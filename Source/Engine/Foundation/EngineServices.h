@@ -10,7 +10,7 @@
  *          | 게임 인스턴스 | `game::findSubsystem<T>()`(게임 범위 → 호스트), 인스턴스 멤버 `getSubsystem<T>()` |
  *          | 에디터 | `editor::findSubsystem<T>()`(에디터 범위 → 호스트), 컨텍스트 멤버 `getSubsystem<T>()` · `findSubsystem<T>()` |
  *          언리얼 `GEngine->GetEngineSubsystem<T>()` · `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 언리얼은 부를 때마다 맵을 찾는 것으로 알고 있고(기억),
- *          여기서는 타입마다 가진 칸(`ServiceSlotOf<T>::s_slot`, `Core/Subsystem/ServiceSlot.h`)을 바인딩 때 한 번 채우고 창구는 그 칸만 읽는다 —
+ *          여기서는 타입마다 가진 칸(`T::s_serviceSlot`, `Core/Subsystem/ServiceSlot.h`)을 바인딩 때 한 번 채우고 창구는 그 칸만 읽는다 —
  *          캐스트마다 타입 레지스트리를 묻는 자리가 이름 조회를 하지 않는다. 중앙 목록은 없다: 칸은 타입 헤더가 선언하고, 그 객체를 범위에 넣는 .cpp 의
  *          등록 줄(`Engine/Foundation/EngineSubsystemRegistration.h`)이 정의한다. 칸을 선언하지 않은 타입은 `findSubsystem<T>()` 가 범위를 올라가며 찾고
  *          (선형 검색 — 핫 패스면 칸을 선언한다), `getSubsystem<T>()` 는 컴파일 오류다. 소유는 범위(`SubsystemScope`)이고 칸은 아무것도 소유하지 않습니다.
@@ -72,11 +72,11 @@ namespace sw
         typename ServiceSlotOf<std::remove_const_t<T>>::Access& getSubsystem()
         {
             using Slot = ServiceSlotOf<std::remove_const_t<T>>;
-            static_assert( Slot::kRegistered, "engine::getSubsystem<T>: T has no service slot - declare SW_SERVICE_SLOT in its header (and include it), register it with SW_ENGINE_SERVICE*, or use engine::findSubsystem<T>()" );
+            static_assert( Slot::kRegistered, "engine::getSubsystem<T>: T has no service slot - declare SW_SERVICE_SLOT in its class (and include its header), register it with SW_ENGINE_SERVICE*, or use engine::findSubsystem<T>()" );
             if constexpr ( Slot::kRegistered )
             {
                 static_assert( Slot::kRequirement == ServiceRequirement::Required, "engine::getSubsystem<T>: this slot may be empty (Optional) - use engine::findSubsystem<T>()" );
-                void* const pService = Slot::s_slot._pBound;
+                void* const pService = Slot::getSlot()._pBound;
                 if ( pService == nullptr )
                     ::sw::internal::reportMissingRequiredService( Slot::kTypeName ); // 모든 구성에서 멈춘다 — `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 널을 역참조했다
                 return *static_cast<typename Slot::Access*>( pService );
@@ -94,7 +94,7 @@ namespace sw
             using Slot = ServiceSlotOf<std::remove_const_t<T>>;
             if constexpr ( Slot::kRegistered )
             {
-                return static_cast<typename Slot::Access*>( Slot::s_slot._pBound );
+                return static_cast<typename Slot::Access*>( Slot::getSlot()._pBound );
             }
             else
             {

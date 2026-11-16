@@ -27,6 +27,9 @@ namespace sw::test
                 return {};
             }
 
+            /** @brief 테스트 키트는 표가 없다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+
             void stop() override {}
 
         private:

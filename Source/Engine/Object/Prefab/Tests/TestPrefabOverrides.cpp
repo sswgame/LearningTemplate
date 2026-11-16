@@ -110,7 +110,7 @@ SW_TEST_CASE( PrefabOverridesTest, NoOverridesRebuildsThePrefabUnderTheInstanceN
     SW_EXPECT_TRUE( doc.getRoot().findChild( "Extra" ).isValid() );
 }
 
-SW_TEST_CASE( PrefabOverridesTest, ChangedFieldsRoundTrip )
+SW_TEST_CASE( PrefabOverridesTest, ChangedPropertiesRoundTrip )
 {
     string instance = Util::kBase;
     instance.replace( instance.find( "_tag=\"a\"" ), 8, "_tag=\"b\"" );

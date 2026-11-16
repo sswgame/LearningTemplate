@@ -7,11 +7,14 @@
  *          스레드: 게임 스레드에서만 쓴다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
@@ -21,6 +24,13 @@
 namespace sw
 {
     struct TypeInfo;
+
+    /** @brief 봉투 읽기(`GameStateSnapshot::readEnvelope`)가 진 까닭입니다 — 부르는 쪽은 씬이 그대로인지에 따라 세이브를 막을지 정한다. */
+    enum class SnapshotRestoreFailure : uint8
+    {
+        Rejected,   ///< 검증에서 졌다 — 씬 · 상태 인스턴스는 건드리지 않았다
+        SceneBroken ///< 검증을 지난 뒤 교체에서 졌다 — 씬은 비워졌고 일부만 섰다(세이브를 막는다)
+    };
 
     /**
      * @class GameStateSnapshot
@@ -48,8 +58,8 @@ namespace sw
         void registerStatefulComponent()
         {
             StatefulComponentType type;
-            type._pCapture = &GameStateSnapshot::captureStateOf<TComponent>;
-            type._pRestore = &GameStateSnapshot::restoreStateOf<TComponent>;
+            type._pCapture = &GameStateSnapshot::captureComponentStates<TComponent>;
+            type._pRestore = &GameStateSnapshot::restoreComponentStates<TComponent>;
             _listStatefulType.push_back( type );
         }
         /**
@@ -62,7 +72,7 @@ namespace sw
         void registerViewOwner()
         {
             StatefulComponentType type;
-            type._pDespawn = &GameStateSnapshot::despawnViewsOf<TComponent>;
+            type._pDespawn = &GameStateSnapshot::despawnComponentViews<TComponent>;
             _listStatefulType.push_back( type );
         }
         /** @brief 디렉터(`GameModeComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
@@ -70,9 +80,9 @@ namespace sw
         void registerGameMode()
         {
             StatefulComponentType type;
-            type._pCapture = &GameStateSnapshot::captureStateOf<TDirector>;
-            type._pRestore = &GameStateSnapshot::restoreStateOf<TDirector>;
-            type._pDespawn = &GameStateSnapshot::despawnViewsOf<TDirector>;
+            type._pCapture = &GameStateSnapshot::captureComponentStates<TDirector>;
+            type._pRestore = &GameStateSnapshot::restoreComponentStates<TDirector>;
+            type._pDespawn = &GameStateSnapshot::despawnComponentViews<TDirector>;
             _listStatefulType.push_back( type );
         }
 
@@ -92,9 +102,20 @@ namespace sw
         [[nodiscard]] bool writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, vector<uint8>& outBytes );
         /**
          * @brief 읽기: 같은 목적으로 쓴 봉투를 읽어 씬 오브젝트 · 리플렉션 상태 · 컴포넌트 상태를 되살리고, 올린 타입마다 실어 둔 상태를 돌려줍니다.
-         * @details 성공하면 부르는 쪽은 읽기 훅을 부르고 `endRestore` 로 저장소를 비운다. 실패하면 false 이고 훅을 부르지 않는다.
+         * @details 두 단계다. 1) 검증 — 봉투를 끝까지 읽고 씬은 분리된 오브젝트 매니저에, 리플렉션 상태는 새로 만든 사본에 풀어 본다. 지금 씬과 @p pStateInstance 는 건드리지 않는다.
+         *          2) 교체 — 검증을 지난 봉투만 활성 씬을 비우고 채운다. 언리얼 `LoadGameFromSlot` 이 별도 `USaveGame` 으로 풀고 월드는 성공 뒤에만 건드리는 나눔이다.
+         *          성공하면 부르는 쪽은 읽기 훅을 부르고 `endRestore` 로 저장소를 비운다. 실패하면 훅을 부르지 않고, 까닭이 `Rejected`(아무것도 바꾸지 않았다)인지
+         *          `SceneBroken`(교체 중에 졌다 — 세이브를 막아야 한다)인지 돌려준다.
+         *          머리의 씬 정체(찍을 때 활성 씬의 리소스 id)가 지금 활성 씬과 다르면 `Rejected` 다 — 그 씬을 연 뒤에 읽는다(`readSceneID` 로 먼저 본다).
+         *          리플렉션 상태가 있으면 그 타입은 기본 생성할 수 있어야 한다(검증 사본) — 아니면 `Rejected` 다.
          */
-        [[nodiscard]] bool readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer, uint32 size );
+        [[nodiscard]] expected<void, SnapshotRestoreFailure> readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
+                                                                           uint32 size );
+        /**
+         * @brief 봉투의 머리만 읽어 찍을 때 활성 씬의 리소스 id 를 돌려줍니다(씬 없이 찍었으면 빈 글). 머리가 없거나 판이 다르거나 잘렸으면 없음입니다(까닭은 알린다).
+         * @details 섹션은 풀지 않는다 — 불러오기가 그 씬을 먼저 열지 정하는 자리다(언리얼 게임이 세이브의 맵 이름을 보고 `OpenLevel` 하는 것과 같다).
+         */
+        [[nodiscard]] static optional<string> readSceneID( const void* pInBuffer, uint32 size );
         /** @brief 읽기 끝: 읽기 훅이 넘겨받은 뒤 저장소를 비웁니다. */
         void endRestore();
 
@@ -102,9 +123,9 @@ namespace sw
         /** @brief 상태 스냅샷에 오른 컴포넌트 타입 하나의 일입니다(`register*`). 없는 일은 nullptr 입니다. */
         struct StatefulComponentType
         {
-            void ( *_pCapture )( ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
-            void ( *_pRestore )( const ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
-            void ( *_pDespawn )( GameObjectManager& manager ){ nullptr };
+            void ( *_pCapture )( SceneIterationKey key, ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
+            void ( *_pRestore )( SceneIterationKey key, const ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
+            void ( *_pDespawn )( SceneIterationKey key, GameObjectManager& manager ){ nullptr };
         };
 
         /** @brief `deserializeSceneObjects` 가 읽는 씬 오브젝트 데이터의 형식입니다. */
@@ -116,21 +137,21 @@ namespace sw
 
         // 매니저 타입은 템플릿 매개변수로 둔다 — 이 헤더는 오브젝트 매니저를 include 하지 않고, 등록하는 .cpp 에서 만들어진다.
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void captureStateOf( ComponentStateStore& store, TManager& manager )
+        static void captureComponentStates( SceneIterationKey key, ComponentStateStore& store, TManager& manager )
         {
-            (void)store.capture<TComponent>( manager );
+            (void)store.capture<TComponent>( key, manager );
         }
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void restoreStateOf( const ComponentStateStore& store, TManager& manager )
+        static void restoreComponentStates( SceneIterationKey key, const ComponentStateStore& store, TManager& manager )
         {
-            (void)store.restore<TComponent>( manager ); // 넘긴 수는 쓰지 않는다 — 짝이 없는 컴포넌트는 그대로 둔다
+            (void)store.restore<TComponent>( key, manager ); // 넘긴 수는 쓰지 않는다 — 짝이 없는 컴포넌트는 그대로 둔다
         }
         template <typename TComponent, typename TManager = GameObjectManager>
-        static void despawnViewsOf( TManager& manager )
+        static void despawnComponentViews( SceneIterationKey key, TManager& manager )
         {
             // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 핸들을 모은 뒤 걷는다.
             vector<TComponentHandle<TComponent>> listComponent;
-            manager.template forEachComponentOfType<TComponent>( [&listComponent]( TComponent* pComponent )
+            manager.template forEachComponentOfType<TComponent>( key, [&listComponent]( TComponent* pComponent )
             { listComponent.push_back( TComponentHandle<TComponent>{ pComponent } ); } );
             for ( const TComponentHandle<TComponent>& handle : listComponent )
             {
@@ -147,10 +168,11 @@ namespace sw
          */
         [[nodiscard]] static bool serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes );
         /**
-         * @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
+         * @brief 바이너리 데이터로부터 씬 GameObject 들을 @p manager 에 만듭니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
+         * @details @p manager 를 비우지 않는다 — 검증은 분리된 매니저에, 교체는 부르는 쪽이 비운 활성 매니저에 푼다. 하나라도 못 읽으면 false 다.
          * @param outListRemap id 를 복원하지 않을 때(`WithIdentity`) 저장된 컴포넌트 id → 다시 만든 컴포넌트 id 표를 채웁니다(`ComponentStateStore::remapComponentIDs`).
          */
-        [[nodiscard]] static bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
+        [[nodiscard]] static bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format, GameObjectManager& manager,
                                                            vector<ComponentStateStore::SavedComponentID>& outListRemap );
         /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(읽기 훅 앞). */
         void restoreStatefulComponents();

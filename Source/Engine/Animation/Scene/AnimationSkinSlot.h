@@ -34,9 +34,9 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
-    };
 
-    SW_SERVICE_SLOT( AnimationSkinSlotRegistry, Required );
+        SW_SERVICE_SLOT( AnimationSkinSlotRegistry, Required );
+    };
 
     /**
      * @class AnimationSkinSlot

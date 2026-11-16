@@ -36,8 +36,14 @@ namespace sw
                     return result;
                 _settings._listServerKind = std::move( kitConfig._listServerKind );
                 // 점검 · 공지 창은 GM 키트가 `start` 에서 읽는다(GM 키트의 선택 의존).
-                return registerServerService( context, entry, &_server ).and_then( [&]
-                { return exposeInterface<IServerDirectoryControl>( context, entry, _service ); } );
+                const ServiceTTLConfig& announcementTTL = kitConfig._endedAnnouncementTTL;
+                return registerServerService( context, entry, &_server )
+                    .and_then( [&]
+                { return exposeInterface<IServerDirectoryControl>( context, entry, _service ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, ServerDirectoryService::makeAnnouncementTTLRule( announcementTTL.getExpireAfterMs() ), announcementTTL ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, ServerDirectoryService::makeMaintenanceTTLRule( announcementTTL.getExpireAfterMs() ), announcementTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override
@@ -54,7 +60,10 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 서버 등록 · 배정 요청. */
-            int32 getOpenWorkCount() const override { return _service.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _service.getPendingCount(); }
+
+            /** @brief 서버 목록 · 점검 공지 표에는 계정이 없다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
 
             void stop() override
             {

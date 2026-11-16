@@ -25,7 +25,7 @@ namespace sw
         /** @brief 스토어 통신이 없어 할 일이 없습니다. 결과는 맡길 때 이미 정해진다. */
         void update( UnixMilliseconds now ) override { (void)now; }
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
-        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) override;
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotification ) override;
         /** @brief 다음 `pollRefunds` 에 환불 알림 하나를 냅니다(테스트와 개발 서버). */
         void  pushRefund( string_view transactionID, int64 refundedMs );
         int32 getPendingCount() const { return static_cast<int32>( _listPending.size() ); }

@@ -61,7 +61,7 @@ namespace sw
         vector<SocialPresence> _listPresence{}; ///< 친구의 접속 상태이다
         uint64                 _requestTag{ 0 };
         AccountID              _otherID{ kInvalidAccountID }; ///< 관계를 바꾼 상대이다. 이름으로 찾았으면 찾은 계정이다
-        SocialOutcome          _result{ SocialResult::Ok };
+        SocialServiceResult    _result{ SocialResult::Ok };
     };
 } // namespace sw
 
@@ -96,6 +96,13 @@ namespace sw
         /** @brief 접속 상태의 시한을 연장합니다. */
         void update( UnixMilliseconds nowMs );
 
+        /**
+         * @brief 탈퇴한 계정의 관계 레코드를 모두 지웁니다(친구 키트의 `IAfterDeleteAccount` 몫). 저장소 스레드에서 부릅니다.
+         * @details 내 줄(`<나>/<상대>`)과 상대 쪽 짝 줄을 지우고 상대 개수를 고친다. 내 쪽 줄이 없는 "나를 막은 사람" 은 역색인(`social_blocked_by`, `<막힌 사람>/<막은 사람>`)으로 찾는다.
+         *          마지막으로 내 개수를 지운다. 짝마다 커밋하고 멱등이다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
+
         // 관계 함수들은 비동기이며 완료는 요청 태그로 받는다
         void changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 정식 계정의 표시 이름으로 친구 신청합니다. 완료의 `_otherID` 가 찾은 계정입니다. */
@@ -124,7 +131,7 @@ namespace sw
         void applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink );
         struct LocalAccount
         {
-            vector<SocialLink>   _listLink{};
+            vector<SocialLink>   _listLink{}; ///< `replaceLinks` 로만 바꾼다(떠날 때는 `removeFriendWatcher` 뒤 항목째 지운다) — 친구 역색인이 함께 바뀐다
             string               _activity{};
             int64                _presenceWrittenMs{ 0 };
             SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
@@ -149,23 +156,29 @@ namespace sw
         LocalAccount& ensureLocal( AccountID accountID );
         void          startLoad( AccountID accountID, uint64 requestTag );
         void          reloadIfLocal( AccountID accountID );
-        void          submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag );
-        void          publishPresence( AccountID accountID, const LocalAccount& local );
-        void          notifyFriendsOfPresence( const SocialPresence& presence );
+        /** @brief 관계 목록을 바꾸고 친구 역색인을 함께 고칩니다. `_listLink` 를 쓰는 유일한 입구입니다. */
+        void replaceLinks( AccountID accountID, LocalAccount& local, const vector<SocialLink>& listLink );
+        void addFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink );
+        void removeFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink );
+        void submitLinkJob( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag );
+        void publishPresence( AccountID accountID, const LocalAccount& local );
+        void notifyFriendsOfPresence( const SocialPresence& presence );
         /** @brief 접속 상태 캐시 값을 씁니다. 값을 못 쓰면 오류 로그를 남기고 false 이며 캐시에 아무것도 보내지 않습니다. */
         [[nodiscard]] bool writePresenceRecord( const SocialPresence& presence );
         void               onPresenceReply( const EphemeralReply& reply );
-        void               pushCompletion( uint64 requestTag, SocialOutcome result );
+        void               pushCompletion( uint64 requestTag, SocialServiceResult result );
 
     private:
         unordered_map<AccountID, LocalAccount> _mapAccountToLocal;
-        unordered_map<uint64, PresenceRead>    _mapCacheRequestToRead;
-        unordered_map<uint64, PresenceQuery>   _mapQuery;
-        EventBuffer<SocialCompletion>          _completionBuffer;
-        EventBuffer<SocialNotification>        _notificationBuffer;
-        SocialServiceDependencies              _dependencies;
-        Subscription                           _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        IDAllocator<uint64>                    _queryIDAllocator;
-        ServiceStoreTracker                    _store; ///< 저장소에 맡긴 일의 앞이다
+        /// 친구 id → 그를 친구(`Friend`)로 둔 이 서버 계정들이다. 접속 상태 한 건의 전달 비용을 그 계정의 관계 수에 맞춘다(Nakama status follow · EOS Presence 의 구독자 역색인)
+        unordered_map<AccountID, vector<AccountID>> _mapFriendToWatchers;
+        unordered_map<uint64, PresenceRead>         _mapCacheRequestToRead;
+        unordered_map<uint64, PresenceQuery>        _mapQuery;
+        EventBuffer<SocialCompletion>               _completionBuffer;
+        EventBuffer<SocialNotification>             _notificationBuffer;
+        SocialServiceDependencies                   _dependencies;
+        Subscription                                _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        IDAllocator<uint64>                         _queryIDAllocator;
+        ServiceStoreTracker                         _store; ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

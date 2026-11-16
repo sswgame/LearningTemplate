@@ -7,7 +7,7 @@
 namespace sw
 {
     DeterministicRunPolicy::DeterministicRunPolicy()
-        : _bFinishAssetWorkEachFrame{ SW_FALSE }
+        : _bFinishAssetJobsEachFrame{ SW_FALSE }
         , _bWaitForAnimationClips{ SW_FALSE }
         , _bFreezeEnvironmentTime{ SW_FALSE }
         , _fixedFrameDelta{ 0.0f }

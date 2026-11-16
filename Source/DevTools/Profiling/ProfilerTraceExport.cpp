@@ -1021,11 +1021,16 @@ namespace sw
     {
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().setRecording( true );
+        // 기동 자체를 첫 구간으로 연다 — 프레임을 몇 번 돌았는지와 상관없이 종료 저장에 구간이 생긴다(finishExitCapture 가 닫는다)
+        profiler.getTimeline().recordFrameBegin( static_cast<uint64>( MonotonicClock::nowNanoseconds() ) );
         SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", path );
     }
 
-    void ProfilerTraceExport::finishExitCapture( const FrameProfiler& profiler, string_view path, string_view processName )
+    void ProfilerTraceExport::finishExitCapture( FrameProfiler& profiler, string_view path, string_view processName )
     {
+        // 마지막 프레임부터 종료까지를 닫는다 — 구간의 끝은 마지막 프레임 시작이라, 닫지 않으면 마지막 프레임과 종료 사건이 빠지고
+        // 접속 직후 멈춘 프로세스(멀티 프로세스 재생의 클라이언트)는 프레임 표시가 둘이 안 돼 저장하지 못했다
+        profiler.getTimeline().recordFrameBegin( static_cast<uint64>( MonotonicClock::nowNanoseconds() ) );
         string savedPath;
         string reply;
         if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, path, processName, savedPath, reply ) )

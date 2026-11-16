@@ -90,8 +90,8 @@ namespace sw::editor
         float32 arrProj[16];
         EditorViewportProjectionUtil::storeGizmoMatrix( arrView, view );
         EditorViewportProjectionUtil::storeGizmoMatrix( arrProj, projection );
-        pScene->getObjectManager()->flushSceneTransforms(); // 기즈모가 읽는 월드 행렬을 이번 프레임 값으로
-        _gizmo.draw( selection, arrView, arrProj, viewport.getImagePosition(), imageSize, _settings );
+        pScene->getObjectManager()->flushSceneTransforms();                                                     // 기즈모가 읽는 월드 행렬을 이번 프레임 값으로
+        _gizmo.draw( selection, arrView, arrProj, viewport.getImagePosition(), imageSize, _settings, nullptr ); // 미리보기 창은 여럿이라 마크 이름이 겹친다 — 가운데 마크는 씬 뷰만
 
         // 클릭 피킹 — 왼쪽 끌기는 오빗이라 끌지 않고 놓은 클릭만 집는다. 기즈모 위의 클릭은 기즈모의 것이다.
         const EditorPointerState pointer        = EditorInputGUI::readPointer();

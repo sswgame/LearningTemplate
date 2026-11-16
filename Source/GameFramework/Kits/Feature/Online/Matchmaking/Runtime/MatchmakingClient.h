@@ -9,7 +9,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
@@ -32,7 +32,7 @@ namespace sw
          * @brief 파티 · 초대 · 로비 · 매칭 결과 버퍼를 꺼낼 권한을 @p outLease 에 받습니다.
          * @details 네 버퍼가 한 표를 씁니다(한 클라이언트의 알림은 한 모델이 받는다). 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다.
          */
-        [[nodiscard]] bool claimNotifications( ConsumerLease& outLease ) { return _notificationGate.claim( outLease ); }
+        [[nodiscard]] bool claimNotifications( ConsumerLease& outLease ) { return _notificationConsumerLock.claim( outLease ); }
         /** @brief 아래 `poll*` 는 모두 `claimNotifications` 로 받은 표를 넘겨야 합니다(아니면 어서션이고 꺼내지 않습니다). */
         void pollPartyUpdates( const ConsumerLease& lease, vector<PartySnapshot>& outListParty )
         {
@@ -66,12 +66,12 @@ namespace sw
     private:
         bool isConsumerLeaseHeld( const ConsumerLease& lease ) const
         {
-            SW_ASSERT( _notificationGate.isHeldBy( lease ) );
-            return _notificationGate.isHeldBy( lease );
+            SW_ASSERT( _notificationConsumerLock.isHeldBy( lease ) );
+            return _notificationConsumerLock.isHeldBy( lease );
         }
 
     private:
-        ConsumerGate                 _notificationGate;
+        ConsumerLock                 _notificationConsumerLock;
         EventBuffer<PartySnapshot>   _partyBuffer;
         EventBuffer<PartyInvite>     _inviteBuffer;
         EventBuffer<LobbySnapshot>   _lobbyBuffer;

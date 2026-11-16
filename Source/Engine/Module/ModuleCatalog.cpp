@@ -34,7 +34,7 @@ namespace sw
 
             /**
              * @brief 모듈이 도는 플랫폼 비트입니다. 기본은 전부이고 `_listExcludedPlatform` 이 뺍니다(플랫폼 하나를 더할 때 매니페스트 87 개를 고치지 않는다).
-             * @details 에디터 · 에디터 확장은 종류가 데스크톱 전용이라 적지 않아도 Android · Web 에서 빠집니다. CMake `sw_readManifestPlatforms` 와 같은 규칙입니다.
+             * @details 에디터 · 에디터 확장은 종류가 데스크톱 전용이라 적지 않아도 Android · Web 에서 빠집니다. CMake `sw_read_manifest_platforms` 와 같은 규칙입니다.
              */
             static uint8 computePlatformMask( const ModuleManifestFile& file )
             {
@@ -166,7 +166,7 @@ namespace sw
                 return {};
             }
 
-            /** @brief 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — CMake `sw_readModuleManifest` 와 같은 검사. */
+            /** @brief 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — CMake `sw_read_module_manifest` 와 같은 검사. */
             [[nodiscard]] static expected<void> validateEditorExtension( const ModuleManifest& manifest, const string& errorContext )
             {
                 if ( manifest._kind != ModuleKind::EditorExtension )
@@ -190,7 +190,7 @@ namespace sw
             // ------------------------------------------------------------------------------
 
             /** @brief 매니페스트 @p pManifest 가 목록의 몇 번째인지입니다. */
-            static size_t indexOf( const ModuleCatalog& catalog, const ModuleManifest* pManifest )
+            static size_t getIndexOf( const ModuleCatalog& catalog, const ModuleManifest* pManifest )
             {
                 return static_cast<size_t>( pManifest - catalog.getManifests().data() );
             }
@@ -207,7 +207,7 @@ namespace sw
                     const ModuleManifest* pTarget = catalog.findManifest( entry._name );
                     if ( pTarget == nullptr )
                         return unexpected( Error{ ErrorKind::NotFound, "a module override names an unknown module", entry._name }.appendDetail( " in " ).appendDetail( pProject->_sourcePath ) );
-                    outListOverride[indexOf( catalog, pTarget )] = entry._bEnabled ? 1 : 0;
+                    outListOverride[getIndexOf( catalog, pTarget )] = entry._bEnabled ? 1 : 0;
                 }
                 return {};
             }
@@ -233,7 +233,7 @@ namespace sw
                 }
             }
 
-            /** @brief 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). CMake 의 `sw_resolveModuleManifests` 와 같다. */
+            /** @brief 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). CMake 의 `sw_resolve_module_manifests` 와 같다. */
             static void deactivateEditorExtensions( const ModuleCatalog& catalog, vector<uint8>& inoutListActive, vector<string>& inoutListReason )
             {
                 // 확장이 확장에 의존할 수 있고 목록은 이름 순이다. 뒤의 확장이 꺼지면 앞의 확장도 꺼져야 하므로 바뀌는 것이 없을 때까지 돈다.
@@ -251,7 +251,7 @@ namespace sw
                             const ModuleManifest* pDependency = catalog.findManifest( dependency._name );
                             if ( pDependency == nullptr )
                                 break; // 없는 의존은 다음 단계(`collectDependencies`)가 오류로 알린다
-                            const size_t dependencyIndex = indexOf( catalog, pDependency );
+                            const size_t dependencyIndex = getIndexOf( catalog, pDependency );
                             if ( inoutListActive[dependencyIndex] == SW_FALSE )
                             {
                                 inoutListActive[index] = SW_FALSE;
@@ -281,7 +281,7 @@ namespace sw
                             return unexpected( Error{ ErrorKind::NotFound, "a module depends on a module that has no manifest (missing module)", manifest._name }
                                                    .appendDetail( " -> " )
                                                    .appendDetail( dependency._name ) );
-                        const size_t dependencyIndex = indexOf( catalog, pDependency );
+                        const size_t dependencyIndex = getIndexOf( catalog, pDependency );
                         if ( listActive[dependencyIndex] == SW_FALSE )
                             return unexpected( Error{ ErrorKind::NotFound, "a module depends on an inactive module", manifest._name }
                                                    .appendDetail( " -> " )
@@ -309,12 +309,12 @@ namespace sw
                 const size_t        manifestCount = catalog.getManifestCount();
                 vector<uint32>      listActiveIndex;
                 vector<string_view> listActiveName;
-                vector<uint32>      listCompactOf( manifestCount, 0 );
+                vector<uint32>      getListCompactOf( manifestCount, 0 );
                 for ( size_t index = 0; index < manifestCount; ++index )
                 {
                     if ( listActive[index] == SW_FALSE )
                         continue;
-                    listCompactOf[index] = static_cast<uint32>( listActiveIndex.size() );
+                    getListCompactOf[index] = static_cast<uint32>( listActiveIndex.size() );
                     listActiveIndex.push_back( static_cast<uint32>( index ) );
                     listActiveName.push_back( catalog.getManifests()[index]._name );
                 }
@@ -323,7 +323,7 @@ namespace sw
                 {
                     for ( const uint32 dependencyIndex : listDependency[listActiveIndex[compactIndex]] )
                     {
-                        graph.addDependency( compactIndex, listCompactOf[dependencyIndex] );
+                        graph.addDependency( compactIndex, getListCompactOf[dependencyIndex] );
                     }
                 }
 

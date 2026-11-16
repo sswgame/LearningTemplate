@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Asset/Model/ModelImportAnimation.h"
 
-#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -211,8 +211,9 @@ namespace sw::editor
     bool ModelImportAnimation::readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve, float32& outDuration )
     {
         outListCurve.clear();
-        float32& duration = outDuration;
-        duration          = 0.0f;
+        unordered_set<hashed_string> uniqueCurveName; // 이미 낸 곡선 이름 — 곡선마다 낸 목록을 훑지 않는다(모프 수의 제곱). 목록은 처음 나온 순서다
+        float32&                     duration = outDuration;
+        duration                              = 0.0f;
         for ( cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex )
         {
             const cgltf_animation_channel& channel                = animation.channels[channelIndex];
@@ -246,10 +247,8 @@ namespace sw::editor
             vector<float32> listValue( targetCount );
             for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
-                const hashed_string name       = ModelImportUtil::makeMorphTargetName( &mesh, targetIndex );
-                const bool          bDuplicate = VectorUtil::containsIf( outListCurve, [&name]( const AnimationClipCurve& curve )
-                         { return curve._name == name; } );
-                if ( bDuplicate )
+                const hashed_string name = ModelImportUtil::makeMorphTargetName( &mesh, targetIndex );
+                if ( uniqueCurveName.insert( name ).second == false )
                     continue;
                 AnimationClipCurve curve{};
                 curve._name = name;
@@ -299,7 +298,7 @@ namespace sw::editor
                 const JSONValue      notify = notifies.at( notifyIndex );
                 AnimationNotifyEvent event{};
                 // 이름과 시각은 여기서 필수다(스프라이트 클립은 같은 칸을 생략할 수 있어 구조체에 필수를 달지 않는다).
-                const bool bInvalidNotify = JSONFields::readFields( notify, event, clipDataPath ) == false || notify.has( "name" ) == false || notify.has( "time" ) == false;
+                const bool bInvalidNotify = JSONFields::readProperties( notify, event, clipDataPath ) == false || notify.has( "name" ) == false || notify.has( "time" ) == false;
                 if ( bInvalidNotify )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotifyNeeds", "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath, static_cast<uint32>( notifyIndex ), clipName );

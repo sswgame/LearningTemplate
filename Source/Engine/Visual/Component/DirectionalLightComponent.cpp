@@ -524,12 +524,12 @@ namespace sw
         return projection;
     }
 
-    void DirectionalLightComponent::writeGPULightKindFields( GPULight& outLight ) const
+    void DirectionalLightComponent::writeGPULightKindProperties( GPULight& outLight ) const
     {
         const float3 direction     = getLightDirection();
         outLight._directionType._x = direction._x;
         outLight._directionType._y = direction._y;
         outLight._directionType._z = direction._z;
-        _shadowSettings.writeGPULightFields( outLight );
+        _shadowSettings.writeGPULightProperties( outLight );
     }
 } // namespace sw

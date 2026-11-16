@@ -60,11 +60,11 @@ namespace sw
         using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;    ///< 스냅숏을 요청한다
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
 
-        static constexpr uint8 kEvent           = Table::kindOf<Event>();
-        static constexpr uint8 kSnapshot        = Table::kindOf<Snapshot>();
-        static constexpr uint8 kPose            = Table::kindOf<Pose>();
-        static constexpr uint8 kHash            = Table::kindOf<Hash>();
-        static constexpr uint8 kSnapshotRequest = Table::kindOf<SnapshotRequest>();
+        static constexpr uint8 kEvent           = Table::getKindOf<Event>();
+        static constexpr uint8 kSnapshot        = Table::getKindOf<Snapshot>();
+        static constexpr uint8 kPose            = Table::getKindOf<Pose>();
+        static constexpr uint8 kHash            = Table::getKindOf<Hash>();
+        static constexpr uint8 kSnapshotRequest = Table::getKindOf<SnapshotRequest>();
     };
 } // namespace sw
 
@@ -158,8 +158,10 @@ namespace sw
         };
 
         FractureComponentBase* resolve( const Entry& entry ) const;
-        Entry*                 findEntry( uint32 netID );
-        void                   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
+        /** @brief 스냅숏 요청을 줄에 넣습니다. 같은 (연결, netID) 가 이미 있으면 넣지 않는다. */
+        void   queueRequest( int32 connectionID, uint32 netID );
+        Entry* findEntry( uint32 netID );
+        void   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
         /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false 를 반환하고, 호출한 쪽이 요청을 다음 `update` 로 미룹니다. */
         [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID );
         void               sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
@@ -173,7 +175,7 @@ namespace sw
 
     private:
         vector<Entry>                _listEntry;
-        vector<Request>              _listRequest;
+        vector<Request>              _listRequest; ///< 보낼 스냅숏 요청 — (연결, netID) 하나에 하나(`queueRequest`)
         DestructionReplicationConfig _settings;
         DestructionReplicationStats  _stats;
         NetMessageWriter             _writer;
@@ -215,7 +217,7 @@ namespace sw
         NetHandleResult receive( NetDestructionMessage::Hash, const NetMessageContext& context, BitReader& body );
 
         /** @brief 덩어리를 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수입니다. 자세를 하나도 받지 않았으면 음수입니다. */
-        float32                            getRenderTick() const { return _clock.getRenderTick(); }
+        float64                            getRenderTick() const { return _clock.getRenderTick(); }
         const DestructionReplicationStats& getStats() const { return _stats; }
 
     private:

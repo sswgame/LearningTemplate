@@ -67,7 +67,7 @@ namespace sw
      *          `assumeHeld()` 를 부른다 — 역할 밖 스레드에서 만지는 코드가 컴파일 경고가 된다. 크로미움 `SequenceChecker`(`GUARDED_BY_CONTEXT` + DCHECK)와 같은 자리다.
      *          **Debug 는 실제 스레드를 확인한다.** 소유 스레드는 시작 지점이 `bindToCurrentThread` 로 정하고(스레드를 다시 세우면 다시 정한다),
      *          정하지 않은 역할은 확인하지 않는다(처음 부른 스레드를 소유자로 삼으면 합법적인 넘김이 거짓 단언이 된다). 정한 뒤 다른 스레드의 `assumeHeld` 는 단언이다.
-     *          소유 스레드가 끝나면 `unbind` 로 놓는다. Debug 가 아니면 멤버도 비용도 없다.
+     *          소유 스레드가 끝나면 `unbind` 로 놓는다. 배포(Shipping)에서는 멤버도 비용도 없다.
      *          소유 스레드가 합류를 기다리는 동안 대신 도는 작업(병렬 기록 태스크)은 `assumeHeldByJoinedTask` 로 적는다 — 스레드 id 가 달라 확인하지 않는다.
      */
     class SW_CAPABILITY( "thread role" ) ThreadRole
@@ -79,7 +79,7 @@ namespace sw
         /** @brief @p owner 스레드를 역할의 소유자로 정합니다(다른 스레드가 소유 스레드를 띄우며 정할 때). */
         void bindToThread( std::thread::id owner )
         {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             _owner.store( owner, std::memory_order_release );
 #else
             (void)owner;
@@ -89,7 +89,7 @@ namespace sw
         /** @brief 소유자를 놓습니다(소유 스레드가 끝날 때). 다음 `assumeHeld` 를 부른 스레드가 소유자가 됩니다. */
         void unbind()
         {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             _owner.store( std::thread::id{}, std::memory_order_release );
 #endif
         }
@@ -101,7 +101,7 @@ namespace sw
          */
         void assumeHeld() const SW_ASSERT_CAPABILITY_LOCK( this )
         {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             const std::thread::id owner = _owner.load( std::memory_order_acquire );
             if ( owner == std::thread::id{} )
                 return;
@@ -114,7 +114,7 @@ namespace sw
 
     private:
         friend class ScopedThreadRoleBorrow;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         mutable atomic<std::thread::id> _owner{};
 #endif
     };
@@ -130,14 +130,14 @@ namespace sw
         explicit ScopedThreadRoleBorrow( ThreadRole& role ) SW_ACQUIRE_LOCK( role ) SW_NO_THREAD_SAFETY_ANALYSIS
             : _role{ role }
         {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             _previous = _role._owner.exchange( std::this_thread::get_id(), std::memory_order_acq_rel );
 #endif
         }
 
         ~ScopedThreadRoleBorrow() SW_RELEASE_LOCK() SW_NO_THREAD_SAFETY_ANALYSIS
         {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             _role._owner.store( _previous, std::memory_order_release );
 #endif
         }
@@ -147,7 +147,7 @@ namespace sw
 
     private:
         [[maybe_unused]] ThreadRole& _role; // Debug 만 읽는다
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         std::thread::id _previous{};
 #endif
     };

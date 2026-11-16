@@ -20,16 +20,8 @@ namespace sw::editor
     void InspectorPropertyLayout::collectTypeChain( const TypeInfo& type, vector<const TypeInfo*>& outListType )
     {
         outListType.clear();
-        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        for ( const TypeInfo* pType : type.getTypeChain() )
         {
-            for ( const TypeInfo* pSeen : outListType )
-            {
-                if ( pSeen == pType )
-                {
-                    VectorUtil::reverse( outListType );
-                    return;
-                }
-            }
             outListType.push_back( pType );
         }
         VectorUtil::reverse( outListType );

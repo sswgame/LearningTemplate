@@ -116,7 +116,7 @@ namespace sw
         }
 
         /**
-         * @brief 실행 없이 시계만 붙잡는 단계(`WaitUntil` · `EditorWaitSettled`)면 true 입니다.
+         * @brief 실행 없이 시계만 붙잡는 단계(`WaitUntil` · `EditorWaitStable`)면 true 입니다.
          * @details 이런 단계는 제 프레임을 혼자 갖는다 — 붙잡힌 프레임에 같이 적힌 다른 단계(입력 · 입력 전 단계)가 다시 돌지 않게(`AutomationScenario` 의 프레임 배정),
          *          그리고 같은 프레임의 단계 순서 검사(`validateStepPhaseOrder`)에서 빠진다. 이름이 아니라 등록 모양으로 가린다 — 기다리는 단계를 더해도 규칙이 따라온다.
          */
@@ -227,9 +227,9 @@ namespace sw
 
     /**
      * @brief 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 모양이 다른 단계도 이 매크로 하나이고, 다른 점은 @p options 에만 적습니다.
-     * @details @p pValidate 는 스키마 구조체만 읽으면 되는 단계라면 `&AutomationStep::validateFields<TParams>` 입니다(모르는 속성 · 필수 · 범위가 `PROPERTY` 에서 나온다). 의미 검사가 더 있을 때만 함수를 씁니다.
+     * @details @p pValidate 는 스키마 구조체만 읽으면 되는 단계라면 `&AutomationStep::validateProperties<TParams>` 입니다(모르는 속성 · 필수 · 범위가 `PROPERTY` 에서 나온다). 의미 검사가 더 있을 때만 함수를 씁니다.
      * @code
-     *     SW_AUTOMATION_STEP( controlMount, "Mount", &runMount, &AutomationStep::validateFields<MountStepParams>, AutomationStepOptions{} );
+     *     SW_AUTOMATION_STEP( controlMount, "Mount", &runMount, &AutomationStep::validateProperties<MountStepParams>, AutomationStepOptions{} );
      *     SW_AUTOMATION_STEP( runnerPress, "Press", nullptr, &validateSlotStep, AutomationStepOptions{}.withPrepare( &prepareSlotStep ) );
      * @endcode
      */

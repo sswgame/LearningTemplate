@@ -2,7 +2,7 @@
  * @file X11Monitors.h
  * @brief X 서버의 모니터 목록을 읽습니다(RandR · `_NET_WORKAREA`). 헤더에 X11 타입을 두지 않아 어느 플랫폼의 `IWindow.cpp` 에서도 읽힌다.
  * @details **libXrandr 은 링크하지 않고 올려 쓴다**(`libasound` · GLFW · SDL 과 같다) - X 서버 없이 도는 기계에도 깔린 게임이 동적 링커 단계에서 서지 않게 한다.
- *          헤더만 빌드에 필요하다(libxrandr-dev, `cmake/Modules/Platform/Linux.cmake` 가 확인한다).
+ *          헤더만 빌드에 필요하다(libxrandr-dev, `cmake/Toolchain/Platform/Linux.cmake` 가 확인한다).
  *
  *          **RandR 이 없어도 오류가 아니다.** 라이브러리가 없거나, 서버에 확장 · 1.5 판이 없거나(Xnest · 옛 VNC), 서버가 활성 모니터가 없다고 답하는 환경은 정상으로 있다.
  *          그때 코어 프로토콜의 X screen 은 추측값이 아니라 그 서버가 가진 화면 자체이므로 모니터 하나로 알린다(GLFW 와 같다). 해상도 선택지는 그 크기 하나다.

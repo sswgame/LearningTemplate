@@ -29,6 +29,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -62,8 +63,8 @@ namespace sw
     /** @brief 변경 요청의 완료입니다. */
     struct ServerDirectoryCompletion
     {
-        uint64                 _requestTag{ 0 };
-        ServerDirectoryOutcome _result{ ServerDirectoryResult::Ok };
+        uint64                       _requestTag{ 0 };
+        ServerDirectoryServiceResult _result{ ServerDirectoryResult::Ok };
     };
 } // namespace sw
 
@@ -103,6 +104,10 @@ namespace sw
         ServerDirectoryService& operator=( const ServerDirectoryService& ) = delete;
 
         void initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectoryServiceConfig& settings );
+        /** @brief 끝난 공지(`sd_notice`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 공지는 남긴다). */
+        static ServiceTTLRule makeAnnouncementTTLRule( int64 expireAfterMs );
+        /** @brief 끝난 점검 창(`sd_maintenance`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 점검은 남긴다). */
+        static ServiceTTLRule makeMaintenanceTTLRule( int64 expireAfterMs );
         /** @brief 서버 목록 읽기를 멈추고 기다리던 캐시 요청을 취소합니다. 맡긴 저장소 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
         void shutdown();
 
@@ -116,30 +121,30 @@ namespace sw
         // 클라이언트 요청 함수들이며 동기이고 메모리에서 처리한다
         ServerDirectoryStatus makeStatus( UnixMilliseconds nowMs ) const;
         /** @brief 서버를 고릅니다. 모르는 종류 · 틀린 지역 이름은 키트 오류 `kUnknownKind`, 아니면 업무 결과(`Ok` · `NoServer` · `Maintenance`)이고 @p outAssignment 를 채웁니다. */
-        [[nodiscard]] ServerDirectoryOutcome assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment );
-        [[nodiscard]] ServerDirectoryOutcome listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const;
+        [[nodiscard]] ServerDirectoryServiceResult assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment );
+        [[nodiscard]] ServerDirectoryServiceResult listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const;
         /** @brief 지금 @p kind 에 걸린 점검이 @p accountID 를 막으면 true 입니다. 계정 서버와 게임 서버가 조립 단계에서 물을 수 있습니다. 막으면 그 점검 창을 @p pOutWindow 에 채웁니다. */
         bool isBlockedByMaintenance( string_view kind, AccountID accountID, UnixMilliseconds nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
 
         // 변경 함수들이며 비동기이다. 완료는 takeCompletions 로 받는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
         void setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
         void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag );
-        void removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void postAnnouncement( const ServiceAnnouncement& announcement, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag );
+        void removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
 
         void takeCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
 
         // IServerDirectoryControl — GM 키트가 서버 조립 문맥으로 부른다
         void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
 
         uint64 getStatusRevision() const { return _statusRevision; }
         int32  getPendingCount() const { return _store.getOpenCount(); }
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs );
-        void applyWrite( uint64 requestTag, ServerDirectoryOutcome result );
+        void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listAnnouncement, bool bReadOk, UnixMilliseconds nowMs );
+        void applyWrite( uint64 requestTag, ServerDirectoryServiceResult result );
 
     private:
         void                  startReload( UnixMilliseconds nowMs );
@@ -148,12 +153,12 @@ namespace sw
         ServerRegistryReader* findReader( string_view kind ) const;
         /** @brief 아는 종류 · 맞는 지역의 배정입니다(`assignServer` 가 먼저 가린다). */
         ServerAssignment pickAssignment( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs );
-        void             submitWrite( ServiceAuditedWrite&& work, uint64 requestTag );
+        void             submitWrite( ServiceAuditedWrite&& job, uint64 requestTag );
 
     private:
         vector<unique_ptr<ServerRegistryReader>> _listReader;
         vector<MaintenanceWindow>                _listMaintenance;
-        vector<ServiceAnnouncement>              _listNotice; ///< 우선순위 내림차순이다
+        vector<ServiceAnnouncement>              _listAnnouncement; ///< 우선순위 내림차순이다
         EventBuffer<ServerDirectoryCompletion>   _completionBuffer;
         ServerDirectoryServiceConfig             _settings;
         ServerDirectoryDependencies              _dependencies;

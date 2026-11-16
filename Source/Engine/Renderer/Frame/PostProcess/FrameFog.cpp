@@ -96,9 +96,9 @@ namespace sw
 
     private:
         std::atomic<uint8> _state;
-    };
 
-    SW_SERVICE_SLOT( FrameFogVolumeStatus, Required );
+        SW_SERVICE_SLOT( FrameFogVolumeStatus, Required );
+    };
 
     std::atomic<uint8>& FrameFogInternal::lastMainVolumeState()
     {

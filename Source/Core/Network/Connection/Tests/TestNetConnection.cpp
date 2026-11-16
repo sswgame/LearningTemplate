@@ -147,30 +147,30 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
         BitReader ackReader( ackWriter.getBytes().data(), ackWriter.getByteCount() );
         (void)sender.readPacket( time + 0.02, ackReader ); // 확인만 받으면 된다 — 결과는 아래 통지로 본다
     }
-    vector<NetDeliveryNotice> listNotice;
-    sender.pollDeliveryNotices( listNotice );
+    vector<NetDeliveryNotification> listNotification;
+    sender.pollDeliveryNotifications( listNotification );
     int32 lostCount      = 0;
     int32 deliveredCount = 0;
-    for ( const NetDeliveryNotice& notice : listNotice )
+    for ( const NetDeliveryNotification& notification : listNotification )
     {
-        SW_EXPECT_EQUAL( int32( kKind ), int32( notice._kind ) );
-        SW_EXPECT_EQUAL( -1, notice._connectionID ); // 연결 하나는 자기 ID 를 모른다 — 호스트가 채운다
-        if ( notice._result == NetDeliveryResult::Lost )
+        SW_EXPECT_EQUAL( int32( kKind ), int32( notification._kind ) );
+        SW_EXPECT_EQUAL( -1, notification._connectionID ); // 연결 하나는 자기 ID 를 모른다 — 호스트가 채운다
+        if ( notification._result == NetDeliveryResult::Lost )
         {
-            SW_EXPECT_EQUAL( uint32( 101 ), notice._tag );
+            SW_EXPECT_EQUAL( uint32( 101 ), notification._tag );
             ++lostCount;
         }
         else
         {
-            SW_EXPECT_TRUE( notice._tag != 101 );
+            SW_EXPECT_TRUE( notification._tag != 101 );
             ++deliveredCount;
         }
     }
     SW_EXPECT_EQUAL( 1, lostCount );
     SW_EXPECT_EQUAL( 7, deliveredCount );
-    listNotice.clear();
-    sender.pollDeliveryNotices( listNotice );
-    SW_EXPECT_TRUE( listNotice.empty() ); // 한 번만 낸다
+    listNotification.clear();
+    sender.pollDeliveryNotifications( listNotification );
+    SW_EXPECT_TRUE( listNotification.empty() ); // 한 번만 낸다
 
     // 싣지 못한 채 나이 상한을 넘기면 잃은 것이다.
     NetConnection saturated;
@@ -180,10 +180,10 @@ SW_TEST_CASE( NetConnectionTest, NotifiedMessagesReportDeliveredOrLostExactlyOnc
     saturated.writePacket( 0.0, tinyPacket, 12 ); // 머리만 들어가는 크기라 메시지는 남는다
     BitWriter latePacket;
     saturated.writePacket( 1.0, latePacket, 300 );
-    saturated.pollDeliveryNotices( listNotice );
-    SW_REQUIRE_EQUAL( size_t( 1 ), listNotice.size() );
-    SW_EXPECT_EQUAL( uint32( 9 ), listNotice[0]._tag );
-    SW_EXPECT_TRUE( listNotice[0]._result == NetDeliveryResult::Lost );
+    saturated.pollDeliveryNotifications( listNotification );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listNotification.size() );
+    SW_EXPECT_EQUAL( uint32( 9 ), listNotification[0]._tag );
+    SW_EXPECT_TRUE( listNotification[0]._result == NetDeliveryResult::Lost );
 
     SW_EXPECT_LOG( "Net.NotifiedMessageSize" ); // 빈 통지 메시지는 오류와 함께 거절한다
     SW_EXPECT_FALSE( saturated.sendNotifiedMessage( arrBig, 0, 1 ) );
@@ -624,4 +624,48 @@ SW_TEST_CASE( NetConnectionTest, UnreliableMessagesExpireAfterWaitingTooLong )
     sender.writePacket( 5.0, muchLater, 1200, NetConnection::kDefaultAckRequestInterval, 0.0 );
     SW_EXPECT_EQUAL( 0, sender.getQueuedUnreliableCount() );
     SW_EXPECT_EQUAL( uint64( 3 ), sender.getStats()._expiredUnreliableCount );
+}
+
+/**
+ * @brief [NetConnectionTest] 한 종류가 쉬는 동안 다른 종류가 번호 공간의 반(32768) 넘게 나가도, 다시 나온 그 종류는 버려지지 않는다 — 번호는 종류마다 따로 센다(감사 N-2)
+ */
+SW_TEST_CASE( NetConnectionTest, SequencedKindIdleForHalfTheSequenceSpaceStillDelivers )
+{
+    constexpr int32     kOtherKindPacketCount = 40000;
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> poseOld{ 0x15, 1 };
+    const vector<uint8> snapshot{ 0x10, 2 };
+    const vector<uint8> poseNew{ 0x15, 3 };
+
+    vector<vector<uint8>> listReceived; // 자세 종류만 모은다
+    vector<uint8>         buffer;
+    const auto            deliver = [&]( BitWriter& packet )
+    {
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        SW_EXPECT_TRUE( receiver.readPacket( 0.1, reader ) );
+        while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+        {
+            if ( buffer[0] == poseOld[0] )
+                listReceived.push_back( buffer );
+        }
+    };
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseOld.data(), 2 ) );
+    BitWriter firstPacket;
+    sender.writePacket( 0.0, firstPacket, 300 );
+    deliver( firstPacket );
+    for ( int32 packet = 0; packet < kOtherKindPacketCount; ++packet )
+    {
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshot.data(), 2 ) );
+        BitWriter other; // 패킷 번호가 이어지게 받는 쪽도 읽는다(멀리 건너뛴 패킷은 받는 쪽이 거절한다)
+        sender.writePacket( 0.0, other, 300 );
+        deliver( other );
+    }
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseNew.data(), 2 ) );
+    BitWriter lastPacket;
+    sender.writePacket( 0.0, lastPacket, 300 );
+    deliver( lastPacket );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listReceived.size() );
+    SW_EXPECT_TRUE( listReceived[0] == poseOld );
+    SW_EXPECT_TRUE( listReceived[1] == poseNew );
 }

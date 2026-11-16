@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/TimeRollover.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -19,8 +20,10 @@ namespace sw
     {
         struct CitySimulationInternal
         {
-            static constexpr uint32 kMinBuildingStateBytes = 64; ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
-            static constexpr uint32 kMinWalkerStateBytes   = 56; ///< 일꾼 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinTileStateBytes     = 12;      ///< 칸 하나의 최소 바이트 — 건물(4) + 도로 번호(4) + 매력(2) + 지형(1) + 도로(1)
+            static constexpr uint32  kMinBuildingStateBytes = 64;      ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinWalkerStateBytes   = 56;      ///< 일꾼 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr float32 kNeverServedTime       = -1.0e9f; ///< 서비스를 받은 적 없는 집의 서비스 시각(기준을 옮겨도 이 아래로 내려가지 않는다)
 
             /** @brief 노동을 나누는 순서입니다. 물, 식량 사슬, 나머지 순이며 값이 작을수록 먼저입니다. */
             static int32 computeLaborPriority( const CityBuildingDef& def )
@@ -60,10 +63,10 @@ namespace sw
                 const CityBuildingDef& def         = *building._pDef;
                 const bool             bPlaceValid = topology.isRectInside( building._origin, int2{ def._size, def._size } ) && ( building.hasRoadAccess() ? topology.isInside( building._accessTile ) : building._accessTile == int2{ -1, -1 } );
                 const bool             bTimeValid  = 0.0f <= building._walkerTimer && 0.0f <= building._productionProgress && 0.0f <= building._evolveTimer && 0.0f <= building._devolveTimer && 0.0f <= building._immigrationTimer;
-                const bool             bWorkValid  = 0.0f <= building._efficiency && building._efficiency <= 1.0f && 0 <= building._assignedWorkers && building._assignedWorkers <= def._workers && 0 <= building._activeWalkerCount;
+                const bool             bJobValid   = 0.0f <= building._efficiency && building._efficiency <= 1.0f && 0 <= building._assignedWorkers && building._assignedWorkers <= def._workers && 0 <= building._activeWalkerCount;
                 const int32            levelCount  = static_cast<int32>( catalog.getHouseLevels().size() );
                 const bool             bHouseValid = building.isHouse() ? 0 <= building._level && ( building._level == 0 || building._level < levelCount ) && 0 <= building._population : building._level == 0 && building._population == 0;
-                return bPlaceValid && bTimeValid && bWorkValid && bHouseValid;
+                return bPlaceValid && bTimeValid && bJobValid && bHouseValid;
             }
 
             /** @brief 읽은 타일과 건물이 서로 맞는지 봅니다. 타일의 번호는 건물 목록을 바로 찌르고, 살아 있는 건물의 발밑은 모두 그 건물을 가리킵니다. */
@@ -330,7 +333,7 @@ namespace sw
         building._origin       = int2{ x, y };
         for ( float32& serviceTime : building._arrServiceTime )
         {
-            serviceTime = -1.0e9f;
+            serviceTime = CitySimulationInternal::kNeverServedTime;
         }
         for ( int32 dy = 0; dy < pDef->_size; ++dy )
         {
@@ -508,6 +511,17 @@ namespace sw
     void CitySimulation::stepFixed( float32 deltaTime )
     {
         _time += deltaTime;
+        // 시각은 서비스 만료(차이)만 본다 — float32 걸음을 지키려 기준을 옮기고, 비교하는 서비스 시각도 같이 옮긴다(감사 K-5).
+        if ( TimeRolloverUtil::rebase( _time ) )
+        {
+            for ( CityBuilding& building : _listBuilding )
+            {
+                for ( float32& serviceTime : building._arrServiceTime )
+                {
+                    serviceTime = MathUtil::max( serviceTime - TimeRolloverUtil::kRebaseSeconds, CitySimulationInternal::kNeverServedTime );
+                }
+            }
+        }
         if ( _bRoadsDirty != SW_FALSE )
             recomputeRoadComponents();
         if ( _bDesirabilityDirty != SW_FALSE )
@@ -912,7 +926,7 @@ namespace sw
         return service != CityService::Count && _time - house._arrServiceTime[static_cast<int32>( service )] <= _settings._serviceDuration;
     }
 
-    bool CitySimulation::meetsHouseLevel( const CityBuilding& house, int32 level ) const
+    bool CitySimulation::hasReachedHouseLevel( const CityBuilding& house, int32 level ) const
     {
         const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( level );
         if ( pLevel == nullptr )
@@ -967,7 +981,7 @@ namespace sw
             if ( house._population <= 0 )
                 continue;
 
-            const bool bCanEvolve = meetsHouseLevel( house, house._level + 1 );
+            const bool bCanEvolve = hasReachedHouseLevel( house, house._level + 1 );
             house._evolveTimer    = bCanEvolve ? house._evolveTimer + deltaTime : 0.0f;
             if ( house._evolveTimer >= _settings._evolveDelay )
             {
@@ -976,7 +990,7 @@ namespace sw
                 _eventBuffer.push( CityEvent{ house._level, buildingIndex, CityEvent::Kind::HouseEvolved } );
                 continue;
             }
-            const bool bLosing  = house._level > 0 && meetsHouseLevel( house, house._level ) == false;
+            const bool bLosing  = house._level > 0 && hasReachedHouseLevel( house, house._level ) == false;
             house._devolveTimer = bLosing ? house._devolveTimer + deltaTime : 0.0f;
             if ( house._devolveTimer >= _settings._evolveDelay )
             {
@@ -1078,18 +1092,23 @@ namespace sw
     // ------------------------------------------------------------------------------
     void CitySimulation::serializeState( StateIO& io )
     {
-        io.expect( _topology._width );
-        io.expect( _topology._height );
+        // 지도 크기는 설정이 정한다 — 저장된 크기로 읽어 같은 좌표에 옮긴다. 줄어 밖에 건물 · 도로가 남으면 거절하고, 늘어난 칸은 지금 지형 그대로다(감사 A-6).
+        const GridTopology savedTopology = _topology.serializeSize( io );
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        for ( CityTile& tile : _listTile )
+        // 칸마다 건물(4) + 도로 번호(4) + 매력(2) + 지형(1) + 도로(1)
+        _topology.serializeCells(
+            io, savedTopology, _listTile, CitySimulationInternal::kMinTileStateBytes,
+            []( StateIO& tileIO, CityTile& tile )
         {
-            io.value( tile._buildingIndex );
-            io.value( tile._roadComponent );
-            io.value( tile._desirability );
-            io.enumValue( tile._terrain, CityTerrain::Rock );
-            io.value( tile._bRoad );
-        }
+            tileIO.value( tile._buildingIndex );
+            tileIO.value( tile._roadComponent );
+            tileIO.value( tile._desirability );
+            tileIO.enumValue( tile._terrain, CityTerrain::Rock );
+            tileIO.value( tile._bRoad );
+        },
+            []( const CityTile& tile )
+        { return tile._buildingIndex == constant::invalid_index::kInt32 && tile._bRoad == SW_FALSE; } );
         io.list( _listBuilding, CitySimulationInternal::kMinBuildingStateBytes, [&]( CityBuilding& building )
         {
             io.reference( building._pDef, [this]( const hashed_string& defID )

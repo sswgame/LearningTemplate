@@ -97,6 +97,8 @@ namespace sw
         uint8  _bTexture{ SW_FALSE }; ///< 참이면 텍스처, 거짓이면 버퍼
 
         bool operator==( const WebGPUBindlessEntry& other ) const { return _handle == other._handle && _bTexture == other._bTexture; }
+        /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
+        RHIBindlessOwner getBindlessOwner() const { return _bTexture != SW_FALSE ? RHIBindlessOwner{ 0, _handle } : RHIBindlessOwner{ _handle, 0 }; }
     };
 
     /** @brief 번호 공간 하나(텍스처 SRV · 버퍼 · UAV)의 표입니다. 기록 때 번호를 자원으로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`). */
@@ -160,41 +162,41 @@ namespace sw
     };
 
     /**
-     * @brief 제출한 프레임 하나의 완료입니다. 큐 완료 콜백이 `_bWorkDone` 을 켜고, 그 프레임에 복사 도착지가 된 읽기 버퍼의 매핑이 모두 끝나야(`_pendingMapCount` 0) 끝난 것으로 본다.
+     * @brief 제출한 프레임 하나의 완료입니다. 큐 완료 콜백이 `_bJobDone` 을 켜고, 그 프레임에 복사 도착지가 된 읽기 버퍼의 매핑이 모두 끝나야(`_pendingMapCount` 0) 끝난 것으로 본다.
      * @details 매핑까지 기다리는 까닭: `readReadbackBuffer` 는 그 프레임의 지연 해제 콜백 안에서 기다리지 않고 읽는다(장치 계약) — WebGPU 는 매핑 없이 읽을 수 없다.
      */
     struct WebGPUFrameFence
     {
         uint64                  _serial{ 0 };
-        atomic<uint8>           _bWorkDone{ SW_TRUE }; ///< 빈 칸은 끝난 것이다(`RHIFrameFenceRing` 은 낸 적 없는 칸을 기다리지 않는다)
+        atomic<uint8>           _bJobDone{ SW_TRUE }; ///< 빈 칸은 끝난 것이다(`RHIFrameFenceRing` 은 낸 적 없는 칸을 기다리지 않는다)
         atomic<uint32>          _pendingMapCount{ 0 };
         WebGPURHIDevice*        _pDevice{ nullptr };
         vector<RHIBufferHandle> _listMappedBuffer{}; ///< 이 프레임에 매핑하는 읽기 버퍼(콜백이 다 끝나면 "읽을 수 있음" 으로 적는다)
-        WGPUFuture              _workDoneFuture{};   ///< 큐 완료 콜백의 퓨처 — 링이 차면 `wgpuInstanceWaitAny` 로 기다린다
+        WGPUFuture              _jobDoneFuture{};    ///< 큐 완료 콜백의 퓨처 — 링이 차면 `wgpuInstanceWaitAny` 로 기다린다
         vector<WGPUFuture>      _listMapFuture{};    ///< 매핑 콜백의 퓨처(같은 대기)
 
         /** @brief 이 칸에 새 프레임을 겁니다. 칸의 앞 프레임은 끝났어야 합니다(링이 기다린다). */
         void arm( uint64 serial, WebGPURHIDevice* pDevice )
         {
             _serial = serial;
-            _bWorkDone.store( SW_FALSE, std::memory_order_release );
+            _bJobDone.store( SW_FALSE, std::memory_order_release );
             _pendingMapCount.store( 0, std::memory_order_release );
             _pDevice = pDevice;
             _listMappedBuffer.clear();
-            _workDoneFuture = WGPUFuture{};
+            _jobDoneFuture = WGPUFuture{};
             _listMapFuture.clear();
         }
         /** @brief 칸을 빈 상태(끝남)로 되돌립니다(장치를 놓을 때). */
         void clear()
         {
-            _bWorkDone.store( SW_TRUE, std::memory_order_release );
+            _bJobDone.store( SW_TRUE, std::memory_order_release );
             _pendingMapCount.store( 0, std::memory_order_release );
             _listMappedBuffer.clear();
-            _workDoneFuture = WGPUFuture{};
+            _jobDoneFuture = WGPUFuture{};
             _listMapFuture.clear();
         }
         /** @brief 큐 완료와 매핑이 모두 끝났는지 봅니다. */
-        bool isDone() const { return _bWorkDone.load( std::memory_order_acquire ) != SW_FALSE && _pendingMapCount.load( std::memory_order_acquire ) == 0; }
+        bool isDone() const { return _bJobDone.load( std::memory_order_acquire ) != SW_FALSE && _pendingMapCount.load( std::memory_order_acquire ) == 0; }
     };
 
     /** @brief 읽기 하나의 결과입니다(`submitTextureReadback`). 매핑 콜백이 패딩을 벗긴 바이트를 채운다. */
@@ -277,6 +279,8 @@ namespace sw
 
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다 — 손실 콜백이 따로 들던 비트필드는 다른 스레드가 쓰는 경쟁이라 없앴다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
 
         RHIFormat            getBackBufferFormat() const override { return _swapChain.getRHIFormat(); }
         RHICapabilities      getCapabilities() const override;
@@ -321,7 +325,7 @@ namespace sw
         [[nodiscard]] bool           acquireSwapChainImageInternal( IRHISwapChain& swapChain ) override;
 
     private:
-        /** @brief 비동기 요청(어댑터 · 장치)을 기다립니다. 브라우저는 ASYNCIFY · JSPI 로 링크해야 이 대기가 된다(cmake/Modules/Platform/Web.cmake). */
+        /** @brief 비동기 요청(어댑터 · 장치)을 기다립니다. 브라우저는 ASYNCIFY · JSPI 로 링크해야 이 대기가 된다(cmake/Toolchain/Platform/Web.cmake). */
         [[nodiscard]] bool waitForFuture( WGPUFuture future, const utf8* pWhat ) const;
         /** @brief 어댑터를 받고 필수 기능 · 한도를 대조해 장치를 만듭니다. 필수 기능이 없으면 `DriverUnsupported` 로 멈춘다. */
         [[nodiscard]] bool createDeviceInternal( const RHISwapChainDesc& desc );
@@ -365,7 +369,7 @@ namespace sw
         /** @brief 칸 @p fence 의 큐 완료 · 매핑을 `wgpuInstanceWaitAny` 로 기다립니다(앞서가기 상한 — `beginFrameInternal`). 잃은 장치도 콜백은 온다(명세). */
         [[nodiscard]] bool waitFrameFence( const WebGPUFrameFence& fence ) const;
         /** @brief 큐 완료 콜백입니다(userdata1 = 프레임 완료). */
-        static void onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
+        static void onFrameJobsDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 읽기 버퍼 매핑 콜백입니다(userdata1 = 프레임 완료). */
         static void onFrameBufferMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 잡히지 않은 검증 오류를 남깁니다(장치 생성 때 건다). 브라우저는 파이프라인 오류도 여기로 늦게 온다. */
@@ -492,7 +496,6 @@ namespace sw
         RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
 
         uint8 _bInitialized         : 1;
-        uint8 _bDeviceLost          : 1;
         uint8 _bTextureFormatsTier1 : 1; ///< rg16snorm 첨부 · 블렌드(`texture-formats-tier1`)
         uint8 _bDepth32Stencil8     : 1; ///< 깊이를 되읽을 수 있는 깊이 · 스텐실 형식
         uint8 _bTextureBC           : 1;

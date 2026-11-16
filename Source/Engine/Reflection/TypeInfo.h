@@ -77,6 +77,43 @@ namespace sw
         size_t                     _count;
     };
 
+    struct TypeInfo;
+
+    /**
+     * @struct TypeChain
+     * @brief 자기부터 기반까지의 타입 사슬입니다(`TypeInfo::getTypeChain`). 부모 사슬을 따라가는 곳은 모두 이것만 쓴다 — 고리 · 깊이 상한을 한 곳에서 막는다.
+     * @details 예전에는 걷는 곳마다 고리 방지를 따로 두었다(깊이 상한 · 방문 목록 · 아무것도 없음). 없는 걷기 하나(필드 이름 해시 검사)가 고리 사슬에서
+     *          끝나지 않았다. 언리얼 `UStruct::GetSuperStruct` 사슬은 컴파일러가 고리를 막지만, 여기는 이름으로 잇는 사슬이라 데이터가 고리를 만들 수 있다.
+     *          찾을 수 없는 부모에서 끝나고, 이미 담은 타입을 다시 만나면(고리) 그 앞에서 끝나며 `isLoop` 이 참이다. 상한(`kMaxParentChainDepth`)에서도 끝난다.
+     */
+    struct TypeChain
+    {
+        const TypeInfo* _arrType[constant::reflection::kMaxParentChainDepth]{}; ///< [0] 이 자기, 뒤로 갈수록 기반
+        uint32          _count{ 0 };
+        uint8           _bLoop{ SW_FALSE };   ///< 고리를 만나 끝났다
+        uint8           _bCapped{ SW_FALSE }; ///< 깊이 상한에서 끝났다
+
+        uint32                 size() const { return _count; }
+        bool                   isLoop() const { return _bLoop != SW_FALSE; }
+        const TypeInfo*        operator[]( uint32 index ) const { return _arrType[index]; }
+        const TypeInfo* const* begin() const { return _arrType; }
+        const TypeInfo* const* end() const { return _arrType + _count; }
+    };
+
+    /**
+     * @class TypeParentLink
+     * @brief `TypeInfo` 가 한 번 찾아 둔 부모 포인터입니다. 읽고 쓰는 것은 `TypeInfo` 만이다(friend) — 밖에서 포인터를 따라 사슬을 손으로 걸으면 고리 방지가 빠진다.
+     * @details 칸 자체는 `TypeInfo` 의 다른 칸처럼 공개로 둔다 — 칸마다 접근이 섞이면 표준 배치가 깨져 맨 앞 `_castHeader` 를 주소로 읽는 캐스트의 전제가
+     *          흔들린다. 그래서 칸의 접근 대신 이 형식의 접근으로 막는다(포인터 하나라 크기 · 비용은 원자 포인터 그대로). 사슬은 `TypeInfo::getTypeChain` 한 곳이 걷는다.
+     */
+    class TypeParentLink
+    {
+    private:
+        friend struct TypeInfo;
+
+        atomic<const TypeInfo*> _pType{ nullptr };
+    };
+
     /// @brief 등록된 타입의 정보입니다. FQN, 프로퍼티, 메서드, 생성 가능 여부를 담습니다.
     struct SW_API TypeInfo
     {
@@ -88,8 +125,8 @@ namespace sw
          *          이 규칙은 부모를 따라가는 `isSameTypeName` 과 같다. `_typeID` 를 쓰지 않는 이유도 그 사본이다. 사본은 자기 id 를 따로 가진다.
          *          등록이나 해제로 부모 체인이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고,
          *          등록 배치가 끝날 때(`populateLookupCaches`)나 첫 상속 검사가 테이블을 다시 만든다.
-         *          원자값으로 둔 이유는 `_pParentType` 과 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
-         *          등록과 캐스트가 동시에 실행되는 경우는 `_pParentType` 과 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
+         *          원자값으로 둔 이유는 `_parentLink` 와 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
+         *          등록과 캐스트가 동시에 실행되는 경우는 `_parentLink` 와 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
          */
         TypeCastHeader _castHeader;
         size_t         _size;
@@ -109,15 +146,18 @@ namespace sw
          * @brief 고정 배치형(B) 코덱 테이블입니다(`Engine/Serialization/Fixed/FixedLayout.h`). 코드젠이 모든 `REFLECT` 타입에 채우고, 적격이 아니면
          *        이유만 든 테이블입니다. 코드젠을 거치지 않은 타입(내장 스칼라)은 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다.
          */
-        const FixedCodec*                _pFixedCodec;
-        hashed_string                    _name;
-        hashed_string                    _fullyQualifiedName;
-        hashed_string                    _parentFQN;
-        hashed_string                    _moduleName;
-        vector<PropertyInfo>             _listProperty;
-        vector<FunctionInfo>             _listMethod;
-        vector<EventInfo>                _listEvent; ///< 이 타입이 선언한 이벤트다. 기반 타입의 이벤트는 `findEventInHierarchy` 가 따라 올라가며 찾는다
-        ReflectMetadataBox<TypeMetadata> _metadata;  ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
+        const FixedCodec*    _pFixedCodec;
+        hashed_string        _name;
+        hashed_string        _fullyQualifiedName;
+        hashed_string        _parentFQN;
+        hashed_string        _moduleName;
+        vector<PropertyInfo> _listProperty;
+        vector<FunctionInfo> _listMethod;
+        vector<EventInfo>    _listEvent; ///< 이 타입이 선언한 이벤트다. 기반 타입의 이벤트는 `findEventInHierarchy` 가 따라 올라가며 찾는다
+        /// @brief `REFLECT( RemovedField = … )` 로 적은 지운 필드 이름입니다. 옛 세이브에는 이 이름의 해시가 남아 있어 새 필드가 그 이름 · 해시를 쓰면 등록이 오류를 남긴다
+        ///        (`TypeRegistry::reportFieldNameHashClashes`, 언리얼 CoreRedirects 의 지운 프로퍼티 기록과 같은 자리).
+        vector<hashed_string>            _listRemovedField;
+        ReflectMetadataBox<TypeMetadata> _metadata; ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
         /**
          * @brief 상속 병합 목록입니다 — 기반부터, 파생이 같은 이름을 제자리에서 덮는다. 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
          * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 다시 짓는다(`rebuildDerivedCaches`). 조회는 읽기만 한다 — `mutable` 지연 캐시가
@@ -137,7 +177,7 @@ namespace sw
          *          비어 있으면 `getParentType()` 이 이름으로 다시 찾는다. 원자값으로 둔 이유는, 배치 밖에서 등록한 타입(테스트)은
          *          첫 조회가 여러 스레드에서 동시에 올 수 있기 때문이다. 같은 값을 쓰는 경쟁이라 relaxed 로 충분하다.
          */
-        mutable atomic<const TypeInfo*> _pParentType;
+        mutable TypeParentLink _parentLink;
         /**
          * @brief `_parentFQN` 을 이름으로 찾아 봤지만 찾지 못했던 때의 타입 테이블 세대입니다. 0 이면 아직 찾아 보지 않았습니다.
          * @details 등록되지 않은 기반 타입은 이름만 적혀 있다. 부모를 물을 때마다(계층 프로퍼티 조회, 이름 따라가기, 기본값 체인 수집)
@@ -238,14 +278,12 @@ namespace sw
         }
         /** @brief 조상 테이블이 없을 때의 경로입니다. 만들 수 있으면 만들어서 답하고, 아니면 부모 포인터를 따라갑니다. */
         bool isDerivedFromSlow( const TypeInfo* pTarget ) const;
-        /** @brief 부모 TypeInfo 입니다. 찾아 둔 것이 없으면 이름으로 찾아 기록합니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다. */
-        const TypeInfo* getParentType() const;
         /** @brief 부모 포인터를 이름으로 다시 찾습니다. 등록 배치가 끝날 때 `TypeRegistry` 가 부릅니다. */
         void resolveParentType() const;
         /** @brief 부모 포인터와 "찾지 못했다"는 기록을 비웁니다. 해제 뒤에는 부모가 사라졌을 수 있으므로 `TypeRegistry` 가 부릅니다. */
         void clearParentType() const
         {
-            _pParentType.store( nullptr, std::memory_order_relaxed );
+            _parentLink._pType.store( nullptr, std::memory_order_relaxed );
             _parentMissGeneration.store( 0, std::memory_order_relaxed );
         }
 
@@ -389,20 +427,25 @@ namespace sw
         template <typename Func>
         void forEachEventWithBase( Func&& func ) const
         {
-            const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-            uint32          depth = collectTypeChain( arrChain );
-            while ( depth > 0 )
+            const TypeChain chain = getTypeChain();
+            for ( uint32 depth = chain.size(); depth > 0; --depth )
             {
-                --depth;
-                for ( const EventInfo& event : arrChain[depth]->_listEvent )
+                for ( const EventInfo& event : chain[depth - 1]->_listEvent )
                 {
                     func( event );
                 }
             }
         }
 
-        /** @brief 자기부터 기반까지의 체인을 @p outArrType 에 담고 길이를 반환합니다. 찾을 수 없는 부모에서 끝나고, 순환이면 상한에서 멈춥니다. */
-        uint32 collectTypeChain( const TypeInfo* ( &outArrType )[constant::reflection::kMaxParentChainDepth] ) const;
+        /** @brief 자기부터 기반까지의 사슬입니다(`TypeChain`). 부모 사슬을 걷는 곳은 모두 이것을 쓴다(부모 한 단계는 `getTypeChain()[1]`). */
+        TypeChain getTypeChain() const;
+
+    private:
+        /**
+         * @brief 부모 TypeInfo 입니다. 찾아 둔 것이 없으면 이름으로 찾아 기록합니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다.
+         * @details 비공개다 — 밖에서 `p = p->getParentType()` 으로 손으로 걸으면 고리 방지가 빠진다(고리 사슬에서 끝나지 않았다). 사슬은 `getTypeChain` 한 곳이 걷는다.
+         */
+        const TypeInfo* getParentType() const;
     };
 
 } // namespace sw

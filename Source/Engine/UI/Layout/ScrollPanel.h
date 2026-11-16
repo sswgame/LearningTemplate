@@ -14,7 +14,7 @@ namespace sw
 {
     /**
      * @class ScrollPanel
-     * @brief 첫 자식(내용)을 스크롤 축으로는 무한 가용 크기로 측정하고, `-오프셋` 위치에 놓고 자릅니다(`clipsChildren`).
+     * @brief 첫 자식(내용)을 스크롤 축으로는 무한 가용 크기로 측정하고, `-오프셋` 위치에 놓고 자릅니다(`shouldClipChildren`).
      * @details 오프셋은 `[0, 내용 − 보이는 크기]` 로 제한한다. 오프셋이 바뀌면 `kArrange` 만 쓰는데, 크기는 그대로라 위로 번지지 않고 이 패널만 다시 배치하기 때문이다
      *          (measure 0).
      *          입력: 휠(버블, 안쪽 스크롤이 끝에 닿으면 바깥으로 넘어간다), 막대 드래그(터널, 막대 위 누름은 내용보다 먼저 받고 포인터를 잡는다),
@@ -84,7 +84,7 @@ namespace sw
         /** @brief 스크롤 막대 엄지를 내용 위에 칠합니다(드래그 중이면 더 밝게). */
         void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const override;
         /** @brief 내용 위치는 스크롤 오프셋으로 정해지므로 일반 거울 배치는 하지 않습니다(내용 안의 패널은 자기 방향으로 거울 배치합니다). 가로 스크롤은 `arrangeChildren` 이 직접 오른쪽에서 시작하게 둡니다. */
-        bool mirrorsChildrenInRightToLeft() const override { return false; }
+        bool shouldMirrorChildrenInRightToLeft() const override { return false; }
 
     private:
         /** @brief 오프셋을 지난 배치의 범위로 제한합니다. */

@@ -97,7 +97,7 @@ namespace sw::editor
 
         // 구간 항목
         /** @brief 구간 항목의 칸을 그립니다 — 이름 · 바인딩과 종류가 쓰는 칸(종류 표)입니다. 초안이 열려 있으면 초안을, 아니면 고른 항목을 고칩니다. */
-        void drawItemFields();
+        void drawItemProperties();
         /** @brief 항목의 바인딩 고르기 콤보입니다. 바꿨으면 true 입니다. */
         [[nodiscard]] bool drawItemBindingCombo( SequenceTrackItem& edit, const SequenceItemKindInfo& kindInfo );
         /** @brief 초안의 만들기 · 취소 단추와 안내입니다. 만들기는 필수 칸이 찰 때까지 꺼져 있습니다. */

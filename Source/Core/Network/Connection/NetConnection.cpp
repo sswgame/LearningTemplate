@@ -69,6 +69,8 @@ namespace sw
                 return "AuthenticationFailed";
             case NetDisconnectReason::ReceiveOverflow:
                 return "ReceiveOverflow";
+            case NetDisconnectReason::ReliableOverflow:
+                return "ReliableOverflow";
         }
         return "Unknown";
     }
@@ -85,7 +87,7 @@ namespace sw
         , _listSequencedReceive{}
         , _listReliableAssembly{}
         , _listSpareBuffer{}
-        , _listDeliveryNotice{}
+        , _listDeliveryNotification{}
         , _stats{}
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
@@ -98,7 +100,6 @@ namespace sw
         , _nextReliableSendID{ 0 }
         , _oldestUnackedReliableID{ 0 }
         , _nextReliableReceiveID{ 0 }
-        , _nextSequencedSendID{ 0 }
         , _bAckPending{ SW_FALSE }
         , _bDiscardingAssembly{ SW_FALSE }
         , _bUnreliableFirst{ SW_FALSE }
@@ -120,8 +121,9 @@ namespace sw
         _listOutgoingSequenced.clear();
         _listOutgoingUnreliable.clear();
         _listSequencedReceive.clear();
-        _listReliableAssembly.clear(); // 끊긴 연결의 반쪽 메시지가 같은 슬롯의 새 연결 메시지 앞에 붙지 않게 한다.
-        _listDeliveryNotice.clear();   // 끊긴 연결의 판정은 내지 않는다 — 처리기는 연결 닫힘(`onConnectionClosed`)으로 그 연결의 상태를 지운다.
+        _listSequencedSend.clear();
+        _listReliableAssembly.clear();     // 끊긴 연결의 반쪽 메시지가 같은 슬롯의 새 연결 메시지 앞에 붙지 않게 한다.
+        _listDeliveryNotification.clear(); // 끊긴 연결의 판정은 내지 않는다 — 처리기는 연결 닫힘(`onConnectionClosed`)으로 그 연결의 상태를 지운다.
         _stats                   = NetConnectionStats{};
         _lastStatsTime           = 0.0;
         _lastAckRequestTime      = -1.0e9;
@@ -134,7 +136,6 @@ namespace sw
         _nextReliableSendID      = 0;
         _oldestUnackedReliableID = 0;
         _nextReliableReceiveID   = 0;
-        _nextSequencedSendID     = 0;
         _bAckPending             = SW_FALSE;
         _bDiscardingAssembly     = SW_FALSE;
         _bUnreliableFirst        = SW_FALSE;
@@ -144,6 +145,12 @@ namespace sw
     int32 NetConnection::getPendingReliableCount() const
     {
         return NetSequence::computeDifference( _nextReliableSendID, _oldestUnackedReliableID );
+    }
+
+    bool NetConnection::isReliableWindowFull( int32 size ) const
+    {
+        const int32 fragmentCount = MathUtil::max( 1, ( size + kMaxSingleMessageSize - 1 ) / kMaxSingleMessageSize );
+        return getPendingReliableCount() + fragmentCount > kReliableWindow - 1;
     }
 
     bool NetConnection::sendMessage( NetChannelType channel, const uint8* pData, int32 size )
@@ -209,25 +216,25 @@ namespace sw
         QueuedUnreliable& queued = _listOutgoingUnreliable.emplace_back();
         queued._buffer           = acquireBuffer();
         queued._buffer.assign( pData, pData + size );
-        queued._noticeTag = tag;
-        queued._bNotified = SW_TRUE;
+        queued._notificationTag = tag;
+        queued._bNotified       = SW_TRUE;
         return true;
     }
 
-    void NetConnection::pollDeliveryNotices( vector<NetDeliveryNotice>& inoutListNotice )
+    void NetConnection::pollDeliveryNotifications( vector<NetDeliveryNotification>& inoutListNotification )
     {
-        inoutListNotice.insert( inoutListNotice.end(), _listDeliveryNotice.begin(), _listDeliveryNotice.end() );
-        _listDeliveryNotice.clear();
+        inoutListNotification.insert( inoutListNotification.end(), _listDeliveryNotification.begin(), _listDeliveryNotification.end() );
+        _listDeliveryNotification.clear();
     }
 
-    void NetConnection::settleNotices( SentPacket& sent, NetDeliveryResult result )
+    void NetConnection::completeNotifications( SentPacket& sent, NetDeliveryResult result )
     {
-        if ( sent._bNoticeSettled == SW_TRUE )
+        if ( sent._bNotificationCompleted == SW_TRUE )
             return;
-        sent._bNoticeSettled = SW_TRUE;
+        sent._bNotificationCompleted = SW_TRUE;
         for ( int32 index = 0; index < sent._notifiedCount; ++index )
         {
-            _listDeliveryNotice.push_back( NetDeliveryNotice{ sent._arrNotifiedTag[index], constant::invalid_index::kInt32, sent._arrNotifiedKind[index], result } );
+            _listDeliveryNotification.push_back( NetDeliveryNotification{ sent._arrNotifiedTag[index], constant::invalid_index::kInt32, sent._arrNotifiedKind[index], result } );
         }
     }
 
@@ -241,8 +248,8 @@ namespace sw
         // 조각 하나가 신뢰 ID 하나다. 재전송과 확인도 조각마다 한다. 창이 메시지 전체를 받을 수 없으면 조각을 하나도 넣지 않는다.
         // 신뢰 순서 없음은 조각나지 않는다(`getMaxMessageSize` 가 이미 1KB 로 막았다). 조각은 연속으로 ID를 받으므로 사이에 다른 메시지가 끼지 않는다.
         const int32 fragmentCount = MathUtil::max( 1, ( size + kMaxSingleMessageSize - 1 ) / kMaxSingleMessageSize );
-        if ( getPendingReliableCount() + fragmentCount > kReliableWindow - 1 )
-            return false; // 상대가 확인하지 않아 막힌 상태다(게임이 보내는 속도를 줄인다).
+        if ( isReliableWindowFull( size ) )
+            return false; // 상대가 확인하지 않아 막힌 상태다(엔드포인트가 닫거나, `trySendMessage` 를 쓴 쪽이 보내는 속도를 줄인다).
         for ( int32 fragment = 0; fragment < fragmentCount; ++fragment )
         {
             const int32       offset   = fragment * kMaxSingleMessageSize;
@@ -443,7 +450,7 @@ namespace sw
                 break;
             QueuedUnreliable& expired = _listOutgoingUnreliable.front();
             if ( expired._bNotified == SW_TRUE )
-                _listDeliveryNotice.push_back( NetDeliveryNotice{ expired._noticeTag, constant::invalid_index::kInt32, expired._buffer[0], NetDeliveryResult::Lost } ); // 싣지도 못했다
+                _listDeliveryNotification.push_back( NetDeliveryNotification{ expired._notificationTag, constant::invalid_index::kInt32, expired._buffer[0], NetDeliveryResult::Lost } ); // 싣지도 못했다
             recycleBuffer( expired._buffer );
             _listOutgoingUnreliable.pop_front();
             ++_stats._expiredUnreliableCount;
@@ -472,16 +479,29 @@ namespace sw
         }
     }
 
+    NetConnection::SequencedStream& NetConnection::findOrAddSequencedStream( vector<SequencedStream>& listStream, uint8 kind )
+    {
+        for ( SequencedStream& stream : listStream )
+        {
+            if ( stream._kind == kind )
+                return stream;
+        }
+        return listStream.emplace_back( SequencedStream{ 0, kind } );
+    }
+
     void NetConnection::writeSequencedMessages( PacketBody& body )
     {
         // 쌓을 때 같은 종류의 옛것은 이미 새것으로 바뀌었다.
         size_t sequencedWritten = 0;
-        while ( sequencedWritten < _listOutgoingSequenced.size() &&
-                body.tryWriteMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendID, _listOutgoingSequenced[sequencedWritten], false ) )
+        while ( sequencedWritten < _listOutgoingSequenced.size() )
         {
-            const vector<uint8>& written = _listOutgoingSequenced[sequencedWritten];
-            recordFlow( NetChannelType::UnreliableSequenced, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), written.data(), written.size(), false );
-            ++_nextSequencedSendID;
+            const vector<uint8>& pending = _listOutgoingSequenced[sequencedWritten];
+            SequencedStream&     stream  = findOrAddSequencedStream( _listSequencedSend, pending.empty() ? static_cast<uint8>( 0 ) : pending[0] );
+            const uint16         id      = static_cast<uint16>( stream._lastID + 1 );
+            if ( body.tryWriteMessage( NetChannelType::UnreliableSequenced, id, pending, false ) == false )
+                break;
+            recordFlow( NetChannelType::UnreliableSequenced, NetConnectionInternal::makeWirePosition( body._sequence, body._written - 1 ), pending.data(), pending.size(), false );
+            stream._lastID = id;
             ++sequencedWritten;
         }
         _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.begin() + static_cast<std::ptrdiff_t>( sequencedWritten ) );
@@ -492,9 +512,9 @@ namespace sw
         SentPacket& sent = *body._pSent;
         while ( _listOutgoingUnreliable.empty() == false )
         {
-            QueuedUnreliable& front           = _listOutgoingUnreliable.front();
-            const bool        bNoticeSlotFull = front._bNotified == SW_TRUE && sent._notifiedCount >= kMaxNotifiedPerPacket;
-            if ( bNoticeSlotFull )
+            QueuedUnreliable& front                 = _listOutgoingUnreliable.front();
+            const bool        bNotificationSlotFull = front._bNotified == SW_TRUE && sent._notifiedCount >= kMaxNotifiedPerPacket;
+            if ( bNotificationSlotFull )
                 break; // 순서를 지키려고 뒤의 메시지도 다음 패킷으로 미룬다
             if ( body.tryWriteMessage( NetChannelType::Unreliable, 0, front._buffer, false ) == false )
                 break;
@@ -502,7 +522,7 @@ namespace sw
                         false );
             if ( front._bNotified == SW_TRUE )
             {
-                sent._arrNotifiedTag[sent._notifiedCount]  = front._noticeTag;
+                sent._arrNotifiedTag[sent._notifiedCount]  = front._notificationTag;
                 sent._arrNotifiedKind[sent._notifiedCount] = front._buffer[0];
                 ++sent._notifiedCount;
             }
@@ -525,12 +545,12 @@ namespace sw
         // 이 슬롯을 쓰던 옛 패킷(창 하나 앞)이 확인도 손실 판정도 없이 밀려나면 그 전달 통지는 잃은 것이다.
         SentPacket* pEvicted = _sentPackets.find( static_cast<uint16>( sequence - kPacketWindow ) );
         if ( pEvicted != nullptr )
-            settleNotices( *pEvicted, NetDeliveryResult::Lost );
-        SentPacket* pSent      = _sentPackets.insert( sequence );
-        pSent->_time           = time;
-        pSent->_reliableCount  = 0;
-        pSent->_notifiedCount  = 0;
-        pSent->_bNoticeSettled = SW_FALSE;
+            completeNotifications( *pEvicted, NetDeliveryResult::Lost );
+        SentPacket* pSent              = _sentPackets.insert( sequence );
+        pSent->_time                   = time;
+        pSent->_reliableCount          = 0;
+        pSent->_notifiedCount          = 0;
+        pSent->_bNotificationCompleted = SW_FALSE;
 
         // 메시지 수를 먼저 쓰지 않고, 메시지마다 "더 있다" 1비트를 앞에 둔다. 몇 개가 들어갈지는 쓰면서 정한다.
         PacketBody body;
@@ -621,7 +641,7 @@ namespace sw
             }
             case NetChannelType::UnreliableSequenced:
             {
-                // 번호는 연결 하나에서 증가하기만 하므로 종류마다 마지막 번호와 비교한다. 늦게 온 같은 종류의 옛 메시지만 버린다.
+                // 번호는 종류(흐름)마다 따로 센다. 종류마다 마지막 번호와 비교해 늦게 온 같은 종류의 옛 메시지만 버린다.
                 const uint8      kind    = message._buffer.empty() ? static_cast<uint8>( 0 ) : message._buffer[0];
                 SequencedStream* pStream = nullptr;
                 for ( SequencedStream& stream : _listSequencedReceive )
@@ -751,7 +771,7 @@ namespace sw
                 continue;
             pSent->_bAcked = SW_TRUE;
             ++_stats._ackedPacketCount;
-            settleNotices( *pSent, NetDeliveryResult::Delivered );
+            completeNotifications( *pSent, NetDeliveryResult::Delivered );
             // RTT 표본은 확인을 요청한 패킷이 가장 새 확인으로 돌아왔을 때만 잡는다. ack 비트로 늦게 확인된 패킷이나 답 패킷은 상대가 기다렸다가 보냈을 수 있기 때문이다.
             if ( bitIndex < 0 && pSent->_bAckRequested )
             {
@@ -784,7 +804,7 @@ namespace sw
             if ( bSkipSentPacket )
                 continue;
             pSent->_bLossDetected = SW_TRUE;
-            settleNotices( *pSent, NetDeliveryResult::Lost );
+            completeNotifications( *pSent, NetDeliveryResult::Lost );
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
             {
                 OutgoingReliable* pMessage = _outgoingReliable.find( pSent->_arrReliableID[index] );

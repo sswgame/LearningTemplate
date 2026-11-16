@@ -84,7 +84,7 @@ namespace sw
             {
                 if ( EconomyMirrorInternal::isListed( listBalance, kItemPrefix, itemID ) )
                     continue;
-                const bool bRemoved = inoutInventory.removeItem( itemID, inoutInventory.getItemCount( itemID ) );
+                const bool bRemoved = inoutInventory.consumeItem( itemID, inoutInventory.getItemCount( itemID ) );
                 SW_ASSERT( bRemoved ); // 가진 개수를 그대로 빼므로 항상 성공한다
                 (void)bRemoved;
             }
@@ -104,7 +104,7 @@ namespace sw
             }
             else if ( target < current )
             {
-                const bool bRemoved = inoutInventory.removeItem( itemID, static_cast<int32>( current - target ) );
+                const bool bRemoved = inoutInventory.consumeItem( itemID, static_cast<int32>( current - target ) );
                 SW_ASSERT( bRemoved ); // 가진 개수보다 적게 빼므로 항상 성공한다
                 (void)bRemoved;
             }

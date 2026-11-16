@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Path/PathKey.h"
 
 namespace sw
 {
@@ -103,6 +104,11 @@ namespace sw
          */
         [[nodiscard]] static bool tryMakePathUnderRoot( string_view root, string_view path, string& outRelative );
         /**
+         * @brief @p path 에 `..` 구간이 있으면 true 입니다. 포함 판정(`tryMakePathUnderRoot` · `isPathUnderRoot` · `isPathAtOrUnderRoot`)은 이런 경로를 밖으로 본다 —
+         *        글 접두 비교라 `root/../x` 를 안으로 봤다(감사 C-18, 언리얼은 `FPaths::CollapseRelativeDirectories` 뒤 비교). 풀지 않고 거절한다(심볼릭 링크를 지나면 글로 푼 결과가 틀린다).
+         */
+        [[nodiscard]] static bool hasParentComponent( string_view path );
+        /**
          * @brief @p path 가 @p root 아래(구간 경계 기준, 루트 자신은 아님)인지를 이 OS 의 대소문자 규칙(Windows 무시 · POSIX 구별)으로 봅니다. 글 연산입니다(`..` 를 풀지 않는다).
          * @details 비교 · 맵 키용 `normalizePath` 는 POSIX 에서도 소문자로 접어 대소문자만 다른 바깥 폴더를 안으로 본다 — 포함 판정은 이것을 쓴다.
          */
@@ -127,10 +133,11 @@ namespace sw
          */
         [[nodiscard]] static optional<AbsolutePath> requireAbsolutePath( string_view path );
         /**
-         * @brief 비교 · 맵 키용으로 경로를 정규화합니다(`\` 를 `/` 로 바꾸고 소문자로).
-         * @note Linux 의 파일 I/O 에는 쓰지 마십시오. 파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로를 씁니다.
+         * @brief 비교 · 맵 키용으로 경로를 접습니다(`\` 를 `/` 로 바꾸고 소문자로).
+         * @details 결과는 `PathKey` 라 어떤 글로도 암시적으로 바뀌지 않는다 — 디스크 판정(`isPathAtOrUnderRoot` · `isSameDiskPath` …)에 그대로 넘어가지 않는다(리눅스에서 대소문자를 잃는다).
+         *          키 · id 로 꺼낼 때는 `str()` · `view()` 를 적는다. Linux 의 파일 I/O 에는 쓰지 않는다(파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로).
          */
-        static string normalizePath( string_view path );
+        [[nodiscard]] static PathKey normalizePath( string_view path );
         /** @brief I/O 용으로 구분자만 정규화합니다(`\` 를 `/` 로). 대소문자는 그대로 둡니다. */
         static string normalizeSeparators( string_view path );
         /** @brief OS 고유의 경로 구분자로 바꿉니다(Windows: `\`, POSIX: `/`). */
@@ -255,17 +262,17 @@ namespace sw
          *          이 클래스 밖에서 경로를 스스로 여는 서드파티 저장 함수(DDS 저장 · SQLite)는 쓰기 전에 `isWriteAllowed` 를 직접 부른다 —
          *          그런 호출과 OS · C 런타임의 직접 쓰기는 이 쓰기 경로를 우회한 것이다.
          */
-        using WriteGate = expected<void> ( * )( string_view path );
+        using WriteFilter = expected<void> ( * )( string_view path );
         /** @brief 쓰기 게이트를 바꿉니다. nullptr 이면 게이트가 없습니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). */
-        static void setWriteGate( WriteGate gate );
+        static void setWriteFilter( WriteFilter filter );
         /**
          * @brief 새로 만드는 자리의 이름 규칙을 겁니다(있는 파일을 덮어쓰거나 지우는 것은 보지 않는다). 자동화 쓰기 게이트와 따로 늘 선다. nullptr 이면 규칙이 없습니다.
          * @details 리소스 트리(`Content/`)의 새 파일은 소문자다 — 엔진의 `AssetPaths` 가 건다(Core 는 리소스 루트를 모른다). 입구마다 이름을 접는 대신(`toDiskPath` · 임포트 · 새 에셋)
          *          쓰기 경로 하나가 막으므로, 접지 않고 이은 새 입구도 대문자 파일을 만들지 못한다.
          */
-        static void setCreateRule( WriteGate rule );
+        static void setCreateRule( WriteFilter rule );
         /**
-         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
+         * @brief 게이트가 @p path 를 바꾸는 것을 허락하는지, 체크아웃하지 않은 파일이 아닌지(`findNotOpenForEdit`, 폴더면 그 아래), 새 자리면 이름 규칙(`setCreateRule`)에 맞는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다.
          *        둘 다 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다.
          */
         [[nodiscard]] static bool isWriteAllowed( string_view path );
@@ -274,6 +281,22 @@ namespace sw
          * @details `isWriteAllowed` 와 폴더를 만드는 `ensureDirectoryExists` 가 부른다 — 파일이든 폴더든 새로 생기는 이름은 같은 규칙을 지난다.
          */
         [[nodiscard]] static bool isCreateAllowed( string_view path );
+        /**
+         * @brief 이 자리의 읽기 전용 파일이 "체크아웃하지 않음"(버전 관리 잠금 — git LFS lockable 은 잠그기 전까지 읽기 전용)을 뜻하면 true 를 돌려주는 규칙입니다.
+         * @details 버전 관리 트리(리소스 트리)를 아는 엔진의 `AssetPaths` 가 건다(Core 는 그 뿌리를 모른다 — `setCreateRule` 과 같은 자리). 규칙 밖의 읽기 전용(복사로 속성이 따라온 사본 ·
+         *          git 개체 · 작업 폴더)은 잠금이 아니라 정리가 지워야 하는 파일이다 — 그래서 지우기를 모든 읽기 전용에서 막지 않고 규칙 안에서만 막는다.
+         */
+        using CheckoutRule = bool ( * )( string_view path );
+        /** @brief 체크아웃 규칙을 걸고 앞 규칙을 돌려줍니다(테스트가 되돌린다). nullptr 이면 규칙이 없고 지우기 · 옮기기는 읽기 전용을 보지 않습니다. */
+        static CheckoutRule setCheckoutRule( CheckoutRule rule );
+        /**
+         * @brief @p path(파일, 폴더면 그 아래 모든 파일)에서 체크아웃 규칙 안의 읽기 전용 파일을 처음 만난 경로입니다. 규칙이 없거나 그런 파일이 없으면 빈 값입니다.
+         * @details `isWriteAllowed` 가 이 답으로 거절하므로, 그것을 지나는 모든 입구(쓰기 · `removeFile` · `tryRemoveFile` · `removeDirectory` · `renamePath` · `copyFile` 의 대상 · `moveToRecycleBin`)와
+         *          경로를 스스로 여는 서드파티 저장(DDS 저장 · SQLite — 쓰기 전에 `isWriteAllowed` 를 직접 부른다)이 같은 확인을 지난다 —
+         *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
+         *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
+         */
+        [[nodiscard]] static optional<string> findNotOpenForEdit( string_view path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
@@ -342,6 +365,7 @@ namespace sw
         /**
          * @brief 디렉터리를 훑으며 항목마다 @p visit 를 부릅니다. 들어갈 수 없는 하위 폴더는 건너뜁니다. 예외를 던지지 않습니다.
          * @details 순회가 도중에 멈추면(폴더가 순회 중에 지워짐 등) 경고하고 거기까지로 끝납니다. 항목 경로는 버퍼 하나를 다시 써서 넘깁니다.
+         *          순서는 플랫폼과 무관하다 — 폴더마다 이름의 바이트 순이고, 폴더를 만나면 그 안을 먼저 걷는다(부모가 자식보다 앞). OS 순서(NTFS 이름 순, ext4 해시 순)는 쓰지 않는다.
          * @return 디렉터리를 열지 못했거나 순회가 도중에 멈췄으면 false 입니다(콜백이 멈춘 것은 실패가 아닙니다).
          */
         [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
@@ -378,7 +402,7 @@ namespace sw
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
          *          있는 경로여야 하기 때문입니다. 대소문자를 구분하는 파일 시스템에서는 소문자로 바꾼 경로가 곧 "파일 없음" 입니다.
-         *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오.
+         *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오. 순서는 `forEachDirectoryEntry` 와 같다(폴더마다 이름의 바이트 순, 폴더를 만나면 그 안을 먼저).
          * @return 폴더가 없으면 알리지 않고 false(없으면 빈 목록이 맞는지는 부른 쪽이 정한다 — 맞으면 `(void)` 와 이유), 순회가 도중에 멈췄으면 경로를 알리고
          *         false(목록은 모은 데까지 — 부분 목록을 전부로 믿으면 지울 것 · 구울 것을 빠뜨린다)입니다.
          * @param stopToken 협조 중단 신호입니다(`StopSource::getToken`). 올라가면 알리지 않고 멈추고 false 를 돌려줍니다 — 부른 쪽이 신호를 다시 읽고 목록을 버린다. 기본값(묶이지 않은 토큰)이면 끝까지 훑는다.

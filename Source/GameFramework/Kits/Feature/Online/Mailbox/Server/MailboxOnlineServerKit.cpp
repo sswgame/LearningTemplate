@@ -1,7 +1,11 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -22,6 +26,7 @@ namespace sw
             MailboxOnlineServerKit()
                 : _service{}
                 , _settings{}
+                , _afterDeleteAccount{}
             {
             }
 
@@ -30,27 +35,33 @@ namespace sw
                 MailboxKitConfig kitConfig;
                 if ( expected<void> result = entry.readSettings( kitConfig ); result.has_value() == false )
                     return result;
-                _settings._sweepIntervalMs = kitConfig._sweepIntervalMs;
+                _settings._sweepIntervalMs    = kitConfig._sweepIntervalMs;
+                _settings._claimedRetentionMs = static_cast<int64>( kitConfig._claimedRetentionDays ) * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond;
                 if ( expected<void> result = registerServerService( context, entry, &_service ); result.has_value() == false )
                     return result;
-                return {};
+                const ServiceTTLConfig& campaignTTL = kitConfig._endedCampaignTTL;
+                return addTTLRule( context, entry, ServiceMailCampaign::makeCampaignTTLRule( campaignTTL.getExpireAfterMs() ), campaignTTL ).and_then( [&]
+                { return addTTLRule( context, entry, ServiceMailCampaign::makeClaimTTLRule( campaignTTL.getExpireAfterMs() ), campaignTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override
             {
-                _settings._pPolicy         = context._kits.find<const ILedgerPolicy>(); // 경제 키트가 없으면 원장 상한만 적용된다
-                _settings._pMetricRegistry = context._pMetricRegistry;
-                _settings._pPresence       = context._kits.find<IAccountPresence>();        // 계정 키트(다른 서버에 붙은 계정)
-                _settings._pBalanceNotice  = context._kits.find<IBalanceChangedListener>(); // 경제 키트(수령 · 만료 반환의 잔액 변경 알림)
-                _settings._pOfflinePush    = context._kits.find<IOfflinePushSender>();      // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
-                _settings._pScheduler      = context._pScheduler;                           // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
+                _settings._pPolicy              = context._kits.find<const ILedgerPolicy>(); // 경제 키트가 없으면 원장 상한만 적용된다
+                _settings._pMetricRegistry      = context._pMetricRegistry;
+                _settings._pPresence            = context._kits.find<IAccountPresence>();        // 계정 키트(다른 서버에 붙은 계정)
+                _settings._pBalanceNotification = context._kits.find<IBalanceChangedListener>(); // 경제 키트(수령 · 만료 반환의 잔액 변경 알림)
+                _settings._pOfflinePush         = context._kits.find<IOfflinePushSender>();      // 라이브 운영 키트(접속하지 않은 계정의 기기 푸시)
+                _settings._pScheduler           = context._pScheduler;                           // 만료 정리를 예약 작업(`mail.sweep`)으로 서버 하나만 돌린다
                 if ( _service.initialize( context._pStore, _settings ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the mailbox service needs a store and a sweep interval of at least a minute" } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the mailbox service needs a store, a sweep interval of at least a minute and a claimed-mail retention" } );
                 return {};
             }
 
+            /** @brief 탈퇴한 계정의 받은 우편 · 보낸 기록 · 캠페인 수령을 지운다(`MailboxStoreLogic::eraseAccount`). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
+
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 우편 호출. */
-            int32 getOpenWorkCount() const override { return _service.getOpenWorkCount(); }
+            int32 getOpenJobCount() const override { return _service.getOpenJobCount(); }
 
             void stop() override
             {
@@ -66,8 +77,9 @@ namespace sw
             }
 
         private:
-            MailboxService       _service;
-            MailboxServiceConfig _settings;
+            MailboxService                                               _service;
+            MailboxServiceConfig                                         _settings;
+            AfterDeleteAccountFunction<&MailboxStoreLogic::eraseAccount> _afterDeleteAccount;
         };
     } // namespace
 } // namespace sw

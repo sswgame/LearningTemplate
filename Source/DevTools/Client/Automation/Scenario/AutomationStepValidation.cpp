@@ -48,8 +48,8 @@ namespace sw
         }
 
         // `Variable` · `ExpectVariable` 의 검사 함수가 `name` 을 전역 변수 관리자에 묻는다. 엔진 서비스가 묶이지 않았으면 묻지 못하므로 모르는 것으로 센다.
-        const bool    bAsksVariable = step._kind == "Variable" || step._kind == "ExpectVariable";
-        const string* pVariable     = bAsksVariable ? step.findAttribute( "name" ) : nullptr;
+        const bool    bNeedsVariable = step._kind == "Variable" || step._kind == "ExpectVariable";
+        const string* pVariable      = bNeedsVariable ? step.findAttribute( "name" ) : nullptr;
         const bool    bUnknownVariable =
             pVariable != nullptr && ( engine::areEngineServicesBound() == false || engine::getSubsystem<GlobalVariableManager>().findVariable( *pVariable ) == nullptr );
         if ( bUnknownVariable )
@@ -138,7 +138,7 @@ namespace sw
             if ( pFrameEndStep != nullptr && pFrameEndStep->_frameIndex != step._frameIndex )
                 pFrameEndStep = nullptr;
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
-            // 모르는 단계 · 실행 없이 기다리기만 하는 단계(`WaitUntil` · `EditorWaitSettled` — 제 프레임을 혼자 갖는다)는 건너뛴다.
+            // 모르는 단계 · 실행 없이 기다리기만 하는 단계(`WaitUntil` · `EditorWaitStable` — 제 프레임을 혼자 갖는다)는 건너뛴다.
             if ( pRegistration == nullptr || pRegistration->isWaitOnly() )
                 continue;
             const bool bRunsAtFrameStart = pRegistration->_pRun == nullptr || pRegistration->_bBeforeInput;

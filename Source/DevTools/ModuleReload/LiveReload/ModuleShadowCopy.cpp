@@ -139,7 +139,7 @@ namespace sw
         return false;
     }
 
-    bool ModuleShadowCopy::rejectsDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes )
+    bool ModuleShadowCopy::shouldRejectDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         // 지연 import 디렉터리가 있으면 서술자를 읽든 못 읽든 올리지 않는다 — 지연 import 가 없다고 말할 수 없다.
@@ -176,7 +176,7 @@ namespace sw
         }
 
         // 스탬프가 **없는** 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
-        // `sw_registerDynamicModule` 이 스탬프를 박는다).
+        // `sw_register_dynamic_module` 이 스탬프를 박는다).
         string     moduleStamp;
         const bool bEngineABIMismatch = ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp();
         if ( bEngineABIMismatch )
@@ -188,7 +188,7 @@ namespace sw
                              params._moduleName, moduleStamp, engine::getEngineABIStamp(), pHint );
             return false;
         }
-        if ( rejectsDelayImports( params._moduleName, params._originalModulePath, bytes ) )
+        if ( shouldRejectDelayImports( params._moduleName, params._originalModulePath, bytes ) )
             return false;
         if ( ModuleShadowCopyInternal::rewriteLibraryNames( params, inoutSerials, inoutLibraryName, bytes ) == false )
         {

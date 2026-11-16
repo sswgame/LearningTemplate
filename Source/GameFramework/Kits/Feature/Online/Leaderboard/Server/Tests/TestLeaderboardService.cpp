@@ -15,6 +15,8 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -66,14 +68,14 @@ namespace
 
         ~LeaderboardFixture()
         {
-            pump();
+            poll();
             _service.shutdown();
             _router.shutdown();
         }
 
-        void pump()
+        void poll()
         {
-            while ( _store.pollCompletions() + _router.pump() > 0 )
+            while ( _store.pollCompletions() + _router.poll() > 0 )
             {
             }
         }
@@ -81,7 +83,7 @@ namespace
         /** @brief 태그 하나의 완료를 꺼냅니다. 없으면 실패이며 빈 완료를 돌려줍니다. */
         LeaderboardCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<LeaderboardCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -91,10 +93,11 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        LeaderboardCompletion submit( string_view boardID, AccountID accountID, int64 score, int64 nowMs = kNowMs, string_view name = "name" )
+        LeaderboardCompletion submit( string_view boardID, AccountID accountID, int64 score, int64 nowMs = kNowMs, string_view name = "name",
+                                      const NetIdempotencyKey& idempotencyKey = NetIdempotencyKey::makeRandom() )
         {
             const uint64 tag = _nextTag++;
-            _service.submitScore( boardID, accountID, name, score, UnixMilliseconds{ nowMs }, tag );
+            _service.submitScore( boardID, accountID, name, score, idempotencyKey, UnixMilliseconds{ nowMs }, tag );
             return take( tag );
         }
 
@@ -112,7 +115,7 @@ namespace
             return take( tag );
         }
 
-        LeaderboardCompletion scoresOf( string_view boardID, const vector<AccountID>& listAccountID )
+        LeaderboardCompletion queryScores( string_view boardID, const vector<AccountID>& listAccountID )
         {
             const uint64 tag = _nextTag++;
             _service.readScoresOf( boardID, listAccountID, UnixMilliseconds{ kNowMs }, tag );
@@ -122,7 +125,7 @@ namespace
         LeaderboardCompletion stat( AccountID accountID, string_view statName, int64 value, LeaderboardUpdate update )
         {
             const uint64 tag = _nextTag++;
-            _service.changeStat( accountID, "name", statName, value, update, UnixMilliseconds{ kNowMs }, tag );
+            _service.changeStat( accountID, "name", statName, value, update, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, tag );
             return take( tag );
         }
 
@@ -137,7 +140,7 @@ namespace
         {
             SettlementSink sink;
             _service.settleSeason( boardID, seasonID, UnixMilliseconds{ kSeasonEndMs }, SettlementDelegate::create<&SettlementSink::onDone>( &sink ) );
-            pump();
+            poll();
             return sink;
         }
 
@@ -216,6 +219,92 @@ namespace
     };
 } // namespace
 
+/** @brief [LeaderboardServiceTest] TTL 규칙: 지난 기간 점수는 기간 끝(시즌은 정산 창 끝) 뒤에 지우고, 초기화 없는 보드의 점수는 남긴다(감사 O-9) */
+SW_TEST_CASE( LeaderboardServiceTest, PastScoresExpireAfterPeriodAndSettlementWindow )
+{
+    constexpr int64     kSettlementWindowMs = 7 * kDayMs;
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );
+    rig.addBoard( "best" );
+    rig.addSeasonBoard( "season", 2 );
+    SW_REQUIRE_TRUE( rig.submit( "daily", 1, 10 )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "daily", 2, 20 )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "daily", 2, 30 )._result == LeaderboardResult::Ok ); // 다시 써도 색인 줄은 처음 한 번이다
+    SW_REQUIRE_TRUE( rig.submit( "best", 1, 10 )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "season", 1, 10, kInSeasonMs )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "season", 2, 20, kInSeasonMs )._result == LeaderboardResult::Ok );
+    const hashed_string scoreTable{ "lb_score" };
+    SW_REQUIRE_EQUAL( 5, world._database.countRecords( scoreTable ) );
+    SW_EXPECT_EQUAL( 4, world._database.countRecords( hashed_string( "lb_score_expiry" ) ) );
+
+    ServiceTTLRule        scoreRule = LeaderboardService::makeScoreTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kSeasonEndMs + kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, report._deletedCount ); // 정산 창 안이다 - 정산이 읽을 점수를 지우지 않는다
+    SW_EXPECT_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 4, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, world._database.countRecords( scoreTable ) ); // 초기화 없는 보드다
+
+    const hashed_string resultTable{ "lb_season_result" };
+    ServiceTTLRule      resultRule = LeaderboardService::makeSeasonResultTTLRule( 1000 );
+    SW_REQUIRE_EQUAL( 2, world._database.countRecords( resultTable ) );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 2, world._database.countRecords( resultTable ) ); // 창이 닫힌 뒤부터 잰다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, world._database.countRecords( resultTable ) );
+}
+
+/** @brief [LeaderboardServiceTest] 색인보다 먼저 쓴 점수 · 시즌 결과도 백필이 보드 정의의 사본으로 줄을 채워 지운다(감사 O-9). 초기화 없는 보드의 점수는 남는다 */
+SW_TEST_CASE( LeaderboardServiceTest, LegacyScoresAreBackfilledFromTheBoardCatalog )
+{
+    constexpr int64     kSettlementWindowMs = 7 * kDayMs; // 서비스의 정산 창과 같다(LeaderboardService.cpp)
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );
+    rig.addBoard( "best" );
+    rig.addSeasonBoard( "season", 2 );
+    SW_REQUIRE_TRUE( rig.submit( "daily", 1, 10 )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "best", 1, 10 )._result == LeaderboardResult::Ok );
+    SW_REQUIRE_TRUE( rig.submit( "season", 1, 10, kInSeasonMs )._result == LeaderboardResult::Ok );
+    SW_EXPECT_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
+    for ( const utf8* pTable : { "lb_score_expiry", "lb_season_result_expiry" } ) // 색인보다 먼저 쓴 레코드로 만든다
+    {
+        vector<ServiceRecord> listIndex;
+        SW_REQUIRE_TRUE( world._database.listRecords( hashed_string( pTable ), "", "", 100, false, listIndex ) == ServiceStoreResult::Ok );
+        ServiceTransaction dropIndex;
+        for ( const ServiceRecord& entry : listIndex )
+        {
+            dropIndex.erase( hashed_string( pTable ), entry._key );
+        }
+        SW_REQUIRE_TRUE( world._database.commit( dropIndex ) == ServiceStoreResult::Ok );
+    }
+    vector<LeaderboardDef> listBoard;
+    for ( const utf8* pBoardID : { "daily", "best", "season" } )
+    {
+        const LeaderboardDef* pBoard = rig._service.findBoard( pBoardID );
+        SW_REQUIRE_TRUE( pBoard != nullptr );
+        listBoard.push_back( *pBoard );
+    }
+
+    ServiceTTLRule scoreRule   = LeaderboardService::makeScoreTTLRule( 1000 );
+    scoreRule._pBackfillSource = LeaderboardService::makeScoreBackfillSource( listBoard );
+    scoreRule._backfillVersion = 1;
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, scoreRule, kNowMs + 2 * kDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 2, report._backfilledCount ); // 일간 · 시즌 점수 - 초기화 없는 보드의 점수는 줄이 없다
+    SW_EXPECT_EQUAL( 2, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, world._database.countRecords( hashed_string( "lb_score" ) ) );
+
+    ServiceTTLRule resultRule   = LeaderboardService::makeSeasonResultTTLRule( 1000 );
+    resultRule._pBackfillSource = LeaderboardService::makeSeasonResultBackfillSource( listBoard );
+    resultRule._backfillVersion = 1;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, resultRule, kSeasonEndMs + kSettlementWindowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount );
+    SW_EXPECT_EQUAL( 0, world._database.countRecords( hashed_string( "lb_season_result" ) ) );
+}
+
 /** @brief [LeaderboardServiceTest] 규칙에 맞지 않는 보드 · 업적은 등록하지 않는다 — 통계에 연결된 Sum 보드는 누적값을 또 더하므로 거절한다 */
 SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
 {
@@ -259,6 +348,26 @@ SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
     SW_EXPECT_TRUE( service.registerAchievement( achievement ) );
     achievement._statName = "Bad Stat";
     SW_EXPECT_FALSE( service.registerAchievement( achievement ) );
+}
+
+/** @brief [LeaderboardServiceTest] 같은 멱등 키로 다시 낸 Sum · Latest 제출은 다시 더하지 · 덮지 않고 그때의 값을 돌려준다(감사 O-5 — 커밋 결과를 모른 채 재시도해도 한 번만 든다) */
+SW_TEST_CASE( LeaderboardServiceTest, RetriedSumWithSameKeyCountsOnce )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig.addBoard( "sum", LeaderboardOrder::Descending, LeaderboardUpdate::Sum );
+    rig.addBoard( "latest", LeaderboardOrder::Descending, LeaderboardUpdate::Latest );
+    const NetIdempotencyKey key = NetIdempotencyKey::makeRandom();
+
+    SW_EXPECT_EQUAL( int64( 10 ), rig.submit( "sum", 1, 10, kNowMs, "name", key )._score );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.submit( "sum", 1, 10, kNowMs, "name", key )._score ); // 재시도 — 20 이 아니다
+    SW_EXPECT_EQUAL( int64( 15 ), rig.submit( "sum", 1, 5 )._score );                       // 다른 요청은 더한다
+
+    const NetIdempotencyKey latestKey = NetIdempotencyKey::makeRandom();
+    SW_EXPECT_EQUAL( int64( 7 ), rig.submit( "latest", 1, 7, kNowMs, "name", latestKey )._score );
+    SW_EXPECT_EQUAL( int64( 3 ), rig.submit( "latest", 1, 3 )._score );
+    SW_EXPECT_EQUAL( int64( 7 ), rig.submit( "latest", 1, 7, kNowMs, "name", latestKey )._score ); // 늦게 온 재시도가 새 값을 덮지 않는다
+    SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 }
 
 /** @brief [LeaderboardServiceTest] 갱신 방식: Best 는 정렬 방향으로 더 좋을 때만, Latest 는 덮어쓰기, Sum 은 더하되 상한에서 멈춘다 */
@@ -307,8 +416,8 @@ SW_TEST_CASE( LeaderboardServiceTest, InvalidSubmitsAreRefused )
     SW_EXPECT_TRUE( rig.submit( "season", 1, 1, kSeasonEndMs )._result == LeaderboardResult::NotRanked ); // 끝 시각은 시즌 밖이다
     SW_EXPECT_EQUAL( commitsBefore, world._database.getCommitCount() );
 
-    rig._service.submitScore( "nope", 1, "", 1, UnixMilliseconds{ kNowMs }, 0 );
-    rig.pump();
+    rig._service.submitScore( "nope", 1, "", 1, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, 0 );
+    rig.poll();
     vector<LeaderboardCompletion> listCompletion;
     rig._service.takeCompletions( listCompletion );
     SW_EXPECT_TRUE( listCompletion.empty() );
@@ -428,12 +537,12 @@ SW_TEST_CASE( LeaderboardServiceTest, RebuildsRanksAfterCacheLoss )
 
     LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "fastest", LeaderboardOrder::Ascending );
-    restarted._service.submitScore( "fastest", 3, "late", 20, UnixMilliseconds{ kNowMs }, 0 ); // 완료는 다시 채우는 동안 온다
+    restarted._service.submitScore( "fastest", 3, "late", 20, NetIdempotencyKey::makeRandom(), UnixMilliseconds{ kNowMs }, 0 ); // 완료는 다시 채우는 동안 온다
     restarted._service.readTop( "fastest", 0, 10, UnixMilliseconds{ kNowMs }, 1 );
-    restarted._router.pump();                                                     // 준비 표시가 없어 다시 채우기를 맡긴다
+    restarted._router.poll();                                                     // 준비 표시가 없어 다시 채우기를 맡긴다
     restarted._service.readTop( "fastest", 0, 1, UnixMilliseconds{ kNowMs }, 2 ); // 그동안 온 읽기는 기다린다
     SW_EXPECT_EQUAL( 2, restarted._service.getPendingCount() );                   // 쓰기 하나 + 다시 채우기 하나
-    restarted.pump();
+    restarted.poll();
 
     vector<LeaderboardCompletion> listCompletion;
     restarted._service.takeCompletions( listCompletion );
@@ -550,7 +659,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded );
     rig._service.retainStats( 1 );
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded ); // 완료 전
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
     SW_EXPECT_EQUAL( int64( 1500 ), value );
     SW_EXPECT_TRUE( rig._service.findStat( 1, "other", value ) == AccountStatLookup::Missing );
@@ -567,10 +676,10 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
 
     world._database.armFault( ServiceStoreFault::RejectRead );
     rig._service.retainStats( 1 );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded );
     rig._service.retainStats( 1 ); // 실패한 읽기를 다시 한다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
     rig._service.releaseStats( 1 );
     rig._service.releaseStats( 1 );
@@ -665,7 +774,7 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
     (void)rig.submit( "best", 2, 30, kNowMs, "two" );
     (void)rig.submit( "best", 3, 20, kNowMs, "three" );
 
-    const LeaderboardCompletion friends = rig.scoresOf( "best", vector<AccountID>{ 1, 3, 3, 99 } );
+    const LeaderboardCompletion friends = rig.queryScores( "best", vector<AccountID>{ 1, 3, 3, 99 } );
     SW_REQUIRE_EQUAL( size_t( 2 ), friends._listEntry.size() );
     SW_EXPECT_EQUAL( uint64( 3 ), friends._listEntry[0]._accountID );
     SW_EXPECT_EQUAL( 1, friends._listEntry[0]._rank ); // 전체 2 등이어도 목록 안 1 등
@@ -674,12 +783,12 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksWithinTheList )
 
     LeaderboardFixture restarted{ world._clock, world._database };
     restarted.addBoard( "best" );
-    SW_EXPECT_EQUAL( size_t( 2 ), restarted.scoresOf( "best", vector<AccountID>{ 1, 3 } )._listEntry.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), restarted.queryScores( "best", vector<AccountID>{ 1, 3 } )._listEntry.size() );
 
-    SW_EXPECT_TRUE( rig.scoresOf( "nope", vector<AccountID>{ 1 } )._result == LeaderboardResult::UnknownBoard );
-    SW_EXPECT_TRUE( rig.scoresOf( "best", vector<AccountID>{} )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.queryScores( "nope", vector<AccountID>{ 1 } )._result == LeaderboardResult::UnknownBoard );
+    SW_EXPECT_TRUE( rig.queryScores( "best", vector<AccountID>{} )._result.hasError( OnlineError::kInvalidRequest ) );
     const vector<AccountID> listTooMany( static_cast<size_t>( LeaderboardLimit::kMaxScoresOfCount ) + 1, 1 );
-    SW_EXPECT_TRUE( rig.scoresOf( "best", listTooMany )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.queryScores( "best", listTooMany )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
 /** @brief [LeaderboardServiceTest] 정산: 순위와 점수를 남기고 구간대로 보상하며, 구간 밖은 결과만 남는다. 시즌 결과 조회의 오류 길도 본다 */
@@ -722,7 +831,7 @@ SW_TEST_CASE( LeaderboardServiceTest, SettlementResumesWithoutDoublePaying )
 {
     LeaderboardWorld    world;
     LeaderboardFixture& rig = world._rig;
-    rig.addSeasonBoard( "season", 30 ); // 커밋 하나에 12 명이라 30 명이면 커밋 셋이다
+    rig.addSeasonBoard( "season", 30 ); // 커밋은 쓰기 상한(64)이 차는 만큼 사람을 묶는다 — 30 명이면 여러 커밋이다
     for ( uint64 accountID = 1; accountID <= 30; ++accountID )
     {
         (void)rig.submit( "season", accountID, static_cast<int64>( accountID ), kInSeasonMs );
@@ -731,7 +840,8 @@ SW_TEST_CASE( LeaderboardServiceTest, SettlementResumesWithoutDoublePaying )
     const SettlementSink failed = rig.settle( "season", 1 );
     SW_EXPECT_EQUAL( 1, failed._doneCount );
     SW_EXPECT_EQUAL( 0, failed._succeededCount );
-    SW_EXPECT_EQUAL( 12, world.countMail() );
+    const int32 firstCommitMail = world.countMail(); // 첫 커밋 몫만 남았다(몇 명인지는 사람당 쓰기 수가 정한다)
+    SW_EXPECT_TRUE( 0 < firstCommitMail && firstCommitMail < 30 );
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 
     SW_EXPECT_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
@@ -779,23 +889,23 @@ SW_TEST_CASE( LeaderboardServiceTest, SchedulerSettlesEndedSeasonOnce )
     (void)rig.submit( "season", 1, 10, kInSeasonMs );
 
     scheduler.update( UnixMilliseconds{ kInSeasonMs } ); // 시즌 안 — 돌지 않는다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.seasonResult( "season", 1, 1 )._result == LeaderboardResult::NotRanked );
 
     scheduler.update( UnixMilliseconds{ kSeasonEndMs + 1 } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.seasonResult( "season", 1, 1 )._result == LeaderboardResult::Ok );
     SW_EXPECT_EQUAL( 1, world.countMail() );
 
     const uint64 hashBefore = world._database.computeContentHash();
     scheduler.update( UnixMilliseconds{ kSeasonEndMs + 2 } );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( hashBefore, world._database.computeContentHash() );
 
     ScheduledRun brokenRun;
     brokenRun._jobID = "lb.settle.nope.00000001"; // 없는 보드는 정산하지 않고 회차를 실패로 돌려준다
     rig._service.onScheduledRun( brokenRun );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 
     rig._service.setScheduler( nullptr );
@@ -810,4 +920,59 @@ SW_TEST_CASE( LeaderboardServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = LeaderboardResult::Ok;
     rig.expectFailureReachesService( LeaderboardMethod::SubmitScore::kID, OnlineError::kUnavailable, finished );
     rig.expectFailureReachesService( LeaderboardMethod::SubmitScore::kID, OnlineError::kBusy, finished );
+}
+
+namespace
+{
+    /** @brief @p table 의 레코드 중 키에 계정 @p accountID(16진)가 든 것의 수입니다. */
+    int32 countAccountKeys( MemoryServiceDatabase& database, const utf8* pTable, AccountID accountID )
+    {
+        vector<ServiceRecord> listRecord;
+        SW_EXPECT_TRUE( database.listRecords( hashed_string( pTable ), "", "", 1000, false, listRecord ) == ServiceStoreResult::Ok );
+        const string accountHex = ServiceKeyUtil::makeHex64( accountID );
+        int32        count      = 0;
+        for ( const ServiceRecord& record : listRecord )
+        {
+            // 계정은 키의 첫 칸(통계 · 업적)이거나 끝 칸(점수 · 결과 · 색인)이다 — 가운데 칸의 시즌 id 1 이 계정 1 과 같은 16 진이라 부분 찾기는 셌다
+            const string_view key        = record._key;
+            const size_t      firstSlash = key.find( '/' );
+            const size_t      lastSlash  = key.rfind( '/' );
+            const bool        bFirst     = firstSlash != string_view::npos && key.substr( 0, firstSlash ) == accountHex;
+            const bool        bLast      = lastSlash != string_view::npos && key.substr( lastSlash + 1 ) == accountHex;
+            count += bFirst || bLast ? 1 : 0;
+        }
+        return count;
+    }
+} // namespace
+
+/**
+ * @brief [LeaderboardServiceTest] 계정 삭제 → 리더보드 키트에 그 계정의 레코드 0: 통계 · 점수(일간 · 초기화 없음 · 시즌)와 만료 색인 · 시즌 결과가 지워지고 다른 계정은 남는다(감사 P0-7)
+ * @details 변이: 시즌 결과나 만료 색인을 빼면 그 표에 계정 키가 남고, 기간 걷기를 빼면 일간 점수가 남아 진다.
+ */
+SW_TEST_CASE( LeaderboardServiceTest, AccountDeletionErasesScoresAndStats )
+{
+    LeaderboardWorld    world;
+    LeaderboardFixture& rig = world._rig;
+    rig._service.setPastScoreRetentionMs( 3 * kDayMs );
+    rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );
+    rig.addBoard( "best" );
+    rig.addSeasonBoard( "season", 2 );
+    for ( const AccountID accountID : { AccountID{ 1 }, AccountID{ 2 } } )
+    {
+        SW_REQUIRE_TRUE( rig.submit( "daily", accountID, 10 )._result == LeaderboardResult::Ok );
+        SW_REQUIRE_TRUE( rig.submit( "daily", accountID, 10, kNowMs - kDayMs )._result == LeaderboardResult::Ok ); // 어제 기간
+        SW_REQUIRE_TRUE( rig.submit( "best", accountID, 10 )._result == LeaderboardResult::Ok );
+        SW_REQUIRE_TRUE( rig.submit( "season", accountID, 10, kInSeasonMs )._result == LeaderboardResult::Ok );
+        SW_REQUIRE_TRUE( rig.stat( accountID, "kills", 3, LeaderboardUpdate::Sum )._result == LeaderboardResult::Ok );
+    }
+    SW_REQUIRE_EQUAL( 1, rig.settle( "season", 1 )._succeededCount );
+
+    SW_REQUIRE_TRUE( rig._service.eraseAccount( world._database, 1, kNowMs ) == ServiceStoreResult::Ok );
+    for ( const utf8* pTable : { "lb_score", "lb_score_expiry", "lb_season_result", "lb_season_result_expiry", "lb_stat", "lb_achievement" } )
+    {
+        SW_EXPECT_EQUAL( 0, countAccountKeys( world._database, pTable, 1 ) );
+    }
+    SW_EXPECT_EQUAL( 4, countAccountKeys( world._database, "lb_score", 2 ) ); // 다른 계정은 그대로다(일간 둘 · 초기화 없음 · 시즌)
+    SW_EXPECT_EQUAL( 1, countAccountKeys( world._database, "lb_season_result", 2 ) );
+    SW_EXPECT_TRUE( rig._service.eraseAccount( world._database, 1, kNowMs ) == ServiceStoreResult::Ok ); // 멱등
 }

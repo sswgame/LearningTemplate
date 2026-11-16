@@ -359,12 +359,12 @@ namespace sw
             return;
 
         // 진단 SkipDispatch: 컴퓨트를 돌리지 않고 레스트를 결과 배치로 묶어 결과 버퍼에 올린다 — 정점 셰이더의 결과 읽기(원소 번호 · 풀기)를 컴퓨트 없이 본다.
-        // 메시마다 풀 구간(baseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
+        // 메시마다 풀 구간(getBaseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
         if ( morphDiag == MeshMorphDiagMode::SkipDispatch )
         {
             for ( const Mesh* pMesh : _state._deform._listScratchMorphMesh )
             {
-                const uint32 base = ( pMesh != nullptr ) ? _state._deform._meshMorphPool.baseOf( pMesh ) : GPUMeshMorphPool::kInvalidBase;
+                const uint32 base = ( pMesh != nullptr ) ? _state._deform._meshMorphPool.getBaseOf( pMesh ) : GPUMeshMorphPool::kInvalidBase;
                 if ( base == GPUMeshMorphPool::kInvalidBase )
                     continue;
                 _state._deform._listScratchRestResult.clear();

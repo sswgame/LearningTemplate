@@ -47,7 +47,7 @@ namespace sw
                 for ( int32 seedIndex = 0; seedIndex < static_cast<int32>( listSeed.size() ); ++seedIndex )
                 {
                     const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seedIndex )] );
-                    if ( pCrop == nullptr || pCrop->growsIn( season ) == false )
+                    if ( pCrop == nullptr || pCrop->canGrowIn( season ) == false )
                         continue;
                     if ( seasonalSeed < 0 || bag.getItemCount( pCrop->_seedItem ) > 0 )
                         seasonalSeed = seedIndex;

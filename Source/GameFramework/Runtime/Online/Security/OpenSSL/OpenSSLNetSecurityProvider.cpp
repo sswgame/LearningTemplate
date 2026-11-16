@@ -382,8 +382,12 @@ namespace sw
                 SSL_set_connect_state( _pSSL );
                 if ( serverName.empty() == false )
                 {
-                    (void)SSL_set_tlsext_host_name( _pSSL, serverName.c_str() );
-                    (void)SSL_set1_host( _pSSL, serverName.c_str() ); // 인증서 이름(SAN)이 같아야 검증이 통과한다
+                    (void)SSL_set_tlsext_host_name( _pSSL, serverName.c_str() ); // SNI 는 알림일 뿐이다 — 실패해도 검증은 아래가 한다
+                    if ( SSL_set1_host( _pSSL, serverName.c_str() ) != 1 )       // 인증서 이름(SAN)이 같아야 검증이 통과한다 — 걸지 못하면 이름 검증 없이 잇지 않는다
+                    {
+                        (void)fail( "SSL_set1_host failed" );
+                        return;
+                    }
                 }
                 advanceHandshake(); // ClientHello
             }

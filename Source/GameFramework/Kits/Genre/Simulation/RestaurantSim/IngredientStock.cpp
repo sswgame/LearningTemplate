@@ -63,7 +63,7 @@ namespace sw
         if ( bCannotConsume )
             return false;
         reconcile( itemID );
-        if ( _pInventory->removeItem( itemID, count ) == false )
+        if ( _pInventory->consumeItem( itemID, count ) == false )
             return false;
         int32 remaining = count;
         for ( IngredientBatch& batch : _listBatch )
@@ -115,7 +115,7 @@ namespace sw
                 continue;
             const int32 heldCount         = _pInventory != nullptr ? _pInventory->getItemCount( batch._itemID ) : 0;
             const int32 spoiledCount      = batch._count < heldCount ? batch._count : heldCount;
-            const bool  bCanRemoveSpoiled = spoiledCount > 0 && _pInventory != nullptr && _pInventory->removeItem( batch._itemID, spoiledCount );
+            const bool  bCanRemoveSpoiled = spoiledCount > 0 && _pInventory != nullptr && _pInventory->consumeItem( batch._itemID, spoiledCount );
             if ( bCanRemoveSpoiled )
                 outListSpoilage.push_back( IngredientSpoilage{ batch._itemID, batch._unitCost * spoiledCount, spoiledCount } );
             batch._count = 0;

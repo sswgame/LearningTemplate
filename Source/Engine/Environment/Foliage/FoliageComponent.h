@@ -110,7 +110,7 @@ namespace sw
      *          바람(`WindComponent`), 카메라 위치, 휘게 하는 구(`FoliageInfluencerComponent`), 시간은 틱마다 레이어 머티리얼 인스턴스에 싣는다.
      *          인스턴스마다 위상은 셰이더가 위치 해시로 정하고, 밝기 흔들기는 인스턴스 색 필드(`GPUSpriteInstanceData` 의 tint)로 받는다.
      *          지형을 고치면(`writeHeights` · `writeLayerWeights` · `reloadTerrain`) 높이장 · 스플랫 세대가 오른다. 씬 서비스(`FoliageTerrainFollower`)가 프레임마다
-     *          그 변화를 보고, 세대가 `kTerrainSettleFrames` 프레임 그대로이면(브러시 드래그가 끝나면) 배치를 다시 계산한다 — 칠하는 프레임마다 숲 전체를 다시 뿌리지 않는다.
+     *          그 변화를 보고, 세대가 `kTerrainStabilityFrames` 프레임 그대로이면(브러시 드래그가 끝나면) 배치를 다시 계산한다 — 칠하는 프레임마다 숲 전체를 다시 뿌리지 않는다.
      *          프레임으로 세는 것은 편집 모드의 씬 프레임에 흐르는 시간이 없어서다(시간으로 세면 편집 모드에서 영영 가라앉지 않았다).
      *          다시 계산은 **바뀐 곳만** 한다. 레이어마다 후보의 표면 판정(`PlacementCandidate`)을 들고 있다가 지형이 알려 준 편집 사각형(`TerrainComponent::findEditedArea`)
      *          안의 후보만 다시 판정하고, 최소 거리부터는 전부 다시 풀어(앞 번호가 이기는 순서 규칙이라 연쇄로 바뀔 수 있다) 처음부터 계산한 것과 비트까지 같은 배치를 얻는다.
@@ -124,7 +124,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 지형 세대가 이만큼(프레임) 그대로여야 배치를 다시 계산합니다(60 Hz 에서 0.3 초). */
-        static constexpr uint32 kTerrainSettleFrames = 18;
+        static constexpr uint32 kTerrainStabilityFrames = 18;
 
         FoliageComponent();
         virtual ~FoliageComponent() override;
@@ -213,7 +213,7 @@ namespace sw
         /** @brief 셀 배치 모두를 더티로 표시합니다. 활성 상태가 바뀌었을 때 호출합니다. */
         void markCellsDirty();
         /**
-         * @brief 아래 지형의 세대 변화를 따라가다 `kTerrainSettleFrames` 프레임 그대로이면 true 입니다 - 부르는 쪽이 이어서 `refreshFromTerrainEdits` 를 부른다.
+         * @brief 아래 지형의 세대 변화를 따라가다 `kTerrainStabilityFrames` 프레임 그대로이면 true 입니다 - 부르는 쪽이 이어서 `refreshFromTerrainEdits` 를 부른다.
          * @details 씬 서비스 `FoliageTerrainFollower` 가 프레임마다 부른다 - 컴포넌트 틱이 아니라서 편집 모드(플레이 전)에서도 지형 붓질을 따라간다.
          *          예전에는 틱이 불러 편집 모드에서는 붓질 뒤 폴리지가 낡은 채 남았다.
          */
@@ -265,7 +265,7 @@ namespace sw
         PlacementRegion                    _builtRegion;        ///< 배치를 계산한 영역 — 바뀌면 후보 판정을 버린다
         PrimitiveRegistry*                 _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
         float32                            _time;
-        uint32                             _terrainSettleFrames; ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
+        uint32                             _terrainStabilityFrames; ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
         uint32                             _instanceCount;
         uint32                             _lastRebuiltBatchCount;  ///< `getLastRebuiltBatchCount`
         uint32                             _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)

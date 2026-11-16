@@ -67,7 +67,7 @@ namespace sw::editor
     void RenderTargetViewModel::gather( RenderTargetViewState& outState )
     {
         refreshTargetsIfStale();
-        settleSelection();
+        commitSelection();
         // 고른 타깃이 바뀌면 읽어 둔 픽셀 값은 다른 이미지의 것이다.
         if ( _snapshot._texture != 0 && hasSnapshot() == false )
             _bProbedPixel = SW_FALSE;
@@ -198,7 +198,7 @@ namespace sw::editor
         releasePreviewTexture();
     }
 
-    void RenderTargetViewModel::settleSelection()
+    void RenderTargetViewModel::commitSelection()
     {
         // 고른 것이 사라졌으면(파이프라인이 바뀌었다) 선택을 놓는다. 없는 이름을 보관하고 있으면 미리보기가 영영 빈 채로 남는다.
         if ( _selectedName.empty() == false && findByName( _listTarget, _selectedName ) == nullptr )

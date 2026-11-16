@@ -51,9 +51,9 @@ namespace sw
         return handle;
     }
 
-    string ChatScreen::makeStatusText( const ChatOutcome& outcome, int64 retryAfterMs )
+    string ChatScreen::makeStatusText( const ChatServiceResult& result, int64 retryAfterMs )
     {
-        switch ( outcome._errorCode )
+        switch ( result._errorCode )
         {
             case OnlineError::kOk:
             {
@@ -81,7 +81,7 @@ namespace sw
                 return "Chat is not available right now";
             }
         }
-        switch ( outcome._result )
+        switch ( result._result )
         {
             case ChatResult::Ok:
             {

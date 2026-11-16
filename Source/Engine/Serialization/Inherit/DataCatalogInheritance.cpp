@@ -300,7 +300,7 @@ namespace sw
             }
 
             /** @brief 규칙 표의 줄 하나(@p node)의 @p pChildName 자식을 @p out 의 칸으로 읽습니다. */
-            [[nodiscard]] static bool readSchemaFields( const XMLNode& node, const utf8* pChildName, DataInheritanceSchema& out, bool bKeyRequired )
+            [[nodiscard]] static bool readSchemaProperties( const XMLNode& node, const utf8* pChildName, DataInheritanceSchema& out, bool bKeyRequired )
             {
                 bool bValid = true;
                 for ( XMLNode element = node.findChild( pChildName ); element.isValid(); element = element.findNextSibling( pChildName ) )
@@ -315,7 +315,7 @@ namespace sw
                     }
                     DataInheritanceSchema field{ name };
                     field._keyAttribute = string{ key };
-                    bValid              = readSchemaFields( element, kFieldElement, field, false ) && bValid;
+                    bValid              = readSchemaProperties( element, kFieldElement, field, false ) && bValid;
                     out._listField.push_back( std::move( field ) );
                 }
                 return bValid;
@@ -336,11 +336,11 @@ namespace sw
                     if ( row.getAttributeText( "root" ) != rootName )
                         continue;
                     DataInheritanceSchema schema{ rootName };
-                    if ( readSchemaFields( row, pChildName, schema, bKeyRequired ) == false )
+                    if ( readSchemaProperties( row, pChildName, schema, bKeyRequired ) == false )
                         return false;
                     // 카탈로그 줄의 `<Field>` 는 항목 종류가 아닌 루트 칸이다 — 래퍼 하나에 든 열쇠 목록(입력 맵의 `<layers><layer name>`)처럼 항목 id 가 없는 것.
                     const bool bCatalogRow = StringUtil::equals( pRowElement, kCatalogElement );
-                    if ( bCatalogRow && readSchemaFields( row, kFieldElement, schema, false ) == false )
+                    if ( bCatalogRow && readSchemaProperties( row, kFieldElement, schema, false ) == false )
                         return false;
                     outSchema  = std::move( schema );
                     outbListed = true;

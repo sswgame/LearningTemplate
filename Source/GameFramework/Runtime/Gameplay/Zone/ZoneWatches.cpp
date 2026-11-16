@@ -35,15 +35,15 @@ namespace sw
         {
             /** @brief 대상 @p target 이 든 지역마다 @p visit( 출처, 위치 값 ) 을 부릅니다 — 볼륨과 대상의 표면 지역. */
             template <typename TVisit>
-            static void forEachZoneOf( const GameObjectManager& manager, const GameObject& target, TVisit&& visit )
+            static void forEachZone( const GameObjectManager& manager, const GameObject& target, TVisit&& visit )
             {
                 const GameObjectHandle handle = target.getHandle();
-                manager.forEachComponentOfType<ZoneVolumeComponent>( [&]( const ZoneVolumeComponent* pVolume )
+                for ( const ZoneVolumeComponent* pVolume : manager.getComponentRegistry().getAll<ZoneVolumeComponent>() )
                 {
                     const ZoneTracker::OccupantRecord* pOccupancy = pVolume->getTracker().findOccupancy( handle );
                     if ( pOccupancy != nullptr && pOccupancy->_bEntered == SW_TRUE )
                         visit( pVolume->getSourceName(), pOccupancy->_sample );
-                } );
+                }
                 const ZoneContactComponent* pContact = target.getComponent<ZoneContactComponent>();
                 if ( pContact == nullptr )
                     return;
@@ -89,7 +89,7 @@ namespace sw
                     return false;
                 }
                 float32 best = 0.0f;
-                forEachZoneOf( *query._pManager, *pTarget, [&]( const hashed_string& /*source*/, const ZoneSample& sample )
+                forEachZone( *query._pManager, *pTarget, [&]( const hashed_string& /*source*/, const ZoneSample& sample )
                 {
                     float32 value = 0.0f;
                     (void)readSampleValue( sample, query._key, value ); // 이름은 위에서 봤다
@@ -109,7 +109,7 @@ namespace sw
                     return false;
                 }
                 vector<string> listName;
-                forEachZoneOf( *query._pManager, *pTarget, [&listName]( const hashed_string& source, const ZoneSample& /*sample*/ )
+                forEachZone( *query._pManager, *pTarget, [&listName]( const hashed_string& source, const ZoneSample& /*sample*/ )
                 { listName.push_back( source.c_str() ); } );
                 std::sort( listName.begin(), listName.end() );
                 string joined;
@@ -271,8 +271,8 @@ namespace sw
             {
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
                 // 대상은 지역을 받는 개체다 — 캐릭터(컨트롤러)가 먼저, 없으면 표면 입구를 가진 물체.
-                const CharacterControllerComponent* pController = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( *pManager ) : nullptr;
-                const ZoneContactComponent*         pContact    = pManager != nullptr && pController == nullptr ? GameplayDebugTarget::findTargetComponent<ZoneContactComponent>( *pManager ) : nullptr;
+                const CharacterControllerComponent* pController = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<CharacterControllerComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
+                const ZoneContactComponent*         pContact    = pManager != nullptr && pController == nullptr ? GameplayDebugTarget::findTargetComponent<ZoneContactComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 const GameObject* const             pTarget     = pController != nullptr ? pController->getOwner() : ( pContact != nullptr ? pContact->getOwner() : nullptr );
                 if ( pTarget == nullptr )
                 {
@@ -280,7 +280,7 @@ namespace sw
                     return;
                 }
                 uint32 zoneCount = 0;
-                forEachZoneOf( *pManager, *pTarget, [&]( const hashed_string& source, const ZoneSample& sample )
+                forEachZone( *pManager, *pTarget, [&]( const hashed_string& source, const ZoneSample& sample )
                 {
                     writer.addLineFormat( source.c_str(), "depth %# dist %# immersion %# time %# impact %#", sample._zoneDepth01, sample._distanceToCenter, sample._immersion,
                                           sample._timeInside, sample._impactSpeed );

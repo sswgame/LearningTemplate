@@ -30,7 +30,7 @@
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-// FrameSystemLanePlan
+// FrameSystemParallelPlan
 namespace sw
 {
     namespace
@@ -49,7 +49,7 @@ namespace sw
         return intersects( earlier._reads, later._writes ) || intersects( earlier._readsPrevious, later._writes );
     }
 
-    void buildFrameSystemLanePlan( span<const SceneFrameAccess> listAccess, FrameSystemLanePlan& outPlan )
+    void buildFrameSystemParallelPlan( span<const SceneFrameAccess> listAccess, FrameSystemParallelPlan& outPlan )
     {
         // 파도 벡터는 비우되 안의 용량은 프레임 사이에 둔다(`_listSystem` 만 비운다).
         for ( FrameSystemWave& wave : outPlan._listWave )
@@ -154,21 +154,21 @@ namespace sw
             }
         };
 
-        /** @brief 같은 파도의 워커 레인 묶음입니다 — 구간마다 시스템의 `runLane` 을 잡 컨텍스트(매니저 읽기 전용 + 틱 뒤 큐)로 부른다. */
-        struct FrameSystemLaneJob
+        /** @brief 같은 파도의 워커 스레드 묶음입니다 — 구간마다 시스템의 `runOnAnyThread` 를 잡 컨텍스트(매니저 읽기 전용 + 틱 뒤 큐)로 부른다. */
+        struct FrameSystemParallelJob
         {
-            const GameObjectManager*    _pManager;
-            StructuralChangeBuffer*     _pCommandBuffer;
-            const FrameSystemLaneEntry* _arrLane;
-            float32                     _deltaTime;
+            const GameObjectManager*        _pManager;
+            StructuralChangeBuffer*         _pCommandBuffer;
+            const FrameSystemParallelEntry* _arrEntry;
+            float32                         _deltaTime;
 
             void runRange( uint32 start, uint32 end ) const
             {
                 SceneJobContext context{ *_pManager, *_pCommandBuffer, _deltaTime };
                 for ( uint32 jobIndex = start; jobIndex < end; ++jobIndex )
                 {
-                    const ScopedFrameProfile systemScope{ _arrLane[jobIndex]._scopeID };
-                    _arrLane[jobIndex]._pSystem->runLane( context );
+                    const ScopedFrameProfile systemScope{ _arrEntry[jobIndex]._scopeID };
+                    _arrEntry[jobIndex]._pSystem->runOnAnyThread( context );
                 }
             }
         };
@@ -179,7 +179,7 @@ namespace sw
 {
     void SceneJobContext::deferPostTick( Callback func )
     {
-        // 늘 큐로 간다 — 레인은 워커에서 돌 수 있어, 얼지 않았다고 바로 실행하면(`executeOrDeferPostTick`) 워커가 씬을 바꾼다.
+        // 늘 큐로 간다 — 병렬 시스템은 워커에서 돌 수 있어, 얼지 않았다고 바로 실행하면(`executeOrDeferPostTick`) 워커가 씬을 바꾼다.
         _pCommandBuffer->deferPostTick( std::move( func ) );
     }
 
@@ -190,10 +190,10 @@ namespace sw
     {
     }
 
-    void ISceneLaneFrameSystem::runMain( GameObjectManager& manager, float32 deltaTime )
+    void ISceneParallelFrameSystem::runMain( GameObjectManager& manager, float32 deltaTime )
     {
         SceneJobContext context{ manager, manager._structuralChangeBuffer, deltaTime };
-        runLane( context );
+        runOnAnyThread( context );
     }
 
     struct GameObjectManager::SceneServiceEntry
@@ -243,6 +243,12 @@ namespace sw
     {
     }
 
+    GameObjectManager::GameObjectManager( TransientTag )
+        : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
+    {
+        _bTransient = SW_TRUE;
+    }
+
     GameObjectManager::GameObjectManager( const SceneEngineServices& services )
         : _pOwnedObjectIDAllocator{ services._pObjectIDAllocator == nullptr ? make_unique<ObjectIDAllocator>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
         , _pObjectIDAllocator{ services._pObjectIDAllocator != nullptr ? services._pObjectIDAllocator : _pOwnedObjectIDAllocator.get() }
@@ -250,18 +256,20 @@ namespace sw
         , _pState{ make_unique<State>( *this, _structuralChangeBuffer, *_pObjectIDAllocator, services ) }
         , _pFrameCamera{ nullptr }
         , _listFrameSystem{}
-        , _frameSystemLanePlan{}
+        , _frameSystemParallelPlan{}
         , _listFrameAccess{}
-        , _listLaneJob{}
+        , _listParallelJob{}
         , _listRetiredFrameSystem{}
         , _services{ services }
         , _bRunningFrameSystems{ SW_FALSE }
         , _bPhysicsStepEnabled{ SW_TRUE }
-        , _updateSerial{ 0 }
+        , _bTransient{ SW_FALSE }
+        , _bBuiltOnWorker{ static_cast<uint8>( TaskManager::isOnPoolWorkerThread() ? SW_TRUE : SW_FALSE ) }
+        , _updateCount{ 0 }
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
         , _listDeferredPostLoad{}
-        , _pumpBatch{}
+        , _pollBatch{}
     {
         // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`). 씬 범위가 소유하고 의존 순서로 세운다.
         const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
@@ -347,11 +355,17 @@ namespace sw
         return _pState->_store.createGameObject( name );
     }
 
-    vector<GameObject*> GameObjectManager::getAllGameObjects() const
+    vector<GameObject*> GameObjectManager::getAllGameObjects( SceneIterationKey /*key*/ ) const
     {
         vector<GameObject*> listAllGameObject;
         _pState->_store.getAllGameObjects( listAllGameObject );
         return listAllGameObject;
+    }
+
+    void GameObjectManager::notifyModuleUnloading( string_view moduleName )
+    {
+        forEachComponent( SceneIterationKey{}, [moduleName]( Component* pComponent )
+        { pComponent->onModuleUnloading( moduleName ); } );
     }
 
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
@@ -374,6 +388,21 @@ namespace sw
     void GameObjectManager::notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName )
     {
         _pState->_store.notifyNameChanged( pObj, oldName, newName );
+    }
+
+    void GameObjectManager::findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject )
+    {
+        _pState->_store.findGameObjectsByBaseName( hashed_string( baseName.data(), static_cast<uint32>( baseName.size() ) ), outListGameObject );
+    }
+
+    void GameObjectManager::findGameObjectsByBaseName( string_view baseName, vector<const GameObject*>& outListGameObject ) const
+    {
+        _pState->_store.findGameObjectsByBaseName( hashed_string( baseName.data(), static_cast<uint32>( baseName.size() ) ), outListGameObject );
+    }
+
+    string_view GameObjectManager::computeBaseName( string_view name )
+    {
+        return GameObjectStore::computeBaseName( name );
     }
 
     GameObject* GameObjectManager::findGameObjectByName( hashed_string name )
@@ -401,7 +430,7 @@ namespace sw
         return _pState->_store.getOverflowObjectCount();
     }
 
-    void GameObjectManager::getAllGameObjects( vector<GameObject*>& outListGameObject ) const
+    void GameObjectManager::getAllGameObjects( SceneIterationKey /*key*/, vector<GameObject*>& outListGameObject ) const
     {
         _pState->_store.getAllGameObjects( outListGameObject );
     }
@@ -586,9 +615,9 @@ namespace sw
         return _pState->_tickScheduler.getStageTransformApplyCount();
     }
 
-    void GameObjectManager::notifyTransformDirtied()
+    void GameObjectManager::notifyTransformDirty()
     {
-        _pState->_transformHierarchy.notifyDirtied();
+        _pState->_transformHierarchy.notifyDirty();
     }
 
     uint64 GameObjectManager::getTransformGeneration() const
@@ -699,11 +728,11 @@ namespace sw
         if ( pSystem == nullptr || findFrameSystem( key ) != nullptr )
             return false;
         // 붙인 순서가 실행 순서다 — 이미 붙은 시스템이 이번 프레임의 값을 보아야 하는 종류를 새 시스템이 쓰면, 쓰는 쪽이 읽는 쪽 뒤에 서게 되므로 붙이지 않는다.
-        // 워커에서 돌 시스템은 오브젝트 · 컴포넌트를 만들거나 지울 수 없다(생성 · 파괴는 게임 스레드 전용이다) — 구조를 쓰는 시스템이 레인 안전을 선언하면 모순이라 붙이지 않는다.
+        // 워커에서 돌 시스템은 오브젝트 · 컴포넌트를 만들거나 지울 수 없다(생성 · 파괴는 게임 스레드 전용이다) — 구조를 쓰는 시스템이 병렬 안전을 선언하면 모순이라 붙이지 않는다.
         const SceneFrameAccess newAccess = pSystem->getFrameAccess();
-        if ( pSystem->findLaneSystem() != nullptr && newAccess._writes.contains( SceneDataKind::Structure ) )
+        if ( pSystem->findParallelSystem() != nullptr && newAccess._writes.contains( SceneDataKind::Structure ) )
         {
-            SW_LOG_ERROR_ID( "FrameSystem.LaneStructure", "Frame system '%#' is rejected: it declares itself lane-safe (worker thread) but writes Structure", key.c_str() );
+            SW_LOG_ERROR_ID( "FrameSystem.ParallelStructure", "Frame system '%#' is rejected: it declares itself lane-safe (worker thread) but writes Structure", key.c_str() );
             return false;
         }
         const SceneDataKindSet newWrites = pSystem->getFrameAccess()._writes;
@@ -820,7 +849,7 @@ namespace sw
 
     void GameObjectManager::update( float32 deltaTime )
     {
-        ++_updateSerial;
+        ++_updateCount;
         // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`).
         // 단계마다 본문 뒤에 그 단계에 등록한 씬 서비스를 부른다 — 본문이 부르게 두면 부르지 않는 단계에 등록한 서비스가 조용히 돌지 않는다.
         // 본문 앞에는 이 단계에서 마치기로 한 서비스의 프레임 일을 마친다(워커 일 결과를 쓴다) — 본문(트랜스폼 펼치기 등)이 그 결과를 본다.
@@ -873,29 +902,29 @@ namespace sw
         // 시스템이 시스템을 붙이거나 뗄 수 있다 — 붙인 것은 다음 프레임부터(개수를 먼저 센다), 뗀 것은 빈 칸으로 남았다가 끝에 걷힌다.
         _bRunningFrameSystems = SW_TRUE;
         const size_t count    = _listFrameSystem.size();
-        // 파도 계획 — 붙인 순서를 지키되 접근이 겹치지 않는 시스템끼리 한 파도에 묶는다(`FrameSystemLanePlan`). 뗀 칸은 빈 접근이라 아무와도 겹치지 않는다.
-        // 언리얼 Task Graph 의 선행 있는 태스크, 유니티 Job System 의 JobHandle 의존과 같다. 파도는 차례로 돌고, 같은 파도의 레인 시스템(`ISceneLaneFrameSystem`)은 `TaskManager` 가 병렬로 돌린다.
+        // 파도 계획 — 붙인 순서를 지키되 접근이 겹치지 않는 시스템끼리 한 파도에 묶는다(`FrameSystemParallelPlan`). 뗀 칸은 빈 접근이라 아무와도 겹치지 않는다.
+        // 언리얼 Task Graph 의 선행 있는 태스크, 유니티 Job System 의 JobHandle 의존과 같다. 파도는 차례로 돌고, 같은 파도의 병렬 시스템(`ISceneParallelFrameSystem`)은 `TaskManager` 가 병렬로 돌린다.
         _listFrameAccess.clear();
         for ( size_t systemIndex = 0; systemIndex < count; ++systemIndex )
         {
             const ISceneFrameSystem* pSystem = _listFrameSystem[systemIndex]._pSystem.get();
             _listFrameAccess.push_back( pSystem != nullptr ? pSystem->getFrameAccess() : SceneFrameAccess{} );
         }
-        buildFrameSystemLanePlan( span<const SceneFrameAccess>( _listFrameAccess.data(), _listFrameAccess.size() ), _frameSystemLanePlan );
-        for ( const FrameSystemWave& wave : _frameSystemLanePlan._listWave )
+        buildFrameSystemParallelPlan( span<const SceneFrameAccess>( _listFrameAccess.data(), _listFrameAccess.size() ), _frameSystemParallelPlan );
+        for ( const FrameSystemWave& wave : _frameSystemParallelPlan._listWave )
         {
-            _listLaneJob.clear();
+            _listParallelJob.clear();
             for ( const uint32 systemIndex : wave._listSystem )
             {
                 ISceneFrameSystem* pSystem = _listFrameSystem[systemIndex]._pSystem.get();
                 if ( pSystem == nullptr )
                     continue;
                 // 워커로 보내지 않는 것은 이 스레드가 먼저 돈다 — 같은 파도의 다른 시스템과 접근이 겹치지 않으므로 순서는 결과에 영향이 없다.
-                const ProfileScopeID   scopeID     = _listFrameSystem[systemIndex]._scopeID;
-                ISceneLaneFrameSystem* pLaneSystem = pSystem->findLaneSystem();
-                if ( pLaneSystem != nullptr )
+                const ProfileScopeID       scopeID         = _listFrameSystem[systemIndex]._scopeID;
+                ISceneParallelFrameSystem* pParallelSystem = pSystem->findParallelSystem();
+                if ( pParallelSystem != nullptr )
                 {
-                    _listLaneJob.push_back( FrameSystemLaneEntry{ pLaneSystem, scopeID } );
+                    _listParallelJob.push_back( FrameSystemParallelEntry{ pParallelSystem, scopeID } );
                 }
                 else
                 {
@@ -903,26 +932,26 @@ namespace sw
                     pSystem->runMain( *this, deltaTime );
                 }
             }
-            if ( _listLaneJob.empty() )
+            if ( _listParallelJob.empty() )
                 continue;
-            // 레인 하나뿐이면 나눌 일이 없다(`serialThreshold` 2). 본문은 시스템 포인터만 읽는다 — 이 목록은 파도가 끝날 때까지 바뀌지 않는다.
-            // 워커는 트랜스폼 캐시를 읽기만 해야 한다 — 더티 노드를 읽으면 `SceneComponent::ensureWorldCache` 가 계층을 합성해 쓰므로, 트랜스폼을 읽는 레인 시스템이
+            // 병렬 시스템 하나뿐이면 나눌 일이 없다(`serialThreshold` 2). 본문은 시스템 포인터만 읽는다 — 이 목록은 파도가 끝날 때까지 바뀌지 않는다.
+            // 워커는 트랜스폼 캐시를 읽기만 해야 한다 — 더티 노드를 읽으면 `SceneComponent::ensureWorldCache` 가 계층을 합성해 쓰므로, 트랜스폼을 읽는 병렬 시스템이
             // 둘 이상 같이 돌기 전에 게임 스레드가 한 번 펼쳐 둔다(이 파도의 다른 시스템은 선언상 트랜스폼을 쓰지 않는다).
-            if ( _listLaneJob.size() >= 2 && hasDirtySceneTransforms() )
+            if ( _listParallelJob.size() >= 2 && hasDirtySceneTransforms() )
             {
                 for ( const uint32 systemIndex : wave._listSystem )
                 {
-                    const SceneFrameAccess& laneAccess = _listFrameAccess[systemIndex];
-                    const bool              bLane      = _listFrameSystem[systemIndex]._pSystem != nullptr && _listFrameSystem[systemIndex]._pSystem->findLaneSystem() != nullptr;
-                    if ( bLane && ( laneAccess._reads.contains( SceneDataKind::Transform ) || laneAccess._readsPrevious.contains( SceneDataKind::Transform ) ) )
+                    const SceneFrameAccess& parallelAccess = _listFrameAccess[systemIndex];
+                    const bool              bParallel      = _listFrameSystem[systemIndex]._pSystem != nullptr && _listFrameSystem[systemIndex]._pSystem->findParallelSystem() != nullptr;
+                    if ( bParallel && ( parallelAccess._reads.contains( SceneDataKind::Transform ) || parallelAccess._readsPrevious.contains( SceneDataKind::Transform ) ) )
                     {
                         flushSceneTransforms();
                         break;
                     }
                 }
             }
-            FrameSystemLaneJob job{ this, &_structuralChangeBuffer, _listLaneJob.data(), deltaTime };
-            engine::runParallel( static_cast<uint32>( _listLaneJob.size() ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &FrameSystemLaneJob::runRange, &job ) );
+            FrameSystemParallelJob job{ this, &_structuralChangeBuffer, _listParallelJob.data(), deltaTime };
+            engine::runParallel( static_cast<uint32>( _listParallelJob.size() ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &FrameSystemParallelJob::runRange, &job ) );
         }
         _bRunningFrameSystems = SW_FALSE;
         if ( _listRetiredFrameSystem.empty() )
@@ -1083,21 +1112,30 @@ namespace sw
 
     void GameObjectManager::registerComponent( Component& comp )
     {
+        if ( _bTransient == SW_TRUE )
+            return; // 씬 밖 오브젝트는 게임에 들지 않는다 — 훅이 없다
         if ( _deferredRegistrationDepth != 0 )
+        {
             _listDeferredRegister.push_back( comp.getHandle() );
-        else
-            comp.dispatchRegister( *this );
+            return;
+        }
+        // 워커에서 세운 매니저가 워커에서 훅을 부르면 공유 에셋을 만지는 훅이 게임 스레드와 겹친다(씬 로드는 미루고, 씬 밖 상태 읽기는 TransientTag 다).
+        SW_ASSERT( _bBuiltOnWorker == SW_FALSE || TaskManager::isOnPoolWorkerThread() == false );
+        comp.dispatchRegister( *this );
     }
 
     void GameObjectManager::postLoadComponent( Component& comp )
     {
+        if ( _bTransient == SW_TRUE )
+            return;
         if ( _deferredRegistrationDepth != 0 )
         {
             comp.markPostLoadPending();
             _listDeferredPostLoad.push_back( comp.getHandle() );
+            return;
         }
-        else
-            comp.dispatchPostLoad();
+        SW_ASSERT( _bBuiltOnWorker == SW_FALSE || TaskManager::isOnPoolWorkerThread() == false ); // `registerComponent` 와 같은 규칙
+        comp.dispatchPostLoad();
     }
 
     void GameObjectManager::endDeferredRegistration()
@@ -1105,35 +1143,35 @@ namespace sw
         SW_ASSERT( _deferredRegistrationDepth != 0 );
         if ( --_deferredRegistrationDepth != 0 )
             return;
-        (void)pumpQueuedRegistration( 0 );
+        (void)processQueuedRegistration( 0 );
     }
 
-    bool GameObjectManager::pumpDeferredRegistration( uint32 maxCount )
+    bool GameObjectManager::processDeferredRegistration( uint32 maxCount )
     {
         SW_ASSERT( _deferredRegistrationDepth == 1 );
         --_deferredRegistrationDepth; // 훅이 만든 컴포넌트는 미루지 않고 바로 등록한다(한 번에 부를 때와 같다)
-        const bool bDone = pumpQueuedRegistration( maxCount );
+        const bool bDone = processQueuedRegistration( maxCount );
         if ( bDone == false )
             ++_deferredRegistrationDepth;
         return bDone;
     }
 
-    bool GameObjectManager::pumpQueuedRegistration( uint32 maxCount )
+    bool GameObjectManager::processQueuedRegistration( uint32 maxCount )
     {
         // 묶음을 꺼내 들고 부른다 — 훅이 프리팹을 지으면 이 함수가 다시 불리는데, 그 안쪽 미루기는 제 묶음만 끝내야 한다.
-        DeferredRegistrationBatch batch = std::move( _pumpBatch );
-        _pumpBatch                      = DeferredRegistrationBatch{};
+        DeferredRegistrationBatch batch = std::move( _pollBatch );
+        _pollBatch                      = DeferredRegistrationBatch{};
         batch._listRegister.insert( batch._listRegister.end(), _listDeferredRegister.begin(), _listDeferredRegister.end() );
         batch._listPostLoad.insert( batch._listPostLoad.end(), _listDeferredPostLoad.begin(), _listDeferredPostLoad.end() );
         _listDeferredRegister.clear();
         _listDeferredPostLoad.clear();
-        if ( batch.pump( *this, maxCount ) )
+        if ( batch.poll( *this, maxCount ) )
             return true;
-        _pumpBatch = std::move( batch );
+        _pollBatch = std::move( batch );
         return false;
     }
 
-    bool GameObjectManager::DeferredRegistrationBatch::pump( GameObjectManager& manager, uint32 maxCount )
+    bool GameObjectManager::DeferredRegistrationBatch::poll( GameObjectManager& manager, uint32 maxCount )
     {
         // 등록을 모두 끝낸 뒤 로드 뒤 처리를 부른다 — 바로 붙이던 때와 같이 `onPostLoad` 가 같은 배치의 다른 컴포넌트가 등록된 뒤를 본다.
         uint32 calledCount = 0;

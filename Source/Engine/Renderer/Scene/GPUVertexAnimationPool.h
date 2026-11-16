@@ -44,7 +44,7 @@ namespace sw
          */
         void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
         /** @brief 메시의 헤더 원소 번호입니다. 풀에 없으면 `kInvalidBase` 입니다. */
-        uint32 baseOf( const Mesh* pMesh ) const;
+        uint32 getBaseOf( const Mesh* pMesh ) const;
         /** @brief 테이블 버퍼입니다. 정점 셰이더가 SRV 로 읽습니다. */
         const RHIStructuredBuffer& getBuffer() const { return _table; }
         /** @brief 테이블의 단어(uint32) 수입니다. 셰이더의 범위 검사 값입니다. */

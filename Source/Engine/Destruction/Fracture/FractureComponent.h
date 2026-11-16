@@ -35,7 +35,7 @@ namespace sw
         }
 
         const GameObject* getNavGeometryOwner() const override;
-        bool              overridesOwnerGeometry() const override;
+        bool              shouldOverrideOwnerGeometry() const override;
         void              collectNavGeometry( NavMeshGeometry& outGeometry, uint8 area ) const override;
 
     private:

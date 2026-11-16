@@ -58,15 +58,15 @@ namespace sw
         /** @brief 검사가 모은 문제(종류 id 와 글)를 오류로 옮깁니다. id 는 문제마다 검사가 정한 것이다. */
         void addIssues( const CharacterIssueList& issues );
         /**
-         * @brief 원소 @p node 의 속성을 리플렉션 스키마 @p outDef 로 읽습니다(`XMLFields::readFields` — 모르는 이름 · 빠진 필수 · 범위 밖 값). 오류는 이 읽개의 목록에 쌓인다(`finish` 가 한꺼번에 낸다).
+         * @brief 원소 @p node 의 속성을 리플렉션 스키마 @p outDef 로 읽습니다(`XMLFields::readProperties` — 모르는 이름 · 빠진 필수 · 범위 밖 값). 오류는 이 읽개의 목록에 쌓인다(`finish` 가 한꺼번에 낸다).
          * @details 칸 · 필수 · 범위 · 기본값은 스키마의 `PROPERTY` 가 정본이다 — 칸마다 `readFloat` · `readOptionalFloat` 를 부르고 속성 이름표를 따로 들지 않는다.
          */
         template <typename TDef>
-        bool readFields( const XMLNode& node, TDef& outDef, std::initializer_list<string_view> listHandRead = {} )
+        bool readProperties( const XMLNode& node, TDef& outDef, std::initializer_list<string_view> listHandRead = {} )
         {
-            return readFields( node, &outDef, *TDef::StaticType(), listHandRead );
+            return readProperties( node, &outDef, *TDef::StaticType(), listHandRead );
         }
-        bool readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead );
+        bool readProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead );
         /** @brief 테이블에 없는 속성마다 오류를 남깁니다. */
         template <size_t Count>
         void reportUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count] )

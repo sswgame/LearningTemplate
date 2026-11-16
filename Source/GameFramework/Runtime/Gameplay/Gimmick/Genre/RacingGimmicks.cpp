@@ -21,7 +21,7 @@ namespace sw
                 float32 operator()( const GimmickItemChoice& choice ) const { return choice._weight; }
             };
 
-            static bool accepts( const OverlapInfo& overlap, const TagContainer& requiredTags )
+            static bool canAccept( const OverlapInfo& overlap, const TagContainer& requiredTags )
             {
                 return overlap._pOther != nullptr && overlap._bOtherTrigger == SW_FALSE &&
                        ( requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( requiredTags ) );
@@ -43,7 +43,7 @@ namespace sw
     void BoostPadComponent::onOverlapBegin( const OverlapInfo& overlap )
     {
         Component::onOverlapBegin( overlap );
-        if ( RacingGimmicksInternal::accepts( overlap, _requiredTags ) == false )
+        if ( RacingGimmicksInternal::canAccept( overlap, _requiredTags ) == false )
             return;
         ++_boostCount;
         GimmickBoostEvent event;
@@ -67,7 +67,7 @@ namespace sw
     void ItemBoxComponent::onOverlapBegin( const OverlapInfo& overlap )
     {
         Component::onOverlapBegin( overlap );
-        if ( RacingGimmicksInternal::accepts( overlap, _requiredTags ) )
+        if ( RacingGimmicksInternal::canAccept( overlap, _requiredTags ) )
             (void)open( *overlap._pOther ); // 뽑힌 이름은 쓰지 않는다. 비어 있으면 열리지 않을 뿐이다
     }
 

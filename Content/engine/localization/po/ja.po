@@ -1168,7 +1168,7 @@ msgid "Pick section in Preview"
 msgstr "プレビューで区間を選ぶ"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.PostNotice"
+msgctxt "EdPlugin.PostAnnouncement"
 msgid "Post notice"
 msgstr "お知らせを掲示"
 
@@ -1253,7 +1253,7 @@ msgid "Remove live event"
 msgstr "ライブイベントを削除"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveNotice"
+msgctxt "EdPlugin.RemoveAnnouncement"
 msgid "Remove notice"
 msgstr "お知らせを削除"
 
@@ -1531,12 +1531,12 @@ msgid "Maintenance seconds (0 = until cleared)"
 msgstr "メンテナンス秒(0 = 解除まで)"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.NoticeId"
+msgctxt "EdPluginField.AnnouncementId"
 msgid "Notice id"
 msgstr "お知らせ id"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.NoticeSeconds0UntilRemoved"
+msgctxt "EdPluginField.AnnouncementSeconds0UntilRemoved"
 msgid "Notice seconds (0 = until removed)"
 msgstr "お知らせ秒(0 = 削除まで)"
 
@@ -1988,7 +1988,7 @@ msgid "Loop"
 msgstr "반복"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MaintenanceNotice"
+msgctxt "EdPluginWidget.MaintenanceAnnouncement"
 msgid "Maintenance / Notice"
 msgstr "メンテナンス / お知らせ"
 
@@ -2003,7 +2003,7 @@ msgid "Message key"
 msgstr "メッセージキー"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.NoticeText"
+msgctxt "EdPluginWidget.AnnouncementText"
 msgid "Notice text"
 msgstr "お知らせ本文"
 

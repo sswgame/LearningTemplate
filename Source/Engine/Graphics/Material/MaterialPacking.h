@@ -23,13 +23,13 @@ namespace sw
 
         static const utf8* typeToString( MaterialPropertyType type );
 
-        static uint32 packedSizeOf( MaterialPropertyType type );
+        static uint32 computePackedSizeOf( MaterialPropertyType type );
 
         static bool isTextureType( MaterialPropertyType type );
 
         static bool isNonBufferType( MaterialPropertyType type );
 
-        static MaterialPropertyType defaultShaderTypeFor( MaterialPropertyType cpuType );
+        static MaterialPropertyType getDefaultShaderTypeFor( MaterialPropertyType cpuType );
 
         static MaterialPropertyType shaderTypeFromReflectionName( string_view typeName, uint32 byteSize );
 

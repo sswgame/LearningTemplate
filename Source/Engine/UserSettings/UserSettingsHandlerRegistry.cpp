@@ -83,7 +83,7 @@ namespace sw
         return handler( context );
     }
 
-    bool UserSettingsHandlerRegistry::acceptsValue( const hashed_string& name, string_view value ) const
+    bool UserSettingsHandlerRegistry::canAcceptValue( const hashed_string& name, string_view value ) const
     {
         const HandlerEntry* pEntry = findHandlerEntry( name );
         if ( pEntry == nullptr || pEntry->_filter.isBound() == false )

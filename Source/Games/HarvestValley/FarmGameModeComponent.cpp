@@ -639,7 +639,7 @@ namespace sw
                     return;
                 }
                 result = _field.plant( x, y, seed, pState->getClock().getSeasonName() );
-                if ( result == FarmActionResult::Done && pState->getInventory().removeItem( seed, 1 ) == false )
+                if ( result == FarmActionResult::Done && pState->getInventory().consumeItem( seed, 1 ) == false )
                     SW_LOG_WARNING_ID( "FarmGameMode.PlantedWithoutSeedBag", "[Farm] planted without a seed in the bag" );
                 if ( result == FarmActionResult::Done )
                     getSoundQueue().queueEvent( Internal::kEventPlant );
@@ -765,7 +765,7 @@ namespace sw
         [[maybe_unused]] const CropDef*               pCrop  = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         [[maybe_unused]] const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         SW_LOG_INFO_ID( "FarmGameMode.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pState != nullptr ? pState->getInventory().getItemCount( getSelectedSeed() ) : 0,
-                        pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->growsIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
+                        pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->canGrowIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
     }
 
     void FarmGameModeComponent::updateCameraFocus()

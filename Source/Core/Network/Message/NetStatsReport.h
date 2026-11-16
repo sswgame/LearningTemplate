@@ -80,7 +80,7 @@ namespace sw
          * @brief 받은 쪽(라우터) · 보낸 쪽(엔드포인트) 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개씩으로 `_listKindEntry` · `_listSentKindEntry` 를 채웁니다.
          *        한 번도 세지 않은 종류는 뺍니다.
          */
-        void populateKinds( const NetMessageKindStatsTable& receivedTally, const NetMessageKindStatsTable& sentTally );
+        void populateKinds( const NetMessageKindStatsTable& receivedStats, const NetMessageKindStatsTable& sentStats );
         /** @brief 한 방향의 종류별 셈입니다. */
         const vector<NetStatsKindEntry>& getKindEntries( NetStatsKindDirection direction ) const
         {

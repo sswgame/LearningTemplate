@@ -24,7 +24,7 @@ namespace
         mutex              _mutex{};
         [[nodiscard]] bool open() override { return true; }
         void               close() override {}
-        bool               needsStructuredFields() const override { return true; }
+        bool               needsStructuredProperties() const override { return true; }
         void               write( const LogRecord& record ) override
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -62,7 +62,7 @@ SW_TEST_CASE( JSONLinesLogOutputTest, EscapesQuotesBackslashesAndControlCharacte
     SW_EXPECT_TRUE_MSG( invalid == "a\\ufffdb\\b", invalid.c_str() ); // 줄이 늘 올바른 JSON 이다 — 예전 싱크는 잘못된 바이트를 그대로 흘렸다
 }
 
-SW_TEST_CASE( JSONLinesLogOutputTest, LineHasTheFieldsThatArePresent )
+SW_TEST_CASE( JSONLinesLogOutputTest, LineHasThePropertiesThatArePresent )
 {
     JSONLogFields params;
     params._time             = "2026-10-28 9:5:3";

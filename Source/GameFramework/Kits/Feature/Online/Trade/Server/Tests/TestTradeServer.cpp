@@ -131,13 +131,13 @@ namespace
     class TradePushSink final : public IOnlineClientService
     {
     public:
-        vector<uint16>      _listKind{};
-        vector<TradeNotice> _listReply{};
+        vector<uint16>            _listKind{};
+        vector<TradeNotification> _listReply{};
 
         const OnlineProtocolEntry& getProtocol() const override { return TradeSessionRecord::kOnlineEntry; }
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
-            TradeNotice reply;
+            TradeNotification reply;
             SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( body, reply ) == FixedReadResult::Ok );
             _listKind.push_back( kind );
             _listReply.push_back( std::move( reply ) );
@@ -211,11 +211,11 @@ namespace
             {
                 (void)_pRig->_clients.connect( _pRig->_server._port, { &sink } );
             }
-            pump();
+            poll();
             _pRig->_clients.login( kAliceSlot, kAlice );
             _pRig->_clients.login( kBobSlot, kBob );
             _pRig->_clients.login( kCarolSlot, kCarol );
-            pump();
+            poll();
         }
 
         ~TradeServerFixture()
@@ -244,7 +244,7 @@ namespace
             }
         }
 
-        void pump() { test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 12 ); }
+        void poll() { test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 12 ); }
 
         void grant( AccountID accountID, string_view assetID, int64 amount )
         {
@@ -252,11 +252,11 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.grant";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _pRig->_database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult serviceResult;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _pRig->_database, request, serviceResult ) == LedgerResult::Ok );
         }
 
-        int64 balanceOf( AccountID accountID, string_view assetID )
+        int64 getBalanceOf( AccountID accountID, string_view assetID )
         {
             LedgerBalance balance;
             SW_EXPECT_TRUE( Ledger::readBalance( _pRig->_database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
@@ -270,7 +270,7 @@ namespace
             NetRequestOptions options;
             options._idempotencyKey = NetIdempotencyKey::makeRandom(); // 표의 호출 규칙이다. 빠진 요청은 kInvalidRequest 다
             (void)_pRig->_clients.getClient( slot ).sendRequest( method, body, options, OnlineResponseDelegate::create<&TradeResponseSink::onResponse>( &_response ) );
-            pump();
+            poll();
             return _response;
         }
 
@@ -425,7 +425,7 @@ SW_TEST_CASE( TradeServerTest, AnonymousConnectionIsRefused )
     TradeServerFixture rig;
     TradePushSink      anonymousSink;
     const int32        anonymous = rig._pRig->_clients.connect( rig._pRig->_server._port, { &anonymousSink } );
-    rig.pump();
+    rig.poll();
     TradeInviteRequest request;
     request._peerDisplayName = "bob";
     SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, rig.send( anonymous, TradeMethod::Invite::kID, request )._errorCode );
@@ -434,7 +434,7 @@ SW_TEST_CASE( TradeServerTest, AnonymousConnectionIsRefused )
 }
 
 /** @brief [TradeServerTest] 위조: 없는 거래는 NotFound, 남의 거래는 NotParty 이고, 음수 · 0 · 범위 밖 수량은 Invalid, 항목이 너무 많으면 TooManyLegs 다. 어느 것도 거래를 바꾸지 않는다 */
-SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
+SW_TEST_CASE( TradeServerTest, CraftedValuesAreRefused )
 {
     TradeServerFixture rig;
     rig.grant( kAlice, "cur.gold", 100 );
@@ -443,7 +443,9 @@ SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
 
     SW_EXPECT_TRUE( rig.lock( kBobSlot, tradeID + 1000 )._result == TradeResult::NotFound );
     SW_EXPECT_TRUE( rig.lock( kBobSlot, 0 )._result != TradeResult::Ok );
-    SW_EXPECT_TRUE( rig.lock( kCarolSlot, tradeID )._result == TradeResult::NotParty );
+    const auto carolLock = rig.lock( kCarolSlot, tradeID );
+    SW_EXPECT_TRUE( carolLock._result == TradeResult::NotParty );
+    SW_EXPECT_EQUAL( uint64( 0 ), carolLock._snapshot._tradeID ); // 권한 실패 응답에 남의 거래 내용이 없다(감사 O-4)
     SW_EXPECT_TRUE( rig.offer( kCarolSlot, tradeID, "cur.gold", 1 )._result == TradeResult::NotParty );
 
     (void)rig.offer( kAliceSlot, tradeID, "cur.gold", -5 );
@@ -466,7 +468,7 @@ SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
     const TradeReply same = rig.lock( kAliceSlot, tradeID );
     SW_EXPECT_TRUE( same._result == TradeResult::Ok ); // 거절된 제시는 없던 일이라 빈 제시를 잠근다
     SW_EXPECT_TRUE( same._snapshot._arrSide[0]._listLeg.empty() );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
 }
 
 /** @brief [TradeServerTest] 낡은 확정: 본 버전이 지금 버전과 다르면 StaleOffer 이고 아무것도 옮기지 않는다(바꿔치기 사기) */
@@ -485,7 +487,7 @@ SW_TEST_CASE( TradeServerTest, StaleConfirmMovesNothing )
     request._seenOwnRevision  = locked._arrSide[1]._offerRevision;
     request._seenPeerRevision = locked._arrSide[0]._offerRevision + 1;
     SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::Confirm::kID, request )._result == TradeResult::StaleOffer );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
 }
 
 /** @brief [TradeServerTest] 정산: 양쪽을 옮기고, 응답에는 요청한 쪽, 닫힘 알림에는 각자의 이동 뒤 잔액만 실린다. 남의 잔액이 섞이지 않는다 */
@@ -512,7 +514,7 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
     SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
-    const TradeNotice& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
+    const TradeNotification& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
     SW_EXPECT_TRUE( alicePush._snapshot._state == TradeState::Settled );
     SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gold" ) == int64( 60 ) );
     SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gem" ) == int64( 20 ) );
@@ -521,8 +523,8 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
     SW_EXPECT_TRUE( TradeServerTestUtil::findBalance( rig._arrSink[kBobSlot]._listReply[0]._listBalance, "cur.gold" ) == int64( 40 ) );
     SW_EXPECT_TRUE( rig._arrSink[kCarolSlot]._listKind.empty() );
 
-    SW_EXPECT_EQUAL( int64( 60 ), rig.balanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 40 ), rig.balanceOf( kBob, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 60 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 40 ), rig.getBalanceOf( kBob, "cur.gold" ) );
 }
 
 /** @brief [TradeServerTest] 제시가 바뀌면 두 당사자에게 갱신 알림이 가고, 거절하면 닫힘 알림과 이유가 간다 */
@@ -558,7 +560,7 @@ SW_TEST_CASE( TradeServerTest, LeavingClosesTheTrade )
     rig.clearPushes();
 
     rig._pRig->_clients.drop( kBobSlot );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
     SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
     SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listReply[0]._snapshot._closeReason == TradeCloseReason::PartyLeft );
@@ -575,13 +577,13 @@ SW_TEST_CASE( TradeServerTest, PresenceLookupFinishesTheInvite )
     SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::Invite::kID, request )._count ); // 찾기를 기다린다
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence.getPendingCount() );
     rig._presence.answerFront( kInvalidAccountID );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 1, rig._response._count );
     SW_EXPECT_TRUE( rig._response.readReply()._result == TradeResult::PeerOffline );
 
     SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::Invite::kID, request )._count );
     rig._presence.answerFront( kBob );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 1, rig._response._count );
     const TradeReply reply = rig._response.readReply();
     SW_EXPECT_TRUE( reply._result == TradeResult::Ok );
@@ -598,9 +600,9 @@ SW_TEST_CASE( TradeServerTest, LookupOfADepartedAccountOpensNothing )
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence.getPendingCount() );
 
     rig._pRig->_clients.drop( kAliceSlot );
-    rig.pump();
+    rig.poll();
     rig._presence.answerFront( kBob );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 0, rig._tradeService.getOpenTradeCount() );
     SW_EXPECT_TRUE( rig._arrSink[kBobSlot]._listKind.empty() );
 
@@ -645,7 +647,7 @@ SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
     audit._subject = "config";
     audit._timeMs  = 1;
     rig._remoteConfig.submitSet( rig._pRig->_server._store, TradeServer::kFeatureFlag, value, audit );
-    rig.pump();
+    rig.poll();
 
     TradeInviteRequest request;
     request._peerDisplayName = "carol";

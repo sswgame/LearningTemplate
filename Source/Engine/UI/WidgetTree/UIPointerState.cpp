@@ -20,7 +20,8 @@ namespace sw
 
     UIPointerResult UIPointerState::process( WidgetTree& tree, const UIPointerEvent& event )
     {
-        UIPointerResult result{};
+        const WidgetTree::DispatchScope dispatch{ tree }; // 들고 남(hover)과 경로 전달이 한 구간이다
+        UIPointerResult                 result{};
         // 잡은 위젯이 떨어졌으면 잡기를 해제한다.
         if ( _captured != kInvalidWidgetID && ( _pCaptureTree == nullptr || _pCaptureTree->findWidgetByID( _captured ) == nullptr ) )
         {
@@ -70,11 +71,14 @@ namespace sw
 
     void UIPointerState::cancelCapture()
     {
-        Widget* pWidget = _pCaptureTree != nullptr ? _pCaptureTree->findWidgetByID( _captured ) : nullptr;
-        _pCaptureTree   = nullptr;
-        _captured       = kInvalidWidgetID;
-        if ( pWidget != nullptr )
-            pWidget->onPointerCaptureLost();
+        WidgetTree* const pTree   = _pCaptureTree;
+        Widget*           pWidget = pTree != nullptr ? pTree->findWidgetByID( _captured ) : nullptr;
+        _pCaptureTree             = nullptr;
+        _captured                 = kInvalidWidgetID;
+        if ( pWidget == nullptr )
+            return;
+        const WidgetTree::DispatchScope dispatch{ *pTree };
+        pWidget->onPointerCaptureLost();
     }
 
     void UIPointerState::removeTree( const WidgetTree& tree )
@@ -106,6 +110,7 @@ namespace sw
         // 빠진 쪽: 잎부터 Leave.
         if ( _pHoverTree != nullptr )
         {
+            const WidgetTree::DispatchScope dispatch{ *_pHoverTree };
             for ( uint32 index = static_cast<uint32>( _hoverPath._listWidget.size() ); index > common; --index )
             {
                 Widget* pWidget = _pHoverTree->findWidgetByID( _hoverPath._listWidget[index - 1] );
@@ -119,6 +124,7 @@ namespace sw
         // 새로 든 쪽: 루트부터 Enter.
         if ( pTree != nullptr )
         {
+            const WidgetTree::DispatchScope dispatch{ *pTree };
             for ( uint32 index = common; index < static_cast<uint32>( newPath._listWidget.size() ); ++index )
             {
                 Widget* pWidget = pTree->findWidgetByID( newPath._listWidget[index] );

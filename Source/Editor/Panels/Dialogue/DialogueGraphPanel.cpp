@@ -99,12 +99,12 @@ namespace sw::editor
     SW_EDITOR_PANEL( DialogueGraphPanel, DialogueGraphPanel::kPanelID, EditorPanelCategory::Tool, 1200 );
 
     DialogueGraphPanel::DialogueGraphPanel()
-        : EditorGraphDocumentPanel{ EditorAssetType{ DialogueGraphAsset::kAssetType }, "Move Dialogue Nodes", "dialogue-graph-layout", &ed::SetCurrentEditor }
+        : EditorGraphDocumentPanel{ EditorAssetType{ DialogueGraphAsset::kAssetType }, "Move Dialogue Nodes", &ed::SetCurrentEditor }
         , _selectedNodeID{ 0 }
         , _preview{}
         , _actionGrid{}
-        , _actionFields{}
-        , _actionFieldsText{}
+        , _actionProperties{}
+        , _actionPropertiesText{}
         , _actionError{}
         , _listActionName{}
         , _pActionEntry{ nullptr }
@@ -322,7 +322,7 @@ namespace sw::editor
 
             const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( pSelectedNode->_type );
             if ( pInfo != nullptr )
-                drawNodeFields( *pSelectedNode, *pInfo );
+                drawNodeProperties( *pSelectedNode, *pInfo );
             ImGui::Separator();
         }
         drawSpeakerList();
@@ -340,7 +340,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( speaker._id ) );
             EditorWidgets::drawTextField( "##SpeakerName", speaker._name );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Rename Dialogue Speaker", "dialogue-inspector" );
+                notifyDocumentEdited( "Rename Dialogue Speaker" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakerNameTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
@@ -598,18 +598,18 @@ namespace sw::editor
         }
     }
 
-    void DialogueGraphPanel::drawActionFields( DialogueNode& node )
+    void DialogueGraphPanel::drawActionProperties( DialogueNode& node )
     {
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), node._actionCommand );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+            notifyDocumentEdited( "Edit Dialogue Node" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );
 
-        if ( _actionFieldsText != node._actionCommand || _actionFields.isValid() == false )
+        if ( _actionPropertiesText != node._actionCommand || _actionProperties.isValid() == false )
         {
-            _actionFieldsText = node._actionCommand;
+            _actionPropertiesText = node._actionCommand;
             _actionError.clear();
-            if ( const expected<void> read = GameActionCall::tryReadFields( node._actionCommand, _pActionEntry, _actionFields ); read.has_value() == false )
+            if ( const expected<void> read = GameActionCall::tryReadProperties( node._actionCommand, _pActionEntry, _actionProperties ); read.has_value() == false )
             {
                 _actionError  = string( read.error().message().data(), read.error().message().size() ) + ": " + string( read.error().detail().data(), read.error().detail().size() );
                 _pActionEntry = nullptr;
@@ -618,7 +618,7 @@ namespace sw::editor
 
         // 고르기 목록은 등록에서 온다 — 동작을 더하면 코드 한 줄로 여기에 나타난다.
         const string_view currentName = GameActionCall::getCallName( node._actionCommand );
-        if ( ImGui::BeginCombo( "##dialogue.action", _pActionEntry != nullptr ? _pActionEntry->_pName : "(pick an action)" ) )
+        if ( EditorWidgets::beginCombo( "##dialogue.action", _pActionEntry != nullptr ? _pActionEntry->_pName : "(pick an action)" ) )
         {
             _listActionName.clear();
             ActionRegistry::collectNames( _listActionName );
@@ -627,7 +627,7 @@ namespace sw::editor
                 if ( ImGui::Selectable( name.c_str(), string_view{ name } == currentName ) )
                 {
                     node._actionCommand = name;
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                    notifyDocumentEdited( "Edit Dialogue Node" );
                 }
             }
             ImGui::EndCombo();
@@ -639,8 +639,8 @@ namespace sw::editor
         }
         _pActionTargetText = &node._actionCommand;
         EditorPropertyGridTarget target{};
-        target._pInstance = _actionFields.getInstance();
-        target._pType     = _actionFields.getType();
+        target._pInstance = _actionProperties.getInstance();
+        target._pType     = _actionProperties.getType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &DialogueGraphPanel::onActionFieldEdited, this );
         _actionGrid.drawProperties( target, nullptr, {} );
         _pActionTargetText = nullptr;
@@ -650,12 +650,12 @@ namespace sw::editor
     {
         if ( _pActionTargetText == nullptr || _pActionEntry == nullptr )
             return;
-        *_pActionTargetText = GameActionCall::formatText( *_pActionEntry, _actionFields );
-        _actionFieldsText   = *_pActionTargetText;
-        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+        *_pActionTargetText   = GameActionCall::formatText( *_pActionEntry, _actionProperties );
+        _actionPropertiesText = *_pActionTargetText;
+        notifyDocumentEdited( "Edit Dialogue Node" );
     }
 
-    void DialogueGraphPanel::drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info )
+    void DialogueGraphPanel::drawNodeProperties( DialogueNode& node, const DialogueNodeInfo& info )
     {
         if ( info._bHasSpeaker )
         {
@@ -667,7 +667,7 @@ namespace sw::editor
                 if ( ImGui::Selectable( SW_LOCKEY( "EditorDialogueGraph", "NoSpeaker" ), node._speaker == kDialogueNoSpeaker ) && node._speaker != kDialogueNoSpeaker )
                 {
                     node._speaker = kDialogueNoSpeaker;
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                    notifyDocumentEdited( "Edit Dialogue Node" );
                 }
                 for ( const DialogueSpeaker& speaker : _graph._listSpeaker )
                 {
@@ -675,7 +675,7 @@ namespace sw::editor
                     if ( ImGui::Selectable( speaker._name.c_str(), node._speaker == speaker._id ) && node._speaker != speaker._id )
                     {
                         node._speaker = speaker._id;
-                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                        notifyDocumentEdited( "Edit Dialogue Node" );
                     }
                     ImGui::PopID();
                 }
@@ -690,10 +690,10 @@ namespace sw::editor
             {
                 fixed_string<constant::buffer::kMax512> textBuf{ node._text.c_str() };
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Text" ) ); // 폭 전체 칸이라 이름표는 위에
-                if ( ImGui::InputTextMultiline( "##Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
+                if ( EditorWidgets::inputTextMultiline( SW_WIDGET_ID( "##Text" ), textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
                     node._text = textBuf.c_str();
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                    notifyDocumentEdited( "Edit Dialogue Node" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "TextTip" ) );
                 break;
             }
@@ -701,14 +701,14 @@ namespace sw::editor
             {
                 EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Condition" ), "Condition" ), node._condition );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                    notifyDocumentEdited( "Edit Dialogue Node" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ConditionTip" ) );
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorDialogueGraph", "ConditionExample" ) );
                 break;
             }
             case DialogueNodeBody::Action:
             {
-                drawActionFields( node );
+                drawActionProperties( node );
                 break;
             }
             case DialogueNodeBody::None:
@@ -726,7 +726,7 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( choiceIndex ) );
             EditorWidgets::drawTextField( "##Choice", node._listChoice[choiceIndex] );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                notifyDocumentEdited( "Edit Dialogue Node" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
             {

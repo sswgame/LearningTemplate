@@ -158,7 +158,7 @@ namespace sw
                 {
                     for ( int32 index = 0; index < messageCount; ++index )
                     {
-                        const bool bSent = pSession->getPeers().sendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
+                        const bool bSent = pSession->getPeers().trySendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
                         sentCount += bSent ? 1 : 0;
                     }
                 }
@@ -609,7 +609,7 @@ namespace sw
             return;
         reportConnectResult();
         _listEventScratch.clear();
-        (void)_router.pump( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
+        (void)_router.poll( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
         logEvents( EventPhase::Running );
         updateResourceDigest();
     }
@@ -668,22 +668,22 @@ namespace sw
         (void)_tickWriter.broadcast( _peers, NetChannelType::UnreliableSequenced ); // 잃어도 다음 틱이 더 새 번호를 싣는다
     }
 
-    void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notice )
+    void GameNetSession::sendShutdownNotice( const GameShutdownNotice& notification )
     {
         if ( _role != GameNetRole::Server )
             return;
         BitWriter& writer = _tickWriter.begin( GameNetSessionMessage::kShutdownNotice );
-        writer.writeBits( static_cast<uint32>( notice._reason ), 8 );
-        writer.writeVarUint( notice._graceSeconds );
+        writer.writeBits( static_cast<uint32>( notification._reason ), 8 );
+        writer.writeVarUint( notification._graceSeconds );
         const int32 sentCount = _tickWriter.broadcast( _peers, NetChannelType::ReliableOrdered ); // 끊기 전에 사유가 닿아야 한다
-        SW_LOG_INFO_ID( "GameNetSession.NetSessionToldClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notice._reason ), notice._graceSeconds );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionNotifiedClients", "Net session told %# clients the server is shutting down (reason %#, grace %# s)", sentCount, static_cast<uint32>( notification._reason ), notification._graceSeconds );
     }
 
-    bool GameNetSession::tryGetShutdownNotice( GameShutdownNotice& outNotice ) const
+    bool GameNetSession::tryGetShutdownNotice( GameShutdownNotice& outNotification ) const
     {
         if ( _role != GameNetRole::Client || _bShutdownNoticeKnown == SW_FALSE )
             return false;
-        outNotice = _shutdownNotice;
+        outNotification = _shutdownNotice;
         return true;
     }
 
@@ -829,7 +829,7 @@ namespace sw
         _shutdownNotice._reason       = static_cast<GameShutdownReason>( reasonValue );
         _shutdownNotice._graceSeconds = graceSeconds;
         _bShutdownNoticeKnown         = SW_TRUE;
-        SW_LOG_INFO_ID( "GameNetSession.NetSessionClientTold", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
+        SW_LOG_INFO_ID( "GameNetSession.NetSessionClientNotified", "Net session client was told the server is shutting down (reason %#, grace %# s)", reasonValue, graceSeconds );
         return NetHandleResult::Handled;
     }
 
@@ -921,11 +921,11 @@ namespace sw
             report._lossPercent     = MathUtil::max( report._lossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
             report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::time::kMillisecondsPerSecond );
         }
-        NetMessageKindStatsTable sentTally;
-        _peers.addSentKindTally( sentTally );
-        report.populateKinds( _router.getKindTally(), sentTally );
+        NetMessageKindStatsTable sentStats;
+        _peers.addSentKindStats( sentStats );
+        report.populateKinds( _router.getKindStats(), sentStats );
         // 상한 안에서 앞 절반은 지난 보고 뒤 늘어난 바이트가 큰 것(표의 초당 바이트와 같은 기준), 나머지는 누적 바이트가 큰 것.
-        const auto increaseOf = []( const ReplicaStat& stat )
+        const auto getIncreaseOf = []( const ReplicaStat& stat )
         {
             return stat._entry._byteCount > stat._reportedByteCount ? stat._entry._byteCount - stat._reportedByteCount : uint64{ 0 };
         };
@@ -935,10 +935,10 @@ namespace sw
             listOrder.push_back( &stat );
         }
         const size_t cap = static_cast<size_t>( NetStatsReport::kMaxReplicaEntry );
-        VectorUtil::sort( listOrder, [&increaseOf]( const ReplicaStat* pLeft, const ReplicaStat* pRight )
+        VectorUtil::sort( listOrder, [&getIncreaseOf]( const ReplicaStat* pLeft, const ReplicaStat* pRight )
         {
-            const uint64 leftIncrease  = increaseOf( *pLeft );
-            const uint64 rightIncrease = increaseOf( *pRight );
+            const uint64 leftIncrease  = getIncreaseOf( *pLeft );
+            const uint64 rightIncrease = getIncreaseOf( *pRight );
             return leftIncrease != rightIncrease ? leftIncrease > rightIncrease : pLeft->_entry._name < pRight->_entry._name;
         } );
         const size_t                      recentCount = ( cap + 1 ) / 2;
@@ -946,7 +946,7 @@ namespace sw
         unordered_set<const ReplicaStat*> uniqueSetPicked;
         for ( size_t index = 0; index < listOrder.size() && listPicked.size() < recentCount; ++index )
         {
-            if ( increaseOf( *listOrder[index] ) > 0 && uniqueSetPicked.insert( listOrder[index] ).second )
+            if ( getIncreaseOf( *listOrder[index] ) > 0 && uniqueSetPicked.insert( listOrder[index] ).second )
                 listPicked.push_back( listOrder[index] );
         }
         VectorUtil::sort( listOrder, []( const ReplicaStat* pLeft, const ReplicaStat* pRight )

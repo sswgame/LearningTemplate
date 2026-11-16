@@ -63,7 +63,7 @@ namespace sw::editor
 
     protected:
         /** @brief 이벤트 라이브러리 파일(`*.audioevents.xml`)만 받습니다. */
-        bool acceptsDocumentPath( string_view assetPath ) const override;
+        bool canAcceptDocumentPath( string_view assetPath ) const override;
         /** @brief 받아들인 라이브러리 파일을 사본으로 읽어 고치기를 시작합니다. 같은 라이브러리를 다시 읽으면 고치던 이벤트를 그대로 고릅니다. 읽지 못하면 `Malformed` 입니다. */
         ToolAssetLoadResult loadDocument() override;
 

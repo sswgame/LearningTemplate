@@ -168,7 +168,7 @@ namespace sw
         ResourceComposition& _composition;
         mutable mutex        _mutex;
         ResourceTagSet _tags SW_GUARDED_BY( _mutex );
-    };
 
-    SW_SERVICE_SLOT( ResourceTags, Required );
+        SW_SERVICE_SLOT( ResourceTags, Required );
+    };
 } // namespace sw

@@ -30,7 +30,7 @@ namespace sw
         {
             static constexpr uint32 kDefaultTreeLimit = 200;
 
-            static bool runTree( const vector<string>& listArgument, string& outReply )
+            static bool runTree( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 uint64 limit = kDefaultTreeLimit;
                 if ( listArgument.size() > 1 || ( listArgument.size() == 1 && StringUtil::parseUint64( listArgument[0], limit ) == false ) )
@@ -42,7 +42,7 @@ namespace sw
                     return false;
                 }
                 vector<GameObject*> listObject;
-                pManager->getAllGameObjects( listObject );
+                pManager->getAllGameObjects( key, listObject );
                 VectorUtil::sort( listObject, []( const GameObject* pLeft, const GameObject* pRight )
                 {
                     return pLeft->getObjectID() < pRight->getObjectID();
@@ -138,7 +138,7 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( SceneTree, "scene.tree", "scene.tree [limit]", "List the objects of the active scene (id, name, parent, active, components)", &SceneInspectCommandsInternal::runTree );
+    SW_DEV_SCENE_COMMAND( SceneTree, "scene.tree", "scene.tree [limit]", "List the objects of the active scene (id, name, parent, active, components)", &SceneInspectCommandsInternal::runTree );
     SW_DEV_COMMAND( ObjectDump, "object.dump", "object.dump <name>", "Print the components and property values of a named object of the active scene",
                     &SceneInspectCommandsInternal::runObjectDump );
     SW_DEV_COMMAND( ObjectPlace, "object.place", "object.place <name> <x> <y> <z>", "Put a named object of the active scene at a local position (scenarios move the camera to change LOD)",

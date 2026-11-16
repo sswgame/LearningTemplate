@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
@@ -41,9 +42,9 @@ namespace sw::editor
 
                 string relative;
                 if ( resourceRoot.empty() == false && FileUtil::tryMakePathUnderRoot( resourceRoot, item._absolutePath, relative ) ) // 대소문자는 OS 규칙
-                    item._relativePath = FileUtil::normalizePath( relative );                                                        // 상대 키는 소문자다
+                    item._relativePath = FileUtil::normalizePath( relative ).str();                                                  // 상대 키는 소문자다
                 if ( item._relativePath.empty() )
-                    item._relativePath = FileUtil::normalizePath( item._name );
+                    item._relativePath = FileUtil::normalizePath( item._name ).str();
 
                 outList.push_back( std::move( item ) );
             }
@@ -85,12 +86,13 @@ namespace sw::editor
             if ( entry._bIsDirectory == false )
                 AssetCompanionRegistry::appendCompanionPaths( entry._relativePath, listCompanion );
         }
-        for ( string& companion : listCompanion )
+        unordered_set<string> uniqueCompanion; // 파일마다 곁 파일 목록을 훑지 않는다(폴더 파일 수 × 곁 파일 후보 수)
+        for ( const string& companion : listCompanion )
         {
-            companion = FileUtil::normalizePath( companion );
+            uniqueCompanion.insert( FileUtil::normalizePath( companion ).str() );
         }
-        (void)VectorUtil::removeIf( outList, [&listCompanion]( const EditorFolderListingEntry& entry )
-        { return entry._bIsDirectory == false && VectorUtil::contains( listCompanion, FileUtil::normalizePath( entry._relativePath ) ); } );
+        (void)VectorUtil::removeIf( outList, [&uniqueCompanion]( const EditorFolderListingEntry& entry )
+        { return entry._bIsDirectory == false && uniqueCompanion.contains( FileUtil::normalizePath( entry._relativePath ).str() ); } );
     }
 
     void EditorFolderListing::collectChildFolders( string_view folderAbs, vector<string>& outList )

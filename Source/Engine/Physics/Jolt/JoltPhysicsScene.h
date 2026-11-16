@@ -161,6 +161,7 @@ namespace sw
         // IPhysicsScene3D
         void                                 step( float32 fixedDeltaTime ) override;
         const vector<PhysicsContactEvent3D>& getContactEvents() const override { return _listContactEvent; }
+        void                                 setContactStayListener( uint64 userData, bool bListen ) override { _contactTracker.setStayListener( userData, bListen ); }
         void                                 setGravity( const float3& gravity ) override;
         float3                               getGravity() const override;
         void                                 setLayerCollision( const CollisionLayers& layers ) override;
@@ -175,6 +176,7 @@ namespace sw
         void              createBodies( span<const PhysicsBodyDesc3D> listDesc, vector<PhysicsBodyHandle>& outListBody ) override;
         void              destroyBody( PhysicsBodyHandle body ) override;
         void              destroyBodies( span<const PhysicsBodyHandle> listBody ) override;
+        bool              setBodyShape( PhysicsBodyHandle body, span<const PhysicsShapeDesc3D> listShape, const hashed_string& material, float32 mass ) override;
         bool              isBodyValid( PhysicsBodyHandle body ) const override;
         uint32            getBodyCount() const override;
         void              setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override;
@@ -220,6 +222,7 @@ namespace sw
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
         PhysicsCharacterState3D moveCharacter( PhysicsCharacterHandle character, const float3& velocity, float32 deltaTime ) override;
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float3& position ) override;
+        bool                    setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState3D& outState ) const override;
 
         PhysicsVehicleHandle createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc ) override;
@@ -311,6 +314,10 @@ namespace sw
 
         /** @brief 셰이프 서술자 여럿을 Jolt 셰이프 하나로 만듭니다(둘 이상이면 정적 컴파운드). 실패하면 오류를 남기고 nullptr 를 반환합니다. */
         JPH::RefConst<JPH::Shape> createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const;
+        /** @brief 캐릭터 캡슐 셰이프입니다(바닥이 원점 — 발). 지을 수 없으면 오류를 남기고 nullptr 입니다. */
+        static JPH::RefConst<JPH::Shape> createCharacterShape( float32 radius, float32 halfHeight );
+        /** @brief 캐릭터 캡슐의 엔진 서술자입니다(속 바디 기록 — `createCharacterShape` 와 같은 모양). */
+        static PhysicsShapeDesc3D makeCharacterShapeDesc( float32 radius, float32 halfHeight );
         /** @brief 셰이프 하나를 로컬 위치와 회전 없이 만듭니다. */
         JPH::RefConst<JPH::Shape> createSingleJoltShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material, const JPH::PhysicsMaterial* pMaterial ) const;
         /** @brief 재질 이름을 풉니다. 이름을 적지 않았으면 첫 재질이고, 적은 이름이 설정에 없으면 오류를 남기고 nullptr 입니다(다른 재질로 만들지 않는다). */
@@ -329,7 +336,7 @@ namespace sw
         PhysicsBodyHandle findHandle( const JPH::BodyID& bodyID ) const;
         void              setHandle( const JPH::BodyID& bodyID, PhysicsBodyHandle body );
         /** @brief 바디들에 붙은 관절과 바퀴 차를 지웁니다(바디를 지우기 전에 호출합니다). */
-        void destroyJointsOf( span<const PhysicsBodyHandle> listBody );
+        void destroyJoints( span<const PhysicsBodyHandle> listBody );
         /** @brief 바디 쌍의 접촉을 받을지 쌍 필터로 정합니다(잡 스레드, `JoltContactListener::OnContactValidate`). */
         JPH::ValidateResult validateContact( const JPH::Body& bodyA, const JPH::Body& bodyB ) const;
         /** @brief 접촉이 생기거나 유지될 때 재질을 섞고 알림을 붙입니다(잡 스레드, `_reportMutex`). */
@@ -340,6 +347,8 @@ namespace sw
         static bool isEarlierReport( const ContactReport& lhs, const ContactReport& rhs );
         /** @brief 스텝 동안 모은 알림을 정렬해 추적기에 넣고 이벤트를 냅니다. */
         void flushContactReports();
+        /** @brief 두 바디가 모두 활성이 아닌지입니다(잠든 섬 — 정적은 늘 활성이 아니다). 없는 바디면 false 입니다. */
+        bool isPairAsleep( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const;
         /** @brief 지금 깨어 있는 강체를 `_listMovedBody` 에 붙입니다(스텝 앞 · 뒤에 한 번씩). */
         void appendActiveBodies();
 

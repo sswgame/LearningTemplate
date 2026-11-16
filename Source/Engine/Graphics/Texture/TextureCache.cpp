@@ -58,7 +58,7 @@ namespace sw
         }
 
         /** @brief @p pDevice 의 것을 모두 `releaseHandle` 로 해제합니다(게임 스레드 — 이미 만든 패킷이 끝날 때까지 미룬다). */
-        void releaseFor( IRHIDevice* pDevice )
+        void releaseForDevice( IRHIDevice* pDevice )
         {
             vector<Item> listRelease;
             {
@@ -83,7 +83,7 @@ namespace sw
             }
         }
 
-        void releaseRHI( IRHIDevice* pDevice ) override { releaseFor( pDevice ); }
+        void releaseRHI( IRHIDevice* pDevice ) override { releaseForDevice( pDevice ); }
 
         void clearRHI( IRHIDevice* pDevice ) override
         {
@@ -363,7 +363,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Texture );
         IRHIDevice* const pDevice = _impl->_pBoundDevice.load( std::memory_order_acquire );
-        const string      key     = FileUtil::normalizePath( relativePath );
+        const string      key     = FileUtil::normalizePath( relativePath ).str();
         if ( key.empty() || pDevice == nullptr )
         {
             shared_ptr<TextureLoadOperation> pFailed = sw::make_shared<TextureLoadOperation>( key, pDevice, TextureLoadOperation::Source::File, nullptr, _impl );
@@ -462,7 +462,7 @@ namespace sw
         if ( pTexture == nullptr )
             return nullptr;
         // 핸들 몫의 참조는 이 함수를 나가며 놓인다 — 돌려주는 포인터 몫(짝 `release`)을 하나 더 센다. 핸들이 쥐고 있으므로 항목은 있다.
-        const string             key = FileUtil::normalizePath( relativePath );
+        const string             key = FileUtil::normalizePath( relativePath ).str();
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         SW_ASSERT( it != _impl->_mapEntry.end() );
@@ -474,7 +474,7 @@ namespace sw
     {
         // 업로드 전용 계측(렌더 스레드 업로드 판단 — DesignBacklog "렌더 스레드와 업로드"): 펌프 CPU 시간, 프레임당 제출 · 폴링 · 대기 수.
         SW_PROFILE_SCOPE( "RT.TextureUpload.pump" );
-        return pumpPendingLoads( pDevice, maxCount, false );
+        return processPendingLoads( pDevice, maxCount, false );
     }
 
     uint32 TextureCache::finishPendingLoads( IRHIDevice* pDevice )
@@ -484,14 +484,14 @@ namespace sw
         uint32 completedCount = 0;
         for ( ;; )
         {
-            completedCount += pumpPendingLoads( pDevice, UINT32_MAX, true );
+            completedCount += processPendingLoads( pDevice, UINT32_MAX, true );
             ScopedLock<mutex> lock{ _impl->_awaitingMutex };
             if ( _impl->_listAwaitingUpload.empty() && _impl->_listUploading.empty() )
                 return completedCount;
         }
     }
 
-    uint32 TextureCache::pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking )
+    uint32 TextureCache::processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking )
     {
         if ( pDevice == nullptr )
             return 0;
@@ -554,7 +554,7 @@ namespace sw
             return 0;
         uint32 upgradedCount = 0;
         // 항목의 올리는 중 표시를 내리고 결과를 반영한다 — 마지막 참조가 그사이 놓였으면 표에서 지우고 잠금 밖에서 내린다(`reload` 와 같다).
-        const auto settleUpgrade = [this, pDevice, &upgradedCount]( const string& key, bool bUpgraded, const Texture2DRetiredResource& retired )
+        const auto completeUpgrade = [this, pDevice, &upgradedCount]( const string& key, bool bUpgraded, const Texture2DRetiredResource& retired )
         {
             unique_ptr<Texture2D> pErased;
             {
@@ -605,7 +605,7 @@ namespace sw
                 listStillPending.push_back( key );
                 continue;
             }
-            settleUpgrade( key, status == Texture2DUploadStatus::Ready, retired );
+            completeUpgrade( key, status == Texture2DUploadStatus::Ready, retired );
         }
         if ( listStillPending.empty() == false )
         {
@@ -629,13 +629,13 @@ namespace sw
             if ( _impl->_mapScreenSize.empty() == false )
             {
                 const unordered_map<string, float32>& mapScreenSize = _impl->_mapScreenSize;
-                const auto                            sizeOf        = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
+                const auto                            getSizeOf     = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
                 {
                     const auto it = mapScreenSize.find( upgrade._key );
                     return it != mapScreenSize.end() ? it->second : 0.0f;
                 };
-                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&sizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
-                { return sizeOf( lhs ) > sizeOf( rhs ); } );
+                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&getSizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
+                { return getSizeOf( lhs ) > getSizeOf( rhs ); } );
                 _impl->_mapScreenSize.clear();
             }
             listUpgrade.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
@@ -667,7 +667,7 @@ namespace sw
                 _impl->_listUpgrading.push_back( upgrade._key );
                 continue;
             }
-            settleUpgrade( upgrade._key, false, Texture2DRetiredResource{} );
+            completeUpgrade( upgrade._key, false, Texture2DRetiredResource{} );
             if ( step != Texture2DUploadStep::Busy )
                 continue; // 실패했다(오류를 남겼다) — 아래쪽 밉 그대로 둔다
             // 스테이징이 찼다 — 이 프레임의 나머지도 같은 이유로 못 내므로 순서를 지켜 줄 앞에 되돌려 놓고 멈춘다(다음 프레임에 다시 낸다).
@@ -686,7 +686,7 @@ namespace sw
         ScopedLock<mutex> lock{ _impl->_streamingMutex };
         for ( const string& relativePath : listRelativePath )
         {
-            float32& noted = _impl->_mapScreenSize[FileUtil::normalizePath( relativePath )];
+            float32& noted = _impl->_mapScreenSize[FileUtil::normalizePath( relativePath ).str()];
             noted          = MathUtil::max( noted, screenSize );
         }
     }
@@ -700,7 +700,7 @@ namespace sw
     void TextureCache::releaseRetiredTextures( IRHIDevice* pDevice )
     {
         if ( pDevice != nullptr )
-            _impl->_retired.releaseFor( pDevice );
+            _impl->_retired.releaseForDevice( pDevice );
     }
 
     uint32 TextureCache::countLoadsInFlight() const
@@ -743,7 +743,7 @@ namespace sw
         const bool bValidRequest = isCPUTexturePath( relativePath ) && bSizeMatches;
         if ( _impl == nullptr || bValidRequest == false )
             return false;
-        const string             key = FileUtil::normalizePath( relativePath );
+        const string             key = FileUtil::normalizePath( relativePath ).str();
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         if ( _impl->_mapEntry.find( key ) != _impl->_mapEntry.end() )
             return false;
@@ -759,7 +759,7 @@ namespace sw
     {
         if ( _impl == nullptr || isCPUTexturePath( relativePath ) == false )
             return;
-        const string             key = FileUtil::normalizePath( relativePath );
+        const string             key = FileUtil::normalizePath( relativePath ).str();
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
@@ -775,7 +775,7 @@ namespace sw
         const bool bInvalidDeclaration = _impl == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
         if ( bInvalidDeclaration )
             return;
-        const string             key = FileUtil::normalizePath( relativePath );
+        const string             key = FileUtil::normalizePath( relativePath ).str();
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         Impl::RenderTargetSize&  size = _impl->_mapRenderTargetSize[key];
         size._width                   = width;
@@ -788,7 +788,7 @@ namespace sw
         const bool bInvalidRenderTargetRequest = _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
         if ( bInvalidRenderTargetRequest )
             return false;
-        const string key = FileUtil::normalizePath( relativePath );
+        const string key = FileUtil::normalizePath( relativePath ).str();
 
         // 크기를 먼저 알린다 — 아직 만들지 않았으면 다음 acquire 가 이 크기로 만든다. 다시 만드는 일은 reload 와 같이 잠금 밖에서 한다.
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
@@ -849,7 +849,7 @@ namespace sw
     {
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
-        const string                   key = FileUtil::normalizePath( relativePath );
+        const string                   key = FileUtil::normalizePath( relativePath ).str();
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         const auto                     it = _impl->_mapEntry.find( key );
         // 올리는 중(처음 acquire · reload)인 항목은 내주지 않는다 — 그 스레드가 잠금 없이 같은 객체의 핸들 · SRV 를 바꾸고 있다.
@@ -870,7 +870,7 @@ namespace sw
         if ( _impl == nullptr || bEmpty )
             return;
         Impl::RegionUpdate update;
-        update._key       = FileUtil::normalizePath( relativePath );
+        update._key       = FileUtil::normalizePath( relativePath ).str();
         update._x         = x;
         update._y         = y;
         update._width     = width;
@@ -1005,7 +1005,7 @@ namespace sw
     {
         if ( relativePath.empty() || _impl == nullptr )
             return;
-        _impl->releaseReference( FileUtil::normalizePath( relativePath ), _impl->_pBoundDevice.load( std::memory_order_acquire ) );
+        _impl->releaseReference( FileUtil::normalizePath( relativePath ).str(), _impl->_pBoundDevice.load( std::memory_order_acquire ) );
     }
 
     bool TextureCache::isCached( string_view relativePath ) const
@@ -1013,7 +1013,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return false;
 
-        const string                   key = FileUtil::normalizePath( relativePath );
+        const string                   key = FileUtil::normalizePath( relativePath ).str();
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
@@ -1156,7 +1156,7 @@ namespace sw
         pCache->_listUploading.push_back( shared_from_this() );
     }
 
-    void TextureLoadOperation::removeFromPumpLists( TextureCache::Impl& cache )
+    void TextureLoadOperation::removeFromPollLists( TextureCache::Impl& cache )
     {
         // 펌프가 아닌 쪽(`wait`)이 먼저 올렸으면 목록에서 뺀다 — 목록이 로드 작업(곧 참조)을 쥔 채 남지 않게(렌더가 없는 테스트는 펌프가 돌지 않는다).
         ScopedLock<mutex> lock{ cache._awaitingMutex };
@@ -1174,7 +1174,7 @@ namespace sw
 
     expected<AssetCompletionStep> TextureLoadOperation::concludeCompletion( TextureCache::Impl& cache, bool bReady )
     {
-        removeFromPumpLists( cache );
+        removeFromPollLists( cache );
         if ( bReady == false && _loadError.empty() )
             _loadError = "the GPU upload failed";
         // 위쪽 밉이 남았으면 읽은 이미지를 스트리밍 줄로 넘긴다 — 다시 읽지 않고 렌더 스레드가 프레임 예산 안에서 업로드한다.
@@ -1198,7 +1198,7 @@ namespace sw
         {
             return unexpected( Error{ ErrorKind::NotFound, "the texture cache was shut down before the upload" } );
         }
-        removeFromPumpLists( *pCache );
+        removeFromPollLists( *pCache );
         if ( _loadError.empty() == false )
             return concludeCompletion( *pCache, false );
 
@@ -1275,7 +1275,7 @@ namespace sw
         const bool bCanReload = _impl != nullptr && pDevice != nullptr;
         if ( bNotOnDisk || bCanReload == false )
             return;
-        const string key = FileUtil::normalizePath( relativePath );
+        const string key = FileUtil::normalizePath( relativePath ).str();
 
         // 렌더 스레드 비우기와 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 비우면 같은 잠금을 기다리는
         // 렌더 스레드와 서로 기다릴 수 있다. 진행 중 표시를 세워 두면 그사이 acquire 는 기다리고 release 는 지우지 않는다.

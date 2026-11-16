@@ -53,9 +53,9 @@ namespace sw
 
     private:
         NameRegistry<RigNodeFactory> _registry; ///< 종류 이름 → 생성 함수(등록 순서)
-    };
 
-    SW_SERVICE_SLOT( RigNodeRegistry, Required );
+        SW_SERVICE_SLOT( RigNodeRegistry, Required );
+    };
 } // namespace sw
 
 namespace sw

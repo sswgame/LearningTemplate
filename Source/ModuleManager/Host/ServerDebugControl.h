@@ -39,7 +39,7 @@ namespace sw
         /** @brief 채널을 닫습니다. 열지 않았어도 됩니다. */
         virtual void stopChannel() = 0;
         /** @brief 받은 채널 줄을 이 스레드(게임 스레드)에서 실행합니다. 일시정지 중에도 부른다 — 멈춘 상태의 값을 읽는 것이 쓰임이다. */
-        virtual void pump() = 0;
+        virtual void poll() = 0;
         /** @brief 표준 입력 한 줄(일시정지 명령 · 개발 명령)을 처리했으면 true 입니다. 응답과 실패는 로그에 남긴다. */
         [[nodiscard]] virtual bool executeCommand( string_view command ) = 0;
         /** @brief 게임 틱을 돌지 않고 기다려야 하면 true 입니다(멈췄고 남은 `step` 이 없다). */

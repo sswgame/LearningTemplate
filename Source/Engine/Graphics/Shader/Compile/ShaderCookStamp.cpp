@@ -3,7 +3,7 @@
  * @brief 쿠킹된 산출물이 최신인지 판정합니다. **파일 시간이 아니라 내용 해시**로, **셰이더마다 실제로 연 헤더만** 보고 판단합니다.
  * @details 이 저장소는 쿠킹된 바이너리까지 커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다.
  *          주의: `산출물 mtime >= 소스 mtime` 으로 판정하면 그때 "이미 최신" 이라 답해 낡은 바이너리가 커밋된 채 돌고,
- *          한 백엔드만 다른 이미지를 내면 백엔드 버그로 오인하게 된다. 그 판정이 이 파일 하나에 모여 있다(`ShaderCookStampTest.FreshnessIsJudgedByContentNotFileTime` 이 고정한다).
+ *          한 백엔드만 다른 이미지를 내면 백엔드 버그로 오인하게 된다. 그 판정이 이 파일 하나에 모여 있다(`ShaderCookStampTest.FreshnessIsDecidedByContentNotFileTime` 이 고정한다).
  *
  *          **헤더는 소스마다 컴파일러가 실제로 연 것만 적는다.** 예전에는 모든 `.hlsli` 의 해시 하나를 섞어 헤더 하나를 고치면 모든 셰이더가 다시 쿠킹됐다.
  *          어느 헤더를 열었는지는 바이트코드(리플렉션은 바인딩 정보다)가 아니라 컴파일러가 소스를 읽는 순간 include 처리기가 안다 — 그 목록(`ShaderCompileResult::_listIncludedFile`)을
@@ -30,6 +30,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 #include <algorithm>
 
@@ -669,18 +670,23 @@ namespace sw
 
                 // 바이너리는 있는데 매니페스트에 그 키가 없는 조합을 잡는다. 스탬프는 소스가 바뀌었는지만 보므로 쿠커의 레시피가 늘어난 경우(새 퍼뮤테이션 축)는
                 // 여기가 아니면 못 잡는다 — 리플렉션 없이 바인딩한 DX12 가 DEVICE_HUNG 으로 죽었다. 매니페스트 키는 바이너리 파일 이름 그대로다.
-                vector<uint8> manifestBytes;
-                const string  manifestPath = FileUtil::joinPath( binDir, "reflection.manifest" );
-                if ( FileUtil::isRegularFile( manifestPath ) == false || FileUtil::readFile( manifestPath, manifestBytes ) == false )
+                // 매니페스트를 한 번 풀어 키로 찾는다 — 예전에는 바이너리마다 매니페스트 바이트 전체에서 이름을 찾아(바이너리 수 × 매니페스트 크기) dx12 19382 개 · 78 MB 에 147 초였다(2026-11-13).
+                const string                      manifestPath = FileUtil::joinPath( binDir, ShaderReflectionLibrary::getManifestFileName() );
+                ShaderReflectionLibrary::EntryMap mapManifest;
+                if ( FileUtil::isRegularFile( manifestPath ) == false )
                 {
                     appendProblem( outListProblem, "%#: '%#' has no reflection manifest", label, shaderFolder );
                     return;
                 }
-                const string_view manifest{ reinterpret_cast<const utf8*>( manifestBytes.data() ), manifestBytes.size() };
-                vector<string>    listUncovered;
+                if ( ShaderReflectionLibrary::loadManifestFile( manifestPath, mapManifest ) == false )
+                {
+                    appendProblem( outListProblem, "%#: '%#' reflection manifest cannot be read (unreadable, another format or corrupt) - cook again", label, shaderFolder );
+                    return;
+                }
+                vector<string> listUncovered;
                 for ( const string& binaryName : listBinary )
                 {
-                    if ( manifest.find( binaryName ) == string_view::npos )
+                    if ( mapManifest.find( binaryName ) == mapManifest.end() )
                         listUncovered.push_back( binaryName );
                 }
                 if ( listUncovered.empty() == false )

@@ -80,7 +80,7 @@ namespace sw
         bool update( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
 
         /** @brief 메시의 풀 자리(정점 · 인덱스 시작)를 반환합니다. 풀에 없으면 둘 다 `kInvalidBase` 입니다. */
-        Placement placementOf( const Mesh* pMesh ) const;
+        Placement getPlacementOf( const Mesh* pMesh ) const;
 
         /** @brief 풀 정점 버퍼를 반환합니다. 0 이면 풀이 비어 있습니다. */
         RHIBufferHandle getVertexBuffer() const { return _vertexBuffer; }

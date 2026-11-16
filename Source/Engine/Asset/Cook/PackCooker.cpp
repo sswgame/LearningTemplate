@@ -2,7 +2,6 @@
 
 #include "Engine/Asset/Cook/PackCooker.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
@@ -73,6 +72,7 @@ namespace sw
             {
                 unordered_set<string> _setIncluded;
                 unordered_set<string> _setReferencedExcluded;
+                unordered_set<string> _setExcludedSource; ///< `PackCookParams::_listExcludedSourceFile` 의 색인(절대 경로) — 파일마다 목록을 훑지 않는다(파일 수 × 제외 수). 목록은 순서가 설정 해시에 들어가 그대로 둔다
                 PackStagedSelection   _staged;
             };
 
@@ -109,14 +109,14 @@ namespace sw
             };
 
             /** @brief 원본 파일 하나가 팩에 담길 수 있는지(제외 규칙 · 위 층이 뺀 파일 · 낡은 쿠킹본이 아닌지)입니다. 고르기의 후보 판정이다. */
-            static bool isPackableSource( string_view relativePath, const string& absPath, const PackConfig& config, const PackCookParams& params )
+            static bool isPackableSource( string_view relativePath, const string& absPath, const PackConfig& config, const PackCookParams& params, const PackSelection& selection )
             {
                 return PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) &&
-                       VectorUtil::contains( params._listExcludedSourceFile, FileUtil::normalizePath( absPath ) ) == false && AssetCookPath::isCookedOutput( relativePath ) == false;
+                       selection._setExcludedSource.contains( FileUtil::normalizePath( absPath ).str() ) == false && AssetCookPath::isCookedOutput( relativePath ) == false;
             }
 
             /** @brief 도메인 기준 상대 경로의 정규화 리소스 id(`game/empty/maps/a.scene.xml`)입니다. */
-            static string makeAssetID( string_view domain, string_view relativePath ) { return FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) ); }
+            static string makeAssetID( string_view domain, string_view relativePath ) { return FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) ).str(); }
 
             /** @brief 고르기 요약입니다 — 도메인마다 담은 파일 수 · 바이트와 후보 수 · 바이트, 그리고 합계(보고 · 크기 추적용). */
             static void logSelection( const vector<PackDomainCandidates>& listCandidates, const PackReachResult& reach )
@@ -163,13 +163,18 @@ namespace sw
                 const CookJob reachJob( reachDesc );
 
                 // 작업 범위 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 이 표가 바뀌면 고르는 파일도 바뀌므로 입력이다.
-                AssetReferenceFields fields;
-                if ( fields.load( params._projectRoot ) == false )
+                AssetReferenceFields properties;
+                if ( properties.load( params._projectRoot ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.ReferenceFieldsUnreadable", "Pack cook: the asset reference fields under %# could not be read - references cannot be followed", params._projectRoot );
                     return false;
                 }
 
+                outSelection._setExcludedSource.clear();
+                for ( const string& excludedPath : params._listExcludedSourceFile )
+                {
+                    outSelection._setExcludedSource.insert( excludedPath );
+                }
                 PackReachFiles               files;
                 PackDiskReachSource          source;
                 vector<PackDomainCandidates> listCandidates;
@@ -190,20 +195,20 @@ namespace sw
                         string assetID = makeAssetID( domain, relativePath );
                         files._setExisting.insert( assetID );
                         candidates._listExisting.push_back( assetID );
-                        if ( isPackableSource( relativePath, absPath, config, params ) == false )
+                        if ( isPackableSource( relativePath, absPath, config, params, outSelection ) == false )
                             continue;
                         files._setPackable.insert( assetID );
                         source._mapAbsolutePath.try_emplace( assetID, absPath );
                         candidates._listFile.push_back( PackCandidateFile{ std::move( assetID ), absPath } );
                     }
                     if ( StringUtil::startsWith( domain, gamePrefix ) )
-                        files._listGameDomain.push_back( FileUtil::normalizePath( domain ) );
+                        files._listGameDomain.push_back( FileUtil::normalizePath( domain ).str() );
                 }
 
                 AssetCookRootRegistry::appendRoots( files._listCodeRoot );
                 files._automation = params._automationContent;
                 PackReachResult reach;
-                const bool      bReached = PackReachResult::collect( fields, config._cookRules, files, source, reach );
+                const bool      bReached = PackReachResult::collect( properties, config._cookRules, files, source, reach );
                 logSelection( listCandidates, reach );
                 if ( bReached == false )
                 {
@@ -226,7 +231,7 @@ namespace sw
             /** @brief 도메인 팩 작업의 설정 해시입니다 — 쿠킹 설정 해시에 그 도메인에서 고른 파일 목록(정렬)을 섞는다. 다른 팩의 참조가 바뀌어 고른 것이 달라지면 다시 굽는다. */
             static uint64 computeSelectionHash( uint64 settingsHash, const string& domain, const PackSelection& selection )
             {
-                const string   prefix = FileUtil::normalizePath( domain ) + "/";
+                const string   prefix = FileUtil::normalizePath( domain ).str() + "/";
                 vector<string> listID;
                 for ( const unordered_set<string>* pSet : { &selection._setIncluded, &selection._setReferencedExcluded } )
                 {
@@ -320,10 +325,13 @@ namespace sw
                 return AssetPaths::collectGamePackDomains( params._resourceRoot, outListDomain );
             }
 
-            /** @brief 작업 키의 설정 해시입니다 — 담는 규칙과 팩 바이트를 정하는 값 모두(설정 전체 · 셰이더 폴더 · 빌드 타깃). */
-            static uint64 computeSettingsHash( const PackConfig& config, const PackCookParams& params )
+            /** @brief 작업 키의 설정 해시입니다 — 담는 규칙과 팩 바이트를 정하는 값 모두(설정 전체 · 셰이더 폴더 · 빌드 타깃). 설정을 글로 못 쓰면 오류입니다. */
+            [[nodiscard]] static expected<uint64> computeSettingsHash( const PackConfig& config, const PackCookParams& params )
             {
-                string canonical = JSONSerializer::serialize( &config, *PackConfig::StaticType() );
+                expected<string> configText = JSONSerializer::serialize( &config, *PackConfig::StaticType() );
+                if ( configText.has_value() == false )
+                    return unexpected( configText.error() );
+                string canonical = std::move( *configText );
                 canonical.append( "\nshader=" ).append( params._shaderFolder ).append( "\ntarget=" ).append( params._buildTarget );
                 // 팩 형식 버전도 설정이다 - 형식을 올리면 옛 형식의 산출물을 재사용하지 않는다(리더가 거절할 팩을 남기지 않게).
                 utf8 arrFormat[constant::buffer::kMax32];
@@ -491,7 +499,7 @@ namespace sw
                         continue;
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
                         continue;
-                    if ( VectorUtil::contains( params._listExcludedSourceFile, FileUtil::normalizePath( absPath ) ) )
+                    if ( selection._setExcludedSource.contains( FileUtil::normalizePath( absPath ).str() ) )
                         continue; // 위 층이 뺀 파일(출시 문화권 밖 번역 테이블 — 언리얼 Cultures to Stage). 런타임은 없는 테이블을 "아직 번역 없음" 으로 읽는다
                     // 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가 없을 때 그것으로 물러나 실패를 가리므로 넣지 않는다.
                     if ( AssetCookPath::isCookedOutput( relativePath ) )
@@ -512,8 +520,8 @@ namespace sw
                 vector<string> listStagedFile;
                 if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
                     return CookStep::Failed;
-                DroppedShaderList droppedRequested; // 쿠킹 요청에 있는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
-                DroppedShaderList droppedOther;     // 요청 밖(낡은 잔재 등) — 정보 줄
+                DroppedShaderList droppedRequested; // 닿은 출처가 요청했는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
+                DroppedShaderList droppedOther;     // 닿지 않은 출처만 요청했거나 요청 밖(낡은 잔재 등) — 정보 줄
                 for ( const string& absPath : listStagedFile )
                 {
                     string relativePath;
@@ -522,11 +530,11 @@ namespace sw
                     if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     // 산출물은 그 원본(같은 줄기의 원본 · 셰이더 원본)이 쓰일 때만 담는다 - 쓰지 않는 씬의 쿠킹본 · 쓰지 않는 셰이더의 바이너리를 싣지 않는다.
-                    if ( selection._staged.selects( domain, relativePath ) == false )
+                    if ( selection._staged.isSelected( domain, relativePath ) == false )
                     {
                         const string assetID = makeAssetID( domain, relativePath );
                         if ( StringUtil::contains( assetID, "/shaders/bin/" ) )
-                            ( params._setRequestedShaderBinary.contains( assetID ) ? droppedRequested : droppedOther ).add( relativePath );
+                            ( PackCooker::isRequestedByReachedOrigin( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) ? droppedRequested : droppedOther ).add( relativePath );
                         continue;
                     }
                     if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
@@ -563,16 +571,32 @@ namespace sw
 {
     string PackCooker::makePackFileName( string_view domain )
     {
-        string name = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( domain ) );
+        string name = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( domain ).str() );
         std::replace( name.begin(), name.end(), '/', '_' );
         name += ".pack";
         return name;
     }
 
+    bool PackCooker::isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )
+    {
+        const auto requestIt = mapRequested.find( assetID );
+        if ( requestIt == mapRequested.end() )
+            return false;
+        for ( const vector<string>& listOriginAsset : requestIt->second )
+        {
+            bool bAllReached = true;
+            for ( const string& originAsset : listOriginAsset )
+                bAllReached = bAllReached && setIncluded.contains( originAsset );
+            if ( bAllReached )
+                return true;
+        }
+        return false;
+    }
+
     string PackCooker::makeRecordID( string_view target, string_view cookedDir, string_view packName )
     {
         // 기록 자리는 프리셋(Debug · Release · Shipping)이 함께 쓰고 팩의 입력(스테이징)은 프리셋마다 다르다 — 스테이징 경로의 해시로 기록을 가른다(헤더 주석).
-        const string                            normalizedCookedDir = FileUtil::normalizePath( cookedDir );
+        const string                            normalizedCookedDir = FileUtil::normalizePath( cookedDir ).str();
         StringBuilder<constant::buffer::kMax32> stagingKey;
         stagingKey.appendFormat( "%016llx", static_cast<unsigned long long>( HashUtil::computeStringHash64( normalizedCookedDir.c_str(), normalizedCookedDir.size(), false ) ) );
         return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( "packs", target ), stagingKey.view() ), packName );
@@ -584,7 +608,7 @@ namespace sw
         if ( AssetPaths::isExcludedForTarget( buildTarget, relativePath ) )
             return false;
 
-        const string        normalized = FileUtil::normalizePath( relativePath );
+        const string        normalized = FileUtil::normalizePath( relativePath ).str();
         vector<string_view> listDirectory;
         string_view         fileName;
         PackCookerInternal::splitPath( normalized, listDirectory, fileName );
@@ -620,7 +644,7 @@ namespace sw
     {
         if ( AssetPaths::isExcludedForTarget( buildTarget, relativePath ) )
             return false;
-        const string        normalized = FileUtil::normalizePath( relativePath );
+        const string        normalized = FileUtil::normalizePath( relativePath ).str();
         vector<string_view> listDirectory;
         string_view         fileName;
         PackCookerInternal::splitPath( normalized, listDirectory, fileName );
@@ -660,10 +684,16 @@ namespace sw
         }
 
         CookJobDesc desc;
-        desc._cookerName      = "Pack";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Pack" );
-        desc._target          = params._buildTarget + "-" + params._shaderFolder;
-        desc._settingsHash    = PackCookerInternal::computeSettingsHash( config, params );
+        desc._cookerName                    = "Pack";
+        desc._codeFingerprint               = CookCodeFingerprint::find( "Pack" );
+        desc._target                        = params._buildTarget + "-" + params._shaderFolder;
+        const expected<uint64> settingsHash = PackCookerInternal::computeSettingsHash( config, params );
+        if ( settingsHash.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "PackCooker.SettingsNotWritable", "Pack cook settings could not be written as JSON: %# (%#)", settingsHash.error().message(), settingsHash.error().detail() );
+            return false;
+        }
+        desc._settingsHash = *settingsHash;
 
         PackCookerInternal::PackSelection selection;
         if ( PackCookerInternal::selectFiles( config, params, listDomain, desc, selection ) == false )

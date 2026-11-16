@@ -14,7 +14,7 @@ namespace sw
     struct FixedCodecValueEmitter
     {
         /** @brief 타입의 프로퍼티를 선언 순서로 @p outListNode 에 냅니다. 앞선 필드만 범위 이름으로 볼 수 있습니다. 펼친 중첩 타입이면 범위 깊이가 하나 늡니다. */
-        static void emitFields( FixedCodecEmitState& state, const ParsedTypeInfo& type, string& outCanonical, vector<FixedCodecNode>& outListNode );
+        static void emitProperties( FixedCodecEmitState& state, const ParsedTypeInfo& type, string& outCanonical, vector<FixedCodecNode>& outListNode );
 
     private:
         static const FixedMathTypeDef* findMathType( string_view typeName );

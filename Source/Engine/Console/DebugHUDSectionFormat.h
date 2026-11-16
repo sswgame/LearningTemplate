@@ -9,8 +9,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 
-#if !defined( SW_SHIPPING )
-
+// Shipping 에서도 정의한다 — 섹션 본문은 등록만 꺼지고 컴파일은 되므로, 여기서 빼면 Shipping 에서만 컴파일 오류(undefined-func-template)가 난다(부르지 않으면 코드가 남지 않는다).
 namespace sw
 {
     template <typename... Args>
@@ -21,5 +20,3 @@ namespace sw
         addLine( label, text.c_str() );
     }
 } // namespace sw
-
-#endif

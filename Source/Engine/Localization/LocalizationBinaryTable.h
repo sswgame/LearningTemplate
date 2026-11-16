@@ -6,7 +6,7 @@
  *          형식(리틀 엔디언):
  * @code
  *   u32 magic("SWLR")  u32 version  u32 cultureLength  u8 culture[]  u32 entryCount  u32 blobBytes
- *   entryCount x { u64 keyHash  u32 offset  u32 length }      ← 키 해시 오름차순
+ *   entryCount x { u64 keyHash  u32 offset  u32 length }      ← 키 해시(`LocalizationKeyIndex::computeHash`) 오름차순
  *   u8 blob[blobBytes]                                         ← UTF-8 글, 끝 표시 없음
  *   u64 checksum                                               ← 앞의 모든 바이트의 해시
  * @endcode
@@ -22,6 +22,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Localization/StringTable.h"
 
 namespace sw
 {
@@ -33,7 +34,7 @@ namespace sw
     {
     public:
         static constexpr uint32      kMagic     = FourCCUtil::make( "SWLR" );
-        static constexpr uint32      kVersion   = 1;
+        static constexpr uint32      kVersion   = 2; ///< 2: 키 해시가 64 비트(`LocalizationKeyIndex`)다 — 1 은 32 비트 해시라 조회가 맞지 않아 거절한다
         static constexpr const utf8* kExtension = ".locres";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
@@ -42,10 +43,11 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationBinaryTable.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LocalizationBinaryTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        /** @brief 키(`Menu.Start`)의 글을 넣습니다. 같은 키(해시)는 바꿉니다. */
-        void setText( string_view key, string_view text );
-        /** @brief 키 해시의 글을 넣습니다. */
-        void setTextByHash( uint64 keyHash, string_view text );
+        /**
+         * @brief 키(`Menu.Start`)의 글을 넣습니다. 같은 키는 바꿉니다.
+         * @details 표는 키 글을 담지 않으니 충돌은 여기(쿠킹)에서만 보인다 — 같은 해시에 다른 키면 오류이고 아무것도 넣지 않는다.
+         */
+        [[nodiscard]] expected<void> setText( string_view key, string_view text );
 
         /** @brief 바이트로 굳힙니다(해시 오름차순이라 같은 내용이면 같은 바이트입니다). */
         void toBytes( vector<uint8>& outBytes ) const;
@@ -57,7 +59,8 @@ namespace sw
         const map<uint64, string>& getTexts() const { return _mapText; }
 
     private:
-        string              _culture;
-        map<uint64, string> _mapText;
+        string               _culture;
+        map<uint64, string>  _mapText;
+        LocalizationKeyIndex _keyIndex; ///< 쿠킹 쪽에서 넣은 키(`parse` 로 읽은 표는 키 글이 없어 비어 있다)
     };
 } // namespace sw

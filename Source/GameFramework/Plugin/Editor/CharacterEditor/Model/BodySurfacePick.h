@@ -2,7 +2,7 @@
  * @file BodySurfacePick.h
  * @brief 미리보기 캐릭터(몸과 부품 오브젝트)의 표면을 광선으로 집습니다 — 맞은 메시 구간(별칭 대응 · 강조)과 그 자리의 UV(문신 · 데칼 배치). 캐릭터 편집 창의 몸 탭이 쓴다.
  * @details 표면 하나(`BodyPickSurface`)는 오브젝트 하나의 메시를 **지금 포즈**로 월드에 옮긴 정점이다 — 스킨 정점이면 그 유닛의 스킨 팔레트(GPU 스키닝과 같은 행렬)로
- *          CPU 스키닝하고(`MeshSkinBinding::skinVertex`), 아니면 바인드 정점을 월드로만 옮긴다. 삼각형마다 광선과 맞추고(`CharacterGeometryUtil::intersectRayTriangle`, 양면)
+ *          CPU 스키닝하고(`MeshSkinBinding::skinVertex`), 아니면 바인드 정점을 월드로만 옮긴다. 삼각형마다 광선과 맞추고(`Ray::intersectTriangle`, 양면)
  *          모든 표면 중 가장 가까운 맞음이 답이다. 언리얼의 스켈레탈 메시 라인 트레이스(스키닝된 정점 · 피직스 에셋) · 섹션 클릭 선택 · 데칼 배치와 같은 자리다.
  *          shortcut: 모프 타깃 가중치(얼굴 표정)는 넣지 않는다 — 체형 · 피팅은 메시에 베이크돼 있어 몸 자리에는 닿지 않는다, 표정 위 집기가 필요해지면 모프를 더한다.
  *          ImGui 와 씬을 모릅니다 — 표면은 창이 오브젝트에서 모아 짓는다.

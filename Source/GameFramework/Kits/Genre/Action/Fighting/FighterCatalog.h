@@ -2,7 +2,7 @@
  * @file FighterCatalog.h
  * @brief 철권 같은 3D 격투의 캐릭터 데이터입니다. 기반 `MoveCatalog` 의 프레임 데이터에 커맨드(철권 표기), 시작 자세, 조건, 스트링, 콤보 성질을 붙입니다.
  *        체력, 걷기, 몸 크기, 횡이동, 점프 수치도 여기에 둡니다.
- * @details 정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readFields` 가 읽는다.
+ * @details 정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readProperties` 가 읽는다.
  *          커맨드 표기 · 자세 목록 · 프레임 데이터처럼 칸 하나로 담지 않는 값은 손으로 읽는다.
  */
 #pragma once
@@ -24,6 +24,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 기술을 낼 수 있는 자세입니다. 순서가 비트 번호입니다(`FighterMove::_postureMask`). */
@@ -152,10 +153,10 @@ namespace sw
         /** @brief 리소스 경로의 카탈로그를 읽습니다. 루트의 `moves` 가 가리키는 기술 카탈로그를 공유 캐시에서 받아 기반으로 씁니다. 종류의 로더(공유 캐시)만 부른다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 파일 루트 읽기입니다 — `moves` 의 기술 카탈로그를 받아 `loadRoot` 에 넘깁니다. 없거나 읽지 못하면 오류이고 0 입니다. */
-        uint32 loadFileRoot( const XMLNode& root, string_view sourceName );
-        uint32 loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName );
+        uint32 loadFileRoot( const XMLCatalogRoot& root, string_view sourceName );
+        uint32 loadRoot( const XMLCatalogRoot& root, const MoveCatalog& moveCatalog, string_view sourceName );
     };
 
     /** @brief 캐릭터 카탈로그를 경로마다 한 벌 나눠 줍니다("FighterCatalog", 인스턴스화는 `FighterCatalog.cpp`). 제자리에서 다시 읽습니다(쥔 쪽은 id 로 찾는다). */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<FighterCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, FighterCatalog );
 } // namespace sw

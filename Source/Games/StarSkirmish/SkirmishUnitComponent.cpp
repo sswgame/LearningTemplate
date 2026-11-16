@@ -34,14 +34,14 @@ namespace sw
                 return false;
             float32 lagMax        = 0.0f;
             uint32  measuredCount = 0;
-            pManager->forEachComponentOfType<SkirmishUnitComponent>( [&lagMax, &measuredCount]( const SkirmishUnitComponent* pView )
+            for ( const SkirmishUnitComponent* pView : pManager->getComponentRegistry().getAll<SkirmishUnitComponent>() )
             {
                 const float32 lag = pView->measureViewLag();
                 if ( lag < 0.0f )
-                    return;
+                    continue;
                 lagMax = MathUtil::max( lagMax, lag );
                 ++measuredCount;
-            } );
+            }
             if ( measuredCount == 0 )
                 return false;
             outValue = static_cast<float64>( lagMax );
@@ -101,7 +101,7 @@ namespace sw
         return listPath;
     }
 
-    uint32 SkirmishUnitModelCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 SkirmishUnitModelCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<SkirmishUnitModelCatalog>;
         static constexpr Element kArrElement[] = {
@@ -115,9 +115,9 @@ namespace sw
     {
         // 세 칸은 리플렉션 필수 칸이다 — 빠진 칸 · 빈 이름(XMLFields.RequiredFieldMissing) · 범위 밖 폭(XMLFields.ValueOutOfRange)을 이름과 함께 알린다.
         SkirmishUnitModelDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
         {
-            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, def._id.viewOrEmpty() );
+            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, def._id.view() );
             return false;
         }
         SkirmishUnitModel entry;
@@ -212,4 +212,16 @@ namespace sw
 {
     /** @brief StarSkirmish 유닛 모델 표(`SkirmishUnitModelCatalog`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 알아본다). */
     SW_MODULE_SHARED_ASSET_CACHE( SkirmishUnitModels, SkirmishUnitModelCatalog, , SkirmishUnitModelCatalog::kAssetType.withLoader( AssetTypeLoader::of<SkirmishUnitModelCatalog>( MemoryTag::Game ) ) );
+
+    void SkirmishUnitComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeBoundComponent::onRegister( manager );
+        manager.getComponentRegistry().add<SkirmishUnitComponent>( this );
+    }
+
+    void SkirmishUnitComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SkirmishUnitComponent>( this );
+        GameModeBoundComponent::onUnregister( manager );
+    }
 } // namespace sw

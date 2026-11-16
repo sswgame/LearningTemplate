@@ -121,6 +121,30 @@ namespace sw
                 }
             }
 
+            /** @brief 쉼표 · 세미콜론으로 나눈 이름들을 @p outList 에 붙입니다. */
+            static void appendNameList( vector<string>& outList, const string_view value )
+            {
+                const string_splitter parts( value, { ",", ";" } );
+                for ( const string_view token : parts.getSplitList() )
+                {
+                    const string_view trimmed = StringUtil::trim( token );
+                    if ( trimmed.empty() == false )
+                        outList.emplace_back( trimmed );
+                }
+            }
+
+            /** @brief 지운 필드 이름입니다. `RemovedField = "_oldA, _oldB"`. */
+            static void appendRemovedField( ParsedTypeInfo& target, const string_view value )
+            {
+                appendNameList( target._listRemovedField, value );
+            }
+
+            /** @brief 지운 타입 이름입니다. `RemovedType = "sw::OldThing"`. */
+            static void appendRemovedType( ParsedTypeInfo& target, const string_view value )
+            {
+                appendNameList( target._listRemovedType, value );
+            }
+
             /** @brief `Key=Value, Key2` 를 커스텀 메타 쌍으로 붙입니다. 값이 없는 키는 "1" 입니다. */
             template <typename TParsed>
             static void appendCustomMeta( TParsed& target, const string_view value )
@@ -275,7 +299,7 @@ namespace sw
             // D) 검증 — AnnotationMeta.txt ↔ 필드 표
             // ------------------------------------------------------------------------------
             /** @brief 필드가 받는 값의 종류가 AnnotationMeta.txt 의 kind 와 맞는지 봅니다. */
-            static bool acceptsKind( const AnnotationValue value, const AnnotationBinding::Kind kind ) noexcept
+            static bool canAcceptKind( const AnnotationValue value, const AnnotationBinding::Kind kind ) noexcept
             {
                 switch ( value )
                 {
@@ -322,7 +346,7 @@ namespace sw
                                      entry._scope, binding._field, getBoundFieldID( binding ) );
                     return false;
                 }
-                if ( acceptsKind( pField->_value, binding._kind ) == false )
+                if ( canAcceptKind( pField->_value, binding._kind ) == false )
                 {
                     SW_LOG_ERROR_ID( "AnnotationFields.AnnotationMetaTxtDeclaresBut", "AnnotationMeta.txt [%#] declares '%#' as %#, but its field member in ParsedReflection.h "
                                                                                       "holds another kind of value.",
@@ -531,7 +555,7 @@ namespace sw
     template void AnnotationFields::emitEditorMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
     template void AnnotationFields::emitEditorMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
 
-    bool AnnotationFields::acceptsOnEvent( const string_view propertyFieldID )
+    bool AnnotationFields::canAcceptOnEvent( const string_view propertyFieldID )
     {
         if ( propertyFieldID == "Name" )
             return true;

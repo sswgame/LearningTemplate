@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/DataRaceDetector.h"
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
     #include <cstdio>
     #include <functional>
     #include <thread>
@@ -15,7 +15,7 @@ namespace sw
         /** @brief 걸린 경합 보고 함수입니다. 경합을 찾았을 때만 읽습니다. */
         atomic<DataRaceReportFunction> s_pReportFunction{ nullptr };
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         static constexpr uint32 kWriterBitShift = 16;
         static constexpr uint32 kCountMask      = 0xFFFF;
         static constexpr uint32 kWriterUnit     = 1u << kWriterBitShift;
@@ -41,7 +41,7 @@ namespace sw
         s_pReportFunction.store( pFunction, std::memory_order_release );
     }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
     bool RaceDetectContext::isOwnedByCurrentThread() const
     {
         const uint64 ownerID = _ownerThreadID.load( std::memory_order_relaxed );

@@ -180,7 +180,7 @@ namespace sw
         , _baseGruntCount{ 2u }
         , _wavesPerCaster{ 2u }
         , _wavesPerLevel{ 2u }
-        , _deathLinger{ 0.8f }
+        , _deathLifeSpan{ 0.8f }
         , _playerRespawnDelay{ 2.5f }
         , _playerTint{ 0.55f, 0.75f, 1.0f, 1.0f }
         , _gruntTint{ 1.0f, 0.5f, 0.45f, 1.0f }
@@ -705,7 +705,7 @@ namespace sw
             }
             if ( unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
             {
-                unit._deathTimer = _deathLinger;
+                unit._deathTimer = _deathLifeSpan;
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
                     SW_LOG_INFO_ID( "ArenaGameMode.PlayerFellWaveAfter", "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );

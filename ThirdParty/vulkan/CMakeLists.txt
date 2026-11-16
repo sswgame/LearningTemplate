@@ -17,7 +17,7 @@ if(Vulkan_FOUND)
 		target_include_directories(vulkanheaders INTERFACE ${Vulkan_INCLUDE_DIRS})
 	endif()
 else()
-	sw_linkVcpkgHeaderOnlyTarget(vulkanheaders)
+	sw_link_vcpkg_header_only_target(vulkanheaders)
 endif()
 
 if(TARGET sw_third_party_includes)

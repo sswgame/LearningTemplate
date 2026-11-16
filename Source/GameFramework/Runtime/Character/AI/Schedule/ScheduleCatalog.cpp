@@ -138,7 +138,7 @@ namespace sw
         return false;
     }
 
-    uint32 ScheduleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 ScheduleCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         /** 원소를 읽는 쪽은 id 글을 받고 알림은 스스로 남기므로 줄 모양으로 잇는다. 함수 안의 형식이라 이 클래스의 비공개를 볼 수 있다. id 는 원소마다의 칸 구조체가 필수로 읽는다 — 여기서는 오류 문장에 쓸 글만 꺼낸다. */
         struct ScheduleElementReader
@@ -201,20 +201,20 @@ namespace sw
         const uint32          loadedCount = XMLCatalogReadResult::readInTableOrder( reader, root, sourceName, kArrElement )._loadedCount;
         resolveReferences( sourceName );
         // 같은 파일의 id 연결은 참조 표가 본다(로드 실패). 코드 등록 이름(활동)은 여기서 보고 같은 정책(로드 실패)으로 맞춘다.
-        const bool bActivitiesKnown = validateActivityNames( root, sourceName ) && _bUnknownIdleActivity == SW_FALSE;
+        const bool bActivitiesKnown = validateActivityNames( root.getRawNode(), sourceName ) && _bUnknownIdleActivity == SW_FALSE; // 손 읽기: 표가 읽은 뒤 깊은 <Block> 의 활동 이름만 다시 본다
         return bActivitiesKnown ? loadedCount : 0;
     }
 
     void ScheduleCatalog::loadCalendar( const XMLNode& node, string_view sourceName )
     {
-        (void)XMLFields::readFields( node, _vocabulary, sourceName );
+        (void)XMLFields::readProperties( node, _vocabulary, sourceName );
     }
 
     void ScheduleCatalog::loadPlace( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         // 위치 없는 장소를 원점에 두지 않는다 — 읽히지 않으면 오류를 알리고 장소를 더하지 않는다(그 장소를 가리키는 약속이 "unknown place" 로 걸러진다).
         SchedulePlaceDef place;
-        if ( XMLFields::readFields( node, place, sourceName ) )
+        if ( XMLFields::readProperties( node, place, sourceName ) )
             (void)_placeCatalog.add( place );
         else
             SW_LOG_ERROR_ID( "ScheduleCatalog.PlaceInvalidFieldsSkipped", "%#: place '%#' has invalid fields - skipped", sourceName, pID );
@@ -223,7 +223,7 @@ namespace sw
     void ScheduleCatalog::loadSpot( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         ScheduleSpotDef spot;
-        if ( XMLFields::readFields( node, spot, sourceName ) == false ) // 종류 · 위치 필수, 수용 >= 1
+        if ( XMLFields::readProperties( node, spot, sourceName ) == false ) // 종류 · 위치 필수, 수용 >= 1
             SW_LOG_ERROR_ID( "ScheduleCatalog.SpotInvalidFieldsSkipped", "%#: spot '%#' has invalid fields - skipped", sourceName, pID );
         else if ( spot._kind.empty() )
             SW_LOG_ERROR_ID( "ScheduleCatalog.SpotNoKindSkipped", "%#: spot '%#' has no kind - skipped", sourceName, pID );
@@ -234,7 +234,7 @@ namespace sw
     void ScheduleCatalog::loadInterrupt( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         ScheduleInterruptDef interrupt;
-        if ( XMLFields::readFields( node, interrupt, sourceName ) )
+        if ( XMLFields::readProperties( node, interrupt, sourceName ) )
             (void)_interruptCatalog.add( interrupt );
         else
             SW_LOG_ERROR_ID( "ScheduleCatalog.InterruptInvalidFieldsSkipped", "%#: interrupt '%#' has invalid fields - skipped", sourceName, pID );
@@ -245,7 +245,7 @@ namespace sw
         using Internal = ScheduleCatalogInternal;
         ScheduleAppointmentDef appointment;
         // 시각(H:MM)과 조건 속성은 손으로 읽는다.
-        bool bValid              = XMLFields::readFields( node, appointment, sourceName, { "start", "end" }, &ScheduleCondition::isConditionAttribute );
+        bool bValid              = XMLFields::readProperties( node, appointment, sourceName, { "start", "end" }, &ScheduleCondition::isConditionAttribute );
         appointment._startMinute = Internal::readClock( node, "start", sourceName, pID, bValid ).value_or( -1 );
         appointment._endMinute   = Internal::readClock( node, "end", sourceName, pID, bValid ).value_or( -1 );
         bValid                   = appointment._condition.loadFromXML( node, _vocabulary, sourceName, pID ) && bValid;
@@ -276,7 +276,7 @@ namespace sw
     void ScheduleCatalog::loadArchetype( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         ScheduleArchetypeDef archetype;
-        if ( XMLFields::readFields( node, archetype, sourceName ) == false )
+        if ( XMLFields::readProperties( node, archetype, sourceName ) == false )
             return;
         readRoutineChildren( node, sourceName, "archetype", pID, archetype._listRoutine );
         (void)_archetypeCatalog.add( archetype );
@@ -285,7 +285,7 @@ namespace sw
     bool ScheduleCatalog::loadNPC( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         ScheduleNPCDef npc;
-        if ( XMLFields::readFields( node, npc, sourceName ) == false ) // 속도 >= 0.01 은 PROPERTY 가 본다
+        if ( XMLFields::readProperties( node, npc, sourceName ) == false ) // 속도 >= 0.01 은 PROPERTY 가 본다
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.NpcInvalidFieldsSkipped", "%#: npc '%#' has invalid fields - skipped", sourceName, pID );
             return false;
@@ -307,7 +307,7 @@ namespace sw
     void ScheduleCatalog::loadEvent( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         ScheduleEventDef event;
-        bool             bValid = XMLFields::readFields( node, event, sourceName, {}, &ScheduleCondition::isConditionAttribute );
+        bool             bValid = XMLFields::readProperties( node, event, sourceName, {}, &ScheduleCondition::isConditionAttribute );
         bValid                  = event._condition.loadFromXML( node, _vocabulary, sourceName, pID ) && bValid;
         if ( bValid == false )
         {
@@ -329,7 +329,7 @@ namespace sw
 
     bool ScheduleCatalog::readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const
     {
-        bool bValid = XMLFields::readFields( node, outRoutine, sourceName, {}, &ScheduleCondition::isConditionAttribute );
+        bool bValid = XMLFields::readProperties( node, outRoutine, sourceName, {}, &ScheduleCondition::isConditionAttribute );
         if ( outRoutine._id.empty() )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.RoutineWithoutIdSkipped", "%#: '%#' has a <Routine> without an id - skipped", sourceName, ownerName );
@@ -374,15 +374,15 @@ namespace sw
         using Internal   = ScheduleCatalogInternal;
         outTailEndMinute = -1;
         // 시각은 시계 표기이고 자정 넘김은 칸이 아니라 시각을 고치는 표시다.
-        bool bFieldsValid = XMLFields::readFields( node, outBlock, sourceName, { "start", "end", "overnight", "onStart", "onEnd" }, &ScheduleCondition::isConditionAttribute );
-        bFieldsValid      = outBlock._condition.loadFromXML( node, _vocabulary, sourceName, ownerName ) && bFieldsValid;
+        bool bPropertiesValid = XMLFields::readProperties( node, outBlock, sourceName, { "start", "end", "overnight", "onStart", "onEnd" }, &ScheduleCondition::isConditionAttribute );
+        bPropertiesValid      = outBlock._condition.loadFromXML( node, _vocabulary, sourceName, ownerName ) && bPropertiesValid;
         if ( const utf8* const pOnStart = node.findAttribute( "onStart" ); pOnStart != nullptr )
-            bFieldsValid = GameActionCall::compileText( pOnStart, sourceName, outBlock._onStart ) && bFieldsValid;
+            bPropertiesValid = GameActionCall::compileText( pOnStart, sourceName, outBlock._onStart ) && bPropertiesValid;
         if ( const utf8* const pOnEnd = node.findAttribute( "onEnd" ); pOnEnd != nullptr )
-            bFieldsValid = GameActionCall::compileText( pOnEnd, sourceName, outBlock._onEnd ) && bFieldsValid;
-        bool bOvernight = false;
-        bFieldsValid    = XMLReadUtil::readOptionalBool( node, "overnight", bOvernight ) && bFieldsValid;
-        if ( bFieldsValid == false )
+            bPropertiesValid = GameActionCall::compileText( pOnEnd, sourceName, outBlock._onEnd ) && bPropertiesValid;
+        bool bOvernight  = false;
+        bPropertiesValid = XMLReadUtil::readOptionalBool( node, "overnight", bOvernight ) && bPropertiesValid;
+        if ( bPropertiesValid == false )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.BlockInvalidFieldsSkipped", "%#: '%#' has a block with invalid fields - skipped", sourceName, ownerName );
             return false;

@@ -11,6 +11,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "DevTools/Diagnostics/DevSceneIterationAccess.h"
+
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugHUDRegistry.h"
@@ -329,7 +331,7 @@ namespace sw
         public:
             DebugHUDScreen( const UIScreenDef& desc, unique_ptr<Widget> root, WidgetID panel, WidgetID column )
                 : UIScreen{ desc, std::move( root ) }
-                , _writer{}
+                , _writer{ DevSceneIterationAccess::getKey() }
                 , _listView{}
                 , _listShownScratch{}
                 , _seenState{}

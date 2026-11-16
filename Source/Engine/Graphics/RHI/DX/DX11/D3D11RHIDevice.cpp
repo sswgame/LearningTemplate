@@ -786,7 +786,7 @@ namespace sw
         return true;
     }
 
-    bool D3D11RHIDevice::isDeviceLost()
+    bool D3D11RHIDevice::pollDeviceLost()
     {
         return _transferSerials.isLost() || isDeviceRemoved();
     }

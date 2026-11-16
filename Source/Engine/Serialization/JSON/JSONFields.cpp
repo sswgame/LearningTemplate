@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    bool JSONFields::readFields( const JSONValue& object, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead )
+    bool JSONFields::readProperties( const JSONValue& object, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead )
     {
         if ( object.isObject() == false )
         {
@@ -60,7 +60,7 @@ namespace sw
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#.%#", sourceName, key );
-                bOk = readFields( field, prop.getRawPtr( pInstance ), *pNested, textBuilder.view() ) && bOk;
+                bOk = readProperties( field, prop.getRawPtr( pInstance ), *pNested, textBuilder.view() ) && bOk;
                 continue;
             }
             // 고정 배열의 길이가 다르면 남는 칸이 조용히 옛 값으로 남는다. 저작 파일에서는 오류다(일반 읽기는 판이 달라진 데이터를 위해 받는다).
@@ -68,7 +68,7 @@ namespace sw
             const bool                             bWrongLength = pSequence != nullptr && pSequence->isFixedSize() && field.size() != pSequence->getSize( prop.getRawPtr( pInstance ) );
             if ( bWrongLength || JSONSerializer::readField( field, prop, pInstance, context ) != FieldReadResult::Read )
             {
-                SW_LOG_ERROR_ID( "JSONFields.ValueUnreadable", "%#: '%#' = %# cannot be read as %#", sourceName, key, field.dump(), prop._typeName.c_str() );
+                SW_LOG_ERROR_ID( "JSONFields.ValueUnreadable", "%#: '%#' = %# cannot be read as %#", sourceName, key, field.describe(), prop._typeName.c_str() );
                 bOk = false;
                 continue;
             }

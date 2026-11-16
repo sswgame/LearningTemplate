@@ -52,12 +52,12 @@ namespace
         }
 
         /** @brief 명령 하나를 보내고 결과를 돌려줍니다. 답은 정확히 한 번이어야 합니다. */
-        static AdminOutcome send( FakeAdminProvider& provider, uint16 method, const AdminRequest& request, const NetIdempotencyKey& key = NetIdempotencyKey{} )
+        static AdminServiceResult send( FakeAdminProvider& provider, uint16 method, const AdminRequest& request, const NetIdempotencyKey& key = NetIdempotencyKey{} )
         {
             ReplyRecorder recorder;
             provider.sendCommand( method, request, key, AdminClient::ReplyDelegate::create<&ReplyRecorder::onReply>( &recorder ) );
             SW_EXPECT_EQUAL( 1, recorder._count );
-            return recorder._last._errorCode != OnlineError::kOk ? AdminOutcome::fail( recorder._last._errorCode ) : AdminOutcome{ recorder._last._reply._result };
+            return recorder._last._errorCode != OnlineError::kOk ? AdminServiceResult::fail( recorder._last._errorCode ) : AdminServiceResult{ recorder._last._reply._result };
         }
 
         static int64 findGold( const FakeAdminProvider& provider )
@@ -95,7 +95,7 @@ SW_TEST_CASE( FakeAdminProviderTest, LookupFindsByIDOrNameAndReportsUnknown )
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::LookupAccount::kID, AdminRequest{} ) == AdminResult::UnknownAccount );
 }
 
-SW_TEST_CASE( FakeAdminProviderTest, RolesGateCommands )
+SW_TEST_CASE( FakeAdminProviderTest, RolesRestrictCommands )
 {
     FakeAdminProvider provider{ kNowMs };
     AdminRequest      lookup;
@@ -252,9 +252,9 @@ SW_TEST_CASE( FakeAdminProviderTest, AuditRecordsChangesNewestFirst )
 SW_TEST_CASE( FakeAdminProviderTest, CommandsThatNeedTheServerAreUnavailable )
 {
     FakeAdminProvider provider{ kNowMs };
-    AdminRequest      notice;
-    notice._memo = "ticket";
-    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::PostNotice::kID, notice ).hasError( OnlineError::kUnavailable ) );
+    AdminRequest      announcement;
+    announcement._memo = "ticket";
+    SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::PostAnnouncement::kID, announcement ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( FakeAdminProviderTestUtil::send( provider, AdminMethod::ListLiveEvents::kID, AdminRequest{} ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( 0, provider.getRecordedKeyCount() );
 }

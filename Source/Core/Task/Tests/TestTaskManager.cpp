@@ -12,6 +12,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace
@@ -581,7 +582,7 @@ SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
     listProducer.reserve( kProducerCount );
     for ( int32 producerIndex = 0; producerIndex < kProducerCount; ++producerIndex )
     {
-        listProducer.emplace_back( [&manager, &ranCount]()
+        listProducer.emplace_back( sw::ThreadTestAccess::getKey(), [&manager, &ranCount]()
         {
             for ( int32 index = 0; index < kPerProducer; ++index )
             {
@@ -1006,7 +1007,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelBodyWaitsForPrerequisiteAndHonoursCancel 
         sw::ThreadUtil::sleepForMilliseconds( 30 );
         bPrerequisiteDone.store( true, std::memory_order_release );
     } ) );
-    sw::TaskHandle group        = manager.emplaceParallel( "GatedGroup", 256, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&bPrerequisiteDone, &earlyChunkCount, &chunkCount]( uint32 )
+    sw::TaskHandle group        = manager.emplaceParallel( "LatchedGroup", 256, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&bPrerequisiteDone, &earlyChunkCount, &chunkCount]( uint32 )
            {
         if ( bPrerequisiteDone.load( std::memory_order_acquire ) == false )
             earlyChunkCount.fetch_add( 1 );
@@ -1261,8 +1262,8 @@ SW_TEST_CASE( TaskManagerTest, OppositeEdgesAddedConcurrentlyNeverBothSucceed )
 
             sw::atomic<bool>  bGo{ false };
             sw::atomic<int32> linkedCount{ 0 };
-            sw::thread        otherSide( [&]()
-            {
+            sw::thread        otherSide( sw::ThreadTestAccess::getKey(), [&]()
+                   {
                 while ( bGo.load( std::memory_order_acquire ) == false )
                 {
                     sw::ThreadUtil::yield();
@@ -1441,7 +1442,7 @@ SW_TEST_CASE( TaskManagerTest, HelperSlotIsRecycledWhenThreadEnds )
     for ( uint32 threadIndex = 0; threadIndex < 20; ++threadIndex )
     {
         uint32     slot = ~0u;
-        sw::thread helper( [&manager, &slot]()
+        sw::thread helper( sw::ThreadTestAccess::getKey(), [&manager, &slot]()
         {
             slot = manager.getCurrentThreadScratchSlot();
             manager.releaseCurrentThreadHelperSlot();
@@ -1623,7 +1624,7 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsHeavyItemsAtTheFirstItem )
  * @details 가짜 시계가 부를 때마다 1 ns 만 가므로 경과는 비용 임계값(3 us)에 닿지 않는다. 직렬 길은 구간을 1, 2, 4, … 개씩 차례로 부르므로 호출 기록이 정확히 그 열이면 나뉘지 않은 것이다.
  *          실제 시계를 쓰지 않아 호출 스레드 선점 잡음에 흔들리지 않는다.
  */
-SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkSerial )
+SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightJobsSerial )
 {
     sw::TaskManager manager;
     SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
@@ -1740,3 +1741,29 @@ SW_TEST_CASE( TaskManagerTest, DescribeUnfinishedTaskIgnoresUnsubmittedTask )
     manager.shutdown();
 }
 #endif
+
+/**
+ * @brief 잠든 풀에 깨우지 않고(submitWithoutWake) High 큐 용량(1024)보다 많이 넣어도 끝난다(감사 C-4)
+ * @details 큐가 가득 차면 넣는 스레드가 yield 만 하며 기다렸다 — 워커가 모두 잠들어 아무도 비우지 않아 영원히 돌았다. 지금은 가득 차면 잠든 워커를 깨운다.
+ */
+SW_TEST_CASE( TaskManagerTest, SubmitWithoutWakePastQueueCapacityFinishes )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
+    manager.waitAll( "TaskManagerTest" ); // 워커가 잠들게 둔다
+    constexpr int32   kTaskCount = 2000;
+    sw::atomic<int32> ranCount{ 0 };
+    for ( int32 index = 0; index < kTaskCount; ++index )
+    {
+        sw::TaskHandle handle = manager.emplaceTask( "Unit", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+        {
+            ranCount.fetch_add( 1, std::memory_order_relaxed );
+        } ) );
+        handle.setPriority( sw::TaskPriority::High );
+        manager.submitWithoutWake( handle );
+    }
+    manager.wakeSleepingWorkers();
+    manager.waitAll( "TaskManagerTest" );
+    SW_EXPECT_EQUAL( kTaskCount, ranCount.load() );
+    manager.shutdown();
+}

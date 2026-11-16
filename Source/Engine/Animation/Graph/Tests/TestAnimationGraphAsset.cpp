@@ -13,8 +13,8 @@ namespace
     constexpr sw::string_view kGraph = "<AnimationGraphAsset>"
                                        "<nodes>"
                                        "<node id=\"1\" name=\"Idle\" x=\"40\" y=\"40\" loop=\"true\"/>"
-                                       "<node id=\"2\" name=\"Move\" sync_group=\"Feet\"><blend_space x=\"Speed\" y=\"Direction\" notify=\"HighestWeight\"><samples>"
-                                       "<sample clip=\"Walk\" x=\"1\"/><sample clip=\"Run\" x=\"4\" y=\"1\"/></samples></blend_space></node>"
+                                       "<node id=\"2\" name=\"Move\" sync_group=\"Feet\"><blend_space x=\"Speed\" y=\"Direction\" min_x=\"0\" max_x=\"4\" min_y=\"0\" max_y=\"1\" notify=\"HighestWeight\"><samples>"
+                                       "<sample clip=\"Walk\" x=\"1\"/><sample clip=\"Run\" x=\"4\" y=\"1\"/><sample clip=\"Strafe\" x=\"1\" y=\"1\"/></samples></blend_space></node>"
                                        "<node id=\"3\" name=\"Wave\"><pose_node type=\"BlendPoses\" weight=\"WaveWeight\"><inputs><item>Idle</item><item>Hello</item></inputs></pose_node></node>"
                                        "</nodes>"
                                        "<links>"
@@ -28,7 +28,7 @@ namespace
 
     /** @brief 차이 파일의 부모입니다. 상태 둘 · 전이 하나 · 레이어 둘(클립 · 슬롯)입니다. */
     constexpr sw::string_view kBaseGraph = "<AnimationGraphAsset>"
-                                           "<nodes><node id=\"1\" name=\"Idle\" loop=\"true\"/><node id=\"2\" name=\"Move\"><blend_space x=\"Speed\"><samples><sample clip=\"Walk\" x=\"1\"/></samples></blend_space></node></nodes>"
+                                           "<nodes><node id=\"1\" name=\"Idle\" loop=\"true\"/><node id=\"2\" name=\"Move\"><blend_space x=\"Speed\" min_x=\"0\" max_x=\"1\"><samples><sample clip=\"Walk\" x=\"1\"/></samples></blend_space></node></nodes>"
                                            "<links><link id=\"1\" from=\"1\" to=\"2\" blend=\"0.2\"><condition param=\"Speed\" op=\"Greater\" value=\"0.5\"/></link></links>"
                                            "<layers><layer name=\"Breath\" clip=\"Breathe\" weight=\"0.5\" blend=\"Additive\"/><layer name=\"Upper\" slot=\"UpperBody\" weight=\"1\" blend=\"Override\"/></layers>"
                                            "</AnimationGraphAsset>";
@@ -57,7 +57,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, ReadsElementsThroughSchemas )
     SW_EXPECT_FALSE( graph._listNode[1]._loop.has_value() );                      // 적지 않음 — 값이 없다
     SW_EXPECT_TRUE( graph._listNode[1]._position == sw::float2( 40.0f, 40.0f ) ); // 적지 않은 자리는 스키마 기본값
     SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._notifyMode == sw::AnimationBlendSpaceNotifyMode::HighestWeight );
-    SW_EXPECT_EQUAL( uint32{ 2 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
+    SW_EXPECT_EQUAL( uint32{ 3 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
     SW_EXPECT_TRUE( graph._listNode[2]._poseNode._type == sw::hashed_string( "BlendPoses" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listLink.size() );
     SW_EXPECT_TRUE( graph._listLink[0]._op == sw::AnimationConditionOp::GreaterEqual );
@@ -109,7 +109,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, ChildMergesByKeys )
     const sw::test::ScopedScratchDomain domain;
     sw::AnimationGraphAsset             graph;
     SW_REQUIRE_TRUE( AnimationGraphTestUtil::parseChild( graph, domain,
-                                                         "<nodes><node name=\"Move\"><blend_space x=\"Pace\"><samples><sample clip=\"Run\" x=\"2\"/></samples></blend_space></node><node id=\"3\" name=\"Dance\"/></nodes>"
+                                                         "<nodes><node name=\"Move\"><blend_space x=\"Pace\" min_x=\"0\" max_x=\"2\"><samples><sample clip=\"Run\" x=\"2\"/></samples></blend_space></node><node id=\"3\" name=\"Dance\"/></nodes>"
                                                          "<links><link id=\"1\" blend=\"0.4\"/><link id=\"2\" from=\"2\" to=\"3\"/></links>"
                                                          "<layers><layer name=\"Breath\" _op=\"Remove\"/><layer name=\"Upper\" weight=\"0.25\"/></layers>" ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, graph._listNode.size() );
@@ -244,6 +244,39 @@ SW_TEST_CASE( AnimationGraphAssetTest, RejectsMaxLODOnClipState )
     sw::AnimationGraphAsset graph;
     SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Idle\" max_lod=\"1\"/></nodes></AnimationGraphAsset>" ) );
     SW_EXPECT_TRUE( graph._listNode.empty() );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 2D 블렌드 스페이스의 표본이 넓이를 이루지 못하면(한 줄) 섞을 삼각형이 없어 로드 오류다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, RejectsTwoAxisBlendSpaceWithoutArea )
+{
+    SW_EXPECT_LOG( "AnimationGraphAsset.BlendSpaceNoArea" );
+    sw::AnimationGraphAsset graph;
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Move\"><blend_space x=\"Speed\" y=\"Direction\" min_x=\"0\" max_x=\"2\" min_y=\"0\" max_y=\"2\"><samples>"
+                                            "<sample clip=\"Idle\"/><sample clip=\"Walk\" x=\"1\" y=\"1\"/><sample clip=\"Run\" x=\"2\" y=\"2\"/>"
+                                            "</samples></blend_space></node></nodes></AnimationGraphAsset>" ) );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 블렌드 스페이스 축 범위 — x 범위가 빠지거나, 2D 의 y 범위가 비거나, 표본이 범위 밖이거나, 두 표본이 겹치면 로드 오류다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, RejectsBlendSpaceAxisRangeErrors )
+{
+    sw::AnimationGraphAsset graph;
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Move\"><blend_space x=\"Speed\"><samples>"
+                                            "<sample clip=\"Idle\"/><sample clip=\"Walk\" x=\"1\"/></samples></blend_space></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationGraphAsset.BlendSpaceAxisRange" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Move\"><blend_space x=\"Speed\" y=\"Direction\" min_x=\"0\" max_x=\"1\"><samples>"
+                                            "<sample clip=\"Idle\"/><sample clip=\"Walk\" x=\"1\"/><sample clip=\"Run\" x=\"1\" y=\"1\"/></samples></blend_space></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationGraphAsset.BlendSpaceSampleOutsideRange" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Move\"><blend_space x=\"Speed\" min_x=\"0\" max_x=\"1\"><samples>"
+                                            "<sample clip=\"Idle\"/><sample clip=\"Walk\" x=\"2\"/></samples></blend_space></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationGraphAsset.BlendSpaceCoincidentSamples" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Move\"><blend_space x=\"Speed\" y=\"Direction\" min_x=\"0\" max_x=\"1\" min_y=\"0\" max_y=\"1\"><samples>"
+                                            "<sample clip=\"Idle\"/><sample clip=\"Walk\" x=\"1\"/><sample clip=\"Run\" x=\"1\" y=\"1\"/><sample clip=\"Sprint\" x=\"1\" y=\"1\"/>"
+                                            "</samples></blend_space></node></nodes></AnimationGraphAsset>" ) );
 }
 
 /**

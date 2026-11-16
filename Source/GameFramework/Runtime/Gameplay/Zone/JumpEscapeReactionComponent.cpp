@@ -26,7 +26,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<JumpEscapeReactionComponent>( this );
-        (void)ZoneSystem::ensureFor( manager );
+        (void)ZoneSystem::findOrCreate( manager );
     }
 
     void JumpEscapeReactionComponent::onUnregister( GameObjectManager& manager )

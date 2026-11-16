@@ -186,16 +186,16 @@ namespace sw
         _mapRequestToDelivery[_pHTTPClient->submitRequest( request )] = deliveryID;
     }
 
-    void FCMPushProvider::flushWaiting( ServiceAccountTokenSource::ResponseResult outcome, UnixMilliseconds nowMs )
+    void FCMPushProvider::flushWaiting( ServiceAccountTokenSource::ResponseResult serviceResult, UnixMilliseconds nowMs )
     {
         vector<Waiting> listWaiting;
         listWaiting.swap( _listWaiting );
         for ( const Waiting& waiting : listWaiting )
         {
-            if ( outcome == ServiceAccountTokenSource::ResponseResult::Granted )
+            if ( serviceResult == ServiceAccountTokenSource::ResponseResult::Granted )
                 submitSend( waiting._deliveryID, waiting._bodyBytes, nowMs );
             else
-                complete( waiting._deliveryID, outcome == ServiceAccountTokenSource::ResponseResult::Retryable ? PushDeliveryStatus::Transient : PushDeliveryStatus::Rejected );
+                complete( waiting._deliveryID, serviceResult == ServiceAccountTokenSource::ResponseResult::Retryable ? PushDeliveryStatus::Transient : PushDeliveryStatus::Rejected );
         }
     }
 
@@ -229,10 +229,10 @@ namespace sw
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            const ServiceAccountTokenSource::ResponseResult outcome = _tokenSource.handleResponse( response, nowMs );
-            if ( outcome != ServiceAccountTokenSource::ResponseResult::None )
+            const ServiceAccountTokenSource::ResponseResult serviceResult = _tokenSource.handleResponse( response, nowMs );
+            if ( serviceResult != ServiceAccountTokenSource::ResponseResult::None )
             {
-                flushWaiting( outcome, nowMs );
+                flushWaiting( serviceResult, nowMs );
                 continue;
             }
             const auto requestIt = _mapRequestToDelivery.find( response._requestID );

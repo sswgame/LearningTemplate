@@ -103,7 +103,7 @@ namespace sw
         return static_cast<uint32>( getRegistryInternal()._uniqueSetResource.size() );
     }
 
-    void RHIRenderResource::releaseAllFor( IRHIDevice* pDevice )
+    void RHIRenderResource::releaseAllForDevice( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr )
             return;
@@ -113,7 +113,7 @@ namespace sw
         } );
     }
 
-    void RHIRenderResource::clearAllFor( IRHIDevice* pDevice )
+    void RHIRenderResource::clearAllForDevice( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr )
             return;
@@ -123,7 +123,7 @@ namespace sw
         } );
     }
 
-    void RHIRenderResource::initAllFor( IRHIDevice* pDevice )
+    void RHIRenderResource::initAllForDevice( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr )
             return;

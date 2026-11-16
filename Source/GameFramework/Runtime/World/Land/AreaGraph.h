@@ -181,7 +181,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "AreaGraph"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadArea( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadLink( const XMLNode& node, string_view sourceName );
         /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방을 반환합니다. 그 방향으로 지날 수 없으면 비어 있으며, 잠금은 보지 않습니다. */
@@ -200,5 +200,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<AreaGraph>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<AreaGraph>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, AreaGraph );
 } // namespace sw

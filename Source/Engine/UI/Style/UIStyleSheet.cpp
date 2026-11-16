@@ -395,7 +395,7 @@ namespace sw
     {
         using Internal = UIStyleSheetInternal;
         UIStyleSheetAsset sheet{};
-        sheet._path = FileUtil::normalizePath( path );
+        sheet._path = FileUtil::normalizePath( path ).str();
         XMLDocument document;
         // 부모(`_base`)는 데이터 읽기가 펼친다 — 규칙은 `Content/engine/settings/datacataloginheritance.xml` 한 줄이고 합치기 코드는 여기 없다.
         if ( document.parseComposed( text, path, composeContext ) == false )

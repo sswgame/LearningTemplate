@@ -29,46 +29,48 @@ namespace sw
             const ILedgerPolicy*        _pPolicy{ nullptr };
             AccountID                   _accountID{ kInvalidAccountID };
             int64                       _nowMs{ 0 };
+            int64                       _claimedRetentionMs{ 0 };
         };
 
         /** @brief 메서드마다의 저장 함수입니다. 오버로드라 표에 메서드를 더하고 줄을 빠뜨리면 컴파일되지 않습니다. */
         struct MailboxStoreCall
         {
-            static MailboxOutcome run( MailboxMethod::List, IServiceStoreConnection& connection, const MailboxListRequest& request, const MailboxCallInput& input, MailboxListReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::List, IServiceStoreConnection& connection, const MailboxListRequest& request, const MailboxCallInput& input, MailboxListReply& outReply )
             {
                 return MailboxStoreLogic::listMail( connection, input._accountID, input._nowMs, input._listCampaign, request, outReply );
             }
 
-            static MailboxOutcome run( MailboxMethod::MarkRead, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::MarkRead, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
             {
-                const MailboxOutcome outcome = MailboxStoreLogic::markRead( connection, input._accountID, request._mailKey );
-                outReply._result             = outcome._result;
-                return outcome;
+                const MailboxServiceResult serviceResult = MailboxStoreLogic::markRead( connection, input._accountID, request._mailKey );
+                outReply._result                         = serviceResult._result;
+                return serviceResult;
             }
 
-            static MailboxOutcome run( MailboxMethod::Claim, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::Claim, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
             {
                 MailboxClaimInput claimInput;
-                claimInput._mailKey          = request._mailKey;
-                claimInput._accountID        = input._accountID;
-                claimInput._nowMs            = input._nowMs;
-                claimInput._pPolicy          = input._pPolicy;
-                const MailboxOutcome outcome = MailboxStoreLogic::claim( connection, claimInput, outReply );
-                outReply._result             = outcome._result;
-                return outcome;
+                claimInput._mailKey                      = request._mailKey;
+                claimInput._accountID                    = input._accountID;
+                claimInput._nowMs                        = input._nowMs;
+                claimInput._pPolicy                      = input._pPolicy;
+                claimInput._claimedRetentionMs           = input._claimedRetentionMs;
+                const MailboxServiceResult serviceResult = MailboxStoreLogic::claim( connection, claimInput, outReply );
+                outReply._result                         = serviceResult._result;
+                return serviceResult;
             }
 
-            static MailboxOutcome run( MailboxMethod::ClaimAll, IServiceStoreConnection& connection, const OnlineNoBody& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::ClaimAll, IServiceStoreConnection& connection, const OnlineNoBody& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
             {
                 (void)request;
-                return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._pPolicy, outReply );
+                return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._claimedRetentionMs, input._pPolicy, outReply );
             }
 
-            static MailboxOutcome run( MailboxMethod::Delete, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
+            static MailboxServiceResult run( MailboxMethod::Delete, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
             {
-                const MailboxOutcome outcome = MailboxStoreLogic::deleteMail( connection, input._accountID, request._mailKey );
-                outReply._result             = outcome._result;
-                return outcome;
+                const MailboxServiceResult serviceResult = MailboxStoreLogic::deleteMail( connection, input._accountID, request._mailKey );
+                outReply._result                         = serviceResult._result;
+                return serviceResult;
             }
         };
 
@@ -86,7 +88,7 @@ namespace sw
         , _nowMs{ 0 }
         , _sweepJob{}
         , _campaignJob{}
-        , _noticeJob{}
+        , _notificationJob{}
     {
     }
 
@@ -102,11 +104,16 @@ namespace sw
             SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNeedsStore", "MailboxService needs a store" );
             return false;
         }
+        if ( settings._claimedRetentionMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "MailboxService.ClaimedRetentionMissing", "MailboxService needs a claimed-mail retention above zero (claimedRetentionMs %#)", settings._claimedRetentionMs );
+            return false;
+        }
         _store.bindStore( pStore );
         _settings = settings;
         _sweepJob.setPeriod( settings._pScheduler == nullptr ? settings._sweepIntervalMs : 0 ); // 예약 테이블이 있으면 회차가 부른다
         _campaignJob.setPeriod( settings._campaignRefreshMs );
-        _noticeJob.setPeriod( settings._noticeIntervalMs ); // 0 이면 알림을 보내지 않는다
+        _notificationJob.setPeriod( settings._notificationIntervalMs ); // 0 이면 알림을 보내지 않는다
         _presenceFinds.bind( settings._pPresence );
         initializeCalls( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
@@ -170,33 +177,33 @@ namespace sw
             }, [this]( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
             { completeSweep( stats, completion ); } );
         }
-        if ( _pHost != nullptr && _noticeJob.tryStart( nowMs ) )
+        if ( _pHost != nullptr && _notificationJob.tryStart( nowMs ) )
         {
-            const int32 batchCount = _settings._noticeBatchCount;
+            const int32 batchCount = _settings._notificationBatchCount;
             _store.submit( [batchCount]( IServiceStoreConnection& connection )
             {
                 ServiceStoreRead<vector<ServiceMailNotification>> read;
-                read._result = ServiceMail::claimNotices( connection, batchCount, read._value );
+                read._result = ServiceMail::claimNotifications( connection, batchCount, read._value );
                 return read;
             }, [this]( ServiceStoreRead<vector<ServiceMailNotification>>& read )
-            { completeNotices( read._result, read._value ); } );
+            { completeNotifications( read._result, read._value ); } );
         }
         _calls.publishPendingCount();
     }
 
-    void MailboxService::completeNotices( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice )
+    void MailboxService::completeNotifications( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotification )
     {
-        _noticeJob.finish();
+        _notificationJob.finish();
         if ( result == ServiceStoreResult::Invalid )
-            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotice", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
+            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNewMailNotification", "MailboxService: a new-mail notice record is corrupt - notices stop until it is fixed" );
         if ( result != ServiceStoreResult::Ok || _pHost == nullptr )
             return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
-        if ( static_cast<int32>( inoutListNotice.size() ) == _settings._noticeBatchCount )
-            _noticeJob.request(); // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
-        for ( ServiceMailNotification& notice : inoutListNotice )
+        if ( static_cast<int32>( inoutListNotification.size() ) == _settings._notificationBatchCount )
+            _notificationJob.request(); // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
+        for ( ServiceMailNotification& notification : inoutListNotification )
         {
-            const AccountID accountID = notice._recipientAccountID;
-            MailboxNewMail  newMail{ std::move( notice._mailKey ), std::move( notice._titleKey ) };
+            const AccountID accountID = notification._recipientAccountID;
+            MailboxNewMail  newMail{ std::move( notification._mailKey ), std::move( notification._titleKey ) };
             BitWriter       body;
             const bool      bWritten = MailboxProtocol::MessageTypes::write( body, newMail );
             if ( bWritten && _pHost->sendPush( accountID, MailboxMethod::NewMail::kKind, body ) )
@@ -208,12 +215,12 @@ namespace sw
         }
     }
 
-    void MailboxService::notifyClaimedBalances( AccountID accountID, const MailboxOutcome& outcome, const MailboxClaimReply& reply )
+    void MailboxService::notifyClaimedBalances( AccountID accountID, const MailboxServiceResult& serviceResult, const MailboxClaimReply& reply )
     {
-        const bool bNothingChanged = outcome.isFailed() || reply._listBalance.empty() || _settings._pBalanceNotice == nullptr;
+        const bool bNothingChanged = serviceResult.isFailed() || reply._listBalance.empty() || _settings._pBalanceNotification == nullptr;
         if ( bNothingChanged )
             return;
-        _settings._pBalanceNotice->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
+        _settings._pBalanceNotification->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
     }
 
     void MailboxService::handleMailPresenceResult( const AccountPresenceResult& result, const MailboxNewMail& newMail )
@@ -256,23 +263,24 @@ namespace sw
             return;
         }
         MailboxCallInput input;
-        input._pPolicy   = _settings._pPolicy;
-        input._accountID = context._accountID;
-        input._nowMs     = context._nowMs.count();
+        input._pPolicy            = _settings._pPolicy;
+        input._accountID          = context._accountID;
+        input._nowMs              = context._nowMs.count();
+        input._claimedRetentionMs = _settings._claimedRetentionMs;
         if ( bWithCampaigns )
             input._listCampaign = _listCampaign;
         _store.submit( [request, input = std::move( input )]( IServiceStoreConnection& connection )
         {
-            ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply> done;
-            done._outcome = MailboxStoreCall::run( TMethod{}, connection, request, input, done._reply );
+            ServiceStoreCallResult<MailboxServiceResult, typename TMethod::Reply> done;
+            done._serviceResult = MailboxStoreCall::run( TMethod{}, connection, request, input, done._reply );
             return done;
-        }, [this, call, accountID = context._accountID]( const ServiceStoreCallResult<MailboxOutcome, typename TMethod::Reply>& done )
+        }, [this, call, accountID = context._accountID]( const ServiceStoreCallResult<MailboxServiceResult, typename TMethod::Reply>& done )
         {
             if constexpr ( std::is_same_v<typename TMethod::Reply, MailboxClaimReply> )
-                notifyClaimedBalances( accountID, done._outcome, done._reply );
+                notifyClaimedBalances( accountID, done._serviceResult, done._reply );
             else
-                (void)accountID;                              // 잔액 알림이 있는 메서드만 쓴다
-            (void)finish( call, done._outcome, done._reply ); // 모르는 표지는 호출 표가 경고한다
+                (void)accountID;                                    // 잔액 알림이 있는 메서드만 쓴다
+            (void)finish( call, done._serviceResult, done._reply ); // 모르는 표지는 호출 표가 경고한다
         } );
     }
 
@@ -310,11 +318,11 @@ namespace sw
             if ( _arrExpiredCounter[actionIndex] != nullptr && arrCount[actionIndex] > 0 )
                 _arrExpiredCounter[actionIndex]->add( static_cast<uint64>( arrCount[actionIndex] ) );
         }
-        if ( _settings._pBalanceNotice != nullptr )
+        if ( _settings._pBalanceNotification != nullptr )
         {
             for ( const MailboxBalanceChange& change : stats._listChange )
             {
-                _settings._pBalanceNotice->notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } ); // 돌려받은 계정이 접속해 있으면 지갑이 바로 맞는다
+                _settings._pBalanceNotification->notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } ); // 돌려받은 계정이 접속해 있으면 지갑이 바로 맞는다
             }
         }
         if ( stats._failedCount > 0 && completion.isCancelled() == false ) // 종료 때문에 취소된 정리는 경고하지 않는다

@@ -288,7 +288,7 @@ namespace sw
             setPauseMenuDocument( PackEngineSettings::resolve( packSettings._uiPauseMenu, defaultAssets._uiPauseMenu ) );
         // 모듈을 내리기 전에 그 모듈 타입의 화면을 닫는다(타입의 모듈 이름으로 고른다 — 코드 주소가 아니다).
         _moduleUnloadingSubscription = engine::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
-            TypeRegistry::ModuleUnloadingDelegate::create<&UISystem::onModuleUnloadingNotice>( this ) );
+            TypeRegistry::ModuleUnloadingDelegate::create<&UISystem::onModuleUnloadingNotification>( this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -465,7 +465,7 @@ namespace sw
 
     UIScreenHandle UISystem::pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDef> listBinding, vector<string> listStyleSheet )
     {
-        screen->_documentPath   = FileUtil::normalizePath( documentPath );
+        screen->_documentPath   = FileUtil::normalizePath( documentPath ).str();
         screen->_listBinding    = std::move( listBinding );
         screen->_listStyleSheet = std::move( listStyleSheet );
         applyDocumentAnimations( *screen );
@@ -520,7 +520,7 @@ namespace sw
         if ( root == nullptr )
             return nullptr;
         unique_ptr<UIScreen> screen = sw::make_unique<UIScreen>( desc, std::move( root ) );
-        screen->_documentPath       = FileUtil::normalizePath( documentPath );
+        screen->_documentPath       = FileUtil::normalizePath( documentPath ).str();
         screen->_listBinding        = std::move( listBinding );
         screen->_listStyleSheet     = std::move( listStyleSheet );
         screen->_handle             = _nextScreenHandle++;
@@ -681,16 +681,16 @@ namespace sw
         return isInitialized() && getInputRouter().isActionConsumed( inputMap, action );
     }
 
-    bool UISystem::isCursorCaptured() const
+    bool UISystem::shouldShowCursor() const
     {
-        return isInitialized() && wantsCursor();
+        return isInitialized() && needsCursor();
     }
 
     bool UISystem::isGameInputBlocked() const
     {
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
-            if ( screen->isClosing() == false && screen->blocksLowerInput() )
+            if ( screen->isClosing() == false && screen->shouldBlockLowerInput() )
                 return true;
         }
         return false;
@@ -706,7 +706,7 @@ namespace sw
         return false;
     }
 
-    bool UISystem::wantsCursor() const
+    bool UISystem::needsCursor() const
     {
         const UIScreen* pActive = getActiveScreen();
         return pActive != nullptr && pActive->getDesc()._bShowCursor;
@@ -882,12 +882,12 @@ namespace sw
             UIScreen* pScreen = _listScreen[index - 1].get();
             if ( pScreen->isClosing() )
                 continue;
-            if ( pScreen->takesFocus() )
+            if ( pScreen->canTakeFocus() )
             {
                 pNewActive = pScreen;
                 break;
             }
-            if ( pScreen->blocksLowerInput() )
+            if ( pScreen->shouldBlockLowerInput() )
                 break;
         }
 

@@ -21,7 +21,7 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 월드에 들어가는 블록 번호입니다. 0 은 공기, 나머지는 카탈로그 순서(1 부터)입니다. */
+    /** @brief 월드에 들어가는 블록 번호입니다. 0 은 공기, 나머지는 카탈로그 순서(1 부터)입니다. 실행 중에만 쓰는 번호라 세이브에는 블록 id 로 적습니다(`VoxelWorld` 팔레트). */
     using VoxelBlockIndex = uint8;
 
     /** @brief 공기 블록 번호입니다. */
@@ -150,7 +150,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "VoxelBlockCatalog"; ///< 루트 요소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief `<Block>` 하나를 스키마와 면 칸으로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadBlock( const XMLNode& node, string_view sourceName );
 
@@ -162,5 +162,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<VoxelBlockCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<VoxelBlockCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, VoxelBlockCatalog );
 } // namespace sw

@@ -20,7 +20,7 @@ namespace sw
      * @class XTestInputInjector
      * @brief XTest 확장으로 X 서버에 입력을 주입합니다. 좌표는 루트 창(화면) 기준입니다.
      */
-    class XTestInputInjector final : public ISubsystem
+    class SW_API XTestInputInjector final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다 — 엔진 범위 서비스 하나(개발 명령 `input.xtest` 가 찾는다). */
@@ -49,6 +49,7 @@ namespace sw
 
     private:
         [[maybe_unused]] void* _pDisplay; ///< `Display*` — 헤더에 X11 을 끌고 오지 않으려고 불투명하게 둔다. XTest 없는 구성(빈 구현)은 읽지 않는다.
+
+        SW_SERVICE_SLOT( XTestInputInjector, Optional );
     };
-    SW_SERVICE_SLOT( XTestInputInjector, Optional ); // 칸은 클래스 바로 뒤 — .cpp 에 두면 위의 `findSubsystem` 이 일반 템플릿을 먼저 인스턴스화한다
 } // namespace sw

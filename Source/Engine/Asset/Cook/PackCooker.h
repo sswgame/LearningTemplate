@@ -16,6 +16,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -50,10 +51,12 @@ namespace sw
          */
         vector<string> _listExcludedSourceFile;
         /**
-         * @brief 셰이더 쿠킹 요청이 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, 정규화)입니다 — 위 층(렌더러의 요청 수집)이 채운다. 셰이더가 없는 구성(전용 서버)은 비어 있다.
-         * @details 이 가운데 원본이 닿지 않아 팩에서 버리는 것은 경고(`PackCooker.PackCookDroppedRequestedShader`)다 — 런타임이 찾을 셰이더가 팩에 없다. 요청 밖 바이너리는 정보 줄이다.
+         * @brief 셰이더 쿠킹 요청이 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, 정규화) → 출처 묶음입니다 — 위 층(렌더러의 요청 수집, `ShaderCookRequest::_listOrigin`)이 채운다.
+         *        셰이더가 없는 구성(전용 서버)은 비어 있다.
+         * @details 출처 묶음 하나의 에셋 id 가 모두 닿았는데(빈 묶음은 늘) 원본이 닿지 않아 팩에서 버리는 것은 경고(`PackCooker.PackCookDroppedRequestedShader`)다 — 런타임이 찾을 셰이더가
+         *          팩에 없다. 닿지 않은 출처만 요청한 것(쓰지 않는 개발 파이프라인)과 요청 밖 바이너리는 정보 줄이다.
          */
-        unordered_set<string> _setRequestedShaderBinary;
+        unordered_map<string, vector<vector<string>>> _mapRequestedShaderBinary;
     };
 } // namespace sw
 
@@ -73,6 +76,11 @@ namespace sw
          *          나눠 쓰면 다른 프리셋의 기록이 새것이라 이 스테이징을 보지 않고 그 팩을 DDC 에서 되살렸다(첫 배포 굽기의 빠진 layer_bake).
          */
         static string makeRecordID( string_view target, string_view cookedDir, string_view packName );
+        /**
+         * @brief 바이너리 @p assetID 를 요청한 출처 묶음(`PackCookParams::_mapRequestedShaderBinary`) 가운데 에셋이 모두 @p setIncluded 에 든 것이 있으면 true 입니다(빈 묶음은 늘 든다).
+         * @details 참이면 팩이 그 바이너리를 버릴 때 경고다 — 닿은 파이프라인 · 머티리얼이 쓰는데 원본 셰이더가 리치에서 빠졌다(참조 칸 표의 빈틈).
+         */
+        [[nodiscard]] static bool isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID );
 
         /**
          * @brief 도메인 기준 경로 @p relativePath 를 팩에 담을지 판정합니다(스테이징 산출물은 `shouldIncludeStagedFile` 이 본다).

@@ -1,12 +1,13 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 // JSONDocumentTest — 네트워크 · 데이터 파일의 JSON 입구: 형 읽기(정수 범위 · 없는 멤버는 폴백 없이 오류), 키 순서 보존, 쓰기기와의 왕복,
-// 깨진 글과 아주 깊은 중첩(믿을 수 없는 입력이 스택을 다 쓰는 모양)(nogpu).
+// 깨진 글과 아주 깊은 중첩(믿을 수 없는 입력이 스택을 다 쓰는 모양), 잘못된 UTF-8 쓰기(예외 대신 오류 값)(nogpu).
 
 /**
  * @brief [JSONDocumentTest] 형 읽기는 맞는 칸만 읽고, 범위 밖 정수 · 다른 형 · 없는 필수 멤버는 오류와 함께 비운다
@@ -79,4 +80,37 @@ SW_TEST_CASE( JSONDocumentTest, SurvivesMalformedAndDeepInput )
     (void)document.tryParse( deep ); // 받든 거절하든 — 스택을 다 써 죽지만 않으면 된다
     sw::JSONDocument after;
     SW_EXPECT_TRUE( after.parse( "{}" ) );
+}
+
+/**
+ * @brief [JSONDocumentTest] 잘못된 UTF-8 이 든 문서는 dump 가 오류 값을 돌려주고(예외로 프로세스가 끝나지 않는다), 파일을 덮지 않으며, describe 는 U+FFFD 로 바꿔 쓴다
+ */
+SW_TEST_CASE( JSONDocumentTest, DumpSurvivesInvalidUTF8 )
+{
+    sw::JSONDocument    document;
+    const sw::JSONValue root = document.makeObject();
+    root.set( "ok" ).setString( "\xED\x95\x9C" ); // "한" - 올바른 3 바이트
+    SW_EXPECT_TRUE( document.dump().has_value() );
+
+    root.set( "name" ).setString( "cut\xED\x95" ); // 잘린 UTF-8 (setString 은 바이트를 검사하지 않는다)
+    const sw::expected<sw::string> dumped = document.dump( 2 );
+    SW_REQUIRE_FALSE( dumped.has_value() );
+    SW_EXPECT_TRUE( dumped.error().kind() == sw::ErrorKind::InvalidArgument );
+    SW_EXPECT_FALSE( root.get( "name" ).dump().has_value() ); // 서브트리도 같은 규칙
+
+    const sw::string described = root.describe();
+    SW_EXPECT_TRUE( described.find( "\xEF\xBF\xBD" ) != sw::string::npos ); // U+FFFD
+
+    sw::JSONDocument    badKey;
+    const sw::JSONValue badKeyRoot = badKey.makeObject();
+    badKeyRoot.set( "\xFF" ).setInt( 1 ); // 키도 같은 규칙
+    SW_EXPECT_FALSE( badKey.dump().has_value() );
+
+    const sw::string path = sw::test::makeScratchPath( "InvalidUTF8.json" );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "{\"keep\":1}" ) );
+    SW_EXPECT_LOG( "JSONDocument.DumpFailed" );
+    SW_EXPECT_FALSE( document.saveToFile( path, 2 ) );
+    sw::string kept;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, kept ) );
+    SW_EXPECT_EQUAL( sw::string( "{\"keep\":1}" ), kept ); // 있던 파일을 덮지 않는다
 }

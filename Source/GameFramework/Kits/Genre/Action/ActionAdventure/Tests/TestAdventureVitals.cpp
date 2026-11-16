@@ -145,7 +145,7 @@ SW_TEST_CASE( AdventureVitalsTest, MagicSpendsAndUpgradesOnce )
 /**
  * @brief [AdventureVitalsTest] 스태미나가 바닥나면 오르기 · 활공은 떨어지고 질주는 멈추며, 수영은 피해를 입고 다시 찬다. 쉬면 계속이고 남아 있으면 계속이다
  */
-SW_TEST_CASE( AdventureVitalsTest, StaminaOutcomeDependsOnTheAction )
+SW_TEST_CASE( AdventureVitalsTest, StaminaResultDependsOnTheAction )
 {
     struct Case
     {

@@ -125,7 +125,7 @@ namespace
             return count;
         }
 
-        bool readForgedRecords( float32 unseenTime, int32 bounty, int32 wantedLevel, bool bTwice )
+        bool readFixtureRecords( float32 unseenTime, int32 bounty, int32 wantedLevel, bool bTwice )
         {
             sw::Archive written;
             written << static_cast<uint32>( bTwice ? 2 : 1 );
@@ -144,7 +144,7 @@ namespace
             return _law.readState( reading );
         }
 
-        bool readForgedPending( uint32 incidentID, uint32 nextIncidentID )
+        bool readFixturePending( uint32 incidentID, uint32 nextIncidentID )
         {
             sw::Archive written;
             written << static_cast<uint32>( 0 );
@@ -180,7 +180,7 @@ namespace
             return count;
         }
 
-        bool readForged( const sw::hashed_string& horseID, float32 healthCore, float32 staminaCore, float32 hoursSinceBrush, const sw::vector<sw::hashed_string>& listAbility = {}, int32 bondLevel = 1 )
+        bool readFixture( const sw::hashed_string& horseID, float32 healthCore, float32 staminaCore, float32 hoursSinceBrush, const sw::vector<sw::hashed_string>& listAbility = {}, int32 bondLevel = 1 )
         {
             sw::GameRandom random;
             random.setSeed( 7 );
@@ -215,7 +215,7 @@ namespace
 
         WesternSurvivalTest() { SW_REQUIRE_TRUE( _survival.initialize( &_catalog ) ); }
 
-        bool readForged( float32 healthCore, uint8 bDeadEyeActive, const sw::vector<uint64>& listMark = {}, int32 deadEyeLevel = 2 )
+        bool readFixture( float32 healthCore, uint8 bDeadEyeActive, const sw::vector<uint64>& listMark = {}, int32 deadEyeLevel = 2 )
         {
             sw::Archive written;
             written << static_cast<uint32>( 0 );
@@ -499,22 +499,22 @@ SW_TEST_CASE_F( WesternLawTest, UnknownRegionDoesNotPoisonState )
  */
 SW_TEST_CASE_F( WesternLawTest, ReadStateRefusesBrokenRecords )
 {
-    SW_REQUIRE_TRUE( readForgedRecords( 1.0f, 8, 2, false ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixtureRecords( 1.0f, 8, 2, false ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 8, _law.getBounty( _region ) );
 
-    SW_EXPECT_FALSE( readForgedRecords( std::numeric_limits<float32>::quiet_NaN(), 9, 2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( -1.0f, 9, 2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, -9, 2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, -2, false ) );
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, 4, false ) ); // 지역의 최대 수배(3)를 넘는다
-    SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, 2, true ) );
+    SW_EXPECT_FALSE( readFixtureRecords( std::numeric_limits<float32>::quiet_NaN(), 9, 2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( -1.0f, 9, 2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, -9, 2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, 9, -2, false ) );
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, 9, 4, false ) ); // 지역의 최대 수배(3)를 넘는다
+    SW_EXPECT_FALSE( readFixtureRecords( 1.0f, 9, 2, true ) );
     SW_EXPECT_EQUAL( 8, _law.getBounty( _region ) );
 
-    SW_EXPECT_TRUE( readForgedPending( 4, 5 ) );
+    SW_EXPECT_TRUE( readFixturePending( 4, 5 ) );
     SW_EXPECT_EQUAL( 1, _law.countPendingReports() );
-    SW_EXPECT_FALSE( readForgedPending( 5, 5 ) );
-    SW_EXPECT_FALSE( readForgedPending( 0, 5 ) );
-    SW_EXPECT_FALSE( readForgedPending( 1, 0 ) );
+    SW_EXPECT_FALSE( readFixturePending( 5, 5 ) );
+    SW_EXPECT_FALSE( readFixturePending( 0, 5 ) );
+    SW_EXPECT_FALSE( readFixturePending( 1, 0 ) );
     SW_EXPECT_EQUAL( 1, _law.countPendingReports() );
 }
 
@@ -778,7 +778,7 @@ SW_TEST_CASE_F( WesternHorseTest, StateRoundTripsAcrossBreeds )
     {
         SW_EXPECT_EQUAL( coin.frighten( 1.0f ), _horse.frighten( 1.0f ) );
     }
-    SW_EXPECT_FALSE( readForged( "nothing", 50.0f, 50.0f, 0.0f ) );
+    SW_EXPECT_FALSE( readFixture( "nothing", 50.0f, 50.0f, 0.0f ) );
 }
 
 /**
@@ -786,17 +786,17 @@ SW_TEST_CASE_F( WesternHorseTest, StateRoundTripsAcrossBreeds )
  */
 SW_TEST_CASE_F( WesternHorseTest, ReadStateRefusesOutOfRangeValues )
 {
-    SW_REQUIRE_TRUE( readForged( "steady", 50.0f, 60.0f, 1.0f ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixture( "steady", 50.0f, 60.0f, 1.0f ) ); // 형식은 맞다
     SW_EXPECT_NEAR( 50.0f, _horse.getHealthCore(), kWesternTolerance );
 
     const float32 nan = std::numeric_limits<float32>::quiet_NaN();
-    SW_EXPECT_FALSE( readForged( "steady", nan, 60.0f, 1.0f ) );
-    SW_EXPECT_FALSE( readForged( "steady", -1.0f, 60.0f, 1.0f ) );
-    SW_EXPECT_FALSE( readForged( "steady", 100.5f, 60.0f, 1.0f ) );
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, nan, 1.0f ) );
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, -1.0f, 1.0f ) );
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, nan ) );
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, -1.0f ) );
+    SW_EXPECT_FALSE( readFixture( "steady", nan, 60.0f, 1.0f ) );
+    SW_EXPECT_FALSE( readFixture( "steady", -1.0f, 60.0f, 1.0f ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 100.5f, 60.0f, 1.0f ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, nan, 1.0f ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, -1.0f, 1.0f ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, 60.0f, nan ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, 60.0f, -1.0f ) );
     SW_EXPECT_NEAR( 50.0f, _horse.getHealthCore(), kWesternTolerance );
     SW_EXPECT_NEAR( 60.0f, _horse.getStaminaCore(), kWesternTolerance );
 }
@@ -806,13 +806,13 @@ SW_TEST_CASE_F( WesternHorseTest, ReadStateRefusesOutOfRangeValues )
  */
 SW_TEST_CASE_F( WesternHorseTest, ReadStateRefusesAbilitiesNotUnlocked )
 {
-    SW_REQUIRE_TRUE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "rear" }, 2 ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixture( "steady", 50.0f, 60.0f, 1.0f, { "rear" }, 2 ) ); // 형식은 맞다
     SW_EXPECT_TRUE( _horse.hasAbility( "rear" ) );
 
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "rear", "rear" }, 2 ) );
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "fly" }, 2 ) );
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "drift" }, 2 ) ); // 3 단계에서 열린다
-    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "rear" }, 1 ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, 60.0f, 1.0f, { "rear", "rear" }, 2 ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, 60.0f, 1.0f, { "fly" }, 2 ) );
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, 60.0f, 1.0f, { "drift" }, 2 ) ); // 3 단계에서 열린다
+    SW_EXPECT_FALSE( readFixture( "steady", 50.0f, 60.0f, 1.0f, { "rear" }, 1 ) );
     SW_EXPECT_TRUE( _horse.hasAbility( "rear" ) );
     SW_EXPECT_FALSE( _horse.hasAbility( "drift" ) );
 }
@@ -933,23 +933,23 @@ SW_TEST_CASE_F( WesternSurvivalTest, InitializeAndStateChecks )
     sw::WesternSurvival empty;
     SW_EXPECT_FALSE( empty.initialize( nullptr ) );
 
-    SW_REQUIRE_TRUE( readForged( 40.0f, SW_TRUE ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( readFixture( 40.0f, SW_TRUE ) ); // 형식은 맞다
     SW_EXPECT_NEAR( 40.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_TRUE( _survival.isDeadEyeActive() );
 
-    SW_EXPECT_FALSE( readForged( std::numeric_limits<float32>::quiet_NaN(), SW_FALSE ) );
-    SW_EXPECT_FALSE( readForged( -1.0f, SW_FALSE ) );
-    SW_EXPECT_FALSE( readForged( 101.0f, SW_FALSE ) );
-    SW_EXPECT_FALSE( readForged( 50.0f, 2 ) );
-    SW_EXPECT_FALSE( readForged( 50.0f, SW_TRUE, {}, -1 ) );         // 음수 단계
-    SW_EXPECT_FALSE( readForged( 50.0f, SW_FALSE, { 1 } ) );         // 꺼져 있는데 표시가 있다
-    SW_EXPECT_FALSE( readForged( 50.0f, SW_TRUE, { 1, 2, 3, 4 } ) ); // 2 단계는 셋까지다
-    SW_EXPECT_FALSE( readForged( 50.0f, SW_TRUE, { 1 }, 1 ) );       // 1 단계는 표시가 없다
+    SW_EXPECT_FALSE( readFixture( std::numeric_limits<float32>::quiet_NaN(), SW_FALSE ) );
+    SW_EXPECT_FALSE( readFixture( -1.0f, SW_FALSE ) );
+    SW_EXPECT_FALSE( readFixture( 101.0f, SW_FALSE ) );
+    SW_EXPECT_FALSE( readFixture( 50.0f, 2 ) );
+    SW_EXPECT_FALSE( readFixture( 50.0f, SW_TRUE, {}, -1 ) );         // 음수 단계
+    SW_EXPECT_FALSE( readFixture( 50.0f, SW_FALSE, { 1 } ) );         // 꺼져 있는데 표시가 있다
+    SW_EXPECT_FALSE( readFixture( 50.0f, SW_TRUE, { 1, 2, 3, 4 } ) ); // 2 단계는 셋까지다
+    SW_EXPECT_FALSE( readFixture( 50.0f, SW_TRUE, { 1 }, 1 ) );       // 1 단계는 표시가 없다
     SW_EXPECT_NEAR( 40.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_TRUE( _survival.isDeadEyeActive() );
     SW_EXPECT_TRUE( _survival.getMarks().empty() );
 
-    SW_REQUIRE_TRUE( readForged( 50.0f, SW_TRUE, { 1, 1, 2 } ) ); // 같은 대상에 또 표시해도 된다
+    SW_REQUIRE_TRUE( readFixture( 50.0f, SW_TRUE, { 1, 1, 2 } ) ); // 같은 대상에 또 표시해도 된다
     SW_EXPECT_EQUAL( size_t( 3 ), _survival.getMarks().size() );
 }
 

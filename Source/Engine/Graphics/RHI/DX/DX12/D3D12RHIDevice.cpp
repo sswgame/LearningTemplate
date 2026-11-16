@@ -1199,13 +1199,13 @@ namespace sw
         _listPendingSubmit.clear();
     }
 
-    void D3D12RHIDevice::submitFrameWorkNow()
+    void D3D12RHIDevice::submitFrameJobNow()
     {
         if ( _commandQueue == nullptr || _pActiveFrameList == nullptr )
             return;
         // 조각에 기록한 것이 있으면 닫아 대기열 끝에 넣고 새 조각을 연다(빈 조각은 그대로 둔다 — `executeCommandList` 와 같은 규칙).
-        const bool bSegmentHasWork = _frameStreamState._bRecordedAny != SW_FALSE;
-        if ( bSegmentHasWork )
+        const bool bSegmentHasJobs = _frameStreamState._bRecordedAny != SW_FALSE;
+        if ( bSegmentHasJobs )
         {
             _frameStreamContext->endRenderPass();
             requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (frame segment, queue sync)" );
@@ -1220,7 +1220,7 @@ namespace sw
                 _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
             _listPendingSubmit.clear();
         }
-        if ( bSegmentHasWork )
+        if ( bSegmentHasJobs )
             openNextFrameSegment();
     }
 
@@ -1246,7 +1246,7 @@ namespace sw
             return RHIQueueSyncPoint{};
         // 포크: 지금까지 넘긴 그래픽스 일(프레임 스트림 · 리스트 · 구조 버퍼 복사)을 큐에 내고 그 끝을 신호한다. 컴퓨트 큐는 그 신호를 기다린 뒤 이 리스트를 실행한다.
         // 버퍼는 ExecuteCommandLists 경계에서 COMMON 으로 돌아가므로(상태 감쇠) 큐 사이 소유권 이전이 따로 없다 — 텍스처는 생산자가 컴퓨트에서 쓸 상태로 넘겨 둔다.
-        submitFrameWorkNow();
+        submitFrameJobNow();
         ++_queueSyncValue;
         requireHr( _commandQueue->Signal( _queueSyncFence.Get(), _queueSyncValue ), "ID3D12CommandQueue::Signal (fork)" );
         requireHr( _computeQueue->Wait( _queueSyncFence.Get(), _queueSyncValue ), "ID3D12CommandQueue::Wait (fork)" );
@@ -1267,7 +1267,7 @@ namespace sw
         if ( point.isValid() == false || point._value <= _computeWaitedValue )
             return;
         // 조인: 그 전 그래픽스 일은 기다리지 않게 먼저 큐에 낸다 — 포크와 조인 사이의 그래픽스 일이 컴퓨트와 겹친다.
-        submitFrameWorkNow();
+        submitFrameJobNow();
         requireHr( _commandQueue->Wait( _computeFence.Get(), point._value ), "ID3D12CommandQueue::Wait (join)" );
         _computeWaitedValue = point._value;
     }
@@ -1319,7 +1319,7 @@ namespace sw
         return true;
     }
 
-    bool D3D12RHIDevice::isDeviceLost()
+    bool D3D12RHIDevice::pollDeviceLost()
     {
         return _transferSerials.isLost() || isDeviceRemoved();
     }
@@ -1399,7 +1399,8 @@ namespace sw
             return false;
         }
         // 끝날 때까지 기다린다. 시간 초과로 실패를 돌려주면 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을
-        // 풀거나 재사용한다. 2 초마다 한 번 알리고, 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
+        // 풀거나 재사용한다. 2 초마다 한 번 알리고(정보 — 부하에 느린 GPU 도 제때 끝나므로 고정 간격은 판정이 아니다. 멈춤은 행 감시가 기계 배율로 본다),
+        // 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
         bool   bReached = SUCCEEDED( _fence->SetEventOnCompletion( fenceValue, fenceEvent ) );
         uint32 waitedSeconds{ 0 };
         while ( bReached && WaitForSingleObject( fenceEvent, 2000 ) != WAIT_OBJECT_0 )
@@ -1414,7 +1415,7 @@ namespace sw
             }
             if ( _fence->GetCompletedValue() >= fenceValue )
                 break;
-            SW_LOG_WARNING_ID( "D3D12.GPUNotReachedFence", "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
+            SW_LOG_INFO_ID( "D3D12.GPUNotReachedFence", "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
         }
         CloseHandle( fenceEvent );
         return bReached;
@@ -2236,7 +2237,7 @@ namespace sw
             result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         }
         // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
-        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( ring._allocator, _transferSerials, result, sizeBytes, "D3D12", pCaller, outSpan );
+        const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( ring._allocator, _transferSerials, result, sizeBytes, "D3D12", pCaller, outSpan );
         if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
             return submitResult;
         // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
@@ -2312,7 +2313,7 @@ namespace sw
 
         ScopedLock<mutex> submitLock{ _transferSubmitMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
-        if ( isDeviceLost() )
+        if ( pollDeviceLost() )
         {
             SW_LOG_ERROR_ID( "D3D12.D3D12DeviceLostWhile", "%#: the D3D12 device was lost while the transfer was recorded; the transfer is rejected", pWhere );
             recycleTransferJob( std::move( job ) );
@@ -2348,7 +2349,7 @@ namespace sw
         if ( _transferFence == nullptr )
             return;
         // 잃은 장치의 펜스는 묻지 않는다: 제거된 장치의 펜스는 끝난 값(UINT64_MAX)을 돌려줘 끝나지 않은 전송이 Complete 로 보인다. 워터마크가 멈추고 남은 티켓은 Failed 다.
-        if ( _device != nullptr && isDeviceLost() == false )
+        if ( _device != nullptr && pollDeviceLost() == false )
         {
             const UINT64 completedFence = _transferFence->GetCompletedValue();
             _transferFenceQueue.retireDone(

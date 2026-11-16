@@ -7,6 +7,17 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct RayInternal
+        {
+            /** @brief 삼각형 무게중심 경계의 여유입니다 — 공유 모서리를 정확히 지나는 광선이 양쪽 다 빗나가지 않게 합니다. */
+            static constexpr float32 kBarycentricSlack = 1.0e-5f;
+            /** @brief 이보다 작은 행렬식은 광선이 삼각형 면과 나란한 것으로 봅니다. */
+            static constexpr float32 kParallelDeterminant = 1.0e-12f;
+        };
+    } // namespace
+
     bool Ray::intersectSphere( const Ray& ray, const float3& center, float32 radius, float32 maxDistance, float32& outDistance )
     {
         const float3  toCenter     = center - ray._origin;
@@ -118,6 +129,36 @@ namespace sw
                 return false;
         }
         outDistance = nearDistance;
+        return true;
+    }
+
+    bool Ray::intersectTriangle( const Ray& ray, const float3& a, const float3& b, const float3& c, float32 maxDistance, RayTriangleHit& outHit )
+    {
+        const float3  edge1       = b - a;
+        const float3  edge2       = c - a;
+        const float3  pVector     = ray._direction.cross( edge2 );
+        const float32 determinant = edge1.dot( pVector );
+        if ( MathUtil::abs( determinant ) < RayInternal::kParallelDeterminant )
+            return false; // 광선이 삼각형 면과 나란하다
+        const float32 inverseDeterminant = 1.0f / determinant;
+        const float3  tVector            = ray._origin - a;
+        float32       u                  = tVector.dot( pVector ) * inverseDeterminant;
+        if ( u < -RayInternal::kBarycentricSlack || u > 1.0f + RayInternal::kBarycentricSlack )
+            return false;
+        const float3 qVector = tVector.cross( edge1 );
+        float32      v       = ray._direction.dot( qVector ) * inverseDeterminant;
+        if ( v < -RayInternal::kBarycentricSlack || u + v > 1.0f + RayInternal::kBarycentricSlack )
+            return false;
+        const float32 distance = edge2.dot( qVector ) * inverseDeterminant;
+        if ( distance < 0.0f || distance > maxDistance )
+            return false;
+        // 여유 안의 무게중심 값은 경계로 묶는다 — 보간한 UV · 위치가 삼각형 밖으로 나가지 않게.
+        u                  = MathUtil::saturate( u );
+        v                  = MathUtil::clamp( v, 0.0f, 1.0f - u );
+        outHit._distance   = distance;
+        outHit._baryU      = u;
+        outHit._baryV      = v;
+        outHit._bFrontFace = ray._direction.dot( edge1.cross( edge2 ) ) < 0.0f ? SW_TRUE : SW_FALSE;
         return true;
     }
 

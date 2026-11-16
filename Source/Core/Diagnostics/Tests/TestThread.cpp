@@ -12,6 +12,7 @@
 #include "Core/Diagnostics/DeadlockDetector.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -120,7 +121,7 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
     SW_REQUIRE_TRUE( mutex::getLockObserver() == &observer );
 
     std::thread::id workerID;
-    thread          worker{ [&workerID]()
+    thread          worker{ ThreadTestAccess::getKey(), [&workerID]()
     { workerID = std::this_thread::get_id(); } };
     worker.join();
     mutex::unregisterLockObserver( &observer );
@@ -161,7 +162,7 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
     SW_EXPECT_EQUAL( 2u, workerEventCount );
 }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 /**
  * @brief 락을 쥔 채 그 락을 기다리는 스레드를 join 하면 교착 검출기가 순환으로 잡는다(오류 로그 + 단언 — 단언은 가로채기로 센다).
  * @details 락은 검출기에 직접 적은 가짜 키라 실제로는 막히지 않는다. 워커는 단언이 세어질 때까지 기다려, 합류하는 쪽의 시도가 순환을 닫는 순간 워커가 아직 기다리는 중이다.
@@ -179,7 +180,7 @@ SW_TEST_CASE( ThreadTest, JoinWhileHoldingALockTheThreadWaitsForIsADeadlock )
     void* const  pHeldLock = reinterpret_cast<void*>( 0x4000 );
     atomic<bool> bWorkerWaiting{ false };
     detector.recordLockAcquired( pHeldLock );
-    thread     worker{ [&detector, &bWorkerWaiting, &capture, pHeldLock]()
+    thread     worker{ ThreadTestAccess::getKey(), [&detector, &bWorkerWaiting, &capture, pHeldLock]()
     {
         detector.recordLockAttempt( pHeldLock ); // 합류하는 쪽이 쥔 락을 기다린다
         bWorkerWaiting.store( true );
@@ -205,12 +206,12 @@ SW_TEST_CASE( ThreadTest, DestructorRequestsStopAndJoins )
     atomic<bool>  bFinished{ false };
     atomic<int32> loopCount{ 0 };
     {
-        thread worker{ [&bStarted, &bFinished, &loopCount]( StopToken stopToken )
+        thread worker{ ThreadTestAccess::getKey(), [&bStarted, &bFinished, &loopCount]( StopToken stopToken )
         {
-            bStarted.store( true );
             while ( stopToken.isStopRequested() == false )
             {
                 loopCount.fetch_add( 1 );
+                bStarted.store( true ); // 첫 반복 뒤에 알린다 — 앞에 알리면 소멸자의 정지 요청이 반복보다 먼저 와 loopCount 가 0 일 수 있다
                 ThreadUtil::yield();
             }
             bFinished.store( true );
@@ -229,9 +230,9 @@ SW_TEST_CASE( ThreadTest, DestructorRequestsStopAndJoins )
 SW_TEST_CASE( ThreadTest, MoveAssignJoinsTheCurrentThreadFirst )
 {
     atomic<int32> finishedCount{ 0 };
-    thread        worker{ [&finishedCount]()
+    thread        worker{ ThreadTestAccess::getKey(), [&finishedCount]()
     { finishedCount.fetch_add( 1 ); } };
-    thread        next{ [&finishedCount]( StopToken stopToken )
+    thread        next{ ThreadTestAccess::getKey(), [&finishedCount]( StopToken stopToken )
     {
         while ( stopToken.isStopRequested() == false )
             ThreadUtil::yield();
@@ -252,7 +253,7 @@ SW_TEST_CASE( ThreadTest, MemberFunctionTakesTheStopTokenAsLastArgument )
 {
     StopTokenLastArgumentOwner owner;
     {
-        thread         worker{ &StopTokenLastArgumentOwner::run, &owner, 7 };
+        thread         worker{ ThreadTestAccess::getKey(), &StopTokenLastArgumentOwner::run, &owner, 7 };
         const Deadline deadline = Deadline::afterMilliseconds( 5000 );
         while ( owner._loopCount.load() == 0 && deadline.isExpired() == false )
             ThreadUtil::yield();
@@ -261,7 +262,7 @@ SW_TEST_CASE( ThreadTest, MemberFunctionTakesTheStopTokenAsLastArgument )
     SW_EXPECT_TRUE( owner._loopCount.load() >= 1 );
 }
 
-#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG )
+#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DO_CHECKS )
 /**
  * @brief 로더 락을 쥔 채 join 하면 단언하고 스레드를 뗀다 — 기다리면 끝나는 스레드도 로더 락을 기다려 영원히 멈춘다.
  * @details DLL 을 내릴 때 모듈 정적 소멸자가 스레드를 join 하던 에디터 종료 교착과 같은 조건을 `LdrLockLoaderLock` 으로 만든다. 단언은 가로채기로 센다(Debug 만).
@@ -278,7 +279,7 @@ SW_TEST_CASE( ThreadTest, JoinUnderTheLoaderLockAssertsAndDetaches )
     // 뗀 스레드는 이 함수보다 오래 살 수 있다 — 플래그는 스레드와 나눠 갖는다.
     const std::shared_ptr<atomic<bool>> pStarted = std::make_shared<atomic<bool>>( false );
     const std::shared_ptr<atomic<bool>> pRelease = std::make_shared<atomic<bool>>( false );
-    thread                              worker{ [pStarted, pRelease]()
+    thread                              worker{ ThreadTestAccess::getKey(), [pStarted, pRelease]()
     {
         pStarted->store( true );
         while ( pRelease->load() == false )

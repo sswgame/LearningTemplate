@@ -7,7 +7,7 @@
  *          `g_SurfaceDeformParams` 로 모든 씬 지오메트리 패스에 건다 — 머티리얼 인스턴스마다 싣지 않는다(언리얼 런타임 가상 텍스처 · 유니티 `SetGlobalTexture` 자리).
  *
  *          도장 API(지역 프로필의 반응 · 발걸음 · 도장 컴포넌트가 부른다, 모두 게임 스레드):
- *          - 한 번 찍기: `stamp`(한 점 · 요), `stampSegment`(두 점을 잇는 띠 — 끌린 자국 · 바퀴 자국은 지난 자리 → 이번 자리를 프레임마다 찍는다).
+ *          - 한 번 찍기: `stamp`(한 점 · 요), `applySegmentStamp`(두 점을 잇는 띠 — 끌린 자국 · 바퀴 자국은 지난 자리 → 이번 자리를 프레임마다 찍는다).
  *          - 붙잡기: `addPersistentStamp` → `movePersistentStamp` → `removePersistentStamp`. 붙잡은 도장은 프레임마다 다시 찍혀 메워지지 않고(파묻힘 테두리 · 깔때기),
  *            `_spinSpeed` 로 홈이 돈다. 놓으면 남은 자국이 자기 속도로 메워진다.
  *          격자 크기 · 창 너비 · 깊이 범위는 표면 종류 표(`SurfaceKindTable::_deformResolution` · `_deformExtent` · `_deformDepthRange`)다. 창은 처음 찍을 때 생기고
@@ -65,7 +65,7 @@ namespace sw
         /** @brief 도장 @p def 를 @p point 에 요 @p yaw(라디안, +Z 앞)로 한 번 찍습니다. 빈 도장(`SurfaceStampDef::isSet`)은 아무것도 하지 않는다. */
         void stamp( const SurfaceStampDef& def, const float3& point, float32 yaw );
         /** @brief 도장 @p def 를 @p from → @p to 띠로 한 번 찍습니다(Trail 의 길이가 두 점 사이 거리다). 두 점이 같으면 `stamp` 와 같다. */
-        void stampSegment( const SurfaceStampDef& def, const float3& from, const float3& to );
+        void applySegmentStamp( const SurfaceStampDef& def, const float3& from, const float3& to );
         /** @brief 도장 @p def 를 붙잡아 @p point 에 둡니다. 놓을 때까지 프레임마다 다시 찍힌다. 찍지 못하는 자리(서버 · 빈 도장 · 표 없음)는 빈 핸들입니다. */
         [[nodiscard]] SurfaceStampHandle addPersistentStamp( const SurfaceStampDef& def, const float3& point, float32 yaw );
         /** @brief 붙잡은 도장을 옮깁니다. 놓았거나 씬을 비워 사라진 핸들이면 아무것도 하지 않고 false 입니다(부르는 쪽이 다시 붙잡는다). */

@@ -21,6 +21,7 @@ namespace sw::editor
         float2 _min{};
         float2 _max{};
         uint32 _itemID{ 0 };
+        uint32 _windowID{ 0 };         ///< 위젯을 그린 ImGui 창. 누를 점의 최상위 창이 이 창(또는 그 조상 · 이 위젯이 담은 자식 창)이 아니면 가려진 것이다(`EditorSelfTestInput::hoverMark`)
         uint32 _viewportID{ 0 };       ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
         uint32 _frame{ 0 };            ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
         uint32 _stableStartFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
@@ -30,7 +31,7 @@ namespace sw::editor
          * @brief 두 프레임 연속 같은 자리에 그려졌으면 true 입니다 — 입력 단계가 이때까지 시계를 붙잡는다(창이 열리며 자리를 잡는 중이면 기다린다).
          * @details 예전에는 그려지기만 하면 눌러, 시나리오마다 앞에 고정 대기(10 프레임 이상)를 두어 도킹 · 팝업이 자리 잡기를 기다렸다. Playwright 의 "stable" 확인과 같다.
          */
-        [[nodiscard]] bool isSettled() const { return _frame > _stableStartFrame; }
+        [[nodiscard]] bool isStable() const { return _frame > _stableStartFrame; }
     };
 } // namespace sw::editor
 
@@ -70,6 +71,15 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 레이블의 누를 점에 포인터를 두었을 때 그 점의 입력을 받는 쪽입니다(`EditorSelfTestInput::hoverMark` · `pressMark`). */
+    enum class EditorMarkHit : uint8
+    {
+        Missing,   ///< 레이블이 지난 프레임에 그려지지 않았다
+        Pending,   ///< 아직 판정할 표본이 없다(포인터가 그 점에 닿은 프레임이 아직 끝나지 않았다) — 다음 프레임에 다시 묻는다
+        Reachable, ///< 그 점의 최상위 창이 레이블 주인이다 — 누르면 레이블이 받는다
+        Covered,   ///< 다른 창(오버레이 툴바 · 팝업 · 모달)이 그 점을 덮어 누르면 그쪽이 받는다
+    };
+
     /**
      * @struct EditorSelfTestInput
      * @brief 다음 프레임에 넣을 입력 이벤트 큐입니다. 테스트 단계 하나가 이벤트 몇 개를 넣고 `Continue` 를 반환하면 다음 프레임에 들어갑니다.
@@ -77,8 +87,6 @@ namespace sw::editor
      */
     struct EditorSelfTestInput
     {
-        /** @brief 마우스를 옮깁니다. @p viewportID 가 0 이 아니면 그 뷰포트를 커서 아래 뷰포트로 알립니다. 플랫폼이 실제 커서로 넣는 값보다 우선합니다. */
-        static void moveMouse( const float2& position, uint32 viewportID = 0 );
         static void setMouseButton( int32 button, bool bDown );
         static void typeText( string_view utf8Text );
         /** @brief 세로 휠을 @p notches 눈금 돌립니다(양수면 위로). 커서 아래 창이 받는다. */
@@ -95,41 +103,65 @@ namespace sw::editor
          * @return 없는 이름이면 false 입니다.
          */
         [[nodiscard]] static bool findKeyByName( string_view name, int32& outImguiKey );
-        /** @brief 레이블의 @p anchor 위치(0..1, 가운데가 (0.5, 0.5))로 마우스를 옮깁니다. 레이블이 없으면 false 입니다. */
-        [[nodiscard]] static bool moveMouseToMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         /**
-         * @brief 레이블의 가운데에 커서를 붙잡아 둡니다. `releaseMouseHold` 가 호출될 때까지 프레임마다 그 위치를 다시 넣습니다. 버튼을 누른 채 여러 프레임을 두는
-         *        단계(`EditorClick state="down"`, 뷰포트 비행)에서 플랫폼이 넣는 실제 커서가 호버를 풀지 않게 하기 위해서입니다. 레이블이 없으면 false 입니다.
+         * @brief 레이블 위에 포인터를 두는 입구입니다 — 레이블의 @p anchor 위치(0..1, 가운데가 (0.5, 0.5))에 커서를 붙잡고(`releaseMouseHold` 까지 프레임마다 다시 넣는다)
+         *        그 점에 누가 닿는지 판정합니다. 가려졌으면 @p outCoverName 에 덮은 창 이름을 넣습니다.
+         * @details 레이블을 누르거나 호버하는 모든 길(시나리오 `EditorClick` · `EditorDrag` · `EditorHover`, 자체 테스트)이 이 입구와 `pressMark` 만 거친다 — 레이블 좌표로
+         *          포인터를 옮기는 다른 공개 함수는 없다(끌기는 판정한 점에서 재는 `moveByOffset`). 판정은 포인터가 그 점에 있던 프레임의 최상위 창(ImGui `HoveredWindow`)이 레이블 주인인지다: 레이블을 그린 창,
+         *          그 조상(제목 표시줄 · 도크 탭 · 열린 메뉴 머리), 레이블 사각형 안에 든 자식 창(목록 상자처럼 레이블이 담은 내용). 잘림 검사(`_bClipped`)는 창 밖으로
+         *          잘린 것만 잡아, 같은 창 위의 오버레이(씬 뷰 하단 툴바 자식 창) · 팝업에 가려지면 누름이 그쪽으로 가고 단계는 성공했다.
+         *          언리얼 Automation Driver 의 hit-test 확인 · Playwright actionability 의 "receives events"(elementFromPoint) 와 같은 자리다.
+         *          붙잡기는 플랫폼이 다음 프레임에 넣는 실제 커서가 호버를 풀지 않게 한다(누른 채 두는 `EditorClick state="Down"` · 뷰포트 비행).
+         * @return `Pending` 이면 다음 프레임에 다시 부른다. `Reachable` 일 때만 누른다(`pressMark` 도 같은 판정을 다시 본다).
          */
-        [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
-        /** @brief ImGui 가 본 포인터가 지금 레이블의 @p anchor 자리에 있으면 true 입니다. 레이블이 없으면 false 입니다. */
-        [[nodiscard]] static bool isMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
-        static void               releaseMouseHold();
+        [[nodiscard]] static EditorMarkHit hoverMark( string_view key, const float2& anchor, string& outCoverName );
+        /**
+         * @brief 레이블을 누르는 입구입니다 — `hoverMark` 와 같은 판정이 `Reachable` 일 때만 그 점으로 옮기고 @p button 을 누르는 이벤트를 넣습니다. 아니면 아무것도 넣지 않고 판정을 돌려줍니다.
+         * @details 붙잡기는 건드리지 않는다 — 누른 채 둘 단계는 붙잡은 채로, 한 번 누르고 놓을 단계는 먼저 `releaseMouseHold` 하고 부른다. 수정자 키는 이 앞에 넣는다.
+         */
+        [[nodiscard]] static EditorMarkHit pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName );
+        /**
+         * @brief 마지막으로 닿는다고 판정한 점(`hoverMark` · `pressMark` 가 `Reachable` 을 돌려준 점)에서 @p offset 픽셀만큼 떨어진 곳으로 포인터를 옮기는 이벤트를 넣습니다.
+         *        끌기의 시작 · 중간 · 끝 점이 이 입구로만 움직인다 — 언리얼 Automation Driver 의 `MoveByOffset` 과 같은 자리다.
+         * @details 좌표를 받는 포인터 옮기기(`moveMouse`)는 비공개다 — 레이블 좌표로 손 옮겨 누르면 가림 판정을 건너뛰어 오버레이가 덮어도 단계가 성공했다(editor.gizmotoplevel).
+         *          기준점은 판정한 때의 점이라, 끄는 동안 레이블이 움직여도(기즈모 가운데) 끌기 경로는 누른 점에서 잰다. 판정한 점은 `moveMouseAway` 가 지운다.
+         * @return 판정한 점이 없으면(조준 · 누름이 `Reachable` 이 아니었다) 아무것도 넣지 않고 false 입니다.
+         */
+        [[nodiscard]] static bool moveByOffset( const float2& offset );
+        /** @brief 레이블의 @p anchor 위치로 옮겨 @p button 을 놓는 이벤트를 넣습니다. 레이블이 사라졌으면(누름이 팝업을 닫았다) 그 자리에서 놓고 false 입니다 — 그래도 놓아야 버튼이 눌린 채 남지 않는다. */
+        static bool releaseMark( string_view key, const float2& anchor, int32 button );
+        /** @brief 붙잡기를 풀고 포인터를 화면 밖으로 치웁니다 — 테스트가 끝날 때 다음 테스트의 호버를 흐리지 않게 한다. */
+        static void moveMouseAway();
+        static void releaseMouseHold();
         /** @brief 앞 단계가 넣은 이벤트가 아직 ImGui 에 다 들어가지 않았으면 true 입니다. 입력 단계는 앞 입력이 다 들어간 뒤에 자리를 본다. */
         [[nodiscard]] static bool hasPendingEvents();
         /**
          * @brief 키 · 글 입력을 받을 곳(초점 창과 그 사각형, 활성 · 내비 위젯, 열린 팝업 수)이 두 프레임 연속 같으면 true 입니다.
          * @details 키 · 글 단계에는 누를 레이블이 없다 — 그 대상은 키보드 초점이다. 클릭이 연 팝업 · 입력 칸이 초점을 잡는 데 한두 프레임이 걸린다.
          */
-        [[nodiscard]] static bool isKeyboardTargetSettled();
+        [[nodiscard]] static bool isKeyboardTargetStable();
         /**
-         * @brief 화면이 자리 잡기를 기다리기 시작합니다. 돌려준 번호를 `isLayoutSettledAfter` 에 넘깁니다.
+         * @brief 화면이 자리 잡기를 기다리기 시작합니다. 돌려준 번호를 `isLayoutStableAfter` 에 넘깁니다.
          * @details 번호는 에디터가 다음에 여는 프레임에 찍힌다(`flushIntoImGui`). 앞 단계(개발 명령 · 입력 · 변수)는 이 호출 전에 다 돌았고, 그 요청은 다음 프레임이 열릴 때
          *          받아들여지므로, 이 번호 이상이 찍힌 프레임은 앞 단계를 모두 반영해 그린 화면이다 — 효과가 몇 프레임 뒤에 나오는지 세지 않는다.
          */
-        [[nodiscard]] static uint32 beginSettleWait();
-        /** @brief 마지막 `beginSettleWait` 의 번호입니다. 상태가 새로 만들어졌으면(에디터 컨텍스트를 다시 세움) 0 부터 다시 센다. */
-        [[nodiscard]] static uint32 getSettleWaitSerial();
+        [[nodiscard]] static uint32 beginStabilityWait();
+        /** @brief 마지막 `beginStabilityWait` 의 번호입니다. 상태가 새로 만들어졌으면(에디터 컨텍스트를 다시 세움) 0 부터 다시 센다. */
+        [[nodiscard]] static uint32 getStabilityWaitSerial();
         /**
-         * @brief `beginSettleWait` 가 준 @p waitSerial 이상이 찍힌 프레임 둘이 연속으로 같은 배치면 true 입니다 — 보이는 창 모두의 자리(위치 · 크기 · 도크 노드 · 뷰포트 · 접힘),
+         * @brief `beginStabilityWait` 가 준 @p waitSerial 이상이 찍힌 프레임 둘이 연속으로 같은 배치면 true 입니다 — 보이는 창 모두의 자리(위치 · 크기 · 도크 노드 · 뷰포트 · 접힘),
          *        메인 뷰포트 크기, 열린 팝업 수.
-         * @details 창 크기 바꾸기 · 레이아웃 재설정 · 패널 열기 뒤 도킹이 자리를 잡는 데 몇 프레임이 걸린다 — 시나리오가 그것을 고정 대기로 때우지 않게 한다(`EditorWaitSettled`).
-         *          위젯 하나의 자리(`EditorSelfTestMark::isSettled`)를 창 전체로 넓힌 것이다. 기록이 꺼져 있으면(표본이 없다) false 다.
+         * @details 창 크기 바꾸기 · 레이아웃 재설정 · 패널 열기 뒤 도킹이 자리를 잡는 데 몇 프레임이 걸린다 — 시나리오가 그것을 고정 대기로 때우지 않게 한다(`EditorWaitStable`).
+         *          위젯 하나의 자리(`EditorSelfTestMark::isStable`)를 창 전체로 넓힌 것이다. 기록이 꺼져 있으면(표본이 없다) false 다.
          */
-        [[nodiscard]] static bool isLayoutSettledAfter( uint32 waitSerial );
+        [[nodiscard]] static bool isLayoutStableAfter( uint32 waitSerial );
         /** @brief 창 배치 서명이 마지막으로 바뀐 까닭입니다(움직인 창 이름 등) — 자리 잡기 시한 초과를 알릴 때 붙인다. 표본이 없으면 빈 글입니다. */
         [[nodiscard]] static string describeLastLayoutChange();
         /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 호출합니다. 넣기 전에 키보드 대상을 표본으로 남긴다. */
         static void flushIntoImGui();
+
+    private:
+        /** @brief 마우스를 옮깁니다. @p viewportID 가 0 이 아니면 그 뷰포트를 커서 아래 뷰포트로 알립니다. 입구(`pressMark` · `releaseMark` · `moveMouseAway` · `moveByOffset`)만 부른다. */
+        static void moveMouse( const float2& position, uint32 viewportID = 0 );
     };
 } // namespace sw::editor

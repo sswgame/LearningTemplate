@@ -152,7 +152,7 @@ namespace sw::editor
         return true;
     }
 
-    bool PairedAnimationPanel::acceptsDocumentPath( string_view assetPath ) const
+    bool PairedAnimationPanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, PairedAnimationDef::kExtension );
     }
@@ -187,7 +187,7 @@ namespace sw::editor
         _listSlot.resize( _model.getContent()._listRole.size() );
         _listFiredNotify.clear();
         _previousScrubTime = 0.0f;
-        resetPreviewEdits();
+        resetDocumentHistory();
         _status = "Loaded";
         _editError.clear();
         return ToolAssetLoadResult::Loaded;
@@ -228,7 +228,7 @@ namespace sw::editor
         float32 duration = _model.getContent()._duration;
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "DurationS" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        if ( ImGui::DragFloat( "##Durations", &duration, 0.01f, 0.01f, 60.0f, "%.3f" ) )
+        if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##Durations" ), &duration, 0.01f, 0.01f, 60.0f, "%.3f" ) )
             reportEdit( _model.setDuration( duration, true ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             _model.endContinuousEdit();
@@ -281,7 +281,7 @@ namespace sw::editor
                 float32 start = role._startSeconds;
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "StartS" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( ImGui::DragFloat( "##Starts", &start, 0.01f, 0.0f, _model.getContent()._duration, "%.3f" ) )
+                if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##Starts" ), &start, 0.01f, 0.0f, _model.getContent()._duration, "%.3f" ) )
                     reportEdit( _model.setRoleStart( roleIndex, start, true ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     _model.endContinuousEdit();
@@ -290,7 +290,7 @@ namespace sw::editor
             float32 arrBlend[2] = { role._enterBlendSeconds, role._exitBlendSeconds };
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "EnterExitBlendS" ) );
             EditorChrome::setNextItemWidthColumns( 27.0f );
-            if ( ImGui::DragFloat2( "##Enterexitblends", arrBlend, 0.01f, 0.0f, 5.0f, "%.3f" ) )
+            if ( EditorWidgets::dragFloat2( SW_WIDGET_ID( "##Enterexitblends" ), arrBlend, 0.01f, 0.0f, 5.0f, "%.3f" ) )
                 reportEdit( _model.setRoleBlend( roleIndex, arrBlend[0], arrBlend[1], true ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
@@ -302,12 +302,12 @@ namespace sw::editor
                 float32 yawDegrees = role._yawRadians * MathUtil::kRadianToDegree;
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "OffsetM" ) );
                 EditorChrome::setNextItemWidthColumns( 32.0f );
-                const bool bOffsetChanged = ImGui::DragFloat3( "##Offsetm", offset.data(), 0.01f, -10.0f, 10.0f, "%.3f" );
+                const bool bOffsetChanged = EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Offsetm" ), offset.data(), 0.01f, -10.0f, 10.0f, "%.3f" );
                 const bool bOffsetDone    = ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "YawDeg" ) );
                 EditorChrome::setNextItemWidthColumns( 13.0f );
-                const bool bYawChanged = ImGui::DragFloat( "##Yawdeg", &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f" );
+                const bool bYawChanged = EditorWidgets::dragFloat( SW_WIDGET_ID( "##Yawdeg" ), &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f" );
                 const bool bYawDone    = ImGui::IsItemDeactivatedAfterEdit();
                 if ( bOffsetChanged || bYawChanged )
                     reportEdit( _model.setRoleOffset( roleIndex, offset, yawDegrees, true ) );
@@ -321,7 +321,7 @@ namespace sw::editor
                 float32 warpEnd = role._warpEndSeconds;
                 EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "WarpEndS" ) );
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( ImGui::DragFloat( "##Warpends", &warpEnd, 0.01f, 0.0f, 10.0f, "%.3f" ) )
+                if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##Warpends" ), &warpEnd, 0.01f, 0.0f, 10.0f, "%.3f" ) )
                     reportEdit( _model.setRoleWarpEnd( roleIndex, warpEnd, true ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     _model.endContinuousEdit();
@@ -342,14 +342,14 @@ namespace sw::editor
             ImGui::SameLine();
             float32 time = notify._time;
             EditorChrome::setNextItemWidthColumns( 27.0f );
-            if ( ImGui::SliderFloat( "##Time", &time, 0.0f, content._duration, "%.3f s" ) )
+            if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Time" ), &time, 0.0f, content._duration, "%.3f s" ) )
                 reportEdit( _model.setNotifyTime( notifyIndex, time, true ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
             EditorSelfTestMarks::record( ( string( "pairedanim.notify." ) + notify._name.c_str() + ".time" ).c_str() );
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 19.0f );
-            if ( ImGui::BeginCombo( "##Role", notify._role.c_str() ) )
+            if ( EditorWidgets::beginCombo( "##Role", notify._role.c_str() ) )
             {
                 for ( const PairedAnimationRoleDef& role : content._listRole )
                 {
@@ -367,7 +367,7 @@ namespace sw::editor
             reportEdit( _model.removeNotify( removeIndex ) );
 
         EditorChrome::setNextItemWidthColumns( 21.0f );
-        ImGui::InputText( "##NewNotify", _newNotifyName.data(), _newNotifyName.max_size() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##NewNotify" ), _newNotifyName.data(), _newNotifyName.max_size() );
         ImGui::SameLine();
         const bool bCanAdd = content._listRole.empty() == false;
         ImGui::BeginDisabled( bCanAdd == false );

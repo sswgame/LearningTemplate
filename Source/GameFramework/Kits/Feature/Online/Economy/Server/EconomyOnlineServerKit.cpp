@@ -7,6 +7,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
@@ -79,6 +80,7 @@ namespace sw
                 settings._pPresence              = context._kits.find<IAccountPresence>();            // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
                 settings._pExternalLinks         = context._kits.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
                 settings._bAcceptSandboxReceipts = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
+                settings._refundRecovery         = kitConfig._refundRecovery;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     _receiptRegistry.shutdown();
@@ -90,7 +92,7 @@ namespace sw
                                              .and_then( [&]
                 { return exposeInterface<const ILedgerPolicy>( context, entry, _pCurrencyCatalog->getLedgerPolicy() ); } )
                                              .and_then( [&]
-                { return exposeInterface<IBalanceChangedListener>( context, entry, _service.getBalanceNotice() ); } );
+                { return exposeInterface<IBalanceChangedListener>( context, entry, _service.getBalanceNotification() ); } );
                 if ( exposed.has_value() == false )
                 {
                     stop();
@@ -105,8 +107,11 @@ namespace sw
                 return {};
             }
 
+            /** @brief 탈퇴한 계정의 구매 수를 지운다(`EconomyStoreLogic::eraseAccount`) — 잔액은 탈퇴 정리가 원장에서 소각한다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
+
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 끝나지 않은 지급 · 구매 · 환불 호출(돈이 오가는 일이라 끊지 않고 마무리한다). */
-            int32 getOpenWorkCount() const override { return _service.getOpenWorkCount(); }
+            int32 getOpenJobCount() const override { return _service.getOpenJobCount(); }
 
             void stop() override
             {
@@ -159,12 +164,13 @@ namespace sw
             }
 
         private:
-            shared_ptr<const CurrencyCatalog> _pCurrencyCatalog; ///< 공유 캐시의 한 벌
-            shared_ptr<const OfferCatalog>    _pOfferCatalog;    ///< 공유 캐시의 한 벌
-            unique_ptr<IReceiptValidator>     _pFakeValidator;   ///< `_bFakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
-            ReceiptProviderSet                _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
-            ReceiptValidatorRegistry          _receiptRegistry;
-            EconomyService                    _service;
+            shared_ptr<const CurrencyCatalog>                            _pCurrencyCatalog; ///< 공유 캐시의 한 벌
+            shared_ptr<const OfferCatalog>                               _pOfferCatalog;    ///< 공유 캐시의 한 벌
+            unique_ptr<IReceiptValidator>                                _pFakeValidator;   ///< `_bFakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
+            ReceiptProviderSet                                           _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
+            ReceiptValidatorRegistry                                     _receiptRegistry;
+            EconomyService                                               _service;
+            AfterDeleteAccountFunction<&EconomyStoreLogic::eraseAccount> _afterDeleteAccount;
         };
     } // namespace
 } // namespace sw

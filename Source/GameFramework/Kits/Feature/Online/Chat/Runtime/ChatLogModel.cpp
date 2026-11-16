@@ -41,13 +41,13 @@ namespace sw
         _retryAfterMs = 0;
         if ( text.empty() )
         {
-            _lastResult = ChatOutcome::fail( OnlineError::kInvalidRequest );
+            _lastResult = ChatServiceResult::fail( OnlineError::kInvalidRequest );
             ++_revision;
             return false;
         }
         if ( _pClient == nullptr )
         {
-            _lastResult = ChatOutcome::fail( OnlineError::kUnavailable );
+            _lastResult = ChatServiceResult::fail( OnlineError::kUnavailable );
             ++_revision;
             return false;
         }
@@ -69,7 +69,7 @@ namespace sw
 
     void ChatLogModel::onSendReply( const OnlineResult<ChatSendReply>& reply )
     {
-        _lastResult   = reply._errorCode != OnlineError::kOk ? ChatOutcome::fail( reply._errorCode ) : ChatOutcome{ reply._reply._result };
+        _lastResult   = reply._errorCode != OnlineError::kOk ? ChatServiceResult::fail( reply._errorCode ) : ChatServiceResult{ reply._reply._result };
         _retryAfterMs = reply._reply._retryAfterMs;
         ++_revision;
     }

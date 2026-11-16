@@ -43,7 +43,7 @@ namespace sw
      * @details 빈 글 · 상한 초과 · 잘못된 UTF-8 · 규칙 밖 채널 id 는 `kInvalidRequest`, 저장소 · 캐시 · 전송 장애는 `kUnavailable`, 로그인 없음은 `kUnauthenticated` 이다.
      *          서버 로직 · 클라이언트 모델(`ChatLogModel`)이 같은 형식을 쓴다.
      */
-    using ChatOutcome = OnlineOutcome<ChatResult>;
+    using ChatServiceResult = OnlineServiceResult<ChatResult>;
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */
     ENUM( Count = Count )
@@ -106,7 +106,7 @@ namespace sw
         PROPERTY()
         ChatChannelKind _kind{ ChatChannelKind::World };
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
-        ServiceRecordUnknownFields _unknownFields{};
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 

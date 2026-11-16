@@ -16,6 +16,7 @@
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileMapXML.h"
@@ -23,6 +24,8 @@
 
 namespace sw
 {
+
+    struct PhysicsShapeDesc2D;
     struct TileMapXMLData;
     class Material;
     class SceneComponent;
@@ -76,7 +79,7 @@ namespace sw
         [[nodiscard]] bool loadTileMap();
         /** @brief 이미 읽은 데이터로 맵을 쓰게 합니다(테스트 · 절차 생성). @p pTileSet 이 nullptr 이면 맵을 쓰지 않습니다. */
         void setTileMapData( const TileMapXMLData& map, shared_ptr<const TileSetAsset> pTileSet );
-        /** @brief 청크마다의 스프라이트 배치를 (다시) 만들고 모든 칸 · 바디 · 외곽선을 맞춥니다. 오브젝트 관리자가 없으면 false 입니다. */
+        /** @brief 청크마다의 스프라이트 배치를 (다시) 만들고 모든 칸 · 바디 · 외곽선을 맞춥니다. 바디는 그리기 배치와 따로 짓습니다. 읽지 않았거나 그리기 배치를 못 만들면 false 입니다. */
         bool rebuild();
         /** @brief 칸에 브러시를 칠합니다(빈 이름은 지우기). 그 칸과 이웃의 모습 · 바디 · 외곽선을 다시 맞춥니다. 모르는 브러시 · 맵 밖은 false 입니다. */
         bool setTileBrush( int32 x, int32 y, string_view brushName );
@@ -93,8 +96,8 @@ namespace sw
         void computeWorldOutline( vector<float4>& outListSegment, vector<float2>& outListOutward ) const;
         /** @brief 칸마다 이동 비용(`NavGrid` 와 같은 값)을 만듭니다. */
         void computeNavCosts( vector<uint8>& outListCost ) const;
-        /** @brief 물리 바디 수입니다(병합한 사각형 수와 같습니다). */
-        uint32 getPhysicsBodyCount() const { return static_cast<uint32>( _listBody.size() ); }
+        /** @brief 청크마다 정적 바디입니다(청크 번호 순, 단단한 칸이 없는 청크는 무효 핸들). 바디 하나에 그 청크의 병합 사각형마다 셰이프 하나입니다. */
+        const vector<PhysicsBodyHandle>& getChunkBodies() const { return _listChunkBody; }
         /** @brief 청크 수입니다(배치를 만들지 않은 빈 청크 포함). */
         uint32 getChunkCount() const { return static_cast<uint32>( _listChunkBatch.size() ); }
         /** @brief 그리기 배치를 만든 청크 수입니다. */
@@ -126,13 +129,28 @@ namespace sw
         void refreshChunkCells( int32 chunkIndex );
         /** @brief 칸 하나의 스프라이트 항목을 맞춥니다(모습 · 자리 · 보임). 배치가 없는 청크에 보일 칸이 생기면 그 청크를 틱 뒤에 만듭니다. */
         void refreshCellEntry( int32 x, int32 y );
-        /** @brief 단단한 칸 표시에서 바디 · 외곽선을 다시 만듭니다. */
+        /** @brief 단단한 칸 표시에서 외곽선 · 병합 사각형을 다시 구하고 모든 청크 바디를 다시 만듭니다(읽기 · 다시 짓기). */
         void refreshCollision();
+        /** @brief 칸을 칠해 바뀐 청크를 표시합니다 — 바디는 다음 틱에 그 청크만 한 번 다시 만든다(`flushCollision`). */
+        void markCollisionDirty( int32 chunkIndex );
+        /** @brief 표시된 청크 바디만 다시 만들고 외곽선 · 병합 사각형을 다시 구합니다. 한 프레임에 여러 칸을 칠해도 한 번이다. */
+        void flushCollision();
+        /** @brief 청크 하나의 정적 바디(셰이프 여럿 — 맵 원점 기준)를 맞춥니다 — 바디가 있으면 셰이프만 가고, 없으면 만들고, 단단한 칸이 없으면 놓습니다. */
+        void rebuildChunkBody( int32 chunkIndex, const vector<uint8>& listSolid, IPhysicsScene2D& scene );
+        /** @brief 청크 하나의 병합 사각형 셰이프를 지금 축 배율(`_colliderScale`)로 @p outListShape 에 붙입니다(맵 원점 기준). */
+        void appendChunkShapes( int32 chunkIndex, const vector<uint8>& listSolid, vector<PhysicsShapeDesc2D>& outListShape ) const;
+        /**
+         * @brief 오브젝트가 움직였으면 바디들을 그 자리 · 회전으로 옮깁니다. 배율이 바뀌었으면 바디는 두고 셰이프만 갑니다(`IPhysicsBodyScene::setBodyShape` —
+         *        다시 만들면 맵에 닿아 있던 쌍마다 끝 → 시작이 난다, 감사 S-4).
+         */
+        void followOwnerTransform();
+        /** @brief 오브젝트 월드 행렬의 2D 자리 · 회전 · 축 배율입니다(바디는 배율을 갖지 않아 셰이프에 곱한다). */
+        void computeColliderFrame( float2& outOrigin, float32& outAngle, float2& outScale ) const;
         /** @brief 만든 물리 바디를 모두 뺍니다. */
         void removePhysicsBodies();
         /** @brief 오브젝트의 월드 행렬입니다(장면 컴포넌트가 없으면 단위 행렬). */
         float4x4 getOwnerWorld() const;
-        size_t   indexOf( int32 x, int32 y ) const { return static_cast<size_t>( y ) * static_cast<size_t>( _map._width ) + static_cast<size_t>( x ); }
+        size_t   getIndexOf( int32 x, int32 y ) const { return static_cast<size_t>( y ) * static_cast<size_t>( _map._width ) + static_cast<size_t>( x ); }
 
         PROPERTY( Category = "Tile Map", DisplayName = "Tile Map", Tooltip = "Tile map XML whose tile layer is drawn" )
         AssetRef<TileMapXMLData> _tileMapPath;
@@ -158,7 +176,9 @@ namespace sw
         vector<uint32>                          _listAnimatedCell;  ///< 애니메이션 모습을 보이는 칸 번호
         vector<TileRect>                        _listSolidRect;     ///< 병합한 충돌 사각형
         vector<TileEdge>                        _listOutlineEdge;   ///< 외곽선 토막
-        vector<PhysicsBodyHandle>               _listBody;          ///< 만든 2D 물리 정적 바디(씬의 Box2D 씬)
+        vector<PhysicsBodyHandle>               _listChunkBody;     ///< 청크마다 2D 물리 정적 바디 하나(셰이프 여럿, 빈 청크는 무효 핸들) — 맵 원점에 놓아 오브젝트를 따라 옮긴다
+        vector<uint8>                           _listChunkDirty;    ///< 칠해서 바디를 다시 만들 청크(`flushCollision`)
+        float2                                  _colliderScale;     ///< 바디 셰이프를 만든 배율 — 바뀌면 다시 만든다
         vector<unique_ptr<SpriteInstanceBatch>> _listChunkBatch;    ///< 청크마다 배치(빈 청크는 nullptr). 청크 안 칸마다 항목 하나
         float4x4                                _lastOwnerWorld;    ///< 마지막으로 칸을 놓은 오브젝트 월드 행렬
         const SceneComponent*                   _pLastOwnerRoot;    ///< `_lastOwnerWorld` 를 읽은 장면 컴포넌트(비교만 한다 — 번호는 같은 칸끼리만 견준다)
@@ -167,5 +187,6 @@ namespace sw
         float32                                 _elapsedSeconds;    ///< 애니메이션 시각
         uint8                                   _bLoaded;           ///< 맵 · 타일셋을 읽었는가
         uint8                                   _bChunkBuildQueued; ///< 빈 청크에 칠해 배치를 틱 뒤에 만들기로 했는가
+        uint8                                   _bCollisionDirty;   ///< 표시된 청크가 있는가(`flushCollision`)
     };
 } // namespace sw

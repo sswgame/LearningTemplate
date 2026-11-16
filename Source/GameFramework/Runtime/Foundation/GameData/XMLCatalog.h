@@ -14,6 +14,7 @@
 namespace sw
 {
     class XMLNode;
+    class XMLCatalogRoot;
 
     /**
      * @struct XMLCatalogLoader
@@ -25,7 +26,7 @@ namespace sw
      */
     struct SW_GF_API XMLCatalogLoader
     {
-        using ReadRootFunction = bool ( * )( void* pCatalog, const XMLNode& root, string_view sourceName );
+        using ReadRootFunction = bool ( * )( void* pCatalog, const XMLCatalogRoot& root, string_view sourceName );
 
         /** @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 @p pReadRoot 에 넘깁니다. */
         [[nodiscard]] static bool loadFromAsset( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
@@ -47,7 +48,7 @@ namespace sw
     /**
      * @class XMLCatalog
      * @brief 카탈로그가 물려받으면 종류의 로더가 부르는 `loadFromAsset( path )` 와 공개 `loadFromXMLText( xmlText, sourceName )` 가 생깁니다.
-     * @details 카탈로그는 루트 원소 이름 `kXMLRootName` 과 루트 읽기 `loadRoot( const XMLNode&, string_view sourceName )` 만 두면 된다. 루트 읽기는 원소를 손으로 고르지 않고 `XMLCatalogElement` 표로 돌린다(`XMLCatalogTable.h`).
+     * @details 카탈로그는 루트 원소 이름 `kXMLRootName` 과 루트 읽기 `loadRoot( const XMLCatalogRoot&, string_view sourceName )` 만 두면 된다. 루트 읽기는 원소를 손으로 고르지 않고 `XMLCatalogElement` 표로 돌린다(`XMLCatalogTable.h`).
      *          루트 읽기는 읽은 항목 수(`uint32`, 0 이면 실패)나 성공 여부(`bool`)를 반환한다.
      *          둘 다 비공개로 두고 베이스를 friend 로 연다.
      *          다른 카탈로그를 함께 받는 루트 읽기(기술, 코스터 설계)는 `GameDataXML::loadFromAsset` 의 문맥 버전을 그대로 쓴다.
@@ -65,7 +66,7 @@ namespace sw
      *     ...
      *     private:
      *         static constexpr const utf8* kXMLRootName = "CropCatalog";
-     *         uint32 loadRoot( const XMLNode& root, string_view sourceName );
+     *         uint32 loadRoot( const XMLCatalogRoot& root, string_view sourceName );
      *     };
      * @endcode
      */
@@ -89,7 +90,7 @@ namespace sw
         }
 
     private:
-        [[nodiscard]] static bool readRoot( void* pCatalog, const XMLNode& root, string_view sourceName )
+        [[nodiscard]] static bool readRoot( void* pCatalog, const XMLCatalogRoot& root, string_view sourceName )
         {
             TCatalog& catalog = static_cast<TCatalog&>( *static_cast<XMLCatalog*>( pCatalog ) );
             return XMLCatalogLoader::isLoaded( catalog.loadRoot( root, sourceName ) );

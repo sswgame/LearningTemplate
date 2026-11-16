@@ -89,7 +89,7 @@ namespace sw
      * @brief 표면 채널 표를 경로마다 한 벌 나눠 줍니다("surfacechannels", 인스턴스화는 `SurfaceState.cpp`). 제자리에서 다시 읽습니다.
      * @details 캐릭터마다 엔진 기본 채널 표를 다시 읽지 않는다. 표면 상태(`CharacterSurfaceState`)는 만들 때 표를 복사해 든다(영역 × 채널 값의 배치가 표 순서다).
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SurfaceChannelTable>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SurfaceChannelTable );
 } // namespace sw
 
 namespace sw
@@ -106,7 +106,7 @@ namespace sw
          * @brief UV 원(@p uvCenter, 반지름 @p uvRadius, UV 단위) 안의 셀을 @p value 이상으로 올립니다(큰 쪽을 남깁니다). 가장자리 한 셀 폭은 부드럽게 처리합니다.
          * @return 바뀐 셀 수를 반환합니다.
          */
-        uint32 stampCircle( const float2& uvCenter, float32 uvRadius, float32 value );
+        uint32 paintCircle( const float2& uvCenter, float32 uvRadius, float32 value );
         /** @brief UV 위치의 값을 반환합니다(가장 가까운 셀이며, UV 는 [0, 1] 로 제한합니다). */
         float32 sample( const float2& uv ) const;
         /** @brief 모든 셀에서 @p amount 를 뺍니다(0 아래는 0 입니다). */
@@ -152,7 +152,7 @@ namespace sw
          * @brief 맞은 위치에 스탬프를 찍습니다. 부품의 그 채널 UV 마스크에 원을 찍고, 영역 값도 @p value 만큼 올립니다(영역이 `kNoGroup` 이면 영역은 건너뜁니다).
          * @return 모르는 채널이나 부품이면 false 를 반환합니다. 마스크가 없는 채널은 영역 값만 올립니다.
          */
-        bool stampHit( uint32 part, uint16 region, const hashed_string& channel, const float2& uvCenter, float32 uvRadius, float32 value );
+        bool paintHit( uint32 part, uint16 region, const hashed_string& channel, const float2& uvCenter, float32 uvRadius, float32 value );
         /** @brief 부품의 채널 마스크입니다. 없으면 nullptr 입니다. */
         const SurfaceMask* findMask( uint32 part, const hashed_string& channel ) const;
 

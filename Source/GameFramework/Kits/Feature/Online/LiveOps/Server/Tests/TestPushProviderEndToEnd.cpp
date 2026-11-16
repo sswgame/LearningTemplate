@@ -329,7 +329,7 @@ namespace
 
         static UnixMilliseconds getNow() { return WallClock::nowUnixMilliseconds(); }
 
-        void pump()
+        void poll()
         {
             while ( _store.pollCompletions() > 0 )
             {
@@ -347,9 +347,9 @@ namespace
             registration._locale       = "ko-KR";
             registration._registeredMs = getNow().count();
             _dispatcher.registerDevice( kAccount, registration, 0 );
-            SW_EXPECT_TRUE( test::pumpUntil( [this]()
-            { pump(); }, [this]()
-            { return _dispatcher.getPendingWorkCount() == 0; } ) );
+            SW_EXPECT_TRUE( test::pollUntil( [this]()
+            { poll(); }, [this]()
+            { return _dispatcher.getPendingJobCount() == 0; } ) );
         }
 
         /** @brief 계정에 알림 하나를 보내고 맡긴 배달이 모두 끝날 때까지 돌립니다. */
@@ -360,9 +360,9 @@ namespace
             message._bodyKey  = "body.key";
             message._deepLink = "mailbox";
             SW_EXPECT_TRUE( _dispatcher.notifyAccount( kAccount, message, getNow() ) );
-            SW_EXPECT_TRUE( test::pumpUntil( [this]()
-            { pump(); }, [this]()
-            { return _dispatcher.getPendingWorkCount() == 0 && _dispatcher.getInFlightCount() == 0; } ) );
+            SW_EXPECT_TRUE( test::pollUntil( [this]()
+            { poll(); }, [this]()
+            { return _dispatcher.getPendingJobCount() == 0 && _dispatcher.getInFlightCount() == 0; } ) );
         }
     };
 } // namespace
@@ -443,9 +443,9 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
-        StringBuilder<constant::buffer::kMax256> resultBuilder;
-        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
-        return string( resultBuilder.view() );
+        StringBuilder<constant::buffer::kMax1024> resultBuilder;
+        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 }, "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
+        return test::OnlineRuntimeFixture::withBaseTTL( resultBuilder.view() );
     };
     const int64 nowMs = WallClock::nowUnixMilliseconds().count();
 

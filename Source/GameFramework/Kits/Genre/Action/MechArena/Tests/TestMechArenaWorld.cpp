@@ -858,7 +858,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, StateRoundTripContinuesIdentically )
 /**
  * @brief [MechArenaRulesTest] 카탈로그가 없거나, 잘렸거나, 머리가 범위 밖인 바이트는 거절하고 상태를 바꾸지 않는다
  */
-SW_TEST_CASE_F( MechArenaRulesTest, ForgedHeadIsRefused )
+SW_TEST_CASE_F( MechArenaRulesTest, CraftedHeadIsRefused )
 {
     SW_REQUIRE_TRUE( openDuel( "gunner", "gunner" ) );
     const size_t        head     = computePilotHead();
@@ -889,7 +889,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, ForgedHeadIsRefused )
 /**
  * @brief [MechArenaRulesTest] 근접 슬롯 · 단 · 타임라인이 어긋난 바이트는 거절한다. 결함: 콤보 중인데 슬롯이 −1 이거나 지금 형태 밖이면 `stepMelee` 가 무기 목록 밖을 읽었다
  */
-SW_TEST_CASE_F( MechArenaRulesTest, ForgedMeleeStateIsRefused )
+SW_TEST_CASE_F( MechArenaRulesTest, CraftedMeleeStateIsRefused )
 {
     SW_REQUIRE_TRUE( openDuel( "gunner", "gunner" ) );
     const size_t head = computePilotHead();
@@ -913,7 +913,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, ForgedMeleeStateIsRefused )
 /**
  * @brief [MechArenaRulesTest] 참가자 번호와 록온 대상이 판 밖이면 거절한다. 결함: 받아서 격추 보고가 없는 참가자로 갔다
  */
-SW_TEST_CASE_F( MechArenaRulesTest, ForgedReferencesAreRefused )
+SW_TEST_CASE_F( MechArenaRulesTest, CraftedReferencesAreRefused )
 {
     SW_REQUIRE_TRUE( openDuel( "gunner", "gunner" ) );
     const size_t head        = computePilotHead();
@@ -932,7 +932,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, ForgedReferencesAreRefused )
 /**
  * @brief [MechArenaRulesTest] 탄의 번호 · 수치가 범위 밖이면 거절한다. 결함: 탄속 0 이나 음수 수치를 받았다(날지 않는 탄이 영원히 남았다). 반응은 슬롯을 가리키므로 없는 슬롯 번호도 거절한다
  */
-SW_TEST_CASE_F( MechArenaRulesTest, ForgedProjectileIsRefused )
+SW_TEST_CASE_F( MechArenaRulesTest, CraftedProjectileIsRefused )
 {
     SW_REQUIRE_TRUE( openDuel( "gunner", "gunner" ) );
     MechInput special;

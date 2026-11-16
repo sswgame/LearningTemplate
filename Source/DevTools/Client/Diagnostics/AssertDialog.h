@@ -18,7 +18,7 @@ namespace sw
      */
     struct SW_DEVTOOLS_API AssertDialog
     {
-        /** @brief 사람이 지켜보는 실행이면 단언 대화상자를 겁니다. Windows Debug 가 아니면 아무것도 하지 않습니다. */
+        /** @brief 사람이 지켜보는 실행이면 단언 대화상자를 겁니다. Windows 검사 구성이 아니면 아무것도 하지 않습니다. */
         static void installForInteractiveRun( const CommandLineManager& commandLine );
     };
 } // namespace sw

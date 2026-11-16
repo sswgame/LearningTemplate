@@ -21,13 +21,14 @@
 namespace sw
 {
     class CoasterLayoutCatalog;
+    class XMLCatalogRoot;
     class XMLNode;
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief `<ParkLayout>` 루트 속성의 스키마입니다(`XMLFields::readFields` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
+     * @brief `<ParkLayout>` 루트 속성의 스키마입니다(`XMLFields::readProperties` — 속성 이름은 칸 이름에서 `_` 를 뗀 것).
      * @details 필수 칸(`Required`)이 빠지면 로드 오류이고, 표시가 없는 칸의 초기값이 기본값입니다. 읽는 코드에 리터럴 기본값이 없습니다.
      */
     REFLECT()
@@ -181,7 +182,7 @@ namespace sw
          * @details 종류의 로더(공유 캐시)만 부른다. 코스터 파일 이름을 다시 적지 않는다 — 같은 팩의 코스터 종류 파일이다(`GamePackDataUtil::tryMakeSiblingKindPath`).
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        [[nodiscard]] bool loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
         [[nodiscard]] bool loadFlatRide( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadCoaster( const XMLNode& node, const CoasterLayoutCatalog& layouts, string_view sourceName );
 
@@ -197,5 +198,5 @@ namespace sw
      * @brief 공원 배치를 경로마다 한 벌 나눠 줍니다("parklayout", 인스턴스화는 `ThemeParkDataKind.cpp`). 제자리에서 다시 읽습니다.
      * @details 게임 모드는 시작할 때 배치를 자기 놀이기구 목록으로 옮겨 짓는다(배치 데이터 → 실행 상태).
      */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<ParkLayout>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, ParkLayout );
 } // namespace sw

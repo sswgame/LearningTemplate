@@ -3,9 +3,9 @@
 # @brief 친구 키트(서버) — 관계 규칙 · 관계 저장(양쪽 레코드 + 개수 한 트랜잭션) · 접속 상태(캐시 · 버스) · 길드 · 서비스 호스트 바인딩
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_Server_Social)
+sw_add_game_framework_kit(GF_Server_Social)
 if(NOT TARGET GF_Server_Social)
 	return()
 endif()
-sw_linkRuntimeKit(GF_Server_Social GF_Social)
-sw_linkRuntimeKit(GF_Server_Social GF_Server_OnlineCore)
+sw_link_runtime_kit(GF_Server_Social GF_Social)
+sw_link_runtime_kit(GF_Server_Social GF_Server_OnlineCore)

@@ -27,6 +27,21 @@ namespace sw::editor
         return pending.empty() ? focused : pending;
     }
 
+    bool EditorDocumentOpenUtil::applyAssetMove( const EditorAssetMoveEvent& event, string& inoutLoaded, vector<string>& inoutListRecent )
+    {
+        for ( size_t index = 0; index < event._listOldID.size() && index < event._listNewID.size(); ++index )
+        {
+            if ( inoutLoaded == event._listOldID[index] )
+                inoutLoaded = event._listNewID[index];
+            for ( string& recentPath : inoutListRecent )
+            {
+                if ( recentPath == event._listOldID[index] )
+                    recentPath = event._listNewID[index];
+            }
+        }
+        return inoutLoaded.empty() == false && VectorUtil::contains( event._listRewrittenID, inoutLoaded );
+    }
+
     void EditorDocumentOpenUtil::restoreFocusAfterCancel( EditorWorkspace& workspace, const string& loaded )
     {
         workspace.setFocusedAssetPath( loaded.c_str() );

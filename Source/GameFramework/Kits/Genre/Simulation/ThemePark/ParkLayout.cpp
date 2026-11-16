@@ -48,11 +48,11 @@ namespace sw
         return GameDataXML::loadFromXMLText( *this, &ParkLayout::loadRoot, layouts, xmlText, sourceName, "ParkLayout" );
     }
 
-    bool ParkLayout::loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName )
+    bool ParkLayout::loadRoot( const XMLCatalogRoot& root, const CoasterLayoutCatalog& layouts, string_view sourceName )
     {
         // 형식 · 필수 · 범위는 스키마(ParkLayoutRootDef · ParkFlatRideDef · ParkCoasterDef)가 정한다. 여기에는 기본값 리터럴이 없다.
         ParkLayoutRootDef rootDef;
-        const bool        bRoot = XMLFields::readFields( root, rootDef, sourceName );
+        const bool        bRoot = root.readProperties( rootDef, sourceName );
         _gatePosition           = float3{ rootDef._gateX, 0.0f, rootDef._gateZ };
         _entryFee               = rootDef._entryFee;
         _startingCash           = rootDef._startingCash;
@@ -81,7 +81,7 @@ namespace sw
     {
 
         ParkFlatRideDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
         {
             return false;
         }
@@ -111,7 +111,7 @@ namespace sw
     {
 
         ParkCoasterDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
         {
             return false;
         }

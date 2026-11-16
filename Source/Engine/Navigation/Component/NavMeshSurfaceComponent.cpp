@@ -29,7 +29,7 @@ namespace sw
         Component::onUnregister( manager );
     }
 
-    bool NavMeshSurfaceComponent::coversAgentType( const hashed_string& agentType, const hashed_string& defaultAgentType ) const
+    bool NavMeshSurfaceComponent::supportsAgentType( const hashed_string& agentType, const hashed_string& defaultAgentType ) const
     {
         if ( _listAgentType.empty() )
             return agentType.empty() || agentType == defaultAgentType;

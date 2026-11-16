@@ -42,7 +42,7 @@ namespace sw
                 std::condition_variable _cv;
             };
 
-            static Bucket& bucketOf( const void* pAddress )
+            static Bucket& getBucketOf( const void* pAddress )
             {
                 static Bucket   s_arrBucket[kBucketCount];
                 const uintptr_t value = reinterpret_cast<uintptr_t>( pAddress );
@@ -62,7 +62,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAIT_PRIVATE, expected, nullptr, nullptr, 0 );
 #elif defined( SW_PLATFORM_POSIX )
-        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::bucketOf( &word );
+        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         std::unique_lock<std::mutex>   lock{ bucket._mutex };
         if ( word.load( std::memory_order_acquire ) == expected )
             bucket._cv.wait( lock );
@@ -82,7 +82,7 @@ namespace sw
         const int64 result = syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAIT_PRIVATE, expected, &timeout, nullptr, 0 );
         return result == 0 || word.load( std::memory_order_acquire ) != expected;
 #elif defined( SW_PLATFORM_POSIX )
-        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::bucketOf( &word );
+        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         std::unique_lock<std::mutex>   lock{ bucket._mutex };
         if ( word.load( std::memory_order_acquire ) != expected )
             return true;
@@ -99,7 +99,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0 );
 #elif defined( SW_PLATFORM_POSIX )
-        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::bucketOf( &word );
+        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         {
             std::scoped_lock<std::mutex> lock{ bucket._mutex };
         }
@@ -116,7 +116,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAKE_PRIVATE, INT32_MAX, nullptr, nullptr, 0 );
 #elif defined( SW_PLATFORM_POSIX )
-        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::bucketOf( &word );
+        FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         {
             std::scoped_lock<std::mutex> lock{ bucket._mutex };
         }

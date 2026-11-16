@@ -21,7 +21,7 @@ This is the reference. Adapt the patterns to your stack; keep the contract ident
 import { execFileSync } from 'node:child_process';
 
 const base = (() => {
-  const i = process.argv.indexOf('--base');
+  const i = process.argv.getIndexOf('--base');
   return i > -1 ? process.argv[i + 1] : 'origin/main';
 })();
 

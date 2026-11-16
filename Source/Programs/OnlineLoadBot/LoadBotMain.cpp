@@ -260,7 +260,14 @@ namespace sw
                 const LoadBotMetrics& metrics   = runner.getMetrics();
                 const int64           elapsedMs = runner.getElapsedMs();
                 logLines( LogLevel::Info, metrics.formatTable( elapsedMs ) );
-                const bool bReportFailed = options._reportPath.empty() == false && FileUtil::writeTextFile( options._reportPath, metrics.formatJSON( runner.getScenario(), elapsedMs ) ) == false;
+                bool bReportFailed = false;
+                if ( options._reportPath.empty() == false )
+                {
+                    const expected<string> report = metrics.formatJSON( runner.getScenario(), elapsedMs );
+                    if ( report.has_value() == false )
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.ReportNotWritable", "OnlineLoadBot: report could not be written as JSON: %# (%#)", report.error().message(), report.error().detail() );
+                    bReportFailed = report.has_value() == false || FileUtil::writeTextFile( options._reportPath, *report ) == false;
+                }
                 if ( bReportFailed )
                     SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotWriteReport", "OnlineLoadBot: cannot write report '%#'", options._reportPath );
                 runner.shutdown();

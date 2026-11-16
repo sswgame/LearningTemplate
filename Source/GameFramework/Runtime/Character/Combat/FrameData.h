@@ -188,12 +188,12 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "MoveCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadMove( const XMLNode& node, string_view sourceName );
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MoveCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<MoveCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, MoveCatalog );
 } // namespace sw
 
 namespace sw
@@ -277,9 +277,9 @@ namespace sw
          *          - 앉아 가드: 상단과 잡기는 머리 위로 헛친다(피함). 하단은 막고, 중단은 맞는다.
          *          - 가드 불가(@p bUnblockable)는 막힐 상황에서 맞지만, 높이로 피하는 것은 그대로이다.
          */
-        static GuardResult computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable = false );
-        /** @brief `computeGuardOutcome( height, stance )` 가 `Blocked` 이면 true 입니다. */
-        static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardOutcome( height, stance ) == GuardResult::Blocked; }
+        static GuardResult computeGuardResult( AttackHeight height, GuardStance stance, bool bUnblockable = false );
+        /** @brief `computeGuardResult( height, stance )` 가 `Blocked` 이면 true 입니다. */
+        static bool isBlocked( AttackHeight height, GuardStance stance ) { return computeGuardResult( height, stance ) == GuardResult::Blocked; }
 
         /** @brief 재생 중이면 기술 id, 프레임, 히트스톱, 접촉, 막힘을 씁니다. 기술 정의는 카탈로그의 것이므로 id 만 싣습니다. */
         void writeState( Archive& outArchive ) const

@@ -85,7 +85,7 @@ namespace sw
         /** @brief 다른 적과 겹친 만큼의 절반을 자기 쪽으로 밀어냅니다(상대도 같은 일을 한다 — 물리 없이, 유닛 수가 적다). */
         void separateFromEnemies( const ArenaGameModeComponent& gameMode, float3& inoutPosition ) const;
         /** @brief 쓰러진 뒤 — 납작해지다가 디렉터가 걷는다. */
-        void updateDeath( float32 deltaTime, MeshComponent& mesh, float32 deathLinger );
+        void updateDeath( float32 deltaTime, MeshComponent& mesh, float32 deathLifeSpan );
 
     private:
         PROPERTY( Category = "Arena", DisplayName = "Kind", Tooltip = "Player units are not pushed apart; enemies are" )

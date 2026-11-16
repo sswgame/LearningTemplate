@@ -55,11 +55,68 @@ namespace sw
                 return nullptr;
             }
 
-            static string dumpValue( const JSONImpl& value, int32 indent )
+            static string_view toStringView( const JSONString& value )
             {
-                if ( indent < 0 )
-                    return fromJSONString( value.dump() );
-                return fromJSONString( value.dump( indent ) );
+                return string_view( value.data(), value.size() );
+            }
+
+            /**
+             * @brief 키 · 문자열 값 가운데 잘못된 UTF-8 인 첫 글을 찾아, 로그에 실을 수 있게 바꾼 글(`StringUtil::escapeInvalidUTF8`)로 돌려줍니다.
+             * @details 재귀 대신 스택으로 돈다 — 파서가 받은 깊은 중첩에서 C 스택을 쓰지 않는다.
+             */
+            static optional<string> findInvalidUTF8( const JSONImpl& root )
+            {
+                vector<const JSONImpl*> listPending{ &root };
+                while ( listPending.empty() == false )
+                {
+                    const JSONImpl* const pValue = listPending.back();
+                    listPending.pop_back();
+                    if ( pValue->is_string() )
+                    {
+                        const string_view text = toStringView( pValue->get_ref<const JSONString&>() );
+                        if ( StringUtil::isValidUTF8( text ) == false )
+                            return StringUtil::escapeInvalidUTF8( text );
+                    }
+                    else if ( pValue->is_object() )
+                    {
+                        for ( auto it = pValue->cbegin(); it != pValue->cend(); ++it )
+                        {
+                            const string_view key = toStringView( it.key() );
+                            if ( StringUtil::isValidUTF8( key ) == false )
+                                return StringUtil::escapeInvalidUTF8( key );
+                            listPending.push_back( &it.value() );
+                        }
+                    }
+                    else if ( pValue->is_array() )
+                    {
+                        for ( const JSONImpl& element : *pValue )
+                        {
+                            listPending.push_back( &element );
+                        }
+                    }
+                }
+                return nullopt;
+            }
+
+            /**
+             * @brief 값을 JSON 글로 씁니다. 키 · 문자열에 잘못된 UTF-8 바이트가 있으면 오류를 돌려줍니다.
+             * @details nlohmann 의 기본(`strict`)은 잘못된 바이트에서 `type_error 316` 을 던지는데 받는 곳이 없고, 웹(Emscripten 기본)은 예외를 받지도
+             *          못한다. 그래서 먼저 검사해 오류 값으로 돌려주고, 던지는 길 자체를 두지 않는다(검사를 지난 글에는 `replace` 가 닿지 않는다).
+             *          저장 글은 바이트를 몰래 U+FFFD 로 바꾸지 않고 거절한다(바뀐 설정 · 프리팹이 조용히 디스크에 남는다). 언리얼 `TJsonWriter` · Godot
+             *          `JSON.stringify` 도 쓰기에서 프로세스를 끝내지 않는다. 사람이 읽는 글(로그 · 오류 세부)은 `describeValue` 가 바꿔 쓴다.
+             */
+            static expected<string> dumpValue( const JSONImpl& value, int32 indent )
+            {
+                const optional<string> invalidText = findInvalidUTF8( value );
+                if ( invalidText.has_value() )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "JSON string is not valid UTF-8", *invalidText } );
+                return fromJSONString( value.dump( indent, ' ', false, JSONImpl::error_handler_t::replace ) ); // 음수 indent 는 한 줄이다
+            }
+
+            /** @brief 로그 · 오류 세부에 넣을 한 줄 글입니다. 잘못된 UTF-8 은 U+FFFD 로 바꿔 던지지 않습니다(`JSONWriter` 와 같은 규칙). */
+            static string describeValue( const JSONImpl& value )
+            {
+                return fromJSONString( value.dump( JSONDocument::kSingleLineIndent, ' ', false, JSONImpl::error_handler_t::replace ) );
             }
 
             /**
@@ -196,16 +253,16 @@ namespace sw
 
             /** @brief 값 하나를 읽습니다. 결과는 0 읽음 · 1 없음(무효 · null) · 2 깨짐입니다. @p key 가 비면 키 없는 값(배열 원소 등)이다. */
             template <typename T>
-            static uint8 read( const JSONDocumentInternal::JSONImpl* pMember, const JSONValue& member, string_view key, T& outValue )
+            static uint8 read( const JSONDocumentInternal::JSONImpl* pMember, string_view key, T& outValue )
             {
                 if ( pMember == nullptr || pMember->is_null() )
                     return 1;
                 if ( parse( *pMember, outValue ) )
                     return 0;
                 if ( key.empty() )
-                    SW_LOG_ERROR_ID( "JSON.WrongType", "JSON value is not a %#: %#", getTypeLabel( outValue ), member.dump() );
+                    SW_LOG_ERROR_ID( "JSON.WrongType", "JSON value is not a %#: %#", getTypeLabel( outValue ), JSONDocumentInternal::describeValue( *pMember ) );
                 else
-                    SW_LOG_ERROR_ID( "JSON.WrongType", "JSON member '%#' is not a %#: %#", key, getTypeLabel( outValue ), member.dump() );
+                    SW_LOG_ERROR_ID( "JSON.WrongType", "JSON member '%#' is not a %#: %#", key, getTypeLabel( outValue ), JSONDocumentInternal::describeValue( *pMember ) );
                 return 2;
             }
         };
@@ -246,20 +303,20 @@ namespace sw
             return {};
         if ( pValue->is_string() )
             return JSONDocumentInternal::fromJSONString( pValue->get_ref<const JSONDocumentInternal::JSONString&>() );
-        return JSONDocumentInternal::fromJSONString( pValue->dump() );
+        return JSONDocumentInternal::describeValue( *pValue );
     }
 
     // 정수 읽기는 **부호 없는 쪽을 먼저 본다**(`JSONMemberReader::parse`). nlohmann 의 `is_number_integer()` 는 부호 있는 정수와 부호 없는 정수
     // 둘 다에 참이라, 순서가 뒤집히면 큰 부호 없는 값이 음수로 돌아온다.
-#define SW_JSON_MEMBER_READER( Type )                                                                                                           \
-    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, Type& outValue ) const                                                    \
-    {                                                                                                                                           \
-        const JSONValue member = get( key );                                                                                                    \
-        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( member._pValue ), member, key, outValue ) );   \
-    }                                                                                                                                           \
-    JSONValue::JSONValueRead JSONValue::parseSelf( Type& outValue ) const                                                                       \
-    {                                                                                                                                           \
-        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( _pValue ), *this, string_view{}, outValue ) ); \
+#define SW_JSON_MEMBER_READER( Type )                                                                                                    \
+    JSONValue::JSONValueRead JSONValue::parseMember( string_view key, Type& outValue ) const                                             \
+    {                                                                                                                                    \
+        const JSONValue member = get( key );                                                                                             \
+        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( member._pValue ), key, outValue ) );    \
+    }                                                                                                                                    \
+    JSONValue::JSONValueRead JSONValue::parseSelf( Type& outValue ) const                                                                \
+    {                                                                                                                                    \
+        return static_cast<JSONValueRead>( JSONMemberReader::read( JSONDocumentInternal::asJSON( _pValue ), string_view{}, outValue ) ); \
     }
     SW_JSON_MEMBER_READER( int32 )
     SW_JSON_MEMBER_READER( uint32 )
@@ -361,12 +418,20 @@ namespace sw
         return true;
     }
 
-    string JSONValue::dump( int32 indent ) const
+    expected<string> JSONValue::dump( int32 indent ) const
+    {
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
+        if ( pValue == nullptr )
+            return string( "null" );
+        return JSONDocumentInternal::dumpValue( *pValue, indent );
+    }
+
+    string JSONValue::describe() const
     {
         const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr )
             return "null";
-        return JSONDocumentInternal::dumpValue( *pValue, indent );
+        return JSONDocumentInternal::describeValue( *pValue );
     }
 
     void JSONValue::assignFrom( const JSONValue& other ) const
@@ -588,10 +653,10 @@ namespace sw
         return getRoot();
     }
 
-    string JSONDocument::dump( int32 indent ) const
+    expected<string> JSONDocument::dump( int32 indent ) const
     {
         if ( _impl == nullptr )
-            return "null";
+            return string( "null" );
         return JSONDocumentInternal::dumpValue( _impl->root, indent );
     }
 
@@ -605,7 +670,14 @@ namespace sw
             SW_LOG_ERROR_ID( "JSONDocument.JSONDocumentNoRoot", "JSON document has no root - %# was not written", string{ absPath }.c_str() );
             return false;
         }
-        return FileUtil::writeTextFile( absPath, dump( indent ) );
+        const expected<string> text = dump( indent );
+        if ( text.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "JSONDocument.DumpFailed", "JSON document could not be written - %# was not written: %# (%#)", string{ absPath }.c_str(),
+                             text.error().message(), text.error().detail() );
+            return false;
+        }
+        return FileUtil::writeTextFile( absPath, *text );
     }
 
     string JSONDocument::unescapeString( string_view value )

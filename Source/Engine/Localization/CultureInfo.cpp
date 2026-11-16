@@ -41,7 +41,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 문화권 요소에서 알려지지 않은 첫 자식 이름을 @p outName 에 적고 true 를 반환합니다. 속성은 스키마(`readFields`)가 본다. */
+            /** @brief 문화권 요소에서 알려지지 않은 첫 자식 이름을 @p outName 에 적고 true 를 반환합니다. 속성은 스키마(`readProperties`)가 본다. */
             [[nodiscard]] static bool findUnknownChild( const XMLNode& entry, string& outName )
             {
                 for ( XMLNode child = entry.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -165,7 +165,7 @@ namespace sw
              * @brief 숫자 체계(@p mapNumberingSystem 의 id — 스키마가 읽은 `_numberingSystem`, 물려받았을 수 있다)의 글자와 의사 로케일을 덮어씁니다. 모르는 이름이면 오류입니다.
              * @details `pseudo` 는 손 읽기다 — 소문자 철자(`accented`)가 데이터 형식이고, 물려받지 않는 칸이다(`resolveEntry`).
              */
-            [[nodiscard]] static expected<void> applyScriptFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
+            [[nodiscard]] static expected<void> applyScriptProperties( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
             {
                 const auto systemIt = mapNumberingSystem.find( inoutInfo._numberingSystem );
                 if ( systemIt == mapNumberingSystem.end() )
@@ -201,7 +201,7 @@ namespace sw
             };
 
             /** @brief 날짜 · 시간 패턴 모음과 문자열 목록 필드를 덮어씁니다. 모양이 틀리면 false 입니다. */
-            [[nodiscard]] static expected<void> applyPatternAndListFields( const XMLNode& entry, CultureInfo& inoutInfo )
+            [[nodiscard]] static expected<void> applyPatternAndListProperties( const XMLNode& entry, CultureInfo& inoutInfo )
             {
                 const XMLNode datePatterns = entry.findChild( "datePatterns" );
                 if ( datePatterns.isValid() )
@@ -232,13 +232,13 @@ namespace sw
              * @brief 한 문화권 요소의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). 속성은 스키마로 읽는다 — 부모가 없을 때만 `digits` 필수(`RequiredAtRoot`).
              * @param sourceName 오류 줄에 쓰는 이름(문화권 코드)입니다.
              */
-            [[nodiscard]] static expected<void> applyFields( const XMLNode& entry, string_view sourceName, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
+            [[nodiscard]] static expected<void> applyProperties( const XMLNode& entry, string_view sourceName, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
             {
                 string unknownName;
                 if ( findUnknownChild( entry, unknownName ) )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "unknown field", unknownName } );
 
-                // 스키마 읽기의 첫 문제를 오류의 자세한 글로 옮긴다(표 읽기는 오류를 돌려주는 API 다 — `LocalizationDocuments::readEntryFields` 와 같은 모양).
+                // 스키마 읽기의 첫 문제를 오류의 자세한 글로 옮긴다(표 읽기는 오류를 돌려주는 API 다 — `LocalizationDocuments::readEntryProperties` 와 같은 모양).
                 string                   firstIssue;
                 const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* /*pID*/, string_view text )
                 {
@@ -247,15 +247,15 @@ namespace sw
                         first = string( text );
                 },
                                                &firstIssue };
-                if ( XMLFields::readFields( entry, &inoutInfo, *CultureInfo::StaticType(), sourceName, { "pseudo" }, nullptr, sink ) == false )
+                if ( XMLFields::readProperties( entry, &inoutInfo, *CultureInfo::StaticType(), sourceName, { "pseudo" }, nullptr, sink ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a culture field is missing or unreadable", firstIssue } );
                 if ( expected<void> applied = applyRuleSet( entry, "pluralRules", inoutInfo._pluralRules ); applied.has_value() == false )
                     return applied;
                 if ( expected<void> applied = applyRuleSet( entry, "ordinalRules", inoutInfo._ordinalRules ); applied.has_value() == false )
                     return applied;
-                if ( expected<void> applied = applyScriptFields( entry, mapNumberingSystem, inoutInfo ); applied.has_value() == false )
+                if ( expected<void> applied = applyScriptProperties( entry, mapNumberingSystem, inoutInfo ); applied.has_value() == false )
                     return applied;
-                return applyPatternAndListFields( entry, inoutInfo );
+                return applyPatternAndListProperties( entry, inoutInfo );
             }
 
             /**
@@ -379,7 +379,7 @@ namespace sw
                 info._nativeName.clear();
                 if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo" ) == nullptr )
                     info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
-                if ( const expected<void> applied = applyFields( entry, rawCode, mapNumberingSystem, info ); applied.has_value() == false )
+                if ( const expected<void> applied = applyProperties( entry, rawCode, mapNumberingSystem, info ); applied.has_value() == false )
                     return unexpected( Error{ applied.error().kind(), applied.error().message().data(), rawCode }.appendDetail( ": " ).appendDetail( applied.error().detail() ) );
                 // 스키마는 적힌 글 그대로 읽었다 — 코드는 정규형만 받았고(위), 부모는 정규형으로 둔다(찾기 열쇠).
                 info._code             = code;

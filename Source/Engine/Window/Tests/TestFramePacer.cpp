@@ -39,7 +39,7 @@ SW_TEST_CASE( FramePacerTest, AutomationRunIsFullSpeedWithoutFocus )
     SW_EXPECT_TRUE( resolveAuto( makeInputs( true, false, false, false ) ) == FramePacingState::Automation );
     SW_EXPECT_TRUE( resolveAuto( makeInputs( true, false, true, false ) ) == FramePacingState::Automation );
     SW_EXPECT_TRUE( resolveAuto( makeInputs( true, true, true, false ) ) == FramePacingState::Automation );
-    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( true, false, false, false ), FramePacingRequest::Auto, FramePacer::kEditorIdleSettleFrames ) == FramePacingState::Automation );
+    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( true, false, false, false ), FramePacingRequest::Auto, FramePacer::kEditorIdleStabilityFrames ) == FramePacingState::Automation );
 }
 
 SW_TEST_CASE( FramePacerTest, ListenHostIsFullSpeedWithoutFocus )
@@ -52,17 +52,17 @@ SW_TEST_CASE( FramePacerTest, ListenHostIsFullSpeedWithoutFocus )
 SW_TEST_CASE( FramePacerTest, FullSpeedRequestPinsTheState )
 {
     SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( false, false, false, false ), FramePacingRequest::FullSpeed, 0 ) == FramePacingState::FullSpeed );
-    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( false, false, true, false ), FramePacingRequest::FullSpeed, FramePacer::kEditorIdleSettleFrames ) == FramePacingState::FullSpeed );
+    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( false, false, true, false ), FramePacingRequest::FullSpeed, FramePacer::kEditorIdleStabilityFrames ) == FramePacingState::FullSpeed );
 }
 
 // 조용한 프레임이 이어져야 잔다 — 마지막 변화가 화면에 닿을 몫을 남긴다. 시나리오는 `WindowState` 로 자동화 중에도 이 상태를 본다.
-SW_TEST_CASE( FramePacerTest, EditorIdleNeedsSettledQuietFrames )
+SW_TEST_CASE( FramePacerTest, EditorIdleNeedsStableQuietFrames )
 {
     const FramePacingInputs focused = makeInputs( false, false, false, true );
-    SW_EXPECT_TRUE( FramePacer::resolve( focused, FramePacingRequest::Auto, FramePacer::kEditorIdleSettleFrames - 1 ) == FramePacingState::Foreground );
-    SW_EXPECT_TRUE( FramePacer::resolve( focused, FramePacingRequest::Auto, FramePacer::kEditorIdleSettleFrames ) == FramePacingState::EditorIdle );
-    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( false, false, true, true ), FramePacingRequest::Auto, FramePacer::kEditorIdleSettleFrames ) == FramePacingState::Minimized );
-    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( true, false, false, false ), FramePacingRequest::WindowState, FramePacer::kEditorIdleSettleFrames ) == FramePacingState::EditorIdle );
+    SW_EXPECT_TRUE( FramePacer::resolve( focused, FramePacingRequest::Auto, FramePacer::kEditorIdleStabilityFrames - 1 ) == FramePacingState::Foreground );
+    SW_EXPECT_TRUE( FramePacer::resolve( focused, FramePacingRequest::Auto, FramePacer::kEditorIdleStabilityFrames ) == FramePacingState::EditorIdle );
+    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( false, false, true, true ), FramePacingRequest::Auto, FramePacer::kEditorIdleStabilityFrames ) == FramePacingState::Minimized );
+    SW_EXPECT_TRUE( FramePacer::resolve( makeInputs( true, false, false, false ), FramePacingRequest::WindowState, FramePacer::kEditorIdleStabilityFrames ) == FramePacingState::EditorIdle );
 }
 
 SW_TEST_CASE( FramePacerTest, BackgroundDeadlineFollowsFrameRateLimit )

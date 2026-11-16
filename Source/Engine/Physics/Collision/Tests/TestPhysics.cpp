@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/Collision/SweepHit.h"
 
 using namespace sw;
@@ -184,4 +185,163 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     SW_EXPECT_TRUE( hit._bHit );
     SW_EXPECT_FALSE( sw::SweepHit::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
+}
+
+/**
+ * @brief [PhysicsContactTrackerTest] 지운 바디가 같은 step 간격 안에서 다시 닿으면 끝과 시작을 함께 내고 쌍을 잊지 않는다(감사 S-13 — 예전에는 끝만 내고 잊어 다음 step 부터 접촉이 사라졌다)
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, ReenabledBodyGetsEndThenBegin )
+{
+    PhysicsContactTracker<PhysicsDimension3D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    vector<PhysicsContactEvent3D>             listEvent;
+    tracker.setStayListener( bodyA._userData, true ); // 끝의 유지까지 본다(유지는 opt-in — 감사 S-1)
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Begin );
+
+    const PhysicsBodyHandle removed[] = { bodyA._body };
+    tracker.removeBodies( span<const PhysicsBodyHandle>( removed ) );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f ); // 같은 핸들이 다시 켜져 닿았다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_TRUE( listEvent[1]._phase == PhysicsContactPhase::Begin );
+    SW_EXPECT_EQUAL( 1u, tracker.getActivePairCount() );
+
+    listEvent.clear();
+    tracker.finishStep( listEvent ); // 다음 step 은 이어서 닿아 있다
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+}
+
+/**
+ * @brief [PhysicsContactTrackerTest] 셰이프를 간 바디(`resetSubContacts`)는 새 셰이프가 다시 닿으면 쌍이 이어지고(끝 · 시작 없음), 닿지 않으면 끝난다(감사 S-4)
+ * @details 옛 셰이프 쌍 둘이 닿아 있다가 셰이프를 간다 — 백엔드는 옛 셰이프의 끝 알림을 버리고 새 셰이프의 시작만 넣는다.
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, ReshapedBodyKeepsTouchingPair )
+{
+    PhysicsContactTracker<PhysicsDimension2D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    vector<PhysicsContactEvent2D>             listEvent;
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f ); // 셰이프 쌍 둘
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+
+    tracker.resetSubContacts( bodyB._body );
+    tracker.beginSubContact( bodyB, bodyA, {}, {}, 0.0f ); // 새 셰이프 하나가 다시 닿았다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_EXPECT_EQUAL( size_t{ 0 }, listEvent.size() ); // 유지는 듣지 않으니 아무것도 없다
+    SW_EXPECT_EQUAL( 1u, tracker.getActivePairCount() );
+
+    tracker.endSubContact( bodyA._body, bodyB._body ); // 새 셰이프 쌍의 끝 하나로 끝난다(옛 쌍 수가 남지 않았다)
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    tracker.resetSubContacts( bodyA._body ); // 셰이프를 갈았는데 새 셰이프가 닿지 않는다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_EQUAL( 0u, tracker.getActivePairCount() );
+}
+
+/**
+ * @brief [PhysicsContactTrackerTest] 잠들어 쉰 셰이프 쌍(`suspendSubContact`)은 끝을 내지 않고, 깨어 다시 닿으면 이어지며, 깨었는데 닿지 않으면 그때 끝난다
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, SuspendedPairWaitsForWake )
+{
+    PhysicsContactTracker<PhysicsDimension3D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    vector<PhysicsContactEvent3D>             listEvent;
+    tracker.setStayListener( bodyA._userData, true );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+
+    bool       bAsleep  = true;
+    const auto isAsleep = [&bAsleep]( PhysicsBodyHandle, PhysicsBodyHandle )
+    { return bAsleep; };
+    tracker.suspendSubContact( bodyA._body, bodyB._body ); // 잠들었다
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_EXPECT_EQUAL( size_t{ 0 }, listEvent.size() ); // 끝도 유지도 없다
+    SW_EXPECT_EQUAL( 1u, tracker.getActivePairCount() );
+
+    bAsleep = false; // 깨어 다시 닿았다
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+
+    bAsleep = true; // 다시 잠들었다가
+    tracker.suspendSubContact( bodyA._body, bodyB._body );
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    bAsleep = false; // 깨었는데 닿지 않는다
+    tracker.resumeSubContacts( isAsleep );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_EQUAL( 0u, tracker.getActivePairCount() );
+}
+
+/**
+ * @brief [PhysicsContactTrackerTest] 유지는 듣는 사용자 값이 낀 쌍만 낸다 — 이미 닿은 쌍도 듣기를 켜고 끄면 다음 step 부터 따른다(감사 S-1)
+ * @details A-B(A 가 듣는다)와 C-D(아무도 듣지 않는다)가 함께 닿아 있다. 시작 · 끝은 듣기와 상관없이 늘 나온다.
+ */
+SW_TEST_CASE( PhysicsContactTrackerTest, StayOnlyForListeners )
+{
+    PhysicsContactTracker<PhysicsDimension3D> tracker;
+    const PhysicsContactBody                  bodyA{ PhysicsBodyHandle::fromPacked( 0x100000001ull ), 1 };
+    const PhysicsContactBody                  bodyB{ PhysicsBodyHandle::fromPacked( 0x100000002ull ), 2 };
+    const PhysicsContactBody                  bodyC{ PhysicsBodyHandle::fromPacked( 0x100000003ull ), 3 };
+    const PhysicsContactBody                  bodyD{ PhysicsBodyHandle::fromPacked( 0x100000004ull ), 4 };
+    vector<PhysicsContactEvent3D>             listEvent;
+    tracker.setStayListener( bodyA._userData, true );
+    tracker.beginSubContact( bodyA, bodyB, {}, {}, 0.0f );
+    tracker.beginSubContact( bodyC, bodyD, {}, {}, 0.0f );
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listEvent.size() ); // 시작은 둘 다
+    SW_EXPECT_TRUE( tracker.isStayReported( bodyB._body, bodyA._body ) );
+    SW_EXPECT_FALSE( tracker.isStayReported( bodyC._body, bodyD._body ) );
+
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+    SW_EXPECT_TRUE( listEvent[0]._bodyA == bodyA._body );
+
+    tracker.setStayListener( bodyD._userData, true ); // 닿아 있는 C-D 가 듣기 시작한다
+    tracker.setStayListener( bodyA._userData, false );
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::Stay );
+    SW_EXPECT_TRUE( listEvent[0]._bodyA == bodyC._body );
+    SW_EXPECT_FALSE( tracker.isStayReported( bodyA._body, bodyB._body ) );
+
+    tracker.endSubContact( bodyA._body, bodyB._body ); // 듣지 않는 쌍도 끝은 낸다
+    listEvent.clear();
+    tracker.finishStep( listEvent );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._phase == PhysicsContactPhase::End );
+    SW_EXPECT_TRUE( listEvent[1]._phase == PhysicsContactPhase::Stay );
 }

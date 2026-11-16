@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 노트가 판정선으로 내려오는 빠르기를 정하는 방식입니다. */
@@ -188,7 +189,7 @@ namespace sw
     private:
         /** @brief 리소스 경로의 악보를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RhythmChart>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         void               makeTimingPoints( const vector<RhythmBpmChange>& listBpmChange, const vector<RhythmStop>& listStop );
 
     private:
@@ -209,5 +210,5 @@ namespace sw
      * @brief 악보를 경로마다 한 벌 나눠 줍니다("RhythmChart", 인스턴스화는 `RhythmChart.cpp`). 제자리에서 다시 읽습니다.
      * @details 연주 세션(`RhythmPlaySession`)은 악보를 빌려 읽고 실행 상태(판정 · 콤보)는 자기가 든다 — 같은 곡을 여러 자리가 연주해도 악보는 한 벌이다.
      */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<RhythmChart>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, RhythmChart );
 } // namespace sw

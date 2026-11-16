@@ -351,7 +351,7 @@ namespace sw
             static void writeGrowth( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const        pManager  = GameplayDebugTarget::findActiveObjectManager();
-                const TacticsSRPGDemoComponent* const pDirector = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<TacticsSRPGDemoComponent>( *pManager ) : nullptr;
+                const TacticsSRPGDemoComponent* const pDirector = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<TacticsSRPGDemoComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pDirector == nullptr )
                 {
                     writer.addLine( "target", "none (no tactics demo in the active scene)" );

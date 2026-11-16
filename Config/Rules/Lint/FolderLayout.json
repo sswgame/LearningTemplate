@@ -1,5 +1,5 @@
 {
-    "_comment": "파일 자리 규칙 표(Scripts/lint/FolderLayout.py, 기준 docs/agents/FolderLayout.md). 새 예외는 까닭을 함께 적는다.",
+    "_comment": "파일 자리 규칙 표(Scripts/lint/folder_layout.py, 기준 docs/agents/FolderLayout.md). 새 예외는 까닭을 함께 적는다.",
     "_bannedFolderNames": {
         "Util": "하는 일로 찾을 수 없다 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다",
         "Utils": "Util 과 같다",

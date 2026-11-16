@@ -5,6 +5,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
@@ -43,7 +44,7 @@ namespace sw
     {
     }
 
-    bool GimmickSensorComponent::acceptsOccupant( const GameObject& object ) const
+    bool GimmickSensorComponent::canAcceptOccupant( const GameObject& object ) const
     {
         return _requiredTags.getTagCount() == 0 || object.getTags().hasAllTags( _requiredTags );
     }
@@ -75,7 +76,7 @@ namespace sw
     {
         Component::onOverlapBegin( overlap );
         const bool bIgnoredTrigger = overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false;
-        const bool bIgnoreOverlap  = overlap._pOther == nullptr || bIgnoredTrigger || acceptsOccupant( *overlap._pOther ) == false;
+        const bool bIgnoreOverlap  = overlap._pOther == nullptr || bIgnoredTrigger || canAcceptOccupant( *overlap._pOther ) == false;
         if ( bIgnoreOverlap )
             return;
         addOccupant( *overlap._pOther );
@@ -214,4 +215,16 @@ namespace sw
 
     SW_AUTOMATION_QUERY_WATCH( gimmickOccupantWeight, "Gimmick.OccupantWeight", "Weight of what overlaps the target's gimmick sensor (kg, the pressure plate's reading)",
                                &GimmickSensorWatchesInternal::readOccupantWeight, true, false );
+
+    void GimmickSensorComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<GimmickSensorComponent>( this );
+    }
+
+    void GimmickSensorComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<GimmickSensorComponent>( this );
+        Component::onUnregister( manager );
+    }
 } // namespace sw

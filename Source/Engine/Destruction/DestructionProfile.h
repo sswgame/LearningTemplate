@@ -139,5 +139,5 @@ namespace sw
      * @brief 파괴 프로필을 경로마다 한 벌 나눠 줍니다("destruction", 인스턴스화는 `DestructionProfile.cpp`). 제자리에서 다시 읽습니다.
      * @details 쥔 쪽(`FractureComponentBase`)은 다시 읽은 횟수가 바뀌면 온전한 동안 구조 상태를 다시 시작한다 — 상태는 시작할 때의 값을 들어 결정적 재생 · 네트워크 해시가 흔들리지 않는다.
      */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<DestructionProfile>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, DestructionProfile );
 } // namespace sw

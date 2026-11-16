@@ -150,7 +150,7 @@ namespace sw
 
     /** @brief 거래 알림(초대 · 바뀜 · 닫힘)의 본문입니다. 스냅샷과, 정산이면 이 계정의 이동 뒤 잔액입니다. 알림에는 결과가 없다. */
     REFLECT()
-    struct SW_KIT_API TradeNotice
+    struct SW_KIT_API TradeNotification
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
@@ -172,9 +172,9 @@ namespace sw
         using Lock     = Method<MethodName::Lock, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using Confirm  = Method<MethodName::Confirm, TradeConfirmRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 내가 본 내 제시 버전, 내가 본 상대 제시 버전을 받는다
         using Cancel   = Method<MethodName::Cancel, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Invited  = Push<PushName::Invited, TradeNotice>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
-        using Update   = Push<PushName::Update, TradeNotice>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
-        using Closed   = Push<PushName::Closed, TradeNotice>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
+        using Invited  = Push<PushName::Invited, TradeNotification>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
+        using Update   = Push<PushName::Update, TradeNotification>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
+        using Closed   = Push<PushName::Closed, TradeNotification>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
     };
 } // namespace sw
 
@@ -190,7 +190,7 @@ namespace sw
         PROPERTY()
         uint64 _ownerServerID{ 0 };
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
-        ServiceRecordUnknownFields _unknownFields{};
+        ServiceRecordUnknownFields _unknownProperties{};
 
         // 거래 키트의 메시지 타입 목록, 등록 항목, 저장소 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
         using Table        = OnlineProtocolTable<TradeMethod, OnlineMethodList<TradeMethod::Invite, TradeMethod::Respond, TradeMethod::SetOffer, TradeMethod::Lock, TradeMethod::Confirm, TradeMethod::Cancel>, OnlinePushList<TradeMethod::Invited, TradeMethod::Update, TradeMethod::Closed>>;
@@ -201,7 +201,7 @@ namespace sw
 
         /**
          * @brief 거래 레코드를 읽고 씁니다. 영속 레코드이므로 자기 기술형(A)이며 레코드 버전을 머리에 둡니다.
-         * @details 이 빌드가 모르는 필드는 레코드의 `_unknownFields` 에 담고(다시 쓸 때 그대로 싣는다), 다른 버전이거나 아는 필드를 읽지 못했거나 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
+         * @details 이 빌드가 모르는 필드는 레코드의 `_unknownProperties` 에 담고(다시 쓸 때 그대로 싣는다), 다른 버전이거나 아는 필드를 읽지 못했거나 선언된 범위를 벗어나면 손상으로 보고 오류 로그를 남기며 false 입니다(`ServiceRecordUtil::readDurable`).
          *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 버전을 올리고 데이터를 다시 씁니다.
          */
         [[nodiscard]] static bool encodeSession( const TradeSessionRecord& record, vector<uint8>& outBytes );

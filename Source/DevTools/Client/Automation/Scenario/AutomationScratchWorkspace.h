@@ -49,17 +49,23 @@ namespace sw
          */
         [[nodiscard]] static expected<void> prepare( const AutomationScratchFolder& folder );
         /**
+         * @brief 끝난 시나리오의 사본 폴더를 지웁니다(체인의 다음 단계 앞 — `AutomationSession::startStage`).
+         * @details 같은 프로세스의 사본은 색인 · Quick Open 에 보인다(`AutomationScratch::removeOtherProcessInstances` 는 다른 프로세스 것만 뺀다). 남기면 뒤 단계가 원본과 같은 파일 이름의
+         *          사본을 집었다(editor.sequencerkeys 가 saveroundtripsequencer 의 사본을 열었다). 언리얼 자동화 테스트도 픽스처를 테스트 끝에 거둔다. 못 지우면 경고가 남고 false 다.
+         */
+        static bool discard( const AutomationScratchFolder& folder );
+        /**
          * @brief 사본 폴더를 끝까지 만든 횟수입니다(`prepare` 성공마다 하나 오른다). 사본을 만든 뒤 OS 파일 감시가 그 쓰기를 알려야 한다 — 에디터가 이 번호가 바뀌면
          *        감시 울타리를 다시 세운다(`AssetHotReload` 의 시작 차단 조건).
          */
         [[nodiscard]] static uint64 getPrepareCount();
         /**
-         * @brief 쓰기 입구 게이트를 세웁니다 — 실행기가 시나리오를 시작할 때 한 번 부르고 끝날 때 `releaseWriteGate` 로 짝을 맞춥니다(`FileUtil::setWriteGate`). 시나리오는 한 프로세스에서 차례로 돌므로 셈을 두지 않는다.
+         * @brief 쓰기 입구 게이트를 세웁니다 — 실행기가 시나리오를 시작할 때 한 번 부르고 끝날 때 `releaseWriteFilter` 로 짝을 맞춥니다(`FileUtil::setWriteFilter`). 시나리오는 한 프로세스에서 차례로 돌므로 셈을 두지 않는다.
          * @details 게이트가 서 있는 동안 리소스 루트 아래에서 `scratch/` 밖으로 가는 모든 파일 쓰기(저장 · Quick Open 으로 연 원본 포함)는 오류와 함께 거절된다.
          *          프로젝트 루트의 추적 폴더 `docs/` · `Config/` 도 같은 문이 막는다(`Config/Editor/` 만 허용 목록 — 에디터 설정 저장 길).
          */
-        static void acquireWriteGate();
-        /** @brief `acquireWriteGate` 의 짝입니다. 게이트를 걷습니다. */
-        static void releaseWriteGate();
+        static void acquireWriteFilter();
+        /** @brief `acquireWriteFilter` 의 짝입니다. 게이트를 걷습니다. */
+        static void releaseWriteFilter();
     };
 } // namespace sw

@@ -59,6 +59,8 @@ namespace sw
 
         SkirmishGameModeComponent();
         virtual ~SkirmishGameModeComponent() override;
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 판을 열고 패드 가상 커서를 켭니다(왼쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽, 오른쪽 스틱 = 카메라 이동). 패드만으로 고르기 · 명령을 씁니다. */
         void onBeginPlay() override;
@@ -173,7 +175,7 @@ namespace sw
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between match status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
         PROPERTY( Category = "Input", DisplayName = "Click Slop", Tooltip = "A drag shorter than this counts as a click", Min = 0.0, Units = m )
-        float32 _clickSlop;
+        float32 _clickDragThreshold;
         PROPERTY( Category = "Input", DisplayName = "Max Selection", Tooltip = "Most units one selection holds", Min = 1 )
         int32 _maxSelectionCount;
         // ---- 입력 액션 — 이름은 입력 맵(data/skirmish.input.xml)의 액션이다. 판을 열 때 모두 있는지 본다(hasValidNames) ----

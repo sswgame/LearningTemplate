@@ -8,18 +8,31 @@
 
 namespace sw
 {
-    VoxelHotbar::VoxelHotbar()
+    VoxelHotbar::VoxelHotbar( const VoxelBlockCatalog* pCatalog )
         : _arrSlot{}
+        , _pCatalog{ pCatalog }
         , _selectedIndex{ 0 }
     {
     }
 
     void VoxelHotbar::serializeState( StateIO& io )
     {
+        io.header( kStateTag, kStateVersion ); // 판 1(머리표 없음 · 카탈로그 순서 번호)은 거절한다
+        if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
+            return;
         for ( VoxelHotbarSlot& slot : _arrSlot )
         {
-            io.value( slot._block );
+            // 번호는 실행 중에만 쓰고 세이브에는 id 를 적는다(`VoxelWorld` 팔레트와 같은 까닭 — 마인크래프트 인벤토리도 아이템 이름을 적는다).
+            const VoxelBlockDef* pBlock  = io.isWriting() && _pCatalog != nullptr ? _pCatalog->findBlock( slot._block ) : nullptr;
+            hashed_string        blockID = pBlock != nullptr ? pBlock->_id : hashed_string{};
+            io.value( blockID );
             io.value( slot._count );
+            if ( io.isReading() )
+            {
+                slot._block = blockID.empty() ? kVoxelAirBlock : _pCatalog->findBlockIndex( blockID );
+                io.check( blockID.empty() || slot._block != kVoxelAirBlock ); // 지금 카탈로그에 없는 블록은 비우지 않고 거절한다
+                io.check( blockID.empty() == false || slot._count == 0 );     // 블록 없이 개수만 있는 칸은 손상이다
+            }
             io.check( 0 <= slot._count && slot._count <= kMaxStack );
         }
         io.value( _selectedIndex );

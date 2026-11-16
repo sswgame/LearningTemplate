@@ -117,18 +117,18 @@ namespace sw
             return true;
         }
 
-        /** @brief 값을 이름으로 바꿉니다. */
-        hashed_string toString( int64 val ) const
+        /** @brief 값의 이름입니다(해시 · 맵 키용, 언리얼 `UEnum::GetNameByValue`). 열거자 `None` 은 빈 이름이다 — 글로 쓸 때는 `toString` 을 쓴다. */
+        hashed_string getNameByValue( int64 val ) const
         {
             auto iter = _mapValueToName.find( val );
             return iter != _mapValueToName.end() ? iter->second : hashed_string();
         }
 
-        /** @brief 비트플래그 값을 이름 문자열로 바꿉니다. */
-        hashed_string toStringFlags( int64 val ) const
+        /** @brief 비트플래그 값의 이름(`A | B`)입니다. 비트플래그가 아니면 `getNameByValue` 와 같다. 글로 쓸 때는 `toStringFlags` 를 쓴다. */
+        hashed_string getFlagsNameByValue( int64 val ) const
         {
             if ( _bIsBitFlag == SW_FALSE )
-                return toString( val );
+                return getNameByValue( val );
 
             if ( val == 0 )
             {
@@ -144,10 +144,26 @@ namespace sw
             {
                 if ( result.empty() == false )
                     result += constant::reflection::kFlagSeparator;
-                result += name.c_str();
+                result += name.toString();
             }
 
             return hashed_string( result.c_str() );
+        }
+
+        /** @brief 값의 표시 글입니다(언리얼 `UEnum::GetNameStringByValue`) — 열거자 `None` 도 "None" 이다. 모르는 값은 빈 글이다. 글은 이름 표의 영구 글이다. */
+        string_view toString( int64 val ) const
+        {
+            const auto iter = _mapValueToName.find( val );
+            return iter != _mapValueToName.end() ? iter->second.toString() : string_view{}; // 모르는 값을 "None"(0 으로 읽힌다)으로 적지 않는다
+        }
+
+        /** @brief 비트플래그 값의 표시 글(`A | B`, 0 은 `None`)입니다. 텍스트 직렬화가 적는 글과 같다. */
+        string_view toStringFlags( int64 val ) const
+        {
+            if ( _bIsBitFlag == SW_FALSE )
+                return toString( val );
+            const hashed_string name = getFlagsNameByValue( val );
+            return ( name.empty() && val != 0 ) ? string_view{} : name.toString(); // 이름이 덮지 못한 값은 빈 글이다(0 만 None)
         }
 
         /**
@@ -184,7 +200,7 @@ namespace sw
             return findInMapByNameHash( _mapRedirectNameToValue, nameHash, outValue );
         }
 
-        /** @brief 값에 해당하는 intern 된 열거자 이름입니다. Invalid 나 Count 센티널이면 nullptr 입니다. */
+        /** @brief 값에 해당하는 열거자 이름 글입니다(열거자 `None` 은 "None"). Invalid 나 Count 센티널이거나 이름이 없으면 nullptr 입니다. */
         const utf8* valueToCString( int64 value ) const
         {
             if ( isValidValue( value ) == false )
@@ -192,10 +208,16 @@ namespace sw
             if ( _listDenseName.empty() == false )
             {
                 const bool bInRange = 0 <= value && value < static_cast<int64>( _listDenseName.size() );
-                return bInRange ? _listDenseName[static_cast<size_t>( value )].c_str() : nullptr;
+                return bInRange ? _listDenseName[static_cast<size_t>( value )].toString().data() : nullptr;
             }
-            const hashed_string name = ( _bIsBitFlag != SW_FALSE ) ? toStringFlags( value ) : toString( value );
-            return name.empty() ? nullptr : name.c_str();
+            // 열거자 `None` 의 이름은 빈 이름이라 표시 글(`toString`)로 꺼낸다. 그 `data()` 는 널로 끝나는 영구 글이다.
+            if ( _bIsBitFlag != SW_FALSE )
+            {
+                const hashed_string name = getFlagsNameByValue( value );
+                return ( name.empty() && value != 0 ) ? nullptr : name.toString().data();
+            }
+            const auto iter = _mapValueToName.find( value );
+            return iter != _mapValueToName.end() ? iter->second.toString().data() : nullptr;
         }
 
         /** @brief 이름을 값으로 바꿉니다. 철자는 열거자 이름 그대로여야 하고(대소문자가 다르면 모르는 이름), 비트플래그는 `A|B` 도 허용합니다. */
@@ -209,7 +231,7 @@ namespace sw
                 // `hashed_string` 은 대소문자를 구분하지 않으므로 찾은 뒤 철자를 한 번 더 견준다 — 대소문자 무시는 이름마다 별칭을 만든다.
                 const hashed_string key = hashed_string::findInterned( name );
                 const auto          it  = _mapNameToValue.find( key );
-                if ( it != _mapNameToValue.end() && it->first.view() == name )
+                if ( it != _mapNameToValue.end() && it->first.toString() == name )
                 {
                     if ( isValidValue( it->second ) == false )
                         return false;
@@ -297,7 +319,7 @@ namespace sw
         {
             for ( const auto& [nameKey, enumValue] : mapNameToValue )
             {
-                if ( text == nameKey.view() )
+                if ( text == nameKey.toString() )
                 {
                     outValue = enumValue;
                     return true;

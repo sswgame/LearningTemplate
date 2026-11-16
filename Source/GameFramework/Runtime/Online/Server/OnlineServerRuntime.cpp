@@ -21,9 +21,10 @@
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceRetentionJob.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Schedule/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -65,44 +66,29 @@ namespace sw
                 return error;
             }
 
-            static constexpr int64 kDayMs = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
-            /** @brief 분개를 내역보다 하루 더 남긴다 — 내역이 가리키는 분개가 먼저 사라지지 않게 한다. */
-            static constexpr int64 kJournalExtraDays = 1;
-
-            static ServiceRetentionRule makeRetentionRule( const hashed_string& table, int64 days, ServiceRetentionTimeFn pfnReadTime )
+            /** @brief 기반 규칙 @p rule 에 설정 @p config 의 쓸기 상한을 넣어 @p inoutListRule 에 붙입니다. 기간 0 은 그 표를 지우지 않는다는 뜻이라 붙이지 않는다. */
+            static void addBaseRule( vector<ServiceTTLRule>& inoutListRule, ServiceTTLRule rule, const ServiceTTLConfig& config )
             {
-                ServiceRetentionRule rule;
-                rule._table       = table;
-                rule._retentionMs = days * kDayMs;
-                rule._pfnReadTime = pfnReadTime;
-                return rule;
+                if ( config._expireAfterDays == 0 )
+                    return;
+                config.applySweepLimits( rule );
+                inoutListRule.push_back( std::move( rule ) );
             }
 
-            /** @brief 설정의 보존 일수(0 이면 지우지 않음)로 쓸기 규칙을 만듭니다. */
-            static vector<ServiceRetentionRule> makeRetentionRules( const OnlineServerConfig& config )
+            /**
+             * @brief 설정의 기반 표 TTL(감사 · 원장 · 닫힌 신고 · 보낸 우편)로 쓸기 규칙을 만듭니다. 넷 다 TTL 색인 규칙이고, 색인 없는 옛 레코드는 백필이 한 번 채운다.
+             * @details 원장 내역은 따로 규칙을 두지 않는다 — 분개를 지우는 트랜잭션이 그 내역 줄을 함께 지운다(`Ledger::makeJournalTTLRule`).
+             */
+            static vector<ServiceTTLRule> makeTTLRules( const OnlineServerConfig& config )
             {
-                vector<ServiceRetentionRule> listRule;
-                if ( config._retentionAuditDays > 0 )
-                    listRule.push_back( makeRetentionRule( ServiceAuditLog::getTable(), config._retentionAuditDays, &ServiceAuditLog::readTimeMs ) );
-                if ( config._retentionLedgerDays > 0 )
-                {
-                    listRule.push_back( makeRetentionRule( Ledger::getHistoryTable(), config._retentionLedgerDays, &Ledger::readHistoryTimeMs ) );
-                    listRule.push_back( makeRetentionRule( Ledger::getJournalTable(), config._retentionLedgerDays + kJournalExtraDays, &Ledger::readJournalTimeMs ) );
-                }
-                if ( config._retentionReportDays > 0 )
-                {
-                    ServiceRetentionRule rule = makeRetentionRule( ServiceReportStore::getTable(), config._retentionReportDays, &ServiceReportStore::readClosedTimeMs );
-                    rule._keyPrefix           = "closed/";
-                    listRule.push_back( std::move( rule ) );
-                }
+                vector<ServiceTTLRule> listRule;
+                addBaseRule( listRule, ServiceAuditLog::makeTTLRule( config._auditRetention.getExpireAfterMs() ), config._auditRetention );
+                addBaseRule( listRule, Ledger::makeJournalTTLRule( config._ledgerRetention.getExpireAfterMs() ), config._ledgerRetention ); // 지우는 분개의 공급 합을 이월에 남긴다
+                addBaseRule( listRule, ServiceReportStore::makeClosedTTLRule( config._closedReportTTL.getExpireAfterMs() ), config._closedReportTTL );
+                // 우편 자체는 우편함 만료 정리가 지운다. 보낸 기록은 멱등 창이라 따로 둔다
+                addBaseRule( listRule, ServiceMail::makeSentTTLRule( config._mailSentTTL.getExpireAfterMs() ), config._mailSentTTL );
+                addBaseRule( listRule, ServiceScheduler::makeRunTTLRule( config._scheduleRunTTL.getExpireAfterMs() ), config._scheduleRunTTL );
                 return listRule;
-            }
-
-            static ServiceRetentionJobConfig makeRetentionSettings( const OnlineServerConfig& config )
-            {
-                ServiceRetentionJobConfig settings;
-                settings._minuteOfDay = config._retentionMinuteOfDay;
-                return settings;
             }
 
             /** @brief 설정의 키트 목록에 @p name 이 있는지입니다. */
@@ -139,7 +125,11 @@ namespace sw
             {
                 const expected<void> result = _kit->initialize( _context, _entry );
                 if ( result.has_value() )
+                {
+                    if ( const IAfterDeleteAccount* pHook = _kit->getAfterDeleteAccount(); pHook != nullptr )
+                        _context._listAfterDeleteAccount.push_back( pHook );
                     return SubsystemInitResult::Succeeded;
+                }
                 _startupError = OnlineServerRuntimeInternal::makeKitError( result.error(), _entry._name, "initialize" );
                 return SubsystemInitResult::Failed;
             }
@@ -157,8 +147,8 @@ namespace sw
                 return unexpected( OnlineServerRuntimeInternal::makeKitError( result.error(), _entry._name, "start" ) );
             }
             void          update( UnixMilliseconds nowMs ) { _kit->update( nowMs ); }
-            int32         getOpenWorkCount() const { return _kit->getOpenWorkCount(); }
-            void          beginShutdown( const ServerShutdownNotice& notice ) { _kit->beginShutdown( notice ); }
+            int32         getOpenJobCount() const { return _kit->getOpenJobCount(); }
+            void          beginShutdown( const ServerShutdownNotice& notification ) { _kit->beginShutdown( notification ); }
             const string& getKitName() const { return _entry._name; }
 
             /**
@@ -237,7 +227,7 @@ namespace sw
         unique_ptr<IStreamTransport>        _ownedAdminTransport{};
         unique_ptr<ITLSContext>             _tlsContext{};
         ServiceScheduler                    _scheduler{};
-        ServiceRetentionJob                 _retention{};
+        ServiceTTLMonitor                   _ttlMonitor{};
         RemoteConfig                        _remoteConfig{};
         OnlineServiceHost                   _host{};
         unique_ptr<EphemeralServerBus>      _bus{};
@@ -288,7 +278,7 @@ namespace sw
             // 키트가 모두 멈춘 뒤다. 시작하지 않았어도 종료해도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
             Parts& parts = *_runtime._parts;
             parts._host.shutdown();
-            parts._retention.shutdown(); // 저장소가 살아 있을 때 맡긴 쓸기를 회수한다
+            parts._ttlMonitor.shutdown(); // 저장소가 살아 있을 때 맡긴 쓸기를 회수한다
             parts._scheduler.shutdown();
             if ( parts._store != nullptr )
             {
@@ -376,6 +366,23 @@ namespace sw
             if ( &node != &baseNode )
                 parts._listKit.push_back( static_cast<OnlineServerKitNode*>( &node ) );
         }
+        {
+            // 기반 규칙 뒤에 키트가 `initialize` 에서 올린 자기 테이블 규칙을 붙인다 — 런타임은 키트 테이블을 모른다.
+            using Internal                  = OnlineServerRuntimeInternal;
+            vector<ServiceTTLRule> listRule = Internal::makeTTLRules( parts._config );
+            for ( ServiceTTLRule& rule : parts._context._listTTLRule )
+            {
+                listRule.push_back( std::move( rule ) );
+            }
+            const int64 rolloutMs = static_cast<int64>( parts._config._ttlBackfillRolloutHours ) * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
+            for ( ServiceTTLRule& rule : listRule )
+            {
+                rule._backfillRolloutMs = rolloutMs; // 배포 창은 서버 전체에 하나다 - 옛 판 서버가 내려가는 시간은 표와 상관없다
+            }
+            parts._context._listTTLRule.clear();
+            if ( parts._ttlMonitor.initialize( parts._store.get(), &parts._scheduler, std::move( listRule ), parts._config._ttlSweepMinuteOfDay ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "the TTL sweep job could not be scheduled" } );
+        }
         if ( expected<void> host = startHost( settings ); host.has_value() == false )
             return host;
         for ( OnlineServerKitNode* pKit : parts._listKit )
@@ -459,8 +466,7 @@ namespace sw
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._busFront       = make_unique<ServerBus>( *parts._bus );
         parts._scheduler.initialize( parts._store.get(), serverID );
-        if ( parts._retention.initialize( parts._store.get(), &parts._scheduler, Internal::makeRetentionRules( parts._config ), Internal::makeRetentionSettings( parts._config ) ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "the retention sweep job could not be scheduled" } );
+        parts._scheduler.setRunTTLMs( parts._config._scheduleRunTTL.getExpireAfterMs() ); // 키트가 구간 작업을 등록하기 전이다 // 보존 쓸기는 키트가 규칙을 올린 뒤 `initialize` 가 등록한다
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;
 
@@ -693,25 +699,25 @@ namespace sw
         return _bInitialized == SW_TRUE ? _parts->_host.getConnectionCount() : 0;
     }
 
-    int32 OnlineServerRuntime::getOpenWorkCount() const
+    int32 OnlineServerRuntime::getOpenJobCount() const
     {
         if ( _bInitialized == SW_FALSE )
             return 0;
         int32 count = 0;
         for ( const OnlineServerKitNode* pKit : _parts->_listKit )
         {
-            count += pKit->getOpenWorkCount();
+            count += pKit->getOpenJobCount();
         }
         return count;
     }
 
-    void OnlineServerRuntime::beginShutdown( const ServerShutdownNotice& notice )
+    void OnlineServerRuntime::beginShutdown( const ServerShutdownNotice& notification )
     {
         if ( _bInitialized == SW_FALSE )
             return;
         for ( OnlineServerKitNode* pKit : _parts->_listKit )
         {
-            pKit->beginShutdown( notice );
+            pKit->beginShutdown( notification );
         }
     }
 

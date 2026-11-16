@@ -915,7 +915,7 @@ namespace sw
         }
     }
 
-    LeakCurveResult LeakCurveCriteria::judge( const vector<LeakCurvePoint>& listPoint ) const
+    LeakCurveResult LeakCurveCriteria::evaluate( const vector<LeakCurvePoint>& listPoint ) const
     {
         LeakCurveResult result;
         const size_t    warmup = _warmupRounds;

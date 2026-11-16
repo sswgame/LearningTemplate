@@ -22,21 +22,21 @@ namespace sw
     {
         Component::onBeginPlay();
         rebuildLocalPath();
-        freezeWorldPath();
+        bakeWorldPath();
     }
 
     void SplineComponent::onPostLoad()
     {
         Component::onPostLoad();
         rebuildLocalPath();
-        freezeWorldPath();
+        bakeWorldPath();
     }
 
     void SplineComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
         rebuildLocalPath();
-        freezeWorldPath();
+        bakeWorldPath();
     }
 
     void SplineComponent::setControlPoints( const vector<float3>& listControlPoint, SplineType type, bool bClosed )
@@ -45,7 +45,7 @@ namespace sw
         _type             = type;
         _bClosed          = bClosed;
         rebuildLocalPath();
-        freezeWorldPath();
+        bakeWorldPath();
     }
 
     void SplineComponent::rebuildLocalPath()
@@ -54,7 +54,7 @@ namespace sw
             _localPath.clear();
     }
 
-    void SplineComponent::freezeWorldPath()
+    void SplineComponent::bakeWorldPath()
     {
         ++_pathRevision;
         const GameObject*     pOwner = getOwner();

@@ -33,8 +33,8 @@ namespace sw
         Widget* pWidget = findEnabledAccessibleWidget( ui, screen, widget );
         if ( pWidget == nullptr )
             return false;
-        const WidgetTree& tree = ui.findScreen( screen )->getTree();
-        UIWidgetPath      path{};
+        WidgetTree&  tree = ui.findScreen( screen )->getTree();
+        UIWidgetPath path{};
         if ( UIWidgetPath::makePathTo( tree, widget, path ) == false )
             return false;
         UIActionEvent event{};

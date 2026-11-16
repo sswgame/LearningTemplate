@@ -41,7 +41,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&ModAllowList::readMod>( "Mod" ).uncounted(), // 빈 목록은 모드를 하나도 허락하지 않는 맞는 목록이다
         };
-        if ( XMLCatalogReadResult::readInDocumentOrder( list, root, sourceName, kArrElement ).isClean() == false )
+        if ( XMLCatalogReadResult::readInDocumentOrder( list, XMLCatalogRoot{ root }, sourceName, kArrElement ).isClean() == false )
             return false;
         outList = std::move( list );
         return true;

@@ -1,11 +1,19 @@
 {
     "_storeName": "local",
     "_cacheName": "local",
+    "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
+    "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
+    "_mailSentTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_scheduleRunTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ttlSweepMinuteOfDay": 300,
+    "_ttlBackfillRolloutHours": 24,
     "_publicAddress": "127.0.0.1",
     "_listKit": [
         {
             "_name": "account",
             "_settings": {
+                "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_bLightPasswordHash": true,
                 "_listSeedTestAccount": [
                     {
@@ -18,6 +26,7 @@
         {
             "_name": "chat",
             "_settings": {
+                "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
                 "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
             }
@@ -26,17 +35,24 @@
             "_name": "economy",
             "_settings": {
                 "_currencyCatalog": "game/shooter3d/data/shooter3d.currencies.xml",
-                "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml"
+                "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml",
+                "_refundRecovery": "Debt"
             }
         },
         {
             "_name": "leaderboard",
             "_settings": {
+                "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+                "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
                 "_catalog": "game/shooter3d/data/shooter3d.leaderboards.xml"
             }
         },
         {
-            "_name": "mailbox"
+            "_name": "mailbox",
+            "_settings": {
+                "_claimedRetentionDays": 30,
+                "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }
+            }
         },
         {
             "_name": "matchmaking",

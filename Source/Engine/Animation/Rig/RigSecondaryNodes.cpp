@@ -100,7 +100,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk                    = reader.readFields( _params ); // 범위(비율 0..1, 스텝 > 0 등)는 PROPERTY 가 본다
+                bool bOk                    = reader.readProperties( _params ); // 범위(비율 0..1, 스텝 > 0 등)는 PROPERTY 가 본다
                 bOk                         = reader.readNameList( "bones", _listBoneName, true ) && bOk;
                 _settings._stiffness        = _params._stiffness;
                 _settings._damping          = _params._damping;
@@ -121,7 +121,7 @@ namespace sw
                 {
                     RigXMLReader            colliderReader( colliders.at( index ), reader.getContext() );
                     RigSpringColliderParams colliderParams;
-                    bOk = colliderReader.readFields( colliderParams );
+                    bOk = colliderReader.readProperties( colliderParams );
                     bOk = colliderReader.finish() && bOk;
                     ColliderSpec spec{};
                     spec._boneName         = colliderParams._bone;
@@ -148,7 +148,7 @@ namespace sw
                     jointParams._axisPull  = _settings._axisPull;
                     jointParams._damping   = _settings._damping;
                     jointParams._radius    = _settings._particleRadius;
-                    bOk                    = jointReader.readFields( jointParams );
+                    bOk                    = jointReader.readProperties( jointParams );
                     bOk                    = jointReader.finish() && bOk;
                     _settings._listParticle.push_back(
                         RigSpringParticleSettings{ jointParams._gravity, jointParams._stiffness, jointParams._axisPull, jointParams._damping, jointParams._radius } );
@@ -252,7 +252,7 @@ namespace sw
          * @brief 포즈 구동(RBF 포즈 드라이버)입니다. 키는 `driver`(관절), `radius_degrees`(가우스 폭), `poses`(`[{ "name", "rotation", "morphs": [{ "morph", "weight" }],
          *        "bones": [{ "bone", "rotation", "translation" }] }]`)입니다.
          * @details 관절의 레퍼런스 기준 회전과 포즈마다의 회전 사이 각으로 가우스 핵을 구하고, 바인딩할 때 푼 보간 행렬(Φ⁻¹)로 포즈 가중치를 낸다.
-         *          포즈 위치에서는 그 포즈만 1 이다. 가중치만큼 보정 모프(`RigInstance::getMorphWeights`)와 보정 본(로컬 회전과 이동 덧셈)을 낸다.
+         *          포즈 위치에서는 그 포즈만 1 이다. `weight_threshold` 보다 작은 가중치는 0 으로 두고 그 포즈의 보정은 내지 않는다. 가중치만큼 보정 모프(`RigInstance::getMorphWeights`)와 보정 본(로컬 회전과 이동 덧셈)을 낸다.
          *          팔꿈치를 굽히면 팔뚝 근육을 보정하는 식이며, 언리얼의 Pose Driver 와 Maya 의 RBF 에 해당한다. 쉬는 포즈(출력 없음)도 데이터에 한 줄 넣는다.
          */
         class RigPoseDriverNode final : public RigNode
@@ -264,14 +264,14 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk               = reader.readFields( _params ); // 1..180 도는 PROPERTY 가 본다
+                bool bOk               = reader.readProperties( _params ); // 1..180 도는 PROPERTY 가 본다
                 _radius                = _params._radiusDegrees * MathUtil::kDegreeToRadian;
                 const RigXMLList poses = reader.readArray( "poses", true );
                 for ( size_t index = 0; bOk && poses.isValid() && index < poses.size(); ++index )
                 {
                     RigXMLReader        poseReader( poses.at( index ), reader.getContext() );
                     RigDriverPoseParams poseParams;
-                    bOk = poseReader.readFields( poseParams );
+                    bOk = poseReader.readProperties( poseParams );
                     DriverPose pose{};
                     pose._name              = poseParams._name;
                     pose._rotation          = quaternion::makeFromYawPitchRoll( poseParams._rotation * MathUtil::kDegreeToRadian );
@@ -279,25 +279,25 @@ namespace sw
                     for ( size_t morphIndex = 0; bOk && morphs.isValid() && morphIndex < morphs.size(); ++morphIndex )
                     {
                         RigXMLReader         morphReader( morphs.at( morphIndex ), reader.getContext() );
-                        RigDriverMorphParams morphFields;
-                        bOk = morphReader.readFields( morphFields );
+                        RigDriverMorphParams morphProperties;
+                        bOk = morphReader.readProperties( morphProperties );
                         bOk = morphReader.finish() && bOk;
                         RigMorphWeight morph{};
-                        morph._name   = morphFields._morph;
-                        morph._weight = morphFields._weight;
+                        morph._name   = morphProperties._morph;
+                        morph._weight = morphProperties._weight;
                         pose._listMorph.push_back( morph );
                     }
                     const RigXMLList bones = poseReader.readArray( "bones", false );
                     for ( size_t boneIndex = 0; bOk && bones.isValid() && boneIndex < bones.size(); ++boneIndex )
                     {
                         RigXMLReader            boneReader( bones.at( boneIndex ), reader.getContext() );
-                        RigCorrectiveBoneParams boneFields;
-                        bOk = boneReader.readFields( boneFields );
+                        RigCorrectiveBoneParams boneProperties;
+                        bOk = boneReader.readProperties( boneProperties );
                         bOk = boneReader.finish() && bOk;
                         CorrectiveBone corrective{};
-                        corrective._name        = boneFields._bone;
-                        corrective._rotation    = quaternion::makeFromYawPitchRoll( boneFields._rotation * MathUtil::kDegreeToRadian );
-                        corrective._translation = boneFields._translation;
+                        corrective._name        = boneProperties._bone;
+                        corrective._rotation    = quaternion::makeFromYawPitchRoll( boneProperties._rotation * MathUtil::kDegreeToRadian );
+                        corrective._translation = boneProperties._translation;
                         pose._listBone.push_back( corrective );
                     }
                     bOk = poseReader.finish() && bOk;
@@ -360,18 +360,19 @@ namespace sw
                     {
                         weight += _listInverseKernel[row * poseCount + column] * _listKernel[column];
                     }
-                    _listPoseWeight[row] = MathUtil::saturate( weight );
+                    const float32 saturated = MathUtil::saturate( weight );
+                    _listPoseWeight[row]    = saturated < _params._weightThreshold ? 0.0f : saturated;
                 }
                 for ( uint32 index = 0; index < poseCount; ++index )
                 {
                     const float32     weight     = _listPoseWeight[index];
                     const DriverPose& driverPose = _listPose[index];
+                    if ( weight <= 0.0f )
+                        continue;
                     for ( const RigMorphWeight& morph : driverPose._listMorph )
                     {
                         context._pInstance->addMorphWeight( morph._name, morph._weight * weight * context._nodeWeight );
                     }
-                    if ( weight <= 0.0f )
-                        continue;
                     for ( const CorrectiveBone& corrective : driverPose._listBone )
                     {
                         BoneTransform local = pose.getLocal( corrective._bone );

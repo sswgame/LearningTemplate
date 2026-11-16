@@ -17,7 +17,7 @@ namespace sw
     {
         /**
          * @brief 단계 원소 @p node 의 `<Reward>` 를 @p outReward 에 읽습니다. 보상이 없으면 아무것도 하지 않습니다.
-         * @return 보상 `<Item>` 에 스키마(`QuestRewardItemRowDef`) 오류가 있으면 false 입니다(오류는 readFields 가 남긴다).
+         * @return 보상 `<Item>` 에 스키마(`QuestRewardItemRowDef`) 오류가 있으면 false 입니다(오류는 readProperties 가 남긴다).
          */
         [[nodiscard]] bool readQuestReward( const XMLNode& node, string_view sourceName, QuestReward& outReward )
         {
@@ -29,7 +29,7 @@ namespace sw
             for ( XMLNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
             {
                 QuestRewardItemRowDef row;
-                if ( XMLFields::readFields( item, row, sourceName ) == false )
+                if ( XMLFields::readProperties( item, row, sourceName ) == false )
                 {
                     bValid = false;
                     continue;
@@ -40,7 +40,7 @@ namespace sw
             {
                 QuestRewardActionRowDef row;
                 GameActionCall          call;
-                if ( XMLFields::readFields( action, row, sourceName ) == false || GameActionCall::compileText( row._call, sourceName, call ) == false )
+                if ( XMLFields::readProperties( action, row, sourceName ) == false || GameActionCall::compileText( row._call, sourceName, call ) == false )
                 {
                     bValid = false;
                     continue;
@@ -56,7 +56,7 @@ namespace sw
         return VectorUtil::findBy<&QuestStage::_id>( _listStage, stageID );
     }
 
-    uint32 QuestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 QuestCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<QuestCatalog>;
         static constexpr Element kArrElement[] = {
@@ -69,9 +69,9 @@ namespace sw
     bool QuestCatalog::loadQuest( const XMLNode& questNode, string_view sourceName )
     {
 
-        // 기본값 · 범위는 스키마가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
+        // 기본값 · 범위는 스키마가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readProperties 가 남긴다).
         QuestDef quest;
-        bool     bValid = XMLFields::readFields( questNode, quest, sourceName );
+        bool     bValid = XMLFields::readProperties( questNode, quest, sourceName );
         if ( quest._id.empty() )
             return false;
         const utf8* const pID = quest._id.c_str();
@@ -80,17 +80,17 @@ namespace sw
         for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
         {
             QuestStage stage;
-            bValid = XMLFields::readFields( stageNode, stage, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( stageNode, stage, sourceName ) && bValid;
             for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
             {
                 QuestObjective objective;
-                bValid = XMLFields::readFields( node, objective, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, objective, sourceName ) && bValid;
                 stage._listObjective.push_back( objective );
             }
             for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
             {
                 QuestBranch branch;
-                bValid = XMLFields::readFields( node, branch, sourceName ) && bValid;
+                bValid = XMLFields::readProperties( node, branch, sourceName ) && bValid;
                 stage._listBranch.push_back( branch );
             }
             bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;
@@ -108,6 +108,15 @@ namespace sw
             const bool bDeadEnd = stage._bComplete == false && stage._bFail == false && stage._nextStage.empty() && stage._listBranch.empty();
             if ( bDeadEnd )
                 SW_LOG_WARNING_ID( "QuestCatalog.QuestStageDeadEnd", "%#: quest '%#' stage '%#' has no next stage and is neither complete nor fail - the quest stays active forever", sourceName, pID, stage._id.c_str() );
+            // 보상은 완료 단계에서만 준다 — 앞 단계의 보상은 퀘스트를 포기 · 실패한 뒤 다시 받으면 다시 나간다(받은 단계 기록이 없다, 감사 G-4 — 보상 복제 길).
+            const bool bRewarded = stage._reward._items.isEmpty() == false || stage._reward._values.isEmpty() == false || stage._reward._listAction.empty() == false;
+            if ( bRewarded && stage._bComplete == false )
+            {
+                SW_LOG_ERROR_ID( "QuestCatalog.StageRewardBeforeComplete",
+                                 "%#: quest '%#' stage '%#' gives a reward but is not the complete stage - abandoning and taking the quest again would repeat it; move the reward to the complete stage",
+                                 sourceName, pID, stage._id.c_str() );
+                bValid = false;
+            }
             // 없는 단계로 가는 다음 · 갈래는 참조 표(`engine/settings/datacatalogreferences.xml` — 같은 퀘스트 안)가 오류로 알리고 로드를 멈춘다(예전에는 경고만 하고 영원히 도는 퀘스트가 섰다).
         }
         if ( quest._listStage.empty() )

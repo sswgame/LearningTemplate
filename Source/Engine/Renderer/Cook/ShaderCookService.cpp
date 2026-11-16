@@ -16,9 +16,9 @@ namespace sw
         class ShaderCookService final : public IShaderCookService
         {
         public:
-            bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format ) override
+            bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format, ShaderCookScope scope ) override
             {
-                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format );
+                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format, false, scope );
                 ShaderCookStamp::invalidateSharedHeaderCache();
                 return summary.isClean();
             }
@@ -34,9 +34,9 @@ namespace sw
                 return listProblem.empty();
             }
 
-            bool collectRequestedBinaries( ShaderTargetFormat format, vector<string>& outListBinaryID ) override
+            bool collectRequestedBinaries( ShaderTargetFormat format, unordered_map<string, vector<vector<string>>>& outMapBinaryOrigin ) override
             {
-                return ShaderCookDriver::collectRequestedBinaries( format, outListBinaryID );
+                return ShaderCookDriver::collectRequestedBinaries( format, outMapBinaryOrigin );
             }
         };
 

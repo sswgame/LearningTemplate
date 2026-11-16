@@ -192,12 +192,11 @@ namespace sw
         string       movedDirectory;
         if ( ModuleLibraryUtil::getModuleSubdirectory( movedModule, movedDirectory ) && projectIndex != ModuleCatalogLoaderInternal::kNotFound )
         {
-            const string selectedPath =
-                FileUtil::normalizePath( FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), movedModule + ModuleCatalog::kManifestExtension ) );
-            bool bFound = false;
+            const string selectedPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), movedModule + ModuleCatalog::kManifestExtension );
+            bool         bFound       = false;
             for ( ModuleManifest& project : listGamePackProject )
             {
-                if ( FileUtil::normalizePath( project._sourcePath ) != selectedPath )
+                if ( FileUtil::isSameDiskPath( project._sourcePath, selectedPath ) == false ) // 디스크 경로다(OS 규칙 — 접은 키는 리눅스에서 대소문자를 잃는다)
                     continue;
                 std::swap( project, listManifest[projectIndex] );
                 bFound = true;

@@ -3,9 +3,9 @@
 # @brief 로그인 서비스 키트(서버) — 계정 인증(소금 + 느린 해시) · 세션 토큰 발급 · 검증 · 만료 · 재접속 · 중복 로그인 · 게임(UDP) 접속 표
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_Server_Account)
+sw_add_game_framework_kit(GF_Server_Account)
 if(NOT TARGET GF_Server_Account)
 	return()
 endif()
-sw_linkRuntimeKit(GF_Server_Account GF_Account)
-sw_linkRuntimeKit(GF_Server_Account GF_Server_OnlineCore)
+sw_link_runtime_kit(GF_Server_Account GF_Account)
+sw_link_runtime_kit(GF_Server_Account GF_Server_OnlineCore)

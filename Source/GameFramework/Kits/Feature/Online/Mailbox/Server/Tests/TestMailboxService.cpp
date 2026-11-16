@@ -16,13 +16,15 @@
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineRuntimeTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
 namespace
 {
-    constexpr AccountID kPlayer = 22;
-    constexpr int64     kNowMs  = 1700000000000ll;
+    constexpr AccountID kPlayer             = 22;
+    constexpr int64     kNowMs              = 1700000000000ll;
+    constexpr int64     kClaimedRetentionMs = 1000000; ///< 받은 우편을 남기는 기간(테스트용으로 짧다)
 
     /** @brief 호스트와 클라이언트까지 실제로 도는 묶음입니다. 선언 순서가 수명이다(서비스가 망보다 오래 산다). */
     struct MailboxFixture
@@ -32,7 +34,7 @@ namespace
         MailboxClient           _client{};
         int32                   _clientIndex{ -1 };
 
-        explicit MailboxFixture( MailboxServiceConfig settings = MailboxServiceConfig{}, bool bLogin = true )
+        explicit MailboxFixture( MailboxServiceConfig settings, bool bLogin = true )
         {
             SW_EXPECT_TRUE( _service.initialize( &_rig._server._store, settings ) );
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
@@ -104,7 +106,7 @@ namespace
             return mailKey;
         }
 
-        int64 balanceOf( AccountID accountID )
+        int64 getBalanceOf( AccountID accountID )
         {
             LedgerBalance balance;
             SW_EXPECT_TRUE( Ledger::readBalance( _rig._database, LedgerHolder::makeAccount( accountID ), "cur.gold", balance ) == ServiceStoreResult::Ok );
@@ -118,7 +120,8 @@ namespace
         static MailboxServiceConfig makeQuietSettings()
         {
             MailboxServiceConfig settings;
-            settings._noticeIntervalMs = 0;
+            settings._notificationIntervalMs = 0;
+            settings._claimedRetentionMs     = kClaimedRetentionMs;
             return settings;
         }
 
@@ -158,7 +161,7 @@ SW_TEST_CASE( MailboxServiceTest, EntryRules )
     SW_REQUIRE_TRUE( MailboxProtocol::MessageTypes::write( claimBody, MailboxServiceTestUtil::makeMailRequest( mailKey ) ) );
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( MailboxMethod::Claim::kID, claimBody ) );
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( MailboxMethod::ClaimAll::kID, BitWriter{} ) );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) );
 
     BitWriter brokenBody;
     brokenBody.writeVarUint( 7 );
@@ -185,7 +188,7 @@ SW_TEST_CASE( MailboxServiceTest, ListClaimDelete )
     SW_EXPECT_TRUE( claimed.isOk() );
     SW_EXPECT_FALSE( claimed._reply._listBalance.empty() );
     SW_EXPECT_TRUE( claimed._idempotencyKey.isValid() ); // 키를 넘기지 않아도 창구가 만들었다
-    SW_EXPECT_EQUAL( int64( 5 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
     SW_EXPECT_TRUE( rig._client.getMails()[0]._state == ServiceMailState::Claimed );
 
     SW_EXPECT_TRUE( rig.call<MailboxMethod::Delete>( MailboxServiceTestUtil::makeMailRequest( mailKey ) ).isOk() );
@@ -215,7 +218,7 @@ SW_TEST_CASE( MailboxServiceTest, ClaimAllCounts )
     const OnlineResult<MailboxClaimReply> claimed = rig.call<MailboxMethod::ClaimAll>( OnlineNoBody{} );
     SW_EXPECT_TRUE( claimed.isOk() );
     SW_EXPECT_EQUAL( 2, claimed._reply._claimedCount );
-    SW_EXPECT_EQUAL( int64( 12 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 12 ), rig.getBalanceOf( kPlayer ) );
 }
 
 /** @brief [MailboxServiceTest] 캠페인: 틱이 읽어 메모리에 두고 첫 쪽 목록 앞에 끼운다. 끝난 캠페인은 빠지고, 읽기가 실패하면 있던 목록을 둔다 */
@@ -249,6 +252,38 @@ SW_TEST_CASE( MailboxServiceTest, CampaignsAppearInFirstPage )
     SW_EXPECT_TRUE( rig.list( kNowMs + 12000 )._reply._listMail.empty() );
 }
 
+/** @brief [MailboxServiceTest] TTL: 끝난 캠페인과 그 수령 표식(묶음 줄 하나)을 기간 뒤에 지운다. 색인 없는 옛 표식은 백필이 캠페인을 읽어 줄을 채운다(감사 O-9) */
+SW_TEST_CASE( MailboxServiceTest, EndedCampaignsAndClaimsExpire )
+{
+    MemoryServiceDatabase database;
+    ServiceMailCampaign   campaign;
+    campaign._campaignID = 1;
+    campaign._actorID    = 7;
+    campaign._titleKey   = "mail.campaign";
+    campaign._startMs    = kNowMs - 1;
+    campaign._endMs      = kNowMs + 10000;
+    campaign._listAttachment.push_back( ServiceMailAttachment{ "cur.gold", 3 } );
+    ServiceTransaction created;
+    SW_REQUIRE_TRUE( ServiceMailCampaign::stageCreate( campaign, created ) );
+    SW_REQUIRE_TRUE( database.commit( created ) == ServiceStoreResult::Ok );
+    ServiceTransaction claims; // 받은 계정의 표식 둘과, 색인보다 먼저 지운 캠페인의 옛 표식 하나
+    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 101 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 9, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    SW_REQUIRE_TRUE( database.commit( claims ) == ServiceStoreResult::Ok );
+
+    ServiceTTLRule        claimRule    = ServiceMailCampaign::makeClaimTTLRule( 1000 );
+    ServiceTTLRule        campaignRule = ServiceMailCampaign::makeCampaignTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, claimRule, kNowMs + 5000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );                                          // 캠페인이 없는 옛 표식만 - 받을 캠페인이 없다
+    SW_EXPECT_EQUAL( 2, database.countRecords( ServiceMailCampaign::getClaimTable() ) ); // 진행 중인 캠페인의 표식은 남는다(다시 받기를 막는다)
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, claimRule, kNowMs + 12000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( ServiceMailCampaign::getClaimTable() ) );
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, campaignRule, kNowMs + 12000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( ServiceMailCampaign::getCampaignTable() ) );
+}
+
 /** @brief [MailboxServiceTest] 정리: 만료된 우편을 치워 목록에서 사라진다 */
 SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
 {
@@ -259,7 +294,7 @@ SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
     rig._service.requestSweep();
     rig.tick( kNowMs + 11 );
     SW_EXPECT_TRUE( rig.list( kNowMs + 11 )._reply._listMail.empty() );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kPlayer ) ); // 발행한 재원은 받지 않으면 사라진다
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) ); // 발행한 재원은 받지 않으면 사라진다
 }
 
 /** @brief [MailboxServiceTest] 시작: 저장소가 없으면 서지 않는다 */
@@ -268,6 +303,35 @@ SW_TEST_CASE( MailboxServiceTest, NeedsStore )
     SW_EXPECT_LOG( "MailboxService.MailboxServiceNeedsStore" );
     MailboxService service;
     SW_EXPECT_FALSE( service.initialize( nullptr, MailboxServiceTestUtil::makeQuietSettings() ) );
+}
+
+/** @brief [MailboxServiceTest] 시작: 받은 우편의 보관 기간이 없으면 서지 않는다(설정 필수 값, 기본값으로 메우지 않는다) */
+SW_TEST_CASE( MailboxServiceTest, NeedsClaimedRetention )
+{
+    SW_EXPECT_LOG( "MailboxService.ClaimedRetentionMissing" );
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    MailboxServiceConfig  settings = MailboxServiceTestUtil::makeQuietSettings();
+    settings._claimedRetentionMs   = 0;
+    MailboxService service;
+    SW_EXPECT_FALSE( service.initialize( &store, settings ) );
+}
+
+/** @brief [MailboxServiceTest] 정리: 받은 우편은 받은 뒤 보관 기간이 지나면 정리가 지운다 — 우편 레코드가 0 이 되고 받은 재화는 그대로다 */
+SW_TEST_CASE( MailboxServiceTest, SweepRemovesClaimedMail )
+{
+    MailboxServiceConfig settings = MailboxServiceTestUtil::makeQuietSettings();
+    settings._sweepIntervalMs     = 0; // 틱이 스스로 돌지 않는다
+    MailboxFixture rig( settings );
+    const string   mailKey = rig.sendMail( 5, kNowMs + 10 );
+    SW_EXPECT_TRUE( rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ) ).isOk() );
+    rig._service.requestSweep();
+    rig.tick( kNowMs + 11 );
+    SW_EXPECT_EQUAL( 1, rig._rig._database.countRecords( ServiceMail::getMailTable() ) ); // 원래 만료가 지났어도 보관 기간까지 남는다
+    rig._service.requestSweep();
+    rig.tick( kNowMs + kClaimedRetentionMs );
+    SW_EXPECT_EQUAL( 0, rig._rig._database.countRecords( ServiceMail::getMailTable() ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
 }
 
 /** @brief [MailboxServiceTest] 일시 장애는 공통 범주로 와서 기억되지 않아 같은 멱등 키의 재시도가 서비스에 닿아 끝나고, 끝난 수령은 기억한 답을 주어 원장이 한 번만 움직인다 */
@@ -280,24 +344,24 @@ SW_TEST_CASE( MailboxServiceTest, RetryableCategoryReachesTheServiceAgain )
     const OnlineResult<MailboxClaimReply> failed = rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ) );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, failed._errorCode );
     SW_EXPECT_TRUE( failed.isRetryable() );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) );
 
     const OnlineResult<MailboxClaimReply> retried = rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ), failed._idempotencyKey );
     SW_EXPECT_TRUE( retried.isOk() );
     SW_EXPECT_EQUAL( 1, retried._reply._claimedCount );
-    SW_EXPECT_EQUAL( int64( 5 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
 
     const OnlineResult<MailboxClaimReply> replayed = rig.call<MailboxMethod::Claim>( MailboxServiceTestUtil::makeMailRequest( mailKey ), failed._idempotencyKey );
     SW_EXPECT_TRUE( replayed.isOk() ); // 다시 처리했다면 AlreadyClaimed 이다
     SW_EXPECT_EQUAL( 1, replayed._reply._claimedCount );
-    SW_EXPECT_EQUAL( int64( 5 ), rig.balanceOf( kPlayer ) );
+    SW_EXPECT_EQUAL( int64( 5 ), rig.getBalanceOf( kPlayer ) );
 }
 
 /** @brief [MailboxServiceTest] 알림: 접속한 계정의 새 우편은 표에 적은 알림으로 클라이언트에 닿는다 */
 SW_TEST_CASE( MailboxServiceTest, NewMailPushReachesTheClient )
 {
-    MailboxServiceConfig settings;
-    settings._noticeIntervalMs = 1;
+    MailboxServiceConfig settings    = MailboxServiceTestUtil::makeQuietSettings();
+    settings._notificationIntervalMs = 1;
     MailboxFixture rig( settings );
     const string   mailKey = rig.sendMail( 5 );
     rig.tick( kNowMs + 10 );
@@ -314,9 +378,9 @@ SW_TEST_CASE( MailboxServiceTest, NewMailPushReachesTheClient )
 SW_TEST_CASE( MailboxServiceTest, NewMailGoesToOfflinePushWhenAway )
 {
     FakeOfflinePush      offlinePush;
-    MailboxServiceConfig settings;
-    settings._noticeIntervalMs = 1;
-    settings._pOfflinePush     = &offlinePush;
+    MailboxServiceConfig settings    = MailboxServiceTestUtil::makeQuietSettings();
+    settings._notificationIntervalMs = 1;
+    settings._pOfflinePush           = &offlinePush;
     MailboxFixture rig( settings, false );
     (void)rig.sendMail( 5 );
     rig.tick( kNowMs + 10 );
@@ -358,12 +422,12 @@ SW_TEST_CASE( MailboxServiceTest, MetricsCountKitResultsAndCommonCategories )
 SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
 {
     constexpr const utf8* kServerJSON = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
-    constexpr const utf8* kOnlineJSON = R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "testLogin" }, { "_name": "mailbox" } ] })";
+    constexpr const utf8* kOnlineJSON = R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "testLogin" }, { "_name": "mailbox", "_settings": { "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })";
 
     MailboxClient              client; // 묶음보다 먼저 선언해 나중에 지운다 - 지울 때 스스로 등록을 푼다
     test::OnlineRuntimeFixture rig;
     {
-        const auto result = rig.fromConfig( kServerJSON, kOnlineJSON, kNowMs );
+        const auto result = rig.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
     const int32 clientIndex = rig._clients.connect( test::OnlineRuntimeFixture::kPort, { &client } );
@@ -382,7 +446,7 @@ SW_TEST_CASE( MailboxServiceTest, ServerAssembledFromConfigServesTheClient )
     SW_EXPECT_TRUE( bReplied );
 
     test::OnlineRuntimeFixture unnamed;
-    const auto                 failed1 = unnamed.fromConfig( kServerJSON, R"({ "_listKit": [ { "_name": "mailbox" } ] })", kNowMs );
+    const auto                 failed1 = unnamed.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [ { "_name": "mailbox", "_settings": { "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 } } } ] })" ), kNowMs );
     SW_REQUIRE_FALSE( failed1.has_value() );
     const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
     SW_EXPECT_TRUE( error1.find( "_storeName" ) != string::npos );

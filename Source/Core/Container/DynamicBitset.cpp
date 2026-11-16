@@ -217,7 +217,7 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator&=( const DynamicBitset& other )
     {
-        // 크기가 다르면 아무것도 하지 않는다. assert 는 Debug 에서만 멈추므로, 그 밖의 빌드에서 아래 루프가 돌면 짧은 쪽
+        // 크기가 다르면 아무것도 하지 않는다. assert 는 검사 구성(배포가 아닌 구성)에서만 멈추므로, 그 밖의 빌드에서 아래 루프가 돌면 짧은 쪽
         // `_listBlock` 의 범위 밖을 읽는다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
@@ -237,7 +237,7 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator|=( const DynamicBitset& other )
     {
-        // 크기가 다르면 아무것도 하지 않는다. assert 는 Debug 에서만 멈추므로, 그 밖의 빌드에서 아래 루프가 돌면 짧은 쪽
+        // 크기가 다르면 아무것도 하지 않는다. assert 는 검사 구성(배포가 아닌 구성)에서만 멈추므로, 그 밖의 빌드에서 아래 루프가 돌면 짧은 쪽
         // `_listBlock` 의 범위 밖을 읽는다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
@@ -257,7 +257,7 @@ namespace sw
 
     DynamicBitset& DynamicBitset::operator^=( const DynamicBitset& other )
     {
-        // 크기가 다르면 아무것도 하지 않는다. assert 는 Debug 에서만 멈추므로, 그 밖의 빌드에서 아래 루프가 돌면 짧은 쪽
+        // 크기가 다르면 아무것도 하지 않는다. assert 는 검사 구성(배포가 아닌 구성)에서만 멈추므로, 그 밖의 빌드에서 아래 루프가 돌면 짧은 쪽
         // `_listBlock` 의 범위 밖을 읽는다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {

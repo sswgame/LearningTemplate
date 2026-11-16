@@ -359,7 +359,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
     uint  g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint  g_SwVertexAnimationCount;    // 그 표의 단어(uint32) 수 — 범위 밖 번호를 막는다
-    float g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
+    float g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계를 EngineConfig _shaderTimeRolloverSeconds 주기로 접은 값(인스턴스 위상도 같은 접힌 시계로 잰다)
     float g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
 };
 
@@ -610,16 +610,18 @@ void InstanceData::computeVertexAnimationElements( uint vertexID, out bool outVa
 #else
     const uint meshLocal = vertexID - batch._baseVertex;
 #endif
-    const uint  base          = batch._vertexAnimationBase;
-    const bool  bTable        = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base + SW_VERTEX_ANIMATION_HEADER_WORDS <= g_SwVertexAnimationCount );
-    const uint  headerFrames  = bTable ? g_SwVertexAnimation[base] : 0u;
-    const float headerRate    = bTable ? asfloat( g_SwVertexAnimation[base + 1u] ) : 0.0f;
-    const uint  vertexCount   = bTable ? g_SwVertexAnimation[base + 2u] : 0u;
-    const bool  bLoop         = bTable && ( g_SwVertexAnimation[base + 3u] != 0u );
-    const uint  frameCount    = max( headerFrames, 1u );
-    const float frameTotal    = (float)frameCount;
-    const float framePosition = max( g_SwVertexAnimationTime + _vertexAnimationPhase, 0.0f ) * headerRate;
-    const float wrapped       = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
+    const uint  base         = batch._vertexAnimationBase;
+    const bool  bTable       = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base + SW_VERTEX_ANIMATION_HEADER_WORDS <= g_SwVertexAnimationCount );
+    const uint  headerFrames = bTable ? g_SwVertexAnimation[base] : 0u;
+    const float headerRate   = bTable ? asfloat( g_SwVertexAnimation[base + 1u] ) : 0.0f;
+    const uint  vertexCount  = bTable ? g_SwVertexAnimation[base + 2u] : 0u;
+    const bool  bLoop        = bTable && ( g_SwVertexAnimation[base + 3u] != 0u );
+    const uint  frameCount   = max( headerFrames, 1u );
+    const float frameTotal   = (float)frameCount;
+    // 시계와 오프셋은 CPU 가 같은 주기로 접어 보낸다(EngineConfig _shaderTimeRolloverSeconds, 감사 C-12). 오프셋을 적은 뒤 시계가 한 번 접히면 합이 음수가 된다 —
+    // 반복 클립은 floor 로 감아 이어 돌고(주기마다 한 번 위상이 뛴다, Godot TIME 과 같다), 한 번 도는 클립은 접힘이 지난 시간이라 끝 프레임이다.
+    const float framePosition = ( g_SwVertexAnimationTime + _vertexAnimationPhase ) * headerRate;
+    const float wrapped       = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : ( framePosition < 0.0f ? frameTotal - 1.0f : min( framePosition, frameTotal - 1.0f ) );
     const uint  frame         = min( (uint)wrapped, frameCount - 1u );
     const uint  nextFrame     = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
     outFirstElement           = base + SW_VERTEX_ANIMATION_HEADER_WORDS + ( frame * vertexCount + meshLocal ) * SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT;
@@ -849,7 +851,7 @@ static float4x4 InstanceData::loadPreviousWorld( uint instanceSlot, float4x4 cur
 //      쓰는 셰이더: VS 출력 구조체에 `SW_APPEARANCE_VARYING`, VS 끝에 `SW_APPEARANCE_WRITE( output, instance )`, PS 의 출력을 다 만든 **뒤**(반환 직전)에
 //      `SW_APPEARANCE_CLIP( input )`. Vulkan 1.2 타깃의 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 미분(ddx · Sample 의 밉)에서 빠진다 — 텍스처 읽기 앞에서
 //      버리면 이웃의 밉이 틀린다. 1.3 의 demote(도움 호출로 남기기)를 요구하지 않으려고 순서로 막는다(constant::render::kVulkanRequiredMinor).
-//      순서는 커밋 훅의 린트(Scripts/lint/ShaderKillOrder.py)가 본다 — 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있는 함수는 커밋되지 않는다.
+//      순서는 커밋 훅의 린트(Scripts/lint/shader_kill_order.py)가 본다 — 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있는 함수는 커밋되지 않는다.
 //      변형이 아니면 셋 다 비어 바이트코드가 그대로다.
 // ------------------------------------------------------------------------------
 

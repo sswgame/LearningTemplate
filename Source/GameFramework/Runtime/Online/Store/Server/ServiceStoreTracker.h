@@ -5,7 +5,7 @@
  *          UE 의 `AsyncTask` + 게임 스레드 완료, C# `Task.ContinueWith` 와 같은 모양이다.
  *          - 일 람다는 저장소 스레드에서 연결(`IServiceStoreConnection&`)을 받아 돌고, 값으로 잡은 입력만 쓴다(서비스 멤버를 만지지 않는다). 돌려준 값이 완료로 간다.
  *          - 완료 람다는 맡긴 스레드의 `pollCompletions` 에서 `( 결과&, ServiceStoreCompletion )` 또는 `( 결과& )` 로 불린다. 일이 값을 돌려주지 않으면 `( ServiceStoreCompletion )` 또는 `()` 다.
- *          - 맡긴 일을 여기서 세므로 서비스의 `isIdle` · `getOpenWorkCount` 와 종료 대기가 이 수를 본다. 일마다 `_bXPending` 깃발을 손으로 두면 빠뜨리거나 겹쳐 돌았다.
+ *          - 맡긴 일을 여기서 세므로 서비스의 `isIdle` · `getOpenJobCount` 와 종료 대기가 이 수를 본다. 일마다 `_bXPending` 깃발을 손으로 두면 빠뜨리거나 겹쳐 돌았다.
  *          @code
  *              _store.submit( [accountID]( IServiceStoreConnection& connection ) { return ServiceLedger::readBalances( connection, accountID ); },
  *                             [this]( LedgerReadResult& result, ServiceStoreCompletion completion ) { applyBalances( result, completion ); } );
@@ -40,12 +40,12 @@ namespace sw
         bool isOk() const { return _result == ServiceStoreResult::Ok; }
     };
 
-    /** @brief 요청 하나의 저장 함수가 낸 결과(키트 `OnlineOutcome`)와 채운 응답입니다. 요청 일 람다가 돌려주고 완료가 `finish` 로 넘깁니다. */
-    template <typename TOutcome, typename TReply>
+    /** @brief 요청 하나의 저장 함수가 낸 결과(키트 `OnlineServiceResult`)와 채운 응답입니다. 요청 일 람다가 돌려주고 완료가 `finish` 로 넘깁니다. */
+    template <typename TServiceResult, typename TReply>
     struct ServiceStoreCallResult
     {
-        TOutcome _outcome{};
-        TReply   _reply{};
+        TServiceResult _serviceResult{};
+        TReply         _reply{};
     };
 
     /**

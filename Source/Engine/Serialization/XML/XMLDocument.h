@@ -99,7 +99,7 @@ namespace sw
         const utf8* findChildText( const utf8* pName ) const;
 
         /** @brief 비어 있지 않은 자식 텍스트를 dst 에 복사합니다. 복사했으면 true 입니다. */
-        bool takeChildText( const utf8* pName, string& dst ) const;
+        bool tryCopyChildText( const utf8* pName, string& dst ) const;
 
         // ------------------------------------------------------------------------------
         // 1-1) 값 읽기 — 폴백 인자 없이. 폴백을 받던 `getAttributeInt` · `getChildFloat` 같은 읽기는 지웠다(D9).

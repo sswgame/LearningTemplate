@@ -14,6 +14,7 @@
 namespace sw::editor
 {
     class EditorWorkspace;
+    struct EditorAssetMoveEvent;
 
     /**
      * @struct EditorDocumentOpenUtil
@@ -23,7 +24,7 @@ namespace sw::editor
     {
         /**
          * @brief 색인 항목에서 종류가 @p kind 이고 @p accept 가 받는 경로만 골라, 이름순 · 중복 없이 @p outListPath 에 씁니다(이전 내용은 지운다).
-         * @details 후보의 경로가 ImGui ID 이기도 해서 같은 경로가 둘이면 한 줄만 눌린다. @p accept 는 패널의 `acceptsDocumentPath` 이고 포커스 매칭과 같은 판정이다.
+         * @details 후보의 경로가 ImGui ID 이기도 해서 같은 경로가 둘이면 한 줄만 눌린다. @p accept 는 패널의 `canAcceptDocumentPath` 이고 포커스 매칭과 같은 판정이다.
          */
         template <typename TAccept>
         static void collectCandidates( const vector<EditorAssetIndexEntry>& listEntry, const EditorAssetType& kind, TAccept&& accept, vector<string>& outListPath )
@@ -51,5 +52,11 @@ namespace sw::editor
          * @details 포커스를 그대로 두면 다음 그리기가 또 새 문서로 보고 같은 확인 창을 띄워, 취소가 듣지 않는다.
          */
         static void restoreFocusAfterCancel( EditorWorkspace& workspace, const string& loaded );
+
+        /**
+         * @brief 에셋 옮김 @p event 로 연 문서 경로 @p inoutLoaded 와 최근 목록 @p inoutListRecent 를 새 id 로 고칩니다(감사 P0-4).
+         * @return 고친 뒤의 연 문서가 글을 고친 참조 파일이면 true 입니다 — 패널은 깨끗하면 디스크에서 다시 읽는다(미저장 참조자는 계획이 거절했다, `findDirtyReferrerDocument`).
+         */
+        [[nodiscard]] static bool applyAssetMove( const EditorAssetMoveEvent& event, string& inoutLoaded, vector<string>& inoutListRecent );
     };
 } // namespace sw::editor

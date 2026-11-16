@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -54,8 +55,11 @@ namespace sw
         PROPERTY( MaxCount = kMaxEntryCount )
         vector<GimmickStateEntry> _listEntry{};
 
-        /** @brief 오브젝트 이름의 키입니다(대소문자를 가리지 않는 해시). */
-        static uint64 makeOwnerKey( const hashed_string& objectName ) { return static_cast<uint64>( objectName.getHash() ); }
+        /**
+         * @brief 오브젝트 이름의 키입니다(대소문자를 가리지 않는 **64 비트** 해시).
+         * @details 롤백 · 넷 스냅샷에 실리는 키라 32 비트 이름 해시(`hashed_string::getHash`)면 오브젝트 수만 개에서 충돌이 흔하다. 칸은 처음부터 uint64 였다.
+         */
+        static uint64 makeOwnerKey( const hashed_string& objectName ) { return HashUtil::computeStringHash64( objectName.view() ); }
 
         /** @brief 씬의 회로(컴포넌트 레지스트리)에서 지금 상태를 모읍니다. 만들어지지 않은 회로(`isBuilt` 가 거짓)는 건너뜁니다. 기존 내용은 지웁니다. */
         void collect( const GameObjectManager& manager );

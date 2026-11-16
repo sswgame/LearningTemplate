@@ -5,6 +5,7 @@
  *          만 합니다. 그래서 백엔드를 하나 더 붙여도 정책은 그대로입니다.
  */
 #pragma once
+#include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -83,6 +84,11 @@ namespace sw
         atomic<bool>              _bCancelRequested;
         AsyncIOPriority           _priority;
         MemoryTag                 _memoryTag; ///< 요청한 스레드의 태그 — 버퍼 할당과 완료 콜백이 이 태그로 센다
+        /**
+         * @brief `_state` 가 `Done` 이 되면 알리는 이 요청만의 신호입니다(`AsyncReadHandle::waitFor` 가 여기서 잠든다).
+         * @details 큐의 잠금 · 조건 변수를 쓰지 않는다 — 완료마다 모든 대기자(큐를 기다리는 IO 스레드 · 다른 요청의 대기자)를 깨우지 않게. 기다리는 쪽이 없으면 알림은 원자 읽기 하나다.
+         */
+        FutexBroadcast _doneSignal;
         /** @brief 빈 요청입니다. 매니저가 채웁니다. */
         AsyncReadRequest();
     };
@@ -176,8 +182,6 @@ namespace sw
          * @details 전달 태스크는 큐(`this`)를 쥔다. 기한을 두고 포기하지 않는다 — `waitStage( stage, owner )` 가 오래 걸리면 남은 태스크를 주기적으로 남긴다.
          */
         void waitDeliveriesForShutdown() const;
-        /** @brief @p request 가 끝날 때까지 기다립니다. @p timeoutMs 가 0 이면 끝없이. 끝났으면 true 입니다. */
-        bool waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const;
 
     private:
         /** @brief 결과를 정한 요청의 완료를 전달합니다. @p bInline 이면 이 스레드에서, 아니면 태스크 매니저가 있을 때 그 워커에서. */
@@ -186,8 +190,11 @@ namespace sw
         void runDelivery( const shared_ptr<AsyncReadRequest>& pRequest );
 
     private:
-        mutable mutex                                                               _mutex;
-        mutable std::condition_variable_any                                         _cv;
+        mutable mutex _mutex;
+        /** @brief 큐에 요청이 들어왔거나 멈춘다 — `waitPop`(스레드 풀 IO 스레드)만 기다린다. 요청별 완료 대기는 요청의 `_doneSignal` 이다. */
+        mutable std::condition_variable_any _queueCv;
+        /** @brief 끝나지 않은 요청 수가 0 이 됐다 — `waitIdle` 만 기다린다. 0 이 될 때만 알린다. */
+        mutable std::condition_variable_any                                         _idleCv;
         array<deque<shared_ptr<AsyncReadRequest>>, kAsyncIOPriorityCount> _arrQueue SW_GUARDED_BY( _mutex );
         OnceInit<Delegate<void()>>                                                  _wakeDelegate;     ///< 백엔드가 I/O 스레드를 띄우기 전에 한 번 정한다
         TaskManager* const                                                          _pTaskManager;     ///< 생성자에서 받는다(설정의 태스크 매니저)

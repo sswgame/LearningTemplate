@@ -23,7 +23,7 @@ namespace
             (void)action;
             return _bActionCaptured;
         }
-        bool isCursorCaptured() const override { return false; }
+        bool shouldShowCursor() const override { return false; }
     };
 } // namespace
 

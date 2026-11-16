@@ -76,15 +76,18 @@ namespace sw::editor
 
         /**
          * @brief 되돌리기 · 다시 하기 단계를 스택에 올립니다. 대상이 씬 · 파일이면 데이터 단계(`SW_UNDO_STEP` — 리로드를 넘는다), 패널 인스턴스에만 있으면
-         *        코드 단계(`UndoStep::makeTransient` — 기록을 맡길 때 버린다)다.
+         *        코드 단계(`UndoStep::makeTransient` — 기록을 맡길 때 버린다)다. 작업 공간 스택으로 간다(문서 편집은 `recordDocumentText` 가 스택을 받는다).
          */
-        void push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey = {} );
-        /** @brief 문서 변경 구간만 Undo/Redo에 등록합니다. capture가 있으면 현재 본문에서 복원합니다. */
+        void push( UndoStep undo, UndoStep redo, string_view label );
+        /** @brief 같은 단계를 문서의 스택 @p documentStack 에 올립니다(`EditorDocumentPanel::getDocumentCommandStack`, 감사 E-3). 씬을 dirty 로 표시하지 않는다 — 문서 dirty 는 패널이 한다. */
+        void push( UndoStep undo, UndoStep redo, string_view label, CommandStack& documentStack );
+        /**
+         * @brief 문서 편집 하나(상호작용 구간 하나 — `DocumentEditSpan`)를 @p stack 에 한 단계로 기록합니다. 바뀐 구간만 쥐고 되돌릴 때 @p capture 의 지금 글에서 다시 짓는다.
+         * @details 스택은 부르는 쪽이 정한다 — 문서 패널이 하나만 답한다(`EditorDocumentPanel::getDocumentCommandStack`, 감사 P0-2). 예전에는 문서 기록은 전역 스택으로
+         *          가는데 미리보기 창에 포커스가 있으면 Ctrl+Z 는 그 창의 스택으로 가 아무 일도 하지 않았다. 합치기 키는 없다 — 구간이 합치기를 대신한다(P0-1).
+         */
         void recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
-                                 const EditorDocumentRestoreDelegate& restore, string_view coalesceKey = {} );
-        void recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
-                                 const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
-                                 string_view coalesceKey = {} );
+                                 const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture, CommandStack& stack );
     };
 } // namespace sw::editor
 
@@ -92,7 +95,7 @@ namespace sw::editor
 {
     /**
      * @class EditorObjectEditBindings
-     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditNotice`)을 이 모듈이 받게 거는 주인입니다 — 선택을 맞추고 씬을 dirty 로 표시합니다.
+     * @brief 데이터 명령의 알림(`CommandStack::ObjectEditEvent`)을 이 모듈이 받게 거는 주인입니다 — 선택을 맞추고 씬을 dirty 로 표시합니다.
      * @details 스택의 알림 칸은 주인이 하나다(`DelegateSlot`). 이 서브시스템(에디터 범위)이 스택마다의 구독을 쥐고, 범위가 내려가면 함께 놓는다.
      *          에디터가 설 때 전역 스택에, 오브젝트 편집을 기록할 때 그 스택(미리보기 창의 스택 포함)에 겁니다. 모듈 언로드 훑기가 칸을 비웠으면 다시 겁니다 —
      *          리로드 전에 기록한 명령도 새 모듈의 처리기로 알린다. 에디터 컨텍스트 없이 도는 테스트는 커맨드 스택 서비스와 함께 이것을 범위에 둔다.

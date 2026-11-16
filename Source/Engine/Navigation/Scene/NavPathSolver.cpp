@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    void NavPathSolver::prepareBatch( vector<NavPathJob>& inoutListJob, uint32 /*laneCount*/ ) const
+    void NavPathSolver::prepareBatch( vector<NavPathJob>& inoutListJob, uint32 /*chunkCount*/ ) const
     {
         for ( NavPathJob& job : inoutListJob )
         {
@@ -25,7 +25,7 @@ namespace sw
         }
     }
 
-    void NavPathSolver::solve( NavPathJob& inoutJob, uint32 /*laneIndex*/ ) const
+    void NavPathSolver::solve( NavPathJob& inoutJob, uint32 /*chunkIndex*/ ) const
     {
         if ( inoutJob._pNavMesh == nullptr )
         {

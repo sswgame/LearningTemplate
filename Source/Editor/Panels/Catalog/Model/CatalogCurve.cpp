@@ -84,7 +84,7 @@ namespace sw::editor
                 }
             }
 
-            static void walk( const CatalogXMLText& parsed, int32 elementIndex, const string& prefix, vector<CatalogCurve>& outListCurve )
+            static void visit( const CatalogXMLText& parsed, int32 elementIndex, const string& prefix, vector<CatalogCurve>& outListCurve )
             {
                 const CatalogXMLElement& element        = parsed.getElement( elementIndex );
                 bool                     bHasCurveChild = false;
@@ -113,7 +113,7 @@ namespace sw::editor
                         outListCurve.push_back( std::move( curve ) );
                         continue;
                     }
-                    walk( parsed, childIndex, label, outListCurve );
+                    visit( parsed, childIndex, label, outListCurve );
                 }
             }
         };
@@ -128,7 +128,7 @@ namespace sw::editor
         const bool bInvalid = parsed.isParsed() == false || ownerElement < 0 || static_cast<size_t>( ownerElement ) >= parsed.getElements().size();
         if ( bInvalid )
             return;
-        CatalogCurveModelInternal::walk( parsed, ownerElement, string{}, outListCurve );
+        CatalogCurveModelInternal::visit( parsed, ownerElement, string{}, outListCurve );
     }
 
     void CatalogCurve::collectGradients( const vector<CatalogCurve>& listCurve, vector<CatalogGradient>& outListGradient )

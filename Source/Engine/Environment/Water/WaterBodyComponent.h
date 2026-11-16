@@ -107,7 +107,7 @@ namespace sw
         /** @brief 월드 점이 이 물의 수면 아래면 true 를 반환합니다(부력과 물속 판정). @p outDepth 는 수면에서 아래로 측정한 깊이입니다. */
         bool isUnderwater( const float3& worldPosition, float32& outDepth ) const;
         /** @brief 이 물이 덮는 위치(파도 없는 기준면 기준)면 true 를 반환합니다. */
-        bool coversPosition( float32 worldX, float32 worldZ ) const;
+        bool containsPosition( float32 worldX, float32 worldZ ) const;
         /** @brief 파도 값 넷(방향, 파장, 진폭 × 진폭 배율, 가파름)을 반환합니다. 셰이더에 싣는 값과 같습니다. */
         void getWaveVectors( float4 ( &outArrWave )[WaterWaveMath::kMaxWaveCount] ) const;
         /** @brief 지금 파도 시간(초)입니다. */

@@ -23,6 +23,7 @@ namespace
     {
         ValeRules rules;
         rules._listLevelExperience = { 100, 250, 450, 700 };
+        rules._moveSpeed           = 6.0f; // 씬과 같다
         ValePlacement spawn;
         spawn._kind     = ValePlacementKind::Creature;
         spawn._position = float3{ 2.0f, 0.0f, 0.0f };
@@ -146,9 +147,12 @@ SW_TEST_CASE( ValeWorldTest, PartySharesExperience )
     SW_EXPECT_EQUAL( 5, world.findAvatar( leaderID )->_profile._coins );
     SW_EXPECT_EQUAL( 0, world.findAvatar( memberID )->_profile._coins );
 
-    // 나눔 거리 밖으로 간 파티원은 받지 않는다(한 걸음 12 m 씩 걸어 40 m 밖으로).
+    // 나눔 거리 밖으로 간 파티원은 받지 않는다(한 걸음 12 m 씩 걸어 40 m 밖으로). 걸음 사이에는 시간이 흘러야 한다 — 틱 없이 몰아 보낸 걸음은 거절된다(감사 K-1).
     SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 12.0f ) == ValeActionResult::Ok );
+    SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 24.0f ) == ValeActionResult::StepTooLong );
+    world.tick( 12.0f / 6.0f ); // 걷는 속도 6 m/s 로 12 m
     SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 24.0f ) == ValeActionResult::Ok );
+    world.tick( 12.0f / 6.0f );
     SW_EXPECT_TRUE( world.moveAvatar( memberID, 0.0f, 36.0f ) == ValeActionResult::Ok );
     attackUntilDefeated( world, leaderID, kSideCreatureID );
     SW_EXPECT_EQUAL( 90, world.findAvatar( leaderID )->_profile._experience );

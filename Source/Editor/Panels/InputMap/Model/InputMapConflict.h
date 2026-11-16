@@ -33,9 +33,9 @@ namespace sw::editor
         /** @brief @p inputMap 의 충돌을 @p outListConflict 에 담습니다(먼저 비운다). */
         static void collect( const InputMap& inputMap, vector<InputMapConflict>& outListConflict );
         /** @brief @p action 이 낀 충돌이 있으면 true 입니다. */
-        static bool involves( const vector<InputMapConflict>& listConflict, const hashed_string& action );
+        static bool isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action );
         /** @brief @p action 의 바인딩 @p bindIndex 가 낀 충돌이 있으면 true 입니다. */
-        static bool involves( const vector<InputMapConflict>& listConflict, const hashed_string& action, uint32 bindIndex );
+        static bool isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action, uint32 bindIndex );
         /** @brief @p action 이 낀 충돌을 그 액션 쪽에서 본 줄로 @p outListView 에 담습니다(먼저 비운다). */
         static void collectFor( const vector<InputMapConflict>& listConflict, const hashed_string& action, vector<InputMapConflictView>& outListView );
     };

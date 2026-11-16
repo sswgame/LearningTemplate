@@ -123,7 +123,7 @@ namespace sw
             _startUs = MonotonicClock::nowMicroseconds();
         const MonotonicMilliseconds nowMs = getNowMs();
         (void)_pTransport->pollIO( 0 );
-        (void)_endpoint.pump( *this );
+        (void)_endpoint.poll( *this );
         _requestClient.update();
 
         while ( _launchedCount < getBotCount() && kRunStart + computeLaunchMs( _launchedCount ) <= nowMs )

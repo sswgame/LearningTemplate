@@ -1,8 +1,10 @@
 // EconomyReceiptsTest — 결제 저장 규칙과 서비스(메모리 저장소 + 가짜 스토어): 영수증 지급은 거래당 한 번(다른 계정이면 AlreadyRedeemed), 샌드박스 · 모르는 상품 거절, 환불 회수는 빚을 허용하고 한 번만,
-// 지급 전에 온 환불이 지급을 막음, 구매자 대조(외부 로그인 연동 · 계정 토큰 · 묶지 않음), 청약철회는 쓰지 않은 만큼 · 기한 안 · 구매자만 · 환불과 겹치지 않음, 지갑 · 내역, 서비스의 멱등 키 요구 · 원장 보존 검사.
+// 지급 전에 온 환불이 지급을 막음(읽기와 커밋 사이에 끼어든 환불 · 지급도 — 같은 영수증 상태 레코드를 다툰다), 회수 정책 Debt · Unspent, 구매자 대조(외부 로그인 연동 · 계정 토큰 · 묶지 않음), 청약철회는 쓰지 않은 만큼 · 기한 안 · 구매자만 · 환불과 겹치지 않음, 지갑 · 내역, 서비스의 멱등 키 요구 · 원장 보존 검사.
 // 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
@@ -13,6 +15,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
@@ -61,19 +64,26 @@ namespace
         MemoryServiceDatabase _database;
         CurrencyCatalog       _currencies;
         OfferCatalog          _offers;
-        EconomyOutcome        _lastOutcome{}; ///< 마지막 `redeem` · `withdraw` 의 결과이다. 공통 범주면 응답은 뜻이 없다
+        EconomyServiceResult  _lastServiceResult{}; ///< 마지막 `redeem` · `withdraw` 의 결과이다. 공통 범주면 응답은 뜻이 없다
 
         ReceiptFixture()
             : _database{}
             , _currencies{}
             , _offers{}
-            , _lastOutcome{}
+            , _lastServiceResult{}
         {
             SW_EXPECT_TRUE( _currencies.loadFromXMLText( kCurrencyXML, "test" ) );
             SW_EXPECT_TRUE( _offers.loadFromXMLText( kOfferXML, "test" ) );
         }
 
         EconomyRedeemReply redeem( AccountID accountID, string_view transactionID = "tx1", ReceiptStatus status = ReceiptStatus::Valid, string_view productID = "com.x.gem100", bool bSandbox = false, bool bAcceptSandbox = false )
+        {
+            return redeemVia( _database, accountID, transactionID, status, productID, bSandbox, bAcceptSandbox );
+        }
+
+        /** @brief @p connection 으로 지급합니다(읽기와 커밋 사이에 다른 일을 끼우는 연결을 넘길 때). */
+        EconomyRedeemReply redeemVia( IServiceStoreConnection& connection, AccountID accountID, string_view transactionID = "tx1", ReceiptStatus status = ReceiptStatus::Valid,
+                                      string_view productID = "com.x.gem100", bool bSandbox = false, bool bAcceptSandbox = false )
         {
             EconomyRedeemInput input;
             input._receipt._storeName     = "fake";
@@ -85,12 +95,12 @@ namespace
             input._nowMs                  = kNowMs;
             input._bAcceptSandbox         = bAcceptSandbox ? SW_TRUE : SW_FALSE;
             EconomyRedeemReply reply;
-            _lastOutcome = EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
+            _lastServiceResult = EconomyStoreLogic::redeemReceipt( connection, _currencies, _offers, input, reply );
             return reply;
         }
 
         /** @brief 규칙 @p binding 과 답의 구매자 @p storeBuyerID 로 지급합니다. */
-        EconomyOutcome redeemBound( AccountID accountID, ReceiptBuyerBinding binding, string_view storeBuyerID, const IAccountExternalLinks* pLinks, string_view transactionID = "tx1" )
+        EconomyServiceResult redeemBound( AccountID accountID, ReceiptBuyerBinding binding, string_view storeBuyerID, const IAccountExternalLinks* pLinks, string_view transactionID = "tx1" )
         {
             EconomyRedeemInput input;
             input._receipt._storeName                = "fake";
@@ -107,13 +117,19 @@ namespace
             return EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
         }
 
-        EconomyOutcome refund( string_view transactionID = "tx1", vector<EconomyBalanceChange>* pOutListChange = nullptr )
+        EconomyServiceResult refund( string_view transactionID = "tx1", vector<EconomyBalanceChange>* pOutListChange = nullptr )
         {
-            ReceiptRefundNotification notice;
-            notice._storeName     = "fake";
-            notice._transactionID = string( transactionID );
+            return refundVia( _database, EconomyRefundRecoveryMode::Debt, transactionID, pOutListChange );
+        }
+
+        /** @brief @p connection 으로 회수 정책 @p recovery 의 환불을 처리합니다. */
+        EconomyServiceResult refundVia( IServiceStoreConnection& connection, EconomyRefundRecoveryMode recovery, string_view transactionID = "tx1", vector<EconomyBalanceChange>* pOutListChange = nullptr )
+        {
+            ReceiptRefundNotification notification;
+            notification._storeName     = "fake";
+            notification._transactionID = string( transactionID );
             vector<EconomyBalanceChange> listChange;
-            const EconomyOutcome         result = EconomyStoreLogic::revokeRefund( _database, _currencies, notice, kNowMs, listChange );
+            const EconomyServiceResult   result = EconomyStoreLogic::revokeRefund( connection, _currencies, notification, recovery, kNowMs, listChange );
             if ( pOutListChange != nullptr )
                 *pOutListChange = listChange;
             return result;
@@ -128,11 +144,11 @@ namespace
             input._nowMs         = nowMs;
             input._windowMs      = kWindowMs;
             EconomyWithdrawReply reply;
-            _lastOutcome = EconomyStoreLogic::withdrawPurchase( _database, _currencies, input, reply );
+            _lastServiceResult = EconomyStoreLogic::withdrawPurchase( _database, _currencies, input, reply );
             return reply;
         }
 
-        int64 balanceOf( AccountID accountID, string_view assetID = "cur.gem_paid" )
+        int64 getBalanceOf( AccountID accountID, string_view assetID = "cur.gem_paid" )
         {
             LedgerBalance balance;
             SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
@@ -146,9 +162,59 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
             request._journalKey = "test/spend/" + to_string( accountID ) + "/" + to_string( amount );
             request._reason     = "test.spend";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult serviceResult;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, serviceResult ) == LedgerResult::Ok );
         }
+    };
+
+    /**
+     * @brief 첫 커밋 바로 앞에 같은 데이터베이스로 다른 일(지급 또는 환불)을 한 번 끼워 넣는 연결입니다.
+     * @details 메모리 저장소는 호출마다 직렬이라 "읽기와 커밋 사이" 의 경쟁(감사 O-1)이 저절로 나지 않는다. 이 연결이 그 틈을 만든다.
+     */
+    class InterleavingConnection final : public IServiceStoreConnection
+    {
+    public:
+        EconomyServiceResult _cutResult{}; ///< 끼워 넣은 일의 결과
+
+        enum class Cut : uint8
+        {
+            Redeem = 0, ///< 끼우는 일은 kBuyer 의 tx1 지급이다
+            Refund      ///< 끼우는 일은 tx1 환불(Debt)이다
+        };
+
+        InterleavingConnection( ReceiptFixture& rig, Cut cut )
+            : _rig{ rig }
+            , _cut{ cut }
+        {
+        }
+
+        ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override { return _rig._database.readRecord( table, key, outRecord ); }
+        ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord ) override
+        {
+            return _rig._database.listRecords( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord );
+        }
+        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override
+        {
+            if ( _bCutDone == SW_FALSE )
+            {
+                _bCutDone = SW_TRUE;
+                if ( _cut == Cut::Redeem )
+                {
+                    (void)_rig.redeem( kBuyer );
+                    _cutResult = _rig._lastServiceResult;
+                }
+                else
+                {
+                    _cutResult = _rig.refund();
+                }
+            }
+            return _rig._database.commit( transaction, pOutInfo );
+        }
+
+    private:
+        ReceiptFixture& _rig;
+        Cut             _cut;
+        uint8           _bCutDone{ SW_FALSE };
     };
 
     /** @brief 환불 조회 기준 시각을 쓰는 가짜 제공자입니다. 서비스와 주고받은 것을 기록하고, 판단은 `StoreReceiptValidator` 쪽 테스트가 본다. */
@@ -168,7 +234,7 @@ namespace
         }
         void update( UnixMilliseconds now ) override { (void)now; }
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override { (void)outListResult; }
-        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) override { (void)outListNotice; }
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotification ) override { (void)outListNotification; }
         bool usesRefundCursor() const override { return true; }
         void restoreRefundCursor( int64 lastReadMs ) override { _listRestored.push_back( lastReadMs ); }
         bool takeRefundCursor( int64& outLastReadMs ) override
@@ -186,7 +252,7 @@ namespace
     {
     public:
         vector<ReceiptDeliveryTask>     _listAsked{};
-        vector<ReceiptDeliveryResult>   _listOutcome{};
+        vector<ReceiptDeliveryResult>   _listServiceResult{};
         vector<ReceiptValidationResult> _listResult{};
         ReceiptBuyerRule                _buyerRule{};
         string                          _storeBuyerID{};
@@ -214,21 +280,21 @@ namespace
             outListResult.insert( outListResult.end(), _listResult.begin(), _listResult.end() );
             _listResult.clear();
         }
-        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) override { (void)outListNotice; }
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotification ) override { (void)outListNotification; }
         bool usesDeliveryConfirmation() const override { return true; }
         void confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now ) override
         {
             (void)now;
             _listAsked.push_back( task );
         }
-        void pollDeliveryOutcomes( vector<ReceiptDeliveryResult>& outListOutcome ) override
+        void pollDeliveryResults( vector<ReceiptDeliveryResult>& outListServiceResult ) override
         {
-            outListOutcome.insert( outListOutcome.end(), _listOutcome.begin(), _listOutcome.end() );
-            _listOutcome.clear();
+            outListServiceResult.insert( outListServiceResult.end(), _listServiceResult.begin(), _listServiceResult.end() );
+            _listServiceResult.clear();
         }
 
         /** @brief 맡은 알림 @p index 의 결과를 다음 회수에 냅니다. */
-        void answer( size_t index, ReceiptDeliveryStatus status ) { _listOutcome.push_back( ReceiptDeliveryResult{ "fake", _listAsked[index]._recordKey, status } ); }
+        void answer( size_t index, ReceiptDeliveryStatus status ) { _listServiceResult.push_back( ReceiptDeliveryResult{ "fake", _listAsked[index]._recordKey, status } ); }
     };
 
     /** @brief 서비스 답을 받습니다. 원격 클라이언트와 같은 모양이다(공통 범주는 `_errorCode`). */
@@ -239,9 +305,9 @@ namespace
         void onReply( const OnlineResult<EconomyCallReply>& reply ) { _listReply.push_back( reply ); }
 
         /** @brief 받은 답의 결과입니다. 공통 범주면 그 오류입니다. */
-        static EconomyOutcome toOutcome( const OnlineResult<EconomyCallReply>& reply )
+        static EconomyServiceResult toResult( const OnlineResult<EconomyCallReply>& reply )
         {
-            return reply._errorCode != OnlineError::kOk ? EconomyOutcome::fail( reply._errorCode ) : EconomyOutcome{ reply._reply._result };
+            return reply._errorCode != OnlineError::kOk ? EconomyServiceResult::fail( reply._errorCode ) : EconomyServiceResult{ reply._reply._result };
         }
     };
 
@@ -254,7 +320,7 @@ namespace
         ReceiptValidatorRegistry _registry;
         EconomyService           _service;
         EconomyReplySink         _sink;
-        EconomyOutcome           _lastOutcome; ///< 마지막 `call` 의 결과이다
+        EconomyServiceResult     _lastServiceResult; ///< 마지막 `call` 의 결과이다
 
         explicit EconomyServiceFixture( bool bAcceptSandbox = false )
             : _data{}
@@ -263,7 +329,7 @@ namespace
             , _registry{}
             , _service{}
             , _sink{}
-            , _lastOutcome{}
+            , _lastServiceResult{}
         {
             SW_EXPECT_TRUE( _registry.registerValidator( &_validator ) );
             EconomyServiceConfig settings;
@@ -271,6 +337,7 @@ namespace
             settings._pOfferCatalog          = &_data._offers;
             settings._pReceiptRegistry       = &_registry;
             settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
+            settings._refundRecovery         = EconomyRefundRecoveryMode::Debt;
             SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
         }
 
@@ -280,7 +347,7 @@ namespace
             _registry.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -298,11 +365,11 @@ namespace
             call._method     = method;
             call._accountID  = accountID;
             _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
-            pump();
+            poll();
             SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
             const OnlineResult<EconomyCallReply> result = _sink._listReply.empty() ? OnlineResult<EconomyCallReply>{} : _sink._listReply.back();
             _sink._listReply.clear();
-            _lastOutcome = EconomyReplySink::toOutcome( result );
+            _lastServiceResult = EconomyReplySink::toResult( result );
             return result._reply;
         }
 
@@ -340,6 +407,7 @@ namespace
             settings._pReceiptRegistry       = &_registry;
             settings._deliveryScanIntervalMs = 1000;
             settings._deliveryAlarmMarginMs  = 100;
+            settings._refundRecovery         = EconomyRefundRecoveryMode::Debt;
             SW_EXPECT_TRUE( _service.initialize( &store, settings ) );
         }
 
@@ -349,7 +417,7 @@ namespace
             _registry.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -360,7 +428,7 @@ namespace
             }
         }
 
-        EconomyOutcome redeem( AccountID accountID, string_view payload )
+        EconomyServiceResult redeem( AccountID accountID, string_view payload )
         {
             EconomyCall call{ UnixMilliseconds{ _nowMs } };
             call._method            = EconomyMethod::RedeemReceipt::kID;
@@ -368,9 +436,9 @@ namespace
             call._redeem._storeName = "fake";
             call._redeem._payload   = string( payload );
             _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
-            pump();
+            poll();
             SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
-            const EconomyOutcome result = _sink._listReply.empty() ? EconomyOutcome::fail( OnlineError::kUnavailable ) : EconomyReplySink::toOutcome( _sink._listReply.back() );
+            const EconomyServiceResult result = _sink._listReply.empty() ? EconomyServiceResult::fail( OnlineError::kUnavailable ) : EconomyReplySink::toResult( _sink._listReply.back() );
             _sink._listReply.clear();
             return result;
         }
@@ -396,16 +464,92 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
     SW_EXPECT_TRUE( first._bReplayed == SW_FALSE );
     SW_EXPECT_EQUAL( string( "com.x.gem100" ), first._productID );
     SW_EXPECT_EQUAL( size_t( 2 ), first._listBalance.size() );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
-    SW_EXPECT_EQUAL( int64( 10 ), rig.balanceOf( kBuyer, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
 
     const EconomyRedeemReply again = rig.redeem( kBuyer );
     SW_EXPECT_TRUE( again._result == EconomyResult::Ok );
     SW_EXPECT_TRUE( again._bReplayed == SW_TRUE );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 
     SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kOther ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kOther ) );
+}
+
+/**
+ * @brief [EconomyReceiptsTest] 분개 보존 정리 뒤 같은 영수증을 다시 내도 다시 지급하지 않는다(감사 P0-7)
+ * @details 중복 방지가 분개 키 하나였을 때는 보존 정리(401 일)가 분개를 지우면 스토어는 Valid, 분개는 NotFound 라 다시 지급됐다. 쓴 영수증 표(`econ_receipt`)는 지우지 않는다.
+ *          변이: 쓴 영수증 확인을 빼면 다시 낸 지급이 Ok 이고 잔액이 두 배라 진다.
+ */
+SW_TEST_CASE( EconomyReceiptsTest, RedeemStaysSpentAfterTheJournalIsSwept )
+{
+    ReceiptFixture rig;
+    SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+
+    // 401 일 뒤 운영과 같은 분개 쓸기 규칙 — 분개(감사 내역)는 지워지고 공급 합은 이월로 남는다
+    constexpr int64       kDayMs       = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
+    constexpr int64       kRetentionMs = 401 * kDayMs;
+    ServiceTTLRule        rule         = Ledger::makeJournalTTLRule( kRetentionMs );
+    ServiceTTLSweepReport sweepReport;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( rig._database, rule, kNowMs + kRetentionMs, 1000, 1000, sweepReport ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sweepReport._deletedCount > 0 );
+    vector<ServiceRecord> listJournal;
+    SW_REQUIRE_TRUE( rig._database.listRecords( Ledger::getJournalTable(), "", "", 1000, false, listJournal ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( listJournal.empty() );
+
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::AlreadyRedeemed );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+    LedgerAuditReport audit;
+    SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( audit.isBalanced() );
+}
+
+/**
+ * @brief [EconomyReceiptsTest] 구매 → 계정 삭제 → 감사 균형이 맞고 영수증에 계정 id 가 없다. 뒤에 온 환불은 회수 없이 상태만 바꾼다(감사 P0-7)
+ * @details 계정 삭제는 탈퇴 정리(`LoginStoreLogic::purgeAccount`)와 같은 원장 길이다 — 계정 지우기 트랜잭션의 묘비 · 소각 대기, 그 뒤 소각.
+ *          변이: 소각을 빼면 지운 계정의 잔액 레코드가 남고, 영수증에 계정을 다시 담으면 값이 `[판][상태]` 와 달라지고,
+ *          환불의 AccountDeleted 처리를 빼면 환불이 InvalidRequest 로 져 영수증이 환불로 바뀌지 않는다.
+ */
+SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAnonymous )
+{
+    ReceiptFixture rig;
+    SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
+
+    ServiceTransaction deletion;
+    Ledger::stageAccountDeletion( kBuyer, kNowMs + 1, deletion );
+    SW_REQUIRE_TRUE( rig._database.commit( deletion ) == ServiceStoreResult::Ok );
+    int32 burnedCount = 0;
+    SW_REQUIRE_TRUE( Ledger::burnDeletedAccounts( rig._database, kNowMs + 2, 8, burnedCount ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, burnedCount );
+    vector<LedgerBalance> listBalance;
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeAccount( kBuyer ), listBalance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listBalance.empty() );
+    LedgerAuditReport audit;
+    SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( audit.isBalanced() );
+
+    // 영수증은 남지만(다시 내면 AlreadyRedeemed) 값은 [판][상태] 뿐이다
+    vector<ServiceRecord> listMark;
+    SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
+    BitWriter expected;
+    expected.writeVarUint( 2 ); // 판
+    expected.writeVarUint( 1 ); // Redeemed
+    SW_EXPECT_TRUE( listMark[0]._bytes == expected.getBytes() );
+    SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
+
+    // 지운 계정의 환불: 거둘 이가 없어 회수하지 않고 영수증만 환불로 바꾼다 — 지운 계정에 빚 레코드가 생기지 않는다
+    vector<EconomyBalanceChange> listChange;
+    SW_EXPECT_TRUE( rig.refund( "tx1", &listChange ) == EconomyResult::Ok );
+    SW_EXPECT_TRUE( listChange.empty() );
+    listBalance.clear();
+    SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeAccount( kBuyer ), listBalance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listBalance.empty() );
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded );
+    SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( audit.isBalanced() );
 }
 
 /** @brief [EconomyReceiptsTest] 외부 로그인 묶기: 답의 스토어 신원이 그 계정에 연동된 주체여야 받는다 — 남의 주문 번호를 먼저 낸 계정이 받던 결함이다. 진 뒤에도 진짜 구매자는 받는다 */
@@ -414,17 +558,17 @@ SW_TEST_CASE( EconomyReceiptsTest, LinkedLoginBuyerMustMatchTheAccount )
     ReceiptFixture    rig;
     FakeExternalLinks links;
     SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::LinkedLogin, "S1", &links ) == EconomyResult::NotPurchaser );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kOther ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kOther ) );
     SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S2", &links ) == EconomyResult::NotPurchaser );
     SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "", &links ) == EconomyResult::NotPurchaser ); // 답이 구매자를 말하지 않으면 통과시키지 않는다
     SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S1", nullptr ).hasError( OnlineError::kUnavailable ) );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
 
     links._read = ServiceStoreResult::Unavailable;
     SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S1", &links ).hasError( OnlineError::kUnavailable ) );
     links._read = ServiceStoreResult::Ok;
     SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S1", &links ) == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 }
 
 /** @brief [EconomyReceiptsTest] 계정 토큰 묶기: 답의 토큰이 그 계정의 것이어야 받는다(대소문자 무시). 토큰이 없으면 까닭을 말하며 거절한다. 묶지 않는 규칙은 먼저 낸 계정이 받는다 */
@@ -441,10 +585,10 @@ SW_TEST_CASE( EconomyReceiptsTest, AccountTokenBuyerMustMatchTheAccount )
         character = 'a' <= character && character <= 'f' ? static_cast<utf8>( character - 'a' + 'A' ) : character;
     }
     SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::AccountToken, upper, nullptr ) == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 
     SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::None, "", nullptr, "tx2" ) == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kOther ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kOther ) );
 }
 
 /** @brief [EconomyReceiptsTest] 계정 토큰: 애플이 받는 UUID 모양(36 자)이고 구글 상한(64 자) 안이며 계정의 모든 자리가 값을 바꾼다 */
@@ -477,6 +621,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRefusesLinkedBindingWithoutThePort )
     settings._pCurrencyCatalog = &data._currencies;
     settings._pOfferCatalog    = &data._offers;
     settings._pReceiptRegistry = &registry;
+    settings._refundRecovery   = EconomyRefundRecoveryMode::Debt;
     EconomyService refused;
     SW_EXPECT_FALSE( refused.initialize( &store, settings ) );
 
@@ -498,11 +643,11 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemRefusalsGrantNothing )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Valid, "com.x.unknown" )._result == EconomyResult::UnknownProduct );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Valid, "com.x.gem100", true, false )._result == EconomyResult::ReceiptInvalid );
     (void)rig.redeem( kInvalidAccountID );
-    SW_EXPECT_TRUE( rig._lastOutcome.hasError( OnlineError::kInvalidRequest ) );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
 
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Valid, "com.x.gem100", true, true )._result == EconomyResult::Ok ); // 개발 서버는 샌드박스를 받는다
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 }
 
 /** @brief [EconomyReceiptsTest] 지급 응답을 잃어도 같은 거래를 다시 내면 한 번만 받는다 */
@@ -513,7 +658,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemSurvivesLostCommitReply )
     (void)rig.redeem( kBuyer );
     const EconomyRedeemReply retried = rig.redeem( kBuyer );
     SW_EXPECT_TRUE( retried._result == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 }
 
 /** @brief [EconomyReceiptsTest] 환불: 지급한 만큼 회수하고 이미 쓴 부분은 빚이 된다. 두 번 와도 한 번만 회수하고, 환불된 거래는 다시 받을 수 없다 */
@@ -527,12 +672,12 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundRevokesOnceIntoDebt )
     SW_EXPECT_TRUE( rig.refund( "tx1", &listChange ) == EconomyResult::Ok );
     SW_EXPECT_EQUAL( size_t( 2 ), listChange.size() );
     SW_EXPECT_EQUAL( kBuyer, listChange[0]._accountID );
-    SW_EXPECT_EQUAL( int64( -70 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( -70 ), rig.getBalanceOf( kBuyer ) );
 
     SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded );
-    SW_EXPECT_EQUAL( int64( -70 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( -70 ), rig.getBalanceOf( kBuyer ) );
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
-    SW_EXPECT_EQUAL( int64( -70 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( -70 ), rig.getBalanceOf( kBuyer ) );
 }
 
 /** @brief [EconomyReceiptsTest] 지급보다 먼저 온 환불은 표시만 남기고, 뒤에 온 지급을 막는다 */
@@ -541,7 +686,84 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundBeforeRedeemBlocksIt )
     ReceiptFixture rig;
     SW_EXPECT_TRUE( rig.refund() == EconomyResult::Ok );
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+}
+
+/**
+ * @brief [EconomyReceiptsTest] 지급이 상태를 읽은 뒤 커밋 전에 환불이 끼어들면 지급이 진다 — 환불 표시와 지급이 같은 영수증 레코드를 커밋 조건으로 다툰다(감사 O-1)
+ * @details 변이: 지급 커밋의 "없어야 함" 조건을 빼면 끼어든 환불 표시 위로 지급이 커밋되어 잔액이 100 이고 진다.
+ */
+SW_TEST_CASE( EconomyReceiptsTest, RefundBetweenReadAndCommitRefusesTheGrant )
+{
+    ReceiptFixture         rig;
+    InterleavingConnection cut( rig, InterleavingConnection::Cut::Refund );
+    SW_EXPECT_TRUE( rig.redeemVia( cut, kBuyer )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_TRUE( cut._cutResult == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded ); // 같은 환불을 다시 보내도 멱등이다
+}
+
+/**
+ * @brief [EconomyReceiptsTest] 환불이 "지급 전" 으로 읽은 뒤 커밋 전에 지급이 끼어들면 환불은 다시 읽어 지급을 회수하고 표시한다(감사 O-1)
+ * @details 변이: 지급 전 환불의 "없어야 함" 조건을 빼면 표시만 덮어쓰고 회수하지 않아 잔액이 100 으로 남아 진다.
+ */
+SW_TEST_CASE( EconomyReceiptsTest, GrantBetweenReadAndCommitIsRevokedByTheRefund )
+{
+    ReceiptFixture               rig;
+    InterleavingConnection       cut( rig, InterleavingConnection::Cut::Redeem );
+    vector<EconomyBalanceChange> listChange;
+    SW_EXPECT_TRUE( rig.refundVia( cut, EconomyRefundRecoveryMode::Debt, "tx1", &listChange ) == EconomyResult::Ok );
+    SW_EXPECT_TRUE( cut._cutResult == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( size_t( 2 ), listChange.size() );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+    LedgerAuditReport audit;
+    SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( audit.isBalanced() );
+}
+
+/** @brief [EconomyReceiptsTest] 회수 정책 Unspent: 남은 잔액 안에서만 회수해 빚을 만들지 않고, 다시 온 환불은 멱등이며 환불된 거래는 다시 받을 수 없다 */
+SW_TEST_CASE( EconomyReceiptsTest, UnspentRecoveryTakesOnlyWhatIsLeft )
+{
+    ReceiptFixture rig;
+    SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    rig.spend( kBuyer, 70 );
+    rig.spend( kBuyer, 10, "cur.gold" );
+
+    vector<EconomyBalanceChange> listChange;
+    SW_EXPECT_TRUE( rig.refundVia( rig._database, EconomyRefundRecoveryMode::Unspent, "tx1", &listChange ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( size_t( 1 ), listChange.size() ); // 금은 다 썼으므로 보석만 움직인다
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
+    SW_EXPECT_TRUE( rig.refundVia( rig._database, EconomyRefundRecoveryMode::Unspent ) == EconomyResult::AlreadyRefunded );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 영수증 상태 레코드가 깨지면 지급 · 환불 · 철회 모두 오류 로그와 Unavailable 이고 아무것도 움직이지 않는다 */
+SW_TEST_CASE( EconomyReceiptsTest, UnreadableReceiptRecordHoldsTheTransaction )
+{
+    SW_EXPECT_LOG( "EconomyStoreLogic.ReceiptRecordUnreadable" );
+    ReceiptFixture rig;
+    SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    vector<ServiceRecord> listMark;
+    SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
+    ServiceTransaction broken;
+    broken.put( EconomyStoreLogic::getReceiptTable(), listMark[0]._key, vector<uint8>{ 9 } );
+    SW_REQUIRE_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
+
+    SW_EXPECT_TRUE( rig.refund().hasError( OnlineError::kUnavailable ) );
+    (void)rig.redeem( kBuyer );
+    SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kUnavailable ) );
+    (void)rig.withdraw( kBuyer );
+    SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kUnavailable ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 }
 
 /** @brief [EconomyReceiptsTest] 환불 저장소 실패는 Unavailable 이고 스토어가 다시 보내면 한 번만 회수한다 */
@@ -551,9 +773,9 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundRetriesAfterStoreFailure )
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.refund().hasError( OnlineError::kUnavailable ) );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
     SW_EXPECT_TRUE( rig.refund() == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
 
     rig._database.armFault( ServiceStoreFault::RejectRead );
     SW_EXPECT_TRUE( rig.refund( "tx2" ).hasError( OnlineError::kUnavailable ) );
@@ -570,12 +792,12 @@ SW_TEST_CASE( EconomyReceiptsTest, WithdrawTakesBackOnlyUnused )
     SW_EXPECT_TRUE( withdrawn._result == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 2 ), withdrawn._listWithdrawn.size() );
     SW_EXPECT_EQUAL( int64( 30 ), withdrawn._listWithdrawn[0]._amount + withdrawn._listWithdrawn[1]._amount - 10 );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer, "cur.gold" ) );
 
     SW_EXPECT_TRUE( rig.withdraw( kBuyer )._result == EconomyResult::AlreadyRefunded );
     SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded );
-    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kBuyer ) );
 }
 
 /** @brief [EconomyReceiptsTest] 청약철회 거절: 다른 계정 · 없는 거래는 NotPurchaser, 기한이 지나면 WithdrawalExpired, 다 썼으면 NothingToWithdraw 다 */
@@ -586,9 +808,9 @@ SW_TEST_CASE( EconomyReceiptsTest, WithdrawRefusals )
     SW_EXPECT_TRUE( rig.withdraw( kOther )._result == EconomyResult::NotPurchaser );
     SW_EXPECT_TRUE( rig.withdraw( kBuyer, kNowMs, "tx-none" )._result == EconomyResult::NotPurchaser );
     (void)rig.withdraw( kInvalidAccountID );
-    SW_EXPECT_TRUE( rig._lastOutcome.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.withdraw( kBuyer, kNowMs + kWindowMs + 1 )._result == EconomyResult::WithdrawalExpired );
-    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kBuyer ) );
 
     rig.spend( kBuyer, 100 );
     rig.spend( kBuyer, 10, "cur.gold" );
@@ -629,7 +851,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRedeemsThroughTheValidator )
     EconomyServiceFixture  rig;
     const EconomyCallReply redeemed = rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" );
     SW_EXPECT_TRUE( redeemed._result == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), rig._data.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), rig._data.getBalanceOf( kBuyer ) );
 
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "not a receipt" )._result == EconomyResult::ReceiptInvalid );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx2|sandbox" )._result == EconomyResult::ReceiptInvalid );
@@ -642,9 +864,9 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRedeemsThroughTheValidator )
     SW_EXPECT_TRUE( rig.call( EconomyMethod::RedeemReceipt::kID, kBuyer, &other )._result == EconomyResult::ReceiptInvalid );
 
     (void)rig.call( EconomyMethod::Purchase::kID, kBuyer );
-    SW_EXPECT_TRUE( rig._lastOutcome.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kInvalidRequest ) );
     (void)rig.call( EconomyMethod::GetWallet::kID, kInvalidAccountID );
-    SW_EXPECT_TRUE( rig._lastOutcome.hasError( OnlineError::kUnauthenticated ) );
+    SW_EXPECT_TRUE( rig._lastServiceResult.hasError( OnlineError::kUnauthenticated ) );
     SW_EXPECT_EQUAL( size_t( 2 ), rig.call( EconomyMethod::GetWallet::kID, kBuyer )._listBalance.size() );
 }
 
@@ -655,8 +877,8 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRevokesPushedRefunds )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
     rig._validator.pushRefund( "tx1", kNowMs );
     rig._validator.pushRefund( "tx1", kNowMs ); // 스토어는 다시 보낼 수 있다
-    rig.pump();
-    SW_EXPECT_EQUAL( int64( 0 ), rig._data.balanceOf( kBuyer ) );
+    rig.poll();
+    SW_EXPECT_EQUAL( int64( 0 ), rig._data.getBalanceOf( kBuyer ) );
 }
 
 /** @brief [EconomyReceiptsTest] 원장 보존 검사: 지급 · 사용 · 환불 뒤에도 잔액 합이 발행 - 소각과 맞는다(환불의 빚도 포함) */
@@ -666,9 +888,9 @@ SW_TEST_CASE( EconomyReceiptsTest, LedgerAuditStaysBalanced )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
     rig._data.spend( kBuyer, 70 );
     rig._validator.pushRefund( "tx1", kNowMs );
-    rig.pump();
+    rig.poll();
     rig._service.requestLedgerAudit();
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._service.wasLastAuditBalanced() );
 }
 
@@ -679,14 +901,14 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryIsConfirmedAfterTheGrant )
     MemoryServiceStore     store{ &data._database };
     DeliveryServiceFixture rig( data, store );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), data.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), data.getBalanceOf( kBuyer ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
     SW_EXPECT_EQUAL( string( "key.tx1" ), rig._validator._listAsked[0]._deliveryKey );
     SW_EXPECT_EQUAL( string( "fake" ), rig._validator._listAsked[0]._storeName );
     SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
 
     rig._validator.answer( 0, ReceiptDeliveryStatus::Confirmed );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
 }
 
@@ -696,13 +918,13 @@ SW_TEST_CASE( EconomyReceiptsTest, FailedGrantIsNotConfirmed )
     ReceiptFixture         data;
     MemoryServiceStore     store{ &data._database };
     DeliveryServiceFixture rig( data, store );
-    rig.pump(); // 기동 직후의 훑기를 먼저 끝낸다
+    rig.poll(); // 기동 직후의 훑기를 먼저 끝낸다
 
     data._database.armFault( ServiceStoreFault::RejectCommit );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig._validator._listAsked.empty() );
     SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
-    SW_EXPECT_EQUAL( int64( 0 ), data.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), data.getBalanceOf( kBuyer ) );
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
 
@@ -726,19 +948,19 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryRetriesUntilAnswered )
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
 
     rig._nowMs += 1000;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() ); // 아직 날아가는 중이다
 
     rig._validator.answer( 0, ReceiptDeliveryStatus::Retry );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() ); // 간격 전이다
 
     rig._nowMs += 1000;
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
     rig._validator.answer( 1, ReceiptDeliveryStatus::Refused );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
 }
 
@@ -752,7 +974,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliverySurvivesARestart )
         SW_EXPECT_TRUE( before.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     }
     DeliveryServiceFixture after( data, store );
-    after.pump();
+    after.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), after._validator._listAsked.size() );
     SW_EXPECT_EQUAL( string( "key.tx1" ), after._validator._listAsked[0]._deliveryKey );
     SW_EXPECT_EQUAL( kFarDeadlineMs, after._validator._listAsked[0]._deadlineMs );
@@ -767,11 +989,11 @@ SW_TEST_CASE( EconomyReceiptsTest, ReplayedGrantIsConfirmedAgain )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
     rig._validator.answer( 0, ReceiptDeliveryStatus::Confirmed );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
 
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), data.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 100 ), data.getBalanceOf( kBuyer ) );
     SW_EXPECT_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
     SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
 }
@@ -787,11 +1009,11 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryNearTheDeadlineAlarmsOnce )
     SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
     rig._validator.answer( 0, ReceiptDeliveryStatus::Retry );
     rig._nowMs += 1000; // 기한이 경고 폭(100) 안으로 왔다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
     rig._validator.answer( 1, ReceiptDeliveryStatus::Retry );
     rig._nowMs += 1000;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( size_t( 3 ), rig._validator._listAsked.size() ); // 기한이 지나도 스토어가 거절할 때까지 보낸다
 }
 
@@ -829,9 +1051,10 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
         settings._pCurrencyCatalog = &data._currencies;
         settings._pOfferCatalog    = &data._offers;
         settings._pReceiptRegistry = &registry;
+        settings._refundRecovery   = EconomyRefundRecoveryMode::Debt;
         return settings;
     };
-    const auto pump = [&store]( EconomyService& service, int64 nowMs )
+    const auto poll = [&store]( EconomyService& service, int64 nowMs )
     {
         for ( int32 round = 0; round < 4; ++round )
         {
@@ -847,11 +1070,11 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
         SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
         EconomyService service;
         SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
-        pump( service, kNowMs );
+        poll( service, kNowMs );
         SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() );
         SW_EXPECT_EQUAL( int64( 0 ), validator._listRestored[0] ); // 첫 기동이라 기준이 없다
         validator._movedMs = kNowMs + 5;
-        pump( service, kNowMs );
+        poll( service, kNowMs );
         service.shutdown();
     }
     CursorRecordingValidator validator;
@@ -859,7 +1082,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
     SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
     EconomyService service;
     SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
-    pump( service, kNowMs + 100 );
+    poll( service, kNowMs + 100 );
     SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() ); // 한 번만 넘긴다
     SW_EXPECT_EQUAL( kNowMs + 5, validator._listRestored[0] );
     service.shutdown();
@@ -879,6 +1102,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
     settings._pOfferCatalog       = &data._offers;
     settings._pReceiptRegistry    = &registry;
     settings._refundCursorRetryMs = 1000;
+    settings._refundRecovery      = EconomyRefundRecoveryMode::Debt;
     EconomyService service;
     SW_EXPECT_TRUE( service.initialize( &store, settings ) );
 
@@ -919,10 +1143,18 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorRecord )
     SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "apple", lastReadMs ) == ServiceStoreResult::Invalid );
 }
 
-/** @brief [EconomyReceiptsTest] 시작: 저장소 · 카탈로그가 없으면 서지 않는다 */
+/** @brief [EconomyReceiptsTest] 시작: 저장소 · 카탈로그가 없거나 환불 회수 정책을 정하지 않으면 서지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, ServiceNeedsDependencies )
 {
     SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsStoreBoth" );
+    SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsRefundRecovery" );
     EconomyService service;
     SW_EXPECT_FALSE( service.initialize( nullptr, EconomyServiceConfig{} ) );
+
+    ReceiptFixture       data;
+    MemoryServiceStore   store{ &data._database };
+    EconomyServiceConfig settings;
+    settings._pCurrencyCatalog = &data._currencies;
+    settings._pOfferCatalog    = &data._offers;
+    SW_EXPECT_FALSE( service.initialize( &store, settings ) ); // 회수 정책은 코드 기본값이 없다 — 설정 `_refundRecovery` 가 고른다
 }

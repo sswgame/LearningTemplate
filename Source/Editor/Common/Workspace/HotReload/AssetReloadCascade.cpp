@@ -16,7 +16,7 @@ namespace sw::editor
     {
         outListOrder.clear();
         // 0 번이 바뀐 에셋이고, 나머지는 그것을 (사슬로) 펼쳐 넣는 참조자다. 방문 집합이 같은 참조자를 두 번 넣지 않고 순환에서도 끝나게 한다.
-        vector<string>                listNode{ FileUtil::normalizePath( changedID ) };
+        vector<string>                listNode{ FileUtil::normalizePath( changedID ).str() };
         unordered_map<string, uint32> mapNodeIndex{
             { listNode[0], 0u }
         };

@@ -23,6 +23,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -302,7 +303,7 @@ SW_TEST_CASE( DataStructureTest, SpscQueueBasicAndConcurrent )
     SW_EXPECT_EQUAL( 200, val2 );
     SW_EXPECT_TRUE( queue.empty() );
 
-    sw::thread producer( [&queue]()
+    sw::thread producer( ThreadTestAccess::getKey(), [&queue]()
     {
         for ( int32 itemIndex = 0; itemIndex < 1000; ++itemIndex )
         {
@@ -313,7 +314,7 @@ SW_TEST_CASE( DataStructureTest, SpscQueueBasicAndConcurrent )
         }
     } );
 
-    sw::thread consumer( [&queue]()
+    sw::thread consumer( ThreadTestAccess::getKey(), [&queue]()
     {
         int32 receivedCount{ 0 };
         while ( receivedCount < 1000 )
@@ -381,7 +382,7 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMultiThread )
     sw::vector<sw::thread> producers;
     for ( int32 producerIndex = 0; producerIndex < kNumProducers; ++producerIndex )
     {
-        producers.emplace_back( [&queue, producerIndex]()
+        producers.emplace_back( ThreadTestAccess::getKey(), [&queue, producerIndex]()
         {
             for ( int32 itemIndex = 0; itemIndex < kItemsPerThread; ++itemIndex )
             {
@@ -396,7 +397,7 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMultiThread )
     sw::vector<sw::thread> consumers;
     for ( int32 consumerIndex = 0; consumerIndex < kNumConsumers; ++consumerIndex )
     {
-        consumers.emplace_back( [&queue, &totalSumReceived]()
+        consumers.emplace_back( ThreadTestAccess::getKey(), [&queue, &totalSumReceived]()
         {
             int32 count{ 0 };
             int32 target = ( kNumProducers * kItemsPerThread ) / kNumConsumers;
@@ -641,8 +642,8 @@ SW_TEST_CASE( DataStructureTest, SpinLockMutualExclusion )
 
     for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {
-        listWorkers.emplace_back(
-            [&]()
+        listWorkers.emplace_back( ThreadTestAccess::getKey(),
+                                  [&]()
         {
             for ( int32 iterIndex = 0; iterIndex < kIterations; ++iterIndex )
             {
@@ -714,8 +715,8 @@ SW_TEST_CASE( DataStructureTest, WorkStealingDequeMultiThreadStress )
     listStealers.reserve( kStealCount );
     for ( int32 stealerIndex = 0; stealerIndex < kStealCount; ++stealerIndex )
     {
-        listStealers.emplace_back(
-            [&]()
+        listStealers.emplace_back( ThreadTestAccess::getKey(),
+                                   [&]()
         {
             int32 item = 0;
             while ( bProducerDone.load( std::memory_order_acquire ) == false || deque.steal( item ) )
@@ -830,7 +831,7 @@ SW_TEST_CASE( DataStructureTest, SpscQueueStress )
     bool              bOrderPreserved = true;
 
     // Consumer 스레드
-    sw::thread consumer( [&queue, &bProducerDone, &sumConsumed, &countConsumed, &bOrderPreserved]()
+    sw::thread consumer( ThreadTestAccess::getKey(), [&queue, &bProducerDone, &sumConsumed, &countConsumed, &bOrderPreserved]()
     {
         int32 expectedNext = 1;
         int32 item         = 0;
@@ -889,7 +890,7 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
     listConsumer.reserve( kConsumers );
     for ( int32 consumerIndex = 0; consumerIndex < kConsumers; ++consumerIndex )
     {
-        listConsumer.emplace_back( [&queue, &activeProducers, &sumConsumed, &countConsumed]()
+        listConsumer.emplace_back( ThreadTestAccess::getKey(), [&queue, &activeProducers, &sumConsumed, &countConsumed]()
         {
             int32 item = 0;
             while ( activeProducers.load( std::memory_order_acquire ) > 0 || queue.empty() == false )
@@ -919,7 +920,7 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
             expectedSum += ( baseVal + index );
         }
 
-        listProducer.emplace_back( [&queue, &activeProducers, baseVal]()
+        listProducer.emplace_back( ThreadTestAccess::getKey(), [&queue, &activeProducers, baseVal]()
         {
             for ( int32 index = 1; index <= kItemsPerProducer; ++index )
             {

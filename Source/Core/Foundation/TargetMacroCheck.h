@@ -19,11 +19,11 @@
 // ------------------------------------------------------------------------------
 
 #if ( defined( SW_PLATFORM_WINDOWS ) + defined( SW_PLATFORM_LINUX ) + defined( SW_PLATFORM_ANDROID ) + defined( SW_PLATFORM_WEB ) ) != 1
-    #error "Exactly one of SW_PLATFORM_WINDOWS / SW_PLATFORM_LINUX / SW_PLATFORM_ANDROID / SW_PLATFORM_WEB must be defined (cmake/Modules/Platform via sw_global_options)."
+    #error "Exactly one of SW_PLATFORM_WINDOWS / SW_PLATFORM_LINUX / SW_PLATFORM_ANDROID / SW_PLATFORM_WEB must be defined (cmake/Toolchain/Platform via sw_global_options)."
 #endif
 
 #if ( defined( SW_PLATFORM_WINDOWS ) + defined( SW_PLATFORM_POSIX ) ) != 1
-    #error "SW_PLATFORM_POSIX must be defined exactly on the non-Windows platforms (cmake/Modules/Platform via sw_global_options)."
+    #error "SW_PLATFORM_POSIX must be defined exactly on the non-Windows platforms (cmake/Toolchain/Platform via sw_global_options)."
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS ) && !defined( _WIN32 )
@@ -50,7 +50,7 @@
 // 2) 아키텍처 — x64 / arm64 / wasm32(웹) 중 정확히 하나
 // ------------------------------------------------------------------------------
 #if ( defined( SW_X64 ) + defined( SW_ARM64 ) + defined( SW_WASM32 ) ) != 1
-    #error "Exactly one of SW_X64 / SW_ARM64 / SW_WASM32 must be defined (cmake/Modules/Architecture via sw_global_options)."
+    #error "Exactly one of SW_X64 / SW_ARM64 / SW_WASM32 must be defined (cmake/Toolchain/Architecture via sw_global_options)."
 #endif
 
 #if defined( SW_WASM32 ) && !( defined( __wasm32__ ) && defined( SW_PLATFORM_WEB ) )
@@ -69,7 +69,7 @@
 // 3) 컴파일러 — Clang(clang-cl 포함) / MSVC(cl.exe) / GCC 중 정확히 하나
 // ------------------------------------------------------------------------------
 #if ( defined( SW_COMPILER_CLANG ) + defined( SW_COMPILER_MSVC ) + defined( SW_COMPILER_GCC ) ) != 1
-    #error "Exactly one of SW_COMPILER_CLANG / SW_COMPILER_MSVC / SW_COMPILER_GCC must be defined (cmake/Modules/Compiler via sw_global_options)."
+    #error "Exactly one of SW_COMPILER_CLANG / SW_COMPILER_MSVC / SW_COMPILER_GCC must be defined (cmake/Toolchain/Compiler via sw_global_options)."
 #endif
 
 #if defined( SW_COMPILER_CLANG ) && !defined( __clang__ )

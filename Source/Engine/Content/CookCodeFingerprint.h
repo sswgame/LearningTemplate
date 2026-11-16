@@ -1,6 +1,6 @@
 /**
  * @file CookCodeFingerprint.h
- * @brief 쿠커 코드의 내용 지문입니다. 빌드가 소스를 해시해 만듭니다(`Scripts/generate/CookCodeFingerprint.py`, 입력 목록 `Config/Dev/CookCodeInputs.json`).
+ * @brief 쿠커 코드의 내용 지문입니다. 빌드가 소스를 해시해 만듭니다(`Scripts/generate/cook_code_fingerprint.py`, 입력 목록 `Config/Dev/CookCodeInputs.json`).
  * @details 쿠킹 재사용 판단에 쿠커 번호를 사람이 올리지 않는다 — 언리얼 DDC 의 손 버전(`DDC_VER`)은 올리는 것을 잊으면 옛 결과를 쓴다. 코드가 바뀌면 지문이 바뀌어 저절로 다시 굽는다.
  */
 #pragma once

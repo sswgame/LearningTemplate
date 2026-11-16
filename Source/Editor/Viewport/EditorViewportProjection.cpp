@@ -2,6 +2,8 @@
 
 #include "Editor/Viewport/EditorViewportProjection.h"
 
+#include "Core/Math/AABB.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
 #include "Core/Math/VectorMath.h"
@@ -104,5 +106,37 @@ namespace sw::editor
         outScreenA = toScreen( clipA, canvasPos, canvasSize );
         outScreenB = toScreen( clipB, canvasPos, canvasSize );
         return true;
+    }
+
+    bool EditorViewportProjectionUtil::projectBoxRect( const float4x4& viewProj, const AABB& box, const float2& canvasPos, const float2& canvasSize, float2& outMin,
+                                                       float2& outMax )
+    {
+        constexpr uint32 kCornerCount = 8; // 비트 0 · 1 · 2 가 X · Y · Z 의 최소 · 최대
+        constexpr uint32 kAxisCount   = 3;
+        bool             bAny         = false;
+        outMin                        = float2{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
+        outMax                        = float2{ -MathUtil::kMaxFloat, -MathUtil::kMaxFloat };
+        for ( uint32 corner = 0; corner < kCornerCount; ++corner )
+        {
+            for ( uint32 axis = 0; axis < kAxisCount; ++axis )
+            {
+                const uint32 axisBit = 1u << axis;
+                if ( ( corner & axisBit ) != 0 )
+                    continue; // 모서리 하나를 그 축의 최소 쪽 끝에서만 센다(열두 개)
+                const uint32 other = corner | axisBit;
+                const float3 cornerA{ ( corner & 1u ) != 0 ? box._max._x : box._min._x, ( corner & 2u ) != 0 ? box._max._y : box._min._y,
+                                      ( corner & 4u ) != 0 ? box._max._z : box._min._z };
+                const float3 cornerB{ ( other & 1u ) != 0 ? box._max._x : box._min._x, ( other & 2u ) != 0 ? box._max._y : box._min._y,
+                                      ( other & 4u ) != 0 ? box._max._z : box._min._z };
+                ImVec2 screenA{};
+                ImVec2 screenB{};
+                if ( projectSegment( viewProj, cornerA, cornerB, canvasPos, canvasSize, screenA, screenB ) == false )
+                    continue;
+                outMin = float2{ MathUtil::min( outMin._x, MathUtil::min( screenA.x, screenB.x ) ), MathUtil::min( outMin._y, MathUtil::min( screenA.y, screenB.y ) ) };
+                outMax = float2{ MathUtil::max( outMax._x, MathUtil::max( screenA.x, screenB.x ) ), MathUtil::max( outMax._y, MathUtil::max( screenA.y, screenB.y ) ) };
+                bAny   = true;
+            }
+        }
+        return bAny;
     }
 } // namespace sw::editor

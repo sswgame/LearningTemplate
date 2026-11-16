@@ -23,9 +23,9 @@ namespace sw::editor
     {
     public:
         /** @brief `attachChildPrefabInstances` 의 결과입니다. `_rejectReason` 이 비어 있지 않으면 거절해서 아무것도 옮기지 않았습니다. */
-        struct AdoptResult
+        struct AttachResult
         {
-            uint32 _adoptedCount{ 0 };
+            uint32 _attachedCount{ 0 };
             string _rejectReason;
 
             bool isRejected() const { return _rejectReason.empty() == false; }
@@ -59,9 +59,9 @@ namespace sw::editor
          *          프리팹에 실리지 않는다(유니티: 프리팹 인스턴스를 자식으로 둔 계층으로 프리팹을 만들면 중첩 프리팹이 된다). 옮긴 자식은 씬이
          *          엔티티로 저장하지 않고 루트 인스턴스가 다시 스폰하므로 작업 공간의 인스턴스 경로를 지운다. 루트의 바로 아래와, 옮긴 자식 아래로만
          *          내려간다(부품의 부모는 루트나 다른 부품이어야 한다). 되돌리기는 남기지 않는다 — 기존 프리팹에 쓰는 `applyToPrefab` 은 부르지 않는다.
-         *          옮길 오브젝트를 올라와 있는 씬의 `SceneObjectReference` 가 가리키면 아무것도 옮기지 않고 거절한다(`AdoptResult::_rejectReason` 에 어느 참조인지 적고 로그를 남긴다) —
+         *          옮길 오브젝트를 올라와 있는 씬의 `SceneObjectReference` 가 가리키면 아무것도 옮기지 않고 거절한다(`AttachResult::_rejectReason` 에 어느 참조인지 적고 로그를 남긴다) —
          *          옮기면 그 파일 id 가 다음 로드에 사라져 참조가 끊긴다. 참조를 먼저 지우거나 다른 오브젝트로 바꾼 뒤 다시 만든다.
          */
-        [[nodiscard]] static AdoptResult attachChildPrefabInstances( GameObject* pRoot );
+        [[nodiscard]] static AttachResult attachChildPrefabInstances( GameObject* pRoot );
     };
 } // namespace sw::editor

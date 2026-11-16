@@ -266,7 +266,7 @@ namespace sw
         return true;
     }
 
-    void UIStyleTransitionState::onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields, uint32 oldStates, uint32 newStates )
+    void UIStyleTransitionState::onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedProperties, uint32 oldStates, uint32 newStates )
     {
         using Internal = UIStyleTransitionInternal;
         // 처음 맞추는 위젯, 스타일이 사라진 경우, 움직임 줄이기는 전환 없이 바로 바꾼다.
@@ -287,7 +287,7 @@ namespace sw
         for ( uint32 index = 0; index < static_cast<uint32>( UIStyleField::Count ); ++index )
         {
             const UIStyleField field = static_cast<UIStyleField>( index );
-            if ( ( changedFields & UIStyleFieldTable::makeBit( field ) ) == 0 )
+            if ( ( changedProperties & UIStyleFieldTable::makeBit( field ) ) == 0 )
                 continue;
             // 바뀐 필드: 기존 채널은 지금 값을 넘겨주고 빠진다.
             float32                         arrFrom[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -327,8 +327,8 @@ namespace sw
                 iter = tree._uniqueStyleTransition.erase( iter );
                 continue;
             }
-            UIStyleTransitionState& state         = *pWidget->_styleTransition;
-            uint32                  changedFields = 0;
+            UIStyleTransitionState& state             = *pWidget->_styleTransition;
+            uint32                  changedProperties = 0;
             for ( UIStyleTransitionState::Channel& channel : state._listChannel )
             {
                 channel._elapsed = bReduceMotion ? channel._delay + channel._duration : channel._elapsed + step;
@@ -338,11 +338,11 @@ namespace sw
                 else
                     Internal::evaluateChannel( channel, arrValue );
                 UIStyleFieldTable::writeComponents( state._shown._value, channel._field, arrValue );
-                changedFields |= UIStyleFieldTable::makeBit( channel._field );
+                changedProperties |= UIStyleFieldTable::makeBit( channel._field );
             }
             VectorUtil::removeIf( state._listChannel, Internal::isFinished ); // 끝난 채널은 한 번에 지운다(남은 순서는 그대로)
             ++updatedCount;
-            pWidget->invalidate( UIStylePass::makeDirtyReason( changedFields ) );
+            pWidget->invalidate( UIStylePass::makeDirtyReason( changedProperties ) );
             if ( state._listChannel.empty() )
             {
                 // 끝: 보이는 값이 목표와 같으므로 위젯은 다시 (공유하는) 계산된 스타일을 읽는다.

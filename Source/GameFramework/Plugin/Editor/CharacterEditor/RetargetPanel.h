@@ -72,7 +72,7 @@ namespace sw::editor
             string _target{};
         };
 
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         string              captureDocumentText() const override { return _profile.toXML(); }
         void                applyDocumentText( string_view text ) override;

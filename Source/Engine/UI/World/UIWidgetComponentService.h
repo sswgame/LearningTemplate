@@ -104,7 +104,7 @@ namespace sw
         Subscription             _pointerSubscription;      ///< 포인터 처리 뒤 칸(`UISystem::onPointerProcessed`) 구독
         Subscription             _beforeLayoutSubscription; ///< 레이아웃 앞 칸(`UISystem::onUpdateBeforeLayout`) 구독
         Subscription             _afterPaintSubscription;   ///< 그리기 뒤 칸(`UISystem::onUpdateAfterPaint`) 구독
-    };
 
-    SW_SERVICE_SLOT( UIWidgetComponentService, Required );
+        SW_SERVICE_SLOT( UIWidgetComponentService, Required );
+    };
 } // namespace sw

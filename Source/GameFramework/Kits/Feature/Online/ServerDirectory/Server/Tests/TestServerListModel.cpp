@@ -125,11 +125,11 @@ namespace
             const int32 clientIndex = _rig._clients.connect( _rig._server._port, { &_directoryClient } );
             _directoryClient.initialize( &_rig._clients.getClient( clientIndex ) );
             _model.initialize( &_directoryClient );
-            pump();
+            poll();
             _bReady = _rig._clients.getClient( clientIndex ).isReady();
         }
 
-        void pump() { test::updateAll( { &_rig._server }, _rig._clients, 0 ); }
+        void poll() { test::updateAll( { &_rig._server }, _rig._clients, 0 ); }
     };
 
     bool isSameEntry( const ServerListEntry& left, const ServerListEntry& right )
@@ -195,7 +195,7 @@ SW_TEST_CASE( ServerListModelTest, AnsweredListIsLoaded )
     SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loading );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._model.getRevision() );
-    rig.pump();
+    rig.poll();
 
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
     SW_EXPECT_EQUAL( OnlineError::kOk, rig._model.getErrorCode() );
@@ -216,22 +216,22 @@ SW_TEST_CASE( ServerListModelTest, OverlappingRefreshIsRejectedWhileLoading )
     rig._service._bHoldAnswers = SW_TRUE;
 
     SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
-    rig.pump(); // 서버가 받고 답을 붙잡는다
+    rig.poll(); // 서버가 받고 답을 붙잡는다
     SW_EXPECT_EQUAL( 1, rig._service._requestCount );
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loading );
 
     SW_EXPECT_FALSE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._model.getRevision() ); // 거절은 상태를 건드리지 않는다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 1, rig._service._requestCount ); // 겹친 요청은 나가지 않았다
 
     rig._service._bHoldAnswers = SW_FALSE;
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._model.getRevision() );
 
     SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) ); // Loaded 뒤에는 다시 묻는다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( 2, rig._service._requestCount );
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
 }
@@ -242,12 +242,12 @@ SW_TEST_CASE( ServerListModelTest, ServerErrorClearsTheLoadedList )
     ServerListFixture rig;
     SW_REQUIRE_TRUE( rig._bReady );
     SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
-    rig.pump();
+    rig.poll();
     SW_REQUIRE_TRUE( rig._model.getState() == ServerListState::Loaded );
     SW_EXPECT_FALSE( rig._model.getEntries().empty() );
 
     SW_EXPECT_TRUE( rig._model.refresh( "lobby" ) );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Failed );
     SW_EXPECT_EQUAL( ServerDirectoryError::kUnknownKind, rig._model.getErrorCode() );
     SW_EXPECT_TRUE( rig._model.getEntries().empty() );

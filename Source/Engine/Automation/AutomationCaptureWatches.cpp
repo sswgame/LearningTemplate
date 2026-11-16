@@ -11,10 +11,10 @@ namespace sw
 {
     namespace
     {
-        /** @brief 감시 값 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`AutomationCaptureUtil::countPendingWork`). 0 이면 화면이 다 읽힌 상태입니다. */
+        /** @brief 감시 값 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`AutomationCaptureUtil::countPendingJobs`). 0 이면 화면이 다 읽힌 상태입니다. */
         [[nodiscard]] bool readAssetsPending( const GameObjectManager* pManager, float64& outValue )
         {
-            outValue = static_cast<float64>( AutomationCaptureUtil::countPendingWork( pManager ) );
+            outValue = static_cast<float64>( AutomationCaptureUtil::countPendingJobs( pManager ) );
             return true;
         }
     } // namespace

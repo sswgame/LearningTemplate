@@ -26,9 +26,8 @@ namespace sw
                     case JSONType::Bool:
                         return value.read<bool>() == true ? "true" : "false";
                     case JSONType::Number:
-                        return value.dump();
                     case JSONType::String:
-                        return value.asString();
+                        return value.asString(); // 숫자는 쓰인 그대로다
                     case JSONType::Null:
                     case JSONType::Array:
                     case JSONType::Object:
@@ -131,7 +130,7 @@ namespace sw
         return true;
     }
 
-    string UserSettingsFileEntry::makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsWriteEntry>& listEntry )
+    expected<string> UserSettingsFileEntry::makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsWriteEntry>& listEntry )
     {
         using Internal = UserSettingsFileInternal;
         JSONDocument    doc;

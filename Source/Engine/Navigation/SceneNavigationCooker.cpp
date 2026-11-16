@@ -54,7 +54,7 @@ namespace sw
         GameObjectManager&    manager    = *scene.getObjectManager();
         SceneNavigation&      navigation = manager.getSubsystem<SceneNavigation>();
         vector<hashed_string> listAgentType;
-        manager.forEachComponentOfType<NavMeshSurfaceComponent>( [&listAgentType]( NavMeshSurfaceComponent* pSurface )
+        manager.forEachComponentOfType<NavMeshSurfaceComponent>( SceneIterationKey{}, [&listAgentType]( NavMeshSurfaceComponent* pSurface )
         {
             if ( pSurface->getAgentTypes().empty() )
                 listAgentType.push_back( hashed_string{} );
@@ -101,9 +101,9 @@ namespace sw
         }
         VectorUtil::sort( listFile );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc();
-        CookStats         tally;
+        CookStats         stats;
         for ( const string& filePath : listFile )
         {
             if ( StringUtil::endsWith( filePath, Internal::kSceneSuffix, true ) == false )
@@ -135,10 +135,10 @@ namespace sw
                 return CookStep::Written;
             } );
             outFailedCount += result == CookResult::Failed ? 1u : 0u;
-            tally.add( result );
+            stats.add( result );
         }
-        SW_LOG_INFO_ID( "SceneNavigationCooker.NavmeshCookReusedDDC", "Navmesh cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
-        return tally.getWrittenCount();
+        SW_LOG_INFO_ID( "SceneNavigationCooker.NavmeshCookReusedDDC", "Navmesh cook: %# reused from the DDC, %# cooked", stats._reusedCount, stats._cookedCount );
+        return stats.getWrittenCount();
     }
 
     CookJobDesc SceneNavigationCooker::makeCookJobDesc()

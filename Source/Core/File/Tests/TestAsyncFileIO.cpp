@@ -1,6 +1,6 @@
 /**
  * @file TestAsyncFileIO.cpp
- * @brief 비동기 파일 읽기 — 전체 · 구간 읽기, 없는 파일 · 끝을 넘는 구간, 우선순위 순서, 취소, 내린 뒤 요청, future, 태스크 워커 완료.
+ * @brief 비동기 파일 읽기 — 전체 · 구간 읽기, 없는 파일 · 끝을 넘는 구간, 우선순위 순서, 취소, 내린 뒤 요청, future, 태스크 워커 완료, 요청별 대기 · 여러 스레드 대기.
  * @details 같은 테스트를 이 플랫폼의 기본 백엔드(Windows IOCP · 리눅스 io_uring — 없으면 스레드 풀)와 스레드 풀 백엔드로 각각 돌린다.
  *          순서 테스트는 "동시 진행 1 개" 로 백엔드를 막아 두고(첫 요청의 완료 콜백이 IO 스레드에서 기다린다) 그동안 쌓인 요청이 어떤 순서로
  *          나오는지 본다 — 시간에 기대지 않는다.
@@ -20,6 +20,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
+#include "Core/Testing/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace
@@ -72,10 +73,10 @@ namespace
     }
 
     /**
-     * @struct IOGate
+     * @struct IOLatch
      * @brief 첫 요청의 완료 콜백을 IO 스레드에서 붙잡아 백엔드를 막는 문입니다. 문이 닫힌 동안 들어온 요청은 큐에서 기다린다.
      */
-    struct IOGate
+    struct IOLatch
     {
         sw::atomic<bool> _bEntered{ SW_FALSE };
         sw::atomic<bool> _bOpen{ false };
@@ -228,14 +229,14 @@ SW_TEST_CASE( AsyncFileIOTest, BackloggedRequestsCompleteInPriorityOrder )
         sw::AsyncFileIO io;
         SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
 
-        IOGate        gate;
+        IOLatch       filter;
         CompletionLog log;
         // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
-        (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
+        (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&filter]( sw::AsyncReadResult& )
         {
-            gate.holdInCallback();
+            filter.holdInCallback();
         } ) );
-        SW_REQUIRE_TRUE( gate.waitUntilHeld() );
+        SW_REQUIRE_TRUE( filter.waitUntilHeld() );
 
         const sw::AsyncIOPriority       arrPriority[] = { sw::AsyncIOPriority::Low, sw::AsyncIOPriority::Normal, sw::AsyncIOPriority::Critical,
                                                           sw::AsyncIOPriority::High, sw::AsyncIOPriority::Normal };
@@ -248,7 +249,7 @@ SW_TEST_CASE( AsyncFileIOTest, BackloggedRequestsCompleteInPriorityOrder )
                 log.add( tag );
             } ) ) );
         }
-        gate._bOpen.store( true );
+        filter._bOpen.store( true );
         io.waitIdle();
 
         // Critical(2) → High(3) → Normal(1) → Normal(4) → Low(0)
@@ -279,29 +280,29 @@ SW_TEST_CASE( AsyncFileIOTest, CancelingAQueuedRequestCompletesItAsCanceled )
         sw::AsyncFileIO io;
         SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
 
-        IOGate gate;
+        IOLatch filter;
         // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
-        (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
+        (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&filter]( sw::AsyncReadResult& )
         {
-            gate.holdInCallback();
+            filter.holdInCallback();
         } ) );
-        SW_REQUIRE_TRUE( gate.waitUntilHeld() );
+        SW_REQUIRE_TRUE( filter.waitUntilHeld() );
 
         sw::atomic<uint32>  canceledCallbackCount{ 0 };
         sw::AsyncIOStatus   canceledStatus{ sw::AsyncIOStatus::Pending };
-        sw::AsyncReadHandle doomed = io.readRange( path, 64, 64, sw::AsyncIOPriority::Critical, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&]( sw::AsyncReadResult& result )
+        sw::AsyncReadHandle pendingDelete = io.readRange( path, 64, 64, sw::AsyncIOPriority::Critical, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&]( sw::AsyncReadResult& result )
         {
             canceledStatus = result._status;
             canceledCallbackCount.fetch_add( 1 );
         } ) );
-        sw::AsyncReadHandle kept   = io.readRange( path, 128, 64, sw::AsyncIOPriority::Low );
+        sw::AsyncReadHandle kept          = io.readRange( path, 128, 64, sw::AsyncIOPriority::Low );
 
-        SW_EXPECT_TRUE( doomed.cancel() );
-        SW_EXPECT_FALSE( doomed.cancel() ); // 이미 끝났다
-        gate._bOpen.store( true );
+        SW_EXPECT_TRUE( pendingDelete.cancel() );
+        SW_EXPECT_FALSE( pendingDelete.cancel() ); // 이미 끝났다
+        filter._bOpen.store( true );
         io.waitIdle();
 
-        SW_EXPECT_TRUE( doomed.getStatus() == sw::AsyncIOStatus::Canceled );
+        SW_EXPECT_TRUE( pendingDelete.getStatus() == sw::AsyncIOStatus::Canceled );
         SW_EXPECT_TRUE( canceledStatus == sw::AsyncIOStatus::Canceled );
         SW_EXPECT_EQUAL( canceledCallbackCount.load(), 1u );
         SW_EXPECT_TRUE( kept.getStatus() == sw::AsyncIOStatus::Succeeded );
@@ -329,23 +330,23 @@ SW_TEST_CASE( AsyncFileIOTest, ShutdownCancelsBacklogAndRejectsLateRequests )
         sw::AsyncFileIO io;
         SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
 
-        IOGate gate;
+        IOLatch filter;
         // 핸들은 버린다 — 완료는 콜백이 게이트로 알린다
-        (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&gate]( sw::AsyncReadResult& )
+        (void)io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&filter]( sw::AsyncReadResult& )
         {
-            gate.holdInCallback();
+            filter.holdInCallback();
         } ) );
-        SW_REQUIRE_TRUE( gate.waitUntilHeld() );
+        SW_REQUIRE_TRUE( filter.waitUntilHeld() );
         sw::AsyncReadHandle backlog = io.readRange( path, 16, 16, sw::AsyncIOPriority::Normal );
 
         // 내리는 스레드와 붙잡힌 IO 스레드를 함께 풀어 준다 — shutdown 은 걸린 요청(문 안의 것)이 끝나기를 기다린다.
         // 문은 shutdown 이 밀린 요청을 취소한 **뒤에** 연다(그 사건을 기다린다). 예전에는 20 ms 를 자고 열어, shutdown 이 그보다 늦게 들어가면
         // IO 스레드가 밀린 요청을 읽어 버려 옳은 구현이 졌다. 취소가 오지 않으면 시한 뒤에 열고 아래 단언이 진다.
-        sw::thread opener( [&gate, &backlog]()
+        sw::thread opener( sw::ThreadTestAccess::getKey(), [&filter, &backlog]()
         {
             (void)sw::test::waitUntil( [&backlog]()
             { return backlog.isDone(); } );
-            gate._bOpen.store( true );
+            filter._bOpen.store( true );
         } );
         io.shutdown();
         opener.join();
@@ -421,7 +422,7 @@ SW_TEST_CASE( AsyncFileIOTest, ManyRangesOfOneOpenFile )
     sw::vector<sw::thread> listThread;
     for ( uint32 threadIndex = 0; threadIndex < 4; ++threadIndex )
     {
-        listThread.emplace_back( [&file, &syncOkCount, threadIndex]()
+        listThread.emplace_back( sw::ThreadTestAccess::getKey(), [&file, &syncOkCount, threadIndex]()
         {
             sw::vector<uint8> bytes( kRangeBytes );
             for ( uint32 index = threadIndex; index < kRangeCount; index += 4 )
@@ -439,6 +440,124 @@ SW_TEST_CASE( AsyncFileIOTest, ManyRangesOfOneOpenFile )
     SW_EXPECT_EQUAL( syncOkCount.load(), kRangeCount );
     uint8 overrun[8]{};
     SW_EXPECT_FALSE( file.readAt( kFileBytes - 4, overrun, sizeof( overrun ) ) );
+}
+
+/**
+ * @brief [AsyncFileIOTest] 요청별 대기는 그 요청의 완료에만 깨고, 시한이 지나면 false 다
+ * @details 대기는 요청의 신호(`_doneSignal`)에서 잠들고 큐의 조건 변수(큐 대기 · 비움 대기)와 갈라져 있다. 여러 스레드가 같은 요청을, 다른 요청을
+ *          함께 기다려도 모두 제 요청이 끝날 때 돌아와야 한다. 큐에 들지 않고 바로 끝난 요청은 기다리지 않는다.
+ */
+SW_TEST_CASE( AsyncFileIOTest, RequestWaitWakesOnItsOwnCompletionAndTimesOut )
+{
+    const sw::string path = writeTestFile( "waitfor.bin", 4096 );
+    SW_REQUIRE_FALSE( path.empty() );
+
+    for ( const sw::AsyncIOBackendKind kind : kArrBackendKind )
+    {
+        sw::AsyncFileIO io;
+        SW_REQUIRE_TRUE( startSerialIO( io, kind ) );
+
+        IOLatch             filter;
+        sw::AsyncReadHandle held = io.readRange( path, 0, 16, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&filter]( sw::AsyncReadResult& )
+        {
+            filter.holdInCallback();
+        } ) );
+        SW_REQUIRE_TRUE( filter.waitUntilHeld() );
+        sw::AsyncReadHandle queued = io.readRange( path, 64, 64, sw::AsyncIOPriority::Low );
+
+        // 문이 닫힌 동안은 둘 다 끝나지 않는다 — 시한이 지나 false 로 돌아온다.
+        SW_EXPECT_FALSE( held.waitFor( 30 ) );
+        SW_EXPECT_FALSE( queued.waitFor( 30 ) );
+
+        constexpr uint32       kWaiterCount = 3;
+        sw::atomic<uint32>     heldWokenCount{ 0 };
+        sw::atomic<uint32>     queuedWokenCount{ 0 };
+        sw::vector<sw::thread> listWaiter;
+        for ( uint32 index = 0; index < kWaiterCount; ++index )
+        {
+            listWaiter.emplace_back( sw::ThreadTestAccess::getKey(), [&held, &heldWokenCount]()
+            {
+                if ( held.waitFor( 10000 ) )
+                    heldWokenCount.fetch_add( 1 );
+            } );
+            listWaiter.emplace_back( sw::ThreadTestAccess::getKey(), [&queued, &queuedWokenCount]()
+            {
+                if ( queued.waitFor( 10000 ) && queued.getStatus() == sw::AsyncIOStatus::Succeeded )
+                    queuedWokenCount.fetch_add( 1 );
+            } );
+        }
+        filter._bOpen.store( true );
+        for ( sw::thread& waiter : listWaiter )
+        {
+            waiter.join();
+        }
+
+        const utf8* pBackend = sw::AsyncFileIO::getBackendName( io.getBackendKind() );
+        SW_EXPECT_TRUE_MSG( heldWokenCount.load() == kWaiterCount, pBackend );
+        SW_EXPECT_TRUE_MSG( queuedWokenCount.load() == kWaiterCount, pBackend );
+        SW_EXPECT_TRUE( held.getStatus() == sw::AsyncIOStatus::Succeeded );
+        SW_EXPECT_TRUE( held.waitFor( 1 ) ); // 끝난 요청은 바로 돌아온다
+
+        // 큐에 들지 않은 요청(빈 경로)은 핸들이 나올 때 이미 끝났다 — 끝없이 기다려도 바로 돌아온다.
+        sw::AsyncReadHandle detached = io.readRange( "", 0, 16, sw::AsyncIOPriority::Normal );
+        SW_EXPECT_TRUE( detached.waitFor( 0 ) );
+        SW_EXPECT_TRUE( detached.getStatus() == sw::AsyncIOStatus::FileNotFound );
+        io.shutdown();
+    }
+}
+
+/**
+ * @brief [AsyncFileIOTest] 여러 스레드가 요청을 넣고 곧바로 제 것을 기다려도 모두 제 결과로 끝나고, 끝나면 비움 대기가 돌아온다
+ * @details 큐 대기 신호는 넣을 때마다 IO 스레드 하나만 깨우고, 비움 신호는 남은 수가 0 이 될 때만 울린다 — 깨움을 놓치면 이 테스트가 시한에 걸린다.
+ */
+SW_TEST_CASE( AsyncFileIOTest, ManyThreadsSubmitAndWaitOnTheirOwnRequests )
+{
+    const sw::string path = writeTestFile( "manywait.bin" );
+    SW_REQUIRE_FALSE( path.empty() );
+
+    constexpr uint32 kThreadCount      = 4;
+    constexpr uint32 kRequestPerThread = 100;
+    constexpr uint32 kRangeBytes       = 512;
+    for ( const sw::AsyncIOBackendKind kind : kArrBackendKind )
+    {
+        sw::AsyncFileIO       io;
+        sw::AsyncFileIOConfig settings{};
+        settings._backendKind           = kind;
+        settings._maxInFlightCount      = 4;
+        settings._threadPoolThreadCount = 2;
+        SW_REQUIRE_TRUE( io.initialize( settings ) );
+
+        sw::atomic<uint32>     okCount{ 0 };
+        sw::vector<sw::thread> listThread;
+        for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+        {
+            listThread.emplace_back( sw::ThreadTestAccess::getKey(), [&io, &path, &okCount, threadIndex]()
+            {
+                for ( uint32 index = 0; index < kRequestPerThread; ++index )
+                {
+                    const uint64        offset = static_cast<uint64>( ( threadIndex * kRequestPerThread + index ) % ( kFileBytes / kRangeBytes ) ) * kRangeBytes;
+                    sw::AsyncReadResult readResult{};
+                    sw::AsyncReadHandle handle = io.readRange( path, offset, kRangeBytes, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&readResult]( sw::AsyncReadResult& result )
+                    {
+                        readResult = std::move( result );
+                    } ) );
+                    // 결과는 완료 콜백이 `Done` 앞에서 쓴다 — 대기가 true 면 읽어도 된다.
+                    const bool bOk = handle.waitFor( 10000 ) && readResult.isSucceeded() && readResult._offset == offset && matchesFileRange( readResult._bytes, offset );
+                    if ( bOk )
+                        okCount.fetch_add( 1 );
+                }
+            } );
+        }
+        for ( sw::thread& thread : listThread )
+        {
+            thread.join();
+        }
+        io.waitIdle();
+
+        SW_EXPECT_TRUE_MSG( okCount.load() == kThreadCount * kRequestPerThread, sw::AsyncFileIO::getBackendName( io.getBackendKind() ) );
+        SW_EXPECT_EQUAL( io.getOutstandingCount(), 0u );
+        io.shutdown();
+    }
 }
 
 /**

@@ -51,14 +51,14 @@ namespace
         SW_EXPECT_TRUE( Ledger::executeTransfer( database, request, result ) == LedgerResult::Ok );
     }
 
-    int64 balanceOf( MemoryServiceDatabase& database, string_view assetID )
+    int64 getBalanceOf( MemoryServiceDatabase& database, string_view assetID )
     {
         LedgerBalance balance;
         SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kBuyer ), assetID, balance ) == ServiceStoreResult::Ok );
         return balance._amount;
     }
 
-    EconomyOutcome buy( MemoryServiceDatabase& database, const CurrencyCatalog& currencies, const OfferCatalog& offers, string_view offerID, uint64 idempotencyLow )
+    EconomyServiceResult buy( MemoryServiceDatabase& database, const CurrencyCatalog& currencies, const OfferCatalog& offers, string_view offerID, uint64 idempotencyLow )
     {
         EconomyPurchaseInput input;
         input._offerID    = string( offerID );
@@ -90,10 +90,10 @@ SW_TEST_CASE( EconomyPurchaseTest, VirtualPriceSpendsFreeFundsFirst )
 {
     Fixture fixture;
     SW_REQUIRE_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "starter_pack", 1 ) == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( balanceOf( fixture.database, "cur.gem_free" ), int64( 0 ) );
-    SW_EXPECT_EQUAL( balanceOf( fixture.database, "cur.gem_paid" ), int64( 30 ) );
-    SW_EXPECT_EQUAL( balanceOf( fixture.database, "item.sword" ), int64( 1 ) );
-    SW_EXPECT_EQUAL( balanceOf( fixture.database, "cur.gold" ), int64( 500 ) );
+    SW_EXPECT_EQUAL( getBalanceOf( fixture.database, "cur.gem_free" ), int64( 0 ) );
+    SW_EXPECT_EQUAL( getBalanceOf( fixture.database, "cur.gem_paid" ), int64( 30 ) );
+    SW_EXPECT_EQUAL( getBalanceOf( fixture.database, "item.sword" ), int64( 1 ) );
+    SW_EXPECT_EQUAL( getBalanceOf( fixture.database, "cur.gold" ), int64( 500 ) );
 }
 
 /** @brief [EconomyPurchaseTest] 같은 멱등 키로 다시 보내면(응답을 잃은 재시도) 원장은 한 번만 움직이고, 다른 키의 두 번째 구매는 계정당 한도에 걸린다 */
@@ -119,4 +119,14 @@ SW_TEST_CASE( EconomyPurchaseTest, RefusalsChangeNothing )
     SW_EXPECT_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "expired", 4 ) == EconomyResult::NotOnSale );
     SW_EXPECT_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "no_such_offer", 5 ) == EconomyResult::UnknownOffer );
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBefore );
+}
+
+/** @brief [EconomyPurchaseTest] 계정 삭제 → 경제 키트에 그 계정의 구매 수 레코드 0(`econ_purchase`). 잔액은 탈퇴 정리가 원장에서 소각한다(감사 P0-7) */
+SW_TEST_CASE( EconomyPurchaseTest, AccountDeletionErasesPurchaseCounts )
+{
+    Fixture fixture;
+    SW_REQUIRE_TRUE( buy( fixture.database, fixture.currencies, fixture.offers, "starter_pack", 1 ) == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( 1, fixture.database.countRecords( EconomyStoreLogic::getPurchaseCountTable() ) );
+    SW_REQUIRE_TRUE( EconomyStoreLogic::eraseAccount( fixture.database, kBuyer, 0 ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, fixture.database.countRecords( EconomyStoreLogic::getPurchaseCountTable() ) );
 }

@@ -169,6 +169,25 @@ namespace sw
         _playLength = BlendSpace::computeBlendedLength( _listLength, _listWeight );
     }
 
+    uint32 SkeletalBlendSpaceState::countActiveSamples() const
+    {
+        uint32 active = 0;
+        for ( const float32 weight : _listWeight )
+        {
+            if ( weight > 0.0f )
+                ++active;
+        }
+        return active;
+    }
+
+    uint32 SkeletalAnimatorComponent::countActiveBlendSpaceSamples() const
+    {
+        uint32 active = 0;
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _listBlendSpace )
+            active += state->countActiveSamples();
+        return active;
+    }
+
     float32 SkeletalBlendSpaceState::computeSampleTime( uint32 sampleIndex, float32 time ) const
     {
         if ( _playLength <= 0.0f )
@@ -1368,7 +1387,7 @@ namespace sw
             _listScratchSamplePose.resize( sampleCount );
         _listScratchSamplePosePointer.clear();
         _listScratchSampleWeight.clear();
-        // 가중치가 0 인 표본은 샘플하지 않는다(1D 는 많아야 둘, 2D 는 표본 위면 하나).
+        // 가중치가 0 인 표본은 샘플하지 않는다(1D 는 많아야 둘, 2D 는 삼각형이라 많아야 셋).
         for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
         {
             const float32 weight = pState->getSampleWeight( sampleIndex );

@@ -155,8 +155,10 @@ namespace sw
                 if ( pManager == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no active scene" } );
                 vector<ShooterPlayerComponent*> listPlayer;
-                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&listPlayer]( ShooterPlayerComponent* pPlayer )
-                { listPlayer.push_back( pPlayer ); } );
+                for ( ShooterPlayerComponent* pPlayer : pManager->getComponentRegistry().getAll<ShooterPlayerComponent>() )
+                {
+                    listPlayer.push_back( pPlayer );
+                }
                 if ( listPlayer.empty() )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no ShooterPlayerComponent in the active scene" } );
                 return listPlayer;
@@ -1154,7 +1156,7 @@ namespace sw
         if ( pPartMesh == nullptr || pView == nullptr || pPartMesh->getMeshID().empty() )
             return; // 아직 조립 전이다 — 다음 틱에 다시 본다
         pView->setMeshID( pPartMesh->getMeshID() );
-        pView->setMaterialPath( pPartMesh->getMaterialPath().viewOrEmpty() );
+        pView->setMaterialPath( pPartMesh->getMaterialPath().view() );
         // 시점 총은 카메라를 따라 피치로 움직이고 몸은 요만 돈다 — 손을 몸의 숨은 무기에 두면 아래를 볼 때 보이는 총과 떨어진다. 몸의 리그가 보이는 총의 소켓을 잡게 한다(언리얼 True First Person 의 손 IK).
         const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         const hashed_string       socketSet = pDatabase != nullptr ? Internal::findItemSocketSet( *pDatabase, getWeaponItem( _weaponIndex ) ) : hashed_string{};
@@ -1212,4 +1214,16 @@ namespace sw
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );
     SW_AUTOMATION_COMPONENT_WATCH( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readControllerKind );
+
+    void ShooterPlayerComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeBoundComponent::onRegister( manager );
+        manager.getComponentRegistry().add<ShooterPlayerComponent>( this );
+    }
+
+    void ShooterPlayerComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ShooterPlayerComponent>( this );
+        GameModeBoundComponent::onUnregister( manager );
+    }
 } // namespace sw

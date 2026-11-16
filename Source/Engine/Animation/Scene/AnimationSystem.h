@@ -302,7 +302,7 @@ namespace sw
         {
             if ( _removedCount == 0 )
                 return;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             SW_ASSERT( _compacting.exchange( true ) == false ); // 두 스레드가 동시에 접는다 — 이 목록은 게임 스레드 전용이다
 #endif
             size_t writeIndex = 0;
@@ -321,7 +321,7 @@ namespace sw
             }
             _listItem.resize( writeIndex );
             _removedCount = 0;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             _compacting.store( false );
 #endif
         }
@@ -331,7 +331,7 @@ namespace sw
         mutable unordered_map<const T*, uint32> _mapIndex;            ///< 원소 → `_listItem` 안의 위치
         mutable uint32                          _removedCount{ 0 };   ///< `_listItem` 안의 비운 칸 수
         uint32                                  _iterationDepth{ 0 }; ///< `forEach` 중첩 깊이(0 보다 크면 해제는 칸만 비우고 접지 않는다)
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         mutable atomic<bool> _compacting{ false }; ///< Debug: 접는 중인지(동시 접기 탐지)
 #endif
     };

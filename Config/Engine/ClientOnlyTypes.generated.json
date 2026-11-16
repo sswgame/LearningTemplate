@@ -1,5 +1,5 @@
 {
-    "_comment": "생성 파일 — Scripts/generate/ClientOnlyTypes.py 가 쓴다(고치지 않는다). 전용 서버가 짓지 않는 소스의 리플렉션 형식 이름이다. 서버는 씬에서 이 형식을 만나면 만들지 않고 건너뛴다.",
+    "_comment": "생성 파일 — Scripts/generate/client_only_types.py 가 쓴다(고치지 않는다). 전용 서버가 짓지 않는 소스의 리플렉션 형식 이름이다. 서버는 씬에서 이 형식을 만나면 만들지 않고 건너뛴다.",
     "listType": [
         "AudioAmbientEmitterComponent",
         "AudioAttenuationDef",

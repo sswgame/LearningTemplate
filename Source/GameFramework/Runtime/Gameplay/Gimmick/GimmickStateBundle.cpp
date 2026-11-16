@@ -5,6 +5,7 @@
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Name/NameHashIndex.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -18,6 +19,7 @@ namespace sw
     void GimmickStateBundle::collect( const GameObjectManager& manager )
     {
         _listEntry.clear();
+        NameHashIndex<uint64> ownerIndex; // 같은 키의 다른 이름이면 되돌릴 때 엉뚱한 회로에 적용된다 — 공용 충돌 검사 색인으로 거절한다
         for ( GimmickCircuitComponent* pCircuit : manager.getComponentRegistry().getAll<GimmickCircuitComponent>() )
         {
             const GameObject* pOwner       = pCircuit->getOwner();
@@ -26,7 +28,12 @@ namespace sw
                 continue;
             GimmickStateEntry entry;
             entry._ownerKey = makeOwnerKey( pOwner->getName() );
-            entry._state    = pCircuit->getState();
+            if ( const expected<void> assigned = ownerIndex.assign( pOwner->getName().view(), entry._ownerKey ); assigned.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "Gimmick.OwnerKeyClash", "Gimmick circuit owners '%#' share a state key - the later circuit is not collected; rename one", assigned.error().detail() );
+                continue;
+            }
+            entry._state = pCircuit->getState();
             _listEntry.push_back( std::move( entry ) );
         }
         // 등록 순서에 기대지 않는다 — 키 순이라 같은 씬이면 늘 같은 묶음이다.

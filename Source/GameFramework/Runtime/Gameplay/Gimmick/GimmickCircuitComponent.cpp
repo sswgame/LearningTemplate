@@ -49,7 +49,7 @@ namespace sw
                     pScene->setLocalRotation( float3{ pose._rotation._x, MathUtil::atan2( sample._tangent._x, sample._tangent._z ), pose._rotation._z } );
             }
 
-            /** @brief 피해 틱 출력이 켜진 스텝마다(`recordPulses`) 대상 센서 안의 오브젝트마다 피해를 줍니다. */
+            /** @brief 피해 틱 출력이 켜진 스텝마다(`recordPulse`) 대상 센서 안의 오브젝트마다 피해를 줍니다. */
             static void applyHazard( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, GameObject& target )
             {
                 const GimmickSensorComponent* pSensor = target.getComponent<GimmickSensorComponent>();
@@ -99,7 +99,7 @@ namespace sw
                 } );
             }
 
-            /** @brief 스폰 출력이 켜진 스텝마다(`recordPulses`) 프리팹을 대상 위치(오프셋 더함)에 스폰합니다. 스폰은 틱 뒤로 미룹니다. */
+            /** @brief 스폰 출력이 켜진 스텝마다(`recordPulse`) 프리팹을 대상 위치(오프셋 더함)에 스폰합니다. 스폰은 틱 뒤로 미룹니다. */
             static void applySpawner( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, const SceneComponent* pScene )
             {
                 const string* pPrefab      = circuit.readParamText( node, "prefab" );
@@ -119,7 +119,7 @@ namespace sw
                 } );
             }
 
-            /** @brief 재생 출력이 켜진 스텝마다(`recordPulses`) 소리를 냅니다. 재생은 틱 뒤로 미룹니다. */
+            /** @brief 재생 출력이 켜진 스텝마다(`recordPulse`) 소리를 냅니다. 재생은 틱 뒤로 미룹니다. */
             static void applySound( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager )
             {
                 const string* pSound           = circuit.readParamText( node, "sound" );
@@ -335,7 +335,7 @@ namespace sw
         {
             const Binding binding                     = findBinding( _circuit.getKind( node )._name );
             _listBinding[static_cast<size_t>( node )] = binding;
-            // 펄스 작동기는 켜진 스텝마다 한 번씩 돈다(`recordPulses`). 상태 작동기는 틱의 마지막 값만 적용한다.
+            // 펄스 작동기는 켜진 스텝마다 한 번씩 돈다(`recordPulse`). 상태 작동기는 틱의 마지막 값만 적용한다.
             if ( binding == Binding::Hazard )
                 _listPulsePort[static_cast<size_t>( node )] = hashed_string( "OnDamageTick" );
             else if ( binding == Binding::Spawner )
@@ -504,14 +504,14 @@ namespace sw
         }
     }
 
-    void GimmickCircuitComponent::recordPulses()
+    void GimmickCircuitComponent::recordPulse()
     {
         _circuit.appendRaisedOutputs( _listPulsePort, _listPendingPulse );
     }
 
     void GimmickCircuitComponent::applyActuators( GameObjectManager& manager )
     {
-        recordPulses();
+        recordPulse();
         applyPendingActuators( manager );
     }
 
@@ -676,7 +676,7 @@ namespace sw
         {
             pullSensors( manager, stepIndex == 0 );
             _circuit.step();
-            recordPulses();
+            recordPulse();
         }
         storeState();
         context.deferPostTickOnComponent( *this, []( GimmickCircuitComponent& self, GameObjectManager& sceneManager )
@@ -742,7 +742,7 @@ namespace sw
             static void writeGimmick( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const       pManager = GameplayDebugTarget::findActiveObjectManager();
-                const GimmickCircuitComponent* const pCircuit = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<GimmickCircuitComponent>( *pManager ) : nullptr;
+                const GimmickCircuitComponent* const pCircuit = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<GimmickCircuitComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pCircuit == nullptr )
                 {
                     writer.addLine( "target", "none (no gimmick circuit in the active scene)" );

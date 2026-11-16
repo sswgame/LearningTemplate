@@ -71,7 +71,7 @@ namespace sw
                 job.recordInput( input );
             }
 
-            /** @brief 작업이 없을 때의 읽기 판정입니다(`CookJob::allowRead` 참고). */
+            /** @brief 작업이 없을 때의 읽기 판정입니다(`CookJob::recordReadInput` 참고). */
             [[nodiscard]] static bool allowReadOutsideJob( string_view source )
             {
                 const AssetPaths* const pAssetPaths = engine::findSubsystem<AssetPaths>(); // 엔진 범위 없이 도는 도구 · 테스트는 쿠킹 세션이 없다
@@ -133,7 +133,7 @@ namespace sw
         return 0;
     }
 
-    bool CookJob::allowRead( const AssetID& id, const uint8* pData, size_t size )
+    bool CookJob::recordReadInput( const AssetID& id, const uint8* pData, size_t size )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob == nullptr )

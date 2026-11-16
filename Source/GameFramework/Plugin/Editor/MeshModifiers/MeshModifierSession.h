@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -57,6 +58,8 @@ namespace sw::editor
          */
         [[nodiscard]] bool setTarget( GameObject* pObject );
         void               clearTarget();
+        /** @brief 새 에디터 프로세스처럼 비웁니다 — 대상 · 저장하지 않은 스택 · 되돌리기 이력. 시나리오 체인의 다음 단계 앞(`SW_AUTOMATION_STAGE_RESET`)에서 부른다. */
+        void resetToFreshEditor();
         /** @brief 대상 오브젝트입니다. 지워졌으면 nullptr 입니다. */
         GameObject* findTarget() const;
         bool        hasTarget() const { return _meshPath.empty() == false; }
@@ -108,6 +111,8 @@ namespace sw::editor
 
         /** @brief 스택을 사이드카 문서에 씁니다. 성공하면 지금 스택이 저장된 상태가 됩니다(`isStackUnsaved`). */
         [[nodiscard]] bool saveSidecar();
+        /** @brief `saveSidecar` 가 쓸 사이드카의 디스크 경로입니다(메시 파일 곁). 대상이 없거나 메시 자리를 풀지 못하면 빈 값입니다(이유는 `toDiskPath` 가 남긴다). */
+        [[nodiscard]] optional<string> findSidecarPath() const;
         /** @brief 사이드카 문서에서 스택을 다시 읽습니다. 없으면 false 입니다. 읽으면 그 스택이 저장된 상태가 됩니다. */
         [[nodiscard]] bool loadSidecar();
         /**
@@ -236,7 +241,7 @@ namespace sw::editor
         MeshAssetData               _sourceData;
         vector<float3>              _listSourcePosition; ///< 원본 정점 위치(스택 입력 위치 · 원본 상자)
         EditSnapshotHistory<string> _history;            ///< 스택 글(JSON) 되돌리기
-        string                      _savedStackText;     ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준)
+        expected<string>            _savedStackText;     ///< 마지막으로 읽거나 쓴 사이드카의 스택 저장 글(`isStackUnsaved` 의 기준). 못 만들었으면 오류 값이다
         string                      _meshPath;
         MeshModifierBounds          _sourceBounds;
         GameObjectHandle            _target;

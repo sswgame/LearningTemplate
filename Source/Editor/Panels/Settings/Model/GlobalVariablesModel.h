@@ -70,6 +70,8 @@ namespace sw::editor
         static GlobalVariableManager& getVariableManager();
         /** @brief 지금 값을 세션 문서로 저장합니다(`EditorGlobalVariableCommands::saveSessionPreset`). 못 쓰면 false 이고 로그에 남는다. */
         [[nodiscard]] static bool saveSessionPreset();
+        /** @brief `saveSessionPreset` 가 쓸 세션 문서(디스크 경로)를 @p outListPath 에 더합니다(`EditorGlobalVariableCommands::getSessionPresetPath`). */
+        static void collectFilesToSave( vector<string>& outListPath );
         /** @brief 열거형 전역 변수의 리플렉션 열거 정보입니다. @p enumType 이 비었거나 등록되지 않았으면 nullptr 입니다. */
         static const EnumInfo* findEnumInfo( const string& enumType );
         /** @brief 열거형 @p enumType 의 값 @p value 의 이름입니다. 없으면 nullptr 입니다. */

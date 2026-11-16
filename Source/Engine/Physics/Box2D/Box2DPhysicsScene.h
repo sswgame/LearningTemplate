@@ -46,6 +46,7 @@ namespace sw
 
         void                                 step( float32 fixedDeltaTime ) override;
         const vector<PhysicsContactEvent2D>& getContactEvents() const override { return _listContactEvent; }
+        void                                 setContactStayListener( uint64 userData, bool bListen ) override { _contactTracker.setStayListener( userData, bListen ); }
         void                                 setGravity( const float2& gravity ) override;
         float2                               getGravity() const override;
         void                                 setLayerCollision( const CollisionLayers& layers ) override;
@@ -60,6 +61,7 @@ namespace sw
         void              createBodies( span<const PhysicsBodyDesc2D> listDesc, vector<PhysicsBodyHandle>& outListBody ) override;
         void              destroyBody( PhysicsBodyHandle body ) override;
         void              destroyBodies( span<const PhysicsBodyHandle> listBody ) override;
+        bool              setBodyShape( PhysicsBodyHandle body, span<const PhysicsShapeDesc2D> listShape, const hashed_string& material, float32 mass ) override;
         bool              isBodyValid( PhysicsBodyHandle body ) const override;
         uint32            getBodyCount() const override;
         void              setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override;
@@ -105,6 +107,7 @@ namespace sw
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
         PhysicsCharacterState2D moveCharacter( PhysicsCharacterHandle character, const float2& velocity, float32 deltaTime ) override;
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float2& position ) override;
+        bool                    setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const override;
 
         bool   raycast( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;
@@ -183,7 +186,7 @@ namespace sw
         void              drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const;
         PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeID ) const;
         /** @brief 쌍 예외 필터 관절 테이블에서 @p body 가 포함된 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지웁니다). */
-        void removePairJointsOf( PhysicsBodyHandle body );
+        void removePairJoints( PhysicsBodyHandle body );
         /** @brief 스텝이 낸 Box2D 이벤트를 추적기에 넣고 충격량을 채웁니다. */
         void flushEvents();
         /** @brief 두 바디 사이 접촉이 이번 스텝에 받은 법선 충격량입니다(마지막 서브 스텝 × 서브 스텝 수). */

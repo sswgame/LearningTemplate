@@ -13,7 +13,9 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -50,7 +52,7 @@ namespace sw
                 return static_cast<uint32>( mixed & 0xFFFFu );
             }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             /** @brief 로컬 포즈와 모프 가중치의 바이트 지문입니다 — `ReadsOnly` 를 선언한 작업이 단계 뒤에도 이 값을 그대로 두었는지 `runTasks` 가 본다. */
             static uint64 fingerprintPose( const Pose& pose, const vector<float32>& listMorphWeight )
             {
@@ -795,8 +797,12 @@ namespace sw
                     if ( getMesh() != vertexMesh )
                         setMesh( std::move( vertexMesh ) );
                     // 들어갈 때 한 번 — VAT 시계 + 오프셋 = 이 유닛의 클립 시각. 그 뒤로 둘이 같은 dt 로 흘러 다시 적지 않는다(인스턴스를 다시 올리지 않는다).
+                    // 오프셋은 셰이더가 받는 접힌 시계로 잰다(감사 C-12) — 접지 않은 시계로 재면 오프셋이 실행 시간만큼 커져 float 정밀도를 잃는다.
                     if ( bEntering )
-                        setVertexAnimationPhase( static_cast<float32>( static_cast<float64>( request._time ) - crowd.getClock() ) );
+                    {
+                        const float32 shaderClock = crowd.getShaderClock( engine::getSubsystem<EngineConfig>()._shaderTimeRolloverSeconds );
+                        setVertexAnimationPhase( request._time - shaderClock );
+                    }
                     _frameContext._bPoseNeeded = SW_FALSE;
                     _bInterpolateFrame         = SW_FALSE;
                     return;
@@ -908,14 +914,14 @@ namespace sw
     {
         for ( IAnimationPhaseTask* pTask : _listTask )
         {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             // 포즈 접근 선언은 군중 공유가 믿는 계약이다 — 읽기만 한다고 선언한 작업이 포즈나 모프 가중치를 쓰면 묶음의 포즈를 덮거나(공유 유닛은 이 단계를 돌지 않아
             // 쓰기가 사라지거나) 한다. 반대 방향(쓴다고 선언하고 안 쓴다)은 값이 같은 쓰기가 있을 수 있어 단언할 수 없으므로 작업마다 선언과 쓰기가 같은 판정을 쓰게 하고 테스트로 막는다.
             const bool   bDeclaredReadsOnly = pTask->getPoseAccess() == AnimationPoseAccess::ReadsOnly;
             const uint64 before             = bDeclaredReadsOnly ? SkeletalMeshComponentInternal::fingerprintPose( _localPose, _listMorphWeight ) : 0ull;
 #endif
             pTask->runAnimationPhase( phase, *this, _frameContext );
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             if ( bDeclaredReadsOnly )
                 SW_LOG_ASSERT( before == SkeletalMeshComponentInternal::fingerprintPose( _localPose, _listMorphWeight ),
                                "An animation phase task declared AnimationPoseAccess::ReadsOnly changed the pose or morph weights (phase %#)", static_cast<uint32>( phase ) );

@@ -12,7 +12,7 @@ namespace
 {
     const sw::hashed_string kTable{ "test_table" };
 
-    sw::vector<uint8> bytesOf( sw::string_view text )
+    sw::vector<uint8> makeBytesOf( sw::string_view text )
     {
         return sw::vector<uint8>( text.begin(), text.end() );
     }
@@ -25,23 +25,23 @@ SW_TEST_CASE( ServiceStoreTest, VersionConditions )
 {
     sw::MemoryServiceDatabase database;
     sw::ServiceTransaction    create;
-    create.put( kTable, "a", bytesOf( "1" ), sw::ServiceRecord::kAbsentVersion );
+    create.put( kTable, "a", makeBytesOf( "1" ), sw::ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( create ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( database.commit( create ) == sw::ServiceStoreResult::Conflict );
 
     sw::ServiceRecord read;
     SW_REQUIRE_TRUE( database.readRecord( kTable, "a", read ) == sw::ServiceStoreResult::Ok );
     sw::ServiceTransaction other;
-    other.put( kTable, "a", bytesOf( "2" ) );
+    other.put( kTable, "a", makeBytesOf( "2" ) );
     SW_REQUIRE_TRUE( database.commit( other ) == sw::ServiceStoreResult::Ok );
 
     sw::ServiceTransaction stale;
-    stale.put( kTable, "a", bytesOf( "3" ), read._version );
+    stale.put( kTable, "a", makeBytesOf( "3" ), read._version );
     sw::ServiceCommitInfo info;
     SW_EXPECT_TRUE( database.commit( stale, &info ) == sw::ServiceStoreResult::Conflict );
     SW_EXPECT_EQUAL( 0, info._conflictIndex );
     SW_REQUIRE_TRUE( database.readRecord( kTable, "a", read ) == sw::ServiceStoreResult::Ok );
-    SW_EXPECT_TRUE( read._bytes == bytesOf( "2" ) );
+    SW_EXPECT_TRUE( read._bytes == makeBytesOf( "2" ) );
     SW_EXPECT_TRUE( database.readRecord( kTable, "missing", read ) == sw::ServiceStoreResult::NotFound );
 }
 
@@ -52,13 +52,13 @@ SW_TEST_CASE( ServiceStoreTest, CommitsAreAtomic )
 {
     sw::MemoryServiceDatabase database;
     sw::ServiceTransaction    seed;
-    seed.put( kTable, "taken", bytesOf( "x" ) );
+    seed.put( kTable, "taken", makeBytesOf( "x" ) );
     SW_REQUIRE_TRUE( database.commit( seed ) == sw::ServiceStoreResult::Ok );
     const uint64 hashBefore = database.computeContentHash();
 
     sw::ServiceTransaction mixed;
-    mixed.put( kTable, "fresh", bytesOf( "y" ), sw::ServiceRecord::kAbsentVersion );
-    mixed.put( kTable, "taken", bytesOf( "z" ), sw::ServiceRecord::kAbsentVersion ); // 어긋난다
+    mixed.put( kTable, "fresh", makeBytesOf( "y" ), sw::ServiceRecord::kAbsentVersion );
+    mixed.put( kTable, "taken", makeBytesOf( "z" ), sw::ServiceRecord::kAbsentVersion ); // 어긋난다
     sw::ServiceCommitInfo info;
     SW_EXPECT_TRUE( database.commit( mixed, &info ) == sw::ServiceStoreResult::Conflict );
     SW_EXPECT_EQUAL( 1, info._conflictIndex );
@@ -67,11 +67,11 @@ SW_TEST_CASE( ServiceStoreTest, CommitsAreAtomic )
     SW_EXPECT_TRUE( database.readRecord( kTable, "fresh", read ) == sw::ServiceStoreResult::NotFound );
 
     sw::ServiceTransaction badKey;
-    badKey.put( kTable, "Upper Case", bytesOf( "k" ) );
+    badKey.put( kTable, "Upper Case", makeBytesOf( "k" ) );
     SW_EXPECT_TRUE( database.commit( badKey ) == sw::ServiceStoreResult::Invalid );
     sw::ServiceTransaction twice;
-    twice.put( kTable, "dup", bytesOf( "1" ) );
-    twice.put( kTable, "dup", bytesOf( "2" ) );
+    twice.put( kTable, "dup", makeBytesOf( "1" ) );
+    twice.put( kTable, "dup", makeBytesOf( "2" ) );
     SW_EXPECT_TRUE( database.commit( twice ) == sw::ServiceStoreResult::Invalid );
     SW_EXPECT_TRUE( database.commit( sw::ServiceTransaction{} ) == sw::ServiceStoreResult::Invalid );
     SW_EXPECT_EQUAL( hashBefore, database.computeContentHash() );
@@ -87,19 +87,19 @@ SW_TEST_CASE( ServiceStoreTest, IdempotencyRecordsTheFirstReply )
     SW_EXPECT_TRUE( sw::ServiceIdempotency::findReply( database, "a1", 7, 9, reply ) == sw::ServiceStoreResult::NotFound );
 
     sw::ServiceTransaction first;
-    first.put( kTable, "effect", bytesOf( "done" ) );
-    sw::ServiceIdempotency::addReply( first, "a1", 7, 9, bytesOf( "reply-1" ) );
+    first.put( kTable, "effect", makeBytesOf( "done" ) );
+    sw::ServiceIdempotency::addReply( first, "a1", 7, 9, makeBytesOf( "reply-1" ) );
     SW_REQUIRE_TRUE( database.commit( first ) == sw::ServiceStoreResult::Ok );
     SW_REQUIRE_TRUE( sw::ServiceIdempotency::findReply( database, "a1", 7, 9, reply ) == sw::ServiceStoreResult::Ok );
-    SW_EXPECT_TRUE( reply == bytesOf( "reply-1" ) );
+    SW_EXPECT_TRUE( reply == makeBytesOf( "reply-1" ) );
 
     sw::ServiceTransaction retry; // 다른 서버가 같은 요청을 동시에 처리했다
-    retry.put( kTable, "effect", bytesOf( "done-again" ) );
-    sw::ServiceIdempotency::addReply( retry, "a1", 7, 9, bytesOf( "reply-2" ) );
+    retry.put( kTable, "effect", makeBytesOf( "done-again" ) );
+    sw::ServiceIdempotency::addReply( retry, "a1", 7, 9, makeBytesOf( "reply-2" ) );
     SW_EXPECT_TRUE( database.commit( retry ) == sw::ServiceStoreResult::Conflict );
     sw::ServiceRecord effect;
     SW_REQUIRE_TRUE( database.readRecord( kTable, "effect", effect ) == sw::ServiceStoreResult::Ok );
-    SW_EXPECT_TRUE( effect._bytes == bytesOf( "done" ) );
+    SW_EXPECT_TRUE( effect._bytes == makeBytesOf( "done" ) );
 
     SW_EXPECT_TRUE( sw::ServiceIdempotency::findReply( database, "a2", 7, 9, reply ) == sw::ServiceStoreResult::NotFound ); // 범위가 다르면 다른 요청
 }

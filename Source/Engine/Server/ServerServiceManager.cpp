@@ -80,21 +80,21 @@ namespace sw
         return count;
     }
 
-    int32 ServerServiceManager::getOpenWorkCount() const
+    int32 ServerServiceManager::getOpenJobCount() const
     {
         int32 count = 0;
         for ( const RunningService& running : _listRunning )
         {
-            count += running._service->getOpenWorkCount();
+            count += running._service->getOpenJobCount();
         }
         return count;
     }
 
-    void ServerServiceManager::beginShutdown( const ServerShutdownNotice& notice )
+    void ServerServiceManager::beginShutdown( const ServerShutdownNotice& notification )
     {
         for ( RunningService& running : _listRunning )
         {
-            running._service->beginShutdown( notice );
+            running._service->beginShutdown( notification );
         }
     }
 } // namespace sw

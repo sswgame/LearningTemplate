@@ -75,7 +75,7 @@ namespace sw
             const size_t needed = shaderslot::kVertexAnimationHeaderWords + wanted._pAnimation->_listFrameVertex.size() * shaderslot::kVertexAnimationWordsPerElement;
             if ( needed > kMaxWordCount )
             {
-                // 상한 초과는 오류다 — 이 메시는 풀에 없고(baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다, GPUMeshBatchBinding::_bDeformRefused).
+                // 상한 초과는 오류다 — 이 메시는 풀에 없고(getBaseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다, GPUMeshBatchBinding::_bDeformRefused).
                 SW_LOG_ERROR_ID( "GPUVertexAnimationPool.VertexAnimationPoolLimit", "Vertex animation pool limit exceeded (%# words, table needs %#) - that mesh is not drawn", kMaxWordCount, static_cast<uint32>( needed ) );
                 continue;
             }
@@ -198,7 +198,7 @@ namespace sw
         refreshBases();
     }
 
-    uint32 GPUVertexAnimationPool::baseOf( const Mesh* pMesh ) const
+    uint32 GPUVertexAnimationPool::getBaseOf( const Mesh* pMesh ) const
     {
         const auto it = _mapBase.find( pMesh );
         return ( it != _mapBase.end() ) ? it->second : kInvalidBase;

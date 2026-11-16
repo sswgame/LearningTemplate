@@ -25,13 +25,17 @@ flag.Static = Static, static
 flag.HideInMenu = HideInMenu, HiddenInMenu, EditorHidden
 # 직렬화 · 핫 리로드용 옛 타입 이름. 여러 개면 Alias="OldA, OldB"
 string.Alias = Alias
+# 지운 필드 이름: RemovedField="_oldA, _oldB". 세이브는 필드를 이름의 32 비트 해시로 싣는다 — 새 필드가 지운 이름 · 그 해시를 다시 쓰면 등록이 오류로 멈춘다(언리얼 CoreRedirects 의 지운 프로퍼티 기록)
+string.RemovedField = RemovedField
+# 지운 타입 이름: RemovedType="sw::OldThing". 보통 뒤를 이은 타입에 적는다. 새 타입 · enum 이 그 이름 · 해시를 다시 쓰면 등록이 오류로 멈춘다
+string.RemovedType = RemovedType
 string.Category = Category
 string.DisplayName = DisplayName
 string.Tooltip = Tooltip
 string.Meta = Meta, meta, CustomMeta
 # 타입 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 뒤에 불린다(ReflectionValidation)
 string.Validate = Validate
-# 컴포넌트 틱 레인 선언(NEXT 5-3 1c): Batch(기본 — 타입별 일괄) · Task(선행 조건 · 일의 양이 큰 개별 태스크) · Main(메인 스레드 전용 API). 컴포넌트만 받는다. 레인은 등록이 없는 파생이 물려받는다(TickBatchRegistry::findDispatch)
+# 컴포넌트 틱 모드 선언(NEXT 5-3 1c): Batch(기본 — 타입별 일괄) · Task(선행 조건 · 일의 양이 큰 개별 태스크) · Main(메인 스레드 전용 API). 컴포넌트만 받는다. 모드는 등록이 없는 파생이 물려받는다(TickBatchRegistry::findDispatch)
 string.TickMode = TickMode
 
 [ENUM]

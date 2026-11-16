@@ -227,7 +227,7 @@ namespace sw
         IServiceStore( const IServiceStore& )            = delete;
         IServiceStore& operator=( const IServiceStore& ) = delete;
 
-        virtual void submit( unique_ptr<IServiceStoreJob> work ) = 0;
+        virtual void submit( unique_ptr<IServiceStoreJob> job ) = 0;
         /** @brief 끝난 일의 `complete` 를 이 스레드에서 부르고, 부른 수를 반환합니다. */
         virtual int32 pollCompletions() = 0;
         /** @brief 받았지만 아직 회수하지 않은 작업의 수를 반환합니다. */

@@ -65,7 +65,7 @@ namespace sw
          * @details 에디터 게임 뷰가 이 줄을 게임 화면 왼쪽 아래에 그립니다. 판정이 여기 있어 ImGui 없이 테스트합니다.
          */
         void collectRows( vector<DebugOverlayRow>& outListRow ) const;
-    };
 
-    SW_SERVICE_SLOT( DebugOverlayState, Required );
+        SW_SERVICE_SLOT( DebugOverlayState, Required );
+    };
 } // namespace sw

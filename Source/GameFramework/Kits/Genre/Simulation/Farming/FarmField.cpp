@@ -39,32 +39,35 @@ namespace sw
 
     void FarmField::serializeState( StateIO& io )
     {
-        io.expect( _topology._width );
-        io.expect( _topology._height );
-        if ( io.isOk() == false )
-            return;
-        for ( FarmTile& tile : _listTile )
+        // 밭 크기는 설정이 정한다 — 저장된 크기로 읽어 같은 좌표에 옮기고, 줄어 밖에 남은 밭이 있으면 거절한다(감사 A-6). 칸마다 이름(4) + 자람(4) + 깃발(1)
+        const GridTopology savedTopology = _topology.serializeSize( io );
+        _topology.serializeCells( io, savedTopology, _listTile, kTileStateMinBytes, [this]( StateIO& tileIO, FarmTile& tile )
+        { serializeTile( tileIO, tile ); },
+                                  []( const FarmTile& tile )
+        { return tile.hasCrop() == false && tile._bTilled == SW_FALSE; } );
+    }
+
+    void FarmField::serializeTile( StateIO& io, FarmTile& tile ) const
+    {
+        if ( io.isReading() )
         {
-            if ( io.isReading() )
-            {
-                tile = FarmTile{};
-            }
-            io.value( tile._cropID );
-            io.value( tile._growth );
-            uint8 flags = static_cast<uint8>( ( tile._bTilled != SW_FALSE ? 1u : 0u ) | ( tile._bWatered != SW_FALSE ? 2u : 0u ) |
-                                              ( tile._bReady != SW_FALSE ? 4u : 0u ) | ( tile._bWithered != SW_FALSE ? 8u : 0u ) );
-            io.value( flags );
-            if ( io.check( flags <= 15u && 0 <= tile._growth ) == false )
+            tile = FarmTile{};
+        }
+        io.value( tile._cropID );
+        io.value( tile._growth );
+        uint8 flags = static_cast<uint8>( ( tile._bTilled != SW_FALSE ? 1u : 0u ) | ( tile._bWatered != SW_FALSE ? 2u : 0u ) |
+                                          ( tile._bReady != SW_FALSE ? 4u : 0u ) | ( tile._bWithered != SW_FALSE ? 8u : 0u ) );
+        io.value( flags );
+        if ( io.check( flags <= 15u && 0 <= tile._growth ) == false )
+            return;
+        if ( io.isReading() )
+        {
+            tile._bTilled   = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
+            tile._bWatered  = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
+            tile._bReady    = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
+            tile._bWithered = ( flags & 8u ) != 0 ? SW_TRUE : SW_FALSE;
+            if ( io.check( isTileValid( tile ) ) == false )
                 return;
-            if ( io.isReading() )
-            {
-                tile._bTilled   = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
-                tile._bWatered  = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
-                tile._bReady    = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
-                tile._bWithered = ( flags & 8u ) != 0 ? SW_TRUE : SW_FALSE;
-                if ( io.check( isTileValid( tile ) ) == false )
-                    return;
-            }
         }
     }
 
@@ -120,7 +123,7 @@ namespace sw
         const CropDef* pCrop = _pCatalog != nullptr ? _pCatalog->findCropBySeed( seedItem ) : nullptr;
         if ( pCrop == nullptr )
             return FarmActionResult::UnknownSeed;
-        if ( pCrop->growsIn( season ) == false )
+        if ( pCrop->canGrowIn( season ) == false )
             return FarmActionResult::OutOfSeason;
 
         pTile->_cropID    = pCrop->_id;
@@ -188,7 +191,7 @@ namespace sw
                         tile._bReady = SW_TRUE;
                 }
                 // 2) 시듦: 새 계절에 자라지 않으면 시든다(다 자란 것도 마찬가지이다).
-                if ( pCrop->growsIn( newSeason ) == false )
+                if ( pCrop->canGrowIn( newSeason ) == false )
                 {
                     tile._bWithered = SW_TRUE;
                     tile._bReady    = SW_FALSE;

@@ -1,3 +1,4 @@
+// 노드 캔버스 지우기 구간 금지(EditorInputBan.h)를 받지 않는 유일한 자리다 — collectRemovals 가 그 구간의 입구다(표시 SW_EDITOR_NODE_GRAPH_ADAPTER=1 은 CMake `sw_apply_editor_input_ban` 만 준다).
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
@@ -952,7 +953,7 @@ namespace sw::editor
     {
         if ( _bNeedsContentFit == false )
             return;
-        if ( isCanvasSizeSettled( _previousCanvasSize, _canvasSize ) == false )
+        if ( isCanvasSizeStable( _previousCanvasSize, _canvasSize ) == false )
             return; // 크기가 정해진 다음 프레임에 맞춘다(노드 위치 시드도 그때까지 매 프레임 같은 값으로 걸린다)
 
         ed::NavigateToContent( 0.1f, 1.0f ); // 작은 그래프는 1:1 에서 가운데로 — 맞추기가 노드를 화면 가득 키우지 않는다(오버레이 포트 패치)

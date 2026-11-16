@@ -1,5 +1,5 @@
 // SocialServiceTest — 친구 로직(메모리 저장소 + 메모리 캐시 + 프로세스 안 버스): 관계 바꾸기와 양쪽 알림, 이름으로 신청, 이 서버 관계 메모리(차단 조회)와 버스로 다시 읽기,
-// 읽는 도중 바뀐 관계, 접속 상태 쓰기 · 연장 · 조회 · 떠날 때. 규칙 표는 SocialLinkRulesTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
+// 읽는 도중 바뀐 관계, 접속 상태 쓰기 · 연장 · 조회 · 떠날 때 · 친구 역색인을 따른 전달. 규칙 표는 SocialLinkRulesTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -15,6 +15,9 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+
+#include <algorithm>
 
 using namespace sw;
 
@@ -85,12 +88,12 @@ namespace
 
         ~SocialFixture()
         {
-            pump();
+            poll();
             _service.shutdown();
             _router.shutdown();
         }
 
-        void pumpBus()
+        void pollBus()
         {
             if ( _transport == nullptr )
                 return;
@@ -102,17 +105,17 @@ namespace
             }
         }
 
-        void pump()
+        void poll()
         {
-            pumpBus();
-            while ( _store.pollCompletions() + _router.pump() > 0 )
+            pollBus();
+            while ( _store.pollCompletions() + _router.poll() > 0 )
             {
             }
         }
 
         vector<SocialCompletion> takeAll()
         {
-            pump();
+            poll();
             vector<SocialCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             return listCompletion;
@@ -125,7 +128,7 @@ namespace
             return listCompletion.empty() ? SocialCompletion{} : std::move( listCompletion[0] );
         }
 
-        SocialOutcome change( SocialLinkOperation operation, AccountID accountID, AccountID otherID )
+        SocialServiceResult change( SocialLinkOperation operation, AccountID accountID, AccountID otherID )
         {
             _service.changeLink( operation, accountID, otherID, UnixMilliseconds{ kNowMs }, _nextTag++ );
             return take()._result;
@@ -139,7 +142,7 @@ namespace
 
         vector<SocialNotification> takeNotifications()
         {
-            pump();
+            poll();
             vector<SocialNotification> listNotification;
             _service.pollNotifications( listNotification );
             return listNotification;
@@ -152,7 +155,7 @@ namespace
             (void)takeNotifications();
         }
 
-        SocialOutcome setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity = "", int64 nowMs = kNowMs )
+        SocialServiceResult setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity = "", int64 nowMs = kNowMs )
         {
             _service.setPresence( accountID, status, activity, UnixMilliseconds{ nowMs }, _nextTag++ );
             return take()._result;
@@ -270,13 +273,13 @@ SW_TEST_CASE( SocialServiceTest, BusChangeReloadsEvenDuringALoad )
     // A 가 읽기를 맡겨(이미 이전 값을 읽었다) 완료를 기다리는 동안 B 에서 막음을 쓴다
     rigA._service.listLinks( kAlice, 7 );
     SW_EXPECT_TRUE( rigB.change( SocialLinkOperation::Block, kAlice, kBob ) == SocialResult::Ok );
-    rigA.pumpBus();
+    rigA.pollBus();
     (void)rigA.takeAll();
     SW_EXPECT_TRUE( rigA._service.isBlockedLocal( kAlice, kBob ) );
     SW_EXPECT_EQUAL( 0, rigA._service.getPendingCount() );
 
     SW_EXPECT_TRUE( rigB.change( SocialLinkOperation::Unblock, kAlice, kBob ) == SocialResult::Ok ); // 평소의 길
-    rigA.pump();
+    rigA.poll();
     SW_EXPECT_FALSE( rigA._service.isBlockedLocal( kAlice, kBob ) );
 }
 
@@ -306,7 +309,7 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriends )
     SocialFixture& rigA = world._rig;
     rigA.befriend( kAlice, kBob );
     (void)rigA.links( kAlice );
-    rigB.pump();
+    rigB.poll();
     (void)rigB.links( kBob );
     (void)rigA.takeNotifications();
     (void)rigB.takeNotifications();
@@ -332,6 +335,56 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriends )
     const vector<SocialPresence> listFromMemory = rigA.queryPresence( kAlice );
     SW_REQUIRE_EQUAL( size_t( 1 ), listFromMemory.size() );
     SW_EXPECT_EQUAL( string( "same" ), listFromMemory[0]._activity );
+}
+
+/** @brief [SocialServiceTest] 접속 상태 전달은 친구 역색인을 따른다 — 관계를 다시 읽거나(끊음) 계정이 떠나면 받는 사람에서 빠지고, 다시 오면 돌아온다. 친구가 아닌 계정과 자신은 받지 않는다 */
+SW_TEST_CASE( SocialServiceTest, PresenceFanoutFollowsFriendIndex )
+{
+    constexpr AccountID kDave = 14; // 이 서버에 있지만 친구가 아니다
+    SocialWorld         world;
+    SocialFixture&      rig = world._rig;
+    rig.befriend( kAlice, kBob );
+    rig.befriend( kAlice, kCarol );
+    (void)rig.links( kAlice );
+    (void)rig.links( kBob );
+    (void)rig.links( kCarol );
+    (void)rig.links( kDave );
+    (void)rig.takeNotifications();
+
+    const auto collectRecipients = [&rig]( SocialPresenceStatus status )
+    {
+        SW_EXPECT_TRUE( rig.setPresence( kAlice, status ) == SocialResult::Ok );
+        vector<AccountID> listRecipient;
+        for ( const SocialNotification& notification : rig.takeNotifications() )
+        {
+            if ( notification._kind == SocialNotificationKind::PresenceChanged && notification._otherID == kAlice )
+                listRecipient.push_back( notification._recipientID );
+        }
+        std::sort( listRecipient.begin(), listRecipient.end() );
+        return listRecipient;
+    };
+
+    vector<AccountID> listRecipient = collectRecipients( SocialPresenceStatus::Online );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listRecipient.size() );
+    SW_EXPECT_EQUAL( kBob, listRecipient[0] );
+    SW_EXPECT_EQUAL( kCarol, listRecipient[1] );
+
+    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Remove, kBob, kAlice ) == SocialResult::Ok ); // 두 사람 모두 다시 읽는다
+    (void)rig.takeNotifications();
+    listRecipient = collectRecipients( SocialPresenceStatus::Away );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRecipient.size() );
+    SW_EXPECT_EQUAL( kCarol, listRecipient[0] );
+
+    rig._service.removeAccount( kCarol ); // 접속 상태를 쓰지 않았으니 조용히 떠난다
+    SW_EXPECT_TRUE( collectRecipients( SocialPresenceStatus::Busy ).empty() );
+
+    (void)rig.links( kCarol ); // 다시 접속하면 역색인에 돌아온다
+    listRecipient = collectRecipients( SocialPresenceStatus::Online );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRecipient.size() );
+    SW_EXPECT_EQUAL( kCarol, listRecipient[0] );
+
+    (void)rig.links( kCarol ); // 같은 목록을 다시 읽어도 두 번 받지 않는다
+    SW_EXPECT_EQUAL( size_t( 1 ), collectRecipients( SocialPresenceStatus::InGame ).size() );
 }
 
 /** @brief [SocialServiceTest] 떠나면 친구에게 Offline 을 알리고 캐시 값을 지워 조회가 Offline 이다. 접속 상태를 쓰지 않은 계정은 조용히 떠난다 */
@@ -372,7 +425,7 @@ SW_TEST_CASE( SocialServiceTest, PresenceExpiresWithoutRefresh )
 
     world._clock.advanceMilliseconds( kTTLMs - 1000 );
     rig._service.update( UnixMilliseconds{ kNowMs + kTTLMs - 1000 } ); // 연장한다
-    rig.pump();
+    rig.poll();
     world._clock.advanceMilliseconds( 2000 );
     SW_REQUIRE_EQUAL( size_t( 1 ), other.queryPresence( kBob ).size() );
     SW_EXPECT_TRUE( other.queryPresence( kBob )[0]._status == SocialPresenceStatus::Online );
@@ -389,4 +442,36 @@ SW_TEST_CASE( SocialServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = SocialResult::Ok;
     rig.expectFailureReachesService( SocialMethod::RequestFriend::kID, OnlineError::kUnavailable, finished );
     rig.expectFailureReachesService( SocialMethod::RequestFriend::kID, OnlineError::kBusy, finished );
+}
+
+/**
+ * @brief [SocialServiceTest] 계정 삭제 → 친구 키트의 관계 표에 그 계정의 레코드 0: 친구 · 보낸 신청 · 나를 막은 사람(내 쪽 줄이 없다)까지 지워지고 상대 목록이 비며 개수가 돌아온다(감사 P0-7)
+ * @details 변이: 역색인(`social_blocked_by`)을 빼면 나를 막은 사람의 줄이 남아 진다.
+ */
+SW_TEST_CASE( SocialServiceTest, AccountDeletionErasesLinks )
+{
+    constexpr AccountID kBlocker = 15;
+    SocialWorld         world;
+    SocialFixture&      rig = world._rig;
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kBob ) == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Accept, kBob, kAlice ) == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kCarol ) == SocialResult::Ok );
+    SW_REQUIRE_TRUE( rig.change( SocialLinkOperation::Block, kBlocker, kAlice ) == SocialResult::Ok );
+    (void)rig.takeNotifications();
+
+    SW_REQUIRE_TRUE( SocialService::eraseAccount( world._database, kAlice, kNowMs ) == ServiceStoreResult::Ok );
+    const string aliceHex = ServiceKeyUtil::makeHex64( kAlice );
+    for ( const utf8* pTable : { "social_link", "social_count", "social_blocked_by" } )
+    {
+        vector<ServiceRecord> listRecord;
+        SW_REQUIRE_TRUE( world._database.listRecords( hashed_string( pTable ), "", "", 100, false, listRecord ) == ServiceStoreResult::Ok );
+        for ( const ServiceRecord& record : listRecord )
+        {
+            SW_EXPECT_TRUE( record._key.find( aliceHex ) == string::npos );
+        }
+    }
+    SW_EXPECT_TRUE( rig.links( kBob ).empty() );
+    SW_EXPECT_TRUE( rig.links( kCarol ).empty() );
+    SW_EXPECT_TRUE( rig.links( kBlocker ).empty() );
+    SW_EXPECT_TRUE( SocialService::eraseAccount( world._database, kAlice, kNowMs ) == ServiceStoreResult::Ok ); // 멱등
 }

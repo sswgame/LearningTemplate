@@ -9,7 +9,7 @@
  *          오류 로그를 남기고 호출부가 실패를 돌려줍니다. 다시 만들 수 있는 캐시는 `readCache` 로 읽어 없는 것으로 봅니다.
  *          캐시는 배포 중에 빌드가 다른 서버가 읽으므로 서버 버스와 같은 읽기(`MixedBuildCodec::decode`)입니다. 버전이 같으면 모르는 이름의 필드는 건너뛰고,
  *          읽지 못한 아는 필드(모르는 열거자)와 다른 버전은 없는 것으로 봅니다. 영속 레코드는 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지므로
- *          **레코드가 모르는 칸을 든다**: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownFields{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
+ *          **레코드가 모르는 칸을 든다**: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownProperties{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
  *          `readDurable` 이 같은 버전의 모르는 칸을 거기 담고 `encode` 가 그대로 다시 싣는다. 레코드를 복사해 고쳐 쓰는 서비스 코드는 손대지 않아도 칸이 따라간다.
  *          버전이 다른 레코드는 `deserializeVersioned` 가 이관 없이 거절하고 모르는 칸도 그대로 거절한다.
  *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
@@ -31,15 +31,15 @@
 
 namespace sw
 {
-    /** @brief @p T 가 모르는 칸을 드는 레코드(`ServiceRecordUnknownFields _unknownFields`)이면 true 입니다. */
+    /** @brief @p T 가 모르는 칸을 드는 레코드(`ServiceRecordUnknownFields _unknownProperties`)이면 true 입니다. */
     template <typename T, typename = void>
     struct ServiceRecordKeepsUnknown : std::false_type
     {
     };
 
     template <typename T>
-    struct ServiceRecordKeepsUnknown<T, std::void_t<decltype( std::declval<T&>()._unknownFields )>>
-        : std::is_same<decltype( std::declval<T&>()._unknownFields ), ServiceRecordUnknownFields>
+    struct ServiceRecordKeepsUnknown<T, std::void_t<decltype( std::declval<T&>()._unknownProperties )>>
+        : std::is_same<decltype( std::declval<T&>()._unknownProperties ), ServiceRecordUnknownFields>
     {
     };
 } // namespace sw
@@ -63,7 +63,7 @@ namespace sw
             bool       bWritten = false;
             // 모르는 칸을 드는 레코드는 읽을 때 담은 칸을 받은 그대로 뒤에 싣는다(옛 빌드가 고쳐 써도 새 빌드의 값이 남는다).
             if constexpr ( ServiceRecordKeepsUnknown<T>::value )
-                bWritten = bInRange && BinarySerializer::serializeVersionedKeepingUnknown( version, &record, *T::StaticType(), record._unknownFields._listField, outBytes );
+                bWritten = bInRange && BinarySerializer::serializeVersionedKeepingUnknown( version, &record, *T::StaticType(), record._unknownProperties._listField, outBytes );
             else
                 bWritten = bInRange && BinarySerializer::serializeVersioned( version, &record, *T::StaticType(), outBytes );
             if ( bWritten )
@@ -76,16 +76,16 @@ namespace sw
 
         /**
          * @brief 영속 레코드(@p key)를 읽습니다. 못 읽으면 손상이므로 오류 로그를 남기고 false 이며 @p outRecord 는 그대로입니다.
-         * @details 버전이 같으면 이 빌드가 모르는 칸을 거절하지 않고 `outRecord._unknownFields` 에 담는다(`encode` 가 다시 싣는다). 아는 칸을 읽지 못했거나(모르는 열거자)
+         * @details 버전이 같으면 이 빌드가 모르는 칸을 거절하지 않고 `outRecord._unknownProperties` 에 담는다(`encode` 가 다시 싣는다). 아는 칸을 읽지 못했거나(모르는 열거자)
          *          선언된 범위를 벗어나면 손상이다. 버전이 다르면 이관 읽기이며 모르는 칸이 있으면 손상이다. false 를 받은 호출부는 레코드를 건너뛰지 않고 요청을 실패로 돌려줍니다.
          */
         template <typename T>
         [[nodiscard]] static bool readDurable( const string_view key, const vector<uint8>& bytes, const uint32 version, T& outRecord )
         {
             static_assert( ServiceRecordKeepsUnknown<T>::value,
-                           "a durable record keeps the fields this build does not know - add `ServiceRecordUnknownFields _unknownFields{};` (not a PROPERTY) to the record type" );
+                           "a durable record keeps the fields this build does not know - add `ServiceRecordUnknownFields _unknownProperties{};` (not a PROPERTY) to the record type" );
             T          decoded;
-            const bool bRead = isVersion( bytes, version ) ? readKeepingUnknown( bytes, version, decoded, decoded._unknownFields._listField ) : read( bytes, version, decoded );
+            const bool bRead = isVersion( bytes, version ) ? readKeepingUnknown( bytes, version, decoded, decoded._unknownProperties._listField ) : read( bytes, version, decoded );
             if ( bRead )
             {
                 outRecord = std::move( decoded );

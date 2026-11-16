@@ -105,14 +105,14 @@ namespace
         }
 
         /** @brief 꾸민 스냅샷의 그룹 하나입니다. 활성 노드는 앞 노드와의 간격으로 씁니다. */
-        struct ForgedGroup
+        struct CraftedGroup
         {
             uint32         _id;
             vector<uint64> _listNodeStep;
         };
 
         /** @brief 끊김 없음 · 변형 없음에 그룹만 정해 쓴 스냅샷입니다. 첫 값은 `writeSnapshot` 과 같은 순서입니다. */
-        static vector<uint8> forgeSnapshot( const FractureGraph& graph, uint32 nextGroupID, const vector<ForgedGroup>& listGroup, float32 nodeStrain = 0.0f )
+        static vector<uint8> craftSnapshot( const FractureGraph& graph, uint32 nextGroupID, const vector<CraftedGroup>& listGroup, float32 nodeStrain = 0.0f )
         {
             BitWriter writer;
             writer.writeUint32( FourCCUtil::make( "SWDS" ) );
@@ -134,7 +134,7 @@ namespace
             }
             writer.writeVarUint( 0 );
             writer.writeVarUint( listGroup.size() );
-            for ( const ForgedGroup& group : listGroup )
+            for ( const CraftedGroup& group : listGroup )
             {
                 writer.writeVarUint( group._id );
                 writer.writeVarUint( 0 );
@@ -631,41 +631,41 @@ SW_TEST_CASE( DestructionStateTest, SnapshotRefusesGroupsThatBreakTheSortedOrder
     { return state.readSnapshot( bytes.data(), bytes.size() ); };
 
     // 꾸미개가 쓰는 형식이 진짜 형식임을 먼저 확인한다 - 묶음 4 · 5 가 각자 그룹이다.
-    SW_REQUIRE_TRUE( read( Util::forgeSnapshot( graph, 3, {
+    SW_REQUIRE_TRUE( read( Util::craftSnapshot( graph, 3, {
                                                               {1, { 4 }},
                                                               {2, { 5 }}
     } ) ) );
     SW_EXPECT_EQUAL( state.getGroupOfLeaf( 3 ), 2u );
 
     const uint64 kWrapToPrevious = std::numeric_limits<uint64>::max(); // 5 + 이 값은 4 다
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               {2, { 4 }},
                                                               {1, { 5 }}
     } ) ) ); // 그룹이 내림차순
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               {1, { 4 }},
                                                               {1, { 5 }}
     } ) ) ); // 같은 번호
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               { 0, { 6 } }
     } ) ) ); // 번호 0
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               { 3, { 6 } }
     } ) ) ); // 다음 번호 이상
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               { 1, { 5, kWrapToPrevious } }
     } ) ) ); // 간격이 감겨 내림차순
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               { 1, { 4 } }
     } ) ) ); // 잎을 다 덮지 않는다
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               { 1, { 4, 2 } }
     } ) ) ); // 묶음 4 와 루트가 겹친다
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               { 1, { 99 } }
     } ) ) ); // 없는 노드
     const float32 kNotFinite = std::numeric_limits<float32>::infinity();
-    SW_EXPECT_FALSE( read( Util::forgeSnapshot( graph, 3, {
+    SW_EXPECT_FALSE( read( Util::craftSnapshot( graph, 3, {
                                                               { 1, { 6 } }
     },
                                                 kNotFinite ) ) ); // 변형이 유한하지 않다

@@ -29,14 +29,14 @@ namespace sw
         struct SequenceTimelineUtilInternal
         {
             /** @brief 구간 동안 대상의 활성 상태를 정하는 종류인지 반환합니다. 표에 없는 종류는 아무것도 하지 않습니다. */
-            static bool drivesTarget( const SequenceTrackItem& item )
+            static bool affectsTarget( const SequenceTrackItem& item )
             {
                 const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
                 return pInfo != nullptr && pInfo->_bDrivesTarget;
             }
 
             /** @brief 시작 프레임을 지날 때 알리는 종류인지 반환합니다. */
-            static bool firesOnCross( const SequenceTrackItem& item )
+            static bool shouldFireOnCross( const SequenceTrackItem& item )
             {
                 const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
                 return pInfo != nullptr && pInfo->_bFiresOnCross;
@@ -47,7 +47,7 @@ namespace sw
             {
                 for ( const SequenceTrackItem* pActive : listActive )
                 {
-                    const bool bActiveDrivesTarget = pActive != nullptr && drivesTarget( *pActive ) && pActive->_binding == bindingID;
+                    const bool bActiveDrivesTarget = pActive != nullptr && affectsTarget( *pActive ) && pActive->_binding == bindingID;
                     if ( bActiveDrivesTarget )
                         return true;
                 }
@@ -55,7 +55,7 @@ namespace sw
             }
 
             /** @brief 축 하나(0 은 x, 1 은 y, 2 는 z)입니다. */
-            static float32& axisOf( float3& value, uint32 axis )
+            static float32& getAxisOf( float3& value, uint32 axis )
             {
                 if ( axis == 0 )
                     return value._x;
@@ -78,9 +78,9 @@ namespace sw
                     const optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
                     if ( value.has_value() == false )
                         continue;
-                    const uint32 groupIndex                          = channelIndex / 3;
-                    axisOf( arrValue[groupIndex], channelIndex % 3 ) = *value;
-                    arrKeyed[groupIndex]                             = true;
+                    const uint32 groupIndex                             = channelIndex / 3;
+                    getAxisOf( arrValue[groupIndex], channelIndex % 3 ) = *value;
+                    arrKeyed[groupIndex]                                = true;
                 }
                 // 키가 있는 그룹만 쓴다. 키 없는 회전과 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
                 if ( arrKeyed[0] )
@@ -360,7 +360,7 @@ namespace sw
         // 클립이 둘인 대상이 매 프레임 꺼졌다 켜져 렌더 집합이 두 번 흔들린다).
         for ( const SequenceTrackItem& item : asset._listItem )
         {
-            if ( SequenceTimelineUtilInternal::drivesTarget( item ) == false )
+            if ( SequenceTimelineUtilInternal::affectsTarget( item ) == false )
                 continue;
             GameObject* pTarget = findTarget( pManager, bindings, item._binding );
             if ( pTarget == nullptr )
@@ -418,7 +418,7 @@ namespace sw
     {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
-            if ( SequenceTimelineUtilInternal::firesOnCross( item ) == false )
+            if ( SequenceTimelineUtilInternal::shouldFireOnCross( item ) == false )
                 continue;
             // 지나갔는가: 이전 프레임에는 아직 닿지 않았고 이번 프레임에는 닿았다.
             if ( previousFrame >= item._start || item._start > frame )
@@ -429,18 +429,17 @@ namespace sw
         }
     }
 
-    void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequencePlayer& player, const SequenceBindingView& bindings,
+    void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings,
                                               vector<const SequenceTrackItem*>* pOutListCrossedEvent )
     {
-        const SequenceAsset& asset           = player.getAsset();
-        const int32          frameBeforeWrap = player.getFrameBeforeWrap();
+        const int32 frameBeforeWrap = step._frameBeforeWrap;
 
         // 되감기 전 끝 구간을 먼저 모은다. `applyFrame` 이 출력을 비우므로 따로 모아 앞에 붙인다.
         vector<const SequenceTrackItem*> listTailEvent;
         if ( frameBeforeWrap != SequencePlayer::kNoLoopWrap )
             appendCrossedEvents( asset, frameBeforeWrap, asset._frameMax, &listTailEvent );
 
-        applyFrame( pManager, asset, bindings, player.getCurrentFrame(), player.getPreviousFrame(), pOutListCrossedEvent );
+        applyFrame( pManager, asset, bindings, step._frame, step._previousFrame, pOutListCrossedEvent );
         if ( pOutListCrossedEvent != nullptr && listTailEvent.empty() == false )
             pOutListCrossedEvent->insert( pOutListCrossedEvent->begin(), listTailEvent.begin(), listTailEvent.end() );
     }
@@ -695,7 +694,7 @@ namespace sw
         for ( uint32 itemIndex = 0; itemIndex < static_cast<uint32>( asset._listItem.size() ); ++itemIndex )
         {
             const SequenceTrackItem& item = asset._listItem[itemIndex];
-            if ( SequenceTimelineUtilInternal::drivesTarget( item ) == false )
+            if ( SequenceTimelineUtilInternal::affectsTarget( item ) == false )
                 continue;
             const GameObject* pTarget = findTarget( pManager, bindings, item._binding );
             if ( pTarget == nullptr )
@@ -746,18 +745,17 @@ namespace sw
         appendCameraSignals( asset, previousFrame, frame, pPreviousCut, outListSignal );
     }
 
-    void SequenceTimelineUtil::collectPlaybackCameraSignals( const SequencePlayer& player, vector<SequenceCameraSignal>& outListSignal )
+    void SequenceTimelineUtil::collectPlaybackCameraSignals( const SequenceAsset& asset, const SequencePlaybackStep& step, vector<SequenceCameraSignal>& outListSignal )
     {
-        const SequenceAsset& asset           = player.getAsset();
-        const int32          frameBeforeWrap = player.getFrameBeforeWrap();
-        if ( frameBeforeWrap == SequencePlayer::kNoLoopWrap )
+        const int32 frameBeforeWrap = step._frameBeforeWrap;
+        if ( frameBeforeWrap == SequencePlaybackStep::kNoLoopWrap )
         {
-            collectCameraSignals( asset, player.getPreviousFrame(), player.getCurrentFrame(), outListSignal );
+            collectCameraSignals( asset, step._previousFrame, step._frame, outListSignal );
             return;
         }
         // 되감았다 — 끝 구간을 먼저 보고, 처음 구간은 끝을 덮던 컷에서 이어진 것으로 본다(같은 컷이 끝과 처음을 덮으면 시네마틱이 끊기지 않는다).
         appendCameraSignals( asset, frameBeforeWrap, asset._frameMax, asset.findCameraCut( frameBeforeWrap ), outListSignal );
-        appendCameraSignals( asset, player.getPreviousFrame(), player.getCurrentFrame(), asset.findCameraCut( asset._frameMax ), outListSignal );
+        appendCameraSignals( asset, step._previousFrame, step._frame, asset.findCameraCut( asset._frameMax ), outListSignal );
     }
 
     void SequenceTimelineUtil::appendCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, const SequenceTrackItem* pPreviousCut,

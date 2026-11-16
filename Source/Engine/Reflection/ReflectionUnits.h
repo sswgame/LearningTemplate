@@ -78,7 +78,7 @@ namespace sw
         /** @brief 종류로 단위를 찾습니다. None 이면 nullptr 입니다. */
         static const ReflectUnit* findUnit( ReflectUnitKind kind ) noexcept;
         /** @brief 철자의 종류입니다(없으면 None). 생성 코드가 상수 문맥에서 불러 철자 오타를 컴파일 오류로 만든다. */
-        static constexpr ReflectUnitKind kindOf( string_view name ) noexcept;
+        static constexpr ReflectUnitKind getKindOf( string_view name ) noexcept;
 
         /** @brief 받는 철자를 `a, b, c` 꼴 한 줄로 씁니다(오류 메시지용). */
         static string makeUnitList();
@@ -139,7 +139,7 @@ namespace sw
     }
     static_assert( isReflectUnitTableOrdered(), "kArrReflectUnit must list ReflectUnitKind in enum order (findUnit( kind ) indexes it)" );
 
-    constexpr ReflectUnitKind ReflectUnit::kindOf( const string_view name ) noexcept
+    constexpr ReflectUnitKind ReflectUnit::getKindOf( const string_view name ) noexcept
     {
         for ( const ReflectUnit& unit : kArrReflectUnit )
         {

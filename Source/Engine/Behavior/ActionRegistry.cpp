@@ -118,7 +118,7 @@ namespace sw
         return name;
     }
 
-    expected<void> GameActionCall::tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams )
+    expected<void> GameActionCall::tryReadProperties( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams )
     {
         outEntry  = nullptr;
         outParams = InstancedStruct{};
@@ -154,7 +154,7 @@ namespace sw
         outCall                   = GameActionCall{};
         const ActionEntry* pEntry = nullptr;
         InstancedStruct    params;
-        if ( expected<void> read = tryReadFields( text, pEntry, params ); read.has_value() == false )
+        if ( expected<void> read = tryReadProperties( text, pEntry, params ); read.has_value() == false )
             return read;
         outCall._pEntry  = pEntry;
         outCall._pParams = params.share();
@@ -276,9 +276,9 @@ namespace sw
 
     private:
         ActionTraceInternal::TraceState _state;
-    };
 
-    SW_SERVICE_SLOT( ActionTraceState, Required );
+        SW_SERVICE_SLOT( ActionTraceState, Required );
+    };
 
     ActionTraceInternal::TraceState& ActionTraceInternal::getState()
     {

@@ -161,10 +161,10 @@ namespace sw
         int32 standingCount = 0;
         for ( const SurvivalHorrorInvestigator& investigator : _listInvestigator )
         {
-            const bool bBroken        = investigator._health <= 0 || investigator._sanity <= 0;
-            const bool bStanding      = investigator._bDefeated == SW_FALSE;
-            const bool bFieldsInvalid = investigator._speed <= 0.0f || investigator._health < 0 || investigator._sanity < 0 || investigator._will < 0 || investigator._strength < 0;
-            if ( bFieldsInvalid || bBroken == bStanding || _turnOrder.hasActor( investigator._actorID ) != bStanding )
+            const bool bBroken            = investigator._health <= 0 || investigator._sanity <= 0;
+            const bool bStanding          = investigator._bDefeated == SW_FALSE;
+            const bool bPropertiesInvalid = investigator._speed <= 0.0f || investigator._health < 0 || investigator._sanity < 0 || investigator._will < 0 || investigator._strength < 0;
+            if ( bPropertiesInvalid || bBroken == bStanding || _turnOrder.hasActor( investigator._actorID ) != bStanding )
                 return false;
             standingCount += bStanding ? 1 : 0;
         }

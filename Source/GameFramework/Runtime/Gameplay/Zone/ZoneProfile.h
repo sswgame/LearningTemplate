@@ -162,6 +162,6 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 `ZoneProfile.cpp` 가 인스턴스화합니다. 쓰는 쪽은 `SharedAssetCache<ZoneProfile>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ZoneProfile>;
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ZoneModuleDef>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, ZoneProfile );
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, ZoneModuleDef );
 } // namespace sw

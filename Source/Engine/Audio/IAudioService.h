@@ -10,6 +10,7 @@
  *       정하고(`resolveLayout`) 엔진을 그 레이아웃으로 만든 뒤 장치가 엔진을 당기기 시작합니다(`startOutput`). 장치가 그만큼의 채널을 갖지 않는 명시 모드는 오류로 멈춥니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -18,6 +19,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Time/ExponentialBackoff.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioSoundPlayer.h"
@@ -38,6 +40,7 @@ namespace sw
 namespace sw
 {
     class AudioEngine;
+    struct AudioConfig;
 
     /**
      * @brief 이름을 붙인 볼륨 버스입니다. 세 버스(`master`, `music`, `sfx`)는 기존 볼륨 필드로 가고, 나머지 이름은 `IAudioService` 의 테이블에 남습니다.
@@ -65,7 +68,7 @@ namespace sw
         static constexpr utf8 kDefaultMixerPath[] = "engine/audio/default.audiomixer.xml";
 
         /**
-         * @brief 이 빌드가 담은 플랫폼 장치 백엔드(`AudioBackendRegistrar` 로 오른 것 — Windows XAudio2 · 리눅스 ALSA)를 만듭니다.
+         * @brief 이 빌드가 담은 플랫폼 장치 백엔드(`AudioBackendRegistrar` 로 오른 것 — Windows XAudio2 · 리눅스 ALSA · Android AAudio · 웹 AudioWorklet)를 만듭니다.
          * @details 등록된 백엔드가 없거나 둘 이상이면 기동을 멈춘다(장치 없는 오디오로 몰래 바꾸지 않는다). 장치를 열지 않을 쪽(전용 서버 · 테스트)은 `createNull` 을 부른다.
          */
         static unique_ptr<IAudioService> create();
@@ -83,15 +86,17 @@ namespace sw
         /**
          * @brief 출력 장치를 열고, 스피커 모드로 레이아웃을 정해 엔진을 만들고(기본 믹서 그래프), 장치가 엔진을 당기게 합니다.
          * @details 믹서 그래프를 못 읽거나, 장치가 명시 스피커 모드만큼의 채널을 갖지 않으면 실패입니다. 장치를 열지 못하는 것은 성공이며, 오프라인으로 진행합니다.
+         *          @p config 는 장치를 잃었거나 없이 시작했을 때 다시 열어 보는 간격과 클립 캐시 예산이다(`EngineConfig::_audio`).
+         *          상한이 첫 간격보다 작거나 캐시 예산이 0 이면 실패입니다.
          */
-        [[nodiscard]] bool initialize();
+        [[nodiscard]] bool initialize( const AudioConfig& config );
         /** @brief 출력 장치를 닫고 엔진을 내립니다. */
         void shutdown();
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = IEngineAudioDriver::kOwnerSubsystemName;
         /** @brief 기동 순서의 자리 — 장치를 열지 못해도 오프라인으로 선다. 음성 스트리밍이 태스크를 쓴다(서버는 장치 없는 NullAudioBackend). */
-        SubsystemInitResult     initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
+        SubsystemInitResult     initializeSubsystem() override;
         void                    shutdownSubsystem() override { shutdown(); }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
@@ -102,6 +107,12 @@ namespace sw
         bool isInitialized() const { return _bInitialized; }
         /** @brief 출력 장치가 엔진을 당기고 있는지입니다. false 면 `update` 가 렌더합니다. */
         bool isOutputOpen() const { return _bOutputOpen; }
+        /**
+         * @brief (아무 스레드 — 장치 콜백 · 스트림 스레드) 장치 출력이 죽었다고 알립니다. 다음 `update` 가 스트림을 닫고 오프라인 렌더로 넘긴 뒤 백오프 간격으로 다시 엽니다.
+         * @details 예전에는 백엔드마다 유실을 따로 다뤘다 — ALSA 는 복원에 지면 쉬지 않고 다시 써 코어 하나를 쓰고 오디오 시계가 실시간보다 빨리 흘렀고, XAudio2 는 유실을 몰라
+         *          렌더가 멈춰 재생 끝남을 기다리는 게임 로직이 영영 기다렸다(감사 P0-13). 언리얼 AudioMixer 의 Null 장치 넘김 → 새 기본 장치 스왑과 같은 자리다.
+         */
+        void notifyOutputLost() { _bOutputLost.store( true, std::memory_order_release ); }
 
         /**
          * @brief 스피커 모드를 정합니다. 초기화 전이면 값만 두고 `initialize` 가 씁니다. 초기화 뒤면 출력을 멈추고 엔진 레이아웃을 바꾼 뒤 다시 엽니다(재생은 이어집니다).
@@ -234,6 +245,10 @@ namespace sw
         virtual void closeDevice() {}
 
     private:
+        /** @brief 죽은 출력을 닫고 오프라인으로 넘깁니다(게임 스레드, `update`). */
+        void closeLostOutput();
+        /** @brief 장치 없이 도는 동안 백오프 간격이 지났으면 장치를 다시 열어 엔진의 지금 레이아웃으로 출력을 잇습니다(게임 스레드, `update`). */
+        void retryOpenOutput( float32 deltaSeconds );
         /** @brief 소리 그래프 파일이고 클립 캐시가 이미 읽어 둔 것이면 캐시의 경로를 @p outGraphPath 에 돌려줍니다(핫 리로드 대상). */
         [[nodiscard]] bool findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const;
 
@@ -263,6 +278,10 @@ namespace sw
         string                  _mixerPath;         /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
         AudioPlayingID          _musicPlayingID;    /**< 배경음악 재생 id 입니다. */
         float64                 _offlineFrameDebt;  /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
+        float64                 _reopenSecondsLeft; /**< 장치를 다시 열어 볼 때까지 남은 시간(초)입니다(`retryOpenOutput`). */
+        ExponentialBackoff      _reopenBackoff;     /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. `initialize` 가 설정의 첫 간격으로 만든다. */
+        int64                   _reopenMaxDelayMs;  /**< 장치 다시 열기 간격의 상한(ms)입니다(`EngineConfig::_audio`). */
+        atomic<bool>            _bOutputLost;       /**< 장치 출력이 죽었다는 알림입니다(`notifyOutputLost` — 아무 스레드). */
         AudioOutputDevice       _device;            /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
         float32                 _masterVolume;      /**< 마스터 볼륨 [0,1] 입니다. */
         float32                 _musicVolume;       /**< 배경음악 볼륨 [0,1] 입니다. */
@@ -272,9 +291,9 @@ namespace sw
         uint8                   _bDeviceOpen  : 1;  /**< 장치를 열었는지입니다. */
         uint8                   _bOutputOpen  : 1;  /**< 장치가 엔진을 당기고 있는지입니다. */
         uint8                   _bInitialized : 1;  /**< initialize 가 끝났는지입니다. */
-    };
 
-    SW_SERVICE_SLOT( IAudioService, Optional );
+        SW_SERVICE_SLOT( IAudioService, Optional );
+    };
 } // namespace sw
 
 namespace sw
@@ -282,8 +301,8 @@ namespace sw
     /**
      * @struct AudioBackendRegistrar
      * @brief 플랫폼 장치 백엔드가 스스로 오르는 정적 등록자입니다(`SW_REGISTER_AUDIO_BACKEND` — RHI 백엔드의 `RHIStaticBackendRegistrar` 와 같은 모양).
-     * @details 플랫폼 백엔드 파일(`Audio/Windows/` · `Audio/Linux/`)이 그 플랫폼 클라이언트 빌드에서만 등록자를 둔다 — 고르는 쪽(`IAudioService::create`)에는 `#if` 가 없다.
-     *          정적 초기화 때 머리에 이어 붙는다(배포의 정적 링크는 Engine 을 통째로 넣는다 — `cmake/Engine/ExecutableTargets.cmake`).
+     * @details 플랫폼 백엔드 파일(`Audio/Windows/` · `Audio/Linux/` · `Audio/Android/`)이 그 플랫폼 클라이언트 빌드에서만 등록자를 둔다 — 고르는 쪽(`IAudioService::create`)에는 `#if` 가 없다.
+     *          정적 초기화 때 머리에 이어 붙는다(배포의 정적 링크는 Engine 을 통째로 넣는다 — `cmake/Modules/Build/ExecutableTargets.cmake`).
      */
     struct SW_API AudioBackendRegistrar
     {

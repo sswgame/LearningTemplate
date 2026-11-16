@@ -363,9 +363,10 @@ namespace sw::editor
         onParamsChanged();
     }
 
-    void MeshModifier::writeExtraJSON( const JSONValue& object ) const
+    expected<void> MeshModifier::writeExtraJSON( const JSONValue& object ) const
     {
         (void)object;
+        return {};
     }
 
     bool MeshModifier::readExtraJSON( const JSONValue& object )

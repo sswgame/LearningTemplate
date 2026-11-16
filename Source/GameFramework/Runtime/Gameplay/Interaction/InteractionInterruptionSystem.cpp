@@ -56,17 +56,17 @@ namespace sw
         if ( _pSchedule == nullptr )
             return;
         vector<const GameObject*> listTarget;
-        manager.forEachComponentOfType<InteractorComponent>( [&]( InteractorComponent* pInteractor )
+        for ( InteractorComponent* pInteractor : manager.getComponentRegistry().getAll<InteractorComponent>() )
         {
             if ( pInteractor->isInteracting() == false )
-                return;
+                continue;
             const InteractionDef* pDef = pInteractor->getSession().getDefinition();
             if ( _interactionID.empty() == false && ( pDef == nullptr || pDef->_id != _interactionID ) )
-                return;
+                continue;
             const GameObject* pTarget = manager.resolveGameObject( pInteractor->getFocus() );
             if ( pTarget != nullptr )
                 listTarget.push_back( pTarget );
-        } );
+        }
         applyTargets( listTarget );
     }
 

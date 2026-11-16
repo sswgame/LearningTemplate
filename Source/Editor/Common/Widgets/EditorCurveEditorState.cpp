@@ -104,7 +104,7 @@ namespace sw::editor
             }
 
             /** @brief 고른 키의 시각 · 값 · 보간 칸입니다. 입력을 마쳤으면 true 입니다. */
-            static bool drawSelectedKeyFields( EditorCurveEditorState& state )
+            static bool drawSelectedKeyProperties( EditorCurveEditorState& state )
             {
                 FloatCurve& curve = state._working;
                 if ( state._selectedKey >= curve._listKey.size() )
@@ -120,7 +120,7 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Time" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
-                ImGui::InputFloat( "##time", &key._time, 0.0f, 0.0f, "%.3f" );
+                EditorWidgets::inputFloat( SW_WIDGET_ID( "##time" ), &key._time, 0.0f, 0.0f, "%.3f" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyTime" ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                 {
@@ -131,7 +131,7 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Value" ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
-                ImGui::InputFloat( "##value", &key._value, 0.0f, 0.0f, "%.3f" );
+                EditorWidgets::inputFloat( SW_WIDGET_ID( "##value" ), &key._value, 0.0f, 0.0f, "%.3f" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyValue" ) );
                 bFinished = bFinished || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
@@ -140,7 +140,7 @@ namespace sw::editor
                 ImGui::SetNextItemWidth( width );
                 const utf8* const arrName[] = { "Constant", "Linear", "Cubic" };
                 int32             current   = static_cast<int32>( key._interpolation );
-                if ( ImGui::Combo( "##interpolation", &current, arrName, 3 ) )
+                if ( EditorWidgets::combo( SW_WIDGET_ID( "##interpolation" ), &current, arrName, 3 ) )
                 {
                     key._interpolation = static_cast<CurveInterpolation>( current );
                     bFinished          = true;
@@ -312,7 +312,7 @@ namespace sw::editor
 
     bool EditorCurveEditorState::drawEditor( EditorCurveEditorState& state, const utf8* pMarkScope )
     {
-        bool bFinished = EditorCurveEditorInternal::drawSelectedKeyFields( state );
+        bool bFinished = EditorCurveEditorInternal::drawSelectedKeyProperties( state );
 
         const ImVec2 available = ImGui::GetContentRegionAvail();
         const ImVec2 size{ MathUtil::max( available.x, 64.0f ), MathUtil::max( available.y, 64.0f ) };

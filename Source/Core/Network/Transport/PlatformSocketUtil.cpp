@@ -259,6 +259,49 @@ namespace sw
 #endif
     }
 
+    bool PlatformSocketUtil::waitReadable( const uint64* pSocketHandles, int32 count, int32 timeoutMilli )
+    {
+        if ( pSocketHandles == nullptr || count <= 0 || count > kMaxWaitSockets )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        WSAPOLLFD arrEntry[kMaxWaitSockets]{};
+        for ( int32 index = 0; index < count; ++index )
+        {
+            if ( pSocketHandles[index] == kInvalidSocket )
+                return false;
+            arrEntry[index].fd     = PlatformSocketUtilInternal::toNative( pSocketHandles[index] );
+            arrEntry[index].events = POLLRDNORM;
+        }
+        if ( WSAPoll( arrEntry, static_cast<ULONG>( count ), timeoutMilli ) <= 0 )
+            return false;
+        for ( int32 index = 0; index < count; ++index )
+        {
+            if ( ( arrEntry[index].revents & ( POLLRDNORM | POLLERR | POLLHUP ) ) != 0 )
+                return true;
+        }
+        return false;
+#elif defined( SW_PLATFORM_POSIX )
+        pollfd arrEntry[kMaxWaitSockets]{};
+        for ( int32 index = 0; index < count; ++index )
+        {
+            if ( pSocketHandles[index] == kInvalidSocket )
+                return false;
+            arrEntry[index].fd     = PlatformSocketUtilInternal::toNative( pSocketHandles[index] );
+            arrEntry[index].events = POLLIN;
+        }
+        if ( poll( arrEntry, static_cast<nfds_t>( count ), timeoutMilli ) <= 0 )
+            return false;
+        for ( int32 index = 0; index < count; ++index )
+        {
+            if ( ( arrEntry[index].revents & ( POLLIN | POLLERR | POLLHUP ) ) != 0 )
+                return true;
+        }
+        return false;
+#else
+    #error "Unsupported platform"
+#endif
+    }
+
     bool PlatformSocketUtil::resolveAddress( string_view hostAndPort, uint16 defaultPort, NetAddress& outAddress )
     {
         if ( NetAddress::parse( hostAndPort, defaultPort, outAddress ) )

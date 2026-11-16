@@ -96,7 +96,7 @@ namespace sw
          */
         [[nodiscard]] optional<int64> findServerTickOffset() const;
         /** @brief 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수이고, 서버의 랙 보정이 씁니다. 스냅샷을 받기 전에는 0 입니다. */
-        float32 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0f; }
+        float64 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0; }
         uint64  getDecodeFailureCount() const { return _decodeFailureCount; }
         bool    hasSnapshot() const { return _listSnapshot.hasNewest(); }
         /** @brief 서버가 아직 확인하지 않은 내 입력 수입니다. 다음 메시지가 다시 싣습니다. */

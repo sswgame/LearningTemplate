@@ -35,7 +35,7 @@ namespace sw::editor
         bool   supportsGPU() const override { return true; }
         /** @brief 3D 격자 표본 버퍼를 싣는다: float4(격자 수 x · y · z, 1) · 쓰는 상자 최소 · 최대(저장된 상자, 무효면 입력 정점 상자), 뒤에 제어점(정규 좌표, x 가 가장 빨리 도는 순서)마다 float4 하나. */
         bool               packGPUInputs( const MeshModifierContext& context, vector<float4>& outListValue ) const override;
-        void               writeExtraJSON( const JSONValue& object ) const override;
+        expected<void>     writeExtraJSON( const JSONValue& object ) const override;
         [[nodiscard]] bool readExtraJSON( const JSONValue& object ) override;
         void               onParamsChanged() override;
 

@@ -29,7 +29,7 @@ namespace sw
             {
                 float3  _focus{};
                 float3  _pivot{};
-                float3  _aimPoint{};
+                float3  _hoverPoint{};
                 float32 _yaw{ 0.0f };
                 float32 _pitch{ 0.0f };
                 bool    _bArm{ false };     ///< 피벗에서 물러나는 모드(암이 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -256,11 +256,11 @@ namespace sw
                     return true;
                 }
                 // 점이나 대상을 보는 고정 카메라(CCTV)다. 보는 각에 훑기와 입력을 더한다.
-                inoutRig._aimPoint = view._aim == CameraAimMode::Point ? view._lookAt : inoutRig._focus;
-                const float2 toAim = computeLookAngles( inoutPose._position, inoutRig._aimPoint );
-                inoutRig._yaw      = toAim._x + inputYaw;
-                inoutRig._pitch    = toAim._y + inoutState._pitchOffset;
-                inoutRig._bCompose = view._aim == CameraAimMode::Target;
+                inoutRig._hoverPoint = view._aim == CameraAimMode::Point ? view._lookAt : inoutRig._focus;
+                const float2 toAim   = computeLookAngles( inoutPose._position, inoutRig._hoverPoint );
+                inoutRig._yaw        = toAim._x + inputYaw;
+                inoutRig._pitch      = toAim._y + inoutState._pitchOffset;
+                inoutRig._bCompose   = view._aim == CameraAimMode::Target;
                 return false;
             }
             case CameraPresetMode::FirstPerson:
@@ -282,11 +282,11 @@ namespace sw
             }
             case CameraPresetMode::Follow:
             {
-                inoutRig._yaw      = target._yaw + inoutRig._yaw;
-                inoutRig._pivot    = inoutRig._focus + rotateByYaw( view._offset, target._yaw );
-                inoutRig._aimPoint = inoutRig._pivot;
-                inoutRig._bArm     = true;
-                inoutRig._bCompose = true;
+                inoutRig._yaw        = target._yaw + inoutRig._yaw;
+                inoutRig._pivot      = inoutRig._focus + rotateByYaw( view._offset, target._yaw );
+                inoutRig._hoverPoint = inoutRig._pivot;
+                inoutRig._bArm       = true;
+                inoutRig._bCompose   = true;
                 return false;
             }
             case CameraPresetMode::OrthoTopDown:
@@ -304,9 +304,9 @@ namespace sw
             }
             case CameraPresetMode::Orbit:
             {
-                inoutRig._aimPoint = inoutRig._pivot;
-                inoutRig._bArm     = true;
-                inoutRig._bCompose = true;
+                inoutRig._hoverPoint = inoutRig._pivot;
+                inoutRig._bArm       = true;
+                inoutRig._bCompose   = true;
                 return false;
             }
             case CameraPresetMode::FollowXY:
@@ -339,11 +339,11 @@ namespace sw
                 {
                     inoutPose._position = view._offset;
                 }
-                inoutRig._aimPoint = inoutRig._focus;
-                const float2 toAim = computeLookAngles( inoutPose._position, inoutRig._aimPoint );
-                inoutRig._yaw      = toAim._x + inputYaw;
-                inoutRig._pitch    = toAim._y + inoutState._pitchOffset;
-                inoutRig._bCompose = true;
+                inoutRig._hoverPoint = inoutRig._focus;
+                const float2 toAim   = computeLookAngles( inoutPose._position, inoutRig._hoverPoint );
+                inoutRig._yaw        = toAim._x + inputYaw;
+                inoutRig._pitch      = toAim._y + inoutState._pitchOffset;
+                inoutRig._bCompose   = true;
                 return false;
             }
         }
@@ -400,11 +400,11 @@ namespace sw
         const float32 inputYaw = inoutState._yawOffset + inoutState._rotateYawShown + sweep;
 
         CameraRig rig;
-        rig._focus    = computeLookAheadFocus( framing, target, elapsed, inoutState );
-        rig._yaw      = view._yaw + inputYaw;
-        rig._pitch    = view._pitch + inoutState._pitchOffset;
-        rig._pivot    = rig._focus + view._offset + inoutState._panOffset;
-        rig._aimPoint = rig._pivot;
+        rig._focus      = computeLookAheadFocus( framing, target, elapsed, inoutState );
+        rig._yaw        = view._yaw + inputYaw;
+        rig._pitch      = view._pitch + inoutState._pitchOffset;
+        rig._pivot      = rig._focus + view._offset + inoutState._panOffset;
+        rig._hoverPoint = rig._pivot;
         if ( placeByMode( def, target, inputYaw, inoutState, rig, pose ) )
             return pose;
 
@@ -420,7 +420,7 @@ namespace sw
         // 대상이 화면 위치에 오도록 조준을 비튼다. 데드존 안의 움직임은 카메라를 돌리지 않고, 소프트존 밖으로는 나가지 않는다.
         const bool bComposeFraming = rig._bCompose && framing._bCompose && pose._bOrthographic == SW_FALSE;
         if ( bComposeFraming )
-            pose._rotation = composeFraming( framing, target, pose, rig._aimPoint, elapsed, inoutState );
+            pose._rotation = composeFraming( framing, target, pose, rig._hoverPoint, elapsed, inoutState );
         else
             pose._rotation = quaternion::makeFromYawPitchRoll( rig._yaw, pitch, 0.0f );
 

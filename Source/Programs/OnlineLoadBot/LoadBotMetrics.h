@@ -8,6 +8,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"
@@ -47,7 +48,8 @@ namespace sw
 
         void   summarize( vector<LoadBotActionSummary>& outListSummary ) const;
         string formatTable( int64 elapsedMs ) const;
-        string formatJSON( const LoadBotScenario& scenario, int64 elapsedMs ) const;
+        /** @brief 보고서 JSON 글입니다. 시나리오 이름 등에 잘못된 UTF-8 이 있으면 오류입니다(`JSONDocument::dump`). */
+        [[nodiscard]] expected<string> formatJSON( const LoadBotScenario& scenario, int64 elapsedMs ) const;
 
         int64 getCompletedCount( LoadBotAction action ) const;
         int64 getErrorCount( LoadBotAction action ) const;

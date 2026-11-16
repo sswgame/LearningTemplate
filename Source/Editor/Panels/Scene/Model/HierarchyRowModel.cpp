@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -102,7 +103,7 @@ namespace sw::editor
     void HierarchyFilter::collectComponentTypeNames( const GameObjectManager& manager, vector<string>& outListName )
     {
         outListName.clear();
-        manager.forEachGameObject( [&outListName]( const GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&outListName]( const GameObject* pObj )
         {
             for ( Component* pComp : pObj->getComponents() )
             {
@@ -154,7 +155,7 @@ namespace sw::editor
         {
             const utf8*            pFilter     = _filterText.c_str();
             unordered_set<uint64>& uniqueMatch = _uniqueFilterMatchID;
-            manager.forEachGameObject( [pFilter, &uniqueMatch]( GameObject* pObj )
+            manager.forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [pFilter, &uniqueMatch]( GameObject* pObj )
             {
                 if ( HierarchyFilter::matches( pObj, pFilter ) == false )
                     return;
@@ -186,7 +187,7 @@ namespace sw::editor
             _bRowsDirty = SW_TRUE;
     }
 
-    void HierarchyRowModel::expandAncestorsOf( const GameObject& object )
+    void HierarchyRowModel::expandAncestors( const GameObject& object )
     {
         for ( const GameObject* pParent = object.getParent(); pParent != nullptr; pParent = pParent->getParent() )
         {

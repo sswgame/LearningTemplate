@@ -330,7 +330,7 @@ namespace sw::editor
 
         // 끄는 동안에도 적용한다 — 시간 막대를 옮기면 뷰포트가 따라온다(언리얼 Sequencer · 유니티 Timeline 의 스크럽).
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::SliderInt( "##ScrubFrame", &_currentFrame, _document._asset._frameMin, _document._asset._frameMax, "Frame %d" ) )
+        if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##ScrubFrame" ), &_currentFrame, _document._asset._frameMin, _document._asset._frameMax, "Frame %d" ) )
         {
             if ( _previewPlayer->isPlaying() )
                 _previewPlayer->seekToFrame( _currentFrame );
@@ -367,7 +367,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "sequencer.pasteItem" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PasteItemTip" ) );
-        drawItemFields();
+        drawItemProperties();
 
         // ImSequencer 는 여러 항목을 그리는 위젯이라 IsItemEdited("마지막 항목")가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다 — 부르기 전후의 배치를 비교한다.
         const vector<SequenceTrackItem>& listItem = _document._asset._listItem;
@@ -383,14 +383,14 @@ namespace sw::editor
         if ( listItem.size() >= itemCountBefore && _sequence->_bDraftOpened == SW_FALSE )
             _document._selectedItem = selectedItem;
         if ( SequenceClipTiming::hasTimingChanged( _listTimingBefore, listItem ) )
-            notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
+            notifyDocumentEdited( "Edit Sequence Timeline" );
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
 
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "CinematicNote" ) );                 // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
         (void)EditorWidgets::drawTextFieldMultiline( "##CinematicNote", _cinematicNote, 2 ); // 바뀐 때는 아래 IsItemDeactivatedAfterEdit 가 본다
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
+            notifyDocumentEdited( "Edit Sequence Note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
     }
 
@@ -489,7 +489,7 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSequencer", "BindingNameLabel" ), SW_LOCKEY( "EditorSequencer", "BindingNameTip" ) );
             (void)EditorWidgets::drawTextField( "##bindingName", name, -1.0f );
             if ( ImGui::IsItemDeactivatedAfterEdit() && _document.renameBinding( binding._id, name ) )
-                notifyDocumentEdited( "Rename Sequence Binding", "sequence-binding" );
+                notifyDocumentEdited( "Rename Sequence Binding" );
             break;
         }
     }
@@ -668,7 +668,7 @@ namespace sw::editor
         const int32 lastFirst  = _document._asset._frameMax - _document.getViewFrameSpan();
         int32       scroll     = firstFrame;
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::SliderInt( "##viewScroll", &scroll, _document._asset._frameMin, MathUtil::max( lastFirst, _document._asset._frameMin ), SW_LOCKEY( "EditorSequencer", "ViewRangeFormat" ) ) )
+        if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##viewScroll" ), &scroll, _document._asset._frameMin, MathUtil::max( lastFirst, _document._asset._frameMin ), SW_LOCKEY( "EditorSequencer", "ViewRangeFormat" ) ) )
             _document.setViewFirstFrame( scroll );
         EditorSelfTestMarks::record( "sequencer.viewScroll" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ViewScrollTip" ) );
@@ -722,7 +722,7 @@ namespace sw::editor
         return bEdited;
     }
 
-    void SequencerPanel::drawItemFields()
+    void SequencerPanel::drawItemProperties()
     {
         constexpr float32 kClipFieldRowCount = 4.0f; // 이름 · 바인딩 · 종류의 칸 · 안내(초안이면 만들기 단추)
         // 고른 항목의 편집 필드는 늘 같은 높이의 구역에 그린다 — 고를 때만 필드가 생기면 그만큼 타임라인이 밀려 내려간다.
@@ -745,7 +745,7 @@ namespace sw::editor
             bool               bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ItemName" ), "Item Name" ), edit._name, nullptr, nullptr, "sequencer.item.name" );
             if ( pKindInfo->allowsField( SequenceItemField::Binding ) )
                 bEdited = drawItemBindingCombo( edit, *pKindInfo ) || bEdited;
-            // 종류가 쓰는 칸만 그린다 — 칸 목록은 종류 표 한 곳이다(`SequenceItemKindInfo::_allowedFields`).
+            // 종류가 쓰는 칸만 그린다 — 칸 목록은 종류 표 한 곳이다(`SequenceItemKindInfo::_allowedProperties`).
             for ( const SequenceItemFieldView& view : kArrItemFieldView )
             {
                 string* pText = edit.accessTextField( view._field );
@@ -765,7 +765,7 @@ namespace sw::editor
                 // 거절되면 칸이 항목의 값으로 돌아간다. 비운 채 치는 동안에는 아래 안내가 그 사실을 미리 알린다.
                 if ( bEdited && _document.commitItemEdit() )
                 {
-                    notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
+                    notifyDocumentEdited( "Edit Sequence Item" );
                     previewCurrentFrame();
                 }
                 if ( _document.isItemAcceptable( edit ) == false )
@@ -996,7 +996,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( pTooltip );
         if ( ImGui::IsItemDeactivatedAfterEdit() == false )
             return;
-        notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
+        notifyDocumentEdited( "Edit Sequence Track" );
         if ( bPreviewOnEdit )
             previewCurrentFrame();
     }
@@ -1098,13 +1098,13 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( track.getChannelName( channelIndex ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( pCurve ) - ImGui::GetStyle().ItemSpacing.x );
             const float32 speed = bRotation ? InspectorPropertyLayout::kAngleDragSpeed : 0.05f;
-            if ( ImGui::DragFloat( "##value", &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
+            if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
             {
                 (void)SequenceModel::setChannelDisplayValue( track, channelIndex, frame, value );
                 previewCurrentFrame();
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sequence Key", "sequence-key" );
+                notifyDocumentEdited( "Edit Sequence Key" );
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
             EditorSelfTestMarks::record( mark.c_str() );
@@ -1270,7 +1270,7 @@ namespace sw::editor
     {
         if ( _previewPlayer == nullptr || _previewPlayer->isPlaying() == false )
             return;
-        _previewPlayer->update( deltaSeconds );
+        (void)_previewPlayer->update( deltaSeconds ); // 미리보기는 지금 프레임만 적용한다 — 이벤트를 내지 않으니 지난 구간은 쓰지 않는다
         _currentFrame = _previewPlayer->getCurrentFrame();
         applyPreviewFrame( _previewPlayer->getAsset(), _currentFrame );
     }

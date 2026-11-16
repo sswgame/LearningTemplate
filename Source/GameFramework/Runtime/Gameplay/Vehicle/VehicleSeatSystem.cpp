@@ -16,11 +16,11 @@ namespace sw
 
     VehicleSeatSystem* VehicleSeatSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`ensureFor`).
+        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
         return static_cast<VehicleSeatSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
     }
 
-    VehicleSeatSystem& VehicleSeatSystem::ensureFor( GameObjectManager& manager )
+    VehicleSeatSystem& VehicleSeatSystem::findOrCreate( GameObjectManager& manager )
     {
         VehicleSeatSystem* pSystem = find( manager );
         if ( pSystem != nullptr )

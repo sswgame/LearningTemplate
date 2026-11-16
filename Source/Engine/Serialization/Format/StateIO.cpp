@@ -2,9 +2,12 @@
 
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 
 namespace sw
 {
@@ -12,87 +15,168 @@ namespace sw
     {
         if ( isReading() )
         {
-            (void)readName( _archive, inoutName ); // 실패는 아카이브 오류에 남는다
+            (void)readName( *_pArchive, inoutName ); // 실패는 아카이브 오류에 남는다
             return;
         }
-        writeName( _archive, inoutName );
+        writeName( *_pArchive, inoutName );
     }
 
     void StateIO::value( string& inoutText )
     {
         if ( isReading() )
         {
-            _archive >> inoutText;
+            *_pArchive >> inoutText;
             return;
         }
-        _archive << string_view( inoutText );
+        *_pArchive << string_view( inoutText );
     }
 
     void StateIO::value( int2& inoutValue )
     {
         if ( isReading() )
         {
-            readInt2( _archive, inoutValue );
+            readInt2( *_pArchive, inoutValue );
             return;
         }
-        writeInt2( _archive, inoutValue );
+        writeInt2( *_pArchive, inoutValue );
     }
 
     void StateIO::value( Countdown& inoutCountdown )
     {
         if ( isReading() )
         {
-            check( readCountdown( _archive, inoutCountdown ) );
+            check( readCountdown( *_pArchive, inoutCountdown ) );
             return;
         }
-        writeCountdown( _archive, inoutCountdown );
+        writeCountdown( *_pArchive, inoutCountdown );
     }
 
     void StateIO::value( FixedStepTimer& inoutTimer )
     {
         if ( isReading() )
         {
-            check( readStepTimer( _archive, inoutTimer ) );
+            check( readStepTimer( *_pArchive, inoutTimer ) );
             return;
         }
-        writeStepTimer( _archive, inoutTimer );
+        writeStepTimer( *_pArchive, inoutTimer );
     }
 
     void StateIO::value( RateAccumulator& inoutAccumulator )
     {
         if ( isReading() )
         {
-            check( readRateAccumulator( _archive, inoutAccumulator ) );
+            check( readRateAccumulator( *_pArchive, inoutAccumulator ) );
             return;
         }
-        writeRateAccumulator( _archive, inoutAccumulator );
+        writeRateAccumulator( *_pArchive, inoutAccumulator );
     }
 
     void StateIO::valueRandom( DeterministicRandom32& inoutRandom )
     {
         if ( isReading() )
         {
-            check( readRandom( _archive, inoutRandom ) );
+            check( readRandom( *_pArchive, inoutRandom ) );
             return;
         }
-        writeRandom( _archive, inoutRandom );
+        writeRandom( *_pArchive, inoutRandom );
     }
 
-    void StateIO::header( uint32 tag, uint32 version )
+    StateIO::~StateIO()
     {
-        if ( isReading() )
+        if ( _pUpgradedArchive == nullptr )
+            return;
+        if ( _pUpgradedArchive->isError() )
         {
-            check( readHeader( _archive, tag, version ) );
+            _pSourceArchive->setError();
             return;
         }
-        writeHeader( _archive, tag, version );
+        // 단계는 머리 뒤 남은 꼬리를 그대로 옮긴다 — 읽지 않고 남은 바이트는 원래 아카이브의 같은 꼬리다.
+        (void)_pSourceArchive->setOffset( _pSourceArchive->getSize() - _pUpgradedArchive->getRemainingBytes() );
+    }
+
+    void StateIO::header( uint32 tag, uint32 version, uint32 headerlessVersion )
+    {
+        if ( isWriting() )
+        {
+            writeHeader( *_pArchive, tag, version );
+            return;
+        }
+        const uint64 start       = _pArchive->getOffset();
+        uint32       readTag     = 0;
+        uint32       readVersion = 0;
+        *_pArchive >> readTag;
+        *_pArchive >> readVersion;
+        if ( check( _pArchive->isOk() ) == false )
+            return;
+        if ( readTag != tag )
+        {
+            if ( headerlessVersion == 0 )
+            {
+                SW_LOG_WARNING_ID( "StateIO.HeaderTagMismatch",
+                                   "State header tag %# is not the expected %# - the bytes are another format or a version from before this format had a header; that version cannot be known, so it is refused (no upgrade)",
+                                   readTag, tag );
+                fail();
+                return;
+            }
+            // 머리표가 없던 판이다 — 머리를 읽지 않은 자리로 돌아가 그 판의 칸으로 올린다.
+            (void)_pArchive->setOffset( start );
+            readVersion = headerlessVersion;
+        }
+        if ( readVersion == version )
+            return;
+        // 옛 판 — 머리 뒤 바이트를 사슬로 올리고 그 바이트에서 이어 읽는다. 한 입구에서 두 번 올리는 일은 없다(안쪽 형식의 머리는 올린 바이트 안에서 다시 올린다).
+        vector<uint8> bytes;
+        readRemainingBytes( *_pArchive, bytes );
+        if ( check( upgradeBytes( tag, readVersion, version, bytes ) ) == false )
+            return;
+        unique_ptr<Archive> pUpgraded = make_unique<Archive>();
+        pUpgraded->writeBytes( bytes.data(), bytes.size() );
+        pUpgraded->setReadModeAndResetPosition( true );
+        _pUpgradedArchive = std::move( pUpgraded ); // 안쪽 형식이 올린 바이트 안에서 또 올렸으면 앞 버퍼는 이미 다 옮겼다
+        _pArchive         = _pUpgradedArchive.get();
+    }
+
+    void StateIO::readRemainingBytes( Archive& archive, vector<uint8>& outBytes )
+    {
+        const uint64 remaining = archive.getRemainingBytes();
+        outBytes.clear();
+        if ( remaining == 0 )
+            return;
+        const uint8* pBytes = archive.readBytesView( remaining );
+        if ( pBytes != nullptr )
+            outBytes.assign( pBytes, pBytes + remaining );
+    }
+
+    bool StateIO::upgradeBytes( uint32 tag, uint32 fromVersion, uint32 toVersion, vector<uint8>& inoutBytes )
+    {
+        // 종류 이름은 표의 네 글자다(`FourCCUtil::make` 의 바이트 순서 — 파일 앞에서 글자 순서 그대로).
+        const utf8           kind[4] = { static_cast<utf8>( tag & 0xFFu ), static_cast<utf8>( ( tag >> 8 ) & 0xFFu ), static_cast<utf8>( ( tag >> 16 ) & 0xFFu ), static_cast<utf8>( ( tag >> 24 ) & 0xFFu ) };
+        FormatUpgradePayload payload{};
+        payload._pBytes = &inoutBytes;
+        return FormatUpgradeStep::upgrade( FormatUpgradeDomain::StateBytes, string_view{ kind, 4 }, fromVersion, toVersion, payload );
+    }
+
+    bool StateIO::upgradeSectionBody( uint32 tag, uint32 fromVersion, uint32 toVersion, Archive& inoutBody )
+    {
+        if ( fromVersion == toVersion )
+            return true;
+        vector<uint8> bytes;
+        Archive       body = inoutBody; // 실패하면 받은 본문을 그대로 둔다
+        readRemainingBytes( body, bytes );
+        if ( upgradeBytes( tag, fromVersion, toVersion, bytes ) == false )
+            return false;
+        Archive upgraded;
+        upgraded.writeBytes( bytes.data(), bytes.size() );
+        upgraded.setReadModeAndResetPosition( true );
+        inoutBody = std::move( upgraded );
+        return true;
     }
 
     bool StateIO::check( bool bCondition )
     {
         if ( isReading() && bCondition == false )
         {
-            _archive.setError();
+            _pArchive->setError();
         }
         return isOk();
     }
@@ -101,10 +185,10 @@ namespace sw
     {
         if ( isReading() )
         {
-            (void)_archive.readCount( minBytesPerElement, inoutCount ); // 실패는 아카이브 오류에 남는다
+            (void)_pArchive->readCount( minBytesPerElement, inoutCount ); // 실패는 아카이브 오류에 남는다
             return;
         }
-        _archive << inoutCount;
+        *_pArchive << inoutCount;
     }
 
     void StateIO::writeHeader( Archive& outArchive, uint32 tag, uint32 version )
@@ -151,13 +235,13 @@ namespace sw
     {
         uint32 readTag     = 0;
         uint32 readVersion = 0;
-        return readSection( archive, readTag, readVersion, outBody ) && readTag == tag && readVersion == version;
+        return readSection( archive, readTag, readVersion, outBody ) && readTag == tag && upgradeSectionBody( tag, readVersion, version, outBody );
     }
 
     void StateIO::writeName( Archive& outArchive, const hashed_string& name )
     {
-        // 빈 이름의 c_str() 는 "None" 이다 - 그대로 쓰면 읽을 때 "None" 이라는 이름으로 돌아온다. 빈 이름은 빈 글로 쓴다.
-        outArchive << name.viewOrEmpty();
+        // 빈 이름은 빈 글로 쓴다(`view()` 는 빈 이름이면 빈 글이다 — "None" 을 쓰면 읽을 때 "None" 이라는 이름으로 볼 쪽이 생긴다).
+        outArchive << name.view();
     }
 
     bool StateIO::readName( Archive& archive, hashed_string& outName )

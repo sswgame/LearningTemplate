@@ -244,6 +244,7 @@ namespace sw
         , _initResult{ RHIInitResult::NotStarted }
         , _bPreferredVSync{ SW_FALSE }
         , _bPendingBackendChange{ SW_FALSE }
+        , _bPendingDeviceRecreate{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -345,7 +346,7 @@ namespace sw
 
         if ( _device )
         {
-            // 죽기 직전의 통보(RHIRenderResource::releaseAllFor)는 shutdown 이 스스로 낸다. 여기서 손으로 훑지 않는다.
+            // 죽기 직전의 통보(RHIRenderResource::releaseAllForDevice)는 shutdown 이 스스로 낸다. 여기서 손으로 훑지 않는다.
             _device->waitIdle( RHIWaitIdleReason::Shutdown );
             _device->shutdown();
             _device.reset();
@@ -397,8 +398,32 @@ namespace sw
 
     RHIBackend RHI::consumePendingBackendChange()
     {
-        _bPendingBackendChange = SW_FALSE;
+        _bPendingBackendChange  = SW_FALSE;
+        _bPendingDeviceRecreate = SW_FALSE;
         return _pendingRHIBackend;
+    }
+
+    void RHI::scheduleDeviceRecreate()
+    {
+        SW_LOG_INFO_ID( "RHI.DeviceRecreateQueued", "Device recreate queued after device loss: %#", getBackendTypeName( _committedRHIBackend ) );
+        _pendingRHIBackend      = _committedRHIBackend;
+        _bPendingBackendChange  = SW_TRUE;
+        _bPendingDeviceRecreate = SW_TRUE;
+    }
+
+    bool RHI::canRecreateAfterDeviceLost( RHIBackend backend )
+    {
+        switch ( backend )
+        {
+            case RHIBackend::DirectX11:
+            case RHIBackend::DirectX12:
+            case RHIBackend::Vulkan:
+                return true;
+            case RHIBackend::OpenGL:
+            case RHIBackend::WebGPU:
+                return false;
+        }
+        return false; // 열거 범위 밖 값 — 다시 만들 백엔드가 아니다
     }
 
     const utf8* RHI::getBackendTypeName( RHIBackend backend )

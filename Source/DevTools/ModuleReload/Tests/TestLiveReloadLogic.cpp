@@ -1,5 +1,5 @@
 // LiveReloadLogicTest — 핫 리로드의 파일 없이 도는 규칙: 모듈 의존 그래프(의존하는 쪽 모으기 · 순서 · 순환), 섀도 복사본 이름 읽기(nogpu).
-// App 이 ModuleManager 를 통째로 링크해 이 등록이 남는다(`Source/App/CMakeLists.txt` 의 `sw_linkWholeArchive`) — Server 는 이 스위트를 돌리지 않는다.
+// App 이 ModuleManager 를 통째로 링크해 이 등록이 남는다(`Source/App/CMakeLists.txt` 의 `sw_link_whole_archive`) — Server 는 이 스위트를 돌리지 않는다.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -229,7 +229,7 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original, bytes ) );
     SW_EXPECT_EQUAL( size_t( 16 ), bytes.size() );
-    SW_EXPECT_FALSE( ModuleShadowCopy::rejectsDelayImports( "NotAModule", original, bytes ) ); // PE 가 아니면 지연 import 표도 없다
+    SW_EXPECT_FALSE( ModuleShadowCopy::shouldRejectDelayImports( "NotAModule", original, bytes ) ); // PE 가 아니면 지연 import 표도 없다
 
     ModuleShadowCopy::removeArtifacts( {} );
     SW_EXPECT_TRUE( FileUtil::exists( original ) );

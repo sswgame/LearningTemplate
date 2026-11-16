@@ -57,7 +57,7 @@ namespace sw
         /** @brief 공통 범주 @p errorCode 로 끝난 요청 하나를 셉니다. 표에 없는 코드는 `internal` 로 셉니다. */
         void observeError( int32 methodIndex, uint16 errorCode, int64 receivedNanoseconds );
         /** @brief 기다리는 호출 수를 씁니다. 실행 중 최대치도 `service_store_pending_peak` 에 남깁니다 — 호출 표의 저장 모양(선형 · 색인)을 고를 근거가 이 값이다. */
-        void setPendingStoreWorkCount( int32 pendingCount );
+        void setPendingCallCount( int32 pendingCount );
 
     private:
         /** @brief `ENUM( Count = Count )` 열거형의 열거자 이름을 순서대로 snake_case 로 바꿉니다. */

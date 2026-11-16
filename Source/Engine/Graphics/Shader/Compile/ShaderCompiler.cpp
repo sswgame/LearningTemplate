@@ -130,7 +130,7 @@ namespace sw
             using DxcComPtr = Microsoft::WRL::ComPtr<T>;
 
             template <typename T>
-            static T** dxcAddressOf( DxcComPtr<T>& ptr )
+            static T** getDxcAddressOf( DxcComPtr<T>& ptr )
             {
                 return ptr.GetAddressOf();
             }
@@ -145,7 +145,7 @@ namespace sw
             using DxcComPtr = CComPtr<T>;
 
             template <typename T>
-            static T** dxcAddressOf( DxcComPtr<T>& ptr )
+            static T** getDxcAddressOf( DxcComPtr<T>& ptr )
             {
                 return &ptr;
             }
@@ -344,7 +344,7 @@ namespace sw
                         return E_FAIL;
                     }
                     DxcComPtr<IDxcBlobEncoding> blob;
-                    const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, dxcAddressOf( blob ) );
+                    const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, getDxcAddressOf( blob ) );
                     if ( FAILED( hr ) )
                         return hr;
                     *ppIncludeSource = blob.Detach();
@@ -490,7 +490,7 @@ namespace sw
 
             /**
              * @brief SPIR-V 를 Tint 로 WGSL 로 옮기고 둘을 한 꾸러미로 묶습니다(`WebGPUShaderContainer`). Tint 는 DXC 처럼 실행 파일 옆에 둔다(`tint` — Dawn 빌드가 낸다).
-             * @details Tint 를 라이브러리로 링크하지 않는다 — Dawn 은 새 의존성이라 아직 붙이지 않았다(docs/PlatformTargets.md). 실행 파일이 없으면 오류로 멈춘다(WGSL 없이 구울 수 없다).
+             * @details Tint 를 라이브러리로 링크하지 않는다 — 쿠커는 `dawn[tint-tools]` 가 낸 실행 파일만 쓴다(빌드가 App 옆에 두는 `sw_copy_tint_tool`, docs/PlatformTargets.md 의존성 표). 실행 파일이 없으면 오류로 멈춘다(WGSL 없이 구울 수 없다).
              *          임시 파일은 시스템 임시 폴더에 두고 부를 때마다 새 이름을 잡는다(`reserveUniquePath`) — 병렬 쿠킹이 같은 파일을 쓰거나 지우지 않는다.
              *          `--allow-non-uniform-derivatives`: WGSL 만 미분(textureSample)을 균일 제어 흐름으로 묶는다 — HLSL · SPIR-V 에는 그 규칙이 없어 같은 셰이더가
              *          다른 백엔드에서 이미 돈다. 모듈 머리에 `diagnostic(off, derivative_uniformity)` 를 넣는다(Dawn 이 받는 표준 지시문).
@@ -613,9 +613,9 @@ namespace sw
 
                 DxcComPtr<IDxcUtils>     utils;
                 DxcComPtr<IDxcCompiler3> compiler;
-                HRESULT                  hrInit = fnDXCCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( dxcAddressOf( utils ) ) );
+                HRESULT                  hrInit = fnDXCCreateInstance( CLSID_DxcUtils, IID_PPV_ARGS( getDxcAddressOf( utils ) ) );
                 if ( SUCCEEDED( hrInit ) )
-                    fnDXCCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( dxcAddressOf( compiler ) ) );
+                    fnDXCCreateInstance( CLSID_DxcCompiler, IID_PPV_ARGS( getDxcAddressOf( compiler ) ) );
                 else
                     SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceCLSIDDxcUtilsFailed", "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
                 if ( utils == nullptr || compiler == nullptr )
@@ -688,7 +688,7 @@ namespace sw
                     listArgument.data(),
                     static_cast<uint32>( listArgument.size() ),
                     dxcGet( includeHandler ),
-                    IID_PPV_ARGS( dxcAddressOf( compileResult ) ) );
+                    IID_PPV_ARGS( getDxcAddressOf( compileResult ) ) );
                 if ( FAILED( hrCompile ) )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXCCompilerCompileFailed", "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
@@ -699,7 +699,7 @@ namespace sw
                 compileResult->GetStatus( &status );
 
                 DxcComPtr<IDxcBlobUtf8> errors;
-                compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( dxcAddressOf( errors ) ), nullptr );
+                compileResult->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( getDxcAddressOf( errors ) ), nullptr );
                 if ( errors != nullptr && errors->GetStringLength() > 0 )
                     outResult._errorMessage = errors->GetStringPointer();
                 if ( FAILED( status ) )
@@ -709,7 +709,7 @@ namespace sw
                 }
 
                 DxcComPtr<IDxcBlob> shaderBlob;
-                compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( dxcAddressOf( shaderBlob ) ), nullptr );
+                compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( getDxcAddressOf( shaderBlob ) ), nullptr );
                 if ( shaderBlob == nullptr || shaderBlob->GetBufferSize() == 0 )
                     return DxcResult::NoOutput;
 
@@ -830,8 +830,9 @@ namespace sw
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
         // 캐시에 없어 실제로 컴파일하는 것만 알린다 — 빈 캐시의 첫 실행은 수 분 동안 이 줄만 나온다. 이 줄이 "멈춘 것이 아니라 일하는 중" 의 증거다
         // (백엔드마다 실행의 정지 감시가 자식 로그가 자라는지로 본다 — AutomationPerBackend). 캐시가 찬 실행은 한 줄도 내지 않는다(언리얼 셰이더 컴파일 진행 줄과 같은 자리).
-        const int64                 compileStartNanos = MonotonicClock::nowNanoseconds();
-        [[maybe_unused]] const auto reportCompiled    = [&desc, &profile, compileStartNanos]( const ShaderCompileResult& compiled )
+        const int64 compileStartNanos = MonotonicClock::nowNanoseconds();
+        // 기본 캡처: Shipping 은 로그 줄이 빠져 이름을 적은 캡처가 쓰이지 않는다는 경고(-Wunused-lambda-capture)가 난다
+        [[maybe_unused]] const auto reportCompiled = [&]( const ShaderCompileResult& compiled )
         {
             if ( compiled._bSuccess )
                 SW_LOG_INFO_ID( "ShaderCompiler.CompiledOnCacheMiss", "Compiled %# %# (%#) in %# ms", desc._source.c_str(), desc._entryPoint.c_str(), profile.c_str(),
@@ -866,14 +867,14 @@ namespace sw
 #endif // SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )
-        const Internal::DxcResult outcome = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
-        if ( outcome == Internal::DxcResult::Compiled )
+        const Internal::DxcResult serviceResult = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
+        if ( serviceResult == Internal::DxcResult::Compiled )
         {
             Internal::saveToCacheIfEnabled( cachePath, result );
             reportCompiled( result );
             return result;
         }
-        if ( outcome == Internal::DxcResult::Rejected )
+        if ( serviceResult == Internal::DxcResult::Rejected )
             return result;
         // DXC 가 출력을 못 냈으면 실패다 - 예전에는 DX12 타깃을 FXC 로 다시 컴파일했지만 FXC 는 SM6 을 못 해 늘 실패했고, DXC 의 진짜 까닭을 FXC 의 글로 덮었다.
 #endif // SW_HAS_DXC_API

@@ -142,8 +142,8 @@ namespace sw
         /** @brief 글 @p text 의 이름 부분입니다(`flag.set(a)` → `flag.set`). */
         [[nodiscard]] static string_view getCallName( string_view text );
         /** @brief 글을 칸 값으로 풉니다. 편집기가 칸을 보이려고 부릅니다. 틀리면 그 까닭이고 @p outParams 는 비어 있습니다. */
-        [[nodiscard]] static expected<void> tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams );
-        /** @brief 칸 값을 글로 되돌립니다(`tryReadFields` 의 짝). 기본값과 같은 칸은 쓰지 않습니다. */
+        [[nodiscard]] static expected<void> tryReadProperties( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams );
+        /** @brief 칸 값을 글로 되돌립니다(`tryReadProperties` 의 짝). 기본값과 같은 칸은 쓰지 않습니다. */
         [[nodiscard]] static string formatText( const ActionEntry& entry, const InstancedStruct& params );
 
         /** @brief 부릅니다. 빈 호출은 `Failed` 입니다. */

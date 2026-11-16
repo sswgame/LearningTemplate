@@ -37,8 +37,8 @@ SW_TEST_CASE( SurfaceStateWaterTest, WaterWashesOnlyWashableChannels )
     SW_REQUIRE_TRUE( state.setRegionValue( 0, "Wet", 0.4f ) );
     SW_REQUIRE_TRUE( state.setRegionValue( 1, "Dirt", 0.8f ) );
     SW_REQUIRE_TRUE( state.setRegionValue( 0, "Wound", 1.0f ) );
-    SW_REQUIRE_TRUE( state.stampHit( 0, 1, "Dirt", float2{ 0.5f, 0.5f }, 0.2f, 0.8f ) );
-    SW_REQUIRE_TRUE( state.stampHit( 0, 0, "Wound", float2{ 0.5f, 0.5f }, 0.2f, 1.0f ) );
+    SW_REQUIRE_TRUE( state.paintHit( 0, 1, "Dirt", float2{ 0.5f, 0.5f }, 0.2f, 0.8f ) );
+    SW_REQUIRE_TRUE( state.paintHit( 0, 0, "Wound", float2{ 0.5f, 0.5f }, 0.2f, 1.0f ) );
     const float32 dirtBefore  = state.getRegionValue( 1, "Dirt" );
     const uint64  revisionOld = state.getRevision();
 

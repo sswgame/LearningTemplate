@@ -123,7 +123,7 @@ namespace
         }
 
         /** @brief 받음 · 실패까지, 길어야 @p maxMs 만큼 돌립니다. 그때까지 기다리는 중이면 `Pending` 입니다. */
-        expected<AccountTicketStep> runFor( int64 maxMs )
+        expected<AccountTicketStep> runUntilSettled( int64 maxMs )
         {
             const MonotonicMilliseconds until = _now + maxMs;
             while ( _now < until )
@@ -152,7 +152,7 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, TicketArrivesFromLoopbackServer 
     TicketConnectRig rig;
     rig.startServer();
     SW_REQUIRE_TRUE( rig.begin( 5000 ).has_value() );
-    const expected<AccountTicketStep> result = rig.runFor( 5000 );
+    const expected<AccountTicketStep> result = rig.runUntilSettled( 5000 );
     SW_REQUIRE_TRUE( result.has_value() );
     SW_EXPECT_TRUE( *result == AccountTicketStep::Received );
     SW_EXPECT_EQUAL( 1, rig._service._loginCount );
@@ -170,7 +170,7 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, ExpiredSessionTicketIsRefusedAnd
     rig._service._ticketResult = LoginResult::Expired;
     rig.startServer();
     SW_REQUIRE_TRUE( rig.begin( 5000 ).has_value() );
-    const expected<AccountTicketStep> result = rig.runFor( 5000 );
+    const expected<AccountTicketStep> result = rig.runUntilSettled( 5000 );
     SW_EXPECT_TRUE( TicketConnectRig::failedWith( result, "game ticket refused" ) );
     SW_EXPECT_TRUE( TicketConnectRig::failedWith( result, "result 7" ) );
     SW_EXPECT_EQUAL( 0, rig._credentials._tokenSize );
@@ -186,7 +186,7 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, NoServerTimesOutConnectingAtTheD
     TicketConnectRig rig;
     SW_REQUIRE_TRUE( rig.begin( 2000 ).has_value() );
     const MonotonicMilliseconds       started = rig._now;
-    const expected<AccountTicketStep> result  = rig.runFor( 10000 );
+    const expected<AccountTicketStep> result  = rig.runUntilSettled( 10000 );
     SW_EXPECT_TRUE( TicketConnectRig::failedWith( result, "timed out connecting to the login server" ) );
     const int64 elapsedMs = rig._now - started;
     SW_EXPECT_TRUE( elapsedMs >= 2000 );
@@ -202,7 +202,7 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, HeldLoginTimesOutWaitingForTheLo
     rig._service._holdMethod = AccountMethod::Login::kID;
     rig.startServer();
     SW_REQUIRE_TRUE( rig.begin( 2000 ).has_value() );
-    const expected<AccountTicketStep> result = rig.runFor( 10000 );
+    const expected<AccountTicketStep> result = rig.runUntilSettled( 10000 );
     SW_EXPECT_TRUE( TicketConnectRig::failedWith( result, "timed out waiting for the login reply" ) );
     SW_EXPECT_EQUAL( 1, rig._service._loginCount );
     SW_EXPECT_EQUAL( 0, rig._service._ticketCount );
@@ -216,7 +216,7 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, HeldTicketTimesOutWaitingForTheT
     rig._service._holdMethod = AccountMethod::IssueGameTicket::kID;
     rig.startServer();
     SW_REQUIRE_TRUE( rig.begin( 2000 ).has_value() );
-    const expected<AccountTicketStep> result = rig.runFor( 10000 );
+    const expected<AccountTicketStep> result = rig.runUntilSettled( 10000 );
     SW_EXPECT_TRUE( TicketConnectRig::failedWith( result, "timed out waiting for the game ticket" ) );
     SW_EXPECT_EQUAL( 1, rig._service._loginCount );
     SW_EXPECT_EQUAL( 1, rig._service._ticketCount );
@@ -232,11 +232,11 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, LateServerIsReachedWithinTheBack
     const int64      maxBackoffMs = OnlineServiceClientConfig{ OnlineClientSecurity::plaintextLoopback() }._maxBackoffMs;
     TicketConnectRig rig;
     SW_REQUIRE_TRUE( rig.begin( 60000 ).has_value() );
-    const expected<AccountTicketStep> waiting = rig.runFor( 20000 );
+    const expected<AccountTicketStep> waiting = rig.runUntilSettled( 20000 );
     SW_REQUIRE_TRUE( waiting.has_value() );
     SW_EXPECT_TRUE( *waiting == AccountTicketStep::Pending );
     rig.startServer();
-    const expected<AccountTicketStep> result = rig.runFor( maxBackoffMs + 1000 );
+    const expected<AccountTicketStep> result = rig.runUntilSettled( maxBackoffMs + 1000 );
     SW_REQUIRE_TRUE( result.has_value() );
     SW_EXPECT_TRUE( *result == AccountTicketStep::Received );
     SW_EXPECT_EQUAL( 1, rig._service._ticketCount );
@@ -259,7 +259,7 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, DropWhileWaitingForTheTicketFail
     SW_REQUIRE_TRUE( rig._service._ticketCount == 1 );
     rig.dropServer();
     const MonotonicMilliseconds       droppedAt = rig._now;
-    const expected<AccountTicketStep> result    = rig.runFor( 5000 );
+    const expected<AccountTicketStep> result    = rig.runUntilSettled( 5000 );
     SW_EXPECT_TRUE( TicketConnectRig::failedWith( result, "game ticket refused" ) );
     SW_EXPECT_TRUE( rig._now - droppedAt < 1000 );
     SW_EXPECT_EQUAL( 0, rig._credentials._tokenSize );

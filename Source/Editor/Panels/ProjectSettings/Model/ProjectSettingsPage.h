@@ -10,6 +10,7 @@
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"
 
 namespace sw::editor
 {
@@ -27,14 +28,15 @@ namespace sw::editor
      */
     struct ProjectSettingsPage
     {
-        ProjectSettingsEntry    _entry;
-        ProjectSettingsDocument _document;
-        string                  _absolutePath;
-        bool                    _bOpened{ false };    ///< NOLINT(sw-bool-flag): 집합체다
-        bool                    _bTypeFound{ false }; ///< NOLINT(sw-bool-flag): 집합체다
-        bool                    _bDirty{ false };     ///< NOLINT(sw-bool-flag): 집합체다
+        ProjectSettingsEntry        _entry;
+        ProjectSettingsDocument     _document;      ///< 반사 형식 페이지의 문서
+        ProjectSettingsJSONDocument _tableDocument; ///< 표 페이지(`ProjectSettingsEntry::isTable`)의 문서
+        string                      _absolutePath;
+        bool                        _bOpened{ false };    ///< NOLINT(sw-bool-flag): 집합체다
+        bool                        _bTypeFound{ false }; ///< NOLINT(sw-bool-flag): 집합체다
+        bool                        _bDirty{ false };     ///< NOLINT(sw-bool-flag): 집합체다
 
-        /** @brief 파일을 엽니다. 형식을 찾지 못하면 `_bTypeFound` 를 내립니다. */
+        /** @brief 파일을 엽니다. 형식을 찾지 못하면(표는 읽지 못하거나 JSON 이 틀리면) `_bTypeFound` 를 내립니다. */
         void open();
         /** @brief 문서와 비교해 저장하지 않은 표시를 다시 정합니다. */
         void refreshDirty();
@@ -42,13 +44,17 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument( bool& outApplied );
         /** @brief 파일 내용으로 되돌립니다. 결과는 문서의 상태로 보입니다. */
         void revert();
-        /** @brief 모든 값을 기본값으로 바꿉니다. 저장해야 파일에 씁니다. */
+        /** @brief 모든 값을 기본값으로 바꿉니다. 저장해야 파일에 씁니다. 표 페이지는 기본값이 없어 아무것도 하지 않습니다. */
         void resetToDefault();
+
+        /** @brief 지금 값의 키 수입니다 — 반사 형식은 기본값과 다른 말단 키, 표는 말단 값 수(감시 값 `Editor.ProjectSettingsKeyCount`). 열리지 않았으면 0 입니다. */
+        [[nodiscard]] uint32 countKeys() const;
 
         /** @brief 저장하지 않은 쪽이 하나라도 있으면 true 입니다. */
         static bool hasDirty( const vector<unique_ptr<ProjectSettingsPage>>& listPage );
         /**
-         * @brief 창의 목록을 다시 만듭니다(@p outListPage 를 비우고 채운다): 활성 팩의 `<Engine>` 요소가 맨 앞, 다음은 설정 테이블이 파일에서 읽은 설정입니다(`ProjectSettingsEntry::collectLoaded`).
+         * @brief 창의 목록을 다시 만듭니다(@p outListPage 를 비우고 채운다): 활성 팩의 `<Engine>` 요소가 맨 앞, 다음은 설정 테이블이 파일에서 읽은 설정(`ProjectSettingsEntry::collectLoaded`),
+         *        끝은 형식 페이지가 들지 않은 `Config/` 의 나머지 JSON 표입니다(`ProjectSettingsEntry::collectTables`).
          * @details 팩 폴더를 찾지 못했거나 설정 관리자가 없으면 그 페이지를 만들지 않고 오류를 남긴다(빈 루트에 이어 붙이면 작업 폴더의 파일을 열고 쓴다).
          */
         static void collectPages( vector<unique_ptr<ProjectSettingsPage>>& outListPage );

@@ -162,6 +162,11 @@ namespace sw::editor
         return EditorGlobalVariableCommands::saveSessionPreset();
     }
 
+    void GlobalVariablesModel::collectFilesToSave( vector<string>& outListPath )
+    {
+        outListPath.push_back( EditorGlobalVariableCommands::getSessionPresetPath() );
+    }
+
     const EnumInfo* GlobalVariablesModel::findEnumInfo( const string& enumType )
     {
         return enumType.empty() == false ? editor::getSubsystem<TypeRegistry>().findEnum( hashed_string( enumType.c_str() ) ) : nullptr;

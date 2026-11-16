@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -12,11 +14,14 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/IEditorPanelService.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
@@ -26,6 +31,9 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw::editor
@@ -206,7 +214,7 @@ namespace sw::editor
                     {
                         appendUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
                     }
-                    if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::syntaxOf( referrerID ), listRule ) == 0 )
+                    if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::getSyntaxOf( referrerID ), listRule ) == 0 )
                     {
                         // 역색인은 글에서 경로 모양을 찾고, 고치기는 경로 칸만 본다 — 칸 밖(주석)이거나 목록에 없는 칸이다. 고치지 못한 참조를 남기고 옮기지 않는다.
                         inoutPlan._listUnfixedReferrer.push_back( referrerID );
@@ -295,15 +303,16 @@ namespace sw::editor
             static vector<EditorAssetMove> appendSidecarMoves( const vector<EditorAssetMove>& listMove )
             {
                 vector<EditorAssetMove> listResult = listMove;
+                // 옮기기마다 목록을 훑지 않는다(폴더를 옮기면 옮기는 파일 수의 제곱) — 곁 파일 경로는 원본 경로에 접미를 붙인 것이라 구분자만 맞추면 같은 글이다.
+                unordered_set<string> uniqueSource;
+                for ( const EditorAssetMove& move : listMove )
+                    uniqueSource.insert( FileUtil::normalizeSeparators( move._sourceAbs ) );
                 for ( const EditorAssetMove& move : listMove )
                 {
                     const string sidecar = AssetMeta::makePath( move._sourceAbs );
                     if ( isSidecar( move._sourceAbs ) || FileUtil::isRegularFile( sidecar ) == false )
                         continue;
-                    bool bListed = false;
-                    for ( const EditorAssetMove& other : listMove )
-                        bListed = bListed || FileUtil::isSameDiskPath( other._sourceAbs, sidecar );
-                    if ( bListed == false )
+                    if ( uniqueSource.count( FileUtil::normalizeSeparators( sidecar ) ) == 0 )
                         listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ) } );
                 }
                 return listResult;
@@ -352,6 +361,47 @@ namespace sw::editor
                 if ( assetID.empty() )
                     return true;
                 return loadIdentityRules( rules ) && rules.assignNewIdentity( absPath, assetID );
+            }
+
+            /** @brief @p absolutePath 가 읽기 전용(`EditorContentWrite::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
+            [[nodiscard]] static bool failOnReadOnly( string_view absolutePath, EditorAssetMovePlan& inoutPlan )
+            {
+                const optional<string> readOnlyPath = EditorContentWrite::findReadOnlyAtOrUnder( absolutePath );
+                if ( readOnlyPath.has_value() == false )
+                    return false;
+                StringBuilder<constant::buffer::kMax256> failureBuilder;
+                failureBuilder.appendFormat( "'%#' is read-only (not checked out) - lock it first, nothing was moved", *readOnlyPath );
+                inoutPlan._failure = string( failureBuilder.view() );
+                return true;
+            }
+
+            /** @brief 지우기 전 확인 둘이다 — 열린 문서(`refuseOpenDocumentDelete`)와 읽기 전용(`EditorContentWrite::warnIfReadOnly`, 저장 · 옮기기와 같은 확인). 거절하면 이유를 알리고 true 입니다. */
+            [[nodiscard]] static bool refuseDelete( string_view absolutePath )
+            {
+                return refuseOpenDocumentDelete( absolutePath ) || EditorContentWrite::warnIfReadOnly( absolutePath, EditorContentWriteKind::Delete );
+            }
+
+            /**
+             * @brief @p absolutePath(파일, 또는 폴더면 그 아래)에 열린 문서가 있으면 지우기를 거절하고 이유를 알린 뒤 true 입니다(감사 P0-4).
+             * @details 연 문서를 지우면 다음 저장(Ctrl+S)이 파일을 되살린다. 유니티 · Godot 는 GUID · UID 로 연 문서를 끊고, 이 엔진은 경로가 정체라 거절이 그 자리다.
+             */
+            [[nodiscard]] static bool refuseOpenDocumentDelete( string_view absolutePath )
+            {
+                const string deletedID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::normalizeSeparators( absolutePath ) );
+                if ( deletedID.empty() )
+                    return false; // 리소스 트리 밖 파일은 문서로 열 수 없다
+                vector<EditorOpenDocument> listOpen;
+                EditorAssetFileCommands::collectOpenDocuments( listOpen );
+                const optional<string> openDocument = EditorAssetFileCommands::findOpenDocumentAtOrUnder( deletedID, listOpen );
+                if ( openDocument.has_value() == false )
+                    return false;
+                SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeleteRefusedOpenDocument", "Not deleted - '%#' is open in an editor, close it first", *openDocument );
+                EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext != nullptr )
+                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "DeleteRefusedTitle" ),
+                                                                              SW_LOCKEYFORMAT( "EdCommon", "OpenDocumentNotDeleted", TextArgumentList().addText( "path", *openDocument ) ),
+                                                                              NotificationKind::Warning );
+                return true;
             }
         };
     } // namespace
@@ -488,7 +538,10 @@ namespace sw::editor
             outPlan._failure = "the reference index is still building - try again in a moment";
             return false;
         }
-        const AssetPaths&             assetPaths   = editor::getSubsystem<AssetPaths>();
+        const AssetPaths& assetPaths = editor::getSubsystem<AssetPaths>();
+        // 옮기기마다 계획한 id 목록을 훑지 않는다(폴더를 옮기면 옮기는 에셋 수의 제곱). 계획 목록의 순서는 그대로다.
+        unordered_set<string>         uniqueOldID;
+        unordered_set<string>         uniqueNewID;
         const vector<EditorAssetMove> listExpanded = EditorAssetFileCommandsInternal::appendSidecarMoves( listMove );
         for ( const EditorAssetMove& move : listExpanded )
         {
@@ -509,22 +562,19 @@ namespace sw::editor
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
-            if ( FileUtil::exists( normalized._destinationAbs ) || EditorAssetFileCommandsInternal::mapMovedID( outPlan, oldID ) != oldID )
+            if ( FileUtil::exists( normalized._destinationAbs ) || uniqueOldID.insert( oldID ).second == false )
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
                 failureBuilder.appendFormat( "'%#' already exists or is moved twice - nothing was moved", newID );
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
-            for ( const string& plannedNewID : outPlan._listNewID )
+            if ( uniqueNewID.insert( newID ).second == false )
             {
-                if ( plannedNewID == newID )
-                {
-                    StringBuilder<constant::buffer::kMax256> failureBuilder;
-                    failureBuilder.appendFormat( "two assets would move to '%#' - nothing was moved", newID );
-                    outPlan._failure = string( failureBuilder.view() );
-                    return false;
-                }
+                StringBuilder<constant::buffer::kMax256> failureBuilder;
+                failureBuilder.appendFormat( "two assets would move to '%#' - nothing was moved", newID );
+                outPlan._failure = string( failureBuilder.view() );
+                return false;
             }
             outPlan._listMove.push_back( std::move( normalized ) );
             outPlan._listOldID.push_back( oldID );
@@ -550,7 +600,66 @@ namespace sw::editor
             outPlan._failure = string( failureBuilder.view() );
             return false;
         }
+        // 옮기는 파일과 고칠 참조 파일이 읽기 전용(잠그지 않음)이면 옮기지 않는다 — 저장 · 삭제와 같은 확인이다. 옮기는 참조자의 새 자리는 아직 없고 그 원본을 옮기는 쪽에서 본다.
+        for ( const EditorAssetMove& move : outPlan._listMove )
+        {
+            if ( EditorAssetFileCommandsInternal::failOnReadOnly( move._sourceAbs, outPlan ) )
+                return false;
+        }
+        for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
+        {
+            if ( rewrite._bNewFile == false && EditorAssetFileCommandsInternal::failOnReadOnly( rewrite._referrerAbs, outPlan ) )
+                return false;
+        }
+        // 미저장 참조 문서는 옛 id 를 들고 있다 — 고친 디스크 글을 다음 저장이 덮지 않게 먼저 저장을 요구한다(감사 P0-4).
+        vector<EditorOpenDocument> listOpen;
+        collectOpenDocuments( listOpen );
+        const optional<string> dirtyReferrer = findDirtyReferrerDocument( outPlan, listOpen );
+        if ( dirtyReferrer.has_value() )
+        {
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "'%#' has unsaved edits and names a moved asset - save it first, nothing was moved", *dirtyReferrer );
+            outPlan._failure = string( failureBuilder.view() );
+            return false;
+        }
         return true;
+    }
+
+    void EditorAssetFileCommands::collectOpenDocuments( vector<EditorOpenDocument>& outList )
+    {
+        const IEditorPanelService* const pPanelService = editor::findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
+        if ( pPanelService != nullptr )
+            pPanelService->collectOpenDocuments( outList );
+        const Scene* const pScene = editor::getActiveScene();
+        if ( pScene == nullptr || pScene->getSourcePath().empty() )
+            return;
+        const EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
+        outList.push_back( EditorOpenDocument{ pScene->getSourcePath(), pWorkspace != nullptr && pWorkspace->isSceneDirty() } );
+    }
+
+    optional<string> EditorAssetFileCommands::findDirtyReferrerDocument( const EditorAssetMovePlan& plan, const vector<EditorOpenDocument>& listOpen )
+    {
+        for ( const EditorOpenDocument& document : listOpen )
+        {
+            const bool bReferrer = VectorUtil::contains( plan._listReferrerID, document._assetID ) || VectorUtil::contains( plan._listUnfixedReferrer, document._assetID );
+            if ( document._bDirty && bReferrer )
+                return document._assetID;
+        }
+        return nullopt;
+    }
+
+    optional<string> EditorAssetFileCommands::findOpenDocumentAtOrUnder( string_view deletedID, const vector<EditorOpenDocument>& listOpen )
+    {
+        SW_ASSERT( deletedID.empty() == false );
+        for ( const EditorOpenDocument& document : listOpen )
+        {
+            const string_view documentID = document._assetID;
+            // 같은 id 이거나 지우는 폴더 아래(`<폴더 id>/…`)다 — `a/b` 가 `a/bc` 를 덮지 않게 경계의 `/` 를 본다.
+            const bool bAtOrUnder = documentID == deletedID || ( documentID.size() > deletedID.size() && StringUtil::startsWith( documentID, deletedID ) && documentID[deletedID.size()] == '/' );
+            if ( bAtOrUnder )
+                return document._assetID;
+        }
+        return nullopt;
     }
 
     bool EditorAssetFileCommands::applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan )
@@ -667,7 +776,17 @@ namespace sw::editor
         }
         for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
             inoutIndex.refreshFile( resourceRoot, rewrite._referrerID );
-        outPlan._fixedFileCount = static_cast<uint32>( referrerRewriteCount );
+        outPlan._fixedFileCount           = static_cast<uint32>( referrerRewriteCount );
+        EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
+        if ( pWorkspace != nullptr )
+        {
+            // 열린 문서 · 씬 · 포커스 · 선택이 새 id 를 따르고, 깨끗한 참조 문서는 고친 글을 다시 읽는다. 리다이렉트 표(`referrerRewriteCount` 뒤)는 문서가 아니다.
+            EditorAssetMoveEvent event{ outPlan._listOldID, outPlan._listNewID, {} };
+            event._listRewrittenID.reserve( referrerRewriteCount );
+            for ( size_t index = 0; index < referrerRewriteCount; ++index )
+                event._listRewrittenID.push_back( listRewrite[index]._referrerID );
+            pWorkspace->notifyAssetsMoved( event );
+        }
         if ( outPlan._listMove.size() == 1 )
             SW_LOG_INFO_ID( "Asset.Moved", "Moved '%#' to '%#' and fixed %# referencing file(s)", outPlan._listOldID.front(), outPlan._listNewID.front(), outPlan._fixedFileCount );
         else
@@ -716,6 +835,8 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::moveToTrash( string_view absolutePath )
     {
+        if ( EditorAssetFileCommandsInternal::refuseDelete( absolutePath ) )
+            return false;
         // 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 지운다.
         if ( PlatformFileUtil::hasRecycleBin() == false )
             return deleteAsset( absolutePath );
@@ -737,7 +858,7 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
     {
-        if ( absolutePath.empty() )
+        if ( absolutePath.empty() || EditorAssetFileCommandsInternal::refuseDelete( absolutePath ) )
             return false;
         const string abs{ absolutePath };
         if ( FileUtil::removeFile( abs ) == false )
@@ -799,7 +920,7 @@ namespace sw::editor
             }
 
             // 리소스 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
-            const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) );
+            const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) ).str();
             const string plainPath = FileUtil::joinPath( destFolderAbs, fileName );
             if ( FileUtil::isSameDiskPath( sourcePath, plainPath ) )
             {

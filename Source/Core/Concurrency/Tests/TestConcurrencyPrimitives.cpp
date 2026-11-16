@@ -12,6 +12,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -157,7 +158,7 @@ SW_TEST_CASE( LockedSwapQueueTest, StampsMatchQueueOrderAcrossThreads )
         vector<thread> listThread;
         for ( int32 index = 0; index < kThreadCount; ++index )
         {
-            listThread.emplace_back( [&queue, &nextStamp]
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&queue, &nextStamp]
             {
                 for ( int32 push = 0; push < kPushCount; ++push )
                 {
@@ -205,7 +206,7 @@ SW_TEST_CASE( SpinLockTest, ProtectsACounterUnderContention )
         vector<thread> listThread;
         for ( int32 index = 0; index < kThreadCount; ++index )
         {
-            listThread.emplace_back( [&lock, &counter]
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&lock, &counter]
             {
                 for ( int32 add = 0; add < kAddCount; ++add )
                 {
@@ -216,6 +217,68 @@ SW_TEST_CASE( SpinLockTest, ProtectsACounterUnderContention )
         }
     }
     SW_EXPECT_EQUAL( kThreadCount * kAddCount, counter );
+}
+
+// 쥔 채 오래 머물면 기다리는 쪽은 스핀 예산(`SpinLock::kSpinLimit`)을 넘겨 잠든다. 풀 때 잠든 대기자가 차례로 모두 깨어나야 한다 —
+// 깨어난 쪽이 "잠든 대기자 있음" 상태를 이어받지 않으면 나머지가 영영 잠들어 이 테스트가 끝나지 않는다.
+SW_TEST_CASE( SpinLockTest, SleepingWaitersAllWakeAfterALongHold )
+{
+    constexpr int32 kWaiterCount = 8;
+    SpinLock        lock;
+    atomic<int32>   acquiredCount{ 0 };
+    SW_REQUIRE_TRUE( SpinLockTestUtil::tryLock( lock ) );
+    {
+        vector<thread> listThread;
+        for ( int32 index = 0; index < kWaiterCount; ++index )
+        {
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&lock, &acquiredCount]
+            {
+                ScopedLock<SpinLock> guard{ lock };
+                acquiredCount.fetch_add( 1, std::memory_order_relaxed );
+            } );
+        }
+        ThreadUtil::sleepForMilliseconds( 30 ); // 스핀 예산(약 2 us)을 한참 넘겨 대기자가 잠들게 한다
+        SW_EXPECT_EQUAL( 0, acquiredCount.load( std::memory_order_relaxed ) );
+        SW_EXPECT_TRUE( lock.isLocked() );
+        SpinLockTestUtil::unlock( lock );
+    }
+    SW_EXPECT_EQUAL( kWaiterCount, acquiredCount.load( std::memory_order_relaxed ) );
+    SW_EXPECT_FALSE( lock.isLocked() );
+}
+
+// 감사 C-5 의 모양: 코어보다 스레드가 많고 구간 안에서 힙 할당(벡터 성장)과 양보가 돈다. 상호 배제가 깨지지 않고 넣은 수가 모두 남아야 한다.
+SW_TEST_CASE( SpinLockTest, OversubscribedSectionsWithHeapAllocationStayExclusive )
+{
+    const uint32    processorCount = thread::getUsableProcessorCount();
+    const int32     threadCount    = static_cast<int32>( processorCount * 4 < 8 ? 8 : processorCount * 4 );
+    constexpr int32 kAddCount      = 2000;
+    constexpr int32 kYieldEvery    = 64;
+    SpinLock        lock;
+    vector<int32>   listValue;
+    atomic<int32>   insideCount{ 0 };
+    atomic<int32>   overlapCount{ 0 };
+    {
+        vector<thread> listThread;
+        for ( int32 index = 0; index < threadCount; ++index )
+        {
+            listThread.emplace_back( ThreadTestAccess::getKey(), [&lock, &listValue, &insideCount, &overlapCount, index]
+            {
+                for ( int32 add = 0; add < kAddCount; ++add )
+                {
+                    ScopedLock<SpinLock> guard{ lock };
+                    if ( insideCount.fetch_add( 1, std::memory_order_relaxed ) != 0 )
+                        overlapCount.fetch_add( 1, std::memory_order_relaxed );
+                    listValue.push_back( index );
+                    if ( add % kYieldEvery == 0 )
+                        ThreadUtil::yield(); // 쥔 채 양보해 다른 스레드가 스핀 예산을 넘기고 잠드는 길을 탄다
+                    insideCount.fetch_sub( 1, std::memory_order_relaxed );
+                }
+            } );
+        }
+    }
+    SW_EXPECT_EQUAL( 0, overlapCount.load( std::memory_order_relaxed ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( threadCount ) * kAddCount, listValue.size() );
+    SW_EXPECT_FALSE( lock.isLocked() );
 }
 
 SW_TEST_CASE( ScopedLockTest, UniqueLockFollowsLockAndUnlock )
@@ -279,7 +342,7 @@ SW_TEST_CASE( MutexTest, HeldLockDepthFollowsEveryKindOfLock )
 {
     mutex        plain;
     shared_mutex shared;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
     constexpr uint32 kOne = 1;
 #else
     constexpr uint32 kOne = 0;
@@ -314,7 +377,7 @@ SW_TEST_CASE( MutexTest, SharedLocksCoexistExclusiveDoesNot )
     atomic<bool> bSharedWhileExclusive{ true };
     {
         ScopedSharedLock<shared_mutex> guard{ lock };
-        thread                         other{ [&]
+        thread                         other{ ThreadTestAccess::getKey(), [&]
         {
             const bool bShared = lock.try_lock_shared();
             bSharedWhileShared.store( bShared );
@@ -329,7 +392,7 @@ SW_TEST_CASE( MutexTest, SharedLocksCoexistExclusiveDoesNot )
     }
     {
         ScopedLock<shared_mutex> guard{ lock };
-        thread                   other{ [&]
+        thread                   other{ ThreadTestAccess::getKey(), [&]
         {
             const bool bShared = lock.try_lock_shared();
             bSharedWhileExclusive.store( bShared );
@@ -376,7 +439,7 @@ SW_TEST_CASE( FutexTest, WakeAllReleasesEveryWaiter )
         vector<thread> listWaiter;
         for ( uint32 index = 0; index < kWaiterCount; ++index )
         {
-            listWaiter.emplace_back( [&]
+            listWaiter.emplace_back( ThreadTestAccess::getKey(), [&]
             {
                 arrived.fetch_add( 1 );
                 while ( word.load() == 0 ) // 약속대로 조건을 다시 확인한다
@@ -405,7 +468,7 @@ SW_TEST_CASE( ThreadNameTest, NameIsReadBackOnTheSameThread )
     atomic<bool> bMatches{ false };
     atomic<bool> bEmptyKept{ false };
     {
-        thread other{ [&]
+        thread other{ ThreadTestAccess::getKey(), [&]
         {
             utf8 arrName[64]{};
             bBefore.store( ThreadName::tryGetCurrentThreadName( arrName, sizeof( arrName ) ) );
@@ -428,7 +491,7 @@ SW_TEST_CASE( ThreadNameTest, SmallBufferIsTerminatedNotOverrun )
 {
     atomic<bool> bTerminated{ false };
     {
-        thread other{ [&]
+        thread other{ ThreadTestAccess::getKey(), [&]
         {
             ThreadName::setCurrentThreadName( "SwTestThread" );
             utf8 arrName[6];

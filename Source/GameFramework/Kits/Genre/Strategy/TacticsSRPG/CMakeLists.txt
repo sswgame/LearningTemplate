@@ -4,4 +4,4 @@
 #        전투 예측 · 반격 · 지원 · 동기 공격 · MAP 병기 · 점수 AI · 승패 · 레벨 · 개발 · 로그라이트 작전 지도
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_TacticsSRPG)
+sw_add_game_framework_kit(GF_TacticsSRPG)

@@ -49,7 +49,7 @@ namespace
     };
 
     /** @brief `KlondikeGame::writeState` 의 판 하나(되돌리기 기록 없음)를 꾸밉니다. */
-    struct KlondikeForged
+    struct KlondikeFixture
     {
         sw::KlondikeState _state{};
 
@@ -75,7 +75,7 @@ namespace
     };
 
     /** @brief `UnoGame::writeState` 의 2 인 판을 꾸밉니다. */
-    struct UnoForged
+    struct UnoFixture
     {
         sw::CardPile _hand0{};
         sw::CardPile _hand1{};
@@ -108,7 +108,7 @@ namespace
     };
 
     /** @brief `MatgoGame::writeState` 의 2 인 판을 꾸밉니다. */
-    struct MatgoForged
+    struct MatgoFixture
     {
         sw::CardPile _hand0{};
         sw::CardPile _captured0{};
@@ -146,7 +146,7 @@ namespace
     };
 
     /** @brief `PokerTable::writeState` 의 2 인 판(끝난 판이 기본)을 꾸밉니다. */
-    struct PokerForged
+    struct PokerFixture
     {
         sw::PokerSeat            _seat0{};
         sw::PokerSeat            _seat1{};
@@ -209,7 +209,7 @@ namespace
 </CardBattleCatalog>)";
 
     /** @brief `CardBattle::writeState` 의 카드 두 장짜리 판을 꾸밉니다. 번호 0, 1 은 처음에 뽑을 더미에 있습니다. */
-    struct CardBattleForged
+    struct CardBattleFixture
     {
         sw::CardPile _drawPile{};
         sw::CardPile _hand{};
@@ -223,7 +223,7 @@ namespace
         int32        _turn{ 1 };
         uint8        _phase{ static_cast<uint8>( sw::CardBattlePhase::PlayerTurn ) };
 
-        CardBattleForged()
+        CardBattleFixture()
         {
             _drawPile.push( sw::Card{ 0, 0, 0 } );
             _drawPile.push( sw::Card{ 1, 0, 0 } );
@@ -323,7 +323,7 @@ SW_TEST_CASE( CardGameReadStateTest, KlondikeRefusesImpossibleBoards )
     SW_REQUIRE_TRUE( CardGameReadStateTestUtil::readInto( restored, written ) );
     SW_EXPECT_EQUAL( 1, restored.getUndoCount() );
 
-    KlondikeForged valid;
+    KlondikeFixture valid;
     valid._state._arrTableau[0]       = CardGameReadStateTestUtil::makeStandardPile( { 1, 2 } );
     valid._state._arrFaceDownCount[0] = 1;
     valid._state._arrFoundation[0]    = CardGameReadStateTestUtil::makeStandardPile( { 0 } );
@@ -331,35 +331,35 @@ SW_TEST_CASE( CardGameReadStateTest, KlondikeRefusesImpossibleBoards )
     SW_REQUIRE_TRUE( valid.readInto( restored ) );
     SW_EXPECT_EQUAL( 2, restored.getState()._arrTableau[0].getCount() );
 
-    KlondikeForged clone = valid;
-    clone._state._waste  = CardGameReadStateTestUtil::makeStandardPile( { 1 } );
+    KlondikeFixture clone = valid;
+    clone._state._waste   = CardGameReadStateTestUtil::makeStandardPile( { 1 } );
     SW_EXPECT_FALSE( clone.readInto( restored ) );
 
-    KlondikeForged joker = valid;
+    KlondikeFixture joker = valid;
     joker._state._waste.push( sw::Card{ 52, sw::StandardSuit::kJoker, 0 } );
     SW_EXPECT_FALSE( joker.readInto( restored ) );
 
-    KlondikeForged foundationOrder           = valid;
+    KlondikeFixture foundationOrder          = valid;
     foundationOrder._state._arrFoundation[0] = CardGameReadStateTestUtil::makeStandardPile( { 12 } ); // 킹이 맨 아래
     SW_EXPECT_FALSE( foundationOrder.readInto( restored ) );
 
-    KlondikeForged foundationSuit           = valid;
+    KlondikeFixture foundationSuit          = valid;
     foundationSuit._state._arrFoundation[1] = CardGameReadStateTestUtil::makeStandardPile( { 26 } ); // 하트 에이스가 다이아 칸에
     SW_EXPECT_FALSE( foundationSuit.readInto( restored ) );
 
-    KlondikeForged faceDownTop              = valid;
+    KlondikeFixture faceDownTop             = valid;
     faceDownTop._state._arrFaceDownCount[0] = 2;
     SW_EXPECT_FALSE( faceDownTop.readInto( restored ) );
 
-    KlondikeForged recycleNegative       = valid;
+    KlondikeFixture recycleNegative      = valid;
     recycleNegative._state._recycleCount = -1;
     SW_EXPECT_FALSE( recycleNegative.readInto( restored ) );
 
-    KlondikeForged recycleOver       = valid;
+    KlondikeFixture recycleOver      = valid;
     recycleOver._state._recycleCount = 3;
     SW_EXPECT_FALSE( recycleOver.readInto( restored ) );
 
-    KlondikeForged moveNegative    = valid;
+    KlondikeFixture moveNegative   = valid;
     moveNegative._state._moveCount = -1;
     SW_EXPECT_FALSE( moveNegative.readInto( restored ) );
 
@@ -385,35 +385,35 @@ SW_TEST_CASE( CardGameReadStateTest, UnoRefusesImpossibleTables )
 
     sw::CardPile deck;
     sw::UnoGame::makeDeck( deck );
-    UnoForged valid;
+    UnoFixture valid;
     valid._hand0.push( deck.getAt( 1 ) );
     valid._hand1.push( deck.getAt( 2 ) );
     valid._discardPile.push( deck.getAt( 3 ) );
     SW_REQUIRE_TRUE( valid.readInto( restored ) );
     SW_EXPECT_EQUAL( 1, restored.getHand( 0 ).getCount() );
 
-    UnoForged clone = valid;
+    UnoFixture clone = valid;
     clone._hand1.push( deck.getAt( 1 ) );
     SW_EXPECT_FALSE( clone.readInto( restored ) );
 
-    UnoForged badColor = valid;
+    UnoFixture badColor = valid;
     badColor._hand1.push( sw::Card{ 4, 200, 1 } );
     SW_EXPECT_FALSE( badColor.readInto( restored ) );
 
-    UnoForged outOfDeck = valid;
+    UnoFixture outOfDeck = valid;
     outOfDeck._hand1.push( sw::Card{ 108, 0, 1 } );
     SW_EXPECT_FALSE( outOfDeck.readInto( restored ) );
 
-    UnoForged pendingNegative    = valid;
+    UnoFixture pendingNegative   = valid;
     pendingNegative._pendingDraw = -1;
     SW_EXPECT_FALSE( pendingNegative.readInto( restored ) );
 
-    UnoForged pendingHuge    = valid;
+    UnoFixture pendingHuge   = valid;
     pendingHuge._pendingDraw = 0x7FFFFFFF;
     SW_EXPECT_FALSE( pendingHuge.readInto( restored ) );
 
-    UnoForged winnerWithCards = valid;
-    winnerWithCards._winner   = 0;
+    UnoFixture winnerWithCards = valid;
+    winnerWithCards._winner    = 0;
     SW_EXPECT_FALSE( winnerWithCards.readInto( restored ) );
 
     SW_EXPECT_EQUAL( 1, restored.getHand( 0 ).getCount() );
@@ -435,7 +435,7 @@ SW_TEST_CASE( CardGameReadStateTest, MatgoRefusesImpossibleTables )
     SW_REQUIRE_TRUE( CardGameReadStateTestUtil::readInto( restored, written ) );
     SW_EXPECT_TRUE( restored.getPlayer( 1 )._hand.getCards() == game.getPlayer( 1 )._hand.getCards() );
 
-    MatgoForged valid;
+    MatgoFixture valid;
     valid._hand0     = CardGameReadStateTestUtil::makeHwatuPile( { 0 } );
     valid._captured0 = CardGameReadStateTestUtil::makeHwatuPile( { 1 } );
     valid._floor     = CardGameReadStateTestUtil::makeHwatuPile( { 2 } );
@@ -443,43 +443,43 @@ SW_TEST_CASE( CardGameReadStateTest, MatgoRefusesImpossibleTables )
     SW_REQUIRE_TRUE( valid.readInto( restored ) );
     SW_EXPECT_EQUAL( 1, restored.getPlayer( 0 )._hand.getCount() );
 
-    MatgoForged clone = valid;
-    clone._floor      = CardGameReadStateTestUtil::makeHwatuPile( { 0 } );
+    MatgoFixture clone = valid;
+    clone._floor       = CardGameReadStateTestUtil::makeHwatuPile( { 0 } );
     SW_EXPECT_FALSE( clone.readInto( restored ) );
 
-    MatgoForged outOfDeck = valid;
+    MatgoFixture outOfDeck = valid;
     outOfDeck._floor.push( sw::Card{ 48, 0, 1 } );
     SW_EXPECT_FALSE( outOfDeck.readInto( restored ) );
 
-    MatgoForged wrongMonth = valid;
+    MatgoFixture wrongMonth = valid;
     wrongMonth._floor.push( sw::Card{ 4, static_cast<uint8>( sw::HwatuKind::Gwang ), 1 } ); // 번호 4 는 2 월이다
     SW_EXPECT_FALSE( wrongMonth.readInto( restored ) );
 
-    MatgoForged goNegative = valid;
-    goNegative._goCount0   = -1;
+    MatgoFixture goNegative = valid;
+    goNegative._goCount0    = -1;
     SW_EXPECT_FALSE( goNegative.readInto( restored ) );
 
-    MatgoForged goHuge = valid;
-    goHuge._goCount0   = 40;
+    MatgoFixture goHuge = valid;
+    goHuge._goCount0    = 40;
     SW_EXPECT_FALSE( goHuge.readInto( restored ) );
 
-    MatgoForged scoreNegative     = valid;
+    MatgoFixture scoreNegative    = valid;
     scoreNegative._scoreAtLastGo0 = -1;
     SW_EXPECT_FALSE( scoreNegative.readInto( restored ) );
 
-    MatgoForged settleUneven  = valid;
+    MatgoFixture settleUneven = valid;
     settleUneven._settlement0 = 100;
     settleUneven._winner      = 0;
     settleUneven._phase       = static_cast<uint8>( sw::MatgoPhase::Finished );
     SW_EXPECT_FALSE( settleUneven.readInto( restored ) );
 
-    MatgoForged settleBeforeEnd  = valid;
+    MatgoFixture settleBeforeEnd = valid;
     settleBeforeEnd._settlement0 = 100;
     settleBeforeEnd._settlement1 = -100;
     SW_EXPECT_FALSE( settleBeforeEnd.readInto( restored ) );
 
-    MatgoForged winnerBeforeEnd = valid;
-    winnerBeforeEnd._winner     = 1;
+    MatgoFixture winnerBeforeEnd = valid;
+    winnerBeforeEnd._winner      = 1;
     SW_EXPECT_FALSE( winnerBeforeEnd.readInto( restored ) );
 
     SW_EXPECT_EQUAL( 1, restored.getPlayer( 0 )._hand.getCount() );
@@ -520,7 +520,7 @@ SW_TEST_CASE( CardGameReadStateTest, PokerRefusesImpossibleTables )
     SW_EXPECT_EQUAL( table.getCurrentSeat(), restored.getCurrentSeat() );
     SW_EXPECT_EQUAL( table.computePotTotal(), restored.computePotTotal() );
 
-    PokerForged valid;
+    PokerFixture valid;
     valid._seat0._stack = 70;
     valid._seat1._stack = 130;
     valid._deck         = CardGameReadStateTestUtil::makeStandardPile( { 10, 11 } );
@@ -528,75 +528,75 @@ SW_TEST_CASE( CardGameReadStateTest, PokerRefusesImpossibleTables )
     SW_REQUIRE_TRUE( valid.readInto( restored ) );
     SW_EXPECT_EQUAL( 70, restored.getSeat( 0 )._stack );
 
-    PokerForged stackNegative   = valid;
+    PokerFixture stackNegative  = valid;
     stackNegative._seat0._stack = -1;
     SW_EXPECT_FALSE( stackNegative.readInto( restored ) );
 
-    PokerForged chipsOverflow   = valid;
+    PokerFixture chipsOverflow  = valid;
     chipsOverflow._seat0._stack = 0x7FFFFFFF;
     SW_EXPECT_FALSE( chipsOverflow.readInto( restored ) );
 
-    PokerForged contributedLess       = valid;
+    PokerFixture contributedLess      = valid;
     contributedLess._seat0._committed = 5;
     SW_EXPECT_FALSE( contributedLess.readInto( restored ) );
 
-    PokerForged foldedOutside     = valid;
+    PokerFixture foldedOutside    = valid;
     foldedOutside._seat0._bFolded = SW_TRUE;
     SW_EXPECT_FALSE( foldedOutside.readInto( restored ) );
 
-    PokerForged betNegative = valid;
-    betNegative._currentBet = -1;
+    PokerFixture betNegative = valid;
+    betNegative._currentBet  = -1;
     SW_EXPECT_FALSE( betNegative.readInto( restored ) );
 
-    PokerForged betOverChips = valid;
-    betOverChips._currentBet = 201;
+    PokerFixture betOverChips = valid;
+    betOverChips._currentBet  = 201;
     SW_EXPECT_FALSE( betOverChips.readInto( restored ) );
 
-    PokerForged raiseNegative    = valid;
+    PokerFixture raiseNegative   = valid;
     raiseNegative._lastRaiseSize = -1;
     SW_EXPECT_FALSE( raiseNegative.readInto( restored ) );
 
-    PokerForged boardOverflow = valid;
-    boardOverflow._board      = CardGameReadStateTestUtil::makeStandardPile( { 0, 1, 2, 3, 4, 5 } );
+    PokerFixture boardOverflow = valid;
+    boardOverflow._board       = CardGameReadStateTestUtil::makeStandardPile( { 0, 1, 2, 3, 4, 5 } );
     SW_EXPECT_FALSE( boardOverflow.readInto( restored ) );
 
-    PokerForged clone = valid;
-    clone._deck       = CardGameReadStateTestUtil::makeStandardPile( { 0 } );
+    PokerFixture clone = valid;
+    clone._deck        = CardGameReadStateTestUtil::makeStandardPile( { 0 } );
     SW_EXPECT_FALSE( clone.readInto( restored ) );
 
-    PokerForged holeClone        = valid;
+    PokerFixture holeClone       = valid;
     holeClone._seat0._arrHole[0] = holeClone._deck.getAt( 0 );
     SW_EXPECT_FALSE( holeClone.readInto( restored ) );
 
-    PokerForged joker = valid;
+    PokerFixture joker = valid;
     joker._deck.push( sw::Card{ 52, sw::StandardSuit::kJoker, 0 } );
     SW_EXPECT_FALSE( joker.readInto( restored ) );
 
-    PokerForged turnAfterEnd  = valid;
+    PokerFixture turnAfterEnd = valid;
     turnAfterEnd._currentSeat = 0;
     SW_EXPECT_FALSE( turnAfterEnd.readInto( restored ) );
 
-    PokerForged runningNoTurn = valid;
-    runningNoTurn._street     = static_cast<uint8>( sw::PokerStreet::River );
+    PokerFixture runningNoTurn = valid;
+    runningNoTurn._street      = static_cast<uint8>( sw::PokerStreet::River );
     SW_EXPECT_FALSE( runningNoTurn.readInto( restored ) );
 
-    PokerForged runningNoHole     = valid;
+    PokerFixture runningNoHole    = valid;
     runningNoHole._street         = static_cast<uint8>( sw::PokerStreet::River );
     runningNoHole._currentSeat    = 0;
     runningNoHole._seat0._bInHand = SW_TRUE;
     SW_EXPECT_FALSE( runningNoHole.readInto( restored ) );
 
-    PokerForged potAmountNegative = valid;
+    PokerFixture potAmountNegative = valid;
     potAmountNegative._listPot.resize( 1 );
     potAmountNegative._listPot[0]._amount = -1;
     SW_EXPECT_FALSE( potAmountNegative.readInto( restored ) );
 
-    PokerForged potSeatRepeated = valid;
+    PokerFixture potSeatRepeated = valid;
     potSeatRepeated._listPot.resize( 1 );
     potSeatRepeated._listPot[0]._listEligibleSeat = { 0, 0 };
     SW_EXPECT_FALSE( potSeatRepeated.readInto( restored ) );
 
-    PokerForged tooManyPots = valid;
+    PokerFixture tooManyPots = valid;
     tooManyPots._listPot.resize( 3 );
     SW_EXPECT_FALSE( tooManyPots.readInto( restored ) );
 
@@ -628,63 +628,63 @@ SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
     SW_REQUIRE_TRUE( CardGameReadStateTestUtil::readInto( restored, written ) );
     SW_EXPECT_EQUAL( 4, restored.getEnemy()._hp );
 
-    const CardBattleForged valid;
+    const CardBattleFixture valid;
     SW_REQUIRE_TRUE( valid.readInto( restored ) );
     SW_EXPECT_EQUAL( 10, restored.getEnemy()._hp );
 
-    CardBattleForged missing = valid;
-    missing._drawPile        = sw::CardPile{};
+    CardBattleFixture missing = valid;
+    missing._drawPile         = sw::CardPile{};
     missing._drawPile.push( sw::Card{ 0, 0, 0 } );
     SW_EXPECT_FALSE( missing.readInto( restored ) );
 
-    CardBattleForged clone = valid;
-    clone._drawPile        = sw::CardPile{};
+    CardBattleFixture clone = valid;
+    clone._drawPile         = sw::CardPile{};
     clone._drawPile.push( sw::Card{ 0, 0, 0 } );
     clone._hand.push( sw::Card{ 0, 0, 0 } );
     SW_EXPECT_FALSE( clone.readInto( restored ) );
 
-    CardBattleForged outOfDeck = valid;
-    outOfDeck._drawPile        = sw::CardPile{};
+    CardBattleFixture outOfDeck = valid;
+    outOfDeck._drawPile         = sw::CardPile{};
     outOfDeck._drawPile.push( sw::Card{ 0, 0, 0 } );
     outOfDeck._drawPile.push( sw::Card{ 2, 0, 0 } );
     SW_EXPECT_FALSE( outOfDeck.readInto( restored ) );
 
-    CardBattleForged handOverLimit = valid;
-    handOverLimit._drawPile        = sw::CardPile{};
+    CardBattleFixture handOverLimit = valid;
+    handOverLimit._drawPile         = sw::CardPile{};
     handOverLimit._hand.push( sw::Card{ 0, 0, 0 } );
     handOverLimit._hand.push( sw::Card{ 1, 0, 0 } );
     SW_EXPECT_FALSE( handOverLimit.readInto( restored ) );
 
-    CardBattleForged intentNegative = valid;
-    intentNegative._intentAmount    = -3;
+    CardBattleFixture intentNegative = valid;
+    intentNegative._intentAmount     = -3;
     SW_EXPECT_FALSE( intentNegative.readInto( restored ) );
 
-    CardBattleForged enemyNegative = valid;
-    enemyNegative._enemyHP         = -1;
+    CardBattleFixture enemyNegative = valid;
+    enemyNegative._enemyHP          = -1;
     SW_EXPECT_FALSE( enemyNegative.readInto( restored ) );
 
-    CardBattleForged blockNegative = valid;
-    blockNegative._enemyBlock      = -1;
+    CardBattleFixture blockNegative = valid;
+    blockNegative._enemyBlock       = -1;
     SW_EXPECT_FALSE( blockNegative.readInto( restored ) );
 
-    CardBattleForged hpOverMax = valid;
-    hpOverMax._playerHP        = settings._playerHP + 1;
+    CardBattleFixture hpOverMax = valid;
+    hpOverMax._playerHP         = settings._playerHP + 1;
     SW_EXPECT_FALSE( hpOverMax.readInto( restored ) );
 
-    CardBattleForged hpNegative = valid;
-    hpNegative._playerHP        = -1;
+    CardBattleFixture hpNegative = valid;
+    hpNegative._playerHP         = -1;
     SW_EXPECT_FALSE( hpNegative.readInto( restored ) );
 
-    CardBattleForged energyNegative = valid;
-    energyNegative._energy          = -1;
+    CardBattleFixture energyNegative = valid;
+    energyNegative._energy           = -1;
     SW_EXPECT_FALSE( energyNegative.readInto( restored ) );
 
-    CardBattleForged fakeWin = valid;
-    fakeWin._phase           = static_cast<uint8>( sw::CardBattlePhase::Won );
+    CardBattleFixture fakeWin = valid;
+    fakeWin._phase            = static_cast<uint8>( sw::CardBattlePhase::Won );
     SW_EXPECT_FALSE( fakeWin.readInto( restored ) );
 
-    CardBattleForged fakeLoss = valid;
-    fakeLoss._phase           = static_cast<uint8>( sw::CardBattlePhase::Lost );
+    CardBattleFixture fakeLoss = valid;
+    fakeLoss._phase            = static_cast<uint8>( sw::CardBattlePhase::Lost );
     SW_EXPECT_FALSE( fakeLoss.readInto( restored ) );
 
     SW_EXPECT_EQUAL( 10, restored.getEnemy()._hp );

@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/Ray.h"
 
 #include <algorithm>
 
@@ -116,23 +117,18 @@ namespace sw
             float3 b;
             float3 c;
             getTriangle( globalTriangle, a, b, c );
-            float32 distance   = 0.0f;
-            float32 u          = 0.0f;
-            float32 v          = 0.0f;
-            bool    bFrontFace = false;
-            if ( CharacterGeometryUtil::intersectRayTriangle( origin, unitDirection, a, b, c, distance, u, v, bFrontFace ) == false )
+            RayTriangleHit triangleHit{};
+            if ( Ray::intersectTriangle( Ray{ origin, unitDirection }, a, b, c, bestDistance, triangleHit ) == false )
                 continue;
-            if ( distance > bestDistance )
-                continue;
-            bestDistance       = distance;
+            bestDistance       = triangleHit._distance;
             bFound             = true;
-            outHit._distance   = distance;
-            outHit._baryU      = u;
-            outHit._baryV      = v;
+            outHit._distance   = triangleHit._distance;
+            outHit._baryU      = triangleHit._baryU;
+            outHit._baryV      = triangleHit._baryV;
             outHit._triangle   = _listTriangleLocal[globalTriangle];
             outHit._part       = surface._part;
             outHit._normal     = CharacterGeometryUtil::makeUnitOr( ( b - a ).cross( c - a ), float3::UnitY );
-            outHit._bFrontFace = bFrontFace ? SW_TRUE : SW_FALSE;
+            outHit._bFrontFace = triangleHit._bFrontFace;
         }
         return bFound;
     }
@@ -154,16 +150,17 @@ namespace sw
             float3 b;
             float3 c;
             getTriangle( globalTriangle, a, b, c );
+            RayTriangleHit triangleHit{};
+            if ( Ray::intersectTriangle( Ray{ origin, unitDirection }, a, b, c, maxDistance, triangleHit ) == false )
+                continue;
             GeometryRayHit hit;
-            bool           bFrontFace = false;
-            if ( CharacterGeometryUtil::intersectRayTriangle( origin, unitDirection, a, b, c, hit._distance, hit._baryU, hit._baryV, bFrontFace ) == false )
-                continue;
-            if ( hit._distance > maxDistance )
-                continue;
+            hit._distance   = triangleHit._distance;
+            hit._baryU      = triangleHit._baryU;
+            hit._baryV      = triangleHit._baryV;
             hit._triangle   = _listTriangleLocal[globalTriangle];
             hit._part       = surface._part;
             hit._normal     = CharacterGeometryUtil::makeUnitOr( ( b - a ).cross( c - a ), float3::UnitY );
-            hit._bFrontFace = bFrontFace ? SW_TRUE : SW_FALSE;
+            hit._bFrontFace = triangleHit._bFrontFace;
             outListHit.push_back( hit );
         }
         VectorUtil::sort( outListHit, SurfaceBVHInternal::HitDistanceLess{} );

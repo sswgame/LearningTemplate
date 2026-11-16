@@ -2,6 +2,9 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
+
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 using namespace sw;
@@ -124,4 +127,64 @@ SW_TEST_CASE( WorldClockTest, PhasesFollowTheConfiguredHours )
     SW_EXPECT_TRUE( WorldClock::computePhaseAt( settings, 12.0f ) == DayPhase::Day );
     SW_EXPECT_TRUE( WorldClock::computePhaseAt( settings, 19.0f ) == DayPhase::Dusk );
     SW_EXPECT_TRUE( WorldClock::computePhaseAt( settings, 22.0f ) == DayPhase::Night );
+}
+
+/**
+ * @brief [WorldClockTest] 어떤 하루 길이에서도 하루를 걸으면 시 경계 24 개를 모두 지나 다음 날이 된다(감사 G-2)
+ * @details 하루 3500 · 5000 · 7000 · 10000 · 20000 초에서 시 경계에 올려놓은 시각이 N 바로 아래로 반올림되어 걸음이 1e-4 로 고정됐고,
+ *          2048 초를 넘은 시각에서는 그 걸음이 float 에 더해지지 않아 시계가 영구히 멈췄다. 1 분씩 하루를 흘린다.
+ */
+SW_TEST_CASE( WorldClockTest, AdvancesAcrossEveryHourForAnyDayLength )
+{
+    for ( const float32 secondsPerDay : { 1440.0f, 3500.0f, 5000.0f, 7000.0f, 10000.0f, 20000.0f, 86400.0f } )
+    {
+        WorldClockSettings settings = WorldClockTestUtil::makeSettings();
+        settings._secondsPerDay     = secondsPerDay;
+        WorldClock clock;
+        SW_REQUIRE_TRUE( clock.initialize( settings ) );
+        for ( int32 minute = 0; minute < 24 * 60; ++minute )
+            clock.advanceMinutes( 1.0f );
+        vector<WorldClockEvent> listEvent;
+        clock.pollEvents( listEvent );
+        SW_EXPECT_EQUAL( 24u, WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::HourChanged ) );
+        SW_EXPECT_EQUAL( 1u, WorldClockTestUtil::countEvents( listEvent, WorldClockEvent::Kind::DayChanged ) );
+    }
+}
+
+/**
+ * @brief [WorldClockTest] 판 1(머리표 없음 · float32 시각) 바이트를 머리가 판 1 로 알아보고 사슬(CLOK 1 → 2)로 올려 읽는다 — 날 · 시각 · 배율 · 멈춤이 그대로다(감사 A-6).
+ *        세션 상태 구간 본문(구간이 올리지 않고 넘긴다)과 바깥 형식 안(나일 시티처럼 시계 뒤에 칸이 이어진다) 두 자리 모두다
+ */
+SW_TEST_CASE( WorldClockTest, UpgradesHeaderlessVersionOne )
+{
+    sw::Archive oldBody;
+    oldBody << int32{ 4 } << 12.0f << 2.0f << uint8{ SW_TRUE }; // 하루 24 초 설정의 12 시
+
+    sw::WorldClock clock;
+    SW_REQUIRE_TRUE( clock.initialize( WorldClockTestUtil::makeSettings() ) );
+    sw::Archive body( oldBody.getData(), oldBody.getSize() );
+    SW_REQUIRE_TRUE( clock.readState( body ) );
+    SW_EXPECT_EQUAL( size_t{ 0 }, body.getRemainingBytes() );
+    SW_EXPECT_EQUAL( 4, clock.getDay() );
+    SW_EXPECT_NEAR( 12.0f, clock.getHour(), 1.0e-4f );
+    SW_EXPECT_NEAR( 2.0f, clock.getTimeScale(), 1.0e-6f );
+    SW_EXPECT_TRUE( clock.isPaused() );
+
+    // 바깥 형식 안: 시계 뒤의 칸(int32 77)이 그대로 읽힌다
+    sw::Archive outer;
+    outer.writeBytes( oldBody.getData(), oldBody.getSize() );
+    outer << int32{ 77 };
+    sw::Archive    reading( outer.getData(), outer.getSize() );
+    sw::WorldClock nested;
+    SW_REQUIRE_TRUE( nested.initialize( WorldClockTestUtil::makeSettings() ) );
+    int32 tail = 0;
+    {
+        sw::StateIO io( reading );
+        io.value( nested );
+        io.value( tail );
+        SW_REQUIRE_TRUE( io.isOk() );
+    }
+    SW_EXPECT_EQUAL( 4, nested.getDay() );
+    SW_EXPECT_EQUAL( 77, tail );
+    SW_EXPECT_EQUAL( size_t{ 0 }, reading.getRemainingBytes() );
 }

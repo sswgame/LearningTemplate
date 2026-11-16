@@ -88,6 +88,27 @@ namespace sw
                 return lengthSq > limit * limit ? velocity * ( limit / ::sqrtf( lengthSq ) ) : velocity;
             }
 
+            /**
+             * @brief 셰이프 @p pShape 의 질량 · 관성입니다(@p mass 가 0 보다 크면 그 질량으로 맞춘다).
+             * @details 삼각 메시는 부피가 없어 Jolt 가 질량을 셀 수 없다(움직임 정보를 만들면 단언) — 경계 상자의 질량 · 관성을 준다. 평평한 메시도 두께를 둔다.
+             */
+            static JPH::MassProperties computeMassProperties( const JPH::Shape& shape, float32 density, float32 mass )
+            {
+                JPH::MassProperties massProperties;
+                if ( shape.MustBeStatic() )
+                {
+                    const JPH::Vec3 boxSize = JPH::Vec3::sMax( shape.GetLocalBounds().GetSize(), JPH::Vec3::sReplicate( kMinMeshMassBoxSize ) );
+                    massProperties.SetMassAndInertiaOfSolidBox( boxSize, density );
+                }
+                else
+                {
+                    massProperties = shape.GetMassProperties();
+                }
+                if ( mass > 0.0f )
+                    massProperties.ScaleToMass( mass );
+                return massProperties;
+            }
+
             static float32 combineFriction( float32 frictionA, float32 frictionB ) { return ::sqrtf( frictionA * frictionB ); }
             static float32 combineRestitution( float32 restitutionA, float32 restitutionB ) { return restitutionA > restitutionB ? restitutionA : restitutionB; }
 
@@ -361,6 +382,7 @@ namespace sw
         // 스텝 앞에 깨어 있던 바디와 뒤에 깨어 있는 바디를 함께 든다(`getMovedBodies`) — 이 스텝에 잠든 바디도 마지막으로 조금 움직였다.
         _listMovedBody.clear();
         appendActiveBodies();
+        _contactTracker.refreshStayPairs(); // 잡 스레드가 이 스텝 동안 `isStayReported` 를 읽는다 — 바뀐 듣기를 먼저 적용한다
         if ( fixedDeltaTime > 0.0f )
         {
             const JPH::EPhysicsUpdateError error = _system.Update( fixedDeltaTime, 1, &_tempAllocator, _pJobSystem );
@@ -722,14 +744,8 @@ namespace sw
         const bool bHasMotion = bMoving || desc._bAllowTypeChange;
         if ( bHasMotion && pShape->MustBeStatic() )
         {
-            // 삼각 메시는 부피가 없어 Jolt 가 질량을 셀 수 없다(움직임 정보를 만들면 단언) — 경계 상자의 질량 · 관성을 준다. 평평한 메시도 두께를 둔다.
-            const JPH::Vec3     boxSize = JPH::Vec3::sMax( pShape->GetLocalBounds().GetSize(), JPH::Vec3::sReplicate( JoltPhysicsSceneInternal::kMinMeshMassBoxSize ) );
-            JPH::MassProperties massProperties;
-            massProperties.SetMassAndInertiaOfSolidBox( boxSize, material._density );
-            if ( desc._mass > 0.0f )
-                massProperties.ScaleToMass( desc._mass );
             settings.mOverrideMassProperties = JPH::EOverrideMassProperties::MassAndInertiaProvided;
-            settings.mMassPropertiesOverride = massProperties;
+            settings.mMassPropertiesOverride = JoltPhysicsSceneInternal::computeMassProperties( *pShape, material._density, desc._mass );
         }
         else if ( desc._mass > 0.0f && bMoving )
         {
@@ -801,26 +817,66 @@ namespace sw
         }
     }
 
+    bool JoltPhysicsScene::setBodyShape( PhysicsBodyHandle body, span<const PhysicsShapeDesc3D> listShape, const hashed_string& material, float32 mass )
+    {
+        BodyRecord* pRecord = findBody( body );
+        if ( pRecord == nullptr )
+        {
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.SetBodyShapeStaleBody", "setBodyShape: the body handle is stale" );
+            return false;
+        }
+        const JPH::RefConst<JPH::Shape> pShape = createJoltShape( listShape, material, pRecord->_type != PhysicsBodyType::Dynamic );
+        if ( pShape == nullptr )
+            return false;
+        const PhysicsMaterialDef* pMaterialDef = resolveMaterial( material, hashed_string{} );
+        if ( pMaterialDef == nullptr )
+            return false;
+        // 바디 id 가 그대로라 접촉 쌍도 그대로다 — Jolt 는 옛 셰이프 쌍의 제거와 새 쌍의 추가를 같은 step 에 짝지어 알리고(같은 서브 셰이프 쌍이면 유지),
+        // 추적기는 바디 쌍의 셰이프 쌍 수가 0 이 되지 않는 한 끝 · 시작을 내지 않는다.
+        const bool             bStatic    = pRecord->_type == PhysicsBodyType::Static;
+        const JPH::EActivation activation = bStatic ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
+        JPH::BodyInterface&    bodies     = _system.GetBodyInterface();
+        JPH::AABox             bounds     = bStatic ? bodies.GetTransformedShape( pRecord->_bodyID ).GetWorldSpaceBounds() : JPH::AABox{};
+        bodies.SetShape( pRecord->_bodyID, pShape.GetPtr(), false, activation );
+        if ( bStatic )
+        {
+            // 정적 바디의 셰이프가 바뀌면 그 위에서 자던 바디가 받침을 잃거나 묻힌다 — Jolt 는 깨우지 않으므로 옛 · 새 경계 안 바디를 깨운다(`setBodyTransform` 과 같다).
+            bounds.Encapsulate( bodies.GetTransformedShape( pRecord->_bodyID ).GetWorldSpaceBounds() );
+            bodies.ActivateBodiesInAABox( bounds, JPH::BroadPhaseLayerFilter{}, JPH::ObjectLayerFilter{} );
+        }
+        {
+            // `SetShape` 의 질량 갱신은 셰이프 질량만 쓴다 — 만들 때와 같이 지정 질량 · 메시 상자 질량을 맞춘다. 움직임 정보가 없는 정적 바디는 질량이 없다.
+            const JPH::BodyLockWrite lock{ _system.GetBodyLockInterface(), pRecord->_bodyID };
+            if ( lock.Succeeded() && lock.GetBody().GetMotionPropertiesUnchecked() != nullptr )
+            {
+                JPH::MotionProperties& motion = *lock.GetBody().GetMotionPropertiesUnchecked();
+                motion.SetMassProperties( motion.GetAllowedDOFs(), JoltPhysicsSceneInternal::computeMassProperties( *pShape, pMaterialDef->_density, mass ) );
+            }
+        }
+        pRecord->_pListShape = make_shared<const ShapeDescList>( listShape.begin(), listShape.end() );
+        return true;
+    }
+
     void JoltPhysicsScene::destroyBody( PhysicsBodyHandle body )
     {
         destroyBodies( span<const PhysicsBodyHandle>{ &body, 1 } );
     }
 
-    void JoltPhysicsScene::destroyJointsOf( span<const PhysicsBodyHandle> listBody )
+    void JoltPhysicsScene::destroyJoints( span<const PhysicsBodyHandle> listBody )
     {
-        vector<PhysicsJointHandle> listDoomed;
+        vector<PhysicsJointHandle> listPendingDestroy;
         _joints.forEachHandle( [&]( SlotHandle slot, const JointRecord& joint )
         {
             for ( const PhysicsBodyHandle& body : listBody )
             {
                 if ( joint._bodyA == body || joint._bodyB == body )
                 {
-                    listDoomed.push_back( PhysicsJointHandle::fromSlot( slot ) );
+                    listPendingDestroy.push_back( PhysicsJointHandle::fromSlot( slot ) );
                     return;
                 }
             }
         } );
-        for ( const PhysicsJointHandle& joint : listDoomed )
+        for ( const PhysicsJointHandle& joint : listPendingDestroy )
         {
             destroyJoint( joint );
         }
@@ -832,7 +888,7 @@ namespace sw
     {
         if ( listBody.empty() )
             return;
-        destroyJointsOf( listBody );
+        destroyJoints( listBody );
         vector<JPH::BodyID>       listRemoveID;
         vector<JPH::BodyID>       listDestroyID;
         vector<PhysicsBodyHandle> listDestroyed;
@@ -1167,9 +1223,15 @@ namespace sw
             ioSettings.mCombinedRestitution = JoltPhysicsSceneInternal::combineRestitution( pMaterialA->getRestitution(), pMaterialB->getRestitution() );
         }
 
+        const PhysicsBodyHandle handleA = PhysicsBodyHandle::fromPacked( bodyA.GetUserData() );
+        const PhysicsBodyHandle handleB = PhysicsBodyHandle::fromPacked( bodyB.GetUserData() );
+        // 유지 값은 유지를 내는 쌍만 쓴다 — 나머지는 충격량 어림과 전역 잠금을 건너뛴다(감사 S-1). 추적기는 step 사이에만 쓰여 잡 스레드가 함께 읽어도 된다.
+        if ( kind == 1 && _contactTracker.isStayReported( handleA, handleB ) == false )
+            return;
+
         ContactReport report;
-        report._bodyA._body     = PhysicsBodyHandle::fromPacked( bodyA.GetUserData() );
-        report._bodyB._body     = PhysicsBodyHandle::fromPacked( bodyB.GetUserData() );
+        report._bodyA._body     = handleA;
+        report._bodyB._body     = handleB;
         report._bodyA._bTrigger = bodyA.IsSensor();
         report._bodyB._bTrigger = bodyB.IsSensor();
         report._point           = JoltUtil::toEngine( manifold.GetWorldSpaceContactPointOn1( 0 ) );
@@ -1247,13 +1309,30 @@ namespace sw
                 }
                 default:
                 {
-                    _contactTracker.endSubContact( report._bodyA._body, report._bodyB._body );
+                    // Jolt 는 바디가 잠들면 그 접촉마다 제거를 알린다(`ContactListener::OnContactAdded` 설명) — 떨어진 것이 아니니 끝내지 않고 쉬게 둔다.
+                    if ( isPairAsleep( report._bodyA._body, report._bodyB._body ) )
+                        _contactTracker.suspendSubContact( report._bodyA._body, report._bodyB._body );
+                    else
+                        _contactTracker.endSubContact( report._bodyA._body, report._bodyB._body );
                     break;
                 }
             }
         }
         _listContactReport.clear();
+        _contactTracker.resumeSubContacts( [this]( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB )
+        { return isPairAsleep( bodyA, bodyB ); } );
         _contactTracker.finishStep( _listContactEvent );
+    }
+
+    bool JoltPhysicsScene::isPairAsleep( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const
+    {
+        // 잠든 섬은 정적이 아닌 바디가 모두 잔다 — 두 바디 다 활성이 아니면(정적은 늘 활성이 아니다) 그 쌍은 잠들어 있다.
+        const BodyRecord* pRecordA = findBody( bodyA );
+        const BodyRecord* pRecordB = findBody( bodyB );
+        if ( pRecordA == nullptr || pRecordB == nullptr )
+            return false;
+        const JPH::BodyInterface& bodies = _system.GetBodyInterface();
+        return bodies.IsActive( pRecordA->_bodyID ) == false && bodies.IsActive( pRecordB->_bodyID ) == false;
     }
 
     PhysicsVehicleHandle JoltPhysicsScene::createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc )
@@ -1476,14 +1555,14 @@ namespace sw
 
     // --- 캐릭터 -----------------------------------------------------------------------------------------------------------
 
-    PhysicsCharacterHandle JoltPhysicsScene::createCharacter( const PhysicsCharacterDesc3D& desc )
+    JPH::RefConst<JPH::Shape> JoltPhysicsScene::createCharacterShape( float32 radius, float32 halfHeight )
     {
         // 캡슐 바닥이 캐릭터 원점(발)에 오도록 올려 둔다.
-        const float32             centerHeight = desc._halfHeight + desc._radius;
-        JPH::CapsuleShapeSettings capsule{ desc._halfHeight, desc._radius };
+        JPH::RefConst<JPH::Shape> pResult;
+        JPH::CapsuleShapeSettings capsule{ halfHeight, radius };
         capsule.SetEmbedded();
         JPH::RotatedTranslatedShapeSettings offset{
-            JPH::Vec3{ 0.0f, centerHeight, 0.0f },
+            JPH::Vec3{ 0.0f, halfHeight + radius, 0.0f },
             JPH::Quat::sIdentity(), &capsule
         };
         offset.SetEmbedded();
@@ -1491,12 +1570,31 @@ namespace sw
         if ( result.HasError() )
         {
             SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCharacter", "createCharacter: %#", result.GetError().c_str() );
-            return PhysicsCharacterHandle{};
+            return pResult;
         }
+        pResult = result.Get();
+        return pResult;
+    }
+
+    PhysicsShapeDesc3D JoltPhysicsScene::makeCharacterShapeDesc( float32 radius, float32 halfHeight )
+    {
+        PhysicsShapeDesc3D capsuleDesc;
+        capsuleDesc._type          = PhysicsShapeType3D::Capsule;
+        capsuleDesc._radius        = radius;
+        capsuleDesc._halfHeight    = halfHeight;
+        capsuleDesc._localPosition = float3{ 0.0f, halfHeight + radius, 0.0f };
+        return capsuleDesc;
+    }
+
+    PhysicsCharacterHandle JoltPhysicsScene::createCharacter( const PhysicsCharacterDesc3D& desc )
+    {
+        const JPH::RefConst<JPH::Shape> pShape = createCharacterShape( desc._radius, desc._halfHeight );
+        if ( pShape == nullptr )
+            return PhysicsCharacterHandle{};
 
         JPH::CharacterVirtualSettings settings;
         settings.SetEmbedded();
-        settings.mShape         = result.Get();
+        settings.mShape         = pShape;
         settings.mMaxSlopeAngle = desc._maxSlopeAngle;
         settings.mMass          = desc._mass;
         settings.mMaxStrength   = desc._maxStrength;
@@ -1505,7 +1603,7 @@ namespace sw
         // 속 바디 — 천(소프트 바디)과 센서가 캐릭터를 몸으로 느낀다(`PhysicsCharacterDesc::_bInnerBody`). Jolt 가 캐릭터 갱신 끝마다 그 자리로 옮기고 캐릭터와 함께 지운다.
         if ( desc._bInnerBody )
         {
-            settings.mInnerBodyShape = result.Get();
+            settings.mInnerBodyShape = pShape;
             settings.mInnerBodyLayer = JoltLayerUtil::makeObjectLayer( desc._layer, true );
         }
 
@@ -1524,13 +1622,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "JoltPhysicsScene.CreateCharacterJoltOutBodies", "createCharacter: Jolt is out of bodies for the inner body" );
                 return PhysicsCharacterHandle{};
             }
-            PhysicsShapeDesc3D capsuleDesc;
-            capsuleDesc._type          = PhysicsShapeType3D::Capsule;
-            capsuleDesc._radius        = desc._radius;
-            capsuleDesc._halfHeight    = desc._halfHeight;
-            capsuleDesc._localPosition = float3{ 0.0f, centerHeight, 0.0f };
             BodyRecord inner;
-            inner._pListShape      = make_shared<const ShapeDescList>( ShapeDescList{ capsuleDesc } );
+            inner._pListShape      = make_shared<const ShapeDescList>( ShapeDescList{ makeCharacterShapeDesc( desc._radius, desc._halfHeight ) } );
             inner._userData        = desc._userData;
             inner._bodyID          = innerBodyID;
             inner._type            = PhysicsBodyType::Kinematic;
@@ -1598,6 +1691,36 @@ namespace sw
         state._groundNormal            = state._bGrounded ? JoltUtil::toEngine( virtualCharacter.GetGroundNormal() ) : float3{};
         state._groundBody              = state._bGrounded ? findHandle( virtualCharacter.GetGroundBodyID() ) : PhysicsBodyHandle{};
         return state;
+    }
+
+    bool JoltPhysicsScene::setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight )
+    {
+        CharacterRecord* pRecord = _characters.get( character.getSlot() );
+        if ( pRecord == nullptr || pRecord->_pCharacter == nullptr )
+        {
+            SW_LOG_ERROR_ID( "JoltPhysicsScene.SetCharacterSizeStaleCharacter", "setCharacterSize: the character handle is stale" );
+            return false;
+        }
+        const JPH::RefConst<JPH::Shape> pShape = createCharacterShape( radius, halfHeight );
+        if ( pShape == nullptr )
+            return false;
+        // 겹침 한도 없이 바꾼다(FLT_MAX) — 커진 캡슐이 벽에 묻혀도 다음 이동이 밀어낸다(언리얼 `SetCapsuleSize` 도 막지 않는다).
+        const JPH::ObjectLayer                              objectLayer = JoltLayerUtil::makeObjectLayer( pRecord->_desc._layer, true );
+        const JoltPhysicsSceneInternal::CharacterBodyFilter bodyFilter;
+        const JPH::ShapeFilter                              shapeFilter;
+        JPH::CharacterVirtual&                              virtualCharacter = *pRecord->_pCharacter;
+        (void)virtualCharacter.SetShape( pShape.GetPtr(), FLT_MAX, _system.GetDefaultBroadPhaseLayerFilter( objectLayer ), _system.GetDefaultLayerFilter( objectLayer ),
+                                         bodyFilter, shapeFilter, _tempAllocator );
+        pRecord->_desc._radius     = radius;
+        pRecord->_desc._halfHeight = halfHeight;
+        // 속 바디는 같은 바디에 셰이프만 간다 — 핸들이 그대로라 접촉 쌍도 이어진다(`setBodyShape` 와 같다).
+        BodyRecord* pInner = findBody( pRecord->_innerBody );
+        if ( pInner != nullptr )
+        {
+            virtualCharacter.SetInnerBodyShape( pShape.GetPtr() );
+            pInner->_pListShape = make_shared<const ShapeDescList>( ShapeDescList{ makeCharacterShapeDesc( radius, halfHeight ) } );
+        }
+        return true;
     }
 
     void JoltPhysicsScene::setCharacterPosition( PhysicsCharacterHandle character, const float3& position )

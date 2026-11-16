@@ -17,6 +17,8 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
 
+#include "ModuleAPI/Service/IModuleStateStore.h"
+
 #include "sw/config/ConfigConstants.h"
 
 namespace sw::editor
@@ -42,6 +44,24 @@ namespace sw::editor
                     return {};
                 return FileUtil::joinPath( FileUtil::joinPath( makeAutomationOutputFolderPath(), kAutomationEditorStateFolder ), AutomationScratch::makeInstanceID( "editor" ) );
             }
+
+            /** @brief 이 프로세스가 상태 폴더를 이미 비웠다는 표시의 맡김 칸 키입니다. 값은 비어 있다 — 있느냐만 본다. */
+            static constexpr string_view kPreparedStoreKey = "editor.automationStateDirPrepared";
+
+            /**
+             * @brief 이 프로세스에서 처음 부르면 true 입니다(표시를 맡김 칸에 다시 맡겨 다음 인스턴스가 본다).
+             * @details 맡김 칸이 없는 호스트(테스트 · 도구)는 인스턴스를 다시 세우지 않으므로 늘 처음이다.
+             */
+            static bool takeFirstPreparation()
+            {
+                IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
+                if ( pStore == nullptr )
+                    return true;
+                vector<uint8> bytes;
+                const bool    bPrepared = pStore->take( kPreparedStoreKey, bytes );
+                pStore->store( kPreparedStoreKey, vector<uint8>{} );
+                return bPrepared == false;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -63,6 +83,9 @@ namespace sw::editor
     {
         const string stateDir = EditorPathsInternal::getAutomationStateDirectory();
         if ( stateDir.empty() )
+            return;
+        // 리로드 · 백엔드 교체로 다시 선 인스턴스는 앞선 인스턴스의 상태를 잇는다 — 비우면 자동 저장 세션 폴더(사본 · 잠금)와 레이아웃이 리로드마다 사라졌다.
+        if ( EditorPathsInternal::takeFirstPreparation() == false )
             return;
         // 같은 프로세스 번호를 썼던 지난 실행이 남긴 상태를 읽지 않게 비우고 시작하며, 끝난 실행의 상태 폴더는 거둔다.
         AutomationScratchWorkspace::resetInstanceFolder( stateDir );

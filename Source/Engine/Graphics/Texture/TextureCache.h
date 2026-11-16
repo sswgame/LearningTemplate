@@ -103,7 +103,7 @@ namespace sw
          */
         uint32 completePendingLoads( IRHIDevice* pDevice, uint32 maxCount );
         /**
-         * @brief `completePendingLoads` 의 차단 판입니다 — 기다리는 로드를 상한 없이 모두 제출하고 업로드 끝남까지 기다립니다(결정적 실행, `DeterministicRunPolicy::_bFinishAssetWorkEachFrame`).
+         * @brief `completePendingLoads` 의 차단 판입니다 — 기다리는 로드를 상한 없이 모두 제출하고 업로드 끝남까지 기다립니다(결정적 실행, `DeterministicRunPolicy::_bFinishAssetJobsEachFrame`).
          * @details 스테이징이 차서 `Busy` 로 돌아간 로드는 앞 업로드가 끝난 뒤 다시 낸다 — 두 목록이 빌 때까지 되풀이한다. 끝낸 수를 반환합니다.
          */
         uint32 finishPendingLoads( IRHIDevice* pDevice );
@@ -246,7 +246,7 @@ namespace sw
         struct Impl;
 
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
-        uint32 pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
+        uint32 processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
     private:
         shared_ptr<Impl> _impl; ///< 로드 작업이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 로드 작업은 놓을 것이 없다
@@ -301,7 +301,7 @@ namespace sw
         void                                        onAwaitingCompletion() override;
         void                                        onUploadSubmitted() override;
         /** @brief 두 대기 목록에서 이 로드 작업을 뺍니다(다른 스레드가 먼저 집었거나 끝났을 때). */
-        void removeFromPumpLists( TextureCache::Impl& cache );
+        void removeFromPollLists( TextureCache::Impl& cache );
         /** @brief 업로드가 끝난(또는 실패한) 뒤의 마무리입니다 — 항목을 공개하고 결과를 단계 결과로 바꿉니다. */
         [[nodiscard]] expected<AssetCompletionStep> concludeCompletion( TextureCache::Impl& cache, bool bReady );
 

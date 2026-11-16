@@ -36,13 +36,13 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
         MaterialCache& cache     = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
-        Material*      pMaterial = cache.acquire( path.viewOrEmpty() );
+        Material*      pMaterial = cache.acquire( path.view() );
         if ( pMaterial == nullptr )
         {
             SW_LOG_ERROR_ONCE_ID( "PostProcessMaterialSet.CouldNotAcquire", "Post process material '%#' could not be acquired - the blendable is not drawn", path.c_str() );
             return nullptr;
         }
-        cache.requestInitialize( path.viewOrEmpty() );
+        cache.requestInitialize( path.view() );
         _listEntry.push_back( Entry{ path, pMaterial, _frame, SW_FALSE } );
         return &_listEntry.back();
     }
@@ -90,7 +90,7 @@ namespace sw
         {
             if ( entry._lastUsedFrame == frame || engine::areEngineServicesBound() == false )
                 continue;
-            engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( entry._path.viewOrEmpty() );
+            engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( entry._path.view() );
             entry._pMaterial = nullptr;
         }
         VectorUtil::removeIf( _listEntry, []( const Entry& entry )
@@ -105,7 +105,7 @@ namespace sw
             MaterialCache& cache = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
             for ( const Entry& entry : _listEntry )
             {
-                cache.release( entry._path.viewOrEmpty() );
+                cache.release( entry._path.view() );
             }
         }
         _listEntry.clear();

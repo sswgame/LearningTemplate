@@ -91,8 +91,21 @@ namespace sw
         void schedulePendingBackendChange( RHIBackend requested );
         /** @brief 대기 중인 백엔드 변경이 있는지 반환합니다. */
         bool hasPendingBackendChange() const { return _bPendingBackendChange == SW_TRUE; }
-        /** @brief 대기 중인 백엔드를 가져가고 플래그를 해제합니다. */
+        /** @brief 대기 중인 백엔드를 가져가고 플래그(장치 다시 만들기 예약 포함)를 해제합니다. */
         RHIBackend consumePendingBackendChange();
+        /**
+         * @brief 잃은 장치를 같은 백엔드로 다시 만들도록 예약합니다(`RHIDeviceLostPolicy::Recreate`). 적용은 백엔드 교체와 같은 프레임 끝의 길이다(`hasPendingBackendChange`).
+         * @details 같은 백엔드를 고른 교체는 보통 아무 일도 하지 않으므로 따로 표시한다(`isDeviceRecreatePending`).
+         */
+        void scheduleDeviceRecreate();
+        /** @brief 잃은 장치의 다시 만들기가 예약돼 있으면 true 입니다. `consumePendingBackendChange` 가 지운다. */
+        bool isDeviceRecreatePending() const { return _bPendingDeviceRecreate == SW_TRUE; }
+        /**
+         * @brief 이 백엔드가 장치를 잃은 뒤 같은 백엔드로 다시 만들 수 있으면 true 입니다. 열거자마다 정한다(새 백엔드는 컴파일에서 이 판정을 요구받는다).
+         * @details DX11 · DX12 · Vulkan 은 새 장치를 만들고 자원을 다시 올리면 된다. OpenGL 은 컨텍스트 손실 뒤 창 픽셀 포맷이 한 번만 붙어(WGL) 창까지 다시 만들어야 하고,
+         *          WebGPU 는 브라우저가 장치를 거둬 같은 어댑터를 다시 받는다는 보장이 없다 — 둘은 종료로 답한다.
+         */
+        [[nodiscard]] static bool canRecreateAfterDeviceLost( RHIBackend backend );
         /** @brief 커밋된 백엔드를 반환합니다. */
         RHIBackend getCommittedBackend() const { return _committedRHIBackend; }
 
@@ -127,8 +140,9 @@ namespace sw
         RHIBackend             _pendingRHIBackend;
         RHIBackend             _committedRHIBackend;
         RHIInitResult          _initResult;
-        uint8                  _bPreferredVSync       : 1;
-        uint8                  _bPendingBackendChange : 1;
-        [[maybe_unused]] uint8 _reserved              : 6;
+        uint8                  _bPreferredVSync        : 1;
+        uint8                  _bPendingBackendChange  : 1;
+        uint8                  _bPendingDeviceRecreate : 1; ///< 잃은 장치를 같은 백엔드로 다시 만들 예약(`scheduleDeviceRecreate`)
+        [[maybe_unused]] uint8 _reserved               : 5;
     };
 } // namespace sw

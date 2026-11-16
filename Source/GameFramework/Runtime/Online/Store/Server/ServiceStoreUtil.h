@@ -41,6 +41,30 @@ namespace sw
             }
         }
 
+        /**
+         * @brief @p table 에서 @p prefix 로 시작하는 레코드를 모두 지웁니다(읽은 버전 조건, 한 트랜잭션에 한 쪽씩). 저장소 스레드에서 부릅니다.
+         * @return 다 지웠으면 Ok, 그사이 바뀐 레코드가 있으면 Conflict, 저장소 문제면 그 결과입니다. 탈퇴 정리 훅(`IAfterDeleteAccount`)이 계정 접두어 표에 씁니다.
+         */
+        [[nodiscard]] static ServiceStoreResult erasePrefix( IServiceStoreConnection& connection, const hashed_string& table, string_view prefix )
+        {
+            constexpr int32 kPageSize = 32;
+            while ( true )
+            {
+                vector<ServiceRecord>    listRecord;
+                const ServiceStoreResult listed = connection.listRecords( table, prefix, "", kPageSize, false, listRecord );
+                if ( listed != ServiceStoreResult::Ok || listRecord.empty() )
+                    return listed;
+                ServiceTransaction transaction;
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    transaction.erase( table, record._key, record._version );
+                }
+                const ServiceStoreResult committed = connection.commit( transaction );
+                if ( committed != ServiceStoreResult::Ok )
+                    return committed;
+            }
+        }
+
         /** @brief 저장소 완료만 회수하는 `flushUntilIdle` 입니다. */
         template <typename TIsIdle>
         static void flushUntilIdle( IServiceStore* pStore, TIsIdle&& isIdle )

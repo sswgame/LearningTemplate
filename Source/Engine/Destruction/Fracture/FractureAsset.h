@@ -16,6 +16,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
@@ -101,4 +102,7 @@ namespace sw
         /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<FractureAsset>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
     };
+
+    /** @brief 이 종류의 공유 캐시입니다 — 인스턴스화는 `FractureComponent.cpp` 의 정의 줄이 한다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, FractureAsset );
 } // namespace sw

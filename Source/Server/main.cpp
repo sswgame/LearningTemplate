@@ -14,5 +14,5 @@ int32 main( int32 argc, utf8* pArgv[] )
     if ( serviceExitCode >= 0 )
         return serviceExitCode;
 #endif
-    return sw::ServerApp::runMain( argc, pArgv );
+    return sw::ServerApp::runMain( argc, pArgv, nullptr );
 }

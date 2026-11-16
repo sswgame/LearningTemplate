@@ -87,7 +87,7 @@ namespace
         }
 
         /** @brief 제공자와 서버를 번갈아 돌려 왕복을 끝냅니다. */
-        void pump( IPlatformLoginProvider& provider, int64 nowMs = kNowMs )
+        void poll( IPlatformLoginProvider& provider, int64 nowMs = kNowMs )
         {
             for ( int32 round = 0; round < 40; ++round )
             {
@@ -100,7 +100,7 @@ namespace
         PlatformLoginVerification verify( IPlatformLoginProvider& provider, string_view ticket, int64 nowMs = kNowMs )
         {
             const uint64 verificationID = provider.submitVerification( StringUtil::toBytes( ticket ), UnixMilliseconds{ nowMs } );
-            pump( provider, nowMs );
+            poll( provider, nowMs );
             vector<PlatformLoginVerification> listVerification;
             (void)provider.pollVerifications( listVerification );
             SW_EXPECT_EQUAL( size_t( 1 ), listVerification.size() );
@@ -452,7 +452,7 @@ namespace
         PlatformLoginRevocation revoke( string_view linkSecret )
         {
             const uint64 revocationID = _pProvider->submitRevocation( linkSecret, UnixMilliseconds{ kNowMs } );
-            _http.pump( *_pProvider );
+            _http.poll( *_pProvider );
             vector<PlatformLoginRevocation> listRevocation;
             (void)_pProvider->pollRevocations( listRevocation );
             SW_EXPECT_EQUAL( size_t( 1 ), listRevocation.size() );

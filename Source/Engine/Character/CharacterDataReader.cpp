@@ -67,13 +67,13 @@ namespace sw
         _listError.push_back( { std::move( text ), pID } );
     }
 
-    bool CharacterDataReader::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead )
+    bool CharacterDataReader::readProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead )
     {
         XMLFieldsIssueSink sink;
         sink._pContext = this;
         sink._pfnAdd   = []( void* pContext, const utf8* pID, string_view text )
         { static_cast<CharacterDataReader*>( pContext )->_listError.push_back( { string( text ), pID } ); };
-        return XMLFields::readFields( node, pInstance, typeInfo, _sourceName, listHandRead, nullptr, sink );
+        return XMLFields::readProperties( node, pInstance, typeInfo, _sourceName, listHandRead, nullptr, sink );
     }
 
     void CharacterDataReader::addError( const utf8* pID, string_view message )

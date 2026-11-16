@@ -69,7 +69,10 @@ namespace sw
          * @brief 받을 데이터그램이 생기거나 @p timeoutMilli 가 지날 때까지 잠듭니다(POSIX `poll` · Windows `WSAPoll` — `select` 의 FD_SETSIZE 한도가 없다).
          *        받을 것이 있으면 true 입니다. 기다리는 동안 소켓을 닫으면 안 된다(기다리는 스레드를 먼저 멈춘다).
          */
-        static bool waitReadable( uint64 socketHandle, int32 timeoutMilli );
+        static bool            waitReadable( uint64 socketHandle, int32 timeoutMilli );
+        static constexpr int32 kMaxWaitSockets = 4;
+        /** @brief 소켓 @p count 개(최대 `kMaxWaitSockets`) 가운데 하나라도 읽을 것이 생기거나 @p timeoutMilli 가 지날 때까지 기다립니다(받는 소켓 + 깨우기 소켓). */
+        static bool waitReadable( const uint64* pSocketHandles, int32 count, int32 timeoutMilli );
         /**
          * @brief "호스트:포트" 를 IPv4 주소로 풉니다. 호스트가 점 넷 숫자면 그대로 읽고, 이름이면 운영체제 해석기(`getaddrinfo`, A 레코드 첫 값)에 묻습니다.
          *        포트가 없으면 @p defaultPort 입니다. 풀지 못하면 false 이며 다른 주소로 대신하지 않습니다.

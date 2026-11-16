@@ -260,10 +260,7 @@ namespace sw
                 if ( scene == nullptr || scene->getObjectManager() == nullptr )
                     continue;
                 // 남의 모듈 타입 객체를 든 컴포넌트(어빌리티 · 세트)가 먼저 놓고, 그 모듈 타입의 컴포넌트를 지운다.
-                scene->getObjectManager()->forEachComponent( [moduleName]( Component* pComponent )
-                {
-                    pComponent->onModuleUnloading( moduleName );
-                } );
+                scene->getObjectManager()->notifyModuleUnloading( moduleName );
                 scene->getObjectManager()->destroyComponentsOfModule( moduleName );
             }
             // 모듈 서브시스템은 그것을 빌려 쓰는 인스턴스(컴포넌트 · 등록 줄)가 모두 놓은 뒤, 타입과 코드가 아직 있을 때 걷는다.

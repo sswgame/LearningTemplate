@@ -242,7 +242,7 @@ namespace sw
         return readChild( key, bRequired );
     }
 
-    bool RigXMLReader::readFields( void* pInstance, const TypeInfo& typeInfo )
+    bool RigXMLReader::readProperties( void* pInstance, const TypeInfo& typeInfo )
     {
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
@@ -257,8 +257,8 @@ namespace sw
                 static_cast<RigXMLReader*>( pContext )->fail( text );
         },
                                        this };
-        // 판정은 리더 상태로 한다 — `XMLFields::readFields` 의 반환은 모르는 키에도 거짓이지만, 모르는 키는 아직 다른 칸 읽기가 맡을 수 있다.
-        (void)XMLFields::readFields( _element, pInstance, typeInfo, _context, {}, nullptr, sink );
+        // 판정은 리더 상태로 한다 — `XMLFields::readProperties` 의 반환은 모르는 키에도 거짓이지만, 모르는 키는 아직 다른 칸 읽기가 맡을 수 있다.
+        (void)XMLFields::readProperties( _element, pInstance, typeInfo, _context, {}, nullptr, sink );
         return isOk();
     }
 
@@ -340,6 +340,6 @@ namespace sw
 
     bool RigNode::parseCommon( RigXMLReader& reader )
     {
-        return reader.readFields( _common ); // 키 · 기본값 · 범위(가중치 0..1, 화면 크기 >= 0)는 RigNodeCommonParams 의 PROPERTY
+        return reader.readProperties( _common ); // 키 · 기본값 · 범위(가중치 0..1, 화면 크기 >= 0)는 RigNodeCommonParams 의 PROPERTY
     }
 } // namespace sw

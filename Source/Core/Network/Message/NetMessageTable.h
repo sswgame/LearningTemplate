@@ -62,7 +62,7 @@ namespace sw
 
         /** @brief 메시지 @p TOne 의 종류 바이트입니다. */
         template <typename TOne>
-        static constexpr uint8 kindOf()
+        static constexpr uint8 getKindOf()
         {
             static_assert( contains<TOne>(), "the message is not in this table" );
             static_assert( hasUniqueOffsets(), "two messages of a table share a kind" );
@@ -82,7 +82,7 @@ namespace sw
         static TResult dispatch( uint8 kind, TVisitor& visitor, TResult notFound )
         {
             TResult    result = notFound;
-            const bool bHit   = ( ( kind == kindOf<TMessage>() ? ( result = visitor.template visit<TMessage>(), true ) : false ) || ... );
+            const bool bHit   = ( ( kind == getKindOf<TMessage>() ? ( result = visitor.template visit<TMessage>(), true ) : false ) || ... );
             (void)bHit;
             return result;
         }

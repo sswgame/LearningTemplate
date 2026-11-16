@@ -220,10 +220,10 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
     test::OnlineRuntimeFixture rig;
     string                     error;
     {
-        const auto result = rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( server.getPort() ), RESPEndToEndTestUtil::kOnlineJSON, kNowMs );
+        const auto result = rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
-    const auto pump = [&rig]()
+    const auto poll = [&rig]()
     {
         rig.updateAll( kNowMs, 1 );
     };
@@ -245,14 +245,14 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
 
     (void)router.submit( EphemeralRequest::makeSet( "e2e:key", StringUtil::toBytes( "value" ), 0 ), EphemeralStoreRouter::ReplyDelegate::create( onReply ), owner );
     (void)router.submit( EphemeralRequest::makeGet( "e2e:key" ), EphemeralStoreRouter::ReplyDelegate::create( onReply ), owner );
-    SW_REQUIRE_TRUE( test::pumpUntil( pump, [&repliedCount]()
+    SW_REQUIRE_TRUE( test::pollUntil( poll, [&repliedCount]()
     { return repliedCount == 2; } ) );
     SW_EXPECT_EQUAL( string( "value" ), readBack );
     SW_EXPECT_EQUAL( string( "value" ), server.findValue( "g:e2e:key" ) );
     SW_EXPECT_TRUE( server.getAuthCount() >= 2 ); // 명령 연결과 구독 연결이 각각 AUTH 한다
 
     router.submit( EphemeralRequest::makePublish( "e2e.topic", StringUtil::toBytes( "hello" ) ) );
-    SW_REQUIRE_TRUE( test::pumpUntil( pump, [&message]()
+    SW_REQUIRE_TRUE( test::pollUntil( poll, [&message]()
     { return message.empty() == false; } ) );
     SW_EXPECT_EQUAL( string( "hello" ), message );
     SW_EXPECT_TRUE( server.takeUnknownCommands().empty() );
@@ -264,7 +264,7 @@ SW_TEST_CASE( RESPEndToEndTest, MissingSecretStopsStartup )
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( 6379 ), RESPEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    error = describeError( rig.fromConfig( RESPEndToEndTestUtil::makeServerJSON( 6379 ), test::OnlineRuntimeFixture::withBaseTTL( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "valkey" ) != string::npos );
 }
@@ -275,7 +275,7 @@ SW_TEST_CASE( RESPEndToEndTest, UnknownDriverStopsStartup )
     constexpr const utf8*      kServerJSON = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "valkey", "_driver": "memcached", "_endpoint": "127.0.0.1:1" } ] })";
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( kServerJSON, RESPEndToEndTestUtil::kOnlineJSON, kNowMs ) );
+    error = describeError( rig.fromConfig( kServerJSON, test::OnlineRuntimeFixture::withBaseTTL( RESPEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "memcached" ) != string::npos );
 }

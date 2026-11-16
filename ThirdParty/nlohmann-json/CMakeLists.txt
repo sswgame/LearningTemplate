@@ -3,7 +3,7 @@
 # @brief nlohmann/json — 헤더 온리
 # ==============================================================================
 
-sw_addVcpkgPackage(
+sw_add_vcpkg_package(
 	NAME nlohmann_json
 	PACKAGE nlohmann_json
 	CONFIG_TARGET nlohmann_json::nlohmann_json

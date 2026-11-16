@@ -97,7 +97,7 @@ namespace sw
         PawnAutoPossess      getAutoPossess() const { return _autoPossess; }
         void                 setAutoPossess( PawnAutoPossess autoPossess ) { _autoPossess = autoPossess; }
         /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지 나타냅니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
-        bool          wantsMouseLock() const { return _bLockMouse; }
+        bool          needsMouseLock() const { return _bLockMouse; }
         void          setLockMouse( bool bLockMouse ) { _bLockMouse = bLockMouse; }
         const string& getAIControllerPrefab() const { return _aiControllerPrefab.path(); }
         /** @brief 이 폰의 의도를 내는 네트워크 연결입니다. 0 이면 로컬이며, 빙의를 따라갑니다. 탈것은 운전석 조종자의 연결입니다. */

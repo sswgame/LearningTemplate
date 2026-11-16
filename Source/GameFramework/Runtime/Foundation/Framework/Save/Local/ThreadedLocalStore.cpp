@@ -13,7 +13,7 @@ namespace sw
         , _requestIDAllocator{}
         , _pendingCount{ 0 }
     {
-        _worker.start( "LocalStore", DedicatedWorker<LocalStoreRequest>::ProcessDelegate::create<&ThreadedLocalStore::processRequest>( this ) );
+        _worker.start( ThreadCreationKey{}, "LocalStore", DedicatedWorker<LocalStoreRequest>::ProcessDelegate::create<&ThreadedLocalStore::processRequest>( this ) );
     }
 
     ThreadedLocalStore::~ThreadedLocalStore()

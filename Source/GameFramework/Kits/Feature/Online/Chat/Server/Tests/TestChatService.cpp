@@ -14,18 +14,20 @@
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
 namespace
 {
-    constexpr AccountID   kAlice   = 11;
-    constexpr AccountID   kBob     = 12;
-    constexpr AccountID   kCarol   = 13;
-    constexpr int64       kNowMs   = 1700000000000ll;
-    constexpr uint64      kServerA = 1;
-    constexpr uint64      kServerB = 2;
-    constexpr const utf8* kWorld   = "world.kr";
+    constexpr AccountID   kAlice     = 11;
+    constexpr AccountID   kBob       = 12;
+    constexpr AccountID   kCarol     = 13;
+    constexpr int64       kNowMs     = 1700000000000ll;
+    constexpr int64       kChatDayMs = 86400000ll; ///< 기록 TTL 색인의 날짜 폭과 같다
+    constexpr uint64      kServerA   = 1;
+    constexpr uint64      kServerB   = 2;
+    constexpr const utf8* kWorld     = "world.kr";
 
     /** @brief 접속한 계정을 손으로 넣는 디렉터리입니다. */
     class FakeDirectory final : public IAccountDirectory
@@ -127,11 +129,11 @@ namespace
             _directory._listOnline = vector<AccountID>{ kAlice, kBob, kCarol };
         }
 
-        void pump( int64 nowMs = kNowMs )
+        void poll( int64 nowMs = kNowMs )
         {
             while ( true )
             {
-                int32 work = _store.pollCompletions();
+                int32 job = _store.pollCompletions();
                 if ( _transport != nullptr )
                 {
                     vector<ChatBusTopicChange> listChange;
@@ -144,13 +146,13 @@ namespace
                             _transport->unsubscribe( change._topic );
                     }
                     vector<ServerBusMessage> listMessage;
-                    work += _transport->pollMessages( listMessage );
+                    job += _transport->pollMessages( listMessage );
                     for ( const ServerBusMessage& message : listMessage )
                     {
                         _service.handleBusMessage( message );
                     }
                 }
-                if ( work == 0 )
+                if ( job == 0 )
                     break;
             }
             (void)nowMs;
@@ -160,12 +162,12 @@ namespace
         void flush( int64 nowMs = kNowMs )
         {
             _service.update( UnixMilliseconds{ nowMs } );
-            pump();
+            poll();
         }
 
         ChatCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<ChatCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -175,7 +177,7 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        ChatOutcome join( AccountID accountID, string_view channelID = kWorld )
+        ChatServiceResult join( AccountID accountID, string_view channelID = kWorld )
         {
             const uint64 tag = _nextTag++;
             _service.joinChannel( accountID, channelID, UnixMilliseconds{ kNowMs }, tag );
@@ -203,7 +205,7 @@ namespace
             return take( tag );
         }
 
-        ChatOutcome report( AccountID accountID, const ChatMessage& message, string_view reason = "abuse", int64 nowMs = kNowMs )
+        ChatServiceResult report( AccountID accountID, const ChatMessage& message, string_view reason = "abuse", int64 nowMs = kNowMs )
         {
             ChatReportRequest request;
             request._channelID = message._channelID;
@@ -218,7 +220,7 @@ namespace
 
         vector<ChatDelivery> takeDeliveries()
         {
-            pump();
+            poll();
             vector<ChatDelivery> listDelivery;
             _service.pollDeliveries( listDelivery );
             return listDelivery;
@@ -381,7 +383,7 @@ SW_TEST_CASE( ChatServiceTest, PendingSendsAreBoundedAndFinished )
     SW_EXPECT_EQUAL( uint64( 3 ), listCompletion[0]._requestTag );
     SW_EXPECT_TRUE( listCompletion[0]._result == ChatResult::RateLimited );
     SW_EXPECT_EQUAL( settings._pendingSendRetryAfterMs, listCompletion[0]._retryAfterMs );
-    rig.pump();
+    rig.poll();
     listCompletion.clear();
     rig._service.takeCompletions( listCompletion );
     SW_EXPECT_EQUAL( size_t( 2 ), listCompletion.size() );
@@ -451,6 +453,55 @@ SW_TEST_CASE( ChatServiceTest, BlockedSenderIsSilentlyDropped )
     SW_EXPECT_TRUE( rig.takeDeliveries().empty() );
 }
 
+/** @brief [ChatServiceTest] 귓속말 기록은 새 글이 없어도 보존 기간이 지나면 지워진다(감사 O-9 — 쌍 채널은 다시 쓰이지 않는다) */
+SW_TEST_CASE( ChatServiceTest, WhisperHistoryExpiresWithoutNewMessages )
+{
+    MemoryServiceDatabase database;
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    SW_EXPECT_TRUE( rig.whisper( kAlice, kBob, "psst" )._result == ChatResult::Ok );
+    rig.flush();
+    const hashed_string historyTable{ "chat_history" };
+    SW_REQUIRE_EQUAL( 1, database.countRecords( historyTable ) );
+
+    ServiceTTLRule        rule = ChatService::makeTTLRule( 30 * kChatDayMs );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 29 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, database.countRecords( historyTable ) ); // 아직 기간 안이다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( historyTable ) );
+    SW_EXPECT_EQUAL( 0, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
+}
+
+/** @brief [ChatServiceTest] 색인 없이 쓴 옛 귓속말 기록도 31 일 뒤 쓸기에서 지워진다 — 운영 규칙의 백필이 채널 · 날짜 줄을 채운다(감사 O-9) */
+SW_TEST_CASE( ChatServiceTest, LegacyWhisperHistoryIsBackfilledAndExpires )
+{
+    MemoryServiceDatabase database;
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    SW_EXPECT_TRUE( rig.whisper( kAlice, kBob, "psst" )._result == ChatResult::Ok );
+    rig.flush();
+    const hashed_string   historyTable{ "chat_history" };
+    const hashed_string   expiryTable{ "chat_history_expiry" };
+    vector<ServiceRecord> listIndex; // 색인보다 먼저 쓴 기록으로 만든다
+    SW_REQUIRE_TRUE( database.listRecords( expiryTable, "", "", 100, false, listIndex ) == ServiceStoreResult::Ok );
+    ServiceTransaction dropIndex;
+    for ( const ServiceRecord& entry : listIndex )
+    {
+        dropIndex.erase( expiryTable, entry._key );
+    }
+    SW_REQUIRE_TRUE( database.commit( dropIndex ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( 0, database.countRecords( expiryTable ) );
+    SW_REQUIRE_EQUAL( 1, database.countRecords( historyTable ) );
+
+    ServiceTTLRule        rule = ChatService::makeTTLRule( 30 * kChatDayMs );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 29 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._backfilledCount );
+    SW_EXPECT_EQUAL( 1, database.countRecords( historyTable ) ); // 아직 기간 안이다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( historyTable ) );
+    SW_EXPECT_EQUAL( 0, database.countRecords( expiryTable ) );
+}
+
 /** @brief [ChatServiceTest] 귓속말: 자신 · 0 은 Invalid, 상대가 이 서버에 있으면 그 사람에게만 가고 당사자가 기록을 읽는다. 서버가 하나인데 상대가 없으면 TargetOffline 이다 */
 SW_TEST_CASE( ChatServiceTest, WhisperOnOneServer )
 {
@@ -484,11 +535,11 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServers )
     ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
     SW_EXPECT_TRUE( rigA.join( kAlice ) == ChatResult::Ok );
     SW_EXPECT_TRUE( rigB.join( kBob ) == ChatResult::Ok );
-    rigA.pump();
-    rigB.pump();
+    rigA.poll();
+    rigB.poll();
 
     SW_EXPECT_TRUE( rigA.send( kAlice, "hello" )._result == ChatResult::Ok );
-    rigA.pump();
+    rigA.poll();
     const vector<ChatDelivery> listA = rigA.takeDeliveries();
     const vector<ChatDelivery> listB = rigB.takeDeliveries();
     SW_REQUIRE_EQUAL( size_t( 1 ), listA.size() ); // 자기 서버의 것을 두 번 받지 않는다
@@ -497,9 +548,9 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServers )
     SW_EXPECT_EQUAL( string( "hello" ), listB[0]._message._text );
 
     rigB._service.removeAccount( kBob );
-    rigB.pump();
+    rigB.poll();
     SW_EXPECT_TRUE( rigA.send( kAlice, "again" )._result == ChatResult::Ok );
-    rigA.pump();
+    rigA.poll();
     SW_EXPECT_TRUE( rigB.takeDeliveries().empty() );
 }
 
@@ -512,11 +563,11 @@ SW_TEST_CASE( ChatServiceTest, WhisperCrossesServers )
     ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
     rigA._directory._listOnline = vector<AccountID>{ kAlice };
     rigB._directory._listOnline = vector<AccountID>{ kBob };
-    rigA.pump();
-    rigB.pump();
+    rigA.poll();
+    rigB.poll();
 
     rigA._service.sendWhisper( kAlice, kBob, "psst", UnixMilliseconds{ kNowMs }, 1 );
-    rigA.pump();
+    rigA.poll();
     SW_REQUIRE_EQUAL( size_t( 1 ), rigA._presence._listFind.size() );
     SW_EXPECT_EQUAL( 1, rigA._service.getPendingCount() );
     rigA._presence.answer( kServerB );
@@ -526,17 +577,17 @@ SW_TEST_CASE( ChatServiceTest, WhisperCrossesServers )
     SW_EXPECT_EQUAL( kBob, listB[0]._recipientID );
 
     rigA._service.sendWhisper( kAlice, kBob, "gone", UnixMilliseconds{ kNowMs }, 2 );
-    rigA.pump();
+    rigA.poll();
     rigA._presence.answer( 0 );
     SW_EXPECT_TRUE( rigA.take( 2 )._result == ChatResult::TargetOffline );
     rigA._service.sendWhisper( kAlice, kBob, "self", UnixMilliseconds{ kNowMs }, 3 );
-    rigA.pump();
+    rigA.poll();
     rigA._presence.answer( kServerA );
     SW_EXPECT_TRUE( rigA.take( 3 )._result == ChatResult::TargetOffline );
 
     rigB._policy._listBlocked.push_back( make_pair( kBob, kAlice ) );
     rigA._service.sendWhisper( kAlice, kBob, "blocked", UnixMilliseconds{ kNowMs }, 4 );
-    rigA.pump();
+    rigA.poll();
     rigA._presence.answer( kServerB );
     SW_EXPECT_TRUE( rigA.take( 4 )._result == ChatResult::Ok );
     SW_EXPECT_TRUE( rigB.takeDeliveries().empty() );
@@ -557,7 +608,7 @@ SW_TEST_CASE( ChatServiceTest, SanctionChangeOverBusRefreshes )
     ServiceSanctionChanged changed;
     changed._accountID = kAlice;
     SW_REQUIRE_TRUE( ServiceSanctionBus::kChangedTopic.publish( gmBus, changed ) );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.send( kAlice, "after" )._result == ChatResult::Muted );
 }
 
@@ -593,24 +644,28 @@ SW_TEST_CASE( ChatServiceTest, HistoryPagesNewestFirst )
     SW_EXPECT_TRUE( rig.history( kAlice, "Bad Channel" )._result.hasError( OnlineError::kInvalidRequest ) );
 }
 
-/** @brief [ChatServiceTest] 기록 정리: 정리 차례의 메시지가 나오면 보존 기간이 지난 기록을 지운다. 저장소가 실패하면 경고하고 버린다. 큐가 차면 오래된 것부터 버린다 */
+/** @brief [ChatServiceTest] 기록 정리: TTL 규칙이 기간이 지난 날짜의 기록만 지운다. 저장소가 실패하면 경고하고 버린다. 큐가 차면 오래된 것부터 버린다 */
 SW_TEST_CASE( ChatServiceTest, HistoryTrimsAndDropsWhenItMust )
 {
     SW_EXPECT_LOG( "ChatService.ChatServiceChatHistoryRecords" );
     SW_EXPECT_LOG( "ChatService.ChatServiceChatHistoryQueue" );
     MemoryServiceDatabase database;
     ChatServiceConfig     settings = ChatTestUtil::makeOpenSettings();
-    settings._historyTrimEvery     = 2;
-    settings._historyRetentionMs   = 1000;
     settings._maxQueuedHistory     = 2;
     ChatFixture rig( database, nullptr, kServerA, settings );
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
 
-    SW_EXPECT_TRUE( rig.send( kAlice, "old" )._result == ChatResult::Ok ); // 순번 1
+    SW_EXPECT_TRUE( rig.send( kAlice, "old" )._result == ChatResult::Ok );
     rig.flush();
-    const int64 laterMs = kNowMs + 2000;
-    SW_EXPECT_TRUE( rig.send( kAlice, "new", kWorld, laterMs )._result == ChatResult::Ok ); // 순번 2 — 정리 차례다
+    const int64 laterMs = kNowMs + 2 * kChatDayMs; // 다른 날짜다 - 색인 줄이 따로 있다
+    SW_EXPECT_TRUE( rig.send( kAlice, "new", kWorld, laterMs )._result == ChatResult::Ok );
     rig.flush( laterMs );
+    SW_EXPECT_EQUAL( 2, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
+    ServiceTTLRule        rule = ChatService::makeTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, rule, ( kNowMs / kChatDayMs + 1 ) * kChatDayMs + 1000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, database.countRecords( hashed_string( "chat_history_expiry" ) ) );
     const ChatCompletion trimmed = rig.history( kAlice );
     SW_REQUIRE_EQUAL( size_t( 1 ), trimmed._listHistory.size() );
     SW_EXPECT_EQUAL( string( "new" ), trimmed._listHistory[0]._text );

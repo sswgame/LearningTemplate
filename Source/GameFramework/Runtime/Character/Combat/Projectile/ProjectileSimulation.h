@@ -6,7 +6,7 @@
  *
  *          **2D 는 평면 제약이다.** 2D 키트(액션 플랫포머 · 액션 룸)와 평면 위를 도는 카트도 같은 3D 계산에 평면 법선(`setPlaneNormal`)을 준다. 언리얼 ProjectileMovement 의
  *          평면 제약(`bConstrainToPlane`)과 같은 길이다. 유니티 · Godot 는 2D 물리를 따로 두지만, 발사체 규칙(관통 · 튕김 · 유도)을 차원마다 두 벌로 쓰게 되므로 택하지 않았다(기억에 의존한 비교).
- *          결정성: 이 TU 는 `sw_markDeterministicSources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 쓰는 쪽이 값(가속의 크기)으로 넘긴다 — 물리 설정을 읽지 않는다.
+ *          결정성: 이 TU 는 `sw_mark_deterministic_sources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 쓰는 쪽이 값(가속의 크기)으로 넘긴다 — 물리 설정을 읽지 않는다.
  */
 #pragma once
 #include "Core/Container/vector.h"

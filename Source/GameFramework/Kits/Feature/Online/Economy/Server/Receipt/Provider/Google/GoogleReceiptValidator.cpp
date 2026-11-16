@@ -187,8 +187,8 @@ namespace sw
         const bool bPurchaseStateOk     = root.readOptionalInto( "purchaseState", purchaseState );
         const bool bPurchaseTypeOk      = root.readOptionalInto( "purchaseType", purchaseType );
         const bool bAcknowledgementOk   = root.readOptionalInto( "acknowledgementState", acknowledgementState );
-        const bool bFieldsOk            = bPurchaseStateOk && bPurchaseTypeOk && bAcknowledgementOk;
-        if ( bFieldsOk == false )
+        const bool bPropertiesOk        = bPurchaseStateOk && bPurchaseTypeOk && bAcknowledgementOk;
+        if ( bPropertiesOk == false )
         {
             outFacts._status      = ReceiptStatus::Invalid; // 구글이 이런 칸을 이렇게 주지 않는다 — 읽을 수 없는 응답이다(오류는 JSON 읽기가 남겼다)
             outFacts._failureText = "google purchase has fields of the wrong type";

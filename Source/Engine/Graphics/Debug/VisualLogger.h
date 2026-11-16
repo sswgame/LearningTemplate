@@ -132,7 +132,7 @@ namespace sw
         uint64 _frame                    SW_GUARDED_BY( _mutex );
         uint32 _capacity                 SW_GUARDED_BY( _mutex );
         uint8                            _bEnabled;
-    };
 
-    SW_SERVICE_SLOT( VisualLogger, Required );
+        SW_SERVICE_SLOT( VisualLogger, Required );
+    };
 } // namespace sw

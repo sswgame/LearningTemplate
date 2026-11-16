@@ -213,7 +213,7 @@ namespace sw::editor
             (void)EditorPreferencesStore::saveOpened(); // 실패는 saveAll 이 경고로 알린다
     }
 
-    string EditorPreferencesStore::makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault )
+    expected<string> EditorPreferencesStore::makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault )
     {
         JSONDocument    document;
         const JSONValue object = document.makeObject();

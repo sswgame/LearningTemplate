@@ -16,7 +16,7 @@ namespace sw
             static constexpr uint32 kSampleCount = 50000;
             static constexpr uint32 kSeed        = 0x2545F491u;
 
-            static uint32 bitsOf( const float32 value ) { return half::fromFloat( value ).getBits(); }
+            static uint32 getBitsOf( const float32 value ) { return half::fromFloat( value ).getBits(); }
 
             /** @brief half 비트 패턴이 뜻하는 값을 `ldexp` 로 따로 계산합니다(유한한 값만) — 변환 코드와 같은 식을 쓰지 않는 기준입니다. */
             static float32 referenceValue( const uint32 bits )
@@ -50,17 +50,17 @@ namespace sw
 SW_TEST_CASE( HalfTest, KnownBitPatterns )
 {
     using sw::HalfTestInternal;
-    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::bitsOf( 0.0f ) );
-    SW_EXPECT_EQUAL( 0x8000u, HalfTestInternal::bitsOf( -0.0f ) );
-    SW_EXPECT_EQUAL( 0x3C00u, HalfTestInternal::bitsOf( 1.0f ) );
-    SW_EXPECT_EQUAL( 0xC000u, HalfTestInternal::bitsOf( -2.0f ) );
-    SW_EXPECT_EQUAL( 0x3800u, HalfTestInternal::bitsOf( 0.5f ) );
-    SW_EXPECT_EQUAL( 0x7BFFu, HalfTestInternal::bitsOf( sw::half::kMaxValue ) );
-    SW_EXPECT_EQUAL( 0x0400u, HalfTestInternal::bitsOf( sw::half::kMinNormalValue ) );
-    SW_EXPECT_EQUAL( 0x0001u, HalfTestInternal::bitsOf( sw::half::kMinSubnormalValue ) );
-    SW_EXPECT_EQUAL( 0x2E66u, HalfTestInternal::bitsOf( 0.1f ) );
-    SW_EXPECT_EQUAL( 0x4248u, HalfTestInternal::bitsOf( 3.140625f ) );
-    SW_EXPECT_EQUAL( 0x3C01u, HalfTestInternal::bitsOf( 1.0009765625f ) ); // 1 + 2^-10: 1 보다 큰 첫 half
+    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::getBitsOf( 0.0f ) );
+    SW_EXPECT_EQUAL( 0x8000u, HalfTestInternal::getBitsOf( -0.0f ) );
+    SW_EXPECT_EQUAL( 0x3C00u, HalfTestInternal::getBitsOf( 1.0f ) );
+    SW_EXPECT_EQUAL( 0xC000u, HalfTestInternal::getBitsOf( -2.0f ) );
+    SW_EXPECT_EQUAL( 0x3800u, HalfTestInternal::getBitsOf( 0.5f ) );
+    SW_EXPECT_EQUAL( 0x7BFFu, HalfTestInternal::getBitsOf( sw::half::kMaxValue ) );
+    SW_EXPECT_EQUAL( 0x0400u, HalfTestInternal::getBitsOf( sw::half::kMinNormalValue ) );
+    SW_EXPECT_EQUAL( 0x0001u, HalfTestInternal::getBitsOf( sw::half::kMinSubnormalValue ) );
+    SW_EXPECT_EQUAL( 0x2E66u, HalfTestInternal::getBitsOf( 0.1f ) );
+    SW_EXPECT_EQUAL( 0x4248u, HalfTestInternal::getBitsOf( 3.140625f ) );
+    SW_EXPECT_EQUAL( 0x3C01u, HalfTestInternal::getBitsOf( 1.0009765625f ) ); // 1 + 2^-10: 1 보다 큰 첫 half
 }
 
 /**
@@ -70,18 +70,18 @@ SW_TEST_CASE( HalfTest, RoundsToNearestEven )
 {
     using sw::HalfTestInternal;
     const float32 tieBelowEven = 1.00048828125f; // 1 + 2^-11: 0x3C00 과 0x3C01 의 한가운데 → 짝수 0x3C00
-    SW_EXPECT_EQUAL( 0x3C00u, HalfTestInternal::bitsOf( tieBelowEven ) );
-    SW_EXPECT_EQUAL( 0x3C01u, HalfTestInternal::bitsOf( sw::BitUtil::bitsToFloat( sw::BitUtil::floatToBits( tieBelowEven ) + 1u ) ) );
-    SW_EXPECT_EQUAL( 0x3C00u, HalfTestInternal::bitsOf( sw::BitUtil::bitsToFloat( sw::BitUtil::floatToBits( tieBelowEven ) - 1u ) ) );
-    SW_EXPECT_EQUAL( 0x3C02u, HalfTestInternal::bitsOf( 1.00146484375f ) ); // 1 + 3 * 2^-11: 0x3C01 과 0x3C02 의 한가운데 → 짝수 0x3C02
+    SW_EXPECT_EQUAL( 0x3C00u, HalfTestInternal::getBitsOf( tieBelowEven ) );
+    SW_EXPECT_EQUAL( 0x3C01u, HalfTestInternal::getBitsOf( sw::BitUtil::bitsToFloat( sw::BitUtil::floatToBits( tieBelowEven ) + 1u ) ) );
+    SW_EXPECT_EQUAL( 0x3C00u, HalfTestInternal::getBitsOf( sw::BitUtil::bitsToFloat( sw::BitUtil::floatToBits( tieBelowEven ) - 1u ) ) );
+    SW_EXPECT_EQUAL( 0x3C02u, HalfTestInternal::getBitsOf( 1.00146484375f ) ); // 1 + 3 * 2^-11: 0x3C01 과 0x3C02 의 한가운데 → 짝수 0x3C02
 
-    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::bitsOf( std::ldexp( 1.0f, -25 ) ) ); // 최소 비정규수의 절반 → 짝수 0
-    SW_EXPECT_EQUAL( 0x0001u, HalfTestInternal::bitsOf( sw::BitUtil::bitsToFloat( sw::BitUtil::floatToBits( std::ldexp( 1.0f, -25 ) ) + 1u ) ) );
-    SW_EXPECT_EQUAL( 0x0002u, HalfTestInternal::bitsOf( std::ldexp( 3.0f, -25 ) ) );    // 1.5 단계 → 짝수 2
-    SW_EXPECT_EQUAL( 0x0400u, HalfTestInternal::bitsOf( std::ldexp( 1023.5f, -24 ) ) ); // 가장 큰 비정규수와 최소 정규수의 한가운데 → 짝수인 최소 정규수
+    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::getBitsOf( std::ldexp( 1.0f, -25 ) ) ); // 최소 비정규수의 절반 → 짝수 0
+    SW_EXPECT_EQUAL( 0x0001u, HalfTestInternal::getBitsOf( sw::BitUtil::bitsToFloat( sw::BitUtil::floatToBits( std::ldexp( 1.0f, -25 ) ) + 1u ) ) );
+    SW_EXPECT_EQUAL( 0x0002u, HalfTestInternal::getBitsOf( std::ldexp( 3.0f, -25 ) ) );    // 1.5 단계 → 짝수 2
+    SW_EXPECT_EQUAL( 0x0400u, HalfTestInternal::getBitsOf( std::ldexp( 1023.5f, -24 ) ) ); // 가장 큰 비정규수와 최소 정규수의 한가운데 → 짝수인 최소 정규수
 
-    SW_EXPECT_EQUAL( 0x7BFFu, HalfTestInternal::bitsOf( 65519.0f ) );
-    SW_EXPECT_EQUAL( 0x7C00u, HalfTestInternal::bitsOf( 65520.0f ) ); // 65504 와 65536 의 한가운데 → 짝수인 무한대
+    SW_EXPECT_EQUAL( 0x7BFFu, HalfTestInternal::getBitsOf( 65519.0f ) );
+    SW_EXPECT_EQUAL( 0x7C00u, HalfTestInternal::getBitsOf( 65520.0f ) ); // 65504 와 65536 의 한가운데 → 짝수인 무한대
 }
 
 /**
@@ -91,16 +91,16 @@ SW_TEST_CASE( HalfTest, InfinityOverflowUnderflowAndNaN )
 {
     using sw::HalfTestInternal;
     const float32 infinity = sw::BitUtil::bitsToFloat( 0x7F800000u );
-    SW_EXPECT_EQUAL( 0x7C00u, HalfTestInternal::bitsOf( infinity ) );
-    SW_EXPECT_EQUAL( 0xFC00u, HalfTestInternal::bitsOf( -infinity ) );
-    SW_EXPECT_EQUAL( 0x7C00u, HalfTestInternal::bitsOf( 1.0e10f ) );
-    SW_EXPECT_EQUAL( 0xFC00u, HalfTestInternal::bitsOf( -1.0e10f ) );
-    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::bitsOf( 1.0e-10f ) );
-    SW_EXPECT_EQUAL( 0x8000u, HalfTestInternal::bitsOf( -1.0e-10f ) );
-    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::bitsOf( sw::BitUtil::bitsToFloat( 0x00000001u ) ) ); // float32 비정규수
+    SW_EXPECT_EQUAL( 0x7C00u, HalfTestInternal::getBitsOf( infinity ) );
+    SW_EXPECT_EQUAL( 0xFC00u, HalfTestInternal::getBitsOf( -infinity ) );
+    SW_EXPECT_EQUAL( 0x7C00u, HalfTestInternal::getBitsOf( 1.0e10f ) );
+    SW_EXPECT_EQUAL( 0xFC00u, HalfTestInternal::getBitsOf( -1.0e10f ) );
+    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::getBitsOf( 1.0e-10f ) );
+    SW_EXPECT_EQUAL( 0x8000u, HalfTestInternal::getBitsOf( -1.0e-10f ) );
+    SW_EXPECT_EQUAL( 0x0000u, HalfTestInternal::getBitsOf( sw::BitUtil::bitsToFloat( 0x00000001u ) ) ); // float32 비정규수
 
-    SW_EXPECT_EQUAL( 0x7E00u, HalfTestInternal::bitsOf( sw::BitUtil::bitsToFloat( 0x7FC00000u ) ) );
-    SW_EXPECT_EQUAL( 0xFE00u, HalfTestInternal::bitsOf( sw::BitUtil::bitsToFloat( 0xFFC00000u ) ) );
+    SW_EXPECT_EQUAL( 0x7E00u, HalfTestInternal::getBitsOf( sw::BitUtil::bitsToFloat( 0x7FC00000u ) ) );
+    SW_EXPECT_EQUAL( 0xFE00u, HalfTestInternal::getBitsOf( sw::BitUtil::bitsToFloat( 0xFFC00000u ) ) );
     SW_EXPECT_TRUE( sw::half::fromFloat( sw::BitUtil::bitsToFloat( 0x7F800001u ) ).isNaN() ); // 페이로드가 사라지는 신호 NaN 도 무한대가 되지 않는다
     SW_EXPECT_TRUE( sw::half::fromFloat( sw::BitUtil::bitsToFloat( 0x7FFFFFFFu ) ).isNaN() );
 

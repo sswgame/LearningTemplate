@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Asset/AssetHandle.h"
 
@@ -246,7 +247,7 @@ SW_TEST_CASE( AssetHandleTest, AsyncStartRunsTheLoadOnce )
 }
 
 /** @brief [AssetHandleTest] 완료 단계가 있으면 로드 뒤에도 Loading 이고, 펌프가 한 번 실행하면 Ready 다. 두 번째 펌프는 할 일이 없다 */
-SW_TEST_CASE( AssetHandleTest, CompletionRunsOnThePump )
+SW_TEST_CASE( AssetHandleTest, CompletionRunsInThePoll )
 {
     shared_ptr<FakeAssetLoadOperation> pOperation = Util::makeOperation();
     pOperation->_bHasCompletion                   = SW_TRUE;
@@ -371,7 +372,7 @@ SW_TEST_CASE( AssetHandleTest, WaitSleepsWhileAnotherThreadLoads )
     pOperation->_pLoadEntered                     = &bEntered;
     pOperation->_pLoadRelease                     = &bRelease;
 
-    thread loader{ [&]
+    thread loader{ ThreadTestAccess::getKey(), [&]
     {
         pOperation->runLoadIfUnclaimed();
     } };
@@ -379,7 +380,7 @@ SW_TEST_CASE( AssetHandleTest, WaitSleepsWhileAnotherThreadLoads )
     {
         ThreadUtil::yield();
     }
-    thread waiter{ [&]
+    thread waiter{ ThreadTestAccess::getKey(), [&]
     {
         pOperation->wait();
         bWaited.store( true );

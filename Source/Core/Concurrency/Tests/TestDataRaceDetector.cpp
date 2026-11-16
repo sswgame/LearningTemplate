@@ -9,6 +9,7 @@
 #include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -27,8 +28,8 @@ SW_TEST_CASE( DataRaceDetectorTest, ConcurrentReadsAreNotARace )
         }
         finishedCount.fetch_add( 1 );
     };
-    thread first( readMany );
-    thread second( readMany );
+    thread first( ThreadTestAccess::getKey(), readMany );
+    thread second( ThreadTestAccess::getKey(), readMany );
     first.join();
     second.join();
     SW_EXPECT_EQUAL( 2u, finishedCount.load() );
@@ -65,8 +66,8 @@ SW_TEST_CASE( DataRaceDetectorTest, OwnerIsReleasedSoAnotherThreadCanEnter )
     context.exitWrite();
 
     atomic<uint32> otherThreadDone{ 0 };
-    thread         other( [&context, &otherThreadDone]()
-    {
+    thread         other( ThreadTestAccess::getKey(), [&context, &otherThreadDone]()
+            {
         context.enterWrite();
         context.exitWrite();
         context.enterRead();
@@ -91,8 +92,8 @@ SW_TEST_CASE( DataRaceDetectorTest, CopyStartsUnowned )
     RaceDetectContext copied = original;
 
     atomic<uint32> otherThreadDone{ 0 };
-    thread         other( [&copied, &otherThreadDone]()
-    {
+    thread         other( ThreadTestAccess::getKey(), [&copied, &otherThreadDone]()
+            {
         copied.enterWrite();
         copied.exitWrite();
         otherThreadDone.store( 1 );

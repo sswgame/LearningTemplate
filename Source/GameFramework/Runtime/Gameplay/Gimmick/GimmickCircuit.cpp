@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Name/NameHashIndex.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
@@ -121,6 +122,8 @@ namespace sw
         using Internal                            = GimmickCircuitInternal;
         const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
         _listNode.resize( listNodeDef.size() );
+        // 저장 상태는 노드를 id 의 32 비트 해시로 짝짓는다(`loadState`) — 같은 해시의 두 id 를 공용 충돌 검사 색인으로 막는다.
+        NameHashIndex<uint32> nodeIDIndex;
         for ( size_t nodeIndex = 0; nodeIndex < listNodeDef.size(); ++nodeIndex )
         {
             const GimmickNodeDef& nodeDef = listNodeDef[nodeIndex];
@@ -136,6 +139,8 @@ namespace sw
                 if ( listNodeDef[otherIndex]._id == nodeDef._id )
                     outListError.push_back( def.describeNode( nodeDef ) + ": duplicate node id" );
             }
+            if ( const expected<void> assigned = nodeIDIndex.assign( nodeDef._id.view(), nodeDef._id.getHash() ); assigned.has_value() == false )
+                outListError.push_back( def.describeNode( nodeDef ) + ": node ids share a 32-bit name hash (" + string( assigned.error().detail() ) + ") - saved states match nodes by it; rename one" );
             node._pKind = registry.findKind( nodeDef._kind );
             if ( node._pKind == nullptr )
             {
@@ -235,7 +240,7 @@ namespace sw
     {
         // 고리를 끊는 노드(Delay)는 앞 스텝의 입력을 쓰므로 맨 앞에 두고 간선에서 뺀다. 나머지는 배선의 원천이 먼저인 위상 순서다(준비된 것은 데이터 차례).
         const auto isEvaluated = []( const NodeRuntime& node )
-        { return node._pKind != nullptr && node._pKind->breaksCycle() == false; };
+        { return node._pKind != nullptr && node._pKind->canBreakCycle() == false; };
         DependencyGraph graph{ static_cast<uint32>( _listNode.size() ) };
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
@@ -308,7 +313,7 @@ namespace sw
         for ( const uint32 nodeIndex : _listOrder )
         {
             NodeRuntime&       node     = _listNode[nodeIndex];
-            const bool         bBreaker = node._pKind->breaksCycle();
+            const bool         bBreaker = node._pKind->canBreakCycle();
             GimmickNodeContext context  = makeContext( node );
             context._inputBits          = bBreaker ? node._previousInputBits : gatherInputs( node );
             node._pKind->_pStep( context );
@@ -326,7 +331,7 @@ namespace sw
         for ( const uint32 nodeIndex : _listOrder )
         {
             NodeRuntime& node = _listNode[nodeIndex];
-            if ( node._pKind->breaksCycle() == false )
+            if ( node._pKind->canBreakCycle() == false )
                 continue;
             GimmickNodeContext context = makeContext( node );
             context._inputBits         = gatherInputs( node );

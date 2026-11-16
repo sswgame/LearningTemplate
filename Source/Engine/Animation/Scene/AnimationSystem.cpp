@@ -557,7 +557,7 @@ namespace sw
         // 위상 순서로 훑으며 성분 구간에 차례로 놓는다 — 구간 안은 위 유닛이 먼저이고 고리의 남은 유닛은 등록 순서로 뒤에 온다.
         _listScratchComponentCursor.assign( listStart.begin(), listStart.end() - 1 );
         _componentAll._listSkeletalMesh.resize( skeletalMeshCount );
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         vector<uint32> listSlotOfMesh( skeletalMeshCount ); // 유닛 번호 → 놓인 칸 번호(아래 단언에서만 쓴다)
 #endif
         for ( const uint32 skeletalMeshIndex : _listScratchOrder )
@@ -565,12 +565,12 @@ namespace sw
             const uint32 slot = _listScratchComponentCursor[_listScratchComponentOf[skeletalMeshIndex]]++;
 
             _componentAll._listSkeletalMesh[slot] = listSkeletalMesh[skeletalMeshIndex];
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             listSlotOfMesh[skeletalMeshIndex] = slot;
 #endif
         }
         _componentAll.updateMaxComponentSize();
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         // 간선의 뜻("위 유닛이 먼저")이 성분 안 순서에 지켜졌는지 본다. 고리가 있으면 그 유닛들은 순서를 강제하지 않는다.
         if ( _componentAll.hasCycle() == false )
         {

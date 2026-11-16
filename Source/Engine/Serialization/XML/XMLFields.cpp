@@ -71,8 +71,8 @@ namespace sw
         return attribute;
     }
 
-    bool XMLFields::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead,
-                                AcceptAttributeFunction pfnHandRead, const XMLFieldsIssueSink& sink )
+    bool XMLFields::readProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead,
+                                    AcceptAttributeFunction pfnHandRead, const XMLFieldsIssueSink& sink )
     {
         using Internal = XMLFieldsInternal;
         // 오류는 받는 곳이 있으면 그리로, 없으면 로그로 간다(id 는 글자 상수라 로그 쪽은 갈래마다 적는다).
@@ -195,7 +195,7 @@ namespace sw
         return bOk;
     }
 
-    void XMLFields::writeFields( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )
+    void XMLFields::writeProperties( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )

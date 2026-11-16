@@ -55,7 +55,7 @@ namespace
             _presenceB.shutdown();
         }
 
-        void pump()
+        void poll()
         {
             for ( int32 round = 0; round < 6; ++round )
             {
@@ -73,7 +73,7 @@ namespace
         {
             _sink._listResult.clear();
             const uint64 lookupID = _presenceB.submitFindByAccount( accountID, makeDelegate(), _ownerB );
-            pump();
+            poll();
             return takeOne( lookupID );
         }
 
@@ -81,7 +81,7 @@ namespace
         {
             _sink._listResult.clear();
             const uint64 lookupID = _presenceB.submitFindByDisplayName( displayName, makeDelegate(), _ownerB );
-            pump();
+            poll();
             return takeOne( lookupID );
         }
 
@@ -114,7 +114,7 @@ SW_TEST_CASE( OnlinePresenceTest, OtherServerFindsTheAccountByIDAndName )
     PresenceFixture rig;
     SW_REQUIRE_TRUE( rig._presenceA.isEnabled() && rig._presenceB.isEnabled() );
     rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
-    rig.pump();
+    rig.poll();
 
     const AccountPresenceResult byAccount = rig.findAccountFromB( kAlice );
     SW_EXPECT_TRUE( byAccount.isOnline() );
@@ -136,18 +136,18 @@ SW_TEST_CASE( OnlinePresenceTest, LeavingErasesOnlyItsOwnRecord )
 {
     PresenceFixture rig;
     rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
-    rig.pump();
+    rig.poll();
     rig._presenceA.recordOffline( kAlice );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_FALSE( rig.findAccountFromB( kAlice ).isOnline() );
     SW_EXPECT_FALSE( rig.findNameFromB( "Alice" ).isOnline() );
 
     rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
-    rig.pump();
+    rig.poll();
     rig._presenceB.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) ); // 새 로그인이 이긴다
-    rig.pump();
+    rig.poll();
     rig._presenceA.recordOffline( kAlice ); // A 의 늦은 정리가 B 의 기록을 지우면 안 된다
-    rig.pump();
+    rig.poll();
     const AccountPresenceResult moved = rig.findAccountFromB( kAlice );
     SW_EXPECT_TRUE( moved.isOnline() );
     SW_EXPECT_EQUAL( kOther, moved._serverID );
@@ -158,9 +158,9 @@ SW_TEST_CASE( OnlinePresenceTest, RenameMovesTheNameRecord )
 {
     PresenceFixture rig;
     rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
-    rig.pump();
+    rig.poll();
     rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alicia" ) );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_FALSE( rig.findNameFromB( "Alice" ).isOnline() );
     const AccountPresenceResult renamed = rig.findNameFromB( "alicia" );
     SW_EXPECT_TRUE( renamed.isOnline() );
@@ -192,11 +192,11 @@ SW_TEST_CASE( OnlinePresenceTest, ReleasedOwnerIsNotCalled )
 {
     PresenceFixture rig;
     rig._presenceA.recordOnline( OnlinePresenceTestUtil::makeIdentity( kAlice, "Alice" ) );
-    rig.pump();
+    rig.poll();
     Subscription owner = rig._presenceB.openFindOwner();
     (void)rig._presenceB.submitFindByAccount( kAlice, rig.makeDelegate(), owner );
     owner.reset();
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig._sink._listResult.empty() );
 
     SW_EXPECT_LOG( "OnlinePresence.OnlinePresenceFindWithoutLive" );

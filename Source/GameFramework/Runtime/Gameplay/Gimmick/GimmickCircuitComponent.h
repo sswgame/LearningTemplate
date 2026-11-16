@@ -188,7 +188,7 @@ namespace sw
         void    pullSensors( const GameObjectManager& manager, bool bFirstStep );
         float32 readSensorImpulse( const GimmickSensorComponent& sensor, Binding binding, bool bFirstStep );
         /** @brief 지금 스텝에 켜진 펄스 작동기를 `_listPendingPulse` 에 붙입니다. */
-        void recordPulses();
+        void recordPulse();
         /** @brief 지금 상태로 작동기를 바로 적용합니다(틱 밖 — 시작 · 복원 · `stepOnce`). */
         void applyActuators( GameObjectManager& manager );
         /** @brief 모아 둔 일을 적용합니다: 읽은 충격 몫 비우기, 펄스를 (스텝, 노드) 순서로, 상태 작동기를 마지막 값으로(틱 뒤 · 틱 밖). */

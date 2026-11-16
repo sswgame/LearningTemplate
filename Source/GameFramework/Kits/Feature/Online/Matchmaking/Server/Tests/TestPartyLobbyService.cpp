@@ -22,11 +22,11 @@ namespace
     /** @brief 파티 찾기의 답을 받습니다. */
     struct PartyFoundSink
     {
-        PartySnapshot      _party{};
-        int32              _count{ 0 };
-        MatchmakingOutcome _result{ MatchmakingResult::Ok };
+        PartySnapshot            _party{};
+        int32                    _count{ 0 };
+        MatchmakingServiceResult _result{ MatchmakingResult::Ok };
 
-        void onFound( uint64 /*tag*/, MatchmakingOutcome result, const PartySnapshot& party )
+        void onFound( uint64 /*tag*/, MatchmakingServiceResult result, const PartySnapshot& party )
         {
             ++_count;
             _result = result;
@@ -59,9 +59,9 @@ namespace
             _router.shutdown();
         }
 
-        void pump()
+        void poll()
         {
-            while ( _router.pump() > 0 )
+            while ( _router.poll() > 0 )
             {
             }
         }
@@ -69,7 +69,7 @@ namespace
         /** @brief 쌓인 완료 중 태그가 @p tag 인 것을 꺼냅니다. 태그 0(내부 요청)은 버립니다. */
         PartyLobbyCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<PartyLobbyCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             PartyLobbyCompletion found;
@@ -87,7 +87,7 @@ namespace
 
         vector<PartyLobbyNotification> takeNotifications()
         {
-            pump();
+            poll();
             vector<PartyLobbyNotification> listNotification;
             _service.pollNotifications( listNotification );
             return listNotification;
@@ -101,13 +101,13 @@ namespace
             return created._party._partyID;
         }
 
-        MatchmakingOutcome invite( AccountID leaderID, AccountID targetID )
+        MatchmakingServiceResult invite( AccountID leaderID, AccountID targetID )
         {
             _service.inviteToParty( leaderID, targetID, 2 );
             return take( 2 )._result;
         }
 
-        MatchmakingOutcome accept( AccountID accountID, uint64 partyID )
+        MatchmakingServiceResult accept( AccountID accountID, uint64 partyID )
         {
             _service.acceptPartyInvite( accountID, partyID, 3 );
             return take( 3 )._result;
@@ -123,7 +123,7 @@ namespace
         {
             PartyFoundSink sink;
             _service.findPartyOfAccount( accountID, 9, PartyLobbyService::PartyFoundDelegate::create<&PartyFoundSink::onFound>( &sink ) );
-            pump();
+            poll();
             return sink;
         }
 
@@ -145,13 +145,13 @@ namespace
             return take( 5 );
         }
 
-        MatchmakingOutcome ready( AccountID accountID, uint64 lobbyID, bool bReady = true )
+        MatchmakingServiceResult ready( AccountID accountID, uint64 lobbyID, bool bReady = true )
         {
             _service.setLobbyReady( accountID, lobbyID, bReady, 6 );
             return take( 6 )._result;
         }
 
-        MatchmakingOutcome start( AccountID accountID, uint64 lobbyID )
+        MatchmakingServiceResult start( AccountID accountID, uint64 lobbyID )
         {
             _service.startLobby( accountID, lobbyID, 7 );
             return take( 7 )._result;
@@ -233,7 +233,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, InviteAndAcceptRules )
     SW_EXPECT_TRUE( rig.accept( kDave, partyID ) == MatchmakingResult::PartyFull );
     SW_EXPECT_TRUE( rig.invite( kAlice, kDave ) == MatchmakingResult::PartyFull );
 
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.find( kDave )._result == MatchmakingResult::NotInParty ); // 잡아 둔 인덱스를 되돌렸다
     const uint64 davePartyID = rig.makeParty( kDave );                            // 다른 파티를 만들 수 있다
     SW_EXPECT_TRUE( davePartyID != partyID );
@@ -249,10 +249,10 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueuedPartyLocksMembership )
 
     constexpr uint64 kTicket = 0x100000001ull;
     rig._service.setPartyTicket( partyID, kTicket );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_EQUAL( kTicket, rig.find( kAlice )._party._queuedTicketID );
     SW_EXPECT_TRUE( rig.accept( kCarol, partyID ) == MatchmakingResult::AlreadyQueued );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.find( kCarol )._result == MatchmakingResult::NotInParty );
 
     rig._service.leaveParty( kBob, 2 );
@@ -415,7 +415,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, StartRequiresReadyAndReopens )
     SW_EXPECT_TRUE( rig.start( kAlice, lobbyID ).hasError( OnlineError::kInvalidRequest ) );
 
     rig._service.reopenLobby( lobbyID );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.join( kCarol, lobbyID )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( rig.ready( kCarol, lobbyID ) == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( rig.start( kAlice, lobbyID ) == MatchmakingResult::Ok );
@@ -452,11 +452,11 @@ SW_TEST_CASE( PartyLobbyServiceTest, MovingToAnotherLobbyLeavesThePrevious )
     (void)rig.join( kDave, first );
 
     (void)rig.join( kDave, second ); // 준비하지 않은 사람이 옮겼다
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.start( kAlice, first ) == MatchmakingResult::Ok );
 
     const uint64 own = rig.makeLobby( kBob, "other" ); // 만들어도 옮긴 것이다
-    rig.pump();
+    rig.poll();
     for ( const LobbySnapshot& lobby : rig.list() )
     {
         if ( lobby._lobbyID == first )
@@ -465,7 +465,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, MovingToAnotherLobbyLeavesThePrevious )
     SW_EXPECT_TRUE( own != first );
 
     (void)rig.join( kDave, second ); // 같은 로비에 다시 들어와도 빠지지 않는다
-    rig.pump();
+    rig.poll();
     for ( const LobbySnapshot& lobby : rig.list() )
     {
         if ( lobby._lobbyID == second )
@@ -483,7 +483,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, RemoveAccountLeavesPartyAndLobby )
     (void)rig.join( kBob, lobbyID );
 
     rig._service.removeAccount( kBob );
-    rig.pump();
+    rig.poll();
     SW_EXPECT_TRUE( rig.find( kBob )._result == MatchmakingResult::NotInParty );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.find( kAlice )._party._listMemberID.size() );
     const vector<LobbySnapshot> listLobby = rig.list();

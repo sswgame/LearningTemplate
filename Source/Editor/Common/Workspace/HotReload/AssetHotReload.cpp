@@ -14,6 +14,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -118,11 +119,12 @@ namespace sw::editor
                 FileUtil::getFileNamePart( changeEvent._filename, leafName );
                 if ( StringUtil::startsWith( leafName, kFenceFileStem ) == false )
                     return false; // 값싼 이름 검사로 대부분의 사건을 거른다
-                const string eventPath   = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
-                const string scratchRoot = FileUtil::normalizePath( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain ) );
-                if ( FileUtil::normalizePath( FileUtil::getDirectoryPart( eventPath ) ) != scratchRoot )
+                // 디스크 경로다 — OS 규칙으로 견준다(접은 키는 리눅스에서 대소문자만 다른 폴더를 같게 본다)
+                const string eventPath   = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
+                const string scratchRoot = FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain );
+                if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( eventPath ), scratchRoot ) == false )
                     return false;
-                outbOwn = eventPath == FileUtil::normalizePath( makeFenceMarkerPath() );
+                outbOwn = FileUtil::isSameDiskPath( eventPath, makeFenceMarkerPath() );
                 return true;
             }
 
@@ -259,7 +261,7 @@ namespace sw::editor
     {
         if ( _pFileWatchDispatcher != nullptr )
             _pFileWatchDispatcher->update();
-        pumpImportJob();
+        pollImportJob();
         // 감시 사건이 올린 변경 번호를 같은 프레임에 색인에 반영한다(바뀐 파일만 다시 읽거나 전체 스캔).
         _pReferenceTracker->update( _contentChangeSerial, *this );
     }
@@ -461,13 +463,13 @@ namespace sw::editor
         }
         const uint64 contentHash = ContentHash::computeFile( diskPath->str() );
         if ( contentHash != 0 )
-            _mapAppliedContentHash[FileUtil::normalizePath( relativePath )] = contentHash;
+            _mapAppliedContentHash[FileUtil::normalizePath( relativePath ).str()] = contentHash;
         applyChangedFile( relativePath );
     }
 
     bool AssetHotReload::isAlreadyApplied( const string& relativePath )
     {
-        const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ) );
+        const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ).str() );
         if ( itApplied == _mapAppliedContentHash.end() )
             return false;
         const bool bSame = ContentHash::computeFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ) ) == itApplied->second;
@@ -478,12 +480,12 @@ namespace sw::editor
 
     void AssetHotReload::reloadDependents( const string& relativePath )
     {
-        const string assetID = FileUtil::normalizePath( relativePath );
+        const string assetID = FileUtil::normalizePath( relativePath ).str();
         // 펼쳐 넣는 종류면 바뀐 파일의 참조를 먼저 맞춘다 — 부모를 바꿨으면 새 사슬로 순환을 본다(감시가 올린 번호의 증분 갱신은 다음 `update` 라 늦다).
         // 바뀐 파일의 나가는 참조는 순환 검사에만 쓰인다(따라가는 것은 들어오는 참조) — `_base` 를 적지 않은 파일(체크아웃 한 번에 수천 개)은 표를 다시 정렬하지 않는다.
         // 색인에 없는 새 파일도 여기서 넣지 않는다 — 있으면 추적기가 "생긴 파일" 을 몰라 다른 파일의 참조 판정을 다시 보지 않는다.
         string changedText;
-        if ( inlinesReferences( assetID ) && _pReferenceTracker->getIndex().containsFile( assetID ) &&
+        if ( shouldInlineReferences( assetID ) && _pReferenceTracker->getIndex().containsFile( assetID ) &&
              FileUtil::readOptionalTextFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetID ), changedText ) == OptionalFileRead::Read &&
              changedText.find( DataInheritance::kBaseAttribute ) != string::npos )
             _pReferenceTracker->refreshFile( assetID );
@@ -494,7 +496,7 @@ namespace sw::editor
             return;
         }
         vector<string> listDependent;
-        if ( AssetReloadCascade::planDependents( index, assetID, &AssetHotReload::inlinesReferences, listDependent ) == false )
+        if ( AssetReloadCascade::planDependents( index, assetID, &AssetHotReload::shouldInlineReferences, listDependent ) == false )
             return; // 순환 — 계획이 오류를 남겼다
         for ( const string& dependentID : listDependent )
         {
@@ -508,7 +510,7 @@ namespace sw::editor
         }
     }
 
-    bool AssetHotReload::inlinesReferences( string_view assetID )
+    bool AssetHotReload::shouldInlineReferences( string_view assetID )
     {
         return EditorAssetTypeRegistry::findReloadRoute( assetID )._referenceUse == AssetReferenceUse::InlinedAtLoad;
     }
@@ -545,7 +547,7 @@ namespace sw::editor
             _listQueuedImport.push_back( ImportRequest{ path, pfnImport } );
     }
 
-    void AssetHotReload::pumpImportJob()
+    void AssetHotReload::pollImportJob()
     {
         EditorAssetImportResult result{};
         const EditorTaskPoll    poll = _pImportJob->take( result );
@@ -718,7 +720,7 @@ namespace sw::editor
     {
         const string reloaded = FileUtil::normalizeSeparators( relativePath );
         uint32       notified = 0;
-        objects.forEachGameObject( [&reloaded, &notified]( GameObject* pObject )
+        objects.forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&reloaded, &notified]( GameObject* pObject )
         {
             for ( Component* pComponent : pObject->getComponents() )
             {

@@ -28,7 +28,7 @@ SW_TEST_CASE( CharacterDataReaderTest, RootStatus )
 }
 
 /** @brief [CharacterDataReaderTest] 필수 필드: 읽히면 값이고 오류가 없다. 벡터는 공백이나 쉼표로 나눈다 */
-SW_TEST_CASE( CharacterDataReaderTest, RequiredFieldsRead )
+SW_TEST_CASE( CharacterDataReaderTest, RequiredPropertiesRead )
 {
     XMLDocument         document;
     XMLNode             root;
@@ -49,7 +49,7 @@ SW_TEST_CASE( CharacterDataReaderTest, RequiredFieldsRead )
 }
 
 /** @brief [CharacterDataReaderTest] 필수 필드: 없거나 형식이 틀리면 종류마다 오류로 모은다 */
-SW_TEST_CASE( CharacterDataReaderTest, BadFieldsCollectErrors )
+SW_TEST_CASE( CharacterDataReaderTest, BadPropertiesCollectErrors )
 {
     SW_EXPECT_LOG( "Character.AttributeMissing" );
     SW_EXPECT_LOG( "Character.NumberInvalid" );
@@ -79,7 +79,7 @@ SW_TEST_CASE( CharacterDataReaderTest, BadFieldsCollectErrors )
 }
 
 /** @brief [CharacterDataReaderTest] 선택 필드: 없으면 넣어 둔 값이 남고, 깨졌으면 값은 그대로에 오류만 남는다. 필수가 아닌 이름은 비어도 된다 */
-SW_TEST_CASE( CharacterDataReaderTest, OptionalFieldsKeepValue )
+SW_TEST_CASE( CharacterDataReaderTest, OptionalPropertiesKeepValue )
 {
     SW_EXPECT_LOG( "Character.NumberInvalid" );
     XMLDocument         document;

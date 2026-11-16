@@ -64,7 +64,8 @@ namespace sw
             static bool isSelectable( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
             {
                 const RenderPassTypeInfo& info            = getRenderPassTypeInfo( pass._type );
-                const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource );
+                const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) ||
+                                             info.hasFlag( RenderPassTraitFlag::kCullWhenUnconsumed );
                 if ( bSelectableType == false || pass._listResolvedColorOutput.empty() )
                     return false;
                 return VectorUtil::allOf( pass._listResolvedColorOutput, [&listPass]( const RenderGraphPassDesc::ResolvedAttachment& output )
@@ -114,10 +115,13 @@ namespace sw
             }
 
             /** @brief 도는 패스가 읽는 첨부를 "읽힌다" 로 적습니다. @p bIncludeOutputs 면 쓰는 첨부도 적는다(늘 도는 패스는 앞 판을 불러 이어 그릴 수 있다). */
-            static void markReads( const vector<RenderPassAttachment>& listAttachment, const RenderGraphPassDesc& pass, bool bIncludeOutputs, vector<uint8>& outListNeeded )
+            static void markReads( const vector<RenderPassAttachment>& listAttachment, const RenderGraphPassDesc& pass, bool bIncludeOutputs, vector<uint8>& outListNeeded,
+                                   bool bSkipSceneCopyInputs = false )
             {
                 for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                 {
+                    if ( bSkipSceneCopyInputs && isSceneCopyInput( input ) )
+                        continue;
                     markNeeded( listAttachment, input._attachment, outListNeeded );
                 }
                 if ( pass._resolvedDepthAttachment.empty() == false )
@@ -141,24 +145,46 @@ namespace sw
                 return nullptr;
             }
 
-            /**
-             * @brief 이 뷰에서 이번 프레임에 그 효과(`kSkipsWithoutPostProcess`)가 꺼졌으면 true 입니다. 꺼진 효과는 돌려도 원본(SSAO 는 가림 없음)과 같은 그림이다.
-             * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
-             * @param bContactShadows 이번 프레임에 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스는 꺼진 효과다.
-             */
-            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bMotionStill, bool bContactShadows )
+            /** @brief 굴절 머티리얼(물 · 유리 — scene_refraction.hlsli)만 읽는 입력(장면 색 · 깊이 사본)이면 true 입니다. 굴절 배치가 없으면 반투명 패스는 필요로 하지 않는다(입자는 읽지 않는다). */
+            static bool isSceneCopyInput( const RenderGraphPassDesc::ResolvedAttachment& input )
             {
-                if ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) )
-                    return true;
-                if ( pass._type == RenderPassType::DepthOfField )
-                    return settings._depthOfField.hasDepthOfField() == false || settings._projectionScaleY <= 0.0f; // 핀홀(조리개 0) · 직교
-                if ( pass._type == RenderPassType::MotionBlur )
-                    return static_cast<bool>( gv_motionBlur ) == false || bMotionStill;
-                if ( pass._type == RenderPassType::ContactShadow )
-                    return bContactShadows == false; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
-                if ( pass._type == RenderPassType::PostProcessMaterial )
-                    return settings.drawsPostProcessMaterial( pass._blendableLocation ) == false; // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
-                return false;
+                const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
+                return role == RenderPassInputRole::SceneColorCopy || role == RenderPassInputRole::SceneDepthCopy;
+            }
+
+            /**
+             * @brief 패스가 이번 뷰에서 할 일이 있으면 true 입니다 — 판정은 이 하나다(언리얼 `ShouldRender<기능>` · `Is<효과>Enabled(View)` 처럼 긍정형).
+             * @details 꺼진 효과(`kSkipsWithoutPostProcess` — 후처리를 끈 뷰 · 품질 · DOF · 모션 블러 · 접촉 그림자 · 후처리 머티리얼)와 그릴 것이 없는 덧그리는 패스(SSR · 왜곡)가 false 다.
+             *          결과를 어떻게 쓰는지는 패스 성격이 정한다 — 고를 수 있는 효과는 출력이 원본을 가리키거나(`kBypassesToSource`) 없고, 덧그리는 패스는 출력이 그대로다. 둘 다 실행 입구가 기록하지 않는다.
+             *          예전에는 같은 뜻을 `isEffectOff`(꺼짐)와 `shouldRenderPass`(그림)가 반대 극성으로 따로 말했다.
+             * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
+             */
+            static bool isPassEnabledInView( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, const FrameViewResources::ViewPassSceneState& sceneState, bool bMotionStill )
+            {
+                const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
+                if ( info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) ) )
+                    return false;
+                const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( settings._viewMode );
+                // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다(안개와 같은 판정).
+                const bool bShowsScene = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
+                switch ( pass._type )
+                {
+                    case RenderPassType::DepthOfField:
+                        return settings._depthOfField.hasDepthOfField() && settings._projectionScaleY > 0.0f; // 핀홀(조리개 0) · 직교는 꺼짐
+                    case RenderPassType::MotionBlur:
+                        return static_cast<bool>( gv_motionBlur ) && bMotionStill == false;
+                    case RenderPassType::ContactShadow:
+                        return sceneState._bContactShadows == SW_TRUE; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
+                    case RenderPassType::PostProcessMaterial:
+                        return settings.shouldDrawPostProcessMaterial( pass._blendableLocation ); // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
+                    case RenderPassType::ScreenSpaceReflection:
+                        return settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f;
+                    case RenderPassType::Distortion:
+                    case RenderPassType::DistortionApply:
+                        return bShowsScene && sceneState._bDistortionBatches == SW_TRUE;
+                    default:
+                        return true;
+                }
             }
         };
     } // namespace
@@ -399,9 +425,10 @@ namespace sw
         view._transientPool.release( _pDevice );
     }
 
-    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion, bool bContactShadows )
+    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, const ViewPassSceneState& sceneState )
     {
-        using Internal = FrameViewResourcesInternal;
+        using Internal           = FrameViewResourcesInternal;
+        const bool bObjectMotion = sceneState._bObjectMotion == SW_TRUE;
         // 모션 블러의 속도는 카메라(지난 뷰-투영과의 차이)와 물체(화면 속도)다. 컷이거나 둘 다 서 있으면 모든 픽셀이 원본이다(motion_blur.hlsl).
         const bool                          bCameraStill   = Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
         const bool                          bMotionStill   = view._bHistoryReset == SW_TRUE || ( bCameraStill && bObjectMotion == false );
@@ -411,6 +438,7 @@ namespace sw
         // 선언한 첨부 자리마다 "이번 프레임에 읽힌다" 하나 — 크기가 같으면 할당하지 않는다(프레임마다 · 뷰마다 부른다).
         vector<uint8>& listNeeded = _listScratchNeededAttachment;
         listNeeded.assign( listAttachment.size(), SW_FALSE );
+        view._listPassDisabled.assign( listPass.size(), SW_FALSE );
         bool bForwardSet = false;
         bool bAllocated  = false;
         bool bReleased   = false;
@@ -442,17 +470,24 @@ namespace sw
             const RenderGraphPassDesc& pass = listPass[passIndex];
             if ( Internal::isSelectable( listPass, pass ) == false )
             {
-                if ( pass._type == RenderPassType::TAA )
-                    view._bTAAHistoryWritten = SW_TRUE;
-                Internal::markReads( listAttachment, pass, true, listNeeded );
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
                     ensureMade( output._attachment );
                 }
+                // 비활성인 덧그리는 패스는 출력이 그대로라 입력을 필요로 하지 않는다 — 그것만 읽는 사본이 아래에서 빠진다.
+                if ( Internal::isPassEnabledInView( pass, view._settings, sceneState, bMotionStill ) == false )
+                {
+                    view._listPassDisabled[passIndex] = SW_TRUE;
+                    continue;
+                }
+                if ( pass._type == RenderPassType::TAA )
+                    view._bTAAHistoryWritten = SW_TRUE;
+                const bool bSkipSceneCopyInputs = getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) && sceneState._bRefractionBatches == SW_FALSE;
+                Internal::markReads( listAttachment, pass, true, listNeeded, bSkipSceneCopyInputs );
                 continue;
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
-            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bMotionStill, bContactShadows );
+            const bool                bOff          = Internal::isPassEnabledInView( pass, view._settings, sceneState, bMotionStill ) == false;
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
             const hashed_string*      pSource       = Internal::findSource( pass );
@@ -460,7 +495,8 @@ namespace sw
             if ( bForwards )
             {
                 // 꺼진 효과의 출력은 원본을 가리킨다 — 출력을 읽는 쪽이 원본을 읽는다.
-                bForwardSet = pool.forward( pass._listResolvedColorOutput[0]._attachment, *pSource ) || bForwardSet;
+                bForwardSet                       = pool.forward( pass._listResolvedColorOutput[0]._attachment, *pSource ) || bForwardSet;
+                view._listPassDisabled[passIndex] = SW_TRUE;
                 ageOutput( pass._listResolvedColorOutput[0]._attachment, false );
                 if ( bOutputNeeded )
                     Internal::markNeeded( listAttachment, *pSource, listNeeded );
@@ -468,7 +504,8 @@ namespace sw
             }
             if ( bOff || ( bOutputNeeded == false && Internal::isConsumed( listPass, pass ) ) )
             {
-                // 꺼진 원본 없는 효과(SSAO)와 읽는 패스가 모두 빠진 패스는 출력이 없다 — 읽는 쪽은 그 역할을 바인딩하지 않는다.
+                // 꺼진 원본 없는 효과(SSAO)와 읽는 패스가 모두 빠진 패스(읽는 쪽이 모두 비활성인 사본 포함)는 출력이 없다 — 읽는 쪽은 그 역할을 바인딩하지 않는다.
+                view._listPassDisabled[passIndex] = SW_TRUE;
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
                     bForwardSet = pool.markAbsent( output._attachment ) || bForwardSet;
@@ -488,8 +525,8 @@ namespace sw
         }
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).
         PassSelectionResult result{};
-        result._bTargetsRepointed = bForwardSet ? SW_TRUE : SW_FALSE;
-        result._bTargetsChanged   = ( bAllocated || bReleased ) ? SW_TRUE : SW_FALSE;
+        result._bTargetsRebound = bForwardSet ? SW_TRUE : SW_FALSE;
+        result._bTargetsChanged = ( bAllocated || bReleased ) ? SW_TRUE : SW_FALSE;
         return result;
     }
 } // namespace sw

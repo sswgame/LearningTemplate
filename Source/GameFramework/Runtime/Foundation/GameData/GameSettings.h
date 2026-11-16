@@ -28,6 +28,7 @@ namespace sw
         string _pack{};
     };
 
+    class XMLCatalogRoot;
     class XMLNode;
 
     // ------------------------------------------------------------------------------
@@ -127,7 +128,7 @@ namespace sw
          *          칸 표, `<Defaults>`(`ComponentDefaults` 가 같은 파일을 읽는다), `<Engine>`(`PackEngineSettings` 가 읽는다) 밖의 원소는 로드 오류이고,
          *          `PROPERTY( Required )` 칸이 빠져도 로드 오류다. 철자가 틀린 칸이 조용히 사라지지 않게 하려는 것이다.
          */
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
     };
 } // namespace sw
 

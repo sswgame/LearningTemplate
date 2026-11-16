@@ -72,7 +72,7 @@ SW_TEST_CASE( CookStoreTest, ReusesWhileInputsAreUnchanged )
     SW_EXPECT_EQUAL( CookResult::Reused, fixture.cook( nextRun, kDesc, "x.bin" ) );
     SW_EXPECT_EQUAL( string( "baked:one" ), fixture.readOutput( "x.bin" ) );
     SW_EXPECT_EQUAL( 1, fixture._bakeCount );
-    SW_EXPECT_EQUAL( 2u, nextRun.getTally()._reusedCount );
+    SW_EXPECT_EQUAL( 2u, nextRun.getStats()._reusedCount );
 }
 
 /**
@@ -111,7 +111,7 @@ SW_TEST_CASE( CookStoreTest, RejectsJobsWithoutInputs )
     SW_EXPECT_EQUAL( CookResult::Skipped, fixture._store.cookFile( kDesc, "skip.bin", fixture.makeOutputPath( "skip.bin" ), []
     { return CookStep::Skipped; } ) );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._store.makeRecordPath( "skip.bin" ) ) );
-    SW_EXPECT_EQUAL( 1u, fixture._store.getTally()._failedCount );
+    SW_EXPECT_EQUAL( 1u, fixture._store.getStats()._failedCount );
 }
 
 /**

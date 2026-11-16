@@ -21,6 +21,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -50,7 +51,7 @@ namespace sw
      *         덮어쓰거나 통째로 비우는 길이 없습니다. 모듈마다의 칸은 그 모듈의 주인 하나가 걸고(다시 걸면 앞 구독은 아무것도 풀지 않는다),
      *         배치 직전 콜백은 여럿이 걸 수 있는 목록입니다.
      */
-    class LiveReloadManager final : public ILiveReloadManager, public SubscriptionSource
+    class LiveReloadManager final : public ILiveReloadManager
     {
     public:
         // 델리게이트 형식은 창구(`ILiveReloadManager`)가 정한다. 검사 콜백(`OnValidateLibraryDelegate`)은 옛 라이브러리가 아직 돌 때(prepare) 불리고,
@@ -113,7 +114,7 @@ namespace sw
          * @details 연쇄 빌드는 모듈 DLL 을 하나씩 다시 쓴다. mtime 이 디바운스 시간만큼 멈췄다고 적용하면, 의존하는 모듈의 링크가 아직 끝나지 않은
          *          반쯤 완성된 집합이 로드된다(헤더가 어긋나면 ABI 스탬프가 막지만, 같은 헤더의 반쯤 완성된 집합은 막지 못한다). 언리얼 Live Coding 도 빌드가
          *          끝난 뒤에 패치한다. 바깥에서 돌린 빌드(터미널, IDE)는 빌드 성공 스탬프(`config::kFileModuleBuildStamp`)가 바뀔 때만 올린다 — 빌드가 동적
-         *          모듈을 모두 링크한 뒤에만 쓰는 파일이다(`sw_addModuleBuildStamp`). 모듈 DLL 의 쓰기 자체는 리로드를 부르지 않는다.
+         *          모듈을 모두 링크한 뒤에만 쓰는 파일이다(`sw_add_module_build_stamp`). 모듈 DLL 의 쓰기 자체는 리로드를 부르지 않는다.
          */
         void notifyBuildStarted();
         /**
@@ -179,7 +180,7 @@ namespace sw
          *          라이브러리에 바인딩된다. 어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태와 타입 등록이 갈린다), 옛 라이브러리를 언로드하는 순간
          *          거기로 점프하는 코드가 죽는다. 등록과 연쇄 리로드 끝에 호출하고, 어긋나면 그래프를 막는다. 섞인 채 조용히 도는 것보다 낫기 때문이다.
          *          Windows 는 import 테이블 첫 항목이 가리키는 라이브러리로, 리눅스는 모듈마다 박힌 스탬프 상수(`sw_moduleEngineABIStamp_<이름>`,
-         *          `sw_registerDynamicModule` 이 넣는다)의 주소로 판단한다.
+         *          `sw_register_dynamic_module` 이 넣는다)의 주소로 판단한다.
          */
         bool verifyModuleBindings() const;
 
@@ -268,7 +269,7 @@ namespace sw
         static constexpr int32 kMtimeDebounceMs = 300;
 
         /** @brief 빌드 쪽(`notifyBuildStarted` · `notifyBuildFinished`, 빌드 스레드)이 쓰고 `update` 가 읽는 상태입니다. `_buildMutex` 가 지킵니다. */
-        struct BuildNotice
+        struct BuildEvent
         {
             string _targetName;                ///< 끝난 빌드의 타깃(비면 전체 빌드)
             bool   _bInProgress{ false };      ///< 빌드가 도는 중이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -276,10 +277,9 @@ namespace sw
             bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
-    protected:
-        void releaseSubscription( uint64 id ) override;
-
     private:
+        /** @brief 칸 구독 @p id 가 풀렸습니다. 그 칸을 비웁니다(`_subscriptions` 가 부른다). */
+        void releaseSubscription( uint64 id );
         /** @brief @p moduleName 의 @p slot 칸을 새로 걸 구독을 냅니다. 같은 칸의 앞 등록은 표에서 빠집니다(앞 구독은 아무것도 풀지 않게 된다). */
         [[nodiscard]] Subscription issueSlotSubscription( string_view moduleName, CallbackSlot slot );
         /** @brief @p registration 이 가리키는 칸을 비웁니다. */
@@ -332,7 +332,7 @@ namespace sw
         void clearRecords();
 
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
-        bool consumeBuildNotice();
+        bool consumeBuildEvent();
 
     private:
         unordered_map<string, unique_ptr<ModuleRecord>>  _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 값을 `unique_ptr` 로 들어 맵이 자라도 컨텍스트 주소가 고정이다(언리얼 `TMap<FName, TUniquePtr<…>>` 와 같은 모양)
@@ -342,15 +342,16 @@ namespace sw
         string                                           _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
         string                                           _seenBuildToken;   ///< 마지막으로 본 스탬프 내용(빌드마다 새 시각 글을 쓴다). 이것과 달라지면 바깥 빌드가 끝난 것이다 — 쓰기 시각이 아니라 내용으로 본다
         mutable mutex                                    _buildMutex;
-        BuildNotice _buildNotice                         SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다
+        BuildEvent _buildEvent                           SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다
         MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
         MulticastDelegate<bool()>                        _reloadHolds;                 ///< 리로드 잡음(`addReloadHold`)
         FlushWorkersDelegate                             _flushWorkers;
-        vector<CallbackRegistration>                     _listCallbackRegistration; ///< 살아 있는 칸 구독이 가리키는 칸
-        IDAllocator<uint64>                              _callbackIDAllocator;      ///< 칸 구독 번호(0 은 빈 구독)
-        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;      ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
-        ShadowCopySerials                                _shadowCopySerials;        ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
-        uint32                                           _completedReloadCount;     ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        vector<CallbackRegistration>                     _listCallbackRegistration;                                                                                    ///< 살아 있는 칸 구독이 가리키는 칸
+        IDAllocator<uint64>                              _callbackIDAllocator;                                                                                         ///< 칸 구독 번호(0 은 빈 구독)
+        SubscriptionList                                 _subscriptions{ SubscriptionList::ReleaseFunction::create<&LiveReloadManager::releaseSubscription>( this ) }; ///< 칸 구독을 내준다(믹스인 상속 대신 합성 — 기반은 창구 하나). 풀리면 `releaseSubscription`
+        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;                                                                                         ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
+        ShadowCopySerials                                _shadowCopySerials;                                                                                           ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
+        uint32                                           _completedReloadCount;                                                                                        ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                            _bReloadGraphBroken : 1;
         uint8                                            _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
         [[maybe_unused]] uint8                           _reserved           : 6;

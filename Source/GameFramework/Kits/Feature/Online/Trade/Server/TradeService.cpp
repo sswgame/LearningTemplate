@@ -117,17 +117,17 @@ namespace sw
 
     void TradeService::recoverOwnedTrades( UnixMilliseconds nowMs )
     {
-        TradeCallInput work = makeCallInput( TradeOperation::Recover, uint64{ 0 }, nowMs );
-        submitCall( std::move( work ) );
+        TradeCallInput job = makeCallInput( TradeOperation::Recover, uint64{ 0 }, nowMs );
+        submitCall( std::move( job ) );
     }
 
     void TradeService::invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        TradeCallInput work = makeCallInput( TradeOperation::Invite, requestTag, nowMs );
-        work._fromID        = fromID;
-        work._toID          = toID;
-        work._seed          = ++_nextSeed ^ static_cast<uint64>( nowMs.count() );
-        submitCall( std::move( work ) );
+        TradeCallInput job = makeCallInput( TradeOperation::Invite, requestTag, nowMs );
+        job._fromID        = fromID;
+        job._toID          = toID;
+        job._seed          = ++_nextSeed ^ static_cast<uint64>( nowMs.count() );
+        submitCall( std::move( job ) );
     }
 
     void TradeService::respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, UnixMilliseconds nowMs, uint64 requestTag )
@@ -176,10 +176,10 @@ namespace sw
 
     void TradeService::closeForAccount( AccountID accountID, TradeCloseReason reason, UnixMilliseconds nowMs )
     {
-        TradeCallInput work   = makeCallInput( TradeOperation::Leave, uint64{ 0 }, nowMs );
-        work._fromID          = accountID;
-        work._command._reason = reason;
-        submitCall( std::move( work ) );
+        TradeCallInput job   = makeCallInput( TradeOperation::Leave, uint64{ 0 }, nowMs );
+        job._fromID          = accountID;
+        job._command._reason = reason;
+        submitCall( std::move( job ) );
     }
 
     void TradeService::update( UnixMilliseconds nowMs )
@@ -191,10 +191,10 @@ namespace sw
                 ++tradeIt;
                 continue;
             }
-            TradeCallInput work = makeCallInput( TradeOperation::Expire, uint64{ 0 }, nowMs );
-            work._tradeID       = tradeIt->first;
-            tradeIt             = _mapTradeToDeadline.erase( tradeIt ); // 결과가 닫힘이면 그대로 두고, 아직이면 다시 넣는다
-            submitCall( std::move( work ) );
+            TradeCallInput job = makeCallInput( TradeOperation::Expire, uint64{ 0 }, nowMs );
+            job._tradeID       = tradeIt->first;
+            tradeIt            = _mapTradeToDeadline.erase( tradeIt ); // 결과가 닫힘이면 그대로 두고, 아직이면 다시 넣는다
+            submitCall( std::move( job ) );
         }
     }
 
@@ -243,10 +243,10 @@ namespace sw
 
     void TradeService::submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        TradeCallInput work = makeCallInput( operation, requestTag, nowMs );
-        work._tradeID       = tradeID;
-        work._command       = command;
-        submitCall( std::move( work ) );
+        TradeCallInput job = makeCallInput( operation, requestTag, nowMs );
+        job._tradeID       = tradeID;
+        job._command       = command;
+        submitCall( std::move( job ) );
     }
 
     void TradeService::trackTrade( const TradeSnapshot& snapshot )

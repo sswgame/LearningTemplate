@@ -84,7 +84,7 @@ namespace sw::editor
     struct EditorAssetTypeIDs
     {
         static constexpr const utf8* kShader = "Shader"; ///< 저작 셰이더 소스(`.hlsl` · `.hlsli`). 엔진 종류는 쿠킹된 바이너리(`ShaderBinary`)뿐이다
-        static constexpr const utf8* kData   = "Data";   ///< 카탈로그 데이터(`.xml` · `.json`)와 전용 종류가 없는 데이터 문서. 전용 창이 접미사로 고르는 문서(`acceptsDocumentPath`)가 여기 든다
+        static constexpr const utf8* kData   = "Data";   ///< 카탈로그 데이터(`.xml` · `.json`)와 전용 종류가 없는 데이터 문서. 전용 창이 접미사로 고르는 문서(`canAcceptDocumentPath`)가 여기 든다
     };
 
     /**

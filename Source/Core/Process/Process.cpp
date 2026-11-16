@@ -2,6 +2,7 @@
 
 #include "Core/Process/Process.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
@@ -162,5 +163,49 @@ namespace sw
         }
 
         return proc.waitForExit();
+    }
+} // namespace sw
+
+namespace sw
+{
+    bool Process::takeBufferedLine( string& inoutBuffer, bool bEndOfStream, string& outLine )
+    {
+        const size_t newlinePos = inoutBuffer.find_first_of( "\r\n" );
+        if ( newlinePos == string::npos )
+            return false;
+        const bool bCarriageReturnAtEnd = inoutBuffer[newlinePos] == '\r' && newlinePos + 1 == inoutBuffer.length();
+        if ( bCarriageReturnAtEnd && bEndOfStream == false )
+            return false; // 다음 조각이 \n 이면 CRLF 다 — 기다린다
+        outLine          = inoutBuffer.substr( 0, newlinePos );
+        const bool bCrLf = inoutBuffer[newlinePos] == '\r' && newlinePos + 1 < inoutBuffer.length() && inoutBuffer[newlinePos + 1] == '\n';
+        inoutBuffer.erase( 0, newlinePos + ( bCrLf ? 2 : 1 ) );
+        return true;
+    }
+
+    bool Process::readOutputLine( string& outLine )
+    {
+        outLine.clear();
+        if ( _pStdOutRead == nullptr )
+            return false;
+        if ( takeBufferedLine( _bufferedOutput, false, outLine ) )
+            return true;
+        utf8 arrReadBuffer[constant::buffer::kMax4096];
+        for ( ;; )
+        {
+            const size_t bytesRead = readOutputBytes( arrReadBuffer, sizeof( arrReadBuffer ) );
+            if ( bytesRead == 0 )
+                break;
+            _bufferedOutput.append( arrReadBuffer, bytesRead );
+            if ( takeBufferedLine( _bufferedOutput, false, outLine ) )
+                return true;
+        }
+        // 끝 — 남은 줄(개행 없이 끝난 마지막 줄 · 끝의 \r)을 돌려준다.
+        if ( takeBufferedLine( _bufferedOutput, true, outLine ) )
+            return true;
+        if ( _bufferedOutput.empty() )
+            return false;
+        outLine = std::move( _bufferedOutput );
+        _bufferedOutput.clear();
+        return true;
     }
 } // namespace sw

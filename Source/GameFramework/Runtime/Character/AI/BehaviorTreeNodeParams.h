@@ -2,7 +2,7 @@
  * @file BehaviorTreeNodeParams.h
  * @brief 행동 트리 데이터 파일(`*.bt.xml`)의 노드 칸입니다 — 노드 종류마다 파일에 적을 수 있는 칸의 스키마(`Behavior*Fields`)와, 읽은 노드 하나(`BehaviorTreeNodeData`).
  * @details 언리얼 BT 의 노드 클래스가 저마다 UPROPERTY 를 가지는 것과 같은 모양이다. 종류마다 받는 속성 · 필수 · 범위 · 기본값은 스키마 구조체의 `PROPERTY` 가 정본이고,
- *          읽기 · 쓰기는 카탈로그와 같은 `XMLFields::readFields` · `writeFields` 다. 모든 종류의 칸을 모은 고정 구조체를 두지 않는다 — 노드는 자기 종류의 스키마 값 하나와, 작업이면 그 동작의 칸을 든다.
+ *          읽기 · 쓰기는 카탈로그와 같은 `XMLFields::readProperties` · `writeProperties` 다. 모든 종류의 칸을 모은 고정 구조체를 두지 않는다 — 노드는 자기 종류의 스키마 값 하나와, 작업이면 그 동작의 칸을 든다.
  *          편집기는 이 값을 리플렉션 그리드로 그리므로 칸을 더해도 패널을 고치지 않는다. 런타임 로더(`BehaviorTreeAsset`)와 에디터 모델(`BehaviorTreeEditModel`)이 같은 읽기 · 쓰기(`BehaviorTreeXML`)를 쓴다.
  */
 #pragma once

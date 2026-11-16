@@ -22,7 +22,7 @@
     #include <wayland-cursor.h>
     #include <xkbcommon/xkbcommon.h>
 
-    // 구성 때 wayland-scanner 가 만든다(cmake/Modules/Platform/Linux.cmake 의 프로토콜 XML 목록)
+    // 구성 때 wayland-scanner 가 만든다(cmake/Toolchain/Platform/Linux.cmake 의 프로토콜 XML 목록)
     #include "cursor-shape-v1-client-protocol.h"
     #include "fractional-scale-v1-client-protocol.h"
     #include "pointer-constraints-unstable-v1-client-protocol.h"
@@ -1237,7 +1237,7 @@ namespace sw
         if ( state._pDisplay == nullptr )
             return _bShouldClose == SW_FALSE;
 
-        if ( WaylandShell::pumpEvents( state._pDisplay ) == false )
+        if ( WaylandShell::pollEvents( state._pDisplay ) == false )
         {
             SW_LOG_ERROR_ID( "WaylandWindow.WaylandConnectionCompositorBroke", "Wayland: the connection to the compositor broke - closing the window" );
             return false;

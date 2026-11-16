@@ -7,16 +7,20 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace sw
 {
@@ -26,7 +30,6 @@ namespace sw
         {
             static constexpr uint8       kFormatVersion        = 1;
             static constexpr int32       kRebuildBatch         = 256;
-            static constexpr int32       kPlayersPerCommit     = 12;  ///< 사람마다 쓰기가 다섯이다. 결과, 우편, 보낸 기록, 만료 인덱스, 새 우편 알림이며 트랜잭션 상한 64 안에 들어간다
             static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
             static constexpr int64       kDayMs                = 86400000;
             static constexpr int64       kWeekMs               = 604800000;
@@ -47,6 +50,61 @@ namespace sw
             {
                 static const hashed_string s_table{ "lb_season_result" };
                 return s_table;
+            }
+
+            static const hashed_string& getSeasonResultExpiryTable()
+            {
+                static const hashed_string s_table{ "lb_season_result_expiry" };
+                return s_table;
+            }
+
+            static const hashed_string& getScoreExpiryTable()
+            {
+                static const hashed_string s_table{ "lb_score_expiry" };
+                return s_table;
+            }
+
+            /**
+             * @brief 기간 @p periodID 의 점수가 더 쓰이지 않게 되는 시각입니다(TTL 색인의 기준 시각). 0 이면 지우지 않습니다.
+             * @details 일간 · 주간은 다음 초기화(기간 id 가 기간 시작 시각이다), 시즌은 시즌 끝 + 정산 창이다 — 정산이 점수를 모두 읽은 뒤에야 지운다.
+             */
+            static int64 computeScoreExpiryBaseMs( const LeaderboardDef& definition, uint64 periodID )
+            {
+                switch ( definition._reset )
+                {
+                    case LeaderboardReset::Daily:
+                    {
+                        return static_cast<int64>( periodID ) + kDayMs;
+                    }
+                    case LeaderboardReset::Weekly:
+                    {
+                        return static_cast<int64>( periodID ) + kWeekMs;
+                    }
+                    case LeaderboardReset::Season:
+                    {
+                        for ( const LeaderboardSeason& season : definition._listSeason )
+                        {
+                            if ( season._seasonID == periodID )
+                                return season._endMs + kSettlementWindowMs;
+                        }
+                        return 0;
+                    }
+                    default:
+                    {
+                        return 0; // 초기화 없는 보드의 점수는 지우지 않는다
+                    }
+                }
+            }
+
+            /** @brief 점수 값의 갱신 시각을 읽습니다(보존 쓸기). 기간 끝보다 늦을 수 없으므로 색인 줄이 기간을 넘기면 레코드도 넘긴다. */
+            [[nodiscard]] static bool readScoreTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
+                if ( reader.readBits( 8 ) != kFormatVersion )
+                    return false;
+                (void)reader.readVarInt(); // 점수는 건너뛴다. 넘쳤는지는 아래 hasOverflowed 가 본다
+                outTimeMs = reader.readVarInt();
+                return reader.hasOverflowed() == false;
             }
 
             /** @brief 시즌 id 를 16진 8자리 문자열로 만듭니다. 작업 id 와 우편 멱등 키를 64바이트 안에 두려는 것입니다. */
@@ -223,6 +281,88 @@ namespace sw
             }
         };
 
+        /**
+         * @brief 보드 카탈로그의 불변 사본으로 색인보다 먼저 쓴 점수 · 시즌 결과의 TTL 색인 키를 만듭니다(백필).
+         * @details 줄의 시각(다음 초기화, 시즌 끝 + 정산 창)이 레코드가 아니라 보드 정의에서 나온다. 저장소 스레드가 읽으므로 만들 때 정의를 복사해 두고 바꾸지 않는다.
+         *          모르는 보드 · 초기화 없는 보드 · 모르는 시즌의 레코드는 줄을 만들지 않는다(남는 쪽으로 틀린다).
+         */
+        class LeaderboardBackfillSource final : public IServiceTTLBackfillSource
+        {
+        public:
+            enum class Kind : uint8
+            {
+                Score = 0,   ///< `<보드>/<기간 16 진 16>/<계정 16 진>`
+                SeasonResult ///< `<보드>/<시즌 16 진 8>/<계정 16 진>`
+            };
+
+            LeaderboardBackfillSource( vector<LeaderboardDef> listBoard, Kind kind )
+                : _listBoard{ std::move( listBoard ) }
+                , _kind{ kind }
+            {
+            }
+
+            [[nodiscard]] bool makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const override
+            {
+                (void)connection;
+                constexpr size_t  kAccountWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const size_t      periodWidth   = _kind == Kind::Score ? static_cast<size_t>( ServiceKeyUtil::kHexWidth ) : kSeasonHexWidth;
+                const size_t      tailSize      = 1 + periodWidth + 1 + kAccountWidth;
+                const string_view key           = record._key;
+                if ( key.size() <= tailSize || key[key.size() - kAccountWidth - 1] != '/' || key[key.size() - tailSize] != '/' )
+                    return false;
+                const string_view boardID  = key.substr( 0, key.size() - tailSize );
+                uint64            periodID = 0;
+                if ( parseHex( key.substr( key.size() - tailSize + 1, periodWidth ), periodID ) == false )
+                    return false;
+                const LeaderboardDef* pBoard = nullptr;
+                for ( const LeaderboardDef& board : _listBoard )
+                {
+                    if ( board._boardID == boardID )
+                        pBoard = &board;
+                }
+                if ( pBoard == nullptr )
+                    return false;
+                int64 baseMs = 0;
+                if ( _kind == Kind::Score )
+                    baseMs = LeaderboardServiceInternal::computeScoreExpiryBaseMs( *pBoard, periodID );
+                else
+                {
+                    for ( const LeaderboardSeason& season : pBoard->_listSeason )
+                    {
+                        if ( season._seasonID == periodID )
+                            baseMs = season._endMs + LeaderboardServiceInternal::kSettlementWindowMs; // 쓰는 쪽(`stageSeasonResult`)과 같은 시각이다
+                    }
+                }
+                if ( baseMs <= 0 )
+                    return false;
+                outIndexKey = ServiceTTLRule::makeTTLIndexKey( baseMs, key );
+                return true;
+            }
+
+        private:
+            static constexpr size_t kSeasonHexWidth  = 8;  ///< `makeSeasonHex` 의 자릿수
+            static constexpr uint64 kHexLetterValue  = 10; ///< 'a' · 'A' 의 값
+            static constexpr int32  kBitsPerHexDigit = 4;
+
+            [[nodiscard]] static bool parseHex( string_view text, uint64& outValue )
+            {
+                outValue = 0;
+                for ( const utf8 letter : text )
+                {
+                    const bool bDigit = letter >= '0' && letter <= '9';
+                    const bool bLower = letter >= 'a' && letter <= 'f';
+                    const bool bUpper = letter >= 'A' && letter <= 'F';
+                    if ( bDigit == false && bLower == false && bUpper == false )
+                        return false;
+                    const uint64 digit = bDigit ? static_cast<uint64>( letter - '0' ) : static_cast<uint64>( ( bLower ? letter - 'a' : letter - 'A' ) + kHexLetterValue );
+                    outValue           = ( outValue << kBitsPerHexDigit ) | digit;
+                }
+                return text.empty() == false;
+            }
+
+            vector<LeaderboardDef> _listBoard;
+            Kind                   _kind;
+        };
     } // namespace
 
     /** @brief 점수(또는 통계) 하나를 버전 조건으로 쓰는 일의 입력입니다. 저장소 스레드가 읽는 값 복사입니다(`LeaderboardService::submitWrite` 가 받으므로 이름 있는 이름공간에 둔다). */
@@ -235,6 +375,8 @@ namespace sw
         UnixMilliseconds  _nowMs{ 0 };
         LeaderboardUpdate _update{ LeaderboardUpdate::Best };
         LeaderboardOrder  _order{ LeaderboardOrder::Descending };
+        NetIdempotencyKey _idempotencyKey{};  ///< Sum · Latest 쓰기의 멱등 기록 키. 비면(서버 안의 파생 쓰기) 기록하지 않는다
+        int64             _expiryBaseMs{ 0 }; ///< 0 이 아니면 레코드를 처음 만들 때 이 시각의 TTL 색인 줄(`lb_score_expiry`)을 함께 넣는다
     };
 
     namespace
@@ -242,29 +384,55 @@ namespace sw
         /** @brief 쓰기 일이 완료로 넘기는 값입니다. */
         struct LeaderboardWriteResult
         {
-            int64              _finalValue{ 0 };
-            LeaderboardOutcome _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) };
-            uint8              _bChanged{ SW_FALSE };
+            int64                    _finalValue{ 0 };
+            LeaderboardServiceResult _result{ LeaderboardServiceResult::fail( OnlineError::kUnavailable ) };
+            uint8                    _bChanged{ SW_FALSE };
         };
 
         /** @brief 읽기 일이 완료로 넘기는 값과 결과입니다. */
         template <typename TValue>
         struct LeaderboardRead
         {
-            TValue             _value{};
-            LeaderboardOutcome _result{ LeaderboardOutcome::fail( OnlineError::kUnavailable ) };
+            TValue                   _value{};
+            LeaderboardServiceResult _result{ LeaderboardServiceResult::fail( OnlineError::kUnavailable ) };
         };
 
         /** @brief 저장소 스레드에서 도는 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
         struct LeaderboardStoreRun
         {
             /** @brief 갱신 방식에 따라 새 값을 정하고 버전 조건으로 씁니다. 충돌이면 다시 읽어 `OnlineLimit::kMaxConflictRetry` 번까지 다시 한다. */
+            /** @brief 멱등 기록의 응답(적용한 뒤의 값)을 읽습니다. 처음 요청이면 NotFound 입니다. */
+            static ServiceStoreResult findReplayedValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input, int64& outValue )
+            {
+                vector<uint8>            listReply;
+                const ServiceStoreResult found = ServiceIdempotency::findReply( connection, input._key, input._idempotencyKey._high, input._idempotencyKey._low, listReply );
+                if ( found != ServiceStoreResult::Ok )
+                    return found;
+                if ( listReply.size() != sizeof( int64 ) )
+                    return ServiceStoreResult::Invalid;
+                std::memcpy( &outValue, listReply.data(), sizeof( int64 ) );
+                return ServiceStoreResult::Ok;
+            }
+
             static LeaderboardWriteResult writeValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input )
             {
                 using Internal = LeaderboardServiceInternal;
                 LeaderboardWriteResult write;
+                // 누적 · 덮어쓰기는 다시 적용하면 값이 달라진다 — 멱등 기록이 재시도를 가린다(Best 는 다시 해도 같다)
+                const bool bRecorded = input._idempotencyKey.isValid() && ( input._update == LeaderboardUpdate::Sum || input._update == LeaderboardUpdate::Latest );
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
+                    if ( bRecorded )
+                    {
+                        const ServiceStoreResult replayed = findReplayedValue( connection, input, write._finalValue );
+                        if ( replayed == ServiceStoreResult::Ok )
+                        {
+                            write._result = LeaderboardResult::Ok; // 이미 적용했다 — 그때의 값을 돌려준다
+                            return write;
+                        }
+                        if ( replayed != ServiceStoreResult::NotFound )
+                            return write;
+                    }
                     ServiceRecord            record;
                     const ServiceStoreResult readResult = connection.readRecord( input._table, input._key, record );
                     if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
@@ -280,8 +448,19 @@ namespace sw
                     }
                     ServiceTransaction transaction;
                     transaction.put( input._table, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
+                    if ( readResult == ServiceStoreResult::NotFound && input._expiryBaseMs > 0 ) // 계정 · 기간마다 한 번이다(같은 줄을 여럿이 쓰지 않는다)
+                        transaction.put( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( input._expiryBaseMs, input._key ), vector<uint8>{},
+                                         ServiceRecord::kAnyVersion );
+                    if ( bRecorded )
+                    {
+                        vector<uint8> listReply( sizeof( int64 ) );
+                        std::memcpy( listReply.data(), &write._finalValue, sizeof( int64 ) );
+                        ServiceIdempotency::addReply( transaction, input._key, input._idempotencyKey._high, input._idempotencyKey._low, std::move( listReply ) );
+                    }
                     const ServiceStoreResult commitResult = connection.commit( transaction );
-                    if ( commitResult == ServiceStoreResult::Ok )
+                    const bool               bApplied     = commitResult == ServiceStoreResult::Ok ||
+                                          ( bRecorded && commitResult == ServiceStoreResult::Unavailable && findReplayedValue( connection, input, write._finalValue ) == ServiceStoreResult::Ok );
+                    if ( bApplied )
                     {
                         write._result   = LeaderboardResult::Ok;
                         write._bChanged = SW_TRUE;
@@ -290,7 +469,7 @@ namespace sw
                     if ( commitResult != ServiceStoreResult::Conflict )
                         return write;
                 }
-                write._result = LeaderboardOutcome::fail( OnlineError::kBusy );
+                write._result = LeaderboardServiceResult::fail( OnlineError::kBusy );
                 return write;
             }
 
@@ -448,7 +627,7 @@ namespace sw
                     return read;
                 read._value._score = reader.readVarInt();
                 read._value._rank  = reader.readVarInt32();
-                read._result       = reader.hasOverflowed() ? LeaderboardOutcome::fail( OnlineError::kUnavailable ) : LeaderboardResult::Ok;
+                read._result       = reader.hasOverflowed() ? LeaderboardServiceResult::fail( OnlineError::kUnavailable ) : LeaderboardResult::Ok;
                 return read;
             }
 
@@ -464,26 +643,29 @@ namespace sw
             }
 
             /**
-             * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 12명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다. 다 썼으면 true 입니다.
+             * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 결과와 보상 우편을 트랜잭션 상한(`ServiceTransaction::kMaxWriteCount`)이 차는 만큼씩 묶어 씁니다. 다 썼으면 true 입니다.
              * @details 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다. 실패하면 다음 실행(임대가 지나 다른 서버가 맡거나 다시 부름)이 남은 사람부터 잇는다.
+             *          한 사람의 쓰기 수는 세지 않고 따로 짜 본 뒤 넣는다 — 커밋당 사람 수를 상수로 두었더니 우편이 쓰기(보낸 기록 TTL 색인)를 하나 늘리자 모든 커밋이 상한을 넘어 정산이 멈췄다.
              */
             static bool writeSettlementPage( IServiceStoreConnection& connection, const LeaderboardDef& board, const LeaderboardSeason& season, const vector<LeaderboardScoreRow>& listPage,
                                              int32 firstRank, UnixMilliseconds nowMs )
             {
-                using Internal = LeaderboardServiceInternal;
-                for ( size_t first = 0; first < listPage.size(); first += static_cast<size_t>( Internal::kPlayersPerCommit ) )
+                ServiceTransaction transaction;
+                for ( size_t index = 0; index < listPage.size(); ++index )
                 {
-                    ServiceTransaction transaction;
-                    const size_t       last = MathUtil::min( listPage.size(), first + static_cast<size_t>( Internal::kPlayersPerCommit ) );
-                    for ( size_t index = first; index < last; ++index )
-                    {
-                        if ( stagePlayer( connection, transaction, board, season, listPage[index], firstRank + static_cast<int32>( index ), nowMs ) == false )
-                            return false;
-                    }
-                    if ( transaction.isEmpty() == false && connection.commit( transaction ) != ServiceStoreResult::Ok )
+                    ServiceTransaction player;
+                    if ( stagePlayer( connection, player, board, season, listPage[index], firstRank + static_cast<int32>( index ), nowMs ) == false )
                         return false;
+                    const size_t writeCount = transaction.getWrites().size() + player.getWrites().size();
+                    if ( writeCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                    {
+                        if ( connection.commit( transaction ) != ServiceStoreResult::Ok )
+                            return false;
+                        transaction.clear();
+                    }
+                    Ledger::appendWrites( player, transaction );
                 }
-                return true;
+                return transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
             }
 
         private:
@@ -511,6 +693,8 @@ namespace sw
                 if ( read != ServiceStoreResult::NotFound )
                     return false;
                 inoutTransaction.put( Internal::getSeasonResultTable(), key, Internal::encodeScore( row._score, rank, string_view{} ), ServiceRecord::kAbsentVersion );
+                inoutTransaction.put( Internal::getSeasonResultExpiryTable(), ServiceTTLRule::makeTTLIndexKey( season._endMs + Internal::kSettlementWindowMs, key ),
+                                      vector<uint8>{}, ServiceRecord::kAnyVersion ); // 정산 창이 닫힌 뒤부터 잰다 - 창 안에서는 이 결과가 다시 돌기의 멱등이다
                 const LeaderboardRewardTier* pTier = findTier( season, rank );
                 if ( pTier == nullptr )
                     return true;
@@ -536,6 +720,7 @@ namespace sw
 {
     LeaderboardService::LeaderboardService()
         : _mapBoard{}
+        , _pastScoreRetentionMs{ 0 }
         , _mapRankKeyToWaitingRead{}
         , _mapRankKeyToLateWrite{}
         , _mapReadyRequestToRead{}
@@ -637,6 +822,74 @@ namespace sw
         return boardIt != _mapBoard.end() ? &boardIt->second : nullptr;
     }
 
+    ServiceStoreResult LeaderboardService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const
+    {
+        using Internal          = LeaderboardServiceInternal;
+        const string accountHex = ServiceKeyUtil::makeHex64( accountID );
+        if ( const ServiceStoreResult stats = ServiceStoreUtil::erasePrefix( connection, Internal::getStatTable(), accountHex + "/" ); stats != ServiceStoreResult::Ok )
+            return stats;
+        if ( const ServiceStoreResult achievements = ServiceStoreUtil::erasePrefix( connection, Internal::getAchievementTable(), accountHex + "/" ); achievements != ServiceStoreResult::Ok )
+            return achievements;
+        // 점수 · 시즌 결과는 키가 보드 · 기간 앞이라 접두어로 찾지 못한다. 남아 있을 수 있는 기간마다 키를 만들어 지운다(없는 키 지우기는 할 일이 없다).
+        ServiceTransaction transaction;
+        auto               flush = [&connection, &transaction]() -> ServiceStoreResult
+        {
+            if ( transaction.getWrites().size() + 2 <= static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                return ServiceStoreResult::Ok;
+            const ServiceStoreResult committed = connection.commit( transaction );
+            transaction                        = ServiceTransaction{};
+            return committed;
+        };
+        auto eraseScore = [&]( const LeaderboardDef& board, uint64 periodID ) -> ServiceStoreResult
+        {
+            const string key = Internal::makeScorePrefix( board._boardID, periodID ) + accountHex;
+            transaction.erase( Internal::getScoreTable(), key );
+            if ( const int64 expiryBaseMs = Internal::computeScoreExpiryBaseMs( board, periodID ); expiryBaseMs > 0 )
+                transaction.erase( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiryBaseMs, key ) );
+            return flush();
+        };
+        for ( const auto& [boardID, board] : _mapBoard )
+        {
+            ServiceStoreResult erased = ServiceStoreResult::Ok;
+            switch ( board._reset )
+            {
+                case LeaderboardReset::Daily:
+                case LeaderboardReset::Weekly:
+                {
+                    // 기간 끝 + 보존 기간이 지나지 않은 기간을 지금부터 거꾸로 걷는다(기간 시작은 초기화 시각마다다)
+                    const int64 periodMs = board._reset == LeaderboardReset::Daily ? Internal::kDayMs : Internal::kWeekMs;
+                    for ( int64 periodStartMs = static_cast<int64>( computePeriodID( board, UnixMilliseconds{ nowMs } ) );
+                          periodStartMs > 0 && periodStartMs + periodMs + _pastScoreRetentionMs >= nowMs && erased == ServiceStoreResult::Ok; periodStartMs -= periodMs )
+                    {
+                        erased = eraseScore( board, static_cast<uint64>( periodStartMs ) );
+                    }
+                    break;
+                }
+                case LeaderboardReset::Season:
+                {
+                    for ( const LeaderboardSeason& season : board._listSeason )
+                    {
+                        if ( erased = eraseScore( board, season._seasonID ); erased != ServiceStoreResult::Ok )
+                            break;
+                        const string resultKey = Internal::makeSeasonResultKey( board._boardID, season._seasonID, accountID );
+                        transaction.erase( Internal::getSeasonResultTable(), resultKey );
+                        transaction.erase( Internal::getSeasonResultExpiryTable(), ServiceTTLRule::makeTTLIndexKey( season._endMs + Internal::kSettlementWindowMs, resultKey ) );
+                        erased = flush();
+                    }
+                    break;
+                }
+                default:
+                {
+                    erased = eraseScore( board, 0 ); // 초기화 없는 보드는 기간 id 가 0 하나다
+                    break;
+                }
+            }
+            if ( erased != ServiceStoreResult::Ok )
+                return erased;
+        }
+        return transaction.getWrites().empty() ? ServiceStoreResult::Ok : connection.commit( transaction );
+    }
+
     uint64 LeaderboardService::computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const
     {
         ScheduleDef schedule;
@@ -675,7 +928,8 @@ namespace sw
         return string( "lb/" ) + string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID );
     }
 
-    void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, UnixMilliseconds nowMs, uint64 requestTag )
+    void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, const NetIdempotencyKey& idempotencyKey,
+                                          UnixMilliseconds nowMs, uint64 requestTag )
     {
         const LeaderboardDef* pBoard = findBoard( boardID );
         if ( pBoard == nullptr )
@@ -687,7 +941,7 @@ namespace sw
                             displayName.size() <= static_cast<size_t>( OnlineLimit::kMaxDisplayNameSize ) && accountID != kInvalidAccountID;
         if ( bValid == false )
         {
-            pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
+            pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         const uint64 periodID = computePeriodID( *pBoard, nowMs );
@@ -697,14 +951,45 @@ namespace sw
             return;
         }
         LeaderboardWriteInput input;
-        input._table       = LeaderboardServiceInternal::getScoreTable();
-        input._key         = LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ) + ServiceKeyUtil::makeHex64( accountID );
-        input._displayName = string( displayName );
-        input._value       = score;
-        input._nowMs       = nowMs;
-        input._update      = pBoard->_update;
-        input._order       = pBoard->_order;
+        input._table          = LeaderboardServiceInternal::getScoreTable();
+        input._key            = LeaderboardServiceInternal::makeScorePrefix( pBoard->_boardID, periodID ) + ServiceKeyUtil::makeHex64( accountID );
+        input._displayName    = string( displayName );
+        input._value          = score;
+        input._nowMs          = nowMs;
+        input._update         = pBoard->_update;
+        input._order          = pBoard->_order;
+        input._idempotencyKey = idempotencyKey;
+        input._expiryBaseMs   = LeaderboardServiceInternal::computeScoreExpiryBaseMs( *pBoard, periodID );
         submitWrite( input, pBoard->_boardID, accountID, periodID, requestTag, LeaderboardOperation::Submit );
+    }
+
+    ServiceTTLRule LeaderboardService::makeScoreTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table         = LeaderboardServiceInternal::getScoreTable();
+        rule._ttlIndexTable = LeaderboardServiceInternal::getScoreExpiryTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &LeaderboardServiceInternal::readScoreTimeMs;
+        return rule;
+    }
+
+    shared_ptr<const IServiceTTLBackfillSource> LeaderboardService::makeScoreBackfillSource( const vector<LeaderboardDef>& listBoard )
+    {
+        return shared_ptr<const IServiceTTLBackfillSource>( make_shared<LeaderboardBackfillSource>( listBoard, LeaderboardBackfillSource::Kind::Score ) );
+    }
+
+    shared_ptr<const IServiceTTLBackfillSource> LeaderboardService::makeSeasonResultBackfillSource( const vector<LeaderboardDef>& listBoard )
+    {
+        return shared_ptr<const IServiceTTLBackfillSource>( make_shared<LeaderboardBackfillSource>( listBoard, LeaderboardBackfillSource::Kind::SeasonResult ) );
+    }
+
+    ServiceTTLRule LeaderboardService::makeSeasonResultTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table         = LeaderboardServiceInternal::getSeasonResultTable();
+        rule._ttlIndexTable = LeaderboardServiceInternal::getSeasonResultExpiryTable();
+        rule._expireAfterMs = expireAfterMs; // 시각 읽기를 두지 않는다 - 결과는 한 번 쓰고 바꾸지 않으므로 색인의 시각을 믿는다
+        return rule;
     }
 
     void LeaderboardService::submitWrite( const LeaderboardWriteInput& input, const string& boardID, AccountID accountID, uint64 periodID, uint64 requestTag,
@@ -716,29 +1001,30 @@ namespace sw
         { applyScoreWrite( boardID, periodID, accountID, displayName, write._finalValue, write._bChanged == SW_TRUE, write._result, requestTag, operation, nowMs ); } );
     }
 
-    void LeaderboardService::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, UnixMilliseconds nowMs,
-                                         uint64 requestTag )
+    void LeaderboardService::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update,
+                                         const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
         const bool bValid = LeaderboardNameRule::isValidID( statName ) && update < LeaderboardUpdate::Count && accountID != kInvalidAccountID &&
                           -LeaderboardLimit::kMaxAbsScore <= value && value <= LeaderboardLimit::kMaxAbsScore;
         if ( bValid == false )
         {
-            pushCompletion( requestTag, LeaderboardOperation::StatChange, LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
+            pushCompletion( requestTag, LeaderboardOperation::StatChange, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         LeaderboardWriteInput input;
-        input._table       = LeaderboardServiceInternal::getStatTable();
-        input._key         = ServiceKeyUtil::makeHex64( accountID ) + "/" + string( statName );
-        input._displayName = string( displayName );
-        input._value       = value;
-        input._nowMs       = nowMs;
-        input._update      = update;
-        input._order       = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
+        input._table          = LeaderboardServiceInternal::getStatTable();
+        input._key            = ServiceKeyUtil::makeHex64( accountID ) + "/" + string( statName );
+        input._displayName    = string( displayName );
+        input._value          = value;
+        input._nowMs          = nowMs;
+        input._update         = update;
+        input._order          = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
+        input._idempotencyKey = idempotencyKey;
         submitWrite( input, string( statName ), accountID, 0, requestTag, LeaderboardOperation::StatChange );
     }
 
     void LeaderboardService::applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
-                                              LeaderboardOutcome result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs )
+                                              LeaderboardServiceResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs )
     {
         if ( requestTag != 0 )
         {
@@ -760,7 +1046,7 @@ namespace sw
             for ( const auto& [id, board] : _mapBoard )          // 통계에 연결된 보드에 같은 값을 낸다. 요청 태그가 0이라 완료가 없다
             {
                 if ( board._sourceStat == boardID )
-                    submitScore( board._boardID, accountID, displayName, finalScore, nowMs, 0 );
+                    submitScore( board._boardID, accountID, displayName, finalScore, NetIdempotencyKey{}, nowMs, 0 ); // 통계 쓰기가 이미 멱등이다. 연결 보드는 Sum 일 수 없다
             }
             for ( const auto& [achievementID, achievement] : _mapAchievement ) // 임계값을 넘은 업적이다. 이미 달성했으면 작업은 아무것도 하지 않는다
             {
@@ -780,9 +1066,9 @@ namespace sw
         const string rankKey = makeRankKey( boardID, periodID );
         submitCacheScore( rankKey, accountID, toCacheScore( pBoard->_order, finalScore ) );
         // 기간 보드의 정렬 집합은 기간이 끝나면 캐시가 지우게 한다. 기간마다 이 프로세스에서 한 번만 건다(점수 쓰기마다 요청이 늘지 않게).
-        const int64 retentionMs = computeRankRetentionMs( *pBoard, periodID, nowMs );
-        if ( retentionMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
-            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ) );
+        const int64 expireAfterMs = computeRankRetentionMs( *pBoard, periodID, nowMs );
+        if ( expireAfterMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
+            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, expireAfterMs ) );
         if ( displayName.empty() == false )
             _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
                                                                        vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTTLMs ) );
@@ -843,7 +1129,7 @@ namespace sw
         const bool            bRange = 0 <= offset && 1 <= count && count <= LeaderboardLimit::kMaxPage;
         if ( pBoard == nullptr || bRange == false )
         {
-            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
+            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         read._periodID = computePeriodID( *pBoard, nowMs );
@@ -863,7 +1149,7 @@ namespace sw
         const bool            bRange = 0 <= radius && radius <= LeaderboardLimit::kMaxAround;
         if ( pBoard == nullptr || bRange == false )
         {
-            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
+            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         read._periodID = computePeriodID( *pBoard, nowMs );
@@ -894,7 +1180,7 @@ namespace sw
         _mapReadyRequestToRead.erase( readIt );
         if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
         {
-            completeRead( read, LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
+            completeRead( read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
             return;
         }
         const string rankKey = makeRankKey( read._boardID, read._periodID );
@@ -950,7 +1236,7 @@ namespace sw
         {
             for ( const PendingRead& read : listWaiting )
             {
-                completeRead( read, LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
+                completeRead( read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
             }
             return;
         }
@@ -965,10 +1251,10 @@ namespace sw
             _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, LeaderboardServiceInternal::makeRankMember( row._accountID ), row._score ) );
         }
         // 기간 보드면 다시 채운 집합과 준비 표시도 기간이 끝나면 사라지게 한다(0 이면 만료 없음).
-        const int64 retentionMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
-        if ( retentionMs > 0 )
-            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ) );
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, retentionMs ) );
+        const int64 expireAfterMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
+        if ( expireAfterMs > 0 )
+            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, expireAfterMs ) );
+        _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, expireAfterMs ) );
         // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )
         {
@@ -989,7 +1275,7 @@ namespace sw
         RankQuery& query = queryIt->second;
         if ( reply._result != EphemeralResult::Ok )
         {
-            completeRead( query._read, reply._result == EphemeralResult::NotFound ? LeaderboardResult::NotRanked : LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
+            completeRead( query._read, reply._result == EphemeralResult::NotFound ? LeaderboardResult::NotRanked : LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
             _mapQuery.erase( queryIt );
             return;
         }
@@ -1016,7 +1302,7 @@ namespace sw
         RankQuery& query = queryIt->second;
         if ( reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound )
         {
-            completeRead( query._read, LeaderboardOutcome::fail( OnlineError::kUnavailable ) );
+            completeRead( query._read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
             _mapQuery.erase( queryIt );
             return;
         }
@@ -1078,7 +1364,7 @@ namespace sw
         _mapQuery.erase( queryIt );
     }
 
-    void LeaderboardService::completeRead( const PendingRead& read, LeaderboardOutcome result )
+    void LeaderboardService::completeRead( const PendingRead& read, LeaderboardServiceResult result )
     {
         LeaderboardCompletion completion;
         completion._requestTag = read._requestTag;
@@ -1088,7 +1374,7 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void LeaderboardService::pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardOutcome result )
+    void LeaderboardService::pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardServiceResult result )
     {
         if ( requestTag == 0 )
             return;
@@ -1158,7 +1444,7 @@ namespace sw
         return AccountStatLookup::Found;
     }
 
-    void LeaderboardService::applyStats( uint64 requestTag, LeaderboardOutcome result, vector<LeaderboardStat>&& listStat )
+    void LeaderboardService::applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat )
     {
         LeaderboardCompletion completion;
         completion._requestTag = requestTag;
@@ -1176,7 +1462,7 @@ namespace sw
         { applyAchievements( requestTag, read._result, std::move( read._value ) ); } );
     }
 
-    void LeaderboardService::applyAchievements( uint64 requestTag, LeaderboardOutcome result, vector<AchievementState>&& listAchievement )
+    void LeaderboardService::applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement )
     {
         LeaderboardCompletion completion;
         completion._requestTag      = requestTag;
@@ -1202,7 +1488,7 @@ namespace sw
         { applyAchievementProgress( requestTag, read._result, std::move( read._value ) ); } );
     }
 
-    void LeaderboardService::applyAchievementProgress( uint64 requestTag, LeaderboardOutcome result, vector<AchievementProgress>&& listProgress )
+    void LeaderboardService::applyAchievementProgress( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementProgress>&& listProgress )
     {
         LeaderboardCompletion completion;
         completion._requestTag   = requestTag;
@@ -1222,7 +1508,7 @@ namespace sw
         }
         if ( listAccountID.empty() || listAccountID.size() > static_cast<size_t>( LeaderboardLimit::kMaxScoresOfCount ) )
         {
-            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
+            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         vector<AccountID> listUnique = listAccountID;
@@ -1231,10 +1517,10 @@ namespace sw
         _store.submit( [prefix = LeaderboardServiceInternal::makeScorePrefix( boardID, periodID ), listUnique = std::move( listUnique ), order = pBoard->_order]( IServiceStoreConnection& connection )
         { return LeaderboardStoreRun::readScoresOf( connection, prefix, listUnique, order ); },
                        [this, requestTag, periodID]( LeaderboardRead<vector<LeaderboardEntry>>& read )
-        { applyScoresOf( requestTag, periodID, read._result, std::move( read._value ) ); } );
+        { applyScores( requestTag, periodID, read._result, std::move( read._value ) ); } );
     }
 
-    void LeaderboardService::applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry )
+    void LeaderboardService::applyScores( uint64 requestTag, uint64 periodID, LeaderboardServiceResult result, vector<LeaderboardEntry>&& listEntry )
     {
         LeaderboardCompletion completion;
         completion._requestTag = requestTag;
@@ -1256,7 +1542,7 @@ namespace sw
         const LeaderboardDef* pBoard = findBoard( boardID );
         if ( pBoard == nullptr || pBoard->_reset != LeaderboardReset::Season )
         {
-            pushCompletion( requestTag, LeaderboardOperation::SeasonResult, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardOutcome::fail( OnlineError::kInvalidRequest ) );
+            pushCompletion( requestTag, LeaderboardOperation::SeasonResult, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         _store.submit( [key = LeaderboardServiceInternal::makeSeasonResultKey( pBoard->_boardID, seasonID, accountID ), accountID]( IServiceStoreConnection& connection )
@@ -1265,7 +1551,7 @@ namespace sw
         { applySeasonResult( requestTag, seasonID, read._result, read._value ); } );
     }
 
-    void LeaderboardService::applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardOutcome result, const LeaderboardEntry& entry )
+    void LeaderboardService::applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardServiceResult result, const LeaderboardEntry& entry )
     {
         LeaderboardCompletion completion;
         completion._requestTag = requestTag;

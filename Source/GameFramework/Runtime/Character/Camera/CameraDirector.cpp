@@ -227,8 +227,8 @@ namespace sw
         }
 
         // 아래에서 위로 섞는다. 다 섞인 층(가중치 1)이 있으면 그 아래는 화면에 없으므로 버린다.
-        CameraPose blended      = _listLayer[0]._pose;
-        size_t     settledIndex = 0;
+        CameraPose blended        = _listLayer[0]._pose;
+        size_t     completedIndex = 0;
         for ( size_t index = 1; index < _listLayer.size(); ++index )
         {
             Layer& layer = _listLayer[index];
@@ -237,10 +237,10 @@ namespace sw
             layer._weight                = normalizedTime >= 1.0f ? 1.0f : evaluateBlendWeight( layer._blend, normalizedTime );
             blended                      = blendPoses( blended, layer._pose, layer._weight );
             if ( normalizedTime >= 1.0f )
-                settledIndex = index;
+                completedIndex = index;
         }
-        if ( settledIndex > 0 )
-            _listLayer.erase( _listLayer.begin(), _listLayer.begin() + static_cast<ptrdiff_t>( settledIndex ) );
+        if ( completedIndex > 0 )
+            _listLayer.erase( _listLayer.begin(), _listLayer.begin() + static_cast<ptrdiff_t>( completedIndex ) );
         _bHasPose = SW_TRUE;
 
         // 충격은 섞인 포즈 위에 마지막으로 — 블렌드가 흔들림을 고정해 출발점에 싣지 않게.

@@ -25,7 +25,7 @@ namespace sw::editor
         /**
          * @brief 이번 프레임에 끝난 편집을 되돌리기에 남깁니다. 인스펙터가 그리기를 마친 뒤 부릅니다.
          * @details 위젯이 풀린 순간이 아니라 그 뒤에 기록하는 까닭: 다중 선택은 편집 통지(위젯 뒤)에서 값을 나머지 오브젝트에 입힌다. 풀린 순간에 "뒤" 스냅샷을 뜨면 그 입히기가 빠진다.
-         *          플레이 중 편집은 기록하지 않는다 — 편집 내역은 맡겨 두었고(`CommandStack::parkHistory`) Stop 이 스냅샷으로 되돌린다.
+         *          플레이 중 편집은 기록하지 않는다 — 편집 내역은 맡겨 두었고(`CommandStack::suspendHistory`) Stop 이 스냅샷으로 되돌린다.
          */
         static void commitFinishedEdits();
     };

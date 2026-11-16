@@ -63,7 +63,7 @@ namespace sw
 
 namespace sw
 {
-    // 매니페스트 원소의 속성 스키마다 — `XMLFields::readFields` 가 필수 · 모르는 속성 · 숫자 꼴을 본다. 판(`x.y.z`) · id 꼴 · 경로 규칙은 읽은 뒤 매니페스트가 본다.
+    // 매니페스트 원소의 속성 스키마다 — `XMLFields::readProperties` 가 필수 · 모르는 속성 · 숫자 꼴을 본다. 판(`x.y.z`) · id 꼴 · 경로 규칙은 읽은 뒤 매니페스트가 본다.
 
     /** @brief `<Mod id version minContentVersion maxContentVersion priority>` 입니다. */
     REFLECT()

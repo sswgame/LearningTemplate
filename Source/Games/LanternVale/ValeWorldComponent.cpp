@@ -12,6 +12,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -40,11 +41,11 @@ namespace sw
                 ValeWorldComponent*       pVale    = nullptr;
                 if ( pManager != nullptr )
                 {
-                    pManager->forEachComponentOfType<ValeWorldComponent>( [&pVale]( ValeWorldComponent* pFound )
+                    for ( ValeWorldComponent* pFound : pManager->getComponentRegistry().getAll<ValeWorldComponent>() )
                     {
                         if ( pVale == nullptr )
                             pVale = pFound;
-                    } );
+                    }
                 }
                 return pVale != nullptr && pVale->getClient().isActive() ? pVale : nullptr;
             }
@@ -356,4 +357,16 @@ namespace sw
                                    &ValeWorldComponentDevInternal::readFirstCreatureHealth );
     SW_AUTOMATION_COMPONENT_WATCH( valeAttackReady, "LanternVale.AttackReady", "1 once the attack cooldown has passed in real time since the last action result", ValeWorldComponent,
                                    &ValeWorldComponentDevInternal::readAttackReady );
+
+    void ValeWorldComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<ValeWorldComponent>( this );
+    }
+
+    void ValeWorldComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ValeWorldComponent>( this );
+        Component::onUnregister( manager );
+    }
 } // namespace sw

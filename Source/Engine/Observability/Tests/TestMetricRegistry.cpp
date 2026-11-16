@@ -3,6 +3,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Observability/MetricRegistry.h"
 
@@ -106,7 +107,7 @@ SW_TEST_CASE( MetricRegistryTest, ConcurrentUpdatesAreNotLost )
     sw::thread       arrThread[4];
     for ( sw::thread& thread : arrThread )
     {
-        thread = sw::thread( &addMany, pCounter, pGauge, pHistogram );
+        thread = sw::thread( ThreadTestAccess::getKey(), &addMany, pCounter, pGauge, pHistogram );
     }
     for ( sw::thread& thread : arrThread )
     {

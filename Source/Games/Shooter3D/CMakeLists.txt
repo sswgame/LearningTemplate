@@ -3,4 +3,4 @@
 # @brief 1인칭 · 3인칭 슈터 테스트 게임 — 무기 규칙(Combat) · 캐릭터(애니메이션 · 외형 · 소켓) · 페이싱 감독 — 네트워크 몸 이동은 GF_NetClientServer
 # ==============================================================================
 
-sw_addGameModule(SWGame)
+sw_add_game_module(SWGame)

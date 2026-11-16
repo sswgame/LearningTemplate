@@ -112,5 +112,5 @@ namespace sw
     };
 
     /** @brief 표면 종류 표를 경로마다 한 벌 나눠 줍니다("surfacekinds", 인스턴스화는 `SurfaceKind.cpp`). */
-    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SurfaceKindTable>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SurfaceKindTable );
 } // namespace sw

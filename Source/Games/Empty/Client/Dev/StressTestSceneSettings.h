@@ -201,6 +201,14 @@ namespace sw
         float32 _crowdLookDepthRatio{};
         PROPERTY( Category = "Characters", Tooltip = "Widest start time spread with -gv_stressTestCharacterStagger", Min = 0.0, Units = s )
         float32 _characterStaggerSeconds{};
+        PROPERTY( Category = "Characters", Tooltip = "Animation parameter on the x axis of the prefab's 2D blend space, spread per character with -gv_stressTestCharacterBlend" )
+        string _characterBlendParameterX{};
+        PROPERTY( Category = "Characters", Tooltip = "Animation parameter on the y axis of the prefab's 2D blend space, spread per character with -gv_stressTestCharacterBlend" )
+        string _characterBlendParameterY{};
+        PROPERTY( Category = "Characters", Tooltip = "Lowest (x, y) parameter values spread with -gv_stressTestCharacterBlend" )
+        float2 _characterBlendMinimum{};
+        PROPERTY( Category = "Characters", Tooltip = "Highest (x, y) parameter values spread with -gv_stressTestCharacterBlend" )
+        float2 _characterBlendMaximum{};
         PROPERTY( Category = "Characters", Tooltip = "Half extent the combat bench lights and frames", Min = 0.0, Units = m )
         float32 _combatHalfExtent{};
 

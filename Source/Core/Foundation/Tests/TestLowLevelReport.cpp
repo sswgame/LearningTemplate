@@ -85,7 +85,7 @@ namespace
 #endif
         }
 
-        static int32 descriptorOf( std::FILE* pFile )
+        static int32 getDescriptorOf( std::FILE* pFile )
         {
 #if defined( SW_PLATFORM_WINDOWS )
             return _fileno( pFile );
@@ -132,9 +132,9 @@ namespace
             if ( LowLevelReportTestInternal::_s_pCapture == nullptr )
                 return;
             std::fflush( stderr );
-            _savedStderr = LowLevelReportTestInternal::duplicateDescriptor( LowLevelReportTestInternal::descriptorOf( stderr ) );
-            LowLevelReportTestInternal::redirectDescriptor( LowLevelReportTestInternal::descriptorOf( LowLevelReportTestInternal::_s_pCapture ),
-                                                            LowLevelReportTestInternal::descriptorOf( stderr ) );
+            _savedStderr = LowLevelReportTestInternal::duplicateDescriptor( LowLevelReportTestInternal::getDescriptorOf( stderr ) );
+            LowLevelReportTestInternal::redirectDescriptor( LowLevelReportTestInternal::getDescriptorOf( LowLevelReportTestInternal::_s_pCapture ),
+                                                            LowLevelReportTestInternal::getDescriptorOf( stderr ) );
             _pPreviousReporter = internal::setLowLevelReporter( pfnReporter );
         }
 
@@ -144,7 +144,7 @@ namespace
             {
                 (void)internal::setLowLevelReporter( _pPreviousReporter );
                 std::fflush( stderr );
-                LowLevelReportTestInternal::redirectDescriptor( _savedStderr, LowLevelReportTestInternal::descriptorOf( stderr ) );
+                LowLevelReportTestInternal::redirectDescriptor( _savedStderr, LowLevelReportTestInternal::getDescriptorOf( stderr ) );
                 LowLevelReportTestInternal::closeDescriptor( _savedStderr );
                 std::fclose( LowLevelReportTestInternal::_s_pCapture );
                 LowLevelReportTestInternal::_s_pCapture = nullptr;
@@ -325,7 +325,7 @@ SW_TEST_CASE( LowLevelReportTest, OverflowIsMarkedTruncated )
     SW_EXPECT_TRUE( message.compare( 0, 8, "xxxxxxxx" ) == 0 );
 }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 /**
  * @brief 필수 서비스 부재 보고는 조회 글을 담은 오류 하나를 stderr 에 먼저 쓰고 멈춘다(Debug 가로채기에서는 세고 반환한다).
  * @details 모든 구성에서 `abort` 하므로 멈춤을 프로세스 안에서 볼 수 있는 구성은 가로채기가 있는 Debug 뿐이다.

@@ -16,6 +16,7 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
@@ -24,7 +25,7 @@
 
 namespace sw
 {
-    class ISceneLaneFrameSystem;
+    class ISceneParallelFrameSystem;
 
     /**
      * @brief 앞 시스템(@p earlier, 붙은 순서가 앞)과 뒤 시스템(@p later)이 같이 돌 수 없는지 돌려줍니다.
@@ -39,14 +40,14 @@ namespace sw
     };
 
     /** @brief 한 파도에서 워커로 보낼 프레임 시스템 하나입니다 — 구간 값을 함께 복사해 든다(같은 파도의 시스템이 시스템을 붙이면 매니저의 시스템 목록이 옮겨진다). */
-    struct FrameSystemLaneEntry
+    struct FrameSystemParallelEntry
     {
-        ISceneLaneFrameSystem* _pSystem;
-        ProfileScopeID         _scopeID; ///< 그 시스템의 `runLane` 구간
+        ISceneParallelFrameSystem* _pSystem;
+        ProfileScopeID             _scopeID; ///< 그 시스템의 `runOnAnyThread` 구간
     };
 
     /** @brief 파도의 순서 목록입니다. 호출처가 재사용해도 됩니다(`build` 가 비우고 채운다). */
-    struct FrameSystemLanePlan
+    struct FrameSystemParallelPlan
     {
         vector<FrameSystemWave> _listWave;
         /** @brief 만드는 중 쓰는 칸 — 시스템마다 정해진 파도 번호입니다(프레임 사이에 용량을 둔다). */
@@ -57,7 +58,7 @@ namespace sw
      * @brief 접근 선언의 목록(붙인 순서)으로 파도 계획을 만듭니다. `outPlan` 의 시스템 번호는 @p listAccess 의 번호입니다.
      * @details 시스템 j 의 파도는 "앞 시스템 중 j 와 겹치는 것의 가장 늦은 파도 + 1" 이다. 겹침이 없으면 0.
      */
-    SW_API void buildFrameSystemLanePlan( span<const SceneFrameAccess> listAccess, FrameSystemLanePlan& outPlan );
+    SW_API void buildFrameSystemParallelPlan( span<const SceneFrameAccess> listAccess, FrameSystemParallelPlan& outPlan );
 } // namespace sw
 
 namespace sw
@@ -104,9 +105,9 @@ namespace sw
     class SW_API GameObjectManager
     {
         friend class GameObject;
-        friend class StructuralChangeBuffer; ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
-        friend class ISceneLaneFrameSystem;  ///< 게임 스레드에서 도는 레인 시스템도 같은 잡 컨텍스트(명령 버퍼 = 틱 뒤 큐)로 돈다
-        friend class TickContext;            ///< 주 틱의 잡 컨텍스트도 같은 명령 버퍼(틱 뒤 큐)를 문다
+        friend class StructuralChangeBuffer;    ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
+        friend class ISceneParallelFrameSystem; ///< 게임 스레드에서 도는 병렬 시스템도 같은 잡 컨텍스트(명령 버퍼 = 틱 뒤 큐)로 돈다
+        friend class TickContext;               ///< 주 틱의 잡 컨텍스트도 같은 명령 버퍼(틱 뒤 큐)를 문다
 
     public:
         /**
@@ -115,8 +116,19 @@ namespace sw
          *          에셋 매니저는 씬 안의 코드가 `findAssetManager` 로 씁니다. 빈 칸은 그 서비스가 없다는 뜻입니다.
          */
         explicit GameObjectManager( const SceneEngineServices& services );
-        /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineServices::makeFromBoundEngine`). 테스트 · 프리팹 원형 같은 손수 만든 매니저용입니다. */
+        /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineServices::makeFromBoundEngine`). 테스트 · 손수 만든 매니저용입니다. */
         GameObjectManager();
+        /** @brief `GameObjectManager( TransientTag )` 의 표지입니다. */
+        struct TransientTag
+        {
+        };
+        /**
+         * @brief 월드에 들지 않는 씬 밖 매니저를 만듭니다 — 상태를 읽고 쓰기만 하고 컴포넌트 훅(`onRegister` · `onPostLoad`)을 부르지 않습니다.
+         * @details 프리팹 원형 · 기준 상태처럼 로드(워커일 수 있다)가 상태 글을 오브젝트로 한 번 읽어 다시 쓰는 자리다. 훅은 공유 에셋(머티리얼) · 엔진 서비스를 만져
+         *          게임 스레드에서만 돈다(`beginDeferredRegistration`) — 씬 밖 오브젝트는 게임에 들지 않으므로 훅을 부를 일이 없다.
+         *          언리얼 Transient 패키지의 아키타입(월드에 등록하지 않은 컴포넌트) · Godot 트리에 들지 않은 노드(`_enter_tree` 없음) 자리다.
+         */
+        explicit GameObjectManager( TransientTag );
         /** @brief 등록된 오브젝트를 모두 파괴합니다. */
         ~GameObjectManager();
 
@@ -149,6 +161,14 @@ namespace sw
          */
         GameObject*       findGameObjectByName( hashed_string name );
         const GameObject* findGameObjectByName( hashed_string name ) const;
+        /**
+         * @brief 밑 이름이 @p baseName 인 살아 있는 오브젝트(`Tree` · `Tree_2` …, 대소문자 무시)를 @p outListGameObject 에 채웁니다(먼저 비운다, 순서는 약속하지 않는다).
+         * @details 저장소의 밑 이름 색인을 찾는 좁은 질의라 열쇠(`SceneIterationKey`) 없이 부른다 — 비용은 그 이름의 오브젝트 수다. 상수성은 `findGameObjectByName` 과 같다.
+         */
+        void findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject );
+        void findGameObjectsByBaseName( string_view baseName, vector<const GameObject*>& outListGameObject ) const;
+        /** @brief @p name 의 밑 이름입니다(`Tree_3` → `Tree`, `Tree_03` · `Tree_` 는 그대로). 오브젝트 저장소가 번호를 붙이는 규칙과 같다. */
+        static string_view computeBaseName( string_view name );
 
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). 상수성은 `findGameObjectByName` 과 같다. */
         GameObject*       findGameObjectByID( uint64 objectID );
@@ -165,49 +185,50 @@ namespace sw
          * @details 값 반환형은 호출마다 씬
          *          전체를 새로 할당 · 복사하므로, 매 프레임 도는 곳이나 두 번 이상 쓰는 곳은 이쪽을
          *          씁니다. 순회만 하면 되는 곳은 forEachGameObject 가 복사조차 하지 않습니다.
+         * @note 씬 전체 순회는 열쇠(`SceneIterationKey`)를 받는다 — 컴포넌트 틱은 열쇠가 없다(찾기는 `getComponentRegistry`, 이름은 `findGameObjectsByBaseName`).
          */
-        void getAllGameObjects( vector<GameObject*>& outListGameObject ) const;
+        void getAllGameObjects( SceneIterationKey key, vector<GameObject*>& outListGameObject ) const;
 
         /** @brief 살아 있는 오브젝트 목록을 새 벡터로 반환합니다(한 번만 쓰는 곳 전용). */
-        vector<GameObject*> getAllGameObjects() const;
+        vector<GameObject*> getAllGameObjects( SceneIterationKey key ) const;
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
-         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`GameObjectStore::WalkScope`) —
+         * @note 공유 잠금을 쥔 채 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`GameObjectStore::IterationScope`) —
          *       그런 일을 하는 순회는 `getAllGameObjects( out )` 로 목록을 받아 잠금 없이 돕니다(`beginPlay` 처럼).
          *       콜백은 쓰기 가능한 매니저에서 `GameObject*`, const 매니저에서 `const GameObject*` 를 받는다(`findGameObjectByName`).
          */
         template <typename Func>
-        void forEachGameObject( Func&& func );
+        void forEachGameObject( SceneIterationKey key, Func&& func );
         template <typename Func>
-        void forEachGameObject( Func&& func ) const;
+        void forEachGameObject( SceneIterationKey key, Func&& func ) const;
 
         /** @brief 힙 할당 없이 씬의 모든 유효한 Component 를 순회합니다. 콜백은 매니저의 상수성대로 `Component*` · `const Component*` 를 받는다. */
         template <typename Func>
-        void forEachComponent( Func&& func );
+        void forEachComponent( SceneIterationKey key, Func&& func );
         template <typename Func>
-        void forEachComponent( Func&& func ) const;
+        void forEachComponent( SceneIterationKey key, Func&& func ) const;
 
         /**
          * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
          * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. **방문 순서는 약속하지 않습니다** — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
          *          버킷에서 꺼낸 포인터를 `static_cast` 로 바꿉니다. REFLECT 타입은 가상이 아닌 단일 상속만 받으므로(파서 7-b) 보정이 맞습니다.
-         * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`WalkScope`).
+         * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`IterationScope`).
          *       콜백은 매니저의 상수성대로 `TComponent*` · `const TComponent*` 를 받는다.
          */
         template <typename TComponent, typename Func>
-        void forEachComponentOfType( Func&& func );
+        void forEachComponentOfType( SceneIterationKey key, Func&& func );
         template <typename TComponent, typename Func>
-        void forEachComponentOfType( Func&& func ) const;
+        void forEachComponentOfType( SceneIterationKey key, Func&& func ) const;
 
         /**
          * @brief 런타임 타입 @p pToType 이나 그 파생 컴포넌트를 순회합니다. 타입을 템플릿으로 모르는 곳(인스펙터 선택기)이 씁니다.
          * @details 콜백은 매니저의 상수성대로 `Component*` · `const Component*` 를 받는다.
          */
         template <typename Func>
-        void forEachComponentOfType( const TypeInfo* pToType, Func&& func );
+        void forEachComponentOfType( SceneIterationKey key, const TypeInfo* pToType, Func&& func );
         template <typename Func>
-        void forEachComponentOfType( const TypeInfo* pToType, Func&& func ) const;
+        void forEachComponentOfType( SceneIterationKey key, const TypeInfo* pToType, Func&& func ) const;
 
         /** @brief 비어 있지 않은 타입별 버킷 수입니다. 진단과 회귀 테스트(모듈 언로드 뒤 묘비)용입니다. */
         uint32 getTypedComponentBucketCount() const;
@@ -246,7 +267,7 @@ namespace sw
          * @brief `update` 를 시작한 횟수입니다(게임 스레드의 씬 프레임 번호). 한 프레임의 틱 · 틱 뒤 큐 · 그 뒤 패킷 만들기가 같은 값을 봅니다.
          * @details "이번 프레임에 세워진 표시인가"를 비트 비우기 없이 번호 비교로 정하게 한다(`CameraComponent::markCut`).
          */
-        uint64 getUpdateSerial() const { return _updateSerial; }
+        uint64 getUpdateCount() const { return _updateCount; }
 
         /**
          * @brief 컴포넌트 등록(`onRegister`) · 로드 뒤 처리(`onPostLoad`)를 `endDeferredRegistration` 까지 미룹니다(중첩 가능). 씬을 짓는 배치(`Scene::instantiate`)가 씁니다.
@@ -261,10 +282,13 @@ namespace sw
          * @details 언리얼 `LevelStreamingComponentsRegistrationGranularity` 와 같은 자리다. 다 끝나면 true 이고 미루기가 풀린다(`endDeferredRegistration` 을 부르지 않는다). 남았으면 false 이고
          *          다음 프레임에 다시 부른다 — 그동안 이 매니저는 활성 씬이 아니어야 한다(`SceneManager` 가 씬을 받기 전에 부른다). 바깥 짝 하나만 쥔 동안만 부른다.
          */
-        [[nodiscard]] bool pumpDeferredRegistration( uint32 maxCount );
-        /** @brief 막 붙은 컴포넌트를 등록합니다(`GameObject::attachCreatedComponent`). 미루는 중이면 줄에 세웁니다. */
+        [[nodiscard]] bool processDeferredRegistration( uint32 maxCount );
+        /**
+         * @brief 막 붙은 컴포넌트를 등록합니다(`GameObject::attachCreatedComponent`). 미루는 중이면 줄에 세우고, 씬 밖 매니저(`TransientTag`)면 부르지 않습니다.
+         * @details 워커에서 세운 매니저가 워커에서 훅을 부르면 단언한다(감사 A-15) — 씬 로드는 등록을 미루고, 씬 밖 상태 읽기는 `TransientTag` 로 만든다.
+         */
         void registerComponent( Component& comp );
-        /** @brief 값을 다 읽은 컴포넌트의 `onPostLoad` 를 부릅니다(`ObjectStateBatch`). 미루는 중이면 줄에 세웁니다. */
+        /** @brief 값을 다 읽은 컴포넌트의 `onPostLoad` 를 부릅니다(`ObjectStateBatch`). 미루는 중이면 줄에 세우고, 씬 밖 매니저면 부르지 않습니다. 스레드 규칙은 `registerComponent` 와 같다. */
         void postLoadComponent( Component& comp );
 
         /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
@@ -573,6 +597,8 @@ namespace sw
          * @return 지운 컴포넌트 수입니다.
          */
         uint32 destroyComponentsOfModule( string_view moduleName );
+        /** @brief 씬의 모든 컴포넌트에 `Component::onModuleUnloading( moduleName )` 을 알립니다 — 남의 모듈 타입 객체를 든 컴포넌트가 먼저 놓는다(`destroyComponentsOfModule` 앞, 틱 밖). */
+        void notifyModuleUnloading( string_view moduleName );
 
         /**
          * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.
@@ -585,7 +611,7 @@ namespace sw
         void markTickStagesDirty();
         /**
          * @brief 틱 레지스트리가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
-         * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
+         * @details 틱에 참여하는 컴포넌트(`Component::hasTickJobs`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
          *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
         /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
@@ -595,7 +621,7 @@ namespace sw
         static vector<hashed_string> getRegisteredComponentTypeNames();
 
         /** @brief 트랜스폼이 바뀌었음을 알려 세대를 올립니다(`getTransformHierarchy().notifyDirtied()`). */
-        void notifyTransformDirtied();
+        void notifyTransformDirty();
         /** @brief 현재 트랜스폼 더티 세대 번호를 반환합니다. */
         uint64 getTransformGeneration() const;
 
@@ -639,7 +665,7 @@ namespace sw
         {
             hashed_string                 _key;
             unique_ptr<ISceneFrameSystem> _pSystem;
-            ProfileScopeID                _scopeID; ///< `runMain` · `runLane` 구간(`GT.Scene.frameSystem.<키>`) — 붙일 때 한 번 받는다
+            ProfileScopeID                _scopeID; ///< `runMain` · `runOnAnyThread` 구간(`GT.Scene.frameSystem.<키>`) — 붙일 때 한 번 받는다
         };
 
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
@@ -657,10 +683,10 @@ namespace sw
             size_t                  _postLoadCursor{ 0 };
 
             /** @brief 남은 것을 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 입니다. */
-            [[nodiscard]] bool pump( GameObjectManager& manager, uint32 maxCount );
+            [[nodiscard]] bool poll( GameObjectManager& manager, uint32 maxCount );
         };
-        /** @brief 줄에 선 것과 나누다 만 묶음을 합쳐 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 이고, 남았으면 `_pumpBatch` 에 둡니다. */
-        [[nodiscard]] bool pumpQueuedRegistration( uint32 maxCount );
+        /** @brief 줄에 선 것과 나누다 만 묶음을 합쳐 @p maxCount 개까지 부릅니다(0 은 한도 없음). 다 불렀으면 true 이고, 남았으면 `_pollBatch` 에 둡니다. */
+        [[nodiscard]] bool processQueuedRegistration( uint32 maxCount );
 
     private:
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,
@@ -689,9 +715,9 @@ namespace sw
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */
         vector<FrameSystemEntry> _listFrameSystem;
         /** @brief `FrameSystems` 단계의 파도 계획과 그 계산용 칸입니다 — 프레임마다 다시 만들고(선언은 늘 같은 답이다) 용량만 둡니다. */
-        FrameSystemLanePlan          _frameSystemLanePlan;
-        vector<SceneFrameAccess>     _listFrameAccess;
-        vector<FrameSystemLaneEntry> _listLaneJob;
+        FrameSystemParallelPlan          _frameSystemParallelPlan;
+        vector<SceneFrameAccess>         _listFrameAccess;
+        vector<FrameSystemParallelEntry> _listParallelJob;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
         vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
         /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineServices` · `findAssetManager`). */
@@ -700,14 +726,18 @@ namespace sw
         uint8 _bRunningFrameSystems : 1;
         /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */
         uint8 _bPhysicsStepEnabled : 1;
-        /** @brief `update` 를 시작한 횟수입니다(`getUpdateSerial`). */
-        uint64 _updateSerial;
+        /** @brief 씬 밖 매니저입니다(`TransientTag`) — 컴포넌트 훅을 부르지 않습니다. */
+        uint8 _bTransient : 1;
+        /** @brief 작업 풀의 워커에서 세웠습니다 — 워커에서 훅을 부르면 단언합니다(`registerComponent`). */
+        uint8 _bBuiltOnWorker : 1;
+        /** @brief `update` 를 시작한 횟수입니다(`getUpdateCount`). */
+        uint64 _updateCount;
         /** @brief `beginDeferredRegistration` 의 중첩 깊이입니다. 0 이 아니면 등록 · 로드 뒤 처리를 줄에 세웁니다. */
         uint32 _deferredRegistrationDepth;
         /** @brief 미룬 등록 · 로드 뒤 처리입니다(붙은 순서). 핸들로 들어 그 사이 해체돼도 안전합니다. */
         vector<ComponentHandle> _listDeferredRegister;
         vector<ComponentHandle> _listDeferredPostLoad;
-        /** @brief `pumpDeferredRegistration` 이 나눠 부르는 중인 묶음입니다. 비어 있으면 나누는 중이 아닙니다. */
-        DeferredRegistrationBatch _pumpBatch;
+        /** @brief `processDeferredRegistration` 이 나눠 부르는 중인 묶음입니다. 비어 있으면 나누는 중이 아닙니다. */
+        DeferredRegistrationBatch _pollBatch;
     };
 } // namespace sw

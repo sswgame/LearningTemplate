@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Name/TagID.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -55,7 +56,7 @@ namespace sw::editor
 
                 GameObjectManager*  pObjects = pScene->getObjectManager();
                 vector<GameObject*> listAllObject;
-                pObjects->getAllGameObjects( listAllObject );
+                pObjects->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listAllObject );
                 data._listSnapshot.reserve( listAllObject.size() );
 
                 for ( GameObject* pObj : listAllObject )
@@ -101,7 +102,7 @@ namespace sw::editor
                 }
 
                 vector<GameObject*> listAllObject;
-                objects.getAllGameObjects( listAllObject );
+                objects.getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listAllObject );
 
                 vector<GameObject*> listToDestroy;
                 for ( GameObject* pObj : listAllObject )
@@ -436,7 +437,7 @@ namespace sw::editor
     {
         const TagID playerTag = TagID::request( kPlayerStartTag );
         GameObject* pTagged   = nullptr;
-        manager.forEachGameObject( [&pTagged, playerTag]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&pTagged, playerTag]( GameObject* pObj )
         {
             const bool bFirstTaggedPlayer = pTagged == nullptr && pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( playerTag, true );
             if ( bFirstTaggedPlayer )
@@ -570,7 +571,7 @@ namespace sw::editor
         {
             pData->_listKept.clear();
             if ( pCommandStack != nullptr )
-                pCommandStack->parkHistory();
+                pCommandStack->suspendHistory();
             captureSnapshot( *pData );
             EditorPlaySessionInternal::setWorldPlaying( true );
             // 카메라 위치에서 시작은 플레이어가 조종하는 세션만 해당한다. 월드가 시작한 뒤, 즉 onBeginPlay 가 스폰 위치를 정한 뒤에 옮긴다.
@@ -584,7 +585,7 @@ namespace sw::editor
             restoreSnapshot( *pData );
             // 스냅샷이 오브젝트를 원래 id 로 되돌린 뒤이므로 맡긴 명령의 대상(id)이 다시 맞는다.
             if ( pCommandStack != nullptr )
-                pCommandStack->unparkHistory();
+                pCommandStack->resumeHistory();
             EditorTransaction keepTransaction{ "Keep Simulation Changes" }; // 남긴 오브젝트 모두가 되돌리기 한 단계다
             EditorPlaySessionInternal::applyKeptStates( *pData, keepTransaction );
         }

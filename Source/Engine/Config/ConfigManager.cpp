@@ -48,7 +48,10 @@ namespace sw
                     collectEqualMembers( fileValue, leftValue, rightValue, path, outListKey );
                     continue;
                 }
-                if ( leftValue.dump() == rightValue.dump() )
+                // 글로 못 쓰는 값(잘못된 UTF-8)은 같다고 보지 않는다 - 같은 키로 모이면 파일에서 지워진다.
+                const expected<string> leftText  = leftValue.dump();
+                const expected<string> rightText = rightValue.dump();
+                if ( leftText.has_value() && rightText.has_value() && *leftText == *rightText )
                     outListKey.push_back( path );
             }
         }
@@ -155,11 +158,13 @@ namespace sw
 
     bool ConfigManager::collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey )
     {
-        JSONDocument fileDoc;
-        JSONDocument leftDoc;
-        JSONDocument rightDoc;
-        const bool   bParseFailed = fileDoc.parse( jsonStr ) == false || leftDoc.parse( JSONSerializer::serialize( pLeft, typeInfo ) ) == false ||
-                                  rightDoc.parse( JSONSerializer::serialize( pRight, typeInfo ) ) == false;
+        JSONDocument           fileDoc;
+        JSONDocument           leftDoc;
+        JSONDocument           rightDoc;
+        const expected<string> leftText     = JSONSerializer::serialize( pLeft, typeInfo );
+        const expected<string> rightText    = JSONSerializer::serialize( pRight, typeInfo );
+        const bool             bParseFailed = leftText.has_value() == false || rightText.has_value() == false || fileDoc.parse( jsonStr ) == false ||
+                                  leftDoc.parse( *leftText ) == false || rightDoc.parse( *rightText ) == false;
         if ( bParseFailed )
             return false;
         collectEqualMembers( fileDoc.getRoot(), leftDoc.getRoot(), rightDoc.getRoot(), string(), outListKey );

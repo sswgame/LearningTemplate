@@ -221,7 +221,7 @@ namespace sw
             }
 
             /** @brief 셰이딩 모델 Hair 의 머티리얼 칸을 덧붙입니다(이름 · 범위는 hair.material 의 같은 뜻 칸과 같다). */
-            static void appendHairFields( vector<MaterialGraphField>& inoutListField )
+            static void appendHairProperties( vector<MaterialGraphField>& inoutListField )
             {
                 static constexpr float32 kHairShiftLimit = 0.2f; ///< 큐티클 기울기 칸의 범위(± 라디안, hair.material `_shift` 와 같다)
                 const auto               add             = [&inoutListField]( const utf8* pName, const utf8* pDefault, float32 minValue, float32 maxValue )
@@ -1024,7 +1024,7 @@ namespace sw
             return false;
         // 셰이딩 모델 Hair 의 칸(hair_shading.hlsli 의 큐티클 이동 · 다중 산란, 가닥 축) — 그래프 핀이 아니라 머티리얼 칸이라 다른 그래프의 생성물이 바뀌지 않는다.
         if ( session._bHair )
-            MaterialGraphCompilerInternal::appendHairFields( outResult._listField );
+            MaterialGraphCompilerInternal::appendHairProperties( outResult._listField );
 
         MaterialGraphCompilerInternal::Session fieldLines;
         fieldLines._listField = outResult._listField;

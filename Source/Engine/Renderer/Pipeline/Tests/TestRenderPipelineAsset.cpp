@@ -567,16 +567,16 @@ SW_TEST_CASE( RenderPipelineAssetTest, DistortionPassTypesFollowTheTable )
     SW_EXPECT_FALSE( accumulate.hasFlag( RenderPassTraitFlag::kDepthWrite ) );
     const vector<string> listDistortion{ string( kMaterialDistortionDefine ), string( "MATERIAL_BLEND_TRANSLUCENT" ) };
     const vector<string> listPlain{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
-    SW_EXPECT_TRUE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listDistortion ) );
-    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listPlain ) );
-    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
+    SW_EXPECT_TRUE( FrameRendererUtil::shouldDrawMaterialInPass( RenderPassType::Distortion, &listDistortion ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::shouldDrawMaterialInPass( RenderPassType::Distortion, &listPlain ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::shouldDrawMaterialInPass( RenderPassType::Distortion, nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
     const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
     SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
     const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassType::DistortionApply );
     SW_REQUIRE_TRUE( pApply != nullptr );
-    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneColorCopy ) );
-    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::Distortion ) );
-    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneDepth ) );
+    SW_EXPECT_TRUE( pApply->hasRole( RenderPassInputRole::SceneColorCopy ) );
+    SW_EXPECT_TRUE( pApply->hasRole( RenderPassInputRole::Distortion ) );
+    SW_EXPECT_TRUE( pApply->hasRole( RenderPassInputRole::SceneDepth ) );
     SW_EXPECT_TRUE( resolveRenderPassInputRole( "SceneDistortion", false, "" ) == RenderPassInputRole::Distortion );
 }
 

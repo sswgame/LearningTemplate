@@ -49,8 +49,12 @@ namespace sw
 
     public:
         // 물리 컴포넌트가 함께 쓰는 자세 · 셰이프 도우미입니다.
-        /** @brief 월드 행렬을 자리 · 회전 · 배율로 풉니다. */
-        static void readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale );
+        /**
+         * @brief 월드 행렬을 자리 · 회전 · 배율로 풉니다. 배율 축이 하나라도 0 이면 회전을 알 수 없어 오류를 남기고(오브젝트마다 한 번) false 이며 출력은 건드리지 않습니다.
+         * @details 0 배율을 1 로 바꿔 이어 가지 않는다(폴백 금지 — 그림은 점인데 물리는 원래 크기로 남는다). 크기 0 셰이프는 백엔드(Jolt · Box2D · PhysX)도 짓지 못한다.
+         *          부르는 쪽은 그 일(바디 · 관절 만들기, 자세 쓰기, 그리기)을 이번에 건너뛰고, 시뮬레이션 중인 바디는 놓는다 — 배율이 돌아오면 다시 만든다.
+         */
+        [[nodiscard]] static bool readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale );
         /**
          * @brief 자리 · 회전 · 배율을 월드 트랜스폼으로 씁니다. 부모가 없으면 행렬을 만들어 다시 풀지 않고 로컬 값에 바로 씁니다.
          * @details 배율은 부르는 쪽이 들고 있는 값이다(트랜스폼 변경 번호가 같으면 지난번에 읽은 배율 그대로). 쓴 값을 다시 읽어 비교하지 않는다 —
@@ -124,6 +128,14 @@ namespace sw
         }
         /** @brief 이 컴포넌트가 트랜스폼에 쓴 뒤 부릅니다 — 자기 쓰기를 다음 프레임에 바깥 이동으로 보지 않게. */
         void markTransformSynced() { _syncedTransformVersion = getWorldTransformVersion(); }
+        /**
+         * @brief 백엔드 셰이프를 지은 월드 배율과 @p worldScale 이 다른지입니다(축마다 상대 허용치 — 회전한 행렬을 풀 때의 반올림은 같다고 본다).
+         * @details 셰이프는 지을 때 배율을 굽는다. 배율은 호출 순서(세터 · 재생성 요청)가 아니라 값으로 다룬다 — 물리 프레임 시작 훅이 마지막으로 읽은
+         *          배율과 지은 배율을 비교해 다르면 다시 짓는다(언리얼 `UpdateBodyScale` 은 트랜스폼 갱신마다 셰이프를 바꾸고, Godot 은 바디 배율을 경고만 한다).
+         */
+        bool isShapeScaleStale( const float3& worldScale ) const;
+        /** @brief 백엔드 셰이프를 @p scale 로 지었다고 적습니다(바디 · 캐릭터를 만든 직후). */
+        void markShapeScale( const float3& scale ) { _shapeScale = scale; }
 
         /**
          * @brief 물리 프레임 시작 — 백엔드 객체를 만들거나 트랜스폼의 바깥 변화를 옮깁니다.
@@ -154,6 +166,7 @@ namespace sw
         ScenePhysics*         _pScenePhysics;
         uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
         uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
+        float3                _shapeScale;             ///< 백엔드 셰이프를 지은 월드 배율(`isShapeScaleStale`). 바디 · 캐릭터가 없으면 뜻이 없다
         PhysicsComponentPhase _phase;
         bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
         atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다

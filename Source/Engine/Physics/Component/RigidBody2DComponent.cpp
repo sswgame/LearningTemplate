@@ -234,14 +234,36 @@ namespace sw
         _kinematicStartAngle     = angle;
         _kinematicTargetAngle    = angle;
         _bRestPoseWritten        = false;
+        markShapeScale( scale );
         physics.bindBodyOwner( *this );
     }
 
-    void RigidBody2DComponent::readWorldPose2D( float2& outPosition, float32& outAngle )
+    PhysicsBodyHandle RigidBody2DComponent::applyScaledShape( ScenePhysics& physics, IPhysicsBodyScene2D& scene )
     {
-        PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        // 셰이프는 지을 때 배율을 굽는다 — 바디를 다시 지으면 핸들이 바뀌어 닿아 있던 쌍마다 끝 → 시작이 나므로 셰이프만 간다(감사 S-4).
+        const PhysicsBodyHandle    body = _pPosePage->_arrBody[getPoseIndex()];
+        vector<PhysicsShapeDesc2D> listShape;
+        listShape.reserve( _listShape.size() );
+        for ( const PhysicsShapeDesc2D& shape : _listShape )
+        {
+            listShape.push_back( PhysicsComponent::makeScaledShape( shape, _worldScale ) );
+        }
+        if ( scene.setBodyShape( body, span<const PhysicsShapeDesc2D>{ listShape.data(), listShape.size() }, _material, _mass ) == false )
+        {
+            releasePhysics( physics );
+            return PhysicsBodyHandle{};
+        }
+        markShapeScale( _worldScale );
+        return body;
+    }
+
+    bool RigidBody2DComponent::readWorldPose2D( float2& outPosition, float32& outAngle )
+    {
+        if ( PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale ) == false )
+            return false;
         outPosition = float2{ _worldPosition._x, _worldPosition._y };
         outAngle    = PhysicsComponent::getAngle2D( _worldRotation );
+        return true;
     }
 
     void RigidBody2DComponent::beginPhysicsFrame( ScenePhysics& physics )
@@ -258,17 +280,18 @@ namespace sw
             releasePhysics( physics );
 
         // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(3D 강체와 같은 규칙).
-        const bool              bTransformChanged = consumeTransformChange();
-        PhysicsBodyPage2D&      page              = *_pPosePage;
-        const uint32            index             = getPoseIndex();
-        const PhysicsBodyHandle body              = page._arrBody[index];
-        float2                  position{};
-        float32                 angle = 0.0f;
+        const bool         bTransformChanged = consumeTransformChange();
+        PhysicsBodyPage2D& page              = *_pPosePage;
+        const uint32       index             = getPoseIndex();
+        PhysicsBodyHandle  body              = page._arrBody[index];
+        float2             position{};
+        float32            angle = 0.0f;
         // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
         SW_ASSERT( body.isValid() == false || pScene->isBodyValid( body ) );
         if ( body.isValid() == false )
         {
-            readWorldPose2D( position, angle );
+            if ( readWorldPose2D( position, angle ) == false )
+                return; // 배율 0 — 바디를 만들지 않는다(`readWorldPose` 가 알렸다). 배율이 돌아오면 이 길로 만든다
             createBody( physics, *pScene, position, angle, _worldScale );
             (void)consumeTeleport();
             return;
@@ -282,8 +305,17 @@ namespace sw
 
         const bool bTeleported = consumeTeleport();
         const bool bMoved      = bTeleported || bTransformChanged;
-        if ( bMoved )
-            readWorldPose2D( position, angle );
+        if ( bMoved && readWorldPose2D( position, angle ) == false )
+        {
+            releasePhysics( physics ); // 배율 0 — 셰이프를 지을 수 없어 시뮬레이션에서 뺀다(3D 강체와 같다)
+            return;
+        }
+        if ( isShapeScaleStale( _worldScale ) )
+        {
+            body = applyScaledShape( physics, *pScene );
+            if ( body.isValid() == false )
+                return;
+        }
         if ( _bodyType == PhysicsBodyType::Kinematic && bTeleported == false )
         {
             _kinematicStartPosition = page._arrCurrentPosition[index];

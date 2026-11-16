@@ -114,8 +114,8 @@ namespace sw::editor
         {
             (void)parseLine( line, progress ); // 진입점이 찍지 않은 줄(빌드 · 쿠커 출력)은 지나친다
         }
-        const bool bFinishedWithoutVerdict = progress._state == PackagingState::Idle || progress._state == PackagingState::Running;
-        if ( bFinishedWithoutVerdict || ( progress._state == PackagingState::Succeeded && exitCode != 0 ) )
+        const bool bFinishedWithoutResult = progress._state == PackagingState::Idle || progress._state == PackagingState::Running;
+        if ( bFinishedWithoutResult || ( progress._state == PackagingState::Succeeded && exitCode != 0 ) )
         {
             progress._state   = PackagingState::Failed;
             progress._failure = listLine.empty() ? string{ "the packaging script printed nothing (is Python on PATH?)" } : listLine.back();

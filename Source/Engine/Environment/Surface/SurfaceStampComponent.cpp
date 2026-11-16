@@ -96,7 +96,7 @@ namespace sw
             return;
         // 한 프레임에 너무 멀리 간 것은 순간 이동(배치 · 리스폰)이다 — 그 사이 땅을 긋지 않고 새 자리에서 다시 시작한다.
         if ( distance <= _trailBreak )
-            deform.stampSegment( _stamp, _lastPoint, point );
+            deform.applySegmentStamp( _stamp, _lastPoint, point );
         _lastPoint = point;
     }
 

@@ -1,5 +1,5 @@
 {
-    "_comment": "프레임 함수 안에서 리터럴로 hashed_string 을 만들어도 되는 자리(Scripts/lint/FrameIntern.py). 키는 경로::함수, 값은 까닭이다.",
+    "_comment": "프레임 함수 안에서 리터럴로 hashed_string 을 만들어도 되는 자리(Scripts/lint/frame_intern.py). 키는 경로::함수, 값은 까닭이다.",
     "_exceptions": {
         "Source/Games/Empty/StressTestScene.cpp::updateProbes": "개발용 스트레스 씬이 오브젝트를 처음 만들 때 한 번이다",
         "Source/Games/NileCity/NileGameModeComponent.cpp::updateInput": "게임 스레드 입력, 프레임당 키 수가 상수이고 워커 경합이 없다",

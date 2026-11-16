@@ -92,6 +92,7 @@ namespace sw
     }
 
     CombatAttributeSet::CombatAttributeSet()
+        : _bApplyingDamage{ 0 }
     {
         defineAttribute( CombatAttributes::health(), 100.0f );
         defineAttribute( CombatAttributes::maxHealth(), 100.0f );
@@ -135,6 +136,11 @@ namespace sw
     {
         AttributeSet::postAttributeChange( name, oldValue, newValue );
 
+        // 쓰러짐은 체력의 전이 한 곳에서 낸다 — 어느 길로 0 이 되든 래그돌 신호(`AbilityComponent`)와 사망 처리가 함께 난다.
+        const bool bOutOfHealth = name == CombatAttributes::health() && oldValue > 0.0f && newValue <= 0.0f && _bApplyingDamage == 0;
+        if ( bOutOfHealth && getOwningAbilitySystem() != nullptr )
+            handleOutOfHealth( getOwningAbilitySystem()->getExecutingInstigator() );
+
         // 최대치가 줄면(버프가 해제되면) 현재치도 따라서 줄인다. 최대치가 늘 때는 그대로 둔다. 최대 체력 버프로 체력이 차오르지 않는다(언리얼 Lyra 와 같음).
         AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || newValue >= oldValue )
@@ -165,7 +171,7 @@ namespace sw
     void CombatAttributeSet::postFatalDamage()
     {
         AttributeSet::postFatalDamage();
-        handleOutOfHealth( AttributeModCallbackData{} );
+        handleOutOfHealth( GameObjectHandle{} ); // 체력이 이미 0 이어서 전이가 없던 즉사도 쓰러뜨린다(두 번째 부름은 태그가 막는다)
     }
 
     void CombatAttributeSet::clampCombatValue( const hashed_string& name, float32& inoutValue ) const
@@ -202,7 +208,9 @@ namespace sw
             return;
 
         const float32 oldHealth = CombatAttributeSetInternal::readOwnBase( *this, CombatAttributes::health() );
+        _bApplyingDamage        = 1;
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::health(), oldHealth - damage );
+        _bApplyingDamage        = 0;
         const float32 newHealth = CombatAttributeSetInternal::readOwnBase( *this, CombatAttributes::health() );
 
         GameObject* pOwner = pAbilitySystem->getOwner();
@@ -217,7 +225,7 @@ namespace sw
         }
 
         if ( newHealth <= 0.0f )
-            handleOutOfHealth( data );
+            handleOutOfHealth( data._pSpec != nullptr ? data._pSpec->_context._instigator : GameObjectHandle{} );
     }
 
     void CombatAttributeSet::applyIncomingHealing( const AttributeModCallbackData& data )
@@ -236,7 +244,7 @@ namespace sw
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::health(), health + healing ); // 최대치는 훅이 자른다
     }
 
-    void CombatAttributeSet::handleOutOfHealth( const AttributeModCallbackData& data )
+    void CombatAttributeSet::handleOutOfHealth( GameObjectHandle instigator )
     {
         AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
@@ -246,9 +254,8 @@ namespace sw
         pAbilitySystem->getOwnedTagCounts().updateCount( getDeadTag(), 1 );
         pAbilitySystem->cancelAllAbilities();
 
-        GameObject*      pOwner     = pAbilitySystem->getOwner();
-        GameObjectHandle target     = pOwner != nullptr ? pOwner->getHandle() : GameObjectHandle{};
-        GameObjectHandle instigator = data._pSpec != nullptr ? data._pSpec->_context._instigator : GameObjectHandle{};
+        GameObject*      pOwner = pAbilitySystem->getOwner();
+        GameObjectHandle target = pOwner != nullptr ? pOwner->getHandle() : GameObjectHandle{};
 
         AbilityEventData deathEvent;
         deathEvent._eventTag   = getDeathEventTag();

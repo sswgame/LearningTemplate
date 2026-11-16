@@ -120,7 +120,7 @@ namespace sw::editor
         BehaviorTreeEditNode node{};
         node._id     = _nextID++;
         node._parent = parentID;
-        BehaviorTreeXML::resetNodeFields( type, node );
+        BehaviorTreeXML::resetNodeProperties( type, node );
         _listNode.push_back( std::move( node ) );
 
         const int32 newID = _listNode.back()._id;
@@ -321,7 +321,7 @@ namespace sw::editor
             return unexpected( Internal::makeNodeError( node, "A leaf node cannot have child nodes" ) );
 
         BehaviorTreeEditNode value{};
-        if ( BehaviorTreeXML::readNodeFields( node, type, "BehaviorTreeEditModel", value ) == false )
+        if ( BehaviorTreeXML::readNodeProperties( node, type, "BehaviorTreeEditModel", value ) == false )
             return unexpected( Internal::makeNodeError( node, "The node has a missing, unknown or invalid attribute - see the log" ) );
 
         const expected<int32> added = addNode( parentID, type );
@@ -400,7 +400,7 @@ namespace sw::editor
         if ( pNode == nullptr )
             return;
         const XMLNode xml = parentXML.appendChild( BehaviorTreeNames::toString( pNode->_type ) );
-        BehaviorTreeXML::writeNodeFields( xml, *pNode );
+        BehaviorTreeXML::writeNodeProperties( xml, *pNode );
         for ( const int32 childID : pNode->_listChild )
         {
             writeNode( childID, xml );

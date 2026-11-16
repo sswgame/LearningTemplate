@@ -460,7 +460,7 @@ namespace sw
             pBody->addImpulse( impulse );
             pDraw->setMesh( std::move( pieceMesh ) );
             if ( pUnit->getMaterialPath().empty() == false )
-                pDraw->setMaterialPath( pUnit->getMaterialPath().viewOrEmpty() );
+                pDraw->setMaterialPath( pUnit->getMaterialPath().view() );
             else
                 pDraw->setMaterial( pUnit->getMaterial() );
             _listPiece.push_back( pPiece->getHandle() );

@@ -15,7 +15,7 @@ namespace sw::internal
         /** @brief 로그가 설치한 보고자입니다. 상수 초기화라 정적 초기화 순서를 타지 않습니다. */
         std::atomic<LowLevelReporterFunc> s_pfnLowLevelReporter{ nullptr };
         /**
-         * @brief 단언 대화상자의 사용자 설정입니다(에디터 환경설정 Editor/Diagnostics). 대화상자는 Debug 에만 있지만 설정은 모든 구성에 둔다 —
+         * @brief 단언 대화상자의 사용자 설정입니다(에디터 환경설정 Editor/Diagnostics). 대화상자는 검사 구성(SW_DO_CHECKS)에만 있지만 설정은 모든 구성에 둔다 —
          *        에디터가 구성마다 다른 길 없이 입히고 읽게 한다. 설정을 읽기 전의 초기화 구간은 이 기본값(띄움 · 기억함)으로 돈다.
          */
         std::atomic<bool> s_bShowAssertDialog{ true };
@@ -101,7 +101,7 @@ namespace sw::internal
     }
 } // namespace sw::internal
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 namespace sw::internal
 {
     namespace
@@ -242,10 +242,10 @@ namespace sw::internal
     {
         utf8 arrText[kLowLevelMessageCapacity];
         formatLowLevelMessage( arrText, kLowLevelMessageCapacity, "Required lookup is missing: %s", pLookup );
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         if ( tryCaptureAssert() )
         {
-            // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+            // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 검사 구성(SW_DO_CHECKS)에만 있다
             reportLowLevel( LowLevelReportLevel::Error, __FILE__, static_cast<int32>( __LINE__ ), arrText, SW_ASSERT_LOG_ID );
             return;
         }

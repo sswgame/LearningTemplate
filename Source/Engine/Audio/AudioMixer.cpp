@@ -181,9 +181,9 @@ namespace sw
             }
             for ( size_t candidate = 0; candidate < _listBusState.size(); ++candidate )
             {
-                for ( optional<uint32> walk = _listBusState[candidate]._parentIndex; walk.has_value(); walk = _listBusState[*walk]._parentIndex )
+                for ( optional<uint32> visit = _listBusState[candidate]._parentIndex; visit.has_value(); visit = _listBusState[*visit]._parentIndex )
                 {
-                    if ( *walk == static_cast<uint32>( busIndex ) )
+                    if ( *visit == static_cast<uint32>( busIndex ) )
                     {
                         _listBusState[candidate]._bAudible = SW_TRUE;
                         break;

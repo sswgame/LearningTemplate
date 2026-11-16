@@ -36,7 +36,7 @@ namespace sw
 
         /** @brief 맨 포인터는 그대로, 스마트 포인터는 가리키는 객체, 값은 그 주소입니다. */
         template <class T>
-        auto arrowOf( const T& value )
+        auto getArrowOf( const T& value )
         {
             if constexpr ( std::is_pointer_v<T> )
                 return value;
@@ -81,7 +81,7 @@ namespace sw
         const T& get() const { return _value; }
 
         /** @brief 값이면 그 주소, 포인터류면 가리키는 객체입니다. */
-        auto operator->() const { return OnceInitInternal::arrowOf( _value ); }
+        auto operator->() const { return OnceInitInternal::getArrowOf( _value ); }
 
     private:
         T            _value{};

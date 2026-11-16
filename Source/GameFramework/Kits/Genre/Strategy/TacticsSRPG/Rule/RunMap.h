@@ -120,7 +120,7 @@ namespace sw
 
     private:
         int32         getOrCreateNode( int32 floor, int32 column );
-        bool          crossesExisting( int32 floor, int32 fromColumn, int32 toColumn ) const;
+        bool          intersectsExisting( int32 floor, int32 fromColumn, int32 toColumn ) const;
         hashed_string pickKind( const RunMapSettings& settings, int32 floor, const hashed_string& previousKind, GameRandom& random ) const;
 
     private:

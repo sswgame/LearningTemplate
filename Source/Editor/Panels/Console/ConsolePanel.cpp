@@ -622,8 +622,8 @@ namespace sw::editor
     {
         ImGui::SetNextItemWidth( -1.0f );
         constexpr ImGuiInputTextFlags kFlags     = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCompletion;
-        const bool                    bSubmitted = ImGui::InputTextWithHint( "##ConsoleCommand", SW_LOCKEY( "EditorConsole", "CommandHint" ), _commandBuffer.data(),
-                                                                             _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
+        const bool                    bSubmitted = EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##ConsoleCommand" ), SW_LOCKEY( "EditorConsole", "CommandHint" ), _commandBuffer.data(),
+                                                                                     _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
         if ( bSubmitted )
         {
             (void)_devConsole.submit( _commandBuffer.c_str() ); // 답 · 실패는 로그로 남아 이 패널에 보인다
@@ -773,7 +773,7 @@ namespace sw::editor
         // (`<AllowLog>` 는 나와도 되는 줄일 뿐 기대한 줄이 아니라 경고색 그대로다). 언리얼 Automation 의 `AddExpectedError` 도 기대 오류를 로그 출력에서 따로 표시한다.
         const bool bScenarioDeclared = _pScenarioLogPolicy != nullptr &&
                                        _pScenarioLogPolicy->classify( entry._level, entry._pID != nullptr ? string_view{ entry._pID } : string_view{}, entry._message ) == AutomationLogResult::Declared;
-        consoleEntry._bExpected = bScenarioDeclared || ( AutomationLogPolicy::isGatedLevel( entry._level ) && test::isExpectedLog( entry._pID ) );
+        consoleEntry._bExpected = bScenarioDeclared || ( AutomationLogPolicy::isCheckedLevel( entry._level ) && test::isExpectedLog( entry._pID ) );
         ScopedLock<mutex> lock{ _entriesMutex };
         if ( entry._level == LogLevel::Error && consoleEntry._bExpected == false )
             ++_errorSerial; // 오류 때 멈춤은 진짜 오류에만

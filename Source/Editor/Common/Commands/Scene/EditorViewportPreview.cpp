@@ -7,6 +7,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -14,6 +15,7 @@
 
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -56,7 +58,7 @@ namespace sw::editor
             }
 
             /** @brief 대사 미리보기 메서드의 시그니처( string graphPath, uint32 speakerID, string text ) -> GameObjectHandle 인지입니다. */
-            static bool takesDialogueLineArgs( const FunctionInfo& method )
+            static bool hasDialogueLineArgs( const FunctionInfo& method )
             {
                 // 인자 타입은 넘길 C++ 타입의 내장 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 리터럴을 두지 않는다.
                 const auto isParameterOf = []( const FunctionParameterInfo& parameter, ReflectBuiltinIndex builtinIndex )
@@ -101,7 +103,7 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr )
             return; // 선택(②): 미리보기는 씬이 없는 에디터에서도 열 수 있다. 재생할 대상이 없다
-        const vector<GameObject*> listObject = pManager->getAllGameObjects();
+        const vector<GameObject*> listObject = pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey() );
         for ( GameObject* pObject : listObject )
         {
             if ( pObject == nullptr || pObject == pPrimary )
@@ -126,7 +128,7 @@ namespace sw::editor
         GameObjectHandle   speakerObject{};
         if ( pManager != nullptr )
         {
-            const vector<GameObject*> listObject = pManager->getAllGameObjects();
+            const vector<GameObject*> listObject = pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey() );
             for ( GameObject* pObject : listObject )
             {
                 if ( pObject == nullptr )
@@ -140,7 +142,7 @@ namespace sw::editor
                     const FunctionInfo* pMethod = findPreviewMethod( *pType, kDialogueLinePreview );
                     if ( pMethod == nullptr )
                         continue;
-                    if ( EditorViewportPreviewInternal::takesDialogueLineArgs( *pMethod ) == false )
+                    if ( EditorViewportPreviewInternal::hasDialogueLineArgs( *pMethod ) == false )
                     {
                         SW_LOG_WARNING_ID( "EditorViewportPreview.EditorPreviewButDoesNot", "%#::%# is EditorPreview=%# but does not take ( string graphPath, uint32 speakerID, string text )",
                                            pType->_name.c_str(), pMethod->_name.c_str(), kDialogueLinePreview );
@@ -165,7 +167,7 @@ namespace sw::editor
     {
         if ( previewKind.empty() )
             return nullptr;
-        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        for ( const TypeInfo* pType : type.getTypeChain() )
         {
             for ( const FunctionInfo& method : pType->_listMethod )
             {
@@ -230,4 +232,25 @@ namespace sw::editor
         if ( pSprite != nullptr && assetPath.empty() == false )
             pSprite->setMaterialPath( assetPath );
     }
+
+    namespace
+    {
+        /**
+         * @brief 체인의 다음 단계 앞에서 미리보기가 쥔 머티리얼 참조를 놓습니다. 편집기 상태는 단계를 넘어 남아, 앞 단계(assetmove)가 마지막에 본
+         *        scratch 머티리얼이 캐시에 남았고 그 사본 폴더를 거둔 뒤 장치 재생성이 그 파일을 다시 읽다 졌다(flowterrain · flowboundaries).
+         */
+        void releasePreviewMaterialForNextStage()
+        {
+            EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>(); // 선택: 에디터 없이 도는 체인에는 없다
+            if ( pStore == nullptr )
+                return;
+            EditorViewportPreviewInternal::PreviewMaterialState& heldMaterial = pStore->get<EditorViewportPreviewInternal::PreviewMaterialState>();
+            if ( heldMaterial._acquiredPath.empty() )
+                return;
+            editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( heldMaterial._acquiredPath );
+            heldMaterial._acquiredPath.clear();
+        }
+    } // namespace
+
+    SW_AUTOMATION_STAGE_RESET( editorViewportPreviewMaterial, "viewport preview material reference", &releasePreviewMaterialForNextStage );
 } // namespace sw::editor

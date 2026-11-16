@@ -15,14 +15,14 @@ namespace sw
      * @class IGameAutoplayQuery
      * @brief 개발 스위치(`-gv_<게임>AutoPlay` · 에디터 툴바 · 콘솔 `autoplay`)의 자동 플레이 질의입니다. 게임 스레드와 틱 워커에서 읽습니다(값 하나를 읽을 뿐이다).
      */
-    class IGameAutoplayQuery
+    class SW_API IGameAutoplayQuery
     {
     public:
         virtual ~IGameAutoplayQuery() = default;
 
         /** @brief 지금 올라온 게임의 개발 스위치가 자동 플레이를 켰으면 true 입니다(등록이 없으면 false). */
         [[nodiscard]] virtual bool isGameAutoplayOn() const = 0;
-    };
 
-    SW_SERVICE_SLOT( IGameAutoplayQuery, Optional );
+        SW_SERVICE_SLOT( IGameAutoplayQuery, Optional );
+    };
 } // namespace sw

@@ -50,7 +50,7 @@ namespace sw
 {
     /**
      * @struct NileAutoPlanStepDef
-     * @brief 자동 계획 파일(`data/autoplan.xml`)의 `<Road>` · `<Building>` 원소 하나의 칸입니다. 속성 이름은 칸 이름에서 `_` 를 뗀 것이다(`XMLFields::readFields`).
+     * @brief 자동 계획 파일(`data/autoplan.xml`)의 `<Road>` · `<Building>` 원소 하나의 칸입니다. 속성 이름은 칸 이름에서 `_` 를 뗀 것이다(`XMLFields::readProperties`).
      * @details 칸 좌표("x,y", x 는 배치 이름 road · farm 일 수 있다)는 배치를 알아야 풀리므로 글 그대로 둔다 — 푸는 쪽은 `NileCityPlanner::reset` 이다.
      */
     REFLECT()

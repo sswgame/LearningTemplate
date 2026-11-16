@@ -71,7 +71,7 @@ namespace sw
         return nullptr;
     }
 
-    uint32 StatCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 StatCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<StatCatalog>;
         static constexpr Element kArrElement[] = {
@@ -87,7 +87,7 @@ namespace sw
 
         // 칸 · 종류 이름 · 상한 >= 0 은 StatDef 의 PROPERTY 가 본다. 틀린 통계는 넣지 않는다(자르지 않는다).
         StatDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
             return false;
         if ( def._name.empty() )
             def._name = def._id.c_str();
@@ -99,7 +99,7 @@ namespace sw
     {
         // 칸 · 필수 · 문턱 >= 0 은 AchievementDef 의 PROPERTY 가 본다. 통계가 있는지는 쓰는 쪽(`AchievementTracker::initialize`)이 본다 - 원소 순서에 매이지 않는다.
         AchievementDef def;
-        if ( XMLFields::readFields( node, def, sourceName ) == false )
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
             return false;
         if ( def._name.empty() )
             def._name = def._id.c_str();

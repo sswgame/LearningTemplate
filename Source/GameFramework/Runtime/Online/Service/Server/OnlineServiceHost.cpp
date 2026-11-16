@@ -366,10 +366,10 @@ namespace sw
         _nowMs = nowMs;
         if ( _settings._transportSettings._ioThreadCount == 0 )
             (void)_listenerTransport->pollIO( 0 );
-        (void)_endpoint.pump( *this );
+        (void)_endpoint.poll( *this );
         closeExpiredHelloConnections();
         _requestServer.update();
-        (void)_ephemeralRouter.pump();
+        (void)_ephemeralRouter.poll();
         if ( _settings._pServerBusTransport != nullptr )
         {
             _listBusScratch.clear();

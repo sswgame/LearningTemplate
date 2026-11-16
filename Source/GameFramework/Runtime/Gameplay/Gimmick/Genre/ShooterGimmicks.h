@@ -40,6 +40,9 @@ namespace sw
         ExplosiveBarrelComponent();
         virtual ~ExplosiveBarrelComponent() override = default;
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         void    onTick( TickContext& context ) override;
         void    stepOnce();
         bool    hasExploded() const { return _bExploded; }

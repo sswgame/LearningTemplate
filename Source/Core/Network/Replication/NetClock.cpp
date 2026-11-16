@@ -41,11 +41,11 @@ namespace sw
 
     void NetClock::observeServerTick( uint32 serverTick )
     {
-        const float32 tick = static_cast<float32>( serverTick );
+        const float64 tick = static_cast<float64>( serverTick );
         if ( _bHasServerTick == SW_FALSE )
         {
             _serverTick     = tick;
-            _renderTick     = tick - computeInterpolationDelay() / getTickInterval();
+            _renderTick     = tick - static_cast<float64>( computeInterpolationDelay() / getTickInterval() );
             _newestTick     = serverTick;
             _bHasServerTick = SW_TRUE;
             return;
@@ -60,10 +60,10 @@ namespace sw
             return;
         // 추정은 흐르는 시간만큼 앞으로 가되 받은 가장 새 틱 + 지연을 넘지 않는다(렌더 틱이 받은 틱을 지나치지 않게). 렌더 틱은 뒤로 가지 않는다 — 지연이 커져도
         // (표본 간격이 늘었다) · 받은 틱이 끊겨도 멈춰 기다린다.
-        const float32 tickInterval = getTickInterval();
-        const float32 delayTicks   = computeInterpolationDelay() / tickInterval;
-        const float32 ceiling      = static_cast<float32>( _newestTick ) + delayTicks;
-        _serverTick                = MathUtil::min( _serverTick + deltaTime / tickInterval, ceiling );
+        const float64 tickInterval = static_cast<float64>( getTickInterval() );
+        const float64 delayTicks   = static_cast<float64>( computeInterpolationDelay() ) / tickInterval;
+        const float64 ceiling      = static_cast<float64>( _newestTick ) + delayTicks;
+        _serverTick                = MathUtil::min( _serverTick + static_cast<float64>( deltaTime ) / tickInterval, ceiling );
         _renderTick                = MathUtil::max( _renderTick, _serverTick - delayTicks );
     }
 } // namespace sw

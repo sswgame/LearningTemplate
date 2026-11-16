@@ -174,7 +174,7 @@ namespace sw
         SubscriptionList                         _extraTextSubscriptions;
         CrashHandler*                            _pOuter; ///< 설치했을 때 앞서 설치돼 있던 처리기(떼면 그것이 다시 보고한다)
         uint8                                    _bInstalled : 1;
-    };
 
-    SW_SERVICE_SLOT( CrashHandler, Required );
+        SW_SERVICE_SLOT( CrashHandler, Required );
+    };
 } // namespace sw

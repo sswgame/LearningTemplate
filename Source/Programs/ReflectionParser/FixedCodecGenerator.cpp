@@ -64,7 +64,7 @@ namespace sw
                 (void)state.addDependency( FixedCodecGeneratorInternal::kBaseFieldName, type._parentFQN ); // 기반은 의존 0 번이다(런타임 `FixedCodec::_pBaseCast`)
             }
             state._listInlineFqn.push_back( type._fullyQualifiedName );
-            FixedCodecValueEmitter::emitFields( state, type, canonical, state._listRootNode );
+            FixedCodecValueEmitter::emitProperties( state, type, canonical, state._listRootNode );
 
             if ( state._bError == SW_TRUE )
                 bValid = false;

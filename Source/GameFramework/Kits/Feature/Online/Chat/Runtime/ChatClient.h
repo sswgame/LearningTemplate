@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
@@ -29,12 +29,12 @@ namespace sw
         ChatClient();
 
         /** @brief 메시지 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(메시지를 서로 가져가는 일을 막는다). */
-        [[nodiscard]] bool claimMessages( ConsumerLease& outLease ) { return _messageGate.claim( outLease ); }
+        [[nodiscard]] bool claimMessages( ConsumerLease& outLease ) { return _messageConsumerLock.claim( outLease ); }
         /** @brief 받은 메시지(채널과 귓속말)를 @p outListMessage 끝에 넘깁니다. @p lease 는 `claimMessages` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
         void pollMessages( const ConsumerLease& lease, vector<ChatMessage>& outListMessage )
         {
-            SW_ASSERT( _messageGate.isHeldBy( lease ) );
-            if ( _messageGate.isHeldBy( lease ) )
+            SW_ASSERT( _messageConsumerLock.isHeldBy( lease ) );
+            if ( _messageConsumerLock.isHeldBy( lease ) )
                 _messageBuffer.moveAllTo( outListMessage );
         }
 
@@ -42,7 +42,7 @@ namespace sw
         void onPush( ChatMethod::Message, const ChatMessage& body );
 
     private:
-        ConsumerGate             _messageGate;
+        ConsumerLock             _messageConsumerLock;
         EventBuffer<ChatMessage> _messageBuffer;
     };
 } // namespace sw

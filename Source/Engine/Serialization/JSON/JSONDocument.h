@@ -147,8 +147,16 @@ namespace sw
             return read != JSONValueRead::Invalid;
         }
 
-        /** @brief 이 서브트리를 JSON 문자열로 직렬화합니다. indent 가 음수이면 한 줄로 만듭니다. */
-        string dump( int32 indent = -1 ) const;
+        /**
+         * @brief 이 서브트리를 JSON 문자열로 직렬화합니다. indent 가 음수이면 한 줄로 만듭니다.
+         * @return 키 · 문자열에 잘못된 UTF-8 바이트가 있으면(`setString` 은 바이트를 검사하지 않는다) `InvalidArgument` 오류입니다. 바이트를 몰래 바꾸지 않습니다.
+         */
+        [[nodiscard]] expected<string> dump( int32 indent = -1 ) const;
+        /**
+         * @brief 한 줄 글입니다. 실패하지 않습니다 — 잘못된 UTF-8 은 U+FFFD 로 바꿉니다(`JSONWriter` 와 같은 규칙).
+         * @details 바꿔 써도 되는 곳(로그 · 오류 세부 · 구조화 로그 줄 · 텔레메트리)만 쓴다. 다시 읽어 값으로 쓰는 저장 · 전송은 `dump` 다.
+         */
+        string describe() const;
         /** @brief 다른 핸들의 값을 이 노드에 복사합니다. */
         void assignFrom( const JSONValue& other ) const;
 
@@ -251,6 +259,9 @@ namespace sw
     class SW_API JSONDocument
     {
     public:
+        /** @brief `dump` 의 indent 로 넘기면 한 줄 글입니다(음수면 한 줄). */
+        static constexpr int32 kSingleLineIndent = -1;
+
         // ------------------------------------------------------------------------------
         // 3) 수명: 복사 금지, 이동 가능
         // ------------------------------------------------------------------------------
@@ -310,9 +321,9 @@ namespace sw
         JSONValue makeObject();
         /** @brief 루트를 빈 배열로 만들고 반환합니다. */
         JSONValue makeArray();
-        /** @brief 현재 문서를 JSON 문자열로 직렬화합니다. indent 가 음수이면 한 줄로 만듭니다. */
-        string dump( int32 indent = -1 ) const;
-        /** @brief 현재 문서를 절대 경로에 씁니다. indent 가 음수이면 한 줄로 씁니다. */
+        /** @brief 현재 문서를 JSON 문자열로 직렬화합니다. indent 가 음수이면 한 줄로 만듭니다. 실패 규칙은 `JSONValue::dump` 와 같습니다. */
+        [[nodiscard]] expected<string> dump( int32 indent = -1 ) const;
+        /** @brief 현재 문서를 절대 경로에 씁니다. indent 가 음수이면 한 줄로 씁니다. 직렬화가 실패하면(잘못된 UTF-8) 오류를 남기고 쓰지 않습니다. */
         [[nodiscard]] bool saveToFile( string_view absPath, int32 indent = -1 ) const;
 
         // ------------------------------------------------------------------------------

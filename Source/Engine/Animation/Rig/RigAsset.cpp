@@ -192,7 +192,7 @@ namespace sw
     {
         RigXMLReader       reader( root, sourceLabel );
         RigAssetRootParams rootParams;
-        if ( reader.readFields( rootParams ) == false )
+        if ( reader.readProperties( rootParams ) == false )
             return false;
         _bPlanar                 = rootParams._bPlanar ? SW_TRUE : SW_FALSE;
         const RigXMLList targets = reader.readArray( "targets", false );
@@ -221,7 +221,7 @@ namespace sw
     {
         RigXMLReader    reader( value, sourceLabel );
         RigTargetParams params;
-        bool            bOk = reader.readFields( params );
+        bool            bOk = reader.readProperties( params );
         bOk                 = reader.finish() && bOk;
         if ( bOk == false )
             return false;
@@ -243,10 +243,10 @@ namespace sw
             return false;
         }
         // 접촉 대상은 자기 유닛 본에서 쏜다 — 광선 길이 · 방향은 필수다(기본값으로 조용히 0 길이 광선이 되지 않게).
-        const bool bTraceFieldsWithoutTrace = bTrace == false && ( params._traceDistance > 0.0f || params._traceDirection.getLengthSquared() > 0.0f );
-        const bool bTraceInvalid            = bTrace && ( params._traceDistance <= 0.0f || params._traceDirection.getLengthSquared() < MathUtil::kEpsilon || target._skeletalMesh.empty() == false ||
+        const bool bTracePropertiesWithoutTrace = bTrace == false && ( params._traceDistance > 0.0f || params._traceDirection.getLengthSquared() > 0.0f );
+        const bool bTraceInvalid                = bTrace && ( params._traceDistance <= 0.0f || params._traceDirection.getLengthSquared() < MathUtil::kEpsilon || target._skeletalMesh.empty() == false ||
                                                target._space.empty() == false );
-        if ( bTraceFieldsWithoutTrace || bTraceInvalid )
+        if ( bTracePropertiesWithoutTrace || bTraceInvalid )
         {
             SW_LOG_ERROR_ID( "RigAsset.RigTraceTargetInvalid",
                              "Rig '%#': target '%#' - a trace target needs 'trace_from', 'trace_direction' (non-zero) and 'trace_distance' (> 0) and cannot name 'skeletalMesh' or 'space'",

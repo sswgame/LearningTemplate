@@ -66,7 +66,7 @@ namespace sw::editor
                     return;
                 }
 
-                if ( ImGui::BeginCombo( pLabel, row._valueText.c_str() ) == false )
+                if ( EditorWidgets::beginCombo( pLabel, row._valueText.c_str() ) == false )
                     return;
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "SelectAll" ) ) )
                 {
@@ -85,7 +85,7 @@ namespace sw::editor
                     if ( choice._value == 0 )
                         continue;
                     bool bChecked = ( ( inoutEditedValue & choice._value ) == choice._value );
-                    if ( ImGui::Checkbox( choice._name.c_str(), &bChecked ) )
+                    if ( ImGui::Checkbox( choice._name.toString().data(), &bChecked ) )
                     {
                         if ( bChecked )
                             inoutEditedValue |= choice._value;
@@ -108,18 +108,18 @@ namespace sw::editor
                     return;
                 }
 
-                if ( ImGui::BeginCombo( pLabel, row._valueText.c_str() ) == false )
+                if ( EditorWidgets::beginCombo( pLabel, row._valueText.c_str() ) == false )
                     return;
                 for ( const PropertyEnumChoice& choice : row._listChoice )
                 {
                     const bool bSelected = ( choice._value == row._enumValue );
-                    if ( ImGui::Selectable( choice._name.c_str(), bSelected ) )
+                    if ( ImGui::Selectable( choice._name.toString().data(), bSelected ) )
                         outEditedValue = choice._value;
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
                         // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
                         fixed_string<constant::buffer::kMax128> itemMark;
-                        formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", row._propName.c_str(), choice._name.c_str() );
+                        formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", row._propName.c_str(), choice._name );
                         EditorSelfTestMarks::record( itemMark.c_str() );
                     }
                     if ( bSelected )
@@ -670,7 +670,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256> elementText{ row._valueText.c_str() };
         const bool                              bEditable = row._bReadOnly == SW_FALSE;
         ImGui::SetNextItemWidth( -FLT_MIN );
-        if ( ImGui::InputText( "##element", elementText.data(), elementText.capacity(), bEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly ) && bEditable )
+        if ( EditorWidgets::inputText( SW_WIDGET_ID( "##element" ), elementText.data(), elementText.capacity(), bEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly ) && bEditable )
         {
             _pendingEdit      = PendingRowEdit::ReplaceKeyedElement;
             _pendingEditRowID = row._parentRowID;
@@ -684,7 +684,7 @@ namespace sw::editor
         const ImGuiID                            rowID = ImGui::GetID( "##add" );
         fixed_string<constant::buffer::kMax256>& text  = _mapContainerAddText[static_cast<uint32>( rowID )];
         ImGui::SetNextItemWidth( -FLT_MIN );
-        const bool bEntered = ImGui::InputTextWithHint( "##add", pHint, text.data(), text.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bEntered = EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##add" ), pHint, text.data(), text.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         if ( bEntered == false || text.empty() )
             return false;
         outText = text.c_str();

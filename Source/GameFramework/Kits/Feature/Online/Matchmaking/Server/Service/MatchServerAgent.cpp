@@ -77,7 +77,7 @@ namespace sw
         return true;
     }
 
-    bool MatchServerAgent::isAdmitted( AccountID accountID ) const
+    bool MatchServerAgent::isAccepted( AccountID accountID ) const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _mapAccountToExpected.find( accountID ) != _mapAccountToExpected.end();

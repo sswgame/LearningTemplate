@@ -141,9 +141,9 @@ namespace sw
 
     private:
         AssetRedirectInternal::State _state;
-    };
 
-    SW_SERVICE_SLOT( AssetRedirectTable, Required );
+        SW_SERVICE_SLOT( AssetRedirectTable, Required );
+    };
 } // namespace sw
 
 namespace sw

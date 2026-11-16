@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Security/NetReplayWindow.h"
 #include "Core/Network/Security/NetSessionKeys.h"
@@ -228,4 +229,24 @@ SW_TEST_CASE( NetReplayWindowTest, SessionKeysBindSaltsProtocolAndSessionSecret 
     SW_REQUIRE_TRUE( NetSessionKeys::computeProofKey( provider, secret, arrProofKey ) );
     SW_EXPECT_TRUE( provider._salt.empty() );
     SW_EXPECT_TRUE( provider._info == vector<uint8>( { 's', 'w', '-', 'n', 'e', 't', '-', 'p', 'r', 'o', 'o', 'f', '-', 'v', '1' } ) );
+}
+
+// 접속 증명 태그는 PRF(HKDF, info = 라벨 ‖ 전사)다 — 고정 nonce AEAD 로 봉인하면 같은 비밀로 태그가 두 번 나갈 때 인증 키가 복원되어 위조할 수 있었다(감사 N-1).
+// 전사(솔트 둘 · 공개 키 · 토큰)가 info 에 그대로 들어가고, 검증은 같은 값을 다시 만들어 상수 시간으로 견준다.
+SW_TEST_CASE( NetSessionKeysTest, ConnectProofIsPRFOverTheTranscript )
+{
+    RecordingSecurityProvider provider;
+    NetSessionSecret          secret;
+    uint8                     arrPublicKey[NetSecurityConstant::kX25519KeySize]{};
+    arrPublicKey[0]        = 0x5A;
+    const uint8 arrToken[] = { 1, 2, 3 };
+    uint8       arrTag[NetSecurityConstant::kAEADTagSize]{};
+    SW_REQUIRE_TRUE( NetPacketSealer::computeProofTag( provider, NetAEADAlgorithm::ChaCha20Poly1305, secret, 0x1111u, 0x2222u, arrPublicKey, arrToken, 3, arrTag ) );
+    static constexpr char kLabel[] = "sw.net.connect-proof.v2";
+    SW_REQUIRE_EQUAL( sizeof( kLabel ) + 16u + sizeof( arrPublicKey ) + sizeof( arrToken ), provider._info.size() );
+    SW_EXPECT_TRUE( std::memcmp( provider._info.data(), kLabel, sizeof( kLabel ) ) == 0 );
+    SW_EXPECT_EQUAL( 0x22, static_cast<int32>( provider._info[sizeof( kLabel ) + 8] ) ); // 서버 솔트(리틀 엔디언)
+    SW_EXPECT_TRUE( NetPacketSealer::isProofTagValid( provider, NetAEADAlgorithm::ChaCha20Poly1305, secret, 0x1111u, 0x2222u, arrPublicKey, arrToken, 3, arrTag ) );
+    arrTag[0] ^= 0xFF;
+    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAEADAlgorithm::ChaCha20Poly1305, secret, 0x1111u, 0x2222u, arrPublicKey, arrToken, 3, arrTag ) );
 }

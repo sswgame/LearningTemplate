@@ -204,7 +204,7 @@ namespace sw
              * @brief 확보된 칸(`packSize`) 안에 들어갈 때만 씁니다.
              * @details `writeNumericValue` 뿐 아니라 switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**도 이것을 거쳐야 합니다.
              *          칸 크기는 셰이더 리플렉션이 정하고(`ShaderVariableInfo::_size`) 쓰는 크기는
-             *          `_shaderType`(리플렉션 전에는 `defaultShaderTypeFor`)이 정하므로 **둘이 어긋날 수 있습니다.**
+             *          `_shaderType`(리플렉션 전에는 `getDefaultShaderTypeFor`)이 정하므로 **둘이 어긋날 수 있습니다.**
              *          예를 들어 셰이더가 `uint`(4바이트)로 선언한 자리에 `_shaderType` 이
              *          `Float4` 인 `ChannelMask` 를 쓰면 4바이트 칸에 16바이트를 씁니다.
              *          조용히 넘치는 대신 쓰지 않고 false 를 반환합니다(부르는 쪽이 경고합니다).
@@ -218,10 +218,10 @@ namespace sw
                 return true;
             }
 
-            /** @brief 숫자 글을 셰이더 타입의 칸들로 씁니다. 색인지는 @p cpuType 이 정한다 — 색의 셰이더 타입은 `Float4` 라(`defaultShaderTypeFor` · 리플렉션 · XML) 셰이더 타입으로는 가릴 수 없다. */
+            /** @brief 숫자 글을 셰이더 타입의 칸들로 씁니다. 색인지는 @p cpuType 이 정한다 — 색의 셰이더 타입은 `Float4` 라(`getDefaultShaderTypeFor` · 리플렉션 · XML) 셰이더 타입으로는 가릴 수 없다. */
             [[nodiscard]] static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType cpuType, MaterialPropertyType shaderType, string_view value )
             {
-                const uint32 need                  = MaterialPacking::packedSizeOf( shaderType );
+                const uint32 need                  = MaterialPacking::computePackedSizeOf( shaderType );
                 const bool   bInvalidPackArguments = need == 0 || packSize < need || pDst == nullptr;
                 if ( bInvalidPackArguments )
                     return false;
@@ -372,7 +372,7 @@ namespace sw
             /** @brief 프로퍼티의 셰이더 타입입니다. 비어 있으면(리플렉션 전) 종류의 기본입니다. */
             static MaterialPropertyType resolveShaderType( const MaterialProperty& prop )
             {
-                return prop._shaderType != MaterialPropertyType::Unknown ? prop._shaderType : MaterialPacking::defaultShaderTypeFor( prop._type );
+                return prop._shaderType != MaterialPropertyType::Unknown ? prop._shaderType : MaterialPacking::getDefaultShaderTypeFor( prop._type );
             }
 
             /** @brief 칸 크기입니다. 프로퍼티 크기가 먼저이고, 없으면 셰이더 타입의 크기(모르면 4)입니다. */
@@ -380,7 +380,7 @@ namespace sw
             {
                 if ( prop._size != 0 )
                     return prop._size;
-                const uint32 packSize = MaterialPacking::packedSizeOf( shaderType );
+                const uint32 packSize = MaterialPacking::computePackedSizeOf( shaderType );
                 return packSize != 0 ? packSize : 4u;
             }
 
@@ -444,7 +444,7 @@ namespace sw
         return "Unknown";
     }
 
-    uint32 MaterialPacking::packedSizeOf( MaterialPropertyType type )
+    uint32 MaterialPacking::computePackedSizeOf( MaterialPropertyType type )
     {
         uint32 size{ 0 };
         MaterialPacking::stringToType( MaterialPacking::typeToString( type ), size );
@@ -467,7 +467,7 @@ namespace sw
         return type == MaterialPropertyType::Keyword;
     }
 
-    MaterialPropertyType MaterialPacking::defaultShaderTypeFor( MaterialPropertyType cpuType )
+    MaterialPropertyType MaterialPacking::getDefaultShaderTypeFor( MaterialPropertyType cpuType )
     {
         switch ( cpuType )
         {
@@ -669,7 +669,7 @@ namespace sw
             return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );
         }
 
-        const uint32 need = MaterialPacking::packedSizeOf( shaderType );
+        const uint32 need = MaterialPacking::computePackedSizeOf( shaderType );
         if ( need == 0 || packSize < need )
             return false;
         // 모자란 칸의 규칙은 `writeNumericValue` 와 같다(0, 색의 알파는 1).

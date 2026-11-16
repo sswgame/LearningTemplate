@@ -128,6 +128,7 @@ namespace sw
         : _pNetwork{ pNetwork }
         , _listInbox{}
         , _address{ address }
+        , _bWakeRequested{ false }
     {
     }
 
@@ -147,15 +148,23 @@ namespace sw
 
     bool LoopbackTransport::waitForReceive( float64 timeoutSeconds )
     {
-        // 배달은 누군가의 `update`(`deliverInFlight`)가 한다 — 깨울 수단 없이 짧게 나눠 자며 받은 편지함을 본다.
+        // 날아가는 것을 여기서도 배달한다 — 엔드포인트 스레드는 다음 기한까지 자므로 다른 엔드포인트의 `update` 가 배달해 주기를 기다리면 그 기한만큼 늦는다.
+        // 소켓처럼 깨울 수단이 없어 짧게 나눠 자며 받은 편지함과 깨움(`wake`)을 본다.
         const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( timeoutSeconds * constant::time::kMillisecondsPerSecond ) );
-        while ( _pNetwork->hasDatagram( this ) == false )
+        for ( ;; )
         {
-            if ( deadline.isExpired() )
+            _pNetwork->deliverInFlight();
+            if ( _pNetwork->hasDatagram( this ) )
+                return true;
+            if ( _bWakeRequested.exchange( false, std::memory_order_acq_rel ) || deadline.isExpired() )
                 return false;
             ThreadUtil::sleepForMicroseconds( 200 );
         }
-        return true;
+    }
+
+    void LoopbackTransport::wake()
+    {
+        _bWakeRequested.store( true, std::memory_order_release );
     }
 
     bool LoopbackTransport::popInbox( NetAddress& outFrom, vector<uint8>& outBuffer )

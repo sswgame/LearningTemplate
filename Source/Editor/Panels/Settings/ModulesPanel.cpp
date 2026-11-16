@@ -174,7 +174,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( comboWidth );
         const int32 kindFilter   = _model.getKindFilter();
         const utf8* pKindPreview = kindFilter < 0 ? SW_LOCKEY( "EditorSettings", "ModuleKindAll" ) : ModulesModel::getKindName( static_cast<ModuleKind>( kindFilter ) );
-        if ( ImGui::BeginCombo( "##ModuleKindFilter", pKindPreview ) )
+        if ( EditorWidgets::beginCombo( "##ModuleKindFilter", pKindPreview ) )
         {
             if ( ImGui::Selectable( SW_LOCKEY( "EditorSettings", "ModuleKindAll" ), kindFilter < 0 ) )
                 _model.setKindFilter( -1 );
@@ -191,7 +191,7 @@ namespace sw::editor
                                        SW_LOCKEY( "EditorSettings", "ModuleStateOff" ) };
         ImGui::SetNextItemWidth( comboWidth );
         const uint32 stateFilter = static_cast<uint32>( _model.getStateFilter() );
-        if ( ImGui::BeginCombo( "##ModuleStateFilter", arrStateName[stateFilter] ) )
+        if ( EditorWidgets::beginCombo( "##ModuleStateFilter", arrStateName[stateFilter] ) )
         {
             for ( uint32 index = 0; index < static_cast<uint32>( ModuleStateFilter::Count ); ++index )
             {

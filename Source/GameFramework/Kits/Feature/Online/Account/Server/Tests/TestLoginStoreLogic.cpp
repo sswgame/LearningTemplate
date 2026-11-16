@@ -6,6 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 using namespace sw;
@@ -13,6 +15,25 @@ using namespace sw;
 namespace
 {
     constexpr int64 kNowMs = 1700000000000ll;
+
+    /** @brief 탈퇴 뒤 키트 훅의 가짜입니다. 처음 @p _conflictCount 번은 Conflict(덜 지움)를 내고 그 뒤 Ok 이며, 받은 계정을 적습니다. */
+    class FakeAfterDeleteAccount final : public IAfterDeleteAccount
+    {
+    public:
+        mutable vector<AccountID> _listAccountID{};
+        mutable int32             _conflictCount{ 1 };
+
+        ServiceStoreResult afterDeleteAccount( IServiceStoreConnection& /*connection*/, AccountID accountID, int64 /*nowMs*/ ) const override
+        {
+            _listAccountID.push_back( accountID );
+            if ( _conflictCount > 0 )
+            {
+                --_conflictCount;
+                return ServiceStoreResult::Conflict;
+            }
+            return ServiceStoreResult::Ok;
+        }
+    };
 
     /** @brief 결정적인 가짜 암호입니다 — 같은 입력이면 같은 해시, 난수는 세는 값. 규칙(저장 · 비교)만 본다. */
     class FakeLoginCrypto final : public ILoginCrypto
@@ -65,14 +86,14 @@ namespace
             ticketAuthority.initialize( &crypto, arrMasterKey );
         }
 
-        LoginOutcome registerAccount( string_view name, string_view password )
+        LoginServiceResult registerAccount( string_view name, string_view password )
         {
             LoginStoreResult result;
             LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );
             return logic.registerAccount( LoginCredential{ string( name ), string( password ) }, nullptr );
         }
 
-        LoginOutcome login( string_view name, string_view password, LoginGrant& outGrant, int64 nowMs = kNowMs )
+        LoginServiceResult login( string_view name, string_view password, LoginGrant& outGrant, int64 nowMs = kNowMs )
         {
             LoginStoreResult result;
             LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );
@@ -221,11 +242,21 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
     Fixture fixture;
     SW_REQUIRE_TRUE( fixture.registerAccount( "Ivan_11", "correct horse" ) == LoginResult::Ok );
     SW_REQUIRE_TRUE( fixture.registerAccount( "Judy_12", "correct horse" ) == LoginResult::Ok );
-    const int64 dueMs = kNowMs + fixture.settings._deletionGraceMs;
+    const int64    dueMs = kNowMs + fixture.settings._deletionGraceMs;
+    vector<uint64> listAccountID;
     for ( const string_view name : { string_view( "Ivan_11" ), string_view( "Judy_12" ) } )
     {
         LoginGrant grant;
         SW_REQUIRE_TRUE( fixture.login( name, "correct horse", grant ) == LoginResult::Ok );
+        listAccountID.push_back( grant._identity._accountID );
+        LedgerTransferRequest coins;
+        coins._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( grant._identity._accountID ), "cur.gold", 50 } );
+        coins._journalKey = LedgerJournalKey::makeAccountScope( grant._identity._accountID );
+        coins._journalKey += "/test.grant";
+        coins._reason = "test.grant";
+        coins._timeMs = kNowMs;
+        LedgerTransferResult coinsResult;
+        SW_REQUIRE_TRUE( Ledger::executeTransfer( fixture.database, coins, coinsResult ) == LedgerResult::Ok );
         LoginStoreResult result;
         LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
         int64            outDueMs = 0;
@@ -235,17 +266,59 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
         SW_EXPECT_TRUE( logic.validateSession( grant._token, kNowMs + 1, identity ) != LoginResult::Ok ); // 예약이 세션을 끊었다
     }
 
-    LoginGrant ivanGrant;
+    FakeAfterDeleteAccount                   hook;
+    const vector<const IAfterDeleteAccount*> listHook{ &hook };
+    LoginGrant                               ivanGrant;
     SW_REQUIRE_TRUE( fixture.login( "Ivan_11", "correct horse", ivanGrant, kNowMs + 1000 ) == LoginResult::Ok ); // 유예 안이면 들어온다
     SW_EXPECT_EQUAL( dueMs, ivanGrant._deletionDueMs );
     {
         LoginStoreResult result;
         LoginStoreLogic  logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
         SW_REQUIRE_TRUE( logic.cancelDeletion( ivanGrant._token, kNowMs + 2000 ) == LoginResult::Ok );
-        SW_EXPECT_EQUAL( 1, logic.purgeDueDeletions( dueMs + 1, 8 ) ); // Judy 만
+        SW_EXPECT_EQUAL( 1, logic.purgeDueDeletions( dueMs + 1, 8, listHook ) ); // Judy 만
+        SW_EXPECT_EQUAL( 0, logic.purgeDueDeletions( dueMs + 2, 8, listHook ) ); // 훅이 처음엔 덜 지웠다(Conflict) — 대기열에 남아 다음 회차에 다시 부른다
+        SW_EXPECT_EQUAL( 0, logic.purgeDueDeletions( dueMs + 3, 8, listHook ) ); // 다 지운 계정은 대기열에서 빠져 다시 부르지 않는다
     }
+    SW_REQUIRE_EQUAL( size_t{ 2 }, hook._listAccountID.size() );
+    SW_EXPECT_EQUAL( listAccountID[1], hook._listAccountID[0] );
+    SW_EXPECT_EQUAL( listAccountID[1], hook._listAccountID[1] );
     LoginGrant grant;
     SW_EXPECT_TRUE( fixture.login( "Ivan_11", "correct horse", grant, dueMs + 2 ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( int64{ 0 }, grant._deletionDueMs );
     SW_EXPECT_TRUE( fixture.login( "Judy_12", "correct horse", grant, dueMs + 3 ) == LoginResult::WrongCredentials );
+
+    // 지운 Judy 의 잔액은 같은 정리에서 소각됐고 묘비가 남는다. 취소한 Ivan 의 잔액은 그대로다(감사 P0-7)
+    LedgerBalance balance;
+    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[0] ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( int64{ 50 }, balance._amount );
+    SW_REQUIRE_TRUE( Ledger::readBalance( fixture.database, LedgerHolder::makeAccount( listAccountID[1] ), "cur.gold", balance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( int64{ 0 }, balance._amount );
+    ServiceRecord tombstone;
+    SW_EXPECT_TRUE( fixture.database.readRecord( Ledger::getTombstoneTable(), LedgerHolder::makeAccount( listAccountID[1] ).makeKey(), tombstone ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( fixture.database.readRecord( Ledger::getTombstoneTable(), LedgerHolder::makeAccount( listAccountID[0] ).makeKey(), tombstone ) == ServiceStoreResult::NotFound );
+}
+
+/**
+ * @brief [LoginStoreLogicTest] 계정 id 는 다시 쓰지 않는다: 지운 계정과 같은 id 가 뽑히면 묘비가 막아 새 id 로 만든다(지운 계정의 원장 묘비가 새 계정을 막지 않는다)
+ * @details 가짜 암호의 난수는 세는 값이라 새 고정 장치 둘은 같은 id 를 뽑는다. 둘째 장치에 그 id 의 묘비를 먼저 세운다. 변이: `requireNoTombstone` 을 빼면 같은 id 로 만들어져 진다.
+ */
+SW_TEST_CASE( LoginStoreLogicTest, DeletedAccountIDIsNeverReused )
+{
+    uint64 firstID = 0;
+    {
+        Fixture          first;
+        LoginStoreResult result;
+        LoginStoreLogic  logic( first.database, first.crypto, first.settings, first.ticketAuthority, result );
+        SW_REQUIRE_TRUE( logic.registerAccount( LoginCredential{ "Kate_13", "correct horse" }, &firstID ) == LoginResult::Ok );
+    }
+    Fixture            second;
+    ServiceTransaction deletion;
+    Ledger::stageAccountDeletion( firstID, kNowMs, deletion );
+    SW_REQUIRE_TRUE( second.database.commit( deletion ) == ServiceStoreResult::Ok );
+    uint64           secondID = 0;
+    LoginStoreResult result;
+    LoginStoreLogic  logic( second.database, second.crypto, second.settings, second.ticketAuthority, result );
+    SW_REQUIRE_TRUE( logic.registerAccount( LoginCredential{ "Kate_13", "correct horse" }, &secondID ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( secondID != 0 );
+    SW_EXPECT_TRUE( secondID != firstID );
 }

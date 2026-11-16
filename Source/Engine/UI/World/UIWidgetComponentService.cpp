@@ -156,7 +156,7 @@ namespace sw
         const WidgetComponent* pAnchorComponent = nullptr;
         for ( const WidgetComponent* pComponent : _listComponent )
         {
-            if ( pComponent->acceptsWorldInput() )
+            if ( pComponent->canAcceptWorldInput() )
             {
                 pAnchorComponent = pComponent;
                 break;

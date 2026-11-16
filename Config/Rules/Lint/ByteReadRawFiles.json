@@ -1,5 +1,5 @@
 {
-    "_comment": "LittleEndianUtil::read* 를 직접 쓰는 파일과 그 까닭(Scripts/lint/ByteReadShape.py). 새 파일 형식은 여기에 더하지 않고 ByteReader 로 읽는다.",
+    "_comment": "LittleEndianUtil::read* 를 직접 쓰는 파일과 그 까닭(Scripts/lint/byte_read_shape.py). 새 파일 형식은 여기에 더하지 않고 ByteReader 로 읽는다.",
     "_listFile": [
         { "_path": "Source/Core/Serialization/ByteStream.h", "_reason": "ByteReader 자신이다" },
         { "_path": "Source/Core/Network/Message/StreamMessageEndpoint.cpp", "_reason": "메시지 틀 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },

@@ -89,13 +89,15 @@ namespace sw
             return unexpected( Error{ ErrorKind::NotFound, "no object with id", idText } );
         }
         // 이름은 고르는 입구다 — 겹치면 아무것도 고르지 않고 id 를 알린다(첫 것을 고르면 다른 오브젝트를 조용히 본다).
-        const hashed_string name( argument );
-        GameObjectHandle    found;
-        string              listID;
-        uint32              matchCount = 0;
-        for ( const GameObject* pObject : manager.getAllGameObjects() )
+        const hashed_string       name( argument );
+        GameObjectHandle          found;
+        string                    listID;
+        uint32                    matchCount = 0;
+        vector<const GameObject*> listSameBase;
+        manager.findGameObjectsByBaseName( GameObjectManager::computeBaseName( argument ), listSameBase ); // 밑 이름 색인 — 씬을 돌지 않는다
+        for ( const GameObject* pObject : listSameBase )
         {
-            if ( pObject == nullptr || ( pObject->getName() == name ) == false )
+            if ( ( pObject->getName() == name ) == false )
                 continue;
             ++matchCount;
             found = GameObjectHandle::make( pObject->getObjectID() );

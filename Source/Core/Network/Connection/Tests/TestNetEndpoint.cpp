@@ -11,6 +11,8 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include <limits>
+
 // 엔드포인트 — 핸드셰이크(도전 · 가득 참 · 다른 프로토콜 · 다른 와이어 판), 나쁜 망(지연 · 흔들림 · 손실 · 중복 · 깨짐)에서의 신뢰 순서, 끊기 · 타임아웃,
 // 디버거 대기, 잃은 수락, 만료된 도전, 한가할 때의 유지 패킷, 많은 연결, 64 KB 조각, 끊김 뒤 조각 버림, 보내기 상한과 포화.
 
@@ -301,6 +303,58 @@ SW_TEST_CASE( NetEndpointTest, HostsRejectFullServersForeignProtocolsAndDetectDi
 }
 
 /**
+ * @brief [NetEndpointTest] 끊긴 연결의 번호는 게임 스레드가 끊김을 꺼내기 전에는 새 연결에 주지 않는다(감사 P0-8)
+ * @details 슬롯 번호가 곧 연결 ID 라, 같은 갱신에서 A 의 끊김과 B 의 접속을 처리하면 게임 스레드가 A 에게 보낸 상태가 B 에게 갔다. 1 슬롯 서버에서
+ *          A 가 끊긴 뒤 서버가 사건을 꺼내지 않은 동안 B 는 자리를 받지 못하고(가득 참), A 의 번호로 보낸 것은 거절된다. 꺼낸 뒤에는 B 가 들어온다.
+ *          변이: 보류를 빼면 B 가 바로 번호 0 을 받아 첫 단언이 진다.
+ */
+SW_TEST_CASE( NetEndpointTest, ClosedSlotIsNotReusedBeforeTheGameThreadSeesTheDisconnect )
+{
+    NetEndpointConfig settings;
+    settings._maxConnections = 1;
+    settings._debugHold      = NetDebugHold::Off;
+    LoopbackNetwork network;
+    NetEndpoint     server;
+    NetEndpoint     first;
+    NetEndpoint     second;
+    server.initialize( network.createEndpoint( 4100 ), settings );
+    first.initialize( network.createEndpoint( 5101 ), settings );
+    second.initialize( network.createEndpoint( 5102 ), settings );
+    SW_REQUIRE_TRUE( server.listen() );
+    SW_REQUIRE_TRUE( first.connect( NetAddress::makeLoopback( 4100 ) ) );
+    float64    time   = 0.0;
+    const auto runAll = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            server.update( time );
+            first.update( time );
+            second.update( time );
+        }
+    };
+    runAll( 0.3 );
+    vector<NetEndpointEvent> listEvent;
+    server.pollEvents( listEvent );
+    SW_REQUIRE_EQUAL( 1, server.getConnectedCount() );
+
+    first.disconnect( 0 );
+    runAll( 0.2 ); // 서버가 끊김을 처리했지만 게임 스레드는 아직 꺼내지 않았다
+    SW_REQUIRE_TRUE( second.connect( NetAddress::makeLoopback( 4100 ) ) );
+    runAll( 0.5 );
+    SW_EXPECT_TRUE( second.getConnectionState( 0 ) != NetConnectionState::Connected );
+    const uint8 payload[] = { 1, 2, 3 };
+    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) ); // A 의 번호는 비었다 — B 에게 가지 않는다
+
+    listEvent.clear();
+    server.pollEvents( listEvent ); // 게임 스레드가 A 의 끊김을 본다 — 이제 번호를 다시 준다
+    SW_REQUIRE_TRUE( listEvent.empty() == false && listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
+    SW_REQUIRE_TRUE( second.connect( NetAddress::makeLoopback( 4100 ) ) );
+    runAll( 0.5 );
+    SW_EXPECT_TRUE( second.getConnectionState( 0 ) == NetConnectionState::Connected );
+}
+
+/**
  * @brief [NetEndpointTest] 디버거 대기를 알린 서버가 멈춰도(중단점) 클라이언트는 끊지 않고, 재개한 서버도 멈춘 동안을 시간 초과로 치지 않는다
  * @details 서버만 멈춤(클라이언트는 알림 비트를 보고 시한을 늘린다) → 둘 다 멈춤(한 프로세스가 통째로 멈춤 — 클라이언트는 알리지 않으므로 서버는
  *          가상 시계로만 버틴다) → 대기 시한(10 초)을 넘긴 멈춤은 끊긴다.
@@ -321,8 +375,8 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     client.initialize( network.createEndpoint( 5000 ), clientSettings );
     SW_REQUIRE_TRUE( server.listen() );
     SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4000 ) ) );
-    float64    time   = 0.0;
-    const auto runFor = [&]( float64 seconds, bool bServer, bool bClient )
+    float64    time          = 0.0;
+    const auto runForSeconds = [&]( float64 seconds, bool bServer, bool bClient )
     {
         for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
         {
@@ -333,15 +387,15 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
                 client.update( time );
         }
     };
-    runFor( 0.3, true, true );
+    runForSeconds( 0.3, true, true );
     SW_REQUIRE_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
     SW_EXPECT_TRUE( server.isDebugHoldAnnounced() );
     SW_EXPECT_FALSE( client.isDebugHoldAnnounced() );
 
     // 서버만 6 초 멈춘다 — 보통 시한(1 초)이면 끊겼을 것이다.
-    runFor( 6.0, false, true );
+    runForSeconds( 6.0, false, true );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
-    runFor( 0.5, true, true ); // 서버가 쌓인 패킷을 비운다
+    runForSeconds( 0.5, true, true ); // 서버가 쌓인 패킷을 비운다
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 
     // 둘 다 6 초 멈춘다 — 서버가 먼저 깨어난다. 클라이언트는 알리지 않았고 쌓인 패킷도 없으니 서버는 가상 시계로만 버틴다.
@@ -349,12 +403,12 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     server.update( time );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
     client.update( time );
-    runFor( 0.5, true, true );
+    runForSeconds( 0.5, true, true );
     SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
     const vector<uint8> hello = NetTestUtil::makeMessage( 77 );
     SW_REQUIRE_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, hello ) );
-    runFor( 0.3, true, true );
+    runForSeconds( 0.3, true, true );
     int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
@@ -365,9 +419,9 @@ SW_TEST_CASE( NetEndpointTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
     vector<NetEndpointEvent> listEvent;
     client.pollEvents( listEvent );
     listEvent.clear();
-    runFor( 9.0, false, true );
+    runForSeconds( 9.0, false, true );
     SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
-    runFor( 3.0, false, true );
+    runForSeconds( 3.0, false, true );
     client.pollEvents( listEvent );
     SW_REQUIRE_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );
@@ -548,6 +602,62 @@ SW_TEST_CASE( NetEndpointTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterv
     SW_REQUIRE_TRUE( pair.getServer().receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( NetConnection::kMaxSingleMessageSize, static_cast<int32>( buffer.size() ) );
     SW_EXPECT_EQUAL( 777, NetTestUtil::readMessageValue( buffer ) );
+}
+
+// 감사 N-8 — 깨어날 때마다 정원(여기서는 256) 전 슬롯을 훑지 않는다. 한가한 연결은 유지 간격 · 받은 패킷 때만 들여다본다.
+SW_TEST_CASE( NetEndpointTest, UpdateVisitsOnlyDueConnectionsNotEverySlot )
+{
+    constexpr int32   kClientCount  = 8;
+    constexpr int32   kUpdateCount  = 600;
+    constexpr float64 kUpdateSecond = 1.0 / 600.0; // 받을 것이 올 때마다 깨는 네트워크 스레드처럼 잦게 돈다
+    NetEndpointConfig settings;
+    settings._maxConnections = 256;
+    settings._debugHold      = NetDebugHold::Off;
+    LoopbackNetwork network;
+    NetEndpoint     server;
+    server.initialize( network.createEndpoint( 4000 ), settings );
+    SW_REQUIRE_TRUE( server.listen() );
+    NetEndpoint arrClient[kClientCount];
+    for ( int32 index = 0; index < kClientCount; ++index )
+    {
+        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), settings );
+        SW_REQUIRE_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
+    }
+    float64    time      = 0.0;
+    const auto runSteady = [&]( int32 updateCount )
+    {
+        for ( int32 step = 0; step < updateCount; ++step )
+        {
+            time += kUpdateSecond;
+            server.update( time );
+            for ( NetEndpoint& client : arrClient )
+            {
+                client.update( time );
+            }
+        }
+    };
+    runSteady( 300 );
+    SW_REQUIRE_EQUAL( kClientCount, server.getConnectedCount() );
+
+    const uint64 visitBefore = server.getSlotVisitCount();
+    runSteady( kUpdateCount );
+    const uint64 visited = server.getSlotVisitCount() - visitBefore;
+    // 전 슬롯 훑기는 256 × 600, 살아 있는 연결만 매번 훑어도 8 × 600 = 4800 이다. 한가한 연결은 유지 간격(0.25 초)과 받은 유지 패킷 때만 본다.
+    SW_EXPECT_TRUE_MSG( visited > 0 && visited < static_cast<uint64>( kClientCount * kUpdateCount / 4 ), "idle connections are visited only when due" );
+    SW_EXPECT_EQUAL( kClientCount, server.getConnectedCount() ); // 기한 큐가 유지 패킷 · 타임아웃을 놓치지 않는다
+
+    // 보낼 것이 생기면 다음 유지 시각을 기다리지 않는다 — 넣은 메시지가 그 연결을 바로 기한으로 만든다.
+    SW_REQUIRE_TRUE( server.sendMessage( 3, NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 33 ) ) );
+    runSteady( 40 ); // 보내기 간격(1/30 초)이 지나기를 기다릴 수 있다 — 유지 간격(0.25 초)보다 짧다
+    int32          connectionID = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    bool           bArrived = false;
+    for ( NetEndpoint& client : arrClient )
+    {
+        bArrived = bArrived || ( client.receiveMessage( connectionID, channel, buffer ) && NetTestUtil::readMessageValue( buffer ) == 33 );
+    }
+    SW_EXPECT_TRUE( bArrived );
 }
 
 SW_TEST_CASE( NetEndpointTest, ServerTellsManyClientsApartByAddress )
@@ -751,4 +861,107 @@ SW_TEST_CASE( NetEndpointTest, SaturatedConnectionIsReportedUntilTheQueueDrains 
     SW_REQUIRE_TRUE( client.getConnectionStats( 0, stats ) );
     SW_EXPECT_TRUE( stats._expiredUnreliableCount > 0 ); // 다 싣지 못한 것은 기다리다 버렸다
     SW_EXPECT_TRUE( cluster.areClientsConnected() );
+}
+
+/**
+ * @brief [NetEndpointTest] 상대가 확인하지 않아 신뢰 창이 차면 `trySendMessage` 는 false 만 돌려주고, `sendMessage` 는 신뢰 메시지를 버리지 않고 연결을 `ReliableOverflow` 로 닫는다(감사 N-3)
+ */
+SW_TEST_CASE( NetEndpointTest, FullReliableWindowClosesInsteadOfDroppingMessages )
+{
+    NetEndpointConfig settings;
+    settings._debugHold = NetDebugHold::Off;
+    LoopbackNetwork network;
+    NetEndpoint     server;
+    NetEndpoint     client;
+    server.initialize( network.createEndpoint( 4200 ), settings );
+    client.initialize( network.createEndpoint( 5201 ), settings );
+    SW_REQUIRE_TRUE( server.listen() );
+    SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4200 ) ) );
+    float64 time = 0.0;
+    for ( int32 step = 0; step < 20; ++step )
+    {
+        time += 1.0 / 60.0;
+        server.update( time );
+        client.update( time );
+    }
+    vector<NetEndpointEvent> listEvent;
+    server.pollEvents( listEvent );
+    SW_REQUIRE_EQUAL( 1, server.getConnectedCount() );
+
+    // 클라이언트가 멈췄다(확인이 오지 않는다) — 창이 찰 때까지 넣는다
+    const uint8 payload[]   = { 7, 1, 2 };
+    int32       queuedCount = 0;
+    while ( server.trySendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) )
+    {
+        ++queuedCount;
+    }
+    SW_EXPECT_EQUAL( NetConnection::kReliableWindow - 1, queuedCount );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() ); // 역압만 알렸다
+
+    SW_EXPECT_LOG( "Net.ReliableOverflow" );
+    SW_EXPECT_FALSE( server.sendMessage( 0, NetChannelType::ReliableOrdered, payload, static_cast<int32>( sizeof( payload ) ) ) );
+    listEvent.clear();
+    server.pollEvents( listEvent );
+    SW_REQUIRE_TRUE( listEvent.empty() == false );
+    SW_EXPECT_TRUE( listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
+    SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::ReliableOverflow );
+}
+
+SW_TEST_CASE( NetEndpointTest, NextDueTimeTakesEarliestOfRetryTimeoutAndSendInterval )
+{
+    // 네트워크 스레드는 고정 주기가 아니라 이 기한까지만 잔다 — 시계 없이 순수 함수로 본다(감사 N-8).
+    const NetEndpointConfig settings; // 보내기 1/30 · 유지 0.25 · 연결 제한 5 · 재요청 0.2
+    NetSlotTable            table;
+    table.reset( 1 );
+    table.open( 0, NetConnectionState::Connecting );
+    NetEndpointSlot& slot = table.get( 0 );
+
+    slot._lastSendTime = -1.0; // 아직 보낸 적이 없다 — 바로
+    SW_EXPECT_EQUAL( 10.0, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ) );
+    slot._connectStartTime = 10.0;
+    slot._lastSendTime     = 10.1; // 재요청이 연결 제한보다 이르다
+    SW_EXPECT_NEAR( 10.3, NetEndpoint::computeNextDueTime( 10.1, slot, settings, 5.0 ), 1.0e-9 );
+    slot._connectStartTime = 5.2; // 연결 제한이 재요청보다 이르다
+    SW_EXPECT_NEAR( 10.2, NetEndpoint::computeNextDueTime( 10.1, slot, settings, 5.0 ), 1.0e-9 );
+
+    slot._state           = NetConnectionState::Connected;
+    slot._lastSendTime    = 10.0;
+    slot._lastReceiveTime = 10.0;
+    SW_EXPECT_NEAR( 10.25, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ), 1.0e-9 ); // 한가하면 유지(하트비트) 간격
+    SW_EXPECT_NEAR( 10.1, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 0.1 ), 1.0e-9 );  // 타임아웃이 더 이르다
+    SW_REQUIRE_TRUE( slot._connection->sendMessage( NetChannelType::ReliableOrdered, NetTestUtil::makeMessage( 1 ).data(), 4 ) );
+    SW_EXPECT_NEAR( 10.0 + 1.0 / 30.0, NetEndpoint::computeNextDueTime( 10.0, slot, settings, 5.0 ), 1.0e-9 ); // 보낼 것 · 재전송이 있으면 보내기 간격
+}
+
+SW_TEST_CASE( NetEndpointTest, WaitSecondsRunToTheNextUpdateWithinTheCap )
+{
+    SW_EXPECT_NEAR( 0.05, NetEndpoint::computeWaitSeconds( 10.0, 10.05, 0.1 ), 1.0e-9 );
+    SW_EXPECT_EQUAL( 0.1, NetEndpoint::computeWaitSeconds( 10.0, 10.25, 0.1 ) );                                    // 상한
+    SW_EXPECT_EQUAL( 0.0, NetEndpoint::computeWaitSeconds( 10.0, 9.0, 0.1 ) );                                      // 지난 기한은 바로
+    SW_EXPECT_EQUAL( 0.0, NetEndpoint::computeWaitSeconds( 10.0, std::numeric_limits<float64>::lowest(), 0.1 ) );   // 막 앞당긴 기한
+    SW_EXPECT_EQUAL( 0.1, NetEndpoint::computeWaitSeconds( 10.0, std::numeric_limits<float64>::infinity(), 0.1 ) ); // 연결 없음
+    SW_EXPECT_EQUAL( 0.0, NetEndpoint::computeWaitSeconds( 10.0, 11.0, -1.0 ) );                                    // 틀린 상한은 0
+}
+
+SW_TEST_CASE( NetEndpointTest, ReconnectWaitsForHeldSlotInsteadOfServerFull )
+{
+    // 정원 1 — 끊고 바로 다시 붙는 클라이언트는 게임 스레드가 옛 슬롯의 끊김을 꺼내기 전에 도착한다. 가득 참으로 끝나지 않고 놓이면 붙는다.
+    NetEndpointConfig settings;
+    settings._maxConnections = 1;
+    settings._debugHold      = NetDebugHold::Off;
+    test::LoopbackCluster cluster( 9u );
+    NetTestUtil::addServerAndClient( cluster, settings );
+    SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
+    vector<NetEndpointEvent> listEvent;
+    cluster.getServer().pollEvents( listEvent );
+
+    cluster.getClient( 0 ).disconnect( 0 );
+    SW_REQUIRE_TRUE( cluster.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+    cluster.run( 0.5 ); // 서버는 끊김을 받았지만 사건을 아직 꺼내지 않았다 — 슬롯 0 은 붙잡혀 있다
+    SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connecting );
+    listEvent.clear();
+    cluster.getServer().pollEvents( listEvent ); // 놓는다
+    SW_EXPECT_TRUE( listEvent.empty() == false && listEvent.back()._kind == NetEndpointEvent::Kind::Disconnected );
+    cluster.run( 0.5 );
+    SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
 }

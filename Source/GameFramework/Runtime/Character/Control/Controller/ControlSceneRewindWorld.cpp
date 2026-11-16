@@ -35,7 +35,7 @@ namespace sw
         if ( _instance.restoreSnapshot( SerializePurpose::Snapshot, bytes ) == false )
             return false;
         // 장면을 비울 때 조종 시스템도 떨어졌다. 폰이 다시 등록되며 붙은 시스템의 틱을 키 틱으로 맞춘다.
-        ControlSystem::ensureFor( _manager ).setTick( keyTick );
+        ControlSystem::findOrCreate( _manager ).setTick( keyTick );
         uint32 skippedCount = 0;
         IntentPlayback::start( _manager, _history, false, keyTick, &skippedCount );
         if ( skippedCount > 0 )

@@ -74,9 +74,9 @@ namespace sw::editor
         /** @brief 노드 하나의 헤더, 핀, 본문 요약을 그립니다. 모양은 특성 테이블(`kArrDialogueNodeInfo`)이 정합니다. */
         void drawNodeBody( const DialogueNode& node );
         /** @brief 선택한 노드의 편집 항목을 그립니다. 어떤 항목을 보일지는 특성 테이블이 정합니다. */
-        void drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info );
+        void drawNodeProperties( DialogueNode& node, const DialogueNodeInfo& info );
         /** @brief Action 노드의 동작 고르기와 등록된 칸을 그립니다. 칸을 고치면 글로 되돌려 노드에 씁니다. */
-        void drawActionFields( DialogueNode& node );
+        void drawActionProperties( DialogueNode& node );
         /** @brief 칸 그리드가 고친 값을 노드의 글로 되돌립니다. */
         void onActionFieldEdited( const PropertyInfo& prop );
         /** @brief 미리보기 툴바를 그립니다. */
@@ -85,12 +85,12 @@ namespace sw::editor
     private:
         int32                     _selectedNodeID;
         DialogueGraphPreviewModel _preview;
-        EditorPropertyGrid        _actionGrid;        ///< 고른 동작의 칸
-        InstancedStruct           _actionFields;      ///< 지금 그리는 노드의 칸 값
-        string                    _actionFieldsText;  ///< `_actionFields` 를 푼 글. 노드 글이 바뀌면 다시 푼다
-        string                    _actionError;       ///< 글을 풀지 못한 까닭
-        vector<string>            _listActionName;    ///< 고르기 목록
-        const ActionEntry*        _pActionEntry;      ///< `_actionFields` 의 등록 줄
-        string*                   _pActionTargetText; ///< 그리는 동안만 쓴다 — 칸을 고치면 이 글을 고친다
+        EditorPropertyGrid        _actionGrid;           ///< 고른 동작의 칸
+        InstancedStruct           _actionProperties;     ///< 지금 그리는 노드의 칸 값
+        string                    _actionPropertiesText; ///< `_actionProperties` 를 푼 글. 노드 글이 바뀌면 다시 푼다
+        string                    _actionError;          ///< 글을 풀지 못한 까닭
+        vector<string>            _listActionName;       ///< 고르기 목록
+        const ActionEntry*        _pActionEntry;         ///< `_actionProperties` 의 등록 줄
+        string*                   _pActionTargetText;    ///< 그리는 동안만 쓴다 — 칸을 고치면 이 글을 고친다
     };
 } // namespace sw::editor

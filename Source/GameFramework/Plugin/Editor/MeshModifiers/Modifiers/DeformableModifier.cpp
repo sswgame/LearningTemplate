@@ -61,9 +61,13 @@ namespace sw::editor
         _stack.apply( inoutMesh, subEvaluation );
     }
 
-    void DeformableModifier::writeExtraJSON( const JSONValue& object ) const
+    expected<void> DeformableModifier::writeExtraJSON( const JSONValue& object ) const
     {
-        object.set( "stack" ).setString( _stack.makeJSONText( -1 ) );
+        const expected<string> stackText = _stack.makeJSONText( -1 );
+        if ( stackText.has_value() == false )
+            return unexpected( stackText.error() );
+        object.set( "stack" ).setString( *stackText );
+        return {};
     }
 
     bool DeformableModifier::readExtraJSON( const JSONValue& object )

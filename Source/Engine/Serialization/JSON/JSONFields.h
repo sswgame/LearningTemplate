@@ -30,13 +30,13 @@ namespace sw
          *          리플렉션 구조체 칸은 객체를 받아 같은 규칙으로 들어간다. @p listHandRead 의 키는 부르는 쪽이 따로 읽는다.
          * @return 오류가 하나도 없으면 true 입니다. 오류가 있어도 읽을 수 있는 칸은 채웁니다.
          */
-        [[nodiscard]] static bool readFields( const JSONValue& object, void* pInstance, const TypeInfo& typeInfo, string_view sourceName,
-                                              std::initializer_list<string_view> listHandRead = {} );
-        /** @brief `readFields` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
+        [[nodiscard]] static bool readProperties( const JSONValue& object, void* pInstance, const TypeInfo& typeInfo, string_view sourceName,
+                                                  std::initializer_list<string_view> listHandRead = {} );
+        /** @brief `readProperties` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
         template <typename TDef>
-        [[nodiscard]] static bool readFields( const JSONValue& object, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {} )
+        [[nodiscard]] static bool readProperties( const JSONValue& object, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {} )
         {
-            return readFields( object, &outDef, *TDef::StaticType(), sourceName, listHandRead );
+            return readProperties( object, &outDef, *TDef::StaticType(), sourceName, listHandRead );
         }
         /**
          * @brief 객체의 키가 모두 @p listKnownKey 안에 있는지 봅니다. 객체가 아니거나 모르는 키가 있으면 이름을 오류로 남기고 false 입니다.

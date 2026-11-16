@@ -54,7 +54,7 @@ namespace sw::editor
         /** @brief 현재 선택 섹션을 그립니다. */
         void drawSelectionSection();
         /** @brief 플레이 중이면 "편집은 Stop 에 되돌아간다" 안내를 그립니다. 단일 · 다중 선택이 함께 씁니다. */
-        void drawPlayModeNotice() const;
+        void drawPlayModeBanner() const;
         /** @brief 둘 이상 선택했을 때의 영역을 그립니다. 공통 컴포넌트만 그리고, 다른 값은 혼합으로 보여 주며, 고친 프로퍼티를 나머지에 적용합니다. 언리얼과 유니티와 같습니다. */
         void drawMultiSelection();
         /** @brief 프리팹 인스턴스일 때 적용, 되돌리기, 연결 해제 버튼을 그립니다. */

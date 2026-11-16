@@ -47,8 +47,8 @@ namespace sw
     /** @brief 변경 요청의 완료입니다. */
     struct LiveOpsCompletion
     {
-        uint64         _requestTag{ 0 };
-        LiveOpsOutcome _result{ LiveOpsResult::Ok };
+        uint64               _requestTag{ 0 };
+        LiveOpsServiceResult _result{ LiveOpsResult::Ok };
     };
 } // namespace sw
 
@@ -138,7 +138,7 @@ namespace sw
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs );
-        void applyWrite( uint64 requestTag, LiveOpsOutcome result );
+        void applyWrite( uint64 requestTag, LiveOpsServiceResult result );
 
     private:
         /** @brief 지난번에 열려 있던 이벤트 창 하나입니다. */
@@ -155,7 +155,7 @@ namespace sw
         string              resolveValue( const string& value ) const;
         bool                isKillSwitchOff() const;
         const LiveEventDef* findEvent( string_view eventID ) const;
-        void                submitWrite( ServiceAuditedWrite&& work, uint64 requestTag );
+        void                submitWrite( ServiceAuditedWrite&& job, uint64 requestTag );
 
     private:
         vector<LiveEventDef>           _listEvent;

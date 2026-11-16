@@ -47,8 +47,8 @@ namespace sw
             {
                 if ( _pService == nullptr )
                     return;
-                const string      channelID = makeChannelID( kind, groupID );
-                const ChatOutcome result    = _pService->addMember( accountID, channelID, nowMs );
+                const string            channelID = makeChannelID( kind, groupID );
+                const ChatServiceResult result    = _pService->addMember( accountID, channelID, nowMs );
                 if ( result != ChatResult::Ok )
                     SW_LOG_WARNING_ID( "ChatOnlineServerKit.ChatAccountNotAdded", "Chat: account %# was not added to %# (result %#, error %#)", accountID, channelID.c_str(), static_cast<int32>( result._result ),
                                        static_cast<int32>( result._errorCode ) );
@@ -99,8 +99,11 @@ namespace sw
                 _settings._bannedWordsPath       = bannedWordsPath->has_value() ? ( *bannedWordsPath )->str() : string();
                 _settings._ignoredCharactersPath = ignoredCharactersPath->has_value() ? ( *ignoredCharactersPath )->str() : string();
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
-                return registerServerService( context, entry, &_server ).and_then( [&]
-                { return exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels ); } );
+                return registerServerService( context, entry, &_server )
+                    .and_then( [&]
+                { return exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, ChatService::makeTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override
@@ -123,7 +126,10 @@ namespace sw
             }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 채팅 기록 · 접속 상태 조회. */
-            int32 getOpenWorkCount() const override { return _service.getPendingCount(); }
+            /** @brief 채팅은 계정 키 표가 없다 — 기록(`chat_history`)은 채널 키이고 TTL 쓸기가 기간 뒤에 지운다(Discord 도 탈퇴 사용자의 메시지를 지우지 않고 남긴다). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+
+            int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
             void stop() override
             {

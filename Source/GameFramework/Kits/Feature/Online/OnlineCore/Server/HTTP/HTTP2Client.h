@@ -128,8 +128,8 @@ namespace sw
         /** @brief 잠금 안에서 부릅니다. 핸드셰이크가 끝난 연결에서 HTTP/2 를 세우고 기다리던 요청을 보냅니다. false 면 연결이 실패했다(부르는 쪽이 닫는다). */
         [[nodiscard]] bool establishLocked( Session& session ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 부릅니다. 쌓인 보낼 바이트를 쓰고 끝난 응답을 회수합니다. false 면 쓰기가 실패했다. */
-        [[nodiscard]] bool pumpLocked( Session& session ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 잠금 안에서 부릅니다. 기다리던 요청을 연결에 맡기고 `pumpLocked` 합니다. */
+        [[nodiscard]] bool pollLocked( Session& session ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 잠금 안에서 부릅니다. 기다리던 요청을 연결에 맡기고 `pollLocked` 합니다. */
         [[nodiscard]] bool sendWaitingLocked( Session& session ) SW_REQUIRES_LOCK( _mutex );
         void               collectLocked( Session& session ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 잠금 안에서 부릅니다. 연결의 모든 요청을 실패로 끝내고 더는 새 요청을 받지 않게 합니다(전송을 닫는 일은 부르는 쪽이 한다). */

@@ -49,7 +49,7 @@ namespace sw::editor
         const utf8*                     _pStateName{ "" }; ///< 래그돌 상태 이름(정적 글)
         uint32                          _state{ 0 };       ///< 래그돌 상태 값(감시 값)
         uint8                           _bHasRagdoll{ SW_FALSE };
-        uint8                           _bSettled{ SW_FALSE };
+        uint8                           _bAsleep{ SW_FALSE };
     };
 
     /** @brief 겹쳐 그리기 색입니다(창이 테마 토큰에서 정해 넘긴다). */

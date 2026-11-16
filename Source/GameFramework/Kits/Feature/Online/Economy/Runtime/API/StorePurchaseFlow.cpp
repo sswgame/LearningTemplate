@@ -70,10 +70,10 @@ namespace sw
             finished._redeem  = std::move( _listPending[index]._request );
             finished._key     = reply._idempotencyKey;
             finished._billing = StoreBillingStatus::Purchased;
-            finished._result  = reply._errorCode != OnlineError::kOk ? EconomyOutcome::fail( reply._errorCode ) : EconomyOutcome{ reply._reply._result };
+            finished._result  = reply._errorCode != OnlineError::kOk ? EconomyServiceResult::fail( reply._errorCode ) : EconomyServiceResult{ reply._reply._result };
             _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( index ) );
 
-            const EconomyOutcome result = finished._result;
+            const EconomyServiceResult result = finished._result;
             // 공통 범주의 재시도(장애 · 충돌 · 도배 제한)와 업무 결과의 재시도(스토어 대기)를 함께 본다
             const bool bRetryable = reply.isRetryable() || ( reply._errorCode == OnlineError::kOk && reply._reply.isRetryable() );
             finished._bRetryable  = bRetryable ? SW_TRUE : SW_FALSE;

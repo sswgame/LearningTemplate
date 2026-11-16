@@ -21,7 +21,7 @@ namespace sw
      * @class KeyRebindScreen
      * @brief 키 바인딩 설정 하나의 키를 받는 모달입니다(Lyra 의 키 바인딩 창, 유니티 Input System 의 `PerformInteractiveRebinding` 에 해당).
      * @details **받기**: 액션이 아니라 원시 입력을 받는다. 열린 다음 프레임부터 `InputManager::findFirstPressedSlot` 의 첫 슬롯(키보드, 마우스, 패드)을 쓴다.
-     *          받는 동안은 UI 액션을 끈다(`wantsUIActions`, 누른 키가 메뉴를 움직이지 않게 한다). Esc 는 떼면 취소하고, 1 초 누르고 있으면 Esc 를 바인딩한다.
+     *          받는 동안은 UI 액션을 끈다(`needsUIActions`, 누른 키가 메뉴를 움직이지 않게 한다). Esc 는 떼면 취소하고, 1 초 누르고 있으면 Esc 를 바인딩한다.
      *          **패드 사용자의 취소.** 패드 B 도 바인딩할 수 있어야 해서 패드 단추에는 취소 입력을 두지 않는다. 대신 아무것도 받지 못한 채 `kListenTimeoutSeconds` 가 지나면 취소하고 닫는다
      *          (Esc 는 눌렀다 떼면 취소이므로 그 시간은 Esc 를 누르는 동안 세지 않는다).
      *          받은 슬롯은 UI 가 소비한다(뗄 때까지 게임이 보지 못한다).
@@ -46,7 +46,7 @@ namespace sw
         bool onBack() override;
         void onTick( float32 deltaSeconds ) override;
         /** @brief 키를 받는 동안은 UI 액션을 끕니다(겹침을 묻는 동안은 받습니다). */
-        bool wantsUIActions() const override { return _bListening == false; }
+        bool needsUIActions() const override { return _bListening == false; }
 
         /** @brief 키를 기다리는 중이면 true 입니다(겹침을 묻는 중이면 false). */
         bool                 isListening() const { return _bListening; }

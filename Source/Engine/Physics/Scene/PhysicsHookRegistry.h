@@ -95,9 +95,9 @@ namespace sw
         mutex                              _mutex;
         RegistrationList<Entry> _listEntry SW_GUARDED_BY( _mutex ){ "PhysicsHookRegistry" };
         atomic<uint32>                     _generation{ 0 };
-    };
 
-    SW_SERVICE_SLOT( PhysicsHookRegistry, Required );
+        SW_SERVICE_SLOT( PhysicsHookRegistry, Required );
+    };
 
     /** @brief 물리 훅 줄 하나의 정적 등록자입니다. 링크 때 목록에 달리는 객체라 정적 객체로만 둔다. */
     using PhysicsHookRegistrar = ModuleEntryRegistrar<PhysicsHookRegistry, PhysicsHookRegistry::Entry>;

@@ -26,7 +26,7 @@ namespace sw
         void onBeginPlay() override
         {
             Component::onBeginPlay();
-            ControlSystem::ensureFor( *getOwner()->getMutableManager() ).setServerTickSource( getTickHandle() );
+            ControlSystem::findOrCreate( *getOwner()->getMutableManager() ).setServerTickSource( getTickHandle() );
         }
 
         void onTick( TickContext& context ) override

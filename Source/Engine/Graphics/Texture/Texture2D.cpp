@@ -260,9 +260,9 @@ namespace sw
         RHITransferSubmit submit{};
         if ( bBlocking )
         {
-            const bool bSettled = RHITransferUtil::submitWhileBusy( [&]()
+            const bool bCompleted = RHITransferUtil::submitWhileBusy( [&]()
             { return factory.submitTextureUpload( handle, upload ); }, submit );
-            if ( bSettled == false )
+            if ( bCompleted == false )
             {
                 factory.destroyTexture( handle );
                 return Texture2DUploadStep::Failed;
@@ -631,8 +631,8 @@ namespace sw
     void Texture2D::releaseRHI( IRHIDevice* pDevice )
     {
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
-        const bool bForeignDeviceNotice = pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice;
-        if ( bForeignDeviceNotice )
+        const bool bForeignDeviceWarned = pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice;
+        if ( bForeignDeviceWarned )
             return;
 
         if ( pDevice != nullptr )

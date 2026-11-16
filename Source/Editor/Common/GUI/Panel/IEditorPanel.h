@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class CommandStack;
 } // namespace sw
 
 namespace sw::editor
@@ -70,6 +71,8 @@ namespace sw::editor
         virtual EditorAssetType getDocumentKind() const { return EditorAssetType{}; }
         /** @brief 마지막 draw 에서 이 패널 창에 포커스가 있었으면 true 입니다. */
         bool isWindowFocused() const { return _bWindowFocused; }
+        /** @brief 이 패널 창의 ImGui 창 id 입니다(그린 적이 없으면 0). Ctrl+Z 가 처리하는 순간의 포커스 창과 맞춘다(`IEditorPanelService::collectPanelCommandStacks`). */
+        uint32 getWindowID() const { return _windowID; }
         /** @brief 마지막 draw 에서 내용 영역에 글자 줄(`GetTextLineHeightWithSpacing`)이 몇 줄 들어갔는지입니다. 기본 배치의 크기 점검(감시 값 `Editor.PanelContentLines`)이 읽습니다. */
         float32 getContentLineCount() const { return _contentLineCount; }
         /** @brief 마지막 draw 에서 내용 영역에 숫자 "0" 이 몇 칸 들어갔는지입니다(감시 값 `Editor.PanelContentColumns`). */
@@ -85,6 +88,13 @@ namespace sw::editor
         virtual const IEditorDocumentPanel* asDocumentPanel() const { return nullptr; }
         /** @brief 저장되지 않은 편집이 있으면 true 입니다(문서 없는 패널은 늘 false). */
         bool hasUnsavedDocument() const;
+        /**
+         * @brief 이 창에 포커스가 오면 Ctrl+Z 가 갈 스택입니다. nullptr 이면 메인 스택이다(씬 뷰 · 계층 · 인스펙터 …). 문서 패널은 자기 문서의 스택을 답한다(감사 E-3).
+         * @details 패널 관리자가 그린 뒤 한 곳(`EditorPanelManager::updateFocusedCommandStack`)에서 포커스 창의 답을 건다 — 패널마다 걸고 풀지 않는다.
+         */
+        virtual CommandStack* findPanelCommandStack() { return nullptr; }
+        /** @brief 이 창에 포커스가 와도 Ctrl+Z 의 스택을 바꾸지 않으면 true 입니다. 지금 겨눈 스택을 보여 주는 창(History)만 true — 누르는 순간 메인으로 돌아가면 문서 기록을 볼 수 없다. */
+        virtual bool shouldKeepFocusedCommandStack() const { return false; }
 
         // ------------------------------------------------------------------------------
         // 4) 열림 상태. ImGui Begin 의 p_open
@@ -105,7 +115,7 @@ namespace sw::editor
                 requestClose();
         }
         /**
-         * @brief 패널을 닫으려 합니다. 깨끗하면(또는 `asksBeforeClose` 가 false 면) 바로 닫고, 미저장 편집이 있으면 열어 둔 채 확인을 기다립니다.
+         * @brief 패널을 닫으려 합니다. 깨끗하면(또는 `shouldAskBeforeClose` 가 false 면) 바로 닫고, 미저장 편집이 있으면 열어 둔 채 확인을 기다립니다.
          * @details 이미 닫힌 패널이면 아무 일도 하지 않는다. 그려지지 않는 패널이 확인 대기 상태로 남지 않게 하기 위해서다.
          */
         void requestClose();
@@ -130,8 +140,11 @@ namespace sw::editor
             , _bWindowFocused{ SW_FALSE }
             , _bContentDrawn{ SW_FALSE }
             , _bOpenedNotified{ SW_FALSE }
+            , _bDrawing{ SW_FALSE }
+            , _bClosedWhileDrawing{ SW_FALSE }
             , _contentLineCount{ 0.0f }
             , _contentColumnCount{ 0.0f }
+            , _windowID{ 0 }
         {
         }
 
@@ -148,7 +161,8 @@ namespace sw::editor
         virtual void onPanelOpened() {}
         /**
          * @brief 패널이 닫힌 순간 한 번 부릅니다. `requestClose` 와 문서의 `applyCloseChoice` 가 닫는 모든 경로에서 부릅니다.
-         * @details 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 가지고 있던 전역 상태(초점 씬, Undo 스택)는 여기서 해제해야 한다.
+         * @details 닫힌 패널은 `draw()` 가 돌지 않으므로, 창이 가지고 있던 전역 상태(초점 씬, Undo 스택)와 무거운 자원(미리보기 씬 · 렌더 타깃)은 여기서 해제해야 한다.
+         *          그 패널의 `draw()` 안에서 닫히면(X, 창 안의 Close 단추) 그 `draw()` 가 끝난 뒤에 부른다 — 같은 그리기의 남은 내용이 해제한 자원을 보거나 다시 만들지 않게.
          */
         virtual void onPanelClosed() {}
         /**
@@ -177,15 +191,23 @@ namespace sw::editor
         {
             _bOpen           = false;
             _bOpenedNotified = SW_FALSE; // 다시 열면 첫 draw 가 `onPanelOpened` 를 다시 부른다
+            if ( _bDrawing )
+            {
+                _bClosedWhileDrawing = SW_TRUE; // `draw()` 끝에서 부른다
+                return;
+            }
             onPanelClosed();
         }
 
     private:
         bool    _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        uint8   _bWindowFocused  : 1;
-        uint8   _bContentDrawn   : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
-        uint8   _bOpenedNotified : 1; ///< 이번 열림에 `onPanelOpened` 를 불렀다(`closeNow` 가 내린다)
-        float32 _contentLineCount;    ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
-        float32 _contentColumnCount;  ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
+        uint8   _bWindowFocused      : 1;
+        uint8   _bContentDrawn       : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
+        uint8   _bOpenedNotified     : 1; ///< 이번 열림에 `onPanelOpened` 를 불렀다(`closeNow` 가 내린다)
+        uint8   _bDrawing            : 1; ///< `draw()` 안이다 — 여기서 닫히면 `onPanelClosed` 를 그 끝으로 미룬다
+        uint8   _bClosedWhileDrawing : 1; ///< 이번 `draw()` 안에서 닫혔다
+        float32 _contentLineCount;        ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
+        float32 _contentColumnCount;      ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
+        uint32  _windowID;                ///< 이 패널 창의 ImGui 창 id(`getWindowID`)
     };
 } // namespace sw::editor

@@ -1,4 +1,4 @@
-// GridPathSolverTest — 격자 경로 요청 줄(`PathRequestQueue<GridPathSolver>`)이 동기 길(`NavAgent::planPath`)과 같은 경로를 내고, 레인을 나눠도 결과가 같다(nogpu).
+// GridPathSolverTest — 격자 경로 요청 줄(`PathRequestQueue<GridPathSolver>`)이 동기 길(`NavAgent::planPath`)과 같은 경로를 내고, 구간을 나눠도 결과가 같다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -26,7 +26,7 @@ namespace
 } // namespace
 
 /**
- * @brief [GridPathSolverTest] 줄로 푼 경로는 동기로 구한 경로와 점마다 같다 — 요청 순서 · 레인 수와 상관없다(결정적 고정 걸음이 그대로 쓴다)
+ * @brief [GridPathSolverTest] 줄로 푼 경로는 동기로 구한 경로와 점마다 같다 — 요청 순서 · 구간 수와 상관없다(결정적 고정 걸음이 그대로 쓴다)
  */
 SW_TEST_CASE( GridPathSolverTest, QueuedPathsMatchSynchronousPaths )
 {
@@ -70,7 +70,7 @@ SW_TEST_CASE( GridPathSolverTest, QueuedPathsMatchSynchronousPaths )
 }
 
 /**
- * @brief [GridPathSolverTest] 막힌 칸에서 시작하면 경로가 없다(`InvalidStart`) — 요청자는 그 결과로 걸을 수 있는 칸으로 민다(RTS `nudgeToWalkable`)
+ * @brief [GridPathSolverTest] 막힌 칸에서 시작하면 경로가 없다(`InvalidStart`) — 요청자는 그 결과로 걸을 수 있는 칸으로 민다(RTS `snapToWalkable`)
  */
 SW_TEST_CASE( GridPathSolverTest, BlockedStartReportsNoPath )
 {

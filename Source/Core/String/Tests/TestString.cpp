@@ -16,6 +16,7 @@
 #include "Core/String/string_splitter.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include <sstream>
 
@@ -118,11 +119,21 @@ SW_TEST_CASE( StringTest, HashedString )
     SW_EXPECT_EQUAL( str1.getIndex(), str3.getIndex() );
     SW_EXPECT_TRUE( str1 != str4 );
 
-    // 빈 이름의 표시 글은 "None"(FName), 값으로 쓰는 글은 빈 글이다 — 경로 자리로 "None" 이 가면 'None' 파일을 찾는다
-    SW_EXPECT_EQUAL( sw::string_view( "None" ), defaultStr.view() );
-    SW_EXPECT_TRUE( defaultStr.viewOrEmpty().empty() );
-    SW_EXPECT_EQUAL( '\0', defaultStr.viewOrEmpty().data()[0] );
-    SW_EXPECT_EQUAL( sw::string_view( "TestKey" ), str1.viewOrEmpty() );
+    // 빈 이름의 글은 빈 글이고(경로 자리로 가도 'None' 파일을 찾지 않는다), 표시 글(`toString`)만 "None" 이다(FName 의 ToString)
+    SW_EXPECT_TRUE( defaultStr.view().empty() );
+    SW_EXPECT_EQUAL( '\0', defaultStr.c_str()[0] );
+    SW_EXPECT_EQUAL( sw::string_view( "None" ), defaultStr.toString() );
+    SW_EXPECT_EQUAL( '\0', defaultStr.toString().data()[4] );
+    SW_EXPECT_EQUAL( sw::string_view( "TestKey" ), str1.toString() );
+    // 읽기는 "None" 철자(대소문자 무시)를 빈 이름으로 되돌리고, 그 철자가 글로 새지 않는다
+    SW_EXPECT_TRUE( sw::hashed_string( "None" ).empty() );
+    SW_EXPECT_TRUE( sw::hashed_string( "nOnE" ).empty() );
+    SW_EXPECT_TRUE( sw::hashed_string( "nOnE" ).view().empty() );
+    SW_EXPECT_EQUAL( defaultStr.getHash(), sw::hashed_string( "None" ).getHash() );
+    // 로그 포매터는 이름을 표시 글로 쓴다
+    sw::fixed_string<64> formatted;
+    sw::formatstring( formatted.data(), formatted.capacity(), "[%#][%#]", defaultStr, str1 );
+    SW_EXPECT_EQUAL( sw::string_view( "[None][TestKey]" ), sw::string_view( formatted.c_str() ) );
 }
 
 /**
@@ -1843,14 +1854,14 @@ SW_TEST_CASE( StringTest, FixedStringConcurrentSizeReadsWriteNothing )
     constexpr uint32           kReadCount = 20000;
 
     uint32     arrMismatch[2] = { 0, 0 };
-    sw::thread first( [&shared, &arrMismatch]()
+    sw::thread first( ThreadTestAccess::getKey(), [&shared, &arrMismatch]()
     {
         for ( uint32 index = 0; index < kReadCount; ++index )
         {
             arrMismatch[0] += ( shared.size() == 18u ) ? 0u : 1u;
         }
     } );
-    sw::thread second( [&shared, &arrMismatch]()
+    sw::thread second( ThreadTestAccess::getKey(), [&shared, &arrMismatch]()
     {
         for ( uint32 index = 0; index < kReadCount; ++index )
         {
@@ -2005,4 +2016,17 @@ SW_TEST_CASE( StringTest, KeyValueSplitsAtTheFirstSeparator )
     SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( " = 1", key, value ) );
     SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( "", key, value ) );
     SW_EXPECT_TRUE( key == "unchanged" && value == "unchanged" );
+}
+
+// 작은 버퍼에 한글이 경계에 걸리면 포맷이 글자 시작까지 물러나 끝까지 채우지 않는다 — 그것을 "다 들어갔다" 로 보면 뒤가 잘린 채 끝났다(감사 C-10).
+// 접두 길이를 바꿔 경계가 글자 안 여러 자리에 오게 한다.
+SW_TEST_CASE( StringTest, AppendFormatGrowsAcrossUTF8Boundary )
+{
+    const sw::string_view text = "a가나다라마바"; // 19 바이트 — StringBuilder<16> 의 경계가 글자 안에 걸린다
+    for ( const sw::string_view prefix : { sw::string_view{ "" }, sw::string_view{ "a" }, sw::string_view{ "ab" } } )
+    {
+        sw::StringBuilder<16> builder;
+        builder.appendFormat( "%#%#", prefix, text );
+        SW_EXPECT_TRUE( builder.view() == sw::string( prefix ) + sw::string( text ) );
+    }
 }

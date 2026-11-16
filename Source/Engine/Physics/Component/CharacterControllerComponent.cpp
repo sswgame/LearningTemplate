@@ -139,9 +139,9 @@ namespace sw
 
     private:
         atomic<bool> _state;
-    };
 
-    SW_SERVICE_SLOT( CharacterStepHistorySwitch, Required );
+        SW_SERVICE_SLOT( CharacterStepHistorySwitch, Required );
+    };
 
     atomic<bool>& CharacterControllerHistoryInternal::getEnabled()
     {
@@ -276,28 +276,46 @@ namespace sw
         const bool bTransformChanged = consumeTransformChange();
         const bool bCreate           = _character.isValid() == false;
         const bool bTeleported       = consumeTeleport();
-        const bool bUnchanged        = bCreate == false && bTransformChanged == false && bTeleported == false;
+        // 배율은 끝 훅(`endPhysicsFrame`)이 먼저 읽었을 수 있다 — 변경 번호만이 아니라 지은 배율과의 값 비교로도 본다.
+        const bool bUnchanged = bCreate == false && bTransformChanged == false && bTeleported == false && isShapeScaleStale( _worldScale ) == false;
         if ( bUnchanged )
             return;
         float3 position{};
-        PhysicsComponent::readWorldPose( *this, position, _worldRotation, _worldScale );
+        if ( PhysicsComponent::readWorldPose( *this, position, _worldRotation, _worldScale ) == false )
+        {
+            releasePhysics( physics ); // 배율 0 — 캡슐을 지을 수 없다(`readWorldPose` 가 알렸다). 배율이 돌아오면 다시 만든다
+            return;
+        }
+        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(속 바디의 접촉 · 세로 속도가 이어진다 — 강체 `applyScaledShape` 와 같다, 감사 S-4).
+        if ( bCreate == false && isShapeScaleStale( _worldScale ) )
+        {
+            const PhysicsShapeDesc3D capsule = getScaledCapsule();
+            if ( pScene->setCharacterSize( _character, capsule._radius, capsule._halfHeight ) == false )
+            {
+                releasePhysics( physics );
+                return;
+            }
+            markShapeScale( _worldScale );
+        }
         if ( bCreate )
         {
-            PhysicsCharacterDesc3D desc;
+            const PhysicsShapeDesc3D capsule = getScaledCapsule();
+            PhysicsCharacterDesc3D   desc;
             desc._position      = position;
             desc._userData      = getOwner()->getObjectID();
-            desc._radius        = _radius;
-            desc._halfHeight    = _halfHeight;
+            desc._radius        = capsule._radius;
+            desc._halfHeight    = capsule._halfHeight;
             desc._maxSlopeAngle = _maxSlopeAngle;
             desc._stepHeight    = _stepHeight;
             desc._mass          = _mass;
             desc._layer         = physics.resolveLayer( _layer );
             desc._bInnerBody    = _bInnerBody;
             _character          = pScene->createCharacter( desc );
-            _state              = PhysicsCharacterState3D{};
-            _state._position    = position;
-            _previousPosition   = position;
-            _verticalSpeed      = 0.0f;
+            markShapeScale( _worldScale );
+            _state            = PhysicsCharacterState3D{};
+            _verticalSpeed    = 0.0f;
+            _state._position  = position;
+            _previousPosition = position;
             return;
         }
         pScene->setCharacterPosition( _character, position );
@@ -415,11 +433,9 @@ namespace sw
             return;
         const float3 position = float3::lerp( _previousPosition, _state._position, alpha );
         // 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다(자리는 아래에서 캐릭터 자리로 덮는다 — 전에도 그랬다).
-        if ( consumeTransformChange() )
-        {
-            float3 current{};
-            PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale );
-        }
+        float3 current{};
+        if ( consumeTransformChange() && PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale ) == false )
+            return; // 배율 0 — 트랜스폼을 덮어쓰지 않는다(다음 프레임 시작 훅이 캐릭터를 놓는다)
         if ( _pendingGroundYaw != 0.0f )
         {
             _worldRotation    = quaternion::concatenate( _worldRotation, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _pendingGroundYaw ) ).normalize();
@@ -427,6 +443,15 @@ namespace sw
         }
         // 강체와 같이 모아 한 번에 쓴다 — 적용 · 변경 번호 맞추기는 `ScenePhysics::queuePoseWrite` 가 한다.
         physics.queuePoseWrite( *this, position, _worldRotation, _worldScale );
+    }
+
+    PhysicsShapeDesc3D CharacterControllerComponent::getScaledCapsule() const
+    {
+        PhysicsShapeDesc3D capsule;
+        capsule._type       = PhysicsShapeType3D::Capsule;
+        capsule._radius     = _radius;
+        capsule._halfHeight = _halfHeight;
+        return PhysicsComponent::makeScaledShape( capsule, _worldScale );
     }
 
     void CharacterControllerComponent::releasePhysics( ScenePhysics& physics )

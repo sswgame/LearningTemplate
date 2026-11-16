@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -13,10 +14,20 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct PhysicsComponentInternal
+        {
+            /// 지은 배율과 다르다고 볼 상대 차이 — 회전한 월드 행렬을 풀면 축 길이가 몇 ulp 흔들려 절대 `kEpsilon`(1e-6)으로는 배율 5 짜리 회전 바디가 프레임마다 다시 지어진다.
+            static constexpr float32 kShapeScaleTolerance = 1e-4f;
+        };
+    } // namespace
+
     PhysicsComponent::PhysicsComponent( PhysicsComponentPhase phase )
         : _pScenePhysics{ nullptr }
         , _physicsIndex{ kNotRegistered }
         , _syncedTransformVersion{ 0 }
+        , _shapeScale{ 1.0f, 1.0f, 1.0f }
         , _phase{ phase }
         , _bRebuildPending{ false }
         , _bTeleportPending{ false }
@@ -104,6 +115,15 @@ namespace sw
         _bRebuildPending = true;
     }
 
+    bool PhysicsComponent::isShapeScaleStale( const float3& worldScale ) const
+    {
+        const float3 delta{ worldScale._x - _shapeScale._x, worldScale._y - _shapeScale._y, worldScale._z - _shapeScale._z };
+        const float3 limit{ PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._x ) ),
+                            PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._y ) ),
+                            PhysicsComponentInternal::kShapeScaleTolerance * MathUtil::max( 1.0f, MathUtil::abs( _shapeScale._z ) ) };
+        return MathUtil::abs( delta._x ) > limit._x || MathUtil::abs( delta._y ) > limit._y || MathUtil::abs( delta._z ) > limit._z;
+    }
+
     bool PhysicsComponent::isSimulated() const
     {
         return hasBegunPlay() && isActive() && isPendingDestroy() == false && getOwner() != nullptr;
@@ -112,16 +132,24 @@ namespace sw
 
 namespace sw
 {
-    void PhysicsComponent::readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale )
+    bool PhysicsComponent::readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale )
     {
-        const float4x4 world = component.getWorldMatrix();
-        if ( world.decompose( outScale, outRotation, outPosition ) == false )
+        float3     position{};
+        quaternion rotation{};
+        float3     scale{};
+        if ( component.getWorldMatrix().decompose( scale, rotation, position ) == false )
         {
-            outPosition = world.getTranslation();
-            outRotation = quaternion{};
-            outScale    = float3{ 1.0f, 1.0f, 1.0f };
+            const GameObject*   pOwner = component.getOwner();
+            const hashed_string name   = pOwner != nullptr ? pOwner->getName() : hashed_string{};
+            SW_LOG_ERROR_ONCE_FOR_ID( "PhysicsComponent.ZeroWorldScale", std::string_view( name.c_str(), name.size() ),
+                                      "'%#' has a zero world scale axis (%#, %#, %#) - physics skips it until the scale is non-zero", name.c_str(), scale._x, scale._y,
+                                      scale._z );
+            return false;
         }
-        outRotation.normalize();
+        outPosition = position;
+        outRotation = rotation.normalize();
+        outScale    = scale;
+        return true;
     }
 
     void PhysicsComponent::writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale )

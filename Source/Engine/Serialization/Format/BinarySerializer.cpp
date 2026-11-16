@@ -48,7 +48,7 @@ namespace sw
             }
 
             /**
-             * @brief 엄격한 읽기가 타입에 없는 필드를 건너뛸 때(`skipsUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
+             * @brief 엄격한 읽기가 타입에 없는 필드를 건너뛸 때(`shouldSkipUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
              * @details 바이너리는 필드 이름이 아니라 해시를 싣는다. 오브젝트마다 알리면 같은 타입 천 개가 천 줄을 쓴다.
              */
             static void warnSkippedFieldOnce( const TypeInfo& typeInfo, uint32 nameHash )
@@ -61,7 +61,7 @@ namespace sw
             }
 
             /**
-             * @brief 엄격한 읽기가 읽지 못한 필드를 건너뛸 때(`skipsUnreadableProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
+             * @brief 엄격한 읽기가 읽지 못한 필드를 건너뛸 때(`shouldSkipUnreadableProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
              * @details 현재 타입에 있는 필드인데 값을 읽지 못한 경우다(모르는 열거자 이름, 바뀐 타입). XML, JSON 과 같이 그 필드만 남기고 나머지를 읽는다.
              *          컴포넌트째 실패하면 소유 포인터 목록의 **뒤 컴포넌트까지** 버린다.
              */
@@ -196,7 +196,7 @@ namespace sw
 
                 if ( pTargetProp == nullptr )
                 {
-                    if ( state._bStrict && state._context.skipsUnknownProperties() == false )
+                    if ( state._bStrict && state._context.shouldSkipUnknownProperties() == false )
                         return FieldReadResult::FieldFailed;
                     if ( state._bStrict == false )
                         pushOrphanVal( state._pOutListOrphan, {}, tagHash, wireTypeHash, state._pData + payloadStart, payloadSize, state._wireVersion );
@@ -269,8 +269,8 @@ namespace sw
             /**
              * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 두 가지뿐이다.
-             *          (1) 모르는 프로퍼티: 엄격은 `skipsUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
-             *          (2) 읽지 못한 프로퍼티(페이로드를 끝까지 읽지 못한 것 포함): 엄격은 `skipsUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다)
+             *          (1) 모르는 프로퍼티: 엄격은 `shouldSkipUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
+             *          (2) 읽지 못한 프로퍼티(페이로드를 끝까지 읽지 못한 것 포함): 엄격은 `shouldSkipUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다)
              *          아니면 실패하며, 소프트는 orphan 으로 담는다. 건너뛰거나 orphan 으로 담은 필드는 **읽기 전 값**이다(읽다 만 컨테이너 · 구조체를 되돌린다).
              *          되돌릴 수 없는 소유 포인터 목록(되돌리면 컴포넌트를 새로 만든다)이 읽다 말면 객체째 실패한다.
              *          두 플래그는 따로다. 혼합 빌드 사이의 메시지는 (1) 만 켜서 새 빌드가 더한 필드는 건너뛰고 모르는 열거자는 거절한다. 중첩 구조체도
@@ -291,7 +291,7 @@ namespace sw
                 if ( readTaggedHeader( reader, typeInfo, wireVersion, propCount ) == false )
                     return FieldReadResult::FieldFailed;
 
-                TaggedReadState state{ pInstance, typeInfo, pData, dataSize, context, pOutListOrphan, bStrict, bStrict == false || context.skipsUnreadableProperties(), wireVersion };
+                TaggedReadState state{ pInstance, typeInfo, pData, dataSize, context, pOutListOrphan, bStrict, bStrict == false || context.shouldSkipUnreadableProperties(), wireVersion };
                 if ( typeInfo.getPropertiesWithBase().size() > kFastPropBitmaskThreshold )
                     state._uniqueMatchedPropHashes.reserve( typeInfo.getPropertiesWithBase().size() );
 
@@ -589,7 +589,7 @@ namespace sw
         // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻이기 때문이다.
         // 지운 필드를 버려도 되는 호출부는 컨텍스트로 그렇게 말한다(`setAllowUnknownProperties`, 오브젝트 상태). 버전이 다르면 그래도 거절한다.
         // orphan 은 모르는 이름과 읽지 못한 아는 필드를 함께 담으므로 두 플래그가 모두 켜졌을 때만 버린다. 모르는 이름만 버리는 읽기는 `deserializeExactVersion` 이다.
-        const bool               bIgnoreOrphan = context.skipsUnknownProperties() && context.skipsUnreadableProperties();
+        const bool               bIgnoreOrphan = context.shouldSkipUnknownProperties() && context.shouldSkipUnreadableProperties();
         const SchemaOrphanPolicy orphanPolicy  = bIgnoreOrphan ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
         return runVersionedDeserialize(
             outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,

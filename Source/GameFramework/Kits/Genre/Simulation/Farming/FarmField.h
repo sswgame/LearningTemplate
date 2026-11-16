@@ -111,10 +111,13 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        FarmTile* findTileMutable( int32 x, int32 y );
+        static constexpr uint32 kTileStateMinBytes = 9; ///< 칸 하나의 상태 최소 바이트 — 이름(4) + 자람(4) + 깃발(1)
+        FarmTile*               findTileMutable( int32 x, int32 y );
         /** @brief 읽은 타일이 규칙으로 나올 수 있는 타일인지 반환합니다. 작물은 카탈로그에 있고, 자람은 다 자란 날을 넘지 않습니다. */
         [[nodiscard]] bool isTileValid( const FarmTile& tile ) const;
-        const CropDef*     findCropDef( const FarmTile& tile ) const;
+        /** @brief 칸 하나(작물 · 자람 · 깃발)를 쓰고 읽습니다. 읽으면 `isTileValid` 로 거릅니다. */
+        void           serializeTile( StateIO& io, FarmTile& tile ) const;
+        const CropDef* findCropDef( const FarmTile& tile ) const;
 
     private:
         vector<FarmTile>   _listTile; ///< 타일마다의 상태이다(`_topology` 의 타일 번호)

@@ -412,7 +412,6 @@ namespace sw
         , _arrFrameFence{}
         , _frameFenceRing{}
         , _bInitialized{ SW_FALSE }
-        , _bDeviceLost{ SW_FALSE }
         , _bTextureFormatsTier1{ SW_FALSE }
         , _bDepth32Stencil8{ SW_FALSE }
         , _bTextureBC{ SW_FALSE }
@@ -437,7 +436,7 @@ namespace sw
         waitInfo.future = future;
         if ( wgpuInstanceWaitAny( _instance, 1, &waitInfo, MathUtil::kMaxUInt64 ) != WGPUWaitStatus_Success || waitInfo.completed == false )
         {
-            SW_LOG_ERROR_ID( "WebGPU.WaitFailed", "WebGPU: waiting for %# failed (the web build needs ASYNCIFY or JSPI - cmake/Modules/Platform/Web.cmake)", pWhat );
+            SW_LOG_ERROR_ID( "WebGPU.WaitFailed", "WebGPU: waiting for %# failed (the web build needs ASYNCIFY or JSPI - cmake/Toolchain/Platform/Web.cmake)", pWhat );
             return false;
         }
         return true;
@@ -1177,7 +1176,7 @@ namespace sw
     void WebGPURHIDevice::beginFrameInternal()
     {
         processCompletions();
-        if ( _bDeviceLost != SW_FALSE )
+        if ( isDeviceLost() )
             return;
         // 앞서가기 상한(`IRHIDevice` 계약): 이 칸을 앞 프레임이 아직 쓰면 그 프레임을 기다린다. 기다리지 않으면 상수 링 · 프레임 완료가 GPU 가 뒤처진 만큼 자란다.
         // 브라우저도 같은 대기다 — 웹 빌드는 ASYNCIFY · JSPI 로 링크해 `wgpuInstanceWaitAny` 가 이벤트 루프에 양보한다(`waitForFuture` 와 같은 길).
@@ -1222,10 +1221,10 @@ namespace sw
         WebGPUFrameFence* const pFence = &_arrFrameFence[_frameFenceRing.getRecordingSlot()];
         pFence->arm( _frameFenceRing.getRecordingSerial(), this );
         WGPUQueueWorkDoneCallbackInfo doneInfo{};
-        doneInfo.mode           = WGPUCallbackMode_AllowSpontaneous;
-        doneInfo.callback       = &WebGPURHIDevice::onFrameWorkDone;
-        doneInfo.userdata1      = pFence;
-        pFence->_workDoneFuture = wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
+        doneInfo.mode          = WGPUCallbackMode_AllowSpontaneous;
+        doneInfo.callback      = &WebGPURHIDevice::onFrameJobsDone;
+        doneInfo.userdata1     = pFence;
+        pFence->_jobDoneFuture = wgpuQueueOnSubmittedWorkDone( _queue, doneInfo );
         mapQueuedReadbacks( _frameFenceRing.getRecordingSerial() );
         mapTimestampReadback( pFence ); // 위 매핑 수 기록 뒤에 더한다(`mapQueuedReadbacks` 는 수를 덮어 적는다)
 
@@ -1272,13 +1271,13 @@ namespace sw
         }
     }
 
-    void WebGPURHIDevice::onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
+    void WebGPURHIDevice::onFrameJobsDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
     {
         (void)pUserdata2;
         WebGPUFrameFence* const pFence = static_cast<WebGPUFrameFence*>( pUserdata1 );
         if ( status != WGPUQueueWorkDoneStatus_Success )
             SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameWorkFailed", "WebGPU: a submitted frame did not complete (status %#): %#", static_cast<uint32>( status ), WebGPURHIUtil::fromStringView( message ) );
-        pFence->_bWorkDone.store( SW_TRUE, std::memory_order_release );
+        pFence->_bJobDone.store( SW_TRUE, std::memory_order_release );
     }
 
     void WebGPURHIDevice::onFrameBufferMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
@@ -1314,7 +1313,7 @@ namespace sw
     {
         // 큐 완료와 매핑을 하나씩 기다린다(이미 끝난 퓨처는 바로 돌아온다). 상한은 두지 않는다 — Vulkan 칸 펜스 대기(`vkWaitForFences` UINT64_MAX)와 같다.
         // AllowSpontaneous 콜백도 WaitAny 로 기다릴 수 있다(AllowProcessEvents 와 같은 까닭으로 불린다 — https://webgpu-native.github.io/webgpu-headers/Asynchronous-Operations.html).
-        if ( fence._workDoneFuture.id != 0 && waitForFuture( fence._workDoneFuture, "the frame's submitted work" ) == false )
+        if ( fence._jobDoneFuture.id != 0 && waitForFuture( fence._jobDoneFuture, "the frame's submitted work" ) == false )
             return false;
         for ( const WGPUFuture future : fence._listMapFuture )
         {
@@ -1357,7 +1356,7 @@ namespace sw
         // 폴링으로 둔다: 이 길은 waitIdle(기동 · 종료 · 백엔드 교체 · 창 크기)만 지나고 프레임 경로가 아니다.
         const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( WebGPURHIDeviceInternal::kIdleWaitTimeoutMs ) );
         bool           bTimedOut{ false };
-        while ( _bDeviceLost == SW_FALSE && _frameFenceRing.isIdle() == false )
+        while ( isDeviceLost() == false && _frameFenceRing.isIdle() == false )
         {
             processCompletions();
             if ( deadline.isExpired() )
@@ -1426,7 +1425,6 @@ namespace sw
         if ( reason == WGPUDeviceLostReason_Destroyed || pThis == nullptr )
             return;
         SW_LOG_ERROR_ID( "WebGPU.DeviceLost", "WebGPU device lost (reason %#): %#", static_cast<uint32>( reason ), WebGPURHIUtil::fromStringView( message ) );
-        pThis->_bDeviceLost = SW_TRUE;
         (void)pThis->_transferSerials.markLost();
     }
 } // namespace sw

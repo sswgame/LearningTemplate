@@ -23,7 +23,7 @@ namespace sw
     using SoundPlayingID = uint64;
 
     /** @class ISoundPlayer @brief 소리를 오디오 엔진에 넘기는 쪽입니다. 게임 스레드에서 부릅니다. */
-    class ISoundPlayer
+    class SW_API ISoundPlayer
     {
     public:
         virtual ~ISoundPlayer() = default;
@@ -49,7 +49,7 @@ namespace sw
         virtual void setObjectParameter( const GameObject& object, const hashed_string& name, float32 value ) = 0;
         /** @brief 낸 소리를 멈춥니다. @p fadeSeconds 가 음수면 이벤트의 페이드입니다. 0 이나 끝난 번호는 아무 일도 하지 않습니다. */
         virtual void stop( SoundPlayingID playingID, float32 fadeSeconds ) = 0;
-    };
 
-    SW_SERVICE_SLOT( ISoundPlayer, Optional );
+        SW_SERVICE_SLOT( ISoundPlayer, Optional );
+    };
 } // namespace sw

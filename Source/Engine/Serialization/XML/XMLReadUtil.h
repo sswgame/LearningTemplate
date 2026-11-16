@@ -60,7 +60,7 @@ namespace sw
          * @details 필수 이름은 이 함수로 읽지 않는다 — 빈 이름이 "적지 않음"과 "잘못 적음"을 가르지 못해, 부르는 쪽이 비었는지 보는 것을 잊으면 조용히 지나간다.
          *          필수는 오류를 남기는 읽기(`readRequiredName` · `AppearanceXMLUtil::readRequiredName` · `CharacterDataReader::readName( …, true )`)를 쓴다.
          *          글이 빈 이름의 철자(`none`, 대소문자 무시)이면 오류를 알리고 빈 이름을 돌려준다 — 이름은 "적지 않음"과 값 "none" 을 가를 수 없다.
-         *          그 글이 뜻을 가지는 속성(열거형 · 경로)은 이름이 아니라 글(`XMLNode::findAttribute`)로 읽는다. 빈 이름의 `c_str()` 도 "None" 이라 경로로 쓰면 안 된다.
+         *          그 글이 뜻을 가지는 속성(열거형 · 경로)은 이름이 아니라 글(`XMLNode::findAttribute`)로 읽는다.
          */
         static hashed_string readOptionalName( const XMLNode& node, const utf8* pAttribute );
         /**
@@ -126,7 +126,7 @@ namespace sw
         [[nodiscard]] static bool readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue );
 
         /**
-         * @brief 선택 숫자 속성을 손으로 읽습니다(스키마 구조체가 없는 손 읽기용 — 카탈로그 원소는 `XMLFields::readFields`).
+         * @brief 선택 숫자 속성을 손으로 읽습니다(스키마 구조체가 없는 손 읽기용 — 카탈로그 원소는 `XMLFields::readProperties`).
          * @details 없으면 @p inoutValue 를 두고 true 다 — 기본값은 부르는 쪽 Def 의 초기값이고 여기서 정하지 않는다.
          *          깨진 값이나 [@p minValue, @p maxValue] 밖 값은 원소 · 속성 이름과 함께 오류이고 false 이며 @p inoutValue 는 그대로다(자르지 않는다).
          */

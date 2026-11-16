@@ -219,7 +219,7 @@ namespace sw
 
         _stop     = StopSource{};
         _bRunning = SW_TRUE;
-        _thread   = sw::thread( &RenderThread::threadMain, this );
+        _thread   = sw::thread( ThreadCreationKey{}, &RenderThread::threadMain, this );
         // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 작업을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
         if ( pDevice != nullptr )
             pDevice->setRenderThreadFlush( &RenderThread::pollPacketsThunk, this, _thread.get_id() );
@@ -485,10 +485,10 @@ namespace sw
         // 빠뜨리면 UI 스레드가 다음 스냅샷을 쓰거나 내면서 끝없이 기다린다(`DrawSnapshotHandoff`).
         if ( _postPresentHook.isBound() )
             _postPresentHook( *_pDevice, packet );
-        releaseContextAfterWork();
+        releaseContextAfterJob();
     }
 
-    void RenderThread::releaseContextAfterWork()
+    void RenderThread::releaseContextAfterJob()
     {
         IRHIContextThreadBinding* pContextBinding = _pDevice->findContextThreadBinding();
         if ( pContextBinding != nullptr && _bContextBound.load( std::memory_order_relaxed ) )
@@ -503,7 +503,7 @@ namespace sw
         if ( _pDevice == nullptr || ensureContextOnCurrentThread() == false )
             return false;
         command( *_pDevice );
-        releaseContextAfterWork();
+        releaseContextAfterJob();
         return true;
     }
 

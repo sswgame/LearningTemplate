@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -19,12 +20,34 @@ namespace sw
                 return value >= edge1 ? 1.0f : 0.0f;
             return MathUtil::smoothstep( edge0, edge1, value );
         }
+
+        struct WorldClockInternal
+        {
+            /**
+             * @brief 판 1 → 2: 하루 안 시각이 float32 이던 칸을 float64 칸으로 다시 씁니다(머리 뒤 칸 — 머리는 `StateIO::header` 가 읽고 쓴다).
+             * @details 판 1 은 머리표가 없었다(`kStateHeaderlessVersion`) — 세션 상태 구간이든 바깥 형식(나일 시티) 안이든 머리가 그 바이트를 판 1 로 알아보고 이 단계로 올린다.
+             */
+            [[nodiscard]] static bool upgradeStateFrom1( Archive& inOldBody, Archive& outNewBody )
+            {
+                int32   day         = 0;
+                float32 secondOfDay = 0.0f;
+                float32 timeScale   = 0.0f;
+                uint8   bPaused     = SW_FALSE;
+                inOldBody >> day >> secondOfDay >> timeScale >> bPaused;
+                if ( inOldBody.isError() )
+                    return false;
+                outNewBody << day << static_cast<float64>( secondOfDay ) << timeScale << bPaused;
+                return true;
+            }
+        };
     } // namespace
+
+    SW_STATE_FORMAT_UPGRADE( worldClock1To2, "CLOK", 1, 2, &WorldClockInternal::upgradeStateFrom1 );
 
     WorldClock::WorldClock()
         : _settings{}
         , _eventBuffer{}
-        , _secondOfDay{ 0.0f }
+        , _secondOfDay{ 0.0 }
         , _timeScale{ 1.0f }
         , _day{ 0 }
         , _bPaused{ SW_FALSE }
@@ -70,13 +93,13 @@ namespace sw
             return false;
         }
         _day         = day;
-        _secondOfDay = hour / 24.0f * _settings._secondsPerDay;
+        _secondOfDay = static_cast<float64>( hour ) / 24.0 * _settings._secondsPerDay;
         return true;
     }
 
     float32 WorldClock::getHour() const
     {
-        return _secondOfDay / _settings._secondsPerDay * 24.0f;
+        return static_cast<float32>( _secondOfDay / _settings._secondsPerDay * 24.0 );
     }
 
     int32 WorldClock::getMinute() const
@@ -143,7 +166,7 @@ namespace sw
     void WorldClock::advanceToHour( float32 hour )
     {
         const float32 target = MathUtil::clamp( hour, 0.0f, 23.9999f ) / 24.0f * _settings._secondsPerDay;
-        float32       gap    = target - _secondOfDay;
+        float32       gap    = static_cast<float32>( target - _secondOfDay );
         if ( gap <= 0.0f )
             gap += _settings._secondsPerDay;
         advanceGameSeconds( gap );
@@ -158,36 +181,46 @@ namespace sw
 
     void WorldClock::advanceGameSeconds( float32 gameSeconds )
     {
-        const float32 secondsPerHour = _settings._secondsPerDay / 24.0f;
-        float32       left           = gameSeconds;
-        // 시 경계마다 끊어 가며 넘긴다(하루를 건너뛰어도 모든 경계를 알린다).
-        while ( left > 0.0f )
+        constexpr int32   kHoursPerDay   = 24;
+        constexpr float64 kHourEpsilon   = 1.0e-9; // 경계에 올려놓은 시각을 나눈 몫이 N 바로 아래로 반올림되지 않게
+        const float64     secondsPerHour = static_cast<float64>( _settings._secondsPerDay ) / kHoursPerDay;
+        // 시 경계마다 끊어 가며 넘긴다(하루를 건너뛰어도 모든 경계를 알린다). 지금 시를 **정수로** 들고 경계를 넘을 때마다 하나 올린다 — 예전에는 매 걸음
+        // `getHour()` 를 다시 구해, 경계에 올려놓은 시각이 N 바로 아래로 반올림되면 다음 경계까지가 0 이 되어 걸음이 1e-4 로 고정됐고 하루 길이에 따라
+        // (3500 · 5000 · 7000 · 10000 …) 2048 초를 넘은 시각에서는 그 걸음이 float 에 더해지지 않아 시계가 영구히 멈췄다(감사 G-2). 매 반복은 남은 시간을
+        // 다 쓰거나 시를 하나 올리므로 반드시 끝난다(언리얼 FTimespan 의 정수 틱 자리).
+        int32   hour = MathUtil::clamp( static_cast<int32>( _secondOfDay / secondsPerHour + kHourEpsilon ), 0, kHoursPerDay - 1 );
+        float64 left = gameSeconds;
+        while ( left > 0.0 )
         {
-            const float32  hourBefore    = getHour();
-            const int32    hourIntBefore = static_cast<int32>( hourBefore );
-            const DayPhase phaseBefore   = computePhase( hourBefore );
-            const float32  toNextHour    = static_cast<float32>( hourIntBefore + 1 ) * secondsPerHour - _secondOfDay;
-            float32        step          = MathUtil::min( left, MathUtil::max( toNextHour, 1.0e-4f ) );
-            if ( MathUtil::abs( left - toNextHour ) < 1.0e-3f )
-                step = toNextHour; // 반올림 오차로 경계 바로 앞에 멈추지 않게
-            _secondOfDay += step;
-            left = MathUtil::abs( left - step ) < 1.0e-3f ? 0.0f : left - step;
-            if ( _secondOfDay >= _settings._secondsPerDay - 1.0e-3f )
+            const DayPhase phaseBefore = computePhase( getHour() );
+            const float64  boundary    = static_cast<float64>( hour + 1 ) * secondsPerHour;
+            const float64  toNextHour  = boundary - _secondOfDay;
+            if ( left < toNextHour - 1.0e-6 )
             {
-                _secondOfDay             = 0.0f;
-                const int32 seasonBefore = getSeasonIndex();
-                const int32 yearBefore   = getYear();
-                ++_day;
-                _eventBuffer.push( WorldClockEvent{ _day, WorldClockEvent::Kind::DayChanged } );
-                if ( getSeasonIndex() != seasonBefore )
-                    _eventBuffer.push( WorldClockEvent{ getSeasonIndex(), WorldClockEvent::Kind::SeasonChanged } );
-                if ( getYear() != yearBefore )
-                    _eventBuffer.push( WorldClockEvent{ getYear(), WorldClockEvent::Kind::YearChanged } );
+                _secondOfDay += left; // 이 시 안에서 끝난다
+                left = 0.0;
             }
-            const float32 hourAfter = getHour();
-            if ( static_cast<int32>( hourAfter ) != hourIntBefore )
-                _eventBuffer.push( WorldClockEvent{ static_cast<int32>( hourAfter ), WorldClockEvent::Kind::HourChanged } );
-            const DayPhase phaseAfter = computePhase( hourAfter );
+            else
+            {
+                left         = MathUtil::max( 0.0, left - MathUtil::max( toNextHour, 0.0 ) );
+                _secondOfDay = boundary;
+                ++hour;
+                if ( hour >= kHoursPerDay )
+                {
+                    hour                     = 0;
+                    _secondOfDay             = 0.0;
+                    const int32 seasonBefore = getSeasonIndex();
+                    const int32 yearBefore   = getYear();
+                    ++_day;
+                    _eventBuffer.push( WorldClockEvent{ _day, WorldClockEvent::Kind::DayChanged } );
+                    if ( getSeasonIndex() != seasonBefore )
+                        _eventBuffer.push( WorldClockEvent{ getSeasonIndex(), WorldClockEvent::Kind::SeasonChanged } );
+                    if ( getYear() != yearBefore )
+                        _eventBuffer.push( WorldClockEvent{ getYear(), WorldClockEvent::Kind::YearChanged } );
+                }
+                _eventBuffer.push( WorldClockEvent{ hour, WorldClockEvent::Kind::HourChanged } );
+            }
+            const DayPhase phaseAfter = computePhase( getHour() );
             if ( phaseAfter != phaseBefore )
                 _eventBuffer.push( WorldClockEvent{ static_cast<int32>( phaseAfter ), WorldClockEvent::Kind::PhaseChanged } );
         }
@@ -200,12 +233,13 @@ namespace sw
 
     void WorldClock::serializeState( StateIO& io )
     {
+        io.header( kStateTag, kStateVersion, kStateHeaderlessVersion ); // 판 1(float32 시각 · 머리표 없음)도 머리가 알아보고 올린다(WorldClockInternal::upgradeStateFrom1)
         io.value( _day );
         io.value( _secondOfDay );
         io.value( _timeScale );
         io.flag( _bPaused );
         // NaN 은 비교가 모두 거짓이라 여기서 걸린다.
-        io.check( 0 <= _day && 0.0f <= _secondOfDay && _secondOfDay < _settings._secondsPerDay && 0.0f <= _timeScale );
+        io.check( 0 <= _day && 0.0 <= _secondOfDay && _secondOfDay < _settings._secondsPerDay && 0.0f <= _timeScale );
         if ( io.isReading() )
         {
             _eventBuffer.clear();

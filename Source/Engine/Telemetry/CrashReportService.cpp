@@ -244,9 +244,9 @@ namespace sw
 
     void CrashReportService::onSettingEvent( const UserSettingEvent& event )
     {
-        const bool bSettled = event._kind != UserSettingEventKind::PendingChanged && event._kind != UserSettingEventKind::ConfirmStarted;
-        const bool bOurs    = event._settingID.empty() || event._settingID == hashed_string( kConsentSettingID );
-        if ( bSettled && bOurs )
+        const bool bCompleted = event._kind != UserSettingEventKind::PendingChanged && event._kind != UserSettingEventKind::ConfirmStarted;
+        const bool bOurs      = event._settingID.empty() || event._settingID == hashed_string( kConsentSettingID );
+        if ( bCompleted && bOurs )
             refreshConsentFromSetting();
     }
 
@@ -504,9 +504,16 @@ namespace sw
             if ( attempts.has_value() == false || *attempts >= kMaxAttempts )
                 continue; // 깨진 매니페스트는 보내지 않는다(읽기가 알렸다)
             CrashReportUploadBundle bundle;
-            bundle._folder        = folder;
-            bundle._sessionID     = root.get( "session" ).asString();
-            bundle._manifest      = manifest.dump( -1 );
+            bundle._folder                = folder;
+            bundle._sessionID             = root.get( "session" ).asString();
+            expected<string> manifestText = manifest.dump( -1 );
+            if ( manifestText.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "CrashReportService.ManifestNotWritable", "Crash report manifest in %# could not be written as JSON: %# (%#) - not sent", folder, manifestText.error().message(),
+                                 manifestText.error().detail() );
+                continue;
+            }
+            bundle._manifest      = std::move( *manifestText );
             const JSONValue files = root.get( "files" );
             for ( size_t index = 0; index < files.size(); ++index )
             {

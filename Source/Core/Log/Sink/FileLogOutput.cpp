@@ -6,6 +6,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/Logger.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
@@ -49,6 +50,17 @@ namespace sw
         {
             fixedAbsPath  = _fixedFilePath; // `-log-file` 은 명령줄이 받을 때 절대화했다(CommandLineDiskPath)
             logFolderPath = FileUtil::getDirectoryPart( fixedAbsPath );
+        }
+        // 로그는 `PlatformFileUtil::openFile` 로 스스로 연다(쓰기 입구 `isWriteAllowed` 는 거절을 로그로 남겨 이 장치로 되돌아온다). 기본 자리는 Saved 아래라 버전 관리 트리 밖이고,
+        // `-log-file` 로 받은 자리는 체크아웃하지 않은 파일(`findNotOpenForEdit`)이면 열지 않는다 — 락 밖이라 이유를 남겨도 된다.
+        SW_ASSERT( fixedAbsPath.empty() == false || FileUtil::isPathAtOrUnderRoot( ProcessRoots::get()._content.str(), logFolderPath ) == false );
+        if ( fixedAbsPath.empty() == false )
+        {
+            if ( const optional<string> lockedPath = FileUtil::findNotOpenForEdit( fixedAbsPath ); lockedPath.has_value() )
+            {
+                SW_LOG_ERROR_ID( "FileLogOutput.LogFileNotOpenForEdit", "The log file '%#' is a checked-in read-only file - not written", *lockedPath );
+                return false;
+            }
         }
         const bool bFolderReady = FileUtil::ensureDirectoryExists( logFolderPath );
 

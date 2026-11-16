@@ -6,6 +6,7 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -144,7 +145,7 @@ SW_TEST_CASE( CacheStatsTest, ConcurrentRecordsAreAllCounted )
     sw::vector<sw::thread> listThread;
     for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {
-        listThread.emplace_back( [handle]()
+        listThread.emplace_back( ThreadTestAccess::getKey(), [handle]()
         {
             for ( uint32 index = 0; index < kRecordCount; ++index )
             {

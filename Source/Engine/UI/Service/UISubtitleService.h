@@ -140,7 +140,7 @@ namespace sw
         UIScreenHandle         _screen;
         IDAllocator<uint32>    _lineIDAllocator;
         uint8                  _bDocumentFailed : 1; ///< 문서를 만들지 못했는지 나타냅니다. 같은 오류를 매 프레임 내지 않기 위한 값입니다.
-    };
 
-    SW_SERVICE_SLOT( UISubtitleService, Required );
+        SW_SERVICE_SLOT( UISubtitleService, Required );
+    };
 } // namespace sw

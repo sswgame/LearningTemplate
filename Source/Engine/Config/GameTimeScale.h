@@ -61,7 +61,7 @@ namespace sw
     private:
         atomic<uint32> _pauseRequestCount;    ///< 걸린 정지 요청 수(`addPauseRequest`)
         float32        _unscaledDeltaSeconds; ///< 이번 프레임의 실제 경과(-1 = 아직 적지 않았다)
-    };
 
-    SW_SERVICE_SLOT( GameTimeScale, Required );
+        SW_SERVICE_SLOT( GameTimeScale, Required );
+    };
 } // namespace sw

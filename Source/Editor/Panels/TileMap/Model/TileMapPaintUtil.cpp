@@ -59,12 +59,12 @@ namespace sw::editor
         if ( bInvalidFillRequest )
             return;
 
-        auto indexOf = [width]( int32 x, int32 y )
+        auto getIndexOf = [width]( int32 x, int32 y )
         { return static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ); };
 
-        const uint64  target = listCellValue[indexOf( start._x, start._y )];
+        const uint64  target = listCellValue[getIndexOf( start._x, start._y )];
         vector<uint8> listVisited( cellCount, 0 );
-        listVisited[indexOf( start._x, start._y )] = 1;
+        listVisited[getIndexOf( start._x, start._y )] = 1;
         outListCell.push_back( start );
         // 결과 목록이 곧 큐다 — 앞에서부터 읽으며 이웃을 뒤에 붙인다(너비 우선).
         for ( size_t readIndex = 0; readIndex < outListCell.size(); ++readIndex )
@@ -81,7 +81,7 @@ namespace sw::editor
                 const bool bNeighborOutOfBounds = neighbor._x < 0 || neighbor._y < 0 || neighbor._x >= width || neighbor._y >= height;
                 if ( bNeighborOutOfBounds )
                     continue;
-                const size_t neighborIndex = indexOf( neighbor._x, neighbor._y );
+                const size_t neighborIndex = getIndexOf( neighbor._x, neighbor._y );
                 if ( listVisited[neighborIndex] != 0 || listCellValue[neighborIndex] != target )
                     continue;
                 listVisited[neighborIndex] = 1;

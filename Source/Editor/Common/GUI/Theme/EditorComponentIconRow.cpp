@@ -49,7 +49,7 @@ namespace sw::editor
             static NamedRow findRowUncached( const TypeInfo* pType )
             {
                 const EditorComponentIconTable& iconTable = table();
-                for ( const TypeInfo* pCurrent = pType; pCurrent != nullptr; pCurrent = pCurrent->getParentType() )
+                for ( const TypeInfo* pCurrent : pType != nullptr ? pType->getTypeChain() : TypeChain{} )
                 {
                     const string* pIcon = pCurrent->findCustomMeta( "Icon" );
                     if ( pIcon == nullptr )

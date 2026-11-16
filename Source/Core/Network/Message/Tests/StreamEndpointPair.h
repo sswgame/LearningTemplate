@@ -1,7 +1,7 @@
 /**
  * @file StreamEndpointPair.h
  * @brief 스트림 테스트의 엔드포인트 한 쌍 — 루프백 스트림 망 위에 서버 · 클라이언트 `StreamMessageEndpoint` 를 세우고 클라이언트가 서버에 연결을 겁니다.
- * @details 전송은 I/O 스레드 없이(`_ioThreadCount = 0`) 돌고 `step` 이 두 전송의 `pollIO` 와 두 엔드포인트의 `pump` 를 차례로 부른다 — 한 스레드라 결정적이다.
+ * @details 전송은 I/O 스레드 없이(`_ioThreadCount = 0`) 돌고 `step` 이 두 전송의 `pollIO` 와 두 엔드포인트의 `poll` 를 차례로 부른다 — 한 스레드라 결정적이다.
  *          스트림 엔드포인트 · 압축 봉투 단위 테스트가 함께 쓴다.
  */
 #pragma once
@@ -66,15 +66,15 @@ namespace sw::test
         StreamEndpointPair( const StreamEndpointPair& )            = delete;
         StreamEndpointPair& operator=( const StreamEndpointPair& ) = delete;
 
-        /** @brief 두 전송을 돌고 두 엔드포인트를 pump 하기를 @p count 번 합니다. */
+        /** @brief 두 전송을 돌고 두 엔드포인트를 poll 하기를 @p count 번 합니다. */
         void step( int32 count )
         {
             for ( int32 index = 0; index < count; ++index )
             {
                 (void)_serverTransport->pollIO( 0 );
                 (void)_clientTransport->pollIO( 0 );
-                (void)_server.pump( *_pServerListener );
-                (void)_client.pump( *_pClientListener );
+                (void)_server.poll( *_pServerListener );
+                (void)_client.poll( *_pClientListener );
             }
         }
 

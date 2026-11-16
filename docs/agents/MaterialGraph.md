@@ -4,22 +4,22 @@
 > 독자: 머티리얼 그래프 노드 · 컴파일러 · 생성물을 다루는 사람과 에이전트.
 > 결론: 새 노드는 `MaterialGraphNodes.cpp` 에 `SW_MATERIAL_GRAPH_NODE` 한 줄이다. 그래프는 HLSL 과 `.gen.material` 을 소스 트리에 생성하고, 그 뒤는 손으로 쓴 머티리얼과 같은 길이다. 런타임과 배포에는 그래프 코드가 없다.
 
-구현: `Source/Engine/Graphics/Material/Dev/`(개발 전용), 편집기 `Source/Editor/Panels/MaterialGraph/`. 상용 엔진 비교는 기억에 의존한 설명이다.
+구현: `Source/Engine/Graphics/Material/Dev/`(개발 전용), 편집기 `Source/Editor/Panels/MaterialGraph/`.
 
 ## 길
 
 ```
 rim_glow.matgraph.xml                         저작 파일(팩에 들지 않는다)
-  └ MaterialGraphCompileResult위상 정렬(DependencyGraph 깊이 우선) → 형식 검사 → HLSL 조각 펼치기
+  └ MaterialGraphCompileResult: 위상 정렬(DependencyGraph 깊이 우선) → 형식 검사 → HLSL 조각 펼치기
       ├ shaders/matgraph/<줄기>_<해시>.hlsl    SW_MATERIAL 칸 + evaluateMaterialGraph
       └ materials/.../rim_glow.gen.material    파라미터 칸 · 순열
           └ rim_glow_red.material              _base 로 값만 바꾼다(언리얼 Material Instance)
 ```
 
-- **언제 생성하나:** 셰이더 쿠킹의 시작(`ShaderCookDriver::cookAllShaders`)과 편집기의 핫 리로드 임포터(그래프 파일이 바뀔 때). 바이트가 같으면 쓰지 않는다. 생성물은 커밋한다 — 쿠킹 없는 개발 실행도 같은 파일을 읽는다.
+- **생성 시점:** 셰이더 쿠킹 시작(`ShaderCookDriver::cookAllShaders`)과 편집기 핫 리로드 임포터. 바이트가 같으면 쓰지 않는다. 생성물은 커밋한다 — 쿠킹 없는 개발 실행도 같은 파일을 읽는다.
 - **쿠킹 입력:** 생성된 `.hlsl` 은 셰이더 스탬프가 내용 해시로 추적하고, `.gen.material` 은 요청 수집과 팩이 그대로 읽는다. 컴파일 오류는 쿠킹 실패다.
 - **파일 이름의 해시:** 내용이 바뀌면 경로가 바뀐다. PSO · 리플렉션 캐시의 열쇠가 경로라 무효화 코드 없이 핫 리로드된다.
-- **낡음 확인:** 단위 테스트 `SampleGeneratedAssetsAreCurrent` 가 견본을 대조한다. 그래프를 손으로 고쳤으면 `App --cook-shaders` 나 편집기 저장이 다시 쓴다. 생성물은 손으로 고치지 않는다.
+- **생성물은 손으로 고치지 않는다.** 그래프를 손으로 고쳤으면 `App --cook-shaders` 나 편집기 저장으로 다시 쓴다. 단위 테스트 `SampleGeneratedAssetsAreCurrent` 가 견본의 낡음을 잡는다.
 
 ## 파일에 적는 법
 
@@ -72,7 +72,7 @@ SW_MATERIAL_GRAPH_PARAMETER_NODE( ScalarParameter, "Parameter", "", "Out:float=%
 
 ## 층
 
-기반(`Output`) 위에 층(먼지 · 젖음 · 피 · 칠)을 마스크와 함께 쌓는다. 언리얼 Material Layers · Layer Blend, 유니티 HDRP Layered Lit 의 자리다(비교는 기억에 의존).
+기반(`Output`) 위에 층(먼지 · 젖음 · 피 · 칠)을 마스크와 함께 쌓는다(언리얼 Material Layers · 유니티 HDRP Layered Lit).
 
 ```
 layer_dirt.matgraph.xml        층 한 벌 — GraphOutput 이름이 표면 칸이다. 머티리얼 여럿이 함께 쓴다
@@ -97,7 +97,7 @@ layered_stone.matgraph.xml     Output + Layer 노드 목록(노드 차례가 층
 
 ## 출력과 조명
 
-`Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓴다. 디퍼드에서는 G버퍼 패스가 발광을 장면 색에 미리 적어 디퍼드로 그린다(G버퍼 명세 판 3). 빛을 다르게 받는 셰이딩 모델(피부 · 천 · 코트 · 비등방 · 박막 · 털 · 눈)은 손으로 쓴 외형 셰이더 `appearance_lit.hlsl` 과 라이브러리 `engine/materials/library/` 에 있고, 디퍼드 번호 표는 `shading_model_ids.hlsli` 다. 그래프 `Output` 의 셰이딩 모델 설정은 W13 의 Hair 설정과 합칠 때 그 번호 표로 넓힌다.
+`Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓴다. 디퍼드에서는 G버퍼 패스가 발광을 장면 색에 미리 적는다. 빛을 다르게 받는 셰이딩 모델(피부 · 천 · 코트 · 비등방 · 박막 · 털 · 눈)은 손으로 쓴 외형 셰이더 `appearance_lit.hlsl` 과 라이브러리 `engine/materials/library/` 에 있고, 디퍼드 번호 표는 `shading_model_ids.hlsli` 다.
 
 ## 후처리 영역
 
@@ -126,4 +126,4 @@ layered_stone.matgraph.xml     Output + Layer 노드 목록(노드 차례가 층
 
 ## 편집기
 
-Window > Material Graph(`MaterialGraphPanel`). 오른쪽 클릭 메뉴는 등록표에서 만든다. 고치면 다시 컴파일하고, 통과한 내용을 작업 도메인(`scratch`)에 생성해 미리보기 구(`MaterialModel`)에 건다 — 저장 전 편집이 콘텐츠를 건드리지 않는다. 저장은 컴파일이 통과할 때만 그래프 파일을 쓰고, 임포터가 생성물을 쓰면 감시가 머티리얼 캐시와 자식 머티리얼까지 다시 읽는다.
+Window > Material Graph(`MaterialGraphPanel`). 메뉴는 등록표에서 만든다. 미리보기는 작업 도메인(`scratch`)에 생성해 저장 전 편집이 콘텐츠를 건드리지 않는다. 저장은 컴파일이 통과할 때만 그래프 파일을 쓰고, 생성물은 임포터가 쓴다.

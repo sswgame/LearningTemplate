@@ -83,7 +83,9 @@ namespace sw
                                                .and_then( [&]
                 { return exposeInterface<IOfflinePushSender>( context, entry, _offlinePush ); } )
                                                .and_then( [&]
-                { return exposeInterface<ILiveEventControl>( context, entry, _service ); } );
+                { return exposeInterface<ILiveEventControl>( context, entry, _service ); } )
+                                               .and_then( [&]
+                { return addTTLRule( context, entry, PushNotificationDispatcher::makeTopicClaimTTLRule( kitConfig._pushClaimTTL.getExpireAfterMs() ), kitConfig._pushClaimTTL ); } );
                 if ( assembled.has_value() == false )
                     shutdown(); // 초기화에 실패한 키트는 shutdown 을 받지 않는다 — 만든 제공자를 여기서 내린다
                 return assembled;
@@ -100,8 +102,11 @@ namespace sw
                 return {};
             }
 
+            /** @brief 탈퇴한 계정의 기기 푸시 토큰을 지운다(`PushNotificationDispatcher::eraseAccount`). 운영 이벤트 정의 · 토픽 알림 표에는 계정이 없다. */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
+
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 요청. */
-            int32 getOpenWorkCount() const override { return _service.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
             void stop() override
             {
@@ -150,12 +155,13 @@ namespace sw
             }
 
         private:
-            LiveOpsService                        _service;
-            LiveOpsServer                         _server;
-            PushNotificationDispatcher            _dispatcher;
-            LiveOpsOfflinePush                    _offlinePush;   ///< 발송기를 빌려 쓰므로 뒤에 선언한다
-            unique_ptr<IPushNotificationProvider> _pFakeProvider; ///< `_bFakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다
-            PushProviderSet                       _providerSet;
+            LiveOpsService                                                        _service;
+            LiveOpsServer                                                         _server;
+            PushNotificationDispatcher                                            _dispatcher;
+            LiveOpsOfflinePush                                                    _offlinePush;   ///< 발송기를 빌려 쓰므로 뒤에 선언한다
+            unique_ptr<IPushNotificationProvider>                                 _pFakeProvider; ///< `_bFakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다
+            PushProviderSet                                                       _providerSet;
+            AfterDeleteAccountFunction<&PushNotificationDispatcher::eraseAccount> _afterDeleteAccount;
         };
 
         struct LiveOpsDevOnlineInternal

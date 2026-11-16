@@ -52,7 +52,7 @@ namespace sw
 
     void EventDispatcher::assertBusThread() const
     {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         SW_LOG_ASSERT( isBusThread(),
                        "The EventDispatcher bus (subscribe/Subscription release/publish/processEvents/clear) "
                        "may only be used on the thread that calls processEvents. "

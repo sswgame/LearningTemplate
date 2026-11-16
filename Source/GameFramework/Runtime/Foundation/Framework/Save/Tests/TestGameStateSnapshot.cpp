@@ -1,8 +1,13 @@
-// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않는 것, 머리의 콘텐츠 구성(켠 모드)(nogpu, 활성 씬 없음).
+// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않고 씬을 건드리지 않는 것, 머리의 콘텐츠 구성(켠 모드) · 씬 정체(nogpu, 씬 테스트만 지역 씬 매니저).
 #include "pch.h"
 
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -35,6 +40,28 @@ namespace
             return false;
         }
     };
+
+    /** @brief @p manager 의 살아 있는 오브젝트 수입니다. */
+    uint32 countObjects( const sw::GameObjectManager& manager )
+    {
+        uint32 count = 0;
+        manager.forEachGameObject( sw::SceneIterationTestAccess::getKey(), [&count]( sw::GameObject* )
+        { ++count; } );
+        return count;
+    }
+
+    /** @brief 지역 씬 매니저에 리소스 id @p pSceneID 의 빈 씬을 활성으로 세우고 오브젝트 하나를 둡니다. 실패하면 nullptr 입니다. */
+    sw::GameObjectManager* openSceneWithOneObject( sw::SceneManager& sceneManager, const utf8* pSceneID )
+    {
+        sw::Scene* const pScene = sceneManager.createEmptyActiveScene( pSceneID );
+        if ( pScene == nullptr )
+            return nullptr;
+        pScene->setSourcePath( pSceneID );
+        sw::GameObjectManager* const pManager = pScene->getObjectManager();
+        if ( pManager == nullptr || pManager->createGameObject( sw::hashed_string( "Marker" ) ) == nullptr )
+            return nullptr;
+        return pManager;
+    }
 } // namespace
 
 using namespace sw;
@@ -121,4 +148,102 @@ SW_TEST_CASE( GameStateSnapshotTest, HeaderCarriesTheContentConfiguration )
         SW_EXPECT_LOG( "GameStateSnapshot.SaveNeedsContent" );
         SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, moddedSave.data(), static_cast<uint32>( moddedSave.size() ) ) );
     }
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 봉투 머리는 찍은 씬의 리소스 id 를 싣고, 다른 씬 위에서 읽으면 그 씬을 비우지 않고 거절한다 — 같은 씬이면 지금처럼 복원한다
+ * @details 언리얼 게임은 세이브의 맵을 연 뒤 적용한다. 씬 전환 뒤 적용 흐름이 들어오기 전까지 다른 씬의 세이브는 섞지 않고 거절한다.
+ */
+SW_TEST_CASE( GameStateSnapshotTest, RestoreInAnotherSceneDoesNotMix )
+{
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const game::ScopedGameScope scoped{ scope };
+    GameStateSnapshot           snapshot;
+
+    // 같은 씬: 찍은 씬 위에서 읽으면 복원한다.
+    GameObjectManager* pSceneA = openSceneWithOneObject( sceneManager, "scenes/a.scene" );
+    SW_REQUIRE_NOT_NULL( pSceneA );
+    const vector<uint8> saveA = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( saveA.empty() == false );
+    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, saveA.data(), static_cast<uint32>( saveA.size() ) ) );
+    snapshot.endRestore();
+    SW_EXPECT_EQUAL( 1u, countObjects( *pSceneA ) );
+
+    // 다른 씬: 씬 A 의 세이브를 씬 B 에서 읽으면 거절하고 B 의 오브젝트는 그대로다.
+    GameObjectManager* pSceneB = openSceneWithOneObject( sceneManager, "scenes/b.scene" );
+    SW_REQUIRE_NOT_NULL( pSceneB );
+    SW_EXPECT_LOG( "GameStateSnapshot.SceneMismatch" );
+    SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, saveA.data(), static_cast<uint32>( saveA.size() ) ) );
+    SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
+    SW_EXPECT_NOT_NULL( pSceneB->findGameObjectByName( hashed_string( "Marker" ) ) );
+    SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 머리만 읽기(`readSceneID`)는 찍은 씬의 리소스 id 를 돌려주고 활성 씬을 건드리지 않는다 — 머리가 틀리거나 잘린 버퍼는 없음이다(감사 G-7)
+ * @details 슬롯 불러오기는 이 값으로 그 씬을 먼저 연 뒤 적용한다(언리얼 게임이 세이브의 맵으로 `OpenLevel` 한 뒤 적용하는 것과 같다).
+ */
+SW_TEST_CASE( GameStateSnapshotTest, ReadSceneIDPeeksTheHeaderOnly )
+{
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const game::ScopedGameScope scoped{ scope };
+    GameStateSnapshot           snapshot;
+
+    SW_REQUIRE_NOT_NULL( openSceneWithOneObject( sceneManager, "scenes/a.scene" ) );
+    const vector<uint8> saveA = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( saveA.empty() == false );
+
+    // 다른 씬 위에서 머리만 읽는다 — 값은 찍은 씬이고 지금 씬의 오브젝트는 그대로다.
+    GameObjectManager* pSceneB = openSceneWithOneObject( sceneManager, "scenes/b.scene" );
+    SW_REQUIRE_NOT_NULL( pSceneB );
+    const optional<string> sceneID = GameStateSnapshot::readSceneID( saveA.data(), static_cast<uint32>( saveA.size() ) );
+    SW_REQUIRE_TRUE( sceneID.has_value() );
+    SW_EXPECT_TRUE( *sceneID == "scenes/a.scene" );
+    SW_EXPECT_EQUAL( 1u, countObjects( *pSceneB ) );
+
+    // 머리가 없는 버퍼 · 머리 앞에서 잘린 버퍼는 없음이다.
+    vector<uint8> foreign = saveA;
+    foreign[0]            = static_cast<uint8>( foreign[0] ^ 0xFFu );
+    SW_EXPECT_LOG( "GameStateSnapshot.StateSnapshotNoSWST" );
+    SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( foreign.data(), static_cast<uint32>( foreign.size() ) ).has_value() );
+    SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( nullptr, 0 ).has_value() );
+    SW_EXPECT_FALSE( GameStateSnapshot::readSceneID( saveA.data(), 18 ).has_value() ); // 씬 정체 글의 길이 칸에서 잘렸다
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 진 복원은 씬을 건드리지 않는다 — 끝이 잘린 봉투는 씬 섹션이 온전해도 활성 씬을 비우기 전에 거절된다(감사 P0-6)
+ * @details 예전에는 씬 오브젝트를 먼저 풀고(활성 씬을 비우고) 뒤 섹션을 읽다 졌다. 지금은 섹션을 모두 읽고 분리된 매니저 · 사본에 풀어 본 뒤에만 교체한다.
+ */
+SW_TEST_CASE( GameStateSnapshotTest, FailedRestoreKeepsScene )
+{
+    SubsystemScope scope;
+    SceneManager&  sceneManager = scope.emplaceSubsystem<SceneManager>();
+    SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const game::ScopedGameScope scoped{ scope };
+    GameStateSnapshot           snapshot;
+
+    GameObjectManager* pScene = openSceneWithOneObject( sceneManager, "scenes/a.scene" );
+    SW_REQUIRE_NOT_NULL( pScene );
+    const vector<uint8> save = captureEmptyEnvelope( snapshot );
+    SW_REQUIRE_TRUE( save.size() > 16 );
+    SW_REQUIRE_NOT_NULL( pScene->createGameObject( hashed_string( "AfterSave" ) ) ); // 찍은 뒤에 선 오브젝트 — 복원이 씬을 갈았다면 사라진다
+
+    // 마지막 섹션(컴포넌트 상태)의 끝이 잘린 봉투 — 앞의 씬 섹션은 온전하다.
+    const expected<void, SnapshotRestoreFailure> result = snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, save.data(), static_cast<uint32>( save.size() - 1 ) );
+    SW_REQUIRE_TRUE( result.has_value() == false );
+    SW_EXPECT_TRUE( result.error() == SnapshotRestoreFailure::Rejected );
+    SW_EXPECT_EQUAL( 2u, countObjects( *pScene ) );
+    SW_EXPECT_NOT_NULL( pScene->findGameObjectByName( hashed_string( "Marker" ) ) );
+    SW_EXPECT_NOT_NULL( pScene->findGameObjectByName( hashed_string( "AfterSave" ) ) );
+    SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+
+    // 온전한 봉투는 지금처럼 교체한다 — 찍은 뒤에 선 오브젝트가 사라진다.
+    SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, save.data(), static_cast<uint32>( save.size() ) ) );
+    snapshot.endRestore();
+    SW_EXPECT_EQUAL( 1u, countObjects( *pScene ) );
+    SW_EXPECT_NULL( pScene->findGameObjectByName( hashed_string( "AfterSave" ) ) );
 }

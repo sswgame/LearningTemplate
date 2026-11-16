@@ -195,9 +195,11 @@ namespace sw
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
-        bool   debugRemoveDevice() override;
-        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
-        uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
+        bool debugRemoveDevice() override;
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
+        uint32                    getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
 
         /** @brief 리소스 생성과 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
@@ -447,6 +449,8 @@ namespace sw
             {
                 return _resource.Get() == other._resource.Get() && _buffer == other._buffer && _texture == other._texture;
             }
+            /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
         };
 
         /** @brief bindless 번호 한 칸이 어느 등록표에 살아 있는가입니다(`BindlessReadSlot::_registry`). SRV · UAV 표가 번호 공간 하나를 나눈다. */
@@ -662,8 +666,8 @@ namespace sw
          * @brief 지금까지 기록한 프레임 스트림 조각과 대기 리스트(구조 버퍼 복사 포함)를 곧바로 그래픽스 큐에 내고, 이어 기록할 새 조각을 엽니다.
          * @details 큐 사이 동기화(신호 · 대기)는 큐에 낸 일에만 걸린다 — 모아 두었다가 프레임 끝에 내면 포크의 신호가 그 일을 덮지 못한다.
          */
-        void submitFrameWorkNow();
-        /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameWorkNow` 가 함께 쓴다). */
+        void submitFrameJobNow();
+        /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameJobNow` 가 함께 쓴다). */
         void openNextFrameSegment();
         /**
          * @brief 링 상수 버퍼들의 힙 CBV 를 이번 프레임 슬롯으로 맞춥니다. 프레임당 한 번, 기록 시작 전에 부릅니다.
@@ -716,7 +720,7 @@ namespace sw
         void destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
-         * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::settleAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
+         * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::completeAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
          *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 할당기가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
          *          Rejected 면 이유를 로그로 남기고 잡은 구간은 놓는다. 어느 스레드에서나, 전송 제출 락 밖에서 부른다.
          */
@@ -753,8 +757,11 @@ namespace sw
          *          손실 뒤에도 `Pending` 으로 남는다. 장치가 없으면 false 입니다.
          */
         bool isDeviceRemoved();
-        /** @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved`). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2). */
-        bool isDeviceLost();
+        /**
+         * @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved` — 드라이버에 묻는다). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2).
+         * @details 표시만 읽는 공용 질의는 `IRHIDevice::isDeviceLost` 다. 이름을 가른 까닭은 이쪽이 `GetDeviceRemovedReason` 을 부르고 처음 보면 손실을 표시하기 때문이다.
+         */
+        bool pollDeviceLost();
         /** @brief 이 텍스처에 마지막으로 제출한 전송(업로드 또는 읽기 원본)의 시리얼을 기록합니다(bindless 등록 보호와 파괴 지연이 읽는다). */
         void recordTextureTransfer( RHITextureHandle texture, uint64 serial );
         /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */

@@ -73,7 +73,7 @@ namespace sw
             static constexpr Element kArrElement[] = {
                 Element::of<&TipList::readTip>( "Tip" ).uncounted(), // 팁이 없는 파일도 맞다 — 팁 위젯을 접는다
             };
-            if ( XMLCatalogReadResult::readInDocumentOrder( list, root, sourceName, kArrElement ).isClean() == false )
+            if ( XMLCatalogReadResult::readInDocumentOrder( list, XMLCatalogRoot{ root }, sourceName, kArrElement ).isClean() == false )
                 return false;
             outListTip = std::move( list._listTip );
             return true;

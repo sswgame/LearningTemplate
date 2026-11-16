@@ -47,8 +47,8 @@ namespace sw
         using SessionEnd   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>; ///< 세션 끝(id) — 상태 메시지 뒤에 닿아야 한다
         using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 
-        static constexpr uint8 kSessionState = Table::kindOf<SessionState>();
-        static constexpr uint8 kSessionEnd   = Table::kindOf<SessionEnd>();
+        static constexpr uint8 kSessionState = Table::getKindOf<SessionState>();
+        static constexpr uint8 kSessionEnd   = Table::getKindOf<SessionEnd>();
     };
 } // namespace sw
 

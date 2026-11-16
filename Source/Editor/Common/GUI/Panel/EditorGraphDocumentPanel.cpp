@@ -11,13 +11,11 @@ namespace ed = ax::NodeEditor;
 
 namespace sw::editor
 {
-    EditorGraphDocumentPanelBase::EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey,
-                                                                NodeEditorBindFunction bindModuleCopy )
+    EditorGraphDocumentPanelBase::EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, NodeEditorBindFunction bindModuleCopy )
         : EditorDocumentPanel{ kind, true }
         , _nodeGraph{}
         , _bindModuleCopy{ bindModuleCopy }
         , _pNodeMoveEditLabel{ pNodeMoveEditLabel }
-        , _pNodeMoveCoalesceKey{ pNodeMoveCoalesceKey }
         , _listPendingPlacement{}
         , _bGraphLayoutReady{ SW_FALSE }
         , _reservedGraph{ 0 }

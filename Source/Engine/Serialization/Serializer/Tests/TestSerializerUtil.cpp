@@ -105,8 +105,8 @@ SW_TEST_CASE( SerializerUtilTest, OutOfRangeIntegerTextIsRejectedNotWrapped )
 /** @brief [SerializerUtilTest] 키는 철자 그대로 맞춘다 — 대소문자가 다르면 다른 키이고, 모르는 이름 해시는 목록 끝(없음)이다 */
 SW_TEST_CASE( SerializerUtilTest, KeysMatchExactlyAndUnknownNamesAreNotFound )
 {
-    SW_EXPECT_TRUE( SerializerUtil::keysEqual( "_count", "_count" ) );
-    SW_EXPECT_FALSE( SerializerUtil::keysEqual( "_count", "_Count" ) );
+    SW_EXPECT_TRUE( SerializerUtil::isKeyEqual( "_count", "_count" ) );
+    SW_EXPECT_FALSE( SerializerUtil::isKeyEqual( "_count", "_Count" ) );
     const vector<PropertyInfo>& listProp = getSampleType()._listProperty;
     const PropertyInfo*         pCount   = SerializerUtil::matchProperty( listProp, "_count" );
     SW_REQUIRE_NOT_NULL( pCount );
@@ -441,7 +441,7 @@ SW_TEST_CASE( DataPathTest, RoundTripsAndStaysUnsetWhenAbsent )
     SerializerSample source;
     SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &source }, "common/materials/a.material", getContext() ) );
     SerializerSample fromJSON;
-    SW_REQUIRE_TRUE( JSONSerializer::deserialize( &fromJSON, getSampleType(), JSONSerializer::serialize( &source, getSampleType() ) ) );
+    SW_REQUIRE_TRUE( JSONSerializer::deserialize( &fromJSON, getSampleType(), JSONSerializer::serialize( &source, getSampleType() ).value() ) );
     SW_EXPECT_TRUE( fromJSON._path == "common/materials/a.material" );
 
     vector<uint8> bytes;

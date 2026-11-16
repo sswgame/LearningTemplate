@@ -52,7 +52,7 @@ namespace sw
 
     protected:
         /** @brief 월드 위치와 반경(`_positionRadius`)을 씁니다. */
-        void writeGPULightKindFields( GPULight& outLight ) const override;
+        void writeGPULightKindProperties( GPULight& outLight ) const override;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m, Validate = validateRadius )

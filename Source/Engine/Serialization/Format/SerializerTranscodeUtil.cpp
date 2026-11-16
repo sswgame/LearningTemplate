@@ -70,7 +70,12 @@ namespace sw
     {
         return SerializerTranscodeUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
         {
-            return bPretty ? JSONSerializer::serializePretty( pScratch, typeInfo, 4, context ) : JSONSerializer::serialize( pScratch, typeInfo, context );
+            const expected<string> text = bPretty ? JSONSerializer::serializePretty( pScratch, typeInfo, 4, context ) : JSONSerializer::serialize( pScratch, typeInfo, context );
+            if ( text.has_value() )
+                return *text;
+            // 이 함수의 계약은 "못 쓰면 빈 글" 이다(XML 쪽과 같다) — 이유는 여기서 남긴다.
+            SW_LOG_ERROR_ID( "SerializerTranscodeUtil.JSONNotWritable", "Binary data could not be transcoded to JSON: %# (%#)", text.error().message(), text.error().detail() );
+            return string{};
         } );
     }
 

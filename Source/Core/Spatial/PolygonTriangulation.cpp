@@ -40,7 +40,7 @@ namespace sw
             }
 
             /** @brief 고리 하나의 변 중에서 @p from 에서 @p to 로 가는 선분과 교차하는 것이 있는지 반환합니다. 그 두 점에 닿은 변은 뺍니다. */
-            static bool crossesLoop( vector_reference<const float2> listPoint, const vector<uint32>& listLoopIndex, const float2& from, const float2& to )
+            static bool intersectsLoop( vector_reference<const float2> listPoint, const vector<uint32>& listLoopIndex, const float2& from, const float2& to )
             {
                 const size_t count = listLoopIndex.size();
                 for ( size_t index = 0; index < count; ++index )
@@ -79,12 +79,12 @@ namespace sw
                     const float32 distance  = float2::getDistanceSquared( candidate, holePoint );
                     if ( distance >= bestDistance )
                         continue;
-                    if ( crossesLoop( listPoint, inoutListPolygon, holePoint, candidate ) || crossesLoop( listPoint, hole, holePoint, candidate ) )
+                    if ( intersectsLoop( listPoint, inoutListPolygon, holePoint, candidate ) || intersectsLoop( listPoint, hole, holePoint, candidate ) )
                         continue;
                     bool bBlocked = false;
                     for ( const vector<uint32>& other : listOtherHole )
                     {
-                        if ( &other != &hole && crossesLoop( listPoint, other, holePoint, candidate ) )
+                        if ( &other != &hole && intersectsLoop( listPoint, other, holePoint, candidate ) )
                         {
                             bBlocked = true;
                             break;

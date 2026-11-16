@@ -323,7 +323,7 @@
 		<entry key="EdPlugin.PickCancel" text="選択をやめる" sourceHash="ea93412d8284f2ae" />
 		<entry key="EdPlugin.PickPlaceLayer" text="プレビューで配置" sourceHash="05eac8bfa956f1ab" />
 		<entry key="EdPlugin.PickSection" text="プレビューで区間を選ぶ" sourceHash="a88a406ac7c8db0e" />
-		<entry key="EdPlugin.PostNotice" text="お知らせを掲示" sourceHash="37e6931da5f87431" />
+		<entry key="EdPlugin.PostAnnouncement" text="お知らせを掲示" sourceHash="37e6931da5f87431" />
 		<entry key="EdPlugin.PresetsUserData" text="プリセット(ユーザーデータ)" sourceHash="5f4339cfe94334b7" />
 		<entry key="EdPlugin.Preview" text="プレビュー" sourceHash="417b90913e05bc17" />
 		<entry key="EdPlugin.PreviewConstraintRig" text="拘束リグをプレビュー" sourceHash="ca9d7f72602ecd10" />
@@ -343,7 +343,7 @@
 		<entry key="EdPlugin.Remove" text="削除" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.RemoveBrokenWires" text="切れた配線を削除" sourceHash="56ba420ceb30c42c" />
 		<entry key="EdPlugin.RemoveLiveEvent" text="ライブイベントを削除" sourceHash="286ec822b6f1b615" />
-		<entry key="EdPlugin.RemoveNotice" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
+		<entry key="EdPlugin.RemoveAnnouncement" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.RemoveSkinLayer" text="削除" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.Rename" text="名前を変更" sourceHash="60320a18282b2b33" />
 		<entry key="EdPlugin.ResetBone" text="ボーンをリセット" sourceHash="559f9c3dcb23c44e" />
@@ -422,8 +422,8 @@
 		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
 		       text="メンテナンス秒(0 = 解除まで)"
 		       sourceHash="14988336ae4ff447" />
-		<entry key="EdPluginField.NoticeId" text="お知らせ id" sourceHash="346e643ae672864e" />
-		<entry key="EdPluginField.NoticeSeconds0UntilRemoved"
+		<entry key="EdPluginField.AnnouncementId" text="お知らせ id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
 		       text="お知らせ秒(0 = 削除まで)"
 		       sourceHash="5ca50ca62e3f11de" />
 		<entry key="EdPluginField.OffsetM" text="オフセット(m)" sourceHash="5ec26a29745a2dfc" />
@@ -587,12 +587,12 @@
 		<entry key="EdPluginWidget.Kind" text="種類" sourceHash="70af97de3ad8fb23" />
 		<entry key="EdPluginWidget.LiveEvents" text="ライブイベント" sourceHash="b5622b26740874ec" />
 		<entry key="EdPluginWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
-		<entry key="EdPluginWidget.MaintenanceNotice"
+		<entry key="EdPluginWidget.MaintenanceAnnouncement"
 		       text="メンテナンス / お知らせ"
 		       sourceHash="85b0db04bdd7964f" />
 		<entry key="EdPluginWidget.MemoTicket" text="メモ(チケット)" sourceHash="fdcbf34ceeb42ab6" />
 		<entry key="EdPluginWidget.MessageKey" text="メッセージキー" sourceHash="a982200e6ce2d4db" />
-		<entry key="EdPluginWidget.NoticeText" text="お知らせ本文" sourceHash="30c28e16a2b1dc84" />
+		<entry key="EdPluginWidget.AnnouncementText" text="お知らせ本文" sourceHash="30c28e16a2b1dc84" />
 		<entry key="EdPluginWidget.Options" text="オプション" sourceHash="463b8c4e92751ba5" />
 		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
 		<entry key="EdPluginWidget.Preview" text="プレビュー" sourceHash="417b90913e05bc17" />

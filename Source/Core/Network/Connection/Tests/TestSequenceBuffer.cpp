@@ -61,7 +61,7 @@ static_assert( IsSequenceBufferElement<MisnamedReuseEntry>::value == false, "mis
 static_assert( IsSequenceBufferElement<UndeclaredEntry>::value == false, "an element without kSlotReset must stop the build" );
 static_assert( IsSequenceBufferElement<WrongTypeEntry>::value == false, "kSlotReset must be a SequenceSlotReset" );
 
-SW_TEST_CASE( SequenceBufferTest, ReuseBufferKeepsCapacityAndClearsFields )
+SW_TEST_CASE( SequenceBufferTest, ReuseBufferKeepsCapacityAndClearsProperties )
 {
     SequenceBuffer<ReuseEntry, 4> buffer;
     ReuseEntry*                   pFirst = buffer.insert( 0 );

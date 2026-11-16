@@ -29,13 +29,14 @@ namespace sw
         /**
          * @brief 한 줄로 압축한 JSON 으로 직렬화합니다.
          * @details 스칼라는 프로퍼티 키의 값으로 씁니다. 시퀀스는 배열(`"_scores":[1,2]`), 맵은 오브젝트(`"_stat":{"a":1}`)입니다.
+         * @return 문자열 칸에 잘못된 UTF-8 이 있으면 오류입니다(`JSONDocument::dump`, 타입 이름을 세부에 붙인다). 빈 글을 실패 표시로 쓰지 않는다 — 세이브를 빈 파일로 덮지 않게.
          */
-        static string serialize( const void* pInstance, const TypeInfo& typeInfo,
-                                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        [[nodiscard]] static expected<string> serialize( const void* pInstance, const TypeInfo& typeInfo,
+                                                         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
-        /** @brief 들여쓰기한 Pretty JSON 으로 직렬화합니다. */
-        static string serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
-                                       const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /** @brief 들여쓰기한 Pretty JSON 으로 직렬화합니다. 실패 규칙은 `serialize` 와 같습니다. */
+        [[nodiscard]] static expected<string> serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
+                                                               const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /**
          * @brief JSON 문자열에서 객체를 역직렬화합니다. 빠진 필수 칸(`PROPERTY( Required )`)은 경로마다 `Serialization.RequiredMissing` 으로 알리고 실패입니다.
@@ -87,9 +88,9 @@ namespace sw
                                                              vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
                                                              const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
-        /** @brief 루트에 `_schemaVersion` 을 붙여 JSON 으로 직렬화합니다. */
-        static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
-                                          const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /** @brief 루트에 `_schemaVersion` 을 붙여 JSON 으로 직렬화합니다. 실패 규칙은 `serialize` 와 같습니다. */
+        [[nodiscard]] static expected<string> serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+                                                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 버전을 읽고 soft 역직렬화합니다. 판이 @p currentVersion 과 다르면 이관하지 않고 false 입니다(정확 일치). */
         [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,

@@ -269,8 +269,8 @@ namespace sw
         if ( bIgnoreInput )
             return NetHandleResult::Handled; // 시작 전이거나 다른 판의 메시지이다
         // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
-        const bool bForgedPlayerNumber = _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1;
-        if ( bForgedPlayerNumber )
+        const bool bSpoofedPlayerNumber = _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1;
+        if ( bSpoofedPlayerNumber )
             return NetHandleResult::Handled;
         int32 ackedLocalFrame = constant::invalid_index::kInt32;
         int32 advantage       = 0;
@@ -284,6 +284,10 @@ namespace sw
                 advantage       = peerAdvantage;
             }
         }
+        // 상대가 보낸 정수는 프레임 창 안이어야 한다 — 그대로 빼고 나누면 int32 가 넘치고(UB) 다른 참가자를 한없이 기다리게 할 수 있다(감사 N-15, GGPO 는 창 안으로 자른다)
+        const bool bOutsideFrameWindow = remoteFrame > _frame + kFrameWindow || advantage < -kFrameWindow || advantage > kFrameWindow;
+        if ( bOutsideFrameWindow )
+            return NetHandleResult::Malformed;
         // 입력 묶음이 손상됐으면 하나도 넣지 않는다. 창 밖이거나 이미 받은 프레임은 버퍼가 버린다.
         NetInputReceiveBuffer& buffer = _listReceive[static_cast<size_t>( player )];
         if ( body.hasOverflowed() || buffer.read( body, &_listNewFrameScratch ) == false )

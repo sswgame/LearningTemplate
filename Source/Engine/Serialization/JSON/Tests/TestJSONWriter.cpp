@@ -133,7 +133,9 @@ SW_TEST_CASE( JSONWriterTest, EmptyContainersAndIndentation )
 
     sw::JSONDocument document;
     SW_REQUIRE_TRUE( document.parse( json ) );
-    SW_EXPECT_EQUAL( document.dump( 2 ), json );
+    const sw::expected<sw::string> dumped = document.dump( 2 );
+    SW_REQUIRE_TRUE( dumped.has_value() );
+    SW_EXPECT_EQUAL( *dumped, json );
 }
 
 /**

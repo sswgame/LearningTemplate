@@ -7,7 +7,7 @@
 
 using namespace sw;
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 namespace
 {
     struct AssertDialogTestInternal

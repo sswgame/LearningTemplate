@@ -43,21 +43,27 @@ namespace sw
                 StateIO::writeSection( outArchive, TState::kStateTag, TState::kStateVersion, body );
             }
 
-            /** @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 버전이 다르거나 깨졌으면 경고를 남기고 그대로 두며, 이 경우 그 상태는 새 판입니다. */
+            /**
+             * @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 옛 판은 판 올림 사슬(`SW_STATE_FORMAT_UPGRADE`)로 올려 읽습니다(감사 A-6).
+             *        올릴 단계가 없거나 깨졌으면 경고를 남기고 그대로 둔 채 false 입니다(부르는 쪽이 로드 전체를 실패시킨다).
+             */
             template <typename TState>
             [[nodiscard]] static bool applyStateSection( const Section& section, TState& inoutState, const utf8* pName )
             {
-                if ( section._version != TState::kStateVersion )
+                Archive body = section._body;
+                // 머리로 판을 올리는 형식(`kStateHeaderlessVersion` — 세계 시계)은 안쪽 머리가 올린다 — 구간 판으로 또 올리면 두 번 오른다.
+                constexpr bool bVersionedByHeader = StateIOInternal::HasHeaderlessVersion<TState>::value;
+                if ( bVersionedByHeader == false && StateIO::upgradeSectionBody( TState::kStateTag, section._version, TState::kStateVersion, body ) == false )
                 {
-                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionVersionNot", "SessionState: %# section version %# is not %# - it starts fresh", pName, section._version, TState::kStateVersion );
+                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionVersionNot", "SessionState: %# section version %# is not %# and has no upgrade chain to it", pName, section._version,
+                                       TState::kStateVersion );
                     return false;
                 }
-                Archive    body  = section._body;
                 TState     state = inoutState;
                 const bool bRead = state.readState( body ) && body.getRemainingBytes() == 0;
                 if ( bRead == false )
                 {
-                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionBrokenStarts", "SessionState: %# section is broken - it starts fresh", pName );
+                    SW_LOG_WARNING_ID( "SessionState.SessionStateSectionBrokenStarts", "SessionState: %# section is broken", pName );
                     return false;
                 }
                 inoutState = std::move( state );
@@ -78,11 +84,14 @@ namespace sw
                     return nullptr;
                 }
                 SessionStateComponent* pFound = nullptr;
-                pManager->forEachComponentOfType<SessionStateComponent>( [&pFound]( SessionStateComponent* pComponent )
+                for ( SessionStateComponent* pComponent : pManager->getComponentRegistry().getAll<SessionStateComponent>() )
                 {
-                    if ( pFound == nullptr && pComponent->isInitialized() )
+                    if ( pComponent->isInitialized() )
+                    {
                         pFound = pComponent;
-                } );
+                        break;
+                    }
+                }
                 if ( pFound == nullptr )
                     outReply = "cheat: no initialized SessionStateComponent in the active scene";
                 return pFound;
@@ -268,9 +277,9 @@ namespace sw
             visit( _weather, "weather" );
             visit( _land, "land" );
         };
-        Archive& archive = io.getArchive();
         if ( io.isWriting() )
         {
+            Archive& archive = io.getArchive();
             // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
             if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
             {
@@ -284,7 +293,8 @@ namespace sw
             return;
         }
         io.header( kStateTag, kStateVersion );
-        uint32 sectionCount = 0;
+        Archive& archive      = io.getArchive(); // 머리 뒤에 받는다 — 옛 판이면 올린 바이트다
+        uint32   sectionCount = 0;
         // 구간마다 태그, 버전, 길이(12바이트) 이상
         io.count( 12, sectionCount );
         if ( io.isOk() == false )
@@ -299,15 +309,21 @@ namespace sw
         }
         if ( io.check( archive.getRemainingBytes() == 0 ) == false )
             return;
-        // 구간 하나가 깨지면 applyStateSection 이 경고를 남기고 그 구간만 새 판으로 둔다. 반환값은 쓰지 않는다.
+        // 구간 하나라도 읽지 못하면 로드 전체가 실패다(감사 P0-5) — 예전에는 그 구간만 경고하고 새 판으로 두어, 가방 슬롯 수 같은 설정을 바꾼 패치 뒤
+        // 인벤토리 · 땅 · 달력이 통째로 사라졌고 이어진 저장이 그것을 굳혔다. 읽기 전 상태를 같은 구간 형식으로 떠 두었다가 실패하면 되돌린다(전부 아니면 없음).
+        Archive backup;
+        forEachSection( [&backup]( const auto& state, const utf8* )
+        { SessionStateComponentInternal::writeStateSection( backup, state ); } );
+        bool bAllApplied = true;
         for ( const SessionStateComponentInternal::Section& section : listSection )
         {
             bool bKnown = false;
-            forEachSection( [&section, &bKnown]( auto& state, const utf8* pName )
+            forEachSection( [&section, &bKnown, &bAllApplied]( auto& state, const utf8* pName )
             {
                 if ( section._tag == std::decay_t<decltype( state )>::kStateTag )
                 {
-                    (void)SessionStateComponentInternal::applyStateSection( section, state, pName );
+                    if ( SessionStateComponentInternal::applyStateSection( section, state, pName ) == false )
+                        bAllApplied = false;
                     bKnown = true;
                 }
             } );
@@ -315,6 +331,24 @@ namespace sw
             {
                 SW_LOG_WARNING_ID( "SessionState.SessionStateUnknownSectionSkipped", "SessionState: unknown section %# skipped", section._tag );
             }
+        }
+        if ( bAllApplied == false )
+        {
+            // 되돌린다 — 방금 떠 둔 구간이라 반드시 읽힌다.
+            for ( uint32 sectionIndex = 0; sectionIndex < SessionStateComponentInternal::kSectionCount && backup.getRemainingBytes() > 0; ++sectionIndex )
+            {
+                SessionStateComponentInternal::Section section;
+                if ( StateIO::readSection( backup, section._tag, section._version, section._body ) == false )
+                    break;
+                forEachSection( [&section]( auto& state, const utf8* pName )
+                {
+                    if ( section._tag == std::decay_t<decltype( state )>::kStateTag )
+                        (void)SessionStateComponentInternal::applyStateSection( section, state, pName ); // 같은 판으로 떠 둔 것이다
+                } );
+            }
+            SW_LOG_ERROR_ID( "SessionState.LoadRejected", "SessionState: a section of the save could not be read - the save is not loaded (the session state is unchanged)" );
+            io.fail();
+            return;
         }
         _listClockEvent.clear();
     }
@@ -448,7 +482,7 @@ namespace sw
             static const SessionStateComponent* findTarget( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
-                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( *pManager ) : nullptr;
+                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pState == nullptr || pState->isInitialized() == false )
                 {
                     writer.addLine( "target", "none (no open game state in the active scene)" );

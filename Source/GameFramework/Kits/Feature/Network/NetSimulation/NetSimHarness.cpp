@@ -76,6 +76,17 @@ namespace sw
             _pInner->update( time );
     }
 
+    bool NetSimTrafficCounter::waitForReceive( float64 timeoutSeconds )
+    {
+        return _pInner != nullptr ? _pInner->waitForReceive( timeoutSeconds ) : INetTransport::waitForReceive( timeoutSeconds );
+    }
+
+    void NetSimTrafficCounter::wake()
+    {
+        if ( _pInner != nullptr )
+            _pInner->wake();
+    }
+
     uint64 NetSimTrafficCounter::getSentBytesTo( const NetAddress& to ) const
     {
         for ( const Destination& destination : _listDestination )
@@ -141,7 +152,7 @@ namespace sw
     {
         _listUnhandled.clear();
         _listEvent.clear();
-        (void)_router.pump( _host, &_listUnhandled, &_listEvent );
+        (void)_router.poll( _host, &_listUnhandled, &_listEvent );
         if ( _pSession != nullptr )
         {
             for ( const NetEndpointEvent& event : _listEvent )

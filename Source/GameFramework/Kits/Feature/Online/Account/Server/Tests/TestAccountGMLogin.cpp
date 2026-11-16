@@ -21,8 +21,8 @@ namespace
     class FakeGMAccountService final : public IOnlineServerService
     {
     public:
-        vector<uint16> _listMethod{};
-        LoginOutcome   _result{ LoginResult::Ok };
+        vector<uint16>     _listMethod{};
+        LoginServiceResult _result{ LoginResult::Ok };
 
         const OnlineProtocolEntry& getProtocol() const override { return AccountProtocol::kOnlineEntry; }
         bool                       isAnonymousMethod( uint16 method ) const override
@@ -76,19 +76,19 @@ namespace
             _rig._server.start();
             _clientIndex = _rig._clients.connect( _rig._server._port, {} );
             SW_EXPECT_TRUE( _login.attach( getClient(), AccountClientInfo{} ) ); // 연결이 열리기 전에 붙인다
-            pump();
+            poll();
             SW_EXPECT_TRUE( getClient().isReady() );
         }
 
         OnlineServiceClient& getClient() { return _rig._clients.getClient( _clientIndex ); }
 
-        void pump() { test::updateAll( { &_rig._server }, _rig._clients, kNowMs ); }
+        void poll() { test::updateAll( { &_rig._server }, _rig._clients, kNowMs ); }
 
         /** @brief Ready 알림을 흉내 내고 왕복을 돌린 뒤 응답을 꺼냅니다. */
         void readyAndSettle()
         {
             _login.onReady( getClient() );
-            pump();
+            poll();
             _login.update();
         }
     };
@@ -104,7 +104,7 @@ SW_TEST_CASE( AccountGMLoginTest, LogsInOnceOnReady )
 
     rig._login.onReady( rig.getClient() );
     SW_EXPECT_TRUE( rig._login.getState() == AccountGMLoginState::LoggingIn );
-    rig.pump();
+    rig.poll();
     rig._login.update();
     SW_EXPECT_TRUE( rig._login.getState() == AccountGMLoginState::LoggedIn );
     SW_EXPECT_TRUE( rig._login.getFailureText().empty() );

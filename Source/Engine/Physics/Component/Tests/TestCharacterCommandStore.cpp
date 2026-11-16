@@ -78,26 +78,26 @@ SW_TEST_CASE( CharacterCommandStoreTest, ReusedSlotStartsEmpty )
 SW_TEST_CASE( CharacterCommandStoreTest, PendingInputIsConsumedOnceByThePhysicsStep )
 {
     GameObjectManager             manager;
-    CharacterControllerComponent* pIdle   = TestCharacterCommandStoreInternal::addCharacter( manager, "Idle", float3{ 0.0f, 50.0f, 0.0f } );
-    CharacterControllerComponent* pRoot   = TestCharacterCommandStoreInternal::addCharacter( manager, "Root", float3{ 0.0f, 50.0f, 10.0f } );
-    CharacterControllerComponent* pJumper = TestCharacterCommandStoreInternal::addCharacter( manager, "Jumper", float3{ 0.0f, 50.0f, 20.0f } );
+    CharacterControllerComponent* pIdle          = TestCharacterCommandStoreInternal::addCharacter( manager, "Idle", float3{ 0.0f, 50.0f, 0.0f } );
+    CharacterControllerComponent* pRoot          = TestCharacterCommandStoreInternal::addCharacter( manager, "Root", float3{ 0.0f, 50.0f, 10.0f } );
+    CharacterControllerComponent* pJumpCharacter = TestCharacterCommandStoreInternal::addCharacter( manager, "Jumper", float3{ 0.0f, 50.0f, 20.0f } );
     manager.beginPlay();
     manager.update( TestCharacterCommandStoreInternal::kFrame ); // 첫 물리 프레임이 캐릭터를 짓는다
 
     pRoot->addRootMotionDisplacement( float3{ 1.0f, 5.0f, 0.0f } ); // 수직은 버린다
-    pJumper->jump( 6.0f );
+    pJumpCharacter->jump( 6.0f );
     for ( uint32 frame = 0; frame < 20; ++frame )
     {
         manager.update( TestCharacterCommandStoreInternal::kFrame );
     }
 
-    const float3 idle   = pIdle->getSimulatedPosition();
-    const float3 root   = pRoot->getSimulatedPosition();
-    const float3 jumper = pJumper->getSimulatedPosition();
+    const float3 idle           = pIdle->getSimulatedPosition();
+    const float3 root           = pRoot->getSimulatedPosition();
+    const float3 jumpedPosition = pJumpCharacter->getSimulatedPosition();
     SW_EXPECT_NEAR( 1.0f, root._x - idle._x, 1.0e-3f );
     SW_EXPECT_NEAR( idle._y, root._y, 1.0e-4f );
-    SW_EXPECT_TRUE( jumper._y > idle._y + 1.0f );
-    SW_EXPECT_NEAR( idle._x, jumper._x, 1.0e-4f );
+    SW_EXPECT_TRUE( jumpedPosition._y > idle._y + 1.0f );
+    SW_EXPECT_NEAR( idle._x, jumpedPosition._x, 1.0e-4f );
 }
 
 /**

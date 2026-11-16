@@ -402,14 +402,14 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeRoundTripAndRejects )
     SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
     SW_EXPECT_EQUAL( code, AppearanceSelection::encode( decoded, _database ) );
 
-    const auto reasonOf = []( const expected<void>& result )
+    const auto getReasonOf = []( const expected<void>& result )
     { return result.has_value() ? string{} : string( result.error().message() ); };
-    SW_EXPECT_EQUAL( string( "not a share code" ), reasonOf( AppearanceSelection::decode( "", _database, decoded ) ) );
-    SW_EXPECT_EQUAL( string( "not a share code" ), reasonOf( AppearanceSelection::decode( "***", _database, decoded ) ) );
+    SW_EXPECT_EQUAL( string( "not a share code" ), getReasonOf( AppearanceSelection::decode( "", _database, decoded ) ) );
+    SW_EXPECT_EQUAL( string( "not a share code" ), getReasonOf( AppearanceSelection::decode( "***", _database, decoded ) ) );
 
     string tampered               = code;
     tampered[tampered.size() / 2] = tampered[tampered.size() / 2] == 'A' ? 'B' : 'A';
-    SW_EXPECT_EQUAL( string( "checksum mismatch" ), reasonOf( AppearanceSelection::decode( tampered, _database, decoded ) ) );
+    SW_EXPECT_EQUAL( string( "checksum mismatch" ), getReasonOf( AppearanceSelection::decode( tampered, _database, decoded ) ) );
 }
 
 /** @brief [AppearanceSelectionTest] 공유 코드의 슬라이더는 실제 값이다 — 뒤 판이 범위를 넓혀도 같은 키로 읽고, 범위를 좁히면 끝에 붙이고 보고한다 */

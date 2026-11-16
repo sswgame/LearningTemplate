@@ -159,9 +159,10 @@ namespace sw
                         // 하늘(깊이 1)은 속도 출력이 없어 깊이 · 지난 뷰-투영으로 카메라 재투영만 한다.
                         // 후처리를 끈 뷰(CCTV)에서는 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource, 출력은 원본과 같은 형식 — 검증 3-6).
                         // 일반 풀스크린 패스가 아니라 실행은 executeTAAPass 이고, 출력 타깃은 셋업이 기록 형식으로 읽으므로 늘 만든다(ensureTAAHistory).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderTAA;
-                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
-                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        info._pDefaultShader     = &EngineDefaultAssets::_shaderTAA;
+                        info._inputContract      = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
+                        info._executionBoundRole = Role::GBufferAlbedo; // 기록(지난 출력)을 그 칸에 건다 — executeTAAPass
+                        info._flags              = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
                     case RenderPassType::Tonemap:
@@ -254,7 +255,7 @@ namespace sw
                     {
                         // 셰이더 · PSO 없이 원본을 선언한 출력으로 복사한다(전용 실행 executeSceneColorCopyPass). 입력은 원본 색 하나, 출력은 같은 형식의 첨부다.
                         info._inputContract = makeContract( { Role::SourceColor }, {} );
-                        info._flags         = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        info._flags         = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kCullWhenUnconsumed;
                         break;
                     }
                     case RenderPassType::SceneDepthCopy:
@@ -288,7 +289,7 @@ namespace sw
                         // 화면 공간 반사 — 장면 색 사본 · 깊이 · G버퍼 노멀(· 머티리얼)을 읽어 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(안개와 같은 모양).
                         // 전용 실행이 세기 0 · 후처리를 끈 뷰 · 표면 값 보기에서 그리지 않는다. 출력이 장면 색이라 원본을 가리키는 끄기(kBypassesToSource)는 쓸 수 없다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderScreenSpaceReflection;
-                        info._inputContract  = makeContract( { Role::SceneColorCopy, Role::SceneDepth, Role::GBufferNormal }, { Role::GBufferMaterial } );
+                        info._inputContract  = makeContract( { Role::SceneColorCopy, Role::SceneDepth, Role::GBufferNormal, Role::GBufferAlbedo }, { Role::GBufferMaterial } ); // 알베도 알파 = 셰이딩 모델(그려짐 판정)
                         info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }

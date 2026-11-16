@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
@@ -30,7 +31,7 @@ namespace sw
     bool XMLCatalogLoader::readAndValidate( void* pCatalog, ReadRootFunction pReadRoot, const XMLNode& root, string_view sourceName )
     {
         // 둘 다 돈다 — 형식 오류와 참조 오류를 한 번에 모두 알린다. 참조 규칙은 쿠커와 같은 데이터 표다(`DataCatalogReferenceRules`).
-        const bool bRead       = pReadRoot( pCatalog, root, sourceName );
+        const bool bRead       = pReadRoot( pCatalog, XMLCatalogRoot{ root }, sourceName );
         const bool bReferenced = DataCatalogReferenceRules::validateWithTable( root, sourceName );
         return bRead && bReferenced;
     }

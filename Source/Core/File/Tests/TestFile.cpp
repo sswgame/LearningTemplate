@@ -14,7 +14,7 @@
 
 namespace
 {
-    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::setWriteGate`). */
+    /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::setWriteFilter`). */
     sw::expected<void> refuseEveryWrite( sw::string_view path )
     {
         return sw::unexpected( sw::Error{ sw::ErrorKind::Unsupported, "test gate refuses every write", path } );
@@ -41,7 +41,7 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
     SW_EXPECT_EQUAL( sw::string( "Projects/Sample/TestFile.bin" ), newExt );
 
     SW_EXPECT_EQUAL( sw::string( "Foo/Bar" ), sw::FileUtil::normalizeSeparators( "Foo\\Bar" ) );
-    SW_EXPECT_EQUAL( sw::string( "foo/bar" ), sw::FileUtil::normalizePath( "Foo\\Bar" ) );
+    SW_EXPECT_EQUAL( sw::string( "foo/bar" ), sw::FileUtil::normalizePath( "Foo\\Bar" ).str() );
     SW_EXPECT_TRUE( sw::FileUtil::isSameDiskPath( "Foo/Bar/", "Foo\\Bar" ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::isAbsolutePath( "C:/Projects/Sample/TestFile.txt" ) );
@@ -85,6 +85,12 @@ SW_TEST_CASE( FileTest, PathContainmentFollowsTheOSCaseRule )
     sw::string relative;
     SW_EXPECT_TRUE( sw::FileUtil::tryMakePathUnderRoot( root, root + "/Sub/A.txt", relative ) );
     SW_EXPECT_EQUAL( sw::string( "Sub/A.txt" ), relative ); // 원래 철자
+
+    // `..` 구간은 글로 안에 있어 보여도 밖이다(감사 C-18). 이름에 점이 든 구간은 그대로 안이다
+    SW_EXPECT_FALSE( sw::FileUtil::isPathUnderRoot( root, root + "/../outside.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( root, root + "\\sub\\..\\..\\x" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::tryMakePathUnderRoot( root, root + "/a/../../b", relative ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( root, root + "/..hidden/a..b.txt" ) );
 }
 
 /**
@@ -162,7 +168,7 @@ SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
  *          없는 파일 · 폴더는 스탬프가 없다(false). 같은 크기의 재쓰기는 쓰기 시각에 달렸는데 그 시각의 눈금은 시스템 시계(~1 ~ 16 ms)라
  *          여기서는 크기가 다른 재쓰기로 본다.
  */
-SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
+SW_TEST_CASE( FileTest, FileStampReportsSizeAndDetectsChanges )
 {
     const sw::string dir = sw::test::makeScratchPath( "SwFileStampTestDir" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
@@ -336,6 +342,32 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 }
 
 /**
+ * @brief [FileTest] 모은 파일 · 폴더는 바이트 순이다 — 훑는 순서(NTFS 이름 순, ext4 해시 순)에 기대지 않는다.
+ * @details 정렬하지 않으면 Linux 에서 `scratch/…` 사본이 `engine/…` 원본보다 먼저 나와 Quick Open 이 사본을 골랐다(editor.sequencerkeys).
+ */
+SW_TEST_CASE( FileTest, CollectedPathsAreSortedOnEveryPlatform )
+{
+    const sw::string rootDir = sw::test::makeScratchPath( "sw_walk_sorted" );
+    for ( const char* pFolder : { "scratch", "engine", "common", "game", "editor" } )
+    {
+        const sw::string folder = sw::FileUtil::joinPath( rootDir, pFolder );
+        SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "same.txt" ), "a" ) );
+    }
+
+    sw::vector<sw::string> listFile{ "keep-first" }; // 부른 쪽이 넣어 둔 항목은 건드리지 않는다
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, true ) );
+    SW_REQUIRE_EQUAL( size_t( 6 ), listFile.size() );
+    SW_EXPECT_TRUE( listFile[0] == "keep-first" );
+    SW_EXPECT_TRUE( std::is_sorted( listFile.begin() + 1, listFile.end() ) );
+
+    sw::vector<sw::string> listFolder;
+    SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, true ) );
+    SW_EXPECT_EQUAL( size_t( 5 ), listFolder.size() );
+    SW_EXPECT_TRUE( std::is_sorted( listFolder.begin(), listFolder.end() ) );
+}
+
+/**
  * @brief [FileTest] 쓰기는 원자적이다: 다 쓴 뒤 바꿔 끼우고, 같은 폴더에 임시 파일을 남기지 않는다.
  * @details 원본을 "wb" 로 열어 그 자리에 쓰면 도중에 실패할 때 원본이 빈 파일로 남는다.
  */
@@ -465,6 +497,65 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
 }
 
 /**
+ * @brief [FileTest] 원자적 쓰기는 읽기 전용 파일을 바꿔 끼우지 않는다 — false 이고 내용 · 속성이 그대로다(POSIX `rename` 은 대상 권한을 보지 않아 잠금이 뚫렸다)
+ */
+SW_TEST_CASE( FileTest, WriteRefusesAReadOnlyFile )
+{
+    SW_EXPECT_LOG( "File.WriteReadOnly" );
+    const sw::string filePath = sw::test::makeScratchPath( "locked.txt" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "kept" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, false ) );
+
+    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( filePath, "overwritten" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( filePath ) );
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+    SW_EXPECT_EQUAL( text, sw::string( "kept" ) );
+
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, true ) ); // 케이스 폴더 정리가 Windows 에서 읽기 전용 파일을 지우지 못한다
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "overwritten" ) );
+}
+
+/**
+ * @brief [FileTest] 체크아웃 규칙 안의 읽기 전용 파일은 지우기 · 옮기기 · 덮는 복사가 모두 거절하고 남긴다 — 폴더는 그 아래 파일 하나로 막힌다. 규칙 밖의 읽기 전용은 정리가 지운다
+ * @details POSIX 는 폴더 권한만으로, Windows 지우기는 속성을 풀고 지워 잠금(git LFS lockable)이 뚫렸다. 규칙은 케이스 동안만 바꾸고 앞 규칙으로 되돌린다.
+ */
+SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
+{
+    SW_EXPECT_LOG( "File.NotOpenForEdit" );
+    const sw::string controlled = sw::test::makeScratchPath( "controlled" );
+    const sw::string locked     = controlled + "/deep/locked.txt";
+    const sw::string loose      = sw::test::makeScratchPath( "loose_copy.txt" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( locked ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( loose ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( locked, "kept" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( loose, "copy" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( loose, false ) );
+
+    const sw::FileUtil::CheckoutRule previousRule = sw::FileUtil::setCheckoutRule( []( sw::string_view path )
+    { return path.find( "/controlled/" ) != sw::string_view::npos; } );
+    const sw::optional<sw::string>   found        = sw::FileUtil::findNotOpenForEdit( controlled );
+    SW_EXPECT_TRUE( found.has_value() && *found == sw::FileUtil::normalizeSeparators( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::removeFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::tryRemoveFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
+    SW_EXPECT_FALSE( sw::FileUtil::renamePath( locked, controlled + "/moved.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::copyFile( loose, locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isWriteAllowed( locked ) ); // 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 쓰기 전에 묻는 입구다
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( loose ) );       // 규칙 밖의 읽기 전용(속성이 따라온 사본)은 정리가 지운다
+    (void)sw::FileUtil::setCheckoutRule( previousRule );
+
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( locked, text ) );
+    SW_EXPECT_EQUAL( text, sw::string( "kept" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( locked ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( controlled + "/moved.txt" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, true ) ); // 케이스 폴더 정리는 규칙과 무관하게 지운다 — 다른 케이스와 같게 둔다
+}
+
+/**
  * @brief [FileTest] 순회 콜백은 루트로 시작하는 `/` 경로와 디렉터리 여부를 주고, false 를 돌려주면 멈춘다
  */
 SW_TEST_CASE( FileTest, DirectoryVisitorReportsEntriesAndStops )
@@ -586,9 +677,9 @@ SW_TEST_CASE( FileTest, AppendTextFileAddsToTheEnd )
  * @details 파일을 바꾸는 입구가 모두 `isWriteAllowed` 를 지나는지 본다. 휴지통은 거절하는 쪽만 본다(통과하면 실제로 휴지통에 간다).
  *          게이트는 프로세스 전역이라 단언이 중간에 끝내지 않도록 결과를 모은 뒤 걷고 판정한다.
  */
-SW_TEST_CASE( FileTest, WriteGateRefusesEveryMutatingEntry )
+SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
 {
-    const sw::string root = sw::test::makeScratchPath( "SwWriteGateRoot" );
+    const sw::string root = sw::test::makeScratchPath( "SwWriteFilterRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
     const sw::string path = root + "/Guarded.txt";
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "keep" ) );
@@ -599,12 +690,12 @@ SW_TEST_CASE( FileTest, WriteGateRefusesEveryMutatingEntry )
     bool bRemoved  = true;
     {
         SW_EXPECT_LOG( "File.WriteRefused" ); // 게이트가 거절한 쓰기는 오류로 남는다
-        sw::FileUtil::setWriteGate( &refuseEveryWrite );
+        sw::FileUtil::setWriteFilter( &refuseEveryWrite );
         bWritten  = sw::FileUtil::writeTextFile( path, "changed" );
         bAppended = sw::FileUtil::appendTextFile( path, "more" );
         bTrashed  = sw::FileUtil::moveToRecycleBin( sw::vector<sw::string>{ path } );
         bRemoved  = sw::FileUtil::removeFile( path );
-        sw::FileUtil::setWriteGate( nullptr );
+        sw::FileUtil::setWriteFilter( nullptr );
     }
 
     SW_EXPECT_FALSE( bWritten );

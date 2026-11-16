@@ -985,7 +985,8 @@ namespace sw
 
     void AudioEngine::startWaitingVoice( AudioVoiceSlot& slot )
     {
-        // 엔트리가 없으면 캐시를 비운 뒤다(`clear`) — 요청이 사라졌으니 실패와 같이 보이스를 놓는다.
+        // 엔트리가 없으면 캐시를 비운 뒤다(`clear`) — 요청이 사라졌으니 실패와 같이 보이스를 놓는다. 예산 퇴출은 가장 오래 안 쓴
+        // 클립부터 빼고 여기서 묻는 `findLoadState` 가 블록마다 이 엔트리를 맨 뒤로 올리므로, 다른 클립이 모두 재생 중이고 예산을 넘었을 때만 여기 닿는다.
         const optional<AssetLoadState> state = _clipStore.findLoadState( slot._clipPath );
         if ( state.has_value() == false || *state == AssetLoadState::Failed )
         {

@@ -3,4 +3,4 @@
 # @brief 결정적 네트워크 키트 — 락스텝(입력 지연 · 체크섬 비동기 감지, RTS) · 롤백(예측 · 되감기 · 재시뮬레이션, 격투)
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_NetLockstep)
+sw_add_game_framework_kit(GF_NetLockstep)

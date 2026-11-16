@@ -76,9 +76,9 @@ namespace sw
 
     private:
         ResourceRemapInternal::State _state;
-    };
 
-    SW_SERVICE_SLOT( ResourceRemapTable, Required );
+        SW_SERVICE_SLOT( ResourceRemapTable, Required );
+    };
 } // namespace sw
 
 namespace sw

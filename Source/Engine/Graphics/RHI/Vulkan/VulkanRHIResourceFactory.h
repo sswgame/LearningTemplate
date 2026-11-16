@@ -61,10 +61,8 @@ namespace sw
          * @details `createTexture2D` 와 `createPlacedTexture2D` 가 같은 몸을 쓴다(DX12 `createTextureResource` 와 같다) — 서술 · 뷰 · 레이아웃 규칙이 두 벌로 갈리지 않게.
          */
         RHITextureHandle createTextureResource( const RHITextureDesc& desc, const shared_ptr<VulkanRHIDevice::VulkanHeapMemory>& pHeap, uint64 offsetBytes );
-        /** @brief 텍스처 레코드가 보관한 bindless 슬롯을 반납하고 레코드의 인덱스를 지웁니다(destroyTexture 와 unregisterBindlessTexture 공용). */
-        void releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record );
-        /** @brief bindless 번호 하나를 더미로 되돌리고 GPU 펜스 뒤에 프리리스트로 돌려줍니다(`_bindlessMutex` 를 쥔 채로 부릅니다). */
-        void releaseTextureBindlessIndex( RHIDescriptorIndex index );
+        /** @brief 등록표에서 비운 텍스처 번호를 GPU 펜스 뒤에 더미로 되돌리고 빈 목록에 넣습니다(`_bindlessMutex` 를 쥔 채로 부릅니다). */
+        void scheduleTextureBindlessIndexFree( RHIDescriptorIndex index );
         /** @brief 버퍼 인덱스(SRV/CB 또는 UAV)를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다. 부르기 전에 원본 테이블은 비워 둡니다. */
         void deferFreeBufferIndex( RHIDescriptorIndex index, bool bUAV );
         /** @brief 현재 프레임 슬롯의 스테이징에서 sizeBytes 를 bump 할당합니다(부족하면 키우고 이전 버퍼는 펜스 뒤 해제). */

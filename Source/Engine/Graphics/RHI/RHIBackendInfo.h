@@ -61,6 +61,8 @@ namespace sw
             caps._bWireframeFill              = SW_TRUE;
             caps._bMaterialTessellation       = SW_TRUE; // 헐 · 도메인이 정점 · 픽셀과 같은 상수 · 텍스처 · 구조 버퍼를 받는다(D3D11RHICommandContext 가 HS · DS 에도 건다)
             caps._bGraphicsShaderWrites       = SW_TRUE; // 픽셀 셰이더 UAV 는 렌더 타깃 칸 뒤(UAVStartSlot >= 렌더 타깃 수)
+            caps._bGeometryStage              = SW_TRUE;
+            caps._bTessellationStages         = SW_TRUE;
             return caps;
         }
 
@@ -78,6 +80,8 @@ namespace sw
             caps._bWireframeFill              = SW_TRUE;
             caps._bMaterialTessellation       = SW_TRUE; // 루트 시그니처가 모든 스테이지에 보인다(D3D12_SHADER_VISIBILITY_ALL)
             caps._bGraphicsShaderWrites       = SW_TRUE;
+            caps._bGeometryStage              = SW_TRUE;
+            caps._bTessellationStages         = SW_TRUE;
             return caps;
         }
 
@@ -100,6 +104,8 @@ namespace sw
             caps._bWireframeFill              = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 fillModeNonSolid 로 덮는다
             caps._bMaterialTessellation       = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 tessellationShader 로 덮는다
             caps._bGraphicsShaderWrites       = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 fragmentStoresAndAtomics 로 덮는다
+            caps._bGeometryStage              = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 장치 기능으로 덮는다
+            caps._bTessellationStages         = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 장치 기능으로 덮는다
             return caps;
         }
 
@@ -143,6 +149,8 @@ namespace sw
             caps._bThreadSafeResourceCreation = SW_FALSE;
             caps._bWireframeFill              = SW_TRUE;
             caps._bGraphicsShaderWrites       = SW_TRUE; // GL 4.3 SSBO 는 단계를 가리지 않는다
+            caps._bGeometryStage              = SW_TRUE;
+            caps._bTessellationStages         = SW_TRUE;
             return caps;
         }
     };

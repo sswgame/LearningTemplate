@@ -41,14 +41,14 @@ namespace sw
 {
     SW_DECLARE_DELEGATE( void, FileDialogDelegate, const vector<string>& fileName );
 
-    /** @brief 네이티브 파일 대화상자입니다. **결과 델리게이트는 메인 스레드에서 불립니다**(`pumpResults`). 한 번에 하나만 열린다. */
+    /** @brief 네이티브 파일 대화상자입니다. **결과 델리게이트는 메인 스레드에서 불립니다**(`pollResults`). 한 번에 하나만 열린다. */
     class SW_EDITOR_API FileDialog
     {
     public:
         /**
          * @brief 네이티브 파일 다이얼로그를 엽니다. **결과 델리게이트는 메인 스레드에서 불립니다.** 이미 열려 있으면 경고하고 열지 않습니다.
          * @details 다이얼로그 자체는 별도 스레드가 띄웁니다. 네이티브 다이얼로그는 사용자가 닫을 때까지 돌아오지
-         *          않으므로 그 호출에서 기다리면 프레임이 멈추기 때문입니다. 그래서 **결과만** 담고, `pumpResults`
+         *          않으므로 그 호출에서 기다리면 프레임이 멈추기 때문입니다. 그래서 **결과만** 담고, `pollResults`
          *          가 메인 스레드에서 스레드를 합류시키고 델리게이트를 부릅니다.
          *
          *          그 스레드에서 곧바로 델리게이트를 부르면 콜백이 씬 · 컴포넌트 · 에디터 상태처럼 메인 스레드가 매 프레임
@@ -59,10 +59,10 @@ namespace sw
          */
         static void open( const FileDialogParams& params, FileDialogDelegate onSuccess );
         /** @brief 대화상자가 닫혔으면 스레드를 합류시키고 결과를 넘깁니다. **메인 스레드에서 프레임마다** 부릅니다. */
-        static void pumpResults();
+        static void pollResults();
         /**
          * @brief 열린 대화상자의 결과를 버립니다(델리게이트만 놓는다). 편집기 인스턴스를 없앨 때 부릅니다 — 델리게이트가 가리키는 객체가 사라진다.
-         * @details 스레드는 그대로 두고 대화상자가 닫히면 `pumpResults` 가 합류시킨다. 그때까지 `isOpen` 은 true 라 리로드는 계속 잡혀 있다.
+         * @details 스레드는 그대로 두고 대화상자가 닫히면 `pollResults` 가 합류시킨다. 그때까지 `isOpen` 은 true 라 리로드는 계속 잡혀 있다.
          */
         static void cancelResults();
         /** @brief 대화상자 스레드가 아직 합류되지 않았으면 true 입니다. 이 동안 편집기 모듈을 내리면 안 된다(리로드 잡음). */

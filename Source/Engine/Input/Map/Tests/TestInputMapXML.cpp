@@ -60,7 +60,7 @@ SW_TEST_CASE( InputMapXMLTest, UserBindingsRoundTripEveryKind )
 /**
  * @brief [InputMapXMLTest] 모르는 키 이름 · 모르는 속성 · 모르는 원소는 그 바인딩을 넣지 않고 읽기를 실패로 돌린다(조용히 버리지 않는다)
  */
-SW_TEST_CASE( InputMapXMLTest, RejectsUnknownNamesAndFields )
+SW_TEST_CASE( InputMapXMLTest, RejectsUnknownNamesAndProperties )
 {
     SW_EXPECT_LOG( "InputMapXML.BindingRejected" );
     SW_EXPECT_LOG( "XMLFields.UnknownField" );

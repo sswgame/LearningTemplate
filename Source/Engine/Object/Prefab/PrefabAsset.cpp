@@ -204,7 +204,7 @@ namespace sw
                         return false;
                     }
                     PrefabInstanceParams params;
-                    if ( XMLFields::readFields( element, params, sourceName ) == false )
+                    if ( XMLFields::readProperties( element, params, sourceName ) == false )
                         return false;
                     PrefabInstanceNode node{};
                     node._name              = std::move( params._name );
@@ -230,7 +230,7 @@ namespace sw
                     if ( node._parentIndex != parentIndex )
                         continue;
                     XMLNode element = parent.appendChild( kNestedInstance );
-                    XMLFields::writeFields( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey } );
+                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey } );
                     if ( node._overrideXML.empty() == false )
                     {
                         XMLDocument overrideDoc;
@@ -480,6 +480,38 @@ namespace sw
                     outListNode.push_back( std::move( node ) );
                 }
             }
+
+            /** @brief 스폰이 상태를 읽는 문맥입니다 — 글(`applyStateTo` · 중첩 노드)과 원형이 같은 문맥이어야 원형으로 읽은 결과가 글로 읽은 것과 같다. */
+            static ObjectLoadContext makeSpawnLoadContext()
+            {
+                ObjectLoadContext context{ SerializePurpose::Authoring };
+                context._bExternalParentAllowed = false; // 프리팹 루트 · 부품의 부모는 스폰 자리가 정한다
+                return context;
+            }
+
+            /**
+             * @brief 상태 하나를 씬 밖 오브젝트에 @p readState 로 읽고 바이너리로 써 @p outTemplate 에 둡니다. 읽거나 쓰지 못하면 false 입니다.
+             * @details 쓰기 문맥은 `setFromGameObject` 와 같다(저작 목적, 바깥 부모를 적지 않음 — 컴포넌트 핸들은 파일 형태 `{0, 키 해시}`). 모르는 타입은
+             *          `MissingComponent` 로 실리고 그 원문 · 맡은 참조 키도 PROPERTY 라 원형을 지나도 남는다(A-1). 다 쓰면 매니저를 비운다 — 다음 상태가
+             *          같은 이름이면 번호(`X_2`)를 받아 원형에 그 이름이 실린다.
+             */
+            template <typename ReadStateFunc>
+            [[nodiscard]] static bool bakeSpawnTemplate( GameObjectManager& scratch, const string& objectName, ReadStateFunc&& readState, vector<uint8>& outTemplate )
+            {
+                outTemplate.clear();
+                GameObject*       pTemp = scratch.createGameObject( hashed_string( objectName.empty() ? kRoot : objectName.c_str() ) );
+                ObjectSaveOptions options{ SerializePurpose::Authoring };
+                options._bOmitExternalParent = SW_TRUE;
+                const bool bBaked            = pTemp != nullptr && readState( pTemp ) && ObjectStateSerializer::saveToBinaryBuffer( pTemp, outTemplate, options );
+                scratch.clear();
+                return bBaked && outTemplate.empty() == false;
+            }
+
+            /** @brief 원형 @p spawnTemplate 를 @p pTarget 에 읽습니다. */
+            [[nodiscard]] static bool loadSpawnTemplate( GameObject* pTarget, const vector<uint8>& spawnTemplate )
+            {
+                return pTarget != nullptr && ObjectStateSerializer::loadFromBinaryBuffer( pTarget, spawnTemplate.data(), spawnTemplate.size(), makeSpawnLoadContext() ) != 0;
+            }
         };
 
         /**
@@ -573,7 +605,7 @@ namespace sw
         }
 
         PrefabRootParams rootParams;
-        if ( XMLFields::readFields( root, rootParams, absPath, { "formatVersion", DataInheritance::kBaseAttribute } ) == false )
+        if ( XMLFields::readProperties( root, rootParams, absPath, { "formatVersion", DataInheritance::kBaseAttribute } ) == false )
             return false;
         if ( rootParams._name.empty() == false )
             _name = rootParams._name;
@@ -653,21 +685,23 @@ namespace sw
         }
         _listNestedInstance = std::move( listNode );
 
+        JSONDocument stateDoc;
         if ( root.has( PrefabAssetInternal::kNestedList ) )
         {
-            JSONDocument    stateDoc;
             const JSONValue stateRoot = stateDoc.makeObject();
             for ( const string& key : root.getMemberNames() )
             {
                 if ( key != PrefabAssetInternal::kNestedList )
                     stateRoot.set( key ).assignFrom( root.get( key ) );
             }
-            _stateData = stateDoc.dump( 0 );
         }
-        else
+        const expected<string> stateText = root.has( PrefabAssetInternal::kNestedList ) ? stateDoc.dump( 0 ) : doc.dump( 0 );
+        if ( stateText.has_value() == false )
         {
-            _stateData = doc.dump( 0 );
+            SW_LOG_ERROR_ID( "PrefabAsset.PrefabStateNotWritable", "Prefab state could not be written as JSON: %# (%#) - %#", stateText.error().message(), stateText.error().detail(), absPath );
+            return false;
         }
+        _stateData = *stateText;
 
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
@@ -732,7 +766,7 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::makeVariantFileFields( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const
+    bool PrefabAsset::makeVariantFileProperties( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const
     {
         outOverrideXML.clear();
         PrefabAsset base;
@@ -868,7 +902,7 @@ namespace sw
         root.appendAttribute( "formatVersion", static_cast<uint32>( PrefabAsset::kAssetType._formatVersion ) );
         if ( _basePath.empty() == false )
             root.appendAttribute( DataInheritance::kBaseAttribute, string_view( _basePath ) );
-        XMLFields::writeFields( root, PrefabRootParams{ _name } );
+        XMLFields::writeProperties( root, PrefabRootParams{ _name } );
 
         // 변형은 부모와 다른 점만 쓴다. 다른 점을 만들지 못하면 쓰지 않는다 — 모든 칸을 적어 부모를 끊지 않는다.
         if ( _basePath.empty() == false )
@@ -876,10 +910,10 @@ namespace sw
             string                     overrideXML;
             vector<PrefabInstanceNode> listOwnNode;
             XMLDocument                overrideDoc;
-            const bool                 bFields = makeVariantFileFields( overrideXML, listOwnNode );
-            if ( bFields && overrideXML.empty() == false && overrideDoc.parse( overrideXML ) )
+            const bool                 bProperties = makeVariantFileProperties( overrideXML, listOwnNode );
+            if ( bProperties && overrideXML.empty() == false && overrideDoc.parse( overrideXML ) )
                 (void)root.appendClone( overrideDoc.getRoot() );
-            if ( bFields == false || PrefabAssetInternal::writeNodesToXML( root, listOwnNode, -1 ) == false )
+            if ( bProperties == false || PrefabAssetInternal::writeNodesToXML( root, listOwnNode, -1 ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWritten", "Prefab variant '%#' could not be written - '%#' is left as it was", _name, absPath.str() );
                 return false;
@@ -943,7 +977,7 @@ namespace sw
         {
             string                     overrideXML;
             vector<PrefabInstanceNode> listOwnNode;
-            if ( makeVariantFileFields( overrideXML, listOwnNode ) == false )
+            if ( makeVariantFileProperties( overrideXML, listOwnNode ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWrittenJSON", "Prefab variant '%#' could not be written; nothing written: %#", _name, absPath.str() );
                 return false;
@@ -955,8 +989,14 @@ namespace sw
             if ( overrideXML.empty() == false )
                 variantRoot.set( PrefabAssetInternal::kVariantOverrides ).setString( overrideXML );
             PrefabAssetInternal::writeNodesToJSON( variantRoot, listOwnNode, -1 );
-            const string variantText = variantDoc.dump( 0 );
-            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( variantText.data() ), variantText.size() ) == false )
+            const expected<string> variantText = variantDoc.dump( 0 );
+            if ( variantText.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWritable", "Prefab variant '%#' could not be written as JSON: %# (%#); nothing written: %#", _name, variantText.error().message(),
+                                 variantText.error().detail(), absPath.str() );
+                return false;
+            }
+            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( variantText->data() ), variantText->size() ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON2", "Failed to write prefab JSON: %#", absPath.str() );
                 return false;
@@ -980,7 +1020,14 @@ namespace sw
                 return false;
             }
             PrefabAssetInternal::writeNodesToJSON( doc.getRoot(), _listNestedInstance, -1 );
-            jsonStr = doc.dump( 0 );
+            const expected<string> nestedText = doc.dump( 0 );
+            if ( nestedText.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabNestedNotWritable", "Prefab '%#' could not be written as JSON: %# (%#); nothing written: %#", _name, nestedText.error().message(),
+                                 nestedText.error().detail(), absPath.str() );
+                return false;
+            }
+            jsonStr = *nestedText;
         }
 
         const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) &&
@@ -1059,11 +1106,64 @@ namespace sw
         if ( pTarget == nullptr || _stateData.empty() )
             return false;
         // 프리팹 본문에 남은 다른 오브젝트로의 부착은 읽지 않는다(위 `setFromGameObject`). 오브젝트 안의 부착은 그대로 잇는다.
-        ObjectLoadContext context{ SerializePurpose::Authoring };
-        context._pIdentity              = pIdentity;
-        context._bExternalParentAllowed = false;
+        ObjectLoadContext context = PrefabAssetInternal::makeSpawnLoadContext();
+        context._pIdentity        = pIdentity;
         return ( _stateFormat == PrefabStateFormat::JSON ) ? ObjectStateSerializer::loadFromJSONString( pTarget, _stateData, context )
                                                            : ObjectStateSerializer::loadFromXMLString( pTarget, _stateData, context );
+    }
+
+    bool PrefabAsset::applySpawnTemplateTo( GameObject* pTarget ) const
+    {
+        if ( _spawnTemplate.empty() )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.SpawnTemplateMissing", "Prefab '%#' has no spawn template - only prefabs loaded by PrefabCache can be spawned", _name );
+            return false;
+        }
+        return PrefabAssetInternal::loadSpawnTemplate( pTarget, _spawnTemplate );
+    }
+
+    bool PrefabAsset::applyNestedSpawnTemplateTo( GameObject* pTarget, const size_t nodeIndex ) const
+    {
+        if ( nodeIndex >= _listNestedSpawnTemplate.size() || _listNestedSpawnTemplate[nodeIndex].empty() )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.NestedSpawnTemplateMissing", "Nested node %# of prefab '%#' has no spawn template - only flattened nodes of prefabs loaded by PrefabCache have one",
+                             nodeIndex, _name );
+            return false;
+        }
+        return PrefabAssetInternal::loadSpawnTemplate( pTarget, _listNestedSpawnTemplate[nodeIndex] );
+    }
+
+    bool PrefabAsset::createSpawnTemplate()
+    {
+        _spawnTemplate.clear();
+        _listNestedSpawnTemplate.assign( _listNestedInstance.size(), {} );
+        const bool bHasState = StringUtil::trim( _stateData ).empty() == false;
+        if ( bHasState == false && hasResolvedNestedInstances() == false )
+            return true;
+
+        // 원형은 씬 밖에서 짓는다(`PrefabOverrides::makeBaseState` 와 같은 방법, 언리얼 CDO 처럼 월드에 들지 않는다). 매니저 하나를 상태마다 비워 쓴다.
+        // 캐시는 워커에서도 로드한다 — 씬 밖 매니저(TransientTag)는 훅을 부르지 않아 공유 에셋을 만지지 않는다(감사 A-15). 스폰 때 산 오브젝트에서 훅이 돈다.
+        GameObjectManager scratch( GameObjectManager::TransientTag{} );
+        if ( bHasState && PrefabAssetInternal::bakeSpawnTemplate( scratch, _name, [&]( GameObject* pTemp )
+        { return applyStateTo( pTemp ); }, _spawnTemplate ) == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.SpawnTemplateNotBuilt", "Prefab '%#' state could not be read into a spawn template - the prefab is not loaded", _name );
+            return false;
+        }
+        for ( size_t index = 0; index < _listNestedInstance.size(); ++index )
+        {
+            const PrefabInstanceNode& node = _listNestedInstance[index];
+            if ( node.isResolved() == false )
+                continue;
+            const auto readNodeState = [&]( GameObject* pTemp )
+            { return ObjectStateSerializer::loadFromXMLString( pTemp, node._resolvedStateXML, PrefabAssetInternal::makeSpawnLoadContext() ); };
+            if ( PrefabAssetInternal::bakeSpawnTemplate( scratch, node._name, readNodeState, _listNestedSpawnTemplate[index] ) == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.NestedSpawnTemplateNotBuilt", "Nested instance '%#' of prefab '%#' could not be read into a spawn template - the prefab is not loaded", node._name, _name );
+                return false;
+            }
+        }
+        return true;
     }
 
     string PrefabAsset::convertState( PrefabStateFormat targetFormat ) const

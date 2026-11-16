@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 namespace sw
@@ -50,5 +51,17 @@ namespace sw
         box._min = center - _halfSize;
         box._max = center + _halfSize;
         return box;
+    }
+
+    void ShooterBlockerComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<ShooterBlockerComponent>( this );
+    }
+
+    void ShooterBlockerComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ShooterBlockerComponent>( this );
+        Component::onUnregister( manager );
     }
 } // namespace sw

@@ -33,7 +33,7 @@ namespace
         }
 
         /** @brief 선택 필드를 모두 채웁니다. 정점 v 의 법선은 +z, UV 는 (v, 0), 스킨은 본 v, 그룹은 0 이고, 삼각형 t 의 부품은 t 입니다. 모프 "m" 의 델타는 (v, 0, 0) 입니다. */
-        static void fillOptionalFields( AppearanceGeometry& inoutGeometry )
+        static void fillOptionalProperties( AppearanceGeometry& inoutGeometry )
         {
             inoutGeometry._listGroupName = { hashed_string( "torso" ) };
             GeometryMorphTarget morph;
@@ -133,7 +133,7 @@ SW_TEST_CASE( GeometryCutTest, ExtractKeepsUsedVerticesInOriginalOrder )
 {
     using Util                = GeometryCutTestUtil;
     AppearanceGeometry source = Util::makeStrip( 3 );
-    Util::fillOptionalFields( source );
+    Util::fillOptionalProperties( source );
     vector<uint8> listSelected( source.getTriangleCount(), SW_FALSE );
     listSelected[2] = 7; // 0 이 아니면 뽑는다
     listSelected[3] = SW_TRUE;
@@ -176,7 +176,7 @@ SW_TEST_CASE( GeometryCutTest, ExtractKeepsUsedVerticesInOriginalOrder )
 /**
  * @brief [GeometryCutTest] 마스크가 짧으면 모자란 삼각형은 뽑지 않고, 빈 마스크는 빈 형상이다. 길이가 맞지 않는 선택 필드는 없는 것으로 친다
  */
-SW_TEST_CASE( GeometryCutTest, ExtractToleratesShortMaskAndPartialFields )
+SW_TEST_CASE( GeometryCutTest, ExtractToleratesShortMaskAndPartialProperties )
 {
     using Util                = GeometryCutTestUtil;
     AppearanceGeometry source = Util::makeStrip( 2 );
@@ -285,12 +285,12 @@ SW_TEST_CASE( GeometryCutTest, AppendOffsetsIndicesAndFillsParts )
 /**
  * @brief [GeometryCutTest] 선택 필드가 한쪽에만 있으면 없는 쪽을 기본값으로 채워 길이를 맞춘다
  */
-SW_TEST_CASE( GeometryCutTest, AppendFillsMissingOptionalFields )
+SW_TEST_CASE( GeometryCutTest, AppendFillsMissingOptionalProperties )
 {
     using Util                = GeometryCutTestUtil;
     AppearanceGeometry target = Util::makeStrip( 1 );
     AppearanceGeometry source = Util::makeStrip( 1, 5.0f );
-    Util::fillOptionalFields( source );
+    Util::fillOptionalProperties( source );
     AppearanceGeometry::appendGeometry( target, source );
 
     SW_REQUIRE_TRUE( target.isValid() );
@@ -549,7 +549,7 @@ SW_TEST_CASE( GeometryCutTest, CapCopiesSkinFromLoop )
 {
     using Util             = GeometryCutTestUtil;
     AppearanceGeometry box = Util::makeBox( false, true );
-    Util::fillOptionalFields( box );
+    Util::fillOptionalProperties( box );
     vector<vector<uint32>> listLoop;
     AppearanceGeometry::findBoundaryLoops( box, listLoop );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listLoop.size() ) );

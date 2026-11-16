@@ -254,7 +254,7 @@ namespace sw
             uint32 _skinSlot{ constant::invalid_index::kUint32 };
             /**
              * @brief 등장 비율(0 ~ 1)입니다. MeshComponent 가 주고 `GPUInstance::_appearance` 로 전달됩니다(내용). 1 보다 작으면 디더 변형이라 퍼뮤테이션 해시가 달라진다.
-             * @details 배치 키에는 따로 넣지 않는다 — 디더인지는 퍼뮤테이션 해시에 들어 있다(`usesAppearanceDither`, `stampPermutationHash`).
+             * @details 배치 키에는 따로 넣지 않는다 — 디더인지는 퍼뮤테이션 해시에 들어 있다(`usesAppearanceDither`, `assignPermutationHash`).
              */
             float32 _appearance{ 1.0f };
             /**
@@ -626,7 +626,7 @@ namespace sw
         /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 빈 토큰). 블렌드가 정해진 뒤에 부른다. */
         void applyGPULODGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
-        static void stampPermutationHash( DrawCandidate& candidate );
+        static void assignPermutationHash( DrawCandidate& candidate );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드, 바운드, 블렌드, 시드, 스프라이트 프레임과 색)를 채웁니다. 배치와 머티리얼 인덱스는 건드리지 않습니다. */
         static void fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance );
         /**
@@ -669,7 +669,7 @@ namespace sw
                                           uint32 rawCount, InstanceRefreshChunk& chunk );
 
         /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GPUInstanceRing::acquireWrite`). */
-        vector<GPUInstance>& instanceWork() { return _instanceRing.acquireWrite(); }
+        vector<GPUInstance>& instanceJob() { return _instanceRing.acquireWrite(); }
         /** @brief 쓰기 슬롯을 발행합니다. 이번 빌드의 더티 구간을 이력으로 남깁니다. */
         void publishInstances();
         /** @brief 부분 갱신 전에 쓰기 슬롯을 마지막 발행본에 맞춥니다(`GPUInstanceRing::syncWriteFromPublished`). */
@@ -752,7 +752,7 @@ namespace sw
 
         /**
          * @brief 인스턴스 배열 링입니다. 되복사 없는 발행과 낡은 슬롯 따라잡기는 `GPUInstanceRing` 이 맡습니다.
-         * @details 빌더는 주로 세 함수를 쓴다. `instanceWork()`(이번 프레임 쓰기 슬롯), `syncWriteSlotFromPublished()`(부분 갱신 전),
+         * @details 빌더는 주로 세 함수를 쓴다. `instanceJob()`(이번 프레임 쓰기 슬롯), `syncWriteSlotFromPublished()`(부분 갱신 전),
          *          `publishInstances()`(스냅샷에 포인터 넘기기)다. 이전 값은 `getPublished()` 로 읽는다. 규칙과 이유는 그 타입의 주석에 있다.
          */
         GPUInstanceRing _instanceRing;

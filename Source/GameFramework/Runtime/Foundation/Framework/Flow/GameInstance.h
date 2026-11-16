@@ -20,6 +20,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGame.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
 namespace sw
@@ -99,7 +100,10 @@ namespace sw
          */
         bool captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes );
 
-        /** @brief Shipping/Gameplay: `captureSnapshot` 과 같은 목적으로 찍은 버퍼로부터 씬과 게임 상태를 즉시 복원합니다. */
+        /**
+         * @brief Shipping/Gameplay: `captureSnapshot` 과 같은 목적으로 찍은 버퍼로부터 씬과 게임 상태를 즉시 복원합니다.
+         * @details 검증에서 진 버퍼는 씬을 건드리지 않는다. 교체 중에 졌으면(씬이 일부만 섰다) 세이브 막기를 걸고, 다음 성공한 복원이 푼다(`readStateEnvelope`).
+         */
         [[nodiscard]] bool restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes );
 
         /**
@@ -112,12 +116,16 @@ namespace sw
 
         /**
          * @brief Shipping/Gameplay: 로컬 저장 슬롯에서 씬과 게임 상태 전체를 불러오기를 맡깁니다. 비우면 기본 슬롯입니다.
-         * @details 읽기가 끝난 뒤의 `update` 가 복원하고 성공 · 실패와 함께 `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
-         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리면 알리고 이벤트 없이 false 입니다.
+         * @details 읽기가 끝나면 봉투 머리의 씬 정체를 본다. 지금 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤
+         *          (`SceneLoadCompletedEvent` 바로 뒤) 복원한다(감사 G-7 — 언리얼 게임은 세이브의 맵으로 `OpenLevel` 한 뒤 적용한다). 어느 쪽이든 끝에 성공 · 실패와 함께
+         *          `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
+         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리거나, 앞의 세이브가 아직 씬을 옮기는 중이면 알리고 이벤트 없이 false 입니다.
          */
         [[nodiscard]] bool loadGameFromSlot( string_view slot = {} );
         /** @brief 이 인스턴스에서 성공한 세이브 슬롯 쓰기 · 읽기 수입니다. */
         const SaveSlotCounts& getSaveSlotCounts() const { return _saveSlotCounts; }
+        /** @brief 세이브 막기 문입니다 — 씬 전환 · 연출 · 깨진 복원이 범위형 막기를 들고, 들린 동안 세이브 목적 캡처가 거절된다. 게임 범위에도 걸려 있다. */
+        SaveLock& getSaveLock() { return _saveLock; }
         /**
          * @brief 지금 도는 인스턴스입니다(없으면 nullptr). 게임 스레드에서만 부른다.
          * @details 인스턴스를 들지 않은 창구 — 세이브 메뉴 자리의 개발 명령(`game.save` · `game.load`)과 감시 값 — 가 세이브 슬롯을 부르는 자리다. 프로세스당 하나라 뜻이 하나다.
@@ -177,14 +185,14 @@ namespace sw
         /**
          * @brief 상태 스냅샷 직렬화 직전에 부르는 준비 훅입니다.
          * @details 부르기 전에 봉투의 컴포넌트 상태 저장소(`getStateSnapshot().getComponentStateStore()`)를 비우고, `register*` 로 올린 타입의 상태를 싣고 세운 것을 걷는다.
-         *          그 밖의 상태는 여기서 `getStateSnapshot().getComponentStateStore().capture<T>( manager )` 로 싣는다.
+         *          그 밖의 상태는 여기서 `getStateSnapshot().getComponentStateStore().capture<T>( key, manager )`(열쇠는 저장 틀이 넘긴다 — `StatefulComponentRegistrar` 로 등록하는 길이 먼저다) 로 싣는다.
          *          한 번의 캡처에 두 번 불릴 수 있다(크기 묻기와 채우기).
          */
         virtual void onBeforeStateSerialize() {}
         /**
          * @brief 상태 스냅샷 역직렬화 직후에 부르는 복원 훅입니다.
          * @details 씬 오브젝트가 다시 서고 `register*` 로 올린 타입이 상태를 돌려받은 뒤에 불린다.
-         *          그 밖에 실어 둔 상태는 `getStateSnapshot().getComponentStateStore().restore<T>( manager )` 로 넘긴다. 이 훅이 끝나면 저장소를 비운다.
+         *          그 밖에 실어 둔 상태는 `getStateSnapshot().getComponentStateStore().restore<T>( key, manager )` 로 넘긴다. 이 훅이 끝나면 저장소를 비운다.
          */
         virtual void onAfterStateDeserialize() {}
 
@@ -243,8 +251,12 @@ namespace sw
             return bindScopedService( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
         }
 
-        /** @brief `captureSnapshot` 이 같은 목적으로 쓴 봉투를 읽고(`GameStateSnapshot::readEnvelope`) 읽기 훅을 부릅니다. */
-        [[nodiscard]] bool readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
+        /**
+         * @brief `captureSnapshot` 이 같은 목적으로 쓴 봉투를 읽고(`GameStateSnapshot::readEnvelope`) 읽기 훅을 부릅니다.
+         * @details 목적과 상관없이(세이브 · 핫 리로드) 교체 중에 졌으면 세이브 막기(`_brokenRestoreBlock`)를 걸고, 성공하면 푼다. 검증에서 진 것은 막기를 바꾸지 않는다(씬이 그대로다).
+         *          세이브 목적에서 교체가 졌으면 그 씬을 디스크에서 다시 열고(`reopenBrokenScene`), 다시 서면 막기를 푼다.
+         */
+        [[nodiscard]] expected<void, SnapshotRestoreFailure> readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
     private:
         /**
@@ -256,8 +268,24 @@ namespace sw
         [[nodiscard]] bool resolveSaveSlot( string_view slot, string& outSlot ) const;
         /** @brief 세이브 쓰기 완료입니다 - `SaveGameSavedEvent` 를 냅니다. */
         void onSaveSlotWritten( const LocalStoreCompletion& completion );
-        /** @brief 세이브 읽기 완료입니다 - 복원하고 `SaveGameLoadedEvent` 를 냅니다. */
+        /** @brief 세이브 읽기 완료입니다 - 형식을 확인하고 `applySaveSlot` 에 넘깁니다. */
         void onSaveSlotRead( const LocalStoreCompletion& completion );
+        /** @brief 세이브 적용의 끝을 받습니다(성공이면 true) — 자동 저장 되돌리기의 완료(`AutosaveManager::RestoreCompletedFunction`)가 여기 온다. */
+        using SaveAppliedFunction = Delegate<void( bool bRestored )>;
+        /**
+         * @brief 읽은 세이브 바이트를 적용합니다 — 슬롯 불러오기와 자동 저장 되돌리기가 함께 지나는 한 길(감사 G-7).
+         * @details 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
+         *          앞의 세이브가 씬을 옮기는 중이면 적용하지 않고 실패로 끝낸다.
+         */
+        void applySaveSlot( const string& slot, const vector<uint8>& bytes, const SaveAppliedFunction& onApplied );
+        /** @brief 찍은 씬이 열린 뒤입니다(`GameSceneFlow::requestSceneThen`) — 기다리던 세이브를 적용하고 `SaveGameLoadedEvent` 를 냅니다. @p pScene 이 nullptr 이면 실패로 알린다. */
+        void onSaveSceneLoaded( Scene* pScene );
+        /** @brief 성공한 읽기 수를 세고 `SaveGameLoadedEvent` 를 낸 뒤 @p onApplied 가 묶였으면 부릅니다. */
+        void publishSlotLoaded( const string& slot, bool bLoaded, const SaveAppliedFunction& onApplied );
+        /** @brief 교체에서 진 복원 뒤 활성 씬을 그 리소스에서 다시 엽니다. 리소스가 없거나 요청이 실패하면 알리고 막기는 남는다. */
+        void reopenBrokenScene();
+        /** @brief 깨진 씬이 다시 열린 뒤입니다 — 섰으면 깨진 복원의 세이브 막기를 풉니다. */
+        void onBrokenSceneReopened( Scene* pScene );
         /** @brief 끝난(꺼진) 세이브 요청 구독을 걷고 @p request 를 듭니다. */
         void holdSlotRequest( Subscription request );
         /**
@@ -298,6 +326,7 @@ namespace sw
 
     private:
         GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
+        SaveLock                          _saveLock;            ///< 세이브 막기 문 — 게임 범위(씬 흐름이 빌린다)보다 먼저 서고 늦게 진다
         SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
         shared_ptr<const ItemCatalog>     _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
@@ -307,8 +336,22 @@ namespace sw
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
         vector<Subscription>              _listSlotRequest;     ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
         SaveSlotCounts                    _saveSlotCounts;      ///< 성공한 세이브 슬롯 쓰기 · 읽기 수
-        uint8                             _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
-        uint8                             _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
-        uint8                             _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
+        /** @brief 찍은 씬이 열리기를 기다리는 세이브 하나입니다(`onSaveSlotRead` → `onSaveSceneLoaded`). */
+        struct PendingSlotRestore
+        {
+            string              _slot;      ///< 읽은 슬롯 이름
+            vector<uint8>       _bytes;     ///< 읽은 봉투 바이트
+            SaveAppliedFunction _onApplied; ///< 적용의 끝을 받을 함수(자동 저장 되돌리기 — 슬롯 불러오기는 묶지 않는다)
+        };
+        optional<PendingSlotRestore> _pendingSlotRestore; ///< 씬을 옮기는 중인 세이브(없으면 없음) — 하나만 둔다, 겹친 불러오기는 거절한다
+        /**
+         * @brief 마지막 복원이 교체 중에 졌다 — 씬은 비워져 일부만 섰다. 다음 성공한 복원까지 세이브를 막는다(감사 P0-6).
+         * @details 예전에는 실패를 경고만 하고 간격 자동 저장(예: 300 초 · 슬롯 셋)이 깨진 씬을 15 분 안에 모든 슬롯에 썼다. 수동 · 간격 · 종료 저장이 모두
+         *          `captureSnapshot( SaveGame )` 한 곳을 지나므로 거기서 문(`_saveLock`)을 본다.
+         */
+        Subscription _brokenRestoreBlock;
+        uint8        _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
+        uint8        _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
+        uint8        _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
     };
 } // namespace sw

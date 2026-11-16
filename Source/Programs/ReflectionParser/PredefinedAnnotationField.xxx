@@ -40,6 +40,8 @@ REGISTER_ANNOTATION_FIELD_FN( Reflect, Meta, _listCustomMeta, appendCustomMeta, 
 REGISTER_ANNOTATION_FIELD( Reflect, Abstract, _bAbstract, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, Static, _bStatic, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Reflect, Alias, _listAlias, appendAlias, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedField, _listRemovedField, appendRemovedField, Manual )
+REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedType, _listRemovedType, appendRemovedType, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, Validate, _validate, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, TickMode, _tickMode, Manual )
 

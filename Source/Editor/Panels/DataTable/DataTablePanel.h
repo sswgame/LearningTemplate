@@ -44,6 +44,8 @@ namespace sw::editor
         void drawDocumentContent() override;
         /** @brief 고친 현지화 표와 열린 게임 데이터 표를 저장합니다(`DataTableModel::saveDocument`). */
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 연 문서가 아니라 모델이 쓸 파일들이다(현지화 표 · 게임 데이터 파일 — `DataTableModel::collectFilesToSave`). */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
         /**
          * @brief 현지화 표의 레코드 수와 지난 그리기에서 검색을 지난 행 수입니다. 표를 아직 읽지 않았으면 false 입니다
          *        (감시 값 `Editor.DataTableRecordCount` · `Editor.DataTableVisibleRecordCount`).
@@ -54,7 +56,7 @@ namespace sw::editor
 
     protected:
         /** @brief 데이터 XML(`.xml`)을 받습니다 — 어떤 데이터 XML 이든 원소 표(또는 원문)로 연다. */
-        bool acceptsDocumentPath( string_view assetPath ) const override;
+        bool canAcceptDocumentPath( string_view assetPath ) const override;
         /** @brief 받아들인 게임 데이터 파일을 디스크 자리(`getDocumentDiskPath`)에서 읽습니다. 읽지 못하면 `Malformed` 라 저장이 막힌다. */
         ToolAssetLoadResult loadDocument() override;
         /** @brief 고친 현지화 표를 되돌리고 열린 게임 데이터 표를 디스크에서 다시 읽습니다("저장 안 함" · `panel.reloadDocument`). */

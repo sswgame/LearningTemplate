@@ -108,9 +108,9 @@ namespace sw
         vector<PendingUpdate> _listPendingUpdate SW_GUARDED_BY( _mutex );
         ExtensionSceneProxyID _nextProxyID       SW_GUARDED_BY( _mutex ) = 1;
         OnceKeySet                               _failureLogged; ///< 실패를 알린 키(`recordFailureOnce`)
-    };
 
-    SW_SERVICE_SLOT( RenderExtensionRegistry, Optional );
+        SW_SERVICE_SLOT( RenderExtensionRegistry, Optional );
+    };
 } // namespace sw
 
 namespace sw

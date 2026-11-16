@@ -31,7 +31,7 @@ namespace
     const sw::hashed_string kTomatoSeed{ "tomato_seed" };
 
     /** @brief `FarmField::writeState` 의 타일 한 칸짜리 밭을 꾸밉니다. 깃발은 갈았음 1, 물 2, 다 자람 4, 시듦 8 입니다. */
-    struct FarmForgedTile
+    struct FarmFixtureTile
     {
         sw::hashed_string _cropID{};
         int32             _growth{ 0 };
@@ -182,7 +182,7 @@ SW_TEST_CASE( FarmingTest, CropsWitherOutOfSeason )
 }
 
 /**
- * @brief [FarmingTest] 밭 상태는 작물 · 자람 · 상태 깃발을 그대로 되살리고, 크기가 다른 밭은 읽기를 거절하고 그대로다
+ * @brief [FarmingTest] 밭 상태는 작물 · 자람 · 상태 깃발을 그대로 되살린다. 밭이 커진 설정은 같은 좌표로 읽고, 줄어 밖에 작물이 남으면 거절하고 그대로다(감사 A-6)
  */
 SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
 {
@@ -212,8 +212,16 @@ SW_TEST_CASE( FarmingTest, FieldStateRoundTrips )
     sw::FarmField wider;
     wider.initialize( 3, 2, &catalog );
     sw::Archive again( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( wider.readState( again ) );
-    SW_EXPECT_EQUAL( 0u, wider.getCropCount() );
+    SW_REQUIRE_TRUE( wider.readState( again ) );
+    SW_REQUIRE_TRUE( wider.findTile( 1, 1 ) != nullptr );
+    SW_EXPECT_EQUAL( kTomato, wider.findTile( 1, 1 )->_cropID );
+    SW_EXPECT_TRUE( wider.findTile( 2, 1 )->hasCrop() == false );
+
+    sw::FarmField narrower;
+    narrower.initialize( 1, 1, &catalog );
+    sw::Archive third( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( narrower.readState( third ) ); // (1, 1) 의 토마토가 줄어든 밭 밖이다 — 버리지 않는다
+    SW_EXPECT_EQUAL( 0u, narrower.getCropCount() );
 }
 
 /**
@@ -256,21 +264,21 @@ SW_TEST_CASE( FarmingTest, FieldStateRefusesImpossibleTiles )
     sw::FarmField field;
     field.initialize( 1, 1, &catalog );
 
-    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 1, 1 } ).readInto( field ) ); // 형식은 맞다
+    SW_REQUIRE_TRUE( ( FarmFixtureTile{ kTurnip, 1, 1 } ).readInto( field ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, field.findTile( 0, 0 )->_growth );
-    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 2, 1 | 4 } ).readInto( field ) ); // 다 자랐다
-    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 1, 1 } ).readInto( field ) );
+    SW_REQUIRE_TRUE( ( FarmFixtureTile{ kTurnip, 2, 1 | 4 } ).readInto( field ) ); // 다 자랐다
+    SW_REQUIRE_TRUE( ( FarmFixtureTile{ kTurnip, 1, 1 } ).readInto( field ) );
 
-    SW_EXPECT_FALSE( ( FarmForgedTile{ sw::hashed_string( "rock" ), 0, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, -1, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 3, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 1, 1 | 4 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 2, 1 | 4 | 8 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 1, 0 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 2 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 1, 1 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 1 | 4 } ).readInto( field ) );
-    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 16 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ sw::hashed_string( "rock" ), 0, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, -1, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 3, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 1, 1 | 4 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 2, 1 | 4 | 8 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ kTurnip, 1, 0 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 0, 2 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 1, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 0, 1 | 4 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmFixtureTile{ {}, 0, 16 } ).readInto( field ) );
     SW_EXPECT_EQUAL( kTurnip, field.findTile( 0, 0 )->_cropID );
     SW_EXPECT_EQUAL( 1, field.findTile( 0, 0 )->_growth );
 }

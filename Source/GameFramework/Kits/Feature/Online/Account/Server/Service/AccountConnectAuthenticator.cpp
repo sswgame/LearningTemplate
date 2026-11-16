@@ -22,7 +22,7 @@ namespace sw
         NetGameTicketClaim claim;
         if ( _pAuthority == nullptr || _pAuthority->verifyTicket( pToken, tokenSize, _serverID, _nowMs.load( std::memory_order_relaxed ), claim ) == false )
             return false;
-        if ( _pAdmission->isAdmitted( claim._accountID ) == false )
+        if ( _pAdmission->isAccepted( claim._accountID ) == false )
             return false; // 티켓은 맞지만 이 서버가 받지 않는 계정이다(매칭 배정 밖)
         static_assert( sizeof( outSecret._arrByte ) == NetGameTicket::kSecretSize );
         Memory::copy( outSecret._arrByte, claim._arrSecret, NetGameTicket::kSecretSize );

@@ -44,11 +44,12 @@ namespace sw
     /**
      * @brief 기준 시각(_baseTime) 이후 일시정지 시간을 뺀 총 경과 시간(초)을 반환합니다. 돌고 있으면 직전 갱신(reset · start · update) 시각까지입니다.
      */
-    float32 GameTimer::getTotalTime() const noexcept
+    float64 GameTimer::getTotalTime() const noexcept
     {
+        // float64 초 — float32 로 좁히면 한 눈금이 9 시간에 3.9 ms, 36 시간에 15.6 ms 라 종일 켠 에디터 · 서버에서 시간이 끊긴다(감사 C-12, 언리얼 FApp::CurrentTime · 유니티 timeAsDouble).
         const int64   endTime = _bStopped ? _stopTime : _currentTime;
         const float64 total   = static_cast<float64>( ( endTime - _pausedTime ) - _baseTime ) * GameTimerInternal::kSecondsPerNanosecond;
-        return static_cast<float32>( MathUtil::max( 0.0, total ) );
+        return MathUtil::max( 0.0, total );
     }
 
     /**

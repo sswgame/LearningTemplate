@@ -82,7 +82,7 @@ namespace sw
     private:
         PhysicsSettings _settings;
         uint8           _bInitialized : 1;
-    };
 
-    SW_SERVICE_SLOT( PhysicsSystem, Required );
+        SW_SERVICE_SLOT( PhysicsSystem, Required );
+    };
 } // namespace sw

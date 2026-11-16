@@ -49,7 +49,7 @@ namespace sw
         /** @brief 채널을 닫습니다. 열지 않았어도 됩니다. */
         void stop();
         /** @brief 받은 줄을 이 스레드(게임 스레드)에서 실행합니다. 열지 않았으면 아무 일도 하지 않습니다. */
-        void pump();
+        void poll();
 
     private:
         /** @brief 관리 채널의 한 줄을 실행합니다(허용 목록: `help` · `status` · `maintenance on|off|state` · `shutdown`). */

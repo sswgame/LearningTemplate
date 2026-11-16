@@ -31,7 +31,7 @@ namespace sw
 
     /**
      * @struct AssetIdentityRules
-     * @brief 정체성 규칙 파일(`kConfigFile`)입니다. 파이썬 도구(`Scripts/lint/AssetIdentity.py`)가 같은 키를 읽는다. 패턴의 `*` 는 `/` 도 넘는다(`StringUtil::matchesWildcard`).
+     * @brief 정체성 규칙 파일(`kConfigFile`)입니다. 파이썬 도구(`Scripts/lint/asset_identity.py`)가 같은 키를 읽는다. 패턴의 `*` 는 `/` 도 넘는다(`StringUtil::matchesWildcard`).
      */
     REFLECT()
     struct SW_API AssetIdentityRules

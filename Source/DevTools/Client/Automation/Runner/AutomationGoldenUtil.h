@@ -1,7 +1,7 @@
 /**
  * @file AutomationGoldenUtil.h
  * @brief 골든 이미지의 판정(`GoldenResult`)과 기록 결정, 판정 정책 데이터(`Config/Dev/GoldenImage.json`), 골든 이름 · 메타(`*.golden.json`)입니다.
- * @details 판정은 한 식(`judge`)이고 기록 모드도 같은 식을 본다 — 예전에는 허용치 안이면 기록 모드를 보기 전에 돌아가, 0.99 % 로 남은 골든이 다음 실행에 1.02 % 로 졌다.
+ * @details 판정은 한 식(`evaluate`)이고 기록 모드도 같은 식을 본다 — 예전에는 허용치 안이면 기록 모드를 보기 전에 돌아가, 0.99 % 로 남은 골든이 다음 실행에 1.02 % 로 졌다.
  *          이제 허용치의 일정 비율(`_nearLimitRatio`)을 넘은 골든은 `PassNearLimit` 이고 기록 모드가 다시 쓴다.
  *          상용 엔진 비교: 언리얼 Screenshot Comparison 은 골든 옆에 메타(.json — 플랫폼 · RHI · 허용치)를 두고 비교 결과를 보고에 모은다. 유니티 Graphics Test Framework 는
  *          `ImageComparisonSettings`(화소 문턱 · 평균 오차 상한 · 틀린 화소 비율)를 테스트마다 덮는다. 여기는 둘을 합쳐 기본은 데이터, 덮기는 `<ExpectImage>` 속성이다.
@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    /** @brief 골든 비교 한 번의 판정입니다. 세 값을 한 식(`AutomationGoldenUtil::judge`)이 낸다. */
+    /** @brief 골든 비교 한 번의 판정입니다. 세 값을 한 식(`AutomationGoldenUtil::evaluate`)이 낸다. */
     enum class GoldenResult : uint8
     {
         Pass,          ///< 모든 축이 허용치의 `_nearLimitRatio` 안이다
@@ -70,7 +70,7 @@ namespace sw
     /**
      * @struct AutomationGoldenSample
      * @brief 골든 비교 한 번의 측정값과 그때의 상한입니다. 기록 모드가 아닌 실행이 보고 `goldenSamples[]` 에 남기고,
-     *        `Scripts/dev/ScenarioCulprit.py --golden-margins` 가 여러 보고를 모아 골든마다 실행 사이 흔들림(최대값)과 여유(상한 / 최대값)를 낸다.
+     *        `Scripts/dev/scenario_bisect.py --golden-margins` 가 여러 보고를 모아 골든마다 실행 사이 흔들림(최대값)과 여유(상한 / 최대값)를 낸다.
      */
     struct AutomationGoldenSample
     {
@@ -91,11 +91,11 @@ namespace sw
         [[nodiscard]] static expected<AutomationGoldenPolicy> loadPolicy();
 
         /** @brief 판정입니다 — 한 축이라도 상한을 넘으면 `Fail`, 한 축이라도 상한 × @p nearLimitRatio 를 넘으면 `PassNearLimit`, 아니면 `Pass`. */
-        [[nodiscard]] static GoldenResult judge( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio );
+        [[nodiscard]] static GoldenResult evaluate( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio );
         /** @brief 판정 뒤 할 일입니다. 기록 모드(@p bUpdateGolden)는 `Pass` 가 아닌 모든 골든을 쓴다 — 근접도 쓴다. */
-        [[nodiscard]] static GoldenAction decide( bool bHasGolden, bool bCompared, GoldenResult verdict, bool bUpdateGolden );
+        [[nodiscard]] static GoldenAction decide( bool bHasGolden, bool bCompared, GoldenResult result, bool bUpdateGolden );
         /** @brief 메타의 `_reason` 글입니다(`decide` 가 `Write` 인 까닭). */
-        [[nodiscard]] static const utf8* describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult verdict );
+        [[nodiscard]] static const utf8* describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult result );
 
         /** @brief 백엔드 열거값(`RHI.Backend` 감시 값)의 골든 꼬리 — 쿠킹 표의 명령줄 이름(`dx12` · `wgpu` …)입니다. 표 밖이면 없음. */
         [[nodiscard]] static optional<string_view> findBackendTag( uint32 backendIndex );

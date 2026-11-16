@@ -384,6 +384,7 @@ SW_TEST_CASE( AIDirectorStateTest, StateRoundTripsAndContinuesTheSameWay )
 
 SW_TEST_CASE( AIDirectorStateTest, BadBytesLeaveTheDirectorAlone )
 {
+    SW_EXPECT_LOG( "StateIO.HeaderTagMismatch" ); // 표가 다른 바이트를 거절하는 것이 이 테스트가 보려는 동작이다
     DirectorRig rig;
     rig.run( 1.0f );
     const vector<uint8> listSaved = DirectorRig::save( rig._director );
@@ -428,15 +429,15 @@ SW_TEST_CASE( AIDirectorStateTest, OutOfRangeValuesAreRefused )
     SW_EXPECT_FALSE( model.readState( readingCalm ) );
 
     // 머리(태그 · 버전) 뒤: 단계 수 int32, 시간 float32, 단계 시간, 긴장도, 단계 번호, 순환 — 순환을 음수로 바꾼다.
-    vector<uint8> listForged = DirectorRig::save( rig._director );
+    vector<uint8> listFixture = DirectorRig::save( rig._director );
     Archive       header;
     rig._director.writeState( header );
     constexpr size_t kHeaderBytes = sizeof( uint32 ) * 2;
     constexpr size_t kCycleOffset = kHeaderBytes + sizeof( int32 ) + sizeof( float32 ) * 3 + sizeof( int32 );
-    listForged[kCycleOffset + 3]  = 0xff;
+    listFixture[kCycleOffset + 3] = 0xff;
     DirectorRig target;
-    Archive     forged( listForged.data(), listForged.size() );
-    SW_EXPECT_FALSE( target._director.readState( forged ) );
+    Archive     fixture( listFixture.data(), listFixture.size() );
+    SW_EXPECT_FALSE( target._director.readState( fixture ) );
 }
 
 // ---- 프로필 ----

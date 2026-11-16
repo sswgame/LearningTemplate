@@ -64,7 +64,7 @@ namespace
                 SW_EXPECT_EQUAL( expected, ShaderBindingValidatorIssue::validate( reflection, format, "Test" ) );
         }
 
-        static const utf8* labelOf( ShaderBindingKind kind )
+        static const utf8* getLabelOf( ShaderBindingKind kind )
         {
             switch ( kind )
             {
@@ -86,7 +86,7 @@ namespace
             return "OtherResource";
         }
 
-        static const ShaderReservedLocation& locationOf( const ShaderReservedBinding& reserved, ShaderTargetFormat format )
+        static const ShaderReservedLocation& getLocationOf( const ShaderReservedBinding& reserved, ShaderTargetFormat format )
         {
             switch ( format )
             {
@@ -131,10 +131,10 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryReservedEntryPassesAtItsLocation 
     {
         for ( const ShaderReservedBinding& reserved : ShaderBindingValidatorIssue::getReservedBindings() )
         {
-            const ShaderReservedLocation& location = Util::locationOf( reserved, format );
+            const ShaderReservedLocation& location = Util::getLocationOf( reserved, format );
             if ( location._bDeclared == false )
                 continue;
-            const uint32 issueCount = Util::validateOne( format, reserved._name.c_str(), Util::labelOf( reserved._kind ), location._space, location._bind );
+            const uint32 issueCount = Util::validateOne( format, reserved._name.c_str(), Util::getLabelOf( reserved._kind ), location._space, location._bind );
             SW_EXPECT_TRUE_MSG( issueCount == 0, reserved._name.c_str() );
         }
     }

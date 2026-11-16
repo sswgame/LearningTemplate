@@ -26,7 +26,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorSelfTestWatchsInternal
+        struct EditorSelfTestWatchesInternal
         {
             /**
              * @brief 주 선택 오브젝트의 `gv_editorWatchProperty`(`<컴포넌트 타입>.<프로퍼티>`)가 열거형이면 그 값(열거자의 수)입니다.
@@ -117,13 +117,13 @@ namespace sw::editor
     } // namespace
 
     SW_AUTOMATION_WATCH( editorSelectedEnumValue, "Editor.SelectedEnumValue",
-                         "Enumerator value of gv_editorWatchProperty (<ComponentType>.<property>, an enum) on the primary selection", &EditorSelfTestWatchsInternal::readSelectedEnumValue );
-    SW_AUTOMATION_WATCH( editorObjectDepth, "Editor.ObjectDepth", "Parent levels above the object named by gv_editorWatchObject (0 = a root)", &EditorSelfTestWatchsInternal::readObjectDepth );
+                         "Enumerator value of gv_editorWatchProperty (<ComponentType>.<property>, an enum) on the primary selection", &EditorSelfTestWatchesInternal::readSelectedEnumValue );
+    SW_AUTOMATION_WATCH( editorObjectDepth, "Editor.ObjectDepth", "Parent levels above the object named by gv_editorWatchObject (0 = a root)", &EditorSelfTestWatchesInternal::readObjectDepth );
     SW_AUTOMATION_WATCH( editorPanelContentLines, "Editor.PanelContentLines",
                          "Text lines (content height / text line height) the panel named by gv_editorWatchPanel fit in its content area in the last draw",
-                         &EditorSelfTestWatchsInternal::readPanelContentLines );
+                         &EditorSelfTestWatchesInternal::readPanelContentLines );
     SW_AUTOMATION_WATCH( editorPanelContentColumns, "Editor.PanelContentColumns",
                          "Digit widths (content width / width of '0') the panel named by gv_editorWatchPanel fit in its content area in the last draw",
-                         &EditorSelfTestWatchsInternal::readPanelContentColumns );
-    SW_AUTOMATION_WATCH( editorDirtyDocumentCount, "Editor.DirtyDocumentCount", "Document panels that hold edits not yet saved", &EditorSelfTestWatchsInternal::readDirtyDocumentCount );
+                         &EditorSelfTestWatchesInternal::readPanelContentColumns );
+    SW_AUTOMATION_WATCH( editorDirtyDocumentCount, "Editor.DirtyDocumentCount", "Document panels that hold edits not yet saved", &EditorSelfTestWatchesInternal::readDirtyDocumentCount );
 } // namespace sw::editor

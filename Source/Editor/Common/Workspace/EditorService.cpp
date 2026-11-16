@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -67,10 +68,10 @@ namespace sw::editor
             const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load( std::memory_order_relaxed );
             if ( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() )
                 return;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             if ( sw::internal::tryCaptureAssert() )
             {
-                // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+                // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 검사 구성에만 있다
                 SW_LOG_ERROR_ID( "EditorService.EditorStateReadOff", "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
                 return;
             }
@@ -138,8 +139,24 @@ namespace sw::editor
     CommandStack* getFocusedCommandStack()
     {
         assertEditorThread();
-        const EditorFocus* const pFocus = findSubsystem<EditorFocus>();
-        return pFocus != nullptr && pFocus->_pFocusedCommandStack != nullptr ? pFocus->_pFocusedCommandStack : findSubsystem<CommandStack>();
+        const EditorFocus* const         pFocus      = findSubsystem<EditorFocus>();
+        CommandStack* const              pMain       = findSubsystem<CommandStack>();
+        CommandStack* const              pRegistered = pFocus != nullptr ? pFocus->_pFocusedCommandStack : nullptr;
+        const IEditorPanelService* const pPanels     = findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
+        if ( pPanels == nullptr )
+            return pRegistered != nullptr ? pRegistered : pMain;
+        uint32                          focusedWindowID{ 0 };
+        vector<EditorPanelCommandStack> listPanel;
+        pPanels->collectPanelCommandStacks( focusedWindowID, listPanel );
+        return IEditorPanelService::chooseFocusedCommandStack( focusedWindowID, listPanel, pRegistered, pMain );
+    }
+
+    void releaseFocusedCommandStack( const CommandStack* pStack )
+    {
+        assertEditorThread();
+        EditorFocus* const pFocus = findSubsystem<EditorFocus>();
+        if ( pFocus != nullptr && pStack != nullptr && pFocus->_pFocusedCommandStack == pStack )
+            pFocus->_pFocusedCommandStack = nullptr;
     }
 
     void setFocusedCommandStack( CommandStack* pStack )

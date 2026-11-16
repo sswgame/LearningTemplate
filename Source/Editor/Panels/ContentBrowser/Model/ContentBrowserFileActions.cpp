@@ -173,7 +173,7 @@ namespace sw::editor
         string suffix;
         EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
         // 확장자는 그대로 둔다. 확장자까지 입력했으면 그것을 쓴다.
-        string fileName = FileUtil::normalizePath( newName );
+        string fileName = FileUtil::normalizePath( newName ).str();
         if ( suffix.empty() == false && StringUtil::endsWith( fileName, suffix ) == false )
             fileName += suffix;
         outDestinationAbs = FileUtil::joinPath( FileUtil::getDirectoryPart( sourceAbs ), fileName );

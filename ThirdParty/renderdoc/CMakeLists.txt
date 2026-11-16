@@ -6,4 +6,4 @@
 # ==============================================================================
 
 add_library(renderdoc INTERFACE)
-sw_thirdPartySystemIncludes(renderdoc INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+sw_third_party_system_includes(renderdoc INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")

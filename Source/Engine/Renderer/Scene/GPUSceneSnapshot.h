@@ -237,6 +237,13 @@ namespace sw
         RenderStateOverride _renderStateOverride{};
         /// @brief (경로, define, 렌더 상태) 해시입니다. PSO 캐시 키이자 **배치 병합 키**입니다.
         uint64 _hash{ 0 };
+        /**
+         * @brief 이 변형을 처음 낸 머티리얼이 스위치를 바꾸기 직전에 쓰던 퍼뮤테이션 해시입니다(없으면 0). 배치 키가 아니다.
+         * @details 새 변형의 PSO 가 빌더에서 `Building` 인 동안 드로우가 직전 변형의 `Ready` PSO 로 그린다(`FramePSOManager::psoForBatch`) — 물체가 사라지지 않고 한두 프레임 늦게 바뀐다
+         *          (언리얼 PSO 프리캐시의 "준비 안 된 PSO 는 기본 머티리얼로" 보다 덜 튄다). 같은 변형을 다른 머티리얼이 함께 쓰면 처음 낸 쪽의 직전 변형이다 — 경로가 같아
+         *          셰이더는 같고 define 만 다르며, 그 몇 프레임의 차이만 남는다.
+         */
+        uint64 _fallbackHash{ 0 };
     };
 } // namespace sw
 
@@ -427,10 +434,12 @@ namespace sw
         /// @brief GPU 회전을 요청한 인스턴스 수입니다. 0이면 애니메이션 디스패치를 건너뜁니다.
         uint32 _spinInstanceCount{ 0 };
         /**
-         * @brief 정점 애니메이션(VAT) 시계(초)입니다. 게임 스레드의 군중 시계(`AnimationCrowd::getClock`)를 그대로 옮긴 값으로, 인스턴스 시간 오프셋과 더하면 CPU 가
-         *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 전달됩니다.
+         * @brief 정점 애니메이션(VAT) 시계(초)입니다. 게임 스레드의 군중 시계(`AnimationCrowd::getClock`)를 `_shaderTimeRolloverSeconds` 주기로 접은 값으로,
+         *        인스턴스 시간 오프셋(같은 주기로 접은 시계 기준 — `AnimationCrowd::getShaderClock`)과 더하면 CPU 가 본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 전달됩니다.
          */
         float32 _vertexAnimationTime{ 0.0f };
+        /** @brief 셰이더로 보내는 시간을 접는 주기(초, `EngineConfig::_shaderTimeRolloverSeconds`)입니다. 렌더러 시계(`FrameRenderState::getAnimationTime`)도 이 값으로 접는다. */
+        float64 _shaderTimeRolloverSeconds{ 0.0 };
         /**
          * @brief 정적 그림자 세대입니다. 정적 메시가 움직이거나 바뀌거나 더해지거나 빠질 때 오른다(`GPUSceneBuilder::updateStaticShadowGeneration`).
          * @details 그림자 캐시(`ShadowCachePolicy`)가 이 값이 바뀌면 캐시 층을 다시 그린다 — 언리얼이 정적 프리미티브의 등록 · 이동으로 캐시한 그림자 맵을 버리는 것과 같은 자리다.
@@ -455,7 +464,7 @@ namespace sw
          */
         uint8 _highlightStyleMask{ 0 };
         /**
-         * @brief 1이면 이 스냅샷의 메시(동적 메시 밖)는 게임 스레드가 넘기기 전에 만들었다(`GPUUploadQueue::createsMeshes`) — 렌더 스레드는 다시 만들지 않는다.
+         * @brief 1이면 이 스냅샷의 메시(동적 메시 밖)는 게임 스레드가 넘기기 전에 만들었다(`GPUUploadQueue::shouldCreateMeshes`) — 렌더 스레드는 다시 만들지 않는다.
          * @details 메시 하나를 만드는 쪽은 하나다(언리얼 `BeginInitResource` 가 한 번만 들어가는 것과 같은 자리). 0이면(GL · 큐를 끈 구성 · 큐 없는 화면 밖 캡처) 렌더 스레드가 만든다.
          *          예전에는 두 쪽이 모두 `Mesh::initRHI` 를 불렀고, 게임 스레드 생성이 실패한 메시는 두 스레드가 함께 다시 시도할 수 있었다.
          */

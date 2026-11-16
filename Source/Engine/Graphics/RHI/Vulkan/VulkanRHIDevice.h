@@ -200,15 +200,12 @@ namespace sw
         /**
          * @brief 장치를 잃은 상태로 둡니다(개발 명령 `rhi.removeDevice`). Vulkan 에는 장치를 제거하는 API 가 없어, 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 처음 돌려준
          *        뒤와 같은 상태(`isDeviceLost`)를 만든다. 그 뒤로 제출 · 대기 · 표시를 하지 않고 프레임을 건너뛰며, 종료는 기다리지 않고 끝난다.
+         *        손실 뒤에는 펜스 · 큐 · 장치 대기를 부르지 않는다 — 사양은 손실 뒤 대기가 유한 시간에 돌아온다고 하지만 TDR 중의 드라이버 안 대기는 그 보장 밖이다.
          */
-        bool   debugRemoveDevice() override;
-        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
-        /**
-         * @brief 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 돌려줬거나 `debugRemoveDevice` 가 불렸으면 true 입니다. 어느 스레드에서 읽어도 된다.
-         * @details 저장소는 `_transferSerials` 의 손실 표시 하나다. 세운 뒤에는 펜스 · 큐 · 장치 대기를 부르지 않는다. 사양은 손실 뒤의 대기가 유한 시간에 돌아온다고 하지만
-         *          TDR 중의 드라이버 안 대기는 그 보장 밖이다(DX12 가 `GetDeviceRemovedReason` 을 보고 대기를 건너뛰는 것과 같다). 전송 제출 함수도 진입에서 이 값을 보고 `Rejected` 를 돌려준다(계약 2).
-         */
-        bool isDeviceLost() const { return _transferSerials.isLost(); }
+        bool debugRemoveDevice() override;
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
+        uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void                         resizeInternal( uint32 width, uint32 height ) override;
@@ -266,6 +263,8 @@ namespace sw
             caps._bNativeBindless       = _textureSet != nullptr ? 1u : 0u;
             caps._bWireframeFill        = _bFillModeNonSolid;
             caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
+            caps._bGeometryStage        = _bGeometryShader != 0 ? SW_TRUE : SW_FALSE;
+            caps._bTessellationStages   = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
             caps._bGPUBreadcrumbs       = _breadcrumbMode != VulkanBreadcrumbMode::None ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute         = _asyncComputeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bGraphicsShaderWrites = _bFragmentStores;
@@ -410,8 +409,6 @@ namespace sw
             uint8          _bRenderTarget : 1;
             uint8          _bDepthStencil : 1;
             uint8          _reserved      : 6;
-            /// @brief 이 텍스처에 발급한 bindless 번호들입니다. 등록마다 하나씩이다(DX11 · DX12 · GL 과 같은 규칙 — 다른 쪽의 해제가 내 번호를 놓지 않는다). 파괴가 모두 놓는다.
-            vector<RHIDescriptorIndex> _listBindlessIndex;
             /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
             vector<VkImageView>   _listSliceView;
             vector<VkFramebuffer> _listSliceFramebuffer;
@@ -613,7 +610,7 @@ namespace sw
          */
         bool selectDepthFormat();
         /** @brief @p device 가 텍스처 세트(네이티브 bindless 배열 둘)의 기능과 update-after-bind 한도를 갖췄는지 봅니다. 못 미치면 이유를 남기고 false 입니다(장치 고르기가 건너뛴다). */
-        [[nodiscard]] static bool meetsBindlessRequirements( VkPhysicalDevice device, const utf8* pDeviceName );
+        [[nodiscard]] static bool isBindlessCapable( VkPhysicalDevice device, const utf8* pDeviceName );
 
         /**
          * @brief 엔진이 고정으로 쓰는 컬러 첨부 포맷 중 Vulkan 필수 목록에 없는 것(`R16G16_SNORM` — G버퍼 법선)을 이 GPU 가 첨부로 쓸 수 있는지 확인합니다.
@@ -724,7 +721,7 @@ namespace sw
         void unregisterCommandList( VulkanRHICommandList* pCmdList );
         /** @brief 프레임 스트림의 다음 세그먼트 버퍼를 얻어 기록을 시작합니다. */
         VkCommandBuffer beginNextFrameSegment();
-        /** @brief 프레임 스트림의 새 세그먼트를 열고 기록 상태 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameWorkNow` 가 함께 쓴다). 못 열면 프레임을 멈춘다. */
+        /** @brief 프레임 스트림의 새 세그먼트를 열고 기록 상태 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameJobNow` 가 함께 쓴다). 못 열면 프레임을 멈춘다. */
         void openNextFrameSegment();
         /**
          * @brief 대기 중인 그래픽스 버퍼(`_listPendingSubmit`)를 곧바로 그래픽스 큐에 냅니다. 남은 acquire 대기와 비동기 컴퓨트 대기를 이 제출이 기다리고, @p signal 이 있으면 신호합니다.
@@ -732,7 +729,7 @@ namespace sw
          */
         void submitPendingGraphics( VkSemaphore signal );
         /** @brief 지금 세그먼트를 닫아 대기열에 넣고 대기열을 곧바로 큐에 낸 뒤 새 세그먼트를 엽니다. @p signal 은 `submitPendingGraphics` 와 같다. */
-        void submitFrameWorkNow( VkSemaphore signal );
+        void submitFrameJobNow( VkSemaphore signal );
         /** @brief 이번 프레임 슬롯의 이진 세마포어를 하나 빌립니다(슬롯의 펜스가 지나면 다시 쓴다). 만들지 못하면 멈춘다. */
         VkSemaphore acquireAsyncSemaphore();
 
@@ -809,7 +806,7 @@ namespace sw
         void destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
-         * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::settleAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
+         * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::completeAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
          *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 할당기가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
          *          Rejected 면 이유를 로그로 남기고 잡은 구간은 놓는다. 어느 스레드에서나, 전송 락 밖에서 부른다.
          */
@@ -990,10 +987,11 @@ namespace sw
             RHIBufferHandle  _buffer{ 0 };
             RHITextureHandle _texture{ 0 };
 
-            bool operator==( const UAVEntry& other ) const { return _buffer == other._buffer && _texture == other._texture; }
+            bool             operator==( const UAVEntry& other ) const { return _buffer == other._buffer && _texture == other._texture; }
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
         };
         /// @brief SRV/CB 버퍼 번호 → 원본 버퍼(`_bindlessMutex` 아래). 디스크립터는 그리는 순간 슬롯 세트에 쓰므로 비운 번호도 이 프레임이 끝난 뒤 다시 낸다(`RHIBindlessReuse::AfterFence`).
-        RHIBindlessRegistry<RHIBufferHandle> _bufferRegistry;
+        RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf> _bufferRegistry;
         /// @brief UAV 번호(버퍼 UAV 와 RW 텍스처가 같은 공간) → 원본(`_bindlessMutex` 아래).
         RHIBindlessRegistry<UAVEntry> _uavRegistry;
         /**
@@ -1013,9 +1011,9 @@ namespace sw
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 
-        /// @brief 텍스처 번호(set 1 binding 0 배열 원소) → 그 번호를 가진 텍스처(`_bindlessMutex` 아래). 주인을 바로 찾으므로 해제가 전 텍스처를 훑지 않는다.
-        ///        비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
-        RHIBindlessRegistry<RHITextureHandle> _textureRegistry;
+        /// @brief 텍스처 번호(set 1 binding 0 배열 원소) → 그 번호를 가진 텍스처(`_bindlessMutex` 아래). 등록마다 새 번호이고(다른 쪽의 해제가 내 번호를 놓지 않는다),
+        ///        텍스처별 번호 목록은 등록표가 든다(`releaseTexture`). 비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
+        RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
 
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler

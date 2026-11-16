@@ -74,7 +74,7 @@ namespace sw
      *          빌드가 최소 판보다 낮으면 `kUpdateRequired`(상점 주소는 `LoginGrant::_storeURL`), 깨진 본문 · 상한 초과는 `kInvalidRequest` 이다.
      *          서버 로직 · 바인딩 · 클라이언트 응답(`AccountClientReply`)이 같은 형식을 쓴다.
      */
-    using LoginOutcome = OnlineOutcome<LoginResult>;
+    using LoginServiceResult = OnlineServiceResult<LoginResult>;
 
     /** @brief 세션이 끝난 이유입니다. 묘비와 알림에 남으며 와이어 형식입니다. */
     ENUM()

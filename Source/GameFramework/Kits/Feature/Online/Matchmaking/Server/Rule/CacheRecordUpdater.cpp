@@ -35,7 +35,7 @@ namespace sw
     {
         if ( _pRouter == nullptr )
         {
-            mutation->onFinished( MatchmakingOutcome::fail( OnlineError::kUnavailable ), {} );
+            mutation->onFinished( MatchmakingServiceResult::fail( OnlineError::kUnavailable ), {} );
             return;
         }
         unique_ptr<Operation> operation = make_unique<Operation>();
@@ -61,14 +61,14 @@ namespace sw
         _mapRequestToOperation.erase( operationIt );
         if ( reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound )
         {
-            operation->_mutation->onFinished( MatchmakingOutcome::fail( OnlineError::kUnavailable ), {} );
+            operation->_mutation->onFinished( MatchmakingServiceResult::fail( OnlineError::kUnavailable ), {} );
             return;
         }
         operation->_bExists  = reply._result == EphemeralResult::Ok ? SW_TRUE : SW_FALSE;
         operation->_oldBytes = reply._value;
         operation->_newBytes.clear();
-        bool                     bErase = false;
-        const MatchmakingOutcome result = operation->_mutation->mutate( operation->_bExists != SW_FALSE, operation->_oldBytes, operation->_newBytes, bErase );
+        bool                           bErase = false;
+        const MatchmakingServiceResult result = operation->_mutation->mutate( operation->_bExists != SW_FALSE, operation->_oldBytes, operation->_newBytes, bErase );
         if ( result != MatchmakingResult::Ok )
         {
             operation->_mutation->onFinished( result, operation->_oldBytes );
@@ -110,6 +110,6 @@ namespace sw
             startRead( std::move( operation ) );
             return;
         }
-        operation->_mutation->onFinished( bRaced ? MatchmakingOutcome::fail( OnlineError::kBusy ) : MatchmakingOutcome::fail( OnlineError::kUnavailable ), {} );
+        operation->_mutation->onFinished( bRaced ? MatchmakingServiceResult::fail( OnlineError::kBusy ) : MatchmakingServiceResult::fail( OnlineError::kUnavailable ), {} );
     }
 } // namespace sw

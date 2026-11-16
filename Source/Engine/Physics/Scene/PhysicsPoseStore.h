@@ -282,7 +282,7 @@ namespace sw
         CommandStore<CharacterCommand3D> _commandStore3D;
         CommandStore<CharacterCommand2D> _commandStore2D;
         CommandStore<VehicleDriverInput> _vehicleInputStore;
-    };
 
-    SW_SERVICE_SLOT( PhysicsPoseStore, Required );
+        SW_SERVICE_SLOT( PhysicsPoseStore, Required );
+    };
 } // namespace sw

@@ -28,7 +28,7 @@ namespace sw
 
         /**
          * @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** 종류의 칸 · 재생 동작 · 색은 이 줄이 전부다.
-         * @details 칸: 필수(`_requiredFields`)는 비면 읽기 오류, 허용(`_allowedFields`) 밖의 칸이 차 있어도 읽기 오류다 — 다른 종류의 칸이 남은 파일은 무엇을 뜻하는지 모른다.
+         * @details 칸: 필수(`_requiredProperties`)는 비면 읽기 오류, 허용(`_allowedProperties`) 밖의 칸이 차 있어도 읽기 오류다 — 다른 종류의 칸이 남은 파일은 무엇을 뜻하는지 모른다.
          *          이벤트 · 시나리오는 대상이 없어도 된다(알림만 한다). 소리는 대상이 없으면 화면 소리다. 자막은 대상 바인딩의 표시 이름이 화자다(없으면 화자 없이).
          *          구간 처리기가 있는 종류는 재생 · 미리보기가 들어가기 · 머물기 · 나가기를 그 처리기로 돈다(`SequenceTimelineUtil::applySpans`) — 새 구간 종류는 처리기 하나와 이 줄 하나다.
          */
@@ -54,7 +54,7 @@ namespace sw
             for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
             {
                 const SequenceItemKindInfo& info = kArrSequenceItemKindInfo[kindIndex];
-                if ( info._kind != static_cast<SequenceItemKind>( kindIndex ) || ( info._requiredFields & ~info._allowedFields ) != 0 )
+                if ( info._kind != static_cast<SequenceItemKind>( kindIndex ) || ( info._requiredProperties & ~info._allowedProperties ) != 0 )
                     return false;
             }
             return true;

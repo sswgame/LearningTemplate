@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -48,18 +49,28 @@ namespace sw::editor
                 outListObject.push_back( pObj );
             }
 
-            /** @brief @p pObj 의 조상이 @p listObject 안에 있으면 true 입니다. 그 조상의 서브트리를 복사할 때 이미 함께 복사됩니다. */
-            static bool hasSelectedAncestor( const GameObject* pObj, const vector<GameObject*>& listObject )
+            /** @brief 지울 오브젝트를 그 씬의 선택에서 한 번에 뺍니다. 미리보기 창의 오브젝트면 창의 선택에서 뺍니다(`findSelectionOf`). */
+            static void removeFromSelection( GameObjectManager& manager, const vector<GameObject*>& listPendingDestroy )
             {
-                for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr; pParent = pParent->getParent() )
+                EditorSelection* pSelection = editor::findSelectionOf( manager );
+                if ( pSelection != nullptr )
+                    pSelection->selectObjects( listPendingDestroy, SelectionMode::Remove );
+            }
+
+            /**
+             * @brief `collectSubtreeChildFirst` 로 모은 서브트리 [@p first, @p last) 의 삭제를 한 배치로 기록하고 그 루트(마지막 칸)를 지웁니다.
+             * @details 삭제는 자식까지 지운다(`destroyGameObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 루트 하나의 스냅샷만 남기면 되돌릴 때 부모만
+             *          돌아오고 자식은 영영 사라진다. **자식부터** 기록하므로 배치의 되돌리기(역순)는 부모를 원래 id 로 먼저 복원하고 자식이 그 id 로 다시 붙는다.
+             */
+            static void recordAndDestroySubtree( EditorTransaction& transaction, GameObjectManager& manager, const vector<GameObject*>& listPendingDestroy, size_t first, size_t last )
+            {
+                EditorTransaction::beginTransaction( "Destroy GameObject" );
+                for ( size_t index = first; index < last; ++index )
                 {
-                    for ( const GameObject* pSelected : listObject )
-                    {
-                        if ( pSelected == pParent )
-                            return true;
-                    }
+                    transaction.recordDestruction( listPendingDestroy[index], "Destroy GameObject" );
                 }
-                return false;
+                EditorTransaction::endTransaction();
+                manager.destroyGameObject( listPendingDestroy[last - 1] );
             }
         };
     } // namespace
@@ -207,46 +218,36 @@ namespace sw::editor
         if ( EditorPlaySession::refuseSceneEdit( "Destroy GameObjects" ) || pManager == nullptr )
             return 0;
         // 고른 조상이 있으면 건너뛴다. 조상을 지우면 자식도 지워지므로, 먼저 지운 자식을 다시 지우지 않는다.
-        const vector<GameObject*> listRoot = filterTopLevel( listObject );
+        const vector<GameObject*> listRoot = EditorSelection::filterTopLevel( listObject );
         if ( listRoot.empty() )
             return 0;
 
-        uint32 destroyedCount = 0;
-        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        // 모든 서브트리를 한 목록에 모아 선택에서 한 번에 뺀다 — 루트마다 빼면 루트 수 × 선택 수다.
+        vector<GameObject*> listPendingDestroy;
+        vector<size_t>      listSubtreeEnd;
+        listSubtreeEnd.reserve( listRoot.size() );
         for ( GameObject* pObj : listRoot )
         {
-            if ( destroy( transaction, pManager, pObj ) )
-                ++destroyedCount;
+            EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listPendingDestroy );
+            listSubtreeEnd.push_back( listPendingDestroy.size() );
+        }
+        EditorSceneCommandsInternal::removeFromSelection( *pManager, listPendingDestroy );
+
+        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        size_t first = 0;
+        for ( const size_t last : listSubtreeEnd )
+        {
+            EditorSceneCommandsInternal::recordAndDestroySubtree( transaction, *pManager, listPendingDestroy, first, last );
+            first = last;
         }
         EditorTransaction::endTransaction();
-        return destroyedCount;
-    }
-
-    vector<GameObject*> EditorSceneCommands::filterTopLevel( const vector<GameObject*>& listObject )
-    {
-        vector<GameObject*> listRoot;
-        for ( GameObject* pObj : listObject )
-        {
-            if ( pObj == nullptr )
-                continue;
-            bool bAncestorPicked = false;
-            for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr && bAncestorPicked == false; pParent = pParent->getParent() )
-            {
-                for ( const GameObject* pOther : listObject )
-                {
-                    bAncestorPicked = bAncestorPicked || pOther == pParent;
-                }
-            }
-            if ( bAncestorPicked == false )
-                listRoot.push_back( pObj );
-        }
-        return listRoot;
+        return static_cast<uint32>( listRoot.size() );
     }
 
     void EditorSceneCommands::collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot )
     {
         outListRoot.clear();
-        manager.forEachGameObject( [&outListRoot]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&outListRoot]( GameObject* pObj )
         {
             const bool bRootObject = pObj != nullptr && pObj->getParent() == nullptr && pObj->isPendingDestroy() == false;
             if ( bRootObject )
@@ -258,11 +259,13 @@ namespace sw::editor
     void EditorSceneCommands::duplicateObjects( EditorTransaction& transaction, GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        const bool bNothingToDuplicate = EditorPlaySession::refuseSceneEdit( "Duplicate GameObjects" ) || pManager == nullptr || listObject.empty();
+        // 고른 조상이 있으면 건너뛴다. 조상의 복제가 서브트리째 자식을 복제하므로, 자식을 따로 또 복제하면 사본이 둘이 된다.
+        const vector<GameObject*> listRoot            = EditorSelection::filterTopLevel( listObject );
+        const bool                bNothingToDuplicate = EditorPlaySession::refuseSceneEdit( "Duplicate GameObjects" ) || pManager == nullptr || listRoot.empty();
         if ( bNothingToDuplicate )
             return;
-        EditorTransaction::beginTransaction( listObject.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listObject.size() ) + " GameObjects" );
-        for ( GameObject* pSource : listObject )
+        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listRoot.size() ) + " GameObjects" );
+        for ( GameObject* pSource : listRoot )
         {
             GameObject* pCopy = duplicate( transaction, pManager, pSource );
             if ( pCopy != nullptr )
@@ -278,30 +281,10 @@ namespace sw::editor
         if ( pManager == nullptr || pObj == nullptr )
             return false;
 
-        // 삭제는 자식까지 지운다(`destroyGameObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 이 오브젝트 하나의 스냅샷만 남기면
-        // 되돌릴 때 부모만 돌아오고 자식은 영영 사라진다(그대로 저장하면 파일에서도). **자식부터** 기록해 한 배치로 넣는다.
-        // 배치의 되돌리기는 역순이라 부모가 원래 id 로 먼저 복원되고, 자식은 그 id 로 부모를 찾아 다시 붙는다.
         vector<GameObject*> listSubtree;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pObj, listSubtree );
-
-        // 지울 것은 그 씬의 선택에서 뺀다. 미리보기 창의 오브젝트면 창의 선택에서 뺀다(`findSelectionOf`).
-        EditorSelection* pSelection = editor::findSelectionOf( *pManager );
-        if ( pSelection != nullptr )
-        {
-            for ( GameObject* pDoomed : listSubtree )
-            {
-                if ( pSelection->hasObject( pDoomed ) )
-                    pSelection->selectObject( pDoomed, SelectionMode::Remove );
-            }
-        }
-
-        EditorTransaction::beginTransaction( "Destroy GameObject" );
-        for ( GameObject* pDoomed : listSubtree )
-        {
-            transaction.recordDestruction( pDoomed, "Destroy GameObject" );
-        }
-        EditorTransaction::endTransaction();
-        pManager->destroyGameObject( pObj );
+        EditorSceneCommandsInternal::removeFromSelection( *pManager, listSubtree );
+        EditorSceneCommandsInternal::recordAndDestroySubtree( transaction, *pManager, listSubtree, 0, listSubtree.size() );
         return true;
     }
 
@@ -397,7 +380,7 @@ namespace sw::editor
         outListObject.clear();
         if ( pComponentType == nullptr )
             return;
-        manager.forEachGameObject( [pComponentType, &outListObject]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [pComponentType, &outListObject]( GameObject* pObj )
         {
             if ( pObj == nullptr || pObj->isPendingDestroy() )
                 return;
@@ -418,7 +401,7 @@ namespace sw::editor
         outListObject.clear();
         if ( tag.isValid() == false )
             return;
-        manager.forEachGameObject( [tag, &outListObject]( GameObject* pObj )
+        manager.forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [tag, &outListObject]( GameObject* pObj )
         {
             const bool bMatchingLiveObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
             if ( bMatchingLiveObject )
@@ -436,11 +419,7 @@ namespace sw::editor
             workspace.clearSelection();
             return 0;
         }
-        workspace.selectGameObject( listObject[0], SelectionMode::Replace );
-        for ( size_t index = 1; index < listObject.size(); ++index )
-        {
-            workspace.selectGameObject( listObject[index], SelectionMode::Add );
-        }
+        workspace.selectGameObjects( listObject, SelectionMode::Replace );
         return static_cast<uint32>( listObject.size() );
     }
 
@@ -507,7 +486,7 @@ namespace sw::editor
         // 반환값을 const& 로 받으면 복사가 없어 보이지만, 값으로 반환하는 함수라 그때마다 벡터를 하나 할당한다. 그래서
         // 채워 넣는 쪽 오버로드를 쓴다.
         vector<GameObject*> listAll;
-        pManager->getAllGameObjects( listAll );
+        pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listAll );
         for ( const GameObject* pOther : listAll )
         {
             if ( pOther == nullptr || pOther == pObj )
@@ -552,7 +531,7 @@ namespace sw::editor
         // 타입 이름에서 인스턴스 수로의 대응이다. 이름으로 묶으므로 게임과 키트의 것을 포함해 등록된 모든 컴포넌트가 잡힌다.
         map<string, uint32> mapTypeToCount;
 
-        pManager->forEachGameObject( [&]( GameObject* pObj )
+        pManager->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&]( GameObject* pObj )
         {
             if ( pObj == nullptr )
                 return;
@@ -617,10 +596,8 @@ namespace sw::editor
         vector<ObjectCopyEntry> listCopied;
         EditorContext*          pContext = editor::findSubsystem<EditorContext>();
         uint32                  rootCount{ 0 };
-        for ( GameObject* pRoot : listObject )
+        for ( GameObject* pRoot : EditorSelection::filterTopLevel( listObject ) ) // 선택한 것 안의 자손은 조상의 서브트리로 한 번만 복사한다
         {
-            if ( pRoot == nullptr || EditorSceneCommandsInternal::hasSelectedAncestor( pRoot, listObject ) )
-                continue;
             vector<GameObject*> listSubtree;
             EditorSceneCommandsInternal::collectSubtreeChildFirst( pRoot, listSubtree );
             VectorUtil::reverse( listSubtree ); // 부모부터 둔다. 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
@@ -711,12 +688,6 @@ namespace sw::editor
         // 붙여 넣은 것은 그 씬의 선택에 놓는다. 미리보기 창에 붙이면 창의 선택에 놓는다.
         EditorSelection* pSelection = editor::findSelectionOf( *pManager );
         if ( pSelection != nullptr )
-        {
-            pSelection->clearObjectSelection();
-            for ( GameObject* pRoot : outListCreated )
-            {
-                pSelection->selectObject( pRoot, SelectionMode::Add );
-            }
-        }
+            pSelection->selectObjects( outListCreated, SelectionMode::Replace );
     }
 } // namespace sw::editor

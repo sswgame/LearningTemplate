@@ -32,11 +32,11 @@ namespace sw
 
     DecalRainWashSystem* DecalRainWashSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`ensureFor`).
+        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
         return static_cast<DecalRainWashSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
     }
 
-    DecalRainWashSystem& DecalRainWashSystem::ensureFor( GameObjectManager& manager )
+    DecalRainWashSystem& DecalRainWashSystem::findOrCreate( GameObjectManager& manager )
     {
         DecalRainWashSystem* pSystem = find( manager );
         if ( pSystem != nullptr )

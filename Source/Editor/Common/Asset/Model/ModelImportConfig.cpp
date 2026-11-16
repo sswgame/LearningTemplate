@@ -149,7 +149,7 @@ namespace sw::editor
             StringBuilder<constant::buffer::kMax256> sourceBuilder;
             sourceBuilder.appendFormat( "ModelImportConfig rule %#", ruleIndex );
             const string source{ sourceBuilder.view() };
-            bool         bRead = JSONFields::readFields( ruleValue, rule, source, { "lods" } );
+            bool         bRead = JSONFields::readProperties( ruleValue, rule, source, { "lods" } );
             rule._bFracture    = ruleValue.has( "fracture" ) ? SW_TRUE : SW_FALSE;
             bRead              = bRead && ( ruleValue.has( "lods" ) == false || parseLODKeys( ruleValue.get( "lods" ), rule ) );
             if ( bRead && AnimationCodecRegistry::findCodecByName( rule._animationCodec ) == nullptr )
@@ -192,7 +192,7 @@ namespace sw::editor
             ModelImportLODRule                       lod{};
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "%# %#", context, lodIndex );
-            const bool bRead       = JSONFields::readFields( lodsValue.at( lodIndex ), lod, textBuilder.view() );
+            const bool bRead       = JSONFields::readProperties( lodsValue.at( lodIndex ), lod, textBuilder.view() );
             const bool bRatio      = 0.0f < lod._triangleRatio && lod._triangleRatio < previousRatio;
             const bool bScreenSize = 0.0f < lod._screenSize && lod._screenSize < previousScreenSize;
             const bool bValidLOD   = bRead && bRatio && bScreenSize && lod._maxError >= 0.0f;

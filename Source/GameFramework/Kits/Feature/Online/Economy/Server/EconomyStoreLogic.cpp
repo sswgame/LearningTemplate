@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -24,8 +25,79 @@ namespace sw
                                string_view( kRefundScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize &&
                                string_view( kWithdrawScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize,
                            "스토어 이름 상한(kMaxStoreNameSize)은 가장 긴 범위 접두로 셈한다 — 더 긴 접두를 더하면 kLongestScopePrefixSize 를 올린다" );
-            static constexpr uint8 kMarkRefunded  = 1;
-            static constexpr uint8 kMarkWithdrawn = 2;
+
+            /** @brief 거래 하나의 상태입니다(영수증 상태 레코드의 값 — 저장 형식이라 번호를 바꾸지 않는다). */
+            enum class ReceiptState : uint8
+            {
+                None = 0,      ///< 레코드가 없다 — 지급도 환불도 오지 않았다
+                Redeemed,      ///< 지급했다(받은 계정은 지급 분개의 다리에만 있다)
+                RefundedFirst, ///< 지급 전에 환불이 왔다 — 뒤에 온 지급을 막는다
+                Revoked,       ///< 지급 뒤 환불로 회수했다
+                Withdrawn,     ///< 청약철회로 돌려받았다
+                Count
+            };
+
+            /** @brief 읽은 영수증 상태와 그 버전입니다. 쓰기는 이 버전을 커밋 조건으로 건다. */
+            struct ReceiptRecord
+            {
+                uint64       _version{ ServiceRecord::kAbsentVersion };
+                ReceiptState _state{ ReceiptState::None };
+            };
+
+            static constexpr uint64 kReceiptRecordVersion       = 2;
+            static constexpr uint64 kReceiptRecordVersionLegacy = 1; ///< 받은 계정을 담던 판 — 읽을 때 계정은 버리고, 다음 쓰기가 판 2 로 덮는다
+
+            [[nodiscard]] static bool isRefunded( ReceiptState state )
+            {
+                return state == ReceiptState::RefundedFirst || state == ReceiptState::Revoked || state == ReceiptState::Withdrawn;
+            }
+
+            /**
+             * @brief 영수증 상태 값 `[판][상태]` 를 만듭니다. 사람과 이어지는 값(계정 id)은 담지 않는다 — 이 레코드는 지우지 않으므로 탈퇴 뒤에도 남는다(감사 P0-7).
+             * @details 받은 계정은 지급 분개의 다리에 있고 분개는 보존 기간 뒤 지워진다. 청약철회 · 환불 회수는 분개를 읽으므로 이 값이 필요 없다.
+             *          PlayFab DeletePlayer · Steam 계정 삭제도 거래 기록은 회계 · 분쟁 근거로 남기되 개인과 떼어 두며, GDPR 17 조 3 항 (b) · (e) 의 보존 예외가 이 자리다.
+             */
+            static vector<uint8> encodeReceipt( ReceiptState state )
+            {
+                BitWriter writer;
+                writer.writeVarUint( kReceiptRecordVersion );
+                writer.writeVarUint( static_cast<uint64>( state ) );
+                return writer.releaseBytes();
+            }
+
+            /** @brief 영수증 상태를 읽습니다. 레코드가 없으면 `Ok` 와 `None` 입니다. 값을 읽을 수 없으면 오류 로그와 `Invalid` 입니다. */
+            [[nodiscard]] static ServiceStoreResult readReceipt( IServiceStoreConnection& connection, string_view redeemKey, ReceiptRecord& outRecord )
+            {
+                outRecord = ReceiptRecord{};
+                ServiceRecord            record;
+                const ServiceStoreResult read = connection.readRecord( EconomyStoreLogic::getReceiptTable(), redeemKey, record );
+                if ( read == ServiceStoreResult::NotFound )
+                    return ServiceStoreResult::Ok;
+                if ( read != ServiceStoreResult::Ok )
+                    return read;
+                BitReader    reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
+                const uint64 format = reader.readVarUint();
+                const uint64 state  = reader.readVarUint();
+                if ( format == kReceiptRecordVersionLegacy )
+                    (void)reader.readVarUint(); // 판 1 의 받은 계정 — 쓰지 않는다
+                const bool bKnownFormat = format == kReceiptRecordVersion || format == kReceiptRecordVersionLegacy;
+                if ( reader.hasOverflowed() || bKnownFormat == false || state == 0 || state >= static_cast<uint64>( ReceiptState::Count ) )
+                {
+                    SW_LOG_ERROR_ID( "EconomyStoreLogic.ReceiptRecordUnreadable", "The receipt record '%#' is unreadable - grants, refunds and withdrawals of that transaction wait until the record is fixed", redeemKey );
+                    return ServiceStoreResult::Invalid;
+                }
+                outRecord._version = record._version;
+                outRecord._state   = static_cast<ReceiptState>( state );
+                return ServiceStoreResult::Ok;
+            }
+
+            /** @brief 지급의 원장 결과를 업무 결과로 바꿉니다. 분개 키를 다른 내용(다른 계정)으로 쓰려 했으면 이미 받은 거래다. */
+            static EconomyServiceResult toRedeemResult( LedgerResult result )
+            {
+                if ( result == LedgerResult::JournalKeyReused )
+                    return EconomyResult::AlreadyRedeemed;
+                return EconomyStoreLogic::toEconomyResult( result );
+            }
 
             /** @brief 거래의 지급 분개 키입니다. 환불 표시의 키이기도 하다. */
             [[nodiscard]] static bool makeRedeemKey( string_view storeName, string_view transactionID, string& outKey )
@@ -38,7 +110,7 @@ namespace sw
              * @details 구매자 대조는 여기 한 곳이다. 스토어는 답이 말한 값을 옮겨 적고 규칙은 제공자 설정이 정한다. 답에 구매자가 없으면 거절한다 — 없음을 통과시키면 그 길로 남의 영수증을 받는다.
              *          계정 토큰이 없으면 `BuyerTokenMissing` 으로 까닭을 가른다 — 남의 영수증이 아니라 클라이언트가 토큰을 빠뜨린 구매일 때가 많다.
              */
-            static EconomyOutcome compareBuyer( IServiceStoreConnection& connection, const EconomyRedeemInput& input )
+            static EconomyServiceResult compareBuyer( IServiceStoreConnection& connection, const EconomyRedeemInput& input )
             {
                 const ReceiptValidationResult& receipt = input._receipt;
                 switch ( receipt._buyerRule._binding )
@@ -61,11 +133,11 @@ namespace sw
                         if ( receipt._storeBuyerID.empty() )
                             return EconomyResult::NotPurchaser;
                         if ( input._pExternalLinks == nullptr )
-                            return EconomyOutcome::fail( OnlineError::kUnavailable ); // 서비스가 기동 때 거절한다 — 바로 부른 쪽의 실수이므로 지급하지 않는다
+                            return EconomyServiceResult::fail( OnlineError::kUnavailable ); // 서비스가 기동 때 거절한다 — 바로 부른 쪽의 실수이므로 지급하지 않는다
                         bool                     bLinked = false;
                         const ServiceStoreResult read    = input._pExternalLinks->readIsLinked( connection, input._accountID, receipt._buyerRule._loginProvider, receipt._storeBuyerID, bLinked );
                         if ( read != ServiceStoreResult::Ok )
-                            return EconomyOutcome::fail( OnlineError::kUnavailable );
+                            return EconomyServiceResult::fail( OnlineError::kUnavailable );
                         return bLinked ? EconomyResult::Ok : EconomyResult::NotPurchaser;
                     }
                     case ReceiptBuyerBinding::Count:
@@ -115,42 +187,70 @@ namespace sw
             }
 
             /**
-             * @brief 지급 분개를 커밋합니다. 스토어에 알려야 하는 영수증이면 알림 레코드를 같은 트랜잭션에 넣습니다.
-             * @details 재생(이미 지급한 거래)도 쓴다 — 스토어가 아직 확인 전이라고 답했으니 지난번 알림이 끝나지 않았다. 그 쓰기가 실패하면 Unavailable 로 답해 클라이언트가 같은 영수증을 다시 내게 한다.
+             * @brief 영수증 지급을 커밋합니다. 스토어에 알려야 하는 영수증이면 알림 레코드를 같은 트랜잭션에 넣습니다.
+             * @details 영수증 상태 레코드(`econ_receipt`)를 읽고, 새 지급이면 "없어야 함" 조건으로 `Redeemed` 를 넣는다. 환불도 같은 레코드를 읽은 버전 조건으로 쓰므로
+             *          읽기와 커밋 사이에 환불이 표시하면 이 커밋이 Conflict 로 지고 다시 읽어 ReceiptRefunded 가 된다(감사 O-1 — PlayFab · Nakama 가 구매 검증과 환불을 같은 행 제약 아래 두는 것과 같다).
+             *          분개가 남은 다시 보내기는 같은 결과(`_bReplayed`)이고 알림 레코드도 다시 쓴다(스토어가 아직 확인 전이라고 답했다) — 그 쓰기도 상태 버전을 건다.
+             *          분개가 보존 정리로 지워진 뒤의 다시 보내기는 AlreadyRedeemed 다(감사 P0-7).
              */
-            [[nodiscard]] static LedgerResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt, LedgerTransferResult& outOutcome )
+            [[nodiscard]] static EconomyServiceResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt,
+                                                                    LedgerTransferResult& outServiceResult )
             {
-                ReceiptDeliveryTask task;
-                if ( EconomyStoreLogic::makeDeliveryTask( receipt, task ) == false )
-                    return Ledger::executeTransfer( connection, request, outOutcome );
-                const vector<uint8> recordBytes = encodeDelivery( task );
+                const hashed_string& receiptTable = EconomyStoreLogic::getReceiptTable();
+                const vector<uint8>  redeemed     = encodeReceipt( ReceiptState::Redeemed );
+                ReceiptDeliveryTask  task;
+                const bool           bDelivery   = EconomyStoreLogic::makeDeliveryTask( receipt, task );
+                const vector<uint8>  recordBytes = bDelivery ? encodeDelivery( task ) : vector<uint8>{};
                 for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
                 {
+                    ReceiptRecord mark;
+                    if ( readReceipt( connection, request._journalKey, mark ) != ServiceStoreResult::Ok )
+                        return EconomyServiceResult::fail( OnlineError::kUnavailable );
+                    if ( isRefunded( mark._state ) )
+                        return EconomyResult::ReceiptRefunded; // 지급 전에 환불이 왔거나 이미 돌려받은 거래이다
                     ServiceTransaction transaction;
-                    const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, outOutcome );
+                    const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, outServiceResult );
                     if ( staged != LedgerResult::Ok )
-                        return staged;
-                    const bool bReplayed = outOutcome._bReplayed == SW_TRUE;
-                    transaction.put( EconomyStoreLogic::getDeliveryTable(), task._recordKey, recordBytes );
+                        return toRedeemResult( staged );
+                    const bool bReplayed = outServiceResult._bReplayed == SW_TRUE;
+                    if ( bReplayed == false )
+                    {
+                        if ( mark._state == ReceiptState::Redeemed )
+                            return EconomyResult::AlreadyRedeemed; // 분개는 보존 정리로 지워졌지만 이 거래는 이미 지급했다
+                        transaction.put( receiptTable, request._journalKey, redeemed, ServiceRecord::kAbsentVersion );
+                    }
+                    else if ( bDelivery )
+                    {
+                        transaction.requireVersion( receiptTable, request._journalKey, mark._version ); // 그사이 환불된 거래의 확인은 보내지 않는다
+                    }
+                    if ( bReplayed && bDelivery == false )
+                        return EconomyResult::Ok; // 분개가 남은 다시 보내기 — 쓸 것이 없다
+                    if ( bDelivery )
+                        transaction.put( EconomyStoreLogic::getDeliveryTable(), task._recordKey, recordBytes );
                     const ServiceStoreResult committed = connection.commit( transaction );
                     if ( committed == ServiceStoreResult::Ok )
-                        return LedgerResult::Ok;
+                        return EconomyResult::Ok;
                     if ( committed == ServiceStoreResult::Invalid )
-                        return LedgerResult::Invalid;
+                        return toRedeemResult( LedgerResult::Invalid );
                     if ( bReplayed )
-                        return LedgerResult::Unavailable;
-                    const LedgerResult resolved = Ledger::resolveConflict( connection, request, outOutcome );
+                    {
+                        if ( committed == ServiceStoreResult::Conflict )
+                            continue; // 상태가 바뀌었다 — 다시 읽어 환불이면 거절한다
+                        return EconomyServiceResult::fail( OnlineError::kUnavailable );
+                    }
+                    const LedgerResult resolved = Ledger::resolveConflict( connection, request, outServiceResult );
                     if ( resolved != LedgerResult::Conflict )
-                        return resolved;
+                        return toRedeemResult( resolved );
                     if ( committed == ServiceStoreResult::Unavailable )
-                        return LedgerResult::Unavailable; // 분개가 없어도 커밋이 늦게 닿을 수 있다 — 같은 거래로 나중에 가려진다
+                        return EconomyServiceResult::fail( OnlineError::kUnavailable ); // 분개가 없어도 커밋이 늦게 닿을 수 있다 — 같은 거래로 나중에 가려진다
+                    // Conflict 이다. 상태(환불) · 잔액이 그사이 바뀌었으므로 다시 읽는다
                 }
-                return LedgerResult::Conflict;
+                return EconomyServiceResult::fail( OnlineError::kBusy );
             }
 
             /** @brief 응답에 업무 결과를 적고 결과를 돌려줍니다. 결과 칸이 없는 응답(지갑 · 내역)은 결과만 돌려준다. */
             template <typename TReply>
-            static EconomyOutcome finish( TReply& outReply, EconomyOutcome result )
+            static EconomyServiceResult finish( TReply& outReply, EconomyServiceResult result )
             {
                 if constexpr ( OnlineReplyHasResult<TReply>::value )
                     outReply._result = result._result;
@@ -178,8 +278,8 @@ namespace sw
             }
 
             /** @brief 가격 항목을 붙입니다. 가상 화폐이면 재원 잔액을 순서대로 씁니다. 모자라거나 재원에 빚이 있으면 InsufficientFunds 입니다. */
-            static EconomyOutcome appendPriceLegs( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferPrice& price, int64 totalAmount,
-                                                   const LedgerHolder& account, LedgerTransferRequest& inoutRequest )
+            static EconomyServiceResult appendPriceLegs( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferPrice& price, int64 totalAmount,
+                                                         const LedgerHolder& account, LedgerTransferRequest& inoutRequest )
             {
                 const CurrencyDef* pCurrency = currencies.findCurrency( price._currencyID );
                 if ( pCurrency == nullptr || pCurrency->isVirtual() == false )
@@ -193,7 +293,7 @@ namespace sw
                     LedgerBalance            balance;
                     const ServiceStoreResult read = Ledger::readBalance( connection, account, fundingAsset, balance );
                     if ( read != ServiceStoreResult::Ok )
-                        return EconomyOutcome::fail( OnlineError::kUnavailable );
+                        return EconomyServiceResult::fail( OnlineError::kUnavailable );
                     if ( balance.isDebt() )
                         return EconomyResult::InsufficientFunds; // 빚이 있는 동안은 그 재원의 가상 화폐를 쓸 수 없다
                     const int64 take = balance._amount < remaining ? balance._amount : remaining;
@@ -211,21 +311,21 @@ namespace sw
              * @details 지금 잔액으로 분개 항목을 다시 짤 수 없다. 재원이 비었을 수 있기 때문이다. 그래서 저장된 분개의 항목으로 재생한다.
              */
             template <typename TReply>
-            [[nodiscard]] static optional<EconomyOutcome> findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, TReply& outReply )
+            [[nodiscard]] static optional<EconomyServiceResult> findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, TReply& outReply )
             {
                 LedgerJournalEntry entry;
                 if ( Ledger::findJournal( connection, request._journalKey, entry ) != ServiceStoreResult::Ok )
                     return nullopt;
                 if ( entry._reason != request._reason || entry._memo != request._memo )
-                    return EconomyOutcome::fail( OnlineError::kInvalidRequest ); // 다른 구매에 쓴 멱등 키이다
+                    return EconomyServiceResult::fail( OnlineError::kInvalidRequest ); // 다른 구매에 쓴 멱등 키이다
                 LedgerTransferRequest stored = request;
                 stored._listPosting          = entry._listPosting;
                 LedgerTransferResult replay;
                 if ( Ledger::resolveConflict( connection, stored, replay ) != LedgerResult::Ok )
-                    return EconomyOutcome::fail( OnlineError::kInvalidRequest );
+                    return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
                 EconomyStoreLogic::collectAccountBalances( replay, accountID, outReply._listBalance );
                 outReply._bReplayed = SW_TRUE;
-                return EconomyOutcome{ EconomyResult::Ok };
+                return EconomyServiceResult{ EconomyResult::Ok };
             }
 
             /**
@@ -233,8 +333,8 @@ namespace sw
              * @details 구매를 여기서 끝내야 하면 그 결과를 돌려주고, 이어 가도 되면 빈 값입니다. 가격이 모자라면 같은 키로 이미 산 것인지 먼저 확인합니다.
              *          첫 구매로 잔액이 줄어든 뒤의 재시도가 "부족" 을 받으면 안 되기 때문입니다.
              */
-            [[nodiscard]] static optional<EconomyOutcome> buildPurchaseRequest( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferDef& offer,
-                                                                                const EconomyPurchaseInput& input, EconomyPurchaseReply& outReply, LedgerTransferRequest& outRequest )
+            [[nodiscard]] static optional<EconomyServiceResult> buildPurchaseRequest( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferDef& offer,
+                                                                                      const EconomyPurchaseInput& input, EconomyPurchaseReply& outReply, LedgerTransferRequest& outRequest )
             {
                 const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
                 const int64        count   = input._count;
@@ -248,18 +348,18 @@ namespace sw
                 for ( const OfferPrice& price : offer._listPrice )
                 {
                     if ( price._amount > LedgerConstant::kMaxAmount / count )
-                        return EconomyOutcome::fail( OnlineError::kInvalidRequest );
-                    const EconomyOutcome priced = appendPriceLegs( connection, currencies, price, price._amount * count, account, outRequest );
+                        return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
+                    const EconomyServiceResult priced = appendPriceLegs( connection, currencies, price, price._amount * count, account, outRequest );
                     if ( priced == EconomyResult::Ok )
                         continue;
-                    if ( const optional<EconomyOutcome> replayed = findReplay( connection, outRequest, input._accountID, outReply ) )
+                    if ( const optional<EconomyServiceResult> replayed = findReplay( connection, outRequest, input._accountID, outReply ) )
                         return replayed;
                     return priced;
                 }
                 for ( const OfferGrant& grant : offer._listGrant )
                 {
                     if ( grant._amount > LedgerConstant::kMaxAmount / count )
-                        return EconomyOutcome::fail( OnlineError::kInvalidRequest );
+                        return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
                     outRequest._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount * count } );
                 }
                 return nullopt;
@@ -269,8 +369,8 @@ namespace sw
              * @brief 계정별 구매 한도가 있는 상품이면 구매 수를 늘려 @p inoutTransaction 에 붙입니다.
              * @details 구매를 여기서 끝내야 하면 그 결과(저장소 오류, 한도 초과)를 돌려주고, 이어 가도 되면 빈 값입니다.
              */
-            [[nodiscard]] static optional<EconomyOutcome> stageAccountLimit( IServiceStoreConnection& connection, const OfferDef& offer, const EconomyPurchaseInput& input,
-                                                                             ServiceTransaction& inoutTransaction )
+            [[nodiscard]] static optional<EconomyServiceResult> stageAccountLimit( IServiceStoreConnection& connection, const OfferDef& offer, const EconomyPurchaseInput& input,
+                                                                                   ServiceTransaction& inoutTransaction )
             {
                 if ( offer._limitPerAccount <= 0 )
                     return nullopt;
@@ -279,7 +379,7 @@ namespace sw
                 ServiceRecord            countRecord;
                 const ServiceStoreResult read = connection.readRecord( EconomyStoreLogic::getPurchaseCountTable(), countKey, countRecord );
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
-                    return EconomyOutcome::fail( OnlineError::kUnavailable );
+                    return EconomyServiceResult::fail( OnlineError::kUnavailable );
                 int64 bought = 0;
                 if ( read == ServiceStoreResult::Ok )
                 {
@@ -305,7 +405,7 @@ namespace sw
         return s_table;
     }
 
-    EconomyOutcome EconomyStoreLogic::toEconomyResult( LedgerResult result )
+    EconomyServiceResult EconomyStoreLogic::toEconomyResult( LedgerResult result )
     {
         switch ( result )
         {
@@ -316,29 +416,30 @@ namespace sw
             case LedgerResult::CapExceeded:
                 return EconomyResult::CapExceeded;
             case LedgerResult::JournalKeyReused:
-                return EconomyOutcome::fail( OnlineError::kInvalidRequest );
+                return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
             case LedgerResult::Conflict:
-                return EconomyOutcome::fail( OnlineError::kBusy );
+                return EconomyServiceResult::fail( OnlineError::kBusy );
             case LedgerResult::Invalid:
-                return EconomyOutcome::fail( OnlineError::kInvalidRequest );
+            case LedgerResult::AccountDeleted:
+                return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
             case LedgerResult::Unavailable:
-                return EconomyOutcome::fail( OnlineError::kUnavailable );
+                return EconomyServiceResult::fail( OnlineError::kUnavailable );
         }
-        return EconomyOutcome::fail( OnlineError::kUnavailable );
+        return EconomyServiceResult::fail( OnlineError::kUnavailable );
     }
 
-    void EconomyStoreLogic::collectAccountBalances( const LedgerTransferResult& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance )
+    void EconomyStoreLogic::collectAccountBalances( const LedgerTransferResult& serviceResult, uint64 accountID, vector<LedgerBalance>& outListBalance )
     {
         const LedgerHolder account = LedgerHolder::makeAccount( accountID );
-        for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
+        for ( const LedgerTransferResult::HolderBalance& holderBalance : serviceResult._listHolderBalance )
         {
             if ( holderBalance._holder == account )
                 outListBalance.push_back( holderBalance._balance );
         }
     }
 
-    EconomyOutcome EconomyStoreLogic::purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers,
-                                                const EconomyPurchaseInput& input, EconomyPurchaseReply& outReply )
+    EconomyServiceResult EconomyStoreLogic::purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers,
+                                                      const EconomyPurchaseInput& input, EconomyPurchaseReply& outReply )
     {
         outReply               = EconomyPurchaseReply{};
         const OfferDef* pOffer = offers.findOffer( input._offerID );
@@ -349,65 +450,65 @@ namespace sw
         const bool bCountOk         = 1 <= input._count && input._count <= pOffer->_maxCountPerPurchase;
         const bool bInvalidPurchase = bCountOk == false || input._accountID == 0 || LedgerUtil::isValidJournalKey( input._journalKey ) == false;
         if ( bInvalidPurchase )
-            return EconomyStoreLogicInternal::finish( outReply, EconomyOutcome::fail( OnlineError::kInvalidRequest ) );
+            return EconomyStoreLogicInternal::finish( outReply, EconomyServiceResult::fail( OnlineError::kInvalidRequest ) );
         if ( pOffer->isOnSale( input._nowMs ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::NotOnSale );
 
         // 재시도는 잔액과 한도 판정보다 먼저 지난 결과를 확인한다. 가상 화폐 분개 항목은 지금 잔액으로 짜므로 다시 짜면 처음과 다를 수 있다.
-        if ( const optional<EconomyOutcome> replayed = EconomyStoreLogicInternal::findReplay( connection, EconomyStoreLogicInternal::makePurchaseProbe( input, pOffer->_id ), input._accountID, outReply ) )
+        if ( const optional<EconomyServiceResult> replayed = EconomyStoreLogicInternal::findReplay( connection, EconomyStoreLogicInternal::makePurchaseProbe( input, pOffer->_id ), input._accountID, outReply ) )
             return EconomyStoreLogicInternal::finish( outReply, *replayed );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             LedgerTransferRequest request;
-            if ( const optional<EconomyOutcome> early = EconomyStoreLogicInternal::buildPurchaseRequest( connection, currencies, *pOffer, input, outReply, request ) )
+            if ( const optional<EconomyServiceResult> early = EconomyStoreLogicInternal::buildPurchaseRequest( connection, currencies, *pOffer, input, outReply, request ) )
                 return EconomyStoreLogicInternal::finish( outReply, *early );
 
             ServiceTransaction   transaction;
-            LedgerTransferResult outcome;
-            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+            LedgerTransferResult serviceResult;
+            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
             if ( staged != LedgerResult::Ok )
             {
                 if ( staged == LedgerResult::InsufficientFunds )
                 {
-                    if ( const optional<EconomyOutcome> replayed = EconomyStoreLogicInternal::findReplay( connection, request, input._accountID, outReply ) )
+                    if ( const optional<EconomyServiceResult> replayed = EconomyStoreLogicInternal::findReplay( connection, request, input._accountID, outReply ) )
                         return EconomyStoreLogicInternal::finish( outReply, *replayed );
                 }
                 return EconomyStoreLogicInternal::finish( outReply, toEconomyResult( staged ) );
             }
-            if ( outcome._bReplayed == SW_TRUE )
+            if ( serviceResult._bReplayed == SW_TRUE )
             {
-                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
+                collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
                 outReply._bReplayed = SW_TRUE;
                 return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
             }
-            if ( const optional<EconomyOutcome> early = EconomyStoreLogicInternal::stageAccountLimit( connection, *pOffer, input, transaction ) )
+            if ( const optional<EconomyServiceResult> early = EconomyStoreLogicInternal::stageAccountLimit( connection, *pOffer, input, transaction ) )
                 return EconomyStoreLogicInternal::finish( outReply, *early );
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
-                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
+                collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
                 return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
             }
             if ( committed == ServiceStoreResult::Invalid )
-                return EconomyStoreLogicInternal::finish( outReply, EconomyOutcome::fail( OnlineError::kInvalidRequest ) );
-            const LedgerResult resolved = Ledger::resolveConflict( connection, request, outcome );
+                return EconomyStoreLogicInternal::finish( outReply, EconomyServiceResult::fail( OnlineError::kInvalidRequest ) );
+            const LedgerResult resolved = Ledger::resolveConflict( connection, request, serviceResult );
             if ( resolved == LedgerResult::Ok )
             {
-                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
-                outReply._bReplayed = outcome._bReplayed;
+                collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
+                outReply._bReplayed = serviceResult._bReplayed;
                 return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
             }
             if ( resolved != LedgerResult::Conflict )
                 return EconomyStoreLogicInternal::finish( outReply, toEconomyResult( resolved ) );
             if ( committed == ServiceStoreResult::Unavailable )
-                return EconomyStoreLogicInternal::finish( outReply, EconomyOutcome::fail( OnlineError::kUnavailable ) ); // 적용됐는지 알 수 없다. 같은 키로 다시 하면 중복이 가려진다
+                return EconomyStoreLogicInternal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) ); // 적용됐는지 알 수 없다. 같은 키로 다시 하면 중복이 가려진다
             // Conflict 이다. 잔액이나 구매 수가 그사이 바뀌었으므로 다시 읽어 다시 짠다
         }
-        return EconomyStoreLogicInternal::finish( outReply, EconomyOutcome::fail( OnlineError::kBusy ) );
+        return EconomyStoreLogicInternal::finish( outReply, EconomyServiceResult::fail( OnlineError::kBusy ) );
     }
 
-    EconomyOutcome EconomyStoreLogic::redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers,
-                                                     const EconomyRedeemInput& input, EconomyRedeemReply& outReply )
+    EconomyServiceResult EconomyStoreLogic::redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers,
+                                                           const EconomyRedeemInput& input, EconomyRedeemReply& outReply )
     {
         outReply                               = EconomyRedeemReply{};
         const ReceiptValidationResult& receipt = input._receipt;
@@ -428,8 +529,8 @@ namespace sw
         if ( receipt._bSandbox == SW_TRUE && input._bAcceptSandbox == SW_FALSE )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptInvalid );
         if ( input._accountID == 0 )
-            return EconomyStoreLogicInternal::finish( outReply, EconomyOutcome::fail( OnlineError::kInvalidRequest ) );
-        const EconomyOutcome buyer = EconomyStoreLogicInternal::compareBuyer( connection, input );
+            return EconomyStoreLogicInternal::finish( outReply, EconomyServiceResult::fail( OnlineError::kInvalidRequest ) );
+        const EconomyServiceResult buyer = EconomyStoreLogicInternal::compareBuyer( connection, input );
         if ( buyer != EconomyResult::Ok )
             return EconomyStoreLogicInternal::finish( outReply, buyer );
         const OfferDef* pOffer = offers.findOfferByProduct( receipt._storeName, receipt._productID );
@@ -439,12 +540,6 @@ namespace sw
         LedgerTransferRequest request;
         if ( EconomyStoreLogicInternal::makeRedeemKey( receipt._storeName, receipt._transactionID, request._journalKey ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptInvalid );
-        ServiceRecord            refundMark;
-        const ServiceStoreResult markRead = connection.readRecord( getRefundTable(), request._journalKey, refundMark );
-        if ( markRead == ServiceStoreResult::Ok )
-            return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptRefunded ); // 지급 전에 환불 알림이 왔거나 이미 돌려받은 거래이다
-        if ( markRead != ServiceStoreResult::NotFound )
-            return EconomyStoreLogicInternal::finish( outReply, EconomyOutcome::fail( OnlineError::kUnavailable ) );
         request._reason            = "iap.redeem";
         request._memo              = receipt._productID.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
         request._pPolicy           = &currencies.getLedgerPolicy();
@@ -456,20 +551,18 @@ namespace sw
         {
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount } );
         }
-        LedgerTransferResult outcome;
-        const LedgerResult   result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, outcome );
-        if ( result == LedgerResult::JournalKeyReused )
-            return EconomyStoreLogicInternal::finish( outReply, EconomyResult::AlreadyRedeemed ); // 받는 계정이 달라서 분개 내용이 다르다
-        if ( result != LedgerResult::Ok )
-            return EconomyStoreLogicInternal::finish( outReply, toEconomyResult( result ) );
-        collectAccountBalances( outcome, input._accountID, outReply._listBalance );
-        outReply._bReplayed = outcome._bReplayed;
+        LedgerTransferResult       serviceResult;
+        const EconomyServiceResult result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, serviceResult );
+        if ( result != EconomyResult::Ok )
+            return EconomyStoreLogicInternal::finish( outReply, result );
+        collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
+        outReply._bReplayed = serviceResult._bReplayed;
         return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
     }
 
-    const hashed_string& EconomyStoreLogic::getRefundTable()
+    const hashed_string& EconomyStoreLogic::getReceiptTable()
     {
-        static const hashed_string s_table{ "econ_refund" };
+        static const hashed_string s_table{ "econ_receipt" };
         return s_table;
     }
 
@@ -548,57 +641,86 @@ namespace sw
         return connection.commit( transaction );
     }
 
-    EconomyOutcome EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice, int64 nowMs,
-                                                    vector<EconomyBalanceChange>& outListChange )
+    EconomyServiceResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notification,
+                                                          EconomyRefundRecoveryMode recovery, int64 nowMs, vector<EconomyBalanceChange>& outListChange )
     {
         using Internal = EconomyStoreLogicInternal;
         outListChange.clear();
+        if ( recovery >= EconomyRefundRecoveryMode::Count )
+            return EconomyServiceResult::fail( OnlineError::kInvalidRequest ); // 서비스가 기동 때 거절한다 — 바로 부른 쪽의 실수이므로 회수하지 않는다
         string redeemKey;
-        if ( Internal::makeRedeemKey( notice._storeName, notice._transactionID, redeemKey ) == false )
-            return EconomyOutcome::fail( OnlineError::kInvalidRequest );
+        if ( Internal::makeRedeemKey( notification._storeName, notification._transactionID, redeemKey ) == false )
+            return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
-            ServiceRecord            mark;
-            const ServiceStoreResult markRead = connection.readRecord( getRefundTable(), redeemKey, mark );
-            if ( markRead == ServiceStoreResult::Ok )
+            Internal::ReceiptRecord mark;
+            if ( Internal::readReceipt( connection, redeemKey, mark ) != ServiceStoreResult::Ok )
+                return EconomyServiceResult::fail( OnlineError::kUnavailable );
+            if ( Internal::isRefunded( mark._state ) )
                 return EconomyResult::AlreadyRefunded; // 이미 회수했거나 청약철회로 돌려받았다
-            if ( markRead != ServiceStoreResult::NotFound )
-                return EconomyOutcome::fail( OnlineError::kUnavailable );
-            LedgerJournalEntry       redeem;
-            const ServiceStoreResult found = Ledger::findJournal( connection, redeemKey, redeem );
-            if ( found != ServiceStoreResult::Ok && found != ServiceStoreResult::NotFound )
-                return EconomyOutcome::fail( OnlineError::kUnavailable );
             ServiceTransaction transaction;
-            transaction.put( getRefundTable(), redeemKey, vector<uint8>{ Internal::kMarkRefunded }, ServiceRecord::kAbsentVersion );
-            if ( found == ServiceStoreResult::NotFound )
+            if ( mark._state == Internal::ReceiptState::None )
             {
-                // 지급 전에 환불이 왔다. 표시만 남겨 뒤에 온 지급을 막는다
+                // 지급 전에 환불이 왔다. 상태만 남겨 뒤에 온 지급을 막는다 — 지급도 이 레코드를 "없어야 함" 으로 쓰므로 먼저 커밋한 쪽이 이기고 다른 쪽은 다시 읽는다
+                transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::RefundedFirst ), ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult committed = connection.commit( transaction );
                 if ( committed == ServiceStoreResult::Conflict )
                     continue;
-                return committed == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyOutcome::fail( OnlineError::kUnavailable );
+                return committed == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyServiceResult::fail( OnlineError::kUnavailable );
             }
+            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Revoked ), mark._version );
+            LedgerJournalEntry       redeem;
+            const ServiceStoreResult found = Ledger::findJournal( connection, redeemKey, redeem );
+            if ( found == ServiceStoreResult::NotFound )
+            {
+                SW_LOG_ERROR_ID( "EconomyStoreLogic.RefundAfterJournalSwept", "The refund of '%#' came after its grant journal was swept - nothing is revoked, only the receipt is marked refunded", redeemKey );
+                const ServiceStoreResult committed = connection.commit( transaction );
+                if ( committed == ServiceStoreResult::Conflict )
+                    continue;
+                return committed == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyServiceResult::fail( OnlineError::kUnavailable );
+            }
+            if ( found != ServiceStoreResult::Ok )
+                return EconomyServiceResult::fail( OnlineError::kUnavailable );
             LedgerTransferRequest request;
-            if ( LedgerJournalKey::makeFromToken( string( Internal::kRefundScopePrefix ) + notice._storeName, notice._transactionID, request._journalKey ) == false )
-                return EconomyOutcome::fail( OnlineError::kInvalidRequest );
+            if ( LedgerJournalKey::makeFromToken( string( Internal::kRefundScopePrefix ) + notification._storeName, notification._transactionID, request._journalKey ) == false )
+                return EconomyServiceResult::fail( OnlineError::kInvalidRequest );
             request._reason     = "refund.revoke";
             request._memo       = redeem._memo;
             request._pPolicy    = &currencies.getLedgerPolicy();
             request._timeMs     = nowMs;
             request._actorKind  = LedgerActorKind::System;
-            request._bAllowDebt = SW_TRUE; // 환불 회수만 빚을 허용한다
+            request._bAllowDebt = recovery == EconomyRefundRecoveryMode::Debt ? SW_TRUE : SW_FALSE; // 빚은 환불 회수의 Debt 정책만 허용한다
             for ( const LedgerPosting& posting : redeem._listPosting )
             {
-                request._listPosting.push_back( LedgerPosting{ posting._to, LedgerHolder::makeSink(), posting._assetID, posting._amount } );
+                int64 amount = posting._amount;
+                if ( recovery == EconomyRefundRecoveryMode::Unspent )
+                {
+                    LedgerBalance balance;
+                    if ( Ledger::readBalance( connection, posting._to, posting._assetID, balance ) != ServiceStoreResult::Ok )
+                        return EconomyServiceResult::fail( OnlineError::kUnavailable );
+                    amount = balance._amount < amount ? balance._amount : amount; // 남은 만큼만 — 이미 쓴 몫은 빚으로 만들지 않는다
+                }
+                if ( amount > 0 )
+                    request._listPosting.push_back( LedgerPosting{ posting._to, LedgerHolder::makeSink(), posting._assetID, amount } );
             }
-            LedgerTransferResult outcome;
-            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
-            if ( staged != LedgerResult::Ok )
-                return toEconomyResult( staged );
+            LedgerTransferResult serviceResult;
+            if ( request._listPosting.empty() == false )
+            {
+                const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
+                if ( staged == LedgerResult::InsufficientFunds && recovery == EconomyRefundRecoveryMode::Unspent )
+                    continue; // 잔액을 읽은 뒤 그사이 쓰였다 — 다시 읽어 남은 만큼으로 짠다
+                if ( staged == LedgerResult::AccountDeleted )
+                {
+                    // 받은 계정은 탈퇴로 지워졌고 잔액은 그때 소각됐다 — 거둘 이가 없으므로 상태만 바꾼다(실패한 붙이기는 트랜잭션에 아무것도 남기지 않는다)
+                    serviceResult = LedgerTransferResult{};
+                }
+                else if ( staged != LedgerResult::Ok )
+                    return toEconomyResult( staged );
+            }
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
-                for ( const LedgerTransferResult::HolderBalance& holderBalance : outcome._listHolderBalance )
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : serviceResult._listHolderBalance )
                 {
                     if ( holderBalance._holder._kind == LedgerHolderKind::Account )
                         outListChange.push_back( EconomyBalanceChange{ holderBalance._holder._accountID, holderBalance._balance } );
@@ -606,39 +728,40 @@ namespace sw
                 return EconomyResult::Ok;
             }
             if ( committed != ServiceStoreResult::Conflict )
-                return EconomyOutcome::fail( OnlineError::kUnavailable );
+                return EconomyServiceResult::fail( OnlineError::kUnavailable );
         }
-        return EconomyOutcome::fail( OnlineError::kBusy );
+        return EconomyServiceResult::fail( OnlineError::kBusy );
     }
 
-    EconomyOutcome EconomyStoreLogic::withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
-                                                        EconomyWithdrawReply& outReply )
+    EconomyServiceResult EconomyStoreLogic::withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
+                                                              EconomyWithdrawReply& outReply )
     {
         using Internal = EconomyStoreLogicInternal;
         outReply       = EconomyWithdrawReply{};
         string redeemKey;
         if ( input._accountID == 0 || Internal::makeRedeemKey( input._storeName, input._transactionID, redeemKey ) == false )
-            return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kInvalidRequest ) );
+            return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kInvalidRequest ) );
         const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
-            ServiceRecord            mark;
-            const ServiceStoreResult markRead = connection.readRecord( getRefundTable(), redeemKey, mark );
-            if ( markRead == ServiceStoreResult::Ok )
+            Internal::ReceiptRecord mark;
+            if ( Internal::readReceipt( connection, redeemKey, mark ) != ServiceStoreResult::Ok )
+                return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
+            if ( Internal::isRefunded( mark._state ) )
                 return Internal::finish( outReply, EconomyResult::AlreadyRefunded );
-            if ( markRead != ServiceStoreResult::NotFound )
-                return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kUnavailable ) );
+            if ( mark._state != Internal::ReceiptState::Redeemed )
+                return Internal::finish( outReply, EconomyResult::NotPurchaser ); // 받은 계정은 아래에서 분개의 다리로 대조한다
             LedgerJournalEntry       redeem;
             const ServiceStoreResult found = Ledger::findJournal( connection, redeemKey, redeem );
             if ( found == ServiceStoreResult::NotFound )
-                return Internal::finish( outReply, EconomyResult::NotPurchaser );
+                return Internal::finish( outReply, EconomyResult::WithdrawalExpired ); // 분개 보존 기간은 철회 기한보다 훨씬 길다
             if ( found != ServiceStoreResult::Ok )
-                return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kUnavailable ) );
+                return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
             if ( input._nowMs - redeem._timeMs > input._windowMs )
                 return Internal::finish( outReply, EconomyResult::WithdrawalExpired );
             LedgerTransferRequest request;
             if ( LedgerJournalKey::makeFromToken( string( Internal::kWithdrawScopePrefix ) + input._storeName, input._transactionID, request._journalKey ) == false )
-                return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kInvalidRequest ) );
+                return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kInvalidRequest ) );
             request._reason    = "iap.withdraw";
             request._memo      = redeem._memo;
             request._pPolicy   = &currencies.getLedgerPolicy();
@@ -652,7 +775,7 @@ namespace sw
                     return Internal::finish( outReply, EconomyResult::NotPurchaser );
                 LedgerBalance balance;
                 if ( Ledger::readBalance( connection, account, posting._assetID, balance ) != ServiceStoreResult::Ok )
-                    return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kUnavailable ) );
+                    return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
                 const int64 unused = balance._amount < posting._amount ? balance._amount : posting._amount; // 쓰지 않은 만큼만 돌려받는다
                 if ( unused <= 0 )
                     continue;
@@ -662,38 +785,43 @@ namespace sw
             if ( request._listPosting.empty() )
                 return Internal::finish( outReply, EconomyResult::NothingToWithdraw );
             ServiceTransaction transaction;
-            transaction.put( getRefundTable(), redeemKey, vector<uint8>{ Internal::kMarkWithdrawn }, ServiceRecord::kAbsentVersion );
-            LedgerTransferResult outcome;
-            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, outcome );
+            transaction.put( getReceiptTable(), redeemKey, Internal::encodeReceipt( Internal::ReceiptState::Withdrawn ), mark._version ); // 그사이 온 환불과 같은 레코드를 다툰다
+            LedgerTransferResult serviceResult;
+            const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
             if ( staged != LedgerResult::Ok )
                 return Internal::finish( outReply, toEconomyResult( staged ) );
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
-                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
+                collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
                 return Internal::finish( outReply, EconomyResult::Ok );
             }
             if ( committed != ServiceStoreResult::Conflict )
-                return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kUnavailable ) );
+                return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kUnavailable ) );
         }
-        return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kBusy ) );
+        return Internal::finish( outReply, EconomyServiceResult::fail( OnlineError::kBusy ) );
     }
 
-    EconomyOutcome EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply )
+    ServiceStoreResult EconomyStoreLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
+    {
+        return ServiceStoreUtil::erasePrefix( connection, getPurchaseCountTable(), ServiceKeyUtil::makeHex64( accountID ) + "/" );
+    }
+
+    EconomyServiceResult EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply )
     {
         outReply                      = EconomyWalletReply{};
         const ServiceStoreResult read = Ledger::listBalances( connection, LedgerHolder::makeAccount( accountID ), outReply._listBalance );
-        return EconomyStoreLogicInternal::finish( outReply, read == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyOutcome::fail( OnlineError::kUnavailable ) );
+        return EconomyStoreLogicInternal::finish( outReply, read == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyServiceResult::fail( OnlineError::kUnavailable ) );
     }
 
-    EconomyOutcome EconomyStoreLogic::readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply )
+    EconomyServiceResult EconomyStoreLogic::readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply )
     {
         outReply                           = EconomyHistoryReply{};
         const LedgerHolder         account = LedgerHolder::makeAccount( accountID );
         vector<LedgerJournalEntry> listEntry;
         const ServiceStoreResult   read = Ledger::listHistory( connection, account, request._cursor, request._maxCount, listEntry, outReply._nextCursor );
         if ( read != ServiceStoreResult::Ok )
-            return EconomyStoreLogicInternal::finish( outReply, read == ServiceStoreResult::Invalid ? EconomyOutcome::fail( OnlineError::kInvalidRequest ) : EconomyOutcome::fail( OnlineError::kUnavailable ) );
+            return EconomyStoreLogicInternal::finish( outReply, read == ServiceStoreResult::Invalid ? EconomyServiceResult::fail( OnlineError::kInvalidRequest ) : EconomyServiceResult::fail( OnlineError::kUnavailable ) );
         for ( const LedgerJournalEntry& entry : listEntry )
         {
             EconomyHistoryEntry& historyEntry = outReply._listHistory.emplace_back();

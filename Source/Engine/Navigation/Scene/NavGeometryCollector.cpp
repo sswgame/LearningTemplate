@@ -183,7 +183,7 @@ namespace sw
         return bounds;
     }
 
-    uint32 NavGeometryCollector::collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
+    uint32 NavGeometryCollector::collectGeometry( SceneIterationKey key, GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
                                                   const vector<INavGeometrySource*>& listSource, NavMeshArrival arrival, NavMeshGeometry& outGeometry )
     {
         using Internal = NavGeometryCollectorInternal;
@@ -199,7 +199,7 @@ namespace sw
         const TypeInfo*         pSkinnedType = findStaticType<SkeletalMeshComponent>();
         const TypeInfo*         pLinkType    = findStaticType<NavMeshLinkComponent>();
         uint32                  pendingMeshCount{ 0 };
-        manager.forEachGameObject( [&]( GameObject* pObject )
+        manager.forEachGameObject( key, [&]( GameObject* pObject )
         {
             if ( pObject->isActiveInHierarchy() == false )
                 return;
@@ -223,7 +223,7 @@ namespace sw
                 return;
             for ( const INavGeometrySource* pSource : listSource )
             {
-                if ( pSource->getNavGeometryOwner() == pObject && pSource->overridesOwnerGeometry() )
+                if ( pSource->getNavGeometryOwner() == pObject && pSource->shouldOverrideOwnerGeometry() )
                 {
                     pSource->collectNavGeometry( outGeometry, result._area );
                     return;
@@ -273,7 +273,8 @@ namespace sw
                     float3     position{};
                     quaternion rotation{};
                     float3     scale{};
-                    PhysicsComponent::readWorldPose( *pBody, position, rotation, scale );
+                    if ( PhysicsComponent::readWorldPose( *pBody, position, rotation, scale ) == false )
+                        return; // 배율 0 — 물리도 짓지 않는 바디다
                     const float4x4 world = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
                     for ( const PhysicsShapeDesc3D& shape : pBody->getShapes() )
                     {

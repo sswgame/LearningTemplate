@@ -43,13 +43,13 @@ namespace sw
         /** @brief 빈 슬롯을 채워 @p outListBackfilled 뒤에 덧붙입니다. 다 찼거나 시한이 지난 요청은 지웁니다. `process` 보다 먼저 부릅니다. */
         void processBackfills( int64 nowMs, vector<MatchBackfilled>& outListBackfilled );
         /** @brief 빈 슬롯 요청을 넣습니다. 같은 경기 id 가 있으면 바꿉니다. 모드가 다르거나 팀 수가 다르거나 빈 슬롯이 음수면 Invalid 입니다. */
-        MatchmakingOutcome addBackfill( const MatchBackfillRequest& request );
-        int32              getBackfillCount() const { return static_cast<int32>( _listBackfill.size() ); }
+        MatchmakingServiceResult addBackfill( const MatchBackfillRequest& request );
+        int32                    getBackfillCount() const { return static_cast<int32>( _listBackfill.size() ); }
 
         /** @brief 티켓을 넣습니다. 인원이 0이거나 팀 인원을 넘으면 PartyTooLarge, 같은 id 가 있으면 AlreadyQueued 를 반환합니다. */
-        MatchmakingOutcome addTicket( const MatchTicket& ticket );
-        [[nodiscard]] bool removeTicket( uint64 ticketID );
-        bool               hasTicket( uint64 ticketID ) const;
+        MatchmakingServiceResult addTicket( const MatchTicket& ticket );
+        [[nodiscard]] bool       removeTicket( uint64 ticketID );
+        bool                     hasTicket( uint64 ticketID ) const;
         /** @brief 티켓을 모두 뺍니다. 규칙과 다음 경기 id 는 그대로라 권한을 되찾아도 경기 id 가 겹치지 않습니다. 권한을 잃은 대기열이 씁니다. */
         void clearTickets()
         {

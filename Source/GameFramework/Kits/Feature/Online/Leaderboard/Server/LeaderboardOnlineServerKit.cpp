@@ -28,6 +28,7 @@ namespace sw
                 , _listInlineBoardID{}
                 , _service{}
                 , _server{}
+                , _afterDeleteAccount{ &_service }
             {
             }
 
@@ -43,9 +44,23 @@ namespace sw
                     return unexpected( Error{ ErrorKind::NotFound, "the leaderboard catalog could not be read", catalogPath } );
                 if ( catalogPath.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither _catalog nor _listBoardID - no boards are registered" );
+                // 옛 점수 · 시즌 결과의 백필은 카탈로그 보드의 사본으로 줄 시각을 잰다. 인라인 보드(_listBoardID)는 초기화가 없어 지울 것이 없다
+                const vector<LeaderboardDef> listCatalogBoard = _pCatalog != nullptr ? _pCatalog->getBoards() : vector<LeaderboardDef>{};
+                ServiceTTLRule               scoreRule        = LeaderboardService::makeScoreTTLRule( kitConfig._pastScoreTTL.getExpireAfterMs() );
+                scoreRule._pBackfillSource                    = LeaderboardService::makeScoreBackfillSource( listCatalogBoard );
+                scoreRule._backfillVersion                    = 1;
+                ServiceTTLRule resultRule                     = LeaderboardService::makeSeasonResultTTLRule( kitConfig._seasonResultTTL.getExpireAfterMs() );
+                resultRule._pBackfillSource                   = LeaderboardService::makeSeasonResultBackfillSource( listCatalogBoard );
+                resultRule._backfillVersion                   = 1;
+                _service.setPastScoreRetentionMs( kitConfig._pastScoreTTL.getExpireAfterMs() ); // 탈퇴 정리가 지울 지난 기간 — TTL 규칙과 같은 값
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
-                return registerServerService( context, entry, &_server ).and_then( [&]
-                { return exposeInterface<IAccountStatSource>( context, entry, _service ); } );
+                return registerServerService( context, entry, &_server )
+                    .and_then( [&]
+                { return exposeInterface<IAccountStatSource>( context, entry, _service ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, scoreRule, kitConfig._pastScoreTTL ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, resultRule, kitConfig._seasonResultTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override
@@ -66,8 +81,11 @@ namespace sw
                 return {};
             }
 
+            /** @brief 탈퇴한 계정의 통계 · 업적 · 점수 · 시즌 결과를 지운다(`LeaderboardService::eraseAccount`). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
+
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 기록 쓰기. */
-            int32 getOpenWorkCount() const override { return _service.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
             void stop() override
             {
@@ -117,10 +135,11 @@ namespace sw
             }
 
         private:
-            shared_ptr<const LeaderboardCatalog> _pCatalog;          ///< 설정 `_catalog` 의 공유 캐시 한 벌(없으면 nullptr)
-            vector<string>                       _listInlineBoardID; ///< 설정 `_listBoardID`
-            LeaderboardService                   _service;
-            LeaderboardServer                    _server;
+            shared_ptr<const LeaderboardCatalog>                                            _pCatalog;          ///< 설정 `_catalog` 의 공유 캐시 한 벌(없으면 nullptr)
+            vector<string>                                                                  _listInlineBoardID; ///< 설정 `_listBoardID`
+            LeaderboardService                                                              _service;
+            LeaderboardServer                                                               _server;
+            AfterDeleteAccountMember<LeaderboardService, &LeaderboardService::eraseAccount> _afterDeleteAccount; ///< `_service` 를 빌린다(뒤에 선언)
         };
     } // namespace
 } // namespace sw

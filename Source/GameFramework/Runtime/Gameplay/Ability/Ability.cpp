@@ -352,8 +352,10 @@ namespace sw
                 if ( pManager == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no active scene" } );
                 vector<AbilityComponent*> listComponent;
-                pManager->forEachComponentOfType<AbilityComponent>( [&listComponent]( AbilityComponent* pComponent )
-                { listComponent.push_back( pComponent ); } );
+                for ( AbilityComponent* pComponent : pManager->getComponentRegistry().getAll<AbilityComponent>() )
+                {
+                    listComponent.push_back( pComponent );
+                }
                 if ( listComponent.empty() )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no AbilityComponent in the active scene" } );
                 return listComponent;

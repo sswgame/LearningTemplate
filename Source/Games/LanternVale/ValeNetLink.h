@@ -223,13 +223,13 @@ namespace sw
         int64 getLastResultNanoseconds() const { return _lastResultNanoseconds; }
 
     private:
-        ValeAvatarAgent                _agent;
-        RemoteCallClient               _remoteCalls;
-        MMOClientView                  _view;
-        vector<RemoteCallRejectNotice> _listRejectScratch;
-        vector<Subscription>           _listSubscription;
-        int64                          _lastResultNanoseconds;
-        int32                          _seenResultCount;
-        uint8                          _bActive;
+        ValeAvatarAgent                      _agent;
+        RemoteCallClient                     _remoteCalls;
+        MMOClientView                        _view;
+        vector<RemoteCallRejectNotification> _listRejectScratch;
+        vector<Subscription>                 _listSubscription;
+        int64                                _lastResultNanoseconds;
+        int32                                _seenResultCount;
+        uint8                                _bActive;
     };
 } // namespace sw

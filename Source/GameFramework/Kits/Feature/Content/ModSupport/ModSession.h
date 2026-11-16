@@ -81,7 +81,7 @@ namespace sw
 
         /** @brief 모드 설치 폴더입니다 — 패키지는 실행 파일 옆 `Mods`, 저장소는 `Test/Mods`(시연 모드는 시나리오 · 테스트 자료). */
         static string getInstallFolder();
-        /** @brief 배포할 묶은 모드를 두는 폴더(`<Saved>/ModPacks`)입니다. 배포 패키지 스크립트(`Scripts/package/Pack.py --mods`)가 여기서 베낀다. */
+        /** @brief 배포할 묶은 모드를 두는 폴더(`<Saved>/ModPacks`)입니다. 배포 패키지 스크립트(`Scripts/package/pack.py --mods`)가 여기서 베낀다. */
         static string getExportFolder();
         /**
          * @brief 설치 폴더의 소스 모드 @p id(`<id>/content/`)를 배포 형태(`<내보내기 폴더>/<id>/mod.xml` + `content.pack`)로 묶습니다 — 배포 게임은 묶은 모드만 읽는다.

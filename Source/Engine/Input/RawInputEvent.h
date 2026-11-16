@@ -163,15 +163,14 @@ namespace sw
             return event;
         }
 
-        static RawInputEvent makeMouseMove( int32 x, int32 y, float32 rawDx = 0.0f, float32 rawDy = 0.0f )
+        /** @brief 커서 위치 이벤트를 만듭니다. 원시 이동량은 싣지 않습니다 — 원시 이동은 `makeMouseRawDelta` 하나로만 온다(출처가 원시 원천을 정한다, `MouseDevice::getMovementDelta`). */
+        static RawInputEvent makeMouseMove( int32 x, int32 y )
         {
             RawInputEvent event{};
-            event._type                            = RawInputEventType::MouseMove;
-            event._deviceKind                      = InputDeviceKind::Mouse;
-            event._payload._mouseData._x           = x;
-            event._payload._mouseData._y           = y;
-            event._payload._mouseData._rawDelta._x = rawDx;
-            event._payload._mouseData._rawDelta._y = rawDy;
+            event._type                  = RawInputEventType::MouseMove;
+            event._deviceKind            = InputDeviceKind::Mouse;
+            event._payload._mouseData._x = x;
+            event._payload._mouseData._y = y;
             return event;
         }
 

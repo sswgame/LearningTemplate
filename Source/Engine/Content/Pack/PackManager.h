@@ -188,8 +188,8 @@ namespace sw
         atomic<ContentSource>                _contentSource;  ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
         atomic<uint32>                       _patchPackCount; ///< 도메인 없는 팩 수(`hasPatchFile` 이 모든 리소스 읽기에서 잠금 없이 0 을 본다). 목록을 바꿀 때 잠금 안에서 다시 센다
         PackPatchTrust                       _patchTrust;     ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
-    };
 
-    SW_SERVICE_SLOT( PackManager, Optional );
+        SW_SERVICE_SLOT( PackManager, Optional );
+    };
 
 } // namespace sw

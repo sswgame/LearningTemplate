@@ -46,7 +46,7 @@ namespace sw
         return StaticType();
     }
 
-    bool UIScreen::takesFocus() const
+    bool UIScreen::canTakeFocus() const
     {
         return _desc._bTakesFocus && _desc._layer != UILayer::HUD && _desc._layer != UILayer::Overlay;
     }

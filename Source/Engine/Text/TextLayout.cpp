@@ -54,7 +54,7 @@ namespace sw
             }
 
             /** @brief 앞에서 끊으면 안 되는 문자(닫는 괄호, 마침표, 쉼표, 물음표, 느낌표, 쌍점, 일본과 중국 구두점)입니다. */
-            static bool forbidsBreakBefore( uint32 codepoint )
+            static bool isBreakForbiddenBefore( uint32 codepoint )
             {
                 switch ( codepoint )
                 {
@@ -82,7 +82,7 @@ namespace sw
             }
 
             /** @brief 뒤에서 끊으면 안 되는 문자(여는 괄호, 따옴표)입니다. */
-            static bool forbidsBreakAfter( uint32 codepoint )
+            static bool isBreakForbiddenAfter( uint32 codepoint )
             {
                 switch ( codepoint )
                 {
@@ -103,7 +103,7 @@ namespace sw
             {
                 if ( current == '\n' )
                     return BreakKind::Mandatory;
-                if ( forbidsBreakAfter( current ) || forbidsBreakBefore( next ) )
+                if ( isBreakForbiddenAfter( current ) || isBreakForbiddenBefore( next ) )
                     return BreakKind::None;
                 const bool bBreakOpportunity = isSpace( current ) || current == '-' || current == 0x2010u;
                 if ( bBreakOpportunity )
@@ -252,7 +252,7 @@ namespace sw
                             else
                             {
                                 // 기회가 없다(한 단어가 줄보다 길다). 그 위치에서 끊되, 닫는 부호를 줄 머리로, 여는 부호를 줄 끝으로 보내지 않게 한 글자 물린다.
-                                while ( lineEnd > lineStart + 1 && ( forbidsBreakBefore( _listShaped[lineEnd]._codepoint ) || forbidsBreakAfter( _listShaped[lineEnd - 1]._codepoint ) ) )
+                                while ( lineEnd > lineStart + 1 && ( isBreakForbiddenBefore( _listShaped[lineEnd]._codepoint ) || isBreakForbiddenAfter( _listShaped[lineEnd - 1]._codepoint ) ) )
                                 {
                                     --lineEnd;
                                 }

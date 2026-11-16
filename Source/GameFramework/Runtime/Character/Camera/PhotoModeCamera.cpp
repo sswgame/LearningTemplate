@@ -196,7 +196,7 @@ namespace sw
                     outReply = "photo mode: the screenshot command is not registered";
                     return true;
                 }
-                return pScreenshot->_pFunc( listArgument, outReply );
+                return DevCommandRegistry::run( *pScreenshot, listArgument, outReply );
             }
         };
     } // namespace

@@ -22,6 +22,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneSystem.h"
 
@@ -59,12 +60,16 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneContactComponent>( this );
-        (void)ZoneSystem::ensureFor( manager );
+        ZoneOccupantIndex::addLayerReader( manager ); // 표면 지역의 근처 역할이 물리 층을 질의한다(`ZoneTracker::resolveRoleTargets`)
+        (void)ZoneSystem::findOrCreate( manager );
+        manager.getSubsystem<ScenePhysics>().registerContactStayListener( *this, ContactStayListener{ &ZoneContactComponent::receiveCollisionStay, nullptr } );
     }
 
     void ZoneContactComponent::onUnregister( GameObjectManager& manager )
     {
+        manager.getSubsystem<ScenePhysics>().unregisterContactStayListener( *this );
         manager.getComponentRegistry().remove<ZoneContactComponent>( this );
+        ZoneOccupantIndex::removeLayerReader( manager );
         ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }
@@ -88,10 +93,9 @@ namespace sw
         recordCollision( collision );
     }
 
-    void ZoneContactComponent::onCollisionStay( const CollisionInfo& collision )
+    void ZoneContactComponent::receiveCollisionStay( Component& self, const CollisionInfo& collision )
     {
-        Component::onCollisionStay( collision );
-        recordCollision( collision );
+        static_cast<ZoneContactComponent&>( self ).recordCollision( collision );
     }
 
     void ZoneContactComponent::recordCollision( const CollisionInfo& collision )
@@ -124,7 +128,10 @@ namespace sw
     {
         const GameObject* const                   pOwner      = getOwner();
         const CharacterControllerComponent* const pController = pOwner != nullptr ? pOwner->getComponent<CharacterControllerComponent>() : nullptr;
-        return pController != nullptr ? 2.0f * ( pController->getHalfHeight() + pController->getRadius() ) : _bodyHeight;
+        if ( pController == nullptr )
+            return _bodyHeight;
+        const PhysicsShapeDesc3D capsule = pController->getScaledCapsule();
+        return 2.0f * ( capsule._halfHeight + capsule._radius );
     }
 
     void ZoneContactComponent::addContact( vector<ContactRecord>& inoutList, const SurfaceKindTable& table, const ContactRecord& contact )
@@ -230,7 +237,7 @@ namespace sw
             {
                 CharacterRayHit hit;
                 SurfaceSample   touched;
-                if ( CharacterRayHit::raycast3D( manager, waist, direction, pController->getRadius() + _touchDistance, Internal::kAllLayers, pOwner->getObjectID(), hit ) == false ||
+                if ( CharacterRayHit::raycast3D( manager, waist, direction, pController->getScaledCapsule()._radius + _touchDistance, Internal::kAllLayers, pOwner->getObjectID(), hit ) == false ||
                      SurfaceSample::resolveHit( manager, pTable, hit, touched ) == false )
                     continue;
                 ContactRecord contact;

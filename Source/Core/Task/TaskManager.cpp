@@ -66,7 +66,7 @@ namespace sw
         constexpr uint32 kIdleSpinCount = 64;
         /**
          * @brief 워커가 잠들기 전에 작업을 기다리며 스핀하는 시간(마이크로초)입니다. 짧게 둡니다(측정해 본 결과입니다).
-         * @details 스핀은 `_workEpoch` 캐시 라인 하나만 읽으므로 큐 경합은 없습니다. 그런데도 길게(50 us) 돌리면 손해입니다. 워커가
+         * @details 스핀은 `_jobEpoch` 캐시 라인 하나만 읽으므로 큐 경합은 없습니다. 그런데도 길게(50 us) 돌리면 손해입니다. 워커가
          *          SMT 형제 코어를 차지해 게임 · 렌더 스레드가 느려집니다. 렌더 그래프 병렬 기록이 150~192 us(2 us 스핀) 대
          *          214~242 us(50 us 스핀)였습니다. 일부 워커만 길게 돌리는 hot pool(2 · 4개)도 이득이 없었습니다. 이 엔진의 프레임
          *          (~0.7 ms)은 잡 사이의 빈틈이 워커 수만큼의 코어를 깨어 있게 유지할 만큼 길지 않습니다. 상용 엔진의 8~16 ms
@@ -172,7 +172,7 @@ namespace sw
          * @brief 이 수 이상이면 비용을 재지 않고 바로 나눈다. 가장 가벼운 항목(~10 ns)이라도 이만큼이면 직렬이 `kSerialBudgetNanos` 를 넘는다.
          *        큰 씬에서는 직렬로 측정하는 약 3 us 가 병렬 시작을 늦추기만 한다(무버 8000 의 틱 90 us 대 98 us).
          */
-        constexpr uint32 kObviouslyParallelCount = 4096;
+        constexpr uint32 kParallelThresholdCount = 4096;
 
         /** @brief 병렬 그룹을 어떻게 나눌지(청크 크기와 큐에 넣을 티켓 수)입니다. */
         struct ParallelSplit
@@ -219,7 +219,7 @@ namespace sw
         , _pHelperSlotPool{ std::make_shared<HelperSlotPool>() }
         , _instanceID{ s_nextInstanceID.fetch_add( 1, std::memory_order_relaxed ) }
         , _idleWorkerMask{ 0 }
-        , _workEpoch{ 0 }
+        , _jobEpoch{ 0 }
         , _completionBroadcast{}
         , _mainThreadParkedSlot{ -1 }
         , _globalHighQueue{}
@@ -275,7 +275,7 @@ namespace sw
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
             // 워커가 이미 목록을 읽고 있으므로 const 로 꺼낸다(비 const 첨자는 레이스 탐지기에 쓰기로 잡힌다).
-            std::as_const( _listWorkerSlot )[workerIndex]->_thread = sw::thread( &TaskManager::workerLoop, this, workerIndex );
+            std::as_const( _listWorkerSlot )[workerIndex]->_thread = sw::thread( ThreadCreationKey{}, &TaskManager::workerLoop, this, workerIndex );
         }
 
         _bInitialized = SW_TRUE;
@@ -413,16 +413,11 @@ namespace sw
             }
 
             const uint32 assigned = _pHelperSlotPool->_count.fetch_add( 1, std::memory_order_relaxed );
+            // 넘치면 멈춘다 — 마지막 슬롯을 나눠 쓰면 스크래치 벡터가 겹치고(힙 손상) 깨우기가 엉뚱한 스레드로 간다(감사 C-17). 끝나는 스레드가 슬롯을
+            // 돌려주므로(`ThreadTaskState` 소멸) 동시에 살아 있는 비워커 스레드가 이만큼일 때만 닿는다.
             if ( assigned >= kMaxHelperThreadCount )
-            {
-                // 넘치면 마지막 슬롯을 나눠 쓴다. 스크래치가 겹칠 수 있으므로 로그로 알린다. 끝나는 스레드가 슬롯을 돌려주므로(`ThreadTaskState` 소멸) 동시에 살아 있는
-                // 비워커 스레드가 이만큼일 때만 닿는다.
-                SW_LOG_ERROR_ID( "Task.HelperSlotsExhausted", "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)",
-                                 kMaxHelperThreadCount );
-                t_threadState._helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
-            }
-            else
-                t_threadState._helperScratchSlot = static_cast<int32>( assigned );
+                SW_FATAL( "More than %# non-worker threads execute tasks at once - scratch slots would collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
+            t_threadState._helperScratchSlot = static_cast<int32>( assigned );
         }
         return getWorkerCount() + static_cast<uint32>( t_threadState._helperScratchSlot );
     }
@@ -722,7 +717,7 @@ namespace sw
             return;
         }
 
-        if ( count >= kObviouslyParallelCount )
+        if ( count >= kParallelThresholdCount )
         {
             runParallelRange( 0, count, body );
             return;
@@ -954,8 +949,10 @@ namespace sw
             const int64 elapsed = reportWatch.getElapsedMilliseconds();
             if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
             {
-                SW_LOG_ERROR_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, join.getPending(), kStageWaitReportMs,
-                                 _nodePool->describeFirstUnfinished( stage._pNode ) );
+                // 진행 알림이다(정보) — 판정이 아니다. 고정 벽시계로 오류를 내면 느린 구성 · 부하에서 제때 끝난 긴 일(Debug 의 메시 LOD 짓기)도 실패가 됐다. 멈춤 판정은
+                // 기계 배율을 읽는 행 감시(`AutomationHangWatchdog`, `gv_scenarioWallScale`) 하나다 — 언리얼도 대기가 아니라 `FThreadHeartBeat`(HangDuration 배율)가 판정한다.
+                SW_LOG_INFO_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, join.getPending(), kStageWaitReportMs,
+                                _nodePool->describeFirstUnfinished( stage._pNode ) );
                 reportWatch = Stopwatch{};
                 continue;
             }
@@ -999,12 +996,12 @@ namespace sw
             dispatchMainThreadTasks();
 
         // **세대를 먼저 읽고 큐를 본다**(워커 루프와 같은 순서). 읽은 뒤에 들어온 일은 세대를 바꿔 다음 걸음이 보고, 읽기 전에 들어온 일은 바로 아래에서 본다.
-        const uint32 workEpoch     = _workEpoch.load( std::memory_order_acquire );
-        const bool   bQueueChanged = inoutState._bQueueCheckDue || workEpoch != inoutState._observedWorkEpoch;
+        const uint32 jobEpoch      = _jobEpoch.load( std::memory_order_acquire );
+        const bool   bQueueChanged = inoutState._bQueueCheckDue || jobEpoch != inoutState._observedJobEpoch;
         if ( bQueueChanged )
         {
-            inoutState._observedWorkEpoch = workEpoch;
-            inoutState._bQueueCheckDue    = false;
+            inoutState._observedJobEpoch = jobEpoch;
+            inoutState._bQueueCheckDue   = false;
             if ( tryHelpAndExecute( bHelpLowQueue ) )
             {
                 // 같은 세대에 일이 더 남았을 수 있다(배치 하나에 세대는 한 번 오른다). 다음 걸음도 큐를 본다.
@@ -1032,7 +1029,7 @@ namespace sw
         while ( join.getPending() > 0 )
         {
             if ( helpOrSpin( spinState, bHelpLowQueue ) == false )
-                parkOnJoin( join );
+                parkOnJoin( join, bHelpLowQueue );
         }
     }
 
@@ -1047,8 +1044,8 @@ namespace sw
             const int64 elapsed = reportStopwatch.getElapsedMilliseconds();
             if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
             {
-                SW_LOG_ERROR_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, _activeTaskCount.load( std::memory_order_acquire ),
-                                 kStageWaitReportMs, describeUnfinishedTask() );
+                SW_LOG_INFO_ID( "TaskManager.StillWaitingTaskAfter", "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, _activeTaskCount.load( std::memory_order_acquire ),
+                                kStageWaitReportMs, describeUnfinishedTask() );
                 reportStopwatch = Stopwatch{};
                 continue;
             }
@@ -1066,7 +1063,7 @@ namespace sw
         return _nodePool->describeFirstUnfinished( nullptr );
     }
 
-    void TaskManager::parkOnJoin( JoinCounter& join )
+    void TaskManager::parkOnJoin( JoinCounter& join, const bool bHelpLowQueue )
     {
         const uint32    slotIndex = getCurrentThreadScratchSlot();
         atomic<uint32>& word      = getWaiterWord( slotIndex );
@@ -1108,8 +1105,28 @@ namespace sw
             }
         }
 
+        // 합류로 잠드는 워커도 유휴 마스크에 올린다 — 올리지 않으면 모든 워커가 합류로 잠든 뒤 워커 밖에서 넣은 일(그 합류가 기다리는 일일 수 있다)이
+        // 큐에 남아 교착한다(감사 C-3, 워커 1 개 구성에서 닿기 쉽다). 깨운 쪽은 비트를 내리고 워드를 바꾼다 → 돌아가 `waitForJoin` 이 돕는다. 순서는
+        // `workerLoop` 의 잠들기와 같다(워드 읽기 → 비트 올리기 → 큐 다시 보기). UE Tasks 의 기다리는 워커가 유휴 워커와 같은 대기 큐에 서는 자리.
+        const int32  workerIndex = t_currentWorkerIndex;
+        const uint64 idleBit     = workerIndex >= 0 ? static_cast<uint64>( 1 ) << static_cast<uint32>( workerIndex ) : 0;
+        if ( idleBit != 0 )
+        {
+            _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
+            std::atomic_thread_fence( std::memory_order_seq_cst );
+            uintptr_t item{ 0 };
+            if ( tryTakeItem( workerIndex, bHelpLowQueue, item ) )
+            {
+                _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
+                executeItem( item );
+                return;
+            }
+        }
+
         Futex::wait( word, observed );
 
+        if ( idleBit != 0 )
+            _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst ); // 합류가 끝나 깨었으면 비트가 아직 켜져 있다
         if ( bMainThread )
             _mainThreadParkedSlot.store( -1, std::memory_order_seq_cst );
     }
@@ -1259,13 +1276,13 @@ namespace sw
             {
                 if ( _globalWorkerQueue.enqueue( item ) )
                     return;
-                ThreadUtil::yield();
+                waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
             }
             return;
         }
         while ( _globalWorkerQueue.enqueue( item ) == false )
         {
-            ThreadUtil::yield();
+            waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
         }
     }
 
@@ -1354,14 +1371,14 @@ namespace sw
         {
             while ( _globalHighQueue.enqueue( item ) == false )
             {
-                ThreadUtil::yield();
+                waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
             }
         }
         else if ( pNode->_priority == TaskPriority::Low )
         {
             while ( _globalLowQueue.enqueue( item ) == false )
             {
-                ThreadUtil::yield();
+                waitForQueueSpace(); // 가득 찬 큐 — 잠든 워커가 비우게 깨운다(감사 C-4)
             }
         }
         else
@@ -1373,6 +1390,14 @@ namespace sw
             wakeSleepingWorkers( 1 );
     }
 
+    void TaskManager::waitForQueueSpace()
+    {
+        // 큐가 가득 찼다. `submitWithoutWake` 로 넣던 중이면 워커가 모두 잠들어 아무도 비우지 않는다 — 기한 없이 yield 만 하면 영원히 돈다.
+        // 잠든 워커를 깨워 비우게 한 뒤 양보한다(UE Tasks · 유니티 JobSystem 의 큐는 늘어난다 — 블록 연결 큐로 바꾸는 것은 남은 몫).
+        wakeSleepingWorkers();
+        ThreadUtil::yield();
+    }
+
     void TaskManager::wakeSleepingWorkers()
     {
         wakeSleepingWorkers( 0xFFFFFFFFu );
@@ -1381,7 +1406,7 @@ namespace sw
     void TaskManager::wakeSleepingWorkers( uint32 requestedCount )
     {
         // 스핀 중인 워커는 세대로 알아챈다. seq_cst 인 이유는 워커 쪽의 "유휴 비트 올리기 → 큐 확인" 과 Dekker 식 짝을 이루기 때문이다.
-        _workEpoch.fetch_add( 1, std::memory_order_seq_cst );
+        _jobEpoch.fetch_add( 1, std::memory_order_seq_cst );
         if ( requestedCount == 0 )
             return;
 
@@ -1436,13 +1461,13 @@ namespace sw
             // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 작업이 세대를 올려 스핀이 알아챈다.
             // (읽은 뒤에 들어온 작업은 세대를 바꾸고, 읽기 전에 들어온 작업은 바로 아래 tryTakeItem 이 본다.)
             bool            bFoundInSpin  = false;
-            uint32          observedEpoch = _workEpoch.load( std::memory_order_acquire );
+            uint32          observedEpoch = _jobEpoch.load( std::memory_order_acquire );
             const Stopwatch spinStopwatch;
             for ( ;; )
             {
-                if ( _workEpoch.load( std::memory_order_acquire ) != observedEpoch )
+                if ( _jobEpoch.load( std::memory_order_acquire ) != observedEpoch )
                 {
-                    observedEpoch = _workEpoch.load( std::memory_order_acquire );
+                    observedEpoch = _jobEpoch.load( std::memory_order_acquire );
                     if ( tryTakeItem( static_cast<int32>( workerID ), true, item ) )
                     {
                         bFoundInSpin = true;

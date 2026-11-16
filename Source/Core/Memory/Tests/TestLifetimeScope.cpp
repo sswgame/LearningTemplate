@@ -7,6 +7,7 @@
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -169,7 +170,7 @@ SW_TEST_CASE( LifetimeScopeTest, ConcurrentFirstUseCreatesOnce )
         thread arrWorker[kThreadCount];
         for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
         {
-            arrWorker[threadIndex] = thread( [&owned, &readyCount, &arrSeen, threadIndex]()
+            arrWorker[threadIndex] = thread( ThreadTestAccess::getKey(), [&owned, &readyCount, &arrSeen, threadIndex]()
             {
                 readyCount.fetch_add( 1 );
                 while ( readyCount.load() < kThreadCount )

@@ -204,7 +204,7 @@ namespace sw
      *          언리얼은 레벨 안 오브젝트를 경로로, 유니티는 파일 안 fileID 로 가리킨다. 이 배치의 저장된 id 가 그에 해당한다.
      *
      *          컴포넌트의 `GameObjectHandle` PROPERTY 도 같은 규칙으로 바꾼다(`resolveObjectReference`). 어느 깊이에 있든(구조체 필드, 컨테이너 원소 · 키 · 값, 중첩) 바꾼다 —
-     *          쓰기 처리기가 모든 깊이에서 저장 id 로 적으므로 읽기도 같은 깊이를 본다(`ReflectedValueWalk`). 상태를 읽은 항목만, 그 읽기의 목적이 다룬 필드만 바꾼다.
+     *          쓰기 처리기가 모든 깊이에서 저장 id 로 적으므로 읽기도 같은 깊이를 본다(`ReflectedValueVisitor`). 상태를 읽은 항목만, 그 읽기의 목적이 다룬 필드만 바꾼다.
      *          배치의 저장된 id 면 그 오브젝트로, `Live` 면 런타임 id 를 그대로(핫 리로드와 되돌리기에서는 id 가 다시 쓰이지 않는다), `Saved` 인데 배치에 없으면 없음으로 처리한다.
      *          컨테이너(시퀀스, set, 맵의 키와 값, 중첩)의 핸들도 옮긴다. 옮기지 못하는 모양(원소가 컨테이너인 set)이나 옮기다 실패한 것은 `Saved` 면
      *          **로드 오류**다(`finish` 가 false). 파일 id 를 그대로 두면 이 실행에서 같은 값을 받은 다른 오브젝트를 가리키고, 비우면 값이 조용히 사라진다.
@@ -212,12 +212,16 @@ namespace sw
      *
      *          타입 핸들(`TComponentHandle<T>`) PROPERTY 도 옮긴다(값 하나, 또는 시퀀스 원소 — 파서가 그 밖의 모양을 막는다). 파일 형태는 `{대상 오브젝트의 저장 id, 컴포넌트 안정 키}` 이고
      *          오브젝트 자리가 0 이면 이 오브젝트 자신이다. 읽은 값의 컴포넌트 자리는 키의 해시이며, 대상 오브젝트의 컴포넌트 키 해시와 맞춰 찾는다.
-     *          오브젝트를 찾지 못했거나 그 키의 컴포넌트가 없으면 핸들은 비운다(약한 참조라서 사라진 대상은 정상 값이다). **대상이 있는데 대상 타입이 아니면 로드 오류**다(`finish` 가 false).
+     *          오브젝트를 찾지 못했거나 그 키의 컴포넌트가 없으면 핸들은 비운다(약한 참조라서 사라진 대상은 정상 값이다). 다만 대상 오브젝트에 모르는 타입의 자리
+     *          (`MissingComponent`)가 있으면 그것이 대상일 수 있어 키 해시 그대로 남기고, 키 글은 그 자리가 맡아 다음 저장이 같은 글로 다시 쓴다(부착의 `keepUnresolvedAttach` 와 같은 규칙). **대상이 있는데 대상 타입이 아니면 로드 오류**다(`finish` 가 false).
      *          `Live` 면 런타임 id 를 그대로 두되 같은 타입 확인을 한다. 타입 없는 `ComponentHandle` 은 PROPERTY 에 둘 수 없다(리플렉션 파서 생성 오류).
      */
     class SW_API ObjectStateBatch
     {
     public:
+        /** @brief 읽은 컴포넌트 핸들의 키 글(`타입#n`)을 그 해시(`componentID` 자리 값)로 찾는 표입니다. */
+        using ComponentKeyTextMap = unordered_map<uint64, string>;
+
         explicit ObjectStateBatch( ObjectIDSpace idSpace );
         /** @brief 오브젝트를 추가했다면 `finish` 를 불렀어야 합니다(Debug 단언). */
         ~ObjectStateBatch();
@@ -237,6 +241,11 @@ namespace sw
          * @details `onPostLoad` 는 부착과 핸들 PROPERTY 가 해석된 **뒤에** 온다. 읽는 시점에 부르면 다른 오브젝트를 가리키는 필드가 아직 저장된 id 다.
          */
         void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed = true, uint64 savedIDScope = 0 );
+        /**
+         * @brief 상태를 읽으며 모은 컴포넌트 핸들의 키 글을 더합니다. 로더가 `addLoadedState` 와 함께 부릅니다.
+         * @details 핸들은 키의 해시만 든다. 대상이 모르는 타입이라 풀지 못한 참조를 남길 때 그 글을 `MissingComponent` 에 맡겨야 다음 글 저장이 참조를 그대로 쓴다.
+         */
+        void addComponentKeyTexts( ComponentKeyTextMap&& mapKeyText );
 
         /**
          * @brief 기록한 오브젝트들의 부착과 핸들 PROPERTY 를 연결하고, 상태를 읽은 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 모두 읽은 뒤 한 번 부릅니다.
@@ -301,6 +310,7 @@ namespace sw
         vector<Entry>                        _listEntry;
         unordered_map<uint64, GameObject*>   _mapSavedIDToObject;
         unordered_map<hashed_string, uint32> _mapSavedNameToEntry;
+        ComponentKeyTextMap                  _mapComponentKeyText; ///< 읽은 핸들의 키 글이다(`addComponentKeyTexts`)
         ObjectIDSpace                        _idSpace;
         uint8                                _bFinished           : 1;
         uint8                                _bReferencesResolved : 1; ///< `finish` 의 결과다. 두 번째 호출이 그대로 돌려준다
@@ -393,7 +403,7 @@ namespace sw
 
 /*
  * 전용 서버가 짓지 않는 소스(런타임 UI · `Client/`)의 리플렉션 형식 이름 표입니다 — 서버가 씬에서 그 컴포넌트를 만나면 `MissingComponent` 가 아니라 조용히 건너뜁니다.
- * 표는 생성 파일 `Config/Engine/ClientOnlyTypes.generated.json`(`Scripts/generate/ClientOnlyTypes.py`, 커밋 훅이 낡음을 잡는다)이다. 서버는 그 형식을 모르므로
+ * 표는 생성 파일 `Config/Engine/ClientOnlyTypes.generated.json`(`Scripts/generate/client_only_types.py`, 커밋 훅이 낡음을 잡는다)이다. 서버는 그 형식을 모르므로
  *          이름 바꾸기 · 빠진 모듈(오류 — 경고를 남기고 원문을 지킨다)과 클라이언트 전용(정상 — 서버에는 할 일이 없다)을 이 표로 가른다.
  *          언리얼은 클래스를 서버도 지어 두고 HUD 를 띄우지 않지만, 여기는 클래스를 짓지 않으니 이름만 싣는다(기억). 클라이언트 구성은 표를 읽지 않는다.
  */

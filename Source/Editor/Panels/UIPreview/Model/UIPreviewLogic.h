@@ -246,7 +246,7 @@ namespace sw::editor
         /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */
         static bool canEditSlotByHandle( const Widget& widget );
         /** @brief 위젯 @p widget 의 부모 패널 종류로 Slot 필드에 보일 필드 그룹을 고릅니다. 부모가 없으면(루트) 모두 false 입니다. */
-        static UIPreviewSlotParams findSlotFields( const Widget& widget );
+        static UIPreviewSlotParams findSlotProperties( const Widget& widget );
         /**
          * @brief 손잡이 @p handle 을 UI 단위 @p deltaUI 만큼 끈 결과를 슬롯에 적용합니다. 가운데는 두 오프셋을 함께, 변은 그 변의 오프셋만 옮깁니다(자동 크기이면 오른쪽 · 아래 오프셋은 쓰이지 않아 옮기지 않는다).
          * @return 슬롯이 바뀌었으면 true 입니다.
@@ -310,10 +310,6 @@ namespace sw::editor
          * @return 옮길 수 있으면 true 입니다. 루트이거나 형제 끝을 넘으면 false 입니다.
          */
         [[nodiscard]] static bool findSiblingMove( const Widget& widget, int32 delta, uint32& outFromIndex, uint32& outToIndex );
-        /**
-         * @brief 인스펙터 끌기의 되돌리기 항목을 합치는 키입니다. 세대가 들어 있어야 한다 — 트리를 새로 지은 뒤의 편집이 옛 세대 항목과 합쳐지면, 되돌리기가 끊긴 옛 항목을 불러 아무 일도 하지 않는다.
-         */
-        static string makeEditCoalesceKey( uint32 generation, uint32 ordinal, string_view propertyName );
         /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
         static string makeTimeLabel( float32 time, float32 duration );
     };

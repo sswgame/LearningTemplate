@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -16,8 +17,11 @@
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -73,10 +77,10 @@ namespace sw
 
     unique_ptr<IAudioService> IAudioService::create()
     {
-        // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 없거나 둘이면 빌드 구성의 결함이다(장치 없는 오디오로 몰래 바꾸지 않는다).
+        // 플랫폼 클라이언트 빌드는 백엔드 하나를 담는다 — 구성 단계가 먼저 막는다(Source/Engine/CMakeLists.txt). 여기 닿으면 링크가 등록자를 버린 것이다(장치 없는 오디오로 몰래 바꾸지 않는다).
         const AudioBackendRegistrar* pRegistrar = AudioBackendRegistrar::getHead();
         if ( pRegistrar == nullptr )
-            SW_FATAL( "No audio device backend is registered in this build (%#) - a client build links Audio/Windows or Audio/Linux", build::kTargetName );
+            SW_FATAL( "No audio device backend is registered in this build (%#) - a client build links Audio/Windows, Audio/Linux, Audio/Android or Audio/Web", build::kTargetName );
         if ( pRegistrar->_pNext != nullptr )
             SW_FATAL( "Two audio device backends are registered (%#, %#) - one platform build links one", pRegistrar->_pName, pRegistrar->_pNext->_pName );
         return pRegistrar->_pCreate();
@@ -97,6 +101,10 @@ namespace sw
         , _mixerPath{}
         , _musicPlayingID{ 0 }
         , _offlineFrameDebt{ 0.0 }
+        , _reopenSecondsLeft{ 0.0 }
+        , _reopenBackoff{ ExponentialBackoff::createWithRandomSeed( 0 ) } // `initialize` 가 설정의 첫 간격으로 바꾼다 — 그 전에는 `update` 가 돌지 않는다
+        , _reopenMaxDelayMs{ 0 }
+        , _bOutputLost{ false }
         , _device{}
         , _masterVolume{ 1.0f }
         , _musicVolume{ 1.0f }
@@ -111,10 +119,33 @@ namespace sw
 
     IAudioService::~IAudioService() = default;
 
-    bool IAudioService::initialize()
+    SubsystemInitResult IAudioService::initializeSubsystem()
+    {
+        return initialize( engine::getSubsystem<EngineConfig>()._audio ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+    }
+
+    bool IAudioService::initialize( const AudioConfig& config )
     {
         if ( _bInitialized )
             return true;
+
+        // 다시 열기 간격은 설정 파일이 정한다(엔진 설정 바탕 층 — 코드 기본값으로 대신하지 않는다).
+        if ( config._reopenFirstDelayMs == 0 || config._reopenMaxDelayMs < config._reopenFirstDelayMs )
+        {
+            SW_LOG_ERROR_ID( "AudioService.InvalidReopenDelay", "EngineConfig _audio: reopen delays must be first > 0 and max >= first (first %# ms, max %# ms)", config._reopenFirstDelayMs,
+                             config._reopenMaxDelayMs );
+            return false;
+        }
+        // 클립 캐시 예산도 설정 파일이 정한다 — 없으면 캐시가 끝없이 자라므로 기동을 멈춘다.
+        if ( config._clipCacheMegabytes == 0 )
+        {
+            SW_LOG_ERROR_ID( "AudioService.MissingClipCacheBudget", "EngineConfig _audio: _clipCacheMegabytes must be > 0" );
+            return false;
+        }
+        _pEngine->getClipStore().setBudgetBytes( static_cast<uint64>( config._clipCacheMegabytes ) * constant::memory::kBytesPerMegabyte );
+        _reopenBackoff     = ExponentialBackoff::createWithRandomSeed( static_cast<int64>( config._reopenFirstDelayMs ) );
+        _reopenMaxDelayMs  = static_cast<int64>( config._reopenMaxDelayMs );
+        _reopenSecondsLeft = 0.0; // 장치 없이 시작하면 첫 update 가 바로 다시 열어 본다
 
         // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
         AudioMixerDef mixerDesc;
@@ -309,10 +340,56 @@ namespace sw
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
     }
 
+    void IAudioService::closeLostOutput()
+    {
+        _bOutputLost.store( false, std::memory_order_release );
+        if ( _bOutputOpen )
+            stopOutput();
+        _bOutputOpen = SW_FALSE;
+        _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 오프라인 렌더(게임 스레드)가 받는다
+        if ( _bDeviceOpen )
+            closeDevice();
+        _bDeviceOpen       = SW_FALSE;
+        _device            = AudioOutputDevice{};
+        _offlineFrameDebt  = 0.0;
+        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( _reopenMaxDelayMs ) ) / static_cast<float64>( constant::time::kMillisecondsPerSecond );
+        SW_LOG_WARNING_ID( "AudioService.OutputLost", "The audio output device was lost - rendering offline and reopening the default device" );
+    }
+
+    void IAudioService::retryOpenOutput( float32 deltaSeconds )
+    {
+        _reopenSecondsLeft -= static_cast<float64>( deltaSeconds );
+        if ( _reopenSecondsLeft > 0.0 )
+            return;
+        _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( _reopenMaxDelayMs ) ) / static_cast<float64>( constant::time::kMillisecondsPerSecond );
+        AudioOutputDevice device{};
+        if ( openDevice( device ) == false )
+            return;
+        // 엔진의 지금 레이아웃으로 잇는다 — 새 장치가 그 채널 수를 못 받으면(5.1 로 돌다 스테레오 헤드폰) 스피커 모드 협상(`setSpeakerMode`)이 바꿀 일이다. 여기서는 열지 않는다.
+        const AudioChannelLayout layout       = _pEngine->getChannelLayout();
+        const bool               bFitsChannel = device._channelCount >= AudioChannelLayoutUtil::getChannelCount( layout );
+        _pEngine->releaseAudioThread(); // 렌더를 부를 스레드가 바뀐다(오프라인 → 장치 스레드)
+        if ( bFitsChannel == false || startOutput( layout ) == false )
+        {
+            _pEngine->releaseAudioThread();
+            closeDevice();
+            return;
+        }
+        _device      = device;
+        _bDeviceOpen = SW_TRUE;
+        _bOutputOpen = SW_TRUE;
+        _reopenBackoff.reset();
+        SW_LOG_INFO_ID( "AudioService.OutputReopened", "Audio output reopened (%# channels)", AudioChannelLayoutUtil::getChannelCount( layout ) );
+    }
+
     void IAudioService::update( float32 deltaSeconds )
     {
         SW_MEMORY_SCOPE( Audio );
-        if ( _bInitialized == false || _bOutputOpen )
+        if ( _bInitialized == false )
+            return;
+        if ( _bOutputLost.load( std::memory_order_acquire ) )
+            closeLostOutput();
+        if ( _bOutputOpen )
             return;
         // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
         const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioServiceInternal::kMaxOfflineSecondsPerUpdate );
@@ -326,6 +403,7 @@ namespace sw
             if ( bListened )
                 AudioRenderListenerRegistry::notifyRenderedBlock( _listOfflineBlock.data(), audio::kBlockFrameCount, layout );
         }
+        retryOpenOutput( deltaSeconds );
     }
 
     bool IAudioService::play( const AssetID& assetID, const hashed_string& bus )
@@ -504,7 +582,7 @@ namespace sw
 {
     span<const utf8* const> IAudioService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName, ConfigManager::kSubsystemName }; // 다시 열기 간격을 엔진 설정에서 읽는다
         return kArrDependency;
     }
 
@@ -569,7 +647,7 @@ namespace sw
 
 namespace sw
 {
-    // 전용 서버 역할(클라이언트 · 게임 구성의 `-server`)은 장치를 열지 않는다 — 소리 요청을 받아 버린다. 전용 서버 구성은 이 폴더를 짓지 않는다(`SW_UNBUILT_ENGINE_FOLDERS`).
+    // 전용 서버 역할(클라이언트 · 게임 구성의 `-server`)은 장치를 열지 않는다 — 소리 요청을 받아 버린다. 전용 서버 구성은 이 폴더를 짓지 않는다(`SW_EXCLUDED_ENGINE_FOLDERS`).
     SW_ENGINE_SERVICE_SUBSYSTEM( IAudioService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         SW_MEMORY_SCOPE( Audio );

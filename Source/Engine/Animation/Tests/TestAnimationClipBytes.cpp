@@ -126,7 +126,7 @@ SW_TEST_CASE( AnimationClipBytesTest, EveryTruncatedLengthIsRefused )
 }
 
 /** @brief [AnimationClipBytesTest] 꾸민 개수 · 길이는 할당 전에, NaN 은 칸에서 거절한다. 남는 바이트도 틀린 파일이다 */
-SW_TEST_CASE( AnimationClipBytesTest, ForgedCountsAndNonFiniteValuesAreRefused )
+SW_TEST_CASE( AnimationClipBytesTest, CraftedCountsAndNonFiniteValuesAreRefused )
 {
     SW_EXPECT_LOG( "AnimationClip.AnimationClipMalformed" );
     XTestUtil::ClipOffsets offsets{};
@@ -134,15 +134,15 @@ SW_TEST_CASE( AnimationClipBytesTest, ForgedCountsAndNonFiniteValuesAreRefused )
 
     for ( const size_t offset : { offsets._trackCount, offsets._firstTrackNameLength, offsets._codecByteSize, offsets._notifyCount, offsets._curveCount, offsets._keyCount } )
     {
-        vector<uint8> forged = bytes;
-        XTestUtil::patch( forged, offset, 0xFFFFFFFFu );
-        XTestUtil::expectClipRefused( forged );
+        vector<uint8> crafted = bytes;
+        XTestUtil::patch( crafted, offset, 0xFFFFFFFFu );
+        XTestUtil::expectClipRefused( crafted );
     }
     for ( const size_t offset : { offsets._duration, offsets._keyValue } )
     {
-        vector<uint8> forged = bytes;
-        XTestUtil::patch( forged, offset, 0x7FC00000u );
-        XTestUtil::expectClipRefused( forged );
+        vector<uint8> crafted = bytes;
+        XTestUtil::patch( crafted, offset, 0x7FC00000u );
+        XTestUtil::expectClipRefused( crafted );
     }
     vector<uint8> longer = bytes;
     longer.push_back( 0 );

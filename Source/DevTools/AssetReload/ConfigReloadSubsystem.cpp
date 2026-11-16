@@ -77,14 +77,14 @@ namespace sw
 
     ReloadResult ConfigReloadSubsystem::reloadChangedFile( string_view fullPath )
     {
-        const ReloadResult hostOutcome = _configManager.reloadConfigFile( fullPath );
-        if ( hostOutcome != ReloadResult::NotTracked )
-            return hostOutcome;
+        const ReloadResult hostResult = _configManager.reloadConfigFile( fullPath );
+        if ( hostResult != ReloadResult::NotTracked )
+            return hostResult;
         ReloadResult result = ReloadResult::NotTracked;
-        (void)_fileHandlers.broadcastUntil( [&result]( ReloadResult handlerOutcome )
+        (void)_fileHandlers.broadcastUntil( [&result]( ReloadResult handlerResult )
         {
-            result = handlerOutcome;
-            return handlerOutcome != ReloadResult::NotTracked; // 처음 맡은 처리기에서 멈춘다
+            result = handlerResult;
+            return handlerResult != ReloadResult::NotTracked; // 처음 맡은 처리기에서 멈춘다
         }, fullPath );
         return result;
     }

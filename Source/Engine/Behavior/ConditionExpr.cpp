@@ -365,7 +365,7 @@ namespace sw
         }
 
         /** @brief 평가에 필요한 스택 깊이를 잽니다. */
-        static bool fitsStack( const ConditionExpr& expr )
+        static bool canFitStack( const ConditionExpr& expr )
         {
             int32 depth = 0;
             for ( const ConditionInstruction& instruction : expr._listInstruction )
@@ -520,7 +520,7 @@ namespace sw
         parser.parseOr();
         if ( parser.hasError() == false && parser.isAtEnd() == false )
             parser.fail( "unexpected text after the expression" );
-        if ( parser.hasError() == false && ConditionExprInternal::fitsStack( built ) == false )
+        if ( parser.hasError() == false && ConditionExprInternal::canFitStack( built ) == false )
             parser.fail( "the expression is too large" );
         if ( parser.hasError() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "invalid condition expression", parser._error } );

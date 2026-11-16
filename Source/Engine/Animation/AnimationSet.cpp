@@ -146,7 +146,7 @@ namespace sw
         for ( XMLNode item = root.findChild( AnimationSetInternal::kClipName ); item; item = item.findNextSibling( AnimationSetInternal::kClipName ) )
         {
             AnimationSetClipParams params;
-            if ( XMLFields::readFields( item, params, sourceLabel ) == false )
+            if ( XMLFields::readProperties( item, params, sourceLabel ) == false )
                 return false;
             const string name = StringUtil::toLower( params._name.c_str() );
             if ( StringUtil::contains( name, "/" ) )

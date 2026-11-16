@@ -56,7 +56,7 @@ namespace sw
              * @brief `hud.print <섹션>` — 섹션 본문을 한 번 돌려 줄마다 로그(`DebugHUD.PrintLine`)와 답으로 낸다. HUD 를 켜지 않고 Output Log · 시나리오가 읽는다.
              * @details 본문은 HUD 가 부를 때와 같다(읽기만 한다). 게임 스레드에서 돈다(개발 명령은 게임 스레드에서 실행된다).
              */
-            static bool runPrint( const vector<string>& listArgument, string& outReply )
+            static bool runPrint( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 || engine::areEngineServicesBound() == false )
                     return false;
@@ -66,7 +66,7 @@ namespace sw
                     outReply = "hud.print: no section '" + listArgument[0] + "' (hud list)";
                     return false;
                 }
-                DebugHUDSectionWriter writer;
+                DebugHUDSectionWriter writer{ key };
                 pSection->_pFunc( writer );
                 outReply = string( "[" ) + pSection->_pTitle + "]";
                 for ( uint32 index = 0; index < writer.getLineCount(); ++index )
@@ -83,13 +83,14 @@ namespace sw
 
 namespace sw
 {
-    DebugHUDSectionWriter::DebugHUDSectionWriter()
+    DebugHUDSectionWriter::DebugHUDSectionWriter( SceneIterationKey key )
         : _listLine{}
         , _listGraph{}
         , _arrFrameSecond{}
         , _graphMax{ 0.0f }
         , _lineCount{ 0 }
         , _frameHistoryCount{ 0 }
+        , _sceneIterationKey{ key }
     {
     }
 
@@ -270,7 +271,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEV_COMMAND( DebugHUDPrint, "hud.print", "hud.print <section>", "Run one debug HUD section once and print its lines to the log (no HUD needed; Output Log and scenarios read it)",
-                    &DebugHUDRegistryInternal::runPrint );
+    SW_DEV_SCENE_COMMAND( DebugHUDPrint, "hud.print", "hud.print <section>", "Run one debug HUD section once and print its lines to the log (no HUD needed; Output Log and scenarios read it)",
+                          &DebugHUDRegistryInternal::runPrint );
     SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
 } // namespace sw

@@ -2,7 +2,7 @@
  * @file EditorAssertControl.cpp
  * @brief 단언 대화상자의 에디터 제어입니다 — 환경설정 Editor/Diagnostics 의 등록, 바뀐 값을 Core 에 입히기, 기억한 "늘 무시" 자리 지우기 명령, 감시 값.
  * @details 대화상자를 거는 것은 개발 도구다(실행 종류로 정한다 — `DevTools/Client/Diagnostics/AssertDialog`). 여기서는 걸린 대화상자를 띄울지와 "늘 무시" 를 기억할지만 정한다.
- *          설정은 모든 구성에 있고, 기억한 자리는 대화상자가 있는 Debug 에만 있다(Release 는 0 이다).
+ *          설정은 모든 구성에 있고, 기억한 자리는 대화상자가 있는 검사 구성에만 있다(배포는 0 이다).
  */
 #include "pch.h"
 
@@ -31,7 +31,7 @@ namespace sw::editor
             /** @brief 기억한 "늘 무시" 자리 수입니다. 대화상자가 없는 구성은 0 입니다. */
             static uint32 countIgnoredSites()
             {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
                 return ::sw::internal::getIgnoredAssertSiteCount();
 #else
                 return 0;
@@ -44,7 +44,7 @@ namespace sw::editor
                 if ( listArgument.empty() == false )
                     return false;
                 const uint32 count = countIgnoredSites();
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
                 ::sw::internal::clearIgnoredAssertSites();
 #endif
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

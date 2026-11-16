@@ -38,7 +38,7 @@ namespace sw
 {
     /**
      * @class ITelemetryUploader
-     * @brief 묶음 하나를 보냅니다. flush 를 부른 스레드에서 막고 돕니다.
+     * @brief 묶음 하나를 보냅니다. 서비스의 스풀 워커 스레드(`TelemetrySpool`)에서 막고 돕니다 — 어느 서비스 잠금도 쥐지 않은 채 불린다.
      */
     class SW_API ITelemetryUploader
     {

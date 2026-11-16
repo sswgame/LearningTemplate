@@ -51,6 +51,12 @@ namespace sw
         outReport = LedgerAuditReport{};
         map<string, LedgerAssetAudit> mapAsset;
 
+        // 공급 = 이월(보존 쓸기가 지운 분개의 합) + 남은 분개
+        map<string, LedgerSupplyStats> mapSupply;
+        const ServiceStoreResult       carried = Ledger::addCarriedSupply( connection, mapSupply, outReport._unreadableRecordCount );
+        if ( carried != ServiceStoreResult::Ok )
+            return carried;
+
         string cursor;
         while ( true )
         {
@@ -68,17 +74,18 @@ namespace sw
                     continue;
                 }
                 ++outReport._journalCount;
-                for ( const LedgerPosting& posting : entry._listPosting )
-                {
-                    if ( posting._from._kind == LedgerHolderKind::Mint )
-                        LedgerAuditInternal::getOrCreate( mapAsset, posting._assetID )._issued += posting._amount;
-                    if ( posting._to._kind == LedgerHolderKind::Sink )
-                        LedgerAuditInternal::getOrCreate( mapAsset, posting._assetID )._burned += posting._amount;
-                }
+                Ledger::addSupply( entry, mapSupply );
             }
             if ( static_cast<int32>( listRecord.size() ) < LedgerAuditInternal::kPageSize )
                 break;
             cursor = listRecord.back()._key;
+        }
+
+        for ( const auto& [assetID, supply] : mapSupply )
+        {
+            LedgerAssetAudit& audit = LedgerAuditInternal::getOrCreate( mapAsset, assetID );
+            audit._issued += supply._issued;
+            audit._burned += supply._burned;
         }
 
         cursor.clear();

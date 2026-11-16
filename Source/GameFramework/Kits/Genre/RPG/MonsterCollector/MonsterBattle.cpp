@@ -741,10 +741,10 @@ namespace sw
         return nullopt;
     }
 
-    void MonsterBattle::setResult( MonsterBattleResult outcome )
+    void MonsterBattle::setResult( MonsterBattleResult serviceResult )
     {
-        _result = outcome;
-        pushEvent( MonsterBattleEvent::Kind::BattleEnded, kPlayerSide, static_cast<int32>( outcome ) );
+        _result = serviceResult;
+        pushEvent( MonsterBattleEvent::Kind::BattleEnded, kPlayerSide, static_cast<int32>( serviceResult ) );
     }
 
     void MonsterBattle::pushEvent( MonsterBattleEvent::Kind kind, int32 side, int32 value, const hashed_string& id, float32 multiplier )

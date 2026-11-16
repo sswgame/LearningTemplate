@@ -136,7 +136,7 @@ namespace sw
          *        `kSlowFrameFramesAfter` 프레임 뒤 링 버퍼 전체(그 틱 앞뒤)를 `Saved/Traces/slowtick_<유닉스 밀리초>.trace.json` 에 저장합니다.
          * @param frameBeginNanos 틱 본문 시작(단조 시계) — 파일에 "Slow tick" 표식으로 찍힌다
          * @param frameEndNanos 틱 본문 끝
-         * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다(개발 도구 `ProfilerLaunchSwitches` 가 `-gv_traceSlowTickMs` 로). 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
+         * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다(개발 도구 `ProfilerLaunchSubsystem` 가 `-gv_traceSlowTickMs` 로). 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
          *          Shipping 에는 없습니다 — 운영에서 쓰려면 Dev 구성 서버(`Ninja-Release`)를 씁니다.
          */
         static void updateSlowFrameCapture( FrameProfiler& profiler, int32 budgetMilliseconds, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName );
@@ -177,16 +177,17 @@ namespace sw
                                                     string& outSavedPath, string& outReply );
 
         /**
-         * @brief 종료 때 트레이스 저장을 준비합니다 — 타임라인 링 버퍼 기록을 켭니다. @p path 는 로그에 알릴 저장 경로입니다.
-         * @details 개발 도구가 `-gv_traceSaveOnExit=<경로>` 로 기동 단계에 부릅니다(`ProfilerLaunchSwitches`). 여러 프로세스를 띄운 부모(에디터의 멀티 프로세스 재생)가
+         * @brief 종료 때 트레이스 저장을 준비합니다 — 타임라인 링 버퍼 기록을 켜고 기동을 첫 프레임 구간으로 엽니다. @p path 는 로그에 알릴 저장 경로입니다.
+         * @details 개발 도구가 `-gv_traceSaveOnExit=<경로>` 로 기동 단계에 부릅니다(`ProfilerLaunchSubsystem`). 여러 프로세스를 띄운 부모(에디터의 멀티 프로세스 재생)가
          *          프로세스마다 경로를 주고, 모두 끝난 뒤 그 파일들을 `mergeTraceJSON` 으로 합칩니다.
          */
         static void startExitCapture( FrameProfiler& profiler, string_view path );
         /**
-         * @brief 링 버퍼의 최근 프레임을 @p path 에 저장합니다. 결과는 로그에 남깁니다(`Exit trace saved <경로>`).
+         * @brief 지금을 마지막 구간의 끝으로 표시하고 링 버퍼의 최근 프레임을 @p path 에 저장합니다. 결과는 로그에 남깁니다(`Exit trace saved <경로>`).
          * @details 기동 단계가 내려갈 때 부릅니다(서비스가 아직 있다). @p processName 은 머리말의 프로세스 이름입니다.
+         *          `startExitCapture` 의 기동 표시와 이 끝 표시로 구간이 늘 있다 — 프레임을 돌기 전에 멈춘 프로세스도 기동 사건을 저장한다.
          */
-        static void finishExitCapture( const FrameProfiler& profiler, string_view path, string_view processName );
+        static void finishExitCapture( FrameProfiler& profiler, string_view path, string_view processName );
 
         /** @brief 개발 명령 `profile.trace` 의 첫 낱말이 가리키는 하위 명령입니다. */
         enum class CommandWord : uint8

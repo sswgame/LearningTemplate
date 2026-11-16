@@ -168,17 +168,27 @@ namespace sw
             if ( bUpToDate && bBodyGood )
                 continue;
             bBuiltAny = true;
-            if ( body.isValid() )
-                pScene->destroyBody( body );
-            body = PhysicsBodyHandle{};
             _triangleCount -= _listTriangleCount[chunkIndex];
             _listTriangleCount[chunkIndex]   = 0;
             _listBuiltGeneration[chunkIndex] = listGeneration[chunkIndex];
             ++_chunkBuildCount;
             // 모두 구멍인 청크는 바디가 없다(무효 핸들로 남는다).
-            if ( TerrainColliderComponent::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX, desc._listShape[0] ) == false )
-                continue;
-            body = pScene->createBody( desc );
+            const bool bSolid = TerrainColliderComponent::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX,
+                                                                                  desc._listShape[0] );
+            // 높이를 고친 청크는 바디를 두고 셰이프만 간다 — 다시 만들면 그 청크에 서 있던 쌍마다 끝 → 시작이 난다(감사 S-4). 레이어 · 재질이 바뀌면
+            // 속성 변경(`consumeRebuild`)이 바디를 먼저 놓아 이 길에 오지 않는다.
+            const bool bReshaped = bSolid && body.isValid() && pScene->isBodyValid( body ) &&
+                                   pScene->setBodyShape( body, span<const PhysicsShapeDesc3D>{ desc._listShape.data(), desc._listShape.size() }, _material, 0.0f );
+            if ( bReshaped )
+            {
+                pScene->setBodyTransform( body, desc._position, desc._rotation ); // 다시 읽기로 원점이 옮겨졌을 수 있다
+            }
+            else
+            {
+                if ( body.isValid() )
+                    pScene->destroyBody( body );
+                body = bSolid ? pScene->createBody( desc ) : PhysicsBodyHandle{};
+            }
             if ( body.isValid() == false )
                 continue;
             _listTriangleCount[chunkIndex] = static_cast<uint32>( desc._listShape[0]._listIndex.size() / 3 );

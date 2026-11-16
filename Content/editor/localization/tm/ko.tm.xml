@@ -519,6 +519,7 @@
 		<entry source="Delete every copy of this scene" text="이 씬의 사본을 모두 지웁니다" />
 		<entry source="Delete key" text="키 지우기" />
 		<entry source="Delete preset" text="프리셋 삭제" />
+		<entry source="Delete refused" text="삭제 거절" />
 		<entry source="Delete selected keys" text="선택한 키 지우기" />
 		<entry source="Delete the selected binding. Remove the items and tracks that use it first."
 		       text="선택한 바인딩을 지웁니다. 그것을 쓰는 항목과 트랙을 먼저 지우세요." />
@@ -1062,6 +1063,7 @@
 		<entry source="Move Up in Hierarchy" text="계층에서 위로" />
 		<entry source="Move cost" text="이동 비용" />
 		<entry source="Move down" text="아래로 옮기기" />
+		<entry source="Move refused" text="옮기기 거절" />
 		<entry source="Move the preview focus in this direction (like the keyboard or pad). The first press focuses the first focusable widget."
 		       text="미리보기 초점을 이 방향으로 옮깁니다(키보드 · 패드처럼). 처음 누르면 초점을 받는 첫 위젯에 갑니다." />
 		<entry source="Move the preview to the next node without waiting."
@@ -1880,6 +1882,7 @@
 		<entry source="Save or revert this file before opening another one."
 		       text="다른 파일을 열기 전에 이 파일을 저장하거나 되돌립니다." />
 		<entry source="Save preset" text="프리셋 저장" />
+		<entry source="Save refused" text="저장 거절" />
 		<entry source="Save the captured window to Saved/Profiler/ProfilerCapture.txt (long captures: Tracy)"
 		       text="캡처한 구간을 Saved/Profiler/ProfilerCapture.txt 로 저장합니다(긴 캡처는 Tracy)" />
 		<entry source="Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
@@ -2725,6 +2728,9 @@
 		<entry source="{objectCount} objects selected" text="오브젝트 {objectCount}개 선택됨" />
 		<entry source="{passed} ({frameCount} frames){reason}{reason2}"
 		       text="{passed}({frameCount}프레임){reason}{reason2}" />
+		<entry source="{path} is open - close it first" text="{path} 이(가) 열려 있습니다. 먼저 닫으십시오." />
+		<entry source="{path} is read-only - Check Out (lock) it in the Content Browser first"
+		       text="{path} 은(는) 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오." />
 		<entry source="{referrerCount} referencing file(s) are fixed in the same step. If a write fails, everything is put back"
 		       text="참조하는 파일 {referrerCount}개를 같은 단계에서 고칩니다. 쓰기가 하나라도 실패하면 모두 되돌립니다" />
 		<entry source="{registryCount, plural, one {# test} other {# tests}}" text="테스트 {registryCount}개" />

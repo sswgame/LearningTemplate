@@ -1,9 +1,9 @@
 /**
  * @file BuildInfo.h
  * @brief 빌드 구성 · 플랫폼 · 빌드 타깃 이름 상수입니다. 값은 CMake 가 정합니다.
- * @details `SW_BUILD_CONFIG_NAME` 은 `cmake/Engine/BuildLayout.cmake`(Shipping 이면 "Shipping", 아니면 구성 이름),
- *          `SW_PLATFORM_NAME` 은 `cmake/Modules/Platform/` 의 플랫폼 파일(그 플랫폼의 `SW_PLATFORM_*` 매크로 옆)가 정의합니다.
- *          `SW_TARGET_NAME` 은 `cmake/Engine/BuildLayout.cmake`(빌드 타깃 종류 `SW_TARGET_TYPE`)가 정의하고, 클라이언트 · 서버 코드를 담는지는 그 이름에서 만든 상수다
+ * @details `SW_BUILD_CONFIG_NAME` 은 `cmake/Modules/Build/BuildLayout.cmake`(Shipping 이면 "Shipping", 아니면 구성 이름),
+ *          `SW_PLATFORM_NAME` 은 `cmake/Toolchain/Platform/` 의 플랫폼 파일(그 플랫폼의 `SW_PLATFORM_*` 매크로 옆)가 정의합니다.
+ *          `SW_TARGET_NAME` 은 `cmake/Modules/Build/BuildLayout.cmake`(빌드 타깃 종류 `SW_TARGET_TYPE`)가 정의하고, 클라이언트 · 서버 코드를 담는지는 그 이름에서 만든 상수다
  *          — 전처리 갈래(`#if`)로 클라이언트 구역을 두지 못하게 매크로를 두지 않는다(`TargetMacroCheck.h`).
  *          이름을 코드에서 `#if` 사슬로 다시 만들지 말 것 — 원본은 CMake 한 곳입니다.
  */

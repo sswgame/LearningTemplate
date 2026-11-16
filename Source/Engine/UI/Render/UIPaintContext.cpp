@@ -214,7 +214,7 @@ namespace sw
         PanelWidget* const pPanel = widget.asPanel();
         if ( pPanel != nullptr && pPanel->getChildCount() > 0 )
         {
-            const bool bClip = pPanel->clipsChildren();
+            const bool bClip = pPanel->shouldClipChildren();
             SW_ASSERT( bClip == false || painter.getAnchor() == constant::invalid_index::kUint32 );
             if ( bClip )
             {

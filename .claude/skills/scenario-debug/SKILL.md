@@ -15,10 +15,11 @@ description: "이 저장소의 자동화 시나리오 실패를 추적하는 절
 # Windows Debug (빠르다, 먼저 시도). 백엔드는 하나로. 로그는 dbg.<백엔드>.log
 build/Ninja-Debug/Bin/App.exe -EnableEditor -scenario=<경로,경로> -scenario-keep-going -unattended -scenario-backends=dx12 -log-file=dbg.log
 # Linux
-py -3 Scripts/dev/LinuxScenarios.py stages 이름 앞단계,이름
+py -3 Scripts/dev/linux_scenarios.py stages 이름 앞단계,이름
 ```
 
 - 에디터 자체 테스트는 케이스 하나만: `-scenario=engine/automation/editor/selftests.scenario.xml -gv_editorSelfTestPattern=hierarchy.tagFilter` (시나리오 사본을 만들지 않는다).
+- 옛 바이너리로 재현하지 않는다: `App.exe` 를 직접 띄울 때는 고친 뒤 증분 빌드를 먼저 한다. `scenario_bisect.py` · `watch_scenarios.py` 는 돌리기 전에 프리셋을 스스로 증분 빌드하고, Linux 의 `chain` · `stages` · `bisect` 는 지은 커밋이 HEAD 와 다르면 멈춘다(`build` 를 먼저).
 - 체인을 처음부터 다시 돌리지 않는다: 진 단계와 의심 앞 단계만 `-scenario=` 에 넘긴다.
 - `-scenario-keep-going` 을 빼지 않는다. 앞 단계가 건너뜀 · 실패하면 뒤 단계가 돌지 않아 통과로 착각한다.
 - 게임 시나리오는 그 시나리오 `<Launch>` 값을 인자로 함께 넘긴다.
@@ -28,7 +29,7 @@ py -3 Scripts/dev/LinuxScenarios.py stages 이름 앞단계,이름
 
 ## 2. 앞 단계 찾기
 
-Windows: `py -3 Scripts/dev/ScenarioCulprit.py <체인> <단계> [--preset Ninja-Debug] [--backend dx12] [--show]`, Linux: `py -3 Scripts/dev/LinuxScenarios.py culprit <단계> [체인]` — 같은 함수로 앞 단계들을 이분 탐색한다(단계 목록 · 인자는 ctest 명령에서 가져오므로 게임 체인도 된다, 그 백엔드의 체인 로그가 있어야 한다). 단독 쌍으로 지지 않으면 뒤 단계와 함께 만드는 상태다. 그때는 묶음을 직접 좁힌 뒤, 범인 시나리오의 구간을 빼 가며 돌린다.
+Windows: `py -3 Scripts/dev/scenario_bisect.py <체인> <단계> [--preset Ninja-Debug] [--backend dx12] [--show]`, Linux: `py -3 Scripts/dev/linux_scenarios.py bisect <단계> [체인]` — 같은 함수로 앞 단계들을 이분 탐색한다(단계 목록 · 인자는 ctest 명령에서 가져오므로 게임 체인도 된다, 그 백엔드의 체인 로그가 있어야 한다). 단독 쌍으로 지지 않으면 뒤 단계와 함께 만드는 상태다. 그때는 묶음을 직접 좁힌 뒤, 범인 시나리오의 구간을 빼 가며 돌린다.
 
 자주 나온 상태: 눌린 채 끝난 입력(단계 초기화 `EditorAutomationStageReset`), 그리지 않는 위젯의 마지막 값(ImGuizmo), 숨긴 창(무인 실행의 `showWindow( false )` — 최소화가 아니다), 포커스.
 
@@ -40,7 +41,7 @@ Windows: `py -3 Scripts/dev/ScenarioCulprit.py <체인> <단계> [--preset Ninja
 
 ## 4. 고치기
 
-증상이 아니라 그 모양을 쓸 수 없게 한다. 시나리오의 시한을 늘리거나 고정 대기를 넣지 않는다.
+시나리오의 시한을 늘리거나 고정 대기를 넣지 않는다(구조로 푸는 원칙은 CLAUDE.md 1).
 
 - 입력 대상 대기는 단계가 맡는다(`holdUntilTextTarget` 등). 시나리오에 `<Wait>` 를 더하지 않는다.
 - 레이블이 복합 위젯의 엉뚱한 항목에 찍히면 위젯 함수의 `pMark` 인자로 옮긴다.
@@ -54,5 +55,3 @@ Windows: `py -3 Scripts/dev/ScenarioCulprit.py <체인> <단계> [--preset Ninja
 - 끄고 켠 두 장이 실제로 다른가(`game/empty/automation/deferredtransparent` 처럼). 값을 바꿔도 그림이 같은 시나리오는 아무것도 보지 않는다.
 - 기록 실행(`-scenario-update-golden`)의 통과는 그림의 증거가 아니다.
 - 로그의 Error · Warning 을 선언한 것과 대조한다.
-
-보고 끝에 근본 원인과 같은 결함이 다른 곳에 있을 가능성을 한 줄로 적는다.

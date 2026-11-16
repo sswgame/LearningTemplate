@@ -193,13 +193,13 @@ namespace sw
         if ( pManager == nullptr )
             return;
         int32 calledCount = 0;
-        pManager->forEachComponentOfType<HorseFollowAIController>( [this, &calledCount]( HorseFollowAIController* pAI )
+        for ( HorseFollowAIController* pAI : pManager->getComponentRegistry().getAll<HorseFollowAIController>() )
         {
             if ( pAI->getOwnerObject() != _player )
-                return;
+                continue;
             pAI->whistle();
             ++calledCount;
-        } );
+        }
         SW_LOG_INFO_ID( "WildWestGameMode.WhistleHorseComing", "[WildWest] whistle - %# horse(s) coming", calledCount );
     }
 

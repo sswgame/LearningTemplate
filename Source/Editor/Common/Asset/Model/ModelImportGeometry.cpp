@@ -6,7 +6,8 @@
 
 #include "Editor/Common/Asset/Model/ModelImportGeometry.h"
 
-#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -86,8 +87,9 @@ namespace sw::editor
                     if ( sceneNodes.isArray() == false )
                         continue;
 
-                    vector<uint64> listRoot;
-                    bool           bPromoted = false;
+                    vector<uint64>        listRoot;
+                    unordered_set<uint64> uniqueRoot; // 루트마다 목록을 훑지 않는다(장면 노드 수의 제곱). 목록은 처음 나온 순서다
+                    bool                  bPromoted = false;
                     for ( size_t slot = 0; slot < sceneNodes.size(); ++slot )
                     {
                         const optional<uint64> listedSlot = sceneNodes.at( slot ).read<uint64>();
@@ -104,7 +106,7 @@ namespace sw::editor
                             ++outPromotedCount;
                             bPromoted = true;
                         }
-                        if ( VectorUtil::contains( listRoot, rootIndex ) == false )
+                        if ( uniqueRoot.insert( rootIndex ).second )
                             listRoot.push_back( rootIndex );
                     }
                     if ( bPromoted == false )
@@ -186,13 +188,21 @@ namespace sw::editor
                                                   cgltf_size vertexCount, ModelImportUtil::MergedMesh& inoutMesh )
     {
         const size_t totalCount = inoutMesh._listVertex.size();
+        // 이름 → 번호를 한 번 색인한다 — 모프마다 이름 목록을 훑지 않는다(모프 수의 제곱). 새 이름은 목록 끝에 붙는다(순서 그대로).
+        unordered_map<hashed_string, size_t> mapMorphIndex;
+        for ( size_t morphIndex = 0; morphIndex < inoutMesh._listMorphName.size(); ++morphIndex )
+        {
+            mapMorphIndex.emplace( inoutMesh._listMorphName[morphIndex], morphIndex );
+        }
         for ( cgltf_size targetIndex = 0; targetIndex < primitive.targets_count; ++targetIndex )
         {
-            const hashed_string    name    = ModelImportUtil::makeMorphTargetName( pSourceMesh, targetIndex );
-            const optional<size_t> found   = VectorUtil::findIndex( inoutMesh._listMorphName, name );
-            const size_t           indexOf = found.has_value() ? *found : inoutMesh._listMorphName.size();
-            if ( found.has_value() == false )
+            const hashed_string name       = ModelImportUtil::makeMorphTargetName( pSourceMesh, targetIndex );
+            const auto          foundIter  = mapMorphIndex.find( name );
+            const bool          bFound     = foundIter != mapMorphIndex.end();
+            const size_t        getIndexOf = bFound ? foundIter->second : inoutMesh._listMorphName.size();
+            if ( bFound == false )
             {
+                mapMorphIndex.emplace( name, getIndexOf );
                 inoutMesh._listMorphName.push_back( name );
                 inoutMesh._listMorphPosition.emplace_back( totalCount, float3{} );
                 inoutMesh._listMorphNormal.emplace_back( totalCount, float3{} );
@@ -212,8 +222,8 @@ namespace sw::editor
             vector<float32> listNormalValue;
             if ( unpackOptionalFloats( pPosition, 3, vertexCount, listPositionValue ) == false || unpackOptionalFloats( pNormal, 3, vertexCount, listNormalValue ) == false )
                 return false;
-            vector<float3>& listPosition = inoutMesh._listMorphPosition[indexOf];
-            vector<float3>& listNormal   = inoutMesh._listMorphNormal[indexOf];
+            vector<float3>& listPosition = inoutMesh._listMorphPosition[getIndexOf];
+            vector<float3>& listNormal   = inoutMesh._listMorphNormal[getIndexOf];
             listPosition.resize( totalCount );
             listNormal.resize( totalCount );
             for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
@@ -455,7 +465,10 @@ namespace sw::editor
         if ( promotedCount == 0 )
             return promotedCount;
 
-        vector<uint8> rewrittenBytes = Internal::rewriteBytes( inoutBytes, span, document.dump() );
+        const expected<string> rewrittenJSON = document.dump();
+        if ( rewrittenJSON.has_value() == false )
+            return 0; // 다시 쓰지 못하는 글 — 고치지 않고 cgltf 가 알리게 한다
+        vector<uint8> rewrittenBytes = Internal::rewriteBytes( inoutBytes, span, *rewrittenJSON );
         inoutBytes.swap( rewrittenBytes );
         return promotedCount;
     }

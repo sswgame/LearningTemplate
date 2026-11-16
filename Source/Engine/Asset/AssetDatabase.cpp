@@ -63,7 +63,7 @@ namespace sw
             return false;
         }
         AssetIdentityRules loaded;
-        bool               bValid = JSONFields::readFields( document.getRoot(), loaded, path, { "_comment" } );
+        bool               bValid = JSONFields::readProperties( document.getRoot(), loaded, path, { "_comment" } );
         bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path ) && bValid;
         bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path ) && bValid;
         bValid                    = AssetDatabaseInternal::hasNoEmptyText( loaded._listDerivedFolder, "listDerivedFolder", path ) && bValid;

@@ -176,10 +176,10 @@ namespace sw
         /** @brief 스테이지에 속한 모든 태스크가 끝날 때까지 호출 스레드를 막고 기다립니다(기다리는 동안 다른 일을 돕습니다). */
         void waitStage( const TaskStageHandle& stage );
         /**
-         * @brief `waitStage` 와 같이 끝날 때까지 기다리되, 오래 걸리면 `kStageWaitReportMs` 마다 @p owner 와 남은 수 · 그 스테이지의 남은 태스크 이름 하나를 오류로 남깁니다.
+         * @brief `waitStage` 와 같이 끝날 때까지 기다리되, 오래 걸리면 `kStageWaitReportMs` 마다 @p owner 와 남은 수 · 그 스테이지의 남은 태스크 이름 하나를 정보로 남깁니다(진행 알림 — 판정이 아니다).
          * @details 주인이 "내가 낸 일만" 기다리는 자리(종료 · 취소)가 씁니다. **기한을 넘겨 그만 기다리지 않는다** — 낸 일은 반드시 끝나고(영구 태스크를 두지 않는 계약),
          *          기다리다 이어 가면 도는 태스크가 곧 지울 상태를 건드려 멈춤이 메모리 오염이 된다. 오래 걸리는 일은 주인이 먼저 협조 중단(`StopSource`)을 올린다.
-         *          정말 멈춘 것은 프로세스의 행 감시가 잡는다. 스테이지는 태스크가 도는 중에도 `addTask` 할 수 있어(남은 수가 0 에서 다시 오르면 스스로를 다시 잡는다)
+         *          정말 멈춘 것은 프로세스의 행 감시가 잡는다(기계 배율을 읽는 시한 하나 — 고정 간격의 이 알림이 오류면 느린 구성에서 제때 끝난 일도 실패가 된다). 스테이지는 태스크가 도는 중에도 `addTask` 할 수 있어(남은 수가 0 에서 다시 오르면 스스로를 다시 잡는다)
          *          오래 사는 주인이 스테이지 하나를 계속 쓴다. 엔진 전체 대기(`waitAll`)는 남이 낸 일까지 기다려 쓰지 않는다.
          */
         void waitStage( const TaskStageHandle& stage, string_view owner );
@@ -226,7 +226,7 @@ namespace sw
 
         /**
          * @brief 만들어진 태스크가 모두 끝날 때까지 기다립니다(기다리는 동안 다른 일을 돕는다). 기한은 없다 — `kStageWaitReportMs` 마다 @p owner 와 남은 수 ·
-         *        남은 태스크 이름 하나를 오류로 남긴다(`waitStage` 와 같은 정책 — 시간으로 포기하면 해제된 코드 · 객체를 태스크가 만지게 된다).
+         *        남은 태스크 이름 하나를 정보로 남긴다(`waitStage` 와 같은 정책 — 시간으로 포기하면 해제된 코드 · 객체를 태스크가 만지게 된다).
          * @details 남이 낸 일까지 기다리므로 주인이 자기 일만 기다릴 때는 스테이지를 쓴다. 엔진 종료 · 모듈 언로드처럼 "어떤 태스크도 남으면 안 되는" 자리만 쓴다.
          */
         void waitAll( string_view owner );
@@ -306,7 +306,7 @@ namespace sw
         /**
          * @brief 현재 스레드의 스크래치 슬롯입니다. 워커면 그 번호이고, 아니면 처음 물을 때 받는 고유한 도우미 번호(워커 수 + n)입니다.
          * @details 도우미 번호는 스레드마다 한 번 배정되어 그 스레드가 사는 동안 바뀌지 않습니다. 상한(`kMaxHelperThreadCount`)을
-         *          넘는 스레드는 마지막 슬롯을 나눠 쓰고, 그 경우를 로그로 알립니다(엔진에서 태스크를 기다리는 스레드는 메인 · 렌더 ·
+         *          넘으면 치명 오류로 멈춥니다(슬롯을 나눠 쓰면 스크래치가 겹친다 — 엔진에서 태스크를 기다리는 스레드는 메인 · 렌더 ·
          *          로더 · 업로드 정도라 넘지 않습니다). 대기자 슬롯(잠드는 워드)도 같은 번호를 씁니다.
          */
         uint32 getCurrentThreadScratchSlot();
@@ -328,6 +328,8 @@ namespace sw
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
     private:
+        /** @brief 전역 · 지역 큐가 가득 찼을 때 한 번 기다립니다 — 잠든 워커를 깨워 비우게 한 뒤 양보한다(`submitWithoutWake` 묶음이 용량을 넘어도 돈다). */
+        void waitForQueueSpace();
         // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
         void workerLoop( uint32 workerID );
@@ -381,13 +383,13 @@ namespace sw
         // --- 기다리기 ---
         /**
          * @brief 기다리는 스레드 하나의 스핀 상태입니다(`helpOrSpin` 이 고친다). 대기 함수의 스택에 둡니다.
-         * @details 큐는 `_workEpoch` 가 바뀌었을 때만 다시 봅니다 — 워커의 유휴 스핀과 같은 규칙입니다. 스핀마다 큐를 뒤지면 High · Normal 전역 큐의
+         * @details 큐는 `_jobEpoch` 가 바뀌었을 때만 다시 봅니다 — 워커의 유휴 스핀과 같은 규칙입니다. 스핀마다 큐를 뒤지면 High · Normal 전역 큐의
          *          읽기와 데크마다의 steal 을 대기자(게임 · 렌더 · 로더 스레드)가 64 번씩 반복해 워커와 같은 캐시 라인을 두드립니다.
          */
         struct WaitSpinState
         {
             uint32 _spinCount{ 0 };         ///< 이번 스핀 예산에서 쓴 `cpuPause` 수
-            uint32 _observedWorkEpoch{ 0 }; ///< 마지막으로 큐를 볼 때 읽은 `_workEpoch`
+            uint32 _observedJobEpoch{ 0 };  ///< 마지막으로 큐를 볼 때 읽은 `_jobEpoch`
             bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
@@ -401,7 +403,7 @@ namespace sw
         /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 작업을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
         void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
-        void parkOnJoin( JoinCounter& join );
+        void parkOnJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 메인 스레드가(어느 대기에서든) 잠들어 있으면 깨웁니다. 메인 전용 작업이 들어왔을 때 부릅니다. */
         void wakeParkedMainThread();
         /** @brief 대기자 슬롯 @p slotIndex 의 스레드를 깨웁니다. 할 일 없는 워커(슬롯 = 워커 번호)와 기다리는 스레드 모두 이 함수 하나로 깨웁니다. */
@@ -471,7 +473,7 @@ namespace sw
          *          세대가 바뀌었을 때만 큐를 건드립니다. `submitWithoutWake` 는 세대를 올리지 않고, 배치 끝의
          *          `wakeSleepingWorkers` 가 한 번 올립니다.
          */
-        alignas( 64 ) atomic<uint32> _workEpoch;
+        alignas( 64 ) atomic<uint32> _jobEpoch;
         /**
          * @brief 완료 브로드캐스트입니다(스테이지 완료 · 활성 수 0 · 메인 작업 · clear). `waitAll` 과 "두 번째 대기자" 가 잠듭니다.
          * @details 스테이지 · 병렬 그룹은 대기자 **하나**를 자기 조인 카운터에 적어 두고, 마지막 태스크가 그 스레드만 깨웁니다. 같은
@@ -509,7 +511,7 @@ namespace sw
          */
         atomic<uint32>           _clearEpoch;
         unique_ptr<TaskNodePool> _nodePool; ///< 태스크 노드 · 스테이지 · 병렬 그룹 풀
-    };
 
-    SW_SERVICE_SLOT( TaskManager, Required );
+        SW_SERVICE_SLOT( TaskManager, Required );
+    };
 } // namespace sw

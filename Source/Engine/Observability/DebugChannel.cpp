@@ -95,7 +95,7 @@ namespace sw
         (void)_pTransport->send( StreamConnectionHandle::fromPacked( packedHandle ), reinterpret_cast<const uint8*>( reply.data() ), static_cast<int32>( reply.size() ) );
     }
 
-    uint32 DebugChannel::pump()
+    uint32 DebugChannel::poll()
     {
         vector<Request> listRequest;
         {

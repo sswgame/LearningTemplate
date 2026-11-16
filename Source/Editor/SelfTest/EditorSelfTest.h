@@ -30,7 +30,7 @@ namespace sw::editor
     enum class EditorSelfTestStep : uint8
     {
         Continue = 0, ///< 다음 프레임에 다시 호출한다. 프레임 자체가 시험 내용일 때(매 프레임 크기 바꾸기 · "다음 프레임에 그려졌다") · 조건을 직접 볼 때 쓴다
-        WaitSettled,  ///< 에디터가 멈춘 뒤(정지 상태 — `EditorSettleWait`, 시나리오 `<EditorWaitSettled/>` 와 같은 판정) 다시 호출한다. 앞 단계가 낳은 일(패널 열기 · 도킹 · 에셋)을 기다릴 때 쓴다 — 프레임 수를 어림하지 않는다
+        WaitStable,   ///< 에디터가 멈춘 뒤(정지 상태 — `EditorStabilityWait`, 시나리오 `<EditorWaitStable/>` 와 같은 판정) 다시 호출한다. 앞 단계가 낳은 일(패널 열기 · 도킹 · 에셋)을 기다릴 때 쓴다 — 프레임 수를 어림하지 않는다
         Done          ///< 끝났다
     };
 

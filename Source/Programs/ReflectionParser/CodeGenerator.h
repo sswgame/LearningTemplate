@@ -38,7 +38,7 @@ namespace sw
 
         /**
          * @brief 개발 전용 단위(`<이름>.gen.meta.cpp`)의 내용 — 에디터 메타데이터(표시 · 편집 필드, 슬라이더 범위)를 채우는 함수와 정적 등록입니다.
-         * @details 배포 구성은 이 단위를 짓지 않는다(CMake `sw_addReflectionStep`) — 런타임 메타데이터 구조체의 배치가 구성마다 같다.
+         * @details 배포 구성은 이 단위를 짓지 않는다(CMake `sw_add_reflection_step`) — 런타임 메타데이터 구조체의 배치가 구성마다 같다.
          *          언리얼 `WITH_METADATA` 가 같은 칸을 `#if` 로 가르는 자리를 빌드 단위로 가른다. 적은 것이 없으면 한 줄 주석짜리 단위다(산출물 목록은 헤더마다 고정).
          */
         string makeEditorMetadataText() const;
@@ -82,7 +82,7 @@ namespace sw
         void emitTypeInfoAccessors( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief EnumRegistrar 본문을 출력합니다. */
         void emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const;
-        /** @brief 틱 레인 등록 줄(`SW_REGISTER_TICK_TYPE( 타입, 레인 )`)을 냅니다(NEXT 5-4 W-R3 c · 5-3 1c). 대상은 `ParsedTypeInfo::requiresTickRegistration`. */
+        /** @brief 틱 모드 등록 줄(`SW_REGISTER_TICK_TYPE( 타입, 모드 )`)을 냅니다(NEXT 5-4 W-R3 c · 5-3 1c). 대상은 `ParsedTypeInfo::requiresTickRegistration`. */
         void emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 물리 훅 등록 줄(`SW_REGISTER_PHYSICS_HOOKS( 타입 )`)을 냅니다(NEXT 5-3 물리 훅 배치). 대상은 `ParsedTypeInfo::requiresPhysicsHookRegistration`. */
         void emitPhysicsHookRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;

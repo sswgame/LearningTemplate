@@ -27,7 +27,7 @@ namespace sw
 
     /**
      * @class MatchServerAgent
-     * @brief 게임 서버 쪽에서 배정을 받는 객체입니다. `isAdmitted` 외에는 서버 루프 스레드 하나에서 씁니다.
+     * @brief 게임 서버 쪽에서 배정을 받는 객체입니다. `isAccepted` 외에는 서버 루프 스레드 하나에서 씁니다.
      */
     class SW_KIT_SERVER_API MatchServerAgent final : public IConnectAdmission
     {
@@ -49,7 +49,7 @@ namespace sw
         /** @brief 접속한 계정이 접속 예정자이면 경기 id 와 팀을 돌려줍니다. */
         [[nodiscard]] bool findExpected( AccountID accountID, uint64& outMatchID, int32& outTeam ) const;
         /** @brief 접속 예정자이면 true 입니다. 접속 인증기가 네트워크 스레드에서 부릅니다. */
-        bool isAdmitted( AccountID accountID ) const override;
+        bool isAccepted( AccountID accountID ) const override;
         /** @brief 새로 배정된 경기를 게임 로직이 받아 준비합니다. */
         void  pollNewMatches( vector<MatchFormed>& outListMatch ) { _newMatchBuffer.moveAllTo( outListMatch ); }
         int32 getExpectedCount() const;

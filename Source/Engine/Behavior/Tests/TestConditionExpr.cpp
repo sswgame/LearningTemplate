@@ -102,7 +102,7 @@ SW_TEST_CASE( ConditionExprTest, GrammarAndEvaluation )
 }
 
 /** @brief [ConditionExprTest] 산술(`+ - * /`)은 비교보다 먼저 묶이고 곱이 합보다 먼저다. 수치 칸이 같은 문법으로 값을 낸다. 0 으로 나누면 값이 없음이다 */
-SW_TEST_CASE( ConditionExprTest, ArithmeticForNumericFields )
+SW_TEST_CASE( ConditionExprTest, ArithmeticForNumericProperties )
 {
     TestValues values;
     values._x = 0.25;
@@ -177,9 +177,9 @@ SW_TEST_CASE( ConditionExprTest, ActionCallsByName )
     SW_EXPECT_TRUE( unknown.invoke( context ) == ActionResult::Failed );
 
     const ActionEntry* pEntry = nullptr;
-    InstancedStruct    fields;
-    SW_REQUIRE_TRUE( GameActionCall::tryReadFields( "test.count()", pEntry, fields ).has_value() );
-    SW_EXPECT_EQUAL( string( "test.count" ), GameActionCall::formatText( *pEntry, fields ) );
+    InstancedStruct    properties;
+    SW_REQUIRE_TRUE( GameActionCall::tryReadProperties( "test.count()", pEntry, properties ).has_value() );
+    SW_EXPECT_EQUAL( string( "test.count" ), GameActionCall::formatText( *pEntry, properties ) );
 }
 
 /** @brief [ConditionExprTest] 식 안의 호출마다 굴림 씨앗이 다르다(첫 호출은 문맥 그대로). 같은 문맥이면 몇 번 평가해도 같은 답이다 */

@@ -834,3 +834,23 @@ SW_TEST_CASE( MathTest, DeterministicRandomRejectsAZeroSeed )
     if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
 }
+
+/**
+ * @brief [MathTest] 피치 ±90° 에서도 오일러 → 쿼터니언 왕복이 같은 회전이다(감사 C-1 — 요 · 롤이 잡음을 받아 수직 카메라의 요가 사라졌다)
+ */
+SW_TEST_CASE( MathTest, EulerRoundTripSurvivesGimbalLock )
+{
+    for ( const float32 pitchDegrees : { 90.0f, -90.0f, 89.999f, -89.999f } )
+    {
+        for ( int32 yawStep = -4; yawStep <= 4; ++yawStep )
+        {
+            for ( int32 rollStep = -3; rollStep <= 3; ++rollStep )
+            {
+                const sw::quaternion q     = sw::quaternion::makeFromYawPitchRoll( 0.37f * static_cast<float32>( yawStep ), sw::MathUtil::toRadian( pitchDegrees ),
+                                                                                   0.41f * static_cast<float32>( rollStep ) );
+                const sw::quaternion again = sw::quaternion::makeFromYawPitchRoll( q.getEulerAngles() );
+                SW_EXPECT_NEAR( 1.0f, sw::MathUtil::abs( q.dot( again ) ), 1.0e-4f ); // ±q 는 같은 회전이다
+            }
+        }
+    }
+}

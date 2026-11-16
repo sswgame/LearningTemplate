@@ -119,13 +119,14 @@ namespace sw
         JournalKeyReused,  ///< 같은 분개 키에 다른 내용이다. 다시 쓴 멱등 키이거나 이미 쓰인 영수증이다
         Conflict,          ///< 버전 충돌이 재시도 상한을 넘었다. 부르는 쪽이 같은 키로 다시 한다
         Invalid,           ///< 규칙 위반(레그 수, 금액, 같은 보유자끼리, 시스템끼리, 글자 규칙, 쓰기 상한)
-        Unavailable        ///< 저장소 오류로 적용됐는지 모른다(같은 키로 다시 하면 판명된다)
+        Unavailable,       ///< 저장소 오류로 적용됐는지 모른다(같은 키로 다시 하면 판명된다)
+        AccountDeleted     ///< 다리의 계정이 탈퇴로 지워졌다(묘비 `ledger_tombstone`). 받을 이도 거둘 잔액도 없다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 자산마다 계정 잔액 상한을 알려 주는 인터페이스입니다. 화폐 카탈로그가 구현합니다. */
+    /** @brief 자산마다 계정 잔액 상한과 계정 사이 이전 가능 여부를 알려 주는 인터페이스입니다. 화폐 카탈로그가 구현합니다. */
     class ILedgerPolicy
     {
     public:
@@ -137,6 +138,12 @@ namespace sw
 
         /** @brief @p assetID 의 계정 잔액 상한입니다. 0 이하면 상한이 없다는 뜻이지만 그래도 `kMaxBalance` 를 넘지 못합니다. 저장소 스레드에서 불리므로 읽기만 해야 합니다. */
         virtual int64 getBalanceCap( string_view assetID ) const = 0;
+        /**
+         * @brief @p assetID 가 한 계정에서 다른 계정으로(길드 창고처럼 중간 보유자를 거쳐서도) 옮겨져도 되면 true 입니다. 저장소 스레드에서 불린다.
+         * @details 유료 재화는 맡긴 당사자가 허용한 권한 안에서만 다른 계정으로 간다(사용자 결정 2026-11-12, 감사 O-10). 이전 가능 여부는 정의의 속성이고 모든 통로가
+         *          같은 것을 본다(PlayFab Economy v2 · Steam Inventory).
+         */
+        virtual bool isTransferable( string_view assetID ) const = 0;
     };
 } // namespace sw
 

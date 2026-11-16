@@ -20,10 +20,10 @@ SW_TEST_CASE( AssetGUIDTest, TextRoundTripsAndCreateGivesDistinctValues )
     const AssetGUID first  = AssetGUID::create();
     const AssetGUID second = AssetGUID::create();
     SW_EXPECT_TRUE( first != second );
-    const optional<AssetGUID> reparsed = AssetGUID::tryParse( first.toString() );
-    SW_REQUIRE_TRUE( reparsed.has_value() );
-    SW_EXPECT_TRUE( *reparsed == first );
-    SW_EXPECT_EQUAL( first.computeHash(), reparsed->computeHash() );
+    const optional<AssetGUID> parsedAgain = AssetGUID::tryParse( first.toString() );
+    SW_REQUIRE_TRUE( parsedAgain.has_value() );
+    SW_EXPECT_TRUE( *parsedAgain == first );
+    SW_EXPECT_EQUAL( first.computeHash(), parsedAgain->computeHash() );
 }
 
 SW_TEST_CASE( AssetGUIDTest, RejectsOtherSpellingsAndTheZeroValue )

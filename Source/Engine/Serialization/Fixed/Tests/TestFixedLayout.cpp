@@ -42,7 +42,7 @@ namespace
             sample._quantized     = 3.7f;
             sample._time          = 12.5;
             sample._position      = float3( 1.0f, -2.5f, 9.75f );
-            sample._mode          = FixedLayoutSampleMode::Walk;
+            sample._mode          = FixedLayoutSampleMode::Crouch;
             sample._flags         = static_cast<FixedLayoutSampleFlags>( SW_BIT( 0 ) | SW_BIT( 2 ) );
             sample._name          = "pilot";
             sample._listValue     = { -5, 0, 300 };
@@ -182,10 +182,10 @@ SW_TEST_CASE( FixedLayoutTest, DescriptorCodecRefusesOutOfBoundBytes )
     }
 
     // 검증 함수는 다른 코덱 안에서도 읽기 끝에 불린다
-    FixedLayoutSample unlucky    = sample;
-    unlucky._listStat[0]._health = 13;
+    FixedLayoutSample invalidSample    = sample;
+    invalidSample._listStat[0]._health = 13;
     FixedLayoutSample target;
-    SW_EXPECT_TRUE( FixedSampleUtil::readHandEncoded( unlucky, FixedSampleFault::None, target ) == FixedReadResult::ValidateFailed );
+    SW_EXPECT_TRUE( FixedSampleUtil::readHandEncoded( invalidSample, FixedSampleFault::None, target ) == FixedReadResult::ValidateFailed );
 
     // 잘린 스트림
     BitWriter writer;

@@ -32,7 +32,9 @@ namespace sw
         , _bPointerLeft{ SW_FALSE }
         , _bHasSubRect{ SW_FALSE }
         , _bHasPosition{ SW_FALSE }
-        , _reserved{ 0 }
+        , _bRawMotionSource{ SW_FALSE }
+        , _bRawMotionThisFrame{ SW_FALSE }
+        , _bRawMotionConfirmed{ SW_FALSE }
     {
         MouseDevice::resetState();
     }
@@ -81,7 +83,7 @@ namespace sw
 
     float2 MouseDevice::getMovementDelta() const
     {
-        if ( _rawDelta._x != 0.0f || _rawDelta._y != 0.0f )
+        if ( isRawMotionConfirmed() || _bRawMotionThisFrame == SW_TRUE )
             return _rawDelta;
         return float2{ static_cast<float32>( _delta._x ), static_cast<float32>( _delta._y ) };
     }
@@ -104,6 +106,7 @@ namespace sw
         _prevMouse._y              = _mouse._y;
         _rawDelta._x               = 0.0f;
         _rawDelta._y               = 0.0f;
+        _bRawMotionThisFrame       = SW_FALSE;
         _mouseWheelDelta           = 0.0f;
         _mouseWheelHorizontalDelta = 0.0f;
 
@@ -119,6 +122,7 @@ namespace sw
         _releasedMask              = 0;
         _rawDelta._x               = 0.0f;
         _rawDelta._y               = 0.0f;
+        _bRawMotionThisFrame       = SW_FALSE;
         _mouseWheelDelta           = 0.0f;
         _mouseWheelHorizontalDelta = 0.0f;
     }
@@ -132,6 +136,7 @@ namespace sw
         _delta._y                  = 0;
         _rawDelta._x               = 0.0f;
         _rawDelta._y               = 0.0f;
+        _bRawMotionThisFrame       = SW_FALSE;
         _smoothDelta._x            = 0.0f;
         _smoothDelta._y            = 0.0f;
         _smoothVelocity._x         = 0.0f;
@@ -243,6 +248,8 @@ namespace sw
     {
         _rawDelta._x += dx;
         _rawDelta._y += dy;
+        _bRawMotionThisFrame = SW_TRUE;
+        _bRawMotionConfirmed = _bRawMotionSource; // 등록 뒤 첫 보고가 원천을 확정한다 — 등록 없이 온 이동(가상 입력)은 그 프레임만 원시다
     }
 
     void MouseDevice::addWheelDelta( float32 delta )

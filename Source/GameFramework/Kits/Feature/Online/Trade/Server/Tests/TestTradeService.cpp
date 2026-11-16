@@ -6,8 +6,10 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 using namespace sw;
 
@@ -38,7 +40,7 @@ namespace
             _service.initialize( &_store, &_policy, nullptr, kServer, _settings );
         }
 
-        void pump()
+        void poll()
         {
             while ( _store.pollCompletions() > 0 )
             {
@@ -47,7 +49,7 @@ namespace
 
         TradeCompletion take( uint64 tag )
         {
-            pump();
+            poll();
             vector<TradeCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -111,7 +113,7 @@ namespace
 
         vector<TradeSnapshot> takeUpdates()
         {
-            pump();
+            poll();
             vector<TradeSnapshot> listUpdate;
             _service.pollUpdates( listUpdate );
             return listUpdate;
@@ -138,8 +140,8 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), string( assetID ), amount } );
             request._journalKey = "test/grant/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.grant";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult result;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
         }
 
         void spend( AccountID accountID, string_view assetID, int64 amount )
@@ -148,11 +150,11 @@ namespace
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
             request._journalKey = "test/spend/" + to_string( accountID ) + "/" + string( assetID );
             request._reason     = "test.spend";
-            LedgerTransferResult outcome;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+            LedgerTransferResult result;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
         }
 
-        int64 balanceOf( AccountID accountID, string_view assetID )
+        int64 getBalanceOf( AccountID accountID, string_view assetID )
         {
             LedgerBalance balance;
             SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
@@ -195,18 +197,18 @@ SW_TEST_CASE( TradeServiceTest, SettlementSwapsBothSidesOnce )
     const TradeCompletion firstConfirm = rig.confirm( kAlice, locked );
     SW_EXPECT_TRUE( firstConfirm._result == TradeResult::Ok );
     SW_EXPECT_FALSE( firstConfirm._snapshot.isClosed() );
-    SW_EXPECT_EQUAL( int64( 100 ), world.balanceOf( kAlice, "cur.gold" ) ); // 한쪽 확정으로는 옮기지 않는다
+    SW_EXPECT_EQUAL( int64( 100 ), world.getBalanceOf( kAlice, "cur.gold" ) ); // 한쪽 확정으로는 옮기지 않는다
 
     const TradeCompletion settled = rig.confirm( kBob, firstConfirm._snapshot );
     SW_EXPECT_TRUE( settled._result == TradeResult::Ok );
     SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
-    SW_EXPECT_EQUAL( int64( 60 ), world.balanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 20 ), world.balanceOf( kAlice, "cur.gem" ) );
-    SW_EXPECT_EQUAL( int64( 40 ), world.balanceOf( kBob, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 30 ), world.balanceOf( kBob, "cur.gem" ) );
+    SW_EXPECT_EQUAL( int64( 60 ), world.getBalanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 20 ), world.getBalanceOf( kAlice, "cur.gem" ) );
+    SW_EXPECT_EQUAL( int64( 40 ), world.getBalanceOf( kBob, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 30 ), world.getBalanceOf( kBob, "cur.gem" ) );
 
     SW_EXPECT_TRUE( rig.confirm( kBob, firstConfirm._snapshot )._result == TradeResult::Ok ); // 응답을 잃은 재시도
-    SW_EXPECT_EQUAL( int64( 60 ), world.balanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 60 ), world.getBalanceOf( kAlice, "cur.gold" ) );
 
     SW_EXPECT_TRUE( rig.invite( kAlice, kBob )._result == TradeResult::Ok ); // 끝난 거래의 링크는 남지 않는다
 }
@@ -223,8 +225,8 @@ SW_TEST_CASE( TradeServiceTest, LostSettlementReplyMovesOnce )
     const TradeCompletion settled = rig.confirm( kBob, first );
     SW_EXPECT_TRUE( settled._result == TradeResult::Ok );
     SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
-    SW_EXPECT_EQUAL( int64( 60 ), world.balanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 40 ), world.balanceOf( kBob, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 60 ), world.getBalanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 40 ), world.getBalanceOf( kBob, "cur.gold" ) );
 }
 
 /** @brief [TradeServiceTest] 잔액: 잠글 때 모자라면 거절하고, 잠근 뒤 써 버렸으면 정산이 Failed 로 닫히며 아무도 재화를 잃지 않는다 */
@@ -247,8 +249,8 @@ SW_TEST_CASE( TradeServiceTest, FundsAreCheckedAtLockAndSettlement )
     SW_EXPECT_TRUE( failed._result == TradeResult::InsufficientFunds );
     SW_EXPECT_TRUE( failed._snapshot._state == TradeState::Failed );
     SW_EXPECT_TRUE( failed._snapshot._closeReason == TradeCloseReason::InsufficientFunds );
-    SW_EXPECT_EQUAL( int64( 10 ), world.balanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 50 ), world.balanceOf( kBob, "cur.gem" ) );
+    SW_EXPECT_EQUAL( int64( 10 ), world.getBalanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 50 ), world.getBalanceOf( kBob, "cur.gem" ) );
 
     SW_EXPECT_TRUE( rig.confirm( kBob, first )._result == TradeResult::InsufficientFunds ); // 재시도도 같은 답이다
     SW_EXPECT_TRUE( rig.invite( kAlice, kBob )._result == TradeResult::Ok );
@@ -265,7 +267,7 @@ SW_TEST_CASE( TradeServiceTest, ConfirmOfStaleOfferIsRefused )
     const TradeSnapshot relocked = rig.lock( kBob, locked._tradeID )._snapshot;
     SW_EXPECT_TRUE( rig.confirm( kAlice, locked )._result == TradeResult::StaleOffer );
     SW_EXPECT_TRUE( rig.confirm( kAlice, relocked )._result == TradeResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), world.balanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 100 ), world.getBalanceOf( kAlice, "cur.gold" ) );
 }
 
 /** @brief [TradeServiceTest] 시한이 지난 거래: 명령을 내면 닫히며 WrongState 이고, 새 초대는 남은 링크를 정리하고 진행한다 */
@@ -350,6 +352,30 @@ SW_TEST_CASE( TradeServiceTest, CloseForAccountWhenLeaving )
     SW_EXPECT_TRUE( rig.invite( kAlice, kCarol )._result == TradeResult::Ok );
 }
 
+/** @brief [TradeServiceTest] TTL 규칙: 거절된(닫힌) 거래는 닫은 뒤 기간이 지나면 지우고, 열린 거래는 남긴다(감사 O-9) */
+SW_TEST_CASE( TradeServiceTest, ClosedTradesExpireByRetention )
+{
+    TradeWorld    world;
+    TradeFixture& rig = world._rig;
+    for ( int32 index = 0; index < 3; ++index )
+    {
+        const uint64 tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
+        SW_REQUIRE_TRUE( rig.respond( kBob, tradeID, false )._result == TradeResult::Ok );
+    }
+    SW_REQUIRE_TRUE( rig.invite( kAlice, kBob )._result == TradeResult::Ok ); // 열린 거래다
+    SW_REQUIRE_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
+    SW_EXPECT_EQUAL( 3, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );
+
+    ServiceTTLRule        rule = TradeStoreLogic::makeTTLRule( 1000 );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) ); // 아직 기간 안이다
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 3, report._deletedCount );
+    SW_EXPECT_EQUAL( 1, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
+    SW_EXPECT_EQUAL( 0, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );
+}
+
 /** @brief [TradeServiceTest] 기동 복구: 다시 뜬 서버는 자기가 연 열린 거래를 닫아 당사자를 풀어 준다. 재화는 그대로다 */
 SW_TEST_CASE( TradeServiceTest, RestartRecoversOwnedTrades )
 {
@@ -362,7 +388,7 @@ SW_TEST_CASE( TradeServiceTest, RestartRecoversOwnedTrades )
     SW_REQUIRE_EQUAL( size_t( 1 ), listClosed.size() );
     SW_EXPECT_EQUAL( locked._tradeID, listClosed[0]._tradeID );
     SW_EXPECT_TRUE( listClosed[0]._closeReason == TradeCloseReason::ServerRestart );
-    SW_EXPECT_EQUAL( int64( 100 ), world.balanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 100 ), world.getBalanceOf( kAlice, "cur.gold" ) );
     SW_EXPECT_TRUE( restarted.invite( kAlice, kBob )._result == TradeResult::Ok );
     (void)restarted.takeUpdates();
 

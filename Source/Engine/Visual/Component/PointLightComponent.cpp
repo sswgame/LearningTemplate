@@ -69,10 +69,10 @@ namespace sw
         context.addErrorWithFix( "Radius is 0 - the light reaches nothing and the shader divides by it", ValidationPropertyEdit{ hashed_string{}, valueText.c_str(), description.c_str() } );
     }
 
-    void PointLightComponent::writeGPULightKindFields( GPULight& outLight ) const
+    void PointLightComponent::writeGPULightKindProperties( GPULight& outLight ) const
     {
         const float3 position    = getLightPosition();
         outLight._positionRadius = float4{ position._x, position._y, position._z, _radius };
-        _shadowSettings.writeGPULightFields( outLight );
+        _shadowSettings.writeGPULightProperties( outLight );
     }
 } // namespace sw

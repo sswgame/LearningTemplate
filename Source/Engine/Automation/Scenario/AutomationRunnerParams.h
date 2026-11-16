@@ -1,6 +1,6 @@
 /**
  * @file AutomationRunnerParams.h
- * @brief 실행기가 맡는 시나리오 단계(입력 · 변수 · 감시 값 · 로그 · 이미지 · 종료)의 인자 스키마입니다(`AutomationStep::readFields`).
+ * @brief 실행기가 맡는 시나리오 단계(입력 · 변수 · 감시 값 · 로그 · 이미지 · 종료)의 인자 스키마입니다(`AutomationStep::readProperties`).
  * @details 수 비교(`equals` · `near` · `atLeast` · `atMost`)는 어느 속성을 적었는지가 곧 규칙이라 스키마 칸이 아니라 손으로 읽습니다(`AutomationStepArgsUtil::parseNumberComparison`).
  *          감시 값 참조(`watch` · `target` · `key`)의 뜻 검사도 등록표를 봐야 해서 단계의 검사 함수가 합니다.
  * @note 실행기는 개발 도구(`DevTools/Client/Automation`)에 있지만 이 스키마는 엔진의 단계 형식 곁에 둔다 — 리플렉션 코드 생성(`REFLECT`)은 엔진 · 모듈 타깃만 돌고 DevTools 에는 그 단계가 없다.
@@ -190,9 +190,9 @@ namespace sw
         string _key{};
     };
 
-    /** @brief `Remember` 의 인자입니다. */
+    /** @brief `Store` 의 인자입니다. */
     REFLECT()
-    struct SW_API AutomationRememberParams : public AutomationRecordParams
+    struct SW_API AutomationStoreParams : public AutomationRecordParams
     {
         REFLECT_BODY();
 
@@ -227,7 +227,7 @@ namespace sw
         PROPERTY( Required )
         string _file{};
         PROPERTY()
-        bool _bWaitForSettle{ true }; ///< NOLINT(sw-bool-flag): 집합체다
+        bool _bWaitForStability{ true }; ///< NOLINT(sw-bool-flag): 집합체다
     };
 
     /** @brief `ExpectImage` 의 인자입니다. */
@@ -279,7 +279,11 @@ namespace sw
         float32 _withinSeconds{ AutomationTimeLimits::kDefaultExitWithinSeconds };
     };
 
-    /** @brief `ExpectExitWithin` 의 인자입니다. */
+    /**
+     * @brief `ExpectExitWithin` 의 인자입니다.
+     * @details `exitCode` 는 엔진이 스스로 끝낼 때 요청한 종료 코드(`QuitRequest`, `Config/Engine/ProcessExitCodes.json` 의 수)다 — 장치 분실 정책이 `DeviceLost`(18)로
+     *          끝내는지 같은, "정해진 코드로 끝난다" 를 시나리오가 판정한다. 맞으면 시나리오는 통과(0)로 끝난다. 창 닫기로 끝나는 보통의 경우는 0 이다.
+     */
     REFLECT()
     struct SW_API AutomationExpectExitWithinParams
     {
@@ -287,6 +291,8 @@ namespace sw
 
         PROPERTY( Min = 0 )
         float32 _seconds{ AutomationTimeLimits::kDefaultExitWithinSeconds };
+        PROPERTY( Min = 0, Max = 255 )
+        int32 _exitCode{ 0 };
     };
 
     /** @brief `Fail` · `Skip` 의 인자입니다. */

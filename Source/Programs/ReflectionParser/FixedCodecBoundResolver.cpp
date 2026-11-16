@@ -157,7 +157,7 @@ namespace sw
     string FixedCodecBoundResolver::makeFieldBound( const FixedCodecBound& bound )
     {
         StringBuilder<constant::buffer::kMax1024> text;
-        text.appendFormat( "::sw::FixedBound::field( %#u, offsetof( ::%#, %# ), ::sw::fixedNumberTypeOf< decltype( ::%#::%# ) >(), %# )", bound._scopeDepth, bound._ownerFqn,
+        text.appendFormat( "::sw::FixedBound::field( %#u, offsetof( ::%#, %# ), ::sw::getFixedNumberType< decltype( ::%#::%# ) >(), %# )", bound._scopeDepth, bound._ownerFqn,
                            bound._fieldName, bound._ownerFqn, bound._fieldName, bound._bNegate == SW_TRUE ? "true" : "false" );
         return string( text.view() );
     }

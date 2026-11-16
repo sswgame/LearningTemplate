@@ -8,7 +8,7 @@
  *             서버는 관찰자 둘레의 셀만 올리므로(`feedStreamingSources` → `SceneStreamingSubsystem::setExternalSources`) 나가는 반경이
  *             격자의 로딩 반경보다 크면 보이는 엔티티가 올라 있지 않은 셀에 있을 수 있다. 그 설정은 `initialize` 가 거절한다.
  *          2. 전송: 틱마다 새로 보이는 엔티티를 신뢰 메시지 하나에 묶어 전체 상태로 보낸다(Core 가 64 KB까지 조각으로 나눠 전송한다). 갱신은 비신뢰 메시지로 보낸다.
- *             갱신은 전달 통지(`INetPeers::sendNotifiedMessage`, 값은 서버 틱)를 달아 보내고, 연결 계층의 패킷 확인이 그 판정을 돌려준다(`onDeliveryNotice`).
+ *             갱신은 전달 통지(`INetPeers::sendNotifiedMessage`, 값은 서버 틱)를 달아 보내고, 연결 계층의 패킷 확인이 그 판정을 돌려준다(`onDeliveryNotification`).
  *             클라이언트가 확인 메시지를 따로 보내지 않는다(언리얼의 패킷 ACK · NAK 와 같다).
  *             갱신을 잃은 엔티티는 우선도와 "바뀜" 가중치를 되돌려서 곧 다시 보낸다.
  *             보이지 않게 된 엔티티는 조각나지 않는 크기(1 KB)의 메시지 여러 개로 나눠 알리고, 보낸 것만 보이는 목록에서 뺀다.
@@ -58,9 +58,9 @@ namespace sw
         using Update = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable, 4>; ///< 서버 → 클라이언트(비신뢰, 전달 통지). 통지 값은 서버 틱이다. 판 4: 갱신 확인 메시지 없이 전달 통지로 판정한다
         using Table  = NetMessageTable<NetKitMessageRange::kMMO, Enter, Leave, Update>;
 
-        static constexpr uint8 kEnter  = Table::kindOf<Enter>();
-        static constexpr uint8 kLeave  = Table::kindOf<Leave>();
-        static constexpr uint8 kUpdate = Table::kindOf<Update>();
+        static constexpr uint8 kEnter  = Table::getKindOf<Enter>();
+        static constexpr uint8 kLeave  = Table::getKindOf<Leave>();
+        static constexpr uint8 kUpdate = Table::getKindOf<Update>();
 
         static constexpr int32  kMaxStateBytes       = 512; ///< 엔티티 상태 상한. 서버는 넘는 엔티티를 받지 않고, 클라이언트는 넘는 길이를 손상된 메시지로 본다
         static constexpr uint32 kMaxUnconfirmedTicks = 64;  ///< 이만큼 지나도 판정이 없으면 잃은 것으로 본다. 서버 판정 테이블의 크기이기도 하다
@@ -76,7 +76,8 @@ namespace sw
         float3        _position{};
         uint32        _entityID{ 0 };
         uint32        _typeID{ 0 };
-        float32       _importance{ 1.0f }; ///< 보스와 다른 플레이어는 크게 잡는다
+        float32       _importance{ 1.0f };          ///< 보스와 다른 플레이어는 크게 잡는다
+        uint8         _bAlwaysRelevant{ SW_FALSE }; ///< 반경 밖에서도 보일 후보. 서버 복제기가 `setEntity` 때 항상 보임 집합에 모으고 정책(`IInterestPolicy::isAlwaysRelevant`)이 관찰자마다 거른다. 와이어에는 싣지 않는다
     };
 } // namespace sw
 
@@ -85,7 +86,7 @@ namespace sw
     /**
      * @class IInterestPolicy
      * @brief 관찰자가 어떤 엔티티를 얼마나 원하는지 정하는 정책입니다. 게임마다 교체합니다.
-     * @details 예를 들어 파티원은 항상 보이게 하고, 길드전 지역은 반경을 넓힐 수 있다.
+     * @details 예를 들어 파티원은 항상 보임 후보로 표시하고 같은 파티의 관찰자에게만 보이게 할 수 있다.
      * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
      */
     class SW_KIT_API IInterestPolicy
@@ -98,17 +99,16 @@ namespace sw
         IInterestPolicy& operator=( const IInterestPolicy& ) = default;
 
         /**
-         * @brief 반경 밖에서도 항상 보이는 엔티티가 있을 수 있으면 true 를 반환합니다.
-         * @details 기본값은 false 이다. false 이면 새로 보임 단계가 엔티티 전체를 훑지 않으므로 관찰자 수 × 엔티티 수만큼의 비용을 아낀다.
-         *          `isAlwaysRelevant` 를 바꾼 정책은 true 를 반환해야 한다.
+         * @brief 항상 보임 후보(`MMOEntity::_bAlwaysRelevant`)가 이 관찰자에게 반경과 상관없이 보여야 하면 true 를 반환합니다.
+         * @details 복제기는 후보만 모아 둔 집합(등록 · 해제 때 갱신)에 대해서만 부른다 — 관찰자마다 월드 전체를 훑지 않는다.
+         *          기본값은 모든 관찰자에게 true 이다(언리얼 Replication Graph 의 AlwaysRelevant 노드처럼 전역 목록을 그대로 준다).
+         *          파티원처럼 관찰자마다 다른 정책은 후보로 표시한 뒤 여기서 연결별로 거른다.
          */
-        virtual bool hasAlwaysRelevant() const { return false; }
-        /** @brief 반경과 상관없이 항상 보여야 하면 true 를 반환합니다. 파티원이나 추적 중인 퀘스트 대상이 해당합니다. `hasAlwaysRelevant` 가 true 일 때만 호출합니다. */
         virtual bool isAlwaysRelevant( int32 connectionID, const MMOEntity& entity ) const
         {
             (void)connectionID;
             (void)entity;
-            return false;
+            return true;
         }
         /** @brief 한 틱에 쌓을 우선도를 반환합니다. 기본값은 중요도 / (1 + 거리 / 10) 입니다. */
         virtual float32 computePriority( int32 connectionID, const MMOEntity& entity, float32 distance ) const
@@ -147,7 +147,7 @@ namespace sw
 {
     /**
      * @brief 서버 쪽 복제기입니다. 관찰자는 연결과 그 연결이 조종하는 엔티티이며, 그 엔티티의 위치가 관심의 중심입니다.
-     * @details 받는 메시지는 없다. 갱신(`kUpdate`)의 전달 판정을 라우터에서 받는다(`getNotifiedKindMask` · `onDeliveryNotice`).
+     * @details 받는 메시지는 없다. 갱신(`kUpdate`)의 전달 판정을 라우터에서 받는다(`getNotifiedKindMask` · `onDeliveryNotification`).
      *          라우터에 등록하면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
      */
     class SW_KIT_API MMOReplicator : public INetMessageHandler
@@ -161,7 +161,7 @@ namespace sw
         /** @brief 받는 종류가 없으므로 라우터는 부르지 않는다. 직접 전달하면 NotMine 이다. */
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 갱신 하나(값 = 그 틱)의 판정을 그 관찰자의 판정 테이블에 적습니다. 다음 `update` 가 전송 중인 갱신을 판정할 때 읽는다. */
-        void onDeliveryNotice( const NetDeliveryNotice& notice ) override;
+        void onDeliveryNotification( const NetDeliveryNotification& notification ) override;
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         /**
@@ -225,8 +225,8 @@ namespace sw
         struct Observer
         {
             unordered_map<uint32, VisibleEntry> _mapVisible{};
-            NetPrioritizer                      _prioritizer{};   ///< 보이는 엔티티마다 쌓인 우선도
-            TickRingBuffer<uint8>               _updateOutcome{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
+            NetPrioritizer                      _prioritizer{};  ///< 보이는 엔티티마다 쌓인 우선도
+            TickRingBuffer<uint8>               _updateResult{}; ///< 판정이 난 갱신 틱. 값이 `SW_TRUE` 면 전달, `SW_FALSE` 면 잃음이다. 항목이 없으면 아직 판정이 없다
             uint32                              _entityID{ 0 };
             uint8                               _bActive{ SW_FALSE };
         };
@@ -261,6 +261,7 @@ namespace sw
 
     private:
         unordered_map<uint32, MMOEntity>    _mapEntity;
+        unordered_set<uint32>               _setAlwaysRelevant; ///< `_bAlwaysRelevant` 인 엔티티 id. `setEntity` · `removeEntity` 가 갱신하고, 관찰자마다 이것만 정책에 묻는다(월드 전체를 훑지 않는다)
         vector<Observer>                    _listObserver;
         NetInterestGrid                     _interest;          ///< 엔티티 위치(XZ 평면의 점)와 두 반경. 칸은 `initialize` 가 받은 월드 격자의 셀 크기, 키는 `NetInterestGrid::makeKey`
         vector<float3>                      _listScratchSource; ///< `feedStreamingSources` 가 틱마다 다시 쓴다

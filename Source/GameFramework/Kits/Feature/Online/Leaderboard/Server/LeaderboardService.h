@@ -11,6 +11,10 @@
  *          - 업적은 통계가 임계값을 넘으면 `lb_achievement` 를 "없어야 함" 조건으로 쓰고 보상 우편(`ServiceMail::stageSend`, 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을 한 트랜잭션에 넣는다. 두 번 넘어도 한 번만 처리된다.
  *          - 시즌 정산은 예약 작업(`lb.settle.<보드>.<시즌 16진 8자리>`, 창 [끝, 끝 + 7일))이 한다. 점수를 모두 읽어 순위(같은 점수는 계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함")와 구간 보상 우편을 15명씩 한 트랜잭션에 쓴다.
  *            결과가 이미 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다.
+ *          - 지난 기간의 점수와 시즌 결과는 TTL 규칙(`makeScoreTTLRule` · `makeSeasonResultTTLRule`, 기간은 `LeaderboardKitConfig`)이 지운다.
+ *            점수는 처음 만들 때 TTL 색인 `lb_score_expiry` 에 `<기간 끝 16진>/<점수 키>` 를 함께 넣는다. 기간 끝은 일간 · 주간이면 다음 초기화, 시즌이면
+ *            시즌 끝 + 정산 창(7일)이라 정산이 읽기 전에 지워지지 않는다. 초기화 없는 보드는 색인을 넣지 않아 지우지 않는다.
+ *            시즌 결과는 정산 멱등의 근거지만 정산 창 안에서만 쓰인다. 색인 `lb_season_result_expiry` 의 시각이 창의 끝이라 창이 닫힌 뒤에만 지운다.
  *
  *          PlayFab Statistics 와 Leaderboards, EOS Stats 와 Leaderboards, Nakama Leaderboards(best, set, incr)에 해당한다.
  */
@@ -23,15 +27,18 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardTypes.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -69,7 +76,7 @@ namespace sw
 namespace sw
 {
     /** @brief 로직의 결과입니다. 업무 결과(`LeaderboardResult`) 또는 공통 범주(`OnlineError` — 범위 밖 요청 · 일시 장애 · 경합)입니다. */
-    using LeaderboardOutcome = OnlineOutcome<LeaderboardResult>;
+    using LeaderboardServiceResult = OnlineServiceResult<LeaderboardResult>;
 
     /** @brief 요청 하나의 완료입니다. 바인딩이 `_operation` 으로 메서드의 응답 타입을 고른다. */
     struct LeaderboardCompletion
@@ -81,7 +88,7 @@ namespace sw
         uint64                      _periodID{ 0 };
         uint64                      _requestTag{ 0 };
         int64                       _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
-        LeaderboardOutcome          _result{ LeaderboardResult::Ok };
+        LeaderboardServiceResult    _result{ LeaderboardResult::Ok };
         LeaderboardOperation        _operation{ LeaderboardOperation::Submit };
     };
 } // namespace sw
@@ -132,14 +139,28 @@ namespace sw
         const LeaderboardDef* findBoard( string_view boardID ) const;
         /** @brief 현재 기간 id 를 반환합니다. 기간 시작 시각이며 None 이면 0입니다. */
         uint64 computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const;
+        /** @brief 지난 기간 점수를 남기는 기간입니다. 키트 조립이 보존 규칙과 같은 값을 넣습니다(탈퇴 정리가 지울 기간을 정한다). */
+        void setPastScoreRetentionMs( int64 retentionMs ) { _pastScoreRetentionMs = retentionMs; }
+        /**
+         * @brief 탈퇴한 계정의 통계 · 업적 · 점수 · 시즌 결과를 지웁니다(키트 조립이 `AfterDeleteAccountMember` 로 훅에 건다). 저장소 스레드에서 부르며 `start` 뒤 바뀌지 않는 보드 정의만 읽습니다.
+         * @details 통계 · 업적은 계정 접두어로, 점수는 보드마다 남아 있을 수 있는 기간(초기화 없음 · 시즌 전부 · 일간/주간은 보존 기간 안)의 키로, 시즌 결과는 시즌마다 키로 지운다.
+         *          캐시 층의 순위(정렬 집합)는 서비스 스레드 것이라 여기서 지우지 않는다 — 기간이 바뀌거나 다시 채울 때 영속 표에서 사라진다.
+         */
+        [[nodiscard]] ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const;
 
-        /** @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다. */
-        void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, UnixMilliseconds nowMs, uint64 requestTag );
+        /**
+         * @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다.
+         * @details Sum · Latest 보드는 @p idempotencyKey 의 멱등 기록을 점수와 같은 트랜잭션에 남긴다 — 커밋이 Unavailable(적용 여부 모름)이어도 같은 키의 재시도가
+         *          두 번 더하지 않는다(감사 O-5, PlayFab 통계 Version · Nakama 유일 키 자리). 같은 키로 다시 오면 그때의 값을 돌려준다.
+         */
+        void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs,
+                          uint64 requestTag );
         void readTop( string_view boardID, int32 offset, int32 count, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 내 순위 주변을 조회합니다. 위아래로 @p radius 명씩이며 나를 포함합니다. 점수가 없으면 NotRanked 입니다. */
         void readAround( string_view boardID, AccountID accountID, int32 radius, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 통계를 바꿉니다. @p update 방식을 따르며 Best 는 큰 값을 씁니다. 그 통계에 연결된 보드에 같은 값을 냅니다. */
-        void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, UnixMilliseconds nowMs, uint64 requestTag );
+        void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, const NetIdempotencyKey& idempotencyKey,
+                         UnixMilliseconds nowMs, uint64 requestTag );
         void readStats( AccountID accountID, uint64 requestTag );
         // IAccountStatSource. 바인딩이 계정이 붙을 때 · 떠날 때 부르고, 매칭이 다른 서버의 파티원을 줄 세우는 동안 부른다
         AccountStatLookup findStat( AccountID accountID, string_view statName, int64& outValue ) const override;
@@ -167,6 +188,15 @@ namespace sw
         /** @brief 시즌 정산 작업 id 를 만듭니다. `lb.settle.<보드>.<시즌 16진 8자리>` 형식입니다. */
         static string makeSettlementJobID( string_view boardID, uint32 seasonID );
 
+        /** @brief 지난 기간 점수의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
+        static ServiceTTLRule makeScoreTTLRule( int64 expireAfterMs );
+        /** @brief 시즌 결과의 TTL 규칙입니다(TTL 색인 규칙, 정산 창이 닫힌 뒤부터 잰다). */
+        static ServiceTTLRule makeSeasonResultTTLRule( int64 expireAfterMs );
+        /** @brief 색인보다 먼저 쓴 점수의 백필 출처입니다. 줄의 시각이 보드 정의(초기화 · 시즌)에서 나오므로 @p listBoard 를 복사한 불변 사본을 든다. */
+        static shared_ptr<const IServiceTTLBackfillSource> makeScoreBackfillSource( const vector<LeaderboardDef>& listBoard );
+        /** @brief 색인보다 먼저 쓴 시즌 결과의 백필 출처입니다(시즌 끝 + 정산 창). */
+        static shared_ptr<const IServiceTTLBackfillSource> makeSeasonResultBackfillSource( const vector<LeaderboardDef>& listBoard );
+
         // 예약 작업
         void onScheduledRun( const ScheduledRun& run );
 
@@ -187,15 +217,15 @@ namespace sw
     private:
         /** @brief 저장소 일의 완료입니다. */
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
-                              LeaderboardOutcome result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
-        void applyStats( uint64 requestTag, LeaderboardOutcome result, vector<LeaderboardStat>&& listStat );
+                              LeaderboardServiceResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
+        void applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat );
         void applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
-        void applyAchievements( uint64 requestTag, LeaderboardOutcome result, vector<AchievementState>&& listAchievement );
-        void applyAchievementProgress( uint64 requestTag, LeaderboardOutcome result, vector<AchievementProgress>&& listProgress );
-        void applyScoresOf( uint64 requestTag, uint64 periodID, LeaderboardOutcome result, vector<LeaderboardEntry>&& listEntry );
-        void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardOutcome result, const LeaderboardEntry& entry );
+        void applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement );
+        void applyAchievementProgress( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementProgress>&& listProgress );
+        void applyScores( uint64 requestTag, uint64 periodID, LeaderboardServiceResult result, vector<LeaderboardEntry>&& listEntry );
+        void applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardServiceResult result, const LeaderboardEntry& entry );
         /** @brief 정산의 순위 읽기가 끝났습니다. 순위대로 정렬한 점수를 받아 첫 페이지를 맡깁니다. */
         void applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked );
         /** @brief 정산 페이지 하나가 끝났습니다. 다 썼으면 다음 페이지를, 실패했거나 끝이면 정산을 마칩니다. */
@@ -250,8 +280,8 @@ namespace sw
         void onRangeReply( const EphemeralReply& reply );
         void onNameReply( const EphemeralReply& reply );
         void finishQuery( uint64 queryID );
-        void completeRead( const PendingRead& read, LeaderboardOutcome result );
-        void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardOutcome result );
+        void completeRead( const PendingRead& read, LeaderboardServiceResult result );
+        void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardServiceResult result );
         void submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore );
         /** @brief 점수 · 통계 쓰기 일 하나를 맡깁니다. 완료가 `applyScoreWrite` 로 간다. */
         void submitWrite( const LeaderboardWriteInput& input, const string& boardID, AccountID accountID, uint64 periodID, uint64 requestTag, LeaderboardOperation operation );
@@ -265,6 +295,7 @@ namespace sw
 
     private:
         unordered_map<string, LeaderboardDef>              _mapBoard;
+        int64                                              _pastScoreRetentionMs;    ///< `setPastScoreRetentionMs`
         unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 대기 중인 읽기이다
         unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수)이다. 채운 뒤 한 번 더 싣는다
         unordered_map<uint64, PendingRead>                 _mapReadyRequestToRead;

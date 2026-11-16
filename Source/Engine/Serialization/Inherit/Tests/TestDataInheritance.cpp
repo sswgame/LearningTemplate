@@ -85,7 +85,7 @@ namespace
 } // namespace
 
 /** @brief [DataInheritanceTest] 자식이 적은 칸만 덮고 나머지는 부모 값이며, `_base` 는 결과에 남지 않는다 */
-SW_TEST_CASE( DataInheritanceTest, FieldsMergeOnlyWhatChildWrites )
+SW_TEST_CASE( DataInheritanceTest, PropertiesMergeOnlyWhatChildWrites )
 {
     DataInheritanceTestSource source;
     source.add( "base.xml", Util::kBase );
@@ -142,7 +142,7 @@ SW_TEST_CASE( DataInheritanceTest, KeyedListMergesByName )
 }
 
 /** @brief [DataInheritanceTest] 교체는 부모 칸을 물려받지 않고, 옮기기만 하는 줄은 값을 바꾸지 않는다 */
-SW_TEST_CASE( DataInheritanceTest, ReplaceDropsParentFieldsAndMoveKeepsThem )
+SW_TEST_CASE( DataInheritanceTest, ReplaceDropsParentPropertiesAndMoveKeepsThem )
 {
     DataInheritanceTestSource source;
     source.add( "base.xml", Util::kBase );

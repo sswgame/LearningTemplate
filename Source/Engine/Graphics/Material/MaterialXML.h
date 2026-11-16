@@ -76,7 +76,7 @@ namespace sw
     /**
      * @brief 머티리얼 루트(`<MaterialDef …>`)의 칸입니다. `formatVersion` 은 에셋 형식이, `_base` 는 부모 펼치기(`DataInheritance`)가 읽는다.
      * @details 쓸 때는 기본값도 모두 쓴다(`XMLFields::writeEveryField`) — 부모와 다른 칸만 남기는 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
-     *          렌더 상태 칸(`FixedRenderState`)은 같은 원소에 적지만 이 구조체에 들지 않는다 — "적지 않음" 이 "패스의 값" 이라 적은 칸만 쓴다(`MaterialXML::parseRenderFields`).
+     *          렌더 상태 칸(`FixedRenderState`)은 같은 원소에 적지만 이 구조체에 들지 않는다 — "적지 않음" 이 "패스의 값" 이라 적은 칸만 쓴다(`MaterialXML::parseRenderProperties`).
      */
     REFLECT()
     struct SW_API MaterialRootParams
@@ -202,9 +202,9 @@ namespace sw
          *          `twoSidedLighting` 은 `cullMode="None"` 과 함께다. `alphaCutoff` 는 `Mask` 일 때만 기본값이 아닐 수 있다. `MATERIAL_ALPHA_CUTOFF` · `MATERIAL_TWO_SIDED` 를 define 으로 직접 적지 않는다.
          *          @p inoutDesc 의 퍼뮤테이션을 읽은 뒤에 부른다.
          */
-        [[nodiscard]] static bool parseRenderFields( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc );
-        /** @brief 렌더 상태 칸 중 적은 것과 `_listBlendTarget` 을 씁니다(`parseRenderFields` 의 짝). */
-        static void appendRenderFields( XMLNode root, const MaterialDef& desc );
+        [[nodiscard]] static bool parseRenderProperties( XMLNode root, const MaterialRootParams& rootParams, string_view sourceName, MaterialDef& inoutDesc );
+        /** @brief 렌더 상태 칸 중 적은 것과 `_listBlendTarget` 을 씁니다(`parseRenderProperties` 의 짝). */
+        static void appendRenderProperties( XMLNode root, const MaterialDef& desc );
 
         /** @brief 순열 설정을 읽습니다(칸은 `MaterialPermutationParams` · `MaterialStaticSwitchParams` · `MaterialMultiCompileParams`). 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool parsePermutationNode( XMLNode root, MaterialPermutationDef& outDesc );

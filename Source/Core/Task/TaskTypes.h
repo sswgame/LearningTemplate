@@ -185,7 +185,7 @@ namespace sw
             using Stored = std::decay_t<T>;
             if ( _pVtable == nullptr )
                 return nullptr;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             SW_ASSERT( _pVtable->_pDestroy != nullptr );
             SW_ASSERT( _pVtable->_bIsInline == kIsInline<Stored> );
             SW_ASSERT( _pVtable->_typeSize == sizeof( Stored ) );

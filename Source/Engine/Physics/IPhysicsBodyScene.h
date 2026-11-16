@@ -74,6 +74,15 @@ namespace sw
         virtual void   destroyBodies( span<const PhysicsBodyHandle> listBody ) = 0;
         virtual bool   isBodyValid( PhysicsBodyHandle body ) const             = 0;
         virtual uint32 getBodyCount() const                                    = 0;
+        /**
+         * @brief 바디를 지우지 않고 셰이프를 @p listShape 로 바꿉니다 — 핸들 · 자세 · 속도 · 관절이 그대로이고, 새 셰이프로도 닿아 있는 쌍은 접촉이 이어집니다.
+         * @details 배율이 바뀐 콜라이더가 쓴다(바디를 다시 지으면 핸들이 바뀌어 닿아 있던 쌍마다 끝 → 시작 한 쌍이 난다, 감사 S-4). 떨어진 쌍만 다음 step 에
+         *          끝난다. 질량은 새 셰이프로 다시 센다(@p mass 가 0 보다 크면 그 질량). @p material 은 셰이프가 재질을 지정하지 않았을 때의 재질이다.
+         *          Jolt `BodyInterface::SetShape`, Godot `PhysicsServer3D::body_set_shape`, 언리얼 `FBodyInstance::UpdateBodyScale` 자리다.
+         *          지을 수 없는 셰이프(빈 목록, 동적 바디의 삼각 메시, 없는 재질, 껍질이 없는 다각형)면 오류를 남기고 false 다 — 그 바디는 옛 셰이프이거나
+         *          일부만 붙었을 수 있으니 부르는 쪽이 바디를 놓는다.
+         */
+        [[nodiscard]] virtual bool setBodyShape( PhysicsBodyHandle body, span<const ShapeDesc> listShape, const hashed_string& material, float32 mass ) = 0;
         /** @brief 바디를 시뮬레이션에서 빼거나 다시 넣습니다. 지우지는 않으며, 풀에 넣어 둔 파편을 다시 쓸 때 씁니다. 뺀 바디는 질의와 접촉에서 제외됩니다. */
         virtual void setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) = 0;
         virtual bool isBodyEnabled( PhysicsBodyHandle body ) const           = 0;

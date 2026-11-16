@@ -38,11 +38,11 @@ namespace sw
                 }
                 uint32 playedCount  = 0;
                 uint32 killcamCount = 0;
-                pManager->forEachComponentOfType<KillcamComponent>( [&playedCount, &killcamCount]( KillcamComponent* pKillcam )
+                for ( KillcamComponent* pKillcam : pManager->getComponentRegistry().getAll<KillcamComponent>() )
                 {
                     ++killcamCount;
                     playedCount += pKillcam->playLastKill() ? 1u : 0u;
-                } );
+                }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "killcam.play played %# of %# killcam(s)", playedCount, killcamCount );
                 outReply = string( replyBuilder.view() );

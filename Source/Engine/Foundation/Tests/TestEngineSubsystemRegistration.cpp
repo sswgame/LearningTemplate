@@ -12,19 +12,23 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/QuitRequest.h"
 
-// 칸을 가진 타입은 외부 연결이어야 한다(칸이 `SW_API` 정적 멤버다) — 익명 namespace 에 둘 수 없다.
+// 칸을 가진 타입은 외부 연결이어야 한다(칸이 형식의 정적 멤버다) — 익명 namespace 에 둘 수 없다.
 namespace sw::engine_registration_test
 {
     /** @brief 필수 칸 · 게임 노출로 등록하는 값입니다. */
     struct RequiredValue
     {
         int32 _value;
+
+        SW_SERVICE_SLOT( RequiredValue, Required );
     };
 
     /** @brief 선택 칸 · 호스트 전용으로 등록하는 값입니다. */
     struct OptionalValue
     {
         int32 _value;
+
+        SW_SERVICE_SLOT( OptionalValue, Optional );
     };
 
     /** @brief 번호 @p id 의 서브시스템 이름입니다(없는 번호는 nullptr). */
@@ -72,10 +76,8 @@ namespace sw::engine_registration_test
 
 namespace sw
 {
-    SW_SERVICE_SLOT( engine_registration_test::RequiredValue, Required );
-    SW_SERVICE_SLOT( engine_registration_test::OptionalValue, Optional );
-    ServiceSlot ServiceSlotOf<engine_registration_test::RequiredValue>::s_slot{ nullptr };
-    ServiceSlot ServiceSlotOf<engine_registration_test::OptionalValue>::s_slot{ nullptr };
+    ServiceSlot engine_registration_test::RequiredValue::s_serviceSlot{ nullptr };
+    ServiceSlot engine_registration_test::OptionalValue::s_serviceSlot{ nullptr };
 } // namespace sw
 
 using namespace sw;
@@ -91,7 +93,7 @@ namespace
             : engine::EngineServiceRecord{ list,
                                            ServiceSlotOf<T>::kTypeName,
                                            getSubsystemTypeHash<T>(),
-                                           ServiceSlotOf<T>::s_slot,
+                                           ServiceSlotOf<T>::getSlot(),
                                            &engine::EngineRegistrationOps<T>::bind,
                                            ServiceSlotOf<T>::kRequirement,
                                            visibility }
@@ -186,7 +188,7 @@ SW_TEST_CASE( EngineRegistrationTest, MissingRequiredSlotIsReportedByName )
     const engine::EngineServiceBindResult  missing = list.bindServices( emptyScope );
     SW_REQUIRE_TRUE( missing._kind == engine::EngineServiceBindKind::MissingRequired );
     SW_REQUIRE_NOT_NULL( missing._pTypeName );
-    SW_EXPECT_EQUAL( string( "engine_registration_test::RequiredValue" ), string( missing._pTypeName ) );
+    SW_EXPECT_EQUAL( string( "RequiredValue" ), string( missing._pTypeName ) );
     SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
     list.unbindServices( emptyScope ); // 서지 못한 호스트도 끊는다 — 다음 바인딩이 거절되지 않게
 

@@ -173,7 +173,7 @@ namespace sw
         /** @brief 두 결과 중 나쁜 쪽입니다(ObjectRejected > StreamBroken > FieldFailed > Read). */
         static ContainerReadResult mergeResult( ContainerReadResult lhs, ContainerReadResult rhs ) noexcept;
         /** @brief 이 결과 뒤로 원소를 더 읽지 않습니다(StreamBroken, ObjectRejected). 형식의 `forEachElement` 가 원소마다 봅니다. */
-        [[nodiscard]] static bool stopsReading( ContainerReadResult result ) noexcept;
+        [[nodiscard]] static bool shouldStopReading( ContainerReadResult result ) noexcept;
         /**
          * @brief 컨테이너 필드 하나의 결과를 필드 결과로 바꿉니다. 필드의 끝은 형식이 알므로(XML 노드, JSON 값, 바이너리 페이로드 크기) StreamBroken 은 그 필드의 실패입니다.
          * @details ObjectRejected 는 그대로 객체째 실패입니다 — 칸 실패로 낮추면 안의 금지된 필드가 orphan 으로 넘어간다.
@@ -182,6 +182,6 @@ namespace sw
         /** @brief 원소 하나(값 구조체 · 소유 포인터 객체)의 필드 결과를 원소 결과로 바꿉니다. ObjectRejected 는 그대로 위로 올라갑니다. */
         [[nodiscard]] static ContainerReadResult toElementResult( FieldReadResult result ) noexcept;
         /** @brief 실패가 한 가지뿐인 읽기(처리기 · 열거형 · 텍스트 값)의 bool 을 필드 결과로 바꿉니다. 그런 읽기는 객체째 실패를 알 수 없으므로 false 는 `FieldFailed` 입니다. */
-        [[nodiscard]] static FieldReadResult fieldResultOf( bool bRead ) noexcept;
+        [[nodiscard]] static FieldReadResult makeFieldResult( bool bRead ) noexcept;
     };
 } // namespace sw

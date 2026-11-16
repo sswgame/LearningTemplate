@@ -202,7 +202,7 @@ namespace sw
         unordered_set<string> uniqueSetEmittedPath;
         for ( const FileChangeEvent& changeEvent : outListEvent )
         {
-            uniqueSetEmittedPath.insert( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
+            uniqueSetEmittedPath.insert( FileUtil::makeComparableDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) ); // 디스크 경로라 OS 규칙(리눅스는 대소문자를 가른다)
         }
 
         // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
@@ -224,7 +224,7 @@ namespace sw
                 if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false || mtime < sinceTimestamp )
                     continue; // 그 사이 지워졌거나 그 뒤로 바뀌지 않았다
 
-                const string normalized = FileUtil::normalizePath( filePath );
+                const string normalized = FileUtil::makeComparableDiskPath( filePath );
                 if ( uniqueSetEmittedPath.insert( normalized ).second == false )
                     continue;
 

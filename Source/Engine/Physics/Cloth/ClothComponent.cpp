@@ -194,8 +194,7 @@ namespace sw
             if ( findPinBoneWorlds( listBoneWorld ) == false )
                 return false;
             float3 scale;
-            PhysicsComponent::readWorldPose( *this, outPosition, outRotation, scale );
-            return true;
+            return PhysicsComponent::readWorldPose( *this, outPosition, outRotation, scale );
         }
         float4x4 boneWorld;
         if ( findBoneWorld( _listPinBone[0], boneWorld ) == false )

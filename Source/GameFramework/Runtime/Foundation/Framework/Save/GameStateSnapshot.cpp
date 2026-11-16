@@ -8,13 +8,16 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Reflection/ReflectedInstance.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/SnapshotFaultHook.h"
 
 namespace sw
 {
@@ -29,8 +32,60 @@ namespace sw
              *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`) 셋이다.
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
+             *          머리의 씬 정체는 찍을 때 활성 씬의 리소스 id(`Scene::getSourcePath`)다 — 읽을 때 지금 활성 씬과 다르면 섞지 않고 거절한다.
              */
-            static constexpr uint32 kVersion = 5; // 4: 오브젝트 id 묶음에 컴포넌트 안정 키가 실린다, 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다
+            static constexpr uint32 kVersion = 6; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다
+
+            /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
+            struct Header
+            {
+                uint64 _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
+                string _sceneID;           ///< 찍을 때 활성 씬의 리소스 id(씬이 없었으면 빈 글)
+                string _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
+            };
+
+            /**
+             * @brief @p pInBuffer 의 머리를 읽어 @p outHeader 를 채우고 @p arch 를 섹션 앞에 둡니다. 머리가 없거나 판이 다르거나 잘렸으면 false 입니다(머리 · 판은 까닭을 남긴다).
+             * @details 봉투 읽기와 머리만 읽기(`readSceneID`)가 같은 길을 쓴다 — 머리 형식을 두 곳에서 따로 읽지 않는다.
+             */
+            static bool readHeader( const void* pInBuffer, uint32 size, Archive& arch, Header& outHeader )
+            {
+                if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
+                    return false;
+                uint32 magic = 0;
+                Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
+                if ( magic != kMagic )
+                {
+                    SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotNoSWST", "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
+                    return false;
+                }
+                if ( size < sizeof( uint32 ) * 4 )
+                    return false;
+                arch >> magic;
+                uint32 version = 0;
+                arch >> version;
+                if ( version != kVersion )
+                {
+                    SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotVersionNot", "State snapshot version %# is not this build's %#", version, kVersion );
+                    return false;
+                }
+                arch >> outHeader._processToken;
+                return arch.readString( outHeader._sceneID ) && arch.readString( outHeader._contentText ) && arch.isError() == false;
+            }
+
+            /**
+             * @brief 세이브 머리의 씬 정체 @p savedSceneID 가 지금 활성 씬과 같은지 봅니다. 아니면 까닭을 오류로 남기고 false 입니다.
+             * @details 복원은 활성 씬을 비우고 채우므로, 다른 씬(타이틀 · 다른 맵) 위에서 풀면 그 씬에 다른 맵의 오브젝트가 선다. 언리얼 게임은 세이브에 맵 이름을 적고
+             *          `OpenLevel` 뒤에 적용한다 — 슬롯 불러오기는 `GameInstance` 가 머리(`readSceneID`)를 보고 그 씬을 먼저 연다. 여기는 그 흐름을 거치지 않은 읽기의 마지막 막기다.
+             */
+            static bool checkScene( const string& savedSceneID, const string& activeSceneID )
+            {
+                if ( savedSceneID == activeSceneID )
+                    return true;
+                SW_LOG_ERROR_ID( "GameStateSnapshot.SceneMismatch", "This save was made in scene '%#' but the active scene is '%#' - open that scene before loading it",
+                                 savedSceneID.c_str(), activeSceneID.c_str() );
+                return false;
+            }
 
             /** @brief 지금 실행의 콘텐츠 구성(`IContentConfiguration`)입니다. 걸린 것이 없으면 nullptr(구성 없음)입니다. */
             static const IContentConfiguration* findContent() { return game::findSubsystem<IContentConfiguration>(); }
@@ -60,6 +115,22 @@ namespace sw
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+            }
+            /**
+             * @brief 개발 구성의 결함 주입이 교체 단계를 지게 하라는지 봅니다(`ISnapshotFaultHook` — 배포는 창구가 없어 늘 false).
+             * @details 깨진 복원 뒤 세이브 막기 · 씬 다시 열기를 시나리오가 밟는 길이다. 런타임은 창구만 묻고 테스트 변수는 개발 소스(`Save/Dev/`)가 든다.
+             */
+            static bool shouldBreakReplace()
+            {
+                const ISnapshotFaultHook* const pFaultHook = ISnapshotFaultHook::find();
+                return pFaultHook != nullptr && pFaultHook->shouldBreakReplace();
+            }
+            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
+            static string findActiveSceneID()
+            {
+                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+                const Scene* const  pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+                return pScene != nullptr ? pScene->getSourcePath() : string{};
             }
         };
     } // namespace
@@ -96,12 +167,12 @@ namespace sw
         for ( const StatefulComponentType& type : _listStatefulType )
         {
             if ( type._pCapture != nullptr )
-                type._pCapture( *_pComponentStateStore, *pManager );
+                type._pCapture( SceneIterationKey{}, *_pComponentStateStore, *pManager );
         }
         for ( const StatefulComponentType& type : _listStatefulType )
         {
             if ( type._pDespawn != nullptr )
-                type._pDespawn( *pManager );
+                type._pDespawn( SceneIterationKey{}, *pManager );
         }
     }
 
@@ -111,6 +182,8 @@ namespace sw
         arch << StateEnvelopeInternal::kMagic;
         arch << StateEnvelopeInternal::kVersion;
         arch << ObjectStateSerializer::getProcessToken();
+        // 이 세이브를 찍은 씬 — 읽는 쪽이 같은 씬 위인지 봉투를 풀기 전에 본다(씬이 없으면 빈 글).
+        arch.writeString( GameStateSnapshotInternal::findActiveSceneID() );
         // 이 세이브를 만든 콘텐츠 구성(켠 모드) — 읽는 쪽이 같은 구성인지 봉투를 풀기 전에 본다(없으면 빈 글).
         const IContentConfiguration* const pContent = StateEnvelopeInternal::findContent();
         arch.writeString( pContent != nullptr ? pContent->makeContentConfigText() : string{} );
@@ -154,87 +227,104 @@ namespace sw
         return true;
     }
 
-    bool GameStateSnapshot::readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer, uint32 size )
+    expected<void, SnapshotRestoreFailure> GameStateSnapshot::readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
+                                                                            uint32 size )
     {
-        if ( pInBuffer == nullptr || size < sizeof( uint32 ) )
-            return false;
+        const unexpected<SnapshotRestoreFailure> rejected{ SnapshotRestoreFailure::Rejected };
+        _pComponentStateStore->clear();
 
-        uint32 magic = 0;
-        Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
-
-        if ( magic != StateEnvelopeInternal::kMagic )
-        {
-            SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotNoSWST", "State snapshot has no SWST header - not written by GameStateSnapshot::writeEnvelope" );
-            return false;
-        }
-
-        if ( size < sizeof( uint32 ) * 4 )
-            return false;
-
-        Archive arch( static_cast<const uint8*>( pInBuffer ), size );
-        arch >> magic;
-
-        uint32 version = 0;
-        arch >> version;
-        if ( version != StateEnvelopeInternal::kVersion )
-        {
-            SW_LOG_ERROR_ID( "GameStateSnapshot.StateSnapshotVersionNot", "State snapshot version %# is not this build's %#", version, StateEnvelopeInternal::kVersion );
-            return false;
-        }
-
-        uint64 processToken = 0;
-        arch >> processToken;
-        // 콘텐츠 구성: 씬을 건드리기 전에 본다 — 맞지 않는 세이브는 아무것도 바꾸지 않고 거절한다.
-        string contentText;
-        if ( arch.readString( contentText ) == false || StateEnvelopeInternal::checkContent( contentText ) == false )
-            return false;
-        const bool              bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
+        // ---- 1 단계: 검증. 봉투를 끝까지 읽고 분리된 사본에 풀어 본다 — 지금 씬과 상태 인스턴스는 건드리지 않는다. ----
+        Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
+        StateEnvelopeInternal::Header header;
+        if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
+            return rejected;
+        if ( StateEnvelopeInternal::checkContent( header._contentText ) == false ||
+             StateEnvelopeInternal::checkScene( header._sceneID, GameStateSnapshotInternal::findActiveSceneID() ) == false )
+            return rejected;
+        const bool              bSameProcess = ( header._processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
 
-        // 1) 씬 오브젝트 복원
+        // 섹션 셋(씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태)을 모두 읽은 뒤에 푼다 — 끝이 잘린 봉투가 씬을 비운 뒤에 지지 않게 한다.
         vector<uint8> bytesScene;
-        if ( arch.readSection( bytesScene ) == false )
-            return false;
-
-        vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
-        if ( bytesScene.empty() == false && deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, listComponentIDRemap ) == false )
-            return false;
-
-        // 2) 파생 클래스 커스텀 리플렉션 상태 복원
         vector<uint8> bytesState;
-        if ( arch.readSection( bytesState ) == false )
-            return false;
+        vector<uint8> bytesComponent;
+        if ( arch.readSection( bytesScene ) == false || arch.readSection( bytesState ) == false || arch.readSection( bytesComponent ) == false || arch.isError() )
+            return rejected;
 
-        if ( bytesState.empty() == false && pStateType != nullptr && pStateInstance != nullptr )
+        GameObjectManager* const pLiveManager = GameStateSnapshotInternal::findActiveObjectManager();
+        if ( bytesScene.empty() == false )
         {
-            if ( BinarySerializer::deserialize( pStateInstance, *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
-                return false;
+            if ( pLiveManager == nullptr )
+            {
+                SW_LOG_ERROR_ID( "GameStateSnapshot.NoActiveSceneForObjects", "State snapshot carries scene objects but there is no active scene to restore them into" );
+                return rejected;
+            }
+            // 분리된 매니저 — 같은 엔진 서비스를 받되 활성 씬과 오브젝트를 나누지 않는다(프리팹 원형이 쓰는 손수 만든 매니저와 같다). 풀어 본 것은 여기서 버린다.
+            GameObjectManager                             probeManager( pLiveManager->getSceneEngineServices() );
+            vector<ComponentStateStore::SavedComponentID> listProbeRemap;
+            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, probeManager, listProbeRemap ) == false )
+                return rejected;
         }
 
-        // 3) 컴포넌트 상태는 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 넘어간다. 씬은 이미 섰고, 디렉터는 새로 시작한다.
-        vector<uint8> bytesComponent;
-        if ( arch.readSection( bytesComponent ) == false )
-            return false;
-        _pComponentStateStore->clear();
+        const bool bHasState = bytesState.empty() == false && pStateType != nullptr && pStateInstance != nullptr;
+        if ( bHasState )
+        {
+            // 상태 인스턴스에 바로 풀면 반쯤 덮인 채 진다 — 새 사본에 먼저 풀어 본다.
+            const ReflectedInstance probeState = ReflectedInstance::create( *pStateType );
+            if ( probeState.isValid() == false )
+            {
+                SW_LOG_ERROR_ID( "GameStateSnapshot.StateTypeNotConstructible", "State type '%#' cannot be default-constructed, so the save cannot be checked before it is applied",
+                                 pStateType->_name.c_str() );
+                return rejected;
+            }
+            if ( BinarySerializer::deserialize( probeState.get(), *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
+                return rejected;
+        }
+
+        // 컴포넌트 상태는 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 비운다 — 디렉터는 새로 시작한다(씬 · 상태는 그대로 선다).
         if ( bytesComponent.empty() == false )
         {
             Archive componentArch( bytesComponent.data(), bytesComponent.size() );
             if ( _pComponentStateStore->read( componentArch ) == false )
+            {
                 SW_LOG_WARNING_ID( "GameStateSnapshot.ComponentStateSectionCould", "Component state section could not be read - components start fresh" );
-            // 다른 실행의 세이브는 컴포넌트 id 가 새로 나갔다. 씬 섹션이 만든 표로 저장된 id 를 이번 id 로 바꿔 id 로만 짝짓는다.
-            if ( format == SceneObjectFormat::WithIdentity )
-                _pComponentStateStore->remapComponentIDs( listComponentIDRemap );
+                _pComponentStateStore->clear();
+            }
         }
 
-        if ( arch.isError() )
+        // ---- 2 단계: 교체. 검증을 지난 봉투만 씬을 비우고 채운다. 같은 바이트 · 같은 코드라 여기서 지는 것은 검증이 못 본 결함이다 — 씬이 깨졌다고 알린다. ----
+        const unexpected<SnapshotRestoreFailure>      broken{ SnapshotRestoreFailure::SceneBroken };
+        vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
+        if ( bytesScene.empty() == false )
         {
-            _pComponentStateStore->clear(); // 끝이 깨진 봉투 — 실어 둔 상태를 남기지 않는다(읽기 훅을 부르지 않으니 비울 쪽이 없다)
-            return false;
+            pLiveManager->clear();
+            if ( GameStateSnapshotInternal::shouldBreakReplace() || deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap ) == false )
+            {
+                _pComponentStateStore->clear();
+                return broken;
+            }
         }
+        if ( bHasState && BinarySerializer::deserialize( pStateInstance, *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
+        {
+            _pComponentStateStore->clear();
+            return broken;
+        }
+        // 다른 실행의 세이브는 컴포넌트 id 가 새로 나갔다. 씬 섹션이 만든 표로 저장된 id 를 이번 id 로 바꿔 id 로만 짝짓는다.
+        if ( format == SceneObjectFormat::WithIdentity )
+            _pComponentStateStore->remapComponentIDs( listComponentIDRemap );
 
         // 읽기 훅(`onAfterStateDeserialize`)은 부르는 쪽이 이 뒤에 부르고 `endRestore` 로 저장소를 비운다.
         restoreStatefulComponents();
-        return true;
+        return {};
+    }
+
+    optional<string> GameStateSnapshot::readSceneID( const void* pInBuffer, uint32 size )
+    {
+        Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
+        StateEnvelopeInternal::Header header;
+        if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
+            return nullopt;
+        return header._sceneID;
     }
 
     void GameStateSnapshot::endRestore()
@@ -250,7 +340,7 @@ namespace sw
         for ( const StatefulComponentType& type : _listStatefulType )
         {
             if ( type._pRestore != nullptr )
-                type._pRestore( *_pComponentStateStore, *pManager );
+                type._pRestore( SceneIterationKey{}, *_pComponentStateStore, *pManager );
         }
     }
 
@@ -262,7 +352,7 @@ namespace sw
 
         // 살아 있는 것만 담는다. `forEachGameObject` 가 파괴 대기 오브젝트를 이미 건너뛴다. 실행 중에 세운 파생 오브젝트(`isTransient`)는 세운 쪽이 다시 세운다.
         vector<GameObject*> listValidObject;
-        pObjectManager->forEachGameObject( [&listValidObject]( GameObject* pObj )
+        pObjectManager->forEachGameObject( SceneIterationKey{}, [&listValidObject]( GameObject* pObj )
         {
             if ( pObj->isTransient() == false )
                 listValidObject.push_back( pObj );
@@ -291,19 +381,14 @@ namespace sw
         return true;
     }
 
-    bool GameStateSnapshot::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
+    bool GameStateSnapshot::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format, GameObjectManager& manager,
                                                      vector<ComponentStateStore::SavedComponentID>& outListRemap )
     {
         outListRemap.clear();
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
 
-        GameObjectManager* pObjectManager = GameStateSnapshotInternal::findActiveObjectManager();
-        if ( pObjectManager == nullptr )
-            return false;
-
-        // 기존 오브젝트를 정리한다.
-        pObjectManager->clear();
+        GameObjectManager* const pObjectManager = &manager;
 
         size_t offset = 0;
         uint32 count  = 0;
@@ -326,8 +411,7 @@ namespace sw
         // 부착은 상태의 부착 필드(부모의 **id** 와 컴포넌트 키)로 잇는다. 부모 이름으로 찾아 부모의 primary 에 붙이면
         // 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 가므로 깨진다.
         // 다른 실행의 세이브는 id 를 복원하지 않고, 스트림에 적힌 그때의 id 로 묶음 안에서 부모를 찾는다.
-        // **하나라도 못 읽으면 실패다.** 읽기를 멈추고도 true 를 돌려주면 핫 리로드가 스냅샷을 버리고 저장 막기를 풀어 버린다.
-        // 씬은 이미 비운 뒤라서, 못 읽은 오브젝트부터 뒤가 사라진 채 저장될 수 있다.
+        // **하나라도 못 읽으면 실패다.** 읽기를 멈추고도 true 를 돌려주면 검증이 지나가 활성 씬이 못 읽은 오브젝트부터 뒤가 사라진 채 교체된다.
         const bool       bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
         bool             bComplete        = true;
         ObjectStateBatch batch( bRestoreIdentity ? ObjectIDSpace::Live : ObjectIDSpace::Saved );
@@ -371,7 +455,7 @@ namespace sw
 
         if ( bComplete == false )
         {
-            SW_LOG_ERROR_ID( "GameStateSnapshot.SceneRestoreStoppedAfter", "Scene restore stopped after %# of %# objects - the snapshot is kept and saving stays blocked",
+            SW_LOG_ERROR_ID( "GameStateSnapshot.SceneRestoreStoppedAfter", "Scene restore stopped after %# of %# objects",
                              static_cast<uint32>( listRestoredObject.size() ), count );
             return false;
         }

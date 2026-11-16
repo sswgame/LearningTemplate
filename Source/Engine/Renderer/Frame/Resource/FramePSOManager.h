@@ -2,7 +2,7 @@
  * @file FramePSOManager.h
  * @brief 렌더러 하나가 쓰는 PSO 를 만들고 찾는 자리입니다 — 엔진 패스 PSO, 출력(Present · Canvas · RCAS) 포맷 변형, 머티리얼 · 보기 모드 · 컬 반전 변형, 입자 · 쿠키 아틀라스 · 확장 프로그램 PSO, 머티리얼 폴백 버퍼.
  * @details `FrameRenderer` 가 소유하고 패스 실행 · 드로우가 조회만 합니다. 만드는 일은 모두 기록 전(셋업)이고, 기록 중에는 찾기만 합니다(패스가 병렬로 기록된다).
- *          저장소는 `RenderPSOCache` 이고, 미리보기 씬 렌더러는 주 렌더러의 저장소를 빌려 씁니다(`shareCacheOf`).
+ *          저장소는 `RenderPSOCache` 이고, 미리보기 씬 렌더러는 주 렌더러의 저장소를 빌려 씁니다(`shareCache`).
  *          언리얼의 `FGraphicsPipelineStateInitializer` 를 패스 · 머티리얼 · 뷰 모드로 조립하는 `FMeshPassProcessor` 와 PSO 캐시 자리를 한데 모은 것이다.
  */
 #pragma once
@@ -57,9 +57,9 @@ namespace sw
          * @brief @p owner 의 저장소를 빌려 씁니다(미리보기 씬 렌더러). 해제 · 레이아웃 무효화는 소유자만 합니다.
          * @details 미리보기 씬은 주 렌더러와 같은 디바이스 · 파이프라인 XML 로 그리므로 PSO 가 같다. 나눠 두면 창을 열 때마다 엔진 PSO 를 모두 다시 만들어 첫 프레임이 끊긴다.
          */
-        void shareCacheOf( FramePSOManager& owner ) { _pCache = owner._pCache; }
+        void shareCache( FramePSOManager& owner ) { _pCache = owner._pCache; }
         /** @brief 이 관리자가 저장소를 소유하면 true 입니다(빌려 쓰면 false). */
-        bool ownsCache() const { return _pCache == &_cache; }
+        bool hasOwnCache() const { return _pCache == &_cache; }
         /** @brief 지금 쓰는 저장소입니다(소유하거나 빌린 것). 캔버스 렌더러가 출력 PSO 를 찾을 때 씁니다. */
         RenderPSOCache&       getCache() { return *_pCache; }
         const RenderPSOCache& getCache() const { return *_pCache; }
@@ -134,11 +134,11 @@ namespace sw
         void warmPinnedMaterialPSOs( MaterialCache& pinnedMaterials, uint32 viewModeMask );
         /**
          * @brief 머티리얼 변형을 빌더 스레드가 만들게 하는지 반환합니다(`-gv_psoAsync` 가 켜져 있고 백엔드가 `_bThreadSafeResourceCreation` 이면 true).
-         * @details 결정적 실행(`DeterministicRunPolicy::_bFinishAssetWorkEachFrame`)은 빌더 스레드를 쓰지 않는다. false 이면 렌더 스레드가 같은 줄을 셋업 구간에서 직접 만든다.
+         * @details 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)은 빌더 스레드를 쓰지 않는다. false 이면 렌더 스레드가 같은 줄을 셋업 구간에서 직접 만든다.
          */
         [[nodiscard]] bool usesAsyncMaterialPSOBuilder() const;
         /** @brief 빌더가 끝낸 머티리얼 변형을 저장소에 합치고(스레드를 쓰지 않으면 이 자리에서 만들고), 새로 `Ready` 가 된 것이 있으면 폴백 버퍼를 점검합니다. 셋업 구간에서만 부릅니다. */
-        void pumpMaterialPSOBuilds();
+        void pollMaterialPSOBuilds();
         /** @brief 입자 그리기가 있는 프레임에 입자 PSO 를 **기록 시작 전에** 만들어 둡니다(투명 패스 PSO 의 렌더 상태를 물려받고 셰이더만 바꾼다). */
         void ensureParticlePSO();
         /** @brief 입자 PSO 입니다. 투명 패스 PSO 가 없거나 만들지 못했으면 0 입니다. */
@@ -229,7 +229,7 @@ namespace sw
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
         [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
-         * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pumpMaterialPSOBuilds` 가 합칩니다).
+         * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pollMaterialPSOBuilds` 가 합칩니다).
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
          * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */
@@ -242,7 +242,7 @@ namespace sw
         const GPUScene&            _gpuScene;
         /// @brief 이 관리자가 소유하는 저장소입니다(엔진 패스 PSO, 출력 PSO, 머티리얼 변형과 그 바인딩 레이아웃). 빌려 쓰는 관리자는 이것을 비워 둔다.
         RenderPSOCache _cache;
-        /// @brief 찾고 넣는 저장소입니다. 주 렌더러는 자기 `_cache`, 미리보기 씬 렌더러는 주 렌더러의 것입니다(`shareCacheOf`).
+        /// @brief 찾고 넣는 저장소입니다. 주 렌더러는 자기 `_cache`, 미리보기 씬 렌더러는 주 렌더러의 것입니다(`shareCache`).
         RenderPSOCache* _pCache;
         /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;

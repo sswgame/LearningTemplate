@@ -34,17 +34,17 @@ namespace sw
         /** @brief @p worldIndex 월드에 빌려 준 씬의 키입니다(`SceneManager::getPreviewSceneKey`). 빌려 준 씬이 없으면 비어 있습니다. */
         optional<uint32> findSceneKey( int32 worldIndex ) const;
         /** @brief 빌려 준 씬 수입니다. */
-        uint32 getLentCount() const { return static_cast<uint32>( _listLent.size() ); }
+        uint32 getBorrowedCount() const { return static_cast<uint32>( _listBorrowed.size() ); }
 
     private:
-        struct Lent
+        struct BorrowedScene
         {
             Scene* _pScene{ nullptr };
             int32  _worldIndex{ constant::invalid_index::kInt32 };
             uint32 _sceneKey{ 0 };
         };
 
-        SceneManager* _pSceneManager;
-        vector<Lent>  _listLent;
+        SceneManager*         _pSceneManager;
+        vector<BorrowedScene> _listBorrowed;
     };
 } // namespace sw

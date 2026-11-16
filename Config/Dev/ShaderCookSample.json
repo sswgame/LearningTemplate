@@ -1,0 +1,4 @@
+{
+    "_comment": "셰이더 표본 굽기(App --cook-shaders -cook-shaders-sample, 테스트 ShaderCache.RebuildFromEmpty)의 규칙. 요청을 순서대로 보며 이 축들 가운데 하나라도 아직 덮지 않은 값을 가진 요청만 굽는다(ShaderCookDriver::selectSample). 축: source(셰이더 소스 — include · 도메인 · 머티리얼 그래프 생성물), entryPoint(소스 + 진입점), stage(그래픽 · 컴퓨트 · 지오메트리 · 테셀레이션), permutationDefine(퍼뮤테이션 define 하나하나와 퍼뮤테이션 없음). 바인드리스는 형식(dx12 · vk)이 정해 축이 아니다. 모든 요청의 굽기는 배포 쿠킹(CookAssets)이 본다.",
+    "_listCoverAxis": [ "source", "entryPoint", "stage", "permutationDefine" ]
+}

@@ -41,11 +41,11 @@ namespace sw
     {
     }
 
-    uint32 AdventureCooking::loadRoot( const XMLNode& root, string_view sourceName )
+    uint32 AdventureCooking::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
-        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         AdventureCookingRulesDef rules;
-        if ( XMLFields::readFields( root, rules, sourceName ) == false )
+        if ( root.readProperties( rules, sourceName ) == false )
             return 0;
         _rules = rules;
         // 재료가 효과를 가리키므로 효과를 먼저 다 읽는다.
@@ -61,7 +61,7 @@ namespace sw
     {
 
         AdventureIngredientDef ingredient;
-        if ( XMLFields::readFields( node, ingredient, sourceName ) == false )
+        if ( XMLFields::readProperties( node, ingredient, sourceName ) == false )
             return false;
         if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
         {
@@ -161,16 +161,15 @@ namespace sw
             }
         }
 
+        // 요리가 들어가지 않으면 소비 전 인벤토리로 되돌린다 — 재료를 id 로 다시 넣으면 개체 상태(내구도 · 꾸미기)가 새것이 된다
+        const Inventory before = inventory;
         for ( const auto& [itemID, count] : pot.getItems() )
         {
-            (void)inventory.removeItem( itemID, count ); // 재료는 위의 hasItems 가 확인했다
+            (void)inventory.consumeItem( itemID, count ); // 재료는 위의 hasItems 가 확인했다
         }
         if ( inventory.addItem( outDish._itemID, 1 ) == 1 )
             return AdventureCookResult::Ok;
-        for ( const auto& [itemID, count] : pot.getItems() )
-        {
-            (void)inventory.addItem( itemID, count );
-        }
+        inventory = before;
         return AdventureCookResult::NoRoom;
     }
 } // namespace sw

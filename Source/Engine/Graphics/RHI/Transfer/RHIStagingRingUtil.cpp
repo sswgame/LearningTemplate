@@ -4,8 +4,8 @@
 
 namespace sw
 {
-    RHISubmitResult RHIStagingRingUtil::settleAllocation( RHIStagingAllocator& tracker, const RHITransferSerials& serials, RHIStagingAllocateResult result, uint64 sizeBytes,
-                                                          const utf8* pBackend, const utf8* pCaller, const RHIStagingSpan& span )
+    RHISubmitResult RHIStagingRingUtil::completeAllocation( RHIStagingAllocator& tracker, const RHITransferSerials& serials, RHIStagingAllocateResult result, uint64 sizeBytes,
+                                                            const utf8* pBackend, const utf8* pCaller, const RHIStagingSpan& span )
     {
         // 잃은 장치면 워터마크가 멈춰 링이 다시 비지 않는다 — Full 도 Busy 가 아니라 Rejected 다(계약 2).
         const RHISubmitResult submitResult = serials.classifyStagingAllocation( result );

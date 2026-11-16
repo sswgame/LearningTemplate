@@ -137,7 +137,7 @@ namespace sw
         , _waterBlock{}
         , _listStartBlock{}
         , _body{}
-        , _hotbar{}
+        , _hotbar{ nullptr }
         , _target{}
         , _listPendingEdit{}
         , _soundQueue{}
@@ -162,9 +162,9 @@ namespace sw
     {
         Component::onBeginPlay();
         _bBodyPlaced = SW_FALSE;
-        _hotbar      = VoxelHotbar{};
         // 물 블록과 처음 핫바는 씬 데이터에 적힌 블록 이름입니다. 카탈로그나 이름이 틀리면 플레이어를 만들지 않고, 이유는 오류 로그에 남깁니다.
         const VoxelBlockCatalog* pCatalog = game::findSubsystem<const VoxelBlockCatalog>();
+        _hotbar                           = VoxelHotbar{ pCatalog };
         if ( pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "VoxelPlayer.NoVoxelBlockCatalogGameService", "[Voxel] no VoxelBlockCatalog game service - the player cannot start" );

@@ -569,7 +569,7 @@ the other; the caption at the middle of the screen is lit and its picture is sho
     if (count) count.textContent = `${i + 1} of ${items.length}`;
   };
   const io = new IntersectionObserver((entries) => {
-    for (const e of entries) if (e.isIntersecting) show(items.indexOf(e.target));
+    for (const e of entries) if (e.isIntersecting) show(items.getIndexOf(e.target));
   }, { rootMargin: '-45% 0px -45% 0px' });                 // a band across the middle of the screen
   items.forEach((el) => io.observe(el));
   show(0);

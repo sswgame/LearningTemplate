@@ -80,6 +80,11 @@ namespace sw
 
         struct StressTestSceneInternal
         {
+            static constexpr uint32  kIndexHashMultiplier = 2654435761u; ///< 크누스 곱셈 해시(2^32 / 황금비) — 인덱스를 결정적으로 흩는다
+            static constexpr uint32  kHashHalfBits        = 16u;         ///< 32 비트 해시를 두 축에 나누는 비트 수
+            static constexpr uint32  kHashHalfMask        = 0xFFFFu;     ///< 해시 아래 절반
+            static constexpr float32 kHashHalfMax         = 65535.0f;    ///< 해시 절반의 최댓값(0..1 로 나눈다)
+
             /**
              * @brief 망토 메시를 망토 스켈레톤(`knight_cape.skeleton.xml` — 루트 + 아래로 사슬)에 높이로 나눠 묶은 스킨드 사본을 만듭니다.
              * @details 원본 망토(KayKit)는 스킨이 없는 단단한 부품이다 — 스프링 본을 보이려고 데모가 뼈 데이터를 두고 가중치를 높이로 나눈다
@@ -206,6 +211,12 @@ namespace sw
      * @brief `-gv_stressTestCharacterStagger=1`: 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩어 놓습니다(군중이 한 프레임에 맞춰 움직이지 않게 합니다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
+
+    /**
+     * @brief `-gv_stressTestCharacterBlend=1`: 프리팹 벤치 캐릭터마다 2D 블렌드 스페이스의 두 파라미터를 인덱스 해시로 범위 안에 흩어 놓습니다.
+     * @details 파라미터 이름 · 범위는 벤치 데이터(`_characterBlendParameterX` · `Y` · `_characterBlendMinimum` · `Maximum`)다. 표본 위에만 서지 않게 해 삼각형 셋을 섞는 비용을 잰다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestCharacterBlend, 0, "프리팹 벤치 캐릭터의 2D 블렌드 파라미터를 흩는다 (0=그대로)" );
 
     /**
      * @brief `-gv_stressTestCharacterFollowers=K`: 벤치 캐릭터(몸)마다 리더 포즈로 몸을 따르는 부품 유닛 K 개를 더합니다(모듈 캐릭터의 옷 · 머리 모양).
@@ -683,7 +694,7 @@ namespace sw
 
     void StressTestScene::finishGrid( Scene* pScene, uint32 side )
     {
-        const float32 halfExtent = halfExtentOf( side, _settings._cubeSpacing );
+        const float32 halfExtent = computeHalfExtentOf( side, _settings._cubeSpacing );
         spawnLight( pScene, halfExtent );
         spawnBenchLights( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
@@ -802,6 +813,8 @@ namespace sw
                 pBody->setLocalPosition( position );
                 pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
                 _listBenchExtra.push_back( pBody->getHandle() );
+                if ( gv_stressTestCharacterBlend != 0 && randomizeBlendParameters( *pSpawned, index ) == false )
+                    return;
                 continue;
             }
             GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
@@ -836,6 +849,26 @@ namespace sw
         applyFraming( pScene, FramingMode::Character );
         SW_LOG_INFO_ID( "StressTestScene.ScenePlacedSkinnedCharacters", "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount,
                         prefabPath.empty() ? string_view( _settings._knightMesh ) : prefabPath );
+    }
+
+    bool StressTestScene::randomizeBlendParameters( GameObject& character, uint32 characterIndex ) const
+    {
+        SkeletalAnimatorComponent* pAnimator = character.getComponent<SkeletalAnimatorComponent>();
+        if ( pAnimator == nullptr || _settings._characterBlendParameterX.empty() || _settings._characterBlendParameterY.empty() )
+        {
+            SW_LOG_ERROR_ID( "StressTestScene.CharacterBlendUnavailable", "[Bench] -gv_stressTestCharacterBlend needs a prefab with a skeletal animator and both blend parameter names in the bench data" );
+            return false;
+        }
+        // 결정적 해시를 씁니다. 실행마다 같은 이미지여야 비교할 수 있습니다. 아래 · 위 16 비트를 두 축에 나눕니다.
+        const uint32           hash       = ( characterIndex + 1u ) * StressTestSceneInternal::kIndexHashMultiplier;
+        const float32          alphaX     = static_cast<float32>( hash & StressTestSceneInternal::kHashHalfMask ) / StressTestSceneInternal::kHashHalfMax;
+        const float32          alphaY     = static_cast<float32>( hash >> StressTestSceneInternal::kHashHalfBits ) / StressTestSceneInternal::kHashHalfMax;
+        const float2&          low        = _settings._characterBlendMinimum;
+        const float2&          high       = _settings._characterBlendMaximum;
+        AnimationParameterSet& parameters = pAnimator->getParameters();
+        parameters.setFloat( hashed_string( _settings._characterBlendParameterX.c_str() ), MathUtil::lerp( low._x, high._x, alphaX ) );
+        parameters.setFloat( hashed_string( _settings._characterBlendParameterY.c_str() ), MathUtil::lerp( low._y, high._y, alphaY ) );
+        return true;
     }
 
     void StressTestScene::spawnCharacterParts( GameObjectManager& objects, uint32 characterIndex, SkeletalMeshComponent* pBody )
@@ -1214,7 +1247,7 @@ namespace sw
         return ( hash % 100u ) < percent;
     }
 
-    float32 StressTestScene::halfExtentOf( uint32 side, float32 spacing )
+    float32 StressTestScene::computeHalfExtentOf( uint32 side, float32 spacing )
     {
         return 0.5f * static_cast<float32>( side ) * spacing;
     }
@@ -1400,7 +1433,7 @@ namespace sw
         // 격자 한 변의 절반이 시야각 안에 들어오는 거리까지 카메라를 뒤로 뺍니다. 기본 카메라는 (0, 1.2, 3.2) 라서
         // 큐브 5000개(71x71 = 140 유닛)를 놓으면 화면에 몇 개밖에 걸리지 않습니다. 그러면 드로우는 실행되지만
         // 눈으로 확인할 수가 없습니다.
-        const float32 halfExtent = halfExtentOf( side, spacing );
+        const float32 halfExtent = computeHalfExtentOf( side, spacing );
         const float32 fovY       = pCamera->getFieldOfViewY();
         const float32 tanHalf    = MathUtil::tan( fovY * 0.5f );
         const float32 distance   = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent / tanHalf ) : ( halfExtent * 2.0f );

@@ -82,9 +82,9 @@ namespace sw
         }
         const Texture2D* pAtlas = findAtlas();
         // 디바이스가 바뀌어 아틀라스를 새로 만들었으면 내용이 비었다 — 모든 칸을 다시 그린다.
-        const RHITextureHandle atlasHandle  = pAtlas != nullptr ? pAtlas->getHandle() : RHITextureHandle{ 0 };
-        const bool             bAtlasReborn = atlasHandle != _drawnAtlasHandle;
-        _drawnAtlasHandle                   = atlasHandle;
+        const RHITextureHandle atlasHandle     = pAtlas != nullptr ? pAtlas->getHandle() : RHITextureHandle{ 0 };
+        const bool             bAtlasRecreated = atlasHandle != _drawnAtlasHandle;
+        _drawnAtlasHandle                      = atlasHandle;
         // 텍스처 캐시가 다시 읽었으면(핫 리로드) 같은 객체에 새 내용이다 — 모든 칸을 다시 그린다.
         const uint32 reloadGeneration = pCache->getReloadGeneration();
         const bool   bReloaded        = reloadGeneration != _reloadGeneration;
@@ -114,7 +114,7 @@ namespace sw
                 // 렌더 스레드는 디스크를 기다리지 않는다 — 요청만 내고, 업로드는 이 스레드의 펌프(`TextureCache::completePendingLoads`)가 한다.
                 Entry entry{};
                 entry._path = cookie._texturePath;
-                entry._load = pCache->request( cookie._texturePath.viewOrEmpty(), AssetLoadStart::Async );
+                entry._load = pCache->request( cookie._texturePath.view(), AssetLoadStart::Async );
                 entry._cell = cell;
                 _listEntry.push_back( std::move( entry ) );
                 pEntry = &_listEntry.back();
@@ -149,7 +149,7 @@ namespace sw
             if ( pTexture == nullptr )
                 continue;
             const RHITextureHandle handle  = pTexture->getHandle();
-            const bool             bRedraw = bAtlasReborn || bReloaded || handle != entry._drawnHandle;
+            const bool             bRedraw = bAtlasRecreated || bReloaded || handle != entry._drawnHandle;
             if ( bRedraw && handle != 0 )
             {
                 _listPendingDraw.push_back( CellDraw{ entry._cell, pTexture } );

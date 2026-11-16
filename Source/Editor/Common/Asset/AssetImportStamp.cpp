@@ -417,6 +417,9 @@ namespace sw::editor
                 // 원본이 사라진 줄 — 그 결과(파일과 같은 이름의 옆 폴더)도 지운다. 결과는 생성물이라 깨끗한 클론에는 없다. 남겨 두면 지운 원본을 아직 가리키는 코드 · 데이터가
                 // 이 PC 에서만 그려져 숨는다(2026-11-02 — 지운 원본의 `nilecity/models/tree_large.mesh` 를 C++ 표가 계속 읽었다). 옆 폴더 아래에 남은 원본의 자리가 있으면
                 // (`x.glb` 를 지웠는데 `x/y.glb` 는 있다) 옆 폴더는 두고 결과 파일만 지운다.
+                // 남은 원본의 자리마다 조상 자리를 한 번 색인한다 — 지울 결과마다 남은 원본 전체를 훑으면 지운 수 × 남은 수다. 지울 것이 있을 때만 만든다.
+                unordered_set<string> uniqueLiveAncestor;
+                bool                  bLiveAncestorBuilt = false;
                 for ( const auto& [relativePath, entry] : mapStamped )
                 {
                     if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
@@ -429,7 +432,12 @@ namespace sw::editor
                         inoutSummary._listProblem.push_back( sourcePath.substr( rootDir.size() + 1 ) + ": 원본이 없는데 스탬프에 남아 있습니다" );
                         continue;
                     }
-                    removeOrphanedResult( importer.makeImportedPath( sourcePath ), listFile, inoutSummary );
+                    if ( bLiveAncestorBuilt == false )
+                    {
+                        collectFootprintAncestors( listFile, uniqueLiveAncestor );
+                        bLiveAncestorBuilt = true;
+                    }
+                    removeOrphanedResult( importer.makeImportedPath( sourcePath ), uniqueLiveAncestor, inoutSummary );
                 }
 
                 if ( mode == AssetImportMode::CheckOnly )
@@ -437,18 +445,27 @@ namespace sw::editor
                 writeStampIfChanged( stampPath, importer.getStampHeader(), mapCurrent, inoutSummary );
             }
 
-            /** @brief 원본이 사라진 결과 파일과 옆 폴더를 지웁니다. 옆 폴더 아래에 남은 원본의 결과 자리가 있으면 옆 폴더는 둡니다. 못 지우면 문제로 남깁니다. */
-            static void removeOrphanedResult( const string& importedPath, const vector<SourceFile>& listLiveFile, AssetImportSummary& inoutSummary )
+            /** @brief 남은 원본의 결과 자리(`makeFootprintKey`)마다 그 조상 자리(`a/b/c` → `a/b` · `a`)를 모읍니다. */
+            static void collectFootprintAncestors( const vector<SourceFile>& listLiveFile, unordered_set<string>& outUniqueAncestor )
+            {
+                for ( const SourceFile& file : listLiveFile )
+                {
+                    const string key = makeFootprintKey( file._importedPath );
+                    for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
+                        outUniqueAncestor.insert( key.substr( 0, slash ) );
+                }
+            }
+
+            /** @brief 원본이 사라진 결과 파일과 옆 폴더를 지웁니다. 옆 폴더 아래에 남은 원본의 결과 자리가 있으면(@p uniqueLiveAncestor — 남은 자리의 조상 `collectFootprintAncestors`) 옆 폴더는 둡니다. 못 지우면 문제로 남깁니다. */
+            static void removeOrphanedResult( const string& importedPath, const unordered_set<string>& uniqueLiveAncestor, AssetImportSummary& inoutSummary )
             {
                 const string footprint = makeFootprintKey( importedPath );
                 if ( footprint.empty() )
                     return;
                 if ( FileUtil::removeFile( importedPath ) == false )
                     inoutSummary._listProblem.push_back( importedPath + ": 원본이 사라진 결과를 지우지 못했습니다" );
-                const string sideFolder     = FileUtil::removeExtension( importedPath );
-                const string footprintSlash = footprint + "/";
-                const bool   bShared        = VectorUtil::containsIf( listLiveFile, [&footprintSlash]( const SourceFile& file )
-                         { return StringUtil::startsWith( makeFootprintKey( file._importedPath ), footprintSlash ); } );
+                const string sideFolder = FileUtil::removeExtension( importedPath );
+                const bool   bShared    = uniqueLiveAncestor.contains( footprint );
                 if ( bShared == false && FileUtil::isDirectory( sideFolder ) && FileUtil::removeDirectory( sideFolder ) == false )
                     inoutSummary._listProblem.push_back( sideFolder + ": 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다" );
                 SW_LOG_INFO_ID( "AssetImportStamp.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath );
@@ -457,12 +474,14 @@ namespace sw::editor
             /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
             static string makeScopeKey( string_view assetPath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( assetPath ).c_str() ); }
 
-            /** @brief @p pScope 에 @p resourceFolder 아래 원본이 하나라도 있으면 true 입니다. 원본이 없는 폴더는 훑지 않는다. */
-            static bool hasScopeUnder( const unordered_set<string>& uniqueScope, string_view resourceFolder )
+            /** @brief 범위의 원본 열쇠마다 그 조상 폴더 열쇠(`a/b/c.png` → `a/b` · `a`)를 모읍니다 — 폴더마다 범위 전체를 훑지 않는다(폴더 수 × 범위 수). */
+            static void collectScopeFolders( const unordered_set<string>& uniqueScope, unordered_set<string>& outUniqueFolder )
             {
-                const string prefix = makeScopeKey( resourceFolder ) + "/";
-                return VectorUtil::containsIf( uniqueScope, [&prefix]( const string& key )
-                { return StringUtil::startsWith( key, prefix ); } );
+                for ( const string& key : uniqueScope )
+                {
+                    for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
+                        outUniqueFolder.insert( key.substr( 0, slash ) );
+                }
             }
 
             /** @brief 리소스 루트 아래 모든 원본 폴더를 대조합니다. @p pScope 가 있으면 그 원본(리소스 경로 열쇠)만 대조하고 임포트합니다. */
@@ -481,12 +500,16 @@ namespace sw::editor
                 }
 
                 VectorUtil::sort( listFolder );
+                // 원본이 없는 폴더는 훑지 않는다 — 범위 원본의 조상 폴더 열쇠로 본다.
+                unordered_set<string> uniqueScopeFolder;
+                if ( pScope != nullptr )
+                    collectScopeFolders( *pScope, uniqueScopeFolder );
                 for ( const string& folder : listFolder )
                 {
                     const string normalizedFolder = FileUtil::normalizeSeparators( folder );
                     if ( FileUtil::getFileNamePart( normalizedFolder ) != importer.getRawFolderName() )
                         continue;
-                    const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.size() <= rootDir.size() + 1 || hasScopeUnder( *pScope, string_view( normalizedFolder ).substr( rootDir.size() + 1 ) ) == false );
+                    const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.size() <= rootDir.size() + 1 || uniqueScopeFolder.contains( makeScopeKey( string_view( normalizedFolder ).substr( rootDir.size() + 1 ) ) ) == false );
                     if ( bOutOfScope )
                         continue;
                     importRawFolder( rootDir, normalizedFolder, importer, mode, pScope, pTaskManager, summary );

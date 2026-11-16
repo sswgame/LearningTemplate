@@ -7,7 +7,7 @@
 namespace sw
 {
     MatchmakingClient::MatchmakingClient()
-        : _notificationGate{}
+        : _notificationConsumerLock{}
         , _partyBuffer{}
         , _inviteBuffer{}
         , _lobbyBuffer{}

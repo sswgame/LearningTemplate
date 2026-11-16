@@ -29,6 +29,8 @@ namespace sw::editor
          *          다 쓰면 실행 중인 `LocalizationManager` 가 그 프로젝트를 다시 읽습니다(핫 리로드).
          */
         [[nodiscard]] static bool saveLocalizationProject( LocalizationSheet& inoutSheet );
+        /** @brief `saveLocalizationProject` 가 쓸 수 있는 파일(원문 테이블 · 문화권마다 번역 테이블, 디스크 경로)을 @p outListPath 에 더합니다. 쓰기 전 읽기 전용 확인이 본다. */
+        static void collectLocalizationFiles( const LocalizationSheet& sheet, vector<string>& outListPath );
         /** @brief @p dataFolder(`getGameDataFolderPath`)의 XML 파일 목록을 채웁니다. 에디터 상태를 읽지 않아 워커에서 불러도 된다. 폴더가 없거나 목록이 도중에 멈췄으면 false 입니다(`FileUtil::collectFiles` 와 같다). */
         [[nodiscard]] static bool collectGameDataFiles( string_view dataFolder, vector<GameDataFileEntry>& outList );
 

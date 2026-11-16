@@ -80,10 +80,10 @@ namespace sw
         _status          = ServerAdminStatusDelegate{};
     }
 
-    void ServerAdminChannel::pump()
+    void ServerAdminChannel::poll()
     {
         if ( _channel != nullptr )
-            (void)_channel->pump();
+            (void)_channel->poll();
     }
 
     bool ServerAdminChannel::executeCommand( string_view line, string& outReply )

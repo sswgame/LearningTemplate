@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -65,6 +67,25 @@ SW_TEST_CASE( PackCookerTest, RecordIDSeparatesStagingFolders )
     SW_EXPECT_NOT_EQUAL( release, PackCooker::makeRecordID( "Client-dx12", "D:/Repo/build/Ninja-Release/Cooked", "common.pack" ) );
     SW_EXPECT_TRUE( StringUtil::startsWith( release, "packs" ) );
     SW_EXPECT_TRUE( StringUtil::endsWith( release, "engine.pack" ) );
+}
+
+/**
+ * @brief [PackCookerTest] 버린 셰이더 바이너리는 출처 묶음 하나의 에셋이 모두 닿았을 때만(빈 묶음은 늘) 필요한 것이다 — 닿지 않은 개발 파이프라인이 요청한 것은 경고가 아니다
+ */
+SW_TEST_CASE( PackCookerTest, DroppedShaderIsNeededOnlyWhenAnOriginIsReached )
+{
+    const unordered_map<string, vector<vector<string>>> mapRequested = {
+        {  "engine/shaders/bin/dx12/gtao_ps.dxil",                           { { "engine/pipeline/deferredpipeline_gi.xml" } }},
+        {   "engine/shaders/bin/dx12/lit_ps.dxil", { { "engine/pipeline/forward.xml", "game/empty/materials/rock.material" } }},
+        {"engine/shaders/bin/dx12/sprite_ps.dxil",                                                                      { {} }}
+    };
+    const unordered_set<string> setIncluded = { "engine/pipeline/forward.xml" };
+    SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/gtao_ps.dxil" ) );    // 출처가 닿지 않았다
+    SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/lit_ps.dxil" ) );     // 머티리얼이 닿지 않았다
+    SW_EXPECT_TRUE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/sprite_ps.dxil" ) );   // 늘 필요하다
+    SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/unknown_ps.dxil" ) ); // 요청 밖
+    const unordered_set<string> setBoth = { "engine/pipeline/forward.xml", "game/empty/materials/rock.material" };
+    SW_EXPECT_TRUE( PackCooker::isRequestedByReachedOrigin( mapRequested, setBoth, "engine/shaders/bin/dx12/lit_ps.dxil" ) );
 }
 
 /**

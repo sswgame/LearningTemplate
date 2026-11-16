@@ -183,7 +183,7 @@ namespace sw
             const AnnotationBinding* pBinding = ( eqPos == string::npos )
                                                   ? session._annotationMeta.findBare( annotation::kPropertyScope, token )
                                                   : session._annotationMeta.findKey( annotation::kPropertyScope, StringUtil::trim( string_view( token ).substr( 0, eqPos ) ) );
-            if ( pBinding != nullptr && AnnotationFields::acceptsOnEvent( pBinding->_field ) == false )
+            if ( pBinding != nullptr && AnnotationFields::canAcceptOnEvent( pBinding->_field ) == false )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEventEvent", "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only (%#).", owner, token,
                                  AnnotationFields::makeEventFieldList() );

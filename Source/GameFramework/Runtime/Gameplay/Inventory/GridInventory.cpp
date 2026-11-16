@@ -43,7 +43,7 @@ namespace sw
         _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), constant::invalid_index::kInt32 );
         for ( const GridItem& item : _listItem )
         {
-            stampItem( item, item._instanceID );
+            fillItemCells( item, item._instanceID );
         }
         ++_revision;
         return true;
@@ -115,7 +115,7 @@ namespace sw
         item._y          = y;
         item._bRotated   = bRotated ? SW_TRUE : SW_FALSE;
         _listItem.push_back( item );
-        stampItem( item, item._instanceID );
+        fillItemCells( item, item._instanceID );
         ++_revision;
         return item._instanceID;
     }
@@ -196,11 +196,11 @@ namespace sw
         GridItem& item = _listItem[static_cast<size_t>( *itemIndex )];
         if ( canPlace( item._itemID, x, y, bRotated, instanceID ) == false )
             return false;
-        stampItem( item, constant::invalid_index::kInt32 );
+        fillItemCells( item, constant::invalid_index::kInt32 );
         item._x        = x;
         item._y        = y;
         item._bRotated = bRotated ? SW_TRUE : SW_FALSE;
-        stampItem( item, instanceID );
+        fillItemCells( item, instanceID );
         ++_revision;
         return true;
     }
@@ -275,7 +275,7 @@ namespace sw
         outHeight = bRotated ? shape._width : shape._height;
     }
 
-    void GridInventory::stampItem( const GridItem& item, int32 value )
+    void GridInventory::fillItemCells( const GridItem& item, int32 value )
     {
         GridItemShape shape;
         if ( findShape( item._itemID, shape ) == false )
@@ -294,7 +294,7 @@ namespace sw
 
     void GridInventory::eraseItemAt( size_t itemIndex )
     {
-        stampItem( _listItem[itemIndex], constant::invalid_index::kInt32 );
+        fillItemCells( _listItem[itemIndex], constant::invalid_index::kInt32 );
         _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( itemIndex ) );
     }
 

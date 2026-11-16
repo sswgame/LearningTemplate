@@ -372,7 +372,7 @@ SW_TEST_CASE( ControlSystemTest, PlaybackWithNoPreviousControllerReleases )
 SW_TEST_CASE( ControlSystemTest, QueuedPossessIgnoresDeadControllers )
 {
     ControlRig     rig;
-    ControlSystem& system = ControlSystem::ensureFor( rig._manager );
+    ControlSystem& system = ControlSystem::findOrCreate( rig._manager );
     system.queuePossess( TComponentHandle<ControllerComponent>{ rig._pFirst }, TComponentHandle<PawnComponent>{ rig._pPawn } );
     SW_EXPECT_FALSE( rig._pPawn->isPossessed() ); // 다음 틱 첫머리에 적용한다
     rig.tick();
@@ -472,7 +472,7 @@ SW_TEST_CASE( ControlSystemTest, SystemLeavesWhenNothingUsesIt )
 SW_TEST_CASE( ControlSystemTest, RecordingCapturesEachTick )
 {
     ControlRig     rig;
-    ControlSystem& system = ControlSystem::ensureFor( rig._manager );
+    ControlSystem& system = ControlSystem::findOrCreate( rig._manager );
     rig._pFirst->play( *rig._pPawn, { ControlRig::makeMove( 1.0f ), ControlRig::makeMove( 0.5f ) }, false );
     system.setRecording( true, 16 );
     SW_EXPECT_TRUE( system.isRecording() );

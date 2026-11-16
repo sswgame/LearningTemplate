@@ -89,8 +89,10 @@ namespace sw
         int32 _herbExperience{ 15 };
         PROPERTY( Min = 0.0, Units = s )
         float32 _herbRespawnSeconds{ 5.0f };
-        PROPERTY( Min = 0.1, Units = m, Tooltip = "Longest walk one move request may ask for" )
+        PROPERTY( Min = 0.1, Units = m, Tooltip = "Longest walk one move request may ask for - also the most walk budget an avatar can save up" )
         float32 _maxMoveStep{ 12.0f };
+        PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may walk - the server refills this much walk budget per second and moves spend it" )
+        float32 _moveSpeed{ 0.0f };
         PROPERTY( Min = 1.0, Units = m, Tooltip = "The vale spans -extent..extent on X and Z" )
         float32 _worldHalfExtent{ 64.0f };
         PROPERTY( Min = 2, Max = 8 )
@@ -149,6 +151,7 @@ namespace sw
         uint32      _partyID{ 0 };      ///< 0 이면 파티가 없다
         uint32      _inviteFromID{ 0 }; ///< 받은 초대를 보낸 아바타. 0 이면 없다
         float32     _attackCooldown{ 0.0f };
+        float32     _moveBudget{ 0.0f };   ///< 지금 걸을 수 있는 거리(m) — 틱이 `_moveSpeed × dt` 만큼 채우고(`_maxMoveStep` 까지) 이동이 쓴다(감사 K-1)
         uint8       _bChanged{ SW_FALSE }; ///< 알릴 진행 · 파티가 바뀌었다(`ValeWorld::consumeDirtyFlag`)
     };
 

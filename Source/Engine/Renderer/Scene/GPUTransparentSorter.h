@@ -21,7 +21,7 @@ namespace sw
      */
     /**
      * @enum TransparentDrawBand
-     * @brief 반투명 그리기의 띠입니다 — 장면 색 사본을 읽는 굴절(`Material::readsSceneColorCopy`)이 먼저다. 차례 · 레이어 · 깊이는 띠 안의 순서다.
+     * @brief 반투명 그리기의 띠입니다 — 장면 색 사본을 읽는 굴절(`Material::usesSceneColorCopy`)이 먼저다. 차례 · 레이어 · 깊이는 띠 안의 순서다.
      * @details 사본은 반투명 전체 앞에 떠 둔 것이라 굴절 면보다 먼저 그려진 반투명은 굴절 너머로 사라진다. 차례(renderQueue)를 손으로 적던 규칙을 띠가 대신한다
      *          (유니티 HDRP 의 굴절 앞 · 뒤 반투명, 언리얼은 굴절을 반투명 뒤의 왜곡 패스로 미룬다).
      */

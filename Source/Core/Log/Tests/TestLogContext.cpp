@@ -44,7 +44,7 @@ namespace
         *pOutEmpty = LogContext::getCurrent().isEmpty();
     }
 
-    string formatTagOf( const LogContext& context )
+    string makeFormatTag( const LogContext& context )
     {
         utf8        arrTag[LogContext::kMaxTagSize];
         const int32 length = context.formatTag( arrTag, LogContext::kMaxTagSize );
@@ -86,18 +86,18 @@ SW_TEST_CASE( LogContextTest, ThreadsDoNotShareTheContext )
     SW_EXPECT_TRUE( first != LogTraceID::makeRandom() );
 }
 
-SW_TEST_CASE( LogContextTest, TagHasOnlyThePresentFields )
+SW_TEST_CASE( LogContextTest, TagHasOnlyThePresentProperties )
 {
     LogContext context;
-    SW_EXPECT_TRUE( formatTagOf( context ).empty() );
+    SW_EXPECT_TRUE( makeFormatTag( context ).empty() );
     context._traceID = LogTraceID{ 0x0123456789abcdefull, 0x1 };
-    SW_EXPECT_TRUE( formatTagOf( context ) == "[trace=0123456789abcdef0000000000000001] " );
+    SW_EXPECT_TRUE( makeFormatTag( context ) == "[trace=0123456789abcdef0000000000000001] " );
     context._principalID = 0x42;
-    const string both    = formatTagOf( context );
+    const string both    = makeFormatTag( context );
     SW_EXPECT_TRUE( both == "[trace=0123456789abcdef0000000000000001 acct=0000000000000042] " );
     SW_EXPECT_EQUAL( static_cast<int32>( both.size() ), LogContext::kMaxTagSize - 1 ); // 가장 긴 꼬리표가 버퍼에 꼭 맞는다
     context._traceID = LogTraceID{};
-    SW_EXPECT_TRUE( formatTagOf( context ) == "[acct=0000000000000042] " );
+    SW_EXPECT_TRUE( makeFormatTag( context ) == "[acct=0000000000000042] " );
     utf8 arrSmall[LogContext::kMaxTagSize - 1];
     SW_EXPECT_EQUAL( context.formatTag( arrSmall, LogContext::kMaxTagSize - 1 ), 0 ); // 모자란 버퍼는 빈 글
     SW_EXPECT_EQUAL( arrSmall[0], utf8( '\0' ) );

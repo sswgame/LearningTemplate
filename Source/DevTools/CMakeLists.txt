@@ -12,20 +12,20 @@
 # 공유 라이브러리다 — 여러 이미지(App · EditorModule · GameFramework)가 링크하므로 정적이면 정적 등록이 이미지마다 돈다(언리얼 Developer 모듈도 DLL).
 # include 경로는 `DevTools/...` 다.
 # ------------------------------------------------------------------------------
-file(GLOB_RECURSE DEVTOOLS_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.h")
-sw_filterPlatformSources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Windows` · `FileWatch/Linux`)
-# 클라이언트 전용 부분(Client/ — 셰이더 라이브 리로드 · 디버그 HUD · 콘솔 오버레이, `IDevToolsClientPart`)은 전용 서버가 짓지 않는다(cmake/Engine/UnbuiltSources.cmake).
+sw_glob_source_tree(DEVTOOLS_SOURCES RECURSE "*.cpp" "*.h")
+sw_filter_platform_sources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Windows` · `FileWatch/Linux`)
+# 클라이언트 전용 부분(Client/ — 셰이더 라이브 리로드 · 디버그 HUD · 콘솔 오버레이, `IDevToolsClientPart`)은 전용 서버가 짓지 않는다(cmake/Modules/Build/ExcludedSources.cmake).
 # 자동화 시나리오 실행기(`Client/Automation` — 언리얼 Automation 컨트롤러 · Gauntlet 이 Developer 모듈인 자리)도 여기다. 창 · RHI · 렌더러 사진을 모는 클라이언트 구동기라 서버는 짓지 않고,
 # 엔진 창구 `IAutomationRuntime` 에 모듈 서브시스템으로 스스로 선다(`SW_MODULE_SUBSYSTEM` — 호스트 라이브러리 등록이 "Engine" 이름으로 걷는다).
 # 설정 리로드 · 콘솔의 입력 · 시작 명령은 서버에도 선다.
 if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_excludeUnbuiltSources(DEVTOOLS_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+	sw_remove_excluded_sources(DEVTOOLS_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
 elseif(SW_TARGET_TYPE STREQUAL "Client")
-	sw_excludeUnbuiltSources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
+	sw_remove_excluded_sources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
 endif()
 
 add_library(DevTools SHARED ${DEVTOOLS_SOURCES})
-sw_applyTargetLayerGate(DevTools devtools)
+sw_apply_target_layer_guard(DevTools devtools)
 set_target_properties(DevTools PROPERTIES
 	FOLDER "Source/DevTools"
 	EXCLUDE_FROM_ALL ON)
@@ -38,33 +38,33 @@ target_link_libraries(DevTools
 		sw_global_options
 )
 target_compile_definitions(DevTools PRIVATE "SW_LOG_TAG=\"DevTools\"" "SW_REGISTRAR_MODULE=\"DevTools\"" SW_TOOL_INTERNAL) # 호스트 쪽 도구라 엔진 서비스 표를 직접 찾는다
-sw_configureDLLExports(DevTools SHARED DEVTOOLS)
-sw_configurePCH(DevTools "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+sw_configure_dll_exports(DevTools SHARED DEVTOOLS)
+sw_configure_pch(DevTools "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
 # Tracy — 엔진 프로파일러의 외부 출력(`Profiling/Tracy/TracyProfilerBackend`, 엔진은 `IProfilerBackend` 만 안다). 헤더는 Profiling/Tracy 에서만 include 한다.
 # 클라이언트는 프로세스에 하나 — DevTools 만 링크하고, 엔진 · RHI 백엔드 · 모듈은 엔진 인터페이스만 본다. GPU 구간은 엔진이 이미 모으는 타임스탬프를 넘긴다.
 # 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(엔진의 Jolt 와 같은 방식). 배포 호스트는 DevTools 를 짓지 않는다.
 # Windows 는 링크하지 않는다 — `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`). 리눅스는 링크한다.
 if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
-	if(sw_platform_name STREQUAL "Windows")
+	if(SW_PLATFORM_NAME STREQUAL "Windows")
 		# 링크하지 않는다(위 — 지연 로드).
-	elseif(sw_platform_name STREQUAL "Linux")
+	elseif(SW_PLATFORM_NAME STREQUAL "Linux")
 		target_link_libraries(DevTools PRIVATE $<LINK_ONLY:tracy>)
 	else()
-		message(FATAL_ERROR "[DevTools] Tracy link mode for platform '${sw_platform_name}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
+		message(FATAL_ERROR "[DevTools] Tracy link mode for platform '${SW_PLATFORM_NAME}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
 	endif()
 	target_compile_definitions(DevTools PRIVATE SW_PROFILER_TRACY)
-	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
+	sw_glob_source_tree(tracy_backend_sources "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
 	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
-	get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
+	get_target_property(tracy_include_dir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
 	if(MSVC)
-		set(swTracyIncludeOption "/external:I${swTracyIncludeDir}")
+		set(tracy_include_option "/external:I${tracy_include_dir}")
 	else()
-		set(swTracyIncludeOption "-isystem${swTracyIncludeDir}")
+		set(tracy_include_option "-isystem${tracy_include_dir}")
 	endif()
-	set_source_files_properties(${swTracyBackendSources} PROPERTIES
+	set_source_files_properties(${tracy_backend_sources} PROPERTIES
 		COMPILE_DEFINITIONS "$<TARGET_PROPERTY:Tracy::TracyClient,INTERFACE_COMPILE_DEFINITIONS>"
-		COMPILE_OPTIONS "${swTracyIncludeOption}"
+		COMPILE_OPTIONS "${tracy_include_option}"
 		SKIP_PRECOMPILE_HEADERS ON
 	)
 	message(STATUS "[DevTools] Tracy profiler client enabled (loaded on demand on Windows)")

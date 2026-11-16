@@ -23,6 +23,11 @@
     #include <stdlib.h>
 
 // NOLINTNEXTLINE(readability-identifier-naming): NDK 글루가 부르는 이름이다
+namespace
+{
+    constexpr int32 kWaitForever = -1; ///< ALooper_pollOnce 의 시한 없음
+} // namespace
+
 extern "C" void android_main( android_app* pApp )
 {
     sw::AndroidWindow::setApplication( pApp );
@@ -48,6 +53,20 @@ extern "C" void android_main( android_app* pApp )
     const sw::IContentFileSource* const pPreviousSource = sw::ContentFileSource::bindCurrent( &packSource );
     (void)sw::AppEntry::run( static_cast<int32>( listArgument.size() ), listArgumentPointer.data() );
     (void)sw::ContentFileSource::bindCurrent( pPreviousSource );
+    // 게임이 스스로 끝냈으면(종료 메뉴 · 시나리오 끝) 액티비티를 끝내 달라고 하고 글루의 destroyRequested 까지 기다린다(감사 P0-9).
+    // android_main 이 먼저 돌아오면 Java 액티비티는 살아 있어 표면 · 수명 콜백이 처리할 스레드 없는 파이프에 쓰고 기다린다(검은 화면 · ANR).
+    // 언리얼 AndroidThunkCpp_ForceQuit · 유니티 Application.Quit 의 finish 자리다. 시스템이 먼저 닫았으면(destroyRequested) 바로 지나간다.
+    if ( pApp->destroyRequested == 0 )
+    {
+        ANativeActivity_finish( pApp->activity );
+        while ( pApp->destroyRequested == 0 )
+        {
+            int32                events  = 0;
+            android_poll_source* pSource = nullptr;
+            if ( ALooper_pollOnce( kWaitForever, nullptr, &events, reinterpret_cast<void**>( &pSource ) ) >= 0 && pSource != nullptr )
+                pSource->process( pApp, pSource );
+        }
+    }
     sw::AndroidWindow::setApplication( nullptr );
 }
 

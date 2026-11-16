@@ -108,7 +108,7 @@ namespace sw::editor
         _nodeGraph.shutdown();
     }
 
-    bool BehaviorTreePanel::acceptsDocumentPath( string_view assetPath ) const
+    bool BehaviorTreePanel::canAcceptDocumentPath( string_view assetPath ) const
     {
         return StringUtil::endsWith( assetPath, BehaviorTreeAsset::kExtension );
     }
@@ -232,7 +232,7 @@ namespace sw::editor
             const bool bEditable = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
             if ( bEditable )
             {
-                if ( ImGui::BeginCombo( "##behaviorTree.add", "Add node..." ) )
+                if ( EditorWidgets::beginCombo( "##behaviorTree.add", "Add node..." ) )
                 {
                     for ( uint32 index = 0; index < BehaviorTreePanelInternal::kNodeTypeCount; ++index )
                     {
@@ -661,7 +661,7 @@ namespace sw::editor
         if ( pTask != nullptr )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Task" ) );
-            if ( ImGui::BeginCombo( "##behaviorTree.task", pTask->_task.empty() ? "(pick a task)" : pTask->_task.c_str() ) )
+            if ( EditorWidgets::beginCombo( "##behaviorTree.task", pTask->_task.empty() ? "(pick a task)" : pTask->_task.c_str() ) )
             {
                 _listTaskName.clear();
                 ActionRegistry::collectNames( _listTaskName );
@@ -696,7 +696,7 @@ namespace sw::editor
         if ( bEdited )
         {
             _statusText.clear();
-            notifyDocumentEdited( "Edit Behavior Node", "behavior-tree-node-edit" ); // 연속 편집은 한 번의 되돌리기로 합친다
+            notifyDocumentEdited( "Edit Behavior Node" ); // 연속 편집은 상호작용 구간 하나라 한 번의 되돌리기다
         }
     }
 

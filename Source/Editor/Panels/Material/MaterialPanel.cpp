@@ -57,10 +57,11 @@ namespace sw::editor
              */
             static bool drawTypedProperty( MaterialProperty& prop )
             {
-                const string label  = EditorDisplayNameUtil::chooseLabel( prop._displayName, prop._name ); // 인스펙터와 같은 이름표 규칙
-                const string id     = "##" + label;
-                const utf8*  pLabel = label.c_str();
-                const utf8*  pID    = id.c_str(); // 이름표는 왼쪽 열(`drawPropertyRowLabel`)에 둔다 — 셰이더 · 텍스처 슬롯과 같은 쪽이다(예전에는 값 오른쪽에 붙었다)
+                const string         label    = EditorDisplayNameUtil::chooseLabel( prop._displayName, prop._name ); // 인스펙터와 같은 이름표 규칙
+                const string         id       = "##" + label;
+                const utf8*          pLabel   = label.c_str();
+                const EditorWidgetID widgetID = EditorWidgetID::fromString( id.c_str() );
+                const utf8*          pID      = id.c_str(); // 이름표는 왼쪽 열(`drawPropertyRowLabel`)에 둔다 — 셰이더 · 텍스처 슬롯과 같은 쪽이다(예전에는 값 오른쪽에 붙었다)
                 if ( prop._value.empty() )
                     prop._value = prop._defaultValue;
 
@@ -88,9 +89,9 @@ namespace sw::editor
                         bool bChanged{ false };
                         EditorWidgets::drawPropertyRowLabel( pLabel );
                         if ( prop._type == MaterialPropertyType::Range && prop._min < prop._max )
-                            bChanged = ImGui::SliderFloat( pID, &arrVal[0], prop._min, prop._max );
+                            bChanged = EditorWidgets::sliderFloat( widgetID, &arrVal[0], prop._min, prop._max );
                         else
-                            bChanged = ImGui::DragFloat( pID, &arrVal[0], 0.01f );
+                            bChanged = EditorWidgets::dragFloat( widgetID, &arrVal[0], 0.01f );
                         if ( bChanged )
                             MaterialModel::writeFloats( prop._value, arrVal, 1 );
                         return bChanged;
@@ -101,7 +102,7 @@ namespace sw::editor
                         if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
                         EditorWidgets::drawPropertyRowLabel( pLabel );
-                        const bool bChanged = ImGui::DragFloat2( pID, arrVal, 0.01f );
+                        const bool bChanged = EditorWidgets::dragFloat2( widgetID, arrVal, 0.01f );
                         if ( bChanged )
                             MaterialModel::writeFloats( prop._value, arrVal, 2 );
                         return bChanged;
@@ -112,7 +113,7 @@ namespace sw::editor
                         if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
                         EditorWidgets::drawPropertyRowLabel( pLabel );
-                        const bool bChanged = ImGui::DragFloat3( pID, arrVal, 0.01f );
+                        const bool bChanged = EditorWidgets::dragFloat3( widgetID, arrVal, 0.01f );
                         if ( bChanged )
                             MaterialModel::writeFloats( prop._value, arrVal, 3 );
                         return bChanged;
@@ -141,7 +142,8 @@ namespace sw::editor
                     {
                         int32 iVal{ 0 };
                         (void)StringUtil::parseInt( prop._value, iVal ); // 화면 표시 — 못 읽으면 0
-                        const bool bChanged = ImGui::DragInt( pLabel, &iVal );
+                        EditorWidgets::drawPropertyRowLabel( pLabel );
+                        const bool bChanged = EditorWidgets::dragInt( widgetID, &iVal );
                         if ( bChanged )
                             prop._value = to_string( iVal );
                         return bChanged;
@@ -157,7 +159,7 @@ namespace sw::editor
                                 pPreview = entry._name.c_str();
                         }
                         bool bChanged{ false };
-                        if ( ImGui::BeginCombo( pLabel, pPreview ) )
+                        if ( EditorWidgets::beginCombo( pLabel, pPreview ) )
                         {
                             for ( const MaterialEnumEntry& entry : prop._listEnumEntry )
                             {
@@ -327,11 +329,11 @@ namespace sw::editor
 
         fixed_string<constant::buffer::kMax128>& name = _model.editName();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
-        ImGui::InputText( "##name", name.data(), name.capacity() );
+        EditorWidgets::inputText( SW_WIDGET_ID( "##name" ), name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _model.commitName();
-            notifyDocumentEdited( "Edit Material Name", "material-name" );
+            notifyDocumentEdited( "Edit Material Name" );
             applyLivePreview();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
@@ -340,7 +342,7 @@ namespace sw::editor
         if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Shader" ), shaderPath, ".hlsl" ) )
         {
             _model.setShaderPath( shaderPath );
-            notifyDocumentEdited( "Edit Material Shader", "material-shader" );
+            notifyDocumentEdited( "Edit Material Shader" );
         }
         ImGui::EndGroup();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ShaderTip" ) );
@@ -390,9 +392,7 @@ namespace sw::editor
             }
             if ( bChanged )
             {
-                fixed_string<constant::buffer::kMax128> key;
-                formatstring( key.data(), key.capacity(), "material-prop:%s", pProp->_name.c_str() );
-                notifyDocumentEdited( "Edit Material Property", key.c_str() );
+                notifyDocumentEdited( "Edit Material Property" ); // 슬라이더 끌기 한 번은 상호작용 구간 하나 = 되돌리기 한 단계(감사 P0-1)
                 applyLivePreview();
             }
             ImGui::PopID();

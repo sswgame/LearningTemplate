@@ -21,19 +21,31 @@
 
 namespace sw
 {
+    /**
+     * @enum AutomationBackendSplit @brief 체인의 시나리오를 백엔드에 어떻게 나눠 줄지입니다(`-scenario-backend-split=independent|all`).
+     * @details Independent 는 판정이 백엔드에 달린 시나리오만 모두에게 주고, All 은 모든 시나리오를 돌아가며 하나에게 준다 — 그림 · 기록 대조는 모든 백엔드를 도는
+     *          구성(Release)이 맡고, 검사 빌드(Debug)는 단언 · 검사를 시나리오마다 한 번 지나는 것이 목적이라 All 이다(언리얼 CI 가 Debug 를 RHI 하나로 도는 것과 같다).
+     */
+    enum class AutomationBackendSplit : uint8
+    {
+        None,        ///< 모든 시나리오를 모든 백엔드에서
+        Independent, ///< 백엔드와 무관한 시나리오만 하나씩
+        All,         ///< 모든 시나리오를 하나씩
+    };
+
     /** @struct AutomationPerBackendOptions @brief 백엔드마다 실행 하나의 입력입니다. */
     struct AutomationPerBackendOptions
     {
-        string         _executablePath{};          ///< 자식으로 띄울 App(이 프로세스의 실행 파일)
-        string         _scenarioPath{};            ///< `-scenario` 의 값 그대로
-        vector<string> _listBackend{};             ///< 명령줄 이름(`dx11` · `vk` …) — 쿠킹 표 순서
-        vector<string> _listPassThroughArgument{}; ///< 자식에 그대로 넘길 원본 인자(`<Launch>` 값 · `-unattended` …) — 백엔드 목록 · 로그 · 보고 · 백엔드 인자는 뺐다
-        string         _logFilePath{};             ///< 부모의 `-log-file`(비면 기본 폴더)
-        string         _reportPath{};              ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
-        int32          _splitOffset{ -1 };         ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
-        bool           _bSplitScenarios{ false };  ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`) NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        int32          _slotCount{ 0 };            ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
-        string         _userDataRoot{};            ///< 부모의 사용자 데이터 뿌리(`AutomationUserDataRoot::resolve`) — 자식마다 `<이 뿌리>/<백엔드>` 를 비워 건다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다
+        string                 _executablePath{};                      ///< 자식으로 띄울 App(이 프로세스의 실행 파일)
+        string                 _scenarioPath{};                        ///< `-scenario` 의 값 그대로
+        vector<string>         _listBackend{};                         ///< 명령줄 이름(`dx11` · `vk` …) — 쿠킹 표 순서
+        vector<string>         _listPassThroughArgument{};             ///< 자식에 그대로 넘길 원본 인자(`<Launch>` 값 · `-unattended` …) — 백엔드 목록 · 로그 · 보고 · 백엔드 인자는 뺐다
+        string                 _logFilePath{};                         ///< 부모의 `-log-file`(비면 기본 폴더)
+        string                 _reportPath{};                          ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
+        int32                  _splitOffset{ -1 };                     ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
+        AutomationBackendSplit _split{ AutomationBackendSplit::None }; ///< `-scenario-backend-split` — 백엔드 하나에만 줄 시나리오(`assignScenarios`)
+        int32                  _slotCount{ 0 };                        ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
+        string                 _userDataRoot{};                        ///< 부모의 사용자 데이터 뿌리(`AutomationUserDataRoot::resolve`) — 자식마다 `<이 뿌리>/<백엔드>` 를 비워 건다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다
     };
 
     /** @struct AutomationBackendRecords @brief 한 시나리오를 한 백엔드에서 돌린 기록 줄(자식 보고의 `records[]`, 적은 순서)입니다. */
@@ -52,9 +64,13 @@ namespace sw
          */
         [[nodiscard]] static expected<vector<string>> parseBackendList( string_view text );
 
+        /** @brief `-scenario-backend-split` 의 값(`independent` · `all`)을 읽습니다. 다른 값(빈 값 포함)은 그 값이 대상인 오류입니다. */
+        [[nodiscard]] static expected<AutomationBackendSplit> parseBackendSplit( string_view text );
+
         /**
          * @brief 백엔드마다(@p options 의 `_listBackend` 순서) 돌릴 `-scenario` 목록입니다. 나누지 않으면 모두 같은 목록입니다.
-         * @details 나누면 판정이 백엔드에 달린 단계(`<ExpectImage>` · 마젠타 문턱이 있는 `<CaptureEditorUI>` · `<EditorSelfTest>` · 백엔드 사이에 견주는 `<Record>`)가 있는 시나리오는 모두에게, 나머지는 순서대로 돌아가며 하나에게 준다 — 체인의 순서는 그대로다.
+         * @details Independent 로 나누면 판정이 백엔드에 달린 단계(`<ExpectImage>` · 마젠타 문턱이 있는 `<CaptureEditorUI>` · `<EditorSelfTest>` · 백엔드 사이에 견주는 `<Record>`)가 있는 시나리오는 모두에게,
+         *          나머지는 순서대로 돌아가며 하나에게 준다. All 이면 모든 시나리오를 돌아가며 하나에게 준다. 체인의 순서는 그대로다.
          *          읽지 못하는 시나리오도 모두에게 준다 — 자식마다 읽기 오류를 낸다.
          */
         static vector<string> assignScenarios( const AutomationPerBackendOptions& options );

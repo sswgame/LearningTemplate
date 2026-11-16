@@ -39,7 +39,7 @@ namespace sw::editor
              * @details 켜기 단추는 그 조작(이동 · 회전 · 크기)의 아이콘이다 — 언리얼 뷰포트 툴바의 스냅 묶음(아이콘 + 값)과 같다. 예전 글 단추("Grid Snap" · "Rot Snap")는
              *          크기 스냅을 더하자 기본 배치(1600 폭)에서 막대가 캔버스 밖으로 잘렸다.
              */
-            static void drawSnapToggleCombo( const utf8* pToggleID, const utf8* pIcon, const utf8* pComboID, bool& bEnabled, float32& value,
+            static void drawSnapToggleCombo( const utf8* pToggleID, const utf8* pIcon, EditorWidgetID comboID, bool& bEnabled, float32& value,
                                              const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
                                              int32 fallbackIndex, bool bVertical, const utf8* pToggleTooltip,
                                              const utf8* pValueTooltip, const utf8* pToggleMark )
@@ -67,7 +67,7 @@ namespace sw::editor
                     }
                 }
 
-                if ( ImGui::Combo( pComboID, &currentIndex, arrLabel, valueCount ) )
+                if ( EditorWidgets::combo( comboID, &currentIndex, arrLabel, valueCount ) )
                 {
                     if ( 0 <= currentIndex && currentIndex < valueCount )
                         value = arrValue[currentIndex];
@@ -153,7 +153,7 @@ namespace sw::editor
 
             ImGui::BeginDisabled( pRenderer == nullptr );
             EditorChrome::setNextItemWidthColumns( 13.0f );
-            const bool bOpen = ImGui::BeginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
+            const bool bOpen = EditorWidgets::beginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
             EditorSelfTestMarks::record( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
             if ( bOpen )
             {
@@ -187,7 +187,7 @@ namespace sw::editor
 
         nextItem( bVertical );
         EditorChrome::setNextItemWidthColumns( 9.0f );
-        ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
+        EditorWidgets::sliderFloat( SW_WIDGET_ID( "##CamSpeed" ), &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraSpeed" ) );
     }
 
@@ -300,14 +300,14 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "##gridSnap", SW_EDITOR_ICON( "Grid" ), "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##gridSnap", SW_EDITOR_ICON( "Grid" ), SW_WIDGET_ID( "##GridSnapVal" ), settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
                                                             SW_LOCKEY( "EdCommon", "GridSnap" ),
                                                             SW_LOCKEY( "EdCommon", "GridSnapSize" ), "viewport.gridSnap" );
 
         nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
         const utf8*   arrRotLabel[] = { "5\xc2\xb0", "15\xc2\xb0", "45\xc2\xb0", "90\xc2\xb0" }; // 5° …(UTF-8 도 기호)
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "##rotationSnap", SW_EDITOR_ICON( "Rotate" ), "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##rotationSnap", SW_EDITOR_ICON( "Rotate" ), SW_WIDGET_ID( "##RotSnapVal" ), settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
                                                             4, 1, bVertical,
                                                             SW_LOCKEY( "EdCommon", "RotationSnap" ),
                                                             SW_LOCKEY( "EdCommon", "RotationSnapSize" ), "viewport.rotationSnap" );
@@ -316,7 +316,7 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrScaleValue[] = { 0.1f, 0.25f, 0.5f, 1.0f };
         const utf8*   arrScaleLabel[] = { "0.1", "0.25", "0.5", "1.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "##scaleSnap", SW_EDITOR_ICON( "Scale" ), "##ScaleSnapVal", settings._bScaleSnap, settings._scaleSnapValue, arrScaleValue,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##scaleSnap", SW_EDITOR_ICON( "Scale" ), SW_WIDGET_ID( "##ScaleSnapVal" ), settings._bScaleSnap, settings._scaleSnapValue, arrScaleValue,
                                                             arrScaleLabel, 4, 0, bVertical,
                                                             SW_LOCKEY( "EdCommon", "ScaleSnap" ),
                                                             SW_LOCKEY( "EdCommon", "ScaleSnapSize" ), "viewport.scaleSnap" );

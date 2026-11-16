@@ -14,7 +14,7 @@ using namespace sw;
 /**
  * @brief [DeferredRegistrationTest] 나눠 부르면 한도만큼만 붙은 순서로 등록되고, 끝나면 미루기가 풀려 다음 컴포넌트는 바로 등록된다. 남은 것은 `endDeferredRegistration` 이 끝낼 수도 있다
  */
-SW_TEST_CASE( DeferredRegistrationTest, PumpRegistersUpToTheBudgetInOrder )
+SW_TEST_CASE( DeferredRegistrationTest, PollRegistersUpToTheBudgetInOrder )
 {
     GameObjectManager manager;
     manager.beginDeferredRegistration();
@@ -26,13 +26,13 @@ SW_TEST_CASE( DeferredRegistrationTest, PumpRegistersUpToTheBudgetInOrder )
         pSky = pObject->addComponent<SkyComponent>();
         SW_REQUIRE_NOT_NULL( pSky );
     }
-    SW_EXPECT_FALSE( manager.pumpDeferredRegistration( 2 ) );
+    SW_EXPECT_FALSE( manager.processDeferredRegistration( 2 ) );
     SW_EXPECT_TRUE( arrSky[0]->isRegistered() );
     SW_EXPECT_TRUE( arrSky[1]->isRegistered() );
     SW_EXPECT_FALSE( arrSky[2]->isRegistered() );
 
     // 한도를 다 쓰지 않으면 끝난다 — 미루기가 풀려 새 컴포넌트는 바로 등록된다.
-    SW_EXPECT_TRUE( manager.pumpDeferredRegistration( 100 ) );
+    SW_EXPECT_TRUE( manager.processDeferredRegistration( 100 ) );
     SW_EXPECT_TRUE( arrSky[2]->isRegistered() );
     GameObject* pLate = manager.createGameObject( hashed_string( "Late" ) );
     SW_REQUIRE_NOT_NULL( pLate );
@@ -50,7 +50,7 @@ SW_TEST_CASE( DeferredRegistrationTest, PumpRegistersUpToTheBudgetInOrder )
     SkyComponent* pNextSky  = pNext->addComponent<SkyComponent>();
     SW_REQUIRE_NOT_NULL( pFirstSky );
     SW_REQUIRE_NOT_NULL( pNextSky );
-    SW_EXPECT_FALSE( manager.pumpDeferredRegistration( 1 ) );
+    SW_EXPECT_FALSE( manager.processDeferredRegistration( 1 ) );
     SW_EXPECT_FALSE( pNextSky->isRegistered() );
     manager.endDeferredRegistration();
     SW_EXPECT_TRUE( pNextSky->isRegistered() );

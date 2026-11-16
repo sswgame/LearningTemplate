@@ -166,6 +166,8 @@ namespace sw
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief 장치 손실 흉내입니다. GL 은 문맥을 일부러 잃을 API 가 없어 DX11 처럼 첫 손실을 본 뒤의 상태(전송 거절 · 대기 멈춤)만 만든다 — GPU 는 살아 있다. */
         bool debugRemoveDevice() override;
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
@@ -278,6 +280,8 @@ namespace sw
                 return _buffer == other._buffer && _texture == other._texture;
             }
             bool operator!=( const BindlessResourceRecord& other ) const { return ( *this == other ) == false; }
+            /** @brief 자원을 부술 때 이 칸을 찾는 주인입니다(`RHIBindlessRegistry::releaseBuffer` · `releaseTexture`). */
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
         };
 
         /// @brief GLuint 텍스처와 타깃, 포맷입니다.
@@ -349,6 +353,8 @@ namespace sw
             /** @brief `RHIBindlessRegistry` 가 "이 칸이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessTextureRecord& other ) const { return _texture == other._texture; }
             bool operator!=( const BindlessTextureRecord& other ) const { return ( *this == other ) == false; }
+            /** @brief 텍스처를 부술 때 이 칸을 찾는 주인입니다. */
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ 0, _texture }; }
         };
 
         /** @brief 번호가 가리키는 버퍼 · UAV · 텍스처를 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). */
@@ -426,7 +432,7 @@ namespace sw
          * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
          *          링보다 큰 한 장은 할당기가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
          * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
-         *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::settleAllocation` 한 곳).
+         *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::completeAllocation` 한 곳).
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
         /**
@@ -447,7 +453,7 @@ namespace sw
          * @details 되읽기 구간은 GPU 완료가 아니라 CPU 가 다 읽었을 때(`takeTextureReadback`) 돌아온다. 버린 읽기의 구간만 펜스가 지나면 돌아오므로, 차 있으면 펜스를 한 번 모은 뒤 다시 본다.
          *          링보다 큰 한 장은 업로드와 같이 단독 구간과 일회성 버퍼로 받는다.
          * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
-         *         (옮기는 곳은 업로드와 같은 `RHIStagingRingUtil::settleAllocation`).
+         *         (옮기는 곳은 업로드와 같은 `RHIStagingRingUtil::completeAllocation`).
          */
         [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
         /**

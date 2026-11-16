@@ -540,7 +540,7 @@ namespace sw
                 : IAudioEffect{ typeInfo, layout }
                 , _fft{}
                 , _arrImpulseSpectrum{}
-                , _listWork{}
+                , _listJob{}
                 , _listAccumulate{}
                 , _listWet{}
                 , _partitionCount{ 0 }
@@ -617,7 +617,7 @@ namespace sw
                     wet._listOutput.assign( kPartitionFrames, 0.0f );
                     _listWet.push_back( std::move( wet ) );
                 }
-                _listWork.assign( kFFTSize, AudioComplex{} );
+                _listJob.assign( kFFTSize, AudioComplex{} );
                 _listAccumulate.assign( kFFTSize, AudioComplex{} );
                 return true;
             }
@@ -687,12 +687,12 @@ namespace sw
                 {
                     for ( uint32 index = 0; index < kPartitionFrames; ++index )
                     {
-                        _listWork[index]                    = AudioComplex{ wet._listPrevious[index], 0.0f };
-                        _listWork[index + kPartitionFrames] = AudioComplex{ wet._listInput[index], 0.0f };
+                        _listJob[index]                    = AudioComplex{ wet._listPrevious[index], 0.0f };
+                        _listJob[index + kPartitionFrames] = AudioComplex{ wet._listInput[index], 0.0f };
                     }
-                    _fft.forward( _listWork.data() );
+                    _fft.forward( _listJob.data() );
                     AudioComplex* pSlot = wet._listHistory.data() + static_cast<size_t>( _historyCursor ) * kFFTSize;
-                    Memory::copy( pSlot, _listWork.data(), sizeof( AudioComplex ) * kFFTSize );
+                    Memory::copy( pSlot, _listJob.data(), sizeof( AudioComplex ) * kFFTSize );
 
                     for ( AudioComplex& value : _listAccumulate )
                     {
@@ -723,7 +723,7 @@ namespace sw
         private:
             AudioFFT             _fft;                                            /**< 크기 `kFFTSize` 의 FFT 표입니다. */
             vector<AudioComplex> _arrImpulseSpectrum[audio::kStereoChannelCount]; /**< 응답 채널마다 조각 스펙트럼(조각 수 × FFT 크기)입니다. */
-            vector<AudioComplex> _listWork;                                       /**< 입력 FFT 작업 버퍼입니다. */
+            vector<AudioComplex> _listJob;                                        /**< 입력 FFT 작업 버퍼입니다. */
             vector<AudioComplex> _listAccumulate;                                 /**< 조각 곱의 합입니다. */
             vector<WetChannel>   _listWet;                                        /**< 젖은 채널입니다(LFE 를 뺀 채널). */
             uint32               _partitionCount;                                 /**< 조각 수입니다. */

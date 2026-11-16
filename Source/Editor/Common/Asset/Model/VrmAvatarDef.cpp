@@ -181,12 +181,12 @@ namespace sw::editor
                 {
                     const optional<float32> number = value.at( axis ).read<float32>();
                     if ( number.has_value() == false )
-                        return unexpected( makeError( ErrorKind::InvalidArgument, "the vector has a value that is not a number", context, "vector", value.dump() ) );
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "the vector has a value that is not a number", context, "vector", value.describe() ) );
                     *arrAxis[axis] = *number;
                 }
                 if ( bArray )
                     return {};
-                return unexpected( makeError( ErrorKind::InvalidArgument, "the vector must be { x, y, z } or [ x, y, z ]", context, "vector", value.dump() ) );
+                return unexpected( makeError( ErrorKind::InvalidArgument, "the vector must be { x, y, z } or [ x, y, z ]", context, "vector", value.describe() ) );
             }
 
             /** @brief 0.x 확장의 벡터(유니티 공간)를 엔진 공간으로 옮깁니다. z 를 뒤집어 glTF 로, X 를 뒤집어 엔진으로 간다. */
@@ -202,7 +202,7 @@ namespace sw::editor
                     return {};
                 const optional<float32> number = value.read<float32>();
                 if ( number.has_value() == false )
-                    return unexpected( makeError( ErrorKind::InvalidArgument, "is not a number", context, key, value.dump() ) );
+                    return unexpected( makeError( ErrorKind::InvalidArgument, "is not a number", context, key, value.describe() ) );
                 inoutValue = *number;
                 return {};
             }
@@ -215,7 +215,7 @@ namespace sw::editor
                     return {};
                 const optional<bool> flag = value.read<bool>();
                 if ( flag.has_value() == false )
-                    return unexpected( makeError( ErrorKind::InvalidArgument, "is not a boolean", context, key, value.dump() ) );
+                    return unexpected( makeError( ErrorKind::InvalidArgument, "is not a boolean", context, key, value.describe() ) );
                 inoutFlag = *flag ? SW_TRUE : SW_FALSE;
                 return {};
             }
@@ -225,7 +225,7 @@ namespace sw::editor
             {
                 const optional<uint32> index = value.read<uint32>();
                 if ( index.has_value() == false || *index >= count )
-                    return unexpected( makeError( ErrorKind::NotFound, pReason, context, what, value.dump() ) );
+                    return unexpected( makeError( ErrorKind::NotFound, pReason, context, what, value.describe() ) );
                 return *index;
             }
 
@@ -237,7 +237,7 @@ namespace sw::editor
             }
 
             /** @brief 0.x 의 "없음" 이 -1 인 노드 필드(center · firstPersonBone)가 노드를 가리키는지 봅니다. 없거나 음수면 false 이고, 정수가 아니면 @p outbInvalid 입니다. */
-            static bool refersToNode( const JSONValue& value, bool& outbInvalid )
+            static bool isNodeReference( const JSONValue& value, bool& outbInvalid )
             {
                 outbInvalid = false;
                 if ( value.isValid() == false || value.isNull() )
@@ -505,9 +505,9 @@ namespace sw::editor
                     string          centerBone;
                     const JSONValue center         = group.get( "center" );
                     bool            bCenterInvalid = false;
-                    const bool      bHasCenter     = refersToNode( center, bCenterInvalid );
+                    const bool      bHasCenter     = isNodeReference( center, bCenterInvalid );
                     if ( bCenterInvalid )
-                        return unexpected( makeError( ErrorKind::InvalidArgument, "the center is not a node number", context, "center", center.dump() ) );
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "the center is not a node number", context, "center", center.describe() ) );
                     if ( bHasCenter )
                     {
                         const expected<string> centerNode = resolveNode( names, center, context + " center" );
@@ -567,9 +567,9 @@ namespace sw::editor
                 collectUnknownKeys( firstPerson, kArrVrm0FirstPersonKey, "VRM.firstPerson", pOutListIgnored );
                 const JSONValue bone         = firstPerson.get( "firstPersonBone" );
                 bool            bBoneInvalid = false;
-                const bool      bHasBone     = refersToNode( bone, bBoneInvalid );
+                const bool      bHasBone     = isNodeReference( bone, bBoneInvalid );
                 if ( bBoneInvalid )
-                    return unexpected( makeError( ErrorKind::InvalidArgument, "firstPersonBone is not a node number", "VRM 0.x firstPersonBone", {}, bone.dump() ) );
+                    return unexpected( makeError( ErrorKind::InvalidArgument, "firstPersonBone is not a node number", "VRM 0.x firstPersonBone", {}, bone.describe() ) );
                 if ( bHasBone )
                 {
                     const expected<string> node = resolveNode( names, bone, "VRM 0.x firstPersonBone" );
@@ -594,7 +594,7 @@ namespace sw::editor
                     VrmFirstPersonMesh     mesh;
                     const optional<uint32> meshIndex = annotation.get( "mesh" ).read<uint32>();
                     if ( meshIndex.has_value() == false )
-                        return unexpected( makeError( ErrorKind::InvalidArgument, "is not a mesh number", "VRM 0.x meshAnnotations", "mesh", annotation.get( "mesh" ).dump() ) );
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "is not a mesh number", "VRM 0.x meshAnnotations", "mesh", annotation.get( "mesh" ).describe() ) );
                     mesh._mesh        = makeMeshName( names, *meshIndex );
                     const string flag = annotation.get( "firstPersonFlag" ).asString();
                     if ( parseFirstPersonMode( flag, mesh._mode ) == false )

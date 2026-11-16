@@ -46,7 +46,7 @@ namespace sw
             {
                 // 위젯이 그리기 크기를 바꿨으면 텍스처를 그 크기로 다시 만든다(같은 객체, 새 GPU 자원). 다시 만든 텍스처는 비어 있으므로 다시 그린다.
                 const bool bResized = width > 0 && height > 0 && ( pState->_pTexture->getWidth() != width || pState->_pTexture->getHeight() != height );
-                if ( bResized && textures.resizeRenderTarget( target._targetPath.viewOrEmpty(), width, height, &device ) )
+                if ( bResized && textures.resizeRenderTarget( target._targetPath.view(), width, height, &device ) )
                     pState->_drawnRevision = 0;
                 continue;
             }
@@ -54,8 +54,8 @@ namespace sw
             // 실행되므로(전송 계약 3) 그 자리에서 기다리면 앞 프레임의 GPU 일을 기다린다 — 이 스레드의 펌프가 끝내고, 그 전 프레임은 이 대상을 그리지 않는다.
             if ( pState->_load.isValid() == false )
             {
-                textures.declareRenderTarget( target._targetPath.viewOrEmpty(), width, height );
-                pState->_load = textures.request( target._targetPath.viewOrEmpty(), AssetLoadStart::Async );
+                textures.declareRenderTarget( target._targetPath.view(), width, height );
+                pState->_load = textures.request( target._targetPath.view(), AssetLoadStart::Async );
             }
             if ( pState->_load.isReady() == false )
                 continue; // 만드는 중이거나 만들지 못했다(이유는 캐시가 남겼다 — 실패한 핸들을 쥐어 다시 묻지 않는다)
@@ -101,7 +101,7 @@ namespace sw
                 // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 이미지를 빼고 그린다(언리얼 Slate 의 브러시도 텍스처가 스트리밍되는 동안 비어 있다).
                 PathTexture& added = _listPathTexture.emplace_back();
                 added._path        = path;
-                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.viewOrEmpty(), AssetLoadStart::Async );
+                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), AssetLoadStart::Async );
             }
         }
     }

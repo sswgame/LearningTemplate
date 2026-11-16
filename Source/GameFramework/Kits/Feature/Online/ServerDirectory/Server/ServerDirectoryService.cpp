@@ -31,10 +31,30 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getNoticeTable()
+            static const hashed_string& getAnnouncementTable()
             {
                 static const hashed_string s_table{ "sd_notice" };
                 return s_table;
+            }
+
+            /** @brief 공지의 끝 시각을 읽습니다. 끝이 없는 공지(0)는 false 라 지우지 않는다. */
+            [[nodiscard]] static bool readAnnouncementEndMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                ServiceAnnouncement announcement;
+                if ( ServerDirectoryProtocol::decodeAnnouncement( record._key, record._bytes, announcement ) == false || announcement._endMs == 0 )
+                    return false;
+                outTimeMs = announcement._endMs;
+                return true;
+            }
+
+            /** @brief 점검 창의 끝 시각을 읽습니다. 끝이 없는 점검(0)은 false 라 지우지 않는다. */
+            [[nodiscard]] static bool readMaintenanceEndMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                MaintenanceWindow window;
+                if ( ServerDirectoryProtocol::decodeMaintenance( record._key, record._bytes, window ) == false || window._endMs == 0 )
+                    return false;
+                outTimeMs = window._endMs;
+                return true;
             }
 
             /** @brief 점검 창 규칙입니다. 운영 쓰기와 저장소에서 읽은 레코드(A 는 상한을 보지 않는다)가 같은 규칙을 지납니다. */
@@ -48,17 +68,17 @@ namespace sw
             }
 
             /** @brief 공지 규칙입니다. 운영 쓰기와 저장소에서 읽은 레코드가 같은 규칙을 지납니다. */
-            static bool isValidNotice( const ServiceAnnouncement& notice )
+            static bool isValidAnnouncement( const ServiceAnnouncement& announcement )
             {
-                const bool bTextOk   = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
-                const bool bWindowOk = notice._endMs == 0 || notice._startMs < notice._endMs;
-                return notice._noticeID != 0 && bTextOk && bWindowOk;
+                const bool bTextOk   = announcement._text.empty() == false && static_cast<int32>( announcement._text.size() ) <= ServerDirectoryLimit::kMaxAnnouncementTextSize;
+                const bool bWindowOk = announcement._endMs == 0 || announcement._startMs < announcement._endMs;
+                return announcement._announcementID != 0 && bTextOk && bWindowOk;
             }
 
             static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, HashUtil::computeStringHash64( text.data(), text.size(), false ) ); }
 
             /** @brief 공지 정렬 기준입니다. 우선순위 내림차순, 같으면 시작 시각 내림차순, 그래도 같으면 id 오름차순이며 결과가 결정적입니다. */
-            struct NoticeOrder
+            struct AnnouncementOrder
             {
                 bool operator()( const ServiceAnnouncement& left, const ServiceAnnouncement& right ) const
                 {
@@ -66,7 +86,7 @@ namespace sw
                         return left._priority > right._priority;
                     if ( left._startMs != right._startMs )
                         return left._startMs > right._startMs;
-                    return left._noticeID < right._noticeID;
+                    return left._announcementID < right._announcementID;
                 }
             };
         };
@@ -79,7 +99,7 @@ namespace sw
     struct ServerDirectoryTables
     {
         vector<MaintenanceWindow>   _listMaintenance{};
-        vector<ServiceAnnouncement> _listNotice{};
+        vector<ServiceAnnouncement> _listAnnouncement{};
     };
 
     /** @brief 점검과 공지 두 테이블을 읽습니다. 손상된 영속 레코드는 건너뛰지 않는다 — 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다. */
@@ -107,21 +127,21 @@ namespace sw
                 read._value._listMaintenance.push_back( std::move( window ) );
             }
             listRecord.clear();
-            read._result = connection.listRecords( Internal::getNoticeTable(), "", "", ServerDirectoryLimit::kMaxNoticeCount * 4, false, listRecord );
+            read._result = connection.listRecords( Internal::getAnnouncementTable(), "", "", ServerDirectoryLimit::kMaxAnnouncementCount * 4, false, listRecord );
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
             for ( const ServiceRecord& record : listRecord )
             {
-                ServiceAnnouncement notice;
-                const bool          bDecoded = ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice );
-                if ( bDecoded && Internal::isValidNotice( notice ) == false )
-                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryNoticeRecord", "Server directory notice record '%#' breaks the write rules", record._key );
-                if ( bDecoded == false || Internal::isValidNotice( notice ) == false )
+                ServiceAnnouncement announcement;
+                const bool          bDecoded = ServerDirectoryProtocol::decodeAnnouncement( record._key, record._bytes, announcement );
+                if ( bDecoded && Internal::isValidAnnouncement( announcement ) == false )
+                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryAnnouncementRecord", "Server directory notice record '%#' breaks the write rules", record._key );
+                if ( bDecoded == false || Internal::isValidAnnouncement( announcement ) == false )
                 {
                     read._result = ServiceStoreResult::Invalid;
                     return read;
                 }
-                read._value._listNotice.push_back( std::move( notice ) );
+                read._value._listAnnouncement.push_back( std::move( announcement ) );
             }
             return read;
         }
@@ -133,7 +153,7 @@ namespace sw
     ServerDirectoryService::ServerDirectoryService()
         : _listReader{}
         , _listMaintenance{}
-        , _listNotice{}
+        , _listAnnouncement{}
         , _completionBuffer{}
         , _settings{}
         , _dependencies{}
@@ -195,17 +215,17 @@ namespace sw
         _store.submit( []( IServiceStoreConnection& connection )
         { return ServerDirectoryStoreRun::readTables( connection ); },
                        [this, nowMs]( ServiceStoreRead<ServerDirectoryTables>& read )
-        { applyReload( std::move( read._value._listMaintenance ), std::move( read._value._listNotice ), read.isOk(), nowMs ); } );
+        { applyReload( std::move( read._value._listMaintenance ), std::move( read._value._listAnnouncement ), read.isOk(), nowMs ); } );
     }
 
-    void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs )
+    void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listAnnouncement, bool bReadOk, UnixMilliseconds nowMs )
     {
         _reloadJob.finish();
         if ( bReadOk == false )
             return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
-        _listMaintenance = std::move( listMaintenance );
-        _listNotice      = std::move( listNotice );
-        VectorUtil::sort( _listNotice, ServerDirectoryServiceInternal::NoticeOrder{} );
+        _listMaintenance  = std::move( listMaintenance );
+        _listAnnouncement = std::move( listAnnouncement );
+        VectorUtil::sort( _listAnnouncement, ServerDirectoryServiceInternal::AnnouncementOrder{} );
         markStatusIfChanged( nowMs );
     }
 
@@ -234,16 +254,16 @@ namespace sw
             hash = HashUtil::combine( hash, static_cast<uint64>( window._startMs ) );
             hash = HashUtil::combine( hash, static_cast<uint64>( window._endMs ) );
         }
-        for ( const ServiceAnnouncement& notice : _listNotice )
+        for ( const ServiceAnnouncement& announcement : _listAnnouncement )
         {
-            if ( notice.isActive( nowMs.count() ) == false )
+            if ( announcement.isActive( nowMs.count() ) == false )
                 continue;
-            hash = HashUtil::combine( hash, notice._noticeID );
-            hash = Internal::combineText( hash, notice._text );
-            hash = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( notice._priority ) ) );
-            hash = HashUtil::combine( hash, static_cast<uint64>( notice._startMs ) );
-            hash = HashUtil::combine( hash, static_cast<uint64>( notice._endMs ) );
-            hash = HashUtil::combine( hash, notice._bLiteralText );
+            hash = HashUtil::combine( hash, announcement._announcementID );
+            hash = Internal::combineText( hash, announcement._text );
+            hash = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( announcement._priority ) ) );
+            hash = HashUtil::combine( hash, static_cast<uint64>( announcement._startMs ) );
+            hash = HashUtil::combine( hash, static_cast<uint64>( announcement._endMs ) );
+            hash = HashUtil::combine( hash, announcement._bLiteralText );
         }
         return hash;
     }
@@ -267,10 +287,10 @@ namespace sw
                 continue;
             status._listMaintenance.push_back( window.makeView() ); // 보이는 타입에는 허용 목록이 없다
         }
-        for ( const ServiceAnnouncement& notice : _listNotice )
+        for ( const ServiceAnnouncement& announcement : _listAnnouncement )
         {
-            if ( notice.isActive( nowMs.count() ) && static_cast<int32>( status._listNotice.size() ) < ServerDirectoryLimit::kMaxNoticeCount )
-                status._listNotice.push_back( notice );
+            if ( announcement.isActive( nowMs.count() ) && static_cast<int32>( status._listAnnouncement.size() ) < ServerDirectoryLimit::kMaxAnnouncementCount )
+                status._listAnnouncement.push_back( announcement );
         }
         return status;
     }
@@ -279,7 +299,7 @@ namespace sw
     {
         for ( const MaintenanceWindow& window : _listMaintenance )
         {
-            const bool bBlocks = window.isActive( nowMs.count() ) && window.appliesTo( kind ) && window.allowsAccount( accountID ) == false;
+            const bool bBlocks = window.isActive( nowMs.count() ) && window.isApplicableTo( kind ) && window.allowsAccount( accountID ) == false;
             if ( bBlocks == false )
                 continue;
             if ( pOutWindow != nullptr )
@@ -289,11 +309,11 @@ namespace sw
         return false;
     }
 
-    ServerDirectoryOutcome ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment )
+    ServerDirectoryServiceResult ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment )
     {
         outAssignment = ServerAssignment{};
         if ( findReader( request._kind ) == nullptr || ServerRecord::isValidName( request._region ) == false )
-            return ServerDirectoryOutcome::fail( ServerDirectoryError::kUnknownKind );
+            return ServerDirectoryServiceResult::fail( ServerDirectoryError::kUnknownKind );
         outAssignment = pickAssignment( accountID, request, nowMs );
         return outAssignment._result;
     }
@@ -314,7 +334,7 @@ namespace sw
         bool bAllowedDuringMaintenance = false;
         for ( const MaintenanceWindow& active : _listMaintenance )
         {
-            bAllowedDuringMaintenance = bAllowedDuringMaintenance || ( active.isActive( nowMs.count() ) && active.appliesTo( request._kind ) );
+            bAllowedDuringMaintenance = bAllowedDuringMaintenance || ( active.isActive( nowMs.count() ) && active.isApplicableTo( request._kind ) );
         }
 
         ServerSelectionQuery query;
@@ -337,11 +357,11 @@ namespace sw
         return assignment;
     }
 
-    ServerDirectoryOutcome ServerDirectoryService::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
+    ServerDirectoryServiceResult ServerDirectoryService::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
     {
         const ServerRegistryReader* pReader = findReader( kind );
         if ( pReader == nullptr )
-            return ServerDirectoryOutcome::fail( ServerDirectoryError::kUnknownKind );
+            return ServerDirectoryServiceResult::fail( ServerDirectoryError::kUnknownKind );
         for ( const ServerStatus& status : pReader->getSnapshot() )
         {
             const bool bStale      = nowMs.count() - status._heartbeatMs > _settings._staleMs;
@@ -376,23 +396,23 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidWindow( window ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        if ( ServerDirectoryProtocol::encodeMaintenance( window, work._bytes ) == false )
+        ServiceAuditedWrite pendingJob;
+        if ( ServerDirectoryProtocol::encodeMaintenance( window, pendingJob._bytes ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work._table               = Internal::getMaintenanceTable();
-        work._key                 = window._scope;
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.maintenance.set";
-        work._auditEntry._subject = "sd/" + window._scope;
-        work._auditEntry._memo    = string( memo );
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        pendingJob._table               = Internal::getMaintenanceTable();
+        pendingJob._key                 = window._scope;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.maintenance.set";
+        pendingJob._auditEntry._subject = "sd/" + window._scope;
+        pendingJob._auditEntry._memo    = string( memo );
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void ServerDirectoryService::clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -400,55 +420,74 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( scope != MaintenanceWindow::kScopeAll && ServerRecord::isValidName( scope ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        work._table               = Internal::getMaintenanceTable();
-        work._key                 = string( scope );
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.maintenance.clear";
-        work._auditEntry._subject = "sd/" + string( scope );
-        work._auditEntry._memo    = string( memo );
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        ServiceAuditedWrite pendingJob;
+        pendingJob._table               = Internal::getMaintenanceTable();
+        pendingJob._key                 = string( scope );
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.maintenance.clear";
+        pendingJob._auditEntry._subject = "sd/" + string( scope );
+        pendingJob._auditEntry._memo    = string( memo );
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    void ServerDirectoryService::postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::postAnnouncement( const ServiceAnnouncement& announcement, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
-        if ( Internal::isValidNotice( notice ) == false )
+        if ( Internal::isValidAnnouncement( announcement ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
-        ServiceAuditedWrite work;
-        if ( ServerDirectoryProtocol::encodeNotice( notice, work._bytes ) == false )
+        ServiceAuditedWrite pendingJob;
+        if ( ServerDirectoryProtocol::encodeAnnouncement( announcement, pendingJob._bytes ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
-        work._table               = Internal::getNoticeTable();
-        work._key                 = ServiceKeyUtil::makeHex64( notice._noticeID );
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.notice.post";
-        work._auditEntry._subject = "sd/notice/" + work._key;
-        work._auditEntry._after   = notice._text;
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        pendingJob._table               = Internal::getAnnouncementTable();
+        pendingJob._key                 = ServiceKeyUtil::makeHex64( announcement._announcementID );
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.notice.post";
+        pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
+        pendingJob._auditEntry._after   = announcement._text;
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    ServiceTTLRule ServerDirectoryService::makeAnnouncementTTLRule( int64 expireAfterMs )
+    {
+        // 표가 작아 색인 없이 커서로 훑는다(liveops_push 와 같다). 읽기가 앞 128 줄만 보므로, 끝난 공지가 쌓이면 새 공지가 목록에서 빠졌다
+        ServiceTTLRule rule;
+        rule._table         = ServerDirectoryServiceInternal::getAnnouncementTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &ServerDirectoryServiceInternal::readAnnouncementEndMs;
+        return rule;
+    }
+
+    ServiceTTLRule ServerDirectoryService::makeMaintenanceTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule; // 읽기가 앞 kMaxMaintenanceRow 줄만 본다 - 끝난 점검이 쌓이면 새 점검이 빠진다
+        rule._table         = ServerDirectoryServiceInternal::getMaintenanceTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &ServerDirectoryServiceInternal::readMaintenanceEndMs;
+        return rule;
+    }
+
+    void ServerDirectoryService::removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
-        ServiceAuditedWrite work;
-        work._table               = Internal::getNoticeTable();
-        work._key                 = ServiceKeyUtil::makeHex64( noticeID );
-        work._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
-        work._auditEntry._action  = "sd.notice.remove";
-        work._auditEntry._subject = "sd/notice/" + work._key;
-        work._auditEntry._timeMs  = nowMs.count();
-        submitWrite( std::move( work ), requestTag );
+        ServiceAuditedWrite pendingJob;
+        pendingJob._table               = Internal::getAnnouncementTable();
+        pendingJob._key                 = ServiceKeyUtil::makeHex64( announcementID );
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._auditEntry._action  = "sd.notice.remove";
+        pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
+        pendingJob._auditEntry._timeMs  = nowMs.count();
+        submitWrite( std::move( pendingJob ), requestTag );
     }
 
     void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
@@ -462,16 +501,16 @@ namespace sw
         setMaintenance( window, actorID, memo, nowMs, requestTag );
     }
 
-    void ServerDirectoryService::postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        ServiceAnnouncement notice;
-        notice._text         = change._text;
-        notice._noticeID     = change._noticeID;
-        notice._startMs      = change._startMs;
-        notice._endMs        = change._endMs;
-        notice._priority     = change._priority;
-        notice._bLiteralText = change._bLiteralText;
-        postNotice( notice, actorID, nowMs, requestTag );
+        ServiceAnnouncement announcement;
+        announcement._text           = change._text;
+        announcement._announcementID = change._announcementID;
+        announcement._startMs        = change._startMs;
+        announcement._endMs          = change._endMs;
+        announcement._priority       = change._priority;
+        announcement._bLiteralText   = change._bLiteralText;
+        postAnnouncement( announcement, actorID, nowMs, requestTag );
     }
 
     void ServerDirectoryService::takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion )
@@ -491,20 +530,20 @@ namespace sw
         }
     }
 
-    void ServerDirectoryService::submitWrite( ServiceAuditedWrite&& work, uint64 requestTag )
+    void ServerDirectoryService::submitWrite( ServiceAuditedWrite&& pendingJob, uint64 requestTag )
     {
-        _store.submit( [work = std::move( work )]( IServiceStoreConnection& connection )
-        { return work.commit( connection ); },
+        _store.submit( [pendingJob = std::move( pendingJob )]( IServiceStoreConnection& connection )
+        { return pendingJob.commit( connection ); },
                        [this, requestTag]( ServiceStoreResult result )
         {
-            const ServerDirectoryOutcome outcome = result == ServiceStoreResult::Ok       ? ServerDirectoryOutcome{ ServerDirectoryResult::Ok }
-                                                 : result == ServiceStoreResult::NotFound ? ServerDirectoryOutcome{ ServerDirectoryResult::NotFound }
-                                                                                          : ServerDirectoryOutcome::fail( OnlineError::kUnavailable );
-            applyWrite( requestTag, outcome );
+            const ServerDirectoryServiceResult serviceResult = result == ServiceStoreResult::Ok       ? ServerDirectoryServiceResult{ ServerDirectoryResult::Ok }
+                                                             : result == ServiceStoreResult::NotFound ? ServerDirectoryServiceResult{ ServerDirectoryResult::NotFound }
+                                                                                                      : ServerDirectoryServiceResult::fail( OnlineError::kUnavailable );
+            applyWrite( requestTag, serviceResult );
         } );
     }
 
-    void ServerDirectoryService::applyWrite( uint64 requestTag, ServerDirectoryOutcome result )
+    void ServerDirectoryService::applyWrite( uint64 requestTag, ServerDirectoryServiceResult result )
     {
         _completionBuffer.push( ServerDirectoryCompletion{ requestTag, result } );
         if ( result != ServerDirectoryResult::Ok )

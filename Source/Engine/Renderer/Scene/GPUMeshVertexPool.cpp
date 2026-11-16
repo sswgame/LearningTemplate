@@ -44,7 +44,7 @@ namespace sw
                                      _listScratchByte.data() );
     }
 
-    GPUMeshVertexPool::Placement GPUMeshVertexPool::placementOf( const Mesh* pMesh ) const
+    GPUMeshVertexPool::Placement GPUMeshVertexPool::getPlacementOf( const Mesh* pMesh ) const
     {
         const auto it = _mapEntry.find( pMesh );
         if ( it == _mapEntry.end() || it->second._base == kInvalidBase )

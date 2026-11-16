@@ -6,6 +6,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 namespace
 {
@@ -309,7 +310,7 @@ SW_TEST_CASE( EventTest, DestructorDestroysQueuedEvents )
  *          스레드가 프레임마다 `processEvents` 로 빼서 방송한다(`Engine::update`).
  *          버스 쪽(subscribe/publish)은 퍼내는 스레드 전용이며 Debug 에서 확인한다.
  */
-SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
+SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPollingThread )
 {
     sw::EventDispatcher dispatcher;
 
@@ -328,7 +329,7 @@ SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
     sw::thread arrWorker[kThreadCount];
     for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {
-        arrWorker[threadIndex] = sw::thread( [&dispatcher]()
+        arrWorker[threadIndex] = sw::thread( sw::ThreadTestAccess::getKey(), [&dispatcher]()
         {
             for ( int32 eventIndex = 0; eventIndex < kEventsPerThread; ++eventIndex )
             {
@@ -362,8 +363,8 @@ SW_TEST_CASE( EventTest, BusThreadIsTheThreadThatProcessesEvents )
 {
     sw::EventDispatcher dispatcher;
     bool                bOtherThreadBeforeOwner = false;
-    sw::thread          before( [&dispatcher, &bOtherThreadBeforeOwner]()
-    { bOtherThreadBeforeOwner = dispatcher.isBusThread(); } );
+    sw::thread          before( sw::ThreadTestAccess::getKey(), [&dispatcher, &bOtherThreadBeforeOwner]()
+             { bOtherThreadBeforeOwner = dispatcher.isBusThread(); } );
     before.join();
     SW_EXPECT_TRUE( bOtherThreadBeforeOwner );
     SW_EXPECT_TRUE( dispatcher.isBusThread() );
@@ -371,7 +372,7 @@ SW_TEST_CASE( EventTest, BusThreadIsTheThreadThatProcessesEvents )
     dispatcher.processEvents(); // 이 스레드가 주인이 된다
     SW_EXPECT_TRUE( dispatcher.isBusThread() );
     bool       bOtherThreadAfterOwner = true;
-    sw::thread after( [&dispatcher, &bOtherThreadAfterOwner]()
+    sw::thread after( sw::ThreadTestAccess::getKey(), [&dispatcher, &bOtherThreadAfterOwner]()
     { bOtherThreadAfterOwner = dispatcher.isBusThread(); } );
     after.join();
     SW_EXPECT_FALSE( bOtherThreadAfterOwner );

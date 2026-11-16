@@ -51,7 +51,7 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             if ( _mapPendingWrite.empty() )
                 return;
-            const uint32 slotBit = slotBitOf( slot );
+            const uint32 slotBit = getSlotBitOf( slot );
             _listFilledScratch.clear();
             for ( auto& [buffer, pending] : _mapPendingWrite )
             {
@@ -88,7 +88,7 @@ namespace sw
         };
 
         /** @brief 슬롯 번호의 비트를 반환합니다. */
-        static uint32 slotBitOf( uint32 slot ) { return 1u << ( slot % constant::render::kMaxFrameCountInFlight ); }
+        static uint32 getSlotBitOf( uint32 slot ) { return 1u << ( slot % constant::render::kMaxFrameCountInFlight ); }
         /** @brief 쓴 값을 기억하고 나머지 슬롯을 옛 값으로 표시합니다. 락 안에서 부릅니다. */
         void rememberWrite( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size ) SW_REQUIRES_LOCK( _mutex );
 

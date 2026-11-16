@@ -9,14 +9,26 @@ namespace sw
 {
     enum class ShaderTargetFormat : uint8;
 
-    /// @brief CB 와 UBO 멤버입니다(이름, 오프셋, 크기).
+    /**
+     * @brief 셰이더 코드가 CB 멤버를 실제로 읽는지입니다(DXC · FXC 리플렉션의 `D3D_SVF_USED`).
+     * @details SPIR-V · GLSL 리플렉션과 쿠킹한 매니페스트는 알려 주지 않아 `Unknown` 이다 — 그때 검사(패스 입력 계약 ⊆ 셰이더가 읽는 역할)는 하지 않는다.
+     */
+    enum class ShaderVariableUsage : uint8
+    {
+        Unknown = 0,
+        Used,
+        Unused,
+    };
+
+    /// @brief CB 와 UBO 멤버입니다(이름, 오프셋, 크기, 쓰임).
     struct ShaderVariableInfo
     {
         string _name;
         /** @brief 머티리얼 패킹용 HLSL 과 SPIR-V 타입 라벨입니다(예: Float4, Uint, Bool). */
-        string _type;
-        uint32 _offset{ 0 };
-        uint32 _size{ 0 };
+        string              _type;
+        uint32              _offset{ 0 };
+        uint32              _size{ 0 };
+        ShaderVariableUsage _usage{ ShaderVariableUsage::Unknown }; ///< 여러 스테이지를 합친 레이아웃에서는 한 스테이지라도 읽으면 `Used`
     };
 } // namespace sw
 

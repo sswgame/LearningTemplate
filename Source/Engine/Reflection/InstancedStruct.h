@@ -88,7 +88,7 @@ namespace sw
     /**
      * @struct InstancedStructText
      * @brief 칸 구조체를 글 인자로 읽고 씁니다. `flag.set(hasKey, 1)` · `date(fromSeason=Spring, fromDay=20)` 처럼 차례로 또는 이름으로 적습니다.
-     * @details 칸 이름 규칙은 XML 속성과 같다(`XMLFields::getAttributeName`). 차례는 칸을 선언한 순서이고, 목록 칸은 남은 글을 모두 받는다. 필수 칸 · `Min`/`Max` 는 `XMLFields::readFields` 와 같이 본다.
+     * @details 칸 이름 규칙은 XML 속성과 같다(`XMLFields::getAttributeName`). 차례는 칸을 선언한 순서이고, 목록 칸은 남은 글을 모두 받는다. 필수 칸 · `Min`/`Max` 는 `XMLFields::readProperties` 와 같이 본다.
      */
     struct SW_API InstancedStructText
     {

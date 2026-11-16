@@ -34,7 +34,7 @@ namespace sw
         void               stopConsole() override;
         [[nodiscard]] bool startChannel() override;
         void               stopChannel() override;
-        void               pump() override;
+        void               poll() override;
         [[nodiscard]] bool executeCommand( string_view command ) override;
         bool               isHoldingTick() const override { return _bPaused && _pendingStepCount == 0; }
         bool               isPaused() const override { return _bPaused; }
@@ -178,10 +178,10 @@ namespace sw
         _pDev->_transport.reset();
     }
 
-    void ServerDebugControl::pump()
+    void ServerDebugControl::poll()
     {
         if ( _pDev != nullptr && _pDev->_channel != nullptr )
-            (void)_pDev->_channel->pump();
+            (void)_pDev->_channel->poll();
     }
 
     bool ServerDebugControl::executeCommand( string_view command )

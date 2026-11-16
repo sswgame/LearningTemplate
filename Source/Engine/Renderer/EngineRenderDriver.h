@@ -1,12 +1,13 @@
 /**
  * @file Engine/Renderer/EngineRenderDriver.h
  * @brief 엔진 루프의 렌더러 몫(프레임 패킷 제출 · 창 크기 · 백엔드 교체 · 캡처 종료)을 맡는 서브시스템입니다. `IEngineRenderDriver` 로 찾습니다.
- * @details 선언한 의존이 없습니다 — RHI 에 기대면 백엔드 교체(`shutdownDependentsOf`)가 교체를 돌리는 자기를 내린다. 세 단계는 공장에서 빌리고 기동이 끝난 뒤에 읽습니다.
+ * @details 선언한 의존이 없습니다 — RHI 에 기대면 백엔드 교체(`shutdownDependents`)가 교체를 돌리는 자기를 내린다. 세 단계는 공장에서 빌리고 기동이 끝난 뒤에 읽습니다.
  *          전용 서버는 이 폴더를 짓지 않아 등록이 없고, 엔진 루프는 인터페이스가 없으면 건너뜁니다(docs/agents/BuildConfigSwitch.md 셋째 줄).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -16,13 +17,18 @@
 #include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 
+#include "sw/config/ProcessExitCodes.gen.h"
+
 namespace sw
 {
+    enum class RHIBackend : uint32;
+    enum class RHIDeviceLostPolicy : uint8;
     enum class WindowLifecycleEvent : uint8;
 
     class FontService;
     class FrameRenderer;
     class FrameRendererSubsystem;
+    class IRHIDevice;
     class RenderPacketBuilder;
     class RenderThreadSubsystem;
     class RHISubsystem;
@@ -51,7 +57,16 @@ namespace sw
         [[nodiscard]] bool          applyPendingBackendChange() override;
         void                        setScenarioCaptureEnabled( bool bEnabled ) override;
         void                        setPresentInterval( uint32 interval ) override;
-        [[nodiscard]] uint32        countPendingCaptureWork( const GameObjectManager* pManager ) const override;
+        [[nodiscard]] uint32        countPendingCaptureJobs( const GameObjectManager* pManager ) const override;
+        void                        overrideDeviceLostPolicy( RHIDeviceLostPolicy policy ) override;
+        [[nodiscard]] uint32        getDeviceRecreateCount() const override { return _deviceRecreateCount; }
+
+        /**
+         * @brief 장치 분실에 대한 답입니다. 잃지 않았으면 비고, 잃었으면 지금 할 일(`Quit` 또는 `Recreate`)입니다(`submitFrame` 이 프레임마다 묻는다).
+         * @details 브레드크럼 보고는 손실을 처음 본 백엔드가 이미 했다(`GPUBreadcrumbs::reportDeviceLost`) — 여기서는 끝낼지 다시 만들지만 정한다.
+         *          `Recreate` 정책도 다시 만들 수 없는 @p backend(`RHI::canRecreateAfterDeviceLost`)면 `Quit` 다. 다시 만드는 길은 개발 · 배포 공통이다(`EditorModuleManager::applyPendingBackendChange`).
+         */
+        [[nodiscard]] static optional<RHIDeviceLostPolicy> decideDeviceLostResponse( const IRHIDevice& device, RHIBackend backend, RHIDeviceLostPolicy policy );
 
     private:
         /**
@@ -84,6 +99,10 @@ namespace sw
         FontService*            _pFontService;                 ///< 캔버스가 글리프 캐시를 싣는다
         Subscription            _mainWindowResizeSubscription; ///< 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `onShutdownBegin` 이 창보다 먼저 놓는다
         Subscription            _mainWindowLifecycleSubscription;
+        RHIDeviceLostPolicy     _deviceLostPolicy;         ///< `onStartupFinished` 가 `EngineConfig::_deviceLostPolicy` 에서 읽는다
+        RHIDeviceLostPolicy     _deviceLostPolicyOverride; ///< `overrideDeviceLostPolicy` 가 덮은 값(`None` 이면 덮지 않았다 — 설정 값을 쓴다)
+        uint32                  _deviceRecreateCount;      ///< 잃은 장치를 다시 만들어 장면을 다시 묶은 횟수
+        uint8                   _bDeviceLostHandled : 1;   ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
     };
 
     /**

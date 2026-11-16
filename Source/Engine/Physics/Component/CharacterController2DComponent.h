@@ -63,12 +63,14 @@ namespace sw
         /** @brief 상태 해시에 트랜스폼과 속도 · 접지를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
-        float32 getRadius() const { return _radius; }
-        void    setRadius( float32 radius );
-        float32 getHalfHeight() const { return _halfHeight; }
-        void    setHalfHeight( float32 halfHeight );
-        float32 getMaxSlopeAngle() const { return _maxSlopeAngle; }
-        void    setMaxSlopeAngle( float32 angle );
+        /** @brief 월드 배율(마지막 물리 프레임에 읽은 값)을 굽은 충돌 캡슐입니다 — 백엔드 캐릭터가 이 크기로 지어진다(반지름은 X, 높이는 Y). */
+        PhysicsShapeDesc2D getScaledCapsule() const;
+        float32            getRadius() const { return _radius; }
+        void               setRadius( float32 radius );
+        float32            getHalfHeight() const { return _halfHeight; }
+        void               setHalfHeight( float32 halfHeight );
+        float32            getMaxSlopeAngle() const { return _maxSlopeAngle; }
+        void               setMaxSlopeAngle( float32 angle );
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;

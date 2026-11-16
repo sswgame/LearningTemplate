@@ -73,7 +73,7 @@ namespace sw
      * @details 규칙 밖 값 · 다른 구매에 쓴 멱등 키는 `kInvalidRequest`, 버전 충돌이 상한을 넘으면 `kBusy`, 저장소 · 전송 장애는 `kUnavailable`(적용됐는지 모르므로 같은 키로 다시 한다),
      *          로그인 없음은 `kUnauthenticated` 이다. 서버 로직과 같은 프로세스의 호출(`EconomyService::submitCall`)이 이 형식을 쓴다.
      */
-    using EconomyOutcome = OnlineOutcome<EconomyResult>;
+    using EconomyServiceResult = OnlineServiceResult<EconomyResult>;
 } // namespace sw
 
 namespace sw

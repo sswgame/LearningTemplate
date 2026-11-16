@@ -172,7 +172,7 @@ namespace sw
                 return;
             }
             _role = Role::Server;
-            (void)MeleeSweepHistory::ensureFor( *getOwner()->getMutableManager() ); // 서버만 켠다 — 권위 있는 스윕이 여기에 적힌다
+            (void)MeleeSweepHistory::findOrCreate( *getOwner()->getMutableManager() ); // 서버만 켠다 — 권위 있는 스윕이 여기에 적힌다
         }
         else
         {
@@ -715,5 +715,17 @@ namespace sw
     {
         const float3 delta = left._position - right._position;
         return delta.getLength() <= _reconcileTolerance && left._bOnGround == right._bOnGround;
+    }
+
+    void ShooterNetPawnComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<ShooterNetPawnComponent>( this );
+    }
+
+    void ShooterNetPawnComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ShooterNetPawnComponent>( this );
+        Component::onUnregister( manager );
     }
 } // namespace sw

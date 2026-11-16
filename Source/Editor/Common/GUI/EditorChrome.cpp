@@ -152,6 +152,19 @@ namespace sw::editor
         ImGui::End();
     }
 
+    uint32 EditorChrome::getCurrentWindowID()
+    {
+        return static_cast<uint32>( ImGui::GetCurrentWindowRead()->ID );
+    }
+
+    uint32 EditorChrome::findFocusedRootWindowID()
+    {
+        const ImGuiContext* const pContext = ImGui::GetCurrentContext();
+        if ( pContext == nullptr || pContext->NavWindow == nullptr )
+            return 0;
+        return static_cast<uint32>( pContext->NavWindow->RootWindow->ID ); // 도킹된 창의 뿌리는 그 창이다(도크 노드를 넘지 않는다) — `IsWindowFocused( RootAndChildWindows )` 와 같은 판정
+    }
+
     float2 EditorChrome::resolveTextExtent( const EditorTextExtent& extent )
     {
         // 글자 너비 · 줄 높이는 글꼴(UI 배율 포함)에서 오므로 배율을 따로 곱하지 않는다. 작은 창(960×540 · 배율 1.5)에서도 닫기 단추가 화면 안에 남게 작업 영역의 90 % 로 자른다.

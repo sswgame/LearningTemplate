@@ -50,7 +50,7 @@ namespace sw
              * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
              *        그 스냅샷이 렌더 큐를 지나야 화면에 나온다 — 씬 빌드 한 프레임 + 큐에 쌓이는 패킷 수(링 칸 수 − 1, `RenderThread::submit` 은 한 칸을 비워 둔다).
              */
-            static constexpr uint32 kAssetSettleTrailFrames = 1u + ( constant::render::kRenderFrameQueueDepth - 1u );
+            static constexpr uint32 kAssetStabilityTrailFrames = 1u + ( constant::render::kRenderFrameQueueDepth - 1u );
 
             // --- 단계 인자: 검사 함수와 준비 · 실행 함수가 같은 읽기(`parse*`) 하나를 쓴다 -----------------------------------------
             //     검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앤다. 실행 때 읽기가 실패하면(핫 리로드로 바뀐 단계) 버리지 않고 오류로 끝낸다.
@@ -66,7 +66,7 @@ namespace sw
             [[nodiscard]] static expected<SlotStepArgs> parseSlotStep( const AutomationStep& step )
             {
                 AutomationSlotStepParams params;
-                const expected<void>     read = step.readFields( params );
+                const expected<void>     read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return unexpected( read.error() );
                 SlotStepArgs args;
@@ -101,7 +101,7 @@ namespace sw
             static expected<void> validateVariable( const AutomationStep& step )
             {
                 AutomationVariableParams params;
-                const expected<void>     read = step.readFields( params );
+                const expected<void>     read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 const expected<GlobalVariableInfo*> info = findRegisteredVariable( params._name );
@@ -117,7 +117,7 @@ namespace sw
             [[nodiscard]] static expected<bool> evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info )
             {
                 AutomationExpectVariableParams params;
-                const expected<void>           read = step.readFields( params );
+                const expected<void>           read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return unexpected( read.error() );
                 if ( step.findAttribute( "tolerance" ) != nullptr && info._type != GlobalVariableType::Float )
@@ -136,7 +136,7 @@ namespace sw
             static expected<void> validateExpectVariable( const AutomationStep& step )
             {
                 AutomationExpectVariableParams params;
-                const expected<void>           read = step.readFields( params );
+                const expected<void>           read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 const expected<GlobalVariableInfo*> info = findRegisteredVariable( params._name );
@@ -192,7 +192,7 @@ namespace sw
             static expected<void> validateExpect( const AutomationStep& step )
             {
                 AutomationExpectParams params;
-                return step.readFields( params, { "equals", "near", "atLeast", "atMost" } ).and_then( [&]()
+                return step.readProperties( params, { "equals", "near", "atLeast", "atMost" } ).and_then( [&]()
                 { return validateWatchComparison( step ); } );
             }
 
@@ -200,7 +200,7 @@ namespace sw
             static expected<void> validateWaitUntil( const AutomationStep& step )
             {
                 AutomationWaitUntilParams params;
-                const expected<void>      read = step.readFields( params, { "equals", "near", "atLeast", "atMost" } );
+                const expected<void>      read = step.readProperties( params, { "equals", "near", "atLeast", "atMost" } );
                 if ( read.has_value() == false )
                     return read;
                 const uint32 timeoutCount = ( step.findAttribute( "timeoutFrames" ) != nullptr ? 1u : 0u ) + ( step.findAttribute( "timeoutSeconds" ) != nullptr ? 1u : 0u ) +
@@ -224,7 +224,7 @@ namespace sw
             static expected<void> validateExpectVisited( const AutomationStep& step )
             {
                 AutomationExpectVisitedParams params;
-                const expected<void>          read = step.readFields( params ).and_then( [&]()
+                const expected<void>          read = step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
                 if ( read.has_value() == false )
                     return read;
@@ -237,15 +237,15 @@ namespace sw
             static expected<void> validateRecord( const AutomationStep& step )
             {
                 AutomationRecordParams params;
-                return step.readFields( params ).and_then( [&]()
+                return step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
             }
 
-            /** @brief `Remember` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
-            static expected<void> validateRemember( const AutomationStep& step )
+            /** @brief `Store` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
+            static expected<void> validateStore( const AutomationStep& step )
             {
-                AutomationRememberParams params;
-                return step.readFields( params ).and_then( [&]()
+                AutomationStoreParams params;
+                return step.readProperties( params ).and_then( [&]()
                 { return validateWatchReference( step ); } );
             }
 
@@ -254,7 +254,7 @@ namespace sw
                 // 사건은 로그 id 로만 센다 — 문장으로 세면 문구를 고칠 때 단언이 조용히 낡는다. contains 는 그 id 줄의 값(경로 · 수)을 좁히는 데만 쓴다.
                 // 세려는 줄에 id 가 없으면 소스에서 `SW_LOG_*_ID` 로 쓴다.
                 AutomationExpectLogParams params;
-                const expected<void>      read = step.readFields( params );
+                const expected<void>      read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 if ( ( params._count == kAutomationNoCount ) == ( params._atLeast == kAutomationNoCount ) )
@@ -263,19 +263,19 @@ namespace sw
             }
 
             /**
-             * @brief `<Screenshot waitForSettle="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
+             * @brief `<Screenshot waitForStability="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
              * @details 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다. 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
              *          그런 시나리오는 앞에서 `<WaitUntil watch="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
              */
-            [[nodiscard]] static bool capturesWithoutSettling( const AutomationStep& step )
+            [[nodiscard]] static bool shouldCaptureWithoutStabilizing( const AutomationStep& step )
             {
-                return step.readValidatedFields<AutomationScreenshotParams>()._bWaitForSettle == false;
+                return step.readValidatedProperties<AutomationScreenshotParams>()._bWaitForStability == false;
             }
 
             static expected<void> validateExpectImagesDiffer( const AutomationStep& step )
             {
                 AutomationExpectImagesDifferParams params;
-                const expected<void>               read = step.readFields( params );
+                const expected<void>               read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
                 if ( params._minDiffering > params._maxDiffering )
@@ -343,7 +343,7 @@ namespace sw
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
-            const expected<void>     read = step.readFields( args );
+            const expected<void>     read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             if ( args._y != 0.0f )
@@ -357,7 +357,7 @@ namespace sw
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
-            const expected<void>     read = step.readFields( args );
+            const expected<void>     read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             runner._inputScript.addMouseDelta( step._frameIndex, args._x, args._y );
@@ -374,7 +374,7 @@ namespace sw
             if ( bNoWindowForPointer )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to place the pointer in" } );
             AutomationMousePositionParams args;
-            const expected<void>          read = step.readFields( args );
+            const expected<void>          read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
@@ -393,7 +393,7 @@ namespace sw
             if ( bNoWindowForTouch )
                 return unexpected( Error{ ErrorKind::Unsupported, "no window to touch" } );
             AutomationTouchParams args;
-            const expected<void>  read = step.readFields( args );
+            const expected<void>  read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             const int32 x = static_cast<int32>( MathUtil::round( args._x * static_cast<float32>( pWindow->getWidth() - 1 ) ) );
@@ -407,7 +407,7 @@ namespace sw
         {
             AutomationRunner&           runner = asRunner( context );
             AutomationGamepadAxisParams args;
-            const expected<void>        read = step.readFields( args );
+            const expected<void>        read = step.readProperties( args );
             if ( read.has_value() == false )
                 return read;
             // 가상 입력 세션의 패드는 끊긴 채 시작하고 끊긴 패드의 스틱은 입력 맵 · 가상 커서가 읽지 않는다 — 축을 내는 단계는 그 패드를 먼저 연결한다.
@@ -441,7 +441,7 @@ namespace sw
         static bool runVariable( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&              runner = asRunner( context );
-            const AutomationVariableParams params = step.readValidatedFields<AutomationVariableParams>();
+            const AutomationVariableParams params = step.readValidatedProperties<AutomationVariableParams>();
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( params._name, params._value ) == false )
                 runner.recordFailure( step, "could not set " + params._name + " to '" + params._value + "'" );
             return true;
@@ -450,7 +450,7 @@ namespace sw
         static bool runExpectVariable( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&                    runner = asRunner( context );
-            const AutomationExpectVariableParams params = step.readValidatedFields<AutomationExpectVariableParams>();
+            const AutomationExpectVariableParams params = step.readValidatedProperties<AutomationExpectVariableParams>();
             const string&                        name   = params._name;
             const string&                        value  = params._value;
             const GlobalVariableInfo*            pInfo  = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
@@ -471,42 +471,42 @@ namespace sw
         static bool runExpect( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpect( runner, step );
+            runner._evaluator.runExpect( runner, step );
             return true;
         }
 
         static bool runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpectVisited( runner, step );
+            runner._evaluator.runExpectVisited( runner, step );
             return true;
         }
 
         static bool runRecord( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runRecord( runner, step );
+            runner._evaluator.runRecord( runner, step );
             return true;
         }
 
-        static bool runRemember( AutomationStepContext& context, const AutomationStep& step )
+        static bool runStore( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runRemember( runner, step );
+            runner._evaluator.runStore( runner, step );
             return true;
         }
 
         static bool runExpectLog( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpectLog( runner, step );
+            runner._evaluator.runExpectLog( runner, step );
             return true;
         }
 
         static bool runScreenshot( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner    = asRunner( context );
-            const string      path      = runner.resolveOutputPath( step.readValidatedFields<AutomationScreenshotParams>()._file );
+            const string      path      = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
             const string      directory = FileUtil::getDirectoryPart( path );
             if ( directory.empty() == false )
                 (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
@@ -518,13 +518,13 @@ namespace sw
         static bool runExpectImage( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.deferExpectImage( runner, step );
+            runner._evaluator.deferExpectImage( runner, step );
             return true;
         }
 
         static bool runExpectImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
         {
-            asRunner( context )._judge.deferExpectImagesDiffer( step );
+            asRunner( context )._evaluator.deferExpectImagesDiffer( step );
             return true;
         }
 
@@ -532,11 +532,14 @@ namespace sw
         [[nodiscard]] static bool startExitDeadline( AutomationRunner& runner, const AutomationStep& step, bool bClose )
         {
             string        error;
-            const float32 seconds = bClose ? step.readValidatedFields<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedFields<AutomationExpectExitWithinParams>()._seconds;
+            const float32 seconds = bClose ? step.readValidatedProperties<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedProperties<AutomationExpectExitWithinParams>()._seconds;
             // 종료 시한도 멈춘 루프를 잡는 그물이다(통과는 창이 닫힌 사건) — 다른 벽시계 시한처럼 기계 배율로 늘린다.
             runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + AutomationRunner::scaleWallSeconds( seconds );
             if ( bClose == false )
+            {
+                runner._run._expectedExitCode = step.readValidatedProperties<AutomationExpectExitWithinParams>()._exitCode;
                 return true;
+            }
             MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
             IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             if ( pWindow == nullptr )
@@ -553,7 +556,7 @@ namespace sw
         static bool runPass( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.judgeDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
+            runner._evaluator.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
             (void)step;
             runner.finish( AutomationResult::Passed, "<Pass/>" );
             return true;
@@ -599,7 +602,7 @@ namespace sw
             AutomationRunner&    runner = asRunner( context );
             AutomationWatchValue value{};
             string               message;
-            if ( runner._judge.readWatchValue( context, step, value, message ) == false || value._bText )
+            if ( runner._evaluator.readWatchValue( context, step, value, message ) == false || value._bText )
             {
                 const string reason = "<SkipUnless> could not read a number: " + message;
                 runner.recordFailure( step, reason );
@@ -633,16 +636,16 @@ namespace sw
         static AutomationStepHold holdScreenshot( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             AutomationRunner& runner = asRunner( context );
-            if ( AutomationRunnerStepsInternal::capturesWithoutSettling( step ) )
+            if ( AutomationRunnerStepsInternal::shouldCaptureWithoutStabilizing( step ) )
                 return AutomationStepHold::Run;
-            const bool bSettled                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
-            runner._run._assetSettledFrameCount = bSettled ? runner._run._assetSettledFrameCount + 1 : 0;
-            const bool               bReady     = runner._run._assetSettledFrameCount > AutomationRunnerStepsInternal::kAssetSettleTrailFrames;
-            const utf8* const        pCover     = AutomationStepRegistry::findCaptureBlocker();
-            const AutomationStepHold hold       = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames,
-                                                                         string( "the screen to settle before the screenshot (" ) +
-                                                                             ( pCover != nullptr ? string( "covered by " ) + pCover : string( bSettled ? "trailing frames" : "assets pending" ) ) +
-                                                                             ")" );
+            const bool bStable                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
+            runner._run._assetStableFrameCount = bStable ? runner._run._assetStableFrameCount + 1 : 0;
+            const bool               bReady    = runner._run._assetStableFrameCount > AutomationRunnerStepsInternal::kAssetStabilityTrailFrames;
+            const utf8* const        pCover    = AutomationStepRegistry::findCaptureBlocker();
+            const AutomationStepHold hold      = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetStabilityFrames,
+                                                                        string( "the screen to settle before the screenshot (" ) +
+                                                                            ( pCover != nullptr ? string( "covered by " ) + pCover : string( bStable ? "trailing frames" : "assets pending" ) ) +
+                                                                            ")" );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
@@ -650,7 +653,7 @@ namespace sw
                     runner.recordFailure( step, pCover != nullptr ? string( "the screen did not settle before the screenshot was due (still covered by " ) + pCover + ")"
                                                                   : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" ) );
                 }
-                runner._run._assetSettledFrameCount = 0;
+                runner._run._assetStableFrameCount = 0;
             }
             return hold;
         }
@@ -663,27 +666,27 @@ namespace sw
     SW_AUTOMATION_STEP( runnerPress, "Press", nullptr, &AutomationRunnerStepsInternal::validateSlotStep, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareSlotStep ) );
     SW_AUTOMATION_STEP( runnerRelease, "Release", nullptr, &AutomationRunnerStepsInternal::validateSlotStep, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareSlotStep ) );
     SW_AUTOMATION_STEP( runnerTap, "Tap", nullptr, &AutomationRunnerStepsInternal::validateSlotStep, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareSlotStep ) );
-    SW_AUTOMATION_STEP( runnerMouseDelta, "MouseDelta", nullptr, &AutomationStep::validateFields<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMouseDelta ) );
-    SW_AUTOMATION_STEP( runnerWheel, "Wheel", nullptr, &AutomationStep::validateFields<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWheel ) );
-    SW_AUTOMATION_STEP( runnerMousePosition, "MousePosition", nullptr, &AutomationStep::validateFields<AutomationMousePositionParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMousePosition ) );
-    SW_AUTOMATION_STEP( runnerTouch, "Touch", nullptr, &AutomationStep::validateFields<AutomationTouchParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareTouch ) );
-    SW_AUTOMATION_STEP( runnerGamepadAxis, "GamepadAxis", nullptr, &AutomationStep::validateFields<AutomationGamepadAxisParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareGamepadAxis ) );
-    SW_AUTOMATION_STEP( runnerText, "Text", nullptr, &AutomationStep::validateFields<AutomationTextStepParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareText ) );
+    SW_AUTOMATION_STEP( runnerMouseDelta, "MouseDelta", nullptr, &AutomationStep::validateProperties<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMouseDelta ) );
+    SW_AUTOMATION_STEP( runnerWheel, "Wheel", nullptr, &AutomationStep::validateProperties<AutomationAxisPairParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWheel ) );
+    SW_AUTOMATION_STEP( runnerMousePosition, "MousePosition", nullptr, &AutomationStep::validateProperties<AutomationMousePositionParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareMousePosition ) );
+    SW_AUTOMATION_STEP( runnerTouch, "Touch", nullptr, &AutomationStep::validateProperties<AutomationTouchParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareTouch ) );
+    SW_AUTOMATION_STEP( runnerGamepadAxis, "GamepadAxis", nullptr, &AutomationStep::validateProperties<AutomationGamepadAxisParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareGamepadAxis ) );
+    SW_AUTOMATION_STEP( runnerText, "Text", nullptr, &AutomationStep::validateProperties<AutomationTextStepParams>, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareText ) );
     SW_AUTOMATION_STEP( runnerVariable, "Variable", &AutomationRunnerEngineSteps::runVariable, &AutomationRunnerStepsInternal::validateVariable, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectVariable, "ExpectVariable", &AutomationRunnerEngineSteps::runExpectVariable, &AutomationRunnerStepsInternal::validateExpectVariable, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpect, "Expect", &AutomationRunnerEngineSteps::runExpect, &AutomationRunnerStepsInternal::validateExpect, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerWaitUntil, "WaitUntil", nullptr, &AutomationRunnerStepsInternal::validateWaitUntil, AutomationStepOptions{}.withPrepare( &AutomationRunnerEngineSteps::prepareWaitUntil ).withHold( &AutomationRunnerEngineSteps::holdWaitUntil ) );
     SW_AUTOMATION_STEP( runnerExpectVisited, "ExpectVisited", &AutomationRunnerEngineSteps::runExpectVisited, &AutomationRunnerStepsInternal::validateExpectVisited, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerStepsInternal::validateRecord, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerRemember, "Remember", &AutomationRunnerEngineSteps::runRemember, &AutomationRunnerStepsInternal::validateRemember, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerStore, "Store", &AutomationRunnerEngineSteps::runStore, &AutomationRunnerStepsInternal::validateStore, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerStepsInternal::validateExpectLog, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationStep::validateFields<AutomationScreenshotParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
+    SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationStep::validateProperties<AutomationScreenshotParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdScreenshot ) );
     SW_AUTOMATION_STEP( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerExpectImagesDiffer, "ExpectImagesDiffer", &AutomationRunnerEngineSteps::runExpectImagesDiffer, &AutomationRunnerStepsInternal::validateExpectImagesDiffer, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationStep::validateFields<AutomationCloseWindowParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerExpectExitWithin, "ExpectExitWithin", &AutomationRunnerEngineSteps::runExpectExitWithin, &AutomationStep::validateFields<AutomationExpectExitWithinParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerPass, "Pass", &AutomationRunnerEngineSteps::runPass, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdPass ) );
-    SW_AUTOMATION_STEP( runnerFail, "Fail", &AutomationRunnerEngineSteps::runFail, &AutomationStep::validateFields<AutomationEndStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerSkip, "Skip", &AutomationRunnerEngineSteps::runSkip, &AutomationStep::validateFields<AutomationEndStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( runnerSkipUnless, "SkipUnless", &AutomationRunnerEngineSteps::runSkipUnless, &AutomationStep::validateFields<AutomationSkipUnlessParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationStep::validateProperties<AutomationCloseWindowParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerExpectExitWithin, "ExpectExitWithin", &AutomationRunnerEngineSteps::runExpectExitWithin, &AutomationStep::validateProperties<AutomationExpectExitWithinParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerPass, "Pass", &AutomationRunnerEngineSteps::runPass, &AutomationStep::validateProperties<AutomationNoParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdPass ) );
+    SW_AUTOMATION_STEP( runnerFail, "Fail", &AutomationRunnerEngineSteps::runFail, &AutomationStep::validateProperties<AutomationEndStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerSkip, "Skip", &AutomationRunnerEngineSteps::runSkip, &AutomationStep::validateProperties<AutomationEndStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerSkipUnless, "SkipUnless", &AutomationRunnerEngineSteps::runSkipUnless, &AutomationStep::validateProperties<AutomationSkipUnlessParams>, AutomationStepOptions{} );
 } // namespace sw

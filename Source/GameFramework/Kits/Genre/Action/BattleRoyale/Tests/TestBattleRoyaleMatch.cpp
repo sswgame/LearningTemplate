@@ -76,7 +76,7 @@ namespace
             return true;
         }
 
-        void stepFor( int32 steps )
+        void stepFrames( int32 steps )
         {
             for ( int32 step = 0; step < steps; ++step )
             {
@@ -169,9 +169,9 @@ SW_TEST_CASE( BattleRoyaleMatchTest, DownedPlayersBleedOutAndCreditTheKnocker )
     SW_EXPECT_EQUAL( 3, bench._match.countRemainingPlayers() ); // 기절도 남은 인원이다
     SW_EXPECT_EQUAL( size_t( 1 ), bench.drainKind( EventKind::PlayerDowned ).size() );
 
-    bench.stepFor( 40 ); // 출혈 체력 50, 초당 10 — 4 초에는 아직 산다
+    bench.stepFrames( 40 ); // 출혈 체력 50, 초당 10 — 4 초에는 아직 산다
     SW_EXPECT_TRUE( bench.player( 0 ).isDowned() );
-    bench.stepFor( 15 );
+    bench.stepFrames( 15 );
     SW_REQUIRE_TRUE( bench.player( 0 ).isDead() );
     SW_EXPECT_EQUAL( 1, bench.player( 2 )._kills );
     SW_EXPECT_EQUAL( 2, bench._match.countRemainingPlayers() );
@@ -202,11 +202,11 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReviveRestoresTheDownedTeammate )
     SW_EXPECT_EQUAL( 0, bench.player( 1 )._revivingTarget );
     SW_EXPECT_EQUAL( size_t( 1 ), bench.drainKind( EventKind::ReviveStarted ).size() );
 
-    bench.stepFor( 15 ); // 부활 2 초 중 1.5 초
+    bench.stepFrames( 15 ); // 부활 2 초 중 1.5 초
     SW_EXPECT_TRUE( bench.player( 0 ).isDowned() );
     SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._healthMachine.getDownedHealth(), kMatchTolerance );
 
-    bench.stepFor( 10 );
+    bench.stepFrames( 10 );
     SW_REQUIRE_TRUE( bench.player( 0 ).isAlive() );
     SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance ); // 최대 × 0.5
     SW_EXPECT_EQUAL( -1, bench.player( 1 )._revivingTarget );
@@ -227,7 +227,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, TwoRevivesAreFaster )
     (void)bench._match.applyDamage( 0, 3, 150.0f, sw::BattleRoyaleHitZone::Limb );
     SW_REQUIRE_TRUE( bench._match.beginRevive( 1, 0 ) );
     SW_REQUIRE_TRUE( bench._match.beginRevive( 2, 0 ) );
-    bench.stepFor( 15 ); // 혼자면 2 초가 걸린다
+    bench.stepFrames( 15 ); // 혼자면 2 초가 걸린다
     SW_EXPECT_TRUE( bench.player( 0 ).isAlive() );
 }
 
@@ -240,7 +240,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReviveInterruptions )
     SW_REQUIRE_TRUE( bench.setUp( kMatchXML, 2 ) );
     (void)bench._match.applyDamage( 0, 2, 150.0f, sw::BattleRoyaleHitZone::Limb );
     SW_REQUIRE_TRUE( bench._match.beginRevive( 1, 0 ) );
-    bench.stepFor( 5 );
+    bench.stepFrames( 5 );
     SW_EXPECT_TRUE( bench.player( 0 )._revive.getProgress() > 0.0f );
 
     (void)bench._match.applyDamage( 0, -1, 1.0f, sw::BattleRoyaleHitZone::Limb ); // 환경
@@ -253,13 +253,13 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReviveInterruptions )
     SW_EXPECT_EQUAL( size_t( 1 ), bench.drainKind( EventKind::ReviveInterrupted ).size() );
 
     SW_EXPECT_TRUE( bench._match.beginRevive( 1, 0 ) );
-    bench.stepFor( 5 );
+    bench.stepFrames( 5 );
     bench._match.endRevive( 1 );
     bench._match.endRevive( 99 ); // 없는 사람은 아무 일도 없다
     SW_EXPECT_EQUAL( -1, bench.player( 1 )._revivingTarget );
     SW_EXPECT_NEAR( 0.0f, bench.player( 0 )._revive.getProgress(), kMatchTolerance );
     const float32 bleedBefore = bench.player( 0 )._healthMachine.getDownedHealth();
-    bench.stepFor( 5 );
+    bench.stepFrames( 5 );
     SW_EXPECT_TRUE( bench.player( 0 )._healthMachine.getDownedHealth() < bleedBefore );
 }
 
@@ -277,7 +277,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, DownedReviverStops )
     SW_EXPECT_TRUE( bench.player( 0 ).isDowned() );
     SW_EXPECT_EQUAL( -1, bench.player( 1 )._revivingTarget );
     SW_EXPECT_EQUAL( 0, bench.player( 0 )._revive.getParticipantCount() );
-    bench.stepFor( 5 );
+    bench.stepFrames( 5 );
     SW_EXPECT_TRUE( bench.player( 0 )._healthMachine.getDownedHealth() < 50.0f );
 }
 
@@ -316,7 +316,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, TeamWipeEndsTheMatch )
 
     SW_EXPECT_NEAR( 0.0f, bench._match.applyDamage( 2, 0, 10.0f, sw::BattleRoyaleHitZone::Limb ), kMatchTolerance );
     const float32 timeBefore = bench._match.getTime();
-    bench.stepFor( 5 );
+    bench.stepFrames( 5 );
     SW_EXPECT_NEAR( timeBefore, bench._match.getTime(), kMatchTolerance );
 }
 
@@ -366,7 +366,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, SelfKnockIsNotCounted )
     (void)bench._match.applyDamage( 0, 0, 150.0f, sw::BattleRoyaleHitZone::Limb );
     SW_REQUIRE_TRUE( bench.player( 0 ).isDowned() );
     SW_EXPECT_EQUAL( 0, bench.player( 0 )._knocks );
-    bench.stepFor( 55 );
+    bench.stepFrames( 55 );
     SW_REQUIRE_TRUE( bench.player( 0 ).isDead() );
     SW_EXPECT_EQUAL( 0, bench.player( 0 )._kills );
 }
@@ -384,7 +384,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneDamageIgnoresArmorAndRevives )
     bench._match.setPlayerPosition( 2, center );
     bench._match.setPlayerPosition( 99, center ); // 없는 사람은 아무 일도 없다
 
-    bench.stepFor( 10 ); // 1 초
+    bench.stepFrames( 10 ); // 1 초
     SW_EXPECT_NEAR( 90.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance );
     SW_EXPECT_NEAR( 100.0f, bench.player( 1 )._healthMachine.getHealth(), kMatchTolerance );
     SW_EXPECT_NEAR( 1000.0f, bench.player( 0 )._loadout.getVest()._durability, kMatchTolerance );
@@ -392,7 +392,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneDamageIgnoresArmorAndRevives )
     (void)bench._match.applyDamage( 0, 2, 200.0f, sw::BattleRoyaleHitZone::Limb );
     SW_REQUIRE_TRUE( bench.player( 0 ).isDowned() );
     SW_REQUIRE_TRUE( bench._match.beginRevive( 1, 0 ) );
-    bench.stepFor( 10 );
+    bench.stepFrames( 10 );
     SW_EXPECT_EQUAL( 1, bench.player( 0 )._revive.getParticipantCount() );
     SW_EXPECT_NEAR( 40.0f, bench.player( 0 )._healthMachine.getDownedHealth(), kMatchTolerance ); // 출혈은 멈췄고 자기장만 깎는다
 }
@@ -408,7 +408,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneDeathKeepsTheKnockCredit )
     bench._match.setPlayerPosition( 1, center );
     bench._match.setPlayerPosition( 2, center );
     (void)bench._match.applyDamage( 0, 2, 200.0f, sw::BattleRoyaleHitZone::Limb );
-    bench.stepFor( 40 ); // 출혈 10 + 자기장 10 = 초당 20, 체력 50
+    bench.stepFrames( 40 ); // 출혈 10 + 자기장 10 = 초당 20, 체력 50
     SW_REQUIRE_TRUE( bench.player( 0 ).isDead() );
     SW_EXPECT_EQUAL( 1, bench.player( 2 )._kills );
 
@@ -417,7 +417,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneDeathKeepsTheKnockCredit )
     environment._match.setPlayerPosition( 1, center );
     environment._match.setPlayerPosition( 2, center );
     (void)environment.drainKind( EventKind::PlayerKilled );
-    environment.stepFor( 150 ); // 자기장 10 초에 기절, 그 뒤 2.5 초에 죽는다
+    environment.stepFrames( 150 ); // 자기장 10 초에 기절, 그 뒤 2.5 초에 죽는다
     SW_REQUIRE_TRUE( environment.player( 0 ).isDead() );
     SW_EXPECT_EQUAL( -1, environment.player( 0 )._downedBy );
     SW_EXPECT_EQUAL( 0, environment.player( 2 )._kills );
@@ -434,7 +434,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, MatchEndStopsTheTick )
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kLethalXML, 1 ) ); // 둘 다 원 밖, 한 틱에 200 피해
     (void)bench.drainKind( EventKind::PlayerKilled );
-    bench.stepFor( 1 );
+    bench.stepFrames( 1 );
     SW_EXPECT_TRUE( bench.player( 0 ).isDead() );
     SW_EXPECT_TRUE( bench.player( 1 ).isAlive() );
     SW_EXPECT_EQUAL( 1, bench._match.getMatchState().getWinningTeam() );
@@ -449,7 +449,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneTieLosesByLowerHealth )
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kLethalXML, 1 ) );
     (void)bench._match.findPlayerMutable( 1 )->_healthMachine.applyDamage( 10.0f, 0.0f, sw::nullopt );
-    bench.stepFor( 1 );
+    bench.stepFrames( 1 );
     SW_EXPECT_TRUE( bench.player( 1 ).isDead() );
     SW_EXPECT_TRUE( bench.player( 0 ).isAlive() );
     SW_EXPECT_EQUAL( 0, bench._match.getMatchState().getWinningTeam() );
@@ -462,12 +462,12 @@ SW_TEST_CASE( BattleRoyaleMatchTest, SupplyDropsFollowTheSchedule )
 {
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kMatchXML, 1, false ) );
-    bench.stepFor( 10 );
+    bench.stepFrames( 10 );
     SW_EXPECT_TRUE( bench._match.getSupplyDrops().empty() );
     SW_EXPECT_NEAR( 0.0f, bench._match.getTime(), kMatchTolerance );
     bench._match.start();
 
-    bench.stepFor( 3 ); // 0.3 초
+    bench.stepFrames( 3 ); // 0.3 초
     SW_REQUIRE_EQUAL( size_t( 1 ), bench._match.getSupplyDrops().size() );
     const sw::BattleRoyaleSupplyDrop& first = bench._match.getSupplyDrops()[0];
     SW_REQUIRE_EQUAL( size_t( 1 ), first._listItem.size() );
@@ -480,9 +480,9 @@ SW_TEST_CASE( BattleRoyaleMatchTest, SupplyDropsFollowTheSchedule )
     SW_REQUIRE_EQUAL( size_t( 1 ), listLanded.size() );
     SW_EXPECT_EQUAL( 0, listLanded[0]._value );
 
-    bench.stepFor( 3 ); // 0.6 초
+    bench.stepFrames( 3 ); // 0.6 초
     SW_EXPECT_EQUAL( size_t( 2 ), bench._match.getSupplyDrops().size() );
-    bench.stepFor( 10 );
+    bench.stepFrames( 10 );
     SW_EXPECT_EQUAL( size_t( 2 ), bench._match.getSupplyDrops().size() );
 }
 
@@ -520,7 +520,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, StateRoundTripResumes )
     original._match.setPlayerPosition( 2, sw::float2{ 20.0f, 30.0f } );
     (void)original._match.applyDamage( 0, 2, 150.0f, sw::BattleRoyaleHitZone::Limb );
     SW_REQUIRE_TRUE( original._match.beginRevive( 1, 0 ) );
-    original.stepFor( 3 );
+    original.stepFrames( 3 );
 
     sw::Archive written;
     original._match.writeState( written );
@@ -549,8 +549,8 @@ SW_TEST_CASE( BattleRoyaleMatchTest, StateRoundTripResumes )
 
     for ( int32 step = 0; step < 30; ++step )
     {
-        original.stepFor( 1 );
-        restored.stepFor( 1 );
+        original.stepFrames( 1 );
+        restored.stepFrames( 1 );
         SW_EXPECT_TRUE( original.player( 0 ).isAlive() == restored.player( 0 ).isAlive() );
         SW_EXPECT_NEAR( original.player( 0 )._revive.getProgress(), restored.player( 0 )._revive.getProgress(), kMatchTolerance );
     }
@@ -596,7 +596,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReadRejectsBrokenBytes )
     // 끝에서: 시각(4), 상자 위치(8), 무더기의 지점(4), 개수(4).
     MatchBench withDrop;
     SW_REQUIRE_TRUE( withDrop.setUp( kMatchXML, 1 ) );
-    withDrop.stepFor( 3 );
+    withDrop.stepFrames( 3 );
     SW_REQUIRE_EQUAL( size_t( 1 ), withDrop._match.getSupplyDrops().size() );
     sw::Archive dropWritten;
     withDrop._match.writeState( dropWritten );

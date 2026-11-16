@@ -402,8 +402,10 @@ namespace sw
         string                       _displayName;
         string                       _tooltip;
         vector<string>               _listAlias;
-        string                       _validate; ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
-        string                       _tickMode; ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
+        vector<string>               _listRemovedField; ///< `REFLECT( RemovedField = "_oldA, _oldB" )` — 지운 필드 이름(세이브의 해시 공간에 남는다)
+        vector<string>               _listRemovedType;  ///< `REFLECT( RemovedType = "sw::OldThing" )` — 지운 타입 이름(바이너리 태그의 타입 해시 공간에 남는다)
+        string                       _validate;         ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
+        string                       _tickMode;         ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
@@ -416,7 +418,7 @@ namespace sw
         uint8                        _bHideInMenu       : 1;
         /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
         uint8 _bParentReflected : 1;
-        /** @brief `Component` 파생입니다(추상 포함). 틱 레인 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
+        /** @brief `Component` 파생입니다(추상 포함). 틱 모드 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
         uint8 _bComponent : 1;
         /** @brief `parsing.physics_hook_base_types`(`sw::PhysicsComponent`) 파생입니다(추상 포함). 물리 훅 등록(`requiresPhysicsHookRegistration`)이 본다. */
         uint8 _bPhysicsComponent : 1;
@@ -434,6 +436,8 @@ namespace sw
             , _displayName{}
             , _tooltip{}
             , _listAlias{}
+            , _listRemovedField{}
+            , _listRemovedType{}
             , _validate{}
             , _tickMode{}
             , _listCustomMeta{}
@@ -459,8 +463,8 @@ namespace sw
         bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
         /**
-         * @brief 이 타입에 틱 레인 등록(`SW_REGISTER_TICK_TYPE`)을 낸다 — 컴포넌트가 `onTick` · `onSubTick` 을 직접 재정의했거나 `REFLECT( TickMode = … )` 를 달았을 때다.
-         * @details 추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 레인 — 재정의만으로는 그 타입의 인스턴스가 없다).
+         * @brief 이 타입에 틱 모드 등록(`SW_REGISTER_TICK_TYPE`)을 낸다 — 컴포넌트가 `onTick` · `onSubTick` 을 직접 재정의했거나 `REFLECT( TickMode = … )` 를 달았을 때다.
+         * @details 추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 모드 — 재정의만으로는 그 타입의 인스턴스가 없다).
          */
         bool requiresTickRegistration() const noexcept
         {

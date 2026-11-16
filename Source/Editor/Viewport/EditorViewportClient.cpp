@@ -275,7 +275,7 @@ namespace sw::editor
                 // 콜라이더 손잡이나 확장 도구(EditorViewportMouseClaim) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
                 const bool bGizmoYields = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
                 if ( bGizmoYields == false )
-                    _gizmo.draw( editor::getMainSceneSelection(), arrView, arrProj, canvasPos, canvasSize, _toolbarSettings ); // 메인 뷰포트는 메인 선택
+                    _gizmo.draw( editor::getMainSceneSelection(), arrView, arrProj, canvasPos, canvasSize, _toolbarSettings, "sceneView.gizmoCenter" ); // 메인 뷰포트는 메인 선택
             }
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
@@ -331,6 +331,6 @@ namespace sw::editor
             subject._listSelectedID.push_back( pSelected->getObjectID() );
         }
         subject._selectOnly = &EditorViewportClientInternal::selectOnlyObject;
-        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+        (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 } // namespace sw::editor

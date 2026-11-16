@@ -98,7 +98,7 @@ namespace sw
 
         /** @brief 팩이 적은 @p packValue 가 있으면 그것, 없으면 엔진이 가진 @p engineValue 의 경로입니다(UI 규칙 칸 — 엔진 기본을 팩이 덮어쓴다). */
         [[nodiscard]] static const string& resolve( const DataPath& packValue, const DataPath& engineValue );
-    };
 
-    SW_SERVICE_SLOT_CONST( PackEngineSettings, Required );
+        SW_SERVICE_SLOT_CONST( PackEngineSettings, Required );
+    };
 } // namespace sw

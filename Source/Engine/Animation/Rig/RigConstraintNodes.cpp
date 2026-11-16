@@ -89,8 +89,8 @@ namespace sw
 
                 // 위치 · 회전 고르기는 변환 복사만 받는다 — 위치 · 회전 제약은 공통 칸만 읽는다(그 키를 적으면 모르는 키다).
                 if ( _mode != Mode::CopyTransform )
-                    return reader.readFields( static_cast<RigConstraintParams&>( _params ) );
-                if ( reader.readFields( _params ) == false )
+                    return reader.readProperties( static_cast<RigConstraintParams&>( _params ) );
+                if ( reader.readProperties( _params ) == false )
                     return false;
                 _bPosition = _params._bPosition ? SW_TRUE : SW_FALSE;
                 _bRotation = _params._bRotation ? SW_TRUE : SW_FALSE;
@@ -153,7 +153,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                const bool bOk = reader.readFields( _params ) && reader.readNameList( "parents", _listParentName, true );
+                const bool bOk = reader.readProperties( _params ) && reader.readNameList( "parents", _listParentName, true );
                 if ( bOk && _params._initial >= _listParentName.size() )
                 {
                     reader.fail( "'initial' is out of range of 'parents'" );
@@ -253,7 +253,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                const bool bOk = reader.readFields( _params ); // 음수 아님은 PROPERTY( Min ) 가 본다
+                const bool bOk = reader.readProperties( _params ); // 음수 아님은 PROPERTY( Min ) 가 본다
                 if ( bOk && _params._max < _params._min )
                 {
                     reader.fail( "'min' must not be above 'max'" );
@@ -298,7 +298,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                return reader.readFields( _params );
+                return reader.readProperties( _params );
             }
 
             [[nodiscard]] bool bind( const RigBindContext& context ) override
@@ -343,14 +343,14 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                bool bOk               = reader.readFields( _params );
+                bool bOk               = reader.readProperties( _params );
                 _axis                  = _params._axis.normalize();
                 const RigXMLList bones = reader.readArray( "bones", true );
                 for ( size_t index = 0; bOk && bones.isValid() && index < bones.size(); ++index )
                 {
                     RigXMLReader        entryReader( bones.at( index ), reader.getContext() );
                     RigBoneWeightParams entryParams;
-                    bOk = entryReader.readFields( entryParams );
+                    bOk = entryReader.readProperties( entryParams );
                     bOk = entryReader.finish() && bOk;
                     TwistBone entry{};
                     entry._name   = entryParams._bone;
@@ -445,7 +445,7 @@ namespace sw
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
-                const bool bOk = reader.readFields( _params );
+                const bool bOk = reader.readProperties( _params );
                 if ( bOk && ( _params._scale._x < 0.0f || _params._scale._y < 0.0f || _params._scale._z < 0.0f ) )
                 {
                     reader.fail( "'scale' must not be negative" );

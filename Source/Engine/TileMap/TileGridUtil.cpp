@@ -13,14 +13,14 @@ namespace sw
         struct TileGridUtilInternal
         {
             /** @brief (x, y) 의 행 우선 번호입니다. */
-            static size_t indexOf( int32 width, int32 x, int32 y ) { return static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ); }
+            static size_t getIndexOf( int32 width, int32 x, int32 y ) { return static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ); }
 
             /** @brief 셀이 단단하고 아직 어느 사각형에도 속하지 않았는지 반환합니다. 맵 밖은 false 입니다. */
             static bool isFree( const vector<uint8>& listSolid, const vector<uint8>& listUsed, int32 width, int32 x, int32 y )
             {
                 if ( x < 0 || x >= width )
                     return false;
-                const size_t index = indexOf( width, x, y );
+                const size_t index = getIndexOf( width, x, y );
                 return listSolid[index] != 0 && listUsed[index] == 0;
             }
 
@@ -61,13 +61,13 @@ namespace sw
         {
             for ( int32 x = 0; x < width; ++x )
             {
-                if ( listSolid[Internal::indexOf( width, x, y )] == 0 || listUsed[Internal::indexOf( width, x, y )] != 0 )
+                if ( listSolid[Internal::getIndexOf( width, x, y )] == 0 || listUsed[Internal::getIndexOf( width, x, y )] != 0 )
                     continue;
                 // 오른쪽으로 아직 쓰지 않은 단단한 셀이 이어지는 만큼 폭을 잡는다.
                 int32 runWidth = 1;
                 while ( true )
                 {
-                    const bool bNextCellFree = x + runWidth < width && listSolid[Internal::indexOf( width, x + runWidth, y )] != 0 && listUsed[Internal::indexOf( width, x + runWidth, y )] == 0;
+                    const bool bNextCellFree = x + runWidth < width && listSolid[Internal::getIndexOf( width, x + runWidth, y )] != 0 && listUsed[Internal::getIndexOf( width, x + runWidth, y )] == 0;
                     if ( bNextCellFree == false )
                         break;
                     ++runWidth;
@@ -83,7 +83,7 @@ namespace sw
                 {
                     for ( int32 column = x; column < x + runWidth; ++column )
                     {
-                        listUsed[Internal::indexOf( width, column, row )] = 1;
+                        listUsed[Internal::getIndexOf( width, column, row )] = 1;
                     }
                 }
                 outListRect.push_back( TileRect{ x, y, runWidth, runHeight } );

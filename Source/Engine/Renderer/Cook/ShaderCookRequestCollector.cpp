@@ -11,11 +11,14 @@
 #include "Engine/Renderer/Cook/ShaderCookRequestCollector.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -28,28 +31,94 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @brief 모으는 중인 요청 목록과 그 색인입니다 — 같은 요청(셰이더 · 진입점 · 스테이지 · 퍼뮤테이션)과 같은 출처 묶음을 해시로 찾는다.
+         * @details 예전에는 더할 때마다 목록 전체를 훑어(요청 수의 제곱) 엔진 도메인만 모아도 Debug 12 초가 걸렸고, 부하 아래에서 단위 테스트 시한(30 초)을 넘었다.
+         */
+        struct RequestList
+        {
+            vector<ShaderCookRequest>&    _list;
+            unordered_map<string, uint32> _mapIndex;      ///< 요청 열쇠(`makeRequestKey` — 정렬한 퍼뮤테이션 해시) → `_list` 번호
+            unordered_map<string, uint32> _mapRawIndex;   ///< 정렬 전 원문 열쇠(`makeRawKey`) → `_list` 번호 — 메시 패스 × 머티리얼 조합은 대부분 같은 원문의 중복이라 해시(복사 · 정렬)를 건너뛴다
+            vector<unordered_set<string>> _listOriginKey; ///< 요청마다 이미 든 출처 묶음 열쇠(`_list` 와 같은 순서)
+        };
+
+        /** @brief 출처 묶음 하나와 그 열쇠입니다 — 열쇠를 묶음마다 한 번만 만든다(같은 묶음이 보기 모드 × 스테이지만큼 다시 온다). */
+        struct OriginGroup
+        {
+            string         _key;
+            vector<string> _listAsset;
+        };
+
         struct ShaderCookRequestCollectorInternal
         {
-            static void appendRequestUnique( vector<ShaderCookRequest>& outListRequest,
-                                             string_view                shaderPath,
-                                             string_view                entryPoint,
-                                             ShaderStage                stage,
-                                             const vector<string>&      listPermutation )
+            static string makeRequestKey( const string& normPath, string_view entryPoint, ShaderStage stage, uint64 permutationHash )
+            {
+                return normPath + '\n' + string( entryPoint ) + '\n' + to_string( static_cast<uint64>( stage ) ) + '\n' + to_string( permutationHash );
+            }
+
+            static string makeRawKey( string_view shaderPath, string_view entryPoint, ShaderStage stage, const vector<string>& listPermutation )
+            {
+                string key = string( shaderPath ) + '\n' + string( entryPoint ) + '\n' + to_string( static_cast<uint64>( stage ) );
+                for ( const string& define : listPermutation )
+                    key += '\n' + define;
+                return key;
+            }
+
+            static OriginGroup makeOriginGroup( vector<string> listAsset )
+            {
+                OriginGroup group;
+                group._key       = makeOriginKey( listAsset );
+                group._listAsset = std::move( listAsset );
+                return group;
+            }
+
+            static void addOrigin( RequestList& outListRequest, uint32 index, const OriginGroup& group )
+            {
+                // 같은 바이너리를 다른 출처도 요청한다 — 어느 한 출처가 닿으면 필요하다(`ShaderCookRequest::_listOrigin`).
+                if ( outListRequest._listOriginKey[index].insert( group._key ).second )
+                    outListRequest._list[index]._listOrigin.push_back( group._listAsset );
+            }
+
+            static string makeOriginKey( const vector<string>& listOrigin )
+            {
+                string key;
+                for ( const string& origin : listOrigin )
+                    key += origin + '\n';
+                return key;
+            }
+
+            static void appendRequestUnique( RequestList& outListRequest, string_view shaderPath, string_view entryPoint, ShaderStage stage, const vector<string>& listPermutation,
+                                             const vector<string>& listOrigin )
+            {
+                appendRequestUniqueGroups( outListRequest, shaderPath, entryPoint, stage, listPermutation, vector<OriginGroup>{ makeOriginGroup( listOrigin ) } );
+            }
+
+            /** @brief 요청 하나를 더합니다(이미 있으면 출처 묶음만) — @p listOriginGroup 은 이 요청을 낸 출처 묶음들이다(같은 패스를 가진 파이프라인 여럿). */
+            static void appendRequestUniqueGroups( RequestList& outListRequest, string_view shaderPath, string_view entryPoint, ShaderStage stage, const vector<string>& listPermutation,
+                                                   const vector<OriginGroup>& listOriginGroup )
             {
                 if ( shaderPath.empty() || entryPoint.empty() )
                     return;
 
+                string     rawKey = makeRawKey( shaderPath, entryPoint, stage, listPermutation );
+                const auto rawIt  = outListRequest._mapRawIndex.find( rawKey );
+                if ( rawIt != outListRequest._mapRawIndex.end() )
+                {
+                    for ( const OriginGroup& group : listOriginGroup )
+                        addOrigin( outListRequest, rawIt->second, group );
+                    return;
+                }
                 const uint64 permutationHash = ShaderCooker::computePermutationHash( listPermutation );
                 const string normPath        = FileUtil::normalizeSeparators( shaderPath );
-
-                for ( const ShaderCookRequest& existing : outListRequest )
+                const string requestKey      = makeRequestKey( normPath, entryPoint, stage, permutationHash );
+                const auto   indexIt         = outListRequest._mapIndex.find( requestKey );
+                if ( indexIt != outListRequest._mapIndex.end() )
                 {
-                    const bool bDuplicateRequest = existing._stage == stage &&
-                                                   existing._permutationHash == permutationHash &&
-                                                   existing._entryPoint == entryPoint &&
-                                                   existing._shaderPath == normPath;
-                    if ( bDuplicateRequest )
-                        return;
+                    outListRequest._mapRawIndex.emplace( std::move( rawKey ), indexIt->second ); // 같은 define 집합의 다른 순서 · 표기
+                    for ( const OriginGroup& group : listOriginGroup )
+                        addOrigin( outListRequest, indexIt->second, group );
+                    return;
                 }
 
                 ShaderCookRequest request;
@@ -58,7 +127,13 @@ namespace sw
                 request._stage           = stage;
                 request._listPermutation = listPermutation;
                 request._permutationHash = permutationHash;
-                outListRequest.push_back( std::move( request ) );
+                const uint32 index       = static_cast<uint32>( outListRequest._list.size() );
+                outListRequest._mapIndex.emplace( requestKey, index );
+                outListRequest._mapRawIndex.emplace( std::move( rawKey ), index );
+                outListRequest._listOriginKey.emplace_back();
+                outListRequest._list.push_back( std::move( request ) );
+                for ( const OriginGroup& group : listOriginGroup )
+                    addOrigin( outListRequest, index, group );
             }
 
             /** @brief 씬 메시를 그리는 패스 하나입니다. 머티리얼과 곱해 변형을 만들 대상입니다. */
@@ -69,6 +144,7 @@ namespace sw
                 string         _pixelEntryPoint;
                 vector<string> _listPermutation;
                 RenderPassType _passType{ RenderPassType::Invalid };
+                vector<string> _listOrigin;                   ///< 이 패스를 낸 파이프라인(`ShaderCookRequest::_listOrigin` 의 한 묶음 — 표의 패스는 비었다)
                 bool           _bUsesMaterialShader{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool           _bAppliesViewMode{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool           _bHasPixelStage{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -77,24 +153,25 @@ namespace sw
             /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다), 헐 · 도메인 유무(변위 머티리얼). */
             struct MeshDrawVariant
             {
-                string         _shaderPath;
-                vector<string> _listDefine;
-                bool           _bHasPixelStage{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool           _bTessellates{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                string              _shaderPath;
+                vector<string>      _listDefine;
+                bool                _bHasPixelStage{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                _bTessellates{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                vector<OriginGroup> _listOriginGroup;         ///< 이 변형을 내는 출처 묶음들(패스 출처마다 + 머티리얼 출처 — `ShaderCookRequest::_listOrigin`)
             };
 
             /** @brief 메시 패스 하나가 이 변형으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS, 변위 머티리얼이면 HS · DS) 요청을 더합니다. */
-            static void appendMeshPassRequest( vector<ShaderCookRequest>& outListRequest, const MeshPassInfo& passInfo, const MeshDrawVariant& drawVariant,
+            static void appendMeshPassRequest( RequestList& outListRequest, const MeshPassInfo& passInfo, const MeshDrawVariant& drawVariant,
                                                const vector<string>& listDefine )
             {
-                appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine );
+                appendRequestUniqueGroups( outListRequest, drawVariant._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine, drawVariant._listOriginGroup );
                 if ( drawVariant._bHasPixelStage )
-                    appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listDefine );
+                    appendRequestUniqueGroups( outListRequest, drawVariant._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listDefine, drawVariant._listOriginGroup );
                 // 진입점은 런타임 변형(`FramePSOManager::createMaterialPSOVariant`)과 같은 스테이지 기본값이다.
                 if ( drawVariant._bTessellates )
                 {
-                    appendRequestUnique( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Hull )._pEntryPoint, ShaderStage::Hull, listDefine );
-                    appendRequestUnique( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Domain )._pEntryPoint, ShaderStage::Domain, listDefine );
+                    appendRequestUniqueGroups( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Hull )._pEntryPoint, ShaderStage::Hull, listDefine, drawVariant._listOriginGroup );
+                    appendRequestUniqueGroups( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Domain )._pEntryPoint, ShaderStage::Domain, listDefine, drawVariant._listOriginGroup );
                 }
             }
 
@@ -103,7 +180,22 @@ namespace sw
             {
                 string         _shaderPath;
                 vector<string> _listDefine;
+                vector<string> _listOrigin; ///< 머티리얼 에셋 id 하나(`ShaderCookRequest::_listOrigin` 의 한 묶음)
             };
+
+            /** @brief 훑은 파일 @p absPath 의 에셋 id(리소스 루트 `Content/` 기준 정규화 경로 — 팩 고르기의 id 와 같은 규칙)입니다. 훑는 루트가 도메인 하나여도 같다. 출처 칸에 든다. */
+            static string makeOriginID( const string& absPath )
+            {
+                const string resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+                string       relativePath;
+                if ( FileUtil::tryMakePathUnderRoot( resourceRoot, absPath, relativePath ) == false )
+                {
+                    // 훑기(`collectContentFiles`)가 리소스 루트 아래에서 낸 파일이라 오지 않는 자리다 — 경로 그대로면 어떤 닿은 id 와도 맞지 않아 경고가 빠질 뿐이다.
+                    SW_LOG_ERROR_ID( "ShaderCooker.OriginOutsideRoot", "Shader cook: '%#' is not under the resource root '%#' - its requests have no asset origin", absPath, resourceRoot );
+                    return FileUtil::normalizePath( absPath ).str();
+                }
+                return FileUtil::normalizePath( relativePath ).str();
+            }
 
             /** @brief 두 define 목록을 합칩니다(중복 제거, 앞쪽 우선). */
             static vector<string> mergeDefines( const vector<string>& listLeft, const vector<string>& listRight )
@@ -128,82 +220,56 @@ namespace sw
                 return listMerged;
             }
 
-            /** @brief 쿠킹하는 런타임 스위치 수의 상한입니다. 조합이 2^n 이라 넘으면 에셋 상태만 쿠킹하고 오류로 알린다. */
-            static constexpr uint32 kMaxRuntimeSwitchCount = 4;
-
             /**
              * @brief 머티리얼이 런타임에 낼 수 있는 define 목록 전부입니다 — 에셋 상태 하나 + 런타임에 바꿀 수 있는 정적 스위치(`bShaderFeature="0"`)의 켬/끔 조합.
-             * @details 유니티의 shader_feature(쓰는 변형만) · multi_compile(모든 변형) 구분과 같다. 런타임 스위치를 쿠킹하지 않으면 코드가
-             *          `Material::setStaticSwitch` 로 켠 변형이 Dev 에서는 실시간 컴파일로 그려지고 Shipping 에서만 바이너리가 없다.
-             *          조합은 런타임과 **같은 함수**(`setStaticSwitch` → `getCachedShaderDefines`)로 만든다 — 손으로 define 을 끼우면 정렬 · 꺼짐 키워드가 어긋난다.
+             * @details 유니티의 shader_feature(쓰는 변형만) · multi_compile(모든 변형) 구분과 같다. 조합은 런타임 PSO 미리 만들기와 **같은 함수**
+             *          (`Material::collectRuntimeSwitchVariants` — `setStaticSwitch` 뒤의 `getCachedShaderDefines` 와 같은 정의)로 만든다. 상한(`Material::kMaxRuntimeStaticSwitchCount`)을
+             *          넘으면 그 함수가 오류를 남기고 에셋 상태만 낸다.
              */
-            static void collectMaterialRuntimeDefines( Material& material, string_view materialPath, vector<vector<string>>& outListDefine )
+            static void collectMaterialRuntimeDefines( const Material& material, vector<vector<string>>& outListDefine )
             {
-                outListDefine.clear();
-                outListDefine.push_back( material.getCachedShaderDefines() );
-                vector<string> listRuntimeSwitch;
-                for ( const MaterialStaticSwitch& entry : material.getPermutations()._listStaticSwitch )
-                {
-                    if ( entry._bShaderFeature == SW_FALSE )
-                        listRuntimeSwitch.push_back( entry._name );
-                }
-                if ( listRuntimeSwitch.size() > kMaxRuntimeSwitchCount )
-                {
-                    SW_LOG_ERROR_ID( "ShaderCooker.MaterialRuntimeStaticSwitches", "Material '%#' has %# runtime static switches (bShaderFeature=\"0\") - only %# are cooked in every combination; the asset state is cooked alone",
-                                     materialPath, listRuntimeSwitch.size(), kMaxRuntimeSwitchCount );
-                    return;
-                }
-                const uint32 comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
-                for ( uint32 combo = 0; combo < comboCount; ++combo )
-                {
-                    for ( size_t switchIndex = 0; switchIndex < listRuntimeSwitch.size(); ++switchIndex )
-                    {
-                        material.setStaticSwitch( hashed_string( listRuntimeSwitch[switchIndex] ), ( combo & ( 1u << switchIndex ) ) != 0 );
-                    }
-                    const vector<string>& listDefine = material.getCachedShaderDefines();
-                    if ( VectorUtil::contains( outListDefine, listDefine ) == false )
-                        outListDefine.push_back( listDefine );
-                }
+                vector<uint64> listPermutationHash;
+                material.collectRuntimeSwitchVariants( outListDefine, listPermutationHash );
             }
 
             /** @brief 파이프라인 패스 하나의 스테이지 요청(컴퓨트, 또는 VS · PS · GS · HS · DS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
-            static void appendPipelinePassStages( vector<ShaderCookRequest>& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline, const EngineDefaultAssets& engineDefaultAssets,
-                                                  const string& shaderPath, const vector<string>& listPassDefine )
+            static void appendPipelinePassStages( RequestList& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline, const EngineDefaultAssets& engineDefaultAssets,
+                                                  const string& shaderPath, const vector<string>& listPassDefine, const vector<string>& listOrigin )
             {
                 if ( pass._type == RenderPassType::Compute )
                 {
-                    appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine );
+                    appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine, listOrigin );
                     return;
                 }
                 // 컴퓨트 구현(`_implementation="Compute"`)도 굽는다 — 런타임과 같은 함수(`selectRenderPassComputeShader`)의 define 이다. 픽셀 구현(아래)은 에뮬 백엔드가 쓰므로 함께 굽는다.
                 if ( pass._implementation == RenderPassExecutionMode::Compute )
                 {
                     const RenderPassShaderSelection computeShader = selectRenderPassComputeShader( pass, engineDefaultAssets );
-                    appendRequestUnique( outListRequest, computeShader._shaderPath, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, computeShader._listDefine );
+                    appendRequestUnique( outListRequest, computeShader._shaderPath, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, computeShader._listDefine, listOrigin );
                 }
                 const string vsEntry = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
-                appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
+                appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine, listOrigin );
 
                 // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 런타임과 같은 판정
                 // (`hasPixelStage`, 출력 선언의 RT 수)을 써야 둘이 어긋나지 않는다.
                 if ( FrameRendererUtil::hasPixelStage( pass, pipeline.getDesc()._listAttachment ) )
                 {
                     const string psEntry = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
-                    appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
+                    appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine, listOrigin );
                 }
 
                 // 선택 스테이지는 진입점을 적은 패스만 쓴다.
                 if ( pass._geometryEntryPoint.empty() == false )
-                    appendRequestUnique( outListRequest, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine );
+                    appendRequestUnique( outListRequest, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine, listOrigin );
                 if ( pass._hullEntryPoint.empty() == false )
-                    appendRequestUnique( outListRequest, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine );
+                    appendRequestUnique( outListRequest, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine, listOrigin );
                 if ( pass._domainEntryPoint.empty() == false )
-                    appendRequestUnique( outListRequest, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine );
+                    appendRequestUnique( outListRequest, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine, listOrigin );
             }
 
             /** @brief 1) 렌더 파이프라인 XML(`pipeline` 폴더)의 패스마다 셰이더 요청을 더하고, 씬 메시 패스는 머티리얼과 곱할 목록에 넣습니다. */
             [[nodiscard]] static bool collectPipelinePassRequests( string_view rootDir, const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
-                                                                   vector<ShaderCookRequest>& outListRequest )
+                                                                   RequestList& outListRequest )
             {
                 vector<string> listXMLFile;
                 // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 셰이더를 빠뜨린 채 쿠킹하므로 실패다(경로는 collectContentFiles 가 알린다 — 작업 도메인 `scratch` 는 콘텐츠가 아니라 뺀다).
@@ -215,7 +281,8 @@ namespace sw
                     if ( normXML.find( "pipeline/" ) == string::npos && normXML.find( "pipeline.xml" ) == string::npos )
                         continue;
 
-                    RenderPipelineAsset pipelineResource;
+                    const vector<string> pipelineOrigin{ makeOriginID( xmlPath ) };
+                    RenderPipelineAsset  pipelineResource;
                     // 디스크로 훑은 소스 파일이다 — 디스크 입구로 읽는다(리소스 입구는 OS 경로를 받지 않는다).
                     if ( pipelineResource.loadFromDiskFile( xmlPath ) == false )
                         continue;
@@ -230,7 +297,7 @@ namespace sw
                             continue;
 
                         // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 쿠킹해야 한다(5단계).
-                        if ( FrameRendererUtil::drawsSceneMeshes( pass._type ) )
+                        if ( FrameRendererUtil::shouldDrawSceneMeshes( pass._type ) )
                         {
                             MeshPassInfo passInfo;
                             passInfo._shaderPath          = passShader._shaderPath;
@@ -238,19 +305,20 @@ namespace sw
                             passInfo._pixelEntryPoint     = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                             passInfo._listPermutation     = passShader._listDefine;
                             passInfo._passType            = pass._type;
+                            passInfo._listOrigin          = pipelineOrigin;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._type );
-                            passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( pass._type );
+                            passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( pass._type );
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             outListMeshPass.push_back( std::move( passInfo ) );
                         }
-                        appendPipelinePassStages( outListRequest, pass, pipelineResource, engineDefaultAssets, passShader._shaderPath, passShader._listDefine );
-                        appendInternalSlotMeshPasses( pass, engineDefaultAssets, outListMeshPass, outListRequest );
+                        appendPipelinePassStages( outListRequest, pass, pipelineResource, engineDefaultAssets, passShader._shaderPath, passShader._listDefine, pipelineOrigin );
+                        appendInternalSlotMeshPasses( pass, engineDefaultAssets, pipelineOrigin, outListMeshPass, outListRequest );
                     }
                     // 모듈 확장 패스의 프로그램(ExtensionRenderPass) — 모듈이 런타임에 고르는 셰이더라 파이프라인 XML 이 `_listExtensionShader` 로 선언한다. 진입점 · define 은 기본 한 벌이다.
                     for ( const string& moduleShader : pipelineResource.getDesc()._listExtensionShader )
                     {
-                        appendRequestUnique( outListRequest, moduleShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
-                        appendRequestUnique( outListRequest, moduleShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
+                        appendRequestUnique( outListRequest, moduleShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {}, pipelineOrigin );
+                        appendRequestUnique( outListRequest, moduleShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {}, pipelineOrigin );
                     }
                 }
                 return true;
@@ -261,8 +329,8 @@ namespace sw
              * @details 내부 슬롯은 서술 없이 표로 셰이더를 고르지만 화면 속도 쓰기는 대신 그리는 패스의 출력 선언이 정한다(`selectRenderPassShader` 의 대상 서술).
              *          런타임(`FramePSOManager::makePassPSODesc`)이 같은 대상 서술로 고르므로, 그 선언이 속도를 쓸 때의 define 조합을 여기서 더한다 — 표 단계(2)는 속도 없는 조합을 낸다.
              */
-            static void appendInternalSlotMeshPasses( const RenderGraphPassDesc& pass, const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
-                                                      vector<ShaderCookRequest>& outListRequest )
+            static void appendInternalSlotMeshPasses( const RenderGraphPassDesc& pass, const EngineDefaultAssets& engineDefaultAssets, const vector<string>& listOrigin,
+                                                      vector<MeshPassInfo>& outListMeshPass, RequestList& outListRequest )
             {
                 for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
                 {
@@ -277,12 +345,13 @@ namespace sw
                     passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
                     passInfo._listPermutation     = slotShader._listDefine;
                     passInfo._passType            = slotType;
+                    passInfo._listOrigin          = listOrigin;
                     passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( slotType );
-                    passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( slotType );
+                    passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( slotType );
                     passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( slotType );
                     outListMeshPass.push_back( std::move( passInfo ) );
-                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, slotShader._listDefine );
-                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, slotShader._listDefine );
+                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, slotShader._listDefine, listOrigin );
+                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, slotShader._listDefine, listOrigin );
                 }
             }
 
@@ -294,7 +363,7 @@ namespace sw
              *          어느 파이프라인에도 없는 종류의 변형이 빠진다.
              */
             static void collectPassTypeTableRequests( const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
-                                                      vector<ShaderCookRequest>& outListRequest )
+                                                      RequestList& outListRequest )
             {
                 for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
                 {
@@ -310,10 +379,10 @@ namespace sw
                         vector<string> listComputeDefine;
                         if ( info._pPassDefine != nullptr )
                             listComputeDefine.push_back( string( info._pPassDefine ) );
-                        appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, listComputeDefine );
+                        appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, listComputeDefine, {} );
                         continue;
                     }
-                    if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
+                    if ( FrameRendererUtil::shouldDrawSceneMeshes( passType ) )
                     {
                         const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
                         MeshPassInfo                    passInfo;
@@ -323,20 +392,20 @@ namespace sw
                         passInfo._listPermutation     = passShader._listDefine;
                         passInfo._passType            = passType;
                         passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( passType );
-                        passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( passType );
+                        passInfo._bAppliesViewMode    = FrameRendererUtil::shouldApplyViewMode( passType );
                         passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
                         outListMeshPass.push_back( std::move( passInfo ) );
                     }
                     // define 은 런타임이 서술 없이 만드는 엔진 PSO 와 같은 함수(selectRenderPassShader — 표의 패스 define 포함)로 정한다. 빈 목록으로 쿠킹하면
                     // 패스 define 이 있는 종류(FSR 의 RCAS 등)는 런타임이 찾는 해시를 아무도 쿠킹하지 않아 Shipping 에서 PSO 가 없다.
                     const RenderPassShaderSelection tableShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
-                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, tableShader._listDefine );
-                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, tableShader._listDefine );
+                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, tableShader._listDefine, {} );
+                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, tableShader._listDefine, {} );
                 }
             }
 
             /** @brief 3) 패스가 아닌 엔진 · 테스트 셰이더(VS · PS 짝, 컴퓨트, 기본이 아닌 컴퓨트 진입점)입니다. */
-            static void collectEngineShaderRequests( const EngineDefaultAssets& engineDefaultAssets, vector<ShaderCookRequest>& outListRequest )
+            static void collectEngineShaderRequests( const EngineDefaultAssets& engineDefaultAssets, RequestList& outListRequest )
             {
                 const vector<string> listEngineShader = {
                     engineDefaultAssets._shaderSprite2D.get(),
@@ -345,8 +414,8 @@ namespace sw
                     engineDefaultAssets._shaderLayerBake.get() }; // 빠뜨린 칸은 ShaderCookCoverageTest 가 잡는다
                 for ( const string& path : listEngineShader )
                 {
-                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
-                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {}, {} );
+                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {}, {} );
                 }
 
                 const vector<string> listEngineComputeShader = {
@@ -355,14 +424,14 @@ namespace sw
                     engineDefaultAssets._shaderProbeWaterWave.get() };
                 for ( const string& path : listEngineComputeShader )
                 {
-                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
+                    appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {}, {} );
                 }
                 // 기본이 아닌 컴퓨트 진입점.
-                appendRequestUnique( outListRequest, engineDefaultAssets._shaderProbeComputeTextureWrite.get(), "csWriteSwapped", ShaderStage::Compute, {} );
+                appendRequestUnique( outListRequest, engineDefaultAssets._shaderProbeComputeTextureWrite.get(), "csWriteSwapped", ShaderStage::Compute, {}, {} );
             }
 
             /** @brief 4) 머티리얼 에셋(.material)마다 런타임과 같은 define 목록으로 요청을 더하고, 패스와 곱할 머티리얼 변형 목록을 만듭니다. */
-            [[nodiscard]] static bool collectMaterialRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, vector<ShaderCookRequest>& outListRequest )
+            [[nodiscard]] static bool collectMaterialRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, RequestList& outListRequest )
             {
                 vector<string> listMaterialFile;
                 // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 머티리얼 변형을 빠뜨린 채 쿠킹하므로 실패다(경로는 collectContentFiles 가 알린다 — 작업 도메인 `scratch` 는 콘텐츠가 아니라 뺀다).
@@ -381,30 +450,31 @@ namespace sw
 
                     // 에셋 상태 + 런타임에 바꿀 수 있는 정적 스위치의 조합(collectMaterialRuntimeDefines).
                     vector<vector<string>> listRuntimeDefine;
-                    collectMaterialRuntimeDefines( *material, matPath, listRuntimeDefine );
+                    collectMaterialRuntimeDefines( *material, listRuntimeDefine );
                     MaterialVariantInfo variant;
                     variant._shaderPath = material->getShaderPath();
-                    // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::permutationHashFor`).
+                    variant._listOrigin = { makeOriginID( matPath ) };
+                    // 불투명 머티리얼은 등장 디더 변형도 쿠킹한다 — 로드가 끝나 서서히 나타나는 메시가 그 변형으로 그려진다(`GPUMaterialRegistry::computePermutationHashFor`).
                     const bool bCooksAppearanceDither = material->getBlendMode() != BlendMode::Transparent;
                     for ( vector<string>& listDefine : listRuntimeDefine )
                     {
                         variant._listDefine = std::move( listDefine );
                         outListMaterialVariant.push_back( variant );
-                        appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, variant._listDefine );
-                        appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, variant._listDefine );
+                        appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, variant._listDefine, variant._listOrigin );
+                        appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, variant._listDefine, variant._listOrigin );
                         if ( bCooksAppearanceDither == false )
                             continue;
                         MaterialVariantInfo ditherVariant = variant;
                         ditherVariant._listDefine.push_back( string( kAppearanceDitherDefine ) );
-                        appendRequestUnique( outListRequest, ditherVariant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, ditherVariant._listDefine );
-                        appendRequestUnique( outListRequest, ditherVariant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, ditherVariant._listDefine );
+                        appendRequestUnique( outListRequest, ditherVariant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, ditherVariant._listDefine, ditherVariant._listOrigin );
+                        appendRequestUnique( outListRequest, ditherVariant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, ditherVariant._listDefine, ditherVariant._listOrigin );
                         outListMaterialVariant.push_back( std::move( ditherVariant ) );
                     }
                     // 정의 없는 변형도 — 머티리얼이 원소 레이아웃을 읽는 자리다(`Material::ensureShaderLayout` 은 define 없이 리플렉션한다). 패스 기본
                     // 셰이더(forward_lit)는 위 1) 에서 이미 쿠킹되지만, 머티리얼만 쓰는 셰이더(지형 · 식생 · 물)는 여기서 쿠킹하지 않으면 Shipping 에서
                     // 매니페스트를 못 찾아 XML 순서 패킹으로 남는다.
-                    appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
-                    appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {}, variant._listOrigin );
+                    appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {}, variant._listOrigin );
                 }
                 return true;
             }
@@ -418,29 +488,89 @@ namespace sw
              *          래스터라이저 상태만 바꾸는 모드는 define 이 없어 새 바이트코드가 필요 없다.
              */
             static void collectMeshPassVariantRequests( const vector<MeshPassInfo>& listMeshPass, const vector<MaterialVariantInfo>& listMaterialVariant,
-                                                        vector<ShaderCookRequest>& outListRequest )
+                                                        RequestList& outListRequest )
             {
+                // 여러 파이프라인이 같은 메시 패스(셰이더 · 진입점 · define · 성격)를 가진다 — 한 번만 머티리얼과 곱하고 출처는 묶음으로 단다(요청 수는 그대로, 반복이 줄어든다).
+                vector<const MeshPassInfo*>    listUniquePass;
+                vector<vector<vector<string>>> listPassOrigins;
+                unordered_map<string, size_t>  mapPassIndex;
+                // 고유 항목마다 이미 단 출처의 색인(`<종류><항목 번호>` 뒤에 줄바꿈으로 이은 출처 id) — 같은 출처를 목록에서 훑어 찾으면 항목마다 출처 수의 제곱이다
+                // (머티리얼이 늘면 변형 하나에 출처가 쌓인다). 목록은 출처를 처음 나온 순서로 지닌다(요청 순서가 그대로다).
+                unordered_set<string> uniqueOriginKey;
+                const auto            appendOriginOnce = [&uniqueOriginKey]( string_view kind, size_t index, const vector<string>& listOrigin, vector<vector<string>>& inoutListOrigin )
+                {
+                    string originKey = string( kind ) + to_string( static_cast<uint64>( index ) );
+                    for ( const string& origin : listOrigin )
+                        originKey += '\n' + origin;
+                    if ( uniqueOriginKey.insert( originKey ).second )
+                        inoutListOrigin.push_back( listOrigin );
+                };
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
-                    vector<MeshDrawVariant> listDrawVariant;
-                    listDrawVariant.push_back( MeshDrawVariant{ passInfo._shaderPath, passInfo._listPermutation, passInfo._bHasPixelStage, false } );
-                    for ( const MaterialVariantInfo& variant : listMaterialVariant )
+                    string key = passInfo._shaderPath + '\n' + passInfo._vertexEntryPoint + '\n' + passInfo._pixelEntryPoint + '\n' + to_string( static_cast<uint64>( passInfo._passType ) ) +
+                                 ( passInfo._bUsesMaterialShader ? "M" : "-" ) + ( passInfo._bAppliesViewMode ? "V" : "-" ) + ( passInfo._bHasPixelStage ? "P" : "-" );
+                    for ( const string& define : passInfo._listPermutation )
+                        key += '\n' + define;
+                    const auto [passIt, bInserted] = mapPassIndex.emplace( std::move( key ), listUniquePass.size() );
+                    if ( bInserted )
                     {
+                        listUniquePass.push_back( &passInfo );
+                        listPassOrigins.emplace_back();
+                    }
+                    appendOriginOnce( "pass", passIt->second, passInfo._listOrigin, listPassOrigins[passIt->second] );
+                }
+                // 머티리얼 변형도 같다 — 서로 다른 머티리얼이 같은 셰이더 · define 을 낸다(엔진 도메인 287 개 중 고유 73 개). 출처는 머티리얼마다 묶음으로 단다.
+                vector<const MaterialVariantInfo*> listUniqueVariant;
+                vector<vector<vector<string>>>     listVariantOrigins;
+                unordered_map<string, size_t>      mapVariantIndex;
+                for ( const MaterialVariantInfo& variant : listMaterialVariant )
+                {
+                    string key = variant._shaderPath;
+                    for ( const string& define : variant._listDefine )
+                        key += '\n' + define;
+                    const auto [variantIt, bInserted] = mapVariantIndex.emplace( std::move( key ), listUniqueVariant.size() );
+                    if ( bInserted )
+                    {
+                        listUniqueVariant.push_back( &variant );
+                        listVariantOrigins.emplace_back();
+                    }
+                    appendOriginOnce( "variant", variantIt->second, variant._listOrigin, listVariantOrigins[variantIt->second] );
+                }
+                for ( size_t passIndex = 0; passIndex < listUniquePass.size(); ++passIndex )
+                {
+                    const MeshPassInfo&           passInfo       = *listUniquePass[passIndex];
+                    const vector<vector<string>>& listPassOrigin = listPassOrigins[passIndex];
+                    vector<MeshDrawVariant>       listDrawVariant;
+                    vector<OriginGroup>           listPassGroup;
+                    for ( const vector<string>& passOrigin : listPassOrigin )
+                        listPassGroup.push_back( makeOriginGroup( passOrigin ) );
+                    listDrawVariant.push_back( MeshDrawVariant{ passInfo._shaderPath, passInfo._listPermutation, passInfo._bHasPixelStage, false, std::move( listPassGroup ) } );
+                    for ( size_t variantIndex = 0; variantIndex < listUniqueVariant.size(); ++variantIndex )
+                    {
+                        const MaterialVariantInfo& variant = *listUniqueVariant[variantIndex];
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
-                        if ( FrameRendererUtil::drawsMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
+                        if ( FrameRendererUtil::shouldDrawMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
                             continue;
                         // 후처리 머티리얼은 메시에 붙지 않는다 — 풀스크린 VS · PS(정의 없는 변형, 4 단계)만 쓴다(`FramePostProcessMaterials` 의 확장 프로그램 PSO).
                         if ( VectorUtil::contains( variant._listDefine, string( kMaterialDomainPostProcessDefine ) ) )
                             continue;
                         // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에 define 만 얹고, 모양을 머티리얼이 정하는
                         // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더로 그린다(createMaterialPSOVariant 와 같은 판정).
-                        const bool    bMaterialDepthShader = FrameRendererUtil::drawsDepthWithMaterialShader( passInfo._passType, &variant._listDefine );
+                        const bool    bMaterialDepthShader = FrameRendererUtil::usesMaterialShaderForDepth( passInfo._passType, &variant._listDefine );
                         const string& shaderPath           = ( passInfo._bUsesMaterialShader || bMaterialDepthShader ) ? variant._shaderPath : passInfo._shaderPath;
                         const bool    bHasPixelStage =
                             bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine )
-                                                    : ( passInfo._bHasPixelStage || FrameRendererUtil::addsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
-                        const bool bTessellates = FrameRendererUtil::tessellatesMaterial( passInfo._passType, &variant._listDefine );
-                        listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage, bTessellates } );
+                                                    : ( passInfo._bHasPixelStage || FrameRendererUtil::needsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
+                        const bool          bTessellates = FrameRendererUtil::isMaterialTessellated( passInfo._passType, &variant._listDefine );
+                        vector<OriginGroup> listOriginGroup;
+                        listOriginGroup.reserve( listPassOrigin.size() * listVariantOrigins[variantIndex].size() );
+                        for ( const vector<string>& passOrigin : listPassOrigin )
+                        {
+                            for ( const vector<string>& variantOrigin : listVariantOrigins[variantIndex] )
+                                listOriginGroup.push_back( makeOriginGroup( mergeDefines( passOrigin, variantOrigin ) ) );
+                        }
+                        listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage, bTessellates,
+                                                                    std::move( listOriginGroup ) } );
                     }
 
                     for ( const MeshDrawVariant& drawVariant : listDrawVariant )
@@ -469,13 +599,22 @@ namespace sw
                     return false;
                 vector<MeshPassInfo>        listMeshPass;
                 vector<MaterialVariantInfo> listMaterialVariant;
-                if ( collectPipelinePassRequests( rootDir, *loadedAssets, listMeshPass, outListRequest ) == false )
+                RequestList                 requests{ outListRequest, {}, {}, {} };
+                for ( uint32 index = 0; index < static_cast<uint32>( outListRequest.size() ); ++index ) // 부르는 쪽이 넘긴 요청도 색인한다
+                {
+                    const ShaderCookRequest& existing = outListRequest[index];
+                    requests._mapIndex.emplace( makeRequestKey( existing._shaderPath, existing._entryPoint, existing._stage, existing._permutationHash ), index );
+                    requests._listOriginKey.emplace_back();
+                    for ( const vector<string>& listOrigin : existing._listOrigin )
+                        requests._listOriginKey.back().insert( makeOriginKey( listOrigin ) );
+                }
+                if ( collectPipelinePassRequests( rootDir, *loadedAssets, listMeshPass, requests ) == false )
                     return false;
-                collectPassTypeTableRequests( *loadedAssets, listMeshPass, outListRequest );
-                collectEngineShaderRequests( *loadedAssets, outListRequest );
-                if ( collectMaterialRequests( rootDir, listMaterialVariant, outListRequest ) == false )
+                collectPassTypeTableRequests( *loadedAssets, listMeshPass, requests );
+                collectEngineShaderRequests( *loadedAssets, requests );
+                if ( collectMaterialRequests( rootDir, listMaterialVariant, requests ) == false )
                     return false;
-                collectMeshPassVariantRequests( listMeshPass, listMaterialVariant, outListRequest );
+                collectMeshPassVariantRequests( listMeshPass, listMaterialVariant, requests );
                 return true;
             }
         };

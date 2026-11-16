@@ -716,9 +716,15 @@ namespace sw
             return false;
         }
 
-        const string jsonStr = bPretty ? JSONSerializer::serializePretty( pInstance, typeInfo )
-                                       : JSONSerializer::serialize( pInstance, typeInfo );
-        ( *this ) << jsonStr;
+        const expected<string> jsonStr = bPretty ? JSONSerializer::serializePretty( pInstance, typeInfo )
+                                                 : JSONSerializer::serialize( pInstance, typeInfo );
+        if ( jsonStr.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Archive.JSONNotWritable", "Archive JSON object could not be written: %# (%#)", jsonStr.error().message(), jsonStr.error().detail() );
+            _bError = SW_TRUE;
+            return false;
+        }
+        ( *this ) << *jsonStr;
         return true;
     }
 

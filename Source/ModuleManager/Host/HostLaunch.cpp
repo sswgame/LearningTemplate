@@ -51,7 +51,7 @@ namespace sw
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
         if ( _pDevLayer != nullptr )
             _pDevLayer->attachFrameHooks( _engine );
-        // 작업이 실패했으면 **기동 실패다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `Pack.py` 가 "쿠킹하지 못했다" 는 사실을 알 수 있다.
+        // 작업이 실패했으면 **기동 실패다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `pack.py` 가 "쿠킹하지 못했다" 는 사실을 알 수 있다.
         if ( _engine.isHeadless() )
             return _engine.didHeadlessTaskFail() ? HostEngineStart::Failed : HostEngineStart::Headless;
         return HostEngineStart::Ready;

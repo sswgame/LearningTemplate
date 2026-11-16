@@ -5,6 +5,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -27,7 +28,7 @@ namespace sw::editor
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                     return;
-                for ( GameObject* pObject : pManager->getAllGameObjects() )
+                for ( GameObject* pObject : pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey() ) )
                 {
                     SequencePlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
                     if ( pPlayer != nullptr && pPlayer->getOwner() != nullptr )

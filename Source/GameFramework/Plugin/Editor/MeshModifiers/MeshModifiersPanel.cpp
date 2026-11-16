@@ -11,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -49,7 +50,11 @@ namespace sw::editor
                 {
                     arrBuffer[index] = value[index];
                 }
-                if ( ImGui::InputText( pLabel, arrBuffer, constant::file::kMaxPathSize ) == false )
+                EditorWidgets::drawPropertyRowLabel( pLabel ); // 이름표는 칸 앞에(칸에 주면 오른쪽에 붙는다)
+                ImGui::PushID( pLabel );
+                const bool bEdited = EditorWidgets::inputText( SW_WIDGET_ID( "##text" ), arrBuffer, constant::file::kMaxPathSize );
+                ImGui::PopID();
+                if ( bEdited == false )
                     return false;
                 outValue = string( arrBuffer );
                 return true;
@@ -127,7 +132,7 @@ namespace sw::editor
             {
                 bool        bPicked  = false;
                 const utf8* pPreview = current.empty() ? SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ) : current.c_str();
-                if ( ImGui::BeginCombo( pLabel, pPreview ) )
+                if ( EditorWidgets::beginCombo( pLabel, pPreview ) )
                 {
                     if ( ImGui::Selectable( SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ), current.empty() ) )
                     {
@@ -137,7 +142,7 @@ namespace sw::editor
                     GameObjectManager*  pManager = getActiveObjectManager();
                     vector<GameObject*> listObject;
                     if ( pManager != nullptr )
-                        pManager->getAllGameObjects( listObject );
+                        pManager->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listObject );
                     // 걸러 볼 컴포넌트가 있으면 그것을 가진 오브젝트만, 하나도 없으면 알리고 전체를 보인다
                     bool bAnyMatch = false;
                     for ( const GameObject* pObject : listObject )
@@ -299,6 +304,14 @@ namespace sw::editor
     {
         MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
         return pSession != nullptr && pSession->saveSidecar(); // 실패는 saveSidecar 가 알린다
+    }
+
+    void MeshModifiersPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        const MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
+        const optional<string>     sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
+        if ( sidecar.has_value() )
+            outListPath.push_back( *sidecar );
     }
 
     bool MeshModifiersPanel::canSaveDocument() const
@@ -571,21 +584,24 @@ namespace sw::editor
     {
         MeshModifierGizmo& gizmo  = modifier.getGizmo();
         float3             center = gizmo._center;
-        if ( ImGui::DragFloat3( SW_LOCKEY( "EdMeshModifiers", "Center" ), &center._x, 0.01f ) )
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdMeshModifiers", "Center" ) );
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Center" ), &center._x, 0.01f ) )
         {
             recordEdit( session );
             gizmo._center = center;
         }
         finishItem();
         float3 rotation = gizmo._rotationDegree;
-        if ( ImGui::DragFloat3( SW_LOCKEY( "EdMeshModifiers", "Rotation" ), &rotation._x, 0.5f ) )
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdMeshModifiers", "Rotation" ) );
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Rotation" ), &rotation._x, 0.5f ) )
         {
             recordEdit( session );
             gizmo._rotationDegree = rotation;
         }
         finishItem();
         int32 axis = static_cast<int32>( gizmo._axisIndex );
-        if ( ImGui::Combo( SW_LOCKEY( "EdMeshModifiers", "Axis" ), &axis, MeshModifiersPanelInternal::kAxisNames ) )
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdMeshModifiers", "Axis" ) );
+        if ( EditorWidgets::combo( SW_WIDGET_ID( "##Axis" ), &axis, MeshModifiersPanelInternal::kAxisNames ) )
         {
             session.applyEdit( [&]
             { gizmo._axisIndex = static_cast<uint32>( MathUtil::clamp( axis, 0, 2 ) ); } );
@@ -649,8 +665,9 @@ namespace sw::editor
             {
                 float32      value  = modifier.getFloat( paramIndex );
                 const string format = MeshModifiersPanelInternal::makeFormat( "%.3f", def._pUnit );
-                if ( ImGui::DragFloat( def._pName, &value, MathUtil::max( ( def._max - def._min ) * 0.001f, 0.0001f ), def._min, def._max,
-                                       format.c_str() ) )
+                EditorWidgets::drawPropertyRowLabel( def._pName );
+                if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &value, MathUtil::max( ( def._max - def._min ) * 0.001f, 0.0001f ), def._min, def._max,
+                                               format.c_str() ) )
                 {
                     recordEdit( session );
                     modifier.setScalar( paramIndex, value );
@@ -664,7 +681,8 @@ namespace sw::editor
             {
                 int32        value  = modifier.getInt( paramIndex );
                 const string format = MeshModifiersPanelInternal::makeFormat( "%d", def._pUnit );
-                if ( ImGui::DragInt( def._pName, &value, 0.1f, static_cast<int32>( def._min ), static_cast<int32>( def._max ), format.c_str() ) )
+                EditorWidgets::drawPropertyRowLabel( def._pName );
+                if ( EditorWidgets::dragInt( SW_WIDGET_ID( "##value" ), &value, 0.1f, static_cast<int32>( def._min ), static_cast<int32>( def._max ), format.c_str() ) )
                 {
                     recordEdit( session );
                     modifier.setScalar( paramIndex, static_cast<float32>( value ) );
@@ -691,7 +709,8 @@ namespace sw::editor
             case MeshModifierParamKind::Axis:
             {
                 int32 axis = static_cast<int32>( modifier.getAxisIndex( paramIndex ) );
-                if ( ImGui::Combo( def._pName, &axis, MeshModifiersPanelInternal::kAxisNames ) )
+                EditorWidgets::drawPropertyRowLabel( def._pName );
+                if ( EditorWidgets::combo( SW_WIDGET_ID( "##value" ), &axis, MeshModifiersPanelInternal::kAxisNames ) )
                 {
                     session.applyEdit( [&]
                     {
@@ -706,7 +725,8 @@ namespace sw::editor
             {
                 float3       value  = modifier.getVector3( paramIndex );
                 const string format = MeshModifiersPanelInternal::makeFormat( "%.3f", def._pUnit );
-                if ( ImGui::DragFloat3( def._pName, &value._x, 0.01f, def._min, def._max, format.c_str() ) )
+                EditorWidgets::drawPropertyRowLabel( def._pName );
+                if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##value" ), &value._x, 0.01f, def._min, def._max, format.c_str() ) )
                 {
                     recordEdit( session );
                     modifier.setVector3( paramIndex, value );
@@ -879,7 +899,7 @@ namespace sw::editor
         {
             case MeshModifierListColumnKind::Float:
             {
-                if ( ImGui::DragFloat( "##Value", pValue, 0.01f, def._min, def._max, "%.3f" ) )
+                if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##Value" ), pValue, 0.01f, def._min, def._max, "%.3f" ) )
                 {
                     recordEdit( session );
                     bChanged = true;
@@ -890,7 +910,7 @@ namespace sw::editor
             case MeshModifierListColumnKind::Int:
             {
                 int32 value = static_cast<int32>( MathUtil::round( *pValue ) );
-                if ( ImGui::DragInt( "##Value", &value, 0.1f, static_cast<int32>( def._min ), static_cast<int32>( def._max ) ) )
+                if ( EditorWidgets::dragInt( SW_WIDGET_ID( "##Value" ), &value, 0.1f, static_cast<int32>( def._min ), static_cast<int32>( def._max ) ) )
                 {
                     recordEdit( session );
                     *pValue  = static_cast<float32>( value );
@@ -903,7 +923,7 @@ namespace sw::editor
             {
                 const int32 itemCount = static_cast<int32>( MeshModifierParamEdit::getComboItemCount( def._pColumn[column]._pComboItems ) );
                 int32       item      = MathUtil::clamp( static_cast<int32>( MathUtil::round( *pValue ) ), 0, MathUtil::max( itemCount - 1, 0 ) );
-                if ( ImGui::Combo( "##Value", &item, def._pColumn[column]._pComboItems ) )
+                if ( EditorWidgets::combo( SW_WIDGET_ID( "##Value" ), &item, def._pColumn[column]._pComboItems ) )
                 {
                     session.recordUndo();
                     *pValue  = static_cast<float32>( item );
@@ -913,7 +933,7 @@ namespace sw::editor
             }
             case MeshModifierListColumnKind::Vector3:
             {
-                if ( ImGui::DragFloat3( "##Value", pValue, 0.01f, def._min, def._max, "%.3f" ) )
+                if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##Value" ), pValue, 0.01f, def._min, def._max, "%.3f" ) )
                 {
                     recordEdit( session );
                     bChanged = true;
@@ -1096,7 +1116,7 @@ namespace sw::editor
             ImGui::SameLine();
             int32 axis = static_cast<int32>( session.getMirrorAxis() );
             EditorChrome::setNextItemWidthColumns( 8.0f );
-            if ( ImGui::Combo( "##MirrorAxis", &axis, MeshModifiersPanelInternal::kAxisNames ) )
+            if ( EditorWidgets::combo( SW_WIDGET_ID( "##MirrorAxis" ), &axis, MeshModifiersPanelInternal::kAxisNames ) )
                 session.setMirrorAxis( static_cast<uint32>( MathUtil::clamp( axis, 0, 2 ) ) );
         }
 
@@ -1105,13 +1125,15 @@ namespace sw::editor
             return;
         // 고른 점이 없으면(-1) 칸은 0 을 보이고, 칸을 움직이면 그 점을 고른다
         int32 selected = MathUtil::clamp( session.getSelectedControlPoint(), 0, count - 1 );
-        if ( ImGui::SliderInt( SW_LOCKEY( "EdMeshModifiers", "PointIndex" ), &selected, 0, count - 1 ) )
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdMeshModifiers", "PointIndex" ) );
+        if ( EditorWidgets::sliderInt( SW_WIDGET_ID( "##PointIndex" ), &selected, 0, count - 1 ) )
         {
             session.setSelectedControlPoint( selected );
             session.markDirty();
         }
         float3 position = lattice.getControlPoint( selected );
-        if ( ImGui::DragFloat3( SW_LOCKEY( "EdMeshModifiers", "PointPosition" ), &position._x, 0.005f ) )
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdMeshModifiers", "PointPosition" ) );
+        if ( EditorWidgets::dragFloat3( SW_WIDGET_ID( "##PointPosition" ), &position._x, 0.005f ) )
         {
             recordEdit( session );
             session.setSelectedControlPoint( selected );
@@ -1148,7 +1170,8 @@ namespace sw::editor
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdMeshModifiers", "GPUPreviewBlockedByStack" ) );
         }
         float32 time = session.getPreviewTime();
-        if ( ImGui::DragFloat( SW_LOCKEY( "EdMeshModifiers", "PreviewTime" ), &time, 0.01f, 0.0f, MeshModifierSession::kMaxPreviewTimeSeconds ) )
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdMeshModifiers", "PreviewTime" ) );
+        if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##PreviewTime" ), &time, 0.01f, 0.0f, MeshModifierSession::kMaxPreviewTimeSeconds ) )
             session.setPreviewTime( time );
         // 재생하면 시간만 바뀌는 애니메이션 모디파이어(Waving · Ripple · Vertex Anim …)가 칸을 끌지 않아도 움직인다
         bool bPlaying = session.isPreviewPlaying();

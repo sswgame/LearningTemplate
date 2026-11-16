@@ -99,8 +99,8 @@ namespace sw::editor
         void requestSetMaintenance( string_view scope, string_view messageKey, int64 durationSeconds, string_view memo );
         void requestClearMaintenance( string_view scope, string_view memo );
         /** @brief 공지를 올립니다(GM 이 쓴 문구). @p durationSeconds 가 0 이면 내릴 때까지입니다. 음수이거나 끝 시각이 넘치면 보내지 않고 `InvalidRequest` 입니다. */
-        void requestPostNotice( uint64 noticeID, string_view text, int32 priority, int64 durationSeconds, string_view memo );
-        void requestRemoveNotice( uint64 noticeID, string_view memo );
+        void requestPostAnnouncement( uint64 announcementID, string_view text, int32 priority, int64 durationSeconds, string_view memo );
+        void requestRemoveAnnouncement( uint64 announcementID, string_view memo );
         /** @brief 라이브 이벤트 정의(JSON)를 읽습니다. 성공하면 `getLiveEvents` 가 채워집니다. */
         void requestLiveEvents();
         /** @brief 라이브 이벤트 정의(JSON) 하나를 올리거나 덮어씁니다. 성공하면 목록을 다시 읽습니다. */
@@ -116,7 +116,7 @@ namespace sw::editor
         const vector<ServiceAuditEntry>&  getAuditRows() const { return _lookupAudit._listAudit; }
         const vector<ServiceReport>&      getReports() const { return _reports._listReport; }
         const vector<AdminLiveEventView>& getLiveEvents() const { return _liveEvents._listLiveEvent; }
-        const AdminOutcome&               getLastResult() const { return _lastResult; }
+        const AdminServiceResult&         getLastResult() const { return _lastResult; }
         uint16                            getLastMethod() const { return _lastMethod; }
         bool                              wasLastReplayed() const { return _bLastReplayed; }
         const string&                     getStatusLine() const { return _statusLine; }
@@ -156,7 +156,7 @@ namespace sw::editor
         int32                            _pendingCount;
         AccountID                        _lookupAccountID;
         AccountID                        _actedAccountID; ///< 마지막 지급 · 회수 · 제재의 대상. shortcut: 답에 계정이 없어 마지막 것만 안다, 답이 계정을 담으면 그 값으로
-        AdminOutcome                     _lastResult;
+        AdminServiceResult               _lastResult;
         uint16                           _lastMethod;
         uint8                            _bHasLookup    : 1;
         uint8                            _bLastReplayed : 1;

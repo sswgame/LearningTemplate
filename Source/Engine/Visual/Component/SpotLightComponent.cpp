@@ -82,7 +82,7 @@ namespace sw
         return computeLightDirection( float3::Forward );
     }
 
-    void SpotLightComponent::writeGPULightKindFields( GPULight& outLight ) const
+    void SpotLightComponent::writeGPULightKindProperties( GPULight& outLight ) const
     {
         const float3 position      = getLightPosition();
         const float3 direction     = getLightDirection();
@@ -93,6 +93,6 @@ namespace sw
         // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
         outLight._params._y = MathUtil::cos( _outerConeAngle );
         outLight._params._z = MathUtil::cos( _innerConeAngle );
-        _shadowSettings.writeGPULightFields( outLight );
+        _shadowSettings.writeGPULightProperties( outLight );
     }
 } // namespace sw

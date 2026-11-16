@@ -92,7 +92,7 @@ namespace sw::editor
 
     void* EditorThumbnailCache::findTexture( string_view assetID )
     {
-        const string key = FileUtil::normalizePath( assetID );
+        const string key = FileUtil::normalizePath( assetID ).str();
         for ( Entry& entry : _listEntry )
         {
             if ( entry._assetID != key )

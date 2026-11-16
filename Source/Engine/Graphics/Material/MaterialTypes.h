@@ -27,7 +27,7 @@ namespace sw
         Blend,  ///< 반투명 배치 목록. 반투명 패스의 블렌드를 쓰고, 머티리얼이 프리셋으로 덮을 수 있다
     };
 
-    /** @brief `alphaMode="Mask"` 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`FrameRendererUtil::drawsDepthWithMaterialShader`). 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
+    /** @brief `alphaMode="Mask"` 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`FrameRendererUtil::usesMaterialShaderForDepth`). 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
     inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
     /** @brief `twoSidedLighting="true"` 머티리얼의 define 입니다. 셰이더가 뒷면 노멀을 뒤집습니다. 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";

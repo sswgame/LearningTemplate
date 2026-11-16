@@ -17,7 +17,7 @@ namespace sw::editor
             static constexpr utf8 kSeparator = '\t';
 
             /** @brief 탭으로 나눈 칸을 @p outListField 에 담습니다(빈 칸 포함). */
-            static void splitFields( string_view line, vector<string_view>& outListField )
+            static void splitProperties( string_view line, vector<string_view>& outListField )
             {
                 outListField.clear();
                 size_t start = 0;
@@ -180,7 +180,7 @@ namespace sw::editor
             lineStart        = lineEnd + 1;
             if ( line.empty() == false && line.back() == '\r' )
                 line = line.substr( 0, line.size() - 1 );
-            ContentBrowserCollectionStoreInternal::splitFields( line, listField );
+            ContentBrowserCollectionStoreInternal::splitProperties( line, listField );
             if ( listField.size() == 4 && listField[0] == "search" && listField[1].empty() == false )
             {
                 (void)saveSearch( ContentBrowserSavedSearch{ string( listField[1] ), string( listField[2] ), string( listField[3] ), bShared } );

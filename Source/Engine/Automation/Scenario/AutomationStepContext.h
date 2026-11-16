@@ -82,9 +82,9 @@ namespace sw
          * @details 앞 단계가 잰 것을 뒤 단계가 견주는 자리다(`<RecordStateHash key="…">` → 저장 · 복원 → `<ExpectStateHash key="…">` — 오브젝트별 해시 글을 기억해
          *          다르면 어느 오브젝트인지 말한다).
          */
-        virtual void rememberText( string_view name, string text ) = 0;
-        /** @brief `rememberText` 로 기억한 글입니다. 없으면 nullptr 입니다. */
-        [[nodiscard]] virtual const string* findRememberedText( string_view name ) const = 0;
+        virtual void storeText( string_view name, string text ) = 0;
+        /** @brief `storeText` 로 기억한 글입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] virtual const string* findStoredText( string_view name ) const = 0;
 
         /** @brief 이 시나리오의 산출물 폴더입니다. */
         virtual const string& getOutputDirectory() const = 0;

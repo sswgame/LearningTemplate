@@ -33,11 +33,12 @@ namespace sw
     struct NetInterpolationUtil
     {
         /** @brief 앞뒤 표본 틱 사이에서 렌더 틱의 비율을 반환합니다(0~1로 자릅니다). 뒤가 앞보다 크지 않으면 0입니다. */
-        static float32 computeAlpha( uint32 fromTick, uint32 toTick, float32 renderTick )
+        static float32 computeAlpha( uint32 fromTick, uint32 toTick, float64 renderTick )
         {
             if ( toTick <= fromTick )
                 return 0.0f;
-            return MathUtil::saturate( ( renderTick - static_cast<float32>( fromTick ) ) / static_cast<float32>( toTick - fromTick ) );
+            // 틱 차이를 먼저 뺀다(float64) — 큰 틱끼리의 float32 뺄셈은 비율을 잃는다(감사 N-4).
+            return MathUtil::saturate( static_cast<float32>( ( renderTick - static_cast<float64>( fromTick ) ) / static_cast<float64>( toTick - fromTick ) ) );
         }
     };
 } // namespace sw
@@ -109,7 +110,7 @@ namespace sw
          * @brief 렌더 틱을 사이에 둔 두 표본과 비율을 찾습니다. 규칙은 파일 머리말을 참고하세요. @p pOutFrom 과 @p pOutTo 는 다음 `insert` 나 `removeConsumed` 전까지 유효합니다.
          * @return 렌더 틱이 표본들의 어디에 있는지 반환합니다.
          */
-        InterpolationBracketKind findBracket( float32 renderTick, const Sample*& pOutFrom, const Sample*& pOutTo, float32& outAlpha ) const
+        InterpolationBracketKind findBracket( float64 renderTick, const Sample*& pOutFrom, const Sample*& pOutTo, float32& outAlpha ) const
         {
             pOutFrom = nullptr;
             pOutTo   = nullptr;
@@ -118,14 +119,14 @@ namespace sw
                 return InterpolationBracketKind::Empty;
             const Sample& first = _listSample.front();
             pOutFrom            = &first;
-            if ( static_cast<float32>( first._tick ) > renderTick )
+            if ( static_cast<float64>( first._tick ) > renderTick )
             {
                 pOutTo = &first;
                 return InterpolationBracketKind::BeforeFirst;
             }
             for ( const Sample& sample : _listSample )
             {
-                if ( static_cast<float32>( sample._tick ) > renderTick )
+                if ( static_cast<float64>( sample._tick ) > renderTick )
                 {
                     pOutTo   = &sample;
                     outAlpha = NetInterpolationUtil::computeAlpha( pOutFrom->_tick, sample._tick, renderTick );
@@ -138,9 +139,9 @@ namespace sw
         }
 
         /** @brief 다 쓴 표본을 버립니다. 렌더 틱 이하는 마지막 하나(보간의 앞)만 남기며, 두 개보다 적게는 줄이지 않습니다. */
-        void removeConsumed( float32 renderTick )
+        void removeConsumed( float64 renderTick )
         {
-            while ( _listSample.size() > 2 && static_cast<float32>( _listSample[1]._tick ) <= renderTick )
+            while ( _listSample.size() > 2 && static_cast<float64>( _listSample[1]._tick ) <= renderTick )
             {
                 _listSample.pop_front();
             }

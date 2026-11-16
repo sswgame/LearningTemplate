@@ -30,18 +30,23 @@ namespace sw::editor
      *
      *          **파생 창이 지킬 계약**
      *          - 내용을 그릴 때 먼저 `beginPreviewFrame()` 을 부른다. 처음 부를 때 씬을 만들고(`getPreviewPolicy`, `getPreviewEnvironment`)
-     *            `populatePreviewScene` 을 한 번 부른다. 포커스가 바뀌면 초점 씬과 창의 Undo 스택을 등록하거나 해제한다.
+     *            `populatePreviewScene` 을 한 번 부른다. 포커스가 바뀌면 초점 씬을 등록하거나 해제한다(Undo 스택은 문서 패널 기반의 것을 패널 관리자가 건다).
      *          - 뷰포트 위치에서 `drawPreviewViewport( size )` 를 부른다. 이 함수를 부른 프레임만 그리므로, 가려진 탭은 그리지 않는다.
-     *          - 미리보기 씬의 오브젝트 편집은 `recordPreviewModify` 와 `getPreviewCommandStack` 으로 **창의 스택**에 남긴다. 창이 포커스일 때
+     *          - 미리보기 씬의 오브젝트 편집은 `recordPreviewModify` 와 `getPreviewCommandStack` 으로 **창의 스택**(문서의 스택)에 남긴다. 창이 포커스일 때
      *            Ctrl+Z 는 이 스택만 되돌리고(`editor::getFocusedCommandStack`), 메인 씬 기록은 그대로 둔다. 창을 닫으면 스택도 사라진다
-     *            (되돌리기 어려운 결정 4). 문서 텍스트 편집(`notifyDocumentEdited`)은 지금처럼 에디터 전역 스택에 남는다.
+     *            (되돌리기 어려운 결정 4). 문서 텍스트 편집(`notifyDocumentEdited`)도 이 스택에 남는다(`getDocumentCommandStack`, 감사 P0-2) —
+     *            창에 포커스를 둔 Ctrl+Z 가 그 편집을 되돌리고, 창을 닫으면(`releasePreview`) 씬 편집과 함께 버린다.
      *          - 선택은 창마다 따로 있다(`getPreviewSelection`, 이 창의 씬과 스택에 묶인 `EditorSelection`). 창이 포커스를 얻거나 선택이 바뀌면
      *            인스펙터가 그 선택을 대상으로 삼는다(`editor::getFocusedSelection`). 인스펙터의 값과 구조 편집, 전역 명령(삭제, 정렬 등)의 기록은
      *            이 창의 스택에 남는다. `EditorTransaction` 이 오브젝트가 있는 씬으로 스택을 고르기 때문이다.
      *          - 창 스택이 늘거나 줄면 기반 클래스가 문서를 dirty 로 표시한다(`syncDocumentDirty`, 닫기 확인보다 먼저 돈다). 그래서 파생 창이
-     *            미리보기 씬 편집을 따로 알릴 필요가 없다. 저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 만들면 `resetPreviewEdits` 를
+     *            미리보기 씬 편집을 따로 알릴 필요가 없다. 저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 만들면 `resetDocumentHistory` 를
      *            부른다. 닫기 확인은 `IEditorPanel::requestClose` 가 한다.
-     *          - 창을 종료할 때(`shutdown`) 씬, 렌더 타깃, 초점을 놓는다. 파생 창이 `shutdown` 을 재정의하면 기반 클래스의 것을 부른다.
+     *          - 창을 **닫거나**(`onPanelClosed`) 종료할 때(`shutdown`) 기반 클래스가 씬, 렌더 타깃, 초점, 창 스택을 한 곳(`releasePreview`)에서 놓는다.
+     *            다시 열면 첫 `beginPreviewFrame` 이 씬을 새로 만들고 `populatePreviewScene` 을 다시 부른다 — 파생 창은 거기서 앞 씬을 가리키던
+     *            핸들 · "놓았다" 표시를 모두 비운다(objectID 는 씬의 매니저마다 따로 세므로 낡은 핸들이 새 씬의 다른 오브젝트로 풀릴 수 있다).
+     *            열린 문서(편집 사본)는 패널에 남는다. 닫기는 미저장 확인(`requestClose`)을 거친 뒤라 버릴 편집이 없다.
+     *            파생 창이 `shutdown` 을 재정의하면 기반 클래스의 것을 부른다.
      */
     class SW_EDITOR_API EditorPreviewPanel : public EditorDocumentPanel
     {
@@ -55,8 +60,8 @@ namespace sw::editor
         /** @brief 카메라와 렌더 타깃을 가진 미리보기 뷰포트입니다. */
         EditorPreviewViewport&       getPreviewViewport() { return _viewport; }
         const EditorPreviewViewport& getPreviewViewport() const { return _viewport; }
-        /** @brief 창 범위 Undo 스택입니다. */
-        CommandStack& getPreviewCommandStack() { return *_pCommandStack; }
+        /** @brief 창 범위 Undo 스택입니다 — 문서의 스택(`getDocumentCommandStack`) 하나다. 미리보기 씬 편집과 문서 글 편집이 같은 스택에 쌓인다. */
+        CommandStack& getPreviewCommandStack() { return getDocumentCommandStack(); }
         /** @brief 미리보기 씬과 창의 스택에 묶인 창 범위 선택입니다. 씬을 만들기 전에는 묶이지 않은 빈 선택입니다. */
         EditorSelection&       getPreviewSelection() { return *_pSelection; }
         const EditorSelection& getPreviewSelection() const { return *_pSelection; }
@@ -98,8 +103,8 @@ namespace sw::editor
         void beginPreviewFrame();
         /** @brief 창 Undo 스택의 지금 길이까지를 "저장했거나 버린 편집"으로 삼습니다. 파생 창이 저장에 성공한 직후 부르며, 그 뒤의 편집만 다시 dirty 로 만듭니다. */
         void acknowledgePreviewEdits();
-        /** @brief 창 Undo 스택을 비우고 편집 기록을 처음으로 돌립니다. 파생 창이 문서를 다시 만들 때 부릅니다. */
-        void resetPreviewEdits();
+        /** @brief 창 Undo 스택을 비우고 편집 기록을 처음으로 돌립니다. 문서를 읽을 때 기반이 부르고, 파생 창이 문서를 다시 만들 때도 부릅니다. */
+        void resetDocumentHistory() override;
         /**
          * @brief 뷰포트를 @p size 로 그립니다. 창이 포커스이거나 마우스가 올라가 있으면 카메라 입력을 받습니다.
          * @param bOrbitBlocked 기즈모가 마우스를 가졌으면 true 입니다(`EditorPreviewGizmo::hasMouse`). 기즈모를 쓰지 않는 창은 false 입니다.
@@ -130,16 +135,20 @@ namespace sw::editor
         void applyPreviewTimeScale();
         /** @brief 맞춤: 파생 창이 준 구로 카메라를 되돌립니다. */
         void framePreviewSubject();
-        /** @brief @p bFocused 면 초점 씬과 창 스택을 이 창의 것으로 등록하고, 아니면 이 창이 등록해 둔 것을 해제합니다. */
+        /** @brief @p bFocused 면 초점 씬과 창 선택을 이 창의 것으로 등록하고, 아니면 이 창이 등록해 둔 초점 씬을 해제합니다. Ctrl+Z 의 스택은 패널 관리자가 건다(`findPanelCommandStack`). */
         void applyWindowFocus( bool bFocused );
-        /** @brief 포커스를 가진 채 닫혀도 초점 씬과 창 스택을 해제합니다. 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않습니다. */
-        void onPanelClosed() override { applyWindowFocus( false ); }
+        /**
+         * @brief 닫히면 미리보기 씬 · 렌더 타깃 · 창 스택을 놓습니다(`releasePreview`). 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않습니다.
+         * @details 언리얼은 에셋 편집기를 닫으면 `FPreviewScene` 을 파괴한다 — 닫힌 창의 씬 · 타깃이 세션 끝까지 남지 않게 같은 수명을 따른다(감사 E-14).
+         */
+        void onPanelClosed() override { releasePreview(); }
+        /** @brief 초점과 선택 바인딩을 풀고 창 스택을 비운 뒤 씬과 렌더 타깃을 놓습니다. 닫기와 종료가 같이 쓰며 여러 번 불러도 됩니다. */
+        void releasePreview();
 
     private:
         EditorPreviewViewport       _viewport;
-        unique_ptr<CommandStack>    _pCommandStack; ///< 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다(View 가 Workspace 헤더에 닿지 않게)
         unique_ptr<EditorSelection> _pSelection;
-        uint8                       _bFocusApplied  : 1; ///< 이 창이 초점 씬과 스택을 등록해 두었다
+        uint8                       _bFocusApplied  : 1; ///< 이 창이 초점 씬을 등록해 두었다
         uint8                       _bPreviewPaused : 1; ///< 재생 막대의 멈춤
         uint8                       _bFloorShown    : 1; ///< 바닥을 보인다
         uint8                       _bAxesShown     : 1; ///< 축 방향 표시를 그린다

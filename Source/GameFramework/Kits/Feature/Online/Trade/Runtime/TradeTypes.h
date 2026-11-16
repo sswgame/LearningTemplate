@@ -100,7 +100,7 @@ namespace sw
      * @brief 거래 결과입니다. 업무 결과(`TradeResult`) 또는 공통 범주(`OnlineError`)입니다.
      * @details 규칙 밖 값(자기 자신 · 0 · 범위 밖 양 · 겹친 자산)은 `kInvalidRequest`, 저장소 장애는 `kUnavailable`(같은 멱등 키로 다시 한다)이다.
      */
-    using TradeOutcome = OnlineOutcome<TradeResult>;
+    using TradeServiceResult = OnlineServiceResult<TradeResult>;
 } // namespace sw
 
 namespace sw

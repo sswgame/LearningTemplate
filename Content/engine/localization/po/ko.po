@@ -1168,7 +1168,7 @@ msgid "Pick section in Preview"
 msgstr "미리보기에서 구간 집기"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.PostNotice"
+msgctxt "EdPlugin.PostAnnouncement"
 msgid "Post notice"
 msgstr "공지 올리기"
 
@@ -1253,7 +1253,7 @@ msgid "Remove live event"
 msgstr "라이브 이벤트 지우기"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveNotice"
+msgctxt "EdPlugin.RemoveAnnouncement"
 msgid "Remove notice"
 msgstr "공지 지우기"
 
@@ -1531,12 +1531,12 @@ msgid "Maintenance seconds (0 = until cleared)"
 msgstr "점검 초(0 = 풀 때까지)"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.NoticeId"
+msgctxt "EdPluginField.AnnouncementId"
 msgid "Notice id"
 msgstr "공지 id"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.NoticeSeconds0UntilRemoved"
+msgctxt "EdPluginField.AnnouncementSeconds0UntilRemoved"
 msgid "Notice seconds (0 = until removed)"
 msgstr "공지 초(0 = 지울 때까지)"
 
@@ -1988,7 +1988,7 @@ msgid "Loop"
 msgstr "반복"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MaintenanceNotice"
+msgctxt "EdPluginWidget.MaintenanceAnnouncement"
 msgid "Maintenance / Notice"
 msgstr "점검 / 공지"
 
@@ -2003,7 +2003,7 @@ msgid "Message key"
 msgstr "메시지 키"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.NoticeText"
+msgctxt "EdPluginWidget.AnnouncementText"
 msgid "Notice text"
 msgstr "공지 글"
 

@@ -425,7 +425,7 @@ namespace sw::editor
         // DockTabIsVisible 는 이번 프레임의 Begin 이 정한 값이다. 같은 프레임에 뒤에서 처음 나타난 창(다시 연 패널)이 포커스를 가져가면 다음 프레임에 탭이 바뀌므로,
         // 두 프레임 동안 포커스를 주고 나서 확인한다.
         constexpr uint32 kMinFocusFrames = 2;
-        bool             bAllSettled     = true;
+        bool             bAllStable      = true;
         for ( const utf8* pTitle : EditorDockLayoutInternal::collectFrontTabTitles() )
         {
             ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( pTitle ).c_str() );
@@ -433,10 +433,10 @@ namespace sw::editor
                 continue;
             if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames )
                 continue;
-            bAllSettled = false;
+            bAllStable = false;
             ImGui::FocusWindow( pWindow ); // 도킹된 창이면 그 노드의 탭 막대에서 이 탭을 선택한다
         }
-        if ( bAllSettled && _frontTabFrameCount >= kMinFocusFrames )
+        if ( bAllStable && _frontTabFrameCount >= kMinFocusFrames )
         {
             _bFrontTabPending = SW_FALSE;
             return;

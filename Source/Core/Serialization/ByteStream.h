@@ -6,7 +6,7 @@
  *          읽기가 남은 바이트를 넘으면 0 을 돌려주고 `hasOverflowed` 가 참이 됩니다(`BitReader` 와 같은 규칙) — 깨진 파일을 받아도 버퍼 밖을 읽지 않으며,
  *          부르는 쪽은 필드를 모두 읽은 뒤 한 번 확인합니다. `read*( T& )` 꼴(가변 정수 · 길이 붙은 글 · POD)은 바로 bool 로도 답한다(넘침 표시도 함께 남긴다).
  *          **파일이 적은 개수는 이 타입의 목록 읽기(`readList` · `readCountedList` · `readPodList`)로만 할당한다.** 남은 바이트로 먼저 거르고 곱셈 대신 나눗셈으로 재므로, 위조된 개수 하나가
- *          수십 기가 할당이나 넘친 곱셈으로 "길이가 맞아" 보이는 파일이 되지 못한다(린트 `Scripts/lint/ByteReadShape.py` 가 다른 길을 막는다). 언리얼 `FArchive::IsError` 처럼 끈적한 실패이고,
+ *          수십 기가 할당이나 넘친 곱셈으로 "길이가 맞아" 보이는 파일이 되지 못한다(린트 `Scripts/lint/byte_read_shape.py` 가 다른 길을 막는다). 언리얼 `FArchive::IsError` 처럼 끈적한 실패이고,
  *          원소 최소 크기로 미리 재는 것은 언리얼 `TArray` 직렬화의 `Ar.IsLoading()` 음수 · 상한 검사를 형식 쪽으로 옮긴 것이다(기억에 따른 비교).
  *          `readFloat32` 는 유한한 값만 받는다 — NaN 은 모든 비교를 빠져나가 깨진 파일이 값으로 번진다(`Archive::operator>>` · `BitReader::readFiniteFloat` 와 같은 규칙).
  *          POD 통째 쓰기(`writePod` · `readPod`)는 호스트 바이트를 그대로 옮긴다 — 지원 플랫폼이 모두 리틀 엔디언이라 정수 쓰기와 같은 바이트다(아래 static_assert).

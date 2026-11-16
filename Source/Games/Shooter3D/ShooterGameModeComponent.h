@@ -164,6 +164,8 @@ namespace sw
     protected:
         /** @brief 막는 상자를 모으고 페이싱 감독을 시작합니다(데이터를 읽지 못하면 적이 오지 않을 뿐 판은 시작합니다). */
         [[nodiscard]] bool startGame() override;
+        void               onRegister( GameObjectManager& manager ) override;
+        void               onUnregister( GameObjectManager& manager ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;

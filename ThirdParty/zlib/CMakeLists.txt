@@ -5,7 +5,7 @@
 #       인플레이터를 들고 있었는데 동적 허프만을 지원하지 않는 등 온전하지 않았다.
 # ==============================================================================
 
-sw_addVcpkgPackage(
+sw_add_vcpkg_package(
 	NAME zlib
 	PACKAGE ZLIB
 	# zlib 1.3.2 의 ZLIBConfig 는 정적 구성(리눅스)에서 ZLIB::ZLIB 없이 ZLIB::ZLIBSTATIC 만 낸다

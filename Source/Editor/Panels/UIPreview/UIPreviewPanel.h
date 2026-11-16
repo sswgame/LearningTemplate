@@ -76,6 +76,8 @@ namespace sw::editor
         [[nodiscard]] bool canSaveDocument() const override;
         /** @brief 받아들인 문서(없으면 처음 문서)를 미리볼 문서로 정하고 미리보기를 닫습니다 — 다음 그리기의 `syncPreview` 가 디스크에서 다시 짓는다. 고친 값은 버린다. */
         ToolAssetLoadResult loadDocument() override;
+        /** @brief 문서 기반의 구간에 더해, 활성 위젯이 풀렸으면 모델이 쥔 프로퍼티 편집 구간을 되돌리기 항목 하나로 맺습니다(감사 P0-1). */
+        void flushDocumentInteraction() override;
 
     private:
         /** @brief Slot 필드 한 번 그리기의 상태(슬롯 사본 · 필터 · 직전 컨트롤을 그렸는지)와 컨트롤 그룹별 그리기입니다. */
@@ -111,7 +113,7 @@ namespace sw::editor
          */
         void drawLayoutHandle( UIScreen& screen, const float2& drawSize, const float2& origin );
         /**
-         * @brief 인스펙터 위에 고른 위젯의 Slot 필드를 그립니다 — 부모 패널이 읽는 필드만(`UIPreviewLogic::findSlotFields`) 보입니다(상자 · 겹침 · 격자 · 흐름 · 캔버스 …).
+         * @brief 인스펙터 위에 고른 위젯의 Slot 필드를 그립니다 — 부모 패널이 읽는 필드만(`UIPreviewLogic::findSlotProperties`) 보입니다(상자 · 겹침 · 격자 · 흐름 · 캔버스 …).
          * @details 되돌리기는 슬롯 손잡이와 같다 — 끄는 동안은 슬롯을 바로 고치고, 손을 놓으면 `_slot` 텍스트 전후 한 쌍을 `commitSlotEdit` 로 남긴다.
          */
         void drawSlotSection( Widget& widget );

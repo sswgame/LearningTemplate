@@ -92,7 +92,7 @@ namespace sw
         atomic<uint32>                   _requestedSerial{ 0 }; ///< 받은 요청 수(꺼내기 전에 덮어쓴 요청은 세지 않는다 — 처리 수와 견준다)
         atomic<uint32>                   _completedSerial{ 0 };
         atomic<uint32>                   _completedPacketSerial{ 0 };
-    };
 
-    SW_SERVICE_SLOT( ScreenshotRequestQueue, Optional );
+        SW_SERVICE_SLOT( ScreenshotRequestQueue, Optional );
+    };
 } // namespace sw

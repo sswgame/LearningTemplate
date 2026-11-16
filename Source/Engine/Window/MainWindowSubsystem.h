@@ -34,7 +34,7 @@ namespace sw
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc;
 
         /**
-         * @brief 보는 사람이 없는 실행인지입니다 — 무인(`-unattended`)이고, 사람이 검증을 지켜보는 표시(`SW_SHOW_WINDOWS=1`, `VerifyBundle.sh --show`)가 없을 때 true 입니다.
+         * @brief 보는 사람이 없는 실행인지입니다 — 무인(`-unattended`)이고, 사람이 검증을 지켜보는 표시(`SW_SHOW_WINDOWS=1`, `preflight.sh --show`)가 없을 때 true 입니다.
          * @details 무인 실행의 "묻지 않음" 과 "창 숨김 · 내보내지 않음" 을 가른다 — 앞의 것은 그대로, 뒤의 것만 이 판정을 따른다. 판정 · 골든은 렌더 타깃을 읽어 결과가 같다. App 과 자동화 세션이 같이 쓴다.
          */
         [[nodiscard]] static bool shouldRenderOffScreen( const CommandLineManager& commandLine );
@@ -117,7 +117,7 @@ namespace sw
         TitleTarget         _titleTarget;         ///< 제목을 거는 이음매(`getTitleTarget`)
         uint32              _pendingClientWidth;  ///< `setPendingClientSize` 가 적은 너비(0 이면 요청 없음)
         uint32              _pendingClientHeight; ///< `setPendingClientSize` 가 적은 높이
-    };
 
-    SW_SERVICE_SLOT( MainWindowSubsystem, Optional );
+        SW_SERVICE_SLOT( MainWindowSubsystem, Optional );
+    };
 } // namespace sw

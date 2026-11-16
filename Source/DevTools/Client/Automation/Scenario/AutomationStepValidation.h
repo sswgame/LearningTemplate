@@ -72,7 +72,7 @@ namespace sw
          */
         [[nodiscard]] static expected<void> validateDesktopSteps( const AutomationScenario& scenario );
         /**
-         * @brief 같은 파일을 두 번 찍는 `<Screenshot>` 을 거절합니다. `<ExpectImage>` 는 시나리오 끝에서 판정하므로(`AutomationJudge::deferExpectImage`)
+         * @brief 같은 파일을 두 번 찍는 `<Screenshot>` 을 거절합니다. `<ExpectImage>` 는 시나리오 끝에서 판정하므로(`AutomationEvaluator::deferExpectImage`)
          *        앞 사진을 덮으면 앞 단언이 뒤 그림을 본다.
          */
         [[nodiscard]] static expected<void> validateScreenshotFiles( const AutomationScenario& scenario );
@@ -102,13 +102,13 @@ namespace sw
      */
     #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate ) SW_STATIC_REGISTRATION( automationStepValidator, ::sw::AutomationStepValidatorRegistration, ::sw::AutomationStepValidatorRegistrar, id, pKind, pValidate )
 
-    /** @brief 스키마 구조체 @p TParams 만 읽으면 되는 단계의 검사만 등록합니다(`SW_AUTOMATION_STEP_VALIDATOR` 에 `AutomationStep::validateFields<TParams>` 를 준 것). 쓰는 .cpp 는 `AutomationScenario.h` 를 포함합니다. */
-    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams ) SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )
+    /** @brief 스키마 구조체 @p TParams 만 읽으면 되는 단계의 검사만 등록합니다(`SW_AUTOMATION_STEP_VALIDATOR` 에 `AutomationStep::validateProperties<TParams>` 를 준 것). 쓰는 .cpp 는 `AutomationScenario.h` 를 포함합니다. */
+    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams ) SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateProperties<TParams> )
 
 #else
 
 // 자동화를 뺀 배포본: 등록하지 않고 본문 함수만 붙잡는다(`Engine/Automation/Watch/AutomationHooksEnabled.h`).
     #define SW_AUTOMATION_STEP_VALIDATOR( id, pKind, pValidate ) [[maybe_unused]] static constexpr auto sw_automationStepValidatorUnused_##id = pValidate
-    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams )      SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateFields<TParams> )
+    #define SW_AUTOMATION_STEP_SCHEMA( id, pKind, TParams )      SW_AUTOMATION_STEP_VALIDATOR( id, pKind, &::sw::AutomationStep::validateProperties<TParams> )
 
 #endif // !SW_SHIPPING

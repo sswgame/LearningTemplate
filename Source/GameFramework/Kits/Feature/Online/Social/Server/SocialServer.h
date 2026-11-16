@@ -53,7 +53,7 @@ namespace sw
         void handleCall( OnlineServerCall<SocialMethod::GuildLeave> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildKick> call, const OnlineCallContext& context, const SocialAccountRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildSetRole> call, const OnlineCallContext& context, const GuildRoleRequest& request );
-        void handleCall( OnlineServerCall<SocialMethod::GuildSetNotice> call, const OnlineCallContext& context, const SocialTextRequest& request );
+        void handleCall( OnlineServerCall<SocialMethod::GuildSetAnnouncement> call, const OnlineCallContext& context, const SocialTextRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildGet> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildDeposit> call, const OnlineCallContext& context, const GuildAssetRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildWithdraw> call, const OnlineCallContext& context, const GuildAssetRequest& request );
@@ -63,6 +63,8 @@ namespace sw
         void handleCall( OnlineServerCall<SocialMethod::GuildApplications> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildApprove> call, const OnlineCallContext& context, const SocialAccountRequest& request );
         void handleCall( OnlineServerCall<SocialMethod::GuildReject> call, const OnlineCallContext& context, const SocialAccountRequest& request );
+        void handleCall( OnlineServerCall<SocialMethod::GuildGrantWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request );
+        void handleCall( OnlineServerCall<SocialMethod::GuildRevokeWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request );
 
         // IOnlineServerService
         void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;

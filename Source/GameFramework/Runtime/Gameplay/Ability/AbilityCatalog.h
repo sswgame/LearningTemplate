@@ -424,7 +424,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "AbilityCatalog"; ///< 루트 원소(`XMLCatalog`)
         /** @brief 실행 계산 클래스를 이름으로 등록합니다(생성자가 기본 어휘를 올린다). */
         void               registerExecutionClass( const hashed_string& className, ExecutionFactoryFunc factory );
-        uint32             loadRoot( const XMLNode& root, string_view sourceName );
+        uint32             loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool loadEffect( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadAbility( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadAbilitySet( const XMLNode& node, string_view sourceName );
@@ -449,5 +449,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<AbilityCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<AbilityCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, AbilityCatalog );
 } // namespace sw

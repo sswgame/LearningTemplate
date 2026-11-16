@@ -1,6 +1,6 @@
 /**
  * @file AssetReferenceFields.cpp
- * @brief 에셋 참조 칸 목록의 읽기 · 뽑기 · 있음 판정 · 고쳐 쓰기를 구현합니다. 뽑기는 `Scripts/lint/AssetReferences.py` 의 `_extract*` 와 같은 규칙이다.
+ * @brief 에셋 참조 칸 목록의 읽기 · 뽑기 · 있음 판정 · 고쳐 쓰기를 구현합니다. 뽑기는 `Scripts/lint/asset_references.py` 의 `_extract*` 와 같은 규칙이다.
  */
 #include "pch.h"
 
@@ -42,16 +42,6 @@ namespace sw
 
             static bool isSpace( utf8 character ) { return character == ' ' || character == '\t' || character == '\r' || character == '\n'; }
 
-            static string normalizePath( string_view token )
-            {
-                string normalized( token );
-                for ( utf8& character : normalized )
-                {
-                    character = character == '\\' ? '/' : StringUtil::toLowerChar( character );
-                }
-                return normalized;
-            }
-
             static bool startsWithDomain( string_view path, const vector<string>& listDomain )
             {
                 for ( const string& domain : listDomain )
@@ -73,7 +63,7 @@ namespace sw
                 return listLineStart;
             }
 
-            static uint32 lineOf( const vector<size_t>& listLineStart, size_t offset )
+            static uint32 getLineOf( const vector<size_t>& listLineStart, size_t offset )
             {
                 const auto itNext = std::upper_bound( listLineStart.begin(), listLineStart.end(), offset );
                 return static_cast<uint32>( itNext - listLineStart.begin() );
@@ -132,7 +122,7 @@ namespace sw
 {
     void AssetIDSet::addFile( string_view assetID )
     {
-        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        const string lowered = FileUtil::normalizePath( assetID ).str();
         size_t       slash   = lowered.rfind( '/' );
         while ( slash != string::npos && slash > 0 )
         {
@@ -162,7 +152,7 @@ namespace sw
         using Internal       = AssetReferenceFieldsInternal;
         const JSONValue root = document.getRoot();
         // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
-        bool                        bValid   = JSONFields::readFields( root, config, path, { "listImportedFolder" } );
+        bool                        bValid   = JSONFields::readProperties( root, config, path, { "listImportedFolder" } );
         const JSONValue             imported = root.get( "listImportedFolder" );
         vector<AssetImportedFolder> listImported;
         if ( imported.isArray() == false )
@@ -173,7 +163,7 @@ namespace sw
         for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
         {
             AssetImportedFolder folder;
-            bValid = JSONFields::readFields( imported.at( index ), folder, path ) && bValid;
+            bValid = JSONFields::readProperties( imported.at( index ), folder, path ) && bValid;
             listImported.push_back( std::move( folder ) );
         }
         bValid = Internal::hasNoEmptyText( config._listDomain, "listDomain", path ) && bValid;
@@ -194,10 +184,10 @@ namespace sw
         _listCMakeArgument   = std::move( config._listCMakeArgument );
         _listImported        = std::move( listImported );
         _setField.clear();
-        return loadGeneratedFields( projectRoot );
+        return loadGeneratedProperties( projectRoot );
     }
 
-    bool AssetReferenceFields::loadGeneratedFields( string_view projectRoot )
+    bool AssetReferenceFields::loadGeneratedProperties( string_view projectRoot )
     {
         const string path = FileUtil::joinPath( projectRoot, kGeneratedFile );
         JSONDocument document;
@@ -242,14 +232,14 @@ namespace sw
 
     bool AssetReferenceFields::isTextAsset( string_view assetID ) const
     {
-        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        const string lowered = FileUtil::normalizePath( assetID ).str();
         return std::any_of( _listTextExtension.begin(), _listTextExtension.end(), [&lowered]( const string& extension )
         { return StringUtil::endsWith( lowered, extension ); } );
     }
 
     bool AssetReferenceFields::isReferrer( string_view assetID ) const
     {
-        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        const string lowered = FileUtil::normalizePath( assetID ).str();
         // 리다이렉트 표(`redirects.xml`)는 옛 id 를 적는 글이다 — 있는지 검사하거나 옮기기가 고칠 참조가 아니다(`from` 은 다른 형식의 경로 칸 이름이기도 하다).
         if ( isTextAsset( lowered ) == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) || AssetRedirect::isTable( lowered ) )
             return false;
@@ -263,7 +253,7 @@ namespace sw
         return AssetReferenceFieldsInternal::startsWithDomain( path, _listUncheckedDomain ) == false;
     }
 
-    AssetReferenceSyntax AssetReferenceFields::syntaxOf( string_view path )
+    AssetReferenceSyntax AssetReferenceFields::getSyntaxOf( string_view path )
     {
         if ( FileUtil::hasExtension( path, ".json" ) )
             return AssetReferenceSyntax::JSON;
@@ -292,11 +282,11 @@ namespace sw
             { return AssetReferenceFieldsInternal::isOneOf( character, AssetReferenceFieldsInternal::kTemplateCharacters ); } );
             if ( token.empty() || bTemplate )
                 continue;
-            string normalized = AssetReferenceFieldsInternal::normalizePath( token );
+            string normalized = FileUtil::normalizePath( token ).str();
             if ( AssetReferenceFieldsInternal::startsWithDomain( normalized, _listDomain ) == false )
                 continue;
             AssetReference reference;
-            reference._line   = AssetReferenceFieldsInternal::lineOf( listLineStart, tokenStart );
+            reference._line   = AssetReferenceFieldsInternal::getLineOf( listLineStart, tokenStart );
             reference._field  = string( field );
             reference._offset = tokenStart;
             reference._length = token.size();
@@ -544,15 +534,15 @@ namespace sw
         return false;
     }
 
-    bool AssetReferenceFields::resolves( string_view assetID, const AssetIDSet& assets ) const
+    bool AssetReferenceFields::canResolve( string_view assetID, const AssetIDSet& assets ) const
     {
         return assets.contains( assetID ) || isImportedFromSource( assetID, assets );
     }
 
     vector<AssetReferenceRewriteRule> AssetReferenceFields::makeRewriteRules( string_view oldID, string_view newID, bool bFolder ) const
     {
-        const string                      oldPath = AssetReferenceFieldsInternal::normalizePath( oldID );
-        const string                      newPath = AssetReferenceFieldsInternal::normalizePath( newID );
+        const string                      oldPath = FileUtil::normalizePath( oldID ).str();
+        const string                      newPath = FileUtil::normalizePath( newID ).str();
         vector<AssetReferenceRewriteRule> listRule{
             AssetReferenceRewriteRule{ oldPath, newPath, bFolder }
         };

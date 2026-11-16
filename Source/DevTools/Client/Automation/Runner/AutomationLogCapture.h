@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    struct AutomationLogJudgement;
+    struct AutomationLogCheckResult;
 
     class AutomationLogPolicy;
 
@@ -62,10 +62,10 @@ namespace sw
          */
         uint32 countLinesWithID( const string& id, const string& contains, uint32 sinceFrame ) const;
         /** @brief 모은 줄을 모두 @p policy 로 판정해 처리하지 않은 줄 · 허용 항목이 맞은 id 를 돌려줍니다. */
-        AutomationLogJudgement judgeLines( const AutomationLogPolicy& policy ) const;
+        AutomationLogCheckResult evaluateLines( const AutomationLogPolicy& policy ) const;
         /** @brief 모은 줄 가운데 @p needle 을 담은 줄이 있으면 true 입니다(프레임 무관). */
         bool containsLine( string_view needle ) const;
-        /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용, 판정은 `judgeLines`). 아무 스레드에서나 읽는다. */
+        /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용, 판정은 `evaluateLines`). 아무 스레드에서나 읽는다. */
         uint32 getWarningErrorCount() const { return _warningErrorCount.load( std::memory_order_relaxed ); }
 
     private:

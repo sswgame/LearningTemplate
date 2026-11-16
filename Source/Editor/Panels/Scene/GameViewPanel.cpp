@@ -187,7 +187,7 @@ namespace sw::editor
         {
             const utf8* pCurrentLabel = EditorViewTargetUtil::getAspectLabel( _model.getAspect() );
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldComboEm" ) );
-            if ( ImGui::BeginCombo( "##GameViewAspect", pCurrentLabel ) )
+            if ( EditorWidgets::beginCombo( "##GameViewAspect", pCurrentLabel ) )
             {
                 for ( uint32 aspectIndex = 0; aspectIndex < static_cast<uint32>( EditorGameViewAspect::Count ); ++aspectIndex )
                 {

@@ -31,7 +31,7 @@ namespace sw
     inline constexpr const utf8* kAutomationOutputToken = "{out}";
     /** @brief `kAutomationOutputFolder` 아래에서 에디터 상태 폴더들을 모으는 폴더 이름 — 사용자의 `Saved/Editor` 대신 시나리오마다 비운 폴더를 쓴다. */
     inline constexpr const utf8* kAutomationEditorStateFolder = "EditorState";
-    /** @brief 골든 그림 폴더 이름 — 시나리오 파일 옆 `<시나리오 폴더>/golden/` 이다. 판정(`AutomationJudge`)이 읽고 쓰는 자리와 쓰기 문(`AutomationScratch`)이 여는 자리가 이 하나를 본다. */
+    /** @brief 골든 그림 폴더 이름 — 시나리오 파일 옆 `<시나리오 폴더>/golden/` 이다. 판정(`AutomationEvaluator`)이 읽고 쓰는 자리와 쓰기 문(`AutomationScratch`)이 여는 자리가 이 하나를 본다. */
     inline constexpr const utf8* kAutomationGoldenFolder = "golden";
 
     /**
@@ -91,32 +91,32 @@ namespace sw
         /** @brief `hasOnlyAttributes` 에 더해 @p listRequired 의 속성이 모두 있는지 봅니다. 없으면 빠진 이름이 대상인 오류입니다. */
         [[nodiscard]] expected<void> hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired ) const;
         /**
-         * @brief 속성을 스키마 구조체 @p outParams 로 읽습니다(`XMLFields::readFields` 와 같은 규칙 — 모르는 이름 · 필수 · 범위가 `PROPERTY` 에서 나온다). 틀리면 그 글이 대상인 오류입니다.
+         * @brief 속성을 스키마 구조체 @p outParams 로 읽습니다(`XMLFields::readProperties` 와 같은 규칙 — 모르는 이름 · 필수 · 범위가 `PROPERTY` 에서 나온다). 틀리면 그 글이 대상인 오류입니다.
          * @param listHandRead 적었는지가 뜻인 속성(스키마 기본값으로 담지 못한다) — 부르는 쪽이 `findAttribute` 로 읽는다.
          */
         template <typename TParams>
-        [[nodiscard]] expected<void> readFields( TParams& outParams, std::initializer_list<string_view> listHandRead = {} ) const
+        [[nodiscard]] expected<void> readProperties( TParams& outParams, std::initializer_list<string_view> listHandRead = {} ) const
         {
-            return readFieldsOf( &outParams, *TParams::StaticType(), listHandRead );
+            return readPropertiesOf( &outParams, *TParams::StaticType(), listHandRead );
         }
         /** @brief 스키마 구조체를 읽을 수 있는지만 보는 검사 함수입니다(`AutomationStepValidateFunction`). 의미 검사가 없는 단계의 등록이 이 함수를 가리킵니다. */
         template <typename TParams>
-        [[nodiscard]] static expected<void> validateFields( const AutomationStep& step )
+        [[nodiscard]] static expected<void> validateProperties( const AutomationStep& step )
         {
             TParams params;
-            return step.readFields( params );
+            return step.readProperties( params );
         }
         /** @brief 검사를 지난 단계의 스키마 구조체입니다(실행 함수가 읽는다). 시작 때 검사한 값이라 실패하면 단언합니다. */
         template <typename TParams>
-        [[nodiscard]] TParams readValidatedFields( std::initializer_list<string_view> listHandRead = {} ) const
+        [[nodiscard]] TParams readValidatedProperties( std::initializer_list<string_view> listHandRead = {} ) const
         {
             TParams              params{};
-            const expected<void> read = readFieldsOf( &params, *TParams::StaticType(), listHandRead );
+            const expected<void> read = readPropertiesOf( &params, *TParams::StaticType(), listHandRead );
             SW_LOG_ASSERT( read.has_value(), "%#", read.has_value() ? string{} : describeError( read.error() ) );
             return params;
         }
-        /** @brief `readFields` 의 몸통입니다. */
-        [[nodiscard]] expected<void> readFieldsOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const;
+        /** @brief `readProperties` 의 몸통입니다. */
+        [[nodiscard]] expected<void> readPropertiesOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const;
         /** @brief 꼭 있어야 하는 속성입니다. 없으면 그 이름이 대상인 `NotFound` 오류입니다(값은 nullptr 이 아니다). */
         [[nodiscard]] expected<const string*> requireAttribute( string_view name ) const;
     };
@@ -158,7 +158,7 @@ namespace sw
         vector<AutomationAttribute>     _listAllowedLog{};     ///< 루트 아래 `<AllowLog id reason>`(여럿 가능) — 이 시나리오에서 나와도 되는 로그 id(`_name`)와 사유(`_value`). 사유는 필수다
         vector<AutomationAttribute>     _listLaunchVariable{}; ///< 루트 아래 `<Launch variable value>`(여럿 가능). 첫 씬 · 렌더 파이프라인처럼 시작한 뒤에는 바꿀 수 없는 기동 때 값
         vector<string>                  _listRequiredModule{}; ///< 루트 `requiresModule="A,B"` — 이 모듈이 모두 켜진 빌드에서만 돈다. 하나라도 없으면 건너뜀이다(언리얼에서 끈 플러그인의 테스트가 없는 것과 같다)
-        AutomationLoad                  _load{};               ///< 부하 선언(`<Load>`). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며 `timeoutFrames` 를 보지 않는다
+        AutomationLoad                  _load{};               ///< 부하 선언(`<Load>`). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창과 단계가 둘 다 끝나면 끝나며 `timeoutFrames` 를 보지 않는다
         /** @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다. */
         bool _bRequiresEditor{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         /**

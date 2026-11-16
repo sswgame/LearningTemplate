@@ -55,7 +55,7 @@ namespace sw::editor
         /** @brief 원문의 원소 @p ownerIndex 아래에서 @p step 원소의 번호입니다. 없으면 비어 있고, 담는 원소를 적지 않았으면(@p ownerIndex 가 비면) 그 아래도 없습니다. */
         static optional<int32> findWrittenChild( const CatalogXMLText& parsed, optional<int32> ownerIndex, const CatalogChildStep& step );
         /** @brief @p start 에서 @p path 를 따라 내려간 원소입니다. 없으면 무효입니다. */
-        static XMLNode walkPath( const XMLNode& start, const CatalogChildPath& path );
+        static XMLNode findByPath( const XMLNode& start, const CatalogChildPath& path );
 
     private:
         struct ParentFile

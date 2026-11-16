@@ -119,7 +119,7 @@ namespace sw
 
     ServerApp::~ServerApp() = default;
 
-    int32 ServerApp::runMain( int32 argc, utf8* pArgv[] )
+    int32 ServerApp::runMain( int32 argc, utf8* pArgv[], ReadyFunction pfnOnReady )
     {
         // 줄마다 내보낸다. 테스트, journald, docker logs 가 "ready" 줄을 바로 볼 수 있다. 엔진(로거)을 시작하기 전에 켠다.
         ConsoleLogOutput::setFlushEveryLine( true );
@@ -127,7 +127,11 @@ namespace sw
         const bool bStarted   = server.initialize( argc, pArgv );
         const bool bCheckOnly = server._bConfigCheckOnly == SW_TRUE;
         if ( bStarted && bCheckOnly == false )
+        {
+            if ( pfnOnReady != nullptr )
+                pfnOnReady();
             server.run();
+        }
         server.shutdown();
         if ( bCheckOnly ) // 설정 검사만: 잘못된 설정은 로드 오류 코드(종료 코드 표 `LoadError`) — 스크립트가 크래시 · 기동 실패와 가른다
             return static_cast<int32>( bStarted ? ProcessExitCode::Passed : ProcessExitCode::LoadError );
@@ -153,7 +157,7 @@ namespace sw
         }
         if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibraries, this ), "ServerApp", std::move( pDevLayer ) ) == false )
             return false;
-        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
+        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `pack.py` 가 이 코드를 본다.
         const HostEngineStart engineStart = _launch.initializeEngine( argc, pArgv, EngineHostRole::DedicatedServer );
         if ( engineStart != HostEngineStart::Ready )
             return engineStart == HostEngineStart::Headless;
@@ -447,10 +451,10 @@ namespace sw
     {
         // 서비스 연결(로그인 · 채팅 …) + 게임 UDP 접속(복제 키트의 플레이어) + 키트가 끝내야 하는 진행 중인 일(매치 · 거래). 셋이 모두 0 이어야 조용히 내려갈 수 있다.
         const int32           serviceConnections = getServiceConnectionCount();
-        const int32           openWork           = _serverServices != nullptr ? _serverServices->getOpenWorkCount() : 0;
+        const int32           openJob            = _serverServices != nullptr ? _serverServices->getOpenJobCount() : 0;
         const GameNetSession* pNetSession        = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         const int32           gameConnections    = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server ? pNetSession->getConnectedCount() : 0;
-        return serviceConnections + gameConnections + openWork;
+        return serviceConnections + gameConnections + openJob;
     }
 
     void ServerApp::beginDrain( ShutdownCause cause, int64 monotonicMs )
@@ -461,14 +465,14 @@ namespace sw
         const int64 waitMs = bWait ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::time::kMillisecondsPerSecond : 0;
         _drainDeadlineMs   = monotonicMs + waitMs;
         // 키트에 종료를 알리고(진행 중인 일 마무리) 게임 접속자에게 끊김 사유를 보낸다. 기다리지 않는 종료(콘솔 · Ctrl+C)는 사유 패킷이 나가기 전에 내려갈 수 있어 최선만 다한다.
-        ServerShutdownNotice notice;
-        notice._cause        = cause;
-        notice._graceSeconds = static_cast<uint32>( waitMs / constant::time::kMillisecondsPerSecond );
+        ServerShutdownNotice notification;
+        notification._cause        = cause;
+        notification._graceSeconds = static_cast<uint32>( waitMs / constant::time::kMillisecondsPerSecond );
         if ( _serverServices != nullptr )
-            _serverServices->beginShutdown( notice );
+            _serverServices->beginShutdown( notification );
         GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         if ( pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server )
-            pNetSession->sendShutdownNotice( GameShutdownNotice{ bWait ? GameShutdownReason::ServerRestart : GameShutdownReason::ServerStopped, notice._graceSeconds } );
+            pNetSession->sendShutdownNotice( GameShutdownNotice{ bWait ? GameShutdownReason::ServerRestart : GameShutdownReason::ServerStopped, notification._graceSeconds } );
         if ( waitMs > 0 )
             SW_LOG_INFO_ID( "Server.DrainingWaitingUpConnections", "Draining: waiting up to %# s for %# connections / open jobs to finish (%#)", _pServerConfig->_drainWaitSeconds, countDrainBlockers(),
                             ShutdownSignal::getCauseName( cause ) );
@@ -504,8 +508,8 @@ namespace sw
             if ( _console.poll( SW_DELEGATE_METHOD( StandardInputCommandDelegate, &ServerApp::executeCommand, this ) ) )
                 ShutdownSignal::request( ShutdownCause::ConsoleCommand );
             if ( _pDebugControl != nullptr )
-                _pDebugControl->pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
-            _adminChannel.pump();
+                _pDebugControl->poll(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
+            _adminChannel.poll();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
             if ( cause != ShutdownCause::None || _launch.getEngine().isQuitRequested() )

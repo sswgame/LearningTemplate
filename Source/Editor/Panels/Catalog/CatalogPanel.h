@@ -54,7 +54,7 @@ namespace sw::editor
 
     protected:
         /** @brief 카탈로그 종류 하나에 맞는 파일만 받습니다(목록에 서는 파일과 같은 규칙 — 종류가 겹치는 파일은 스키마 테스트가 잡는다). */
-        bool acceptsDocumentPath( string_view assetPath ) const override;
+        bool canAcceptDocumentPath( string_view assetPath ) const override;
         /** @brief 받아들인 문서 경로의 글을 읽어 세션을 엽니다. 읽지 못하면 `Malformed` 라 저장이 막힌다(앞 파일의 글을 이 파일에 쓰지 않는다). */
         ToolAssetLoadResult loadDocument() override;
         /** @brief 파일 색인 잡을 냅니다(아직 색인이 없을 때만). */

@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/ConsumerLock.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
@@ -26,12 +26,12 @@ namespace sw
         LeaderboardClient();
 
         /** @brief 업적 달성 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
-        [[nodiscard]] bool claimAchievementUnlocks( ConsumerLease& outLease ) { return _unlockGate.claim( outLease ); }
+        [[nodiscard]] bool claimAchievementUnlocks( ConsumerLease& outLease ) { return _unlockConsumerLock.claim( outLease ); }
         /** @brief 쌓인 업적 달성 알림을 꺼냅니다. @p lease 는 `claimAchievementUnlocks` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
         void pollAchievementUnlocks( const ConsumerLease& lease, vector<AchievementState>& outListAchievement )
         {
-            SW_ASSERT( _unlockGate.isHeldBy( lease ) );
-            if ( _unlockGate.isHeldBy( lease ) )
+            SW_ASSERT( _unlockConsumerLock.isHeldBy( lease ) );
+            if ( _unlockConsumerLock.isHeldBy( lease ) )
                 _unlockBuffer.moveAllTo( outListAchievement );
         }
 
@@ -39,7 +39,7 @@ namespace sw
         void onPush( LeaderboardMethod::Achievement, const AchievementState& body );
 
     private:
-        ConsumerGate                  _unlockGate;
+        ConsumerLock                  _unlockConsumerLock;
         EventBuffer<AchievementState> _unlockBuffer;
     };
 } // namespace sw

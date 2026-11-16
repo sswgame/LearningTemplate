@@ -27,10 +27,12 @@ namespace sw
             atomic<uint64> _creationEpoch{ 0 };
             /** @brief 파일 · 폴더를 지운 횟수입니다(`FileUtil::getRemovalEpoch`). */
             atomic<uint64> _removalEpoch{ 0 };
-            /** @brief 쓰기 입구 게이트입니다(`FileUtil::setWriteGate`). 함수 포인터 하나라 상수 초기화된다. */
-            atomic<FileUtil::WriteGate> _writeGate{ nullptr };
+            /** @brief 쓰기 입구 게이트입니다(`FileUtil::setWriteFilter`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::WriteFilter> _writeFilter{ nullptr };
             /** @brief 새로 만드는 자리의 이름 규칙입니다(`FileUtil::setCreateRule`). 함수 포인터 하나라 상수 초기화된다. */
-            atomic<FileUtil::WriteGate> _createRule{ nullptr };
+            atomic<FileUtil::WriteFilter> _createRule{ nullptr };
+            /** @brief 읽기 전용이 "체크아웃 안 함" 인 자리의 규칙입니다(`FileUtil::setCheckoutRule`). 함수 포인터 하나라 상수 초기화된다. */
+            atomic<FileUtil::CheckoutRule> _checkoutRule{ nullptr };
         };
 
         struct FileUtilInternal
@@ -44,7 +46,7 @@ namespace sw
              */
             [[nodiscard]] static bool findEntryIgnoringCase( const string& directory, string_view component, string& outName )
             {
-                const string lowerComponent = FileUtil::normalizePath( component );
+                const PathKey lowerComponent = FileUtil::normalizePath( component );
                 outName.clear();
                 (void)FileUtil::forEachDirectoryEntry( directory, false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
                 {
@@ -55,6 +57,16 @@ namespace sw
                     return true;
                 } ); // 폴더를 열지 못하면 항목이 없는 것과 같다 — 아래가 outName 이 비었는지로 가른다
                 return outName.empty() == false;
+            }
+
+            /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
+            [[nodiscard]] static bool refuseNotOpenForEdit( string_view path, const utf8* pAction )
+            {
+                const optional<string> lockedPath = FileUtil::findNotOpenForEdit( path );
+                if ( lockedPath.has_value() == false )
+                    return false;
+                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, *lockedPath );
+                return true;
             }
 
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
@@ -76,6 +88,13 @@ namespace sw
                 const string filePath = FileUtil::normalizeSeparators( fileName );
                 if ( FileUtil::isWriteAllowed( filePath ) == false )
                     return false;
+                // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
+                // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
+                if ( FileUtil::isReadOnlyFile( filePath ) )
+                {
+                    SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", filePath.c_str() );
+                    return false;
+                }
                 const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
                 // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
                 StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
@@ -292,6 +311,40 @@ namespace sw
                 return removedCount;
             }
 
+            /** @brief 폴더 바로 아래 항목 하나입니다(`walkSorted` 가 이름 순으로 줄 세운다). */
+            struct WalkChild
+            {
+                string _name;
+                uint8  _bDirectory{ 0 };
+                uint8  _bLink{ 0 };
+            };
+
+            static bool collectWalkChild( void* pContext, string_view name, bool bDirectory, bool bLink )
+            {
+                static_cast<vector<WalkChild>*>( pContext )->push_back( WalkChild{ string{ name }, static_cast<uint8>( bDirectory ? 1 : 0 ), static_cast<uint8>( bLink ? 1 : 0 ) } );
+                return true;
+            }
+
+            /**
+             * @brief 폴더 하나의 항목을 이름의 바이트 순으로 걷습니다. OS 가 주는 순서(NTFS 이름 순, ext4 해시 순)에 기대면 같은 트리가 플랫폼마다 다른 목록이 되어
+             *        첫 일치를 고르는 쪽(Quick Open)이 갈렸다 — 훑는 모든 길이 이 한 곳을 지나 순서를 정한다(언리얼 `IterateDirectory` 는 순서를 정하지 않아 부른 쪽이 정렬한다).
+             * @return 폴더를 열 수 있었으면 true(콜백이 멈춘 것도 포함)입니다.
+             */
+            static bool walkSorted( WalkContext& walk )
+            {
+                vector<WalkChild> listChild;
+                // 도중에 멈춘 폴더도 모은 데까지 걷는다(부분 목록과 false — 전과 같은 계약이다)
+                const bool bOpened = PlatformFileSystem::forEachChild( walk._directory, collectWalkChild, &listChild );
+                std::sort( listChild.begin(), listChild.end(), []( const WalkChild& lhs, const WalkChild& rhs )
+                { return lhs._name < rhs._name; } );
+                for ( const WalkChild& child : listChild )
+                {
+                    if ( walkChild( &walk, child._name, child._bDirectory != 0, child._bLink != 0 ) == false )
+                        break;
+                }
+                return bOpened;
+            }
+
             static bool walkChild( void* pContext, string_view name, bool bDirectory, bool bLink )
             {
                 WalkContext& walk = *static_cast<WalkContext*>( pContext );
@@ -313,7 +366,7 @@ namespace sw
                     child._visit      = walk._visit;
                     child._pContext   = walk._pContext;
                     // 들어갈 수 없는 하위 폴더는 멈추지 않고 건너뛴다(권한 없음).
-                    (void)PlatformFileSystem::forEachChild( path, walkChild, &child );
+                    (void)walkSorted( child );
                     if ( child._bStopped )
                     {
                         walk._bStopped = SW_TRUE;
@@ -524,7 +577,7 @@ namespace sw
         return path[0] == '/' || path[0] == '\\';
     }
 
-    string FileUtil::normalizePath( string_view path )
+    PathKey FileUtil::normalizePath( string_view path )
     {
         string outResult{ path };
         for ( utf8& ch : outResult )
@@ -534,7 +587,7 @@ namespace sw
             else
                 ch = StringUtil::toLowerChar( ch );
         }
-        return outResult;
+        return PathKey{ std::move( outResult ) };
     }
 
     string FileUtil::normalizeSeparators( string_view path )
@@ -623,8 +676,25 @@ namespace sw
         return string{ path.substr( component.size() + 1 ) };
     }
 
+    bool FileUtil::hasParentComponent( string_view path )
+    {
+        size_t start = 0;
+        while ( start <= path.size() )
+        {
+            size_t end = path.find_first_of( "/\\", start );
+            if ( end == string_view::npos )
+                end = path.size();
+            if ( path.substr( start, end - start ) == ".." )
+                return true;
+            start = end + 1;
+        }
+        return false;
+    }
+
     bool FileUtil::tryMakePathUnderRoot( string_view root, string_view path, string& outRelative )
     {
+        if ( hasParentComponent( root ) || hasParentComponent( path ) )
+            return false; // 글 비교라 `root/../x` 를 안으로 본다 — 풀지 않고 거절한다(감사 C-18)
         const string rootText   = trimTrailingSlashes( normalizeSeparators( root ) );
         const string pathText   = normalizeSeparators( path );
         const bool   bUnderRoot = rootText.empty() == false && pathText.size() > rootText.size() + 1 && pathText[rootText.size()] == '/' &&
@@ -643,6 +713,8 @@ namespace sw
 
     bool FileUtil::isPathAtOrUnderRoot( string_view root, string_view path )
     {
+        if ( hasParentComponent( root ) || hasParentComponent( path ) )
+            return false; // `tryMakePathUnderRoot` 와 같다
         const string rootText = makeComparableDiskPath( root );
         return rootText.empty() == false && startsWithPathComponent( makeComparableDiskPath( path ), rootText );
     }
@@ -701,40 +773,71 @@ namespace sw
         FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
     }
 
-    void FileUtil::setWriteGate( WriteGate gate )
+    void FileUtil::setWriteFilter( WriteFilter filter )
     {
-        FileUtilInternal::s_writeCounters._writeGate.store( gate, std::memory_order_release );
+        FileUtilInternal::s_writeCounters._writeFilter.store( filter, std::memory_order_release );
     }
 
-    void FileUtil::setCreateRule( WriteGate rule )
+    void FileUtil::setCreateRule( WriteFilter rule )
     {
         FileUtilInternal::s_writeCounters._createRule.store( rule, std::memory_order_release );
     }
 
     bool FileUtil::isWriteAllowed( string_view path )
     {
-        if ( const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire ); gate != nullptr )
+        if ( const WriteFilter filter = FileUtilInternal::s_writeCounters._writeFilter.load( std::memory_order_acquire ); filter != nullptr )
         {
-            const expected<void> verdict = gate( path );
-            if ( verdict.has_value() == false )
+            const expected<void> evaluation = filter( path );
+            if ( evaluation.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+                SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, evaluation.error().message(), evaluation.error().detail() );
                 return false;
             }
         }
+        // 체크아웃하지 않은 파일(버전 관리 트리의 읽기 전용, 폴더면 그 아래)은 바꾸지 않는다 — FileUtil 의 쓰기 · 지우기 · 옮기기 입구와, 경로를 스스로 여는 서드파티 저장(DDS · SQLite)이 모두 이 함수를 지난다.
+        if ( FileUtilInternal::refuseNotOpenForEdit( path, "change" ) )
+            return false;
         return isCreateAllowed( path );
+    }
+
+    FileUtil::CheckoutRule FileUtil::setCheckoutRule( CheckoutRule rule )
+    {
+        return FileUtilInternal::s_writeCounters._checkoutRule.exchange( rule, std::memory_order_acq_rel );
+    }
+
+    optional<string> FileUtil::findNotOpenForEdit( string_view path )
+    {
+        const CheckoutRule             rule = FileUtilInternal::s_writeCounters._checkoutRule.load( std::memory_order_acquire );
+        PlatformFileSystem::FileStatus status;
+        if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path, status ) == false )
+            return nullopt; // 없는 자리는 지우거나 옮길 것이 없다
+        if ( status._kind == PlatformFileSystem::FileKind::File )
+            return status._bReadOnly && rule( path ) ? optional<string>{ normalizeSeparators( path ) } : nullopt;
+        if ( status._kind != PlatformFileSystem::FileKind::Directory || status._bLink )
+            return nullopt; // 폴더 링크는 링크만 지운다(가리키는 폴더는 그대로다)
+        optional<string> found;
+        (void)forEachDirectoryEntry( path, true, [&found, rule]( const DirectoryEntry& entry )
+        {
+            if ( entry._bDirectory == false && isReadOnlyFile( entry._path ) && rule( entry._path ) )
+            {
+                found = normalizeSeparators( entry._path );
+                return false;
+            }
+            return true;
+        } ); // 폴더를 끝까지 읽지 못하면 본 데까지다 — 지우기 자체가 못 지운 항목을 알린다
+        return found;
     }
 
     bool FileUtil::isCreateAllowed( string_view path )
     {
         // 이름 규칙은 새로 생기는 자리만 본다 — 있는 파일을 덮어쓰거나 지우는 것은 이름을 만들지 않는다.
-        const WriteGate rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
+        const WriteFilter rule = FileUtilInternal::s_writeCounters._createRule.load( std::memory_order_acquire );
         if ( rule == nullptr || exists( path ) )
             return true;
-        const expected<void> verdict = rule( path );
-        if ( verdict.has_value() )
+        const expected<void> evaluation = rule( path );
+        if ( evaluation.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
+        SW_LOG_ERROR_ID( "File.CreateRefused", "Creating %# was refused: %# (%#)", path, evaluation.error().message(), evaluation.error().detail() );
         return false;
     }
 
@@ -1005,8 +1108,8 @@ namespace sw
 
     optional<AbsolutePath> FileUtil::requireAbsolutePath( string_view path )
     {
-        // 빈 글도 절대가 아니다 - `acceptsPathInput` 은 빈 글을 통과시키므로(열기 실패로 드러난다) 여기서 따로 거절한다.
-        if ( path.empty() || PlatformFileUtil::acceptsPathInput( path ) == false )
+        // 빈 글도 절대가 아니다 - `canAcceptPathInput` 은 빈 글을 통과시키므로(열기 실패로 드러난다) 여기서 따로 거절한다.
+        if ( path.empty() || PlatformFileUtil::canAcceptPathInput( path ) == false )
         {
             if ( path.empty() )
                 SW_LOG_ERROR_ID( "File.RelativePath", "An empty path was given where an absolute disk path is required" );
@@ -1031,7 +1134,7 @@ namespace sw
             return true;
 
         const string directory = FileUtilInternal::trimTrailingSeparators( directoryPath );
-        // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `setWriteGate`).
+        // 새 폴더도 새 자리다 — 이름 규칙(리소스 트리는 소문자)을 지난다. 자동화 쓰기 게이트는 보지 않는다(이미 있는 폴더에 흔히 부르는 입구다 — `setWriteFilter`).
         if ( isCreateAllowed( directory ) == false )
             return false;
         if ( FileUtilInternal::createDirectoryTree( directory ) )
@@ -1319,6 +1422,6 @@ namespace sw
         walk._bRecursive = bRecursive;
         walk._visit      = visit;
         walk._pContext   = pContext;
-        return PlatformFileSystem::forEachChild( walk._directory, FileUtilInternal::walkChild, &walk );
+        return FileUtilInternal::walkSorted( walk );
     }
 } // namespace sw

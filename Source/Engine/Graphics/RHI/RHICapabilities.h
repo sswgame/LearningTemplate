@@ -68,6 +68,18 @@ namespace sw
          */
         uint8 _bGraphicsShaderWrites{ SW_FALSE };
         /**
+         * @brief 패스 XML 의 선택 지오메트리 스테이지(`_geometryEntryPoint`)를 PSO 에 붙일 수 있는지입니다.
+         * @details DX11 · DX12 · OpenGL 은 참, Vulkan 은 장치 기능 `geometryShader` 가 있을 때 참이다. WebGPU 는 스테이지가 없다. 거짓이면 그 PSO 를 만들지 않는다(백엔드가 거절한다) —
+         *          자동화 시나리오는 감시 값 `RHI.GeometryStage` 로 요구를 선언하고 건너뛴다(언리얼 `RHISupportsGeometryShaders` · 유니티 `SystemInfo.supportsGeometryShaders` 와 같은 자리).
+         */
+        uint8 _bGeometryStage{ SW_FALSE };
+        /**
+         * @brief 패스 XML 의 선택 헐 · 도메인 스테이지(`_hullEntryPoint`)를 PSO 에 붙일 수 있는지입니다. 머티리얼 변위(`_bMaterialTessellation`)와 달리 머티리얼 자원을 읽지 않는다.
+         * @details DX11 · DX12 · OpenGL 은 참, Vulkan 은 장치 기능 `tessellationShader` 가 있을 때 참이다(dzn 은 없다). WebGPU 는 스테이지가 없다. 감시 값은 `RHI.TessellationStages` 다
+         *          (언리얼 `RHISupportsTessellation` · 유니티 `SystemInfo.supportsTessellationShaders` 와 같은 자리).
+         */
+        uint8 _bTessellationStages{ SW_FALSE };
+        /**
          * @brief 서술이 다른 렌더 타깃 텍스처를 힙 하나에 겹쳐 놓을 수 있는지입니다(`IRHIResourceFactory::createTransientHeap` · `createPlacedTexture2D`, 첫 쓰기 앞 `IRHICommandList::beginTextureAlias`).
          * @details DX12 는 placed resource(D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES 힙 — 모든 리소스 힙 등급이 받는다)와 앨리어싱 배리어로 참이다. Vulkan 도 참이다 — 메모리 하나에 이미지를
          *          겹쳐 묶고(`vkBindImageMemory` 오프셋), 해제 큐의 대리자가 힙 메모리 참조를 펜스까지 들어 마지막 이미지가 사라진 뒤에 메모리를 놓는다. DX11 · GL · WebGPU 는 API 에 없어 거짓이다.

@@ -4,4 +4,4 @@
 #        구현(`CGLTF_IMPLEMENTATION`)은 `Source/Editor/Common/Asset/Model/ModelImporter.cpp` 한 곳에서 펼친다.
 # ==============================================================================
 
-sw_addVcpkgHeaderOnly(NAME cgltf PROBE cgltf.h)
+sw_add_vcpkg_header_only(NAME cgltf PROBE cgltf.h)

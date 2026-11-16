@@ -138,9 +138,9 @@ namespace sw
          * @brief 리소스 읽기 하나를 받아들입니다(`AssetIO` 가 읽은 바이트와 함께 부른다).
          * @return 이 스레드에 작업이 있으면 입력으로 기록하고 true, 작업이 없고 세션도 없으면 true, 세션 안인데 작업 밖이면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool allowRead( const AssetID& id, const uint8* pData, size_t size );
+        [[nodiscard]] static bool recordReadInput( const AssetID& id, const uint8* pData, size_t size );
         /**
-         * @brief 디스크 경로(절대 또는 작업 폴더 기준) 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `allowRead` 와 같고,
+         * @brief 디스크 경로(절대 또는 작업 폴더 기준) 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `recordReadInput` 와 같고,
          *        절대 경로를 만들지 못하면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] static bool allowDiskRead( string_view diskPath, const uint8* pData, size_t size );

@@ -10,8 +10,8 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/DismountOnDeathComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/RiderDownWatcherComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 using namespace sw;
@@ -58,7 +58,7 @@ SW_TEST_CASE( VehicleSeatTest, DriverTakesTheVehicleAndGivesItBack )
     SW_EXPECT_TRUE( VehicleSeatComponent::findSeatOf( *rig._pRiderPawn ) == rig._pSeat );
     SW_EXPECT_TRUE( rig._pVehiclePawn->getController() == rig._pController->getHandle() );
     SW_EXPECT_FALSE( rig._pRiderPawn->isPossessed() );
-    SW_EXPECT_TRUE( rig._pRider->getComponent<RiderDownWatcherComponent>() != nullptr );
+    SW_EXPECT_TRUE( rig._pRider->getComponent<DismountOnDeathComponent>() != nullptr );
 
     SW_EXPECT_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
     SW_EXPECT_TRUE( rig._pSeat->isFree() );

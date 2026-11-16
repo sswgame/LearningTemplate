@@ -135,7 +135,7 @@ namespace sw
         float3                _sortAxis;          ///< CustomAxis 의 축(정규화)
         uint32                _defaultLayerIndex; ///< `Default` 의 순번
         TransparencySortMode  _sortMode;
-    };
 
-    SW_SERVICE_SLOT_CONST( Render2DSettings, Required );
+        SW_SERVICE_SLOT_CONST( Render2DSettings, Required );
+    };
 } // namespace sw

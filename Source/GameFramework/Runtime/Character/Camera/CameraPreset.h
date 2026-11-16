@@ -391,7 +391,7 @@ namespace sw
      *         <BlendIn curve="EaseInOut" duration="0.6"/>
      *     </Preset>
      * @endcode
-     * @details 섹션의 속성 이름은 섹션 구조체의 칸 이름이다(`XMLFields::readFields`). 각은 라디안, 벡터는 쉼표로 잇는다.
+     * @details 섹션의 속성 이름은 섹션 구조체의 칸 이름이다(`XMLFields::readProperties`). 각은 라디안, 벡터는 쉼표로 잇는다.
      *          `<BlendIn>` 이 없으면 카탈로그의 `<DefaultBlend>` 를 쓰며, 읽을 때 채운다.
      */
     REFLECT()
@@ -507,7 +507,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "CameraPresetCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadDefaultBlend( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadPreset( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadBlendRule( const XMLNode& node, string_view sourceName );
@@ -518,5 +518,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CameraPresetCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<CameraPresetCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, CameraPresetCatalog );
 } // namespace sw

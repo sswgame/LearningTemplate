@@ -33,7 +33,7 @@ namespace sw
         }
 
         /** @brief 값이 들어갈 칸입니다. 옥타브 = floor(log2) 이고, 그 안을 상위 비트로 등분합니다. 한 옥타브 미만은 값 그대로입니다. */
-        uint32 bucketOf( uint64 nanos )
+        uint32 getBucketOf( uint64 nanos )
         {
             if ( nanos < FrameProfiler::kSubBucketCount )
                 return static_cast<uint32>( nanos );
@@ -244,7 +244,7 @@ namespace sw
                 scope._minNanos = nanos;
             if ( nanos > scope._maxNanos )
                 scope._maxNanos = nanos;
-            ++scope._arrBucket[bucketOf( nanos )];
+            ++scope._arrBucket[getBucketOf( nanos )];
             ++scope._sampledFrames;
         }
         _frameCount.fetch_add( 1, std::memory_order_relaxed );

@@ -9,7 +9,7 @@
 using namespace sw;
 
 /** @brief [CraftingElementCatalogsTest] 레시피 — 칸 이름(`level` · `known`), 물건 줄의 `count` 기본 1, 0 개 줄은 그 레시피를 넣지 않는다 */
-SW_TEST_CASE( CraftingElementCatalogsTest, RecipeReadsFieldsAndItemLines )
+SW_TEST_CASE( CraftingElementCatalogsTest, RecipeReadsPropertiesAndItemLines )
 {
     RecipeCatalog catalog;
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );

@@ -41,6 +41,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 상태 값이 스텝마다 어떻게 바뀌는지 나타냅니다. */
@@ -270,7 +271,7 @@ namespace sw
         void                              setStepTime( float32 stepTime ) { _stepTime = stepTime; }
 
     private:
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool loadFlag( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadStatus( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadMaterial( const XMLNode& node, string_view sourceName );
@@ -296,5 +297,5 @@ namespace sw
      * @brief 공유 캐시("elementrules")는 GameFramework 가 인스턴스화합니다(`ElementRuleCatalog.cpp`). 쓰는 쪽은 `SharedAssetCache<ElementRuleCatalog>::acquire` 로 받습니다(같은 경로는 같은 객체).
      * @details 파일을 고치면 에디터 핫 리로드가 캐시에서 떼어 내고 `getReloadCount` 를 늘린다 — 쥔 쪽은 옛 테이블을 쥐고 있다가 다시 받는다.
      */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ElementRuleCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, ElementRuleCatalog );
 } // namespace sw

@@ -36,7 +36,7 @@ namespace sw
 
         /**
          * @brief GPU 자원을 가진 에셋 캐시(텍스처 · 머티리얼 · 메시)에 올릴 디바이스를 붙이거나(nullptr 면) 뗍니다.
-         * @details 기동 · 종료가 부르고, 백엔드 교체는 자원 다시 올리기(`RHIRenderResource::initAllFor`) **앞에서** 부른다 — 머티리얼을 다시 올리면
+         * @details 기동 · 종료가 부르고, 백엔드 교체는 자원 다시 올리기(`RHIRenderResource::initAllForDevice`) **앞에서** 부른다 — 머티리얼을 다시 올리면
          *          텍스처를 요청하는데 이 단계는 그 뒤(`restartStopped`)에야 다시 선다. 붙지 않은 캐시는 요청을 실패시킨다(텍스처 머티리얼이 체커가 된다).
          */
         static void bindAssetCaches( IRHIDevice* pDevice );

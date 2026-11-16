@@ -78,19 +78,29 @@ namespace sw::editor
             outValue = static_cast<float64>( tickCount );
             return true;
         }
+
+        /** @brief 감시 값 `Editor.PreviewSceneCount` — 씬 매니저가 가진 미리보기 씬 수입니다. 미리보기 창을 닫으면 그 창의 씬이 빠진다(감사 E-14). */
+        [[nodiscard]] bool readPreviewSceneCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SceneManager* pSceneManager = findSubsystem<SceneManager>();
+            if ( pSceneManager == nullptr )
+                return false;
+            outValue = static_cast<float64>( pSceneManager->getPreviewScenes().size() );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( editorPreviewTimeScale, "Editor.PreviewTimeScale", "Time scale the preview bar of the preview window drawn most recently gave its scene (0 while paused)",
                          &readPreviewTimeScale );
     SW_AUTOMATION_WATCH( editorPreviewFloorShown, "Editor.PreviewFloorShown", "1 when the preview window drawn most recently shows its floor", &readPreviewFloorShown );
     SW_AUTOMATION_WATCH( editorPreviewAxesShown, "Editor.PreviewAxesShown", "1 when the preview window drawn most recently draws its axis indicator", &readPreviewAxesShown );
+    SW_AUTOMATION_WATCH( editorPreviewSceneCount, "Editor.PreviewSceneCount", "Preview scenes the scene manager holds (a closed preview window holds none)", &readPreviewSceneCount );
     SW_AUTOMATION_WATCH( editorPreviewTickCount, "Editor.PreviewTickCount", "Ticks the scene manager gave all preview scenes (a hidden preview window adds none)",
                          &readPreviewTickCount );
 
     EditorPreviewPanel::EditorPreviewPanel( const EditorAssetType& kind, bool bLoadOnOpen )
         : EditorDocumentPanel{ kind, bLoadOnOpen }
         , _viewport{}
-        , _pCommandStack{ make_unique<CommandStack>() }
         , _pSelection{ make_unique<EditorSelection>() }
         , _bFocusApplied{ SW_FALSE }
         , _bPreviewPaused{ SW_FALSE }
@@ -112,26 +122,31 @@ namespace sw::editor
 
     void EditorPreviewPanel::shutdown()
     {
+        releasePreview();
+    }
+
+    void EditorPreviewPanel::releasePreview()
+    {
         applyWindowFocus( false );
-        resetPreviewEdits();
+        resetDocumentHistory(); // 창 스택의 명령은 이 씬의 키를 가리킨다 — 씬과 함께 버린다(되돌리기 어려운 결정 4)
         _pSelection->unbindPreviewScope();
         _viewport.shutdown();
     }
 
     void EditorPreviewPanel::acknowledgePreviewEdits()
     {
-        _seenCommandCount = _pCommandStack->getCommandCount();
+        _seenCommandCount = getDocumentCommandStack().getCommandCount();
     }
 
-    void EditorPreviewPanel::resetPreviewEdits()
+    void EditorPreviewPanel::resetDocumentHistory()
     {
-        _pCommandStack->clear();
-        _seenCommandCount = 0;
+        EditorDocumentPanel::resetDocumentHistory();
+        _seenCommandCount = 0; // 비운 스택을 "편집이 줄었다" 로 읽어 dirty 로 만들지 않는다
     }
 
     void EditorPreviewPanel::syncDocumentDirty()
     {
-        const size_t count = _pCommandStack->getCommandCount();
+        const size_t count = getDocumentCommandStack().getCommandCount();
         if ( count == _seenCommandCount )
             return;
         _seenCommandCount = count;
@@ -156,7 +171,7 @@ namespace sw::editor
             Scene* pScene = _viewport.getScene();
             if ( pScene != nullptr )
             {
-                _pSelection->bindPreviewScope( *pScene, *_pCommandStack );
+                _pSelection->bindPreviewScope( *pScene, getDocumentCommandStack() );
                 populatePreviewScene( *pScene );
                 framePreviewSubject(); // 처음 카메라 = 맞춤(F) — 창마다 따로 두던 frameSphere 를 한 곳으로
             }
@@ -249,7 +264,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PreviewStepTip" ) );
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 6.0f );
-            if ( ImGui::BeginCombo( "##previewSpeed", EditorPreviewPanelInternal::kArrSpeedLabel[_speedIndex] ) )
+            if ( EditorWidgets::beginCombo( "##previewSpeed", EditorPreviewPanelInternal::kArrSpeedLabel[_speedIndex] ) )
             {
                 for ( uint32 index = 0; index < static_cast<uint32>( std::size( EditorPreviewPanelInternal::kArrPreviewSpeed ) ); ++index )
                 {
@@ -267,7 +282,7 @@ namespace sw::editor
             {
                 ImGui::SameLine();
                 EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( ImGui::SliderFloat( "##previewScrub", &time, 0.0f, duration, "%.2f s" ) )
+                if ( EditorWidgets::sliderFloat( SW_WIDGET_ID( "##previewScrub" ), &time, 0.0f, duration, "%.2f s" ) )
                 {
                     _bPreviewPaused = SW_TRUE; // 문지르는 동안은 멈춘다(언리얼 Persona 타임라인과 같다)
                     seekPreviewTimeline( time );
@@ -315,7 +330,7 @@ namespace sw::editor
 
     bool EditorPreviewPanel::recordPreviewModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label )
     {
-        _pCommandStack->push( ObjectSnapshot::makeModify( editor::getSubsystem<SceneManager>(), obj, before, after, label ) ); // 인스펙터 편집은 선택의 `recordModify` 로 같은 스택
+        getDocumentCommandStack().push( ObjectSnapshot::makeModify( editor::getSubsystem<SceneManager>(), obj, before, after, label ) ); // 인스펙터 편집은 선택의 `recordModify` 로 같은 스택
         return true;
     }
 
@@ -337,7 +352,6 @@ namespace sw::editor
             if ( _bFocusApplied )
                 return;
             (void)editor::getSubsystem<SceneManager>().focusScene( pScene ); // 이 창의 씬이라 늘 알려진 씬이다
-            setFocusedCommandStack( _pCommandStack.get() );
             if ( _pSelection->isPreviewScope() )
                 setFocusedSelection( _pSelection.get() ); // 포커스를 잃어도 남는다 — 인스펙터가 이 선택을 고친다(`getFocusedSelection`)
             _bFocusApplied = SW_TRUE;
@@ -345,9 +359,6 @@ namespace sw::editor
         }
         if ( _bFocusApplied == false )
             return;
-        // 이 창이 건 것만 푼다 — 그 사이 다른 창이 자기 것을 걸었으면 그대로 둔다.
-        if ( getFocusedCommandStack() == _pCommandStack.get() )
-            setFocusedCommandStack( nullptr );
         // 소멸자 · 종료에서도 오는 길이라 씬 관리자가 먼저 내려갔을 수 있다 — 초점 씬을 풀 대상이 없을 뿐 오류가 아니다.
         SceneManager* pSceneManager    = findSubsystem<SceneManager>(); // 종료 순서에 따라 이미 없을 수 있다
         const bool    bOwnSceneFocused = pSceneManager != nullptr && pScene != nullptr && pSceneManager->getFocusedScene() == pScene;

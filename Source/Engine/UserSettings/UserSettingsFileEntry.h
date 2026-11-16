@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -31,8 +32,11 @@ namespace sw
          * @details 숫자는 쓰인 그대로, 불리언은 `true` / `false` 글이 됩니다. null · 배열 · 오브젝트는 빈 글입니다.
          */
         [[nodiscard]] static bool parseJSON( string_view jsonText, string_view sourceName, const UserSettingsSchema& schema, vector<UserSettingsFileEntry>& outListEntry );
-        /** @brief 스키마 버전과 @p listEntry 를 JSON 글로 만듭니다. 불리언 · 숫자 설정은 JSON 불리언 · 숫자로 쓰고(숫자로 읽히지 않으면 글), 나머지는 글로 씁니다. */
-        static string makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsWriteEntry>& listEntry );
+        /**
+         * @brief 스키마 버전과 @p listEntry 를 JSON 글로 만듭니다. 불리언 · 숫자 설정은 JSON 불리언 · 숫자로 쓰고(숫자로 읽히지 않으면 글), 나머지는 글로 씁니다.
+         * @return 값에 잘못된 UTF-8 이 있으면 오류입니다(`JSONDocument::dump`) — 부르는 쪽은 있던 파일을 덮지 않는다.
+         */
+        [[nodiscard]] static expected<string> makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsWriteEntry>& listEntry );
     };
 } // namespace sw
 

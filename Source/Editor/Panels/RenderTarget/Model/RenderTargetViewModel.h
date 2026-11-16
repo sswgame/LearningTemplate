@@ -86,7 +86,7 @@ namespace sw::editor
         /** @brief 레지스트리 세대가 바뀌었으면 목록을 다시 가져옵니다. */
         void refreshTargetsIfStale();
         /** @brief 사라진 선택을 놓고, 선택이 없으면 화면에 나가는 것(없으면 첫 색 타깃)을 고릅니다. */
-        void settleSelection();
+        void commitSelection();
         /** @brief 고른 타깃의 스냅샷이 있으면 true 입니다. */
         bool hasSnapshot() const;
         /** @brief 고른 타깃의 ImGui 텍스처 등록을 현재 선택에 맞춥니다. */

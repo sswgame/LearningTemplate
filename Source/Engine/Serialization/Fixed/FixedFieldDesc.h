@@ -32,12 +32,12 @@ namespace sw
 
     /** @brief @p T 의 수 꼴입니다. 열거형은 기반 타입으로 봅니다. 크기와 부호로 고르므로 `char` · `long` 도 같은 폭의 정수와 같은 값 규칙입니다. */
     template <typename TDecl>
-    constexpr FixedNumberType fixedNumberTypeOf() noexcept
+    constexpr FixedNumberType getFixedNumberType() noexcept
     {
         using T = std::remove_cv_t<TDecl>;
         if constexpr ( std::is_enum_v<T> )
         {
-            return fixedNumberTypeOf<std::underlying_type_t<T>>();
+            return getFixedNumberType<std::underlying_type_t<T>>();
         }
         else if constexpr ( std::is_same_v<T, float32> )
         {

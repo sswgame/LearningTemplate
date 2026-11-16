@@ -150,7 +150,7 @@ namespace sw
 
     /** @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`). */
     template <typename TCache>
-    void reloadAssetCacheOf( AssetCacheBase& cache, const AssetID& assetID )
+    void reloadAssetCache( AssetCacheBase& cache, const AssetID& assetID )
     {
         static_cast<TCache&>( cache ).reload( assetID );
     }
@@ -160,4 +160,4 @@ namespace sw
  * @brief 캐시 형식 @p Type 의 리로드 함수(`AssetCacheReloadFunction`)입니다. 배포 빌드는 리로드가 없다 — `nullptr` 이고 리로드 본문을 참조하지 않는다.
  * @details 빌드 스위치는 `SW_DEV_ONLY_FUNCTION` 한 곳이다(캐시마다 `#if` 를 두지 않는다).
  */
-#define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( SW_DEV_ONLY_FUNCTION( &::sw::reloadAssetCacheOf<Type> ) ) )
+#define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( SW_DEV_ONLY_FUNCTION( &::sw::reloadAssetCache<Type> ) ) )

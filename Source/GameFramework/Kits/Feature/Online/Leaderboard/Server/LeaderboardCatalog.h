@@ -51,7 +51,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "LeaderboardCatalog";
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadBoard( const XMLNode& node, string_view sourceName );
         /** @brief `<Board>` 와 그 `<Season>` · `<Reward>` 를 스키마로 읽습니다. 하나라도 틀리면 오류를 남기고 false 입니다(그 보드는 넣지 않는다). */
         [[nodiscard]] static bool readBoard( const XMLNode& node, string_view sourceName, LeaderboardDef& outBoard );
@@ -62,5 +62,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<LeaderboardCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_SERVER_API_EXTERN_TEMPLATE SharedAssetCache<LeaderboardCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_SERVER_API_EXTERN_TEMPLATE, LeaderboardCatalog );
 } // namespace sw

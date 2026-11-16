@@ -74,7 +74,7 @@ namespace sw
         uint8 _bDumpPending          SW_GUARDED_BY( _mutex ){ SW_FALSE };
         string _visualizedAttachment SW_GUARDED_BY( _mutex );   ///< Present 원본을 바꾼 첨부 이름(비면 바꾸지 않음)
         atomic<uint8>                _bVisualizing{ SW_FALSE }; ///< `_visualizedAttachment` 가 비지 않았는지 — 렌더 스레드가 잠금 없이 먼저 본다
-    };
 
-    SW_SERVICE_SLOT( GPUPixelInspector, Optional );
+        SW_SERVICE_SLOT( GPUPixelInspector, Optional );
+    };
 } // namespace sw

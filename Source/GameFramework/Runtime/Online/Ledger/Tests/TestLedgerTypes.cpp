@@ -85,7 +85,7 @@ SW_TEST_CASE( LedgerTypesTest, HolderKeysFollowTheirFormat )
 }
 
 /** @brief [LedgerTypesTest] 유효성 · 같음은 종류가 쓰는 칸만 본다 — 계정 0, 규칙 밖 에스크로, Count 종류는 무효이다 */
-SW_TEST_CASE( LedgerTypesTest, HolderValidityAndEqualityLookOnlyAtTheirKindFields )
+SW_TEST_CASE( LedgerTypesTest, HolderValidityAndEqualityLookOnlyAtTheirKindProperties )
 {
     // 틀리면: 계정 0 · 대문자 도메인 · Count 를 받으면 무효 단언이, 종류를 안 보고 비교하면 발행 ≠ 소각이, 안 쓰는 칸까지 비교하면 마지막 같음 단언이 진다.
     SW_EXPECT_TRUE( LedgerHolder::makeAccount( 1 ).isValid() );

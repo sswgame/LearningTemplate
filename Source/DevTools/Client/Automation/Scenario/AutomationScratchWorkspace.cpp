@@ -35,7 +35,7 @@ namespace sw
              */
             static constexpr string_view kAllowedConfigWrites[] = { "Config/Editor" };
 
-            /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
+            /** @brief `FileUtil::WriteFilter` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static expected<void> allowWrite( string_view path )
             {
                 // 지킬 원본(`Content`)이 없는 구성(패키지 - 팩만)에는 막을 것이 없다.
@@ -122,6 +122,12 @@ namespace sw
         (void)FileUtil::removeDirectory( instanceDir ); // 못 지우면 FileUtil 이 경고를 남긴다 — 남은 상태로 시작한다
     }
 
+    bool AutomationScratchWorkspace::discard( const AutomationScratchFolder& folder )
+    {
+        const string scratchDir = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), folder._scratchID );
+        return FileUtil::removeDirectory( scratchDir ); // 못 지우면 FileUtil 이 경로와 이유를 경고한다
+    }
+
     expected<void> AutomationScratchWorkspace::prepare( const AutomationScratchFolder& folder )
     {
         if ( expected<void> valid = AutomationScratch::isValidFolder( folder ); valid.has_value() == false )
@@ -187,14 +193,14 @@ namespace sw
         return {};
     }
 
-    void AutomationScratchWorkspace::acquireWriteGate()
+    void AutomationScratchWorkspace::acquireWriteFilter()
     {
-        FileUtil::setWriteGate( &AutomationScratchWorkspaceInternal::allowWrite );
+        FileUtil::setWriteFilter( &AutomationScratchWorkspaceInternal::allowWrite );
     }
 
-    void AutomationScratchWorkspace::releaseWriteGate()
+    void AutomationScratchWorkspace::releaseWriteFilter()
     {
-        FileUtil::setWriteGate( nullptr );
+        FileUtil::setWriteFilter( nullptr );
     }
 
     uint64 AutomationScratchWorkspace::getPrepareCount()

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -15,8 +16,15 @@
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
+namespace sw
+{
+    class CommandStack;
+} // namespace sw
+
 namespace sw::editor
 {
+    class DocumentEditSpan;
+    struct DocumentEdit;
     class UndoStepOwner;
 
     /**
@@ -25,7 +33,7 @@ namespace sw::editor
      * @details 닫기 확인(Save / Don't Save / Cancel)은 `IEditorPanel::requestClose` 가 문서 패널이 아닌 패널과 함께 한다. 저장하지 않고 닫으면
      *          `revertDocument` 로 편집을 버린다(기본은 `reloadDocument`).
      *          파일 하나를 문서로 고치는 패널은 모두 이 기반으로 연다(언리얼 `FAssetEditorToolkit` 의 자리) — 콘텐츠 브라우저 · 패널 안 목록 · 경로 칸 · 시나리오(`asset.openScratch`)가
-     *          같은 길(워크스페이스 포커스 → `acceptsDocumentPath` → `loadDocument`)로 열고, 저장 왕복 시나리오(`panel.saveDocument` · `panel.reloadDocument`)가 사본 문서를 다룬다.
+     *          같은 길(워크스페이스 포커스 → `canAcceptDocumentPath` → `loadDocument`)로 열고, 저장 왕복 시나리오(`panel.saveDocument` · `panel.reloadDocument`)가 사본 문서를 다룬다.
      *          자체 열기 길을 둔 패널(카탈로그 · 입력 맵 · 오디오 이벤트 · UI Preview · 어빌리티 카탈로그 · 데이터 테이블)은 시나리오가 사본을 가리킬 수 없어 이 기반으로 옮겼다.
      *          연 문서 경로가 없는 문서 패널(전역 변수 · 프로젝트 설정 · 메시 모디파이어)은 `EditorStateDocumentPanel` 이고, `IEditorDocumentPanel` 은 이 둘만 상속할 수 있다.
      */
@@ -35,6 +43,8 @@ namespace sw::editor
         const utf8*     getPanelTitle() const override;
         EditorDockSlot  getDefaultDockSlot() const override { return EditorDockSlot::Center; }
         EditorAssetType getDocumentKind() const override { return _kind; }
+        /** @brief 이 문서의 되돌리기 스택이다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(`EditorPanelManager::updateFocusedCommandStack`). */
+        CommandStack* findPanelCommandStack() override { return _pDocumentStack.get(); }
 
     private:
         static constexpr uint32 kMaxRecentDocumentCount = 8;
@@ -45,7 +55,7 @@ namespace sw::editor
          * @param bLoadOnOpen true 이면 포커스가 없어도 첫 draw 에서 로드를 요청합니다. 기본 문서를 여는 용도입니다.
          */
         explicit EditorDocumentPanel( const EditorAssetType& kind, bool bLoadOnOpen );
-        /** @brief 쌓여 있는 되돌리기 항목이 사라진 패널을 부르지 않게 표지를 비웁니다(백엔드 교체는 패널을 다시 만들어도 되돌리기 스택을 남긴다). */
+        /** @brief 쌓여 있는 되돌리기 항목이 사라진 패널을 부르지 않게 표지를 비우고, 포커스가 이 문서의 스택을 겨누고 있으면 풉니다. */
         ~EditorDocumentPanel() override;
 
         /** @brief 패널 본문을 그립니다. */
@@ -53,13 +63,13 @@ namespace sw::editor
 
         /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true 입니다. */
         bool hasNewFocusedDocument() const;
-        /** @brief 매칭된 포커스 경로를 반환합니다. 종류가 맞고 `acceptsDocumentPath` 가 받는 경로만이며, 매칭이 없으면 빈 문자열입니다. */
+        /** @brief 매칭된 포커스 경로를 반환합니다. 종류가 맞고 `canAcceptDocumentPath` 가 받는 경로만이며, 매칭이 없으면 빈 문자열입니다. */
         string_view getMatchingFocusedPath() const;
         /**
          * @brief 이 패널이 @p assetPath(리소스 id)를 문서로 받으면 true 입니다. 기본은 종류만 맞으면 받습니다.
          * @details 한 종류 안의 일부만 다루는 패널이 좁힌다(Data 종류 중 `*.vfx.xml` 만 보는 VFX 미리보기). "Open..." 목록은 이 판정에 더해 파일의 첫 종류가 이 패널의 종류여야 한다 — 포커스는 그보다 넓다(스프라이트 클립은 포커스한 이미지를 아틀라스로 열지만, 이미지를 모두 목록에 넣지는 않는다).
          */
-        virtual bool acceptsDocumentPath( string_view assetPath ) const
+        virtual bool canAcceptDocumentPath( string_view assetPath ) const
         {
             (void)assetPath;
             return true;
@@ -88,7 +98,8 @@ namespace sw::editor
         /** @brief 최근에 연 문서 목록을 반환합니다. 새 것이 앞이고 최대 `kMaxRecentDocumentCount` 개입니다. */
         const vector<string>& getRecentDocumentPaths() const { return _listRecentPath; }
 
-        const string& getLoadedAssetPath() const { return _loadedAssetPath; }
+        const string&             getLoadedAssetPath() const { return _loadedAssetPath; }
+        [[nodiscard]] string_view getDocumentAssetPath() const final { return _loadedAssetPath; }
         /**
          * @brief 열린 문서(리소스 id)의 디스크 자리입니다 - 읽기와 쓰기가 같은 해석이다(R7, `AssetPaths::toDiskPath`: 전역 id 는 아직 없어도 그 도메인 아래, 상대 키는 이긴 있는 파일).
          * @details 예전에는 패널마다 읽기는 `findLooseFile`, 쓰기는 다른 해석(못 찾으면 받은 글 그대로 · 쓸 자리 해석)을 따로 불렀다. 문서가 없거나 풀 수 없으면 빈 값이다(이유는 로그).
@@ -125,8 +136,32 @@ namespace sw::editor
         void revertDocument() override { reloadDocument(); }
         /** @brief 저장한 문서(`getLoadedAssetPath`)를 그 자리에서 캐시 · 씬 · 그것을 펼쳐 넣은 에셋에 반영합니다(`AssetHotReload::applySavedAsset`). 파일 감시의 늦은 사건을 기다리지 않는다. */
         void onDocumentSaved() override;
-        /** @brief 편집 단위로 Undo 를 남기고 dirty 로 표시합니다. */
-        void notifyDocumentEdited( string_view label, string_view coalesceKey = {} );
+        /** @brief 연 문서의 디스크 자리(`getDocumentDiskPath`)입니다. 다른 파일을 쓰거나 더 쓰는 패널(스프라이트 클립 · 타일맵 · 캐릭터 · 데이터 테이블)이 재정의한다. 풀지 못하면 더하지 않는다 — 저장 자신이 이유를 남기고 진다. */
+        void collectFilesToSave( vector<string>& outListPath ) const override;
+        /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
+        static void appendFileToSave( string_view path, vector<string>& outListPath );
+        /**
+         * @brief 문서가 바뀌었음을 알립니다 — dirty 로 표시하고 되돌리기를 남긴다. 위젯이 활성인 동안(끌기 · 슬라이더 · 글 칸)은 상호작용 구간으로 쥐고,
+         *        풀린 프레임에 (구간 전 글, 끝 글)을 한 단계로 기록한다(`flushDocumentInteraction`, 감사 P0-1). 바뀐 것이 없으면 아무것도 하지 않는다.
+         */
+        void notifyDocumentEdited( string_view label );
+        /**
+         * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
+         * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`suspendHistory`)가 그 기록을
+         *          함께 버렸다 — 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 되돌릴 수 없었다. 이제 플레이 경계는 메인(씬) 스택만 맡는다.
+         *          언리얼은 전역 트랜잭션 버퍼 하나(에셋 편집도 같은 버퍼), 유니티 Undo 도 전역 하나, Godot 은 씬 · 리소스마다 history 를 두고 편집한 대상이 고른다 —
+         *          에셋 문서를 씬과 따로 되돌리는 Godot 쪽을 따르고, 포커스 창이 스택을 고른다(`findPanelCommandStack`).
+         */
+        CommandStack& getDocumentCommandStack() { return *_pDocumentStack; }
+        /**
+         * @brief 이 문서의 되돌리기 기록을 비웁니다. 문서를 (다시) 읽으면 부른다 — 쥔 단계는 앞 글의 구간이라 새 글에 붙이면 문서가 깨진다.
+         * @details 기록 길이로 dirty 를 읽는 파생(미리보기)은 재정의해 그 기준도 함께 돌리고 이 함수를 꼭 부른다.
+         */
+        virtual void resetDocumentHistory();
+        /** @brief 쥐고 있는 상호작용 구간이 끝났으면(활성 위젯이 없다) 그 구간을 한 단계로 기록합니다. */
+        void flushDocumentInteraction() override;
+        /** @brief 상호작용 구간이 열려 있으면(활성 위젯이 있다) true 입니다. 구간을 쥐는 패널 모델(UI 미리보기 프로퍼티 편집)도 이 답을 본다. */
+        static bool isWidgetInteractionActive();
         /** @brief 로드나 저장 직후에 Undo 기준 텍스트를 맞춥니다. */
         void syncDocumentUndoBaseline();
         /** @brief 현재 문서를 텍스트로 직렬화합니다. */
@@ -152,6 +187,8 @@ namespace sw::editor
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
+        /** @brief 상호작용 구간 하나(@p edit)를 이 문서의 스택(`getDocumentCommandStack`)에 한 단계로 기록하고 dirty 로 표시합니다. */
+        void recordDocumentEdit( const DocumentEdit& edit );
         /** @brief 읽었거나 새 문서임을 표시합니다. 저장을 허용하고 되돌리기 기준을 맞춥니다. */
         void markDocumentLoaded();
         /** @brief 읽지 못했음을 표시합니다. 다시 읽으려 하지 않고(`isDocumentLoaded`) 저장을 막습니다(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀립니다. */
@@ -161,14 +198,15 @@ namespace sw::editor
         EditorAssetType                         _kind;
         string                                  _loadedAssetPath;
         string                                  _pendingFocusPath;
-        string                                  _documentUndoBaseline;
         string                                  _lastSavedDocumentText;
-        shared_ptr<EditorDocumentPanel*>        _pUndoTarget; ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
-        unique_ptr<UndoStepOwner>               _pUndoOwner;  ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
+        Subscription                            _assetsMovedSubscription; ///< 작업 공간의 에셋 옮김 알림 — 열린 문서의 경로를 새 id 로 고친다
+        shared_ptr<EditorDocumentPanel*>        _pUndoTarget;             ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
+        unique_ptr<DocumentEditSpan>            _pEditSpan;               ///< 되돌리기 기준 글과 쥔 상호작용 구간. 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
+        unique_ptr<UndoStepOwner>               _pUndoOwner;              ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
+        unique_ptr<CommandStack>                _pDocumentStack;          ///< 이 문서의 되돌리기 스택(`getDocumentCommandStack`). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
         vector<string>                          _listRecentPath;
         vector<string>                          _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128> _openFilter;
-        uint32                                  _documentLoadEpoch; ///< 문서를 읽은 횟수이다. 합치기 키를 가른다
         uint8                                   _bLoaded        : 1;
         uint8                                   _bConfirmSwitch : 1;
         uint8                                   _bLoadFailed    : 1;

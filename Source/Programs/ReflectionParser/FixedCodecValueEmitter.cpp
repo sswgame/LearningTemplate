@@ -99,7 +99,7 @@ namespace sw
     FixedCodecNode FixedCodecValueEmitter::makeInteger( const FixedCodecSite& site, const FixedCodecBound& minBound, const FixedCodecBound& maxBound )
     {
         StringBuilder<constant::buffer::kMax2048> call;
-        call.appendFormat( "::sw::FixedFieldDesc::makeInteger( %#, ::sw::fixedNumberTypeOf< %# >(), %#, %#", site._offsetExpr, site._typeExpr,
+        call.appendFormat( "::sw::FixedFieldDesc::makeInteger( %#, ::sw::getFixedNumberType< %# >(), %#, %#", site._offsetExpr, site._typeExpr,
                            FixedCodecBoundResolver::makeIntegerBound( minBound ), FixedCodecBoundResolver::makeIntegerBound( maxBound ) );
         return FixedCodecNode( string( call.view() ), FixedCodecNode::ChildArgs::None );
     }
@@ -160,7 +160,7 @@ namespace sw
                     mask.append( " | " );
                 mask.appendFormat( "static_cast<uint64>( %#::%# )", enumType, enumerator._name );
             }
-            call.appendFormat( "::sw::FixedFieldDesc::makeFlagEnum( %#, ::sw::fixedNumberTypeOf< %# >(), %#", site._offsetExpr, enumType,
+            call.appendFormat( "::sw::FixedFieldDesc::makeFlagEnum( %#, ::sw::getFixedNumberType< %# >(), %#", site._offsetExpr, enumType,
                                mask.size() > 0 ? mask.view() : string_view( "0" ) );
             outListNode.emplace_back( string( call.view() ), FixedCodecNode::ChildArgs::None );
             return true;
@@ -203,7 +203,7 @@ namespace sw
             maxExpr.appendFormat( "static_cast<int64>( %#::%# )", enumType, pMax->_name );
         else
             maxExpr.appendFormat( "static_cast<int64>( %#::%# ) - 1", enumType, enumInfo._countEnumerator );
-        call.appendFormat( "::sw::FixedFieldDesc::makeEnum( %#, ::sw::fixedNumberTypeOf< %# >(), static_cast<int64>( %#::%# ), %#, %#, %#u", site._offsetExpr, enumType, enumType,
+        call.appendFormat( "::sw::FixedFieldDesc::makeEnum( %#, ::sw::getFixedNumberType< %# >(), static_cast<int64>( %#::%# ), %#, %#, %#u", site._offsetExpr, enumType, enumType,
                            pMin->_name, maxExpr.view(), FixedCodecEmitState::makeEnumValueTableName( enumInfo ), valueCount );
         outListNode.emplace_back( string( call.view() ), FixedCodecNode::ChildArgs::None );
         return true;
@@ -274,7 +274,7 @@ namespace sw
             FixedCodecNode node( "::sw::FixedFieldDesc::makeInline( " + site._offsetExpr, FixedCodecNode::ChildArgs::Group );
             outCanonical += "inline{T=" + fqn + "|";
             state._listInlineFqn.push_back( fqn );
-            emitFields( state, *pNested, outCanonical, node._listChild );
+            emitProperties( state, *pNested, outCanonical, node._listChild );
             state._listInlineFqn.pop_back();
             outCanonical += "}";
             outListNode.push_back( std::move( node ) );
@@ -473,7 +473,7 @@ namespace sw
         outCanonical += "|";
     }
 
-    void FixedCodecValueEmitter::emitFields( FixedCodecEmitState& state, const ParsedTypeInfo& type, string& outCanonical, vector<FixedCodecNode>& outListNode )
+    void FixedCodecValueEmitter::emitProperties( FixedCodecEmitState& state, const ParsedTypeInfo& type, string& outCanonical, vector<FixedCodecNode>& outListNode )
     {
         state._listScope.push_back( FixedCodecScopeFrame{ &type, 0 } );
         for ( size_t index = 0; index < type._listProperty.size(); ++index )

@@ -43,11 +43,9 @@ namespace sw
             {
                 if ( depth > constant::reflection::kMaxParentChainDepth )
                     return false;
-                const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-                const uint32    chainLength = type.collectTypeChain( arrChain );
-                for ( uint32 level = 0; level < chainLength; ++level )
+                for ( const TypeInfo* pLevel : type.getTypeChain() )
                 {
-                    if ( arrChain[level]->_pValidate != nullptr )
+                    if ( pLevel->_pValidate != nullptr )
                         return true;
                 }
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
@@ -127,12 +125,10 @@ namespace sw
                 }
 
                 // 타입 검증은 기반부터 — 파생의 검증이 기반이 이미 본 것을 다시 적지 않게 순서를 정해 둔다.
-                const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
-                uint32          level = type.collectTypeChain( arrChain );
-                while ( level > 0 )
+                const TypeChain chain = type.getTypeChain();
+                for ( uint32 level = chain.size(); level > 0; --level )
                 {
-                    --level;
-                    const TypeInfo& levelType = *arrChain[level];
+                    const TypeInfo& levelType = *chain[level - 1];
                     if ( levelType._pValidate == nullptr )
                         continue;
                     context.setScope( levelType._fullyQualifiedName, hashed_string{} );

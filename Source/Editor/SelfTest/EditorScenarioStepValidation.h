@@ -193,7 +193,7 @@ namespace sw::editor
         static constexpr const utf8* kDockLayoutKind   = "EditorExpectDockLayout";
         static constexpr const utf8* kCaptureKind      = "CaptureEditorUI";
         static constexpr const utf8* kSelfTestKind     = "EditorSelfTest";
-        static constexpr const utf8* kWaitSettledKind  = "EditorWaitSettled";
+        static constexpr const utf8* kWaitStableKind   = "EditorWaitStable";
         /**
          * @brief UI 캡처 한 번이 시나리오 벽시계 상한에 더하는 초입니다. 캡처는 에디터가 가라앉기(애셋 · 배경 작업 — 바깥 일)를 벽시계로 기다린다.
          * @details 캡처 수에 상한이 따라가지 않으면 패널마다 찍는 감사(uiaudit, 40 장 넘게)가 부하 걸린 기계에서 기본 150 초를 넘겨 졌다

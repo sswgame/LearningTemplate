@@ -242,7 +242,7 @@ namespace
             return {};
         }
 
-        void pump()
+        void poll()
         {
             _registry.update( UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } );
             _endpoint._server.update();
@@ -253,8 +253,8 @@ namespace
             const uint64 ticket = _registry.submitValidation( storeName, payload, kBuyer, UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } );
             SW_EXPECT_TRUE( ticket != 0 );
             vector<ReceiptValidationResult> listResult;
-            const bool                      bDone = test::pumpUntil( [this]()
-            { pump(); }, [this, &listResult]()
+            const bool                      bDone = test::pollUntil( [this]()
+            { poll(); }, [this, &listResult]()
             {
                 _registry.pollCompletions( listResult );
                 return listResult.empty() == false;
@@ -299,14 +299,14 @@ SW_TEST_CASE_F( ReceiptEndToEndTest, GoogleReachesTheEndpoint )
     task._recordKey   = "rcpt.google/rec";
     task._deliveryKey = result._deliveryKey;
     SW_REQUIRE_TRUE( _registry.confirmDelivery( task, UnixMilliseconds{ ReceiptEndpointTestUtil::getNowMs() } ) );
-    vector<ReceiptDeliveryResult> listOutcome;
-    SW_REQUIRE_TRUE( test::pumpUntil( [this]()
-    { pump(); }, [this, &listOutcome]()
+    vector<ReceiptDeliveryResult> listServiceResult;
+    SW_REQUIRE_TRUE( test::pollUntil( [this]()
+    { poll(); }, [this, &listServiceResult]()
     {
-        _registry.pollDeliveryOutcomes( listOutcome );
-        return listOutcome.empty() == false;
+        _registry.pollDeliveryResults( listServiceResult );
+        return listServiceResult.empty() == false;
     } ) );
-    SW_EXPECT_TRUE( listOutcome[0]._status == ReceiptDeliveryStatus::Confirmed );
+    SW_EXPECT_TRUE( listServiceResult[0]._status == ReceiptDeliveryStatus::Confirmed );
     SW_EXPECT_EQUAL( 1, _endpoint._acknowledgeCount );
 }
 
@@ -365,9 +365,10 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
         resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "economy", "_settings": {
             "_currencyCatalog": "%#/e2e.currencies.xml",
             "_offerCatalog": "%#/e2e.offers.xml",
+            "_refundRecovery": "Debt",
             "_receiptProvidersFile": "%#"%# } } ] })",
                                     test::ScopedScratchDomain::kDomain, test::ScopedScratchDomain::kDomain, providersFile, trustOption );
-        return string( resultBuilder.view() );
+        return test::OnlineRuntimeFixture::withBaseTTL( resultBuilder.view() );
     };
 
     {
@@ -386,7 +387,7 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
         const expected<void> started = rig.fromConfig( kServerJSON, makeOnlineJSON( trustOption ), ReceiptEndpointTestUtil::getNowMs() );
         SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? string_view{} : started.error().message() );
     }
-    SW_REQUIRE_TRUE( test::pumpUntil( [&rig, &endpoint]()
+    SW_REQUIRE_TRUE( test::pollUntil( [&rig, &endpoint]()
     {
         rig.updateAll( ReceiptEndpointTestUtil::getNowMs(), 1 );
         endpoint._server.update();

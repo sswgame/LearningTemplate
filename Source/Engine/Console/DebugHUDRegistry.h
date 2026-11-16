@@ -14,6 +14,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
 
 namespace sw
@@ -47,7 +48,8 @@ namespace sw
         /** @brief 프레임 시간 기록의 길이(프레임)입니다. */
         static constexpr uint32 kFrameHistoryCount = 120;
 
-        DebugHUDSectionWriter();
+        /** @brief HUD 틀(레지스트리 · HUD · 에디터 HUD 뷰 · 테스트)만 만든다 — 열쇠를 받아 섹션 본문에 넘긴다(`getSceneIterationKey`). */
+        explicit DebugHUDSectionWriter( SceneIterationKey key );
 
         /** @brief 줄 · 그래프를 비웁니다(칸은 남긴다). */
         void reset();
@@ -74,6 +76,8 @@ namespace sw
         bool                   hasGraph() const { return _listGraph.empty() == false; }
         const vector<float32>& getGraph() const { return _listGraph; }
         float32                getGraphMax() const { return _graphMax; }
+        /** @brief 씬 전체를 도는 섹션이 쓰는 순회 열쇠입니다(`GameplayDebugTarget::findTargetComponent`) — HUD 틀이 넘긴 것이다. */
+        SceneIterationKey getSceneIterationKey() const { return _sceneIterationKey; }
 
     private:
         vector<DebugHUDLine> _listLine;
@@ -82,6 +86,7 @@ namespace sw
         float32              _graphMax;
         uint32               _lineCount;
         uint32               _frameHistoryCount;
+        SceneIterationKey    _sceneIterationKey;
     };
 } // namespace sw
 
@@ -173,9 +178,9 @@ namespace sw
         RegistrationList<const DebugHUDSectionRegistration> _registration SW_GUARDED_BY( _mutex ); ///< (순서, 이름) 순 · 이름은 대소문자 무시
         uint64 _revision                                                  SW_GUARDED_BY( _mutex );
         GameObjectHandle _target                                          SW_GUARDED_BY( _mutex ); ///< `setTarget` 이 정한 대상(무효면 없음)
-    };
 
-    SW_SERVICE_SLOT( DebugHUDRegistry, Required );
+        SW_SERVICE_SLOT( DebugHUDRegistry, Required );
+    };
 } // namespace sw
 
 namespace sw
@@ -204,8 +209,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
 
 /**
- * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 아무것도 남기지 않습니다 — 본문 함수도 `#if !defined( SW_SHIPPING )`
- *        안에 두십시오.
+ * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 등록을 남기지 않습니다 — 본문 함수는 컴파일되지만 부르는 곳이 없어 링크에서 빠진다.
  * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName   명령 · 설정에 쓰는 이름(리터럴, `hud <이름> on`)
  * @param pTitle  HUD 에 보이는 제목
@@ -222,6 +226,8 @@ namespace sw
 
 #else
 
-    #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc ) static_assert( true, "SW_DEBUG_HUD_SECTION is compiled out of Shipping" )
+    // 인자를 평가 없이 참조한다 — 등록에만 쓰이는 순서 상수 · 본문 함수가 Shipping 에서만 '안 쓰임' 경고를 내지 않게.
+    #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc ) \
+        static_assert( sizeof( pFunc ) > 0 && sizeof( order ) > 0 && sizeof( flags ) > 0, "SW_DEBUG_HUD_SECTION is compiled out of Shipping" )
 
 #endif

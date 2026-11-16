@@ -32,7 +32,7 @@ namespace sw
      *          시선(폰의 `Look Action`, 2D)은 감도를 곱해 조종 회전에 더하고, 피치를 폰의 상한에서 자른다. 화면 아래(+y)로 끌면 아래를 본다.
      *          폰 스키마에 있는데 입력 맵에 없는 버튼과 아날로그는 처음 쥘 때 한 번 경고한다. 조용히 안 눌리면 안 되기 때문이다.
      *
-     *          **마우스 잠금**: 폰이 바라면(`PawnComponent::wantsMouseLock`, 1인칭) 쥘 때 커서를 창 가운데에 잠그고 숨긴다.
+     *          **마우스 잠금**: 폰이 바라면(`PawnComponent::needsMouseLock`, 1인칭) 쥘 때 커서를 창 가운데에 잠그고 숨긴다.
      *          잠금 토글 액션(`_mouseLockAction`, 기본 `ToggleMouseLock`, Esc)이 해제하고 다시 적용한다. 빙의를 풀거나 지워질 때 적용한 잠금을 해제한다.
      *          그런 폰의 시선은 잠금이 실제로 적용된 동안만 쌓는다(`InputManager::isMouseLockActive`).
      *          포커스 밖, Alt, 개발 콘솔, 클릭 전에는 풀린 커서를 움직여도 화면이 돌지 않는다.
@@ -42,7 +42,7 @@ namespace sw
      *          **UI 와의 경계는 이 조종자 한 곳이다.**
      *          런타임 UI 가 먹은 입력(`IInputCaptureQuery::isActionCaptured`, 메뉴에서 누른 패드 A, 위젯이 받은 클릭)은 뗄 때까지 의도에 넣지 않는다.
      *          모달이나 로딩 화면이 떠 있으면(`isGameInputBlocked`) 의도가 0 이다. 조종 회전은 남는다.
-     *          활성 화면이 커서를 바라면(`wantsCursor`) 마우스 잠금을 쉬고 시선을 쌓지 않는다. 화면이 닫히면 요청해 둔 잠금으로 돌아간다.
+     *          활성 화면이 커서를 바라면(`needsCursor`) 마우스 잠금을 쉬고 시선을 쌓지 않는다. 화면이 닫히면 요청해 둔 잠금으로 돌아간다.
      */
     REFLECT( Category = "Control", DisplayName = "Player Controller", Tooltip = "Local player: InputMap actions -> control intent; moves the view target and input layer with possession" )
     class SW_GF_API PlayerControllerComponent : public ControllerComponent

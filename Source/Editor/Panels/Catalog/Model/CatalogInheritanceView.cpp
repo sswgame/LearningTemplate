@@ -130,7 +130,7 @@ namespace sw::editor
                 for ( XMLNode child = flat.isValid() ? flat.findChild( pName ) : XMLNode{}; child.isValid(); child = child.findNextSibling( pName ) )
                 {
                     CatalogChildStep step{ section._name, field._keyAttribute, string( child.getAttributeText( pKey ) ), 0 };
-                    Row              row{ step, findWritten( parsed, ownerIndex, step ), child, parent.isValid() ? CatalogInheritanceView::walkPath( parent, CatalogChildPath{ step } ) : XMLNode{} };
+                    Row              row{ step, findWritten( parsed, ownerIndex, step ), child, parent.isValid() ? CatalogInheritanceView::findByPath( parent, CatalogChildPath{ step } ) : XMLNode{} };
                     // `_op="Replace"` 는 부모 칸을 물려받지 않는다.
                     if ( readWrittenAttribute( row._pWritten, DataInheritance::kOpAttribute ) == DataInheritance::kOpReplace )
                         row._parent = XMLNode{};
@@ -148,7 +148,7 @@ namespace sw::editor
                         if ( written._name != section._name || readWrittenAttribute( &written, DataInheritance::kOpAttribute ) != DataInheritance::kOpRemove )
                             continue;
                         CatalogChildStep step{ section._name, field._keyAttribute, string( readWrittenAttribute( &written, field._keyAttribute ) ), 0 };
-                        listRemoved.push_back( Row{ step, &written, XMLNode{}, parent.isValid() ? CatalogInheritanceView::walkPath( parent, CatalogChildPath{ step } ) : XMLNode{} } );
+                        listRemoved.push_back( Row{ step, &written, XMLNode{}, parent.isValid() ? CatalogInheritanceView::findByPath( parent, CatalogChildPath{ step } ) : XMLNode{} } );
                     }
                 }
 
@@ -198,8 +198,8 @@ namespace sw::editor
                 section._kind = CatalogChildSectionKind::Field;
                 const CatalogChildStep   step{ section._name, string(), string(), 0 };
                 const CatalogChildPath   stepPath{ step };
-                const XMLNode            flatChild   = flat.isValid() ? CatalogInheritanceView::walkPath( flat, stepPath ) : XMLNode{};
-                const XMLNode            parentChild = parent.isValid() ? CatalogInheritanceView::walkPath( parent, stepPath ) : XMLNode{};
+                const XMLNode            flatChild   = flat.isValid() ? CatalogInheritanceView::findByPath( flat, stepPath ) : XMLNode{};
+                const XMLNode            parentChild = parent.isValid() ? CatalogInheritanceView::findByPath( parent, stepPath ) : XMLNode{};
                 const CatalogXMLElement* pWritten    = findWritten( parsed, ownerIndex, step );
                 addNodeColumns( flatChild, section._listColumn );
                 addWrittenColumns( pWritten, section._listColumn );
@@ -446,7 +446,7 @@ namespace sw::editor
         return nullopt;
     }
 
-    XMLNode CatalogInheritanceView::walkPath( const XMLNode& start, const CatalogChildPath& path )
+    XMLNode CatalogInheritanceView::findByPath( const XMLNode& start, const CatalogChildPath& path )
     {
         XMLNode node = start;
         for ( const CatalogChildStep& step : path )

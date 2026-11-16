@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -329,6 +330,8 @@ namespace sw
         void recordNativeEvent( const NativeWindowEvent& event );
         /** @brief 지금까지 센 사람 입력 수입니다(늘기만 한다 — 시작 때 값과 비교한다). */
         uint64 getHumanInputSerial() const { return _humanInputSerial; }
+        /** @brief 지금까지 OS 에서 받은 원시 마우스 이동 보고 수입니다(Win32 WM_INPUT, 이동 0 인 보고는 세지 않는다). 늘기만 한다 — 감시 값 `Input.RawMouseEvents`. */
+        uint64 getRawMouseEventCount() const { return _rawMouseEventCount; }
         /** @brief 붙인 뒤 지난 `beginFrame` 횟수이며, 다음 `beginFrame` 이 원천에 넘길 프레임 번호입니다. */
         uint32 getVirtualFrameIndex() const { return _virtualFrameIndex; }
         /** @brief 이번 `beginFrame` 이 장치에 적용한 원시 이벤트입니다(배타 가상 입력이면 가상 이벤트만). 입력 녹화가 읽으며, 다음 `beginFrame` 까지 유효합니다. */
@@ -473,6 +476,7 @@ namespace sw
         vector<FramePress>                        _listFramePress;          /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
         float2                                    _frameLookDelta;          /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
         int2                                      _lastPlatformPointer;     /**< 버튼 이벤트에 좌표가 없는 창(Wayland `wl_pointer.button`)이 쓰는 포인터의 마지막 자리입니다. */
+        [[maybe_unused]] optional<int2>           _lastRawMouseAbsolute;    /**< 직전 절대 원시 마우스 보고의 화면 픽셀 좌표입니다(Win32 원격 데스크톱 · 가상 머신 — `Win32RawMouseUtil::readMotion`). 등록을 바꾸면 비운다. */
         ClockFunction                             _pfnNowMicroseconds;      /**< 이벤트 시각과 프레임 창을 측정하는 시계입니다(`setClock`). */
         int64                                     _frameEndMicroseconds;    /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
         IVirtualInputSource*                      _pVirtualInput;           /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
@@ -504,9 +508,9 @@ namespace sw
         uint8                                     _bNativeWindowFocused            : 1; /**< OS 창 자체가 포커스를 가졌는지입니다(X11 FocusIn/FocusOut) — 보조 폴링 · 가운데 되돌리기를 건너뛸지 정한다. */
         uint8                                     _bAccessibilityShortcutsDisabled : 1; /**< 접근성 단축키를 꺼 두었는지입니다(`_arrSavedAccessibilityFlags` 가 유효하다). */
         uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`recordNativeEvent`) */
+        uint64                                    _rawMouseEventCount{ 0 };             /**< OS 에서 받은 원시 마우스 이동 보고 수(`getRawMouseEventCount`) */
 
     private:
+        SW_SERVICE_SLOT( InputManager, Required );
     };
-
-    SW_SERVICE_SLOT( InputManager, Required );
 } // namespace sw

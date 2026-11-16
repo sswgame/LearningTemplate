@@ -44,9 +44,11 @@ namespace sw::editor
          * @brief @p selection 의 오브젝트에 기즈모를 그리고 조작합니다. 편집이 막혔거나(Play) 선택이 비면 진행 중인 드래그를 정리하고 반환합니다.
          * @details 드래그 중 다른 선택이 넘어오면 앞 드래그를 그 선택의 범위에 정리한다. @p selection 은 이 기즈모보다 오래 살거나 그 전에 `endDrag` 가 불려야 한다
          *          (미리보기 창은 기즈모와 선택을 함께 가진다). 표면 붙이기는 메인 선택에만 쓴다(활성 씬을 레이캐스트한다).
+         * @param pCenterMark 기즈모 가운데(화면 평면 이동 손잡이)를 적을 셀프테스트 마크 이름입니다. nullptr 이면 적지 않는다 — 한 프레임에 기즈모가 여럿(씬 뷰 · 미리보기 창)이라
+         *        이름은 부르는 쪽이 정한다(시나리오가 `EditorDrag` 로 끈다).
          */
         void draw( EditorSelection& selection, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
-                   const ViewportToolbarSettings& settings );
+                   const ViewportToolbarSettings& settings, const utf8* pCenterMark );
 
         /** @brief 기즈모를 끄는 중이면 true 입니다. 호버 강조를 막는 데 씁니다. */
         bool isDragging() const { return _bTracking == SW_TRUE; }
@@ -80,6 +82,9 @@ namespace sw::editor
         GameObject* findTracked( GameObjectHandle handle ) const;
         /** @brief 드래그 하나를 대상 선택의 범위에 기록합니다. */
         void commitDrag( GameObject& obj, const ObjectSnapshot& before ) const;
+        /** @brief 기즈모 가운데(@p listGizmo 하나면 그 위치, 여럿이면 무게중심 — `manipulateGroup` 과 같은 점)의 화면 자리를 마크 @p pMark 로 적습니다. 카메라 뒤면 적지 않는다. */
+        static void recordCenterMark( const utf8* pMark, const vector<GameObject*>& listGizmo, const float32* pView, const float32* pProj, const float2& canvasPos,
+                                      const float2& canvasSize );
 
     private:
         /// 드래그 시작 전 스냅샷(단일 · 그룹). 되돌리기 형식(`Workspace/Undo`)은 .cpp 만 본다 — 이 헤더를 include 하는 패널 View 가 작업 공간 헤더에 닿지 않게(언리얼 FScopedTransaction 이 기즈모 구현 안에 있는 자리)

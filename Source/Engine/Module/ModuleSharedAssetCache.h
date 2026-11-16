@@ -14,21 +14,22 @@
  *     SW_MODULE_SHARED_ASSET_CACHE( Crops, CropCatalog, SW_KIT_API, AssetTypeDef::makeDataFile( CropCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/crops.xml" }, AssetTypeLoader::of<CropCatalog>() ) );
  * @endcode
  */
-#define SW_MODULE_SHARED_ASSET_CACHE( id, AssetType, ExportMacro, ... )                            \
-    template <>                                                                                    \
-    struct SharedAssetCacheTraits<AssetType>                                                       \
-    {                                                                                              \
-        static constexpr AssetTypeDef kType = __VA_ARGS__;                                         \
-    };                                                                                             \
-    template class ExportMacro           SharedAssetCache<AssetType>;                              \
-    class SharedAssetCacheSubsystem_##id final : public ::sw::SharedAssetCacheSubsystem<AssetType> \
-    {                                                                                              \
-    public:                                                                                        \
-        static constexpr const utf8* kSubsystemName = "SharedAssetCache." #id;                     \
-        const utf8*                  getSubsystemName() const override                             \
-        {                                                                                          \
-            return kSubsystemName;                                                                 \
-        }                                                                                          \
-    };                                                                                             \
-    SW_MODULE_SUBSYSTEM( Engine, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id ); \
+#define SW_MODULE_SHARED_ASSET_CACHE( id, AssetType, ExportMacro, ... )                                                                                          \
+    static_assert( SharedAssetCacheDecl<AssetType>::kValue, "declare the cache in the asset header: SW_DECLARE_SHARED_ASSET_CACHE( <extern macro>, <asset> )" ); \
+    template <>                                                                                                                                                  \
+    struct SharedAssetCacheTraits<AssetType>                                                                                                                     \
+    {                                                                                                                                                            \
+        static constexpr AssetTypeDef kType = __VA_ARGS__;                                                                                                       \
+    };                                                                                                                                                           \
+    template class ExportMacro           SharedAssetCache<AssetType>;                                                                                            \
+    class SharedAssetCacheSubsystem_##id final : public ::sw::SharedAssetCacheSubsystem<AssetType>                                                               \
+    {                                                                                                                                                            \
+    public:                                                                                                                                                      \
+        static constexpr const utf8* kSubsystemName = "SharedAssetCache." #id;                                                                                   \
+        const utf8*                  getSubsystemName() const override                                                                                           \
+        {                                                                                                                                                        \
+            return kSubsystemName;                                                                                                                               \
+        }                                                                                                                                                        \
+    };                                                                                                                                                           \
+    SW_MODULE_SUBSYSTEM( Engine, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id );                                                               \
     SW_ASSET_TYPE( id, SharedAssetCacheTraits<AssetType>::kType )

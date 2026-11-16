@@ -186,7 +186,7 @@ namespace sw
 
         /** @brief 서비스를 등록합니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 등록하지 않습니다. */
         [[nodiscard]] bool registerServerService( IOnlineServerService* pService );
-        /** @brief 엔드포인트 pump, 요청 시한, 캐시 라우터, 서버 버스, 서비스 틱을 차례로 돌립니다. */
+        /** @brief 엔드포인트 poll, 요청 시한, 캐시 라우터, 서버 버스, 서비스 틱을 차례로 돌립니다. */
         void update( UnixMilliseconds nowMs );
 
         // 답은 서비스가 부르며 한 번만 보낼 수 있다. 이미 답했거나 끝난 요청이면 false 를 반환한다.

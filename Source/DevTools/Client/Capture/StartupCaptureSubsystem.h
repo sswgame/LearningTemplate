@@ -62,7 +62,7 @@ namespace sw
         /** @brief `-gv_screenshot` 의 한 프레임입니다 — 맡긴 장의 결과를 거두고, 차례면 다음 장을 맡긴다. */
         void updateGameView();
         /** @brief 화면이 자리 잡았는지입니다(활성 씬이 플레이를 시작했고 로딩 화면 · 페이드 · 에셋 읽기가 끝났다 — `AutomationCaptureUtil::isReadyForCapture`). */
-        [[nodiscard]] static bool isScreenSettled();
+        [[nodiscard]] static bool isScreenStable();
         /** @brief 맡긴 장의 결과가 왔으면 거둔다. 아직이면 false 입니다. */
         [[nodiscard]] bool collectPendingShot();
         /** @brief 다음 장(번호 `_shotCount`)을 렌더 스레드에 맡긴다. 첨부를 찾지 못하면 그 장은 쓰지 못한 것으로 센다. */

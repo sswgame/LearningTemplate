@@ -54,12 +54,12 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. 요청 태그가 0인 요청도 오며, 계정이 떠나서 서버가 낸 요청이 그렇습니다. */
     struct PartyLobbyCompletion
     {
-        vector<LobbySnapshot> _listLobby{}; ///< LobbyList
-        PartySnapshot         _party{};
-        LobbySnapshot         _lobby{};
-        uint64                _requestTag{ 0 };
-        MatchmakingOutcome    _result{ MatchmakingResult::Ok };
-        PartyLobbyOperation   _operation{ PartyLobbyOperation::PartyCreate };
+        vector<LobbySnapshot>    _listLobby{}; ///< LobbyList
+        PartySnapshot            _party{};
+        LobbySnapshot            _lobby{};
+        uint64                   _requestTag{ 0 };
+        MatchmakingServiceResult _result{ MatchmakingResult::Ok };
+        PartyLobbyOperation      _operation{ PartyLobbyOperation::PartyCreate };
     };
 } // namespace sw
 
@@ -94,7 +94,7 @@ namespace sw
     class SW_KIT_SERVER_API PartyLobbyService
     {
     public:
-        using PartyFoundDelegate = Delegate<void( uint64, MatchmakingOutcome, const PartySnapshot& )>; ///< 인자는 (요청 태그, 결과, 파티)이다
+        using PartyFoundDelegate = Delegate<void( uint64, MatchmakingServiceResult, const PartySnapshot& )>; ///< 인자는 (요청 태그, 결과, 파티)이다
 
         /** @brief 요청 하나의 컨텍스트입니다. 캐시 단계와 바꾸기 객체가 가지고 다니며 키트 안에서만 씁니다. */
         struct Request
@@ -168,8 +168,8 @@ namespace sw
         static string makeLobbyListKey( string_view modeID );
 
         /** @brief 바꾸기 객체가 부릅니다. 키트 안에서만 씁니다. */
-        void  finishParty( const Request& request, MatchmakingOutcome result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID );
-        void  finishLobby( const Request& request, MatchmakingOutcome result, const LobbySnapshot& lobby, AccountID removedID, bool bErased );
+        void  finishParty( const Request& request, MatchmakingServiceResult result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID );
+        void  finishLobby( const Request& request, MatchmakingServiceResult result, const LobbySnapshot& lobby, AccountID removedID, bool bErased );
         int32 getMaxPartySize() const { return _maxPartySize; }
 
     private:
@@ -210,8 +210,8 @@ namespace sw
         void   refreshIndexTTL( const PartySnapshot& party );
         void   notifyParty( const PartySnapshot& party, AccountID removedID );
         void   notifyLobby( const LobbySnapshot& lobby, AccountID removedID );
-        void   completeParty( const Request& request, MatchmakingOutcome result, const PartySnapshot& party );
-        void   completeLobby( const Request& request, MatchmakingOutcome result, const LobbySnapshot& lobby );
+        void   completeParty( const Request& request, MatchmakingServiceResult result, const PartySnapshot& party );
+        void   completeLobby( const Request& request, MatchmakingServiceResult result, const LobbySnapshot& lobby );
         uint64 allocateID() { return ( _serverID << 32 ) | ++_sequence; }
         /** @brief 계정의 로비를 기록합니다. 다른 로비에 있었으면 거기서 뺍니다. */
         void moveAccountToLobby( AccountID accountID, uint64 lobbyID );

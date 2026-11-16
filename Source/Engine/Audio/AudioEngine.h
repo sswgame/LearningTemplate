@@ -120,6 +120,8 @@ namespace sw
         [[nodiscard]] bool findEventLibraryName( string_view libraryName, hashed_string& outLibraryName ) const;
         /** @brief 클립 캐시입니다. */
         AudioClipCache& getClipStore() { return _clipStore; }
+        /** @brief 클립 캐시입니다(읽기 전용 — 감시 값). */
+        const AudioClipCache& getClipStore() const { return _clipStore; }
         /** @brief 컨테이너와 범위가 쓰는 난수의 시드를 정합니다. 테스트에서 결정성을 얻으려고 씁니다. 다음 블록부터 적용됩니다. */
         void setRandomSeed( uint64 seed );
 

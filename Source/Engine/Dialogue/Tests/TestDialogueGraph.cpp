@@ -356,9 +356,25 @@ SW_TEST_CASE( DialogueGraphTest, SpeakerIsAnIDOfTheSpeakerList )
     SW_EXPECT_LOG( "Dialogue.SpeakerMissing" );   // 목록에 없는 화자
     SW_EXPECT_LOG( "Dialogue.SpeakerIDInvalid" ); // 겹친 화자 id
     SW_EXPECT_LOG( "Config.KeyUnknown" );         // 화자 칸에 이름 글(옛 모양) — 읽지 못한 값
+    SW_EXPECT_LOG( "Dialogue.StartNodeCount" );   // 시작 없는 그래프
     SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Dialogue" _speaker="7" /></_listNode></DialogueGraphAsset>)" ) );
     SW_EXPECT_FALSE( asset.loadFromXMLText(
         R"(<DialogueGraphAsset><_listSpeaker><DialogueSpeaker _id="1" _name="A" /><DialogueSpeaker _id="1" _name="B" /></_listSpeaker><_listNode /></DialogueGraphAsset>)" ) );
     SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Dialogue" _speaker="Elder" /></_listNode></DialogueGraphAsset>)" ) );
     SW_EXPECT_TRUE( asset._listSpeaker.empty() );
+}
+
+/**
+ * @brief [DialogueGraphTest] 노드가 있는 그래프는 Start 가 정확히 하나여야 읽힌다 — 없거나 둘이면 첫 노드로 대신하지 않고 거절한다(감사 S-12)
+ */
+SW_TEST_CASE( DialogueGraphTest, RejectsGraphWithoutExactlyOneStart )
+{
+    DialogueGraphAsset asset;
+    SW_EXPECT_LOG( "Dialogue.StartNodeCount" );
+    SW_EXPECT_FALSE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="End" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.loadFromXMLText(
+        R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /><DialogueAssetNode _id="2" _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_TRUE( asset.findStartNode() == nullptr );
+    SW_EXPECT_TRUE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_REQUIRE_NOT_NULL( asset.findStartNode() );
 }

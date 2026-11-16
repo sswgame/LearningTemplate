@@ -146,7 +146,7 @@ namespace sw
         UserSettingsManager* _pSettings;
         CrashReportConsent   _consent;
         uint8                _bInitialized;
-    };
 
-    SW_SERVICE_SLOT( CrashReportService, Required );
+        SW_SERVICE_SLOT( CrashReportService, Required );
+    };
 } // namespace sw

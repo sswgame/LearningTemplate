@@ -29,7 +29,7 @@ namespace sw::editor
         {
             static void readMap( const XMLNode& node, CharacterDataReader& reader, OutfitAtlasMapSpec& outMap )
             {
-                (void)reader.readFields( node, outMap ); // 칸은 OutfitAtlasMapSpec 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
+                (void)reader.readProperties( node, outMap ); // 칸은 OutfitAtlasMapSpec 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Source" ) == false )
@@ -38,20 +38,20 @@ namespace sw::editor
                         continue;
                     }
                     OutfitAtlasSourceSpec source;
-                    (void)reader.readFields( child, source );
+                    (void)reader.readProperties( child, source );
                     outMap._listSource.push_back( std::move( source ) );
                 }
             }
 
             static void readRoot( const XMLNode& root, CharacterDataReader& reader, OutfitAtlasSpec& outSpec )
             {
-                (void)reader.readFields( root, outSpec );
+                (void)reader.readProperties( root, outSpec );
                 for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Part" ) )
                     {
                         OutfitAtlasPartSpec part;
-                        (void)reader.readFields( child, part );
+                        (void)reader.readProperties( child, part );
                         outSpec._listPart.push_back( std::move( part ) );
                     }
                     else if ( StringUtil::equals( child.getName(), "Map" ) )

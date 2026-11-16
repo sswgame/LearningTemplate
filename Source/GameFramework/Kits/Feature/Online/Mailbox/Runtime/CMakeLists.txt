@@ -3,4 +3,4 @@
 # @brief 우편함 키트(공유) — 메서드 · 요청/응답 형식 · 클라이언트(목록 캐시 · 안 읽은 수)
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_Mailbox)
+sw_add_game_framework_kit(GF_Mailbox)

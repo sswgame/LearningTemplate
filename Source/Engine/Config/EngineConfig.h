@@ -96,6 +96,50 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct AudioConfig
+     * @brief 오디오 서비스(`IAudioService::initialize`)가 읽는 설정입니다 — 출력 장치 다시 열기 간격과 클립 캐시 예산.
+     * @details 다시 열기는 장치를 잃었거나 없이 시작했을 때 기본 장치를 다시 열어 보는 백오프다(지터를 섞어 두 배씩 상한까지). 헤드폰을 다시 꽂으면 곧 붙고(첫 간격),
+     *          장치가 없는 기계는 상한마다 한 번만 본다. 언리얼 AudioMixer 의 장치 스왑 재시도 · 유니티 `OnAudioConfigurationChanged` 자리다.
+     */
+    REFLECT()
+    struct SW_API AudioConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1, Units = ms )
+        uint32 _reopenFirstDelayMs{}; ///< 첫 다시 열기 간격의 위 끝(ms) — 첫 시도는 [0, 이 값] 안이다
+
+        PROPERTY( Min = 1, Units = ms )
+        uint32 _reopenMaxDelayMs{}; ///< 다시 열기 간격의 상한(ms) — `_reopenFirstDelayMs` 보다 작으면 오디오 초기화가 실패한다
+
+        /**
+         * @brief 디코드한 클립 캐시(`AudioClipCache`)의 예산(MB)입니다. 넘으면 재생 중이 아닌 클립을 가장 오래 안 쓴 것부터 뺀다.
+         * @details 메모리 태그 예산(`MemoryBudget.json` 의 Audio)보다 작게 둔다 — 그 나머지가 스트리밍 디코더 · 믹서 몫이다. 언리얼 `Max Cache Size` · 유니티 `UnloadUnusedAssets` 자리다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _clipCacheMegabytes{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @enum RHIDeviceLostPolicy
+     * @brief 렌더 장치를 잃었을 때(TDR · 드라이버 재시작 · 개발 명령 `rhi.removeDevice`) 엔진이 할 일입니다. `EngineRenderDriver` 가 프레임마다 `IRHIDevice::isDeviceLost` 를 보고 고른다.
+     * @details 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 뒤 종료하고 Godot 4 도 치명 오류로 끝낸다(기본값 `Quit`).
+     *          유니티는 D3D11 장치를 잃으면 장치를 다시 만들고 자원을 다시 올린다 — 그 자리가 `Recreate` 다. 다시 만드는 길은 백엔드 교체와 같은 하나
+     *          (모듈 내리기 → `RHI::recreateDevice` → 자원 다시 올리기 → 모듈 세우기, App 의 `EditorModuleManager::applyPendingBackendChange` — 개발 · 배포 공통)이고,
+     *          다시 만들기가 어려운 백엔드(`RHI::canRecreateAfterDeviceLost` — OpenGL 은 컨텍스트 · 창 픽셀 포맷, WebGPU 는 브라우저 장치)는 `Quit` 로 답한다.
+     */
+    ENUM()
+    enum class RHIDeviceLostPolicy : uint8
+    {
+        None     = 0, ///< 파일에 값이 없다 — 기동이 오류로 멈춘다(정책을 짐작하지 않는다)
+        Quit     = 1, ///< 손실을 처음 본 백엔드가 브레드크럼을 보고한 뒤, 그 프레임에 `ProcessExitCode::DeviceLost` 로 끝낸다
+        Recreate = 2, ///< 같은 백엔드로 장치를 다시 만든다(프레임 끝의 재생성 길). 백엔드가 다시 만들 수 없으면 `Quit` 와 같고, 다시 만들기가 실패해도 `DeviceLost` 로 끝낸다
+    };
+
+    /**
      * @struct EngineConfig
      * @brief `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.
      * @details 이 헤더는 형식(타입 · 범위)만 정하고 값은 모두 그 파일에 있습니다(언리얼 `BaseEngine.ini` 와 같은 바탕 층). 그래서 파일은 모든 키를 적고
@@ -152,7 +196,20 @@ namespace sw
 
         PROPERTY()
         TextureFormatSettings _textureFormats{}; ///< 대상별 텍스처 압축 형식 목록
-    };
 
-    SW_SERVICE_SLOT_CONST( EngineConfig, Required );
+        PROPERTY()
+        AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
+
+        PROPERTY()
+        RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)
+
+        /**
+         * @brief 셰이더로 보내는 시간(머티리얼 시간 · VAT 시계 · 시간 구동 컴퓨트)을 접는 주기(초)입니다(`TimeRolloverUtil::fold`).
+         * @details 셰이더 칸이 float32 라 접지 않으면 긴 실행에서 시간이 끊긴다(감사 C-12). 주기마다 한 번 시간이 0 으로 돌아간다 — Godot `time_rollover_secs` 와 같은 값이다.
+         */
+        PROPERTY( Min = 1, Units = s )
+        float64 _shaderTimeRolloverSeconds{};
+
+        SW_SERVICE_SLOT_CONST( EngineConfig, Required );
+    };
 } // namespace sw

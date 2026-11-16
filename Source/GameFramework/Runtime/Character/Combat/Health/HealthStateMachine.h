@@ -183,7 +183,7 @@ namespace sw
          * @brief 지금 들어오는 피해가 아무 일도 일으키지 않으면 true 입니다(죽음 · 무적 시간 · 피해 면역). `applyDamage` 가 `_bIgnored` 로 돌려주는 판정과 같고,
          *        맞는 쪽의 규칙(가드 스태미나 · 피격 연출 · 소리)이 피해를 적용하기 전에 물을 수 있게 한다 — 막힌 피격에 연출만 나가는 일을 막는다.
          */
-        bool ignoresDamage() const { return _state == LifeState::Dead || isInvulnerable() || isDamageImmune(); }
+        bool shouldIgnoreDamage() const { return _state == LifeState::Dead || isInvulnerable() || isDamageImmune(); }
         /** @brief 상태를 가리지 않고 죽입니다. 낙사, 존 밖, 갈고리 희생에 씁니다. 이미 죽었으면 아무 일도 없습니다. */
         void kill( optional<int32> instigatorID = nullopt );
         void resetDownCount() { _downCount = 0; }

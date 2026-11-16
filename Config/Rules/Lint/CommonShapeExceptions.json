@@ -1,24 +1,16 @@
 {
-    "_comment": "Scripts/lint/CommonShapes.py 의 예외. 규칙마다 '자리' → 까닭이다.",
+    "_comment": "Scripts/lint/common_shapes.py 의 예외. 규칙마다 '자리' → 까닭이다.",
     "enumNameSwitch": {
         "Source/Engine/Serialization/Fixed/FixedLayout.cpp|FixedReadResult": "리플렉션 생성 코드(ReflectGenerated.h)가 이 헤더를 끌어 ENUM() 을 달 수 없는 아래 층이다",
         "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp|?": "바깥 표준 철자(VkResult 상수)다",
         "Source/Engine/Animation/Rig/RigConstraintNodes.cpp|Mode": ".cpp 안 열거라 리플렉션이 보지 못한다. 글은 노드 종류 이름이다",
         "Source/DevTools/AssetReload/ReloadTracker.cpp|ReloadSource": "DevTools 는 리플렉션 코드젠을 하지 않는 모듈이라 ENUM() 을 달 수 없다(개발 명령 표의 글이다)"
     },
-    "reloadCount": {
-        "Source/Engine/Asset/Cache/AssetReloadWatch.h": "기반 자신이다",
-        "Source/Engine/Asset/Cache/SharedAssetCacheDefinition.h": "횟수를 내는 쪽이다",
-        "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.cpp": "두 캐시 횟수의 합을 굽기 키에 넣는다(computeFitReloadStamp) — 낡음 판정만이 아니다"
-    },
     "firstComponent": {
         "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다"
     },
     "oneLineValidator": {
-        "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateFields)"
-    },
-    "canvasDelete": {
-        "Source/Editor/Common/Widgets/EditorNodeGraph.cpp": "기반 자신이다"
+        "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateProperties)"
     },
     "makeDelta": {
         "Source/Engine/Serialization/Inherit/DataInheritance.cpp": "기반 자신이다",
@@ -53,8 +45,9 @@
     "editorContentScan": {
         "Source/Editor/Common/Asset/EditorContentScan.cpp|folder": "입구 자신이다(훑은 뒤 남의 시나리오 사본을 뺀다)",
         "Source/Editor/Common/Commands/EditorBackgroundIO.cpp|input._folder": "프리셋 폴더 하나(인스펙터 · 전역 변수 프리셋, 재귀 아님)를 훑는 일반 잡이다 — 트리를 걷지 않는다. 리소스 트리를 훑는 곳은 EditorContentScan 을 쓴다",
-        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|folder": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
-        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|getFolder()": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|EditorAutosaveCommandsInternal::getFolder()": "자동 저장 칸(Saved 아래)이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|root": "자동 저장 칸(Saved 아래)의 세션 폴더 목록이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|sessionFolder": "자동 저장 세션 폴더 하나(Saved 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|slotFolder": "자동 저장 칸 하나(Saved 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Workspace/EditorLayoutStore.cpp|folder": "에디터 배치 ini 폴더(에디터 상태 폴더)다 — 리소스 트리 밖",
         "Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp|BugReportViewModelInternal::makeRoot()": "버그 보고 폴더(Saved/BugReports)다 — 리소스 트리 밖",
@@ -63,7 +56,18 @@
         "Source/Editor/Common/Localization/LocalizationTools.cpp|gameFolder": "게임 팩 하나의 현지화 폴더(game/<팩>/data/localization, 재귀 아님)다 — scratch 를 지나지 않는다",
         "Source/Editor/Common/Asset/Model/ModelImporter.cpp|sideFolder": "모델 하나의 곁 폴더(그 원본 옆)만 훑는다 — 트리를 걷지 않아 남의 사본으로 건너가지 않는다",
         "Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp|source": "사람이 옮기거나 복사하려고 고른 폴더 하나의 내용이다 — 그 폴더를 통째로 다룬다",
+        "Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp|path": "옮기거나 지우려고 고른 폴더 하나의 모든 파일이다 — 그 폴더를 통째로 다루니 남의 사본까지 읽기 전용을 본다",
         "Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp|dataFolder": "데이터 표 폴더 하나(재귀 아님)다 — scratch 를 지나지 않는다",
-        "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다"
+        "Source/Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.cpp|sourceAbs": "사람이 옮기려고 고른 폴더 하나에 남은 파일이다 — 그 폴더를 통째로 다룬다",
+        "Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.cpp|configFolder": "프로젝트 설정 창이 표 페이지로 여는 `Config/` 다 — 리소스 트리(Content) 밖이라 다른 프로세스의 시나리오 사본이 없다"
+    },
+    "nameHashKey": {
+        "Source/Engine/Reflection/TypeRegistry.cpp": "기반 자신이다 — 해시 표는 NameHashIndex(find 로 종류 · 지운 이름을 먼저 본다)이고, tryFindNameHashClash 는 열거자 해시 충돌을 찾는 검사 표다",
+        "Source/Engine/Serialization/Format/BinarySerializer.cpp": "LogOnce 키(경고를 필드마다 한 번)다 — 겹치면 경고 한 줄이 빠질 뿐 데이터는 바뀌지 않는다",
+        "Source/Engine/Serialization/Serializer/SerializerUtil.cpp": "LogOnce 키(모르는 열거자 경고를 한 번)다 — 겹쳐도 데이터는 바뀌지 않는다",
+        "Source/GameFramework/Runtime/Online/Bus/ServerBus.cpp": "LogOnce 키(버린 메시지 경고를 한 번)다 — 겹쳐도 거절 수는 그대로 센다",
+        "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp": "무작위 씨앗에 섞는 값이다(pickUnit) — 겹쳐도 같은 씨앗일 뿐 표가 아니다",
+        "Source/GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",
+        "Source/Editor/Panels/Inspector/Model/PropertyGridModel.cpp": "인스펙터 행 높이 기억 키다 — 겹치면 한 행의 높이 추정이 섞일 뿐 데이터는 바뀌지 않는다"
     }
 }

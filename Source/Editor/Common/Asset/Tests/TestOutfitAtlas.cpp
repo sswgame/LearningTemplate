@@ -78,15 +78,15 @@ SW_TEST_CASE( OutfitAtlasTest, PackPlacesEveryTextureWithoutOverlap )
  */
 SW_TEST_CASE( OutfitAtlasTest, PackRefusesWhatDoesNotFit )
 {
-    const auto messageOf = []( const expected<void>& result )
+    const auto getMessageOf = []( const expected<void>& result )
     { return result.has_value() ? string{} : string( result.error().message() ); };
     vector<OutfitAtlasRect> listRect;
     const OutfitAtlasSource arrTooBig[] = { makeSource( "A", 100, 100 ), makeSource( "B", 100, 100 ) };
-    SW_EXPECT_TRUE( messageOf( OutfitAtlasLayout::pack( arrTooBig, 128, 0, listRect ) ).find( "does not fit" ) != string::npos );
+    SW_EXPECT_TRUE( getMessageOf( OutfitAtlasLayout::pack( arrTooBig, 128, 0, listRect ) ).find( "does not fit" ) != string::npos );
     const OutfitAtlasSource arrWide[] = { makeSource( "Wide", 300, 10 ) };
     SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrWide, 256, 0, listRect ) );
     const OutfitAtlasSource arrTwice[] = { makeSource( "A", 8, 8 ), makeSource( "A", 8, 8 ) };
-    SW_EXPECT_TRUE( messageOf( OutfitAtlasLayout::pack( arrTwice, 64, 0, listRect ) ).find( "twice" ) != string::npos );
+    SW_EXPECT_TRUE( getMessageOf( OutfitAtlasLayout::pack( arrTwice, 64, 0, listRect ) ).find( "twice" ) != string::npos );
     const OutfitAtlasSource arrEmpty[] = { makeSource( "A", 0, 8 ) };
     SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrEmpty, 64, 0, listRect ) );
     SW_EXPECT_FALSE( OutfitAtlasLayout::pack( arrEmpty, 0, 0, listRect ) );

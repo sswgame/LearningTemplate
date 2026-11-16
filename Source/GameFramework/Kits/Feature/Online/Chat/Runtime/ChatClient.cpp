@@ -7,7 +7,7 @@
 namespace sw
 {
     ChatClient::ChatClient()
-        : _messageGate{}
+        : _messageConsumerLock{}
         , _messageBuffer{}
     {
     }

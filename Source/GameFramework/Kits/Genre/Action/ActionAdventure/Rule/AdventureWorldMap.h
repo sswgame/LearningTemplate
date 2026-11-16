@@ -124,8 +124,9 @@ namespace sw
         const vector<AdventureLandmarkDef>& getLandmarks() const { return _catalog.getAll(); }
 
     private:
-        static constexpr const utf8* kXMLRootName = "AdventureWorld"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName           = "AdventureWorld"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr uint32      kLandmarkStateMinBytes = 6;                ///< 표지 하나의 상태 최소 바이트 — 이름(4) + 깨움(1) + 마침(1)
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadLandmark( const XMLNode& node, AdventureLandmarkKind kind, string_view sourceName );
         [[nodiscard]] bool           loadTower( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadShrine( const XMLNode& node, string_view sourceName );
@@ -140,5 +141,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<AdventureWorldMap>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<AdventureWorldMap>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, AdventureWorldMap );
 } // namespace sw

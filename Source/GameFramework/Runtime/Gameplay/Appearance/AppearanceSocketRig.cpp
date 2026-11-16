@@ -57,7 +57,7 @@ namespace sw
         if ( found != _mapSocketSet.end() )
             return found->second;
         // 공유 캐시가 종류 표(엔진 기본)와 대조해 읽는다. 읽지 못하면 읽는 함수가 까닭을 남긴다.
-        shared_ptr<const SocketSet> socketSet = SharedAssetCache<SocketSet>::acquire( path.viewOrEmpty() );
+        shared_ptr<const SocketSet> socketSet = SharedAssetCache<SocketSet>::acquire( path.view() );
         if ( socketSet == nullptr )
             SW_LOG_ERROR_ID( "AppearanceSocketRig.SocketAssetCouldNot", "Socket asset '%#' could not be loaded", path.c_str() );
         _mapSocketSet[path] = socketSet;

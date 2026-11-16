@@ -1,3 +1,4 @@
+// ImGui 입력 위젯을 직접 부르는 유일한 자리다 — CMake 가 이 파일에만 SW_EDITOR_WIDGET_ADAPTER=1 을 주어 금지 헤더(EditorInputBan.h)의 위젯 절을 받지 않는다(`sw_apply_editor_input_ban`).
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -6,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -170,6 +172,21 @@ namespace sw::editor
     {
         struct EditorWidgetsInternal
         {
+            /**
+             * @brief 숫자 칸(InputScalar)의 글 칸 부분에 시험 레이블을 찍습니다. 단계 단추가 있으면 마지막 항목은 글 칸과 `-` · `+` 를 묶은 그룹이라
+             *        가운데를 누르면 단추를 누른다 — ImGui 의 배치(글 칸 폭 = 전체 - 2 × (단추 + 안쪽 간격))대로 단추 몫을 뺀다.
+             */
+            static void recordNumberFieldMark( const utf8* pMark, bool bStepButtons )
+            {
+                if ( pMark == nullptr )
+                    return;
+                const ImVec2  min      = ImGui::GetItemRectMin();
+                const ImVec2  max      = ImGui::GetItemRectMax();
+                const float32 buttons  = bStepButtons ? 2.0f * ( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x ) : 0.0f;
+                const float32 fieldMax = max.x - buttons > min.x ? max.x - buttons : max.x;
+                EditorSelfTestMarks::recordRect( pMark, float2{ min.x, min.y }, float2{ fieldMax, max.y } );
+            }
+
             /** @brief 0 건 안내를 그린 기록입니다. 감시 값이 읽는다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로 센다. */
             struct HintState
             {
@@ -726,6 +743,9 @@ namespace sw::editor
 
     bool EditorWidgets::beginCombo( const utf8* pLabel, const utf8* pPreview, int32 flags )
     {
+        // 숨은 id 는 그대로 쓴다(앞에 "##" 를 또 붙이면 id 가 바뀐다).
+        if ( pLabel[0] == '#' && pLabel[1] == '#' )
+            return ImGui::BeginCombo( pLabel, pPreview, static_cast<ImGuiComboFlags>( flags ) );
         EditorWidgetsInternal::drawLeadingLabel( pLabel );
         // 보이는 이름표를 감춘 같은 id: "##" 를 앞에 붙인다. `###` 가 있으면 ImGui 가 그 뒤만 해시하므로 언어를 바꿔도 id 가 같다.
         fixed_string<constant::buffer::kMax128> hiddenLabel{ "##" };
@@ -954,5 +974,135 @@ namespace sw::editor
     {
         ImGui::TextDisabled( "(?)" );
         drawTooltip( pDesc );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    EditorWidgetID EditorWidgetID::fromString( const utf8* pHiddenID )
+    {
+        if ( pHiddenID == nullptr || pHiddenID[0] != '#' || pHiddenID[1] != '#' )
+            SW_FATAL( "Editor widget id '%#' would show its label on the right of the field - draw the label first (EditorWidgets::drawPropertyRowLabel / drawInlineLabel) and pass a '##' id",
+                      pHiddenID != nullptr ? pHiddenID : "(null)" );
+        return EditorWidgetID{ pHiddenID };
+    }
+
+    bool EditorWidgets::inputInt( EditorWidgetID id, int32* pValue, int32 step, int32 stepFast, int32 flags, const utf8* pMark )
+    {
+        const bool bChanged = ImGui::InputInt( id.c_str(), pValue, step, stepFast, flags );
+        EditorWidgetsInternal::recordNumberFieldMark( pMark, step > 0 );
+        return bChanged;
+    }
+    bool EditorWidgets::inputInt2( EditorWidgetID id, int32* arrValue, int32 flags )
+    {
+        return ImGui::InputInt2( id.c_str(), arrValue, flags );
+    }
+    bool EditorWidgets::inputFloat( EditorWidgetID id, float32* pValue, float32 step, float32 stepFast, const utf8* pFormat, int32 flags, const utf8* pMark )
+    {
+        const bool bChanged = ImGui::InputFloat( id.c_str(), pValue, step, stepFast, pFormat, flags );
+        EditorWidgetsInternal::recordNumberFieldMark( pMark, step > 0.0f );
+        return bChanged;
+    }
+    bool EditorWidgets::inputFloat2( EditorWidgetID id, float32* arrValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::InputFloat2( id.c_str(), arrValue, pFormat, flags );
+    }
+    bool EditorWidgets::inputFloat4( EditorWidgetID id, float32* arrValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::InputFloat4( id.c_str(), arrValue, pFormat, flags );
+    }
+    bool EditorWidgets::inputScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pStep, const void* pStepFast, const utf8* pFormat, int32 flags, const utf8* pMark )
+    {
+        const bool bChanged = ImGui::InputScalar( id.c_str(), dataType, pData, pStep, pStepFast, pFormat, flags );
+        EditorWidgetsInternal::recordNumberFieldMark( pMark, pStep != nullptr );
+        return bChanged;
+    }
+    bool EditorWidgets::inputScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, const void* pStep, const void* pStepFast, const utf8* pFormat,
+                                      int32 flags )
+    {
+        return ImGui::InputScalarN( id.c_str(), dataType, pData, components, pStep, pStepFast, pFormat, flags );
+    }
+    bool EditorWidgets::inputText( EditorWidgetID id, utf8* pBuffer, size_t bufferSize, int32 flags, InputTextCallback pfnCallback, void* pUserData )
+    {
+        return ImGui::InputText( id.c_str(), pBuffer, bufferSize, flags, pfnCallback, pUserData );
+    }
+    bool EditorWidgets::inputTextMultiline( EditorWidgetID id, utf8* pBuffer, size_t bufferSize, const ImVec2& size, int32 flags, InputTextCallback pfnCallback,
+                                            void* pUserData )
+    {
+        return ImGui::InputTextMultiline( id.c_str(), pBuffer, bufferSize, size, flags, pfnCallback, pUserData );
+    }
+    bool EditorWidgets::inputTextWithHint( EditorWidgetID id, const utf8* pHint, utf8* pBuffer, size_t bufferSize, int32 flags, InputTextCallback pfnCallback,
+                                           void* pUserData )
+    {
+        return ImGui::InputTextWithHint( id.c_str(), pHint, pBuffer, bufferSize, flags, pfnCallback, pUserData );
+    }
+    bool EditorWidgets::dragFloat( EditorWidgetID id, float32* pValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat( id.c_str(), pValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragFloat2( EditorWidgetID id, float32* arrValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat2( id.c_str(), arrValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragFloat3( EditorWidgetID id, float32* arrValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat3( id.c_str(), arrValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragFloat4( EditorWidgetID id, float32* arrValue, float32 speed, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragFloat4( id.c_str(), arrValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragInt( EditorWidgetID id, int32* pValue, float32 speed, int32 minValue, int32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragInt( id.c_str(), pValue, speed, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::dragScalar( EditorWidgetID id, int32 dataType, void* pData, float32 speed, const void* pMin, const void* pMax, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragScalar( id.c_str(), dataType, pData, speed, pMin, pMax, pFormat, flags );
+    }
+    bool EditorWidgets::dragScalarN( EditorWidgetID id, int32 dataType, void* pData, int32 components, float32 speed, const void* pMin, const void* pMax,
+                                     const utf8* pFormat, int32 flags )
+    {
+        return ImGui::DragScalarN( id.c_str(), dataType, pData, components, speed, pMin, pMax, pFormat, flags );
+    }
+    bool EditorWidgets::sliderFloat( EditorWidgetID id, float32* pValue, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::SliderFloat( id.c_str(), pValue, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::sliderInt( EditorWidgetID id, int32* pValue, int32 minValue, int32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::SliderInt( id.c_str(), pValue, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::sliderScalar( EditorWidgetID id, int32 dataType, void* pData, const void* pMin, const void* pMax, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::SliderScalar( id.c_str(), dataType, pData, pMin, pMax, pFormat, flags );
+    }
+    bool EditorWidgets::vSliderFloat( EditorWidgetID id, const ImVec2& size, float32* pValue, float32 minValue, float32 maxValue, const utf8* pFormat, int32 flags )
+    {
+        return ImGui::VSliderFloat( id.c_str(), size, pValue, minValue, maxValue, pFormat, flags );
+    }
+    bool EditorWidgets::combo( EditorWidgetID id, int32* pCurrent, const utf8* const* arrItem, int32 itemCount, int32 popupMaxHeightInItems )
+    {
+        return ImGui::Combo( id.c_str(), pCurrent, arrItem, itemCount, popupMaxHeightInItems );
+    }
+    bool EditorWidgets::combo( EditorWidgetID id, int32* pCurrent, const utf8* pItemsSeparatedByZeros, int32 popupMaxHeightInItems )
+    {
+        return ImGui::Combo( id.c_str(), pCurrent, pItemsSeparatedByZeros, popupMaxHeightInItems );
+    }
+    bool EditorWidgets::combo( EditorWidgetID id, int32* pCurrent, ComboItemGetter pfnGetter, void* pUserData, int32 itemCount, int32 popupMaxHeightInItems )
+    {
+        return ImGui::Combo( id.c_str(), pCurrent, pfnGetter, pUserData, itemCount, popupMaxHeightInItems );
+    }
+    bool EditorWidgets::colorEdit3( EditorWidgetID id, float32* arrColor, int32 flags )
+    {
+        return ImGui::ColorEdit3( id.c_str(), arrColor, flags );
+    }
+    bool EditorWidgets::colorEdit4( EditorWidgetID id, float32* arrColor, int32 flags )
+    {
+        return ImGui::ColorEdit4( id.c_str(), arrColor, flags );
+    }
+    bool EditorWidgets::beginListBox( EditorWidgetID id, const ImVec2& size )
+    {
+        return ImGui::BeginListBox( id.c_str(), size );
     }
 } // namespace sw::editor

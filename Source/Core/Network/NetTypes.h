@@ -114,7 +114,7 @@ namespace sw
      * @brief 전달 통지 하나입니다(언리얼 `PacketNotify` 의 ACK · NAK 자리). 패킷 확인을 메시지 단위로 돌려준다 — 키트가 확인 메시지를 따로 주고받지 않는다.
      * @details 종류(`_kind`)는 메시지 첫 바이트다. 라우터가 그 종류를 보내는 처리기(`INetMessageHandler::getNotifiedKindMask`)에게 넘긴다.
      */
-    struct NetDeliveryNotice
+    struct NetDeliveryNotification
     {
         uint32            _tag{ 0 };                                        ///< 보낼 때 단 값(키트가 정한다 — MMO 는 서버 틱).
         int32             _connectionID{ constant::invalid_index::kInt32 }; ///< 보낸 연결. 연결 하나(`NetConnection`)는 모르므로 엔드포인트가 채운다.
@@ -146,7 +146,8 @@ namespace sw
         VersionMismatch,      ///< 같은 게임의 다른 와이어 버전(`NetWireVersion`).
         SecurityMismatch,     ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
         AuthenticationFailed, ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
-        ReceiveOverflow       ///< 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
+        ReceiveOverflow,      ///< 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
+        ReliableOverflow      ///< 신뢰 창이 차 신뢰 메시지를 넣지 못했다(상대가 확인하지 않는다) — 버리면 받는 쪽의 순서가 영영 끊기므로 닫는다(언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다).
     };
 
     SW_API const utf8* toString( NetDisconnectReason reason );
@@ -249,7 +250,7 @@ namespace sw
 {
     /**
      * @class NetMessageKindStatsTable
-     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::pump`)과 보낸 쪽(`NetEndpoint::sendMessage`)이 같은 표를 써서
+     * @brief 메시지 종류(첫 바이트) 256 개의 누적 셈 표입니다. 받은 쪽(`NetMessageRouter::poll`)과 보낸 쪽(`NetEndpoint::sendMessage`)이 같은 표를 써서
      *        `NetStatsReport` 가 두 방향을 같은 규칙으로 싣습니다. 스레드 보호는 들고 있는 쪽이 합니다.
      */
     class NetMessageKindStatsTable
@@ -262,22 +263,22 @@ namespace sw
         {
             if ( size <= 0 )
                 return;
-            NetMessageKindStats& tally = _arrTally[pData[0]];
-            ++tally._messageCount;
-            tally._byteCount += static_cast<uint64>( size );
+            NetMessageKindStats& stats = _arrStats[pData[0]];
+            ++stats._messageCount;
+            stats._byteCount += static_cast<uint64>( size );
         }
         /** @brief 다른 표의 셈을 종류마다 더합니다(포트 샤드마다의 보낸 쪽 셈을 하나로 모을 때). */
         void addTable( const NetMessageKindStatsTable& other )
         {
             for ( int32 kind = 0; kind < kKindCount; ++kind )
             {
-                _arrTally[kind]._messageCount += other._arrTally[kind]._messageCount;
-                _arrTally[kind]._byteCount += other._arrTally[kind]._byteCount;
+                _arrStats[kind]._messageCount += other._arrStats[kind]._messageCount;
+                _arrStats[kind]._byteCount += other._arrStats[kind]._byteCount;
             }
         }
-        const NetMessageKindStats& get( uint8 kind ) const { return _arrTally[kind]; }
+        const NetMessageKindStats& get( uint8 kind ) const { return _arrStats[kind]; }
 
     private:
-        NetMessageKindStats _arrTally[kKindCount]{};
+        NetMessageKindStats _arrStats[kKindCount]{};
     };
 } // namespace sw

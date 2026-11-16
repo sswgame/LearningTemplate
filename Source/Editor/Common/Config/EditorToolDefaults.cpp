@@ -48,7 +48,7 @@ namespace sw::editor
 
     AbsolutePath EditorToolDefaults::getHostPath()
     {
-        // 경로의 원본은 `Scripts/common/ProjectConstants.py` 하나다. 경로를 바꾸는 칸을 `EditorAppearanceConfig` 에 두지 말 것 — 그 파일은
+        // 경로의 원본은 `Scripts/common/project_constants.py` 하나다. 경로를 바꾸는 칸을 `EditorAppearanceConfig` 에 두지 말 것 — 그 파일은
         // **테마를 저장할 때마다 기계가 다시 쓴다.** 상수는 프로젝트 루트 기준 상대 경로라 푸는 일이 실패할 수 없다.
         const optional<AbsolutePath> path = AbsolutePath::tryResolve( config::kFileRuntimeEditorToolDefaults, ProcessRoots::get()._project );
         SW_ASSERT( path.has_value() );

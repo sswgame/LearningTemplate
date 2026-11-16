@@ -46,10 +46,10 @@ namespace sw
         {
             const hashed_string resolvedPath = materialPath.empty() ? SpriteRenderUtil::getSpriteMaterialPath() : hashed_string( materialPath );
             MaterialCache&      cache        = _pAssetManager->getAssetCache<MaterialCache>();
-            pMaterial                        = cache.acquire( resolvedPath.viewOrEmpty() );
+            pMaterial                        = cache.acquire( resolvedPath.view() );
             if ( pMaterial != nullptr )
             {
-                cache.requestInitialize( resolvedPath.viewOrEmpty() );
+                cache.requestInitialize( resolvedPath.view() );
                 _acquiredMaterialPath = resolvedPath;
             }
             else
@@ -109,7 +109,7 @@ namespace sw
             return;
         // 경로가 있으면 `initialize` 가 이 에셋 매니저로 잡은 것이다.
         if ( _pAssetManager != nullptr )
-            _pAssetManager->getAssetCache<MaterialCache>().release( _acquiredMaterialPath.viewOrEmpty() );
+            _pAssetManager->getAssetCache<MaterialCache>().release( _acquiredMaterialPath.view() );
         _acquiredMaterialPath = hashed_string{};
     }
 

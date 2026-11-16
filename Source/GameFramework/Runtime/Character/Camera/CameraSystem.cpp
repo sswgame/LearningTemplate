@@ -17,11 +17,11 @@ namespace sw
 
     CameraSystem* CameraSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`ensureFor`).
+        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
         return static_cast<CameraSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
     }
 
-    CameraSystem& CameraSystem::ensureFor( GameObjectManager& manager )
+    CameraSystem& CameraSystem::findOrCreate( GameObjectManager& manager )
     {
         CameraSystem* pSystem = find( manager );
         if ( pSystem != nullptr )

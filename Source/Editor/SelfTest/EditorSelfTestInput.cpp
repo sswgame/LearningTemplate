@@ -50,7 +50,7 @@ namespace sw::editor
                 uint64 _hash{ 0 };
             };
 
-            /** @brief 키 · 글 입력을 받을 곳입니다(`EditorSelfTestInput::isKeyboardTargetSettled`). */
+            /** @brief 키 · 글 입력을 받을 곳입니다(`EditorSelfTestInput::isKeyboardTargetStable`). */
             struct KeyboardTarget
             {
                 float2 _pos{};
@@ -67,27 +67,49 @@ namespace sw::editor
                 }
             };
 
+            /** @brief 한 프레임의 포인터 자리와 그 점의 최상위 창입니다(`evaluateMarkHit` 의 재료). 그 프레임이 끝난 뒤, 다음 입력을 넣기 전에 뜬다. */
+            struct HitSample
+            {
+                float2 _mousePos{};
+                uint32 _hoveredWindowID{ 0 };   ///< 0 이면 그 점에서 입력을 받는 창이 없다(모달이 막는다)
+                uint32 _frame{ 0 };             ///< 표본이 그린 ImGui 프레임
+                uint8  _bMouseDown{ SW_FALSE }; ///< 버튼이 눌린 채였다 — ImGui 는 누른 동안 호버 창을 누른 곳에 묶으므로 판정하지 않는다
+                uint8  _bValid{ SW_FALSE };
+            };
+
             /** @brief 테스트가 돈다(레이블을 적는다)는 표시와 큐 · 레이블입니다. */
             struct State
             {
                 vector<PendingEvent> _listEvent;
                 vector<NamedMark>    _listMark;
                 KeyboardTarget       _keyboardTarget{};
+                HitSample            _hitSample{};
                 uint32               _keyboardTargetFrame{ 0 };       ///< `_keyboardTarget` 을 뜬 ImGui 프레임
                 uint32               _keyboardTargetStableStart{ 0 }; ///< 지금 표본과 같은 값이 이어진 첫 프레임
                 uint64               _layoutSignature{ 0 };           ///< 바로 앞 프레임이 끝난 뒤의 창 배치 서명(`sampleLayoutSignature`)
                 uint32               _layoutFrame{ 0 };               ///< `_layoutSignature` 를 뜬 ImGui 프레임(그 서명은 이 바로 앞 프레임의 것이다)
                 uint32               _layoutTag{ 0 };                 ///< `_layoutSignature` 가 그린 프레임이 열릴 때 찍힌 기다림 번호
-                uint32               _stablePairTag{ 0 };             ///< 지금 서명이 바로 앞 표본과 같으면 그 앞 표본의 번호, 다르면 0(`isLayoutSettledAfter`)
-                uint32               _settleWaitSerial{ 0 };          ///< 마지막 `beginSettleWait` 의 번호
+                uint32               _stablePairTag{ 0 };             ///< 지금 서명이 바로 앞 표본과 같으면 그 앞 표본의 번호, 다르면 0(`isLayoutStableAfter`)
+                uint32               _stabilityWaitSerial{ 0 };       ///< 마지막 `beginStabilityWait` 의 번호
                 uint32               _openFrameTag{ 0 };              ///< 지금 열린 프레임에 찍은 기다림 번호
                 vector<WindowPlace>  _listWindowPlace;                ///< 바로 앞 표본의 창마다 자리 해시(`_layoutSignature` 의 재료) — 바뀐 창을 이름으로 알린다
                 string               _lastLayoutChange;               ///< 서명이 마지막으로 바뀐 까닭(창 이름 · 메인 뷰포트 · 팝업, `describeLastLayoutChange`)
                 string               _scrollIntoViewKey;              ///< 다음에 기록할 때 잘려 있으면 그린 창을 스크롤해 보이게 할 레이블(`requestScrollIntoView`)
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
+                float2               _hoverPoint{}; ///< 마지막으로 `Reachable` 로 판정한 점(`moveByOffset` 의 기준)
+                uint32               _hoverViewportID{ 0 };
+                bool                 _bHovered{ false };    ///< `_hoverPoint` 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool                 _bHoldMouse{ false };  ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool                 _bEnabled{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+                /** @brief 닿는다고 판정한 점을 끌기 기준(`EditorSelfTestInput::moveByOffset`)으로 남깁니다. */
+                void rememberHover( const float2& point, uint32 viewportID )
+                {
+                    _hoverPoint      = point;
+                    _hoverViewportID = viewportID;
+                    _bHovered        = true;
+                }
             };
 
             /**
@@ -141,6 +163,7 @@ namespace sw::editor
             {
                 EditorSelfTestMark mark;
                 mark._itemID     = ImGui::GetItemID();
+                mark._windowID   = ImGui::GetCurrentWindow()->ID;
                 mark._viewportID = ImGui::GetWindowViewport() != nullptr ? ImGui::GetWindowViewport()->ID : 0u;
                 mark._min        = float2{ ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y };
                 mark._max        = float2{ ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y };
@@ -246,6 +269,75 @@ namespace sw::editor
                 }
                 return "the main viewport size or the open popup count changed";
             }
+
+            /**
+             * @brief @p pHit(그 점의 최상위 창)가 @p mark 의 주인이면 true 입니다 — 레이블을 그린 창, 그 조상(제목 표시줄 · 도크 탭 · 열린 메뉴 머리), 레이블 사각형 안에 든 자식 창.
+             * @details 자식 창 · 팝업 · 도킹된 창은 `ParentWindow` 로 부모를 잇는다. 레이블을 그린 창의 자손인데 레이블 안에 들지 않은 창(같은 창 위의 오버레이 툴바, 그 창이 연 팝업)은 덮은 것이다.
+             */
+            static bool isMarkOwner( const ImGuiWindow& hit, const ImGuiWindow& markWindow, const EditorSelfTestMark& mark )
+            {
+                for ( const ImGuiWindow* pAncestor = &markWindow; pAncestor != nullptr; pAncestor = pAncestor->ParentWindow )
+                {
+                    if ( pAncestor == &hit )
+                        return true;
+                }
+                constexpr float32 kTolerance = 1.0f; ///< 픽셀. 자식 창 사각형과 그 항목 사각형이 반올림으로 어긋난다
+                const ImRect      markRect( mark._min._x - kTolerance, mark._min._y - kTolerance, mark._max._x + kTolerance, mark._max._y + kTolerance );
+                bool              bInsideMark = false;
+                for ( const ImGuiWindow* pWindow = &hit; pWindow != nullptr; pWindow = pWindow->ParentWindow )
+                {
+                    if ( pWindow == &markWindow )
+                        return bInsideMark;
+                    bInsideMark = bInsideMark || markRect.Contains( pWindow->Rect() );
+                }
+                return false;
+            }
+
+            /** @brief 테스트가 끝난 포인터를 두는 화면 밖 자리입니다(`moveMouseAway`). */
+            static constexpr float32 kMouseAwayPosition = -10000.0f;
+
+            /** @brief 레이블의 @p anchor 위치(0..1)입니다. */
+            static float2 computeHoverPoint( const EditorSelfTestMark& mark, const float2& anchor )
+            {
+                return float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y };
+            }
+
+            /** @brief 두 점이 같은 픽셀이면 true 입니다. ImGui 는 마우스 좌표를 정수로 내린다. */
+            static bool isSamePixel( const float2& lhs, const float2& rhs )
+            {
+                constexpr float32 kHoverTolerance = 1.0f;
+                return fabsf( lhs._x - rhs._x ) <= kHoverTolerance && fabsf( lhs._y - rhs._y ) <= kHoverTolerance;
+            }
+
+            /**
+             * @brief 포인터가 @p mark 의 @p anchor 자리에 있던 프레임에 그 점의 최상위 창이 레이블 주인인지 판정합니다(`EditorSelfTestInput::hoverMark` 의 판정).
+             * @details 지금 포인터(이번 프레임)와 표본(바로 앞 프레임이 끝난 뒤) 둘 다 그 점이어야 판정한다 — 표본의 창은 그 포인터로 정한 것이다.
+             */
+            static EditorMarkHit evaluateMarkHit( const State& state, const EditorSelfTestMark& mark, const float2& anchor, string& outCoverName )
+            {
+                const HitSample& sample    = state._hitSample;
+                const float2     target    = computeHoverPoint( mark, anchor );
+                const ImVec2     mouse     = ImGui::GetIO().MousePos;
+                const bool       bFresh    = sample._bValid != SW_FALSE && sample._frame + 1 >= static_cast<uint32>( ImGui::GetFrameCount() );
+                const bool       bOnTarget = isSamePixel( float2{ mouse.x, mouse.y }, target ) && isSamePixel( sample._mousePos, target );
+                if ( bFresh == false || bOnTarget == false )
+                    return EditorMarkHit::Pending;
+                if ( sample._bMouseDown != SW_FALSE )
+                    return EditorMarkHit::Reachable; // 누른 동안은 ImGui 가 호버 창을 누른 곳에 묶는다 — 이 점의 창을 말하지 않는다(누른 채 다른 버튼을 누르는 단계)
+                const ImGuiWindow* pMarkWindow = ImGui::FindWindowByID( mark._windowID );
+                const ImGuiWindow* pHit        = sample._hoveredWindowID != 0 ? ImGui::FindWindowByID( sample._hoveredWindowID ) : nullptr;
+                if ( pMarkWindow == nullptr )
+                    return EditorMarkHit::Pending; // 레이블을 그린 창이 없어졌다 — 다음 기록을 기다린다
+                if ( pHit == nullptr )
+                {
+                    outCoverName = "(no window takes input there - a modal popup blocks it)";
+                    return EditorMarkHit::Covered;
+                }
+                if ( isMarkOwner( *pHit, *pMarkWindow, mark ) )
+                    return EditorMarkHit::Reachable;
+                outCoverName = pHit->Name != nullptr ? pHit->Name : "?";
+                return EditorMarkHit::Covered;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -278,6 +370,7 @@ namespace sw::editor
         if ( pState == nullptr )
             return;
         EditorSelfTestMark mark;
+        mark._windowID   = ImGui::GetCurrentWindow()->ID;
         mark._viewportID = ImGui::GetWindowViewport() != nullptr ? ImGui::GetWindowViewport()->ID : 0u;
         mark._min        = min;
         mark._max        = max;
@@ -320,6 +413,7 @@ namespace sw::editor
             pState->_listMark.clear();
             pState->_listEvent.clear();
             pState->_bHoldMouse = false;
+            pState->_bHovered   = false;
         }
         return true;
     }
@@ -427,40 +521,65 @@ namespace sw::editor
         return false;
     }
 
-    bool EditorSelfTestInput::moveMouseToMark( string_view key, const float2& anchor )
+    EditorMarkHit EditorSelfTestInput::hoverMark( string_view key, const float2& anchor, string& outCoverName )
+    {
+        using Internal = EditorSelfTestInputInternal;
+        EditorSelfTestMark mark;
+        Internal::State*   pState = Internal::findState();
+        if ( pState == nullptr || EditorSelfTestMarks::find( key, mark ) == false )
+            return EditorMarkHit::Missing;
+        pState->_heldMousePosition   = Internal::computeHoverPoint( mark, anchor );
+        pState->_heldMouseViewportID = mark._viewportID;
+        pState->_bHoldMouse          = true;
+
+        const EditorMarkHit hit = Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
+        if ( hit == EditorMarkHit::Reachable )
+            pState->rememberHover( Internal::computeHoverPoint( mark, anchor ), mark._viewportID );
+        return hit;
+    }
+
+    EditorMarkHit EditorSelfTestInput::pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName )
+    {
+        using Internal = EditorSelfTestInputInternal;
+        EditorSelfTestMark mark;
+        Internal::State*   pState = Internal::findState();
+        if ( pState == nullptr || EditorSelfTestMarks::find( key, mark ) == false )
+            return EditorMarkHit::Missing;
+        const EditorMarkHit hit = Internal::evaluateMarkHit( *pState, mark, anchor, outCoverName );
+        if ( hit != EditorMarkHit::Reachable )
+            return hit;
+        pState->rememberHover( Internal::computeHoverPoint( mark, anchor ), mark._viewportID );
+        moveMouse( pState->_hoverPoint, pState->_hoverViewportID );
+        setMouseButton( button, true );
+        return hit;
+    }
+
+    bool EditorSelfTestInput::releaseMark( string_view key, const float2& anchor, int32 button )
     {
         EditorSelfTestMark mark;
-        if ( EditorSelfTestMarks::find( key, mark ) == false )
+        const bool         bDrawn = EditorSelfTestMarks::find( key, mark );
+        if ( bDrawn )
+            moveMouse( EditorSelfTestInputInternal::computeHoverPoint( mark, anchor ), mark._viewportID );
+        setMouseButton( button, false );
+        return bDrawn;
+    }
+
+    bool EditorSelfTestInput::moveByOffset( const float2& offset )
+    {
+        const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState == nullptr || pState->_bHovered == false )
             return false;
-        moveMouse( float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y }, mark._viewportID );
+        moveMouse( float2{ pState->_hoverPoint._x + offset._x, pState->_hoverPoint._y + offset._y }, pState->_hoverViewportID );
         return true;
     }
 
-    bool EditorSelfTestInput::isMouseAtMark( string_view key, const float2& anchor )
+    void EditorSelfTestInput::moveMouseAway()
     {
-        EditorSelfTestMark mark;
-        if ( EditorSelfTestMarks::find( key, mark ) == false )
-            return false;
-        constexpr float32 kAimTolerance = 1.0f; ///< 픽셀. ImGui 는 마우스 좌표를 정수로 내린다
-        const ImVec2      mouse         = ImGui::GetIO().MousePos;
-        const float32     targetX       = mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x;
-        const float32     targetY       = mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y;
-        return fabsf( mouse.x - targetX ) <= kAimTolerance && fabsf( mouse.y - targetY ) <= kAimTolerance;
-    }
-
-    bool EditorSelfTestInput::holdMouseAtMark( string_view key, const float2& anchor )
-    {
-        EditorSelfTestMark mark;
-        if ( EditorSelfTestMarks::find( key, mark ) == false )
-            return false;
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
-        if ( pState == nullptr )
-            return false;
-        EditorSelfTestInputInternal::State& state = *pState;
-        state._heldMousePosition                  = float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y };
-        state._heldMouseViewportID                = mark._viewportID;
-        state._bHoldMouse                         = true;
-        return true;
+        if ( pState != nullptr )
+            pState->_bHovered = false;
+        releaseMouseHold();
+        moveMouse( float2{ EditorSelfTestInputInternal::kMouseAwayPosition, EditorSelfTestInputInternal::kMouseAwayPosition } );
     }
 
     bool EditorSelfTestInput::hasPendingEvents()
@@ -469,7 +588,7 @@ namespace sw::editor
         return pState != nullptr && pState->_listEvent.empty() == false;
     }
 
-    bool EditorSelfTestInput::isKeyboardTargetSettled()
+    bool EditorSelfTestInput::isKeyboardTargetStable()
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         if ( pState == nullptr )
@@ -479,21 +598,21 @@ namespace sw::editor
         return bFresh && pState->_keyboardTargetFrame > pState->_keyboardTargetStableStart;
     }
 
-    uint32 EditorSelfTestInput::beginSettleWait()
+    uint32 EditorSelfTestInput::beginStabilityWait()
     {
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         if ( pState == nullptr )
             return 0;
-        return ++pState->_settleWaitSerial;
+        return ++pState->_stabilityWaitSerial;
     }
 
-    uint32 EditorSelfTestInput::getSettleWaitSerial()
+    uint32 EditorSelfTestInput::getStabilityWaitSerial()
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
-        return pState != nullptr ? pState->_settleWaitSerial : 0;
+        return pState != nullptr ? pState->_stabilityWaitSerial : 0;
     }
 
-    bool EditorSelfTestInput::isLayoutSettledAfter( uint32 waitSerial )
+    bool EditorSelfTestInput::isLayoutStableAfter( uint32 waitSerial )
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         // 같은 두 표본 중 앞 것의 번호가 기다림 번호 이상이면 뒤 것도 그렇다(번호는 줄지 않는다).
@@ -531,6 +650,20 @@ namespace sw::editor
             state._keyboardTarget      = target;
             state._keyboardTargetFrame = frame;
 
+            // 바로 앞 프레임의 포인터 자리와 그 점의 최상위 창이다(그 프레임의 NewFrame 이 같은 포인터로 정했다) — 이번 입력을 넣기 전에 뜬다.
+            const ImGuiContext& imguiContext = *ImGui::GetCurrentContext();
+            const ImGuiIO&      imguiIO      = ImGui::GetIO();
+            bool                bMouseDown   = false;
+            for ( const bool bDown : imguiIO.MouseDown )
+            {
+                bMouseDown = bMouseDown || bDown;
+            }
+            state._hitSample = EditorSelfTestInputInternal::HitSample{
+                float2{ imguiIO.MousePos.x, imguiIO.MousePos.y },
+                imguiContext.HoveredWindow != nullptr ? imguiContext.HoveredWindow->ID : 0u, frame,
+                static_cast<uint8>( bMouseDown ), static_cast<uint8>( ImGui::IsMousePosValid() )
+            };
+
             // 바로 앞 프레임의 배치다 — 그 프레임이 열릴 때 찍은 번호를 붙인다. 그다음 이번에 여는 프레임에 지금 번호를 찍는다.
             vector<EditorSelfTestInputInternal::WindowPlace> listPlace;
             const uint64                                     signature     = EditorSelfTestInputInternal::sampleLayoutSignature( listPlace );
@@ -542,7 +675,7 @@ namespace sw::editor
             state._layoutSignature = signature;
             state._layoutFrame     = frame;
             state._layoutTag       = state._openFrameTag;
-            state._openFrameTag    = state._settleWaitSerial;
+            state._openFrameTag    = state._stabilityWaitSerial;
         }
         if ( state._bHoldMouse )
         {

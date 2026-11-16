@@ -230,12 +230,21 @@ namespace sw
         optional<uint32> findTextureSlot( hashed_string name ) const;
         /** @brief 품질 레벨을 설정합니다. */
         void setQualityLevel( MaterialQualityLevel level );
+        /** @brief 쿠킹 · 미리 만들기가 모든 조합을 다루는 런타임 스위치(`bShaderFeature="0"`) 수의 상한입니다. 조합이 2^n 이라 넘으면 에셋 상태만 쿠킹하고 오류로 알린다. */
+        static constexpr uint32 kMaxRuntimeStaticSwitchCount = 4;
         /**
-         * @brief 정적 스위치를 켜거나 끕니다.
-         * @note Shipping 에서 런타임에 바꿔도 되는 것은 `bShaderFeature="0"` 인 스위치뿐이다(켬과 끔 둘 다 쿠킹된다). 나머지는 에셋 상태만 쿠킹되어
-         *       바꾼 변형의 바이너리가 없다. Dev 는 실시간 컴파일이 가린다(`ShaderCookRequestTest.EveryRuntimeStaticSwitchCombinationIsRequested`).
+         * @brief 런타임 스위치(`bShaderFeature="0"`)를 켜거나 끕니다. 바꿨거나 이미 그 상태면 true 입니다.
+         * @details 선언하지 않은 이름과 에셋 상태만 쿠킹되는 스위치(`bShaderFeature="1"`)는 **모든 빌드에서** 오류로 거절한다 — 받으면 Dev 는 실시간 컴파일이 가리고
+         *          Shipping 에서만 바이너리가 없어 물체가 사라진다(유니티 shader_feature 를 런타임에 켠 것과 같은 결함). 쿠커 · 미리 만들기는 런타임 스위치의 모든 조합을
+         *          같은 함수(`collectRuntimeSwitchVariants`)로 만든다.
          */
-        void setStaticSwitch( hashed_string name, bool bEnabled );
+        [[nodiscard]] bool setStaticSwitch( hashed_string name, bool bEnabled );
+        /**
+         * @brief 런타임 스위치 조합마다의 define 목록과 그 퍼뮤테이션 해시를 냅니다(지금 상태 포함, 같은 목록은 한 번). 런타임 스위치가 상한을 넘으면 오류를 남기고 지금 상태만 냅니다.
+         * @details 머티리얼을 바꾸지 않는다 — `setStaticSwitch` 뒤 `getCachedShaderDefines` · `getPermutationHash` 가 낼 값과 같다(같은 정의 함수 `buildShaderDefines`).
+         *          쿠커(`ShaderCookRequestCollector`)와 런타임 PSO 미리 만들기(`MaterialCache` → `FramePSOManager::warmPinnedMaterialPSOs`)가 같은 조합을 쓴다.
+         */
+        void collectRuntimeSwitchVariants( vector<vector<string>>& outListDefine, vector<uint64>& outListPermutationHash ) const;
         /** @brief 멀티컴파일 옵션을 선택합니다. */
         void setMultiCompile( hashed_string name, string_view selectedOption );
         /** @brief float32 파라미터를 설정합니다. */
@@ -266,12 +275,21 @@ namespace sw
         const void* getParameterData( string_view name ) const;
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
+        /** @brief 퍼뮤테이션 정의 @p permutationDesc 로 이 머티리얼의 define 목록(정렬)을 만듭니다. 캐시를 건드리지 않는다(`getCachedShaderDefines` 의 본문). */
+        void buildShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const;
+        /** @brief 정렬한 define 목록의 퍼뮤테이션 해시입니다(렌더 칸 해시를 섞는다 — `getPermutationHash` 와 같은 규칙). */
+        uint64 computePermutationHash( const vector<string>& listDefine ) const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. define 에 렌더 상태 · 그리기 순서를 섞은 값이라 PSO 변형과 배치가 그것으로 갈린다. */
         uint64 getPermutationHash() const;
         /**
+         * @brief 스위치 · 멀티컴파일을 바꾸기 직전의 퍼뮤테이션 해시입니다. define 을 처음 만들기 전이면 0 입니다.
+         * @details 새 변형 PSO 를 빌더가 만드는 동안 그 배치를 직전 변형으로 그리게 한다(`GPUShaderPermutation::_fallbackHash`) — 사라짐 대신 한두 프레임 늦은 전환.
+         */
+        uint64 getPreviousPermutationHash() const;
+        /**
          * @brief 퍼뮤테이션 해시에 섞을 렌더 칸의 해시입니다(`MaterialInstance` 도 부모의 것을 섞는다). 덮는 칸이 없고 순서가 기본이면 0 입니다 — 0 은 섞지 않아 기본 머티리얼의 해시 · 배치 순서가 그대로다.
          */
-        uint64 getRenderFieldsHash() const;
+        uint64 getRenderPropertiesHash() const;
         /** @brief 셰이더 경로를 반환합니다. */
         const string& getShaderPath() const { return _desc._shaderPath; }
 
@@ -308,7 +326,7 @@ namespace sw
          * @details 반투명 정렬의 첫 띠다 — 사본 뒤에 그린 반투명은 사본에 없어 굴절 면이 먼저 그려져야 그 위에 얹힌다(유니티 HDRP 의 굴절 앞 · 뒤 반투명 자리).
          *          반투명(`Blend`) 밖에서는 로드 오류다 — 언리얼이 불투명의 SceneColor · Refraction 을 컴파일 오류로 막는 자리.
          */
-        bool readsSceneColorCopy() const { return _desc._permutations.hasAlwaysDefine( kRefractionDefine ); }
+        bool usesSceneColorCopy() const { return _desc._permutations.hasAlwaysDefine( kRefractionDefine ); }
         /**
          * @brief 메시가 그려질 머티리얼입니다 — 자기 머티리얼, 없으면 인스턴스의 부모, 그래도 없으면 씬 기본. 렌더러와 복셀러가 이 한 벌로 고른다.
          * @details 인스턴스 부모가 씬 기본보다 먼저다 — 뒤집히면 인스턴스만 붙은 메시의 배치가 두 머티리얼이 섞인 상태(원소 바이트는 인스턴스, 레이아웃은 기본)가 된다.
@@ -319,6 +337,9 @@ namespace sw
         /** @brief float32 파라미터를 읽습니다. */
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
+        /// 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다 — 렌더러가 굴절 배치를 가른다(`GPUScene::hasRefractionBatches`)(scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
+        static constexpr const utf8* kRefractionDefine = "MATERIAL_REFRACTION";
+
     private:
         /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다. */
         [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceLabel, const ResourceContext& context );
@@ -326,8 +347,6 @@ namespace sw
         /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */
         static constexpr const utf8* kAlphaCutoffProperty = "_alphaCutoff";
 
-        /// 장면 색 사본을 굴절해 읽는 머티리얼의 define 입니다(scene_refraction.hlsli 를 쓰는 셰이더 — 물 · 외형 유리).
-        static constexpr const utf8* kRefractionDefine = "MATERIAL_REFRACTION";
         /// 반투명 블렌드 define 입니다 — `alphaMode="Blend"` 와 함께 움직인다(하나만 있으면 알파가 새거나 불투명 목록에서 섞인다).
         static constexpr const utf8* kTranslucentDefine = "MATERIAL_BLEND_TRANSLUCENT";
 
@@ -389,6 +408,7 @@ namespace sw
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;
+        mutable uint64         _previousPermutationHash; ///< define 을 다시 만들기 직전의 `_cachedPermutationHash`(`getPreviousPermutationHash`)
         mutable uint64         _cachedShaderPathHash;
         mutable uint8          _bDefinesDirty        : 1;
         mutable uint8          _bShaderPathHashDirty : 1;

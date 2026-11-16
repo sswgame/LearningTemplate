@@ -1,0 +1,752 @@
+[
+  {
+    "old": "sw_addAssetReferenceFieldList",
+    "new": "sw_add_asset_reference_field_list",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addContentModuleCheck",
+    "new": "sw_add_content_module_check",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addDynamicModuleDependencies",
+    "new": "sw_add_dynamic_module_dependencies",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addEditorExtension",
+    "new": "sw_add_editor_extension",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addEditorLayerStubs",
+    "new": "sw_add_editor_layer_stubs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addExecutable",
+    "new": "sw_add_executable",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addGameFrameworkKit",
+    "new": "sw_add_game_framework_kit",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addGameModule",
+    "new": "sw_add_game_module",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addLayerStubs",
+    "new": "sw_add_layer_stubs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addLoadScenario",
+    "new": "sw_add_load_scenario",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addModuleBuildStamp",
+    "new": "sw_add_module_build_stamp",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addModuleEngineStamp",
+    "new": "sw_add_module_engine_stamp",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addModuleLibrary",
+    "new": "sw_add_module_library",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addModulePart",
+    "new": "sw_add_module_part",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addPCHEntryDirectory",
+    "new": "sw_add_pch_entry_directory",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addReflectBuiltinsGen",
+    "new": "sw_add_reflect_builtins_gen",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addReflectionCandidateCheck",
+    "new": "sw_add_reflection_candidate_check",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addReflectionStep",
+    "new": "sw_add_reflection_step",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addRHIBackendModule",
+    "new": "sw_add_rhi_backend_module",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addScenarioChain",
+    "new": "sw_add_scenario_chain",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addServerOnlyMarker",
+    "new": "sw_add_server_only_marker",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addSharedPCHOwner",
+    "new": "sw_add_shared_pch_owner",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addSourceTreeRoot",
+    "new": "sw_add_source_tree_root",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addVcpkgHeaderOnly",
+    "new": "sw_add_vcpkg_header_only",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_addVcpkgPackage",
+    "new": "sw_add_vcpkg_package",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_applyEditorCoreSettings",
+    "new": "sw_apply_editor_core_settings",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_applyEditorInputBan",
+    "new": "sw_apply_editor_input_ban",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_applyLayerStubs",
+    "new": "sw_apply_layer_stubs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_applyModuleLayerGuard",
+    "new": "sw_apply_module_layer_guard",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_applyTargetLayerGuard",
+    "new": "sw_apply_target_layer_guard",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_bindClangClWindowsTools",
+    "new": "sw_bind_clang_cl_windows_tools",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_bindPinnedArchiver",
+    "new": "sw_bind_pinned_archiver",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_checkConfigureGlobs",
+    "new": "sw_check_configure_globs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_checkIpoSupport",
+    "new": "sw_check_ipo_support",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_checkManifestKeys",
+    "new": "sw_check_manifest_keys",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_checkRHIBackendName",
+    "new": "sw_check_rhi_backend_name",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_claimReflectionStem",
+    "new": "sw_claim_reflection_stem",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_collectReflectionTargetArgs",
+    "new": "sw_collect_reflection_target_args",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_collectUnusedKits",
+    "new": "sw_collect_unused_kits",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_configureAppDependencies",
+    "new": "sw_configure_app_dependencies",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_configureDLLExports",
+    "new": "sw_configure_dll_exports",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_configureKitModuleCompile",
+    "new": "sw_configure_kit_module_compile",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_configurePCH",
+    "new": "sw_configure_pch",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_copyDxcDlls",
+    "new": "sw_copy_dxc_dlls",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_copyTintTool",
+    "new": "sw_copy_tint_tool",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_copyTracyRuntime",
+    "new": "sw_copy_tracy_runtime",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_copyVcpkgFile",
+    "new": "sw_copy_vcpkg_file",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_copyVcpkgSharedLib",
+    "new": "sw_copy_vcpkg_shared_lib",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_copyVulkanValidationRuntime",
+    "new": "sw_copy_vulkan_validation_runtime",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_deactivateExtensionsOfInactiveDependencies",
+    "new": "sw_deactivate_extensions_of_inactive_dependencies",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_deactivateModule",
+    "new": "sw_deactivate_module",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_decideModuleActivation",
+    "new": "sw_decide_module_activation",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_declareExcludedDirectory",
+    "new": "sw_declare_excluded_directory",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_declareExcludedSources",
+    "new": "sw_declare_excluded_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_defineEngineABIStamp",
+    "new": "sw_define_engine_abi_stamp",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_deployRuntimeDependencies",
+    "new": "sw_deploy_runtime_dependencies",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_emitRuntimeCopies",
+    "new": "sw_emit_runtime_copies",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_ensureDxilLinuxSonameSymlink",
+    "new": "sw_ensure_dxil_linux_soname_symlink",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_escapeRegex",
+    "new": "sw_escape_regex",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_excludeSourcesIncludingPrefix",
+    "new": "sw_exclude_sources_including_prefix",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_executePythonScript",
+    "new": "sw_execute_python_script",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_filterPlatformSources",
+    "new": "sw_filter_platform_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_findDxcRuntimeDlls",
+    "new": "sw_find_dxc_runtime_dlls",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_findEngineCompressionLibraries",
+    "new": "sw_find_engine_compression_libraries",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_findLibclang",
+    "new": "sw_find_libclang",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_findLlvmBin",
+    "new": "sw_find_llvm_bin",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_findMsvcLibExe",
+    "new": "sw_find_msvc_lib_exe",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_findWindowsArchiveAndMt",
+    "new": "sw_find_windows_archive_and_mt",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_findWindowsSdkMt",
+    "new": "sw_find_windows_sdk_mt",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getAllRHIBackendSources",
+    "new": "sw_get_all_rhi_backend_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getCoreTier",
+    "new": "sw_get_core_tier",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getDynamicModules",
+    "new": "sw_get_dynamic_modules",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getModuleDependenciesOfKind",
+    "new": "sw_get_module_dependencies_of_kind",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getModuleDirectoriesOfKind",
+    "new": "sw_get_module_directories_of_kind",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getRHIBackendEntrySource",
+    "new": "sw_get_rhi_backend_entry_source",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getRHIBackendSources",
+    "new": "sw_get_rhi_backend_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getSourceTreeFiles",
+    "new": "sw_get_source_tree_files",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_getVcpkgPaths",
+    "new": "sw_get_vcpkg_paths",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_globEditorLayer",
+    "new": "sw_glob_editor_layer",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_globSourceTree",
+    "new": "sw_glob_source_tree",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_globTestsUnder",
+    "new": "sw_glob_tests_under",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_hasReflectionMacro",
+    "new": "sw_has_reflection_macro",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_inheritEditorCoreReflection",
+    "new": "sw_inherit_editor_core_reflection",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_isModuleActive",
+    "new": "sw_is_module_active",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_keepImportLibraryIfUnchanged",
+    "new": "sw_keep_import_library_if_unchanged",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_linkEditorCore",
+    "new": "sw_link_editor_core",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_linkRuntimeKit",
+    "new": "sw_link_runtime_kit",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_linkVcpkgHeaderOnlyTarget",
+    "new": "sw_link_vcpkg_header_only_target",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_linkWholeArchive",
+    "new": "sw_link_whole_archive",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_makeReflectionParserArgs",
+    "new": "sw_make_reflection_parser_args",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_markDeterministicSources",
+    "new": "sw_mark_deterministic_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_pinnedArchiverPath",
+    "new": "sw_pinned_archiver_path",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_planReflectionOutputs",
+    "new": "sw_plan_reflection_outputs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_prependEnvPath",
+    "new": "sw_prepend_env_path",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_queryCompilerSystemIncludes",
+    "new": "sw_query_compiler_system_includes",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_queryJSONInternal",
+    "new": "sw_query_json_internal",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_queueRuntimeCopy",
+    "new": "sw_queue_runtime_copy",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readAllModuleManifests",
+    "new": "sw_read_all_module_manifests",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readGamePackManifest",
+    "new": "sw_read_game_pack_manifest",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readJSONFileText",
+    "new": "sw_read_json_file_text",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readManifestDependencies",
+    "new": "sw_read_manifest_dependencies",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readManifestOverrides",
+    "new": "sw_read_manifest_overrides",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readManifestPlatforms",
+    "new": "sw_read_manifest_platforms",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readManifestWords",
+    "new": "sw_read_manifest_words",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readModuleEnumNames",
+    "new": "sw_read_module_enum_names",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readModuleManifest",
+    "new": "sw_read_module_manifest",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readOptionalJSONValue",
+    "new": "sw_read_optional_json_value",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_readScenarioLaunch",
+    "new": "sw_read_scenario_launch",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_registerDynamicModule",
+    "new": "sw_register_dynamic_module",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_removeExcludedSources",
+    "new": "sw_remove_excluded_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_removeStaleBinaryOutputs",
+    "new": "sw_remove_stale_binary_outputs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_requireActiveDependencies",
+    "new": "sw_require_active_dependencies",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_requireDeterministicMarkForRollback",
+    "new": "sw_require_deterministic_mark_for_rollback",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_requireJSONValue",
+    "new": "sw_require_json_value",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_requireTemplateDefinitions",
+    "new": "sw_require_template_definitions",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_resolveModuleManifests",
+    "new": "sw_resolve_module_manifests",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_resolveShippingRHIBackend",
+    "new": "sw_resolve_shipping_rhi_backend",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_scanReflectionHeaders",
+    "new": "sw_scan_reflection_headers",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_selectGamePacks",
+    "new": "sw_select_game_packs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_setModuleBinOutput",
+    "new": "sw_set_module_bin_output",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_setTargetDefsHeader",
+    "new": "sw_set_target_defs_header",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_setUnityBuild",
+    "new": "sw_set_unity_build",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_skipInactiveModule",
+    "new": "sw_skip_inactive_module",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_skipUnityForTestSources",
+    "new": "sw_skip_unity_for_test_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_skipUnityForX11Sources",
+    "new": "sw_skip_unity_for_x11_sources",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_skipWithoutReflectionParser",
+    "new": "sw_skip_without_reflection_parser",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_sortModulesByDependency",
+    "new": "sw_sort_modules_by_dependency",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_splitShippingDebugInfo",
+    "new": "sw_split_shipping_debug_info",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_stageModuleRuntimeDLLs",
+    "new": "sw_stage_module_runtime_dlls",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_thirdPartySystemIncludes",
+    "new": "sw_third_party_system_includes",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_useSharedPCH",
+    "new": "sw_use_shared_pch",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgComputeManifestHash",
+    "new": "sw_vcpkg_compute_manifest_hash",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgComputeManifestHashLegacy",
+    "new": "sw_vcpkg_compute_manifest_hash_legacy",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgHashFileNormalized",
+    "new": "sw_vcpkg_hash_file_normalized",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgInstallReadOnlyReason",
+    "new": "sw_vcpkg_install_read_only_reason",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgPlanManifestInstall",
+    "new": "sw_vcpkg_plan_manifest_install",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgResolveWindowsPortTools",
+    "new": "sw_vcpkg_resolve_windows_port_tools",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgWriteIfChanged",
+    "new": "sw_vcpkg_write_if_changed",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgWriteManifestStamp",
+    "new": "sw_vcpkg_write_manifest_stamp",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_vcpkgWriteOverlayTriplets",
+    "new": "sw_vcpkg_write_overlay_triplets",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_verifyDeterministicMark",
+    "new": "sw_verify_deterministic_mark",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_verifyDynamicModuleRegistry",
+    "new": "sw_verify_dynamic_module_registry",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_verifySourceIncludeRoots",
+    "new": "sw_verify_source_include_roots",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_writeCoreTierStubs",
+    "new": "sw_write_core_tier_stubs",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_writeExcludedSourceList",
+    "new": "sw_write_excluded_source_list",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_writeIfChanged",
+    "new": "sw_write_if_changed",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_writeLayerStub",
+    "new": "sw_write_layer_stub",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_writeReflectionBundles",
+    "new": "sw_write_reflection_bundles",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "sw_writeRuntimeModuleCatalog",
+    "new": "sw_write_runtime_module_catalog",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  },
+  {
+    "old": "swRunParser",
+    "new": "sw_run_parser",
+    "why": "CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)"
+  }
+]

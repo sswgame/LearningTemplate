@@ -50,7 +50,7 @@ namespace
     constexpr float32 kGhostTolerance = 1.0e-3f;
 
     /** @brief 싸움의 상태 바이트를 손으로 씁니다. 기본값은 숨은 유령 하나인 정상 상태입니다. */
-    struct GhostForgedEncounter
+    struct GhostFixtureEncounter
     {
         hashed_string _kind{ "goob" };
         float3        _flee{};
@@ -97,7 +97,7 @@ namespace
     };
 
     /** @brief 부 하나의 상태 바이트입니다. 기본값은 가구에 숨은 `booA` 입니다. */
-    struct GhostForgedBoo
+    struct GhostFixtureBoo
     {
         hashed_string _room{ "foyer" };
         hashed_string _furniture{ "dresser" };
@@ -207,7 +207,7 @@ namespace
         }
 
         /** @brief 저택의 상태 바이트를 손으로 쓴 뒤 읽습니다. 싸움은 지금 것을 그대로 싣습니다. */
-        bool readForged( const GhostForgedBoo& boo, const hashed_string& currentRoom, uint32 booCount = 2u, uint32 searchedCount = 3u, uint8 searched = SW_FALSE )
+        bool readFixture( const GhostFixtureBoo& boo, const hashed_string& currentRoom, uint32 booCount = 2u, uint32 searchedCount = 3u, uint8 searched = SW_FALSE )
         {
             Archive written;
             _mansion.getEncounter().writeState( written );
@@ -217,7 +217,7 @@ namespace
             boo.write( written );
             for ( uint32 index = 1; index < booCount; ++index )
             {
-                GhostForgedBoo other;
+                GhostFixtureBoo other;
                 other._room      = "hall";
                 other._furniture = hashed_string{};
                 other._hp        = 10.0f;
@@ -675,73 +675,73 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
 /**
  * @brief [GhostHuntTest] 결함: 체력 · 번호 · 게이지 · 강화 단계의 범위와 흡입 짝을 보지 않았다. 흡입 대상 없이 흡입 중인 유령은 `update` 가 건너뛰어 영영 멈추고, 겹친 번호나 다음 번호 이하의 번호는 새 유령과 겹친다 — 거절한다
  */
-SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesForgedBytes )
+SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesCraftedBytes )
 {
-    GhostForgedEncounter good;
+    GhostFixtureEncounter good;
     SW_REQUIRE_TRUE( good.read( _encounter ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 1, _encounter.countRemaining() );
 
-    GhostForgedEncounter forged = good;
-    forged._kind                = "nobody";
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    GhostFixtureEncounter fixture = good;
+    fixture._kind                 = "nobody";
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged     = good;
-    forged._hp = 41.0f;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._hp = -1.0f;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._hp = 0.0f; // 체력 0 인데 잡히지 않았다
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture     = good;
+    fixture._hp = 41.0f;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._hp = -1.0f;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._hp = 0.0f; // 체력 0 인데 잡히지 않았다
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged        = good;
-    forged._state = static_cast<uint8>( GhostState::Caught ); // 체력이 남았는데 잡혔다
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._hp = 0.0f;
-    SW_EXPECT_TRUE( forged.read( _encounter ) ); // 잡힌 유령은 체력이 0 이다
-    forged._state = 9;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture        = good;
+    fixture._state = static_cast<uint8>( GhostState::Caught ); // 체력이 남았는데 잡혔다
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._hp = 0.0f;
+    SW_EXPECT_TRUE( fixture.read( _encounter ) ); // 잡힌 유령은 체력이 0 이다
+    fixture._state = 9;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged     = good;
-    forged._id = 0;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged     = good;
-    forged._id = 2; // 다음 번호와 겹친다
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged         = good;
-    forged._bTwice = SW_TRUE;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture     = good;
+    fixture._id = 0;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture     = good;
+    fixture._id = 2; // 다음 번호와 겹친다
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture         = good;
+    fixture._bTwice = SW_TRUE;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged       = good;
-    forged._flee = float3{ 5.0f, 0.0f, 0.0f };
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture       = good;
+    fixture._flee = float3{ 5.0f, 0.0f, 0.0f };
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged        = good;
-    forged._stage = 2;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._stage = -1;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture        = good;
+    fixture._stage = 2;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._stage = -1;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged         = good;
-    forged._strobe = 1.5f;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._strobe = -0.5f;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture         = good;
+    fixture._strobe = 1.5f;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._strobe = -0.5f;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged        = good;
-    forged._surge = 1.5f;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._surge = -0.5f;
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture        = good;
+    fixture._surge = 1.5f;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._surge = -0.5f;
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
-    forged                = good;
-    forged._suctionTarget = 7; // 없는 유령이다
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._suctionTarget = 1; // 흡입 중이 아니다
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
-    forged._state = static_cast<uint8>( GhostState::Sucking );
-    SW_EXPECT_TRUE( forged.read( _encounter ) );
-    forged._suctionTarget = 0; // 대상 없이 흡입 중이다
-    SW_EXPECT_FALSE( forged.read( _encounter ) );
+    fixture                = good;
+    fixture._suctionTarget = 7; // 없는 유령이다
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._suctionTarget = 1; // 흡입 중이 아니다
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
+    fixture._state = static_cast<uint8>( GhostState::Sucking );
+    SW_EXPECT_TRUE( fixture.read( _encounter ) );
+    fixture._suctionTarget = 0; // 대상 없이 흡입 중이다
+    SW_EXPECT_FALSE( fixture.read( _encounter ) );
 
     // 잘린 바이트와, 거절한 뒤 상태가 그대로인 것을 본다.
     SW_REQUIRE_TRUE( good.read( _encounter ) );
@@ -1007,39 +1007,39 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionStateRoundTrip )
 /**
  * @brief [GhostHuntRulesTest] 결함: 부의 체력과 방 · 가구 이름, 지금 방을 보지 않았다 — 음수나 최대 초과 체력, 없는 방과 가구를 거절한다. 수가 다른 부와 가구, 깨진 뒤짐 표시도 거절하고 상태는 그대로이다
  */
-SW_TEST_CASE_F( GhostHuntRulesTest, MansionReadRefusesForgedBytes )
+SW_TEST_CASE_F( GhostHuntRulesTest, MansionReadRefusesCraftedBytes )
 {
-    const GhostForgedBoo good;
-    SW_REQUIRE_TRUE( readForged( good, "foyer" ) ); // 형식은 맞다
+    const GhostFixtureBoo good;
+    SW_REQUIRE_TRUE( readFixture( good, "foyer" ) ); // 형식은 맞다
     SW_EXPECT_TRUE( _mansion.getCurrentRoom() == hashed_string( "foyer" ) );
-    SW_EXPECT_TRUE( readForged( good, hashed_string{} ) ); // 아직 방에 들어가지 않았다
-    SW_REQUIRE_TRUE( readForged( good, "foyer" ) );
+    SW_EXPECT_TRUE( readFixture( good, hashed_string{} ) ); // 아직 방에 들어가지 않았다
+    SW_REQUIRE_TRUE( readFixture( good, "foyer" ) );
 
-    SW_EXPECT_FALSE( readForged( good, "nowhere" ) );
+    SW_EXPECT_FALSE( readFixture( good, "nowhere" ) );
 
-    GhostForgedBoo forged = good;
-    forged._hp            = 31.0f;
-    SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
-    forged._hp = -1.0f;
-    SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
-    forged._hp = 0.0f; // 체력 0 인데 잡히지 않았다
-    SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
+    GhostFixtureBoo fixture = good;
+    fixture._hp             = 31.0f;
+    SW_EXPECT_FALSE( readFixture( fixture, "foyer" ) );
+    fixture._hp = -1.0f;
+    SW_EXPECT_FALSE( readFixture( fixture, "foyer" ) );
+    fixture._hp = 0.0f; // 체력 0 인데 잡히지 않았다
+    SW_EXPECT_FALSE( readFixture( fixture, "foyer" ) );
 
-    forged        = good;
-    forged._state = static_cast<uint8>( HidingGhostState::Caught ); // 체력이 남았는데 잡혔다
-    SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
-    forged._state = 9;
-    SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
+    fixture        = good;
+    fixture._state = static_cast<uint8>( HidingGhostState::Caught ); // 체력이 남았는데 잡혔다
+    SW_EXPECT_FALSE( readFixture( fixture, "foyer" ) );
+    fixture._state = 9;
+    SW_EXPECT_FALSE( readFixture( fixture, "foyer" ) );
 
-    forged       = good;
-    forged._room = "nowhere";
-    SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
-    forged            = good;
-    forged._furniture = "nothing";
-    SW_EXPECT_FALSE( readForged( forged, "foyer" ) );
+    fixture       = good;
+    fixture._room = "nowhere";
+    SW_EXPECT_FALSE( readFixture( fixture, "foyer" ) );
+    fixture            = good;
+    fixture._furniture = "nothing";
+    SW_EXPECT_FALSE( readFixture( fixture, "foyer" ) );
 
-    SW_EXPECT_FALSE( readForged( good, "foyer", 1u ) );
-    SW_EXPECT_FALSE( readForged( good, "foyer", 2u, 2u ) );
-    SW_EXPECT_FALSE( readForged( good, "foyer", 2u, 3u, 2 ) );
+    SW_EXPECT_FALSE( readFixture( good, "foyer", 1u ) );
+    SW_EXPECT_FALSE( readFixture( good, "foyer", 2u, 2u ) );
+    SW_EXPECT_FALSE( readFixture( good, "foyer", 2u, 3u, 2 ) );
     SW_EXPECT_TRUE( _mansion.getCurrentRoom() == hashed_string( "foyer" ) );
 }

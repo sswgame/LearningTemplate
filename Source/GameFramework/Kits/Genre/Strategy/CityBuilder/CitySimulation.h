@@ -244,7 +244,8 @@ namespace sw
         /** @brief 집 단계의 인구 가중 평균을 반환합니다(번영 평가). */
         float32 computeAverageHouseLevel() const;
         /** @brief 그 집이 그 서비스를 지금 받고 있는지 반환합니다. */
-        bool    isHouseServed( const CityBuilding& house, CityService service ) const;
+        bool isHouseServed( const CityBuilding& house, CityService service ) const;
+        /** @brief 시뮬레이션 시각(초)입니다. 차이만 뜻이 있다 — 커지면 기준을 옮긴다(`TimeRolloverUtil::rebase`, 서비스 시각도 같이 옮긴다). */
         float32 getTime() const { return _time; }
 
         /**
@@ -276,7 +277,7 @@ namespace sw
         /** @brief 그 물건을 @p amount 만큼 받을 수 있고 같은 도로망에 있는 가장 가까운 창고입니다. 없으면 비어 있습니다. */
         optional<int32> findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
         int32           computeStorageFree( const CityBuilding& storage ) const;
-        bool            meetsHouseLevel( const CityBuilding& house, int32 level ) const;
+        bool            hasReachedHouseLevel( const CityBuilding& house, int32 level ) const;
         bool            isRoad( int32 x, int32 y ) const;
         int32           getRoadComponent( const int2& tile ) const;
 

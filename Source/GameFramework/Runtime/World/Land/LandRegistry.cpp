@@ -155,9 +155,9 @@ namespace sw
 
     void LandRegistry::serializeState( StateIO& io )
     {
-        io.expect( _topology._width );
-        io.expect( _topology._height );
-        uint32 ownerCount = static_cast<uint32>( _listOwnerName.size() );
+        // 땅 크기는 설정이 정한다 — 저장된 크기로 읽어 같은 좌표에 옮긴다(감사 A-6, `GridTopology::serializeCells`).
+        const GridTopology savedTopology = _topology.serializeSize( io );
+        uint32             ownerCount    = static_cast<uint32>( _listOwnerName.size() );
         io.count( sizeof( uint32 ), ownerCount );
         if ( io.isOk() == false )
             return;
@@ -174,20 +174,25 @@ namespace sw
                 listOwnerMap.push_back( registerOwner( ownerName ) );
             }
         }
-        for ( Cell& cell : _listCell )
+        // 칸마다 주인(2) + 막음(1)
+        _topology.serializeCells(
+            io, savedTopology, _listCell, kCellStateMinBytes,
+            [&]( StateIO& cellIO, Cell& cell )
         {
             uint16 savedOwner = cell._owner;
             uint8  bBlocking  = cell._bBlocking;
-            io.value( savedOwner );
-            io.value( bBlocking );
-            if ( io.isWriting() )
-                continue;
-            if ( io.check( savedOwner <= ownerCount && bBlocking <= SW_TRUE ) == false )
+            cellIO.value( savedOwner );
+            cellIO.value( bBlocking );
+            if ( cellIO.isWriting() )
+                return;
+            if ( cellIO.check( savedOwner <= ownerCount && bBlocking <= SW_TRUE ) == false )
                 return;
             cell._owner     = savedOwner == kNoOwner ? kNoOwner : listOwnerMap[static_cast<size_t>( savedOwner - 1 )];
             cell._bBlocking = savedOwner == kNoOwner ? SW_FALSE : bBlocking;
-        }
-        if ( io.isReading() )
+        },
+            []( const Cell& cell )
+        { return cell._owner == kNoOwner; } );
+        if ( io.isReading() && io.isOk() )
         {
             ++_revision;
         }

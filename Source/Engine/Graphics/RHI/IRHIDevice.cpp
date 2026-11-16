@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Window/IRenderSurface.h"
 
@@ -208,6 +209,11 @@ namespace sw
         return _pDeferredHandleQueue->_gpuIdleWaitCount.load( std::memory_order_relaxed );
     }
 
+    bool IRHIDevice::isDeviceLost() const
+    {
+        return getTransferSerials().isLost();
+    }
+
     bool IRHIDevice::queryNativeHandles( RHIBackend expectedBackend, RHINativeHandles& inoutHandles ) const
     {
         // 핸들의 뜻은 백엔드마다 다르다 — 호출처가 캐스트할 백엔드가 아니면 한 칸도 쓰지 않는다.
@@ -385,7 +391,7 @@ namespace sw
     {
         // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점에는 백엔드 자원이
         // 이미 없으므로 **돌려줄 수 없다.** 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
-        RHIRenderResource::clearAllFor( this );
+        RHIRenderResource::clearAllForDevice( this );
     }
 
     IRHIDevice::IRHIDevice()
@@ -588,7 +594,7 @@ namespace sw
             SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# GPU releases were queued after %# shut down - they run against destroyed native objects",
                            getPendingReleaseCount(), getBackendName() );
         // 1 은 **자원을 내리기 전에** 알린다 — 언리얼 FRenderResource::ReleaseRHI 자리. 든 쪽이 해제 큐에 넘긴 자원은 2 가 GPU 를 기다린 뒤 비운다.
-        RHIRenderResource::releaseAllFor( this );
+        RHIRenderResource::releaseAllForDevice( this );
         flushDeferredHandleReleases();
         waitIdleInternal();
         SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# kept %# GPU releases after waiting for the GPU", getBackendName(), getPendingReleaseCount() );

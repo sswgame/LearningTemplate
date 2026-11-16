@@ -184,7 +184,7 @@ namespace sw
                 };
                 for ( const string& tokenRaw : listPriority )
                 {
-                    const string token = FileUtil::normalizePath( tokenRaw );
+                    const string token = FileUtil::normalizePath( tokenRaw ).str();
                     if ( token == "game" )
                     {
                         // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
@@ -309,7 +309,7 @@ namespace sw
                     string relative;
                     if ( FileUtil::tryMakePathUnderRoot( mounted._folder, absolutePath, relative ) == false ) // 대소문자는 OS 규칙
                         continue;
-                    outID = mounted._domain + "/" + FileUtil::normalizePath( relative ); // id 는 소문자다
+                    outID = mounted._domain + "/" + FileUtil::normalizePath( relative ).str(); // id 는 소문자다
                     return true;
                 }
                 return false;
@@ -513,10 +513,21 @@ namespace sw
         return {};
     }
 
+    bool AssetPaths::isUnderSourceControl( string_view diskPath )
+    {
+        string relative;
+        if ( FileUtil::tryMakePathUnderRoot( ProcessRoots::get()._content.str(), diskPath, relative ) == false )
+            return false; // 리소스 트리 밖(Saved · 빌드 · 임시 폴더)의 읽기 전용은 잠금이 아니다
+        const string_view relativeView{ relative };
+        return relativeView != kScratchDomain && StringUtil::startsWith( relativeView, string( kScratchDomain ) + "/" ) == false;
+    }
+
     bool AssetPaths::initialize()
     {
         // 리소스 트리에 새로 생기는 이름은 소문자 — 쓰기 경로 하나가 막는다(입구마다 접는 것을 잊어도 대문자 파일이 생기지 않는다). 함수가 상태 없이 루트를 읽어 다시 걸어도 같다.
         FileUtil::setCreateRule( &AssetPaths::checkLowercaseResourceName );
+        // 리소스 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
+        (void)FileUtil::setCheckoutRule( &AssetPaths::isUnderSourceControl );
         // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
         if ( _pState->_bInitialized )
@@ -585,7 +596,7 @@ namespace sw
         }
         AssetPathsInternal::getPathStats().recordMiss();
 
-        const string lowerFile = FileUtil::normalizePath( resourceID );
+        const string lowerFile = FileUtil::normalizePath( resourceID ).str();
 
         string found;
         string domainRoot;
@@ -637,7 +648,7 @@ namespace sw
         if ( folderID.empty() || FileUtil::isAbsolutePath( folderID ) || hasParentDirectoryComponent( folderID ) )
             return;
         State&       state       = *_pState;
-        const string lowerFolder = FileUtil::normalizePath( folderID );
+        const string lowerFolder = FileUtil::normalizePath( folderID ).str();
         string       domainRoot;
         string       keyUnderRoot;
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder, domainRoot, keyUnderRoot ) )
@@ -681,7 +692,7 @@ namespace sw
     {
         if ( FileUtil::isAbsolutePath( text ) )
             return {}; // 디스크 경로는 id 가 아니다 - 바꾸는 길은 `toAssetID` 하나다
-        string id = FileUtil::normalizePath( FileUtil::normalizeSeparators( text ) );
+        string id = FileUtil::normalizePath( FileUtil::normalizeSeparators( text ) ).str();
         while ( StringUtil::startsWith( id, "./" ) )
         {
             id.erase( 0, 2 );
@@ -729,7 +740,7 @@ namespace sw
 
     bool AssetPaths::mountDiskDomain( string_view domainName, string_view diskFolder )
     {
-        const string domain       = FileUtil::normalizePath( domainName );
+        const string domain       = FileUtil::normalizePath( domainName ).str();
         const bool   bInvalidName = domain.empty() || domain.find_first_of( "/\\:" ) != string::npos || domain == "." || domain == "..";
         if ( bInvalidName )
         {
@@ -759,7 +770,7 @@ namespace sw
             {
                 if ( mounted._domain != domain )
                     continue;
-                if ( FileUtil::normalizePath( mounted._folder ) == FileUtil::normalizePath( folder ) )
+                if ( FileUtil::isSameDiskPath( mounted._folder, folder ) ) // 디스크 폴더다 — 접은 키로 견주면 리눅스에서 대소문자만 다른 폴더가 같아진다
                     return true;
                 conflictFolder = mounted._folder;
                 bConflict      = true;
@@ -779,7 +790,7 @@ namespace sw
 
     bool AssetPaths::unmountDiskDomain( string_view domainName )
     {
-        const string domain = FileUtil::normalizePath( domainName );
+        const string domain = FileUtil::normalizePath( domainName ).str();
         State&       state  = *_pState;
         bool         bFound{ false };
         {
@@ -808,7 +819,7 @@ namespace sw
         string root;
         string key;
         return assetID.empty() == false && FileUtil::isAbsolutePath( assetID ) == false &&
-               AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ), root, key );
+               AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ).str(), root, key );
     }
 
     const string& AssetPaths::getRootFolderPath() const

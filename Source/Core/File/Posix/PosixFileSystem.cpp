@@ -39,7 +39,7 @@ namespace sw
             static string toNative( string_view path )
             {
                 // 파일 시스템 연산이 모두 지나는 길목이다 - 상대 경로는 빈 글로 돌려 그 연산을 실패시킨다(R2).
-                if ( PlatformFileUtil::acceptsPathInput( path ) == false )
+                if ( PlatformFileUtil::canAcceptPathInput( path ) == false )
                     return {};
                 string separated{ path };
                 StringUtil::replaceChar( separated, '\\', '/' );

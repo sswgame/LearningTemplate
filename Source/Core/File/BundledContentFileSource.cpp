@@ -76,8 +76,12 @@ namespace sw
         const AsyncFileHandle handle = open( path );
         if ( handle.isValid() == false )
             return false;
-        outBytes.resize( static_cast<size_t>( handle.getSize() ) );
-        return handle.readAt( 0, outBytes.data(), outBytes.size() );
+        // 곧 전부 읽어 덮으니 0 으로 채우지 않는다. 다 읽지 못하면 초기화하지 않은 바이트를 남기지 않게 비운다.
+        outBytes.resizeForOverwrite( static_cast<size_t>( handle.getSize() ) );
+        if ( handle.readAt( 0, outBytes.data(), outBytes.size() ) )
+            return true;
+        outBytes.clear();
+        return false;
     }
 
     bool BundledContentFileSource::readTextFile( string_view path, string& outText ) const

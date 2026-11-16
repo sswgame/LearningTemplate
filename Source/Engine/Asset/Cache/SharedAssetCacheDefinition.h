@@ -174,14 +174,15 @@ namespace sw
  *     SW_SHARED_ASSET_CACHE( Skeleton, Skeleton, Skeleton::kAssetType.withLoader( AssetTypeLoader::of<Skeleton>( MemoryTag::Animation ) ) );
  * @endcode
  */
-#define SW_SHARED_ASSET_CACHE( id, AssetType, ... )                           \
-    template <>                                                               \
-    struct SharedAssetCacheTraits<AssetType>                                  \
-    {                                                                         \
-        static constexpr AssetTypeDef kType = __VA_ARGS__;                    \
-    };                                                                        \
-    template class SW_API SharedAssetCache<AssetType>;                        \
-    SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, ::sw::SharedAssetCache<AssetType> ); \
+#define SW_SHARED_ASSET_CACHE( id, AssetType, ... )                                                                                                              \
+    static_assert( SharedAssetCacheDecl<AssetType>::kValue, "declare the cache in the asset header: SW_DECLARE_SHARED_ASSET_CACHE( <extern macro>, <asset> )" ); \
+    template <>                                                                                                                                                  \
+    struct SharedAssetCacheTraits<AssetType>                                                                                                                     \
+    {                                                                                                                                                            \
+        static constexpr AssetTypeDef kType = __VA_ARGS__;                                                                                                       \
+    };                                                                                                                                                           \
+    template class SW_API SharedAssetCache<AssetType>;                                                                                                           \
+    SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, ::sw::SharedAssetCache<AssetType> );                                                                                    \
     SW_ASSET_TYPE( id, SharedAssetCacheTraits<AssetType>::kType )
 
 namespace sw

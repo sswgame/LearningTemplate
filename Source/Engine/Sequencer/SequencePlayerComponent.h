@@ -98,7 +98,7 @@ namespace sw
         float32 getFramesPerSecond() const { return _framesPerSecond; }
 
     private:
-        void applyTimeline();
+        void applyTimeline( const SequencePlaybackStep& step );
         /** @brief 재생을 끝냅니다(클래스 머리말의 재생 계약). @p kind 는 기록에 남길 끝의 종류입니다. 쥔 것이 없으면 아무것도 하지 않는다. */
         void endPlayback( SequenceHistoryKind kind );
         /** @brief 카메라 신호의 초 단위 값과 대상을 채워 알리고 기록합니다. */

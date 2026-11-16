@@ -75,6 +75,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
+        static constexpr uint32 kCellStateMinBytes = 3; ///< 셀 하나의 상태 바이트 — 주인(2) + 막음(1)
         /** @brief 한 셀입니다. 주인 번호와 막힘을 담습니다. */
         struct Cell
         {

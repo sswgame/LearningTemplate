@@ -57,7 +57,9 @@ namespace sw
         ServerApp& operator=( const ServerApp& ) = delete;
 
         /** @brief 프로세스 본문입니다(콘솔 실행 · Windows 서비스 공용). 정상 종료면 0 입니다. */
-        static int32 runMain( int32 argc, utf8* pArgv[] );
+        /** @brief 기동을 마치고 루프에 들어가기 직전에 불리는 함수입니다(서비스 호스트가 그때 RUNNING 을 알린다). 없으면 nullptr 을 넘긴다. */
+        using ReadyFunction = void ( * )();
+        static int32 runMain( int32 argc, utf8* pArgv[], ReadyFunction pfnOnReady );
 
         /** @brief 엔진 · 설정 · 모듈 · 게임을 세웁니다. 헤드리스 작업(서버 팩의 씬 쿠킹)이면 그것으로 끝납니다(`run` 이 바로 돌아온다). */
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[] );
@@ -72,7 +74,7 @@ namespace sw
         [[nodiscard]] bool loadServerConfig();
         /**
          * @brief 읽은 설정의 칸 사이 규칙을 서비스를 세우지 않고 봅니다(`--check-config` · 기동이 같은 검사를 지난다). 어긴 규칙마다 오류를 남기고, 하나라도 있으면 false 입니다.
-         * @details 운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 보고 동의. 배포 전에 CI · 이미지 빌드(`Scripts/package/ServerImage.py`)가 돌린다(언리얼 `-run=` 커맨드릿 · 서버 `-validate` 자리).
+         * @details 운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 보고 동의. 배포 전에 CI · 이미지 빌드(`Scripts/package/server_image.py`)가 돌린다(언리얼 `-run=` 커맨드릿 · 서버 `-validate` 자리).
          */
         [[nodiscard]] static bool checkServerConfig( const ServerConfig& config );
         /** @brief 호스트 서비스 하나를 세웁니다(`kArrServerHostService` — 순서는 `HostService` 의 의존 선언이 정한다). */
@@ -92,7 +94,7 @@ namespace sw
         [[nodiscard]] bool collectPreviousCrashes();
         /** @brief 종료 요청이 처음 보였을 때 드레인(서버 운영 O3)을 시작합니다. `/readyz` 를 503 으로 바꾸고 접속이 빌 때까지의 기한을 정합니다. */
         void beginDrain( ShutdownCause cause, int64 monotonicMs );
-        /** @brief 드레인이 기다리는 것의 수입니다 — 서비스 연결 + 게임 UDP 접속(O3) + 키트의 진행 중인 일(`IServerService::getOpenWorkCount`). 0 이면 조용히 내려갈 수 있다. */
+        /** @brief 드레인이 기다리는 것의 수입니다 — 서비스 연결 + 게임 UDP 접속(O3) + 키트의 진행 중인 일(`IServerService::getOpenJobCount`). 0 이면 조용히 내려갈 수 있다. */
         [[nodiscard]] int32 countDrainBlockers() const;
         /** @brief 드레인이 끝났는지입니다 — 기다릴 이유가 없거나(접속 0 · 기다림 0 초) 기한이 지났으면 true. */
         [[nodiscard]] bool isDrainFinished( int64 monotonicMs ) const;

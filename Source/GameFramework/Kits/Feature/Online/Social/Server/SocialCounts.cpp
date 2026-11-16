@@ -8,7 +8,7 @@ namespace sw
     {
         struct SocialLinkRulesInternal
         {
-            static SocialLinkDecision makeResult( SocialOutcome result )
+            static SocialLinkDecision makeResult( SocialServiceResult result )
             {
                 SocialLinkDecision decision;
                 decision._result = result;
@@ -141,6 +141,6 @@ namespace sw
             case SocialLinkOperation::Unblock:
                 return Internal::decideUnblock( selfState, otherState );
         }
-        return Internal::makeResult( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
+        return Internal::makeResult( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
     }
 } // namespace sw

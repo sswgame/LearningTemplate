@@ -40,7 +40,7 @@ namespace sw
         , _connection{}
         , _nowMs{ 0 }
         , _nextConnectMs{ 0 }
-        , _backoff{ OnlineServiceClientInternal::kFirstBackoffMs }
+        , _backoff{ ExponentialBackoff::createWithRandomSeed( OnlineServiceClientInternal::kFirstBackoffMs ) }
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
         , _schemaHash{ 0 }
@@ -90,10 +90,10 @@ namespace sw
         { return pClient == this; } );
         if ( VectorUtil::removeFirst( _listService, pService ) == 0 )
             return;
-        cancelRequestsOf( pService->_registeredRange ); // 기반 소멸자에서 불리므로 getMethodRange(가상)는 부르지 않는다
+        cancelRequests( pService->_registeredRange ); // 기반 소멸자에서 불리므로 getMethodRange(가상)는 부르지 않는다
     }
 
-    void OnlineServiceClient::cancelRequestsOf( uint16 methodRange )
+    void OnlineServiceClient::cancelRequests( uint16 methodRange )
     {
         VectorUtil::removeIf( _listQueuedCall, [methodRange]( const QueuedCall& call )
         { return OnlineMethodRange::getRangeBase( call._method ) == methodRange; } );
@@ -185,7 +185,7 @@ namespace sw
         {
             if ( _settings._transportSettings._ioThreadCount == 0 )
                 (void)_pTransport->pollIO( 0 );
-            (void)_pEndpoint->pump( *this );
+            (void)_pEndpoint->poll( *this );
             _pRequestClient->update();
             if ( _state == OnlineClientState::Disconnected && nowMs >= _nextConnectMs )
                 beginConnect();
@@ -387,7 +387,7 @@ namespace sw
     {
         vector<QueuedCall> listCall = std::move( _listQueuedCall );
         _listQueuedCall.clear();
-        _listDrainingCall.push_back( &listCall ); // 콜백이 키트를 파괴하면 cancelRequestsOf 가 남은 항목을 표시한다
+        _listDrainingCall.push_back( &listCall ); // 콜백이 키트를 파괴하면 cancelRequests 가 남은 항목을 표시한다
         for ( size_t index = 0; index < listCall.size(); ++index )
         {
             QueuedCall& call = listCall[index];
@@ -405,7 +405,7 @@ namespace sw
     {
         vector<QueuedCall> listCall = std::move( _listQueuedCall );
         _listQueuedCall.clear();
-        _listDrainingCall.push_back( &listCall ); // 콜백이 키트를 파괴하면 cancelRequestsOf 가 남은 항목을 표시한다
+        _listDrainingCall.push_back( &listCall ); // 콜백이 키트를 파괴하면 cancelRequests 가 남은 항목을 표시한다
         for ( size_t index = 0; index < listCall.size(); ++index )
         {
             const QueuedCall& call = listCall[index];

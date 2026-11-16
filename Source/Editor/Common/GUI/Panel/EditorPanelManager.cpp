@@ -250,6 +250,27 @@ namespace sw::editor
         }
         if ( bTimed && ++_panelTimeFrameCount >= static_cast<uint32>( gv_editorPanelTimes ) )
             reportPanelTimes();
+        updateFocusedCommandStack();
+    }
+
+    void EditorPanelManager::updateFocusedCommandStack()
+    {
+        IEditorPanel* pFocused = nullptr;
+        for ( const EditorPanelEntry& entry : _listPanel )
+        {
+            IEditorPanel* const pPanel = entry._pInstance.get();
+            if ( pPanel == nullptr )
+                continue;
+            if ( pPanel->isOpen() == false )
+            {
+                releaseFocusedCommandStack( pPanel->findPanelCommandStack() ); // 닫힌 문서의 스택 — 보이지 않는 문서를 되돌리지 않는다
+                continue;
+            }
+            if ( pFocused == nullptr && pPanel->isWindowFocused() )
+                pFocused = pPanel;
+        }
+        if ( pFocused != nullptr && pFocused->shouldKeepFocusedCommandStack() == false )
+            setFocusedCommandStack( pFocused->findPanelCommandStack() );
     }
 
     void EditorPanelManager::reportPanelTimes()

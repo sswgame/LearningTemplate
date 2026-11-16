@@ -179,7 +179,7 @@ namespace sw
         , _builtRegion{}
         , _pPrimitiveRegistry{ nullptr }
         , _time{ 0.0f }
-        , _terrainSettleFrames{ 0 }
+        , _terrainStabilityFrames{ 0 }
         , _instanceCount{ 0 }
         , _lastRebuiltBatchCount{ 0 }
         , _builtTerrainGeneration{ 0 }
@@ -202,11 +202,13 @@ namespace sw
     void FoliageComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
+        manager.getComponentRegistry().add<FoliageComponent>( this );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
     }
 
     void FoliageComponent::onUnregister( GameObjectManager& manager )
     {
+        manager.getComponentRegistry().remove<FoliageComponent>( this );
         releaseCells();
         _listLayerMaterial.clear();
         _listLayerCandidate.clear();
@@ -348,14 +350,14 @@ namespace sw
         const uint32 revision   = pTerrain->getSplatRevision();
         if ( generation != _seenTerrainGeneration || revision != _seenSplatRevision )
         {
-            _seenTerrainGeneration = generation;
-            _seenSplatRevision     = revision;
-            _terrainSettleFrames   = 0;
+            _seenTerrainGeneration  = generation;
+            _seenSplatRevision      = revision;
+            _terrainStabilityFrames = 0;
             return false;
         }
         const bool bStale = generation != _builtTerrainGeneration || revision != _builtSplatRevision;
-        ++_terrainSettleFrames;
-        return bStale && kTerrainSettleFrames <= _terrainSettleFrames;
+        ++_terrainStabilityFrames;
+        return bStale && kTerrainStabilityFrames <= _terrainStabilityFrames;
     }
 
     bool FoliageComponent::isBehindTerrainEdits() const

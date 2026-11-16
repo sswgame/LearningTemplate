@@ -74,7 +74,7 @@ namespace sw::editor
          *        싣는 정점별 가중치 표(입력 가중치 수집)로 간다.
          */
         bool supportsGPU() const override { return true; }
-        bool writesGPUVertexColor() const override { return getInt( _targetParam ) == 0; }
+        bool isVertexColorModifier() const override { return getInt( _targetParam ) == 0; }
 
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {

@@ -20,7 +20,7 @@
 namespace sw
 {
     /**
-     * @brief `<Entry>` 와 `<Always>` 속성의 스키마입니다(`XMLFields::readFields`). 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다.
+     * @brief `<Entry>` 와 `<Always>` 속성의 스키마입니다(`XMLFields::readProperties`). 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다.
      * @details 적지 않은 필드는 여기 초기값이고, 범위 밖 값은 로드 오류입니다(자르지 않는다). `max` 를 적지 않으면 `min` 과 같습니다(정해진 개수).
      */
     REFLECT()
@@ -128,7 +128,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "LootCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadTable( const XMLNode& node, string_view sourceName );
         void                         rollTable( const LootTableDef& table, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
         void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
@@ -137,5 +137,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<LootCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<LootCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, LootCatalog );
 } // namespace sw

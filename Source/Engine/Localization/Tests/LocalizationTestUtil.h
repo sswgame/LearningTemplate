@@ -31,14 +31,14 @@ namespace sw::test
         /**
          * @brief 프로젝트 파일을 쓰고 그 디스크 경로를 돌려줍니다.
          * @param culturesJSON `[ "ko", "ja" ]` 같은 JSON 배열 글입니다.
-         * @param extraFields `"stagedCultures": [ "ko" ]` 처럼 문자열 목록 칸들의 JSON 글입니다.
+         * @param extraProperties `"stagedCultures": [ "ko" ]` 처럼 문자열 목록 칸들의 JSON 글입니다.
          */
-        static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJSON, string_view extraFields = {} )
+        static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJSON, string_view extraProperties = {} )
         {
             const string projectPath = FileUtil::joinPath( folder, "test.locproject.xml" );
             string       json        = "{ \"cultures\": " + string( culturesJSON ) + ", \"stringTables\": [ \"test.strings.xml\" ]";
-            if ( extraFields.empty() == false )
-                json += ", " + string( extraFields );
+            if ( extraProperties.empty() == false )
+                json += ", " + string( extraProperties );
             json += " }";
             JSONDocument params;
             if ( params.parse( json, "test project fields" ) == false )

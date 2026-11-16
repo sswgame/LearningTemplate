@@ -44,7 +44,7 @@ namespace sw
 
     expected<shared_ptr<const void>> UITextAssetCache::findOrLoadAsset( string_view path, const ResourceTagSet& tagOverride )
     {
-        const string normalized = FileUtil::normalizePath( path );
+        const string normalized = FileUtil::normalizePath( path ).str();
         const string key        = makeKey( normalized, tagOverride );
         const auto   iter       = _mapKeyToEntry.find( key );
         if ( iter != _mapKeyToEntry.end() )
@@ -65,7 +65,7 @@ namespace sw
 
     void UITextAssetCache::registerMemoryText( string_view path, string_view text )
     {
-        const string key          = FileUtil::normalizePath( path );
+        const string key          = FileUtil::normalizePath( path ).str();
         _mapPathToMemoryText[key] = string( text );
         for ( auto iter = _mapKeyToEntry.begin(); iter != _mapKeyToEntry.end(); )
         {
@@ -78,7 +78,7 @@ namespace sw
 
     bool UITextAssetCache::isCached( string_view relativePath ) const
     {
-        const string key = FileUtil::normalizePath( relativePath );
+        const string key = FileUtil::normalizePath( relativePath ).str();
         for ( const auto& [entryKey, entry] : _mapKeyToEntry )
         {
             if ( entry._path == key )
@@ -109,7 +109,7 @@ namespace sw
     void UITextAssetCache::reload( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        const string      key          = FileUtil::normalizePath( relativePath );
+        const string      key          = FileUtil::normalizePath( relativePath ).str();
         string            text;
         if ( readText( key, assetID, text ) == false )
         {

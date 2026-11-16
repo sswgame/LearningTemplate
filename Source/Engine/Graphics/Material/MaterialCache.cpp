@@ -16,6 +16,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -147,7 +148,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
 
-        const string key = FileUtil::normalizePath( relativePath );
+        const string key = FileUtil::normalizePath( relativePath ).str();
 
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         Impl::Entry&             entry = _impl->_mapEntry[key];
@@ -171,7 +172,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return;
 
-        const string key = FileUtil::normalizePath( relativePath );
+        const string key = FileUtil::normalizePath( relativePath ).str();
 
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         auto                     it = _impl->_mapEntry.find( key );
@@ -206,7 +207,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return;
 
-        const string             key = FileUtil::normalizePath( relativePath );
+        const string             key = FileUtil::normalizePath( relativePath ).str();
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         // 이미 올라갔거나(`Ready`) 올리려다 실패했거나(`Failed`, 핫 리로드만 다시 시도한다) 줄에 든(`Pending`) 것은 다시 넣지 않는다.
@@ -254,7 +255,11 @@ namespace sw
                 continue;
             // 실패는 `Material::initialize` 가 `Failed` 로 남긴다 — 오류는 여기서 한 번만 낸다(패킷 빌더는 그 머티리얼을 건너뛴다).
             if ( material->initialize( pDevice, AssetID{ key } ) == false )
+            {
                 SW_LOG_ERROR_ID( "MaterialCache.FailedInitializeMaterial", "Failed to initialize Material %#", key.c_str() );
+                continue;
+            }
+            appendRuntimeSwitchWarmEntries( *material );
         }
         if ( processed < listKey.size() )
         {
@@ -262,6 +267,30 @@ namespace sw
             _impl->_listPendingKey.insert( _impl->_listPendingKey.begin(), listKey.begin() + static_cast<std::ptrdiff_t>( processed ), listKey.end() );
             _impl->_pendingCount.store( static_cast<uint32>( _impl->_listPendingKey.size() ), std::memory_order_release );
         }
+    }
+
+    void MaterialCache::appendRuntimeSwitchWarmEntries( const Material& material )
+    {
+        // 런타임 스위치(`bShaderFeature="0"`)를 가진 머티리얼은 지금 상태 밖의 조합 PSO 도 낮은 우선순위로 미리 만든다(언리얼 PSO 프리캐시) — `setStaticSwitch` 가 바꾼 프레임에
+        // 새 변형이 이미 있다. 조합은 쿠커와 같은 함수다. 지금 상태(0 번)는 배치가 그릴 때 만든다.
+        vector<vector<string>> listDefine;
+        vector<uint64>         listPermutationHash;
+        material.collectRuntimeSwitchVariants( listDefine, listPermutationHash );
+        if ( listDefine.size() <= 1 )
+            return;
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        for ( size_t variantIndex = 1; variantIndex < listDefine.size(); ++variantIndex )
+        {
+            MaterialPSOWarmEntry entry{};
+            entry._shaderPath          = material.getShaderPath();
+            entry._listDefine          = std::move( listDefine[variantIndex] );
+            entry._shaderPathHash      = material.getShaderPathHash();
+            entry._permutationHash     = listPermutationHash[variantIndex];
+            entry._renderStateOverride = material.getRenderStateOverride();
+            entry._bTransparent        = material.getBlendMode() == BlendMode::Transparent;
+            _impl->_listPSOWarmEntry.push_back( std::move( entry ) );
+        }
+        _impl->_psoWarmEntryCount.store( static_cast<uint32>( _impl->_listPSOWarmEntry.size() ), std::memory_order_release );
     }
 
     void MaterialCache::promoteReadyPSOWarmKeys()
@@ -302,7 +331,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return false;
 
-        const string                   key = FileUtil::normalizePath( relativePath );
+        const string                   key = FileUtil::normalizePath( relativePath ).str();
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
@@ -315,7 +344,7 @@ namespace sw
         const Material* pMaterial = acquire( relativePath );
         SW_ASSERT( pMaterial != nullptr );
         requestInitialize( relativePath );
-        const string key = FileUtil::normalizePath( relativePath );
+        const string key = FileUtil::normalizePath( relativePath ).str();
         {
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             if ( VectorUtil::contains( _impl->_listPSOWarmKey, key ) == false )
@@ -378,7 +407,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return;
 
-        const string key{ FileUtil::normalizePath( relativePath ) };
+        const string key{ FileUtil::normalizePath( relativePath ).str() };
 
         // 대기와 초기화는 잠금 밖에서 한다. `flushRenderThread` 는 렌더 스레드가 받은 일을 끝내길 기다리는데 렌더 스레드는 프레임 안에서
         // `takePSOWarmEntries` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
@@ -414,4 +443,38 @@ namespace sw
     {
         return engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().acquire( path );
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct MaterialCacheCommandInternal
+        {
+            /** @brief `matswitch <머티리얼> <스위치> <0|1>` — 캐시에 든 머티리얼의 런타임 스위치를 바꿉니다. 시나리오가 런타임 퍼뮤테이션 전환(물체가 사라지지 않는다)을 확인할 때 쓴다. */
+            static bool runSetStaticSwitch( const vector<string>& listArgument, string& outReply )
+            {
+                const bool bBadValue = listArgument.size() == 3 && listArgument[2] != "0" && listArgument[2] != "1";
+                if ( listArgument.size() != 3 || bBadValue )
+                {
+                    outReply = "usage: matswitch <material> <switch> <0|1>";
+                    return false;
+                }
+                MaterialCache* const pCache = MaterialCache::findBound();
+                if ( pCache == nullptr || pCache->isCached( listArgument[0] ) == false )
+                {
+                    outReply = "material " + listArgument[0] + " is not loaded";
+                    return false;
+                }
+                Material* const pMaterial = pCache->acquire( listArgument[0] );
+                const bool      bSet      = pMaterial != nullptr && pMaterial->setStaticSwitch( hashed_string( string_view( listArgument[1] ) ), listArgument[2] == "1" );
+                pCache->release( listArgument[0] );
+                outReply = bSet ? "set " + listArgument[1] : "could not set " + listArgument[1] + " of " + listArgument[0];
+                return bSet;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( MaterialStaticSwitch, "matswitch", "matswitch <material> <switch> <0|1>", "Turn a runtime static switch (bShaderFeature=\"0\") of a loaded material on or off",
+                    &MaterialCacheCommandInternal::runSetStaticSwitch );
 } // namespace sw

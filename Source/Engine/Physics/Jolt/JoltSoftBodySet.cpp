@@ -42,10 +42,16 @@ namespace sw
                     SW_LOG_ERROR_ID( "JoltPhysicsScene.SoftBodySkinnedVertices", "Soft body has %# skinned vertices but no inverse bind matrices", desc._listSkinnedVertex.size() );
                     return false;
                 }
+                // 스킨 정점마다 고정 정점 목록을 훑지 않는다(스킨 정점 수 × 고정 정점 수) — 정점마다 고정 표시 하나. 고정 정점의 범위는 `validateDesc` 가 먼저 본다.
+                vector<uint8> listPinned( desc._listVertex.size(), SW_FALSE );
+                for ( const uint32 vertexIndex : desc._listPinnedVertex )
+                {
+                    if ( vertexIndex < listPinned.size() )
+                        listPinned[vertexIndex] = SW_TRUE;
+                }
                 for ( const PhysicsSoftBodySkinnedVertex& skinned : desc._listSkinnedVertex )
                 {
-                    const bool bBadVertex = desc._listVertex.size() <= skinned._vertex ||
-                                            std::find( desc._listPinnedVertex.begin(), desc._listPinnedVertex.end(), skinned._vertex ) != desc._listPinnedVertex.end();
+                    const bool bBadVertex        = desc._listVertex.size() <= skinned._vertex || listPinned[skinned._vertex] != SW_FALSE;
                     const bool bBadCount         = skinned._weightCount == 0 || skinned._weightCount > PhysicsSoftBodySkinnedVertex::kMaxWeightCount;
                     const bool bBadSkinnedVertex = bBadVertex || bBadCount || skinned._maxDistance < 0.0f;
                     if ( bBadSkinnedVertex )

@@ -137,7 +137,7 @@ namespace sw::editor
             }
         }
 
-        drawPlayModeNotice();
+        drawPlayModeBanner();
         drawGameObjectHeader();
 
         ImGui::Spacing();
@@ -162,7 +162,7 @@ namespace sw::editor
         drawComponentList();
     }
 
-    void InspectorPanel::drawPlayModeNotice() const
+    void InspectorPanel::drawPlayModeBanner() const
     {
         // 플레이 중에도 값은 고칠 수 있다(유니티의 플레이 모드 편집). Stop 이 스냅샷으로 되돌리며, 남기려면 Keep Simulation Changes 를 쓴다.
         // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
@@ -178,7 +178,7 @@ namespace sw::editor
         ImGui::TextColored( EditorColorUtil::toImVec4( InspectorPanelInternal::kMultiSelectionText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ObjectsSelected", TextArgumentList().addInteger( "objectCount", static_cast<int64>( _state._selectedCount ) ) ).c_str() );
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Primary", TextArgumentList().addText( "name", _state._objectName.c_str() ) ).c_str() );
 
-        drawPlayModeNotice();
+        drawPlayModeBanner();
 
         // 활성은 모든 선택에 적용한다. 값이 섞여 있으면 혼합으로 표시하고, 체크는 주 선택의 값을 따른다.
         bool bActive = _state._bActive == SW_TRUE;
@@ -422,12 +422,12 @@ namespace sw::editor
         subject._pPopupID  = "CompCardCtx";
         subject._kind      = EditorCommandTargetKind::Component;
         subject._hoveredID = componentID;
-        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+        (void)EditorInputGUI::drawContextMenu( subject ); // 열렸는지는 쓰지 않는다
     }
 
     void InspectorPanel::drawComponentPresetItems( const EditorCommandTarget& target )
     {
-        ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(), _presetNameBuffer.capacity() );
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##presetName" ), SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(), _presetNameBuffer.capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) && _presetNameBuffer.empty() == false && _viewModel.saveComponentPreset( target, _presetNameBuffer.c_str() ) )
             _presetNameBuffer.clear();
@@ -456,7 +456,7 @@ namespace sw::editor
             _nameEditObjectID = _state._objectID;
         }
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
-        const bool bEnter         = ImGui::InputText( "##Name", _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bEnter         = EditorWidgets::inputText( SW_WIDGET_ID( "##Name" ), _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         const bool bLeftAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
         if ( bEnter || bLeftAfterEdit )
             _viewModel.renameObject( _nameEditObjectID, _nameEditBuffer.c_str() ); // 빈 이름 · 같은 이름은 ViewModel 이 거른다

@@ -231,7 +231,7 @@ namespace sw
         reply._errorCode = errorCode;
         if ( errorCode == OnlineError::kOk )
             return reply;
-        reply._result = LoginOutcome::fail( errorCode );
+        reply._result = LoginServiceResult::fail( errorCode );
         BitReader detail( errorDetail.data(), static_cast<int32>( errorDetail.size() ) );
         if ( errorCode == OnlineError::kUpdateRequired )
         {

@@ -1,8 +1,9 @@
 #include "pch.h"
 
+#include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
+
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 
@@ -46,6 +47,25 @@ namespace sw
             return false;
         outTimeMs = static_cast<int64>( timeMs );
         return true;
+    }
+
+    const hashed_string& ServiceReportStore::getExpiryTable()
+    {
+        static const hashed_string s_table{ "service_report_expiry" };
+        return s_table;
+    }
+
+    ServiceTTLRule ServiceReportStore::makeClosedTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = getTable();
+        rule._ttlIndexTable   = getExpiryTable();
+        rule._keyPrefix       = string( ServiceReportInternal::kClosedPrefix );
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &readClosedTimeMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readClosedTimeMs>();
+        rule._backfillVersion = 1;
+        return rule;
     }
 
     string ServiceReportStore::makeOpenKey( int64 createdMs, AccountID reporterID, uint64 uniqueID )
@@ -144,7 +164,13 @@ namespace sw
         if ( ServiceRecordUtil::encode( ServiceReportConstant::kRecordVersion, report, bytes ) == false )
             return ServiceStoreResult::Invalid;
         inoutTransaction.erase( getTable(), reportKey, record._version ); // 그사이 다른 GM 이 처리했으면 Conflict
+        ServiceRecord closedRecord;
+        closedRecord._key  = closedKey;
+        int64 closedTimeMs = 0;
+        if ( readClosedTimeMs( closedRecord, closedTimeMs ) == false )
+            return ServiceStoreResult::Invalid; // 열린 키 모양이 틀렸다 - 색인에 넣지 못하는 닫힌 신고는 만들지 않는다
         inoutTransaction.put( getTable(), closedKey, std::move( bytes ), ServiceRecord::kAbsentVersion );
+        inoutTransaction.put( getExpiryTable(), ServiceTTLRule::makeTTLIndexKey( closedTimeMs, closedKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
         outReport = std::move( report );
         return ServiceStoreResult::Ok;
     }

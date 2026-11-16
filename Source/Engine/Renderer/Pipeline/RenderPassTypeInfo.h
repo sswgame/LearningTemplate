@@ -87,8 +87,8 @@ namespace sw
 
     /**
      * @brief 등장 중인 인스턴스(`GPUInstance::_appearance` < 1)의 퍼뮤테이션 define 입니다. 셰이더가 등장 비율만큼의 픽셀만 남긴다(binding.hlsli 8-1).
-     * @details 머티리얼 에셋이 아니라 빌더가 붙인다(`GPUMaterialRegistry::permutationHashFor`). 등장 중인 인스턴스만 이 변형이라 다 보이는 물체는
-     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`FrameRendererUtil::addsAppearanceDitherPixelStage`).
+     * @details 머티리얼 에셋이 아니라 빌더가 붙인다(`GPUMaterialRegistry::computePermutationHashFor`). 등장 중인 인스턴스만 이 변형이라 다 보이는 물체는
+     *          픽셀 버리기 없이 그린다. 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지를 붙인다(`FrameRendererUtil::needsAppearanceDitherPixelStage`).
      */
     inline constexpr const utf8* kAppearanceDitherDefine = "SW_APPEARANCE_DITHER";
 
@@ -97,7 +97,7 @@ namespace sw
 
     /**
      * @brief 높이 맵으로 표면을 노멀 방향으로 옮기는 머티리얼(`material_displacement.hlsli`)의 define 입니다. 그 배치는 헐 · 도메인 스테이지가 붙은 변형 PSO 로 그린다.
-     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`FrameRendererUtil::drawsDepthWithMaterialShader`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
+     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`FrameRendererUtil::usesMaterialShaderForDepth`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
      *          테셀레이션이 없는 백엔드(`RHICapabilities::_bMaterialTessellation`)에서는 변형을 만들지 않고 오류를 남긴다 — 평면으로 대신 그리지 않는다.
      */
     inline constexpr const utf8* kMaterialDisplacementDefine = "MATERIAL_DISPLACEMENT";
@@ -233,6 +233,11 @@ namespace sw
          *        서피스를 돌릴 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만 만든다(`FramePSOManager::collectOutputPSOJobs`).
          */
         static constexpr uint32 kSurfaceRotation = SW_BIT( 29 );
+        /**
+         * @brief 읽는 쪽을 위해서만 도는 생산 패스다(장면 색 사본) — 출력을 혼자 쓰고, 출력을 읽는 패스가 이번 뷰에 모두 쉬면 뷰 패스 고르기가 출력을 빼고 실행은 기록하지 않는다.
+         * @details 일반 풀스크린 패스(장면 깊이 사본)는 이 표시 없이도 같은 규칙을 탄다. 읽는 쪽이 누구인지는 파이프라인 선언과 그 패스의 이번 뷰 판정이 정한다 — 생산 패스가 읽는 쪽을 알지 않는다(언리얼 RDG 의 소비자 없는 패스 컬링).
+         */
+        static constexpr uint32 kCullWhenUnconsumed = SW_BIT( 30 );
     };
 } // namespace sw
 
@@ -250,7 +255,7 @@ namespace sw
         const utf8* _pPassDefine{ nullptr };
         /**
          * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
-         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::drawsBatchInPass`).
+         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::shouldDrawBatchInPass`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
         /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 빠지는 범위는 `_pRequiredMaterialDefine` 과 같습니다. */
@@ -259,6 +264,12 @@ namespace sw
         const RHIFormat* _pColorFormat{ nullptr };
         /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 의미가 있습니다. */
         RenderPassInputSignature _inputContract{};
+        /**
+         * @brief 그래프가 아니라 이 패스의 전용 실행이 스스로 거는 엔진 칸의 역할입니다(Invalid 면 없음). 셰이더가 읽어도 계약 밖이 아니다(`FramePSOManager` 의 계약 검사).
+         * @details TAA 는 지난 출력(기록)을 `GBufferAlbedo` 칸에 건다(`FramePassExecutor::executeTAAPass` — 기록 전용 칸을 두면 에뮬 백엔드의 엔진 칸이 하나 는다). 숨은 재사용을
+         *          데이터로 적어 검사가 그것만 받게 한다.
+         */
+        RenderPassInputRole _executionBoundRole{ RenderPassInputRole::Invalid };
         /** @brief 테이블의 항목 순서를 검사하는 용도입니다. 항목 번호가 이 값입니다. */
         RenderPassType _type{ RenderPassType::Invalid };
         /**

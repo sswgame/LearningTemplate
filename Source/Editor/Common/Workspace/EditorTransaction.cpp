@@ -108,17 +108,17 @@ namespace sw::editor
              * @brief 데이터 명령이 오브젝트에 한 일을 에디터 상태에 맞춥니다. 없앨 오브젝트는 선택에서 빼고(파괴는 지연이라 남겨 두면 인스펙터 · 기즈모가
              *        계속 잡는다), 복원한 오브젝트는 선택하고, 씬을 dirty 로 표시합니다.
              */
-            static void onObjectEdit( const CommandStack::ObjectEditNotice& notice )
+            static void onObjectEdit( const CommandStack::ObjectEditEvent& event )
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectID ) );
+                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( event._objectID ) );
                 if ( pContext != nullptr && pTarget != nullptr )
                 {
                     // 이 처리기는 전역 스택에만 걸린다 — 전역 스택은 메인 씬 오브젝트만 받는다(미리보기 씬 것은 창의 스택, `findPreviewScopeOf`).
                     EditorSelection& selection = editor::getMainSceneSelection();
-                    if ( notice._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
+                    if ( event._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
                         selection.selectObject( pTarget, SelectionMode::Remove );
-                    else if ( notice._kind == ObjectEditKind::Recreated )
+                    else if ( event._kind == ObjectEditKind::Recreated )
                         selection.selectObject( pTarget, SelectionMode::Replace );
                 }
                 EditorTransaction::markActiveSceneDirty();
@@ -310,7 +310,7 @@ namespace sw::editor
         recordObjectLifetime( pObj, label, ObjectLifetimeEdit::Destroyed );
     }
 
-    void EditorTransaction::push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey )
+    void EditorTransaction::push( UndoStep undo, UndoStep redo, string_view label )
     {
         // 선택 조회(②): 스택이 없는 곳은 종료 뒤 · 테스트 · 도구뿐이다. 되돌리기 기록은 남기지 못하지만 편집 자체는 이미 끝났으므로 로그만 남기고 넘어간다.
         CommandStack* pStack = editor::findSubsystem<CommandStack>();
@@ -320,58 +320,38 @@ namespace sw::editor
             return;
         }
 
+        push( std::move( undo ), std::move( redo ), label, *pStack );
+    }
+
+    void EditorTransaction::push( UndoStep undo, UndoStep redo, string_view label, CommandStack& documentStack )
+    {
         CommandStack::Command cmd;
         cmd._label = string{ label };
         cmd._undo  = std::move( undo );
         cmd._redo  = std::move( redo );
-        if ( coalesceKey.empty() == false )
-            pStack->pushCoalesce( coalesceKey, std::move( cmd ) );
-        else
-            pStack->push( std::move( cmd ) );
+        documentStack.push( std::move( cmd ) );
     }
 
     void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
-                                                const EditorDocumentRestoreDelegate& restore, string_view coalesceKey )
+                                                const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture, CommandStack& stack )
     {
-        recordDocumentText( beforeText, afterText, label, owner, restore, {}, coalesceKey );
-    }
-
-    void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
-                                                const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
-                                                string_view coalesceKey )
-    {
-        if ( beforeText == afterText || restore.isBound() == false )
+        if ( beforeText == afterText || restore.isBound() == false || capture.isBound() == false )
             return;
 
+        // 바뀐 가운데만 쥔다 — 문서 전체 글 두 벌을 단계마다 들지 않는다. 단계는 스택 순서로만 실행되므로 되돌릴 때의 지금 글은 이 편집 뒤의 글이다.
         const EditorTransactionInternal::StringChangeSpan span = EditorTransactionInternal::makeChangeSpan( beforeText, afterText );
-        if ( capture.isBound() )
-        {
-            push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
-            {
-                restore( span.reconstructBefore( capture() ) );
-            } ),
-                                           owner ),
-                  UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
-            {
-                restore( span.reconstructAfter( capture() ) );
-            } ),
-                                           owner ),
-                  label, coalesceKey );
-            return;
-        }
-
-        const string beforeStr{ beforeText };
-        const string afterStr{ afterText };
-        push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, beforeStr]()
-        {
-            restore( beforeStr );
+        CommandStack::Command                             cmd;
+        cmd._label = string{ label };
+        cmd._undo  = UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
+         {
+            restore( span.reconstructBefore( capture() ) );
         } ),
-                                       owner ),
-              UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, afterStr]()
-        {
-            restore( afterStr );
+                                              owner );
+        cmd._redo  = UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
+         {
+            restore( span.reconstructAfter( capture() ) );
         } ),
-                                       owner ),
-              label, coalesceKey );
+                                              owner );
+        stack.push( std::move( cmd ) );
     }
 } // namespace sw::editor

@@ -81,7 +81,7 @@ namespace sw
     /**
      * @struct CultureInfo
      * @brief 문화권 하나의 형식 데이터입니다. 부모(`parent`)에서 적지 않은 필드를 물려받은 뒤의 값입니다.
-     * @details `<culture>` 의 속성은 이 구조체의 `PROPERTY` 가 스키마다(`XMLFields::readFields` — 모르는 속성 · 읽지 못한 값 · 필수 칸).
+     * @details `<culture>` 의 속성은 이 구조체의 `PROPERTY` 가 스키마다(`XMLFields::readProperties` — 모르는 속성 · 읽지 못한 값 · 필수 칸).
      *          부모가 없는 문화권만 `digits` 가 필수다(`RequiredAtRoot` — 부모를 가리키는 `parent` 가 적히면 물려받는다). 자식 요소(규칙 · 패턴 · 목록)는 손 읽기다.
      */
     REFLECT()

@@ -9,6 +9,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/Map/CommonInputActions.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
@@ -37,7 +38,9 @@ namespace sw
             /** @brief 첫 열린 디렉터의 지금 지역 이름입니다(감시 값 `Velmora.Region`). */
             [[nodiscard]] static bool readRegion( const AutomationWatchQuery& query, AutomationWatchValue& outValue, bool bRespawn )
             {
-                const VelmoraGameModeComponent* pDirector = AutomationComponentWatch::findFirst<VelmoraGameModeComponent>( query._pManager );
+                const VelmoraGameModeComponent* pDirector = nullptr;
+                if ( query._pManager != nullptr && query._pManager->getComponentRegistry().getAll<VelmoraGameModeComponent>().empty() == false )
+                    pDirector = query._pManager->getComponentRegistry().getAll<VelmoraGameModeComponent>()[0];
                 if ( pDirector == nullptr )
                 {
                     outValue.setText( "no Velmora director in the scene" );
@@ -460,5 +463,17 @@ namespace sw
         _phase           = VelmoraPhase::Explore;
         if ( const VelmoraRegionCatalog* const pRegions = findRegions() )
             reconcileWithRegions( *pRegions );
+    }
+
+    void VelmoraGameModeComponent::onRegister( GameObjectManager& manager )
+    {
+        GameModeComponent::onRegister( manager );
+        manager.getComponentRegistry().add<VelmoraGameModeComponent>( this );
+    }
+
+    void VelmoraGameModeComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<VelmoraGameModeComponent>( this );
+        GameModeComponent::onUnregister( manager );
     }
 } // namespace sw

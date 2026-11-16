@@ -9,17 +9,17 @@ namespace sw
 {
     NetSimPreviewSceneSource::NetSimPreviewSceneSource( SceneManager& sceneManager )
         : _pSceneManager{ &sceneManager }
-        , _listLent{}
+        , _listBorrowed{}
     {
     }
 
     NetSimPreviewSceneSource::~NetSimPreviewSceneSource()
     {
         // 하니스가 먼저 내려가 모두 돌려받았어야 한다. 남았으면 씬 매니저에서 내린다(씬이 남아 렌더되지 않게).
-        SW_ASSERT( _listLent.empty() && "NetSimPreviewSceneSource destroyed before the harness returned its scenes" );
-        for ( const Lent& lent : _listLent )
+        SW_ASSERT( _listBorrowed.empty() && "NetSimPreviewSceneSource destroyed before the harness returned its scenes" );
+        for ( const BorrowedScene& borrowed : _listBorrowed )
         {
-            (void)_pSceneManager->destroyPreviewScene( lent._pScene );
+            (void)_pSceneManager->destroyPreviewScene( borrowed._pScene );
         }
     }
 
@@ -34,18 +34,18 @@ namespace sw
         Scene*       pScene = _pSceneManager->createPreviewScene( name, policy );
         if ( pScene == nullptr )
             return nullptr;
-        _listLent.push_back( Lent{ pScene, worldIndex, _pSceneManager->getPreviewSceneKey( pScene ) } );
+        _listBorrowed.push_back( BorrowedScene{ pScene, worldIndex, _pSceneManager->getPreviewSceneKey( pScene ) } );
         return pScene;
     }
 
     void NetSimPreviewSceneSource::releaseScene( Scene& scene )
     {
-        for ( size_t index = 0; index < _listLent.size(); ++index )
+        for ( size_t index = 0; index < _listBorrowed.size(); ++index )
         {
-            if ( _listLent[index]._pScene != &scene )
+            if ( _listBorrowed[index]._pScene != &scene )
                 continue;
             (void)_pSceneManager->destroyPreviewScene( &scene );
-            _listLent.erase( _listLent.begin() + static_cast<std::ptrdiff_t>( index ) );
+            _listBorrowed.erase( _listBorrowed.begin() + static_cast<std::ptrdiff_t>( index ) );
             return;
         }
         SW_ASSERT( false && "NetSimPreviewSceneSource::releaseScene got a scene it did not lend" );
@@ -53,10 +53,10 @@ namespace sw
 
     optional<uint32> NetSimPreviewSceneSource::findSceneKey( int32 worldIndex ) const
     {
-        for ( const Lent& lent : _listLent )
+        for ( const BorrowedScene& borrowed : _listBorrowed )
         {
-            if ( lent._worldIndex == worldIndex )
-                return lent._sceneKey;
+            if ( borrowed._worldIndex == worldIndex )
+                return borrowed._sceneKey;
         }
         return nullopt;
     }

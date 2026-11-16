@@ -224,7 +224,7 @@ namespace sw
     void PairedAnimationDef::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         PairedAnimationRootParams rootParams;
-        (void)reader.readFields( root, rootParams ); // 오류는 읽개의 목록에 쌓이고 `finish` 가 읽기를 실패로 돌린다
+        (void)reader.readProperties( root, rootParams ); // 오류는 읽개의 목록에 쌓이고 `finish` 가 읽기를 실패로 돌린다
         _content._duration = rootParams._duration;
         PairedAnimationDefInternal::requireFinite( reader, root, "duration", _content._duration );
         if ( _content._duration <= 0.0f )
@@ -246,7 +246,7 @@ namespace sw
     void PairedAnimationDef::readRole( const XMLNode& node, CharacterDataReader& reader )
     {
         PairedAnimationRoleParams params;
-        (void)reader.readFields( node, params );
+        (void)reader.readProperties( node, params );
         PairedAnimationRoleDef role;
         role._name              = params._name;
         role._clip              = params._clip;
@@ -320,7 +320,7 @@ namespace sw
     void PairedAnimationDef::readNotify( const XMLNode& node, CharacterDataReader& reader )
     {
         PairedAnimationNotifyParams params;
-        (void)reader.readFields( node, params );
+        (void)reader.readProperties( node, params );
         PairedAnimationNotifyDef notify;
         notify._name = params._name;
         notify._role = params._role;
@@ -332,7 +332,7 @@ namespace sw
     void PairedAnimationDef::readSelect( const XMLNode& node, CharacterDataReader& reader )
     {
         PairedAnimationSelectParams params;
-        (void)reader.readFields( node, params );
+        (void)reader.readProperties( node, params );
         if ( _content._bHasSelect )
         {
             reader.addError( "Character.PairedSelectRepeated", node, "repeats <Select> (a paired animation has at most one)" );

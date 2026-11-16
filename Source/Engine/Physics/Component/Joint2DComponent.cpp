@@ -116,7 +116,8 @@ namespace sw
         float3     position{};
         quaternion rotation{};
         float3     scale{};
-        PhysicsComponent::readWorldPose( *this, position, rotation, scale );
+        if ( PhysicsComponent::readWorldPose( *this, position, rotation, scale ) == false )
+            return; // 배율 0 — 축을 정할 수 없다(`readWorldPose` 가 알렸다). 배율이 돌아오면 만든다
         PhysicsJointDesc2D desc;
         desc._bodyA   = bodyA;
         desc._bodyB   = bodyB;

@@ -95,13 +95,13 @@ namespace sw::editor
         }
     }
 
-    bool InputMapConflict::involves( const vector<InputMapConflict>& listConflict, const hashed_string& action )
+    bool InputMapConflict::isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action )
     {
         return VectorUtil::containsIf( listConflict, [&]( const InputMapConflict& conflict )
         { return conflict._actionA == action || conflict._actionB == action; } );
     }
 
-    bool InputMapConflict::involves( const vector<InputMapConflict>& listConflict, const hashed_string& action, uint32 bindIndex )
+    bool InputMapConflict::isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action, uint32 bindIndex )
     {
         return VectorUtil::containsIf( listConflict, [&]( const InputMapConflict& conflict )
         { return ( conflict._actionA == action && conflict._bindIndexA == bindIndex ) || ( conflict._actionB == action && conflict._bindIndexB == bindIndex ); } );

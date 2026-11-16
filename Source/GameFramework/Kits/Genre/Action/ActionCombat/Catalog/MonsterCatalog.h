@@ -200,7 +200,7 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
         /** @brief `<MonsterCatalog>` 루트의 `<Monster>` 들을 읽고(`XMLCatalog`), 읽은 수를 반환합니다. 0이면 실패입니다. */
-        uint32 loadRoot( const XMLNode& root, string_view sourceName );
+        uint32 loadRoot( const XMLCatalogRoot& root, string_view sourceName );
 
         /**
          * @brief `<Monster>` 하나를 스키마(`MonsterDef` · `MonsterStatsDef` · `MonsterAIDef` · `MonsterShotDef`)로 읽습니다.
@@ -213,5 +213,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MonsterCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<MonsterCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, MonsterCatalog );
 } // namespace sw

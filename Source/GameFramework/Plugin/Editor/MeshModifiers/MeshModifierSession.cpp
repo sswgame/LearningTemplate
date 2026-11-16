@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -105,7 +106,7 @@ namespace sw::editor
                 if ( pModifier == nullptr || pModifier->isEnabled() == false )
                     continue;
                 const MeshModifierStack* pChild = pModifier->getGPUChildStack();
-                if ( pModifier->writesGPUVertexColor() || ( pChild != nullptr && hasColorPainter( *pChild ) ) )
+                if ( pModifier->isVertexColorModifier() || ( pChild != nullptr && hasColorPainter( *pChild ) ) )
                     return true;
             }
             return false;
@@ -269,7 +270,7 @@ namespace sw::editor
         , _sourceData{}
         , _listSourcePosition{}
         , _history{}
-        , _savedStackText{}
+        , _savedStackText{ string{} }
         , _meshPath{}
         , _sourceBounds{}
         , _target{}
@@ -308,14 +309,16 @@ namespace sw::editor
         }
         _sourceBounds = MeshModifierBounds::makeFromPoints( _listSourcePosition );
         (void)loadSidecar();                         // 사이드카가 없으면 빈 스택으로 시작한다
-        _savedStackText = _stack.makeJSONText( -1 ); // 사이드카가 없으면 빈 스택이 저장된 상태다
+        _savedStackText = _stack.makeJSONText( -1 ); // 사이드카가 없으면 빈 스택이 저장된 상태다(못 만들면 오류 값 - 저장되지 않은 것으로 본다)
         _bPreviewDirty  = SW_TRUE;
         return true;
     }
 
     bool MeshModifierSession::isStackUnsaved() const
     {
-        return hasTarget() && _stack.makeJSONText( -1 ) != _savedStackText;
+        // 지금 글이나 저장 글을 못 만들면(잘못된 UTF-8) 저장되지 않은 것으로 본다 - 저장을 시도하면 이유가 남는다.
+        const expected<string> current = _stack.makeJSONText( -1 );
+        return hasTarget() && ( current.has_value() == false || _savedStackText.has_value() == false || *current != *_savedStackText );
     }
 
     void MeshModifierSession::revertStackToSaved()
@@ -323,7 +326,7 @@ namespace sw::editor
         if ( hasTarget() == false || isStackUnsaved() == false )
             return;
         recordUndo();
-        if ( _stack.readJSONText( _savedStackText ) == false )
+        if ( _savedStackText.has_value() == false || _stack.readJSONText( *_savedStackText ) == false )
             SW_LOG_ERROR_ID( "MeshModifierSession.MeshModifierStackCould", "Mesh modifier stack of %# could not be restored to its saved state - undo brings the edits back", _meshPath.c_str() );
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
         _bPreviewDirty = SW_TRUE;
@@ -333,6 +336,12 @@ namespace sw::editor
     {
         restoreOriginalMesh();
         _gpuPreviewMesh = nullptr;
+    }
+
+    void MeshModifierSession::resetToFreshEditor()
+    {
+        clearTarget();
+        _history.clear();
     }
 
     void MeshModifierSession::clearTarget()
@@ -358,7 +367,7 @@ namespace sw::editor
         _inputBounds          = MeshModifierBounds{};
         _selectedControlPoint = -1;
         _history.clear();
-        _savedStackText.clear();
+        _savedStackText     = string{};
         _bPreviewDirty      = SW_TRUE;
         _bStagePreviewDirty = SW_TRUE;
         _bInputBoundsDirty  = SW_TRUE;
@@ -371,12 +380,21 @@ namespace sw::editor
 
     void MeshModifierSession::recordUndo()
     {
-        _history.record( _stack.makeJSONText( -1 ) );
+        const expected<string> text = _stack.makeJSONText( -1 );
+        if ( text.has_value() == false )
+        {
+            SW_LOG_WARNING_ID( "MeshModifierSession.UndoNotRecorded", "Mesh modifier stack could not be recorded for undo: %# (%#)", text.error().message(), text.error().detail() );
+            return;
+        }
+        _history.record( *text );
     }
 
     bool MeshModifierSession::undo()
     {
-        string text = _stack.makeJSONText( -1 );
+        expected<string> current = _stack.makeJSONText( -1 );
+        if ( current.has_value() == false )
+            return false; // 지금 상태를 되돌리기 목록에 담을 수 없다(잘못된 UTF-8)
+        string text = std::move( *current );
         if ( _history.undo( text ) == false )
             return false;
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다. 실패해도 빈 스택이다
@@ -387,7 +405,10 @@ namespace sw::editor
 
     bool MeshModifierSession::redo()
     {
-        string text = _stack.makeJSONText( -1 );
+        expected<string> current = _stack.makeJSONText( -1 );
+        if ( current.has_value() == false )
+            return false; // 지금 상태를 다시 하기 목록에 담을 수 없다(잘못된 UTF-8)
+        string text = std::move( *current );
         if ( _history.redo( text ) == false )
             return false;
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다
@@ -439,12 +460,13 @@ namespace sw::editor
         if ( bStackChanged == false && prefixEnd == _prefixEnd )
             return;
         // 앞부분의 결과는 앞부분 모디파이어 상태(저장 글) · 시간 · 메시 변환으로 정해진다. 셋이 같으면 다시 걸지 않는다
-        string     key   = _stack.makePrefixJSONText( prefixEnd );
-        const bool bSame = prefixEnd == _prefixEnd && key == _prefixKey && evaluation._time == _prefixTime && evaluation._meshToWorld == _prefixMeshToWorld;
+        // 열쇠를 못 만들면(잘못된 UTF-8) 같다고 보지 않고 매번 다시 건다.
+        expected<string> key   = _stack.makePrefixJSONText( prefixEnd );
+        const bool       bSame = key.has_value() && prefixEnd == _prefixEnd && *key == _prefixKey && evaluation._time == _prefixTime && evaluation._meshToWorld == _prefixMeshToWorld;
         if ( bSame )
             return;
         _prefixEnd         = prefixEnd;
-        _prefixKey         = std::move( key );
+        _prefixKey         = key.has_value() ? std::move( *key ) : string{};
         _prefixTime        = evaluation._time;
         _prefixMeshToWorld = evaluation._meshToWorld;
         makeSourceMesh( _prefixMesh );
@@ -612,15 +634,23 @@ namespace sw::editor
         return pMesh != nullptr ? pMesh->getWorldMatrix() : float4x4{};
     }
 
-    bool MeshModifierSession::saveSidecar()
+    optional<string> MeshModifierSession::findSidecarPath() const
     {
         if ( hasTarget() == false )
-            return false;
+            return nullopt;
         // 곁 파일은 아직 없을 수 있다 — 메시 파일(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
         const auto meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         if ( meshPath.has_value() == false )
-            return false; // 이유는 toDiskPath 가 남겼다
-        const string                 path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
+            return nullopt; // 이유는 toDiskPath 가 남겼다
+        return MeshModifierStack::makeSidecarPath( meshPath->str() );
+    }
+
+    bool MeshModifierSession::saveSidecar()
+    {
+        const optional<string> sidecarPath = findSidecarPath();
+        if ( sidecarPath.has_value() == false )
+            return false;
+        const string&                path      = *sidecarPath;
         const optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
         if ( stackFile.has_value() == false || _stack.saveToFile( *stackFile ) == false )
         {
@@ -796,4 +826,16 @@ namespace sw::editor
                          &MeshModifierSessionProbes::readCurveListKeyCount );
     SW_AUTOMATION_WATCH( meshModifierReferenceList, "MeshModifiers.ReferenceListCount", "Named items of the selected modifier's first reference list",
                          &MeshModifierSessionProbes::readReferenceListCount );
+    namespace
+    {
+        /** @brief 체인의 다음 단계 앞에서 세션을 비웁니다 — 앞 단계가 남긴 저장하지 않은 스택이 `Use Selection` 을 막아 다음 단계가 대상을 잡지 못했다(flowedit 뒤 meshmodifiers). */
+        void resetMeshModifierSessionForNextStage()
+        {
+            MeshModifierSession* pSession = editor::findSubsystem<MeshModifierSession>(); // 선택: 플러그인을 싣지 않은 체인에는 없다
+            if ( pSession != nullptr )
+                pSession->resetToFreshEditor();
+        }
+    } // namespace
+
+    SW_AUTOMATION_STAGE_RESET( meshModifierSession, "mesh modifier session (target, unsaved stack, undo history)", &resetMeshModifierSessionForNextStage );
 } // namespace sw::editor

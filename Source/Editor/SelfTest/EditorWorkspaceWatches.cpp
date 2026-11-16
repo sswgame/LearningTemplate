@@ -16,6 +16,7 @@
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -84,7 +85,7 @@ namespace sw::editor
             if ( pActive == nullptr )
                 return false;
             uint32 count = 0;
-            pActive->forEachGameObject( [&count]( const GameObject* pObj )
+            pActive->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&count]( const GameObject* pObj )
             {
                 if ( pObj != nullptr && pObj->isPendingDestroy() == false )
                     ++count;
@@ -129,9 +130,10 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief Ctrl+Z 가 가는 스택(포커스한 문서 패널의 스택, 없으면 메인 스택 — 감사 E-3)의 기록 수입니다. History 창이 보이는 것과 같다. */
         [[nodiscard]] bool readUndoCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const CommandStack* pStack = editor::findSubsystem<CommandStack>();
+            const CommandStack* pStack = editor::getFocusedCommandStack();
             if ( pStack == nullptr ) // 필수 서비스: 없으면 버그
             {
                 SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorUndoCountCommandStack", "[Scenario] watch Editor.UndoCount: CommandStack is missing" );
@@ -141,9 +143,10 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief Ctrl+Z 가 가는 스택의 위치입니다(`readUndoCount` 와 같은 스택). */
         [[nodiscard]] bool readUndoIndex( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const CommandStack* pStack = editor::findSubsystem<CommandStack>();
+            const CommandStack* pStack = editor::getFocusedCommandStack();
             if ( pStack == nullptr ) // 필수 서비스: 없으면 버그
             {
                 SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorUndoIndexCommandStack", "[Scenario] watch Editor.UndoIndex: CommandStack is missing" );
@@ -203,10 +206,10 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 되돌리기 스택을 `<위치>/<수>:<레이블>|<레이블>…` 로 씁니다(아래에서 위로). */
+        /** @brief Ctrl+Z 가 가는 스택을 `<위치>/<수>:<레이블>|<레이블>…` 로 씁니다(아래에서 위로). */
         bool makeUndoState( string& outText )
         {
-            const CommandStack* pStack = editor::findSubsystem<CommandStack>();
+            const CommandStack* pStack = editor::getFocusedCommandStack();
             if ( pStack == nullptr )
                 return false;
             StringBuilder<constant::buffer::kMax256> textBuilder;
@@ -356,7 +359,7 @@ namespace sw::editor
         vector<pair<string, uint64>> listEntry;
         ObjectSaveOptions            options{ SerializePurpose::Authoring };
         options._bOmitExternalParent = SW_TRUE;
-        pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
+        pActive->forEachGameObject( editor::EditorSceneIterationAccess::getKey(), [&listEntry, &options]( const GameObject* pObject )
         {
             if ( pObject == nullptr || pObject->isPendingDestroy() )
                 return;
@@ -398,8 +401,8 @@ namespace sw::editor
                          &readDebugTargetFollowsSelection );
     SW_AUTOMATION_WATCH( editorSelectedIsEditorCamera, "Editor.SelectedIsEditorCamera", "1 when the primary selection is the viewport's editor camera",
                          &readSelectedIsEditorCamera );
-    SW_AUTOMATION_WATCH( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack", &readUndoCount );
-    SW_AUTOMATION_WATCH( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack (commands not undone)", &readUndoIndex );
+    SW_AUTOMATION_WATCH( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack Ctrl+Z goes to (the focused document panel's stack, else the main stack)", &readUndoCount );
+    SW_AUTOMATION_WATCH( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack Ctrl+Z goes to (commands not undone)", &readUndoIndex );
     SW_AUTOMATION_WATCH( editorToolFocusIsMain, "Editor.ToolFocusIsMain", "1 when the scene and undo stack tools aim at are the main scene's (0 while a preview window holds the focus)",
                          &readToolFocusIsMain );
     SW_AUTOMATION_QUERY_WATCH( editorSceneHash, "Editor.SceneHash", "Hash of the edited scene content (every object's name, parent and saved state; the scene view camera is left out)",

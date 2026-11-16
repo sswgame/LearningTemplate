@@ -28,7 +28,7 @@ namespace sw
         const vector<AutomationGoldenSample>* _pListGoldenSample{ nullptr };    ///< 골든마다의 측정값과 상한(기록 모드가 아닌 실행) — 여러 보고를 모아 실행 사이 흔들림을 잰다
         const vector<string>*                 _pListUnhandledLog{ nullptr };    ///< 로그 게이트가 처리하지 않았다고 본 Warning · Error 줄
         const vector<string>*                 _pListAllowedLog{ nullptr };      ///< 허용 목록 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
-        const vector<string>*                 _pListMetric{ nullptr };          ///< 지표 값 줄(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 판정(`AutomationJudge`)이 소유한다
+        const vector<string>*                 _pListMetric{ nullptr };          ///< 지표 값 줄(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 판정(`AutomationEvaluator`)이 소유한다
         const vector<string>*                 _pListRecord{ nullptr };          ///< 기록 값 줄(`frame 300 Scene.TransformHash = 12345`, 결정성 대조) — 판정이 소유한다
         // --- 실행 환경: 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 하는 칸입니다(없으면 빈 글 · 0) ---
         string_view               _backendName{};              ///< 끝날 때의 RHI 백엔드(`dx12` …). 헤드리스면 빔

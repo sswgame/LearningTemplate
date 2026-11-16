@@ -318,8 +318,8 @@ SW_TEST_CASE( ServiceStoreParityTest, SQLiteAnswersLikeMemory, ._timeoutSeconds 
 SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutSeconds = 60 )
 {
     SQLiteStoreFixture         fixture;
-    constexpr int32            kWorkCount = 16;
-    vector<ServiceStoreResult> listResult( kWorkCount, ServiceStoreResult::Invalid );
+    constexpr int32            kJobCount = 16;
+    vector<ServiceStoreResult> listResult( kJobCount, ServiceStoreResult::Invalid );
     int32                      completeCount  = 0;
     int32                      cancelledCount = 0;
     for ( ServiceStoreResult& result : listResult )
@@ -335,9 +335,9 @@ SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutS
     (void)test::waitUntil( [&]()
     {
         (void)fixture._store.pollCompletions();
-        return completeCount >= kWorkCount;
+        return completeCount >= kJobCount;
     }, 45.0 );
-    SW_REQUIRE_EQUAL( kWorkCount, completeCount );
+    SW_REQUIRE_EQUAL( kJobCount, completeCount );
     int32 okCount       = 0;
     int32 conflictCount = 0;
     for ( const ServiceStoreResult result : listResult )
@@ -346,7 +346,7 @@ SW_TEST_CASE( ServiceStoreParityTest, ConcurrentCreatesHaveOneWinner, ._timeoutS
         conflictCount += result == ServiceStoreResult::Conflict ? 1 : 0;
     }
     SW_EXPECT_EQUAL( 1, okCount );
-    SW_EXPECT_EQUAL( kWorkCount - 1, conflictCount );
+    SW_EXPECT_EQUAL( kJobCount - 1, conflictCount );
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -550,7 +550,7 @@ SW_TEST_CASE( SQLServiceStoreTest, ReadFailuresAreUnavailable )
 }
 
 /** @brief 종료 뒤 맡긴 일은 닫힌 연결로 돌고 완료를 받으며 취소로 표시된다(`IServiceStoreJob` 의 약속). */
-SW_TEST_CASE( SQLServiceStoreTest, WorkAfterShutdownIsCancelled )
+SW_TEST_CASE( SQLServiceStoreTest, JobAfterShutdownIsCancelled )
 {
     FakeStoreFixture fixture;
     fixture._store.shutdown();

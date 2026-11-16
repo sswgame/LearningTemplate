@@ -113,15 +113,15 @@ namespace sw
 
     void ChatServer::respondCompletion( ChatCompletion& completion )
     {
-        const uint64       callID  = completion._requestTag;
-        const ChatOutcome& outcome = completion._result;
+        const uint64             callID = completion._requestTag;
+        const ChatServiceResult& result = completion._result;
         if ( completion._method == ChatMethod::Send::kID || completion._method == ChatMethod::Whisper::kID )
         {
             ChatSendReply reply;
             reply._message      = std::move( completion._message );
             reply._retryAfterMs = completion._retryAfterMs;
-            reply._result       = outcome._result;
-            (void)finishCall( callID, outcome, reply );
+            reply._result       = result._result;
+            (void)finishCall( callID, result, reply );
             return;
         }
         if ( completion._method == ChatMethod::History::kID )
@@ -129,14 +129,14 @@ namespace sw
             ChatHistoryReply reply;
             reply._listHistory = std::move( completion._listHistory );
             reply._nextCursor  = std::move( completion._nextCursor );
-            reply._result      = outcome._result;
-            (void)finishCall( callID, outcome, reply );
+            reply._result      = result._result;
+            (void)finishCall( callID, result, reply );
             return;
         }
         ChatResultReply reply; // Join · Leave · Report
         reply._retryAfterMs = completion._retryAfterMs;
-        reply._result       = outcome._result;
-        (void)finishCall( callID, outcome, reply );
+        reply._result       = result._result;
+        (void)finishCall( callID, result, reply );
     }
 
     void ChatServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )

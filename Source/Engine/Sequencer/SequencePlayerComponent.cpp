@@ -154,11 +154,11 @@ namespace sw
         Component::onTick( context );
         if ( _player.isPlaying() == false )
             return;
-        _player.update( context.getDeltaTime() );
+        const SequencePlaybackStep step = _player.update( context.getDeltaTime() );
         // 묶인 오브젝트(남의 오브젝트)에 값 · 스폰 · 구간을 적용하는 것은 틱 뒤(같은 프레임)에 한다 — 틱은 시간만 민다.
-        context.deferPostTickOnComponent( *this, []( SequencePlayerComponent& self )
+        context.deferPostTickOnComponent( *this, [step]( SequencePlayerComponent& self )
         {
-            self.applyTimeline();
+            self.applyTimeline( step );
             // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
             if ( self._player.isPlaying() == false )
                 self.endPlayback( SequenceHistoryKind::Finished );
@@ -181,7 +181,7 @@ namespace sw
         }
         _player.play();
         _history.record( SequenceHistoryKind::Started, _player.getCurrentFrame(), kSequenceNoBinding, _sequencePath.path() );
-        applyTimeline();
+        applyTimeline( _player.getStartStep() );
     }
 
     void SequencePlayerComponent::stop()
@@ -323,7 +323,7 @@ namespace sw
         }
     }
 
-    void SequencePlayerComponent::applyTimeline()
+    void SequencePlayerComponent::applyTimeline( const SequencePlaybackStep& step )
     {
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
@@ -335,7 +335,7 @@ namespace sw
         // 루프를 되감은 갱신이면 끝 구간 이벤트까지 본다(`applyPlayback`).
         const SequenceBindingView        view = makeBindingView();
         vector<const SequenceTrackItem*> listCrossed;
-        SequenceTimelineUtil::applyPlayback( pManager, _player, view, &listCrossed );
+        SequenceTimelineUtil::applyPlayback( pManager, _player.getAsset(), step, view, &listCrossed );
         SequenceTimelineUtil::applySpawns( pManager, _player.getAsset(), _player.getCurrentFrame(), _state._listSpawned );
         vector<const SequenceTrackItem*> listEnteredSpan;
         SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _state._listSpan, &listEnteredSpan );
@@ -346,7 +346,7 @@ namespace sw
         if ( _cameraSignalMulticast.isBound() || build::kShipping == false )
         {
             vector<SequenceCameraSignal> listSignal;
-            SequenceTimelineUtil::collectPlaybackCameraSignals( _player, listSignal );
+            SequenceTimelineUtil::collectPlaybackCameraSignals( _player.getAsset(), step, listSignal );
             broadcastCameraSignals( listSignal );
         }
         if ( listCrossed.empty() )

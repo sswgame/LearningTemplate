@@ -190,7 +190,7 @@ namespace sw
 
     void BodyShapeSet::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
-        (void)reader.readFields( root, _params ); // 모르는 속성도 이 읽기가 오류로 남긴다
+        (void)reader.readProperties( root, _params ); // 모르는 속성도 이 읽기가 오류로 남긴다
         for ( XMLNode axisNode = root.findChild(); axisNode; axisNode = axisNode.findNextSibling() )
         {
             if ( StringUtil::equals( axisNode.getName(), "Unsupported" ) )
@@ -211,7 +211,7 @@ namespace sw
                 continue;
             }
             BodyShapeAxis axis;
-            (void)reader.readFields( axisNode, axis ); // 칸은 BodyShapeAxis 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
+            (void)reader.readProperties( axisNode, axis ); // 칸은 BodyShapeAxis 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
             const bool bInvalidAxisRange = axis._min > 0.0f || axis._max < 0.0f || axis._min >= axis._max;
             if ( bInvalidAxisRange )
                 reader.addError( "Character.BodyAxisRangeInvalid", axisNode, "needs min <= 0 <= max with min < max" );
@@ -244,7 +244,7 @@ namespace sw
 
     void BodyShapeSet::readSide( const XMLNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader )
     {
-        (void)reader.readFields( node, outSide );
+        (void)reader.readProperties( node, outSide );
         for ( XMLNode boneNode = node.findChild(); boneNode; boneNode = boneNode.findNextSibling() )
         {
             if ( StringUtil::equals( boneNode.getName(), "Bone" ) == false )
@@ -253,7 +253,7 @@ namespace sw
                 continue;
             }
             BoneProportionEntry entry;
-            (void)reader.readFields( boneNode, entry );
+            (void)reader.readProperties( boneNode, entry );
             if ( entry._bone.empty() == false )
                 outSide._listBone.push_back( entry );
         }

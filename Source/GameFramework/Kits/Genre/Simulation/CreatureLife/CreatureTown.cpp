@@ -179,7 +179,7 @@ namespace sw
             for ( int32 speciesIndex = 0; speciesIndex < static_cast<int32>( listSpecies.size() ) && hasRoom( instance ); ++speciesIndex )
             {
                 const CreatureSpeciesDef& species      = listSpecies[static_cast<size_t>( speciesIndex )];
-                const bool                bSkipSpecies = findCreatureIndex( species._id ).has_value() || species.likesHabitat( instance._habitatID ) == false || species.comesIn( phase, weatherID ) == false;
+                const bool                bSkipSpecies = findCreatureIndex( species._id ).has_value() || species.isFavoriteHabitat( instance._habitatID ) == false || species.canAppearIn( phase, weatherID ) == false;
                 if ( bSkipSpecies )
                     continue;
                 // 서식지 번호가 아니라 위치로 섞는다. 같은 배치면 지어 온 순서와 상관없이 같은 답이 나온다.
@@ -228,14 +228,14 @@ namespace sw
         TownCreature& creature      = _listCreature[static_cast<size_t>( creatureIndex )];
         if ( creature._lastGiftDay == getDay() )
             return CreatureInteractResult::AlreadyToday;
-        if ( inventory.removeItem( itemID, 1 ) == false )
+        if ( inventory.consumeItem( itemID, 1 ) == false )
             return CreatureInteractResult::MissingItem;
         creature._lastGiftDay              = getDay();
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
         int32                     points   = _settings._giftPoints;
-        if ( pSpecies != nullptr && pSpecies->likesGift( itemID ) )
+        if ( pSpecies != nullptr && pSpecies->isFavoriteGift( itemID ) )
             points = _settings._likedGiftPoints;
-        else if ( pSpecies != nullptr && pSpecies->likesFood( itemID ) )
+        else if ( pSpecies != nullptr && pSpecies->isFavoriteFood( itemID ) )
             points = _settings._foodPoints;
         changeFriendship( speciesID, points );
         return CreatureInteractResult::Ok;
@@ -246,7 +246,7 @@ namespace sw
         if ( findCreatureIndex( speciesID ).has_value() == false )
             return CreatureRequestResult::UnknownCreature;
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
-        if ( pSpecies == nullptr || pSpecies->offersRequest( questID ) == false )
+        if ( pSpecies == nullptr || pSpecies->canOfferRequest( questID ) == false )
             return CreatureRequestResult::NotOffered;
         if ( _pQuestLog == nullptr )
             return CreatureRequestResult::Unavailable;
@@ -269,8 +269,8 @@ namespace sw
         const int32 progressedCount = _pQuestLog->notify( CreatureTownInternal::makeDeliverKind(), itemID, count );
         if ( progressedCount > 0 )
         {
-            if ( inventory.removeItem( itemID, count ) == false )
-                SW_LOG_WARNING_ID( "CreatureTown.InventoryLostBetweenHasItem", "inventory lost '%#' between hasItem and removeItem", itemID.c_str() );
+            if ( inventory.consumeItem( itemID, count ) == false )
+                SW_LOG_WARNING_ID( "CreatureTown.InventoryLostBetweenHasItem", "inventory lost '%#' between hasItem and consumeItem", itemID.c_str() );
         }
         collectCompletedRequests();
         return progressedCount;
@@ -572,7 +572,7 @@ namespace sw
             const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesID );
             for ( const HabitatInstance& instance : _listHabitat )
             {
-                const bool bHabitatHasRoom = pSpecies != nullptr && pSpecies->likesHabitat( instance._habitatID ) && hasRoom( instance );
+                const bool bHabitatHasRoom = pSpecies != nullptr && pSpecies->isFavoriteHabitat( instance._habitatID ) && hasRoom( instance );
                 if ( bHabitatHasRoom )
                 {
                     creature._habitat = instance._id;
@@ -674,7 +674,7 @@ namespace sw
         for ( const TownCreature& creature : _listCreature )
         {
             const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesID );
-            if ( pSpecies == nullptr || pSpecies->offersRequest( questID ) == false )
+            if ( pSpecies == nullptr || pSpecies->canOfferRequest( questID ) == false )
                 continue;
             _eventBuffer.push( CreatureTownEvent{ creature._speciesID, questID, 0, CreatureTownEvent::Kind::RequestCompleted } );
             changeFriendship( creature._speciesID, _settings._requestPoints );
@@ -711,15 +711,17 @@ namespace sw
 
     void CreatureTown::serializeState( StateIO& io )
     {
-        io.expect( _topology._width );
-        io.expect( _topology._height );
+        // 마을 크기는 설정이 정한다 — 저장된 크기로 읽어 같은 좌표에 옮긴다. 줄어 밖에 놓인 물건 · 서식지가 남으면 거절하고, 늘어난 칸은 비어 있다(감사 A-6).
+        const GridTopology savedTopology = _topology.serializeSize( io );
         if ( io.isOk() == false )
             return;
-        const int32 tileCount = _topology._width * _topology._height;
-        for ( hashed_string& object : _listObject )
-        {
-            io.value( object );
-        }
+        const int32 tileCount = savedTopology.getCellCount();
+        // 칸마다 물건 이름(4)
+        _topology.serializeCells(
+            io, savedTopology, _listObject, sizeof( uint32 ), []( StateIO& tileIO, hashed_string& object )
+        { tileIO.value( object ); },
+            []( const hashed_string& object )
+        { return object.empty(); } );
         // 서식지마다 이름(4) + 위치(8) + 번호(4) + 회전(4) + 셀 수(4) 이상
         io.list( _listHabitat, 24, [&]( HabitatInstance& habitat )
         {
@@ -730,7 +732,12 @@ namespace sw
             io.list( habitat._listTile, 4, [&]( int32& tileIndex )
             {
                 io.value( tileIndex );
-                io.check( 0 <= tileIndex && tileIndex < tileCount );
+                if ( io.isWriting() || io.check( 0 <= tileIndex && tileIndex < tileCount ) == false )
+                    return;
+                // 저장된 크기의 셀 번호 → 좌표 → 지금 셀 번호. 줄어든 마을 밖이면 서식지를 버리지 않고 거절한다.
+                const int2 cell = savedTopology.toCell( tileIndex );
+                if ( io.check( _topology.isInside( cell ) ) )
+                    tileIndex = _topology.toIndex( cell );
             } );
             // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
             io.check( habitat._listTile.empty() == false && 0 < habitat._id && 0 <= habitat._rotation && habitat._rotation < CreatureTownInternal::kRotationCount );

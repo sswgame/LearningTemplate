@@ -66,7 +66,7 @@ namespace sw::editor
     string InspectorFavorites::makePropertyKey( const TypeInfo& type, const PropertyInfo& prop )
     {
         const TypeInfo* pDeclaring = &type;
-        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        for ( const TypeInfo* pType : type.getTypeChain() )
         {
             if ( pType->findProperty( prop._name ) != nullptr )
             {
@@ -79,7 +79,7 @@ namespace sw::editor
 
     bool InspectorFavorites::hasAnyForTypeOrBase( const TypeInfo& type ) const
     {
-        for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
+        for ( const TypeInfo* pType : type.getTypeChain() )
         {
             if ( hasAnyForType( pType->_name.c_str() ) )
                 return true;

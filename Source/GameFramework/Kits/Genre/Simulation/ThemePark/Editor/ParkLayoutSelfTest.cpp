@@ -31,7 +31,7 @@ namespace sw::editor
                 {
                     context.expect( findSubsystem<ParkLayoutPreview>() != nullptr, "the extension subsystem ParkLayoutPreview is not bound in the editor scope" );
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( true ), "extension panel is not registered" );
-                    return EditorSelfTestStep::WaitSettled; // 열린 패널이 도킹 · 그리기를 마칠 때까지
+                    return EditorSelfTestStep::WaitStable; // 열린 패널이 도킹 · 그리기를 마칠 때까지
                 }
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( ParkLayoutPanel::kPanelTitle );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "extension panel drew nothing in the editor's ImGui context" );

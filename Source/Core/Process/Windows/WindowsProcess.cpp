@@ -25,22 +25,6 @@ namespace sw
                 return StringUtil::utf8ToUTF16( nativePath.c_str() );
             }
 
-            /**
-             * @brief 버퍼에 개행이 있으면 첫 줄을 `outLine` 으로 분리하고(개행 문자는 뺍니다) true 를 돌려줍니다. CRLF 는 한 개행으로 칩니다.
-             * @details `readOutputLine` 이 읽기 전과 파이프를 읽을 때마다 부릅니다.
-             */
-            static bool takeBufferedLine( string& inoutBuffer, string& outLine )
-            {
-                const size_t newlinePos = inoutBuffer.find_first_of( "\r\n" );
-                if ( newlinePos == string::npos )
-                    return false;
-
-                outLine          = inoutBuffer.substr( 0, newlinePos );
-                const bool bCrLf = inoutBuffer[newlinePos] == '\r' && newlinePos + 1 < inoutBuffer.length() && inoutBuffer[newlinePos + 1] == '\n';
-                inoutBuffer.erase( 0, newlinePos + ( bCrLf ? 2 : 1 ) );
-                return true;
-            }
-
             /** @brief 자식의 표준 출력 · 입력에 쓰는 파이프 끝 넷입니다. 쓰는 끝 · 읽는 끝 중 자식에게 줄 끝은 `closeChildEnds` 로 부모가 닫습니다. */
             struct StdPipes
             {
@@ -387,7 +371,7 @@ namespace sw
                                               nullptr, options._workingDirectory.empty() ? nullptr : wsDirectory.c_str(), &startupInfo, &pi );
         if ( bCreated == FALSE )
         {
-            SW_LOG_ERROR_ID( "WindowsProcess.FailedLaunchDetachedCommand", "Failed to launch detached command: %#", cmdStr.c_str() );
+            SW_LOG_ERROR_ID( "Process.LaunchDetachedFailed", "Failed to launch detached command: %#", cmdStr.c_str() );
             return false;
         }
 
@@ -437,38 +421,12 @@ namespace sw
         return true;
     }
 
-    bool Process::readOutputLine( string& outLine )
+    size_t Process::readOutputBytes( utf8* pBuffer, size_t capacity )
     {
-        outLine.clear();
-
-        if ( _pStdOutRead == nullptr )
-            return false;
-
-        // 1) 버퍼에 이미 개행 문자가 남아 있는지 확인한다
-        if ( WindowsProcessInternal::takeBufferedLine( _bufferedOutput, outLine ) )
-            return true;
-
-        // 2) 파이프에서 데이터를 더 읽는다
-        utf8  arrReadBuffer[constant::buffer::kMax4096];
         DWORD bytesRead = 0;
-
-        while ( ReadFile( static_cast<HANDLE>( _pStdOutRead ), arrReadBuffer, sizeof( arrReadBuffer ) - 1, &bytesRead, nullptr ) != FALSE && bytesRead > 0 )
-        {
-            arrReadBuffer[bytesRead] = '\0';
-            _bufferedOutput.append( arrReadBuffer, bytesRead );
-            if ( WindowsProcessInternal::takeBufferedLine( _bufferedOutput, outLine ) )
-                return true;
-        }
-
-        // 3) EOF 에 도달했으면 버퍼에 남은 문자열을 반환한다
-        if ( _bufferedOutput.empty() == false )
-        {
-            outLine = std::move( _bufferedOutput );
-            _bufferedOutput.clear();
-            return true;
-        }
-
-        return false;
+        if ( ReadFile( static_cast<HANDLE>( _pStdOutRead ), pBuffer, static_cast<DWORD>( capacity ), &bytesRead, nullptr ) == FALSE )
+            return 0; // 쓰는 쪽이 닫혔다(ERROR_BROKEN_PIPE) — 끝
+        return static_cast<size_t>( bytesRead );
     }
 
     expected<int32> Process::waitForExit()

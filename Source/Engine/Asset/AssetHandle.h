@@ -172,7 +172,7 @@ namespace sw
         /** @brief 집은 업로드 중 단계의 끝남 확인을 한 걸음 실행하고 결과를 반영합니다. */
         void executeUploadPoll( bool bBlocking );
         /** @brief 완료 단계 한 걸음의 결과를 단계 워드에 반영합니다. */
-        void settleCompletionStep( const expected<AssetCompletionStep>& step );
+        void advanceCompletionStep( const expected<AssetCompletionStep>& step );
         /** @brief 결과를 적고 `Done` 으로 넘긴 뒤 기다리는 쪽을 깨웁니다. */
         void finish( bool bSucceeded, string error );
         /** @brief 실패 이유 @p error 를 글(`문장 (대상)`)로 적어 실패로 끝냅니다. */

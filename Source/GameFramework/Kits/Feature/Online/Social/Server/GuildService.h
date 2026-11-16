@@ -5,6 +5,12 @@
  *            길드는 `social_guild`, 멤버는 `social_guild_member`(`<길드>/<계정>`), 계정의 길드는 `social_account_guild` 에 둔다.
  *            이름은 `social_guild_name` 에 ASCII 소문자로 바꾼 바이트의 16진 문자열로 두므로 대소문자를 무시하고 유일하다.
  *            초대는 `social_guild_invite`(`<계정>/<길드>`, 7일)에, 순번은 `social_sequence/guild` 에 두며 순번은 만들기와 같은 트랜잭션에서 늘린다.
+ *            초대를 쓰는 트랜잭션이 TTL 색인 `social_guild_invite_expiry`(`<만료 16진>/<초대 키>`)를 함께 넣고, TTL 규칙(`makeInviteTTLRule`,
+ *            기간은 `SocialKitConfig::_expiredInviteTTL`)이 만료 뒤 기간이 지난 초대를 지운다. 다시 보내 늦춰진 초대는 새 줄이 맡는다.
+ *            초대는 수락 권한일 뿐 다른 합 · 멱등의 근거가 아니다 — 만료된 초대는 지우기 전에도 수락이 거절된다.
+ *            가입 신청(`social_guild_application`, `<길드>/<계정>`, 7일)도 같다 — 신청을 쓰는 트랜잭션이 `social_guild_application_expiry` 줄을 함께 넣고,
+ *            TTL 규칙(`makeApplicationTTLRule`, 기간은 `SocialKitConfig::_expiredApplicationTTL`)이 지운다. 신청은 받아들이기 권한일 뿐이다 — 멤버 · 계정의 길드는
+ *            "없어야 함" 조건으로 따로 쓰고, 정원은 길드 레코드가 센다. 그래서 지워도 합 · 멱등이 깨지지 않는다.
  *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
  *            길드장은 혼자일 때만 떠날 수 있고 그때 길드가 해산되며 이름도 지운다. 내보내기는 더 높은 역할만 할 수 있다.
  *          - 변경한 뒤 멤버 목록을 한 번 더 읽어 `GuildChanged` 알림을 보낸다. 받는 사람이 오프라인이면 호스트가 버린다.
@@ -14,6 +20,11 @@
  *          - 길드 창고는 원장의 맡김(`esc/guild/<길드 16진>`)이다. 맡기기는 멤버 누구나, 꺼내기는 임원 이상이 하며 둘 다 클라이언트 멱등 키로 만든 분개 키가 필수이다.
  *            이동은 멤버 레코드의 버전 조건과 한 트랜잭션에 들어가므로 그사이 내보내지거나 역할이 바뀌면 충돌로 다시 읽는다.
  *            맡기기는 길드 레코드를 다시 써서 해산과 겹치지 않게 하며, 창고에 남은 것이 있으면 해산(혼자 남은 길드장의 떠나기)은 `StorageNotEmpty` 이다.
+ *          - 이전 불가 자산(원장 정책 `isTransferable` 이 false — 유료 재화)은 공용 창고가 아니라 맡긴 사람별 보유자(`esc/guild/<길드 16진>.<계정 16진>`)에 든다.
+ *            맡긴 사람은 `social_guild_depositor`(`<길드>/<계정>`)에 적어 해산 확인과 창고 목록이 열거한다. 꺼내기는 어느 몫인지(`_depositorID`) 적고,
+ *            맡긴 본인이거나 그가 준 허용(`social_guild_storage_grant`, `<길드>/<맡긴 사람>/<받는 계정>/<자산>`, 남은 한도)이 있을 때만 옮기며 한도는 같은 트랜잭션에서 줄인다.
+ *            맡긴 사람이 떠나거나 내보내지면 그의 몫은 같은 트랜잭션에서 그 계정으로 돌아가고 그가 준 허용 · 받은 허용도 지운다(사용자 결정 2026-11-12, 감사 O-10).
+ *            허용 부여 · 회수는 멱등 기록(`ServiceIdempotency`)을 남겨 재전송이 상태를 바꾸지 않는다.
  *
  *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다.
  *          - 레벨은 경험치(`addExperience`, 서버 시스템만)와 서버 설정의 레벨 테이블로 응답할 때 정한다. 테이블이 바뀌면 저장된 데이터를 고치지 않아도 레벨이 따라간다.
@@ -27,11 +38,13 @@
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
@@ -47,18 +60,20 @@ namespace sw
         Leave,
         Kick,
         SetRole,
-        SetNotice,
+        SetAnnouncement,
         Get,
         Attach,           ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
         Deposit,          ///< 내 계정에서 길드 창고로 옮긴다
-        Withdraw,         ///< 길드 창고에서 내 계정으로 옮긴다. 임원 이상
+        Withdraw,         ///< 길드 창고에서 내 계정으로 옮긴다. 공용 창고는 임원 이상, 맡긴 사람별 몫은 본인이나 허용을 받은 멤버
         ListStorage,      ///< 길드 창고의 잔액 목록이다
         SetJoinPolicy,    ///< 공개 길드를 켜고 끈다. 임원 이상
         Apply,            ///< 공개 길드에 가입 신청을 낸다. 길드가 없는 계정만
         ListApplications, ///< 살아 있는 신청 목록이다. 임원 이상
         Approve,          ///< 신청을 받아들인다. 임원 이상
         Reject,           ///< 신청을 지운다. 임원 이상
-        AddExperience     ///< 서버 시스템이 길드 경험치를 늘린다(`addExperience`). 완료는 없다
+        AddExperience,    ///< 서버 시스템이 길드 경험치를 늘린다(`addExperience`). 완료는 없다
+        GrantWithdrawal,  ///< 내 몫(이전 불가 자산)을 다른 멤버가 한도까지 꺼내도록 허용한다. 한도는 덮어쓴다
+        RevokeWithdrawal  ///< 내가 준 꺼내기 허용을 거둔다
     };
 } // namespace sw
 
@@ -88,17 +103,19 @@ namespace sw
     /** @brief 길드 요청 하나입니다. */
     struct GuildRequest
     {
-        string           _text{};                         ///< 이름이나 공지이다
-        string           _assetID{};                      ///< Deposit · Withdraw 의 자산이다
-        string           _journalKey{};                   ///< Deposit · Withdraw 의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
-        AccountID        _accountID{ kInvalidAccountID }; ///< 요청한 사람이다
-        AccountID        _targetID{ kInvalidAccountID };  ///< 초대, 내보내기, 역할 변경의 대상이다
-        uint64           _guildID{ 0 };                   ///< 수락할 길드이다
-        int64            _amount{ 0 };                    ///< Deposit · Withdraw 의 양, AddExperience 의 경험치이다
-        UnixMilliseconds _nowMs{ 0 };
-        GuildRole        _role{ GuildRole::Member };
-        GuildOperation   _operation{ GuildOperation::Get };
-        uint8            _bOpen{ SW_FALSE }; ///< SetJoinPolicy 의 값이다
+        string            _text{};                           ///< 이름이나 공지이다
+        string            _assetID{};                        ///< Deposit · Withdraw 의 자산이다
+        string            _journalKey{};                     ///< 창고 이동 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
+        AccountID         _accountID{ kInvalidAccountID };   ///< 요청한 사람이다
+        AccountID         _targetID{ kInvalidAccountID };    ///< 초대, 내보내기, 역할 변경의 대상, 꺼내기 허용을 받는 계정이다
+        AccountID         _depositorID{ kInvalidAccountID }; ///< Withdraw 가 꺼낼 맡긴 사람별 몫의 주인이다. 공용 창고 자산이면 `kInvalidAccountID`
+        NetIdempotencyKey _idempotencyKey{};                 ///< 호출의 멱등 키이다. GrantWithdrawal · RevokeWithdrawal 이 멱등 기록(`ServiceIdempotency`)에 쓴다
+        uint64            _guildID{ 0 };                     ///< 수락할 길드이다
+        int64             _amount{ 0 };                      ///< Deposit · Withdraw 의 양, AddExperience 의 경험치, GrantWithdrawal 의 한도이다
+        UnixMilliseconds  _nowMs{ 0 };
+        GuildRole         _role{ GuildRole::Member };
+        GuildOperation    _operation{ GuildOperation::Get };
+        uint8             _bOpen{ SW_FALSE }; ///< SetJoinPolicy 의 값이다
     };
 } // namespace sw
 
@@ -111,7 +128,7 @@ namespace sw
         vector<GuildStorageItem> _listStorage{};     ///< ListStorage 는 창고 전체, Deposit · Withdraw 는 옮긴 자산의 창고 잔액 하나이다
         vector<GuildApplication> _listApplication{}; ///< ListApplications 의 결과이다
         uint64                   _requestTag{ 0 };
-        SocialOutcome            _result{ SocialResult::Ok };
+        SocialServiceResult      _result{ SocialResult::Ok };
     };
 } // namespace sw
 
@@ -129,7 +146,7 @@ namespace sw
         AccountID                _leftID{ kInvalidAccountID };
         AccountID                _attachedID{ kInvalidAccountID };
         uint64                   _guildID{ 0 };
-        SocialOutcome            _result{ SocialResult::Ok };
+        SocialServiceResult      _result{ SocialResult::Ok };
     };
 } // namespace sw
 
@@ -172,10 +189,21 @@ namespace sw
 
         /** @brief 이름 규칙을 검사합니다. 1~24바이트이고, 올바른 UTF-8 이며, 제어 문자가 없고, 앞뒤 공백이 없어야 합니다. */
         static bool isValidName( string_view name );
+        /** @brief 만료된 길드 초대의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
+        static ServiceTTLRule makeInviteTTLRule( int64 expireAfterMs );
+        /** @brief 만료된 가입 신청의 TTL 규칙입니다(TTL 색인 규칙). 해산한 길드 · 다시 오지 않는 신청자의 신청이 남지 않게 한다. */
+        static ServiceTTLRule makeApplicationTTLRule( int64 expireAfterMs );
+        /**
+         * @brief 탈퇴한 계정의 길드 레코드를 지웁니다(친구 키트의 `IAfterDeleteAccount` 몫). 저장소 스레드에서 부릅니다.
+         * @details 받은 초대와 그 만료 색인, 낸 신청(역색인 `social_account_application`), 멤버십이다. 멤버십은 맡긴 몫을 소각하고(돌려줄 계정이 없다) 그가 주거나 받은 허용을 지운다.
+         *          길드장이면 남은 멤버 중 가장 높은 역할 · 먼저 들어온 사람에게 넘기고, 혼자면 공용 창고를 소각하고 길드를 해산한다. 단계마다 커밋하고 멱등이다.
+         *          Nakama 의 DeleteAccount 가 그룹 소유권을 넘기고 멤버십을 지우는 것과 같은 자리다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
 
     private:
         /** @brief 저장소 일의 완료입니다. */
-        void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildResult&& outcome );
+        void applyServiceResult( const GuildRequest& request, uint64 requestTag, GuildResult&& result );
         void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, UnixMilliseconds nowMs );
 
     private:

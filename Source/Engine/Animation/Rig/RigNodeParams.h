@@ -1,7 +1,7 @@
 /**
  * @file RigNodeParams.h
  * @brief 리그 파일(`*.rig.xml`)의 원소마다 받는 칸입니다 — 에셋 루트 · 대상 · 노드 공통 키 · 노드 종류마다의 키와 그 목록 원소(`<item>`).
- * @details `RigXMLReader::readFields` 가 이 스키마로 속성을 읽는다. 칸의 초기값이 "적지 않음" 값이고, 범위는 PROPERTY( Min · Max ) 가 정본이다.
+ * @details `RigXMLReader::readProperties` 가 이 스키마로 속성을 읽는다. 칸의 초기값이 "적지 않음" 값이고, 범위는 PROPERTY( Min · Max ) 가 정본이다.
  *          이름 목록(`<bones><item>…`)과 객체 목록(`<feet>` 등)은 자식 요소라 노드가 손으로 푼다. 파일 키는 밑줄 이름이라 칸마다 `Name` 을 적는다.
  *          도 단위로 적는 각은 파일 단위 그대로(`Units = deg`) 읽고, 노드가 라디안이나 쿼터니언으로 옮긴다.
  *          언리얼 애님 노드의 UPROPERTY 파라미터 구조체 자리다 — 키 · 기본값 · 범위를 한 곳에 둔다.
@@ -472,6 +472,9 @@ namespace sw
         hashed_string _driver{};
         PROPERTY( Name = "radius_degrees", Min = 1.0, Max = 180.0, Units = deg )
         float32 _radiusDegrees{ 45.0f };
+        /** @brief 이보다 작은 포즈 가중치는 0 으로 둔다(언리얼 RBF WeightThreshold) — 가우스 핵은 먼 포즈도 0 이 아니라 모든 포즈의 보정을 늘 내던 것을 막는다. */
+        PROPERTY( Name = "weight_threshold", Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _weightThreshold{ 0.001f };
     };
 
     /** @brief 구동 포즈(`<poses><item …>`) 하나의 칸입니다. 모프(`morphs`) · 보정 본(`bones`) 목록은 노드가 푼다. */

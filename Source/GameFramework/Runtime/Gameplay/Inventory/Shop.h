@@ -24,11 +24,11 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 namespace sw
 {
     class Archive;
-    class Inventory;
     class ItemCatalog;
     class XMLNode;
 
@@ -160,9 +160,11 @@ namespace sw
         float32 _recoveryPerDay{ 0.1f }; ///< 하루마다 시세가 1 로 돌아오는 양
         PROPERTY( Min = 0 )
         int32 _restockDays{ 1 }; ///< 재입고 주기(일). 0 이면 재입고하지 않는다
+        PROPERTY( Min = 0, Required )
+        int32 _buybackLimit{ 0 }; ///< 되사기 목록에 남기는 판매 수(넘치면 오래된 것부터 버린다). 필수 — 0 이면 판 아이템은 사라진다(WoW 상인은 12)
 
         const ShopStockDef* findStock( const hashed_string& itemID ) const;
-        bool                refusesCategory( const hashed_string& category ) const;
+        bool                isRefusedCategory( const hashed_string& category ) const;
     };
 } // namespace sw
 
@@ -188,12 +190,12 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "ShopCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadShop( const XMLNode& node, string_view sourceName );
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<ShopCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ShopCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, ShopCatalog );
 } // namespace sw
 
 namespace sw
@@ -225,6 +227,7 @@ namespace sw
         {
             Bought = 0, ///< 손님이 샀다
             Sold,       ///< 손님이 팔았다
+            BoughtBack, ///< 손님이 판 것을 되샀다(`buyBack`, WoW `BuybackItem`)
             Restocked   ///< 재입고(아이템마다 하나씩)
         };
         hashed_string _shopID{};
@@ -237,33 +240,51 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 가게 하나의 현재 상태입니다. */
-    struct ShopRuntime
+    /**
+     * @brief 되사기 목록의 판매 하나입니다. 판 조각을 개체 상태(내구도 · 꾸미기 · 뗀 부품)째 들고, 되사면 받은 돈 그대로 돌려받고 조각을 그대로 돌려준다.
+     * @details id 로 다시 넣으면 닳은 장비가 새것이 된다 — 제작 대기열의 꺼낸 재료(`CraftJob::_listUnitInput`)와 같은 모양이다(WoW 의 Buyback 탭, Lyra 는 아이템 인스턴스를 옮긴다).
+     */
+    struct ShopBuybackEntry
     {
-        hashed_string         _shopID{};
-        vector<int32>         _listStockCount{};    ///< `ShopDef::_listStock` 과 같은 순서의 재고(-1 이면 무한)
-        vector<hashed_string> _listSaturatedItem{}; ///< 시세가 떨어진 아이템
-        vector<float32>       _listSellFactor{};    ///< 그 아이템의 시세(1 이면 보통)
-        vector<hashed_string> _listExtraRefused{};  ///< 실행 중에 추가한 "사들이지 않는 분류"
-        float32               _buyModifier{ 1.0f };
-        float32               _sellModifier{ 1.0f };
-        int32                 _daysSinceRestock{ 0 };
+        vector<InventorySlot> _listPiece{}; ///< 판 조각(`Inventory::takeItem` 이 꺼낸 그대로)
+        hashed_string         _itemID{};
+        int64                 _price{ 0 }; ///< 팔 때 받은 돈이자 되살 때 내는 돈
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 가게 하나의 현재 상태입니다. */
+    struct ShopState
+    {
+        vector<ShopBuybackEntry> _listBuyback{}; ///< 되살 수 있는 판매(오래된 것이 앞). 길이는 `ShopDef::_buybackLimit` 까지
+        hashed_string            _shopID{};
+        vector<int32>            _listStockCount{};    ///< `ShopDef::_listStock` 과 같은 순서의 재고(-1 이면 무한)
+        vector<hashed_string>    _listSaturatedItem{}; ///< 시세가 떨어진 아이템
+        vector<float32>          _listSellFactor{};    ///< 그 아이템의 시세(1 이면 보통)
+        vector<hashed_string>    _listExtraRefused{};  ///< 실행 중에 추가한 "사들이지 않는 분류"
+        float32                  _buyModifier{ 1.0f };
+        float32                  _sellModifier{ 1.0f };
+        int32                    _daysSinceRestock{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @class ShopState
+     * @class ShopManager
      * @brief 모든 가게의 재고, 시세, 가격 배율을 관리합니다. 카탈로그 두 개는 소유하지 않고 참조만 하므로 이 객체보다 오래 살아 있어야 합니다.
      * @details 사기 단가는 round( 값 × 가게 `buyMultiplier` × 사기 배율 ) 이다. 팔기는 한 개씩 round( `ItemDef::_value` × `sellMultiplier` × 팔기 배율 × 시세 ) 를 더하고,
      *          한 개를 팔 때마다 시세가 `saturation` 만큼 떨어진다(하한은 `minSellFactor`). `advanceDay` 가 시세를 되돌리고 `restockDays` 마다 재입고한다.
      *          사기와 팔기는 전부 성공하거나 아무것도 바뀌지 않는다.
      */
-    class SW_GF_API ShopState
+    class SW_GF_API ShopManager
     {
     public:
-        ShopState();
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "SHOP" );
+        static constexpr uint32 kStateVersion = 2; ///< 2: 머리표와 가게마다 되사기 목록을 쓴다(판 1 은 머리표가 없어 거절한다)
+
+        ShopManager();
 
         void initialize( const ShopCatalog* pShopCatalog, const ItemCatalog* pItemCatalog );
         /** @brief 잠금 조건을 평가할 문맥입니다(플래그 · 태그 칸). 빌려 씁니다. 없으면 조건이 있는 항목은 항상 잠겨 있습니다. */
@@ -278,8 +299,18 @@ namespace sw
         /** @brief 삽니다. @p pOutPaid 가 있으면 실제로 낸 금액을 기록합니다. 성공했을 때만 기록합니다. */
         ShopResult buy( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutPaid = nullptr );
         ShopResult evaluateSell( const hashed_string& shopID, const hashed_string& itemID, int32 count, const Inventory& inventory ) const;
-        /** @brief 팝니다. @p pOutReceived 가 있으면 실제로 받은 금액을 기록합니다. 성공했을 때만 기록합니다. */
+        /** @brief 팝니다. @p pOutReceived 가 있으면 실제로 받은 금액을 기록합니다. 성공했을 때만 기록합니다. 가게의 `_buybackLimit` 가 있으면 판 조각을 개체 상태째 되사기 목록에 남깁니다. */
         ShopResult sell( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
+        /**
+         * @brief 인벤토리 슬롯 @p slot 에서 @p count 개를 팝니다. 같은 id 가 여럿일 때 어느 개체(닳은 칼)를 팔지 손님이 고른다. 나머지는 id 판 `sell` 과 같습니다.
+         * @details 슬롯이 비었거나 범위 밖이거나 그 슬롯에 @p count 개가 없으면 `NotOwned` 이다(Lyra 는 아이템 인스턴스를 고르고, 이 인벤토리의 인스턴스는 슬롯이다 — `Inventory::takeFromSlot`).
+         */
+        ShopResult sell( const hashed_string& shopID, int32 slot, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
+        /**
+         * @brief 되사기 목록의 @p buybackIndex 번째 판매를 팔 때 받은 돈으로 되삽니다. 조각은 내구도 · 꾸미기 · 뗀 부품째 돌아옵니다. @p pOutPaid 는 성공했을 때만 기록합니다.
+         * @details 없는 번호는 `InvalidCount`, 돈이 모자라면 `NotEnoughMoney`, 조각이 다 들어가지 않으면 `NoRoom` 이며 그때는 아무것도 바뀌지 않는다. 시세 · 재고는 되돌리지 않는다.
+         */
+        ShopResult buyBack( const hashed_string& shopID, int32 buybackIndex, Wallet& wallet, Inventory& inventory, int64* pOutPaid = nullptr );
         /** @brief 하루를 넘깁니다. 시세를 회복하고, 재입고할 때가 되면 재입고합니다. */
         void advanceDay();
         void pollEvents( vector<ShopEvent>& outListEvent );
@@ -293,24 +324,27 @@ namespace sw
         /** @brief 그 아이템의 매입 시세입니다. 1 이면 보통입니다. */
         float32 getSellFactor( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief 진열 항목이 열려 있으면 true 입니다. 조건이 없거나 조건 평가가 참일 때 열립니다. */
-        bool               isUnlocked( const ShopStockDef& stock ) const;
-        hashed_string      getCurrency( const hashed_string& shopID ) const;
-        const ShopRuntime* findRuntime( const hashed_string& shopID ) const;
+        bool             isUnlocked( const ShopStockDef& stock ) const;
+        hashed_string    getCurrency( const hashed_string& shopID ) const;
+        const ShopState* findRuntime( const hashed_string& shopID ) const;
 
         /**
-         * @brief 가게마다 런타임 상태(가게 id, 재고, 시세, 사들이지 않는 분류, 가격 배율, 재입고 후 지난 날)를 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다.
+         * @brief 가게마다 런타임 상태(가게 id, 재고, 시세, 사들이지 않는 분류, 가격 배율, 재입고 후 지난 날, 되사기 목록)를 씁니다. 카탈로그는 `initialize` 가 받은 것이므로 저장하지 않습니다.
          *        `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
          */
         SW_DECLARE_STATE_IO();
 
     private:
-        ShopRuntime*                  findRuntime( const hashed_string& shopID );
+        /** @brief 쓰기용 상태입니다. 공개 `findRuntime` 과 이름을 나눈다 — 같은 이름의 private 비 const 판은 비 const 객체에서 부른 공개 호출을 가로채 clang 이 접근 오류를 냈다. */
+        ShopState*                    findRuntimeMutable( const hashed_string& shopID );
         [[nodiscard]] optional<int32> findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const;
-        int32                         computeBasePrice( const ShopStockDef& stock ) const;
-        bool                          isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const;
+        /** @brief 꺼낸 조각의 값을 치르고 되사기 목록 · 시세 · 이벤트를 남깁니다. 두 `sell` 의 뒷부분입니다. */
+        void  settleSale( const hashed_string& shopID, const hashed_string& itemID, int32 count, int64 total, vector<InventorySlot>&& listPiece, Wallet& wallet, int64* pOutReceived );
+        int32 computeBasePrice( const ShopStockDef& stock ) const;
+        bool  isRefused( const ShopDef& shop, const ShopState& runtime, const hashed_string& itemID ) const;
 
     private:
-        vector<ShopRuntime>    _listRuntime;
+        vector<ShopState>      _listRuntime;
         EventBuffer<ShopEvent> _eventBuffer;
         const ShopCatalog*     _pShopCatalog;
         const ItemCatalog*     _pItemCatalog;

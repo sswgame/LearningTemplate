@@ -46,7 +46,7 @@ namespace sw
     private:
         atomic<uint64> _nextObjectID;    ///< 다음 오브젝트 id
         atomic<uint64> _nextComponentID; ///< 다음 컴포넌트 id
-    };
 
-    SW_SERVICE_SLOT( ObjectIDAllocator, Required );
+        SW_SERVICE_SLOT( ObjectIDAllocator, Required );
+    };
 } // namespace sw

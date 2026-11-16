@@ -152,7 +152,7 @@ namespace sw
             return GhostDoorResult::UnknownDoor;
         if ( _pFlags->hasFlag( pDoor->_flag ) )
             return GhostDoorResult::AlreadyOpen;
-        if ( pDoor->_key.empty() == false && ( _pInventory == nullptr || _pInventory->removeItem( pDoor->_key, 1 ) == false ) )
+        if ( pDoor->_key.empty() == false && ( _pInventory == nullptr || _pInventory->consumeItem( pDoor->_key, 1 ) == false ) )
             return GhostDoorResult::NeedKey;
         _pFlags->setFlag( pDoor->_flag, 1 );
         pushEvent( GhostMansionEventKind::DoorOpened, doorID );

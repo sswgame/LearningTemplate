@@ -48,7 +48,10 @@ namespace sw::editor
             item.set( "_name" ).setString( entry.first );
             item.set( "_bEnabled" ).setBool( entry.second );
         }
-        outManifestJSON = document.dump( 4 );
+        const expected<string> manifestText = document.dump( 4 );
+        if ( manifestText.has_value() == false )
+            return false; // 잘못된 UTF-8 모듈 이름 — 매니페스트를 고쳐 쓰지 않는다
+        outManifestJSON = *manifestText;
         return true;
     }
 

@@ -38,7 +38,7 @@ namespace sw
     expected<void> AutomationBackendSteps::validateSwapBackend( const AutomationStep& step )
     {
         AutomationSwapBackendParams params;
-        const expected<void>        read = step.readFields( params );
+        const expected<void>        read = step.readProperties( params );
         if ( read.has_value() == false )
             return read;
         RHIBackend backend{};

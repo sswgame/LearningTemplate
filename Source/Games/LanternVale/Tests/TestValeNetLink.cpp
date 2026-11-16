@@ -33,6 +33,7 @@ namespace
         void setAccount( int32 connectionID, uint64 accountID ) { _mapAccount[connectionID] = accountID; }
 
         bool               sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override { return _inner.sendMessage( connectionID, channel, pData, size ); }
+        bool               trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override { return _inner.trySendMessage( connectionID, channel, pData, size ); }
         bool               sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) override { return _inner.sendNotifiedMessage( connectionID, pData, size, tag ); }
         int32              broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID ) override { return _inner.broadcast( channel, pData, size, exceptID ); }
         void               disconnect( int32 connectionID ) override { _inner.disconnect( connectionID ); }
@@ -51,7 +52,7 @@ namespace
         void  collectConnected( vector<int32>& outListConnection ) const override { _inner.collectConnected( outListConnection ); }
         int32 getMaxBytesPerSecond() const override { return _inner.getMaxBytesPerSecond(); }
         bool  isConnectionSaturated( int32 connectionID ) const override { return _inner.isConnectionSaturated( connectionID ); }
-        void  addSentKindTally( NetMessageKindStatsTable& outTable ) const override { _inner.addSentKindTally( outTable ); }
+        void  addSentKindStats( NetMessageKindStatsTable& outTable ) const override { _inner.addSentKindStats( outTable ); }
 
     private:
         NetEndpoint&                 _inner;
@@ -62,6 +63,7 @@ namespace
     {
         ValeRules rules;
         rules._listLevelExperience = { 100, 250, 450, 700 };
+        rules._moveSpeed           = 6.0f;
         ValePlacement spawn;
         spawn._kind     = ValePlacementKind::Creature;
         spawn._position = float3{ 2.0f, 0.0f, 0.0f };
@@ -128,11 +130,11 @@ namespace
             for ( int32 step = 0; step < stepCount; ++step )
             {
                 _cluster.step();
-                (void)_serverRouter.pump( *_pServerPeers );
+                (void)_serverRouter.poll( *_pServerPeers );
                 server.update( 1.0f / 60.0f );
                 for ( int32 index = 0; index < _clientCount; ++index )
                 {
-                    (void)_arrClientRouter[index].pump( _cluster.getClient( index ) );
+                    (void)_arrClientRouter[index].poll( _cluster.getClient( index ) );
                     _arrClient[index].update();
                 }
             }
@@ -210,7 +212,7 @@ SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
 }
 
 /** @brief [ValeNetLinkTest] 검증 짝이 지어낸 번호 · 자기 초대를 거르면 서버가 그 연결을 끊는다 — 몸(골짜기 규칙)은 돌지 않는다. */
-SW_TEST_CASE( ValeNetLinkTest, ForgedTargetsAreDisconnected )
+SW_TEST_CASE( ValeNetLinkTest, CraftedTargetsAreDisconnected )
 {
     ValeLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
@@ -221,7 +223,7 @@ SW_TEST_CASE( ValeNetLinkTest, ForgedTargetsAreDisconnected )
     for ( int32 step = 0; step < 8; ++step )
     {
         rig._cluster.step();
-        (void)rig._serverRouter.pump( *rig._pServerPeers ); // 서버만 — 끊긴 클라이언트 쪽 사건은 이 테스트가 보지 않는다
+        (void)rig._serverRouter.poll( *rig._pServerPeers ); // 서버만 — 끊긴 클라이언트 쪽 사건은 이 테스트가 보지 않는다
     }
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getRemoteCallStats()._validationFailedCount );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._actionCount );

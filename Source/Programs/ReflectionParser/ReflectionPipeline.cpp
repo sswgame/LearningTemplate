@@ -587,7 +587,7 @@ namespace sw
                 StringBuilder<constant::buffer::kMax256> textBuilder3;
                 textBuilder3.appendFormat( "%#\t%#", prop._name, target );
                 stamp._listAssetField.push_back( string( textBuilder3.view() ) );
-                // 속성으로 읽는 문서(`XMLFields::readFields`)는 C++ 이름이 아니라 속성 이름(`_shaderPath` → `shaderPath`)으로 적는다 — 그 이름도 낸다.
+                // 속성으로 읽는 문서(`XMLFields::readProperties`)는 C++ 이름이 아니라 속성 이름(`_shaderPath` → `shaderPath`)으로 적는다 — 그 이름도 낸다.
                 // 예전에는 그 이름을 손 표(`AssetReferenceFields.json`)가 따로 적었다.
                 const string attribute = ReflectionPipelineInternal::makeXMLAttributeName( prop._name );
                 if ( attribute != prop._name )

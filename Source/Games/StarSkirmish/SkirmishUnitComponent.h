@@ -10,6 +10,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -31,7 +32,7 @@ namespace sw
         float32       _width{ 1.0f };
     };
 
-    /** @brief `unitmodels.xml` 의 `<Model id model width/>` 한 줄의 스키마입니다(`XMLFields::readFields`). 세 칸 모두 필수이고 폭은 0.01 ~ 1000 이다. */
+    /** @brief `unitmodels.xml` 의 `<Model id model width/>` 한 줄의 스키마입니다(`XMLFields::readProperties`). 세 칸 모두 필수이고 폭은 0.01 ~ 1000 이다. */
     REFLECT()
     struct SkirmishUnitModelDef
     {
@@ -64,7 +65,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "SkirmishUnitModelCatalog";
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadModel( const XMLNode& node, string_view sourceName );
     };
 } // namespace sw
@@ -85,6 +86,9 @@ namespace sw
 
         SkirmishUnitComponent();
         virtual ~SkirmishUnitComponent() override = default;
+
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
@@ -116,4 +120,7 @@ namespace sw
         uint8       _bPlaced  : 1; ///< 한 번이라도 자리를 맞췄다(그 전에는 숨어 있다)
         uint8       _reserved : 7;
     };
+
+    /** @brief 이 종류의 공유 캐시입니다 — 인스턴스화는 `SkirmishUnitComponent.cpp` 의 정의 줄이 한다. */
+    SW_DECLARE_SHARED_ASSET_CACHE(, SkirmishUnitModelCatalog );
 } // namespace sw

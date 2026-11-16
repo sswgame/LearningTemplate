@@ -90,14 +90,14 @@ namespace sw
             if ( MonotonicClock::nowMicroseconds() > deadlineMicro )
             {
                 SW_LOG_ERROR_ID( "SceneCapture.CaptureNeverDrewComplete", "The capture never drew a complete frame within %# s (scene work %#, or batches waiting for their material PSO) - nothing was read ('%#')",
-                                 SceneCaptureInternal::kReadyWaitSeconds, CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ), _pipelinePath.c_str() );
+                                 SceneCaptureInternal::kReadyWaitSeconds, CaptureReadiness::countPendingSceneJobs( scene.getObjectManager() ), _pipelinePath.c_str() );
                 _job._bSucceeded = false;
                 break;
             }
             _job._packet.resetForFrame();
             _scene.fillSceneView( _job._packet, scene, request._view, nullptr );
             _job._packet._sceneKey = _sceneKey;
-            _job._bReadNow         = CaptureReadiness::countPendingSceneWork( scene.getObjectManager() ) == 0;
+            _job._bReadNow         = CaptureReadiness::countPendingSceneJobs( scene.getObjectManager() ) == 0;
             const bool bRan        = _pRenderThread->executeAndWait( SW_DELEGATE_METHOD( RenderCommandDelegate, &SceneCapture::renderFrameOnRenderThread, this ) );
             _job._bSucceeded       = bRan && _job._bSucceeded;
             if ( _job._pendingPSOBatches > 0 ) // 셰이더를 컴파일하는 중이다 — 진척이 있으니 시한을 다시 센다

@@ -60,7 +60,7 @@ namespace sw
         {
             const GameObject*        pOwner   = camera.getOwner();
             const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-            return pManager != nullptr ? pManager->getUpdateSerial() : 0;
+            return pManager != nullptr ? pManager->getUpdateCount() : 0;
         }
     } // namespace
 
@@ -161,7 +161,7 @@ namespace sw
             return;
         IRenderTargetDeclarationSink* pSink = engine::findSubsystem<IRenderTargetDeclarationSink>();
         if ( pSink != nullptr ) // 텍스처 캐시를 범위에 걸지 않은 하네스는 알릴 곳이 없다
-            pSink->declareRenderTarget( _renderOutput._renderTexture.viewOrEmpty(), _renderOutput._renderTextureWidth, _renderOutput._renderTextureHeight );
+            pSink->declareRenderTarget( _renderOutput._renderTexture.view(), _renderOutput._renderTextureWidth, _renderOutput._renderTextureHeight );
     }
 
     void CameraComponent::onUnregister( GameObjectManager& manager )

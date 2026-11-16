@@ -104,7 +104,7 @@ namespace sw
         [[nodiscard]] bool            findShape( const hashed_string& itemID, GridItemShape& outShape ) const;
         [[nodiscard]] optional<int32> findItemIndex( int32 instanceID ) const;
         void                          computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const;
-        void                          stampItem( const GridItem& item, int32 value );
+        void                          fillItemCells( const GridItem& item, int32 value );
         void                          eraseItemAt( size_t itemIndex );
 
     private:

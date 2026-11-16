@@ -9,6 +9,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+
 namespace sw
 {
     /** @brief 서버가 서자마자 가입시켜 둘 개발용 계정 하나입니다. 이미 있으면 그대로 둡니다. */
@@ -27,6 +29,9 @@ namespace sw
     struct AccountKitConfig
     {
         REFLECT_BODY();
+        /** @brief 만료된 세션(밀려난 세션의 묘비 포함)의 TTL 입니다. 만료 뒤 이 기간이 지나면 TTL 쓸기가 세션 레코드를 지웁니다. */
+        PROPERTY( Required )
+        ServiceTTLConfig _expiredSessionTTL{};
         /** @brief 게임 접속 티켓 주 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름입니다. 비우면 개발 키(DevOnline 단위), 그 단위가 없는 구성(배포)은 기동 실패입니다. */
         PROPERTY()
         string _ticketKeySecretEnvironment{};
@@ -37,7 +42,7 @@ namespace sw
         PROPERTY()
         bool _bLightPasswordHash{ false };
         /**
-         * @brief 개발 · 두 프로세스 시나리오(`Scripts/net/NetPairRun.py`)용 시드 계정입니다. **DevOnline 단위만** — 그 단위가 없는 구성(배포)은 기동 실패입니다.
+         * @brief 개발 · 두 프로세스 시나리오(`Scripts/net/net_pair_run.py`)용 시드 계정입니다. **DevOnline 단위만** — 그 단위가 없는 구성(배포)은 기동 실패입니다.
          * @details 비밀번호를 설정 파일에 적어 두는 길을 운영에 남기지 않습니다. 상용 엔진의 테스트 계정 시드(언리얼 서버의 `-ini` 계정 · 유니티 UGS 의 테스트 플레이어)와 같은 자리입니다(기억에 의존).
          */
         PROPERTY()

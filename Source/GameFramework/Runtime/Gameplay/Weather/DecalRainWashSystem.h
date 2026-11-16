@@ -38,7 +38,7 @@ namespace sw
         /** @brief 매니저에 붙은 시스템입니다. 없으면 nullptr 입니다. */
         static DecalRainWashSystem* find( const GameObjectManager& manager );
         /** @brief 매니저의 시스템을 반환합니다. 없으면 붙입니다(게임 스레드, 틱 밖). */
-        static DecalRainWashSystem& ensureFor( GameObjectManager& manager );
+        static DecalRainWashSystem& findOrCreate( GameObjectManager& manager );
         /** @brief 시스템을 뗍니다(날씨가 닫힐 때). */
         static void release( GameObjectManager& manager );
 

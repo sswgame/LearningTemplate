@@ -61,7 +61,7 @@ namespace sw
         vector<hashed_string> _listSeason{}; ///< 자라는 계절이다(`seasons`, 필수). 시계의 계절 이름이며 `WorldClockSettings::_listSeason` 과 같다
 
         /** @brief @p season 에 자라면 true 를 반환합니다. */
-        bool growsIn( const hashed_string& season ) const { return VectorUtil::contains( _listSeason, season ); }
+        bool canGrowIn( const hashed_string& season ) const { return VectorUtil::contains( _listSeason, season ); }
     };
 } // namespace sw
 
@@ -103,7 +103,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "CropCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief `<Crop>` 하나를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadCrop( const XMLNode& node, string_view sourceName );
         /** @brief 씨앗과 수확물에서 작물 index 로 가는 맵을 다시 만듭니다(작물이 추가될 때 호출합니다). */
@@ -117,5 +117,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CropCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<CropCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, CropCatalog );
 } // namespace sw

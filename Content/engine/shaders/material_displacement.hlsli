@@ -2,7 +2,7 @@
  * material_displacement.hlsli — 머티리얼 변위(MATERIAL_DISPLACEMENT)의 정점 · 헐 · 도메인 진입점(VSMain · HSMain · DSMain).
  *
  * material_shader_main.hlsli 가 MATERIAL_DISPLACEMENT 일 때 보간 칸 VSMain 대신 이 파일을 include 한다. 렌더러가 그 머티리얼의 변형 PSO 에 헐 · 도메인 진입점과
- * 패치 토폴로지를 붙인다(`FrameRendererUtil::tessellatesMaterial` — 본 · G버퍼 패스와 머티리얼 셰이더로 갈아탄 그림자 · 깊이 프리패스).
+ * 패치 토폴로지를 붙인다(`FrameRendererUtil::isMaterialTessellated` — 본 · G버퍼 패스와 머티리얼 셰이더로 갈아탄 그림자 · 깊이 프리패스).
  *
  *   정점   문맥은 보간 칸 VSMain 과 같은 함수(`VertexContext::load`)로 만들고 위치 오프셋 훅까지 더한 월드 위치를 제어점으로 낸다(클립 위치는 아직 없다).
  *   헐     변 계수를 변의 두 끝점(월드 위치 · 카메라 뷰 깊이)만으로 정한다 — 변을 나누는 두 패치가 같은 값을 내어 틈이 없다. 안쪽은 세 변의 최댓값이다.

@@ -47,7 +47,7 @@ namespace sw
         TradeSnapshot        _snapshot{};
         LedgerTransferResult _ledger{}; ///< 정산 결과이다. 이동 뒤 잔액이며 게임이 미러에 넣는다
         uint64               _requestTag{ 0 };
-        TradeOutcome         _result{ TradeResult::Ok };
+        TradeServiceResult   _result{ TradeResult::Ok };
         TradeOperation       _operation{ TradeOperation::Invite };
     };
 } // namespace sw

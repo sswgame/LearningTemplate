@@ -87,6 +87,8 @@ namespace sw
         const vector<CurrencyDef>& getCurrencies() const { return _listCurrency; }
         /** @brief @p assetID 의 계정 잔액 상한입니다. 정의가 없거나 0이면 0(원장 상한만 적용)입니다. */
         int64 getBalanceCap( string_view assetID ) const;
+        /** @brief 계정 사이로 옮겨져도 되는 자산이면 true 입니다. 유료 재화(`_bPaid`)는 아니다 — 맡긴 당사자가 허용한 권한 안에서만 옮긴다(감사 O-10). */
+        bool isTransferable( string_view assetID ) const;
         /** @brief 원장에 넘기는 상한 정책입니다(`getBalanceCap` 으로 넘긴다). 이 카탈로그와 수명이 같습니다. 키트 범위에 거는 쪽은 비 const 판을 쓴다(`bind` 가 const 를 떼지 않는다). */
         ILedgerPolicy&       getLedgerPolicy() { return _ledgerPolicy; }
         const ILedgerPolicy& getLedgerPolicy() const { return _ledgerPolicy; }
@@ -102,13 +104,14 @@ namespace sw
             }
 
             int64 getBalanceCap( string_view assetID ) const override { return _catalog.getBalanceCap( assetID ); }
+            bool  isTransferable( string_view assetID ) const override { return _catalog.isTransferable( assetID ); }
 
         private:
             const CurrencyCatalog& _catalog;
         };
 
         static constexpr const utf8* kXMLRootName = "CurrencyCatalog";
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief `<Currency>` 와 그 `<Funding>` 을 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadCurrency( const XMLNode& node, string_view sourceName );
 
@@ -118,5 +121,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CurrencyCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<CurrencyCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, CurrencyCatalog );
 } // namespace sw

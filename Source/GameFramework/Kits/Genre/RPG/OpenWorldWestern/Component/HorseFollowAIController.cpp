@@ -5,6 +5,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
@@ -57,5 +58,17 @@ namespace sw
         // 말은 땅을 걷는다 — 목적지 높이는 말의 것이고, 거리도 수평으로 잰다.
         blackboard.setVector( "FollowPosition", float3{ ownerPosition._x, horsePosition._y, ownerPosition._z } );
         blackboard.setFloat( "OwnerDistance", float3::getHorizontalDistance( horsePosition, ownerPosition ) );
+    }
+
+    void HorseFollowAIController::onRegister( GameObjectManager& manager )
+    {
+        AIControllerComponent::onRegister( manager );
+        manager.getComponentRegistry().add<HorseFollowAIController>( this );
+    }
+
+    void HorseFollowAIController::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<HorseFollowAIController>( this );
+        AIControllerComponent::onUnregister( manager );
     }
 } // namespace sw

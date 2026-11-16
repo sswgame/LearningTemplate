@@ -28,7 +28,7 @@ namespace sw
             static void writeSequence( DebugHUDSectionWriter& writer )
             {
                 const GameObjectManager* const       pManager = GameplayDebugTarget::findActiveObjectManager();
-                const SequencePlayerComponent* const pPlayer  = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SequencePlayerComponent>( *pManager ) : nullptr;
+                const SequencePlayerComponent* const pPlayer  = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SequencePlayerComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
                 if ( pPlayer == nullptr || pPlayer->getOwner() == nullptr )
                 {
                     writer.addLine( "sequence", "none (no sequence player in the active scene)" );

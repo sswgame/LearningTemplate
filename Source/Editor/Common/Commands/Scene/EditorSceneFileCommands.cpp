@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -37,7 +38,7 @@ namespace sw::editor
     {
         struct EditorSceneFileCommandsInternal
         {
-            /// @brief 파일 대화상자의 결과를 받습니다. `FileDialog::pumpResults` 가 메인 스레드에서 호출합니다.
+            /// @brief 파일 대화상자의 결과를 받습니다. `FileDialog::pollResults` 가 메인 스레드에서 호출합니다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() )
@@ -247,25 +248,16 @@ namespace sw::editor
         const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
         // 읽기 전용 검사는 쓰기와 같은 해석으로 푼 자리를 본다(R7). 소스가 없거나 못 풀면 SceneManager 가 이유를 남기고 실패한다.
         const optional<AbsolutePath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        if ( targetPath.has_value() && reportReadOnlyTarget( *targetPath ) )
+        if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( targetPath->str(), EditorContentWriteKind::Save ) )
             return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
     }
 
     bool EditorSceneFileCommands::saveActiveSceneAs( const AbsolutePath& absPath )
     {
-        if ( reportReadOnlyTarget( absPath ) )
+        if ( EditorContentWrite::warnIfReadOnly( absPath.str(), EditorContentWriteKind::Save ) )
             return false;
         return finishSave( editor::getSubsystem<SceneManager>().saveActiveSceneAs( absPath ), absPath.str() );
-    }
-
-    bool EditorSceneFileCommands::reportReadOnlyTarget( const AbsolutePath& absPath )
-    {
-        if ( FileUtil::isReadOnlyFile( absPath.str() ) == false )
-            return false;
-        editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ), NotificationKind::Warning );
-        SW_LOG_WARNING_ID( "EditorSceneFileCommands.SceneReadOnlyNot", "Scene '%#' is read-only (not checked out) - not saved", absPath.str() );
-        return true;
     }
 
     bool EditorSceneFileCommands::finishSave( const bool bSaved, string_view target )

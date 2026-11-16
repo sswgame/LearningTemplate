@@ -34,6 +34,6 @@ namespace sw::editor
     {
         inline constexpr EditorPanelID kSceneView{ "scene_view" };
         inline constexpr EditorPanelID kGameView{ "game_view" };
-        inline constexpr EditorPanelID kRecoveredWork{ "recovered_work" }; ///< 복구 창 — 후보가 있으면 자동 저장이 기동 첫 프레임에 연다
+        inline constexpr EditorPanelID kRecoveredScene{ "recovered_work" }; ///< 복구 창 — 후보가 있으면 자동 저장이 기동 첫 프레임에 연다
     } // namespace editorpanel
 } // namespace sw::editor

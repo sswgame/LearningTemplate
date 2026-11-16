@@ -157,7 +157,7 @@ namespace sw
 
             static void readPreset( const XMLNode& node, CharacterAppearanceDef& outDef, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::readFields( node, outDef, report, sourceName, { "id", "tags" } ); // 적지 않은 칸은 부모에서 이어받는다
+                (void)AppearanceXMLUtil::readProperties( node, outDef, report, sourceName, { "id", "tags" } ); // 적지 않은 칸은 부모에서 이어받는다
                 AppearanceXMLUtil::readTags( node, "tags", outDef._tags );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {

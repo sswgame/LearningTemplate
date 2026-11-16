@@ -56,11 +56,11 @@ namespace sw
         if ( _pPublished == nullptr )
             return;
         const vector<GPUInstance>& prev = *_pPublished;
-        vector<GPUInstance>&       work = acquireWrite();
+        vector<GPUInstance>&       job  = acquireWrite();
 
         // 슬롯이 발행된 뒤 무엇이 바뀌었나. 이력에서 (슬롯의 발행 번호, 마지막 발행 번호] 를 모은다.
         const uint64 slotBuild = ( _writeSlotIndex < _listSlotBuild.size() ) ? _listSlotBuild[_writeSlotIndex] : 0;
-        bool         bWhole    = ( slotBuild == 0 ) || ( work.size() != prev.size() );
+        bool         bWhole    = ( slotBuild == 0 ) || ( job.size() != prev.size() );
         uint64       expected  = slotBuild + 1;
         if ( bWhole == false )
         {
@@ -80,11 +80,11 @@ namespace sw
                 bWhole = true;
         }
 
-        work.resize( prev.size() );
+        job.resize( prev.size() );
         if ( bWhole )
         {
             if ( prev.empty() == false )
-                Memory::copy( work.data(), prev.data(), prev.size() * sizeof( GPUInstance ) );
+                Memory::copy( job.data(), prev.data(), prev.size() * sizeof( GPUInstance ) );
             return;
         }
         for ( const PublishRecord& record : _listHistory )
@@ -96,7 +96,7 @@ namespace sw
                 const size_t start = MathUtil::min<size_t>( run._start, prev.size() );
                 const size_t end   = MathUtil::min<size_t>( static_cast<size_t>( run._start ) + run._count, prev.size() );
                 if ( end > start )
-                    Memory::copy( work.data() + start, prev.data() + start, ( end - start ) * sizeof( GPUInstance ) );
+                    Memory::copy( job.data() + start, prev.data() + start, ( end - start ) * sizeof( GPUInstance ) );
             }
         }
     }

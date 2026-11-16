@@ -122,7 +122,7 @@ namespace sw
         }
     }
 
-    string UserAppearancePresetStore::saveToText() const
+    expected<string> UserAppearancePresetStore::saveToText() const
     {
         UserAppearancePresetFile file;
         file._formatVersion = kVersion;
@@ -176,7 +176,14 @@ namespace sw
 
     bool UserAppearancePresetStore::writeBytes( vector<uint8>& outBytes ) const
     {
-        StringUtil::assignBytes( outBytes, saveToText() );
+        const expected<string> text = saveToText();
+        if ( text.has_value() == false )
+        {
+            // 프리셋 이름은 사용자가 친 글이다 - 잘못된 UTF-8 이면 세이브를 빈 글로 덮지 않고 실패한다.
+            SW_LOG_ERROR_ID( "UserAppearancePresetStore.NotWritable", "Appearance presets could not be written: %# (%#)", text.error().message(), text.error().detail() );
+            return false;
+        }
+        StringUtil::assignBytes( outBytes, *text );
         return true;
     }
 

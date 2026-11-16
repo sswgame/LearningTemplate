@@ -71,7 +71,7 @@ namespace sw
          * @brief 조용한 프레임이 이만큼 이어져야 잡니다.
          * @details 마지막 변화 뒤의 프레임이 화면에 닿게 하는 몫이다 — ImGui 는 포커스 · 창 배치를 다음 프레임에 반영하고, 렌더 스레드는 게임 스레드보다 한두 프레임 늦다.
          */
-        static constexpr uint32 kEditorIdleSettleFrames = 3;
+        static constexpr uint32 kEditorIdleStabilityFrames = 3;
 
         /** @brief 입력에서 상태를 정합니다. 실행 인자가 고른 상태(FullSpeed · 자동화 · 서버)가 창 · 에디터 상태보다 앞선다. */
         [[nodiscard]] static FramePacingState resolve( const FramePacingInputs& inputs, FramePacingRequest request, uint32 editorQuietFrames );
@@ -93,7 +93,7 @@ namespace sw
 
     private:
         int64            _frameStartNanoseconds{ 0 };
-        uint32           _editorQuietFrames{ 0 }; ///< 에디터가 조용했던 프레임이 몇 번 이어졌는지(`kEditorIdleSettleFrames` 에서 멈춘다)
+        uint32           _editorQuietFrames{ 0 }; ///< 에디터가 조용했던 프레임이 몇 번 이어졌는지(`kEditorIdleStabilityFrames` 에서 멈춘다)
         FramePacingState _state{ FramePacingState::Foreground };
     };
 } // namespace sw

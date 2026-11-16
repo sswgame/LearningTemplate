@@ -38,7 +38,7 @@ namespace sw::editor
         void                     applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override;
         bool                     supportsGPU() const override { return true; }
         const MeshModifierStack* getGPUChildStack() const override { return &_stack; }
-        void                     writeExtraJSON( const JSONValue& object ) const override;
+        expected<void>           writeExtraJSON( const JSONValue& object ) const override;
         [[nodiscard]] bool       readExtraJSON( const JSONValue& object ) override;
 
         MeshModifierStack&       getStack() { return _stack; }

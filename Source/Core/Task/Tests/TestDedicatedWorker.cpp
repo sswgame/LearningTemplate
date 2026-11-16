@@ -3,6 +3,7 @@
 
 #include "Core/Task/DedicatedWorker.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 using namespace sw;
 
@@ -11,7 +12,7 @@ SW_TEST_CASE( DedicatedWorkerTest, ProcessesInOrderAndDrainsOnStop )
     using Worker = DedicatedWorker<int32>;
     vector<int32> listProcessed;
     Worker        worker;
-    worker.start( "TestWorker", SW_DELEGATE_LAMBDA( Worker::ProcessDelegate, [&listProcessed]( int32& job, bool bStopping )
+    worker.start( ThreadTestAccess::getKey(), "TestWorker", SW_DELEGATE_LAMBDA( Worker::ProcessDelegate, [&listProcessed]( int32& job, bool bStopping )
     {
         (void)bStopping; // 정지 뒤에 꺼낸 일도 처리 함수에 온다 — 여기서는 모두 센다
         listProcessed.push_back( job );

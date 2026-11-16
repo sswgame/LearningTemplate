@@ -30,7 +30,7 @@ namespace sw
     };
 
     /** @brief 서버 로직의 결과입니다. 업무 결과(`LiveOpsResult`) 또는 공통 범주(`OnlineError` — 범위 밖 요청 · 일시 장애)입니다. */
-    using LiveOpsOutcome = OnlineOutcome<LiveOpsResult>;
+    using LiveOpsServiceResult = OnlineServiceResult<LiveOpsResult>;
 } // namespace sw
 
 namespace sw
@@ -98,7 +98,7 @@ namespace sw
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bClientVisible{ SW_TRUE };
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
-        ServiceRecordUnknownFields _unknownFields{};
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 
@@ -154,7 +154,7 @@ namespace sw
         PROPERTY()
         int64 _registeredMs{ 0 }; ///< 서버가 등록 시각으로 덮어쓴다
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
-        ServiceRecordUnknownFields _unknownFields{};
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 

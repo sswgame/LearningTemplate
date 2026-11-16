@@ -42,7 +42,7 @@ namespace sw
          */
         static void setReportFunction( DataRaceReportFunction pFunction );
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         // 복사 · 이동은 허용한다. 컨테이너를 복사해도 컨텍스트는 0 인 초기 상태로 복사된다.
         /** @brief 카운터를 공유하지 않고, 0 으로 초기화된 새 컨텍스트로 복사합니다. */
         constexpr RaceDetectContext( const RaceDetectContext& ) noexcept
@@ -91,7 +91,7 @@ namespace sw
 #endif
 
     private:
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         /** @brief 레이스 메시지와 콜 스택을 Fatal 로그로 남깁니다. */
         void triggerDataRace( const utf8* pMessage );
 
@@ -132,7 +132,7 @@ namespace sw
      */
     struct ScopedRaceRead
     {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         RaceDetectContext& _context;
         /** @brief context 에 읽기 진입을 알립니다. */
         SW_INLINE explicit ScopedRaceRead( RaceDetectContext& context )
@@ -158,7 +158,7 @@ namespace sw
      */
     struct ScopedRaceWrite
     {
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         RaceDetectContext& _context;
         /** @brief context 에 쓰기 진입을 알립니다. */
         SW_INLINE explicit ScopedRaceWrite( RaceDetectContext& context )
@@ -180,7 +180,7 @@ namespace sw
 // 3) 컨테이너 훅 — Release · C++17 에서 멤버와 가드가 바이너리에 남지 않게 한다
 //    [[no_unique_address]] 는 C++20 기능이라 쓰지 않는다
 // ------------------------------------------------------------------------------
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
     #define SW_RACE_CTX_MEMBER mutable ::sw::RaceDetectContext _raceContext{};
 
     #define SW_SCOPED_RACE_READ()                                      \

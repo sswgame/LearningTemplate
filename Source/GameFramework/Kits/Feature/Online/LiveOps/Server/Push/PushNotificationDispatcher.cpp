@@ -9,6 +9,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -29,6 +30,19 @@ namespace sw
             {
                 static const hashed_string s_table{ "liveops_push" };
                 return s_table;
+            }
+
+            /** @brief 토픽 알림 표 키 `<…>/<창 끝 16진>/<16진 꼬리>` 에서 창 끝을 읽습니다(보존 쓸기). 모양이 다르면 false 이고 지우지 않습니다. */
+            [[nodiscard]] static bool readClaimWindowEndMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                const size_t  width       = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const string& key         = record._key;
+                uint64        windowEndMs = 0;
+                if ( key.size() < 2 * width + 3 || key[key.size() - width - 1] != '/' || key[key.size() - 2 * width - 2] != '/' ||
+                     ServiceKeyUtil::parseHex64( string_view( key ).substr( key.size() - 2 * width - 1, width ), windowEndMs ) == false )
+                    return false;
+                outTimeMs = static_cast<int64>( windowEndMs );
+                return true;
             }
 
             /** @brief 계정의 기기 레코드를 모두 읽습니다. 한도보다 하나 더 읽어서 넘친 것도 보이게 합니다. */
@@ -77,7 +91,7 @@ namespace sw
             }
 
             /** @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)이나 해지(@p bytes 가 비었다)를 한 트랜잭션으로 씁니다. */
-            static LiveOpsOutcome writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const vector<uint8>& bytes )
+            static LiveOpsServiceResult writeDevice( IServiceStoreConnection& connection, AccountID accountID, const string& key, const vector<uint8>& bytes )
             {
                 using Internal             = PushNotificationDispatcherInternal;
                 const hashed_string& table = Internal::getDeviceTable();
@@ -89,14 +103,14 @@ namespace sw
                     if ( readResult == ServiceStoreResult::NotFound )
                         return LiveOpsResult::NotFound;
                     if ( readResult != ServiceStoreResult::Ok )
-                        return LiveOpsOutcome::fail( OnlineError::kUnavailable );
+                        return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
                     transaction.erase( table, key, current._version );
                 }
                 else
                 {
                     vector<ServiceRecord> listRecord;
                     if ( Internal::listDevices( connection, accountID, listRecord ) != ServiceStoreResult::Ok )
-                        return LiveOpsOutcome::fail( OnlineError::kUnavailable );
+                        return LiveOpsServiceResult::fail( OnlineError::kUnavailable );
                     bool          bReplacing  = false;
                     const string* pOldestKey  = nullptr;
                     int64         oldestMs    = 0;
@@ -107,7 +121,7 @@ namespace sw
                         bReplacing = bReplacing || record._key == key;
                         PushDeviceRegistration registration;
                         if ( LiveOpsProtocol::decodeDevice( record._key, record._bytes, registration ) == false )
-                            return LiveOpsOutcome::fail( OnlineError::kUnavailable ); // 손상된 영속 레코드는 건너뛰지 않고 이 쓰기를 Unavailable 로 끝낸다
+                            return LiveOpsServiceResult::fail( OnlineError::kUnavailable ); // 손상된 영속 레코드는 건너뛰지 않고 이 쓰기를 Unavailable 로 끝낸다
                         if ( record._key != key && ( pOldestKey == nullptr || registration._registeredMs < oldestMs ) )
                         {
                             pOldestKey = &record._key;
@@ -119,7 +133,7 @@ namespace sw
                         transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
                     transaction.put( table, key, bytes );
                 }
-                return connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsOutcome{ LiveOpsResult::Ok } : LiveOpsOutcome::fail( OnlineError::kUnavailable );
+                return connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsServiceResult{ LiveOpsResult::Ok } : LiveOpsServiceResult::fail( OnlineError::kUnavailable );
             }
         };
     } // namespace
@@ -157,9 +171,23 @@ namespace sw
         return true;
     }
 
+    ServiceTTLRule PushNotificationDispatcher::makeTopicClaimTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table         = PushNotificationDispatcherInternal::getTopicClaimTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &PushNotificationDispatcherInternal::readClaimWindowEndMs;
+        return rule;
+    }
+
     string PushNotificationDispatcher::makeAccountPrefix( AccountID accountID )
     {
         return ServiceKeyUtil::makeHex64( accountID ) + "/";
+    }
+
+    ServiceStoreResult PushNotificationDispatcher::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
+    {
+        return ServiceStoreUtil::erasePrefix( connection, PushNotificationDispatcherInternal::getDeviceTable(), makeAccountPrefix( accountID ) );
     }
 
     string PushNotificationDispatcher::makeDeviceKey( AccountID accountID, string_view providerID, string_view token )
@@ -331,14 +359,14 @@ namespace sw
         if ( bValid == false || _store.hasStore() == false )
         {
             if ( requestTag != 0 )
-                _completionBuffer.push( PushDeviceCompletion{ requestTag, bValid ? LiveOpsOutcome::fail( OnlineError::kUnavailable ) : LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
+                _completionBuffer.push( PushDeviceCompletion{ requestTag, bValid ? LiveOpsServiceResult::fail( OnlineError::kUnavailable ) : LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         vector<uint8> bytes;
         if ( LiveOpsProtocol::encodeDevice( registration, bytes ) == false )
         {
             if ( requestTag != 0 )
-                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
+                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
         submitWrite( accountID, makeDeviceKey( accountID, registration._providerID, registration._token ), std::move( bytes ), requestTag );
@@ -350,7 +378,7 @@ namespace sw
         if ( bInvalidUnregister )
         {
             if ( requestTag != 0 )
-                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
+                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         submitWrite( accountID, makeDeviceKey( accountID, providerID, token ), vector<uint8>{}, requestTag ); // 빈 몸은 해지다
@@ -360,11 +388,11 @@ namespace sw
     {
         _store.submit( [accountID, key = std::move( key ), bytes = std::move( bytes )]( IServiceStoreConnection& connection )
         { return PushStoreRun::writeDevice( connection, accountID, key, bytes ); },
-                       [this, requestTag]( LiveOpsOutcome result )
+                       [this, requestTag]( LiveOpsServiceResult result )
         { applyWrite( requestTag, result ); } );
     }
 
-    void PushNotificationDispatcher::applyWrite( uint64 requestTag, LiveOpsOutcome result )
+    void PushNotificationDispatcher::applyWrite( uint64 requestTag, LiveOpsServiceResult result )
     {
         if ( requestTag != 0 )
             _completionBuffer.push( PushDeviceCompletion{ requestTag, result } );

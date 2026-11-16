@@ -30,8 +30,8 @@ namespace sw
          * @param pBackend 로그에 넣는 백엔드 이름입니다("D3D12", "Vulkan", "GL").
          * @param pCaller 로그에 넣는 제출 함수 이름입니다.
          */
-        [[nodiscard]] static RHISubmitResult settleAllocation( RHIStagingAllocator& tracker, const RHITransferSerials& serials, RHIStagingAllocateResult result, uint64 sizeBytes,
-                                                               const utf8* pBackend, const utf8* pCaller, const RHIStagingSpan& span );
+        [[nodiscard]] static RHISubmitResult completeAllocation( RHIStagingAllocator& tracker, const RHITransferSerials& serials, RHIStagingAllocateResult result, uint64 sizeBytes,
+                                                                 const utf8* pBackend, const utf8* pCaller, const RHIStagingSpan& span );
 
         /**
          * @brief 단독 구간의 일회성 버퍼를 만들지 못했을 때의 마무리입니다. 잡은 구간을 놓고 이유를 로그로 남기고 `Rejected` 를 돌려줍니다.

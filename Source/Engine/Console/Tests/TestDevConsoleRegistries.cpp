@@ -21,7 +21,7 @@ namespace
 
     DevCommandRegistration makeCommand( const utf8* pName )
     {
-        return DevCommandRegistration{ pName, "usage", "help", &doNothingCommand };
+        return DevCommandRegistration{ pName, "usage", "help", &doNothingCommand, nullptr };
     }
 
     DebugHUDSectionRegistration makeSection( const utf8* pName, int32 order = 0, uint8 flags = DebugHUDSectionFlag::kNone )
@@ -45,7 +45,7 @@ SW_TEST_CASE( DevConsoleRegistryTest, CommandRegistration )
     SW_EXPECT_FALSE( registry.registerEntry( nullptr ) );
     const DevCommandRegistration noName = makeCommand( "" );
     SW_EXPECT_FALSE( registry.registerEntry( &noName ) );
-    const DevCommandRegistration noBody{ "nobody", "", "", nullptr };
+    const DevCommandRegistration noBody{ "nobody", "", "", nullptr, nullptr };
     SW_EXPECT_FALSE( registry.registerEntry( &noBody ) );
 
     registry.unregisterEntry( &second ); // 등록되지 않은 줄은 아무 일도 없다

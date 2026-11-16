@@ -37,13 +37,13 @@ namespace sw
         }
         ModSupportSettings settings;
         // 한계는 리플렉션 칸이다 — 빠진 칸(XMLFields.RequiredFieldMissing) · 0 인 한계(XMLFields.ValueOutOfRange) · 숫자가 아닌 글을 모두 이름과 함께 알린다.
-        if ( XMLFields::readFields( root, settings, sourceName ) == false )
+        if ( XMLFields::readProperties( root, settings, sourceName ) == false )
             return false;
         using Element                          = XMLCatalogElement<ModSupportSettings>;
         static constexpr Element kArrElement[] = {
             Element::of<&ModSupportSettings::readOverridable>( "Overridable" ).uncounted(), // 없으면 덮어쓰기를 받지 않는 정책이다(빈 목록이 맞다)
         };
-        if ( XMLCatalogReadResult::readInDocumentOrder( settings, root, sourceName, kArrElement ).isClean() == false )
+        if ( XMLCatalogReadResult::readInDocumentOrder( settings, XMLCatalogRoot{ root }, sourceName, kArrElement ).isClean() == false )
             return false;
         outSettings = std::move( settings );
         return true;

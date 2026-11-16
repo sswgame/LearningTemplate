@@ -27,7 +27,7 @@ SW_TEST_CASE( TestFrameworkTest, ScratchPathIsStableWithinACaseAndDistinctPerNam
     SW_EXPECT_TRUE( FileUtil::isDirectory( FileUtil::getDirectoryPart( path ) ) ); // 폴더는 처음 부를 때 선다
 }
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
 /**
  * @brief 단언 가로채기 안에서는 SW_ASSERT 가 멈추지 않고 세어지며 그 뒤 줄이 돈다 — 겹쳐 건 가로채기가 풀려도 바깥은 그대로다(Debug 만 단언이 있다).
  */

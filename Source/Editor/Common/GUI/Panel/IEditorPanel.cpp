@@ -17,6 +17,7 @@ namespace sw::editor
 {
     void IEditorPanel::draw()
     {
+        _bDrawing = SW_TRUE;
         if ( _bOpenedNotified == SW_FALSE )
         {
             _bOpenedNotified = SW_TRUE;
@@ -33,7 +34,8 @@ namespace sw::editor
             panelFlags |= EditorPanelFlags::UnsavedDocument;
 
         const bool bVisible = EditorChrome::beginPanel( getPanelTitle(), getOpenFlagAddress(), panelFlags );
-        absorbCloseButton(); // 접힌 창과 숨은 탭의 X 도 같은 확인을 거친다
+        _windowID           = EditorChrome::getCurrentWindowID(); // 접힌 창도 창은 있다 — 포커스 창과 맞출 id
+        absorbCloseButton();                                      // 접힌 창과 숨은 탭의 X 도 같은 확인을 거친다
         if ( bVisible )
         {
             _bWindowFocused     = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
@@ -50,9 +52,18 @@ namespace sw::editor
         }
         EditorChrome::endPanel();
 
+        if ( pDocument != nullptr )
+            pDocument->flushDocumentInteraction(); // 끌기가 끝난 프레임에 그 구간을 한 단계로 기록한다
         // 창 밖에서 그린다 — 접힌 창은 내용을 그리지 않지만 확인은 떠야 한다.
         if ( pDocument != nullptr && pDocument->isCloseConfirmPending() )
             pDocument->drawCloseConfirm();
+
+        _bDrawing = SW_FALSE;
+        if ( _bClosedWhileDrawing )
+        {
+            _bClosedWhileDrawing = SW_FALSE;
+            onPanelClosed(); // 그리기 중에 닫혔다 — 내용이 다 끝난 뒤에 자원을 놓는다
+        }
     }
 
     bool IEditorPanel::hasUnsavedDocument() const

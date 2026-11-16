@@ -53,12 +53,10 @@ namespace sw::editor
         /**
          * @param kind 이 패널이 다루는 애셋 종류입니다.
          * @param pNodeMoveEditLabel 노드를 옮겼을 때 Undo 에 남길 이름입니다("Move Dialogue Nodes" 등).
-         * @param pNodeMoveCoalesceKey 연속 이동을 한 편집으로 합칠 키입니다.
          * @param bindModuleCopy 패널 모듈의 사본에 편집기를 거는 함수입니다. nullptr 이면 안 된다.
-         * @details 패널마다 다른 것은 이 두 문자열과 사본뿐이고, 절차는 같다.
+         * @details 패널마다 다른 것은 이 이름과 사본뿐이고, 절차는 같다. 끌기 한 번은 상호작용 구간 하나라 되돌리기 한 단계다(`notifyDocumentEdited`).
          */
-        EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey,
-                                      NodeEditorBindFunction bindModuleCopy );
+        EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, NodeEditorBindFunction bindModuleCopy );
 
         /**
          * @brief 캔버스를 열고 패널 모듈의 imgui-node-editor 사본에도 현재 편집기를 바인딩합니다. false 이면 `endGraphCanvas` 를 호출하지 않습니다.
@@ -90,7 +88,6 @@ namespace sw::editor
         EditorNodeGraph          _nodeGraph;             /**< 캔버스 컨텍스트. 패널마다 하나씩 소유한다. */
         NodeEditorBindFunction   _bindModuleCopy;        /**< 패널 모듈의 imgui-node-editor 사본에 편집기를 거는 함수. */
         const utf8*              _pNodeMoveEditLabel;    /**< 노드 이동 Undo 이름. */
-        const utf8*              _pNodeMoveCoalesceKey;  /**< 노드 이동을 합치는 키. */
         vector<PendingPlacement> _listPendingPlacement;  /**< 다음 그리기에서 위치를 정할 새 노드들(검색으로 넣은 노드 · 붙여 넣은 노드). */
         uint8                    _bGraphLayoutReady : 1; /**< 캔버스가 위치를 한 번 정한 뒤에 켠다. */
         [[maybe_unused]] uint8   _reservedGraph     : 7;
@@ -114,8 +111,8 @@ namespace sw::editor
         using LinkType = typename LinkList::value_type;
 
         /** @brief 인자는 `EditorGraphDocumentPanelBase` 와 같습니다. 패널 .cpp 가 `&ax::NodeEditor::SetCurrentEditor` 를 넘깁니다. */
-        EditorGraphDocumentPanel( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey, NodeEditorBindFunction bindModuleCopy )
-            : EditorGraphDocumentPanelBase{ kind, pNodeMoveEditLabel, pNodeMoveCoalesceKey, bindModuleCopy }
+        EditorGraphDocumentPanel( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, NodeEditorBindFunction bindModuleCopy )
+            : EditorGraphDocumentPanelBase{ kind, pNodeMoveEditLabel, bindModuleCopy }
             , _graph{}
         {
             _nodeGraph.setCommentsEnabled( true ); // 이 문서 틀의 애셋은 주석 상자를 저장한다(`_listComment`)
@@ -210,7 +207,7 @@ namespace sw::editor
                 bMoved = true;
 
             if ( bMoved )
-                notifyDocumentEdited( _pNodeMoveEditLabel, _pNodeMoveCoalesceKey );
+                notifyDocumentEdited( _pNodeMoveEditLabel );
             _bGraphLayoutReady = SW_TRUE;
         }
 

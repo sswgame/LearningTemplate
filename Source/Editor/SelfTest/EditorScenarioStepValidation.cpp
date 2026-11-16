@@ -82,7 +82,7 @@ namespace sw::editor
     {
         using Internal = EditorScenarioStepValidationInternal;
         EditorClickParams params;
-        return step.readFields( params ).and_then( [&]()
+        return step.readProperties( params ).and_then( [&]()
         { return Internal::checkAnchor( params._anchor ); } )
             .and_then( [&]()
         { return Internal::checkModifiers( params._mods ); } );
@@ -92,7 +92,7 @@ namespace sw::editor
     {
         using Internal = EditorScenarioStepValidationInternal;
         EditorDragParams     params;
-        const expected<void> read = step.readFields( params );
+        const expected<void> read = step.readProperties( params );
         if ( read.has_value() == false )
             return read;
         if ( params._toMark.empty() == false && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
@@ -105,7 +105,7 @@ namespace sw::editor
     {
         using Internal = EditorScenarioStepValidationInternal;
         EditorHoverParams    params;
-        const expected<void> read = step.readFields( params, { "release" } );
+        const expected<void> read = step.readProperties( params, { "release" } );
         if ( read.has_value() == false )
             return read;
         const bool bRelease = step.findAttribute( "release" ) != nullptr;
@@ -117,7 +117,7 @@ namespace sw::editor
     expected<void> EditorScenarioStepValidation::validateKey( const AutomationStep& step )
     {
         EditorKeyParams      params;
-        const expected<void> read = step.readFields( params );
+        const expected<void> read = step.readProperties( params );
         if ( read.has_value() == false )
             return read;
         vector<string_view> listToken;
@@ -129,7 +129,7 @@ namespace sw::editor
     expected<void> EditorScenarioStepValidation::validateCapture( const AutomationStep& step )
     {
         EditorCaptureParams  params;
-        const expected<void> read = step.readFields( params );
+        const expected<void> read = step.readProperties( params );
         if ( read.has_value() == false )
             return read;
         if ( StringUtil::endsWith( params._file, ".png", true ) )
@@ -147,5 +147,5 @@ namespace sw::editor
     SW_AUTOMATION_STEP_SCHEMA( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, EditorDockLayoutParams );
     SW_AUTOMATION_STEP_VALIDATOR( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorScenarioStepValidation::validateCapture );
     SW_AUTOMATION_STEP_SCHEMA( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, EditorSelfTestParams );
-    SW_AUTOMATION_STEP_SCHEMA( editorWaitSettled, EditorScenarioStepValidation::kWaitSettledKind, EditorNoParams );
+    SW_AUTOMATION_STEP_SCHEMA( editorWaitStable, EditorScenarioStepValidation::kWaitStableKind, EditorNoParams );
 } // namespace sw::editor

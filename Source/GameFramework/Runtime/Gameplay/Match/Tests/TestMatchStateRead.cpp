@@ -14,7 +14,7 @@ namespace
     /** @brief 팀 하나, 피해 기록 하나인 참가자 하나의 상태 바이트를 씁니다. */
     struct MatchStateReadTestUtil
     {
-        static bool readForged( int32 team, int32 attacker )
+        static bool readFixture( int32 team, int32 attacker )
         {
             sw::Archive written;
             written << static_cast<uint32>( 1 );
@@ -55,9 +55,9 @@ namespace
  */
 SW_TEST_CASE( MatchStateTest, ReadRefusesUnknownTeamAndAttacker )
 {
-    SW_EXPECT_TRUE( MatchStateReadTestUtil::readForged( 0, 0 ) );
-    SW_EXPECT_FALSE( MatchStateReadTestUtil::readForged( -1, 0 ) );
-    SW_EXPECT_FALSE( MatchStateReadTestUtil::readForged( 1, 0 ) );
-    SW_EXPECT_FALSE( MatchStateReadTestUtil::readForged( 0, -1 ) );
-    SW_EXPECT_FALSE( MatchStateReadTestUtil::readForged( 0, 1 ) );
+    SW_EXPECT_TRUE( MatchStateReadTestUtil::readFixture( 0, 0 ) );
+    SW_EXPECT_FALSE( MatchStateReadTestUtil::readFixture( -1, 0 ) );
+    SW_EXPECT_FALSE( MatchStateReadTestUtil::readFixture( 1, 0 ) );
+    SW_EXPECT_FALSE( MatchStateReadTestUtil::readFixture( 0, -1 ) );
+    SW_EXPECT_FALSE( MatchStateReadTestUtil::readFixture( 0, 1 ) );
 }

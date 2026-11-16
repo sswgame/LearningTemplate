@@ -51,7 +51,7 @@ namespace
         };
 
         /** @brief root 아래 왼팔(+X 1 m) · 오른팔(-X 1 m) · 척추(+Y 1 m)입니다. */
-        static Skeleton makeArmsSkeleton()
+        static Skeleton makeArmSkeleton()
         {
             Skeleton skeleton;
             (void)skeleton.addBone( hashed_string( "root" ), -1, test::makeBoneTransform( float3{ 0.0f, 0.0f, 0.0f } ) );
@@ -79,7 +79,7 @@ namespace
 
         static bool isSameRotation( const quaternion& expected, const quaternion& actual ) { return MathUtil::abs( expected.dot( actual ) ) > 0.9999f; }
 
-        static constexpr const utf8* kArmsMirrorTable = R"(<SkeletonMirrorTable><_listPair><SkeletonMirrorPair _bone="arm_l" _mirroredBone="arm_r" /></_listPair></SkeletonMirrorTable>)";
+        static constexpr const utf8* kArmMirrorTable = R"(<SkeletonMirrorTable><_listPair><SkeletonMirrorPair _bone="arm_l" _mirroredBone="arm_r" /></_listPair></SkeletonMirrorTable>)";
 
         /** @brief 섹션 Start(0..0.5) → Loop(0.5..1, 반복, Done 이면 End) → End(1..1.5) 의 몽타주입니다. */
         static unique_ptr<IAnimationPoseNode> makeReloadMontage( const IAnimationPlayable& input )
@@ -158,7 +158,7 @@ SW_TEST_CASE( AnimationPoseNodeTest, MontageSectionPastTheClipIsAnError )
  */
 SW_TEST_CASE( AnimationPoseNodeTest, MirrorSwapsPairedBonesAcrossTheAxis )
 {
-    const Skeleton      skeleton = Util::makeArmsSkeleton();
+    const Skeleton      skeleton = Util::makeArmSkeleton();
     SkeletonMirrorTable table;
     SW_REQUIRE_TRUE( table.loadFromXMLText( R"(<SkeletonMirrorTable><_listPair><SkeletonMirrorPair _bone="arm_l" _mirroredBone="arm_r" /></_listPair></SkeletonMirrorTable>)", "arms" ) );
     vector<uint32> listMirrored;
@@ -209,7 +209,7 @@ SW_TEST_CASE( AnimationPoseNodeTest, MirrorSwapsPairedBonesAcrossTheAxis )
  */
 SW_TEST_CASE( AnimationPoseNodeTest, MirrorTableRejectsBadPairs )
 {
-    const Skeleton skeleton = Util::makeArmsSkeleton();
+    const Skeleton skeleton = Util::makeArmSkeleton();
     vector<uint32> listMirrored;
     const auto     build = [&]( const utf8* pPairs )
     {
@@ -244,9 +244,9 @@ SW_TEST_CASE( AnimationPoseNodeTest, GraphMirrorStateEvaluatesThroughTheNodeSet 
     SW_REQUIRE_NOT_NULL( pNode );
     SW_EXPECT_NULL( poseNodes.findNode( hashed_string( "Wave" ) ) ); // 입력 클립은 노드가 아니다
 
-    const Skeleton                  skeleton = Util::makeArmsSkeleton();
+    const Skeleton                  skeleton = Util::makeArmSkeleton();
     shared_ptr<SkeletonMirrorTable> table    = make_shared<SkeletonMirrorTable>();
-    SW_REQUIRE_TRUE( table->loadFromXMLText( Util::kArmsMirrorTable, "arms" ) );
+    SW_REQUIRE_TRUE( table->loadFromXMLText( Util::kArmMirrorTable, "arms" ) );
     SkeletonMirrorBoneMap boneMap;
     boneMap.setTable( table );
     const vector<uint32>* pMirrored = boneMap.find( skeleton, "arms" );
@@ -344,11 +344,11 @@ SW_TEST_CASE( AnimationPoseNodeTest, SkeletalMeshGivesTheMirrorBoneMap )
     SW_REQUIRE_NOT_NULL( pActor );
     SkeletalMeshComponent* pMesh = pActor->addComponent<SkeletalMeshComponent>();
     SW_REQUIRE_NOT_NULL( pMesh );
-    pMesh->setSkeleton( make_shared<Skeleton>( Util::makeArmsSkeleton() ) );
+    pMesh->setSkeleton( make_shared<Skeleton>( Util::makeArmSkeleton() ) );
     SW_EXPECT_NULL( pMesh->findMirroredBones() ); // 표 없음
 
     shared_ptr<SkeletonMirrorTable> table = make_shared<SkeletonMirrorTable>();
-    SW_REQUIRE_TRUE( table->loadFromXMLText( Util::kArmsMirrorTable, "arms" ) );
+    SW_REQUIRE_TRUE( table->loadFromXMLText( Util::kArmMirrorTable, "arms" ) );
     pMesh->setMirrorTable( table );
     const vector<uint32>* pMirrored = pMesh->findMirroredBones();
     SW_REQUIRE_NOT_NULL( pMirrored );

@@ -174,7 +174,7 @@ namespace sw
         pSession->_state        = SessionState::Resolving;
         pSession->_resolveState = ResolveState::Pending;
         if ( _resolver.isRunning() == false )
-            _resolver.start( "HTTP2Resolve", DedicatedWorker<uint64>::ProcessDelegate::create<&HTTP2Client::resolveSession>( this ) );
+            _resolver.start( ThreadCreationKey{}, "HTTP2Resolve", DedicatedWorker<uint64>::ProcessDelegate::create<&HTTP2Client::resolveSession>( this ) );
         uint64 resolveJob = sessionID;
         (void)_resolver.submit( std::move( resolveJob ) ); // 바로 위에서 띄웠으니 받는다 — 못 받아도 요청은 시한이 끝낸다
         return pSession;
@@ -277,10 +277,10 @@ namespace sw
             session._connection->submit( pending._requestID, pending._request, pending._url, session._outBytes );
         }
         session._listWaiting.clear();
-        return pumpLocked( session );
+        return pollLocked( session );
     }
 
-    bool HTTP2Client::pumpLocked( Session& session )
+    bool HTTP2Client::pollLocked( Session& session )
     {
         bool bWritten = true;
         if ( session._outBytes.empty() == false )
@@ -384,11 +384,11 @@ namespace sw
                         break;
                     }
                     if ( bWaiting == false && session->_connection != nullptr )
-                        session->_connection->cancel( requestID, "timed out", session->_outBytes ); // 응답으로 모이고 아래 pump 가 회수한다(시한도 거기서 지운다)
+                        session->_connection->cancel( requestID, "timed out", session->_outBytes ); // 응답으로 모이고 아래 poll 가 회수한다(시한도 거기서 지운다)
                     else if ( bWaiting == false )
                         session->_mapDeadline.erase( requestID );
                 }
-                if ( session->_connection != nullptr && pumpLocked( *session ) == false )
+                if ( session->_connection != nullptr && pollLocked( *session ) == false )
                 {
                     failSessionLocked( *session, "could not send the request" );
                     listClose.push_back( session->getHandle() );
@@ -470,7 +470,7 @@ namespace sw
         if ( session._state != SessionState::Ready || session._plainBytes.empty() )
             return;
         const expected<void> fed      = session._connection->feed( session._plainBytes.data(), session._plainBytes.size(), session._outBytes );
-        const bool           bWritten = pumpLocked( session ); // 연결 오류로 끝난 요청의 실패 응답도 여기서 회수한다
+        const bool           bWritten = pollLocked( session ); // 연결 오류로 끝난 요청의 실패 응답도 여기서 회수한다
         if ( fed.has_value() == false || bWritten == false )
         {
             failSessionLocked( session, fed.has_value() ? "could not send the request" : fed.error().message().data() ); // 문장은 리터럴이라 널로 끝난다

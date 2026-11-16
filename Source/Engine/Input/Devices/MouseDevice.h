@@ -71,10 +71,28 @@ namespace sw
         int2   getDelta() const { return _delta; }
         float2 getRawDelta() const { return _rawDelta; }
         /**
-         * @brief 이번 프레임의 이동량입니다. 원시 델타가 있으면 그 값(화면 경계에 막히지 않음)이고, 없으면 위치 차이입니다.
-         * @details 스무딩과 InputMap 의 마우스 델타 바인딩이 같은 규칙으로 읽습니다.
+         * @brief 이번 프레임의 이동량입니다. 원시 원천이 있으면 원시 델타(화면 경계에 막히지 않음)만 쓰고, 없으면 위치 차이입니다.
+         * @details 원시 원천은 값이 아니라 출처로 정한다 — 플랫폼이 원시 입력을 등록했고(`setRawMotionSource`) 그 뒤 원시 이동 보고가 실제로
+         *          한 번이라도 왔거나, 이번 프레임에 원시 이동 이벤트(`addRawDelta`)가 왔을 때다. 원시 원천 프레임의 합이 0 이어도 위치 차이로 넘어가지 않는다
+         *          (언리얼 HighPrecisionMouseMode 와 같다). 등록만 하고 보고가 오지 않는 환경(원격 데스크톱 · 원격 제어 도구 · 터치가 흉내 낸 마우스는
+         *          WM_INPUT 없이 커서만 옮긴다)에서는 위치 차이를 쓴다 — 등록 성공만 믿으면 시선이 멈췄다(감사 P-1). SDL 도 원시 입력이 없으면
+         *          커서를 가운데로 되돌리는 상대 모드(`SDL_HINT_MOUSE_RELATIVE_MODE_WARP`)로 읽는다.
+         *          스무딩과 InputMap 의 마우스 델타 바인딩이 같은 규칙으로 읽습니다.
          */
         float2 getMovementDelta() const;
+        /**
+         * @brief 플랫폼이 원시 마우스 입력을 등록했는지 선언합니다(Win32 `RegisterRawInputDevices` 성공 · 해제). 원시 보고를 기다리는 표시는 바꿀 때마다 지운다.
+         * @details 등록만으로는 원천이 되지 않는다 — 등록 뒤 첫 원시 이동 보고(`addRawDelta`)가 원천을 확정한다(`getMovementDelta`).
+         */
+        void setRawMotionSource( bool bActive )
+        {
+            _bRawMotionSource    = bActive ? SW_TRUE : SW_FALSE;
+            _bRawMotionConfirmed = SW_FALSE;
+        }
+        /** @brief 플랫폼이 원시 입력을 등록해 두었으면 true 입니다(보고가 왔는지와 무관 — `isRawMotionConfirmed`). */
+        bool isRawMotionSource() const { return _bRawMotionSource == SW_TRUE; }
+        /** @brief 등록 뒤 원시 이동 보고가 왔으면 true 입니다. 이 동안 원시 델타만 이동으로 쓴다. */
+        bool isRawMotionConfirmed() const { return _bRawMotionSource == SW_TRUE && _bRawMotionConfirmed == SW_TRUE; }
         /** @brief 가속과 스무딩을 적용한 이번 프레임의 이동량입니다. 프레임당 한 번 갱신합니다(`onEventsDispatched`). */
         float2 getSmoothDelta() const { return _smoothDelta; }
 
@@ -154,30 +172,32 @@ namespace sw
     private:
         static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
 
-        int2                   _mouse;                     /**< 현재 프레임의 마우스 화면 좌표입니다(창 클라이언트 기준). */
-        int2                   _prevMouse;                 /**< 직전 프레임의 마우스 좌표입니다. 델타 계산에 씁니다. */
-        int2                   _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse)입니다. 화면 경계에 막히면 실제 이동보다 작습니다. */
-        float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값입니다. 화면 경계에 막히지 않는 실제 이동량이라 FPS 카메라 룩에 알맞습니다. */
-        float2                 _smoothDelta;               /**< 가속과 스무딩(EMA)을 적용한 이번 프레임 이동량입니다. getSmoothDelta() 가 반환하는 값입니다. */
-        float2                 _smoothVelocity;            /**< 스무딩한 속도(픽셀/초)입니다. EMA 를 속도에 걸기 때문에 프레임 길이가 달라도 단위가 섞이지 않습니다. */
-        float32                _smoothingFactor;           /**< 스무딩 설정값 [0.0, 0.99] 입니다. 1/60 초 동안 남기는 비율이며, 0 이면 스무딩 없이 이동을 그대로 씁니다. */
-        float32                _accelerationPower;         /**< 마우스 가속 지수입니다. 1.0 이면 가속이 없고, 클수록 빠르게 움직일 때 델타가 더 커집니다. */
-        float32                _mouseWheelDelta;           /**< 이번 프레임 세로 휠 회전량. getMouseWheel() 이 반환하는 값. */
-        float32                _mouseWheelHorizontalDelta; /**< 이번 프레임 가로 휠(틸트) 회전량. */
-        int32                  _clipSubRectLeft;           /**< 마우스 클리핑 서브 영역입니다(클라이언트 좌표 기준, setClipSubRect 로 설정). */
-        int32                  _clipSubRectTop;
-        int32                  _clipSubRectRight;
-        int32                  _clipSubRectBottom;
-        MouseLockMode          _lockMode;     /**< 커서 잠금 모드(None/ConfinedToWindow/LockedInCenter)입니다. 실제 OS 클리핑은 InputManager::syncMouseLock() 이 적용합니다(조건은 isMouseLockActive). */
-        uint8                  _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크입니다(MouseButton 인덱스로 비트를 조회). */
-        uint8                  _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크(엣지)입니다. onFrameBegin/onFrameEnd 에서 초기화합니다. */
-        uint8                  _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크(엣지)입니다. */
-        uint8                  _bCursorVisible  : 1;
-        uint8                  _bPointerInside  : 1; /**< 마우스 포인터가 지금 창 클라이언트 영역 안에 있는지 나타냅니다. */
-        uint8                  _bPointerEntered : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 나타냅니다(엣지). */
-        uint8                  _bPointerLeft    : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 나타냅니다(엣지). */
-        uint8                  _bHasSubRect     : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 나타냅니다. */
-        uint8                  _bHasPosition    : 1; /**< 위치를 한 번이라도 받았는지 나타냅니다. 첫 위치는 기준점이 없어서 이동량을 내지 않습니다. */
-        [[maybe_unused]] uint8 _reserved        : 2;
+        int2          _mouse;                     /**< 현재 프레임의 마우스 화면 좌표입니다(창 클라이언트 기준). */
+        int2          _prevMouse;                 /**< 직전 프레임의 마우스 좌표입니다. 델타 계산에 씁니다. */
+        int2          _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse)입니다. 화면 경계에 막히면 실제 이동보다 작습니다. */
+        float2        _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값입니다. 화면 경계에 막히지 않는 실제 이동량이라 FPS 카메라 룩에 알맞습니다. */
+        float2        _smoothDelta;               /**< 가속과 스무딩(EMA)을 적용한 이번 프레임 이동량입니다. getSmoothDelta() 가 반환하는 값입니다. */
+        float2        _smoothVelocity;            /**< 스무딩한 속도(픽셀/초)입니다. EMA 를 속도에 걸기 때문에 프레임 길이가 달라도 단위가 섞이지 않습니다. */
+        float32       _smoothingFactor;           /**< 스무딩 설정값 [0.0, 0.99] 입니다. 1/60 초 동안 남기는 비율이며, 0 이면 스무딩 없이 이동을 그대로 씁니다. */
+        float32       _accelerationPower;         /**< 마우스 가속 지수입니다. 1.0 이면 가속이 없고, 클수록 빠르게 움직일 때 델타가 더 커집니다. */
+        float32       _mouseWheelDelta;           /**< 이번 프레임 세로 휠 회전량. getMouseWheel() 이 반환하는 값. */
+        float32       _mouseWheelHorizontalDelta; /**< 이번 프레임 가로 휠(틸트) 회전량. */
+        int32         _clipSubRectLeft;           /**< 마우스 클리핑 서브 영역입니다(클라이언트 좌표 기준, setClipSubRect 로 설정). */
+        int32         _clipSubRectTop;
+        int32         _clipSubRectRight;
+        int32         _clipSubRectBottom;
+        MouseLockMode _lockMode;     /**< 커서 잠금 모드(None/ConfinedToWindow/LockedInCenter)입니다. 실제 OS 클리핑은 InputManager::syncMouseLock() 이 적용합니다(조건은 isMouseLockActive). */
+        uint8         _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크입니다(MouseButton 인덱스로 비트를 조회). */
+        uint8         _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크(엣지)입니다. onFrameBegin/onFrameEnd 에서 초기화합니다. */
+        uint8         _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크(엣지)입니다. */
+        uint8         _bCursorVisible      : 1;
+        uint8         _bPointerInside      : 1; /**< 마우스 포인터가 지금 창 클라이언트 영역 안에 있는지 나타냅니다. */
+        uint8         _bPointerEntered     : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 나타냅니다(엣지). */
+        uint8         _bPointerLeft        : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 나타냅니다(엣지). */
+        uint8         _bHasSubRect         : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 나타냅니다. */
+        uint8         _bHasPosition        : 1; /**< 위치를 한 번이라도 받았는지 나타냅니다. 첫 위치는 기준점이 없어서 이동량을 내지 않습니다. */
+        uint8         _bRawMotionSource    : 1; /**< 플랫폼이 원시 마우스 입력을 받고 있는지입니다(`setRawMotionSource`). 프레임이 바뀌어도 남는다. */
+        uint8         _bRawMotionThisFrame : 1; /**< 이번 프레임에 원시 이동 이벤트(`addRawDelta`)가 왔는지입니다. 가상 입력 · 다른 플랫폼의 잠금 이동이 여기로 온다. */
+        uint8         _bRawMotionConfirmed : 1; /**< 등록(`setRawMotionSource`) 뒤 원시 이동 보고가 한 번이라도 왔는지입니다. 등록을 바꾸면 지운다. */
     };
 } // namespace sw

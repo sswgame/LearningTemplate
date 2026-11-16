@@ -16,8 +16,10 @@
 #include "DevTools/Client/Automation/Runner/AutomationRunner.h"
 #include "DevTools/Client/Automation/Runner/AutomationScenarioChain.h"
 #include "DevTools/Client/Automation/Runner/ScenarioPlayer.h"
+#include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameSelection.h"
@@ -255,6 +257,9 @@ namespace sw
             restoreStartWindowSize();
             // 엔진이 모르는 모듈 상태(편집기의 패널 · 팝업 · 배치)도 새 프로세스처럼 — 그 상태를 가진 모듈이 등록한 되돌리기를 부른다.
             (void)AutomationStageResetRegistry::resetAll();
+            // 앞 단계의 사본 폴더를 거둔다 — 패널 · 문서를 새로 만든 뒤라 연 파일이 없다. 남기면 이 프로세스의 색인 · Quick Open 이 원본과 같은 이름의 사본을 집는다.
+            for ( const AutomationScratchFolder& folder : _pRunner->getScenario().getTestOptions()._listScratchFolder )
+                (void)AutomationScratchWorkspace::discard( folder ); // 못 지우면 경고가 남는다 — 다음 단계의 prepare 는 자기 사본만 새로 만든다
             // 앞 단계가 찾지 못한 번역 키(시네마틱 자막 같은 것)도 비운다 — 판정의 로그 게이트가 그 목록을 세므로, 남기면 뒤 단계가 모두 그 키로 진다.
             engine::getSubsystem<LocalizationManager>().clearMissingKeys();
             // 단계 사이 초기화가 든 시간이다 - 다음 시나리오가 시작하기까지의 프레임(새 게임 · 첫 씬)은 그 실행의 timeline `start` 가 센다.
@@ -289,7 +294,7 @@ namespace sw
             // 느린 프레임 — 이 다른 그림을 낸다). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다). 환경 시간 멈춤은 시나리오가 고른다.
             DeterministicRunPolicy policy     = engine::getSubsystem<DeterministicRun>().getPolicy();
             policy._bWaitForAnimationClips    = SW_TRUE;
-            policy._bFinishAssetWorkEachFrame = SW_TRUE;
+            policy._bFinishAssetJobsEachFrame = SW_TRUE;
             policy._fixedFrameDelta           = _pRunner->getScenario().getFixedDelta(); // 시나리오 프레임 시간 — App 이 벽시계 대신 흘린다
             engine::getSubsystem<DeterministicRun>().setPolicy( policy );
             // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.
@@ -574,21 +579,30 @@ namespace sw
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, options._reportPath );
         options._executablePath          = FileUtil::getExecutablePath();
         options._listPassThroughArgument = AutomationPerBackend::filterPassThroughArguments( commandLine.getOriginalArguments() );
-        (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, options._bSplitScenarios );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SLOTS, options._slotCount );
+        expected<AutomationBackendSplit> split = AutomationBackendSplit::None;
+        string                           splitText;
+        if ( commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, splitText ) )
+            split = AutomationPerBackend::parseBackendSplit( splitText );
+        if ( split.has_value() )
+            options._split = *split;
         const expected<vector<string>> listBackend = AutomationPerBackend::parseBackendList( backends );
         if ( listBackend.has_value() )
             options._listBackend = *listBackend;
-        if ( options._scenarioPath.empty() || listBackend.has_value() == false )
+        if ( options._scenarioPath.empty() || listBackend.has_value() == false || split.has_value() == false )
         {
             if ( options._scenarioPath.empty() )
             {
                 SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", "-scenario-backends needs -scenario=<path>" );
             }
-            else
+            else if ( listBackend.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#: %#", listBackend.error().message(), listBackend.error().detail() );
+            }
+            else
+            {
+                SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#: %#", split.error().message(), split.error().detail() );
             }
             inoutState._bFailed         = SW_TRUE;
             inoutState._failureExitCode = getAutomationExitStatus( AutomationResult::LoadError );

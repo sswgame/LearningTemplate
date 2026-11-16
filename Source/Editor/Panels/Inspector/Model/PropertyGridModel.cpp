@@ -98,7 +98,7 @@ namespace sw::editor
                     {
                         if ( outText.empty() == false )
                             outText += " | ";
-                        outText += nameHashed.c_str();
+                        outText += nameHashed.toString();
                     }
                 }
                 if ( outText.empty() )

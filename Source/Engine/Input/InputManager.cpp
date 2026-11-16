@@ -85,6 +85,7 @@ namespace sw
         , _listFramePress{}
         , _frameLookDelta{}
         , _lastPlatformPointer{ 0, 0 }
+        , _lastRawMouseAbsolute{ nullopt }
         , _pfnNowMicroseconds{ &MonotonicClock::nowMicroseconds }
         , _frameEndMicroseconds{ 0 }
         , _pVirtualInput{ nullptr }
@@ -322,14 +323,14 @@ namespace sw
         {
             if ( pRemaining == nullptr )
                 continue;
-            const bool bAdoptAsMouse    = bWasMouse && _pMouse == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Mouse;
-            const bool bAdoptAsGamepad  = bWasGamepad && _pGamepad == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Gamepad;
+            const bool bAssignAsMouse   = bWasMouse && _pMouse == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Mouse;
+            const bool bAssignAsGamepad = bWasGamepad && _pGamepad == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Gamepad;
             const bool bReplaceKeyboard = bWasKeyboard && _pKeyboard == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Keyboard;
             if ( bReplaceKeyboard )
                 _pKeyboard = static_cast<KeyboardDevice*>( pRemaining.get() );
-            else if ( bAdoptAsMouse )
+            else if ( bAssignAsMouse )
                 _pMouse = static_cast<MouseDevice*>( pRemaining.get() );
-            else if ( bAdoptAsGamepad )
+            else if ( bAssignAsGamepad )
                 _pGamepad = static_cast<GamepadDevice*>( pRemaining.get() );
         }
     }
@@ -431,8 +432,7 @@ namespace sw
         {
             recordFramePress( rawEvent );
             dispatchRawEvent( rawEvent );
-            const bool bLookMotion = rawEvent._type == RawInputEventType::MouseMove || rawEvent._type == RawInputEventType::MouseRawDelta;
-            if ( bLookMotion )
+            if ( rawEvent._type == RawInputEventType::MouseRawDelta )
                 _frameLookDelta += rawEvent._payload._mouseData._rawDelta;
         }
 
@@ -547,10 +547,7 @@ namespace sw
             case RawInputEventType::MouseMove:
             {
                 if ( _pMouse != nullptr )
-                {
                     _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
-                    _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
-                }
                 setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }

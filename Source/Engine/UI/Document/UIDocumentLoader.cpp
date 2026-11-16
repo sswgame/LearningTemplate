@@ -371,7 +371,7 @@ namespace sw
             }
 
             /** @brief 경로를 정규화해 적습니다(캐시 키와 조각 연쇄 비교용). */
-            static string normalizeDocumentPath( string_view path ) { return FileUtil::normalizePath( path ); }
+            static string normalizeDocumentPath( string_view path ) { return FileUtil::normalizePath( path ).str(); }
 
             /** @brief orphan 하나를 `이름 = '텍스트'` 로 적습니다(안쪽 요소면 타입 이름이 앞에 붙습니다). */
             static string describeOrphan( const SchemaOrphanValue& orphan )

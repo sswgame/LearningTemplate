@@ -110,7 +110,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "ElementChart"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadElement( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadRule( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadStatus( const XMLNode& node, string_view sourceName );
@@ -122,5 +122,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<ElementChart>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ElementChart>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, ElementChart );
 } // namespace sw

@@ -237,7 +237,7 @@ namespace sw
         void releaseExcessWorkers();
         /** @brief 읽은 상태 전체가 서로 맞는지입니다(건물 슬롯 · 일꾼 · 병사 번호 · 음수 자원 · 지휘관). 칸 하나로 볼 수 없는 것을 여기서 봅니다. */
         [[nodiscard]] bool            isStateConsistent() const;
-        void                          refreshOutcome();
+        void                          refreshResult();
         Target                        findNearestTarget( ConquestTeam team, float32 x, float32 maxDistance, bool bUnits, bool bStructures ) const;
         float32                       computeGateX( const ConquestSite& site, ConquestTeam attacker ) const;
         bool                          isLaddered( int32 siteIndex, ConquestTeam attacker ) const;

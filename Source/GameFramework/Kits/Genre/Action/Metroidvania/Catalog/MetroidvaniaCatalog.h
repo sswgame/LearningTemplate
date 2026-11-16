@@ -4,7 +4,7 @@
  *        적(통화, 전리품, 보스 플래그), 규칙(회복 물약, 스태미나, 체력, 패리 창, 반격 배율)을 담습니다.
  * @details 할로우 나이트, 블라스퍼머스 2, 더 라스트 페이스, 어스블레이드, 게슈탈트가 같은 테이블을 쓴다. 방, 연결, 잠금은 기반 `AreaGraph` 의 XML 이 가지고,
  *          여기에서는 그 위에 얹는 장르 규칙만 읽는다. 정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고
- *          `XMLFields::readFields` 가 읽는다.
+ *          `XMLFields::readProperties` 가 읽는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -280,7 +280,7 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "Metroidvania"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadRules( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool           loadAbility( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadCharm( const XMLNode& node, string_view sourceName );
@@ -298,5 +298,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MetroidvaniaCatalog>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<MetroidvaniaCatalog>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_KIT_API_EXTERN_TEMPLATE, MetroidvaniaCatalog );
 } // namespace sw

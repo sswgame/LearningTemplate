@@ -111,7 +111,7 @@ namespace sw::editor
         /** @brief 행을 펼치거나 접습니다. 바뀌면 다음 `refresh` 가 행을 다시 폅니다. */
         void setExpanded( HierarchyRowKind kind, uint64 id, bool bExpanded );
         /** @brief @p object 의 조상을 모두 펼칩니다(선택 따라가기 — 언리얼 Outliner 와 같다). */
-        void expandAncestorsOf( const GameObject& object );
+        void expandAncestors( const GameObject& object );
 
         // ------------------------------------------------------------------------------
         // 행 찾기 — id 만 읽는다(명령이 프레임 중간에 구조를 바꿔도 낡은 포인터를 읽지 않는다)

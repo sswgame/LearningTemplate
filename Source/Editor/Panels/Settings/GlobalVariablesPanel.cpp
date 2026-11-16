@@ -69,7 +69,7 @@ namespace sw::editor
             static bool drawInt32Widget( GlobalVariableInfo& info )
             {
                 int32 iVal = info.getValueAsInt();
-                if ( ImGui::DragInt( "##val", &iVal ) == false )
+                if ( EditorWidgets::dragInt( SW_WIDGET_ID( "##val" ), &iVal ) == false )
                     return false;
                 info.setValueAsInt( iVal );
                 return true;
@@ -78,7 +78,7 @@ namespace sw::editor
             static bool drawFloatWidget( GlobalVariableInfo& info )
             {
                 float32 fVal = info.getValueAsFloat();
-                if ( ImGui::DragFloat( "##val", &fVal, 0.1f ) == false )
+                if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##val" ), &fVal, 0.1f ) == false )
                     return false;
                 info.setValueAsFloat( fVal );
                 return true;
@@ -104,12 +104,12 @@ namespace sw::editor
                 bool        bChanged{ false };
                 const utf8* pName    = GlobalVariablesModel::findEnumName( info._enumType, currentVal );
                 const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
-                if ( ImGui::BeginCombo( "##val", pPreview ) )
+                if ( EditorWidgets::beginCombo( "##val", pPreview ) )
                 {
                     for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
                     {
                         const int32 val32     = static_cast<int32>( val );
-                        const utf8* name      = nameHashed.c_str();
+                        const utf8* name      = nameHashed.toString().data();
                         const bool  bSelected = ( val32 == currentVal );
                         if ( ImGui::Selectable( name, bSelected ) )
                         {
@@ -198,6 +198,11 @@ namespace sw::editor
         return true;
     }
 
+    void GlobalVariablesPanel::collectFilesToSave( vector<string>& outListPath ) const
+    {
+        GlobalVariablesModel::collectFilesToSave( outListPath );
+    }
+
     void GlobalVariablesPanel::revertDocument()
     {
         GlobalVariablesModel::getVariableManager().resetAllToDefault();
@@ -279,8 +284,8 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GlobalVariablePresets" ) );
         ImGui::Separator();
 
-        ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
-                                  _presetNameBuf.capacity() );
+        EditorWidgets::inputTextWithHint( SW_WIDGET_ID( "##PresetNameInput" ), SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
+                                          _presetNameBuf.capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) && _model.savePreset( _presetNameBuf.c_str() ) )
             _presetNameBuf.clear();

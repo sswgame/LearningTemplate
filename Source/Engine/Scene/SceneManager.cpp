@@ -127,7 +127,7 @@ namespace sw
         const bool bNeedWait     = _services._pTaskManager != nullptr && ( bLoading || bAsyncReady );
 
         if ( bNeedWait )
-            _services._pTaskManager->waitStage( _loadStage, "SceneManager::shutdown" ); // 오래 걸리면 남은 태스크 이름이 주기적으로 오류로 남는다
+            _services._pTaskManager->waitStage( _loadStage, "SceneManager::shutdown" ); // 오래 걸리면 남은 태스크 이름이 주기적으로 로그에 남는다
 
         if ( _asyncLoad != nullptr )
         {
@@ -546,7 +546,7 @@ namespace sw
         updateScenePreload();
         if ( _asyncLoad == nullptr || _asyncLoad->_bReady.load( std::memory_order_acquire ) == false )
             return;
-        if ( pumpPendingSceneRegistration() == false )
+        if ( processPendingSceneRegistration() == false )
             return; // 남은 등록은 다음 프레임에 — 그동안 로드는 진행 중으로 보인다(`isTransitioning`)
 
         unique_ptr<Scene> pendingScene;
@@ -614,19 +614,19 @@ namespace sw
             _pRenderBinding->flushRenderThread();
 
         // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `applyScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
-        Scene* const pAdopted = applyScene( std::move( pendingScene ), SceneRole::Active );
-        SW_LOG_INFO_ID( "SceneManager.ActiveSceneSwapped", "Active scene swapped to '%#'", pAdopted->getName() );
+        Scene* const pActivated = applyScene( std::move( pendingScene ), SceneRole::Active );
+        SW_LOG_INFO_ID( "SceneManager.ActiveSceneSwapped", "Active scene swapped to '%#'", pActivated->getName() );
         if ( _asyncLoad != nullptr )
-            _asyncLoad->_promise.setValue( pAdopted );
+            _asyncLoad->_promise.setValue( pActivated );
         // 대기열이 같은 경로를 가리키고 있었으면 그 요청자도 이 씬이 답이다.
         if ( bQueuedSatisfiedByThisLoad )
-            _queuedPromise.setValue( pAdopted );
+            _queuedPromise.setValue( pActivated );
     }
 
-    bool SceneManager::pumpPendingSceneRegistration()
+    bool SceneManager::processPendingSceneRegistration()
     {
         // 결정적 실행은 한 프레임에 모두 부른다 — 시나리오의 첫 프레임이 벽시계 아닌 값에 달리지 않게(언리얼 FlushAsyncLoading 자리).
-        const bool bAllAtOnce = gv_sceneRegisterComponentsPerFrame <= 0 || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE;
+        const bool bAllAtOnce = gv_sceneRegisterComponentsPerFrame <= 0 || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
         // 어차피 버릴 결과(다른 경로가 대기 · 타입 표가 바뀜)는 훅을 부르지 않는다 — 내릴 모듈의 훅을 돌리지 않는다.
         const bool bTypeTableChanged = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
         Scene*     pScene{ nullptr };
@@ -637,7 +637,7 @@ namespace sw
         const bool bDiscard = pScene == nullptr || bTypeTableChanged || ( _queuedPath.empty() == false && FileUtil::isSameDiskPath( pScene->getSourcePath(), _queuedPath ) == false );
         if ( bAllAtOnce || bDiscard )
             return true; // `applyScene` 이 끝낸다
-        return pScene->pumpHeldRegistration( static_cast<uint32>( gv_sceneRegisterComponentsPerFrame ) );
+        return pScene->processHeldRegistration( static_cast<uint32>( gv_sceneRegisterComponentsPerFrame ) );
     }
 
     /**

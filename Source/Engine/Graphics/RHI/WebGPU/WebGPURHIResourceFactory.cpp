@@ -404,13 +404,10 @@ namespace sw
             return;
         {
             // 이 버퍼의 번호를 모두 놓는다(다섯 백엔드 같은 계약).
-            const WebGPUBindlessEntry entry{ buffer, SW_FALSE };
-            UniqueLock<shared_mutex>  lock{ _pDevice->_bindlessMutex };
-            const auto                isThis = [entry]( const WebGPUBindlessEntry& other )
-            { return other == entry; };
-            const auto ignore = []( RHIDescriptorIndex ) {};
-            _pDevice->_bufferTable.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
-            _pDevice->_uavTable.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
+            UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+            const auto               ignore = []( RHIDescriptorIndex ) {};
+            _pDevice->_bufferTable.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
+            _pDevice->_uavTable.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
         }
         const WGPUBuffer native = record._buffer;
         _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native]()
@@ -547,13 +544,10 @@ namespace sw
             return;
         // 그 텍스처의 번호를 모두 놓는다(다섯 백엔드 같은 계약 — `registerBindlessTexture`).
         {
-            const WebGPUBindlessEntry entry{ texture, SW_TRUE };
-            UniqueLock<shared_mutex>  lock{ _pDevice->_bindlessMutex };
-            const auto                isThis = [entry]( const WebGPUBindlessEntry& other )
-            { return other == entry; };
-            const auto ignore = []( RHIDescriptorIndex ) {};
-            _pDevice->_textureTable.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
-            _pDevice->_uavTable.releaseIf( RHIBindlessReuse::Immediately, isThis, ignore );
+            UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+            const auto               ignore = []( RHIDescriptorIndex ) {};
+            _pDevice->_textureTable.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
+            _pDevice->_uavTable.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
         }
         _pDevice->releaseDepthSampleCopy( record );
         const WGPUTexture       native     = record._texture;
@@ -597,7 +591,7 @@ namespace sw
     RHITransferSubmit WebGPURHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_bDeviceLost != SW_FALSE )
+        if ( pRecord == nullptr || _pDevice->isDeviceLost() )
             return RHITransferSubmit::rejected();
         const RHITextureDesc& textureDesc = pRecord->_desc;
         RHITextureMipSpan     arrSpan[constant::render::kMaxTextureMipCount]{};
@@ -633,7 +627,7 @@ namespace sw
     RHITransferSubmit WebGPURHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_bDeviceLost != SW_FALSE )
+        if ( pRecord == nullptr || _pDevice->isDeviceLost() )
             return RHITransferSubmit::rejected();
         const RHITextureDesc& textureDesc = pRecord->_desc;
         uint32                rowBytes    = 0;
@@ -660,7 +654,7 @@ namespace sw
     {
         using Internal                     = WebGPURHIResourceFactoryInternal;
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_bDeviceLost != SW_FALSE )
+        if ( pRecord == nullptr || _pDevice->isDeviceLost() )
             return RHITransferSubmit::rejected();
         const RHITextureDesc& textureDesc = pRecord->_desc;
         const bool            bDepth      = Internal::isDepthFormat( pRecord->_wgpuFormat );

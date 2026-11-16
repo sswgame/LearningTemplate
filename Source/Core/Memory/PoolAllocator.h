@@ -55,7 +55,7 @@ namespace sw
         struct FreeNode
         {
             FreeNode* _pNext;
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
             /**
              * @brief 이 블록이 **지금 자유 목록에 있는지** 나타내는 표시입니다.
              * @details 같은 블록을 두 번 반납하면 `_pNext` 가 자기 자신을 가리켜 목록이 **자기 자신으로 도는 고리**가 됩니다. 그 뒤로는
@@ -69,7 +69,7 @@ namespace sw
 #endif
         };
 
-#if defined( SW_DEBUG )
+#if defined( SW_DO_CHECKS )
         /** @brief 자유 목록에 든 블록의 표시 값입니다. 임의의 값이라 객체의 잔해와 우연히 같을 확률은 2^-64 입니다. */
         static constexpr uint64 kFreeBlockMagic = 0xF2EE'B10C'F2EE'B10Cull;
 #endif

@@ -6,8 +6,8 @@
  * 내 LessEqual 을 통과한다(비트까지 같은 깊이 — 위치를 만드는 코드가 뼈대 한 곳뿐이다).
  * 이 셰이더가 같은 자리를 못 만드는 배치는 뼈대가 빼 준다 — 정점을 옮기는 머티리얼(MATERIAL_VERTEX_DEFORM)은 깊이 프리패스에서(기본 패스의 흔들린 정점이 프리패스
  * 깊이에 가려 구멍이 나지 않게), 그림자를 끈 머티리얼(MATERIAL_SHADOW_CAST_OFF)은 그림자에서. 그 머티리얼의 그림자와 알파 컷오프 머티리얼의 깊이는
- * 머티리얼 셰이더가 그린다(FrameRendererUtil::drawsDepthWithMaterialShader).
- * 픽셀 스테이지는 등장 디더 변형에만 붙는다(FrameRendererUtil::addsAppearanceDitherPixelStage) — 기본 패스와 같은 픽셀을 버려 프리패스 · 그림자가 맞는다.
+ * 머티리얼 셰이더가 그린다(FrameRendererUtil::usesMaterialShaderForDepth).
+ * 픽셀 스테이지는 등장 디더 변형에만 붙는다(FrameRendererUtil::needsAppearanceDitherPixelStage) — 기본 패스와 같은 픽셀을 버려 프리패스 · 그림자가 맞는다.
  */
 #include "lighting.hlsli"
 

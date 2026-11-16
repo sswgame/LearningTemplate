@@ -148,7 +148,7 @@ namespace sw::editor
                 const string rootPath = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
                 if ( FileUtil::makeRelativePath( rootPath, FileUtil::normalizeSeparators( filePath ), relativePath ) == false )
                     return {};
-                return FileUtil::normalizePath( relativePath );
+                return FileUtil::normalizePath( relativePath ).str();
             }
         };
     } // namespace
@@ -173,7 +173,7 @@ namespace sw::editor
 
     bool EditorReferenceIndex::isTextAsset( string_view path )
     {
-        const string lowerPath = FileUtil::normalizePath( path );
+        const string lowerPath = FileUtil::normalizePath( path ).str();
         if ( StringUtil::endsWith( lowerPath, EditorReferenceIndexInternal::kScenarioSuffix ) )
             return false;
         // 리다이렉트 표는 옛 id 와 새 id 를 적는 글이라 참조자가 아니다 — 세면 옮긴 에셋의 참조가 하나 더 보였다(엔진 규칙 `AssetReferenceFields::isReferrer` 와 같다).
@@ -190,7 +190,7 @@ namespace sw::editor
     void EditorReferenceIndex::extractReferences( string_view referrerPath, string_view text, const vector<string>& listSortedKnownID,
                                                   vector<EditorAssetReference>& outListReference )
     {
-        const string referrerID = FileUtil::normalizePath( referrerPath );
+        const string referrerID = FileUtil::normalizePath( referrerPath ).str();
         uint32       line       = 1;
         size_t       offset     = 0;
         while ( offset < text.size() )
@@ -215,7 +215,7 @@ namespace sw::editor
             {
                 ++endOffset;
             }
-            const string candidate = FileUtil::normalizePath( text.substr( offset, endOffset - offset ) );
+            const string candidate = FileUtil::normalizePath( text.substr( offset, endOffset - offset ) ).str();
             const bool   bInlined  = EditorReferenceIndexInternal::isBaseAttributeValue( text, offset );
             offset                 = endOffset;
             if ( std::binary_search( listSortedKnownID.begin(), listSortedKnownID.end(), candidate ) == false )
@@ -296,7 +296,7 @@ namespace sw::editor
 
     void EditorReferenceIndex::refreshFile( string_view resourceRoot, string_view assetPath )
     {
-        const string assetID = FileUtil::normalizePath( assetPath );
+        const string assetID = FileUtil::normalizePath( assetPath ).str();
         VectorUtil::removeIf( _data._listReference, [&assetID]( const EditorAssetReference& reference )
         { return reference._referrerPath == assetID; } );
 
@@ -315,7 +315,7 @@ namespace sw::editor
 
     bool EditorReferenceIndex::containsFile( string_view assetID ) const
     {
-        const string id = FileUtil::normalizePath( assetID );
+        const string id = FileUtil::normalizePath( assetID ).str();
         return std::binary_search( _data._listKnownID.begin(), _data._listKnownID.end(), id );
     }
 
@@ -323,7 +323,7 @@ namespace sw::editor
     {
         outListReference.clear();
         EditorAssetReference key{};
-        key._targetPath  = FileUtil::normalizePath( targetPath );
+        key._targetPath  = FileUtil::normalizePath( targetPath ).str();
         auto itReference = std::lower_bound( _data._listReference.begin(), _data._listReference.end(), key,
                                              []( const EditorAssetReference& left, const EditorAssetReference& right )
         { return left._targetPath < right._targetPath; } );
@@ -336,7 +336,7 @@ namespace sw::editor
     void EditorReferenceIndex::findDependencies( string_view referrerPath, vector<EditorAssetReference>& outListReference ) const
     {
         outListReference.clear();
-        const string referrerID = FileUtil::normalizePath( referrerPath );
+        const string referrerID = FileUtil::normalizePath( referrerPath ).str();
         for ( const EditorAssetReference& reference : _data._listReference )
         {
             if ( reference._referrerPath == referrerID )

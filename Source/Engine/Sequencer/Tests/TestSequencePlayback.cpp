@@ -274,3 +274,30 @@ SW_TEST_CASE( SequencePlaybackTest, HistoryIsBounded )
     SW_EXPECT_EQUAL( 0u, history.getCount() );
     SW_EXPECT_TRUE( history.findLatest() == nullptr );
 }
+
+// 일시정지한 갱신은 빈 구간이다 — 예전에는 플레이어의 "이전 프레임" 이 그대로 남아 직전에 지난 이벤트 · 카메라 신호가 매 틱 다시 났다(P0-12).
+// 구간을 값으로 돌려받으므로 멈춘 틱은 구조상 아무것도 지나지 않는다(이벤트 판정은 `previousFrame < start <= frame`).
+SW_TEST_CASE( SequencePlaybackTest, PausedPlayerStepsOverNothing )
+{
+    SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 30;
+    SequencePlayer player;
+    player.setAsset( asset );
+    player.setFramesPerSecond( 10.0f );
+    player.play();
+    const SequencePlaybackStep moved = player.update( 0.55f );
+    SW_REQUIRE_TRUE( moved._previousFrame < moved._frame );
+
+    player.pause();
+    for ( int32 tick = 0; tick < 3; ++tick )
+    {
+        const SequencePlaybackStep paused = player.update( 0.1f );
+        SW_EXPECT_EQUAL( paused._previousFrame, paused._frame );
+        SW_EXPECT_EQUAL( moved._frame, paused._frame );
+    }
+    player.resume();
+    const SequencePlaybackStep resumed = player.update( 0.1f );
+    SW_EXPECT_EQUAL( moved._frame, resumed._previousFrame ); // 이어서 지난 구간만 본다(멈춘 동안의 구간을 다시 보지 않는다)
+    SW_EXPECT_TRUE( resumed._frame > resumed._previousFrame );
+}

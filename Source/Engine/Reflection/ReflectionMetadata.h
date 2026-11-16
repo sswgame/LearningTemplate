@@ -136,7 +136,7 @@ namespace sw
         /** @brief 네트워크 복제 대상입니다(`Replicated`, `RepNotify`). 네트워크 계층이 `PropertyRoleUtil::collectReplicatedProperties` 로 모읍니다. */
         uint8 _bReplicated : 1;
         /**
-         * @brief 데이터 파일이 반드시 적어야 하는 칸입니다(`PROPERTY( Required )`). 빠지면 엄격한 읽기(`XMLFields::readFields`)가 이름과 함께 오류를 냅니다.
+         * @brief 데이터 파일이 반드시 적어야 하는 칸입니다(`PROPERTY( Required )`). 빠지면 엄격한 읽기(`XMLFields::readProperties`)가 이름과 함께 오류를 냅니다.
          * @details 초기값은 형식일 뿐 기본값이 아니라는 표시다. 표시가 없는 칸은 초기값이 스키마 기본값이다.
          */
         uint8 _bRequired : 1;

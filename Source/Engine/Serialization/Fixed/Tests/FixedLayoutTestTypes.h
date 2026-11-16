@@ -22,7 +22,7 @@ namespace sw
     enum class FixedLayoutSampleMode : uint8
     {
         Idle,
-        Walk,
+        Crouch,
         Run,
         Count,
     };

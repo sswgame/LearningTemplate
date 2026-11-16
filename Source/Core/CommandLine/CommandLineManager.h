@@ -270,9 +270,9 @@ namespace sw
         vector<string> _listOriginalArgument;
         /** @brief `parse` 가 거절한 인자의 이유입니다(`getParseErrors`). `initialize` 가 비웁니다. */
         vector<string> _listParseError;
-    };
 
-    SW_SERVICE_SLOT( CommandLineManager, Required );
+        SW_SERVICE_SLOT( CommandLineManager, Required );
+    };
 
     template <typename T>
     bool CommandLineManager::readValue( const ArgumentInfo& argument, T& outValue )

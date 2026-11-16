@@ -30,7 +30,7 @@ namespace sw
              * @details git 의 racy-git 과 같은 결함이다: 같은 틱 안에 같은 크기로 다시 쓴 파일은 (크기, 시각) 도장이 같아 옛 해시가 돌아왔다
              *          (`ShaderCookStampTest` 가 전체 실행에서만 졌다). 바깥에서 막 쓴 파일은 매번 읽고, 자리 잡은 파일만 캐시한다.
              */
-            static bool isSettled( const FileStamp& stamp )
+            static bool isCompleted( const FileStamp& stamp )
             {
                 const int64 nowFileTimeMs = WallClock::nowUnixMilliseconds().count() + kFileTimeEpochOffsetMs;
                 const int64 writeTimeMs   = static_cast<int64>( stamp._writeTime / kWriteTicksPerMs );
@@ -147,7 +147,7 @@ namespace sw
         }
 
         const uint64 hash = ContentHashInternal::readFileHash( absPath );
-        if ( bStamped == false || hash == 0 || ( bOwnWrite == false && ContentHashInternal::isSettled( stamp ) == false ) )
+        if ( bStamped == false || hash == 0 || ( bOwnWrite == false && ContentHashInternal::isCompleted( stamp ) == false ) )
             return hash;
         ScopedLock<mutex> lock{ _mutex };
         // 읽는 사이에 자기 쓰기가 끼었으면(번호가 바뀌었거나 새 표가 생겼다) 읽은 내용이 어느 쓰기의 것인지 모른다 — 남기지 않는다. 바깥 쓰기가 끼었으면 다음 조회의 도장이 달라 다시 읽는다.

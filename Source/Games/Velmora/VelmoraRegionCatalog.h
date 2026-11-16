@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -51,7 +52,7 @@ namespace sw
         ActionRoomLayout makeLayout() const;
     };
 
-    /** @brief `<Region id name min max respawn startQuest>` 속성의 스키마입니다(`XMLFields::readFields`). 이름이 비면 id 를 쓴다. */
+    /** @brief `<Region id name min max respawn startQuest>` 속성의 스키마입니다(`XMLFields::readProperties`). 이름이 비면 id 를 쓴다. */
     REFLECT()
     struct VelmoraRegionAttributeDef
     {
@@ -117,7 +118,10 @@ namespace sw
 
     private:
         static constexpr const utf8* kXMLRootName = "VelmoraRegionCatalog";
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadRegion( const XMLNode& node, string_view sourceName );
     };
+
+    /** @brief 이 종류의 공유 캐시입니다 — 인스턴스화는 `VelmoraRegionCatalog.cpp` 의 정의 줄이 한다. */
+    SW_DECLARE_SHARED_ASSET_CACHE(, VelmoraRegionCatalog );
 } // namespace sw

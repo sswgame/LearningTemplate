@@ -35,7 +35,7 @@ namespace sw::editor
         [[nodiscard]] bool findPreviewClipDuration( float32& outSeconds ) const;
 
     private:
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬은 조명과 바닥뿐이다 — 몸은 "Spawn" 을 누르면 놓는다. */
         void populatePreviewScene( Scene& scene ) override;

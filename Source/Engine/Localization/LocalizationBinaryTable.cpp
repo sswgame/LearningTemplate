@@ -3,7 +3,6 @@
 #include "Engine/Localization/LocalizationBinaryTable.h"
 
 #include "Core/Hash/HashUtil.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Serialization/ByteStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringUtil.h"
@@ -34,14 +33,13 @@ namespace sw
         _culture = string( culture );
     }
 
-    void LocalizationBinaryTable::setText( string_view key, string_view text )
+    expected<void> LocalizationBinaryTable::setText( string_view key, string_view text )
     {
-        setTextByHash( hashed_string::computeHash( key ), text );
-    }
-
-    void LocalizationBinaryTable::setTextByHash( uint64 keyHash, string_view text )
-    {
-        _mapText[keyHash] = string( text );
+        const expected<uint64> keyHash = _keyIndex.add( key );
+        if ( keyHash.has_value() == false )
+            return unexpected( keyHash.error() );
+        _mapText[*keyHash] = string( text );
+        return {};
     }
 
     void LocalizationBinaryTable::toBytes( vector<uint8>& outBytes ) const
@@ -79,6 +77,7 @@ namespace sw
         using Internal = LocalizationBinaryTableInternal;
         _culture.clear();
         _mapText.clear();
+        _keyIndex.clear();
         if ( pData == nullptr || size < Internal::kHeaderFixedBytes + Internal::kCountBytes + Internal::kChecksumBytes )
             return unexpected( Error{ ErrorKind::InvalidArgument, "locres is too small" } );
         // 끝의 체크섬을 뺀 앞부분만 읽는다 — 표가 체크섬 자리를 읽지 못한다.

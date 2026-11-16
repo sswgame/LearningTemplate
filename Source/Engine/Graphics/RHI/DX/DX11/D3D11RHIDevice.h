@@ -162,14 +162,19 @@ namespace sw
          * @details 그 뒤의 전송 제출은 진입에서 `Rejected` 이다. GPU 는 실제로 살아 있어 프레임 · 대기는 계속 돈다(Vulkan 과 같은 한계).
          */
         bool debugRemoveDevice() override;
+        /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
+        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
         /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
          *          손실 뒤에도 `Pending` 으로 남는다. 장치가 없으면 false 입니다.
          */
         bool isDeviceRemoved();
-        /** @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved`). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2). */
-        bool isDeviceLost();
+        /**
+         * @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved` — 드라이버에 묻는다). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2).
+         * @details 표시만 읽는 공용 질의는 `IRHIDevice::isDeviceLost` 다. 이름을 가른 까닭은 이쪽이 `GetDeviceRemovedReason` 을 부르고 처음 보면 손실을 표시하기 때문이다.
+         */
+        bool pollDeviceLost();
 
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 어댑터를 찾지 못하면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
@@ -594,18 +599,20 @@ namespace sw
         RHIFrameFenceRing                   _frameFenceRing;         ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
-        /// @brief UAV 번호 하나입니다 — 뷰와 그 원본 버퍼(텍스처 UAV 면 0 — SRV/UAV 해저드를 풀 때 본다).
+        /// @brief UAV 번호 하나입니다 — 뷰와 그 원본(버퍼 UAV 면 버퍼 — SRV/UAV 해저드를 풀 때 본다, 텍스처 UAV 면 텍스처 — 텍스처를 부술 때 번호를 놓는다).
         struct UAVEntry
         {
             Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> _uav{};
             RHIBufferHandle                                   _sourceBuffer{ 0 };
+            RHITextureHandle                                  _sourceTexture{ 0 };
 
-            bool operator==( const UAVEntry& other ) const { return _uav.Get() == other._uav.Get() && _sourceBuffer == other._sourceBuffer; }
+            bool             operator==( const UAVEntry& other ) const { return _uav.Get() == other._uav.Get() && _sourceBuffer == other._sourceBuffer && _sourceTexture == other._sourceTexture; }
+            RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _sourceBuffer, _sourceTexture }; }
         };
         /// @brief 세 번호 공간(`RHIBindlessRegistry`, `_bindlessMutex` 아래). DX11 은 번호를 기록 때 뷰로 풀므로 비운 번호는 바로 다시 쓴다(`RHIBindlessReuse::Immediately`).
-        RHIBindlessRegistry<RHIBufferHandle>  _bufferRegistry;
-        RHIBindlessRegistry<RHITextureHandle> _textureRegistry;
-        RHIBindlessRegistry<UAVEntry>         _uavRegistry;
+        RHIBindlessRegistry<RHIBufferHandle, RHIBindlessBufferOwnerOf>   _bufferRegistry;
+        RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
+        RHIBindlessRegistry<UAVEntry>                                    _uavRegistry;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

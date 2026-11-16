@@ -14,6 +14,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputKeyTable.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/Windows/Win32RawMouse.h"
 #include "Engine/Input/Windows/XInputGamepadDevice.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -175,6 +176,31 @@ namespace sw
             return bRead;
         }
 
+        /**
+         * @brief 원시 마우스 입력(HID 일반 데스크톱 · 마우스)을 등록하거나 해제하고, 마우스 장치에 원시 원천이 있는지 선언합니다.
+         * @details 잠금이 걸린 동안만 등록한다 — 풀린 커서는 OS 가속이 붙은 위치(WM_MOUSEMOVE)가 맞다. 언리얼은 `HighPrecisionMouseMode`
+         *          에서, 유니티 Input System 은 늘 Raw Input 을 쓴다. 대상 창은 nullptr(키보드 포커스를 따른다)이다 — `RIDEV_REMOVE` 는
+         *          대상 창이 있으면 실패하고, 포커스 밖 창은 어차피 받지 않는다. 레거시 메시지(`RIDEV_NOLEGACY`)는 끄지 않는다(버튼 · 위치가 그 길이다).
+         *          등록이 실패하면 오류를 남기고 원천을 켜지 않는다 — 장치가 원시 원천 없이 위치 차이를 쓰는 것이 그 상태의 뜻이다.
+         *          등록이 성공해도 원천은 첫 원시 보고가 와야 확정된다(`MouseDevice::getMovementDelta`) — 보고 없이 커서만 옮기는 환경(원격 제어 · 터치)에서 시선이 멈추지 않게.
+         */
+        void setRawMouseInputInternal( MouseDevice& mouse, bool bEnable, optional<int2>& inoutLastAbsolute )
+        {
+            if ( mouse.isRawMotionSource() == bEnable )
+                return;
+            constexpr USHORT     kHidUsagePageGenericDesktop = 0x01;
+            constexpr USHORT     kHidUsageMouse              = 0x02;
+            const RAWINPUTDEVICE device{ kHidUsagePageGenericDesktop, kHidUsageMouse, bEnable ? 0u : static_cast<DWORD>( RIDEV_REMOVE ), nullptr };
+            if ( RegisterRawInputDevices( &device, 1, sizeof( RAWINPUTDEVICE ) ) == FALSE )
+            {
+                SW_LOG_ERROR_ID( "InputManager.RawMouseRegistration", "RegisterRawInputDevices(%#) failed (error %#) - mouse look keeps reading cursor positions", bEnable ? "add" : "remove",
+                                 static_cast<uint32>( GetLastError() ) );
+                return;
+            }
+            mouse.setRawMotionSource( bEnable );
+            inoutLastAbsolute = nullopt; // 다음 등록의 첫 절대 보고가 지난 잠금의 좌표에서 이동을 재지 않게 한다
+        }
+
         /** @brief 활성 창이 마우스를 붙잡게 합니다(창 밖으로 끌어도 뗌이 도착한다). */
         void captureMouseOnActiveWindowInternal()
         {
@@ -230,12 +256,16 @@ namespace sw
                 UINT      size = sizeof( RAWINPUT );
                 if ( GetRawInputData( hRawInput, RID_INPUT, &rawInput, &size, sizeof( RAWINPUTHEADER ) ) != static_cast<UINT>( -1 ) )
                 {
+                    // 등록은 잠금이 맡는다(`setRawMouseInputInternal`). 버튼 · 휠만 담은 보고(이동 0)는 레거시 메시지가 이미 낸다.
                     if ( rawInput.header.dwType == RIM_TYPEMOUSE )
                     {
-                        const float32 rawDx = static_cast<float32>( rawInput.data.mouse.lLastX );
-                        const float32 rawDy = static_cast<float32>( rawInput.data.mouse.lLastY );
-                        if ( rawDx != 0.0f || rawDy != 0.0f )
-                            postRawEvent( RawInputEvent::makeMouseRawDelta( rawDx, rawDy ) );
+                        const RAWMOUSE& mouse  = rawInput.data.mouse;
+                        const float2    motion = Win32RawMouseUtil::readMotion( mouse, Win32RawMouseUtil::getAbsoluteArea( mouse ), _lastRawMouseAbsolute );
+                        if ( motion._x != 0.0f || motion._y != 0.0f )
+                        {
+                            ++_rawMouseEventCount;
+                            postRawEvent( RawInputEvent::makeMouseRawDelta( motion._x, motion._y ) );
+                        }
                     }
                 }
                 break;
@@ -494,7 +524,7 @@ namespace sw
         // 전경이 아닌 창은 커서를 가두지 않는다. ClipCursor 는 화면 전체에 걸리기 때문이다.
         if ( pHwnd == nullptr || GetForegroundWindow() != pHwnd )
         {
-            ClipCursor( nullptr );
+            releaseMouseLockMode();
             return;
         }
 
@@ -504,6 +534,7 @@ namespace sw
             return;
 
         ClipCursor( &clipRect );
+        setRawMouseInputInternal( *_pMouse, true, _lastRawMouseAbsolute ); // 잠금의 상대 이동은 원시 입력이다(감사 P-1) — 가속 · 가장자리 · 가운데 되돌림을 타지 않는다
 
         if ( _pMouse->getLockMode() == MouseLockMode::LockedInCenter )
             recenterLockedCursorPlatform();
@@ -543,6 +574,8 @@ namespace sw
     void InputManager::releaseMouseLockMode()
     {
         ClipCursor( nullptr );
+        if ( _pMouse != nullptr )
+            setRawMouseInputInternal( *_pMouse, false, _lastRawMouseAbsolute );
     }
 
     bool InputManager::isWindowFocusedPlatform() const
@@ -564,19 +597,22 @@ namespace sw
         STICKYKEYS stickyKeys{ sizeof( STICKYKEYS ), 0 };
         SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
         _arrSavedAccessibilityFlags[0] = stickyKeys.dwFlags;
-        stickyKeys.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
+        if ( ( stickyKeys.dwFlags & SKF_STICKYKEYSON ) == 0 ) // 사용자가 켠 기능은 그대로 둔다 — 단축키만 끈다(감사 P-11, 언리얼 FWindowsApplication 과 같다)
+            stickyKeys.dwFlags &= static_cast<DWORD>( ~SKF_HOTKEYACTIVE );
         SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
 
         TOGGLEKEYS toggleKeys{ sizeof( TOGGLEKEYS ), 0 };
         SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
         _arrSavedAccessibilityFlags[1] = toggleKeys.dwFlags;
-        toggleKeys.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
+        if ( ( toggleKeys.dwFlags & TKF_TOGGLEKEYSON ) == 0 )
+            toggleKeys.dwFlags &= static_cast<DWORD>( ~TKF_HOTKEYACTIVE );
         SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
 
         FILTERKEYS filterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
         SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
         _arrSavedAccessibilityFlags[2] = filterKeys.dwFlags;
-        filterKeys.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
+        if ( ( filterKeys.dwFlags & FKF_FILTERKEYSON ) == 0 )
+            filterKeys.dwFlags &= static_cast<DWORD>( ~FKF_HOTKEYACTIVE );
         SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
 
         _bAccessibilityShortcutsDisabled = SW_TRUE;

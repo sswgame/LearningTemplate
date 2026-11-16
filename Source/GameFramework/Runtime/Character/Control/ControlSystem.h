@@ -33,7 +33,7 @@ namespace sw
      *          (1) 자동 빙의를 처리한다. (2) 조종자 없는 폰의 의도를 0 으로 둔다. (3) 조종자마다 의도를 만들어 폰에 넣는다.
      *          조종자와 폰 목록은 씬을 훑지 않고 레지스트리(`ComponentRegistry`)에서 읽는다. 등록 순서대로 돌므로 결정적이다.
      *          의도는 `quantize` 를 거쳐 폰에 넣으므로, 로컬 플레이어도 네트워크나 재생과 같은 값으로 움직인다.
-     *          첫 폰이나 조종자가 등록될 때 `ensureFor` 가 매니저에 붙이고(매니저가 소유), 마지막 것이 빠질 때 `releaseIfUnused` 가 뗀다.
+     *          첫 폰이나 조종자가 등록될 때 `findOrCreate` 가 매니저에 붙이고(매니저가 소유), 마지막 것이 빠질 때 `releaseIfUnused` 가 뗀다.
      *          GameFramework 모듈이 내려가기 전에 그 컴포넌트가 먼저 지워지므로, 매니저에 이 타입의 객체가 남지 않는다.
      *          에디터가 씬을 멈추면 `GameObjectManager::update` 이 돌지 않으므로 이 단계도 돌지 않는다.
      */
@@ -44,7 +44,7 @@ namespace sw
         ~ControlSystem() override = default;
 
         /** @brief @p manager 의 조종 시스템을 반환합니다. 없으면 붙입니다. */
-        static ControlSystem& ensureFor( GameObjectManager& manager );
+        static ControlSystem& findOrCreate( GameObjectManager& manager );
         /** @brief @p manager 의 조종 시스템을 반환합니다. 없으면 nullptr 이며, 씬을 비우는 중에도 시스템이 먼저 떨어지므로 nullptr 입니다. */
         static ControlSystem* find( const GameObjectManager& manager );
         /**

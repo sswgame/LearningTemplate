@@ -27,7 +27,7 @@ namespace sw
         bool              _bIncludeTriggers{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 레이어가 마스크에 포함되는지 반환합니다. */
-        bool acceptsLayer( uint8 layer ) const { return layer < 32 && ( _layerMask & ( 1u << layer ) ) != 0; }
+        bool canAcceptLayer( uint8 layer ) const { return layer < 32 && ( _layerMask & ( 1u << layer ) ) != 0; }
     };
 } // namespace sw
 

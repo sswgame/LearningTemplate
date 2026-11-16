@@ -32,6 +32,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
@@ -74,6 +75,7 @@ namespace sw
         IAccountPresence*            _pPresence{ nullptr };                                                                                     ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
         const IAccountExternalLinks* _pExternalLinks{ nullptr };                                                                                ///< 영수증 구매자를 외부 로그인으로 묶는 제공자(`ReceiptBuyerBinding::LinkedLogin`)가 있으면 필수다. 없으면 기동 실패다
         uint8                        _bAcceptSandboxReceipts{ SW_FALSE };
+        EconomyRefundRecoveryMode    _refundRecovery{ EconomyRefundRecoveryMode::Count }; ///< 지급 뒤 온 환불의 회수 정책(키트 설정 `_refundRecovery`). 정하지 않으면 기동 실패다
     };
 } // namespace sw
 
@@ -201,10 +203,10 @@ namespace sw
         // IOnlineServerService
         void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void onHostShutdown( OnlineServiceHost& host ) override;
-        /** @brief 잔액 변경을 계정에 알립니다. 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다. `getBalanceNotice` 가 이 함수로 넘깁니다. */
+        /** @brief 잔액 변경을 계정에 알립니다. 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다. `getBalanceNotification` 가 이 함수로 넘깁니다. */
         void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance );
         /** @brief 다른 키트(GM · 우편함)에 거는 잔액 변경 알림 창구입니다. 이 서비스와 수명이 같습니다. */
-        IBalanceChangedListener& getBalanceNotice() { return _balanceNotice; }
+        IBalanceChangedListener& getBalanceNotification() { return _balanceNotification; }
         // 예약 작업 — 보존 검사 회차를 차지했다
         void onScheduledRun( const ScheduledRun& run );
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
@@ -214,11 +216,11 @@ namespace sw
 
         /** @brief 요청 하나를 결과 @p outcome 과 응답 @p reply 로 끝냅니다. 저장 일의 완료와 영수증 거절이 부릅니다. 응답과 지표를 처리합니다. */
         template <typename TReply>
-        void completeCall( uint64 callID, const EconomyOutcome& outcome, const TReply& reply )
+        void completeCall( uint64 callID, const EconomyServiceResult& serviceResult, const TReply& reply )
         {
-            if ( outcome.isFailed() )
+            if ( serviceResult.isFailed() )
             {
-                failCallOf( callID, outcome._errorCode );
+                failCallByID( callID, serviceResult._errorCode );
                 return;
             }
             if ( LocalCallTable::isLocal( callID ) )
@@ -227,14 +229,14 @@ namespace sw
                 local._reply.assign( reply );
                 (void)_localCalls.finish( callID, local );
             }
-            else if ( finishCall( callID, outcome, reply ) == false ) // 스토어 대기는 `EconomyRedeemReply::isRetryable` 이 정한다
+            else if ( finishCall( callID, serviceResult, reply ) == false ) // 스토어 대기는 `EconomyRedeemReply::isRetryable` 이 정한다
                 _calls.warnUnknownCall( callID );
         }
         /** @brief 호출을 공통 범주 @p errorCode 로 끝냅니다. 원격이면 공통 오류, 같은 프로세스면 `OnlineResult::_errorCode` 입니다. 공통 범주는 기억하지 않는다. */
-        void  failCallOf( uint64 callID, uint16 errorCode );
+        void  failCallByID( uint64 callID, uint16 errorCode );
         int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }
         /** @brief 종료 드레인이 기다리는 일 수입니다 — 원격 · 같은 프로세스 호출과 저장소에 맡긴 일. */
-        int32 getOpenWorkCount() const { return getPendingCallCount() + _store.getOpenCount(); }
+        int32 getOpenJobCount() const { return getPendingCallCount() + _store.getOpenCount(); }
 
     protected:
         /** @brief 구매 · 지급 · 철회는 원격 설정의 기능 플래그가 꺼져 있으면 본문을 읽기 전에 `kFeatureDisabled` 로 끝냅니다. 조회는 된다. */
@@ -257,13 +259,13 @@ namespace sw
         };
 
         void startCall( const EconomyCall& call, uint64 callID );
-        /** @brief 요청 하나의 저장 함수 @p run( 연결, 응답& ) -> EconomyOutcome 을 맡기고 완료에서 `completeCall` 로 끝냅니다. */
+        /** @brief 요청 하나의 저장 함수 @p run( 연결, 응답& ) -> EconomyServiceResult 을 맡기고 완료에서 `completeCall` 로 끝냅니다. */
         template <typename TReply, typename TRun>
         void submitStoreCall( uint64 callID, TRun&& run );
         /** @brief 보존 검사의 완료입니다. 지표와 로그를 남기고 예약 회차를 마칩니다. */
         void completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion );
         /** @brief 환불 회수의 완료입니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
-        void completeRefund( const ReceiptRefundNotification& notice, EconomyOutcome result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
+        void completeRefund( const ReceiptRefundNotification& notification, EconomyServiceResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         /** @brief 기준 시각 읽기의 완료입니다. 읽었으면 제공자에 넘기고, 못 읽었으면 다시 읽게 합니다. */
         void completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion );
         /** @brief 기준 시각 쓰기의 완료입니다. */
@@ -290,7 +292,7 @@ namespace sw
         AccountPresenceTracker                    _presenceFinds;             ///< 다른 서버에 붙은 계정을 찾는 잔액 변경 알림(`initialize` 가 묶고 `shutdown` 이 푼다)
         unordered_set<string>                     _uniqueSetDeliveryInFlight; ///< 제공자에 맡겨 결과를 기다리는 지급 알림의 레코드 키
         unordered_set<string>                     _uniqueSetDeliveryAlarmed;  ///< 기한 오류 로그를 이미 남긴 레코드 키
-        BalanceChangedListener                    _balanceNotice;             ///< 잔액 변경 알림 창구(`getBalanceNotice`)
+        BalanceChangedListener                    _balanceNotification;       ///< 잔액 변경 알림 창구(`getBalanceNotification`)
         OnlineServiceHost*                        _pHost;                     ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
         MetricRegistry*                           _pMetricRegistry;           ///< 환불 결과 지표를 센다(설정에서 복사)
         ServicePeriodicJob                        _auditJob;                  ///< 원장 보존 검사이다. 주기 없이 예약 회차와 `requestLedgerAudit` 로 돈다

@@ -10,6 +10,8 @@
 
 #include "Core/Container/string.h"
 
+#include "DevTools/Diagnostics/DevSceneIterationAccess.h"
+
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
@@ -25,7 +27,7 @@ namespace sw
         {
             static bool runRecordStateHash( AutomationStepContext& context, const AutomationStep& step )
             {
-                const AutomationStateHashStepParams params   = step.readValidatedFields<AutomationStateHashStepParams>();
+                const AutomationStateHashStepParams params   = step.readValidatedProperties<AutomationStateHashStepParams>();
                 const GameObjectManager*            pManager = context.findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
@@ -33,18 +35,18 @@ namespace sw
                     return true;
                 }
                 vector<SceneObjectHash> listObject;
-                SceneObjectHash::collectObjects( *pManager, listObject );
+                SceneObjectHash::collectObjects( DevSceneIterationAccess::getKey(), *pManager, listObject );
                 string report;
                 SceneObjectHash::writeObjectReport( listObject, report );
-                context.rememberText( params._key, std::move( report ) );
+                context.storeText( params._key, std::move( report ) );
                 return true;
             }
 
             static bool runExpectStateHash( AutomationStepContext& context, const AutomationStep& step )
             {
-                const AutomationStateHashStepParams params   = step.readValidatedFields<AutomationStateHashStepParams>();
+                const AutomationStateHashStepParams params   = step.readValidatedProperties<AutomationStateHashStepParams>();
                 const GameObjectManager*            pManager = context.findActiveObjectManager();
-                const string*                       pReport  = context.findRememberedText( params._key );
+                const string*                       pReport  = context.findStoredText( params._key );
                 if ( pReport == nullptr )
                 {
                     context.recordFailure( step, "no state hash was recorded under key '" + params._key + "' - put <RecordStateHash key=\"" + params._key + "\"/> before it" );
@@ -62,7 +64,7 @@ namespace sw
                     return true;
                 }
                 vector<SceneObjectHash> listActual;
-                SceneObjectHash::collectObjects( *pManager, listActual );
+                SceneObjectHash::collectObjects( DevSceneIterationAccess::getKey(), *pManager, listActual );
                 vector<string> listDiffering;
                 if ( SceneObjectHash::findDifferingObjects( listExpected, listActual, listDiffering ) )
                 {
@@ -79,6 +81,6 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_STEP( stateRecordStateHash, "RecordStateHash", &AutomationStateHashStepsInternal::runRecordStateHash, &AutomationStep::validateFields<AutomationStateHashStepParams>, AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( stateExpectStateHash, "ExpectStateHash", &AutomationStateHashStepsInternal::runExpectStateHash, &AutomationStep::validateFields<AutomationStateHashStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( stateRecordStateHash, "RecordStateHash", &AutomationStateHashStepsInternal::runRecordStateHash, &AutomationStep::validateProperties<AutomationStateHashStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( stateExpectStateHash, "ExpectStateHash", &AutomationStateHashStepsInternal::runExpectStateHash, &AutomationStep::validateProperties<AutomationStateHashStepParams>, AutomationStepOptions{} );
 } // namespace sw

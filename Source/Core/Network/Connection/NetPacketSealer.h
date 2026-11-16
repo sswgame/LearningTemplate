@@ -6,7 +6,8 @@
  *          열 때는 재전송 방지 윈도우를 먼저 보고, **복호가 성공한 뒤에만** 번호를 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
  *
  *          패킷 형식(체크섬 헤더, 패킷 종류)과 연결 상태는 `NetEndpoint` 가 맡고, 이 클래스는 바이트와 키만 다룬다.
- *          **스레드**: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다. 스크래치 버퍼를 다시 쓰므로 패킷마다 할당하지 않는다.
+ *          **스레드**: 잠금이 없다. 봉인(`seal`)은 `NetEndpoint` 의 잠금 안에서 그 값 멤버로 한다(아무 스레드나 끊기 패킷을 봉인한다).
+ *          열기(`open`)는 받는 방향 상태(`NetReceiveCryptContext`)만 만지는 static 이라, 그 상태를 쥔 `update` 스레드가 잠금 밖에서 연다(감사 N-8).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -24,20 +25,35 @@ namespace sw
     class INetSecurityProvider;
 
     /**
+     * @brief 연결 하나의 받는 방향 암호 상태입니다 — 받는 키로 초기화한 AEAD, 받는 방향 IV, 재전송 방지 윈도우.
+     * @details 보내는 방향과 나눈 까닭: 복호를 엔드포인트 잠금 밖에서 하려면 받는 쪽 상태를 `update` 스레드 하나가 쥐어야 한다(`NetEndpoint` 가 키 유도 뒤 옮겨 간다).
+     *          보내는 쪽은 아무 스레드의 끊기 · 보내기가 잠금 안에서 쓴다. GameNetworkingSockets 가 연결마다 `m_cryptContextSend` · `m_cryptContextRecv` 를 따로 두는 것과 같다.
+     *          소멸시키는 번역 단위는 `INetSecurityProvider.h`(`INetAEAD` 정의)를 include 해야 한다.
+     */
+    struct NetReceiveCryptContext
+    {
+        unique_ptr<INetAEAD> _aead{};                                       ///< 받는 방향 키로 초기화한 AEAD. 없으면 키가 없다.
+        NetReplayWindow      _replayWindow{};                               ///< 받은 패킷 번호의 재전송 방지 윈도우.
+        uint8                _arrIv[NetSecurityConstant::kAEADNonceSize]{}; ///< 받는 방향 IV(nonce = IV XOR 패킷 번호).
+
+        /** @brief IV 를 지우고 AEAD 를 놓고 윈도우를 처음으로 돌립니다(연결이 끝났을 때). */
+        SW_API void wipe();
+    };
+
+    /**
      * @brief 연결 하나의 암호 상태입니다. 암호화 방식일 때만 만듭니다.
      * @details 소멸시키는 번역 단위는 `INetSecurityProvider.h`(`INetAEAD` 정의)를 include 해야 한다.
      */
     struct NetSlotSecurity
     {
-        NetX25519KeyPair     _keyPair{};      ///< 이쪽의 일회용 키. 클라이언트는 키를 만든 뒤 지우고, 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
-        NetSessionKeys       _keys{};         ///< 방향별 키와 IV.
-        unique_ptr<INetAEAD> _sendAEAD{};     ///< 보내는 방향 키로 초기화한 AEAD.
-        unique_ptr<INetAEAD> _receiveAEAD{};  ///< 받는 방향 키로 초기화한 AEAD.
-        NetReplayWindow      _replayWindow{}; ///< 받은 패킷 번호의 재전송 방지 윈도우.
-        uint64               _sendPacketNumber{ 0 };
-        uint64               _principalID{ 0 };                                      ///< 서버 전용. 인증기가 지정한 주체.
-        uint8                _arrKeyConfirmTag[NetSecurityConstant::kAEADTagSize]{}; ///< 서버 전용. 수락을 다시 보낼 때 같은 태그를 쓰기 위해 보관한다.
-        uint8                _bKeysReady{ SW_FALSE };
+        NetX25519KeyPair       _keyPair{};  ///< 이쪽의 일회용 키. 클라이언트는 키를 만든 뒤 지우고, 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
+        NetSessionKeys         _keys{};     ///< 방향별 키와 IV.
+        unique_ptr<INetAEAD>   _sendAEAD{}; ///< 보내는 방향 키로 초기화한 AEAD.
+        NetReceiveCryptContext _receive{};  ///< 받는 방향 상태. 키를 만든 뒤 `NetEndpoint` 가 `update` 스레드 소유로 옮겨 가므로 그 뒤에는 비어 있다.
+        uint64                 _sendPacketNumber{ 0 };
+        uint64                 _principalID{ 0 };                                      ///< 서버 전용. 인증기가 지정한 주체.
+        uint8                  _arrKeyConfirmTag[NetSecurityConstant::kAEADTagSize]{}; ///< 서버 전용. 수락을 다시 보낼 때 같은 태그를 쓰기 위해 보관한다.
+        uint8                  _bKeysReady{ SW_FALSE };
     };
 } // namespace sw
 
@@ -45,7 +61,7 @@ namespace sw
 {
     /**
      * @class NetPacketSealer
-     * @brief 암호화 방식의 패킷 본문을 봉인하고 엽니다. 연 평문은 다음 `open` 까지 `getOpened` 에 남습니다.
+     * @brief 암호화 방식의 패킷 본문을 봉인하고 엽니다. 봉인은 스크래치 버퍼를 다시 쓰는 멤버이고, 열기는 부른 쪽 버퍼에 평문을 덧붙이는 static 입니다.
      */
     class SW_API NetPacketSealer
     {
@@ -77,10 +93,11 @@ namespace sw
          */
         [[nodiscard]] bool seal( NetSlotSecurity& security, uint8 typeByte, uint32 connectionToken, uint32 protocolID, bool bServer, const uint8* pPlain, int32 plainSize,
                                  BitWriter& outWriter );
-        /** @brief 본문(체크섬 헤더 뒤)을 엽니다. 재전송 방지 윈도우와 태그를 검사하고, 연 뒤에만 번호를 표시합니다. */
-        OpenResult open( NetSlotSecurity& security, uint32 protocolID, bool bServer, const uint8* pBody, int32 bodySize );
-        /** @brief 마지막으로 연 평문입니다. */
-        const vector<uint8>& getOpened() const { return _listOpenScratch; }
+        /**
+         * @brief 본문(체크섬 헤더 뒤)을 엽니다. 재전송 방지 윈도우와 태그를 검사하고, 연 뒤에만 번호를 표시합니다.
+         * @details 연 평문을 @p inoutPlainBytes 뒤에 덧붙인다(열지 못하면 길이를 그대로 둔다). @p receive 만 만지므로 그것을 쥔 스레드가 잠금 없이 부른다.
+         */
+        static OpenResult open( NetReceiveCryptContext& receive, uint32 protocolID, const uint8* pBody, int32 bodySize, vector<uint8>& inoutPlainBytes );
 
         /**
          * @brief 서버 쪽 키를 만듭니다. 일회용 키 쌍을 만들고 공유 비밀, 세션 키(@p pSecret 이 있으면 그것이 솔트), 방향별 AEAD 를 만든 뒤 개인 키를 지웁니다.
@@ -109,6 +126,5 @@ namespace sw
 
     private:
         vector<uint8> _listSealScratch; ///< 봉인한 암호문과 태그.
-        vector<uint8> _listOpenScratch; ///< 연 평문.
     };
 } // namespace sw

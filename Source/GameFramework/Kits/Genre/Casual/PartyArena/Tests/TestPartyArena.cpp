@@ -209,7 +209,7 @@ namespace
             return def;
         }
 
-        static bool readForged( PartyItemSpawner& spawner, const utf8* pItemID, float32 age, int32 serial, int32 nextSerial, uint32 count = 1 )
+        static bool readFixture( PartyItemSpawner& spawner, const utf8* pItemID, float32 age, int32 serial, int32 nextSerial, uint32 count = 1 )
         {
             GameRandom random;
             random.setSeed( 3 );
@@ -677,7 +677,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, StateRoundTripContinuesIdentically )
 /**
  * @brief [PartyArenaRulesTest] 꾸민 바이트: 콤보 · 때린 사람 · 상태 · 깃발 · 배율 · 시각이 범위 밖이거나 NaN 이면 거절한다. 결함: 최대를 넘는 콤보 · 음수 배율 · 음수 시각을 받았다
  */
-SW_TEST_CASE_F( PartyArenaRulesTest, ForgedBytesAreRefused )
+SW_TEST_CASE_F( PartyArenaRulesTest, CraftedBytesAreRefused )
 {
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( readInFreshArena( writeBytes( _arena ) ) );
@@ -699,7 +699,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, ForgedBytesAreRefused )
 /**
  * @brief [PartyArenaRulesTest] 진행 중에 몸은 탈락인데 경기는 살아 있으면 거절한다. 결함: 받으면 그 몸은 오지 않을 부활을 기다렸다
  */
-SW_TEST_CASE_F( PartyArenaRulesTest, ForgedRespawnStateMustMatchTheMatch )
+SW_TEST_CASE_F( PartyArenaRulesTest, CraftedRespawnStateMustMatchTheMatch )
 {
     SW_REQUIRE_TRUE( open() );
     SW_EXPECT_FALSE( readPatched<uint8>( kPartyFirstPlayer + kPartyFieldState, static_cast<uint8>( TrampolinePlayerState::Respawning ) ) );
@@ -852,20 +852,20 @@ SW_TEST_CASE( PartyArenaTest, SpawnerStateRoundTrips )
 /**
  * @brief [PartyArenaTest] 꾸민 스포너 바이트: 모르는 id, 음수 나이, 범위 밖 번호, 상한을 넘는 수, 잘린 바이트는 거절하고 상태를 바꾸지 않는다. 결함: id 만 보고 나머지를 받았다
  */
-SW_TEST_CASE( PartyArenaTest, SpawnerRefusesForgedState )
+SW_TEST_CASE( PartyArenaTest, SpawnerRefusesCraftedState )
 {
     PartyItemSpawner spawner;
     SW_REQUIRE_TRUE( spawner.initialize( PartyArenaTestUtil::makeSettings(), 7u ) );
     spawner.addItem( PartyArenaTestUtil::makeItem( "a", 1.0f ) );
     using Util = PartyArenaTestUtil;
-    SW_EXPECT_FALSE( Util::readForged( spawner, "ghost", 0.0f, 1, 2 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", -1.0f, 1, 2 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 0, 2 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 2, 2 ) ); // 다음 번호와 같다
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 1, 0 ) );
-    SW_EXPECT_FALSE( Util::readForged( spawner, "a", 0.0f, 1, 9, 3 ) ); // 상한은 둘이다
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "ghost", 0.0f, 1, 2 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", -1.0f, 1, 2 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 0, 2 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 2, 2 ) ); // 다음 번호와 같다
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 1, 0 ) );
+    SW_EXPECT_FALSE( Util::readFixture( spawner, "a", 0.0f, 1, 9, 3 ) ); // 상한은 둘이다
     SW_EXPECT_TRUE( spawner.getInstances().empty() );
-    SW_EXPECT_TRUE( Util::readForged( spawner, "a", 0.0f, 1, 3, 2 ) );
+    SW_EXPECT_TRUE( Util::readFixture( spawner, "a", 0.0f, 1, 3, 2 ) );
     SW_EXPECT_EQUAL( size_t( 2 ), spawner.getInstances().size() );
 
     Archive written;

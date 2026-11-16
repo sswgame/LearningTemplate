@@ -1,6 +1,6 @@
 /**
  * @file AutomationInputWatches.cpp
- * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OSDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY`.
+ * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OSDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY` · `Input.RawMouseEvents`.
  * @details 입력 층(티어 10)은 감시 값 레지스트리(티어 10)를 볼 수 없어 레지스트리를 볼 수 있는 가장 가까운 층인 Automation 이 등록합니다. 읽기는 `InputManager` 의 공개 getter 뿐입니다.
  */
 #include "pch.h"
@@ -56,6 +56,15 @@ namespace sw
         {
             return readMousePosition( false, outValue );
         }
+
+        /** @brief 감시 값 `Input.RawMouseEvents` 입니다. OS 에서 받은 원시 마우스 이동 보고 수입니다(Win32 WM_INPUT — 커서 잠금 중에만 등록한다). 늘기만 한다. */
+        [[nodiscard]] bool readRawMouseEvents( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            if ( engine::areEngineServicesBound() == false )
+                return false;
+            outValue = static_cast<float64>( engine::getSubsystem<InputManager>().getRawMouseEventCount() );
+            return true;
+        }
     } // namespace
 
     SW_AUTOMATION_WATCH( inputOSDeviceInputBlocked, "Input.OSDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
@@ -64,4 +73,6 @@ namespace sw
                          &readVirtualCursorEnabled );
     SW_AUTOMATION_WATCH( inputMouseX, "Input.MouseX", "Mouse pointer X in window client pixels (the gamepad virtual cursor moves it too)", &readMouseX );
     SW_AUTOMATION_WATCH( inputMouseY, "Input.MouseY", "Mouse pointer Y in window client pixels (the gamepad virtual cursor moves it too)", &readMouseY );
+    SW_AUTOMATION_WATCH( inputRawMouseEvents, "Input.RawMouseEvents", "Raw mouse motion reports the OS delivered so far (Win32 WM_INPUT, registered only while the cursor is locked); only grows",
+                         &readRawMouseEvents );
 } // namespace sw

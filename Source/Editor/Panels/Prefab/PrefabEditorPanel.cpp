@@ -79,7 +79,7 @@ namespace sw::editor
             return false;
 
         const bool bSpawned = _viewModel.rebuildRoot( getPreviewScene(), getPreviewSelection(), getLoadedAssetPath() );
-        resetPreviewEdits(); // 옛 문서의 편집 기록은 새 루트와 맞지 않는다
+        resetDocumentHistory(); // 옛 문서의 편집 기록은 새 루트와 맞지 않는다
         if ( bSpawned )
             getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, PrefabEditorPanelInternal::kFrameRadius );
         return bSpawned;
@@ -110,7 +110,7 @@ namespace sw::editor
         }
         if ( result == PrefabFrameExit::DocumentStep )
         {
-            setOpen( false ); // 문서 단계 — 창을 닫는다(편집이 남았으면 확인을 거친다). 문서 루트는 씬에 남는다
+            setOpen( false ); // 문서 단계 — 창을 닫는다(편집이 남았으면 확인을 거친다). 닫히면 기반이 미리보기 씬을 놓고, 다시 열면 문서 루트를 새로 스폰한다
             if ( isOpen() == false )
                 PrefabEditorViewModel::notifyExited(); // 확인을 기다리는 중이면 아직 나가지 않았다
             return true;

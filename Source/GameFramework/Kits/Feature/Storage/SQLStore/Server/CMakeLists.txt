@@ -3,11 +3,11 @@
 # @brief SQL 저장 키트(서버) — 서비스 저장소(IServiceStore)의 SQL 구현 · PostgreSQL 드라이버 · 서버 설정 → 저장소
 # ==============================================================================
 
-sw_addGameFrameworkKit(GF_Server_SQLStore)
+sw_add_game_framework_kit(GF_Server_SQLStore)
 if(NOT TARGET GF_Server_SQLStore)
 	return()
 endif()
-sw_linkRuntimeKit(GF_Server_SQLStore GF_SQLStore)
+sw_link_runtime_kit(GF_Server_SQLStore GF_SQLStore)
 # libpq-fe.h 는 Driver/Postgres 에서만 include 한다 — 링크도 이 파일에서만.
 find_package(PostgreSQL REQUIRED)
 target_link_libraries(GF_Server_SQLStore PRIVATE PostgreSQL::PostgreSQL)

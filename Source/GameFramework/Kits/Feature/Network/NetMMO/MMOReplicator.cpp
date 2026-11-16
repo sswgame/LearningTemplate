@@ -60,6 +60,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     MMOReplicator::MMOReplicator()
         : _mapEntity{}
+        , _setAlwaysRelevant{}
         , _listObserver{}
         , _interest{}
         , _settings{}
@@ -128,12 +129,17 @@ namespace sw
         }
         _mapEntity[entity._entityID] = entity;
         _interest.setPoint( entity._entityID, entity._position );
+        if ( entity._bAlwaysRelevant )
+            _setAlwaysRelevant.insert( entity._entityID );
+        else
+            _setAlwaysRelevant.erase( entity._entityID );
     }
 
     void MMOReplicator::removeEntity( uint32 entityID )
     {
         _mapEntity.erase( entityID );
         _interest.removePoint( entityID );
+        _setAlwaysRelevant.erase( entityID );
     }
 
     void MMOReplicator::setObserver( int32 connectionID, uint32 entityID )
@@ -146,7 +152,7 @@ namespace sw
         if ( observer._bActive == SW_FALSE )
         {
             observer = Observer{};
-            observer._updateOutcome.initialize( static_cast<int32>( NetMMOMessage::kMaxUnconfirmedTicks ) );
+            observer._updateResult.initialize( static_cast<int32>( NetMMOMessage::kMaxUnconfirmedTicks ) );
         }
         observer._entityID = entityID;
         observer._bActive  = SW_TRUE;
@@ -165,22 +171,22 @@ namespace sw
         return NetHandleResult::NotMine;
     }
 
-    void MMOReplicator::onDeliveryNotice( const NetDeliveryNotice& notice )
+    void MMOReplicator::onDeliveryNotification( const NetDeliveryNotification& notification )
     {
         // 메시지 펌프(게임 스레드)에서 불린다. 같은 스레드에서 차례로 실행되므로 `update` 의 병렬 본문과 겹치지 않는다.
-        const bool bUnknownConnection = notice._connectionID < 0 || notice._connectionID >= static_cast<int32>( _listObserver.size() );
+        const bool bUnknownConnection = notification._connectionID < 0 || notification._connectionID >= static_cast<int32>( _listObserver.size() );
         if ( bUnknownConnection )
             return;
-        Observer& observer = _listObserver[static_cast<size_t>( notice._connectionID )];
+        Observer& observer = _listObserver[static_cast<size_t>( notification._connectionID )];
         if ( observer._bActive == SW_FALSE )
             return;
         // 테이블 크기 이상 오래된 틱은 적지 않는다. 적으면 링 버퍼에서 새 틱의 슬롯을 덮어쓰게 된다(그 갱신은 `resolveInFlightUpdates` 가 이미 잃은 것으로 정리했다).
-        const uint32 tick     = notice._tag;
+        const uint32 tick     = notification._tag;
         const bool   bTooOld  = _tick - tick >= NetMMOMessage::kMaxUnconfirmedTicks;
         const bool   bFromNow = tick > _tick; // 이 복제기가 단 값이 아니다(재초기화 전의 통지)
         if ( bTooOld || bFromNow )
             return;
-        observer._updateOutcome.acquire( tick ) = notice._result == NetDeliveryResult::Delivered ? SW_TRUE : SW_FALSE;
+        observer._updateResult.acquire( tick ) = notification._result == NetDeliveryResult::Delivered ? SW_TRUE : SW_FALSE;
     }
 
     void MMOReplicator::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
@@ -275,8 +281,6 @@ namespace sw
             return;
         const float3 center = observerIter->second._position;
 
-        const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
-
         // 1) 보이지 않게 됨: 사라졌거나 나가는 반경 밖으로 간 엔티티이다. 항상 보이는 엔티티는 제외한다.
         vector<uint32>& listLeave = scratch._listLeave;
         listLeave.clear();
@@ -288,7 +292,7 @@ namespace sw
                 listLeave.push_back( visible.first );
                 continue;
             }
-            const bool bAlways = bAlwaysPolicy && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
+            const bool bAlways = entityIter->second._bAlwaysRelevant && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
             if ( bAlways == false && _interest.isOutsideLeaveRadius( center, entityIter->second._position ) )
                 listLeave.push_back( visible.first );
         }
@@ -302,17 +306,14 @@ namespace sw
 
     void MMOReplicator::sendEnters( int32 connectionID, Observer& observer, const float3& center, ObserverScratch& scratch )
     {
-        const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
-        // 2) 새로 보임: 들어오는 반경 안의 엔티티이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
+        // 2) 새로 보임: 들어오는 반경 안의 엔티티와 항상 보임 후보 가운데 정책이 고른 것이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
         vector<SlotHandle>& listNear = scratch._listNear;
         _interest.queryEntering( center, listNear );
-        if ( bAlwaysPolicy )
+        // 후보 집합만 묻는다 — 관찰자 × 월드 전체 엔티티가 아니라 관찰자 × 후보 수이다(언리얼 Replication Graph 의 AlwaysRelevant 노드가 미리 만든 목록을 주는 것과 같다).
+        for ( const uint32 entityID : _setAlwaysRelevant )
         {
-            for ( const auto& entity : _mapEntity )
-            {
-                if ( _pPolicy->isAlwaysRelevant( connectionID, entity.second ) )
-                    listNear.push_back( NetInterestGrid::makeKey( entity.first ) );
-            }
+            if ( _pPolicy->isAlwaysRelevant( connectionID, getEntity( entityID ) ) )
+                listNear.push_back( NetInterestGrid::makeKey( entityID ) );
         }
         // 거리는 한 번만 계산하고 (거리, id) 로 정렬한다. 비교마다 해시를 찾지 않으려는 것이다. 이미 보이는 엔티티는 뺀다.
         vector<pair<float32, uint32>>& listRank = scratch._listRank;
@@ -349,7 +350,7 @@ namespace sw
                 listEnter.push_back( ranked.second );
             }
             writer.writeBool( false );
-            if ( listEnter.empty() == false && _pHost->sendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) )
+            if ( listEnter.empty() == false && _pHost->trySendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) )
             {
                 for ( const uint32 entityID : listEnter )
                 {
@@ -426,11 +427,11 @@ namespace sw
             VisibleEntry& entry = visible.second;
             if ( entry._bInFlight == SW_FALSE )
                 continue;
-            const uint8* pOutcome = observer._updateOutcome.find( entry._inFlightTick );
+            const uint8* pResult  = observer._updateResult.find( entry._inFlightTick );
             const bool   bExpired = _tick - entry._inFlightTick >= NetMMOMessage::kMaxUnconfirmedTicks;
-            if ( pOutcome == nullptr && bExpired == false )
+            if ( pResult == nullptr && bExpired == false )
                 continue; // 아직 판정이 없다(패킷이 오가는 중이다)
-            const bool bDelivered = pOutcome != nullptr && *pOutcome == SW_TRUE;
+            const bool bDelivered = pResult != nullptr && *pResult == SW_TRUE;
             if ( bDelivered )
                 entry._listSentState.swap( entry._listInFlightState );
             entry._listInFlightState.clear();
@@ -460,7 +461,7 @@ namespace sw
             {
                 writer.writeVarUint( listLeave[sentCount + index] );
             }
-            if ( _pHost->sendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
+            if ( _pHost->trySendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
                 break; // 신뢰 창이 찼다. 남은 엔티티는 보이는 채로 두고 다음 틱에 보낸다
             for ( size_t index = 0; index < count; ++index )
             {

@@ -91,7 +91,7 @@ namespace sw
         bool   _bReview{ false };  ///< 검토가 필요한지 나타냅니다(번역 메모리의 근사 일치, PO `#, fuzzy`). 화면에 나오지 않습니다. NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 
-    // 표 항목(`<entry …/>`)의 속성 스키마다 — `XMLFields::readFields` 가 필수 칸 · 값 꼴 · 모르는 속성을 본다(원본 · 번역 표가 같은 길).
+    // 표 항목(`<entry …/>`)의 속성 스키마다 — `XMLFields::readProperties` 가 필수 칸 · 값 꼴 · 모르는 속성을 본다(원본 · 번역 표가 같은 길).
 
     /** @brief 원본 표의 `<entry key source context comment maxLength>` 입니다. */
     REFLECT()

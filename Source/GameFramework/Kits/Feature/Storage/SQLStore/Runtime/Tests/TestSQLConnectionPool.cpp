@@ -5,6 +5,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"
@@ -37,28 +38,28 @@ namespace
     class PoolTestJob final : public ISQLJob
     {
     public:
-        explicit PoolTestJob( PoolJobResult& outcome )
-            : _outcome{ outcome }
+        explicit PoolTestJob( PoolJobResult& serviceResult )
+            : _serviceResult{ serviceResult }
         {
         }
 
         void run( ISQLConnection& connection ) override
         {
-            ++_outcome._runCount;
-            _outcome._result = connection.execute( "SELECT job", nullptr, 0, nullptr );
+            ++_serviceResult._runCount;
+            _serviceResult._result = connection.execute( "SELECT job", nullptr, 0, nullptr );
         }
-        void complete() override { ++_outcome._completeCount; }
-        void cancel() override { ++_outcome._cancelCount; }
+        void complete() override { ++_serviceResult._completeCount; }
+        void cancel() override { ++_serviceResult._cancelCount; }
 
     private:
-        PoolJobResult& _outcome;
+        PoolJobResult& _serviceResult;
     };
 
     /** @brief 문이 열릴 때까지 워커를 잡아 두는 일입니다. */
-    class PoolGateJob final : public ISQLJob
+    class PoolLatchJob final : public ISQLJob
     {
     public:
-        PoolGateJob( atomic<bool>& bEntered, atomic<bool>& bRelease )
+        PoolLatchJob( atomic<bool>& bEntered, atomic<bool>& bRelease )
             : _bEntered{ bEntered }
             , _bRelease{ bRelease }
         {
@@ -82,18 +83,18 @@ namespace
     class PoolChainJob final : public ISQLJob
     {
     public:
-        PoolChainJob( SQLConnectionPool& pool, PoolJobResult& nextOutcome )
+        PoolChainJob( SQLConnectionPool& pool, PoolJobResult& nextResult )
             : _pool{ pool }
-            , _nextOutcome{ nextOutcome }
+            , _nextResult{ nextResult }
         {
         }
 
         void run( ISQLConnection& connection ) override { (void)connection; }
-        void complete() override { _pool.submit( sw::make_unique<PoolTestJob>( _nextOutcome ) ); }
+        void complete() override { _pool.submit( sw::make_unique<PoolTestJob>( _nextResult ) ); }
 
     private:
         SQLConnectionPool& _pool;
-        PoolJobResult&     _nextOutcome;
+        PoolJobResult&     _nextResult;
     };
 
     struct SQLConnectionPoolTestUtil
@@ -119,11 +120,11 @@ namespace
         /** @brief 일 하나를 맡기고 끝날 때까지 기다린 결과입니다. */
         static PoolJobResult runOne( SQLConnectionPool& pool )
         {
-            PoolJobResult outcome;
-            pool.submit( sw::make_unique<PoolTestJob>( outcome ) );
+            PoolJobResult serviceResult;
+            pool.submit( sw::make_unique<PoolTestJob>( serviceResult ) );
             const bool bDrained = pollAll( pool );
             SW_EXPECT_TRUE( bDrained );
-            return outcome;
+            return serviceResult;
         }
     };
 } // namespace
@@ -154,11 +155,11 @@ SW_TEST_CASE( SQLConnectionPoolTest, InitializeRefusesWhatCannotRun )
 SW_TEST_CASE( SQLConnectionPoolTest, JobOnAnUnstartedPoolFinishesAsConnectionLost )
 {
     SQLConnectionPool   pool;
-    const PoolJobResult outcome = SQLConnectionPoolTestUtil::runOne( pool );
-    SW_EXPECT_TRUE( outcome._result == SQLResult::ConnectionLost );
-    SW_EXPECT_EQUAL( 1, outcome._runCount );
-    SW_EXPECT_EQUAL( 1, outcome._completeCount );
-    SW_EXPECT_EQUAL( 0, outcome._cancelCount );
+    const PoolJobResult serviceResult = SQLConnectionPoolTestUtil::runOne( pool );
+    SW_EXPECT_TRUE( serviceResult._result == SQLResult::ConnectionLost );
+    SW_EXPECT_EQUAL( 1, serviceResult._runCount );
+    SW_EXPECT_EQUAL( 1, serviceResult._completeCount );
+    SW_EXPECT_EQUAL( 0, serviceResult._cancelCount );
 }
 
 SW_TEST_CASE( SQLConnectionPoolTest, RunsOnWorkerAndCompletesOnPoll )
@@ -168,18 +169,18 @@ SW_TEST_CASE( SQLConnectionPoolTest, RunsOnWorkerAndCompletesOnPoll )
     string              error;
     SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 2 ) ) );
 
-    deque<PoolJobResult> listOutcome( 16 );
-    for ( PoolJobResult& outcome : listOutcome )
+    deque<PoolJobResult> listServiceResult( 16 );
+    for ( PoolJobResult& serviceResult : listServiceResult )
     {
-        pool.submit( sw::make_unique<PoolTestJob>( outcome ) );
+        pool.submit( sw::make_unique<PoolTestJob>( serviceResult ) );
     }
     SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::pollAll( pool ) );
-    for ( const PoolJobResult& outcome : listOutcome )
+    for ( const PoolJobResult& serviceResult : listServiceResult )
     {
-        SW_EXPECT_TRUE( outcome._result == SQLResult::Ok );
-        SW_EXPECT_EQUAL( 1, outcome._runCount );
-        SW_EXPECT_EQUAL( 1, outcome._completeCount );
-        SW_EXPECT_EQUAL( 0, outcome._cancelCount );
+        SW_EXPECT_TRUE( serviceResult._result == SQLResult::Ok );
+        SW_EXPECT_EQUAL( 1, serviceResult._runCount );
+        SW_EXPECT_EQUAL( 1, serviceResult._completeCount );
+        SW_EXPECT_EQUAL( 0, serviceResult._cancelCount );
     }
     pool.shutdown();
     SW_EXPECT_EQUAL( 3, driver.getOpenCount() ); // 먼저 열어 본 하나 + 워커 둘 — 일마다 다시 열지 않는다
@@ -235,15 +236,15 @@ SW_TEST_CASE( SQLConnectionPoolTest, FailedReconnectBacksOffAndRecovers )
     driver.loseAllConnections();
     const int32          attemptsBefore = driver.getOpenCount();
     constexpr int32      kJobCount      = 32;
-    deque<PoolJobResult> listOutcome( kJobCount );
-    for ( PoolJobResult& outcome : listOutcome )
+    deque<PoolJobResult> listServiceResult( kJobCount );
+    for ( PoolJobResult& serviceResult : listServiceResult )
     {
-        pool.submit( sw::make_unique<PoolTestJob>( outcome ) );
+        pool.submit( sw::make_unique<PoolTestJob>( serviceResult ) );
     }
     SW_REQUIRE_TRUE( SQLConnectionPoolTestUtil::pollAll( pool ) );
-    for ( const PoolJobResult& outcome : listOutcome )
+    for ( const PoolJobResult& serviceResult : listServiceResult )
     {
-        SW_EXPECT_TRUE( outcome._result == SQLResult::ConnectionLost );
+        SW_EXPECT_TRUE( serviceResult._result == SQLResult::ConnectionLost );
     }
     SW_EXPECT_TRUE( driver.getOpenCount() > attemptsBefore );
     SW_EXPECT_TRUE( driver.getOpenCount() - attemptsBefore < kJobCount / 2 );
@@ -265,9 +266,9 @@ SW_TEST_CASE( SQLConnectionPoolTest, WorkerThatCouldNotConnectStillAnswers )
     SQLConnectionPool pool;
     string            error;
     SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ) );
-    const PoolJobResult outcome = SQLConnectionPoolTestUtil::runOne( pool ); // 첫 일 앞에서 한 번 더 시도한다 — 둘째 경고
-    SW_EXPECT_TRUE( outcome._result == SQLResult::ConnectionLost );
-    SW_EXPECT_EQUAL( 0, outcome._cancelCount ); // 고장이지 종료가 아니다
+    const PoolJobResult serviceResult = SQLConnectionPoolTestUtil::runOne( pool ); // 첫 일 앞에서 한 번 더 시도한다 — 둘째 경고
+    SW_EXPECT_TRUE( serviceResult._result == SQLResult::ConnectionLost );
+    SW_EXPECT_EQUAL( 0, serviceResult._cancelCount ); // 고장이지 종료가 아니다
 }
 
 /** @brief 종료는 돌던 일을 끝내고 남은 일을 취소로 끝낸다. 그 뒤 맡긴 일도 취소이고 모두 완료를 받는다. 다시 시작할 수 있다. */
@@ -280,13 +281,13 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
 
     atomic<bool> bEntered{ false };
     atomic<bool> bRelease{ false };
-    pool.submit( sw::make_unique<PoolGateJob>( bEntered, bRelease ) );
+    pool.submit( sw::make_unique<PoolLatchJob>( bEntered, bRelease ) );
     SW_REQUIRE_TRUE( test::waitUntil( [&bEntered]()
     { return bEntered.load(); } ) );
 
     PoolJobResult queued;
     pool.submit( sw::make_unique<PoolTestJob>( queued ) );
-    sw::thread stopper{ [&pool]()
+    sw::thread stopper{ ThreadTestAccess::getKey(), [&pool]()
     { pool.shutdown(); } };
 
     // 종료가 깃발을 세웠는지는 새 일이 그 자리에서 취소되는 것으로 본다. 그 전의 일은 줄에 서고 워커는 문에 잡혀 있어 칸을 만지지 않는다.

@@ -48,16 +48,16 @@ namespace sw
     /**
      * @struct BehaviorTreeXML
      * @brief 노드 원소 하나의 칸 읽기 · 쓰기입니다. 런타임 로더와 에디터 모델이 함께 쓴다(같은 형식을 두 곳이 손으로 읽지 않는다).
-     * @details 종류마다 받는 칸은 스키마 구조체(`BehaviorTreeNodeParams.h`)의 `PROPERTY` 가 정한다 — 모르는 속성 · 빠진 필수 · 범위 밖 값은 `XMLFields::readFields` 가 이름과 함께 알린다.
+     * @details 종류마다 받는 칸은 스키마 구조체(`BehaviorTreeNodeParams.h`)의 `PROPERTY` 가 정한다 — 모르는 속성 · 빠진 필수 · 범위 밖 값은 `XMLFields::readProperties` 가 이름과 함께 알린다.
      */
     struct SW_GF_API BehaviorTreeXML
     {
         /** @brief 종류 @p type 의 스키마 값을 기본값으로 담습니다(`_type` 도 채운다). 칸이 있던 작업 동작은 비웁니다. */
-        static void resetNodeFields( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData );
+        static void resetNodeProperties( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData );
         /** @brief 원소 @p node(종류 @p type)의 속성을 @p inoutData 에 읽습니다. 틀린 속성이 하나라도 있으면 false 입니다(오류는 로그에 남는다). 등록되지 않은 동작의 칸은 글로 듭니다(`_listRawParam`). */
-        [[nodiscard]] static bool readNodeFields( const XMLNode& node, BehaviorNodeKind type, string_view sourceName, BehaviorTreeNodeData& inoutData );
+        [[nodiscard]] static bool readNodeProperties( const XMLNode& node, BehaviorNodeKind type, string_view sourceName, BehaviorTreeNodeData& inoutData );
         /** @brief @p data 의 칸을 @p node 에 속성으로 씁니다(기본값은 생략 — 손으로 쓴 파일과 같은 모양). */
-        static void writeNodeFields( const XMLNode& node, const BehaviorTreeNodeData& data );
+        static void writeNodeProperties( const XMLNode& node, const BehaviorTreeNodeData& data );
         /** @brief 작업 노드의 동작을 @p task 로 바꿉니다. 칸은 그 동작의 기본값이 됩니다. 등록되지 않은 이름이면 칸이 비어 있습니다. */
         static void selectTask( BehaviorTreeNodeData& inoutData, string_view task );
     };
@@ -129,7 +129,7 @@ namespace sw
          * @details 베이스(`XMLCatalog`)의 보호된 읽기를 가리는 자기 읽기라 공개하면 사본을 읽는 길이 다시 열린다 — 종류의 로더(공유 캐시)만 부른다.
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        uint32             loadRoot( const XMLNode& root, string_view sourceName );
+        uint32             loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief 부모를 펼친 글을 읽습니다. 하위 파일은 @p source 에서 찾습니다. */
         [[nodiscard]] bool readFlatText( string_view flatText, string_view sourceName, IDataInheritanceSource& source );
 
@@ -139,5 +139,5 @@ namespace sw
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<BehaviorTreeAsset>::acquire` 로 한 벌을 받습니다. */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<BehaviorTreeAsset>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, BehaviorTreeAsset );
 } // namespace sw

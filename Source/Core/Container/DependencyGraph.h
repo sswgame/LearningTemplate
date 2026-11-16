@@ -47,7 +47,7 @@ namespace sw
         /** @brief Kahn 정렬 — 준비된 노드 가운데 **번호가 가장 작은** 것을 먼저 꺼냅니다. 결과가 데이터의 차례에 묶입니다(소리 그래프 · 믹서 · 기믹 회로). */
         [[nodiscard]] DependencyOrder sortInDataOrder() const;
         /**
-         * @brief Kahn 정렬 — 준비된 노드 가운데 **이름이 가장 앞인** 것을 먼저 꺼냅니다. 결과가 입력 차례와 무관합니다(서브시스템 · 모듈 적재 · `cmake/Engine/ModuleManifest.cmake`).
+         * @brief Kahn 정렬 — 준비된 노드 가운데 **이름이 가장 앞인** 것을 먼저 꺼냅니다. 결과가 입력 차례와 무관합니다(서브시스템 · 모듈 적재 · `cmake/Modules/Build/ModuleManifest.cmake`).
          * @param listName 노드 이름. 노드 수와 같아야 합니다. 같은 이름이면 번호가 작은 쪽이 먼저다
          */
         [[nodiscard]] DependencyOrder sortByName( const vector<string_view>& listName ) const;

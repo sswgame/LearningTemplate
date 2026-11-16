@@ -35,7 +35,7 @@ namespace sw
 
 namespace sw
 {
-    bool JRPGMember::knowsSpell( const hashed_string& spellID ) const
+    bool JRPGMember::hasLearnedSpell( const hashed_string& spellID ) const
     {
         return VectorUtil::contains( _listSpell, spellID );
     }
@@ -340,7 +340,7 @@ namespace sw
     {
         if ( isValidIndex( memberIndex ) == false )
             return false;
-        return _listMember[static_cast<size_t>( memberIndex )].knowsSpell( spellID ) || isTechniqueUnlocked( memberIndex, spellID );
+        return _listMember[static_cast<size_t>( memberIndex )].hasLearnedSpell( spellID ) || isTechniqueUnlocked( memberIndex, spellID );
     }
 
     bool JRPGParty::isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueID ) const
@@ -423,7 +423,7 @@ namespace sw
         for ( const JRPGLearnEntry& learn : classDef._listLearn )
         {
             // 모르는 주문은 카탈로그 읽기가 이미 오류로 알렸다. 배우면 세이브가 읽히지 않는다.
-            if ( learn._level != level || member.knowsSpell( learn._spellID ) || _pCatalog->findSpell( learn._spellID ) == nullptr )
+            if ( learn._level != level || member.hasLearnedSpell( learn._spellID ) || _pCatalog->findSpell( learn._spellID ) == nullptr )
                 continue;
             member._listSpell.push_back( learn._spellID );
             pushEvent( JRPGPartyEvent::Kind::LearnedSpell, memberIndex, level, learn._spellID );

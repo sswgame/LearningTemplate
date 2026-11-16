@@ -170,7 +170,7 @@ namespace sw
                 _writer.alignToByte();
                 if ( bodySize > 0 )
                     _writer.writeBytes( pBody, bodySize );
-                // 줄에 먼저 넣는다 — 같은 연결의 응답이 다른 스레드의 pump 로 보내기보다 먼저 올 수 있다.
+                // 줄에 먼저 넣는다 — 같은 연결의 응답이 다른 스레드의 poll 로 보내기보다 먼저 올 수 있다.
                 _mapPending.emplace( requestID, std::move( pending ) );
                 const StreamSendResult result = _pEndpoint->sendFrame( handle, StreamFrameKind::Request, _writer.getBytes().data(), _writer.getByteCount() );
                 if ( result == StreamSendResult::Closed || result == StreamSendResult::QueueFull )
@@ -314,6 +314,7 @@ namespace sw
         , _settings{}
         , _pEndpoint{}
         , _nextSerial{ 1 }
+        , _idempotencyBodyBytes{ 0 }
     {
     }
 
@@ -331,6 +332,7 @@ namespace sw
         _mapSerialByRequest.clear();
         _mapInFlightCount.clear();
         _mapIdempotency.clear();
+        _idempotencyBodyBytes = 0;
         _listExpiry.clear();
         _pEndpoint.reset();
         _settings.reset();
@@ -436,6 +438,13 @@ namespace sw
                 admission._replyBytes  = entry._body;
                 return admission;
             }
+            // 같은 키 대기자는 진행 수에 들지 않는다 — 상한 없이 쌓으면 같은 키 재시도를 몰아 보내 메모리를 늘릴 수 있었다(감사 N-12). 진행 상한과 같은 수까지만.
+            if ( entry._bInProgress == SW_TRUE && static_cast<int32>( entry._listWaiter.size() ) >= _settings->_maxInFlightPerConnection )
+            {
+                admission._action      = RequestAdmission::Action::Reply;
+                admission._replyStatus = NetRequestStatus::Overloaded;
+                return admission;
+            }
             if ( entry._bInProgress == SW_TRUE )
             {
                 admission._action = RequestAdmission::Action::Wait;
@@ -524,7 +533,9 @@ namespace sw
             {
                 IdempotencyEntry& entry = _mapIdempotency[inFlight._scope];
                 entry._status           = status;
+                _idempotencyBodyBytes -= static_cast<int64>( entry._body.size() );
                 entry._body.assign( pBody, pBody + bodySize );
+                _idempotencyBodyBytes += static_cast<int64>( entry._body.size() );
                 entry._bInProgress       = SW_FALSE;
                 entry._bDone             = SW_TRUE;
                 entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _settings->_idempotencyTTLSeconds );
@@ -564,16 +575,18 @@ namespace sw
 
     void NetRequestServer::purgeIdempotencyLocked( int64 now )
     {
-        const bool bOverCapacity = static_cast<int32>( _mapIdempotency.size() ) > _settings->_maxIdempotencyEntries;
-        while ( _listExpiry.empty() == false && ( _listExpiry.front().second <= now || bOverCapacity ) )
+        const auto isOverCapacity = [this]() SW_REQUIRES_LOCK( _mutex )
+        { return static_cast<int32>( _mapIdempotency.size() ) > _settings->_maxIdempotencyEntries || _idempotencyBodyBytes > _settings->_maxIdempotencyBytes; };
+        while ( _listExpiry.empty() == false && ( _listExpiry.front().second <= now || isOverCapacity() ) )
         {
             const auto found                  = _mapIdempotency.find( _listExpiry.front().first );
             const bool bExpiredEntryCompleted = found != _mapIdempotency.end() && found->second._bDone == SW_TRUE && found->second._expireNanoseconds == _listExpiry.front().second;
             if ( bExpiredEntryCompleted )
+            {
+                _idempotencyBodyBytes -= static_cast<int64>( found->second._body.size() );
                 _mapIdempotency.erase( found );
+            }
             _listExpiry.pop_front();
-            if ( bOverCapacity && static_cast<int32>( _mapIdempotency.size() ) <= _settings->_maxIdempotencyEntries )
-                break;
         }
     }
 } // namespace sw

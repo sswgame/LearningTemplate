@@ -92,7 +92,7 @@ namespace
             sw::JSONDocument fileDocument;
             sw::JSONDocument shapeDocument;
             const T          shape{};
-            if ( fileDocument.parse( text ) == false || shapeDocument.parse( sw::JSONSerializer::serialize( &shape, *T::StaticType() ) ) == false )
+            if ( fileDocument.parse( text ) == false || shapeDocument.parse( sw::JSONSerializer::serialize( &shape, *T::StaticType() ).value() ) == false )
                 return false;
             sw::vector<sw::string> listMissingKey;
             collectMissingKeys( shapeDocument.getRoot(), fileDocument.getRoot(), sw::string(), listMissingKey );
@@ -120,9 +120,9 @@ namespace
             {                    "Config/Engine/EngineConfig.json",                                                                                     "", &loadBaseLayer<sw::EngineConfig>},
             {                    "Config/Engine/MemoryBudget.json",                                                                                     "",                &loadMemoryBudget},
             {                      "Config/Engine/PackConfig.json",                                                                                     "",   &loadBaseLayer<sw::PackConfig>},
-            {                    "Config/Engine/CookContract.json",                                       "Scripts/generate/ConfigureFiles.py (configure)",                          nullptr},
-            {       "Config/Engine/ClientOnlyTypes.generated.json",             "Scripts/generate/ClientOnlyTypes.py (py -3 -m Scripts client-only-types)",                          nullptr},
-            {                "Config/Engine/ProcessExitCodes.json",                                     "Scripts/generate/ProcessExitCodes.py (configure)",                          nullptr},
+            {                    "Config/Engine/CookContract.json",                                      "Scripts/generate/configure_files.py (configure)",                          nullptr},
+            {       "Config/Engine/ClientOnlyTypes.generated.json",           "Scripts/generate/client_only_types.py (py -3 -m Scripts client-only-types)",                          nullptr},
+            {                "Config/Engine/ProcessExitCodes.json",                                   "Scripts/generate/process_exit_codes.py (configure)",                          nullptr},
             {                                       "Config/Game/",                                                                                     "",      &loadStrict<sw::GameConfig>},
             {                "Config/Server/chat_banned_words.txt",                                               "chat word filter (word list, not keys)",                          nullptr},
             {          "Config/Server/chat_ignored_characters.txt",           "chat text normalizer (U+XXXX list, not keys - ChatModerationTest reads it)",                          nullptr},
@@ -130,10 +130,11 @@ namespace
             {"Config/Server/Online/Shooter3D.external.online.json",                 "online kit settings: GameFramework types are not in the Engine image",                          nullptr},
             {                    "Config/Server/Online/Providers/", "provider lists: the kits read them (GameFramework types are not in the Engine image)",                          nullptr},
             {                                     "Config/Server/",                                                                                     "",    &loadStrict<sw::ServerConfig>},
-            {                                "Config/Environment/",                                         "Scripts/setup/Environment.py - machine-local",                          nullptr},
+            {                                "Config/Environment/",                                         "Scripts/setup/environment.py - machine-local",                          nullptr},
             {                                     "Config/Editor/",                                             "editor types are not in the Engine image",                          nullptr},
             {                                        "Config/Dev/",          "DevTools types are not in the Engine image (DevTools reads them at startup)",                          nullptr},
             {                                      "Config/Rules/",      "code rule tables: the build (layers) and Scripts/lint read them, not the engine",                          nullptr},
+            {                                      "Config/Build/",         "build policy data: CMake and the sanitizer runtime read them, not the engine",                          nullptr},
         };
 
         static const ConfigKind* findKind( sw::string_view relativePath )

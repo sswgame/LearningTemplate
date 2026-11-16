@@ -82,6 +82,15 @@ namespace sw
         const FrameProfileReport& getReport() const { return _report; }
 
         /**
+         * @brief 보고를 낸 프레임에 종료 코드를 낼지 정합니다(기본 true — 실행 인자 `-gv_profileSeconds` 계측은 측정이 곧 실행 전체다).
+         * @details 부하 시나리오는 끄고 끝을 실행기가 정한다 — 측정 창(벽시계)과 판정 단계(시뮬레이션 시계)가 따로 흘러, 느린 기계에서 창이 먼저 닫히면
+         *          판정이 돌기 전에 프로세스가 끝났다. 언리얼 CSV 프로파일러의 `-csvExitOnCompletion` 과 같은 자리다(끝은 테스트 컨트롤러가 쥔다).
+         */
+        void setExitOnCompletion( bool bExit ) { _bExitOnCompletion = bExit ? SW_TRUE : SW_FALSE; }
+        /** @brief 측정 창을 닫고 보고를 냈는가입니다. */
+        bool isCompleted() const { return _bReported == SW_TRUE; }
+
+        /**
          * @brief 측정 창을 닫을 때인가입니다. 프레임 목표와 시간 목표 가운데 먼저 닿는 쪽이 닫습니다(0 인 목표는 보지 않습니다).
          * @details 프레임 상한이 없는 실행은 초당 프레임 수가 장면마다 수십 배 달라 "N 프레임" 이 몇 초인지 모릅니다 — 오래 도는 테스트(soak)은
          *          시간으로 끊습니다(`-gv_profileSeconds`).
@@ -141,5 +150,6 @@ namespace sw
         uint8              _bReported                  : 1; ///< 보고를 이미 냈다 — 프레임마다 다시 찍지 않는다
         uint8              _bWarmedUp                  : 1; ///< 워밍업 구간을 이미 버렸다
         uint8              _bAllocationTrackingStarted : 1; ///< 측정 구간에서 할당 추적을 켰다(보고 뒤 세부 추적을 끈다)
+        uint8              _bExitOnCompletion          : 1; ///< 보고를 낸 프레임에 종료 코드(통과)를 낸다(`setExitOnCompletion`)
     };
 } // namespace sw

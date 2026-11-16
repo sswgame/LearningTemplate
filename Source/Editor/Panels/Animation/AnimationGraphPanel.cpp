@@ -103,7 +103,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( AnimationGraphPanel, AnimationGraphPanel::kPanelID, EditorPanelCategory::Tool, 1100 );
 
     AnimationGraphPanel::AnimationGraphPanel()
-        : EditorGraphDocumentPanel{ EditorAssetType{ AnimationGraphAsset::kAssetType }, "Move Animation Graph Nodes", "animation-graph-layout", &ed::SetCurrentEditor }
+        : EditorGraphDocumentPanel{ EditorAssetType{ AnimationGraphAsset::kAssetType }, "Move Animation Graph Nodes", &ed::SetCurrentEditor }
         , _preview{}
         , _layerEditor{}
         , _nameEditBuffer{}
@@ -647,7 +647,7 @@ namespace sw::editor
         ImGui::TextUnformatted( "Loop" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        if ( ImGui::Combo( "##stateLoop", &loopIndex, arrLoop, 3 ) )
+        if ( EditorWidgets::combo( SW_WIDGET_ID( "##stateLoop" ), &loopIndex, arrLoop, 3 ) )
         {
             pNode->_loop = loopIndex == 0 ? optional<bool>{} : optional<bool>( loopIndex == 1 );
             notifyDocumentEdited( "Edit Animation State" );
@@ -818,7 +818,7 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Condition" ) );
         bool bEdited = false;
         if ( ImGui::IsAnyItemActive() == false )
-            _parameterEditBuffer = pLink->_parameter.viewOrEmpty(); // 빈 이름은 빈 칸이다("None" 이 아니다)
+            _parameterEditBuffer = pLink->_parameter.view(); // 빈 이름은 빈 칸이다("None" 이 아니다)
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Param" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
@@ -835,7 +835,7 @@ namespace sw::editor
         ImGui::TextUnformatted( "Op" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        const bool bOpOpen = ImGui::BeginCombo( "##conditionOp", pLink->_op == AnimationConditionOp::None ? "(on finish)" : getEnumName( pLink->_op ) );
+        const bool bOpOpen = EditorWidgets::beginCombo( "##conditionOp", pLink->_op == AnimationConditionOp::None ? "(on finish)" : getEnumName( pLink->_op ) );
         EditorSelfTestMarks::record( "animationGraph.condition.op" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ConditionOpTip" ) );
         if ( bOpOpen )
@@ -860,14 +860,14 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Value" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        ImGui::DragFloat( "##conditionValue", &pLink->_threshold, 0.05f );
+        EditorWidgets::dragFloat( SW_WIDGET_ID( "##conditionValue" ), &pLink->_threshold, 0.05f );
         EditorSelfTestMarks::record( "animationGraph.condition.value" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "ConditionValueTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Blend" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
-        ImGui::DragFloat( "##transitionBlend", &pLink->_blendSeconds, 0.01f, -1.0f, 10.0f, pLink->_blendSeconds < 0.0f ? "(player default)" : "%.2f s" );
+        EditorWidgets::dragFloat( SW_WIDGET_ID( "##transitionBlend" ), &pLink->_blendSeconds, 0.01f, -1.0f, 10.0f, pLink->_blendSeconds < 0.0f ? "(player default)" : "%.2f s" );
         EditorSelfTestMarks::record( "animationGraph.condition.blend" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "TransitionBlendTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;

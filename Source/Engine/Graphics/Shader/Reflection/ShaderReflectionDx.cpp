@@ -201,6 +201,7 @@ namespace sw
                     varInfo._name   = varDesc.Name != nullptr ? varDesc.Name : "";
                     varInfo._offset = varDesc.StartOffset;
                     varInfo._size   = varDesc.Size;
+                    varInfo._usage  = ( varDesc.uFlags & D3D_SVF_USED ) != 0 ? ShaderVariableUsage::Used : ShaderVariableUsage::Unused;
                     TType* pTy      = pVar->GetType();
                     if ( pTy != nullptr )
                     {

@@ -303,7 +303,7 @@ namespace sw
          */
         Scene* applyScene( unique_ptr<Scene> scene, SceneRole role );
         /** @brief 워커가 지은 씬의 쥔 등록을 이번 프레임 몫만큼 부릅니다(`gv_sceneRegisterComponentsPerFrame`). 이제 받아도 되면 true, 남았으면 false 입니다. */
-        [[nodiscard]] bool pumpPendingSceneRegistration();
+        [[nodiscard]] bool processPendingSceneRegistration();
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
         /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 모두 여기로 옵니다. */
@@ -357,9 +357,9 @@ namespace sw
         unique_ptr<PreloadSet> _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
         uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
         SceneLoadLeakProbe     _leakProbe;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakProbe`)
-    };
 
-    SW_SERVICE_SLOT( SceneManager, Required );
+        SW_SERVICE_SLOT( SceneManager, Required );
+    };
 } // namespace sw
 
 namespace sw

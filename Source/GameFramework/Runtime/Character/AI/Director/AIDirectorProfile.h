@@ -24,6 +24,7 @@
 
 namespace sw
 {
+    class XMLCatalogRoot;
     class XMLNode;
 
     /** @brief 긴장도 신호를 긴장도에 반영하는 방식입니다(파일에는 열거자 이름). */
@@ -232,7 +233,7 @@ namespace sw
     /**
      * @class AIDirectorProfile
      * @brief `*.director.xml` 하나입니다.
-     * @details 모르는 원소, 속성, 종류, 단계, 신호와 겹친 id, 단계 없음, 깨진 값과 PROPERTY( Min · Max ) 밖 값은 로드 오류이며, 오류를 남기고 false 를 반환한다. 칸은 `XMLFields::readFields` 가 읽는다.
+     * @details 모르는 원소, 속성, 종류, 단계, 신호와 겹친 id, 단계 없음, 깨진 값과 PROPERTY( Min · Max ) 밖 값은 로드 오류이며, 오류를 남기고 false 를 반환한다. 칸은 `XMLFields::readProperties` 가 읽는다.
      * @code
      *     <AIDirector startPhase="BuildUp">
      *       <Calendar weathers="sunny,rain"/>                                         <!-- 조건 이름 검사(선택) -->
@@ -283,7 +284,7 @@ namespace sw
     private:
         /** @brief 리소스 경로의 프로필을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AIDirectorProfile>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool readIntensity( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPhase( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPool( const XMLNode& node, const ScheduleConditionSchema& vocabulary, string_view sourceName );
@@ -304,5 +305,5 @@ namespace sw
      *          쥔 쪽은 다시 읽은 횟수가 바뀌면 새 객체를 받아 감독이 번호를 이어 옮긴다(`AIDirector::rebindProfile` — 구조가 같은 변경만, 구조가 바뀌면 그 판은 옛 객체로 돈다).
      *          언리얼 AI 감독 데이터 에셋 한 벌과 같은 자리다(기억에 의존).
      */
-    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<AIDirectorProfile>;
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_GF_API_EXTERN_TEMPLATE, AIDirectorProfile );
 } // namespace sw

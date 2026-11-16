@@ -20,7 +20,7 @@ namespace sw
 
             [[nodiscard]] static bool readPiece( const XMLNode& node, EquipmentSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setID )
             {
-                (void)AppearanceXMLUtil::readFields( node, outPiece, report, sourceName, { "items" } ); // 오류는 보고서에 쌓인다
+                (void)AppearanceXMLUtil::readProperties( node, outPiece, report, sourceName, { "items" } ); // 오류는 보고서에 쌓인다
                 AppearanceXMLUtil::readNameList( node, "items", outPiece._listItem );
                 if ( outPiece._slot.empty() || outPiece._listItem.empty() )
                 {
@@ -53,7 +53,7 @@ namespace sw
                 continue;
             }
             EquipmentSetDef def;
-            (void)AppearanceXMLUtil::readFields( setNode, def, report, sourceName );
+            (void)AppearanceXMLUtil::readProperties( setNode, def, report, sourceName );
             if ( def._id.empty() )
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findSet( def._id ) != nullptr )
@@ -77,7 +77,7 @@ namespace sw
                 else if ( StringUtil::equals( pName, "Variant" ) )
                 {
                     EquipmentSetVariantDef variant;
-                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName );
+                    (void)AppearanceXMLUtil::readProperties( child, variant, report, sourceName );
                     if ( variant._bodyType.empty() )
                         report.addErrorWithID( "Appearance.SetVariantNoBodyType", "%#: set '%#' <Variant> without a bodyType", sourceName, def._id.c_str() );
                     for ( XMLNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
@@ -93,7 +93,7 @@ namespace sw
                 else if ( StringUtil::equals( pName, "Complete" ) )
                 {
                     EquipmentSetCompleteParams complete;
-                    (void)AppearanceXMLUtil::readFields( child, complete, report, sourceName, { "slots" } );
+                    (void)AppearanceXMLUtil::readProperties( child, complete, report, sourceName, { "slots" } );
                     def._completeVisual = complete._visual;
                     AppearanceXMLUtil::readNameList( child, "slots", def._listCompleteSlot );
                     if ( def._completeVisual.empty() || def._listCompleteSlot.empty() )

@@ -25,7 +25,7 @@ namespace sw
     /**
      * @struct ModSupportSettings
      * @brief 모드 정책과 한계입니다. 값은 `parseXMLText` 가 채운다.
-     * @details 루트 속성(한계)은 리플렉션 칸이다 — `XMLFields::readFields` 가 필수(`Required`) · 범위(`Min = 1`, 0 인 한계는 모든 모드를 막는 오타다)를 본다.
+     * @details 루트 속성(한계)은 리플렉션 칸이다 — `XMLFields::readProperties` 가 필수(`Required`) · 범위(`Min = 1`, 0 인 한계는 모든 모드를 막는 오타다)를 본다.
      */
     REFLECT()
     struct SW_KIT_API ModSupportSettings

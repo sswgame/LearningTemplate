@@ -75,7 +75,7 @@ namespace sw
         AccountIdentity    _identity{};    ///< Validate, Register(계정 id), Link* 의 결과이다
         AccountLinkSummary _linkSummary{}; ///< ListLinks
         uint64             _requestTag{ 0 };
-        LoginOutcome       _result{ LoginResult::Ok };
+        LoginServiceResult _result{ LoginResult::Ok };
         LoginOperation     _operation{ LoginOperation::Login };
     };
 } // namespace sw
@@ -108,6 +108,8 @@ namespace sw
         void setSecretVault( const LoginSecretVault* pVault ) { _pSecretVault = pVault; }
         /** @brief 빌드 버전 확인에 쓸 원격 설정을 지정합니다. 빌려 쓰는 포인터이며, 없으면 확인하지 않습니다. */
         void setRemoteConfig( const RemoteConfig* pRemoteConfig ) { _pRemoteConfig = pRemoteConfig; }
+        /** @brief 탈퇴 정리가 계정을 지운 뒤 부를 키트 훅입니다. 키트 조립이 `start` 에서 넘깁니다(모든 키트의 `initialize` 뒤). 키트가 소유하고 서비스보다 오래 삽니다. */
+        void setAfterDeleteAccount( vector<const IAfterDeleteAccount*> listHook ) { _listAfterDeleteAccount = std::move( listHook ); }
         /** @brief 외부 확인 결과를 회수합니다. 제공자의 `tick` 과 `pollVerifications` 를 부르며, 서비스 스레드의 틱마다 호출합니다. */
         void update( UnixMilliseconds nowMs );
 
@@ -192,20 +194,20 @@ namespace sw
         [[nodiscard]] bool consumeAttempt( uint64 clientKey, UnixMilliseconds nowMs, int64& outRetryAfterMs );
         /** @brief 철회할 제공자가 있으면 주기마다 철회 대기열을 읽고, 끝난 철회의 항목을 지웁니다. `update` 가 부릅니다. */
         void updateRevocations( UnixMilliseconds nowMs );
-        void pushImmediate( LoginOperation operation, uint64 requestTag, LoginOutcome result, const LoginGrant& grant );
+        void pushImmediate( LoginOperation operation, uint64 requestTag, LoginServiceResult result, const LoginGrant& grant );
         /** @brief 빌드 버전을 확인합니다. 최소 버전 미만이면 `UpdateRequired` 이고 @p outGrant 에 상점 주소를 채웁니다. 권장 버전 미만이면 Ok 와 `_bUpdateRecommended` 를 반환합니다. */
-        LoginOutcome evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
-        void         beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
-                                        const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag );
-        void         finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
-        void         removeOfflineIdentities();
+        LoginServiceResult evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
+        void               beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
+                                              const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag );
+        void               finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
+        void               removeOfflineIdentities();
         /** @brief 요청 하나의 저장 일을 맡깁니다. 완료가 `applyCompletion` 으로 간다. */
         void submitCall( LoginCallInput&& input );
         /** @brief 끊김 · 세션 다시 읽기 · 탈퇴 정리 일을 맡깁니다. 응답이 없다. */
         void                  submitMaintenance( LoginMaintenanceInput&& input );
         static LoginCallInput makeCallInput( LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs );
         /** @brief 저장 일의 완료입니다. 밀려남, 오프라인, 끊김, 온라인, 이벤트 순서로 적용합니다. */
-        void applyCompletion( LoginCompletion&& completion, const LoginStoreResult& outcome );
+        void applyCompletion( LoginCompletion&& completion, const LoginStoreResult& serviceResult );
         /** @brief 철회 대기열 읽기의 완료입니다. 읽은 항목의 비밀을 풀어 제공자에 철회를 맡깁니다. */
         void applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs );
 
@@ -228,7 +230,8 @@ namespace sw
         const RemoteConfig*                                                _pRemoteConfig;
         const LoginSecretVault*                                            _pSecretVault;
         size_t                                                             _refreshCursor;
-        ServicePeriodicJob                                                 _revocationScanJob; ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
-        ServiceStoreTracker                                                _store;             ///< 저장소에 맡긴 일의 앞이다
+        ServicePeriodicJob                                                 _revocationScanJob;      ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
+        ServiceStoreTracker                                                _store;                  ///< 저장소에 맡긴 일의 앞이다
+        vector<const IAfterDeleteAccount*>                                 _listAfterDeleteAccount; ///< 탈퇴 뒤 키트 정리 훅(`setAfterDeleteAccount`)
     };
 } // namespace sw

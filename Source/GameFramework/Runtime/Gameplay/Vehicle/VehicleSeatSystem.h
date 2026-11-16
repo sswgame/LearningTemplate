@@ -40,7 +40,7 @@ namespace sw
         /** @brief 매니저에 붙은 시스템입니다. 없으면 nullptr 입니다. */
         static VehicleSeatSystem* find( const GameObjectManager& manager );
         /** @brief 매니저의 시스템을 반환합니다. 없으면 붙입니다(게임 스레드, 틱 밖). */
-        static VehicleSeatSystem& ensureFor( GameObjectManager& manager );
+        static VehicleSeatSystem& findOrCreate( GameObjectManager& manager );
         /** @brief 좌석이 하나도 등록되어 있지 않으면 시스템을 뗍니다. */
         static void releaseIfUnused( GameObjectManager& manager );
 

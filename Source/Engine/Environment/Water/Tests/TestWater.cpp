@@ -123,8 +123,8 @@ SW_TEST_CASE( WaterTest, LakeQueriesAndUnderwater )
     pWater->setWaveTime( 1.5f );
     SW_EXPECT_TRUE( pWater->getSurfaceVertexCount() > 0 );
 
-    SW_EXPECT_TRUE( pWater->coversPosition( 19.0f, -1.0f ) );
-    SW_EXPECT_FALSE( pWater->coversPosition( 21.0f, -1.0f ) );
+    SW_EXPECT_TRUE( pWater->containsPosition( 19.0f, -1.0f ) );
+    SW_EXPECT_FALSE( pWater->containsPosition( 21.0f, -1.0f ) );
     float32 height{ 0.0f };
     SW_REQUIRE_TRUE( pWater->computeSurfaceHeight( 12.0f, -4.0f, height ) );
     float4 arrWave[shaderslot::kGerstnerWaveCount];
@@ -168,7 +168,7 @@ SW_TEST_CASE( WaterTest, RiverFollowsItsPath )
     SW_REQUIRE_TRUE( pWater->computeSurfaceHeight( 21.0f, 10.0f, height ) );
     SW_EXPECT_NEAR( 1.0f, height, 1.0e-5f );
     SW_EXPECT_FALSE( pWater->computeSurfaceHeight( 10.0f, 3.0f, height ) ); // 반폭 2 밖
-    SW_EXPECT_FALSE( pWater->coversPosition( 10.0f, 10.0f ) );
+    SW_EXPECT_FALSE( pWater->containsPosition( 10.0f, 10.0f ) );
 }
 
 /**

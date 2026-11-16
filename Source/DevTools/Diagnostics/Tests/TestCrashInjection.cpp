@@ -147,9 +147,9 @@ SW_TEST_CASE( CrashInjectionTest, StuckReportStillEndsAndKeepsTheStackFile, ._ta
     expectCrashFiles( folder, "stuck" );
 }
 
-    #if defined( SW_DEBUG )
+    #if defined( SW_DO_CHECKS )
 /**
- * @brief 실패한 `SW_ASSERT` 는 멈추기 전에 식 · 자리를 남기고 크래시 보고도 남는다(단언은 Debug 에만 있다).
+ * @brief 실패한 `SW_ASSERT` 는 멈추기 전에 식 · 자리를 남기고 크래시 보고도 남는다(단언은 검사 구성(배포가 아닌 구성)에만 있다).
  * @details 아무것도 찍지 않고 멈추면 디버거 없이 돌 때 "EXCEPTION_BREAKPOINT"(리눅스 SIGILL)와 스택만 남아 어느 식이 어긋났는지 모른다.
  */
 SW_TEST_CASE( CrashInjectionTest, FailedAssertNamesItsExpressionBeforeStopping, ._tags = "slow", ._timeoutSeconds = 180.0f )

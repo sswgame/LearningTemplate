@@ -40,7 +40,7 @@ SW_TEST_CASE( SequencerTest, KindTableRowsAreConsistent )
     {
         const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( static_cast<SequenceItemKind>( kindIndex ) );
         SW_REQUIRE_NOT_NULL( pInfo );
-        SW_EXPECT_EQUAL( 0, static_cast<int32>( pInfo->_requiredFields & ~pInfo->_allowedFields ) );
+        SW_EXPECT_EQUAL( 0, static_cast<int32>( pInfo->_requiredProperties & ~pInfo->_allowedProperties ) );
         const bool bSpanKind = pInfo->_kind == SequenceItemKind::Animation || pInfo->_kind == SequenceItemKind::Audio || pInfo->_kind == SequenceItemKind::Subtitle;
         SW_EXPECT_EQUAL( bSpanKind, pInfo->_pSpanHandler != nullptr );
     }

@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     namespace
@@ -18,7 +20,7 @@ namespace sw
                 /** @brief 중복 검사 이름(`<자리>:<종류>:<판>`)입니다. */
                 static string makeStepName( FormatUpgradeDomain domain, string_view kind, uint32 fromVersion )
             {
-                string name = domain == FormatUpgradeDomain::AssetXML ? "AssetXML:" : "SaveBytes:";
+                string name = domain == FormatUpgradeDomain::AssetXML ? "AssetXML:" : ( domain == FormatUpgradeDomain::SaveBytes ? "SaveBytes:" : "StateBytes:" );
                 name += kind;
                 name += ':';
                 name += sw::to_string( fromVersion );
@@ -74,6 +76,23 @@ namespace sw
                 return false;
             }
         }
+        return true;
+    }
+
+    bool FormatUpgradeStep::runStateStep( StateUpgradeFunction pFunction, FormatUpgradePayload& payload )
+    {
+        if ( payload._pBytes == nullptr )
+            return false;
+        vector<uint8>& bytes = *payload._pBytes;
+        Archive        oldBody( bytes.data(), bytes.size() );
+        Archive        newBody;
+        if ( pFunction( oldBody, newBody ) == false || oldBody.isError() || newBody.isError() )
+            return false;
+        // 단계가 읽지 않은 꼬리(바깥 형식의 칸)는 그대로 옮긴다.
+        const uint64 tailSize = oldBody.getRemainingBytes();
+        if ( tailSize > 0 )
+            newBody.writeBytes( bytes.data() + oldBody.getOffset(), tailSize );
+        newBody.writeData( bytes );
         return true;
     }
 

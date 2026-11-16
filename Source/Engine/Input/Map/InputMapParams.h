@@ -1,7 +1,7 @@
 /**
  * @file InputMapParams.h
  * @brief 입력 맵 파일(`*.input.xml`)의 원소마다 적을 수 있는 칸의 스키마입니다(`<InputMap>` · `<layer>` · `<action>` · 바인딩 원소 일곱 — `bind` · `axis1d` · `chord` 는 `layer` · `time` · `negate` · `taps` 를 함께 받는다).
- * @details 속성 이름 · 필수 · 범위 · 기본값은 여기 `PROPERTY` 가 정본이고 `XMLFields::readFields` · `writeFields` 가 읽고 쓴다(언리얼 Input Mapping Context 의 UPROPERTY 자리).
+ * @details 속성 이름 · 필수 · 범위 · 기본값은 여기 `PROPERTY` 가 정본이고 `XMLFields::readProperties` · `writeProperties` 가 읽고 쓴다(언리얼 Input Mapping Context 의 UPROPERTY 자리).
  *          열거 값은 열거자 이름 그대로다(`trigger="Pressed"`, `source="Key"`). 키 · 마우스 버튼 이름은 `Key` · `MouseButton` 열거, 패드 버튼은 `GamepadButtonUtil` 이름이다.
  *          장치마다 뜻이 다른 `code` · `negative` · `positive` 만 글로 두고 `source` 를 보고 읽는다. 칸 사이 의미(가상 커서 충돌, 같은 레이어 충돌)는 `InputMap` 이 본다.
  */

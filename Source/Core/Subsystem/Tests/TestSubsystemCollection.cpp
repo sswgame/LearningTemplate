@@ -359,7 +359,7 @@ SW_TEST_CASE( SubsystemCollectionTest, DependentsRestartWithTheSameBodies )
     SW_REQUIRE_TRUE( pDevice != nullptr );
     recorder._listEvent.clear();
 
-    collection.shutdownDependentsOf( *pDevice );
+    collection.shutdownDependents( *pDevice );
     SW_EXPECT_EQUAL( string( "SceneDevice RenderThread Renderer" ), recorder.joinEvents( 'P' ) );
     SW_EXPECT_EQUAL( string( "SceneDevice RenderThread Renderer" ), recorder.joinEvents( 'S' ) );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 6 ), recorder._listEvent.size() );
@@ -393,7 +393,7 @@ SW_TEST_CASE( SubsystemCollectionTest, FailedRestartLeavesTheRestStopped )
             pDevice = &collection.getSubsystem( index );
     }
     SW_REQUIRE_TRUE( pDevice != nullptr );
-    collection.shutdownDependentsOf( *pDevice );
+    collection.shutdownDependents( *pDevice );
     recorder._failName   = "RenderThread";
     recorder._failResult = SubsystemInitResult::Failed;
     SW_EXPECT_FALSE( collection.restartStopped() );

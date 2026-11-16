@@ -26,12 +26,14 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
 {
     struct OnlineServerConfig;
 
     class EphemeralStoreRouter;
+    class IAfterDeleteAccount;
     class IClock;
     class IEphemeralStore;
     class IOnlineServerService;
@@ -87,6 +89,11 @@ namespace sw
         uint64                    _serverID{ 1 };
         ServerDescriptor          _serverDescriptor{}; ///< 이 서버의 설명(id · 종류 · 지역 · 공개 주소 · 게임 포트와 수). 디렉터리 등록과 매칭 백필이 같은 값을 쓴다
         UnixMilliseconds          _nowMs{ 0 };         ///< 시작 시각. 테스트는 가짜 시각을 넣는다
+
+        // 키트가 `initialize` 에서 채운다(`IOnlineServerKit::addTTLRule`). 런타임이 키트를 모두 띄운 뒤 기반 규칙과 함께 보존 쓸기에 넘긴다.
+        vector<ServiceTTLRule> _listTTLRule{};
+        // 런타임이 키트의 `initialize` 가 성공할 때마다 `getAfterDeleteAccount` 를 모은다. 계정 키트가 `start` 에서 탈퇴 정리에 넘긴다. 키트가 소유한다.
+        vector<const IAfterDeleteAccount*> _listAfterDeleteAccount{};
     };
 } // namespace sw
 
@@ -126,9 +133,15 @@ namespace sw
          * @brief 종료 드레인이 끝나기를 기다려야 하는 이 키트의 진행 중인 일 수입니다(진행 중인 매치 · 거래 · 저장). 키트별 종료 API 의 한 칸 — 접속은 호스트가 센다.
          * @details 기본 0(기다릴 일이 없다). 서버 루프가 접속 수와 함께 0 이 될 때까지(기한 안에서) 틱을 돌리므로, 키트는 일이 끝나는 대로 줄이기만 하면 된다.
          */
-        virtual int32 getOpenWorkCount() const { return 0; }
+        virtual int32 getOpenJobCount() const { return 0; }
         /** @brief 종료 드레인이 시작될 때 한 번 불립니다. 새 일을 받지 않고 진행 중인 일을 마무리하며 접속한 클라이언트에 사유를 알립니다(`ServerShutdownNotice`). 기본은 아무 일도 하지 않습니다. */
-        virtual void beginShutdown( const ServerShutdownNotice& notice ) { (void)notice; }
+        virtual void beginShutdown( const ServerShutdownNotice& notification ) { (void)notification; }
+
+        /**
+         * @brief 탈퇴한 계정의 이 키트 레코드를 지우는 훅입니다. 계정 id 를 키나 값으로 두는 표가 없으면 nullptr 를 반환합니다.
+         * @details 순수 가상이다 — 키트를 새로 만들면 탈퇴 정리를 정하지 않고는 컴파일되지 않는다. 훅은 키트보다 짧게 쓰인다(저장소 일이 키트 `shutdown` 전에 회수된다).
+         */
+        virtual const IAfterDeleteAccount* getAfterDeleteAccount() const = 0;
 
         /** @brief 인터페이스를 `get` 으로 받는 키트 이름(`OnlineServerKitName`)입니다. 설정에 없으면 기동 오류이고, 있으면 이 키트보다 먼저 섭니다. */
         virtual span<const utf8* const> getRequiredKits() const { return {}; }
@@ -161,6 +174,13 @@ namespace sw
                 return {};
             return unexpected( Error{ ErrorKind::AlreadyExists, "the kit exposes an interface another kit already exposed", entry._name } );
         }
+
+        /**
+         * @brief 이 키트 테이블의 TTL 규칙 @p rule 에 설정 @p config 의 쓸기 상한을 넣어 문맥에 올립니다. 런타임이 모든 키트의 `initialize` 뒤에 기반 규칙(감사 · 원장 · 신고 · 보낸 우편)과 함께 매일 쓸기에 넘깁니다.
+         * @details 기간은 키트 설정(Config JSON)에서 읽어 넣습니다. 규칙이 틀렸거나(기간 · 시각 읽기 · 색인이 없다) 같은 테이블 · 접두어 규칙이 이미 있으면 대상이 키트 이름인 오류입니다.
+         *          테이블 주인이 보존을 정하는 자리다 — PlayFab 의 데이터 보존 정책, Nakama 의 저장소 TTL 과 같다.
+         */
+        [[nodiscard]] static expected<void> addTTLRule( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, ServiceTTLRule rule, const ServiceTTLConfig& config );
 
     private:
         uint8 _bStarted : 1;

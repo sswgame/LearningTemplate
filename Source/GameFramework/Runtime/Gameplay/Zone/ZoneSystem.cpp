@@ -19,11 +19,11 @@ namespace sw
 
     ZoneSystem* ZoneSystem::find( const GameObjectManager& manager )
     {
-        // 이 키로는 이 타입만 붙인다(`ensureFor`).
+        // 이 키로는 이 타입만 붙인다(`findOrCreate`).
         return static_cast<ZoneSystem*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
     }
 
-    ZoneSystem& ZoneSystem::ensureFor( GameObjectManager& manager )
+    ZoneSystem& ZoneSystem::findOrCreate( GameObjectManager& manager )
     {
         ZoneSystem* pSystem = find( manager );
         if ( pSystem != nullptr )

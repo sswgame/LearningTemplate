@@ -207,7 +207,7 @@ namespace sw::editor
     void CharacterEditorModel::openBodyData( const hashed_string& bodyShapesAsset )
     {
         const string folder( _paths._appearanceFolder.c_str() );
-        openBodyDataFile( _bodyShapes, bodyShapesAsset.viewOrEmpty() );
+        openBodyDataFile( _bodyShapes, bodyShapesAsset.view() );
         openBodyDataFile( _bodyProfiles, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "bodyprofiles.xml" ) ) );
         openBodyDataFile( _visuals, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "itemvisuals.xml" ) ) );
     }
@@ -265,6 +265,14 @@ namespace sw::editor
         if ( bSaved )
             _status.clear();
         return bSaved;
+    }
+
+    void CharacterEditorModel::collectFilesToSave( vector<string>& outListAssetID ) const
+    {
+        if ( _sockets.isDirty() )
+            outListAssetID.push_back( string( _paths._socketPath.c_str() ) );
+        if ( _pose.isDirty() )
+            outListAssetID.push_back( string( _paths._refPosePath.c_str() ) );
     }
 
     void CharacterEditorModel::revert()

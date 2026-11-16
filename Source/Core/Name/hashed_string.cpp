@@ -36,7 +36,7 @@ namespace sw
         // 함수 지역 static 은 **한 번만** 생성된다. shutdown 이 `clear()` 로 0번 청크와 미리 정의된 이름까지 돌려주므로, 두 번째
         // initialize 에서는 생성자가 돌지 않아 **빈 테이블**을 가리키게 된다. 그러면 `hashed_string( NameType_float3 )` 의
         // `c_str()` 이 nullptr 이 되고, 새로 intern 되는 첫 문자열이 0번(`NameType_None`)을 받아 기본 생성자와 같아진다. 둘 다
-        // 조용히 틀린 답이다. 위의 단언은 Debug 전용이라 Shipping 에서는 막아 주지도 못한다. 그래서 저장소를 다시 생성한다.
+        // 조용히 틀린 답이다. 위의 단언은 검사 구성 전용이라 Shipping 에서는 막아 주지도 못한다. 그래서 저장소를 다시 생성한다.
         if ( s_instance._arrChunk[0].load( std::memory_order_acquire ) == nullptr )
             s_instance.initializeStorage();
 

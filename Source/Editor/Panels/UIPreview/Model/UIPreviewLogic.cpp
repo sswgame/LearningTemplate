@@ -414,7 +414,7 @@ namespace sw::editor
         PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );
         if ( pParent == nullptr || index >= pParent->getChildCount() )
             return {};
-        return pParent->removeChild( pParent->getChild( index ) );
+        return pParent->removeChild( pParent->getChild( index ) ).release(); // 되돌리기 기록이 미리보기 트리보다 오래 맡는다(편집은 이벤트 전달 밖이다)
     }
 
     Widget* UIPreviewLogic::attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index )
@@ -430,7 +430,7 @@ namespace sw::editor
         return castTo<const CanvasPanel>( widget.getParent() ) != nullptr;
     }
 
-    UIPreviewSlotParams UIPreviewLogic::findSlotFields( const Widget& widget )
+    UIPreviewSlotParams UIPreviewLogic::findSlotProperties( const Widget& widget )
     {
         UIPreviewSlotParams params{};
         const auto*         pParent = widget.getParent();
@@ -580,13 +580,6 @@ namespace sw::editor
         return true;
     }
 
-    string UIPreviewLogic::makeEditCoalesceKey( uint32 generation, uint32 ordinal, string_view propertyName )
-    {
-        StringBuilder<constant::buffer::kMax256> resultBuilder;
-        resultBuilder.appendFormat( "uipreview.%#.%#.%#", generation, ordinal, propertyName );
-        return string( resultBuilder.view() );
-    }
-
     expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath )
     {
         const Widget* pRoot = screen.getTree().getRoot();
@@ -686,7 +679,7 @@ namespace sw::editor
         float2 local{};
         if ( grid.getGeometry().inverseTransformPoint( screenPoint, local ) == false )
             return false;
-        // 격자는 RTL 이면 늘 거울로 놓는다(`mirrorsChildrenInRightToLeft` 를 바꾸지 않는다) — 배치는 거울 전 좌표로 줄을 정한다(`PanelWidget::arrangeChild`).
+        // 격자는 RTL 이면 늘 거울로 놓는다(`shouldMirrorChildrenInRightToLeft` 를 바꾸지 않는다) — 배치는 거울 전 좌표로 줄을 정한다(`PanelWidget::arrangeChild`).
         if ( grid.isRightToLeft() )
             local._x = grid.getGeometry()._size._x - local._x;
         vector<float32> listStart;

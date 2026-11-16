@@ -178,7 +178,7 @@ namespace sw
         return text;
     }
 
-    string LoadBotMetrics::formatJSON( const LoadBotScenario& scenario, int64 elapsedMs ) const
+    expected<string> LoadBotMetrics::formatJSON( const LoadBotScenario& scenario, int64 elapsedMs ) const
     {
         vector<LoadBotActionSummary> listSummary;
         summarize( listSummary );

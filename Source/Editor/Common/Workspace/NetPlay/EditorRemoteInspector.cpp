@@ -64,10 +64,10 @@ namespace sw::editor
                 string_view parentName;
                 string_view active;
                 string_view components;
-                const bool  bFields = tryGetField( line.substr( parentAt + 1, activeAt - parentAt - 1 ), "parent=", parentName ) &&
-                                     tryGetField( line.substr( activeAt + 1, componentsAt - activeAt - 1 ), "active=", active ) &&
-                                     tryGetField( line.substr( componentsAt + 1 ), "components=", components );
-                if ( bFields == false )
+                const bool  bProperties = tryGetField( line.substr( parentAt + 1, activeAt - parentAt - 1 ), "parent=", parentName ) &&
+                                         tryGetField( line.substr( activeAt + 1, componentsAt - activeAt - 1 ), "active=", active ) &&
+                                         tryGetField( line.substr( componentsAt + 1 ), "components=", components );
+                if ( bProperties == false )
                     return false;
                 bool bActive{ false };
                 if ( StringUtil::tryParseBool( active, bActive ) == false )

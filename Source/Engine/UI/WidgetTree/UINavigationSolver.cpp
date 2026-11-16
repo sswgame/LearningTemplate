@@ -40,7 +40,7 @@ namespace sw
                 const UIRect bounds = widget.getGeometry().computeScreenBounds();
                 for ( const PanelWidget* pParent = widget.getParent(); pParent != nullptr; pParent = pParent->getParent() )
                 {
-                    const bool bClippedByParent = pParent->clipsChildren() && pParent->canScrollIntoView() == false &&
+                    const bool bClippedByParent = pParent->shouldClipChildren() && pParent->canScrollIntoView() == false &&
                                                   bounds.intersects( pParent->getGeometry().computeScreenBounds() ) == false;
                     if ( bClippedByParent )
                         return true;

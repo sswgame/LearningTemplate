@@ -2,9 +2,10 @@
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Workspace/Asset/EditorAssetReferenceUtil.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -37,6 +38,7 @@ namespace sw::editor
         , _scrollToComponentID{ 0 }
         , _selectedComponentKey{}
         , _focusedAssetPath{}
+        , _assetsMoved{}
         , _pendingOpenPanel{}
         , _pendingScenePath{}
         , _pendingSceneActionPath{}
@@ -44,7 +46,7 @@ namespace sw::editor
         , _copiedComponentTypeName{}
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
-        , _listLockedObjectID{}
+        , _uniqueLockedObjectID{}
         , _gizmoOperation{ 0 }
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _sceneEditSerial{ 0 }
@@ -91,6 +93,14 @@ namespace sw::editor
     {
         if ( _pEditorSelection != nullptr )
             _pEditorSelection->selectObject( pObj, mode );
+        _selectedComponentID = 0;
+        _selectedComponentKey.clear();
+    }
+
+    void EditorWorkspace::selectGameObjects( const vector<GameObject*>& listObj, SelectionMode mode )
+    {
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->selectObjects( listObj, mode );
         _selectedComponentID = 0;
         _selectedComponentKey.clear();
     }
@@ -149,6 +159,38 @@ namespace sw::editor
             _selectedComponentID = pResolved->getComponentID();
         else
             _selectedComponentID = 0;
+    }
+
+    void EditorWorkspace::notifyAssetsMoved( const EditorAssetMoveEvent& event )
+    {
+        const vector<string>& listOldID = event._listOldID;
+        const vector<string>& listNewID = event._listNewID;
+        SW_ASSERT( listOldID.size() == listNewID.size() );
+        // 옛 id → 새 id 를 한 번 색인하고 받는 쪽마다 찾기만 한다(옮긴 수 × 받는 쪽 칸 수로 훑지 않는다 — 언리얼 리다이렉터 고치기도 옛 경로 → 새 경로 맵이다).
+        unordered_map<string, string> mapOldToNew;
+        mapOldToNew.reserve( listOldID.size() );
+        for ( size_t index = 0; index < listOldID.size(); ++index )
+        {
+            mapOldToNew.insert_or_assign( listOldID[index], listNewID[index] );
+        }
+
+        const auto itFocused = mapOldToNew.find( _focusedAssetPath );
+        if ( itFocused != mapOldToNew.end() )
+            _focusedAssetPath = itFocused->second;
+        Scene* const pScene = editor::getActiveScene();
+        if ( pScene != nullptr )
+        {
+            const auto itScene = mapOldToNew.find( pScene->getSourcePath() );
+            if ( itScene != mapOldToNew.end() )
+                pScene->setSourcePath( itScene->second ); // 다음 저장(Ctrl+S)이 새 자리에 쓴다 — 옛 자리에 파일을 다시 만들지 않는다
+            // 씬이 든 참조(컴포넌트 칸 · 엔티티 프리팹 · 중첩 부품)를 새 id 로 바꿔 끼운다 — 다시 읽지 않아 되돌리기 · 선택이 그대로이고, 디스크 글은 이미 고쳤으니 dirty 로 만들지 않는다.
+            (void)EditorAssetReferenceUtil::remapScene( *pScene, mapOldToNew );
+        }
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->remapAssets( mapOldToNew ); // 고른 에셋 경로도 글이다 — 옛 id 로 남으면 인스펙터 · 명령이 없는 파일을 가리킨다
+        for ( EditorSelection* const pPreviewSelection : editor::getPreviewSelections() )
+            pPreviewSelection->remapAssets( mapOldToNew ); // 미리보기 창의 선택도 같은 글이다(창마다 선택이 따로다)
+        _assetsMoved.broadcast( event );
     }
 
     void EditorWorkspace::setFocusedAssetPath( const utf8* pPath )
@@ -284,21 +326,15 @@ namespace sw::editor
 
     bool EditorWorkspace::isObjectLocked( uint64 objectID ) const
     {
-        return VectorUtil::contains( _listLockedObjectID, objectID );
+        return _uniqueLockedObjectID.contains( objectID );
     }
 
     void EditorWorkspace::setObjectLocked( uint64 objectID, bool bLocked )
     {
-        for ( size_t index = 0; index < _listLockedObjectID.size(); ++index )
-        {
-            if ( _listLockedObjectID[index] != objectID )
-                continue;
-            if ( bLocked == false )
-                _listLockedObjectID.erase( _listLockedObjectID.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
         if ( bLocked )
-            _listLockedObjectID.push_back( objectID );
+            _uniqueLockedObjectID.insert( objectID );
+        else
+            _uniqueLockedObjectID.erase( objectID );
     }
 
     void EditorWorkspace::markSceneDirty()

@@ -51,13 +51,13 @@ namespace sw
              *        그린 화소를 보는 단계와, GPU 수명 결함을 백엔드 검증 레이어(Vulkan)의 로그로만 드러내는 에디터 자체 테스트(`EditorSelfTest`)와,
              *        백엔드 사이에 같아야 하는 값을 남기는 `Record`(부모가 자식 보고의 `records[]` 를 견준다 — `findRecordMismatches`, 한 백엔드에서만 돌면 견줄 것이 없다)다.
              */
-            struct BackendJudgingStep
+            struct BackendEvaluationStep
             {
                 string_view _kind;
                 string_view _attribute;
             };
             // `CaptureEditorUI` 는 마젠타 문턱이 있을 때만 화소를 본다 — 문턱 없는 캡처는 사람 · 리뷰가 볼 그림을 남기고, 잘린 창 수는 레이아웃이라 백엔드와 무관하다.
-            static constexpr BackendJudgingStep kArrBackendJudgingStep[] = {
+            static constexpr BackendEvaluationStep kArrBackendEvaluationStep[] = {
                 {       "ExpectImage",                   {}},
                 {"ExpectImagesDiffer",                   {}},
                 {   "CaptureEditorUI", "maxMagentaFraction"},
@@ -65,10 +65,10 @@ namespace sw
                 {            "Record",                   {}}
             };
 
-            static bool judgesPerBackend( const AutomationStep& step )
+            static bool isEvaluatedPerBackend( const AutomationStep& step )
             {
-                return std::any_of( std::begin( kArrBackendJudgingStep ), std::end( kArrBackendJudgingStep ), [&step]( const BackendJudgingStep& judging )
-                { return step._kind == judging._kind && ( judging._attribute.empty() || step.findAttribute( judging._attribute ) != nullptr ); } );
+                return std::any_of( std::begin( kArrBackendEvaluationStep ), std::end( kArrBackendEvaluationStep ), [&step]( const BackendEvaluationStep& evaluation )
+                { return step._kind == evaluation._kind && ( evaluation._attribute.empty() || step.findAttribute( evaluation._attribute ) != nullptr ); } );
             }
 
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */
@@ -263,6 +263,15 @@ namespace sw
         return listBackend;
     }
 
+    expected<AutomationBackendSplit> AutomationPerBackend::parseBackendSplit( string_view text )
+    {
+        if ( text == "independent" )
+            return AutomationBackendSplit::Independent;
+        if ( text == "all" )
+            return AutomationBackendSplit::All;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "-scenario-backend-split takes independent | all", text } );
+    }
+
     vector<string> AutomationPerBackend::filterPassThroughArguments( const vector<string>& listOriginalArgument )
     {
         using Internal                                   = AutomationPerBackendInternal;
@@ -291,14 +300,15 @@ namespace sw
         {
             AutomationScenario scenario;
             const bool         bLoaded     = scenario.loadFromPath( AssetID{ path } ).has_value();
-            const bool         bPerBackend = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::judgesPerBackend );
+            const bool         bPerBackend = options._split == AutomationBackendSplit::Independent &&
+                                     std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::isEvaluatedPerBackend );
+            const bool bSplit = options._split != AutomationBackendSplit::None && bLoaded && bPerBackend == false;
             for ( size_t i = 0; i < listScenarioList.size(); ++i )
             {
-                const bool bThisBackend = options._bSplitScenarios == false || bLoaded == false || bPerBackend || i == nextBackend % listScenarioList.size();
-                if ( bThisBackend )
+                if ( bSplit == false || i == nextBackend % listScenarioList.size() )
                     listScenarioList[i] += ( listScenarioList[i].empty() ? "" : "," ) + path;
             }
-            if ( options._bSplitScenarios && bLoaded && bPerBackend == false )
+            if ( bSplit )
                 ++nextBackend;
         }
         return listScenarioList;
@@ -373,12 +383,12 @@ namespace sw
         } );
         // 나눌 때 배정의 시작점 — 주지 않았으면 UTC 날짜(일)로 정해 날마다 한 칸씩 돌린다. 백엔드와 무관하다고 본 시나리오도 나흘이면 모든 백엔드를 거친다.
         AutomationPerBackendOptions assignOptions = options;
-        if ( options._bSplitScenarios && assignOptions._splitOffset < 0 )
+        if ( options._split != AutomationBackendSplit::None && assignOptions._splitOffset < 0 )
         {
             constexpr int64 kSecondsPerDay = 24 * 60 * 60;
             assignOptions._splitOffset     = static_cast<int32>( ( WallClock::nowUnixMilliseconds().toSeconds() / kSecondsPerDay ) % static_cast<int64>( MathUtil::max<size_t>( 1, options._listBackend.size() ) ) );
         }
-        if ( options._bSplitScenarios )
+        if ( options._split != AutomationBackendSplit::None )
             SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendSplitOffset", "[Scenario] per-backend: split offset %# (rerun the same assignment with -scenario-backend-split-offset=%#)", assignOptions._splitOffset, assignOptions._splitOffset );
         const vector<string>                listScenarioList = assignScenarios( assignOptions );
         vector<unique_ptr<Internal::Child>> listChild;
@@ -449,7 +459,7 @@ namespace sw
             }
             SW_LOG_INFO_ID( "ScenarioPerBackend.PerBackendStartedLog", "[Scenario] per-backend: %# started (log %#)", child._backend.c_str(), child._logPath.c_str() );
             Process* pProcess  = &child._process;
-            child._flushThread = thread( [pProcess]()
+            child._flushThread = thread( ThreadCreationKey{}, [pProcess]()
             {
                 string line;
                 while ( pProcess->readOutputLine( line ) )

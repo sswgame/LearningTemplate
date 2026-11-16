@@ -74,7 +74,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, KeyMixesBytesAndSettings )
 /**
  * @brief [ImportedAssetStoreTest] 클립 설정 글은 클립 바이트를 정하는 칸만 본다 — LOD · 재질 칸이 달라도 같고, 정밀도가 다르면 다르다(KayKit 몸 규칙 둘이 클립을 나눠 쓴다)
  */
-SW_TEST_CASE( ImportedAssetStoreTest, ClipSettingsTextIgnoresOtherRuleFields )
+SW_TEST_CASE( ImportedAssetStoreTest, ClipSettingsTextIgnoresOtherRuleProperties )
 {
     ModelImportRule first;
     ModelImportRule second;

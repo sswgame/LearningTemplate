@@ -307,7 +307,7 @@ namespace sw
         reply._result   = completion._result._result;
     }
 
-    void MatchmakingServer::onPartyFound( uint64 lookupTag, MatchmakingOutcome result, const PartySnapshot& party )
+    void MatchmakingServer::onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party )
     {
         if ( result != MatchmakingResult::Ok || _pGroupChannels == nullptr )
             return; // 파티가 없다

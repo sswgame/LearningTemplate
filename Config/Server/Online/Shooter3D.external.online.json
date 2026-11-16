@@ -1,16 +1,25 @@
 {
     "_storeName": "main",
     "_cacheName": "main",
+    "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
+    "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
+    "_mailSentTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_scheduleRunTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+    "_ttlSweepMinuteOfDay": 300,
+    "_ttlBackfillRolloutHours": 24,
     "_listKit": [
         {
             "_name": "account",
             "_settings": {
+                "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_ticketKeySecretEnvironment": "SW_SHOOTER3D_TICKET_KEY"
             }
         },
         {
             "_name": "chat",
             "_settings": {
+                "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
                 "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
             }
@@ -20,6 +29,7 @@
             "_settings": {
                 "_currencyCatalog": "game/shooter3d/data/shooter3d.currencies.xml",
                 "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml",
+                "_refundRecovery": "Debt",
                 "_receiptProvidersFile": "Config/Server/Online/Providers/Shooter3D.receipts.json",
                 "_receiptTrustFile": "Config/Server/Online/ca-bundle.pem"
             }
@@ -27,12 +37,17 @@
         {
             "_name": "liveops",
             "_settings": {
+                "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 },
                 "_pushProvidersFile": "Config/Server/Online/Providers/Shooter3D.push.json",
                 "_pushTrustFile": "Config/Server/Online/ca-bundle.pem"
             }
         },
         {
-            "_name": "mailbox"
+            "_name": "mailbox",
+            "_settings": {
+                "_claimedRetentionDays": 30,
+                "_endedCampaignTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 }
+            }
         }
     ]
 }

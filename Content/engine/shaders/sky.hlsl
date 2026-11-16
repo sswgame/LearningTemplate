@@ -2,7 +2,7 @@
 // 깊이 테스트(LessEqual)만 하고 쓰지 않으므로 아무것도 그리지 않은 곳(깊이 클리어 1)만 칠해진다. 씬에 하늘이 없으면 패스가 돌지 않는다(FrameRenderer).
 //
 // 모드 셋 — 그러데이션(g_SkyAtmosphereRayleigh.w = 0), 대기 산란(= 1), HDRI(= 2).
-//   HDRI: 등장방형 HDR 텍스처(패스가 원본 역할 g_SourceColorIndex 로 건다, 다 읽기 전이면 검정)를 밉 0 에서 직접 쌍선형으로 읽는다 — 하드웨어 샘플은 이음매에서 미분이 튀어 낮은 밉 줄이 보이고, GL 의 엔진 칸은 클램프다. g_SkyHorizon.w 가 Y 축 회전(라디안), g_SkyGround.w 가 세기다. C++ SkyGradient::evaluateRadiance 가 같은 회전으로 SH9 계수를 평가하고, 계수는 Scripts/dev/MakeSkyHdriPrefabs.py 가 같은 방향 식으로 투영한다.
+//   HDRI: 등장방형 HDR 텍스처(패스가 원본 역할 g_SourceColorIndex 로 건다, 다 읽기 전이면 검정)를 밉 0 에서 직접 쌍선형으로 읽는다 — 하드웨어 샘플은 이음매에서 미분이 튀어 낮은 밉 줄이 보이고, GL 의 엔진 칸은 클램프다. g_SkyHorizon.w 가 Y 축 회전(라디안), g_SkyGround.w 가 세기다. C++ SkyGradient::evaluateRadiance 가 같은 회전으로 SH9 계수를 평가하고, 계수는 Scripts/dev/make_sky_hdri_prefabs.py 가 같은 방향 식으로 투영한다.
 //   그러데이션: C++ SkyGradient::evaluateRadiance 와 같은 식이다 — 위는 천정 → 지평선, 아래는 땅 → 지평선, 지평선 쪽 비율 (1 - |y|)^지수, 마지막에 세기.
 //     상수 배치: g_SkyZenith(rgb, w 지수) · g_SkyHorizon(rgb) · g_SkyGround(rgb, w 세기).
 //   대기 산란: C++ SkyAtmosphere::evaluateScattering 와 같은 식 · 같은 구간 수(kAtmosphereViewSteps · kAtmosphereLightSteps) · 같은 상수다(식을 고치면 두 곳을 함께).

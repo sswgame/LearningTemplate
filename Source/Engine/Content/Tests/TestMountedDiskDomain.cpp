@@ -53,7 +53,7 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     SW_REQUIRE_TRUE( diskID.empty() == false );
 
     // 소문자 id: 있는 폴더 둘은 디스크 표기이고 아직 없는 파일 이름은 id 의 표기다.
-    const string                 lowerID   = FileUtil::normalizePath( diskID );
+    const string                 lowerID   = FileUtil::normalizePath( diskID ).str();
     const optional<AbsolutePath> writePath = paths.toDiskPath( lowerID );
     SW_REQUIRE_TRUE( writePath.has_value() );
     // 기대 경로는 대소문자를 구분하는 표기로 적는다 — isSameDiskPath 는 Linux 에서 정확히 같아야, Windows 에서는 같은 파일이면 참이다.

@@ -65,7 +65,7 @@ namespace sw
 
     private:
         NameRegistry<UIBindingConverter> _registry; ///< 엔진 기본은 주인 없는 값, 게임 · 키트 것은 주인 있는 값(`addOwned` — 풀리면 덮었던 기본으로 돌아간다)
-    };
 
-    SW_SERVICE_SLOT( UIBindingConverterRegistry, Required );
+        SW_SERVICE_SLOT( UIBindingConverterRegistry, Required );
+    };
 } // namespace sw

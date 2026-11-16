@@ -88,7 +88,7 @@ namespace sw
                 if ( pMoveID == nullptr )
                     return false;
                 FighterMove          move;
-                bool                 bValid   = XMLFields::readFields( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
+                bool                 bValid   = XMLFields::readProperties( node, move, sourceName, { "id", "frames", "command", "priority", "maxGap", "from", "breakButtons" } );
                 const string_view    framesID = node.getAttributeText( "frames" );
                 const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
                 if ( pFrame == nullptr )
@@ -161,7 +161,7 @@ namespace sw
         return GameDataXML::loadFromAsset( *this, &FighterCatalog::loadFileRoot, assetID, "FighterCatalog" );
     }
 
-    uint32 FighterCatalog::loadFileRoot( const XMLNode& root, string_view sourceName )
+    uint32 FighterCatalog::loadFileRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 기반 기술 카탈로그는 데이터가 정한다 — 공유 캐시는 경로만으로 나눠 주므로 호출하는 쪽의 문맥을 받을 수 없다(작물의 계절과 같은 규칙).
         const string_view movesPath = root.getAttributeText( "moves" );
@@ -198,7 +198,7 @@ namespace sw
         (void)add( copy ); // 빈 id 는 카탈로그가 거른다
     }
 
-    uint32 FighterCatalog::loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName )
+    uint32 FighterCatalog::loadRoot( const XMLCatalogRoot& root, const MoveCatalog& moveCatalog, string_view sourceName )
     {
         InputCommandParser parser;
         const string_view  buttonNames = root.getAttributeText( "buttons" );
@@ -215,9 +215,9 @@ namespace sw
             bool loadFighter( const XMLNode& node, string_view sourceName )
             {
                 using Internal = FighterCatalogInternal;
-                // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+                // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
                 FighterDef fighter;
-                bool       bValid = XMLFields::readFields( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
+                bool       bValid = XMLFields::readProperties( node, fighter, sourceName, { "sidestep", "sidestepDown", "jump" } );
                 bValid            = Internal::readRequiredCommand( _parser, node, "sidestep", sourceName, fighter._sidestepUp ) && bValid;
                 bValid            = Internal::readRequiredCommand( _parser, node, "sidestepDown", sourceName, fighter._sidestepDown ) && bValid;
                 bValid            = Internal::readRequiredCommand( _parser, node, "jump", sourceName, fighter._jump ) && bValid;

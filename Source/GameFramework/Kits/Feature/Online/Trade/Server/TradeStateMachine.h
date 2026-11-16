@@ -74,9 +74,9 @@ namespace sw
     struct SW_KIT_SERVER_API TradeStateMachine
     {
         /** @brief @p command 를 @p inoutTrade 에 적용합니다. Ok 가 아니면 @p inoutTrade 는 그대로입니다. @p nowMs 는 `_updatedMs` 에 기록합니다. */
-        static TradeOutcome apply( TradeSnapshot& inoutTrade, const TradeCommand& command, const ITradePolicy& policy, int64 nowMs );
+        static TradeServiceResult apply( TradeSnapshot& inoutTrade, const TradeCommand& command, const ITradePolicy& policy, int64 nowMs );
         /** @brief 제시가 규칙을 지키면 true 입니다. 규칙은 항목 수, 자산 id, 수량, 거래 가능 여부, 같은 자산의 중복 금지입니다. */
-        static TradeOutcome validateOffer( const vector<TradeLeg>& listLeg, const ITradePolicy& policy );
+        static TradeServiceResult validateOffer( const vector<TradeLeg>& listLeg, const ITradePolicy& policy );
         /** @brief 거래를 닫습니다. 취소, 시한, 떠남, 재시작이 해당하며 아무것도 움직이지 않습니다. 이미 닫혔으면 그대로 둡니다. */
         static void close( TradeSnapshot& inoutTrade, TradeState state, TradeCloseReason reason, int64 nowMs );
     };

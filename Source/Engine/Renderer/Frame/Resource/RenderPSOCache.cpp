@@ -169,7 +169,7 @@ namespace sw
         _materialPSOBuilder.submit( pDevice, MaterialPSOBuilder::Job{ key, std::move( desc ) }, bUrgent, bAsync );
     }
 
-    uint32 RenderPSOCache::pumpMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds )
+    uint32 RenderPSOCache::pollMaterialPSOBuilds( IRHIDevice* pDevice, bool bAsync, uint32 budgetMicroseconds )
     {
         if ( pDevice == nullptr )
             return 0;
