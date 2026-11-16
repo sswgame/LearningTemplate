@@ -540,9 +540,8 @@ namespace sw
         : _listCategory{}
         , _listSetting{}
         , _listScalabilityGroup{}
-        , _listUpgradeStep{}
+        , _listOwner{}
         , _mapSettingIndex{}
-        , _version{ 1 }
     {
     }
 
@@ -551,9 +550,8 @@ namespace sw
         _listCategory.clear();
         _listSetting.clear();
         _listScalabilityGroup.clear();
-        _listUpgradeStep.clear();
+        _listOwner.clear();
         _mapSettingIndex.clear();
-        _version = 1;
     }
 
     bool UserSettingsSchema::loadFromAsset( const AssetID& assetID )
@@ -593,7 +591,7 @@ namespace sw
         UserSettingsSchema           overlay;
         UserSettingsSchemaRootParams rootParams;
         bool                         bOk = XMLFields::readProperties( root, rootParams, sourceName );
-        overlay._version                 = rootParams._version;
+        UserSettingsSchemaOwner      owner{ rootParams._owner, rootParams._version, {} };
 
         const uint32 orderBase = static_cast<uint32>( _listSetting.size() );
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -623,7 +621,7 @@ namespace sw
             {
                 UserSettingsUpgradeStep step;
                 bOk = Internal::readElement( child, step, sourceName, nullptr ) && bOk;
-                overlay._listUpgradeStep.push_back( step );
+                owner._listUpgradeStep.push_back( step );
             }
             else
             {
@@ -654,15 +652,19 @@ namespace sw
                 bOk = false;
             }
         }
+        // 판은 주인마다 따로 센다 — 같은 주인이 둘이면 사용자 파일의 판 하나를 두 스키마가 나눠 쓰게 된다.
+        if ( owner._owner.empty() == false && findOwner( owner._owner ) != nullptr )
+        {
+            SW_LOG_ERROR_ID( "UserSettingsSchema.OwnerDefinedTwice", "%#: version owner '%#' is defined twice", sourceName, owner._owner.c_str() );
+            bOk = false;
+        }
         if ( bOk == false )
             return false;
 
-        // 버전 번호는 가장 큰 것을 쓴다. 게임 덧붙이기가 자기 버전 단계를 더하면 그 버전까지 올라간다.
-        _version = _version > overlay._version ? _version : overlay._version;
+        _listOwner.push_back( owner );
         _listCategory.insert( _listCategory.end(), overlay._listCategory.begin(), overlay._listCategory.end() );
         _listSetting.insert( _listSetting.end(), overlay._listSetting.begin(), overlay._listSetting.end() );
         _listScalabilityGroup.insert( _listScalabilityGroup.end(), overlay._listScalabilityGroup.begin(), overlay._listScalabilityGroup.end() );
-        _listUpgradeStep.insert( _listUpgradeStep.end(), overlay._listUpgradeStep.begin(), overlay._listUpgradeStep.end() );
         rebuildIndex();
         return true;
     }
@@ -674,6 +676,16 @@ namespace sw
         {
             _mapSettingIndex[_listSetting[settingIndex]._id] = settingIndex;
         }
+    }
+
+    const UserSettingsSchemaOwner* UserSettingsSchema::findOwner( const hashed_string& owner ) const
+    {
+        for ( const UserSettingsSchemaOwner& candidate : _listOwner )
+        {
+            if ( candidate._owner == owner )
+                return &candidate;
+        }
+        return nullptr;
     }
 
     const UserSettingDef* UserSettingsSchema::findSetting( const hashed_string& id ) const
@@ -805,12 +817,16 @@ namespace sw
         {
             bOk = Internal::validateScalabilityGroup( *this, group ) && bOk;
         }
-        for ( const UserSettingsUpgradeStep& step : _listUpgradeStep )
+        for ( const UserSettingsSchemaOwner& owner : _listOwner )
         {
-            if ( step._fromVersion >= _version )
+            for ( const UserSettingsUpgradeStep& step : owner._listUpgradeStep )
             {
-                SW_LOG_ERROR_ID( "UserSettingsSchema.UpgradeVersionNotOlder", "<Upgrade> from version %# is not older than the schema version %#", step._fromVersion, _version );
-                bOk = false;
+                if ( step._fromVersion >= owner._version )
+                {
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.UpgradeVersionNotOlder", "'%#': <Upgrade> from version %# is not older than the schema version %#", owner._owner.c_str(),
+                                     step._fromVersion, owner._version );
+                    bOk = false;
+                }
             }
         }
         return bOk;

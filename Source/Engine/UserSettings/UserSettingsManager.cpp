@@ -112,6 +112,7 @@ namespace sw
         , _registry{}
         , _engineHandlers{}
         , _listState{}
+        , _carriedFile{}
         , _onEvent{}
         , _userFilePath{}
         , _confirmSecondsLeft{ 0.0f }
@@ -133,6 +134,7 @@ namespace sw
         _registry.clear();
         _schema.clear();
         _listState.clear();
+        _carriedFile = {};
         _onEvent.clear();
         _userFilePath.clear();
         _confirmSecondsLeft = 0.0f;
@@ -262,21 +264,28 @@ namespace sw
             return false;
         // 사용자 파일은 엔진 필수 데이터와 달리 복구가 필요하다. 깨진 파일은 조용히 기본값으로 덮지 않고 `.corrupt` 로 치운 뒤
         // 오류를 남긴다 — 다음 저장이 새 파일을 만들고, 사용자는 치운 파일로 무엇이 있었는지 볼 수 있다.
-        string text;
-        if ( FileUtil::readTextFile( filePath, text ) && loadUserJSON( text, filePath ) )
+        // 새 빌드가 쓴 파일(어느 주인의 판이 이 빌드보다 큼)도 `.newer` 로 옮긴다 — 읽은 값을 옛 판 번호로 다시 쓰면 새 빌드가 멱등이 아닌 올림(`Scale`)을 또 돌린다.
+        string                           text;
+        const UserSettingsFileReadResult result = FileUtil::readTextFile( filePath, text ) ? loadUserJSON( text, filePath ) : UserSettingsFileReadResult::Unreadable;
+        if ( result == UserSettingsFileReadResult::Read )
             return true;
-        const string corruptPath = string( filePath ) + ".corrupt";
-        const bool   bMovedAside = FileUtil::copyFile( filePath, corruptPath ) && FileUtil::removeFile( filePath );
-        SW_LOG_ERROR_ID( "UserSettings.FileUnreadable", "User settings '%#' could not be read - %# and starting from a fresh file", filePath,
-                         bMovedAside ? ( "moved to '" + corruptPath + "'" ).c_str() : "could not be moved aside" );
+        const bool   bNewer      = result == UserSettingsFileReadResult::NewerThanBuild;
+        const string asidePath   = string( filePath ) + ( bNewer ? ".newer" : ".corrupt" );
+        const bool   bMovedAside = FileUtil::copyFile( filePath, asidePath ) && FileUtil::removeFile( filePath );
+        const string movedText   = bMovedAside ? "moved to '" + asidePath + "'" : string( "could not be moved aside" );
+        if ( bNewer )
+            SW_LOG_WARNING_ID( "UserSettings.FileNewerThanBuild", "User settings '%#' were written by a newer build - %# and starting from defaults", filePath, movedText );
+        else
+            SW_LOG_ERROR_ID( "UserSettings.FileUnreadable", "User settings '%#' could not be read - %# and starting from a fresh file", filePath, movedText );
         return false;
     }
 
-    bool UserSettingsManager::loadUserJSON( string_view jsonText, string_view sourceName )
+    UserSettingsFileReadResult UserSettingsManager::loadUserJSON( string_view jsonText, string_view sourceName )
     {
-        vector<UserSettingsFileEntry> listEntry;
-        if ( UserSettingsFileEntry::parseJSON( jsonText, sourceName, _schema, listEntry ) == false )
-            return false;
+        UserSettingsFileContent          content;
+        const UserSettingsFileReadResult result = UserSettingsFileEntry::parseJSON( jsonText, sourceName, _schema, content );
+        if ( result != UserSettingsFileReadResult::Read )
+            return result;
 
         for ( SettingState& state : _listState )
         {
@@ -285,12 +294,15 @@ namespace sw
             state._bPending  = false;
             state._bRollback = false;
         }
-        for ( const UserSettingsFileEntry& entry : listEntry )
+        _carriedFile = UserSettingsFileContent{ {}, content._listForeignOwner };
+        for ( const UserSettingsFileEntry& entry : content._listEntry )
         {
             const optional<uint32> settingFound = findIndex( hashed_string( entry._key ) );
             if ( settingFound.has_value() == false )
             {
-                SW_LOG_WARNING_ID( "UserSettings.UnknownKeyDropped", "User settings '%#': dropped unknown key '%#'", sourceName, entry._key );
+                // 다른 구성(Dev 의 debughud) · 다른 판 빌드의 키일 수 있다 — 버리지 않고 원문 그대로 다음 저장에 다시 쓴다.
+                SW_LOG_INFO_ID( "UserSettings.UnknownKeyKept", "User settings '%#': kept unknown key '%#' as written", sourceName, entry._key );
+                _carriedFile._listEntry.push_back( entry );
                 continue;
             }
             const uint32                 settingIndex = *settingFound;
@@ -312,7 +324,7 @@ namespace sw
 
         _bUserFileLoaded = SW_TRUE;
         broadcast( {}, UserSettingEventKind::Loaded );
-        return true;
+        return UserSettingsFileReadResult::Read;
     }
 
     expected<string> UserSettingsManager::makeUserJSON() const
@@ -328,7 +340,7 @@ namespace sw
                 continue;
             listEntry.push_back( UserSettingsWriteEntry{ listSetting[settingIndex], value } );
         }
-        return UserSettingsFileEntry::makeJSON( _schema, listEntry );
+        return UserSettingsFileEntry::makeJSON( _schema, listEntry, _carriedFile );
     }
 
     bool UserSettingsManager::saveUserFile( string_view filePath ) const

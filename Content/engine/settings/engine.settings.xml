@@ -4,6 +4,8 @@
   엔진 사용자 설정 스키마 — 플레이어 옵션 메뉴의 카테고리 · 설정 · 그래픽 품질 프리셋이다. UserSettingsManager 가 읽고 검사한다(Source/Engine/UserSettings/README.md).
   게임은 게임 프리셋(Config/Game/<Game>.json)의 _userSettingsSchema 로 설정을 덧붙이고, _mapUserSettingDefault 로 기본값을 바꾼다.
 
+  <UserSettingsSchema> 속성: owner 는 판 번호의 주인(engine · game · debughud, 사용자 파일 "versions" 의 키), version 은 그 주인의 판. 판은 주인마다 따로 센다.
+
   <Setting> 속성
     id          category.name — 사용자 파일(usersettings.json)의 키. 바꾸면 <Upgrade op="Rename"> 을 더하고 version 을 올린다(배포된 플레이어 데이터).
     type        bool · int · float · enum · keyBinding · string
@@ -18,7 +20,7 @@
     optionsFrom   런타임 선택지 공급자(localization.languages · display.resolutions). <Option> 을 함께 적으면 공급자가 비었을 때의 대체 목록이다
     text · description  메뉴 글의 로컬라이제이션 키
 -->
-<UserSettingsSchema version="1">
+<UserSettingsSchema owner="engine" version="1">
 	<Category id="display" text="settings.category.display"/>
 	<Category id="graphics" text="settings.category.graphics"/>
 	<Category id="audio" text="settings.category.audio"/>

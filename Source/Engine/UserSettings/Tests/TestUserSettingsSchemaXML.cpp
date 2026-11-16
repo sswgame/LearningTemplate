@@ -12,7 +12,7 @@
 SW_TEST_CASE( UserSettingsSchemaXMLTest, ReadsDefinitionsThroughSchemas )
 {
     sw::UserSettingsSchema schema;
-    SW_REQUIRE_TRUE( schema.loadFromXMLText( "<UserSettingsSchema version=\"3\">"
+    SW_REQUIRE_TRUE( schema.loadFromXMLText( "<UserSettingsSchema owner=\"engine\" version=\"3\">"
                                              "<Category id=\"audio\" text=\"Menu.Audio\"/>"
                                              "<Setting id=\"audio.master\" category=\"audio\" type=\"Float\" default=\"0.50\" min=\"0\" max=\"1\" step=\"0.1\" apply=\"Immediate\"/>"
                                              "<Setting id=\"audio.mode\" category=\"audio\" type=\"Enum\" default=\"stereo\" enabledWhen=\"audio.master!=0\" platforms=\"windows\">"
@@ -20,7 +20,8 @@ SW_TEST_CASE( UserSettingsSchemaXMLTest, ReadsDefinitionsThroughSchemas )
                                              "<Upgrade version=\"2\" op=\"Rename\" key=\"audio.volume\" to=\"audio.master\"/>"
                                              "</UserSettingsSchema>",
                                              "test" ) );
-    SW_EXPECT_EQUAL( uint32{ 3 }, schema.getVersion() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, schema.getOwners().size() );
+    SW_EXPECT_EQUAL( uint32{ 3 }, schema.getOwners()[0]._version );
     const sw::UserSettingDef* pMaster = schema.findSetting( sw::hashed_string( "audio.master" ) );
     SW_REQUIRE_TRUE( pMaster != nullptr );
     SW_EXPECT_TRUE( pMaster->_type == sw::UserSettingType::Float && pMaster->_applyTiming == sw::UserSettingApplyTiming::Immediate );
@@ -32,9 +33,9 @@ SW_TEST_CASE( UserSettingsSchemaXMLTest, ReadsDefinitionsThroughSchemas )
     SW_EXPECT_EQUAL( size_t{ 1 }, pMode->_listEnabledCondition.size() );
     SW_EXPECT_EQUAL( uint8{ sw::UserSettingsPlatform::kWindows }, pMode->_platformMask );
     SW_EXPECT_TRUE( pMode->_applyTiming == sw::UserSettingApplyTiming::OnConfirm ); // 적지 않은 칸은 정의 구조체의 초기값
-    SW_REQUIRE_EQUAL( size_t{ 1 }, schema.getUpgradeSteps().size() );
-    SW_EXPECT_TRUE( schema.getUpgradeSteps()[0]._operation == sw::UserSettingsUpgradeOperation::Rename );
-    SW_EXPECT_EQUAL( sw::string( "audio.master" ), schema.getUpgradeSteps()[0]._newKey );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, schema.getOwners()[0]._listUpgradeStep.size() );
+    SW_EXPECT_TRUE( schema.getOwners()[0]._listUpgradeStep[0]._operation == sw::UserSettingsUpgradeOperation::Rename );
+    SW_EXPECT_EQUAL( sw::string( "audio.master" ), schema.getOwners()[0]._listUpgradeStep[0]._newKey );
 }
 
 /**
@@ -47,9 +48,9 @@ SW_TEST_CASE( UserSettingsSchemaXMLTest, RejectsFieldErrors )
     SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     sw::UserSettingsSchema schema;
-    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema><Setting id=\"a\" type=\"Bool\" colour=\"red\"/></UserSettingsSchema>", "test" ) );
-    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema><Setting id=\"b\" type=\"bool\"/></UserSettingsSchema>", "test" ) );
-    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema><Setting type=\"Bool\"/></UserSettingsSchema>", "test" ) );
+    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema owner=\"engine\"><Setting id=\"a\" type=\"Bool\" colour=\"red\"/></UserSettingsSchema>", "test" ) );
+    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema owner=\"engine\"><Setting id=\"b\" type=\"bool\"/></UserSettingsSchema>", "test" ) );
+    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema owner=\"engine\"><Setting type=\"Bool\"/></UserSettingsSchema>", "test" ) );
 }
 
 /**
