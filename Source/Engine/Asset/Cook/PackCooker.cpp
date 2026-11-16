@@ -437,6 +437,10 @@ namespace sw
                     AssetMeta meta;
                     guid = meta.parseXML( text, AssetMeta::makePath( assetID ) );
                 }
+                // 산출물 폴더의 우리 형식 글(임포트가 쓴 `_shared/materials/*.material`)은 머리가 없다 — 원본의 정체성을 쓴다. 손으로 커밋한 글(거울 표 등)은
+                // 커밋 검사(`asset-ids` — git 이 추적하는 파일만 본다)가 머리를 요구하므로, 여기서는 디스크에만 있는 산출물을 건너뛴다.
+                if ( guid.has_value() == false && kind == AssetIdentityKind::Header && rules.isUnderDerivedFolder( assetID ) )
+                    return true;
                 if ( guid.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackCookNoIdentity", "Pack cook: '%#' has no asset GUID - run py -3 -m Scripts asset-ids --fix", assetID );
