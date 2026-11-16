@@ -55,11 +55,27 @@ namespace sw
             }
 
             /**
+             * @brief 다각형(감은 방향 @p sign)의 @p index 번째 꼭짓점에서 @p target 으로 가는 방향이 그 모서리의 안쪽 원뿔에 드는지 반환합니다(earcut `locallyInside`).
+             * @details 다리를 놓은 꼭짓점은 목록에 두 번 든다 — 같은 자리라도 사본마다 안쪽 원뿔이 달라, 원뿔 밖의 사본으로 다리를 놓으면 고리가 꼬여 귀 자르기가 막힌다.
+             */
+            static bool isLocallyInside( vector_reference<const float2> listPoint, const vector<uint32>& listPolygon, size_t index, const float2& target, float32 sign )
+            {
+                const size_t  count    = listPolygon.size();
+                const float2& prev     = listPoint[listPolygon[( index + count - 1 ) % count]];
+                const float2& cur      = listPoint[listPolygon[index]];
+                const float2& next     = listPoint[listPolygon[( index + 1 ) % count]];
+                const bool    bLeftIn  = cross2( prev, cur, target ) * sign >= 0.0f; // 안쪽은 들어오는 변의 왼쪽(sign 이 + 일 때)
+                const bool    bLeftOut = cross2( cur, next, target ) * sign >= 0.0f; // 나가는 변의 왼쪽
+                const bool    bConvex  = cross2( prev, cur, next ) * sign >= 0.0f;
+                return bConvex ? ( bLeftIn && bLeftOut ) : ( bLeftIn || bLeftOut );
+            }
+
+            /**
              * @brief 구멍을 바깥 다각형에 다리로 이어 붙입니다. 구멍의 가장 오른쪽 점에서 보이는 가장 가까운 바깥 점을 고릅니다.
              * @return 다리를 놓았으면 true 입니다.
              */
             static bool bridgeHole( vector_reference<const float2> listPoint, vector<uint32>& inoutListPolygon, const vector<uint32>& hole,
-                                    const vector<vector<uint32>>& listOtherHole )
+                                    const vector<vector<uint32>>& listOtherHole, float32 sign )
             {
                 size_t holeStart = 0;
                 for ( size_t index = 1; index < hole.size(); ++index )
@@ -78,6 +94,8 @@ namespace sw
                     const float2& candidate = listPoint[inoutListPolygon[index]];
                     const float32 distance  = float2::getDistanceSquared( candidate, holePoint );
                     if ( distance >= bestDistance )
+                        continue;
+                    if ( isLocallyInside( listPoint, inoutListPolygon, index, holePoint, sign ) == false )
                         continue;
                     if ( intersectsLoop( listPoint, inoutListPolygon, holePoint, candidate ) || intersectsLoop( listPoint, hole, holePoint, candidate ) )
                         continue;
@@ -312,7 +330,7 @@ namespace sw
             } );
             for ( const size_t holeOrder : listOrder )
             {
-                if ( PolygonTriangulationInternal::bridgeHole( listPoint, listPolygon, listOwnHole[holeOrder], listOwnHole ) == false )
+                if ( PolygonTriangulationInternal::bridgeHole( listPoint, listPolygon, listOwnHole[holeOrder], listOwnHole, sign ) == false )
                     bComplete = false;
             }
             if ( PolygonTriangulationInternal::clipEars( listPoint, std::move( listPolygon ), sign, outListIndex ) == false )
