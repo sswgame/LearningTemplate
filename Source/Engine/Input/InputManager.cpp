@@ -8,6 +8,7 @@
 #include "Core/String/UTF8Util.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
@@ -114,7 +115,16 @@ namespace sw
         , _bOSDeviceInputBlocked{ SW_FALSE }
         , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
+        , _bBackgroundGamepadInput{ SW_TRUE }
     {
+    }
+
+    SubsystemInitResult InputManager::initializeSubsystem()
+    {
+        if ( initialize() == false )
+            return SubsystemInitResult::Failed;
+        setBackgroundGamepadInput( engine::getSubsystem<EngineConfig>()._bBackgroundGamepadInput != 0 );
+        return SubsystemInitResult::Succeeded;
     }
 
     InputManager::~InputManager()
@@ -367,12 +377,15 @@ namespace sw
         // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다. 배타 가상 입력이면 폴링하지 않는다.
         //    패드 폴링(XInput, 조이스틱)이 가상 패드 상태를 실제 패드 값으로 덮어쓰기 때문이다.
         const bool bOSSuppressed = isOSInputSuppressed();
+        // 배경 창은 패드를 읽지 않는다(정책 — XInput · evdev 는 창과 상관없이 읽힌다). 포커스를 잃을 때 눌린 버튼은 이미 놓았다(`onWindowFocusLost`).
+        const bool bPadSuppressed = canPollGamepad( _bWindowFocused == SW_TRUE, _bBackgroundGamepadInput == SW_TRUE ) == false;
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
             {
                 pDev->onFrameBegin( deltaSeconds );
-                if ( bOSSuppressed == false )
+                const bool bSkipPoll = bOSSuppressed || ( bPadSuppressed && pDev->getDeviceKind() == InputDeviceKind::Gamepad );
+                if ( bSkipPoll == false )
                     pDev->poll( deltaSeconds );
                 pDev->onPolled();
             }

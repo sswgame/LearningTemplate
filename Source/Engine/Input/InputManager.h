@@ -120,9 +120,14 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Input";
         /** @brief 기동 순서의 자리 — 모듈이 등록한 장치 · 콜백을 든다(서버는 이벤트가 오지 않는 장치 목록이다). */
-        SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
-        void                shutdownSubsystem() override { shutdown(); }
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 초기화하고 엔진 설정의 정책(`EngineConfig::_bBackgroundGamepadInput`)을 겁니다. */
+        SubsystemInitResult initializeSubsystem() override;
+        /** @brief 창이 배경일 때도 패드를 폴링할지 정합니다(`EngineConfig::_bBackgroundGamepadInput`). 끄면 포커스가 없는 동안 패드 장치를 폴링하지 않는다. */
+        void setBackgroundGamepadInput( bool bAllowed ) { _bBackgroundGamepadInput = bAllowed ? SW_TRUE : SW_FALSE; }
+        /** @brief 패드를 이번 프레임에 폴링할지입니다 — 창이 포커스를 가졌거나 정책이 배경 입력을 허락하면 true 다. */
+        [[nodiscard]] static bool canPollGamepad( bool bWindowFocused, bool bBackgroundAllowed ) { return bWindowFocused || bBackgroundAllowed; }
+        void                      shutdownSubsystem() override { shutdown(); }
+        const utf8*               getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 프레임을 시작합니다. 장치를 폴링하고, 락프리 큐를 비워 이벤트를 들어온 순서대로 적용하고, 프레임 엣지를 맞춥니다.
@@ -512,6 +517,7 @@ namespace sw
         uint8                                     _bOSDeviceInputBlocked           : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
         uint8                                     _bNativeWindowFocused            : 1; /**< OS 창 자체가 포커스를 가졌는지입니다(X11 FocusIn/FocusOut) — 보조 폴링 · 가운데 되돌리기를 건너뛸지 정한다. */
         uint8                                     _bAccessibilityShortcutsDisabled : 1; /**< 접근성 단축키를 꺼 두었는지입니다(`_arrSavedAccessibilityFlags` 가 유효하다). */
+        uint8                                     _bBackgroundGamepadInput         : 1; /**< 배경에서도 패드를 폴링하는지입니다 — 엔진은 설정이 정한다(`initializeSubsystem`), 설정 없이 만든 단위 테스트는 켠 채로 시작한다. */
         uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`recordNativeEvent`) */
         uint64                                    _rawMouseEventCount{ 0 };             /**< OS 에서 받은 원시 마우스 이동 보고 수(`getRawMouseEventCount`) */
 
