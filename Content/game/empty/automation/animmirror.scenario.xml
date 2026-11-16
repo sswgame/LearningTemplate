@@ -15,8 +15,8 @@
 	<Wait frames="30"/>
 	<Variable name="gv_timeScale" value="0"/>
 	<Wait frames="4"/>
-	<Remember watch="Animation.BoneX" target="KnightAim" key="hand.l" as="aimLeft"/>
-	<Remember watch="Animation.BoneX" target="KnightAim" key="hand.r" as="aimRight"/>
+	<Store watch="Animation.BoneX" target="KnightAim" key="hand.l" as="aimLeft"/>
+	<Store watch="Animation.BoneX" target="KnightAim" key="hand.r" as="aimRight"/>
 	<Expect watch="Animation.BoneX" target="KnightMirrored" key="hand.l" oppositeOf="aimRight" tolerance="0.002"/>
 	<Expect watch="Animation.BoneX" target="KnightMirrored" key="hand.r" oppositeOf="aimLeft" tolerance="0.002"/>
 	<Pass/>

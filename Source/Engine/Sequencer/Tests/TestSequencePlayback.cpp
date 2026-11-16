@@ -52,6 +52,16 @@ namespace
             return pDirector->addComponent<SequencePlayerComponent>();
         }
 
+        /** @brief 플레이어를 한 틱 돌리고 그 틱 뒤 큐(묶인 오브젝트에 적용 · 완료 기록)를 비웁니다 — 엔진 프레임이 하는 순서다. */
+        static void tick( GameObjectManager& manager, SequencePlayerComponent& player, float32 deltaSeconds )
+        {
+            {
+                TickContext context{ *player.getOwner(), deltaSeconds };
+                player.onTick( context );
+            }
+            manager.update( 0.0f ); // 틱 뒤 큐를 비운다(시간은 흐르지 않는다)
+        }
+
         static float32 readX( const GameObject& object )
         {
             return object.getPrimarySceneComponent()->getLocalPosition()._x;
@@ -72,10 +82,7 @@ SW_TEST_CASE( SequencePlaybackTest, StopRestoresTheStateBeforePlay )
 
     pPlayer->play();
     SW_REQUIRE_TRUE( pPlayer->isPlaying() );
-    {
-        TickContext context{ *pPlayer->getOwner(), 0.1f };
-        pPlayer->onTick( context );
-    }
+    Util::tick( manager, *pPlayer, 0.1f );
     SW_EXPECT_NEAR( 5.0f, Util::readX( *pHero ), 1e-4f );
     SW_EXPECT_TRUE( pHero->isActive() );
 
@@ -101,10 +108,7 @@ SW_TEST_CASE( SequencePlaybackTest, KeepStateLeavesTheLastFrame )
     pPlayer->play();
     for ( int32 tickIndex = 0; tickIndex < 20 && pPlayer->isPlaying(); ++tickIndex )
     {
-        {
-            TickContext context{ *pPlayer->getOwner(), 0.05f };
-            pPlayer->onTick( context );
-        }
+        Util::tick( manager, *pPlayer, 0.05f );
     }
     SW_EXPECT_FALSE( pPlayer->isPlaying() );
     SW_EXPECT_NEAR( 5.0f, Util::readX( *pHero ), 1e-4f );
@@ -124,18 +128,12 @@ SW_TEST_CASE( SequencePlaybackTest, FinishAndReplayRestore )
     pPlayer->setBinding( 1, pHero->getHandle() );
 
     pPlayer->play();
-    {
-        TickContext context{ *pPlayer->getOwner(), 0.1f };
-        pPlayer->onTick( context );
-    }
+    Util::tick( manager, *pPlayer, 0.1f );
     pPlayer->play(); // 다시 틀기 — 앞 재생을 끝내고(되돌림) 다시 시작한다
     SW_EXPECT_EQUAL( 1u, pPlayer->getHistory().countKind( SequenceHistoryKind::Stopped ) );
     for ( int32 tickIndex = 0; tickIndex < 20 && pPlayer->isPlaying(); ++tickIndex )
     {
-        {
-            TickContext context{ *pPlayer->getOwner(), 0.05f };
-            pPlayer->onTick( context );
-        }
+        Util::tick( manager, *pPlayer, 0.05f );
     }
     SW_EXPECT_NEAR( 1.0f, Util::readX( *pHero ), 1e-4f );
     SW_EXPECT_FALSE( pHero->isActive() );
@@ -179,10 +177,7 @@ SW_TEST_CASE( SequencePlaybackTest, SameSequenceDrivesAnotherBinding )
     pOther->setBinding( 1, pDouble->getHandle() );
 
     pOther->play();
-    {
-        TickContext context{ *pOther->getOwner(), 0.1f };
-        pOther->onTick( context );
-    }
+    Util::tick( manager, *pOther, 0.1f );
     SW_EXPECT_NEAR( 5.0f, Util::readX( *pDouble ), 1e-4f );
     SW_EXPECT_NEAR( 1.0f, Util::readX( *pHero ), 1e-4f );
 }

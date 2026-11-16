@@ -4,6 +4,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Material/Dev/MaterialGraph.h"
@@ -418,7 +419,9 @@ SW_TEST_CASE( MaterialGraphCompilerTest, SampleGeneratedAssetsAreCurrent )
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ shaderPath }, shaderText ) );
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ paths._materialPath }, materialText ) );
         SW_EXPECT_EQUAL( result._hlsl, MaterialGraphTestUtil::withoutCarriageReturns( shaderText ) );
-        SW_EXPECT_EQUAL( MaterialGraphCompileResult::makeMaterialText( result, paths._stem, shaderPath, pGraphID ), MaterialGraphTestUtil::withoutCarriageReturns( materialText ) );
+        // 생성기 쓰기(`MaterialGraphGeneratedPaths`)는 있던 파일의 정체성 머리를 옮겨 쓴다 — 같은 길로 만든 글과 견준다.
+        const string fileText = MaterialGraphTestUtil::withoutCarriageReturns( materialText );
+        SW_EXPECT_EQUAL( AssetGUIDHeader::carryOver( fileText, MaterialGraphCompileResult::makeMaterialText( result, paths._stem, shaderPath, pGraphID ) ), fileText );
     }
 }
 

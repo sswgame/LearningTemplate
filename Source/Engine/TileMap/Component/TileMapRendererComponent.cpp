@@ -107,7 +107,10 @@ namespace sw
                     { (void)tiles.rebuild(); } );
             }
         }
-        flushCollision(); // 이번 틱까지 칠한 칸의 청크 바디를 한 번에(칸마다 맵 전체를 다시 만들지 않는다)
+        // 이번 틱까지 칠한 칸의 청크 바디를 한 번에(칸마다 맵 전체를 다시 만들지 않는다). 바디를 고치는 것은 씬 쓰기라 틱 뒤(같은 프레임)에 한다.
+        if ( _bCollisionDirty == SW_TRUE )
+            context.deferPostTickOnComponent( *this, []( TileMapRendererComponent& tiles )
+            { tiles.flushCollision(); } );
         // 오브젝트가 움직였는지 본다. 타일맵은 대개 서 있다 — 장면 컴포넌트와 월드 변경 번호가 그대로면 행렬도 읽지 않는다.
         // 번호가 바뀌어도 행렬이 같으면(같은 값으로 다시 합성) 칸을 다시 놓지 않도록 행렬 비교는 남긴다.
         const GameObject*     pOwner         = getOwner();

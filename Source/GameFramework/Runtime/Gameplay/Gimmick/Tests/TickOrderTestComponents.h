@@ -32,7 +32,7 @@ namespace sw
         void onTick( TickContext& context ) override
         {
             Component::onTick( context );
-            ControlSystem* pControl = ControlSystem::find( *getOwner()->getMutableManager() );
+            ControlSystem* pControl = ControlSystem::find( *getOwner()->getManager() ); // 틱 본문은 읽기 매니저 — 서버 틱 발행은 ControlSystem 의 몫이다
             if ( pControl == nullptr )
                 return;
             ++_offset;

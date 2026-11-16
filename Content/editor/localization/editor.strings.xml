@@ -5011,7 +5011,8 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.AddPoseNodeTip" source="Add a pose node state of this type. Set its inputs to clip or state names in the inspector.">
+		<entry key="EditorAnimationGraph.AddPoseNodeTip"
+		       source="Add a pose node state of this type. Set its inputs to clip or state names in the inspector.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
@@ -5209,7 +5210,8 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.PoseNodeMirrorAxisTip" source="Model-space axis that runs left to right; the pose is reflected across the plane normal to it. Bone pairs come from the skeleton&apos;s mirror table.">
+		<entry key="EditorAnimationGraph.PoseNodeMirrorAxisTip"
+		       source="Model-space axis that runs left to right; the pose is reflected across the plane normal to it. Bone pairs come from the skeleton's mirror table.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
@@ -5224,7 +5226,8 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.PoseNodeSectionsTip" source="Montage sections in start order. A section ends where the next one starts; the last ends at the clip end.">
+		<entry key="EditorAnimationGraph.PoseNodeSectionsTip"
+		       source="Montage sections in start order. A section ends where the next one starts; the last ends at the clip end.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
@@ -5234,7 +5237,8 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.PoseNodeWeightTip" source="Float parameter that blends the inputs (0 = first, 1 = second).">
+		<entry key="EditorAnimationGraph.PoseNodeWeightTip"
+		       source="Float parameter that blends the inputs (0 = first, 1 = second).">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
@@ -5260,7 +5264,8 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.SectionBranchParamTip" source="Bool parameter that, when on at the section end, goes to Branch instead of Next.">
+		<entry key="EditorAnimationGraph.SectionBranchParamTip"
+		       source="Bool parameter that, when on at the section end, goes to Branch instead of Next.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
@@ -5285,7 +5290,8 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAnimationGraph.SectionStartTip" source="Clip time where the section starts; must be after the previous section.">
+		<entry key="EditorAnimationGraph.SectionStartTip"
+		       source="Clip time where the section starts; must be after the previous section.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
