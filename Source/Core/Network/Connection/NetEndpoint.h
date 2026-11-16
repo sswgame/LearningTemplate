@@ -132,6 +132,18 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 엔드포인트의 운영 셈 한 벌입니다(`NetEndpoint::getCounters` 가 잠금 한 번에 읽는다). 누적 셈은 `initialize` 때 0 으로 돌아간다. */
+    struct NetEndpointCounters
+    {
+        uint64 _rejectedPacketCount{ 0 };        ///< 헤더 · 체크섬 · 종류 · 챌린지가 틀려 버린 패킷(다른 버전 · 다른 게임 · 위조)
+        uint64 _authenticationFailureCount{ 0 }; ///< 복호 · 증명 · 키 확인에 실패해 버린 패킷
+        uint64 _replayRejectedCount{ 0 };        ///< 재전송 방지 윈도우가 버린 패킷
+        int32  _connectedCount{ 0 };             ///< 지금 붙은 연결 수
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief `connectAsync` 의 결과입니다. */
     struct NetConnectResult
     {
@@ -366,6 +378,8 @@ namespace sw
         uint64 getAuthenticationFailureCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 재전송 방지 윈도우가 버린 패킷 수입니다. */
         uint64 getReplayRejectedCount() const SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 운영 셈 한 벌을 잠금 한 번에 읽습니다(서버 지표가 틱마다 샤드마다 읽는다 — `GameNetSession`). */
+        NetEndpointCounters getCounters() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief `update` 가 지금까지 들여다본 슬롯 수의 합입니다(기한이 된 연결만 보는지 확인하는 진단과 테스트용, 감사 N-8). */
         uint64 getSlotVisitCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 이 엔드포인트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */

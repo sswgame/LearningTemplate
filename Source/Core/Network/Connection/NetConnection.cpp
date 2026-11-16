@@ -71,6 +71,8 @@ namespace sw
                 return "ReceiveOverflow";
             case NetDisconnectReason::ReliableOverflow:
                 return "ReliableOverflow";
+            case NetDisconnectReason::Count:
+                break;
         }
         return "Unknown";
     }

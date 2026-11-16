@@ -147,7 +147,8 @@ namespace sw
         SecurityMismatch,     ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
         AuthenticationFailed, ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
         ReceiveOverflow,      ///< 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
-        ReliableOverflow      ///< 신뢰 창이 차 신뢰 메시지를 넣지 못했다(상대가 확인하지 않는다) — 버리면 받는 쪽의 순서가 영영 끊기므로 닫는다(언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다).
+        ReliableOverflow,     ///< 신뢰 창이 차 신뢰 메시지를 넣지 못했다(상대가 확인하지 않는다) — 버리면 받는 쪽의 순서가 영영 끊기므로 닫는다(언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다).
+        Count                 ///< 사유가 아니라 개수다 — 서버 지표가 사유마다 시리즈를 이 값까지 만든다(`GameNetSession`). 사유를 더하면 `toString` 의 switch 가 빠진 줄을 컴파일에서 알린다.
     };
 
     SW_API const utf8* toString( NetDisconnectReason reason );
@@ -172,6 +173,11 @@ namespace sw
         [[nodiscard]] static bool parse( string_view text, uint16 defaultPort, NetAddress& outAddress );
 
         string toString() const;
+        /**
+         * @brief 로그에 남길 가린 주소입니다 — 마지막 옥텟을 `x` 로 가리고 포트를 뺀다(`203.0.113.x`). 클라이언트 주소는 개인 정보라 운영 로그에는 이것만 남긴다.
+         * @details /24 로 줄이면 망 · 지역은 남고 사람은 가려진다(GA4 의 IP 익명화와 같은 폭). 연결을 가르는 일은 연결 ID 가 한다.
+         */
+        string toMaskedString() const;
         bool   isValid() const { return _port != 0; }
         /** @brief 이 기계의 루프백(127.0.0.1)이면 true 입니다(포트는 보지 않는다). 루프백에만 묶인 채널 · 세션이 받는 주소를 가린다. */
         constexpr bool isLoopback() const { return _ipv4 == makeLoopback( 0 )._ipv4; }

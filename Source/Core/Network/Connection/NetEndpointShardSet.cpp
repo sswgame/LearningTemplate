@@ -51,16 +51,24 @@ namespace sw
         _connectionStride = 0;
     }
 
-    NetEndpoint* NetEndpointShardSet::findShard( int32 connectionID, int32& outLocalConnectionID ) const
+    optional<int32> NetEndpointShardSet::findShardIndex( int32 connectionID ) const
     {
-        outLocalConnectionID = constant::invalid_index::kInt32;
         if ( connectionID < 0 || _connectionStride < 1 )
-            return nullptr;
+            return nullopt;
         const int32 shardIndex = connectionID / _connectionStride;
         if ( shardIndex >= getShardCount() )
+            return nullopt;
+        return shardIndex;
+    }
+
+    NetEndpoint* NetEndpointShardSet::findShard( int32 connectionID, int32& outLocalConnectionID ) const
+    {
+        outLocalConnectionID             = constant::invalid_index::kInt32;
+        const optional<int32> shardIndex = findShardIndex( connectionID );
+        if ( shardIndex.has_value() == false )
             return nullptr;
-        outLocalConnectionID = connectionID - shardIndex * _connectionStride;
-        return _listShard[static_cast<size_t>( shardIndex )];
+        outLocalConnectionID = connectionID - *shardIndex * _connectionStride;
+        return _listShard[static_cast<size_t>( *shardIndex )];
     }
 
     bool NetEndpointShardSet::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )

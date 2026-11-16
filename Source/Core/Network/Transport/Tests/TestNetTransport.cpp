@@ -85,6 +85,7 @@ SW_TEST_CASE( NetTransportTest, UDPTransportSendsDatagramsOverLocalhost )
     SW_EXPECT_TRUE( NetAddress::parse( "10.0.0.7:7777", 1, parsed ) );
     SW_EXPECT_TRUE( parsed == NetAddress::make( 10, 0, 0, 7, 7777 ) );
     SW_EXPECT_TRUE( parsed.toString() == "10.0.0.7:7777" );
+    SW_EXPECT_TRUE( NetAddress::make( 203, 0, 113, 77, 7777 ).toMaskedString() == "203.0.113.x" ); // 로그용 — 마지막 옥텟과 포트를 가린다
     SW_EXPECT_TRUE( NetAddress::parse( "192.168.1.2", 3000, parsed ) && parsed._port == 3000 );
     SW_EXPECT_FALSE( NetAddress::parse( "300.1.1.1:5", 1, parsed ) );
     SW_EXPECT_FALSE( NetAddress::parse( "1.2.3", 1, parsed ) );

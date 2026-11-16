@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
@@ -47,6 +48,8 @@ namespace sw
         NetEndpoint& getShard( int32 shardIndex ) const { return *_listShard[static_cast<size_t>( shardIndex )]; }
         /** @brief 샤드 번호와 샤드 안의 연결 ID 를 묶음의 연결 ID 로 접습니다. */
         int32 makeConnectionID( int32 shardIndex, int32 localConnectionID ) const { return shardIndex * _connectionStride + localConnectionID; }
+        /** @brief 묶음의 연결 ID 가 든 샤드 번호입니다. 범위 밖이면 비었습니다. */
+        optional<int32> findShardIndex( int32 connectionID ) const;
 
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
         [[nodiscard]] bool trySendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
