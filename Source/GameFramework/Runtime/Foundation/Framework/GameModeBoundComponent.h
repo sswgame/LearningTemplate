@@ -41,8 +41,8 @@ namespace sw
         template <typename TGameMode, typename TObject = GameObject>
         const TGameMode* findGameMode() const
         {
-            TObject* pOwner   = getOwner();
-            auto*    pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+            const TObject* pOwner   = getOwner();
+            const auto*    pManager = pOwner != nullptr ? pOwner->getManager() : nullptr; // 읽기다 — 틱에서 부른다(쓰기 매니저는 틱 단언에 걸린다)
             return pManager != nullptr ? GameModeComponent::resolve<TGameMode>( *pManager, _gameMode ) : nullptr;
         }
 

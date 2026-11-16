@@ -353,7 +353,9 @@ namespace sw
         void registerSocketTask( SkeletalMeshComponent& body );
         void unregisterSocketTask();
         /** @brief 유닛 번호에 해당하는 오브젝트입니다. 몸이면 이 오브젝트입니다. */
-        GameObject*        findUnitObject( GameObjectManager& manager, uint32 unitIndex ) const;
+        GameObject* findUnitObject( GameObjectManager& manager, uint32 unitIndex ) const;
+        /** @brief 읽기 판입니다 — 틱(애니메이션 알림의 소켓 변환)에서 부른다. */
+        const GameObject*  findUnitObject( const GameObjectManager& manager, uint32 unitIndex ) const;
         GameObjectManager* findManager() const;
         /** @brief 이번 조립의 외형 전개입니다. 미리보기 입히기면 선택을, 아니면 프리셋 id 를 펼칩니다. 펼치지 못하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool expandSpec( const AppearanceDatabase& database, CharacterAppearanceSpec& outSpec ) const;

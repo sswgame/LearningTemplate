@@ -378,19 +378,19 @@ namespace sw
 
     void ShooterEnemyComponent::requestDropSocketParts() const
     {
-        GameObject*                         pOwner      = getOwner();
-        GameObjectManager*                  pManager    = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*                   pOwner      = getOwner();
+        const GameObjectManager*            pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr; // 틱(피해)에서 불린다 — 쓰기는 틱 뒤 작업이 받은 매니저로
         const CharacterAppearanceComponent* pAppearance = pOwner != nullptr ? pOwner->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pManager == nullptr || pAppearance == nullptr )
             return;
         vector<GameObjectHandle> listPart;
         pAppearance->collectPartObjects( listPart );
         // 강체를 동적으로 바꾸는 일은 물리 단계와 겹치지 않게 틱 뒤에 한다.
-        pManager->executeOrDeferPostTick( [pManager, listPart]()
+        pManager->executeOrDeferPostTickOnScene( [listPart]( GameObjectManager& sceneManager )
         {
             for ( const GameObjectHandle part : listPart )
             {
-                GameObject*             pPart      = pManager->resolveGameObject( part );
+                GameObject*             pPart      = sceneManager.resolveGameObject( part );
                 SocketBindingComponent* pBinding   = pPart != nullptr ? pPart->getComponent<SocketBindingComponent>() : nullptr;
                 const bool              bDroppable = pBinding != nullptr && pPart->getComponent<RigidBodyComponent>() != nullptr;
                 if ( bDroppable && pBinding->release( SocketReleaseMode::Physics ) == false )

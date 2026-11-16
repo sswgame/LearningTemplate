@@ -635,7 +635,8 @@ namespace sw
 
     bool CharacterAppearanceComponent::findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const
     {
-        GameObjectManager* pManager = findManager();
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr; // 읽기다 — 틱(애니메이션 알림)에서 부른다
         if ( pManager == nullptr || _assembleCount == 0 )
             return false;
         // 유닛 번호 순서의 월드이다. 몸은 이 오브젝트이고, 부품은 그 부품 오브젝트이며, 지난 프레임에 적용된 위치를 쓴다.
@@ -1782,6 +1783,19 @@ namespace sw
         _socketTaskRegistration.reset();
         _proportionTaskRegistration.reset();
         _bProportionTask = SW_FALSE;
+    }
+
+    const GameObject* CharacterAppearanceComponent::findUnitObject( const GameObjectManager& manager, uint32 unitIndex ) const
+    {
+        if ( unitIndex == AppearanceSocketRig::kBodyUnit )
+            return getOwner();
+        const optional<uint32> partIndex = _rig.getUnitPart( unitIndex );
+        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        {
+            if ( partIndex == spawned._partIndex )
+                return spawned._bMerged == SW_TRUE ? getOwner() : manager.resolveGameObject( spawned._object ); // 합친 부품은 몸 유닛이 그린다
+        }
+        return nullptr;
     }
 
     GameObject* CharacterAppearanceComponent::findUnitObject( GameObjectManager& manager, uint32 unitIndex ) const
