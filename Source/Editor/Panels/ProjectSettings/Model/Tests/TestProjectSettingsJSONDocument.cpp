@@ -11,8 +11,7 @@ using namespace sw;
 using namespace sw::editor;
 
 /**
- * @brief [ProjectSettingsJSONDocumentTest] 저장소의 `Config/` JSON 중 고칠 수 있게 열린 것은 다시 쓰면 바이트까지 같다 — 표 페이지에서 한 값을 고쳐 저장해도 diff 는 그 줄뿐이다
- * @details 되살리지 못하는 손 모양(한 줄 객체 등)은 읽기 전용(`LayoutNotPreserved`)으로 열려 저장이 모양을 바꾸지 않는다. 그 파일도 고치게 하려면 바뀐 글 범위만 고치는 쓰기가 필요하다(NEXT).
+ * @brief [ProjectSettingsJSONDocumentTest] 저장소의 `Config/` JSON 은 모두 고칠 수 있게 열리고 다시 쓰면 바이트까지 같다 — 손으로 맞춘 한 줄 객체도 원문 범위로 쓴다
  */
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EveryConfigFileRoundTrips )
 {
@@ -26,9 +25,9 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EveryConfigFileRoundTrips )
         SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
         ProjectSettingsJSONDocument document;
         SW_EXPECT_TRUE_MSG( document.openText( path, text ).has_value(), path.c_str() );
-        // 되살리지 못하는 손 모양은 읽기 전용이다 — 고칠 수 있는 파일은 글자 하나 다르지 않게 되살아나야 한다
-        const string message = path + " is editable but does not round-trip";
-        SW_EXPECT_TRUE_MSG( document.getReadOnlyReason() == ProjectSettingsReadOnlyReason::LayoutNotPreserved || document.makeText() == text, message.c_str() );
+        const string message = path + " does not round-trip";
+        SW_EXPECT_TRUE_MSG( document.getReadOnlyReason() != ProjectSettingsReadOnlyReason::LayoutNotPreserved, message.c_str() );
+        SW_EXPECT_TRUE_MSG( document.makeText() == text, message.c_str() );
         SW_EXPECT_FALSE( document.isModified() );
     }
 }
@@ -91,15 +90,22 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, GeneratedFileIsReadOnly )
 }
 
 /**
- * @brief [ProjectSettingsJSONDocumentTest] 쓰기가 되살리지 못하는 손 모양(들여쓴 파일 안의 한 줄 객체)은 읽기 전용으로 연다 — 저장이 모양을 조용히 바꾸지 않는다
+ * @brief [ProjectSettingsJSONDocumentTest] 손 모양(들여쓴 파일 안의 한 줄 객체)을 고치면 바뀐 값 · 더한 원소 밖은 원문 그대로다 — 한 줄 객체는 한 줄로 남고, 새 객체 원소만 파일 들여쓰기로 쓴다
  */
-SW_TEST_CASE( ProjectSettingsJSONDocumentTest, HandLayoutOpensReadOnly )
+SW_TEST_CASE( ProjectSettingsJSONDocumentTest, HandLayoutIsKeptOnEdit )
 {
     ProjectSettingsJSONDocument document;
     SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Dev/Rules.json", "{\n    \"_listRule\": [\n        { \"_folder\": \"Logs\", \"_keepCount\": 30 }\n    ]\n}\n" ).has_value() );
-    SW_EXPECT_TRUE( document.getReadOnlyReason() == ProjectSettingsReadOnlyReason::LayoutNotPreserved );
-    SW_EXPECT_LOG( "ProjectSettingsJSON.SaveRefused" );
-    SW_EXPECT_FALSE( document.saveDocument() );
+    SW_EXPECT_FALSE( document.isReadOnly() );
+    const uint32 listRule = document.getNode( ProjectSettingsJSONDocument::kRootNode )._listChild[0];
+    const uint32 rule     = document.getNode( listRule )._listChild[0];
+    SW_EXPECT_TRUE( document.setLeafText( document.getNode( rule )._listChild[1], "40" ) );
+    SW_EXPECT_TRUE( document.addObjectMember( rule, "_note" ) );
+    SW_EXPECT_EQUAL( document.makeText(), string( "{\n    \"_listRule\": [\n        { \"_folder\": \"Logs\", \"_keepCount\": 40, \"_note\": \"\" }\n    ]\n}\n" ) );
+    SW_EXPECT_TRUE( document.removeChild( rule, 2 ) );
+    SW_REQUIRE_TRUE( document.addArrayItem( listRule ).has_value() );
+    SW_EXPECT_EQUAL( document.makeText(), string( "{\n    \"_listRule\": [\n        { \"_folder\": \"Logs\", \"_keepCount\": 40 },\n        {\n            \"_folder\": \"\",\n"
+                                                  "            \"_keepCount\": 0\n        }\n    ]\n}\n" ) );
 }
 
 /**

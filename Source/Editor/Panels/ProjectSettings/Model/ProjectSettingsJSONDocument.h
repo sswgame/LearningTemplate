@@ -1,6 +1,6 @@
 /**
  * @file ProjectSettingsJSONDocument.h
- * @brief 반사 형식이 없는 설정 JSON(린트 · 격리 · 환경 표, C++ 가 직접 읽는 개발 표) 하나의 편집 상태입니다. 값을 형식별 칸으로 고치고 파일의 모양(들여쓰기 · 끝 줄바꿈 · 키 순서 · 수 글)을 지켜 씁니다(ImGui 없음).
+ * @brief 반사 형식이 없는 설정 JSON(린트 · 격리 · 환경 표, C++ 가 직접 읽는 개발 표) 하나의 편집 상태입니다. 값을 형식별 칸으로 고치고 바뀐 글 범위만 고쳐 씁니다(ImGui 없음).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -22,7 +22,23 @@ namespace sw::editor
     {
         None,               ///< 고칠 수 있다
         Generated,          ///< 도구가 만든 파일(`*.generated.json`) — 고쳐도 다음 생성이 덮는다
-        LayoutNotPreserved, ///< 쓰기가 읽은 글을 그대로 되살리지 못한다(손으로 맞춘 한 줄 객체 등) — 저장하면 파일 모양이 바뀌므로 고치지 않는다
+        LayoutNotPreserved, ///< 원문에서 노드 범위를 찾지 못했고(겹친 키 등) 다시 쓴 글도 원문과 다르다 — 저장하면 파일 모양이 바뀌므로 고치지 않는다
+    };
+
+    /**
+     * @struct ProjectSettingsJSONSpan
+     * @brief 노드가 읽은 원문에서 차지한 글 범위(바이트 위치)입니다. 연 뒤에 더한 노드는 범위가 없다.
+     */
+    struct ProjectSettingsJSONSpan
+    {
+        static constexpr uint32 kNone = ~0u;
+
+        uint32 _memberBegin{ kNone }; ///< 객체 멤버면 키의 여는 따옴표, 배열 원소면 값의 시작
+        uint32 _keyEnd{ kNone };      ///< 객체 멤버면 키의 닫는 따옴표 다음, 아니면 kNone
+        uint32 _valueBegin{ kNone };
+        uint32 _valueEnd{ kNone };
+
+        [[nodiscard]] bool isPresent() const { return _valueBegin != kNone; }
     };
 
     /**
@@ -35,13 +51,19 @@ namespace sw::editor
         string         _key;       ///< 객체 멤버면 키, 배열 원소 · 루트면 비었다
         string         _text;      ///< 글 · 수 · 불의 글(따옴표 안쪽, `0.01`, `true`). 컨테이너 · null 은 비었다
         vector<uint32> _listChild; ///< 배열 · 객체의 자식 노드 번호(순서 그대로)
+
+        ProjectSettingsJSONSpan _source;          ///< 원문 범위 — 바뀌지 않은 노드는 이 글을 그대로 쓴다
+        string                  _textAtOpen;      ///< 열 때의 `_text`(말단이 바뀌었는지 본다)
+        vector<uint32>          _listChildAtOpen; ///< 열 때의 `_listChild`(원소를 더하거나 뺐는지 본다)
     };
 
     /**
      * @class ProjectSettingsJSONDocument
      * @brief 스키마 없는 설정 파일의 편집 문서입니다 — Godot ProjectSettings 가 형식 없는 값을 형식별 칸으로 고치는 자리(반사 형식이 있으면 `ProjectSettingsDocument` 가 프로퍼티 그리드로 고친다).
-     * @details 읽은 글과 지금 트리를 쓴 글이 다르면 바뀐 것이다. 쓰기는 파일의 들여쓰기(첫 들여쓴 줄의 칸 수, 없으면 한 줄)와 끝 줄바꿈을 지키고 수는 파일의 글 그대로 둔다 —
-     *          고치지 않은 파일은 쓴 글이 읽은 글과 바이트까지 같다(`ProjectSettingsJSONDocumentTest.EveryConfigFileRoundTrips`). 도구가 만든 파일(`*.generated.json`)은 읽기 전용이다.
+     * @details 읽은 글과 지금 트리를 쓴 글이 다르면 바뀐 것이다. 쓰기는 VS Code 의 settings.json 편집(jsonc-parser `modify`)처럼 바뀐 범위만 고친다 —
+     *          바뀌지 않은 노드는 원문 글, 바뀐 말단은 그 값 글만, 원소를 더하거나 뺀 컨테이너는 원문의 구분자(쉼표 · 줄바꿈 · 들여쓰기)를 다시 쓴다.
+     *          손으로 맞춘 한 줄 객체도 고친 값 밖은 바이트까지 그대로다(`ProjectSettingsJSONDocumentTest.EveryConfigFileRoundTrips` · `HandLayoutIsKeptOnEdit`).
+     *          새로 더한 컨테이너만 파일의 들여쓰기(첫 들여쓴 줄의 칸 수, 없으면 한 줄)로 쓴다. 도구가 만든 파일(`*.generated.json`)은 읽기 전용이다.
      */
     class ProjectSettingsJSONDocument
     {
@@ -90,11 +112,20 @@ namespace sw::editor
     private:
         uint32 appendNode( const JSONValue& value, string_view key );
         uint32 appendEmptyLike( uint32 sampleNode, string_view key );
+        /** @brief 원문 @p inoutPos 부터 노드 @p node 의 범위를 찾아 적고 그 끝으로 옮깁니다. 트리와 원문이 어긋나면(겹친 키 등) false 입니다. */
+        [[nodiscard]] bool mapSource( uint32 node, size_t& inoutPos );
+        /** @brief 노드 @p node 의 글을 덧붙입니다. 범위가 없는 노드는 파일 들여쓰기로 새로 쓰고 줄마다 @p lineIndent 를 앞에 붙인다. */
+        [[nodiscard]] bool appendValueText( uint32 node, string_view lineIndent, string& inoutText ) const;
+        /** @brief 원소를 더하거나 뺀 컨테이너 @p node 를 원문의 구분자로 다시 씁니다. */
+        [[nodiscard]] bool appendChangedContainerText( uint32 node, string& inoutText ) const;
+        /** @brief 범위가 없는 노드 @p node 를 파일 들여쓰기로 씁니다. */
+        [[nodiscard]] bool appendFreshText( uint32 node, string_view lineIndent, string& inoutText ) const;
 
     private:
         vector<ProjectSettingsJSONNode> _listNode;
         string                          _absolutePath;
-        EditorDocumentState<string>     _state; ///< 마지막으로 읽거나 저장한 글
+        string                          _sourceText; ///< 열 때 읽은 글 — 노드 범위(`_source`)가 가리킨다
+        EditorDocumentState<string>     _state;      ///< 마지막으로 읽거나 저장한 글
         int32                           _indent;
         ProjectSettingsReadOnlyReason   _readOnlyReason;
         uint8                           _bTrailingNewLine : 1;
