@@ -120,17 +120,17 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, UndoRestoresEachEdit )
     const uint32                   name  = root._listChild[0];
     const uint32                   bOn   = root._listChild[1];
     const uint32                   list  = root._listChild[2];
-    const uint32                   start = document.getUndoStepSerial();
+    const uint32                   start = document.getRecordedUndoStepCount();
 
     SW_EXPECT_TRUE( document.setLeafText( bOn, "true" ) ); // 같은 값
-    SW_EXPECT_EQUAL( document.getUndoStepSerial(), start );
+    SW_EXPECT_EQUAL( document.getRecordedUndoStepCount(), start );
     SW_EXPECT_TRUE( document.setLeafText( name, "ab" ) );
     SW_EXPECT_TRUE( document.setLeafText( name, "abc" ) ); // 같은 칸을 치는 중 — 앞 단계에 합친다
-    SW_EXPECT_EQUAL( document.getUndoStepSerial(), start + 1u );
+    SW_EXPECT_EQUAL( document.getRecordedUndoStepCount(), start + 1u );
     document.endTextEdit();
     SW_EXPECT_TRUE( document.setLeafText( bOn, "false" ) );
     SW_EXPECT_TRUE( document.addArrayItem( list ).has_value() );
-    SW_EXPECT_EQUAL( document.getUndoStepSerial(), start + 3u );
+    SW_EXPECT_EQUAL( document.getRecordedUndoStepCount(), start + 3u );
     SW_EXPECT_EQUAL( document.makeText(), string( "{ \"name\": \"abc\", \"on\": false, \"list\": [ 1, 0 ] }\n" ) );
 
     SW_EXPECT_TRUE( document.undo() );

@@ -1308,7 +1308,9 @@
     "sw_vcpkg_target_system": "SW_VCPKG_TARGET_SYSTEM — CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)(2026-11-13)",
     "sw_vcpkg_triplet": "SW_VCPKG_TRIPLET — CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)(2026-11-13)",
     "sw_vulkan_validation": "SW_VULKAN_VALIDATION — CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례) — 같은 이름의 컴파일 정의와 같은 값을 뜻한다(2026-11-13)",
-    "sw_workspace_name": "SW_WORKSPACE_NAME — CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)(2026-11-13)"
+    "sw_workspace_name": "SW_WORKSPACE_NAME — CMake 전역 변수는 SW_SCREAMING_CASE(옵션 · 캐시와 같은 꼴 — CMake 자체 CMAKE_* 관례)(2026-11-13)",
+    "getUndoStepSerial": "getRecordedUndoStepCount — serial 은 업계 용어가 아니다 — 기록한 되돌리기 단계 수다(2026-11-17)",
+    "_undoStepSerial": "_recordedUndoStepCount — 같은 칸(2026-11-17)"
   },
   "_keep": {
     "allOf": "std::all_of 와 같은 알고리즘 이름(VectorUtil)",

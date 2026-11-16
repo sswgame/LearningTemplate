@@ -109,8 +109,8 @@ namespace sw::editor
         [[nodiscard]] bool undo() { return _state.undo( _listNode ); }
         /** @brief 되돌린 단계를 다시 합니다. 기록이 없으면 false 입니다. */
         [[nodiscard]] bool redo() { return _state.redo( _listNode ); }
-        /** @brief 새 되돌리기 단계가 생길 때마다 하나 오르는 번호입니다 — 패널이 단계마다 명령 하나를 올린다(합친 편집은 오르지 않는다). */
-        [[nodiscard]] uint32 getUndoStepSerial() const { return _undoStepSerial; }
+        /** @brief 지금까지 기록한 되돌리기 단계 수입니다(합친 편집은 세지 않고 되돌려도 줄지 않는다) — 패널이 단계마다 명령 하나를 올린다. */
+        [[nodiscard]] uint32 getRecordedUndoStepCount() const { return _recordedUndoStepCount; }
         /**
          * @brief 배열 @p arrayNode 끝에 원소를 더하고 그 번호를 돌려줍니다. 원소 모양은 마지막 원소와 같고(말단은 빈 값 — 글 "", 수 0, 불 false; 객체는 같은 키에 빈 값; 배열은 빈 배열),
          *        빈 배열이면 빈 글입니다. 배열이 아니거나 읽기 전용이면 없음입니다.
@@ -141,7 +141,7 @@ namespace sw::editor
         string                          _sourceText; ///< 열 때 읽은 글 — 노드 범위(`_source`)가 가리킨다
         /// 마지막으로 읽거나 저장한 글과 트리 스냅숏 되돌리기 기록. 노드가 원문 범위를 들어 되돌린 트리도 바뀐 범위만 고쳐 쓴다
         EditorDocumentState<vector<ProjectSettingsJSONNode>> _state;
-        uint32                                               _undoStepSerial;
+        uint32                                               _recordedUndoStepCount;
         int32                                                _indent;
         ProjectSettingsReadOnlyReason                        _readOnlyReason;
         uint8                                                _bTrailingNewLine : 1;

@@ -158,7 +158,7 @@ namespace sw::editor
         : _listNode{}
         , _absolutePath{}
         , _state{}
-        , _undoStepSerial{ 0 }
+        , _recordedUndoStepCount{ 0 }
         , _indent{ ProjectSettingsJSONDocumentInternal::kSingleLineIndent }
         , _readOnlyReason{ ProjectSettingsReadOnlyReason::None }
         , _bTrailingNewLine{ 0 }
@@ -349,7 +349,7 @@ namespace sw::editor
     void ProjectSettingsJSONDocument::recordEdit( string_view coalesceKey )
     {
         if ( _state.record( _listNode, coalesceKey ) )
-            ++_undoStepSerial;
+            ++_recordedUndoStepCount;
     }
 
     uint32 ProjectSettingsJSONDocument::appendNode( const JSONValue& value, string_view key )

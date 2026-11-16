@@ -1,0 +1,4 @@
+[
+  {"old": "getUndoStepSerial", "new": "getRecordedUndoStepCount", "why": "serial 은 업계 용어가 아니다 — 기록한 되돌리기 단계 수다"},
+  {"old": "_undoStepSerial", "new": "_recordedUndoStepCount", "why": "같은 칸"}
+]

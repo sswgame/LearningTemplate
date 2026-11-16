@@ -236,10 +236,10 @@ namespace sw::editor
                 EditorWidgets::drawChip( "Table", SW_THEME_COLOR( "Base", "Accent" ) );
             drawPageActions( page );
             ImGui::BeginChild( "##ProjectSettingsTable", ImVec2{ 0.0f, 0.0f } );
-            const uint32 undoSerial = table.getUndoStepSerial();
+            const uint32 recordedStepCount = table.getRecordedUndoStepCount();
             if ( _tableView.draw( table, _statusText ) )
                 refreshDirtyState();
-            if ( table.getUndoStepSerial() != undoSerial )
+            if ( table.getRecordedUndoStepCount() != recordedStepCount )
                 pushTableUndo( page );
             ImGui::EndChild();
             return;
