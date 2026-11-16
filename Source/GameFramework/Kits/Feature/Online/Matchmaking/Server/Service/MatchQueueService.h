@@ -124,6 +124,7 @@ namespace sw
         void update( UnixMilliseconds nowMs );
 
         void joinQueue( AccountID accountID, string_view modeID, string_view region, UnixMilliseconds nowMs, uint64 requestTag );
+        /** @brief 이 서버에 티켓이 없으면 파티 기록의 티켓을 풉니다 — 티켓을 낸 서버가 죽어 다른 서버로 붙은 파티가 "줄 섬" 에 갇히지 않게 한다(감사 O-7). */
         void leaveQueue( AccountID accountID, uint64 requestTag );
         /** @brief 계정이 떠났을 때 부릅니다. 그 계정이 포함된 티켓을 뺍니다. */
         void removeAccount( AccountID accountID );
@@ -188,6 +189,13 @@ namespace sw
             UnixMilliseconds _nowMs{ 0 };
         };
 
+        /** @brief 파티 찾기를 기다리는 빠지기입니다. 이 서버에 티켓이 없는 계정의 파티 기록 티켓을 풀려고 읽습니다. */
+        struct LeaveRequest
+        {
+            AccountID _accountID{ kInvalidAccountID };
+            uint64    _requestTag{ 0 };
+        };
+
         /** @brief 통계를 읽기를 기다리는 줄 서기입니다. 다른 서버의 파티원은 이 서버 메모리에 통계가 없습니다. */
         struct RatingWait
         {
@@ -198,6 +206,8 @@ namespace sw
         };
 
         void onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
+        /** @brief 파티 기록에 남은 다른 서버의 티켓을 권한 매처와 낸 서버에서 빼고 기록에서 지웁니다. */
+        void onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 통계가 모두 있으면 티켓을 내고, 아니면 올려 달라고 한 뒤 기다립니다. */
         void prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 다 읽었거나 시한이 지난 줄 서기의 티켓을 냅니다. 시한이 지났으면 `submitTicket` 이 RatingUnavailable 로 끝냅니다. */
@@ -227,7 +237,8 @@ namespace sw
         unordered_map<string, ModeState>    _mapModeState;
         unordered_map<uint64, LocalTicket>  _mapLocalTicket; ///< 이 서버가 낸 티켓이다
         unordered_map<AccountID, uint64>    _mapAccountToTicket;
-        unordered_map<uint64, PendingJoin>  _mapLookupToJoin; ///< 파티 찾기를 기다리는 줄 서기 요청이다
+        unordered_map<uint64, PendingJoin>  _mapLookupToJoin;  ///< 파티 찾기를 기다리는 줄 서기 요청이다
+        unordered_map<uint64, LeaveRequest> _mapLookupToLeave; ///< 파티 찾기를 기다리는 빠지기 요청이다
         vector<RatingWait>                  _listRatingWait;
         unordered_map<uint64, string>       _mapLeaseRequestToMode;
         EventBuffer<MatchQueueCompletion>   _completionBuffer;

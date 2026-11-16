@@ -34,6 +34,7 @@ namespace sw
         , _mapLocalTicket{}
         , _mapAccountToTicket{}
         , _mapLookupToJoin{}
+        , _mapLookupToLeave{}
         , _listRatingWait{}
         , _mapLeaseRequestToMode{}
         , _completionBuffer{}
@@ -130,6 +131,7 @@ namespace sw
         }
         _mapModeState.clear();
         _mapLookupToJoin.clear();
+        _mapLookupToLeave.clear();
         _listRatingWait.clear(); // 통계 창은 내리지 않는다 — 먼저 내려갔을 수 있고, 내려갈 때 메모리를 비운다
         _dependencies._pRouter = nullptr;
         _dependencies._pBus    = nullptr;
@@ -659,7 +661,7 @@ namespace sw
                 _mapAccountToTicket.erase( accountIt );
         }
         if ( ticketIt->second._partyID != 0 && _dependencies._pPartyLobby != nullptr )
-            _dependencies._pPartyLobby->setPartyTicket( ticketIt->second._partyID, 0 );
+            _dependencies._pPartyLobby->clearPartyTicket( ticketIt->second._partyID, ticketID );
         _mapLocalTicket.erase( ticketIt );
     }
 
@@ -743,14 +745,46 @@ namespace sw
             return;
         }
         const auto accountIt = _mapAccountToTicket.find( accountID );
-        if ( accountIt == _mapAccountToTicket.end() )
+        if ( accountIt != _mapAccountToTicket.end() )
+        {
+            const uint64 ticketID = accountIt->second;
+            cancelTicket( ticketID );
+            _completionBuffer.push( MatchQueueCompletion{ requestTag, ticketID, MatchmakingResult::Ok } );
+            return;
+        }
+        if ( _dependencies._pPartyLobby == nullptr )
         {
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::NotQueued } );
             return;
         }
-        const uint64 ticketID = accountIt->second;
+        // 이 서버의 티켓이 없다. 다른 서버(죽었을 수 있다)가 낸 파티 티켓이 파티 기록에 남아 있으면 그것을 푼다
+        const uint64 lookupTag       = _nextLookupTag++;
+        _mapLookupToLeave[lookupTag] = LeaveRequest{ accountID, requestTag };
+        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, PartyLobbyService::PartyFoundDelegate::create<&MatchQueueService::onLeavePartyFound>( this ) );
+    }
+
+    void MatchQueueService::onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party )
+    {
+        const auto leaveIt = _mapLookupToLeave.find( lookupTag );
+        if ( leaveIt == _mapLookupToLeave.end() )
+            return;
+        const LeaveRequest leave = leaveIt->second;
+        _mapLookupToLeave.erase( leaveIt );
+        if ( result != MatchmakingResult::Ok && result != MatchmakingResult::NotInParty )
+        {
+            _completionBuffer.push( MatchQueueCompletion{ leave._requestTag, 0, result } );
+            return;
+        }
+        const uint64 ticketID = party._queuedTicketID;
+        if ( result == MatchmakingResult::NotInParty || ticketID == 0 || party.hasMember( leave._accountID ) == false )
+        {
+            _completionBuffer.push( MatchQueueCompletion{ leave._requestTag, 0, MatchmakingResult::NotQueued } );
+            return;
+        }
+        // 낸 서버가 살아 있으면 그 서버가 Cancelled 를 받아 멤버에게 알리고, 죽었으면 아무도 받지 않는다. 어느 쪽이든 기록은 여기서 지운다(비교 후 지우기라 새 티켓은 남는다)
         cancelTicket( ticketID );
-        _completionBuffer.push( MatchQueueCompletion{ requestTag, ticketID, MatchmakingResult::Ok } );
+        _dependencies._pPartyLobby->clearPartyTicket( party._partyID, ticketID );
+        _completionBuffer.push( MatchQueueCompletion{ leave._requestTag, ticketID, MatchmakingResult::Ok } );
     }
 
     void MatchQueueService::cancelTicket( uint64 ticketID )

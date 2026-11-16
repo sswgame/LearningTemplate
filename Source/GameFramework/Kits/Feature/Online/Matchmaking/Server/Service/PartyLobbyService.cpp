@@ -155,6 +155,8 @@ namespace sw
                 }
                 case PartyLobbyOperation::PartySetTicket:
                 {
+                    if ( party._queuedTicketID != _request._expectedTicketID )
+                        return _request._expectedTicketID == 0 ? MatchmakingResult::AlreadyQueued : MatchmakingResult::NotQueued; // 그사이 다른 티켓이 섰거나 이미 풀렸다
                     party._queuedTicketID = _request._ticketID;
                     break;
                 }
@@ -475,6 +477,15 @@ namespace sw
         request._operation = PartyLobbyOperation::PartySetTicket;
         request._partyID   = partyID;
         request._ticketID  = ticketID;
+        startPartyMutation( request );
+    }
+
+    void PartyLobbyService::clearPartyTicket( uint64 partyID, uint64 ticketID )
+    {
+        Request request;
+        request._operation        = PartyLobbyOperation::PartySetTicket;
+        request._partyID          = partyID;
+        request._expectedTicketID = ticketID;
         startPartyMutation( request );
     }
 
