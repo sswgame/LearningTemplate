@@ -7,6 +7,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
@@ -19,14 +20,15 @@ using namespace sw;
 
 namespace
 {
-    constexpr int64     kNowMs   = 1700000000000ll;
-    constexpr int64     kMaxWait = 60000;
-    constexpr uint64    kGameID  = 500;
-    constexpr AccountID kAlice   = 11;
-    constexpr AccountID kBob     = 12;
-    constexpr AccountID kCarol   = 13;
-    constexpr uint64    kServerA = 1;
-    constexpr uint64    kServerB = 2;
+    constexpr int64     kNowMs          = 1700000000000ll;
+    constexpr int64     kMaxWait        = 60000;
+    constexpr int64     kMatchTimeLimit = 600000;
+    constexpr uint64    kGameID         = 500;
+    constexpr AccountID kAlice          = 11;
+    constexpr AccountID kBob            = 12;
+    constexpr AccountID kCarol          = 13;
+    constexpr uint64    kServerA        = 1;
+    constexpr uint64    kServerB        = 2;
 
     /** @brief 1 대 1 모드입니다. @p teamSize 를 키우면 파티 모드입니다. */
     struct MatchQueueTestUtil
@@ -34,11 +36,12 @@ namespace
         static MatchModeDef makeMode( string_view modeID = "duel", int32 teamSize = 1, string_view ratingStat = "" )
         {
             MatchModeDef mode;
-            mode._modeID     = string( modeID );
-            mode._teamCount  = 2;
-            mode._teamSize   = teamSize;
-            mode._maxWaitMs  = kMaxWait;
-            mode._ratingStat = string( ratingStat );
+            mode._modeID           = string( modeID );
+            mode._teamCount        = 2;
+            mode._teamSize         = teamSize;
+            mode._maxWaitMs        = kMaxWait;
+            mode._matchTimeLimitMs = kMatchTimeLimit;
+            mode._ratingStat       = string( ratingStat );
             return mode;
         }
     };
@@ -476,6 +479,39 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
     const vector<MatchQueueNotification> listTimedOut = world._serverB.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 1 ), listTimedOut.size() );
     SW_EXPECT_TRUE( listTimedOut[0]._assignment._result == MatchQueueResult::Timeout );
+}
+
+/** @brief [MatchQueueServiceTest] 게임 서버는 배정 버스를 잃어도 명단 기록으로 접속을 받는다(감사 O-6). 기록은 경기 시한까지 살아 경기 중 재접속도 받고, 시한이 지나면 거절한다 */
+SW_TEST_CASE( MatchQueueServiceTest, GameServerAcceptsFromMatchRecordWithoutBus )
+{
+    SoloWorld world; // 버스가 없다 — 배정 버스 메시지가 하나도 닿지 않는 경우(잃은 것과 같다)
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 1 );
+    const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
+    SW_EXPECT_TRUE( listFound[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_FALSE( agent.isAccepted( kAlice ) ); // 아직 기록을 읽지 않았다
+
+    agent.update( UnixMilliseconds{ kNowMs + 1 } );
+    world._server.poll( kNowMs + 1 );
+    SW_EXPECT_TRUE( agent.isAccepted( kAlice ) ); // Found 인데 거절되던 자리이다
+    SW_EXPECT_TRUE( agent.isAccepted( kBob ) );
+    SW_EXPECT_FALSE( agent.isAccepted( kCarol ) );
+
+    const int64 reconnectMs = kNowMs + 1 + MatchServerAgent::kExpectTTLMs + 1; // 버스 명단이었으면 지워졌을 시각이다
+    agent.update( UnixMilliseconds{ reconnectMs } );
+    world._server.poll( reconnectMs );
+    SW_EXPECT_TRUE( agent.isAccepted( kAlice ) );
+
+    agent.update( UnixMilliseconds{ kNowMs + 1 + kMatchTimeLimit } );
+    SW_EXPECT_FALSE( agent.isAccepted( kAlice ) );
+    agent.shutdown();
 }
 
 /** @brief [MatchQueueServiceTest] 백필: 경기 중 빈 슬롯을 새 경기보다 먼저 채우고, 들어갈 사람은 그 경기 id · 게임 서버 주소를 받는다. 모르는 모드 · 모양이 틀린 요청은 거절한다 */

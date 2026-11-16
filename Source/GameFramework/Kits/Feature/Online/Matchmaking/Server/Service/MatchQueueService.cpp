@@ -10,6 +10,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
+#include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
@@ -80,6 +81,32 @@ namespace sw
     string MatchQueueService::makeAssignTopic( uint64 serverID )
     {
         return MatchQueueBus::kAssignTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
+    }
+
+    string MatchQueueService::makeMatchRecordKey( uint64 serverID, string_view recordName )
+    {
+        return "mm/match/" + ServiceKeyUtil::makeHex64( serverID ) + "/" + string( recordName );
+    }
+
+    string MatchQueueService::makeMatchListKey( uint64 serverID )
+    {
+        return "mm/matches/" + ServiceKeyUtil::makeHex64( serverID );
+    }
+
+    void MatchQueueService::storeMatchRecord( uint64 serverID, const string& recordName, const MatchFormed& match, UnixMilliseconds nowMs )
+    {
+        const auto modeIt = _mapMode.find( match._modeID );
+        SW_ASSERT( modeIt != _mapMode.end() ); // 배정은 등록한 모드만 한다(로비 · 백필도 모드 상태를 찾은 뒤에 온다)
+        if ( modeIt == _mapMode.end() )
+            return;
+        const int64   ttlMs = modeIt->second._matchTimeLimitMs;
+        vector<uint8> bytes;
+        if ( MixedBuildCodec::encode( MatchFormed::kBusVersion, match, bytes ) == false )
+            return; // encode 가 오류 로그를 남겼다
+        const string listKey = makeMatchListKey( serverID );
+        _dependencies._pRouter->submit( EphemeralRequest::makeSet( makeMatchRecordKey( serverID, recordName ), std::move( bytes ), ttlMs ) );
+        _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( listKey, recordName, nowMs.count() + ttlMs ) );
+        _dependencies._pRouter->submit( EphemeralRequest::makeExpire( listKey, ttlMs ) ); // 목록은 마지막 기록과 함께 사라진다. 지난 멤버는 게임 서버가 지운다
     }
 
     bool MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDef>& listMode )
@@ -450,7 +477,7 @@ namespace sw
         state._maker.processBackfills( nowMs.count(), listBackfilled ); // 경기 중 빈 슬롯을 새 경기보다 먼저 채운다
         for ( const MatchBackfilled& backfilled : listBackfilled )
         {
-            deliverBackfill( backfilled );
+            deliverBackfill( backfilled, nowMs );
         }
         vector<MatchFormed> listFormed;
         vector<MatchTicket> listTimedOut;
@@ -481,7 +508,7 @@ namespace sw
         }
     }
 
-    void MatchQueueService::deliverBackfill( const MatchBackfilled& backfilled )
+    void MatchQueueService::deliverBackfill( const MatchBackfilled& backfilled, UnixMilliseconds nowMs )
     {
         const MatchBackfillRequest& request = backfilled._request;
         MatchFormed                 joined;
@@ -492,8 +519,9 @@ namespace sw
         joined._listTeam.resize( request._listOpenSlot.size() );
         joined._listTeam[static_cast<size_t>( backfilled._team )]._listMember = backfilled._ticket._listMember;
         joined._listTicket.push_back( backfilled._ticket );
-        if ( _dependencies._pBus != nullptr )                                                                                          // 게임 서버가 들어올 사람을 먼저 안다. 같은 경기 id 에 더해진다
-            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( request._serverID ), joined ); // 실패는 발행이 로그에 남겼다
+        storeMatchRecord( request._serverID, ServiceKeyUtil::makeHex64( request._matchID ) + "." + ServiceKeyUtil::makeHex64( backfilled._ticket._ticketID ), joined, nowMs ); // 경기의 첫 명단 기록은 그대로 두고 더한 사람만 따로 남긴다
+        if ( _dependencies._pBus != nullptr )                                                                                                                                  // 게임 서버가 들어올 사람을 먼저 안다. 같은 경기 id 에 더해진다
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( request._serverID ), joined );                                         // 실패는 발행이 로그에 남겼다
         MatchAssignment assignment;
         assignment._ticketID = backfilled._ticket._ticketID;
         assignment._matchID  = request._matchID;
@@ -566,8 +594,10 @@ namespace sw
         if ( bPlaced == false && failResult == MatchQueueResult::Count )
             return false;
 
+        if ( bPlaced )
+            storeMatchRecord( picked._descriptor._serverID, ServiceKeyUtil::makeHex64( match._matchID ), match, nowMs );                         // 게임 서버가 수락을 판정하는 원본이다
         if ( bPlaced && _dependencies._pBus != nullptr )                                                                                         // 게임 서버에 접속할 사람을 먼저 알린다
-            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 실패는 발행이 로그에 남겼다
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 빠른 길이다. 잃어도 게임 서버가 기록을 읽는다
         for ( const MatchTicket& ticket : match._listTicket )
         {
             MatchAssignment assignment;
@@ -617,8 +647,10 @@ namespace sw
             query._bAllowOtherRegion = SW_TRUE; // 로비는 지역을 고르지 않았으므로 다른 지역도 허용한다
             bPlaced                  = pState->_reader->pickServer( query, nowMs, picked );
         }
+        if ( bPlaced )
+            storeMatchRecord( picked._descriptor._serverID, ServiceKeyUtil::makeHex64( match._matchID ), match, nowMs ); // 게임 서버가 수락을 판정하는 원본이다
         if ( bPlaced && _dependencies._pBus != nullptr )
-            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 실패는 발행이 로그에 남겼다
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 빠른 길이다. 잃어도 게임 서버가 기록을 읽는다
         for ( const LobbyMember& member : lobby._listMember )
         {
             MatchAssignment assignment;

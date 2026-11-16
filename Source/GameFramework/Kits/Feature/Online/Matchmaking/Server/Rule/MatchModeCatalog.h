@@ -4,7 +4,7 @@
  * @details 형식은 다음과 같습니다. 속성을 빼면 `MatchModeDef` 의 기본값입니다. 속성은 `MatchModeDef` 스키마로 읽고(`id` 만 손으로 읽는다) 모르는 속성 · 범위 밖 값은 그 모드를 넣지 않는 오류입니다. id 형식은 대기열이 등록할 때 봅니다.
  * @code
  *     <MatchModeCatalog>
- *         <Mode id="duo" teamCount="2" teamSize="2" serverKind="game" regionRelaxMs="30000" maxWaitMs="120000"
+ *         <Mode id="duo" teamCount="2" teamSize="2" serverKind="game" regionRelaxMs="30000" maxWaitMs="120000" matchTimeLimitMs="1800000"
  *               baseRatingWindow="100" ratingWindowPerSecond="25" maxRatingWindow="1000" buildVersion="0"/>
  *     </MatchModeCatalog>
  * @endcode

@@ -63,7 +63,7 @@ namespace sw
                 if ( _bGameServer == SW_FALSE )
                     return {};
                 // 배정받은 계정만 게임 포트에 들이는 정책이다. 계정 키트의 `gameConnect` 가 `start` 에서 찾는다.
-                _agent.initialize( context._serverDescriptor );
+                _agent.initialize( context._serverDescriptor._serverID );
                 return exposeInterface<IConnectAdmission>( context, entry, _agent );
             }
 
@@ -84,6 +84,8 @@ namespace sw
                     _partyLobby.shutdown(); // 실패한 start 는 `stop` 이 보지 않으므로 세운 파티 · 로비를 여기서 내린다
                     return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled" } );
                 }
+                if ( _bGameServer == SW_TRUE )
+                    _agent.startReading( context._pRouter );                                                                                                                // 대기열이 남긴 명단 기록을 읽는다(버스 배정은 잃을 수 있다)
                 _server.initialize( &_partyLobby, &_queue, _bGameServer == SW_TRUE ? &_agent : nullptr, context._kits.find<IAccountPresence>(), context._pMetricRegistry ); // 배정 구독 · 시한은 서버가 돈다
                 _server.setReconnectGrace( _reconnectGraceMs );
                 _server.setGroupChannels( context._kits.find<IGroupChannelMembership>() );
@@ -107,6 +109,7 @@ namespace sw
                 if ( isStarted() == false )
                     return;
                 _server.shutdown();
+                _agent.shutdown();
                 _queue.shutdown();
                 _partyLobby.shutdown();
             }
