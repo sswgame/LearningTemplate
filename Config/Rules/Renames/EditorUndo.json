@@ -1,4 +1,17 @@
 [
-  {"old": "getUndoStepSerial", "new": "getRecordedUndoStepCount", "why": "serial 은 업계 용어가 아니다 — 기록한 되돌리기 단계 수다"},
-  {"old": "_undoStepSerial", "new": "_recordedUndoStepCount", "why": "같은 칸"}
+  {
+    "old": "getUndoStepSerial",
+    "new": "getRecordedUndoStepCount",
+    "why": "serial 은 업계 용어가 아니다 — 기록한 되돌리기 단계 수다"
+  },
+  {
+    "old": "_undoStepSerial",
+    "new": "_recordedUndoStepCount",
+    "why": "같은 칸"
+  },
+  {
+    "old": "appendFreshText",
+    "new": "appendSerializedText",
+    "why": "fresh 는 업계 용어가 아니다 — 쓰기기로 직렬화한 글이다"
+  }
 ]

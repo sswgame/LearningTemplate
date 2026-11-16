@@ -180,7 +180,7 @@ namespace sw
         return out;
     }
 
-    string AssetGUIDHeader::carry( string_view previousText, string_view newText )
+    string AssetGUIDHeader::carryOver( string_view previousText, string_view newText )
     {
         const AssetGUIDHeader previous = read( previousText );
         if ( previous._state != AssetGUIDHeaderState::Found || read( newText )._state != AssetGUIDHeaderState::Missing )

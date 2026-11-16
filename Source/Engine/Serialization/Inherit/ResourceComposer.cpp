@@ -850,7 +850,7 @@ namespace sw
         if ( restoreConditions( text, sourceText, absPath, tags, restoredText ) == false )
             return false;
         // 정체성 머리(`<?asset guid?>`)는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다(고쳐 저장해도 GUID 는 그대로).
-        return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carry( sourceText, restoredText ) );
+        return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carryOver( sourceText, restoredText ) );
     }
 
     expected<void> ResourceComposer::checkDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )

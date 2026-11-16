@@ -50,7 +50,7 @@ namespace sw
                 string     current;
                 const bool bHasCurrent = FileUtil::exists( diskPath->str() ) && FileUtil::readTextFile( diskPath->str(), current );
                 // 산출물 머티리얼도 정체성(머리 GUID)을 든다 — 다시 지을 때 있던 머리를 옮겨 쓴다(지으면 GUID 가 바뀌는 일이 없게).
-                const string desired = bHasCurrent ? AssetGUIDHeader::carry( normalizeLineEndings( current ), text ) : string( text );
+                const string desired = bHasCurrent ? AssetGUIDHeader::carryOver( normalizeLineEndings( current ), text ) : string( text );
                 if ( bHasCurrent && normalizeLineEndings( current ) == desired )
                     return true;
                 if ( FileUtil::ensureParentDirectoryExists( diskPath->str() ) == false || FileUtil::writeTextFile( diskPath->str(), desired ) == false )

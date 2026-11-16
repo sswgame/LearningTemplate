@@ -190,7 +190,7 @@ namespace sw::editor
         _sourceText       = string( text );
         (void)appendNode( document.getRoot(), {} ); // 첫 노드가 루트(`kRootNode`)다
         size_t sourcePos = 0;
-        if ( mapSource( kRootNode, sourcePos ) == false || Internal::skipSpace( text, sourcePos ) != text.size() )
+        if ( locateSourceSpans( kRootNode, sourcePos ) == false || Internal::skipSpace( text, sourcePos ) != text.size() )
         {
             for ( ProjectSettingsJSONNode& node : _listNode )
                 node._source = ProjectSettingsJSONSpan{}; // 범위 없이 쓴다 — 아래에서 그 글이 원문과 같은지 본다
@@ -249,7 +249,7 @@ namespace sw::editor
         const ProjectSettingsJSONSpan& root = _listNode[kRootNode]._source;
         if ( root.isPresent() == false )
         {
-            if ( appendFreshText( kRootNode, {}, text ) == false )
+            if ( appendSerializedText( kRootNode, {}, text ) == false )
                 return {};
             if ( _bTrailingNewLine != 0 )
                 text += '\n';
@@ -391,7 +391,7 @@ namespace sw::editor
         return node;
     }
 
-    bool ProjectSettingsJSONDocument::mapSource( uint32 node, size_t& inoutPos )
+    bool ProjectSettingsJSONDocument::locateSourceSpans( uint32 node, size_t& inoutPos )
     {
         using Internal         = ProjectSettingsJSONDocumentInternal;
         const string_view text = _sourceText;
@@ -431,7 +431,7 @@ namespace sw::editor
                         return false;
                     ++pos;
                 }
-                if ( mapSource( value._listChild[index], pos ) == false )
+                if ( locateSourceSpans( value._listChild[index], pos ) == false )
                     return false;
                 pos = Internal::skipSpace( text, pos );
             }
@@ -464,11 +464,11 @@ namespace sw::editor
         const ProjectSettingsJSONSpan& span  = value._source;
         const string_view              text  = _sourceText;
         if ( span.isPresent() == false )
-            return appendFreshText( node, lineIndent, inoutText );
+            return appendSerializedText( node, lineIndent, inoutText );
         if ( value._type != JSONType::Array && value._type != JSONType::Object )
         {
             if ( value._text != value._textAtOpen )
-                return appendFreshText( node, lineIndent, inoutText ); // 말단은 한 줄이다
+                return appendSerializedText( node, lineIndent, inoutText ); // 말단은 한 줄이다
             inoutText.append( Internal::slice( text, span._valueBegin, span._valueEnd ) );
             return true;
         }
@@ -495,7 +495,7 @@ namespace sw::editor
         const ProjectSettingsJSONSpan& span  = value._source;
         const string_view              text  = _sourceText;
         if ( value._listChildAtOpen.empty() )
-            return appendFreshText( node, Internal::getLineIndent( text, span._valueBegin ), inoutText ); // 원문에 본뜰 구분자가 없다
+            return appendSerializedText( node, Internal::getLineIndent( text, span._valueBegin ), inoutText ); // 원문에 본뜰 구분자가 없다
         const ProjectSettingsJSONSpan& first = _listNode[value._listChildAtOpen.front()]._source;
         const ProjectSettingsJSONSpan& last  = _listNode[value._listChildAtOpen.back()]._source;
         const string_view              lead  = Internal::slice( text, span._valueBegin + 1, first._memberBegin );
@@ -530,7 +530,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ProjectSettingsJSONDocument::appendFreshText( uint32 node, string_view lineIndent, string& inoutText ) const
+    bool ProjectSettingsJSONDocument::appendSerializedText( uint32 node, string_view lineIndent, string& inoutText ) const
     {
         string     fresh;
         JSONWriter writer( fresh, _indent );

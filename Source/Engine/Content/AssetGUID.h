@@ -83,6 +83,6 @@ namespace sw
          * @details 파서는 처리 지시를 문서에 올리지 않으므로 문서를 고쳐 통째로 다시 쓰는 저장은 머리를 잃는다 — 저장 입구(`ResourceComposer::saveText`)와
          *          생성기(머티리얼 그래프 산출물)가 이것을 지나 고쳐도 정체성이 그대로다.
          */
-        static string carry( string_view previousText, string_view newText );
+        static string carryOver( string_view previousText, string_view newText );
     };
 } // namespace sw

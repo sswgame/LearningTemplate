@@ -125,13 +125,13 @@ namespace sw::editor
         uint32 appendNode( const JSONValue& value, string_view key );
         uint32 appendEmptyLike( uint32 sampleNode, string_view key );
         /** @brief 원문 @p inoutPos 부터 노드 @p node 의 범위를 찾아 적고 그 끝으로 옮깁니다. 트리와 원문이 어긋나면(겹친 키 등) false 입니다. */
-        [[nodiscard]] bool mapSource( uint32 node, size_t& inoutPos );
+        [[nodiscard]] bool locateSourceSpans( uint32 node, size_t& inoutPos );
         /** @brief 노드 @p node 의 글을 덧붙입니다. 범위가 없는 노드는 파일 들여쓰기로 새로 쓰고 줄마다 @p lineIndent 를 앞에 붙인다. */
         [[nodiscard]] bool appendValueText( uint32 node, string_view lineIndent, string& inoutText ) const;
         /** @brief 원소를 더하거나 뺀 컨테이너 @p node 를 원문의 구분자로 다시 씁니다. */
         [[nodiscard]] bool appendChangedContainerText( uint32 node, string& inoutText ) const;
         /** @brief 범위가 없는 노드 @p node 를 파일 들여쓰기로 씁니다. */
-        [[nodiscard]] bool appendFreshText( uint32 node, string_view lineIndent, string& inoutText ) const;
+        [[nodiscard]] bool appendSerializedText( uint32 node, string_view lineIndent, string& inoutText ) const;
         /** @brief 편집 직전 트리를 되돌리기 기록에 올립니다. */
         void recordEdit( string_view coalesceKey = {} );
 

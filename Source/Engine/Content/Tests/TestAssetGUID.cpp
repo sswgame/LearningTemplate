@@ -62,12 +62,12 @@ SW_TEST_CASE( AssetGUIDTest, CarryKeepsTheIdentityAcrossAWholeRewrite )
 {
     const AssetGUID guid     = *AssetGUID::tryParse( kSampleText );
     const string    previous = AssetGUIDHeader::write( "<?xml version=\"1.0\"?>\n<Root a=\"1\"/>\n", guid );
-    const string    saved    = AssetGUIDHeader::carry( previous, "<?xml version=\"1.0\"?>\n<Root a=\"2\"/>\n" ); // 파서가 다시 쓴 글에는 머리가 없다
+    const string    saved    = AssetGUIDHeader::carryOver( previous, "<?xml version=\"1.0\"?>\n<Root a=\"2\"/>\n" ); // 파서가 다시 쓴 글에는 머리가 없다
     SW_EXPECT_EQUAL( string( "<?xml version=\"1.0\"?>\n<?asset guid=\"0123456789abcdef0011223344556677\"?>\n<Root a=\"2\"/>\n" ), saved );
     // 있던 글에 머리가 없으면(새 파일 · 정체성이 없는 글) 그대로, 새 글이 이미 머리를 들면(복사 · 내용 바꾸기가 정한 GUID) 그 머리가 이긴다
-    SW_EXPECT_EQUAL( string( "<Root/>" ), AssetGUIDHeader::carry( "<Root/>", "<Root/>" ) );
+    SW_EXPECT_EQUAL( string( "<Root/>" ), AssetGUIDHeader::carryOver( "<Root/>", "<Root/>" ) );
     const AssetGUID other = AssetGUID::create();
-    SW_EXPECT_TRUE( *AssetGUIDHeader::read( AssetGUIDHeader::carry( previous, AssetGUIDHeader::write( "<Root/>", other ) ) )._guid == other );
+    SW_EXPECT_TRUE( *AssetGUIDHeader::read( AssetGUIDHeader::carryOver( previous, AssetGUIDHeader::write( "<Root/>", other ) ) )._guid == other );
 }
 
 SW_TEST_CASE( AssetGUIDTest, HeaderStatesSeparateMissingFromBroken )
