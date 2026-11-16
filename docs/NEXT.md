@@ -8,7 +8,7 @@
 
 ## 0. 다음 순서
 
-1. **아직 합치지 않은 갈래**(합치기 전에 `git cherry main <갈래>` 로 이미 들어간 커밋을 거른다): 남은 것 — 활성 게임이 아닌 `Config/Game/*.json` 이 범용 페이지로 열림. `integ2`(에셋 GUID 1단계 · 5-3 틱 const · W-R3 (a) 코덱 키 검사 · A1 포즈 노드 · R1 리다이렉트 표 팩 담기 · `setTransient`, 빌드 한 번도 안 함).
+1. **아직 합치지 않은 갈래**(합치기 전에 `git cherry main <갈래>` 로 이미 들어간 커밋을 거른다): 남은 것 — `integ2`(에셋 GUID 1단계 · 5-3 틱 const · W-R3 (a) 코덱 키 검사 · A1 포즈 노드 · R1 리다이렉트 표 팩 담기 · `setTransient`, 빌드 한 번도 안 함).
    - integ2: main 을 다시 합친다(새 `extern template class … SharedAssetCache<…>;` 줄은 공유 캐시 선언 매크로로) → Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → preflight. 남은 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-2 · "다음 할 일" 16).
 2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 14 번부터. 감사 남은 몫: P-10, P-11 포커스, C-2(다리 원뿔 먼저), G-3 상점 판매 개체. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합이 지운다.
 
@@ -17,7 +17,7 @@
 - **5-4 리플렉션:** 묶음 TU(`ReflectionBundle.N.cpp` — 헤더 충돌 · Windows 매크로 오염), `build_time_report.py` 생성 비중(전 30.7 %, 목표 8 % 미만), `kMethods` · `kEvents` 상수 초기화, `.gen.cpp` 합계(전 7.86 MB), `_bDerivedFlagsBuilt` 단언, 단위 `PhysicsHookRegistryTest.*` · `ReflectionTypeRegistryTest.PropertyHandleGoesStaleWhenItsDeclaringTypeChanges` · `ReflectionTypeInfoTest.MethodTableBuildsMethodList` · `ReflectionPropertyRoleTest.DerivedFlagsAreBuiltByRegistrationNotByFirstQuery` · `ReflectionTypeInfoTest.PropertyDescTableSharesDefaultMetadata`, `ReflectionPipeline.LeafNameCollision`.
 - **RHI 5-2**(Vulkan 기록 경로 락 제거 · 텍스처 전이 묶음 ABI v54 · 컴퓨트 큐 타임스탬프 ABI v55): RHI 단위(`RHITrackedStateTest`), lightculling · shadow_* · postprocess_* 시나리오 dx12 · vk, `D3D12.ComputeTimestampClock` 어긋남, Vulkan 비동기 컴퓨트 `GPU.<패스>` · Tracy 겹침.
 - **실장치 · 백엔드 동작:** Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯, DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), Vulkan placed 텍스처(`RT.Frame.transientPlacements`, 검증 레이어 경고 없이 — lavapipe · Android 포함).
-- **설정 표 범위 쓰기 · Ctrl+Z(52533d1b86 · a36b93f499):** `ProjectSettingsJSONDocumentTest.*`(모든 Config 파일이 고칠 수 있게 열리는지 · `HandLayoutIsKeptOnEdit` · `UndoRestoresEachEdit` 의 기대 글), 에디터에서 표 값을 고친 뒤 Ctrl+Z(형식 페이지 그리드는 아직 단계를 올리지 않는다).
+- **설정 표 범위 쓰기 · Ctrl+Z(52533d1b86 · a36b93f499):** `ProjectSettingsJSONDocumentTest.*`(모든 Config 파일이 고칠 수 있게 열리는지 · `HandLayoutIsKeptOnEdit` · `UndoRestoresEachEdit` 의 기대 글), 에디터에서 표 값을 고친 뒤 Ctrl+Z(형식 페이지 그리드는 아직 단계를 올리지 않는다). 다른 게임 프리셋 형식 페이지(f983064659): `ProjectSettingsEntryTest.OtherGamePresetsAreTyped`, 목록의 'Game Config - Shooter3D' 를 열어 저장.
 - **원장 공급 합 맵(dbf959bd7e):** `TestLedger.cpp` · `TestServiceMail.cpp` · `TestEconomyReceipts.cpp` 의 감사 · 분개 TTL 케이스.
 - **그 밖:** 게이트 껍데기(`<빌드>/gates`) · `editorextension` 의 RHI · Shader 게이트, 5-4 생성기 출력(`_pApplyDefault` · `_pEditCondition`, 파서 사례 `DefaultOnContainer` · `EditConditionUnknownName` · `RequiredAtRootWithoutParent`), `HapticEffectTest`, `editor/undocoverage`(컴포넌트 대상 명령은 대상을 주는 줄을 더한다), G1 `slice` 12 게임, T2 격리(`AutomationUserDataRootTest` · `engine.isolation` · `Scenario.editor.statedir.*` · `net-pair mmo`), N2 `server-image`, 지형 표면 변형(`game.empty.terraindeform` 골든 첫 기록, envshowcase · waterplay · surfacelibrary 골든 유지).
 
