@@ -713,6 +713,16 @@ namespace sw
         resetAllDeviceState();
     }
 
+    void InputManager::onAppSuspended()
+    {
+        for ( uint32 padIndex = 0; padIndex < kMaxGamepadSlot; ++padIndex )
+        {
+            if ( GamepadDevice* const pPad = getGamepad( padIndex ) )
+                pPad->stopVibration();
+        }
+        postWindowStateEvent( RawInputEvent::makeFocusChange( false ) );
+    }
+
     void InputManager::resetAllDeviceState()
     {
         for ( auto& pDev : _listDevice )

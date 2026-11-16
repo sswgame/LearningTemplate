@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
@@ -125,6 +126,7 @@ namespace sw
         , _sceneViewCameraProvider{}
         , _configReloadedSubscription{}
         , _windowMessageSubscription{}
+        , _appLifecycleSubscription{}
         , _pFramePacer{ nullptr }
         , _initializeStartMicro{ 0 }
         , _mainLoopStartMicro{ 0 }
@@ -433,10 +435,31 @@ namespace sw
         }
     }
 
+    void App::onAppLifecycle( const WindowLifecycleEvent event )
+    {
+        // 표면을 잃고 찾는 것(SurfaceLost · SurfaceRestored)은 렌더러 몫이다 — 앱이 멈추고 돌아오는 것만 본다.
+        if ( event != WindowLifecycleEvent::AppSuspended && event != WindowLifecycleEvent::AppResumed )
+            return;
+        const bool bSuspended = event == WindowLifecycleEvent::AppSuspended;
+        if ( bSuspended )
+        {
+            if ( InputManager* const pInput = engine::findSubsystem<InputManager>() ) // 선택: 헤드리스 구성은 입력이 없다
+                pInput->onAppSuspended();
+        }
+        if ( IAudioService* const pAudio = engine::findSubsystem<IAudioService>() ) // 선택: 오디오 없는 구성
+        {
+            if ( bSuspended )
+                pAudio->suspendOutput();
+            else
+                pAudio->resumeOutput();
+        }
+    }
+
     void App::bindHostCallbacks()
     {
         // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
         _windowMessageSubscription = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
+        _appLifecycleSubscription  = _pWindow->addLifecycleListener( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &App::onAppLifecycle, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
         // 에디터 뷰 카메라는 에디터 모드에서만 연결한다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다"는 뜻이므로 루프에서 모드를

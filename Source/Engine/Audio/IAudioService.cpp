@@ -114,6 +114,7 @@ namespace sw
         , _bDeviceOpen{ SW_FALSE }
         , _bOutputOpen{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
+        , _bOutputSuspended{ SW_FALSE }
     {
     }
 
@@ -340,20 +341,43 @@ namespace sw
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
     }
 
-    void IAudioService::closeLostOutput()
+    void IAudioService::closeOutput()
     {
-        _bOutputLost.store( false, std::memory_order_release );
         if ( _bOutputOpen )
             stopOutput();
         _bOutputOpen = SW_FALSE;
         _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 오프라인 렌더(게임 스레드)가 받는다
         if ( _bDeviceOpen )
             closeDevice();
-        _bDeviceOpen       = SW_FALSE;
-        _device            = AudioOutputDevice{};
-        _offlineFrameDebt  = 0.0;
+        _bDeviceOpen      = SW_FALSE;
+        _device           = AudioOutputDevice{};
+        _offlineFrameDebt = 0.0;
+    }
+
+    void IAudioService::closeLostOutput()
+    {
+        _bOutputLost.store( false, std::memory_order_release );
+        closeOutput();
         _reopenSecondsLeft = static_cast<float64>( _reopenBackoff.takeDelayMs( _reopenMaxDelayMs ) ) / static_cast<float64>( constant::time::kMillisecondsPerSecond );
         SW_LOG_WARNING_ID( "AudioService.OutputLost", "The audio output device was lost - rendering offline and reopening the default device" );
+    }
+
+    void IAudioService::suspendOutput()
+    {
+        if ( _bInitialized == false || _bOutputSuspended != 0 )
+            return;
+        _bOutputSuspended = SW_TRUE;
+        closeOutput();
+        SW_LOG_INFO_ID( "AudioService.OutputSuspended", "Audio output closed while the app is suspended" );
+    }
+
+    void IAudioService::resumeOutput()
+    {
+        if ( _bOutputSuspended == 0 )
+            return;
+        _bOutputSuspended  = SW_FALSE;
+        _reopenSecondsLeft = 0.0; // 다음 update 가 바로 연다 — 유실이 아니라 멈춤이었으니 백오프를 기다리지 않는다
+        _reopenBackoff.reset();
     }
 
     void IAudioService::retryOpenOutput( float32 deltaSeconds )
@@ -389,8 +413,8 @@ namespace sw
             return;
         if ( _bOutputLost.load( std::memory_order_acquire ) )
             closeLostOutput();
-        if ( _bOutputOpen )
-            return;
+        if ( _bOutputOpen || _bOutputSuspended != 0 )
+            return; // 멈춘 동안은 오프라인으로도 렌더하지 않는다 — 게임 시간이 서 있다
         // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
         const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioServiceInternal::kMaxOfflineSecondsPerUpdate );
         _offlineFrameDebt += seconds * static_cast<float64>( audio::kSampleRate );

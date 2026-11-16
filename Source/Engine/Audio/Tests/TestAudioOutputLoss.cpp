@@ -94,3 +94,29 @@ SW_TEST_CASE( AudioServiceTest, InvalidReopenDelayFailsInitialize )
     SW_EXPECT_FALSE( service.initialize( config ) );
     SW_EXPECT_EQUAL( 0, service._openCount );
 }
+
+/**
+ * @brief [AudioServiceTest] 앱이 멈추면 출력을 닫고 멈춘 동안은 렌더 · 다시 열기를 하지 않으며, 돌아오면 다음 갱신이 바로 연다(감사 P-6)
+ * @details Android onPause · 브라우저 탭 숨김에 소리가 계속 나던 자리다. 변이: `update` 의 멈춤 확인을 빼면 렌더 단언이, `resumeOutput` 의 대기 0 을 빼면 마지막 단언이 진다.
+ */
+SW_TEST_CASE( AudioServiceTest, SuspendClosesOutputUntilResume )
+{
+    FakeOutputBackend service;
+    SW_REQUIRE_TRUE( service.initialize( makeOutputConfig() ) );
+    SW_REQUIRE_TRUE( service.isOutputOpen() );
+
+    service.suspendOutput();
+    SW_EXPECT_TRUE( service.isOutputSuspended() );
+    SW_EXPECT_FALSE( service.isOutputOpen() );
+    const int32  openCount = service._openCount;
+    const uint64 frames    = service.getEngine().getStats()._renderedFrameCount;
+    for ( int32 tick = 0; tick < 30; ++tick )
+        service.update( 0.1f );
+    SW_EXPECT_EQUAL( openCount, service._openCount );
+    SW_EXPECT_EQUAL( frames, service.getEngine().getStats()._renderedFrameCount );
+
+    service.resumeOutput();
+    SW_EXPECT_FALSE( service.isOutputSuspended() );
+    service.update( 0.0f ); // 백오프를 기다리지 않는다
+    SW_EXPECT_TRUE( service.isOutputOpen() );
+}

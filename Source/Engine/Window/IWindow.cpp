@@ -20,6 +20,7 @@ namespace sw
         , _accessibilityQuery{}
         , _onResize{}
         , _onLifecycle{}
+        , _lifecycleListeners{}
         , _closeQuery{}
         , _width{ 1280 }
         , _height{ 720 }
@@ -65,7 +66,10 @@ namespace sw
                 break;
         }
         const bool bChanged = bWasLost != ( _bSurfaceLost == SW_TRUE ) || bWasSuspended != ( _bAppSuspended == SW_TRUE );
-        if ( bChanged && _onLifecycle.isBound() )
+        if ( bChanged == false )
+            return;
+        _lifecycleListeners.broadcast( event ); // 입력 · 오디오가 먼저 멈춘다 — 표면은 렌더러가 마지막에 놓는다
+        if ( _onLifecycle.isBound() )
             _onLifecycle.get()( event );
     }
 
