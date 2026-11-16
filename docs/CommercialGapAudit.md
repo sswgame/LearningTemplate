@@ -29,9 +29,7 @@
 
 ### Core
 
-- **C-2 삼각 분할 실패가 "빈 목록" 이 아니라 구멍을 덮는 부채꼴을 남긴다** (결함 — 계약 확인, 반례는 손 시뮬레이션) — `Source/Core/Spatial/PolygonTriangulation.cpp:194-201` 은 실패 때 남은 부분을 부채꼴로 붙이고 false 를 돌려주는데 호출자 둘(`MeshFracture.cpp:310` · `PolygonFracture.cpp:273`)은 결과를 버린다. 다리 놓기(`:79-84`)는 구멍 둘이 같은 바깥 꼭짓점을 고르면 막히고 귀 자르기는 최악 O(n³). 실패 계약만 먼저 바꾼 시도(064d2a93a9)는 파쇄 단면에 구멍을 내 되돌렸다(70f813a588) — 막힘을 먼저 없앤다. 상용: earcut `locallyInside`, polypartition `InCone`. 제안: 다리 후보에 모서리 원뿔 검사, 귀 후보를 오목 꼭짓점 목록으로 좁힌 뒤 실패하면 결과를 되돌린다. 확인: 바깥 사각형 + 같은 바깥 꼭짓점을 고르는 구멍 둘에서 `triangulate` 가 true 이고 넓이 합이 맞는지.
 - **C-6 출하 전역 할당기가 CRT `malloc` 그대로다** (성능 — 측정 필요) — `Source/Core/Memory/Memory.cpp:148-158 · 224-234`. 스레드 캐시 · 크기 등급 할당기가 없다. NEXT 의 "메모리 풀은 측정 뒤" 의 측정 대상이다. 상용: 언리얼 `FMallocBinned2/3`, 유니티 TLSF + 스레드 버킷. 제안: `Memory::allocate` 한 입구라 병목이면 출하 구성만 mimalloc(vcpkg overlay). 확인: Release 프레임당 할당 수 · 시간(`MemoryProfiler` · Tracy), 워커 N 개 16 ~ 256 B 벤치.
-- **C-7 `gv_` 문자열 변수의 잠금을 직접 읽는 쪽이 잡을 수 없다** (결함 · 경쟁 — 코드 확인) — 매크로가 보통 전역을 만들고(`GlobalVariableManager.h:461-464`) 문자열은 쓰는 쪽만 `s_stringVarMutex` 를 잡는다. `FrameRenderer.cpp:177` 이 `gv_renderPipeline` 을 렌더 스레드에서 `string_view` 로 쥐어 콘솔이 값을 바꾸면 해제된 버퍼를 읽는다. 상용: 언리얼 `TAutoConsoleVariable` 은 게임 · 렌더 스레드 값을 따로 둔다. 제안: 잠금 안에서 사본을 돌려주는 접근자 형식(`GlobalString::get()`)으로 직접 참조가 컴파일되지 않게, 렌더 스레드 변수는 프레임 스냅샷 한 길로. 확인: TSan 에서 `gv_renderPipeline` 반복 변경 시나리오.
 - **C-9 컨테이너가 std 와 같은 이름 · API 인데 복잡도가 다르다** (성능 — 측정 필요) — `vector.h:977-988` 범위 `insert` 가 원소마다 삽입(`ByteStream.h:54` · `Archive.cpp:112`), `deque.h:14` 는 `std::deque` 래퍼(MSVC 에서 큰 원소마다 힙 할당), `unordered_map.h:645` `reserve` 는 버킷만, `map.h:30` 정렬 벡터라 대량 구축 O(n²). 상용: `TArray::Append` · `TDeque` 링 버퍼 · `TMap::Reserve`. 제안: 한 번 예약 → 한 번 밀기, 2 의 거듭제곱 링 `deque`, `map` 범위 구축은 붙이고 `stable_sort`. 확인: 1 MB 범위 삽입 · `deque` 1 만 push 할당 수 · 10 만 키 `map` 구축 벤치.
 - **C-14 결정성 표시가 손으로 적은 TU 목록이라 빠진 것이 있다** (구조 — 목록 확인, 비트 차이 추정) — `Source/Core/CMakeLists.txt:190` 의 다섯 TU 에 `MatrixMath.cpp`(결정성 물리 TU 가 부름) · `ValueNoise.cpp` 가 없고 libm 초월 함수를 막는 검사도 없다. 상용: 유니티 Burst `FloatMode.Deterministic`. 제안: Core Math 티어 통째 `-ffp-contract=off`(비용은 재서). 확인: `quaternion::operator*` · `slerp` · `ValueNoise::sampleFractal` 기록 비트 고정 케이스를 Debug · Release · Linux 에서.
 
@@ -42,8 +40,7 @@
 ### 온라인 서비스 · 저장소
 
 - **O-3 비밀번호 해시(Argon2id)가 저장소 워커 스레드에서 돌고 저장소 대기열에 상한이 없다** (성능 · DoS — 측정 필요) — `LoginService.cpp:83-108` 의 로그인 일 안에서 `LoginStoreLogic.cpp:554` 가 해시(19 MiB × 2, 워커 4)를 내 원장 · 우편 · 거래가 뒤에 선다. `SQLConnectionPool.cpp:138-149` 대기열 무제한. 상용: OWASP — KDF 는 DB 연결과 분리된 연산 풀 + 세마포어. 제안: 읽기(저장소) → 해시(상한 있는 연산 풀, 넘치면 `kBusy`) → 커밋(저장소), 저장소 대기 상한. 확인: 부하 봇 `login_storm` 을 `_bLightPasswordHash` 없이 돌려 `service_store_pending_peak` 와 다른 키트 지연(O-12).
-- **O-6 매치 명단이 "최대 한 번" 버스로만 게임 서버에 가고 받는 쪽 버퍼는 읽는 곳이 없다** (결함 + 구조 — 확인) — `MatchQueueService.cpp:565-566` 이 `(void)` 발행 뒤 Found 를 보낸다. 게임 서버는 버스로 채운 메모리 표(`MatchServerAgent.cpp:36-43 · 80-84`)뿐이라 메시지 하나를 잃으면 전원이 접속에서 거절되고, 표 수명 2 분이라 경기 중 재접속도 거절된다. `pollNewMatches` · `findExpected` · `requestBackfill` 호출자 0. 상용: Agones Allocation · PlayFab MPS 는 배정을 영속 기록으로. 제안: 명단을 캐시 기록(`mm/match/<서버>/<경기>`, 수명 = 경기 시한)으로, 소비자 없는 버퍼는 지운다. 확인: 발행 실패 가짜 버스로 "Found 인데 `isAccepted` false".
-- **O-7 티켓을 낸 서버가 죽으면 파티가 "줄 섬" 에 갇힌다** (결함 — 확인) — id 순번을 난수에서 시작하는 앞몫은 들어갔다(fb0b786ee2). 남은 것: `PartyLobbyService` `:304` 는 `_queuedTicketID != 0` 이면 AlreadyQueued, `MatchQueueService.cpp:743-747` `leaveQueue` 는 로컬 표에 없으면 NotQueued 라 다른 서버로 붙은 파티장이 줄을 서지도 떠나지도 못한다. 상용: EOS · 유니티 Lobby 는 멤버 하트비트로 낡은 상태를 걷는다. 제안: 로컬 티켓이 없으면 파티 기록의 티켓을 푼다. 확인: `TestMatchQueueService` "A 에서 티켓 → A 버림 → B 에서 leave → join".
+- **O-6 (남은 몫) 명단 기록 쓰기의 답을 보지 않는다** (결함 — 확인) — 명단은 캐시 기록(`mm/match/<서버>/<경기>`)으로 남고 게임 서버가 그 기록으로 수락한다(13d9d54758). 남은 것: 기록 쓰기가 실패하면 버스 배정만 남는다 — Found 를 쓰기 Ok 답 뒤로(배정 흐름 비동기화). 게임 서버는 기록을 최대 1 초 늦게 읽어 버스도 잃은 첫 접속이 한 번 거절될 수 있다(클라이언트 재시도 확인). 다른 프로세스 게임 서버의 백필 요청 API 가 없다(`requestBackfill` 은 호출자 0 이라 지웠다). 확인: 쓰기 실패 가짜 캐시에서 Found 가 나지 않는지.
 - **O-12 부하 봇이 원장 경로를 치지 않고 가벼운 해시 · 닫힌 루프로 잰다** (구조 · 검증 공백 — 확인) — 동작 표(`LoadBotScenario.cpp:33-53`)에 구매 · 영수증 · 우편 수령 · 거래 · 길드 창고 · 점수 제출이 없고, `Shooter3D.online.json` 의 `_bLightPasswordHash: true` 라 O-3 이 안 보이며, 다음 요청을 답 뒤에 내 coordinated omission 이다(`LoadBot.cpp:521`). 상용: k6 · Gatling 도착률 고정 실행기. 제안: `economy_purchase` · `mailbox_claim_all` · `trade_pair` · `leaderboard_submit` · `guild_storage` 동작, `<Load>` 도착률 모드(지연은 보내려던 시각 기준), 끝에 `LedgerAuditReport` 균형 검사. 확인: PostgreSQL 구성(`Shooter3D.external.json`)의 Conflict 재시도율 · `kBusy` 비율.
 
 ### RHI · 그래픽스 자원
@@ -68,7 +65,6 @@
 ### 에셋 · 직렬화 · 리플렉션 · 오브젝트 · 씬
 
 - **A-2 컴포넌트 · 중첩 프리팹 부품의 영속 정체성이 순번이다** (구조 · 잠재 데이터 오염 — 확인) — `ComponentStableKey.cpp:32-58` 키가 `이름#몇 번째` 이고 프리팹 덮어쓰기(`PrefabOverrides.cpp:85-103`) · 세이브 컴포넌트 핸들(`ObjectStateSerializer.cpp:346 · 453`)이 쓰며, 중첩 부품 키는 노드 인덱스다(`PrefabAsset.cpp:499`). 앞 형제를 지우거나 끼우면 덮어쓰기와 쌓인 세이브가 경고 없이 다른 대상으로 간다. 상용: 유니티 fileID, 언리얼 SCS `VariableGuid`, Godot 유일 노드 이름. 제안: 저작 시점 고정 지역 id(64 비트)로 키 · 부품 경로 · 세이브 핸들, 옛 형식은 `SchemaMigrate`(에셋 GUID 작업과 같은 줄기, A-20). 확인: `PrefabOverridesTest.OverrideFollowsComponentWhenAnEarlierSiblingIsRemoved`, `ObjectStateSerializerTest.SavedHandleSurvivesSiblingInsertion`.
-- **A-5 사용자 설정 판 번호가 스키마 여럿의 최댓값 하나다** (결함 · 잠재 — 첫 `<Upgrade>` 에서 드러남) — `UserSettingsSchema.cpp:661` `max( _version, overlay._version )` 하나를 파일에 쓴다(`UserSettingsFileEntry.cpp:139`). 엔진 3 · 게임 1 파일에서 게임이 2 로 올려도 단계가 돌지 않고, 새 판 파일을 옛 빌드가 옛 번호로 다시 써 멱등이 아닌 `Scale` 이 또 돈다. 상용: 언리얼 `FCustomVersion`(주인 GUID 별 번호). 제안: 주인별 판(`"versions": { "engine": 3, "game": 2 }`), 빌드보다 새 파일은 덮지 않고 옆에 보관, 모르는 키는 원문 보존. 확인: `UserSettingsFileEntryTest.GameUpgradeRunsWhenEngineVersionIsHigher` · `NewerFileIsNotRewrittenAsOlder`.
 - **A-7 공유 에셋의 제자리 다시 읽기가 `shared_ptr<const T>` 를 쥔 다른 스레드와 겹칠 수 있다** (결함 · 잠재 경쟁) — `SharedAssetTable.h:104-115` `*live = std::move( fresh )`. 캐시는 워커 호출을 허용하고 배포에서도 매 프레임 `reloadComposedDependents`(`Engine.cpp:452-455`) · `ModSession.cpp:322` 가 다시 읽는다. 상용: 언리얼은 새 객체 + 게임 스레드 참조 교체. 제안: 다시 읽기 방식을 `Detach`(새 객체 + 다시 읽은 횟수) 하나로. 확인: TSan `SharedAssetCacheTest.ReloadWhileWorkerReads`.
 - **A-8 ReflectionParser 증분 판정에 명령줄이 없다** (결함 — 확인) — `GeneratedFiles.cpp:226-249` 스탬프는 도구 입력 파일 시각뿐이라 `--module` · `-D…` · `--include` 를 바꿔도 옛 `.gen.cpp` 가 남는다. 상용: UBT 는 UHT 매니페스트 변경으로 무효화. 제안: 스탬프에 `args <해시>` 필수 줄. 확인: `RunParserToolInputs.cmake` `MODE=args-changed`.
 - **A-9 패치 서명 검증이 기동마다 패치 팩 전체를 읽어 해시한다** (성능 · 확장 — 측정 필요) — `PackManager.cpp:685-703` · `PackPatch.cpp:86-99`(2 GiB 이상 거절), 사슬 전체 · 매 기동, 검증한 바이트와 마운트 핸들이 다르다. 상용: 언리얼 pak 블록 해시 표(`.sig`). 제안: 목록이 "FAT + 스트링 풀 해시" 를 서명하고 항목은 FAT 의 항목 해시로 읽을 때 확인. 확인: 1 GiB 패치 기동 시간 · 최고 메모리(`Asset.mount`).
@@ -88,10 +84,8 @@
 ### 플랫폼 · 창 · 입력 · 빌드
 
 - **P-2 리사이즈를 메시지 처리 안에서 동기로 하고 Win32 모달 이동 · 크기 루프 동안 프레임이 멈춘다** (구조 · 성능) — `EngineRenderDriver.cpp:187-196` 크기 통보마다 `waitIdle` + `resize`, X11 은 `ConfigureNotify` 마다(`X11Window.cpp:642-654`), Win32 는 모달 루프에서 `tickMainLoop` 정지(리슨 호스트 틱 · 오디오 갱신 정지). 상용: Godot `WM_ENTERSIZEMOVE` 타이머로 `Main::iteration()`. 제안: 창은 대기 크기만 적고 프레임 시작에 한 번 적용, Win32 모달 루프는 타이머로 틱(재진입 가드는 창 형식에). 확인: `RHI.ResizeCount`, `windowdrag` 시나리오에서 `Engine.FrameIndex` 증가.
-- **P-3 웹 · Android: 포커스를 잃어도 입력 관리자가 몰라 눌린 키가 남는다** (결함 — 확인) — `PlatformInputKind` 에 포커스 종류가 없고 웹 · Android 창은 `IWindow::setFocusState` 만 부른다. `makeFocusChange` 는 Win32 · X11 뿐. 상용: 언리얼 `OnWindowActivationChanged` 공통 경로. 제안: `setFocusState` 가 값이 바뀌면 포커스 델리게이트를 부르고 `InputManager` 가 그것만 구독, 개별 `makeFocusChange` 는 지운다. 확인: `PlatformInputTest.FocusLossReleasesHeldKeys`(`CallbackInputWindow`).
 - **P-4 웹 · Android: 글 입력 경로가 없다(소프트 키보드 · IME 조합)** (결함 — 확인) — `applyTextInputWanted` · `applyTextInputArea`(`IWindow.h:494-496`)를 두 창이 재정의하지 않고, 웹은 `keypress` 만 받는다. 상용: 유니티 `TouchScreenKeyboard` · WebGL 숨은 input, Godot `virtual_keyboard_show`. 제안: 순수 가상으로 바꿔 구현하거나 "지원 안 함" 을 선언하게, 웹은 숨은 `<input>` 의 `beforeinput` · `composition*`, Android 는 GameTextInput. 확인: `WindowTextInputTest` 플랫폼별 케이스, `web-check` 에 `compositionend` 화면.
 - **P-5 웹: 배경 페이싱이 브라우저 메인 스레드를 막고 Android 는 멈춘 동안 10 ms 폴링한다** (성능 — 측정 필요) — `FramePacer.cpp:62-66` 의 `sleepUntilNanoseconds` 는 Emscripten 메인 스레드에서 바쁜 대기(기억 기준), `App.cpp:639-644` 10 ms 폴링. 상용: 유니티 WebGL `emscripten_set_main_loop_timing`, NDK `ALooper_pollOnce( -1 )`. 제안: `IWindow::waitForNextFrame( deadline )` 가상 하나로. 확인: blur 뒤 메인 스레드 long task(chrome-devtools trace).
-- **P-6 앱 멈춤 수명 이벤트를 렌더러만 받는다** (구조 — 구독자 하나 확인) — `_onLifecycle` 이 `DelegateSlot`(`IWindow.h:441 · 522`)이고 구독자는 `EngineRenderDriver` 뿐이라 멈춤 동안 햅틱이 꺼지지 않고 입력이 리셋되지 않으며 오디오가 계속될 수 있다. 상용: 언리얼 `ApplicationWillEnterBackgroundDelegate` 멀티캐스트, 유니티 `OnApplicationPause`. 제안: 멀티캐스트 + 순서 선언(표면 해제는 렌더러가 마지막), 입력 리셋 · 햅틱 정지 · 오디오 서스펜드를 구독자로. 확인: `simulateAppInterruption` 뒤 `Input.AnyDown` · `Haptics.Active` · `Audio.DeviceRunning` 0.
 - **P-9 (보강) 웹 · Android 프리셋이 Shipping 뿐이라 플랫폼 결함을 자동으로 볼 길이 없다** (구조 — 확인) — `CMakePresets.json` 에 `Web-Shipping` · `Android-Shipping` 만 있다. P-3 ~ P-6 이 모두 이 틈에서 나왔다([PlatformTargets](PlatformTargets.md) "배포 빌드에 시나리오 실행기가 없다"). 상용: 언리얼 Development + Gauntlet, 유니티 Development Build. 제안: `Web-Release` · `Android-Release` 개발 프리셋(DevTools 정적 링크)으로 `-scenario`, 그 전에라도 가짜 창 단위 테스트. 확인: `PlatformInputTest.*` 를 `ctest -L nogpu` 에.
 
 ### 장르 키트 · 게임
@@ -174,8 +168,6 @@
 
 ### 플랫폼 · 입력 · 호스트
 
-- **P-10 창이 배경일 때도 패드 입력이 게임에 들어간다** (구조 · 정책 누락) — `InputManager.cpp:367-378`(XInput 전역). 상용: SDL `JOYSTICK_ALLOW_BACKGROUND_EVENTS` 기본 0. 제안: `Config/Engine` 에 `backgroundGamepadInput`(필수 값). 확인: `InputManagerTest.BackgroundPadFollowsPolicy`.
-- **P-11 접근성 단축키 끄기 API 의 호출자가 없다** (죽은 코드) — 사용자가 켠 기능을 끄던 결함은 고쳤다(5781c0994b). 남은 것: `InputManagerWin32.cpp:558-583` 을 포커스 획득 · 유실에 잇는다. 확인: `InputAccessibilityTest.KeepsEnabledStickyKeys`.
 - **P-13 스플래시 창이 상태를 바꿀 때만 메시지를 처리한다** (결함 · UX — 추정) — `Win32SplashWindow.cpp:157-183`, 5 초를 넘는 단계면 "응답 없음". 상용: 언리얼 `FWindowsSplash` 전용 스레드. 제안: `ScopedProgressReport` 간격 콜백이 펌프. 확인: `updateStatus` 사이 최대 간격.
 
 ### GameFramework Runtime
@@ -212,15 +204,13 @@
 1. **에디터 되돌리기 입구** — History 우회 E-2, 편집 알림 직렬화 E-9, 바이트 한도 E-13. `editor/undocoverage` 에 문서 패널 전수 단계(E-16)를 먼저 더해 지는 것을 본다.
 2. **복구 입구** — 복구 입구 통일과 새 씬 · 문서 패널 자동 저장: E-1.
 5. **읽은 것을 커밋 조건으로** — 일 안에서 읽은 것을 커밋 조건으로 붙이는 연결 포장과 Admin · Mailbox · Guild 저장 로직 점검(경제 키트는 영수증 레코드 하나로 묶였다 — O-1).
-14. **웹 · Android 개발 프리셋과 가짜 창 테스트** — P-9, 그 위에서 P-3 · P-4 · P-5 · P-6.
-15. **세이브 판 올림** — 사용자 설정 주인별 판 A-5.
+14. **웹 · Android 개발 프리셋과 가짜 창 테스트** — P-9, 그 위에서 P-4 · P-5.
 16. **영속 정체성** — 컴포넌트 · 중첩 노드 고정 지역 id: A-2(에셋 GUID 2 단계와 같은 줄기, A-20).
 18. **팩 규모** — 스트림 쓰기 · 분할 · 정렬 배열 색인 · 블록 읽기 · 색인 서명 A-9 · A-10 · A-12, 증분 쿠킹 해시 캐시 A-11. 30 만 항목 합성 팩으로 먼저 잰다.
 20. **할당 · 컨테이너 측정** — 출하 할당기 C-6, 범위 삽입 · 링 버퍼 `deque` C-9. 벤치 숫자가 나온 것만 고친다.
-21. **Core 작은 결함** — 삼각 분할 막힘 → 실패 계약 C-2.
-22. **전역 변수와 결정성** — 문자열 `gv_` 접근자 · 렌더 스레드 스냅샷 C-7, 결정성 TU C-14.
+22. **결정성** — 결정성 TU C-14.
 25. **서버 관측** — UDP 지표 등록 N-7.
-28. **매칭 영속 기록** — 명단 캐시 기록 O-6, 죽은 서버의 티켓 풀기 O-7.
+28. **매칭 영속 기록** — 명단 쓰기 답 · 백필 API(O-6 남은 몫).
 30. **온라인 부하** — 해시 연산 풀 · 저장소 대기 상한 O-3, 부하 봇 원장 동작 · 열린 루프 O-12.
 31. **RHI 자원 모델** — 정적 버퍼 장치 로컬 R-3, 버퍼 구간 할당 R-4, Alt+Enter R-1.
 32. **텍스처 스트리밍** — bindless 번호 고정 · 밉 범위 대기 줄 · 예산 R-6(A-12 위).
@@ -239,7 +229,7 @@
 46. **렌더러** — RN-10 ~ RN-16.
 47. **에셋 · 오브젝트** — A-19 ~ A-24.
 48. **시뮬레이션** — S-9 · S-10 · S-11 · S-12 · S-14.
-49. **플랫폼 · 호스트** — P-10 · P-11 · P-13.
+49. **플랫폼 · 호스트** — P-13.
 50. **GameFramework · 키트** — G-8 · G-10 ~ G-13, K-5 ~ K-14.
 51. **에디터** — E-15 · E-16.
 
@@ -251,7 +241,7 @@
 - **렌더러:** `FramePassExecutorPasses.cpp` 대부분, `RenderGraph::executeParallel` 배리어 묶음, 모프 · 정점 애니메이션 풀, 실시간 프로브, forward 계열 파이프라인 XML.
 - **직렬화 · 리플렉션:** `SerializerUtil.cpp` · `XMLSerializer.cpp` · `DataInheritance.cpp` · `ResourceComposer.cpp`, ReflectionParser `CodeGenerator.cpp`.
 - **입력 · 창:** `InputMap` 평가와 고정 틱 사이 엣지 유실, `WaylandWindow.cpp`, UI 접근성 브리지.
-- **온라인:** `OnlineCore/Server/HTTP`(HPACK · HTTP/2 동적 표 · 프레임 길이 상한), Apple · Google 영수증 검증기 본문, RESP 재연결 뒤 응답 짝.
+- **온라인:** `OnlineCore/Server/HTTP`(HPACK · HTTP/2 동적 표 · 프레임 길이 상한), Apple · Google 영수증 검증기 본문, RESP 재연결 뒤 응답 짝 · O-7 죽은 서버의 파티 티켓 풀기 · 비교 후 쓰기(748bca0b0d) · O-6 명단 캐시 기록(13d9d54758, 남은 몫은 위).
 - **게임플레이:** `ScheduleSystem.cpp`, BehaviorTree · Blackboard, Appearance, 장르 키트 14 개 내부 로직.
 - **에디터:** 임포터(Model · Texture · Vrm), Animation 패널, 프리팹 오버라이드 적용, 도킹 · 레이아웃.
 - **실행으로만 확인되는 것:** 성능 항목 전부(측정 전), 외부 API 동작에 기댄 항목(R-1 · P-5 · P-13 · O-15), 추정 항목.
@@ -261,12 +251,12 @@
 코드 주석이 `감사 <번호>` 로 근거를 대는 항목이다. 판단 한 줄과 고친 커밋만 남긴다(전문은 `e480b07498` 판 이 문서와 커밋 메시지).
 
 - **P0:** P0-1 · P0-2 문서 되돌리기를 상호작용 구간 하나로(b8473b34f6 · 977e4d28a0) · P0-4 옮긴 문서 · 씬의 경로가 따라간다(45f5a3f2d6 · 8b12e105ed) · P0-5 세션 상태 구간을 못 읽으면 로드 전체 실패(ef6e2a3b74) · P0-6 복원은 검증 → 교체, 저장 막기는 범위형 `SaveLock`(801b62e7cc) · P0-7 분개 보존 정리가 영수증 중복 방지 기록을 지우지 않는다(4493a0df85) · P0-8 끊긴 연결 번호를 같은 갱신에서 재사용하지 않는다(421856cb5a) · P0-9 Android 자체 종료는 `ANativeActivity_finish`(afa347088b) · P0-10 Android 볼륨 키 소비 판정(27c738c316) · P0-11 오디오 백엔드 없는 구성은 CMake 에서 멈추고 Android AAudio · 웹 AudioWorklet 백엔드를 둔다(ec297c8197 · 938e1a9483 · 9a3060de71) · P0-13 오디오 장치 유실 계약(3e883528e7) · P0-14 타일맵 충돌이 오너 이동을 따른다(fd769f5585) · P0-15 Win32 Alt · F10 창 메뉴 모드 차단(996394ca30) · P0-16 · P0-17 POSIX exec 실패 · 줄 쪼개기(821c55c889).
-- **Core:** C-1 쿼터니언 → 오일러 피치 ±90° 특이점(0293095f01) · C-3 합류로 잠드는 워커도 유휴 마스크에(86fb9b0e61) · C-4 큐가 차면 잠든 풀을 깨운다(e082c6f7e1) · C-5 적응형 `SpinLock`(b261acc635) · C-8 현지화 키 해시 64 비트 + 충돌 오류(65f98c29d6) · C-10 `appendFormat` 잘림을 실패로(113e42d23a) · C-11 백오프 지터(456fc3a9ea) · C-12 `getTotalTime` float64(df6eeafff0) · C-13 POSIX 크래시 처리기가 앞 처리기를 잇는다(ba3cf4e860) · C-17 이름 풀이 차면 멈춘다(2f20abeafa) · C-18 경로 포함 판정의 `..`(db54280e9d).
+- **Core:** C-1 쿼터니언 → 오일러 피치 ±90° 특이점(0293095f01) · C-3 합류로 잠드는 워커도 유휴 마스크에(86fb9b0e61) · C-4 큐가 차면 잠든 풀을 깨운다(e082c6f7e1) · C-5 적응형 `SpinLock`(b261acc635) · C-8 현지화 키 해시 64 비트 + 충돌 오류(65f98c29d6) · C-10 `appendFormat` 잘림을 실패로(113e42d23a) · C-11 백오프 지터(456fc3a9ea) · C-12 `getTotalTime` float64(df6eeafff0) · C-13 POSIX 크래시 처리기가 앞 처리기를 잇는다(ba3cf4e860) · C-17 이름 풀이 차면 멈춘다(2f20abeafa) · C-18 경로 포함 판정의 `..`(db54280e9d) · C-2 삼각 분할 구멍 다리의 모서리 원뿔 검사(3198393a5e) · C-7 문자열 `gv_` 잠금 형식 GlobalString(fc98beda2e).
 - **네트워크:** N-1 접속 증명 태그 PRF(ac944d4075) · N-2 순서 번호를 종류마다(4bb15d623f) · N-3 신뢰 창이 차면 연결을 닫는다(0c6cecfe78) · N-4 서버 틱 추정 float64(da9b332d88) · N-5 파괴 스냅숏 요청 중복 제거(d04ddcd157) · N-6 텔레메트리 업로드 전용 스레드(100835c275) · N-8 기한 큐 · 잠금 밖 AEAD · 슬롯 지연 할당(9283b011a2 · 3fe02c6232 · 290b0d3bea · 66f70c136f) · N-10 TLS 핸드셰이크 시한(6e1dd25570) · N-12 멱등 기억 바이트 예산 · 대기자 상한(66e9dd9e0b · 0e9622787b) · N-15 롤백 상대 정수 검사(6a81d9ac7e).
 - **온라인:** O-1 영수증 지급 · 환불이 거래당 레코드 하나를 버전 조건으로 다툰다(5141b93911) · O-2 TLS 클라이언트 서버 이름 검증(4e0c51722e) · O-4 거래 스냅숏을 당사자 밖에 내지 않는다(691fbe486d) · O-5 리더보드 쓰기 멱등 기록(1c1d594f44) · O-9 키트 보존 규칙 · 만료 색인(d1bbe65ace · abe54cfed9) · O-10 길드 창고의 이전 불가 자산은 맡긴 사람의 허용 안에서만(b2a12e5838 · 564fdf6a1d · f11cfdf881 — 설계는 [DesignBacklog](DesignBacklog.md) "길드 창고의 이전 불가 자산").
 - **RHI:** R-2 장치 분실을 `IRHIDevice::isDeviceLost` 한 입구로(1a4c9b5c4a) · R-5 bindless 주인별 번호 목록(3662a42b0f).
-- **에셋:** A-3 · A-4 팩 쓰기 · 읽기 한도 하나, Cooked 마운트 실패는 기동 실패(7639493bf9) · A-6 세이브 상태 판 올림 사슬(27d0d80bd5 · ab041b228f) · A-15 프리팹 스폰 원형 이진 본문(4339ca7db4) · A-18 실수 복수형 범주(6f121dd5cd).
+- **에셋:** A-3 · A-4 팩 쓰기 · 읽기 한도 하나, Cooked 마운트 실패는 기동 실패(7639493bf9) · A-6 세이브 상태 판 올림 사슬(27d0d80bd5 · ab041b228f) · A-15 프리팹 스폰 원형 이진 본문(4339ca7db4) · A-18 실수 복수형 범주(6f121dd5cd) · A-5 사용자 설정 주인별 판 · 새 판 파일 보관(5d225f4c90).
 - **시뮬레이션:** S-1 접촉 Stay opt-in(2017fbb151) · S-3 오디오 클립 캐시 예산 퇴출(d88842069b) · S-4 배율 변경은 바디를 두고 셰이프만 간다(2d764de775 · 56c2b7b086) · S-13 지운 바디가 같은 간격에 다시 닿으면 끝 · 시작(f441c0b842).
-- **플랫폼:** P-1 Win32 원시 마우스 등록 · 이동량 출처(acac3ad5fc) · P-8 새니타이저 프리셋(9d91478995) · P-12 Win32 창 틀 DPI(a88446a564) · P-14 Windows 서비스 RUNNING 시점(264161a3e2).
+- **플랫폼:** P-1 Win32 원시 마우스 등록 · 이동량 출처(acac3ad5fc) · P-8 새니타이저 프리셋(9d91478995) · P-12 Win32 창 틀 DPI(a88446a564) · P-14 Windows 서비스 RUNNING 시점(264161a3e2) · P-3 웹 · Android 포커스 입력(4435fa3230) · P-6 앱 멈춤을 입력 · 오디오도 받는다(2818b73417) · P-10 배경 패드 입력 정책(ae98475c0a) · P-11 접근성 단축키 포커스 연결, 배포 빌드만(789415fe26 · 3a8f3c8bc9).
 - **GameFramework · 키트:** G-2 세계 시계 시 경계 멈춤(29627bb692) · G-3 제작 재료를 개체 상태째 되돌림(e25f386340) · G-4 단계 진입 보상 재지급(1f22ed288d) · G-5 사망 전이 한 곳(e115e3fd98) · G-6 상호작용 완료가 가용성을 다시 본다(719c228325) · G-7 세이브는 찍은 씬으로 옮긴 뒤 적용(27864fb4c7 · 5918551eaa · 02f53466e1) · G-9 틱 밖 씬 전수 걷기는 순회 열쇠(`SceneIterationKey`)가 컴파일에서 막는다(d4f26b9693) · K-1 LanternVale 이동 시간 예산(8748b7963e) · K-2 FrontierTown 빨리 감기가 도시에도(61580115b1).
 - **에디터:** E-3 문서 패널마다 되돌리기 스택(a722e48f58) · E-4 다중 대상을 최상위 집합으로(19c7272302) · E-5 선택 포함 색인(3d9948c165) · E-10 피킹은 OBB · 삼각형까지(04eb4d7aa0) · E-11 콘텐츠 쓰기 확인 한 입구(16006e0cd0 · ce5660498a · 0d507f9fec) · E-12 되돌리기 대상은 id 로만(a644f468c8) · E-14 미리보기 창 닫으면 씬 · 타깃을 놓는다(db3c1ee9fe).

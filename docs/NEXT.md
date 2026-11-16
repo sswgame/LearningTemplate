@@ -10,7 +10,7 @@
 
 1. **아직 합치지 않은 갈래**(합치기 전에 `git cherry main <갈래>` 로 이미 들어간 커밋을 거른다): 남은 것 — `integ2`(에셋 GUID 1단계 · 5-3 틱 const · W-R3 (a) 코덱 키 검사 · A1 포즈 노드 · R1 리다이렉트 표 팩 담기 · `setTransient`, 빌드 한 번도 안 함).
    - integ2: main 을 다시 합친다(새 `extern template class … SharedAssetCache<…>;` 줄은 공유 캐시 선언 매크로로) → Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → preflight. 남은 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-2 · "다음 할 일" 16).
-2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 14 번부터. 감사 남은 몫: P-10, P-11 포커스, C-2(다리 원뿔 먼저), G-3 상점 판매 개체. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합이 지운다.
+2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 14 번부터. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합이 지운다.
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
 
