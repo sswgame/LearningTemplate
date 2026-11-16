@@ -136,7 +136,10 @@ namespace sw
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;
+        /** @brief 이번 스텝의 속도를 정해 씬에 이동을 넣습니다(`ScenePhysics::queueCharacterMove` — 씬이 모든 캐릭터를 한 번에 옮긴다, 감사 S-8). */
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
+        /** @brief 옮긴 결과(`getCharacterState`)를 읽어 수직 속도 · 공중 관성 · 이동 방식 · 바닥 회전을 잇습니다. */
+        void postPhysicsStep( ScenePhysics& physics ) override;
         void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
         void releasePhysics( ScenePhysics& physics ) override;
 
@@ -162,7 +165,8 @@ namespace sw
         float32 _mass;
         PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
-        PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep a kinematic capsule body on the character so cloth and sensors feel it (it also pushes dynamic bodies harder)" )
+        /// 기본 켬(감사 S-7) — 트리거 · 천이 캐릭터를 느낀다. 캐릭터끼리 막는 것은 씬의 캐릭터 대 캐릭터 충돌이 한다(속 바디와 상관없다).
+        PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep a kinematic capsule body on the character so triggers, cloth and sensors feel it (it also pushes dynamic bodies harder)" )
         bool _bInnerBody;
 
         PhysicsCharacterHandle                  _character;
@@ -178,6 +182,8 @@ namespace sw
         PhysicsFieldSample                      _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
         float3 _walkVelocity                    SW_GUARDED_BY( _physicsStep ); ///< 지난 스텝에 실제로 낸 걷는 속도 — 접지가 낮으면(빙판) 요청 속도로 천천히 간다
         float3 _fieldVelocity                   SW_GUARDED_BY( _physicsStep ); ///< 필드의 가속 · 흐름이 쌓은 수평 속도(당김 · 해류) — 디디면 접지만큼 줄어든다
+        float3 _queuedStepVelocity              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동 속도(수직 포함 — 스텝 기록용)
+        float32 _queuedStepSeconds              SW_GUARDED_BY( _physicsStep ); ///< 이번 스텝에 넣은 이동의 길이(초). 0 이면 넣지 않았다 — `postPhysicsStep` 이 읽고 비운다
         CharacterMovementMode                   _movementMode;                 ///< 지난 스텝의 이동 방식
         float3                                  _previousPosition;
         float3                                  _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)

@@ -1358,6 +1358,14 @@ namespace sw
         _characters.erase( character.getSlot() );
     }
 
+    void Box2DPhysicsScene::moveCharacters( span<const PhysicsCharacterMove2D> listMove, float32 deltaTime )
+    {
+        for ( const PhysicsCharacterMove2D& move : listMove )
+        {
+            (void)moveCharacter( move._character, move._velocity, deltaTime );
+        }
+    }
+
     PhysicsCharacterState2D Box2DPhysicsScene::moveCharacter( PhysicsCharacterHandle character, const float2& velocity, float32 deltaTime )
     {
         CharacterRecord* pRecord = _characters.get( character.getSlot() );

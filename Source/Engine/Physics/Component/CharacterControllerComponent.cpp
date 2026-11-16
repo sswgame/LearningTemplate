@@ -60,7 +60,7 @@ namespace sw
         , _gravityScale{ 1.0f }
         , _mass{ 70.0f }
         , _layer{ "Character" }
-        , _bInnerBody{ false }
+        , _bInnerBody{ true }
         , _character{}
         , _state{}
         , _pCommandPage{ nullptr }
@@ -73,6 +73,8 @@ namespace sw
         , _frameField{}
         , _walkVelocity{}
         , _fieldVelocity{}
+        , _queuedStepVelocity{}
+        , _queuedStepSeconds{ 0.0f }
         , _movementMode{ CharacterMovementMode::Walking }
         , _previousPosition{}
         , _worldScale{ 1.0f, 1.0f, 1.0f }
@@ -391,20 +393,30 @@ namespace sw
         if ( jumpSpeed > 0.0f )
             _verticalSpeed = jumpSpeed;
 
-        _previousPosition = _state._position;
-        _state            = pScene->moveCharacter( _character, float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z }, fixedDeltaTime );
+        _previousPosition   = _state._position;
+        _queuedStepVelocity = float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z };
+        _queuedStepSeconds  = fixedDeltaTime;
+        // 옮기기는 씬이 모든 캐릭터를 모아 한 번에 한다(이 스텝의 모든 `prePhysicsStep` 뒤, 월드 스텝 앞) — 결과는 `postPhysicsStep` 이 잇는다.
+        physics.queueCharacterMove( _character, _queuedStepVelocity );
+    }
+
+    void CharacterControllerComponent::postPhysicsStep( ScenePhysics& physics )
+    {
+        _physicsStep.assumeHeld(); // `prePhysicsStep` 과 같은 스레드 규칙이다
+        const float32 fixedDeltaTime  = _queuedStepSeconds;
+        _queuedStepSeconds            = 0.0f;
+        const IPhysicsScene3D* pScene = physics.findScene3D();
+        if ( fixedDeltaTime <= 0.0f || pScene == nullptr || pScene->getCharacterState( _character, _state ) == false )
+            return; // 이번 스텝에 넣은 이동이 없다
         if ( isStepHistoryEnabled() )
         {
             // 진단 기록 — 켰을 때만 칸을 만들고 쓴다(꺼져 있으면 이 분기 하나).
             if ( _listStepHistory.empty() )
                 _listStepHistory.resize( kStepHistoryCapacity );
-            _listStepHistory[_stepHistoryCount % kStepHistoryCapacity] = StepRecord{
-                float3{ moveVelocity._x, _verticalSpeed, moveVelocity._z },
-                _state
-            };
+            _listStepHistory[_stepHistoryCount % kStepHistoryCapacity] = StepRecord{ _queuedStepVelocity, _state };
             ++_stepHistoryCount;
         }
-        _movementMode = field.selectMovementMode( _state._bGrounded, kBodyDensity );
+        _movementMode = _frameField.selectMovementMode( _state._bGrounded, kBodyDensity );
         // 결정: 바닥이 돌면 위치만이 아니라 방향(yaw)도 같이 돈다 — 이번 스텝에 바닥이 돈 각을 모아 두고 트랜스폼을 쓸 때 얹는다.
         _pendingGroundYaw += _state._groundYawRate * fixedDeltaTime;
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.

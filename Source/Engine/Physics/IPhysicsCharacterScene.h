@@ -5,6 +5,7 @@
  *          핸들 · 스레드 · 단위 규칙은 `IPhysicsScene.h` 머리말과 같다.
  */
 #pragma once
+#include "Core/Container/span.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -13,6 +14,17 @@
 
 namespace sw
 {
+    /** @brief 일괄 이동(`moveCharacters`)의 한 칸입니다 — 캐릭터 하나와 이번 스텝의 바닥 기준 속도(`moveCharacter` 의 @p velocity 와 같다). */
+    template <typename TDimension>
+    struct PhysicsCharacterMove
+    {
+        PhysicsCharacterHandle      _character{};
+        typename TDimension::Vector _velocity{};
+    };
+
+    using PhysicsCharacterMove3D = PhysicsCharacterMove<PhysicsDimension3D>;
+    using PhysicsCharacterMove2D = PhysicsCharacterMove<PhysicsDimension2D>;
+
     /** @brief 캡슐 캐릭터 무버를 다룹니다. */
     template <typename TDimension>
     class IPhysicsCharacterScene
@@ -21,6 +33,7 @@ namespace sw
         using Vector         = typename TDimension::Vector;
         using CharacterDesc  = PhysicsCharacterDesc<TDimension>;
         using CharacterState = PhysicsCharacterState<TDimension>;
+        using CharacterMove  = PhysicsCharacterMove<TDimension>;
 
         virtual ~IPhysicsCharacterScene() = default;
 
@@ -33,7 +46,14 @@ namespace sw
          *          @p velocity 는 바닥 기준 속도다. 딛고 선 바디는 상태의 `_groundBody` 로 나간다.
          */
         virtual CharacterState moveCharacter( PhysicsCharacterHandle character, const Vector& velocity, float32 deltaTime ) = 0;
-        virtual void           setCharacterPosition( PhysicsCharacterHandle character, const Vector& position )             = 0;
+        /**
+         * @brief 캐릭터 여럿을 한 번에 @p deltaTime 만큼 움직입니다 — 칸마다 `moveCharacter` 와 같은 결과이고 차례도 목록 차례입니다(앞 캐릭터가 옮긴 뒤 다음이 본다).
+         *        결과는 `getCharacterState` 로 읽습니다. 없는 캐릭터의 칸은 건너뜁니다.
+         * @details 씬이 스텝마다 캐릭터 이동을 모아 한 번 부른다(`ScenePhysics::queueCharacterMove`, 감사 S-8) — 유니티 DOTS 캐릭터 컨트롤러 잡 · 언리얼 Mover 의
+         *          일괄 갱신 자리다. 구현이 레인으로 나눠 돌 수 있게 한 호출에 모은다(지금 구현은 차례로 돈다).
+         */
+        virtual void moveCharacters( span<const CharacterMove> listMove, float32 deltaTime )          = 0;
+        virtual void setCharacterPosition( PhysicsCharacterHandle character, const Vector& position ) = 0;
         /**
          * @brief 캐릭터를 지우지 않고 캡슐 크기를 바꿉니다 — 자리 · 디딘 바닥 · 속 바디(`_bInnerBody`)의 핸들과 접촉이 이어집니다.
          * @details 배율이 바뀐 컨트롤러가 쓴다(다시 만들면 속 바디의 쌍마다 끝 → 시작이 난다, 감사 S-4). 커진 캡슐이 벽에 묻혀도 바꾼다 — 다음 이동이 밀어낸다.

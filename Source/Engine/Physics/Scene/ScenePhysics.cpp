@@ -88,6 +88,7 @@ namespace sw
         , _poseRead3D{}
         , _poseRead2D{}
         , _listPoseWrite{}
+        , _listCharacterMove3D{}
         , _listTransformWrite{}
         , _listDispatchEvent3D{}
         , _listDispatchEvent2D{}
@@ -147,6 +148,7 @@ namespace sw
         _listSweptOverlap2D.clear();
         _listMovedCollider2D.clear();
         _listPoseWrite.clear();
+        _listCharacterMove3D.clear();
         _bFrameEventsPending = SW_FALSE;
         _stepTimer.reset();
     }
@@ -567,6 +569,20 @@ namespace sw
         _listPoseWrite.push_back( PoseWrite{ &writer, position, rotation, scale } );
     }
 
+    void ScenePhysics::queueCharacterMove( PhysicsCharacterHandle character, const float3& velocity )
+    {
+        _listCharacterMove3D.push_back( PhysicsCharacterMove3D{ character, velocity } );
+    }
+
+    void ScenePhysics::flushCharacterMoves( float32 fixedDeltaTime )
+    {
+        if ( _listCharacterMove3D.empty() )
+            return;
+        if ( _pScene3D != nullptr )
+            _pScene3D->moveCharacters( _listCharacterMove3D, fixedDeltaTime );
+        _listCharacterMove3D.clear();
+    }
+
     void ScenePhysics::applyPoseWrites()
     {
         if ( _listPoseWrite.empty() )
@@ -645,6 +661,7 @@ namespace sw
             {
                 runFrameHook( PhysicsHookSlot::PreStep, phase, args );
             }
+            flushCharacterMoves( fixedStep ); // 캐릭터는 바디 · 관절이 이번 스텝 목표를 정한 뒤, 월드 스텝 앞에 움직인다(예전 차례 그대로)
             if ( _pScene3D != nullptr )
             {
                 _pScene3D->step( fixedStep );

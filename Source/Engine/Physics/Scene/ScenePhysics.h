@@ -229,6 +229,11 @@ namespace sw
          *          하나를 부르지 않고, 부모 바디가 목록에서 뒤에 있어도 자식이 지난 자리의 부모로 풀지 않는다(유니티 `TransformAccessArray` · 언리얼 Chaos 의 결과 일괄 반영).
          */
         void queuePoseWrite( PhysicsComponent& writer, const float3& position, const quaternion& rotation, const float3& scale );
+        /**
+         * @brief 이번 스텝의 3D 캐릭터 이동 하나를 넣습니다(`prePhysicsStep` 안에서만). 모든 단계의 `prePhysicsStep` 뒤, 씬 step 앞에 한 번에 움직인다
+         *        (`IPhysicsCharacterScene3D::moveCharacters`, 감사 S-8) — 결과는 `postPhysicsStep` 에서 `getCharacterState` 로 읽는다.
+         */
+        void queueCharacterMove( PhysicsCharacterHandle character, const float3& velocity );
 
         /**
          * @brief 마지막 `step` 이 모은 접촉 이벤트를 나눠 줍니다(`ScenePhysicsEvents::update`, `FlushPostPhysics` 단계). 나눠 줄 것이 없거나 이미 나눠 줬으면 아무것도 하지 않습니다.
@@ -278,6 +283,8 @@ namespace sw
         void readMovedBodies( const vector<uint32>& listPoseSlot, const IPhysicsBodyScene<TDimension>& scene, PoseReadBuffer<TDimension>& buffer );
         /** @brief `queuePoseWrite` 로 모은 쓰기를 적용합니다(그 머리말의 순서). */
         void applyPoseWrites();
+        /** @brief `queueCharacterMove` 로 모은 이동을 3D 씬에 한 번에 넘기고 비웁니다(스텝마다 `prePhysicsStep` 뒤). */
+        void flushCharacterMoves( float32 fixedDeltaTime );
 
         /** @brief 유지 듣는 쪽 하나입니다(`registerContactStayListener`) — 켜짐 · 파괴 대기는 컴포넌트로 본다. */
         struct ContactStayListenerEntry
@@ -344,6 +351,7 @@ namespace sw
         PoseReadBuffer<PhysicsDimension3D>                                _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
         PoseReadBuffer<PhysicsDimension2D>                                _poseRead2D;                         ///< 위와 같다(2D)
         vector<PoseWrite>                                                 _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)
+        vector<PhysicsCharacterMove3D>                                    _listCharacterMove3D;                ///< 이번 스텝의 캐릭터 이동(`queueCharacterMove`, 재사용)
         vector<SceneTransformWrite>                                       _listTransformWrite;                 ///< 그 가운데 부모 없는 것의 일괄 쓰기(`applyPoseWrites` 가 채운다, 재사용)
         vector<PhysicsContactEvent3D>                                     _listDispatchEvent3D;                ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
         vector<PhysicsContactEvent2D>                                     _listDispatchEvent2D;                ///< 위와 같다
