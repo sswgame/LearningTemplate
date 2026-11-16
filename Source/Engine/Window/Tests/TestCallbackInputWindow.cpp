@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Window/CallbackInputWindow.h"
-#include "Engine/Window/IWindow.h"
+#include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/PlatformInputEvent.h"
 
 using namespace sw;
