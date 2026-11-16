@@ -21,6 +21,7 @@
  *          - 잔액은 버전 조건으로 쓴다. 읽은 뒤 다른 이동이 끼면 커밋이 `Conflict` 이고, `executeTransfer` 가 다시 읽어 다시 한다.
  */
 #pragma once
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -76,10 +77,13 @@ namespace sw
          * @details 분개를 끝까지 읽지 못하면 시각도 읽지 않은 것으로 보고 지우지 않는다 — 이월에 넣지 못하는 분개를 지우면 감사 균형이 깨진다.
          */
         [[nodiscard]] static ServiceTTLRule makeJournalTTLRule( int64 retentionMs );
-        /** @brief 분개 @p entry 의 발행 · 소각 다리를 자산별로 @p inoutListSupply 에 더합니다. 이월과 감사(`LedgerAuditReport`)가 같은 셈을 씁니다. */
-        static void addSupply( const LedgerJournalEntry& entry, vector<LedgerSupplyStats>& inoutListSupply );
-        /** @brief 이월 레코드를 모두 읽어 @p inoutListSupply 에 더합니다. 읽지 못한 레코드는 @p outUnreadableCount 에 셉니다. */
-        [[nodiscard]] static ServiceStoreResult addCarriedSupply( IServiceStoreConnection& connection, vector<LedgerSupplyStats>& inoutListSupply, int32& outUnreadableCount );
+        /**
+         * @brief 분개 @p entry 의 발행 · 소각 다리를 자산별로 @p inoutMapSupply 에 더합니다. 이월과 감사(`LedgerAuditReport`)가 같은 셈을 씁니다.
+         * @details 자산 id 로 찾는 맵이다 — 감사는 분개 전부(보존 기간만큼)를 더하므로 목록을 훑으면 분개 수 × 자산 수였다.
+         */
+        static void addSupply( const LedgerJournalEntry& entry, map<string, LedgerSupplyStats>& inoutMapSupply );
+        /** @brief 이월 레코드를 모두 읽어 @p inoutMapSupply 에 더합니다. 읽지 못한 레코드는 @p outUnreadableCount 에 셉니다. */
+        [[nodiscard]] static ServiceStoreResult addCarriedSupply( IServiceStoreConnection& connection, map<string, LedgerSupplyStats>& inoutMapSupply, int32& outUnreadableCount );
 
         /**
          * @brief 이동을 @p inoutTransaction 에 붙입니다. 커밋은 하지 않으며, 자기 레코드와 한 트랜잭션에 넣는 쪽(거래, 우편 수령, 구매 한도)이 씁니다.

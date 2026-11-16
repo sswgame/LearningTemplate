@@ -212,30 +212,30 @@ namespace sw
              */
             static ServiceStoreResult stageJournalErase( IServiceStoreConnection& connection, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction )
             {
-                vector<LedgerSupplyStats> listSupply;
+                map<string, LedgerSupplyStats> mapSupply;
                 for ( const ServiceRecord* pRecord : listErased )
                 {
                     LedgerJournalEntry entry;
                     if ( decodeJournal( pRecord->_bytes, entry, nullptr ) == false )
                         return ServiceStoreResult::Invalid; // 시각을 읽은 분개라 여기 오지 않는다
-                    Ledger::addSupply( entry, listSupply );
+                    Ledger::addSupply( entry, mapSupply );
                     stageHistoryErase( entry, pRecord->_key, inoutTransaction );
                 }
-                for ( const LedgerSupplyStats& supply : listSupply )
+                for ( const auto& [assetID, supply] : mapSupply )
                 {
                     ServiceRecord            carryRecord;
-                    const ServiceStoreResult read = connection.readRecord( Ledger::getCarryTable(), supply._assetID, carryRecord );
+                    const ServiceStoreResult read = connection.readRecord( Ledger::getCarryTable(), assetID, carryRecord );
                     if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                         return read;
-                    LedgerSupplyStats total{ supply._assetID };
+                    LedgerSupplyStats total{ assetID };
                     if ( read == ServiceStoreResult::Ok && decodeCarry( carryRecord._bytes, total ) == false )
                     {
-                        SW_LOG_ERROR_ID( "Ledger.LedgerCarryUnreadable", "Ledger carry '%#' is unreadable", supply._assetID.c_str() );
+                        SW_LOG_ERROR_ID( "Ledger.LedgerCarryUnreadable", "Ledger carry '%#' is unreadable", assetID.c_str() );
                         return ServiceStoreResult::Invalid; // 깨진 이월에 더하면 합이 틀린다 - 지우지 않고 멈춘다
                     }
                     total._issued += supply._issued;
                     total._burned += supply._burned;
-                    inoutTransaction.put( Ledger::getCarryTable(), supply._assetID, encodeCarry( total ), carryRecord._version );
+                    inoutTransaction.put( Ledger::getCarryTable(), assetID, encodeCarry( total ), carryRecord._version );
                 }
                 return ServiceStoreResult::Ok;
             }
@@ -653,7 +653,7 @@ namespace sw
         return rule;
     }
 
-    void Ledger::addSupply( const LedgerJournalEntry& entry, vector<LedgerSupplyStats>& inoutListSupply )
+    void Ledger::addSupply( const LedgerJournalEntry& entry, map<string, LedgerSupplyStats>& inoutMapSupply )
     {
         for ( const LedgerPosting& posting : entry._listPosting )
         {
@@ -661,17 +661,16 @@ namespace sw
             const bool bBurned = posting._to._kind == LedgerHolderKind::Sink;
             if ( bIssued == false && bBurned == false )
                 continue;
-            LedgerSupplyStats* pSupply = VectorUtil::findBy<&LedgerSupplyStats::_assetID>( inoutListSupply, posting._assetID );
-            if ( pSupply == nullptr )
-                pSupply = &inoutListSupply.emplace_back( LedgerSupplyStats{ posting._assetID } );
+            LedgerSupplyStats& supply = inoutMapSupply[posting._assetID];
+            supply._assetID           = posting._assetID;
             if ( bIssued )
-                pSupply->_issued += posting._amount;
+                supply._issued += posting._amount;
             if ( bBurned )
-                pSupply->_burned += posting._amount;
+                supply._burned += posting._amount;
         }
     }
 
-    ServiceStoreResult Ledger::addCarriedSupply( IServiceStoreConnection& connection, vector<LedgerSupplyStats>& inoutListSupply, int32& outUnreadableCount )
+    ServiceStoreResult Ledger::addCarriedSupply( IServiceStoreConnection& connection, map<string, LedgerSupplyStats>& inoutMapSupply, int32& outUnreadableCount )
     {
         outUnreadableCount = 0;
         string cursor;
@@ -689,14 +688,10 @@ namespace sw
                     ++outUnreadableCount;
                     continue;
                 }
-                LedgerSupplyStats* pSupply = VectorUtil::findBy<&LedgerSupplyStats::_assetID>( inoutListSupply, carried._assetID );
-                if ( pSupply == nullptr )
-                {
-                    inoutListSupply.push_back( std::move( carried ) );
-                    continue;
-                }
-                pSupply->_issued += carried._issued;
-                pSupply->_burned += carried._burned;
+                LedgerSupplyStats& supply = inoutMapSupply[carried._assetID];
+                supply._assetID           = carried._assetID;
+                supply._issued += carried._issued;
+                supply._burned += carried._burned;
             }
             if ( static_cast<int32>( listRecord.size() ) < LedgerInternal::kListPageSize )
                 return ServiceStoreResult::Ok;
