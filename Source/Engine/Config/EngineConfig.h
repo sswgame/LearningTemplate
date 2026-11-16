@@ -200,6 +200,13 @@ namespace sw
         PROPERTY()
         AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
 
+        /**
+         * @brief 창이 배경(포커스 없음)일 때도 패드 입력을 게임에 넣을지입니다(감사 P-10).
+         * @details XInput · evdev 는 창과 상관없이 읽혀, 끄지 않으면 다른 창을 쓰는 동안 패드가 게임을 움직인다. SDL `JOYSTICK_ALLOW_BACKGROUND_EVENTS`(기본 끔)와 같은 자리다.
+         */
+        PROPERTY()
+        bool32 _bBackgroundGamepadInput{};
+
         PROPERTY()
         RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)
 

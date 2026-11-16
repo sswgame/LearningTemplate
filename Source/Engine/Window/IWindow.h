@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 
 #include "Engine/EngineMinimal.h"
@@ -437,8 +438,13 @@ namespace sw
 
         /** @brief 창 크기가 바뀔 때 부를 콜백을 겁니다. */
         [[nodiscard]] Subscription bindResizeCallback( WindowResizeDelegate callback ) { return _onResize.bind( std::move( callback ) ); }
-        /** @brief 수명 이벤트 처리기를 겁니다(`notifyLifecycleEvent`). 엔진이 주 창에 건다. */
+        /** @brief 렌더러의 수명 이벤트 처리기를 겁니다(`notifyLifecycleEvent`). 표면을 놓고 다시 짓는 쪽이라 구독자(`addLifecycleListener`) 뒤에 마지막으로 불린다. */
         [[nodiscard]] Subscription bindLifecycleCallback( WindowLifecycleDelegate callback ) { return _onLifecycle.bind( std::move( callback ) ); }
+        /**
+         * @brief 수명 이벤트 구독자를 더합니다 — 앱이 멈추면 입력 리셋 · 진동 정지 · 오디오 멈춤을 거는 자리다(감사 P-6).
+         * @details 언리얼 `ApplicationWillEnterBackgroundDelegate`(멀티캐스트) · 유니티 `OnApplicationPause` 자리다. 렌더러 처리기(`bindLifecycleCallback`)보다 먼저, 더한 차례로 불린다.
+         */
+        [[nodiscard]] Subscription addLifecycleListener( const WindowLifecycleDelegate& listener ) { return _lifecycleListeners.add( listener ); }
 
         /** @brief 닫기 전에 불리는 처리기를 겁니다. false 를 반환하면 닫기를 보류합니다. */
         [[nodiscard]] Subscription bindCloseQueryHandler( WindowCloseQueryDelegate handler ) { return _closeQuery.bind( std::move( handler ) ); }
@@ -515,15 +521,16 @@ namespace sw
          * @brief `recreate` 가 같은 제목으로 다시 만들 제목입니다.
          * @details 창 안의 고정 버퍼다. 창은 엔진 종료 뒤에 파괴되므로, 힙 문자열이면 기동 뒤에 바꾼 제목(에디터)이 엔진 종료 누수 보고에 그 태그의 증가로 남았다.
          */
-        utf8                                           _arrTitle[kTitleCapacity];
-        DelegateSlot<WindowMessageHandlerDelegate>     _customHandler;
-        DelegateSlot<WindowAccessibilityQueryDelegate> _accessibilityQuery;
-        DelegateSlot<WindowResizeDelegate>             _onResize;
-        DelegateSlot<WindowLifecycleDelegate>          _onLifecycle;
-        DelegateSlot<WindowCloseQueryDelegate>         _closeQuery;
-        uint32                                         _width;
-        uint32                                         _height;
-        uint8                                          _bShouldClose : 1;
+        utf8                                            _arrTitle[kTitleCapacity];
+        DelegateSlot<WindowMessageHandlerDelegate>      _customHandler;
+        DelegateSlot<WindowAccessibilityQueryDelegate>  _accessibilityQuery;
+        DelegateSlot<WindowResizeDelegate>              _onResize;
+        DelegateSlot<WindowLifecycleDelegate>           _onLifecycle;
+        MulticastDelegate<void( WindowLifecycleEvent )> _lifecycleListeners; ///< `addLifecycleListener` — 렌더러 처리기보다 먼저 불린다
+        DelegateSlot<WindowCloseQueryDelegate>          _closeQuery;
+        uint32                                          _width;
+        uint32                                          _height;
+        uint8                                           _bShouldClose : 1;
         /**
          * @brief 다시 만드는 중인지 나타냅니다.
          * @details 플랫폼 메시지 처리기가 이 플래그를 보고 그 사이의 리사이즈와 닫기 통보를 삼킨다.

@@ -8,6 +8,7 @@
 #include "Core/String/UTF8Util.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
@@ -114,7 +115,16 @@ namespace sw
         , _bOSDeviceInputBlocked{ SW_FALSE }
         , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
+        , _bBackgroundGamepadInput{ SW_TRUE }
     {
+    }
+
+    SubsystemInitResult InputManager::initializeSubsystem()
+    {
+        if ( initialize() == false )
+            return SubsystemInitResult::Failed;
+        setBackgroundGamepadInput( engine::getSubsystem<EngineConfig>()._bBackgroundGamepadInput != 0 );
+        return SubsystemInitResult::Succeeded;
     }
 
     InputManager::~InputManager()
@@ -367,12 +377,15 @@ namespace sw
         // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다. 배타 가상 입력이면 폴링하지 않는다.
         //    패드 폴링(XInput, 조이스틱)이 가상 패드 상태를 실제 패드 값으로 덮어쓰기 때문이다.
         const bool bOSSuppressed = isOSInputSuppressed();
+        // 배경 창은 패드를 읽지 않는다(정책 — XInput · evdev 는 창과 상관없이 읽힌다). 포커스를 잃을 때 눌린 버튼은 이미 놓았다(`onWindowFocusLost`).
+        const bool bPadSuppressed = canPollGamepad( _bWindowFocused == SW_TRUE, _bBackgroundGamepadInput == SW_TRUE ) == false;
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
             {
                 pDev->onFrameBegin( deltaSeconds );
-                if ( bOSSuppressed == false )
+                const bool bSkipPoll = bOSSuppressed || ( bPadSuppressed && pDev->getDeviceKind() == InputDeviceKind::Gamepad );
+                if ( bSkipPoll == false )
                     pDev->poll( deltaSeconds );
                 pDev->onPolled();
             }
@@ -713,6 +726,16 @@ namespace sw
         resetAllDeviceState();
     }
 
+    void InputManager::onAppSuspended()
+    {
+        for ( uint32 padIndex = 0; padIndex < kMaxGamepadSlot; ++padIndex )
+        {
+            if ( GamepadDevice* const pPad = getGamepad( padIndex ) )
+                pPad->stopVibration();
+        }
+        postWindowStateEvent( RawInputEvent::makeFocusChange( false ) );
+    }
+
     void InputManager::resetAllDeviceState()
     {
         for ( auto& pDev : _listDevice )
@@ -1002,6 +1025,14 @@ namespace sw
             _bMouseLockEngaged = SW_FALSE;
             _bAltHeld          = SW_FALSE; // Alt+Tab 의 Alt 뗌은 다른 창으로 간다
         }
+        // OS 접근성 단축키(Shift 다섯 번 등)는 창이 앞에 있는 동안만 끈다 — 다른 창으로 가면 사용자의 설정으로 되돌린다(감사 P-11, 언리얼 FWindowsApplication 의 활성화 처리와 같다).
+        // 배포 빌드만 한다: OS 전역 설정이라 병렬로 도는 테스트 · 개발 프로세스가 서로의 "끈 상태" 를 원래 값으로 적어 꺼진 채 남길 수 있다.
+#if defined( SW_SHIPPING )
+        if ( bFocused )
+            disableWindowsAccessibilityShortcuts();
+        else
+            restoreWindowsAccessibilityShortcuts();
+#endif
         syncMouseLock();
     }
 

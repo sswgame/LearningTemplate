@@ -155,3 +155,33 @@ SW_TEST_CASE( PolygonTriangulationTest, ResultIsAppended )
     SW_EXPECT_EQUAL( 6u, static_cast<uint32>( listIndex.size() ) );
     SW_EXPECT_EQUAL( 7u, listIndex[0] );
 }
+
+/**
+ * @brief [PolygonTriangulationTest] 구멍 둘이 같은 바깥 꼭짓점으로 다리를 놓아도 막히지 않고 넓이 그대로 덮는다(감사 C-2)
+ * @details 첫 다리를 놓으면 바깥 꼭짓점 (10, 0) 이 목록에 두 번 든다. 예전에는 둘째 다리가 원뿔 밖의 사본을 골라 고리가 꼬였고, 귀 자르기가 막혀 남은 부분을 부채꼴로 덮었다(구멍 위에 면).
+ */
+SW_TEST_CASE( PolygonTriangulationTest, TwoHolesBridgingToTheSameVertex )
+{
+    const vector<float2> listPoint{
+        float2{ 0.0f,  0.0f},
+        float2{10.0f,  0.0f},
+        float2{10.0f, 10.0f},
+        float2{ 0.0f, 10.0f}, // 바깥(반시계)
+        float2{ 7.0f,  1.0f},
+        float2{ 7.0f,  2.0f},
+        float2{ 8.0f,  2.0f},
+        float2{ 8.0f,  1.0f}, // 구멍 A(시계) — 오른쪽 점 (8, 1) 은 (10, 0) 이 가장 가깝다
+        float2{ 7.0f,  3.0f},
+        float2{ 7.0f,  4.0f},
+        float2{ 8.0f,  4.0f},
+        float2{ 8.0f,  3.0f}, // 구멍 B(시계) — 오른쪽 점 (8, 3) 도 (10, 0) 이 가장 가깝다
+    };
+    const vector<vector<uint32>> listLoop{
+        {0, 1,  2,  3},
+        {4, 5,  6,  7},
+        {8, 9, 10, 11}
+    };
+    vector<uint32> listIndex;
+    SW_EXPECT_TRUE( PolygonTriangulationUtil::triangulate( listPoint, listLoop, listIndex ) );
+    SW_EXPECT_NEAR( 98.0f, PolygonTriangulationTestUtil::sumTriangleArea( listPoint, listIndex ), 0.001f );
+}

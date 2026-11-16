@@ -80,3 +80,20 @@ SW_TEST_CASE( WindowLifecycleTest, SimulatedInterruptionEndsAfterItsTicks )
     window.advanceLifecycleTick();
     SW_EXPECT_EQUAL( 3u, window.getRenderPausedTickCount() );
 }
+
+/** @brief [WindowLifecycleTest] 구독자(입력 · 오디오)는 렌더러 처리기보다 먼저 받는다 — 앱이 멈추면 소리 · 입력이 먼저 서고 표면은 렌더러가 마지막에 놓는다(감사 P-6). */
+SW_TEST_CASE( WindowLifecycleTest, ListenersRunBeforeRendererCallback )
+{
+    FakeWindow         window;
+    vector<int32>      listOrder;
+    const Subscription renderer = window.bindLifecycleCallback( SW_DELEGATE_LAMBDA( WindowLifecycleDelegate, [&listOrder]( WindowLifecycleEvent )
+    { listOrder.push_back( 0 ); } ) );
+    const Subscription listener = window.addLifecycleListener( SW_DELEGATE_LAMBDA( WindowLifecycleDelegate, [&listOrder]( WindowLifecycleEvent )
+    { listOrder.push_back( 1 ); } ) );
+
+    window.notifyLifecycleEvent( WindowLifecycleEvent::AppSuspended );
+    window.notifyLifecycleEvent( WindowLifecycleEvent::AppSuspended ); // 바뀌지 않으면 아무도 받지 않는다
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listOrder.size() );
+    SW_EXPECT_EQUAL( 1, listOrder[0] );
+    SW_EXPECT_EQUAL( 0, listOrder[1] );
+}

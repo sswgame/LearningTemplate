@@ -113,6 +113,15 @@ namespace sw
          *          렌더가 멈춰 재생 끝남을 기다리는 게임 로직이 영영 기다렸다(감사 P0-13). 언리얼 AudioMixer 의 Null 장치 넘김 → 새 기본 장치 스왑과 같은 자리다.
          */
         void notifyOutputLost() { _bOutputLost.store( true, std::memory_order_release ); }
+        /**
+         * @brief (게임 스레드) 앱이 멈췄습니다 — 장치 출력을 닫고 멈춘 동안 렌더하지 않습니다(Android onPause · 브라우저 탭 숨김에 소리가 계속 나지 않게, 감사 P-6).
+         * @details 언리얼 `FAudioDevice::SuspendContext` · 유니티 `OnApplicationPause` 의 오디오 멈춤 자리다. 재생 상태는 그대로이고 `resumeOutput` 뒤 첫 `update` 가 장치를 다시 연다.
+         */
+        void suspendOutput();
+        /** @brief (게임 스레드) 앱이 돌아왔습니다. 다음 `update` 가 바로 장치를 다시 엽니다. */
+        void resumeOutput();
+        /** @brief 앱 멈춤으로 출력을 닫아 둔 동안 true 입니다. */
+        bool isOutputSuspended() const { return _bOutputSuspended != 0; }
 
         /**
          * @brief 스피커 모드를 정합니다. 초기화 전이면 값만 두고 `initialize` 가 씁니다. 초기화 뒤면 출력을 멈추고 엔진 레이아웃을 바꾼 뒤 다시 엽니다(재생은 이어집니다).
@@ -247,6 +256,8 @@ namespace sw
     private:
         /** @brief 죽은 출력을 닫고 오프라인으로 넘깁니다(게임 스레드, `update`). */
         void closeLostOutput();
+        /** @brief 스트림 · 장치를 닫고 렌더를 게임 스레드로 돌립니다(`closeLostOutput` · `suspendOutput` 의 공통 몸체). */
+        void closeOutput();
         /** @brief 장치 없이 도는 동안 백오프 간격이 지났으면 장치를 다시 열어 엔진의 지금 레이아웃으로 출력을 잇습니다(게임 스레드, `update`). */
         void retryOpenOutput( float32 deltaSeconds );
         /** @brief 소리 그래프 파일이고 클립 캐시가 이미 읽어 둔 것이면 캐시의 경로를 @p outGraphPath 에 돌려줍니다(핫 리로드 대상). */
@@ -269,28 +280,29 @@ namespace sw
         };
 
     private:
-        unique_ptr<AudioEngine> _pEngine;           /**< 오디오 엔진입니다. */
-        AudioSoundPlayer        _soundPlayer;       /**< 소리 창구입니다(`ISoundPlayer`). */
-        EngineAudioDriver       _engineAudioDriver; /**< 프레임 창구입니다(`IEngineAudioDriver`). */
-        vector<AudioBusVolume>  _listBusVolume;     /**< 세 기본 버스 밖의 버스 볼륨입니다. */
-        vector<float32>         _listOfflineBlock;  /**< 장치가 없을 때 렌더하는 버퍼입니다. */
-        string                  _musicPath;         /**< 마지막으로 요청된 배경음악 경로입니다. */
-        string                  _mixerPath;         /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
-        AudioPlayingID          _musicPlayingID;    /**< 배경음악 재생 id 입니다. */
-        float64                 _offlineFrameDebt;  /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
-        float64                 _reopenSecondsLeft; /**< 장치를 다시 열어 볼 때까지 남은 시간(초)입니다(`retryOpenOutput`). */
-        ExponentialBackoff      _reopenBackoff;     /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. `initialize` 가 설정의 첫 간격으로 만든다. */
-        int64                   _reopenMaxDelayMs;  /**< 장치 다시 열기 간격의 상한(ms)입니다(`EngineConfig::_audio`). */
-        atomic<bool>            _bOutputLost;       /**< 장치 출력이 죽었다는 알림입니다(`notifyOutputLost` — 아무 스레드). */
-        AudioOutputDevice       _device;            /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
-        float32                 _masterVolume;      /**< 마스터 볼륨 [0,1] 입니다. */
-        float32                 _musicVolume;       /**< 배경음악 볼륨 [0,1] 입니다. */
-        float32                 _sfxVolume;         /**< 효과음 볼륨 [0,1] 입니다. */
-        AudioSpeakerMode        _speakerMode;       /**< 사용자가 고른 스피커 모드입니다. */
-        uint8                   _bMuted       : 1;  /**< 음소거 상태입니다. */
-        uint8                   _bDeviceOpen  : 1;  /**< 장치를 열었는지입니다. */
-        uint8                   _bOutputOpen  : 1;  /**< 장치가 엔진을 당기고 있는지입니다. */
-        uint8                   _bInitialized : 1;  /**< initialize 가 끝났는지입니다. */
+        unique_ptr<AudioEngine> _pEngine;              /**< 오디오 엔진입니다. */
+        AudioSoundPlayer        _soundPlayer;          /**< 소리 창구입니다(`ISoundPlayer`). */
+        EngineAudioDriver       _engineAudioDriver;    /**< 프레임 창구입니다(`IEngineAudioDriver`). */
+        vector<AudioBusVolume>  _listBusVolume;        /**< 세 기본 버스 밖의 버스 볼륨입니다. */
+        vector<float32>         _listOfflineBlock;     /**< 장치가 없을 때 렌더하는 버퍼입니다. */
+        string                  _musicPath;            /**< 마지막으로 요청된 배경음악 경로입니다. */
+        string                  _mixerPath;            /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
+        AudioPlayingID          _musicPlayingID;       /**< 배경음악 재생 id 입니다. */
+        float64                 _offlineFrameDebt;     /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
+        float64                 _reopenSecondsLeft;    /**< 장치를 다시 열어 볼 때까지 남은 시간(초)입니다(`retryOpenOutput`). */
+        ExponentialBackoff      _reopenBackoff;        /**< 장치 다시 열기의 간격입니다 — 성공하면 처음부터. `initialize` 가 설정의 첫 간격으로 만든다. */
+        int64                   _reopenMaxDelayMs;     /**< 장치 다시 열기 간격의 상한(ms)입니다(`EngineConfig::_audio`). */
+        atomic<bool>            _bOutputLost;          /**< 장치 출력이 죽었다는 알림입니다(`notifyOutputLost` — 아무 스레드). */
+        AudioOutputDevice       _device;               /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
+        float32                 _masterVolume;         /**< 마스터 볼륨 [0,1] 입니다. */
+        float32                 _musicVolume;          /**< 배경음악 볼륨 [0,1] 입니다. */
+        float32                 _sfxVolume;            /**< 효과음 볼륨 [0,1] 입니다. */
+        AudioSpeakerMode        _speakerMode;          /**< 사용자가 고른 스피커 모드입니다. */
+        uint8                   _bMuted           : 1; /**< 음소거 상태입니다. */
+        uint8                   _bDeviceOpen      : 1; /**< 장치를 열었는지입니다. */
+        uint8                   _bOutputOpen      : 1; /**< 장치가 엔진을 당기고 있는지입니다. */
+        uint8                   _bInitialized     : 1; /**< initialize 가 끝났는지입니다. */
+        uint8                   _bOutputSuspended : 1; /**< 앱 멈춤으로 출력을 닫아 두었는지입니다(`suspendOutput`). */
 
         SW_SERVICE_SLOT( IAudioService, Optional );
     };
