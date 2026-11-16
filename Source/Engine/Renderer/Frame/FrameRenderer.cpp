@@ -59,7 +59,7 @@ namespace sw
      * @details 게임은 데이터로 고른다 — 팩 설정의 `PackEngineSettings::_renderPipeline`(2D 게임은 그림자 맵과 톤맵이 없는
      *          `engine/pipeline/forward2dpipeline.xml`. 톤맵은 흰색을 0.5 로 누르기 때문이다). 이 스위치는 측정 · 검증용으로 그것을 덮는다.
      */
-    SW_GLOBAL_VARIABLE( sw::string, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 gv_deferredShading · 팩 설정 · 기본 포워드)" );
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 gv_deferredShading · 팩 설정 · 기본 포워드)" );
 
     /**
      * @brief `-gv_vertexPool=0` 이면 씬 메시 정점을 한 풀 버퍼에 모으지 않고 메시마다 자기 정점 버퍼로 그립니다.
@@ -170,11 +170,13 @@ namespace sw
     {
         // 인자, `-gv_renderPipeline`, `-gv_deferredShading`, 팩 설정(`PackEngineSettings::_renderPipeline`), EngineDefaultAssets 의 포워드 순서로 고른다.
         // 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferredShading=1` 을 준다.
-        const EngineDefaultAssets&        engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
-        const DataPath&                   packPipeline        = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
+        const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
+        const DataPath&            packPipeline        = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
+        // 렌더 스레드가 부른다 — 콘솔이 값을 바꿔도 이 사본은 이 선택 동안 그대로다(뷰는 이 사본을 가리킨다).
+        const string                      commandLinePipeline = gv_renderPipeline.get();
         FrameRendererUtil::PipelineChoice choice{};
         choice._argumentPath               = _argumentPipelinePath;
-        choice._commandLinePath            = gv_renderPipeline;
+        choice._commandLinePath            = commandLinePipeline;
         choice._deferredPath               = engineDefaultAssets._defaultDeferredPipeline.get();
         choice._gamePath                   = packPipeline.isSet() ? string_view( packPipeline.get() ) : string_view{};
         choice._forwardPath                = engineDefaultAssets._defaultForwardPipeline.get();

@@ -10,11 +10,11 @@
 namespace sw
 {
     /** @brief `-gv_onlineServerAddress=<주소:포트>`: gamesettings 의 온라인 서버 대신 붙을 주소입니다(로컬 실행 `Scripts/net/online_local_run.py` · 자동화). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_onlineServerAddress, "", "gamesettings 의 온라인 서버 대신 붙을 주소 (주소:포트, 비면 gamesettings)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_onlineServerAddress, "", "gamesettings 의 온라인 서버 대신 붙을 주소 (주소:포트, 비면 gamesettings)" );
     /** @brief `-gv_telemetryUploadEndpoint=<주소>`: gamesettings 의 텔레메트리 끝점 대신 쓸 주소입니다(로컬 수신기 `Scripts/net/telemetry_local_run.py` · 자동화). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_telemetryUploadEndpoint, "", "gamesettings 의 텔레메트리 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_telemetryUploadEndpoint, "", "gamesettings 의 텔레메트리 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );
     /** @brief `-gv_crashUploadEndpoint=<주소>`: gamesettings 의 크래시 보고 끝점 대신 쓸 주소입니다(로컬 수신기 · 자동화). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_crashUploadEndpoint, "", "gamesettings 의 크래시 보고 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_crashUploadEndpoint, "", "gamesettings 의 크래시 보고 업로드 끝점 대신 쓸 주소 (비면 gamesettings)" );
 
     namespace
     {
@@ -24,9 +24,9 @@ namespace sw
         public:
             void apply( GameSettings& settings ) override
             {
-                replace( settings._onlineServerAddress, gv_onlineServerAddress, "onlineServerAddress" );
-                replace( settings._telemetryUploadEndpoint, gv_telemetryUploadEndpoint, "telemetryUploadEndpoint" );
-                replace( settings._crashUploadEndpoint, gv_crashUploadEndpoint, "crashUploadEndpoint" );
+                replace( settings._onlineServerAddress, gv_onlineServerAddress.get(), "onlineServerAddress" );
+                replace( settings._telemetryUploadEndpoint, gv_telemetryUploadEndpoint.get(), "telemetryUploadEndpoint" );
+                replace( settings._crashUploadEndpoint, gv_crashUploadEndpoint.get(), "crashUploadEndpoint" );
             }
 
         private:

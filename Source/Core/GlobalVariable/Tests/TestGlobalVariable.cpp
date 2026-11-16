@@ -21,7 +21,7 @@ namespace
     struct GlobalVariableFixture
     {
         sw::GlobalVariableManager _manager;
-        sw::string                _stringValue;
+        sw::GlobalString          _stringValue;
         float32                   _floatValue;
         int32                     _intValue;
         bool                      _bValue; ///< NOLINT(sw-bool-flag): `registerVariable` 이 주소(`bool*`)를 받는다
@@ -152,9 +152,9 @@ SW_TEST_CASE( GlobalVariableTest, DirectValueModificationAndReset )
     sw::GlobalVariableInfo* pStrInfo = fixture._manager.findVariable( "gv_testString" );
     SW_REQUIRE_NOT_NULL( pStrInfo );
     SW_EXPECT_TRUE( pStrInfo->setValueAsString( "ModifiedStr" ) );
-    SW_EXPECT_EQUAL( sw::string( "ModifiedStr" ), fixture._stringValue );
+    SW_EXPECT_EQUAL( sw::string( "ModifiedStr" ), fixture._stringValue.get() );
     pStrInfo->resetToDefault();
-    SW_EXPECT_EQUAL( sw::string( "InitialValue" ), fixture._stringValue );
+    SW_EXPECT_EQUAL( sw::string( "InitialValue" ), fixture._stringValue.get() );
 }
 
 /**
@@ -189,7 +189,7 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
     SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testInt", sw::to_string( parsedInt ) ) );
     SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testString", parsedStr ) );
     SW_EXPECT_EQUAL( 777, fixture._intValue );
-    SW_EXPECT_EQUAL( sw::string( "FromCLI" ), fixture._stringValue );
+    SW_EXPECT_EQUAL( sw::string( "FromCLI" ), fixture._stringValue.get() );
 }
 
 /**
@@ -351,6 +351,58 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety, ._ta
 
     SW_EXPECT_EQUAL( 0u, badReadCount.load() );
     SW_EXPECT_TRUE_MSG( overlappedRead >= kMinOverlappedRead, "읽기가 쓰기와 거의 겹치지 않았다 — 아무것도 테스트하지 않은 것이다" );
+}
+
+/**
+ * @brief 다른 스레드가 `GlobalString` 값을 바꾸는 동안 읽은 사본(`get`)은 늘 온전한 한 값이다
+ * @details 코드가 전역 글 변수를 읽는 길은 `get` 하나다(참조 · 뷰를 내주지 않는다 — 직접 참조는 컴파일이 막는다). 두 값은 작은 글 최적화를 넘는 길이라
+ *          쓸 때마다 버퍼를 다시 잡는다 — 잠금 없이 읽으면 해제된 버퍼나 반쯤 쓴 글을 본다. 쓰는 스레드가 돈 뒤에 읽고, 읽는 동안 쓰기가 겹친 횟수를 단언한다.
+ */
+SW_TEST_CASE( GlobalVariableTest, GlobalStringCopyStaysWholeWhileAnotherThreadWrites, ._timeoutSeconds = 120.0f )
+{
+    const sw::string kFirst( 96, 'A' );
+    const sw::string kSecond( 160, 'B' );
+    sw::GlobalString value;
+    value.set( kFirst );
+
+    sw::atomic<bool>   bReaderDone{ false };
+    sw::atomic<uint32> writeCount{ 0 };
+    sw::thread         writer( sw::ThreadTestAccess::getKey(), [&]()
+            {
+        for ( uint32 iter = 0; bReaderDone.load( std::memory_order_acquire ) == false; ++iter )
+        {
+            value.set( ( iter & 1u ) == 0u ? kSecond : kFirst );
+            writeCount.fetch_add( 1 );
+            sw::ThreadUtil::yield();
+        }
+    } );
+
+    const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
+    while ( writeCount.load() == 0 && waitDeadline.isExpired() == false )
+    {
+        sw::ThreadUtil::yield();
+    }
+    const uint32 writeBeforeRead = writeCount.load();
+
+    constexpr uint32   kMinOverlappedWrite = 100;
+    const sw::Deadline overlapDeadline     = sw::Deadline::afterMilliseconds( 60000 );
+    uint32             badReadCount        = 0;
+    for ( uint32 iter = 0;; ++iter )
+    {
+        const bool bEnoughReads  = iter >= 2000;
+        const bool bEnoughWrites = writeCount.load() - writeBeforeRead >= kMinOverlappedWrite;
+        if ( bEnoughReads && ( bEnoughWrites || overlapDeadline.isExpired() ) )
+            break;
+        const sw::string copy = value.get();
+        if ( copy != kFirst && copy != kSecond )
+            ++badReadCount;
+    }
+    const uint32 overlappedWrite = writeCount.load() - writeBeforeRead;
+    bReaderDone.store( true, std::memory_order_release );
+    writer.join();
+
+    SW_EXPECT_EQUAL( 0u, badReadCount );
+    SW_EXPECT_TRUE_MSG( overlappedWrite >= kMinOverlappedWrite, "쓰기가 읽기와 거의 겹치지 않았다 — 아무것도 테스트하지 않은 것이다" );
 }
 
 /**

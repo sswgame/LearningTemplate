@@ -32,7 +32,7 @@ namespace sw
 {
     /** @brief `-gv_serverPoseOverlayPort=N`: 클라이언트가 서버의 디버그 채널(루프백 포트 N)에서 포즈를 읽어 권위 고스트를 겹칩니다(0=끄기). Shipping 에는 없습니다. */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_serverPoseOverlayPort, 0, "서버 디버그 채널 포트 - 서버 포즈를 고스트로 겹침 (0=끄기)" );
-    SW_TEST_GLOBAL_VARIABLE( string, gv_serverPoseOverlayToken, "", "서버 디버그 채널 토큰" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_serverPoseOverlayToken, "", "서버 디버그 채널 토큰" );
 
     namespace
     {
@@ -327,7 +327,7 @@ namespace sw
             _pClient = make_unique<DebugChannelClient>();
         int64 delayNanoseconds = ServerPoseOverlayInternal::kPollIntervalNanoseconds;
         if ( _pClient->isConnected() == false &&
-             _pClient->connect( NetAddress::makeLoopback( static_cast<uint16>( gv_serverPoseOverlayPort ) ), gv_serverPoseOverlayToken, ServerPoseOverlayInternal::kRequestTimeoutMilli ) == false )
+             _pClient->connect( NetAddress::makeLoopback( static_cast<uint16>( gv_serverPoseOverlayPort ) ), gv_serverPoseOverlayToken.get(), ServerPoseOverlayInternal::kRequestTimeoutMilli ) == false )
             delayNanoseconds = ServerPoseOverlayInternal::kReconnectNanoseconds;
         string     body;
         const bool bReceived = _pClient->isConnected() && _pClient->request( "scene.poses", ServerPoseOverlayInternal::kRequestTimeoutMilli, body );

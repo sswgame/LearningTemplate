@@ -199,7 +199,7 @@ namespace sw
      * @brief `-gv_stressTestCharacterPrefab=<경로>`: 벤치 캐릭터를 KayKit 기사 대신 이 프리팹으로 스폰합니다(예: 외형 · 병합을 쓰는 `common/prefabs/quaternius/townsfolk_merged.prefab.xml`).
      * @details 프리팹의 애니메이터 · 외형이 스스로 움직이고 차려입으므로 짝수 · 홀수 클립, 시작 시각 흩기, 부품 · 무기 유닛 스위치는 기사에만 걸린다. 위치 · 방향 · 격자는 같다.
      */
-    SW_TEST_GLOBAL_VARIABLE( string, gv_stressTestCharacterPrefab, "", "벤치 캐릭터 프리팹 (비우면 KayKit 기사)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_stressTestCharacterPrefab, "", "벤치 캐릭터 프리팹 (비우면 KayKit 기사)" );
 
     /**
      * @brief `-gv_stressTestCrowdShare=1`: 벤치 캐릭터의 군중 포즈 공유를 켭니다(`SkeletalMeshComponent::setShareCrowdPose`).
@@ -784,10 +784,10 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
-        const uint32      columns = ( gv_stressTestCharacterColumns > 0 ) ? static_cast<uint32>( gv_stressTestCharacterColumns ) : characterCount;
-        const float32     origin  = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * _settings._characterSpacing;
-        const string_view prefabPath( gv_stressTestCharacterPrefab.c_str(), gv_stressTestCharacterPrefab.size() );
-        AssetManager*     pAssets = prefabPath.empty() ? nullptr : game::findSubsystem<AssetManager>();
+        const uint32  columns    = ( gv_stressTestCharacterColumns > 0 ) ? static_cast<uint32>( gv_stressTestCharacterColumns ) : characterCount;
+        const float32 origin     = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * _settings._characterSpacing;
+        const string  prefabPath = gv_stressTestCharacterPrefab.get();
+        AssetManager* pAssets    = prefabPath.empty() ? nullptr : game::findSubsystem<AssetManager>();
         if ( prefabPath.empty() == false && pAssets == nullptr )
         {
             SW_LOG_ERROR_ID( "StressTestScene.CharacterPrefabNoAssets", "[Bench] Character prefab '%#' cannot be spawned - there is no asset manager", prefabPath );
@@ -2037,7 +2037,7 @@ namespace sw
      * @details 워커가 파싱하고 오브젝트를 생성하는 동안과, 활성 씬을 바꾸는 프레임의 최악 시간을 측정합니다(`GT.Frame` 의 p99와 max). 로드 자체에 걸린 시간은
      *          로그의 `'Scene.load.parse'` 와 `'Scene.load.instantiate'` 에 나옵니다. 쿠킹한 결과를 측정하려면 `--cooked-dir` 로 쿠킹 폴더를 마운트합니다.
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_stressTestSceneLoadPath, "", "감시 값 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_stressTestSceneLoadPath, "", "감시 값 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
 
     /**
      * @brief `-gv_stressTestWatchFrame=F`: 한 번 일어나는 감시 값(한글 글, 씬 로드)을 거는 벤치 프레임입니다.
@@ -2107,11 +2107,11 @@ namespace sw
             }
         }
 
-        if ( gv_stressTestSceneLoadPath.empty() == false )
+        if ( gv_stressTestSceneLoadPath.get().empty() == false )
         {
             SceneManager*               pSceneManager = game::findSubsystem<SceneManager>();
-            [[maybe_unused]] const bool bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_stressTestSceneLoadPath, SceneLoadKind::Travel );
-            SW_LOG_INFO_ID( "StressTestScene.ProbeFrameAsyncScene", "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_stressTestSceneLoadPath.c_str(), bRequested ? "requested" : "failed" );
+            [[maybe_unused]] const bool bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_stressTestSceneLoadPath.get(), SceneLoadKind::Travel );
+            SW_LOG_INFO_ID( "StressTestScene.ProbeFrameAsyncScene", "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_stressTestSceneLoadPath.get().c_str(), bRequested ? "requested" : "failed" );
         }
     }
 

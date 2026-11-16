@@ -31,6 +31,7 @@ private:
 
 ```cpp
 SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, true, "..." );          // 에디터에서 바꿀 런타임 설정
+SW_GLOBAL_VARIABLE( GlobalString, gv_firstScene, "", "..." );         // 글은 `GlobalString` — 읽기는 잠금 안에서 사본을 받는 `gv_firstScene.get()` 하나다(참조는 컴파일되지 않는다)
 SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes, 0, "..." );     // 벤치 · 진단. Dev/ · Tests/ · DevTools · Editor 에만(매크로의 static_assert 가 파일 경로를 본다), Shipping 에는 없다
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // 일반 변수 extern
 SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes );         // 테스트용 변수 extern

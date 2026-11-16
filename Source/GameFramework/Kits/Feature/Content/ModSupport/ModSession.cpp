@@ -33,7 +33,7 @@
 namespace sw
 {
     /** @brief `-gv_modList=a,b`: 이 세션에 켤 모드 id(쉼표로 가른다). 비면 모드 없이 돈다. 배포 구성에도 있다 — 모드를 고르는 것은 플레이어다. */
-    SW_GLOBAL_VARIABLE( sw::string, gv_modList, "", "이 세션에 켤 모드 id 목록 (쉼표로 가른다, 비우면 모드 없음)" );
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_modList, "", "이 세션에 켤 모드 id 목록 (쉼표로 가른다, 비우면 모드 없음)" );
 
     namespace
     {
@@ -218,13 +218,13 @@ namespace sw
     bool ModSession::applyForGame( string_view packRoot )
     {
         ModSessionRequest request;
-        request._listEnabledID = ModSessionInternal::splitList( gv_modList );
+        request._listEnabledID = ModSessionInternal::splitList( gv_modList.get() );
         if ( request._listEnabledID.empty() )
             return true;
         string settingsPath;
         if ( const expected<void> path = GamePackDataUtil::tryMakeKindPath( packRoot, ModSupportSettings::kDataKind, settingsPath ); path.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ModSession.NoSettingsPath", "Mods were requested (%#) but the game has no mod support settings path: %# (%#)", gv_modList, path.error().message(), path.error().detail() );
+            SW_LOG_ERROR_ID( "ModSession.NoSettingsPath", "Mods were requested (%#) but the game has no mod support settings path: %# (%#)", gv_modList.get(), path.error().message(), path.error().detail() );
             return false;
         }
         ModSupportSettings settings;

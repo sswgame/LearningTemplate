@@ -135,10 +135,10 @@ namespace sw
             CacheStats::markWindowStart(); // 캐시 적중 · 실패는 워밍업(첫 로드가 모두 실패)을 빼고 센다
             SW_LOG_INFO_ID( "FrameProfileSession.DiscardedWarmupFramesMeasuring", "[Profile] Discarded %# warmup frames. Measuring %# frames from now.", kWarmupFrames,
                             _frameTarget );
-            if ( gv_profileTracePath.empty() == false )
+            if ( gv_profileTracePath.get().empty() == false )
             {
                 string reply;
-                if ( ProfilerTraceExport::startRecording( profiler, 0.0, gv_profileTracePath, "Game", 0, reply ) == false )
+                if ( ProfilerTraceExport::startRecording( profiler, 0.0, gv_profileTracePath.get(), "Game", 0, reply ) == false )
                     SW_LOG_WARNING_ID( "FrameProfileSession.TraceCaptureNotStarted", "[Profile] trace capture not started: %#", reply );
             }
             // 할당 횟수도 같은 측정 구간에서 센다. 시간 표에는 보이지 않는 비용이다. 프로파일러가 없는 구성도 있다.
@@ -168,7 +168,7 @@ namespace sw
         reportHitches();
         fillReport( profiler, frames, elapsedMicro );
         reportAllocations( frames );
-        if ( gv_profileTracePath.empty() == false )
+        if ( gv_profileTracePath.get().empty() == false )
             (void)ProfilerTraceExport::finishRecording( profiler ); // 저장 경로 · 실패 이유는 finishRecording 이 로그로 남긴다
         profiler.setEnabled( false );
         return true;
@@ -185,11 +185,11 @@ namespace sw
         // 캐시 적중 · 실패 표도 같은 자리에서 남긴다.
         CacheStatsUtil::logReport( "profile window" );
         // 기계 판독 보고(`-gv_profileReportPath`). 실패는 `saveToFile` 이 오류로 남긴다.
-        if ( gv_profileReportPath.empty() )
+        if ( gv_profileReportPath.get().empty() )
             return;
         _report._rhiBackend = string( rhiBackend );
         _report._scene      = string( activeSceneID );
-        (void)_report.saveToFile( gv_profileReportPath.c_str() );
+        (void)_report.saveToFile( gv_profileReportPath.get().c_str() );
     }
 
     void FrameProfileSession::fillReport( const FrameProfiler& profiler, uint64 frames, int64 elapsedMicro )

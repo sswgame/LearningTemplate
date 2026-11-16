@@ -68,8 +68,8 @@ namespace sw
             {
                 if ( ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>() )
                     pOptions->_pForceMelee = nullptr;
-                if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace, _motionTrace ) == false )
-                    SW_LOG_WARNING_ID( "ShooterGameMode.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
+                if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace.get(), _motionTrace ) == false )
+                    SW_LOG_WARNING_ID( "ShooterGameMode.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.get().c_str() );
             }
 
             void update( float32 deltaTime ) override
@@ -79,7 +79,7 @@ namespace sw
                 GameObjectManager* const pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
                 if ( pManager == nullptr )
                     return;
-                if ( gv_shooterMotionTrace.empty() )
+                if ( gv_shooterMotionTrace.get().empty() )
                     return;
                 // 게임 모드는 레지스트리에 없다 — 폰(레지스트리에 오른다)의 Shooter 플레이어가 가리키는 게임 모드를 쓴다(그 게임 모드의 플레이어가 기록 대상이다).
                 for ( const PawnComponent* pPawn : pManager->getComponentRegistry().getAll<PawnComponent>() )

@@ -19,11 +19,11 @@ enum class TestGlobalVariableMode : uint8
 SW_TEST_GLOBAL_VARIABLE( bool, gv_testMacroBool, true, "Unit Test Bool Global Variable" );
 SW_TEST_GLOBAL_VARIABLE( int32, gv_testMacroInt, 60, "Unit Test Int32 Global Variable" );
 SW_TEST_GLOBAL_VARIABLE( float32, gv_testMacroFloat, 45.0f, "Unit Test Float Global Variable" );
-SW_TEST_GLOBAL_VARIABLE( sw::string, gv_testMacroString, "InitialValue", "Unit Test String Global Variable" );
+SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_testMacroString, "InitialValue", "Unit Test String Global Variable" );
 SW_TEST_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testMacroEnum, TestGlobalVariableMode::Second, "Unit Test Enum Global Variable" );
 
 // 참조 매크로는 정의의 종류와 상관없이 같은 `extern` 이다.
-SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::string, gv_testMacroString );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_testMacroString );
 SW_EXTERN_TEST_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testMacroEnum );
 
 /**

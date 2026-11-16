@@ -258,7 +258,7 @@ namespace sw::editor
             if ( pPanels == nullptr )
                 return false;
             const SceneViewPanel*               pPanel        = pPanels->findPanel<SceneViewPanel>();
-            const EditorVisualizerRegistration* pRegistration = EditorExtensionRegistry<EditorVisualizerRegistration>::find( gv_editorWatchVisualizer );
+            const EditorVisualizerRegistration* pRegistration = EditorExtensionRegistry<EditorVisualizerRegistration>::find( gv_editorWatchVisualizer.get() );
             if ( pPanel == nullptr || pRegistration == nullptr )
                 return false;
             outValue = pPanel->getViewportClient().getToolbarSettings()._visualizerToggles.isOn( *pRegistration ) ? 1.0 : 0.0;
@@ -342,8 +342,8 @@ namespace sw::editor
             const EditorViewportClient* pClient = findSceneViewClient();
             if ( pClient == nullptr )
                 return false;
-            pOutState   = pClient->getOverlays().getLayout().findBar( gv_editorWatchOverlay );
-            pOutRuntime = pClient->getOverlays().findRuntime( gv_editorWatchOverlay );
+            pOutState   = pClient->getOverlays().getLayout().findBar( gv_editorWatchOverlay.get() );
+            pOutRuntime = pClient->getOverlays().findRuntime( gv_editorWatchOverlay.get() );
             return pOutState != nullptr;
         }
 

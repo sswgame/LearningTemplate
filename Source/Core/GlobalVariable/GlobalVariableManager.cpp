@@ -39,7 +39,6 @@ namespace sw
                 return *static_cast<const int32*>( pData );
             }
 
-            static inline shared_mutex s_stringVarMutex;
             /** @brief 디스크 경로 변수의 상대 경로 기준입니다(`setPathBaseDirectory` - 기동 때 한 번, 그 뒤 읽기만). */
             static inline optional<AbsolutePath> s_pathBaseDirectory;
         };
@@ -127,19 +126,17 @@ namespace sw
             }
         };
 
-        /** @brief `sw::string` 변수의 처리입니다. 읽기 · 쓰기 모두 `s_stringVarMutex` 를 잡는다(복사 도중 재할당된 버퍼를 읽지 않게). */
+        /** @brief 글 변수(`GlobalString`)의 처리입니다. 잠금은 변수가 가진다(`get` · `set`) — 읽는 쪽 코드도 같은 잠금으로만 읽는다. */
         struct GlobalVariableStringOps
         {
             static string formatValue( const GlobalVariableInfo& info )
             {
-                ScopedSharedLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-                return *static_cast<const string*>( info._pData );
+                return static_cast<const GlobalString*>( info._pData )->get();
             }
 
             [[nodiscard]] static bool parseValue( GlobalVariableInfo& info, string_view text )
             {
-                UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-                *static_cast<string*>( info._pData ) = string{ text };
+                static_cast<GlobalString*>( info._pData )->set( text );
                 return true;
             }
 
@@ -147,8 +144,7 @@ namespace sw
             {
                 if ( std::holds_alternative<string>( info._defaultValue ) == false )
                     return;
-                UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-                *static_cast<string*>( info._pData ) = std::get<string>( info._defaultValue );
+                static_cast<GlobalString*>( info._pData )->set( std::get<string>( info._defaultValue ) );
             }
 
             static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
@@ -162,8 +158,7 @@ namespace sw
                 string value;
                 if ( commandLine.getArgument( info._name, value ) == false )
                     return false;
-                UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-                *static_cast<string*>( info._pData ) = std::move( value );
+                static_cast<GlobalString*>( info._pData )->set( value );
                 return true;
             }
         };

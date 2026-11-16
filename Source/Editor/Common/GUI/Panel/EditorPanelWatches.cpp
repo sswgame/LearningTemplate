@@ -22,7 +22,7 @@ namespace sw::editor
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
                 return false;
-            const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel );
+            const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
             if ( pPanel == nullptr )
                 return false;
             outValue = pPanel->isOpen() ? 1.0 : 0.0;
@@ -35,7 +35,7 @@ namespace sw::editor
             EditorContext* pContext = getWatchContext( __func__ );
             if ( pContext == nullptr )
                 return false;
-            const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel );
+            const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorWatchPanel.get() );
             if ( pPanel == nullptr )
                 return false;
             outValue = pPanel->hasUnsavedDocument() ? 1.0 : 0.0;

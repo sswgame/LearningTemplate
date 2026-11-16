@@ -24,7 +24,7 @@ namespace sw::editor
 {
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다). 아래 실행 상태가 읽으므로 그보다 먼저 둔다.
     /** @brief `-gv_editorSelfTest=<패턴>`: 에디터가 뜬 뒤 이름이 맞는 에디터 자체 테스트를 돌리고 앱을 닫습니다(`*` 와 쉼표). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTest, "", "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 테스트를 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_editorSelfTest, "", "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 테스트를 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)" );
     /** @brief `-gv_editorSelfTestReport=<파일>`: 에디터 자체 테스트의 결과 줄을 이 파일에 씁니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_editorSelfTestReport, "", "에디터 자체 테스트 결과를 쓸 파일 (비우면 로그에만)" );
 } // namespace sw::editor
@@ -165,10 +165,11 @@ namespace sw::editor
                 if ( _bQuitWhenDone == SW_FALSE )
                     return;
 
-                if ( gv_editorSelfTestReport.empty() == false )
+                const string reportPath = gv_editorSelfTestReport.get();
+                if ( reportPath.empty() == false )
                 {
-                    if ( FileUtil::ensureParentDirectoryExists( gv_editorSelfTestReport ) == false || FileUtil::writeTextFile( gv_editorSelfTestReport, _report ) == false )
-                        SW_LOG_ERROR_ID( "EditorSelfTest.CouldNotWriteEditor", "Could not write the editor self test report to %#", gv_editorSelfTestReport.c_str() );
+                    if ( FileUtil::ensureParentDirectoryExists( reportPath ) == false || FileUtil::writeTextFile( reportPath, _report ) == false )
+                        SW_LOG_ERROR_ID( "EditorSelfTest.CouldNotWriteEditor", "Could not write the editor self test report to %#", reportPath.c_str() );
                 }
 
                 // 실패가 하나라도 있으면 프로세스가 실패 코드로 끝난다(CTest 가 읽는다) — 창만 닫으면 코드가 0 이었다.
@@ -283,8 +284,9 @@ namespace sw::editor
                 if ( _bCommandLineConsumed == SW_FALSE )
                 {
                     _bCommandLineConsumed = SW_TRUE;
-                    if ( gv_editorSelfTest.empty() == false )
-                        (void)requestRun( gv_editorSelfTest, true ); // 기동 직후라 도는 실행이 없다
+                    const string pattern  = gv_editorSelfTest.get();
+                    if ( pattern.empty() == false )
+                        (void)requestRun( pattern, true ); // 기동 직후라 도는 실행이 없다
                 }
                 _run.advanceFrame();
             }
@@ -333,7 +335,7 @@ namespace sw::editor
 
     bool EditorSelfTestRunner::isRequested()
     {
-        return gv_editorSelfTest.empty() == false;
+        return gv_editorSelfTest.get().empty() == false;
     }
 
     bool EditorSelfTestRunner::matchesPattern( string_view id, string_view pattern )

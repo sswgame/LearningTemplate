@@ -39,7 +39,7 @@ namespace sw
 
             void onRenderedBlock( const float32* pSample, uint32 frameCount, AudioChannelLayout layout ) override
             {
-                if ( gv_audioDumpPath.empty() )
+                if ( gv_audioDumpPath.get().empty() )
                     return;
                 AudioDumpBuffer* const pBuffer = engine::findSubsystem<AudioDumpBuffer>();
                 if ( pBuffer == nullptr )
@@ -58,7 +58,7 @@ namespace sw
                 if ( pBuffer == nullptr || pBuffer->_listSample.empty() )
                     return;
                 vector<float32>& listSample   = pBuffer->_listSample;
-                const string     path         = gv_audioDumpPath;
+                const string     path         = gv_audioDumpPath.get();
                 const uint32     channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
                 vector<uint8>    bytes;
                 AudioWAVEncoder::encodeFloat32( listSample.data(), static_cast<uint32>( listSample.size() / channelCount ), channelCount,

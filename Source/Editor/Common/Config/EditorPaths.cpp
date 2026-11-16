@@ -40,7 +40,7 @@ namespace sw::editor
              */
             static string getAutomationStateDirectory()
             {
-                if ( gv_editorStateDir.empty() == false || editor::getSubsystem<CommandLineManager>().isAutomatedRun() == false )
+                if ( gv_editorStateDir.get().empty() == false || editor::getSubsystem<CommandLineManager>().isAutomatedRun() == false )
                     return {};
                 return FileUtil::joinPath( FileUtil::joinPath( makeAutomationOutputFolderPath(), kAutomationEditorStateFolder ), AutomationScratch::makeInstanceID( "editor" ) );
             }
@@ -96,7 +96,9 @@ namespace sw::editor
     {
         // 자동화 실행은 빈 폴더를 쓴다 — 사용자의 레이아웃 · 테마 · 최근 씬과 무관하게 시작하고, 사용자 상태에 쓰지 않는다.
         // `gv_editorStateDir` 는 디스크 경로 변수라 값을 받을 때 이미 절대로 풀었다(R5) — 여기서 다시 풀지 않는다.
-        string stateDir = gv_editorStateDir.empty() ? EditorPathsInternal::getAutomationStateDirectory() : string( gv_editorStateDir );
+        string stateDir = gv_editorStateDir.get();
+        if ( stateDir.empty() )
+            stateDir = EditorPathsInternal::getAutomationStateDirectory();
         if ( stateDir.empty() )
         {
             stateDir = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor );

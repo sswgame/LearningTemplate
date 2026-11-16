@@ -124,7 +124,7 @@ test('the SW profile on this repository: every macro call under Source is in the
     assert.equal(rhiBackend.defaultText, catalog.listExclusiveGroup[0].defaultLabel, 'SW_RHI_BACKEND_DEFAULT resolves through the JSON table');
     assert.equal(findVariable('gv_rhiImmediateSubmit').valueKind, ValueKind.Boolean, 'a call split over several lines is read');
     assert.equal(findVariable('gv_profileFrames').tag, 'test');
-    assert.equal(findVariable('gv_tracyViewerPath').valueKind, ValueKind.String, 'sw::string maps through the profile type_map');
+    assert.equal(findVariable('gv_tracyViewerPath').valueKind, ValueKind.String, 'sw::GlobalString maps through the profile type_map');
     assert.equal(findVariable('gv_stressTestMeshes').variantName, 'Empty');
 
     assert.deepEqual(catalog.listTag.map((tagInfo) => tagInfo.tag), ['', 'test'], 'tags in profile macro order');

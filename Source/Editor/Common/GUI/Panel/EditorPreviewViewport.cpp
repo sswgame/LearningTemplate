@@ -248,13 +248,14 @@ namespace sw::editor
     void EditorPreviewViewport::requestScreenshotIfAsked()
     {
         // 다 그려진 그림만 찍는다 — 주 화면 캡처와 같은 판정(`CaptureReadiness` — 이 씬의 에셋 일, 이 씬을 그린 하위 렌더러가 PSO 때문에 빠뜨린 배치). 프레임 수를 어림하지 않는다.
-        const bool bNotReady = _pScene == nullptr || CaptureReadiness::countPendingJobs( _pScene->getObjectManager(), _sceneKey ) != 0;
-        if ( gv_editorPreviewScreenshot.empty() || bNotReady )
+        const bool   bNotReady = _pScene == nullptr || CaptureReadiness::countPendingJobs( _pScene->getObjectManager(), _sceneKey ) != 0;
+        const string path      = gv_editorPreviewScreenshot.get();
+        if ( path.empty() || bNotReady )
             return;
-        if ( requestImageFile( string_view( gv_editorPreviewScreenshot.c_str() ) ) == false )
+        if ( requestImageFile( path ) == false )
             return;
-        SW_LOG_INFO_ID( "PreviewViewport.Screenshot", "Preview viewport screenshot (scene key %#) -> %#", _sceneKey, gv_editorPreviewScreenshot.c_str() );
-        gv_editorPreviewScreenshot = string{}; // 한 번만
+        SW_LOG_INFO_ID( "PreviewViewport.Screenshot", "Preview viewport screenshot (scene key %#) -> %#", _sceneKey, path.c_str() );
+        gv_editorPreviewScreenshot.set( {} ); // 한 번만
     }
 
     bool EditorPreviewViewport::requestImageFile( string_view path )

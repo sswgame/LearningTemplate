@@ -23,7 +23,7 @@ namespace sw::editor
      * @details 상대 경로는 프로젝트 루트 기준이다. 기본은 저장소 안 `Tools/Tracy`(저장소에 넣지 않는다 — `.gitignore`, `Source/Engine/Profiling/README.md`).
      *          경로의 원본은 이 설정 하나이고, 찾기(`EditorTracyLauncher::findViewerPath`)는 다른 경로를 더 뒤지지 않는다.
      */
-    SW_GLOBAL_VARIABLE( sw::string, gv_tracyViewerPath, "Tools/Tracy", "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더, 상대 경로는 프로젝트 루트 기준" );
+    SW_GLOBAL_VARIABLE( sw::GlobalString, gv_tracyViewerPath, "Tools/Tracy", "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더, 상대 경로는 프로젝트 루트 기준" );
 
     const utf8* EditorTracyLauncher::getViewerFileName()
     {
@@ -72,10 +72,10 @@ namespace sw::editor
             return EditorTracyLaunchResult::TracyNotCompiled;
 
         string viewerPath;
-        if ( findViewerPath( gv_tracyViewerPath, ProcessRoots::get()._project, viewerPath ) == false )
+        if ( findViewerPath( gv_tracyViewerPath.get(), ProcessRoots::get()._project, viewerPath ) == false )
         {
             SW_LOG_WARNING_ID( "EditorTracy.TracyViewerNotFound", "Tracy viewer not found at gv_tracyViewerPath '%#' — download the 0.14.1 Windows release and put %# there (or point gv_tracyViewerPath at it)",
-                               string( gv_tracyViewerPath ).c_str(), getViewerFileName() );
+                               string( gv_tracyViewerPath.get() ).c_str(), getViewerFileName() );
             return EditorTracyLaunchResult::ViewerNotFound;
         }
 

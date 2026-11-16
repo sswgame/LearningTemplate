@@ -16,10 +16,10 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );               ///< 디버그 HUD 표시(사용자 설정 debug.hud).
-SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections ); ///< 섹션 켬과 끔 텍스트입니다(DebugHUDSectionState).
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_debugHUDCorner );        ///< HUD 모서리입니다(0 왼쪽 위, 1 오른쪽 위, 2 왼쪽 아래, 3 오른쪽 아래).
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity );     ///< HUD 불투명도 0.2~1.
+SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );                     ///< 디버그 HUD 표시(사용자 설정 debug.hud).
+SW_EXTERN_GLOBAL_VARIABLE( sw::GlobalString, gv_debugHUDSections ); ///< 섹션 켬과 끔 텍스트입니다(DebugHUDSectionState).
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_debugHUDCorner );              ///< HUD 모서리입니다(0 왼쪽 위, 1 오른쪽 위, 2 왼쪽 아래, 3 오른쪽 아래).
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity );           ///< HUD 불투명도 0.2~1.
 namespace sw
 {
     class InputMap;

@@ -18,7 +18,7 @@
 namespace sw
 {
     /** @brief `-gv_devConsoleExec="timescale 0.5;gv_viewMode Wireframe"`: 시작 씬이 열린 뒤 개발 콘솔에서 실행할 명령입니다(`;` 로 구분). 자동화와 재현에 씁니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
     /** @brief `-gv_devConsoleOpen=1`: 에디터 없이 실행할 때 게임 창의 개발 콘솔을 연 채로 시작합니다(화면 확인용). */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_devConsoleOpen, 0, "게임 창 개발 콘솔을 연 채로 시작 (1=열기)" );
     /**
@@ -50,7 +50,7 @@ namespace sw
             unique_ptr<IDevConsoleView> view        = pClientPart != nullptr ? pClientPart->createConsoleView() : nullptr;
             (void)_devConsoleController->initialize( &engine::getSubsystem<InputManager>(), std::move( view ) ); // UI 가 없어도 입력과 시작 명령은 돈다
         }
-        _bExecPending = gv_devConsoleExec.empty() ? SW_FALSE : SW_TRUE;
+        _bExecPending = gv_devConsoleExec.get().empty() ? SW_FALSE : SW_TRUE;
         if ( gv_devConsoleOpen != 0 && bEnableEditor == false )
             _devConsoleController->setOpen( true );
         if ( gv_standardInputCommands != 0 )
@@ -75,8 +75,9 @@ namespace sw
         const SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
         if ( sceneManager.isTransitioning() || sceneManager.getActiveScene() == nullptr )
             return;
-        _bExecPending = SW_FALSE;
-        const string_splitter commands( string_view{ gv_devConsoleExec.c_str(), gv_devConsoleExec.size() }, { ";" } );
+        _bExecPending                     = SW_FALSE;
+        const string          commandText = gv_devConsoleExec.get();
+        const string_splitter commands( string_view{ commandText }, { ";" } );
         for ( const string_view command : commands.getSplitList() )
         {
             (void)_devConsoleController->getConsole().submit( command ); // 응답과 실패는 로그에 남는다.

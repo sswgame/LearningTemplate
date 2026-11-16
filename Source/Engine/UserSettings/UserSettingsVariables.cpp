@@ -19,7 +19,7 @@ SW_GLOBAL_VARIABLE( bool, gv_cameraHeadBob, true, "걷기 머리 흔들림 (사�
 
 SW_GLOBAL_VARIABLE( int32, gv_colorVisionMode, 0, "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스와 화면 출력 뷰의 톤맵 — post_grade.hlsli)" );
 SW_GLOBAL_VARIABLE( float32, gv_uiScale, 1.0f, "게임 UI 배율 (사용자 설정 accessibility.uiScale)" );
-SW_GLOBAL_VARIABLE( sw::string, gv_uiTheme, "default", "게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme)" );
+SW_GLOBAL_VARIABLE( sw::GlobalString, gv_uiTheme, "default", "게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme)" );
 SW_GLOBAL_VARIABLE( float32, gv_uiTextScale, 1.0f, "게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize)" );
 SW_GLOBAL_VARIABLE( bool, gv_uiReduceMotion, false, "UI 움직임 줄이기 — UI 애니메이션 · 트윈 · 스타일 전환이 바로 끝 값으로 (사용자 설정 accessibility.reduceMotion)" );
 SW_GLOBAL_VARIABLE( bool, gv_subtitles, true, "자막 표시 (사용자 설정 accessibility.subtitles)" );
