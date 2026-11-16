@@ -276,7 +276,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 사용자 파일 버전 올리기 한 단계입니다. `_fromVersion` 버전 파일에 적용해 다음 버전으로 만듭니다. */
+    /** @brief 사용자 파일 버전 올리기 한 단계입니다. 단계를 적은 스키마 주인의 판이 `_fromVersion` 인 파일에 적용해 다음 판으로 만듭니다. */
     REFLECT()
     struct SW_API UserSettingsUpgradeStep
     {
@@ -301,14 +301,30 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 스키마 파일 루트(`<UserSettingsSchema version>`)의 칸입니다. 적지 않으면 판 0 이다. */
+    /** @brief 스키마 파일 루트(`<UserSettingsSchema owner version>`)의 칸입니다. 판을 적지 않으면 0 이다. */
     REFLECT()
     struct SW_API UserSettingsSchemaRootParams
     {
         REFLECT_BODY();
 
+        PROPERTY( Required )
+        hashed_string _owner{}; ///< 판 번호의 주인(`engine` · `game` · `debughud`). 사용자 파일의 `versions` 키다.
         PROPERTY( Max = 1048576 )
         uint32 _version{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 스키마 파일 하나(판 번호의 주인 하나)의 판과 올림 단계입니다.
+     * @details 판은 주인마다 따로 센다(언리얼 `FCustomVersion` 과 같은 이유) — 번호 하나를 여러 스키마가 나눠 쓰면 큰 쪽이 작은 쪽의 올림을 가린다.
+     */
+    struct UserSettingsSchemaOwner
+    {
+        hashed_string                   _owner{};
+        uint32                          _version{ 0 };
+        vector<UserSettingsUpgradeStep> _listUpgradeStep{};
     };
 } // namespace sw
 
@@ -340,7 +356,7 @@ namespace sw
     /**
      * @class UserSettingsSchema
      * @brief 엔진 스키마 위에 게임 스키마를 덧붙인 설정 정의 전체입니다.
-     * @details 덧붙이기는 새 카테고리, 새 설정, 새 품질 번들, 새 버전 단계만 더한다. 이미 있는 id 를 다시 정의하면 로드 오류다.
+     * @details 덧붙이기는 새 카테고리, 새 설정, 새 품질 번들, 새 판 주인(자기 판 · 올림 단계)만 더한다. 이미 있는 id · 주인을 다시 정의하면 로드 오류다.
      *          게임마다 다른 기본값은 팩 설정(`PackEngineSettings::_mapUserSettingDefault`)이 준다. 모르는 요소, 속성, 열거자 이름도 로드 오류다.
      */
     class SW_API UserSettingsSchema
@@ -374,12 +390,13 @@ namespace sw
         /** @brief @p type 의 성질 표 한 줄입니다. */
         static const UserSettingTypeTraits& getTypeTraits( UserSettingType type );
 
-        /** @brief 사용자 파일 버전 번호입니다(`version` 속성). */
-        uint32                                 getVersion() const { return _version; }
-        const vector<UserSettingCategoryDef>&  getCategories() const { return _listCategory; }
-        const vector<UserSettingDef>&          getSettings() const { return _listSetting; }
-        const vector<ScalabilityGroupDef>&     getScalabilityGroups() const { return _listScalabilityGroup; }
-        const vector<UserSettingsUpgradeStep>& getUpgradeSteps() const { return _listUpgradeStep; }
+        /** @brief 읽은 스키마 파일마다 판 번호의 주인 · 판 · 올림 단계입니다(읽은 순서). */
+        const vector<UserSettingsSchemaOwner>& getOwners() const { return _listOwner; }
+        /** @brief 주인 @p owner 를 찾습니다. 없으면 nullptr 입니다. */
+        const UserSettingsSchemaOwner*        findOwner( const hashed_string& owner ) const;
+        const vector<UserSettingCategoryDef>& getCategories() const { return _listCategory; }
+        const vector<UserSettingDef>&         getSettings() const { return _listSetting; }
+        const vector<ScalabilityGroupDef>&    getScalabilityGroups() const { return _listScalabilityGroup; }
 
         /** @brief id 로 설정을 찾습니다. 없으면 nullptr 입니다. */
         const UserSettingDef* findSetting( const hashed_string& id ) const;
@@ -398,8 +415,7 @@ namespace sw
         vector<UserSettingCategoryDef>       _listCategory;
         vector<UserSettingDef>               _listSetting;
         vector<ScalabilityGroupDef>          _listScalabilityGroup;
-        vector<UserSettingsUpgradeStep>      _listUpgradeStep;
+        vector<UserSettingsSchemaOwner>      _listOwner;
         unordered_map<hashed_string, uint32> _mapSettingIndex; ///< id 에서 `_listSetting` 인덱스를 찾는 맵입니다.
-        uint32                               _version;
     };
 } // namespace sw

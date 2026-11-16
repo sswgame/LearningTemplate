@@ -22,6 +22,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
+#include "Engine/UserSettings/UserSettingsFileEntry.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
@@ -195,11 +196,13 @@ namespace sw
         /**
          * @brief 사용자 파일을 읽어 확정 값으로 씁니다. 파일이 없으면 false 입니다(첫 실행이며 오류가 아닙니다).
          *        파일이 깨졌으면(읽기 · JSON 실패) 오류를 남기고 `<경로>.corrupt` 로 치운 뒤 false 입니다 — 다음 저장이 새 파일을 만듭니다.
-         * @details 이전 버전 파일은 스키마의 `<Upgrade>` 단계로 올린다. 모르는 키는 경고하고 버리고, 범위 밖 값은 맞춰 넣고(경고), 형식이 틀린 값은 기본값으로 둔다.
+         *        이 빌드보다 새 판 파일이면 덮지 않고 `<경로>.newer` 로 옮겨 보관한 뒤 기본값으로 시작하고 false 입니다(언리얼 `GameUserSettings` 도 판이 다르면 기본값).
+         * @details 이전 판 파일은 스키마 주인별 `<Upgrade>` 단계로 올린다. 모르는 키 · 주인은 원문 그대로 보관해 다음 저장에 다시 쓰고, 범위 밖 값은 맞춰 넣고(경고),
+         *          형식이 틀린 값은 기본값으로 둔다.
          */
         [[nodiscard]] bool loadUserFile( string_view filePath );
-        /** @brief 위와 같되 JSON 글에서 읽습니다. */
-        [[nodiscard]] bool loadUserJSON( string_view jsonText, string_view sourceName );
+        /** @brief 위와 같되 JSON 글에서 읽습니다. `Read` 가 아니면 상태를 바꾸지 않습니다. */
+        [[nodiscard]] UserSettingsFileReadResult loadUserJSON( string_view jsonText, string_view sourceName );
         /** @brief 기본값과 다른 확정 값만 사용자 파일에 씁니다. 확인 대기 중인 설정은 되돌릴 값(옛 값)을 씁니다. */
         [[nodiscard]] bool saveUserFile( string_view filePath ) const;
         /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. 값에 잘못된 UTF-8 이 있으면 오류입니다(`UserSettingsFileEntry::makeJSON`). */
@@ -359,6 +362,7 @@ namespace sw
         UserSettingsHandlerRegistry             _registry;
         UserSettingsEngineHandlers              _engineHandlers;
         vector<SettingState>                    _listState;
+        UserSettingsFileContent                 _carriedFile; ///< 읽은 사용자 파일에서 이 빌드가 모르는 키 · 주인입니다. 저장이 원문 그대로 다시 쓴다.
         UserSettingEventDelegate                _onEvent;
         string                                  _userFilePath;
         float32                                 _confirmSecondsLeft;
