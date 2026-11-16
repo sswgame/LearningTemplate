@@ -17,7 +17,7 @@ namespace sw::editor
         for ( const EditorAutosaveEntry& entry : EditorAutosaveCommands::getRecoverable() )
         {
             RecoveredSceneRow row{};
-            row._sceneID   = entry._sourceID;
+            row._sceneID   = entry._sourceID.empty() ? string( "Untitled (never saved)" ) : entry._sourceID;
             row._savedAge  = formatSavedAge( entry._savedTicks, nowTicks );
             row._copyCount = entry._generationCount;
             row._refusal   = entry._refusal;
