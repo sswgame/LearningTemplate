@@ -19,9 +19,13 @@ namespace sw::editor
     class EditorSceneFileCommands
     {
     public:
-        /** @brief 씬을 비동기 로드하고 선택을 지웁니다. */
-        [[nodiscard]] static bool loadScene( string_view path );
-        /** @brief dirty 이면 확인을 띄우고, 아니면 로드합니다. 플레이 중이면 false 입니다. */
+        /**
+         * @brief 씬을 확인 · 플레이 검사 없이 비동기 로드하고 선택을 지웁니다.
+         * @details 기동 씬 · 무인 개발 명령(`scene.open`) · 확인 창 선택 뒤 이어 하기만 부른다. 사용자 동작(메뉴 · 에셋 · 복구)은 `tryOpenScene` 한 입구로 연다 —
+         *          이름이 건너뛰는 것을 드러내 새 호출이 미저장 확인을 모르고 건너뛰지 않게 한다(E-1).
+         */
+        [[nodiscard]] static bool loadSceneWithoutPrompt( string_view path );
+        /** @brief dirty 이면 확인을 띄우고(로드는 선택 뒤로 미룬다), 아니면 로드합니다. 플레이 중이면 false 입니다. */
         [[nodiscard]] static bool tryOpenScene( string_view path );
         /** @brief dirty 이면 확인을 띄우고, 아니면 빈 씬으로 바꿉니다. */
         [[nodiscard]] static bool tryCreateNewScene();

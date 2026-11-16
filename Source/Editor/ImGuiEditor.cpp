@@ -696,7 +696,7 @@ namespace sw::editor
         if ( startupScene.empty() == false && bResumedSession == false )
         {
             SW_LOG_INFO_ID( "ImGuiEditor.OpeningStartupScene", "Opening the startup scene: %#", startupScene.c_str() );
-            if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
+            if ( EditorSceneFileCommands::loadSceneWithoutPrompt( startupScene ) == false )
                 SW_LOG_ERROR_ID( "ImGuiEditor.FailedOpenStartupScene", "Failed to open the startup scene: %#", startupScene.c_str() );
         }
         return SubsystemInitResult::Succeeded;

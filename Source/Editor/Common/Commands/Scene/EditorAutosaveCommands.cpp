@@ -53,9 +53,9 @@ namespace sw::editor
                 vector<EditorAutosaveEntry> _listRecoverable{};
                 Stopwatch                   _sinceSnapshot{};
                 string                      _sessionFolder{};         ///< 이 세션의 폴더(`Autosave/<pid>-<시각>`). 비면 세션을 열지 못했다 — 사본을 쓰지 않는다
-                string                      _pendingSnapshotID{};     ///< 복원으로 연 사본의 id. 다 열리면 소스를 돌린다
+                string                      _pendingSnapshotID{};     ///< 복원으로 연 사본의 id(`normalizeAssetID`). 활성 씬이 이 id 로 열리면 소스를 돌린다
                 string                      _pendingSlotFolder{};     ///< 그 사본의 씬 칸 폴더. 다 열리면 지운다(씬이 dirty 로 메모리에 있고 다음 사본은 이 세션 폴더에 간다)
-                string                      _pendingSourceID{};       ///< 그 원래 id
+                string                      _pendingSourceID{};       ///< 그 원래 id. 비면 새 씬(원본 없음)이다
                 uint64                      _pendingGeneration{ 0 };  ///< 복원을 청한 때의 씬 세대
                 uint32                      _snapshotEditSerial{ 0 }; ///< 지난 사본 때의 편집 번호(`EditorWorkspace::getSceneEditSerial`)
                 uint32                      _writtenCount{ 0 };
@@ -147,6 +147,24 @@ namespace sw::editor
                 return FileUtil::joinPath( slotFolder, fileName.view() );
             }
 
+            /** @brief 원래 씬 @p sourceID 파일의 내용 해시입니다. 풀지 못하거나 없으면 0 입니다. */
+            static uint64 computeSourceHash( string_view sourceID )
+            {
+                const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+                return sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
+            }
+
+            /**
+             * @brief 새 씬(원본 없음)의 사본 칸 이름 `untitled-<씬 세대>` 입니다 — 언리얼 Untitled 패키지 · 유니티 씬 백업처럼 저장 전 씬도 사본을 둔다.
+             * @details 리소스 id 칸(`makeSlotName`)은 `.scene.xml` 로 끝나 겹치지 않는다. 세대마다 칸이 달라 새 씬을 다시 만들면 앞 칸과 섞이지 않는다.
+             */
+            static string makeUntitledSlotName( uint64 sceneGeneration )
+            {
+                StringBuilder<constant::buffer::kMax64> nameBuilder;
+                nameBuilder.appendFormat( "untitled-%#", sceneGeneration );
+                return string( nameBuilder.view() );
+            }
+
             /** @brief 세션 폴더 @p listSessionFolder 를 훑어 씬 칸마다 가장 새 사본 하나를 복구 후보로 만듭니다. 다른 프로젝트 · 바뀐 원본은 거절 이유를 단다. */
             static void scanRecoverable( const vector<string>& listSessionFolder, vector<EditorAutosaveEntry>& outListEntry )
             {
@@ -178,14 +196,16 @@ namespace sw::editor
                     (void)StringUtil::parseUint64( readMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
                     // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게.
                     // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
-                    const optional<AbsolutePath> sourcePath  = editor::getSubsystem<AssetPaths>().toDiskPath( entry._sourceID );
-                    const uint64                 currentHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
                     if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot ) == false )
                         entry._refusal = "it was written for another project";
-                    else if ( currentHash == 0 )
-                        entry._refusal = "the original scene is gone";
-                    else if ( currentHash != entry._sourceContentHash )
-                        entry._refusal = "the original scene changed after this copy";
+                    else if ( entry._sourceID.empty() == false ) // 새 씬(원본 없음)은 견줄 원본이 없다 — 프로젝트만 본다
+                    {
+                        const uint64 currentHash = computeSourceHash( entry._sourceID );
+                        if ( currentHash == 0 )
+                            entry._refusal = "the original scene is gone";
+                        else if ( currentHash != entry._sourceContentHash )
+                            entry._refusal = "the original scene changed after this copy";
+                    }
                     outListEntry.push_back( std::move( entry ) );
                 }
             }
@@ -241,11 +261,11 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 지금 씬의 사본 하나를 씁니다. 원본이 없는 새 씬 · Play 중 · 저장이 막혔으면 쓰지 않는다. */
+            /** @brief 지금 씬의 사본 하나를 씁니다. 원본이 없는 새 씬은 `untitled-<세대>` 칸에 쓴다. Play 중 · 저장이 막혔으면 쓰지 않는다. */
             static bool writeSnapshot()
             {
                 Scene* pScene = editor::getActiveScene();
-                if ( pScene == nullptr || pScene->getSourcePath().empty() || EditorPlaySession::areSceneEditsAllowed() == false )
+                if ( pScene == nullptr || EditorPlaySession::areSceneEditsAllowed() == false )
                     return false;
                 const string sourceID = pScene->getSourcePath();
                 if ( StringUtil::startsWith( sourceID, string( EditorAutosaveCommands::kDomain ) + "/" ) )
@@ -253,10 +273,11 @@ namespace sw::editor
                 State& state = getState();
                 if ( state._sessionFolder.empty() )
                     return false; // 세션을 열지 못했다(이유는 beginSession 이 남겼다)
-                const string                 slotFolder = FileUtil::joinPath( state._sessionFolder, EditorAutosaveCommands::makeSlotName( sourceID ) );
-                const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-                const uint64                 sourceHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
-                if ( sourceHash == 0 || FileUtil::ensureDirectoryExists( slotFolder ) == false )
+                const bool   bUntitled  = sourceID.empty();
+                const string slotName   = bUntitled ? makeUntitledSlotName( editor::getSubsystem<SceneManager>().getSceneGeneration() ) : EditorAutosaveCommands::makeSlotName( sourceID );
+                const string slotFolder = FileUtil::joinPath( state._sessionFolder, slotName );
+                const uint64 sourceHash = bUntitled ? 0 : computeSourceHash( sourceID ); // 새 씬은 견줄 원본이 없다(메타 sourceHash=0)
+                if ( ( bUntitled == false && sourceHash == 0 ) || FileUtil::ensureDirectoryExists( slotFolder ) == false )
                     return false;
                 vector<uint32> listGeneration;
                 collectGenerations( slotFolder, listGeneration );
@@ -264,7 +285,7 @@ namespace sw::editor
                 const optional<AbsolutePath> snapshotPath = AbsolutePath::tryMake( makeSnapshotPath( slotFolder, generation ) );
                 if ( snapshotPath.has_value() == false || editor::getSubsystem<SceneManager>().saveActiveSceneCopy( *snapshotPath ) == false )
                 {
-                    SW_LOG_WARNING_ID( "EditorAutosaveCommands.CopyFailed", "Autosave: could not write a copy of '%#'", sourceID );
+                    SW_LOG_WARNING_ID( "EditorAutosaveCommands.CopyFailed", "Autosave: could not write a copy of '%#'", bUntitled ? slotName : sourceID );
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> metaBuilder;
@@ -279,11 +300,14 @@ namespace sw::editor
                 ++state._writtenCount;
                 state._snapshotEditSerial = editor::getSubsystem<EditorWorkspace>().getSceneEditSerial();
                 state._sinceSnapshot.restart();
-                SW_LOG_INFO_ID( "EditorAutosaveCommands.Written", "Autosave: wrote copy %# of '%#'", generation, sourceID );
+                SW_LOG_INFO_ID( "EditorAutosaveCommands.Written", "Autosave: wrote copy %# of '%#'", generation, bUntitled ? slotName : sourceID );
                 return true;
             }
 
-            /** @brief 복원으로 연 사본이 다 열렸으면 소스를 원래 id 로 돌리고 dirty 로 둔다(원본은 사용자가 저장할 때만 바뀐다). */
+            /**
+             * @brief 씬이 바뀐 뒤 그것이 복원을 청한 사본이면 소스를 원래 id 로 돌리고 dirty 로 두고 후보에서 뺀다(원본은 사용자가 저장할 때만 바뀐다).
+             * @details 복원은 `tryOpenScene` 을 거쳐 미저장 확인 뒤로 미뤄질 수 있다 — 취소하거나 다른 씬이 열리면 활성 씬이 사본이 아니니 소스를 건드리지 않고 청을 버린다.
+             */
             static void finishPendingRestore()
             {
                 State& state = getState();
@@ -293,15 +317,23 @@ namespace sw::editor
                 if ( sceneManager.isTransitioning() || sceneManager.getSceneGeneration() == state._pendingGeneration )
                     return;
                 Scene* pScene = editor::getActiveScene();
-                if ( pScene != nullptr )
+                if ( pScene != nullptr && pScene->getSourcePath() == state._pendingSnapshotID )
                 {
                     pScene->setSourcePath( state._pendingSourceID );
                     editor::getSubsystem<EditorWorkspace>().markSceneDirty();
                     ++state._restoredCount;
                     if ( FileUtil::isDirectory( state._pendingSlotFolder ) )
                         (void)FileUtil::removeDirectory( state._pendingSlotFolder ); // 씬이 메모리에 dirty 로 있다 — 남기면 리로드 · 다음 기동이 같은 사본을 또 묻는다
-                    SW_LOG_INFO_ID( "EditorAutosaveCommands.Restored", "Autosave: restored '%#' from its copy - save to keep it", state._pendingSourceID );
+                    vector<EditorAutosaveEntry>& listEntry = state._listRecoverable;
+                    listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [&state]( const EditorAutosaveEntry& entry )
+                    { return AssetPaths::normalizeAssetID( entry._snapshotID ) == state._pendingSnapshotID; } ),
+                                     listEntry.end() );
+                    SW_LOG_INFO_ID( "EditorAutosaveCommands.Restored", "Autosave: restored '%#' from its copy - save to keep it",
+                                    state._pendingSourceID.empty() ? string( "Untitled" ) : state._pendingSourceID );
                 }
+                else
+                    SW_LOG_INFO_ID( "EditorAutosaveCommands.RestoreAbandoned", "Autosave: the copy '%#' was not opened (cancelled or another scene opened) - it stays in Recovered Work",
+                                    state._pendingSnapshotID );
                 state._pendingSnapshotID.clear();
                 state._pendingSourceID.clear();
                 state._pendingSlotFolder.clear();
@@ -404,9 +436,14 @@ namespace sw::editor
         EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
         if ( state._sessionFolder.empty() || sourceID.empty() )
             return;
-        const string slotFolder = FileUtil::joinPath( state._sessionFolder, makeSlotName( sourceID ) );
-        if ( FileUtil::isDirectory( slotFolder ) )
-            (void)FileUtil::removeDirectory( slotFolder );
+        // 새 씬을 처음 저장했으면 저장 전 칸(`untitled-<세대>`)도 지운다 — 씬 세대는 저장으로 바뀌지 않는다
+        const string arrSlotName[] = { makeSlotName( sourceID ), EditorAutosaveCommandsInternal::makeUntitledSlotName( editor::getSubsystem<SceneManager>().getSceneGeneration() ) };
+        for ( const string& slotName : arrSlotName )
+        {
+            const string slotFolder = FileUtil::joinPath( state._sessionFolder, slotName );
+            if ( FileUtil::isDirectory( slotFolder ) )
+                (void)FileUtil::removeDirectory( slotFolder );
+        }
         // 이미 저장한 씬은 복구 후보에서도 빼고 그 사본(넘겨받은 세션의 것)도 지운다 — 저장한 원본이 사본보다 새것이다
         vector<EditorAutosaveEntry>& listEntry = state._listRecoverable;
         for ( const EditorAutosaveEntry& entry : listEntry )
@@ -450,13 +487,13 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorAutosaveCommands.DomainNotMounted", "Autosave: the copy folder is not mounted as '%#' - '%#' cannot be opened", kDomain, entry._sourceID );
             return false;
         }
-        if ( EditorSceneFileCommands::loadScene( entry._snapshotID ) == false )
-            return false; // 이유는 loadScene 이 알렸다
-        state._pendingSnapshotID = entry._snapshotID;
+        // 씬 열기와 같은 입구다 — Play 중이면 거절하고, 지금 씬이 dirty 면 미저장 확인 뒤로 미룬다(E-1). 후보는 사본이 실제로 열린 뒤 뺀다(finishPendingRestore).
+        if ( EditorSceneFileCommands::tryOpenScene( entry._snapshotID ) == false )
+            return false; // 이유는 tryOpenScene 이 알렸다
+        state._pendingSnapshotID = AssetPaths::normalizeAssetID( entry._snapshotID );
         state._pendingSourceID   = entry._sourceID;
         state._pendingSlotFolder = FileUtil::getDirectoryPart( entry._snapshotAbs );
         state._pendingGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
-        state._listRecoverable.erase( state._listRecoverable.begin() + static_cast<ptrdiff_t>( index ) );
         return true;
     }
 

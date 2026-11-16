@@ -4,7 +4,7 @@
  * @details 언리얼 Auto Save(`Saved/Autosaves` 의 사본 · 다음 기동의 Restore 대화상자) · 유니티의 `Temp/__Backupscenes` 와 같은 자리다.
  *          - 쓰는 곳: `<에디터 상태 폴더>/Autosave/<pid>-<기동 시각>/<씬 칸>/<세대>.scene.xml` 과 옆의 `<세대>.meta`(프로젝트 · 원본 id · 원본 수정 시각 · 저장 시각).
  *            세션(에디터 프로세스 하나)마다 폴더 하나와 잠금 `session.lock`(pid · 기동 시각)이다 — 두 에디터가 서로의 사본 · 잠금을 지우지 않는다(유니티 프로세스별 `Temp/__Backupscenes`).
- *          - 쓰는 때: 씬이 dirty 이고 지난 사본 뒤 편집이 있었고 주기(환경설정 Editor/Autosave)가 지났을 때. Play 중 · 원본이 없는 새 씬은 쓰지 않는다.
+ *          - 쓰는 때: 씬이 dirty 이고 지난 사본 뒤 편집이 있었고 주기(환경설정 Editor/Autosave)가 지났을 때. Play 중에는 쓰지 않는다. 원본이 없는 새 씬은 `untitled-<씬 세대>` 칸에 쓰고, 복원하면 소스 없는 새 씬으로 열린다(저장은 다른 이름 저장).
  *          - 정리: 그 씬을 정상 저장하면 그 씬의 사본을, 편집기를 끝내면 자기 세션 폴더(넘겨받은 것 포함)를 지운다. 세대는 환경설정 수만 남긴다.
  *            모듈 리로드 · 백엔드 교체는 세션 id 를 호스트 맡김 칸(`IModuleStateStore`)에 맡겨 같은 폴더에 이어 쓴다 — 리로드는 가장 죽기 쉬운 순간이라 사본을 지우지 않는다.
  *          - 비정상 종료: 기동 때 잠금의 pid 가 죽은 세션 폴더만 지난 세션이 끝나지 않은 것이다 — 이 세션이 넘겨받고(잠금을 고쳐 쓴다) 남은 사본을 복구 후보로 둔다.
@@ -23,7 +23,7 @@ namespace sw::editor
     {
         string _snapshotAbs;            ///< 가장 새 사본의 디스크 경로
         string _snapshotID;             ///< 그 사본의 리소스 id(`autosave/…` — 붙인 도메인)
-        string _sourceID;               ///< 원래 씬의 리소스 id
+        string _sourceID;               ///< 원래 씬의 리소스 id. 비면 저장한 적 없는 새 씬이다
         string _projectRoot;            ///< 사본을 쓴 프로젝트 루트
         int64  _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금)
         uint64 _sourceContentHash{ 0 }; ///< 그때 원본 파일의 내용 해시(`ContentHash`). 0 은 메타에 없음 — 바뀐 원본으로 거절한다
@@ -87,7 +87,7 @@ namespace sw::editor
         static const vector<EditorAutosaveEntry>& getRecoverable();
         /** @brief 지금 사본 폴더를 복구 후보로 다시 읽습니다(개발 명령 `autosave.rescan` — 비정상 종료 시나리오). 후보 수입니다. */
         static uint32 refreshRecoverable();
-        /** @brief 후보 @p index 를 복원합니다(사본을 열고, 다 열리면 소스를 원래 id 로 돌리고 dirty). 거절 이유가 있으면 false 입니다. */
+        /** @brief 후보 @p index 를 복원합니다 — 씬 열기 입구(`tryOpenScene`: Play 중 거절 · 미저장 확인)로 사본을 열고, 열리면 소스를 원래 id 로 돌리고 dirty 로 두고 후보에서 뺀다. 확인에서 취소하면 후보는 남는다. 거절 · Play 중이면 false 입니다. */
         static bool restore( uint32 index );
         /** @brief 후보 @p index 의 사본을 지웁니다. */
         static void discard( uint32 index );

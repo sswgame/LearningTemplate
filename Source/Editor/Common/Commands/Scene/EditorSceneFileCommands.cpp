@@ -75,7 +75,7 @@ namespace sw::editor
                 ws.clearPendingSceneAction();
                 // 실패는 각 함수가 알린다. 씬을 읽지 못했거나 플레이 중일 때가 해당한다.
                 if ( action == EditorPendingSceneAction::Load )
-                    (void)EditorSceneFileCommands::loadScene( path ); // 실패는 loadScene 이 알린다
+                    (void)EditorSceneFileCommands::loadSceneWithoutPrompt( path ); // 실패는 loadSceneWithoutPrompt 가 알린다
                 else if ( action == EditorPendingSceneAction::New )
                     (void)EditorSceneFileCommands::tryCreateNewScene(); // 실패는 tryCreateNewScene 이 알린다(플레이 중)
                 else if ( action == EditorPendingSceneAction::Quit )
@@ -93,7 +93,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorSceneFileCommands::loadScene( string_view path )
+    bool EditorSceneFileCommands::loadSceneWithoutPrompt( string_view path )
     {
         // 리소스 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.
         const string loadPath = AssetPaths::normalizeAssetID( path );
@@ -132,7 +132,7 @@ namespace sw::editor
             workspace.setPendingSceneAction( EditorPendingSceneAction::Load, path );
             return true;
         }
-        return loadScene( path );
+        return loadSceneWithoutPrompt( path );
     }
 
     bool EditorSceneFileCommands::tryCreateNewScene()
@@ -335,7 +335,7 @@ namespace sw::editor
                     return false;
                 }
                 // 미저장 씬이 있어도 대화상자를 띄우는 경로(tryOpenScene)를 쓰지 않고 바로 연다. 무인 실행에서는 대화상자를 아무도 닫지 않는다.
-                if ( EditorSceneFileCommands::loadScene( sceneID ) == false )
+                if ( EditorSceneFileCommands::loadSceneWithoutPrompt( sceneID ) == false )
                 {
                     outReply = "could not open '" + absolutePath + "'";
                     return false;
