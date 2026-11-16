@@ -21,10 +21,11 @@ namespace
         static CharacterControllerComponent* addCharacter( GameObjectManager& manager, const utf8* pName, const float3& position )
         {
             GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
-            SW_REQUIRE_NOT_NULL( pObject );
-            CharacterControllerComponent* pController = pObject->addComponent<CharacterControllerComponent>();
-            SW_REQUIRE_NOT_NULL( pController );
-            pController->setLocalPosition( position );
+            SW_EXPECT_NOT_NULL( pObject ); // REQUIRE 는 void 를 돌려주며 끝나 포인터를 돌려주는 이 함수에서 쓸 수 없다
+            CharacterControllerComponent* pController = pObject != nullptr ? pObject->addComponent<CharacterControllerComponent>() : nullptr;
+            SW_EXPECT_NOT_NULL( pController );
+            if ( pController != nullptr )
+                pController->setLocalPosition( position );
             return pController;
         }
     };

@@ -22,7 +22,6 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
@@ -481,7 +480,7 @@ namespace sw::editor
     int32 AnimationGraphPanel::addPoseNode( const hashed_string& typeName )
     {
         AnimationGraphPoseNodeDef def;
-        if ( engine::getSubsystem<AnimationPoseNodeRegistry>().makeDefaultDef( typeName, def ) == false )
+        if ( AnimationGraphEdit::makeDefaultPoseNode( typeName, def ) == false )
             return 0; // 오류는 표가 남겼다
         const int32 nodeID                = addNamedNode( typeName.c_str() );
         _graph._listNode.back()._poseNode = std::move( def );
@@ -491,7 +490,7 @@ namespace sw::editor
     void AnimationGraphPanel::collectAddKinds( vector<EditorGraphNodeKind>& outListKind )
     {
         // 표는 게임 · 플러그인이 종류를 더할 수 있어 메뉴를 열 때마다 다시 읽는다. 이름 포인터는 이 목록(`_listPoseTypeName`)이 다음 호출까지 든다.
-        _listPoseTypeName = engine::getSubsystem<AnimationPoseNodeRegistry>().getTypeNames();
+        _listPoseTypeName = AnimationGraphEdit::getPoseNodeTypeNames();
         outListKind.clear();
         uint32 kindID = 0;
         for ( const utf8* pName : AnimationGraphPanelInternal::kArrClipStateName )
@@ -663,7 +662,7 @@ namespace sw::editor
         const uint32 fieldID  = ImGui::GetID( pID );
         const bool   bEditing = _nameFieldID == fieldID;
         if ( bEditing == false )
-            _nameFieldShown = string( inoutName.viewOrEmpty() );
+            _nameFieldShown = string( inoutName.view() );
         string& text = bEditing ? _nameFieldBuffer : _nameFieldShown;
         (void)EditorWidgets::drawTextField( pID, text, -FLT_MIN );
         if ( ImGui::IsItemActivated() )
@@ -674,7 +673,7 @@ namespace sw::editor
         if ( ImGui::IsItemDeactivated() == false )
             return false;
         _nameFieldID          = 0;
-        const bool bCommitted = ImGui::IsItemDeactivatedAfterEdit() && text != inoutName.viewOrEmpty();
+        const bool bCommitted = ImGui::IsItemDeactivatedAfterEdit() && text != inoutName.view();
         if ( bCommitted )
             inoutName = hashed_string( text.c_str() );
         return bCommitted;
@@ -682,7 +681,7 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawPoseNodeInspector( GraphNode& node )
     {
-        const AnimationPoseNodeType* pType = engine::getSubsystem<AnimationPoseNodeRegistry>().findType( node._poseNode._type );
+        const AnimationPoseNodeType* pType = AnimationGraphEdit::findPoseNodeType( node._poseNode._type );
         ImGui::SeparatorText( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeSection" ) );
         ImGui::TextDisabled( "%s", node._poseNode._type.c_str() );
         if ( pType == nullptr )
@@ -709,7 +708,7 @@ namespace sw::editor
         {
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeMirrorAxis" ), SW_LOCKEY( "EditorAnimationGraph", "PoseNodeMirrorAxisTip" ) );
             ImGui::SetNextItemWidth( -FLT_MIN );
-            if ( ImGui::BeginCombo( "##poseMirrorAxis", getEnumName( edited._mirrorAxis ) ) )
+            if ( EditorWidgets::beginCombo( "##poseMirrorAxis", getEnumName( edited._mirrorAxis ) ) )
             {
                 for ( const AnimationMirrorAxis axis : { AnimationMirrorAxis::X, AnimationMirrorAxis::Y, AnimationMirrorAxis::Z } )
                 {
@@ -733,12 +732,12 @@ namespace sw::editor
             {
                 AnimationMontageSection& section = edited._listSection[sectionIndex];
                 ImGui::PushID( static_cast<int32>( sectionIndex ) );
-                ImGui::SeparatorText( section._name.viewOrEmpty().empty() ? "?" : section._name.c_str() );
+                ImGui::SeparatorText( section._name.view().empty() ? "?" : section._name.c_str() );
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionName" ) );
                 bEdited = drawNameField( "##sectionName", section._name ) || bEdited;
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionStart" ), SW_LOCKEY( "EditorAnimationGraph", "SectionStartTip" ) );
                 ImGui::SetNextItemWidth( -FLT_MIN );
-                ImGui::DragFloat( "##sectionStart", &section._startSeconds, AnimationGraphPanelInternal::kSectionStartDragSpeed, 0.0f, AnimationGraphPanelInternal::kSectionStartMax, "%.2f s" );
+                EditorWidgets::dragFloat( SW_WIDGET_ID( "##sectionStart" ), &section._startSeconds, AnimationGraphPanelInternal::kSectionStartDragSpeed, 0.0f, AnimationGraphPanelInternal::kSectionStartMax, "%.2f s" );
                 bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorAnimationGraph", "SectionNext" ), SW_LOCKEY( "EditorAnimationGraph", "SectionNextTip" ) );
                 bEdited = drawNameField( "##sectionNext", section._next ) || bEdited;

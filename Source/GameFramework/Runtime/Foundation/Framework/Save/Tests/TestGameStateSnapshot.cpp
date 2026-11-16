@@ -45,7 +45,7 @@ namespace
     uint32 countObjects( const sw::GameObjectManager& manager )
     {
         uint32 count = 0;
-        manager.forEachGameObject( sw::SceneIterationTestAccess::getKey(), [&count]( sw::GameObject* )
+        manager.forEachGameObject( sw::SceneIterationTestAccess::getKey(), [&count]( const sw::GameObject* )
         { ++count; } );
         return count;
     }

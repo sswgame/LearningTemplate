@@ -10,6 +10,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
@@ -94,6 +95,7 @@ namespace sw
         , _bAutoPlay{ SW_TRUE }
         , _reserved{ 0 }
         , _player{}
+        , _pendingStep{}
         , _state{}
         , _history{}
         , _sequenceEventMulticast{}
@@ -154,11 +156,11 @@ namespace sw
         Component::onTick( context );
         if ( _player.isPlaying() == false )
             return;
-        const SequencePlaybackStep step = _player.update( context.getDeltaTime() );
+        _pendingStep = _player.update( context.getDeltaTime() );
         // 묶인 오브젝트(남의 오브젝트)에 값 · 스폰 · 구간을 적용하는 것은 틱 뒤(같은 프레임)에 한다 — 틱은 시간만 민다.
-        context.deferPostTickOnComponent( *this, [step]( SequencePlayerComponent& self )
+        context.deferPostTickOnComponent( *this, []( SequencePlayerComponent& self )
         {
-            self.applyTimeline( step );
+            self.applyTimeline( self._pendingStep );
             // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
             if ( self._player.isPlaying() == false )
                 self.endPlayback( SequenceHistoryKind::Finished );

@@ -121,6 +121,8 @@ namespace sw
         uint8                  _bAutoPlay : 1;
         [[maybe_unused]] uint8 _reserved  : 6;
         SequencePlayer         _player;
+        /** @brief 이번 틱이 민 재생 구간입니다 — 틱 뒤 작업이 묶인 오브젝트에 적용한다(틱 뒤 작업은 값을 캡처하지 않는다). 저장하지 않는다. */
+        SequencePlaybackStep _pendingStep;
         /** @brief 재생이 쥔 것(스폰 · 구간 · 되돌릴 값)입니다. 저장하지 않는다 — 재생이 만들고 끝내기가 거둔다. */
         SequencePlaybackState _state;
         /** @brief 최근 재생 기록입니다. 저장하지 않는다. */

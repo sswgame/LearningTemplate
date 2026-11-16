@@ -13,18 +13,13 @@
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsPage.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsTableHistory.h"
 #include "Editor/Panels/ProjectSettings/ProjectSettingsTableView.h"
 
 namespace sw
 {
-    class CommandStack;
     struct PropertyInfo;
 } // namespace sw
-
-namespace sw::editor
-{
-    class UndoStepOwner;
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -56,7 +51,7 @@ namespace sw::editor
         static uint32 getDirtyPageCount();
 
         /** @brief 표 페이지 편집의 되돌리기 스택입니다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(감사 E-13). 형식 페이지의 그리드 편집은 아직 단계를 올리지 않는다. */
-        CommandStack* findPanelCommandStack() override { return _pTableStack.get(); }
+        CommandStack* findPanelCommandStack() override { return &_tableHistory.getStack(); }
 
     protected:
         [[nodiscard]] bool saveDocument() override;
@@ -75,17 +70,16 @@ namespace sw::editor
         void drawPageDetail( Page& page );
         void drawPageActions( Page& page );
         void selectPage( Page& page );
-        /** @brief 표 문서 @p page 가 만든 되돌리기 단계 하나를 스택에 올립니다. 단계는 그 문서의 `undo` · `redo` 를 부른다. */
-        void pushTableUndo( Page& page );
+        /** @brief 표 단계가 @p page 의 문서를 움직인 뒤 초안 · 미저장 표시를 맞춥니다(`ProjectSettingsTableHistory`). */
+        void onTableUndoMoved( Page& page );
 
     private:
-        vector<unique_ptr<Page>>  _listPage;
-        EditorPropertyGrid        _grid;
-        ProjectSettingsTableView  _tableView;
-        Page*                     _pSelected;
-        string                    _statusText;
-        unique_ptr<CommandStack>  _pTableStack; ///< 표 편집 단계(`findPanelCommandStack`). 단계는 페이지를 가리키므로 페이지를 다시 만들거나 되돌리면 비운다
-        unique_ptr<UndoStepOwner> _pUndoOwner;  ///< 표 단계의 주인 — 패널이 사라지면 그 단계가 스택에서 빠진다
-        uint8                     _bCatalogLoaded : 1;
+        vector<unique_ptr<Page>>    _listPage;
+        EditorPropertyGrid          _grid;
+        ProjectSettingsTableView    _tableView;
+        Page*                       _pSelected;
+        string                      _statusText;
+        ProjectSettingsTableHistory _tableHistory; ///< 표 편집 단계(`findPanelCommandStack`)
+        uint8                       _bCatalogLoaded : 1;
     };
 } // namespace sw::editor

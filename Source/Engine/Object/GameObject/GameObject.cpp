@@ -290,7 +290,7 @@ namespace sw
 
     void GameObject::detachFromParent( AttachRule rule )
     {
-        GameObjectManager* pManager = getManager();
+        GameObjectManager* pManager = getMutableManager();
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childID = _objectID;

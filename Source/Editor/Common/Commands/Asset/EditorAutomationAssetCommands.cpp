@@ -444,7 +444,8 @@ namespace sw::editor
                 string sourcePath;
                 if ( listArgument.size() != 2 || EditorAssetFileCommands::readSourceFileArgument( listArgument[1], sourcePath, outReply ) == false )
                     return false; // 원본이 없으면 readSourceFileArgument 가 이유를 적었다
-                const string targetID = FileUtil::normalizePath( listArgument[0] );
+                const PathKey targetKey = FileUtil::normalizePath( listArgument[0] );
+                const string  targetID  = targetKey.str();
                 if ( FileUtil::startsWithPathComponent( targetID, kImportTempFolder ) == false || targetID.find( ".." ) != string::npos )
                 {
                     outReply = "asset.replaceContent takes a target under " + string( kImportTempFolder ) + "/";

@@ -995,7 +995,7 @@ namespace sw
             GameObject* pTargetObject = savedHandle.objectID() == 0 ? entry._pObject : findBySavedID( savedHandle.objectID() ^ entry._savedIDScope );
             // 같은 실행의 상태면 배치 밖도 런타임 id 로 찾는다(부착의 `findAttachOwner` 와 같은 규칙). 풀지 못해 남긴 참조가 스냅샷을 지나면 런타임 id 로 온다.
             if ( pTargetObject == nullptr && _idSpace == ObjectIDSpace::Live && entry._pObject->getManager() != nullptr )
-                pTargetObject = entry._pObject->getManager()->findGameObjectByID( savedHandle.objectID() );
+                pTargetObject = entry._pObject->getMutableManager()->findGameObjectByID( savedHandle.objectID() );
             if ( pTargetObject == nullptr )
                 return ComponentHandle{}; // 파일 밖(또는 이 배치에 없는) 오브젝트다. 약한 참조라서 사라진 대상은 정상 값이다
             pTarget = ObjectStateSerializerInternal::findComponentByKeyHash( pTargetObject, savedHandle.componentID() );

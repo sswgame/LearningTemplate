@@ -122,7 +122,9 @@ namespace sw
         {
             _lastOwnerWorld = ownerWorld;
             // 충돌은 그리기 배치와 따로 오너를 따른다(그림 없는 서버에서도) — 예전에는 만들 때의 월드 자리에 남았다(감사 P0-14).
-            followOwnerTransform();
+            // 물리 바디를 옮기는 것은 씬 쓰기라 틱 뒤(같은 프레임)에 한다.
+            context.deferPostTickOnComponent( *this, []( TileMapRendererComponent& tiles )
+            { tiles.followOwnerTransform(); } );
         }
         if ( _listChunkBatch.empty() )
             return;
@@ -595,7 +597,7 @@ namespace sw
     void TileMapRendererComponent::followOwnerTransform()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         IPhysicsScene2D*   pScene   = pManager != nullptr ? pManager->getSubsystem<sw::ScenePhysics>().findScene2D() : nullptr;
         if ( pScene == nullptr )
             return;
