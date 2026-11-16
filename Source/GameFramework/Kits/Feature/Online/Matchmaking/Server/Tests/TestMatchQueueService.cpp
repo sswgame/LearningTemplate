@@ -7,6 +7,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
@@ -19,14 +20,15 @@ using namespace sw;
 
 namespace
 {
-    constexpr int64     kNowMs   = 1700000000000ll;
-    constexpr int64     kMaxWait = 60000;
-    constexpr uint64    kGameID  = 500;
-    constexpr AccountID kAlice   = 11;
-    constexpr AccountID kBob     = 12;
-    constexpr AccountID kCarol   = 13;
-    constexpr uint64    kServerA = 1;
-    constexpr uint64    kServerB = 2;
+    constexpr int64     kNowMs          = 1700000000000ll;
+    constexpr int64     kMaxWait        = 60000;
+    constexpr int64     kMatchTimeLimit = 600000;
+    constexpr uint64    kGameID         = 500;
+    constexpr AccountID kAlice          = 11;
+    constexpr AccountID kBob            = 12;
+    constexpr AccountID kCarol          = 13;
+    constexpr uint64    kServerA        = 1;
+    constexpr uint64    kServerB        = 2;
 
     /** @brief 1 대 1 모드입니다. @p teamSize 를 키우면 파티 모드입니다. */
     struct MatchQueueTestUtil
@@ -34,11 +36,12 @@ namespace
         static MatchModeDef makeMode( string_view modeID = "duel", int32 teamSize = 1, string_view ratingStat = "" )
         {
             MatchModeDef mode;
-            mode._modeID     = string( modeID );
-            mode._teamCount  = 2;
-            mode._teamSize   = teamSize;
-            mode._maxWaitMs  = kMaxWait;
-            mode._ratingStat = string( ratingStat );
+            mode._modeID           = string( modeID );
+            mode._teamCount        = 2;
+            mode._teamSize         = teamSize;
+            mode._maxWaitMs        = kMaxWait;
+            mode._matchTimeLimitMs = kMatchTimeLimit;
+            mode._ratingStat       = string( ratingStat );
             return mode;
         }
     };
@@ -478,6 +481,39 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
     SW_EXPECT_TRUE( listTimedOut[0]._assignment._result == MatchQueueResult::Timeout );
 }
 
+/** @brief [MatchQueueServiceTest] 게임 서버는 배정 버스를 잃어도 명단 기록으로 접속을 받는다(감사 O-6). 기록은 경기 시한까지 살아 경기 중 재접속도 받고, 시한이 지나면 거절한다 */
+SW_TEST_CASE( MatchQueueServiceTest, GameServerAcceptsFromMatchRecordWithoutBus )
+{
+    SoloWorld world; // 버스가 없다 — 배정 버스 메시지가 하나도 닿지 않는 경우(잃은 것과 같다)
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 1 );
+    const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
+    SW_EXPECT_TRUE( listFound[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_FALSE( agent.isAccepted( kAlice ) ); // 아직 기록을 읽지 않았다
+
+    agent.update( UnixMilliseconds{ kNowMs + 1 } );
+    world._server.poll( kNowMs + 1 );
+    SW_EXPECT_TRUE( agent.isAccepted( kAlice ) ); // Found 인데 거절되던 자리이다
+    SW_EXPECT_TRUE( agent.isAccepted( kBob ) );
+    SW_EXPECT_FALSE( agent.isAccepted( kCarol ) );
+
+    const int64 reconnectMs = kNowMs + 1 + MatchServerAgent::kExpectTTLMs + 1; // 버스 명단이었으면 지워졌을 시각이다
+    agent.update( UnixMilliseconds{ reconnectMs } );
+    world._server.poll( reconnectMs );
+    SW_EXPECT_TRUE( agent.isAccepted( kAlice ) );
+
+    agent.update( UnixMilliseconds{ kNowMs + 1 + kMatchTimeLimit } );
+    SW_EXPECT_FALSE( agent.isAccepted( kAlice ) );
+    agent.shutdown();
+}
+
 /** @brief [MatchQueueServiceTest] 백필: 경기 중 빈 슬롯을 새 경기보다 먼저 채우고, 들어갈 사람은 그 경기 id · 게임 서버 주소를 받는다. 모르는 모드 · 모양이 틀린 요청은 거절한다 */
 SW_TEST_CASE( MatchQueueServiceTest, BackfillFillsRunningMatchFirst )
 {
@@ -665,6 +701,94 @@ SW_TEST_CASE( MatchQueueServiceTest, LeavingDuringPartyLookupLeavesNoTicket )
     party.poll();
     SW_EXPECT_TRUE( party._world._server.takeCompletion()._result == MatchmakingResult::Ok );
     SW_EXPECT_EQUAL( 1, queue.getLocalTicketCount() );
+}
+
+namespace
+{
+    /** @brief 서버 둘 + 서버마다 실제 파티 서비스입니다(캐시는 같이 쓴다). A 가 권한입니다. */
+    struct PartyPairWorld
+    {
+        PairWorld         _pair;
+        PartyLobbyService _partyA;
+        PartyLobbyService _partyB;
+
+        PartyPairWorld()
+            : _pair{}
+            , _partyA{}
+            , _partyB{}
+        {
+            SW_EXPECT_TRUE( _partyA.initialize( &_pair._serverA._router, kServerA ) );
+            SW_EXPECT_TRUE( _partyB.initialize( &_pair._serverB._router, kServerB ) );
+            const vector<MatchModeDef> listMode{ MatchQueueTestUtil::makeMode( "duel", 2 ) };
+            MatchQueueDependencies     dependenciesA = _pair._serverA.makeDependencies();
+            dependenciesA._pPartyLobby               = &_partyA;
+            SW_EXPECT_TRUE( _pair._serverA._queue.initialize( dependenciesA, listMode ) );
+            MatchQueueDependencies dependenciesB = _pair._serverB.makeDependencies();
+            dependenciesB._pPartyLobby           = &_partyB;
+            SW_EXPECT_TRUE( _pair._serverB._queue.initialize( dependenciesB, listMode ) );
+            _pair._serverA.tick( kNowMs );
+            _pair.tickBoth( kNowMs );
+            SW_EXPECT_TRUE( _pair._serverA._queue.isAuthority( "duel" ) );
+        }
+
+        ~PartyPairWorld()
+        {
+            _partyA.shutdown();
+            _partyB.shutdown();
+        }
+
+        /** @brief A 에서 파티 하나를 만듭니다. */
+        void makePartyOnA( AccountID leaderID, AccountID memberID )
+        {
+            _partyA.createParty( leaderID, 1 );
+            _pair._serverA.poll( kNowMs );
+            vector<PartyLobbyCompletion> listCompletion;
+            _partyA.takeCompletions( listCompletion );
+            SW_REQUIRE_EQUAL( size_t( 1 ), listCompletion.size() );
+            const uint64 partyID = listCompletion[0]._party._partyID;
+            _partyA.inviteToParty( leaderID, memberID, 2 );
+            _pair._serverA.poll( kNowMs );
+            _partyA.acceptPartyInvite( memberID, partyID, 3 );
+            _pair._serverA.poll( kNowMs );
+            listCompletion.clear();
+            _partyA.takeCompletions( listCompletion );
+            for ( const PartyLobbyCompletion& completion : listCompletion )
+            {
+                SW_EXPECT_TRUE( completion._result == MatchmakingResult::Ok );
+            }
+        }
+    };
+} // namespace
+
+/** @brief [MatchQueueServiceTest] 티켓을 낸 서버가 죽어도 파티가 "줄 섬" 에 갇히지 않는다(감사 O-7): A 에서 파티 티켓 → A 가 멎음 → B 로 붙은 파티장이 빠지면 파티 기록의 티켓을 풀고 다시 설 수 있다 */
+SW_TEST_CASE( MatchQueueServiceTest, LeaveReleasesTicketOfDeadServer )
+{
+    PartyPairWorld world;
+    world.makePartyOnA( kAlice, kBob );
+    world._pair._serverA._queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    world._pair._serverA.poll( kNowMs );
+    const MatchQueueCompletion joined = world._pair._serverA.takeCompletion();
+    SW_REQUIRE_TRUE( joined._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( kServerA, joined._ticketID >> 32 );
+
+    // 여기서 A 가 멎는다 — 이 뒤로 A 는 돌지 않으며 티켓의 결과 · 시한 · 파티 기록 정리가 오지 않는다
+    MatchQueueService& queueB = world._pair._serverB._queue;
+    queueB.leaveQueue( kAlice, 8 );
+    world._pair._serverB.poll( kNowMs );
+    const MatchQueueCompletion left = world._pair._serverB.takeCompletion();
+    SW_EXPECT_TRUE( left._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( joined._ticketID, left._ticketID );
+
+    queueB.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs + 1 }, 9 );
+    world._pair._serverB.poll( kNowMs + 1 );
+    const MatchQueueCompletion joinedAgain = world._pair._serverB.takeCompletion();
+    SW_EXPECT_TRUE( joinedAgain._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( kServerB, joinedAgain._ticketID >> 32 );
+    SW_EXPECT_EQUAL( 1, queueB.getLocalTicketCount() );
+
+    queueB.leaveQueue( kCarol, 10 ); // 파티도 티켓도 없는 계정은 그대로 NotQueued 다
+    world._pair._serverB.poll( kNowMs + 1 );
+    SW_EXPECT_TRUE( world._pair._serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
 }
 
 /** @brief [MatchQueueServiceTest] 메모리에 통계가 없는 계정은 올려 달라고 한 뒤 기다렸다 줄을 선다 — 다른 서버의 파티원도 실력 모드에 설 수 있다. 끝나면 내려 달라고 한다 */

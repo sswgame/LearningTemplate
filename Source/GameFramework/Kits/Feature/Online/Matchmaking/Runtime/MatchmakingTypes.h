@@ -64,6 +64,8 @@ namespace sw
         int64 _regionRelaxMs{ 30000 }; ///< 앵커나 후보가 이만큼 기다렸으면 지역을 따지지 않는다
         PROPERTY()
         int64 _maxWaitMs{ 120000 }; ///< 넘으면 티켓을 뺀다. 매칭에 실패한 것이며 다시 줄을 서야 한다
+        PROPERTY( Min = 1 )
+        int64 _matchTimeLimitMs{ 0 }; ///< 경기 한 판의 시한이다. 게임 서버가 읽는 명단 기록(`mm/match/<서버>/<경기>`)의 수명이며 이 동안 경기 중 재접속을 받는다. 기본값이 없어 모드마다 적어야 한다(빠지면 범위 오류로 모드를 거절한다)
         PROPERTY( Min = 1, Max = MatchmakingLimit::kMaxTeamCount )
         int32 _teamCount{ 2 }; ///< 1 ~ `MatchmakingLimit::kMaxTeamCount`
         PROPERTY( Min = 1, Max = MatchmakingLimit::kMaxTeamSize )

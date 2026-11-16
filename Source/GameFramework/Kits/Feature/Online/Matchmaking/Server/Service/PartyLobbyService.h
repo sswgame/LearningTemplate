@@ -37,7 +37,7 @@ namespace sw
         PartyAccept,
         PartyLeave,
         PartyKick,
-        PartySetTicket, ///< 대기열이 쓰며 완료는 없다
+        PartySetTicket, ///< 대기열이 쓰며 완료는 없다. 기록의 티켓이 `_expectedTicketID` 일 때만 바꾼다
         PartyFind,      ///< 대기열이 쓰며 결과는 델리게이트로 전달한다
         LobbyCreate,
         LobbyList,
@@ -107,6 +107,7 @@ namespace sw
             uint64              _partyID{ 0 };
             uint64              _lobbyID{ 0 };
             uint64              _ticketID{ 0 };
+            uint64              _expectedTicketID{ 0 }; ///< PartySetTicket 이 바꾸기 전 기록에 있어야 할 티켓이다
             uint64              _requestTag{ 0 };
             UnixMilliseconds    _nowMs{ 0 };
             PartyLobbyOperation _operation{ PartyLobbyOperation::PartyCreate };
@@ -134,8 +135,13 @@ namespace sw
         void acceptPartyInvite( AccountID accountID, uint64 partyID, uint64 requestTag );
         void leaveParty( AccountID accountID, uint64 requestTag );
         void kickFromParty( AccountID leaderID, AccountID targetID, uint64 requestTag );
-        /** @brief 파티의 대기열 티켓을 기록합니다. 0이면 대기열에서 빠진 것입니다. 완료는 없습니다. */
+        /** @brief 줄 서지 않은 파티에 대기열 티켓을 기록합니다. 기록에 이미 티켓이 있으면 바꾸지 않습니다. 완료는 없습니다. */
         void setPartyTicket( uint64 partyID, uint64 ticketID );
+        /**
+         * @brief 기록의 티켓이 @p ticketID 일 때만 지웁니다. 완료는 없습니다.
+         * @details 비교 후 지우기라 늦게 온 정리(죽은 서버의 티켓을 다른 서버가 풀었고, 낸 서버도 뒤늦게 지우는 경우)가 그사이 새로 선 티켓을 지우지 않는다.
+         */
+        void clearPartyTicket( uint64 partyID, uint64 ticketID );
         /** @brief 계정의 파티를 찾습니다. 결과는 나중에 @p onFound( @p lookupTag, Ok 나 NotInParty 나 Unavailable, 파티 )로 한 번 전달합니다. */
         void findPartyOfAccount( AccountID accountID, uint64 lookupTag, const PartyFoundDelegate& onFound );
 

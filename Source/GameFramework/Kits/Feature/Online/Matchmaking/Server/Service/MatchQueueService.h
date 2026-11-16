@@ -8,7 +8,9 @@
  *            메모리에 없는 계정(다른 서버의 파티원, 막 접속한 사람)은 올려 달라고 한 뒤 3초까지 기다리고, 그래도 없으면 RatingUnavailable 이다.
  *            권한이 있으면 바로 매처에 넣고, 없으면 버스 `mm.queue.<모드>` 로 보낸다. 빠지기는 `mm.cancel.<모드>` 로 보낸다.
  *          - 배정: 경기가 만들어지면 기반 계층의 `ServerRegistryReader` 로 모드의 서버 종류, 경기 지역, 인원 슬롯에 맞는 서버를 고른다.
- *            게임 서버에는 `mm.assign.<서버>`(접속할 사람 목록)로, 티켓을 낸 서버에는 `mm.result.<서버>` 로 결과를 보낸다. 결과를 받은 서버가 멤버에게 알린다.
+ *            게임 서버에는 명단을 캐시 기록 `mm/match/<서버>/<경기>`(수명은 모드의 경기 시한, 목록은 정렬 집합 `mm/matches/<서버>`, 점수는 끝나는 시각)으로 남기고
+ *            `mm.assign.<서버>` 로도 먼저 알린다. 버스는 "최대 한 번" 이라 잃을 수 있으므로 게임 서버(`MatchServerAgent`)는 기록을 주기적으로 읽어 수락을 판정한다(Agones Allocation · PlayFab MPS 의 영속 배정).
+ *            티켓을 낸 서버에는 `mm.result.<서버>` 로 결과를 보낸다. 결과를 받은 서버가 멤버에게 알린다.
  *            배정할 서버가 없으면 경기를 쥐고 기다렸다가 다시 시도하고, 30초를 넘기면 NoServer 로 끝낸다.
  *          - 권한이 넘어가면 대기 중인 티켓을 잃는다. 티켓을 낸 서버가 티켓마다 시한(모드 시한 + 30초 + 10초)을 보관하다가 결과가 없으면 Timeout 을 알리고, 클라이언트가 다시 줄을 선다.
  *          - 로비 시작도 같은 배정 경로를 쓴다. 팀은 로비의 팀 그대로이고, 배정할 서버가 없으면 바로 NoServer 로 끝내고 로비를 다시 연다.
@@ -124,6 +126,7 @@ namespace sw
         void update( UnixMilliseconds nowMs );
 
         void joinQueue( AccountID accountID, string_view modeID, string_view region, UnixMilliseconds nowMs, uint64 requestTag );
+        /** @brief 이 서버에 티켓이 없으면 파티 기록의 티켓을 풉니다 — 티켓을 낸 서버가 죽어 다른 서버로 붙은 파티가 "줄 섬" 에 갇히지 않게 한다(감사 O-7). */
         void leaveQueue( AccountID accountID, uint64 requestTag );
         /** @brief 계정이 떠났을 때 부릅니다. 그 계정이 포함된 티켓을 뺍니다. */
         void removeAccount( AccountID accountID );
@@ -151,6 +154,10 @@ namespace sw
         static string makeBackfillTopic( string_view modeID );
         static string makeResultTopic( uint64 serverID );
         static string makeAssignTopic( uint64 serverID );
+        /** @brief 게임 서버 하나에 배정된 명단 기록의 키입니다. @p recordName 은 경기 id 16진이고, 백필은 뒤에 `.<티켓 id 16진>` 이 붙습니다. */
+        static string makeMatchRecordKey( uint64 serverID, string_view recordName );
+        /** @brief 게임 서버 하나의 명단 기록 목록(정렬 집합, 멤버는 기록 이름, 점수는 끝나는 시각)의 키입니다. */
+        static string makeMatchListKey( uint64 serverID );
 
     private:
         struct UnplacedMatch
@@ -188,6 +195,13 @@ namespace sw
             UnixMilliseconds _nowMs{ 0 };
         };
 
+        /** @brief 파티 찾기를 기다리는 빠지기입니다. 이 서버에 티켓이 없는 계정의 파티 기록 티켓을 풀려고 읽습니다. */
+        struct LeaveRequest
+        {
+            AccountID _accountID{ kInvalidAccountID };
+            uint64    _requestTag{ 0 };
+        };
+
         /** @brief 통계를 읽기를 기다리는 줄 서기입니다. 다른 서버의 파티원은 이 서버 메모리에 통계가 없습니다. */
         struct RatingWait
         {
@@ -198,6 +212,8 @@ namespace sw
         };
 
         void onPartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
+        /** @brief 파티 기록에 남은 다른 서버의 티켓을 권한 매처와 낸 서버에서 빼고 기록에서 지웁니다. */
+        void onLeavePartyFound( uint64 lookupTag, MatchmakingServiceResult result, const PartySnapshot& party );
         /** @brief 통계가 모두 있으면 티켓을 내고, 아니면 올려 달라고 한 뒤 기다립니다. */
         void prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 다 읽었거나 시한이 지난 줄 서기의 티켓을 냅니다. 시한이 지났으면 `submitTicket` 이 RatingUnavailable 로 끝냅니다. */
@@ -209,7 +225,9 @@ namespace sw
         [[nodiscard]] bool dropPendingJoin( AccountID accountID );
         void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 백필로 채운 티켓을 게임 서버(배정)와 티켓을 낸 서버(결과)에 알립니다. */
-        void               deliverBackfill( const MatchBackfilled& backfilled );
+        void deliverBackfill( const MatchBackfilled& backfilled, UnixMilliseconds nowMs );
+        /** @brief 게임 서버 @p serverID 에 배정한 명단을 캐시 기록으로 남깁니다. 수명은 모드의 경기 시한입니다. 쓰기 답은 보지 않습니다 — 캐시에 쓰지 못하면 버스 배정만 남는다(Found 를 쓰기 답 뒤로 미루는 것은 남은 몫). */
+        void               storeMatchRecord( uint64 serverID, const string& recordName, const MatchFormed& match, UnixMilliseconds nowMs );
         void               updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs );
         void               onLeaseReply( const EphemeralReply& reply );
         void               placeMatches( ModeState& state, UnixMilliseconds nowMs );
@@ -227,7 +245,8 @@ namespace sw
         unordered_map<string, ModeState>    _mapModeState;
         unordered_map<uint64, LocalTicket>  _mapLocalTicket; ///< 이 서버가 낸 티켓이다
         unordered_map<AccountID, uint64>    _mapAccountToTicket;
-        unordered_map<uint64, PendingJoin>  _mapLookupToJoin; ///< 파티 찾기를 기다리는 줄 서기 요청이다
+        unordered_map<uint64, PendingJoin>  _mapLookupToJoin;  ///< 파티 찾기를 기다리는 줄 서기 요청이다
+        unordered_map<uint64, LeaveRequest> _mapLookupToLeave; ///< 파티 찾기를 기다리는 빠지기 요청이다
         vector<RatingWait>                  _listRatingWait;
         unordered_map<uint64, string>       _mapLeaseRequestToMode;
         EventBuffer<MatchQueueCompletion>   _completionBuffer;

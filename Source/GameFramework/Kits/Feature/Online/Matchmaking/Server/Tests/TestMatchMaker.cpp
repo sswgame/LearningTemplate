@@ -23,6 +23,7 @@ namespace
         definition._maxRatingWindow       = 300;
         definition._regionRelaxMs         = 10000;
         definition._maxWaitMs             = 60000;
+        definition._matchTimeLimitMs      = 600000;
         return definition;
     }
 
