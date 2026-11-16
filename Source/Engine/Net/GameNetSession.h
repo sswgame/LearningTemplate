@@ -31,6 +31,9 @@
  *          샤드 전송은 건 데코레이터(`setTransportDecorator`)로 감쌀 수 있다 — 개발 도구가 회선 흉내(`NetEmulationTransport`, 시작 값 `-gv_netEmulation*`,
  *          실행 중 `net.emulation`)를 건다. 개발 명령 `net.disconnect` · `net.reconnect` · `net.traffic` 은 기능 옆 `GameNetSession.cpp` 다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
  *          `net.stats` 는 연결 · 트래픽 수치 한 줄(`NetStatsReport`)을 답한다(Profiler 탭이 0.5 초마다 묻는다).
+ *          운영 지표(감사 N-7): 전용 서버가 건 레지스트리(`bindMetricRegistry`)에 샤드 라벨(`shard`)로 연결 수 · 거절 · 인증 실패 · 재생 거절 · 끊김 사유별 수를 올리고 `update` 마다 채운다
+ *          (언리얼 NetDriver 통계 · 유니티 Transport NetworkMetrics 의 자리). 끊김 사유 시리즈는 `NetDisconnectReason` 의 열거에서 만든다 — 사유를 더하면 저절로 는다.
+ *          접속 로그의 클라이언트 주소는 가린 형식(`NetAddress::toMaskedString`)이다.
  *          배포 빌드에는 개발 도구가 없어 감싸지 않는다.
  *
  *          서버 틱(서버 디버깅 S7): 전용 서버가 틱마다 `sendServerTick` 으로 방금 끝낸 틱 번호를 모두에게 보내고(비신뢰 순서, 엔진 영역 `GameNetSessionMessage`),
@@ -77,6 +80,9 @@ namespace sw
     struct ServerConfig;
 
     class Component;
+    class MetricCounter;
+    class MetricGauge;
+    class MetricRegistry;
 
     /** @brief 게임 인스턴스의 네트워크 역할입니다. */
     ENUM()
@@ -260,6 +266,11 @@ namespace sw
         int32 getShardCount() const { return static_cast<int32>( _listShard.size() ); }
         /** @brief 서버면 붙은 클라이언트 수(모든 샤드)를 반환하고, 클라이언트면 서버에 붙었을 때 1 을 반환합니다. */
         int32 getConnectedCount() const;
+        /**
+         * @brief 서버 운영 지표 레지스트리를 겁니다(전용 서버 조립이 게임 인스턴스보다 먼저 걸고, 레지스트리를 지우기 전에 nullptr 로 푼다). nullptr 이면 세지 않는다.
+         * @details 서버 세션이 열려 있으면 곧바로, 아니면 다음 서버 `initialize` 가 샤드마다 시리즈를 올리고 `update` 가 채운다. 클라이언트 세션은 올리지 않는다.
+         */
+        void bindMetricRegistry( MetricRegistry* pRegistry );
         /** @brief 키트가 보내고 연결을 묻는 창구입니다(샤드 묶음 — 연결 ID 에 샤드 번호가 접혀 있다). 세션을 열지 않았으면 쓰면 안 됩니다(`isActive`). */
         INetPeers& getPeers() { return _peers; }
         /**
@@ -334,6 +345,15 @@ namespace sw
 
     private:
         struct Shard;
+        /** @brief 샤드 하나의 운영 지표 시리즈입니다(레지스트리가 소유 — 걸지 않았으면 모두 nullptr). */
+        struct ShardMetrics
+        {
+            MetricGauge*   _pConnectionGauge{ nullptr };                                               ///< net_connections
+            MetricCounter* _pRejectedCounter{ nullptr };                                               ///< net_rejected_packets_total
+            MetricCounter* _pAuthenticationFailureCounter{ nullptr };                                  ///< net_authentication_failures_total
+            MetricCounter* _pReplayRejectedCounter{ nullptr };                                         ///< net_replay_rejected_packets_total
+            MetricCounter* _arrDisconnectCounter[static_cast<size_t>( NetDisconnectReason::Count )]{}; ///< net_disconnects_total, 사유가 첨자(None 은 비었다)
+        };
         /** @brief 올린 복제 셈과 지난 보고에 실은 바이트입니다(늘어난 양 = 지금 − 지난 보고 때). */
         struct ReplicaStat
         {
@@ -415,6 +435,10 @@ namespace sw
         };
         /** @brief `_listEventScratch` 의 연결과 끊김을 로그 한 줄씩 남깁니다. 서버는 둘 다 남기고, 클라이언트는 끊김만 남깁니다(@p phase 가 무게를 정한다). */
         void logEvents( EventPhase phase ) const;
+        /** @brief 샤드 @p shardIndex 의 지표 시리즈를 레지스트리에 올립니다. 레지스트리가 없으면 빈 값입니다. */
+        ShardMetrics registerShardMetrics( int32 shardIndex ) const;
+        /** @brief `_listEventScratch` 의 끊김을 사유별로 세고, 샤드마다 엔드포인트 셈(`NetEndpoint::getCounters`)의 늘어난 만큼을 지표에 옮깁니다(서버만). */
+        void recordMetrics();
 
     private:
         vector<unique_ptr<Shard>>         _listShard;          ///< 포트 샤드마다 소켓 · 데코레이터 · 호스트 · 네트워크 스레드(클라이언트는 하나)
@@ -437,6 +461,7 @@ namespace sw
         GameNetRole                       _role;
         uint8                             _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
+        MetricRegistry*                   _pMetricRegistry;         ///< 서버 — 운영 지표(`bindMetricRegistry`, 전용 서버가 소유). nullptr 이면 세지 않는다
         ResourceDigestComparer            _digestComparer;          ///< 서버 — 클라이언트마다 받은 합성 줄과 자기 합성을 맞댄다
         uint64                            _digestSentRevision;      ///< 클라이언트 — 합성 줄을 어디까지 보냈는가
         int32                             _digestServerConnection;  ///< 클라이언트 — 합성 줄을 보낼 연결. 음수면 붙어 있지 않다

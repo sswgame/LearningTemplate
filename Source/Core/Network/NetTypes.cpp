@@ -49,4 +49,12 @@ namespace sw
         text += std::to_string( _port ).c_str();
         return text;
     }
+
+    string NetAddress::toMaskedString() const
+    {
+        string text = toString();
+        text.resize( text.rfind( '.' ) + 1 ); // 마지막 옥텟과 포트를 뗀다(`toString` 에는 점이 늘 셋 있다)
+        text += 'x';
+        return text;
+    }
 } // namespace sw

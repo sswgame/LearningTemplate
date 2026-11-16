@@ -77,6 +77,7 @@ namespace sw
                     case NetDisconnectReason::Rejected:
                     case NetDisconnectReason::ReceiveOverflow:
                     case NetDisconnectReason::ReliableOverflow:
+                    case NetDisconnectReason::Count:
                         break;
                 }
                 return NetDisconnectReason::Rejected;
@@ -1541,6 +1542,17 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         return _replayRejectedCount;
+    }
+
+    NetEndpointCounters NetEndpoint::getCounters() const
+    {
+        ScopedLock<mutex>   lock{ _mutex };
+        NetEndpointCounters counters;
+        counters._rejectedPacketCount        = _rejectedPacketCount;
+        counters._authenticationFailureCount = _authenticationFailureCount;
+        counters._replayRejectedCount        = _replayRejectedCount;
+        counters._connectedCount             = _slotTable.countConnected();
+        return counters;
     }
 
     uint64 NetEndpoint::getSlotVisitCount() const

@@ -4,19 +4,24 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Server/OpsHTTPEndpoint.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
 #include <charconv>
 #include <thread>
 
-// 운영 HTTP — 경로 셋 · 405 · 404 · 400 · Content-Length(전송 없이), 루프백 위 /metrics · 머리 상한 431 · 조각난 머리, 실제 소켓(이 기계 주소)의 /healthz.
+// 운영 HTTP — 경로 셋 · 405 · 404 · 400 · Content-Length(전송 없이), 루프백 위 /metrics · 머리 상한 431 · 조각난 머리, 실제 소켓(이 기계 주소)의 /healthz,
+// 게임 UDP 포트(GameNetSession)의 샤드 지표가 /metrics 에 보인다(감사 N-7).
 
 using namespace sw;
 
@@ -243,4 +248,44 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
     SW_EXPECT_TRUE( probe._bClosed.load( std::memory_order_acquire ) ); // 답한 뒤 서버가 닫는다
     endpoint.shutdown();
     clientTransport->shutdown();
+}
+
+/**
+ * @brief [OpsHTTPEndpointTest] 게임 UDP 포트의 샤드 지표(연결 수 · 거절 · 끊김 사유)가 /metrics 에 보인다 — 깨진 데이터그램 하나가 거절 1 이 된다(감사 N-7)
+ */
+SW_TEST_CASE( OpsHTTPEndpointTest, GameNetSessionMetricsReachTheMetricsPath )
+{
+    MetricRegistry metrics;
+    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    session.bindMetricRegistry( &metrics );
+    GameNetSessionParams params;
+    params._role = GameNetRole::Server; // 포트 0 — 운영체제가 고른다
+    SW_REQUIRE_TRUE( session.initialize( params ) );
+
+    UDPNetTransport stranger; // 다른 게임 · 위조 — 헤더의 프로토콜 ID 가 맞지 않는다
+    SW_REQUIRE_TRUE( stranger.open( 0, true ) );
+    const uint8 arrJunk[16] = {};
+    SW_REQUIRE_TRUE( stranger.send( NetAddress::makeLoopback( session.getListenPort() ), arrJunk, static_cast<int32>( sizeof( arrJunk ) ) ) );
+
+    string     response;
+    const bool bRejectedSeen = test::waitUntil( [&session, &metrics, &response]()
+    {
+        session.update(); // 네트워크 스레드가 센 것을 게임 스레드가 지표로 옮긴다
+        (void)OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1", &metrics, nullptr, 0, {}, response );
+        return response.find( "net_rejected_packets_total{shard=\"0\"} 1
+" ) != string::npos;
+    } );
+    SW_EXPECT_TRUE_MSG( bRejectedSeen, response.c_str() );
+    SW_EXPECT_TRUE( response.find( "net_connections{shard=\"0\"} 0
+" ) != string::npos );
+    SW_EXPECT_TRUE( response.find( "net_authentication_failures_total{shard=\"0\"} 0
+" ) != string::npos );
+    SW_EXPECT_TRUE( response.find( "net_replay_rejected_packets_total{shard=\"0\"} 0
+" ) != string::npos );
+    SW_EXPECT_TRUE( response.find( "net_disconnects_total{shard=\"0\",reason=\"Timeout\"} 0
+" ) != string::npos ); // 사유마다 시리즈가 열거에서 선다
+    SW_EXPECT_TRUE( response.find( "reason=\"None\"" ) == string::npos );                                           // None 은 끊김 사유가 아니다
+
+    session.bindMetricRegistry( nullptr ); // 레지스트리보다 세션이 늦게 닫힌다(전용 서버와 같은 순서)
+    session.shutdown();
 }

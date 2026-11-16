@@ -26,6 +26,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/SceneObjectHash.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -244,6 +245,8 @@ namespace sw
         unique_ptr<INetTransport>   _decorator{}; ///< `_transport` 를 감싼 전송(`setTransportDecorator` — 개발 도구의 회선 흉내). 있으면 호스트가 이것을 쓴다
         NetEndpoint                 _host{};
         NetEndpointThread           _thread{};
+        ShardMetrics                _metrics{};  ///< 서버 — 운영 지표 시리즈(`bindMetricRegistry`)
+        NetEndpointCounters         _reported{}; ///< 서버 — 지표에 옮긴 엔드포인트 셈(늘어난 만큼 = 지금 − 이것). 샤드와 함께 0 에서 시작한다
     };
 } // namespace sw
 
@@ -270,6 +273,7 @@ namespace sw
         , _role{ GameNetRole::None }
         , _bTicketBound{ SW_FALSE }
         , _bConnectFailureReported{ SW_FALSE }
+        , _pMetricRegistry{ nullptr }
         , _digestComparer{ composition }
         , _digestSentRevision{ 0 }
         , _digestServerConnection{ -1 }
@@ -474,6 +478,10 @@ namespace sw
                 }
             }
             _listenPort = _listShard.front()->_transport->getLocalAddress()._port;
+            for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
+            {
+                _listShard[static_cast<size_t>( shardIndex )]->_metrics = registerShardMetrics( shardIndex );
+            }
         }
         // 엔진 영역은 역할마다 맡는 종류가 다르다(클라이언트: 서버 틱 · 종료 통지, 서버: 합성 해시). 키트 · 게임 영역과 겹치지 않으므로 거절되면 이 라우터를 다른 누가 엔진 영역에 썼다는 결함이다.
         _engineMessageHandler.setRole( params._role );
@@ -578,6 +586,7 @@ namespace sw
                 }
             }
             logEvents( EventPhase::Closing );
+            recordMetrics();
         }
         for ( const unique_ptr<Shard>& shard : _listShard )
         {
@@ -611,6 +620,7 @@ namespace sw
         _listEventScratch.clear();
         (void)_router.poll( _peers, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
         logEvents( EventPhase::Running );
+        recordMetrics();
         updateResourceDigest();
     }
 
@@ -622,7 +632,7 @@ namespace sw
             {
                 if ( event._kind == NetEndpointEvent::Kind::Connected )
                     SW_LOG_INFO_ID( "Net.ClientConnected", "Net session client %# connected from %# (%# connected)", event._connectionID,
-                                    _peers.getConnectionAddress( event._connectionID ).toString(), _peers.getConnectedCount() );
+                                    _peers.getConnectionAddress( event._connectionID ).toMaskedString(), _peers.getConnectedCount() );
                 else
                     SW_LOG_INFO_ID( "GameNetSession.NetSessionClientDisconnected", "Net session client %# disconnected (%#, %# connected)", event._connectionID, toString( event._reason ), _peers.getConnectedCount() );
             }
@@ -635,6 +645,70 @@ namespace sw
                 // 세션은 엔진 수명이라 종료의 끝에서 닫힌다 — 같이 끝나는 서버(에디터 netplay.stop)가 먼저 나간 끊김이 여기서 읽힌다. 이상이 아니다.
                 SW_LOG_INFO_ID( "GameNetSession.NetSessionClosingAfter", "Net session closing after the server %# left (%#)", _serverAddress.toString(), toString( event._reason ) );
             }
+        }
+    }
+
+    void GameNetSession::bindMetricRegistry( MetricRegistry* pRegistry )
+    {
+        _pMetricRegistry   = pRegistry;
+        const bool bServer = _role == GameNetRole::Server;
+        // 셈의 기준(`_reported`)은 두고 시리즈만 바꾼다 — 같은 레지스트리를 다시 걸어도 같은 시리즈라 두 번 세지 않는다.
+        for ( int32 shardIndex = 0; shardIndex < getShardCount(); ++shardIndex )
+        {
+            _listShard[static_cast<size_t>( shardIndex )]->_metrics = bServer ? registerShardMetrics( shardIndex ) : ShardMetrics{};
+        }
+    }
+
+    GameNetSession::ShardMetrics GameNetSession::registerShardMetrics( int32 shardIndex ) const
+    {
+        ShardMetrics metrics;
+        if ( _pMetricRegistry == nullptr )
+            return metrics;
+        const vector<MetricLabel> listShardLabel{
+            MetricLabel{ "shard", to_string( shardIndex ) }
+        };
+        metrics._pConnectionGauge = _pMetricRegistry->registerGauge( "net_connections", "Game UDP connections per port shard", listShardLabel );
+        metrics._pRejectedCounter =
+            _pMetricRegistry->registerCounter( "net_rejected_packets_total", "Game UDP packets dropped for a wrong header, checksum, type or challenge (other version, other game, forged)", listShardLabel );
+        metrics._pAuthenticationFailureCounter =
+            _pMetricRegistry->registerCounter( "net_authentication_failures_total", "Game UDP packets dropped because decryption, the session proof or the key confirmation failed", listShardLabel );
+        metrics._pReplayRejectedCounter = _pMetricRegistry->registerCounter( "net_replay_rejected_packets_total", "Game UDP packets dropped by the replay window", listShardLabel );
+        // 사유는 열거에서 만든다(None 은 끊김 사유가 아니다) — 사유를 더하면 손대지 않아도 시리즈가 는다.
+        for ( size_t reasonIndex = static_cast<size_t>( NetDisconnectReason::None ) + 1; reasonIndex < static_cast<size_t>( NetDisconnectReason::Count ); ++reasonIndex )
+        {
+            const vector<MetricLabel> listLabel{
+                listShardLabel.front(), MetricLabel{ "reason", toString( static_cast<NetDisconnectReason>( reasonIndex ) ) }
+            };
+            metrics._arrDisconnectCounter[reasonIndex] = _pMetricRegistry->registerCounter( "net_disconnects_total", "Game UDP connections closed, by reason", listLabel );
+        }
+        return metrics;
+    }
+
+    void GameNetSession::recordMetrics()
+    {
+        if ( _role != GameNetRole::Server || _pMetricRegistry == nullptr )
+            return;
+        for ( const NetEndpointEvent& event : _listEventScratch )
+        {
+            const size_t          reasonIndex = static_cast<size_t>( event._reason );
+            const optional<int32> shardIndex  = _peers.findShardIndex( event._connectionID );
+            if ( event._kind != NetEndpointEvent::Kind::Disconnected || shardIndex.has_value() == false || reasonIndex >= static_cast<size_t>( NetDisconnectReason::Count ) )
+                continue;
+            MetricCounter* pCounter = _listShard[static_cast<size_t>( *shardIndex )]->_metrics._arrDisconnectCounter[reasonIndex];
+            if ( pCounter != nullptr )
+                pCounter->add();
+        }
+        for ( const unique_ptr<Shard>& shard : _listShard )
+        {
+            const ShardMetrics& metrics = shard->_metrics;
+            if ( metrics._pConnectionGauge == nullptr || metrics._pRejectedCounter == nullptr || metrics._pAuthenticationFailureCounter == nullptr || metrics._pReplayRejectedCounter == nullptr )
+                continue; // 등록이 오류로 끝났다(레지스트리가 남겼다)
+            const NetEndpointCounters counters = shard->_host.getCounters();
+            metrics._pConnectionGauge->set( static_cast<float64>( counters._connectedCount ) );
+            metrics._pRejectedCounter->add( counters._rejectedPacketCount - shard->_reported._rejectedPacketCount );
+            metrics._pAuthenticationFailureCounter->add( counters._authenticationFailureCount - shard->_reported._authenticationFailureCount );
+            metrics._pReplayRejectedCounter->add( counters._replayRejectedCount - shard->_reported._replayRejectedCount );
+            shard->_reported = counters;
         }
     }
 
