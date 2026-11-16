@@ -62,7 +62,7 @@ namespace sw
         applyTitle();
         syncCanvasSize();
         bindCallbacks();
-        setFocusState( true );
+        applyPlatformFocus( true );
         return true;
     }
 
@@ -255,7 +255,7 @@ namespace sw
     EM_BOOL WebWindow::onFocus( int eventType, const EmscriptenFocusEvent* pEvent, void* pUserData )
     {
         (void)pEvent;
-        static_cast<WebWindow*>( pUserData )->setFocusState( eventType == EMSCRIPTEN_EVENT_FOCUS );
+        static_cast<WebWindow*>( pUserData )->applyPlatformFocus( eventType == EMSCRIPTEN_EVENT_FOCUS );
         return EM_FALSE;
     }
 } // namespace sw

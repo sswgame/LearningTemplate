@@ -34,6 +34,16 @@ namespace sw
         return _bShouldClose == SW_FALSE;
     }
 
+    void CallbackInputWindow::applyPlatformFocus( bool bFocused )
+    {
+        if ( hasFocus() == bFocused )
+            return;
+        IWindow::setFocusState( bFocused );
+        PlatformInputEvent event{};
+        event._kind = bFocused ? PlatformInputKind::FocusGained : PlatformInputKind::FocusLost;
+        queueInput( event );
+    }
+
     bool CallbackInputWindow::tryGetFrameExtents( WindowFrameExtents& outExtents ) const
     {
         outExtents = WindowFrameExtents{};

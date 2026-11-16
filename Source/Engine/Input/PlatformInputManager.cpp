@@ -283,6 +283,15 @@ namespace sw
         const PlatformInputEvent& input = *reinterpret_cast<const PlatformInputEvent*>( event._lParam );
         switch ( input._kind )
         {
+            case PlatformInputKind::FocusGained:
+            case PlatformInputKind::FocusLost:
+            {
+                // 장치 상태 리셋은 큐 순서 안에서 한다(Win32 · X11 과 같은 규칙 — `InputManager::beginFrame`)
+                const bool bFocused = input._kind == PlatformInputKind::FocusGained;
+                onPlatformFocusChanged( bFocused );
+                postWindowStateEvent( RawInputEvent::makeFocusChange( bFocused ) );
+                break;
+            }
             case PlatformInputKind::KeyDown:
             case PlatformInputKind::KeyUp:
             {

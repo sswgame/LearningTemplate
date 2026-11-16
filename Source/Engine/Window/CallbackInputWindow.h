@@ -36,6 +36,13 @@ namespace sw
     protected:
         /** @brief 콜백이 받은 입력 하나를 모읍니다(창 스레드 — 브라우저 메인 · ALooper 스레드). */
         void queueInput( const PlatformInputEvent& event ) { _listPendingInput.push_back( event ); }
+        /**
+         * @brief 창 포커스가 바뀌었습니다. 상태(`hasFocus` — 프레임 페이싱)를 적고, 값이 바뀌었으면 입력 관리자가 받을 포커스 입력을 모읍니다.
+         * @details 상태만 적으면 입력 관리자가 몰라 포커스를 잃기 전에 눌린 키가 눌린 채 남는다(감사 P-3). 그래서 콜백 창에서는 `setFocusState` 를 숨기고 이것만 연다.
+         */
+        void applyPlatformFocus( bool bFocused );
+        /** @brief 콜백 창의 포커스는 `applyPlatformFocus` 로만 바꾼다 — 상태만 바꾸고 입력을 빠뜨리는 길을 형식으로 막는다. */
+        void setFocusState( bool bFocused ) = delete;
         /** @brief 표면 크기 · 배율 · 안전 여백이 바뀌었습니다. 크기가 달라졌으면 크기 콜백(스왑체인 · UI)을 부릅니다 — 회전도 이 길이다. */
         void applyPlatformResize( uint32 width, uint32 height, float32 contentScale, const float4& safeInsets );
 

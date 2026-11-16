@@ -194,7 +194,7 @@ namespace sw
         pApp->onAppCmd                   = &AndroidWindow::onAppCommand;
         pApp->onInputEvent               = &AndroidWindow::onInputEvent;
         syncSurfaceMetrics();
-        setFocusState( true );
+        applyPlatformFocus( true );
         return true;
     }
 
@@ -391,7 +391,7 @@ namespace sw
                 break;
             case APP_CMD_GAINED_FOCUS:
             case APP_CMD_LOST_FOCUS:
-                pWindow->setFocusState( command == APP_CMD_GAINED_FOCUS );
+                pWindow->applyPlatformFocus( command == APP_CMD_GAINED_FOCUS );
                 break;
             case APP_CMD_DESTROY:
                 pWindow->requestClose();

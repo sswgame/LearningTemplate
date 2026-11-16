@@ -28,6 +28,8 @@ namespace sw
         GamepadAxis,         ///< 패드 칸 `_pointerIndex` 의 축 `_keyCode`(Android `AMOTION_EVENT_AXIS_*`)가 `_wheel` 값이다(플랫폼 부호 그대로)
         GamepadConnected,    ///< 패드 칸 `_pointerIndex` 에 패드가 붙었다
         GamepadDisconnected, ///< 그 칸의 패드가 떨어졌다
+        FocusGained,         ///< 창이 포커스를 얻었다(웹 `focus` · Android `APP_CMD_GAINED_FOCUS`)
+        FocusLost,           ///< 창이 포커스를 잃었다 — 입력 관리자가 눌린 키 · 버튼을 놓는다(Win32 `WM_KILLFOCUS` 와 같은 길)
     };
 
     /** @brief 콜백 창이 패드에 주는 칸 수입니다 — 입력 관리자의 패드 슬롯 수(`kMaxGamepadSlot`)와 같아야 한다(PlatformInputManager 가 static_assert 로 본다). 창 층은 입력 층 형식을 모른다. */
