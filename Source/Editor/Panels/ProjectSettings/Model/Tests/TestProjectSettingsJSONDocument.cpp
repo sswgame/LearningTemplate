@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
@@ -176,4 +177,31 @@ SW_TEST_CASE( ProjectSettingsEntryTest, TablesSkipTypedFiles )
         bNamingWords = bNamingWords || table._page == "Rules/Lint/NamingWords";
     }
     SW_EXPECT_TRUE( bNamingWords );
+}
+
+/**
+ * @brief [ProjectSettingsEntryTest] 고른 게임의 프리셋만 읽혀 있어도 같은 폴더의 다른 게임 프리셋이 같은 형식 페이지로 나오고, 표 페이지로는 나오지 않는다
+ */
+SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
+{
+    const string                 projectRoot = ProcessRoots::get()._project.str();
+    vector<ProjectSettingsEntry> listTyped( 1 );
+    listTyped[0]._page         = "GameConfig";
+    listTyped[0]._typeName     = "GameConfig";
+    listTyped[0]._relativePath = "Config/Game/Empty.json";
+    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot, listTyped[0]._relativePath ) );
+    ProjectSettingsEntry::addOtherGamePresets( projectRoot, listTyped );
+    SW_EXPECT_EQUAL( listTyped[0]._gameName, string( "Empty" ) );
+    const ProjectSettingsEntry* pShooter = nullptr;
+    for ( const ProjectSettingsEntry& entry : listTyped )
+        pShooter = entry._page == "GameConfig/Shooter3D" ? &entry : pShooter;
+    SW_REQUIRE_TRUE( pShooter != nullptr );
+    SW_EXPECT_EQUAL( pShooter->_typeName, string( "GameConfig" ) );
+    SW_EXPECT_EQUAL( pShooter->_gameName, string( "Shooter3D" ) );
+    SW_EXPECT_EQUAL( pShooter->_relativePath, string( "Config/Game/Shooter3D.json" ) );
+
+    vector<ProjectSettingsEntry> listTable;
+    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot, listTyped, listTable ) );
+    for ( const ProjectSettingsEntry& table : listTable )
+        SW_EXPECT_FALSE( StringUtil::startsWith( table._relativePath, "Config/Game/" ) );
 }

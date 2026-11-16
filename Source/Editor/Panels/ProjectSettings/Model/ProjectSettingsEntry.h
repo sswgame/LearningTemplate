@@ -17,11 +17,12 @@ namespace sw::editor
     /** @brief 설정 파일 하나입니다. 같은 타입이 파일 여럿이면(`Config/Game` 아래 게임마다 하나) 파일마다 하나씩 나옵니다. */
     struct ProjectSettingsEntry
     {
-        string _page;         ///< 목록에 보이는 이름(리플렉션 타입 이름)
+        string _page;         ///< 페이지 키(리플렉션 타입 이름, 고르지 않은 게임의 프리셋은 `GameConfig/Shooter3D`). 목록 이름 · 자체 검사 표식이 쓴다
         string _relativePath; ///< 프로젝트 루트 기준 경로(슬래시) - 보여 주기용
         string _absolutePath; ///< 설정 테이블이 읽은 자리(절대, 슬래시). 창은 이것을 열고 쓴다 - 상대 경로에서 다시 풀지 않는다(R8)
         string _typeName;     ///< 리플렉션 타입 이름(`EngineConfig`). 비면 표 페이지다(`collectTables`)
         string _elementName;  ///< 비면 파일 전체가 설정(JSON)이다. 있으면 XML 파일 안의 그 요소 하나가 설정이다(팩 `gamesettings.xml` 의 `<Engine>`)
+        string _gameName;     ///< 게임별 프리셋(`Config/Game` · `Config/Server` 의 `<게임>.json`)이면 그 게임 이름, 아니면 빈 글
 
         // 설정 테이블이 파일에서 읽은 설정 가운데 창이 고칠 수 있는 JSON 설정 파일을 고릅니다.
         // 언리얼 Project Settings · 유니티 Project Settings 가 설정 종류마다 페이지를 두는 것과 같습니다. 목록은 로드된 설정이 곧 정본이다 —
@@ -29,6 +30,8 @@ namespace sw::editor
          * @brief @p configManager 가 파일에서 읽은 설정 중 고칠 수 있는 것을 모읍니다(먼저 비운다). 순서는 페이지 이름 사전순입니다.
          * @details 고르는 규칙: @p projectRoot 아래 `Config/` 나 `Content/` 의 `.json` 이다. 모듈 매니페스트(`Source/`)와 XML 설정은 뺀다 —
          *          매니페스트는 Modules 창이, XML 은 손으로 쓴 주석이 있어 다시 쓰면 잃기 때문이다.
+         *          게임별 프리셋 폴더(`config::kDirRuntimeGamePreset` · `kDirRuntimeServerPreset`)는 고른 게임의 파일만 읽혀 있다 — 같은 폴더의 다른 게임 파일도
+         *          같은 형식 페이지로 더한다(범용 표로 열리면 형식 검사 · 기본값 차이 쓰기를 잃는다).
          */
         static void collectLoaded( const ConfigManager& configManager, string_view projectRoot, vector<ProjectSettingsEntry>& outListEntry );
 
@@ -44,6 +47,9 @@ namespace sw::editor
         [[nodiscard]] static bool collectTables( string_view projectRoot, const vector<ProjectSettingsEntry>& listTyped, vector<ProjectSettingsEntry>& outListEntry );
         /** @brief 반사 형식 없이 범용 JSON 페이지로 여는 표면 true 입니다. */
         [[nodiscard]] bool isTable() const { return _typeName.empty(); }
+
+        /** @brief 고른 게임의 프리셋이 든 폴더의 다른 게임 파일을 같은 형식 페이지로 @p inoutListEntry 에 더합니다(`collectLoaded`). */
+        static void addOtherGamePresets( string_view projectRoot, vector<ProjectSettingsEntry>& inoutListEntry );
 
         /** @brief 경로가 `Config/` 나 `Content/` 아래의 JSON 이면 true 입니다. */
         [[nodiscard]] static bool isEditableLocation( string_view relativePath );

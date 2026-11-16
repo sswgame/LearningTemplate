@@ -8,6 +8,8 @@
 
 #include "Engine/Config/ConfigManager.h"
 
+#include "sw/config/ConfigConstants.h"
+
 namespace sw::editor
 {
     bool ProjectSettingsEntry::isEditableLocation( string_view relativePath )
@@ -35,8 +37,43 @@ namespace sw::editor
             entry._absolutePath = FileUtil::normalizeSeparators( resolvedPath );
             outListEntry.push_back( std::move( entry ) );
         } );
+        addOtherGamePresets( projectRoot, outListEntry );
         VectorUtil::sort( outListEntry, []( const ProjectSettingsEntry& lhs, const ProjectSettingsEntry& rhs )
         { return lhs._page < rhs._page; } );
+    }
+
+    void ProjectSettingsEntry::addOtherGamePresets( string_view projectRoot, vector<ProjectSettingsEntry>& inoutListEntry )
+    {
+        for ( const utf8* pPresetFolder : { config::kDirRuntimeGamePreset, config::kDirRuntimeServerPreset } )
+        {
+            const string presetFolder = FileUtil::normalizeSeparators( pPresetFolder );
+            // 고른 게임의 프리셋이 읽혀 있으면 그 형식이 이 폴더 파일의 형식이다
+            const auto isInFolder = [&presetFolder]( const ProjectSettingsEntry& entry )
+            { return FileUtil::normalizeSeparators( FileUtil::getDirectoryPart( entry._relativePath ) ) == presetFolder; };
+            ProjectSettingsEntry* const pLoaded = VectorUtil::findIf( inoutListEntry, isInFolder );
+            if ( pLoaded == nullptr )
+                continue;
+            const ProjectSettingsEntry active = *pLoaded; // 복사 — 아래 push_back 이 배열을 옮긴다
+            pLoaded->_gameName                = FileUtil::removeExtension( FileUtil::getFileNamePart( active._relativePath ) );
+            vector<string> listPath;
+            if ( FileUtil::collectFiles( FileUtil::joinPath( projectRoot, presetFolder ), ".json", listPath, false ) == false )
+            {
+                SW_LOG_ERROR_ID( "ProjectSettingsPanel.PresetFolderUnreadable", "Project settings: %# could not be listed - the other games' presets are missing", presetFolder );
+                continue;
+            }
+            for ( const string& absolutePath : listPath )
+            {
+                if ( FileUtil::isSameDiskPath( absolutePath, active._absolutePath ) )
+                    continue;
+                ProjectSettingsEntry entry{};
+                entry._gameName     = FileUtil::removeExtension( FileUtil::getFileNamePart( absolutePath ) );
+                entry._typeName     = active._typeName;
+                entry._page         = active._typeName + "/" + entry._gameName;
+                entry._relativePath = FileUtil::joinPath( presetFolder, FileUtil::getFileNamePart( absolutePath ) );
+                entry._absolutePath = FileUtil::normalizeSeparators( absolutePath );
+                inoutListEntry.push_back( std::move( entry ) );
+            }
+        }
     }
 
     bool ProjectSettingsEntry::collectTables( string_view projectRoot, const vector<ProjectSettingsEntry>& listTyped, vector<ProjectSettingsEntry>& outListEntry )
