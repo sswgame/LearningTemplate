@@ -33,17 +33,19 @@ namespace sw::editor
          * @brief 편집 직전 상태를 기록합니다. 다시 하기 기록은 버립니다.
          * @param before 편집 직전 상태입니다.
          * @param coalesceKey 비어 있지 않고 직전 기록의 키와 같으면 새 단계를 만들지 않습니다(끌기 한 번이 한 단계). 비면 항상 새 단계입니다.
+         * @return 새 단계를 만들었으면 true, 직전 단계에 합쳤으면 false 입니다(바깥 명령 스택이 단계마다 명령 하나를 올릴 때 본다).
          */
-        void record( const TSnapshot& before, string_view coalesceKey = {} )
+        bool record( const TSnapshot& before, string_view coalesceKey = {} )
         {
             _listRedo.clear();
             const bool bCoalesce = coalesceKey.empty() == false && string_view( _lastCoalesceKey ) == coalesceKey && _listUndo.empty() == false;
             _lastCoalesceKey     = string( coalesceKey );
             if ( bCoalesce )
-                return;
+                return false;
             _listUndo.push_back( before );
             if ( _listUndo.size() > kMaxCount )
                 _listUndo.erase( _listUndo.begin() );
+            return true;
         }
 
         /** @brief 끌기가 끝났음을 알립니다. 다음 편집은 같은 키여도 새 단계를 만듭니다. */

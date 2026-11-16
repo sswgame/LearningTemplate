@@ -109,6 +109,42 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, HandLayoutIsKeptOnEdit )
 }
 
 /**
+ * @brief [ProjectSettingsJSONDocumentTest] 되돌리기는 편집 한 단계씩 트리를 되돌리고 글도 원문 범위로 되살아난다. 글 칸을 치는 동안은 한 단계이고(`endTextEdit` 가 끊는다), 같은 값은 단계를 만들지 않는다
+ */
+SW_TEST_CASE( ProjectSettingsJSONDocumentTest, UndoRestoresEachEdit )
+{
+    const string                text = "{ \"name\": \"a\", \"on\": true, \"list\": [ 1 ] }\n";
+    ProjectSettingsJSONDocument document;
+    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Dev/Undo.json", text ).has_value() );
+    const ProjectSettingsJSONNode& root  = document.getNode( ProjectSettingsJSONDocument::kRootNode );
+    const uint32                   name  = root._listChild[0];
+    const uint32                   bOn   = root._listChild[1];
+    const uint32                   list  = root._listChild[2];
+    const uint32                   start = document.getUndoStepSerial();
+
+    SW_EXPECT_TRUE( document.setLeafText( bOn, "true" ) ); // 같은 값
+    SW_EXPECT_EQUAL( document.getUndoStepSerial(), start );
+    SW_EXPECT_TRUE( document.setLeafText( name, "ab" ) );
+    SW_EXPECT_TRUE( document.setLeafText( name, "abc" ) ); // 같은 칸을 치는 중 — 앞 단계에 합친다
+    SW_EXPECT_EQUAL( document.getUndoStepSerial(), start + 1u );
+    document.endTextEdit();
+    SW_EXPECT_TRUE( document.setLeafText( bOn, "false" ) );
+    SW_EXPECT_TRUE( document.addArrayItem( list ).has_value() );
+    SW_EXPECT_EQUAL( document.getUndoStepSerial(), start + 3u );
+    SW_EXPECT_EQUAL( document.makeText(), string( "{ \"name\": \"abc\", \"on\": false, \"list\": [ 1, 0 ] }\n" ) );
+
+    SW_EXPECT_TRUE( document.undo() );
+    SW_EXPECT_EQUAL( document.makeText(), string( "{ \"name\": \"abc\", \"on\": false, \"list\": [ 1 ] }\n" ) );
+    SW_EXPECT_TRUE( document.undo() );
+    SW_EXPECT_TRUE( document.undo() );
+    SW_EXPECT_EQUAL( document.makeText(), text );
+    SW_EXPECT_FALSE( document.isModified() );
+    SW_EXPECT_FALSE( document.undo() );
+    SW_EXPECT_TRUE( document.redo() );
+    SW_EXPECT_EQUAL( document.makeText(), string( "{ \"name\": \"abc\", \"on\": true, \"list\": [ 1 ] }\n" ) );
+}
+
+/**
  * @brief [ProjectSettingsJSONDocumentTest] 틀린 JSON 은 열지 않는다(닫힌 문서 — 저장으로 파일을 덮지 않는다)
  */
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, InvalidJSONDoesNotOpen )

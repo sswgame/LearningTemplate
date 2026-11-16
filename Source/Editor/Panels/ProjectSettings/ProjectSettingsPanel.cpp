@@ -17,6 +17,9 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -68,11 +71,16 @@ namespace sw::editor
         , _tableView{}
         , _pSelected{ nullptr }
         , _statusText{}
+        , _pTableStack{ make_unique<CommandStack>() }
+        , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _bCatalogLoaded{ SW_FALSE }
     {
     }
 
-    ProjectSettingsPanel::~ProjectSettingsPanel() = default;
+    ProjectSettingsPanel::~ProjectSettingsPanel()
+    {
+        releaseFocusedCommandStack( _pTableStack.get() ); // 사라질 스택을 Ctrl+Z 가 겨누지 않게
+    }
 
     uint32 ProjectSettingsPanel::getPageCount()
     {
@@ -93,7 +101,32 @@ namespace sw::editor
     {
         _bCatalogLoaded = SW_TRUE;
         _pSelected      = nullptr;
+        _pTableStack->clear(); // 단계가 가리키던 페이지가 사라진다
         ProjectSettingsPage::collectPages( _listPage );
+    }
+
+    void ProjectSettingsPanel::pushTableUndo( Page& page )
+    {
+        Page* const pPage = &page;
+        // 페이지 문서가 자기 스냅숏 기록을 가진다 — 스택 단계는 그 기록을 한 칸 움직이고 표시를 맞춘다(단계가 노드 배열을 따로 쥐지 않는다).
+        const auto makeStep = [this, pPage]( bool bUndo )
+        {
+            return UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [this, pPage, bUndo]()
+            {
+                const bool bMoved = bUndo ? pPage->_tableDocument.undo() : pPage->_tableDocument.redo();
+                if ( bMoved == false )
+                    return;
+                _tableView.resetDraft();
+                pPage->refreshDirty();
+                refreshDirtyState();
+            } ),
+                                            *_pUndoOwner );
+        };
+        CommandStack::Command command;
+        command._label = "Edit " + page._entry._page;
+        command._undo  = makeStep( true );
+        command._redo  = makeStep( false );
+        _pTableStack->push( std::move( command ) );
     }
 
     void ProjectSettingsPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )
@@ -141,6 +174,7 @@ namespace sw::editor
                 continue;
             pPage->revert();
         }
+        _pTableStack->clear(); // 되돌린 문서는 기록을 비웠다
     }
 
     void ProjectSettingsPanel::drawPageList()
@@ -202,8 +236,11 @@ namespace sw::editor
                 EditorWidgets::drawChip( "Table", SW_THEME_COLOR( "Base", "Accent" ) );
             drawPageActions( page );
             ImGui::BeginChild( "##ProjectSettingsTable", ImVec2{ 0.0f, 0.0f } );
+            const uint32 undoSerial = table.getUndoStepSerial();
             if ( _tableView.draw( table, _statusText ) )
                 refreshDirtyState();
+            if ( table.getUndoStepSerial() != undoSerial )
+                pushTableUndo( page );
             ImGui::EndChild();
             return;
         }
@@ -266,6 +303,7 @@ namespace sw::editor
         {
             _tableView.resetDraft();
             page.revert();
+            _pTableStack->clear(); // 다시 읽은 문서는 기록을 비웠다 — 다른 페이지의 단계도 함께 버린다(단계가 페이지별로 섞여 있어 그 페이지 것만 골라 뺄 수 없다)
             refreshDirtyState();
             _statusText = "Reverted to the file";
         }

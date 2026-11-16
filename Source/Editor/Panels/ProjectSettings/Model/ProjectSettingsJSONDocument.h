@@ -97,8 +97,20 @@ namespace sw::editor
         /** @brief 노드 @p node 입니다. */
         [[nodiscard]] const ProjectSettingsJSONNode& getNode( uint32 node ) const { return _listNode[node]; }
 
-        /** @brief 말단 @p node 의 값을 @p text 로 바꿉니다. 수는 JSON 수 글, 불은 `true` · `false` 여야 한다. 맞지 않거나 컨테이너 · null · 읽기 전용이면 바꾸지 않고 false 입니다. */
+        /**
+         * @brief 말단 @p node 의 값을 @p text 로 바꿉니다. 수는 JSON 수 글, 불은 `true` · `false` 여야 한다. 맞지 않거나 컨테이너 · null · 읽기 전용이면 바꾸지 않고 false 입니다.
+         * @details 글 칸을 치는 동안의 연속 편집은 되돌리기 한 단계로 합친다 — 칸을 떠나면 `endTextEdit` 를 부른다.
+         */
         [[nodiscard]] bool setLeafText( uint32 node, string_view text );
+        /** @brief 글 칸 하나의 편집이 끝났습니다. 다음 편집은 같은 칸이어도 새 되돌리기 단계입니다. */
+        void endTextEdit() { _state.endCoalescing(); }
+
+        /** @brief 편집 한 단계를 되돌립니다(창 안 되돌리기 — 패널이 자기 명령 스택에서 부른다). 기록이 없으면 false 입니다. */
+        [[nodiscard]] bool undo() { return _state.undo( _listNode ); }
+        /** @brief 되돌린 단계를 다시 합니다. 기록이 없으면 false 입니다. */
+        [[nodiscard]] bool redo() { return _state.redo( _listNode ); }
+        /** @brief 새 되돌리기 단계가 생길 때마다 하나 오르는 번호입니다 — 패널이 단계마다 명령 하나를 올린다(합친 편집은 오르지 않는다). */
+        [[nodiscard]] uint32 getUndoStepSerial() const { return _undoStepSerial; }
         /**
          * @brief 배열 @p arrayNode 끝에 원소를 더하고 그 번호를 돌려줍니다. 원소 모양은 마지막 원소와 같고(말단은 빈 값 — 글 "", 수 0, 불 false; 객체는 같은 키에 빈 값; 배열은 빈 배열),
          *        빈 배열이면 빈 글입니다. 배열이 아니거나 읽기 전용이면 없음입니다.
@@ -120,14 +132,18 @@ namespace sw::editor
         [[nodiscard]] bool appendChangedContainerText( uint32 node, string& inoutText ) const;
         /** @brief 범위가 없는 노드 @p node 를 파일 들여쓰기로 씁니다. */
         [[nodiscard]] bool appendFreshText( uint32 node, string_view lineIndent, string& inoutText ) const;
+        /** @brief 편집 직전 트리를 되돌리기 기록에 올립니다. */
+        void recordEdit( string_view coalesceKey = {} );
 
     private:
         vector<ProjectSettingsJSONNode> _listNode;
         string                          _absolutePath;
         string                          _sourceText; ///< 열 때 읽은 글 — 노드 범위(`_source`)가 가리킨다
-        EditorDocumentState<string>     _state;      ///< 마지막으로 읽거나 저장한 글
-        int32                           _indent;
-        ProjectSettingsReadOnlyReason   _readOnlyReason;
-        uint8                           _bTrailingNewLine : 1;
+        /// 마지막으로 읽거나 저장한 글과 트리 스냅숏 되돌리기 기록. 노드가 원문 범위를 들어 되돌린 트리도 바뀐 범위만 고쳐 쓴다
+        EditorDocumentState<vector<ProjectSettingsJSONNode>> _state;
+        uint32                                               _undoStepSerial;
+        int32                                                _indent;
+        ProjectSettingsReadOnlyReason                        _readOnlyReason;
+        uint8                                                _bTrailingNewLine : 1;
     };
 } // namespace sw::editor

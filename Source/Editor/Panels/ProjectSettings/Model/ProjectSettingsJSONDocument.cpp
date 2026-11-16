@@ -158,6 +158,7 @@ namespace sw::editor
         : _listNode{}
         , _absolutePath{}
         , _state{}
+        , _undoStepSerial{ 0 }
         , _indent{ ProjectSettingsJSONDocumentInternal::kSingleLineIndent }
         , _readOnlyReason{ ProjectSettingsReadOnlyReason::None }
         , _bTrailingNewLine{ 0 }
@@ -270,37 +271,41 @@ namespace sw::editor
     {
         if ( isReadOnly() || node >= _listNode.size() )
             return false;
-        ProjectSettingsJSONNode& value = _listNode[node];
-        switch ( value._type )
+        const JSONType type = _listNode[node]._type;
+        switch ( type )
         {
             case JSONType::String:
-                value._text = string( text );
-                return true;
+                break;
             case JSONType::Number:
             {
                 JSONDocument number;
                 if ( ProjectSettingsJSONDocumentInternal::parseNumber( text, number ) == false )
                     return false;
-                value._text = string( text );
-                return true;
+                break;
             }
             case JSONType::Bool:
                 if ( text != "true" && text != "false" )
                     return false;
-                value._text = string( text );
-                return true;
+                break;
             case JSONType::Null:
             case JSONType::Array:
             case JSONType::Object:
                 return false;
         }
-        return false;
+        if ( _listNode[node]._text == text )
+            return true; // 같은 값 — 되돌리기 단계를 만들지 않는다
+        // 글 칸을 치는 동안은 칸 하나가 한 단계다(`endTextEdit` 가 끊는다). 수 · 불은 칸을 떠날 때 · 누를 때 한 번 오므로 늘 새 단계다
+        const string coalesceKey = type == JSONType::String ? "text:" + to_string( static_cast<uint64>( node ) ) : string{};
+        recordEdit( coalesceKey );
+        _listNode[node]._text = string( text );
+        return true;
     }
 
     optional<uint32> ProjectSettingsJSONDocument::addArrayItem( uint32 arrayNode )
     {
         if ( isReadOnly() || arrayNode >= _listNode.size() || _listNode[arrayNode]._type != JSONType::Array )
             return nullopt;
+        recordEdit();
         uint32 item = 0;
         if ( _listNode[arrayNode]._listChild.empty() )
         {
@@ -324,6 +329,7 @@ namespace sw::editor
             if ( _listNode[child]._key == key )
                 return false;
         }
+        recordEdit();
         const uint32 member = static_cast<uint32>( _listNode.size() );
         _listNode.push_back( ProjectSettingsJSONNode{ JSONType::String, string( key ), {}, {} } );
         _listNode[objectNode]._listChild.push_back( member );
@@ -334,9 +340,16 @@ namespace sw::editor
     {
         if ( isReadOnly() || parentNode >= _listNode.size() || childIndex >= _listNode[parentNode]._listChild.size() )
             return false;
+        recordEdit();
         vector<uint32>& listChild = _listNode[parentNode]._listChild;
         listChild.erase( listChild.begin() + static_cast<ptrdiff_t>( childIndex ) );
         return true;
+    }
+
+    void ProjectSettingsJSONDocument::recordEdit( string_view coalesceKey )
+    {
+        if ( _state.record( _listNode, coalesceKey ) )
+            ++_undoStepSerial;
     }
 
     uint32 ProjectSettingsJSONDocument::appendNode( const JSONValue& value, string_view key )

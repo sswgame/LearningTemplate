@@ -161,6 +161,8 @@ namespace sw::editor
                 const bool bChanged  = bLong ? EditorWidgets::drawTextFieldMultiline( "##value", text, lineCount ) : EditorWidgets::drawTextField( "##value", text, -1.0f );
                 if ( bChanged && document.setLeafText( node, text ) )
                     _bEdited = 1;
+                if ( ImGui::IsItemDeactivated() )
+                    document.endTextEdit(); // 칸 하나를 친 것이 되돌리기 한 단계다
                 break;
             }
             case JSONType::Number:

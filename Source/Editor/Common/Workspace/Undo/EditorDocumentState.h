@@ -42,7 +42,7 @@ namespace sw::editor
         [[nodiscard]] bool isDirty( const TSaved& current ) const { return current != _saved; }
 
         /** @brief 편집 직전 상태를 기록합니다(`EditSnapshotHistory::record`). */
-        void               record( const TSnapshot& before, string_view coalesceKey = {} ) { _history.record( before, coalesceKey ); }
+        bool               record( const TSnapshot& before, string_view coalesceKey = {} ) { return _history.record( before, coalesceKey ); }
         void               endCoalescing() { _history.endCoalescing(); }
         [[nodiscard]] bool undo( TSnapshot& inoutCurrent ) { return _history.undo( inoutCurrent ); }
         [[nodiscard]] bool redo( TSnapshot& inoutCurrent ) { return _history.redo( inoutCurrent ); }
