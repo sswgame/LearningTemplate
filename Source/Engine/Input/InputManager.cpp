@@ -1026,10 +1026,13 @@ namespace sw
             _bAltHeld          = SW_FALSE; // Alt+Tab 의 Alt 뗌은 다른 창으로 간다
         }
         // OS 접근성 단축키(Shift 다섯 번 등)는 창이 앞에 있는 동안만 끈다 — 다른 창으로 가면 사용자의 설정으로 되돌린다(감사 P-11, 언리얼 FWindowsApplication 의 활성화 처리와 같다).
+        // 배포 빌드만 한다: OS 전역 설정이라 병렬로 도는 테스트 · 개발 프로세스가 서로의 "끈 상태" 를 원래 값으로 적어 꺼진 채 남길 수 있다.
+#if defined( SW_SHIPPING )
         if ( bFocused )
             disableWindowsAccessibilityShortcuts();
         else
             restoreWindowsAccessibilityShortcuts();
+#endif
         syncMouseLock();
     }
 
