@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="83ea3b5f65d4842e46b5851a93154dab"?>
 <!--
   에디터 시나리오 — 프리팹 창(PrefabEditorPanel): 콘텐츠 브라우저에서 프리팹을 더블클릭하면 새 프리팹 창("Prefab Window", 패널 id prefab_window)이 뜨고,
   미저장 편집이 있을 때 제목 표시줄 X 로 닫으면 Save / Don't Save / Cancel 확인이 뜬다.

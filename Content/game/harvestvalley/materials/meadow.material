@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="621a911d75c1763a6f5529fd097e1c19"?>
 <!-- 농장 풀밭 — 기본 머티리얼에 풀밭 색을 기본값으로 둔 것이다. -->
 <MaterialDef formatVersion="0" name="HarvestValleyMeadow" _base="engine/materials/defaultmaterial.material">
 	<_properties>

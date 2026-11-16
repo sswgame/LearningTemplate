@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ae6499745ac216d77a67d3bf52ac0b62"?>
 <!--
   비동기 경로 요청(maps/navasync) — 탐침(Prober, NavPathProbeComponent)이 Start 자리에서 Goal 까지 SceneNavigation::requestPath 로 계속 묻는다.
   ① 요청 → 결과: 비동기 경로가 장애물(Barrier)을 돌아간다 — 동기 감시 값(Nav.PathLength)과 같은 길이 범위.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bae05ddd97d705aacbd4e1c9f1fd04d6"?>
 <!-- 하우징 고스트 — 놓을 수 있는 자리(반투명 초록) -->
 <MaterialDef formatVersion="0" name="housing_ghost_placeable" _base="engine/materials/glassmaterial.material">
 	<_properties>

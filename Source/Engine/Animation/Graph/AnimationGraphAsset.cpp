@@ -25,7 +25,7 @@ namespace sw
         {
             static constexpr const utf8* kArrNodeChild[]       = { "blend_space", "pose_node" };
             static constexpr const utf8* kArrBlendSpaceChild[] = { "samples" };
-            static constexpr const utf8* kArrPoseNodeChild[]   = { "inputs" };
+            static constexpr const utf8* kArrPoseNodeChild[]   = { "inputs", "sections" };
             static constexpr const utf8* kArrLinkChild[]       = { "condition" };
             static constexpr const utf8* kArrBoneMaskChild[]   = { "roots", "bones" };
 
@@ -269,6 +269,7 @@ namespace sw
         def                                = AnimationGraphPoseNodeDef{};
         def._type                          = params._type;
         def._weightParameter               = params._weight;
+        def._mirrorAxis                    = params._mirrorAxis;
         const AnimationPoseNodeType* pType = engine::getSubsystem<AnimationPoseNodeRegistry>().findType( def._type );
         if ( pType == nullptr )
         {
@@ -279,15 +280,16 @@ namespace sw
         {
             def._listInput.push_back( hashed_string( string_view{ input.getText() } ) );
         }
-
-        // 종류마다 요구하는 값은 그 종류의 계약이다(입력 수 · weight — 표가 정한다).
-        if ( AnimationPoseNodeRegistry::isSatisfiedBy( *pType, def ) == false )
+        for ( XMLNode sectionXML = poseNodeXML.findChild( "sections" ).findChild(); sectionXML.isValid(); sectionXML = sectionXML.findNextSibling() )
         {
-            SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBlend7", "Animation graph node '%#' pose_node '%#' needs %# named 'inputs'%#", inoutNode._name.c_str(), def._type.c_str(), pType->_inputCount,
-                             pType->_bRequiresWeight ? " and a 'weight' parameter" : "" );
-            return false;
+            AnimationGraphMontageSectionParams section;
+            if ( Internal::isTag( sectionXML, "section", "sections", inoutNode._name ) == false || Internal::readLeafElement( sectionXML, section, inoutNode._name ) == false )
+                return false;
+            def._listSection.push_back( AnimationMontageSection{ section._name, section._start, section._next, section._branchParam, section._branch } );
         }
-        return true;
+
+        // 종류마다 요구하는 값은 그 종류의 계약이다(입력 수 · weight · 축 · 섹션 — 표가 정하고 어긴 까닭은 계약이 남긴다).
+        return AnimationPoseNodeRegistry::isSatisfiedBy( *pType, def, inoutNode._name );
     }
 
     bool AnimationGraphAsset::parseRoot( const XMLNode& root, string_view sourceLabel )
@@ -637,12 +639,27 @@ namespace sw
             AnimationGraphPoseNodeParams     poseNode;
             poseNode._type            = def._type;
             poseNode._weight          = def._weightParameter;
+            poseNode._mirrorAxis      = def._mirrorAxis;
             const XMLNode poseNodeXML = nodeXML.appendChild( "pose_node" );
             XMLFields::writeProperties( poseNodeXML, poseNode );
             const XMLNode inputsXML = poseNodeXML.appendChild( "inputs" );
             for ( const hashed_string& input : def._listInput )
             {
                 (void)inputsXML.appendChild( "item", string_view{ input.c_str() } );
+            }
+            if ( def._listSection.empty() == false )
+            {
+                const XMLNode sectionsXML = poseNodeXML.appendChild( "sections" );
+                for ( const AnimationMontageSection& section : def._listSection )
+                {
+                    AnimationGraphMontageSectionParams sectionProperties;
+                    sectionProperties._name        = section._name;
+                    sectionProperties._start       = section._startSeconds;
+                    sectionProperties._next        = section._next;
+                    sectionProperties._branchParam = section._branchParameter;
+                    sectionProperties._branch      = section._branch;
+                    XMLFields::writeProperties( sectionsXML.appendChild( "section" ), sectionProperties );
+                }
             }
         }
     }

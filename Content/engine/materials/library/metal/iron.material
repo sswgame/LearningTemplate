@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0b94291ac355fa6e39996e36eb068eba"?>
 <!-- 외형 라이브러리 프리셋(metal): 무쇠(어둡고 거칠다). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="Iron" _base="engine/materials/library/metal/base.material">
 	<_properties>

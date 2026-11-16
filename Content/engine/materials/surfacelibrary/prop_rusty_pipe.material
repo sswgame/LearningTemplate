@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4521fea4af106c5cee2bd84468644b7c"?>
 <!-- 녹슨 관 — 강철 위 녹 반점과 흘러내린 녹 줄, 약한 먼지. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="RustyPipe" _base="engine/materials/environmentsurface.material">
 	<_properties>

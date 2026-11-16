@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c89e33db1b7b5048880662e6eb8c316d"?>
 <!-- 아이템 외형. ItemDef 는 visual id 만 가리키고 한 외형을 여러 아이템이 나눈다(형상 변경은 이 id 를 바꾼다).
      _base 는 다른 칸만 적는 부모 항목이다(docs/agents/DataInheritance.md) — Part 는 이름으로 합치고 _before · _after · _op 를 쓴다.
      Part kind: Skinned(캐릭터 스켈레톤을 따르는 mesh) · SocketPrefab(prefab 을 socket 에 — 후보는 쉼표, 앞의 것이 있으면 그것) ·

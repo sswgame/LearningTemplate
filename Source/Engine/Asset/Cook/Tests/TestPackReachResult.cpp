@@ -176,6 +176,30 @@ SW_TEST_CASE( PackReachabilityTest, MissingReferenceStopsTheCook )
     SW_EXPECT_FALSE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
 }
 
+/**
+ * @brief [PackReachabilityTest] 도메인 뿌리의 리다이렉트 표(`redirects.xml`)는 아무도 가리키지 않아도 담고, 훑지 않는다 — `from` 의 옛 id 는 빠진 참조가 아니다.
+ *        도메인 뿌리가 아닌 자리의 같은 이름 파일은 런타임이 읽지 않으므로 뿌리가 아니다.
+ */
+SW_TEST_CASE( PackReachabilityTest, RedirectTablesAreRootsAndNotFollowed )
+{
+    AssetReferenceFields params;
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, "" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", "<Scene/>" );
+    Util::addText( files, source, "game/x/redirects.xml", R"(<Redirects><Redirect from="game/x/maps/old.scene.xml" to="game/x/maps/a.scene.xml" /></Redirects>)" );
+    Util::addText( files, source, "common/redirects.xml", R"(<Redirects><Redirect from="common/data/gone.xml" to="common/data/kept.xml" /></Redirects>)" );
+    Util::addText( files, source, "common/data/redirects.xml", "<Redirects/>" );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/redirects.xml" ) ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "common/redirects.xml" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "common/data/redirects.xml" ) ) );
+    SW_EXPECT_EQUAL( 3u, result._rootCount ); // 맵 하나 + 표 둘
+}
+
 /** @brief [PackReachabilityTest] 제외 규칙이 뺀 원본(셰이더 원본 — 쿠킹본은 스테이징)을 가리키는 참조는 빠진 것이 아니고, 담지도 않는다 */
 SW_TEST_CASE( PackReachabilityTest, ExcludedSourceIsNotMissing )
 {

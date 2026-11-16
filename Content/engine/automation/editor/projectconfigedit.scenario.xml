@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a2f189f1c31f9dd397e3369d73bc0f2a"?>
 <!--
   에디터 시나리오 — 프로젝트 설정 창: 커맨드 팔레트로 열면 읽힌 설정과 Config/ 의 나머지 JSON 표로 만든 파일 목록이 보인다.
   EngineConfig 를 고르면 바탕 층(값이 파일에만 있다)이라 모든 키를 쓰는 문서다. _maxFrameDeltaTime 을 0.2 로 바꾸면 페이지가 바뀜 상태가 되고, Revert 를 누르면 돌아온다.

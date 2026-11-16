@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c7c8106646a9038d7e3a86d2e3eea487"?>
 <!--
   StarSkirmish 컴퓨터 상대 — 행동 트리(RTSCommanderAI)가 머문 잎(Skirmish.AITask, key = 플레이어)을 단언한다. 사람(파랑, 0) 대 AI(빨강, 1)로 연다.
   AI 는 0.5 초마다 트리를 한 번 돌며 경제 가지(GatherIdle → TrainWorkers → BuildSupply → BuildProduction → TrainArmy → Attack)를 지난다. 작업이 한 틱에 끝나므로

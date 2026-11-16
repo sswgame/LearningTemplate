@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b051845ad08c8bcec8b3f795584b6cf7"?>
 <!--
   지역 효과 — 유황 분출구와 독가스 살포(maps/zoneshowcase 의 SulfurVent, 프로필 zones/sulfurvent.zone.xml = sulfur.zone.xml + 살포 모듈).
   ① 캐릭터(태그 Character)가 들어오면 중독(GE_SulfurPoison — 4 초, 2 초마다 다시)과 그 자리에 독가스 구름(런타임 영역 프리팹 ZoneGas — 프로필 poisonspread, 수명 6 초 · 초당 0.5 m 퍼짐).

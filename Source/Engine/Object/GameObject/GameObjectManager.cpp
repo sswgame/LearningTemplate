@@ -184,8 +184,9 @@ namespace sw
     }
 
     TickContext::TickContext( GameObject& self, float32 deltaTime )
-        : SceneJobContext{ *self.getManager(), self.getManager()->_structuralChangeBuffer, deltaTime }
+        : SceneJobContext{ *self._pOwnerManager, self._pOwnerManager->_structuralChangeBuffer, deltaTime } // 디스패치 안이라 getMutableManager(틱 단언)를 지나지 않는다
         , _pSelf{ &self }
+        , _pSceneManager{ self._pOwnerManager }
     {
     }
 
@@ -389,7 +390,12 @@ namespace sw
         _pState->_store.notifyNameChanged( pObj, oldName, newName );
     }
 
-    void GameObjectManager::findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject ) const
+    void GameObjectManager::findGameObjectsByBaseName( string_view baseName, vector<GameObject*>& outListGameObject )
+    {
+        _pState->_store.findGameObjectsByBaseName( hashed_string( baseName.data(), static_cast<uint32>( baseName.size() ) ), outListGameObject );
+    }
+
+    void GameObjectManager::findGameObjectsByBaseName( string_view baseName, vector<const GameObject*>& outListGameObject ) const
     {
         _pState->_store.findGameObjectsByBaseName( hashed_string( baseName.data(), static_cast<uint32>( baseName.size() ) ), outListGameObject );
     }
@@ -399,12 +405,22 @@ namespace sw
         return GameObjectStore::computeBaseName( name );
     }
 
-    GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
+    GameObject* GameObjectManager::findGameObjectByName( hashed_string name )
     {
         return _pState->_store.findGameObjectByName( name );
     }
 
-    GameObject* GameObjectManager::findGameObjectByID( uint64 objectID ) const
+    const GameObject* GameObjectManager::findGameObjectByName( hashed_string name ) const
+    {
+        return _pState->_store.findGameObjectByName( name );
+    }
+
+    GameObject* GameObjectManager::findGameObjectByID( uint64 objectID )
+    {
+        return _pState->_store.findGameObjectByID( objectID );
+    }
+
+    const GameObject* GameObjectManager::findGameObjectByID( uint64 objectID ) const
     {
         return _pState->_store.findGameObjectByID( objectID );
     }
@@ -459,12 +475,22 @@ namespace sw
         return _pState->_componentRegistry;
     }
 
-    Component* GameObjectManager::resolveComponent( ComponentHandle handle ) const
+    Component* GameObjectManager::resolveComponent( ComponentHandle handle )
     {
         return _pState->_store.resolveComponent( handle );
     }
 
-    GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle ) const
+    const Component* GameObjectManager::resolveComponent( ComponentHandle handle ) const
+    {
+        return _pState->_store.resolveComponent( handle );
+    }
+
+    GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle )
+    {
+        return _pState->_store.resolveGameObject( handle );
+    }
+
+    const GameObject* GameObjectManager::resolveGameObject( GameObjectHandle handle ) const
     {
         return _pState->_store.resolveGameObject( handle );
     }

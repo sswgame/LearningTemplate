@@ -39,7 +39,7 @@ namespace sw::editor
     struct EditorPlacementQuery
     {
         const IPhysicsQueryScene3D* _pPhysics{ nullptr };
-        const GameObjectManager*    _pManager{ nullptr };
+        GameObjectManager*          _pManager{ nullptr };
         float32                     _maxDistance{ 0.0f }; ///< 이보다 먼 표면은 없는 것으로 본다(지평선 근처의 바닥 평면)
         float32                     _snapStep{ 0.0f };    ///< 0 보다 크면 바닥 두 축을 이 간격에 맞춘다(높이는 표면 그대로)
         uint8                       _b2DMode  : 1;        ///< 2D 는 Z = 0 평면만 본다(스프라이트는 평면에 놓인다)

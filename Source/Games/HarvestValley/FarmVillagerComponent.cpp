@@ -38,10 +38,9 @@ namespace sw
     void FarmVillagerComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        if ( pManager == nullptr || pMesh == nullptr )
+        GameObject*    pOwner = getOwner();
+        MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
             return;
         const FarmVillageGameModeComponent* pGameMode         = findGameMode<FarmVillageGameModeComponent>();
         const bool                          bFollowsAVillager = pGameMode != nullptr && 0 <= _npcIndex && _npcIndex < pGameMode->getVillagerCount();

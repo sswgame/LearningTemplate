@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -848,7 +849,8 @@ namespace sw
         const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
         if ( restoreConditions( text, sourceText, absPath, tags, restoredText ) == false )
             return false;
-        return FileUtil::writeTextFile( absPath, restoredText );
+        // 정체성 머리(`<?asset guid?>`)는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다(고쳐 저장해도 GUID 는 그대로).
+        return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carry( sourceText, restoredText ) );
     }
 
     expected<void> ResourceComposer::checkDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )

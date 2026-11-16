@@ -222,8 +222,8 @@ namespace sw
 
     void ShooterAvatarComponent::sampleGunJerk( bool bMoving )
     {
-        GameObject*                         pOwner      = getOwner();
-        GameObjectManager*                  pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*                   pOwner      = getOwner();
+        const GameObjectManager*            pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const SceneComponent*               pScene      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const CharacterAppearanceComponent* pAppearance = pOwner != nullptr ? pOwner->getComponent<CharacterAppearanceComponent>() : nullptr;
         const GameObject*                   pGun        = ( pAppearance != nullptr && pManager != nullptr ) ? pManager->resolveGameObject( pAppearance->findSlotPartObject( hashed_string( "MainHand" ) ) ) : nullptr;
@@ -246,8 +246,7 @@ namespace sw
     {
         Component::onTick( context );
         GameObject*                   pOwner              = getOwner();
-        GameObjectManager*            pManager            = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*             pObject             = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
+        const GameObject*             pObject             = context.getManager().resolveGameObject( _player );
         const ShooterPlayerComponent* pPlayer             = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
         SkeletalAnimatorComponent*    pAnimator           = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         SceneComponent*               pScene              = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;

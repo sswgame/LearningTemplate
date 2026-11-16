@@ -1,3 +1,4 @@
+<?asset guid="6ac5b2ec9738887209560352474c7c12"?>
 <!--
 	Quaternius Sci-Fi Essentials QuadShell(CC0)의 래그돌 · 맞음 상자 물리 에셋 — 몸(상자 + 총 두 자루 상자의 컴파운드)과 다리 열두 마디(캡슐).
 	셰이프 · 관절 축은 뼈 로컬(엔진 공간: glTF 의 X 를 뒤집은 것, +Y 가 뼈 방향)이고, 값은 원본 glTF(models_raw/quaternius/scifi/enemy_quadshell.gltf)의 묶인 정점에서 계산했다:

@@ -1,3 +1,4 @@
+<?asset guid="5c0a422d5a727ce7aaed19a746802f10"?>
 <!-- Quaternius Universal Base Characters 리그(65 뼈 — UAL 클립과 같은 리그)의 몸 피팅 표. 영역은 본 가중치로 정한다(칠한 정점 그룹이 없다).
      앞 줄이 먼저 맞으므로 손 · 발 같은 끝 영역을 팔 · 다리 앞에 둔다. 겹 · 프로필 · 상호작용은 엔진 기본 표(engine/character/default.fit.xml)와 같다 —
      옷(Outfits 묶음, models_raw/quaternius/outfits)이 덮는 몸 삼각형은 피부 × 천 상호작용(Cut)이 잘라 낸다(전신 몸 위에 옷을 입혀도 몸이 뚫고 나오지 않는다). -->

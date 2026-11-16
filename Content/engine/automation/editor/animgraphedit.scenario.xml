@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a4ef5584eed0962a29ac77709f31875f"?>
 <!--
   에디터 시나리오 — 애니메이션 그래프 전이 편집(N8): 노드를 하나 찾아 넣고, Walk 를 누른 뒤 Ctrl 로 Attack 을 골라 Link Selected 로 잇는다
   (감시 값 Editor.AnimationGraphLinkCount). 오른쪽 인스펙터에서 그 전이를 골라 조건(파라미터 Speed · 비교 >)을 적으면 조건 있는 전이가 하나가 되고

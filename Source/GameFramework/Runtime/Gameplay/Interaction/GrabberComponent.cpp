@@ -114,18 +114,17 @@ namespace sw
             return;
         GameObject*          pOwner   = getOwner();
         const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const bool           bNoPress = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _grabIndex ) == false;
+        const bool           bNoPress = pPawn == nullptr || pPawn->wasButtonTriggered( _grabIndex ) == false;
         if ( bNoPress )
             return;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( GrabberComponent& component )
+        context.deferPostTickOnComponent( *this, []( GrabberComponent& component )
         { (void)component.toggleGrab(); } ); // 집을 것이 없으면 아무 일도 없다
     }
 
     GameObject* GrabberComponent::findNearestGrabbable()
     {
         GameObject*           pOwner   = getOwner();
-        GameObjectManager*    pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*    pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const SceneComponent* pSelf    = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pSelf == nullptr )
             return nullptr;
@@ -184,7 +183,7 @@ namespace sw
     bool GrabberComponent::throwHeld( const float3& velocity )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         GameObject*        pHeld    = pManager != nullptr ? pManager->resolveGameObject( _held ) : nullptr;
         _held                       = GameObjectHandle{};
         if ( pHeld == nullptr )

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="184c7181003847b17de6692909de840f"?>
 <!--
   HarvestValley 에디터 시나리오 — NPC 일정 디버그 창(npc_schedule). 일정 시스템은 이 게임에만 있어 엔진 에디터 체인(engine/automation/editor)에서는 창이 비어 있다.
   ① 플레이를 시작해 일정 시스템을 띄우고 ② 창을 열어 NPC 목록이 찼는지 본다. ③ pierre 를 골라 오늘 타임라인 줄이 나오는지 보고 에디터 UI 를 찍는다.

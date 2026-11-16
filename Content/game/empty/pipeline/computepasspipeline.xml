@@ -1,3 +1,4 @@
+<?asset guid="dad3e5b1d1ea27b312dada505dbcc800"?>
 <!--
 	파이프라인 XML 만으로 컴퓨트 효과를 더한 포워드 파이프라인 — 코드 없이 패스 한 줄과 셰이더 하나다. 시나리오: automation/computepass.
 	고르는 법: `-gv_renderPipeline=game/empty/pipeline/computepasspipeline.xml`.

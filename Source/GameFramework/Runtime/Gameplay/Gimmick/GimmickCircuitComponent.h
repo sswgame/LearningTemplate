@@ -27,6 +27,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/GraphCommentBox.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -34,6 +35,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
 
 namespace sw
 {
@@ -173,9 +175,24 @@ namespace sw
             Enable
         };
 
+        /** @brief 이번 틱에 읽은 충격 센서 몫 하나입니다(틱 뒤에 그만큼 비운다). */
+        struct SensorRead
+        {
+            TComponentHandle<GimmickSensorComponent> _sensor{};
+            GimmickSensorImpulse                     _read{};
+            Binding                                  _binding{ Binding::None };
+        };
+
         void bindNodes();
-        void pullSensors( GameObjectManager& manager );
+        /** @brief 센서 노드에 대상 센서 값을 넣습니다 — 읽기만 한다. 충격(피해 · 사용)은 @p bFirstStep 에서만 읽고 `_listSensorRead` 에 적는다. */
+        void    pullSensors( const GameObjectManager& manager, bool bFirstStep );
+        float32 readSensorImpulse( const GimmickSensorComponent& sensor, Binding binding, bool bFirstStep );
+        /** @brief 지금 스텝에 켜진 펄스 작동기를 `_listPendingPulse` 에 붙입니다. */
+        void recordPulse();
+        /** @brief 지금 상태로 작동기를 바로 적용합니다(틱 밖 — 시작 · 복원 · `stepOnce`). */
         void applyActuators( GameObjectManager& manager );
+        /** @brief 모아 둔 일을 적용합니다: 읽은 충격 몫 비우기, 펄스를 (스텝, 노드) 순서로, 상태 작동기를 마지막 값으로(틱 뒤 · 틱 밖). */
+        void applyPendingActuators( GameObjectManager& manager );
         void applyActuator( GameObjectManager& manager, int32 node, Binding binding );
         void storeState();
         /**
@@ -185,11 +202,12 @@ namespace sw
          */
         void applySavedState( const GimmickCircuitState& state );
         /** @brief 상태를 바꾼 뒤 액추에이터 자세를 다시 적용하고 `_state` 를 맞춥니다. */
-        void           commitRestoredState();
-        GameObject*    resolveTarget( GameObjectManager& manager, int32 node ) const;
-        float32        computeProximity( GameObjectManager& manager, int32 node, const GameObject& target );
-        float32        computeLaserBlocked( GameObjectManager& manager, int32 node, const GameObject& target ) const;
-        static Binding findBinding( const hashed_string& kind );
+        void              commitRestoredState();
+        const GameObject* resolveTarget( const GameObjectManager& manager, int32 node ) const;
+        GameObject*       resolveTarget( GameObjectManager& manager, int32 node ) const;
+        float32           computeProximity( const GameObjectManager& manager, int32 node, const GameObject& target );
+        float32           computeLaserBlocked( const GameObjectManager& manager, int32 node, const GameObject& target ) const;
+        static Binding    findBinding( const hashed_string& kind );
 
     private:
         PROPERTY( Category = "Circuit", DisplayName = "Nodes" )
@@ -208,11 +226,14 @@ namespace sw
         PROPERTY( Category = "Circuit", DisplayName = "Step Time", Min = 0.001, Tooltip = "Fixed simulation step", Units = s )
         float32 _stepTime;
 
-        GimmickCircuit       _circuit;
-        vector<Binding>      _listBinding;
-        vector<TagContainer> _listNodeTag; ///< 노드마다 근접 센서의 태그(`bindNodes` 가 `tag` 매개변수에서 한 번 만든다). 근접 노드가 아니거나 태그가 없으면 비어 있다
-        vector<GameObject*>  _listTagged;  ///< 근접 노드가 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
-        vector<string>       _listError;
-        GimmickCircuitState  _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
+        GimmickCircuit        _circuit;
+        vector<Binding>       _listBinding;
+        vector<TagContainer>  _listNodeTag;      ///< 노드마다 근접 센서의 태그(`bindNodes` 가 `tag` 매개변수에서 한 번 만든다). 근접 노드가 아니거나 태그가 없으면 비어 있다
+        vector<GameObject*>   _listTagged;       ///< 근접 노드가 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
+        vector<hashed_string> _listPulsePort;    ///< 노드마다 펄스 작동기의 출력 이름(피해 틱 · 스폰 · 재생). 상태 작동기 · 센서는 비어 있다
+        vector<int32>         _listPendingPulse; ///< 이번 틱 스텝들이 켠 펄스 노드((스텝, 노드) 순서). 틱 뒤 `applyPendingActuators` 가 돌리고 비운다
+        vector<SensorRead>    _listSensorRead;   ///< 이번 틱에 읽은 충격 센서 몫. 틱 뒤에 그만큼 비운다
+        vector<string>        _listError;
+        GimmickCircuitState   _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
     };
 } // namespace sw

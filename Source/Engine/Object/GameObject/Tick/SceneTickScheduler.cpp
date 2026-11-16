@@ -47,7 +47,10 @@ namespace sw
                 else
                 {
                     if ( pComp->isSubTickActive( item._subTickID ) )
-                        pComp->onSubTick( item._subTickID, deltaTime );
+                    {
+                        TickContext context{ *pComp->getOwner(), deltaTime };
+                        pComp->onSubTick( item._subTickID, context );
+                    }
                 }
             }
 

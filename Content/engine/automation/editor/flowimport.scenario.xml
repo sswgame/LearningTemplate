@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="158dc89458d67d512a0b04d5906748f6"?>
 <!--
   에디터 흐름 시나리오 — 에셋 임포트 → 씬에서 쓰기 → 저장 → 다시 열기.
   임포트는 콘텐츠 브라우저 Import 와 같은 길(EditorAssetFileCommands::importFiles — 복사와 .meta)이고 OS 파일 대화상자만 건너뛴다(asset.import).

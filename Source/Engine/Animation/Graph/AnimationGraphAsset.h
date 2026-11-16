@@ -105,17 +105,48 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum AnimationMirrorAxis
+     * @brief `Mirror` 포즈 노드가 모델 공간에서 뒤집는 축입니다(XML "mirror_axis" — 그 축에 수직인 면으로 비춘다). `None` 은 적지 않음이고 `Mirror` 에는 로드 오류입니다.
+     * @details 언리얼 `UMirrorDataTable::MirrorAxis` 자리다. 축은 스켈레톤의 좌우가 모델 공간의 어느 축인지(임포트 규약)에 달렸다.
+     */
+    ENUM()
+    enum class AnimationMirrorAxis : uint8
+    {
+        None = 0, ///< 적지 않았습니다.
+        X,        ///< YZ 면으로 비춥니다(X 가 좌우인 스켈레톤).
+        Y,        ///< XZ 면으로 비춥니다.
+        Z,        ///< XY 면으로 비춥니다.
+    };
+
+    /**
+     * @struct AnimationMontageSection
+     * @brief `Montage` 포즈 노드의 섹션 하나입니다(XML `<sections><section name="Loop" start="0.4" next="Loop" branch_param="Release" branch="End" />`).
+     * @details 언리얼 AnimMontage 섹션과 같다 — 섹션은 시작 시각만 적고 다음 섹션의 시작(마지막은 입력 클립 끝)에서 끝난다. 끝에 닿으면 `next` 로 간다(비면 그 자리에서 멈춘다 — 노드의 끝).
+     *          분기: `branch_param` 의 불 파라미터가 켜져 있으면 `next` 대신 `branch` 로 간다(언리얼에서 게임 코드가 `Montage_SetNextSection` 으로 바꾸는 자리를 그래프 파라미터로 둔다).
+     */
+    struct AnimationMontageSection
+    {
+        hashed_string _name{};               /**< 섹션 이름입니다. 노드 안에서 유일합니다. */
+        float32       _startSeconds{ 0.0f }; /**< 입력 클립에서의 시작 시각(초)입니다. 앞 섹션보다 커야 합니다. */
+        hashed_string _next{};               /**< 끝에 닿으면 갈 섹션입니다. 비면 멈춥니다. */
+        hashed_string _branchParameter{};    /**< 켜져 있으면 `_branch` 로 가는 불 파라미터입니다(선택). */
+        hashed_string _branch{};             /**< 분기할 섹션입니다(`_branchParameter` 와 함께 적는다). */
+    };
+
+    /**
      * @struct AnimationGraphPoseNodeDef
      * @brief 포즈 노드 상태의 데이터입니다(XML 노드의 "pose_node").
      * @details XML 형식은 `<pose_node type="BlendPoses" weight="WaveWeight"><inputs><item>Idle</item><item>Wave</item></inputs></pose_node>` 이다.
-     *          종류는 포즈 노드 표(`AnimationPoseNodeRegistry`)의 이름이고, 입력 수 · "weight" 요구는 그 종류의 계약이다(`BlendPoses` 는 입력 둘 + weight).
-     *          모르는 종류 · 계약 위반은 로드 오류다(기본값으로 채우지 않는다).
+     *          종류는 포즈 노드 표(`AnimationPoseNodeRegistry`)의 이름이고, 입력 수와 종류가 요구하는 칸(`BlendPoses` 의 weight, `Mirror` 의 mirror_axis, `Montage` 의 sections)은
+     *          그 종류의 계약이다(`AnimationPoseNodeType::_validate`). 모르는 종류 · 계약 위반은 로드 오류다(기본값으로 채우지 않는다).
      */
     struct AnimationGraphPoseNodeDef
     {
-        hashed_string         _type{};          /**< 노드 종류 이름(`AnimationPoseNodeRegistry`)입니다. 비면 포즈 노드 상태가 아닙니다. */
-        vector<hashed_string> _listInput;       /**< 입력 클립 이름입니다(그래프 플레이어의 클립 풀이로 찾습니다). */
-        hashed_string         _weightParameter; /**< 섞기 가중치 파라미터 이름(`AnimationParameterSet`)입니다. */
+        hashed_string                   _type{};                                  /**< 노드 종류 이름(`AnimationPoseNodeRegistry`)입니다. 비면 포즈 노드 상태가 아닙니다. */
+        vector<hashed_string>           _listInput;                               /**< 입력 클립 이름입니다(그래프 플레이어의 클립 풀이로 찾습니다). */
+        hashed_string                   _weightParameter;                         /**< 섞기 가중치 파라미터 이름(`AnimationParameterSet`)입니다. */
+        AnimationMirrorAxis             _mirrorAxis{ AnimationMirrorAxis::None }; /**< `Mirror` 가 뒤집는 축입니다(XML "mirror_axis"). */
+        vector<AnimationMontageSection> _listSection;                             /**< `Montage` 의 섹션입니다(XML `<sections>`, 적은 순서 = 시작 시각 순서). */
     };
 } // namespace sw
 

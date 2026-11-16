@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bf990fc08d3d6bf27e75b7cab50af033"?>
 <!--
   에디터 시나리오 — 스프라이트 클립 창 저장 왕복: 테스트 클립(spriteclipregion/hero.sprite.xml — 프레임 둘)의 실행마다 새 사본(scratch/saveroundtripspriteclip)을 연다.
   고치지 않고 저장(panel.saveDocument) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged).

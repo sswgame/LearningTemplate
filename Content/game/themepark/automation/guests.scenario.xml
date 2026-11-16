@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1a6c65a0e50f1e743583554a102a5de8"?>
 <!--
   ThemeParkTycoon 손님 풀과 자동 건설 — 같은 이름 오브젝트를 번호로 고르는 규칙(target="Name[N]")을 실제 게임에서 단언한다.
   디렉터는 손님 뷰를 최대 손님 수만큼 미리 모두 ParkGuest 로 스폰한다(저장소가 ParkGuest, ParkGuest_2, ... 로 번호를 붙인다). Name[N] 은 만든 순서이므로

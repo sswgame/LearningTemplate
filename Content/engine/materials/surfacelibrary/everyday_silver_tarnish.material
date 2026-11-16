@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c43c917ce21ff2c7dd886dea9bc6be9e"?>
 <!-- 변색한 은 — 오목 · 평평한 곳에 갈흑색 황화막, 닦이는 볼록한 곳은 밝다. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="SilverTarnish" _base="engine/materials/environmentsurface.material">
 	<_properties>

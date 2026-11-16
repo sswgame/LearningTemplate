@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="034110d4b992fc6dca89b0dad025e5e0"?>
 <!--
   StarSkirmish 뷰 동기 — 유닛 뷰(PostUpdate)는 디렉터(PrePhysics)가 끝낸 같은 프레임의 자리를 보여 준다. 뷰가 디렉터보다 앞 그룹에서 돌면 움직이는 유닛마다 한 프레임 뒤처진다.
   컴퓨터 대 컴퓨터로 열어 일꾼이 광물로 움직이는 동안 여러 프레임에서 Skirmish.ViewLagMax(메시와 유닛 자리의 최대 거리)가 0 인지 본다. 그룹 순서(TickGroup)가 지켜지는지 보는 시나리오다.

@@ -230,7 +230,7 @@ namespace sw
     void ServerPoseOverlay::collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose )
     {
         outListPose.clear();
-        manager.forEachGameObject( DevSceneIterationAccess::getKey(), [&outListPose]( GameObject* pObject )
+        manager.forEachGameObject( DevSceneIterationAccess::getKey(), [&outListPose]( const GameObject* pObject )
         {
             const SceneComponent* pRoot = pObject->getName().empty() ? nullptr : pObject->getComponent<SceneComponent>();
             if ( pRoot == nullptr )

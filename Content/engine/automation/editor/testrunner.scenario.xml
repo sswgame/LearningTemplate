@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="04f1754b7c68682f4426e1ab51492a61"?>
 <!--
   에디터 시나리오 — Test Runner 창(panel test_runner)의 Editor Self Tests 탭에서 자체 테스트 하나(hierarchy.tagFilter)를 골라 Run Selected 를 누르면
   그 자리에서 돌고(앱은 그대로) 결과가 PASS 로 찬다(Editor.TestRunnerPassCount 1). 시나리오 · 단위 테스트 탭은 새 프로세스를 띄우므로 여기서 돌리지 않는다.

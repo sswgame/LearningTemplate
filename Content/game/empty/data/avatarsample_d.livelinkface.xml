@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4ada016aec9b63da058849a30a4e34b7"?>
 <!--
   VRoid AvatarSample_D 의 Live Link Face 연결 표 — 아이폰 앱(ARKit 52 채널)의 값이 이 얼굴 리그(avatarsample_d.facial.xml)의 표정으로 간다.
   표정 값 = 채널 × 배율의 합(리그가 0..1 로 자른다). 입 모양 다섯(aa · ih · ou · ee · oh)은 턱 · 입술 채널로, 눈 깜빡임은 눈 채널 그대로, 감정 넷(happy · sad · angry · Surprised)은

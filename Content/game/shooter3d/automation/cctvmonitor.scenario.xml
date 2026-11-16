@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6f7bb06098f242acc88f7d0f8e572be9"?>
 <!--
   Shooter3D CCTV 모니터 — 게임 셰이더(shaders/cctv_monitor.hlsl)로 그린 북쪽 벽 모니터를 가까이서 찍어 골든과 견준다(머티리얼 셰이더 훅의 게임 셰이더).
   자동 플레이를 끄고 엄폐물 사이로 걸어(시작 (0, -16) 에서 +Z 를 본다. x 5.5 로 비켜 Cover_6 을, x 4.2 로 Cover_2 · Cover_3 사이를 지난다)

@@ -55,7 +55,7 @@ namespace sw
             return WesternHorseReaction::Calm;
         const WesternHorseReaction reaction = _pHorse->frighten( amount );
         GameObject*                pOwner   = getOwner();
-        GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( reaction == WesternHorseReaction::Bucked && pManager != nullptr )
             pManager->executeOrDeferPostTickOnComponent( *this, []( WesternHorseMountComponent& component )
             { component.throwRiders(); } );
@@ -65,7 +65,7 @@ namespace sw
     void WesternHorseMountComponent::throwRiders()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 좌석 레지스트리에서 이 말의 좌석만 고른다. 내리기는 레지스트리를 바꾸지 않지만, 내린 탑승자를 먼저 모은 뒤에 내린다.

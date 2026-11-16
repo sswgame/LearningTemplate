@@ -82,7 +82,7 @@ namespace sw
     {
         // 영역이 사라지면 안의 대상은 나간 것이다 — 이탈 할 일(이펙트 지우기 · 끌려감 해제)이 돈다.
         GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr && _bReady == SW_TRUE )
         {
             const ActionSource source{ getSourceName(), pOwner->getHandle() };
@@ -148,7 +148,7 @@ namespace sw
             return;
         }
         _bReady = SW_TRUE;
-        if ( GameObjectManager* pManager = pOwner->getManager() )
+        if ( GameObjectManager* pManager = pOwner->getMutableManager() )
             ZoneTracker::onZoneOpened( *pManager, _compiled );
     }
 

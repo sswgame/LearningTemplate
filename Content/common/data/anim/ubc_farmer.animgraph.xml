@@ -1,3 +1,4 @@
+<?asset guid="2c00238087cb49febe13f8e381298e10"?>
 <!-- 농부(Quaternius 기본 캐릭터 · UAL 클립) — 마을 사람과 같은 이동 섞기(Speed)에 농사 동작 셋을 더한다. 디렉터가 도구 사용을 끝내면 농부 몸(FarmerComponent)이
      트리거(Sow · Water · Harvest)를 걸고, 동작이 끝나면 이동으로 돌아간다. 클립 이름은 애니메이터의 셋(ubc_farmer.animset.xml — UAL1 위에 UAL2 농사 클립)에서 찾는다. 괭이질 클립이 없어 괭이는 씨앗 심기(Sow)를 쓴다. -->
 <AnimationGraphAsset>

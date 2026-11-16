@@ -204,7 +204,7 @@ namespace sw
         // 늘 틱 뒤에 한 번 짓는다 — 같은 배치에서 지형(높이장)과 강 경로 어댑터(`setRiverPathFromSource`)가 아직이거나 뒤따르면 지금 지은 메시는 버려졌다
         // (waterplay: 지형 없이 한 번 · 강 경로로 또 한 번). 그사이 들어온 다시 만들기 요청은 줄 선 이 한 번에 합쳐진다.
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
         {
             rebuildSurface();
@@ -221,7 +221,7 @@ namespace sw
     {
         SceneComponent::onBeginPlay();
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         // 지형 없이 지었는데 지금은 이 자리에 지형이 있을 때만 다시 짓는다(지형이 뒤에 생긴 로드 순서). 열린 물은 다시 짓지 않는다.
         if ( pManager == nullptr || _bBuiltOnTerrain || TerrainComponent::findTerrainAt( *pManager, _surfaceOrigin._x, _surfaceOrigin._z ) == nullptr )
             return;
@@ -262,12 +262,12 @@ namespace sw
         SceneComponent::onTick( context );
         if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
             _waveTime += context.getDeltaTime();
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
+        // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미룬다(줄 선 것과 합치는 규칙은 `queueRebuild` 와 같다).
+        if ( _bOriginDirty.exchange( false, std::memory_order_relaxed ) && _bRebuildQueued == false )
         {
-            // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미룬다.
-            queueRebuild( *pManager );
+            _bRebuildQueued = true;
+            context.deferPostTickOnComponent( *this, []( WaterBodyComponent& water )
+            { water.rebuildSurface(); } );
         }
         // 날씨가 진폭 배율을 바꿨으면 바운드만 고친다(메시는 그대로 — 정점 셰이더가 파도를 민다).
         if ( _batch != nullptr && _boundsWaveScale != _waveAmplitudeScale )
@@ -301,7 +301,7 @@ namespace sw
         _bRiverPathDriven = true;
         // 수면 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다 — 틱 중이면 틱 뒤로 미룬다(onTick 의 원점 갱신과 같은 길).
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
         {
             rebuildSurface();
@@ -377,7 +377,7 @@ namespace sw
             return;
 
         GameObject*               pOwner   = getOwner();
-        GameObjectManager*        pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*        pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const TerrainComponent*   pTerrain = pManager != nullptr ? TerrainComponent::findTerrainAt( *pManager, _surfaceOrigin._x, _surfaceOrigin._z ) : nullptr;
         const TerrainHeightfield* pField   = pTerrain != nullptr ? &pTerrain->getHeightfield() : nullptr;
         _bBuiltOnTerrain                   = pField != nullptr;

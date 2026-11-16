@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a3e2aac2bfb91f62c706309851942409"?>
 <!--
   워프 정렬 · 이동 보정 · 리타깃(maps/pairedwarp) — 값으로 판정한다(골든 없음).
   ① Lead 가 페어드 세션(cheer_warp)을 시작하면 Partner 의 MotionWarpingComponent 에 창 하나가 열리고, LocomotionWarpingComponent 는 재생 속도를 세션에 넘긴다.

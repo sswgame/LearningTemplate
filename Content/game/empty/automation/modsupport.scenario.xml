@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="382ff5072bc9bbd3b7cdd72532710b9f"?>
 <!--
   모드 지원 키트(GF_ModSupport) 시연 — 시연 모드 Test/Mods/demo_lantern 을 켜고 시작한다(`-gv_modList`). 소스 모드라 시작 때 팩으로 묶여 기본 팩 위에 올라간다.
   값으로 판정한다: 켠 모드 하나와 구성 글(mod.status), 모드가 덮어쓴 기본 리소스의 글(소스 구성에서도 낱개 파일 위에 선다), 모드가 더한 새 리소스의 글.

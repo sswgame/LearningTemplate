@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1dbd86192c4917db783fef09097d41dc"?>
 <!--
   에디터 시나리오 — 애니메이션 되감기 창(animation_rewind): 걷는 기사(knight/knight.prefab.xml — 애니메이터 + 리그)를 놓고 플레이한 뒤 Record 를 켜면
   기사의 트랙이 생기고 기록이 1 초 넘게 쌓인다. 타임라인(Ctrl+클릭으로 값 입력)을 0(가장 이른 기록)으로 옮기면 되감는 중이 되고 PIE 가 멈춘다(언리얼 Rewind Debugger 와 같다).

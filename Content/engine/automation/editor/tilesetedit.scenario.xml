@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="af2958472a3f32c8906a5454d181feef"?>
 <!--
   에디터 시나리오 — 타일셋 편집 창(Tile Set Editor): PixelTown 의 실제 타일셋 구성(town.tileset.xml — puny_world 아틀라스 27 × 65, grass · path · water)을 테스트 사본
   (scratch/tilesetedit, <Scratch>)에서 연다. 원본은 건드리지 않는다.

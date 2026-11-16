@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="95ce988bb5dac9fb1bb95e8f77bd35c8"?>
 <!--
   에디터 시나리오 — Sequencer 저장 왕복: 테스트 시퀀스(sequencerkeys/sequencerkeys.seq.xml — 바인딩 하나, 빈 트랜스폼 트랙)의 실행마다 새 사본(scratch/saveroundtripsequencer)을 연다.
   고치지 않고 저장(panel.saveDocument) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged).

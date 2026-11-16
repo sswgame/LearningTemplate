@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0fd64a90a8229f71035eeb8a01c20ca6"?>
 <!-- 외형 라이브러리 프리셋(glass): 간유리(흐린 굴절). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="GlassFrosted" _base="engine/materials/library/glass/base.material">
 	<_properties>

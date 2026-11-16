@@ -118,8 +118,7 @@ namespace sw
         Component::onTick( context );
         GameObject*           pVehicle = getOwner();
         const SceneComponent* pRoot    = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
-        GameObjectManager*    pManager = pVehicle != nullptr ? pVehicle->getManager() : nullptr;
-        if ( isFree() || pRoot == nullptr || pManager == nullptr || context.getDeltaTime() <= 0.0f )
+        if ( isFree() || pRoot == nullptr || context.getDeltaTime() <= 0.0f )
         {
             _rideSampleCount  = 0;
             _rideAcceleration = float3{};
@@ -194,7 +193,7 @@ namespace sw
     {
         using Internal              = VehicleSeatComponentInternal;
         GameObject*        pVehicle = getOwner();
-        GameObjectManager* pManager = pVehicle != nullptr ? pVehicle->getManager() : nullptr;
+        GameObjectManager* pManager = pVehicle != nullptr ? pVehicle->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         if ( _rideFeel._speedSoundParameter.empty() == false )

@@ -933,7 +933,6 @@ namespace sw
                             { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) +
                                   CodeGeneratorInternal::emitRetiredTypeLines( typeInfo._listRemovedType ) },
-                            { templatekey::kFixedCodec, _fixedCodec.getMemberText( typeIndex ) },
         } );
     }
 

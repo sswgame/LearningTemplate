@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9c01afe3c83ced813d5406130766ff69"?>
 <!--
   Velmora 입력 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄: base · move) 위에 얹힌다. 디렉터는 키를 묻지 않고 액션 이름만 묻는다. 걷기는 공통 `Move` 축이다.
 -->

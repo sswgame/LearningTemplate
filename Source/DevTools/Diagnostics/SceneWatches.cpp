@@ -37,7 +37,7 @@ namespace sw
             if ( pManager == nullptr )
                 return false;
             uint32 count = 0;
-            pManager->forEachGameObject( DevSceneIterationAccess::getKey(), [&count]( GameObject* /*pObject*/ )
+            pManager->forEachGameObject( DevSceneIterationAccess::getKey(), [&count]( const GameObject* /*pObject*/ )
             { ++count; } );
             outValue = static_cast<float64>( count );
             return true;
@@ -82,7 +82,7 @@ namespace sw
             if ( pManager == nullptr )
                 return false;
             uint32 sum = 0;
-            pManager->forEachGameObject( DevSceneIterationAccess::getKey(), [&sum]( GameObject* pObject )
+            pManager->forEachGameObject( DevSceneIterationAccess::getKey(), [&sum]( const GameObject* pObject )
             {
                 const SceneComponent* pScene   = pObject->getPrimarySceneComponent();
                 const float3          position = pScene != nullptr ? pScene->getWorldPosition() : float3{};

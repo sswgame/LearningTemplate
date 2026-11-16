@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/Reflection.h"
 
@@ -235,6 +236,14 @@ namespace sw
         return bAny;
     }
 
+    GameObjectManager* GameObject::getMutableManager() const
+    {
+        // 틱 본문은 쓰기 가능한 매니저를 꺼내지 않는다 — 읽기는 `TickContext::getManager`(const), 쓰기는 틱 뒤 작업 · const 매니저의 명령 버퍼.
+        // 언리얼 Mass 가 처리기 실행 컨텍스트 밖의 쓰기 접근을 검사하는(FMassExecutionContext 의 접근 요구 검증) 자리다 — 형식(const)이 막지 못하는 우회(멤버에 둔 오브젝트 포인터)를 실행에서 잡는다.
+        SW_ASSERT( StructuralChangeBuffer::getTickingObject() == nullptr );
+        return _pOwnerManager;
+    }
+
     bool GameObject::attachToParent( GameObject* pParent, AttachRule rule )
     {
         if ( pParent == nullptr )
@@ -244,8 +253,9 @@ namespace sw
 
         // 미루기 **전에** 거른다. 미룬 일은 자기 매니저로 부모를 다시 찾으므로 다른 매니저의 부모는 그때 조용히 사라지고, 순환은 그때야
         // 실패하는데 이 호출은 이미 true 를 반환한 뒤다. 붙이는 쪽의 나머지 규칙은 `SceneComponent::canAttachTo` 가 본다.
-        GameObjectManager* pManager = getManager();
-        if ( pParent->getManager() != pManager || pParent->isDescendantOf( this ) )
+        // 틱 중에도 붙는다(계층 변경 큐) — 매니저는 멤버로 바로 잡는다(`getMutableManager` 의 틱 단언은 틱 본문용이다).
+        GameObjectManager* pManager = _pOwnerManager;
+        if ( pParent->_pOwnerManager != pManager || pParent->isDescendantOf( this ) )
         {
             SW_LOG_WARNING_ID( "GameObject.AttachToParentCannotBecomeParent", "attachToParent: '%#' cannot become the parent of '%#' (another scene, or its own descendant)", pParent->getName().c_str(),
                                getName().c_str() );

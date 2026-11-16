@@ -1,3 +1,4 @@
+<?asset guid="32449a3941f2568d5a842067fcba3de2"?>
 <!-- 자동 플레이(P · 자동 플레이 스위치)의 짓기 순서표 — 한 줄이 한 단계이고 적힌 순서로 실행한다(NileCityPlanner::reset · advance).
      Road 는 from → to 의 곧은 길(다 깔 돈이 될 때까지 기다린다), Building 은 from(과 to 가 있으면 그 사이 모든 칸, 행 우선)의 건물이다.
      칸은 "x,y" 이고 x 는 배치의 이름일 수 있다(road = 남북 도로, farm = 농장 왼쪽 — 디렉터의 Auto Plan PROPERTY).

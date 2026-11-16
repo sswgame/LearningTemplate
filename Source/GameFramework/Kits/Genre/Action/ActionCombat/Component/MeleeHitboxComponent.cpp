@@ -104,8 +104,8 @@ namespace sw
 
     void MeleeHitboxComponent::requestSweep()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( MeleeHitboxComponent& self, GameObjectManager& manager )

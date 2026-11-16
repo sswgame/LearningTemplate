@@ -1,3 +1,4 @@
+<?asset guid="2a0c823c357b0be809122fa231742f96"?>
 <Scene formatVersion="2" name="MatGraph_base">
 	<!-- 시나리오 automation/matgraph_parameter 의 무대 — 그래프가 낸 베이스 머티리얼을 입은 구. matgraph_red 는 그 머티리얼의 값 변형만 다르다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

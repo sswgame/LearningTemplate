@@ -5,7 +5,7 @@
   py -3 -m Scripts move-asset game/empty/materials game/empty/surfaces
 
 경로는 리소스 id(`Content/` 뒤 — 앞에 `Content/` 를 붙여도 된다)다. 하는 일:
-  1. `git mv`
+  1. `git mv` — 원본 곁의 정체성 서술(`<파일>.meta`)도 함께 옮기고 그 안의 원본 이름을 새 이름으로 쓴다(GUID 는 그대로 — 옮겨도 정체성은 같다).
   2. 참조 파일(Content 의 글 에셋 · 테스트 CMake)에서 경로 칸(`Config/Dev/AssetReferenceFields.json` — 커밋 전 검사 · `App --check-asset-refs` ·
      에디터 이름 바꾸기와 같은 목록)의 값만 새 경로로. 폴더면 그 아래 경로 전부, 원본(`models_raw/x.glb`)이면 그 임포트 산출물 경로(`models/x…`)도.
      칸 밖의 글(주석 · 문서 · 출처 표)은 고치지 않는다 — 끝에 남은 옛 경로를 찍는다.
@@ -24,6 +24,7 @@ from pathlib import Path
 from common.exit_code import ExitCode
 from common.git import run_git
 from common.paths import get_project_root
+from lint.asset_identity import META_EXTENSION, make_meta_text, parse_meta
 from lint.asset_references import (FieldConfig, add_redirects, check_working_tree, extract_references, is_referrer, CONTENT_FOLDER, REDIRECT_FILE_NAME, list_index_files, load_config,
                                   make_redirect_table_id)
 
@@ -99,7 +100,22 @@ def list_moved_files(root: Path, old_id: str, new_id: str, is_folder: bool) -> l
         return [(old_id, new_id)]
     prefix = f"{CONTENT_FOLDER}/{new_id}/"
     return [(old_id + "/" + path[len(prefix):], path[len(CONTENT_FOLDER) + 1:]) for path in list_index_files(root)
-            if path.startswith(prefix) and not path.endswith("/" + REDIRECT_FILE_NAME)]
+            if path.startswith(prefix) and not path.endswith("/" + REDIRECT_FILE_NAME) and not path.endswith(META_EXTENSION)]   # .meta 는 원본과 함께 간다 — 따로 가리킬 것이 아니다
+
+
+def move_sidecar(root: Path, old_path: str, new_path: str) -> None:
+    """원본 곁의 `.meta` 를 원본과 함께 옮기고 원본 이름 칸을 새 이름으로 쓴다(GUID 는 그대로)."""
+    old_meta, new_meta = old_path + META_EXTENSION, new_path + META_EXTENSION
+    if not (root / old_meta).is_file():
+        return
+    meta = parse_meta((root / old_meta).read_text(encoding="utf-8"))
+    if meta is None:
+        raise RuntimeError(f"{old_meta} 를 읽지 못했다 — 손으로 고친 뒤 다시 옮긴다")
+    git_move(root, old_meta, new_meta)
+    (root / new_meta).write_bytes(make_meta_text(new_path, meta[0]).encode("utf-8"))
+    result = run_git(["add", new_meta], cwd=root)
+    if not result.succeeded:
+        raise RuntimeError(f"git add {new_meta} 실패: {result.stderr.strip()}")
 
 
 def write_redirects(root: Path, list_move: list[tuple[str, str]]) -> list[str]:
@@ -150,14 +166,16 @@ def main(argv: list[str]) -> int:
     if not (root / old_path).exists():
         print(f"[move-asset] '{old_path}' 가 없습니다")
         return ExitCode.CHECK_INVALID
-    if (root / new_path).exists():
-        print(f"[move-asset] '{new_path}' 가 이미 있습니다 — 아무것도 옮기지 않았습니다")
+    if (root / new_path).exists() or (root / (new_path + META_EXTENSION)).exists():
+        print(f"[move-asset] '{new_path}'(또는 그 .meta)가 이미 있습니다 — 아무것도 옮기지 않았습니다")
         return ExitCode.CHECK_INVALID
     is_folder = (root / old_path).is_dir()
     list_rule = make_rules(old_id, new_id, is_folder, config)
 
     if not args.dry_run:
         git_move(root, old_path, new_path)
+        if not is_folder:
+            move_sidecar(root, old_path, new_path)   # 폴더는 안의 .meta 가 함께 간다
     fixed_count = 0
     for relative_path in list_index_files(root):
         if not is_referrer(relative_path, config) or not (root / relative_path).is_file():

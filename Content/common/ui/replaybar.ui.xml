@@ -1,3 +1,4 @@
+<?asset guid="46c119923c40cef1d78d14185507d7c8"?>
 <UIDocument _schemaVersion="1">
 	<!--
 		리플레이 막대 — IntentReplayBar 가 연다(IntentNetworkWiring 3절). 이름 Scrub(슬라이더, 값 = 재생 틱) · TimeText(현재 / 가장 먼 시각) · PlayPauseLabel 은 코드가 맞추고,

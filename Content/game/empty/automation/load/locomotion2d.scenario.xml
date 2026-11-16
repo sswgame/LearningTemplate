@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="01d3446f610f52b7e4cded02928d5cd6"?>
 <!--
   부하 시나리오 — 2D 이동 블렌드 스페이스(9 표본, common/data/anim/ubc_locomotion2d.animgraph.xml)를 쓰는 Quaternius 마을 사람 400 명(20 열 격자).
   인원은 스킨 변형 풀(GPUMeshMorphPool::kMaxPoolVertices 4M 정점 = 결과 192MB, 언리얼 r.SkinCache.SceneMemoryLimitInMB 기본 128MB 보다 크다)에 맞춘다 — 자리 잡은 뒤는 LOD 로 500 명이 1M 정점(24%)이지만,

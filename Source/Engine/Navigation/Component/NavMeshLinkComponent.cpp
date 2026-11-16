@@ -75,7 +75,7 @@ namespace sw
     void NavMeshLinkComponent::invalidateLinkArea()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         SceneNavigation& navigation = pManager->getSubsystem<SceneNavigation>();

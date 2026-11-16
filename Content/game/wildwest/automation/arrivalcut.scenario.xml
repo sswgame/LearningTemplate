@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fe067551baf9dd5e223320fc039e4a86"?>
 <!--
   WildWest 마을 도착 컷 — 기수가 마을 앞(TownArrival, X 40, 반지름 2.5)에 닿으면 시퀀스 트리거(SequenceTriggerComponent — 거리로 재므로 말 탄 기수도 닿는다)가
   ArrivalDirector 의 시퀀스를 한 번 튼다. 컷은 CinematicCameraComponent 가 받아 화면을 컷 카메라로 바꾸고, 끝나면 게임 카메라(디렉터)로 끊어 돌아온다.

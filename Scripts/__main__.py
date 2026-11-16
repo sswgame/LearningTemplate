@@ -63,6 +63,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("telemetry-local", "net.telemetry_local_run", "텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기와 게임 두 번으로 동의한 스풀 파일 · 보낼 줄의 크래시 묶음이 HTTP 로 오는지 본다(run)"),
     Subcommand("move-source", "dev.move_source:main_move", "소스 파일 · 폴더를 옮기고 include · CMake · 문서 참조를 고친다(Source 기준 old=new)"),
     Subcommand("move-asset", "dev.move_asset", "에셋 파일 · 폴더를 옮기고 경로 칸(Config/Dev/AssetReferenceFields.json)의 참조를 고친다(리소스 id old new)"),
+    Subcommand("asset-ids", "lint.asset_identity", "에셋 정체성(GUID — 우리 형식 글의 머리 <?asset guid?> · 원본 곁 .meta) 검사, --fix 로 없는 GUID 만들기 · 짝 잃은 .meta 다시 붙이기 · 복사본 새 GUID"),
     Subcommand("asset-refs", "lint.asset_references", "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"),
     Subcommand("rename-symbol", "dev.move_source:main_rename", "C++ 이름을 낱말 경계로 바꾼다(Old=New, 새 이름이 이미 쓰이면 멈춘다)"),
     Subcommand("android-apk", "package.android_apk", "Android-Shipping 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, aapt2 · zipalign · apksigner — Tools/Android)"),

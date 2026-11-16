@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2dc6eb06db5b1b0c68fb73ca649d4e98"?>
 <!--
   Shooter3D 효과 풀 — 탄착 구 · 탄도선은 `PrefabPool` 에서 꺼내 쓴다. 판을 열 때 미리 만든 수(씬의 _effectPoolSize 32 + _tracerPoolSize 24)에서 쏘는 내내 늘지 않아야 한다.
   자동 플레이가 쏘게 두고 값만 본다.

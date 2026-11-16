@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="dc7056d02c1ff4b5f549fafd4bf45143"?>
 <!--
   지형 표면 변형 — 지형 머티리얼(terrain.hlsl)이 표면 변형 층(엔진 텍스처 칸 SurfaceDeform · 패스 상수 g_SurfaceDeformParams)을 정점 · 그림자 · 법선에 받는다.
   무대 maps/terraindeform: 평평한 지형 앞에 레이어 Stamp 의 깔때기(Hold, 지름 3 m · 깊이 0.14 m · 홈 셋, 돌지 않는다).

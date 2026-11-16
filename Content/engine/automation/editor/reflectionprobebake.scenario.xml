@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f094b8374890ec812af5cb344d5cc5be"?>
 <!--
   에디터 시나리오 — lighting.bakeReflectionProbes 커맨드(Build > Bake Reflection Probes, 결정 기록 5-5 P4). lightprobebake 의 반사 프로브 짝이다.
   반사 프로브가 없는 씬(기본 에디터 씬)에서 커맨드가 돌고("Nothing to bake" 알림) 끝난 베이크 횟수가 1 이 되며 베이크가 돌고 있지 않고 구운 프로브가 0 인지 본다.

@@ -35,10 +35,10 @@ namespace sw
 
     bool PushBlockComponent::push( const float3& direction )
     {
-        GameObject*        pOwner      = getOwner();
-        GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SceneComponent*    pScene      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool         bCannotMove = pManager == nullptr || pScene == nullptr || isMoving();
+        GameObject*              pOwner      = getOwner();
+        const GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr; // 틱(stepOnce)에서도 부른다 — 광선 읽기만 한다
+        SceneComponent*          pScene      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const bool               bCannotMove = pManager == nullptr || pScene == nullptr || isMoving();
         if ( bCannotMove )
             return false;
         // 가장 가까운 축 하나로 맞춘다. 3D 는 X/Z, 2D 는 X/Y 축을 쓴다.
@@ -76,9 +76,9 @@ namespace sw
 
     void PushBlockComponent::stepOnce()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        SceneComponent*          pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;
         // 상호작용(Push)을 끝낸 쪽이 있으면 그 쪽에서 블록 방향으로 민다.

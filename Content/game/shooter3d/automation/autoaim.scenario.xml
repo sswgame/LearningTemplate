@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="413b01d782f54dada472c2dfc884156c"?>
 <!--
   Shooter3D 자동 조준 AI — 판단 상태(AI.State: Patrol 적 없음 · Aim 겨눔 · Fire 쏨)와 블랙보드(TargetDistance)를 단언한다.
   자동 플레이를 켜면 디렉터가 ShooterAutoPlay 오브젝트의 자동 조준 조종자를 플레이어 폰에 빙의시킨다. 첫 적은 시작 즈음 이미 일어나 있어 바로 겨눈다.

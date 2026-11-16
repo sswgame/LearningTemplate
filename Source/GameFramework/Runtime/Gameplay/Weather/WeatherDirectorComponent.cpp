@@ -42,7 +42,7 @@ namespace sw
         SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, settings );
         if ( pState != nullptr )
         {
-            if ( GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr; pManager != nullptr )
+            if ( GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr; pManager != nullptr )
                 (void)DecalRainWashSystem::findOrCreate( *pManager ); // 강수를 가진 쪽이 비 씻김도 붙인다 — 데칼(엔진)은 날씨를 모른다
         }
         if ( pState == nullptr || pState->isFreshGame() == false || _startWeather.empty() )
@@ -54,8 +54,8 @@ namespace sw
 
     void WeatherDirectorComponent::onEndPlay()
     {
-        if ( GameObject* const pOwner = getOwner(); pOwner != nullptr && pOwner->getManager() != nullptr )
-            DecalRainWashSystem::release( *pOwner->getManager() );
+        if ( GameObject* const pOwner = getOwner(); pOwner != nullptr && pOwner->getMutableManager() != nullptr )
+            DecalRainWashSystem::release( *pOwner->getMutableManager() );
         Component::onEndPlay();
     }
 } // namespace sw

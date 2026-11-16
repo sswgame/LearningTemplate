@@ -234,7 +234,6 @@ namespace sw
         inline constexpr const utf8* kInvalidValue = "InvalidValue";
         inline constexpr const utf8* kHasCount     = "HasCount";
         inline constexpr const utf8* kCountValue   = "CountValue";
-        inline constexpr const utf8* kFixedCodec   = "FixedCodec";
     } // namespace templatekey
 
     // ------------------------------------------------------------------------------

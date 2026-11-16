@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9a883c7c9b1ec35dfa5ce3e9581df3cf"?>
 <!--
   에디터 시나리오 — 콘텐츠 브라우저의 폴더 · 묶음 옮기기(S3). 테스트 폴더 engine/automation/editor/assetmove 를 실행마다 scratch/assetmove 로 복사해 사본에만 쓴다.
   pack/ 에는 probe.material 과 detail/probe_detail.material 이 있고 assetmove.scene.xml 이 둘을 쓴다. target/ 에는 keep.material 이 있다.

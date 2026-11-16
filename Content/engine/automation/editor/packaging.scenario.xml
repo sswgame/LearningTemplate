@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fb381147df0e849609998196a367ae46"?>
 <!--
   에디터 시나리오 — 패키징 창(T4): Skip build 와 Skip cook 을 켜고 Package 를 누르면 Scripts/dev/MakePackage.py 가 새 프로세스로 돌아
   이 에디터의 Bin 을 Saved/Packages/<게임>-Client 에 스테이징하고 검사한다(빌드 · 쿠킹이 없어 수 초). 끝나면 Editor.PackagingState 가 2(성공)다.

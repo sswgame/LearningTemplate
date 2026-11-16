@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="61a95e3c498c467e0c22926366797aa1"?>
 <!-- 외형 라이브러리 갈래 바탕: 비단 · 공단 — 비등방 GGX(실 방향 = UV u) 와 약한 시엔. -->
 <MaterialDef formatVersion="0" name="AppearanceSilk" _base="engine/materials/library/appearance.material">
 	<_properties>

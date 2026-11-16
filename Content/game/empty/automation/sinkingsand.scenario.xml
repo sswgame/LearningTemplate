@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fe650f437cbb232bc1e4d32ce1f6be65"?>
 <!--
   모래 함몰 — 무대 maps/surfaceinteraction 의 Quicksand(가운데 8,0 · 반 크기 1.5 × 2.5)는 지역 볼륨(ZoneVolumeComponent)이고 프로필은 zones/sand.zone.xml 이다:
   0.5 초마다 가라앉음 스택(GE_Sink — 0.1 m · 걷는 속도 −10%, 아홉 번까지), SinkDepth ≥ 0.85 에 2 초면 삼켜짐(GE_Engulfed — 움직이지 못한다), 나가면 이 출처의 이펙트를 지운다.

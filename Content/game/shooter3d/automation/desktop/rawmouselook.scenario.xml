@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fe5567b6bbbe91e0664814b1089ae9f5"?>
 <!--
   원시 마우스 시선(감사 P-1) — 1인칭 카메라가 커서를 잠그면 Win32 원시 입력(WM_INPUT)을 등록하고, 잠긴 동안 시선은 원시 델타로 돈다.
   SendInput 으로 상대 마우스 이동을 OS 입력 큐에 넣어(실제 마우스와 같은 길 — 창 메시지가 아니다) 원시 보고가 왔는지(Input.RawMouseEvents)와

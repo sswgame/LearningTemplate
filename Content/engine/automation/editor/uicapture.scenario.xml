@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="61c5241ba6cec78aa2dbbc81e5e56ea4"?>
 <!--
   에디터 시나리오 — 에디터 UI 캡처(`CaptureEditorUI`)가 네 백엔드에서 에디터 창 전체(패널 + 플로팅 창)를 PNG 로 쓰고,
   빠진 텍스처 · 디버그 색(마젠타)이 UI 에 섞이지 않는지 본다. 테마 토큰 벌 셋(다크 · 라이트 · 고대비)을 차례로 찍는다.

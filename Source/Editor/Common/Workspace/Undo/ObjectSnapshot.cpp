@@ -91,7 +91,7 @@ namespace sw
             /** @brief @p obj 가 사는 씬의 키입니다(활성 · 로드된 씬이면 0). */
             static uint32 computeSceneKey( const SceneManager& sceneManager, const GameObject& obj )
             {
-                return sceneManager.getPreviewSceneKeyOf( obj.getManager() );
+                return sceneManager.getPreviewSceneKeyOf( obj.getMutableManager() );
             }
 
             /**
@@ -208,7 +208,7 @@ namespace sw
         const Scene*         pScene   = ObjectSnapshotInternal::findActiveTarget( &sceneManager, sceneKey )._pScene;
         const string         prefabPath{ ( pScene != nullptr ) ? pScene->getEntityPrefabPath( objectID ) : string_view{} };
         // 중첩 프리팹 부품 표시는 값으로 든다 — 레지스트리는 놓인 오브젝트의 표시를 거둔다.
-        const PrefabNestedPart* pFoundPart  = ( pObj->getManager() != nullptr ) ? pObj->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( objectID ) : nullptr;
+        const PrefabNestedPart* pFoundPart  = ( pObj->getMutableManager() != nullptr ) ? pObj->getMutableManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( objectID ) : nullptr;
         const bool              bNestedPart = pFoundPart != nullptr;
         const PrefabNestedPart  nestedPart  = bNestedPart ? *pFoundPart : PrefabNestedPart{};
 

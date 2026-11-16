@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6c6c60a972e75c56d5eb2520d613f0ff"?>
 <!--
   에디터 시나리오 — 미리보기 창 공통 재생 막대(EditorPreviewPanel): 클립 미리보기에 몸을 놓고(clippreview 와 같은 길)
   멈춤 → 시간 배율 0(Editor.PreviewTimeScale) → 문지르기(끌면 멈춘 채) → 다시 재생(1) → 바닥 끄기(Editor.PreviewFloorShown)

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
@@ -220,6 +221,38 @@ SW_TEST_CASE( GimmickCircuitTest, DefinitionOrderDoesNotMatter )
     circuit.setSensorValue( circuit.findNode( hashed_string( "s" ) ).value(), 1.0f );
     circuit.step();
     SW_EXPECT_EQUAL( 1, circuit.getIntState( circuit.findNode( hashed_string( "c" ) ).value(), 0 ) );
+}
+
+// 한 틱의 여러 스텝이 낸 펄스를 모으면 (스텝, 노드) 순서다 — 회로 컴포넌트가 틱 뒤에 한 번에 돌려도 스텝 사이 순서가 노드별로 묶이지 않는다.
+SW_TEST_CASE( GimmickCircuitTest, RaisedOutputsKeepStepOrderAcrossSteps )
+{
+    GimmickNodeRegistry registry;
+    GimmickTestKinds::registerAll( registry );
+    GimmickCircuitDef def;
+    (void)def.addNode( hashed_string( "a" ), hashed_string( "Sensor" ) );
+    (void)def.addNode( hashed_string( "b" ), hashed_string( "Sensor" ) );
+    (void)def.addNode( hashed_string( "g" ), hashed_string( "And" ) ); // 펄스 목록에 이름이 없는 노드는 건너뛴다
+    GimmickCircuit circuit;
+    vector<string> listError;
+    SW_REQUIRE_TRUE( circuit.populate( def, registry, listError ) );
+    const int32           a = circuit.findNode( hashed_string( "a" ) ).value();
+    const int32           b = circuit.findNode( hashed_string( "b" ) ).value();
+    vector<hashed_string> listPort( static_cast<size_t>( circuit.getNodeCount() ) );
+    listPort[static_cast<size_t>( a )] = hashed_string( "Out" );
+    listPort[static_cast<size_t>( b )] = hashed_string( "Out" );
+
+    vector<int32> listRaised;
+    const float32 arrA[] = { 0.0f, 1.0f, 1.0f };
+    const float32 arrB[] = { 1.0f, 1.0f, 0.0f };
+    for ( size_t stepIndex = 0; stepIndex < 3; ++stepIndex )
+    {
+        circuit.setSensorValue( a, arrA[stepIndex] );
+        circuit.setSensorValue( b, arrB[stepIndex] );
+        circuit.step();
+        circuit.appendRaisedOutputs( listPort, listRaised );
+    }
+    const vector<int32> listExpected = { b, MathUtil::min( a, b ), MathUtil::max( a, b ), a };
+    SW_EXPECT_TRUE( listRaised == listExpected );
 }
 
 SW_TEST_CASE( GimmickCircuitTest, InvertedWireFlipsTheSignal )

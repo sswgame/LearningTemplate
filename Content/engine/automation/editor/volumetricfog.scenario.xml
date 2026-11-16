@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="92d786384d1985ca84ccd37f6b1654a4"?>
 <!--
   에디터 시나리오 — 볼륨 안개 창(Volumetric Fog): 볼륨 안개 무대(game/empty/maps/fogvolumetric.scene.xml)를 열면 창이 주 화면의 볼륨 상태를 "켜짐" 으로 보인다(Render.FogVolumeState = 6).
   비교(왼쪽 반 볼륨 · 오른쪽 반 평범한 안개) · 산란 단면 · 투과율 단면을 차례로 켜 그림을 찍고(volumetricfog/*.png — 씬 뷰가 바뀌는지 눈으로 본다), 끝에서 보통 그림으로 돌린다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d8c1ba8c361e8915fb0ae9318af3fe56"?>
 <!--
   WildWest 자동 저장 볼륨 — 마을 문(TownGate, X 36)은 말 탄 기수도 닿도록 거리로 잰다(ActivatorVolumeComponent). 기수가 들어오면 체크포인트를 넘기고, 관리자(gamesettings 의 autosaveSettings)가 슬롯에 저장을 끝낸다.
   시작 자리에서는 발동하지 않는다. 슬롯은 사용자 폴더의 wildwest/ 그룹이다 — 이번 실행의 저장 수만 본다.

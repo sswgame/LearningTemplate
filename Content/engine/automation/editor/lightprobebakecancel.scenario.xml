@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="13a5a8fe0b84073dfb0d56ba7cef4c63"?>
 <!--
   에디터 시나리오 — 라이트 프로브 나눠 굽기와 취소(결정 기록 5-5 P6).
   큰 볼륨이 든 픽스처 씬(engine/automation/editor/lightprobebake/bake_cancel.scene.xml)을 열고 lighting.bakeProbes 를 부르면 굽기가 에디터 프레임에 나눠 돈다

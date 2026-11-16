@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="74cdde5bcea3a7473ee855fc82005490"?>
 <!--
   에디터 시나리오 — 입력 맵 패널의 바인딩 줄: HoldThreshold 를 고르면 시간 칸이, MultiTap 을 고르면 횟수(taps) 칸이 같은 바인딩 줄 아래에 나온다.
   패널 기본 크기(960 x 640)에서 콤보 · 시간 · Negate 가 잘리지 않는 것은 캡처로 확인했다(후보 EditorCaptureFollowUps). 여기서는 트리거가 실제로 바뀌는 것만 본다.

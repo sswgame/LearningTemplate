@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ca8764b335a9b191a024c8df1fdb3ff9"?>
 <!--
   절단(DismembermentComponent) — 치명타가 잘라 낼 수 있는 영역의 뼈에 들면 그 영역이 몸에서 빠지고, 조각이 자기 강체로 떨어지며, 표면 상태에 피가 오른다.
   ① 잘라 낼 수 없는 뼈(hips — Torso 는 목록에 없다)는 자르지 않는다. 이때 치명타는 래그돌로 넘긴다. ② 왼팔 뼈 치명타 → 영역 하나가 잘리고 Skeleton_Arm_L 오브젝트가 생겨 바닥까지 떨어진다.

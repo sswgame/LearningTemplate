@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="029e99364e4ee6d12ee242f6ff0b16df"?>
 <!-- 용암 — 식은 껍질(보로노이 판) 사이로 흐르는 뜨거운 틈이 빛난다. 부모(gimmicksurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="Lava" _base="engine/materials/gimmicksurface.material">
 	<_properties>

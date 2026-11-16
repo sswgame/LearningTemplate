@@ -119,6 +119,7 @@ namespace sw
         if ( pView == nullptr )
         {
             pView = manager.createGameObject( hashed_string( "NavMeshDebugView" ) );
+            pView->setTransient( true ); // 세운 쪽이 다시 세우는 파생 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
             pView->addComponent<NavMeshModifierComponent>()->setIgnoreFromBuild( true );
             (void)pView->addComponent<MeshComponent>();
             _viewObject = pView->getHandle();

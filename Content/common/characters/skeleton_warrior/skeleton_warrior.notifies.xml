@@ -1,3 +1,4 @@
+<?asset guid="41d588160a20a771c2a97324cfa7aca3"?>
 <!-- KayKit 스켈레톤 전사의 알림 표 — 클립의 알림 이름(곁 데이터 models_raw/kaykit/skeleton_warrior.clips.json) → 처리기 + 인자.
      AnimationNotifyComponent 가 읽는다. 처리기 이름 · 인자는 Engine/Animation/Notify/AnimationNotifyTable.h 의 처리기 표. -->
 <AnimationNotifies>

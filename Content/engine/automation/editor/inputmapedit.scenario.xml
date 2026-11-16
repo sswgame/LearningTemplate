@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="33ea1033753c40e3b03b14f344323587"?>
 <!--
   에디터 시나리오 — Input Map Editor 의 Mappings 탭(에디터 보강 "그 밖에": 데이터 편집기 정리). 왼쪽 목록을 Confirm 으로 걸러 고르면
   오른쪽에 바인딩 둘(Enter · Space)이 보이고(Editor.InputMapBindingCount), 0 번 바인딩의 발화 규칙을 HoldThreshold(4)로 바꾸면

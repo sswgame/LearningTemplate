@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d2bba832182fed80ac12b986ad34a18a"?>
 <!--
   에디터 시나리오 — 씬 뷰 툴바의 시각화 체크박스를 누르면 그 시각화만 바뀐다(확장 지점 C2: 켬/끔은 등록 순서의 비트가 아니라 id 로 보관한다).
   Cam(camera_frustum, 기본 켬)을 눌러 끄고, Col(box_collider_2d, 기본 켬)은 그대로인지, 다시 누르면 켜지는지 본다.

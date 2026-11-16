@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e37f056d089e078c4088d522229f547e"?>
 <!-- Shooter3D 의 사용자 설정 — 엔진 스키마(engine/settings/engine.settings.xml) 위에 덧붙는다(Config/Game/Shooter3D.json 의 _userSettingsSchema).
      난이도는 대상이 없다: 게임이 UserSettingsManager::getValue( "gameplay.difficulty" ) 와 변경 통보로 읽는다. -->
 <UserSettingsSchema version="1">

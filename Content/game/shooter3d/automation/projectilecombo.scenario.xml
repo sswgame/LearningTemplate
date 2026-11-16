@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c3c2818b93e1cdcd3ede917c4034574e"?>
 <!--
   Shooter3D 무기 · 탄 조합 — 같은 소총에 다른 탄(projectiles.xml)을 넣으면 한 발의 값과 그림이 탄을 따른다.
   기본 탄(rifle_round, 피해 14, 노란 탄도선)으로 한 발, 치트로 소이탄(incendiary_round — rifle_round 를 물려받아 피해 11, 붉고 굵은 탄도선)을 넣고 한 발 쏜다.

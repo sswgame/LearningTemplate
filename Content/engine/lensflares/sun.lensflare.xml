@@ -1,3 +1,4 @@
+<?asset guid="0a81c8c24bd6c559139aa960af2f50f5"?>
 <!--
 	해 · 밝은 빛의 렌즈 플레어(LensFlareAsset) — 빛 자리의 빛무리 · 가로 줄과, 화면 가운데 너머 축 위의 고스트 셋 · 헤일로 하나. 빛 컴포넌트의 _lensFlarePath 가 가리킨다.
 	칸: _axisPosition(빛 0 → 화면 가운데 1, 1 너머는 반대쪽) · _size(반지름, 화면 높이 비율) · _color(HDR, 빛 색 × 세기에 곱한다) · _shape(Glow · Disc · Ring · Streak).

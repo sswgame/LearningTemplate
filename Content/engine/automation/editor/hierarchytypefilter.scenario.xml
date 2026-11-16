@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="63c0284d37e61cc9f9e54c39d822141b"?>
 <!--
   에디터 시나리오 — Hierarchy 형식 필터: 검색 칸 앞의 깔때기 단추가 씬에 있는 컴포넌트 종류를 늘어놓고, 고르면 검색어가 `t:<종류>` 가 된다
   (언리얼 아웃라이너의 필터 단추 · 유니티 계층 창의 형식 검색). 테스트 씬(editortest)에서 DirectionalLightComponent 는 TestKeyLight 하나뿐이다.

@@ -298,6 +298,10 @@ namespace sw
     private:
         /** @brief 조립을 틱 뒤(또는 지금)로 예약합니다. 이미 예약되어 있으면 그대로 둡니다. */
         void requestAssemble();
+        /** @brief 틱 안에서 조립을 틱 뒤로 예약합니다(쓰기 가능한 매니저를 꺼내지 않는다 — `TickContext`). */
+        void requestAssemble( TickContext& context );
+        /** @brief 예약된 조립을 돕니다(틱 뒤 작업 몸체). */
+        void runScheduledAssemble();
         /** @brief 펼치고, 해석하고, 조립합니다. 게임 스레드의 틱 밖에서 실행합니다. */
         void assemble();
         /** @brief 몸 부품을 이 오브젝트의 유닛에 입힙니다. 몸 부품 번호를 반환하고, 없으면 -1 입니다. */

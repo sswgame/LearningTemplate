@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a1ca69e14c6b11feda3fe95c72fb6e7f"?>
 <!--
   WildWest 자동 플레이 — gv_wildWestAutoPlay 를 켜면 디렉터가 첫 틱 뒤에 기수를 가장 가까운 말(Bessie)에 태운다(WildWestGameModeComponent::mountNearestHorse).
   탈 말이 닿는 곳에 없으면 [WildWest] auto play 경고가 남아 로그 게이트(15)가 잡는다. 탑승 단계 대신 스위치로 탔을 때도 좌석 · 조종자가 mount 시나리오와 같게 넘어가는지 본다.

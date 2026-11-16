@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="779969d7e387254a5c6b58c1f042e21f"?>
 <!--
   몸 동작(CharacterBodyDynamicsComponent) — 무대 maps/bodycustomization(해골 Dancer, 외형 BodyDemoWarrior · 몸 프로필 BodyDemoWarrior).
   ① 굽 높이: 몸 프로필의 Heel.Height 층 0.08 m 가 체형 축 footLiftAxis 를 지나 발 들림이 된다(발 디딤 IK 입력).

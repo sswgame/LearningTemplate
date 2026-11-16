@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e25001c09f521d904a359c47adf63f84"?>
 <!--
   Shooter3D 발 디딤 — 몸 리그(common/rigs/ubc_player_body.rig.xml 의 FootPlacement 노드 Feet)가 물리 광선으로 땅 높이를 읽어 발을 올리는지 본다.
   무대는 maps/footplacement.scene.xml(아레나 + 계단 두 칸, 윗면 0.12 · 0.24 m). 슈터 몸은 늘 y = 0 에 서므로 발 높이 보정(감시 값 Rig.Output 의

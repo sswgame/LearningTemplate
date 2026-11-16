@@ -1,3 +1,4 @@
+<?asset guid="0aedcbdbe6498f757ed2418be6656a47"?>
 <RenderPipelineDesc _name="DeferredPipeline" _shadingModel="Deferred">
 	<_listAttachment>
 		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />

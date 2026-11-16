@@ -1,3 +1,4 @@
+<?asset guid="e0ac33deab927c23a8c52d721e3938b7"?>
 <!-- 재 무더기 — 용암 지역(zones/lava.zone.xml)의 경우 목록이 불붙는 물체(Flammable)를 이것으로 바꾼다(object.replace). 낮은 어두운 상자다. -->
 <Prefab formatVersion="0" name="ZoneAsh">
 	<GameObject _schemaVersion="0" _name="ZoneAsh" _bActive="true">

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="67a68f43c04cb01817d3d770f9698c9f"?>
+<!--
+  에디터 시나리오 — 에셋 정체성(GUID)의 짝: 가져오기는 새 GUID 를 주고, 내용 바꾸기는 GUID 를 지킨다(Source/Engine/Asset/AssetDatabase.h).
+  가져오기는 콘텐츠 브라우저 Import 와 같은 길(asset.import — EditorAssetFileCommands::importFiles)이고 대상은 리소스 트리 안의 임시 폴더 scratch/import/ 뿐이다(.gitignore 가 무시).
+  ① 우리 형식 글(프리팹 — 머리 <?asset guid?>)과 원본(SQL 글 — 곁의 .meta)을 하나씩 가져온다. 가져온 프리팹은 원본의 머리를 든 채 복사되므로 새 GUID 로 바뀌어야 한다.
+  ② 둘의 내용을 다른 파일로 바꾼다(asset.replaceContent) — 바꾸기 전에 GUID 가 없거나(가져오기가 주지 않았다) 바꾼 뒤 GUID 가 다르면 명령이 실패한다.
+  원본은 반응하는 로더가 없는 SQL 글이다(그림 · 소리는 핫 리로드 임포터가 움직인다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/assetidentity.scenario.xml -unattended
+-->
+<Scenario name="editor.assetidentity" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<EditorWaitSettled/>
+	<DevCommand line="asset.removeImportFolder scratch/import/editor.assetidentity"/>
+	<!-- ① 가져오기 — 새 GUID -->
+	<EditorWaitSettled/>
+	<DevCommand line="asset.import common/prefabs/gimmicks/horror/flickerlight.prefab.xml scratch/import/editor.assetidentity"/>
+	<DevCommand line="asset.import common/sql/localstore/0001_local_slot.sql scratch/import/editor.assetidentity"/>
+	<!-- ② 내용 바꾸기 — GUID 그대로 -->
+	<EditorWaitSettled/>
+	<DevCommand line="asset.replaceContent scratch/import/editor.assetidentity/flickerlight.prefab.xml common/prefabs/gimmicks/horror/hidingspot.prefab.xml"/>
+	<DevCommand line="asset.replaceContent scratch/import/editor.assetidentity/0001_local_slot.sql common/sql/servicestore/0001_records.sql"/>
+	<EditorWaitSettled/>
+	<DevCommand line="asset.removeImportFolder scratch/import/editor.assetidentity"/>
+	<EditorWaitSettled/>
+	<Pass/>
+</Scenario>

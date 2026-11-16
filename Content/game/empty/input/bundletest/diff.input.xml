@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="1ab17931478ac0b02affeb3d742fb595"?>
 <InputMap>
 	<action name="Game.Fire" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="E"/>

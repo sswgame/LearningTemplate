@@ -38,10 +38,9 @@ namespace sw
     void FarmCropComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner       = getOwner();
-        GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*     pMesh        = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
+        GameObject*    pOwner       = getOwner();
+        MeshComponent* pMesh        = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        const bool     bMissingTile = pMesh == nullptr || _tileIndex < 0;
         if ( bMissingTile )
             return;
         const FarmGameModeComponent* pGameMode = findGameMode<FarmGameModeComponent>();

@@ -1571,7 +1571,7 @@ namespace sw
     MeshComponent* FractureComponentBase::resolveIntactMesh() const
     {
         const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         return ( pManager != nullptr && _intactMesh.isValid() ) ? pManager->resolveComponent( _intactMesh ) : nullptr;
     }
 

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4eda0592978b220c29ee5ccd20d1f832"?>
 <!--
   지역 효과 — 바다(maps/zoneshowcase 의 Sea, 프로필 zones/sea.zone.xml — 액체 종류 Sea 의 잠김 입력). 물리 필드: 유체 밀도 1.03 · 저항 1.2 · +x 해류 0.5 m/s.
   ① 걷는 사람은 헤엄친다(이동 방식 Swimming)고 해류에 +x 로 떠밀린다. ② 물체는 자기 밀도로 갈린다 — 나무 상자는 뜨고(수면 근처), 돌은 가라앉는다(바닥 −2.5).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8b4c93815b75d42e37170b030d0e0776"?>
 <!-- Kenney Fantasy Town · Nature 모델(밭 · 조각상 · 울타리 · 나무)의 머티리얼 — 색은 모델 정점 색이다(텍스처 없음). 화면 확인 전 추정. -->
 <MaterialDef formatVersion="0" name="NileNature" _base="engine/materials/defaultmaterial.material">
 	<_properties>

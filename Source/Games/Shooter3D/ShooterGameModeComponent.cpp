@@ -841,7 +841,7 @@ namespace sw
                 bool bFound = false;
                 if ( pManager == nullptr )
                     return false;
-                for ( ShooterGameModeComponent* pGameMode : pManager->getComponentRegistry().getAll<ShooterGameModeComponent>() )
+                for ( const ShooterGameModeComponent* pGameMode : pManager->getComponentRegistry().getAll<ShooterGameModeComponent>() )
                 {
                     if ( bFound )
                         break;

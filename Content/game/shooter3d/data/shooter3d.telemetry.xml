@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6189150233e1fa27bea913340207ef87"?>
 <!-- Shooter3D 진행 사건 — 엔진 텔레메트리 스키마(engine/telemetry/engine.telemetry.xml)에 덧붙는다(게임 프리셋 _telemetrySchema).
      ShooterGameModeComponent 가 남긴다: 새 웨이브에 들어설 때, 판이 끝날 때(쓰러짐). -->
 <TelemetrySchema version="1">

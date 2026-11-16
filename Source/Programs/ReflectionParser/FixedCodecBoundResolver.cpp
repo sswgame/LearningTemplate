@@ -2,6 +2,7 @@
 
 #include "Programs/ReflectionParser/FixedCodecBoundResolver.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
@@ -37,17 +38,18 @@ namespace sw
              * @brief 범위 이름을 안쪽 범위부터 바깥으로 찾습니다. 찾은 필드는 앞에 선언된 Transient 아닌 정수 · 실수여야 합니다.
              * @param bIntegerSite 범위를 받는 값이 정수입니다. 그러면 범위 필드도 정수여야 합니다. 실수 필드를 정수로 바꾸면 소수부가 잘리기 때문입니다.
              */
-            static LookupResult lookupRangeName( FixedCodecEmitState& state, const ParsedPropertyInfo& prop, const string& name, const bool bIntegerSite, string& outExpr )
+            static LookupResult lookupRangeName( FixedCodecEmitState& state, const ParsedPropertyInfo& prop, const string& name, const bool bIntegerSite, FixedCodecBound& outBound )
             {
-                for ( auto frameIt = state._listScope.rbegin(); frameIt != state._listScope.rend(); ++frameIt )
+                for ( size_t frameIndex = state._listScope.size(); frameIndex > 0; --frameIndex )
                 {
-                    const vector<ParsedPropertyInfo>& listProperty = frameIt->_pType->_listProperty;
+                    const FixedCodecScopeFrame&       frame        = state._listScope[frameIndex - 1];
+                    const vector<ParsedPropertyInfo>& listProperty = frame._pType->_listProperty;
                     for ( size_t index = 0; index < listProperty.size(); ++index )
                     {
                         const ParsedPropertyInfo& candidate = listProperty[index];
                         if ( candidate._memberName != name )
                             continue;
-                        if ( index >= frameIt->_limit )
+                        if ( index >= frame._limit )
                         {
                             state.reportError( prop, "range field '" + name + "' must be declared before this field - the reader needs its value first" );
                             return LookupResult::Error;
@@ -65,7 +67,9 @@ namespace sw
                             state.reportError( prop, "range field '" + name + "' is floating-point but this field is an integer - the fraction would be cut" );
                             return LookupResult::Error;
                         }
-                        outExpr = frameIt->_objectExpr + "." + name;
+                        outBound._ownerFqn   = frame._pType->_fullyQualifiedName;
+                        outBound._fieldName  = name;
+                        outBound._scopeDepth = static_cast<uint32>( frameIndex - 1 );
                         return LookupResult::Found;
                     }
                 }
@@ -119,8 +123,7 @@ namespace sw
 
             const bool                                          bNegative = term.front() == '-';
             const string                                        name( bNegative ? term.substr( 1 ) : term );
-            string                                              fieldExpr;
-            const FixedCodecBoundResolverInternal::LookupResult result = FixedCodecBoundResolverInternal::lookupRangeName( state, prop, name, bInteger, fieldExpr );
+            const FixedCodecBoundResolverInternal::LookupResult result = FixedCodecBoundResolverInternal::lookupRangeName( state, prop, name, bInteger, bound );
             if ( result == FixedCodecBoundResolverInternal::LookupResult::Error )
                 return false;
             if ( result == FixedCodecBoundResolverInternal::LookupResult::NotFound )
@@ -140,7 +143,7 @@ namespace sw
                 state.markIneligible( prop, "range name '" + name + "' refers to a field of an enclosing type" );
                 return false;
             }
-            bound._expr = bNegative ? "( -" + fieldExpr + " )" : fieldExpr;
+            bound._bNegate = bNegative ? SW_TRUE : SW_FALSE;
             outListBound.push_back( std::move( bound ) );
         }
         return true;
@@ -151,21 +154,37 @@ namespace sw
         return listBound.size() == 1 ? listBound.front() : listBound[elementIndex];
     }
 
-    string FixedCodecBoundResolver::makeIntegerBound( const FixedCodecBound& bound, const bool bLower )
+    string FixedCodecBoundResolver::makeFieldBound( const FixedCodecBound& bound )
     {
-        if ( bound._bPresent == SW_FALSE )
-            return bLower ? "::sw::FixedCodecUtil::kNoLowerBound" : "::sw::FixedCodecUtil::kNoUpperBound";
-        if ( bound._bLiteral == SW_TRUE )
-            return "static_cast<int64>( " + FixedCodecEmitState::formatInteger( static_cast<int64>( bound._value ) ) + " )";
-        return "static_cast<int64>( " + bound._expr + " )";
+        StringBuilder<constant::buffer::kMax1024> text;
+        text.appendFormat( "::sw::FixedBound::field( %#u, offsetof( ::%#, %# ), ::sw::getFixedNumberType< decltype( ::%#::%# ) >(), %# )", bound._scopeDepth, bound._ownerFqn,
+                           bound._fieldName, bound._ownerFqn, bound._fieldName, bound._bNegate == SW_TRUE ? "true" : "false" );
+        return string( text.view() );
     }
 
-    string FixedCodecBoundResolver::makeFloatBound( const FixedCodecBound& bound, const bool bLower, const utf8* pCastType )
+    string FixedCodecBoundResolver::makeIntegerBound( const FixedCodecBound& bound )
     {
         if ( bound._bPresent == SW_FALSE )
-            return bLower ? "::sw::FixedCodecUtil::kNoLowerFloatBound" : "::sw::FixedCodecUtil::kNoUpperFloatBound";
-        if ( bound._bLiteral == SW_TRUE )
-            return string( "static_cast<" ) + pCastType + ">( " + bound._text + " )";
-        return string( "static_cast<" ) + pCastType + ">( " + bound._expr + " )";
+            return "::sw::FixedBound::none()";
+        if ( bound._bLiteral == SW_FALSE )
+            return makeFieldBound( bound );
+        StringBuilder<constant::buffer::kMax256> text;
+        text.appendFormat( "::sw::FixedBound::integer( %# )", static_cast<int64>( bound._value ) );
+        return string( text.view() );
+    }
+
+    string FixedCodecBoundResolver::makeFloatBound( const FixedCodecBound& bound, const bool bFloat32 )
+    {
+        if ( bound._bPresent == SW_FALSE )
+            return "::sw::FixedBound::none()";
+        if ( bound._bLiteral == SW_FALSE )
+            return makeFieldBound( bound );
+        // 숫자는 적힌 글을 C++ 리터럴로 그대로 내 컴파일러가 값을 정한다. `Step` 자리는 float32 로 바꾼 값이고, 넓혀 실어도 되돌리면 같다.
+        StringBuilder<constant::buffer::kMax256> text;
+        if ( bFloat32 )
+            text.appendFormat( "::sw::FixedBound::real( static_cast<float64>( static_cast<float32>( %# ) ) )", bound._text );
+        else
+            text.appendFormat( "::sw::FixedBound::real( static_cast<float64>( %# ) )", bound._text );
+        return string( text.view() );
     }
 } // namespace sw

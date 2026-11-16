@@ -252,8 +252,7 @@ namespace sw
             return;
         }
         GameObject*                     pOwner    = getOwner();
-        GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ShooterGameModeComponent* pGameMode = pManager != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, _gameMode ) : nullptr;
+        const ShooterGameModeComponent* pGameMode = GameModeComponent::resolve<ShooterGameModeComponent>( context.getManager(), _gameMode );
         if ( pGameMode == nullptr )
             return;
         const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
@@ -362,15 +361,15 @@ namespace sw
 
     void ShooterEnemyComponent::requestPlayerDamage( GameObjectHandle player ) const
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 플레이어는 다른 워커가 틱하고 있을 수 있다 — 틱 뒤(게임 스레드)에 깎는다.
         const float32 damage = _damage;
-        pManager->executeOrDeferPostTick( [pManager, player, damage]()
+        pManager->executeOrDeferPostTickOnScene( [player, damage]( GameObjectManager& sceneManager )
         {
-            GameObject*             pPlayer    = pManager->resolveGameObject( player );
+            GameObject*             pPlayer    = sceneManager.resolveGameObject( player );
             ShooterPlayerComponent* pComponent = pPlayer != nullptr ? pPlayer->getComponent<ShooterPlayerComponent>() : nullptr;
             if ( pComponent != nullptr )
                 pComponent->takeDamage( damage );
@@ -380,7 +379,7 @@ namespace sw
     void ShooterEnemyComponent::requestDropSocketParts() const
     {
         GameObject*                         pOwner      = getOwner();
-        GameObjectManager*                  pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*                  pManager    = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const CharacterAppearanceComponent* pAppearance = pOwner != nullptr ? pOwner->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pManager == nullptr || pAppearance == nullptr )
             return;

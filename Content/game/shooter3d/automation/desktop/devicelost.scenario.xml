@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d0d52e8d29a23a9c8a48cc363460801c"?>
 <!--
   렌더 장치 분실(감사 R-2) — 개발 명령 rhi.removeDevice 로 TDR 처럼 DX12 장치를 제거하면 EngineConfig _deviceLostPolicy(Quit)대로 엔진이 스스로
   종료 코드 DeviceLost(18, Config/Engine/ProcessExitCodes.json)를 요청하고 10 초 안에 루프를 끝내는지(멈추지 않는지) 본다. ExpectExitWithin exitCode 가 그 코드를 판정하고,

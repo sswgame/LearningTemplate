@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fbd2e3d56739c783db5379651b831900"?>
 <!--
   에디터 시나리오 — 콜라이더 크기 손잡이: TestMesh 에 RigidBodyComponent 를 붙이고 Phys(physics_shapes)를 켜면 선택한 상자 셰이프의 면마다 손잡이 여섯 개가 선다
   (표식 collider.handle.<셰이프>.<축><부호>). +X 손잡이를 끌면 셰이프 크기가 바뀌고 되돌리기 하나가 남으며(Editor.ColliderHandleCommitCount),

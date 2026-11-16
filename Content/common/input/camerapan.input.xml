@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="81403123e7b7787d7f8e69b8ec08209c"?>
 <!-- 내려다보는 카메라 — 카메라 디렉터의 _panAction · _rotateAction. 프리셋 <Input> 이 받는 것만 읽는다. 오른쪽 스틱은 패드 RTS 관례다(결정 D4-3.3). -->
 <InputMap>
 	<layers>

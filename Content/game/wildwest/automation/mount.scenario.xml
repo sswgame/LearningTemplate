@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="694a13b5879f3291e988e7bd00ddfd00"?>
 <!--
   WildWest 탑승 시나리오 — 기수가 곁의 말(Bessie)에 올라타고(Mount), W + Shift 로 2 초 질주하고, 멈춘 뒤 먹이를 주고(FeedHorse — 키트 단계) 내린다(Dismount).
   탑승 단계와 감시 값 Pawn.Seat · Pawn.Controller 를 실제 게임에서 돌리고, 말 AI 가 탈 때 빙의를 넘기고 내리면 되찾는지 본다.

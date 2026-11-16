@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7cbcdb55bc3335c22165df2f4bc82ba3"?>
 <!-- 꾸미기 스키마. 캐릭터(Adventurer · Skeleton)와 아이템(Gun)이 같은 형식이다.
      Slider → Drive(Morph · BoneProportion · MaterialScalar), Color → Drive(MaterialColor · DyeChannel · PaletteSwap), Choice → Option(visual · variant ·
      materialVariant), Attachment → Option(prefab · sprite) 를 주인의 socket 에 단다. category 는 부분 프리셋(머리만 · 얼굴만 · 염색만)이 고르는 묶음,

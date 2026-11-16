@@ -8,11 +8,14 @@
 from __future__ import annotations
 
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
 
 _ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ROOT / "Scripts"))
+from lint.asset_identity import write_keeping_identity  # noqa: E402 — 다시 지어도 있던 프리팹의 정체성(머리 GUID)을 지킨다
 _SOURCE = _ROOT / "Content/engine/textures_raw/sky"
 _OUTPUT = _ROOT / "Content/engine/prefabs/sky"
 
@@ -94,8 +97,7 @@ def _write_prefab(name: str, coefficients: np.ndarray) -> None:
 	</GameObject>
 </Prefab>
 """
-    _OUTPUT.mkdir(parents=True, exist_ok=True)
-    (_OUTPUT / f"{name}.prefab.xml").write_text(text, encoding="utf-8", newline="\n")
+    write_keeping_identity(_OUTPUT / f"{name}.prefab.xml", text)
 
 
 def main() -> None:

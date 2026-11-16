@@ -48,10 +48,10 @@ namespace sw
 
     void AbilityGateComponent::stepOnce()
     {
-        GameObject*           pOwner           = getOwner();
-        GameObjectManager*    pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const SceneComponent* pScene           = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool            bCannotCheckDoor = pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0;
+        GameObject*              pOwner           = getOwner();
+        const GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneComponent*    pScene           = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const bool               bCannotCheckDoor = pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0;
         if ( bCannotCheckDoor )
             return;
         const float3 center     = pScene->getWorldPosition();
@@ -88,7 +88,7 @@ namespace sw
     {
     }
 
-    bool GatheringNodeComponent::gather( GameObject& who )
+    bool GatheringNodeComponent::gather( const GameObject& who )
     {
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || isDepleted() )
@@ -121,8 +121,8 @@ namespace sw
 
     void GatheringNodeComponent::stepOnce()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 상호작용(Gather)을 끝낸 쪽에 준다.
@@ -130,7 +130,7 @@ namespace sw
         if ( pSensor != nullptr && pSensor->consumeUses() > 0.0f )
         {
             const InteractableComponent* pInteractable = pOwner->getComponent<InteractableComponent>();
-            GameObject*                  pWho          = pInteractable != nullptr ? pManager->resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
+            const GameObject*            pWho          = pInteractable != nullptr ? pManager->resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
             if ( pWho != nullptr )
                 (void)gather( *pWho );
         }

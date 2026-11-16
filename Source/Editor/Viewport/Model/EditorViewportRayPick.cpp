@@ -347,7 +347,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorViewportRayPick::pick( const GameObjectManager* pManager, const Ray& ray, bool b2DMode,
+    bool EditorViewportRayPick::pick( GameObjectManager* pManager, const Ray& ray, bool b2DMode,
                                       EditorPickResult& outResult )
     {
         outResult = EditorPickResult{};

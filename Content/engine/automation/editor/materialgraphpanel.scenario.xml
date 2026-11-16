@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="fa7393d56bc98c7250e5e0ec486d4ab9"?>
 <!--
   에디터 시나리오 — 머티리얼 그래프 패널(materialgraph): 패널을 열면 그려지고(에디터 UI 캡처에 마젠타 자리표시가 없다) 닫으면 닫힌다.
   그래프 컴파일 · 편집 규칙은 단위 테스트(MaterialGraphCompilerTest · MaterialGraphModelTest)가 본다.

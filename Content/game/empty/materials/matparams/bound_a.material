@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="42a949bc22c07d5043fd73fc204b8da5"?>
 <MaterialDef formatVersion="0" name="matparams_bound_a" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" collection="game/empty/materials/matparams/world.matparams.xml" collectionParameter="WorldTint"/>

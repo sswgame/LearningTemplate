@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bfad5ba10c227e7104a6e65ad192bfe5"?>
 <!--
   Shooter3D 듣는 자리 — 플레이어 눈에 AudioListenerComponent 가 있어, 화면 시점(ViewCamera — PlayerCamera 의 카메라 매니저가 받는 뷰 타깃)을 3인칭 궤도(orbit)로 띄워도 소리는 몸에서 듣는다
   (리스너가 없으면 게임 카메라가 듣는다. 언리얼 3인칭 게임이 리스너를 폰에 두는 것과 같다).

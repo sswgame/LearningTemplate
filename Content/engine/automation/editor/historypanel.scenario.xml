@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f3be51ad8d732581cabf0ad2345fb04d"?>
 <!--
   에디터 시나리오 — 히스토리 창(history): 새 씬에 오브젝트 셋을 만들면(되돌리기 셋) 창의 줄을 눌러 그 시점으로 간다.
   #1 줄 → 하나만 남고(UndoIndex 1), [Initial State] 줄 → 모두 되돌리고, 다시 실행 단추 → 하나 되살리고, #3 줄 → 모두 되살린다. 지우기 단추는 기록을 비운다.

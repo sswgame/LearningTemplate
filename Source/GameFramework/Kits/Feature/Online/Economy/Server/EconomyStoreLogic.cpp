@@ -18,9 +18,13 @@ namespace sw
     {
         struct EconomyStoreLogicInternal
         {
-            static constexpr const utf8* kReceiptScopePrefix  = "rcpt.";
-            static constexpr const utf8* kRefundScopePrefix   = "refund.";
-            static constexpr const utf8* kWithdrawScopePrefix = "withdraw.";
+            static constexpr const utf8* kReceiptScopePrefix  = EconomyProtocol::kReceiptScopePrefix;
+            static constexpr const utf8* kRefundScopePrefix   = EconomyProtocol::kRefundScopePrefix;
+            static constexpr const utf8* kWithdrawScopePrefix = EconomyProtocol::kWithdrawScopePrefix;
+            static_assert( string_view( kReceiptScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize &&
+                               string_view( kRefundScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize &&
+                               string_view( kWithdrawScopePrefix ).size() <= EconomyProtocol::kLongestScopePrefixSize,
+                           "스토어 이름 상한(kMaxStoreNameSize)은 가장 긴 범위 접두로 셈한다 — 더 긴 접두를 더하면 kLongestScopePrefixSize 를 올린다" );
 
             /** @brief 거래 하나의 상태입니다(영수증 상태 레코드의 값 — 저장 형식이라 번호를 바꾸지 않는다). */
             enum class ReceiptState : uint8

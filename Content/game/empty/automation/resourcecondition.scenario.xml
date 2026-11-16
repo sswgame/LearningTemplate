@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="656449a64f8914598993dc2875c91c8a"?>
 <!--
   리소스 조건 — 표의 `<_when _if="quality.low">` · `<_when _if="layer.Night">` 가 바꾼 사거리가 표를 쥔 쪽에 닿는다(resourcecondition/table.interactions.xml).
   품질은 옵션 메뉴와 같은 길(`settings.apply` → 핸들러 `resource.tag` → `quality` 축)로, 레이어는 `scene.layer` 로(`SceneDataLayerSubsystem` → `layer` 축) 바꾼다.

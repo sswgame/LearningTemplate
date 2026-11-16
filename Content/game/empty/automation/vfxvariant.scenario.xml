@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cfa3ad69d6b99cf80a3b53049836cd7a"?>
 <!--
   VFX 변형과 사용자 파라미터 — sparks_tinted 는 _base 로 sparks 를 물려받고, 컴포넌트가 색 · 크기 파라미터를 덮으면 불꽃의 그림이 바뀐다.
   같은 실행의 두 장을 견주는 음성 대조다(`ExpectImagesDiffer`) — 칸이 그림을 바꾸지 않으면 진다. 골든은 두지 않는다.

@@ -18,6 +18,7 @@
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Animation/Skeletal/AnimationPoseNode.h"
 #include "Engine/Animation/Skeletal/CurveAccumulator.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/PoseInertializer.h"
@@ -141,19 +142,25 @@ namespace sw
 {
     /**
      * @class SkeletalAnimatorClipSource
-     * @brief 상태 기계(`AnimationGraphPlayer`)가 상태 이름을 재생 항목으로 해석할 때 애니메이터의 블렌드 스페이스 상태나 클립을 그 이름으로 맞춰 줍니다.
-     * @details 컴포넌트가 하나 보관하고 상태 기계에 빌려준다(스프라이트 애니메이터의 `SpriteAnimatorClipSource` 와 같은 방식이다).
+     * @brief 상태 기계(`AnimationGraphPlayer`)가 상태 이름을 재생 항목으로 해석할 때 애니메이터의 블렌드 스페이스 상태 · 포즈 노드 · 클립을 그 이름으로 맞춰 줍니다.
+     * @details 컴포넌트가 하나 보관하고 상태 기계에 빌려준다(스프라이트 애니메이터의 `SpriteAnimatorClipSource` 와 같은 방식이다). 포즈 노드의 입력도 이것으로 찾는다
+     *          (`AnimationPoseNodeSet::rebuild`) — 앞에 지은 포즈 노드는 뒤 노드의 입력이 될 수 있다.
      */
     class SW_API SkeletalAnimatorClipSource final : public IAnimationPlayableSource
     {
     public:
-        /** @brief @p pListBlendSpace 는 그 상태 기계의 블렌드 스페이스 상태입니다. nullptr 이면 애니메이터의 주 그래프 것입니다. 클립은 어느 쪽이든 애니메이터의 셋에서 찾습니다. */
-        explicit SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner, const vector<unique_ptr<SkeletalBlendSpaceState>>* pListBlendSpace = nullptr );
+        /**
+         * @brief @p pListBlendSpace · @p pPoseNodes 는 그 상태 기계의 블렌드 스페이스 상태 · 포즈 노드입니다. nullptr 이면 애니메이터의 주 그래프 것입니다.
+         *        클립은 어느 쪽이든 애니메이터의 셋에서 찾습니다.
+         */
+        explicit SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner, const vector<unique_ptr<SkeletalBlendSpaceState>>* pListBlendSpace = nullptr,
+                                             const AnimationPoseNodeSet* pPoseNodes = nullptr );
         const IAnimationPlayable* findPlayable( const hashed_string& name ) const override;
 
     private:
         const SkeletalAnimatorComponent&                   _owner;
         const vector<unique_ptr<SkeletalBlendSpaceState>>* _pListBlendSpace;
+        const AnimationPoseNodeSet*                        _pPoseNodes;
     };
 } // namespace sw
 
@@ -384,7 +391,24 @@ namespace sw
             AnimationGraphAsset                         _graph;
             AnimationGraphPlayer                        _player;
             vector<unique_ptr<SkeletalBlendSpaceState>> _listBlendSpace;
+            AnimationPoseNodeSet                        _poseNodes; ///< 이 그래프의 포즈 노드 상태(상태마다 인스턴스 하나)
             SkeletalAnimatorClipSource                  _source;
+        };
+
+        /**
+         * @class PoseNodeSampler
+         * @brief 포즈 노드가 입력(클립 · 블렌드 스페이스 상태 · 앞 포즈 노드)을 샘플할 때 부르는 쪽입니다. 같은 스켈레톤 · 본 LOD 마스크로 `samplePlayableIntoPose` 를 다시 부릅니다.
+         */
+        class PoseNodeSampler final : public IAnimationPoseSampler
+        {
+        public:
+            PoseNodeSampler( SkeletalAnimatorComponent& owner, const Skeleton& skeleton, const uint8* pBoneMask );
+            void samplePose( const IAnimationPlayable& playable, float32 time, Pose& inoutPose ) override;
+
+        private:
+            SkeletalAnimatorComponent* _pOwner;
+            const Skeleton*            _pSkeleton;
+            const uint8*               _pBoneMask;
         };
 
         /** @brief 레이어 하나의 실행 상태입니다. */
@@ -435,14 +459,16 @@ namespace sw
         void applyGraphPlayables();
         /**
          * @brief 노드의 클립(블렌드 스페이스면 표본 클립)을 미리 읽고 블렌드 스페이스 상태와 그래프 레이어를 다시 만듭니다.
-         * @return 포즈 노드(아직 평가하지 않는다), 표본 클립이 없는 블렌드 스페이스, 클립이 없는 레이어가 있으면 각각 오류를 남기고 false 입니다.
+         * @return 입력을 찾지 못한 포즈 노드, 표본 클립이 없는 블렌드 스페이스, 클립이 없는 레이어가 있으면 각각 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool rebuildGraphPlayables();
         /**
-         * @brief @p graph 의 노드 클립을 미리 읽고 블렌드 스페이스 상태를 @p outListBlendSpace 에 다시 만듭니다.
-         * @return 포즈 노드나 표본 클립이 없는 블렌드 스페이스가 있으면 오류를 남기고 false 입니다.
+         * @brief @p graph 의 노드 클립(포즈 노드면 입력 클립)을 미리 읽고 블렌드 스페이스 상태를 @p outListBlendSpace 에, 포즈 노드를 @p outPoseNodes 에 다시 만듭니다.
+         *        포즈 노드의 입력은 @p source(그 상태 기계가 빌린 것)로 찾는다 — 블렌드 스페이스 상태를 먼저 짓는다.
+         * @return 표본 클립이 없는 블렌드 스페이스나 입력을 찾지 못한 포즈 노드가 있으면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool rebuildNodePlayables( const AnimationGraphAsset& graph, string_view graphPath, vector<unique_ptr<SkeletalBlendSpaceState>>& outListBlendSpace );
+        [[nodiscard]] bool rebuildNodePlayables( const AnimationGraphAsset& graph, string_view graphPath, vector<unique_ptr<SkeletalBlendSpaceState>>& outListBlendSpace,
+                                                 AnimationPoseNodeSet& outPoseNodes, const IAnimationPlayableSource& source );
         /**
          * @brief 연결 레이어 그래프의 재생할 것을 다시 만들고 상태 기계에 겁니다.
          * @return 그래프를 읽지 못했거나, 그래프가 또 레이어를 적었거나(한 단계만 지원), 주 그래프에 없는 슬롯을 채우면 오류를 남기고 false 입니다.
@@ -466,7 +492,11 @@ namespace sw
         void updateBlendSpaceWeights( const vector<unique_ptr<SkeletalBlendSpaceState>>& listBlendSpace, AnimationPlayer& player );
         /** @brief 재생할 것이 이 애니메이터의 블렌드 스페이스 상태면 그것을, 아니면(클립) nullptr 을 반환합니다. */
         const SkeletalBlendSpaceState* findBlendSpaceState( const IAnimationPlayable* pPlayable ) const;
-        /** @brief 재생할 것(클립 또는 블렌드 스페이스 상태)을 @p time 에 샘플해 @p inoutPose 에 씁니다. */
+        /**
+         * @brief 재생할 것(클립, 블렌드 스페이스 상태, 포즈 노드)을 @p time 에 샘플해 @p inoutPose 에 씁니다.
+         * @details 포즈 노드는 여기서 평가한다(`IAnimationPoseNode::evaluatePose`) — 언리얼 AnimGraph 는 Update(시간 · 상태)와 Evaluate(포즈)를 나누는데, 여기서 시간은 상태 기계의
+         *          커서(시간 단계)가 들고 노드는 그 시각을 포즈로 바꾸기만 한다. 몽타주의 섹션 위치는 커서 시각에서 길을 따라 걸어 구하므로 포즈를 건너뛴 프레임(LOD)도 따라잡는다.
+         */
         void samplePlayableIntoPose( const IAnimationPlayable& playable, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask );
         /** @brief 재생할 것이 @p step 동안 낸 루트 모션입니다. 블렌드 스페이스면 표본의 움직임을 가중치로 섞습니다. */
         BoneTransform computePlayableRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const;
@@ -547,6 +577,8 @@ namespace sw
         vector<LayerState>                                            _listLayer;
         vector<LayerState>                                            _listGraphLayer;  ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다
         vector<unique_ptr<SkeletalBlendSpaceState>>                   _listBlendSpace;  ///< 그래프의 블렌드 스페이스 상태다(상태 기계가 포인터를 빌린다)
+        AnimationPoseNodeSet                                          _poseNodes;       ///< 그래프의 포즈 노드 상태다 — 상태마다 인스턴스 하나(몽타주는 섹션 위치를 든다). 블렌드 스페이스 상태를 입력으로 빌린다
+        const vector<uint32>*                                         _pMirroredBone;   ///< 이번 기본 포즈 단계의 짝 본 번호 표(`SkeletalMeshComponent::findMirroredBones`, 없으면 nullptr)
         vector<unique_ptr<LinkedLayerGraph>>                          _listLinkedGraph; ///< `_listLinkedLayer` 의 그래프를 읽은 것이다
         vector<Pose>                                                  _listScratchSamplePose;
         vector<const Pose*>                                           _listScratchSamplePosePointer;

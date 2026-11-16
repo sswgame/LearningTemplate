@@ -152,16 +152,18 @@ namespace sw
     /** @brief 원장의 상한 값들입니다. */
     struct LedgerConstant
     {
-        static constexpr int32 kMaxPostingCount   = 16;                 ///< 한 이동의 다리 수
-        static constexpr int64 kMaxAmount         = 1000000000000000ll; ///< 레그 하나와 잔액 하나의 상한(10^15). 레그 16 개의 합이 int64 안에 들어간다
-        static constexpr int64 kMaxBalance        = kMaxAmount;
-        static constexpr int32 kMaxAssetIDSize    = 48;
-        static constexpr int32 kMaxStoredTextSize = 512; ///< 저장 레코드 안 글(메모 · 에스크로 표식) 하나의 최대 길이
-        static constexpr int32 kMaxReasonSize     = 32;
-        static constexpr int32 kMaxMemoSize       = 256;
-        static constexpr int32 kMaxJournalKeySize = 200;
-        static constexpr int32 kMaxTokenBytes     = 96; ///< `makeFromToken` 이 16 진으로 펴는 토큰 바이트
-        static constexpr int32 kMaxRetryCount     = 8;
+        static constexpr int32 kMaxPostingCount     = 16;                 ///< 한 이동의 다리 수
+        static constexpr int64 kMaxAmount           = 1000000000000000ll; ///< 레그 하나와 잔액 하나의 상한(10^15). 레그 16 개의 합이 int64 안에 들어간다
+        static constexpr int64 kMaxBalance          = kMaxAmount;
+        static constexpr int32 kMaxAssetIDSize      = 48;
+        static constexpr int32 kMaxStoredTextSize   = 512; ///< 저장 레코드 안 글(메모 · 에스크로 표식) 하나의 최대 길이
+        static constexpr int32 kMaxReasonSize       = 32;
+        static constexpr int32 kMaxMemoSize         = 256;
+        static constexpr int32 kMaxJournalKeySize   = 200;
+        static constexpr int32 kMaxJournalScopeSize = 32; ///< `makeFromToken` 의 범위(`rcpt.<스토어>` · `mail.claim`) 길이
+        /// `makeFromToken` 이 16 진으로 펴는 토큰 바이트(83). 범위 상한 + '/' + 16 진이 분개 키 상한에 들도록 키 상한에서 낸다 — 와이어(청약철회 거래 id)가 받은 토큰은 언제나 원장 키가 된다.
+        static constexpr int32 kMaxTokenBytes = ( kMaxJournalKeySize - 1 - kMaxJournalScopeSize ) / 2;
+        static constexpr int32 kMaxRetryCount = 8;
     };
 } // namespace sw
 
@@ -234,7 +236,7 @@ namespace sw
     {
         /** @brief 클라이언트 멱등 키(128 비트)로 `<범위>/<16 진 32>` 키를 만듭니다. */
         static string makeFromIdempotency( string_view scope, uint64 keyHigh, uint64 keyLow );
-        /** @brief 바깥 토큰(영수증 거래 id, 우편 키, 거래 id)으로 `<범위>/<토큰 바이트의 16 진>` 키를 만듭니다. 범위가 틀리거나 토큰이 비거나 `kMaxTokenBytes` 를 넘으면 false 입니다. */
+        /** @brief 바깥 토큰(영수증 거래 id, 우편 키, 거래 id)으로 `<범위>/<토큰 바이트의 16 진>` 키를 만듭니다. 범위가 틀리거나(`kMaxJournalScopeSize` 초과 포함) 토큰이 비거나 `kMaxTokenBytes` 를 넘으면 false 입니다. 만든 키는 늘 `kMaxJournalKeySize` 안입니다. */
         [[nodiscard]] static bool makeFromToken( string_view scope, string_view token, string& outKey );
         static string             makeAccountScope( uint64 accountID );    ///< `acct.<16 진 16>`
         static string             makeAdminScope( uint64 adminAccountID ); ///< `gm.<16 진 16>`

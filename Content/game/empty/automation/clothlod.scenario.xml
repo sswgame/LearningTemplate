@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0f3676a7fe1d79cec4a263080e48751e"?>
 <!--
   천 LOD — 기사 등의 물리 천(maps/clothlod.scene.xml, _iterationCount 6 · _listLODIterationCount 4, 2 · _maxLOD 2)은 기사 스켈레탈 메시의 애니메이션 LOD 등급을 읽는다.
   카메라를 멀리 옮기면(object.place) 화면 크기가 줄어 등급이 오른다(engine/animation/animationlod.xml: 0.25 · 0.10 · 0.04 문턱, 기사 경계 구 지름 4, fovY 0.7).

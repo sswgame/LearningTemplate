@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="41321acdff3b09cb5a2de8d2316ed924"?>
 <!--
   Shooter3D 자동 플레이 조종자(ShooterAutoAimControllerComponent)의 판단. 감각이 적는 것:
   CirclePoint(아레나 가운데를 도는 나선의 앞 점, 판이 아니거나 플레이어가 쓰러졌으면 지운다) · HasEnemy · AimPoint(보이는 적 가운데 가장 가까운 가슴,

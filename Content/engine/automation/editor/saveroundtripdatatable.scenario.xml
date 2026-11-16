@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b09e772557f63c12c28dd3731e13b2d3"?>
 <!--
   에디터 시나리오 — 데이터 테이블 창 저장 왕복: 표면 종류 표(engine/environment/default.surfacekinds.xml)의 실행마다 새 사본(scratch/saveroundtripdatatable — <Scratch>)을 게임 데이터 표로 연다.
   데이터 테이블 창의 게임 데이터 표는 문서 기반(EditorDocumentPanel, Data 종류 가운데 .xml)이라 asset.openScratch 가 목록 클릭 · 콘텐츠 브라우저와 같은 길(워크스페이스 포커스)로 사본을 연다.

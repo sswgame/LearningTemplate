@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0af65a6b60fdac6647007356642d518d"?>
 <!-- 외형 라이브러리 프리셋(brushedmetal): 칼날(갈린 강철). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="BladeSteel" _base="engine/materials/library/brushedmetal/base.material">
 	<_properties>

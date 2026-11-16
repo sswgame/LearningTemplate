@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="89788f48ce6b3585e5bd1abfeac5dd25"?>
 <!--
   GPU 방출기의 파티클 라이트 — 빛나는 불똥(engine/vfx/gpusparklights, 깊이 충돌 + _light)이 어두운 바닥을 비추는지 본다(결정 기록 5-5 L5).
   빛은 vfx_simulate.hlsl 이 라이트 버퍼의 GPU 구간에 쓰고 GPU 라이트 그리드(light_grid.hlsl)가 받는다. 불똥 그림은 아주 작아 바닥의 밝기 차이가 거의 빛이다.

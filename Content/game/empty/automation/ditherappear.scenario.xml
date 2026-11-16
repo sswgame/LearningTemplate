@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="901dafd0c42f8d3a98923731ce9e2892"?>
 <!--
   디더 등장 — 순간이동한 메시(_bAppearOnTeleport)가 4 초 동안 0 → 1 로 나타나고, 남은 픽셀 비율이 등장 비율을 따라 단조롭게 는다.
   무대(maps/rendertest3d)의 DitherCube 를 제자리로 순간이동해 등장을 다시 시작하고, 0 · 1/4 · 1/2 · 3/4 지점을 찍는다. 등장 비율은 고정 프레임 시간으로 정해진다

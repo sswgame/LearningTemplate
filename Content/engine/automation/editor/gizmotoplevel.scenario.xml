@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7b468596c45eb6eaded5e9a5b0e9b0a5"?>
 <!--
   에디터 시나리오 — 그룹 기즈모는 선택의 최상위 집합만 옮긴다(감사 E-4, 유니티 Selection.GetTransforms( SelectionMode.TopLevel ) · 언리얼과 같다).
   TestKeyLight 를 TestParent 아래로 옮긴 뒤 자식 → Ctrl+부모 순으로 고르고 씬 뷰 기즈모 가운데(sceneView.gizmoCenter, 화면 평면 이동)를 끈다.

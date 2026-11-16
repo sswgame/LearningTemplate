@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="642dce0fb771de2f8de0125dd3df8d5e"?>
 <!--
   에디터 시나리오 — 오디오 그래프 패널(audiograph): 패널을 열면 그려지고(에디터 UI 캡처에 마젠타 자리표시가 없다) 닫으면 닫힌다. 패널을 열고 닫는 길만 본다 —
   그래프 편집(노드 더하기 · 연결)은 EditorTest 의 AudioGraph 모델 테스트가 본다.

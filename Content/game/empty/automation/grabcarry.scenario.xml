@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a460e9b6be99249bdf0030f8479a458b"?>
 <!--
   집기(GrabberComponent) · 눌림판 무게(GimmickWeightComponent) · 씬 너머 남기기(PersistAcrossScenesComponent) — 값으로 판정한다(골든 없음).
   ① Hand 가 상자를 집으면(개발 명령 grab.pick — 게임의 집기 입력과 같은 함수) 상자가 손을 따라 키네마틱으로 붙는다. ② 손을 눌림판 위로 옮기고 내려놓으면(grab.throw 0 0 0)

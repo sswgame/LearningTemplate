@@ -24,8 +24,10 @@ namespace sw::editor
      * @struct EditorAssetFileCommands
      * @brief 에셋 파일을 만들고 옮기고 지웁니다. 이름은 리소스 규칙(소문자, 숫자, `_`, `-`, `.`)을 지키고, 겹치면 `_2` · `_3` 을 붙입니다.
      * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorReferenceIndex`)이 아는 텍스트 에셋의 글을 새 리소스 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
-     *          에셋은 경로 하나로 가리키므로(식별자 표 · `.meta` 는 없다) 참조를 고치는 일이 옮기기의 전부다. 고치는 자리는 경로 칸(`AssetReferenceFields` —
-     *          커밋 전 검사 · `py -3 -m Scripts move-asset` 과 같은 `Config/Dev/AssetReferenceFields.json`)의 값뿐이다.
+     *          참조 칸은 아직 경로로 가리키므로(GUID 로 바꾸는 일은 docs/NEXT.md 2 단계) 고치는 자리는 경로 칸(`AssetReferenceFields` —
+     *          커밋 전 검사 · `py -3 -m Scripts move-asset` 과 같은 `Config/Dev/AssetReferenceFields.json`)의 값이다.
+     *          정체성(GUID — `AssetDatabase.h`)의 짝을 지킨다: 옮기기 · 이름 바꾸기 · 휴지통 · 지우기는 원본 곁 `.meta` 를 함께 다루고, 새로 만들기 · 복제 · 가져오기는 새 GUID 를,
+     *          내용 바꾸기(`replaceAssetContent`)는 옛 GUID 를 지킨다.
      */
     struct EditorAssetFileCommands
     {
@@ -45,7 +47,7 @@ namespace sw::editor
         [[nodiscard]] static bool createFolder( string_view parentAbs, string& outFolderAbs );
         /** @brief @p folderAbs 안에 @p assetTemplate(종류 등록의 틀, `EditorAssetTypeRegistry::collectNewAssetTemplates`)의 새 에셋(`<줄기><확장자>`, 겹치면 `_2` 부터)을 씁니다. */
         [[nodiscard]] static bool createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs );
-        /** @brief 에셋을 같은 폴더에 `<stem>_2` 처럼 복제합니다. */
+        /** @brief 에셋을 같은 폴더에 `<stem>_2` 처럼 복제합니다. 복제본은 새 GUID 를 받는다(원본의 `.meta` 는 베끼지 않는다). */
         [[nodiscard]] static bool duplicateAsset( string_view sourceAbs, string& outAssetAbs );
         /**
          * @brief 에셋을 @p destinationAbs 로 옮기고(이름 바꾸기 포함) 그 에셋을 적은 텍스트 에셋의 경로 칸을 고칩니다(칸 목록을 읽지 못하면 옮기지 않는다).
@@ -85,12 +87,17 @@ namespace sw::editor
          * @return 옮기기 목록입니다. 폴더가 아니거나 · 자기 안으로 옮기기 · 이미 있는 대상 · 빈 폴더면 그 이유입니다. 옮긴 뒤 빈 원본 폴더 지우기는 부른 쪽이 한다.
          */
         [[nodiscard]] static expected<vector<EditorAssetMove>> collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs );
-        /** @brief 에셋을 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. 그 자리(폴더면 그 아래)에 열린 문서가 있으면 지우지 않고 false 입니다(이유를 알린다). */
+        /** @brief 에셋과 곁의 `.meta` 를 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. 그 자리(폴더면 그 아래)에 열린 문서가 있으면 지우지 않고 false 입니다(이유를 알린다). */
         [[nodiscard]] static bool moveToTrash( string_view absolutePath );
-        /** @brief 에셋 파일을 삭제합니다. 열린 문서가 있으면 지우지 않고 false 입니다(`moveToTrash` 와 같다). */
+        /** @brief 에셋 파일을 지우고, 지운 뒤에 곁의 `.meta` 도 지웁니다. 열린 문서가 있으면 지우지 않고 false 입니다(`moveToTrash` 와 같다). */
         [[nodiscard]] static bool deleteAsset( string_view absolutePath );
         /**
-         * @brief 파일을 Content Browser 폴더로 복사합니다. 같은 이름이 있으면 덮지 않고 `_2` 처럼 새 이름으로 둡니다.
+         * @brief 에셋 @p targetAbs 의 내용을 파일 @p newContentAbs 의 것으로 바꾸고 GUID 는 지킵니다(`AssetIdentityRules::replaceContentKeepingIdentity`) — 지우고 다시 만들면 새 GUID 가 된다.
+         * @return 리소스 트리 밖이거나 대상에 정체성이 없거나 쓰기가 지면 오류를 남기고 false 입니다(디스크는 시작 상태).
+         */
+        [[nodiscard]] static bool replaceAssetContent( string_view targetAbs, string_view newContentAbs );
+        /**
+         * @brief 파일을 Content Browser 폴더로 복사하고 새 GUID 를 줍니다. 같은 이름이 있으면 덮지 않고 `_2` 처럼 새 이름으로 둡니다.
          * @return 복사한 파일 수입니다. 이미 그 폴더에 있는 파일과 없는 파일은 건너뜁니다.
          */
         static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );

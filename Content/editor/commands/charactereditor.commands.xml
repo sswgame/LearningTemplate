@@ -1,3 +1,4 @@
+<?asset guid="b965bfd19d1b19261e85649e0e377f01"?>
 <!-- 에디터 명령의 표시 · 배치(charactereditor) — 코드는 id 와 동작만 든다(SW_EDITOR_COMMAND · 명령 표). 칸은 모두 적는다, 빈 글은 "없음". -->
 <EditorCommandTextTable>
 	<_listCommand>

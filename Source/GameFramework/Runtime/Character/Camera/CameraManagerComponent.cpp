@@ -107,7 +107,7 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
         updateCamera( 0.0f );
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             _shakeSubscription = pManager->getCameraRegistry().getShakeChannel().add(
                 SW_DELEGATE_METHOD( CameraShakeRequestCallback, &CameraManagerComponent::onCameraShakeRequested, this ) );
@@ -174,8 +174,8 @@ namespace sw
 
     GameObjectHandle CameraManagerComponent::cycleViewTarget( CameraRole role )
     {
-        const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return _viewTarget;
         vector<CameraComponent*> listCamera;
@@ -255,7 +255,7 @@ namespace sw
     {
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        GameObject*              pObject  = pManager != nullptr ? pManager->resolveGameObject( target ) : nullptr;
+        const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( target ) : nullptr;
         if ( pObject == nullptr || pObject == pOwner )
             return nullptr;
         return pObject->getComponent<CameraComponent>();
@@ -299,7 +299,7 @@ namespace sw
     {
         // 대기 뷰(컷 프리롤)의 카메라를 애니메이션 LOD 에 넣는다 — 그 시점에서 보일 캐릭터가 컷 첫 프레임부터 제 LOD · 새 포즈다.
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         AnimationSystem&       animation      = pManager->getSubsystem<AnimationSystem>();

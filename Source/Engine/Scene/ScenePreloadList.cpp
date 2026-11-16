@@ -47,7 +47,7 @@ namespace sw
     void ScenePreloadList::collect( SceneIterationKey key, const GameObjectManager& objects, vector<string>& outListPath )
     {
         outListPath.clear();
-        objects.forEachGameObject( key, [&outListPath]( GameObject* pObject )
+        objects.forEachGameObject( key, [&outListPath]( const GameObject* pObject )
         {
             for ( Component* pComponent : pObject->getComponents() )
             {

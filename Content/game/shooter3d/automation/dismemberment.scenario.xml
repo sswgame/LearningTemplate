@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2718636695141e8f044be4131c4901d8"?>
 <!--
   Shooter3D 해골 적의 절단 — 아레나의 다섯째 보통 적(_listEnemyKind 의 SkeletonMinion, 오브젝트 이름도 프리셋)은 절단이 붙은 사람형이다.
   맞음은 게임의 총알 길과 같이 치명 표시 없이 보낸다(개발 명령 combat.hit). 쓰러짐은 적의 체력(ShooterEnemyComponent)이 정하고 치명 신호를 같은 오브젝트에 다시 보낸다

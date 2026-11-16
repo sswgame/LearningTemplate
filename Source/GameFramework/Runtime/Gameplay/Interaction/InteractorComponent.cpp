@@ -128,6 +128,7 @@ namespace sw
         , _listSessionEvent{}
         , _focus{}
         , _focusComponent{}
+        , _highlightComponent{}
         , _bHeld{ SW_FALSE }
         , _bWasHeld{ SW_FALSE }
         , _bPressed{ SW_FALSE }
@@ -142,7 +143,7 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
         {
             pManager->getSubsystem<SceneSpatialGrid>().addLayerReader( InteractableComponent::getSpatialLayer( _space ) );
@@ -153,9 +154,10 @@ namespace sw
     void InteractorComponent::onEndPlay()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        setFocus( GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         if ( pManager != nullptr )
-            setFocus( *pManager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
+            syncHighlight( *pManager );
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
             pManager->getSubsystem<SceneSpatialGrid>().removeLayerReader( InteractableComponent::getSpatialLayer( _space ) );
         _bSpatialIndexUser = SW_FALSE;
@@ -167,7 +169,7 @@ namespace sw
         if ( space == _space )
             return;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         // 세어진 공간과 `_space` 가 어긋나면 뗄 때 다른 공간의 수를 줄인다. 사용자를 함께 옮긴다.
         if ( pManager != nullptr && _bSpatialIndexUser == SW_TRUE )
         {
@@ -203,7 +205,7 @@ namespace sw
         outViewer._forward  = _space == InteractionSpace::Space2D ? _facing2D : float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pScene->getWorldMatrix() );
     }
 
-    void InteractorComponent::gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer )
+    void InteractorComponent::gatherCandidates( const GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer )
     {
         _listCandidate.clear();
         _listCandidateComponent.clear();
@@ -220,18 +222,18 @@ namespace sw
             for ( Component* pTarget : _listGridTarget )
             {
                 // 이 층의 열쇠는 대상 자신이다(`InteractableComponent::onRegister`). 해제가 항목을 빼므로 살아 있다.
-                considerCandidate( *static_cast<InteractableComponent*>( pTarget ), owner, viewer );
+                considerCandidate( *static_cast<const InteractableComponent*>( pTarget ), owner, viewer );
             }
             return;
         }
-        for ( InteractableComponent* pInteractable : manager.getComponentRegistry().getAll<InteractableComponent>() )
+        for ( const InteractableComponent* pInteractable : manager.getComponentRegistry().getAll<InteractableComponent>() )
         {
             if ( pInteractable != nullptr )
                 considerCandidate( *pInteractable, owner, viewer );
         }
     }
 
-    void InteractorComponent::considerCandidate( InteractableComponent& interactable, const GameObject& owner, const InteractionView& viewer )
+    void InteractorComponent::considerCandidate( const InteractableComponent& interactable, const GameObject& owner, const InteractionView& viewer )
     {
         const GameObject*     pObject = interactable.getOwner();
         const SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
@@ -254,46 +256,47 @@ namespace sw
         _listCandidateComponent.push_back( TComponentHandle<InteractableComponent>{ &interactable } );
     }
 
-    void InteractorComponent::setFocus( GameObjectManager& manager, GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent )
+    void InteractorComponent::setFocus( GameObjectHandle focus, TComponentHandle<InteractableComponent> focusComponent )
     {
-        if ( focusComponent == _focusComponent )
+        _focus          = focus;
+        _focusComponent = focusComponent;
+    }
+
+    void InteractorComponent::syncHighlight( GameObjectManager& manager )
+    {
+        if ( _highlightComponent == _focusComponent )
             return;
-        InteractableComponent* pOld = manager.resolveComponent( _focusComponent );
-        if ( pOld != nullptr )
+        if ( InteractableComponent* pOld = manager.resolveComponent( _highlightComponent ) )
             pOld->setHighlightRequested( false );
-        _focus                      = focus;
-        _focusComponent             = focusComponent;
-        InteractableComponent* pNew = manager.resolveComponent( _focusComponent );
-        if ( pNew != nullptr )
+        _highlightComponent = _focusComponent;
+        if ( InteractableComponent* pNew = manager.resolveComponent( _highlightComponent ) )
             pNew->setHighlightRequested( true );
     }
 
-    void InteractorComponent::finishSession( GameObjectManager& manager, const GameObject& owner )
+    void InteractorComponent::finishSession( TickContext& context, const GameObject& owner )
     {
         const TComponentHandle<InteractableComponent> target     = _focusComponent;
         const GameObjectHandle                        interactor = owner.getHandle();
-        GameObjectManager*                            pManager   = &manager;
-        manager.executeOrDeferPostTick( [pManager, target, interactor]()
+        context.deferPostTickOnScene( [target, interactor]( GameObjectManager& manager )
         {
-            InteractableComponent* pInteractable = pManager->resolveComponent( target );
-            const GameObject*      pInteractor   = pManager->resolveGameObject( interactor );
+            InteractableComponent* pInteractable = manager.resolveComponent( target );
+            const GameObject*      pInteractor   = manager.resolveGameObject( interactor );
             if ( pInteractable != nullptr && pInteractor != nullptr )
                 pInteractable->completeInteraction( *pInteractor );
         } );
     }
 
-    void InteractorComponent::deferPairedAnimationStart( GameObjectManager& manager, const InteractionStepDef& step )
+    void InteractorComponent::deferPairedAnimationStart( TickContext& context, const InteractionStepDef& step )
     {
         const TComponentHandle<InteractorComponent>   self{ this };
-        const TComponentHandle<InteractableComponent> target   = _focusComponent;
-        GameObjectManager*                            pManager = &manager;
-        _bPairedStartPending                                   = SW_TRUE;
+        const TComponentHandle<InteractableComponent> target = _focusComponent;
+        _bPairedStartPending                                 = SW_TRUE;
         // 세션은 다른 오브젝트(대상)의 애니메이터를 바꾸므로 틱 워커가 아닌 틱 뒤 게임 스레드에서 시작한다.
-        manager.executeOrDeferPostTick( [pManager, self, target, step]()
+        context.deferPostTickOnScene( [self, target, step]( GameObjectManager& manager )
         {
-            InteractorComponent* pSelf = pManager->resolveComponent( self );
+            InteractorComponent* pSelf = manager.resolveComponent( self );
             if ( pSelf != nullptr )
-                pSelf->startPairedAnimation( *pManager, target, step );
+                pSelf->startPairedAnimation( manager, target, step );
         } );
     }
 
@@ -347,26 +350,25 @@ namespace sw
             _pairedSessionID = sessionID;
     }
 
-    void InteractorComponent::deferPairedAnimationAbort( GameObjectManager& manager )
+    void InteractorComponent::deferPairedAnimationAbort( TickContext& context )
     {
         _bPairedStartPending = SW_FALSE;
         if ( _pairedSessionID == 0 )
             return;
-        const uint32       sessionID = _pairedSessionID;
-        GameObjectManager* pManager  = &manager;
-        _pairedSessionID             = 0;
-        manager.executeOrDeferPostTick( [pManager, sessionID]()
+        const uint32 sessionID = _pairedSessionID;
+        _pairedSessionID       = 0;
+        context.deferPostTickOnScene( [sessionID]( GameObjectManager& manager )
         {
-            PairedAnimationSystem* pSystem = PairedAnimationSystem::find( *pManager );
+            PairedAnimationSystem* pSystem = PairedAnimationSystem::find( manager );
             if ( pSystem != nullptr )
-                pSystem->abortSession( *pManager, sessionID );
+                pSystem->abortSession( manager, sessionID );
         } );
     }
 
-    void InteractorComponent::updateActiveSession( GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed )
+    void InteractorComponent::updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed )
     {
-        InteractableComponent* pTarget = manager.resolveComponent( _focusComponent );
-        bool                   bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
+        const InteractableComponent* pTarget = manager.resolveComponent( _focusComponent );
+        bool                         bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
         if ( bKeep )
         {
             InteractionCandidate candidate;
@@ -382,20 +384,20 @@ namespace sw
             _session.cancel();
     }
 
-    void InteractorComponent::updateFocusAndBegin( GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed )
+    void InteractorComponent::updateFocusAndBegin( const GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed )
     {
         const WorldLineOfSightQuery lineOfSight{ manager };
         const optional<int32>       best = InteractionView::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
         if ( best.has_value() )
         {
             const size_t index = static_cast<size_t>( *best );
-            setFocus( manager, GameObjectHandle::make( _listCandidate[index]._objectID ), _listCandidateComponent[index] );
+            setFocus( GameObjectHandle::make( _listCandidate[index]._objectID ), _listCandidateComponent[index] );
         }
         else
         {
-            setFocus( manager, GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
+            setFocus( GameObjectHandle{}, TComponentHandle<InteractableComponent>{} );
         }
-        InteractableComponent* pTarget = best.has_value() ? manager.resolveComponent( _focusComponent ) : nullptr;
+        const InteractableComponent* pTarget = best.has_value() ? manager.resolveComponent( _focusComponent ) : nullptr;
         if ( bPressed == false || pTarget == nullptr )
             return;
         const InteractionDef*  pDef       = pTarget->getDefinition();
@@ -409,11 +411,11 @@ namespace sw
             InteractorComponentInternal::setAlignmentWarpTarget( owner, *pTarget, *pDef );
     }
 
-    void InteractorComponent::handleSessionEvents( GameObjectManager& manager, GameObject& owner )
+    void InteractorComponent::handleSessionEvents( TickContext& context, GameObject& owner )
     {
         _listSessionEvent.clear();
         _session.pollEvents( _listSessionEvent );
-        const InteractableComponent* pEventTarget = manager.resolveComponent( _focusComponent );
+        const InteractableComponent* pEventTarget = context.getManager().resolveComponent( _focusComponent );
         const InteractionDef*        pEventDef    = pEventTarget != nullptr ? pEventTarget->getDefinition() : nullptr;
         for ( const InteractionSessionEvent event : _listSessionEvent )
         {
@@ -432,7 +434,7 @@ namespace sw
                 const InteractionStepDef& step = pEventDef->_listStep[static_cast<size_t>( _montageStep )];
                 InteractorComponentInternal::playStepMontage( owner, step, _resumeState );
                 if ( step._listPairedAnimationPath.empty() == false )
-                    deferPairedAnimationStart( manager, step );
+                    deferPairedAnimationStart( context, step );
             }
             if ( event == InteractionSessionEvent::Cancelled && pEventDef != nullptr )
             {
@@ -448,7 +450,7 @@ namespace sw
             {
                 InteractorComponentInternal::restoreMontage( owner, _resumeState );
                 _montageStep = constant::invalid_index::kInt32;
-                deferPairedAnimationAbort( manager );
+                deferPairedAnimationAbort( context );
             }
             if ( event == InteractionSessionEvent::Completed )
             {
@@ -456,12 +458,12 @@ namespace sw
                 _resumeState     = hashed_string{};
                 _montageStep     = constant::invalid_index::kInt32;
                 _pairedSessionID = 0;
-                finishSession( manager, owner );
+                finishSession( context, owner );
             }
         }
     }
 
-    void InteractorComponent::updatePrompt( GameObjectManager& manager )
+    void InteractorComponent::updatePrompt( const GameObjectManager& manager )
     {
         const InteractableComponent* pFocus = manager.resolveComponent( _focusComponent );
         const InteractionStepDef*    pStep  = _session.getStep();
@@ -486,23 +488,25 @@ namespace sw
     void InteractorComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        const bool bPressed = _bPressed == SW_TRUE;
-        const bool bHeld    = _bHeld == SW_TRUE;
-        _bPressed           = SW_FALSE;
+        GameObject&              owner    = context.getSelf();
+        const GameObjectManager& manager  = context.getManager();
+        const bool               bPressed = _bPressed == SW_TRUE;
+        const bool               bHeld    = _bHeld == SW_TRUE;
+        _bPressed                         = SW_FALSE;
 
         InteractionView viewer;
         makeView( viewer );
-        gatherCandidates( *pManager, *pOwner, viewer );
+        gatherCandidates( manager, owner, viewer );
         if ( _session.isActive() )
-            updateActiveSession( *pManager, viewer, context.getDeltaTime(), bHeld, bPressed );
+            updateActiveSession( manager, viewer, context.getDeltaTime(), bHeld, bPressed );
         else
-            updateFocusAndBegin( *pManager, *pOwner, viewer, bPressed );
-        handleSessionEvents( *pManager, *pOwner );
-        updatePrompt( *pManager );
+            updateFocusAndBegin( manager, owner, viewer, bPressed );
+        handleSessionEvents( context, owner );
+        updatePrompt( manager );
+        // 대상의 강조는 남의 컴포넌트라 틱 뒤(같은 프레임)에 맞춘다.
+        if ( _highlightComponent != _focusComponent )
+            context.deferPostTickOnComponent( *this, []( InteractorComponent& self, GameObjectManager& sceneManager )
+            { self.syncHighlight( sceneManager ); } );
     }
 
     void InteractorComponent::onRegister( GameObjectManager& manager )

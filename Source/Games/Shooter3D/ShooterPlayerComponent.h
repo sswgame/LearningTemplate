@@ -142,7 +142,9 @@ namespace sw
         /** @brief 마지막 탄도선의 시작점이 눈에서 조준 방향으로 얼마나 앞인지(m)입니다. 1인칭이면 시점 총의 총구라 총 앞이고, 쏜 적이 없으면 0 입니다. */
         float32 getLastTracerStartAhead() const { return _lastTracerStartAhead; }
         /** @brief 스폰해 둔 몸 오브젝트입니다. 없으면 nullptr 입니다. */
-        GameObject* findBodyObject() const;
+        const GameObject* findBodyObject() const;
+        /** @brief 위와 같되 쓰기 가능한 몸입니다 — 틱 밖 · 틱 뒤(`flushPending`)에서만 부른다(쓰기 가능한 매니저를 꺼낸다). */
+        GameObject* findMutableBodyObject();
         uint32      getHitCount() const { return _hitCount; }
 
     private:

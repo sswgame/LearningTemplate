@@ -42,7 +42,7 @@ namespace sw::editor
     {
         outListChoice.clear();
         // 콜백은 공유 잠금 안이라 구조를 바꾸지 않는다. 핸들과 라벨만 모은다.
-        manager.forEachComponentOfType( editor::EditorSceneIterationAccess::getKey(), &targetType, [&outListChoice]( Component* pComp )
+        manager.forEachComponentOfType( editor::EditorSceneIterationAccess::getKey(), &targetType, [&outListChoice]( const Component* pComp )
         { outListChoice.push_back( InspectorComponentChoice{ pComp->getHandle(), makeLabel( *pComp ) } ); } );
         // 방문 순서는 약속되지 않는다.
         VectorUtil::sort( outListChoice, []( const InspectorComponentChoice& lhs, const InspectorComponentChoice& rhs )

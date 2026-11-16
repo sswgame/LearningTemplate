@@ -22,7 +22,7 @@ namespace sw
     void WesternWitnessComponent::collect( const GameObjectManager& manager, vector<WesternWitness>& outListWitness )
     {
         outListWitness.clear();
-        for ( WesternWitnessComponent* pWitness : manager.getComponentRegistry().getAll<WesternWitnessComponent>() )
+        for ( const WesternWitnessComponent* pWitness : manager.getComponentRegistry().getAll<WesternWitnessComponent>() )
         {
             const GameObject*     pOwner = pWitness->getOwner();
             const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;

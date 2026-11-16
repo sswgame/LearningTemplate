@@ -186,6 +186,20 @@ namespace sw
         }
     }
 
+    void GameObjectStore::findGameObjectsByBaseName( hashed_string baseName, vector<const GameObject*>& outListGameObject ) const
+    {
+        outListGameObject.clear();
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        const auto                     it = _mapBaseNameToObject.find( baseName );
+        if ( it == _mapBaseNameToObject.end() )
+            return;
+        for ( const GameObject* pObj : it->second )
+        {
+            if ( pObj->isPendingDestroy() == false )
+                outListGameObject.push_back( pObj );
+        }
+    }
+
     string_view GameObjectStore::computeBaseName( string_view name )
     {
         const size_t underscore = name.rfind( '_' );

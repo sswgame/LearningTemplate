@@ -55,6 +55,21 @@
 - **5-4 리플렉션:** W-R3 (a) 고정 배치형 코덱 본문을 필드 서술자 공용 코덱으로(생성 바이트 4 MB 미만은 그 뒤 측정), (e) `CultureInfo` 부모 병합 · 자식 요소를 리플렉션 컨테이너로(폴백을 없애면 `RequiredAtRoot`), `InspectorLayoutCache` 키를 `PropertyHandle` 로(핫 리로드 때 비우는지 먼저). W-R4 `ReflectVisit` 하나(상태 해시 동등성 판정과 같은 묶음). W-R6 밀집 타입 색인은 5-3 SoA 와 함께. N1 `PROPERTY( Replicated, Quantize = … )` 복제 스키마, 스키마 해시를 와이어 버전에.
 - **상용 대비:** T3 샤드 시간 균형(외부 CI 러너는 사용자 결정), U1 방아쇠 진동 · Android Vibrator(백엔드가 생길 때), A1 Mirror · Montage 를 `AnimationPoseNodeRegistry` 에, R1 배포 팩이 도메인 `redirects.xml` 을 담는지(쿠킹 설정에 이름이 없어 Shipping 에서 빠질 수 있다).
 
+### 에셋 정체성(GUID) 2 · 3 단계 — 판단은 [DesignBacklog](DesignBacklog.md) "에셋 정체성" 절
+
+1 단계(들어감): `AssetGUID` · 머리 `<?asset guid?>` · `.meta`(`AssetMeta`) · `AssetDatabase`(색인 · 결함) · `asset-ids [--fix]` · 커밋 훅 · 에디터 짝 처리 · 팩 색인 `assetindex.xml` 쓰기. Content 전체에 부여했다(머리 1314 · `.meta` 2580).
+
+- **통합 검증에서 볼 것(1 단계):** 단위 테스트 `AssetGUIDTest` · `AssetDatabaseTest` · `AssetPackIndexTest`, 에디터 시나리오 `editor.assetidentity`(가져오기가 새 GUID, `asset.replaceContent` 가 GUID 유지), `editor.assetmove` · `editor.flowimport` · `contentbrowser`(`.meta` 가 브라우저 · 빠른 열기 · 참조 색인에 안 보이는지 — `EditorContentScan` 이 뺀다), 모든 쿠킹(팩마다 색인이 들고 `PackCooker.PackCookNoIdentity` 가 없는지), `--check-text` · 머티리얼 그래프 생성 검사(머리 때문에 "낡았다" 가 나오지 않는지), Content XML 을 바이트로 다시 쓰고 견주는 테스트가 머리로 지지 않는지. `py -3 -m Scripts asset-ids` 를 린트 규칙 `asset-ids` 로 들어갔다(`lint --all` 이 전체를 본다).
+- **2 단계 — 참조를 GUID 로:**
+  - 참조 칸(`Config/Dev/AssetReferenceFields*.json` 의 경로 칸)과 `AssetRef<T>` 의 저장 꼴을 `guid:<32자>` 로 — 읽기는 GUID 만, 옛 경로 칸은 형식 판 올림(`SW_ASSET_FORMAT_UPGRADE`)이 저작 색인으로 GUID 를 찾아 바꿔 쓴다(못 찾으면 오류). 에디터 · `move-asset` 의 참조 고쳐 쓰기는 GUID 참조에서는 할 일이 없어진다.
+  - 세이브(`SaveGame` 판 올림 `SW_SAVE_FORMAT_UPGRADE`)와 서버 기록(서비스 저장소 마이그레이션 `Content/common/sql/*/migrations.xml`)에 적힌 경로를 GUID 로 — 배포된 팩 색인 + 마지막 리다이렉트 표로 한 번 풀어 쓴다.
+  - `Content/engine/data/enginedefaultassets.xml`(`EngineDefaultAssets`) 같은 설정의 경로 칸, 게임 설정 · 카탈로그 `_base`(`common/data/items.xml#helmet_knight`) 의 파일 부분.
+  - 런타임 색인: `AssetManager` 가 마운트한 팩마다 `assetindex.xml` 을 읽어 합친다(뒤에 마운트한 패치가 이긴다, 한 팩 안 겹침은 오류). Dev(느슨한 트리)는 `AssetDatabase::scan` 을 시작 · 파일 감시로 갱신.
+  - 임포트 산출물 줄: 원본 GUID → 산출물 경로(`textures_raw/x.png` → `textures/x.dds`)를 임포트 기록(스탬프)에서 팩 색인에 더한다. 내용 주소 공유 파일(`textures_raw/_shared/`)은 저장소 경로 해시 GUID 로 `.meta` 를 함께 쓴다(판단 절).
+  - 옮기기용 리다이렉트(`AssetRedirect` · 도메인 `redirects.xml` · `move-asset` 의 줄 더하기)를 걷고, 정체성 대체 · 합치기용 GUID→GUID 표만 남긴다(`deprecation-and-migration` — 표를 읽는 쪽을 먼저 GUID 로 옮긴 뒤 지운다).
+  - localization 표(글 수집이 바이트로 쓰는 `strings` · `translation` · `tm`)의 쓰기가 머리를 옮겨 쓰게 하고 규칙 파일의 `*/localization/*` 건너뛰기를 걷는다. 시나리오 사본(`scratch/`)은 원본 GUID 를 그대로 들어 `scan` 에서 겹친다 — 사본 도메인을 색인에서 빼거나 사본에 새 GUID 를 준다.
+- **3 단계 — 공유 DDC · 원본 저장소 떼기:** 변환 결과 키(서술 + 원본 내용 해시)를 공유 DDC(네트워크 캐시)로, 원본(png · ogg · glb)을 LFS · 별도 저장소로 떼고 서술의 `_source` 가 그 자리를 가리킨다. 에셋별 임포트 예외 칸을 `AssetMeta` 에(기본값은 폴더 규칙 `Config/Editor` 의 임포트 설정).
+
 ## 6. 리소스 · 그 뒤
 
 - **Sprite Fusion 타일셋**(상세 페이지마다 CC0): Castle · Tiny Swords(Pixel Frog), Dungeon(0x72), Four Seasons Platformer(Analog Studios), Retro Gameboy(Ben Leggett) — `https://www.spritefusion.com/downloads/tilesets/<이름>.zip`. 1Bit Platformer 는 Kenney 원본에서. **VFX 25 종**(MIT, credits 에 고지): 캔버스 TypeScript 를 브라우저 MCP 로 재생해 시트로 굽는다. **PixelFX Piper**: 이용 조건 확인 뒤 시트로 내보낸다.

@@ -1,3 +1,4 @@
+<?asset guid="ee3cd24a6c4973db4d0f0448ac59ad4c"?>
 <Scene formatVersion="2" name="VfxGPULights256">
 	<!-- 슬롯 스윕(VfxGPULightSlotSweep)의 측정 씬 — vfxgpulights 와 같은 무대이고 효과만 파티클 라이트 슬롯 256 짜리(engine/vfx/gpusparklights256, GPU 구간 상한)다. 시나리오는 없다(측정 전용).
 	     성능 비교 사례 vfxGpuLights256 이 RT.VFX.Simulate 를 슬롯 32(vfxgpulights)와 견주게 한다. -->

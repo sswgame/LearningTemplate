@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d173aea7c599d65fce298f2134f038dd"?>
 <!--
   세이브 불러오기가 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7) · 교체에서 진 복원 뒤 세이브를 막고 그 씬을 다시 연다(감사 P0-6).
   1) 맵 A(rendertest3d)에서 저장 → 다른 씬(fogshowcase — 타이틀 자리)으로 옮김 → game.load: 머리의 씬 정체로 A 를 다시 열고 적용한다(활성 씬 경로 · 오브젝트 수).

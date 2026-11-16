@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f6084b7f555696ac1fb3d2562619ab63"?>
 <!-- 핫 리로드 확인(editor/matparamreload)의 머티리얼 — 색이 사본 묶음의 WorldTint 를 읽는다. -->
 <MaterialDef formatVersion="0" name="matparamreload_bound" _base="engine/materials/defaultmaterial.material">
 	<_properties>

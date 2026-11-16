@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8d4107e95f49c64fbf72a2b7119961b8"?>
 <!--
   에디터 시나리오 — 카메라 프리셋 창(GF_EditorPlugin_CameraPresets 확장): 창을 열고 Quick Open 으로 엔진 기본 프리셋 파일(default.cameras.xml, 프리셋 넷)을 고르면 창이 목록을 읽고,
   행을 누르면 그 프리셋이 골라져 미리보기 뷰가 그 카메라로 그린다.

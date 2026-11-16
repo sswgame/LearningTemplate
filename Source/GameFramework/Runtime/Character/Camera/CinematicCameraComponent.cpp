@@ -147,7 +147,7 @@ namespace sw
     GameObject* CinematicCameraComponent::findSignalTarget( const SequenceCameraSignal& signal ) const
     {
         const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         return pManager != nullptr ? pManager->resolveGameObject( signal._target ) : nullptr;
     }
 

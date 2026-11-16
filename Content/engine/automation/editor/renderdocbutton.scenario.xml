@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3b507e613184f843268bdce85683528a"?>
 <!--
   에디터 시나리오 — RenderDoc 단추(EditorPlus G3): -renderdoc 없이 띄우면 RenderDoc 이 붙지 않고, 상단 툴바의 회색 단추를 눌러도 아무 일이 없다.
   좁힌 창(900x720)에 UI 배율 1.5 면 단추가 툴바 줄에 들지 않아 ">>" 넘침 펼침에 있다 — 펼침을 열고 누른다(넘침이 없으면 표식이 없어 진다).

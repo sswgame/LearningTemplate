@@ -97,20 +97,25 @@ namespace sw
         inoutState._rootMotionRotation    = _owner._rootMotionDelta._rotation;
     }
 
-    SkeletalAnimatorClipSource::SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner, const vector<unique_ptr<SkeletalBlendSpaceState>>* pListBlendSpace )
+    SkeletalAnimatorClipSource::SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner, const vector<unique_ptr<SkeletalBlendSpaceState>>* pListBlendSpace,
+                                                            const AnimationPoseNodeSet* pPoseNodes )
         : _owner{ owner }
         , _pListBlendSpace{ pListBlendSpace }
+        , _pPoseNodes{ pPoseNodes }
     {
     }
 
     const IAnimationPlayable* SkeletalAnimatorClipSource::findPlayable( const hashed_string& name ) const
     {
-        // 블렌드 스페이스 노드는 그 상태를, 보통 노드(또는 그래프 밖 이름)는 같은 이름의 클립을 낸다.
+        // 블렌드 스페이스 노드는 그 상태를, 포즈 노드는 그 노드를, 보통 노드(또는 그래프 밖 이름)는 같은 이름의 클립을 낸다.
         for ( const unique_ptr<SkeletalBlendSpaceState>& state : _pListBlendSpace != nullptr ? *_pListBlendSpace : _owner._listBlendSpace )
         {
             if ( state->getStateName() == name )
                 return state.get();
         }
+        const IAnimationPoseNode* pPoseNode = ( _pPoseNodes != nullptr ? *_pPoseNodes : _owner._poseNodes ).findNode( name );
+        if ( pPoseNode != nullptr )
+            return pPoseNode;
         return _owner.findClip( name );
     }
 
@@ -120,9 +125,22 @@ namespace sw
         , _graph{}
         , _player{}
         , _listBlendSpace{}
-        , _source{ owner, &_listBlendSpace }
+        , _poseNodes{}
+        , _source{ owner, &_listBlendSpace, &_poseNodes }
     {
         _player.setPlayableSource( &_source );
+    }
+
+    SkeletalAnimatorComponent::PoseNodeSampler::PoseNodeSampler( SkeletalAnimatorComponent& owner, const Skeleton& skeleton, const uint8* pBoneMask )
+        : _pOwner{ &owner }
+        , _pSkeleton{ &skeleton }
+        , _pBoneMask{ pBoneMask }
+    {
+    }
+
+    void SkeletalAnimatorComponent::PoseNodeSampler::samplePose( const IAnimationPlayable& playable, float32 time, Pose& inoutPose )
+    {
+        _pOwner->samplePlayableIntoPose( playable, time, *_pSkeleton, inoutPose, _pBoneMask );
     }
 
     SkeletalBlendSpaceState::SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip, int32 maxLODGrade )
@@ -242,6 +260,8 @@ namespace sw
         , _listLayer{}
         , _listGraphLayer{}
         , _listBlendSpace{}
+        , _poseNodes{}
+        , _pMirroredBone{ nullptr }
         , _listLinkedGraph{}
         , _listScratchSamplePose{}
         , _listScratchSamplePosePointer{}
@@ -379,7 +399,14 @@ namespace sw
         for ( const AnimationGraphNode& node : graph._listNode )
         {
             if ( node.hasPoseNode() )
+            {
+                // 입력 이름은 클립이거나 같은 그래프의 다른 상태다 — 셋에 없는 이름은 `requestClipLoad` 가 건너뛴다.
+                for ( const hashed_string& inputName : node._poseNode._listInput )
+                {
+                    requestClipLoad( inputName );
+                }
                 continue;
+            }
             if ( node.hasBlendSpace() == false )
             {
                 requestClipLoad( hashed_string( node._name ) );
@@ -558,6 +585,7 @@ namespace sw
         }
         // 빠진 것만 빼고 돌지 않는다 — 파일을 못 읽은 그래프와 같이 플레이어에 그래프를 걸지 않는다. 데이터는 남겨 셋을 바꾸면 다시 맞춰 본다.
         SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNotUsed", "Animation graph '%#' is not used - it names what SkeletalAnimatorComponent cannot play (errors above)", _animationGraphPath.c_str() );
+        _poseNodes.clear(); // 포즈 노드가 블렌드 스페이스 상태를 입력으로 빌렸다 — 먼저 놓는다
         _listBlendSpace.clear();
         _listGraphLayer.clear();
         releaseLinkedGraphPlayables();
@@ -567,22 +595,26 @@ namespace sw
     {
         // 플레이어(`setGraph`, `stop`)가 빌린 상태를 놓은 뒤에 부른다. 워커의 전이는 읽어 둔 클립만 찾으므로 클립은 지금(게임 스레드) 읽는다.
         _listGraphLayer.clear();
+        _poseNodes.clear();
         _listBlendSpace.clear();
-        bool bPlayable = rebuildNodePlayables( _graph, _animationGraphPath, _listBlendSpace );
+        bool bPlayable = rebuildNodePlayables( _graph, _animationGraphPath, _listBlendSpace, _poseNodes, _clipSource );
         bPlayable      = rebuildLinkedGraphs() && bPlayable;
         return rebuildGraphLayers() && bPlayable;
     }
 
-    bool SkeletalAnimatorComponent::rebuildNodePlayables( const AnimationGraphAsset& graph, string_view graphPath, vector<unique_ptr<SkeletalBlendSpaceState>>& outListBlendSpace )
+    bool SkeletalAnimatorComponent::rebuildNodePlayables( const AnimationGraphAsset& graph, string_view graphPath, vector<unique_ptr<SkeletalBlendSpaceState>>& outListBlendSpace,
+                                                          AnimationPoseNodeSet& outPoseNodes, const IAnimationPlayableSource& source )
     {
         bool bPlayable = true;
         for ( const AnimationGraphNode& node : graph._listNode )
         {
-            // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 그래프를 쓰지 않는다.
+            // 포즈 노드는 입력 클립만 읽어 두고 블렌드 스페이스 상태를 다 지은 뒤 만든다(입력이 블렌드 스페이스 상태일 수 있다).
             if ( node.hasPoseNode() )
             {
-                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNodePose", "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", graphPath, node._name.c_str() );
-                bPlayable = false;
+                for ( const hashed_string& inputName : node._poseNode._listInput )
+                {
+                    (void)preloadClip( inputName ); // 클립이 아닌 입력(다른 상태)도 있다 — 못 찾으면 노드를 만들 때 오류다
+                }
                 continue;
             }
             if ( node.hasBlendSpace() == false )
@@ -607,6 +639,11 @@ namespace sw
             unique_ptr<SkeletalBlendSpaceState> state = sw::make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ), node._maxLODGrade );
             state->updateWeights( _parameters );
             outListBlendSpace.push_back( std::move( state ) );
+        }
+        if ( outPoseNodes.rebuild( graph, source ) == false )
+        {
+            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphPoseNodes", "Animation graph '%#' has a pose node that could not be built (errors above)", graphPath );
+            bPlayable = false;
         }
         return bPlayable;
     }
@@ -637,7 +674,7 @@ namespace sw
                 bPlayable = false;
                 continue;
             }
-            if ( rebuildNodePlayables( linked->_graph, linked->_graphPath, linked->_listBlendSpace ) == false )
+            if ( rebuildNodePlayables( linked->_graph, linked->_graphPath, linked->_listBlendSpace, linked->_poseNodes, linked->_source ) == false )
             {
                 bPlayable = false;
                 continue;
@@ -653,6 +690,7 @@ namespace sw
         for ( const unique_ptr<LinkedLayerGraph>& linked : _listLinkedGraph )
         {
             linked->_player.setGraph( nullptr );
+            linked->_poseNodes.clear();
             linked->_listBlendSpace.clear();
         }
     }
@@ -833,7 +871,7 @@ namespace sw
         // 블렌드 스페이스 노드의 표본은 그래프를 읽을 때 읽었다. 가중치와 길이는 지금 파라미터로 맞춰 둔다(길이 0 이면 재생되지 않는다).
         if ( pNode != nullptr && pNode->hasBlendSpace() )
             updateBlendSpaceWeights( _listBlendSpace, _graphPlayer.getPlayer() );
-        else
+        else if ( pNode == nullptr || pNode->hasPoseNode() == false )                          // 포즈 노드는 그래프를 읽을 때 지었다
             (void)preloadClip( pNode != nullptr ? hashed_string( pNode->_name ) : stateName ); // 못 찾으면 아래 play 가 오류를 남긴다
         const bool bFound = _graphPlayer.play( stateName, bLoop, blendSeconds < 0.0f ? _blendSeconds : blendSeconds );
         _currentState     = _graphPlayer.getCurrentStateName().c_str();
@@ -962,8 +1000,8 @@ namespace sw
         // 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다. 반복 클립 둘 사이의 페이드는 섞기 묶음으로 나눈다(`AnimationCrowd::joinBlendBucket`).
         const IAnimationPlayable* pNext        = player.getNextPlayable();
         const bool                bLayered     = _listLayer.empty() == false || _listGraphLayer.empty() == false;
-        const bool                bNotClip     = pPlaying == nullptr || findBlendSpaceState( pPlaying ) != nullptr;
-        const bool                bNextNotClip = pNext != nullptr && ( findBlendSpaceState( pNext ) != nullptr || player.isNextLooping() == false );
+        const bool                bNotClip     = pPlaying == nullptr || findBlendSpaceState( pPlaying ) != nullptr || pPlaying->findPoseNode() != nullptr;
+        const bool                bNextNotClip = pNext != nullptr && ( findBlendSpaceState( pNext ) != nullptr || pNext->findPoseNode() != nullptr || player.isNextLooping() == false );
         // inertialization 중이면 남은 차이가 유닛마다 달라 묶음의 포즈와 같지 않다.
         const bool bInertializing = _inertializer.isActive() || _bInertializationPending == SW_TRUE;
         const bool bNotShareable  = bNotClip || bNextNotClip || bInertializing || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || bLayered ||
@@ -1325,10 +1363,22 @@ namespace sw
 
     void SkeletalAnimatorComponent::samplePlayableIntoPose( const IAnimationPlayable& playable, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
     {
+        const IAnimationPoseNode* pPoseNode = playable.findPoseNode();
+        if ( pPoseNode != nullptr )
+        {
+            PoseNodeSampler     sampler( *this, skeleton, pBoneMask );
+            AnimationPoseParams params;
+            params._pSampler      = &sampler;
+            params._pParameter    = &_parameters;
+            params._pSkeleton     = &skeleton;
+            params._pMirroredBone = _pMirroredBone;
+            (void)pPoseNode->evaluatePose( params, time, inoutPose ); // 못 하면 노드가 오류를 남겼고 포즈는 들어온 그대로다
+            return;
+        }
         const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
         if ( pState == nullptr )
         {
-            // 이 애니메이터가 상태 기계에 주는 재생할 것은 블렌드 스페이스 상태가 아니면 클립뿐이다(`SkeletalAnimatorClipSource::findPlayable`).
+            // 이 애니메이터가 상태 기계에 주는 재생할 것은 포즈 노드 · 블렌드 스페이스 상태가 아니면 클립뿐이다(`SkeletalAnimatorClipSource::findPlayable`).
             sampleClipIntoPose( static_cast<const AnimationClip&>( playable ), time, skeleton, inoutPose, pBoneMask );
             return;
         }
@@ -1356,6 +1406,9 @@ namespace sw
 
     BoneTransform SkeletalAnimatorComponent::computePlayableRootMotion( const IAnimationPlayable& playable, const AnimationTimeStep& step ) const
     {
+        // shortcut: 포즈 노드는 루트 모션을 내지 않는다(몽타주 섹션 · 미러의 이동 뒤집기 없음). 루트 모션 몽타주를 쓰는 게임이 생기면 노드가 걸음 구간을 입력 시각으로 옮겨 내게 한다.
+        if ( playable.findPoseNode() != nullptr )
+            return BoneTransform{};
         const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
         if ( pState == nullptr )
             return static_cast<const AnimationClip&>( playable ).computeRootMotionDelta( step );
@@ -1379,6 +1432,9 @@ namespace sw
 
     void SkeletalAnimatorComponent::accumulatePlayableCurves( const IAnimationPlayable& playable, float32 time, float32 weight )
     {
+        // shortcut: 포즈 노드는 커브를 내지 않는다(입력 클립의 커브 · 모프 없음). 커브를 싣는 클립을 노드에 넣는 데이터가 생기면 노드가 입력 시각을 알려 더하게 한다.
+        if ( playable.findPoseNode() != nullptr )
+            return;
         const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
         if ( pState == nullptr )
         {
@@ -1485,6 +1541,7 @@ namespace sw
         const IAnimationPlayable* pCurrent = player.getCurrentPlayable();
         const IAnimationPlayable* pNext    = player.getNextPlayable();
         const uint8*              pMask    = skeletalMesh.findBoneLODMask();
+        _pMirroredBone                     = skeletalMesh.findMirroredBones(); // 포즈 노드 `Mirror` 가 받는다 — 표가 없으면 nullptr 이고 노드가 오류를 남긴다
 
         // pose 는 유닛이 레퍼런스(또는 리더 포즈)로 채워 둔 상태다. 지금 칸을 그 위에 샘플하고, 페이드 중이면 다음 칸과 섞는다.
         if ( pCurrent != nullptr )

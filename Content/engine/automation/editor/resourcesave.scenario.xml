@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8557490ce30081728c93dc966b9335b4"?>
 <!--
   에디터 시나리오: 저장이 리소스 조건(_when)을 지킨다(ResourceComposer::saveText 가 restoreConditions 를 지난다).
   문서(resourcesave/resourcesave.animgraph.xml)의 전이 101 은 quality.low 이면 빠진다. 편집기 사본은 지금 태그로 푼 값을 들어

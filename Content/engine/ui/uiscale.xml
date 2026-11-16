@@ -1,3 +1,4 @@
+<?asset guid="5613fe742b1bb3ba904e6a4a829df553"?>
 <!-- UI 배율 규칙(UIScaleSettings). _minTouchTargetSize: 손가락 조작의 가장 작은 상자(UI 단위 — Material 48dp). _compactMaxWidth: 이보다 좁은 화면(dp = 물리 너비 / 창 배율)은
      리소스 태그 screen.compact — 문서가 _when 변형으로 다시 배치한다(Android sw600dp 경계). -->
 <UIScaleSettings _rule="ShortestSide"

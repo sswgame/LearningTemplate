@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4c4b78fdc897ed1cd8034449c8739436"?>
 <!--
   에디터 시나리오 — Sequencer 바인딩 · 카메라 컷 차선: 테스트 씬(sequencerkeys/sequencerkeys.scene.xml)과 시퀀스를 연다.
   ① 계층에서 CamA 를 고르고 "선택에서 바인딩 더하기" → 바인딩 2, 묶이지 않은 바인딩 0(Director 의 플레이어에 묶였다 — 되돌리기 한 단계).

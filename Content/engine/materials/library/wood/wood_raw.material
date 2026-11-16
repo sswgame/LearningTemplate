@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c7f45386382e4d9bb34d199c3cd3fcc1"?>
 <!-- 외형 라이브러리 프리셋(wood): 생목. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="WoodRaw" _base="engine/materials/library/wood/base.material">
 </MaterialDef>

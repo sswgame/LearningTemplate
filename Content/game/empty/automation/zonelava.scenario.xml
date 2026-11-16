@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b3425841c29eac17433dc48df2c6c59f"?>
 <!--
   지역 효과 — 용암(maps/zoneshowcase 의 LavaPool · LavaField, 프로필 zones/lava.zone.xml). 웅덩이는 액체(WaterBodyComponent _surfaceKind="Lava")라 잠김 입력이고,
   Empty 층의 표면 종류 표가 Lava 에 프로필을 붙였다(전용 컴포넌트 없음).

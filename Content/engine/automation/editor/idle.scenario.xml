@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c091f45d83d497f8a77c6fd7a1eb034c"?>
 <!--
   에디터 시나리오 — 에디터 유휴(FramePacingState::EditorIdle = 6)에서 깨어나는 조건이 빠지지 않았는지 본다(감사 SB P1 후속).
   에디터가 다시 그릴 까닭(EditorRedrawReason: 입력 · 잡은 항목 · 플레이 · 알림 · 패널의 연속 프레임 요청)이 없는 프레임이 이어지면 앱 루프는 창 메시지까지 잔다.

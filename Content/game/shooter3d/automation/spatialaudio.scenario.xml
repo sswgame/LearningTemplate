@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c29ff0d1a83aa89e25f41be76d9aee4e"?>
 <!--
   공간 오디오(Engine/Audio/Component) — 아레나에 놓인 영역 환경음 · 점 소리 · 잔향 존을 값으로 판정한다. 소리 자체는 듣지 않는다(장치가 없어도 오디오 엔진은 오프라인으로 돈다).
   ① 시작할 때 환경음 둘이 낸 인스턴스가 산다(이벤트 ArenaHum, _bPlayOnBeginPlay). ② 플레이어(스폰 0,0,-16)는 구석의 존 · 상자 밖이라 잔향 0, 환경음까지 거리 > 0 이다.

@@ -133,6 +133,7 @@ namespace sw
          * @details 밑 이름 색인(`_mapBaseNameToObject`)을 찾으므로 비용은 그 밑의 오브젝트 수다 — 씬을 돌지 않는다(틱에서도 부를 수 있는 좁은 질의).
          */
         void findGameObjectsByBaseName( hashed_string baseName, vector<GameObject*>& outListGameObject ) const;
+        void findGameObjectsByBaseName( hashed_string baseName, vector<const GameObject*>& outListGameObject ) const;
         /** @brief @p name 의 밑 이름입니다. 끝이 `_` + 0 으로 시작하지 않는 숫자면 그것을 뗀다(`Tree_3` → `Tree`, `Tree_03` · `Tree_` 는 그대로). */
         static string_view computeBaseName( string_view name );
         /** @brief 병합된 오브젝트가 하나라도 있으면 true 입니다. 틱이 컴포넌트 단계를 건너뛸지 판단할 때 씁니다(게임 스레드). */

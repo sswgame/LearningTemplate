@@ -219,7 +219,7 @@ namespace sw
     {
         Component::onBeginPlay();
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 시작이 틱 안이어도(플레이 중에 붙었다) 틱 뒤에 세운다. 그 사이에 컴포넌트가 사라질 수 있으니 핸들로 다시 찾는다.
@@ -259,7 +259,7 @@ namespace sw
     {
         despawnProps();
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         if ( const expected<void> models = PropScatterPlacement::validateModels( _listModel, _materialPath ); models.has_value() == false )
@@ -296,6 +296,7 @@ namespace sw
             GameObject* pProp = pManager->createGameObject( propName );
             if ( pProp == nullptr )
                 continue;
+            pProp->setTransient( true ); // 시작할 때 규칙에서 다시 흩뿌린다 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
             MeshComponent* pMesh = pProp->addComponent<MeshComponent>();
             if ( pMesh == nullptr )
             {
@@ -336,7 +337,7 @@ namespace sw
     bool PropScatterComponent::areSpawnedPropsAlive() const
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _listSpawned.empty() )
             return false;
         for ( const GameObjectHandle& handle : _listSpawned )
@@ -350,7 +351,7 @@ namespace sw
     void PropScatterComponent::despawnProps()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
         {
             for ( const GameObjectHandle& handle : _listSpawned )

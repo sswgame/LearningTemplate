@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="662f1dcecaaefcc71178327567d11507"?>
 <!--
   에디터 시나리오 — 캐릭터 편집 창의 소켓 뷰포트 기즈모: 소켓 탭에서 첫 소켓을 고르고 미리보기 탭으로 가면 기즈모가 그 소켓(마지막에 고른 것)에 놓인다
   (Editor.CharacterEditorSocketGizmoPlaced = 1, 본 기즈모는 0). 기즈모 가운데(화면 평면 이동)를 끌면 소켓 파일의 로컬 위치가 바뀌고(Editor.CharacterEditorSelectedSocketX 가 달라진다),

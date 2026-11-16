@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f4e11084aa557cb9ad5b1d521b630c49"?>
 <!-- 침 가닥 — 침 방아쇠(Drool)가 켜진 동안 몸 동작(CharacterBodyDynamicsComponent)이 입꼬리(소켓 Mouth)에서 켠다(bodyprofiles.xml 의 Fluid strand="true").
      느리게 늘어지는 띠(태어난 순서로 잇는다)라 끈적한 줄기로 보인다. 텍스처는 Kenney 파티클 팩(CC0) circle_05(띠는 u 가 길이 · v 가 폭). -->
 <VFXEffectDef>

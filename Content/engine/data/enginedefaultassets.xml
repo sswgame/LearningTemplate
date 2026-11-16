@@ -1,3 +1,4 @@
+<?asset guid="a90f9981fd87bde534909b069aa5b30c"?>
 <!-- 엔진 기본 에셋 경로 — 칸 표는 docs/Config/EngineDefaultAssets.md. 값의 정본은 이 파일이다(헤더의 칸은 DataPath 라 값이 없다).
      모든 칸이 필수다 — 빠지거나 가리키는 파일이 없으면 기동과 쿠킹이 오류로 멈춘다. -->
 <EngineDefaultAssets _defaultMaterial="engine/materials/defaultmaterial.material"

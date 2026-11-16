@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c010376975a88215be9e8ded89502d5f"?>
 <!-- 녹아 사라짐 · 나타남 — 노이즈 문턱(_dissolve)보다 낮은 곳을 오리고 경계가 탄다. _dissolve 를 0 → 1 로 올리면 사라진다. 부모(gimmicksurface_dissolve.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="Dissolve" _base="engine/materials/gimmicksurface_dissolve.material">
 	<_properties>

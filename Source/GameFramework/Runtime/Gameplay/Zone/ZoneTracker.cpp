@@ -47,7 +47,7 @@ namespace sw
             }
 
             /** @brief 대상을 쥔 AI 조종자입니다 — 조종자는 폰과 따로 자기 오브젝트에 산다(언리얼 AController). 같은 오브젝트에 있으면 그것이다. 없으면 nullptr 입니다. */
-            static AIControllerComponent* findAIController( const GameObjectManager& manager, GameObject& target )
+            static AIControllerComponent* findAIController( GameObjectManager& manager, GameObject& target )
             {
                 if ( AIControllerComponent* pSame = target.getComponent<AIControllerComponent>() )
                     return pSame;

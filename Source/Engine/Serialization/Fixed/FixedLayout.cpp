@@ -11,6 +11,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -52,7 +53,7 @@ namespace sw
                 for ( uint32 index = 0; index < codec._dependencyCount; ++index )
                 {
                     const FixedCodec::Dependency& dependency = codec._pDependency[index];
-                    const TypeInfo*               pType      = registry.findType( hashed_string( dependency._pTypeFqn ) );
+                    const TypeInfo*               pType      = registry.findType( dependency._fqn );
                     const FixedCodec*             pNested    = pType != nullptr ? pType->_pFixedCodec : nullptr;
                     string_view                   nestedReason;
                     expected<void>                nested{};
@@ -67,7 +68,7 @@ namespace sw
 
                     listVisited.pop_back();
                     Error error{ ErrorKind::Unsupported, "a field's type is not fixed layout eligible", dependency._pFieldName };
-                    error.appendDetail( " (" ).appendDetail( dependency._pTypeFqn ).appendDetail( "): " );
+                    error.appendDetail( " (" ).appendDetail( dependency._fqn.c_str() ).appendDetail( "): " );
                     if ( nested.has_value() )
                         error.appendDetail( nestedReason );
                     else
@@ -89,30 +90,39 @@ namespace sw
 
 namespace sw
 {
-    FixedCodec::FixedCodec( WriteFunction pWrite, ReadFunction pRead, EqualsFunction pEquals, SchemaHashFunction pComputeSchemaHash, const utf8* pCanonical,
-                            const Dependency* pDependency, uint32 dependencyCount ) noexcept
-        : _pWrite{ pWrite }
-        , _pRead{ pRead }
-        , _pEquals{ pEquals }
-        , _pComputeSchemaHash{ pComputeSchemaHash }
+    FixedCodec::Dependency::Dependency( const utf8* pFieldName, const utf8* pTypeFqn )
+        : _pFieldName{ pFieldName }
+        , _fqn{ pTypeFqn }
+        , _cache{}
+    {
+    }
+
+    FixedCodec::FixedCodec( const FixedFieldDesc* pField, const uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, const uint32 dependencyCount,
+                            const BaseCastFunction pBaseCast, const ReflectValidateFunction pValidate ) noexcept
+        : _pField{ pField }
         , _pCanonical{ pCanonical }
         , _pIneligibleReason{ nullptr }
         , _pDependency{ pDependency }
+        , _pBaseCast{ pBaseCast }
+        , _pValidate{ pValidate }
+        , _fieldCount{ fieldCount }
         , _dependencyCount{ dependencyCount }
         , _dependencyState{ dependencyCount == 0 ? FixedDependencyState::Valid : FixedDependencyState::Unknown }
+        , _schemaHash{ 0 }
     {
     }
 
     FixedCodec::FixedCodec( const utf8* pIneligibleReason ) noexcept
-        : _pWrite{ nullptr }
-        , _pRead{ nullptr }
-        , _pEquals{ nullptr }
-        , _pComputeSchemaHash{ nullptr }
+        : _pField{ nullptr }
         , _pCanonical{ nullptr }
         , _pIneligibleReason{ pIneligibleReason }
         , _pDependency{ nullptr }
+        , _pBaseCast{ nullptr }
+        , _pValidate{ nullptr }
+        , _fieldCount{ 0 }
         , _dependencyCount{ 0 }
         , _dependencyState{ FixedDependencyState::Missing }
+        , _schemaHash{ 0 }
     {
     }
 } // namespace sw
@@ -323,6 +333,513 @@ namespace sw
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 범위 이름이 볼 수 있는 객체 하나입니다. 최상위가 깊이 0 이고, 펼친 중첩 타입(`Inline`)마다 하나씩 쌓입니다. 호출 스택에만 삽니다. */
+        struct FixedScope
+        {
+            const void*       _pObject;
+            const FixedScope* _pParent;
+            uint32            _depth;
+        };
+
+        template <typename T>
+        struct FixedNumberTag
+        {
+            using Type = T;
+        };
+
+        /**
+         * @brief 서술자 표(`FixedFieldDesc`)를 해석해 쓰고 · 읽고 · 비교합니다. 예전에 생성기가 타입마다 낸 직선 코드와 같은 차례 · 같은 `FixedCodecUtil` 호출이다 —
+         *        같은 객체는 같은 바이트, 같은 바이트는 같은 판정(경계 · 개수 · 열거자 · 글자)이다(`FixedLayoutTest` 의 손 인코딩 대조).
+         */
+        struct FixedFieldCodec
+        {
+            /** @brief 정수 꼴마다 @p visitor 를 그 타입 꼬리표로 부릅니다. 실수 꼴은 생성기가 정수 자리에 내지 않으므로 멈춥니다. */
+            template <typename Visitor>
+            static auto dispatchInteger( const FixedNumberType type, Visitor&& visitor )
+            {
+                switch ( type )
+                {
+                    case FixedNumberType::Int8:
+                        return visitor( FixedNumberTag<int8>{} );
+                    case FixedNumberType::Int16:
+                        return visitor( FixedNumberTag<int16>{} );
+                    case FixedNumberType::Int32:
+                        return visitor( FixedNumberTag<int32>{} );
+                    case FixedNumberType::Int64:
+                        return visitor( FixedNumberTag<int64>{} );
+                    case FixedNumberType::UInt8:
+                        return visitor( FixedNumberTag<uint8>{} );
+                    case FixedNumberType::UInt16:
+                        return visitor( FixedNumberTag<uint16>{} );
+                    case FixedNumberType::UInt32:
+                        return visitor( FixedNumberTag<uint32>{} );
+                    case FixedNumberType::UInt64:
+                        return visitor( FixedNumberTag<uint64>{} );
+                    case FixedNumberType::Float32:
+                    case FixedNumberType::Float64:
+                        break;
+                }
+                SW_FATAL( "fixed layout descriptor has a floating-point type in an integer slot (%#)", static_cast<int32>( type ) );
+            }
+
+            template <typename Target, typename T>
+            static Target loadSigned( const void* const pField, const bool bNegate )
+            {
+                const T value = *static_cast<const T*>( pField );
+                if ( bNegate )
+                    return static_cast<Target>( -value );
+                return static_cast<Target>( value );
+            }
+
+            /**
+             * @brief 범위 한쪽 끝을 @p Target 으로 읽습니다. 필드 이름이면 그 필드 타입의 값에 부호를 바꾸고(C++ 단항 `-` 승격 그대로) @p Target 으로 바로 바꿉니다 —
+             *        예전 생성 식 `static_cast<Target>( ( -object._x ) )` 와 같은 값이다(float32 자리를 float64 를 거쳐 바꾸면 두 번 반올림된다).
+             */
+            template <typename Target>
+            static Target loadBound( const FixedBound& bound, const FixedScope& scope, const Target missing )
+            {
+                if ( bound._kind == FixedBound::Kind::None )
+                    return missing;
+                if ( bound._kind == FixedBound::Kind::Literal )
+                {
+                    if constexpr ( std::is_same_v<Target, int64> )
+                        return bound._integer;
+                    else
+                        return static_cast<Target>( bound._float );
+                }
+                const FixedScope* pScope = &scope;
+                while ( pScope->_depth != bound._scopeDepth )
+                {
+                    pScope = pScope->_pParent;
+                }
+                const void* const pField = static_cast<const uint8*>( pScope->_pObject ) + bound._fieldOffset;
+                if ( bound._fieldType == FixedNumberType::Float32 )
+                    return loadSigned<Target, float32>( pField, bound._bNegate );
+                if ( bound._fieldType == FixedNumberType::Float64 )
+                    return loadSigned<Target, float64>( pField, bound._bNegate );
+                return dispatchInteger( bound._fieldType, [&]( auto tag ) -> Target
+                { return loadSigned<Target, typename decltype( tag )::Type>( pField, bound._bNegate ); } );
+            }
+
+            static bool isEnumValue( const FixedFieldDesc& desc, const int64 value ) noexcept
+            {
+                for ( uint32 index = 0; index < desc._enumValueCount; ++index )
+                {
+                    if ( desc._pEnumValue[index] == value )
+                        return true;
+                }
+                return false;
+            }
+
+            static bool isFloatBounded( const FixedFieldDesc& desc ) noexcept { return desc._min.isPresent() || desc._max.isPresent(); }
+
+            /** @brief 의존 코덱입니다. 진입점이 `findCodec` 으로 확인했으므로 늘 있다 — 없으면(확인한 뒤 모듈이 내려감) 대신 쓸 코덱 없이 멈춘다. */
+            static const FixedCodec& requireDependency( const FixedCodec& codec, const uint32 dependencyIndex )
+            {
+                if ( dependencyIndex == FixedFieldDesc::kSelfDependency )
+                    return codec;
+                const FixedCodec::Dependency& dependency = codec._pDependency[dependencyIndex];
+                const TypeInfo*               pType      = dependency._cache.find( dependency._fqn );
+                const FixedCodec*             pNested    = pType != nullptr ? pType->_pFixedCodec : nullptr;
+                if ( pNested == nullptr || pNested->isEligible() == false )
+                    SW_FATAL( "'%#' has no fixed layout codec: nested codec is missing although its owner was checked (module unloaded?)", dependency._fqn.c_str() );
+                return *pNested;
+            }
+
+            // ------------------------------------------------------------------------------
+            // 1) 쓰기
+            // ------------------------------------------------------------------------------
+            static bool writeObject( const FixedCodec& codec, BitWriter& writer, const void* pObject )
+            {
+                if ( codec._pBaseCast != nullptr && writeObject( requireDependency( codec, 0 ), writer, codec._pBaseCast( pObject ) ) == false )
+                    return false;
+                const FixedScope scope{ pObject, nullptr, 0 };
+                return writeChildren( codec, 0, codec._fieldCount, writer, pObject, scope );
+            }
+
+            static bool writeChildren( const FixedCodec& codec, const uint32 first, const uint32 count, BitWriter& writer, const void* pBase, const FixedScope& scope )
+            {
+                for ( uint32 index = first; index < first + count; ++index )
+                {
+                    if ( writeField( codec, codec._pField[index], writer, pBase, scope ) == false )
+                        return false;
+                }
+                return true;
+            }
+
+            static bool writeElements( const FixedCodec& codec, const FixedFieldDesc& desc, BitWriter& writer, const void* pSequence, const FixedScope& scope )
+            {
+                const FixedSequenceOps& ops     = *desc._pSequenceOps;
+                const size_t            count   = ops._pSize( pSequence );
+                const uint8* const      pData   = static_cast<const uint8*>( ops._pData( pSequence ) );
+                const FixedFieldDesc&   element = codec._pField[desc._firstChild];
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    if ( writeField( codec, element, writer, pData + index * ops._elementSize, scope ) == false )
+                        return false;
+                }
+                return true;
+            }
+
+            static bool writeField( const FixedCodec& codec, const FixedFieldDesc& desc, BitWriter& writer, const void* pBase, const FixedScope& scope )
+            {
+                const void* const pValue = static_cast<const uint8*>( pBase ) + desc._offset;
+                switch ( desc._kind )
+                {
+                    case FixedFieldKind::Bool:
+                    {
+                        writer.writeBool( *static_cast<const bool*>( pValue ) );
+                        return true;
+                    }
+                    case FixedFieldKind::BitFieldBool:
+                    {
+                        writer.writeBool( desc._pGetBit( pBase ) );
+                        return true;
+                    }
+                    case FixedFieldKind::Integer:
+                    {
+                        const int64 minValue = loadBound<int64>( desc._min, scope, FixedCodecUtil::kNoLowerBound );
+                        const int64 maxValue = loadBound<int64>( desc._max, scope, FixedCodecUtil::kNoUpperBound );
+                        const bool  bRanged  = desc._min.isPresent() && desc._max.isPresent();
+                        return dispatchInteger( desc._numberType, [&]( auto tag ) -> bool
+                        {
+                            using T       = typename decltype( tag )::Type;
+                            const T value = *static_cast<const T*>( pValue );
+                            if ( bRanged )
+                                return FixedCodecUtil::writeRangedInteger( writer, value, minValue, maxValue );
+                            return FixedCodecUtil::writeVarInteger( writer, value, minValue, maxValue );
+                        } );
+                    }
+                    case FixedFieldKind::Float32:
+                    {
+                        const float32 value = *static_cast<const float32*>( pValue );
+                        if ( desc._step > 0.0f )
+                        {
+                            const float32 minValue = loadBound<float32>( desc._min, scope, -std::numeric_limits<float32>::infinity() );
+                            const float32 maxValue = loadBound<float32>( desc._max, scope, std::numeric_limits<float32>::infinity() );
+                            return FixedCodecUtil::writeQuantizedFloat32( writer, value, minValue, maxValue, desc._step );
+                        }
+                        if ( isFloatBounded( desc ) )
+                        {
+                            return FixedCodecUtil::writeBoundedFloat32( writer, value, loadBound<float64>( desc._min, scope, FixedCodecUtil::kNoLowerFloatBound ),
+                                                                        loadBound<float64>( desc._max, scope, FixedCodecUtil::kNoUpperFloatBound ) );
+                        }
+                        writer.writeFloat( value );
+                        return true;
+                    }
+                    case FixedFieldKind::Float64:
+                    {
+                        const float64 value = *static_cast<const float64*>( pValue );
+                        if ( isFloatBounded( desc ) )
+                        {
+                            return FixedCodecUtil::writeBoundedFloat64( writer, value, loadBound<float64>( desc._min, scope, FixedCodecUtil::kNoLowerFloatBound ),
+                                                                        loadBound<float64>( desc._max, scope, FixedCodecUtil::kNoUpperFloatBound ) );
+                        }
+                        FixedCodecUtil::writeFloat64( writer, value );
+                        return true;
+                    }
+                    case FixedFieldKind::Enum:
+                    {
+                        const int64 value = dispatchInteger( desc._numberType, [&]( auto tag ) -> int64
+                        { return static_cast<int64>( *static_cast<const typename decltype( tag )::Type*>( pValue ) ); } );
+                        if ( isEnumValue( desc, value ) == false )
+                            return false;
+                        return FixedCodecUtil::writeRangedInteger( writer, value, desc._min._integer, desc._max._integer );
+                    }
+                    case FixedFieldKind::FlagEnum:
+                    {
+                        return dispatchInteger( desc._numberType, [&]( auto tag ) -> bool
+                        {
+                            using T        = typename decltype( tag )::Type;
+                            using Unsigned = std::make_unsigned_t<T>;
+                            const T value  = *static_cast<const T*>( pValue );
+                            if ( ( static_cast<uint64>( value ) & ~desc._enumMask ) != 0 )
+                                return false;
+                            FixedCodecUtil::writeRawBits( writer, static_cast<uint64>( static_cast<Unsigned>( value ) ), static_cast<int32>( sizeof( Unsigned ) * 8 ) );
+                            return true;
+                        } );
+                    }
+                    case FixedFieldKind::String:
+                        return FixedCodecUtil::writeString( writer, *static_cast<const string*>( pValue ), desc._maxCount );
+                    case FixedFieldKind::Bitset:
+                        return FixedCodecUtil::writeBitset( writer, *static_cast<const DynamicBitset*>( pValue ), desc._maxCount );
+                    case FixedFieldKind::Vector:
+                    {
+                        if ( FixedCodecUtil::writeCount( writer, desc._pSequenceOps->_pSize( pValue ), desc._maxCount ) == false )
+                            return false;
+                        return writeElements( codec, desc, writer, pValue, scope );
+                    }
+                    case FixedFieldKind::FixedArray:
+                        return writeElements( codec, desc, writer, pValue, scope );
+                    case FixedFieldKind::Math:
+                        return writeChildren( codec, desc._firstChild, desc._childCount, writer, pValue, scope );
+                    case FixedFieldKind::Inline:
+                    {
+                        const FixedScope inner{ pValue, &scope, scope._depth + 1 };
+                        return writeChildren( codec, desc._firstChild, desc._childCount, writer, pValue, inner );
+                    }
+                    case FixedFieldKind::Codec:
+                        return writeObject( requireDependency( codec, desc._dependencyIndex ), writer, pValue );
+                }
+                return false;
+            }
+
+            // ------------------------------------------------------------------------------
+            // 2) 읽기 — 읽는 바이트는 네트워크 · 세이브에서 온다. 경계 · 개수 · 열거자 · 글자 검사는 `FixedCodecUtil` 이 하고 여기서 하나도 건너뛰지 않는다.
+            // ------------------------------------------------------------------------------
+            static FixedReadResult readObject( const FixedCodec& codec, BitReader& reader, void* pObject )
+            {
+                FixedReadResult result = FixedReadResult::Ok;
+                if ( codec._pBaseCast != nullptr )
+                {
+                    result = readObject( requireDependency( codec, 0 ), reader, const_cast<void*>( codec._pBaseCast( pObject ) ) );
+                    if ( result != FixedReadResult::Ok )
+                        return result;
+                }
+                const FixedScope scope{ pObject, nullptr, 0 };
+                result = readChildren( codec, 0, codec._fieldCount, reader, pObject, scope );
+                if ( result != FixedReadResult::Ok )
+                    return result;
+                if ( codec._pValidate != nullptr )
+                {
+                    ValidationContext context;
+                    codec._pValidate( pObject, context );
+                    if ( context.hasError() )
+                        return FixedReadResult::ValidateFailed;
+                }
+                return FixedReadResult::Ok;
+            }
+
+            static FixedReadResult readChildren( const FixedCodec& codec, const uint32 first, const uint32 count, BitReader& reader, void* pBase, const FixedScope& scope )
+            {
+                for ( uint32 index = first; index < first + count; ++index )
+                {
+                    const FixedReadResult result = readField( codec, codec._pField[index], reader, pBase, scope );
+                    if ( result != FixedReadResult::Ok )
+                        return result;
+                }
+                return FixedReadResult::Ok;
+            }
+
+            static FixedReadResult readElements( const FixedCodec& codec, const FixedFieldDesc& desc, BitReader& reader, void* pSequence, const FixedScope& scope )
+            {
+                const FixedSequenceOps& ops     = *desc._pSequenceOps;
+                const size_t            count   = ops._pSize( pSequence );
+                uint8* const            pData   = static_cast<uint8*>( ops._pWritableData( pSequence ) );
+                const FixedFieldDesc&   element = codec._pField[desc._firstChild];
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    const FixedReadResult result = readField( codec, element, reader, pData + index * ops._elementSize, scope );
+                    if ( result != FixedReadResult::Ok )
+                        return result;
+                }
+                return FixedReadResult::Ok;
+            }
+
+            static FixedReadResult readField( const FixedCodec& codec, const FixedFieldDesc& desc, BitReader& reader, void* pBase, const FixedScope& scope )
+            {
+                void* const pValue = static_cast<uint8*>( pBase ) + desc._offset;
+                switch ( desc._kind )
+                {
+                    case FixedFieldKind::Bool:
+                    {
+                        *static_cast<bool*>( pValue ) = reader.readBool();
+                        return FixedReadResult::Ok;
+                    }
+                    case FixedFieldKind::BitFieldBool:
+                    {
+                        desc._pSetBit( pBase, reader.readBool() );
+                        return FixedReadResult::Ok;
+                    }
+                    case FixedFieldKind::Integer:
+                    {
+                        const int64 minValue = loadBound<int64>( desc._min, scope, FixedCodecUtil::kNoLowerBound );
+                        const int64 maxValue = loadBound<int64>( desc._max, scope, FixedCodecUtil::kNoUpperBound );
+                        const bool  bRanged  = desc._min.isPresent() && desc._max.isPresent();
+                        return dispatchInteger( desc._numberType, [&]( auto tag ) -> FixedReadResult
+                        {
+                            using T  = typename decltype( tag )::Type;
+                            T& value = *static_cast<T*>( pValue );
+                            if ( bRanged )
+                                return FixedCodecUtil::readRangedInteger( reader, minValue, maxValue, value );
+                            return FixedCodecUtil::readVarInteger( reader, minValue, maxValue, value );
+                        } );
+                    }
+                    case FixedFieldKind::Float32:
+                    {
+                        float32& value = *static_cast<float32*>( pValue );
+                        if ( desc._step > 0.0f )
+                        {
+                            const float32 minValue = loadBound<float32>( desc._min, scope, -std::numeric_limits<float32>::infinity() );
+                            const float32 maxValue = loadBound<float32>( desc._max, scope, std::numeric_limits<float32>::infinity() );
+                            return FixedCodecUtil::readQuantizedFloat32( reader, minValue, maxValue, desc._step, value );
+                        }
+                        if ( isFloatBounded( desc ) )
+                        {
+                            return FixedCodecUtil::readBoundedFloat32( reader, loadBound<float64>( desc._min, scope, FixedCodecUtil::kNoLowerFloatBound ),
+                                                                       loadBound<float64>( desc._max, scope, FixedCodecUtil::kNoUpperFloatBound ), value );
+                        }
+                        // 범위 없는 실수는 비트 그대로 왕복한다(NaN 포함 — `isBitEqual` 과 같은 뜻). 유한 검사는 범위를 적은 필드의 몫이다.
+                        value = reader.readFloatBits();
+                        return FixedReadResult::Ok;
+                    }
+                    case FixedFieldKind::Float64:
+                    {
+                        float64& value = *static_cast<float64*>( pValue );
+                        if ( isFloatBounded( desc ) )
+                        {
+                            return FixedCodecUtil::readBoundedFloat64( reader, loadBound<float64>( desc._min, scope, FixedCodecUtil::kNoLowerFloatBound ),
+                                                                       loadBound<float64>( desc._max, scope, FixedCodecUtil::kNoUpperFloatBound ), value );
+                        }
+                        value = FixedCodecUtil::readFloat64( reader );
+                        return FixedReadResult::Ok;
+                    }
+                    case FixedFieldKind::Enum:
+                    {
+                        int64                 value  = 0;
+                        const FixedReadResult result = FixedCodecUtil::readRangedInteger( reader, desc._min._integer, desc._max._integer, value );
+                        if ( result != FixedReadResult::Ok )
+                            return result;
+                        if ( isEnumValue( desc, value ) == false )
+                            return FixedReadResult::OutOfRange;
+                        // 읽은 값은 [최소, 최대] 열거자 안이라 기반 타입에 그대로 들어간다.
+                        return dispatchInteger( desc._numberType, [&]( auto tag ) -> FixedReadResult
+                        {
+                            using T                    = typename decltype( tag )::Type;
+                            *static_cast<T*>( pValue ) = static_cast<T>( value );
+                            return FixedReadResult::Ok;
+                        } );
+                    }
+                    case FixedFieldKind::FlagEnum:
+                    {
+                        return dispatchInteger( desc._numberType, [&]( auto tag ) -> FixedReadResult
+                        {
+                            using T            = typename decltype( tag )::Type;
+                            using Unsigned     = std::make_unsigned_t<T>;
+                            const uint64 raw   = FixedCodecUtil::readRawBits( reader, static_cast<int32>( sizeof( Unsigned ) * 8 ) );
+                            const T      value = static_cast<T>( static_cast<Unsigned>( raw ) );
+                            // 비트 플래그는 켜진 비트의 조합이라 범위가 없다. 등록된 비트 밖은 거절한다.
+                            if ( ( static_cast<uint64>( value ) & ~desc._enumMask ) != 0 )
+                                return FixedReadResult::OutOfRange;
+                            *static_cast<T*>( pValue ) = value;
+                            return FixedReadResult::Ok;
+                        } );
+                    }
+                    case FixedFieldKind::String:
+                        return FixedCodecUtil::readString( reader, desc._maxCount, *static_cast<string*>( pValue ) );
+                    case FixedFieldKind::Bitset:
+                        return FixedCodecUtil::readBitset( reader, desc._maxCount, *static_cast<DynamicBitset*>( pValue ) );
+                    case FixedFieldKind::Vector:
+                    {
+                        uint32                count  = 0;
+                        const FixedReadResult result = FixedCodecUtil::readCount( reader, desc._maxCount, count );
+                        if ( result != FixedReadResult::Ok )
+                            return result;
+                        desc._pSequenceOps->_pResize( pValue, count );
+                        return readElements( codec, desc, reader, pValue, scope );
+                    }
+                    case FixedFieldKind::FixedArray:
+                        return readElements( codec, desc, reader, pValue, scope );
+                    case FixedFieldKind::Math:
+                        return readChildren( codec, desc._firstChild, desc._childCount, reader, pValue, scope );
+                    case FixedFieldKind::Inline:
+                    {
+                        const FixedScope inner{ pValue, &scope, scope._depth + 1 };
+                        return readChildren( codec, desc._firstChild, desc._childCount, reader, pValue, inner );
+                    }
+                    case FixedFieldKind::Codec:
+                        return readObject( requireDependency( codec, desc._dependencyIndex ), reader, pValue );
+                }
+                return FixedReadResult::OutOfRange;
+            }
+
+            // ------------------------------------------------------------------------------
+            // 3) 비교 — 코덱과 같은 필드 집합을 선언 순서로. 실수는 비트 패턴이다.
+            // ------------------------------------------------------------------------------
+            static bool equalsObject( const FixedCodec& codec, const void* pA, const void* pB )
+            {
+                if ( codec._pBaseCast != nullptr && equalsObject( requireDependency( codec, 0 ), codec._pBaseCast( pA ), codec._pBaseCast( pB ) ) == false )
+                    return false;
+                return equalsChildren( codec, 0, codec._fieldCount, pA, pB );
+            }
+
+            static bool equalsChildren( const FixedCodec& codec, const uint32 first, const uint32 count, const void* pBaseA, const void* pBaseB )
+            {
+                for ( uint32 index = first; index < first + count; ++index )
+                {
+                    if ( equalsField( codec, codec._pField[index], pBaseA, pBaseB ) == false )
+                        return false;
+                }
+                return true;
+            }
+
+            static bool equalsElements( const FixedCodec& codec, const FixedFieldDesc& desc, const void* pSequenceA, const void* pSequenceB )
+            {
+                const FixedSequenceOps& ops     = *desc._pSequenceOps;
+                const size_t            count   = ops._pSize( pSequenceA );
+                const uint8* const      pDataA  = static_cast<const uint8*>( ops._pData( pSequenceA ) );
+                const uint8* const      pDataB  = static_cast<const uint8*>( ops._pData( pSequenceB ) );
+                const FixedFieldDesc&   element = codec._pField[desc._firstChild];
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    if ( equalsField( codec, element, pDataA + index * ops._elementSize, pDataB + index * ops._elementSize ) == false )
+                        return false;
+                }
+                return true;
+            }
+
+            static bool equalsField( const FixedCodec& codec, const FixedFieldDesc& desc, const void* pBaseA, const void* pBaseB )
+            {
+                const void* const pA = static_cast<const uint8*>( pBaseA ) + desc._offset;
+                const void* const pB = static_cast<const uint8*>( pBaseB ) + desc._offset;
+                switch ( desc._kind )
+                {
+                    case FixedFieldKind::Bool:
+                        return *static_cast<const bool*>( pA ) == *static_cast<const bool*>( pB );
+                    case FixedFieldKind::BitFieldBool:
+                        return desc._pGetBit( pBaseA ) == desc._pGetBit( pBaseB );
+                    case FixedFieldKind::Integer:
+                    case FixedFieldKind::Enum:
+                    case FixedFieldKind::FlagEnum:
+                    {
+                        return dispatchInteger( desc._numberType, [&]( auto tag ) -> bool
+                        {
+                            using T = typename decltype( tag )::Type;
+                            return *static_cast<const T*>( pA ) == *static_cast<const T*>( pB );
+                        } );
+                    }
+                    case FixedFieldKind::Float32:
+                        return FixedCodecUtil::isBitEqual( *static_cast<const float32*>( pA ), *static_cast<const float32*>( pB ) );
+                    case FixedFieldKind::Float64:
+                        return FixedCodecUtil::isBitEqual( *static_cast<const float64*>( pA ), *static_cast<const float64*>( pB ) );
+                    case FixedFieldKind::String:
+                        return *static_cast<const string*>( pA ) == *static_cast<const string*>( pB );
+                    case FixedFieldKind::Bitset:
+                        return *static_cast<const DynamicBitset*>( pA ) == *static_cast<const DynamicBitset*>( pB );
+                    case FixedFieldKind::Vector:
+                    {
+                        if ( desc._pSequenceOps->_pSize( pA ) != desc._pSequenceOps->_pSize( pB ) )
+                            return false;
+                        return equalsElements( codec, desc, pA, pB );
+                    }
+                    case FixedFieldKind::FixedArray:
+                        return equalsElements( codec, desc, pA, pB );
+                    case FixedFieldKind::Math:
+                    case FixedFieldKind::Inline:
+                        return equalsChildren( codec, desc._firstChild, desc._childCount, pA, pB );
+                    case FixedFieldKind::Codec:
+                        return equalsObject( requireDependency( codec, desc._dependencyIndex ), pA, pB );
+                }
+                return false;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     expected<const FixedCodec*> FixedLayout::findCodec( const TypeInfo& type )
     {
         const FixedCodec* pCodec = type._pFixedCodec;
@@ -340,23 +857,6 @@ namespace sw
         return pCodec;
     }
 
-    const FixedCodec* FixedLayout::findNestedCodec( const TypeLookupCache& cache, const hashed_string& fqn )
-    {
-        const TypeInfo*   pType  = cache.find( fqn );
-        const FixedCodec* pCodec = pType != nullptr ? pType->_pFixedCodec : nullptr;
-        if ( pCodec == nullptr || pCodec->isEligible() == false )
-            return nullptr;
-        return pCodec;
-    }
-
-    const FixedCodec& FixedLayout::requireNestedCodec( const TypeLookupCache& cache, const hashed_string& fqn )
-    {
-        const FixedCodec* pCodec = findNestedCodec( cache, fqn );
-        if ( pCodec == nullptr )
-            stopForMissingCodec( fqn, "nested codec is missing although its owner was checked (module unloaded?)" );
-        return *pCodec;
-    }
-
     uint64 FixedLayout::computeSchemaHash( const uint32 version, const string_view canonical, const std::initializer_list<uint64> listNestedHash )
     {
         uint64 hash = HashUtil::kFNVOffset64;
@@ -366,6 +866,21 @@ namespace sw
         {
             hash = FixedLayoutInternal::appendHashInteger( hash, nestedHash );
         }
+        return hash;
+    }
+
+    uint64 FixedLayout::getSchemaHash( const FixedCodec& codec )
+    {
+        const uint64 cached = codec._schemaHash.load( std::memory_order_acquire );
+        if ( cached != 0 )
+            return cached;
+        // 다른 타입의 해시는 다른 헤더 · 모듈일 수 있으므로 실행 시간에 그 코덱에서 얻어 의존 차례로 섞는다(`computeSchemaHash` 와 같은 식).
+        uint64 hash = computeSchemaHash( kVersion, codec._pCanonical, {} );
+        for ( uint32 index = 0; index < codec._dependencyCount; ++index )
+        {
+            hash = FixedLayoutInternal::appendHashInteger( hash, getSchemaHash( FixedFieldCodec::requireDependency( codec, index ) ) );
+        }
+        codec._schemaHash.store( hash, std::memory_order_release );
         return hash;
     }
 
@@ -399,8 +914,8 @@ namespace sw
 
     bool FixedLayout::writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )
     {
-        FixedCodecUtil::writeRawBits( writer, codec._pComputeSchemaHash(), 64 );
-        return codec._pWrite( writer, pObject );
+        FixedCodecUtil::writeRawBits( writer, getSchemaHash( codec ), 64 );
+        return FixedFieldCodec::writeObject( codec, writer, pObject );
     }
 
     FixedReadResult FixedLayout::readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
@@ -408,7 +923,7 @@ namespace sw
         const uint64 schemaHash = FixedCodecUtil::readRawBits( reader, 64 );
         if ( reader.hasOverflowed() )
             return FixedReadResult::Truncated;
-        if ( schemaHash != codec._pComputeSchemaHash() )
+        if ( schemaHash != getSchemaHash( codec ) )
         {
             // 변환 레지스트리를 볼 자리입니다. 키는 (기록된 해시, 대상 타입)이고 값은 옛 바이트를 새 객체로 바꾸는 함수입니다(Source/Engine/Serialization/Fixed/README.md 3.14).
             // 변환할 옛 B 데이터가 없어 레지스트리가 아직 없으므로 거절합니다.
@@ -419,12 +934,12 @@ namespace sw
 
     bool FixedLayout::writeBodyWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )
     {
-        return codec._pWrite( writer, pObject );
+        return FixedFieldCodec::writeObject( codec, writer, pObject );
     }
 
     FixedReadResult FixedLayout::readBodyWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
     {
-        const FixedReadResult result = codec._pRead( reader, pObject );
+        const FixedReadResult result = FixedFieldCodec::readObject( codec, reader, pObject );
         // 모자란 스트림은 0 을 읽으므로 그 전에 범위 · 열거자 검사가 먼저 걸릴 수 있습니다. 원인은 잘림입니다.
         if ( reader.hasOverflowed() )
             return FixedReadResult::Truncated;
@@ -437,5 +952,10 @@ namespace sw
         if ( bitsRemaining > 0 && reader.readBits( bitsRemaining ) != 0 )
             return FixedReadResult::TrailingData;
         return FixedReadResult::Ok;
+    }
+
+    bool FixedLayout::equalsWithCodec( const FixedCodec& codec, const void* pA, const void* pB )
+    {
+        return FixedFieldCodec::equalsObject( codec, pA, pB );
     }
 } // namespace sw

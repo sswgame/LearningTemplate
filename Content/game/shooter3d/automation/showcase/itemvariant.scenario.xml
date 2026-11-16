@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6478eb7ec12d5f3ed271be6fa1a32566"?>
 <!--
   아이템 변형 쇼케이스 — 같은 투구 메시(helmet_knight)를 세 캐릭터가 입는다. 왼쪽은 그대로, 가운데는 항목을 물려받아 material 만 적은 helmet_knight_gilded,
   오른쪽은 꾸미기 고르기로 MaterialVariant 를 고른 helmet_knight_dyeable 이다(common/data/appearance/itemvisuals.xml).

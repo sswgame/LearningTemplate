@@ -372,7 +372,7 @@ namespace sw
          */
         virtual void onTick( TickContext& context );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */
-        virtual void onSubTick( uint32 subTickID, float32 deltaTime );
+        virtual void onSubTick( uint32 subTickID, TickContext& context );
         /**
          * @brief 이 오브젝트의 콜라이더가 다른 오브젝트의 콜라이더와 겹치기 시작했을 때 불립니다(유니티의 `OnTriggerEnter2D`, 언리얼의 `BeginOverlap`).
          * @details 틱과 트랜스폼 적용 뒤에 게임 스레드에서 오브젝트의 켜진 컴포넌트마다 불린다. 이 안에서 스폰, 파괴, 구조 변경을 해도 된다.

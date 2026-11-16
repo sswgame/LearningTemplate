@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="470c814ddeea48c3b3b08490bff0ed8f"?>
 <!--
   에디터 시나리오 — 본 마스크 계층 칠하기(AnimationGraphLayerEditor 의 Skeleton view): 테스트 그래프(animgraphmaskpaint/maskpaint.animgraph.xml, 마스크 Upper = spine 자손 1 · 스켈레톤에 없는 tail)의
   새 사본(scratch/animgraphmaskpaint)을 열고, 레이어 탭에서 마스크를 고른 뒤 검증 스켈레톤(maskpaint.skeleton.xml, 본 다섯)을 친다.

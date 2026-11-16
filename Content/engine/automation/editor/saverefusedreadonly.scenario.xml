@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a6334fbd2cfb9e00ff6fe4b83548f6e0"?>
 <!--
   에디터 시나리오 — 잠그지 않은(읽기 전용) 파일 앞에서 문서 패널 저장이 거절되는지(감사 E-11). 버전 관리가 잠그지 않은 파일(git LFS lockable = 읽기 전용)을 흉내 낸다.
   패널 셋이 저장 확인 하나(IEditorDocumentPanel::saveDocumentAndClearDirty → collectFilesToSave → EditorContentWrite::warnIfReadOnly)를 지나는지 본다:

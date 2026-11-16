@@ -50,7 +50,7 @@ namespace sw
              */
             static ISoundPlayer* findSoundPlayer( const AnimationNotifyContext& context )
             {
-                GameObjectManager* pManager = context._owner.getManager();
+                GameObjectManager* pManager = context._owner.getMutableManager();
                 return pManager != nullptr ? locateSubsystem<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
             }
 
@@ -94,7 +94,7 @@ namespace sw
                     (void)context._component.findSocketWorldTransform( context._entry.getNameParam( s_socket ), world ); // 없으면 오브젝트 루트 변환이 담긴다(선언 설명)
                     const float3       offset   = context._entry.getVectorParam( s_offset );
                     const float3       position = float3::transform( offset, world );
-                    GameObjectManager* pManager = context._owner.getManager();
+                    GameObjectManager* pManager = context._owner.getMutableManager();
                     AssetManager*      pAssets  = pManager != nullptr ? pManager->findAssetManager() : nullptr;
                     GameObject*        pSpawned = ( pManager != nullptr && pAssets != nullptr ) ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, prefab ) : nullptr;
                     SceneComponent*    pScene   = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
@@ -138,7 +138,7 @@ namespace sw
                     // 발 위 반 거리에서 아래로 쏜다. 발이 바닥에 조금 묻혀 있어도 바닥을 맞힌다.
                     const float3                             from     = foot + float3{ 0.0f, distance * 0.5f, 0.0f };
                     const float3                             to       = foot - float3{ 0.0f, distance, 0.0f };
-                    GameObjectManager*                       pManager = context._owner.getManager();
+                    GameObjectManager*                       pManager = context._owner.getMutableManager();
                     const shared_ptr<const SurfaceKindTable> pTable   = pManager != nullptr ? SurfaceKindTable::findDefault() : nullptr;
                     CharacterRayHit                          hit;
                     SurfaceSample                            sample;
@@ -270,7 +270,7 @@ namespace sw
                     request._frequency      = context._entry.getFloatParam( s_frequency );
                     request._falloffRadius  = context._entry.getFloatParam( s_radius );
                     // 같은 씬의 카메라만 받는다. 매니저가 없는 오브젝트(씬 밖)는 들을 카메라도 없다.
-                    if ( GameObjectManager* pManager = context._owner.getManager(); pManager != nullptr )
+                    if ( GameObjectManager* pManager = context._owner.getMutableManager(); pManager != nullptr )
                         pManager->getCameraRegistry().getShakeChannel().broadcast( request );
                     record( context, hashed_string{}, request._origin, 0, AnimationNotifyPhase::Instant );
                 }

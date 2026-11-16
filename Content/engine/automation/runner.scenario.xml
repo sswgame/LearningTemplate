@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="424ef4f784bc269967be0c0efdb270fd"?>
 <!--
   엔진 시나리오 — 실행기 자체(어느 게임 프리셋에서나 돈다): 시작 조건 · 고정 프레임 시간 · 가상 키 · 스크린샷 · 픽셀 지표 · 개발 명령 · 로그 · 종료 코드.
   실행: App -scenario=engine/automation/runner.scenario.xml -unattended (ctest -L hostgpu 가 같은 명령으로 돈다)

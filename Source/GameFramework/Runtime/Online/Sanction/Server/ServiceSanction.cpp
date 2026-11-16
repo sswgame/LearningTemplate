@@ -12,9 +12,8 @@ namespace sw
     {
         struct ServiceSanctionInternal
         {
-            static constexpr uint64 kFormat        = 1;
-            static constexpr int32  kMaxReasonSize = 64;
-            static constexpr int32  kKindCount     = static_cast<int32>( ServiceSanctionKind::Count );
+            static constexpr uint64 kFormat    = 1;
+            static constexpr int32  kKindCount = static_cast<int32>( ServiceSanctionKind::Count );
 
             static bool isEmpty( const ServiceSanctionState& state )
             {
@@ -55,7 +54,8 @@ namespace sw
         {
             outState._arrUntilMs[kindIndex] = reader.readVarInt();
         }
-        if ( ServiceKeyUtil::readString( reader, ServiceSanctionInternal::kMaxReasonSize, outState._reasonCode ) == false || reader.hasOverflowed() )
+        // 쓰는 쪽(관리자 프로토콜의 MaxCount)과 같은 상한 하나다 — 따로 두면 그 사이 길이의 사유가 쓰이고 다시는 읽히지 않는다.
+        if ( ServiceKeyUtil::readString( reader, ServiceSanctionState::kMaxReasonCodeSize, outState._reasonCode ) == false || reader.hasOverflowed() )
             return ServiceStoreResult::Unavailable;
         outState._version = record._version;
         return ServiceStoreResult::Ok;

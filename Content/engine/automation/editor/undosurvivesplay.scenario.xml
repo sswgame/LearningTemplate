@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="0cebd85779a5abd2a50310bbfdf71265"?>
 <!--
   에디터 시나리오 — Play 전의 편집 내역이 Stop 뒤에도 남아 되돌릴 수 있다(panel-audit D4). 저장 안 된 씬이라 Play 를 누르면 확인 상자가 뜬다.
   ② 플레이 중 고친 문서(시퀀서 컷 더하기)의 기록은 그 문서의 스택이라 Stop 이 버리지 않는다 — 시퀀서에 포커스를 두고 Ctrl+Z 하면 컷이 빠진다(감사 E-3).

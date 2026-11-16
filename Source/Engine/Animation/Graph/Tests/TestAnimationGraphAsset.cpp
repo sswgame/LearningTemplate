@@ -287,7 +287,65 @@ SW_TEST_CASE( AnimationGraphAssetTest, PoseNodeTypeComesFromRegistry )
     sw::AnimationGraphAsset graph;
     SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphNodeUnknown" );
     SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"W\"><pose_node type=\"Mystery\" weight=\"W\"><inputs><item>A</item><item>B</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
-    SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphNodeBlend7" );
+    SW_EXPECT_LOG( "AnimationPoseNode.PoseNodeInputs" );
     SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"W\"><pose_node type=\"BlendPoses\" weight=\"W\"><inputs><item>A</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationPoseNode.BlendPosesNeedsWeight" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"W\"><pose_node type=\"BlendPoses\"><inputs><item>A</item><item>B</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
     SW_EXPECT_TRUE( graph._listNode.empty() );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] Mirror(축) · Montage(섹션 · 다음 · 분기)를 읽고 같은 글로 다시 쓴다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, MirrorAndMontageRoundTrip )
+{
+    constexpr sw::string_view kText = "<AnimationGraphAsset><nodes>"
+                                      "<node id=\"1\" name=\"WaveMirrored\"><pose_node type=\"Mirror\" mirror_axis=\"X\"><inputs><item>Wave</item></inputs></pose_node></node>"
+                                      "<node id=\"2\" name=\"Reload\"><pose_node type=\"Montage\"><inputs><item>ReloadClip</item></inputs><sections>"
+                                      "<section name=\"Start\" start=\"0\" next=\"Loop\"/>"
+                                      "<section name=\"Loop\" start=\"0.5\" next=\"Loop\" branch_param=\"Done\" branch=\"End\"/>"
+                                      "<section name=\"End\" start=\"1\"/>"
+                                      "</sections></pose_node></node>"
+                                      "</nodes></AnimationGraphAsset>";
+    sw::AnimationGraphAsset   graph;
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( kText ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listNode.size() );
+    SW_EXPECT_TRUE( graph._listNode[0]._poseNode._mirrorAxis == sw::AnimationMirrorAxis::X );
+    const sw::vector<sw::AnimationMontageSection>& listSection = graph._listNode[1]._poseNode._listSection;
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listSection.size() );
+    SW_EXPECT_EQUAL( 0.5f, listSection[1]._startSeconds );
+    SW_EXPECT_TRUE( listSection[1]._next == sw::hashed_string( "Loop" ) );
+    SW_EXPECT_TRUE( listSection[1]._branchParameter == sw::hashed_string( "Done" ) );
+    SW_EXPECT_TRUE( listSection[1]._branch == sw::hashed_string( "End" ) );
+    SW_EXPECT_TRUE( listSection[2]._next.empty() );
+
+    sw::AnimationGraphAsset reread;
+    SW_REQUIRE_TRUE( reread.loadFromXMLText( graph.toXML() ) );
+    SW_EXPECT_EQUAL( graph.toXML(), reread.toXML() );
+    SW_EXPECT_TRUE( reread._listNode[0]._poseNode._mirrorAxis == sw::AnimationMirrorAxis::X );
+    SW_EXPECT_EQUAL( size_t{ 3 }, reread._listNode[1]._poseNode._listSection.size() );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] Mirror 는 축이, Montage 는 섹션 · 이어지는 이름 · 차례 · 분기 짝이 계약이다 — 어기면 로드 오류다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, MirrorAndMontageContracts )
+{
+    sw::AnimationGraphAsset graph;
+    SW_EXPECT_LOG( "AnimationPoseNode.MirrorNeedsAxis" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"M\"><pose_node type=\"Mirror\"><inputs><item>A</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationPoseNode.MontageNeedsSections" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"M\"><pose_node type=\"Montage\"><inputs><item>A</item></inputs></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationPoseNode.MontageSectionLink" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"M\"><pose_node type=\"Montage\"><inputs><item>A</item></inputs><sections>"
+                                            "<section name=\"S\" start=\"0\" next=\"Nowhere\"/></sections></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationPoseNode.MontageSectionOrder" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"M\"><pose_node type=\"Montage\"><inputs><item>A</item></inputs><sections>"
+                                            "<section name=\"S\" start=\"0.5\"/><section name=\"T\" start=\"0.2\"/></sections></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationPoseNode.MontageBranchNeedsBoth" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"M\"><pose_node type=\"Montage\"><inputs><item>A</item></inputs><sections>"
+                                            "<section name=\"S\" start=\"0\" branch=\"S\"/></sections></pose_node></node></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_LOG( "AnimationGraphAsset.UnexpectedElement" );
+    SW_EXPECT_FALSE( graph.loadFromXMLText( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"M\"><pose_node type=\"Montage\"><inputs><item>A</item></inputs><sections>"
+                                            "<part name=\"S\" start=\"0\"/></sections></pose_node></node></nodes></AnimationGraphAsset>" ) );
 }

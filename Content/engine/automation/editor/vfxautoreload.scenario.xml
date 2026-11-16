@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="631dcbcac715751a0e31d52020fabfe5"?>
 <!--
   에디터 시나리오 — VFX 미리보기 자동 갱신(S5): 사본(scratch/vfxautoreload)의 효과를 미리보기 창에 열면 방출기 둘로 재생한다.
   그 파일을 저장한 글(autoreload_edited — 연기 방출기를 지웠다)로 덮어쓰면(카탈로그 편집기 · 바깥 편집기의 저장과 같은 원자적 쓰기) 창이 도장 변화를 보고

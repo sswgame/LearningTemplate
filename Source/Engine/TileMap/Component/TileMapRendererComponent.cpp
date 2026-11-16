@@ -101,8 +101,10 @@ namespace sw
             {
                 const TileMapXMLData map = _map;
                 setTileMapData( map, std::move( pReloaded ) );
+                // 청크 배치를 다시 만드는 것은 씬 레지스트리 쓰기라 틱 뒤(같은 프레임)에 한다.
                 if ( _bLoaded == SW_TRUE )
-                    (void)rebuild();
+                    context.deferPostTickOnComponent( *this, []( TileMapRendererComponent& tiles )
+                    { (void)tiles.rebuild(); } );
             }
         }
         flushCollision(); // 이번 틱까지 칠한 칸의 청크 바디를 한 번에(칸마다 맵 전체를 다시 만들지 않는다)
@@ -246,7 +248,7 @@ namespace sw
     bool TileMapRendererComponent::rebuildChunks()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr || _bLoaded == SW_FALSE )
             return false;
         releaseChunks();
@@ -278,7 +280,7 @@ namespace sw
         if ( pBatch != nullptr )
             return true;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return false;
         const TileRect                  rect  = _chunkGrid.computeChunkRect( chunkIndex );
@@ -298,7 +300,7 @@ namespace sw
     {
         // 레지스트리에서 한 번에 뺀다(청크마다 빼면 항목 목록을 청크 수만큼 접는다). 오너가 매니저에서 빠졌으면 배치마다 소멸자 경로가 뺀다.
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
         {
             SpriteInstanceBatch::shutdownAll( *pManager, _listChunkBatch );
@@ -441,8 +443,8 @@ namespace sw
             // 빈 청크에 칠했다. 배치를 만드는 것은 구조 변경이라 틱 중에는 틱 뒤로 미룬다(그 청크를 통째로 다시 놓는다).
             if ( _bChunkBuildQueued == SW_TRUE )
                 return;
-            GameObject*        pOwner   = getOwner();
-            GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+            const GameObject*        pOwner   = getOwner();
+            const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
             if ( pManager == nullptr )
                 return;
             _bChunkBuildQueued = SW_TRUE;
@@ -513,7 +515,7 @@ namespace sw
         TileGridUtil::traceSolidOutline( listSolid, _map._width, _map._height, _listOutlineEdge );
 
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         if ( _bGenerateColliders == false || pManager == nullptr )
         {
             removePhysicsBodies();
@@ -646,7 +648,7 @@ namespace sw
     void TileMapRendererComponent::removePhysicsBodies()
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getMutableManager() : nullptr;
         IPhysicsScene2D*   pScene   = pManager != nullptr ? pManager->getSubsystem<sw::ScenePhysics>().findScene2D() : nullptr;
         if ( pScene != nullptr )
         {

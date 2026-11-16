@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d27d591edee07687d0de63fa59ab0de6"?>
 <!-- InputMapBundleTest 의 묶음 — 기본 맵, 공통 맵, 게임 차이 차례다. -->
 <GameSettings>
   <startMap>game/empty/maps/editortest.scene.xml</startMap>

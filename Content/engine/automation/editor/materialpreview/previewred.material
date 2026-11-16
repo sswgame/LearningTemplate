@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="af0cbfba76f03862000d8527b8490cf0"?>
 <!-- 시나리오 editor/materialpreview 의 테스트 머티리얼 — 기본색만 다르다. -->
 <MaterialDef formatVersion="0" name="Previewred" shaderPath="engine/shaders/forward_lit.hlsl" alphaMode="Opaque">
 	<_properties>

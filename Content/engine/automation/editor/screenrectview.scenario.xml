@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7dad3c0d71a34874e00b63742ed63207"?>
 <!--
   에디터 시나리오 — 화면 사각형 뷰(PiP)가 에디터 게임 뷰(ImGui 이미지로 보이는 게임 뷰 RT) 안의 자기 사각형에 그려진다.
   테스트 씬(engine/automation/editor/screenrectview/screenrectview.scene.xml): 주 카메라는 빈 곳을 보고, PiP 카메라(사각형 0.55,0.55,0.4,0.4)는 30 m 옆의 큐브를 본다.

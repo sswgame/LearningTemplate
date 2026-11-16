@@ -1,3 +1,4 @@
+<?asset guid="2db4dd9b5d65fed07c4e212e41352364"?>
 <UIDocument _schemaVersion="1">
 	<BoxPanel _styleClass="settingrow" _spacing="12">
 		<TextWidget _name="Label" _styleClass="settinglabel">

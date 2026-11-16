@@ -257,7 +257,7 @@ namespace sw::editor
 
     void EditorWorkspace::setPlacedPrefabPath( const GameObject& object, string_view prefabPath )
     {
-        Scene* pScene = editor::findSceneOf( object.getManager() );
+        Scene* pScene = editor::findSceneOf( object.getMutableManager() );
         if ( pScene == nullptr )
         {
             SW_LOG_ERROR_ID( "EditorWorkspace.PrefabPathNotRecorded", "Prefab path of '%#' is not recorded: its scene is neither the active scene nor an open preview scene", object.getName().c_str() );
@@ -268,7 +268,7 @@ namespace sw::editor
 
     string_view EditorWorkspace::getPlacedPrefabPath( const GameObject& object ) const
     {
-        const Scene* pScene = editor::findSceneOf( object.getManager() );
+        const Scene* pScene = editor::findSceneOf( object.getMutableManager() );
         if ( pScene == nullptr )
             return {};
         return pScene->getEntityPrefabPath( object.getObjectID() );
@@ -279,13 +279,13 @@ namespace sw::editor
         if ( pObject == nullptr )
             return {};
         if ( isNestedPrefabPart( pObject ) )
-            return pObject->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( pObject->getObjectID() )->_prefabPath; // 붙은 부품이면 기록이 있다
+            return pObject->getMutableManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( pObject->getObjectID() )->_prefabPath; // 붙은 부품이면 기록이 있다
         return getPlacedPrefabPath( *pObject );
     }
 
     bool EditorWorkspace::isNestedPrefabPart( const GameObject* pObject ) const
     {
-        GameObjectManager* pManager = pObject != nullptr ? pObject->getManager() : nullptr;
+        GameObjectManager* pManager = pObject != nullptr ? pObject->getMutableManager() : nullptr;
         return pManager != nullptr && pManager->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( pObject );
     }
 

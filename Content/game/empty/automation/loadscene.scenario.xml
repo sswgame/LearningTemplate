@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="26e8b0e642cb5b38b19510ab488575a8"?>
 <!--
   씬 단계 — 시나리오가 다른 씬을 열고(LoadScene) 그 씬이 서기를 기다린 뒤 다음 단계로 간다. 데모 · 어트랙트 · 튜토리얼 재생(scenario.play)이 쓰는 단계라 테스트로 지킨다.
   첫 씬(rendertest3d)에서 시작해 fogshowcase 로 바꾸고, 바뀐 씬이 서고(전환 끝 · 에셋 로드 끝 · 오브젝트 있음) 화면이 그 씬인지 골든으로 본다.

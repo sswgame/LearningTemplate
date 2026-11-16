@@ -154,10 +154,15 @@ namespace sw
         Component::onTick( context );
         if ( _player.isPlaying() == false )
             return;
-        applyTimeline( _player.update( context.getDeltaTime() ) );
-        // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
-        if ( _player.isPlaying() == false )
-            endPlayback( SequenceHistoryKind::Finished );
+        const SequencePlaybackStep step = _player.update( context.getDeltaTime() );
+        // 묶인 오브젝트(남의 오브젝트)에 값 · 스폰 · 구간을 적용하는 것은 틱 뒤(같은 프레임)에 한다 — 틱은 시간만 민다.
+        context.deferPostTickOnComponent( *this, [step]( SequencePlayerComponent& self )
+        {
+            self.applyTimeline( step );
+            // 루프가 아니면 끝 프레임을 적용한 갱신에서 플레이어가 멈춘다 — 그때 끝낸다.
+            if ( self._player.isPlaying() == false )
+                self.endPlayback( SequenceHistoryKind::Finished );
+        } );
     }
 
     void SequencePlayerComponent::play()
@@ -171,7 +176,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && _player.getAsset()._whenFinished == SequenceFinishPolicy::RestoreState )
         {
-            SequenceTimelineUtil::captureRestoreState( pOwner->getManager(), _player.getAsset(), makeBindingView(), _state._listRestore );
+            SequenceTimelineUtil::captureRestoreState( pOwner->getMutableManager(), _player.getAsset(), makeBindingView(), _state._listRestore );
             _state._bRestoreCaptured = SW_TRUE;
         }
         _player.play();
@@ -188,7 +193,7 @@ namespace sw
     {
         GameObject*    pOwner = getOwner();
         vector<uint32> listUnbound;
-        SequenceTimelineUtil::collectUnboundBindings( pOwner != nullptr ? pOwner->getManager() : nullptr, _player.getAsset(), makeBindingView(), listUnbound );
+        SequenceTimelineUtil::collectUnboundBindings( pOwner != nullptr ? pOwner->getMutableManager() : nullptr, _player.getAsset(), makeBindingView(), listUnbound );
         for ( const uint32 bindingID : listUnbound )
         {
             const SequenceBinding* pBinding = _player.getAsset().findBinding( bindingID );
@@ -207,7 +212,7 @@ namespace sw
         if ( bWasPlaying == false && bHoldsState == false )
             return;
         GameObject*               pOwner   = getOwner();
-        GameObjectManager*        pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*        pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const SequenceAsset&      asset    = _player.getAsset();
         const SequenceBindingView view     = makeBindingView();
         const int32               frame    = _player.getCurrentFrame();
@@ -285,7 +290,7 @@ namespace sw
     GameObject* SequencePlayerComponent::findBoundObject( uint32 bindingID ) const
     {
         const GameObject* pOwner = getOwner();
-        return SequenceTimelineUtil::findTarget( pOwner != nullptr ? pOwner->getManager() : nullptr, makeBindingView(), bindingID );
+        return SequenceTimelineUtil::findTarget( pOwner != nullptr ? pOwner->getMutableManager() : nullptr, makeBindingView(), bindingID );
     }
 
     Subscription SequencePlayerComponent::registerSequenceEvent( const OnSequenceEventDelegate& delegate )
@@ -323,7 +328,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return;
-        GameObjectManager* pManager = pOwner->getManager();
+        GameObjectManager* pManager = pOwner->getMutableManager();
         if ( pManager == nullptr )
             return;
 

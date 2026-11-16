@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b2f85e4b0d4812aa05b8572fdeb23fde"?>
 <!--
   사용자 설정이 화면에 닿는지 — 렌더 스케일 · 시야 거리 · 후처리 품질 · 색각 보정을 한 무대(maps/rendertest3d, 디퍼드)에서 하나씩 바꿔 사진을 찍고 기준과 견준다(UserSettingsConsumers U4).
   변수는 옵션 메뉴가 쓰는 gv_* 와 같다(UserSettingsVariables.h). 결정적: 애니메이션 없는 무대, 고정 프레임 시간, 카메라는 움직이지 않는다.

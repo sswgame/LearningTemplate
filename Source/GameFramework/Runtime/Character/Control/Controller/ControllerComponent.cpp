@@ -47,7 +47,7 @@ namespace sw
         if ( _possessAtStart.isValid() == false || _pawn.isValid() )
             return;
         GameObject*        pOwner      = getOwner();
-        GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         GameObject*        pPawnObject = pManager != nullptr ? pManager->resolveGameObject( _possessAtStart ) : nullptr;
         PawnComponent*     pPawn       = pPawnObject != nullptr ? pPawnObject->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
@@ -57,7 +57,7 @@ namespace sw
     void ControllerComponent::possess( PawnComponent& pawn )
     {
         GameObject*        pOwner         = getOwner();
-        GameObjectManager* pManager       = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager       = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const bool         bCannotPossess = pManager == nullptr || pawn.getOwner() == nullptr || _pawn == pawn.getHandle();
         if ( bCannotPossess )
             return;
@@ -83,7 +83,7 @@ namespace sw
     void ControllerComponent::requestPossess( const GameObjectHandle& pawnObject )
     {
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return;
         const TComponentHandle<ControllerComponent> self{ this };
@@ -117,7 +117,7 @@ namespace sw
         if ( _pawn.isValid() == false )
             return nullptr;
         GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         return pManager != nullptr ? pManager->resolveComponent( _pawn ) : nullptr;
     }
 

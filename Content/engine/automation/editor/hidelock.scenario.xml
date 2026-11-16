@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8ab2145ea7f63942a83ff3decbb0245a"?>
 <!--
   에디터 시나리오 — 에디터에서만 숨김과 고르기 잠금(N12): Hierarchy 의 눈(hierarchy.toggle.<이름>)은 에디터에서만 숨긴다 — 씬 dirty · 되돌리기에 남지 않고
   오브젝트 활성 비트는 그대로다(게임 동작이 바뀌지 않는다). 자물쇠(hierarchy.lock.<이름>)를 건 오브젝트는 뷰포트에서 눌러도(빌보드) 골라지지 않는다.

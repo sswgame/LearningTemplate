@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6fbf78912d6e62a2bca67650be848fec"?>
 <!--
   Shooter3D 액션 단계 — "점프하고 앞으로 달린다" 를 입력 맵 액션 이름(Jump · Move · Weapon2 · Weapon3)으로 낸다. 키보드 바인딩(Space · WASD)이 기본이고,
   두 번째 점프는 패드 바인딩(A)으로 낸다(device="Gamepad" — 가상 패드를 연결하고 같은 액션을 낸다). 플레이어는 (0, 1.6, -16) 에서 시작하며 눈 높이(몸의 Eyes 소켓)가 1.69 m 이다.

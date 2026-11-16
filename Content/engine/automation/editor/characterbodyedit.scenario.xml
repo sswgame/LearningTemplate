@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4243b2f07e957b1c84ed60089c5e2921"?>
 <!--
   에디터 시나리오 — 캐릭터 편집 창의 몸 탭 동작: 몸 탭에서 바꾼 것이 미리보기 몸의 메시에 닿는지, 뷰포트 표면 집기가 지금 포즈의 몸 · 부품을 맞히는지 본다.
   ① 외형 탭에서 데이터 · 기준 프리셋 · 세트를 입혀 미리보기 몸을 조립한다(감시 값 Editor.CharacterEditorPreviewPickVertices — 몸 + 부품 오브젝트 메시 정점 수).

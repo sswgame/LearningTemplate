@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c5064c863231e550e9fc5008f46664a0"?>
 <!--
   런타임 퍼뮤테이션 전환 — 머티리얼 스위치를 실행 중에 바꾼 프레임들에 물체가 사라지지 않는지 본다(네 백엔드).
   무대: 툰 쇼케이스(toonshowcase.scene.xml)의 툰 구. 외곽선 스위치(Outline, bShaderFeature="0" — 켬 · 끔 둘 다 쿠킹된다)를 `matswitch` 로 끈다.

@@ -310,7 +310,7 @@ namespace sw
         // 비용은 이름 있는 오브젝트 × 컴포넌트 수의 가상 호출이다 — 이력이 켜진 틱에만 돈다. 측정은 이 구간과 오브젝트 수 카운터로 본다.
         SW_PROFILE_SCOPE( "GT.StateHash.collect" );
         outListObject.clear();
-        manager.forEachGameObject( key, [&outListObject]( GameObject* pObject )
+        manager.forEachGameObject( key, [&outListObject]( const GameObject* pObject )
         {
             if ( pObject->getName().empty() || pObject->isTransient() ) // 세운 쪽이 상태에서 다시 세우는 파생 오브젝트는 상태가 아니다
                 return;

@@ -1,3 +1,4 @@
+<?asset guid="af37077a1b39819248fbf5141f8d96e9"?>
 <Prefab formatVersion="0" _base="common/prefabs/gimmicks/platformer/spring3d.prefab.xml" name="BoostPad3D">
 	<PrefabOverrides>
 		<Remove key="LaunchPadComponent#0" />

@@ -12,17 +12,27 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 namespace sw
 {
     template <typename Func>
-    void GameObjectManager::forEachGameObject( SceneIterationKey /*key*/, Func&& func ) const
+    void GameObjectManager::forEachGameObject( SceneIterationKey /*key*/, Func&& func )
     {
         getObjectStore().forEachGameObject( std::forward<Func>( func ) );
     }
 
     template <typename Func>
-    void GameObjectManager::forEachComponent( SceneIterationKey key, Func&& func ) const
+    void GameObjectManager::forEachGameObject( SceneIterationKey /*key*/, Func&& func ) const
+    {
+        getObjectStore().forEachGameObject( [&func]( const GameObject* pObj )
+        {
+            func( pObj );
+        } );
+    }
+
+    template <typename Func>
+    void GameObjectManager::forEachComponent( SceneIterationKey key, Func&& func )
     {
         forEachGameObject( key, [&func]( GameObject* pObj )
         {
@@ -30,8 +40,20 @@ namespace sw
         } );
     }
 
+    template <typename Func>
+    void GameObjectManager::forEachComponent( SceneIterationKey key, Func&& func ) const
+    {
+        forEachGameObject( key, [&func]( const GameObject* pObj )
+        {
+            pObj->forEachComponent( [&func]( const Component* pComp )
+            {
+                func( pComp );
+            } );
+        } );
+    }
+
     template <typename TComponent, typename Func>
-    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, Func&& func ) const
+    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, Func&& func )
     {
         static_assert( std::is_base_of_v<Component, TComponent>, "TComponent must derive from sw::Component" );
         getObjectStore().forEachComponentOfType( findStaticType<TComponent>(), [&func]( Component* pComp )
@@ -40,30 +62,56 @@ namespace sw
         } );
     }
 
+    template <typename TComponent, typename Func>
+    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, Func&& func ) const
+    {
+        static_assert( std::is_base_of_v<Component, TComponent>, "TComponent must derive from sw::Component" );
+        getObjectStore().forEachComponentOfType( findStaticType<TComponent>(), [&func]( const Component* pComp )
+        {
+            func( static_cast<const TComponent*>( pComp ) );
+        } );
+    }
+
     template <typename Func>
-    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, const TypeInfo* pToType, Func&& func ) const
+    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, const TypeInfo* pToType, Func&& func )
     {
         getObjectStore().forEachComponentOfType( pToType, std::forward<Func>( func ) );
     }
 
-    template <typename TComponent, typename TFunc>
-    void GameObjectManager::executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func )
+    template <typename Func>
+    void GameObjectManager::forEachComponentOfType( SceneIterationKey /*key*/, const TypeInfo* pToType, Func&& func ) const
     {
-        executeOrDeferPostTick( makeComponentPostTickTask( self, func ) );
+        getObjectStore().forEachComponentOfType( pToType, [&func]( const Component* pComp )
+        {
+            func( pComp );
+        } );
     }
 
     template <typename TComponent, typename TFunc>
-    void GameObjectManager::deferPostTickOnComponent( const TComponent& self, TFunc func )
+    void GameObjectManager::executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func ) const
     {
-        deferPostTick( makeComponentPostTickTask( self, func ) );
+        _structuralChangeBuffer.executeOrDeferPostTick( makeComponentPostTickTask( self, func ) );
     }
 
     template <typename TComponent, typename TFunc>
-    GameObjectManager::PostTickDelegate GameObjectManager::makeComponentPostTickTask( const TComponent& self, TFunc func )
+    void GameObjectManager::deferPostTickOnComponent( const TComponent& self, TFunc func ) const
+    {
+        _structuralChangeBuffer.deferPostTick( makeComponentPostTickTask( self, func ) );
+    }
+
+    template <typename TComponent, typename TFunc>
+    void TickContext::deferPostTickOnComponent( const TComponent& self, TFunc func )
+    {
+        _pSceneManager->deferPostTickOnComponent( self, func );
+    }
+
+    template <typename TComponent, typename TFunc>
+    GameObjectManager::PostTickDelegate GameObjectManager::makeComponentPostTickTask( const TComponent& self, TFunc func ) const
     {
         static_assert( std::is_empty_v<TFunc>, "post-tick component callable must not capture" );
         const TComponentHandle<TComponent> handle{ &self };
-        GameObjectManager*                 pManager = this;
+        // 명령 버퍼: 쓰기 가능한 매니저는 이 일이 도는 때(틱 밖 · 틱 뒤)에만 @p func 로 나간다 — 거는 쪽(const 매니저 · 틱)은 받지 않는다.
+        GameObjectManager* pManager = const_cast<GameObjectManager*>( this );
         return PostTickDelegate( [pManager, handle, func]()
         {
             TComponent* pComponent = pManager->resolveComponent( handle );
@@ -96,19 +144,35 @@ namespace sw
     }
 
     template <typename T>
-    T* GameObjectManager::resolveComponent( TComponentHandle<T> handle ) const
+    bool GameObjectManager::isResolvedAs( ComponentHandle handle, const Component* pComponent ) const
     {
         static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
         static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
-        Component* pComponent = resolveComponent( handle.untyped() );
 #if !defined( SW_SHIPPING )
         if ( pComponent != nullptr && isComponentOfType( *pComponent, findStaticType<T>() ) == false )
         {
-            reportTypedResolveMismatch( handle.untyped(), *pComponent, findStaticType<T>() );
-            return nullptr;
+            reportTypedResolveMismatch( handle, *pComponent, findStaticType<T>() );
+            return false;
         }
+#else
+        (void)handle;
+        (void)pComponent;
 #endif
-        return static_cast<T*>( pComponent );
+        return true;
+    }
+
+    template <typename T>
+    T* GameObjectManager::resolveComponent( TComponentHandle<T> handle )
+    {
+        Component* pComponent = resolveComponent( handle.untyped() );
+        return isResolvedAs<T>( handle.untyped(), pComponent ) ? static_cast<T*>( pComponent ) : nullptr;
+    }
+
+    template <typename T>
+    const T* GameObjectManager::resolveComponent( TComponentHandle<T> handle ) const
+    {
+        const Component* pComponent = resolveComponent( handle.untyped() );
+        return isResolvedAs<T>( handle.untyped(), pComponent ) ? static_cast<const T*>( pComponent ) : nullptr;
     }
 
     template <typename T>

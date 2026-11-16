@@ -72,7 +72,7 @@ namespace sw::editor
                 SceneComponent* pNewRoot = pInstance->getPrimarySceneComponent();
                 if ( pNewRoot != nullptr )
                 {
-                    GameObjectManager* pManager        = pInstance->getManager();
+                    GameObjectManager* pManager        = pInstance->getMutableManager();
                     Component*         pParent         = ( pManager != nullptr && parentHandle.isValid() ) ? pManager->resolveComponent( parentHandle ) : nullptr;
                     const bool         bReattachNeeded = pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent &&
                                                  pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) ) == false;
@@ -170,7 +170,7 @@ namespace sw::editor
         // 인스턴스는 두 종류다. 씬에 놓은 인스턴스(에디터 작업 공간이 경로를 기록)와 다른 프리팹 인스턴스가 스폰한 중첩 부품이다.
         // (`PrefabInstanceRegistry`). 부품은 씬에 저장되지 않고 바깥 프리팹이 다시 스폰하므로 지금 보이는 부품만 고치면 된다(언리얼 차일드 액터).
         EditorWorkspace&    workspace = pContext->getSubsystem<EditorWorkspace>();
-        GameObjectManager*  pManager  = pObj->getManager();
+        GameObjectManager*  pManager  = pObj->getMutableManager();
         vector<GameObject*> listInstance;
         if ( pManager != nullptr && oldBaseState.empty() == false )
         {
@@ -262,7 +262,7 @@ namespace sw::editor
 
     GameObject* EditorInspectorCommands::findOuterInstance( const GameObject* pPart )
     {
-        GameObjectManager* pManager = pPart != nullptr ? pPart->getManager() : nullptr;
+        GameObjectManager* pManager = pPart != nullptr ? pPart->getMutableManager() : nullptr;
         if ( pManager == nullptr )
             return nullptr;
         const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();
@@ -291,7 +291,7 @@ namespace sw::editor
     EditorInspectorCommands::AttachResult EditorInspectorCommands::attachChildPrefabInstances( GameObject* pRoot )
     {
         // 참조 검사에 필요한 것을 얻지 못하면 검사를 건너뛰고 옮기지 않는다 — 거절 사유와 오류 로그로 멈춘다.
-        GameObjectManager* pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
+        GameObjectManager* pManager = pRoot != nullptr ? pRoot->getMutableManager() : nullptr;
         const Scene*       pScene   = pManager != nullptr ? editor::findSceneOf( pManager ) : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
         {

@@ -1,3 +1,4 @@
+<?asset guid="c5fa5803c7f287627593c58909124395"?>
 <Scene formatVersion="2" name="RealtimeGIExtrasOff">
 	<!-- 시나리오 automation/realtimegi_extras 의 대조 무대 — realtimegi 무대에 앰비언트(0.6)와 발광 큐브(realtimegi_emitter)를 더했다. 하늘 가림 · 발광 배율이 0 이라 프로브는 발광을 보지 않고 반사 앰비언트를 가리지 않는다(이전 그림). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

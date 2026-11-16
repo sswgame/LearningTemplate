@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e455fb17e85a43c679379492b7e42b2c"?>
 <!--
   NileCity 일시정지 메뉴 시나리오 — Esc 로 엔진 일시정지 메뉴(engine/ui/pause.ui.xml)가 뜨고, 떠 있는 동안 UI 가 먹은 입력(패드 B = 뒤로)은
   디렉터의 허물기(Nile.Demolish)로 새지 않는다(UIInputMapView). 배타 입력에서도 가상 커서는 돌아 패드 B 가 마우스 오른쪽도 내므로, 그 오른쪽까지 소비로 쳐야 한다

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f92d8433047835e2493a2b3986c589f5"?>
 <!--
   MeadowVillage 목표 마커 — 부탁(quest meadow_request)을 받으면 목표 자리(OrchardSite 의 QuestObjectiveMarkerComponent)에 화면 마커가 뜨고,
   과수원이 서서 부탁이 끝나면 사라지는지 본다. day.scenario 와 같은 흐름(날 단위로 시계를 감는다)에서 마커 가시성(UI.MarkerVisible)의 이력이 0 → 1 → 0 인지,

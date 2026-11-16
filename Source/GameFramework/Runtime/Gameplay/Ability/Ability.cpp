@@ -327,7 +327,7 @@ namespace sw
         {
             // 상대는 이벤트의 "다른 쪽" 이다. 받은 이벤트(`_target` 이 주인 자신인 피격)이면 일으킨 쪽이고, 보낸 이벤트이면 받은 쪽이다.
             GameObject*            pOwner        = pAbilitySystem->getOwner();
-            GameObjectManager*     pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            GameObjectManager*     pManager      = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
             const bool             bTargetIsSelf = pOwner != nullptr && ( pTriggerEvent->_target.isValid() == false || pTriggerEvent->_target == pOwner->getHandle() );
             const GameObjectHandle targetHandle  = bTargetIsSelf ? pTriggerEvent->_instigator : pTriggerEvent->_target;
             GameObject*            pTargetObject = pManager != nullptr ? pManager->resolveGameObject( targetHandle ) : nullptr;

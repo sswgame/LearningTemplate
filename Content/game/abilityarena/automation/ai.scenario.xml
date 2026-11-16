@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="60dc19016726ba457fdf9f9f50927049"?>
 <!--
   AbilityArena 적 AI — 판단 상태(AI.State)와 빙의(Pawn.Controller)를 단언한다. 자동 플레이를 끄고 플레이어가 가운데 서 있으면 첫 웨이브의 근접 적(Grunt)이
   다가와(Chase) 때린다(Strike). 적 AI 오브젝트는 모두 ArenaGruntAI 로 스폰되므로 저장소가 번호를 붙인다(ArenaGruntAI, ArenaGruntAI_2, ...) —

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ca20ceb0ea3b8a235b345ff7315373bb"?>
 <!--
   에디터 시나리오 — lighting.bakeProbes 커맨드(Build > Bake Light Probes, 결정 기록 5-5 P6).
   볼륨이 없는 씬에서 커맨드가 돌고("Nothing to bake" 경고) 구운 볼륨 수가 0 인지, 볼륨을 붙인 뒤에도 굽기 전에는 0 인지 본다.

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="42b5fc76e4ef8f15fce365d191a4b278"?>
 <!--
   에디터 시나리오 — 에디터 자체 테스트(SW_EDITOR_SELF_TEST) 모두와 에디터 단위 테스트(editor.unitTests)를 시나리오 안에서 돌린다.
   자체 테스트도 시나리오 체인의 백엔드 넷(Vulkan 검증 레이어 포함)과 로그 게이트(선언하지 않은 Error · Warning 이면 실패)를 받는다 — 결함이 로그로만 드러나는

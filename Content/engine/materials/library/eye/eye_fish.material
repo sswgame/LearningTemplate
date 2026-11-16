@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="71b83b6d3088e1447a90364c10144d76"?>
 <!-- 외형 라이브러리 프리셋(eye): 물고기 — 평평한 렌즈(굴절 거의 없음) · 큰 둥근 동공 · 은빛 홍채 · 눈꺼풀 젖음 없음. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="EyeFish" _base="engine/materials/library/eye/base.material">
 	<_properties>

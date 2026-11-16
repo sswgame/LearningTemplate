@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ce34667ee82224b4fef87724a0f11d96"?>
 <!--
   메시 벤치의 스캔 소품 모드 — -gv_stressTestScanProps=1 이면 격자가 원시 도형 대신 Poly Haven 스캔 소품 8 종(data/benchscene.xml 의 _listScanProp,
   수천 ~ 6 만 삼각형 · 2k 알베도 · 노멀 · ORM)을 각자의 PBR 머티리얼(pbr_lit.hlsl)로 그린다. 사진을 골든과 견준다.

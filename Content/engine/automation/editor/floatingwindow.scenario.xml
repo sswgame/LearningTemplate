@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ce4f035ba6c6c77b4324db5b31354e94"?>
 <!--
   에디터 시나리오 — 플로팅 창(ImGui 보조 뷰포트): 인스펙터를 도킹에서 풀어 메인 창 밖으로 옮기면(panel.float) ImGui 가 제 OS 창을 띄우고, 에디터 렌더러(ImGuiRenderer)가
   그 창에 RHI 스왑체인을 달아(IRHIDevice::createSwapChain) 렌더 스레드에서 그 백버퍼에 그린다. 창을 닫으면 스왑체인을 부순다.

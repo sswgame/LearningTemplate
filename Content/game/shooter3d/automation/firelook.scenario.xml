@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4d8d8ae072254192c416d2a7666b8d29"?>
 <!--
   Shooter3D 사격 — 플레이어의 클릭이 사격으로 이어진다(서브틱 입력: 폰의 `_triggerLookButton`(Fire)이 눌린 틱의 의도가 발동 시선을 싣고 `ShooterPlayerComponent` 가 그 방향으로 쏜다).
   자동 플레이를 끄고 왼쪽 버튼을 한 프레임 눌러 `Shooter3D.ShotCount` 가 정확히 하나 늘고, 길게 눌러도(연사 소총) 계속 쏘는지 본다. 방향 계산 자체는 `ControlTest.TriggerLookCarriesTheControlRotationAtTheClick` 가 본다.

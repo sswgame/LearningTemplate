@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2b0440c936686437cbd626eb9ec20287"?>
 <!-- 피부 층 종류(SkinLayerCatalog) — 화장 · 문신 · 흉터 · 바디 페인트. 플레이어가 고른 층 목록(순서 · 색 · 불투명도 · 배치)은 외형 선택 · 공유 코드(판 2)에 실린다.
      mask 는 R 채널 덮임 텍스처(배치 없는 층은 피부 UV, placeable 층은 층 UV). palette 는 customization.xml 의 <Palette> — 염색과 같은 견본이다.
      roughness/metallic + Weight 는 머티리얼 덮어쓰기(립스틱 광 · 펄), smearResistance 는 번짐 저항(1 = 방수 · 문신). regionMin/Max 는 피부 UV 경계(이음새를 넘지 않게).

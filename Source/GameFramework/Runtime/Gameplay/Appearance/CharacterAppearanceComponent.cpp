@@ -355,13 +355,15 @@ namespace sw
     void CharacterAppearanceComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObjectManager* pManager = findManager();
-        if ( pManager == nullptr || _assembleCount == 0 )
+        if ( _assembleCount == 0 )
             return;
         if ( hasSurfaceState() )
         {
             _surface.update( context.getDeltaTime() ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
-            applySurface( *pManager, false );
+            // 부품은 다른 오브젝트의 메시라 머티리얼 올리기는 틱 뒤(같은 프레임)에 한다.
+            if ( _surfaceAppliedRevision != _surface.getRevision() )
+                context.deferPostTickOnComponent( *this, []( CharacterAppearanceComponent& self, GameObjectManager& manager )
+                { self.applySurface( manager, false ); } );
         }
         if ( _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE )
             return; // 베이크한 메시를 기다리거나(`waitMeshAssembly`) 걸기가 틱 뒤로 예약됐다 — 걸기 전의 원본 내용 id 는 0 이라 낡음으로 보이면 조립을 끝없이 다시 한다
@@ -374,7 +376,7 @@ namespace sw
             return;
         if ( bSocketsStale )
             _socketCache.clear();
-        requestAssemble();
+        requestAssemble( context );
     }
 
     void CharacterAppearanceComponent::onAppearanceDataReloaded()
@@ -684,13 +686,25 @@ namespace sw
         GameObjectManager* pManager = findManager();
         if ( pManager == nullptr || _bAssembleScheduled == SW_TRUE )
             return;
-        // 조립은 사건(시작 · 선택 · 장비 · 데이터 다시 읽기)마다 한 번이고 깃발로 합친다 — 매 프레임 일(표면 감쇠 · 올리기)은 자기 오브젝트 쓰기라 틱에 남는다.
+        // 조립은 사건(시작 · 선택 · 장비 · 데이터 다시 읽기)마다 한 번이고 깃발로 합친다 — 매 프레임 일(표면 감쇠)은 자기 상태라 틱에 남는다.
         _bAssembleScheduled = SW_TRUE;
         pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance )
-        {
-            appearance._bAssembleScheduled = SW_FALSE;
-            appearance.assemble();
-        } );
+        { appearance.runScheduledAssemble(); } );
+    }
+
+    void CharacterAppearanceComponent::requestAssemble( TickContext& context )
+    {
+        if ( _bAssembleScheduled == SW_TRUE )
+            return;
+        _bAssembleScheduled = SW_TRUE;
+        context.deferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance )
+        { appearance.runScheduledAssemble(); } );
+    }
+
+    void CharacterAppearanceComponent::runScheduledAssemble()
+    {
+        _bAssembleScheduled = SW_FALSE;
+        assemble();
     }
 
     void CharacterAppearanceComponent::assemble()
@@ -1800,6 +1814,6 @@ namespace sw
     GameObjectManager* CharacterAppearanceComponent::findManager() const
     {
         GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
     }
 } // namespace sw

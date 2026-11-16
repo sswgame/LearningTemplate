@@ -116,6 +116,7 @@ namespace sw
             GameObject* pNumber = pManager->createGameObject( hashed_string( "DamageNumber" ) );
             if ( pNumber == nullptr )
                 return;
+            pNumber->setTransient( true ); // 잠깐 떠오르는 표시다 — 세이브 · 상태 해시에 넣지 않는다(`GameObject::setTransient`)
             SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
             if ( pNumberRoot != nullptr )
                 pNumberRoot->setWorldPosition( position );
@@ -158,15 +159,15 @@ namespace sw
 
     void DamageNumberComponent::scheduleRefresh()
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 핸들로 다시 찾는다 — 그 사이 지워졌으면(구조 변경 큐가 먼저 돈다) 아무것도 하지 않는다.
         const TComponentHandle<DamageNumberComponent> handle{ this };
-        pManager->executeOrDeferPostTick( [pManager, handle]()
+        pManager->executeOrDeferPostTickOnScene( [handle]( GameObjectManager& sceneManager )
         {
-            DamageNumberComponent* pResolved = pManager->resolveComponent( handle );
+            DamageNumberComponent* pResolved = sceneManager.resolveComponent( handle );
             if ( pResolved != nullptr )
                 pResolved->refreshWidget();
         } );

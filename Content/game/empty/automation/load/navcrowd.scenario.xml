@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="90931fed8e86bc1c8601a27530757de6"?>
 <!--
   부하 시나리오 — 목표 규모 AI 이동(에이전트 1 천이 목적지를 바꿔 가며 걷는다, maps/navcrowd_load): 경로 질의 · 군중 진행이 게임 스레드를 떠난 뒤의 프레임 비용을 잰다.
   에이전트마다 자기 틱(NavWanderComponent)이 멈추면 둘레의 새 목적지를 걸고 네 번에 한 번 비동기 경로 질의를 낸다. 군중 진행은 Navigation 단계 끝에 워커로 가

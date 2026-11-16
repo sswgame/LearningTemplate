@@ -1,3 +1,4 @@
+<?asset guid="03d0a103fa865b8bd811cda6faeb90de"?>
 <StressTestSceneSettings _knightMesh="common/models/kaykit/knight.mesh"
                     _knightMaterial="common/materials/kaykit_knight.material"
                     _knightSkeleton="common/models/kaykit/knight/knight.skeleton.xml"

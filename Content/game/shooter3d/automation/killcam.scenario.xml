@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="098a9a7ce12f2bb35577e9f15119abd8"?>
 <!--
   Shooter3D 킬캠 프리셋 — shooter.cameras.xml 의 killcam(대상 정면 3인칭 · 얕은 초점 · 채도 0.8 · 비네트)이 읽히고 그려지는지 화면 전체를 골든과 견준다(IntentNetworkWiring 3절).
   프리셋을 개발 명령 camera.preset killcam 으로 고른다. 예전의 평균 휘도 문턱(meanLuma ≥ 0.30)은 골든 비교로 바꿨다 — 문턱은 빈 화면만 잡고 다른 시점은 못 잡았다.

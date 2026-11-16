@@ -35,7 +35,7 @@ namespace sw
             static GameObjectManager* findManager( const Component& component )
             {
                 const GameObject* pOwner = component.getOwner();
-                return pOwner != nullptr ? pOwner->getManager() : nullptr;
+                return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
             }
 
             /** @brief 탑승 자세 파라미터를 켜거나 끕니다. 애니메이터가 없거나 이름이 비어 있으면 아무것도 하지 않습니다. */

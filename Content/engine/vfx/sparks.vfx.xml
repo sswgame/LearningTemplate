@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="eda5381686b6f19ebb7ca057d35cf47a"?>
 <!-- 엔진 표본 효과 — 연기(알파)와 불꽃(더하기) 두 방출기가 반복한다. VFX 미리보기 창 시나리오와 VfxComponentTest 가 읽는다. 텍스처는 Kenney 파티클 팩(CC0). -->
 <VFXEffectDef>
 	<_listEmitter>

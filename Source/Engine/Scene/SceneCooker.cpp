@@ -39,7 +39,7 @@ namespace sw
             static void makeObjectByFileID( const Scene& scene, unordered_map<uint64, GameObject*>& outMap )
             {
                 outMap.clear();
-                const GameObjectManager* pManager = scene.getObjectManager();
+                GameObjectManager* pManager = scene.getObjectManager();
                 if ( pManager == nullptr )
                     return;
                 ObjectSavedIDMap mapSavedID;

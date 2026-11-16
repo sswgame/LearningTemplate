@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="71b0cf6fd73611805d3461682450e6cc"?>
 <!-- 외형 라이브러리 프리셋(thin): 종이 · 한지. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
 <MaterialDef formatVersion="0" name="Paper" _base="engine/materials/library/thin/base.material">
 	<_properties>

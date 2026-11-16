@@ -50,10 +50,9 @@ namespace sw
     void TownWalkerViewComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        if ( pManager == nullptr || pScene == nullptr )
+        GameObject*     pOwner = getOwner();
+        SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
             return;
         const TownGameModeComponent* pGameMode = findGameMode<TownGameModeComponent>();
         if ( pGameMode == nullptr || pGameMode->isStarted() == false )

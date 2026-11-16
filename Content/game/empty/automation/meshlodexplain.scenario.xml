@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="87fd5c2e86db2dfa5e9686171828a4bf"?>
 <!--
   LOD 판정 확인(진단) — 보기 모드 LODLevel 이 색으로 보이는 것을 숫자로 읽는다: 지금 단계/단계 수 · 화면 크기 · 단계별 임계값 · 고른 쪽(cpu · gpu · forced · section · single).
   무대 maps/cinematic: 상자(BoxLeft — 단계 하나)와 해골(Actor). 단계를 고정(-gv_meshLodForce)하면 단계가 여럿인 메시의 고른 쪽이 forced 다.

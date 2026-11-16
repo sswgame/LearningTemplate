@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="666a8dde11e4a4c149c857513c4068ec"?>
 <!--
   에디터 시나리오 — 애니메이션 그래프 레이어 탭(AnimationGraphLayers): 레이어 하나 · 본 마스크 하나를 가진 테스트 그래프
   (animgraphlayers/animgraphlayers.animgraph.xml)의 실행마다 새 사본(scratch/animgraphlayers — <Scratch>)을 `asset.openScratch` 로 열고, 인스펙터의 Layers 탭에서 레이어와 마스크를 하나씩 더한다

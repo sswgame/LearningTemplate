@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b6024b37ca361cb76a37cf43db2c9bb7"?>
 <!--
   에디터 시나리오 — 런타임 디버거의 대상이 선택을 따른다(언리얼 Gameplay Debugger 의 선택 액터 자리). 씬 뷰 HUD 상자가 켜져 있으면 메인 씬의 첫 선택이 바뀔 때마다
   디버그 대상(debug.target — 핸들)을 그 오브젝트로 바꾼다(Editor.DebugTargetFollowsSelection: 1 같다, 0 다르다, -1 선택 없음).

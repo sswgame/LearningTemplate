@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="afcac85302871578627bf2759cb8be43"?>
 <!--
   에디터 시나리오 — 콘텐츠 브라우저 썸네일(R9): engine/textures 를 열면 DDS 가 썸네일 캐시에 올라가 실제 텍스처로 그려지고(Editor.ThumbnailCacheCount),
   그림 썸네일이 없는 종류(engine/data 의 Data)는 종류 아이콘을 가운데에 그린다(Editor.ThumbnailFallbackGlyphCount).

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b08a954838c4de1c251d98f7285d51a2"?>
 <!--
   Shooter3D 자동 플레이 = AI 조종자의 빙의 — 자동 플레이를 켜면 자동 조준 AI(ShooterAutoAimControllerComponent)가 플레이어 폰을 쥐어 쏘고 맞히며,
   끄면 플레이어 조종자가 폰을 다시 쥐어 입력 층(가상 키보드)의 키가 먹는다. 몸(ShooterPlayerComponent)에는 자동 플레이 분기가 없다.

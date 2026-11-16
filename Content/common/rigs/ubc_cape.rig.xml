@@ -1,3 +1,4 @@
+<?asset guid="30c48795e843ed4300365afaad82f31f"?>
 <!-- UBC 몸(Quaternius 기본 캐릭터)의 스프링 망토 — knight_cape.rig.xml 과 같은 사슬 · 강성이고, 망토는 UBC 어깨 폭으로 줄인 사슬(ubc_cape_chain — KayKit 망토를 축마다 0.5 · 0.85 · 0.55 배)이다.
      고정점은 UBC Back 소켓 자리(spine_03 위 · 뒤), 몸 충돌체는 UBC 뼈에 붙고 망토 축소에 맞춰 줄였다. -->
 <RigAsset>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="96fca60cacc00d10c744813392bf1afc"?>
 <!--
   에디터 시나리오 — 디버그 HUD 의 에디터 연결. 게임 뷰 툴바의 HUD 단추가 게임 HUD 를 켜고(Editor.DebugHUDEnabled), 오른쪽 클릭 팝업의
   섹션 체크 상자가 섹션을 켠다(Editor.DebugHUDShownSections — 기본 켜짐 넷 + physics). 씬 뷰 HUD 상자는 같은 섹션을 그리고

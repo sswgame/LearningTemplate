@@ -1,3 +1,4 @@
+<?asset guid="9844a780a34506eb17a90acc5b4b67e7"?>
 <!--
 	모듈 렌더 확장 시연 파이프라인(ExtensionRenderPass M3 · M4) — 포워드 파이프라인(`engine/pipeline/forwardpipeline.xml`)과 같은 패스 목록이다. 모듈 패스는 이 XML 에 적지 않는다:
 	게임 모듈(EmptyGame)이 `IRenderExtension` 을 등록하고, 렌더러가 프레임마다 그 확장이 선언한 패스(`Empty.DrawDemo` · `Empty.TintDemo`)를 같은 RenderGraph 에 끼운다

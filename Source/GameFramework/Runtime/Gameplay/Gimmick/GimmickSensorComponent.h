@@ -44,6 +44,20 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 센서에서 한 번 읽은 충격 몫입니다. 회로 틱이 `peekDamage` · `peekUses` 로 읽고(남의 오브젝트라 틱에서는 쓰지 않는다)
+     *        틱 뒤에 `acknowledgeDamage` · `acknowledgeUses` 로 그만큼만 비운다 — 그 사이 들어온 충격은 다음 틱에 남는다.
+     */
+    struct GimmickSensorImpulse
+    {
+        float32 _amount{ 0.0f };      ///< 회로가 받는 값(쌓인 몫 + 새로 완료된 상호작용 수)
+        float32 _pending{ 0.0f };     ///< 읽을 때 쌓여 있던 몫
+        uint32  _completedCount{ 0 }; ///< 읽을 때의 `InteractableComponent::getCompletedCount`(사용만)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class GimmickSensorComponent
      * @brief 겹친 오브젝트 목록(태그로 거름), 쌓이는 충격(피해, 사용), 신호 하나를 담습니다. 틱하지 않습니다.
      * @details 겹침 목록은 게임 스레드의 겹침 훅이 바꾸고, 회로는 다음 틱에 읽는다. 피해, 사용, 신호는 아무 스레드(병렬 틱)에서 넣어도 되도록
@@ -87,6 +101,14 @@ namespace sw
         float32 consumeDamage();
         /** @brief 쌓인 사용 횟수를 꺼내고 비웁니다. `notifyUsed` 로 쌓인 것과, 같은 오브젝트의 `InteractableComponent` 가 지난번 이후 완료한 수를 더한 값입니다. */
         float32 consumeUses();
+        /** @brief 쌓인 피해를 비우지 않고 읽습니다(`GimmickSensorImpulse`). */
+        GimmickSensorImpulse peekDamage() const;
+        /** @brief `consumeUses` 가 돌려줄 값을 비우지 않고 읽습니다. */
+        GimmickSensorImpulse peekUses() const;
+        /** @brief @p read 로 읽은 피해만큼 비웁니다(읽은 뒤 들어온 것은 남는다). */
+        void acknowledgeDamage( const GimmickSensorImpulse& read );
+        /** @brief @p read 로 읽은 사용 횟수만큼 비웁니다(읽은 뒤 들어온 것은 남는다). */
+        void acknowledgeUses( const GimmickSensorImpulse& read );
 
     private:
         PROPERTY( Category = "Sensor", DisplayName = "Required Tags", Tooltip = "Only objects with all of these tags count; empty counts everything" )

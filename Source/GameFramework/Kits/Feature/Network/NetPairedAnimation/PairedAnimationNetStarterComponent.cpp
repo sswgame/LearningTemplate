@@ -45,10 +45,9 @@ namespace sw
     void PairedAnimationNetStarterComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        GameObject*                     pOwner   = getOwner();
-        const PairedAnimationComponent* pPaired  = _bStarts == SW_TRUE && pOwner != nullptr ? pOwner->getComponent<PairedAnimationComponent>() : nullptr;
-        GameObjectManager*              pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pPaired == nullptr || pManager == nullptr )
+        GameObject*                     pOwner  = getOwner();
+        const PairedAnimationComponent* pPaired = _bStarts == SW_TRUE && pOwner != nullptr ? pOwner->getComponent<PairedAnimationComponent>() : nullptr;
+        if ( pPaired == nullptr )
             return;
         if ( pPaired->getSessionState() == PairedAnimationSessionState::Playing )
         {
@@ -59,7 +58,7 @@ namespace sw
         if ( _endedSeconds < _restartDelay )
             return;
         // 세션은 다른 오브젝트의 애니메이터를 바꾼다 — 틱 뒤에 시작한다.
-        pManager->executeOrDeferPostTickOnComponent( *this, []( PairedAnimationNetStarterComponent& component, GameObjectManager& manager )
+        context.deferPostTickOnComponent( *this, []( PairedAnimationNetStarterComponent& component, GameObjectManager& manager )
         {
             (void)manager;
             component.startSession();

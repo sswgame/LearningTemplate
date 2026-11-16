@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="36cbc511472f167147bce146cbc6cfa6"?>
 <!--
   에디터 시나리오 — 오디오 그래프 패널(audiograph) 저장 왕복: 시험 그래프(audiograph/tone.audiograph.xml — 노드 위치 없음)의 실행마다 새 사본(scratch/saveroundtripaudiograph — <Scratch>)을 연다.
   소리 종류는 썸네일 동작만 있어 예전에는 asset.openScratch(EditorAssetCommands::openPath)가 "열 곳 없음" 으로 졌다 — 이제 동작이 열지 않으면 포커스 길로 간다.

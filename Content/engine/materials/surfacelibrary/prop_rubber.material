@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f667e571b7d752b68cf85e70be91aff9"?>
 <!-- 고무 — 짙고 거친 유전체, 가는 홈(줄 무늬). 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
 <MaterialDef formatVersion="0" name="Rubber" _base="engine/materials/environmentsurface.material">
 	<_properties>

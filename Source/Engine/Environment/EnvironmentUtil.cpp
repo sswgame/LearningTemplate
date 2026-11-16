@@ -13,16 +13,16 @@
 
 namespace sw
 {
-    bool EnvironmentUtil::findViewPosition( GameObjectManager& manager, float3& outPosition )
+    bool EnvironmentUtil::findViewPosition( const GameObjectManager& manager, float3& outPosition )
     {
         float3 forward{};
         return findView( manager, outPosition, forward );
     }
 
-    bool EnvironmentUtil::findView( GameObjectManager& manager, float3& outPosition, float3& outForward )
+    bool EnvironmentUtil::findView( const GameObjectManager& manager, float3& outPosition, float3& outForward )
     {
-        const CameraRegistry& registry = manager.getCameraRegistry();
-        CameraComponent*      pCamera  = registry.selectCamera( CameraRole::Game );
+        const CameraRegistry&  registry = manager.getCameraRegistry();
+        const CameraComponent* pCamera  = registry.selectCamera( CameraRole::Game );
         if ( pCamera == nullptr && registry.getAll().empty() == false )
             pCamera = registry.getAll().front();
         if ( pCamera == nullptr )

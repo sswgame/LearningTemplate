@@ -81,10 +81,10 @@ namespace sw
         vector<string_view> listObstacleName;
         StringUtil::forEachToken( string_view{ _navObstacleNames }, ", ", [&listObstacleName]( string_view token )
         { listObstacleName.push_back( token ); } );
-        const GameObjectManager* pManager     = getOwner()->getManager();
-        const int32              radiusCells  = static_cast<int32>( MathUtil::ceil( _navObstacleRadius / _navCellSize ) );
-        uint32                   blockedCount = 0;
-        vector<GameObject*>      listObstacle;
+        const GameObjectManager*  pManager     = getOwner()->getManager();
+        const int32               radiusCells  = static_cast<int32>( MathUtil::ceil( _navObstacleRadius / _navCellSize ) );
+        uint32                    blockedCount = 0;
+        vector<const GameObject*> listObstacle;
         for ( const string_view obstacleName : listObstacleName )
         {
             // 장애물 이름이거나 저장소가 번호를 붙인 같은 이름(`Tree_3`)인 오브젝트 — 밑 이름 색인이라 씬을 돌지 않는다.

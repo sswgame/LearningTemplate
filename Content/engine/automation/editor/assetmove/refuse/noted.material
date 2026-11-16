@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cfeb902c0f86a30382ae47801bef4274"?>
 <!-- Scalars as XML attributes; nested lists remain child elements. -->
 <MaterialDef formatVersion="0" name="Noted" shaderPath="engine/shaders/forward_lit.hlsl" alphaMode="Opaque">
 	<_properties>

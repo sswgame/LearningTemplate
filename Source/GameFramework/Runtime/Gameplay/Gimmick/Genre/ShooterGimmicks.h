@@ -149,7 +149,7 @@ namespace sw
         /** @brief 날아가는 탄을 한 걸음 옮기고 닿은 대상에 피해를 줍니다. `_listTagged` 를 이번 스텝의 대상 목록으로 씁니다. */
         void stepProjectiles( GameObject& owner );
         /** @brief 지금 겨눈 쪽으로 한 발 쏩니다. */
-        void fireAt( GameObject& owner, GameObject& victim, const float3& origin, const float3& direction );
+        void fireAt( GameObject& owner, const GameObject& victim, const float3& origin, const float3& direction );
 
     private:
         PROPERTY( Category = "Turret", DisplayName = "Target Tags" )

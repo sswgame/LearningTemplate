@@ -1,3 +1,4 @@
+<?asset guid="7725d7f950b9d06cee55300dbd69fc98"?>
 <!--
 	표면 종류 표 — SurfaceKindTable 이 읽는다(엔진 기본 에셋 표 _surfaceKinds). 종류 이름은 물리 재질 이름(physicssettings.xml _listMaterial)과 같고,
 	모든 물리 재질이 여기에 종류를 가져야 한다(테스트 SurfaceKindTest.ShippedTableCoversPhysicsMaterials). 물 속에 선 발은 _waterKind 를 낸다(SurfaceQuery).

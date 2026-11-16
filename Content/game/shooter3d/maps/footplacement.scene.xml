@@ -1,3 +1,4 @@
+<?asset guid="8094b8697e31b33891695eebcf54540e"?>
 <Scene formatVersion="2" _base="game/shooter3d/maps/arena.scene.xml" name="Shooter3DFootPlacement">
 	<!-- 발 디딤 무대(automation/footplacement.scenario.xml) — 아레나를 물려받아 시작 자리(0, -16) 앞 +Z 쪽에 계단 두 칸(윗면 0.12 m · 0.24 m)을 놓는다.
 	     계단은 정적 강체뿐이고 ShooterBlocker 가 아니다 — 슈터 몸 이동은 늘 y = 0 평면이라 몸은 계단을 지나가고, 리그 발 광선(물리 질의)만 윗면을 본다.

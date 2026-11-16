@@ -1,7 +1,17 @@
-<!-- 시나리오 automation/animvariant 의 바탕 그래프 — 상태는 Idle 하나이고 상체에 연결 레이어 슬롯을 둔다. 비어 있는 슬롯은 아무것도 얹지 않는다. -->
+<?asset guid="3324774a823d44dee2697c279310ee2f"?>
+<!-- 시나리오 automation/animvariant 의 바탕 그래프 — 진입 상태는 Idle 이고 상체에 연결 레이어 슬롯을 둔다. 비어 있는 슬롯은 아무것도 얹지 않는다.
+     조준(한 손이 앞으로 나온 비대칭 자세)과 그 미러 상태(포즈 노드 Mirror, 짝은 스켈레톤 옆 knight.mirrortable.xml)는 시나리오 automation/animmirror 가 쓴다. -->
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Idle" loop="true" />
+		<node id="2" name="1h_ranged_aiming" loop="true" />
+		<node id="3" name="AimMirrored" loop="true">
+			<pose_node type="Mirror" mirror_axis="X">
+				<inputs>
+					<item>1h_ranged_aiming</item>
+				</inputs>
+			</pose_node>
+		</node>
 	</nodes>
 	<bone_masks>
 		<bone_mask name="UpperBody" file="common/data/anim/masks/upper_body.bonemask.xml" />

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="7b1721c0e6f3fcc737362c15ea8e1fe1"?>
 <!--
   관성 이동과 탑승 가속감(maps/inertia.scene.xml) — 바디 없는 탈것(KinematicVehicleComponent)이 경사 중력 · 구름 저항(표면 종류) · 공기 저항을 질량으로 적분하는지,
   좌석이 잰 가속도로 탑승자가 기우는지 값으로 본다.

@@ -3,7 +3,8 @@
 """
 Scripts/lint/asset_references.py
 
-에셋 참조 검사 — 에셋은 경로 하나로 가리키므로(식별자 표 · `.meta` 는 없다, 언리얼 소프트 경로와 같다) 끊어진 경로를 커밋 전에 잡는다.
+에셋 참조 검사 — 참조 칸은 아직 경로로 가리키므로(언리얼 소프트 경로와 같다 — GUID 로 바꾸는 일은 docs/NEXT.md 의 2 단계) 끊어진 경로를 커밋 전에 잡는다.
+정체성(GUID · `.meta`)의 짝은 `asset_identity.py`(`asset-ids`)가 본다.
 
 - 어떤 칸이 경로인지는 리플렉션 선언이 정하고 파서가 낸 표(`Config/Dev/AssetReferenceFields.generated.json`) 한 곳에 모인다. 도메인 · 확장자 · 임포트 폴더는
   `Config/Dev/AssetReferenceFields.json` 이다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
@@ -438,13 +439,6 @@ def collect_reference_problems(map_reference: dict[str, list[Reference]], assets
     return list_problem
 
 
-def list_meta_problems(list_index: list[str]) -> list[str]:
-    """인덱스에 오른 `Content/**/*.meta` 입니다 — 에셋은 경로 하나로 가리키고 `.meta` 는 없다.
-    `.gitignore` 는 새 파일만 막고, 옛 커밋을 옮기는 체리픽 · 리베이스는 그 파일을 그대로 들여온다(작업자 브랜치 병합에서 아홉 개가 다시 들어왔다)."""
-    prefix = CONTENT_FOLDER + "/"
-    return [f"{path}: .meta 는 쓰지 않는다 — 지운다(에셋은 경로로만 가리킨다)" for path in list_index if path.startswith(prefix) and path.endswith(".meta")]
-
-
 def check_asset_references(project_root: Path, scope: LintScope) -> list[str]:
     """
     린트 규칙(`rules.py`): 인덱스 전체의 끊어진 참조 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)까지 잡으려고 판정은 늘 전체로 낸다.
@@ -469,10 +463,10 @@ def check_asset_references(project_root: Path, scope: LintScope) -> list[str]:
     # 판정은 참조한 경로만으로 난다(옮긴 옛 id · 없는 경로) — 요약(경로마다 참조 수)으로 거르고, 걸린 것이 있을 때만 사실 전체를 읽어 줄 번호를 낸다.
     list_failing = [path for path in open_references().summary if is_checked_path(path, config) and (path in map_redirect or not resolves(path, assets, config))]
     if not list_failing:
-        return list_meta_problems(list_index)
+        return []
     map_fact = open_references(want=list_referrer).map_fact   # 걸린 때만 — 줄 번호를 내려고 모든 조각을 읽는다
     map_reference = {path: [Reference(*row) for row in list_row] for path, list_row in map_fact.items()}
-    return list_meta_problems(list_index) + collect_reference_problems(map_reference, assets, config, map_redirect)
+    return collect_reference_problems(map_reference, assets, config, map_redirect)
 
 
 def check_working_tree(project_root: Path) -> list[str]:
@@ -484,7 +478,7 @@ def check_working_tree(project_root: Path) -> list[str]:
     list_referrer = [path for path in list_index if is_referrer(path, config)]
     map_text = {path: (project_root / path).read_text(encoding="utf-8", errors="replace") for path in list_referrer}
     map_redirect = parse_redirects({path: (project_root / path).read_text(encoding="utf-8", errors="replace") for path in list_index if is_redirect_table(path)})
-    return list_meta_problems(list_index) + collect_problems(list_referrer, map_text, assets, config, map_redirect)
+    return collect_problems(list_referrer, map_text, assets, config, map_redirect)
 
 
 def run_self_check() -> None:

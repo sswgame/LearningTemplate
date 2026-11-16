@@ -35,7 +35,7 @@ namespace sw
     {
         Blackboard&                   blackboard = getBlackboard();
         GameObject*                   pOwner     = pawn.getOwner();
-        GameObjectManager*            pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObjectManager*            pManager   = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         const VoxelPlayerComponent*   pPlayer    = pOwner != nullptr ? pOwner->getComponent<VoxelPlayerComponent>() : nullptr;
         const VoxelGameModeComponent* pGameMode =
             pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;

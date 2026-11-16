@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="79b3c3894614cf93ad65e9c8600b588f"?>
 <!-- 툰 쇼케이스(toonshowcase.scene.xml)의 툰 구 — PBR 구와 같은 기본색, 칼같은 계단 · 푸른 그림자색 · 림 · 화면 기준 외곽선. -->
 <MaterialDef formatVersion="0" name="ToonShowcaseToon" _base="engine/materials/toon.material">
 	<_properties>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3c3ee5d5a61424360d24f7ffd6f1ee76"?>
 <!--
   에디터 시나리오 — 어긋남 찾기(서버 디버깅 S7). 전용 서버 + App 클라이언트 1 을 띄우면 세션이 서버에 -gv_stateHashHistory 를 켠다.
   netplay.sync save 는 Multiplayer 창 Sync 탭의 "Session server" + "Save" 를, netplay.sync compare 는 세션 서버를 A · 저장한 파일을 B 로 담아 "Compare" 를 한다.

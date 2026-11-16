@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="37d7f4e6565a518e8a83b7cf0328a7a6"?>
 <!--
   에디터 시나리오 — 기본 배치(Reset Default Layout)는 가운데 영역의 앞 탭이 Scene 이다. 열린 도구 패널(Prefab Overrides)이 같은 영역에 붙어도 그렇다.
   ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르고 처음 나타난 창에 포커스를 주므로, 붙인 순서로는 Scene 이 앞에 서지 않는다(EditorDockLayout::updateDefaultTabSelection).

@@ -1,3 +1,4 @@
+<?asset guid="8ea1f6221fa3d348a1ff80eb856c9f22"?>
 <!-- 2D 이동 블렌드(Quaternius 기본 캐릭터 · UAL1 클립) — 속도(Speed, m/s) × 자세(Posture: -1 웅크림 · 0 보통 · 1 꼿꼿함) 3×3 표본.
      삼각분할 무게중심 가중(켜지는 표본 많아야 셋)을 쓰는 실제 에셋이다. 속도 표본은 ubc_townsfolk 와 같다(걷기 0.84 · 달리기 2.1).
      측정: game/empty/automation/load/locomotion2d.scenario.xml(500 명, -gv_stressTestCharacterBlend=1 이 두 파라미터를 캐릭터마다 흩는다). -->

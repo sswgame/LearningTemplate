@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3f339a62309853310e8ae6653c746e80"?>
 <!--
   Shooter3D 관통 킬캠(S5) — 자동 플레이가 관통탄(piercing_round, 관통 2 · 피해 60)으로 적을 쓰러뜨리면 사격이 판정한 명중을 아레나의 Killcam 이 기록한다(다시 판정하지 않는다).
   ① 쓰러뜨린 발이 기록된다(Killcam.ShotCount ≥ 1). ② killcam.play 가 마지막 쓰러뜨린 발을 재생한다 — 화면이 Killcam 카메라로 바뀌고 탄을 따라가다(Phase 0) 명중에서 멈춘다(Phase 1).

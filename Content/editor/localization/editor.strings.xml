@@ -5006,6 +5006,16 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorAnimationGraph.AddPoseNodeSection" source="Pose nodes">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.AddPoseNodeTip" source="Add a pose node state of this type. Set its inputs to clip or state names in the inspector.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorAnimationGraph.AddWalkTip"
 		       source="Add a Walk state node. Its name is the clip it plays; rename it in the inspector.">
 			<origins>
@@ -5179,6 +5189,56 @@
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeAddSection" source="Add section">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeInputs" source="Inputs">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeInputsTip" source="Clip or state names this node evaluates, in order.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeMirrorAxis" source="Mirror axis">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeMirrorAxisTip" source="Model-space axis that runs left to right; the pose is reflected across the plane normal to it. Bone pairs come from the skeleton&apos;s mirror table.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeSection" source="Pose node">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeSections" source="Sections">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeSectionsTip" source="Montage sections in start order. A section ends where the next one starts; the last ends at the clip end.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeWeight" source="Weight">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PoseNodeWeightTip" source="Float parameter that blends the inputs (0 = first, 1 = second).">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorAnimationGraph.ResetBoneTip"
 		       source="Remove this bone's entries so it takes its parent's weight again.">
 			<origins>
@@ -5186,6 +5246,46 @@
 			</origins>
 		</entry>
 		<entry key="EditorAnimationGraph.SaveTip" source="Write the graph and its node layout to the asset file.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionBranch" source="Branch">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionBranchParam" source="Branch parameter">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionBranchParamTip" source="Bool parameter that, when on at the section end, goes to Branch instead of Next.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionName" source="Name">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionNext" source="Next">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionNextTip" source="Section to play at the end; empty stops here.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionStart" source="Start">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SectionStartTip" source="Clip time where the section starts; must be after the previous section.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>

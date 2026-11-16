@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8c17359afa23abcf84e4528d33af43d9"?>
 <!--
   에디터 시나리오 — 무인 실행 중 창이 포커스를 잃어도(다른 프로세스의 창이 전경을 가져가는 것과 같은 Windows WM_KILLFOCUS · X11 FocusOut) 누르고 있는 자동화 입력이 끊기지 않는다.
   Windows 와 X11 에서 끝까지 돈다. Wayland 는 자기 창에 포커스 이벤트를 보낼 길이 없어 포커스 단계에서 건너뜀으로 끝난다.

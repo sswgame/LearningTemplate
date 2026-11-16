@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="aa1c7f8a2498455f662dc4753d86bb77"?>
 <!--
   스프라이트 라이브러리 — 클립은 라벨만 적고, 라이브러리를 바꾸면 같은 클립이 다른 그림이 된다(유니티 Sprite Library). 두 장이 같으면 라벨이 그림을 정하지 않는 것이라 진다.
   라벨을 찾지 못하면 SpriteComponent.SpriteLibraryLabelMissing 오류로 진다.

@@ -144,6 +144,7 @@ namespace sw
         , _boneLODMeshContentID{}
         , _listBoneLODMaskCount{}
         , _listBoneRequirement{}
+        , _mirrorBoneMap{}
         , _boneRequirementSubscriptions{ SubscriptionList::ReleaseFunction::create<&SkeletalMeshComponent::releaseBoneRequirement>( this ) }
         , _nextBoneRequirementID{ 1 }
         , _interpolationFrom{}
@@ -297,6 +298,7 @@ namespace sw
         if ( _skeletonPath.empty() && _bRuntimeSkeleton == SW_TRUE )
         {
             resolveBoneLOD();
+            resolveMirrorTable();
             return;
         }
         shared_ptr<const Skeleton> skeleton;
@@ -310,28 +312,45 @@ namespace sw
             skeleton = SkeletalMeshComponentInternal::getImplicitSkeleton();
         if ( skeleton != _skeleton )
             assignSkeleton( std::move( skeleton ) );
-        // 본 LOD 는 이 스켈레톤에 맞춰 마스크를 짓는다 — 스켈레톤을 정한 뒤다.
+        // 본 LOD · 미러 표는 이 스켈레톤의 곁 파일이다 — 스켈레톤을 정한 뒤다.
         resolveBoneLOD();
+        resolveMirrorTable();
     }
 
-    void SkeletalMeshComponent::resolveBoneLOD()
+    string SkeletalMeshComponent::findSidePath( string ( *pfnMakePath )( string_view ) ) const
     {
-        // 본 LOD 는 스켈레톤 곁의 선택 파일이다 — 없으면 조용히 본 LOD 없이 간다. 변형은 곁에 없으면 부모의 것을 쓴다(이름으로 찾으므로 그대로 맞는다).
-        string path = SkeletonBoneLOD::makePathForSkeleton( _skeletonPath );
+        // 곁 파일은 선택이다. 변형은 곁에 없으면 부모의 것을 쓴다(본 이름으로 찾으므로 그대로 맞는다).
+        string path = pfnMakePath( _skeletonPath.path() );
         for ( const string& basePath : _skeleton->getBasePaths() )
         {
             if ( path.empty() == false && AssetIO::hasAsset( AssetID{ path } ) )
                 break;
-            path = SkeletonBoneLOD::makePathForSkeleton( basePath );
+            path = pfnMakePath( basePath );
         }
         if ( path.empty() || AssetIO::hasAsset( AssetID{ path } ) == false )
+            return string{};
+        return path;
+    }
+
+    void SkeletalMeshComponent::resolveBoneLOD()
+    {
+        const string path = findSidePath( &SkeletonBoneLOD::makePathForSkeleton );
+        if ( path.empty() )
         {
-            setBoneLOD( nullptr );
+            setBoneLOD( nullptr ); // 없으면 조용히 본 LOD 없이 간다
             return;
         }
         shared_ptr<const SkeletonBoneLOD> boneLOD = SharedAssetCache<SkeletonBoneLOD>::acquire( path );
         if ( boneLOD != _boneLOD )
             setBoneLOD( std::move( boneLOD ) );
+    }
+
+    void SkeletalMeshComponent::resolveMirrorTable()
+    {
+        const string                          path  = findSidePath( &SkeletonMirrorTable::makePathForSkeleton );
+        shared_ptr<const SkeletonMirrorTable> table = path.empty() ? nullptr : SharedAssetCache<SkeletonMirrorTable>::acquire( path ); // 못 읽으면 읽는 쪽이 오류를 남겼다
+        if ( table.get() != _mirrorBoneMap.findTable() )
+            _mirrorBoneMap.setTable( std::move( table ) );
     }
 
     void SkeletalMeshComponent::setBoneLOD( shared_ptr<const SkeletonBoneLOD> boneLOD )
@@ -542,10 +561,10 @@ namespace sw
 
     SkeletalMeshComponent* SkeletalMeshComponent::findLeaderPose() const
     {
-        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getManager() == nullptr;
+        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getMutableManager() == nullptr;
         if ( bNoLeader )
             return nullptr;
-        return getOwner()->getManager()->resolveComponent( _leader );
+        return getOwner()->getMutableManager()->resolveComponent( _leader );
     }
 
     void SkeletalMeshComponent::addAnimationDependency( SkeletalMeshComponent* pUpstream )

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="698809c30fff4bb6bda05aef160450a4"?>
 <!--
   활 쇼케이스 — 궁수(앵커) · 활 · 메긴 화살이 페어드 애니메이션 하나(common/data/anim/bow_shoot.pairedanim.xml)로 돈다.
   궁수의 PairedAnimationComponent(_bStartOnPlay)가 플레이 첫 틱 뒤에 세션을 시작하고, 활 · 화살 역할은 외형 부품(아이템 bow_long)의 프리팹이 데이터로 든다.

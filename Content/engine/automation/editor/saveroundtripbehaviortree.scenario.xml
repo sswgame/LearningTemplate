@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<?asset guid="84ac3e4b5defb42c9f38a8afcd9e1f91"?>
 <!--
   에디터 시나리오 — 행동 트리 패널(behavior_tree, GameFramework 에디터 확장) 저장 왕복: Empty 의 경비 트리(game/empty/data/vocabulary/guard.bt.xml)의 실행마다 새 사본(scratch/saveroundtripbehaviortree — <Scratch>)을 연다.
   고치지 않고 저장(panel.saveDocument) → 글 붙잡기(asset.snapshotScratch) → 디스크에서 다시 읽기(panel.reloadDocument) → 다시 저장 → 같은 바이트(asset.expectScratchUnchanged).
