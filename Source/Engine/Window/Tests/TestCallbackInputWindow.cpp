@@ -14,9 +14,10 @@ namespace
     class FakeCallbackWindow final : public CallbackInputWindow
     {
     public:
-        bool initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
-        void destroy() override {}
-        void simulateFocus( bool bFocused ) { applyPlatformFocus( bFocused ); }
+        bool              initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
+        void              destroy() override {}
+        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
+        void              simulateFocus( bool bFocused ) { applyPlatformFocus( bFocused ); }
 
     protected:
         void* getNativeHandle() const override { return nullptr; }
