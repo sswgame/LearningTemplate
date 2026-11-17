@@ -23,6 +23,20 @@
 
 namespace sw
 {
+    /** @brief 명단에서 읽은 계정 하나의 자리입니다. 나가면 이 자리를 채워 달라고 맡긴다(`MatchBackfillSender::submitPlayerLeft`). */
+    struct MatchSeat
+    {
+        string _modeID{};
+        uint64 _matchID{ 0 };
+        int64  _expiresMs{ 0 };
+        int32  _team{ 0 };
+        int32  _teamCount{ 0 };
+        int32  _averageRating{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     struct EphemeralReply;
 
     class EphemeralStoreRouter;
@@ -60,6 +74,8 @@ namespace sw
         /** @brief 접속 예정자이면 true 입니다. 접속 인증기가 네트워크 스레드에서 부릅니다. 아니면 다음 `update` 가 주기를 기다리지 않고 목록을 읽는다 — Found 는 기록이 남은 뒤에 가므로 막 배정받은 사람의 재시도가 1 초 주기에 막히지 않는다. */
         bool  isAccepted( AccountID accountID ) const override;
         int32 getExpectedCount() const;
+        /** @brief 계정 @p accountID 의 자리를 꺼냅니다(한 번만 — 같은 사람이 두 번 나가도 자리 하나). 명단에 없거나 이미 꺼냈으면 false 입니다. 서버 루프에서 부릅니다. */
+        [[nodiscard]] bool takeSeat( AccountID accountID, MatchSeat& outSeat );
 
     private:
         void onListReply( const EphemeralReply& reply );
@@ -72,6 +88,7 @@ namespace sw
         unordered_map<AccountID, int64> _mapAccountToExpiresMs SW_GUARDED_BY( _mutex ); ///< 접속 예정자와 받는 시한이다
         mutable uint8 _bReadRequested                          SW_GUARDED_BY( _mutex ); ///< 명단에 없는 계정이 접속을 시도했다. 다음 `update` 가 목록을 바로 읽는다
         unordered_map<string, int64>                           _mapRecordToExpiresMs;   ///< 읽었거나 읽는 중인 기록 이름과 끝나는 시각이다. 같은 기록을 다시 읽지 않는다
+        unordered_map<AccountID, MatchSeat>                    _mapAccountToSeat;       ///< 명단의 계정마다 경기 · 팀이다(서버 루프만 쓴다)
         unordered_map<uint64, string>                          _mapRequestToRecord;     ///< 기다리는 기록 읽기이다
         EphemeralStoreRouter*                                  _pRouter;
         Subscription                                           _replyOwner; ///< 라우터 답의 주인 몫(`startReading` 이 열고 `shutdown` 이 놓는다)

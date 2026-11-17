@@ -663,8 +663,10 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillSenderFillsServerFromDescriptor )
     descriptor._address   = "10.0.0.5";
     descriptor._port      = 7100;
     descriptor._portCount = 1;
+    MatchServerAgent    agent; // 이 테스트는 자리를 꺼내지 않는다(빈 슬롯을 직접 적는다)
     MatchBackfillSender sender;
-    sender.initialize( &world._serverB._queue, descriptor );
+    agent.initialize( kGameID );
+    sender.initialize( &world._serverB._queue, &agent, descriptor );
 
     MatchBackfillSlots slots;
     slots._matchID       = 77;
@@ -988,4 +990,47 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     stats._mapStat[kBob] = 1500;
     world._server.tick( kNowMs + 1 );
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() ); // 떠난 사람의 티켓이 생기지 않는다
+}
+
+/** @brief [MatchQueueServiceTest] 나간 사람의 자리: 게임 서버는 계정만 넘기고 경기 · 모드 · 팀은 읽은 명단에서 찾는다. 같은 사람은 한 번만, 명단에 없는 계정은 NotQueued, 채운 사람은 그 경기의 그 팀으로 Found */
+SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+    ServerDescriptor descriptor;
+    descriptor._serverID  = kGameID;
+    descriptor._kind      = "game";
+    descriptor._region    = "kr";
+    descriptor._address   = "10.0.0.9";
+    descriptor._port      = 7000;
+    descriptor._portCount = 1;
+    MatchBackfillSender sender;
+    sender.initialize( &world._server._queue, &agent, descriptor );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 1 );
+    const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
+    const MatchAssignment& aliceFound = listFound[0]._recipientID == kAlice ? listFound[0]._assignment : listFound[1]._assignment;
+    agent.update( UnixMilliseconds{ kNowMs + 1 } ); // 명단 기록을 읽는다
+    world._server.poll( kNowMs + 1 );
+    SW_REQUIRE_TRUE( agent.isAccepted( kAlice ) );
+
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kCarol, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::NotQueued ); // 명단에 없다
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::NotQueued ); // 자리 하나는 한 번만
+
+    SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs + 3 )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 3 );
+    const vector<MatchQueueNotification> listFilled = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFilled.size() );
+    SW_EXPECT_EQUAL( kCarol, listFilled[0]._recipientID );
+    SW_EXPECT_TRUE( listFilled[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_EQUAL( aliceFound._matchID, listFilled[0]._assignment._matchID );
+    SW_EXPECT_EQUAL( aliceFound._team, listFilled[0]._assignment._team );
+    agent.shutdown();
 }

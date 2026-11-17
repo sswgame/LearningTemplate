@@ -23,6 +23,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
+#include "ModuleAPI/Service/IServerKitLocator.h"
 
 #include "ModuleManager/ILiveReloadManager.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
@@ -453,6 +454,10 @@ namespace sw
             SW_LOG_ERROR_ID( "GameModuleManager.HostScopeNoIModuleStateStore", "The host scope has no IModuleStateStore - module state is not carried across reloads" );
         else
             (void)outScope.bind( pStateStore );
+        // 서버 키트 창구 — 전용 서버(Server)만 호스트 범위에 건다. 게임 서버 코드가 키트 인터페이스(백필 …)를 찾는다. 창구는 호스트 소유라 리로드에 매달리지 않는다.
+        IServerKitLocator* const pKitLocator = engine::findSubsystem<IServerKitLocator>();
+        if ( bGameModule && pKitLocator != nullptr )
+            (void)outScope.bind( pKitLocator );
         // 호스트 전용 서비스 — 에디터 모듈만 찾는다(게임 모듈의 범위에는 걸지 않는다).
         if ( bGameModule == false )
         {
