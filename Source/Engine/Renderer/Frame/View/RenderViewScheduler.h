@@ -53,11 +53,13 @@ namespace sw
         RenderViewScheduler();
 
         /**
-         * @brief 시각 @p now(초)에서 후보마다 이번 프레임에 그릴지를 @p pOutRender 에 적습니다(SW_TRUE / SW_FALSE).
+         * @brief 시각 @p now(초)에서 후보마다 자리를 얻었는지(@p pOutListed)와 이번 프레임에 그릴지(@p pOutRender)를 적습니다(SW_TRUE / SW_FALSE).
+         * @details 자리(뷰 자원 — 컬링 슬롯 · 트랜지언트 풀)는 @p maxListed 개다. 넘치면 보이는 뷰 먼저, 그다음 늦은 정도가 큰 뷰(처음 보는 뷰가 가장 늦다), 덜 그린 뷰 순으로 준다
+         *          — 등록 순서로 자르면 뒤에 만든 카메라가 영영 그려지지 않는다. 자리를 얻지 못한 뷰도 기록은 남겨 다음 프레임에 늦은 채로 겨룬다. 그리기는 자리를 얻은 뷰만 고른다.
          * @param budget 예산을 받는 뷰에 거는 한 프레임의 예산입니다.
          * @return 그리기로 고른 수입니다(예산을 받지 않는 뷰 포함).
          */
-        uint32 schedule( float64 now, const Candidate* pCandidate, uint32 candidateCount, const RenderViewBudget& budget, uint8* pOutRender );
+        uint32 schedule( float64 now, const Candidate* pCandidate, uint32 candidateCount, uint32 maxListed, const RenderViewBudget& budget, uint8* pOutListed, uint8* pOutRender );
         /** @brief 모든 기록을 잊습니다. */
         void clear() { _listEntry.clear(); }
         /** @brief 기억하는 뷰 수입니다(진단과 테스트용). */
@@ -80,5 +82,7 @@ namespace sw
         vector<float64> _listScratchOverdue;     ///< 그 후보의 늦은 정도(처음 보는 뷰는 아주 크다)
         vector<uint64>  _listScratchRenderCount; ///< 그 후보가 지금까지 그려진 횟수
         vector<uint32>  _listScratchOrder;       ///< 예산을 채우는 순서(늦은 정도가 큰 것부터)
+        vector<float64> _listScratchListOverdue; ///< 후보마다의 늦은 정도(자리 고르기 — 아직 때가 아니면 음수)
+        vector<uint32>  _listScratchListOrder;   ///< 자리를 주는 순서
     };
 } // namespace sw
