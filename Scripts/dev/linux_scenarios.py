@@ -570,7 +570,9 @@ def run_fuzz(names, seconds, sync=True):
         log = f'/tmp/lt.fuzz.{name}.log'
         os.makedirs(corpus, exist_ok=True)
         # 자라는 말뭉치를 앞에 둔다 — libFuzzer 는 첫 폴더에 새 입력을 쓴다(씨앗 폴더를 더럽히지 않는다).
-        shell(f'cd {build_dir}/Bin && ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 ./Fuzz_{name} -max_total_time={seconds} {corpus} {seeds_root / name} > {log} 2>&1')
+        # 엔진은 공유 ASan 런타임(libclang_rt.asan.so)으로 짓는다 — 퍼저 실행 파일은 그 런타임을 먼저 싣지 않아 "ASan runtime does not come first" 로 바로 멈췄다. 런타임을 앞에 싣는다.
+        preload = f'$(ls {CLONE}/Tools/LLVM/lib/clang/*/lib/x86_64-unknown-linux-gnu/libclang_rt.asan.so | head -n 1)'
+        shell(f'cd {build_dir}/Bin && LD_PRELOAD={preload} ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 ./Fuzz_{name} -max_total_time={seconds} {corpus} {seeds_root / name} > {log} 2>&1')
         reason = evaluate_fuzz_log(pathlib.Path(log).read_text(errors='replace'))
         print(f'fuzz {name}: {"ok" if reason is None else reason} - {log}')
         if reason is not None:
