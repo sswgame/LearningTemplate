@@ -44,7 +44,6 @@ namespace sw
         string                           _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
         float64                          _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
         int32                            _expectedExitCode;              ///< `ExpectExitWithin exitCode` — 엔진이 끝낼 때 요청했어야 할 종료 코드입니다(`QuitRequest`, 창 닫기는 0)
-        float64                          _loadDeadlineSeconds;           ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
         float64                          _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
         const BusyClock*                 _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getCompileBusyClock` — 셰이더 로드 · PSO 생성) — 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
         int64                            _compileBusyAtStartNanoseconds; ///< 시작 때 `_pCompileBusy` 의 값
@@ -282,7 +281,7 @@ namespace sw
         [[nodiscard]] bool holdForStartScene();
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
-        /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
+        /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 엽니다(창 길이는 벽시계 상한 `computeWallLimitSeconds` 에 든다). 아니면 아무것도 하지 않습니다. */
         void startLoadWindow();
         /** @brief 벽시계 감시를 시작합니다(시나리오를 읽기 시작할 때 한 번). 시작 시각(단조 시계 · 유닉스 · 지역 달력 글)을 잡습니다. */
         void markWallStart();
@@ -301,7 +300,7 @@ namespace sw
         /** @brief 단계 · 시계 잡기 조건이 오래 붙잡고 있으면 무엇을 기다리는지 기다리는 동안 찍습니다(`AutomationTimeLimits::kWaitReportFirstSeconds`). */
         void reportOngoingWait();
         /**
-         * @brief 시작부터 `wallTimeoutSeconds` 가 지났으면 시간 초과(12)로 끝냅니다. 부하 시나리오는 자기 그물이 있어 보지 않습니다.
+         * @brief 시작부터 `wallTimeoutSeconds` 가 지났으면 시간 초과(12)로 끝냅니다. 부하 시나리오도 본다(측정 창 길이는 상한에 든다).
          * @details 프레임 시한(`timeoutFrames`)은 붙잡은 프레임(`holdUntilReady` · 시계 잡기)을 세지 않아, 붙잡힌 채로는 영영 끝나지 않고 테스트의 프로세스 시한(보고 없는 kill)까지 간다.
          *          이 감시는 프레임이 도는 동안만 본다 — 프레임 자체가 멈춘 행은 행 감시 스레드(`AutomationHangWatchdog`)가 상한 + 유예 뒤에 잡는다.
          */
@@ -319,8 +318,8 @@ namespace sw
         /** @brief 이 실행의 재현 명령입니다 — 세션이 넘긴 재료에 이 시나리오의 `<Launch>` 변수를 더해 짓습니다. 재료에 시나리오가 없으면 빈 글. */
         string makeReproduceCommand() const;
         /**
-         * @brief 행 감시 스레드를 띄웁니다. 감시가 켜져 있고(`armHangWatchdog`) 시나리오를 읽었으며 부하 시나리오가 아닐 때만 띄웁니다.
-         * @details 부하 시나리오는 측정 창 그물이 따로 있어 제외한다. 스레드는 `endRun` 이 내린다.
+         * @brief 행 감시 스레드를 띄웁니다. 감시가 켜져 있고(`armHangWatchdog`) 시나리오를 읽었을 때만 띄웁니다.
+         * @details 부하 시나리오도 본다 — 측정 창 길이는 상한(`computeWallLimitSeconds`)에 든다. 스레드는 `endRun` 이 내린다.
          */
         void startHangWatchdog();
         /** @brief 쓰기 입구 게이트를 쥡니다(이미 쥐었으면 아무것도 하지 않습니다). 시나리오가 `scratch/` 밖의 리소스 원본에 쓰면 거절된다. */

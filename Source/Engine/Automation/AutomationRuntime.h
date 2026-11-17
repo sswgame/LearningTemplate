@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Automation/AutomationResult.h"
 
@@ -44,6 +45,16 @@ namespace sw
     struct HeadlessTaskState;
 
     /**
+     * @class IAutomationShutdownWatch
+     * @brief 시나리오 실행 뒤 프로세스 종료를 지켜보는 감시 하나입니다. 들고 있는 동안 감시하고, 놓으면(소멸) 내립니다 — 호스트가 엔진을 다 내린 뒤에 놓는다.
+     */
+    class IAutomationShutdownWatch
+    {
+    public:
+        virtual ~IAutomationShutdownWatch() = default;
+    };
+
+    /**
      * @class IAutomationRuntime
      * @brief 자동화 실행기의 바깥 창구입니다 — 시나리오 시작, 무인 실행 여부, 백엔드마다 실행 작업.
      */
@@ -71,5 +82,12 @@ namespace sw
          * @details 포인터는 이 프레임 안에서만 쓴다(세션이 프레임 끝마다 다시 쓴다). 게임 스레드에서만 읽는다.
          */
         virtual const AutomationRunStatus* findRunStatus() const = 0;
+        /**
+         * @brief 프로세스 종료(엔진 · 모듈 내리기)를 감시하기 시작합니다. 시나리오를 돌린 실행만 감시를 돌려주고, 아니면 nullptr 입니다.
+         * @details 종료 대기(`TaskManager::waitAll` · `waitStage`)는 기한 없이 기다린다 — 교착이면 시나리오의 행 감시가 이미 내려가 ctest 시한까지 아무 판정이 없었다.
+         *          감시는 실행기 · 세션과 따로 산다(세션은 엔진과 함께 내려간다). 시한(`AutomationTimeLimits::kShutdownWallSeconds` × `gv_scenarioWallScale`)을 넘기면 종료 코드 12 로 끝낸다.
+         *          언리얼 `FThreadHeartBeat` 도 엔진 종료 끝까지 돈다.
+         */
+        [[nodiscard]] virtual unique_ptr<IAutomationShutdownWatch> watchShutdown() = 0;
     };
 } // namespace sw

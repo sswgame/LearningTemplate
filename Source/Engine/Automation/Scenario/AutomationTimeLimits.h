@@ -37,8 +37,13 @@ namespace sw
 
         /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
         static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
-        /** @brief 부하 시나리오(`<Load>`)의 멈춤 그물 여유(초)입니다 — 그물은 측정 창 길이의 두 배에 이것을 더한다. 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다. */
+        /** @brief 부하 시나리오(`<Load>`)의 벽시계 상한에 더하는 여유(초)입니다 — 상한에 측정 창 길이의 두 배와 이것을 더한다. 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다. */
         static constexpr float64 kLoadDeadlineSlackSeconds = 120.0;
+        /**
+         * @brief 시나리오 실행이 끝난 뒤 프로세스 종료(엔진 · 모듈 내리기)에 주는 벽시계 시한(초, `gv_scenarioWallScale` 배)입니다. 넘으면 종료 감시가 종료 코드 12 로 끝낸다.
+         * @details 종료 대기(`TaskManager::waitAll` · `waitStage`)는 기한 없이 기다린다 — 교착이면 ctest 시한(`kProcessKillSeconds`)까지 아무 판정 없이 갔다. Debug 종료는 몇 초다.
+         */
+        static constexpr float32 kShutdownWallSeconds = 60.0f;
         /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
         static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
         /**
@@ -63,6 +68,8 @@ namespace sw
         static_assert( kClockHoldTimeoutSeconds < static_cast<float64>( kProcessKillSeconds ), "the clock-hold timeout must come before the process kill" );
         static_assert( kClockHoldTimeoutSeconds < static_cast<float64>( kProcessStallSeconds ), "the clock-hold timeout (which logs while it waits) must come before the stall kill" );
         static_assert( kProcessStallSeconds < kProcessKillSeconds, "the stall kill catches a stopped child before the process limit" );
+        static_assert( static_cast<float64>( kShutdownWallSeconds ) + static_cast<float64>( kHangGraceSeconds ) < static_cast<float64>( kProcessStallSeconds ),
+                       "the shutdown watch must end a stuck teardown before the stall kill (the wait's progress lines keep the log growing)" );
     };
 
     // 멤버 함수는 클래스 안에서 상수식에 쓸 수 없어 아래에서 묶는다.
