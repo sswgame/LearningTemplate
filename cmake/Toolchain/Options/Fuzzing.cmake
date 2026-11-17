@@ -18,8 +18,9 @@ endif()
 
 # 리눅스 심볼 숨김(`--exclude-libs,ALL`, cmake/Modules/Build/BuildLayout.cmake)에는 걸리지 않는다 — 계측된 모듈 .so 가 찾는 `__sanitizer_cov_*` ·
 # `__sancov_lowest_stack` 은 공유 ASan 런타임(`-shared-libsan`, Sanitizer.cmake)이 내보내고, 그 숨김은 정적 아카이브에서 온 심볼만 가린다.
-# 퍼저 실행 파일을 더할 때는 걸린다: `-fsanitize=fuzzer` 의 정적 libFuzzer 가 가진 진짜 콜백이 숨겨져 .so 는 ASan 의 빈 기본 구현에 묶이고,
-# 링크 · 실행은 되는데 엔진 .so 의 커버리지가 퍼저에 닿지 않는다. 그 타깃은 대상 코드를 정적으로 링크하거나 숨김을 빼고, 시작 줄 `Loaded N modules` 로 확인한다.
+# 퍼저 실행 파일에는 걸린다: `-fsanitize=fuzzer` 의 정적 libFuzzer 가 가진 진짜 콜백이 숨겨지면 .so 는 ASan 의 빈 기본 구현에 묶이고,
+# 링크 · 실행은 되는데 엔진 .so 의 커버리지가 퍼저에 닿지 않는다. 그래서 `sw_add_fuzz_target`(cmake/Modules/Build/FuzzTargets.cmake)이 대상 속성
+# `SW_FUZZ_TARGET` 을 켜 그 타깃만 숨김에서 빼고, 스모크 테스트(`Fuzz.<이름>.Smoke`)가 시작 줄 `Loaded N modules`(N ≥ 2)로 확인한다.
 add_library(sw_fuzzing INTERFACE)
 target_compile_options(sw_fuzzing INTERFACE -fsanitize=fuzzer-no-link)
 target_compile_definitions(sw_fuzzing INTERFACE SW_FUZZING=1)

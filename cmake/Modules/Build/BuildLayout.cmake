@@ -87,7 +87,8 @@ message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 # 에디터 모듈의 심볼을 잡아, 확장의 결속기가 에디터의 할당자를 덮어쓰고 확장이 내려간 뒤 없는 코드로 뛰었다. 정적 라이브러리(vcpkg)는 숨김으로 짓지 않아 링크에서 따로 가린다.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	target_compile_options(sw_global_options INTERFACE -fvisibility=hidden "$<$<COMPILE_LANGUAGE:CXX>:-fvisibility-inlines-hidden>")
-	target_link_options(sw_global_options INTERFACE "LINKER:--exclude-libs,ALL")
+	# 퍼저 실행 파일(`SW_FUZZ_TARGET`, FuzzTargets.cmake)만 뺀다 — 정적 libFuzzer 의 커버리지 콜백을 내보내야 엔진 .so 의 계측이 거기에 묶인다.
+	target_link_options(sw_global_options INTERFACE "$<$<NOT:$<BOOL:$<TARGET_PROPERTY:SW_FUZZ_TARGET>>>:LINKER:--exclude-libs,ALL>")
 endif()
 
 set(SW_EXCLUDED_ENGINE_FOLDERS "")

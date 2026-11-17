@@ -107,7 +107,7 @@ option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 �
 set(SW_SANITIZER_KIND "address" CACHE STRING "SW_ENABLE_SANITIZER 가 켤 새니타이저: address | thread")
 set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 
-# 커버리지 안내 퍼징(libFuzzer) — 엔진에 커버리지 계측(`-fsanitize=fuzzer-no-link`)을 건다(퍼저 대상은 테스트 프레임워크를 다시 만들 때 정한다). 리눅스 clang + ASan 만
+# 커버리지 안내 퍼징(libFuzzer) — 엔진에 커버리지 계측(`-fsanitize=fuzzer-no-link`)을 건다(프리셋 Linux-Fuzz, 퍼저 대상은 `sw_add_fuzz_target`). 리눅스 clang + ASan 만
 # (Windows 의 clang_rt.fuzzer 는 정적 CRT 뿐이라 엔진과 링크되지 않는다).
 option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 엔진 커버리지 계측(libFuzzer)" OFF)
 
