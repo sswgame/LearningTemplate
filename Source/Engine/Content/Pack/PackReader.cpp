@@ -395,6 +395,33 @@ namespace sw
         } ) );
     }
 
+    AsyncReadHandle PackReader::readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const
+    {
+        PackReadPlan    plan{};
+        AsyncFileHandle file;
+        if ( makeReadPlan( pathHash, plan, file ) == false )
+            return AsyncReadHandle{};
+        if ( plan._compression != PackCompressionType::None )
+        {
+            SW_LOG_ERROR_ID( "Pack.RangeReadOnCompressedEntry", "Range read of a compressed entry in pack %# (codec %#) - cook range-read assets (.dds) uncompressed", file.getPath(),
+                             static_cast<uint32>( plan._compression ) );
+            return AsyncReadHandle{};
+        }
+        if ( offset > plan._uncompressedSize || size > plan._uncompressedSize - offset )
+        {
+            SW_LOG_ERROR_ID( "Pack.RangeReadOutOfEntry", "Range read %#+%# is outside the entry (%# bytes) in pack %#", offset, size, plan._uncompressedSize, file.getPath() );
+            return AsyncReadHandle{};
+        }
+        return io.readRange( file, plan._dataOffset + offset, size, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [plan, file, onComplete]( AsyncReadResult& result )
+        {
+            const bool bSuccess = result.isSucceeded();
+            if ( bSuccess == false && result._status != AsyncIOStatus::Canceled )
+                SW_LOG_ERROR_ID( "PackReader.ReadErrorPackOffset", "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIO::getStatusName( result._status ), plan._dataOffset );
+            if ( onComplete.isBound() )
+                onComplete( bSuccess, result._bytes );
+        } ) );
+    }
+
     PackHeader PackReader::getHeader() const
     {
         ScopedLock<mutex> lock{ _fileMutex };
