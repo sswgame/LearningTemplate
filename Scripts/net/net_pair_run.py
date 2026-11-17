@@ -87,6 +87,8 @@ def write_configs(out_dir: Path, game_port: int, service_port: int, account: str
         "_listKit": [
             {"_name": "account", "_settings": {
                 "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
+                "_maxConcurrentPasswordHashes": 2,
+                "_maxQueuedPasswordHashes": 64,
                 "_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT,
                 "_bLightPasswordHash": True,
                 "_listSeedTestAccount": [{"_loginName": account, "_password": password}],

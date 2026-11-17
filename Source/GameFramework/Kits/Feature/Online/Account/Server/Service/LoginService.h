@@ -30,6 +30,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Service/PasswordHashQueue.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
@@ -40,12 +41,14 @@ namespace sw
 {
     struct LoginCallInput;
     struct LoginMaintenanceInput;
+    struct LoginPasswordCall;
     struct LoginRevocationEntry;
     struct LoginStoreResult;
 
     class IServiceStore;
     class LoginSecretVault;
     class RemoteConfig;
+    class TaskManager;
 
     /** @brief 로그인 서비스의 작업 종류입니다. */
     enum class LoginOperation : uint8
@@ -92,11 +95,17 @@ namespace sw
         static constexpr size_t kMaxTrackedClientCount = 4096; ///< 시도 버킷의 상한이다. 넘으면 가득 찬 버킷(새 버킷과 같은 상태)을 지운다
 
         LoginService();
+        ~LoginService();
 
-        /** @brief @p pStore 와 @p pCrypto 는 빌려 씁니다. @p pCrypto 는 스레드 안전해야 합니다. 저장소 워커에서 해시를 돌리기 때문입니다. @p arrTicketMasterKey 는 게임 서버와 나눠 가진 티켓 마스터 키입니다. */
-        void initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginServiceConfig& settings,
-                         const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] );
-        void shutdown();
+        /**
+         * @brief @p pStore · @p pCrypto · @p pHasher · @p pTaskManager 는 빌려 씁니다. @p pCrypto 와 @p pHasher 는 스레드 안전해야 합니다(저장소 워커 · 작업 풀 워커에서 부른다).
+         *        @p arrTicketMasterKey 는 게임 서버와 나눠 가진 티켓 마스터 키입니다.
+         * @details 비밀번호 해시는 저장소 워커가 아니라 @p pTaskManager 위의 상한 있는 줄(`PasswordHashQueue`, `_maxConcurrentPasswordHashes` · `_maxQueuedPasswordHashes`)에서 돈다.
+         *          작업 풀이 없거나 상한이 1 미만이면 오류입니다(기동 실패 — 저장소 워커로 대신하지 않는다).
+         */
+        [[nodiscard]] expected<void> initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
+                                                 const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] );
+        void                         shutdown();
 
         /** @brief 외부 로그인 제공자를 등록합니다. 빌려 쓰는 포인터입니다. 같은 이름이 있거나 이름 규칙(`[a-z0-9_]`)을 어기면 false 를 반환합니다. */
         [[nodiscard]] bool registerPlatformProvider( IPlatformLoginProvider* pProvider );
@@ -110,10 +119,13 @@ namespace sw
         void setRemoteConfig( const RemoteConfig* pRemoteConfig ) { _pRemoteConfig = pRemoteConfig; }
         /** @brief 탈퇴 정리가 계정을 지운 뒤 부를 키트 훅입니다. 키트 조립이 `start` 에서 넘깁니다(모든 키트의 `initialize` 뒤). 키트가 소유하고 서비스보다 오래 삽니다. */
         void setAfterDeleteAccount( vector<const IAfterDeleteAccount*> listHook ) { _listAfterDeleteAccount = std::move( listHook ); }
-        /** @brief 외부 확인 결과를 회수합니다. 제공자의 `tick` 과 `pollVerifications` 를 부르며, 서비스 스레드의 틱마다 호출합니다. */
+        /** @brief 외부 확인 결과와 끝난 비밀번호 해시를 회수합니다. 제공자의 `tick` 과 `pollVerifications` 를 부르며, 서비스 스레드의 틱마다 호출합니다. */
         void update( UnixMilliseconds nowMs );
+        /** @brief 도는 비밀번호 해시가 끝나거나 @p timeoutMs 가 지날 때까지 잡니다(작업 풀 일을 돕지 않는다). 완료는 다음 `update` 가 잇는다. 테스트가 쓴다. */
+        bool waitForPasswordHashes( int64 timeoutMs ) { return _hashQueue.waitForRunning( timeoutMs ); }
 
         // 요청 함수들이다. 결과는 같은 @p requestTag 로 `takeCompletions` 에서 받는다. 시도 제한이나 빌드 버전에 걸리면 작업을 맡기지 않고 바로 완료를 쌓는다.
+        // 비밀번호를 해시하는 요청(가입 · 로그인 · 이름 연동)은 해시 줄에 자리가 없으면 읽기 전에 `kBusy`(다시 시도)로 끝난다 — 계정이 있든 없든 같은 답이다.
         /** @brief 이름 · 비밀번호로 가입합니다. @p clientKey 는 로그인과 같은 시도 제한의 단위입니다. */
         void registerAccount( const LoginCredential& credential, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 서버가 스스로 계정을 만듭니다(개발용 시드 계정). 클라이언트 요청이 아니라 시도 제한을 쓰지 않습니다. */
@@ -160,8 +172,8 @@ namespace sw
         [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override;
         bool               isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
 
-        /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기도 포함합니다. */
-        int32                       getPendingCount() const { return _store.getOpenCount() + _verifications.getOpenCount(); }
+        /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기와 해시 줄의 자리도 포함합니다. */
+        int32                       getPendingCount() const { return _store.getOpenCount() + _verifications.getOpenCount() + _hashQueue.getOpenCount(); }
         const LoginTicketAuthority& getTicketAuthority() const { return _ticketAuthority; }
         const LoginServiceConfig&   getSettings() const { return _settings; }
         int32                       getOnlineCount() const { return static_cast<int32>( _mapAccountToSession.size() ); }
@@ -203,6 +215,19 @@ namespace sw
         void               removeOfflineIdentities();
         /** @brief 요청 하나의 저장 일을 맡깁니다. 완료가 `applyCompletion` 으로 간다. */
         void submitCall( LoginCallInput&& input );
+        /**
+         * @brief 비밀번호를 해시하는 요청(가입 · 로그인 · 이름 연동)을 맡깁니다. 해시 줄 자리(티켓)를 먼저 잡고, 없으면 `kBusy` 로 끝내고 false 입니다.
+         * @details 가입 · 연동: 형식 확인 → 해시(새 솔트) → 커밋. 로그인: 읽기(`readLoginChallenge`) → 해시 → 커밋(`commitLogin`).
+         */
+        bool submitPasswordCall( LoginCallInput&& input );
+        /** @brief 로그인의 읽기 단계를 맡깁니다. */
+        void submitLoginRead( uint64 callID );
+        /** @brief 비밀번호 요청 @p callID 의 해시를 줄에 맡깁니다(자리는 요청이 든 티켓). */
+        void submitPasswordHash( uint64 callID, LoginPasswordCall& call );
+        /** @brief 끝난 해시 하나를 다음 단계(커밋)로 잇습니다. */
+        void continueAfterHash( const PasswordHashCompletion& completion );
+        /** @brief 비밀번호 요청을 끝냅니다 — 비밀번호를 지우고 완료를 적용합니다. */
+        void finishPasswordCall( uint64 callID, LoginCompletion&& completion, const LoginStoreResult& serviceResult );
         /** @brief 끊김 · 세션 다시 읽기 · 탈퇴 정리 일을 맡깁니다. 응답이 없다. */
         void                  submitMaintenance( LoginMaintenanceInput&& input );
         static LoginCallInput makeCallInput( LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs );
@@ -233,5 +258,10 @@ namespace sw
         ServicePeriodicJob                                                 _revocationScanJob;      ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
         ServiceStoreTracker                                                _store;                  ///< 저장소에 맡긴 일의 앞이다
         vector<const IAfterDeleteAccount*>                                 _listAfterDeleteAccount; ///< 탈퇴 뒤 키트 정리 훅(`setAfterDeleteAccount`)
+        PasswordHashQueue                                                  _hashQueue;              ///< 비밀번호 해시 줄(작업 풀 위, 상한 있음). 아래 요청 표보다 먼저 선다 — 요청이 든 티켓이 먼저 사라진다
+        unordered_map<uint64, unique_ptr<LoginPasswordCall>>               _mapPasswordCall;        ///< 진행 중인 비밀번호 요청(단계 사이에 입력 · 티켓 · 문제를 든다)
+        unordered_map<uint64, uint64>                                      _mapHashJobToCall;       ///< 해시 줄의 일 번호 → 비밀번호 요청 번호
+        vector<PasswordHashCompletion>                                     _listHashCompletionScratch;
+        uint64                                                             _nextPasswordCallID;
     };
 } // namespace sw

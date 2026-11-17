@@ -5,6 +5,7 @@
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
@@ -509,7 +510,7 @@ namespace sw
     {
     }
 
-    LoginServiceResult LoginStoreLogic::registerAccount( const LoginCredential& credential, uint64* pOutAccountID )
+    LoginServiceResult LoginStoreLogic::validateNewCredential( const LoginCredential& credential )
     {
         using Internal = LoginStoreLogicInternal;
         string nameKey;
@@ -517,15 +518,21 @@ namespace sw
             return LoginResult::InvalidName;
         if ( Internal::isValidPassword( credential._password ) == false )
             return LoginResult::InvalidPassword;
+        return LoginResult::Ok;
+    }
+
+    LoginServiceResult LoginStoreLogic::registerAccount( const LoginCredential& credential, const PasswordHashRecord& prepared, uint64* pOutAccountID )
+    {
+        using Internal = LoginStoreLogicInternal;
+        string nameKey;
+        if ( Internal::normalizeLoginName( credential._loginName, nameKey ) == false )
+            return LoginResult::InvalidName;
 
         Internal::AccountRecord account;
         account._displayName = credential._loginName;
-        account._params      = _settings._passwordHashParams;
-        if ( _crypto.fillRandom( account._arrSalt, LoginConstant::kSaltSize ) == false )
-            return LoginServiceResult::fail( OnlineError::kUnavailable );
-        if ( _crypto.computePasswordHash( credential._password, account._arrSalt, LoginConstant::kSaltSize, account._params, account._arrPasswordHash,
-                                          LoginConstant::kPasswordHashSize ) == false )
-            return LoginServiceResult::fail( OnlineError::kUnavailable );
+        account._params      = prepared._params;
+        Memory::copy( account._arrSalt, prepared._arrSalt, LoginConstant::kSaltSize );
+        Memory::copy( account._arrPasswordHash, prepared._arrHash, LoginConstant::kPasswordHashSize );
 
         Internal::ProfileRecord profile;
         profile._nameKey     = nameKey;
@@ -553,26 +560,55 @@ namespace sw
         return LoginServiceResult::fail( OnlineError::kUnavailable );
     }
 
-    LoginServiceResult LoginStoreLogic::login( const LoginCredential& credential, int64 nowMs, LoginGrant& outGrant )
+    LoginServiceResult LoginStoreLogic::readLoginChallenge( string_view loginName, int64 nowMs, PasswordHashChallenge& outChallenge, LoginGrant& outGrant )
     {
         using Internal = LoginStoreLogicInternal;
         outGrant       = LoginGrant{};
-        string nameKey;
-        if ( Internal::normalizeLoginName( credential._loginName, nameKey ) == false )
+        outChallenge   = PasswordHashChallenge{};
+        // 없는 이름의 가짜 문제 — 설정 매개변수와 빈 솔트로 해시를 한 번 치른다(예전 `burnPasswordHash` 와 같은 비용 · 같은 시간).
+        outChallenge._params = _settings._passwordHashParams;
+        if ( Internal::normalizeLoginName( loginName, outChallenge._nameKey ) == false )
+            return LoginResult::Ok;
+        ServiceRecord            accountRaw;
+        const ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountTable(), outChallenge._nameKey, accountRaw );
+        if ( readResult == ServiceStoreResult::NotFound )
+            return LoginResult::Ok;
+        if ( readResult != ServiceStoreResult::Ok )
+            return LoginServiceResult::fail( OnlineError::kUnavailable );
+        Internal::AccountRecord account;
+        if ( Internal::decodeAccount( accountRaw._bytes, account ) == false )
         {
-            burnPasswordHash( credential._password );
-            return LoginResult::WrongCredentials;
+            SW_LOG_ERROR_ID( "LoginStoreLogic.AccountRecordCorrupt", "account record '%#' is corrupt", outChallenge._nameKey.c_str() );
+            return LoginServiceResult::fail( OnlineError::kUnavailable );
         }
+        if ( account._lockedUntilMs > nowMs )
+        {
+            outGrant._retryAfterMs = account._lockedUntilMs - nowMs;
+            return LoginResult::AccountLocked; // 잠긴 계정에는 해시를 치르지 않는다(지금과 같다)
+        }
+        outChallenge._params = account._params;
+        Memory::copy( outChallenge._arrSalt, account._arrSalt, LoginConstant::kSaltSize );
+        outChallenge._bKnownAccount = SW_TRUE;
+        outChallenge._bRehash       = account._params != _settings._passwordHashParams ? SW_TRUE : SW_FALSE;
+        return LoginResult::Ok;
+    }
+
+    LoginServiceResult LoginStoreLogic::commitLogin( const PasswordHashChallenge& challenge, const PasswordHashResult& hashResult, int64 nowMs, LoginGrant& outGrant,
+                                                     bool& outbHashStale )
+    {
+        using Internal = LoginStoreLogicInternal;
+        outGrant       = LoginGrant{};
+        outbHashStale  = false;
+        if ( challenge._bKnownAccount == SW_FALSE )
+            return LoginResult::WrongCredentials;
+        const string& nameKey = challenge._nameKey;
 
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
             ServiceRecord            accountRaw;
             const ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountTable(), nameKey, accountRaw );
             if ( readResult == ServiceStoreResult::NotFound )
-            {
-                burnPasswordHash( credential._password );
-                return LoginResult::WrongCredentials;
-            }
+                return LoginResult::WrongCredentials; // 해시하는 사이 계정이 지워졌다
             if ( readResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             Internal::AccountRecord account;
@@ -581,16 +617,19 @@ namespace sw
                 SW_LOG_ERROR_ID( "LoginStoreLogic.AccountRecordCorrupt", "account record '%#' is corrupt", nameKey.c_str() );
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
             }
+            // 계산한 해시는 솔트 · 매개변수에만 달렸다 — 같으면 그대로 쓰고, 다르면(그사이 비밀번호 · 매개변수가 바뀌었다) 해시 단계부터 다시 한다.
+            const bool bSameInputs = account._params == challenge._params && Memory::compare( account._arrSalt, challenge._arrSalt, LoginConstant::kSaltSize ) == 0;
+            if ( bSameInputs == false )
+            {
+                outbHashStale = true;
+                return LoginServiceResult::fail( OnlineError::kUnavailable );
+            }
             if ( account._lockedUntilMs > nowMs )
             {
                 outGrant._retryAfterMs = account._lockedUntilMs - nowMs;
                 return LoginResult::AccountLocked;
             }
-            uint8 arrHash[LoginConstant::kPasswordHashSize];
-            if ( _crypto.computePasswordHash( credential._password, account._arrSalt, LoginConstant::kSaltSize, account._params, arrHash, LoginConstant::kPasswordHashSize ) ==
-                 false )
-                return LoginServiceResult::fail( OnlineError::kUnavailable );
-            if ( SecureUtil::equalsConstantTime( arrHash, account._arrPasswordHash, LoginConstant::kPasswordHashSize ) == false )
+            if ( SecureUtil::equalsConstantTime( hashResult._arrHash, account._arrPasswordHash, LoginConstant::kPasswordHashSize ) == false )
                 return recordFailure( nameKey, accountRaw._bytes, accountRaw._version, nowMs, outGrant._retryAfterMs );
 
             const LoginServiceResult sanction = evaluateSanction( account._accountID, nowMs, outGrant );
@@ -601,16 +640,14 @@ namespace sw
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
 
             ServiceTransaction transaction;
-            // 매개변수가 바뀌었으면 새 솔트와 새 값으로 다시 해시한다. 비밀번호를 아는 지금만 할 수 있다.
-            const bool bRehash         = account._params != _settings._passwordHashParams;
+            // 매개변수가 바뀐 계정이면 해시 단계가 새 솔트 · 설정 매개변수로 계산해 두었다 — 그 값으로 바꾼다. 그사이 설정이 또 바뀌었으면 다음 로그인이 한다.
+            const bool bRehash         = hashResult._bHasRehash == SW_TRUE && hashResult._rehash._params == _settings._passwordHashParams && account._params != _settings._passwordHashParams;
             const bool bAccountChanged = bRehash || account._failedCount != 0 || account._lockedUntilMs != 0;
             if ( bRehash )
             {
-                account._params        = _settings._passwordHashParams;
-                const bool bSaltFilled = _crypto.fillRandom( account._arrSalt, LoginConstant::kSaltSize );
-                if ( bSaltFilled == false || _crypto.computePasswordHash( credential._password, account._arrSalt, LoginConstant::kSaltSize, account._params,
-                                                                          account._arrPasswordHash, LoginConstant::kPasswordHashSize ) == false )
-                    return LoginServiceResult::fail( OnlineError::kUnavailable );
+                account._params = hashResult._rehash._params;
+                Memory::copy( account._arrSalt, hashResult._rehash._arrSalt, LoginConstant::kSaltSize );
+                Memory::copy( account._arrPasswordHash, hashResult._rehash._arrHash, LoginConstant::kPasswordHashSize );
             }
             if ( bAccountChanged )
             {
@@ -628,7 +665,7 @@ namespace sw
                 return staged;
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue; // 같은 계정이 그사이 다른 곳에서 로그인했거나 실패 횟수가 바뀌었으므로 다시 읽는다
+                continue; // 같은 계정이 그사이 다른 곳에서 로그인했거나 실패 횟수가 바뀌었으므로 다시 읽는다(솔트 · 매개변수가 같으면 계산한 해시를 다시 쓴다)
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable ); // 적용됐는지 알 수 없다. 클라이언트가 다시 로그인하면 그 세션을 밀어낸다
 
@@ -936,14 +973,13 @@ namespace sw
         return bIssued ? LoginResult::Ok : LoginServiceResult::fail( OnlineError::kUnavailable );
     }
 
-    LoginServiceResult LoginStoreLogic::linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity )
+    LoginServiceResult LoginStoreLogic::linkCredential( const LoginSessionToken& token, const LoginCredential& credential, const PasswordHashRecord& prepared, int64 nowMs,
+                                                        AccountIdentity& outIdentity )
     {
         using Internal = LoginStoreLogicInternal;
         string nameKey;
         if ( Internal::normalizeLoginName( credential._loginName, nameKey ) == false )
             return LoginResult::InvalidName;
-        if ( Internal::isValidPassword( credential._password ) == false )
-            return LoginResult::InvalidPassword;
         AccountIdentity          identity;
         const LoginServiceResult state = validateSession( token, nowMs, identity );
         if ( state != LoginResult::Ok )
@@ -952,12 +988,9 @@ namespace sw
         Internal::AccountRecord account;
         account._accountID   = identity._accountID;
         account._displayName = credential._loginName;
-        account._params      = _settings._passwordHashParams;
-        if ( _crypto.fillRandom( account._arrSalt, LoginConstant::kSaltSize ) == false )
-            return LoginServiceResult::fail( OnlineError::kUnavailable );
-        if ( _crypto.computePasswordHash( credential._password, account._arrSalt, LoginConstant::kSaltSize, account._params, account._arrPasswordHash,
-                                          LoginConstant::kPasswordHashSize ) == false )
-            return LoginServiceResult::fail( OnlineError::kUnavailable );
+        account._params      = prepared._params;
+        Memory::copy( account._arrSalt, prepared._arrSalt, LoginConstant::kSaltSize );
+        Memory::copy( account._arrPasswordHash, prepared._arrHash, LoginConstant::kPasswordHashSize );
 
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
@@ -1431,15 +1464,6 @@ namespace sw
         // 틀린 시도가 동시에 겹치면 하나는 세지 못한다(Conflict). 시도 제한(버킷)이 따로 막으므로 다시 읽지 않는다.
         (void)_connection.commit( transaction );
         return result;
-    }
-
-    void LoginStoreLogic::burnPasswordHash( string_view password )
-    {
-        const uint8 arrSalt[LoginConstant::kSaltSize]{};
-        uint8       arrHash[LoginConstant::kPasswordHashSize];
-        const bool  bWithinLimit = password.size() <= static_cast<size_t>( LoginConstant::kMaxPasswordSize );
-        (void)_crypto.computePasswordHash( bWithinLimit ? password : string_view{}, arrSalt, LoginConstant::kSaltSize, _settings._passwordHashParams, arrHash,
-                                           LoginConstant::kPasswordHashSize );
     }
 
     LoginServiceResult LoginStoreLogic::evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant )

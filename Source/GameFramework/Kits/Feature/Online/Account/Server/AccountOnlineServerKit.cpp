@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/DevOnlineExtension.h"
+#include "Core/Task/TaskManager.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
@@ -40,6 +41,7 @@ namespace sw
         public:
             AccountOnlineServerKit()
                 : _crypto{ &game::getSubsystem<INetSecurityProvider>() }
+                , _hasher{ &game::getSubsystem<INetSecurityProvider>() }
                 , _secretVault{}
                 , _platformProviders{}
                 , _loginService{}
@@ -61,7 +63,9 @@ namespace sw
                 if ( trustFile.has_value() == false )
                     return unexpected( trustFile.error() );
                 LoginServiceConfig loginSettings;
-                loginSettings._attemptBurst = kitConfig._attemptBurst;
+                loginSettings._attemptBurst                = kitConfig._attemptBurst;
+                loginSettings._maxConcurrentPasswordHashes = kitConfig._maxConcurrentPasswordHashes;
+                loginSettings._maxQueuedPasswordHashes     = kitConfig._maxQueuedPasswordHashes;
                 // 개발 설정은 DevOnline 단위가 있을 때만 받는다 — 그 단위가 없는 구성(배포)은 기동 오류다.
                 const bool bDevOption = kitConfig._bLightPasswordHash || kitConfig._listSeedTestAccount.empty() == false;
                 if ( bDevOption )
@@ -81,8 +85,12 @@ namespace sw
                 uint8         arrTicketKey[LoginTicketAuthority::kMasterKeySize];
                 if ( expected<void> result = LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey ); result.has_value() == false )
                     return result;
-                _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
+                // 비밀번호 해시는 작업 풀 위의 줄에서 돈다 — 이 프로세스(전용 서버 · 프로세스 안 서버 · 부하 봇은 엔진을 세운다)에 작업 풀이 없으면 기동 오류다(감사 O-3).
+                TaskManager* const   pTaskManager = game::findSubsystem<TaskManager>();
+                const expected<void> loginReady   = _loginService.initialize( context._pStore, &_crypto, &_hasher, pTaskManager, loginSettings, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
+                if ( loginReady.has_value() == false )
+                    return loginReady;
                 // 여기부터 실패하면 세운 로그인 서비스를 스스로 내린다 — 초기화에 실패한 키트는 shutdown 을 받지 않는다.
                 expected<void> assembled =
                     createPlatformProviders( *providersFile, *trustFile, linkSecretKeyEnvironment, context._clock )
@@ -186,14 +194,15 @@ namespace sw
             }
 
         private:
-            NetSecurityLoginCrypto   _crypto;
-            LoginSecretVault         _secretVault;       ///< 로그인 서비스보다 오래 산다(먼저 선언)
-            PlatformLoginProviderSet _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)
-            LoginService             _loginService;
-            AccountServer            _accountServer;
-            AccountNameIndex         _nameIndex;
-            AccountExternalLinks     _externalLinks;
-            vector<LoginCredential>  _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`_listSeedTestAccount`)
+            NetSecurityLoginCrypto    _crypto;
+            NetSecurityPasswordHasher _hasher;
+            LoginSecretVault          _secretVault;       ///< 로그인 서비스보다 오래 산다(먼저 선언)
+            PlatformLoginProviderSet  _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)
+            LoginService              _loginService;
+            AccountServer             _accountServer;
+            AccountNameIndex          _nameIndex;
+            AccountExternalLinks      _externalLinks;
+            vector<LoginCredential>   _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`_listSeedTestAccount`)
         };
 
         struct AccountDevOnlineInternal

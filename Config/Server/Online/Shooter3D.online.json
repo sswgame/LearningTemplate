@@ -14,6 +14,8 @@
             "_name": "account",
             "_settings": {
                 "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+                "_maxConcurrentPasswordHashes": 2,
+                "_maxQueuedPasswordHashes": 64,
                 "_bLightPasswordHash": true,
                 "_listSeedTestAccount": [
                     {

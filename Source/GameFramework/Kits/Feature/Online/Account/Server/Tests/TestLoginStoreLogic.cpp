@@ -39,22 +39,19 @@ namespace
     class FakeLoginCrypto final : public ILoginCrypto
     {
     public:
+        uint32 _counter{ 0 };
+
         bool fillRandom( uint8* pOut, int32 size ) override
         {
             for ( int32 index = 0; index < size; ++index )
                 pOut[index] = static_cast<uint8>( ++_counter );
             return true;
         }
-        bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& /*params*/, uint8* pOut, int32 outSize ) override
-        {
-            return fill( reinterpret_cast<const uint8*>( password.data() ), static_cast<int32>( password.size() ), pSalt, saltSize, pOut, outSize );
-        }
         bool computeKeyedHash( const uint8* pKey, int32 keySize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) override
         {
             return fill( pKey, keySize, pInfo, infoSize, pOut, outSize );
         }
 
-    private:
         static bool fill( const uint8* pA, int32 aSize, const uint8* pB, int32 bSize, uint8* pOut, int32 outSize )
         {
             uint64 hash = HashUtil::kFNVOffset64;
@@ -69,14 +66,26 @@ namespace
             }
             return true;
         }
+    };
 
-        uint32 _counter{ 0 };
+    /** @brief 결정적인 가짜 비밀번호 해시입니다. 부른 수를 셉니다 — 저장 규칙은 해시를 하지 않고 해시를 마친 값만 받는다(감사 O-3). */
+    class FakeLoginHasher final : public IPasswordHasher
+    {
+    public:
+        int32 _callCount{ 0 };
+
+        bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& /*params*/, uint8* pOut, int32 outSize ) override
+        {
+            ++_callCount;
+            return FakeLoginCrypto::fill( reinterpret_cast<const uint8*>( password.data() ), static_cast<int32>( password.size() ), pSalt, saltSize, pOut, outSize );
+        }
     };
 
     struct Fixture
     {
         MemoryServiceDatabase database;
         FakeLoginCrypto       crypto;
+        FakeLoginHasher       hasher;
         LoginServiceConfig    settings;
         LoginTicketAuthority  ticketAuthority;
 
@@ -86,18 +95,52 @@ namespace
             ticketAuthority.initialize( &crypto, arrMasterKey );
         }
 
-        LoginServiceResult registerAccount( string_view name, string_view password )
+        /** @brief 해시 줄이 하는 일(새 솔트 · 설정 매개변수로 해시)을 흉내 냅니다. */
+        PasswordHashRecord prepare( string_view password )
         {
-            LoginStoreResult result;
-            LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );
-            return logic.registerAccount( LoginCredential{ string( name ), string( password ) }, nullptr );
+            PasswordHashRecord prepared;
+            prepared._params = settings._passwordHashParams;
+            SW_EXPECT_TRUE( crypto.fillRandom( prepared._arrSalt, LoginConstant::kSaltSize ) );
+            SW_EXPECT_TRUE( hasher.computePasswordHash( password, prepared._arrSalt, LoginConstant::kSaltSize, prepared._params, prepared._arrHash, LoginConstant::kPasswordHashSize ) );
+            return prepared;
         }
 
-        LoginServiceResult login( string_view name, string_view password, LoginGrant& outGrant, int64 nowMs = kNowMs )
+        LoginServiceResult registerAccount( string_view name, string_view password )
         {
+            const LoginCredential    credential{ string( name ), string( password ) };
+            const LoginServiceResult valid = LoginStoreLogic::validateNewCredential( credential ); // 서비스가 해시를 맡기기 전에 본다
+            if ( valid != LoginResult::Ok )
+                return valid;
             LoginStoreResult result;
             LoginStoreLogic  logic( database, crypto, settings, ticketAuthority, result );
-            return logic.login( LoginCredential{ string( name ), string( password ) }, nowMs, outGrant );
+            return logic.registerAccount( credential, prepare( password ), nullptr );
+        }
+
+        /** @brief 읽기 단계의 문제를 해시합니다(해시 줄의 몫). */
+        PasswordHashResult hashChallenge( const PasswordHashChallenge& challenge, string_view password )
+        {
+            PasswordHashResult hashResult;
+            SW_EXPECT_TRUE( hasher.computePasswordHash( password, challenge._arrSalt, LoginConstant::kSaltSize, challenge._params, hashResult._arrHash, LoginConstant::kPasswordHashSize ) );
+            if ( challenge._bRehash == SW_TRUE )
+            {
+                hashResult._rehash     = prepare( password );
+                hashResult._bHasRehash = SW_TRUE;
+            }
+            return hashResult;
+        }
+
+        /** @brief 비밀번호 로그인의 세 단계(읽기 → 해시 → 커밋)를 차례로 합니다. */
+        LoginServiceResult login( string_view name, string_view password, LoginGrant& outGrant, int64 nowMs = kNowMs )
+        {
+            LoginStoreResult         result;
+            LoginStoreLogic          logic( database, crypto, settings, ticketAuthority, result );
+            PasswordHashChallenge    challenge;
+            const LoginServiceResult read = logic.readLoginChallenge( name, nowMs, challenge, outGrant );
+            if ( read != LoginResult::Ok )
+                return read;
+            const PasswordHashResult hashResult = hashChallenge( challenge, password );
+            bool                     bHashStale = false;
+            return logic.commitLogin( challenge, hashResult, nowMs, outGrant, bHashStale );
         }
     };
 } // namespace
@@ -177,9 +220,9 @@ SW_TEST_CASE( LoginStoreLogicTest, GuestLinksCredentialOnce )
         SW_EXPECT_TRUE( summary._bGuest == SW_TRUE && summary._bHasCredential == SW_FALSE );
 
         AccountIdentity identity;
-        SW_EXPECT_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "frank_07", "other horse" }, kNowMs + 2, identity ) == LoginResult::AlreadyLinked );
-        SW_REQUIRE_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "Grace_08", "correct horse" }, kNowMs + 3, identity ) == LoginResult::Ok );
-        SW_EXPECT_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "Grace_09", "correct horse" }, kNowMs + 4, identity ) == LoginResult::AlreadyLinked );
+        SW_EXPECT_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "frank_07", "other horse" }, fixture.prepare( "other horse" ), kNowMs + 2, identity ) == LoginResult::AlreadyLinked );
+        SW_REQUIRE_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "Grace_08", "correct horse" }, fixture.prepare( "correct horse" ), kNowMs + 3, identity ) == LoginResult::Ok );
+        SW_EXPECT_TRUE( logic.linkCredential( guestGrant._token, LoginCredential{ "Grace_09", "correct horse" }, fixture.prepare( "correct horse" ), kNowMs + 4, identity ) == LoginResult::AlreadyLinked );
         SW_REQUIRE_TRUE( logic.listLinks( guestGrant._token, kNowMs + 5, summary ) == LoginResult::Ok );
         SW_EXPECT_TRUE( summary._bGuest == SW_FALSE && summary._bHasCredential == SW_TRUE );
     }
@@ -200,7 +243,7 @@ SW_TEST_CASE( LoginStoreLogicTest, LastLoginMethodStays )
     SW_EXPECT_TRUE( logic.unlinkPlatform( grant._token, "epic", kNowMs + 2 ) == LoginResult::NotLinked );
 
     AccountIdentity identity;
-    SW_REQUIRE_TRUE( logic.linkCredential( grant._token, LoginCredential{ "Heidi_10", "correct horse" }, kNowMs + 3, identity ) == LoginResult::Ok );
+    SW_REQUIRE_TRUE( logic.linkCredential( grant._token, LoginCredential{ "Heidi_10", "correct horse" }, fixture.prepare( "correct horse" ), kNowMs + 3, identity ) == LoginResult::Ok );
     SW_EXPECT_TRUE( logic.unlinkPlatform( grant._token, "steam", kNowMs + 4 ) == LoginResult::Ok );
     AccountLinkSummary summary;
     SW_REQUIRE_TRUE( logic.listLinks( grant._token, kNowMs + 5, summary ) == LoginResult::Ok );
@@ -231,7 +274,7 @@ SW_TEST_CASE( LoginStoreLogicTest, ReadIsLinkedMatchesOnlyTheLinkedSubject )
     SW_EXPECT_FALSE( isLinked( accountID, "steam", "" ) );
 
     AccountIdentity identity;
-    SW_REQUIRE_TRUE( logic.linkCredential( grant._token, LoginCredential{ "Heidi_11", "correct horse" }, kNowMs + 1, identity ) == LoginResult::Ok );
+    SW_REQUIRE_TRUE( logic.linkCredential( grant._token, LoginCredential{ "Heidi_11", "correct horse" }, fixture.prepare( "correct horse" ), kNowMs + 1, identity ) == LoginResult::Ok );
     SW_REQUIRE_TRUE( logic.unlinkPlatform( grant._token, "steam", kNowMs + 2 ) == LoginResult::Ok );
     SW_EXPECT_FALSE( isLinked( accountID, "steam", "76561190000000001" ) );
 }
@@ -309,7 +352,7 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletedAccountIDIsNeverReused )
         Fixture          first;
         LoginStoreResult result;
         LoginStoreLogic  logic( first.database, first.crypto, first.settings, first.ticketAuthority, result );
-        SW_REQUIRE_TRUE( logic.registerAccount( LoginCredential{ "Kate_13", "correct horse" }, &firstID ) == LoginResult::Ok );
+        SW_REQUIRE_TRUE( logic.registerAccount( LoginCredential{ "Kate_13", "correct horse" }, first.prepare( "correct horse" ), &firstID ) == LoginResult::Ok );
     }
     Fixture            second;
     ServiceTransaction deletion;
@@ -318,7 +361,65 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletedAccountIDIsNeverReused )
     uint64           secondID = 0;
     LoginStoreResult result;
     LoginStoreLogic  logic( second.database, second.crypto, second.settings, second.ticketAuthority, result );
-    SW_REQUIRE_TRUE( logic.registerAccount( LoginCredential{ "Kate_13", "correct horse" }, &secondID ) == LoginResult::Ok );
+    SW_REQUIRE_TRUE( logic.registerAccount( LoginCredential{ "Kate_13", "correct horse" }, second.prepare( "correct horse" ), &secondID ) == LoginResult::Ok );
     SW_EXPECT_TRUE( secondID != 0 );
     SW_EXPECT_TRUE( secondID != firstID );
+}
+
+/** @brief [LoginStoreLogicTest] 없는 이름 · 형식 밖 이름도 해시를 한 번 치르는 같은 길이다 — 응답 시간으로 계정 유무가 드러나지 않는다(감사 O-3) */
+SW_TEST_CASE( LoginStoreLogicTest, UnknownNameStillPaysOneHash )
+{
+    Fixture     fixture;
+    LoginGrant  grant;
+    const int32 before = fixture.hasher._callCount;
+    SW_EXPECT_TRUE( fixture.login( "Nobody_20", "correct horse", grant ) == LoginResult::WrongCredentials );
+    SW_EXPECT_EQUAL( before + 1, fixture.hasher._callCount );
+    SW_EXPECT_TRUE( fixture.login( "x", "correct horse", grant ) == LoginResult::WrongCredentials ); // 형식 밖 이름
+    SW_EXPECT_EQUAL( before + 2, fixture.hasher._callCount );
+}
+
+/**
+ * @brief [LoginStoreLogicTest] 읽기와 커밋 사이에 계정이 바뀌어도(다른 시도가 실패 수를 올렸다) 솔트 · 매개변수가 같으면 커밋이 계산한 해시를 그대로 쓴다 — 다시 해시하지 않는다
+ */
+SW_TEST_CASE( LoginStoreLogicTest, ConflictAfterHashReusesTheVerifiedHash )
+{
+    Fixture fixture;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Liam_21", "correct horse" ) == LoginResult::Ok );
+    LoginStoreResult      result;
+    LoginStoreLogic       logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
+    LoginGrant            grant;
+    PasswordHashChallenge challenge;
+    SW_REQUIRE_TRUE( logic.readLoginChallenge( "Liam_21", kNowMs, challenge, grant ) == LoginResult::Ok );
+    SW_REQUIRE_TRUE( challenge._bKnownAccount == SW_TRUE );
+    const PasswordHashResult hashResult = fixture.hashChallenge( challenge, "correct horse" );
+
+    LoginGrant other;
+    SW_EXPECT_TRUE( fixture.login( "Liam_21", "wrong horse!", other ) == LoginResult::WrongCredentials ); // 그사이 계정 레코드의 버전이 바뀐다
+    const int32 hashCount  = fixture.hasher._callCount;
+    bool        bHashStale = true;
+    SW_EXPECT_TRUE( logic.commitLogin( challenge, hashResult, kNowMs, grant, bHashStale ) == LoginResult::Ok );
+    SW_EXPECT_FALSE( bHashStale );
+    SW_EXPECT_EQUAL( hashCount, fixture.hasher._callCount ); // 커밋은 해시하지 않는다
+    SW_EXPECT_TRUE( grant._token.isEmpty() == false );
+}
+
+/** @brief [LoginStoreLogicTest] 해시하는 사이 솔트가 바뀌면(매개변수가 바뀐 계정을 다른 로그인이 다시 해시했다) 커밋은 그 해시를 쓰지 않고 다시 해시하라고 답한다 */
+SW_TEST_CASE( LoginStoreLogicTest, CommitAfterSaltChangeAsksForANewHash )
+{
+    Fixture fixture;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Mia_22", "correct horse" ) == LoginResult::Ok );
+    fixture.settings._passwordHashParams._iterationCount += 1; // 설정이 바뀌었다 — 다음 로그인이 새 솔트로 다시 해시한다
+    LoginStoreResult      result;
+    LoginStoreLogic       logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, result );
+    LoginGrant            grant;
+    PasswordHashChallenge challenge;
+    SW_REQUIRE_TRUE( logic.readLoginChallenge( "Mia_22", kNowMs, challenge, grant ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( challenge._bRehash == SW_TRUE );
+    const PasswordHashResult hashResult = fixture.hashChallenge( challenge, "correct horse" );
+
+    LoginGrant other;
+    SW_REQUIRE_TRUE( fixture.login( "Mia_22", "correct horse", other ) == LoginResult::Ok ); // 다른 로그인이 먼저 새 솔트로 바꿨다
+    bool bHashStale = false;
+    SW_EXPECT_TRUE( logic.commitLogin( challenge, hashResult, kNowMs, grant, bHashStale ) != LoginResult::Ok );
+    SW_EXPECT_TRUE( bHashStale );
 }
