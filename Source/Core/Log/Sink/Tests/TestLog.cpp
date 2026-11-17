@@ -165,8 +165,8 @@ namespace
     };
 
     /**
-     * @brief `gate` 를 담은 줄의 `write` 에서 장치 락을 쥔 채 문이 열리기를 기다리는 테스트용 출력 장치입니다(락을 쥔 채 멈춘 장치 — 크래시한 스레드 · 막힌 콘솔).
-     * @details 받은 줄 가운데 `Order <번호>` 의 번호를 받은 순서대로 모은다. 문은 시한이 지나면 스스로 열린다 — 결함이 있어도 테스트가 멈추지 않고 진다.
+     * @brief `TestLog.BlockHere` 를 담은 줄의 `write` 에서 장치 락을 쥔 채 문이 열리기를 기다리는 테스트용 출력 장치입니다(락을 쥔 채 멈춘 장치 — 크래시한 스레드 · 막힌 콘솔).
+     * @details 받은 줄 가운데 `TestLog.LineOrder <번호>` 의 번호를 받은 순서대로 모은다. 문은 시한이 지나면 스스로 열린다 — 결함이 있어도 테스트가 멈추지 않고 진다.
      */
     class BlockingLogOutput final : public sw::ILogOutput
     {
@@ -180,15 +180,15 @@ namespace
         void               write( const sw::LogRecord& record ) override
         {
             sw::ScopedLock<sw::mutex> lock{ _mutex };
-            if ( record._formatted.find( "gate" ) != sw::string::npos )
+            if ( record._formatted.find( "TestLog.BlockHere" ) != sw::string::npos )
             {
                 _bHeld.store( true );
                 (void)sw::test::waitUntil( [this]()
                 { return _bOpen.load(); } );
             }
-            const size_t orderStart = record._formatted.find( "Order " );
+            const size_t orderStart = record._formatted.find( "TestLog.LineOrder " );
             if ( orderStart != sw::string::npos )
-                _listOrder.push_back( static_cast<uint32>( std::strtoul( record._formatted.c_str() + orderStart + 6, nullptr, 10 ) ) );
+                _listOrder.push_back( static_cast<uint32>( std::strtoul( record._formatted.c_str() + orderStart + 18, nullptr, 10 ) ) );
         }
         void writeWithoutWaiting( const sw::LogRecord& record ) override
         {
@@ -977,7 +977,7 @@ SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
     logger.initialize();
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "gate", __FILE__, __LINE__ );
+    logger.writeLog( sw::LogLevel::Info, "Test", "TestLog.BlockHere", __FILE__, __LINE__ );
     SW_REQUIRE_TRUE( sw::test::waitUntil( [pBlocking]()
     { return pBlocking->_bHeld.load(); } ) ); // 작업 스레드가 장치 락을 쥔 채 멈췄다
     logger.writeLog( sw::LogLevel::Info, "Test", "left in the queue", __FILE__, __LINE__ );
@@ -1004,7 +1004,7 @@ SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
     logger.initialize();
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "gate", __FILE__, __LINE__ );
+    logger.writeLog( sw::LogLevel::Info, "Test", "TestLog.BlockHere", __FILE__, __LINE__ );
     SW_REQUIRE_TRUE( sw::test::waitUntil( [pBlocking]()
     { return pBlocking->_bHeld.load(); } ) );
 
@@ -1014,7 +1014,7 @@ SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
         utf8 arrLine[64]{};
         for ( uint32 index = 0; index < kLineCount; ++index )
         {
-            sw::formatstring( arrLine, static_cast<uint32>( sizeof( arrLine ) ), "Order %#", index );
+            sw::formatstring( arrLine, static_cast<uint32>( sizeof( arrLine ) ), "TestLog.LineOrder %#", index );
             logger.writeLog( sw::LogLevel::Info, "Test", arrLine, __FILE__, __LINE__ );
         }
     } );
