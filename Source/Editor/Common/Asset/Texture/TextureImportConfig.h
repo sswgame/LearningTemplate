@@ -17,6 +17,8 @@ namespace sw
     enum class ConfigReadResult : uint8;
 
     class JSONValue;
+
+    struct AssetImportOverride;
 } // namespace sw
 
 namespace sw::editor
@@ -159,6 +161,12 @@ namespace sw::editor
          *          조건 없는 규칙(나머지 규칙)이 받고, 그것도 없으면 `_bMatched` 가 거짓이며 기본 규칙입니다.
          */
         [[nodiscard]] TextureImportRuleMatch findMatchingRule( string_view relativePath ) const;
+
+        /**
+         * @brief `findMatchingRule` 로 고른 규칙에 그 에셋 서술의 임포트 예외 @p listOverride 를 마지막 층으로 읽습니다 — 우선순위는 프리셋 < 규칙 < 서술.
+         * @details 규칙 파일과 같은 파서(`JSONFields`)다. 모르는 키 · 틀린 값 · 규칙을 고르는 칸(`name` · `filter` · `inherits`)은 `_error` 다(임포트 오류).
+         */
+        [[nodiscard]] TextureImportRuleMatch resolveRule( string_view relativePath, const vector<AssetImportOverride>& listOverride ) const;
 
         /** @brief 등록된 프리셋 맵을 반환합니다. */
         const map<string, TextureImportRule>& getPresets() const { return _mapPreset; }

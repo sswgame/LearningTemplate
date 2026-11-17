@@ -5,7 +5,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"

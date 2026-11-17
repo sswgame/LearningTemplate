@@ -309,8 +309,8 @@ namespace sw::editor
                     outReply = AutomationStep::describeReason( move.error() );
                     return false;
                 }
-                AssetHotReload&             hotReload = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>();
-                EditorReferenceIndex* const pIndex    = hotReload.findCurrentReferenceIndex();
+                AssetHotReload&         hotReload = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>();
+                EditorAssetIndex* const pIndex    = hotReload.findCurrentReferenceIndex();
                 if ( pIndex == nullptr )
                 {
                     outReply = "the reference index has not caught up with the last file change - wait for Editor.ReferenceIndexReady first";
@@ -340,7 +340,7 @@ namespace sw::editor
                     outReply = AutomationStep::describeReason( move.error() );
                     return false;
                 }
-                const EditorReferenceIndex* const pIndex = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().findCurrentReferenceIndex();
+                const EditorAssetIndex* const pIndex = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().findCurrentReferenceIndex();
                 if ( pIndex == nullptr )
                 {
                     outReply = "the reference index has not caught up with the last file change - wait for Editor.ReferenceIndexReady first";

@@ -366,7 +366,7 @@ namespace sw::editor
                     bool bOrderDependent = false;
                     for ( const uint32 fileIndex : listChain[chainIndex] )
                     {
-                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._assetPath ) );
+                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._sourcePath, listFile[fileIndex]._assetPath ) );
                     }
                     if ( bOrderDependent )
                         listSerialChain.push_back( chainIndex );

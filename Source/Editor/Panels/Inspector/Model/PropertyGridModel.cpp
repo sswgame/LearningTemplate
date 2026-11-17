@@ -9,7 +9,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -1181,7 +1181,8 @@ namespace sw::editor
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr )
             return;
-        EditorAssetIndex::collectEntries( EditorPaths::getAssetPaths(), outListEntry );
+        // 에디터의 에셋 색인에서 읽는다 — 팝업을 열 때마다 리소스 트리를 걷지 않는다.
+        EditorAssetCatalog::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), outListEntry );
         // 타입 있는 참조는 대상 종류가 거른다(언리얼 `TSoftObjectPtr<T>` 의 선택기와 같다). 그 밖의 경로 칸은 `FileFilter` 를 본다.
         const PropertyInfo& prop = *pBinding->_pProp;
         const AssetRefBase* pRef = prop._typeName == hashed_string( AssetRefBase::kTypeName ) ? prop.getValuePtr<AssetRefBase>( pBinding->_instance.get() ) : nullptr;

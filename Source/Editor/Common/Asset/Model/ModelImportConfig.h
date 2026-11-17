@@ -19,6 +19,8 @@ namespace sw
 
     class AssetPaths;
 
+    struct AssetImportOverride;
+
     class JSONValue;
 } // namespace sw
 
@@ -64,6 +66,7 @@ namespace sw::editor
      * @brief 모델 원본 하나에 적용하는 임포트 규칙입니다. 규칙이 없는 원본은 기본값(옮기지 않음, 애니메이션 모두, ACL)을 씁니다.
      * @details 적용 순서는 `translation` 다음 `recenter` 이다. 스킨드 모델에는 둘 다 쓸 수 없다. 바인드 행렬이 어긋나기 때문이다.
      *          키는 `PROPERTY` 이고(`JSONFields`), 모르는 키나 틀린 값은 설정 오류다. 한 원본에 규칙이 둘 이상 맞으면 임포트 오류다(`excludePatterns` 로 풀어 쓴다).
+     *          한 파일만의 값은 규칙이 아니라 그 에셋의 서술(`.meta` 의 `_listImportOverride`)에 같은 키로 적는다 — 우선순위는 규칙 < 서술(`ModelImportConfig::resolveRule`).
      */
     REFLECT()
     struct ModelImportRule
@@ -172,12 +175,21 @@ namespace sw::editor
          */
         [[nodiscard]] ModelImportRuleMatch findMatchingRule( string_view relativePath ) const;
 
+        /**
+         * @brief `findMatchingRule` 로 고른 규칙에 그 에셋 서술의 임포트 예외 @p listOverride 를 마지막 층으로 읽습니다(규칙 파일과 같은 파서 — 같은 키 · 같은 검증).
+         * @details 모르는 키 · 틀린 값 · 규칙을 고르는 칸(`name` · `filter`)은 `_error` 다(임포트 오류). 해석한 규칙이 원본 해시에 들어 예외를 고치면 그 에셋만 다시 임포트한다.
+         */
+        [[nodiscard]] ModelImportRuleMatch resolveRule( string_view relativePath, const vector<AssetImportOverride>& listOverride ) const;
+
         const vector<ModelImportRule>& getRules() const { return _listRule; }
 
         /** @brief 에디터 설정을 거치지 않은 기본 경로(`<프로젝트>/Config/Editor/ModelImportConfig.json`)를 반환합니다(프로젝트 루트는 기동 때 정한 값이라 워커에서 불러도 된다). */
         static string makeDefaultConfigPath();
 
     private:
+        /** @brief 규칙 객체 @p ruleValue 의 키를 @p inoutRule 에 읽습니다(적지 않은 칸은 그대로). 규칙 파일과 서술의 예외가 함께 쓴다. 오류가 있으면 false 입니다. */
+        [[nodiscard]] static bool readRuleKeys( const JSONValue& ruleValue, ModelImportRule& inoutRule, string_view source );
+
         /**
          * @brief 규칙의 `lods` 배열을 읽습니다. 모르는 키, (0, 1) 밖의 비율 · 임계값, 음수 오차, 앞 단계보다 크거나 같은 비율 · 임계값이 있으면 false 입니다.
          */

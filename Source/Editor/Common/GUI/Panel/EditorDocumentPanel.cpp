@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/GUI/Panel/Model/EditorDocumentOpenUtil.h"
@@ -63,9 +63,9 @@ namespace sw::editor
         const string markOpen = string{ pMarkPrefix } + ".open";
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Open" ) ) )
         {
-            // 열 때 한 번 모은다 — 리소스 트리를 훑으므로 그리기마다 하지 않는다.
+            // 열 때 한 번 모은다 — 에디터의 에셋 색인에서 읽는다(디스크를 걷지 않는다).
             vector<EditorAssetIndexEntry> listEntry;
-            EditorAssetIndex::collectEntries( editor::getSubsystem<AssetPaths>(), listEntry );
+            EditorAssetCatalog::collectEntriesOnUIThread( editor::getSubsystem<AssetPaths>(), listEntry );
             EditorDocumentOpenUtil::collectCandidates( listEntry, _kind, [this]( string_view path )
             { return canAcceptDocumentPath( path ); }, _listOpenCandidate );
             _openFilter.clear();

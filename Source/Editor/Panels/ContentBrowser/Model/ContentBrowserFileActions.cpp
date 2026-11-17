@@ -10,7 +10,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
 namespace sw::editor
@@ -99,7 +99,7 @@ namespace sw::editor
         };
     }
 
-    bool ContentBrowserFileActions::planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan )
+    bool ContentBrowserFileActions::planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan )
     {
         const expected<vector<EditorAssetMove>> listMove = collectMovesToFolder( sourceAbs, folderAbs );
         if ( listMove.has_value() == false )
@@ -113,7 +113,7 @@ namespace sw::editor
         return EditorAssetFileCommands::planAssetMoves( *listMove, index, outPlan );
     }
 
-    bool ContentBrowserFileActions::moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorReferenceIndex& inoutIndex, string& outDestinationAbs )
+    bool ContentBrowserFileActions::moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs )
     {
         const expected<vector<EditorAssetMove>> collected = collectMovesToFolder( sourceAbs, folderAbs );
         if ( collected.has_value() == false )
@@ -149,7 +149,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ContentBrowserFileActions::commitRename( string_view newName, EditorReferenceIndex& inoutIndex, string& outDestinationAbs )
+    bool ContentBrowserFileActions::commitRename( string_view newName, EditorAssetIndex& inoutIndex, string& outDestinationAbs )
     {
         const string renamingAbs = _renamingAbs;
         _renamingAbs.clear();

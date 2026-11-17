@@ -16,7 +16,7 @@
     },
     {
       "name": "KayKit_Characters",
-      "filter": { "includePatterns": ["common/models_raw/kaykit/**"], "excludePatterns": ["common/models_raw/kaykit/skeleton_minion.glb"] },
+      "filter": { "includePatterns": ["common/models_raw/kaykit/**"] },
       "importMaterials": false,
       "animationCodec": "acl",
       "animationSampleRate": 30,
@@ -32,48 +32,12 @@
       "animationShellDistance": 0.1
     },
     {
-      "name": "KayKit_SkeletonMinionLOD",
-      "filter": { "includePatterns": ["common/models_raw/kaykit/skeleton_minion.glb"] },
-      "importMaterials": false,
-      "animationCodec": "acl",
-      "animationSampleRate": 30,
-      "animationPrecision": 0.0001,
-      "animationShellDistance": 0.1,
-      "lods": [
-        { "triangleRatio": 0.5, "screenSize": 0.3, "maxError": 0.01 },
-        { "triangleRatio": 0.25, "screenSize": 0.12, "maxError": 0.02 }
-      ]
-    },
-    {
       "name": "PolyHaven_ScanProps",
       "filter": { "includePatterns": ["common/models_raw/polyhaven/**"] },
       "lods": [
         { "triangleRatio": 0.25, "screenSize": 0.3, "maxError": 0.01 },
         { "triangleRatio": 0.06, "screenSize": 0.1, "maxError": 0.03 }
       ]
-    },
-    {
-      "name": "WildWest_Horse",
-      "filter": { "includePatterns": ["*/wildwest/models_raw/horse.*"] },
-      "animationCodec": "acl",
-      "animationSampleRate": 30,
-      "animationPrecision": 0.0001,
-      "animationShellDistance": 0.1
-    },
-    {
-      "name": "Destruction_BrickWall",
-      "filter": { "includePatterns": ["*/empty/models_raw/brick_wall*"] },
-      "fracture": { "pattern": "Uniform", "pieces": 200, "seed": 7, "levels": [6, 30], "interiorColor": "0.55, 0.5, 0.45, 1.0" }
-    },
-    {
-      "name": "Destruction_Crate",
-      "filter": { "includePatterns": ["*/empty/models_raw/crate_medium*"] },
-      "fracture": { "volume": "Bounds", "pattern": "Uniform", "pieces": 24, "seed": 3, "levels": [4], "interiorColor": "0.62, 0.45, 0.28, 1.0" }
-    },
-    {
-      "name": "Destruction_Barrel",
-      "filter": { "includePatterns": ["*/empty/models_raw/barrel*"] },
-      "fracture": { "pattern": "Uniform", "pieces": 20, "seed": 11, "levels": [3], "interiorColor": "0.35, 0.33, 0.3, 1.0" }
     }
   ]
 }

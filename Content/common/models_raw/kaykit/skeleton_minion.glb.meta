@@ -1,1 +1,5 @@
-<AssetMeta _guid="8e8d5e8bfe6b81b942f673408c83d5f5" _source="skeleton_minion.glb" />
+<AssetMeta _guid="8e8d5e8bfe6b81b942f673408c83d5f5" _source="skeleton_minion.glb">
+	<_listImportOverride>
+		<AssetImportOverride _key="lods" _value='[{"triangleRatio": 0.5, "screenSize": 0.3, "maxError": 0.01}, {"triangleRatio": 0.25, "screenSize": 0.12, "maxError": 0.02}]' />
+	</_listImportOverride>
+</AssetMeta>

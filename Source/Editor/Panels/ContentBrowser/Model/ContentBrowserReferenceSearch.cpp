@@ -15,7 +15,7 @@ namespace sw::editor
     {
     }
 
-    void ContentBrowserReferenceSearch::query( const EditorReferenceIndex& index, string_view absolutePath, bool bDependencies )
+    void ContentBrowserReferenceSearch::query( const EditorAssetIndex& index, string_view absolutePath, bool bDependencies )
     {
         _queryID          = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
         _bDependencyQuery = bDependencies ? SW_TRUE : SW_FALSE;

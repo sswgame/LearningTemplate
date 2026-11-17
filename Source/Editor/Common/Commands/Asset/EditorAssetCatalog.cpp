@@ -1,17 +1,21 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Engine/Content/AssetPaths.h"
 
 namespace sw::editor
 {
-    bool EditorAssetIndex::classifyFile( const AssetPaths& assetPaths, string_view filePath, EditorAssetIndexEntry& outEntry )
+    bool EditorAssetCatalog::classifyFile( const AssetPaths& assetPaths, string_view filePath, EditorAssetIndexEntry& outEntry )
     {
         const EditorAssetTypeRegistration* pInfo = EditorAssetTypeRegistry::findKindInfoForPath( filePath );
         if ( pInfo == nullptr )
@@ -28,7 +32,7 @@ namespace sw::editor
         return true;
     }
 
-    void EditorAssetIndex::collectEntries( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList, const StopToken& stopToken )
+    void EditorAssetCatalog::collectEntries( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList, const StopToken& stopToken )
     {
         outList.clear();
 
@@ -52,7 +56,55 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetIndex::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
+    void EditorAssetCatalog::collectEntries( const AssetPaths& assetPaths, const EditorAssetIndex& index, vector<EditorAssetIndexEntry>& outList )
+    {
+        outList.clear();
+        const string& resourceFolder = assetPaths.getRootFolderPath();
+        if ( resourceFolder.empty() )
+            return;
+        // 디스크 표기(대소문자 그대로)로 짓는다 — 제목 · 경로가 트리 걷기와 같게 보인다. 색인의 열쇠(소문자)는 쓰지 않는다.
+        vector<string> listDisplayPath;
+        index.collectDisplayPaths( listDisplayPath );
+        outList.reserve( listDisplayPath.size() );
+        for ( const string& displayPath : listDisplayPath )
+        {
+            EditorAssetIndexEntry entry{};
+            if ( classifyFile( assetPaths, FileUtil::joinPath( resourceFolder, displayPath ), entry ) )
+                outList.push_back( std::move( entry ) );
+        }
+    }
+
+    const EditorAssetIndex* EditorAssetCatalog::findReadyIndex()
+    {
+        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+        if ( pContext == nullptr )
+            return nullptr;
+        const EditorAssetIndex& index = pContext->getSubsystem<AssetHotReload>().getReferenceIndex();
+        return index.isReady() ? &index : nullptr;
+    }
+
+    void EditorAssetCatalog::collectEntriesOnUIThread( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList )
+    {
+        const EditorAssetIndex* const pIndex = findReadyIndex();
+        if ( pIndex != nullptr )
+            collectEntries( assetPaths, *pIndex, outList );
+        else
+            collectEntries( assetPaths, outList ); // 첫 전체 스캔 전 — 한 번 걷는다
+    }
+
+    void EditorAssetCatalog::collectCatalogCounts( const AssetPaths& assetPaths, const EditorAssetIndex& index, EditorResourceCatalogCounts& outCounts )
+    {
+        vector<string> listDisplayPath;
+        index.collectDisplayPaths( listDisplayPath );
+        const string& resourceFolder = assetPaths.getRootFolderPath();
+        for ( string& displayPath : listDisplayPath )
+        {
+            displayPath = FileUtil::joinPath( resourceFolder, displayPath ); // `countFiles` 는 트리 걷기와 같은 디스크 경로를 받는다
+        }
+        countFiles( listDisplayPath, outCounts );
+    }
+
+    void EditorAssetCatalog::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
     {
         const uint32 kindCount = EditorAssetTypeRegistry::getKindCount();
         outCounts._listKindCount.clear();
@@ -76,7 +128,7 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetIndex::collectCatalogCounts( const AssetPaths& assetPaths, EditorResourceCatalogCounts& outCounts, const StopToken& stopToken )
+    void EditorAssetCatalog::collectCatalogCounts( const AssetPaths& assetPaths, EditorResourceCatalogCounts& outCounts, const StopToken& stopToken )
     {
         vector<string> listAllFile;
         const string&  resourceRootPath = assetPaths.getRootFolderPath();

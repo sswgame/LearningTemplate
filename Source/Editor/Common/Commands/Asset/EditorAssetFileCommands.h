@@ -12,7 +12,7 @@
 
 namespace sw::editor
 {
-    class EditorReferenceIndex;
+    class EditorAssetIndex;
 
     struct EditorNewAssetTemplate;
     struct EditorOpenDocument;
@@ -23,7 +23,7 @@ namespace sw::editor
     /**
      * @struct EditorAssetFileCommands
      * @brief 에셋 파일을 만들고 옮기고 지웁니다. 이름은 리소스 규칙(소문자, 숫자, `_`, `-`, `.`)을 지키고, 겹치면 `_2` · `_3` 을 붙입니다.
-     * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorReferenceIndex`)이 아는 텍스트 에셋의 글을 새 리소스 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
+     * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorAssetIndex`)이 아는 텍스트 에셋의 글을 새 리소스 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
      *          참조 칸은 아직 경로로 가리키므로(GUID 로 바꾸는 일은 docs/NEXT.md 2 단계) 고치는 자리는 경로 칸(`AssetReferenceFields` —
      *          커밋 전 검사 · `py -3 -m Scripts move-asset` 과 같은 `Config/Dev/AssetReferenceFields.json`)의 값이다.
      *          정체성(GUID — `AssetDatabase.h`)의 짝을 지킨다: 옮기기 · 이름 바꾸기 · 휴지통 · 지우기는 원본 곁 `.meta` 를 함께 다루고, 새로 만들기 · 복제 · 가져오기는 새 GUID 를,
@@ -55,12 +55,12 @@ namespace sw::editor
          * @param outFixedFileCount 글을 고친 파일 수
          * @return 대상이 이미 있거나, 이름이 규칙에 맞지 않거나, 역색인이 아직이면 아무것도 하지 않고 false 입니다(이유를 알린다).
          */
-        [[nodiscard]] static bool moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount );
+        [[nodiscard]] static bool moveAsset( string_view sourceAbs, string_view destinationAbs, EditorAssetIndex& inoutIndex, uint32& outFixedFileCount );
         /**
          * @brief 옮기기 묶음을 디스크를 건드리지 않고 계획합니다 — 이름 규칙 · 겹침 · 역색인 · 경로 칸 목록을 확인하고, 고칠 참조 파일과 고칠 수 없는 참조(칸 밖)를 모은다.
          * @return 그대로 적용할 수 있으면 true. false 면 `_failure` 에 이유가 있다(고칠 수 없는 참조가 하나라도 있으면 false — 반쯤 고친 상태를 만들지 않는다).
          */
-        [[nodiscard]] static bool planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan );
+        [[nodiscard]] static bool planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan );
         /**
          * @brief 지금 열린 문서를 모읍니다 — 에셋 파일을 연 문서 패널(`IEditorPanelService::collectOpenDocuments`)과 소스 파일이 있는 활성 씬(미저장은 `EditorWorkspace::isSceneDirty`).
          * @details 패널 서비스가 없는 호스트(셸 없는 테스트)는 연 패널이 없다 — 씬만 본다.
@@ -81,7 +81,7 @@ namespace sw::editor
          *          리다이렉트 표(`redirects.xml`, `AssetRedirect::addToXMLText`)에 줄을 더한다 — 언리얼이 옮긴 자리에 리다이렉터를 남기는 것과 같다. 표 쓰기도 되돌림에 든다.
          * @return 다 옮기고 고쳤으면 true(`_fixedFileCount`). false 면 디스크는 시작 상태이거나, 아니면 남은 목록이 로그에 있다.
          */
-        [[nodiscard]] static bool applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan );
+        [[nodiscard]] static bool applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorAssetIndex& inoutIndex, EditorAssetMovePlan& outPlan );
         /**
          * @brief 폴더 @p sourceFolderAbs 를 @p destinationParentAbs 아래로 옮기는 파일 옮기기 목록을 만듭니다(폴더 안 모든 파일, 하위 폴더 구조 그대로).
          * @return 옮기기 목록입니다. 폴더가 아니거나 · 자기 안으로 옮기기 · 이미 있는 대상 · 빈 폴더면 그 이유입니다. 옮긴 뒤 빈 원본 폴더 지우기는 부른 쪽이 한다.

@@ -86,7 +86,7 @@ namespace sw::editor
          */
         bool isWaitingForReferenceIndex() const;
         /** @brief 참조 역색인을 반환합니다. */
-        const EditorReferenceIndex& getReferenceIndex() const { return ContentBrowserModel::getReferenceIndex(); }
+        const EditorAssetIndex& getReferenceIndex() const { return ContentBrowserModel::getReferenceIndex(); }
         /**
          * @brief 에셋의 참조를 찾아 결과 창을 엽니다.
          * @param bDependencies false 면 그 에셋을 사용하는 쪽(Find References)을, true 면 그 에셋이 사용하는 쪽(Show Dependencies)을 찾습니다.
