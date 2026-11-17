@@ -14,6 +14,12 @@
 
 namespace
 {
+    /** @brief 몸 테스트의 규칙 자산이다 — 움직임 규칙은 데이터에만 있고 몸 설정은 `ActionBodyDef` 초기값을 쓴다. */
+    constexpr const utf8* kBodyCatalogXML = R"(<ActionPlatformer>
+  <Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
+  <Grading><Grade id="S" min="90"/></Grading>
+</ActionPlatformer>)";
+
     constexpr float32 kBodyStep      = 1.0f / 60.0f;
     constexpr float32 kBodyTolerance = 1.0e-3f;
 
@@ -170,17 +176,19 @@ SW_TEST_CASE( ActionTerrainGridTest, FindGrapplePointHonorsRangeBoundsAndTies )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, GlideLimitsFallSpeedAndRestoresSettings )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
-    const sw::PlatformerSettings motorSettings{};
-    const sw::ActionBodyDef      bodySettings{};
+    const sw::PlatformerSettings& motorSettings = catalog.getMotorSettings();
+    const sw::ActionBodyDef&      bodySettings  = catalog.getBodySettings();
 
     sw::ActionPlatformerBody gliding;
-    gliding.initialize( motorSettings, bodySettings );
+    gliding.initialize( catalog );
     gliding.setPosition( sw::float2{ 3.5f, 9.5f } );
     sw::ActionPlatformerBody falling;
-    falling.initialize( motorSettings, bodySettings );
+    falling.initialize( catalog );
     falling.setPosition( sw::float2{ 3.5f, 9.5f } );
 
     const sw::ActionBodyInput glideInput = ActionPlatformerBodyTestUtil::makeGlideInput();
@@ -210,12 +218,14 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GlideLimitsFallSpeedAndRestoresSettings 
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, GlideEndsOnGround )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
-    const sw::PlatformerSettings motorSettings{};
-    sw::ActionPlatformerBody     body;
-    body.initialize( motorSettings, sw::ActionBodyDef{} );
+    const sw::PlatformerSettings& motorSettings = catalog.getMotorSettings();
+    sw::ActionPlatformerBody      body;
+    body.initialize( catalog );
     body.setPosition( sw::float2{ 3.5f, 1.8f } );
 
     const sw::ActionBodyInput glideInput = ActionPlatformerBodyTestUtil::makeGlideInput();
@@ -246,11 +256,13 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GlideEndsOnGround )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, GrappleKeepsRopeLengthAndHandsVelocityBack )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
-    body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    body.initialize( catalog );
 
     // 지점 바로 옆(최소 거리 0.75 안)에서는 걸리지 않는다.
     body.setPosition( sw::float2{ 6.5f, 9.0f } );
@@ -292,12 +304,14 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleKeepsRopeLengthAndHandsVelocityBa
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, GrappleFromGlideRestoresSettings )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kOpenRoom, 1.0f, sw::float2{}, map ) );
-    const sw::PlatformerSettings motorSettings{};
-    sw::ActionPlatformerBody     body;
-    body.initialize( motorSettings, sw::ActionBodyDef{} );
+    const sw::PlatformerSettings& motorSettings = catalog.getMotorSettings();
+    sw::ActionPlatformerBody      body;
+    body.initialize( catalog );
     body.setPosition( sw::float2{ 3.5f, 6.5f } );
     body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGlideInput(), kBodyStep );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Glide );
@@ -315,11 +329,13 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleFromGlideRestoresSettings )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, DrillEntersOnlyTowardDirtAndExitsOutsideTheTile )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
-    body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    body.initialize( catalog );
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
 
     body.setPosition( sw::float2{ 3.5f, 2.5f } ); // 앞으로 0.65 를 봐도 빈 칸
@@ -347,11 +363,13 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillEntersOnlyTowardDirtAndExitsOutside
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, DrillExitWithJumpLaunchesUpward )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
-    body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    body.initialize( catalog );
     body.setPosition( sw::float2{ 6.5f, 2.5f } );
 
     sw::ActionBodyInput up = ActionPlatformerBodyTestUtil::makeDrillInput( 0.0f, 1.0f );
@@ -368,11 +386,13 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillExitWithJumpLaunchesUpward )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, DrillAbortsWhenItNeverReachesDirt )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
-    body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    body.initialize( catalog );
     body.setPosition( sw::float2{ 4.5f, 2.5f } );
     body.update( map, terrain, ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f ), kBodyStep );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Drill );
@@ -387,11 +407,13 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillAbortsWhenItNeverReachesDirt )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, DrillBlockedByRockBeforeDirtStillAborts )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kRockBeforeDirtRoom, 0.5f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
-    body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    body.initialize( catalog );
     body.setPosition( sw::float2{ 1.95f, 1.25f } );
 
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
@@ -409,11 +431,13 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillBlockedByRockBeforeDirtStillAborts 
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, DrillInsideDirtWaitsAtRock )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtThenRockRoom, 1.0f, sw::float2{}, map ) );
     sw::ActionPlatformerBody body;
-    body.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    body.initialize( catalog );
     body.setPosition( sw::float2{ 4.5f, 2.5f } );
 
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
@@ -436,13 +460,15 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillInsideDirtWaitsAtRock )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::PlatformTileMap   map;
     sw::ActionTerrainGrid terrain;
     SW_REQUIRE_TRUE( terrain.loadFromXMLText( kDirtRoom, 1.0f, sw::float2{}, map ) );
-    const sw::ActionBodyDef bodySettings{};
+    const sw::ActionBodyDef& bodySettings = catalog.getBodySettings();
 
     sw::ActionPlatformerBody drilling;
-    drilling.initialize( sw::PlatformerSettings{}, bodySettings );
+    drilling.initialize( catalog );
     drilling.setPosition( sw::float2{ 4.5f, 2.5f } );
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
     for ( int32 tick = 0; tick < 5; ++tick )
@@ -454,7 +480,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
     sw::Archive written;
     drilling.writeState( written );
     sw::ActionPlatformerBody restored;
-    restored.initialize( sw::PlatformerSettings{}, bodySettings );
+    restored.initialize( catalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( restored.getMode() == sw::ActionMoveMode::Drill );
@@ -468,14 +494,14 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
     }
 
     sw::ActionPlatformerBody gliding;
-    gliding.initialize( sw::PlatformerSettings{}, bodySettings );
+    gliding.initialize( catalog );
     gliding.setPosition( sw::float2{ 2.5f, 5.0f } );
     gliding.update( map, terrain, ActionPlatformerBodyTestUtil::makeGlideInput(), kBodyStep );
     SW_REQUIRE_TRUE( gliding.getMode() == sw::ActionMoveMode::Glide );
     sw::Archive glideWritten;
     gliding.writeState( glideWritten );
     sw::ActionPlatformerBody glideRestored;
-    glideRestored.initialize( sw::PlatformerSettings{}, bodySettings );
+    glideRestored.initialize( catalog );
     sw::Archive glideReading( glideWritten.getData(), glideWritten.getSize() );
     SW_REQUIRE_TRUE( glideRestored.readState( glideReading ) );
     SW_EXPECT_TRUE( glideRestored.getMode() == sw::ActionMoveMode::Glide );
@@ -487,8 +513,10 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
  */
 SW_TEST_CASE( ActionPlatformerBodyTest, ReadRejectsBrokenBytes )
 {
+    sw::ActionPlatformerCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBodyCatalogXML, "ActionPlatformerBodyTest" ) );
     sw::ActionPlatformerBody source;
-    source.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    source.initialize( catalog );
     source.setPosition( sw::float2{ 1.0f, 2.0f } );
     sw::Archive written;
     source.writeState( written );
@@ -498,7 +526,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, ReadRejectsBrokenBytes )
     SW_REQUIRE_TRUE( size > 34 );
 
     sw::ActionPlatformerBody target;
-    target.initialize( sw::PlatformerSettings{}, sw::ActionBodyDef{} );
+    target.initialize( catalog );
     target.setPosition( sw::float2{ 7.0f, 7.0f } );
     const auto expectRejected = [&]( size_t offset, const void* pValue, size_t valueSize )
     {
@@ -529,4 +557,16 @@ SW_TEST_CASE( ActionPlatformerBodyTest, ReadRejectsBrokenBytes )
     sw::Archive whole( written.getData(), written.getSize() );
     SW_EXPECT_TRUE( target.readState( whole ) );
     SW_EXPECT_NEAR( 1.0f, target.getPosition()._x, kBodyTolerance );
+}
+
+/** @brief [ActionPlatformerBodyTest] 움직임 규칙(`<Motor>`) 없는 카탈로그와 칸이 빠진 규칙 줄은 로드가 실패한다 — 몸이 C++ 기본값으로 열리지 않는다(감사 K-4) */
+SW_TEST_CASE( ActionPlatformerBodyTest, CatalogWithoutMotorIsRefused )
+{
+    SW_EXPECT_LOG( "ActionPlatformerCatalog.MotorMissing" );
+    SW_EXPECT_LOG( "ActionPlatformerCatalog.MotorInvalid" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    sw::ActionPlatformerCatalog bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<ActionPlatformer><Grading><Grade id="S" min="90"/></Grading></ActionPlatformer>)", "ActionPlatformerBodyTest" ) );
+    sw::ActionPlatformerCatalog partial;
+    SW_EXPECT_FALSE( partial.loadFromXMLText( R"(<ActionPlatformer><Motor runSpeed="7"/><Grading><Grade id="S" min="90"/></Grading></ActionPlatformer>)", "ActionPlatformerBodyTest" ) );
 }

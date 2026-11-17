@@ -12,6 +12,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -65,32 +66,61 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 움직임 수치입니다. 점프는 높이와 정점까지 시간으로 정합니다(중력 · 초속은 거기서 나온다). */
-    struct PlatformerSettings
+    /**
+     * @brief 움직임 수치입니다. 점프는 높이와 정점까지 시간으로 정합니다(중력 · 초속은 거기서 나온다).
+     * @details 키트의 규칙 자산(액션 플랫포머 카탈로그의 `<Motor …/>`)이 읽는 칸은 모두 `Required` 다 — 데이터가 모든 칸을 적어야 하고 C++ 초기값은 데이터 길에 쓰이지 않는다(감사 K-4).
+     *          초기값은 엔진 이동 부품의 기본 조율값으로 남긴다(언리얼 `UCharacterMovementComponent` · Godot `CharacterBody2D` 와 같은 자리 — 모터 단독 테스트가 쓴다).
+     */
+    REFLECT()
+    struct SW_GF_API PlatformerSettings
     {
-        float2  _halfExtents{ 0.35f, 0.45f };
+        REFLECT_BODY();
+        PROPERTY( Required )
+        float2 _halfExtents{ 0.35f, 0.45f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _runSpeed{ 7.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _groundAcceleration{ 70.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _airAcceleration{ 40.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _jumpHeight{ 3.2f };
-        float32 _timeToApex{ 0.38f };
+        PROPERTY( Required, Min = 0.001 )
+        float32 _timeToApex{ 0.38f }; ///< 중력 · 점프 초속을 이 값으로 나눈다 — 0 은 받지 않는다
+        PROPERTY( Required, Min = 0.0 )
         float32 _fallGravityScale{ 1.6f }; ///< 내려올 때 더 빨리(떠 있는 느낌을 줄인다)
-        float32 _jumpCutRatio{ 0.45f };    ///< 오르는 중 점프를 떼면 위 속도를 이만큼으로(짧은 점프)
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _jumpCutRatio{ 0.45f }; ///< 오르는 중 점프를 떼면 위 속도를 이만큼으로(짧은 점프)
+        PROPERTY( Required, Min = 0.0 )
         float32 _maxFallSpeed{ 18.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _coyoteTime{ 0.1f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _jumpBufferTime{ 0.12f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _wallSlideSpeed{ 2.5f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _wallJumpSpeedX{ 7.5f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _wallJumpSpeedY{ 12.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _wallJumpLockTime{ 0.15f }; ///< 벽 점프 직후 이 시간은 좌우 입력을 줄인다(같은 벽으로 바로 붙지 않게)
+        PROPERTY( Required, Min = 0.0 )
         float32 _dashSpeed{ 18.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _dashDuration{ 0.15f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _dashCooldown{ 0.3f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _climbSpeed{ 4.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _dropThroughTime{ 0.25f };
-        int32   _extraJumpCount{ 0 }; ///< 공중 점프 수(2단 점프 = 1)
-        int32   _airDashCount{ 1 };
-        uint8   _bWallJump{ SW_TRUE };
+        PROPERTY( Required, Min = 0 )
+        int32 _extraJumpCount{ 0 }; ///< 공중 점프 수(2단 점프 = 1)
+        PROPERTY( Required, Min = 0 )
+        int32 _airDashCount{ 1 };
+        PROPERTY( Required )
+        bool _bWallJump{ true };
         /**
          * @brief 경사 땅의 관성(탈것 · 썰매와 같은 식 `InertiaSettings::computeAlongAcceleration`)입니다. 기본은 경사가 당기지 않는다(`_slopeScale` 0 —
          *        메가맨 · 메트로이드처럼 경사에서 미끄러지지 않는다). 썰매 같은 미끄럼은 `_slopeScale` 을 올리고 `_groundAcceleration` 을 낮춘다.

@@ -147,11 +147,11 @@ namespace sw
     {
     }
 
-    void ActionPlatformerBody::initialize( const PlatformerSettings& motorSettings, const ActionBodyDef& settings )
+    void ActionPlatformerBody::initialize( const ActionPlatformerCatalog& catalog )
     {
-        _motorSettings = motorSettings;
-        _settings      = settings;
-        _motor.setSettings( motorSettings );
+        _motorSettings = catalog.getMotorSettings();
+        _settings      = catalog.getBodySettings();
+        _motor.setSettings( _motorSettings );
         _mode   = ActionMoveMode::Normal;
         _events = 0;
     }
