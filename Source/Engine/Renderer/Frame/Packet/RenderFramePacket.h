@@ -8,6 +8,7 @@
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
@@ -90,6 +91,10 @@ namespace sw
         uint32           _viewportWidth;      ///< 주 출력의 픽셀 너비 — 백버퍼 경로도 스왑체인 크기로 풀어 싣는다(0 은 정말 빈 화면, 최소화)
         uint32           _viewportHeight;     ///< 주 출력의 픽셀 높이(너비와 같은 규칙)
         uint64           _frameIndex;
+        /** @brief 이 패킷을 그리는가입니다. `SimulationOnly` 면 렌더 스레드가 상태(업로드)만 받고 기록 · Present · 사진을 하지 않는다(`SimulationOnlyFrameQueue`). */
+        FrameDrawMode _drawMode;
+        /** @brief 짓는 때까지 그리지 않은 프레임의 번호(`SimulationOnlyFrameQueue::getLastSkippedSerial`)입니다 — 그린 패킷이 끝나면 따라잡기를 이 번호까지 적는다. */
+        uint64 _simulationOnlySerial;
         /** @brief `_viewProj` · `_cameraPos` 가 카메라에서 온 주 시점이면 1 입니다. 0 인 패킷은 그리지 않습니다(`FrameRenderer::executePacket` — 기본 카메라로 대신 그리지 않는다). `setMainView` 로만 켭니다. */
         uint8 _bHasViewProj : 1;
         uint8 _bValid       : 1;
@@ -130,6 +135,8 @@ namespace sw
             , _viewportWidth{ 0 }
             , _viewportHeight{ 0 }
             , _frameIndex{ 0 }
+            , _drawMode{ FrameDrawMode::Draw }
+            , _simulationOnlySerial{ 0 }
             , _bHasViewProj{ SW_FALSE }
             , _bValid{ SW_FALSE }
             , _bHasLight{ SW_FALSE }
@@ -181,16 +188,18 @@ namespace sw
             _screenshotPath.clear();
             _scenePreviewCount = 0;
             _listRetiredSceneKey.clear();
-            _sceneKey           = 0;
-            _outputRenderTarget = 0;
-            _viewportWidth      = 0;
-            _viewportHeight     = 0;
-            _frameIndex         = 0;
-            _bHasViewProj       = SW_FALSE;
-            _bValid             = SW_FALSE;
-            _bHasLight          = SW_FALSE;
-            _bHasSky            = SW_FALSE;
-            _bHasFog            = SW_FALSE;
+            _sceneKey             = 0;
+            _outputRenderTarget   = 0;
+            _viewportWidth        = 0;
+            _viewportHeight       = 0;
+            _frameIndex           = 0;
+            _drawMode             = FrameDrawMode::Draw;
+            _simulationOnlySerial = 0;
+            _bHasViewProj         = SW_FALSE;
+            _bValid               = SW_FALSE;
+            _bHasLight            = SW_FALSE;
+            _bHasSky              = SW_FALSE;
+            _bHasFog              = SW_FALSE;
         }
     };
 } // namespace sw

@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -190,15 +191,16 @@ namespace sw
     void RenderPacketSceneCollector::populateShadows( RenderFramePacket& packet, const RenderPacketKeyLights& lights )
     {
         FrameShadowData::populateFrame( lights.getShadowCaster(), packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr, FrameRenderer::getShadowMapResolution(),
-                                        _listShadowLightIndex, packet._listLight, packet._shadow );
+                                        engine::getSubsystem<EngineConfig>()._render, _listShadowLightIndex, packet._listLight, packet._shadow );
     }
 
     void RenderPacketSceneCollector::populateViewShadows( RenderFramePacket& packet, const RenderPacketKeyLights& lights ) const
     {
+        const RenderConfig& renderConfig = engine::getSubsystem<EngineConfig>()._render;
         for ( RenderViewRequest& view : packet._listView )
         {
             if ( view._bRender == SW_TRUE )
-                view._shadow = FrameShadowData::makeViewShadowFor( lights.getShadowCaster(), view._viewProj, packet._shadow );
+                view._shadow = FrameShadowData::makeViewShadowFor( lights.getShadowCaster(), view._viewProj, renderConfig, packet._shadow );
         }
     }
 

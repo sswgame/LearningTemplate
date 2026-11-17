@@ -134,3 +134,14 @@ SW_TEST_CASE( MaterialLibraryTest, TerrainMaterialsDeformVertices )
     }
     SW_EXPECT_TRUE( terrainCount >= 2 ); // terrain · terrain_geomorph — 하나도 못 찾으면 이 테스트는 아무것도 보지 않는다
 }
+
+/** @brief [MaterialLibraryTest] 외형 뿌리가 피부 층 표면 덮어쓰기 칸(`SkinLayerBakeBinding::kSurfaceParameter`)을 텍스처로 선언한다 — 선언이 없으면 굽기가 건 텍스처를 몸 머티리얼이 읽지 않는다 */
+SW_TEST_CASE( MaterialLibraryTest, RootDeclaresSkinLayerSurfaceMap )
+{
+    const shared_ptr<Material> root = Material::create();
+    SW_REQUIRE_TRUE( root->loadFromAsset( AssetID{ MaterialLibraryTestUtil::kRootID } ) );
+    bool bDeclared = false;
+    for ( const MaterialProperty& property : root->getProperties() )
+        bDeclared = bDeclared || ( property._name == "_skinLayerSurfaceMap" && property._type == MaterialPropertyType::Texture2D ); // GameFramework 의 이름 — Engine 테스트라 글로 적는다
+    SW_EXPECT_TRUE( bDeclared );
+}

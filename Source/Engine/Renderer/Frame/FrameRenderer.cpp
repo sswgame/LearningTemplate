@@ -11,6 +11,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Environment/Fog/FogSettings.h"
@@ -31,6 +32,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
@@ -329,24 +331,7 @@ namespace sw
         if ( GPUMessageChannel::isRequested() != _state._gpuMessages.isActive() )
             releasePassResources();
 
-        // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
-        if ( engine::areEngineServicesBound() )
-        {
-            // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
-            const bool bFinishAssetJobs = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
-            // 새 머티리얼의 초기화는 여기서 하지 않는다 — 머티리얼은 게임 스레드 객체다(`Engine::submitRenderPacket`). 상수 버퍼는 `GPUScene::upload` 의 프록시가 만든다.
-            SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
-            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            (void)textures.flushRegionUpdates( pDevice );
-            // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
-            // 결정적 실행이면 상한 없이 모두 올리고 업로드 끝남까지 이 자리에서 기다린다.
-            if ( bFinishAssetJobs )
-                (void)textures.finishPendingLoads( pDevice );
-            else
-                (void)textures.completePendingLoads( pDevice, TextureCache::kMaxUploadsPerFrame );
-            // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
-            (void)textures.updateStreaming( pDevice, bFinishAssetJobs ? UINT32_MAX : TextureCache::kMaxStreamingUpgradesPerFrame );
-        }
+        updateTextureUploads( pDevice );
 
         _pDevice                   = pDevice;
         _state._outputRenderTarget = packet._outputRenderTarget;
@@ -403,7 +388,72 @@ namespace sw
         // 값 업로드와 바인딩은 드로우 직전에 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
         _passExecutor.resetViewRecordState();
 
-        return uploadSceneAndSubmit( pDevice, "executePacket" );
+        const bool bDrew = uploadSceneAndSubmit( pDevice, "executePacket" );
+        // 건너뛴 프레임 뒤의 따라잡기 — GPU 입자가 다 따라잡았으면 이 패킷이 실은 건너뛴 번호까지 끝났다고 적는다(캡처 준비가 본다).
+        if ( SimulationOnlyFrameQueue* const pSimulationOnly = engine::areEngineServicesBound() ? engine::findSubsystem<SimulationOnlyFrameQueue>() : nullptr )
+            pSimulationOnly->reportDrawnFrame( packet._simulationOnlySerial, _state._particleRenderer.getPendingGPUStepCount() );
+        return bDrew;
+    }
+
+    void FrameRenderer::executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet )
+    {
+        // 그리지 않고 진행하는 프레임(`SimulationOnlyFrameQueue`) — 다음 패킷이 이어 쓸 상태만 받는다. 기록 · 제출하지 않는다.
+        // 받는 것: 텍스처 업로드(구간 · 읽기 · 스트리밍), GPU 장면의 CPU 사본과 고친 구간 업로드(빠뜨리면 다음에 그릴 때 인스턴스가 옛 값이다).
+        // 받지 않는 것: 라이트 · 그림자 · 안개 · 캔버스 · 데칼 · 추가 뷰 · 입자 — 다음 패킷이 통째로 다시 싣는 값이다. GPU 입자는 누적 단계 요청이라 다음에 그릴 때 따라잡는다.
+        if ( isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE )
+            return;
+        SW_PROFILE_SCOPE( "RT.SimulationOnly" );
+        updateTextureUploads( pDevice );
+        _pDevice = pDevice;
+        _state._gpuScene.applyCPUSnapshot( packet._gpuScene );
+        uploadGPUScene( pDevice );
+        // 시간 누적(TAA · 모션 블러 · 노출 적응 · 가림)과 깊이 히스토리는 그리지 않은 프레임을 건너 이을 수 없다 — 다음에 그리는 프레임이 버린다.
+        _state._mainView.markFrameSkipped();
+        _state._mainView._bLastFrameDepthValid = SW_FALSE;
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+        {
+            pView->markFrameSkipped();
+            pView->_bLastFrameDepthValid = SW_FALSE;
+        }
+    }
+
+    void FrameRenderer::uploadGPUScene( IRHIDevice* pDevice )
+    {
+        // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
+        // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
+        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getFrameGraphExecutor().usesGPUGeneratedCommands() );
+        // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
+        _passExecutor.getFrameGraphExecutor().prepareMeshMorphPool();
+        _state._gpuScene.setVertexPoolEnabled( gv_vertexPool );
+        _state._gpuScene.upload( pDevice );
+    }
+
+    void FrameRenderer::updateTextureUploads( IRHIDevice* pDevice )
+    {
+        // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
+        // 그리지 않는 패킷(`executePacketWithoutDrawing`)도 같은 길이다 — 결정적 실행은 상한 없이 끝내므로 그리는 프레임이 따라잡을 몫이 남지 않는다.
+        if ( engine::areEngineServicesBound() == false )
+            return;
+        // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
+        const bool bFinishAssetJobs = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE;
+        // 새 머티리얼의 초기화는 여기서 하지 않는다 — 머티리얼은 게임 스레드 객체다(`Engine::submitRenderPacket`). 상수 버퍼는 `GPUScene::upload` 의 프록시가 만든다.
+        SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
+        TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        (void)textures.flushRegionUpdates( pDevice );
+        // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
+        // 결정적 실행이면 상한 없이 모두 올리고 업로드 끝남까지 이 자리에서 기다린다.
+        // 프레임당 상한 · 스트리밍 풀 예산은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다.
+        const TextureStreamingConfig& streamingConfig = engine::getSubsystem<EngineConfig>()._render._textureStreaming;
+        if ( bFinishAssetJobs )
+            (void)textures.finishPendingLoads( pDevice );
+        else
+            (void)textures.completePendingLoads( pDevice, streamingConfig._uploadsPerFrame );
+        // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
+        // 결정적 실행도 풀 예산은 지킨다(예산은 장면 내용으로만 정해져 결정적이다) — 풀리는 것은 프레임당 제출 수뿐이다.
+        TextureStreamingBudget streamingBudget;
+        streamingBudget._maxUpgradesPerFrame = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
+        streamingBudget._poolBytes           = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
+        (void)textures.updateStreaming( pDevice, streamingBudget );
     }
 
     void FrameRenderer::prepareFrameDecals()
@@ -521,14 +571,7 @@ namespace sw
 
     bool FrameRenderer::uploadSceneAndSubmitFrame( IRHIDevice* pDevice, const utf8* pCallerName )
     {
-        // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
-        // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
-        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getFrameGraphExecutor().usesGPUGeneratedCommands() );
-        // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
-        _passExecutor.getFrameGraphExecutor().prepareMeshMorphPool();
-        bool bVertexPool = gv_vertexPool;
-        _state._gpuScene.setVertexPoolEnabled( bVertexPool );
-        _state._gpuScene.upload( pDevice );
+        uploadGPUScene( pDevice );
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );
         // 볼륨 안개의 버퍼와 입력은 라이트 그리드(주 시점의 그리드 번호)가 정해진 뒤, 기록 전에 갖춘다.
@@ -659,7 +702,7 @@ namespace sw
         _passExecutor.applyViewShadowConstants( context, _state._mainView._shadow );
         _state.view( RenderViewType::Shadow ).setViewProjection( _state._mainView._shadow._cullViewProj );
 
-        beginViewHistory( _state._mainView );
+        _state._mainView.beginViewHistory();
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
         const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj, captureViewPassSceneState() );
@@ -693,16 +736,6 @@ namespace sw
         _state._postProcessTextures.pruneUnused();
         _postProcessMaterials.pruneUnused();
         _passExecutor.applyViewPassConstants( context, _state._mainView );
-    }
-
-    void FrameRenderer::beginViewHistory( FrameViewTarget& view )
-    {
-        view._bHistoryReset = ( view._bHasHistory == SW_FALSE || view._settings._bCut == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-        view._bHasHistory   = SW_TRUE;
-        // TAA 기록은 TAA 가 도는 프레임만 쓴다. 지난 프레임이 쓰지 않았으면 기록은 그 앞 화면이라 버린다 — 뷰 상태(후처리 켬)가 바뀐 첫 프레임이다.
-        // 지난 프레임에 TAA 가 돌았는지는 그 프레임의 패스 고르기(`applyViewPassSelection`)가 남긴 `_bTAAHistoryWritten` 하나다 — 실행도 같은 결과를 본다.
-        // 후처리 뒤의 효과(피사계 심도 · 모션 블러)가 켜지고 꺼지는 것은 TAA 뒤라 기록과 무관하다.
-        view._bTAAHistoryReset = ( view._bHistoryReset == SW_TRUE || view._bTAAHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
     }
 
     void FrameRenderer::ensurePassResources()
@@ -1085,6 +1118,10 @@ namespace sw
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
             prepareExtraView( listRequest[requestIndex] );
+            // 그리지 않는 프레임(갱신 주기 · 예산 · 숨음)을 적는다 — 다음에 그리는 프레임은 시간 누적 기록을 버린다(물체의 지난 행렬은 한 프레임 전 것이라 어긋난다).
+            FrameViewTarget& view = getOrCreateExtraView( listRequest[requestIndex]._viewID );
+            if ( view._bRenderThisFrame == SW_FALSE )
+                view.markFrameSkipped();
         }
 
         // 이번 요청에 없는 뷰(카메라가 사라졌다)는 놓는다. 남은 뷰의 컬링 칸은 목록 순서로 고정 칸 뒤에 붙는다 — 뷰마다 둘(시점, 그림자).
@@ -1212,7 +1249,7 @@ namespace sw
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
         (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
-        beginViewHistory( view );
+        view.beginViewHistory();
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
         (void)_viewResources.applyViewPassSelection( view, request._viewProj, captureViewPassSceneState() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );

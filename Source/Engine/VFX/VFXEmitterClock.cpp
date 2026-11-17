@@ -90,6 +90,27 @@ namespace sw
         return spawn;
     }
 
+    uint64 VFXEmitterClock::getLifetimeWindowSteps( const VFXEmitterDef& def, float32 stepSeconds )
+    {
+        SW_ASSERT( stepSeconds > 0.0f );
+        // 올림에 한 단계를 더 둔다 — 실수 나눗셈이 경계에서 한 단계 모자라도 산 입자를 건너뛰지 않게.
+        return static_cast<uint64>( MathUtil::ceil( def._lifetimeMax / stepSeconds ) ) + 1u;
+    }
+
+    uint64 VFXEmitterClock::skipExpiredSteps( uint64 doneStepCount, uint64 targetStepCount, float32 stepSeconds )
+    {
+        const uint64 window = getLifetimeWindowSteps( *_pDef, stepSeconds );
+        if ( targetStepCount <= doneStepCount + window )
+            return 0u;
+        const uint64 skipCount = targetStepCount - window - doneStepCount;
+        for ( uint64 stepIndex = 0; stepIndex < skipCount; ++stepIndex )
+        {
+            const VFXSpawnStep skipped = spawnStep( stepSeconds );
+            static_cast<void>( skipped ); // 일정만 옮긴다 — 이 입자들은 목표 단계에 모두 죽었다
+        }
+        return skipCount;
+    }
+
     void VFXEmitterClock::restart()
     {
         _listBurstFired.assign( _pDef->_listBurst.size(), 0 );

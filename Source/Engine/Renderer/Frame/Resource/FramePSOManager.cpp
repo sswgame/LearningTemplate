@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineParallel.h"
@@ -1136,10 +1137,10 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "RT.PSO.pumpBuilds" );
         // 빌더 스레드를 쓰지 않을 때: `-gv_psoAsync=0` 은 전부(옛 동작, A/B 측정), 그 밖(GL)은 프레임당 시간 예산(줄이 있으면 최소 하나)이다.
-        constexpr uint32 kFrameBudgetMicroseconds = 2000;
-        const bool       bBuildAll                = gv_psoAsync == false || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE; // 결정적 실행은 시간 예산 없이 이 프레임에 모두 만든다
-        const uint32     budgetMicroseconds       = bBuildAll ? 0u : kFrameBudgetMicroseconds;
-        const uint32     readyCount               = _pCache->pollMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
+        // 예산은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다 — 0 이면 로드의 범위 검사(Min 1)가 막는다.
+        const bool   bBuildAll          = gv_psoAsync == false || engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetJobsEachFrame == SW_TRUE; // 결정적 실행은 시간 예산 없이 이 프레임에 모두 만든다
+        const uint32 budgetMicroseconds = bBuildAll ? 0u : engine::getSubsystem<EngineConfig>()._render._psoBuildBudgetMicroseconds;
+        const uint32 readyCount         = _pCache->pollMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
         SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", _pCache->getPendingMaterialPSOBuilds() );
         // 방금 합친 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다(`ensureMaterialPSOs` 의 같은 이유).
         if ( readyCount > 0 )

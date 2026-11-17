@@ -71,6 +71,8 @@ namespace sw
         void resolvePostProcessMaterials( RenderFramePacket& packet );
         /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` — 게임 스레드). */
         uint32 getLastHiddenViewCount() const { return _lastHiddenViewCount; }
+        /** @brief 마지막 `collectExtraViews` 에서 자리(`kMaxExtraRenderView`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
+        uint32 getLastOverflowViewCount() const { return _lastOverflowViewCount; }
 
     private:
         /** @brief 자동 렌더 배율(`gv_autoRenderScale`)에 이번 프레임 시간(초)을 넣고 주 시점 배율에 곱할 값을 돌려줍니다. 꺼져 있으면 1 입니다. */
@@ -83,6 +85,7 @@ namespace sw
         float64 _renderViewClock;
         /** @brief 마지막 수집에서 보임 판정으로 쉰 추가 뷰 수입니다(`getLastHiddenViewCount`). */
         uint32 _lastHiddenViewCount;
+        uint32 _lastOverflowViewCount; ///< 마지막 수집에서 자리를 얻지 못한 추가 뷰 수(`getLastOverflowViewCount`)
         /** @brief 뷰의 후처리 블렌더블이 가리키는 머티리얼의 참조와 렌더 사본입니다(`resolvePostProcessMaterials`). */
         PostProcessMaterialSet _postProcessMaterials;
         /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */
