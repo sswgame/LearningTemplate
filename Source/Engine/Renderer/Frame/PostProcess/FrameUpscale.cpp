@@ -21,6 +21,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
@@ -106,7 +107,7 @@ namespace sw
             RHITextureDesc desc{};
             desc._width                   = viewportWidth;
             desc._height                  = viewportHeight;
-            desc._format                  = RHIFormat::R8G8B8A8_UNORM;
+            desc._format                  = getRenderPassTypeInfo( RenderPassType::UpscaleEasu )._pColorFormat[0]; // EASU PSO 와 같은 포맷 한 곳
             desc._bIsRenderTarget         = SW_TRUE;
             desc._bIsShaderResource       = SW_TRUE;
             IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();

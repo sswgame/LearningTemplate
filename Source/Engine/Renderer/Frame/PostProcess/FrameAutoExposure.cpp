@@ -81,7 +81,7 @@ namespace sw
         RHITextureDesc desc{};
         desc._width                   = 1;
         desc._height                  = 1;
-        desc._format                  = RHIFormat::R32G32_FLOAT; // R: 지금 EV(톤맵이 읽는다), G: 목표 EV(되읽어 적응이 남은 정도를 본다 — `readBackAdaptation`)
+        desc._format                  = getRenderPassTypeInfo( RenderPassType::AutoExposure )._pColorFormat[0]; // 측정 PSO 와 같은 포맷 한 곳(R 지금 EV · G 목표 EV)
         desc._bIsRenderTarget         = SW_TRUE;
         desc._bIsShaderResource       = SW_TRUE;
         IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();

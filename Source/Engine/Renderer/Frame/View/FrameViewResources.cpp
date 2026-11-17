@@ -304,7 +304,7 @@ namespace sw
         RHITextureDesc historyDesc{};
         historyDesc._width              = depth._width;
         historyDesc._height             = depth._height;
-        historyDesc._format             = RHIFormat::R32_FLOAT;
+        historyDesc._format             = getRenderPassTypeInfo( RenderPassType::DepthHistory )._pColorFormat[0]; // 복사 PSO 와 같은 포맷 한 곳
         historyDesc._bIsRenderTarget    = SW_TRUE;
         historyDesc._bIsShaderResource  = SW_TRUE;
         historyDesc._bIsUnorderedAccess = SW_TRUE;
