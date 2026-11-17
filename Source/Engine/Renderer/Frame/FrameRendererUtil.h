@@ -51,8 +51,10 @@ namespace sw
          * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::render::kMaxGPUTimestampSlot`(128)개입니다.
          * @details [뷰 패스 쌍 × kGPUTimedPassCapacity][프레임 패스 쌍 × kGPUTimedFramePassCapacity][빈 칸][예약 셋]. 뷰 패스는 앞에서부터 인덱스 × 2 쌍,
          *          프레임 패스(`_listFramePass`)는 그 뒤에서부터 인덱스 × 2 쌍을 쓴다(병렬 기록이라 흐르는 카운터가 아니라 고정 슬롯).
-         *          프레임 전체와 프레임 그래프는 **뒤쪽 세 슬롯**을 쓴다. 백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
+         *          프레임 전체와 프레임 그래프는 **뒤쪽 네 슬롯**을 쓴다. 백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
+         *          프레임 시작 · 끝 쌍은 `GPUFrameClock` 이 늘(Shipping 포함) 쓰고, 프레임 그래프 쌍은 프로파일러가 기록 중일 때만 쓴다.
          */
+        static constexpr uint32 kGPUTimestampSlotFrameEnd     = constant::render::kMaxGPUTimestampSlot - 4u;
         static constexpr uint32 kGPUTimestampSlotComputeBegin = constant::render::kMaxGPUTimestampSlot - 3u;
         static constexpr uint32 kGPUTimestampSlotComputeEnd   = constant::render::kMaxGPUTimestampSlot - 2u;
         static constexpr uint32 kGPUTimestampSlotFrameBegin   = constant::render::kMaxGPUTimestampSlot - 1u;
@@ -61,8 +63,10 @@ namespace sw
         /// @brief 뷰 패스 쌍이 쓰는 슬롯의 끝(미포함) = 프레임 패스 쌍의 첫 슬롯입니다.
         static constexpr uint32 kGPUTimestampPassSlotEnd        = kGPUTimedPassCapacity * 2u;
         static constexpr uint32 kGPUTimestampFramePassSlotBegin = kGPUTimestampPassSlotEnd;
+        /// @brief 예약 슬롯(프레임 끝 · 프레임 그래프 쌍 · 프레임 시작)의 첫 번호입니다.
+        static constexpr uint32 kGPUTimestampReservedSlotBegin = kGPUTimestampSlotFrameEnd;
         /// @brief GPU 시간을 측정할 수 있는 프레임 패스 수입니다(프레임 패스 종류는 열하나 — `isFramePassType`). 위 예약 슬롯과 겹치지 않게 합니다.
-        static constexpr uint32 kGPUTimedFramePassCapacity = ( kGPUTimestampSlotComputeBegin - kGPUTimestampFramePassSlotBegin ) / 2u;
+        static constexpr uint32 kGPUTimedFramePassCapacity = ( kGPUTimestampReservedSlotBegin - kGPUTimestampFramePassSlotBegin ) / 2u;
 
         /** @brief 프레임 패스 @p framePassIndex(`_listFramePass` 의 번호)의 시작 슬롯입니다(끝은 + 1). 측정 칸 밖이면 `constant::invalid_index::kUint32` 입니다. */
         static constexpr uint32 findFramePassTimestampSlot( size_t framePassIndex )

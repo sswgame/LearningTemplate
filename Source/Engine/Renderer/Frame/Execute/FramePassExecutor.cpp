@@ -125,6 +125,7 @@ namespace sw
         , _graphContext{}
         , _nanCheck{}
         , _nanCheckCommandList{}
+        , _frameEndCommandList{}
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
         , _frameArena{}
@@ -149,6 +150,7 @@ namespace sw
     {
         _frameGraphExecutor.releaseResources();
         _nanCheckCommandList.reset();
+        _frameEndCommandList.reset();
         _nanCheck.shutdown();
     }
 
@@ -160,6 +162,7 @@ namespace sw
         _frameGraphContext.reset();
         _frameCmd.reset();
         _asyncComputeCmd.reset();
+        _frameEndCommandList.reset();
         _pCmdOwnerDevice = nullptr;
         _pCmd            = nullptr;
     }
@@ -219,17 +222,16 @@ namespace sw
         _pendingPSOBatchCount.store( 0, std::memory_order_relaxed );
         _state._deform._animationTimer.updateTimer();
 
+        // 프레임의 첫 GPU 명령 위치다(Shipping 포함 — 자동 렌더 배율의 입력). 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
+        // 프리패스, 업로드, 배리어)이다. 쓸지는 시계가 정한다(`GPUFrameClock::readBack`).
+        _state._gpuFrameClock.writeFrameBegin( *_pCmd );
 #if SW_PROFILE_COMPILED
-        // 프레임의 첫 GPU 명령 위치다. 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
-        // 프리패스, 업로드, 배리어)이다. 게이트는 패스 타임스탬프와 같다(`onGraphPassExecute`).
+        // 프레임 그래프 구간은 프로파일러 기록 중일 때만 쓴다. 게이트는 패스 타임스탬프와 같다(`onGraphPassExecute`).
         const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
         const bool                   bWriteGPUTime = pTimestamps != nullptr && _state._gpuPassTimeline.isRecording() &&
-                                   FrameRendererUtil::kGPUTimestampSlotFrameBegin < pTimestamps->getTimestampSlotCount();
+                                   FrameRendererUtil::kGPUTimestampSlotComputeEnd < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
-        {
-            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotFrameBegin );
             _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotComputeBegin );
-        }
 #endif
 
         // 프레임 그래프(파이프라인 XML 의 `_listFramePass`) — 깊이 히스토리 · 입자 · 변형 · 컬링 · 라이트 그리드 등, 이번 프레임에 그리는 **모든 뷰**의 몫이다.
@@ -279,9 +281,26 @@ namespace sw
         renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::ViewportTarget );
         _state._frameContext        = _state._mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
+        writeFrameEndTimestamp( pDevice );
         // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
         _frameGraphExecutor.rememberDepthHistoryViews();
         return bOk;
+    }
+
+    void FramePassExecutor::writeFrameEndTimestamp( IRHIDevice* pDevice )
+    {
+        // 마지막 패스가 어느 리스트(병렬 레벨 · 추가 뷰)에서 끝나든 그 뒤에 제출되는 작은 리스트 하나에 끝 시각을 쓴다(같은 큐는 제출 순서로 실행된다).
+        if ( _state._gpuFrameClock.isWritingFrame() == false )
+            return;
+        if ( _frameEndCommandList == nullptr )
+            _frameEndCommandList = pDevice->createCommandList();
+        IRHICommandList* pCmd = _frameEndCommandList.get();
+        if ( pCmd == nullptr )
+            return;
+        pCmd->beginCommandList();
+        _state._gpuFrameClock.writeFrameEnd( *pCmd );
+        pCmd->endCommandList();
+        pDevice->executeCommandList( pCmd );
     }
 
     uint32 FramePassExecutor::renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind )

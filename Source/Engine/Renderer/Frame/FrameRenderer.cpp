@@ -237,6 +237,7 @@ namespace sw
         _pDevice                   = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않도록 버린다.
         _state._gpuPassTimeline.clearDevice();
+        _state._gpuFrameClock.clearDevice();
         _state._pTaskManager = nullptr;
         _status              = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
@@ -572,8 +573,13 @@ namespace sw
         _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
         _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
+        // 시계가 스위치를 맞추고 끝난 프레임을 읽는다(자동 렌더 배율 표본). 읽은 프레임 한 벌을 프로파일러도 받는다.
         if ( _host._pProfiler != nullptr )
-            _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass(), _pipelineResource.getFramePass() );
+        {
+            const RHITimestampFrame* pFrame = _state._gpuFrameClock.readBack( pDevice->findTimestampProvider(), _state._gpuPassTimeline.isRecording() );
+            if ( pFrame != nullptr )
+                _state._gpuPassTimeline.reportAndExport( pDevice, *pFrame, _pipelineResource.getGraphPass(), _pipelineResource.getFramePass() );
+        }
         return bOk;
     }
 
