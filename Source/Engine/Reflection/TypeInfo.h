@@ -114,6 +114,47 @@ namespace sw
         atomic<const TypeInfo*> _pType{ nullptr };
     };
 
+    /**
+     * @class TypeInheritedPropertySlot
+     * @brief 상속 병합 목록과 그 이름 맵의 **발행된 판**입니다(RCU). 읽고 쓰는 것은 `TypeInfo` 만이다(friend — `TypeParentLink` 와 같은 이유).
+     * @details 쓰는 쪽(`TypeRegistry` 의 독점 잠금 안 `TypeInfo::rebuildDerivedCaches`)은 새 판을 다 지은 뒤 원자 포인터 하나로 바꿔 끼우고, 옛 판은 지우지 않고
+     *          이 칸이 사는 동안(레지스트리 수명) 들고 있다 — 잠금 없이 판을 든 읽기(`getPropertiesWithBase` · `findPropertyInHierarchy`)가 끝까지 산 배열을 본다.
+     *          예전에는 같은 벡터를 잠금 밖에서 비우고 다시 채워(`clearInheritedProperties` → `rebuildDerivedCaches`), 별칭 · 모듈 등록이 자손을 다시 잇는 동안
+     *          다른 스레드의 읽기가 반쯤 찬 벡터를 보거나 "짓지 않았다" 로 멈췄다. 내용이 같은 판은 새로 두지 않아(`publish`) 옛 판은 실제로 바뀐 횟수만큼만 쌓인다.
+     *          언리얼 `UStruct` 의 `PropertyLink` 는 링크 때만 바뀌고 GC 가 옛 것을 거두며, 여기는 그 거두기 대신 레지스트리 수명으로 둔다(에디터 메타데이터의 옛 판과 같은 규칙).
+     */
+    class TypeInheritedPropertySlot
+    {
+    public:
+        /** @brief 발행되는 판 하나입니다. 발행 뒤에는 바뀌지 않는다. */
+        struct Snapshot
+        {
+            vector<const PropertyInfo*>                       _listProperty;      ///< 기반부터, 파생이 같은 이름을 제자리에서 덮는다
+            unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty; ///< 이름과 별칭에서 항목으로. 뒤의 항목(파생)이 앞(기반)을 덮는다
+        };
+
+    private:
+        friend struct TypeInfo;
+
+        /** @brief 지금 판입니다. nullptr 이면 아직 짓지 않았거나 비웠다. */
+        const Snapshot* load() const { return _pPublished.load( std::memory_order_acquire ); }
+        /** @brief @p pSnapshot 을 발행합니다. 지금 판과 목록이 같으면 두지 않습니다(옛 판이 쌓이지 않게). 쓰는 쪽은 하나다(레지스트리 잠금 · 사본은 그 스레드). */
+        void publish( unique_ptr<Snapshot> pSnapshot )
+        {
+            const Snapshot* const pCurrent = _pPublished.load( std::memory_order_relaxed );
+            if ( pCurrent != nullptr && pCurrent->_listProperty == pSnapshot->_listProperty )
+                return;
+            _pPublished.store( pSnapshot.get(), std::memory_order_release );
+            _listOwned.push_back( std::move( pSnapshot ) );
+        }
+        /** @brief 발행을 거둡니다(다음 조회는 "짓지 않았다"). 판 자체는 지우지 않는다 — 든 읽기가 있을 수 있다. */
+        void withdraw() { _pPublished.store( nullptr, std::memory_order_release ); }
+
+    private:
+        atomic<const Snapshot*>      _pPublished{ nullptr };
+        vector<unique_ptr<Snapshot>> _listOwned; ///< 지금 판과 옛 판 — 이 칸이 사는 동안 산다
+    };
+
     /// @brief 등록된 타입의 정보입니다. FQN, 프로퍼티, 메서드, 생성 가능 여부를 담습니다.
     struct SW_API TypeInfo
     {
@@ -159,12 +200,11 @@ namespace sw
         vector<hashed_string>            _listRemovedField;
         ReflectMetadataBox<TypeMetadata> _metadata; ///< `REFLECT()` 에 적은 메타데이터(`ReflectionMetadata.h`)
         /**
-         * @brief 상속 병합 목록입니다 — 기반부터, 파생이 같은 이름을 제자리에서 덮는다. 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
-         * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 다시 짓는다(`rebuildDerivedCaches`). 조회는 읽기만 한다 — `mutable` 지연 캐시가
-         *          워커의 첫 조회와 등록 사이에서 경합하던 자리다.
+         * @brief 상속 병합 목록과 그 이름 맵의 발행된 판입니다 — 원소는 선언한 타입의 `_listProperty` 를 가리킨다(`PropertyListView`).
+         * @details `TypeRegistry` 가 등록 · 해제 때 **그 타입과 자손만** 독점 잠금 안에서 새 판으로 바꾼다(`rebuildDerivedCaches`). 조회는 잠금 없이 판 하나를 읽는다
+         *          (`TypeInheritedPropertySlot`) — `mutable` 지연 캐시가, 다음에는 잠금 밖 제자리 다시 짓기가 워커의 조회와 경합하던 자리다.
          */
-        vector<const PropertyInfo*>                       _listPropertyWithBase;
-        unordered_map<hashed_string, const PropertyInfo*> _mapNameToPropertyWithBase; ///< 계층 병합 목록에서 이름과 별칭으로 항목을 찾는 맵이다. 목록과 함께 만든다
+        TypeInheritedPropertySlot                         _inheritedProperties;
         unordered_map<hashed_string, const PropertyInfo*> _mapNameToProperty;
         unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
         /**
@@ -195,9 +235,8 @@ namespace sw
         /** @brief `REFLECT( Static )` 타입(함수 라이브러리)입니다. `FunctionMetadata::_bStatic` 과는 다릅니다. */
         uint8 _bStatic : 1;
         /** @brief 내장 스칼라나 문자열 타입입니다(int32, bool, sw::string 등). REFLECT 코드젠이 없습니다. */
-        uint8 _bPrimitive                 : 1;
-        uint8 _bIsCacheBuilt              : 1; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
-        uint8 _bListPropertyWithBaseBuilt : 1; ///< 상속 병합 목록을 지었다(`rebuildDerivedCaches`). 부모가 있는데 아니면 `getPropertiesWithBase` 가 멈춘다
+        uint8 _bPrimitive    : 1;
+        uint8 _bIsCacheBuilt : 1; ///< 자기 이름 맵(`_mapNameToProperty` · `_mapNameToMethod`)을 지었다. 아니면 이름 조회는 선형으로 찾는다
         /**
          * @brief 아래 셋은 판정(POD · 세이브 · 검증)이고 `computeDerivedFlags` 가 한 번에 구한다 — 조회는 읽기만 한다(`mutable` 지연 계산이 없다).
          * @details 등록은 배치 끝에 바뀐 타입의 상속 목록을 **모두** 다시 지은 뒤 판정을 구한다(`TypeRegistry::rebuildAffected`) — 검증 판정이 칸 타입의
@@ -208,7 +247,7 @@ namespace sw
         uint8                  _bHasSaveGameProperty : 1;
         uint8                  _bHasValidator        : 1;
         uint8                  _bDerivedFlagsBuilt   : 1; ///< 위 셋을 구했다. 상속 목록을 비우면 함께 내려간다
-        [[maybe_unused]] uint8 _reservedCacheFlags   : 7;
+        [[maybe_unused]] uint8 _reservedCacheFlags   : 8;
         [[maybe_unused]] uint8 _reservedPadding[2];
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
@@ -312,9 +351,9 @@ namespace sw
             _castHeader._ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
         /**
-         * @brief 부모에게서 **물려받은** 캐시(상속 포함 목록, 그 이름 맵, POD · 세이브 · 검증 판정)를 비웁니다. 다시 지을 때까지 상속 목록을 물으면 멈춥니다.
-         * @details 기반이 다시 등록되거나 내려갈 때 `TypeRegistry` 가 **그 자손에게만** 부르고, 잠금을 푼 뒤 `rebuildDerivedCaches` 로 다시 짓는다.
-         *          예전에는 등록 한 번마다 모든 타입을 비워 등록 비용이 O(타입²) 였다.
+         * @brief 부모에게서 **물려받은** 캐시(상속 포함 목록 · 그 이름 맵의 발행, POD · 세이브 · 검증 판정)를 거둡니다. 다시 지을 때까지 상속 목록을 물으면 멈춥니다.
+         * @details 자기 내용이 바뀌는 대입 · 묘비만 부른다. 자손을 다시 잇는 일(`TypeRegistry::relinkAffectedLocked`)은 거두지 않고 새 판으로 바로 바꾼다 — 거둔 틈에 다른
+         *          스레드의 조회가 멈췄다. 옛 판은 지우지 않는다(`TypeInheritedPropertySlot`).
          */
         void clearInheritedProperties();
         /**
@@ -324,9 +363,11 @@ namespace sw
          */
         void invalidateDerivedCaches();
         /**
-         * @brief 자기 이름 맵과 상속 병합 목록 · 그 이름 맵을 지금의 부모 사슬로 다시 짓습니다. `TypeRegistry` 가 등록 · 해제 뒤 잠금 밖, 단일 스레드에서 부릅니다.
-         * @details 사슬의 단계마다 **자기 선언 목록**만 접어 넣으므로(부모의 병합 목록을 읽지 않는다) 같은 배치에서 부모가 아직 다시 지어지지 않았어도 답이 같다.
-         *          사슬이 순환하면(`_parentFQN` 이 자손을 가리키는 핫 리로드) 오류를 남기고 자기 목록만 둔다. 판정(POD · 세이브 · 검증)은 부르는 쪽이 이어서 구한다.
+         * @brief 자기 이름 맵(아직 없을 때만)을 짓고, 상속 병합 목록 · 그 이름 맵을 지금의 부모 사슬로 새 판으로 지어 발행합니다.
+         * @details 레지스트리에 든 타입은 `TypeRegistry` 가 독점 잠금 안에서 부른다(`relinkAffectedLocked` — 사슬 걷기는 레지스트리 타입에서 잠그지 않는다). 레지스트리를
+         *          다시 잠그거나 로그를 남기지 않는다. 사슬의 단계마다 **자기 선언 목록**만 접어 넣으므로(부모의 병합 목록을 읽지 않는다) 같은 배치에서 부모가 아직
+         *          다시 지어지지 않았어도 답이 같다. 사슬이 순환하면(`_parentFQN` 이 자손을 가리키는 핫 리로드) 자기 목록만 둔다 — 오류 로그는 잠금 밖
+         *          `TypeRegistry::rebuildAffected` 가 남긴다. 판정(POD · 세이브 · 검증)은 부르는 쪽이 이어서 구한다.
          */
         void rebuildDerivedCaches();
         /** @brief 레지스트리에 살아 있으면 true 입니다. 모듈을 해제하면 내려가고 다시 등록하면 올라갑니다. 사본은 항상 true 입니다. */
@@ -453,6 +494,8 @@ namespace sw
          * @details 비공개다 — 밖에서 `p = p->getParentType()` 으로 손으로 걸으면 고리 방지가 빠진다(고리 사슬에서 끝나지 않았다). 사슬은 `getTypeChain` 한 곳이 걷는다.
          */
         const TypeInfo* getParentType() const;
+        /** @brief 지금 발행된 상속 판입니다(부모가 있는 타입만). 짓지 않았으면 멈춘다 — 목록과 맵을 같은 판에서 읽도록 한 번만 부른다. */
+        const TypeInheritedPropertySlot::Snapshot& loadInheritedProperties() const;
     };
 
 } // namespace sw
