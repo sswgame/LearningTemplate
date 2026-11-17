@@ -830,13 +830,43 @@ namespace sw
          *        디스크리트 GPU 가 PCIe 로 읽는다). `DeviceLocal` 은 초기 데이터를 받지 않는다 — 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
          */
         RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory );
-        /** @brief 스테이징 → 기기 로컬 복사 하나와 뒤의 읽기 배리어(정점 입력 · 셰이더)를 @p cmd 에 기록합니다. */
-        void recordDeviceLocalUploadCopy( VkCommandBuffer cmd, RHIBufferHandle staging, RHIBufferHandle destination, uint32 sizeBytes );
-        /** @brief 쌓인 기기 로컬 업로드를 지금 프레임 세그먼트에 모두 기록하고 스테이징을 지연 해제합니다(렌더 스레드 — 세그먼트를 닫기 직전 · 프레임 시작). */
-        void recordPendingDeviceLocalUploads();
-        /** @brief 쌓인 기기 로컬 업로드를 일회성 커맨드버퍼로 내고 기다립니다 — 프레임 없이 장치를 기다리는 자리(`waitIdleInternal`)만 부른다. */
-        void flushPendingDeviceLocalUploadsNow();
-        /** @brief 이 스레드가 지금 프레임 스트림을 기록하는 렌더 스레드면 true 입니다 — 그때는 업로드를 줄에 쌓지 않고 바로 기록한다(같은 프레임의 그리기보다 앞). */
+        /// @brief 업로드 스테이징 블록입니다 — 호스트 보임 버퍼 하나를 매핑해 두고 앞에서부터 나눠 쓴다(전용이면 그 업로드 하나 몫).
+        struct UploadStagingBlock
+        {
+            RHIBufferHandle _buffer{ 0 };
+            uint8*          _pMapped{ nullptr };
+            uint64          _capacity{ 0 };
+            uint64          _offset{ 0 };
+            uint8           _bDedicated{ SW_FALSE };
+        };
+        /// @brief 닫은 업로드 커맨드버퍼 하나와 그 복사가 읽는 블록들입니다 — 제출한 뒤 GPU 가 끝나면 함께 돌려받는다.
+        struct UploadBatch
+        {
+            VkCommandBuffer            _buffer{ VK_NULL_HANDLE };
+            vector<UploadStagingBlock> _listBlock;
+        };
+        /** @brief 버퍼 복사 하나(원본 → 도착 구간)와 앞뒤 배리어(앞 읽기 → 전송 쓰기 → 정점 입력 · 셰이더 · 간접 인자 · 전송 읽기)를 @p cmd 에 기록합니다. */
+        void recordBufferUploadCopy( VkCommandBuffer cmd, VkBuffer source, uint64 sourceOffset, RHIBufferHandle destination, uint64 destinationOffset, uint64 sizeBytes );
+        /**
+         * @brief @p pData 를 업로드 스테이징에 쓰고 도착 구간으로의 복사를 업로드 커맨드버퍼에 기록합니다 — 아무 스레드나 부른다(`_uploadMutex`).
+         * @details 다음 그래픽스 제출(프레임 세그먼트 · 프레임 끝 · 즉시 제출 · 장치 대기)이 이 버퍼를 맨 앞에 둔다. 블록보다 크면 그 업로드만 전용 스테이징을 쓴다.
+         */
+        [[nodiscard]] bool recordUploadCopy( const void* pData, uint64 sizeBytes, RHIBufferHandle destination, uint64 destinationOffset );
+        /**
+         * @brief 열린 업로드 커맨드버퍼를 닫아 그 스테이징 블록과 함께 넘깁니다(없으면 `_buffer` 가 VK_NULL_HANDLE).
+         * @details 그래픽스 큐에 내는 쪽이 제출 직전에 부르고 `_buffer` 를 제출 배열 맨 앞에 둔다. 낸 뒤에는 반드시 `deferUploadBatchRetire`(프레임 펜스 뒤)나
+         *          `retireUploadBatch`(큐를 기다린 뒤) 중 하나로 돌려준다.
+         */
+        [[nodiscard]] UploadBatch takeUploadBatch();
+        /** @brief 이번 기록 시리얼(이 제출을 덮는 프레임 펜스)이 끝난 뒤 @p batch 를 돌려받게 겁니다. */
+        void deferUploadBatchRetire( UploadBatch&& batch );
+        /** @brief 다 쓴 업로드 커맨드버퍼와 블록을 지금 돌려받습니다(`_uploadMutex` 를 잡는다) — GPU 가 끝났다고 아는 쪽만 부른다. */
+        void retireUploadBatch( const UploadBatch& batch );
+        /** @brief 스테이징 블록 하나를 만들어 매핑합니다(@p bDedicated 면 그 크기 그대로). 실패하면 빈 블록입니다. */
+        UploadStagingBlock createStagingBlock( uint64 capacity, bool bDedicated );
+        /** @brief 렌더 스레드가 있고 이 스레드가 그것이 아니면 true 입니다 — 그 업로드는 프레임 세그먼트가 아니라 업로드 커맨드버퍼로 간다. */
+        bool isOtherThanRenderThread() const;
+        /** @brief 이 스레드가 지금 프레임 스트림을 기록하는 렌더 스레드면 true 입니다(렌더 스레드가 없으면 부르는 스레드가 그 자리) — 그때만 구조 버퍼 갱신을 프레임 스트림에 바로 기록한다(앞뒤 그리기와 기록 순서 그대로). */
         bool isRecordingFrameOnThisThread() const;
         /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
         void restoreDroppedFrameLayouts();
@@ -918,15 +948,15 @@ namespace sw
          */
         VkCommandPool _oneShotCommandPool;
         mutex         _oneShotMutex;
-        /// @brief 기기 로컬 버퍼의 첫 내용 업로드 줄입니다(`VulkanRHIResourceFactory::uploadDeviceLocal`) — 아무 스레드나 쌓고 렌더 스레드가 프레임 세그먼트 끝에서 한 번에 기록한다.
-        struct PendingDeviceLocalUpload
-        {
-            RHIBufferHandle _staging{ 0 };     ///< 호스트 보임 스테이징(복사를 기록한 뒤 펜스 지연 해제)
-            RHIBufferHandle _destination{ 0 }; ///< 기기 로컬 도착
-            uint32          _sizeBytes{ 0 };
-        };
-        mutex                            _deviceLocalUploadMutex;
-        vector<PendingDeviceLocalUpload> _listPendingDeviceLocalUpload; ///< `_deviceLocalUploadMutex` 아래
+        /// @brief 다른 스레드 · 프레임 밖 업로드를 담는 업로드 커맨드버퍼(`recordUploadCopy`)와 그 스테이징 — 모두 `_uploadMutex` 아래다.
+        ///        렌더 스레드가 그래픽스 큐에 낼 때 이 버퍼를 같은 제출 배열 맨 앞에 둔다(`takeUploadBatch`) — 같은 제출의 어느 세그먼트보다 먼저 실행된다.
+        mutex                      _uploadMutex;
+        VkCommandPool              _uploadCommandPool{ VK_NULL_HANDLE };
+        VkCommandBuffer            _openUploadBuffer{ VK_NULL_HANDLE };
+        UploadStagingBlock         _openStagingBlock;
+        vector<UploadStagingBlock> _listUsedStagingBlock;    ///< 열린 업로드 버퍼가 다 쓴 블록 · 전용 블록(제출과 함께 펜스 뒤 해제에 건다)
+        vector<UploadStagingBlock> _listFreeStagingBlock;    ///< 펜스가 지나 돌려받은 블록
+        uint64                     _uploadStagingBytes{ 0 }; ///< 블록 크기(`RHISwapChainDesc::_uploadStagingBytes`)
         /**
          * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit`, `vkQueueWaitIdle`, `vkQueuePresentKHR`, `vkDeviceWaitIdle`)을 보호합니다.
          * @details VkQueue 는 외부 동기화 대상이다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있다.

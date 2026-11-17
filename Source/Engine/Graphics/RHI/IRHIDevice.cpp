@@ -556,6 +556,7 @@ namespace sw
         // 정책 값은 EngineConfig 의 `_rhi` 하나다. 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
         const RHIConfig& rhiConfig                      = engine::getSubsystem<EngineConfig>()._rhi;
         swapChainDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
+        swapChainDesc._uploadStagingBytes               = static_cast<uint64>( rhiConfig._uploadStagingMegabytes ) * constant::memory::kBytesPerMegabyte;
         swapChainDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
         swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
         swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;

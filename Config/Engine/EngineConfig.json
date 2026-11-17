@@ -48,6 +48,7 @@
     "_deviceLostPolicy": "Quit",
     "_rhi": {
         "_allocationCountReserve": 256,
+        "_uploadStagingMegabytes": 32,
         "_pipelineCacheSaveIntervalSeconds": 300.0,
         "_bGPUBasedValidation": false,
         "_bSynchronizationValidation": false

@@ -298,6 +298,8 @@ namespace sw
         uint64 _stagingSoloMaxBytes{ 0 };
         /// @brief 장치 메모리 할당 수 한도에서 남겨 둘 칸입니다(`EngineConfig::_rhi._allocationCountReserve`). 할당을 세는 백엔드(Vulkan)는 0 이면 초기화를 거절한다. 리플렉션하지 않는다.
         uint32 _allocationCountReserve{ 0 };
+        /// @brief 업로드 스테이징 블록 크기(바이트)입니다(`EngineConfig::_rhi._uploadStagingMegabytes`). 블록을 나눠 쓰는 백엔드(Vulkan)는 0 이면 초기화를 거절한다. 리플렉션하지 않는다.
+        uint64 _uploadStagingBytes{ 0 };
         /// @brief 파이프라인 캐시 저장 주기(초)입니다(`EngineConfig::_rhi._pipelineCacheSaveIntervalSeconds`). 캐시를 디스크에 두는 백엔드(Vulkan)는 0 이하면 초기화를 거절한다. 리플렉션하지 않는다.
         float64 _pipelineCacheSaveIntervalSeconds{ 0.0 };
         /// @brief GPU 기반 검증을 켭니다(`EngineConfig::_rhi._bGPUBasedValidation`, 디버그 레이어가 켜진 구성만). 리플렉션하지 않는다.

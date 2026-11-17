@@ -14,7 +14,6 @@
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingPlacement.h"
 #include "Engine/Graphics/RHI/Transfer/RHITextureTransferDriver.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -268,6 +267,25 @@ namespace sw
         if ( totalSize == 0 )
             return;
 
+        // 프레임을 기록하는 렌더 스레드가 아니면(워커 · 프레임 밖) 업로드 커맨드버퍼로 보낸다 — 프레임 커맨드버퍼는 렌더 스레드만 만진다.
+        // 다음 그래픽스 제출(세그먼트 · 프레임 끝 · 즉시 제출 · 장치 대기)이 그 버퍼를 맨 앞에 둔다(DX12 의 앞세운 복사 리스트와 같은 자리).
+        if ( _pDevice->isRecordingFrameOnThisThread() == false )
+        {
+            const uint8* pSource = static_cast<const uint8*>( pBaseSource );
+            for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+            {
+                const RHIBufferCopyRegion& region = pRegions[regionIndex];
+                if ( region._sizeBytes == 0 || region._dstOffset >= pRecord->_sizeBytes )
+                    continue;
+                uint64 copySize = region._sizeBytes;
+                if ( copySize > pRecord->_sizeBytes - region._dstOffset )
+                    copySize = pRecord->_sizeBytes - region._dstOffset;
+                if ( _pDevice->recordUploadCopy( pSource + region._srcOffset, copySize, buffer, region._dstOffset ) == false )
+                    SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateStructuredBufferUploadFailed", "updateStructuredBuffer: failed to record a %#-byte upload", copySize );
+            }
+            return;
+        }
+
         uint64   stagingOffset{ 0 };
         VkBuffer stagingBuffer{ VK_NULL_HANDLE };
         if ( acquireStructuredUploadStaging( totalSize, stagingOffset, stagingBuffer ) == false )
@@ -300,32 +318,10 @@ namespace sw
         if ( listRegion.empty() )
             return;
 
-        // 프레임 안이면 프레임 스트림에 기록한다(제출 순서상 이번 프레임의 패스 리스트보다 앞). 프레임 밖
-        // (초기 업로드 · 테스트)이면 일회성 커맨드버퍼로 제출하고 큐가 비기를 기다린다.
-        VkCommandBuffer cmd      = ( _pDevice->_bFrameStarted == SW_TRUE ) ? _pDevice->_activeFrameBuffer : VK_NULL_HANDLE;
-        const bool      bOneShot = ( cmd == VK_NULL_HANDLE );
-
-        // 프레임 밖이면 일회성 커맨드버퍼를 쓴다. **해제는 소멸자가 하므로** 나중에 이 사이에 검사가
-        // 하나 더 생겨도 커맨드 버퍼가 새지 않는다.
-        optional<VulkanOneShotCommands> oneShot;
-        if ( bOneShot )
-        {
-            if ( _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )
-                return;
-
-            oneShot.emplace( _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue, _pDevice->_queueMutex );
-            if ( oneShot->isValid() == false )
-            {
-                SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateStructuredBufferFailedAllocateOne", "updateStructuredBuffer: failed to allocate the one-shot command buffer" );
-                return;
-            }
-            cmd = oneShot->get();
-        }
-        else
-        {
-            // 패스 안에는 복사를 기록할 수 없다. 렌더 스레드의 위반은 위 판정(requireNoOpenRenderPassForUpload)이 알리고 닫았다 — 남은 것은 공용 상태와 함께 닫는다.
-            _pDevice->_frameStreamContext->endRenderPass();
-        }
+        // 렌더 스레드가 기록 중인 프레임 스트림에 넣는다(같은 스레드의 앞뒤 그리기와 기록 순서 그대로).
+        const VkCommandBuffer cmd = _pDevice->_activeFrameBuffer;
+        // 패스 안에는 복사를 기록할 수 없다. 렌더 스레드의 위반은 위 판정(requireNoOpenRenderPassForUpload)이 알리고 닫았다 — 남은 것은 공용 상태와 함께 닫는다.
+        _pDevice->_frameStreamContext->endRenderPass();
 
         // 앞 프레임의 읽기(셰이더 · 간접 인자 · 컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
         // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다. 보수적인 마스크로 양쪽을 다 덮는다.
@@ -352,34 +348,20 @@ namespace sw
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = kConsumerAccess;
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, kConsumerStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
-
-        if ( oneShot.has_value() && oneShot->endSubmitAndWait() == false )
-            _pDevice->reportQueueResult( static_cast<int32>( oneShot->getLastResult() ), "updateStructuredBuffer: one-shot submit" );
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::uploadDeviceLocal( RHIBufferHandle handle, const void* pData, uint32 sizeBytes )
     {
         if ( handle == 0 )
             return 0;
-        // 첫 내용은 호스트 보임 스테이징에 쓰고 복사는 기다리지 않는다 — 렌더 스레드가 프레임을 기록 중이면 지금 세그먼트에 바로, 아니면(워커 · 프레임 밖) 줄에 쌓아
-        // 렌더 스레드가 다음 세그먼트 끝(리스트 제출 · 프레임 끝)이나 프레임 시작에 한 번에 기록한다. 그 버퍼를 읽는 리스트는 그 뒤에 제출되므로 복사가 먼저 실행된다.
-        // 스테이징은 복사를 기록한 뒤 펜스 지연 해제다(DX12 스테이징 슬롯과 같은 자리 — CPU 대기 없음).
-        const RHIBufferHandle staging = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, pData, 0, VulkanBufferMemory::HostVisible );
-        if ( staging == 0 )
+        // 첫 내용은 업로드 커맨드버퍼로 간다(링 스테이징에 나눠 쓰고 CPU 대기 없음). 다음 그래픽스 제출이 그 버퍼를 제출 배열 맨 앞에 두므로,
+        // 새 버퍼를 읽는 어느 그리기(이 호출 뒤에 기록된다)보다 먼저 실행된다 — 렌더 스레드 · 워커 · 프레임 밖 모두 같은 길이다.
+        if ( _pDevice->recordUploadCopy( pData, sizeBytes, handle, 0 ) == false )
         {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.DeviceLocalUploadFailed", "Failed to create a %#-byte staging buffer for a device-local upload", sizeBytes );
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.DeviceLocalUploadFailed", "Failed to record a %#-byte device-local upload", sizeBytes );
             destroyBuffer( handle );
             return 0;
         }
-        if ( _pDevice->isRecordingFrameOnThisThread() )
-        {
-            _pDevice->_frameStreamContext->endRenderPass(); // 복사는 패스 밖이다
-            _pDevice->recordDeviceLocalUploadCopy( _pDevice->_activeFrameBuffer, staging, handle, sizeBytes );
-            destroyBuffer( staging );
-            return handle;
-        }
-        ScopedLock<mutex> lock{ _pDevice->_deviceLocalUploadMutex };
-        _pDevice->_listPendingDeviceLocalUpload.push_back( VulkanRHIDevice::PendingDeviceLocalUpload{ staging, handle, sizeBytes } );
         return handle;
     }
 

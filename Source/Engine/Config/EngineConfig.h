@@ -231,6 +231,13 @@ namespace sw
         PROPERTY( Min = 1 )
         uint32 _allocationCountReserve{};
 
+        /**
+         * @brief 다른 스레드 · 프레임 밖 버퍼 업로드가 쓰는 스테이징 블록 하나의 크기(MB)입니다(Vulkan 업로드 커맨드버퍼 — 블록을 나눠 쓰고 프레임 펜스 뒤에 돌려받는다).
+         * @details 한 업로드가 블록보다 크면 그 업로드만 전용 스테이징을 쓴다. DX12 의 구조 버퍼 스테이징 슬롯 자리다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _uploadStagingMegabytes{};
+
         /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
         PROPERTY( Min = 1, Units = s )
         float64 _pipelineCacheSaveIntervalSeconds{};
