@@ -398,7 +398,7 @@ namespace sw
              *          것인가" 를 파일 시간이 아니라 내용으로 확인하기 위한 것이다. 파일 시간은
              *          `git clone` 이 모두 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
              *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 이고, 소스가 연 헤더마다 `<해시> <소스 경로>?<헤더 키>` 줄이 더 있다(`makeHeaderKey`).
-             *          해시는 CR 을 뺀 바이트로 계산한다(`ContentHash::computeFile`). 판정 쪽과 같은 함수다.
+             *          해시는 원시 바이트로 계산한다(`ContentHash::computeFile`). 판정 쪽과 같은 함수다.
              * @param resolver include 규칙 — 다른 include 루트 도메인의 자리
              * @param sourceShadersDir 소스 폴더(`<리소스 루트>/<domain>/shaders`) — 스탬프 키가 이 폴더 기준이다
              * @param binDirectory 매니페스트를 쓴 폴더(`<쿠킹 스테이징>/<domain>/shaders/bin/<rhi>`)
