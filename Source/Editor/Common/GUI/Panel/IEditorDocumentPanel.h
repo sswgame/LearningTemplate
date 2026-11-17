@@ -14,6 +14,14 @@
 
 namespace sw::editor
 {
+    /** @brief 문서 자동 저장 사본을 꺼낸 결과입니다(`IEditorDocumentPanel::takeAutosaveCopy`). */
+    enum class DocumentAutosaveResult : uint8
+    {
+        Nothing,  ///< 쓸 것이 없다(깨끗하다 · 지난 사본과 같다 · 사본을 두지 않는 문서)
+        Deferred, ///< 끌기 · 글 칸 같은 상호작용 구간 중이다 — 구간 중간 상태를 사본으로 두지 않게 다음 프레임으로 미룬다
+        Ready     ///< 사본으로 쓸 문서 id 와 글을 꺼냈다
+    };
+
     /**
      * @class IEditorDocumentPanel
      * @brief 저장할 문서를 가진 패널입니다. 파생은 `saveDocument` · `revertDocument` 를 구현하고 편집을 `markDocumentDirty` 로 알립니다.
@@ -86,6 +94,12 @@ namespace sw::editor
          *          자기 모델에 두어 글 왕복이 없다고 답한다. 언리얼 트랜잭션 테스트 · 유니티 Undo 테스트의 실행 → 되돌리기 → 상태 비교와 같은 자리다.
          */
         [[nodiscard]] virtual expected<void> checkUndoRoundTrip() = 0;
+        /**
+         * @brief 자동 저장 사본으로 쓸 문서 id 와 글을 꺼냅니다(감사 E-1 — 문서 패널 자동 저장). 꺼냈으면 같은 글은 다시 내지 않는다.
+         * @details 두 기반이 정한다(순수 가상) — 에셋 문서는 연 문서의 글(문서 되돌리기와 같은 `captureDocumentText`), 상태 문서는 기록을 자기 모델에 두어 사본이 없다고 답한다.
+         *          언리얼 `FPackageAutoSaver` 가 dirty 패키지를 모두 사본으로 두고, 끌기 같은 상호작용 중이면 미루는 것과 같은 자리다.
+         */
+        [[nodiscard]] virtual DocumentAutosaveResult takeAutosaveCopy( string& outDocumentPath, string& outText ) = 0;
 
     private:
         friend class IEditorPanel; // 셸(`draw` · `requestClose`)이 문서 상태를 묻고 확인을 띄운다

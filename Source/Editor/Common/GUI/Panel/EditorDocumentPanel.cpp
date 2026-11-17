@@ -7,6 +7,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
+#include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/GUI/Panel/Model/EditorDocumentOpenUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -26,6 +28,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -184,6 +187,7 @@ namespace sw::editor
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
+        , _lastCopyTextHash{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
@@ -228,6 +232,9 @@ namespace sw::editor
 
     void EditorDocumentPanel::onDocumentSaved()
     {
+        // 저장한 원본이 사본보다 새것이다 — 남기면 다음 기동이 이미 저장한 일을 복구하라고 묻는다(씬 자동 저장의 `onSceneSaved` 와 같다)
+        EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
+        _lastCopyTextHash       = 0;
         EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 컨텍스트 없는 패널 테스트는 감시도 없다
         if ( _loadedAssetPath.empty() == false && pContext != nullptr )
             pContext->getSubsystem<AssetHotReload>().applySavedAsset( _loadedAssetPath );
@@ -290,6 +297,28 @@ namespace sw::editor
         clearDocumentDirty();
         resetDocumentHistory();
         syncDocumentUndoBaseline();
+        // 디스크의 글로 (다시) 읽었다 — 앞 편집의 사본은 낡았다(저장 안 함 · 다시 읽기). 복구 청이 이 문서면 사본 글을 되돌리기와 같은 길로 적용해 dirty 로 둔다(감사 E-1).
+        EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
+        _lastCopyTextHash = 0;
+        string restoredText;
+        if ( _loadedAssetPath.empty() == false && EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText ) )
+            restoreDocumentFromUndo( restoredText );
+    }
+
+    DocumentAutosaveResult EditorDocumentPanel::takeAutosaveCopy( string& outDocumentPath, string& outText )
+    {
+        if ( isDocumentDirty() == false || _bLoadFailed == SW_TRUE || _loadedAssetPath.empty() )
+            return DocumentAutosaveResult::Nothing;
+        if ( _pEditSpan->isHolding() || isWidgetInteractionActive() )
+            return DocumentAutosaveResult::Deferred; // 끄는 중간 상태를 사본으로 두지 않는다 — 다음 프레임에 다시 묻는다
+        string       text     = captureDocumentText();
+        const uint64 textHash = text.empty() ? 0u : ContentHash::computeBytes( reinterpret_cast<const uint8*>( text.data() ), text.size() );
+        if ( textHash == 0 || textHash == _lastCopyTextHash )
+            return DocumentAutosaveResult::Nothing; // 문서 글이 없는 패널이거나 지난 사본과 같다
+        _lastCopyTextHash = textHash;
+        outDocumentPath   = _loadedAssetPath;
+        outText           = std::move( text );
+        return DocumentAutosaveResult::Ready;
     }
 
     void EditorDocumentPanel::markDocumentLoadFailed( string_view reason )

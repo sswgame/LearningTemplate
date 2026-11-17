@@ -59,6 +59,8 @@ namespace sw::editor
         uint32 _undoMaxCommandCount{}; ///< 되돌리기 스택 하나(메인 · 문서 창마다)의 명령 수 한도 — 넘으면 가장 오래된 것부터 버린다(`UndoBufferLimit`)
         PROPERTY( Required )
         uint32 _undoBufferMegabytes{}; ///< 되돌리기 스택 하나가 쥘 바이트 한도(MB) — 언리얼 에디터 설정 Undo Buffer Size 와 같은 값이다(감사 E-13)
+        PROPERTY( Required )
+        float32 _documentAutosaveSeconds{}; ///< 문서 패널 자동 저장 사본의 주기(초) — dirty 문서를 이만큼마다 세션 폴더에 사본으로 둔다(`EditorDocumentAutosaveScheduler`, 감사 E-1)
 
         /**
          * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.

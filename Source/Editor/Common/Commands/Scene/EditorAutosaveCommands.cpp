@@ -11,6 +11,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -50,18 +51,22 @@ namespace sw::editor
             /** @brief 세션 하나의 자동 저장 상태입니다. 에디터 상태 저장소가 소유한다(UI 스레드만). */
             struct State
             {
-                vector<EditorAutosaveEntry> _listRecoverable{};
-                Stopwatch                   _sinceSnapshot{};
-                string                      _sessionFolder{};         ///< 이 세션의 폴더(`Autosave/<pid>-<시각>`). 비면 세션을 열지 못했다 — 사본을 쓰지 않는다
-                string                      _pendingSnapshotID{};     ///< 복원으로 연 사본의 id(`normalizeAssetID`). 활성 씬이 이 id 로 열리면 소스를 돌린다
-                string                      _pendingSlotFolder{};     ///< 그 사본의 씬 칸 폴더. 다 열리면 지운다(씬이 dirty 로 메모리에 있고 다음 사본은 이 세션 폴더에 간다)
-                string                      _pendingSourceID{};       ///< 그 원래 id. 비면 새 씬(원본 없음)이다
-                uint64                      _pendingGeneration{ 0 };  ///< 복원을 청한 때의 씬 세대
-                uint32                      _snapshotEditSerial{ 0 }; ///< 지난 사본 때의 편집 번호(`EditorWorkspace::getSceneEditSerial`)
-                uint32                      _writtenCount{ 0 };
-                uint32                      _restoredCount{ 0 };
-                bool                        _bSessionBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                        _bMounted{ false };      ///< NOLINT(sw-bool-flag): 위와 같다
+                vector<EditorAutosaveEntry>         _listRecoverable{};
+                vector<EditorDocumentAutosaveEntry> _listRecoverableDocument{}; ///< 문서 패널의 복구 후보(감사 E-1)
+                string                              _pendingDocumentPath{};     ///< 복원을 청한 문서(그 문서 패널이 읽으면 사본 글을 적용한다)
+                string                              _pendingDocumentText{};     ///< 그 사본 글
+                uint32                              _restoredDocumentCount{ 0 };
+                Stopwatch                           _sinceSnapshot{};
+                string                              _sessionFolder{};         ///< 이 세션의 폴더(`Autosave/<pid>-<시각>`). 비면 세션을 열지 못했다 — 사본을 쓰지 않는다
+                string                              _pendingSnapshotID{};     ///< 복원으로 연 사본의 id(`normalizeAssetID`). 활성 씬이 이 id 로 열리면 소스를 돌린다
+                string                              _pendingSlotFolder{};     ///< 그 사본의 씬 칸 폴더. 다 열리면 지운다(씬이 dirty 로 메모리에 있고 다음 사본은 이 세션 폴더에 간다)
+                string                              _pendingSourceID{};       ///< 그 원래 id. 비면 새 씬(원본 없음)이다
+                uint64                              _pendingGeneration{ 0 };  ///< 복원을 청한 때의 씬 세대
+                uint32                              _snapshotEditSerial{ 0 }; ///< 지난 사본 때의 편집 번호(`EditorWorkspace::getSceneEditSerial`)
+                uint32                              _writtenCount{ 0 };
+                uint32                              _restoredCount{ 0 };
+                bool                                _bSessionBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                                _bMounted{ false };      ///< NOLINT(sw-bool-flag): 위와 같다
             };
 
             static State& getState() { return getEditorState<State>(); }
@@ -238,14 +243,23 @@ namespace sw::editor
                 if ( listRecoveredFolder.empty() == false )
                 {
                     scanRecoverable( listRecoveredFolder, state._listRecoverable );
+                    scanRecoverableDocuments( listRecoveredFolder, state._listRecoverableDocument );
                     // 리로드로 이었으면 같은 후보를 앞선 인스턴스가 이미 알렸다 — 창을 다시 열지 않는다
-                    if ( state._listRecoverable.empty() == false && bResumed == false )
+                    if ( ( state._listRecoverable.empty() == false || state._listRecoverableDocument.empty() == false ) && bResumed == false )
                     {
-                        SW_LOG_WARNING_ID( "EditorAutosaveCommands.RecoveryOffered", "Autosave: the last editor session did not close - %# scene copy(ies) can be recovered (Window > Recovered Work)", state._listRecoverable.size() );
+                        SW_LOG_WARNING_ID( "EditorAutosaveCommands.RecoveryOffered",
+                                           "Autosave: the last editor session did not close - %# scene copy(ies) and %# document copy(ies) can be recovered (Window > Recovered Work)",
+                                           state._listRecoverable.size(), state._listRecoverableDocument.size() );
                         editor::getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kRecoveredScene.getView() );
                     }
                 }
                 state._bMounted = editor::getSubsystem<AssetPaths>().mountDiskDomain( EditorAutosaveCommands::kDomain, folder ); // 거절하면 이유를 로그로 남긴다(복원만 막힌다)
+            }
+
+            /** @brief 세션 폴더들의 문서 사본을 복구 후보로 모읍니다(다른 프로젝트 · 바뀐 원본은 거절 이유를 단다). 원본 해시는 씬과 같은 `computeSourceHash` 다. */
+            static void scanRecoverableDocuments( const vector<string>& listSessionFolder, vector<EditorDocumentAutosaveEntry>& outListEntry )
+            {
+                EditorDocumentAutosaveEntry::scan( listSessionFolder, ProcessRoots::get()._project.str(), &computeSourceHash, outListEntry );
             }
 
             /** @brief 지금 씬의 사본 폴더에서 @p keepCount 를 넘는 오래된 세대를 지웁니다. */
@@ -375,6 +389,36 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readRecoverableDocumentCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+                    return false;
+                outValue = static_cast<float64>( EditorAutosaveCommands::getRecoverableDocuments().size() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readRestoredDocumentCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+                    return false;
+                outValue = static_cast<float64>( EditorAutosaveCommands::getRestoredDocumentCount() );
+                return true;
+            }
+
+            static bool runRestoreDocument( const vector<string>& listArgument, string& outReply )
+            {
+                int32 index{ 0 };
+                if ( listArgument.size() != 1 || StringUtil::parseInt( listArgument[0], index ) == false || index < 0 )
+                    return false;
+                if ( EditorAutosaveCommands::restoreDocument( static_cast<uint32>( index ) ) == false )
+                {
+                    outReply = "document copy " + listArgument[0] + " was not restored (refused, unreadable or no such copy)";
+                    return false;
+                }
+                outReply = "opening the document of copy " + listArgument[0];
+                return true;
+            }
+
             [[nodiscard]] static bool readRestoredCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 if ( editor::findSubsystem<EditorStateStore>() == nullptr )
@@ -394,6 +438,12 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorAutosaveSnapshotCount, "Editor.AutosaveSnapshotCount", "Autosave copies written this session", &EditorAutosaveCommandsInternal::readSnapshotCount );
     SW_AUTOMATION_WATCH( editorAutosaveRecoverableCount, "Editor.AutosaveRecoverableCount", "Scene copies offered for recovery (left by a session that did not close)",
                          &EditorAutosaveCommandsInternal::readRecoverableCount );
+    SW_AUTOMATION_WATCH( editorAutosaveDocumentRecoverableCount, "Editor.AutosaveDocumentRecoverableCount", "Document copies offered for recovery (left by a session that did not close)",
+                         &EditorAutosaveCommandsInternal::readRecoverableDocumentCount );
+    SW_AUTOMATION_WATCH( editorAutosaveDocumentRestoredCount, "Editor.AutosaveDocumentRestoredCount", "Document copies restored this session",
+                         &EditorAutosaveCommandsInternal::readRestoredDocumentCount );
+    SW_DEV_COMMAND( AutosaveRestoreDocument, "autosave.restoreDocument", "autosave.restoreDocument <index>",
+                    "Restore document copy <index> of Recovered Work (opens the document and applies the copy)", &EditorAutosaveCommandsInternal::runRestoreDocument );
     SW_AUTOMATION_WATCH( editorAutosaveRestoredCount, "Editor.AutosaveRestoredCount", "Autosave copies restored this session", &EditorAutosaveCommandsInternal::readRestoredCount );
 
     void EditorAutosaveCommands::tick()
@@ -467,8 +517,85 @@ namespace sw::editor
         // 모든 세션 폴더(이 세션 것 포함)를 비정상 종료가 남긴 것처럼 읽는다 — 개발 명령 `autosave.rescan` 의 시나리오용
         vector<string> listSessionFolder;
         (void)FileUtil::collectFolders( EditorAutosaveCommandsInternal::getFolder(), listSessionFolder, false ); // 폴더가 없으면 후보도 없다
-        EditorAutosaveCommandsInternal::scanRecoverable( listSessionFolder, EditorAutosaveCommandsInternal::getState()._listRecoverable );
-        return static_cast<uint32>( EditorAutosaveCommandsInternal::getState()._listRecoverable.size() );
+        EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
+        EditorAutosaveCommandsInternal::scanRecoverable( listSessionFolder, state._listRecoverable );
+        EditorAutosaveCommandsInternal::scanRecoverableDocuments( listSessionFolder, state._listRecoverableDocument );
+        return static_cast<uint32>( state._listRecoverable.size() + state._listRecoverableDocument.size() );
+    }
+
+    string EditorAutosaveCommands::getSessionFolder()
+    {
+        if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+            return {};
+        return EditorAutosaveCommandsInternal::getState()._sessionFolder;
+    }
+
+    const vector<EditorDocumentAutosaveEntry>& EditorAutosaveCommands::getRecoverableDocuments()
+    {
+        return EditorAutosaveCommandsInternal::getState()._listRecoverableDocument;
+    }
+
+    bool EditorAutosaveCommands::restoreDocument( uint32 index )
+    {
+        EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
+        if ( index >= state._listRecoverableDocument.size() )
+            return false;
+        const EditorDocumentAutosaveEntry& entry = state._listRecoverableDocument[index];
+        if ( entry._refusal.empty() == false )
+        {
+            SW_LOG_WARNING_ID( "EditorAutosaveCommands.DocumentRestoreRefused", "Autosave: document '%#' was not restored - %#", entry._documentPath, entry._refusal );
+            return false;
+        }
+        string text;
+        if ( entry.readText( text ) == false )
+        {
+            SW_LOG_WARNING_ID( "EditorAutosaveCommands.DocumentCopyUnreadable", "Autosave: the copy of document '%#' could not be read", entry._documentPath );
+            return false;
+        }
+        // 문서 열기와 같은 길(워크스페이스 포커스)이다 — 맞는 문서 패널이 받아 읽고, 읽은 직후 이 청을 꺼내 사본 글을 적용한다(takePendingDocumentRestore).
+        state._pendingDocumentPath = entry._documentPath;
+        state._pendingDocumentText = std::move( text );
+        editor::getSubsystem<EditorWorkspace>().setFocusedAssetPath( state._pendingDocumentPath.c_str() );
+        return true;
+    }
+
+    void EditorAutosaveCommands::discardDocument( uint32 index )
+    {
+        vector<EditorDocumentAutosaveEntry>& listEntry = EditorAutosaveCommandsInternal::getState()._listRecoverableDocument;
+        if ( index >= listEntry.size() )
+            return;
+        (void)FileUtil::tryRemoveFile( listEntry[index]._textAbs );
+        SW_LOG_INFO_ID( "EditorAutosaveCommands.DocumentDiscarded", "Autosave: discarded the copy of document '%#'", listEntry[index]._documentPath );
+        listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( index ) );
+    }
+
+    bool EditorAutosaveCommands::takePendingDocumentRestore( string_view documentPath, string& outText )
+    {
+        if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+            return false;
+        EditorAutosaveCommandsInternal::State& state = EditorAutosaveCommandsInternal::getState();
+        if ( state._pendingDocumentPath.empty() || state._pendingDocumentPath != documentPath )
+            return false;
+        outText                                        = std::move( state._pendingDocumentText );
+        vector<EditorDocumentAutosaveEntry>& listEntry = state._listRecoverableDocument;
+        for ( const EditorDocumentAutosaveEntry& entry : listEntry )
+        {
+            if ( entry._documentPath == documentPath )
+                (void)FileUtil::tryRemoveFile( entry._textAbs ); // 문서가 dirty 로 메모리에 있다 — 남기면 다음 기동이 같은 사본을 또 묻는다
+        }
+        listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [documentPath]( const EditorDocumentAutosaveEntry& entry )
+        { return entry._documentPath == documentPath; } ),
+                         listEntry.end() );
+        state._pendingDocumentPath.clear();
+        state._pendingDocumentText.clear();
+        ++state._restoredDocumentCount;
+        SW_LOG_INFO_ID( "EditorAutosaveCommands.DocumentRestored", "Autosave: restored document '%#' from its copy - save to keep it", documentPath );
+        return true;
+    }
+
+    uint32 EditorAutosaveCommands::getRestoredDocumentCount()
+    {
+        return EditorAutosaveCommandsInternal::getState()._restoredDocumentCount;
     }
 
     bool EditorAutosaveCommands::restore( uint32 index )

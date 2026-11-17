@@ -10,10 +10,12 @@
      Cancel 이면 씬 · 후보가 그대로다(편집이 묻지 않고 사라지지 않는다). 옛 코드는 확인 없이 바로 열어 unsaved.cancel 표시가 없고 후보가 0 이 된다.
   ⑤ Discard 를 누르면 후보가 0 이다. 정상 저장은 그 씬의 사본을, 편집기 종료는 자기 세션 폴더를 지운다(EditorAutosaveCommands::onSceneSaved · endSession).
   ⑥ 저장한 적 없는 새 씬(editor scene.new)도 고치면 사본을 쓴다(untitled-<씬 세대> 칸 — 언리얼 Untitled 패키지 · 유니티 씬 백업). 옛 코드는 원본 없는 씬을 건너뛰어 사본 수가 늘지 않는다.
+  ⑦ 문서 패널(입력 맵 편집기)도 dirty 면 사본을 쓰고(autosave.documentsNow), 후보로 읽어 복원하면 문서를 다시 읽은 자리에 사본 글이 적용되어 dirty 다(감사 E-1).
   볼 그림: autosave/recovered.png(후보 한 줄, Restore · Discard 단추). 볼 값: Editor.AutosaveSnapshotCount 1 → 2 → 3, Editor.AutosaveRestoredCount 1.
   실행: App -EnableEditor -scenario=engine/automation/editor/autosave.scenario.xml -unattended
 -->
 <Scenario name="editor.autosave" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/input" as="scratch/autosaveinputmap"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
@@ -117,6 +119,45 @@
 	<EditorClick mark="recoveredWork.discard.0" state="Up"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
+	<!-- ⑦ 문서 패널 자동 저장(감사 E-1): 입력 맵 편집기(문서 패널)의 바인딩을 고치고 문서 사본을 쓴다(autosave.documentsNow — 주기 대신, 쓰기는 워커).
+	     후보로 읽은 뒤 복원하면 문서를 다시 읽은 자리에 사본 글이 적용되어 dirty 다(옛 코드는 문서 사본이 없어 Editor.AutosaveDocumentCopyCount 가 0 이다). -->
+	<Variable name="gv_editorWatchPanel" value="input_map"/>
+	<DevCommand line="panel.focus input_map"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
+	<EditorWaitStable/>
+	<!-- 사본은 연 문서 경로가 있는 문서만 둔다 — 실행마다 새 사본 문서를 연다(원본을 건드리지 않는다) -->
+	<DevCommand line="asset.openScratch scratch/autosaveinputmap/default.input.xml"/>
+	<EditorWaitStable/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<EditorClick mark="inputMap.filter"/>
+	<EditorWaitStable/>
+	<EditorText value="Confirm"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inputMap.action.Confirm"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inputMap.binding.0.trigger"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inputMap.trigger.4"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
+	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<DevCommand line="autosave.documentsNow"/>
+	<WaitUntil watch="Editor.AutosaveDocumentCopyCount" atLeast="1" timeoutFrames="300"/>
+	<DevCommand line="autosave.rescan"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.AutosaveDocumentRecoverableCount" equals="1"/>
+	<DevCommand line="autosave.restoreDocument 0"/>
+	<DevCommand line="panel.reloadDocument input_map"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.AutosaveDocumentRestoredCount" equals="1"/>
+	<Expect watch="Editor.AutosaveDocumentRecoverableCount" equals="0"/>
+	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<Expect watch="Editor.InputMapSelectedTrigger" equals="4"/>
+	<!-- 복원한 편집은 버린다(사본 문서 파일은 그대로) -->
+	<DevCommand line="panel.reloadDocument input_map"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<!-- 고친 씬을 열어 둔 채 끝내지 않는다 -->
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
