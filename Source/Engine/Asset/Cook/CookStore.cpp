@@ -14,16 +14,19 @@
 
 namespace sw
 {
-    CookStore::CookStore( string recordRootPath, string ddcRootPath )
+    CookStore::CookStore( string recordRootPath, DerivedDataCache derivedDataCache )
         : _recordRootPath{ std::move( recordRootPath ) }
-        , _derivedDataCache{ std::move( ddcRootPath ) }
+        , _derivedDataCache{ std::move( derivedDataCache ) }
         , _outputHashNanos{ 0 }
     {
     }
 
-    CookStore CookStore::makeLocal()
+    expected<CookStore> CookStore::makeLocal()
     {
-        return CookStore{ FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "CookRecord" ), DerivedDataCache::makeLocalRootPath() };
+        expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+            return unexpected( derivedDataCache.error() );
+        return CookStore{ FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "CookRecord" ), std::move( *derivedDataCache ) };
     }
 
     string CookStore::makeRecordPath( string_view outputID ) const
@@ -49,7 +52,7 @@ namespace sw
         if ( bOutputCurrent )
             return true;
         bytes.clear();
-        if ( _derivedDataCache.find( record._key, bytes ) == false )
+        if ( _derivedDataCache.find( record._key, CookJob::makeKeyDescription( desc, record._listInput ), bytes ) == false )
         {
             SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );
             return false;
@@ -95,7 +98,7 @@ namespace sw
         }
         // 출력 파일은 쿠커가 쓰므로 다시 읽는 것은 DDC 저장에 어차피 필요하다. 해시는 그 바이트를 한 번만 훑는다(`hashOutput` 이 시간도 잰다).
         const CookRecord record = CookRecord::make( job, hashOutput( bytes ) );
-        if ( _derivedDataCache.store( record._key, bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;

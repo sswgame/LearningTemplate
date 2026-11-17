@@ -183,8 +183,15 @@ namespace sw
         /** @brief 지금까지 기록한 입력으로 작업 키를 구합니다. */
         uint64 computeKey() const { return computeKey( _desc, _listInput ); }
 
-        /** @brief 작업 키입니다. 입력은 리소스 id 순서로 정렬해 넣으므로 읽은 순서와 관계없습니다. */
+        /** @brief 작업 키입니다. `makeKeyDescription` 의 글을 해시합니다. */
         static uint64 computeKey( const CookJobDesc& desc, const vector<CookInput>& listInput );
+        /**
+         * @brief 작업 키의 기준 글(쿠커 이름 · 코드 지문 · 대상 · 설정 해시 · 정렬한 입력 id 와 내용 해시)입니다. 입력은 리소스 id 순서로 정렬하므로 읽은 순서와 관계없습니다.
+         * @details DDC 항목 머리에 그대로 적혀 64 비트 키 충돌을 미스로 바꾼다(`DerivedDataCache::find`).
+         */
+        static string makeKeyDescription( const CookJobDesc& desc, const vector<CookInput>& listInput );
+        /** @brief 지금까지 기록한 입력의 키 기준 글입니다. */
+        string makeKeyDescription() const { return makeKeyDescription( _desc, _listInput ); }
 
     private:
         CookJobDesc           _desc;

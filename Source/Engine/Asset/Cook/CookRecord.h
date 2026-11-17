@@ -3,11 +3,12 @@
  * @brief 쿠킹 작업 하나의 기록(`<출력>.cookrec`)과 파생 데이터 캐시(DDC)입니다. 다음 쿠킹은 기록의 입력만 다시 해시해 같으면 DDC 의 출력을 그대로 씁니다.
  * @details 기록은 키, 출력 해시, 입력(리소스 id 와 내용 해시) 목록을 글로 적는다. 판정은 파일 시각이 아니라 내용 해시다(`ContentHash`).
  *          기록이 없거나 형식이 다르거나(머리 줄) 깨졌으면 다시 베이크한다 — 옛 형식을 읽지 않는다.
- *          DDC 는 키의 내용 주소 폴더(`<루트>/<키 앞 두 글자>/<키>`)다. 로컬 루트는 `<프로젝트>/Saved/DDC` 이고, 공유 층은 아직 없다.
+ *          DDC 는 키의 내용 주소 폴더(`<루트>/<키 앞 두 글자>/<키>`)의 층 목록이다(`Config/Dev/DerivedData.json` — 로컬 `<프로젝트>/Saved/DDC`, 공유는 환경 변수 `SW_SHARED_DDC`).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -52,26 +53,62 @@ namespace sw
 
 namespace sw
 {
+    /** @enum DerivedDataAccess @brief DDC 층에 이 머신이 쓸 수 있는지입니다. */
+    enum class DerivedDataAccess : uint8
+    {
+        ReadOnly,  ///< 찾기만 한다(공유 층의 기본 — 쓰기는 설정이 허락한 머신만)
+        ReadWrite, ///< 찾고, 미스 뒤 출력 · 뒤 층 히트를 채운다
+    };
+
+    /** @struct DerivedDataLayer @brief DDC 층 하나(폴더 루트와 쓰기 권한)입니다. */
+    struct DerivedDataLayer
+    {
+        string            _rootPath;
+        DerivedDataAccess _access{ DerivedDataAccess::ReadOnly };
+    };
+
     /**
      * @class DerivedDataCache
-     * @brief 키로 쿠킹 출력을 저장하고 찾는 폴더입니다.
+     * @brief 키로 쿠킹 · 임포트 출력을 저장하고 찾는 폴더 층 목록입니다(앞이 먼저 — 로컬, 공유).
+     * @details 언리얼 `DerivedDataBackendGraph` 의 파일 시스템 계층 꼴이다. 뒤 층에서 찾으면 앞의 쓰기 가능 층에 채운다.
+     *          항목은 머리(형식 · 키 서술 길이 · 본문 해시) + 키 서술 + 본문이다. 서술이 글자 그대로 같고 본문 해시가 맞을 때만 히트다 — 64 비트 키 충돌과
+     *          다른 머신이 쓴 깨진 바이트(공유 층은 신뢰 경계)가 조용히 틀린 산출물 대신 미스 + 경고가 된다.
+     *          폴더가 아닌 백엔드(HTTP · 버킷)는 호스팅이 정해질 때 가상 인터페이스로 낸다 — 지금은 층이 모두 폴더다.
      */
     class SW_API DerivedDataCache
     {
     public:
-        explicit DerivedDataCache( string rootPath );
+        /** @brief 항목 머리의 형식 글입니다. 형식을 바꾸면 올린다 — 옛 항목은 미스가 된다. */
+        static constexpr string_view kEntryHeader{ "SWDDC 1" };
+        /** @brief 층 목록 설정 파일(프로젝트 루트 기준)입니다. */
+        static constexpr const utf8* kConfigFile = "Config/Dev/DerivedData.json";
+
+        explicit DerivedDataCache( vector<DerivedDataLayer> listLayer );
 
         /** @brief 로컬 DDC 루트(`<프로젝트>/Saved/DDC`)입니다. */
         static string makeLocalRootPath();
+        /**
+         * @brief `Config/Dev/DerivedData.json` 의 층 목록으로 만듭니다. 파일이 없거나 칸이 틀리면 오류입니다(폴백 없음).
+         * @details 층은 `_root`(파생 데이터 루트 `<프로젝트>/Saved` 기준 폴더)나 `_rootEnvironment`(머신마다 다른 절대 경로를 담은 환경 변수) 중 하나를 쓴다.
+         *          환경 변수가 없거나 비었으면 그 층은 없는 것이다(로그 `DDC.SharedLayerOff` — 층은 선택 항목이지 필수 값이 아니다).
+         */
+        [[nodiscard]] static expected<DerivedDataCache> loadFromConfig();
 
-        /** @brief 키의 출력을 읽습니다. 없으면 false 입니다. */
-        [[nodiscard]] bool find( uint64 key, vector<uint8>& outBytes ) const;
-        /** @brief 키의 출력을 씁니다. 같은 키가 이미 있으면 덮어씁니다(같은 입력은 같은 바이트여야 한다 — 쿠킹은 결정적이다). */
-        [[nodiscard]] bool store( uint64 key, const vector<uint8>& bytes ) const;
-        /** @brief 키의 파일 경로입니다. */
-        string makePath( uint64 key ) const;
+        /** @brief 키의 출력을 앞 층부터 찾습니다. 머리의 서술이 @p keyDescription 과 같고 본문 해시가 맞을 때만 true 이고, 뒤 층 히트는 앞의 쓰기 가능 층에 채웁니다. */
+        [[nodiscard]] bool find( uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const;
+        /** @brief 키의 출력을 쓰기 가능 층 모두에 씁니다. 읽기 전용 층은 건드리지 않습니다. 쓰기 가능 층 하나라도 못 쓰면 false 입니다. */
+        [[nodiscard]] bool store( uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
+        /** @brief 층 @p layerIndex 의 키 파일 경로입니다. */
+        string                          makePath( size_t layerIndex, uint64 key ) const;
+        const vector<DerivedDataLayer>& getLayers() const { return _listLayer; }
 
     private:
-        string _rootPath;
+        /** @brief 층 하나의 항목을 읽어 검증합니다. 없으면 조용히, 머리 · 서술 · 본문 해시가 어긋나면 경고하고 false 입니다. */
+        [[nodiscard]] bool readEntry( size_t layerIndex, uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const;
+        /** @brief 층 하나에 항목을 씁니다. */
+        [[nodiscard]] bool writeEntry( size_t layerIndex, uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
+
+    private:
+        vector<DerivedDataLayer> _listLayer;
     };
 } // namespace sw
