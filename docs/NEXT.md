@@ -8,9 +8,9 @@
 
 ## 0. 다음 순서
 
-1. **아직 합치지 않은 갈래**(합치기 전에 `git cherry <통합 갈래> <갈래>` 로 이미 들어간 커밋을 거른다): 통합 묶음 5(`integ5`, f3ee225c00)에 w-webiso · w-alloc · w-anim · w-core · w-svcop · w-inspector(w-undo · w-tools3 포함) · w-pk34 · w-rf24 · w-rhi · w-rs · w-kits · w-kitdemo · w-waitempty · w-waitpacks · w-ed · w-core2 · w-onl2 · w-net 을 합쳤다(integ2 는 그 전에 main 에 들어갔다). 남은 병합: `w-tools2` · `w-waiteditor`. 진행 중인 작업자: `w-gl` · `w-scale` · `w-asset2` · `w-kit3`.
-   - integ2 가 남긴 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-20 · "다음 할 일" 16).
-2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 의 남은 줄(5 · 14 · 16 · 20 · 30 · 31 · 34 ~ 37 · 43 · 45 ~ 47 · 50). 2026-11-17 판정으로 열린 항목은 P1 12 · P2 12 건이다. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합 커밋이 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
+1. **통합 묶음 5 검증:** main 1b9293f5ed 에 작업자 갈래 약 30 개를 합친 `integ5`(끝 a9e93f39a2)는 병합이 끝났고 메인 작업 폴더에서 묶음 끝 검증(`preflight`) 중이다. 통과하면 main 에 합쳐 push 한다. 새 갈래를 합칠 때는 `git cherry <통합 갈래> <갈래>` 로 이미 들어간 커밋을 거른다.
+   - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(아래 절 · 감사 A-20 · "다음 할 일" 16).
+2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 의 남은 줄(5 · 14 · 16 · 20 · 30 · 31 · 34 ~ 37 · 43 · 46 · 47 · 50). 2026-11-17 판정으로 열린 항목은 P1 9 · P2 7 건이다. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합 커밋이 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
 
@@ -19,6 +19,7 @@
 - **RHI 5-2**(Vulkan 기록 경로 락 제거 · 텍스처 전이 묶음 ABI v54 · 컴퓨트 큐 타임스탬프 ABI v55): RHI 단위(`RHITrackedStateTest`), lightculling · shadow_* · postprocess_* 시나리오 dx12 · vk, `D3D12.ComputeTimestampClock` 어긋남, Vulkan 비동기 컴퓨트 `GPU.<패스>` · Tracy 겹침.
 - **실장치 · 백엔드 동작:** Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯, DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), Vulkan placed 텍스처(`RT.Frame.transientPlacements`, 검증 레이어 경고 없이 — lavapipe · Android 포함).
 - **설정 표 범위 쓰기 · Ctrl+Z(52533d1b86 · a36b93f499):** `ProjectSettingsJSONDocumentTest.*`(모든 Config 파일이 고칠 수 있게 열리는지 · `HandLayoutIsKeptOnEdit` · `UndoRestoresEachEdit` 의 기대 글), 에디터에서 표 값을 고친 뒤 Ctrl+Z(형식 페이지 그리드는 아직 단계를 올리지 않는다). 다른 게임 프리셋 형식 페이지(f983064659): `ProjectSettingsEntryTest.OtherGamePresetsAreTyped`, 목록의 'Game Config - Shooter3D' 를 열어 저장.
+- **플랫폼 설정 층(감사 A-23, 3fd9c63d41):** `ConfigManagerTest.PlatformOverride*`, `test_shipping_host_defaults.py`. 위험: 에디터 프로젝트 설정 저장이 합친 값(`Config/Platform/<플랫폼>/EngineConfig.json` 덮어쓰기 포함)을 바탕 `Config/Engine/EngineConfig.json` 에 쓰면 덮어쓰기 값이 바탕으로 샌다 — 저장이 바탕 파일 글만 고치는지(덮어쓰기 키를 빼는지) 테스트로 묶는다.
 - **원장 공급 합 맵(dbf959bd7e):** `TestLedger.cpp` · `TestServiceMail.cpp` · `TestEconomyReceipts.cpp` 의 감사 · 분개 TTL 케이스.
 - **그 밖:** 게이트 껍데기(`<빌드>/gates`) · `editorextension` 의 RHI · Shader 게이트, 5-4 생성기 출력(`_pApplyDefault` · `_pEditCondition`, 파서 사례 `DefaultOnContainer` · `EditConditionUnknownName` · `RequiredAtRootWithoutParent`), `HapticEffectTest`, `editor/undocoverage`(컴포넌트 대상 명령은 대상을 주는 줄을 더한다), G1 `slice` 12 게임, T2 격리(`AutomationUserDataRootTest` · `engine.isolation` · `Scenario.editor.statedir.*` · `net-pair mmo`), N2 `server-image`, 지형 표면 변형(`game.empty.terraindeform` 골든 첫 기록, envshowcase · waterplay · surfacelibrary 골든 유지).
 
@@ -32,49 +33,41 @@
 
 ## 3. 플랫폼 ([PlatformTargets](PlatformTargets.md) "남은 일")
 
-- **Android:** `CookAssets` → `py -3 -m Scripts android-apk --game <게임>` → 실기기 기동 · 회전(pre-rotation) · APK 팩 읽기 · 터치. JNI 클립보드(`AndroidClipboard.cpp` 는 `isAvailable` false).
+- **Android:** `CookAssets` → `py -3 -m Scripts android-apk --game <게임>` → 실기기 기동 · 회전(pre-rotation) · APK 팩 읽기 · 터치.
 - **웹:** Web-Shipping 빌드(쿠킹이 단계 텍스처 16 계약을 처음 건다) → `py -3 -m Scripts web-check --game Empty`. 단위 `WebSocketProtocolTest` · `WebSocketAcceptTransportTest`. 입력 · 클립보드, `wss://`, 게임 세션(UDP)의 브라우저 길.
 
 ## 4. 실행 · 측정이 필요한 일
 
 - **에디터 첫 패널 약 1 초:** `-gv_editorPanelTimes` · `-gv_traceSlowTickMs` 로 동기 준비를 찾아 `IEditorPanel::onPanelOpened` 의 비동기 잡으로(`ModulesModel::ensureLoaded` 후보).
-- **검증 시간(Windows 19 분 — 2026-11-13 증분 실측, 11-12 의 53 분에서):** build 5 분(배포 프리셋 셋이 4 분 — Release · 서버 빌드와 겹친다) · cpu 2.7 분 · Release ctest 전체 11.3 분. Debug GPU 단계는 없앴다(검사는 `SW_DO_CHECKS` 로 Release 에 든다). 공통 헤더(`Macros.h`)나 CMake 폴더를 고친 묶음은 전체 재빌드라 50 분대다. 남은 것: Release `Scenario.shooter3d`(고정 대기를 조건 대기로), 체인 하나를 진 단계부터 다시 도는 입구(지금은 이분 탐색 도구를 손으로). Linux `all` 21 분(shooter3d 체인 872 초) + sanitize 3 분.
+- **검증 시간(Windows 19 분 — 2026-11-13 증분 실측, 11-12 의 53 분에서):** build 5 분(배포 프리셋 셋이 4 분 — Release · 서버 빌드와 겹친다) · cpu 2.7 분 · Release ctest 전체 11.3 분. Debug GPU 단계는 없앴다(검사는 `SW_DO_CHECKS` 로 Release 에 든다). 공통 헤더(`Macros.h`)나 CMake 폴더를 고친 묶음은 전체 재빌드라 50 분대다. 남은 고정 대기 목록은 `scenario_bisect --fixed-waits`. Linux `all` 21 분(shooter3d 체인 872 초) + sanitize 3 분.
 - **N×M 측정 후보**(N 이 데이터를 따르지만 목록이 작으면 해시가 손해이거나 순서를 지켜야 한다 — 재고 나서): `DataInheritance.cpp` `findEntry`(열쇠 목록 합치기, 가장 큰 후보), `ComponentRegistry.cpp:60,75`, `PrefabPool.cpp:80,92`, `ShooterNetPawnComponent.cpp:535,571`(틱마다 적 수²), `MaterialCache.cpp:350`, `DestructionState.cpp:779,855`, `ContentBrowserCollectionStore.cpp:108`, `EditorAssetFileCommands.cpp:154,199,569`, `EditorNodeGraph.cpp:333,543,696`(프레임마다 노드 × 고른 노드), `ModResolver.cpp:161`, `ProjectSettingsDocument.cpp:45,62`, `ComponentStateStore.cpp:82`.
-- **퍼징:** `SW_ENABLE_FUZZING=ON` 구성은 어느 프리셋에도 없어 지어 본 적이 없다. 퍼저 실행 파일(`-fsanitize=fuzzer`)을 더하면 `--exclude-libs,ALL` 이 정적 libFuzzer 콜백을 가려 엔진 .so 의 커버리지가 닿지 않는다(`cmake/Toolchain/Options/Fuzzing.cmake` 주석).
-- **시나리오 대기:** boat · clothshowcase(골든 앞 구간이 물리 이력), waterplay(강체 속도 · 잠듦 값으로 조건 대기).
 - **측정([DesignBacklog](DesignBacklog.md) S8 표):** Tracy `GT.Frame` 자식 합 90 % 이상, 배치 크기 12 · 24 · 48, `load/*` × 워커 1 · 2 · 4 · 8 과 구조 지표, W25 GPU 비교(c05a3ee251 대 지금 — 노이즈 안이면 되돌림), W-S4 `-ftime-trace`, W-R1 RT 프레임 힙 할당, W-R2 PSO 조회, 5-2 `RT.Bind.*`, DX12 기록 경로 락 제거 전후 `bench.json` p50, 에디터 MVVM(Hierarchy 큐브 8000 · 인스펙터 값 행), 골든 여유(`scenario_bisect --golden-margins`).
 - **Shooter3D 소총 자세 클립:** 지금은 리그 IK 견착(`ubc_player_body.rig.xml` TwoHandHold). 상용(Lyra · ALS)처럼 쥔 자세 클립 + 왼손 IK 로 간다 — CC0 출처 poly.pizza "SWAT"(Quaternius, `https://static.poly.pizza/713f6535-f4f3-4367-a4c6-ced126ae0936.glb`, `Idle_Gun` · `Gun_Shoot` · `Run_Shoot` 등)을 `models_raw/quaternius` 에 넣고 UBC 로 리타깃해 상체 층(Aim)으로, IK 견착은 손 자리 보정으로.
 
 ## 5. 설계 남은 일
 
-- **렌더링:** TransientLeasePool 을 뷰 풀에, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단의 디퍼드(G버퍼 칸 부족 — 지금은 포워드 전용), 몸 머티리얼이 `_skinLayerSurfaceMap` 을 읽기, VFX · 프로브 디스패치 전이를 묶음 API 로.
-- **폴더 자리**(`Config/Rules/Layers/DevFolders.json`):
-  - Graphics/Material/Dev → `DevTools/Material/`: DevTools 에 `sw_add_reflection_step(DevTools MODULE …)`, 셰이더 쿠커의 `MaterialGraphGeneratedPaths::refreshAll` 호출을 엔진 창구(쿠킹 전 셰이더 소스 생성기, 정적 등록)로 뒤집고 `SW_API` → `SW_DEVTOOLS_API`. 막힘: `DataInheritance.h` 가 등록 모듈 "Engine" 을 단언 — "호스트 라이브러리" 로 넓힌다(`registerHostLibraryTypes`).
-  - GF GameData/Dev → 개발 전용 공유 모듈 `GameFrameworkDev`(언리얼 `DeveloperTool` 모듈 자리): 매니페스트에 개발 전용 표시, 배포 CMake 는 짓지 않고, 개발 호스트가 GameFramework 다음에 `loadSharedModule`.
-- **RHI 5-2:** DX12 기록 경로 락(`resolveBufferAddress` · `resolveOfflineView` 의 `shared_mutex`, `_resourceStateMutex`)을 병렬 기록 구간 불변식(`setParallelRecording`)과 `RHIHandleTable` 텍스처 상태로. 측정 뒤에만: Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Vulkan 서브할당(감사 R-4).
-- **5-3 병렬 오브젝트**(완전 ECS 는 기각, 이득이 흔들림 안이면 되돌림): 틱 본문 45 곳의 `getOwner()->getManager()` 를 `context.getManager()`(읽기) · `context.deferPostTick`(쓰기)으로 옮긴 뒤 쓰기 길을 닫고 `onSubTick` 도 같은 컨텍스트로. 같은 단계 서비스 갱신 병렬화(게임 스레드 전용 API 를 서명으로 먼저 가림). 캐릭터 컨트롤러 3D · 2D 입력을 `ComponentDataStore` 페이지로. 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 로 옮길지 측정 뒤.
-- **5-4 리플렉션:** W-R3 (a) 고정 배치형 코덱 본문을 필드 서술자 공용 코덱으로(생성 바이트 4 MB 미만은 그 뒤 측정), (e) `CultureInfo` 부모 병합 · 자식 요소를 리플렉션 컨테이너로(폴백을 없애면 `RequiredAtRoot`), `InspectorLayoutCache` 키를 `PropertyHandle` 로(핫 리로드 때 비우는지 먼저). W-R4 `ReflectVisit` 하나(상태 해시 동등성 판정과 같은 묶음). W-R6 밀집 타입 색인은 5-3 SoA 와 함께. N1 `PROPERTY( Replicated, Quantize = … )` 복제 스키마, 스키마 해시를 와이어 버전에.
-- **상용 대비:** T3 샤드 시간 균형(외부 CI 러너는 사용자 결정), U1 방아쇠 진동 · Android Vibrator(백엔드가 생길 때), A1 Mirror · Montage 를 `AnimationPoseNodeRegistry` 에, R1 배포 팩이 도메인 `redirects.xml` 을 담는지(쿠킹 설정에 이름이 없어 Shipping 에서 빠질 수 있다).
+- **렌더링:** TransientLeasePool 을 뷰 풀에, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단의 디퍼드(G버퍼 칸 부족 — 지금은 포워드 전용), VFX · 프로브 디스패치 전이를 묶음 API 로.
+- **RHI 5-2(측정 뒤에만):** Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Vulkan 서브할당(감사 R-4).
+- **5-3 병렬 오브젝트**(완전 ECS 는 기각, 이득이 흔들림 안이면 되돌림): 남은 `getOwner()->getManager()`(전 45 곳, 지금 9 곳 — `git grep`) 를 `context.getManager()`(읽기) · `context.deferPostTick`(쓰기)으로 옮긴 뒤 쓰기 길을 닫고 `onSubTick` 도 같은 컨텍스트로. 같은 단계 서비스 갱신 병렬화(게임 스레드 전용 API 를 서명으로 먼저 가림). 캐릭터 컨트롤러 3D · 2D 입력을 `ComponentDataStore` 페이지로. 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 로 옮길지 측정 뒤.
+- **5-4 리플렉션:** W-R3 (a) 고정 배치형 코덱 본문을 필드 서술자 공용 코덱으로(생성 바이트 4 MB 미만은 그 뒤 측정), `InspectorLayoutCache` 키를 `PropertyHandle` 로(핫 리로드 때 비우는지 먼저). W-R6 밀집 타입 색인은 5-3 SoA 와 함께. 경합 같은 모양 둘: 상속 목록은 RCU 로 바꿨지만(babab8149c) `computeDerivedFlags` 가 지은 비트필드를 읽기와 겹쳐 고칠 수 있는지, 핫 리로드가 `TypeInfo` 를 `operator=` 로 제자리 교체하는 동안 다른 스레드가 읽는지 — 같은 판 교체로 막는다.
+- **상용 대비:** T3 샤드 시간 균형(외부 CI 러너는 사용자 결정), U1 방아쇠 진동 · Android Vibrator(백엔드가 생길 때).
 
 ### 에셋 정체성(GUID) 2 · 3 단계 — 판단은 [DesignBacklog](DesignBacklog.md) "에셋 정체성" 절
 
-1 단계(들어감): `AssetGUID` · 머리 `<?asset guid?>` · `.meta`(`AssetMeta`) · `AssetDatabase`(색인 · 결함) · `asset-ids [--fix]` · 커밋 훅 · 에디터 짝 처리 · 팩 색인 `assetindex.xml` 쓰기. Content 전체에 부여했다(머리 1314 · `.meta` 2580).
-
 - **통합 검증에서 볼 것(1 단계):** 단위 테스트 `AssetGUIDTest` · `AssetDatabaseTest` · `AssetPackIndexTest`, 에디터 시나리오 `editor.assetidentity`(가져오기가 새 GUID, `asset.replaceContent` 가 GUID 유지), `editor.assetmove` · `editor.flowimport` · `contentbrowser`(`.meta` 가 브라우저 · 빠른 열기 · 참조 색인에 안 보이는지 — `EditorContentScan` 이 뺀다), 모든 쿠킹(팩마다 색인이 들고 `PackCooker.PackCookNoIdentity` 가 없는지), `--check-text` · 머티리얼 그래프 생성 검사(머리 때문에 "낡았다" 가 나오지 않는지), Content XML 을 바이트로 다시 쓰고 견주는 테스트가 머리로 지지 않는지. `py -3 -m Scripts asset-ids` 를 린트 규칙 `asset-ids` 로 들어갔다(`lint --all` 이 전체를 본다).
 - **2 단계 — 참조를 GUID 로:**
-  - 참조 칸(`Config/Dev/AssetReferenceFields*.json` 의 경로 칸)과 `AssetRef<T>` 의 저장 꼴을 `guid:<32자>` 로 — 읽기는 GUID 만, 옛 경로 칸은 형식 판 올림(`SW_ASSET_FORMAT_UPGRADE`)이 저작 색인으로 GUID 를 찾아 바꿔 쓴다(못 찾으면 오류). 에디터 · `move-asset` 의 참조 고쳐 쓰기는 GUID 참조에서는 할 일이 없어진다.
+  - Content 전수 이전: `py -3 -m Scripts migrate-asset-refs --fix` 로 `AssetRef<T>` 칸의 경로 글을 `guid:<32자>` 로(지금 Content 의 GUID 참조는 0). 그 뒤 읽기를 GUID 만으로 좁힌다(contract — `AssetRefBase::assign` 의 옛 경로 글 읽기를 걷는다). 경로 글 칸(`_base` · `DataPath`)과 임포트 산출물 참조는 아래 산출물 줄이 생긴 뒤. 에디터 · `move-asset` 의 참조 고쳐 쓰기는 GUID 참조에서는 할 일이 없어진다.
   - 세이브(`SaveGame` 판 올림 `SW_SAVE_FORMAT_UPGRADE`)와 서버 기록(서비스 저장소 마이그레이션 `Content/common/sql/*/migrations.xml`)에 적힌 경로를 GUID 로 — 배포된 팩 색인 + 마지막 리다이렉트 표로 한 번 풀어 쓴다.
   - `Content/engine/data/enginedefaultassets.xml`(`EngineDefaultAssets`) 같은 설정의 경로 칸, 게임 설정 · 카탈로그 `_base`(`common/data/items.xml#helmet_knight`) 의 파일 부분.
-  - 런타임 색인: `AssetManager` 가 마운트한 팩마다 `assetindex.xml` 을 읽어 합친다(뒤에 마운트한 패치가 이긴다, 한 팩 안 겹침은 오류). Dev(느슨한 트리)는 `AssetDatabase::scan` 을 시작 · 파일 감시로 갱신.
   - 임포트 산출물 줄: 원본 GUID → 산출물 경로(`textures_raw/x.png` → `textures/x.dds`)를 임포트 기록(스탬프)에서 팩 색인에 더한다. 내용 주소 공유 파일(`textures_raw/_shared/`)은 저장소 경로 해시 GUID 로 `.meta` 를 함께 쓴다(판단 절).
   - 옮기기용 리다이렉트(`AssetRedirect` · 도메인 `redirects.xml` · `move-asset` 의 줄 더하기)를 걷고, 정체성 대체 · 합치기용 GUID→GUID 표만 남긴다(`deprecation-and-migration` — 표를 읽는 쪽을 먼저 GUID 로 옮긴 뒤 지운다).
   - localization 표(글 수집이 바이트로 쓰는 `strings` · `translation` · `tm`)의 쓰기가 머리를 옮겨 쓰게 하고 규칙 파일의 `*/localization/*` 건너뛰기를 걷는다. 시나리오 사본(`scratch/`)은 원본 GUID 를 그대로 들어 `scan` 에서 겹친다 — 사본 도메인을 색인에서 빼거나 사본에 새 GUID 를 준다.
-- **3 단계 — 공유 DDC · 원본 저장소 떼기:** 변환 결과 키(서술 + 원본 내용 해시)를 공유 DDC(네트워크 캐시)로, 원본(png · ogg · glb)을 LFS · 별도 저장소로 떼고 서술의 `_source` 가 그 자리를 가리킨다. 에셋별 임포트 예외 칸을 `AssetMeta` 에(기본값은 폴더 규칙 `Config/Editor` 의 임포트 설정).
+- **3 단계 — 원본 저장소 떼기:** 원본(png · ogg · glb)을 LFS · 별도 저장소로 떼고 서술의 `_source` 가 그 자리를 가리킨다.
 
 ## 6. 리소스 · 그 뒤
 
 - **Sprite Fusion 타일셋**(상세 페이지마다 CC0): Castle · Tiny Swords(Pixel Frog), Dungeon(0x72), Four Seasons Platformer(Analog Studios), Retro Gameboy(Ben Leggett) — `https://www.spritefusion.com/downloads/tilesets/<이름>.zip`. 1Bit Platformer 는 Kenney 원본에서. **VFX 25 종**(MIT, credits 에 고지): 캔버스 TypeScript 를 브라우저 MCP 로 재생해 시트로 굽는다. **PixelFX Piper**: 이용 조건 확인 뒤 시트로 내보낸다.
-- Empty 게임을 TestBed 로 전수 개명(옛 이름 린트로 막기). `new-online-kit` 로 키트 하나 지어 보기. `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지(키트 뷰 표는 감사 K-7 로 됐다). 단위 테스트 빈 곳(`Scripts/dev/test_coverage.py` "없음"), `AccountTicketConnect` 만료 · 재시도.
+- Empty 게임을 TestBed 로 전수 개명(옛 이름 린트로 막기). `new-online-kit` 로 키트 하나 지어 보기. `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지. 단위 테스트 빈 곳(`Scripts/dev/test_coverage.py` "없음"), `AccountTicketConnect` 만료 · 재시도.
 
 ## 사용자에게 받을 것
 
