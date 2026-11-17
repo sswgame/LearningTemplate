@@ -452,7 +452,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath ) );
-    const uint64  pathHash = HashUtil::computeStringHash64( "textures/mips.dds" );
+    const uint64  pathHash = HashUtil::computeStringHash64( string_view( "textures/mips.dds" ) );
     vector<uint8> whole;
     SW_REQUIRE_TRUE( reader.readFile( pathHash, whole ) );
     SW_REQUIRE_TRUE( whole == content );
@@ -480,7 +480,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
     vector<uint8> outside;
     SW_EXPECT_FALSE( reader.readRange( pathHash, size - 1, 2, outside ) );
     SW_EXPECT_FALSE( reader.readRange( pathHash, uint64{ size } + 1, 0, outside ) );
-    SW_EXPECT_FALSE( reader.readRange( HashUtil::computeStringHash64( "nope.dds" ), 0, 1, outside ) );
+    SW_EXPECT_FALSE( reader.readRange( HashUtil::computeStringHash64( string_view( "nope.dds" ) ), 0, 1, outside ) );
     reader.close();
     SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }
@@ -501,7 +501,7 @@ SW_TEST_CASE( PackReaderTest, CorruptBlockIsRefused )
     const PackTestFile file;
     PackReader         reader;
     SW_REQUIRE_TRUE( file.open( image, reader ) );
-    const uint64  pathHash = HashUtil::computeStringHash64( "big.bin" );
+    const uint64  pathHash = HashUtil::computeStringHash64( string_view( "big.bin" ) );
     vector<uint8> bytes;
     SW_EXPECT_FALSE( reader.readFile( pathHash, bytes ) );
     SW_EXPECT_TRUE( bytes.empty() );

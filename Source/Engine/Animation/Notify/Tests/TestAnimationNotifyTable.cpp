@@ -155,7 +155,7 @@ SW_TEST_CASE( AnimationNotifyTableTest, OnlyHitWindowUsesBonesForHitDetection )
     const sw::IAnimationNotifyHandler*       pHitWindow = registry.findHandler( sw::hashed_string( "HitWindow" ) );
     SW_REQUIRE_NOT_NULL( pHitWindow );
     SW_EXPECT_TRUE( pHitWindow->usesBonesForHitDetection() );
-    for ( const sw::utf8* pName : { "PlaySound", "SpawnPrefab", "Footstep", "CameraShake", "AbilityEvent", "MotionWarp" } )
+    for ( const utf8* pName : { "PlaySound", "SpawnPrefab", "Footstep", "CameraShake", "AbilityEvent", "MotionWarp" } )
     {
         const sw::IAnimationNotifyHandler* pHandler = registry.findHandler( sw::hashed_string( pName ) );
         SW_REQUIRE_NOT_NULL( pHandler );

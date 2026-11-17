@@ -436,6 +436,7 @@ namespace sw
         /**
          * @brief @p path(`__FILE__`)가 테스트용 변수를 둘 수 있는 개발 전용 자리면 true 입니다 — 마지막 `Source` 아래 첫 폴더가 `DevTools` · `Editor` 이거나,
          *        그 아래 어딘가에 `Dev` · `Tests` 폴더가 있다(`SW_DEV_ONLY_SOURCE_PATTERNS`, 배포 구성이 짓지 않는다).
+         *        `Source/GameFramework/Developer` 도 같다 — 개발 구성만 싣는 모듈 GameFrameworkDev(매니페스트 `_listConfiguration ["Dev"]`, 언리얼 Developer 폴더)이고 Runtime · 키트 · 게임이 include 하지 못한다(TargetLayers).
          * @details 테스트용 정의 · 참조 매크로가 `static_assert` 로 부른다 — 런타임 클래스가 테스트 변수를 직접 읽으면 개발 기능이 런타임 코드 안에 남는다
          *          (런타임은 일반 창구만 두고 개발 쪽이 스스로 붙는다). 같은 DLL 안의 폴더라 include 게이트로는 가르지 못해 파일 경로로 컴파일에서 막는다.
          *          구분자는 컴파일러마다 다르다(MSVC 는 `\`) — 둘 다 폴더 끝으로 본다. `Source` 가 경로에 없으면 false 다(폴백 없음 — 오류로 드러난다).
@@ -445,6 +446,7 @@ namespace sw
             bool        bUnderSource = false;
             bool        bDevFolder   = false;
             string_view topFolder;
+            string_view secondFolder;
             size_t      segmentBegin = 0;
             for ( size_t index = 0; index <= path.size(); ++index )
             {
@@ -460,6 +462,7 @@ namespace sw
                     bUnderSource = true;
                     bDevFolder   = false;
                     topFolder    = string_view();
+                    secondFolder = string_view();
                 }
                 else if ( bUnderSource && index < path.size() )
                 {
@@ -467,10 +470,15 @@ namespace sw
                     {
                         topFolder = segment;
                     }
+                    else if ( secondFolder.empty() )
+                    {
+                        secondFolder = segment;
+                    }
                     bDevFolder = bDevFolder || segment == "Dev" || segment == "Tests";
                 }
             }
-            return bUnderSource && ( bDevFolder || topFolder == "DevTools" || topFolder == "Editor" );
+            const bool bGameFrameworkDeveloper = topFolder == "GameFramework" && secondFolder == "Developer";
+            return bUnderSource && ( bDevFolder || bGameFrameworkDeveloper || topFolder == "DevTools" || topFolder == "Editor" );
         }
     };
 
@@ -478,6 +486,8 @@ namespace sw
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:\\Repo\\Source\\Editor\\SelfTest\\EditorWatchSupport.h" ) );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "/home/u/Repo/Source/Games/Shooter3D/Dev/ShooterAutoplay.cpp" ) );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "Source/Engine/Config/Tests/TestGlobalVariableMacro.cpp" ) );
+    static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/GameFramework/Developer/GameSettingsLaunchOverride.cpp" ) );
+    static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/GameFramework/Runtime/Developer/X.cpp" ) == false );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Dev/Repo/Source/Engine/Audio/AudioEngine.cpp" ) == false );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/Games/Shooter3D/DevilComponent.cpp" ) == false );
     static_assert( GlobalVariableRegistrar::isTestVariablePath( "D:/Repo/Source/GameFramework/Plugin/Editor/X.cpp" ) == false );
@@ -526,7 +536,7 @@ namespace sw
  *          한 DLL 안의 폴더라 include 게이트가 가르지 못하고, 파일마다 include 자리를 달리하면 유니티 빌드에서 빠진다 — 그래서 경로를 컴파일 시간 상수로 본다.
  */
 #define SW_TEST_GLOBAL_VARIABLE_PATH_CHECK \
-    static_assert( ::sw::GlobalVariableRegistrar::isTestVariablePath( __FILE__ ), "Test global variables live only in Dev/, Tests/, Source/DevTools, Source/Editor: move the dev feature there and leave a plain hook in runtime code" )
+    static_assert( ::sw::GlobalVariableRegistrar::isTestVariablePath( __FILE__ ), "Test global variables live only in Dev/, Tests/, Source/DevTools, Source/Editor, Source/GameFramework/Developer: move the dev feature there and leave a plain hook in runtime code" )
 
 /** @brief 테스트용 전역 변수입니다. 개발 구성(Debug · Release)에서 등록되고, Shipping 에서는 상수입니다(등록도 없고 바꿀 길도 없다): `( type, name, defaultValue, desc )`. */
 #if defined( SW_SHIPPING )

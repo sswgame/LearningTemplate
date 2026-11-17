@@ -326,7 +326,7 @@ SW_TEST_CASE( ModSessionTest, ModIndexCannotRedirectAKnownGUID )
     (void)AssetRegistry::install( withBase );
     {
         ModSession session( assets );
-        SW_EXPECT_FALSE( session.apply( request, Internal::makeSettings() ) );
+        SW_EXPECT_FALSE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
     }
     (void)AssetRegistry::install( previous );
 }
