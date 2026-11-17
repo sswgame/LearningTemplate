@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
@@ -33,6 +34,23 @@ namespace sw
             }
 
             static string makeSubject( AccountID accountID ) { return "acct." + ServiceKeyUtil::makeHex64( accountID ); }
+
+            /**
+             * @brief 등급이 모자란 명령을 거절합니다. 거절 감사 줄(`admin.command.denied`, 대상은 운영자 `gm.<16 진>`)을 남기고 kForbidden 으로 끝낸다.
+             * @details 등급 거절은 모두 이 함수로만 나가 감사를 빠뜨릴 수 없다. 감사 줄은 읽기 집합 조건 없이 바깥 연결로 커밋한다(효과가 없어 조건이 필요 없다).
+             */
+            static AdminServiceResult refuseForRole( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply )
+            {
+                ServiceAuditEntry audit;
+                audit._actor   = ServiceAuditLog::makeOperatorActor( command._adminID );
+                audit._action  = "admin.command";
+                audit._subject = audit._actor;
+                audit._after   = "method " + to_string( static_cast<uint32>( command._method ) );
+                audit._memo    = command._request._memo;
+                audit._timeMs  = command._nowMs;
+                ServiceAuditLog::commitRejection( connection, audit );
+                return finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
+            }
 
             static string formatAmount( string_view assetID, int64 amount )
             {
@@ -525,7 +543,7 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
         const AdminRole required = AdminProtocol::getRequiredRole( command._method, command._request._sanctionKind );
         if ( required == AdminRole::Count || role < required )
-            return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
+            return AdminStoreLogicInternal::refuseForRole( connection, command, outReply );
         if ( AdminStoreLogicInternal::isWellFormed( command ) == false )
             return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kInvalidRequest ) );
         if ( command._method == AdminMethod::SetSanction::kID && AdminStoreLogicInternal::isSanctionWithinLimit( command, role ) == false )
@@ -558,7 +576,7 @@ namespace sw
             if ( readRole( readSet, command._adminID, attemptRole, attemptVersion ) != ServiceStoreResult::Ok )
                 return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
             if ( attemptRole < required )
-                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
+                return AdminStoreLogicInternal::refuseForRole( connection, command, outReply );
             vector<uint8>            listStoredReply;
             const ServiceStoreResult found = ServiceIdempotency::findReply( readSet, scope, command._keyHigh, command._keyLow, listStoredReply );
             if ( found == ServiceStoreResult::Ok )
