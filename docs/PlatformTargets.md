@@ -64,7 +64,7 @@
 - 웹 실행: `py -3 -m Scripts web-check --game Empty`(묶기 · COOP/COEP 서버 · 헤드리스 브라우저 — WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속)를 아직 돌리지 않았다. Web-Shipping 빌드(단계 텍스처 16 계약이 처음 걸린다) 뒤 통합에서 돌린다. 입력 · 클립보드(paste) 판정은 없다 — 배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다(웹 시나리오를 쿠킹하거나 반응을 페이지로 내보내는 길이 필요하다).
 - 웹 온라인: 스트림은 WebSocket 이다 — 클라이언트 `WebSocketStreamTransport`(Web), 서버는 같은 리슨에서 첫 바이트로 가르는 `WebSocketAcceptTransport`(온라인 서비스 리슨). 남은 것: `ws://` 만이라 https 페이지는 `wss://`(수락 쪽 TLS 종단)가 필요하다. 게임 세션(암호화 UDP)은 브라우저에 UDP 가 없어 아직 길이 없다(WebSocket · WebTransport 위 데이터그램 갈래).
 - 웹 오디오: `Audio/Web/WebAudioBackend`(믹서 스레드 → SPSC 링 `Audio/CircularAudioBuffer` → AudioWorklet `WebAudioBackend.js`, 첫 사용자 몸짓에 `AudioContext.resume`, 워클릿 실패는 `notifyOutputLost` → 다시 열기)는 아직 컴파일 · 실행하지 않았다 — `web-check` 가 `[WebAudio] output started` 줄을 판정한다. Android AAudio(`Audio/Android`)는 실기기에서 장치 분리 → 다시 열기를 본다.
-- Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드는 아직 OS 를 잇지 않는다(`AndroidClipboard.cpp` 의 `isAvailable` false — JNI `ClipboardManager` 는 Looper 스레드 제약을 실기기와 함께 본다).
+- Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드(JNI `ClipboardManager`)는 실기기에서 Looper 스레드 제약 없이 읽고 쓰는지 본다.
 
 ## 입력(웹 · Android)
 
