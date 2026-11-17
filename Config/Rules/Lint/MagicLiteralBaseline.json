@@ -495,7 +495,7 @@
     "Source/Engine/Graphics/Shader/Binding/ShaderBindingSlots.h": {"integer": 9},
     "Source/Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.cpp": {"integer": 2},
     "Source/Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.cpp": {"integer": 1},
-    "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp": {"integer": 2},
+    "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp": {"integer": 1},
     "Source/Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp": {"integer": 11},
     "Source/Engine/Graphics/Shader/Compile/WebGPUShaderContainer.cpp": {"integer": 1},
     "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionDx.cpp": {"integer": 3},
