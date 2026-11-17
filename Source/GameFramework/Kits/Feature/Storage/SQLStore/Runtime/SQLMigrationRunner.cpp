@@ -24,10 +24,28 @@ namespace sw
         {
             static constexpr int32 kVersionDigitCount = 4;
 
-            static constexpr const utf8* kCreateHistorySQL = "CREATE TABLE IF NOT EXISTS sw_schema_migration ( version INTEGER PRIMARY KEY, name TEXT NOT NULL, "
-                                                             "checksum TEXT NOT NULL, applied_at_ms BIGINT NOT NULL )";
-            static constexpr const utf8* kReadHistorySQL   = "SELECT version, checksum FROM sw_schema_migration";
-            static constexpr const utf8* kInsertHistorySQL = "INSERT INTO sw_schema_migration ( version, name, checksum, applied_at_ms ) VALUES ( ?, ?, ?, ? )";
+            static constexpr const utf8* kCreateHistorySQL  = "CREATE TABLE IF NOT EXISTS sw_schema_migration ( version INTEGER PRIMARY KEY, name TEXT NOT NULL, "
+                                                              "checksum TEXT NOT NULL, applied_at_ms BIGINT NOT NULL ); "
+                                                              "CREATE TABLE IF NOT EXISTS sw_schema_breaking ( version INTEGER PRIMARY KEY )";
+            static constexpr const utf8* kReadHistorySQL    = "SELECT version, checksum FROM sw_schema_migration";
+            static constexpr const utf8* kInsertHistorySQL  = "INSERT INTO sw_schema_migration ( version, name, checksum, applied_at_ms ) VALUES ( ?, ?, ?, ? )";
+            static constexpr const utf8* kReadBreakingSQL   = "SELECT version FROM sw_schema_breaking";
+            static constexpr const utf8* kInsertBreakingSQL = "INSERT INTO sw_schema_breaking ( version ) VALUES ( ? )";
+            static constexpr const utf8* kBackward          = "Backward";
+            static constexpr const utf8* kBreaking          = "Breaking";
+
+            /** @brief 목록의 한 줄입니다. */
+            struct ListEntry
+            {
+                string _stem;
+                uint8  _bBreaking : 1;
+
+                ListEntry()
+                    : _stem{}
+                    , _bBreaking{ SW_FALSE }
+                {
+                }
+            };
 
             /** @brief 파일 이름 하나를 해석한 결과입니다. */
             struct MigrationFile
@@ -85,8 +103,11 @@ namespace sw
                 return Error{ kind, pMessage, detailBuilder.view() };
             }
 
-            /** @brief 목록 파일(`<SQLMigrationList><Migration _name="NNNN_이름" />…</SQLMigrationList>`)을 읽습니다. 다른 요소 · 속성 · 빈 이름 · 빈 목록은 오류입니다. */
-            [[nodiscard]] static expected<void> readList( string_view folder, vector<string>& outListStem )
+            /**
+             * @brief 목록 파일(`<SQLMigrationList><Migration _name="NNNN_이름" _compatibility="Backward|Breaking" />…</SQLMigrationList>`)을 읽습니다.
+             *        다른 요소 · 속성 · 빈 이름 · 빠진 호환성 · 빈 목록은 오류입니다(호환성은 기본값이 없다 — 옛 빌드가 계속 돌아도 되는지는 쓴 사람만 안다).
+             */
+            [[nodiscard]] static expected<void> readList( string_view folder, vector<ListEntry>& outListEntry )
             {
                 const string listPath = FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName );
                 string       text;
@@ -110,21 +131,28 @@ namespace sw
                     errorBuilder.appendFormat( "%#", listPath );
                     return unexpected( Error{ ErrorKind::InvalidArgument, "migration list must be a <SQLMigrationList> element without attributes", errorBuilder.view() } );
                 }
-                outListStem.clear();
+                outListEntry.clear();
                 for ( XMLNode entry = root.findChild(); entry.isValid(); entry = entry.findNextSibling() )
                 {
-                    const XMLAttribute nameAttribute = entry.getFirstAttribute();
-                    const bool         bValidEntry   = string_view{ entry.getName() } == "Migration" && nameAttribute.isValid() && nameAttribute.getNext().isValid() == false &&
-                                             string_view{ nameAttribute.getName() } == "_name" && string_view{ nameAttribute.getValue() }.empty() == false;
+                    const XMLAttribute nameAttribute          = entry.getFirstAttribute();
+                    const XMLAttribute compatibilityAttribute = nameAttribute.isValid() ? nameAttribute.getNext() : XMLAttribute{};
+                    const string_view  compatibility          = compatibilityAttribute.isValid() ? string_view{ compatibilityAttribute.getValue() } : string_view{};
+                    const bool         bValidEntry            = string_view{ entry.getName() } == "Migration" && nameAttribute.isValid() && string_view{ nameAttribute.getName() } == "_name" &&
+                                             string_view{ nameAttribute.getValue() }.empty() == false && compatibilityAttribute.isValid() &&
+                                             string_view{ compatibilityAttribute.getName() } == "_compatibility" && ( compatibility == kBackward || compatibility == kBreaking ) &&
+                                             compatibilityAttribute.getNext().isValid() == false;
                     if ( bValidEntry == false )
                     {
                         StringBuilder<constant::buffer::kMax128> errorBuilder;
                         errorBuilder.appendFormat( "%#", listPath );
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "migration list must hold only <Migration _name=\"NNNN_name\" /> elements", errorBuilder.view() } );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "migration list must hold only <Migration _name=\"NNNN_name\" _compatibility=\"Backward|Breaking\" /> elements",
+                                                  errorBuilder.view() } );
                     }
-                    outListStem.push_back( nameAttribute.getValue() );
+                    ListEntry& listEntry = outListEntry.emplace_back();
+                    listEntry._stem      = nameAttribute.getValue();
+                    listEntry._bBreaking = compatibility == kBreaking ? SW_TRUE : SW_FALSE;
                 }
-                if ( outListStem.empty() )
+                if ( outListEntry.empty() )
                 {
                     StringBuilder<constant::buffer::kMax128> errorBuilder;
                     errorBuilder.appendFormat( "%#", listPath );
@@ -149,7 +177,7 @@ namespace sw
             }
 
             /** @brief 폴더의 `.sql` 이 모두 목록의 마이그레이션(공통이나 방언 분기)인지 대조합니다. */
-            [[nodiscard]] static expected<void> checkFolderMatchesList( string_view folder, const vector<string>& listStem )
+            [[nodiscard]] static expected<void> checkFolderMatchesList( string_view folder, const vector<ListEntry>& listEntry )
             {
                 vector<AssetID> listFilePath;
                 if ( expected<void> result = collectMigrationFiles( folder, listFilePath ); result.has_value() == false )
@@ -167,7 +195,7 @@ namespace sw
                     StringBuilder<constant::buffer::kMax256> stemBuilder;
                     stemBuilder.appendFormat( "%#%#", string_view( fileName ).substr( 0, static_cast<size_t>( kVersionDigitCount + 1 ) ), file._name );
                     const string stem{ stemBuilder.view() };
-                    const bool   bListed = VectorUtil::contains( listStem, stem );
+                    const bool   bListed = VectorUtil::findBy<&ListEntry::_stem>( listEntry, stem ) != nullptr;
                     if ( bListed == false )
                     {
                         StringBuilder<constant::buffer::kMax128> errorBuilder;
@@ -185,14 +213,14 @@ namespace sw
 {
     expected<void> SQLMigrationRunner::loadMigrations( string_view folder, string_view driverName, vector<SQLMigration>& outListMigration )
     {
-        vector<string> listStem;
-        if ( expected<void> result = SQLMigrationRunnerInternal::readList( folder, listStem ); result.has_value() == false )
+        vector<SQLMigrationRunnerInternal::ListEntry> listEntry;
+        if ( expected<void> result = SQLMigrationRunnerInternal::readList( folder, listEntry ); result.has_value() == false )
             return result;
-        if ( expected<void> result = SQLMigrationRunnerInternal::checkFolderMatchesList( folder, listStem ); result.has_value() == false )
+        if ( expected<void> result = SQLMigrationRunnerInternal::checkFolderMatchesList( folder, listEntry ); result.has_value() == false )
             return result;
-        for ( size_t stemIndex = 0; stemIndex < listStem.size(); ++stemIndex )
+        for ( size_t stemIndex = 0; stemIndex < listEntry.size(); ++stemIndex )
         {
-            const string&                             stem = listStem[stemIndex];
+            const string&                             stem = listEntry[stemIndex]._stem;
             SQLMigrationRunnerInternal::MigrationFile file;
             StringBuilder<constant::buffer::kMax256>  textBuilder3;
             textBuilder3.appendFormat( "%#.sql", stem );
@@ -220,6 +248,7 @@ namespace sw
             SQLMigration& migration = outListMigration.emplace_back();
             migration._version      = file._version;
             migration._name         = file._name;
+            migration._bBreaking    = listEntry[stemIndex]._bBreaking;
             if ( AssetIO::readTextAsset( AssetID{ path }, migration._sql ) == false )
             {
                 StringBuilder<constant::buffer::kMax128> errorBuilder;
@@ -278,15 +307,45 @@ namespace sw
         {
             mapAppliedChecksum[static_cast<int32>( row[0]._integer )] = string( row[1].getText() );
         }
-        // 이 빌드가 모르는 번호가 적용돼 있으면 더 새 빌드가 올린 스키마다 - 예전에는 말없이 지나가 옛 서버가 새 스키마에 쓸 수 있었다(Flyway 의 validate 와 같다).
+        // 이 빌드가 모르는 번호가 적용돼 있으면 더 새 빌드가 올린 스키마다. 그중 하나라도 Breaking 으로 적용됐으면 거절하고, 모두 Backward 면 경고만 남기고 돈다 —
+        // 예전에는 모르는 번호면 늘 거절해 순차 배포(새 빌드가 스키마를 올린 뒤 옛 빌드가 다시 뜨는 때)가 막혔다. Flyway 의 future 마이그레이션 무시 + expand/contract 와 같다.
+        vector<int32> listUnknownVersion;
         for ( const auto& [appliedVersion, appliedChecksum] : mapAppliedChecksum )
         {
             (void)appliedChecksum;
             if ( VectorUtil::findBy<&SQLMigration::_version>( listMigration, appliedVersion ) == nullptr )
+                listUnknownVersion.push_back( appliedVersion );
+        }
+        if ( listUnknownVersion.empty() == false )
+        {
+            SQLRowSet breakingRowSet;
+            if ( connection.execute( SQLMigrationRunnerInternal::kReadBreakingSQL, nullptr, 0, &breakingRowSet ) != SQLResult::Ok )
             {
+                const Error error{ ErrorKind::ExternalFailure, "cannot read the breaking migration table", connection.getLastErrorText() }; // 되돌리기가 마지막 오류 글을 바꾸기 전에 복사한다
                 SQLMigrationRunnerInternal::rollback( connection );
-                return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::Unsupported, "the migration is applied but unknown to this build - the database is newer", appliedVersion, "" ) );
+                return unexpected( error );
             }
+            for ( const vector<SQLValue>& row : breakingRowSet._listRow )
+            {
+                const int32 breakingVersion = static_cast<int32>( row[0]._integer );
+                if ( VectorUtil::contains( listUnknownVersion, breakingVersion ) )
+                {
+                    SQLMigrationRunnerInternal::rollback( connection );
+                    return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::Unsupported, "a breaking migration unknown to this build is applied - the database is newer", breakingVersion, "" ) );
+                }
+            }
+            // 더 새 빌드는 앞 번호를 모두 적용했다 — 이 빌드의 것이 빠져 있으면 목록이 갈라진 것이다.
+            for ( const SQLMigration& migration : listMigration )
+            {
+                if ( mapAppliedChecksum.find( migration._version ) == mapAppliedChecksum.end() )
+                {
+                    SQLMigrationRunnerInternal::rollback( connection );
+                    return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::Unsupported, "the database is newer but misses a migration of this build - the migration lists diverged", migration._version,
+                                                                              migration._name ) );
+                }
+            }
+            SW_LOG_WARNING_ID( "SQLMigrationRunner.NewerBackwardSchema", "SQL schema is newer than this build (%# unknown backward-compatible migration(s), first %#) - running on it",
+                               listUnknownVersion.size(), listUnknownVersion.front() );
         }
 
         for ( const SQLMigration& migration : listMigration )
@@ -312,6 +371,15 @@ namespace sw
             if ( connection.execute( SQLMigrationRunnerInternal::kInsertHistorySQL, arrParam, 4, nullptr ) != SQLResult::Ok )
             {
                 const Error error{ ErrorKind::ExternalFailure, "cannot record a migration", connection.getLastErrorText() }; // 되돌리기가 마지막 오류 글을 바꾸기 전에 복사한다
+                SQLMigrationRunnerInternal::rollback( connection );
+                return unexpected( error );
+            }
+            if ( migration._bBreaking == SW_FALSE )
+                continue;
+            const SQLValue breakingParam = SQLValue::makeInt64( migration._version );
+            if ( connection.execute( SQLMigrationRunnerInternal::kInsertBreakingSQL, &breakingParam, 1, nullptr ) != SQLResult::Ok )
+            {
+                const Error error{ ErrorKind::ExternalFailure, "cannot record a breaking migration", connection.getLastErrorText() }; // 되돌리기가 마지막 오류 글을 바꾸기 전에 복사한다
                 SQLMigrationRunnerInternal::rollback( connection );
                 return unexpected( error );
             }
