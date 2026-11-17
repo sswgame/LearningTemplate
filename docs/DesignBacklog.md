@@ -51,7 +51,7 @@
 
 ### Test Framework
 
-- 틀(필터 · 태그 · 픽스처 · 매개변수 · 시한 · 결정적 샤드 · 스냅숏 · 기대 로그 · JSON)은 충분하다 — 별도 프레임워크를 들이지 않는다.
+- 틀(필터 · 태그 · 픽스처 · 매개변수 · 시한 · 결정적 샤드 · 스냅숏 · 기대 로그 · JSON)은 충분하다 — 별도 프레임워크를 들이지 않는다. 실행기의 입구 · 출구, 새 테스트와 기준 파일의 수명, 대기 · 격리는 맨 끝 "시나리오 · 테스트 프레임워크 개편 판단" 절이 정했다.
 - 샤드는 이름 FNV 해시라 긴 테스트가 몰릴 수 있다. JSON 실행 시간을 모아 병목이 실제일 때만 시간 균형형 결정적 배정. 같은 프로세스 병렬은 `TestExecutionContext` 를 케이스별로 가르기 전에는 하지 않는다.
 - 게임 시나리오(Shooter3D autoplay · HarvestValley actions · StarSkirmish AI · AbilityArena AI)는 개별 동작을 본다. 장르의 완결 루프(목표 → 보상, 파종 → 판매, 생산 → 승패)가 빈 게임에만 수직 슬라이스 시나리오를 더하고, 자동 플레이는 플레이어와 같은 입력 · 서비스를 쓴다(치트 경로 금지).
 
@@ -1351,3 +1351,153 @@ public:
 - 기각 — 시나리오 전체 `gv_timeScale`(README: 94 단계 중 17 실패). 기각 — 사진 수 줄이기(판정 범위가 준다). 기각 — 백엔드 함께 돌리기(무거운 장면에서 더 느려 차례로 정한 것이다).
 
 **측정이 먼저다.** 지난 Release 로그의 `[Scenario] … timeline:` 줄에서 shooter3d 의 고정 대기 ms 합과 체인 벽시계를 모은다(새로 재지 않는다). 판정: 고정 대기가 체인의 50 % 이상이면 V3 를 짓고, 그린 프레임 대비 안 그린 프레임 비용이 1/3 이하면 V4 로 간다. 아니면 닫고 `stage reset took` 과 기동을 본다.
+
+## 시나리오 · 테스트 프레임워크 개편 판단(2026-11-17)
+
+통합 묶음 5(작업자 갈래 약 30 개를 빌드 없이 합침)에서 겪은 실패 열 가지가 형식 · 실행기 동작으로 다시 생기지 않게 하는 설계다. 코드 근거는 f615fb04f4 다. 할 일 줄은 [NEXT](NEXT.md) 5 절 ST-1 ~ ST-6 이다.
+
+**판단.** 틀(`SW_TEST_CASE` · 단언 매크로 · 시나리오 XML 형식 · 단계 등록)은 바꾸지 않는다. 실패 열 가지 가운데 선언 · 단언의 모양이 원인인 것은 없고, 케이스 선언 약 6490 개(921 파일)와 시나리오 443 개를 옮겨 얻는 것이 없다. 바꾸는 것은 넷이다 — ① 사진 앞 정착과 대기의 형식, ② 판정 값과 실행기의 입구 · 출구, ③ 새 테스트와 기준 파일(골든 · 스냅숏)의 수명, ④ 프로세스 · 단계 격리의 주인. 위 "Test Framework" 절의 "별도 프레임워크를 들이지 않는다" 는 그대로다.
+
+### 실패 열 가지와 막는 자리
+
+| # | 실패 | 근본 모양 | 막는 구조 | 막는 시점 | 남는 틈 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `Render.Stable` 이 TAA 없는 Forward 뷰에서 계속 0, Empty 체인 74 분 | 합성 0/1 감시 값이 "이 구성에는 해당 없음" 과 "아직" 을 같은 0 으로 냈다. 대기는 시한까지 기다린 뒤 실패만 적고 다음 단계로 갔다(`shouldHoldForCondition` → `recordFailure`) | 정착 조건의 세 값 형식(D1), 정지 시한 · 포기는 시나리오의 끝 · 반복 실패 차단(D2) | 컴파일(`bool` 조건을 등록할 수 없다) · 로드(`Render.Stable` 은 모르는 감시 값) · 실행(정지 시한) | 0/1 프레임 감시 값을 기다리는 `<WaitUntil>` 은 진척을 볼 수 없어 시한까지 기다린다 — 상한은 K × 시한(D2) |
+| 2 | 렌더 감시 값이 공용 자동화 파일에 있어 전용 서버 빌드가 깨짐 | 층 표의 포괄 키 `Automation = 11` — `Engine/Automation` 뿌리 파일은 모든 층을 include 할 수 있어 기능의 감시 값 · 차단 조건이 주인 폴더 밖에 쌓였다 | 포괄 키를 지우고 주인 폴더에서 등록(D3) | configure(층이 없는 파일) · 컴파일(위 층 `#error` 껍데기) | 층 11 의 조립 파일(`Engine.cpp` …)이 렌더러를 include 하는 것은 서버 빌드(`preflight` build 단계)가 본다 |
+| 3 | 빌드 없이 쓴 테스트: 로그 선언 누락 · 틀린 기대값 · 박아 둔 형식 폭 · 사라진 로그 대기 · 기록된 적 없는 스냅숏 · 없는 골든 | 한 번도 돌지 않은 테스트와 기준 파일이 검증된 것과 구별 없이 전체 검증에 섞였다 | `changed` 단계 · 기준 파일 없음 판정 · 실패 종류(D4 · D6) | 실행 — 빌드 직후, 갈래 이름과 함께 | 작업자 시점에는 막지 못한다(빌드 금지가 규칙이다). 손으로 쓴 기대값 · 형식 폭은 형식이 막지 못한다 |
+| 4 | vfxsort 의 PiP `ExpectImagesDiffer` 전제가 틀림 | 3 과 같다 — 새 시나리오의 단언이 처음 도는 곳이 전체 체인이었다 | `changed` 단계가 새 시나리오를 혼자 · 백엔드마다 먼저 돌리고, 모든 백엔드가 같은 단언으로 지면 "전제" 로 묶는다(D4) | 실행 — 빌드 직후 | 그림의 전제는 돌려야 안다 |
+| 5 | 체인 위치에 따라 골든이 1.2 ~ 1.8 % 갈림(TAA 지터 순번) | 프레임을 넘는 뷰 상태가 단계보다 오래 살았고, 단계 사이 되돌리기는 사고가 날 때마다 늘리는 목록이다 | 뷰 대상을 통째로 버리기, 혼자 기록 · 체인 검증(D5) | 실행 — 골든을 기록한 그 묶음 | 판정에 드러나지 않는 누출, 특정 앞 단계에서만 드러나는 누출 |
+| 6 | scratch 사본 판정이 한 층만 봐 남의 프로세스 파일을 읽음 | 프로세스 격리를 id 꼬리(`_p<pid>`)로 하고, 같은 리소스 트리에 놓인 남의 사본을 읽는 쪽이 이름을 풀어 걸렀다 | 실행 뿌리와 scratch 도메인 마운트(D7) | 구조 — 남의 사본이 이 프로세스의 리소스 트리에 없다 | 드라이버 캐시 · 창 포커스 같은 OS 전역 상태 |
+| 7 | 백엔드 넷이 기동 직후 함께 멈춰 정지 시한에 죽음(재현 안 됨) | 자식 넷이 저마다 옛 산출물을 거두고, 부모는 죽일 때 증거를 남기지 않는다 | 거두기는 부모만, 죽이기 전 덤프(D7) | 실행 | 원인은 추정이다 — 다음에는 덤프가 가른다 |
+| 8 | 거르개에 콜론을 써 `NO TESTS` | 거르개가 어떤 글자든 받아 틀린 문법과 "맞는 케이스 없음" 이 같은 길이다. 끝 줄이 기계가 읽는 꼴이 아니다 | 문법 검사 · 패턴마다 맞는 케이스 · 끝 줄(D6) | 인자를 읽을 때(실행 전) | 없음 |
+| 9 | 세 갈래가 같은 멤버 · 감시 값 · 설정 칸을 각자 더해 충돌 | 기능마다 칸을 더하는 닫힌 집합체(`RenderStabilitySample` · `EngineConfig::_renderStability` · 실행기 멤버)가 공용 편집 자리였다 | 열린 등록(D1), 중복 등록은 시작 거절 · 병합 전 새 이름 겹침 보고(D3) | 병합 전(`api-diff`) · 기동(로드 오류) | 같은 일을 두 갈래에 맡기는 것은 배정이 막는다 |
+| 10 | 체인 로그 끝줄이 `Failed X at frame 5: <Pass/>` | 결과와 까닭이 따로 든 두 변수 — 통과로 끝맺은 뒤(`finish( Passed, "<Pass/>" )`) 실패로 바뀌면 까닭은 끝 단계 이름으로 남는다 | 판정 값 하나(D6) | 컴파일(까닭 없는 실패를 만들 수 없다) | 없음 |
+
+### 상용 엔진 대비
+
+| 자리 | 언리얼 | 유니티 | Godot | 여기(이 설계 뒤) |
+| --- | --- | --- | --- | --- |
+| 사진 앞 정착 | 스크린샷 기능 테스트가 흔들리는 기능(TAA · 자동 노출 · 모션 블러)을 끄고(`bDisableNoisyRenderingFeatures`) 지연 뒤 찍는다 | Graphics Test Framework 의 `WaitFrames`(고정 프레임) | 없음(스크립트가 프레임을 센다) | 끄지 않고 찍는다 — 정착 조건을 만든 기능이 등록하고 사진 단계가 기다린다(D1) |
+| 대기의 두 시계 | Gauntlet `MaxDuration` + 하트비트(`TimeoutBetweenActivity` — 기억에 의존), 기능 테스트 `TimeLimit` | `[Timeout]` 하나(넘으면 테스트 끝) | GUT `wait_until( 조건, 상한 )` — 넘으면 false 를 주고 테스트는 이어진다 | 시한 + 정지 시한, 포기는 끝(D2) |
+| 기준 그림이 없을 때 | 스크린샷 비교 도구에 "New" 로 떠 승인을 기다린다(실패와 다른 상태) | 실패하고 실제 그림을 `ActualImages` 에 둔다 | 없음 | 실패 종류 `MissingBaseline`, `changed` 단계가 없는 것만 기록해 승인 목록으로(D4) |
+| 기대 로그 | `AddExpectedError` — 안 나오면 실패, 선언 밖 Error 는 실패, Warning 은 기본 통과 | `LogAssert.Expect` — 같은 규칙, Warning 은 통과 | GUT 는 선택 | Warning 도 실패(그대로 둔다 — DDC · 그림자 경고가 실제 결함이었다) |
+| 빈 실행 | Low-Level Tests(Catch2)는 맞는 테스트가 없으면 0 이 아닌 코드, 안 맞는 패턴 경고 옵션 | 맞는 테스트가 없어도 0(기억에 의존) | — | 문법 오류 · 안 맞는 패턴 · 0 개 모두 실패(D6). GoogleTest 는 0 개가 통과다 — 콜론 문법과 함께 들여오지 않는다 |
+| 테스트 사이 격리 | Gauntlet 은 테스트마다 프로세스, PIE 는 새 GameInstance, 뷰 이력은 `FSceneViewState` 하나 | 없음(TearDown 이 맡는다) | 없음(고아 노드 수만 센다) | 단계마다 게임 · 뷰 대상을 새로 만들고, 골든은 혼자 기록해 체인으로 검증(D5) |
+| 프로세스 산출물 | Gauntlet 이 역할마다 산출물 폴더를 주고 시한 때 로그 · 덤프를 모은다 | 프로젝트 `Library` 잠금이 한 편집기만 받는다 | `user://` 는 프로젝트마다 | 부모가 실행 뿌리를 주고 죽이기 전에 덤프(D7) |
+| 실패 한 줄 | Gauntlet `ExitReason` + 요약 머리 | NUnit XML | — | 판정 값의 종류 + 첫 까닭이 모든 끝 줄에(D6) |
+
+### 결정
+
+**D1. 사진 앞 정착은 사진 단계가 맡고, 정착 조건은 그 상태를 만든 기능이 세 값 형식으로 등록한다.**
+지금은 시나리오가 사진마다 `<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/>` 를 적는다(170 줄 · 75 파일). `Render.Stable` 은 `RenderStabilitySample` 의 칸들을 `EngineConfig::_renderStability` 문턱과 견준 0/1 이라, 칸을 채우는 패스가 파이프라인에 없으면 계속 0 이다. 한편 `<Screenshot>` 은 이미 에셋 일과 차단 조건을 기다린다(`holdScreenshot`) — 정착을 기다리는 곳이 둘이다.
+
+```cpp
+class AutomationReadiness // 기본 생성자가 없다 — 셋 중 하나를 골라야 한다
+{
+public:
+    [[nodiscard]] static AutomationReadiness ready();
+    [[nodiscard]] static AutomationReadiness notApplicable();                              // 이 구성에는 이 일이 없다(파이프라인에 TAA 패스가 없다)
+    [[nodiscard]] static AutomationReadiness waiting( uint64 progress, const utf8* pWhat ); // progress 는 일이 나아가면 바뀌는 수(쌓인 정지 프레임 · 남은 일 수)
+};
+using AutomationReadinessFunction = AutomationReadiness ( * )();
+```
+
+1. `SW_AUTOMATION_CAPTURE_BLOCKER` · `FINISH_BLOCKER` · `START_BLOCKER` · `CLOCK_HOLDER` 가 `bool()` 대신 `AutomationReadinessFunction` 을 받는다(12 자리 — 옛 함수는 컴파일되지 않는다). `_pDescribe` 와 `FINISH_BLOCKER_DESCRIBED` 는 지운다(`pWhat` 이 대신한다).
+2. TAA 이력 · 노출 적응 · 실시간 GI 누적은 각각 그 이력을 든 코드 옆(`Renderer/…`)에서 캡처 조건으로 등록한다. `Render.Stable` 감시 값, `RenderStabilityUtil::isStable`, `EngineConfig::_renderStability`(배포 엔진 설정에 든 테스트 전용 문턱)는 지운다. 낱값 감시 값(`Render.StillFrames` …)은 진단용으로 남긴다.
+3. 문턱은 `Config/Dev/ScenarioRun.json` 의 `_conditions.<조건 이름>` 이고 조건을 등록한 기능이 제 구조체로 읽는다. 등록된 조건에 칸이 없거나 칸에 조건이 없으면 로드 오류다(공용 구조체에 칸을 더하지 않는다 — 실패 9).
+4. `<Screenshot stability="render|assets|none">`(옛 `waitForStability` 를 대신한다). `render`(기본) 는 에셋 + 캡처 조건 전부, `assets` 는 에셋 일만(움직이는 장면), `none` 은 그 프레임 그대로다. 움직이는 장면에 `render` 를 쓰면 TAA 조건이 정지 시한(D2)에 걸려 "카메라 · 물체가 움직인다" 로 바로 진다.
+- 기각 — 감시 값 564 개의 함수 꼴(`bool f( …, float64& )`)을 세 값으로 바꾸기: 실패 1 의 원인은 합성 판정 하나였고, 낱값은 "값 없음" 과 0 이 이미 갈린다. 564 자리를 옮겨도 지은이가 0 을 내는 것은 막지 못한다.
+- 기각 — 언리얼처럼 흔들리는 기능을 끄고 찍기: 골든이 TAA · 노출을 켠 그림을 보지 못한다.
+
+**D2. 대기는 시계가 둘이고(시한 · 정지 시한), 포기는 그 시나리오의 끝이며, 같은 실패가 되풀이되면 체인을 멈춘다.**
+에디터의 `<EditorWaitStable/>` 는 이미 이 모양이다(진행 중인 일에는 시한이 없고, 할 일이 없는데 120 프레임 넘게 움직이면 진다) — 나머지 대기에 넓힌다.
+1. **정지 시한.** `waiting( progress, … )` 의 `progress` 가 `_stallFrames`(ScenarioRun.json) 동안 그대로면 그 단계는 `WaitStalled` 로 진다. 붙잡기 네 종류(캡처 · 끝 · 시작 · 시계)가 한 구현을 쓴다. 시한(`kMaxAssetStabilityFrames` 등)은 나아가고 있는 일의 상한으로만 남는다.
+2. **벽시계 감시 값.** `SW_AUTOMATION_WALL_WATCH` 가 활동 수 함수(`uint64()` — 따르는 바깥 일이 나아가면 느는 수: 읽은 바이트 · 끝난 컴파일 · 자식 출력 길이)를 필수 인자로 받는다(25 자리). `timeoutWallSeconds` 대기는 활동 수가 `_stallWallSeconds` 동안 그대로면 `WaitStalled` 다. 프로세스 층의 정지 시한(`kProcessStallSeconds` — 로그가 안 자라면 죽인다)과 같은 생각을 단계에 둔다.
+3. **프레임 감시 값의 `<WaitUntil>`** 은 시한만 본다 — 0/1 값은 뒤집히기 전까지 진척이 보이지 않는다. 무인 실행은 프레임이 실시간보다 빨라 비용이 작다.
+4. **포기는 끝이다.** `<WaitUntil>` · 사진 정착 · 입력 대상 대기가 시한 · 정지 시한에 걸리면 `AutomationStepEnd::Fail` 로 시나리오를 끝낸다. 지금은 실패를 적고 다음 단계로 가서 뒤의 대기가 모두 다시 시한까지 기다린다(실패 1 — 사진마다 수천 프레임).
+5. **반복 실패 차단.** 한 체인에서 같은 실패 열쇠(종류 + 단계 종류 + 감시 값 · 조건 이름)가 `_repeatedFailureLimit`(기본 3) 번 나오면 체인을 `RepeatedFailure` 로 끝내고 남은 단계는 돌지 않은 것으로 적는다. 다시 돌 때는 `--from-stage` 로 잇는다.
+- 상한: 실패 1 과 같은 일이 다시 나도 백엔드마다 3 × 정지 시한이다.
+- 기각 — `<WaitUntil>` 모두에 진척 요구: 깃발 감시 값(애니메이션 끝 · 씬 전환)은 낼 진척이 없다.
+
+**D3. 감시 값 · 조건 · 되돌리기는 주인 폴더에서 등록하고, 겹친 등록은 시작을 거절한다.**
+1. `Engine/Automation` 뿌리의 기능 파일을 옮긴다: `Client/AutomationRenderWatches.cpp` → `Renderer/Frame/View/`(`RenderViewWatches.cpp` 옆), `AutomationInputWatches.cpp` → `Input/`, `AutomationCaptureUtil.cpp` 의 foliage 조건 → `Environment/Foliage/`(같은 모양의 숨은 자리다 — 층 11 파일이 층 8 헤더를 읽는다), 에셋 · 스크린샷 조건은 그 큐의 폴더로.
+2. `EngineLayers.toml` 의 `Automation = 11` 을 지우고 남는 기계 파일(`AutomationRuntime.h` · `AutomationResult.h`)만 파일 키로 적는다. 뿌리에 새 파일을 더하면 configure 가 멈춘다(표에 없는 파일).
+3. 정적 등록이 거절되면(`Registration.DuplicateName`) 수를 세고, `App --test` · `-scenario` 는 0 이 아니면 로드 오류로 시작하지 않는다 — 두 등록 자리(파일 · 줄)를 함께 찍는다. 지금은 오류 로그 한 줄이고 뒤의 등록이 조용히 빠진다.
+4. `py -3 -m Scripts api-diff --base <시작 커밋> <갈래…>` 가 두 갈래 이상이 새로 더한 같은 이름(함수 · 멤버 · 등록 이름 · Config 키)을 따로 낸다 — 병합 전에 한 곳에서 본다.
+- 기각 — 서버가 짓지 않는 헤더를 클라이언트 빌드에서 `#error` 로 가리기: 층마다 부분을 둘로 갈라야 해(PCH 두 벌) 빌드 시간이 든다. 서버 빌드는 build 단계에서 이미 돈다.
+
+**D4. `origin/main` 뒤에 들어온 테스트 · 시나리오 · 기준 파일은 `changed` 단계에서 먼저 돈다.**
+push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 더해지거나 바뀐 것은 돈 적이 없다. 이 구별을 상태 파일 없이 git 으로 낸다.
+1. `preflight.sh` 에 build 와 cpu 사이 단계 `changed`(`--from changed`): `git diff --name-status origin/main...HEAD` 에서 (a) 바뀐 소스 · 테스트 파일의 기능 폴더 → 그 폴더를 싣는 ctest 항목(`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits`)을 `--test-source=<폴더…>` 로 좁혀, (b) 더해지거나 바뀐 `*.scenario.xml` 을 하나씩 제 프로세스로 · 체인 백엔드마다 돌린다. 고르는 코드는 이력 스크립트(`test_history.py`)의 새 하위 명령이다.
+2. 출력은 표 하나다: 항목 · 새것/바뀐 것 · 실패 종류(D6) · 까닭 한 줄 · 그 파일을 더한 갈래(병합 커밋 제목). 새 시나리오가 모든 백엔드에서 같은 단언으로 지면 "전제" 로, 한 백엔드만 지면 "백엔드" 로 묶는다. 지면 cpu · gpu-release 를 시작하지 않는다 — 끝 줄 `CHANGED_FAILED` · `CHANGED_OK=<sha>`.
+3. **기준 파일 없음은 실패 종류 `MissingBaseline` 이다.** `changed` 단계만 `-scenario-record-missing-golden` · `--record-missing-snapshots` 로 **없는 것만** 쓴다(다른 것 · 진 것은 덮지 않는다 — `-scenario-update-golden` 은 진 골든도 써서 바뀐 시나리오의 회귀를 가린다). 쓴 파일이 있으면 단계는 목록을 내고 멈춘다. 통합 담당이 그림 · 글을 보고 커밋한 뒤 `--from changed` 로 다시 돌려 기록 없이 통과해야 한다. 커밋된 트리는 늘 완전하다는 불변식(`ScenarioGoldensTest.EveryChainBackendHasGoldens`)은 그대로다.
+4. **스냅숏의 뜻은 "지금 코드의 출력을 사람이 본 것" 하나다.** 돌려 봐야 아는 수(전이 수 · 생성 글)는 추측한 리터럴 대신 `SW_EXPECT_SNAPSHOT` 으로 적어 첫 실행이 기록하게 한다(지금 쓰는 곳 3 · 파일 2 라 옮길 것이 없다). "옛 구현과 같다" 는 스냅숏으로 쓰지 않는다 — 옛 구현을 `Tests/` 로 옮겨 한 케이스에서 둘을 견주고 다음 묶음에서 지운다(CultureInfo 는 옛 코드로 돌아가 빌드해야 했다).
+5. **낡은 기대 로그.** `SW_EXPECT_LOG( "X" )` · `<ExpectLog id="X">` · `<AllowLog id="X">` 의 id 를 내는 `SW_LOG_*_ID( "X"` 가 소스에 없으면 위반 — 기능 참조 린트(`feature-refs`)의 이름 종류에 로그 id 를 더한다. 린트인 까닭: id 는 테스트와 다른 TU 의 호출 자리를 잇는 글자라 형식이 잇지 못하고, 작업자는 빌드하지 않으므로 커밋 때 볼 수 있는 것은 글 대조뿐이다. 이 설계가 린트에 기대는 자리는 이것 하나다.
+- 기각 — 선언 밖 Warning 을 통과로(언리얼 · 유니티 기본): 이번 그림자 · 글리프 · DDC 경고는 테스트가 새 경로를 밟는다는 사실이었다. 대신 실패 줄이 붙일 줄을 그대로 낸다(D6).
+- 기각 — 이력 DB 로 "새 테스트" 가르기: `Saved/` 의 sqlite 는 기계마다 다르다. git 은 어디서나 같다.
+
+**D5. 단계 격리는 되돌릴 목록이 아니라 버리고 새로 만드는 객체로, 누출 찾기는 혼자 기록 · 체인 검증으로 한다.**
+지금 단계 시작(`AutomationSession::startStage`)은 빈 씬 · 전역 변수 · 창 크기 · `SW_AUTOMATION_STAGE_RESET` 5 개 · 사본 · 번역 키를 차례로 되돌리고 게임을 다시 세운다. 줄마다 사고의 흔적이고, 뷰 대상(`FrameViewTarget` — TAA · 깊이 이력, 지터 순번, 노출 기록, 가림 타일)은 이 목록에 없었다.
+1. 단계 시작이 렌더 드라이버 창구(`IEngineRenderDriver`)로 "뷰 대상을 모두 버린다" 를 한 번 부른다. 프레임을 넘는 뷰 상태는 뷰 대상의 멤버로만 둔다(`TemporalJitterSequence` 포함) — 새 이력 멤버를 더해도 목록을 고치지 않는다. 이력을 버릴 때 지터를 되돌리는 지금 줄은 지운다. 언리얼 `FSceneViewState` 와 같은 자리다.
+2. 렌더러 범위에서 프레임을 넘어 쌓이는 그 밖의 상태는 씬 객체가 들거나(씬과 함께 사라진다) `SW_AUTOMATION_STAGE_RESET` 을 등록한다 — 이 목록은 남는다.
+3. **골든과 `<Record>` 는 혼자 돈 실행(새 프로세스)에서만 기록하고 체인으로 검증한다.** `changed` 단계가 그렇게 돈다(D4). 판정에 닿는 누출은 골든을 기록한 그 묶음에서 그 시나리오의 실패로 드러난다 — 지금은 체인 자리에서 기록해 체인 순서가 바뀔 때(갈래 30 개가 시나리오를 더할 때) 남의 골든이 진다.
+- 기각 — 단계마다 프로세스(Gauntlet): 시나리오 443 × 백엔드 4 의 기동 비용. 기각 — 체인 순서 섞기: 앞 단계가 가리던 결함이 실행마다 드러났다 숨는다(시간표를 사람이 커밋하게 한 까닭과 같다).
+
+**D6. 입구는 틀린 문법을 거절하고, 출구는 판정 값 하나에서 한 줄을 찍는다.**
+1. **거르개.** 패턴에 올 수 있는 글자(이름 글자 · `.` · `*` · `?` · `/` · `[태그]` · 앞의 `-`)와 쉼표 밖의 글자가 있으면 인자 오류다("separate patterns with a comma"). 더하기 패턴마다 등록된 케이스 하나는 맞아야 한다(샤드 · 폴더로 거르기 전에 본다) — `A.*,Typo.*` 가 A 만 돌고 통과하지 않는다.
+2. **끝 줄.** 단위 실행의 마지막 표준 출력 줄은 늘 `TEST_RESULT=<PASSED|FAILED|NO_TESTS|TIMEOUT> run=… failed=… skipped=…`, 시나리오 부모는 `SCENARIO_RESULT=<…> stages=… failed=… notRun=…` 다(`WINDOWS_OK=` · `LINUX_OK=` 와 같은 꼴). 출력을 잘라 본 쪽도 0 개 실행을 통과로 읽지 않는다.
+3. **판정 값.** `AutomationRunner` 의 `_result` + `_finishReason` 을 값 하나로 바꾼다.
+
+```cpp
+enum class AutomationFailureKind : uint8 { Assertion, WaitTimeout, WaitStalled, UnhandledLog, GoldenMismatch, MissingBaseline, LoadError, Hang, RepeatedFailure };
+class AutomationVerdict // 만드는 길은 아래 셋뿐이다
+{
+public:
+    [[nodiscard]] static AutomationVerdict passed();
+    [[nodiscard]] static AutomationVerdict skipped( string_view reason, bool bByBuild );
+    [[nodiscard]] static AutomationVerdict failed( AutomationFailureKind kind, string_view reason, string_view stepLocation );
+};
+```
+
+   통과로 끝맺었는데 실패 줄이 있으면 첫 실패 줄이, 처리하지 않은 로그면 그 첫 줄(과 남은 수)이 까닭이다 — 끝 단계 이름이 까닭이 되는 길이 없다. `Automation.Finished` · `chain stage i/n` · 체인 끝 표 · 부모의 백엔드 요약 · 보고 JSON(`verdict`) · HUD 가 이 값 하나를 찍는다. `chain stage 12/94 Failed (game.empty.vfxsort)` 뒤에 `: UnhandledLog - [Warning] (id=Shadow.AtlasFull) … (+2)` 가 붙는다(앞머리는 그대로 — `linux_scenarios.py` 의 정규식이 읽는다).
+4. **부모 요약.** 백엔드별 실행 끝에 (단계 · 종류 · 까닭)이 같은 줄을 백엔드로 접은 표를 낸다 — `vfxsort: GoldenMismatch dx11,dx12,vk,gl` 과 `…: vk` 가 한눈에 갈린다. `preflight.sh` 가 단계 끝마다 이 표를 찍는다.
+5. **단위 테스트 실패 종류.** 보고 판 4 에 케이스의 `failureKind`(Assertion · NoAssertion · UndeclaredLog · ExpectedLogMissing · SnapshotMissing · SnapshotDiffers · Timeout · Crashed)와 종류별 수. `UndeclaredLog` 줄은 붙일 글을 그대로 낸다(`add SW_EXPECT_LOG( "Shadow.AtlasFull" )` + 케이스 파일 · 줄).
+
+**D7. 프로세스가 쓰는 곳은 부모가 준 실행 뿌리 하나이고, 지우는 것은 주인뿐이며, 죽이기 전에 덤프를 뜬다.**
+지금은 scratch 사본(`scratch/<이름>_p<pid>`) · 사용자 데이터(`run_p<pid>`) · 에디터 상태(`editor_p<pid>`) · 울타리 표지(`contentfence_p<pid>`)가 저마다 pid 로 이름을 짓고, 자식마다 죽은 형제의 폴더를 거두며, `Content/scratch/` 를 훑는 길(에디터 콘텐츠 훑기 · 파일 감시)이 `isOtherProcessInstance` 로 남의 사본을 걸러야 한다.
+1. `ProcessRoots` 에 실행 뿌리 `_run` 을 둔다. 백엔드별 부모(`AutomationPerBackend`)가 `Saved/Automation/Runs/<실행 id>/<백엔드>/` 를 만들어 `-run-root=` 로 넘기고, 혼자 뜬 실행은 스스로 만든다. 사용자 데이터 · 에디터 상태 · 테스트 쓰기 폴더는 그 아래다.
+2. **scratch 도메인은 실행 뿌리에 마운트한다**(`AssetPaths::mountDiskDomain( "scratch", <실행 뿌리>/scratch )` — 단위 테스트가 이미 쓰는 길). 사본 id 는 시나리오가 적은 그대로다. 지우는 것: `makeInstanceID` · `isOtherProcessInstance` · `removeOtherProcessInstances` · `findInstanceProcessID` · `AutomationScenario::bindScratchInstances` · 형제 거두기 · 울타리 표지의 pid 꼬리. 남의 사본은 이 프로세스의 리소스 트리 밖이라 거를 것이 없다.
+3. **거두기는 부모만.** 부모가 자식을 띄우기 전에 끝난 실행의 뿌리를 지운다(최근 몇 개를 남길지는 ScenarioRun.json). 자식은 제 뿌리 밖을 지우지 않는다.
+4. **죽이기 전 덤프.** 정지 시한 · 프로세스 시한으로 자식을 죽일 때 부모가 먼저 자식의 모든 스레드 스택을 실행 뿌리에 쓴다(Windows 는 자식 핸들로 미니덤프, Linux 는 중단 신호로 크래시 처리기) — 경로가 요약 줄에 붙는다. 행 감시(`AutomationHangWatch`)는 지금 단계 시작에서 켜져 기동 중 멈춤을 보지 못한다. 언리얼 `FThreadHeartBeat` · Gauntlet 의 시한 덤프와 같은 자리다.
+- 기각 — 정지 시한에 걸린 자식을 다시 띄우기: 흔들림을 가린다.
+
+### 이전 순서와 규모
+
+모두 강제 이전이다 — 옛 꼴은 컴파일 · 로드에서 멈추고, 옮기는 일은 형식을 바꾼 쪽이 한다. 수는 `git ls-files` · `git grep`(f615fb04f4)이다.
+
+| 단계 | 내용 | 손대는 곳 | 의존 |
+| --- | --- | --- | --- |
+| ST-1 출입구 | D6 전부 + D3-3(겹친 등록 시작 거절) | `Core/Testing/TestRunner` · 실행기 판정(`finish` 호출 38 자리, `recordFailure` 113 자리는 그대로) · 세션 · 체인 · 백엔드별 부모 · 보고 · HUD · 스크립트 3(`preflight.sh` · `linux_scenarios.py` · `scenario_bisect.py`) · 에디터 Test Runner 패널 — C++ 약 15 파일 | 없음 |
+| ST-2 `changed` 단계 | D4 | `preflight.sh` · `test_history.py` · 골든 판정(`AutomationEvaluator` · `AutomationGoldenUtil`) · `TestRunner` 스냅숏 · `feature_references.py` · 스킬 2(`preflight` · `scenario-debug`) · `Test/README.md` | ST-1(실패 종류) |
+| ST-3 정착 · 대기 | D1 · D2 | 차단 조건 12 자리 · 벽시계 감시 값 25 자리(16 파일) · 실행기 대기 3 파일 · 렌더러 정착 3 ~ 4 파일 · `EngineConfig`(칸 삭제) · 시나리오 코드모드: `Render.Stable` 170 줄(75 파일) 삭제, `<Screenshot>` 268 개(110 파일) 가운데 `waitForStability` 29 개 → `stability="none"`, 앞에 `Render.Stable` 이 없던 약 70 개 → `stability="assets"`(동작 보존) | ST-1 |
+| ST-4 주인 폴더 | D3-1 · 2 · 4 | 파일 옮기기 3(`py -3 -m Scripts move-source`) · `EngineLayers.toml` · `api_diff.py` | 없음(ST-3 과 같은 파일 — 뒤에) |
+| ST-5 실행 뿌리 | D7 | `ProcessRoots` · `AutomationScratch`(+ Workspace) · `AutomationUserDataRoot` · `AutomationPerBackend` · `EditorPaths` · `EditorContentScan` · `AssetHotReload` · 테스트 — 약 14 파일. `<Scratch>` 61 개(36 파일)의 XML 은 그대로 | 없음 |
+| ST-6 격리 | D5 | 세션 · 렌더 드라이버 창구 · 뷰 대상 3 파일 | ST-2(혼자 기록) |
+
+ST-1 · ST-5 는 파일이 겹치지 않아 함께 맡길 수 있다. ST-2 · ST-3 은 ST-1 뒤, ST-4 는 ST-3 뒤, ST-6 은 ST-2 뒤다. 코드모드는 이전 스크립트(`Scripts/dev/migrate_*.py` 와 같은 자리, 자체 검사 포함)로 한다. 지운 이름(`isOtherProcessInstance` · `makeInstanceID` · `_finishReason` …)은 `_bannedNames` 에 올린다.
+
+### 합격 문턱
+
+- **ST-1:** 단위 — 콜론 · 세미콜론 · 공백이 든 거르개가 인자 오류, 안 맞는 패턴이 실패, 통과로 끝맺고 실패 줄이 있는 판정의 까닭이 첫 실패 줄, 겹친 등록을 낸 자식 역할이 로드 오류. 체인 로그에 `: <Pass/>` 로 끝나는 실패 줄 0. 세 스크립트의 `--self-check` 통과.
+- **ST-2:** 심은 묶음(틀린 기대값 케이스 · 골든 없는 시나리오 · 스냅숏 없는 케이스 · 선언 안 한 Warning 하나씩)을 `changed` 단계가 종류 · 갈래와 함께 넷 다 내고 cpu 를 시작하지 않는다. 증분 빌드 뒤 5 분 이내. 기록한 골든으로 기록 없는 체인이 통과한다.
+- **ST-3:** 단위 — 진척 없는 `waiting` 이 `_stallFrames` 뒤 `WaitStalled`, `notApplicable` 은 막지 않는다. Forward 파이프라인 사진 시나리오가 TAA 조건을 기다린 프레임 0. 멈춘 조건을 심은 체인이 같은 실패 3 번 뒤 `RepeatedFailure` 로 끝나고 벽시계가 3 × 정지 시한 + 기동 이내. 코드모드 뒤 Release 체인이 기록 없이 통과(다시 뜬 골든 0 — 넘으면 그 시나리오의 대기 순서를 본다). Empty 체인 벽시계가 전보다 늘지 않는다(`timeline` 줄). `Render.Stable` · `waitForStability` · `_renderStability` 참조 0.
+- **ST-4:** 전용 서버 Debug 빌드 통과. `Source/Engine/Automation/` 뿌리에 `.cpp` 0. 층 생성 스크립트 테스트에 "뿌리에 더한 파일은 configure 오류" 사례.
+- **ST-5:** pid 꼬리 도우미 호출 0. `<Scratch>` 시나리오 36 개가 네 백엔드 함께 3 회 통과하고 실행 뒤 `Content/scratch/` 에 남는 폴더 0. 멈춘 자식 역할을 죽인 부모가 덤프를 남기고 그 안에 게임 스레드 스택이 있다.
+- **ST-6:** 같은 시나리오를 혼자 · 체인 끝에서 돌린 `goldenSamples` 차이가 같은 자리 두 번의 차이 이내. `stage reset took` 증가 5 ms 이내.
+
+### 남는 위험
+
+- 3 번 실패(빌드 없이 쓴 테스트)는 통합에서 처음 드러난다는 점은 그대로다 — 줄인 것은 드러나는 때(전체 검증 중간 → 빌드 직후)와 분류 비용이다. `changed` 단계는 바뀐 폴더의 테스트만 골라, 다른 폴더의 테스트가 밟는 새 Warning 은 전체 실행에서 처음 나온다.
+- 반복 실패 차단은 뒤 단계의 다른 실패를 가린다 — 돌지 않은 단계를 표에 남기고 `--from-stage` 로 잇는다.
+- scratch 마운트: 리소스 뿌리에 id 를 직접 붙여 디스크 경로를 만드는 에디터 코드가 있으면 사본을 찾지 못한다 — ST-5 의 첫 일은 그 자리를 `AssetPaths` 로 모으는 것이다.
+- 같은 모양이 남은 곳: 모듈 섀도 복사 폴더(`<모듈>_temp_p<pid>_…`)의 pid 이름, `EngineConfig` 의 다른 개발 전용 칸, `<EditorWaitStable/>` 의 정지 판정(`EditorStabilityWait` — D1 형식으로 합칠 수 있으나 2750 줄이 지금 통과해 미룬다).

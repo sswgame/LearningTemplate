@@ -43,7 +43,7 @@
 순서: 측정이 문턱을 넘은 것만 고친다. 이득이 없으면 값을 DesignBacklog "측정과 성능 후보(S8)" 에 한 줄 적고 줄을 지운다. "켤 코드" 커밋은 따로라 값이 흔들림 안이면 그 커밋만 되돌린다. 설계 절의 측정 문턱은 DesignBacklog 각 절의 "측정" 이다.
 
 - **에디터 첫 패널 · Hierarchy 8000(DesignBacklog "에디터 첫 패널 · Hierarchy 8000 측정 계획", E1):** `App -EnableEditor -gv_editorPanelTimes=120 -gv_traceSlowTickMs=100`(`Saved/Editor` 지운 것 · 둔 것) — 첫 그리기 max 50 ms 넘는 패널은 준비를 `onPanelOpened` 잡으로(`ModulesModel::ensureLoaded` 후보), 100 ms 넘는 프레임 0. 큐브 8000 씬: Hierarchy 정지 avg 0.5 ms 미만 · 구조 세대가 같으면 수집 0 회, Ctrl+A 16 ms 미만, 이름 거르기 글자마다 16 ms 미만, 한 줄 옮기기 · 칸 끌기는 형제 순서 · 프로퍼티 기록 절의 판정.
-- **검증 시간(Windows 19 분 — 2026-11-13 증분, 11-12 의 53 분에서):** build 5 분(배포 프리셋 셋이 4 분) · cpu 2.7 분 · Release ctest 11.3 분. 공통 헤더 · CMake 폴더를 고치면 전체 재빌드라 50 분대. Linux `all` 21 분(shooter3d 체인 872 초) + sanitize 3 분. 고정 대기는 `scenario_bisect --fixed-waits` — V2 timeline 모으기가 먼저(5 절 도구 줄).
+- **검증 시간(Windows 19 분 — 2026-11-13 증분, 11-12 의 53 분에서):** build 5 분(배포 프리셋 셋이 4 분) · cpu 2.7 분 · Release ctest 11.3 분. 공통 헤더 · CMake 폴더를 고치면 전체 재빌드라 50 분대. Linux `all` 21 분(shooter3d 체인 872 초) + sanitize 3 분.
 - **S8 후보(Release, 반복):**
   - 대기 호출 표: `OnlineServerCallTableTest.CompletionCostByPending` P 16 · 256 · 4096 ns/완료 · `service_store_pending_peak` — 차이가 흔들림보다 크면 `_mapCall` 을 둔다.
   - 반사 검증 중첩 타입: `ReflectionValidationTest.NestedElementCost` — 흔들림보다 작으면 `NestedTypeCache` 를 되돌린다.
@@ -67,6 +67,7 @@
 - **5-4 리플렉션:** RF-7 밀집 타입 색인(W-R6)은 5-3 SoA 와 함께, 문턱을 넘을 때만(`ReflectionTypeRegistryTest.TypeIndexIsReusedWithANewGeneration`). 경합 같은 모양 둘: `computeDerivedFlags` 가 지은 비트필드를 읽기와 겹쳐 고칠 수 있는지, 핫 리로드가 `TypeInfo` 를 `operator=` 로 제자리 교체하는 동안 다른 스레드가 읽는지 — 같은 판 교체로 막는다. FUNCTION: 인자 있는 메서드를 타입 위젯 · `ReflectCallResult` 오류 표시로, 그다음 반복 작업용 액션 목록(언리얼 `CallInEditor` 대조).
 - **코어 · 온라인 설계 일:** AC-2 `reserve` · `map` 구축(감사 C-9 와 같은 줄, `UnorderedMapTest.ReservedInsertsDoNotAllocate` · `MapTest.RangeBuildKeepsTheFirstOfEqualKeys`). O3-5 실제 해시 부하 구성(`Config/Server/Online/` · `OnlineLoadBot`, 도착률은 감사 O-12).
 - **도구 · 에디터(측정이 문턱을 넘을 때만):** V2 timeline 모으기(의존 없음) → V3 그리지 않는 대기(`engine/automation/waitrenderoff`) → V4 shooter3d 적용, T2 체인 샤드(ctest 벽시계 10 % 이상 안 줄면 되돌림), R3 에셋 색인 디스크 캐시, E2 문턱 넘는 패널, D3 공유 DDC 측정, S2 · S3 원본 떼기(원본 2 GB 문턱).
+- **시나리오 · 테스트 프레임워크 개편:** ST-1 → ST-2 `changed` → ST-3 대기 → ST-4, ST-2 뒤 ST-6, ST-5 따로.
 - **구조 점검:** `ModuleSharedAssetCache.h` 를 직접 include 하는 장르 · 온라인 카탈로그가 공유 캐시 계약에 기대는지 보고 좁히기 + 모듈 언로드 · 재로드 때 캐시 무효화 테스트. 서브시스템 `scope.get<T>()` 가 `after` 에 빠진 타입을 시작 단계 오류로 잡는지 · 수명 의존 누락 진단 테스트.
 - **데이터 · 카탈로그:** 매직 리터럴 기준선이 큰 파일(데모 UI · 게임 모드 컴포넌트)의 튜닝 값과 게임 모드 상태 `switch` 를 PROPERTY · 규칙 카탈로그로, 남은 `-1` 과 `find*Index` 를 `sw::optional` 로(`sw::expected` Core 밖 이전과 함께). `FighterCatalog`(기술 → 프레임) 엄격도와 `ActionPlatformerCatalog` 전이 검사를 참조 표로 옮길지 정하기, 상속 · 다른 팩 참조와 잘못된 참조가 쿠킹 · 시작을 통과하는 회귀 테스트.
 - **키트:** 하우징 서버 권위 배치(요청 → 서버 판정 → 부지 상태 방송 · 늦은 참가, 넷 메시지 영역 · 복제 테스트 · 둘 실행 시나리오 — `Kits/Feature/World/Housing/`). MMO 키트의 부하 목표와 운영 비용.
