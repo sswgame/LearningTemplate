@@ -10,13 +10,15 @@
 #include "Editor/Common/Localization/LocalizationTools.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Content/AssetPaths.h"
 
 namespace sw::editor
 {
-    DataTableModel::DataTableModel()
-        : _localizationSheet{}
+    DataTableModel::DataTableModel( const DocumentEditRecorder& recorder )
+        : _pRecorder{ &recorder }
+        , _localizationSheet{}
         , _listLocalizationProject{}
         , _listGameDataFile{}
         , _gameDataPath{}
@@ -299,11 +301,21 @@ namespace sw::editor
     {
         _gameDataDocument.replaceText( _selectedGameDataRawText );
         _bGameDataDirty = SW_TRUE;
+        _pRecorder->notifyEdited( "Edit Game Data Text" ); // 글 상자를 치는 동안은 상호작용 구간 하나다
     }
 
     void DataTableModel::commitGameDataTableEdit()
     {
         _selectedGameDataRawText = _gameDataDocument.getText();
         _bGameDataDirty          = SW_TRUE;
+        _pRecorder->notifyEdited( "Edit Game Data Table" );
+    }
+
+    void DataTableModel::applyGameDataText( string_view text )
+    {
+        _selectedGameDataRawText = text;
+        _gameDataDocument.replaceText( _selectedGameDataRawText ); // 깨진 원문도 글 상자로 고치게 둔다
+        _bGameDataDirty = _selectedGameDataRawText != _savedGameDataRawText ? SW_TRUE : SW_FALSE;
+        ++_gameDataLoadCount;
     }
 } // namespace sw::editor

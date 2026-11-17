@@ -16,6 +16,7 @@
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     class EditorListFilter;
 
     /** @brief 현지화 표에서 어떤 행을 볼지입니다. */
@@ -37,7 +38,8 @@ namespace sw::editor
     class DataTableModel
     {
     public:
-        DataTableModel();
+        /** @param recorder 편집 알림 창구입니다(문서 패널이 쥔다). 게임 데이터 표를 고친 뒤 이리 알려 문서 되돌리기 한 단계가 된다(감사 E-13). */
+        explicit DataTableModel( const DocumentEditRecorder& recorder );
 
         /** @brief 백그라운드 읽기 잡의 결과를 받고, 아직 읽지 않은 문서는 읽기를 겁니다. 패널이 그리기마다 부릅니다. */
         void pollBackgroundJobs();
@@ -131,6 +133,10 @@ namespace sw::editor
         void commitGameDataRawEdit();
         /** @brief 표 편집기가 문서를 고친 뒤 원문을 문서 글로 맞추고 dirty 로 만듭니다. */
         void commitGameDataTableEdit();
+        /** @brief 열린 게임 데이터 파일의 원문입니다(문서 되돌리기의 글). 열린 파일이 없으면 빈 글입니다. */
+        string captureGameDataText() const { return _gameDataPath.empty() ? string{} : _selectedGameDataRawText; }
+        /** @brief 되돌리기가 준 원문 @p text 로 문서를 맞춥니다. dirty 는 저장한 글과 다를 때만이고, 표 편집기 상태는 다시 잡는다(`getGameDataLoadCount` 가 는다). */
+        void applyGameDataText( string_view text );
         /** @brief 게임 데이터 문서를 새로 읽은(또는 되돌린) 횟수입니다. 늘면 패널이 표 편집기 상태를 지운다. */
         uint32 getGameDataLoadCount() const { return _gameDataLoadCount; }
 
@@ -139,21 +145,22 @@ namespace sw::editor
         void openGameDataText( string&& text );
 
     private:
-        LocalizationSheet         _localizationSheet;
-        vector<string>            _listLocalizationProject;
-        vector<GameDataFileEntry> _listGameDataFile;
-        string                    _gameDataPath; ///< 열린 게임 데이터 파일의 디스크 경로(문서 패널이 정한 문서를 푼 자리)
-        string                    _selectedGameDataRawText;
-        string                    _savedGameDataRawText;
-        CatalogDocument           _gameDataDocument;
-        EditorLocalizationLoadJob _localizationJob;
-        EditorGameDataScanJob     _gameDataJob;
-        int32                     _selectedProjectIndex;
-        int32                     _requestedProjectIndex; ///< 돌고 있는 읽기를 건 때의 프로젝트 번호(`acceptLoadedSheet`)
-        uint32                    _gameDataLoadCount;
-        uint8                     _bLocalizationLoaded : 1;
-        uint8                     _bGameDataLoaded     : 1;
-        uint8                     _bLocalizationDirty  : 1;
-        uint8                     _bGameDataDirty      : 1;
+        const DocumentEditRecorder* _pRecorder; ///< 편집 알림 창구(문서 패널이 쥔다)
+        LocalizationSheet           _localizationSheet;
+        vector<string>              _listLocalizationProject;
+        vector<GameDataFileEntry>   _listGameDataFile;
+        string                      _gameDataPath; ///< 열린 게임 데이터 파일의 디스크 경로(문서 패널이 정한 문서를 푼 자리)
+        string                      _selectedGameDataRawText;
+        string                      _savedGameDataRawText;
+        CatalogDocument             _gameDataDocument;
+        EditorLocalizationLoadJob   _localizationJob;
+        EditorGameDataScanJob       _gameDataJob;
+        int32                       _selectedProjectIndex;
+        int32                       _requestedProjectIndex; ///< 돌고 있는 읽기를 건 때의 프로젝트 번호(`acceptLoadedSheet`)
+        uint32                      _gameDataLoadCount;
+        uint8                       _bLocalizationLoaded : 1;
+        uint8                       _bGameDataLoaded     : 1;
+        uint8                       _bLocalizationDirty  : 1;
+        uint8                       _bGameDataDirty      : 1;
     };
 } // namespace sw::editor
