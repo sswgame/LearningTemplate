@@ -57,7 +57,7 @@ namespace sw
         if ( isPlainFileName( fileName ) == false )
             return false;
         const string path = FileUtil::joinPath( FileUtil::joinPath( _folder, kCloudFolderName ), fileName );
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, bytes.data(), bytes.size() );
+        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFileDurable( path, bytes.data(), bytes.size() );
     }
 
     bool LocalPlatformServices::readCloudFile( string_view fileName, vector<uint8>& outBytes )
@@ -103,7 +103,7 @@ namespace sw
                 text += '\n';
             }
             const string path   = FileUtil::joinPath( _folder, kAchievementsFileName );
-            const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, text );
+            const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text );
             if ( bSaved == false )
                 SW_LOG_WARNING_ID( "LocalPlatformServices.AchievementsNotSaved", "Local platform: '%#' could not be written - tried again on the next update", path.c_str() );
             _bAchievementsDirty = bSaved ? SW_FALSE : SW_TRUE;
@@ -140,7 +140,7 @@ namespace sw
             text += '\n';
         }
         const string path   = FileUtil::joinPath( _folder, pFileName );
-        const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, text );
+        const bool   bSaved = FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFileDurable( path, text );
         if ( bSaved == false )
             SW_LOG_WARNING_ID( "LocalPlatformServices.FileNotSaved", "Local platform: '%#' could not be written - tried again on the next update", path.c_str() );
         return bSaved;

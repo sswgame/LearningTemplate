@@ -1,9 +1,8 @@
 /**
  * @file FileLocalSlotStorage.h
  * @brief 파일 로컬 저장 백엔드입니다. 슬롯 `save/slot0` 은 `<루트>/save/slot0.swls` 파일이 됩니다.
- *        쓰기는 `FileUtil::writeFile`(같은 폴더 임시 파일에 쓰고 이름 바꾸기)이라 결과는 옛 것이거나 새 것입니다.
- * @details 시작할 때 남은 임시 파일(`*.swls.tmp*`, 중단된 쓰기의 잔여물)을 지운다. fsync 는 하지 않는다(언리얼 `SaveArrayToFile` 과 같다). 전원이 나가 이름 바꾸기만
- *          남은 반쪽 파일은 봉투 체크섬이 Corrupt 로 잡는다.
+ *        쓰기는 `FileUtil::writeFileDurable`(같은 폴더 임시 파일에 쓰고 fsync 뒤 이름 바꾸기)이라 전원이 나가도 결과는 옛 것이거나 새 것입니다.
+ * @details 시작할 때 남은 임시 파일(`*.swls.tmp*`, 중단된 쓰기의 잔여물)을 지운다. 그래도 깨진 파일(장치 결함)은 봉투 체크섬이 Corrupt 로 잡는다.
  */
 #pragma once
 #include "Core/Container/string.h"

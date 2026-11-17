@@ -49,7 +49,7 @@ namespace sw
         const string path = makeSlotPath( slot );
         if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             return LocalStoreResult::IOError;
-        return FileUtil::writeFile( path, envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+        return FileUtil::writeFileDurable( path, envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::eraseSlot( const string& slot )

@@ -9,6 +9,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/FileLocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalDeviceKeyProvider.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreBackend.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/Tests/LocalStoreContract.h"
@@ -16,6 +17,7 @@
 
 // LocalStoreMemoryTest · LocalStoreFileTest — 로컬 저장: 메모리 저장소와 파일 저장소(전용 스레드 + 파일 바닥)가 같은 계약 아홉(왕복 · 나열 · 압축 · 봉인 셋 · 이름 ·
 // 순서 · 내리기)을 지킨다. 메모리는 쓰기 도중 꺼짐 · 슬롯 이름 규칙, 파일은 슬롯 → 파일 경로와 꺼진 쓰기의 임시 파일 지우기, 공장(file · memory · 모르는 이름 · 기반 이름 덮기)(nogpu).
+// LocalDeviceKeyTest — 장치 키: 0 바이트 · 쓰레기 키 파일은 옆에 남기고 새 키로 기동한다(nogpu).
 
 using namespace sw;
 
@@ -155,4 +157,44 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
         SW_EXPECT_TRUE( LocalStoreBackend::createLocalStore( "UnitGame", settings, context ) ); // 기반 파일 백엔드가 그대로 만든다
     }
     SW_EXPECT_TRUE( LocalStoreBackend::createLocalStore( "UnitGame", settings, context ) ); // 거절된 등록이 풀려도 기반 백엔드는 남는다
+}
+
+namespace
+{
+    /** @brief 키 파일 @p keyBytes 를 두고 장치 키를 얻은 뒤, 풀리지 않던 파일이 옆에 남고 새 키가 다음 기동에도 같은지 봅니다. */
+    void expectUnreadableKeyFileIsReplaced( string_view caseName, const string& keyBytes )
+    {
+        OpenSSLNetSecurityProvider provider;
+        const string               keyPath = FileUtil::joinPath( test::makeScratchPath( caseName ), LocalDeviceKeyProvider::kKeyFileName );
+        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( keyPath ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( keyPath, keyBytes ) );
+
+        uint8 arrKey[ILocalStoreKeyProvider::kKeySize]{};
+        {
+            LocalDeviceKeyProvider keyProvider{ keyPath, &provider };
+            SW_EXPECT_LOG( "LocalDeviceKeyProvider.UnreadableKeyReplaced" );
+            SW_REQUIRE_TRUE( keyProvider.getSealKey( arrKey ) ); // 예전에는 IOError 로 멈춰 사용자가 파일을 지울 때까지 저장 · 읽기가 막혔다
+        }
+        const string setAsidePath = keyPath + LocalDeviceKeyProvider::kUnreadableKeySuffix;
+        string       keptBytes;
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( setAsidePath, keptBytes ) );
+        SW_EXPECT_TRUE( keptBytes == keyBytes ); // 지우지 않는다 — 다른 사용자의 파일이었으면 되돌려 놓을 수 있다
+
+        uint8                  arrReloadedKey[ILocalStoreKeyProvider::kKeySize]{};
+        LocalDeviceKeyProvider restarted{ keyPath, &provider };
+        SW_REQUIRE_TRUE( restarted.getSealKey( arrReloadedKey ) );
+        SW_EXPECT_TRUE( std::memcmp( arrKey, arrReloadedKey, sizeof( arrKey ) ) == 0 );
+    }
+} // namespace
+
+/** @brief [LocalDeviceKeyTest] 0 바이트 키 파일(전원이 나간 쓰기)로 기동해도 옆에 남기고 새 키를 만든다 */
+SW_TEST_CASE( LocalDeviceKeyTest, ZeroByteKeyFileIsKeptAsideAndReplaced )
+{
+    expectUnreadableKeyFileIsReplaced( "device_key_empty", "" );
+}
+
+/** @brief [LocalDeviceKeyTest] 쓰레기 키 파일로 기동해도 옆에 남기고 새 키를 만든다 */
+SW_TEST_CASE( LocalDeviceKeyTest, GarbageKeyFileIsKeptAsideAndReplaced )
+{
+    expectUnreadableKeyFileIsReplaced( "device_key_garbage", "not a key" );
 }
