@@ -227,8 +227,9 @@ namespace sw
         /**
          * @brief 스펙을 @p pTarget 에 겁니다. 틱 중이고 @p pTarget 이 지금 틱하는 오브젝트가 아니면 적용을 틱 직후로 미루고 무효 핸들을 반환합니다.
          * @details 미룬 적용은 대상을 핸들로 다시 찾기 때문에, 그 사이에 대상이 사라져도 안전합니다.
+         *          대상은 const 로 받는다 — 틱에서 읽기 매니저로 찾은 대상을 그대로 넘기고, 쓰기는 쓸 수 있는 때(`canMutateNow`)나 틱 뒤에만 한다.
          */
-        ActiveEffectHandle applyGameplayEffectSpecToTarget( const AbilityEffectSpec& spec, AbilityComponent* pTarget );
+        ActiveEffectHandle applyGameplayEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilityComponent* pTarget );
         /** @brief 카탈로그의 이펙트 id 로 스펙을 만들어 자기에게 겁니다. 시작 이펙트와 디버그에 씁니다. */
         ActiveEffectHandle applyGameplayEffectToSelf( const hashed_string& effectID, int32 level = 1 );
         /**

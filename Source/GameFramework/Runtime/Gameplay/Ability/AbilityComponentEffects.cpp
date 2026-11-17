@@ -110,25 +110,26 @@ namespace sw
         return applyDurationSpec( spec );
     }
 
-    ActiveEffectHandle AbilityComponent::applyGameplayEffectSpecToTarget( const AbilityEffectSpec& spec, AbilityComponent* pTarget )
+    ActiveEffectHandle AbilityComponent::applyGameplayEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilityComponent* pTarget )
     {
         if ( pTarget == nullptr || spec.isValid() == false )
             return ActiveEffectHandle{};
         if ( pTarget->canMutateNow() )
-            return pTarget->applyGameplayEffectSpecToSelf( spec );
+            return const_cast<AbilityComponent*>( pTarget )->applyGameplayEffectSpecToSelf( spec ); // 틱 밖이거나 대상이 지금 틱하는 자신이다 — 쓸 수 있는 때다
 
         // 다른 워커가 대상을 틱하고 있을 수 있으므로 틱 직후 게임 스레드에서 건다. 그 사이 대상이 사라질 수 있어서 핸들로 다시 찾는다.
-        GameObject*                              pTargetOwner = pTarget->getOwner();
-        GameObjectManager*                       pManager     = pTargetOwner != nullptr ? pTargetOwner->getMutableManager() : nullptr;
-        const TComponentHandle<AbilityComponent> targetHandle{ pTarget };
+        // 읽기 매니저의 명령 버퍼로 넘긴다 — 틱 중에 쓰기 매니저를 꺼내지 않는다(`GameObject::getMutableManager` 단언).
+        const GameObject*        pTargetOwner = pTarget->getOwner();
+        const GameObjectManager* pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return ActiveEffectHandle{};
-        pManager->deferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, targetHandle, spec]()
+        const TComponentHandle<AbilityComponent> targetHandle{ pTarget };
+        pManager->executeOrDeferPostTickOnScene( [targetHandle, spec]( GameObjectManager& sceneManager )
         {
-            AbilityComponent* pResolved = pManager->resolveComponent( targetHandle );
+            AbilityComponent* pResolved = sceneManager.resolveComponent( targetHandle );
             if ( pResolved != nullptr )
                 (void)pResolved->applyGameplayEffectSpecToSelf( spec ); // 미룬 적용은 핸들을 돌려줄 곳이 없다
-        } ) );
+        } );
         return ActiveEffectHandle{};
     }
 

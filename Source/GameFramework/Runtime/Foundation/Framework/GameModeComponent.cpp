@@ -243,7 +243,13 @@ namespace sw
         inoutListHandle.clear();
     }
 
-    GameObject* GameModeComponent::findGameObject( GameObjectHandle handle ) const
+    const GameObject* GameModeComponent::findGameObject( GameObjectHandle handle ) const
+    {
+        const GameObjectManager* pManager = getObjectManager();
+        return pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
+    }
+
+    GameObject* GameModeComponent::findGameObject( GameObjectHandle handle )
     {
         GameObjectManager* pManager = getObjectManager();
         return pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
@@ -289,7 +295,13 @@ namespace sw
         _compactThreshold = MathUtil::max( GameModeComponentInternal::kMinCompactThreshold, static_cast<uint32>( keptCount * 2 ) );
     }
 
-    GameObjectManager* GameModeComponent::getObjectManager() const
+    const GameObjectManager* GameModeComponent::getObjectManager() const
+    {
+        const GameObject* pOwner = getOwner();
+        return pOwner != nullptr ? pOwner->getManager() : nullptr;
+    }
+
+    GameObjectManager* GameModeComponent::getObjectManager()
     {
         GameObject* pOwner = getOwner();
         return pOwner != nullptr ? pOwner->getMutableManager() : nullptr;

@@ -96,7 +96,7 @@ namespace sw
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 현재 위치를 반환합니다. 없으면 false 입니다(틱 밖에서 부릅니다). */
         [[nodiscard]] bool findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const;
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 어빌리티 시스템을 반환합니다(어빌리티가 대상을 찾을 때 씁니다). */
-        AbilityComponent* findNearestHostile( const AbilityComponent& from, float32 maxRange ) const;
+        const AbilityComponent* findNearestHostile( const AbilityComponent& from, float32 maxRange ) const;
         /**
          * @brief @p from 이 @p facing 방향으로 탄 @p projectileID(`ProjectileCatalog`)를 쏩니다. 맞은 적대 유닛에 @p spec(있으면 @p extraSpec 도)을 적용합니다.
          * @details 어느 스레드에서 불러도 된다. 투사체는 틱이 끝난 뒤(게임 스레드) 시뮬레이션에 넣고 모습을 스폰한다. 스펙은 쏜 순간 만든 것이라 쏜 쪽이 그 사이 쓰러져도 남는다.
@@ -190,8 +190,8 @@ namespace sw
         /** @brief 플레이어 폰을 자동 플레이 스위치에 맞는 조종자(자동 전투 AI 또는 플레이어 조종자)가 조종하게 합니다. 틱 밖(플러시)에서 부릅니다. */
         void syncPlayerPossession( GameObjectManager& manager );
         /** @brief 현재 스냅샷의 플레이어 폰을 반환합니다. 없으면 nullptr 입니다. */
-        PawnComponent* findPlayerPawn() const;
-        void           spawnProjectile( const ProjectileRequest& request );
+        const PawnComponent* findPlayerPawn() const;
+        void                 spawnProjectile( const ProjectileRequest& request );
         /**
          * @brief 팀 색 하나를 메시에 입힙니다. 메시의 머티리얼(씬이 항상 보관하는 팔레트와 기본 머티리얼)에서 만든 인스턴스를 모두가 나눠 씁니다.
          * @details 색마다 머티리얼 에셋을 두면 그 머티리얼은 처음 스폰할 때 게임 스레드에서 로드되고 마지막 것이 사라질 때 언로드된다.

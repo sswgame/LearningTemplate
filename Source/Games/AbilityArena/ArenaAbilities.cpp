@@ -37,8 +37,8 @@ namespace sw
         }
         if ( pGameMode != nullptr )
         {
-            AbilityComponent* pTarget = pGameMode->findNearestHostile( *pAbilitySystem, *range );
-            AbilityEffectSpec spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
+            const AbilityComponent* pTarget = pGameMode->findNearestHostile( *pAbilitySystem, *range );
+            AbilityEffectSpec       spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( pTarget != nullptr && spec.isValid() )
             {
                 spec.setSetByCallerMagnitude( "Damage", *damage );

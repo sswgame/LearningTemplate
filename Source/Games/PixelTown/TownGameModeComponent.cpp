@@ -125,7 +125,7 @@ namespace sw
 
     const TileMapRendererComponent* TownGameModeComponent::findLayer( GameObjectHandle layer, const utf8* pRole ) const
     {
-        GameObjectManager*              pManager  = getObjectManager();
+        const GameObjectManager*        pManager  = getObjectManager();
         const GameObject*               pObject   = pManager != nullptr ? pManager->resolveGameObject( layer ) : nullptr;
         const TileMapRendererComponent* pRenderer = pObject != nullptr ? pObject->getComponent<TileMapRendererComponent>() : nullptr;
         if ( pRenderer == nullptr || pRenderer->getTileMap()._width <= 0 )

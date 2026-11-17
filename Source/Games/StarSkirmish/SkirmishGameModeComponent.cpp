@@ -321,7 +321,7 @@ namespace sw
         }
         // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러선 프리셋(`_watchCameraPreset`, 씬 데이터)으로 시작하고 WASD 도 카메라를 움직인다.
         // 프리셋 고르기는 카메라 오브젝트의 시작 순서에 기대지 않는다(`startWithPreset` — 시작 전이면 시작 프리셋, 뒤면 컷).
-        CameraDirectorComponent* pRig = findCameraRig();
+        CameraDirectorComponent* pRig = findOn<CameraDirectorComponent>( _cameraRig );
         if ( pRig != nullptr )
         {
             pRig->setPanAction( _bHuman == SW_TRUE ? _playerPanAction : _spectatorPanAction ); // 플레이할 때 WASD 는 명령 단축키다.
@@ -680,7 +680,7 @@ namespace sw
         {
             // 선택한 유닛으로 이동한다. 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽는다(카메라 오브젝트에는 다른 쓰기가 없다).
             const RTSUnit*           pPrimary = world.findUnit( _selection.getPrimary() );
-            CameraDirectorComponent* pRig     = findCameraRig();
+            CameraDirectorComponent* pRig     = findOn<CameraDirectorComponent>( _cameraRig );
             if ( pPrimary != nullptr && pRig != nullptr )
                 pRig->setFocusPoint( float3{ pPrimary->_position._x, 0.0f, pPrimary->_position._z } );
         }
@@ -983,7 +983,7 @@ namespace sw
         }
     }
 
-    CameraDirectorComponent* SkirmishGameModeComponent::findCameraRig() const
+    const CameraDirectorComponent* SkirmishGameModeComponent::findCameraRig() const
     {
         return findOn<CameraDirectorComponent>( _cameraRig );
     }

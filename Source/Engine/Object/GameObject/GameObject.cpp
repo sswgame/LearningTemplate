@@ -240,7 +240,10 @@ namespace sw
     {
         // 틱 본문은 쓰기 가능한 매니저를 꺼내지 않는다 — 읽기는 `TickContext::getManager`(const), 쓰기는 틱 뒤 작업 · const 매니저의 명령 버퍼.
         // 언리얼 Mass 가 처리기 실행 컨텍스트 밖의 쓰기 접근을 검사하는(FMassExecutionContext 의 접근 요구 검증) 자리다 — 형식(const)이 막지 못하는 우회(멤버에 둔 오브젝트 포인터)를 실행에서 잡는다.
-        SW_ASSERT( StructuralChangeBuffer::getTickingObject() == nullptr );
+        // 어긴 자리를 이름으로 남긴다 — 부른 쪽이 게임 모듈(그림자 복사본)이면 스택에 기호가 없다.
+        const GameObject* const pTicking = StructuralChangeBuffer::getTickingObject();
+        SW_LOG_ASSERT( pTicking == nullptr, "getMutableManager on '%#' while '%#' ticks - read through getManager() and defer writes (TickContext::deferPostTickOnComponent)",
+                       getName().c_str(), pTicking != nullptr ? pTicking->getName().c_str() : "" );
         return _pOwnerManager;
     }
 

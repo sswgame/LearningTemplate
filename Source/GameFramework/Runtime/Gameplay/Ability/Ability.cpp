@@ -164,7 +164,7 @@ namespace sw
         return _pAbilitySystem->applyGameplayEffectSpecToSelf( spec );
     }
 
-    ActiveEffectHandle Ability::applyEffectSpecToTarget( const AbilityEffectSpec& spec, AbilityComponent* pTarget )
+    ActiveEffectHandle Ability::applyEffectSpecToTarget( const AbilityEffectSpec& spec, const AbilityComponent* pTarget )
     {
         if ( _pAbilitySystem == nullptr )
             return ActiveEffectHandle{};
@@ -326,12 +326,12 @@ namespace sw
         if ( bApplyTargetEffect )
         {
             // 상대는 이벤트의 "다른 쪽" 이다. 받은 이벤트(`_target` 이 주인 자신인 피격)이면 일으킨 쪽이고, 보낸 이벤트이면 받은 쪽이다.
-            GameObject*            pOwner        = pAbilitySystem->getOwner();
-            GameObjectManager*     pManager      = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-            const bool             bTargetIsSelf = pOwner != nullptr && ( pTriggerEvent->_target.isValid() == false || pTriggerEvent->_target == pOwner->getHandle() );
-            const GameObjectHandle targetHandle  = bTargetIsSelf ? pTriggerEvent->_instigator : pTriggerEvent->_target;
-            GameObject*            pTargetObject = pManager != nullptr ? pManager->resolveGameObject( targetHandle ) : nullptr;
-            AbilityComponent*      pTarget       = pTargetObject != nullptr ? pTargetObject->getComponent<AbilityComponent>() : nullptr;
+            const GameObject*        pOwner        = pAbilitySystem->getOwner();
+            const GameObjectManager* pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            const bool               bTargetIsSelf = pOwner != nullptr && ( pTriggerEvent->_target.isValid() == false || pTriggerEvent->_target == pOwner->getHandle() );
+            const GameObjectHandle   targetHandle  = bTargetIsSelf ? pTriggerEvent->_instigator : pTriggerEvent->_target;
+            const GameObject*        pTargetObject = pManager != nullptr ? pManager->resolveGameObject( targetHandle ) : nullptr;
+            const AbilityComponent*  pTarget       = pTargetObject != nullptr ? pTargetObject->getComponent<AbilityComponent>() : nullptr;
             if ( pTarget != nullptr )
                 (void)applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), pTarget ); // 이펙트 핸들은 쓰지 않는다. 막히면 걸리지 않을 뿐이다
             else                                                                            // 상대가 이미 사라졌거나(죽은 공격자) 어빌리티 시스템이 없는 것(함정)은 게임 중 흔한 일이다 — 언리얼 GAS 도 조용히 넘긴다

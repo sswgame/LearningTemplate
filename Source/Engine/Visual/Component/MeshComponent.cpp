@@ -216,7 +216,7 @@ namespace sw
         // 시간이 0 이면 바로 끝 값이다(등장을 끈 물체 — 데이터 `_appearSeconds`). 플레이 전 씬(에디터 편집 · 로드 중)도 그렇다 — 씬 시간이 흐르지 않아(편집 모드는
         // 경과 0) 램프가 끝나지 않고 메시가 0 에 머문다(유니티 편집 모드 · 언리얼 에디터 월드도 등장 페이드를 하지 않는다).
         const GameObject* const pOwner   = getOwner();
-        const bool              bPlaying = pOwner != nullptr && pOwner->getMutableManager() != nullptr && pOwner->getMutableManager()->hasBegunPlay();
+        const bool              bPlaying = pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getManager()->hasBegunPlay(); // 읽기다 — 틱(보이기 바꾸기)에서 불린다
         if ( _appearSeconds <= 0.0f || bPlaying == false )
         {
             _appearance     = direction > 0.0f ? 1.0f : 0.0f;

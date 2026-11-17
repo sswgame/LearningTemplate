@@ -192,7 +192,7 @@ namespace sw
         /** @brief 농부를 @p direction 방향으로 움직이고 바라보는 방향을 네 방향으로 맞춥니다. 벡터 길이 1 이 걷는 속도의 최대치이며, 길이가 곧 속도 비율입니다. */
         void movePlayer( const float3& direction, float32 deltaTime );
         /** @brief 농부 폰을 반환합니다(`_farmer` 오브젝트). 없으면 nullptr 입니다. */
-        PawnComponent* findFarmerPawn() const;
+        const PawnComponent* findFarmerPawn() const;
         /** @brief 농부 폰을 자동 플레이 스위치에 맞는 조종자(자동 농부 AI 또는 플레이어 조종자)가 조종하게 합니다. 틱 밖(플러시)에서 부릅니다. */
         void syncFarmerPossession( GameObjectManager& manager );
         /** @brief 바라보는 타일에 현재 도구를 씁니다. 체력이 모자라면 아무것도 하지 않습니다. */

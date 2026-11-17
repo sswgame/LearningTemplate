@@ -412,7 +412,7 @@ namespace sw
         _bPossessionDirty = SW_FALSE;
     }
 
-    PawnComponent* FarmGameModeComponent::findFarmerPawn() const
+    const PawnComponent* FarmGameModeComponent::findFarmerPawn() const
     {
         return findOn<PawnComponent>( _farmer );
     }
@@ -433,7 +433,7 @@ namespace sw
     void FarmGameModeComponent::syncFarmerPossession( GameObjectManager& manager )
     {
         _bPossessionDirty    = SW_FALSE;
-        PawnComponent* pPawn = findFarmerPawn();
+        PawnComponent* pPawn = findOn<PawnComponent>( _farmer );
         if ( pPawn == nullptr || isStarted() == false )
             return;
         if ( isAutoPlayOn() )
@@ -830,9 +830,9 @@ namespace sw
 
     bool FarmGameModeComponent::tryGetObjectPosition( GameObjectHandle handle, float3& outPosition ) const
     {
-        GameObjectManager*    pManager = getObjectManager();
-        const GameObject*     pObject  = pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
-        const SceneComponent* pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+        const GameObjectManager* pManager = getObjectManager();
+        const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
+        const SceneComponent*    pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
             return false;
         outPosition = pScene->getWorldPosition();
