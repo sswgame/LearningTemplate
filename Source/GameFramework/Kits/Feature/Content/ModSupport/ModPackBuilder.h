@@ -1,7 +1,7 @@
 /**
  * @file ModPackBuilder.h
  * @brief 소스 모드 폴더(`<모드>/content/`, 리소스 경로 그대로의 낱개 파일)를 모드 팩(도메인 없는 패치 팩)으로 묶습니다. 모드 제작 도구와 개발 실행이 같이 쓴다.
- * @details 팩 바이트는 쿠커와 같은 쓰는 곳 하나(`PackWriter`)가 만든다. 묶은 팩도 마운트 전에 같은 검사(`ModSession`)를 지난다 — 여기서는 경로 꼴과 크기 한계만 본다.
+ * @details 팩 바이트는 쿠커와 같은 쓰는 곳 하나(`PackStreamWriter`)가 만든다. 묶은 팩도 마운트 전에 같은 검사(`ModSession`)를 지난다 — 여기서는 경로 꼴과 크기 한계만 본다.
  */
 #pragma once
 #include "Core/Container/string.h"

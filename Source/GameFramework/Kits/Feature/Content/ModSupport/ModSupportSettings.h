@@ -3,7 +3,7 @@
  * @brief 게임이 모드에 허락하는 것(콘텐츠 판, 덮어쓸 수 있는 기본 리소스 접두)과 바깥 입력의 크기 한계입니다. 게임 팩 데이터(`game/<팩>/data/modsupport.xml`)에서 읽는다.
  * @details 정책 값은 코드 표가 아니라 데이터다(데이터 종류 `kDataKind`). 모든 칸이 필수이고 빠지면 읽기가 실패한다(기본값으로 물러나지 않는다).
  *
- *          <ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216">
+ *          <ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
  *              <Overridable prefix="game/empty/data/"/>
  *          </ModSupportSettings>
  */
@@ -46,7 +46,9 @@ namespace sw
         PROPERTY( Required, Min = 1 )
         uint32 _maxEntryCount{ 0 }; ///< 모드 팩 항목 수 상한
         PROPERTY( Required, Min = 1 )
-        uint32         _maxEntryBytes{ 0 };    ///< 항목 하나의 풀린 크기 상한
+        uint32 _maxEntryBytes{ 0 }; ///< 항목 하나의 풀린 크기 상한
+        PROPERTY( Required, Min = 65536, Max = 262144 )
+        uint32         _packBlockSize{ 0 };    ///< 모드 팩을 묶을 때(`ModPackBuilder`)의 블록 크기 — 2 의 거듭제곱(`kPackMinBlockSize` ~ `kPackMaxBlockSize`). 런타임에는 `Config/` 의 팩 설정이 없어 게임 데이터가 든다
         vector<string> _listOverridablePrefix; ///< 모드가 덮어쓸 수 있는 기본 리소스 id 접두(끝 `/`). 비면 덮어쓰기를 받지 않는다
 
         /** @brief 설정 글을 읽습니다. 모르는 원소 · 빠진 칸 · 0 인 한계 · 끝이 `/` 가 아니거나 정규형이 아닌 접두면 이유를 오류로 남기고 false 입니다. */

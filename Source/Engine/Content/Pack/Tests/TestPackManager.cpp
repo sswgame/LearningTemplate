@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Content/Pack/Tests/PackTestUtil.h"
 
 // 팩 가상 파일 시스템 — 도메인 팩은 도메인을 뗀 경로로, 패치 팩은 전체 경로로 담는다. 도메인이 붙은 키와 없는 키 모두에서 패치의 교체 · 지움이 보이고, dlc 팩도 찾는다.
 // 도메인은 팩이 적은 마운트 도메인이다 — 파일 이름과 상관없다.
@@ -16,19 +16,10 @@ namespace
 {
     struct TestPackManagerInternal
     {
-        static vector<uint8> toBytes( string_view text ) { return vector<uint8>( text.begin(), text.end() ); }
-
         /** @brief @p packPath 에 항목들을 담은 팩을 씁니다. @p mountDomain 이 비면 패치 팩이다(항목이 전체 경로). */
         static bool writePack( const string& packPath, string_view mountDomain, const vector<std::pair<string, string>>& listEntry )
         {
-            PackWriterDesc desc;
-            desc._mountDomain = string{ mountDomain };
-            PackWriter writer( desc );
-            for ( const std::pair<string, string>& entry : listEntry )
-            {
-                writer.addBytes( entry.first, toBytes( entry.second ) );
-            }
-            return writer.writePackFile( packPath );
+            return PackTestUtil::writeTextPack( packPath, mountDomain, listEntry );
         }
 
         static string read( const PackManager& packs, string_view path )

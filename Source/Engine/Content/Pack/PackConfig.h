@@ -23,7 +23,7 @@ namespace sw
 {
     /**
      * @struct PackCompressionConfig
-     * @brief 팩 압축 코덱과 레벨입니다. 코덱은 팩 단위입니다(리더가 헤더의 코덱 하나로 모든 항목을 푼다).
+     * @brief 팩 압축 코덱 · 레벨 · 블록 크기 · 쓰기 창입니다. 코덱은 팩 단위입니다(리더가 헤더의 코덱 하나로 모든 블록을 푼다).
      */
     REFLECT()
     struct SW_API PackCompressionConfig
@@ -35,6 +35,26 @@ namespace sw
 
         PROPERTY( Required, Min = 0 )
         int32 _level{ 0 }; ///< 코덱 레벨(0 = 코덱 기본값)
+
+        PROPERTY( Required, Min = 65536, Max = 262144 )
+        uint32 _blockSize{ 0 }; ///< 압축 전 블록 크기(2 의 거듭제곱, `kPackMinBlockSize` ~ `kPackMaxBlockSize`). 범위 읽기의 단위이자 CRC 단위다 — 언리얼 IoStore 의 64 KiB 압축 블록 자리
+
+        PROPERTY( Required, Min = 1 )
+        uint64 _writeWindowBytes{ 0 }; ///< 쓰기가 이만큼의 원본을 모아 병렬로 압축한다. 쓰기의 최고 메모리가 이 값의 몇 배다(콘텐츠 크기와 무관)
+
+        PROPERTY( Required )
+        vector<string> _listStoredExtension; ///< 압축하지 않고 담는 확장자(`.dds` — 이미 압축된 형식, 대소문자 무시). 범위 읽기가 풀기 없이 바이트를 읽는다(`PackEntryStorage::Stored`)
+
+        /** @brief 팩 안 경로 @p relativePath 의 저장 방식입니다 — 확장자가 `_listStoredExtension` 에 있으면 `Stored`, 아니면 `Blocks`. */
+        PackEntryStorage getEntryStorage( string_view relativePath ) const
+        {
+            for ( const string& extension : _listStoredExtension )
+            {
+                if ( StringUtil::endsWith( relativePath, extension, true ) )
+                    return PackEntryStorage::Stored;
+            }
+            return PackEntryStorage::Blocks;
+        }
     };
 } // namespace sw
 
@@ -42,7 +62,7 @@ namespace sw
 {
     /**
      * @struct PackLayoutConfig
-     * @brief 팩 페이로드 배치(`PackWriter` 의 `PackLayoutMode`)와 슬롯 배치의 빈 자리 한도입니다.
+     * @brief 팩 페이로드 배치(`PackStreamWriter` 의 `PackLayoutMode`)와 슬롯 배치의 빈 자리 한도입니다.
      * @details `Slot` 은 같은 폴더에 앞 빌드의 팩이 있으면 그 팩을 앞 빌드로 읽어 안 바뀐 항목의 자리를 지킨다(쿠커가 덮어쓸 팩 경로를 앞 빌드로 준다).
      */
     REFLECT()

@@ -6,7 +6,7 @@
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackPatch.h"
 #include "Engine/Content/Pack/PackPatchBuilder.h"
-#include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Content/Pack/Tests/PackTestUtil.h"
 
 using namespace sw;
 
@@ -19,14 +19,7 @@ namespace
         {
             if ( FileUtil::ensureDirectoryExists( folder ) == false )
                 return false;
-            PackWriterDesc desc;
-            desc._mountDomain = string{ domain };
-            PackWriter writer( desc );
-            for ( const std::pair<string, string>& entry : listEntry )
-            {
-                writer.addBytes( entry.first, vector<uint8>( entry.second.begin(), entry.second.end() ) );
-            }
-            return writer.writePackFile( FileUtil::joinPath( folder, fileName ) );
+            return PackTestUtil::writeTextPack( FileUtil::joinPath( folder, fileName ), domain, listEntry );
         }
 
         static PackPatchBuildParams makeParams( const string& newPacks, const string& record, const string& output, string_view build )
@@ -36,6 +29,7 @@ namespace
             params._previousRecordPath = record;
             params._outputDirectory    = output;
             params._newBuild           = string{ build };
+            params._writerDesc         = PackTestUtil::makeDesc( "" );
             return params;
         }
 

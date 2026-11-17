@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 
+#include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -88,7 +89,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 패치 목록 루트(`<PackPatch from to pack [packSHA256 signature]>`)의 칸입니다. 해시와 서명은 함께 있거나 함께 없다(`PackPatchManifest::parse` 가 본다). */
+    /** @brief 패치 목록 루트(`<PackPatch from to pack [indexSHA256 signature]>`)의 칸입니다. 해시와 서명은 함께 있거나 함께 없다(`PackPatchManifest::parse` 가 본다). */
     REFLECT()
     struct SW_API PackPatchManifestParams
     {
@@ -101,7 +102,7 @@ namespace sw
         PROPERTY( Required )
         string _pack{};
         PROPERTY()
-        string _packSHA256{};
+        string _indexSHA256{};
         PROPERTY()
         string _signature{};
     };
@@ -134,9 +135,11 @@ namespace sw
     };
 
     /**
-     * @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…" [packSHA256="…" signature="…"]><Removed path="…"/></PackPatch>`)입니다.
-     * @details `packSHA256`(패치 팩 파일의 SHA-256, 소문자 16 진 64 자)과 `signature`(ES256 r ‖ s, 소문자 16 진 128 자)는 둘이 함께 있거나 함께 없다. 서명은 목록의
-     *          내용(`PackPatchManifest::makeSigningPayload`)에 걸고, 팩의 바이트는 그 안의 해시가 묶는다. 서명이 없는 목록은 시작 마운트가 신뢰 설정을 받았을 때만 거절한다.
+     * @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…" [indexSHA256="…" signature="…"]><Removed path="…"/></PackPatch>`)입니다.
+     * @details `indexSHA256`(패치 팩 색인 구역의 SHA-256, 소문자 16 진 64 자)과 `signature`(ES256 r ‖ s, 소문자 16 진 128 자)는 둘이 함께 있거나 함께 없다. 서명은 목록의
+     *          내용(`PackPatchManifest::makeSigningPayload`)에 걸고, 색인은 그 안의 요약이, 페이로드는 색인 안의 블록 요약이 묶는다(언리얼 pak `.sig` 블록 해시 표 자리).
+     *          확인 비용이 색인 크기에만 비례하고 팩 크기 한도(예전 2 GiB)가 없다. 서명이 없는 목록은 시작 마운트가 신뢰 설정을 받았을 때만 거절한다.
+     *          목록 판: 서명 글 머리 `SWPackPatch2`(예전 `packSHA256` 의 팩 전체 요약 목록은 서명이 맞지 않아 거절된다).
      */
     struct SW_API PackPatchManifest
     {
@@ -144,7 +147,7 @@ namespace sw
         string         _toBuild{};         ///< 얹은 뒤의 빌드
         string         _packFileName{};    ///< 패치 팩 파일 이름(목록 파일과 같은 폴더)
         vector<string> _listRemovedPath{}; ///< 지운 경로(가상 상대 경로)
-        string         _packSHA256Hex{};   ///< 패치 팩 파일의 SHA-256. 서명하지 않은 목록은 비어 있다
+        string         _indexSHA256Hex{};  ///< 패치 팩 색인 구역의 SHA-256. 서명하지 않은 목록은 비어 있다
         string         _signatureHex{};    ///< 목록 내용의 ES256 서명. 서명하지 않은 목록은 비어 있다
 
         static constexpr string_view kManifestExtension = ".packpatch.xml"; ///< 패치 목록 파일의 이름 끝
@@ -178,18 +181,19 @@ namespace sw
         static string makeSigningPayload( const PackPatchManifest& manifest );
 
         /**
-         * @brief 패치 팩의 SHA-256 을 목록에 적고 목록 내용에 ES256 으로 서명합니다(@p inOutManifest 의 `_packSHA256Hex` · `_signatureHex` 를 채운다).
+         * @brief 패치 팩의 색인 요약(@p indexDigest — 쓰기가 센 `PackWriteResult::_indexDigest`)을 목록에 적고 목록 내용에 ES256 으로 서명합니다.
          * @param privateKeyPem 개인 키(PKCS#8 PEM) — 저장소에 두지 않고 부르는 쪽이 저장소 밖 파일에서 읽어 넘긴다.
-         * @return 팩이 2 GiB 이상이거나(제공자의 해시가 32 비트 크기를 받는다) · 줄바꿈이 든 필드가 있거나 · 서명에 실패하면 이유를 남기고 false 입니다.
+         * @return 줄바꿈이 든 필드가 있거나 · 서명에 실패하면 이유를 남기고 false 입니다. 팩 바이트를 받지 않는다 — 통째 읽기를 형식으로 막는다.
          */
-        [[nodiscard]] static bool sign( INetSecurityProvider& provider, const string& privateKeyPem, const vector<uint8>& packBytes, PackPatchManifest& inOutManifest );
+        [[nodiscard]] static bool sign( INetSecurityProvider& provider, const string& privateKeyPem, const PackDigest& indexDigest, PackPatchManifest& inOutManifest );
 
         /**
-         * @brief 목록의 서명과 팩 해시를 확인합니다. 서명이 없거나 · 팩 해시가 다르거나 · 서명이 안 맞거나 · 공개 키가 ES256 이 아니면 이유를 남기고 false 입니다.
+         * @brief 목록의 서명을 확인하고 그 팩을 열 신뢰(@p outTrust — 서명된 색인 요약과 제공자)를 줍니다. 팩 바이트는 읽지 않는다 — 색인은 마운트가 여는 핸들로 견준다.
+         * @return 서명이 없거나 · 요약 · 서명 글이 틀렸거나 · 서명이 안 맞거나 · 공개 키가 ES256 이 아니면 이유를 남기고 false 입니다.
          * @param sourceName 오류에 적을 이름(목록 파일 경로)입니다.
          */
-        [[nodiscard]] static bool verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const vector<uint8>& packBytes, const PackPatchManifest& manifest,
-                                          string_view sourceName );
+        [[nodiscard]] static bool verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const PackPatchManifest& manifest, string_view sourceName,
+                                          PackIndexTrust& outTrust );
     };
 } // namespace sw
 

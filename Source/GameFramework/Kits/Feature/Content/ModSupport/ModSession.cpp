@@ -20,6 +20,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -497,13 +498,14 @@ namespace sw
             SW_LOG_ERROR_ID( "ModSession.PackTooLarge", "Mod pack '%#' is unreadable or larger than %# bytes", packPath, settings._maxPackBytes );
             return false;
         }
-        vector<uint8> packBytes;
-        if ( FileUtil::readFile( packPath, packBytes ) == false )
+        // 내용 해시는 팩을 조각으로 읽어 센다(원시 바이트의 FNV-1a 64 — 허용 목록의 `contentHash` 와 같은 값). 팩을 한 벡터로 들지 않는다.
+        const expected<uint64> packHash = ContentHash::computeFileStream( packPath );
+        if ( packHash.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ModSession.CannotReadPack", "Mod pack '%#' could not be read", packPath );
             return false;
         }
-        outContentHash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, packBytes.data(), packBytes.size() );
+        outContentHash = *packHash;
 
         PackReader reader;
         if ( reader.open( packPath ) == false )
