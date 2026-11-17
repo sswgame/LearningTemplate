@@ -14,9 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common.project_constants import DIR_RUNTIME_PLATFORM_CONFIG  # noqa: E402
+from common.project_constants import DIR_RUNTIME_PLATFORM_CONFIG, FILE_RUNTIME_RENDER_QUALITY  # noqa: E402
 from generate.generator_output import GeneratorError  # noqa: E402
-from generate.shipping_host_defaults import _platform_override_lines, collect_platform_overrides  # noqa: E402
+from generate.shipping_host_defaults import _platform_override_lines, collect_platform_overrides, load_render_quality  # noqa: E402
 
 
 class PlatformOverrideTest(unittest.TestCase):
@@ -48,6 +48,25 @@ class PlatformOverrideTest(unittest.TestCase):
             self._write(root, "Web", "[1]")
             with self.assertRaises(GeneratorError):
                 collect_platform_overrides(root)
+
+
+class RenderQualityTest(unittest.TestCase):
+    def _write(self, root: Path, text: str) -> None:
+        path = root / FILE_RUNTIME_RENDER_QUALITY
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def test_tier_table_is_required_object_of_objects(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            with self.assertRaises(GeneratorError):
+                load_render_quality(root)   # 없는 표는 오류 — 기동이 단계를 이 표에서 찾는다
+            self._write(root, '{ "High": {}, "Low": { "_maxExtraViewCount": 4 } }')
+            self.assertIn('"Low"', load_render_quality(root))
+            for bad in ("[1]", "{}", '{ "High": 1 }'):
+                self._write(root, bad)
+                with self.assertRaises(GeneratorError):
+                    load_render_quality(root)
 
 
 if __name__ == "__main__":

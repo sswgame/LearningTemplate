@@ -26,6 +26,8 @@ namespace sw::config
     // -------------------------------------------------------------------------
     inline constexpr const utf8* kFileRuntimeEditorToolDefaults   = "@SW_FILE_RUNTIME_EDITOR_TOOL_DEFAULTS@";
     inline constexpr const utf8* kFileRuntimeEngineConfig = "@SW_FILE_RUNTIME_ENGINE_CONFIG@";
+    /** @brief 렌더 품질 단계 표입니다 — 단계 이름마다 `EngineConfig._render` 의 덮어쓰기(`RenderQualityOverride`). */
+    inline constexpr const utf8* kFileRuntimeRenderQuality = "@SW_FILE_RUNTIME_RENDER_QUALITY@";
     /** @brief 게임 프리셋 폴더입니다 — 게임마다 `<게임>.json`(`GameSelection::getConfigPath`). */
     inline constexpr const utf8* kDirRuntimeGamePreset = "@SW_DIR_RUNTIME_GAME_PRESET@";
     /** @brief 호스트 설정의 플랫폼 덮어쓰기 폴더입니다 — `<플랫폼>/EngineConfig.json`(`PlatformConfigOverride`). 파일이 없으면 덮어쓰기가 없다. */

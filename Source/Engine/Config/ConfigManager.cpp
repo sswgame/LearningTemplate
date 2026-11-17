@@ -4,12 +4,14 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/PlatformConfigOverride.h"
+#include "Engine/Config/RenderQualityOverride.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -59,6 +61,9 @@ namespace sw
     } // namespace
 } // namespace sw
 
+// 언리얼 스케일러빌리티 그룹(`sg.*`) · 유니티 품질 단계 자리. 기본 단계 High 는 바탕 값 그대로다. 엔진 설정은 기동 때 한 번 읽으므로 기동 인자로 고른다.
+SW_GLOBAL_VARIABLE( sw::GlobalString, gv_renderQuality, "High", "렌더 품질 단계 — Config/Engine/RenderQuality.json 의 단계 이름(기동 때 엔진 설정 _render 위에 합친다, 빈 글이면 단계 없음)" );
+
 namespace sw
 {
     SubsystemInitResult ConfigManager::initializeSubsystem()
@@ -76,9 +81,13 @@ namespace sw
             }
         }
         // 플랫폼 덮어쓰기 층(`PlatformConfigOverride` — 언리얼 플랫폼 ini 자리)이 엔진 설정 위에 선다. 디스크 구성은 이 플랫폼의 파일(없어도 된다), 정적 구성은 구운 글.
+        // 그 위에 고른 품질 단계(`RenderQualityOverride`, `gv_renderQuality`)가 선다 — 디스크 구성은 단계 표 파일, 정적 구성은 구운 표.
+        const string       qualityTier  = gv_renderQuality.get();
         const ConfigSource engineSource = build::kStaticModules
                                             ? ConfigSource::baked( shipping_host::kEngineConfigJSON, shipping_host::kEngineConfigPlatformOverrideJSON )
-                                            : ConfigSource::disk( config::kFileRuntimeEngineConfig, PlatformConfigOverride::makeEngineConfigPath() );
+                                                  .withRenderQuality( shipping_host::kRenderQualityJSON, qualityTier )
+                                            : ConfigSource::disk( config::kFileRuntimeEngineConfig, PlatformConfigOverride::makeEngineConfigPath() )
+                                                  .withRenderQuality( config::kFileRuntimeRenderQuality, qualityTier );
         if ( loadHostConfig<EngineConfig>( engineSource ) == nullptr )
             return SubsystemInitResult::Failed;
         const ConfigSource gameSource = build::kStaticModules ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
@@ -200,36 +209,63 @@ namespace sw
         for ( const auto& [key, source] : _mapSource )
         {
             (void)key;
-            const bool bOverrideChanged = source._resolvedOverridePath.empty() == false && FileUtil::isSameDiskPath( source._resolvedOverridePath, changedPath );
+            const bool bOverrideChanged = ( source._resolvedOverridePath.empty() == false && FileUtil::isSameDiskPath( source._resolvedOverridePath, changedPath ) ) ||
+                                          ( source._resolvedQualityPath.empty() == false && FileUtil::isSameDiskPath( source._resolvedQualityPath, changedPath ) );
             if ( source._pReload != nullptr && ( FileUtil::isSameDiskPath( source._resolvedPath, changedPath ) || bOverrideChanged ) )
                 return source._pReload( *this, source ) ? ReloadResult::Reloaded : ReloadResult::Failed;
         }
         return ReloadResult::NotTracked;
     }
 
-    OptionalFileRead ConfigManager::readLayeredFile( const string& resolvedPath, const string& resolvedOverridePath, string& outJSON, string& outLabel )
+    OptionalFileRead ConfigManager::readLayeredFile( const string& resolvedPath, const string& resolvedOverridePath, const string& resolvedQualityPath,
+                                                     const string& qualityTier, string& outJSON, string& outLabel )
     {
         outLabel                    = resolvedPath;
         const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, outJSON );
-        if ( read != OptionalFileRead::Read || resolvedOverridePath.empty() )
+        if ( read != OptionalFileRead::Read )
             return read;
-        string                 overrideJSON;
-        const OptionalFileRead overrideRead = FileUtil::readOptionalTextFile( resolvedOverridePath, overrideJSON );
-        if ( overrideRead == OptionalFileRead::Missing )
-            return OptionalFileRead::Read; // 덮어쓰기 층은 선택이다 — 없으면 바탕만
-        if ( overrideRead == OptionalFileRead::Failed )
-            return OptionalFileRead::Failed; // 이유는 읽기가 오류로 남겼다
-        const string base = std::move( outJSON );
-        if ( applyOverride( base, overrideJSON.c_str(), resolvedOverridePath.c_str(), outJSON ) == false )
+        if ( resolvedOverridePath.empty() == false )
+        {
+            string                 overrideJSON;
+            const OptionalFileRead overrideRead = FileUtil::readOptionalTextFile( resolvedOverridePath, overrideJSON );
+            if ( overrideRead == OptionalFileRead::Failed )
+                return OptionalFileRead::Failed;          // 이유는 읽기가 오류로 남겼다
+            if ( overrideRead == OptionalFileRead::Read ) // 덮어쓰기 층은 선택이다 — 없으면 바탕만
+            {
+                const string base = std::move( outJSON );
+                if ( applyOverride( base, overrideJSON.c_str(), resolvedOverridePath.c_str(), outJSON ) == false )
+                    return OptionalFileRead::Failed;
+                // 합친 글의 모르는 키 · 범위 밖 값은 어느 층에서 왔는지 모른다 — 출처에 층을 모두 적는다.
+                outLabel += " + ";
+                outLabel += resolvedOverridePath;
+            }
+        }
+        if ( qualityTier.empty() )
+            return OptionalFileRead::Read;
+        // 단계를 골랐으면 표는 필수다 — 없는 표를 "단계 없음" 으로 읽으면 고른 단계가 조용히 무시된다.
+        string                 tiersJSON;
+        const OptionalFileRead tiersRead = FileUtil::readOptionalTextFile( resolvedQualityPath, tiersJSON );
+        if ( tiersRead == OptionalFileRead::Missing )
+            SW_LOG_ERROR_ID( "Config.RenderQualityMissing", "Render quality tier '%#' was chosen but the tier table %# is missing", qualityTier.c_str(), resolvedQualityPath.c_str() );
+        if ( tiersRead != OptionalFileRead::Read )
             return OptionalFileRead::Failed;
-        // 합친 글의 모르는 키 · 범위 밖 값은 두 파일 중 어디서 왔는지 모른다 — 출처에 둘 다 적는다.
-        outLabel = resolvedPath + " + " + resolvedOverridePath;
+        const string qualityLabel = string( resolvedQualityPath + "[" + qualityTier + "]" );
+        const string base         = std::move( outJSON );
+        if ( applyQualityTier( base, tiersJSON, qualityTier, qualityLabel.c_str(), outJSON ) == false )
+            return OptionalFileRead::Failed;
+        outLabel += " + ";
+        outLabel += qualityLabel;
         return OptionalFileRead::Read;
     }
 
     bool ConfigManager::applyOverride( const string& baseJSON, const utf8* pOverrideJSON, const utf8* pOverrideLabel, string& outJSON )
     {
         return PlatformConfigOverride::apply( baseJSON, pOverrideJSON, pOverrideLabel, outJSON );
+    }
+
+    bool ConfigManager::applyQualityTier( const string& baseJSON, const string& tiersJSON, const string& qualityTier, const utf8* pLabel, string& outJSON )
+    {
+        return RenderQualityOverride::apply( baseJSON, tiersJSON, qualityTier, pLabel, outJSON );
     }
 } // namespace sw
 
