@@ -3,6 +3,7 @@
  * @brief GPU 방출기의 입자 시뮬레이션(렌더 스레드, vfx_simulate.hlsl · vfx_mesh_instance.hlsl)입니다. `VFXParticleRenderer` 가 소유합니다.
  */
 #pragma once
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -13,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/VFX/VFXParticleOrder.h"
 #include "Engine/VFX/VFXEmitterClock.h"
 #include "Engine/VFX/VFXParticle.h"
 
@@ -53,6 +55,7 @@ namespace sw
         uint32               _lightSlotCount{ 0 };                 ///< 받은 GPU 구간의 슬롯 수 — 0 이면 이번 프레임에 파티클 라이트를 쓰지 않는다
         bool                 _bSimulationPipelineReady{ false };   ///< vfx_simulate.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                 _bMeshPipelineReady{ false };         ///< vfx_mesh_instance.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                 _bSortPipelineReady{ false };         ///< vfx_particle_sort.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                 _bNativeBindless{ SW_FALSE };         ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
@@ -122,9 +125,13 @@ namespace sw
          *          파티클 라이트가 있는 방출기는 밀린 단계가 없어도 매 프레임 디스패치한다 — 라이트 구간의 위치(CPU 라이트 수)와 월드 변환이 프레임마다 바뀌므로 다시 쓴다.
          */
         void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
-                           const VFXSimulationFrameInput& input );
-        /** @brief 프레임 그래프에 이번 프레임의 디스패치를 기록합니다(`prepareFrame` 뒤, 인스턴스 애니메이션 · 컬링 앞). */
-        void recordDispatches( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO ) const;
+                           vector_reference<const VFXGPUParticleSortJob> listSortJob, uint32 gpuOrderCount, const VFXSimulationFrameInput& input );
+        /** @brief 프레임 그래프에 이번 프레임의 디스패치를 기록합니다(`prepareFrame` 뒤, 인스턴스 애니메이션 · 컬링 앞). 정렬 일은 시뮬레이션 뒤에 돈다. */
+        void recordDispatches( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO, RHIPipelineStateHandle sortPSO ) const;
+        /** @brief GPU 순서 버퍼(정렬 일이 쓴 입자 번호)의 SRV 입니다. 이번 프레임에 정렬 일이 없으면 무효일 수 있습니다. */
+        RHIDescriptorIndex getOrderSRV() const { return _orderBuffer._srv; }
+        /** @brief 배치 @p batchIndex 의 정렬 일이 이번 프레임에 모두 기록됩니다 — 아니면 그리기는 순서 없이 그린다(옛 순서 칸을 읽지 않는다). */
+        bool isBatchSorted( uint32 batchIndex ) const { return batchIndex < _listBatchSorted.size() && _listBatchSorted[batchIndex] != SW_FALSE; }
         /** @brief 배치 @p batchIndex(`prepareFrame` 에 넘긴 목록의 번호)를 그릴 자원입니다. GPU 배치가 아니거나 준비하지 못했으면 nullptr 입니다. */
         const DrawSource* findDrawSource( uint32 batchIndex ) const;
         /** @brief 모든 상태를 놓습니다(디바이스가 없으면 핸들만 잊습니다). */
@@ -165,6 +172,13 @@ namespace sw
             uint32              _stepCount{ 0 };   ///< 이번 디스패치가 도는 단계 수(다중 그룹 경로가 단계마다 패스 셋을 기록한다)
         };
 
+        /** @brief 이번 프레임의 정렬 일 하나입니다(vfx_particle_sort.hlsl 워크그룹 하나). */
+        struct SortDispatch
+        {
+            const EmitterState* _pState{ nullptr }; ///< 이번 프레임 안에서만 빌린다
+            uint32              _paramRow{ 0 };
+        };
+
         /** @brief 이번 프레임의 메시 인스턴스 쓰기 하나입니다. */
         struct MeshDispatch
         {
@@ -188,6 +202,8 @@ namespace sw
         void prepareParticleEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
         /** @brief 메시 방출기마다 방출기 상태를 갖추고 시뮬레이션과 메시 인스턴스 쓰기를 더합니다. */
         void prepareMeshEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter );
+        /** @brief 정렬 일마다 매개변수를 붙이고 GPU 순서 버퍼를 갖춥니다. 일이 기록되지 않는 배치는 순서 없이 그린다(`isBatchSorted`). */
+        void prepareParticleSortJobs( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, vector_reference<const VFXGPUParticleSortJob> listSortJob, uint32 gpuOrderCount );
         /** @brief 이번 프레임에 없고 재생 토큰이 끝난 재생(다시 재생 · 컴포넌트 제거)의 GPU 버퍼를 놓습니다. */
         void releaseStaleEmitters( IRHIDevice& device );
         /** @brief 모은 매개변수 단어를 버퍼에 올립니다. 버퍼를 잡지 못하면 이번 프레임의 디스패치를 모두 비웁니다. */
@@ -213,9 +229,15 @@ namespace sw
         vector<RHIBufferTransition>                     _listTransitionBeforeSimulate; ///< 시뮬레이션 앞 — 방출기 버퍼 셋 · 라이트 버퍼를 UAV 로
         vector<RHIBufferTransition>                     _listTransitionAfterSimulate;  ///< 시뮬레이션 뒤 — 입자 SRV · 인자 간접 인자 · 라이트 SRV
         vector<RHIBufferTransition>                     _listTransitionBeforeMesh;     ///< 메시 입자 앞 — 인스턴스 버퍼 UAV · 인자 SRV
-        vector<VFXGPULightRange>                        _listLightRange;               ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
-        VFXSimulationFrameInput                         _frameInput;                   ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
+        vector<RHIBufferTransition>                     _listTransitionBeforeSort;     ///< 정렬 앞 — 정렬하는 방출기의 인자 SRV · 순서 버퍼 UAV
+        vector<RHIBufferTransition>                     _listTransitionAfterSort;      ///< 정렬 뒤 — 인자 간접 인자 · 순서 버퍼 SRV
+        vector<SortDispatch>                            _listSortDispatch;
+        vector<const EmitterState*>                     _listBatchState;  ///< 배치마다의 상태(GPU 배치가 아니면 nullptr) — 이번 프레임 안에서만 쓴다
+        vector<uint8>                                   _listBatchSorted; ///< 배치마다 정렬 일이 모두 기록되면 SW_TRUE(`isBatchSorted`)
+        vector<VFXGPULightRange>                        _listLightRange;  ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
+        VFXSimulationFrameInput                         _frameInput;      ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
         RHIStructuredBuffer                             _paramBuffer;
+        RHIStructuredBuffer                             _orderBuffer;      ///< GPU 방출기 정렬 결과(입자 번호, uint32 — SRV + UAV). 구간은 정렬 일마다 게임 스레드가 잡았다
         uint64                                          _pendingStepCount; ///< `getPendingStepCount`
         uint8                                           _bPipelineMissingLogged     : 1;
         uint8                                           _bMeshPipelineMissingLogged : 1;

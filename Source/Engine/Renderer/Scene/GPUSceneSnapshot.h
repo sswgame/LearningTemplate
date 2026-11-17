@@ -503,6 +503,10 @@ namespace sw
          * @details 입자 데이터는 옮기지 않는다(뷰들이 입자 버퍼 하나를 함께 쓴다). `ViewDepth` 는 (방출기, 뷰)마다, 나이 순서는 방출기마다 구간 하나다(`GPUSceneBuilder::assignParticleOrders`).
          */
         vector<uint32> _listParticleOrder;
+        /** @brief GPU 방출기의 정렬 일입니다(자리의 `_order` 구간은 GPU 순서 버퍼 안의 자리다 — `VFXGPUSimulation` 이 정렬해 쓴다). */
+        vector<VFXGPUParticleSortJob> _listGPUParticleSort;
+        /** @brief GPU 순서 버퍼가 담아야 할 칸 수입니다(정렬 일 구간의 합). */
+        uint32 _gpuParticleOrderCount{ 0 };
         /** @brief GPU 로 시뮬레이션하는 메시 방출기들입니다. 입자 그리기와 같이 매번 다시 모은다(인스턴스 칸은 배치 구성을 따른다). */
         vector<GPUVFXMeshEmitter> _listVFXMeshEmitter;
 
@@ -532,6 +536,8 @@ namespace sw
             _listParticleBatch.clear();
             _listParticleSlot.clear();
             _listParticleOrder.clear();
+            _listGPUParticleSort.clear();
+            _gpuParticleOrderCount = 0;
             _listVFXMeshEmitter.clear();
         }
 

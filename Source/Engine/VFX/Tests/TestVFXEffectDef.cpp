@@ -443,7 +443,7 @@ SW_TEST_CASE( VFXEffectDefTest, RibbonWithSortModeIsLoadError )
     SW_EXPECT_FALSE( mesh.validate( "test" ) );
 }
 
-/** @brief [VFXEffectDefTest] GPU 로 도는 방출기의 뷰 깊이 정렬은 워크그룹 하나(512)까지다 — 넘으면 정렬을 건너뛰지 않고 로드 오류다. CPU 전용 방출기는 한도가 없다 */
+/** @brief [VFXEffectDefTest] GPU 로 도는 방출기의 정렬(뷰 깊이 · 나이 순서 모두)은 워크그룹 하나(512)까지다 — 넘으면 정렬을 건너뛰지 않고 로드 오류다. CPU 전용 방출기는 한도가 없다 */
 SW_TEST_CASE( VFXEffectDefTest, GPUViewDepthOverSortLimitIsLoadError )
 {
     SW_EXPECT_LOG( "VFXEffectDef.VFXEmitter" );
@@ -454,7 +454,11 @@ SW_TEST_CASE( VFXEffectDefTest, GPUViewDepthOverSortLimitIsLoadError )
     SW_EXPECT_TRUE( gpu.validate( "test" ) );
     gpu._maxParticles = VFXEmitterDef::kMaxGPUSortedParticles + 1u;
     SW_EXPECT_FALSE( gpu.validate( "test" ) );
-    gpu._sortMode = VFXSortMode::OldestFirst; // 설계(RN-15 결정 5)는 뷰 깊이만 한도를 묻는다
+    gpu._sortMode = VFXSortMode::OldestFirst; // 나이 순서도 같은 워크그룹 정렬이라 한도가 걸린다(RN-15 결정 5 를 넓혔다)
+    SW_EXPECT_FALSE( gpu.validate( "test" ) );
+    gpu._sortMode = VFXSortMode::YoungestFirst;
+    SW_EXPECT_FALSE( gpu.validate( "test" ) );
+    gpu._maxParticles = VFXEmitterDef::kMaxGPUSortedParticles;
     SW_EXPECT_TRUE( gpu.validate( "test" ) );
 
     VFXEmitterDef cpuOnly      = Util::makeEmitter();

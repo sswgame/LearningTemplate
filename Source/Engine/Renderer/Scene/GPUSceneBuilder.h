@@ -565,11 +565,14 @@ namespace sw
         /** @brief 입자 그리기마다 @p eye · @p axis 의 정렬 키를 채우고 그리는 순서로 정렬합니다. 키의 후보 번호 칸은 `_listParticleBatch` 의 번호입니다. */
         void fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const;
         /**
-         * @brief 뷰 하나(@p eye · @p axis)의 입자 자리마다 방출기 안 입자 순서 구간을 만들어 붙입니다(`VFXSortMode`). CPU 방출기만 — GPU 방출기는 컴퓨트가 정렬한다(PS-3).
+         * @brief 뷰 하나(@p eye · @p axis)의 입자 자리마다 방출기 안 입자 순서 구간을 만들어 붙입니다(`VFXSortMode`). CPU 방출기는 여기서 정렬하고,
+         *        GPU 방출기는 GPU 순서 버퍼의 구간을 잡아 정렬 일(`VFXGPUParticleSortJob`)을 싣는다 — 렌더 스레드의 컴퓨트가 정렬한다.
          * @details `ViewDepth` 는 이 뷰의 구간을 새로 만들고, 나이 순서는 방출기마다 한 번 만든 구간을 뷰들이 함께 쓴다(`_listScratchAgeOrder`).
          *          게임 스레드에서 한다 — 뷰마다의 눈 · 축과 자리 목록이 여기 있고, CPU 입자 배열은 공유 불변 값이라 읽기만 한다.
          */
         void assignParticleOrders( vector<GPUTransparentParticleSlot>& listSlot, const float3& eye, const float3& axis );
+        /** @brief GPU 방출기 자리 하나에 GPU 순서 버퍼의 구간을 잡고 정렬 일을 싣습니다(나이 순서는 방출기마다 한 번). */
+        void assignGPUParticleOrder( GPUTransparentParticleSlot& slot, uint32 batchIndex, const float3& eye, const float3& axis );
         /**
          * @brief 주 투명 배치마다 첫 인스턴스(주 순서에서 가장 먼저 그리는 것)의 키를 채웁니다. 발행된 인스턴스와 꼬리 순서(`_listBuiltTransparentIdx`)를 읽습니다.
          * @details 꼬리 안에서 찾지 못하는 배치는 `GPUTransparentSorter::kNoBatchHeadLayer` 키를 받는다(모든 입자가 그 앞에 선다).
@@ -757,7 +760,10 @@ namespace sw
         /// @brief 방출기(정렬 뒤 `_listParticleBatch` 번호)마다 나이 순서 구간입니다. 뷰와 무관해 한 번만 만든다(`assignParticleOrders`).
         vector<VFXParticleOrder> _listScratchAgeOrder;
         /// @brief 주 시점 구간까지의 순서 목록 길이입니다. 추가 뷰 순서를 다시 만들 때 그 뒤를 잘라 쌓이지 않게 한다.
-        uint32                       _mainParticleOrderSize{ 0 };
+        uint32 _mainParticleOrderSize{ 0 };
+        /// @brief 주 시점까지의 GPU 정렬 일 수와 GPU 순서 칸 수입니다(`_mainParticleOrderSize` 와 같은 까닭).
+        uint32                       _mainGPUSortJobCount{ 0 };
+        uint32                       _mainGPUParticleOrderCount{ 0 };
         vector<InstanceRefreshChunk> _listRefreshChunk;
 
         /**

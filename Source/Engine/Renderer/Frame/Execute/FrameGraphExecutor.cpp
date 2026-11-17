@@ -112,7 +112,8 @@ namespace sw
             case RenderPassType::VFXSimulation:
             {
                 // 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고(VFXMeshInstance — 같은 패스의 두 번째 디스패치), 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다.
-                _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
+                _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ),
+                                                           _psoManager.getEnginePSO( RenderPassType::VFXParticleSort ) );
                 break;
             }
             case RenderPassType::InstanceAnimation:
@@ -667,6 +668,7 @@ namespace sw
         VFXSimulationFrameInput input{};
         input._bSimulationPipelineReady = _psoManager.getEnginePSO( RenderPassType::VFXSimulation ) != 0;
         input._bMeshPipelineReady       = _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) != 0;
+        input._bSortPipelineReady       = _psoManager.getEnginePSO( RenderPassType::VFXParticleSort ) != 0;
         input._bNativeBindless          = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         input._instanceBuffer           = _state._gpuScene.getInstanceBuffer();
         input._instanceUAV              = _state._gpuScene.getInstanceUAV();

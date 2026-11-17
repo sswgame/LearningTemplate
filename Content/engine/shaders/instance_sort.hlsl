@@ -27,6 +27,8 @@
 /// @brief 한 배치에서 GPU 정렬로 다룰 수 있는 최대 인스턴스 수. 바이토닉이라 2의 거듭제곱이어야 한다.
 #define SW_SORT_MAX_ELEMENTS 512
 #define SW_SORT_THREADS      256 // = SW_SORT_MAX_ELEMENTS / 2 (스레드마다 비교·교환 한 쌍)
+// 바이토닉 정렬 본체는 GPU 입자 정렬(vfx_particle_sort.hlsl)과 함께 쓴다.
+#include "bitonic_sort.hlsli"
 
 // 인스턴스 원소(InstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
 #include "instance_data.hlsli"
@@ -77,9 +79,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID 
     // 다를 수 있는 값" 이고, 그 값에 걸린 흐름 안의 배리어는 X4026 으로 거부된다 — 실제로는 그룹 안에서
     // 같은 값이지만 증명할 수 없다. 그래서 배리어는 상수 루프에 두고 **비교·교환만** sortLength 안으로 줄인다.
     // 배리어 45 번은 남지만 그것은 싸고, 비싼 것은 칸마다의 그룹공유 읽기·쓰기다.
-    uint sortLength = 2u;
-    while ( sortLength < count )
-        sortLength <<= 1u;
+    const uint sortLength = computeBitonicSortLength( count );
 
     // 그룹공유로 올린다. count 밖의 자리는 가장 큰 값으로 둬 뒤로 밀어 두고, 되쓸 때 count 까지만 쓴다.
     // 인스턴스 번호가 범위를 벗어나도(있어선 안 되지만) 값 그대로 정렬된다 — 그리는 쪽이 g_SwInstanceCount 로 막는다.
@@ -105,32 +105,8 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID 
     }
     GroupMemoryBarrierWithGroupSync();
 
-    // 바이토닉 정렬 — **오름차순**(번호가 작은 것 = CPU 순서에서 먼저 그릴 것이 앞).
-    // blockSize 는 이 단계에서 정렬되는 구간의 길이, compareDistance 는 그 안에서 짝을 짓는 거리다.
-    for ( uint blockSize = 2u; blockSize <= (uint)SW_SORT_MAX_ELEMENTS; blockSize <<= 1u )
-    {
-        for ( uint compareDistance = blockSize >> 1u; compareDistance > 0u; compareDistance >>= 1u )
-        {
-            // sortLength 를 넘는 단계는 할 일이 없다 — 분기 안에 배리어가 없으므로 가변 값으로 걸러도 된다.
-            for ( uint elementIndex = groupThreadID.x; elementIndex < sortLength && blockSize <= sortLength; elementIndex += SW_SORT_THREADS )
-            {
-                const uint partner = elementIndex ^ compareDistance;
-                if ( partner > elementIndex )
-                {
-                    // (elementIndex & blockSize) == 0 이면 이 구간은 오름차순으로 맞춘다.
-                    const bool bAscending = ( ( elementIndex & blockSize ) == 0u );
-                    const bool bSwap      = bAscending ? ( s_arrID[elementIndex] > s_arrID[partner] ) : ( s_arrID[elementIndex] < s_arrID[partner] );
-                    if ( bSwap )
-                    {
-                        const uint swapID     = s_arrID[elementIndex];
-                        s_arrID[elementIndex] = s_arrID[partner];
-                        s_arrID[partner]      = swapID;
-                    }
-                }
-            }
-            GroupMemoryBarrierWithGroupSync();
-        }
-    }
+    // 바이토닉 정렬 — **오름차순**(번호가 작은 것 = CPU 순서에서 먼저 그릴 것이 앞). sortLength 를 넘는 단계는 할 일이 없다(bitonic_sort.hlsli).
+    SW_BITONIC_SORT_ASCENDING( s_arrID, sortLength, groupThreadID.x )
 
     for ( uint storeIndex = groupThreadID.x; storeIndex < count; storeIndex += SW_SORT_THREADS )
     {

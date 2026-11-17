@@ -64,12 +64,13 @@ namespace sw
     VFXParticleRenderer::~VFXParticleRenderer() = default;
 
     void VFXParticleRenderer::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, vector_reference<const uint32> listParticleOrder,
-                                            const vector<GPUVFXMeshEmitter>& listMeshEmitter, const VFXSimulationFrameInput& input )
+                                            const vector<GPUVFXMeshEmitter>& listMeshEmitter, vector_reference<const VFXGPUParticleSortJob> listGPUSortJob, uint32 gpuOrderCount,
+                                            const VFXSimulationFrameInput& input )
     {
         _listBatchBase.clear();
         _uploadedParticleCount = 0;
         // GPU 방출기의 상태는 배치가 없는 프레임에도 정리해야 한다(멈춘 효과의 버퍼를 놓는다) — 빈 목록이어도 부른다.
-        _gpuSimulation.prepareFrame( device, listBatch, listMeshEmitter, input );
+        _gpuSimulation.prepareFrame( device, listBatch, listMeshEmitter, listGPUSortJob, gpuOrderCount, input );
         if ( listBatch.empty() )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.Upload" );
@@ -154,8 +155,9 @@ namespace sw
         uint32             drawnBatchCount = 0;
         if ( _orderBuffer.isValid() == false )
             return 0; // prepareFrame 이 만들지 못했다(오류를 남겼다)
-        // 순서 목록은 프레임에 하나다 — 방출기마다의 구간은 플래그 칸 위 비트로 간다.
-        cmd.bindStructuredBuffer( _orderBuffer._srv, shaderslot::kParticleOrderBuffer );
+        // 순서 목록은 CPU 정렬 목록과 GPU 정렬 버퍼 둘이다 — 방출기마다의 구간은 플래그 칸 위 비트로 가고, 목록은 바뀔 때만 다시 건다.
+        RHIDescriptorIndex boundOrder = _orderBuffer._srv;
+        cmd.bindStructuredBuffer( boundOrder, shaderslot::kParticleOrderBuffer );
         for ( const GPUTransparentParticleSlot& slot : listSlot )
         {
             using Root              = VFXParticleRendererInternal;
@@ -178,8 +180,16 @@ namespace sw
             uint32 arrRoot[Root::kRootConstantCount]{};
             arrRoot[Root::kRootParticleBase] = bGPUBatch ? 0u : _listBatchBase[batchIndex];
             arrRoot[Root::kRootFlags]        = ( batch._bAdditive == SW_TRUE ? Root::kFlagAdditive : 0u ) | ( batch._bRibbon == SW_TRUE ? Root::kFlagRibbon : 0u );
-            // 정렬하는 CPU 방출기는 이 뷰의 순서 구간을 싣는다(첫 칸 + 1, 0 = 순서 없음). 구간 길이는 입자 수와 같다(게임 스레드가 같은 배열로 만들었다).
-            const bool bOrdered = bGPUBatch == false && slot._order._first != constant::invalid_index::kUint32;
+            // 정렬하는 방출기는 이 뷰의 순서 구간을 싣는다(첫 칸 + 1, 0 = 순서 없음). CPU 방출기는 게임 스레드가 정렬한 목록, GPU 방출기는 컴퓨트가 이번 프레임에 쓴 버퍼다
+            // (정렬 일이 기록되지 않은 GPU 방출기는 옛 칸을 읽지 않게 순서 없이 그린다).
+            const bool               bHasOrder = slot._order._first != constant::invalid_index::kUint32;
+            const bool               bOrdered  = bHasOrder && ( bGPUBatch == false || _gpuSimulation.isBatchSorted( batchIndex ) );
+            const RHIDescriptorIndex orderSRV  = bGPUBatch ? _gpuSimulation.getOrderSRV() : _orderBuffer._srv;
+            if ( bOrdered && orderSRV != boundOrder )
+            {
+                cmd.bindStructuredBuffer( orderSRV, shaderslot::kParticleOrderBuffer );
+                boundOrder = orderSRV;
+            }
             if ( bOrdered && slot._order._first <= Root::kMaxOrderFirst )
                 arrRoot[Root::kRootFlags] |= ( slot._order._first + 1u ) << kRootFlagOrderShift;
             else if ( bOrdered )

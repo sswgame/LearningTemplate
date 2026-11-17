@@ -41,4 +41,18 @@ namespace sw
          */
         static VFXParticleOrder appendByAge( vector_reference<const GPUParticle> listParticle, bool bOldestFirst, vector<uint32>& outListOrder );
     };
+
+    /**
+     * @struct VFXGPUParticleSortJob
+     * @brief GPU 방출기 하나(ViewDepth 는 방출기 × 뷰 하나)의 정렬 일입니다. 게임 스레드가 자리에 구간을 주며 싣고, 렌더 스레드가 워크그룹 하나로 정렬한다(vfx_particle_sort.hlsl).
+     * @details 구간(`_orderFirst` 부터 풀 크기 칸)은 GPU 순서 버퍼(`VFXGPUSimulation` 소유) 안의 자리다 — CPU 순서 목록과 번호 공간이 따로다.
+     */
+    struct VFXGPUParticleSortJob
+    {
+        uint32      _batchIndex{ 0 }; ///< `GPUSceneSnapshot::_listParticleBatch` 의 번호
+        uint32      _orderFirst{ 0 }; ///< GPU 순서 버퍼 안 구간의 첫 칸
+        VFXSortMode _sortMode{ VFXSortMode::None };
+        float3      _eye{};  ///< ViewDepth: 그 뷰의 눈(월드)
+        float3      _axis{}; ///< ViewDepth: 깊이 축(영벡터면 눈까지의 거리)
+    };
 } // namespace sw

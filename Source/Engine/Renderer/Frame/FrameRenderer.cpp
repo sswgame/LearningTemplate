@@ -610,7 +610,8 @@ namespace sw
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         _psoManager.ensureParticlePSO();
         _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), vector_reference<const uint32>( _state._gpuScene.getParticleOrder() ),
-                                               _state._gpuScene.getVFXMeshEmitters(), _passExecutor.getFrameGraphExecutor().makeVFXSimulationInput() );
+                                               _state._gpuScene.getVFXMeshEmitters(), vector_reference<const VFXGPUParticleSortJob>( _state._gpuScene.getGPUParticleSortJobs() ),
+                                               _state._gpuScene.getGPUParticleOrderCount(), _passExecutor.getFrameGraphExecutor().makeVFXSimulationInput() );
 
         if ( _passExecutor.prepareCommandList( pDevice, pCallerName ) == false )
             return false;

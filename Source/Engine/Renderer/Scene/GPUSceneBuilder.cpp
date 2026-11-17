@@ -35,6 +35,7 @@
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/VFX/SceneVFXProvider.h"
+#include "Engine/VFX/VFXEffectDef.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 #include "Engine/Visual/MeshLODSystem.h"
@@ -1204,6 +1205,8 @@ namespace sw
         _snapshot.clearParticles();
         _listScratchAgeOrder.clear();
         _mainParticleOrderSize                = 0;
+        _mainGPUSortJobCount                  = 0;
+        _mainGPUParticleOrderCount            = 0;
         vector<GPUParticleBatch>&   listBatch = _snapshot._listParticleBatch;
         GPUSceneBuilderParticleSink sink{ *this, objects.getPrimitiveRegistry() };
         objects.collectServiceParticles( sink );
@@ -1228,7 +1231,9 @@ namespace sw
         // 방출기 안 입자의 순서(정렬 모드가 있는 방출기만) — 주 시점의 눈과 축으로.
         _listScratchAgeOrder.assign( listBatch.size(), VFXParticleOrder{} );
         assignParticleOrders( _snapshot._listParticleSlot, cameraPos, _transparentSorter.getAxis() );
-        _mainParticleOrderSize = static_cast<uint32>( _snapshot._listParticleOrder.size() );
+        _mainParticleOrderSize     = static_cast<uint32>( _snapshot._listParticleOrder.size() );
+        _mainGPUSortJobCount       = static_cast<uint32>( _snapshot._listGPUParticleSort.size() );
+        _mainGPUParticleOrderCount = _snapshot._gpuParticleOrderCount;
     }
 
     void GPUSceneBuilder::assignParticleOrders( vector<GPUTransparentParticleSlot>& listSlot, const float3& eye, const float3& axis )
@@ -1242,8 +1247,13 @@ namespace sw
                 continue;
             const GPUParticleBatch&    batch         = listBatch[batchIndex];
             const vector<GPUParticle>* pListParticle = batch.findCPUParticles();
-            if ( batch._sortMode == VFXSortMode::None || pListParticle == nullptr )
+            if ( batch._sortMode == VFXSortMode::None )
                 continue;
+            if ( pListParticle == nullptr )
+            {
+                assignGPUParticleOrder( slot, batchIndex, eye, axis );
+                continue;
+            }
             SW_PROFILE_SCOPE( "GT.VFX.sortParticles" );
             if ( batch._sortMode == VFXSortMode::ViewDepth )
             {
@@ -1356,10 +1366,40 @@ namespace sw
         return ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
     }
 
+    void GPUSceneBuilder::assignGPUParticleOrder( GPUTransparentParticleSlot& slot, uint32 batchIndex, const float3& eye, const float3& axis )
+    {
+        const GPUParticleBatch&     batch    = _snapshot._listParticleBatch[batchIndex];
+        const VFXGPUEmitterRequest* pRequest = batch.findGPURequest();
+        if ( pRequest == nullptr || pRequest->_pDef == nullptr )
+            return;
+        // 나이 순서는 뷰와 무관하다 — 방출기마다 일 하나를 뷰들이 함께 쓴다(CPU 나이 구간과 같은 칸에 기억한다 — 한 방출기는 CPU 나 GPU 하나다).
+        const bool bAgeOrder = batch._sortMode != VFXSortMode::ViewDepth;
+        if ( bAgeOrder && _listScratchAgeOrder[batchIndex]._first != constant::invalid_index::kUint32 )
+        {
+            slot._order = _listScratchAgeOrder[batchIndex];
+            return;
+        }
+        // 구간은 풀 크기다(살아 있는 수는 GPU 만 안다 — 그리기는 간접 인자의 살아 있는 수만큼 읽는다). 로드 검사가 풀을 정렬 한도 안으로 막았다.
+        const uint32           count = MathUtil::min( pRequest->_pDef->_maxParticles, VFXEmitterDef::kMaxGPUSortedParticles );
+        VFXGPUParticleSortJob& job   = _snapshot._listGPUParticleSort.emplace_back();
+        job._batchIndex              = batchIndex;
+        job._orderFirst              = _snapshot._gpuParticleOrderCount;
+        job._sortMode                = batch._sortMode;
+        job._eye                     = eye;
+        job._axis                    = axis;
+        slot._order._first           = job._orderFirst;
+        slot._order._count           = count;
+        _snapshot._gpuParticleOrderCount += count;
+        if ( bAgeOrder )
+            _listScratchAgeOrder[batchIndex] = slot._order;
+    }
+
     void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )
     {
         _snapshot._listViewTransparentOrder.clear();
         _snapshot._listParticleOrder.resize( _mainParticleOrderSize ); // 앞서 만든 추가 뷰 구간을 버린다(주 시점 구간 · 나이 구간은 그대로)
+        _snapshot._listGPUParticleSort.resize( _mainGPUSortJobCount );
+        _snapshot._gpuParticleOrderCount = _mainGPUParticleOrderCount;
         if ( listView.empty() )
             return;
         const vector<GPUInstance>*                 pInstance     = _instanceRing.getPublished();

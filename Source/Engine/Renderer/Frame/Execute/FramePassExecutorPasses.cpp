@@ -348,6 +348,7 @@ namespace sw
                 case RenderPassType::LightGrid:
                 case RenderPassType::VFXSimulation:
                 case RenderPassType::VFXMeshInstance:
+                case RenderPassType::VFXParticleSort:
                 case RenderPassType::DepthHistory:
                 case RenderPassType::AutoExposure:
                 case RenderPassType::UpscaleEasu:
