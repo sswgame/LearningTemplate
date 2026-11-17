@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 
 #include <iterator>
@@ -329,6 +330,18 @@ SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
     SW_EXPECT_EQUAL( 2u, kVulkanRequiredMinor );
     SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 5u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( kVulkanRequiredMinor ) ); // vulkan1.2 → SPIR-V 1.5
     SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 6u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( 3u ) );                   // vulkan1.3 → SPIR-V 1.6
+}
+
+/**
+ * @brief [VulkanPipelineCacheFileTest] 파이프라인 캐시 파일이 장치 · 드라이버마다 따로다(R-13)
+ * @details 파일이 하나면 하드웨어 → software → 하드웨어 실행이 하드웨어 캐시를 덮어(드라이버가 다른 장치의 데이터를 버린다) 매번 처음부터 컴파일한다.
+ */
+SW_TEST_CASE( VulkanPipelineCacheFileTest, FileIsPerDeviceAndDriver )
+{
+    const string hardware = VulkanPipelineCacheFile::makeRelativePath( 0x10DEu, 0x2684u, 0x8A3C0000u );
+    SW_EXPECT_TRUE( hardware == "ShaderCache/vk_pipeline_cache_000010de_00002684_8a3c0000.bin" );
+    SW_EXPECT_FALSE( hardware == VulkanPipelineCacheFile::makeRelativePath( 0x10005u, 0u, 1u ) );              // software(lavapipe)
+    SW_EXPECT_FALSE( hardware == VulkanPipelineCacheFile::makeRelativePath( 0x10DEu, 0x2684u, 0x8A3C0001u ) ); // 드라이버 갱신
 }
 
 /** @brief [RHIAvailabilityTest] 다른 백엔드: 지금 것이 아니고 이 플랫폼에서 되는 것이다. Windows 는 DX12 ↔ DX11, Linux 는 Vulkan ↔ OpenGL 이다 */

@@ -13,6 +13,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
@@ -748,12 +749,15 @@ namespace sw
     namespace
     {
         /**
-         * @brief 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache.bin`)입니다.
+         * @brief @p physicalDevice 의 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache_<vendor>_<device>_<driver>.bin`)입니다.
          * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
+         *          장치 · 드라이버마다 파일이 따로다(`VulkanPipelineCacheFile`, R-13).
          */
-        string getVulkanPipelineCachePath()
+        string getVulkanPipelineCachePath( VkPhysicalDevice physicalDevice )
         {
-            return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCache/vk_pipeline_cache.bin" );
+            VkPhysicalDeviceProperties properties{};
+            vkGetPhysicalDeviceProperties( physicalDevice, &properties );
+            return FileUtil::joinPath( ProcessRoots::get()._saved.str(), VulkanPipelineCacheFile::makeRelativePath( properties.vendorID, properties.deviceID, properties.driverVersion ) );
         }
 
         struct VulkanRHIDeviceInternal
@@ -1797,11 +1801,11 @@ namespace sw
 
     bool VulkanRHIDevice::initializePipelineCache()
     {
-        if ( _device == VK_NULL_HANDLE )
+        if ( _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE )
             return false;
 
         vector<uint8> listCacheData;
-        const string  cachePath = getVulkanPipelineCachePath();
+        const string  cachePath = getVulkanPipelineCachePath( _physicalDevice );
         // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
         if ( FileUtil::exists( cachePath ) )
             (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
@@ -1842,7 +1846,7 @@ namespace sw
             vector<uint8> listCacheData( dataSize );
             if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
             {
-                const string cachePath = getVulkanPipelineCachePath();
+                const string cachePath = getVulkanPipelineCachePath( _physicalDevice );
                 // 새 파이프라인이 없던 실행은 같은 바이트다 — 다시 쓰지 않는다. 드라이버가 같은 내용에 다른 바이트를 내면 지금처럼 쓴다.
                 vector<uint8> listSavedData;
                 const bool    bUnchanged = FileUtil::exists( cachePath ) && FileUtil::readFile( cachePath, listSavedData ) && listSavedData.size() == dataSize &&
