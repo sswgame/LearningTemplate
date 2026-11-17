@@ -2,6 +2,8 @@
 
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 
+#include <algorithm>
+
 namespace sw
 {
     VirtualInputScript::VirtualInputScript()
@@ -11,6 +13,11 @@ namespace sw
     }
 
     void VirtualInputScript::addEvent( uint32 frameIndex, const RawInputEvent& rawEvent )
+    {
+        (void)insertEvent( frameIndex, rawEvent );
+    }
+
+    size_t VirtualInputScript::insertEvent( uint32 frameIndex, const RawInputEvent& rawEvent )
     {
         // 같은 프레임 안의 순서를 지키려면 그 프레임의 마지막 항목 뒤에 넣는다.
         size_t insertIndex = _listEntry.size();
@@ -23,9 +30,19 @@ namespace sw
         entry._event      = rawEvent;
         _listEntry.insert( _listEntry.begin() + static_cast<ptrdiff_t>( insertIndex ), entry );
         _cursor = 0;
+        return insertIndex;
     }
 
     bool VirtualInputScript::addSlot( uint32 frameIndex, const InputSlot& slot, bool bDown )
+    {
+        RawInputEvent rawEvent{};
+        if ( makeSlotEvent( frameIndex, slot, bDown, rawEvent ) == false )
+            return false;
+        addEvent( frameIndex, rawEvent );
+        return true;
+    }
+
+    bool VirtualInputScript::makeSlotEvent( uint32 frameIndex, const InputSlot& slot, bool bDown, RawInputEvent& outEvent ) const
     {
         switch ( slot._deviceKind )
         {
@@ -34,7 +51,7 @@ namespace sw
                 if ( slot._controlIndex >= static_cast<uint16>( Key::Count ) )
                     return false;
                 const Key key = static_cast<Key>( slot._controlIndex );
-                addEvent( frameIndex, bDown ? RawInputEvent::makeKeyDown( key ) : RawInputEvent::makeKeyUp( key ) );
+                outEvent      = bDown ? RawInputEvent::makeKeyDown( key ) : RawInputEvent::makeKeyUp( key );
                 return true;
             }
             case InputDeviceKind::Mouse:
@@ -43,8 +60,8 @@ namespace sw
                     return false;
                 const MouseButton button  = static_cast<MouseButton>( slot._controlIndex );
                 const int2        pointer = findPointerPosition( frameIndex );
-                addEvent( frameIndex, bDown ? RawInputEvent::makeMouseButtonDown( button, pointer._x, pointer._y )
-                                            : RawInputEvent::makeMouseButtonUp( button, pointer._x, pointer._y ) );
+                outEvent                  = bDown ? RawInputEvent::makeMouseButtonDown( button, pointer._x, pointer._y )
+                                                  : RawInputEvent::makeMouseButtonUp( button, pointer._x, pointer._y );
                 return true;
             }
             case InputDeviceKind::Gamepad:
@@ -53,8 +70,7 @@ namespace sw
                 if ( slot._controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
                     return false;
                 const GamepadButton button = static_cast<GamepadButton>( slot._controlIndex );
-                addEvent( frameIndex, bDown ? RawInputEvent::makeGamepadButtonDown( button, slot._deviceIndex )
-                                            : RawInputEvent::makeGamepadButtonUp( button, slot._deviceIndex ) );
+                outEvent                   = bDown ? RawInputEvent::makeGamepadButtonDown( button, slot._deviceIndex ) : RawInputEvent::makeGamepadButtonUp( button, slot._deviceIndex );
                 return true;
             }
             default:
@@ -66,9 +82,14 @@ namespace sw
 
     bool VirtualInputScript::addTap( uint32 frameIndex, const InputSlot& slot, uint32 holdFrameCount )
     {
-        if ( addSlot( frameIndex, slot, true ) == false )
+        RawInputEvent pressEvent{};
+        RawInputEvent releaseEvent{};
+        if ( makeSlotEvent( frameIndex, slot, true, pressEvent ) == false || makeSlotEvent( frameIndex + holdFrameCount, slot, false, releaseEvent ) == false )
             return false;
-        return addSlot( frameIndex + holdFrameCount, slot, false );
+        addEvent( frameIndex, pressEvent );
+        const size_t releaseIndex                 = insertEvent( frameIndex + holdFrameCount, releaseEvent );
+        _listEntry[releaseIndex]._pressFrameIndex = frameIndex;
+        return true;
     }
 
     void VirtualInputScript::addMouseDelta( uint32 frameIndex, float32 deltaX, float32 deltaY )
@@ -104,11 +125,26 @@ namespace sw
 
     void VirtualInputScript::delayEventsFrom( uint32 firstFrameIndex, uint32 frameCount )
     {
-        // 목록은 프레임 순서다. 뒤에서부터 밀면 순서가 그대로이고, 커서 앞(이미 낸 이벤트)에는 닿지 않는다.
-        for ( size_t index = _listEntry.size(); index > 0 && _listEntry[index - 1]._frameIndex >= firstFrameIndex; --index )
+        // 커서 앞(이미 낸 이벤트)은 프레임이 @p firstFrameIndex 보다 앞이라 닿지 않는다. 누르기가 이미 나간 탭의 떼기만 제자리에 두므로,
+        // 그 앞에 있던 같은 프레임의 이벤트가 밀려 넘어갈 수 있다 — 민 뒤에 프레임 순서를 다시 맞춘다(같은 프레임은 더한 순서를 지킨다).
+        bool bKeptRelease = false;
+        for ( VirtualInputScriptEntry& entry : _listEntry )
         {
-            _listEntry[index - 1]._frameIndex += frameCount;
+            if ( entry._frameIndex < firstFrameIndex )
+                continue;
+            const bool bPressAlreadyOut = entry._pressFrameIndex != VirtualInputScriptEntry::kNoPress && entry._pressFrameIndex < firstFrameIndex;
+            if ( bPressAlreadyOut )
+            {
+                bKeptRelease = true;
+                continue;
+            }
+            entry._frameIndex += frameCount;
+            if ( entry._pressFrameIndex != VirtualInputScriptEntry::kNoPress )
+                entry._pressFrameIndex += frameCount;
         }
+        if ( bKeptRelease )
+            std::stable_sort( _listEntry.begin(), _listEntry.end(), []( const VirtualInputScriptEntry& lhs, const VirtualInputScriptEntry& rhs )
+            { return lhs._frameIndex < rhs._frameIndex; } );
     }
 
     void VirtualInputScript::clear()

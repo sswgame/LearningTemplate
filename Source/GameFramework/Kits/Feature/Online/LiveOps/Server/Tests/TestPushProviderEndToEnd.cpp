@@ -425,6 +425,8 @@ SW_TEST_CASE_F( PushEndToEndTest, APNSForbiddenWaitsBeforeSigningAgain )
         const expected<void> assembled = assemble();
         SW_REQUIRE_TRUE_MSG( assembled.has_value(), assembled.has_value() ? string_view{} : assembled.error().message() );
     }
+    SW_EXPECT_LOG( "ApnsPushProvider.APNsRejectedProviderToken" ); // 403 거절과 그 배달의 버림이 이 테스트가 보려는 동작이다
+    SW_EXPECT_LOG( "PushNotificationDispatcher.PushDispatcherProviderRejectedNotification" );
     addDevice( "apns", kAPNSToken );
     _apns._status = 403;
     notifyAndWait();

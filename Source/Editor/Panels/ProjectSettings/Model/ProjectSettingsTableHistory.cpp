@@ -11,7 +11,7 @@
 namespace sw::editor
 {
     ProjectSettingsTableHistory::ProjectSettingsTableHistory()
-        : _pStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit() ) }
+        : _pStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() ) ) }
         , _pOwner{ make_unique<UndoStepOwner>() }
     {
     }

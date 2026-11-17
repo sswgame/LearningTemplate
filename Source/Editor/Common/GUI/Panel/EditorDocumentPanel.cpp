@@ -183,7 +183,7 @@ namespace sw::editor
         , _pEditRecorder{ make_unique<DocumentEditRecorder>( DocumentEditRecorder::RecordDelegate::create<&EditorDocumentPanel::notifyDocumentEdited>( this ) ) }
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
-        , _pDocumentStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit() ) }
+        , _pDocumentStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() ) ) }
         , _pStackInteraction{ make_unique<CommandStackInteractionScope>() }
         , _listRecentPath{}
         , _listOpenCandidate{}

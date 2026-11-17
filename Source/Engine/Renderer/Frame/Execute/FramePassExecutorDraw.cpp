@@ -542,7 +542,10 @@ namespace sw
         // 앞 드로우가 이미 올린 슬롯에 다른 값을 다시 쓰지 않는다 — GPU 가 나중에 읽는 DX12 · Vulkan 에서는 그 패스의 모든 드로우가 마지막 값을 본다
         // (데칼 여럿이 마지막 데칼의 상자로 그려졌다). 그리기마다 값이 바뀌는 반복(데칼 · 후처리 머티리얼 · 그림자 타일)은 여기서 새 슬롯을 받는다.
         const bool bSlotAlreadyDrawn = context._lastCbBuffer == context._passCb && context._passCb != 0;
-        const bool bValuesChanged    = context._lastCbValuesVersion != context._passValues.getVersion() || context._lastCbRegistryVersion != context._resourceRegistry.getVersion();
+        // PSO 가 바뀌어 엔진 CB 배치가 달라져도 같은 값에서 다른 바이트가 나온다 — 그 역시 새 슬롯이다(RHI.ConstantBufferRewrittenInFrame).
+        const uint64 cbLayoutHash   = pLayout->getEngineCbLayoutHash();
+        const bool   bValuesChanged = context._lastCbValuesVersion != context._passValues.getVersion() || context._lastCbRegistryVersion != context._resourceRegistry.getVersion() ||
+                                    context._lastCbLayoutHash != cbLayoutHash;
         if ( bSlotAlreadyDrawn && bValuesChanged && acquirePassCb( context ) == false )
             return false; // 링 고갈 — 이 드로우는 그리지 않는다(앞 드로우의 슬롯을 덮지 않는다, 링이 이유를 남겼다)
         const RHIConstantBuffer engineCb{ context._passCb, context._passCbIndex };
@@ -552,18 +555,21 @@ namespace sw
         // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다(FramePassContext::_lastBindPSO 참고).
         const uint32 valuesVersion   = context._passValues.getVersion();
         const uint32 registryVersion = context._resourceRegistry.getVersion();
-        const bool   bUpToDate       = ( context._lastBindPSO == pso ) && ( context._lastCbBuffer == engineCb._buffer ) &&
-                               ( context._lastCbValuesVersion == valuesVersion ) && ( context._lastCbRegistryVersion == registryVersion );
+        // 버퍼의 바이트가 이미 맞나(올리기를 건너뛴다)와, 슬롯 상태까지 그대로인가(PSO 가 같아야 한다 — 리소스 재바인딩을 건너뛴다)는 따로다.
+        const bool bCbUpToDate = ( context._lastCbBuffer == engineCb._buffer ) && ( context._lastCbValuesVersion == valuesVersion ) &&
+                                 ( context._lastCbRegistryVersion == registryVersion ) && ( context._lastCbLayoutHash == cbLayoutHash );
+        const bool bBindUpToDate = bCbUpToDate && ( context._lastBindPSO == pso );
 
         const BindlessIndexCheckSite  indexCheck{ _pDevice, context._passName };
         const BindlessIndexCheckSite* pIndexCheck = &indexCheck;
         ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues, engineCb, materialCb,
-                                             _pDevice->supportsNativeBindlessSampling(), pMaterialTexSRV, bUpToDate, pIndexCheck );
+                                             _pDevice->supportsNativeBindlessSampling(), pMaterialTexSRV, bCbUpToDate, bBindUpToDate, pIndexCheck );
 
         context._lastBindPSO           = pso;
         context._lastCbBuffer          = engineCb._buffer;
         context._lastCbValuesVersion   = valuesVersion;
         context._lastCbRegistryVersion = registryVersion;
+        context._lastCbLayoutHash      = cbLayoutHash;
 
         // 셰이더 메시지 변형 패스(표의 kGPUMessageTarget — Present 의 fullscreen_blit)는 드로우마다 링을 u4 에 건다. 링이 없으면(-gv_gpuMessages 꺼짐) 아무것도 하지 않는다.
         if ( getRenderPassTypeInfo( context._passType ).hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) )

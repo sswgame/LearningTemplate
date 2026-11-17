@@ -492,9 +492,12 @@ SW_TEST_CASE( ServerDirectoryTest, SeatReservationsAreSharedConfirmedAndExpire )
     readerA.update( now );
     rig.pollAll();
     SW_EXPECT_FALSE( readerA.pickServer( query, now, picked ) );
-    rig._clock.advanceMilliseconds( kSeatReservationMs ); // 예약 창이 끝났다 — 확정하지 않은 좌석이 풀린다
-    readerA.requestRefresh();
-    readerA.update( now );
+    rig._clock.advanceMilliseconds( kSeatReservationMs );            // 예약 창이 끝났다 — 확정하지 않은 좌석이 풀린다
+    const sw::UnixMilliseconds later{ kNowMs + kSeatReservationMs }; // 저장소 시계와 읽는 쪽에 넘기는 시각이 같이 간다
+    game.update( later );
     rig.pollAll();
-    SW_EXPECT_TRUE( readerA.pickServer( query, now, picked ) );
+    readerA.requestRefresh();
+    readerA.update( later );
+    rig.pollAll();
+    SW_EXPECT_TRUE( readerA.pickServer( query, later, picked ) );
 }

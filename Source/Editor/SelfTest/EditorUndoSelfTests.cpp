@@ -47,7 +47,7 @@ namespace sw::editor
                 Archive       written;
                 stack.save( written );
                 Archive      reread( written.getData(), written.getSize() );
-                CommandStack resumed{ EditorUndoHistory::readConfiguredLimit() };
+                CommandStack resumed{ EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() ) };
                 (void)context.expect( resumed.load( reread ), "the saved undo history could not be read back" );
                 (void)context.expect( resumed.getCommandCount() == stack.getCommandCount(), "the resumed history has a different number of commands" );
                 resumed.undo();

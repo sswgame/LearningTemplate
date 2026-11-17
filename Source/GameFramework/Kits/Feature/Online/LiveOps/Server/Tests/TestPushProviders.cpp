@@ -338,6 +338,7 @@ SW_TEST_CASE( PushProviderSetTest, ReadEntry )
         SW_EXPECT_EQUAL( string( "b" ), config._topic );
         SW_EXPECT_EQUAL( int64( 1200 ), config._tokenRefreshMinSeconds );
     }
+    SW_EXPECT_LOG( "JSON.WrongType" ); // 문자열 "1200" 줄 — 형식이 틀린 칸의 거절 로그가 이 구간이 보려는 동작이다
     for ( const utf8* pText : {
               R"({"kind":"fcm"})",
               R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","tokenRefreshMinSeconds":1200})",
