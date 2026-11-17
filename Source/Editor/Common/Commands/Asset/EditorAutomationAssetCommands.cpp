@@ -54,8 +54,8 @@ namespace sw::editor
         struct EditorAutomationAssetCommandsInternal
         {
             /**
-             * @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. 사본 도메인(`AutomationScratch::kScratchDomain`) 아래라 자동화 쓰기 게이트가 허락하고
-             *        `.gitignore` 의 `/Content/scratch/` 가 무시한다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
+             * @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. 사본 도메인(`AutomationScratch::kScratchDomain` — 실행 뿌리 아래, 리소스 트리 밖)이라
+             *        자동화 쓰기 게이트가 막지 않고 저장소에 남지 않는다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
              */
             static constexpr const utf8* kImportTempFolder = AutomationScratch::kImportDomain;
 
@@ -420,17 +420,20 @@ namespace sw::editor
 
             /**
              * @brief 임포트 대상 폴더(리소스 id)를 절대 경로로 바꿉니다. 임시 리소스 폴더(`kImportTempFolder`) 아래일 때만 true 입니다.
-             * @details 임포트한 에셋은 리소스 id 가 있어야 씬이 쓸 수 있는데, `Saved/Automation` 에는 id 가 없다. 그래서 리소스 트리 안의 한 폴더만 받는다.
-             *          그 폴더는 `.gitignore` 가 무시하고 시나리오가 처음과 끝에 지운다(`asset.removeImportFolder`). 이 검사가 저장소 리소스를 지킨다.
+             * @details 임포트한 에셋은 리소스 id 가 있어야 씬이 쓸 수 있다 — 작업 도메인의 가져오기 그릇 하나만 받는다.
+             *          시나리오가 처음과 끝에 지운다(`asset.removeImportFolder`). 이 검사가 저장소 리소스를 지킨다.
              */
             [[nodiscard]] static expected<string> resolveImportFolder( const string& folderID )
             {
-                const string  normalized       = FileUtil::normalizePath( folderID ).str();
-                const string& resourceRoot     = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-                const bool    bOutsideTempArea = FileUtil::startsWithPathComponent( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos; // 리소스 id 끼리(소문자)
-                if ( bOutsideTempArea || resourceRoot.empty() )
+                const string normalized       = FileUtil::normalizePath( folderID ).str();
+                const bool   bOutsideTempArea = FileUtil::startsWithPathComponent( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos; // 리소스 id 끼리(소문자)
+                if ( bOutsideTempArea )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "imports go under the temporary resource folder", kImportTempFolder }.appendDetail( "/: " ).appendDetail( folderID ) );
-                return FileUtil::joinPath( resourceRoot, folderID );
+                // 작업 도메인은 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`) — 리소스 루트에 id 를 붙이지 않고 도메인 규칙으로 푼다.
+                const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( normalized );
+                if ( folder.has_value() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the import folder does not resolve to a disk folder", folderID } );
+                return folder->str();
             }
 
             /**

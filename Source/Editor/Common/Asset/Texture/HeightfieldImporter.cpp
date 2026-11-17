@@ -300,7 +300,7 @@ namespace sw::editor
             return true;
         }
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않고 직렬로 돈다(워커는 에디터 서비스 범위를 읽지 않는다).
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( assetPaths.getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ),
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( assetPaths.getRootFolderPathFor( relativePath ), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ),
                                                                                 nullptr, *derivedDataCache );
         for ( const string& problem : summary._listProblem )
         {

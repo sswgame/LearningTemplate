@@ -7,6 +7,7 @@
  *          보고(`-scenario-report=R.json`)를 받았으면 자식은 `R.<백엔드>.json`, 부모는 `R.json` 에 백엔드별 결과를 쓴다. 받지 않아도 자식은 기본 폴더의 `<백엔드>.json` 에 쓴다 —
  *          부모가 그 보고의 `records[]`(`<Record>`)를 시나리오마다 백엔드 사이에 견주고(`findRecordMismatches`), 하나라도 다르면 실행이 실패(10)다. 언리얼 자동화의 결정성 대조 자리다.
  *          자식 창은 2 열 바둑판으로 놓는다(`-WinTile` · `-WinTileColumns` — 칸 간격은 자식 창이 제 틀 두께로 정한다, 넘겨받은 인자에 `-WinX` · `-WinTile` 이 있으면 두지 않는다) — 백엔드마다 화면이 겹치지 않고 한 번에 보인다.
+ *          자식마다 실행 뿌리(`<이 실행 뿌리>/<백엔드>` — `ProcessRoots::_run`, 환경 `SW_RUN_ROOT`)를 비워 준다 — 자식의 상태(사용자 데이터 · 에디터 상태 · 시나리오 사본)가 모두 그 아래다.
  *          자식은 로그가 정지 시한(`AutomationTimeLimits::kProcessStallSeconds`) 넘게 자라지 않거나 프로세스 시한(`kProcessKillSeconds` × 체인의 단계 수)을 넘기면 죽이고 시간 초과(12)로 센다.
  *          종료 코드: 하나라도 실패면 표 순서로 첫 실패 백엔드의 코드, 아니면 하나라도 통과면 0, 모두 건너뜀이면 13. 이 기계에서 못 도는 백엔드(77)는 건너뜀으로 센다.
  */
@@ -45,7 +46,7 @@ namespace sw
         int32                  _splitOffset{ -1 };                     ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
         AutomationBackendSplit _split{ AutomationBackendSplit::None }; ///< `-scenario-backend-split` — 백엔드 하나에만 줄 시나리오(`assignScenarios`)
         int32                  _slotCount{ 0 };                        ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
-        string                 _userDataRoot{};                        ///< 부모의 사용자 데이터 뿌리(`AutomationUserDataRoot::resolve`) — 자식마다 `<이 뿌리>/<백엔드>` 를 비워 건다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다
+        string                 _userDataRoot{};                        ///< 부모의 사용자 데이터 뿌리(`AutomationUserDataRoot::resolve`) — 비지 않으면 자식마다 제 실행 뿌리의 `userdata` 를 건다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다
     };
 
     /** @struct AutomationBackendRecords @brief 한 시나리오를 한 백엔드에서 돌린 기록 줄(자식 보고의 `records[]`, 적은 순서)입니다. */

@@ -26,7 +26,6 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
@@ -50,8 +49,8 @@ namespace sw::editor
             /** @brief 파일 감시가 리소스 루트 기준으로 만든 경로를 캐시 · 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다(디스크 → id 경계). */
             [[nodiscard]] static AssetID toAssetID( string_view relativePath ) { return AssetID{ relativePath }; }
 
-            /** @brief 감시 울타리 표지 파일 이름의 줄기입니다(`Content/scratch/` 아래, 저장소에 넣지 않는 폴더). 이름은 `makeFenceFileName` 이 프로세스마다 다르게 짓는다. */
-            static constexpr const utf8* kFenceFileStem = "contentfence";
+            /** @brief 감시 울타리 표지 파일 이름입니다(작업 도메인 폴더 바로 아래 — 이 프로세스의 실행 뿌리 안이라 다른 에디터와 겹치지 않는다). */
+            static constexpr const utf8* kFenceFileName = "contentfence.tmp";
             /** @brief 표지 사건을 기다리는 시한(밀리초)입니다. 감시는 보통 몇 ms 안에 알린다. */
             static constexpr int64 kFenceTimeoutMilliseconds = 5000;
             /** @brief 표지 사건 뒤에 사본이 일으킨 임포트가 끝나기를 기다리는 시한(밀리초)입니다. 텍스처 압축은 큰 이미지 하나에 수십 초 걸릴 수 있다. */
@@ -89,46 +88,44 @@ namespace sw::editor
             }
 
             /**
-             * @brief 사건의 리소스 id(소문자)를 @p outAssetID 에 담고, 다른 프로세스(나란히 도는 시나리오 실행 — 백엔드마다의 자식 App)의 스크래치 사본에서 온 사건이면 true 입니다. 그 사본은 이 에디터의 콘텐츠가 아니다.
-             * @details 감시 사건의 입구 둘(트리 · 파일)이 모두 이것으로 거른다. 예전에는 트리 입구만 걸러, 파일 입구가 남의 사본을 다시 읽다가 그 프로세스가 단계 끝에
-             *          폴더를 지우는 순간 `File.NotFound` 를 남겼다(Release `Scenario.editor` 의 bugreport 단계 — dx11 이 dx12 의 `assetmanage_p<pid>` 를 읽었다).
-             *          트리 입구에서는 그 쓰기마다 참조 색인을 처음부터 다시 읽어 단언이 낡은 색인을 봤다(assetmanage).
+             * @brief 디스크 경로 @p diskPath 의 리소스 id 를 디스크 표기(대소문자 그대로, `/` 구분)로 돌려줍니다 — 감시 사건과 저장이 같은 규칙으로 쓴다. 트리 밖이면 빈 글입니다.
+             * @details 리소스 트리는 리소스 루트와 작업 도메인 폴더(실행 뿌리 아래 — `AssetPaths::getScratchFolderPath`) 둘이다. 리소스 루트 안의 `scratch/` 는 작업 도메인의 옛 자리에 남은
+             *          찌꺼기라 빈 글이다(그 id 는 실행 뿌리의 사본을 가리킨다). 예전에는 같은 체크아웃의 모든 App 이 `Content/scratch/` 를 나눠 써 남의 사본 사건을 pid 꼬리로 걸렀다.
              */
-            static bool isOtherProcessScratchEvent( const FileChangeEvent& changeEvent, string& outAssetID )
+            static string makeTreePath( string_view diskPath )
             {
-                outAssetID = StringUtil::toLower( editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
-                return AutomationScratch::isOtherProcessInstance( outAssetID );
+                string relative;
+                if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath(), diskPath, relative ) )
+                    return string( AssetPaths::kScratchDomain ) + "/" + relative;
+                if ( FileUtil::tryMakePathUnderRoot( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath, relative ) == false ||
+                     FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ).str(), AssetPaths::kScratchDomain ) )
+                    return {};
+                return relative;
             }
 
-            /**
-             * @brief 울타리 표지 파일의 이름(`contentfence_p<pid>.tmp`)입니다.
-             * @details `Content/scratch/` 는 같은 체크아웃에서 동시에 도는 에디터가 나눠 쓴다. 이름이 고정이면 한쪽이 지운 표지를 다른 쪽이 쓰다 실패하거나 남의 사건을 제 것으로 읽는다.
-             */
-            static string makeFenceFileName() { return AutomationScratch::makeInstanceID( kFenceFileStem ) + ".tmp"; }
+            /** @brief 트리 표기 @p treePath(`makeTreePath`)의 디스크 경로입니다 — 작업 도메인은 실행 뿌리 아래, 나머지는 리소스 루트 아래. */
+            static string makeDiskPath( string_view treePath )
+            {
+                if ( FileUtil::startsWithPathComponent( treePath, AssetPaths::kScratchDomain ) )
+                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), FileUtil::suffixAfterPathComponent( treePath, AssetPaths::kScratchDomain ) );
+                return FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), treePath );
+            }
+
+            /** @brief 감시 사건의 트리 표기(`makeTreePath`)입니다. 사건의 `_directory` 는 감시 루트(리소스 루트 · 작업 도메인 폴더)이고 `_filename` 은 그 아래 상대 경로다(`IFileWatcher::pushChange`). */
+            static string makeEventPath( const FileChangeEvent& changeEvent ) { return makeTreePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ); }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
-            static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain ), makeFenceFileName() ); }
+            static string makeFenceMarkerPath() { return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), kFenceFileName ); }
 
             /**
-             * @brief 감시 사건이 울타리 표지 파일(이 에디터 것이든 같은 체크아웃의 다른 에디터 것이든)의 것인지 봅니다. 맞으면 @p outbOwn 이 이 에디터의 표지인지입니다.
-             * @details 사건의 `_directory` 는 감시 루트(리소스 루트)이고 `_filename` 은 그 아래 상대 경로(`scratch\contentfence_p<pid>.tmp`)다(`IFileWatcher::pushChange`).
-             *          이름만 견주면 루트 아래 표지는 한 번도 맞지 않아 울타리가 5 초마다 시한 오류를 냈다. 전체 경로의 폴더로 견준다.
-             *          다른 에디터의 표지도 바뀐 파일로 세지 않는다 — 에셋이 아니다. 울타리를 푸는 것은 이 에디터의 표지뿐이다.
+             * @brief 감시 사건이 울타리 표지 파일의 것이면 true 입니다 — 바뀐 파일로 세지 않는다(에셋이 아니다).
+             * @details 이름만 견주면 다른 폴더의 같은 이름이 맞는다 — 전체 경로로 견준다(디스크 경로라 OS 규칙, 접은 키는 리눅스에서 대소문자만 다른 폴더를 같게 본다).
              */
-            static bool isFenceMarkerEvent( const FileChangeEvent& changeEvent, bool& outbOwn )
+            static bool isFenceMarkerEvent( const FileChangeEvent& changeEvent )
             {
-                outbOwn = false;
                 string_view leafName{};
                 FileUtil::getFileNamePart( changeEvent._filename, leafName );
-                if ( StringUtil::startsWith( leafName, kFenceFileStem ) == false )
-                    return false; // 값싼 이름 검사로 대부분의 사건을 거른다
-                // 디스크 경로다 — OS 규칙으로 견준다(접은 키는 리눅스에서 대소문자만 다른 폴더를 같게 본다)
-                const string eventPath   = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
-                const string scratchRoot = FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain );
-                if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( eventPath ), scratchRoot ) == false )
-                    return false;
-                outbOwn = FileUtil::isSameDiskPath( eventPath, makeFenceMarkerPath() );
-                return true;
+                return leafName == kFenceFileName && FileUtil::isSameDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), makeFenceMarkerPath() );
             }
 
             /** @brief 시작 차단 조건 — 시나리오 사본 폴더를 새로 만든 뒤 파일 감시가 그 쓰기를 알릴 때까지 참입니다. 에디터가 없으면 막지 않습니다. */
@@ -174,6 +171,7 @@ namespace sw::editor
 
     AssetHotReload::AssetHotReload()
         : _pFileWatchDispatcher{ nullptr }
+        , _pScratchWatchDispatcher{ nullptr }
         , _pReferenceTracker{ make_unique<AssetReferenceTracker>() }
         , _mapAppliedContentHash{}
         , _cascadeReloadCount{ 0 }
@@ -192,6 +190,8 @@ namespace sw::editor
         , _fenceImportDeadlineNanoseconds{ 0 }
         , _resourceWatch{}
         , _contentWatch{}
+        , _scratchResourceWatch{}
+        , _scratchContentWatch{}
         , _contentChangeSerial{ 0 }
         , _listChangedPath{}
         , _pIdentityRules{}
@@ -235,6 +235,18 @@ namespace sw::editor
         // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
         FileWatchMatchDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
         _contentWatch = _pFileWatchDispatcher->registerWatch( editor::getSubsystem<AssetPaths>().getRootFolderPath(), {}, treeWatchDelegate );
+        // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 리소스 루트 밖, 실행 뿌리 아래다 — 디스패처 하나는 루트 하나만 보므로 따로 건다. 감시하려면 폴더가 있어야 한다.
+        const string& scratchFolder = AssetPaths::getScratchFolderPath();
+        _pScratchWatchDispatcher    = make_unique<FileWatchDispatcher>();
+        if ( FileUtil::ensureDirectoryExists( scratchFolder ) && _pScratchWatchDispatcher->initialize( scratchFolder ) )
+        {
+            _scratchResourceWatch = _pScratchWatchDispatcher->registerWatch( scratchFolder, listExtension, fileWatchDelegate );
+            _scratchContentWatch  = _pScratchWatchDispatcher->registerWatch( scratchFolder, {}, treeWatchDelegate );
+        }
+        else
+        {
+            _pScratchWatchDispatcher.reset(); // 이유는 ensure · initialize 가 남겼다 — 작업 도메인의 바깥 변경만 다시 읽지 않는다
+        }
         return _resourceWatch.isActive();
     }
 
@@ -260,7 +272,14 @@ namespace sw::editor
 
         _resourceWatch.reset();
         _contentWatch.reset();
+        _scratchResourceWatch.reset();
+        _scratchContentWatch.reset();
 
+        if ( _pScratchWatchDispatcher != nullptr )
+        {
+            _pScratchWatchDispatcher->shutdown();
+            _pScratchWatchDispatcher.reset();
+        }
         _pFileWatchDispatcher->shutdown();
         _pFileWatchDispatcher.reset();
     }
@@ -269,6 +288,8 @@ namespace sw::editor
     {
         if ( _pFileWatchDispatcher != nullptr )
             _pFileWatchDispatcher->update();
+        if ( _pScratchWatchDispatcher != nullptr )
+            _pScratchWatchDispatcher->update();
         pollImportJob();
         // 감시 사건이 올린 변경 번호를 같은 프레임에 색인에 반영한다(바뀐 파일만 다시 읽거나 전체 스캔).
         _pReferenceTracker->update( _contentChangeSerial, *this );
@@ -301,15 +322,13 @@ namespace sw::editor
 
     void AssetHotReload::onResourceTreeChanged( const FileChangeEvent& changeEvent )
     {
-        string eventAssetID;
-        if ( AssetHotReloadInternal::isOtherProcessScratchEvent( changeEvent, eventAssetID ) )
-            return;
+        const string treePath = AssetHotReloadInternal::makeEventPath( changeEvent );
+        if ( treePath.empty() )
+            return; // 트리 밖 — 리소스 루트 안의 옛 작업 도메인 자리(`Content/scratch/`)에 남은 찌꺼기다
         ++_contentChangeSerial;
-        bool bOwnFence = false;
-        if ( AssetHotReloadInternal::isFenceMarkerEvent( changeEvent, bOwnFence ) )
+        if ( AssetHotReloadInternal::isFenceMarkerEvent( changeEvent ) )
         {
-            if ( bOwnFence )
-                _bFenceSeen = SW_TRUE; // 울타리 표지 — 바뀐 파일로 세지 않는다(다른 에디터의 표지도 세지 않지만 울타리는 풀지 않는다)
+            _bFenceSeen = SW_TRUE; // 울타리 표지 — 바뀐 파일로 세지 않는다
             return;
         }
         if ( _bChangedPathsUnknown )
@@ -322,8 +341,8 @@ namespace sw::editor
                 _bChangedPathsUnknown = SW_TRUE;
             return;
         }
-        const string& assetID = eventAssetID;
-        if ( assetID.empty() || _listChangedPath.size() >= kMaxTrackedChangedPaths )
+        const string assetID = FileUtil::normalizePath( treePath ).str();
+        if ( _listChangedPath.size() >= kMaxTrackedChangedPaths )
         {
             _bChangedPathsUnknown = SW_TRUE;
             return;
@@ -342,7 +361,7 @@ namespace sw::editor
         // 원본 곁의 서술이 바뀌면 정체성은 원본의 것이다.
         const bool   bSidecar = StringUtil::endsWith( assetID, AssetMeta::kExtension );
         const string targetID = bSidecar ? assetID.substr( 0, assetID.size() - AssetMeta::kExtension.size() ) : assetID;
-        const string absPath  = FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), targetID );
+        const string absPath  = AssetHotReloadInternal::makeDiskPath( targetID );
         if ( FileUtil::isRegularFile( absPath ) == false )
             return;
         const optional<AssetGUID> guid = _pIdentityRules->readIdentity( absPath, targetID );
@@ -370,8 +389,8 @@ namespace sw::editor
     bool AssetHotReload::pollContentWatchFence()
     {
         using Internal = AssetHotReloadInternal;
-        if ( _pFileWatchDispatcher == nullptr )
-            return false;
+        if ( _pScratchWatchDispatcher == nullptr )
+            return false; // 사본(작업 도메인)을 보는 감시가 없다 — 기다릴 사건이 오지 않는다
         const string markerPath = Internal::makeFenceMarkerPath();
         if ( _bFenceWaiting == false )
         {
@@ -419,14 +438,10 @@ namespace sw::editor
         // 바깥 편집기의 "안전한 저장" 도 같다. 새로 생긴 파일(Added)은 아직 가진 캐시가 없어 할 일이 없지만 검증은 돈다.
         const bool bContentChanged = changeEvent._action == FileWatcherAction::Modified || changeEvent._action == FileWatcherAction::RenamedNewName ||
                                      changeEvent._action == FileWatcherAction::Added;
-        string eventAssetID;
-        if ( bContentChanged == false || AssetHotReloadInternal::isOtherProcessScratchEvent( changeEvent, eventAssetID ) )
+        if ( bContentChanged == false )
             return;
 
-        string relPath{};
-        if ( FileUtil::makeRelativePath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
-            return;
-
+        string relPath = AssetHotReloadInternal::makeEventPath( changeEvent ); // 트리 밖(옛 작업 도메인 자리)이면 빈 글
         if ( relPath.empty() )
             return;
 
@@ -459,7 +474,7 @@ namespace sw::editor
     {
         // 사건을 꺼낸 때 파일이 이미 없으면(이름을 바꾸고 지운 사본 폴더의 늦은 "바뀜" 사건) 다시 읽을 내용이 없다 — 지운 사건이다.
         // 캐시의 다시 읽기는 파일을 디스크에서 읽어 `File.NotFound` 를 남겼다(시나리오 `assetmanage` 다음 단계에서 났다).
-        if ( FileUtil::exists( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ) ) == false )
+        if ( FileUtil::exists( AssetHotReloadInternal::makeDiskPath( relativePath ) ) == false )
         {
             SW_LOG_INFO_ID( "AssetHotReload.ChangedFileGone", "Hot reload skipped %# - the file was removed before its change was handled", relativePath.c_str() );
             return;
@@ -478,11 +493,11 @@ namespace sw::editor
             (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        string                       relativePath{};
-        if ( diskPath.has_value() == false || FileUtil::makeRelativePath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath->str(), relativePath ) == false )
+        const optional<AbsolutePath> diskPath     = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
+        const string                 relativePath = diskPath.has_value() ? AssetHotReloadInternal::makeTreePath( diskPath->str() ) : string{};
+        if ( relativePath.empty() )
         {
-            // `Content/` 밖(시나리오의 `Saved/Automation/` 임시 문서 · 붙인 디스크 도메인)은 감시도 색인도 없다 — 그 캐시만 다시 읽는다(예전 패널의 저장 뒤 리로드와 같다).
+            // 트리(리소스 루트 · 작업 도메인) 밖(시나리오의 `Saved/Automation/` 임시 문서 · 붙인 디스크 도메인)은 감시도 색인도 없다 — 그 캐시만 다시 읽는다(예전 패널의 저장 뒤 리로드와 같다).
             (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }
@@ -497,7 +512,7 @@ namespace sw::editor
         const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ).str() );
         if ( itApplied == _mapAppliedContentHash.end() )
             return false;
-        const bool bSame = ContentHash::computeFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ) ) == itApplied->second;
+        const bool bSame = ContentHash::computeFile( AssetHotReloadInternal::makeDiskPath( relativePath ) ) == itApplied->second;
         if ( bSame == false )
             _mapAppliedContentHash.erase( itApplied ); // 그 뒤에 바깥에서 또 바뀌었다 — 반영한다
         return bSame;

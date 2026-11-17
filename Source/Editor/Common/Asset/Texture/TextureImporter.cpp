@@ -690,7 +690,7 @@ namespace sw::editor
         if ( FileUtil::hasExtension( relativePath, ".dds" ) )
             return false;
 
-        const string& resourceRoot = assetPaths.getRootFolderPath(); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다
+        const string& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedTexturePath( normalized ).empty() )
         {

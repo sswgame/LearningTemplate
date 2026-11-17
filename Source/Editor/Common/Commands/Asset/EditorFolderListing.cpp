@@ -27,8 +27,7 @@ namespace sw::editor
                 atomic<uint64> _scanCount{ 0 }; ///< `collectChildFolders` 가 디스크를 읽은 횟수. `getChildFolderScanCount` 가 반환한다
             };
 
-            static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
-                                                  const string& resourceRoot )
+            static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory, const AssetPaths& assetPaths )
             {
                 EditorFolderListingEntry item;
                 item._absolutePath = FileUtil::normalizeSeparators( path );
@@ -40,9 +39,8 @@ namespace sw::editor
                     item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
                 }
 
-                string relative;
-                if ( resourceRoot.empty() == false && FileUtil::tryMakePathUnderRoot( resourceRoot, item._absolutePath, relative ) ) // 대소문자는 OS 규칙
-                    item._relativePath = FileUtil::normalizePath( relative ).str();                                                  // 상대 키는 소문자다
+                // 리소스 id(소문자) — 리소스 루트 아래와 작업 도메인(실행 뿌리 아래 `scratch/`)을 한 규칙으로 푼다(`AssetPaths::toAssetID`, 대소문자는 OS 규칙).
+                item._relativePath = assetPaths.toAssetID( item._absolutePath );
                 if ( item._relativePath.empty() )
                     item._relativePath = FileUtil::normalizePath( item._name ).str();
 
@@ -61,22 +59,22 @@ namespace sw::editor
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
-        const string&  resourceRoot = assetPaths.getRootFolderPath(); // 워커(`EditorFolderListingJob`)에서 돈다 — 부른 쪽이 넘긴 경로 상태다
+        // 워커(`EditorFolderListingJob`)에서 돈다 — 경로 상태는 부른 쪽이 넘긴 @p assetPaths 다(읽기만 한다).
         vector<string> listFolder;
         vector<string> listFile;
-        // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다. 남의 시나리오 사본은 빠진다.
-        (void)EditorContentScan::collectFolders( resourceRoot, folderAbs, listFolder, false );
-        (void)EditorContentScan::collectFiles( resourceRoot, folderAbs, {}, listFile, bRecursive, stopToken );
+        // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다.
+        (void)EditorContentScan::collectFolders( folderAbs, listFolder, false );
+        (void)EditorContentScan::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken );
 
         for ( const string& folder : listFolder )
         {
-            EditorFolderListingInternal::appendFolderListingEntry( outList, folder, true, resourceRoot );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, folder, true, assetPaths );
         }
         for ( const string& file : listFile )
         {
             if ( stopToken.isStopRequested() )
                 return;
-            EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, resourceRoot );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, assetPaths );
         }
         // 곁 파일(텍스처 형식 변형 · 파생 데이터 — `SW_ASSET_COMPANION`)은 원본 에셋의 일부다 — 따로 보이지 않는다. 보이면 썸네일 · 열기가 이 플랫폼이 못 읽는
         // 형식(ASTC · ETC2 를 데스크톱 D3D12)을 텍스처로 만들다 실패했다(언리얼 콘텐츠 브라우저도 플랫폼 파생 데이터를 에셋으로 보이지 않는다).
@@ -102,8 +100,8 @@ namespace sw::editor
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
-        // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다. 남의 시나리오 사본 폴더는 빠진다.
-        (void)EditorContentScan::collectFolders( editor::getSubsystem<AssetPaths>().getRootFolderPath(), folderAbs, outList, false );
+        // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다.
+        (void)EditorContentScan::collectFolders( folderAbs, outList, false );
         for ( string& child : outList )
         {
             child = FileUtil::normalizeSeparators( child );

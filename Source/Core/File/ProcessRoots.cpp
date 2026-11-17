@@ -4,7 +4,10 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
@@ -56,6 +59,16 @@ namespace sw
     #error "Unsupported platform"
 #endif
 
+            /** @brief 실행 뿌리입니다 — 부모가 준 폴더(`kRunRootVariable`), 없으면 이 실행만의 이름(`<pid>-<시작 ns>` — Windows 가 pid 를 다시 써도 겹치지 않는다). */
+            static string findRunRoot( const string& binary )
+            {
+                string run;
+                if ( ProcessEnvironment::tryReadNonEmpty( kRunRootVariable, run ) )
+                    return run;
+                const string runsFolder = FileUtil::joinPath( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "Automation/Runs" );
+                return FileUtil::joinPath( runsFolder, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
+            }
+
             static ProcessRoots make()
             {
                 const string binary  = findBinaryFolder();
@@ -78,6 +91,7 @@ namespace sw
                     requireAbsolute( FileUtil::joinPath( binary, constant::path::kPacksFolder ), "packs" ),
                     requireAbsolute( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "saved" ),
                     requireAbsolute( FileUtil::joinPath( project, constant::path::kSavedFolder ), "derived data" ),
+                    requireAbsolute( findRunRoot( binary ), "run" ),
                 };
                 return roots;
             }

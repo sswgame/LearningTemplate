@@ -29,8 +29,6 @@ namespace sw
      *          같은 파일을 덮어썼다 — 읽기(`parse`)가 단계 값 안의 `Saved/Automation/` 직접 표기를 오류로 만든다.
      */
     inline constexpr const utf8* kAutomationOutputToken = "{out}";
-    /** @brief `kAutomationOutputFolder` 아래에서 에디터 상태 폴더들을 모으는 폴더 이름 — 사용자의 `Saved/Editor` 대신 시나리오마다 비운 폴더를 쓴다. */
-    inline constexpr const utf8* kAutomationEditorStateFolder = "EditorState";
     /** @brief 골든 그림 폴더 이름 — 시나리오 파일 옆 `<시나리오 폴더>/golden/` 이다. 판정(`AutomationEvaluator`)이 읽고 쓰는 자리와 쓰기 문(`AutomationScratch`)이 여는 자리가 이 하나를 본다. */
     inline constexpr const utf8* kAutomationGoldenFolder = "golden";
 
@@ -227,14 +225,6 @@ namespace sw
         const AutomationStep* findOtherStepAtSameFrame( const AutomationStep& step ) const;
         /** @brief 실행기와 테스트만 읽는 선언 묶음입니다(`AutomationTestOptions`). 시나리오의 단계 형식과 섞이지 않게 따로 둔다. */
         const AutomationTestOptions& getTestOptions() const { return _testOptions; }
-        /**
-         * @brief `<Scratch as>` 의 사본 id 를 이 프로세스의 이름(`AutomationScratch::makeInstanceID` — `scratch/assetmanage_p<pid>`)으로 바꾸고,
-         *        단계 속성 글 안의 옛 사본 id 도 같은 규칙(`AutomationScratch::rebaseText`)으로 바꿉니다.
-         * @details 실행기가 사본을 만들기 전에 한 번 부른다(`AutomationRunner::prepareScratchFolders`). 읽기(`parse`)는 선언한 id 를 그대로 둔다 — 시나리오를 읽기만 하는
-         *          쪽(테스트 · 도구)은 프로세스가 달라 꼬리가 맞지 않는다. `<Launch>` 값은 바꾸지 않는다 — 띄우는 쪽이 명령줄에 준 값과 같은지 실행기가 보므로
-         *          사본 id 를 기동 값에 쓰지 않는다.
-         */
-        void bindScratchInstances();
         /** @brief 단계 속성 글 안의 `{out}`(`kAutomationOutputToken`)을 이 실행의 산출물 폴더 @p outputDirectory 로 바꿉니다. 실행기가 시작할 때 한 번 부른다. */
         void bindOutputDirectory( string_view outputDirectory );
 

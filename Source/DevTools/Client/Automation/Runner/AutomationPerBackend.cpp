@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
@@ -33,7 +34,8 @@ namespace sw
     {
         struct AutomationPerBackendInternal
         {
-            static constexpr uint32 kTileColumnCount = 2; ///< 자식 창 바둑판의 열 수 — 백엔드 넷이면 2×2
+            static constexpr uint32      kTileColumnCount  = 2;            ///< 자식 창 바둑판의 열 수 — 백엔드 넷이면 2×2
+            static constexpr const utf8* kKillDumpFileName = "killed.dmp"; ///< 시한에 걸린 자식을 죽이기 전 덤프(자식의 실행 뿌리 아래 — `Process::requestDump`)
             /** @brief 쿠킹 표의 명령줄 이름(표 순서) — 부모가 받는 백엔드 이름은 이것뿐이다(`-vk` 와 같은 철자). */
             static constexpr const utf8* kArrBackendName[] = {
 #define SW_MATRIX_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
@@ -78,8 +80,9 @@ namespace sw
                 string          _backend{};
                 string          _logPath{};
                 string          _reportPath{};
+                string          _runRoot{}; ///< 자식의 실행 뿌리(`<부모 실행 뿌리>/<백엔드>`) — 죽이기 전 덤프도 여기 쓴다
                 ProcessCommand  _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
-                ProcessOptions  _options{}; ///< 자식의 환경(사용자 데이터 뿌리)
+                ProcessOptions  _options{}; ///< 자식의 환경(실행 뿌리 · 사용자 데이터 뿌리)
                 Process         _process{};
                 thread          _flushThread{};
                 Deadline        _killDeadline  = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
@@ -552,13 +555,15 @@ namespace sw
 
             const optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
             pChild->_command                        = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
-            // 자식마다 제 사용자 데이터 뿌리 — 한 폴더를 함께 쓰면 한 자식이 다른 자식의 쓰는 중인 임시 파일을 잔재로 지웠다(와일드웨스트 세이브).
+            // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`) — 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다
+            // (예전에는 한 자식이 다른 자식의 쓰는 중인 세이브 임시 파일을 잔재로 지웠다 — 와일드웨스트). 그 폴더의 주인은 이 부모다 — 띄우기 전에 비운다.
+            const string childRunRoot = FileUtil::joinPath( ProcessRoots::get()._run.str(), backend );
+            (void)FileUtil::removeDirectory( childRunRoot ); // 못 지우면 FileUtil 이 경고를 남긴다
+            pChild->_runRoot = childRunRoot;
+            pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kRunRootVariable, childRunRoot } );
+            // 이 부모가 건 사용자 데이터 뿌리는 환경으로 물려 가므로 자식마다 덮는다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다.
             if ( options._userDataRoot.empty() == false )
-            {
-                const string childRoot = AutomationUserDataRoot::makeChildRoot( options._userDataRoot, backend );
-                (void)FileUtil::removeDirectory( childRoot ); // 앞 실행이 남긴 세이브로 시작하지 않게 — 못 지우면 FileUtil 이 경고를 남긴다
-                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, childRoot } );
-            }
+                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, AutomationUserDataRoot::makeRunUserDataRoot( childRunRoot ) } );
             pChild->_bPending = true;
             listChild.push_back( std::move( pChild ) );
         }
@@ -596,10 +601,23 @@ namespace sw
         };
         const auto finishChild = [&]( Internal::Child& child )
         {
-            const bool bKilled = child._process.isRunning() && child._process.terminate( getAutomationExitStatus( AutomationResult::TimedOut ) );
-            if ( bKilled )
-                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - killed", child._backend.c_str(),
-                                 child._killDeadline.isExpired() ? "did not finish within the process limit" : "logged nothing for the stall limit (stopped)" );
+            // 시한에 걸린 자식은 죽이기 전에 모든 스레드의 스택을 남긴다 — 멈춘 까닭(기동 중 교착 · 드라이버 대기)을 다음 실행이 아니라 이 덤프가 가른다.
+            const bool bOverdue = child._process.isRunning();
+            if ( bOverdue )
+            {
+                string where;
+                if ( FileUtil::ensureDirectoryExists( child._runRoot ) == false )
+                    where = "could not create the run root " + child._runRoot;
+                else if ( const expected<string> dump = child._process.requestDump( FileUtil::joinPath( child._runRoot, Internal::kKillDumpFileName ) ); dump.has_value() )
+                    where = *dump;
+                else
+                    where = string( dump.error().message() ) + ": " + string( dump.error().detail() );
+                // POSIX 는 덤프 요청(SIGABRT)으로 이미 끝났을 수 있다 — 그때는 죽일 것이 없다
+                const bool bTaken = child._process.isRunning() == false || child._process.terminate( getAutomationExitStatus( AutomationResult::TimedOut ) );
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - %# (dump: %#)", child._backend.c_str(),
+                                 child._killDeadline.isExpired() ? "did not finish within the process limit" : "logged nothing for the stall limit (stopped)",
+                                 bTaken ? "killed" : "could not be killed", where.c_str() );
+            }
             const expected<int32> waited = child._process.waitForExit();
             if ( waited.has_value() )
             {
@@ -612,7 +630,7 @@ namespace sw
                                  string( waited.error().detail() ) );
                 child._exitCode = getAutomationExitStatus( AutomationResult::Failed );
             }
-            if ( bKilled )
+            if ( bOverdue )
                 child._exitCode = getAutomationExitStatus( AutomationResult::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
             child._flushThread.join();
             child._bLaunched = false;

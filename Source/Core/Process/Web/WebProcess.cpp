@@ -87,6 +87,12 @@ namespace sw
         return false;
     }
 
+    expected<string> Process::requestDump( string_view dumpPath )
+    {
+        (void)dumpPath;
+        return unexpected( Error{ ErrorKind::Unsupported, "the browser has no child processes to dump" } );
+    }
+
     bool Process::isRunning() const
     {
         return false;

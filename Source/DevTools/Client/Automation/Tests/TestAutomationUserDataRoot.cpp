@@ -8,7 +8,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 
-// AutomationUserDataRootTest — 시나리오 실행의 사용자 데이터 뿌리가 자동화 폴더(`Saved/Automation/UserData`) 밖이면 세션 시작이 거절되는 규칙(`checkUnderBase` · `resolve`)과
+// AutomationUserDataRootTest — 시나리오 실행의 사용자 데이터 뿌리가 자동화 폴더(`Saved/Automation`) 밖이면 세션 시작이 거절되는 규칙(`checkUnderBase` · `resolve`)과
 // 사람의 폴더가 바뀌었는지 보는 도장(`UserDataFolderStamp`)(nogpu).
 
 namespace
@@ -39,30 +39,30 @@ namespace
 
 /**
  * @brief [AutomationUserDataRootTest] 자동화 폴더 아래만 통과하고, 그 폴더 자신 · 이름이 겹치는 옆 폴더 · `..` 로 벗어나는 경로 · 상대 경로는 거절한다
- * @details 변이: 앞머리 비교에 `/` 를 빼면 `UserData2/x` 가, `..` 검사를 빼면 `UserData/../x` 가 통과해 이 시험이 진다.
+ * @details 변이: 앞머리 비교에 `/` 를 빼면 `Automation2/x` 가, `..` 검사를 빼면 `Automation/../x` 가 통과해 이 시험이 진다.
  */
 SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass )
 {
     const sw::string base = sw::AutomationUserDataRoot::getBaseFolder();
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/run_p12", base ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/run_p12/dx12", base ).has_value() );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/sequence.velmora.carry/", base ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/Runs/12-34/userdata", base ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/Runs/12-34/dx12/userdata", base ).has_value() );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( base + "/UserData/sequence.velmora.carry/", base ).has_value() );
 
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( base, base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( base + "2/run_p12", base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( base + "2/Runs/12-34", base ).has_value() );
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( base + "/../../../escaped", base ).has_value() );
-    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( "Saved/Automation/UserData/run_p12", base ).has_value() );
+    SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( "Saved/Automation/Runs/12-34/userdata", base ).has_value() );
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::checkUnderBase( sw::FileUtil::getDirectoryPart( base ) + "/Other", base ).has_value() );
 }
 
 /**
  * @brief [AutomationUserDataRootTest] 대소문자만 다른 폴더는 OS 규칙을 따른다 — Windows 는 같은 폴더라 통과, 리눅스는 다른(바깥) 폴더라 거절
- * @details 변이: 비교를 소문자로 접으면(예전 `normalizePath`) 리눅스에서 `.../userdata/run_p12` 가 통과해 이 시험이 진다.
+ * @details 변이: 비교를 소문자로 접으면(예전 `normalizePath`) 리눅스에서 `.../automation/Runs/12-34` 가 통과해 이 시험이 진다.
  */
 SW_TEST_CASE( AutomationUserDataRootTest, CaseOnlyDifferenceFollowsTheOSRule )
 {
-    const sw::string base       = sw::AutomationUserDataRoot::getBaseFolder(); // `.../Saved/Automation/UserData`
-    const sw::string otherCased = sw::FileUtil::getDirectoryPart( base ) + "/userdata/run_p12";
+    const sw::string base       = sw::AutomationUserDataRoot::getBaseFolder(); // `.../Saved/Automation`
+    const sw::string otherCased = sw::FileUtil::getDirectoryPart( base ) + "/automation/Runs/12-34";
 #if defined( SW_PLATFORM_WINDOWS )
     SW_EXPECT_TRUE( sw::AutomationUserDataRoot::checkUnderBase( otherCased, base ).has_value() );
 #elif defined( SW_PLATFORM_POSIX )
@@ -112,7 +112,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
     SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, inside ) );
     const sw::expected<sw::string> accepted = sw::AutomationUserDataRoot::resolve( false );
     SW_EXPECT_TRUE( accepted.has_value() && *accepted == inside );
-    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeChildRoot( inside, "vk" ) == sw::string( inside + "/vk" ) );
+    SW_EXPECT_TRUE( sw::AutomationUserDataRoot::makeRunUserDataRoot( inside ) == sw::string( inside + "/userdata" ) );
 }
 
 /**

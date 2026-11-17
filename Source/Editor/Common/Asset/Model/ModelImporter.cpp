@@ -945,7 +945,7 @@ namespace sw::editor
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) )
             return false;
 
-        const string& resourceRoot = assetPaths.getRootFolderPath();
+        const string& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedModelPath( normalized ).empty() )
         {
@@ -998,8 +998,8 @@ namespace sw::editor
     {
         // 손으로 쓴 셋(가져오기 산출물 `models/` 밖)의 `<clip … retarget="…"/>` 줄이 대상이다. 굽기는 클립 몇 개라 가볍다 — 가져올 때마다 다시 구워 원본 · 프로필이 바뀐 것을 놓치지 않는다.
         vector<string> listSetFile;
-        // 남의 시나리오 사본을 굽지 않는다(그 프로세스가 쓰는 중일 수 있다 — EditorContentScan 이 뺀다)
-        if ( EditorContentScan::collectFiles( resourceRoot, resourceRoot, AnimationSet::kExtension, listSetFile, true ) == false )
+        // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 굽지 않는다(EditorContentScan 이 뺀다)
+        if ( EditorContentScan::collectFiles( resourceRoot, AnimationSet::kExtension, listSetFile, true ) == false )
         {
             inoutSummary._listProblem.push_back( "retarget bake: the animation sets under the content root could not be listed" );
             return;

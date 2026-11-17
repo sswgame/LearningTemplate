@@ -80,15 +80,17 @@ namespace sw::editor
         EditorAssetIndex();
 
         /**
-         * @brief @p resourceRoot(`Content/`) 아래를 모두 훑어 @p outData 를 짓습니다. 워커에서 호출합니다. 텍스트 에셋은 @p pTaskManager 로 파일 단위 병렬로 읽고, nullptr 이면 차례로 읽습니다.
+         * @brief @p resourceRoot(`Content/`)와 작업 도메인 폴더 @p scratchFolder(`AssetPaths::getScratchFolderPath`, 비면 빼고 없어도 뺀다) 아래를 모두 훑어 @p outData 를 짓습니다.
+         *        워커에서 호출합니다. 텍스트 에셋은 @p pTaskManager 로 파일 단위 병렬로 읽고, nullptr 이면 차례로 읽습니다.
          * @details @p stopToken 이 올라가면 남은 파일을 읽지 않고 돌아온다 — 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다.
          */
-        static void scan( string_view resourceRoot, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken = {} );
+        static void scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken = {} );
         /** @brief 스캔한 결과로 색인을 바꿉니다. 이후 `isReady` 가 true 입니다. */
         void assign( EditorAssetIndexData&& data );
         /**
          * @brief 바뀐 파일 · 폴더 @p listChangedID(리소스 id)만 고칩니다 — 있으면 다시 읽고(크기 · 시각이 같으면 열지 않는다), 없으면 그 줄(폴더면 그 아래 줄)을 뺍니다.
          * @details 옮기기 · 이름 바꾸기는 옛 id 와 새 id 둘을 넘긴다. GUID 참조는 정체성이 따라가므로 참조자를 다시 읽지 않는다.
+         *          작업 도메인 id(`scratch/…`)는 @p resourceRoot 가 아니라 실행 뿌리 아래에서 읽는다(`AssetPaths::getScratchFolderPath`).
          */
         void applyChanges( string_view resourceRoot, const vector<string>& listChangedID );
         /** @brief 파일 하나의 글을 디스크 없이 넣습니다(테스트 · 저장 직후의 글). @p assetID 는 디스크 표기 그대로 받는다. @p text 는 텍스트 에셋일 때만 읽는다. */

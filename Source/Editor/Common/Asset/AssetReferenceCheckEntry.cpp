@@ -76,7 +76,7 @@ namespace sw::editor
                 // 트리의 파일이 있는 것이다(임포트 산출물 포함 — ctest 는 임포트 단계 뒤에 돈다). 참조자는 그 가운데 글 에셋이다.
                 const string&  contentRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
                 vector<string> listFile;
-                if ( EditorContentScan::collectFiles( contentRoot, contentRoot, "", listFile, true ) == false ) // 남의 시나리오 사본은 트리의 에셋이 아니다
+                if ( EditorContentScan::collectFiles( contentRoot, "", listFile, true ) == false ) // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 트리의 에셋이 아니다(EditorContentScan)
                 {
                     SW_LOG_ERROR_ID( "AssetReferenceCheck.ContentUnlisted", "Asset reference check: the files under %# could not be listed", contentRoot );
                     return -1;

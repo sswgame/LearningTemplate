@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
     #include "Core/Foundation/PlatformOSHeaders.h"
@@ -672,6 +673,24 @@ namespace sw
     {
         const pid_t childPid = static_cast<pid_t>( _processID.load() );
         return childPid > 0 && ( kill( -childPid, SIGTERM ) == 0 || kill( childPid, SIGTERM ) == 0 );
+    }
+
+    expected<string> Process::requestDump( string_view dumpPath )
+    {
+        (void)dumpPath; // 남의 프로세스를 할당 없이 덤프할 길이 없다 — 자식의 크래시 처리기가 제 보고를 쓴다(헤더 설명)
+        // 크래시 처리기가 스택을 따라가고 보고를 쓰는 시간 — 넘으면 부른 쪽이 죽인다(보고는 반쯤일 수 있다). 묻는 간격은 50 ms.
+        constexpr int64 kCrashReportWaitMilliseconds = 15000;
+        constexpr int64 kPollMilliseconds            = 50;
+        const pid_t     childPid                     = static_cast<pid_t>( _processID.load() ); // `terminate` 와 같은 까닭으로 한 번만 읽는다
+        if ( childPid <= 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the child process is not running - nothing to dump" } );
+        // 그룹이 아니라 자식 하나에만 보낸다 — 손자의 크래시 보고는 이 멈춤과 무관하다.
+        if ( kill( childPid, SIGABRT ) != 0 )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "kill(SIGABRT) failed on the child process" } );
+        const int64 deadline = MonotonicClock::nowNanoseconds() + kCrashReportWaitMilliseconds * constant::time::kNanosecondsPerMillisecond;
+        while ( isRunning() && MonotonicClock::nowNanoseconds() < deadline )
+            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + kPollMilliseconds * constant::time::kNanosecondsPerMillisecond );
+        return string( "the child's crash report (SIGABRT - see its CrashReports folder and log)" );
     }
 
     bool Process::isRunning() const

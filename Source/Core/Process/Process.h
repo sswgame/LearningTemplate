@@ -198,6 +198,15 @@ namespace sw
         [[nodiscard]] bool requestStop();
 
         /**
+         * @brief 죽이기 전에 자식의 모든 스레드 스택을 남깁니다 — 멈춘 자식을 시한으로 죽이는 부모가 부른다(`AutomationPerBackend`, 언리얼 Gauntlet 의 시한 덤프 자리).
+         * @details Windows 는 자식 핸들로 미니덤프(모든 스레드의 스택 · 스레드 정보)를 @p dumpPath 에 쓴다 — 쓰는 동안 자식의 스레드가 멈추고 다 쓰면 다시 돈다.
+         *          POSIX 는 살아 있는 남의 프로세스를 할당 없이 덤프할 길이 없어 자식에게 SIGABRT 를 보내 **자식의 크래시 처리기**가 제 보고를 쓰게 하고, 끝나기를 잠깐 기다린다
+         *          (@p dumpPath 는 쓰지 않는다). 어느 쪽이든 자식을 죽이는 것은 부른 쪽의 `terminate` 다.
+         * @return 남긴 자리(Windows 는 @p dumpPath, POSIX 는 자식의 크래시 보고)를 적은 글입니다. 띄우지 않았거나 쓰지 못하면 그 까닭입니다.
+         */
+        [[nodiscard]] expected<string> requestDump( string_view dumpPath );
+
+        /**
          * @brief 프로세스가 아직 실행 중인지 반환합니다.
          * @details 양쪽 모두 **OS 에 직접 묻습니다.** POSIX 는 `waitid(WNOHANG | WNOWAIT)` 라서 묻기만 하고 회수하지는 않습니다.
          *          회수하면 이어서 부를 `waitForExit` 이 종료 코드를 잃기 때문입니다. 자기가 보관한 플래그만 보면 자식이 스스로

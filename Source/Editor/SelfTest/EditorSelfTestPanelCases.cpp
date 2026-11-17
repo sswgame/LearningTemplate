@@ -26,7 +26,6 @@
 #include "Editor/Panels/Settings/UserSettingsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -49,7 +48,7 @@ namespace sw::editor
         {
             static constexpr const utf8* kContentBrowserPanelID    = ContentBrowserPanel::kPanelID;
             static constexpr const utf8* kContentBrowserPanelTitle = ContentBrowserPanel::kPanelTitle;
-            static constexpr const utf8* kProbeFolderID            = "scratch/editorselftest"; ///< 테스트 폴더(프로세스마다 `_p<pid>`). 끝나면 지운다
+            static constexpr const utf8* kProbeFolderID            = "scratch/editorselftest"; ///< 테스트 폴더(작업 도메인 — 실행 뿌리 아래). 끝나면 지운다
             static constexpr uint32      kMaxWaitStepCount         = 180;                      ///< 폴더 목록(워커)과 파일 감시를 기다리는 최대 프레임 수
 
             /** @brief 콘텐츠 브라우저 테스트의 진행 상태입니다. */
@@ -58,9 +57,9 @@ namespace sw::editor
                 /** @brief 테스트 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
                 bool makeProbeFolder( const utf8* pFileName )
                 {
-                    // 추적하지 않는 scratch 도메인의 이 프로세스 몫에 쓴다 - 예전에는 활성 게임 팩(추적 원본) 아래에 써, 시나리오의 쓰기 게이트가 거절했고 죽은 실행은 저장소에 폴더를 남겼다.
-                    // 백엔드마다 나란히 도는 실행이 서로의 폴더를 지우지 않게 프로세스 꼬리를 단다(`AutomationScratch::makeInstanceID`).
-                    const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( AutomationScratch::makeInstanceID( kProbeFolderID ) );
+                    // 추적하지 않는 작업 도메인(scratch)에 쓴다 - 예전에는 활성 게임 팩(추적 원본) 아래에 써, 시나리오의 쓰기 게이트가 거절했고 죽은 실행은 저장소에 폴더를 남겼다.
+                    // 작업 도메인은 이 프로세스의 실행 뿌리 아래라(`AssetPaths::getScratchFolderPath`) 백엔드마다 나란히 도는 실행이 서로의 폴더를 지우지 않는다.
+                    const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( kProbeFolderID );
                     if ( folder.has_value() == false )
                         return false;
                     _folderAbs = folder->str();

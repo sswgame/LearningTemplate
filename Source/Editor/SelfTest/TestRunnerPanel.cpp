@@ -189,8 +189,8 @@ namespace sw::editor
             _bScenarioListDirty = SW_FALSE;
             const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
             vector<string> listFilePath;
-            // 남의 시나리오 사본은 고를 시나리오가 아니다(EditorContentScan 이 뺀다)
-            if ( EditorContentScan::collectFiles( root, root, ".xml", listFilePath, true ) == false )
+            // 옛 작업 도메인 자리의 찌꺼기는 고를 시나리오가 아니다(EditorContentScan 이 뺀다)
+            if ( EditorContentScan::collectFiles( root, ".xml", listFilePath, true ) == false )
                 listFilePath.clear(); // 도중에 멈춘 목록을 전부로 보이지 않는다
             _scenarios.setFromFiles( listFilePath, root );
         }
@@ -201,7 +201,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunScenario" ) ) && bScenarioChosen )
         {
             const string& scenarioPath = _scenarios.getChosen();
-            // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 자기 폴더를 비우고 쓴다(`EditorPaths::prepareAutomationStateDirectory`).
+            // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 제 실행 뿌리 아래 폴더를 쓴다(`EditorPaths::getEditorStateDirectory`).
             const string         backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백 · 줄표를 뗀다
             const ProcessCommand command         = EngineChildProcess::makeCommand(
                 editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), EditorTestOutputParser::makeScenarioArguments( scenarioPath, backendArgument.empty() ? string_view{} : string_view( backendArgument ).substr( 2 ) ) );
