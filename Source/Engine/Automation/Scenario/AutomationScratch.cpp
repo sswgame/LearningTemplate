@@ -73,7 +73,21 @@ namespace sw
 
     string AutomationScratch::makeInstanceID( string_view name )
     {
-        return string( name ) + string( kInstanceMark ) + to_string( Process::getCurrentProcessID() );
+        // 꼬리는 그릇 아래 첫 폴더 토막에 단다 — 마지막 토막에 달면 의미 있는 폴더 이름(`textures_raw` · `models_raw`)이 바뀌어
+        // 폴더 이름으로 원본 종류 · 임포트 규칙을 고르는 코드가 사본을 못 알아본다(editor.importsettings).
+        // 그릇 폴더(`scratch/import` · `scratch`)는 뜻이 있는 자리라 꼬리를 달지 않는다 — 그 바로 아래의 시나리오 소유 토막에 단다.
+        size_t segmentAt = 0;
+        for ( const string_view container : { string_view{ kImportDomain }, string_view{ kScratchDomain } } )
+        {
+            if ( StringUtil::startsWith( name, container ) && name.size() > container.size() && name[container.size()] == '/' )
+            {
+                segmentAt = container.size() + 1;
+                break;
+            }
+        }
+        const size_t slash  = name.find( '/', segmentAt );
+        const size_t markAt = slash == string_view::npos ? name.size() : slash;
+        return string( name.substr( 0, markAt ) ) + string( kInstanceMark ) + to_string( Process::getCurrentProcessID() ) + string( name.substr( markAt ) );
     }
 
     bool AutomationScratch::isOtherProcessInstance( string_view assetID )

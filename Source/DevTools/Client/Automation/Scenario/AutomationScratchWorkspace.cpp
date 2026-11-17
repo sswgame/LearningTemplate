@@ -88,15 +88,29 @@ namespace sw
              *          이 실행의 사본과 무관하므로 실패로 멈추지 않는다.
              *          프로세스 꼬리가 없는 이름(`makeInstanceID` 를 거치지 않은 사본 — 단위 테스트)은 거둘 형제가 없다.
              */
+            /** @brief 꼬리 달린 조상을 찾아 올라가는 최대 층 수입니다(`scratch/<이름>_p<pid>/a/b` — 사본 선언은 두세 층이다). */
+            static constexpr uint32 kMaxInstanceDepth = 4;
+
             static void removeDeadInstances( const string& scratchDir )
             {
-                const string          folderName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( scratchDir ) );
-                const optional<int32> ownID      = AutomationScratch::findInstanceProcessID( folderName );
+                // 꼬리는 사본 폴더 자신이 아니라 위 토막에 있을 수 있다(`scratch/<이름>_p<pid>/textures_raw` — `makeInstanceID`) — 꼬리 달린 조상을 찾아 그 형제를 거둔다.
+                string          instanceDir = FileUtil::trimTrailingSlashes( scratchDir );
+                string          folderName  = FileUtil::getFileNamePart( instanceDir );
+                optional<int32> ownID       = AutomationScratch::findInstanceProcessID( folderName );
+                for ( uint32 depth = 0; ownID.has_value() == false && depth < kMaxInstanceDepth; ++depth )
+                {
+                    const string parentDir = FileUtil::trimTrailingSlashes( FileUtil::getDirectoryPart( instanceDir ) );
+                    if ( parentDir.empty() || parentDir == instanceDir )
+                        return;
+                    instanceDir = parentDir;
+                    folderName  = FileUtil::getFileNamePart( instanceDir );
+                    ownID       = AutomationScratch::findInstanceProcessID( folderName );
+                }
                 if ( ownID.has_value() == false )
                     return;
                 const string   prefix = folderName.substr( 0, folderName.rfind( AutomationScratch::kInstanceMark ) + AutomationScratch::kInstanceMark.size() );
                 vector<string> listDeadDir;
-                (void)FileUtil::forEachDirectoryEntry( FileUtil::getDirectoryPart( scratchDir ), false, [&prefix, &ownID, &listDeadDir]( const DirectoryEntry& entry )
+                (void)FileUtil::forEachDirectoryEntry( FileUtil::getDirectoryPart( instanceDir ), false, [&prefix, &ownID, &listDeadDir]( const DirectoryEntry& entry )
                 {
                     string_view name;
                     FileUtil::getFileNamePart( entry._path, name );

@@ -177,6 +177,17 @@ SW_TEST_CASE( AssetMetaTest, ImportOverrideRoundTrips )
     SW_EXPECT_EQUAL( string( "false" ), meta._listImportOverride[1]._value );
 }
 
+/**
+ * @brief [AssetMetaTest] 쓴 서술이 저장소의 정규형(`Scripts/lint/asset_identity.py` make_meta_text — 끝 줄바꿈 없음)과 바이트로 같다
+ * @details 변이: 직렬화기의 끝 줄바꿈을 남기면 인스펙터가 예외를 지운 서술이 원본과 한 바이트 달라 editor.importsettings 의 왕복이 졌다.
+ */
+SW_TEST_CASE( AssetMetaTest, TextMatchesTheRepositoryForm )
+{
+    const optional<AssetGUID> guid = AssetGUID::tryParse( "6bf1c6b3381eb58dd5e456b5cb4f5b77" );
+    SW_REQUIRE_TRUE( guid.has_value() );
+    SW_EXPECT_EQUAL( string( "<AssetMeta _guid=\"6bf1c6b3381eb58dd5e456b5cb4f5b77\" _source=\"splash.png\" />" ), AssetMeta::makeText( "editor/textures_raw/splash.png", *guid ) );
+}
+
 SW_TEST_CASE( AssetMetaTest, UnknownAttributeIsStillAnError )
 {
     // 예외 칸이 생겨도 엄격한 읽기는 그대로다 — 겉 · 예외 원소의 모르는 속성이 모두 오류다.

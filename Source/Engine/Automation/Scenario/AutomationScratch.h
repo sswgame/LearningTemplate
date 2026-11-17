@@ -39,11 +39,12 @@ namespace sw
     struct SW_API AutomationScratch
     {
         static constexpr const utf8* kScratchDomain = AssetPaths::kScratchDomain; ///< 사본이 사는 도메인(`Content/scratch/`)
+        static constexpr const utf8* kImportDomain  = "scratch/import";           ///< 에디터 가져오기 사본의 그릇(`scratch/import/<이름>`) — 꼬리는 그 아래 토막에 단다
 
         /** @brief `<Scratch>` 의 두 id 가 맞는 모양인지 봅니다(빈 값 · `..` · 사본이 `scratch/` 밖 · 원본이 `scratch/` 안이면 그 이유). */
         [[nodiscard]] static expected<void> isValidFolder( const AutomationScratchFolder& folder );
         /**
-         * @brief 이 프로세스가 쓸 이름(`<이름>_p<pid>`)입니다 — `scratch/assetmanage` → `scratch/assetmanage_p1234`. 같은 시나리오를 도는 App 이 동시에 여럿이어도
+         * @brief 이 프로세스가 쓸 이름(`<이름>_p<pid>`)입니다 — `scratch/assetmanage` → `scratch/assetmanage_p1234`, `scratch/importsettings/textures_raw` → `scratch/importsettings_p1234/textures_raw`(꼬리는 그릇(`scratch` · `scratch/import`) 바로 아래 토막 — 뒤 토막의 폴더 이름은 그대로). 같은 시나리오를 도는 App 이 동시에 여럿이어도
          *        서로의 사본(과 울타리 표지)을 지우지 않는다. 같은 프로세스 안에서는 늘 같은 이름이라 체인의 뒤 단계가 같은 사본을 다시 만든다.
          */
         static string makeInstanceID( string_view name );

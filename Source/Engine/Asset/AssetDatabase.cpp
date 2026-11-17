@@ -106,7 +106,12 @@ namespace sw
 
     string AssetMeta::toXML() const
     {
-        return XMLSerializer::serialize( this, *StaticType() );
+        // 저장소의 서술(.meta)과 `Scripts/lint/asset_identity.py` 의 make_meta_text 는 끝 줄바꿈이 없다 — 같은 바이트여야 저장 → 다시 읽기 → 저장이 같고
+        // (editor.importsettings 되돌리기), 린트의 글 비교가 에디터가 쓴 서술을 바뀐 것으로 보지 않는다.
+        string text = XMLSerializer::serialize( this, *StaticType() );
+        while ( text.empty() == false && ( text.back() == '\n' || text.back() == '\r' ) )
+            text.pop_back();
+        return text;
     }
 
     optional<AssetGUID> AssetMeta::parseXML( string_view text, string_view sourceLabel )
