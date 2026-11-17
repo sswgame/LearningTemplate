@@ -617,3 +617,47 @@ SW_TEST_CASE( AsyncFileIOTest, CompletionRunsOnTaskWorkerWhenGivenATaskManager )
     }
     taskManager.shutdown();
 }
+
+/**
+ * @brief [AsyncFileIOTest] 태스크 워커가 자기 읽기의 완료를 기다려도 멈추지 않는다 — 완료 전달이 태스크라 워커가 모두 기다리면 돌 워커가 없었다
+ * @details 기동 직후 텍스처 로드가 워커마다 읽기를 기다리다 교착했다(shooter3d dx11, 죽이기 전 덤프). 워커 하나짜리 풀에서 그 워커가 읽고 기다린다.
+ *          변이: 기다리는 쪽이 전달을 집지 않으면(`AsyncFileIOQueue::claimDelivery`) 시한까지 끝나지 않아 첫 단언이 진다.
+ */
+SW_TEST_CASE( AsyncFileIOTest, TaskWorkerWaitingForItsReadDoesNotDeadlock )
+{
+    const sw::string path = writeTestFile( "workerwait.bin", 4096 );
+    SW_REQUIRE_FALSE( path.empty() );
+
+    sw::TaskManager taskManager;
+    SW_REQUIRE_TRUE( taskManager.initialize( 1 ) );
+    {
+        sw::AsyncFileIO       io;
+        sw::AsyncFileIOConfig settings{};
+        settings._pTaskManager = &taskManager;
+        SW_REQUIRE_TRUE( io.initialize( settings ) );
+
+        sw::atomic<bool> bDone{ false };
+        sw::atomic<bool> bWaited{ false };
+        sw::atomic<bool> bSucceeded{ false };
+        sw::TaskHandle   task = taskManager.emplaceTask( "ReadAndWait", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+          {
+            sw::atomic<bool>          bCallback{ false };
+            const sw::AsyncReadHandle handle = io.readFile( path, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&bCallback]( sw::AsyncReadResult& result )
+              {
+                bCallback.store( result.isSucceeded() );
+            } ) );
+            bWaited.store( handle.waitFor( 3000 ) );
+            bSucceeded.store( bCallback.load() );
+            bDone.store( true );
+        } ) );
+        task.submit();
+        // 메인은 돕지 않고 기다린다 — `waitAll` 은 기다리며 태스크를 도와 전달을 대신 돌려 교착을 가린다(워커가 모두 막힌 모양을 만든다).
+        SW_REQUIRE_TRUE( sw::test::waitUntil( [&bDone]()
+        { return bDone.load(); } ) );
+        taskManager.waitAll( "TaskWorkerWaitingForItsReadDoesNotDeadlock" );
+        SW_EXPECT_TRUE( bWaited.load() );
+        SW_EXPECT_TRUE( bSucceeded.load() );
+        io.shutdown();
+    }
+    taskManager.shutdown();
+}

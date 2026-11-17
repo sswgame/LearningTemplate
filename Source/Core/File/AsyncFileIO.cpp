@@ -85,6 +85,7 @@ namespace sw
         , _state{ static_cast<uint8>( AsyncReadState::Queued ) }
         , _doneStatus{ static_cast<uint8>( AsyncIOStatus::Pending ) }
         , _bCancelRequested{ false }
+        , _deliveryClaim{ 0 }
         , _priority{ AsyncIOPriority::Normal }
         , _memoryTag{ MemoryTag::Unknown }
         , _doneSignal{}
@@ -238,6 +239,13 @@ namespace sw
                 if ( elapsedMs >= static_cast<int64>( timeoutMs ) )
                     return false;
                 remainingMs = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsedMs );
+            }
+            // 태스크로 낸 전달이 아직 돌지 않았으면 여기서 집어 실행한다 — 그 전달을 돌릴 워커가 바로 이 스레드일 수 있다(`claimDelivery`).
+            // 풀 워커만 집는다 — 교착은 워커가 모두 막힐 때만 생기고, 다른 스레드의 콜백은 태스크 워커에서 돈다는 약속을 지킨다.
+            if ( TaskManager::isOnPoolWorkerThread() && _pRequest->_deliveryClaim.load( std::memory_order_acquire ) == 1 && _pRequest->_pQueue != nullptr )
+            {
+                _pRequest->_pQueue->claimDelivery( _pRequest );
+                continue;
             }
             const uint32 epoch = doneSignal.prepareWait();
             if ( isDone() )
@@ -454,16 +462,18 @@ namespace sw
         if ( bInline == false && _pTaskManager != nullptr )
         {
             // 캡처가 포인터 둘(24 바이트 안)이라 델리게이트가 힙을 쓰지 않는다.
+            pRequest->_deliveryClaim.store( 1, std::memory_order_release ); // 기다리는 쪽이 집을 수 있다(`claimDelivery`)
+            pRequest->_doneSignal.notifyAll();                              // 잠든 대기자를 깨워 집을 기회를 준다 — 그 대기자가 이 전달을 돌릴 워커 자신일 수 있다
             TaskHandle handle = _pTaskManager->emplaceTask(
                 "AsyncIOComplete",
                 SW_DELEGATE_LAMBDA( TaskDelegate, [this, pRequest]()
             {
-                runDelivery( pRequest );
+                claimDelivery( pRequest );
             } ) );
             if ( handle.isValid() == false )
             {
                 // 태스크를 낼 수 없다(태스크 매니저가 멈추는 중이거나 이미 멈췄다). 전달을 잃으면 요청이 영영 끝나지 않아 `waitIdle` 이 멈춘다 — 이 스레드에서 전달한다.
-                runDelivery( pRequest );
+                claimDelivery( pRequest );
                 return;
             }
             handle.setPriority( AsyncFileIOInternal::toTaskPriority( pRequest->_priority ) );
@@ -472,6 +482,13 @@ namespace sw
             return;
         }
         runDelivery( pRequest );
+    }
+
+    void AsyncFileIOQueue::claimDelivery( const shared_ptr<AsyncReadRequest>& pRequest )
+    {
+        uint8 expected = 1;
+        if ( pRequest->_deliveryClaim.compare_exchange_strong( expected, 2, std::memory_order_acq_rel ) )
+            runDelivery( pRequest );
     }
 
     void AsyncFileIOQueue::runDelivery( const shared_ptr<AsyncReadRequest>& pRequest )

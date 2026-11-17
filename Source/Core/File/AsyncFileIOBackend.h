@@ -82,8 +82,10 @@ namespace sw
         atomic<uint8>             _state;      ///< `AsyncReadState`
         atomic<uint8>             _doneStatus; ///< 완료 콜백까지 끝난 뒤의 `AsyncIOStatus`(그 전에는 Pending)
         atomic<bool>              _bCancelRequested;
-        AsyncIOPriority           _priority;
-        MemoryTag                 _memoryTag; ///< 요청한 스레드의 태그 — 버퍼 할당과 완료 콜백이 이 태그로 센다
+        /// 완료 전달을 누가 실행하는가 — 0 아직 없음, 1 태스크로 냈다(아직 안 돌았다), 2 누군가 집었다. 태스크와 기다리는 쪽 가운데 먼저 집은 하나만 돈다(`AsyncFileIOQueue::claimDelivery`)
+        atomic<uint8>   _deliveryClaim;
+        AsyncIOPriority _priority;
+        MemoryTag       _memoryTag; ///< 요청한 스레드의 태그 — 버퍼 할당과 완료 콜백이 이 태그로 센다
         /**
          * @brief `_state` 가 `Done` 이 되면 알리는 이 요청만의 신호입니다(`AsyncReadHandle::waitFor` 가 여기서 잠든다).
          * @details 큐의 잠금 · 조건 변수를 쓰지 않는다 — 완료마다 모든 대기자(큐를 기다리는 IO 스레드 · 다른 요청의 대기자)를 깨우지 않게. 기다리는 쪽이 없으면 알림은 원자 읽기 하나다.
@@ -191,6 +193,12 @@ namespace sw
          * @details 전달 태스크는 큐(`this`)를 쥔다. 기한을 두고 포기하지 않는다 — `waitStage( stage, owner )` 가 오래 걸리면 남은 태스크를 주기적으로 남긴다.
          */
         void waitDeliveriesForShutdown() const;
+        /**
+         * @brief 태스크로 낸 완료 전달이 아직 돌지 않았으면 이 스레드에서 집어 실행합니다. 이미 누군가 집었으면 아무것도 하지 않습니다.
+         * @details 기다리는 쪽(`AsyncReadHandle::waitFor`)이 잠들기 전에 부른다 — 태스크 워커가 모두 읽기를 기다리며 막히면 전달 태스크를 돌릴 워커가 없어
+         *          교착했다(기동 직후 텍스처 로드 열다섯, shooter3d dx11). 언리얼 TaskGraph 의 "기다리며 돕기" 와 같은 자리를 이 요청 하나로 좁혔다.
+         */
+        void claimDelivery( const shared_ptr<AsyncReadRequest>& pRequest );
 
     private:
         /** @brief 결과를 정한 요청의 완료를 전달합니다. @p bInline 이면 이 스레드에서, 아니면 태스크 매니저가 있을 때 그 워커에서. */
