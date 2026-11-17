@@ -862,7 +862,7 @@ public:
 8. **내용 해시는 원시 바이트.** CR 건너뛰기를 없앤다. `.gitattributes` 가 `* text=auto eol=lf` 라 추적 파일은 어느 기계에서나 같은 바이트다. 쿠킹 키 판이 올라 한 번 전체 재쿠킹이다.
 
 - 기각 — CR 정규화를 텍스트 확장자에만(감사의 제안): 무엇이 텍스트인지를 `.gitattributes` 와 해시 코드 두 곳이 알게 된다.
-- 기각 — 해시를 xxh3 로 지금: 영속 캐시가 있으면 바뀐 파일만 해시한다. 차가운 쿠킹에서 해시가 10 % 를 넘을 때만(새 의존성 BSD-2 — 사용자 확인).
+- 기각 — 해시를 xxh3 로(사용자 판단 2026-11-17: 들이지 않는다): 지금 Content 전체를 FNV-1a 로 한 번 해시해도 0.2 초 안팎(추정)이고 영속 캐시가 있으면 바뀐 파일만 해시한다. 실행 중 블록 해시 검사(PK-5)가 느리면 의존성 없이 하드웨어 CRC32C(SSE4.2 · ARMv8 CRC)로 `HashUtil::computeCRC32` 를 바꾼다.
 - 기각 — 완전 해시 색인(IoStore): 쿠커와 리더가 해시 씨앗을 맞춰야 하고, 30 만 항목 이진 탐색은 19 단계다. 조회 문턱을 넘으면 그때 해시 앞 8 비트 버킷 표를 더한다.
 - 기각 — 큰 항목에만 블록 표: 읽기 길이 둘이 된다. 블록 표 한 줄 8 B 라 30 만 항목에 2.4 MB 다.
 
@@ -949,7 +949,7 @@ AsyncReadHandle    readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offs
 
 **대조.** 언리얼은 `FMallocBinned2/3`(크기 등급 + 스레드 캐시)가 기본이고 mimalloc 을 고를 수 있다. 유니티는 TLSF `DynamicHeapAllocator` + 스레드별 버킷 + 잡용 선형 할당자다. Godot 는 시스템 `malloc` 에 `PagedAllocator` 풀을 얹는다.
 
-**결정.** 두 걸음으로 잰다. ① 의존 없이: 프레임당 할당 수 × CRT 한 번 비용으로 프레임 몫을 추정한다. ② 문턱을 넘으면 mimalloc(MIT)을 `Memory` 한 입구 뒤에 Shipping 만 끼워 재고, 이득이 흔들림 밖이면 둔다. 입구는 변형 파일 하나로 가른다([BuildConfigSwitch](agents/BuildConfigSwitch.md)). **mimalloc 도입은 새 의존성이라 사용자 확인 뒤다.**
+**결정.** 두 걸음으로 잰다. ① 의존 없이: 프레임당 할당 수 × CRT 한 번 비용으로 프레임 몫을 추정한다. ② 문턱을 넘으면 mimalloc(MIT)을 `Memory` 한 입구 뒤에 Shipping 만 끼워 재고, 이득이 흔들림 밖이면 둔다. 입구는 변형 파일 하나로 가른다([BuildConfigSwitch](agents/BuildConfigSwitch.md)). **mimalloc(MIT) 도입은 사용자가 확인했다(2026-11-17) — 백엔드 이름이 공개 헤더에 나오지 않게 감싸 나중에 바꿔도 밖이 모르게 한다. 기본값은 ② 의 판정으로 정한다.**
 
 - 기각 — 자체 크기 등급 할당기: mimalloc 이 하는 일을 다시 쓰는 몇 달이다.
 - 기각 — jemalloc · tcmalloc: Windows · Android · wasm 지원이 고르지 않다.
