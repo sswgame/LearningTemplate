@@ -108,7 +108,7 @@ namespace sw
                     discardTempFile( tempPath );
                     return false;
                 }
-                return finishAtomicWrite( tempPath, filePath );
+                return finishAtomicWrite( tempPath, filePath, durability );
             }
 
             /**
@@ -132,8 +132,8 @@ namespace sw
                 return true;
             }
 
-            /** @brief 원자적 쓰기의 뒤 절반입니다 — 다 쓰고 닫은 임시 파일을 대상과 바꿔 끼웁니다. 못 바꾸면 임시 파일을 지우고 false 입니다. */
-            [[nodiscard]] static bool finishAtomicWrite( const string& tempPath, const string& filePath )
+            /** @brief 원자적 쓰기의 뒤 절반입니다 — 다 쓰고 닫은 임시 파일을 대상과 바꿔 끼웁니다. @p durability 가 `Durable` 이면 폴더 항목도 저장 장치까지 내린다(스트림 쓰기 · replaceFile 은 다시 만들 수 있는 산출물이라 Fast). 못 바꾸면 임시 파일을 지우고 false 입니다. */
+            [[nodiscard]] static bool finishAtomicWrite( const string& tempPath, const string& filePath, const FileSyncMode durability )
             {
                 // 다른 프로세스(파일 감시 · 백신 · 에디터)가 대상을 잠깐 쥐고 있으면 Windows 의 바꿔치기가 실패한다. 잠깐 기다렸다 다시 한다.
                 constexpr uint32 kReplaceAttemptCount = 10;
@@ -1371,7 +1371,7 @@ namespace sw
             (void)tryRemoveFile( tempPath );
             return false;
         }
-        return FileUtilInternal::finishAtomicWrite( FileUtil::normalizeSeparators( tempPath ), filePath );
+        return FileUtilInternal::finishAtomicWrite( FileUtil::normalizeSeparators( tempPath ), filePath, FileSyncMode::Fast );
     }
 
     bool FileUtil::isAbandonedWriteTemp( string_view path )
@@ -1583,7 +1583,7 @@ namespace sw
             FileUtilInternal::discardTempFile( tempPath );
             return unexpected( Error{ ErrorKind::ExternalFailure, "flush or close failed - the original file was left untouched", filePath } );
         }
-        if ( FileUtilInternal::finishAtomicWrite( tempPath, filePath ) == false )
+        if ( FileUtilInternal::finishAtomicWrite( tempPath, filePath, FileSyncMode::Fast ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "replacing the target failed - the original file was left untouched", filePath } );
         return {};
     }

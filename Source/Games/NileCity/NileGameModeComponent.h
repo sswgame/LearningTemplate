@@ -237,40 +237,8 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Trader Color", Tooltip = "Colour of a trader walker" )
         float4 _traderColor;
         PROPERTY( Category = "Look", DisplayName = "Cart Color", Tooltip = "Colour of a cart walker" )
-        float4                               _cartColor;
+        float4 _cartColor;
 
-<<<<<<< HEAD
-        SharedAssetRef<CityCatalog>          _pCatalog;
-        CitySimulation                       _city;
-        ConsumerLease                        _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
-        Wallet                               _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
-        WorldClock                           _clock;          ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
-        NileCityPlanner                      _planner;
-        vector<CityEvent>                    _listEvent;
-        vector<WorldClockEvent>              _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
-        vector<const CityBuildingDef*>       _listTool;       ///< 0은 도로(nullptr)다.
-        vector<GameObjectHandle>             _listRoadObject; ///< 타일마다 하나이며, 도로가 아니면 무효다. 틱이 끝난 뒤에만 바뀐다.
-        vector<uint8>                        _listRoadShown;  ///< 타일마다 스폰했거나 스폰할 도로. 틱이 쓴다.
-        vector<BuildingSlot>                 _listBuildingSlot;
-        vector<GameObjectHandle>             _listWalkerObject;
-        vector<int32>                        _listPendingRoad;     ///< 스폰하거나 지울 도로 타일(틱이 끝난 뒤 처리).
-        vector<int32>                        _listPendingBuilding; ///< 다시 스폰할 건물 타일(틱이 끝난 뒤 처리).
-        MaterialTintCache                    _tintCache;           ///< 땅, 건물, 일꾼 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>> _listWalkerLook;      ///< 일꾼 종류 x 16 + 서비스.
-        vector<MeshHandle>                   _listModelMesh;       ///< 건물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 집 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        size_t                               _wantedWalkerCount;   ///< 스폰할 일꾼 풀 크기(틱이 쓴다).
-        int2                                 _cursorTile;
-        float32                              _timeScale;
-        int32                                _selectedTool;
-        int32                                _monthCount;
-        int32                                _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
-        uint32                               _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
-        uint32                               _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
-        uint8                                _bCursorValid    : 1;
-        uint8                                _bPaused         : 1;
-        uint8                                _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY 와 전역 변수와는 별개다).
-        uint8                                _reserved        : 5;
-=======
         SharedAssetRef<CityCatalog>                _pCatalog;
         SharedAssetRef<RuleViewCatalog>            _pBuildingViews; ///< 건물 id → 모델(`_buildingViewPath`)
         CitySimulation                             _city;
@@ -292,10 +260,11 @@ namespace sw
         GameSpeedControl                           _speed; ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
         int32                                      _selectedTool;
         int32                                      _monthCount;
-        int32                                      _evolvedCount; ///< 이번 달 올라간 집 수(월말 로그).
+        int32                                      _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
+        uint32                                     _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
+        uint32                                     _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
         uint8                                      _bCursorValid    : 1;
         uint8                                      _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY 와 전역 변수와는 별개다).
         uint8                                      _reserved        : 6;
->>>>>>> w-kits
     };
 } // namespace sw
