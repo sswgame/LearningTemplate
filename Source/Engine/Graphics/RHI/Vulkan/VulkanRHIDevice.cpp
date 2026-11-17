@@ -116,6 +116,8 @@ namespace sw
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
         , _bFragmentStores{ SW_FALSE }
+        , _bGPUAssistedValidationRequested{ SW_FALSE }
+        , _bSynchronizationValidationRequested{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _breadcrumbMode{ VulkanBreadcrumbMode::None }
         , _pCmdSetCheckpoint{ nullptr }
@@ -221,6 +223,12 @@ namespace sw
             return false;
         }
         _allocationCountReserve = desc._allocationCountReserve;
+
+        // 검증 스위치(EngineConfig _rhi)는 검증 레이어가 있는 구성에서만 듣는다. 없는 구성에서 켜 두었으면 듣지 않는다고 알린다.
+        _bGPUAssistedValidationRequested     = desc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
+        _bSynchronizationValidationRequested = desc._bSynchronizationValidation ? SW_TRUE : SW_FALSE;
+        if ( _bEnableValidationLayers == SW_FALSE && ( desc._bGPUBasedValidation || desc._bSynchronizationValidation ) )
+            SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but this build has no Vulkan validation layer - ignored" );
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
         _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );
@@ -1041,6 +1049,33 @@ namespace sw
         {
             SW_LOG_WARNING_ID( "Vulkan.VulkanValidationLayerFound", "Vulkan validation layer found but VK_EXT_debug_utils is not available - running without validation" );
             _bEnableValidationLayers = SW_FALSE;
+        }
+
+        // 검증 기능(동기화 · GPU 보조)은 검증 레이어가 주는 VK_EXT_validation_features 로 켠다 — VkValidationFeaturesEXT 를 인스턴스 생성의 pNext 에 단다
+        // (https://docs.vulkan.org/refpages/latest/refpages/source/VkValidationFeaturesEXT.html). 켜 달라고 했는데 레이어가 그 확장을 주지 않으면 짐작하지 않고 멈춘다.
+        VkValidationFeatureEnableEXT arrValidationFeature[2]{};
+        uint32                       validationFeatureCount{ 0 };
+        VkValidationFeaturesEXT      validationFeatures{};
+        const bool                   bValidationFeaturesRequested = _bEnableValidationLayers == SW_TRUE && ( _bGPUAssistedValidationRequested == SW_TRUE || _bSynchronizationValidationRequested == SW_TRUE );
+        if ( bValidationFeaturesRequested )
+        {
+            vector<VkExtensionProperties> listLayerExt;
+            const bool                    bLayerExtRead = enumerateVk( listLayerExt, "vkEnumerateInstanceExtensionProperties (validation layer)", []( uint32* pCount, VkExtensionProperties* pData )
+                               { return vkEnumerateInstanceExtensionProperties( "VK_LAYER_KHRONOS_validation", pCount, pData ); } );
+            if ( bLayerExtRead == false || VulkanRHIUtil::hasExtension( listLayerExt, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME ) == false )
+            {
+                SW_LOG_ERROR_ID( "Vulkan.ValidationFeaturesMissing", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but the validation layer does not offer VK_EXT_validation_features" );
+                return false;
+            }
+            listExtension.push_back( VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME );
+            if ( _bGPUAssistedValidationRequested == SW_TRUE )
+                arrValidationFeature[validationFeatureCount++] = VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
+            if ( _bSynchronizationValidationRequested == SW_TRUE )
+                arrValidationFeature[validationFeatureCount++] = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+            validationFeatures.sType                         = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+            validationFeatures.enabledValidationFeatureCount = validationFeatureCount;
+            validationFeatures.pEnabledValidationFeatures    = arrValidationFeature;
+            createInfo.pNext                                 = &validationFeatures;
         }
 
         createInfo.enabledExtensionCount   = static_cast<uint32>( listExtension.size() );

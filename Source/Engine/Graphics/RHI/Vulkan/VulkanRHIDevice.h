@@ -943,22 +943,24 @@ namespace sw
         uint32                  _height;
         uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
         uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
-        uint16                  _bFrameStarted           : 1;
-        uint16                  _bEnableValidationLayers : 1;
-        uint16                  _bMultiDrawIndirect      : 1;
-        uint16                  _bDrawIndirectCount      : 1;
-        uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
-        uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
-        uint16                  _bDepthClamp             : 1; ///< 깊이 클립을 끌 수 있는가(렌더 상태의 `_bEnableDepthClip`)
-        uint16                  _bGeometryShader         : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
-        uint16                  _bTessellationShader     : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
-        uint16                  _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
-        uint16                  _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
-        [[maybe_unused]] uint16 _reservedSwapChainBit    : 1;
-        uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
-        uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
-        uint16                  _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
-        uint16                  _bFragmentStores         : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
+        uint16                  _bFrameStarted                       : 1;
+        uint16                  _bEnableValidationLayers             : 1;
+        uint16                  _bMultiDrawIndirect                  : 1;
+        uint16                  _bDrawIndirectCount                  : 1;
+        uint16                  _bSamplerAnisotropy                  : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
+        uint16                  _bFillModeNonSolid                   : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16                  _bDepthClamp                         : 1; ///< 깊이 클립을 끌 수 있는가(렌더 상태의 `_bEnableDepthClip`)
+        uint16                  _bGeometryShader                     : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
+        uint16                  _bTessellationShader                 : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
+        uint16                  _bSwapChainDirty                     : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
+        uint16                  _bDepthHasStencil                    : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
+        [[maybe_unused]] uint16 _reservedSwapChainBit                : 1;
+        uint16                  _bMemoryBudget                       : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
+        uint16                  _bSurfaceLost                        : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
+        uint16                  _bDeviceFault                        : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
+        uint16                  _bFragmentStores                     : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
+        uint16                  _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHISwapChainDesc::_bGPUBasedValidation`, R-9)
+        uint16                  _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHISwapChainDesc::_bSynchronizationValidation`, R-9)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief GPU 브레드크럼을 남기는 확장입니다(`VulkanBreadcrumbMode`). 장치를 만들 때 정하고, 함수나 표지 버퍼를 얻지 못하면 None 으로 내린다.

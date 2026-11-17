@@ -588,8 +588,28 @@ namespace sw
             {
                 debugController->EnableDebugLayer();
                 SW_LOG_INFO_ID( "D3D12.DebugLayerEnabled", "Debug layer enabled." );
+                // GPU 기반 검증(GBV)은 장치를 만들기 **전에만** 켤 수 있다(ID3D12Debug1::SetEnableGPUBasedValidation 문서). 켜 달라고 했는데 인터페이스가 없으면 멈춘다(R-9).
+                if ( desc._bGPUBasedValidation )
+                {
+                    Microsoft::WRL::ComPtr<ID3D12Debug1> debugController1;
+                    if ( FAILED( debugController.As( &debugController1 ) ) )
+                    {
+                        SW_LOG_ERROR_ID( "D3D12.GPUBasedValidationUnavailable", "EngineConfig _rhi._bGPUBasedValidation is on, but ID3D12Debug1 is not available" );
+                        return false;
+                    }
+                    debugController1->SetEnableGPUBasedValidation( TRUE );
+                    SW_LOG_INFO_ID( "D3D12.GPUBasedValidationEnabled", "GPU-based validation enabled." );
+                }
+            }
+            else if ( desc._bGPUBasedValidation )
+            {
+                SW_LOG_ERROR_ID( "D3D12.GPUBasedValidationNoDebugLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but the D3D12 debug layer is not installed" );
+                return false;
             }
         }
+    #else
+        if ( desc._bGPUBasedValidation )
+            SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
     #endif
         // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 디버그 레이어가 없는 개발 빌드(Release)에서도 켠다
         // (`-gv_gpuBreadcrumbs` 가 기본 켬). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`)가 싣고, DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
