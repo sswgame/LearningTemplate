@@ -105,3 +105,30 @@ SW_TEST_CASE( DerivedDataCacheTest, ReadOnlyLayerIsNotWritten )
     SW_REQUIRE_TRUE( writable.store( kKey, "job-a", kPayload ) );
     SW_EXPECT_TRUE( FileUtil::exists( writable.makePath( 1, kKey ) ) );
 }
+
+/**
+ * @brief [DerivedDataCacheTest] 같은 서술 · 같은 본문의 항목이 있으면 다시 쓰지 않고(파일 시각 그대로), 본문이 다르면 원자 교체로 바꾼다
+ * @details 같은 내용의 원본 둘(병렬 임포트) · 같은 셰이더를 함께 컴파일하는 프로세스가 한 파일의 교체를 다투던 자리다.
+ */
+SW_TEST_CASE( DerivedDataCacheTest, ExistingSameEntryIsKept )
+{
+    const DerivedDataCacheFixture fixture;
+    const DerivedDataCache        cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
+    SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
+    const string path     = cache.makePath( 0, kKey );
+    const int64  oldTicks = FileUtil::getCurrentFileWriteTime() - 100 * FileUtil::kFileTimeTicksPerSecond; // 다시 쓰면 지금 시각으로 바뀐다
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, oldTicks ) );
+
+    SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
+    int64 ticks = 0;
+    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( path, ticks ) );
+    SW_EXPECT_EQUAL( oldTicks, ticks );
+
+    const vector<uint8> changed{ 9, 9, 9 };
+    SW_REQUIRE_TRUE( cache.store( kKey, "job-a", changed ) );
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( cache.find( kKey, "job-a", bytes ) );
+    SW_EXPECT_TRUE( bytes == changed );
+    SW_EXPECT_TRUE( DerivedDataCache::checkEntry( path, "job-a", bytes ) == DerivedDataEntryState::Valid );
+    SW_EXPECT_TRUE( DerivedDataCache::checkEntry( path, "job-b", bytes ) == DerivedDataEntryState::KeyCollision );
+}

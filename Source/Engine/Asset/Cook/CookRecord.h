@@ -60,6 +60,17 @@ namespace sw
         ReadWrite, ///< 찾고, 미스 뒤 출력 · 뒤 층 히트를 채운다
     };
 
+    /** @enum DerivedDataEntryState @brief 항목 파일 하나를 검증한 결과입니다(로그는 부르는 쪽이 정한다 — 찾기는 경고, 쓰기 전 확인은 조용히). */
+    enum class DerivedDataEntryState : uint8
+    {
+        Missing,        ///< 파일이 없다
+        Unreadable,     ///< 있는데 읽지 못했다
+        InvalidFormat,  ///< 머리가 형식이 아니다(옛 형식 · 잘린 파일)
+        KeyCollision,   ///< 같은 64 비트 키를 다른 작업(서술)이 썼다
+        PayloadCorrupt, ///< 본문이 머리의 해시와 다르다
+        Valid,          ///< 서술이 같고 본문 해시가 맞다
+    };
+
     /** @struct DerivedDataLayer @brief DDC 층 하나(폴더 루트와 쓰기 권한)입니다. */
     struct DerivedDataLayer
     {
@@ -74,6 +85,9 @@ namespace sw
      *          항목은 머리(형식 · 키 서술 길이 · 본문 해시) + 키 서술 + 본문이다. 서술이 글자 그대로 같고 본문 해시가 맞을 때만 히트다 — 64 비트 키 충돌과
      *          다른 머신이 쓴 깨진 바이트(공유 층은 신뢰 경계)가 조용히 틀린 산출물 대신 미스 + 경고가 된다.
      *          폴더가 아닌 백엔드(HTTP · 버킷)는 호스팅이 정해질 때 가상 인터페이스로 낸다 — 지금은 층이 모두 폴더다.
+     *          쓰기는 임시 파일 + 원자 교체(`FileUtil::writeFile`)이고, 같은 서술 · 같은 본문의 항목이 이미 있으면 그대로 둔다 — 같은 내용의 원본 둘(병렬 임포트) ·
+     *          같은 셰이더를 함께 컴파일하는 프로세스가 한 파일을 다투지 않고, 교체를 진 쪽도 이긴 쪽의 같은 항목을 보면 성공이다.
+     *          셰이더 디스크 캐시(`Saved/ShaderCompileCache`)도 이 항목 형식을 쓴다(층 하나).
      */
     class SW_API DerivedDataCache
     {
@@ -98,6 +112,8 @@ namespace sw
         [[nodiscard]] bool find( uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const;
         /** @brief 키의 출력을 쓰기 가능 층 모두에 씁니다. 읽기 전용 층은 건드리지 않습니다. 쓰기 가능 층 하나라도 못 쓰면 false 입니다. */
         [[nodiscard]] bool store( uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
+        /** @brief 항목 파일 @p path 를 검증합니다. Valid 면 @p outBytes 에 본문을 담습니다. 로그를 남기지 않습니다. */
+        [[nodiscard]] static DerivedDataEntryState checkEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes );
         /** @brief 층 @p layerIndex 의 키 파일 경로입니다. */
         string                          makePath( size_t layerIndex, uint64 key ) const;
         const vector<DerivedDataLayer>& getLayers() const { return _listLayer; }
@@ -105,7 +121,7 @@ namespace sw
     private:
         /** @brief 층 하나의 항목을 읽어 검증합니다. 없으면 조용히, 머리 · 서술 · 본문 해시가 어긋나면 경고하고 false 입니다. */
         [[nodiscard]] bool readEntry( size_t layerIndex, uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const;
-        /** @brief 층 하나에 항목을 씁니다. */
+        /** @brief 층 하나에 항목을 씁니다. 같은 서술 · 같은 본문이 이미 있으면 쓰지 않고 true, 교체에 졌어도 그 자리가 같은 항목이면 true 입니다. */
         [[nodiscard]] bool writeEntry( size_t layerIndex, uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
 
     private:

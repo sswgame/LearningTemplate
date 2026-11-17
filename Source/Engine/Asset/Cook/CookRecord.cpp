@@ -239,18 +239,14 @@ namespace sw
         return bAllWritten;
     }
 
-    bool DerivedDataCache::readEntry( size_t layerIndex, uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const
+    DerivedDataEntryState DerivedDataCache::checkEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes )
     {
-        const string path = makePath( layerIndex, key );
         outBytes.clear();
         if ( FileUtil::isRegularFile( path ) == false )
-            return false;
+            return DerivedDataEntryState::Missing;
         vector<uint8> entry;
         if ( FileUtil::readFile( path, entry ) == false )
-        {
-            SW_LOG_WARNING_ID( "DDC.EntryUnreadable", "DDC entry '%#' cannot be read - treated as a miss", path );
-            return false;
-        }
+            return DerivedDataEntryState::Unreadable;
         // 머리: "SWDDC 1 <서술 길이 hex16> <본문 해시 hex16>\n" — 고정 폭이라 본문 앞까지 글자 수가 정해져 있다.
         const size_t      headerSize = kEntryHeader.size() + 1 + HexDigitUtil::kMaxDigitCount + 1 + HexDigitUtil::kMaxDigitCount + 1;
         const string_view text{ reinterpret_cast<const char*>( entry.data() ), entry.size() };
@@ -261,37 +257,63 @@ namespace sw
                                   CookRecordInternal::parseHex( text.substr( headerSize - 1 - HexDigitUtil::kMaxDigitCount, HexDigitUtil::kMaxDigitCount ), payloadHash ) &&
                                   descriptionSize <= text.size() - headerSize;
         if ( bHeaderValid == false )
-        {
-            // 옛 형식 항목(형식을 올린 뒤 한 번)이 대부분이라 정보 로그다 — 다시 구우면 새 형식으로 덮인다.
-            SW_LOG_INFO_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path, kEntryHeader );
-            return false;
-        }
+            return DerivedDataEntryState::InvalidFormat;
         if ( text.substr( headerSize, static_cast<size_t>( descriptionSize ) ) != keyDescription )
-        {
-            SW_LOG_WARNING_ID( "DDC.KeyCollision", "DDC entry '%#' was written for another job with the same key - treated as a miss", path );
-            return false;
-        }
+            return DerivedDataEntryState::KeyCollision;
         const size_t payloadStart = headerSize + static_cast<size_t>( descriptionSize );
         if ( ContentHash::computeBytes( entry.data() + payloadStart, entry.size() - payloadStart ) != payloadHash )
-        {
-            SW_LOG_WARNING_ID( "DDC.PayloadCorrupt", "DDC entry '%#' does not match its payload hash - treated as a miss", path );
-            return false;
-        }
+            return DerivedDataEntryState::PayloadCorrupt;
         outBytes.assign( entry.begin() + static_cast<ptrdiff_t>( payloadStart ), entry.end() );
-        return true;
+        return DerivedDataEntryState::Valid;
+    }
+
+    bool DerivedDataCache::readEntry( size_t layerIndex, uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const
+    {
+        const string path = makePath( layerIndex, key );
+        switch ( checkEntry( path, keyDescription, outBytes ) )
+        {
+            case DerivedDataEntryState::Valid:
+                return true;
+            case DerivedDataEntryState::Missing:
+                return false;
+            case DerivedDataEntryState::Unreadable:
+                SW_LOG_WARNING_ID( "DDC.EntryUnreadable", "DDC entry '%#' cannot be read - treated as a miss", path );
+                return false;
+            case DerivedDataEntryState::InvalidFormat:
+                // 옛 형식 항목(형식을 올린 뒤 한 번)이 대부분이라 정보 로그다 — 다시 구우면 새 형식으로 덮인다.
+                SW_LOG_INFO_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path, kEntryHeader );
+                return false;
+            case DerivedDataEntryState::KeyCollision:
+                SW_LOG_WARNING_ID( "DDC.KeyCollision", "DDC entry '%#' was written for another job with the same key - treated as a miss", path );
+                return false;
+            case DerivedDataEntryState::PayloadCorrupt:
+                SW_LOG_WARNING_ID( "DDC.PayloadCorrupt", "DDC entry '%#' does not match its payload hash - treated as a miss", path );
+                return false;
+        }
+        return false;
     }
 
     bool DerivedDataCache::writeEntry( size_t layerIndex, uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const
     {
+        const string  path        = makePath( layerIndex, key );
+        const uint64  payloadHash = ContentHash::computeBytes( bytes );
+        vector<uint8> existing;
+        // 같은 서술 · 같은 본문이 이미 있으면 그대로 둔다 — 같은 내용을 쓰는 둘이 한 파일의 교체를 다투지 않는다. 본문까지 보는 까닭: 결정적이지 않은 생산자의 새 바이트는 덮어써야 기록과 맞는다.
+        const auto isSameEntry = [&]()
+        { return checkEntry( path, keyDescription, existing ) == DerivedDataEntryState::Valid && ContentHash::computeBytes( existing ) == payloadHash; };
+        if ( isSameEntry() )
+            return true;
         string header( kEntryHeader );
-        header.append( " " ).append( CookRecordInternal::toHex( keyDescription.size() ) ).append( " " ).append( CookRecordInternal::toHex( ContentHash::computeBytes( bytes ) ) );
+        header.append( " " ).append( CookRecordInternal::toHex( keyDescription.size() ) ).append( " " ).append( CookRecordInternal::toHex( payloadHash ) );
         header.push_back( '\n' );
         vector<uint8> entry;
         entry.reserve( header.size() + keyDescription.size() + bytes.size() );
         entry.insert( entry.end(), header.begin(), header.end() );
         entry.insert( entry.end(), keyDescription.begin(), keyDescription.end() );
         entry.insert( entry.end(), bytes.begin(), bytes.end() );
-        const string path = makePath( layerIndex, key );
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, entry.data(), entry.size() );
+        // 쓰기는 임시 파일 + 원자 교체다(반쯤 쓴 항목을 읽는 쪽이 보지 않는다). 교체에 졌으면(다른 프로세스 · 스레드가 같은 자리를 막 바꿨다) 그 자리가 같은 항목인지 본다.
+        if ( FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, entry.data(), entry.size() ) )
+            return true;
+        return isSameEntry();
     }
 } // namespace sw
