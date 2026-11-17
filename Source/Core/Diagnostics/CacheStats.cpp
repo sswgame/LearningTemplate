@@ -3,6 +3,7 @@
 #include "Core/Diagnostics/CacheStats.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Log/Logger.h"
 
 namespace sw
@@ -26,15 +27,15 @@ namespace sw
                 return s_registry;
             }
 
-            /** @brief 이름의 칸 번호입니다(잠금 아래). 없으면 `_entryCount` 입니다. */
-            static uint32 findIndex( const Registry& registry, string_view name )
+            /** @brief 이름의 칸 번호입니다(잠금 아래). */
+            [[nodiscard]] static optional<uint32> findIndex( const Registry& registry, string_view name )
             {
                 for ( uint32 index = 0; index < registry._entryCount; ++index )
                 {
                     if ( registry._arrEntry[index].getName() == name )
                         return index;
                 }
-                return registry._entryCount;
+                return nullopt;
             }
 
             /** @brief 새 칸을 올리지 못한 까닭입니다. 잠금은 잎이라 로그는 잠금을 놓은 뒤에 쓴다(`reportAddFailure`). */
@@ -86,7 +87,7 @@ namespace sw
         CacheStatsHandle               handle{};
         {
             ScopedLock<mutex> lock{ registry._mutex };
-            bDuplicate = CacheStatsInternal::findIndex( registry, name ) != registry._entryCount;
+            bDuplicate = CacheStatsInternal::findIndex( registry, name ).has_value();
             if ( bDuplicate == false )
                 handle = CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
         }
@@ -102,9 +103,9 @@ namespace sw
         CacheStatsInternal::AddFailure failure{ CacheStatsInternal::AddFailure::None };
         CacheStatsHandle               handle{};
         {
-            ScopedLock<mutex> lock{ registry._mutex };
-            const uint32      index = CacheStatsInternal::findIndex( registry, name );
-            handle                  = index != registry._entryCount ? CacheStatsHandle{ &registry._arrEntry[index] } : CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
+            ScopedLock<mutex>      lock{ registry._mutex };
+            const optional<uint32> index = CacheStatsInternal::findIndex( registry, name );
+            handle                       = index.has_value() ? CacheStatsHandle{ &registry._arrEntry[*index] } : CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
         }
         CacheStatsInternal::reportAddFailure( failure, name );
         return handle;
