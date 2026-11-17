@@ -140,15 +140,35 @@ namespace sw
         return pRecord != nullptr ? pRecord->_resource.Get() : nullptr;
     }
 
-    D3D12_RESOURCE_STATES D3D12RHIDevice::getTrackedTextureState( RHITextureHandle texture )
+    static_assert( RHITrackedSubresourceState<D3D12_RESOURCE_STATES>::kWholeResource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, "the whole-resource index must be the D3D12 all-subresources value" );
+
+    void D3D12RHIDevice::recordTextureStateDetour( ID3D12GraphicsCommandList* pList, RHITextureHandle texture, ID3D12Resource* pResource, D3D12_RESOURCE_STATES detourState,
+                                                   bool bLeave )
     {
+        // 전송 리스트의 복사는 추적 상태에서 잠시 @p detourState 로 갔다가 같은 상태로 돌아온다 — 추적 값은 바꾸지 않는다. 서브리소스마다 상태가 갈라졌으면
+        // 서브리소스마다 배리어를 낸다(R-10). 추적하지 않는 텍스처는 COMMON 에서 출발한다.
+        const auto emit = [pList, pResource, detourState, bLeave]( uint32 subresource, D3D12_RESOURCE_STATES tracked )
+        {
+            if ( tracked == detourState )
+                return;
+            D3D12_RESOURCE_BARRIER barrier{};
+            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource   = pResource;
+            barrier.Transition.Subresource = subresource; // kWholeResource 는 D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES 와 같은 값이다
+            barrier.Transition.StateBefore = bLeave ? tracked : detourState;
+            barrier.Transition.StateAfter  = bLeave ? detourState : tracked;
+            pList->ResourceBarrier( 1, &barrier );
+        };
         const TextureRecord* const pRecord = _gpuTextures.get( texture );
         if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
-            return D3D12_RESOURCE_STATE_COMMON;
-        return pRecord->_state.load();
+        {
+            emit( D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_COMMON );
+            return;
+        }
+        pRecord->_state.forEachState( emit );
     }
 
-    bool D3D12RHIDevice::findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView )
+    bool D3D12RHIDevice::findOffscreenTargetView( RHITextureHandle texture, uint32 slice, uint32 mip, OffscreenTargetView& outView )
     {
         const TextureRecord* const pTextureRecord = _gpuTextures.get( texture );
         if ( pTextureRecord == nullptr || pTextureRecord->_bOffscreen == SW_FALSE )
@@ -156,25 +176,25 @@ namespace sw
 
         const OffscreenTextureRecord& record = pTextureRecord->_offscreen;
         outView                              = OffscreenTargetView{};
-        outView._state                       = pTextureRecord->_state.load();
         outView._format                      = record._format;
         outView._bHasRTV                     = record._bHasRTV;
         outView._bHasDSV                     = record._bHasDSV;
-        if ( slice >= record._arraySize )
+        if ( slice >= record._arraySize || mip >= record._mipLevels )
             return true;
 
-        // 면 0 은 레코드의 첫 뷰, 면 1.. 은 추가 인덱스다. 디스크립터가 바닥나 만들다 멈춘 면은 목록에 없다.
-        const size_t extraIndex = static_cast<size_t>( slice ) - 1u;
+        // (밉 0, 면 0) 은 레코드의 첫 뷰, 나머지는 추가 칸 `mip * 면 수 + slice - 1` 이다.
+        const uint32 viewIndex  = mip * record._arraySize + slice;
+        const size_t extraIndex = static_cast<size_t>( viewIndex ) - 1u;
         if ( record._bHasRTV != SW_FALSE )
         {
-            if ( slice == 0 )
+            if ( viewIndex == 0 )
                 outView._rtvHandle = record._rtvHandle;
             else if ( extraIndex < record._listExtraRTVHandle.size() )
                 outView._rtvHandle = record._listExtraRTVHandle[extraIndex];
         }
         if ( record._bHasDSV != SW_FALSE )
         {
-            if ( slice == 0 )
+            if ( viewIndex == 0 )
                 outView._dsvHandle = record._dsvHandle;
             else if ( extraIndex < record._listExtraDSVHandle.size() )
                 outView._dsvHandle = record._listExtraDSVHandle[extraIndex];

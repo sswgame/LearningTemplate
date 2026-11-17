@@ -369,7 +369,8 @@ namespace sw
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
             uint32                      _width{ 0 };
             uint32                      _height{ 0 };
-            /// @brief 면 1부터의 RTV, DSV 칸 번호와 그 디스크립터입니다(면 0 은 `_rtvIndex`, `_dsvIndex`). 면이 하나면 비어 있습니다.
+            uint32                      _mipLevels{ 1 }; ///< 밉마다 RTV · DSV 를 만든다(다운샘플 체인이 밉 하나에 그린다 — R-10)
+            /// @brief (밉, 면) 의 RTV, DSV 칸 번호와 그 디스크립터입니다. 칸 `mip * _arraySize + slice - 1` 이 그 자리다((0, 0) 은 `_rtvIndex`, `_dsvIndex`). 하나뿐이면 비어 있습니다.
             /// @details 핸들을 함께 든다 — 기록 경로는 쪽 목록(`_listOffscreenRTVPage`)을 잠그지 않고 읽어야 하므로 번호로 다시 찾지 않는다.
             vector<uint32>                      _listExtraRTVIndex;
             vector<uint32>                      _listExtraDSVIndex;
@@ -388,10 +389,10 @@ namespace sw
         /// @brief 텍스처 핸들 테이블의 칸입니다. 오프스크린(RTV · DSV 를 가진) 텍스처만 상태를 추적한다 — 나머지는 COMMON 에서 암묵 승격된다.
         struct TextureRecord
         {
-            Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
-            OffscreenTextureRecord                 _offscreen{}; ///< `_bOffscreen` 일 때만 뜻이 있다
-            TrackedState                           _state;
-            uint8                                  _bOffscreen{ SW_FALSE };
+            Microsoft::WRL::ComPtr<ID3D12Resource>            _resource;
+            OffscreenTextureRecord                            _offscreen{}; ///< `_bOffscreen` 일 때만 뜻이 있다
+            RHITrackedSubresourceState<D3D12_RESOURCE_STATES> _state;       ///< 서브리소스(밉 × 면) 단위 상태(R-10) — 오프스크린만 추적한다
+            uint8                                             _bOffscreen{ SW_FALSE };
         };
 
         /// @brief 버퍼 핸들 테이블의 칸입니다. 구조 버퍼(`createStructuredBuffer`)만 상태를 추적한다.
@@ -405,13 +406,12 @@ namespace sw
         /// @brief 기록 경로가 오프스크린 레코드에서 읽는 항목입니다. `findOffscreenTargetView` 가 복사해 줍니다.
         struct OffscreenTargetView
         {
-            D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{};                          ///< 고른 면의 RTV(없으면 0)
-            D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{};                          ///< 고른 면의 DSV(없으면 0)
-            D3D12_RESOURCE_STATES       _state  = D3D12_RESOURCE_STATE_COMMON; ///< 복사한 순간의 상태(전이는 `transitionTexture` 가 비교 교환으로 다시 한다)
+            D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{}; ///< 고른 면의 RTV(없으면 0)
+            D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{}; ///< 고른 면의 DSV(없으면 0)
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
             uint8                       _bHasRTV{ SW_FALSE };
             uint8                       _bHasDSV{ SW_FALSE };
-            uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 면이 면 수 안에 있고 그 면의 뷰가 있다.
+            uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 (밉, 면) 이 범위 안에 있고 그 뷰가 있다.
         };
 
         /// @brief 네이티브 PSO 와 루트 시그니처입니다.
@@ -615,12 +615,13 @@ namespace sw
         /** @brief 텍스처 레코드입니다. 핸들이 무효면 nullptr 입니다(락 없음). */
         TextureRecord* findTextureRecord( RHITextureHandle handle ) { return _gpuTextures.get( handle ); }
         /**
-         * @brief 텍스처의 추적 상태입니다. 상태를 추적하는 것은 오프스크린 렌더 타깃뿐이라 그 밖의 텍스처는 COMMON 입니다.
-         * @details 복사 전이는 이 상태에서 출발해 같은 상태로 돌아와야 SRV 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다.
+         * @brief 전송 리스트 @p pList 에 텍스처를 추적 상태에서 @p detourState 로(@p bLeave) 또는 그 반대로 옮기는 배리어를 기록합니다. 추적 값은 바꾸지 않는다.
+         * @details 복사 전이는 추적 상태에서 출발해 같은 상태로 돌아와야 SRV 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다. 상태가 서브리소스마다 갈라졌으면 서브리소스마다 낸다(R-10).
+         *          추적하지 않는 텍스처(오프스크린이 아닌 것)는 COMMON 이다.
          */
-        D3D12_RESOURCE_STATES getTrackedTextureState( RHITextureHandle texture );
+        void recordTextureStateDetour( ID3D12GraphicsCommandList* pList, RHITextureHandle texture, ID3D12Resource* pResource, D3D12_RESOURCE_STATES detourState, bool bLeave );
         /** @brief 오프스크린 레코드를 찾아 @p slice 면의 뷰와 함께 복사합니다. 오프스크린 레코드가 없으면 false 입니다(락 없음 — 레코드는 만든 뒤 바뀌지 않는다). */
-        [[nodiscard]] bool findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView );
+        [[nodiscard]] bool findOffscreenTargetView( RHITextureHandle texture, uint32 slice, uint32 mip, OffscreenTargetView& outView );
         /** @brief bindless 번호 @p index 의 기록 경로 값을 쓰고 마지막에 등록표를 공개합니다. `_bindlessMutex` 배타 락 아래에서 부릅니다. */
         void publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record );
         /** @brief 번호 @p index 가 고른 등록표(@p bUAV)에 살아 있으면 그 읽기 칸을, 아니면 nullptr 를 줍니다(락 없음 — 기록 경로의 바인딩이 부른다). */
