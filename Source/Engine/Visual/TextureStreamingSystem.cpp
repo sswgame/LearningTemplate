@@ -8,6 +8,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
@@ -53,7 +54,14 @@ namespace sw
         auto           measureRange  = [&lodSystem, &listPrimitive, arrScreenSize]( uint32 start, uint32 end )
         {
             for ( uint32 index = start; index < end; ++index )
-                arrScreenSize[index] = lodSystem.computeScreenSize( static_cast<const MeshComponent&>( *listPrimitive[index] ) );
+            {
+                // 화면 크기 × UV 밀도 / 반지름 — 화면에서 UV 한 단위가 덮는 픽셀의 대리값이다(배율은 밀도 · 반지름에 같이 들어 지워진다). 같은 화면 크기라도
+                // UV 를 촘촘히 펼친 메시가 위쪽 밉을 먼저 받는다(언리얼 텍스처 스트리밍의 UV density). UV 가 없는 메시는 0 이라 알리지 않는다.
+                const MeshComponent& mesh    = static_cast<const MeshComponent&>( *listPrimitive[index] );
+                const Mesh* const    pMesh   = mesh.getMesh().get();
+                const float32        density = pMesh != nullptr ? pMesh->getUVDensity() / MathUtil::max( pMesh->getBoundingRadius(), MathUtil::kEpsilon ) : 0.0f;
+                arrScreenSize[index]         = lodSystem.computeScreenSize( mesh ) * density;
+            }
         };
         engine::runParallelByCost( count, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, measureRange ) );
         // 메시 패스는 머티리얼별 최댓값만 구한다. 글 만들기 · 경로 정규화 · 잠금은 머티리얼마다 한 번이다.

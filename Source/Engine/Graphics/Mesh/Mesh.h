@@ -419,6 +419,14 @@ namespace sw
          *          LOD 화면 크기가 두 배, 컬링 구가 몇 배로 부푼다. 컴포넌트의 경계(`MeshComponent::getWorldBounds`)와 GPU 컬링이 이 구를 쓴다.
          */
         float32 getBoundingRadius() const { return _boundingRadius; }
+        /**
+         * @brief UV 밀도 — UV 한 단위가 덮는 메시 공간 길이(면적 가중 평균의 제곱근 `sqrt( Σ 면적 / Σ UV 면적 )`)입니다. `setVertices` 가 경계와 함께 구합니다. UV 가 없으면 0 입니다.
+         * @details 텍스처 밉 스트리밍의 우선도가 쓴다 — 화면에서 같은 크기라도 UV 를 촘촘히 펼친(타일링한) 메시는 텍스처의 위쪽 밉이 더 필요하다(언리얼 텍스처 스트리밍 빌드의 UV density 와 같은 값).
+         *          경계 반지름처럼 정점에서 바로 구한다 — 파일 · 내장 도형 · 절차 메시 · 조각 모두 같은 한 함수(`computeUVDensity`)를 거친다.
+         */
+        float32 getUVDensity() const { return _uvDensity; }
+        /** @brief 삼각형 @p listIndex 의 메시 공간 면적 합과 UV 면적 합으로 UV 밀도를 구합니다(`getUVDensity`). UV 면적이 0 이면 0 입니다. */
+        [[nodiscard]] static float32 computeUVDensity( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex );
         /** @brief 메시 공간 경계 상자의 중심입니다(경계 구의 중심). 정점이 없으면 원점입니다. */
         const float3& getLocalBoundsCenter() const { return _localBoundsCenter; }
         /** @brief 메시 공간의 축 정렬 경계(최소)입니다. 정점이 없으면 원점입니다. `setVertices` 가 구합니다. */
@@ -466,6 +474,8 @@ namespace sw
         shared_ptr<const MeshVertexAnimation> _vertexAnimation;
         /// @brief getBoundingRadius 를 참고하세요. setVertices 가 구합니다.
         float32 _boundingRadius{ 0.0f };
+        /// @brief getUVDensity 를 참고하세요. setVertices 가 경계와 함께 구합니다.
+        float32 _uvDensity{ 0.0f };
         float3  _localBoundsCenter{};
         float3  _localBoundsMin{};
         float3  _localBoundsMax{};
