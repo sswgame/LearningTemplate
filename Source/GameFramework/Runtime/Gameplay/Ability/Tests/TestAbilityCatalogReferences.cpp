@@ -15,7 +15,7 @@ SW_TEST_CASE( AbilityCatalogReferencesTest, CleanLinksLoad )
     SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<AbilityCatalog>
   <AbilitySet id="AS_Start"><Ability id="GA_Strike"/><Effect id="GE_Buff"/></AbilitySet>
   <Ability id="GA_Strike" class="ApplyEffects" cooldown="GE_Cooldown"/>
-  <AbilityEffect id="GE_Cooldown" duration="HasDuration" seconds="1"/>
+  <AbilityEffect id="GE_Cooldown" duration="HasDuration" seconds="1"><GrantedTag tag="Cooldown.Strike"/></AbilityEffect>
   <AbilityEffect id="GE_Buff" duration="Infinite"><GrantAbility id="GA_Strike"/></AbilityEffect>
 </AbilityCatalog>)",
                                              "AbilityCatalogReferencesTest" ) );
@@ -55,4 +55,21 @@ SW_TEST_CASE( AbilityCatalogReferencesTest, DuplicateIDInOneTextIsAnErrorButMerg
     const shared_ptr<const AbilityEffectDef> pSecond = catalog.findEffect( "GE_Once" );
     (void)catalog.addEffect( *pSecond ); // 코드 추가 API — 같은 id 를 바꾼다(오류가 아니다)
     SW_EXPECT_TRUE( catalog.findEffect( "GE_Once" ) != pSecond );
+}
+
+/** @brief [AbilityCatalogTest] 부여 태그가 없거나 즉시인 쿨다운 이펙트를 쓰는 어빌리티는 거절된다 — 받으면 `isOnCooldown` 이 늘 거짓이라 연타가 된다(감사 G-8) */
+SW_TEST_CASE( AbilityCatalogTest, CooldownEffectWithoutGrantedTagIsRejected )
+{
+    SW_EXPECT_LOG( "AbilityCatalog.CooldownEffectGrantsNoTag" );
+    SW_EXPECT_LOG( "AbilityCatalog.AbilityInvalidFieldsSkipped" );
+    AbilityCatalog catalog;
+    (void)catalog.loadFromXMLText( R"(<AbilityCatalog>
+  <AbilityEffect id="GE_NoTag" duration="HasDuration" seconds="1"/>
+  <AbilityEffect id="GE_Tagged" duration="HasDuration" seconds="1"><GrantedTag tag="Cooldown.Good"/></AbilityEffect>
+  <Ability id="GA_Spam" class="ApplyEffects" cooldown="GE_NoTag"/>
+  <Ability id="GA_Good" class="ApplyEffects" cooldown="GE_Tagged"/>
+</AbilityCatalog>)",
+                                   "AbilityCatalogTest" );
+    SW_EXPECT_NULL( catalog.findAbility( "GA_Spam" ) );
+    SW_EXPECT_NOT_NULL( catalog.findAbility( "GA_Good" ) );
 }

@@ -454,6 +454,16 @@ namespace sw
         config._bActivateOnGranted         = params._bActivateOnGranted ? SW_TRUE : SW_FALSE;
         bool bValid                        = true;
 
+        // 쿨다운은 이펙트의 부여 태그로 "쿨다운 중" 을 본다(`Ability::isOnCooldown`) — 태그가 없거나 즉시 이펙트면 늘 거짓이라 조용히 연타가 된다(감사 G-8).
+        // 언리얼 GAS 도 쿨다운 이펙트의 GrantedTags 로 본다(`UGameplayAbility::GetCooldownTags`). 쿠커도 이 읽기를 돌아 같은 데이터를 거절한다.
+        const AbilityEffectDef* const pCooldown = config._pCooldownEffect.get();
+        if ( pCooldown != nullptr && ( pCooldown->_grantedTags.getTagCount() == 0 || pCooldown->_durationPolicy == EffectDurationPolicy::Instant ) )
+        {
+            SW_LOG_ERROR_ID( "AbilityCatalog.CooldownEffectGrantsNoTag", "%#: ability '%#' has cooldown effect '%#' that grants no tag or is Instant - the ability would never be on cooldown", sourceName,
+                             pID, pCooldown->_id.c_str() );
+            bValid = false;
+        }
+
         AbilityCatalogInternal::readTagChildren( node, "AbilityTag", config._abilityTags );
         AbilityCatalogInternal::readTagChildren( node, "CancelTag", config._cancelAbilitiesWithTags );
         AbilityCatalogInternal::readTagChildren( node, "BlockTag", config._blockAbilitiesWithTags );
