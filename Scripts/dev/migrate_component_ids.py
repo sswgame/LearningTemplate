@@ -151,18 +151,29 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     root = get_project_root()
-    file_count = added_total = attach_total = 0
-    for path in sorted((root / CONTENT_FOLDER).rglob("*.xml")):
+    content = root / CONTENT_FOLDER
+    map_original: dict[str, str] = {}
+    map_text: dict[str, str] = {}
+    added_total = attach_total = 0
+    for path in sorted(content.rglob("*.xml")):
         if not path.name.lower().endswith(STATE_SUFFIXES):
             continue
-        text = path.read_bytes().decode("utf-8", "surrogateescape")
-        rewritten, added, attached = migrate_text(text)
-        if rewritten == text:
-            continue
-        file_count += 1
+        asset_id = path.relative_to(content).as_posix()
+        map_original[asset_id] = path.read_bytes().decode("utf-8", "surrogateescape")
+        map_text[asset_id], added, attached = migrate_text(map_original[asset_id])
         added_total += added
         attach_total += attached
-        if args.fix:
-            path.write_bytes(rewritten.encode("utf-8", "surrogateescape"))
-    print(f"[migrate-component-ids] 파일 {file_count} 개 · 지역 id {added_total} 개 · 부착 키 {attach_total} 개{'' if args.fix else ' (--fix 없이 — 아무것도 쓰지 않았다)'}")
+    # 둘째 단계: 다른 프리팹을 가리키는 옛 키(중첩 노드 id · Part 경로 · 덮어쓰기 key/after · 노드 attach). 첫 단계가 적은 컴포넌트 id 로 푼다.
+    from dev.migrate_prefab_links import LinkMigration  # noqa: PLC0415 — 서로 읽는 두 모듈이다
+    links = LinkMigration({asset_id: text for asset_id, text in map_text.items() if asset_id.lower().endswith(".prefab.xml")})
+    for asset_id in map_text:
+        map_text[asset_id] = links.migrate(asset_id, map_text[asset_id])
+    for line in links.list_unresolved:
+        print(f"  - {line}")
+    list_changed = [asset_id for asset_id in map_text if map_text[asset_id] != map_original[asset_id]]
+    if args.fix:
+        for asset_id in list_changed:
+            (content / asset_id).write_bytes(map_text[asset_id].encode("utf-8", "surrogateescape"))
+    print(f"[migrate-component-ids] 파일 {len(list_changed)} 개 · 지역 id {added_total} 개 · 같은 오브젝트 부착 키 {attach_total} 개 · 따라가지 못한 옛 키 {len(links.list_unresolved)} 개"
+          f"{'' if args.fix else ' (--fix 없이 — 아무것도 쓰지 않았다)'}")
     return ExitCode.PASSED
