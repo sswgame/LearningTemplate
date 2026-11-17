@@ -65,7 +65,7 @@ namespace sw::editor
         {
             // 열 때 한 번 모은다 — 에디터의 에셋 색인에서 읽는다(디스크를 걷지 않는다).
             vector<EditorAssetIndexEntry> listEntry;
-            EditorAssetCatalog::collectEntriesOnUIThread( editor::getSubsystem<AssetPaths>(), editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().getReferenceIndex(), listEntry );
+            EditorAssetCatalog::collectEntriesOnUIThread( editor::getSubsystem<AssetPaths>(), listEntry );
             EditorDocumentOpenUtil::collectCandidates( listEntry, _kind, [this]( string_view path )
             { return canAcceptDocumentPath( path ); }, _listOpenCandidate );
             _openFilter.clear();

@@ -50,6 +50,7 @@ namespace sw::editor
     /** @brief 파일 하나의 줄입니다. */
     struct EditorAssetEntry
     {
+        string                  _displayPath; ///< 디스크 표기의 리소스 id(대소문자 그대로) — 목록 · 제목에 쓴다. 열쇠는 소문자 id 다
         FileStamp               _fileStamp{}; ///< 크기 · 쓰기 시각 — 같으면 파일을 열지 않는다
         vector<EditorAssetLink> _listLink;    ///< 나가는 참조(텍스트 에셋만)
     };
@@ -90,7 +91,7 @@ namespace sw::editor
          * @details 옮기기 · 이름 바꾸기는 옛 id 와 새 id 둘을 넘긴다. GUID 참조는 정체성이 따라가므로 참조자를 다시 읽지 않는다.
          */
         void applyChanges( string_view resourceRoot, const vector<string>& listChangedID );
-        /** @brief 파일 하나의 글을 디스크 없이 넣습니다(테스트 · 저장 직후의 글). @p text 는 텍스트 에셋일 때만 읽는다. */
+        /** @brief 파일 하나의 글을 디스크 없이 넣습니다(테스트 · 저장 직후의 글). @p assetID 는 디스크 표기 그대로 받는다. @p text 는 텍스트 에셋일 때만 읽는다. */
         void applyText( string_view assetID, string_view text, const FileStamp& fileStamp = {} );
 
         /** @brief @p targetPath 를 적은 참조를 모읍니다(경로로 적은 것과 GUID 로 적은 것 모두). 먼저 출력 목록을 비우며, 참조자 · 줄 순서입니다. 없는 파일이면 비어 있습니다. */
@@ -100,10 +101,10 @@ namespace sw::editor
         /** @brief @p targetPath 를 적은 서로 다른 파일 수입니다. */
         uint32 countReferrerFiles( string_view targetPath ) const;
         /**
-         * @brief 아는 파일의 리소스 id 를 모두 모읍니다(선택 팝업 · Open · Quick Open 의 목록). 먼저 출력 목록을 비우며, 정렬합니다.
+         * @brief 아는 파일의 리소스 id 를 디스크 표기(`EditorAssetEntry::_displayPath`)로 모두 모읍니다(선택 팝업 · Open · Quick Open 의 목록). 먼저 출력 목록을 비우며, 정렬합니다.
          * @details 종류로 거르기는 부르는 쪽이 한다 — 종류 등록(`EditorAssetTypeRegistry`)은 이 색인보다 위 층이다. 디스크를 걷지 않는다.
          */
-        void collectAssetIDs( vector<string>& outListAssetID ) const;
+        void collectDisplayPaths( vector<string>& outListPath ) const;
 
         /** @brief 트리의 파일로 아는 리소스 id 이면 그 줄, 아니면 nullptr 입니다. */
         [[nodiscard]] const EditorAssetEntry* find( string_view assetID ) const;
@@ -128,10 +129,13 @@ namespace sw::editor
     private:
         /** @brief 파일 @p assetID 의 줄과 그 줄이 만든 역방향 표 · GUID 줄을 뺍니다. */
         static void removeEntry( EditorAssetIndexData& inoutData, const string& assetID );
-        /** @brief 파일 @p assetID 의 줄을 넣습니다(있던 줄은 먼저 뺀다). @p pText 는 텍스트 에셋 · `.meta` 의 글이고, 없으면 글을 읽지 않은 파일입니다. */
-        static void insertEntry( EditorAssetIndexData& inoutData, const string& assetID, const FileStamp& fileStamp, const string* pText );
-        /** @brief 파일 @p assetID 를 디스크에서 읽어 줄을 고칩니다. 크기 · 시각이 같으면 열지 않는다. 없으면 줄을 뺀다. */
-        static void refreshFromDisk( EditorAssetIndexData& inoutData, string_view resourceRoot, const string& assetID );
+        /**
+         * @brief 파일 @p displayPath(디스크 표기)의 줄을 넣습니다(있던 줄은 먼저 뺀다). @p pText 는 텍스트 에셋의 글, @p pMetaText 는 원본 곁 `.meta` 의 글이고, 없으면 nullptr 입니다.
+         * @details 정체성은 텍스트 에셋이면 머리, 그 밖이면 곁의 `.meta` 에서 읽는다(`.meta` 는 목록의 파일이 아니다 — `EditorContentScan::isListedFile`).
+         */
+        static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, const string* pText, const string* pMetaText );
+        /** @brief 파일 @p displayPath 를 디스크에서 읽어 줄을 고칩니다. 크기 · 시각이 같으면(@p bForce 가 아니면) 열지 않는다. 없으면 줄을 뺀다. */
+        static void refreshFromDisk( EditorAssetIndexData& inoutData, string_view resourceRoot, string_view displayPath, bool bForce );
 
     private:
         EditorAssetIndexData   _data;

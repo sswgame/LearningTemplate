@@ -176,3 +176,26 @@ SW_TEST_CASE( EditorAssetIndexTest, ScratchCopiesAreReferenceDomains )
     SW_EXPECT_EQUAL( string( "game/p.xml" ), listLink[1]._target );
     SW_EXPECT_TRUE( listLink[1]._bInlined );
 }
+
+/**
+ * @brief [EditorAssetIndexTest] 열쇠는 소문자 리소스 id 이고 목록에는 디스크 표기가 그대로 나온다 — 전체 훑기와 한 파일 갱신이 같다. `.meta` 는 목록의 파일이 아니다.
+ */
+SW_TEST_CASE( EditorAssetIndexTest, DisplayPathKeepsDiskSpelling )
+{
+    using Internal    = EditorAssetIndexTestInternal;
+    const string root = sw::test::makeScratchPath( "spelling" );
+    Internal::write( root, "game/a/HeroIcon.png", "png" );
+    Internal::write( root, "game/a/HeroIcon.png.meta", AssetMeta::makeText( "game/a/HeroIcon.png", AssetGUID::create() ) );
+    EditorAssetIndex index = Internal::scan( root );
+    Internal::write( root, "game/a/LaterIcon.png", "png" );
+    index.applyChanges( root, { "game/a/LaterIcon.png" } );
+
+    SW_EXPECT_TRUE( index.containsFile( "game/a/heroicon.png" ) );
+    SW_EXPECT_FALSE( index.containsFile( "game/a/heroicon.png.meta" ) );
+    SW_EXPECT_TRUE( index.findGUID( "game/a/HeroIcon.png" ).has_value() );
+    vector<string> listPath;
+    index.collectDisplayPaths( listPath );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listPath.size() );
+    SW_EXPECT_EQUAL( string( "game/a/HeroIcon.png" ), listPath[0] );
+    SW_EXPECT_EQUAL( string( "game/a/LaterIcon.png" ), listPath[1] );
+}

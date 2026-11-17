@@ -7,6 +7,9 @@
 #include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Engine/Content/AssetPaths.h"
 
@@ -59,23 +62,46 @@ namespace sw::editor
         const string& resourceFolder = assetPaths.getRootFolderPath();
         if ( resourceFolder.empty() )
             return;
-        vector<string> listAssetID;
-        index.collectAssetIDs( listAssetID );
-        outList.reserve( listAssetID.size() );
-        for ( const string& assetID : listAssetID )
+        // 디스크 표기(대소문자 그대로)로 짓는다 — 제목 · 경로가 트리 걷기와 같게 보인다. 색인의 열쇠(소문자)는 쓰지 않는다.
+        vector<string> listDisplayPath;
+        index.collectDisplayPaths( listDisplayPath );
+        outList.reserve( listDisplayPath.size() );
+        for ( const string& displayPath : listDisplayPath )
         {
             EditorAssetIndexEntry entry{};
-            if ( classifyFile( assetPaths, FileUtil::joinPath( resourceFolder, assetID ), entry ) )
+            if ( classifyFile( assetPaths, FileUtil::joinPath( resourceFolder, displayPath ), entry ) )
                 outList.push_back( std::move( entry ) );
         }
     }
 
-    void EditorAssetCatalog::collectEntriesOnUIThread( const AssetPaths& assetPaths, const EditorAssetIndex& index, vector<EditorAssetIndexEntry>& outList )
+    const EditorAssetIndex* EditorAssetCatalog::findReadyIndex()
     {
-        if ( index.isReady() )
-            collectEntries( assetPaths, index, outList );
+        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+        if ( pContext == nullptr )
+            return nullptr;
+        const EditorAssetIndex& index = pContext->getSubsystem<AssetHotReload>().getReferenceIndex();
+        return index.isReady() ? &index : nullptr;
+    }
+
+    void EditorAssetCatalog::collectEntriesOnUIThread( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList )
+    {
+        const EditorAssetIndex* const pIndex = findReadyIndex();
+        if ( pIndex != nullptr )
+            collectEntries( assetPaths, *pIndex, outList );
         else
-            collectEntries( assetPaths, outList );
+            collectEntries( assetPaths, outList ); // 첫 전체 스캔 전 — 한 번 걷는다
+    }
+
+    void EditorAssetCatalog::collectCatalogCounts( const AssetPaths& assetPaths, const EditorAssetIndex& index, EditorResourceCatalogCounts& outCounts )
+    {
+        vector<string> listDisplayPath;
+        index.collectDisplayPaths( listDisplayPath );
+        const string& resourceFolder = assetPaths.getRootFolderPath();
+        for ( string& displayPath : listDisplayPath )
+        {
+            displayPath = FileUtil::joinPath( resourceFolder, displayPath ); // `countFiles` 는 트리 걷기와 같은 디스크 경로를 받는다
+        }
+        countFiles( listDisplayPath, outCounts );
     }
 
     void EditorAssetCatalog::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
