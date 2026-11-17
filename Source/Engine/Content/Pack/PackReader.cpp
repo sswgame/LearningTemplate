@@ -401,16 +401,30 @@ namespace sw
         AsyncFileHandle file;
         if ( makeReadPlan( pathHash, plan, file ) == false )
             return AsyncReadHandle{};
-        if ( plan._compression != PackCompressionType::None )
-        {
-            SW_LOG_ERROR_ID( "Pack.RangeReadOnCompressedEntry", "Range read of a compressed entry in pack %# (codec %#) - cook range-read assets (.dds) uncompressed", file.getPath(),
-                             static_cast<uint32>( plan._compression ) );
-            return AsyncReadHandle{};
-        }
         if ( offset > plan._uncompressedSize || size > plan._uncompressedSize - offset )
         {
             SW_LOG_ERROR_ID( "Pack.RangeReadOutOfEntry", "Range read %#+%# is outside the entry (%# bytes) in pack %#", offset, size, plan._uncompressedSize, file.getPath() );
             return AsyncReadHandle{};
+        }
+        if ( plan._compression != PackCompressionType::None )
+        {
+            // 압축 항목은 구간만 풀 수 없다 — 저장 바이트 전체를 읽어 풀고(CRC 대조 포함) 구간을 자른다. 팩 코덱이 팩 단위라 `.dds` 만 무압축으로 실을 길이 아직 없다
+            // (언리얼 pak 은 항목마다 압축 방식을 고른다 — FAT 항목에 저장 방식 칸이 생기거나 블록 압축(감사 A-12)이 들어오면 이 갈래가 구간 읽기로 바뀐다).
+            // 받는 쪽은 그대로 구간 바이트를 받는다 — 줄이 바이트를 쥐지 않는 것(MR-2)은 같고, 읽는 동안만 항목 전체가 RAM 에 있다.
+            return io.readRange( file, plan._dataOffset, plan.getStoredSize(), priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [plan, file, offset, size, onComplete]( AsyncReadResult& result )
+            {
+                vector<uint8> whole;
+                vector<uint8> range;
+                bool          bSuccess = false;
+                if ( result.isSucceeded() )
+                    bSuccess = decodeStoredBytes( plan, file.getPath(), result._bytes, whole );
+                else if ( result._status != AsyncIOStatus::Canceled )
+                    SW_LOG_ERROR_ID( "PackReader.ReadErrorPackOffset", "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIO::getStatusName( result._status ), plan._dataOffset );
+                if ( bSuccess )
+                    range.assign( whole.begin() + static_cast<ptrdiff_t>( offset ), whole.begin() + static_cast<ptrdiff_t>( offset + size ) );
+                if ( onComplete.isBound() )
+                    onComplete( bSuccess, range );
+            } ) );
         }
         return io.readRange( file, plan._dataOffset + offset, size, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [plan, file, onComplete]( AsyncReadResult& result )
         {

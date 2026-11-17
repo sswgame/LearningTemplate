@@ -88,7 +88,7 @@ namespace sw
         static AsyncReadHandle readBinaryAssetAsync( const AssetID& id, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
         /**
          * @brief 리소스의 구간 [@p offset, @p offset + @p size) 를 비동기로 읽습니다 — 찾는 순서는 `readBinaryAssetAsync` 와 같다(텍스처 밉 스트리밍, MR-2).
-         * @details 낱개 파일은 `IContentFileSource::readRangeAsync`, 팩은 무압축 항목의 구간이다(압축 항목은 `Pack.RangeReadOnCompressedEntry` 오류 — 쿠킹이 `.dds` 를 무압축으로 싣는다).
+         * @details 낱개 파일은 `IContentFileSource::readRangeAsync`, 팩은 무압축 항목이면 그 구간, 압축 항목이면 항목 전체를 풀어 자른 구간이다(`PackReader::readRangeAsync`).
          * @return 어디에도 없거나 구간을 읽을 수 없으면 `isValid() == false` 이고 @p onComplete 는 불리지 않습니다.
          */
         static AsyncReadHandle readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );

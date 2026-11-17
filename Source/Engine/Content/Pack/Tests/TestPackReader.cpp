@@ -398,10 +398,13 @@ SW_TEST_CASE( PackReaderTest, RangeReadOnUncompressedEntryMatchesWholeRead )
     io.shutdown();
 }
 
-/** @brief [PackReaderTest] 압축 항목의 구간 읽기는 오류다 — 구간을 풀 수 없다(쿠킹이 `.dds` 를 무압축으로 싣는다, 블록 압축은 A-12) */
-SW_TEST_CASE( PackReaderTest, RangeReadOnCompressedEntryIsError )
+/**
+ * @brief [PackReaderTest] 압축 항목의 구간 읽기는 항목 전체를 읽어 푼 뒤 자른다 — 풀기에 실패하면 구간도 실패다(팩 코덱이 팩 단위라 `.dds` 만 무압축으로 실을 수 없다, 블록 압축은 A-12)
+ * @details 이 이미지의 페이로드는 압축 바이트가 아니다(머리만 Zlib) — 읽기는 걸리고, 풀기가 실패해 완료가 실패로 온다. 변이: 압축 항목을 저장 위치에서 그대로 자르면 성공으로 온다.
+ */
+SW_TEST_CASE( PackReaderTest, RangeReadOnCompressedEntryDecodesWholeEntry )
 {
-    SW_EXPECT_LOG( "Pack.RangeReadOnCompressedEntry" );
+    SW_EXPECT_LOG( "PackReader.DecompressionFailedEntryPack" );
     PackImage image                = Util::makeValidImage();
     image._header._compressionType = static_cast<uint8>( PackCompressionType::Zlib );
     const PackTestFile file;
@@ -409,11 +412,17 @@ SW_TEST_CASE( PackReaderTest, RangeReadOnCompressedEntryIsError )
     SW_REQUIRE_TRUE( file.open( image, reader ) );
     AsyncFileIO io;
     SW_REQUIRE_TRUE( io.initialize( AsyncFileIOConfig{} ) );
-    bool            bCalled = false;
-    AsyncReadHandle read    = reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "top.txt" ) ), 0, 2, AsyncIOPriority::Normal,
-                                                     SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&bCalled]( bool, vector<uint8>& )
-       { bCalled = true; } ) );
-    SW_EXPECT_FALSE( read.isValid() );
-    SW_EXPECT_FALSE( bCalled );
+    bool            bCalled    = false;
+    bool            bSucceeded = true;
+    AsyncReadHandle read       = reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "top.txt" ) ), 0, 2, AsyncIOPriority::Normal,
+                                                        SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&bCalled, &bSucceeded]( bool bSuccess, vector<uint8>& )
+          {
+        bCalled    = true;
+        bSucceeded = bSuccess;
+    } ) );
+    SW_REQUIRE_TRUE( read.isValid() );
+    read.wait();
+    SW_EXPECT_TRUE( bCalled );
+    SW_EXPECT_FALSE( bSucceeded );
     io.shutdown();
 }
