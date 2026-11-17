@@ -104,50 +104,46 @@ namespace sw
         string getMountDomain() const;
 
     private:
-        /** @brief 항목 하나를 읽고 풀 때 필요한 것 — 잠금 안에서 찍어 두고 잠금 밖에서 씁니다. */
+        /**
+         * @brief 항목 하나를 읽고 풀 때 필요한 것 — 잠금 안에서 찍어 두고 잠금 밖에서 씁니다. 블록 표의 그 항목 줄을 사본으로 든다(비동기 완료가 리더보다 오래 산다).
+         */
         struct PackReadPlan
         {
-            uint64              _dataOffset{ 0 };
-            uint32              _compressedSize{ 0 };
-            uint32              _uncompressedSize{ 0 };
-            uint32              _crc32{ 0 };
-            PackCompressionType _compression{ PackCompressionType::None };
-            bool                _bVerifyCRC{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint64                       _dataOffset{ 0 };
+            uint32                       _uncompressedSize{ 0 };
+            uint32                       _blockSize{ 0 };
+            PackCompressionType          _compression{ PackCompressionType::None };
+            bool                         _bVerifyCRC{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            vector<PackBlockEntryOnDisk> _listBlock;           ///< 항목의 블록 줄(블록 0 부터)
 
-            /** @brief 디스크에서 읽을 바이트 수입니다(비압축이면 원본 크기). */
-            uint32 getStoredSize() const { return _compression == PackCompressionType::None ? _uncompressedSize : _compressedSize; }
+            /** @brief 디스크에서 읽을 바이트 수입니다(마지막 블록의 누적 끝). */
+            uint32 getStoredSize() const { return _listBlock.empty() ? 0 : _listBlock.back()._compressedEnd; }
         };
 
         /** @brief @p pathHash 항목의 읽기 계획과 파일 핸들 사본을 잠금 안에서 찍습니다. 없거나 닫혔으면 false 입니다. */
         bool makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const;
         /**
-         * @brief 디스크에서 읽은 바이트(@p storedBytes)를 풀고 CRC 를 맞춰 @p outBytes 에 담습니다. 동기 · 비동기 읽기가 같은 길을 씁니다.
+         * @brief 디스크에서 읽은 항목의 저장 바이트(@p storedBytes)를 블록마다 풀고 CRC 를 맞춰 @p outBytes 에 담습니다. 동기 · 비동기 읽기가 같은 길을 씁니다.
          * @param packPath 실패 로그에 적을 팩 경로
          */
-        static bool decodeStoredBytes( const PackReadPlan& plan, string_view packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes );
+        static bool decodeStoredBytes( const PackReadPlan& plan, string_view packPath, const vector<uint8>& storedBytes, vector<uint8>& outBytes );
 
         /**
          * @brief 헤더가 말하는 인덱스 · 스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.
          * @details 헤더의 수는 파일에서 온 값입니다. 그것을 그대로 믿고 `resize` 하면 손상된 팩
          *          하나가 거대한 할당 요청이 됩니다. `_indexSize` 와 `_fileCount` 가 같은 것을
          *          두 번 말하는 것도 여기서 맞춰 봅니다.
-         * @param outFileSize 실제 파일 크기입니다. 항목 검사(`validateFileEntry`)가 같은 값을 씁니다.
+         * @param fileSize 실제 파일 크기입니다(헤더는 마지막 `sizeof( PackHeader )` 바이트다).
          */
-        bool validateHeaderGeometry( uint64& outFileSize ) const SW_REQUIRES_LOCK( _fileMutex );
-        /** @brief FAT 항목 하나가 파일 안을 가리키는지, 크기가 다룰 만한지 봅니다. */
-        bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const SW_REQUIRES_LOCK( _fileMutex );
+        bool validateHeaderGeometry( uint64 fileSize ) const SW_REQUIRES_LOCK( _fileMutex );
+        /** @brief FAT 항목 하나가 페이로드 구역 안을 가리키는지, 크기가 다룰 만한지, 블록 줄이 앞 항목에 이어지고 그 누적 끝이 항목 크기와 맞는지 봅니다. */
+        bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 payloadEnd, uint32 expectedFirstBlock ) const SW_REQUIRES_LOCK( _fileMutex );
         [[nodiscard]] bool loadIndexTable() SW_REQUIRES_LOCK( _fileMutex );
         /**
          * @brief `_mapEntry` 의 항목을 폴더별로 모아 `_mapFolderEntry` 를 짓습니다(`loadIndexTable` 이 항목을 다 읽은 뒤 한 번 부릅니다).
          * @details 폴더 나열(`collectFolderEntries`)이 팩 전체를 잠금 안에서 훑지 않고 그 폴더의 항목만 읽게 합니다. 폴더 안의 순서는 `_mapEntry` 의 순서입니다.
          */
         void populateFolderIndex() SW_REQUIRES_LOCK( _fileMutex );
-        /**
-         * @brief 압축 항목을 풀어 @p outBytes 를 @p uncompressedSize 로 채웁니다. **할당도 여기서 합니다.**
-         * @details 엔트리의 원본 크기는 파일에서 온 값입니다. 코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 비교한 뒤에만
-         *          resize 하도록 할당과 해제를 한 함수에 묶었습니다 — 부르는 쪽이 먼저 resize 하는 모양을 쓸 수 없게 하려는 것입니다(B-5).
-         */
-        static bool decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, size_t uncompressedSize, vector<uint8>& outBytes );
         /**
          * @brief @p other 의 파일 · 헤더 · 인덱스를 넘겨받고 @p other 의 파일 핸들을 비웁니다. 두 쪽의 `_fileMutex` 를 잡은 채로 부릅니다.
          * @details 이동 생성자와 이동 대입이 함께 씁니다. 멤버를 더하면 여기 한 곳만 고칩니다.
@@ -162,6 +158,7 @@ namespace sw
         string _packFilePath                           SW_GUARDED_BY( _fileMutex );
         PackHeader _header                             SW_GUARDED_BY( _fileMutex );
         unordered_map<uint64, PackFileEntry> _mapEntry SW_GUARDED_BY( _fileMutex );
+        vector<PackBlockEntryOnDisk> _listBlock        SW_GUARDED_BY( _fileMutex ); ///< 디스크 블록 표 그대로
         /// 폴더(아스키 소문자, 끝 '/' 없음, 팩 맨 위는 빈 문자열) → 그 폴더 바로 아래 항목의 경로 해시. `populateFolderIndex` 가 짓고 읽기만 한다
         unordered_map<string, vector<uint64>> _mapFolderEntry SW_GUARDED_BY( _fileMutex );
         string _mountDomain                                   SW_GUARDED_BY( _fileMutex ); ///< 스트링 풀 맨 앞의 마운트 도메인

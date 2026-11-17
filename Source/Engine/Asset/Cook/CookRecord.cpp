@@ -184,4 +184,10 @@ namespace sw
         const string path = makePath( key );
         return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
+
+    bool DerivedDataCache::storeFile( uint64 key, string_view sourcePath ) const
+    {
+        const string path = makePath( key );
+        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::copyFile( sourcePath, path );
+    }
 } // namespace sw

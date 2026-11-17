@@ -2,8 +2,8 @@
 <?asset guid="1d52401f0b36bf28e3db9118cf9bb855"?>
 <!--
   Velmora 의 모드 · 확장 팩 정책(GF_ModSupport, ModSupportSettings). 확장 팩은 data/ 아래 표(지역 · 퀘스트 · 몬스터)에 덮어쓰기 층으로 항목을 더한다(<Layer>).
-  한계는 바깥 입력(매니페스트 · 팩)을 읽기 전에 견주는 값이다 — 팩 64 MiB, 항목 2048 개, 항목 하나 16 MiB, 매니페스트 16 KiB, 한 세션 16 개.
+  한계는 바깥 입력(매니페스트 · 팩)을 읽기 전에 견주는 값이다 — 팩 64 MiB, 항목 2048 개, 항목 하나 16 MiB, 매니페스트 16 KiB, 한 세션 16 개. 모드 팩을 묶을 때의 블록 크기는 128 KiB(배포 팩과 같은 값).
 -->
-<ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216">
+<ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
 	<Overridable prefix="game/velmora/data/"/>
 </ModSupportSettings>

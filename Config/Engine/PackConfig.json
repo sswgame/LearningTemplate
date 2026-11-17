@@ -1,7 +1,9 @@
 {
   "_compression": {
     "_codec": "Zlib",
-    "_level": 0
+    "_level": 0,
+    "_blockSize": 131072,
+    "_writeWindowBytes": 67108864
   },
   "_layout": {
     "_mode": "Sorted",

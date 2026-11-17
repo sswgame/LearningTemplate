@@ -68,6 +68,8 @@ namespace sw
         [[nodiscard]] bool find( uint64 key, vector<uint8>& outBytes ) const;
         /** @brief 키의 출력을 씁니다. 같은 키가 이미 있으면 덮어씁니다(같은 입력은 같은 바이트여야 한다 — 쿠킹은 결정적이다). */
         [[nodiscard]] bool store( uint64 key, const vector<uint8>& bytes ) const;
+        /** @brief 키의 출력으로 파일 @p sourcePath 를 복사해 둡니다(메모리로 읽지 않는다 — 스트림으로 쓴 큰 팩). 덮어쓰기는 `store` 와 같다. */
+        [[nodiscard]] bool storeFile( uint64 key, string_view sourcePath ) const;
         /** @brief 키의 파일 경로입니다. */
         string makePath( uint64 key ) const;
 

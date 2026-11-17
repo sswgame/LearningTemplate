@@ -13,6 +13,7 @@
 
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 
 #include <algorithm>
@@ -81,23 +82,42 @@ namespace sw
                 return bytes;
             }
 
+            /**
+             * @brief 항목 @p entryCount 개를 경로 해시 순으로 @p packPath 에 스트림으로 씁니다. 항목 i 의 바이트는 `makeEntryBytes( i, listSize[i] )` 다.
+             * @details 스트림 쓰기는 경로 해시 오름차순만 받는다 — 번호를 해시로 세운 뒤 그 순서로 바이트를 만든다(팩 전체를 들지 않는다).
+             */
+            [[nodiscard]] static bool writeEntries( const string& packPath, string_view mountDomain, const vector<size_t>& listSize, vector<uint64>& outListHash )
+            {
+                const uint32   entryCount = static_cast<uint32>( listSize.size() );
+                vector<uint32> listOrder( entryCount );
+                outListHash.resize( entryCount );
+                for ( uint32 index = 0; index < entryCount; ++index )
+                {
+                    listOrder[index]   = index;
+                    outListHash[index] = PackStreamWriter::makePathHash( makeEntryPath( index ) );
+                }
+                VectorUtil::sort( listOrder, [&outListHash]( uint32 left, uint32 right )
+                { return outListHash[left] < outListHash[right]; } );
+                PackStreamWriter writer;
+                expected<void>   step = writer.open( packPath, PackTestUtil::makeDesc( mountDomain ) );
+                for ( size_t order = 0; order < listOrder.size() && step.has_value(); ++order )
+                {
+                    const uint32 index = listOrder[order];
+                    step               = writer.append( makeEntryPath( index ), makeEntryBytes( index, listSize[index] ) );
+                }
+                return step.has_value() && writer.close().has_value();
+            }
+
             /** @brief `index300k` 를 @p packPath 에 쓰고 항목의 경로 해시를 @p outListHash 에 담습니다. */
             [[nodiscard]] static bool writeIndexPack( const string& packPath, vector<uint64>& outListHash )
             {
-                PackWriterDesc desc;
-                desc._compression = PackCompressionType::None;
-                desc._mountDomain = "game/scale";
-                PackWriter writer( desc );
-                uint64     state = 0x9E3779B97F4A7C15ull;
-                outListHash.clear();
-                outListHash.reserve( kIndexEntryCount );
-                for ( uint32 index = 0; index < kIndexEntryCount; ++index )
+                uint64         state = 0x9E3779B97F4A7C15ull;
+                vector<size_t> listSize( kIndexEntryCount );
+                for ( size_t& size : listSize )
                 {
-                    const string path = makeEntryPath( index );
-                    outListHash.push_back( HashUtil::computeStringHash64( path ) );
-                    writer.addBytes( path, makeEntryBytes( index, 256 + nextRandom( state ) % 769 ) );
+                    size = 256 + nextRandom( state ) % 769;
                 }
-                return writer.writePackFile( packPath );
+                return writeEntries( packPath, "game/scale", listSize, outListHash );
             }
 
             /** @brief 활성 메모리 프로파일러의 살아 있는 바이트입니다. 프로파일러가 없으면(배포본) 0 입니다. */
@@ -178,14 +198,8 @@ SW_TEST_CASE( PackScaleTest, Patch1g, ._tags = "bench", ._disabledReason = "benc
     using Internal        = PackScaleInternal;
     const string packPath = test::makeScratchPath( "patch1g.pack" );
     {
-        PackWriterDesc desc;
-        desc._compression = PackCompressionType::None;
-        PackWriter writer( desc );
-        for ( uint32 index = 0; index < Internal::kPatchEntryCount; ++index )
-        {
-            writer.addBytes( Internal::makeEntryPath( index ), Internal::makeEntryBytes( index, Internal::kPatchEntryBytes ) );
-        }
-        SW_REQUIRE_TRUE( writer.writePackFile( packPath ) );
+        vector<uint64> listHash;
+        SW_REQUIRE_TRUE( Internal::writeEntries( packPath, "", vector<size_t>( Internal::kPatchEntryCount, Internal::kPatchEntryBytes ), listHash ) );
     }
 
     INetSecurityProvider* const pProvider = engine::findSubsystem<INetSecurityProvider>();

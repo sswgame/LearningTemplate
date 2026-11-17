@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -27,6 +28,13 @@ namespace sw
         Written, ///< 출력 파일을 썼다
         Skipped, ///< 이 출력은 만들지 않는다(쿠킹 대상이 아님). 기록을 남기지 않는다
         Failed,  ///< 베이크하지 못했다(이유는 함수가 오류로 남긴다)
+    };
+
+    /** @brief 출력을 쓰면서 그 내용 해시를 함께 센 쿠커(팩 스트림 쓰기)가 `cookStreamedFile` 에 알리는 결과입니다. */
+    struct CookStreamedStep
+    {
+        CookStep _step{ CookStep::Failed };
+        uint64   _outputHash{ 0 }; ///< `Written` 일 때 쓴 파일의 `ContentHash::computeBytes` 값
     };
 
     /** @brief `cookFile` 의 결과입니다. */
@@ -90,6 +98,21 @@ namespace sw
         }
 
         /**
+         * @brief `cookFile` 과 같되 베이크하는 함수가 쓰면서 센 출력 해시를 함께 돌려줍니다(`CookStreamedStep`). 출력을 메모리로 다시 읽지 않는다 — 기록은 그 해시로,
+         *        DDC 는 파일 복사로 남긴다(큰 팩, 감사 A-10).
+         */
+        template <typename CookFunction>
+        [[nodiscard]] CookResult cookStreamedFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
+        {
+            if ( reuseFreshOutput( desc, outputID, outputPath ) )
+                return record( outputID, CookResult::Reused );
+            clearAssetCachesForJob();
+            CookJob                job( desc );
+            const CookStreamedStep step = cook();
+            return record( outputID, finishStreamedCook( job, step, outputID, outputPath ) );
+        }
+
+        /**
          * @brief 이번 저장소가 요청받지 않은 옛 출력(소스가 사라져 이번 쿠킹이 만들지 않는 것)을 @p cookedDir 에서 지웁니다.
          * @param cookedDir 출력 루트(절대 경로). 출력 파일은 `<cookedDir>/<출력 id>` 입니다.
          * @param outFailedCount 지우지 못한 파일 수입니다(0 으로 시작해 센다).
@@ -112,11 +135,17 @@ namespace sw
     private:
         /** @brief 출력 바이트의 내용 해시를 구하고 든 시간을 `_outputHashNanos` 에 더합니다. */
         uint64 hashOutput( const vector<uint8>& bytes ) const;
+        /** @brief 출력 파일의 내용 해시를 `ContentHash::computeFile`(도장이 그대로면 읽지 않는다)로 구하고 든 시간을 `_outputHashNanos` 에 더합니다. */
+        uint64 hashOutputFile( string_view outputPath ) const;
 
         /** @brief 기록이 새것이고 DDC 에 그 출력이 있으면 출력 파일에 쓰고 true 입니다. */
         [[nodiscard]] bool reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const;
         /** @brief 작업이 쓴 출력으로 기록과 DDC 를 씁니다. */
         [[nodiscard]] CookResult finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const;
+        /** @brief 작업이 쓰면서 센 출력 해시로 기록을 쓰고 출력 파일을 DDC 로 복사합니다. */
+        [[nodiscard]] CookResult finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, string_view outputPath ) const;
+        /** @brief 끝난 작업이 기록할 수 있는지 봅니다 — `Skipped` · `Failed` 는 그 결과를, 입력이 없는 작업은 `Failed` 를, 기록할 것이면 nullopt 입니다. */
+        [[nodiscard]] static optional<CookResult> checkFinishedJob( const CookJob& job, CookStep step, string_view outputID );
         /** @brief 에셋 캐시를 모두 비웁니다(작업의 시작 조건 — 파일 머리말). */
         static void clearAssetCachesForJob();
         /** @brief 결과 하나를 세고, 요청받은 출력 id 로 적어 둡니다(`Skipped` 는 요청이 아니다). `cookFile` 의 모든 반환이 이것을 지난다 — 한 갈래가 빠지면 멀쩡한 출력이 지워진다. */

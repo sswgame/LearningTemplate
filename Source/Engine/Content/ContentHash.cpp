@@ -61,7 +61,12 @@ namespace sw
 {
     uint64 ContentHash::computeBytes( const uint8* pData, size_t size )
     {
-        return HashUtil::appendBytes64( HashUtil::kFNVOffset64, pData, size );
+        return appendBytes( kInitialState, pData, size );
+    }
+
+    uint64 ContentHash::appendBytes( uint64 state, const uint8* pData, size_t size )
+    {
+        return HashUtil::appendBytes64( state, pData, size );
     }
 
     uint64 ContentHash::computeFile( string_view absPath )

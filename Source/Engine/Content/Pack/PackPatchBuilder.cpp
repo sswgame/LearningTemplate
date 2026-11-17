@@ -150,9 +150,12 @@ namespace sw
                 return true;
             }
 
-            /** @brief 바뀐 파일을 새 빌드의 팩에서 읽어 전체 경로로 @p inoutWriter 에 담습니다. 팩을 열지 못하거나 파일을 읽지 못하면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool addChangedFiles( const PackPatchBuildParams& params, const vector<string>& listPackPath, const vector<Source>& listSource, const PackDelta& delta,
-                                                       PackWriter& inoutWriter )
+            /**
+             * @brief 바뀐 파일을 새 빌드의 팩에서 하나씩 읽어 전체 경로로 @p packPath 에 스트림으로 씁니다(경로 해시 순). 팩을 열지 못하거나 파일을 읽지 못하거나
+             *        쓰지 못하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writeChangedFiles( const PackPatchBuildParams& params, const vector<string>& listPackPath, const vector<Source>& listSource, const PackDelta& delta,
+                                                         const string& packPath )
             {
                 unordered_map<string, size_t> mapFullPathToSource;
                 for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
@@ -168,9 +171,15 @@ namespace sw
                         return false;
                     }
                 }
-                for ( const string& changedPath : delta._listChangedPath )
+                vector<string> listChangedPath = delta._listChangedPath;
+                VectorUtil::sort( listChangedPath, []( const string& left, const string& right )
+                { return PackStreamWriter::makePathHash( left ) < PackStreamWriter::makePathHash( right ); } );
+                PackStreamWriter writer;
+                expected<void>   step = writer.open( packPath, params._writerDesc );
+                for ( size_t index = 0; index < listChangedPath.size() && step.has_value(); ++index )
                 {
-                    const auto sourceIt = mapFullPathToSource.find( changedPath );
+                    const string& changedPath = listChangedPath[index];
+                    const auto    sourceIt    = mapFullPathToSource.find( changedPath );
                     if ( sourceIt == mapFullPathToSource.end() )
                     {
                         SW_LOG_ERROR_ID( "PackPatchBuilder.ChangedPathNotPacks", "Changed path '%#' is not in the packs of '%#' (internal mismatch)", changedPath, params._packsDirectory );
@@ -183,7 +192,13 @@ namespace sw
                         SW_LOG_ERROR_ID( "PackPatchBuilder.PackCouldNotRead", "Pack '%#' could not read '%#'", listPackPath[source._packIndex], source._pathInPack );
                         return false;
                     }
-                    inoutWriter.addBytes( changedPath, std::move( bytes ) );
+                    step = writer.append( changedPath, std::move( bytes ) );
+                }
+                const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
+                if ( closed.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot", "Patch pack could not be written to '%#': %# '%#'", packPath, closed.error().message(), closed.error().detail() );
+                    return false;
                 }
                 return true;
             }
@@ -284,10 +299,6 @@ namespace sw
             return false;
         }
 
-        PackWriter writer( params._writerDesc );
-        if ( Internal::addChangedFiles( params, listPackPath, listSource, delta, writer ) == false )
-            return false;
-
         PackPatchManifest manifest;
         manifest._fromBuild       = previous._build;
         manifest._toBuild         = params._newBuild;
@@ -296,11 +307,8 @@ namespace sw
         const string packPath     = FileUtil::joinPath( params._outputDirectory, manifest._packFileName );
         const string manifestPath = FileUtil::joinPath( params._outputDirectory, makeManifestFileName( params._newBuild ) );
         const string recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackBuildRecord::kExtension ) );
-        if ( FileUtil::ensureDirectoryExists( params._outputDirectory ) == false || writer.writePackFile( packPath ) == false )
-        {
-            SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot", "Patch pack could not be written to '%#'", packPath );
+        if ( Internal::writeChangedFiles( params, listPackPath, listSource, delta, packPath ) == false )
             return false;
-        }
         // 서명은 디스크에 쓴 팩의 바이트에 건다 — 배포되는 바이트의 해시다(메모리의 사본과 갈릴 길이 없다).
         if ( params._signer._pProvider != nullptr )
         {

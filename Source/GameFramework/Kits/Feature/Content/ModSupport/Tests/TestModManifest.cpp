@@ -2,6 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/Pack/PackTypes.h"
+
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModManifest.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModResolver.h"
@@ -25,6 +27,7 @@ namespace
             settings._maxPackBytes          = 1u << 20;
             settings._maxEntryCount         = 16;
             settings._maxEntryBytes         = 4096;
+            settings._packBlockSize         = kPackMinBlockSize;
             settings._listOverridablePrefix = { "game/test/data/" };
             return settings;
         }
@@ -334,7 +337,7 @@ SW_TEST_CASE( ModSupportSettingsTest, EveryLimitIsRequired )
 {
     ModSupportSettings settings;
     SW_REQUIRE_TRUE( ModSupportSettings::parseXMLText(
-        R"(<ModSupportSettings contentVersion="1" maxModCount="2" maxManifestBytes="100" maxPackBytes="5000000000" maxEntryCount="3" maxEntryBytes="4"><Overridable prefix="game/test/data/"/></ModSupportSettings>)",
+        R"(<ModSupportSettings contentVersion="1" maxModCount="2" maxManifestBytes="100" maxPackBytes="5000000000" maxEntryCount="3" maxEntryBytes="4" packBlockSize="65536"><Overridable prefix="game/test/data/"/></ModSupportSettings>)",
         "test", settings ) );
     SW_EXPECT_EQUAL( uint64{ 5000000000ull }, settings._maxPackBytes );
     SW_EXPECT_TRUE( settings.isOverridable( "game/test/data/welcome.xml" ) );
@@ -344,9 +347,9 @@ SW_TEST_CASE( ModSupportSettingsTest, EveryLimitIsRequired )
     SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" ); // 0 인 한계는 Min = 1 밖이다
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     SW_EXPECT_FALSE( ModSupportSettings::parseXMLText(
-        R"(<ModSupportSettings contentVersion="1" maxModCount="0" maxManifestBytes="1" maxPackBytes="1" maxEntryCount="1" maxEntryBytes="1"/>)", "test", settings ) );
+        R"(<ModSupportSettings contentVersion="1" maxModCount="0" maxManifestBytes="1" maxPackBytes="1" maxEntryCount="1" maxEntryBytes="1" packBlockSize="65536"/>)", "test", settings ) );
     SW_EXPECT_LOG( "ModSupportSettings.BadPrefix" );
     SW_EXPECT_FALSE( ModSupportSettings::parseXMLText(
-        R"(<ModSupportSettings contentVersion="1" maxModCount="1" maxManifestBytes="1" maxPackBytes="1" maxEntryCount="1" maxEntryBytes="1"><Overridable prefix="game/test/data"/></ModSupportSettings>)",
+        R"(<ModSupportSettings contentVersion="1" maxModCount="1" maxManifestBytes="1" maxPackBytes="1" maxEntryCount="1" maxEntryBytes="1" packBlockSize="65536"><Overridable prefix="game/test/data"/></ModSupportSettings>)",
         "test", settings ) );
 }

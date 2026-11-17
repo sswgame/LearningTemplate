@@ -44,6 +44,7 @@ namespace sw
         , _packFilePath{}
         , _header{}
         , _mapEntry{}
+        , _listBlock{}
         , _mapFolderEntry{}
         , _mountDomain{}
         , _stringPoolBytes{}
@@ -61,6 +62,7 @@ namespace sw
         , _packFilePath{}
         , _header{}
         , _mapEntry{}
+        , _listBlock{}
         , _mapFolderEntry{}
         , _mountDomain{}
         , _stringPoolBytes{}
@@ -87,6 +89,7 @@ namespace sw
         _packFilePath    = std::move( other._packFilePath );
         _header          = other._header;
         _mapEntry        = std::move( other._mapEntry );
+        _listBlock       = std::move( other._listBlock );
         _mapFolderEntry  = std::move( other._mapFolderEntry );
         _mountDomain     = std::move( other._mountDomain );
         _stringPoolBytes = std::move( other._stringPoolBytes );
@@ -114,8 +117,9 @@ namespace sw
         _file         = file;
         _packFilePath = normalizedPath;
 
-        // 1. 헤더(64B)를 읽는다
-        if ( _file.readAt( 0, &_header, sizeof( PackHeader ) ) == false )
+        // 1. 헤더(96B)를 읽는다 — 파일의 마지막 96 바이트다(`PackTypes.h` 머리말)
+        const uint64 fileSize = _file.getSize();
+        if ( fileSize < sizeof( PackHeader ) || _file.readAt( fileSize - sizeof( PackHeader ), &_header, sizeof( PackHeader ) ) == false )
         {
             closeLocked();
             lock.unlock();
@@ -198,6 +202,7 @@ namespace sw
         _packFilePath.clear();
         _header = PackHeader{};
         _mapEntry.clear();
+        _listBlock.clear();
         _mapFolderEntry.clear();
         _mountDomain.clear();
         _stringPoolBytes.clear();
@@ -292,43 +297,75 @@ namespace sw
             return false;
 
         const PackFileEntry& entry = it->second;
+        const uint32         count = ( entry._uncompressedSize + _header._blockSize - 1 ) / _header._blockSize; // 열 때 블록 줄이 표 안인 것을 확인했다
         outPlan._dataOffset        = entry._dataOffset;
-        outPlan._compressedSize    = entry._compressedSize;
         outPlan._uncompressedSize  = entry._uncompressedSize;
-        outPlan._crc32             = entry._crc32;
+        outPlan._blockSize         = _header._blockSize;
         outPlan._compression       = static_cast<PackCompressionType>( _header._compressionType );
         outPlan._bVerifyCRC        = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
-        outFile                    = _file;
+        outPlan._listBlock.assign( _listBlock.begin() + entry._firstBlock, _listBlock.begin() + entry._firstBlock + count );
+        outFile = _file;
         return true;
     }
 
-    bool PackReader::decodeStoredBytes( const PackReadPlan& plan, string_view packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes )
+    bool PackReader::decodeStoredBytes( const PackReadPlan& plan, string_view packPath, const vector<uint8>& storedBytes, vector<uint8>& outBytes )
     {
-        // 1. 비압축(Raw) 항목은 읽은 버퍼가 곧 결과다(중간 버퍼 할당과 복사가 없다).
-        if ( plan._compression == PackCompressionType::None )
+        outBytes.clear();
+        // 블록 i 의 저장 바이트는 [끝(i-1), 끝(i)), 원본은 [i × 블록 크기, 그 + 원본 블록 크기) 다. 열 때 누적 끝이 오름차순이고 마지막이 항목의 저장 크기인 것을 확인했다.
+        ICompressionCodec* pCodec = nullptr;
+        if ( plan._compression != PackCompressionType::None )
         {
-            if ( &storedBytes != &outBytes )
-                outBytes.swap( storedBytes );
-        }
-        else
-        {
-            if ( decompressData( plan._compression, storedBytes.data(), storedBytes.size(), plan._uncompressedSize, outBytes ) == false )
+            // 팩 종류 → 코덱 종류는 표 한 곳(`PackCompressionUtil::kArrCodecMapping`), 구현은 코덱 레지스트리가 든다.
+            pCodec = PackCompressionUtil::findCodec( plan._compression );
+            if ( pCodec == nullptr )
             {
-                SW_LOG_ERROR_ID( "PackReader.DecompressionFailedEntryPack", "Decompression failed for entry in pack: %#", packPath );
-                outBytes.clear();
+                SW_LOG_ERROR_ID( "PackReader.UnsupportedCompressionTypePack", "Unsupported compression type %# in pack: %#", static_cast<uint32>( plan._compression ), packPath );
                 return false;
             }
         }
-
-        // 2. CRC32 로 무결성을 검증한다. 플래그가 있으면 **늘** 대조한다. 쿠킹하는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0).
-        //    저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
-        if ( plan._bVerifyCRC )
+        // 원본 크기는 파일에서 온 값이다. 블록마다 저장 바이트로 나올 수 있는 크기인지 본 뒤에만 resize 한다(B-5).
+        uint32 storedBegin = 0;
+        for ( size_t index = 0; index < plan._listBlock.size(); ++index )
         {
-            const uint32 computedCRC = HashUtil::computeCRC32( outBytes.data(), outBytes.size() );
-            if ( computedCRC != plan._crc32 )
+            const uint32 storedSize = plan._listBlock[index]._compressedEnd - storedBegin;
+            const uint64 rawBegin   = static_cast<uint64>( index ) * plan._blockSize;
+            const uint64 rawSize    = plan._uncompressedSize - rawBegin < plan._blockSize ? plan._uncompressedSize - rawBegin : plan._blockSize;
+            const bool   bFits      = pCodec != nullptr ? rawSize <= pCodec->decompressBound( storedSize ) : rawSize == storedSize;
+            if ( bFits == false )
             {
-                SW_LOG_ERROR_ID( "PackReader.CRC32ChecksumMismatchPack", "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", packPath,
-                                 Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ), Fmt( plan._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
+                SW_LOG_ERROR_ID( "PackReader.OriginalSizeEntryExceeds", "A block's original size does not fit its stored size in pack %# (%# from %# stored bytes)", packPath, rawSize, storedSize );
+                return false;
+            }
+            storedBegin = plan._listBlock[index]._compressedEnd;
+        }
+        if ( storedBytes.size() != storedBegin )
+            return false;
+
+        outBytes.resize( plan._uncompressedSize );
+        storedBegin = 0;
+        for ( size_t index = 0; index < plan._listBlock.size(); ++index )
+        {
+            const PackBlockEntryOnDisk& block      = plan._listBlock[index];
+            const uint8*                pStored    = storedBytes.data() + storedBegin;
+            const size_t                storedSize = block._compressedEnd - storedBegin;
+            uint8*                      pRaw       = outBytes.data() + static_cast<size_t>( index ) * plan._blockSize;
+            const size_t                rawSize    = outBytes.size() - static_cast<size_t>( index ) * plan._blockSize < plan._blockSize ? outBytes.size() - static_cast<size_t>( index ) * plan._blockSize : plan._blockSize;
+            storedBegin                            = block._compressedEnd;
+            size_t decodedSize{ rawSize };
+            if ( pCodec == nullptr )
+                Memory::copy( pRaw, pStored, rawSize );
+            else if ( pCodec->decompress( pStored, storedSize, pRaw, rawSize, decodedSize ) == false || decodedSize != rawSize )
+            {
+                SW_LOG_ERROR_ID( "PackReader.DecompressionFailedEntryPack", "Decompression failed for block %# of an entry in pack: %#", static_cast<uint64>( index ), packPath );
+                outBytes.clear();
+                return false;
+            }
+            // CRC32 로 블록마다 검증한다. 플래그가 있으면 **늘** 대조한다 — 저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
+            const uint32 computedCRC = plan._bVerifyCRC ? HashUtil::computeCRC32( pRaw, rawSize ) : block._crc32;
+            if ( computedCRC != block._crc32 )
+            {
+                SW_LOG_ERROR_ID( "PackReader.CRC32ChecksumMismatchPack", "CRC32 checksum mismatch in block %# of pack %# (computed 0x%# vs expected 0x%#)", static_cast<uint64>( index ), packPath,
+                                 Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ), Fmt( block._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
                 outBytes.clear();
                 return false;
             }
@@ -338,20 +375,18 @@ namespace sw
 
     bool PackReader::readFile( uint64 pathHash, vector<uint8>& outBytes ) const
     {
+        outBytes.clear();
         PackReadPlan    plan{};
         AsyncFileHandle file;
         if ( makeReadPlan( pathHash, plan, file ) == false )
             return false;
 
-        // 읽기는 잠금 밖이다 — 위치 지정 읽기라 다른 스레드의 읽기와 겹쳐도 된다. 비압축 항목은 부른 쪽 버퍼로 바로 읽는다(그 버퍼의 용량을 다시 쓴다 —
-        // 중간 버퍼를 잡지 않는다).
-        vector<uint8>  compressedBytes;
-        vector<uint8>& storedBytes = plan._compression == PackCompressionType::None ? outBytes : compressedBytes;
+        // 읽기는 잠금 밖이다 — 위치 지정 읽기라 다른 스레드의 읽기와 겹쳐도 된다.
+        vector<uint8> storedBytes;
         storedBytes.resize( plan.getStoredSize() );
         if ( file.readAt( plan._dataOffset, storedBytes.data(), storedBytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "PackReader.ReadErrorPackBytes", "Read error in pack %# (%# bytes at offset %#)", file.getPath(), storedBytes.size(), plan._dataOffset );
-            outBytes.clear();
             return false;
         }
         return decodeStoredBytes( plan, file.getPath(), storedBytes, outBytes );
@@ -431,7 +466,7 @@ namespace sw
         if ( _file.isValid() == false )
             return true;
 
-        uint64 fileSize{ 0 };
+        const uint64 fileSize = _file.getSize();
         if ( validateHeaderGeometry( fileSize ) == false )
             return false;
 
@@ -457,15 +492,13 @@ namespace sw
             return false;
         }
         _mountDomain.assign( pool.substr( 0, domainEnd ) );
-        if ( _header._fileCount == 0 )
-            return true;
 
-        // FAT 인덱스 테이블(32B x FileCount)을 읽는다
-        vector<PackFileEntryOnDisk> listDiskEntry;
-        listDiskEntry.resize( _header._fileCount );
-
-        const size_t expectedBytes = _header._fileCount * sizeof( PackFileEntryOnDisk );
-        if ( _file.readAt( _header._indexOffset, listDiskEntry.data(), expectedBytes ) == false )
+        // FAT(32B × 항목)과 블록 표(8B × 블록)를 읽는다. 크기는 `validateHeaderGeometry` 가 파일 안인 것을 확인했다.
+        vector<PackFileEntryOnDisk> listDiskEntry( _header._fileCount );
+        _listBlock.resize( _header._blockCount );
+        const bool bRead = ( listDiskEntry.empty() || _file.readAt( _header._indexOffset, listDiskEntry.data(), listDiskEntry.size() * sizeof( PackFileEntryOnDisk ) ) ) &&
+                           ( _listBlock.empty() || _file.readAt( _header._blockTableOffset, _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) ) );
+        if ( bRead == false )
         {
             SW_LOG_ERROR_ID( "PackReader.FailedReadFATIndex", "Failed to read FAT index table from pack: %#", _packFilePath );
             return false;
@@ -473,23 +506,21 @@ namespace sw
 
         _mapEntry.clear();
         _mapEntry.reserve( _header._fileCount );
-
+        uint32 expectedFirstBlock = 0;
         for ( const auto& diskEntry : listDiskEntry )
         {
-            // **항목도 파일 안을 가리켜야 한다.** `validateHeaderGeometry` 는 헤더의 구역(인덱스 ·
-            // 스트링 풀)만 측정한다. 그런데 `readFile` 은 항목이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
-            // 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다.
-            // 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
-            if ( validateFileEntry( diskEntry, fileSize ) == false )
+            // **항목도 페이로드 구역 안을 가리켜야 하고 블록 줄이 맞아야 한다.** `readFile` 은 항목 · 블록이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
+            // 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다. 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
+            if ( validateFileEntry( diskEntry, _header._indexOffset, expectedFirstBlock ) == false )
                 return false;
+            expectedFirstBlock += static_cast<uint32>( ( static_cast<uint64>( diskEntry._uncompressedSize ) + _header._blockSize - 1 ) / _header._blockSize );
 
             PackFileEntry memEntry{};
             memEntry._pathHash         = diskEntry._pathHash;
             memEntry._dataOffset       = diskEntry._dataOffset;
             memEntry._compressedSize   = diskEntry._compressedSize;
             memEntry._uncompressedSize = diskEntry._uncompressedSize;
-            memEntry._crc32            = diskEntry._crc32;
-            memEntry._stringPoolOffset = diskEntry._stringPoolOffset;
+            memEntry._firstBlock       = diskEntry._firstBlock;
 
             // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아 풀 **밖까지** 훑는다. 종결자가 풀 안에 없거나
             // (끊긴 다운로드 · 손상) 경로의 해시가 항목과 다르면 이 팩의 나열이 읽을 수 없는 이름을 내놓으므로 팩을 거절한다.
@@ -508,25 +539,21 @@ namespace sw
 
             _mapEntry.insert_or_assign( diskEntry._pathHash, std::move( memEntry ) );
         }
+        // 블록 표는 항목들의 블록을 FAT 순서로 빈틈 없이 잇는다 — 남는 줄이 있으면 쓰는 쪽과 읽는 쪽이 형식을 다르게 본다.
+        if ( expectedFirstBlock != _header._blockCount )
+        {
+            SW_LOG_ERROR_ID( "PackReader.PackBlockTableDisagrees", "Pack block table has %# blocks but its entries use %#: %#", static_cast<uint32>( _header._blockCount ), expectedFirstBlock, _packFilePath );
+            return false;
+        }
 
         populateFolderIndex();
         return true;
     }
 
-    bool PackReader::validateHeaderGeometry( uint64& outFileSize ) const
+    bool PackReader::validateHeaderGeometry( uint64 fileSize ) const
     {
-        outFileSize            = 0;
-        const uint64 sizeBytes = _file.getSize();
-        if ( sizeBytes == 0 )
-        {
-            SW_LOG_ERROR_ID( "PackReader.CannotDetermineSizePack", "Cannot determine size of pack: %#", _packFilePath );
-            return false;
-        }
-        outFileSize = sizeBytes;
-
         // 헤더가 인덱스 크기를 **두 번** 말한다. `_indexSize` 로 한 번, `_fileCount` 로 한 번.
-        // 둘이 어긋난 팩은 리더와 쿠커가
-        // 레이아웃을 다르게 보고 있다는 뜻이므로 여기서 멈춘다.
+        // 둘이 어긋난 팩은 리더와 쿠커가 레이아웃을 다르게 보고 있다는 뜻이므로 여기서 멈춘다.
         const uint64 derivedIndexSize = static_cast<uint64>( _header._fileCount ) * sizeof( PackFileEntryOnDisk );
         if ( _header._indexSize != derivedIndexSize )
         {
@@ -535,48 +562,52 @@ namespace sw
             return false;
         }
 
-        // 그리고 그 구역들이 실제 파일 안에 있어야 한다. 헤더의 수를 그대로 믿고 `resize` 하면
-        // 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있다.
-        if ( _header._indexOffset > sizeBytes || derivedIndexSize > sizeBytes - _header._indexOffset )
+        const bool bBlockSizeValid = _header._blockSize >= kPackMinBlockSize && _header._blockSize <= kPackMaxBlockSize && ( _header._blockSize & ( _header._blockSize - 1 ) ) == 0;
+        if ( bBlockSizeValid == false )
+        {
+            SW_LOG_ERROR_ID( "PackReader.PackBlockSizeInvalid", "Pack block size %# is not a power of two within the format limits: %#", static_cast<uint32>( _header._blockSize ), _packFilePath );
+            return false;
+        }
+
+        // 그리고 그 구역들이 헤더 앞(파일 안)에 있어야 한다. 헤더의 수를 그대로 믿고 `resize` 하면 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있다.
+        // **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
+        const uint64 headerOffset = fileSize - sizeof( PackHeader ); // `open` 이 파일이 헤더보다 큰 것을 확인했다
+        const auto   isOutside    = [headerOffset]( uint64 offset, uint64 size )
+        { return offset > headerOffset || size > headerOffset - offset; };
+        if ( isOutside( _header._indexOffset, derivedIndexSize ) )
         {
             SW_LOG_ERROR_ID( "PackReader.PackIndexTableLies", "Pack index table lies outside the file %# (offset %#, size %#, file %#)",
-                             _packFilePath, static_cast<uint64>( _header._indexOffset ), derivedIndexSize, sizeBytes );
+                             _packFilePath, static_cast<uint64>( _header._indexOffset ), derivedIndexSize, fileSize );
             return false;
         }
-
-        if ( _header._stringPoolSize > 0 &&
-             ( _header._stringPoolOffset > sizeBytes || _header._stringPoolSize > sizeBytes - _header._stringPoolOffset ) )
+        const uint64 blockTableSize = static_cast<uint64>( _header._blockCount ) * sizeof( PackBlockEntryOnDisk );
+        if ( isOutside( _header._blockTableOffset, blockTableSize ) )
+        {
+            SW_LOG_ERROR_ID( "PackReader.PackBlockTableLies", "Pack block table lies outside the file %# (offset %#, size %#, file %#)",
+                             _packFilePath, static_cast<uint64>( _header._blockTableOffset ), blockTableSize, fileSize );
+            return false;
+        }
+        if ( isOutside( _header._stringPoolOffset, _header._stringPoolSize ) )
         {
             SW_LOG_ERROR_ID( "PackReader.PackStringPoolLies", "Pack string pool lies outside the file %# (offset %#, size %#, file %#)",
-                             _packFilePath, static_cast<uint64>( _header._stringPoolOffset ), static_cast<uint64>( _header._stringPoolSize ), sizeBytes );
+                             _packFilePath, static_cast<uint64>( _header._stringPoolOffset ), static_cast<uint64>( _header._stringPoolSize ), fileSize );
             return false;
         }
-
         return true;
     }
 
-    bool PackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const
+    bool PackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 payloadEnd, uint32 expectedFirstBlock ) const
     {
-        // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
-        if ( diskEntry._dataOffset > fileSize || diskEntry._compressedSize > fileSize - diskEntry._dataOffset )
+        // 페이로드가 페이로드 구역(FAT 앞) 안에 있어야 한다. **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
+        if ( diskEntry._dataOffset > payloadEnd || diskEntry._compressedSize > payloadEnd - diskEntry._dataOffset )
         {
-            SW_LOG_ERROR_ID( "PackReader.PackEntryPayloadLies", "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
-                             _packFilePath, diskEntry._dataOffset, diskEntry._compressedSize, fileSize );
+            SW_LOG_ERROR_ID( "PackReader.PackEntryPayloadLies", "Pack entry payload lies outside the payload region %# (offset %#, size %#, region end %#)",
+                             _packFilePath, diskEntry._dataOffset, diskEntry._compressedSize, payloadEnd );
             return false;
         }
 
-        // 비압축 팩은 `_uncompressedSize` 만큼을 **파일에서 그대로 읽는다.** 그것도 파일 안에 있어야 한다.
-        if ( static_cast<PackCompressionType>( _header._compressionType ) == PackCompressionType::None &&
-             diskEntry._uncompressedSize > fileSize - diskEntry._dataOffset )
-        {
-            SW_LOG_ERROR_ID( "PackReader.PackEntryPayloadLies", "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
-                             _packFilePath, diskEntry._dataOffset, diskEntry._uncompressedSize, fileSize );
-            return false;
-        }
-
-        // 압축 항목의 원본 크기는 파일 크기로 묶이지 않는다(그것이 압축의 요점이다). 상한은
-        // `CompressionStream` 이 같은 이유로 이미 정해 둔 것을 쓴다. "이 컨테이너가 다루는
-        // 가장 큰 조각" 의 답이 두 개일 이유가 없다.
+        // 원본 크기는 파일 크기로 묶이지 않는다(그것이 압축의 요점이다). 상한은 `CompressionStream` 이 같은 이유로 이미 정해 둔 것을 쓴다.
+        // "이 컨테이너가 다루는 가장 큰 조각" 의 답이 두 개일 이유가 없다.
         if ( static_cast<uint64>( diskEntry._uncompressedSize ) > CompressionStream::kMaxUncompressedSize )
         {
             SW_LOG_ERROR_ID( "PackReader.PackEntryClaimsUncompressed", "Pack entry claims an uncompressed size of %# bytes in %# — beyond what this container carries.",
@@ -584,55 +615,22 @@ namespace sw
             return false;
         }
 
-        return true;
-    }
-
-    bool PackReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, size_t uncompressedSize, vector<uint8>& outBytes )
-    {
-        outBytes.clear();
-        // 풀 것이 없으면 둘 다 0 이어야 한다. `srcSize == 0` 만 보면 압축 크기 0 · 원본 크기 N 인 항목이 0 바이트 N 개로 읽힌다.
-        if ( uncompressedSize == 0 )
-            return srcSize == 0;
-        if ( srcSize == 0 )
-            return false;
-
-        if ( type == PackCompressionType::None )
+        // 블록 줄은 앞 항목의 줄에 바로 이어지고, 누적 끝은 0 이 아닌 크기로 오르며 마지막이 항목의 저장 크기다(블록 i 의 자리를 그대로 믿는다).
+        const uint64 blockCount = ( static_cast<uint64>( diskEntry._uncompressedSize ) + _header._blockSize - 1 ) / _header._blockSize;
+        bool         bBlocksFit = diskEntry._firstBlock == expectedFirstBlock && expectedFirstBlock <= _listBlock.size() && blockCount <= _listBlock.size() - expectedFirstBlock;
+        uint32       storedEnd  = 0;
+        for ( uint64 index = 0; bBlocksFit && index < blockCount; ++index )
         {
-            if ( srcSize != uncompressedSize )
-                return false;
-            outBytes.assign( pSrc, pSrc + srcSize );
-            return true;
+            const uint32 blockEnd = _listBlock[static_cast<size_t>( expectedFirstBlock + index )]._compressedEnd;
+            bBlocksFit            = blockEnd > storedEnd;
+            storedEnd             = blockEnd;
         }
-
-        // 팩 종류 → 코덱 종류는 표 한 곳(`PackCompressionUtil::kArrCodecMapping`), 구현은 코덱 레지스트리가 든다.
-        ICompressionCodec* pCodec = PackCompressionUtil::findCodec( type );
-        if ( pCodec == nullptr )
+        if ( bBlocksFit == false || storedEnd != diskEntry._compressedSize )
         {
-            SW_LOG_ERROR_ID( "PackReader.UnsupportedCompressionTypePack", "Unsupported compression type %# in pack", static_cast<uint32>( type ) );
-            return false;
-        }
-
-        // 엔트리의 원본 크기는 파일에서 온 값이다. 압축 바이트로 나올 수 없는 크기면 resize 전에 끊는다(B-5).
-        if ( uncompressedSize > pCodec->decompressBound( srcSize ) )
-        {
-            SW_LOG_ERROR_ID( "PackReader.OriginalSizeEntryExceeds", "The original size of a %# entry exceeds the upper bound for its compressed size (%# > %#, compressed %#)", pCodec->getCodecName(),
-                             static_cast<uint64>( uncompressedSize ), static_cast<uint64>( pCodec->decompressBound( srcSize ) ), static_cast<uint64>( srcSize ) );
-            return false;
-        }
-        outBytes.resize( uncompressedSize );
-
-        size_t decompressedSize{ 0 };
-        if ( pCodec->decompress( pSrc, srcSize, outBytes.data(), uncompressedSize, decompressedSize ) == false )
-            return false;
-
-        // 엔트리 헤더가 말한 원본 크기와 실제로 푼 크기가 달라지면 그대로 쓰면 안 된다.
-        if ( decompressedSize != uncompressedSize )
-        {
-            SW_LOG_ERROR_ID( "PackReader.DecompressedSizeDiffersEntry", "The %# decompressed size differs from the entry (%# != %#)", pCodec->getCodecName(),
-                             static_cast<uint64>( decompressedSize ), static_cast<uint64>( uncompressedSize ) );
+            SW_LOG_ERROR_ID( "PackReader.PackEntryBlocksDisagree", "Pack entry blocks do not match the entry (first block %#, stored size %#): %#", static_cast<uint32>( diskEntry._firstBlock ),
+                             static_cast<uint32>( diskEntry._compressedSize ), _packFilePath );
             return false;
         }
         return true;
     }
-
 } // namespace sw

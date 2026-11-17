@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
@@ -10,48 +11,68 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 무압축 팩을 바이트로 직접 짓습니다. 필드를 망가뜨려 손상 입력을 만듭니다. */
+    /**
+     * @brief 무압축 형식 3 팩을 바이트로 직접 짓습니다. 필드를 망가뜨려 손상 입력을 만듭니다.
+     * @details `add` 는 항목을 모으기만 하고 `finalize` 가 경로 해시 순으로 세워 FAT · 블록 표 · 페이로드 · 풀을 짓는다(쓰는 쪽과 같은 규칙).
+     *          망가뜨리는 테스트는 `finalize` 뒤의 칸을 바꾸므로 항목 번호는 해시 순서다 — 경로는 `getPath` 로 찾는다.
+     */
     struct PackImage
     {
-        PackHeader                  _header{};
-        vector<PackFileEntryOnDisk> _listEntry;
-        vector<uint8>               _listData;
-        string                      _pool;
+        PackHeader                        _header{};
+        vector<PackFileEntryOnDisk>       _listEntry;
+        vector<PackBlockEntryOnDisk>      _listBlock;
+        vector<uint8>                     _listData;
+        string                            _pool;
+        vector<std::pair<string, string>> _listAdded;
 
         explicit PackImage( string_view domain = "game/test" )
         {
             _header._magic         = kPackMagic;
             _header._formatVersion = kPackFormatVersion;
             _header._flags         = static_cast<uint16>( PackFlag::HasStringPool ) | static_cast<uint16>( PackFlag::HasCRC32 );
+            _header._blockSize     = kPackMinBlockSize;
             _pool.assign( domain );
             _pool.push_back( '\0' );
         }
 
-        void add( string_view path, string_view content )
-        {
-            PackFileEntryOnDisk entry;
-            entry._pathHash         = HashUtil::computeStringHash64( path );
-            entry._dataOffset       = sizeof( PackHeader ) + _listData.size();
-            entry._compressedSize   = static_cast<uint32>( content.size() );
-            entry._uncompressedSize = static_cast<uint32>( content.size() );
-            entry._crc32            = HashUtil::computeCRC32( reinterpret_cast<const uint8*>( content.data() ), content.size() );
-            entry._stringPoolOffset = static_cast<uint32>( _pool.size() );
-            _listEntry.push_back( entry );
-            _pool.append( path.data(), path.size() );
-            _pool.push_back( '\0' );
-            _listData.insert( _listData.end(), content.begin(), content.end() );
-        }
+        void add( string_view path, string_view content ) { _listAdded.emplace_back( string{ path }, string{ content } ); }
 
-        /** @brief 머리의 구역 위치를 채웁니다. 망가뜨리기 전에 부릅니다. */
+        /** @brief 모은 항목으로 구역을 짓고 머리를 채웁니다. 망가뜨리기 전에 부릅니다. */
         void finalize()
         {
+            VectorUtil::sort( _listAdded, []( const std::pair<string, string>& left, const std::pair<string, string>& right )
+            { return HashUtil::computeStringHash64( left.first ) < HashUtil::computeStringHash64( right.first ); } );
+            for ( const std::pair<string, string>& added : _listAdded )
+            {
+                PackFileEntryOnDisk entry;
+                entry._pathHash         = HashUtil::computeStringHash64( added.first );
+                entry._dataOffset       = _listData.size();
+                entry._compressedSize   = static_cast<uint32>( added.second.size() );
+                entry._uncompressedSize = static_cast<uint32>( added.second.size() );
+                entry._firstBlock       = static_cast<uint32>( _listBlock.size() );
+                entry._stringPoolOffset = static_cast<uint32>( _pool.size() );
+                for ( size_t offset = 0; offset < added.second.size(); offset += kPackMinBlockSize )
+                {
+                    const size_t size = added.second.size() - offset < kPackMinBlockSize ? added.second.size() - offset : kPackMinBlockSize;
+                    _listBlock.push_back( { static_cast<uint32>( offset + size ), HashUtil::computeCRC32( added.second.data() + offset, size ) } );
+                }
+                _listEntry.push_back( entry );
+                _pool.append( added.first );
+                _pool.push_back( '\0' );
+                _listData.insert( _listData.end(), added.second.begin(), added.second.end() );
+            }
             _header._fileCount        = static_cast<uint32>( _listEntry.size() );
-            _header._stringPoolOffset = sizeof( PackHeader ) + _listData.size();
-            _header._stringPoolSize   = _pool.size();
-            _header._indexOffset      = _header._stringPoolOffset + _pool.size();
-            _header._indexSize        = _listEntry.size() * sizeof( PackFileEntryOnDisk );
             _header._totalDataSize    = _listData.size();
+            _header._indexOffset      = _listData.size();
+            _header._indexSize        = _listEntry.size() * sizeof( PackFileEntryOnDisk );
+            _header._blockTableOffset = _header._indexOffset + _header._indexSize;
+            _header._blockCount       = static_cast<uint32>( _listBlock.size() );
+            _header._stringPoolOffset = _header._blockTableOffset + _listBlock.size() * sizeof( PackBlockEntryOnDisk );
+            _header._stringPoolSize   = _pool.size();
         }
+
+        /** @brief `finalize` 뒤 항목 @p index 의 경로입니다. */
+        string getPath( size_t index ) const { return string{ _pool.c_str() + _listEntry[index]._stringPoolOffset }; }
 
         void write( string_view path ) const
         {
@@ -61,10 +82,11 @@ namespace
                 const uint8* pByte = static_cast<const uint8*>( pData );
                 bytes.insert( bytes.end(), pByte, pByte + size );
             };
-            append( &_header, sizeof( PackHeader ) );
             append( _listData.data(), _listData.size() );
-            append( _pool.data(), _pool.size() );
             append( _listEntry.data(), _listEntry.size() * sizeof( PackFileEntryOnDisk ) );
+            append( _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) );
+            append( _pool.data(), _pool.size() );
+            append( &_header, sizeof( PackHeader ) );
             SW_REQUIRE_TRUE( FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
         }
     };
@@ -314,10 +336,34 @@ SW_TEST_CASE( PackReaderTest, EntryPayloadMustLieInsideTheFile )
     hugeSize._listEntry[0]._compressedSize   = 0xFFFFFFFFu;
     hugeSize._listEntry[0]._uncompressedSize = 0xFFFFFFFFu;
     SW_EXPECT_FALSE( file.open( hugeSize, reader ) );
+}
 
-    PackImage hugeRaw                       = Util::makeValidImage();
-    hugeRaw._listEntry[0]._uncompressedSize = 0x7FFFFFFFu; // 무압축은 원본 크기만큼 파일에서 읽는다
-    SW_EXPECT_FALSE( file.open( hugeRaw, reader ) );
+// 블록 줄은 항목 크기 · 앞 항목의 줄과 맞아야 한다 — 읽기가 블록 표의 자리를 그대로 믿는다.
+SW_TEST_CASE( PackReaderTest, BlocksMustMatchTheEntry )
+{
+    SW_EXPECT_LOG( "PackReader.PackEntryBlocksDisagree" );
+    SW_EXPECT_LOG( "PackReader.PackBlockTableDisagrees" );
+    SW_EXPECT_LOG( "PackReader.PackBlockSizeInvalid" );
+    SW_EXPECT_LOG( "PackReader.FailedLoadFATIndex" );
+    const PackTestFile file;
+    PackReader         reader;
+    PackImage          biggerRaw              = Util::makeValidImage();
+    biggerRaw._listEntry[0]._uncompressedSize = 0x00100000u; // 블록 줄이 모자란다
+    SW_EXPECT_FALSE( file.open( biggerRaw, reader ) );
+
+    PackImage skipped                 = Util::makeValidImage();
+    skipped._listEntry[1]._firstBlock = 0; // 앞 항목의 줄과 겹친다
+    SW_EXPECT_FALSE( file.open( skipped, reader ) );
+
+    PackImage spareBlock = Util::makeValidImage();
+    spareBlock._listBlock.push_back( { 1u, 0u } );
+    spareBlock._header._blockCount = static_cast<uint32>( spareBlock._listBlock.size() );
+    spareBlock._header._stringPoolOffset += sizeof( PackBlockEntryOnDisk );
+    SW_EXPECT_FALSE( file.open( spareBlock, reader ) );
+
+    PackImage oddBlockSize          = Util::makeValidImage();
+    oddBlockSize._header._blockSize = kPackMinBlockSize + 1;
+    SW_EXPECT_FALSE( file.open( oddBlockSize, reader ) );
 }
 
 SW_TEST_CASE( PackReaderTest, EntryPathMustLieInThePoolAndMatchItsHash )
@@ -343,17 +389,17 @@ SW_TEST_CASE( PackReaderTest, CorruptedPayloadFailsTheChecksum )
     const PackTestFile file;
     PackReader         reader;
     PackImage          image = Util::makeValidImage();
-    image._listData[0] ^= 0xFFu;
+    image._listData[0] ^= 0xFFu; // 해시 순 첫 항목의 첫 바이트
     SW_REQUIRE_TRUE( file.open( image, reader ) );
     vector<uint8> bytes;
-    SW_EXPECT_FALSE( reader.readFile( "maps/town.xml", bytes ) );
+    SW_EXPECT_FALSE( reader.readFile( image.getPath( 0 ), bytes ) );
     SW_EXPECT_TRUE( bytes.empty() );
-    SW_EXPECT_TRUE( reader.readFile( "top.txt", bytes ) ); // 다른 항목은 읽힌다
+    SW_EXPECT_TRUE( reader.readFile( image.getPath( 1 ), bytes ) ); // 다른 항목은 읽힌다
 
     PackImage zeroed            = Util::makeValidImage();
-    zeroed._listEntry[0]._crc32 = 0;
+    zeroed._listBlock[0]._crc32 = 0;
     SW_REQUIRE_TRUE( file.open( zeroed, reader ) );
-    SW_EXPECT_FALSE( reader.readFile( "maps/town.xml", bytes ) );
+    SW_EXPECT_FALSE( reader.readFile( zeroed.getPath( 0 ), bytes ) );
 }
 
 SW_TEST_CASE( PackReaderTest, ChecksumIsOptionalByFlag )
@@ -365,5 +411,5 @@ SW_TEST_CASE( PackReaderTest, ChecksumIsOptionalByFlag )
     image._listData[0] ^= 0xFFu;
     SW_REQUIRE_TRUE( file.open( image, reader ) );
     vector<uint8> bytes;
-    SW_EXPECT_TRUE( reader.readFile( "maps/town.xml", bytes ) );
+    SW_EXPECT_TRUE( reader.readFile( image.getPath( 0 ), bytes ) );
 }

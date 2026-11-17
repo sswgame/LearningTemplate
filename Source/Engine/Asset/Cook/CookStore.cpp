@@ -44,11 +44,11 @@ namespace sw
             return false;
         }
         // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.
-        vector<uint8> bytes;
-        const bool    bOutputCurrent = FileUtil::isRegularFile( outputPath ) && FileUtil::readFile( outputPath, bytes ) && hashOutput( bytes ) == record._outputHash;
+        // 해시는 내용 해시 캐시로 구한다 — 도장(크기 · 시각)이 지난번과 같으면 큰 팩을 다시 읽지 않는다.
+        const bool bOutputCurrent = FileUtil::isRegularFile( outputPath ) && hashOutputFile( outputPath ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
-        bytes.clear();
+        vector<uint8> bytes;
         if ( _derivedDataCache.find( record._key, bytes ) == false )
         {
             SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );
@@ -75,7 +75,15 @@ namespace sw
         return hash;
     }
 
-    CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
+    uint64 CookStore::hashOutputFile( string_view outputPath ) const
+    {
+        const Stopwatch watch;
+        const uint64    hash = ContentHash::computeFile( outputPath );
+        _outputHashNanos += watch.getElapsedNanoseconds();
+        return hash;
+    }
+
+    optional<CookResult> CookStore::checkFinishedJob( const CookJob& job, CookStep step, string_view outputID )
     {
         if ( step == CookStep::Skipped )
             return CookResult::Skipped;
@@ -87,6 +95,28 @@ namespace sw
             SW_LOG_ERROR_ID( "Cook.NoInputRecorded", "Cook: '%#' recorded no input - its cooker read its sources around AssetIO, so a change would not cook it again", outputID );
             return CookResult::Failed;
         }
+        return nullopt;
+    }
+
+    CookResult CookStore::finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, string_view outputPath ) const
+    {
+        const optional<CookResult> finished = checkFinishedJob( job, step._step, outputID );
+        if ( finished.has_value() )
+            return *finished;
+        const CookRecord record = CookRecord::make( job, step._outputHash );
+        if ( _derivedDataCache.storeFile( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        {
+            SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore2", "Cook: could not store '%#' in the DDC or write its record", outputID );
+            return CookResult::Failed;
+        }
+        return CookResult::Cooked;
+    }
+
+    CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
+    {
+        const optional<CookResult> finished = checkFinishedJob( job, step, outputID );
+        if ( finished.has_value() )
+            return *finished;
         vector<uint8> bytes;
         if ( FileUtil::readFile( outputPath, bytes ) == false )
         {
