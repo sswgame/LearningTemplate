@@ -3,6 +3,7 @@
 #include "Engine/Content/AssetGUID.h"
 
 #include "Core/Foundation/HexDigitUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/SecureRandom.h"
 
 namespace sw
@@ -110,6 +111,15 @@ namespace sw
             if ( high != 0 || low != 0 )
                 return AssetGUID{ high, low };
         }
+    }
+
+    AssetGUID AssetGUID::fromName( string_view name )
+    {
+        // 두 반쪽은 씨앗이 다른 FNV-1a 64 를 섞은 값이다 — 같은 이름이면 같고, 다른 이름이 128 비트 모두 겹칠 일은 없다(색인이 겹친 GUID 를 결함으로 잡는다).
+        const uint64 high = HashUtil::mix64( HashUtil::computeStringHash64( name.data(), name.size(), true, HashUtil::kFNVOffset64 ) );
+        const uint64 low  = HashUtil::mix64( HashUtil::computeStringHash64( name.data(), name.size(), true, HashUtil::kFNVOffset64 ^ HashUtil::kGoldenRatio64 ) );
+        // 모두 0 은 글 표기가 받지 않는다(2^-128) — 정해진 값으로 비켜 결정성을 지킨다.
+        return ( high == 0 && low == 0 ) ? AssetGUID{ 0, HashUtil::kGoldenRatio64 } : AssetGUID{ high, low };
     }
 
     optional<AssetGUID> AssetGUID::tryParse( string_view text )
