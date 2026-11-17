@@ -12,6 +12,8 @@
 #include "DevTools/Client/Automation/Scenario/AutomationTimeline.h"
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Automation/AutomationResult.h"
+
 namespace sw
 {
     /** @struct AutomationReportParams @brief 보고 한 편에 적을 실행 결과입니다(`AutomationReportWriter::write` 의 인자 묶음). */
@@ -21,7 +23,7 @@ namespace sw
         const utf8*                           _pResultName{ "" };
         int32                                 _exitCode{ 0 };
         uint32                                _frameCount{ 0 };
-        string_view                           _reason{};
+        const AutomationRunResult*            _pRunResult{ nullptr }; ///< 판정 값 하나 — `reason` 과 `failure`(종류 · 까닭 · 단계 자리)를 쓴다. 끝난 실행만 보고를 쓰므로 비지 않는다
         const vector<string>*                 _pListFailure{ nullptr };
         const vector<string>*                 _pListUpdatedGolden{ nullptr };   ///< `-scenario-update-golden` 이 쓴 골든(리소스 id) — 리뷰할 목록
         const vector<string>*                 _pListNearLimitGolden{ nullptr }; ///< 통과했지만 허용치에 가까운 골든의 비교 줄 — 기록 모드로 다시 뜰 목록
@@ -48,7 +50,7 @@ namespace sw
     /**
      * @class AutomationReportWriter
      * @brief 보고 경로를 들고 있다가 시나리오가 끝나면 JSON 보고를 씁니다(`AutomationRunner` 의 값 멤버).
-     * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` · `timeline` ·
+     * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `failure`(객체 — `kind` · `reason` · `step`, 진 판정만 `kind` 가 뜻이 있다) · `backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` · `timeline` ·
      *          `failures[]` · `updatedGoldens[]` · `nearLimitGoldens[]` · `goldenSamples[]`(객체 — `golden` · 세 측정값 · 세 상한) · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
      *          읽는 쪽(CI · 스크립트가 보고를 읽는다)이 있으니 필드는 **더하기만** 하고 이름을 바꾸지 않는다. `records[]` 는 끝에 둔다(`readReportRecords` 가 `"records"` 키부터 첫 `]` 까지 읽는다).
      */

@@ -55,6 +55,15 @@ namespace sw
         vector<string> _listRecordLine{};
     };
 
+    /** @struct AutomationStageFailure @brief 한 백엔드에서 진 단계 하나의 판정(자식 단계 보고의 `name` · `failure`)입니다 — 부모 요약(`foldFailures`)의 재료입니다. */
+    struct AutomationStageFailure
+    {
+        string _stage{};   ///< 시나리오 이름(보고의 `name`)
+        string _backend{}; ///< 명령줄 백엔드 이름(`dx12`)
+        string _kind{};    ///< 실패 종류(`AutomationFailureKind` 이름 — 보고가 없으면 종료 코드 이름)
+        string _reason{};  ///< 까닭 한 줄
+    };
+
     /** @class AutomationPerBackend @brief 백엔드마다 실행입니다. 게임 스레드가 아닌 헤드리스 작업에서 부릅니다. */
     class SW_DEVTOOLS_API AutomationPerBackend
     {
@@ -84,10 +93,25 @@ namespace sw
          */
         static vector<string> findRecordMismatches( const vector<AutomationBackendRecords>& listRecords );
 
+        /**
+         * @brief 진 단계들을 (단계 · 종류 · 까닭)이 같은 것끼리 백엔드로 접은 요약 줄입니다(처음 나온 순서). 줄 모양: `vfxsort: GoldenMismatch dx11,dx12,vk,gl - <까닭>`.
+         * @details 모든 백엔드가 같은 까닭으로 진 것(시나리오의 전제)과 한 백엔드만 진 것(백엔드 결함)이 한눈에 갈린다. `preflight.sh` 가 단계 끝마다 이 줄을 찍는다.
+         */
+        static vector<string> foldFailures( const vector<AutomationStageFailure>& listStageFailure );
+
+        /**
+         * @brief 부모의 끝 줄입니다 — `SCENARIO_RESULT=<PASSED|FAILED|SKIPPED|TIMEOUT|LOAD_ERROR> stages=… failed=… notRun=…`(`WINDOWS_OK=` 와 같은 꼴, 스크립트가 읽는다).
+         * @param exitCode 부모가 낼 종료 코드(`run` 의 값) — 결과 이름은 이것이 정한다
+         */
+        static string makeResultLine( int32 exitCode, uint32 stageCount, uint32 failedCount, uint32 notRunCount );
+
         /** @brief 자식 경로 @p path 의 확장자 앞에 `.<백엔드>` 를 끼웁니다(`a/b.log` → `a/b.dx12.log`, 확장자가 없으면 끝에 붙인다). */
         static string insertBackendSuffix( string_view path, string_view backend );
 
-        /** @brief 백엔드마다 자식을 동시에 띄우고 모두 끝나기를 기다린 뒤 모은 종료 코드를 돌려줍니다(파일 머리 주석의 규칙). */
+        /**
+         * @brief 백엔드마다 자식을 동시에 띄우고 모두 끝나기를 기다린 뒤 모은 종료 코드를 돌려줍니다(파일 머리 주석의 규칙).
+         * @details 끝에 진 단계를 백엔드로 접은 요약(`foldFailures`)을 로그에 남기고, 표준 출력의 마지막 줄로 `makeResultLine` 을 쓴다.
+         */
         [[nodiscard]] static int32 run( const AutomationPerBackendOptions& options );
     };
 } // namespace sw

@@ -556,7 +556,7 @@ namespace sw
             }
             case GoldenAction::FailMissing:
             {
-                context.recordFailure( step, "no golden " + goldenID + " yet - run with -scenario-update-golden and review the image" );
+                addFailure( step, "no golden " + goldenID + " yet - run with -scenario-update-golden and review the image", AutomationFailureKind::MissingBaseline );
                 return;
             }
             case GoldenAction::FailUnreadable:
@@ -566,7 +566,7 @@ namespace sw
             }
             case GoldenAction::Fail:
             {
-                context.recordFailure( step, "differs from its golden: " + line );
+                addFailure( step, "differs from its golden: " + line, AutomationFailureKind::GoldenMismatch );
                 return;
             }
         }
@@ -645,8 +645,10 @@ namespace sw
                " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
     }
 
-    void AutomationEvaluator::addFailure( const AutomationStep& step, string_view message )
+    void AutomationEvaluator::addFailure( const AutomationStep& step, string_view message, AutomationFailureKind kind )
     {
+        if ( _listFailure.empty() )
+            _firstFailureKind = kind;
         string line = step.describe() + ": " + string( message );
         SW_LOG_WARNING_ID( "Automation.EvaluationWarning", "[Scenario] %#", line.c_str() );
         _listFailure.push_back( std::move( line ) );

@@ -333,6 +333,9 @@ namespace sw::editor
         }
         const bool bPassed = *_externalExitCode == 0;
         ImGui::TextColored( bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "ExitCodeErrorLines", TextArgumentList().addText( "externalTitle", _externalTitle.c_str() ).addInteger( "externalExitCode", static_cast<int64>( *_externalExitCode ) ).addInteger( "externalErrorCount", static_cast<int64>( _externalErrorCount ) ) ).c_str() );
+        // 실행기의 끝 줄(판정 값 한 줄) — 종료 코드만으로는 인자 오류 · 로드 오류 · 돈 수가 보이지 않는다. 결과 색은 위 줄이 이미 쓴다.
+        if ( const string_view resultLine = EditorTestOutputParser::findResultLine( _listExternalLine ); resultLine.empty() == false )
+            ImGui::TextUnformatted( resultLine.data(), resultLine.data() + resultLine.size() );
         if ( ImGui::BeginChild( "##ExternalOutput", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar ) )
         {
             const size_t first = _listExternalLine.size() > TestRunnerPanelInternal::kVisibleTailLineCount

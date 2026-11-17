@@ -131,6 +131,23 @@ def read_run_reports(run_dir: pathlib.Path) -> list[dict]:
     return list_report
 
 
+def describe_result(report: dict) -> str:
+    """보고 하나의 판정 한 줄 — 실행기의 판정 값(`failure` — 종류 · 까닭)이 지은 `<종류> - <까닭>`(통과면 결과 이름). 판정 칸이 없는 옛 보고는 `result - reason`."""
+    failure = report.get('failure')
+    if isinstance(failure, dict) and failure.get('kind'):
+        return f"{failure['kind']} - {failure.get('reason', '')}"
+    reason = report.get('reason', '')
+    return f"{report.get('result', '?')} - {reason}" if reason else str(report.get('result', '?'))
+
+
+def describe_stage_failures(list_report: Sequence[dict], stage_name: str) -> str:
+    """그 단계 보고들의 판정 한 줄(진 것만, 보고가 없으면 그 사실) — 진 단계 줄에 붙인다."""
+    lines = [describe_result(report) for report in list_report if report.get('name') == stage_name and report.get('result') not in PASSED_RESULTS]
+    if not any(report.get('name') == stage_name for report in list_report):
+        return '보고 없음(크래시 · 행 — 자식 로그를 본다)'
+    return '; '.join(dict.fromkeys(lines))
+
+
 def stage_failed_in_reports(list_report: Sequence[dict], stage_name: str) -> bool:
     """그 단계의 보고가 통과 · 건너뜀이 아니면 짐. 보고가 없으면(크래시 · 행으로 못 씀) 짐이다 — 통과로 치지 않는다."""
     list_result = [report['result'] for report in list_report if report['name'] == stage_name]
@@ -373,6 +390,13 @@ def self_check() -> int:
     assert stage_failed_in_reports([{'name': 'a', 'result': 'Passed'}], 'a') is False
     assert stage_failed_in_reports([{'name': 'a', 'result': 'Failed'}], 'a') is True
     assert stage_failed_in_reports([{'name': 'b', 'result': 'Passed'}], 'a') is True, '보고 없는 단계는 짐'
+    # 판정 한 줄 — 실행기의 판정 값(종류 · 까닭)을 그대로 잇는다. 끝 단계 이름(`<Pass/>`)이 까닭이 되는 일이 없다.
+    failed_report = {'name': 'a', 'result': 'Failed', 'reason': 'frame 5 <Expect> #3: got 2', 'failure': {'kind': 'Assertion', 'reason': 'frame 5 <Expect> #3: got 2', 'step': ''}}
+    assert describe_result(failed_report) == 'Assertion - frame 5 <Expect> #3: got 2', describe_result(failed_report)
+    assert describe_result({'name': 'a', 'result': 'TimedOut', 'reason': 'hang', 'failure': {'kind': 'Hang', 'reason': 'hang', 'step': 's'}}) == 'Hang - hang'
+    assert describe_result({'name': 'a', 'result': 'Failed', 'reason': 'old'}) == 'Failed - old', '판정 칸이 없는 옛 보고'
+    assert describe_stage_failures([failed_report, dict(failed_report)], 'a') == 'Assertion - frame 5 <Expect> #3: got 2', '같은 판정은 한 번'
+    assert describe_stage_failures([{'name': 'b', 'result': 'Passed'}], 'a').startswith('보고 없음')
     # 진 단계 고르기: 보고 없는 단계(크래시 · 행)도 진 것이고, 백엔드마다 따로 본다.
     list_report = [('dx12', {'name': 'a', 'result': 'Passed'}), ('dx12', {'name': 'b', 'result': 'Failed'}), ('vk', {'name': 'a', 'result': 'Skipped'})]
     assert select_failed_stages({'dx12': ['a', 'b', 'c'], 'vk': ['a', 'b']}, list_report) == [('dx12', 'b'), ('dx12', 'c'), ('vk', 'b')]
@@ -434,8 +458,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     def run_stage(stage_paths: list[str], target_name: str, backend: str) -> bool:
         run_dir = run_part(stage_paths, backend)
-        bad = stage_failed_in_reports(read_run_reports(run_dir), target_name)
-        print(f'{backend} {len(stage_paths):3d} 단계 (첫 {stage_paths[0]}) → {target_name} {"짐" if bad else "통과"}  ({run_dir})', flush=True)
+        list_report = read_run_reports(run_dir)
+        bad = stage_failed_in_reports(list_report, target_name)
+        cause = f' — {describe_stage_failures(list_report, target_name)}' if bad else ''
+        print(f'{backend} {len(stage_paths):3d} 단계 (첫 {stage_paths[0]}) → {target_name} {"짐" if bad else "통과"}{cause}  ({run_dir})', flush=True)
         return bad
 
     if options.rerun_failed:

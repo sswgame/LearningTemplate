@@ -283,6 +283,9 @@ namespace sw
                 // 진행 중의 실패는 이미 적혀 끝에서 Failed 가 된다 — 진행 중이어도 경고색이다.
                 const bool bWarn = ( bRunning == false && bGood == false ) || status._failureCount > 0;
                 writer.addLine( "state", bRunning ? "running" : getEnumName( status._result ), bWarn ? DebugHUDLineStyle::Warning : DebugHUDLineStyle::Neutral );
+                // 끝난 단계는 판정 값 한 줄(종류 · 까닭)을 낸다 — 끝 줄 · 보고와 같은 값이다.
+                if ( bRunning == false && status._resultLine.empty() == false )
+                    writer.addLine( "result", AutomationRunTitleInput::truncateUTF8( status._resultLine, kFailureLineBytes ), bGood ? DebugHUDLineStyle::Neutral : DebugHUDLineStyle::Warning );
                 if ( status._failureCount > 0 )
                 {
                     // 첫 실패 줄만 — HUD 한 줄 폭에 맞춰 자른다(전문은 로그 · 보고에 있다).
@@ -300,6 +303,8 @@ namespace sw
                     const bool                               bPreviousGood = status._previousStageResult == AutomationResult::Passed || status._previousStageResult == AutomationResult::Skipped;
                     StringBuilder<constant::buffer::kMax256> previousBuilder;
                     previousBuilder.appendFormat( "%# %#", status._previousStageName.c_str(), getEnumName( status._previousStageResult ) );
+                    if ( bPreviousGood == false && status._previousStageResultLine.empty() == false )
+                        previousBuilder.appendFormat( ": %#", status._previousStageResultLine.c_str() );
                     const string previous{ previousBuilder.view() };
                     writer.addLine( "previous", AutomationRunTitleInput::truncateUTF8( previous, kFailureLineBytes ), bPreviousGood ? DebugHUDLineStyle::Neutral : DebugHUDLineStyle::Warning );
                 }

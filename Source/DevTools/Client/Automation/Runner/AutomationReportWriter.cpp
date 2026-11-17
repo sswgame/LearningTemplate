@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 namespace sw
@@ -120,8 +121,20 @@ namespace sw
         writer.valueInt( params._exitCode );
         writer.key( "frames" );
         writer.valueUint( params._frameCount );
+        SW_ASSERT( params._pRunResult != nullptr );
+        const AutomationRunResult& runResult = *params._pRunResult;
         writer.key( "reason" );
-        writer.valueString( params._reason );
+        writer.valueString( runResult.getReason() );
+        // 판정 값 — 부모(`AutomationPerBackend`) · 스크립트(`scenario_bisect.py` · `linux_scenarios.py`)가 이 칸으로 끝 줄을 짓는다(로그 문구를 읽지 않는다).
+        writer.key( "failure" );
+        writer.beginObject();
+        writer.key( "kind" );
+        writer.valueString( runResult.isFailure() ? getEnumName( runResult.getFailureKind() ) : "" );
+        writer.key( "reason" );
+        writer.valueString( runResult.getReason() );
+        writer.key( "step" );
+        writer.valueString( runResult.getStepLocation() );
+        writer.endObject();
         writer.key( "backend" );
         writer.valueString( params._backendName );
         writer.key( "game" );

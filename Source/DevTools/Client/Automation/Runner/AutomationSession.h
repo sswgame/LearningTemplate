@@ -143,8 +143,11 @@ namespace sw
         void restoreStartWindowSize();
         /** @brief 찍어 둔 값 하나를 @p value 로 바꿉니다 — 첫 단계가 명령줄로 받은 `<Launch>` 값은 다음 단계로 넘기지 않고 기본값에서 시작한다. */
         void removeStartValue( string_view name, string_view value );
-        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationResult`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
-        [[nodiscard]] EngineFrameExit onStageEnded( AutomationResult result, uint32 completedScreenshotCount );
+        /**
+         * @brief 지금 단계의 실행기가 끝났을 때 부릅니다 — 그 판정 값(`AutomationRunner::getRunResult`)을 체인 · 끝 줄 · 상태에 싣는다. 통과했고 다음 단계가 있으면 그것을 시작하고
+         *        `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다.
+         */
+        [[nodiscard]] EngineFrameExit onStageEnded( uint32 completedScreenshotCount );
         /** @brief 녹화를 시작할 프레임인지 보고(활성 씬이 플레이 중이고 시작 차단이 없다) 시작합니다. */
         void startRecordingWhenReady();
         /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */

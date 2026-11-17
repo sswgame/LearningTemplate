@@ -193,7 +193,7 @@ namespace sw
         IAutomationStepState* findHeldStepState( const AutomationStep& step ) const override;
         /** @brief 붙잡은 단계 @p step 의 상태를 맡깁니다 — `holdUntilReady` 가 Run 을 돌려줄 때 · `endRun` 이 지운다. */
         IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) override;
-        /** @brief 단계가 시나리오를 끝냅니다. `Pass` · `Fail` · `Skip` 을 종료 코드(`Passed` · `Failed` · `Skipped`)로 번역해 `finish` 를 부릅니다. */
+        /** @brief 단계가 시나리오를 끝냅니다. `Pass` · `Fail` · `Skip` 을 판정 값(통과 · 단언 실패 · 건너뜀)으로 번역해 `finish` 를 부릅니다. */
         void endScenario( AutomationStepEnd end, string_view reason ) override;
         /** @brief 워커가 낼 값의 상한 판정을 `<Pass/>` 로 미룹니다(`AutomationEvaluator::deferExpectAtMost`). */
         void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue ) override
@@ -218,10 +218,13 @@ namespace sw
         /** @brief 시나리오를 돌리는 입력 관리자입니다(시작 프레임부터, 그 전에는 nullptr). 액션 단계가 입력 맵의 바인딩을 읽습니다. */
         InputManager* getInputManager() const override { return _pInputManager; }
 
-        /** @brief 시나리오를 바로 끝냅니다(`Pass`, `Fail`, `Skipped` 등). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
-        void finish( AutomationResult result, string_view reason );
+        /**
+         * @brief 시나리오를 판정 @p runResult 로 바로 끝냅니다. 이미 끝났으면 무시합니다.
+         * @details 통과로 끝맺었는데 실패가 적혀 있으면 첫 실패 줄(과 그 종류)이 까닭인 실패가 된다(`AutomationRunResult::concludeWithFailures`).
+         */
+        void finish( const AutomationRunResult& runResult );
 
-        bool isActive() const { return _result == AutomationResult::Running; }
+        bool isActive() const { return _runResult.has_value() == false; }
         /** @brief 시작 조건을 지나 단계를 돌기 시작했으면 true 입니다. */
         bool hasStarted() const { return _bStarted == SW_TRUE; }
         /** @brief 마지막으로 시작한 실행 단계의 이름입니다(아직 없으면 빈 글). 창 제목과 단계 로그가 씁니다. */
@@ -233,17 +236,18 @@ namespace sw
          * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다. 시작 프레임(`onFrameBegin`)에서 읽기 오류나 시작 시한으로 끝나면
          *          그 프레임의 `onFrameEnd` 가 끝맺고 결과를 돌려준다. 루프는 이것으로 `onFrameEnd` 를 부를지 정한다.
          */
-        bool                      hasEnded() const { return _bEnded == SW_TRUE; }
-        AutomationResult          getResult() const { return _result; }
-        const AutomationScenario& getScenario() const { return _scenario; }
-        const vector<string>&     getFailures() const { return _evaluator.getFailures(); }
+        bool             hasEnded() const { return _bEnded == SW_TRUE; }
+        AutomationResult getResult() const { return _runResult.has_value() ? _runResult->getResult() : AutomationResult::Running; }
+        /** @brief 끝난 판정입니다(도는 중이면 없다). 끝 줄 · 체인 · 보고 · HUD 가 이 값 하나를 찍는다. */
+        const optional<AutomationRunResult>& getRunResult() const { return _runResult; }
+        const AutomationScenario&            getScenario() const { return _scenario; }
+        const vector<string>&                getFailures() const { return _evaluator.getFailures(); }
         /** @brief `-scenario-update-golden` 으로 이 실행이 쓴 골든(리소스 id)입니다. */
         const vector<string>& getUpdatedGoldens() const { return _evaluator.getUpdatedGoldens(); }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
         const vector<string>& getUnhandledLogs() const { return _evaluator.getUnhandledLogs(); }
         /** @brief 지금까지 모은 Warning · Error 줄 수입니다(허용 판정 전 — 진행 표시용, 판정은 끝의 로그 게이트). */
-        uint32        getCapturedWarningErrorCount() const { return _evaluator.getCapturedWarningErrorCount(); }
-        const string& getFinishReason() const { return _finishReason; }
+        uint32 getCapturedWarningErrorCount() const { return _evaluator.getCapturedWarningErrorCount(); }
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
@@ -330,32 +334,30 @@ namespace sw
         void publishHangSnapshot( string_view position );
 
     private:
-        AutomationScenario       _scenario;
-        VirtualInputScript       _inputScript;
-        AutomationEvaluator      _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
-        AutomationStepTimeline   _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
-        AutomationReportWriter   _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
-        AutomationTimeline       _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
-        string                   _outputDirectory;
-        string                   _finishReason;
-        uint8                    _bSkippedByBuild  : 1; ///< 시나리오가 선언한 빌드 구성(없는 모듈 · 빠진 개발 명령)으로 건너뛰었다 - 환경 탓의 건너뜀과 달리 경고가 아니다
-        uint8                    _bStarted         : 1;
-        uint8                    _bEnded           : 1;
-        uint8                    _bHangWatchArmed  : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        uint8                    _bWriteFilterHeld : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
-        [[maybe_unused]] uint8   _reserved         : 4;
-        string                   _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
-        AutomationReproduceInput _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
-        AutomationHangPayload    _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
-        AutomationHangWatchdog   _hangWatchdog;           ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
-        GameObjectManager*       _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
-        InputManager*            _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
-        int64                    _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
-        float32                  _wallLimitSeconds;       ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산 + 조건 대기의 제 시한(`computeWallLimitSeconds`)
-        string                   _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
-        TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
-        AutomationResult         _result;
-        AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
+        AutomationScenario            _scenario;
+        VirtualInputScript            _inputScript;
+        AutomationEvaluator           _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
+        AutomationStepTimeline        _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
+        AutomationReportWriter        _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
+        AutomationTimeline            _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
+        string                        _outputDirectory;
+        uint8                         _bStarted         : 1;
+        uint8                         _bEnded           : 1;
+        uint8                         _bHangWatchArmed  : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
+        uint8                         _bWriteFilterHeld : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
+        [[maybe_unused]] uint8        _reserved         : 4;
+        string                        _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
+        AutomationReproduceInput      _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
+        AutomationHangPayload         _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
+        AutomationHangWatchdog        _hangWatchdog;           ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
+        GameObjectManager*            _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        InputManager*                 _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
+        int64                         _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
+        float32                       _wallLimitSeconds;       ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산 + 조건 대기의 제 시한(`computeWallLimitSeconds`)
+        string                        _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
+        TaskFuture<Scene*>            _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
+        optional<AutomationRunResult> _runResult;              ///< 끝난 판정(도는 중이면 없다 — `isActive`). 결과 · 종류 · 까닭이 한 값이라 따로 놀지 않는다
+        AutomationFrameStats          _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
         /** @brief 이 실행 안에서 이름 붙여 기억한 글(`storeText`) — 한 시나리오에 몇 개뿐이라 선형으로 찾는다. */
         struct StoredText
         {

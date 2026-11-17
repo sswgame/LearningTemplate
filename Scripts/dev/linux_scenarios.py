@@ -18,7 +18,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
   sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. address 는 끝에 퍼저를 타깃마다 30 초. 끝 줄 SANITIZE_OK=<종류>
   fuzz [이름…] [--minutes N]  퍼저(프리셋 Linux-Fuzz, Test/Fuzz)를 짓고 타깃마다 N 분(기본 0.5) 돌린다. 이름이 없으면 Test/Fuzz/Seeds 의 모든 타깃. 끝 줄 FUZZ_OK
-  --self-check           퍼저 로그 판정의 자체 검사(빌드 없이)
+  --self-check           퍼저 로그 · 체인 단계 줄 · 끝 줄(SCENARIO_RESULT=) 판정의 자체 검사(빌드 없이)
 """
 import concurrent.futures
 import contextlib
@@ -252,9 +252,33 @@ def build():
 
 
 def report(pack):
-    """진 단계와 그 까닭(자동화 판정 경고)을 낸다. 그 밖의 경고 · 오류 분류는 로그를 직접 읽는다."""
+    """진 단계와 그 까닭(실행기의 판정 값 한 줄)을 낸다. 부모 로그가 있으면 끝 줄(SCENARIO_RESULT=)도. 그 밖의 경고 · 오류 분류는 로그를 직접 읽는다."""
+    parent = f'{LOGS}/Scenario.{pack}.log'
+    if os.path.exists(parent):
+        result = read_result_line(pathlib.Path(parent).read_text(errors='replace'))
+        if result:
+            print(' ', result)
     path = f'{LOGS}/Scenario.{pack}.vk.log'
     return report_file(path)
+
+
+CHAIN_STAGE = re.compile(r'chain stage (\d+)/(\d+) (\w+) \(([\w.]+)\)(?:: (.*?))?(?: - \d+ later stage\(s\) skipped)?\s*$')
+RESULT_LINE = re.compile(r'(?:TEST_RESULT|SCENARIO_RESULT)=\S+(?: \w+=\d+)*')
+
+
+def parse_chain_stage(line):
+    """체인 단계 끝 줄(`chain stage 2/9 Failed (x.y): GoldenMismatch - …`)을 (번호, 수, 결과, 이름, 판정 한 줄)로. 아니면 None.
+    판정 한 줄은 실행기의 판정 값이다 — 진 단계는 늘 있고, 통과 단계는 빈 글이다."""
+    match = CHAIN_STAGE.search(line)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2)), match.group(3), match.group(4), match.group(5) or ''
+
+
+def read_result_line(text):
+    """글의 마지막 끝 줄(`SCENARIO_RESULT=…` · `TEST_RESULT=…`). 없으면 None — 끝 줄 없이 끝난 실행(크래시)은 통과가 아니다."""
+    found = RESULT_LINE.findall(text)
+    return found[-1] if found else None
 
 
 def report_file(path):
@@ -267,11 +291,11 @@ def report_file(path):
         if 'Automation.EvaluationWarning' in line:
             reasons.append(line[line.find('[Scenario]') + 11:].strip()[:190])
         elif 'AutomationSession.ChainStage' in line:
-            stage = re.search(r'chain stage (\d+)/(\d+) (\w+) \(([\w.]+)\)', line)
-            if stage and stage.group(3) not in ('Passed', 'Skipped'):
+            stage = parse_chain_stage(line)
+            if stage and stage[2] not in ('Passed', 'Skipped'):
                 failed += 1
-                print(f'  {stage.group(1)}/{stage.group(2)} {stage.group(3)} {stage.group(4)}')
-                for reason in reasons[:6]:
+                print(f'  {stage[0]}/{stage[1]} {stage[2]} {stage[3]}: {stage[4][:190]}')
+                for reason in reasons[1:6]:   # 첫 줄은 판정 값의 까닭이다 — 나머지 판정 경고만
                     print('     ', reason)
             reasons = []
     # 단계 하나만 돌리면 체인 줄이 없다 - 남은 판정 경고가 그 단계의 까닭이다.
@@ -471,10 +495,10 @@ def verify_all(arguments):
     server_dir = f'{CLONE}/build/Linux-Server'
     # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
     # 체인(시간 · 그림 판정)은 이것들이 끝난 뒤 혼자 돈다.
-    jobs = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED" /tmp/lt.unit.log | tail -n 5 | cut -c1-160; exit $rc')],
+    jobs = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > /tmp/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED|TEST_RESULT=" /tmp/lt.unit.log | tail -n 6 | cut -c1-160; exit $rc')],
              [('서버 빌드', f'cmake --build {server_dir} -j8 > /tmp/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" /tmp/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
               ('서버 기동', f'cd {server_dir} && timeout 120 ./Bin/Server -gv_serverExitAfterTicks=60 > /tmp/srv.run.log 2>&1'),
-              ('서버 단위', f'cd {server_dir} && timeout 400 ./Bin/Server --test > /tmp/srv.unit.log 2>&1; rc=$?; grep -E "case run|NO TESTS" /tmp/srv.unit.log | cut -c1-140; exit $rc')]]
+              ('서버 단위', f'cd {server_dir} && timeout 400 ./Bin/Server --test > /tmp/srv.unit.log 2>&1; rc=$?; grep -E "case run|NO TESTS|TEST_RESULT=" /tmp/srv.unit.log | cut -c1-140; exit $rc')]]
     with concurrent.futures.ThreadPoolExecutor(len(jobs)) as pool:
         list_code = list(pool.map(run_job, jobs))
     code = next((rc for rc in list_code if rc != 0), 0)
@@ -599,6 +623,16 @@ def self_check():
     assert evaluate_fuzz_log('INFO: Loaded 3 modules\n==1==ERROR: AddressSanitizer: heap-buffer-overflow') == 'ERROR: AddressSanitizer'
     assert evaluate_fuzz_log('INFO: Loaded 1 modules   (10 inline 8-bit counters)').startswith('coverage reaches only')
     assert evaluate_fuzz_log('INFO: Loaded 4 modules   (99 inline 8-bit counters)\nDone 2000 runs') is None
+    # 체인 단계 끝 줄 — 앞머리는 그대로, 진 단계는 판정 값 한 줄(`<종류> - <까닭>`)이 붙는다. `: <Pass/>` 로 끝나는 실패 줄은 없다.
+    failed = '[Error] [Scenario] chain stage 12/94 Failed (game.empty.vfxsort): UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2) - 3 later stage(s) skipped'
+    assert parse_chain_stage(failed) == (12, 94, 'Failed', 'game.empty.vfxsort', 'UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2)'), parse_chain_stage(failed)
+    assert parse_chain_stage('[Info] [Scenario] chain stage 1/2 Passed (editor.focus)') == (1, 2, 'Passed', 'editor.focus', '')
+    assert parse_chain_stage('chain stage 3/3 Skipped (a.b): no window manager') == (3, 3, 'Skipped', 'a.b', 'no window manager')
+    assert parse_chain_stage('[Scenario] chain Failed (3 stage(s), 1 failed, 0 skipped, 1 not run)') is None
+    # 끝 줄 — 마지막 것을 읽고, 없으면 None(크래시는 통과가 아니다).
+    assert read_result_line('x\n[Info] [Scenario] SCENARIO_RESULT=FAILED stages=4 failed=1 notRun=2\n') == 'SCENARIO_RESULT=FAILED stages=4 failed=1 notRun=2'
+    assert read_result_line('TEST_RESULT=FAILED run=1 failed=1 skipped=0\nTEST_RESULT=PASSED run=3 failed=0 skipped=0') == 'TEST_RESULT=PASSED run=3 failed=0 skipped=0'
+    assert read_result_line('[==========] 3 case run(s)') is None
     print('SELF_CHECK_OK')
     return 0
 

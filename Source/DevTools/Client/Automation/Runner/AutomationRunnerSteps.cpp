@@ -572,7 +572,7 @@ namespace sw
             AutomationRunner& runner = asRunner( context );
             runner._evaluator.evaluateDeferred( runner ); // 스크린샷 · 끝 차단 조건의 뒤의 일은 `holdPass` 가 다 끝난 뒤에 놓는다
             (void)step;
-            runner.finish( AutomationResult::Passed, "<Pass/>" );
+            runner.finish( AutomationRunResult::passed() );
             return true;
         }
 
@@ -588,7 +588,7 @@ namespace sw
                                                                        string( "background work to finish before <Pass/> (" ) + ( pBlocker != nullptr ? pBlocker : "none" ) + ")" );
             runner._run._bFinishWaiting       = hold == AutomationStepHold::Hold;
             if ( hold == AutomationStepHold::Run && pBlocker != nullptr )
-                runner.recordFailure( step, string( "background work did not finish before the scenario ended (" ) + pBlocker + ")" );
+                runner._evaluator.addFailure( step, string( "background work did not finish before the scenario ended (" ) + pBlocker + ")", AutomationFailureKind::WaitTimeout );
             return hold;
         }
 
@@ -598,7 +598,7 @@ namespace sw
             const string*     pReason = step.findAttribute( "reason" );
             const string_view reason  = pReason != nullptr ? string_view{ *pReason } : string_view{ "<Fail/>" };
             runner.recordFailure( step, reason );
-            runner.finish( AutomationResult::Failed, reason );
+            runner.finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, reason, step.describe() ) );
             return true;
         }
 
@@ -606,7 +606,7 @@ namespace sw
         {
             AutomationRunner& runner  = asRunner( context );
             const string*     pReason = step.findAttribute( "reason" );
-            runner.finish( AutomationResult::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<Skip/>" } );
+            runner.finish( AutomationRunResult::skipped( pReason != nullptr ? string_view{ *pReason } : string_view{ "<Skip/>" }, false ) );
             return true;
         }
 
@@ -620,13 +620,13 @@ namespace sw
             {
                 const string reason = "<SkipUnless> could not read a number: " + message;
                 runner.recordFailure( step, reason );
-                runner.finish( AutomationResult::Failed, reason );
+                runner.finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, reason, step.describe() ) );
                 return true;
             }
             if ( value._number == 0.0 )
             {
                 const string* pReason = step.findAttribute( "reason" );
-                runner.finish( AutomationResult::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<SkipUnless/>" } );
+                runner.finish( AutomationRunResult::skipped( pReason != nullptr ? string_view{ *pReason } : string_view{ "<SkipUnless/>" }, false ) );
             }
             return true;
         }

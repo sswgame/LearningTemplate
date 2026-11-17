@@ -8,6 +8,7 @@
 #include "Core/File/UserDataPath.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/Process/StandardOutput.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -146,6 +147,90 @@ namespace sw
                 return *exitCode;
             }
 
+            /** @brief 단계 보고 하나의 판정(`readStageResult`)입니다. */
+            struct StageReportResult
+            {
+                string _name{};
+                string _kind{}; ///< 실패 종류 이름(통과 · 건너뜀이면 빈 글)
+                string _reason{};
+                int32  _exitCode{ 0 };
+            };
+
+            /** @brief 자식이 쓴 단계 보고 하나의 `exitCode` · `name` · `failure`(없으면 `reason`)를 읽습니다. 파일이 없거나 형식이 다르면 그 까닭입니다. */
+            [[nodiscard]] static expected<StageReportResult> readStageResult( const string& reportPath )
+            {
+                string text;
+                if ( FileUtil::readTextFile( reportPath, text ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath } );
+                JSONDocument document;
+                if ( document.parse( text, reportPath ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report is not JSON", document.getLastError() } );
+                const JSONValue       root     = document.getRoot();
+                const optional<int32> exitCode = root.readRequired<int32>( "exitCode" );
+                if ( exitCode.has_value() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report has no exitCode", reportPath } );
+                StageReportResult runResult;
+                runResult._exitCode     = *exitCode;
+                runResult._name         = root.get( "name" ).asString();
+                const JSONValue reading = root.get( "failure" );
+                runResult._kind         = reading.isObject() ? reading.get( "kind" ).asString() : string{};
+                runResult._reason       = reading.isObject() ? reading.get( "reason" ).asString() : root.get( "reason" ).asString();
+                return runResult;
+            }
+
+            /** @brief 부모 요약의 재료입니다 — 진 단계 판정과 단계 수(돌아야 했던 · 진 · 보고가 없는). */
+            struct FailureSummary
+            {
+                vector<AutomationStageFailure> _listStageFailure{};
+                uint32                         _stageCount{ 0 };
+                uint32                         _failedCount{ 0 };
+                uint32                         _notRunCount{ 0 };
+            };
+
+            /**
+             * @brief 자식마다 맡은 체인(@p listScenarioList, 자식 순서)의 단계 보고에서 진 단계의 판정을 모읍니다.
+             * @details 보고가 없는 단계는 돌지 않은 것이다(앞 단계에서 멈춘 체인 · 크래시). 보고 없이 진 자식(크래시 · 죽임)은 그 종료 코드를 처음 돌지 못한 단계의 판정으로 적는다 —
+             *          진 실행이 요약에서 빠지지 않게.
+             */
+            static FailureSummary collectStageFailures( const vector<string>& listScenarioList, const vector<unique_ptr<Child>>& listChild )
+            {
+                FailureSummary summary;
+                for ( size_t childIndex = 0; childIndex < listChild.size(); ++childIndex )
+                {
+                    const Child& child = *listChild[childIndex];
+                    if ( child._reportPath.empty() )
+                        continue; // 맡은 시나리오가 없다
+                    const vector<string> listPath         = AutomationScenarioChain::splitList( listScenarioList[childIndex] );
+                    bool                 bReportedFailure = false;
+                    size_t               firstMissing     = listPath.size();
+                    for ( size_t stage = 0; stage < listPath.size(); ++stage )
+                    {
+                        ++summary._stageCount;
+                        const expected<StageReportResult> runResult = readStageResult( AutomationScenarioChain::makeStageReportPath( child._reportPath, stage, listPath.size() ) );
+                        if ( runResult.has_value() == false )
+                        {
+                            ++summary._notRunCount;
+                            firstMissing = MathUtil::min( firstMissing, stage );
+                            continue;
+                        }
+                        if ( runResult->_exitCode == 0 || isSkip( runResult->_exitCode ) )
+                            continue;
+                        ++summary._failedCount;
+                        bReportedFailure = true;
+                        summary._listStageFailure.push_back( AutomationStageFailure{ runResult->_name.empty() ? listPath[stage] : runResult->_name, child._backend,
+                                                                                     runResult->_kind.empty() ? string( describeExitCode( runResult->_exitCode ) ) : runResult->_kind, runResult->_reason } );
+                    }
+                    const bool bFailedWithoutReport = bReportedFailure == false && child._exitCode.has_value() && *child._exitCode != 0 && isSkip( *child._exitCode ) == false;
+                    if ( bFailedWithoutReport )
+                    {
+                        ++summary._failedCount;
+                        summary._listStageFailure.push_back( AutomationStageFailure{ firstMissing < listPath.size() ? listPath[firstMissing] : string( "(child)" ), child._backend,
+                                                                                     describeExitCode( *child._exitCode ), "no stage report - the child log has the cause" } );
+                    }
+                }
+                return summary;
+            }
+
             /**
              * @brief 자식마다 맡은 체인(@p listScenarioList, 자식 순서)의 단계 보고를 읽어, 둘 이상의 백엔드에서 통과한 시나리오의 기록을 견줍니다. 문제마다 한 줄입니다.
              * @details 통과하지 않은 단계는 견주지 않는다(그 실패가 이미 실행을 진다). 통과한 자식(종료 0)의 보고를 읽지 못하면 그것도 문제다 — 견주지 못한 채 통과하지 않는다.
@@ -192,7 +277,8 @@ namespace sw
                 return listProblem;
             }
 
-            static void writeReport( const AutomationPerBackendOptions& options, const vector<unique_ptr<Child>>& listChild, const vector<string>& listRecordMismatch, int32 exitCode )
+            static void writeReport( const AutomationPerBackendOptions& options, const vector<unique_ptr<Child>>& listChild, const vector<string>& listRecordMismatch, const vector<string>& listFailureLine,
+                                     int32 exitCode )
             {
                 string     json;
                 JSONWriter writer{ json, 2 };
@@ -226,6 +312,11 @@ namespace sw
                 writer.beginArray();
                 for ( const string& mismatch : listRecordMismatch )
                     writer.valueString( mismatch );
+                writer.endArray();
+                writer.key( "stageFailures" ); // 진 단계를 백엔드로 접은 요약(`foldFailures`)
+                writer.beginArray();
+                for ( const string& line : listFailureLine )
+                    writer.valueString( line );
                 writer.endArray();
                 writer.endObject();
                 if ( FileUtil::ensureParentDirectoryExists( options._reportPath ) == false || FileUtil::writeTextFile( options._reportPath, json ) == false )
@@ -312,6 +403,42 @@ namespace sw
                 ++nextBackend;
         }
         return listScenarioList;
+    }
+
+    vector<string> AutomationPerBackend::foldFailures( const vector<AutomationStageFailure>& listStageFailure )
+    {
+        struct FoldedFailure
+        {
+            const AutomationStageFailure* _pFirst;
+            string                        _backends;
+        };
+        vector<FoldedFailure> listFolded;
+        for ( const AutomationStageFailure& runResult : listStageFailure )
+        {
+            auto it = std::find_if( listFolded.begin(), listFolded.end(), [&runResult]( const FoldedFailure& folded )
+            { return folded._pFirst->_stage == runResult._stage && folded._pFirst->_kind == runResult._kind && folded._pFirst->_reason == runResult._reason; } );
+            if ( it == listFolded.end() )
+                listFolded.push_back( FoldedFailure{ &runResult, runResult._backend } );
+            else
+                it->_backends += "," + runResult._backend;
+        }
+        vector<string> listLine;
+        for ( const FoldedFailure& folded : listFolded )
+            listLine.push_back( folded._pFirst->_stage + ": " + folded._pFirst->_kind + " " + folded._backends + " - " + folded._pFirst->_reason );
+        return listLine;
+    }
+
+    string AutomationPerBackend::makeResultLine( int32 exitCode, uint32 stageCount, uint32 failedCount, uint32 notRunCount )
+    {
+        using Internal                                 = AutomationPerBackendInternal;
+        const utf8* const                        pName = exitCode == 0                                                      ? "PASSED"
+                                                       : Internal::isSkip( exitCode )                                       ? "SKIPPED"
+                                                       : exitCode == getAutomationExitStatus( AutomationResult::TimedOut )  ? "TIMEOUT"
+                                                       : exitCode == getAutomationExitStatus( AutomationResult::LoadError ) ? "LOAD_ERROR"
+                                                                                                                            : "FAILED";
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "SCENARIO_RESULT=%# stages=%# failed=%# notRun=%#", pName, stageCount, failedCount, notRunCount );
+        return string( textBuilder.view() );
     }
 
     string AutomationPerBackend::insertBackendSuffix( string_view path, string_view backend )
@@ -545,8 +672,17 @@ namespace sw
 
         const int32 exitCode = firstFailure != 0 ? firstFailure : bAnyPassed ? 0
                                                                              : getAutomationExitStatus( AutomationResult::Skipped );
+        // 부모 요약 — 진 단계를 (단계 · 종류 · 까닭)으로 접어 백엔드를 붙인다. 자식의 판정 값(보고의 `failure`)을 읽을 뿐 로그 문구를 읽지 않는다.
+        const Internal::FailureSummary summary         = Internal::collectStageFailures( listScenarioList, listChild );
+        const vector<string>           listFailureLine = foldFailures( summary._listStageFailure );
+        for ( const string& line : listFailureLine )
+            SW_LOG_INFO_ID( "ScenarioPerBackend.StageFailure", "[Scenario] per-backend failure: %#", line.c_str() );
         if ( options._reportPath.empty() == false )
-            Internal::writeReport( options, listChild, listRecordMismatch, exitCode );
+            Internal::writeReport( options, listChild, listRecordMismatch, listFailureLine, exitCode );
+        // 기록 대조만 진 실행은 진 단계가 없다 — 끝 줄의 실패 수가 0 이어도 결과 이름(종료 코드)이 실패를 말한다.
+        const string resultLine = makeResultLine( exitCode, summary._stageCount, summary._failedCount, summary._notRunCount );
+        SW_LOG_INFO_ID( "ScenarioPerBackend.Result", "[Scenario] %#", resultLine.c_str() );
+        (void)StandardOutput::write( resultLine + "\n" ); // 표준 출력의 마지막 줄 — 출력을 잘라 본 쪽도 결과를 읽는다(못 쓰면 로그 줄이 남는다)
         return exitCode;
     }
 } // namespace sw
