@@ -5,8 +5,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -169,4 +171,27 @@ SW_TEST_CASE( AdminStoreLogicTest, DemotionBetweenReadAndCommitRefusesTheCommand
     InterleavingConnection connection( fixture.database, kOperator );
     SW_EXPECT_TRUE( AdminStoreLogic::execute( connection, makeAdjust( kOperator, 100, 9 ), reply ).hasError( OnlineError::kForbidden ) );
     SW_EXPECT_EQUAL( fixture.database.computeContentHash(), reference.database.computeContentHash() );
+}
+
+/** @brief [AdminStoreLogicTest] 라이브 운영 쓰기의 등급 가드는 쓰는 일 안에서 등급을 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등되면 커밋이 지고, 다시 하면 Forbidden 이다(감사 "다음 할 일" 5 번) */
+SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
+{
+    Fixture             fixture;
+    ServiceAuditedWrite write;
+    write._pGuard              = AdminStoreLogic::makeRoleGuard( kOperator, AdminRole::Operator );
+    write._table               = hashed_string( "liveops_event" );
+    write._key                 = "spring.sale";
+    write._bytes               = vector<uint8>{ 1 };
+    write._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( kOperator );
+    write._auditEntry._action  = "liveops.event.put";
+    write._auditEntry._subject = "liveops/spring.sale";
+    write._auditEntry._memo    = "ticket-1";
+    write._auditEntry._timeMs  = kNowMs;
+
+    InterleavingConnection   interleaving( fixture.database, kOperator );
+    ServiceReadSetConnection readSet( interleaving ); // 저장소 입구(`IServiceStoreJob::execute`)가 거는 것과 같은 포장
+    SW_EXPECT_TRUE( write.commit( readSet ) == ServiceAuditedWriteResult::Unavailable );
+    SW_EXPECT_TRUE( write.commit( fixture.database ) == ServiceAuditedWriteResult::Forbidden );
+    ServiceRecord record;
+    SW_EXPECT_TRUE( fixture.database.readRecord( hashed_string( "liveops_event" ), "spring.sale", record ) == ServiceStoreResult::NotFound );
 }

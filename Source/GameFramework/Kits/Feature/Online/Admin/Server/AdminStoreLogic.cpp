@@ -413,6 +413,40 @@ namespace sw
         return s_table;
     }
 
+    namespace
+    {
+        /** @brief 운영자 등급 가드입니다. 등급이 모자라면 NotFound(허락할 근거가 없다)입니다. */
+        class AdminRoleGuard final : public IServiceWriteGuard
+        {
+        public:
+            AdminRoleGuard( AccountID adminID, AdminRole required )
+                : _adminID{ adminID }
+                , _required{ required }
+            {
+            }
+
+            ServiceStoreResult checkAllowed( IServiceStoreConnection& connection ) const override
+            {
+                AdminRole                role    = AdminRole::None;
+                uint64                   version = 0;
+                const ServiceStoreResult read    = AdminStoreLogic::readRole( connection, _adminID, role, version );
+                if ( read != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                const bool bAllowed = _required != AdminRole::Count && role >= _required;
+                return bAllowed ? ServiceStoreResult::Ok : ServiceStoreResult::NotFound;
+            }
+
+        private:
+            AccountID _adminID;
+            AdminRole _required;
+        };
+    } // namespace
+
+    shared_ptr<const IServiceWriteGuard> AdminStoreLogic::makeRoleGuard( AccountID adminID, AdminRole required )
+    {
+        return make_shared<const AdminRoleGuard>( adminID, required );
+    }
+
     ServiceStoreResult AdminStoreLogic::readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion )
     {
         outRole    = AdminRole::None;

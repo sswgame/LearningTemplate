@@ -125,10 +125,10 @@ namespace sw
 
         // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `takeControlCompletions` 로 받는다.
         // 같은 프로세스의 코드와 테스트는 직접 부르고 `takeCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
-        void putEvent( const LiveEventDef& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
-        void removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void putEvent( const LiveEventDef& definition, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
+        void removeEvent( string_view eventID, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         // ILiveEventControl
-        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void putEventJSON( string_view definitionJSON, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void collectEventJSON( vector<string>& outListJSON ) const override;
         void takeControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override;
         void takeCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
