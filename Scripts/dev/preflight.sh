@@ -62,7 +62,10 @@ build_preset() {
   local LOGS=build/$P/Testing/Logs
   mkdir -p $LOGS
   echo "== $P build $(date +%T)"
-  run $LOGS/verify.configure.log cmake --preset $P || windows_failed "$P configure"
+  # ninja 가 .ninja_deps 를 다시 쓸 때 바깥 프로세스(백신 검사)가 파일을 잡으면 "failed recompaction: Permission denied" 로 진다 — 이 문구일 때만 한 번 더 구성한다.
+  run $LOGS/verify.configure.log cmake --preset $P ||
+    { grep -aq "failed recompaction: Permission denied" $LOGS/verify.configure.log && run $LOGS/verify.configure.log cmake --preset $P; } ||
+    windows_failed "$P configure"
   if ! run $LOGS/verify.build.log cmake --build --preset $P -- -k 0; then
     grep -E "error|FAILED" $LOGS/verify.build.log | head -30
     windows_failed "$P build"
