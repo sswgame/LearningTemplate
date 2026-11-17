@@ -7,14 +7,14 @@
 -->
 <Scenario name="game.wildwest.autosave" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_wildWestAutoPlay" value="0"/>
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 시작 자리에서 반 초 동안 발동하지 않는다(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="Object.Property" target="TownGate" key="AutosaveTriggerComponent._fireCount" equals="0"/>
 	<DevCommand line="teleport Player 36 0.05 0"/>
 	<WaitUntil watch="Object.Property" target="TownGate" key="AutosaveTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
 	<Expect watch="Autosave.LastCheckpoint" is="town_gate"/>
 	<WaitUntil watch="Autosave.SaveCount" atLeast="1" timeoutSeconds="5"/>
 	<!-- 스냅숏을 찍어도 판은 그대로 돈다 -->
-	<Wait frames="10"/>
+	<AdvanceSimulation frames="10"/> <!-- 저장 뒤에도 판이 흐른다(시간이 내용) -->
 	<Expect watch="Pawn.Controller" target="Player" is="PlayerController"/>
 	<Pass/>
 </Scenario>
