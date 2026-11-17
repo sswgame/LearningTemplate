@@ -38,18 +38,22 @@ namespace sw
          * @details 키 하나로 다시 잡는 슬롯이 있는 종류(단일 슬롯, Chord 의 방아쇠, Shortcut)는 그 슬롯만 본다. Chord 의 수식 키(Ctrl)는
          *          다른 액션이 단독으로 써도 겹침이 아니다. 그런 슬롯이 없는 합성 축과 2D 합성은 키를 점유하는 모든 슬롯을 본다(그 부분이 맞바뀌거나 비워진다).
          */
-        uint32 findConflictingSlot( const ActionBinding& binding, const InputSlot& slot )
+        [[nodiscard]] optional<uint32> findConflictingSlot( const ActionBinding& binding, const InputSlot& slot )
         {
             const uint32 rebindSlot = BindingKinds::getRebindSlotIndex( binding._kind );
             if ( rebindSlot != BindingKinds::kNoRebindSlot )
-                return binding._arrSlot[rebindSlot] == slot ? rebindSlot : BindingKinds::kNoRebindSlot;
+            {
+                if ( binding._arrSlot[rebindSlot] == slot )
+                    return rebindSlot;
+                return nullopt;
+            }
             const uint32 slotCount = BindingKinds::getConflictSlotCount( binding._kind );
             for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
             {
                 if ( binding._arrSlot[slotIndex] == slot )
                     return slotIndex;
             }
-            return BindingKinds::kNoRebindSlot;
+            return nullopt;
         }
     } // namespace
 
@@ -512,9 +516,9 @@ namespace sw
             return false;
         const hashed_string targetLayer = pEntry->_definition._listBinding[bindIndex]._layer;
 
-        hashed_string conflictingAction{};
-        uint32        conflictingBindIndex = 0;
-        uint32        conflictingSlot      = BindingKinds::kNoRebindSlot;
+        hashed_string    conflictingAction{};
+        uint32           conflictingBindIndex = 0;
+        optional<uint32> conflictingSlot{};
         for ( auto& [actName, actIndex] : _mapAction )
         {
             if ( actName == action )
@@ -525,7 +529,7 @@ namespace sw
                 if ( entry._definition._listBinding[bIdx]._layer != targetLayer )
                     continue;
                 conflictingSlot = findConflictingSlot( entry._definition._listBinding[bIdx], newSlot );
-                if ( conflictingSlot != BindingKinds::kNoRebindSlot )
+                if ( conflictingSlot.has_value() )
                 {
                     conflictingAction    = actName;
                     conflictingBindIndex = bIdx;
@@ -541,17 +545,17 @@ namespace sw
             ActionEntry* pConflictEntry = findAction( conflictingAction );
             if ( strategy == ConflictResolution::Swap && pConflictEntry != nullptr )
             {
-                const InputSlot oldSlot                                                                  = pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot];
-                pConflictEntry->_definition._listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = oldSlot;
-                pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
+                const InputSlot oldSlot                                                                   = pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot];
+                pConflictEntry->_definition._listBinding[conflictingBindIndex]._arrSlot[*conflictingSlot] = oldSlot;
+                pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot]                          = newSlot;
                 reseedBindingState( *pEntry, bindIndex );
                 reseedBindingState( *pConflictEntry, conflictingBindIndex );
                 return true;
             }
             else if ( strategy == ConflictResolution::Override && pConflictEntry != nullptr )
             {
-                pConflictEntry->_definition._listBinding[conflictingBindIndex]._arrSlot[conflictingSlot] = InputSlot{};
-                pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot]                         = newSlot;
+                pConflictEntry->_definition._listBinding[conflictingBindIndex]._arrSlot[*conflictingSlot] = InputSlot{};
+                pEntry->_definition._listBinding[bindIndex]._arrSlot[targetSlot]                          = newSlot;
                 reseedBindingState( *pEntry, bindIndex );
                 reseedBindingState( *pConflictEntry, conflictingBindIndex );
                 return true;
