@@ -288,13 +288,13 @@ namespace sw
         return _registeredAssetCache.findByName( assetKindName );
     }
 
-    shared_ptr<const void> AssetManager::pinAsset( string_view relativePath )
+    AssetPin AssetManager::pinAsset( string_view relativePath )
     {
         // 종류는 접미사로 갈리므로 한 캐시만 답한다 — 첫 답을 받는다.
         for ( AssetCacheBase* pCache : _registeredAssetCache.getItems() )
         {
-            shared_ptr<const void> pin = pCache->pinAsset( relativePath );
-            if ( pin != nullptr )
+            AssetPin pin = pCache->pinAsset( relativePath );
+            if ( pin._token != nullptr )
                 return pin;
         }
         return {};

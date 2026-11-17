@@ -209,11 +209,12 @@ namespace sw
         return _pState->_sharedTable.countLive();
     }
 
-    shared_ptr<const void> MeshCache::pinAsset( string_view relativePath )
+    AssetPin MeshCache::pinAsset( string_view relativePath )
     {
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) == false )
             return {};
-        return request( relativePath ).getOperation();
+        const shared_ptr<MeshLoadOperation> pOperation = request( relativePath ).getOperation();
+        return AssetPin{ pOperation, pOperation };
     }
 
     void MeshCache::clear()
