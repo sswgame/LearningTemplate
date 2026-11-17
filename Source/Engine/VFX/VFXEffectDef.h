@@ -23,6 +23,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/VFX/VFXParticle.h"
 
 namespace sw
 {
