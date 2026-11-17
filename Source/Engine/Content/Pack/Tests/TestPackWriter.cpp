@@ -62,7 +62,7 @@ SW_TEST_CASE( PackWriterTest, StreamedPackReadsBackEveryEntry )
     SW_REQUIRE_TRUE( reader.open( packPath ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( listEntry.size() ), reader.getFileCount() );
     SW_EXPECT_TRUE( reader.getMountDomain() == "game/test" );
-    SW_EXPECT_EQUAL( PackTestUtil::kBlockSize, reader.getHeader()._blockSize );
+    SW_EXPECT_EQUAL( PackTestUtil::kBlockSize, static_cast<uint32>( reader.getHeader()._blockSize ) ); // 묶음 칸은 참조로 넘기지 않는다
     for ( const std::pair<string, vector<uint8>>& entry : listEntry )
     {
         vector<uint8> bytes;

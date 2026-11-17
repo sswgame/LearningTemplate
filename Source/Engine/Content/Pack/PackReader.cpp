@@ -410,12 +410,13 @@ namespace sw
                 return false;
             }
             // CRC32 로 블록마다 검증한다. 플래그가 있으면 **늘** 대조한다 — 저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
-            const uint32 computedCRC = plan._bVerifyCRC ? HashUtil::computeCRC32( pRaw, rawSize ) : block._crc32;
-            if ( computedCRC != block._crc32 )
+            const uint32 expectedCRC = block._crc32; // 묶음(pack 1) 칸은 참조로 넘기지 않는다
+            const uint32 computedCRC = plan._bVerifyCRC ? HashUtil::computeCRC32( pRaw, rawSize ) : expectedCRC;
+            if ( computedCRC != expectedCRC )
             {
                 SW_LOG_ERROR_ID( "PackReader.CRC32ChecksumMismatchPack", "CRC32 checksum mismatch in block %# of pack %# (computed 0x%# vs expected 0x%#)",
                                  static_cast<uint64>( plan._firstBlockIndex + ordinal ), packPath, Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ),
-                                 Fmt( block._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
+                                 Fmt( expectedCRC, Format( 8, Format::Padding::Zero ).hex() ) );
                 outBytes.clear();
                 return false;
             }
