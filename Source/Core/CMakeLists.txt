@@ -9,6 +9,29 @@
 # ------------------------------------------------------------------------------
 sw_glob_source_tree(list_core_source RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 sw_filter_platform_sources(list_core_source)
+# 힙 백엔드 — `SW_MEMORY_BACKEND`(BuildOptions.cmake)가 고른 `Memory/MemoryBackend<이름>.cpp` 하나만 짓고 나머지는 "이 구성이 짓지 않는다" 로 적는다.
+# 링크 시점 선택이라 할당마다 가상 호출이 없다(언리얼은 `FMalloc*` 가상 호출 — 실행 중에 바꿀 일이 없어 링크로 고정한다).
+if(SW_MEMORY_BACKEND STREQUAL "crt")
+	set(memory_backend_file "CRT")
+elseif(SW_MEMORY_BACKEND STREQUAL "mimalloc")
+	set(memory_backend_file "Mimalloc")
+	# 브라우저 wasm 힙 위에서는 mimalloc 이 얻을 것이 없고 포트도 웹을 짓지 않는다(vcpkg.json 의 기능 의존이 웹을 뺀다).
+	if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+		message(FATAL_ERROR "SW_MEMORY_BACKEND=mimalloc is not available on the web (Emscripten) — use crt")
+	endif()
+else()
+	message(FATAL_ERROR "[Core] SW_MEMORY_BACKEND='${SW_MEMORY_BACKEND}' has no MemoryBackend implementation file")
+endif()
+set(list_memory_backend_source ${list_core_source})
+list(FILTER list_memory_backend_source INCLUDE REGEX "/Source/Core/Memory/MemoryBackend[A-Za-z]+\\.cpp$")
+if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/Memory/MemoryBackend${memory_backend_file}.cpp" IN_LIST list_memory_backend_source)
+	message(FATAL_ERROR "[Core] Memory/MemoryBackend${memory_backend_file}.cpp is missing — the heap backend '${SW_MEMORY_BACKEND}' has no implementation")
+endif()
+list(REMOVE_ITEM list_memory_backend_source "${CMAKE_CURRENT_SOURCE_DIR}/Memory/MemoryBackend${memory_backend_file}.cpp")
+foreach(unused_backend_source IN LISTS list_memory_backend_source)
+	get_filename_component(unused_backend_name "${unused_backend_source}" NAME_WE)
+	sw_remove_excluded_sources(list_core_source "/Source/Core/Memory/${unused_backend_name}\\.cpp$")
+endforeach()
 # 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
 if(SW_SHIPPING_BUILD)
 	sw_remove_excluded_sources(list_core_source "/Source/Core/Testing/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
@@ -216,6 +239,19 @@ endif()
 # Engine 이 $<TARGET_OBJECTS:...> 를 가져갈 수 있도록 의존성을 드러낸다
 add_dependencies(Core ${list_core_objects})
 set_property(TARGET Core PROPERTY SW_CORE_OBJECTS ${list_core_objects})
+
+# 힙 백엔드 라이브러리 — 백엔드 구현 파일이 든 티어 부분만 헤더를 보고, Core 오브젝트를 담는 쪽(Core STATIC · Engine)이 링크한다.
+# Engine 은 오브젝트를 `$<TARGET_OBJECTS>` 로 가져가 부분의 링크 의존을 물려받지 못하므로 `SW_CORE_LINK_LIBRARIES` 속성으로 넘긴다(Source/Engine/CMakeLists.txt).
+set(list_core_link_library "")
+if(SW_MEMORY_BACKEND STREQUAL "mimalloc")
+	list(APPEND list_core_link_library sw_mimalloc)
+endif()
+if(list_core_link_library)
+	sw_get_core_tier("Memory/MemoryBackend${memory_backend_file}.cpp" memory_backend_tier)
+	target_link_libraries(Core_tier${memory_backend_tier}_objects PRIVATE ${list_core_link_library})
+	target_link_libraries(Core PRIVATE ${list_core_link_library})
+endif()
+set_property(TARGET Core PROPERTY SW_CORE_LINK_LIBRARIES ${list_core_link_library})
 
 list(LENGTH list_core_objects core_object_count)
 message(STATUS "[Core] STATIC - foundation, ${core_object_count} tier parts (ReflectionParser links Core; Engine shares the parts' objects)")

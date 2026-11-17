@@ -186,6 +186,11 @@ foreach(core_objects IN LISTS list_core_objects)
 	target_sources(Engine PRIVATE $<TARGET_OBJECTS:${core_objects}>)
 	add_dependencies(Engine ${core_objects})
 endforeach()
+# 그 오브젝트가 부르는 라이브러리(고른 힙 백엔드) — 오브젝트만으로는 링크 의존이 따라오지 않는다.
+get_target_property(list_core_link_library Core SW_CORE_LINK_LIBRARIES)
+if(list_core_link_library)
+	target_link_libraries(Engine PRIVATE ${list_core_link_library})
+endif()
 
 sw_configure_dll_exports(Engine ${core_lib_type} ENGINE)
 sw_keep_import_library_if_unchanged(Engine)
