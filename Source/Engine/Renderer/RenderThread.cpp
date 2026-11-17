@@ -27,6 +27,7 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/View/RenderStability.h"
 
 namespace sw
 {
@@ -756,7 +757,10 @@ namespace sw
         arrPending[pendingCount++]                                    = ScenePendingJob{ 0, bMainDrew ? _pFrameRenderer->getLastPendingPSOBatchCount() : 0u };
         // 볼륨 안개의 상태는 주 화면의 것만 올린다(미리보기 렌더러는 쓰지 않는다 — 에디터 창이 보이는 이유가 주 화면의 이유다).
         if ( bMainDrew )
+        {
             FrameFog::publishMainVolumeState( _pFrameRenderer->getFogVolumeState() );
+            RenderStabilitySample::publish( _pFrameRenderer->getMainStabilitySample() ); // 사진 앞 정착 판정(`Render.Stable`)
+        }
 
         // 미리보기 씬(에디터 툴 창)은 씬마다의 렌더러로 자기 타깃에 그린다(`OffscreenSceneRenderers` — 캡처와 같은 길). 사라진 씬의 렌더러는 그 씬과 함께 내린다.
         const bool bCanDrawPreviews = _pFrameRenderer != nullptr && _pFrameRenderer->isReady() && _pOffscreenRenderers != nullptr && pFrameStream != nullptr;

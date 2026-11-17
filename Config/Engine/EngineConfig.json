@@ -29,6 +29,10 @@
         "_reopenMaxDelayMs": 30000,
         "_clipCacheMegabytes": 192
     },
+    "_renderStability": {
+        "_minStillFrames": 16,
+        "_maxExposureErrorEv": 0.05
+    },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",
     "_shaderTimeRolloverSeconds": 3600.0

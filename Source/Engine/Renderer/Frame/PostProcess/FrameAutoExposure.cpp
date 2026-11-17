@@ -22,6 +22,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Frame/View/RenderStability.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
@@ -112,6 +113,7 @@ namespace sw
     {
         const PostProcessValues& post = view._settings._postProcess;
         view._bAutoExposureThisFrame  = SW_FALSE;
+        view._exposureErrorEv         = 0.0f; // 재지 않으면 노출이 고정이다(아래에서 재면 다시 정한다)
         // 범위가 한 점이면 재지 않는 고정 노출이다(기본 0 · 0 은 노출 1). 후처리를 끈 뷰 · 표면 값 보기는 톤맵이 카메라 노출을 걸지 않으므로 재지 않는다.
         if ( post.usesAutoExposure() == false )
         {
@@ -134,6 +136,9 @@ namespace sw
                                            FrameAutoExposureInternal::computeAdaptRate( post._autoExposureSpeedUp, deltaSeconds, bReset ),
                                            FrameAutoExposureInternal::computeAdaptRate( post._autoExposureSpeedDown, deltaSeconds, bReset ) };
         view._bAutoExposureThisFrame = SW_TRUE;
+        // 사진 앞 정착(`Render.Stable`) — 남은 노출 오차의 상한. 카메라가 움직인 프레임(정지 프레임 0)은 범위 끝까지 되돌린다.
+        view._exposureErrorEv = RenderStabilityUtil::advanceExposureError( view._exposureErrorEv, bReset, view._stillFrameCount == 0, post._autoExposureMaxEv - post._autoExposureMinEv,
+                                                                           MathUtil::min( view._autoExposureParams._z, view._autoExposureParams._w ) );
     }
 
     void FrameAutoExposure::recordAutoExposure( FramePassContext& context, const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const

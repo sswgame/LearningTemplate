@@ -38,6 +38,7 @@
 #include "Engine/Renderer/Frame/View/FrameViewResources.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
+#include "Engine/Renderer/Frame/View/RenderStability.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
@@ -179,6 +180,8 @@ namespace sw
         uint32 getLastPendingPSOBatchCount() const { return _lastPendingPSOBatchCount; }
         /** @brief 마지막 프레임의 볼륨 안개 상태(켜졌거나 왜 꺼졌는지)입니다. 렌더 스레드가 주 렌더러의 값을 올린다(`FrameFog::publishMainVolumeState`). */
         FogVolumeState getFogVolumeState() const { return _fog.getVolumeState(); }
+        /** @brief 주 시점의 마지막 정착 값(정지 프레임 · 노출 오차 상한)입니다. 렌더 스레드가 올린다(`RenderStabilitySample::publish` — 감시 값 `Render.Stable`). */
+        RenderStabilitySample getMainStabilitySample() const { return RenderStabilitySample{ _state._mainView._stillFrameCount, _state._mainView._exposureErrorEv }; }
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 **않게** 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽고 폴백한다(AO 는 1). 같은 프레임 안에서 "이 입력이 실제로 이미지를 바꾸는가" 를 비교할 수 있다.
