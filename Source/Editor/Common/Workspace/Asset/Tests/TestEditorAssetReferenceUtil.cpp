@@ -52,12 +52,12 @@ SW_TEST_CASE( EditorAssetReferenceUtilTest, ComponentAssetRefFollowsTheMove )
     mapUnrelated.insert_or_assign( string( "scratch/p04/other.notifies.xml" ), string( "scratch/p04/else.notifies.xml" ) );
     vector<hashed_string> listChanged;
     SW_EXPECT_EQUAL( 0u, EditorAssetReferenceUtil::remapComponent( *pNotify, mapUnrelated, listChanged ) );
-    SW_EXPECT_TRUE( ComponentAssetPathUtil::readAssetPath( *pPath, pNotify ) == "scratch/p04/old.notifies.xml" );
+    SW_EXPECT_TRUE( pPath->getValuePtr<AssetRefBase>( pNotify )->path() == "scratch/p04/old.notifies.xml" );
 
     unordered_map<string, string> mapMove;
     mapMove.insert_or_assign( string( "scratch/p04/old.notifies.xml" ), string( "scratch/p04/new.notifies.xml" ) );
     SW_EXPECT_EQUAL( 1u, EditorAssetReferenceUtil::remapComponent( *pNotify, mapMove, listChanged ) );
-    SW_EXPECT_TRUE( ComponentAssetPathUtil::readAssetPath( *pPath, pNotify ) == "scratch/p04/new.notifies.xml" );
+    SW_EXPECT_TRUE( pPath->getValuePtr<AssetRefBase>( pNotify )->path() == "scratch/p04/new.notifies.xml" );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listChanged.size() );
     SW_EXPECT_TRUE( listChanged[0] == hashed_string( "_notifyTablePath" ) );
 }

@@ -288,3 +288,25 @@ SW_TEST_CASE( SceneAssemblyTest, BinaryKeepsExpandedResult )
     SW_REQUIRE_TRUE( pHouseLid != nullptr );
     SW_EXPECT_TRUE( pHouseLid->getParent() == scene.getObjectManager()->findGameObjectByName( hashed_string( "House/Box" ) ) );
 }
+
+/** @brief [SceneAssemblyTest] 에셋 리다이렉트를 조립 기록에 반영한다 — 씬 상속의 부모 · 씬 인스턴스 앵커의 씬 · 엔티티의 프리팹이 새 id 로, 맵에 없는 경로는 그대로다(감사 P0-4) */
+SW_TEST_CASE( SceneAssemblyTest, RemapAssetPathsFollowsTheMove )
+{
+    Scene                   scene{ "RemapProbe" };
+    Scene::AssemblySnapshot snapshot = scene.captureAssembly();
+    snapshot._baseScenePath          = "scratch/remap/base.scene.xml";
+    snapshot._mapSceneInstancePath.insert_or_assign( uint64{ 7 }, string( "scratch/remap/inner.scene.xml" ) );
+    snapshot._mapSceneInstancePath.insert_or_assign( uint64{ 8 }, string( "scratch/remap/kept.scene.xml" ) );
+    scene.restoreAssembly( std::move( snapshot ) );
+    scene.setEntityPrefabPath( 9, "scratch/remap/crate.prefab.xml" );
+
+    unordered_map<string, string> mapOldToNew;
+    mapOldToNew.insert_or_assign( string( "scratch/remap/base.scene.xml" ), string( "scratch/moved/base.scene.xml" ) );
+    mapOldToNew.insert_or_assign( string( "scratch/remap/inner.scene.xml" ), string( "scratch/moved/inner.scene.xml" ) );
+    mapOldToNew.insert_or_assign( string( "scratch/remap/crate.prefab.xml" ), string( "scratch/moved/crate.prefab.xml" ) );
+    SW_EXPECT_EQUAL( 3u, scene.remapAssetPaths( mapOldToNew ) );
+    SW_EXPECT_EQUAL( string( "scratch/moved/base.scene.xml" ), scene.getBaseScenePath() );
+    SW_EXPECT_TRUE( scene.getSceneInstancePath( 7 ) == "scratch/moved/inner.scene.xml" );
+    SW_EXPECT_TRUE( scene.getSceneInstancePath( 8 ) == "scratch/remap/kept.scene.xml" );
+    SW_EXPECT_TRUE( scene.getEntityPrefabPath( 9 ) == "scratch/moved/crate.prefab.xml" );
+}

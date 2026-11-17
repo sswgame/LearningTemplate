@@ -747,17 +747,14 @@ namespace sw::editor
             {
                 if ( pComponent == nullptr || pComponent->isPendingDestroy() )
                     continue;
-                const TypeInfo* pType = pComponent->getTypeInfo();
-                if ( pType == nullptr )
-                    continue;
-                pType->forEachProperty( [pComponent, &reloaded, &notified]( const PropertyInfo& prop )
+                ComponentAssetPathUtil::forEachAssetPath( *pComponent, SW_DELEGATE_LAMBDA( AssetPathVisitor, [pComponent, &reloaded, &notified]( const AssetPathValue& value )
                 {
-                    const string_view path = ComponentAssetPathUtil::readAssetPath( prop, pComponent );
+                    const string_view path = value.getPath();
                     if ( path.empty() || StringUtil::equals( FileUtil::normalizeSeparators( path ), reloaded, true ) == false )
                         return;
-                    pComponent->onPropertyChanged( prop._name );
+                    pComponent->onPropertyChanged( value._pTopProperty->_name ); // 중첩 구조체 안의 경로면 그것을 품은 맨 위 칸으로 알린다
                     ++notified;
-                }, true );
+                } ) );
             }
         } );
         return notified;

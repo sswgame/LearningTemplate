@@ -160,6 +160,12 @@ namespace sw
         void collectObjectsOnDataLayer( string_view name, vector<uint64>& outListObjectID ) const;
         /** @brief 씬 상속의 부모입니다(루트의 `_base`). 없으면 빈 문자열입니다. */
         const string& getBaseScenePath() const { return _baseScenePath; }
+        /**
+         * @brief 씬이 조립 기록으로 든 에셋 경로(씬 상속의 부모 · 씬 인스턴스 앵커의 씬 · 엔티티의 프리팹 · 못 지은 엔티티의 프리팹 · 씬)를 @p mapOldToNew(옛 id → 새 id)로 바꿉니다. 바꾼 수입니다.
+         * @details 에셋 리다이렉트를 런타임 메모리에 반영하는 일이라 에디터 옮기기와 런타임 핫 리로드가 같이 쓴다(언리얼 CoreRedirects 가 로드된 객체에 적용되는 자리).
+         *          오브젝트 상태(컴포넌트 칸)는 부르는 쪽이 리플렉션으로 고친다 — 씬은 오브젝트 상태의 형식을 모른다.
+         */
+        uint32 remapAssetPaths( const unordered_map<string, string>& mapOldToNew );
 
         /** @brief 씬 인스턴스 멤버 하나의 기록입니다. */
         struct InstanceMember
