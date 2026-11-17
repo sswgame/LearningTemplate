@@ -48,7 +48,7 @@ namespace
             string text = "<SQLMigrationList>";
             for ( const utf8* pName : listName )
             {
-                text += string( "<Migration _name=\"" ) + pName + "\" />";
+                text += string( "<Migration _name=\"" ) + pName + "\" _compatibility=\"Backward\" />";
             }
             text += "</SQLMigrationList>";
             write( SQLMigrationRunner::kListFileName, text );
@@ -179,20 +179,86 @@ SW_TEST_CASE( SQLMigrationRunnerTest, EditedAppliedMigrationIsRefused )
 }
 
 /**
- * @brief 이 빌드가 모르는 번호가 적용돼 있으면 거절한다.
+ * @brief 이 빌드가 모르는 번호가 Breaking 으로 적용돼 있으면 거절한다.
  * @details 결함: 적용 기록 쪽의 번호를 보지 않아, 새 빌드가 스키마를 올린 DB 에 옛 서버가 말없이 붙어 썼다.
  */
-SW_TEST_CASE( SQLMigrationRunnerTest, NewerDatabaseIsRefused )
+SW_TEST_CASE( SQLMigrationRunnerTest, NewerBreakingDatabaseIsRefused )
 {
     test::FakeSQLDriver driver;
     driver.addRows( "SELECT version, checksum", { SQLMigrationRunnerTestUtil::makeHistoryRow( 1, "CREATE FIRST {{blob}}" ), SQLMigrationRunnerTestUtil::makeHistoryRow( 2, "CREATE SECOND" ),
-                                                  SQLMigrationRunnerTestUtil::makeHistoryRow( 3, "from a newer build" ) } );
+                                                  SQLMigrationRunnerTestUtil::makeHistoryRow( 3, "from a newer build" ), SQLMigrationRunnerTestUtil::makeHistoryRow( 4, "also newer" ) } );
+    driver.addRows( "SELECT version FROM sw_schema_breaking", { { SQLValue::makeInt64( 4 ) } } );
     string error;
     error = describeError( SQLMigrationRunnerTestUtil::applyTwo( driver ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "newer" ) != string::npos );
     SW_EXPECT_EQUAL( 1, driver.countSQL( "ROLLBACK" ) );
     SW_EXPECT_EQUAL( 0, driver.countSQL( "COMMIT" ) );
+}
+
+/**
+ * @brief 모르는 번호가 모두 Backward 면 옛 빌드가 돈다(순차 배포 — 새 빌드가 스키마를 올린 뒤 옛 빌드가 다시 떠도 막히지 않는다).
+ * @details 결함: 모르는 번호면 늘 거절해 순차 배포 중 옛 서버가 다시 뜨지 못했다(Flyway 는 future 마이그레이션을 기본으로 넘긴다).
+ */
+SW_TEST_CASE( SQLMigrationRunnerTest, NewerBackwardDatabaseRuns )
+{
+    test::FakeSQLDriver driver;
+    driver.addRows( "SELECT version, checksum", { SQLMigrationRunnerTestUtil::makeHistoryRow( 1, "CREATE FIRST {{blob}}" ), SQLMigrationRunnerTestUtil::makeHistoryRow( 2, "CREATE SECOND" ),
+                                                  SQLMigrationRunnerTestUtil::makeHistoryRow( 3, "from a newer build" ) } );
+    driver.addRows( "SELECT version FROM sw_schema_breaking", { { SQLValue::makeInt64( 2 ) } } ); // 이 빌드가 아는 Breaking 은 막지 않는다
+    SW_EXPECT_TRUE( SQLMigrationRunnerTestUtil::applyTwo( driver ) );
+    SW_EXPECT_EQUAL( 0, driver.countSQL( "CREATE FIRST" ) );
+    SW_EXPECT_EQUAL( 0, driver.countSQL( "CREATE SECOND" ) );
+    SW_EXPECT_EQUAL( 1, driver.countSQL( "COMMIT" ) );
+}
+
+/** @brief 더 새 DB 인데 이 빌드의 앞 번호가 빠져 있으면 목록이 갈라진 것이다 — 채우지 않고 거절한다. */
+SW_TEST_CASE( SQLMigrationRunnerTest, NewerDatabaseMissingAKnownMigrationIsRefused )
+{
+    test::FakeSQLDriver driver;
+    driver.addRows( "SELECT version, checksum", { SQLMigrationRunnerTestUtil::makeHistoryRow( 1, "CREATE FIRST {{blob}}" ), SQLMigrationRunnerTestUtil::makeHistoryRow( 3, "from a newer build" ) } );
+    const string error = describeError( SQLMigrationRunnerTestUtil::applyTwo( driver ) );
+    SW_EXPECT_TRUE( error.find( "diverged" ) != string::npos );
+    SW_EXPECT_EQUAL( 0, driver.countSQL( "CREATE SECOND" ) );
+    SW_EXPECT_EQUAL( 0, driver.countSQL( "COMMIT" ) );
+}
+
+/** @brief Breaking 마이그레이션을 적용하면 그 번호를 Breaking 표에 남긴다 — 옛 빌드가 읽을 유일한 단서다. Backward 는 남기지 않는다. */
+SW_TEST_CASE( SQLMigrationRunnerTest, BreakingMigrationIsRecorded )
+{
+    test::FakeSQLDriver                  driver;
+    expected<unique_ptr<ISQLConnection>> connection = driver.openConnection( "", "" );
+    SW_REQUIRE_TRUE( connection.has_value() );
+    vector<SQLMigration> listMigration = SQLMigrationRunnerTestUtil::makeTwoMigrations();
+    listMigration[1]._bBreaking        = SW_TRUE;
+    SW_REQUIRE_TRUE( SQLMigrationRunner::apply( **connection, listMigration, UnixMilliseconds{ 1 } ) );
+    SW_REQUIRE_EQUAL( 1, driver.countSQL( "INSERT INTO sw_schema_breaking" ) );
+    for ( const test::FakeSQLDriver::Statement& statement : driver.getStatements() )
+    {
+        if ( statement._sql.find( "INSERT INTO sw_schema_breaking" ) == string::npos )
+            continue;
+        SW_REQUIRE_EQUAL( size_t( 1 ), statement._listParam.size() );
+        SW_EXPECT_EQUAL( int64( 2 ), statement._listParam[0]._integer );
+    }
+}
+
+/** @brief 실제 SQLite: Breaking 표가 기록 표와 함께 생기고, 다음 기동(같은 목록)은 그대로 돈다. */
+SW_TEST_CASE( SQLMigrationRunnerTest, SQLiteRecordsBreakingAndRestarts )
+{
+    unique_ptr<ISQLConnection> connection = SQLMigrationRunnerTestUtil::openSQLite();
+    SW_REQUIRE_NOT_NULL( connection );
+    vector<SQLMigration> listMigration;
+    SQLMigration&        first = listMigration.emplace_back();
+    first._version             = 1;
+    first._name                = "first";
+    first._sql                 = "CREATE TABLE made_by_first ( x INTEGER );";
+    first._bBreaking           = SW_TRUE;
+    SW_REQUIRE_TRUE( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 1 } ) );
+    SW_REQUIRE_TRUE( SQLMigrationRunner::apply( *connection, listMigration, UnixMilliseconds{ 2 } ) );
+    SQLRowSet rowSet;
+    SW_REQUIRE_TRUE( connection->execute( "SELECT version FROM sw_schema_breaking", nullptr, 0, &rowSet ) == SQLResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rowSet._listRow.size() );
+    SW_EXPECT_EQUAL( int64( 1 ), rowSet._listRow[0][0]._integer );
 }
 
 /**
@@ -365,6 +431,16 @@ SW_TEST_CASE( SQLMigrationRunnerTest, ListRejectsBadShapes )
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
     fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" _more=\"x\" /></SQLMigrationList>" );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
+    // 호환성은 기본값이 없다 — 빠지거나 모르는 값이면 오류다.
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" /></SQLMigrationList>" );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_TRUE( error.find( "_compatibility" ) != string::npos );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" _compatibility=\"Maybe\" /></SQLMigrationList>" );
+    error = describeError( fixture.load( "alpha", listMigration ) );
+    SW_EXPECT_FALSE( error.empty() );
+    fixture.write( SQLMigrationRunner::kListFileName, "<SQLMigrationList><Migration _name=\"0001_a\" _compatibility=\"Backward\" _more=\"x\" /></SQLMigrationList>" );
     error = describeError( fixture.load( "alpha", listMigration ) );
     SW_EXPECT_FALSE( error.empty() );
     fixture.writeList( { "first" } ); // 번호가 없는 이름
