@@ -232,7 +232,7 @@ namespace sw::test
             (void)bAccepted;
             const optional<int32> clientIndex = findClient( handle );
             if ( clientIndex.has_value() )
-                SW_EXPECT_TRUE( getClient( *clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint() } ) );
+                SW_EXPECT_TRUE( getClient( *clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint(), OnlineRetryPolicy::none() } ) );
         }
 
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override

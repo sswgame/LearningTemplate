@@ -203,8 +203,8 @@ namespace sw
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the account client could not be registered (method range already taken)" } );
             _bServiceRegistered = SW_TRUE;
         }
-        OnlineServiceClientConfig settings{ security };
-        settings._transportSettings._ioThreadCount = 0; // `poll` 의 `update` 가 전송을 돌린다
+        OnlineServiceClientConfig settings{ security, OnlineRetryPolicy::none() }; // 막는 개발 도구다 — 시한 안의 실패를 바로 보인다
+        settings._transportSettings._ioThreadCount = 0;                            // `poll` 의 `update` 가 전송을 돌린다
         settings._serverAddress                    = *loginAddress;
         settings._gameBuild                        = request._gameBuild;
         if ( expected<void> result = _client.initialize( &transport, settings ); result.has_value() == false )
