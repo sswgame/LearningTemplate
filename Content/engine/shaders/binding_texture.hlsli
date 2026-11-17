@@ -10,18 +10,23 @@
 // 셰이더의 UV 는 사각형 기준(0..1)이고, 풀 텍스처에서는 사각형 배율을 곱한 자리다. 사각형 밖 텍셀이 번지지 않게 가장자리 반 텍셀 안쪽에서 자른다.
 // 사각형이 풀을 다 덮으면(배율 1) 상한이 1 이라 클램프 샘플러가 하던 것과 같은 값이다 — 그림이 바뀌지 않는다.
 // ------------------------------------------------------------------------------
-static float2 PassTexture::scaleToViewRect( float2 uv, float2 scale )
+static float2 PassTexture::scaleToViewRect( float2 uv, float2 scale, float2 texel )
 {
-    const float2 uvMax = scale - 0.5f * g_ViewRectSize.zw * ( 1.0f - step( 1.0f, scale ) );
+    const float2 uvMax = scale - 0.5f * texel * ( 1.0f - step( 1.0f, scale ) );
     return min( uv * scale, uvMax );
 }
 static float2 PassTexture::toViewRectUV( float2 uv )
 {
-    return PassTexture::scaleToViewRect( uv, g_ViewRectScale.xy );
+    return PassTexture::scaleToViewRect( uv, g_ViewRectScale.xy, g_ViewRectSize.zw );
+}
+static float2 PassTexture::toSourceViewRectUV( float2 uv )
+{
+    // 원본 역할은 반해상도 첨부(블룸 사슬)일 수 있다 — 반 텍셀은 그 첨부의 실제 텍셀(g_SourceTexel.xy)로 잰다.
+    return PassTexture::scaleToViewRect( uv, g_ViewRectScale.xy, g_SourceTexel.xy );
 }
 static float2 PassTexture::toPreviousViewRectUV( float2 uv )
 {
-    return PassTexture::scaleToViewRect( uv, g_ViewRectScale.zw );
+    return PassTexture::scaleToViewRect( uv, g_ViewRectScale.zw, g_ViewRectSize.zw );
 }
 static uint2 PassTexture::getViewRectSize()
 {
@@ -999,7 +1004,7 @@ static float4 PassTexture::sampleDepth( float2 uv )
 }
 static float4 PassTexture::sampleSource( float2 uv )
 {
-    return Bindless::sampleIndex( SW_ENGINE_ROLE( SourceColor ), PassTexture::toViewRectUV( uv ) );
+    return Bindless::sampleIndex( SW_ENGINE_ROLE( SourceColor ), PassTexture::toSourceViewRectUV( uv ) );
 }
 /**
  * @brief 화면과 1:1 인 전체화면 패스 전용 — 텍셀 중심에 정확히 떨어지므로 선형 필터가 **할 일이 없다**.
@@ -1014,7 +1019,7 @@ static float4 PassTexture::sampleDepthPoint( float2 uv )
 }
 static float4 PassTexture::sampleSourcePoint( float2 uv )
 {
-    return Bindless::sampleIndexWith( SW_ENGINE_ROLE( SourceColor ), SW_SAMPLER_POINT_CLAMP, PassTexture::toViewRectUV( uv ) );
+    return Bindless::sampleIndexWith( SW_ENGINE_ROLE( SourceColor ), SW_SAMPLER_POINT_CLAMP, PassTexture::toSourceViewRectUV( uv ) );
 }
 /**
  * @brief 깊이의 십자 다섯 칸(중심 + 상하좌우 한 텍셀)을 읽습니다 — 게더가 있으면 **두 번**에 끝낸다.

@@ -9,12 +9,14 @@
 
 SW_ROOT_CONSTANTS_BEGIN
 {
-    uint  g_AutoExposureSource;   // HDR 원본의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
-    uint  g_AutoExposureHistory;  // 지난 EV(1x1)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
-    float g_AutoExposureMinEv;    // 목표 EV 의 하한
-    float g_AutoExposureMaxEv;    // 목표 EV 의 상한
-    float g_AutoExposureRateUp;   // 장면이 밝아질 때(목표 EV > 지난 EV) 이번 프레임에 다가가는 비율(0..1)
-    float g_AutoExposureRateDown; // 장면이 어두워질 때 다가가는 비율(0..1)
+    uint  g_AutoExposureSource;      // HDR 원본의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+    uint  g_AutoExposureHistory;     // 지난 EV(1x1)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+    float g_AutoExposureMinEv;       // 목표 EV 의 하한
+    float g_AutoExposureMaxEv;       // 목표 EV 의 상한
+    float g_AutoExposureRateUp;      // 장면이 밝아질 때(목표 EV > 지난 EV) 이번 프레임에 다가가는 비율(0..1)
+    float g_AutoExposureRateDown;    // 장면이 어두워질 때 다가가는 비율(0..1)
+    uint  g_AutoExposureSourceWidth; // 원본에서 뷰 사각형이 덮는 크기(px) — 텍스처 전체가 아니다(자동 렌더 배율)
+    uint  g_AutoExposureSourceHeight;
 };
 SW_ROOT_CONSTANTS_END
 
@@ -29,7 +31,7 @@ float3 loadSource( int2 texel )
 
 float2 getSourceSize()
 {
-    return float2( Bindless::getEngineTextureSize( SW_ROOT( g_AutoExposureSource ), SW_EMU_SLOT_SourceColor ) );
+    return float2( SW_ROOT( g_AutoExposureSourceWidth ), SW_ROOT( g_AutoExposureSourceHeight ) );
 }
 
 float loadHistory()

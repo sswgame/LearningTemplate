@@ -192,7 +192,8 @@ struct PassTexture
     static float2 toViewRectUV( float2 uv );         // 화면 UV(0..1) → 풀 UV(사각형 안, 가장자리는 반 텍셀 안쪽). 그림자 · 쿠키 아틀라스처럼 뷰 크기가 아닌 텍스처에는 쓰지 않는다
     static float2 toPreviousViewRectUV( float2 uv ); // 같은 변환을 지난 프레임 사각형으로
     static uint2 getViewRectSize();                  // 텍셀 번호로 읽는 쪽의 크기 — 풀(텍스처)이 아니라 사각형
-    static float2 scaleToViewRect( float2 uv, float2 scale );
+    static float2 toSourceViewRectUV( float2 uv );   // 원본 역할(반해상도일 수 있다)의 변환 — 반 텍셀을 원본의 실제 텍셀로 잰다
+    static float2 scaleToViewRect( float2 uv, float2 scale, float2 texel );
 };
 
 /** @brief 머티리얼이 준 텍스처 번호를 읽는다(11-3 절). 에뮬 백엔드의 번호는 머티리얼 슬롯 서수다. */

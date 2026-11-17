@@ -960,6 +960,8 @@ namespace sw
             publishRenderTargets();
             reportRenderTargetMemory();
         }
+        // 자동 렌더 배율은 풀이 아니라 사각형만 줄인다(정수 업스케일은 풀 전체가 화면 픽셀과 짝이라 늘 1).
+        _state._mainView.updateViewRect( settings._upscaleZoom > 0 ? 1.0f : settings._rectScale );
         // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
@@ -1269,6 +1271,7 @@ namespace sw
         const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
         (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration );
+        view.updateViewRect( zoom > 0 ? 1.0f : view._settings._rectScale );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         view.beginViewHistory();
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.

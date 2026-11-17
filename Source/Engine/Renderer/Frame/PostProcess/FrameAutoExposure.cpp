@@ -40,8 +40,10 @@ namespace sw
                 float32 _maxEv{ 0.0f };
                 float32 _rateUp{ 1.0f };
                 float32 _rateDown{ 1.0f };
+                uint32  _sourceWidth{ 0 }; ///< 원본에서 뷰 사각형이 덮는 크기(px) — 사각형 밖(자동 렌더 배율로 그리지 않은 곳)을 재지 않는다
+                uint32  _sourceHeight{ 0 };
             };
-            static_assert( sizeof( RootConstants ) == 6 * sizeof( uint32 ), "auto_exposure.hlsl 의 루트 상수와 크기가 같아야 한다" );
+            static_assert( sizeof( RootConstants ) == 8 * sizeof( uint32 ), "auto_exposure.hlsl 의 루트 상수와 크기가 같아야 한다" );
 
             /** @brief 지수 적응에서 @p deltaSeconds 동안 목표로 다가가는 비율(1 - e^(-속도 · dt))입니다. 기록을 버리는 프레임은 1(측정값 그대로)입니다. */
             static float32 computeAdaptRate( float32 speed, float32 deltaSeconds, bool bReset )
@@ -171,12 +173,14 @@ namespace sw
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameAutoExposureInternal::RootConstants constants{};
-        constants._source   = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._history  = bNativeBindless ? static_cast<uint32>( view._arrAutoExposureSRV[readSlot] ) : 0u;
-        constants._minEv    = view._autoExposureParams._x;
-        constants._maxEv    = view._autoExposureParams._y;
-        constants._rateUp   = view._autoExposureParams._z;
-        constants._rateDown = view._autoExposureParams._w;
+        constants._source       = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
+        constants._history      = bNativeBindless ? static_cast<uint32>( view._arrAutoExposureSRV[readSlot] ) : 0u;
+        constants._minEv        = view._autoExposureParams._x;
+        constants._maxEv        = view._autoExposureParams._y;
+        constants._rateUp       = view._autoExposureParams._z;
+        constants._rateDown     = view._autoExposureParams._w;
+        constants._sourceWidth  = view.scaleToRect( source._width, source._bViewSized != 0, true );
+        constants._sourceHeight = view.scaleToRect( source._height, source._bViewSized != 0, false );
         if ( bNativeBindless == false )
         {
             constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );

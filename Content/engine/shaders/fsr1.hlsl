@@ -29,8 +29,8 @@ SW_ROOT_CONSTANTS_BEGIN
     float g_FSRInputHeight;
     float g_FSROutputWidth; // EASU: 출력(중간 RT) 픽셀 크기. RCAS: 중간 RT(= 대상 뷰포트) 픽셀 크기 — UV 를 픽셀로 옮긴다
     float g_FSROutputHeight;
-    float g_FSRReserved0; // 루트 상수 칸을 지킨다(C++ RootConstants 와 같은 크기)
-    float g_FSRReserved1;
+    float g_FSRInputTextureWidth; // EASU: 원본 텍스처 전체 크기 — 게더 UV 의 텍셀(입력 크기는 그 안의 뷰 사각형, 자동 렌더 배율)
+    float g_FSRInputTextureHeight;
     float g_FSRSharpness; // RCAS: 선명도를 줄이는 단계(0 = 가장 선명, 1 단계마다 절반 — AMD FsrRcasCon 의 sharpness)
 };
 SW_ROOT_CONSTANTS_END
@@ -126,7 +126,7 @@ float3 computeEasu( uint2 outputPixel )
 {
     const float2 inputSize  = float2( SW_ROOT( g_FSRInputWidth ), SW_ROOT( g_FSRInputHeight ) );
     const float2 outputSize = float2( SW_ROOT( g_FSROutputWidth ), SW_ROOT( g_FSROutputHeight ) );
-    const float2 inputTexel = 1.0f / inputSize;
+    const float2 inputTexel = 1.0f / float2( SW_ROOT( g_FSRInputTextureWidth ), SW_ROOT( g_FSRInputTextureHeight ) );
     // FsrEasuCon — 출력 정수 위치를 원본 픽셀 위치로(con0), 'F' 탭의 왼쪽 위와 게더 넷의 가운데(con1 · con2 · con3).
     const float2 scale       = inputSize / outputSize;
     float2       position    = float2( outputPixel ) * scale + ( 0.5f * scale - 0.5f );

@@ -572,6 +572,12 @@ namespace sw
         const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex;
         if ( bHasSource == false || _psoManager.getEnginePSO( RenderPassType::DepthHistory ) == 0 )
             return false;
+        // 지난 프레임을 풀보다 작은 사각형에 그렸으면(자동 렌더 배율) 사각형 밖 깊이는 옛 값이다 — 깊이 히스토리를 읽는 쪽(가림 타일 · GPU 입자 깊이 충돌)은
+        // 텍스처 전체를 화면으로 보므로 그 프레임은 히스토리 없이 간다(가림을 보지 않고, 충돌하지 않는다 — 틀린 가림보다 안전하다).
+        // shortcut: 배율이 1 이 아닌 동안 가림 컬링 · 깊이 충돌이 꺼진다, 읽는 셰이더에 지난 사각형 배율을 넘기면 다시 켠다.
+        const bool bFullRect = view._previousRectScale._x >= 1.0f && view._previousRectScale._y >= 1.0f;
+        if ( bFullRect == false )
+            return false;
         return view._transientPool.find( attachmentNames()._sceneDepth )._texture != 0;
     }
 
