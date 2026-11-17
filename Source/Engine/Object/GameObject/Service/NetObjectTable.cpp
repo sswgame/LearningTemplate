@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -33,10 +34,12 @@ namespace sw
         ++_spawnedRevision;
     }
 
-    uint32 NetObjectTable::computeSceneID( const GameObject& object )
+    NetObjectID NetObjectTable::computeSceneID( const GameObject& object )
     {
-        const uint32 sceneID = object.getName().getHash() & ~kSpawnedBit;
-        return sceneID != 0 ? sceneID : 1u;
+        const hashed_string name    = object.getName();
+        const uint64        hash    = HashUtil::computeStringHash64( name.c_str(), name.size() );
+        const NetObjectID   sceneID = ( hash >> 2 ) << 1; // 맨 아래(생성 비트)를 비우고 위 두 비트를 버려 9 바이트 가변 길이 정수에 든다
+        return sceneID != 0 ? sceneID : NetObjectID{ 2 };
     }
 
     void NetObjectTable::captureSceneObjects( SceneIterationKey key )
@@ -58,17 +61,17 @@ namespace sw
 
         // 새 씬 번호는 모았다가 정렬해 한 번에 끼운다(하나씩 끼우면 목록 뒤쪽을 매번 옮겨 O(N²)). 이 호출 안에서 새로 잡은 번호끼리 겹치면 해시 표로 가린다.
         // 겹친 번호는 먼저 만난 오브젝트의 항목이 모호 표시를 달고 남는다(하나씩 끼울 때와 같다).
-        vector<Entry>                 listNew;
-        unordered_map<uint32, uint32> mapNewIndex;
+        vector<Entry>                      listNew;
+        unordered_map<NetObjectID, uint32> mapNewIndex;
         for ( GameObject* pObject : listObject )
         {
             const GameObjectHandle handle = pObject->getHandle();
             const bool             bKnown = std::binary_search( listKnown.begin(), listKnown.end(), handle );
             if ( bKnown || pObject->isPendingDestroy() )
                 continue;
-            const uint32 sceneID = computeSceneID( *pObject );
-            const auto   it      = std::lower_bound( _listScene.begin(), _listScene.end(), sceneID, []( const Entry& entry, uint32 id )
-                   { return entry._netID < id; } );
+            const NetObjectID sceneID = computeSceneID( *pObject );
+            const auto        it      = std::lower_bound( _listScene.begin(), _listScene.end(), sceneID, []( const Entry& entry, NetObjectID id )
+                        { return entry._netID < id; } );
             if ( it != _listScene.end() && it->_netID == sceneID )
             {
                 // 같은 번호(같은 이름 또는 해시 충돌) — 어느 쪽에도 주지 않는다. 다른 오브젝트에 조용히 묶이면 복제가 엉뚱한 오브젝트를 움직인다.
@@ -106,9 +109,9 @@ namespace sw
         std::inplace_merge( _listScene.begin(), _listScene.begin() + oldCount, _listScene.end(), byNetID );
     }
 
-    const NetObjectTable::Entry* NetObjectTable::findSceneEntry( uint32 netID ) const
+    const NetObjectTable::Entry* NetObjectTable::findSceneEntry( NetObjectID netID ) const
     {
-        const auto it = std::lower_bound( _listScene.begin(), _listScene.end(), netID, []( const Entry& entry, uint32 id )
+        const auto it = std::lower_bound( _listScene.begin(), _listScene.end(), netID, []( const Entry& entry, NetObjectID id )
         { return entry._netID < id; } );
         return ( it != _listScene.end() && it->_netID == netID ) ? &*it : nullptr;
     }
@@ -118,29 +121,29 @@ namespace sw
         const auto itNetID = _mapSpawnedNetID.find( object );
         if ( itNetID == _mapSpawnedNetID.end() )
             return nullptr;
-        const uint32 netID = itNetID->second;
-        const auto   it    = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, uint32 id )
-             { return entry._netID < id; } );
+        const NetObjectID netID = itNetID->second;
+        const auto        it    = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, NetObjectID id )
+                  { return entry._netID < id; } );
         return ( it != _listSpawned.end() && it->_netID == netID ) ? &*it : nullptr;
     }
 
-    uint32 NetObjectTable::findID( const GameObject& object ) const
+    NetObjectID NetObjectTable::findID( const GameObject& object ) const
     {
         const Entry* pSpawned = findSpawnedEntryByObject( object.getHandle() );
         if ( pSpawned != nullptr )
             return pSpawned->_netID;
         const Entry* pScene  = findSceneEntry( computeSceneID( object ) );
         const bool   bIsThis = pScene != nullptr && pScene->_bAmbiguous == SW_FALSE && pScene->_object == object.getHandle();
-        return bIsThis ? pScene->_netID : 0u;
+        return bIsThis ? pScene->_netID : NetObjectID{ 0 };
     }
 
-    GameObject* NetObjectTable::findObject( uint32 netID ) const
+    GameObject* NetObjectTable::findObject( NetObjectID netID ) const
     {
         if ( netID == 0 )
             return nullptr;
         if ( ( netID & kSpawnedBit ) != 0 )
         {
-            const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, uint32 id )
+            const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, NetObjectID id )
             { return entry._netID < id; } );
             return ( it != _listSpawned.end() && it->_netID == netID ) ? _pManager->resolveGameObject( it->_object ) : nullptr;
         }
@@ -150,15 +153,15 @@ namespace sw
         return _pManager->resolveGameObject( pScene->_object );
     }
 
-    uint32 NetObjectTable::registerSpawned( GameObject& object )
+    NetObjectID NetObjectTable::registerSpawned( GameObject& object )
     {
         const Entry* pExisting = findSpawnedEntryByObject( object.getHandle() );
         if ( pExisting != nullptr )
             return pExisting->_netID;
         Entry entry{};
-        entry._netID  = kSpawnedBit | _nextSpawned++;
+        entry._netID  = ( _nextSpawned++ << 1 ) | kSpawnedBit;
         entry._object = object.getHandle();
-        const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), entry._netID, []( const Entry& other, uint32 id )
+        const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), entry._netID, []( const Entry& other, NetObjectID id )
         { return other._netID < id; } );
         (void)_listSpawned.insert( it, entry );
         _mapSpawnedNetID.emplace( entry._object, entry._netID );
@@ -166,7 +169,7 @@ namespace sw
         return entry._netID;
     }
 
-    bool NetObjectTable::bindSpawned( uint32 netID, GameObject& object )
+    bool NetObjectTable::bindSpawned( NetObjectID netID, GameObject& object )
     {
         if ( ( netID & kSpawnedBit ) == 0 || netID == kSpawnedBit )
         {
@@ -181,7 +184,7 @@ namespace sw
             SW_LOG_ERROR_ID( "NetObjectTable.NetObjectAlreadySpawned", "Net object '%#' already has spawned id %# - cannot bind it to %#", object.getName().c_str(), pOwn->_netID, netID );
             return false;
         }
-        const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, uint32 id )
+        const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, NetObjectID id )
         { return entry._netID < id; } );
         if ( it != _listSpawned.end() && it->_netID == netID )
         {

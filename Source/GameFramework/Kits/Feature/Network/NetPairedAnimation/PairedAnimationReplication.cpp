@@ -22,15 +22,15 @@ namespace sw
     namespace
     {
         /** @brief 애니메이터를 가진 오브젝트의 번호(`NetObjectTable`)입니다. 핸들이 풀리지 않거나 번호가 없으면 0 입니다. */
-        uint32 findAnimatorNetID( GameObjectManager& manager, const TComponentHandle<SkeletalAnimatorComponent>& animator )
+        NetObjectID findAnimatorNetID( GameObjectManager& manager, const TComponentHandle<SkeletalAnimatorComponent>& animator )
         {
             const SkeletalAnimatorComponent* pAnimator = manager.resolveComponent( animator );
             const GameObject*                pOwner    = pAnimator != nullptr ? pAnimator->getOwner() : nullptr;
-            return pOwner != nullptr ? manager.getSubsystem<NetObjectTable>().findID( *pOwner ) : 0u;
+            return pOwner != nullptr ? manager.getSubsystem<NetObjectTable>().findID( *pOwner ) : NetObjectID{ 0 };
         }
 
         /** @brief 번호의 오브젝트에 있는 애니메이터입니다. 오브젝트나 애니메이터가 없으면 무효 핸들입니다. */
-        TComponentHandle<SkeletalAnimatorComponent> findNetAnimator( GameObjectManager& manager, uint32 netID )
+        TComponentHandle<SkeletalAnimatorComponent> findNetAnimator( GameObjectManager& manager, NetObjectID netID )
         {
             GameObject*                      pObject   = manager.getSubsystem<NetObjectTable>().findObject( netID );
             const SkeletalAnimatorComponent* pAnimator = pObject != nullptr ? pObject->getComponent<SkeletalAnimatorComponent>() : nullptr;
@@ -66,7 +66,7 @@ namespace sw
             return false;
         writer.writeBlob( reinterpret_cast<const uint8*>( _assetPath.data() ), static_cast<int32>( _assetPath.size() ) );
         writer.writeVarUint( _listRoleNetID.size() );
-        for ( const uint32 netID : _listRoleNetID )
+        for ( const NetObjectID netID : _listRoleNetID )
         {
             writer.writeVarUint( netID );
         }
@@ -86,9 +86,9 @@ namespace sw
         if ( reader.hasOverflowed() || roleCount > kMaxRoleCount )
             return false;
         state._listRoleNetID.resize( static_cast<size_t>( roleCount ) );
-        for ( uint32& netID : state._listRoleNetID )
+        for ( NetObjectID& netID : state._listRoleNetID )
         {
-            netID = reader.readVarUint32();
+            netID = reader.readVarUint();
         }
         vector<uint8> snapshotBytes;
         if ( reader.readBlob( snapshotBytes, kMaxSnapshotBytes ) == false )
@@ -174,13 +174,13 @@ namespace sw
             return false;
         }
         outState._assetPath = def.getSourcePath();
-        outState._listRoleNetID.assign( def.getRoles().size(), 0u );
+        outState._listRoleNetID.assign( def.getRoles().size(), NetObjectID{ 0 } );
         for ( uint32 roleIndex = 0; roleIndex < static_cast<uint32>( def.getRoles().size() ); ++roleIndex )
         {
             const TComponentHandle<SkeletalAnimatorComponent>& animator = session.getRoleAnimator( roleIndex );
             if ( animator.isValid() == false )
                 continue; // 바인딩 없는 선택 역할
-            const uint32 netID = findAnimatorNetID( *_pManager, animator );
+            const NetObjectID netID = findAnimatorNetID( *_pManager, animator );
             if ( netID == 0 )
             {
                 SW_LOG_ERROR_ID( "PairedAnimationReplication.PairedAnimationSessionNot3", "Paired animation session %# is not replicated: role '%#' of '%#' is bound to an object without a net id (not a captured scene object and not a registered spawned object)", session.getID(),
@@ -372,7 +372,7 @@ namespace sw
         vector<PairedAnimationBinding> listBinding;
         for ( uint32 roleIndex = 0; roleIndex < static_cast<uint32>( state._listRoleNetID.size() ); ++roleIndex )
         {
-            const uint32 netID = state._listRoleNetID[roleIndex];
+            const NetObjectID netID = state._listRoleNetID[roleIndex];
             if ( netID == 0 )
                 continue; // 서버에서도 바인딩 없는 선택 역할
             const TComponentHandle<SkeletalAnimatorComponent> animator = findNetAnimator( *_pManager, netID );

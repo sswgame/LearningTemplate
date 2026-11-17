@@ -46,9 +46,9 @@ namespace sw
     /** @brief 해시 로그 한 줄의 값입니다. */
     struct DestructionHashRecord
     {
-        uint64 _hash{ 0 };
-        uint32 _netID{ 0 };
-        uint32 _eventCount{ 0 };
+        uint64      _hash{ 0 };
+        NetObjectID _netID{ 0 };
+        uint32      _eventCount{ 0 };
     };
 } // namespace sw
 
@@ -90,7 +90,7 @@ namespace sw
         DestructionNetSide getSide() const { return _side; }
         uint32             getObjectCount() const { return static_cast<uint32>( _listEntry.size() ); }
         /** @brief 등록한 오브젝트의 번호입니다(등록 순서). */
-        void                                 collectObjectIDs( vector<uint32>& outListNetID ) const;
+        void                                 collectObjectIDs( vector<NetObjectID>& outListNetID ) const;
         const vector<DestructionHashRecord>& getHashRecords() const { return _listRecord; }
         const DestructionReplicationStats&   getStats() const;
         /** @brief 등록한 모든 오브젝트의 구조 해시(`DestructionState::computeStateHash`)를 번호 순으로 접은 값입니다. 해시 이력의 `destruction` 줄이 틱마다 남긴다. */
@@ -98,7 +98,7 @@ namespace sw
         /** @brief 해시 이력의 `destruction` 줄 제공자입니다 — 세션이 멈춰 있으면 남기지 않고, 아니면 호스트 틱에 `computeStateHash` 를 남깁니다. */
         [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const override;
         /** @brief 번호의 오브젝트 이름입니다. 등록하지 않은 번호면 빈 문자열입니다. */
-        string_view findObjectName( uint32 netID ) const;
+        string_view findObjectName( NetObjectID netID ) const;
         /** @brief 클라이언트 복제기입니다(테스트의 결함 주입 `skipNextEvent`). 서버면 쓰지 않습니다. */
         DestructionReplicationClient& getClientReplication() { return _client; }
 
@@ -117,19 +117,19 @@ namespace sw
         {
             FractureComponent* _pFracture{ nullptr }; ///< 오브젝트를 지우지 않는 씬이라 포인터를 든다 — 지우는 게임은 `shutdown` 먼저
             string             _name{};
-            uint32             _netID{ 0 };
+            NetObjectID        _netID{ 0 };
             uint32             _loggedCount{ 0 }; ///< 마지막으로 남긴 사건 수
         };
 
-        DestructionReplicationServer  _server;
-        DestructionReplicationClient  _client;
-        vector<Entry>                 _listEntry;
-        unordered_map<uint32, uint32> _mapEntryIndex; ///< 번호 → `_listEntry` 위치. 항목은 더하기만 하므로 위치가 바뀌지 않는다(`_listEntry` 와 함께 고친다)
-        vector<DestructionHashRecord> _listRecord;
-        GameObjectManager*            _pManager;           ///< 번호표가 있는 씬(빌린 것)
-        Subscription                  _routerSubscription; ///< 라우터에 단 처리기(`_server` 또는 `_client`)의 등록. 처리기보다 뒤에 선언한다 — 먼저 풀린다
-        uint32                        _serverTick;
-        uint32                        _seenSpawnedRevision; ///< 마지막으로 훑은 번호표의 생성 번호 판
-        DestructionNetSide            _side;
+        DestructionReplicationServer       _server;
+        DestructionReplicationClient       _client;
+        vector<Entry>                      _listEntry;
+        unordered_map<NetObjectID, uint32> _mapEntryIndex; ///< 번호 → `_listEntry` 위치. 항목은 더하기만 하므로 위치가 바뀌지 않는다(`_listEntry` 와 함께 고친다)
+        vector<DestructionHashRecord>      _listRecord;
+        GameObjectManager*                 _pManager;           ///< 번호표가 있는 씬(빌린 것)
+        Subscription                       _routerSubscription; ///< 라우터에 단 처리기(`_server` 또는 `_client`)의 등록. 처리기보다 뒤에 선언한다 — 먼저 풀린다
+        uint32                             _serverTick;
+        uint32                             _seenSpawnedRevision; ///< 마지막으로 훑은 번호표의 생성 번호 판
+        DestructionNetSide                 _side;
     };
 } // namespace sw
