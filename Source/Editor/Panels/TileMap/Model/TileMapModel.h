@@ -2,7 +2,7 @@
  * @file TileMapModel.h
  * @brief 타일맵 페인터의 모델 — 편집 중인 맵 · 타일셋, 고른 레이어 · 도구 · 브러시 값, 칠하기 · 채우기 · 스포이트 · 엣지 워프, 읽기 · 쓰기 · 되돌리기 글. ImGui 를 모릅니다.
  * @details 패널(`TileMapPanel`)은 그리기 · 캔버스 보기(확대 · 이동) · 입력 읽기만 하고, 상태와 명령은 모두 이것이 든다 — 인스펙터 `Model/` 과 같은 선이다
- *          (유니티 Tile Palette 창이 Tilemap 데이터와 브러시를 따로 두는 것과 같다). 편집한 명령은 true 를 반환하고, 되돌리기 기록은 `recordDocumentEdit` 로 남긴다(문서 패널의 창구).
+ *          (유니티 Tile Palette 창이 Tilemap 데이터와 브러시를 따로 두는 것과 같다). 편집한 명령은 true 를 반환하고 스스로 되돌리기 이름으로 알린다(문서 패널의 창구 — 감사 E-16).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -41,12 +41,6 @@ namespace sw::editor
     public:
         /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
         void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
-        /**
-         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
-         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
-         */
-        void recordDocumentEdit( string_view label ) const;
-
         /** @brief 작업 공간이 포커스한 에셋 경로입니다(비면 없음). 창이 작업 공간 헤더를 보지 않게 여기서 읽는다(MVVM 계약). 에디터가 서 있을 때만 부른다. */
         static const string& getFocusedAssetPath();
         /** @brief @p path(리소스 경로 또는 디스크 경로)에 도구 문서 파일이 있으면 true 입니다 — 읽기(`EditorToolAssetCommands::loadTileMap`)와 같은 해석이다. */
@@ -103,7 +97,7 @@ namespace sw::editor
         void applyText( string_view text );
 
         // ------------------------------------------------------------------------------
-        // 2) 편집 명령 — 바꿨으면 true(패널이 되돌리기 기록을 남긴다)
+        // 2) 편집 명령 — 바꿨으면 true 이고 모델이 정한 되돌리기 이름으로 알린다(감사 E-16)
         // ------------------------------------------------------------------------------
         /** @brief 크기 칸(`editInputWidth` · `editInputHeight`)대로 맵 크기를 바꿉니다. 겹치는 칸의 내용은 남습니다. 범위를 넘으면 상태 줄에 알리고 false 입니다. */
         bool applyInputSize();
@@ -160,6 +154,8 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256>& editPath() { return _pathBuffer; }
         const utf8*                              getPath() const { return _pathBuffer.c_str(); }
         fixed_string<constant::buffer::kMax128>& editName() { return _nameBuffer; }
+        /** @brief 이름 칸(`editName`)을 다 고쳤습니다 — "Edit Tile Map Name" 으로 알립니다(이름은 칸이 문서다 — 저장할 때 맵으로 옮긴다). */
+        void                                     commitName();
         fixed_string<constant::buffer::kMax256>& editTileSetInput() { return _tileSetBuffer; }
         int32&                                   editInputWidth() { return _inputWidth; }
         int32&                                   editInputHeight() { return _inputHeight; }
@@ -188,6 +184,19 @@ namespace sw::editor
         uint32 countDataCells() const;
 
     private:
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 이 모델의 편집 연산만 부른다(감사 E-16) — 무엇을 고쳤는지와 되돌리기 이름은 모델이 정하고, View 는 연산만 부른다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+        /** @brief 편집 연산의 본문입니다 — 알리지 않는다(공개 연산이 성공하면 알린다). */
+        [[nodiscard]] bool tryApplyInputSize();
+        [[nodiscard]] bool tryApplyInputSpawn();
+        [[nodiscard]] bool tryApplyToolInput( const TileMapToolInput& input );
+        [[nodiscard]] bool tryPaintEdgeWarp( int32 edge );
+        [[nodiscard]] bool tryAddDataLayer( string_view name, int32 defaultValue );
+        [[nodiscard]] bool tryRemoveSelectedDataLayer();
+        [[nodiscard]] bool tryUseTileSetInput();
         /** @brief 맵 크기를 바꿉니다. 겹치는 칸 · 안에 남는 워프를 지키고 스폰을 맵 안으로 옮깁니다(유니티 · Godot 의 맵 크기 바꾸기와 같다). 범위를 넘거나 크기가 그대로면 false 입니다. */
         bool resize( int32 width, int32 height );
         /** @brief 새 맵(`kNewMapSide`)으로 시작합니다. 경로 칸은 그대로입니다. */
