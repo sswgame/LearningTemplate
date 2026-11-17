@@ -130,6 +130,11 @@ namespace sw
         /** @brief 모든 상태를 놓습니다(디바이스가 없으면 핸들만 잊습니다). */
         void release( IRHIDevice* pDevice );
 
+        /**
+         * @brief 이번 프레임의 디스패치를 다 돌고도 남는 단계 수의 최댓값입니다(방출기 하나가 디스패치 상한 `SW_VFX_MAX_STEPS_PER_DISPATCH` 보다 밀렸다).
+         * @details 그리지 않고 진행한 프레임(`SimulationOnlyFrameQueue`) 뒤에 따라잡는 중이면 0 이 아니다 — 캡처 준비가 이것이 0 이 될 때까지 기다린다.
+         */
+        uint64 getPendingStepCount() const { return _pendingStepCount; }
         /** @brief 지금 든 GPU 방출기 상태의 수입니다(테스트와 진단용). */
         uint32 getEmitterStateCount() const { return static_cast<uint32>( _mapState.size() ); }
 
@@ -211,6 +216,7 @@ namespace sw
         vector<VFXGPULightRange>                        _listLightRange;               ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
         VFXSimulationFrameInput                         _frameInput;                   ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
         RHIStructuredBuffer                             _paramBuffer;
+        uint64                                          _pendingStepCount; ///< `getPendingStepCount`
         uint8                                           _bPipelineMissingLogged     : 1;
         uint8                                           _bMeshPipelineMissingLogged : 1;
         uint8                                           _bLightOverflowLogged       : 1;

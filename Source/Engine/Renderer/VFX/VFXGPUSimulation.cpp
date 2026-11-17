@@ -136,6 +136,7 @@ namespace sw
         , _listLightRange{}
         , _frameInput{}
         , _paramBuffer{}
+        , _pendingStepCount{ 0 }
         , _bPipelineMissingLogged{ SW_FALSE }
         , _bMeshPipelineMissingLogged{ SW_FALSE }
         , _bLightOverflowLogged{ SW_FALSE }
@@ -176,7 +177,8 @@ namespace sw
     void VFXGPUSimulation::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
                                          const VFXSimulationFrameInput& input )
     {
-        _frameInput = input;
+        _frameInput       = input;
+        _pendingStepCount = 0;
         _listDispatch.clear();
         _listMeshDispatch.clear();
         _listParamWord.clear();
@@ -490,6 +492,7 @@ namespace sw
             Internal::appendRow( _listParamWord, spawn._count, Internal::lowWord( spawn._firstParticleIndex ), Internal::highWord( spawn._firstParticleIndex ), 0u );
         }
         state._doneStepCount += steps;
+        _pendingStepCount = MathUtil::max( _pendingStepCount, behind - steps );
 
         const uint32 sizeRow  = Internal::appendCurve( _listParamWord, first, def._sizeOverLife );
         const uint32 redRow   = Internal::appendCurve( _listParamWord, first, def._colorOverLife._red );

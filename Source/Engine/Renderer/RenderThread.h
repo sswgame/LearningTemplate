@@ -164,6 +164,8 @@ namespace sw
          * @return 프레임을 실제로 그렸으면 true 이고, 유효하지 않은 패킷이나 리소스라 건너뛰었으면 false 입니다.
          */
         [[nodiscard]] bool executeFrameBody( RenderFramePacket& packet ) SW_REQUIRES_LOCK( _packetThread );
+        /** @brief 그리지 않는 패킷(`FrameDrawMode::SimulationOnly`)의 본문입니다 — 컨텍스트 → beginFrame → 상태 받기(`FrameRenderer::executePacketWithoutDrawing`) → Present 없는 endFrame. 늘 false(그리지 않았다)입니다. */
+        [[nodiscard]] bool executeSimulationOnlyBody( RenderFramePacket& packet ) SW_REQUIRES_LOCK( _packetThread );
         /** @brief (패킷을 실행하는 스레드, 기록 전) `enqueueCommand` 로 맡긴 명령을 맡긴 순서대로 실행합니다. */
         void runQueuedCommands() SW_REQUIRES_LOCK( _packetThread );
         /**

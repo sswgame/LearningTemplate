@@ -58,6 +58,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/View/FrameViewports.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
@@ -574,7 +575,12 @@ namespace sw
         // 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
         updateRuntimeUI( mainOutput, vpWidth, vpHeight );
         if ( _pRenderDriver != nullptr )
-            _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider );
+        {
+            // 그리지 않고 진행하는 고정 걸음(`SimulationOnlyFrameQueue` — 시나리오 `<AdvanceSimulation>`)이면 패킷은 짓되 그리지 않는다. 고정 프레임 시간이 없으면 서비스가 거절한다.
+            SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
+            const FrameDrawMode             drawMode        = pSimulationOnly != nullptr ? pSimulationOnly->beginFrame( engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta ) : FrameDrawMode::Draw;
+            _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider, drawMode );
+        }
     }
 
     void Engine::endFrame()

@@ -34,6 +34,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -607,8 +608,12 @@ namespace sw
         AutomationFrameKind kind = AutomationFrameKind::Start;
         if ( _bStarted == SW_TRUE )
         {
-            const bool bStepRan = _run._nextStepIndex != stepIndexBefore;
-            if ( _run._bClockHeld == SW_TRUE )
+            const bool                            bStepRan        = _run._nextStepIndex != stepIndexBefore;
+            const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
+            // 그리지 않고 진행한 프레임은 따로 센다 — 고정 대기를 얼마나 줄였는지 보고(`timeline` 의 simulationOnly)에 남는다.
+            if ( pSimulationOnly != nullptr && pSimulationOnly->wasLastFrameSimulationOnly() )
+                kind = AutomationFrameKind::SimulationOnly;
+            else if ( _run._bClockHeld == SW_TRUE )
                 kind = AutomationFrameKind::BackgroundHold;
             else if ( _run._holdFrameCount > 0 )
                 kind = AutomationFrameKind::ConditionHold;
