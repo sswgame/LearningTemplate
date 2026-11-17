@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 @file android_apk.py
-@brief Android-Shipping 빌드 산출물(`lib<이름>.so` + 쿠킹한 팩)을 서명한 디버그 APK 하나로 묶는다.
+@brief Android 빌드 산출물(`lib<이름>.so` + 쿠킹한 팩)을 서명한 디버그 APK 하나로 묶는다 — 배포 구성(Android-Shipping) · 개발 구성(Android-Release, 자동화 실행기가 있다).
 
 Java 코드가 없는 NativeActivity 앱이라 Gradle · d8 을 쓰지 않는다 — 매니페스트를 이진 XML 로 바꾸고 자산을 담는 aapt2, 정렬하는 zipalign,
 서명하는 apksigner(모두 `Tools/Android/build-tools/<판>`)와 디버그 키를 만드는 keytool(`Tools/JDK`) 넷이다. NDK 샘플의 native-activity 와 같은 구성이고(기억),
@@ -17,11 +17,13 @@ Java 코드가 없는 NativeActivity 앱이라 Gradle · d8 을 쓰지 않는다
 | sign | keytool · apksigner | 디버그 키(`debug_keystore`, build/ 아래 — 저장소에 두지 않는다)로 서명하고 검증 |
 
 판 · 경로의 정본: 대상 API 와 build-tools 판은 `Config/Environment/search_paths.defaults.json`(`android_platform` · `android_build_tools`),
-최소 API · ABI 는 `CMakePresets.json` 의 `Android-Shipping`(`ANDROID_PLATFORM` · `ANDROID_ABI`) — 같은 값을 두 번 적지 않는다. 값이 없으면 멈춘다(폴백 없음).
+최소 API · ABI 는 `CMakePresets.json` 의 고른 프리셋(`--preset`, 상속 사슬을 따라 — Android-Release 는 Android-Shipping 의 값)의 `ANDROID_PLATFORM` · `ANDROID_ABI`
+— 같은 값을 두 번 적지 않는다. 값이 없으면 멈춘다(폴백 없음).
 
 사용법:
     py -3 -m Scripts android-apk --game Empty
     py -3 -m Scripts android-apk --game Empty --build-dir build/Android-Shipping --packs-dir build/Android-Shipping/Bin/Packs
+    py -3 -m Scripts android-apk --game Empty --preset Android-Release     # 개발 구성 — build/Android-Release 의 .so · 팩(시나리오를 담는다)
 """
 
 from __future__ import annotations
@@ -51,7 +53,9 @@ from package.pack import PackageError, PACK_FOLDER_NAME, select_staged_packs  # 
 PACKAGE_CONFIG_PATH = Path("Config") / "Environment" / "android_package.json"
 MANIFEST_TEMPLATE_PATH = Path("cmake/Templates/AndroidManifest.xml")   # 한 글로 적는다 — 조각으로 쪼개면 경로 옮기기(move-source)가 찾지 못한다
 PRESET_FILE_NAME = "CMakePresets.json"
-PRESET_NAME = "Android-Shipping"
+#: 묶을 수 있는 Android 구성 프리셋 — 기본은 배포 구성이다.
+LIST_PRESET_NAME = ("Android-Shipping", "Android-Release")
+DEFAULT_PRESET_NAME = LIST_PRESET_NAME[0]
 #: 팩 확장자 — aapt2 가 압축하지 않게 한다(AAsset 이 오프셋으로 바로 읽는다).
 PACK_EXTENSION = "pack"
 #: 매니페스트 `android:screen_orientation` 이 받는 값(Android 문서의 열거, 기억) — 오타가 설치 뒤 조용히 기본값이 되지 않게 패키징에서 막는다.
@@ -98,17 +102,35 @@ def require_key(config: dict[str, Any], key: str, source: str) -> Any:
     return value
 
 
-def read_preset_android(list_preset: list[dict[str, Any]]) -> tuple[int, str]:
-    """프리셋 `Android-Shipping` 의 최소 API(`ANDROID_PLATFORM` = `android-<N>`)와 ABI 입니다."""
-    preset = next((entry for entry in list_preset if entry.get("name") == PRESET_NAME), None)
-    if preset is None:
-        raise ApkError(f"{PRESET_FILE_NAME}: no configure preset '{PRESET_NAME}'")
-    cache_variables = preset.get("cacheVariables", {})
-    platform = str(require_key(cache_variables, "ANDROID_PLATFORM", f"{PRESET_NAME}.cacheVariables"))
+def collect_preset_cache_variables(list_preset: list[dict[str, Any]], preset_name: str) -> dict[str, Any]:
+    """프리셋 @p preset_name 의 cacheVariables 를 상속(`inherits` — 글 하나 또는 목록, 앞의 부모가 이긴다) 사슬을 따라 모은다. 자식 값이 부모를 덮는다(CMake 프리셋 규칙)."""
+    by_name = {entry.get("name"): entry for entry in list_preset}
+
+    def collect(name: str, visiting: tuple[str, ...]) -> dict[str, Any]:
+        if name in visiting:
+            raise ApkError(f"{PRESET_FILE_NAME}: preset '{name}' inherits itself ({' -> '.join(visiting + (name,))})")
+        preset = by_name.get(name)
+        if preset is None:
+            raise ApkError(f"{PRESET_FILE_NAME}: no configure preset '{name}'")
+        parents = preset.get("inherits", [])
+        list_parent = [parents] if isinstance(parents, str) else list(parents)
+        merged: dict[str, Any] = {}
+        for parent in reversed(list_parent):  # 앞의 부모가 뒤의 부모를 이긴다
+            merged.update(collect(parent, visiting + (name,)))
+        merged.update(preset.get("cacheVariables", {}))
+        return merged
+
+    return collect(preset_name, ())
+
+
+def read_preset_android(list_preset: list[dict[str, Any]], preset_name: str) -> tuple[int, str]:
+    """프리셋 @p preset_name(상속 사슬 포함)의 최소 API(`ANDROID_PLATFORM` = `android-<N>`)와 ABI 입니다."""
+    cache_variables = collect_preset_cache_variables(list_preset, preset_name)
+    platform = str(require_key(cache_variables, "ANDROID_PLATFORM", f"{preset_name}.cacheVariables"))
     match = re.fullmatch(r"android-(\d+)", platform)
     if match is None:
-        raise ApkError(f"{PRESET_NAME}.cacheVariables.ANDROID_PLATFORM is '{platform}' - expected android-<api level>")
-    return int(match.group(1)), str(require_key(cache_variables, "ANDROID_ABI", f"{PRESET_NAME}.cacheVariables"))
+        raise ApkError(f"{preset_name}.cacheVariables.ANDROID_PLATFORM is '{platform}' - expected android-<api level>")
+    return int(match.group(1)), str(require_key(cache_variables, "ANDROID_ABI", f"{preset_name}.cacheVariables"))
 
 
 def resolve_settings(config: dict[str, Any], game: str, min_sdk: int, target_sdk: int, abi: str, project_root: Path) -> ApkSettings:
@@ -123,7 +145,7 @@ def resolve_settings(config: dict[str, Any], game: str, min_sdk: int, target_sdk
     if orientation not in SET_SCREEN_ORIENTATION:
         raise ApkError(f"{source}: screen_orientation '{orientation}' is not an Android screenOrientation value")
     if target_sdk < min_sdk:
-        raise ApkError(f"target API {target_sdk} (search_paths android_platform) is below the minimum API {min_sdk} ({PRESET_NAME} ANDROID_PLATFORM)")
+        raise ApkError(f"target API {target_sdk} (search_paths android_platform) is below the minimum API {min_sdk} (preset ANDROID_PLATFORM)")
     application_id = str(require_key(merged, "application_id_prefix", source)) + re.sub(r"[^a-z0-9_]", "", game.lower())
     if re.fullmatch(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+", application_id) is None:
         raise ApkError(f"{source}: application id '{application_id}' is not a valid Java package name")
@@ -209,12 +231,12 @@ def add_native_library(apk_path: Path, library: Path, abi: str) -> None:
         archive.write(library, f"lib/{abi}/{library.name}", compress_type=zipfile.ZIP_STORED)
 
 
-def make_apk(game: str, build_dir: Path, packs_dir: Path, project_root: Path) -> Path:
-    """게임 @p game 의 서명한 디버그 APK 를 `<buildDir>/Apk/<게임>-debug.apk` 에 만들고 그 경로를 돌려줍니다."""
+def make_apk(game: str, preset_name: str, build_dir: Path, packs_dir: Path, project_root: Path) -> Path:
+    """프리셋 @p preset_name 으로 지은 게임 @p game 의 서명한 디버그 APK 를 `<buildDir>/Apk/<게임>-debug.apk` 에 만들고 그 경로를 돌려줍니다."""
     search = load_search_paths()
     tools = AndroidTools(search)
     list_preset = json.loads((project_root / PRESET_FILE_NAME).read_text(encoding="utf-8"))["configurePresets"]
-    min_sdk, abi = read_preset_android(list_preset)
+    min_sdk, abi = read_preset_android(list_preset, preset_name)
     try:
         config = require_config(project_root / PACKAGE_CONFIG_PATH, PACKAGE_CONFIG_PATH.name)
     except ConfigError as error:
@@ -223,7 +245,7 @@ def make_apk(game: str, build_dir: Path, packs_dir: Path, project_root: Path) ->
 
     library = build_dir / "Lib" / f"lib{settings.lib_name}.so"  # 공유 라이브러리는 CMAKE_LIBRARY_OUTPUT_DIRECTORY(cmake/Modules/Build/BuildLayout.cmake 의 Lib)로 간다
     if not library.is_file():
-        raise ApkError(f"{library} not found - build the {PRESET_NAME} preset first")
+        raise ApkError(f"{library} not found - build the {preset_name} preset first")
     try:
         list_pack = select_staged_packs(project_root, packs_dir, game)
     except PackageError as error:
@@ -256,16 +278,18 @@ def make_apk(game: str, build_dir: Path, packs_dir: Path, project_root: Path) ->
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts android-apk", description="Android-Shipping 빌드를 서명한 디버그 APK 로 묶는다")
+    parser = argparse.ArgumentParser(prog="py -3 -m Scripts android-apk", description="Android 빌드(Android-Shipping · Android-Release)를 서명한 디버그 APK 로 묶는다")
     parser.add_argument("--game", required=True, help="게임 프리셋 이름(Config/Game/<게임>.json — 담을 팩을 고른다)")
-    parser.add_argument("--build-dir", default=f"build/{PRESET_NAME}", help="Android-Shipping 빌드 폴더(저장소 기준, 기본 build/Android-Shipping)")
+    parser.add_argument("--preset", choices=LIST_PRESET_NAME, default=DEFAULT_PRESET_NAME,
+                        help="지은 구성 프리셋 — 최소 API · ABI 를 이 프리셋(상속 포함)에서 읽고 빌드 폴더의 기본값이 된다(기본 Android-Shipping)")
+    parser.add_argument("--build-dir", default=None, help="빌드 폴더(저장소 기준, 기본 build/<프리셋>)")
     parser.add_argument("--packs-dir", default=None, help="Android 대상으로 쿠킹한 팩 폴더(기본 <build-dir>/Bin/Packs)")
     args = parser.parse_args(argv)
     project_root = get_project_root()
-    build_dir = (project_root / args.build_dir).resolve()
+    build_dir = (project_root / (args.build_dir if args.build_dir else f"build/{args.preset}")).resolve()
     packs_dir = (project_root / args.packs_dir).resolve() if args.packs_dir else build_dir / "Bin" / PACK_FOLDER_NAME
     try:
-        apk = make_apk(args.game, build_dir, packs_dir, project_root)
+        apk = make_apk(args.game, args.preset, build_dir, packs_dir, project_root)
     except ApkError as error:
         print(f"[android-apk] FAILED {error}")
         return ExitCode.VIOLATION

@@ -68,7 +68,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("migrate-component-ids", "dev.migrate_component_ids", "씬 · 프리팹 컴포넌트에 고정 지역 id(_localID)를 적고 같은 오브젝트의 옛 부착 키를 지역 id 키로 바꿔 쓴다 — 감사 A-2 전수 이전(--fix 로 쓴다)"),
     Subcommand("asset-refs", "lint.asset_references", "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"),
     Subcommand("rename-symbol", "dev.move_source:main_rename", "C++ 이름을 낱말 경계로 바꾼다(Old=New, 새 이름이 이미 쓰이면 멈춘다)"),
-    Subcommand("android-apk", "package.android_apk", "Android-Shipping 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, aapt2 · zipalign · apksigner — Tools/Android)"),
+    Subcommand("android-apk", "package.android_apk", "Android 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는다(--game, --preset Android-Shipping|Android-Release, aapt2 · zipalign · apksigner — Tools/Android)"),
     Subcommand("web-package", "package.web_package", "Web-Shipping 빌드(App.js · App.wasm + 쿠킹한 팩)를 브라우저 폴더로 묶는다(--game, file_packager — Tools/emsdk), --serve 로 교차 출처 격리 헤더를 주는 로컬 서버까지"),
     Subcommand("web-check", "package.web_check", "Web-Shipping 묶음을 브라우저(헤드리스 Chrome · Edge)에서 두 번 띄워 기동 · WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속을 본다(--game)"),
     Subcommand("server-image", "package.server_image", "리눅스 서버 패키지 + 운영 설정을 배포 tar.gz(systemd 유닛)로 묶는다 — 묶을 서버로 -check-config 를 먼저 돌린다(--image 면 컨테이너 이미지도)"),

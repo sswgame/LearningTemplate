@@ -4,12 +4,14 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/Map/InputKeyTable.h"
 #include "Engine/Window/WindowPlatform.h"
 
 #include <android/configuration.h>
 #include <android/input.h>
+#include <android/native_activity.h>
 #include <android/native_window.h>
 #include <android_native_app_glue.h>
 #include <jni.h>
@@ -71,6 +73,36 @@ namespace sw
                     pEnv->ExceptionClear();
                 s_pApp->activity->vm->DetachCurrentThread();
                 return bFailed == false;
+            }
+
+            /**
+             * @brief 키 이벤트가 낸 글자(코드 포인트)입니다. 글자가 없거나(기능 키) 못 읽으면 0 입니다.
+             * @details `new KeyEvent( downTime, eventTime, action, code, repeat, metaState, deviceId, scancode, flags, source ).getUnicodeChar( metaState )` —
+             *          https://developer.android.com/reference/android/view/KeyEvent#getUnicodeChar(int). 조합 악센트(COMBINING_ACCENT 비트)는 글자가 아니다.
+             */
+            static uint32 readKeyUnicode( AInputEvent* pEvent )
+            {
+                JNIEnv* const pEnv = attachThread();
+                if ( pEnv == nullptr )
+                    return 0;
+                constexpr int64 kNanosecondsPerMillisecond = 1000000;
+                const jclass    keyC                       = pEnv->FindClass( "android/view/KeyEvent" );
+                const jmethodID construct                  = keyC != nullptr ? pEnv->GetMethodID( keyC, "<init>", "(JJIIIIIIII)V" ) : nullptr;
+                const jmethodID getUnicode                 = keyC != nullptr ? pEnv->GetMethodID( keyC, "getUnicodeChar", "(I)I" ) : nullptr;
+                const int32     metaState                  = AKeyEvent_getMetaState( pEvent );
+                const jobject   keyEvent                   = construct != nullptr ? pEnv->NewObject( keyC, construct, static_cast<jlong>( AKeyEvent_getDownTime( pEvent ) / kNanosecondsPerMillisecond ),
+                                                                                                     static_cast<jlong>( AKeyEvent_getEventTime( pEvent ) / kNanosecondsPerMillisecond ),
+                                                                                                     AKeyEvent_getAction( pEvent ), AKeyEvent_getKeyCode( pEvent ), AKeyEvent_getRepeatCount( pEvent ), metaState,
+                                                                                                     AInputEvent_getDeviceId( pEvent ), AKeyEvent_getScanCode( pEvent ), AKeyEvent_getFlags( pEvent ),
+                                                                                                     AInputEvent_getSource( pEvent ) )
+                                                                                  : nullptr;
+                const jint      unicode                    = keyEvent != nullptr && getUnicode != nullptr ? pEnv->CallIntMethod( keyEvent, getUnicode, metaState ) : 0;
+                if ( pEnv->ExceptionCheck() )
+                    pEnv->ExceptionClear();
+                s_pApp->activity->vm->DetachCurrentThread();
+                constexpr uint32 kCombiningAccent = 0x80000000u; // KeyCharacterMap.COMBINING_ACCENT
+                const uint32     codepoint        = static_cast<uint32>( unicode );
+                return ( codepoint & kCombiningAccent ) != 0 ? 0 : codepoint;
             }
 
             /** @brief 창이 서기 전의 명령 처리입니다 — 표면이 생겼는지만 본다(`waitForInitialSurface`). */
@@ -194,6 +226,7 @@ namespace sw
         pApp->onAppCmd                   = &AndroidWindow::onAppCommand;
         pApp->onInputEvent               = &AndroidWindow::onInputEvent;
         syncSurfaceMetrics();
+        applyTextInputWanted( isTextInputWanted() );
         applyPlatformFocus( true );
         return true;
     }
@@ -223,6 +256,12 @@ namespace sw
         }
         --_gamepadScanCountdown;
         return CallbackInputWindow::processMessages();
+    }
+
+    void AndroidWindow::waitForMessages( uint32 timeoutMilliseconds )
+    {
+        if ( AndroidWindowInternal::pollLooper( static_cast<int32>( timeoutMilliseconds ) ) == false )
+            requestClose();
     }
 
     optional<uint32> AndroidWindow::findOrAssignGamepadSlot( int32 deviceId )
@@ -314,6 +353,32 @@ namespace sw
         queueAxis( AMOTION_EVENT_AXIS_HAT_X, readAxis( AMOTION_EVENT_AXIS_HAT_X ) );
         queueAxis( AMOTION_EVENT_AXIS_HAT_Y, readAxis( AMOTION_EVENT_AXIS_HAT_Y ) );
         return true;
+    }
+
+    void AndroidWindow::applyTextInputWanted( bool bWanted )
+    {
+        android_app* const pApp = AndroidWindowInternal::s_pApp;
+        if ( pApp == nullptr || pApp->activity == nullptr )
+            return;
+        // 플래그 0 은 명시적 요청이다 — IMPLICIT 은 글 칸이 아닌 뷰(NativeActivity)에서 입력기가 무시한다(InputMethodManager.showSoftInput 문서).
+        if ( bWanted )
+            ANativeActivity_showSoftInput( pApp->activity, 0 );
+        else
+            ANativeActivity_hideSoftInput( pApp->activity, 0 );
+    }
+
+    void AndroidWindow::queueKeyText( AInputEvent* pEvent )
+    {
+        if ( isTextInputWanted() == false || AKeyEvent_getAction( pEvent ) != AKEY_EVENT_ACTION_DOWN )
+            return; // 글을 받는 쪽이 없으면 키마다 JNI 를 돌지 않는다
+        const uint32     codepoint        = AndroidWindowInternal::readKeyUnicode( pEvent );
+        constexpr uint32 kFirstPrintable  = 0x20; // 제어 글자(엔터 · 탭 · 백스페이스)는 키로 간다
+        constexpr uint32 kDeleteCharacter = 0x7F;
+        if ( codepoint < kFirstPrintable || codepoint == kDeleteCharacter )
+            return;
+        string text;
+        StringUtil::appendUTF8( text, codepoint );
+        queueTextInput( WindowTextInputKind::Commit, text );
     }
 
     void* AndroidWindow::getNativeHandle() const
@@ -417,10 +482,12 @@ namespace sw
             input._bRepeat = AKeyEvent_getRepeatCount( pEvent ) > 0 ? 1u : 0u;
             // 엔진 키로 옮겨지는 키만 소비한다(뒤로 가기는 Escape — 시스템이 액티비티를 닫지 않게). 볼륨 · 음소거 · 카메라처럼 엔진 키가 없는 키는 0 을 돌려
             // 시스템이 처리한다 — 예전에는 모든 키를 소비해 볼륨 버튼이 먹통이었다(감사 P0-10). 답은 입력의 키 표 하나다.
-            if ( InputKeyTable::mapAndroidKeyCode( input._keyCode ) == Key::Unknown )
-                return 0;
-            pWindow->queueInput( input );
-            return 1;
+            const bool bEngineKey = InputKeyTable::mapAndroidKeyCode( input._keyCode ) != Key::Unknown;
+            if ( bEngineKey )
+                pWindow->queueInput( input );
+            // 화면 키보드의 글자도 키 이벤트로 온다 — 키 뒤에 글을 모아 데스크톱(WM_KEYDOWN 뒤 WM_CHAR)과 같은 차례다. 엔진 키가 없는 글쇠(기호)도 글은 낸다.
+            pWindow->queueKeyText( pEvent );
+            return bEngineKey ? 1 : 0;
         }
         if ( AInputEvent_getType( pEvent ) != AINPUT_EVENT_TYPE_MOTION )
             return 0;

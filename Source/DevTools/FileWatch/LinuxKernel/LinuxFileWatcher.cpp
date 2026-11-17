@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/FileWatch/Linux/LinuxFileWatcher.h"
+#include "DevTools/FileWatch/LinuxKernel/LinuxFileWatcher.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"

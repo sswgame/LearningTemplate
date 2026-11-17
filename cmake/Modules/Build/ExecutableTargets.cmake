@@ -61,11 +61,11 @@ function(sw_configure_app_dependencies TARGET_NAME)
 	sw_add_dynamic_module_dependencies(${TARGET_NAME})
 	sw_get_dynamic_modules(list_dynamic_module)
 
-	# 2) Shipping 은 게임을 정적으로 링크하고, App 이 서면 에셋을 쿠킹한다.
+	# 2) 정적 모듈 구성(SW_STATIC_MODULES — Shipping · 웹 · Android 개발)은 게임을 정적으로 링크하고, App 이 서면 에셋을 쿠킹한다.
 	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)
 	#    쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
 	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다.
-	if(SW_SHIPPING_BUILD)
+	if(SW_STATIC_MODULES)
 		get_property(active_game_target GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_add_game_module`)
 		if(active_game_target AND TARGET ${active_game_target})
 			target_link_libraries(${TARGET_NAME} PRIVATE ${active_game_target})
@@ -79,6 +79,11 @@ function(sw_configure_app_dependencies TARGET_NAME)
 			message(FATAL_ERROR "[App] sw_configure_app_dependencies ran before GameFramework registered itself — its reflection registrars would not be linked into ${TARGET_NAME}.")
 		endif()
 		set(list_reflection_static_lib Engine ${list_dynamic_module})
+		# 정적 개발 구성(웹 · Android — 배포가 아닌 SW_STATIC_MODULES)은 DevTools(자동화 실행기 — 모듈 서브시스템으로 스스로 선다 · 개발 명령 · 시나리오 단계)와
+		# ModuleManager(단위 테스트 등록)도 정적 라이브러리라, 아무도 참조하지 않는 등록자 오브젝트를 링커가 버리지 않게 통째로 링크한다.
+		if(NOT SW_SHIPPING_BUILD)
+			list(APPEND list_reflection_static_lib DevTools ModuleManager)
+		endif()
 		list(REMOVE_DUPLICATES list_reflection_static_lib)
 		sw_link_whole_archive(${TARGET_NAME} ${list_reflection_static_lib})
 

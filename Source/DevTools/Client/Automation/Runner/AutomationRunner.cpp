@@ -440,7 +440,7 @@ namespace sw
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             if ( MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
-                pWindowHost->getWindow()->requestInputFocus();
+                (void)pWindowHost->getWindow()->requestInputFocus(); // 청하지 않는 창 시스템(Windows · Wayland · 웹)은 OS 가 초점을 맡는다
             SW_LOG_INFO_ID( "Automation.StartedAfterFrame", "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
             updateCrashContext( "started" );
             startLoadWindow();

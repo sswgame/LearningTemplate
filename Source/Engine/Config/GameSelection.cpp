@@ -29,7 +29,7 @@ namespace sw
 
     string GameSelection::readDefaultName()
     {
-        if constexpr ( build::kShipping )
+        if constexpr ( build::kStaticModules ) // 정적 구성은 링크한 게임 하나다
             return string{ config::kShippingGameName };
 
         string       text;
@@ -41,8 +41,8 @@ namespace sw
 
     bool GameSelection::select( const CommandLineManager& commandLine )
     {
-        // 배포는 베이크한 게임 하나이고 `-game=` 을 보지 않는다(모듈은 정적 링크).
-        if constexpr ( build::kShipping )
+        // 정적 구성(배포 · 웹 · Android 개발)은 베이크한 게임 하나이고 `-game=` 을 보지 않는다(모듈은 정적 링크).
+        if constexpr ( build::kStaticModules )
         {
             storeName( config::kShippingGameName );
             return true;

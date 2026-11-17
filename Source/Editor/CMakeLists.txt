@@ -222,7 +222,7 @@ function(sw_link_editor_core TARGET_NAME VISIBILITY)
 	sw_inherit_editor_core_reflection(${TARGET_NAME} ${VISIBILITY})
 endfunction()
 
-if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
+if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_STATIC_MODULES)
 	set(list_editor_core_target "")
 
 	# 리플렉션: 코어 헤더의 `.gen.cpp`. 입력은 폴더를 훑어 정한다(새 REFLECT 헤더를 손 목록에 빠뜨리는 일이 없다).
@@ -275,8 +275,8 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
 	endif()
 endif()
 
-# 배포는 에디터(코어 포함)를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declare_excluded_sources`).
-if(SW_SHIPPING_BUILD)
+# 정적 모듈 구성(배포 · 웹 · Android 개발)은 에디터(코어 포함)를 짓지 않는다 — 에디터는 동적으로 올리는 모듈이다. 소스 검사 게이트가 알도록 적는다(`sw_declare_excluded_sources`).
+if(SW_STATIC_MODULES)
 	sw_declare_excluded_sources(${list_editor_all_source})
 	return()
 endif()

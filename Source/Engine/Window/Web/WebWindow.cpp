@@ -2,6 +2,7 @@
 
 #include "Engine/Window/Web/WebWindow.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -10,6 +11,15 @@
 #include "Engine/Window/WindowPlatform.h"
 
 #include <emscripten/emscripten.h>
+
+// 숨은 글 칸의 본문은 WebTextInput.js(Emscripten JS 라이브러리)다.
+extern "C"
+{
+    int  swWebTextInputInstall( void ( *pCallback )( void*, int, const char* ), void* pUserData );
+    void swWebTextInputSetWanted( int bWanted );
+    void swWebTextInputSetArea( const char* pCanvasSelector, double x, double y, double lineHeight );
+    void swWebCursorSet( const char* pCanvasSelector, const char* pCSSName );
+}
 
 namespace sw
 {
@@ -42,8 +52,11 @@ namespace sw
     WebWindow::WebWindow()
         : CallbackInputWindow{}
         , _devicePixelRatio{ 1.0f }
+        , _mainLoopIntervalMilliseconds{ 0 }
+        , _cursorShape{ CursorShape::Arrow }
         , _bCallbacksBound{ SW_FALSE }
         , _bPointerLocked{ SW_FALSE }
+        , _bCursorHidden{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -62,6 +75,12 @@ namespace sw
         applyTitle();
         syncCanvasSize();
         bindCallbacks();
+        if ( swWebTextInputInstall( &WebWindow::onTextInput, this ) == 0 )
+        {
+            SW_LOG_ERROR_ID( "WebWindow.TextInputUnavailable", "The page has no document - the hidden text field for IME and the on-screen keyboard cannot be installed" );
+            return false;
+        }
+        applyTextInputWanted( isTextInputWanted() );
         applyPlatformFocus( true );
         return true;
     }
@@ -83,6 +102,52 @@ namespace sw
         }
         escaped += "\"";
         emscripten_run_script( escaped.c_str() );
+    }
+
+    void WebWindow::applyTextInputWanted( bool bWanted )
+    {
+        swWebTextInputSetWanted( bWanted ? 1 : 0 );
+    }
+
+    void WebWindow::applyTextInputArea( const WindowTextInputArea& area )
+    {
+        const double ratio = _devicePixelRatio > 0.0f ? static_cast<double>( _devicePixelRatio ) : 1.0;
+        swWebTextInputSetArea( kCanvasSelector, area._position._x / ratio, area._position._y / ratio, area._lineHeight / ratio );
+    }
+
+    void WebWindow::waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds )
+    {
+        const int64 intervalNanoseconds = deadlineNanoseconds - frameStartNanoseconds;
+        const int32 intervalMilliseconds =
+            intervalNanoseconds > 0 ? static_cast<int32>( ( intervalNanoseconds + constant::time::kNanosecondsPerMillisecond - 1 ) / constant::time::kNanosecondsPerMillisecond ) : 0;
+        if ( intervalMilliseconds == _mainLoopIntervalMilliseconds )
+            return;
+        _mainLoopIntervalMilliseconds = intervalMilliseconds;
+        (void)emscripten_set_main_loop_timing( intervalMilliseconds > 0 ? EM_TIMING_SETTIMEOUT : EM_TIMING_RAF, intervalMilliseconds > 0 ? intervalMilliseconds : 1 );
+    }
+
+    bool WebWindow::setCursorShape( CursorShape shape )
+    {
+        _cursorShape = shape;
+        applyCursor();
+        return true;
+    }
+
+    bool WebWindow::setCursorVisible( bool bVisible )
+    {
+        _bCursorHidden = bVisible ? SW_FALSE : SW_TRUE;
+        applyCursor();
+        return true;
+    }
+
+    void WebWindow::applyCursor() const
+    {
+        swWebCursorSet( kCanvasSelector, _bCursorHidden != SW_FALSE ? CursorShapeUtil::kHiddenCSSName : CursorShapeUtil::toCSSName( _cursorShape ) );
+    }
+
+    void WebWindow::onTextInput( void* pUserData, int kind, const char* pText )
+    {
+        static_cast<WebWindow*>( pUserData )->queueTextInput( kind == 0 ? WindowTextInputKind::Composition : WindowTextInputKind::Commit, string_view( pText != nullptr ? pText : "" ) );
     }
 
     void WebWindow::syncCanvasSize()
@@ -194,26 +259,33 @@ namespace sw
 
     EM_BOOL WebWindow::onKey( int eventType, const EmscriptenKeyboardEvent* pEvent, void* pUserData )
     {
-        WebWindow* const   pWindow = static_cast<WebWindow*>( pUserData );
+        WebWindow* const   pWindow     = static_cast<WebWindow*>( pUserData );
+        const bool         bFieldInput = pWindow->isTextInputWanted(); // 숨은 글 칸이 포커스를 가져 글은 그 칸의 `input` · 조합 이벤트로 온다
         PlatformInputEvent input{};
         if ( eventType == EMSCRIPTEN_EVENT_KEYPRESS )
         {
+            if ( bFieldInput )
+                return EM_FALSE; // 같은 글자가 글 칸의 `input` 으로도 온다 — 두 번 넣지 않는다
             // 확정 글자 — DOM key 가 한 글자(조합이 아닌 것)일 때만 글 입력이다("Enter" 같은 이름은 키다).
             const string_view key( pEvent->key );
             if ( key.empty() || key.size() > 4 || ( key.size() > 1 && static_cast<uint8>( key[0] ) < 0x80 ) )
                 return EM_FALSE;
-            input._kind = PlatformInputKind::Text;
-            Memory::copy( input._arrText, key.data(), MathUtil::min( key.size(), sizeof( input._arrText ) - 1 ) );
-            pWindow->queueInput( input );
+            pWindow->queueTextInput( WindowTextInputKind::Commit, key );
             return EM_TRUE;
         }
+        // 입력기가 조합 중인 키(keyCode 229, key "Process")는 입력기의 것이다 — 엔진에 넘기면 조합 중 백스페이스가 확정 글자까지 지운다.
+        // https://developer.mozilla.org/docs/Web/API/Element/keydown_event#keydown_events_with_ime
+        constexpr unsigned int kIMEProcessKeyCode = 229;
+        if ( pEvent->keyCode == kIMEProcessKeyCode )
+            return EM_FALSE;
         input._kind    = eventType == EMSCRIPTEN_EVENT_KEYDOWN ? PlatformInputKind::KeyDown : PlatformInputKind::KeyUp;
         input._bRepeat = pEvent->repeat ? 1u : 0u;
         Memory::copy( input._arrText, pEvent->code, MathUtil::min( string_view( pEvent->code ).size(), sizeof( input._arrText ) - 1 ) );
         pWindow->queueInput( input );
-        // 글자를 내는 키는 브라우저가 keypress 를 이어 보내야 한다 — 기본 동작을 막으면 글이 오지 않는다. 탭 · 백스페이스 같은 탐색 키만 막는다.
+        // 글자를 내는 키는 브라우저가 keypress(글 칸이면 `input`)를 이어 보내야 한다 — 기본 동작을 막으면 글이 오지 않는다. 탭 · 백스페이스 같은 탐색 키만 막는다.
+        // 글 칸이 받는 동안 스페이스는 글자다(막으면 띄어쓰기가 오지 않는다).
         const string_view code( pEvent->code );
-        return code == "Tab" || code == "Backspace" || code == "Space" || StringUtil::startsWith( code, "Arrow" ) ? EM_TRUE : EM_FALSE;
+        return code == "Tab" || code == "Backspace" || ( code == "Space" && bFieldInput == false ) || StringUtil::startsWith( code, "Arrow" ) ? EM_TRUE : EM_FALSE;
     }
 
     EM_BOOL WebWindow::onTouch( int eventType, const EmscriptenTouchEvent* pEvent, void* pUserData )

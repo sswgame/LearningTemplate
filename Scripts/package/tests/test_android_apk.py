@@ -59,9 +59,23 @@ class AndroidApkTest(unittest.TestCase):
 
     def test_preset_gives_minimum_api_and_abi(self) -> None:
         list_preset = [{"name": "Android-Shipping", "cacheVariables": {"ANDROID_PLATFORM": "android-29", "ANDROID_ABI": "arm64-v8a"}}]
-        self.assertEqual((29, "arm64-v8a"), read_preset_android(list_preset))
+        self.assertEqual((29, "arm64-v8a"), read_preset_android(list_preset, "Android-Shipping"))
         with self.assertRaises(ApkError):
-            read_preset_android([{"name": "Android-Shipping", "cacheVariables": {"ANDROID_PLATFORM": "29", "ANDROID_ABI": "arm64-v8a"}}])
+            read_preset_android([{"name": "Android-Shipping", "cacheVariables": {"ANDROID_PLATFORM": "29", "ANDROID_ABI": "arm64-v8a"}}], "Android-Shipping")
+
+    def test_development_preset_inherits_api_and_abi(self) -> None:
+        """개발 구성(Android-Release)은 Android-Shipping 을 상속해 API · ABI 를 적지 않는다 — 상속 사슬을 따라 읽고, 자식 값이 이긴다."""
+        list_preset = [
+            {"name": "Android-Shipping", "cacheVariables": {"ANDROID_PLATFORM": "android-29", "ANDROID_ABI": "arm64-v8a"}},
+            {"name": "Android-Release", "inherits": "Android-Shipping", "cacheVariables": {"SW_STATIC_MODULES": "ON"}},
+            {"name": "Android-Other", "inherits": ["Android-Release"], "cacheVariables": {"ANDROID_PLATFORM": "android-31"}},
+        ]
+        self.assertEqual((29, "arm64-v8a"), read_preset_android(list_preset, "Android-Release"))
+        self.assertEqual((31, "arm64-v8a"), read_preset_android(list_preset, "Android-Other"))
+        with self.assertRaises(ApkError):
+            read_preset_android(list_preset, "Android-Missing")
+        with self.assertRaises(ApkError):
+            read_preset_android(list_preset + [{"name": "Android-Loop", "inherits": "Android-Loop"}], "Android-Loop")
 
 
 if __name__ == "__main__":
