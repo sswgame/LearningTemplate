@@ -14,6 +14,7 @@
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
+#include "Editor/Panels/Inspector/Model/InspectorImportSettings.h"
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 namespace sw
@@ -44,6 +45,7 @@ namespace sw::editor
         Multi,           ///< 둘 이상 선택(메인 씬)
         Preview,         ///< 미리보기 창의 선택
         PreviewEmpty,    ///< 미리보기 창이 겨눠졌지만 고른 것이 없다
+        ImportSettings,  ///< 오브젝트 대신 고른 에셋이 임포트 원본이다 — 그 임포트 설정(`InspectorImportSettings`)
     };
 
     /** @brief 컴포넌트 카드 한 장입니다(값만). */
@@ -125,6 +127,8 @@ namespace sw::editor
         void gather( InspectorViewState& outState );
         /** @brief 즐겨찾기 집합입니다. 그리드가 행 메뉴 토글 · 별 표시에 쓴다(`EditorPropertyGrid::setFavorites`). */
         InspectorFavorites& editFavorites() { return _favorites; }
+        /** @brief 고른 임포트 원본의 설정입니다(`InspectorContent::ImportSettings` 일 때 이번 gather 가 채웠다). 고치기 명령도 여기로 부른다. */
+        InspectorImportSettings& editImportSettings() { return _importSettings; }
 
         // ------------------------------------------------------------------------------
         // 보기 명령 — 되돌리기에 남기지 않는다
@@ -193,7 +197,8 @@ namespace sw::editor
         struct MultiEdit;
 
         InspectorFavorites      _favorites;
-        unique_ptr<MultiEdit>   _pMultiEdit; ///< 다중 선택의 공통 컴포넌트(gather 마다 다시 모은다)
+        InspectorImportSettings _importSettings; ///< 오브젝트를 고르지 않았을 때 고른 임포트 원본의 설정
+        unique_ptr<MultiEdit>   _pMultiEdit;     ///< 다중 선택의 공통 컴포넌트(gather 마다 다시 모은다)
         EditorFileCollectJob    _presetJob;
         vector<string>          _listPresetFile;
         uint64                  _lockedObjectID;        ///< 자물쇠로 잠근 오브젝트. 0 이면 선택을 따라간다

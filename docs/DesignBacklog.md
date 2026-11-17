@@ -1315,6 +1315,8 @@ REFLECT() struct SW_API AssetImportOverride { REFLECT_BODY();
 | M2 임포터 · 규칙 이전 | M | `Editor/Common/Asset/Model/ModelImportConfig.*` · `Texture/TextureImporter.*`, `Config/Editor/*ImportConfig.json`, 해당 `.meta` | `ModelImportConfigTest.MetaOverrideWinsOverRule` · `.UnknownOverrideKeyIsAnError` · `.SingleFilePatternIsRejected` | M1 |
 | M3 인스펙터 절 | M | Inspector Model · View | `editor/uicapture` 단계, 예외 고치기 → Ctrl+Z 시나리오 | M2 · P1 |
 
+**M3 에서 정한 것(2026-11-17).** 인스펙터는 오브젝트를 고르지 않았고 고른 에셋이 서술을 가진 원본(`models_raw/` · `textures_raw/`)이면 Import Settings 를 보인다(`InspectorContent::ImportSettings`, 모델 `InspectorImportSettings`). 줄은 규칙 구조체의 리플렉션 칸(규칙 파일 키 이름)마다 해석한 값이고, 예외 칸은 서술의 JSON 값 글 그대로 진한 이름 + Revert 단추, 규칙 칸은 흐린 이름이다(강조색 없음 — app-screens). 고친 값은 임포터와 같은 `resolveRule` 로 먼저 해석해 통과할 때만 서술에 쓴다(폴백 없음). 서술 쓰기는 작업 공간 스택의 데이터 단계(서술 글 전 · 후)이고 씬 dirty 는 아니며, 쓰기 · 되돌리기 모두 `AssetHotReload::applySavedAsset` 으로 그 원본을 다시 임포트한다. 언리얼은 `UAssetImportData` 를 Details 에 보이고 Reimport 를 따로 누르게 하나, 유니티처럼 고치면 바로 적용한다(차이 한 칸이라 비용이 작다). 확인: `editor/importsettings`(고치기 → 되돌리기 → 바이트 같음, Revert) · `editor/uicapture` 의 `ui_import_settings.png`.
+
 ### 형제 순서: 분수 색인 키(설계 2026-11-17, 감사 E-6 · 41)
 
 **문제.** `EditorSiblingOrder.cpp:40-52` `renumber` 가 형제 번호를 0 부터 다시 매기며 바뀐 형제마다 전체 XML 스냅샷 → `commitModify` 한다. 루트 8000 에서 한 줄을 옮기면 직렬화 16000 회, 씬 파일 8000 줄이 바뀐다. 번호는 `GameObject::_siblingIndex`(`uint16`, 65535 에서 막힘)이고 에디터 계층 창만 읽는다("틱 · 렌더 순서에는 쓰지 않는다", `GameObject.h:188`).

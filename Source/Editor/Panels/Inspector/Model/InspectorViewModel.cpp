@@ -129,6 +129,7 @@ namespace sw::editor
 
     InspectorViewModel::InspectorViewModel()
         : _favorites{}
+        , _importSettings{}
         , _pMultiEdit{ make_unique<MultiEdit>() }
         , _presetJob{}
         , _listPresetFile{}
@@ -219,7 +220,10 @@ namespace sw::editor
             const uint64 shownObjectID = _lockedObjectID != 0 ? _lockedObjectID : workspace.getSelectedObjectID();
             if ( shownObjectID == 0 )
             {
-                outState._content = InspectorContent::NothingSelected;
+                // 오브젝트가 없고 고른 에셋이 임포트 원본이면 그 임포트 설정을 보인다(유니티 · 언리얼의 에셋 인스펙터 자리).
+                const string_view primaryAsset = editor::getMainSceneSelection().getPrimaryAsset();
+                const bool        bImport      = primaryAsset.empty() == false && _importSettings.refresh( primaryAsset );
+                outState._content              = bImport ? InspectorContent::ImportSettings : InspectorContent::NothingSelected;
                 return;
             }
             Scene* pScene = editor::getActiveScene();

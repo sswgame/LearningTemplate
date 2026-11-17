@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/Inspector/InspectorPanel.h"
 
+#include "Core/String/formatString.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -70,6 +72,8 @@ namespace sw::editor
         , _nameEditObjectID{ 0 }
         , _addComponentSearch{}
         , _presetNameBuffer{}
+        , _importEditBuffer{}
+        , _importEditKey{}
     {
     }
 
@@ -118,6 +122,11 @@ namespace sw::editor
             case InspectorContent::NothingSelected:
             {
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInspector", "NothingSelected" ) );
+                return;
+            }
+            case InspectorContent::ImportSettings:
+            {
+                drawImportSettings();
                 return;
             }
             case InspectorContent::NoActiveScene:
@@ -229,6 +238,90 @@ namespace sw::editor
             ImGui::PopID();
         }
         ImGui::Spacing();
+    }
+
+    void InspectorPanel::drawImportSettings()
+    {
+        InspectorImportSettings& settings = _viewModel.editImportSettings();
+        ImGui::TextUnformatted( settings.getAssetID().c_str() );
+        ImGui::SeparatorText( SW_LOCKEY( "EditorInspector", "ImportSettings" ) );
+        // 출처 줄: 맞은 폴더 규칙 이름, 없으면 기본값. 강조색은 쓰지 않는다 — 예외 칸만 값 옆의 글로 가른다(app-screens: 색은 데이터 · 선택에만).
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInspector", "ImportRule" ) );
+        ImGui::SameLine();
+        ImGui::TextUnformatted( settings.getRuleName().empty() ? SW_LOCKEY( "EditorInspector", "ImportDefaultRule" ) : settings.getRuleName().c_str() );
+        if ( settings.getError().empty() == false )
+            ImGui::TextWrapped( "%s", settings.getError().c_str() );
+        EditorSelfTestMarks::record( "inspector.import" );
+
+        // 고치기는 행을 다 그린 뒤 한 번 — 쓰기가 서술을 다시 읽게 해 행 목록이 바뀐다.
+        string pendingKey;
+        string pendingValue;
+        bool   bPendingRevert = false;
+        if ( ImGui::BeginTable( "##importSettings", 3, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg ) )
+        {
+            ImGui::TableSetupColumn( "Key", ImGuiTableColumnFlags_WidthStretch );
+            ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
+            ImGui::TableSetupColumn( "Source", ImGuiTableColumnFlags_WidthFixed ); // Revert 단추 너비
+            for ( const InspectorImportRow& row : settings.getRows() )
+            {
+                ImGui::PushID( row._key.c_str() );
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+                if ( row._bOverride != SW_FALSE )
+                    ImGui::TextUnformatted( row._key.c_str() );
+                else
+                    ImGui::TextDisabled( "%s", row._key.c_str() );
+                ImGui::TableNextColumn();
+                // 치는 칸만 패널의 버퍼를 쓰고, 나머지 칸은 프레임마다 값에서 뜬다(되돌리기 · 바깥 편집이 바로 보인다).
+                const bool                              bEditing = _importEditKey == row._key;
+                fixed_string<constant::buffer::kMax256> shown;
+                if ( bEditing == false )
+                    shown = row._valueText.c_str();
+                fixed_string<constant::buffer::kMax256>& buffer = bEditing ? _importEditBuffer : shown;
+                ImGui::SetNextItemWidth( -FLT_MIN );
+                ImGui::InputText( "##value", buffer.data(), buffer.capacity() );
+                if ( ImGui::IsItemDeactivatedAfterEdit() && string_view{ buffer.c_str() } != string_view{ row._valueText } )
+                {
+                    pendingKey   = row._key;
+                    pendingValue = buffer.c_str();
+                }
+                if ( ImGui::IsItemActive() )
+                {
+                    if ( bEditing == false )
+                        _importEditBuffer = buffer.c_str();
+                    _importEditKey = row._key;
+                }
+                else if ( bEditing )
+                    _importEditKey.clear();
+                fixed_string<constant::buffer::kMax128> mark;
+                formatstring( mark.data(), mark.capacity(), "inspector.import.%#", row._key.c_str() );
+                EditorSelfTestMarks::record( mark.c_str() );
+                ImGui::TableNextColumn();
+                if ( row._bOverride != SW_FALSE )
+                {
+                    if ( ImGui::SmallButton( SW_LOCKEY( "EditorInspector", "RevertImportOverride" ) ) )
+                    {
+                        pendingKey     = row._key;
+                        bPendingRevert = true;
+                    }
+                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "RevertImportOverrideTooltip" ) );
+                    formatstring( mark.data(), mark.capacity(), "inspector.import.revert.%#", row._key.c_str() );
+                    EditorSelfTestMarks::record( mark.c_str() );
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        if ( pendingKey.empty() == false )
+        {
+            _importEditKey.clear();
+            // 지면 모델이 이유를 `getError` 에 둔다 — 다음 프레임에 위 줄로 보인다.
+            if ( bPendingRevert )
+                (void)settings.clearOverride( pendingKey );
+            else
+                (void)settings.setOverride( pendingKey, pendingValue );
+        }
     }
 
     void InspectorPanel::drawPreviewSelection()

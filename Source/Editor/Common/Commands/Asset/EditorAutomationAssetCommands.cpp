@@ -237,6 +237,30 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief `asset.select <리소스 id>` — 오브젝트 선택을 비우고 그 에셋 하나를 고릅니다(콘텐츠 브라우저에서 누른 것과 같은 선택). 인스펙터가 임포트 원본의 Import Settings 를 보인다.
+             * @details 파일이 없으면 실패다 — 없는 id 를 고르면 인스펙터가 빈 상태라 뒤 단계가 무엇을 보는지 흐려진다.
+             */
+            static bool runSelectAsset( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                {
+                    outReply = "asset.select takes one resource id";
+                    return false;
+                }
+                const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( listArgument[0] );
+                if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
+                {
+                    outReply = "'" + listArgument[0] + "' is not an asset file";
+                    return false;
+                }
+                EditorSelection& selection = editor::getMainSceneSelection();
+                selection.clearObjectSelection();
+                selection.selectAsset( listArgument[0] );
+                outReply = "selected " + listArgument[0];
+                return true;
+            }
+
             /** @brief `scratch/` 아래 id 하나를 받아 그 사본 파일이 없으면 성공입니다 — 옮긴 뒤 저장이 옛 자리에 파일을 되살리지 않았는지 본다(감사 P0-4). */
             static bool runExpectScratchMissing( const vector<string>& listArgument, string& outReply )
             {
@@ -606,6 +630,9 @@ namespace sw::editor
     SW_DEV_COMMAND( ExpectScratchUnchanged, "asset.expectScratchUnchanged", "asset.expectScratchUnchanged <scratch/...resource id>",
                     "Fail unless a scratch asset still has the text asset.snapshotScratch remembered (save, reload and save again must give the same bytes)",
                     &EditorAutomationAssetCommandsInternal::runExpectScratchUnchanged );
+    SW_DEV_COMMAND( SelectAsset, "asset.select", "asset.select <resource id>",
+                    "Clear the object selection and select one asset the way the Content Browser does (the inspector shows an import source's Import Settings)",
+                    &EditorAutomationAssetCommandsInternal::runSelectAsset );
     SW_DEV_COMMAND( ExpectScratchMissing, "asset.expectScratchMissing", "asset.expectScratchMissing <scratch/...resource id>",
                     "Fail if a scratch asset exists (a save after a move must not bring the old file back)", &EditorAutomationAssetCommandsInternal::runExpectScratchMissing );
     SW_DEV_COMMAND( ExpectScratchContains, "asset.expectScratchContains", "asset.expectScratchContains <scratch/...resource id> <word>",
