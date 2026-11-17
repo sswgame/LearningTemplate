@@ -103,8 +103,10 @@ namespace sw
         /** @brief 씬에 활성 `SkyComponent` 가 있어 `_sky` 가 유효하면 1 입니다. */
         uint8 _bHasSky : 1;
         /** @brief 씬에 안개(`FogComponent` 또는 물속)가 있어 `_fog` 가 유효하면 1 입니다. */
-        uint8                  _bHasFog  : 1;
-        [[maybe_unused]] uint8 _reserved : 3;
+        uint8 _bHasFog : 1;
+        /** @brief 자동 렌더 배율이 켜져 GPU 프레임 시간(`GPUFrameClock`)을 원하면 1 입니다. 렌더 스레드가 시계에 넘긴다(`FrameRenderer::executePacket`). */
+        uint8                  _bWantsGPUFrameTime : 1;
+        [[maybe_unused]] uint8 _reserved           : 2;
 
         RenderFramePacket()
             : _gpuScene{}
@@ -142,6 +144,7 @@ namespace sw
             , _bHasLight{ SW_FALSE }
             , _bHasSky{ SW_FALSE }
             , _bHasFog{ SW_FALSE }
+            , _bWantsGPUFrameTime{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -200,6 +203,7 @@ namespace sw
             _bHasLight            = SW_FALSE;
             _bHasSky              = SW_FALSE;
             _bHasFog              = SW_FALSE;
+            _bWantsGPUFrameTime   = SW_FALSE;
         }
     };
 } // namespace sw

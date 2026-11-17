@@ -274,6 +274,8 @@ namespace sw
          *          `RenderViewCollector` 가 모니터의 "지난 프레임에 그려졌나" 판정에 쓴다(`OcclusionTileSnapshot::isSphereOccluded`).
          */
         shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _passExecutor.getOcclusionSnapshot(); }
+        /** @brief GPU 프레임 시계입니다. 게임 스레드는 `getState` · `getLatest` 만 읽습니다(원자값, 락 없음). 원하는지는 패킷이 렌더 스레드로 나릅니다. */
+        const GPUFrameClock& getGPUFrameClock() const { return _state._gpuFrameClock; }
 
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;

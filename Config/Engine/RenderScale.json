@@ -1,0 +1,11 @@
+{
+    "_budgetMs": 16.7,
+    "_minScale": 0.5,
+    "_stepDown": 0.1,
+    "_stepUp": 0.05,
+    "_overRatio": 1.05,
+    "_headroomRatio": 0.8,
+    "_downFrames": 6,
+    "_upFrames": 120,
+    "_discardSamples": 4
+}

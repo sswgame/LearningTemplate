@@ -239,6 +239,7 @@ namespace sw
         _pDevice                   = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않도록 버린다.
         _state._gpuPassTimeline.clearDevice();
+        _state._gpuFrameClock.clearDevice();
         _state._pTaskManager = nullptr;
         _status              = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
@@ -315,6 +316,8 @@ namespace sw
         const bool bNotExecutable = isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE;
         if ( bNotExecutable )
             return false;
+        // 자동 렌더 배율이 GPU 프레임 시간을 원하는지 — 시계는 다음 `readBack` 에서 계측 스위치를 맞춘다.
+        _state._gpuFrameClock.setWanted( packet._bWantsGPUFrameTime != SW_FALSE );
 
         // 주 시점이 없는 패킷은 그리지 않는다 — 기본 카메라로 대신 그리면 카메라가 없다는 결함이 화면으로 가려진다. 활성 씬이 없는 프레임은
         // 그릴 3D 내용도 없어 조용히 넘기고, 3D 내용을 실은 채 시점이 빠진 패킷(만든 쪽의 결함)만 한 번 알린다. 씬에 카메라가 없는 것은 게임 스레드가 알린다.
@@ -615,8 +618,13 @@ namespace sw
         _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
         _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
+        // 시계가 스위치를 맞추고 끝난 프레임을 읽는다(자동 렌더 배율 표본). 읽은 프레임 한 벌을 프로파일러도 받는다.
         if ( _host._pProfiler != nullptr )
-            _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass(), _pipelineResource.getFramePass() );
+        {
+            const RHITimestampFrame* pFrame = _state._gpuFrameClock.readBack( pDevice->findTimestampProvider(), _state._gpuPassTimeline.isRecording() );
+            if ( pFrame != nullptr )
+                _state._gpuPassTimeline.reportAndExport( pDevice, *pFrame, _pipelineResource.getGraphPass(), _pipelineResource.getFramePass() );
+        }
         return bOk;
     }
 
