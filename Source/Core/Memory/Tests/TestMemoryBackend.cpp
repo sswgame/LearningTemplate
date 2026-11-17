@@ -165,9 +165,10 @@ SW_TEST_CASE( MemoryBackendTest, BlocksCanBeFreedOnAnotherThread )
         vector<std::thread> arrThread;
         for ( size_t threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
         {
-            arrThread.emplace_back( [&arrProducedBlock, threadIndex]()
+            // 칸 참조는 스레드를 만들기 전에 얻는다 — 바깥 vector 의 non-const operator[] 를 여러 스레드가 동시에 부르면 경쟁 감지기(RaceDetectContext)가 쓰기 둘로 본다.
+            vector<void*>& arrBlock = arrProducedBlock[threadIndex];
+            arrThread.emplace_back( [&arrBlock]()
             {
-                vector<void*>& arrBlock = arrProducedBlock[threadIndex];
                 for ( size_t blockIndex = 0; blockIndex < kBlockPerThread; ++blockIndex )
                 {
                     const size_t size   = getProducedBlockSize( blockIndex );
