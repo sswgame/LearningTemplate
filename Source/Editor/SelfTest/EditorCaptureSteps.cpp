@@ -24,6 +24,7 @@
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
 #include "Editor/SelfTest/EditorStabilityWait.h"
 
+#include "Engine/Automation/AutomationResult.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -36,7 +37,7 @@ namespace sw::editor
     {
         struct EditorCaptureStepsInternal
         {
-            /** @brief 레이아웃이 자리 잡을 때까지와 캡처가 써질 때까지 붙잡는 최대 프레임입니다. 렌더 큐 깊이와 GPU 읽기보다 넉넉하다. */
+            /** @brief 레이아웃이 자리 잡을 때까지와 캡처가 써질 때까지 붙잡는 최대 프레임입니다. 렌더 큐 깊이와 GPU 읽기보다 넉넉하다. 넘기면 시나리오가 `WaitTimeout` 으로 끝난다(`giveUpCapture`). */
             static constexpr uint32 kCaptureWaitFrames = 120;
             /** @brief 이 프레임 수만큼 레이아웃 지문이 바뀌지 않으면 자리 잡은 것으로 본다(ImGui 는 새 창 · 자동 크기를 한두 프레임에 걸쳐 맞춘다). */
             static constexpr uint32 kLayoutStableFrames = 2;
@@ -114,6 +115,22 @@ namespace sw::editor
                 return nullptr;
             }
 
+            /**
+             * @brief 캡처 대기가 `kCaptureWaitFrames` 에 닿았다 — 대기 항목을 지우고 `WaitTimeout` 으로 시나리오를 끝냅니다(Skip — 단계는 돌지 않는다).
+             * @details 예전에는 놓아서 단계가 "never completed" 를 적고 다음 단계로 갔다(DesignBacklog D2-4 와 같은 모양). 항목은 단계가 돌 때 지우던 것이라 여기서 지운다 —
+             *          세션은 컨텍스트와 함께 살아 체인의 다음 시나리오까지 남는다.
+             * @param phase 반복 실패 차단 열쇠의 꼬리(`<단계 종류> <phase>`)
+             */
+            static AutomationStepHold giveUpCapture( AutomationStepContext& runner, const AutomationStep& step, PendingCapture& pending, string_view reason, string_view phase )
+            {
+                vector<PendingCapture>& listPending = findSession()->_listPending; // 항목이 있으므로 세션이 있다
+                listPending.erase( listPending.begin() + ( &pending - listPending.data() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "gave up after %# frame(s) waiting for %#", kCaptureWaitFrames, string( reason ).c_str() );
+                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), step._kind + " " + string( phase ) );
+                return AutomationStepHold::Skip;
+            }
+
             /** @brief 처음 차례가 오면 캡처를 요청하고, 결과가 나올 때까지 붙잡습니다. */
             static AutomationStepHold holdCapture( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
@@ -132,7 +149,7 @@ namespace sw::editor
                     const AutomationReadiness readiness = pPending->_stability.advance( runner.findActiveObjectManager() );
                     const bool                bStalled  = readiness.isWaiting() && pPending->_stability.isStalled();
                     if ( bStalled )
-                        runner.recordFailure( step, pPending->_stability.describeOscillation() ); // 그래도 찍는다 — 움직이는 화면이 결과 파일에 남는다
+                        runner.recordFailure( step, pPending->_stability.describeOscillation() ); // 포기하지 않고 찍는다 — 진동하는 배치가 결과 파일에 남아야 어느 창이 움직였는지 눈으로 본다(실패는 적었다)
                     if ( readiness.isWaiting() && bStalled == false )
                         return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), pPending->_stability.describeWait() + " before the UI capture" );
                     pPending->_bStable = true;
@@ -142,20 +159,22 @@ namespace sw::editor
                     const uint64 layoutHash     = computeLayoutHash();
                     pPending->_stableFrameCount = layoutHash == pPending->_layoutHash ? pPending->_stableFrameCount + 1 : 0;
                     pPending->_layoutHash       = layoutHash;
-                    // 자리 잡지 못한 채 `kCaptureWaitFrames` 가 지나면 놓는다 — 요청하지 않았으므로 단계가 돌며 "never completed" 실패를 적는다.
+                    // 자리 잡지 못한 채 `kCaptureWaitFrames` 가 지나면 포기한다.
                     if ( pPending->_stableFrameCount < kLayoutStableFrames )
                     {
-                        const bool bGaveUp = ++pPending->_phaseFrameCount >= kCaptureWaitFrames;
-                        return runner.holdUntilReady( step, input, bGaveUp, std::numeric_limits<uint32>::max(), "the editor window contents to hold still before the UI capture" );
+                        if ( ++pPending->_phaseFrameCount >= kCaptureWaitFrames )
+                            return giveUpCapture( runner, step, *pPending, "the editor window contents to hold still before the UI capture", "LayoutStill" );
+                        return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), "the editor window contents to hold still before the UI capture" );
                     }
                     pPending->_ticket          = pCapture->request( runner.resolveOutputPath( step.readValidatedProperties<EditorCaptureParams>()._file ) );
                     pPending->_bRequested      = SW_TRUE;
                     pPending->_phaseFrameCount = 0;
                 }
                 EditorUICaptureResult result{};
-                const bool            bGaveUp = ++pPending->_phaseFrameCount >= kCaptureWaitFrames; // 결과가 없으면 단계가 돌며 실패를 적는다
-                return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ) || bGaveUp, std::numeric_limits<uint32>::max(),
-                                              "the editor UI capture to be read back" );
+                const bool            bHasResult = pCapture->findResult( pPending->_ticket, result );
+                if ( bHasResult == false && ++pPending->_phaseFrameCount >= kCaptureWaitFrames )
+                    return giveUpCapture( runner, step, *pPending, "the editor UI capture to be read back", "ReadBack" );
+                return runner.holdUntilReady( step, input, bHasResult, std::numeric_limits<uint32>::max(), "the editor UI capture to be read back" );
             }
 
             /**
