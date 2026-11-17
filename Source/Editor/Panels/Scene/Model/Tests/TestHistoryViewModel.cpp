@@ -20,8 +20,8 @@ namespace
         {
             sw::CommandStack::Command cmd;
             cmd._label = pLabel;
-            cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
-            cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
+            cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner, 0u );
+            cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner, 0u );
             return cmd;
         }
     };
@@ -33,7 +33,9 @@ SW_TEST_CASE( HistoryViewModelTest, GatherAndJumpFollowTheStack )
     using Internal = HistoryViewModelTestInternal;
 
     sw::editor::UndoStepOwner owner;
-    sw::CommandStack          stack;
+    sw::CommandStack          stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     stack.push( Internal::makeCommand( owner, "Move" ) );
     stack.push( Internal::makeCommand( owner, "" ) );
 
@@ -71,7 +73,9 @@ SW_TEST_CASE( HistoryViewModelTest, RefusedWhileEditOpen )
     using Internal = HistoryViewModelTestInternal;
 
     sw::editor::UndoStepOwner owner;
-    sw::CommandStack          stack;
+    sw::CommandStack          stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     stack.push( Internal::makeCommand( owner, "Move" ) );
 
     sw::SubsystemScope scope;

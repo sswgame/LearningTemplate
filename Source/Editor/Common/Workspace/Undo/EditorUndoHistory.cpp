@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Scene/SceneManager.h"
@@ -19,8 +20,16 @@ namespace sw::editor
         {
             /** @brief 맡김 칸의 키입니다. */
             static constexpr string_view kStoreKey = "editor.undoHistory";
+            /** @brief 설정의 MB 를 바이트로 바꾸는 배수입니다. */
+            static constexpr uint64 kBytesPerMegabyte = uint64{ 1 } << 20;
         };
     } // namespace
+
+    UndoBufferLimit EditorUndoHistory::readConfiguredLimit()
+    {
+        const EditorToolDefaults& defaults = getEditorToolDefaults();
+        return UndoBufferLimit{ defaults._undoMaxCommandCount, static_cast<uint64>( defaults._undoBufferMegabytes ) * EditorUndoHistoryInternal::kBytesPerMegabyte };
+    }
 
     SubsystemInitResult EditorUndoHistory::initializeSubsystem()
     {

@@ -27,6 +27,17 @@ namespace sw
     };
 
     /**
+     * @struct UndoBufferLimit
+     * @brief 되돌리기 스택 하나의 한도입니다 — 명령 수와 쥔 바이트(넘으면 가장 오래된 명령부터 버린다). 값은 `Config/Editor/editortooldefaults.json` 이다(`EditorUndoHistory::readConfiguredLimit`).
+     * @details 예전에는 개수 상수(128)뿐이라 문서 글 · 스냅샷을 쥔 단계가 쌓이면 메모리가 끝없이 늘 수 있었다(감사 E-13). 언리얼 에디터 설정 Undo Buffer Size(MB)와 같은 자리다.
+     */
+    struct UndoBufferLimit
+    {
+        uint32 _maxCommandCount; ///< 명령 수 한도(1 이상)
+        uint64 _maxBytes;        ///< 쥔 바이트 한도(1 이상 — 명령 이름 · 인자 · 코드 단계가 쥔 자료)
+    };
+
+    /**
      * @class CommandStack
      * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 메인 스택은 `EditorUndoHistory`(편집기 범위)가 소유해 범위에 노출하고, 문서 패널은 문서마다 자기 스택을 멤버로 든다(`EditorDocumentPanel::getDocumentCommandStack`).
      * @details 단계는 데이터다(`UndoStep` — 함수 이름 해시 + 인자 바이트). 그래서 편집기 모듈을 리로드해도 기록이 넘어간다. 언리얼의 `FTransaction`
@@ -62,8 +73,8 @@ namespace sw
         /** @brief 에디터가 등록하는 알림 처리기입니다(선택 갱신, 씬 dirty). 모듈 코드라 그 모듈이 언로드될 때 분리됩니다. */
         using ObjectEditListener = Delegate<void( const ObjectEditEvent& )>;
 
-        /** @brief 빈 스택으로 시작합니다. */
-        CommandStack();
+        /** @brief 빈 스택으로 시작합니다. 한도는 필수다(기본값이 없다 — 설정에서 읽는다). */
+        explicit CommandStack( const UndoBufferLimit& limit );
         /** @brief 살아 있는 스택 목록에서 내려갑니다. */
         ~CommandStack();
         CommandStack( const CommandStack& )            = delete;
@@ -159,12 +170,17 @@ namespace sw
         static bool isPersistable( const Command& cmd );
         /** @brief @p cmd(와 그 안쪽)에 주인이 @p ownerID 인 코드 단계가 있는지 확인합니다. */
         static bool isOwnedBy( const Command& cmd, uint64 ownerID );
+        /** @brief @p cmd(와 그 안쪽)가 쥔 바이트입니다(이름 · 단계). */
+        static uint64 measureHeldBytes( const Command& cmd );
+        /** @brief 한도(`UndoBufferLimit`)를 넘으면 가장 오래된 명령부터 버리고 위치를 맞춥니다. 가장 새 명령 하나는 남긴다. */
+        void evictOverLimit();
         /** @brief 실행할 것이 있는 명령인지 확인합니다(undo 와 redo 가 둘 다 있거나 트랜잭션 묶음). */
         static bool isExecutable( const Command& cmd );
         /** @brief @p inoutListCommand 에서 주인이 @p ownerID 인 명령을 빼고 @p inoutIndex 를 맞춥니다. 뺀 수를 반환합니다. */
         static uint32 dropOwnedBy( vector<Command>& inoutListCommand, size_t& inoutIndex, uint64 ownerID );
 
     private:
+        UndoBufferLimit                  _limit;
         vector<Command>                  _listCommand;
         vector<Command>                  _listPendingTransactionCommand;
         vector<Command>                  _listSuspendedCommand; ///< 보관한 내역(`suspendHistory`)

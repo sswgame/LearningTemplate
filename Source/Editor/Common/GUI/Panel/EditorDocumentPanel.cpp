@@ -20,6 +20,7 @@
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -176,7 +177,7 @@ namespace sw::editor
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
-        , _pDocumentStack{ make_unique<CommandStack>() }
+        , _pDocumentStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit() ) }
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}

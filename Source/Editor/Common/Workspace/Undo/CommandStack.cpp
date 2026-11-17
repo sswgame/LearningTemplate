@@ -112,8 +112,9 @@ namespace sw
         };
     } // namespace
 
-    CommandStack::CommandStack()
-        : _listCommand{}
+    CommandStack::CommandStack( const UndoBufferLimit& limit )
+        : _limit{ limit }
+        , _listCommand{}
         , _listPendingTransactionCommand{}
         , _listSuspendedCommand{}
         , _objectEditListener{}
@@ -127,6 +128,7 @@ namespace sw
         , _bHistorySuspended{ SW_FALSE }
         , _listOwnerWatch{}
     {
+        SW_ASSERT( limit._maxCommandCount > 0 && limit._maxBytes > 0 ); // 0 이면 기록이 남지 않는다 — 설정 값이 틀렸다
     }
 
     CommandStack::~CommandStack() = default;
@@ -176,14 +178,38 @@ namespace sw
 
         _listCommand.push_back( std::move( cmd ) );
         ++_index;
+        evictOverLimit();
+    }
 
-        constexpr size_t kMax = 128;
-        if ( _listCommand.size() > kMax )
+    uint64 CommandStack::measureHeldBytes( const Command& cmd )
+    {
+        uint64 bytes = static_cast<uint64>( cmd._label.size() ) + cmd._undo.getHeldBytes() + cmd._redo.getHeldBytes();
+        if ( cmd._listChild != nullptr )
         {
-            const size_t drop = _listCommand.size() - kMax;
-            _listCommand.erase( _listCommand.begin(), _listCommand.begin() + static_cast<std::ptrdiff_t>( drop ) );
-            _index -= drop;
+            for ( const Command& child : *cmd._listChild )
+                bytes += measureHeldBytes( child );
         }
+        return bytes;
+    }
+
+    void CommandStack::evictOverLimit()
+    {
+        // 기록 전체를 센다 — 명령 수가 한도(수백) 안이라 push 마다 세도 싸고, 따로 든 합계가 빼기 · 비우기 · 맡김 길과 어긋날 일이 없다.
+        uint64 totalBytes{ 0 };
+        for ( const Command& cmd : _listCommand )
+            totalBytes += measureHeldBytes( cmd );
+        size_t dropCount{ 0 };
+        // 가장 새 명령 하나는 남긴다 — 그 하나가 바이트 한도보다 커도 방금 한 편집은 되돌릴 수 있어야 한다.
+        while ( _listCommand.size() - dropCount > 1 &&
+                ( _listCommand.size() - dropCount > _limit._maxCommandCount || totalBytes > _limit._maxBytes ) )
+        {
+            totalBytes -= measureHeldBytes( _listCommand[dropCount] );
+            ++dropCount;
+        }
+        if ( dropCount == 0 )
+            return;
+        _listCommand.erase( _listCommand.begin(), _listCommand.begin() + static_cast<std::ptrdiff_t>( dropCount ) );
+        _index = _index > dropCount ? _index - dropCount : 0;
     }
 
     void CommandStack::beginTransaction( string_view label )

@@ -55,6 +55,11 @@ namespace sw::editor
         PROPERTY( Required )
         vector<string> _listJapaneseFont{}; ///< 한글 글꼴에 없는 가나 · 한자 후보(한글 다음에 병합 — 일본어 번역 표의 効 · ー 가 빈 상자였다). 하나도 없으면 에디터가 서지 않는다
 
+        PROPERTY( Required )
+        uint32 _undoMaxCommandCount{}; ///< 되돌리기 스택 하나(메인 · 문서 창마다)의 명령 수 한도 — 넘으면 가장 오래된 것부터 버린다(`UndoBufferLimit`)
+        PROPERTY( Required )
+        uint32 _undoBufferMegabytes{}; ///< 되돌리기 스택 하나가 쥘 바이트 한도(MB) — 언리얼 에디터 설정 Undo Buffer Size 와 같은 값이다(감사 E-13)
+
         /**
          * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.
          * @details 무엇을 감시할지는 설정이 정하고, 다시 읽는 방법이 있는지는 코드가 정합니다(`AssetHotReload` 의 처리기 테이블).
