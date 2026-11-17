@@ -51,5 +51,10 @@ namespace sw
         /** @brief @p listCandidate 를 보고 바꿀 것을 @p outListDecision 에 채웁니다(지우고 채운다). @p residentBytes 는 지금 풀에 든 바이트 합입니다. */
         static void decide( vector_reference<const TextureStreamingCandidate> listCandidate, uint64 residentBytes, uint64 budgetBytes, const TextureStreamingConfig& config,
                             vector<TextureStreamingDecision>& outListDecision );
+        /**
+         * @brief 화면이 텍스처 가로에 요구하는 텍셀 수 @p requiredTexels 로 필요한 가장 큰 밉을 구합니다 — 너비가 그보다 작아지지 않는 가장 작은 밉이다(R6-6).
+         * @details 밉 0 너비 @p topWidth, 밉 수 @p mipCount. 요구가 0 이하이면 가장 작은 밉이다. 언리얼 `FStreamingRenderAsset::GetWantedMipsFromSize` 자리(화면 텍셀 크기 → 밉 수).
+         */
+        [[nodiscard]] static uint32 computeWantedFirstMip( uint32 topWidth, uint32 mipCount, float32 requiredTexels );
     };
 } // namespace sw

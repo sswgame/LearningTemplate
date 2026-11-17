@@ -34,9 +34,8 @@ namespace sw
         AssetManager* pAssets = _manager.findAssetManager();
         if ( pAssets == nullptr )
             return;
-        TextureCache& textures = pAssets->getAssetCache<TextureCache>();
-        if ( textures.hasPendingStreamingUpgrades() == false )
-            return;
+        // 기다리는 올리기가 없어도 알린다 — 내리기(R6-6)가 오래 안 보인 텍스처와 화면에서 작은 텍스처를 이 알림으로 가린다.
+        TextureCache&        textures  = pAssets->getAssetCache<TextureCache>();
         const MeshLODSystem& lodSystem = _manager.getSubsystem<MeshLODSystem>();
         if ( lodSystem.areViewsSet() == false )
             return; // 렌더가 뷰를 넣기 전에는 화면 크기를 모른다

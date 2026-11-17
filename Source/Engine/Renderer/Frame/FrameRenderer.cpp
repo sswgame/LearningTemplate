@@ -454,9 +454,11 @@ namespace sw
         // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
         // 결정적 실행도 풀 예산은 지킨다(예산은 장면 내용으로만 정해져 결정적이다) — 풀리는 것은 프레임당 제출 수뿐이다.
         TextureStreamingBudget streamingBudget;
-        streamingBudget._maxUpgradesPerFrame = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
-        streamingBudget._poolBytes           = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
-        streamingBudget._maxBytesInFlight    = static_cast<uint64>( streamingConfig._maxMegabytesInFlight ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._maxUpgradesPerFrame     = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
+        streamingBudget._poolBytes               = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._maxBytesInFlight        = static_cast<uint64>( streamingConfig._maxMegabytesInFlight ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._viewHeightPixels        = _state._outputHeight;
+        streamingBudget._idleFramesBeforeRelease = streamingConfig._idleFramesBeforeRelease;
         (void)textures.updateStreaming( pDevice, streamingBudget );
     }
 

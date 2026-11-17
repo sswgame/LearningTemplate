@@ -265,3 +265,37 @@ SW_TEST_CASE( Texture2DStableSRVTest, FailedUploadKeepsReservedSRV )
     texture.releaseRHI( &device ); // 텍스처를 내리면 지키던 번호도 놓는다
     SW_EXPECT_EQUAL( 1u, factory._unregisterCount );
 }
+
+/**
+ * @brief [Texture2DStableSRVTest] 밉을 내려도(R6-6) SRV 번호가 그대로이고 그 번호가 작은 새 텍스처를 가리킨다 — 다시 올릴 위쪽 밉 수가 남는다(언리얼 `FTexture2DStreamOut`)
+ * @details 변이: 내리기가 새 번호를 등록하면 첫 단언이, `finishUpgradeResidency` 가 위쪽 밉 수를 0 으로 두면 마지막 단언이 진다.
+ */
+SW_TEST_CASE( Texture2DStableSRVTest, DemotionKeepsSRV )
+{
+    FakeBindlessFactory factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory = &factory;
+    const DDSImageData image = makeStreamedImage();
+    Texture2D          texture;
+    SW_REQUIRE_TRUE( texture.loadFromImage( &device, "textures/demoted.dds", image, TextureResidency::Full ) );
+    SW_REQUIRE_TRUE( texture.isFullyResident() );
+    const RHIDescriptorIndex srv      = texture.getSRV();
+    const RHITextureHandle   fullMips = texture.getHandle();
+    const TextureMipLayout   layout   = Texture2D::makeMipLayout( image );
+    const uint32             target   = kStreamedTextureMipCount - 1u; // 가장 작은 밉만 남긴다
+    uint64                   offset{ 0 };
+    uint64                   size{ 0 };
+    layout.getRange( target, 1u, offset, size );
+    vector<uint8> mipBytes;
+    mipBytes.assign( image._bytes.begin() + static_cast<ptrdiff_t>( offset ), image._bytes.begin() + static_cast<ptrdiff_t>( offset + size ) );
+    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, target, mipBytes, true ) == Texture2DUploadStep::Submitted );
+    Texture2DRetiredResource retired{};
+    SW_REQUIRE_TRUE( texture.finishUpgradeResidency( &device, true, retired ) == Texture2DUploadStatus::Ready );
+
+    SW_EXPECT_EQUAL( srv, texture.getSRV() );
+    SW_EXPECT_EQUAL( texture.getHandle(), factory.findTexture( srv ) );
+    SW_EXPECT_EQUAL( fullMips, retired._handle ); // 큰 텍스처는 해제 줄로 간다
+    SW_EXPECT_EQUAL( 1u, texture.getMipCount() );
+    SW_EXPECT_EQUAL( target, texture.getStreamedMipCount() );
+    texture.releaseRHI( &device );
+}

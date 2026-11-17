@@ -130,7 +130,8 @@ namespace sw
         /** @brief 제출했고 아직 `finishUpload` 가 끝내지 않은 업로드가 있으면 true 입니다. */
         bool hasUploadInFlight() const { return _uploadTicket.isValid(); }
         /**
-         * @brief 아래쪽 밉만 있는 텍스처(`StreamingBase`)에 밉 @p firstMip 부터 끝까지를 새 GPU 텍스처로 올리는 1단계입니다 — 새 텍스처를 만들고 업로드를 제출합니다(렌더 스레드, 기록 전).
+         * @brief 밉 @p firstMip 부터 끝까지를 새 GPU 텍스처로 올리는 1단계입니다 — 새 텍스처를 만들고 업로드를 제출합니다(렌더 스레드, 기록 전).
+         *        @p firstMip 이 지금 가장 큰 밉보다 작으면 올리기(위쪽 밉 스트리밍), 크면 내리기다(R6-6 — 같은 번호를 작은 텍스처로 다시 묶는다, 언리얼 `FTexture2DStreamOut`).
          * @details 첫 업로드와 같은 세 단계다(RHIAsyncUploads U8): 이 함수 → 이후 프레임의 `finishUpgradeResidency`. 그 사이 이 텍스처는 아래쪽 밉 그대로 그려진다. 실패하면 아래쪽 밉 그대로
          *          남는다(오류를 남긴다). 이미 올리는 중이거나 올릴 것이 없으면 `Failed` 다(오류 없음).
          *          @p mipBytes 는 그 밉들의 파일 구간(`TextureMipLayout::getRange`)을 범위로 읽은 바이트다(MR-2 — 줄은 바이트를 쥐지 않는다). 함수가 끝나면 그대로 돌려준다
@@ -164,6 +165,8 @@ namespace sw
         bool isFullyResident() const { return _streamedMipCount == 0; }
         /** @brief 아직 GPU 에 없는 위쪽 밉 수입니다(품질 설정이 버린 밉은 세지 않는다). */
         uint32 getStreamedMipCount() const { return _streamedMipCount; }
+        /** @brief GPU 에 있는 밉 수입니다(가장 큰 밉부터 끝 밉까지). 파일의 밉 수에서 빼면 지금 가장 큰 밉의 번호다(`TextureCache` 의 올리기 · 내리기). */
+        uint32 getMipCount() const { return _mipCount; }
         /**
          * @brief 그리고 읽는 렌더 타깃으로 만듭니다(렌더 텍스처: CCTV 모니터, 백미러). 경로는 이름입니다(`rendertarget/<이름>`, 파일이 아닙니다).
          * @details 렌더러가 카메라의 이미지를 여기에 그리고, 머티리얼은 DDS 텍스처와 같은 SRV 로 읽습니다. 디바이스가 바뀌면 같은 크기로 다시 만듭니다(내용은 비어 있습니다).
@@ -281,6 +284,7 @@ namespace sw
             uint32            _width{ 0 };
             uint32            _height{ 0 };
             uint32            _mipCount{ 0 };
+            uint32            _streamedMipCount{ 0 }; ///< 바꿔 끼운 뒤 아직 GPU 에 없는 위쪽 밉 수(올리기는 품질까지면 0, 내리기는 내린 밉 수)
         };
 
     private:

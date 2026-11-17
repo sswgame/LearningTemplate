@@ -5,6 +5,8 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -25,9 +27,11 @@ namespace sw
     /** @brief 한 프레임의 텍스처 밉 스트리밍 예산입니다(`TextureCache::updateStreaming`). 값은 `RenderConfig`(Config/Engine/EngineConfig.json `_render`)가 정본이다. */
     struct TextureStreamingBudget
     {
-        uint32 _maxUpgradesPerFrame{ 0 }; ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
-        uint64 _poolBytes{ 0 };           ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
-        uint64 _maxBytesInFlight{ 0 };    ///< 범위로 읽는 중 · 제출을 기다리는 위쪽 밉 바이트 합의 상한(MR-2 — 하나가 이보다 크면 혼자일 때만 읽는다)
+        uint32 _maxUpgradesPerFrame{ 0 };     ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
+        uint64 _poolBytes{ 0 };               ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
+        uint64 _maxBytesInFlight{ 0 };        ///< 범위로 읽는 중 · 제출을 기다리는 위쪽 밉 바이트 합의 상한(MR-2 — 하나가 이보다 크면 혼자일 때만 읽는다)
+        uint32 _viewHeightPixels{ 0 };        ///< 주 뷰의 높이(픽셀) — 화면 크기를 필요한 밉으로 바꾼다(0 이면 화면을 모른다 — 올리고 내리는 판단을 하지 않는다, R6-6)
+        uint32 _idleFramesBeforeRelease{ 0 }; ///< 화면 크기를 알리지 않은 지 이만큼 지나면 필요 없는 것으로 본다(`TextureStreamingConfig::_idleFramesBeforeRelease`)
     };
 
     class IRHIDevice;
@@ -123,6 +127,8 @@ namespace sw
          *          풀 예산(`TextureStreamingBudget::_poolBytes`)을 넘는 승급은 내지 않는다 — 그 텍스처부터 줄에 남아 아래쪽 밉 그대로다(예약은 `TextureStreamingPool`).
          *          줄은 밉 요청(`TextureMipRequest`)만 든다(MR-2): 꺼낼 때 그 밉 구간을 IO 스레드가 범위로 읽고(`AssetIO::readBinaryAssetRangeAsync`), 다 읽은 것을 다음 호출이
          *          제출한다. 읽는 중 · 제출 대기 바이트의 합은 `TextureStreamingBudget::_maxBytesInFlight` 아래다. 읽는 사이 마지막 참조가 놓인 텍스처는 올리지 않고 버린다.
+         *          내리기(R6-6): 알린 화면 크기를 필요한 밉으로 바꿔 항목에 적고, 풀 예산을 넘으면 `TextureStreamingPolicy` 가 고른 텍스처를 작은 밉 사슬로 다시 만들어 같은 SRV 번호에
+         *          다시 묶는다(읽기 · 제출은 올리기와 같은 줄). 내린 텍스처가 다시 보이고 예산이 남으면 필요한 밉까지 다시 올린다.
          */
         uint32 updateStreaming( IRHIDevice* pDevice, const TextureStreamingBudget& budget );
         /**
@@ -255,6 +261,11 @@ namespace sw
          * @details 동기 `acquire` 로 올리므로 다시 이 함수로 들어오지 않는다. 디바이스 교체로 GPU 자원을 잃었으면 다시 올린다.
          */
         void ensureStandInTextures();
+        /**
+         * @brief 이번 프레임의 화면 크기(@p mapFrameScreenSize)를 항목의 필요한 밉 · 유휴 프레임에 적고, `TextureStreamingPolicy` 가 고른 내리기 · 다시 올리기를 줄 앞에 넣습니다(R6-6).
+         * @details 내리기로 한 키를 @p outMapDemotionKey 에 담는다 — `updateStreaming` 이 줄에서 먼저 낸다. 바꾸는 중인 항목은 바이트만 세고 결정에서 뺀다.
+         */
+        void collectStreamingDecisions( const unordered_map<string, float32>& mapFrameScreenSize, const TextureStreamingBudget& budget, unordered_map<string, uint8>& outMapDemotionKey );
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
         uint32 processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 

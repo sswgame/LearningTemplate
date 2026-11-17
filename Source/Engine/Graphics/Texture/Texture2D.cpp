@@ -384,9 +384,12 @@ namespace sw
     Texture2DUploadStep Texture2D::beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, bool bBlocking )
     {
         // 다른 디바이스의 텍스처(백엔드 교체 뒤 아직 다시 업로드하지 않은 것)는 그 디바이스로 다시 만들 때 밉 전부가 올라간다(`initRHI`).
-        const bool bUpgradable = pDevice != nullptr && _pDevice == pDevice && _streamedMipCount > 0 && isRHIValid() && _upgrade._ticket.isValid() == false;
-        if ( bUpgradable == false || firstMip >= layout._listMip.size() )
+        const bool bReplaceable = pDevice != nullptr && _pDevice == pDevice && isRHIValid() && _upgrade._ticket.isValid() == false;
+        if ( bReplaceable == false || firstMip >= layout._listMip.size() || _mipCount > layout._listMip.size() )
             return Texture2DUploadStep::Failed;
+        const uint32 residentFirstMip = static_cast<uint32>( layout._listMip.size() ) - _mipCount;
+        if ( firstMip == residentFirstMip )
+            return Texture2DUploadStep::Failed; // 이미 그 밉부터 있다 — 바꿀 것이 없다
         const uint32 mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
         uint64       rangeOffset{ 0 };
         uint64       rangeSize{ 0 };
@@ -416,7 +419,10 @@ namespace sw
         upgrade._width    = desc._width;
         upgrade._height   = desc._height;
         upgrade._mipCount = desc._mipLevels;
-        _upgrade          = upgrade;
+        // 품질이 버리는 밉보다 위는 늘 없다 — 그보다 아래에서 시작하면(내리기) 그만큼이 다시 올릴 위쪽 밉이다.
+        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout );
+        upgrade._streamedMipCount    = firstMip > qualityFirstMip ? firstMip - qualityFirstMip : 0u;
+        _upgrade                     = upgrade;
         return Texture2DUploadStep::Submitted;
     }
 
@@ -458,7 +464,7 @@ namespace sw
         _width             = upgrade._width;
         _height            = upgrade._height;
         _mipCount          = upgrade._mipCount;
-        _streamedMipCount  = 0;
+        _streamedMipCount  = upgrade._streamedMipCount;
         return Texture2DUploadStatus::Ready;
     }
 

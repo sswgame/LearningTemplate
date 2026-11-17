@@ -109,3 +109,19 @@ SW_TEST_CASE( TextureStreamingPolicyTest, NoOscillationAtBudgetEdge )
     }
     SW_EXPECT_TRUE( Util::sumResident( listCandidate ) <= budget );
 }
+
+/**
+ * @brief [TextureStreamingPolicyTest] 화면이 요구하는 텍셀 수를 필요한 밉으로 바꾼다 — 너비가 그보다 작아지지 않는 가장 작은 밉, 요구가 없으면 가장 작은 밉(R6-6)
+ * @details 변이: 비교를 `>` 로 바꾸면 요구와 같은 너비의 밉을 건너뛰어 한 밉 더 내려 흐려진다.
+ */
+SW_TEST_CASE( TextureStreamingPolicyTest, WantedMipFromScreenTexels )
+{
+    constexpr uint32 kTopWidth = 1024;
+    constexpr uint32 kMipCount = 11;                                                                       // 1024 → 1
+    SW_EXPECT_EQUAL( 0u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 2000.0f ) ); // 밉 0 보다 크게 보인다
+    SW_EXPECT_EQUAL( 0u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 1024.0f ) );
+    SW_EXPECT_EQUAL( 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 512.0f ) ); // 512 너비 밉이면 된다
+    SW_EXPECT_EQUAL( 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 600.0f ) ); // 512 는 모자라다 — 밉 1
+    SW_EXPECT_EQUAL( 3u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 100.0f ) ); // 128 ≥ 100 > 64
+    SW_EXPECT_EQUAL( kMipCount - 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 0.0f ) );
+}

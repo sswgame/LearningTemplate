@@ -40,6 +40,17 @@ namespace sw
         return total;
     }
 
+    uint32 TextureStreamingPolicy::computeWantedFirstMip( uint32 topWidth, uint32 mipCount, float32 requiredTexels )
+    {
+        const uint32 lastMip = mipCount > 0 ? mipCount - 1u : 0u;
+        if ( requiredTexels <= 0.0f )
+            return lastMip;
+        uint32 mip = 0;
+        while ( mip < lastMip && static_cast<float32>( MathUtil::max( topWidth >> ( mip + 1u ), 1u ) ) >= requiredTexels )
+            ++mip;
+        return mip;
+    }
+
     void TextureStreamingPolicy::decide( vector_reference<const TextureStreamingCandidate> listCandidate, uint64 residentBytes, uint64 budgetBytes, const TextureStreamingConfig& config,
                                          vector<TextureStreamingDecision>& outListDecision )
     {

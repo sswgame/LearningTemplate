@@ -22,6 +22,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Asset/Image/TextureMipLayout.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -31,6 +32,7 @@
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
+#include "Engine/Graphics/Texture/TextureStreamingPolicy.h"
 #include "Engine/Graphics/Texture/TextureStreamingPool.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -115,6 +117,9 @@ namespace sw
             TextureStreamingReservation    _streamingReservation; ///< 위쪽 밉 승급이 풀(`_streamingPool`)에서 쥔 바이트 — 항목이 사라지면 돌려준다(지우는 자리마다 빼지 않는다)
             TextureMipLayout               _mipLayout;            ///< 위쪽 밉을 다시 읽을 파일 구간(로드가 끝날 때 적는다 — 픽셀은 쥐지 않는다, MR-2)
             string                         _mipReadPath;          ///< 그 구간을 읽을 경로(형식 변형이 있으면 변형 파일 — 첫 로드가 읽은 파일과 같다)
+            uint32                         _idleFrames{ 0 };      ///< 화면 크기를 알리지 않은 `updateStreaming` 수(R6-6)
+            uint32                         _wantedFirstMip{ 0 };  ///< 마지막으로 알린 화면 크기가 요구한 가장 큰 밉(R6-6)
+            bool                           _bDemoted{ false };    ///< 예산 때문에 내렸다 — 다시 보이면 정책이 다시 올린다(처음 올리기는 로드가 줄에 넣는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief 범위 읽기 하나의 결과입니다 — IO 완료(다른 스레드)가 바이트를 넣고 상태를 올린다. 렌더 스레드는 상태가 `Reading` 이 아닐 때만 바이트를 만진다. */
         struct StreamingReadResult
@@ -180,7 +185,7 @@ namespace sw
         bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
         TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
         vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
-        unordered_map<string, float32>                  _mapScreenSize;                           ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
+        unordered_map<string, float32>                  _mapScreenSize;                           ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 꺼내 항목의 필요한 밉에 적고 줄을 정렬한다
 
         /** @brief `submitRegionUpdate` 의 결과: 올림 · 다음 프레임에 다시(`Busy` 이면 이번 차례의 나머지도 미룬다) · 버림. */
         enum class RegionFlushResult : uint8
@@ -721,6 +726,16 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.TextureStreaming" );
         SW_PROFILE_COUNT( "RT.TextureStreaming.poolBytes", _impl->_streamingPool.getUsedBytes() );
 
+        // 1') 이번 프레임의 화면 크기를 항목에 적고, 정책(`TextureStreamingPolicy`)이 고른 내리기 · 다시 올리기를 줄 앞에 넣는다(R6-6).
+        unordered_map<string, float32> mapFrameScreenSize;
+        {
+            ScopedLock<mutex> lock{ _impl->_streamingMutex };
+            mapFrameScreenSize.swap( _impl->_mapScreenSize );
+        }
+        unordered_map<string, uint8> mapDemotionKey; ///< 이번에 내리기로 한 키 — 줄에서 먼저 낸다(풀을 비워 올리기가 들어온다)
+        if ( budget._viewHeightPixels > 0 )
+            collectStreamingDecisions( mapFrameScreenSize, budget, mapDemotionKey );
+
         // 2) 다 읽은 밉 구간을 제출한다 — 프레임당 상한은 제출 수다. 읽는 중인 것은 줄에 남는다(MR-2).
         vector<Impl::StreamingRead> listRead;
         {
@@ -798,22 +813,19 @@ namespace sw
             const size_t      takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listStreamingUpgrade.size() );
             _impl->_bStreamingParked    = false;
             if ( takeCount == 0 )
-            {
-                _impl->_mapScreenSize.clear();
                 return upgradedCount;
-            }
-            // 화면에서 큰 텍스처부터 올린다. 알리지 않은 것은 0 이고, 같은 값끼리는 먼저 읽힌 순서를 지킨다(안정 정렬).
-            if ( _impl->_mapScreenSize.empty() == false )
+            // 내리기를 먼저, 그다음 화면에서 큰 텍스처부터 올린다. 알리지 않은 것은 0 이고, 같은 값끼리는 먼저 읽힌 순서를 지킨다(안정 정렬).
+            if ( mapFrameScreenSize.empty() == false || mapDemotionKey.empty() == false )
             {
-                const unordered_map<string, float32>& mapScreenSize = _impl->_mapScreenSize;
-                const auto                            getSizeOf     = [&mapScreenSize]( const TextureMipRequest& request )
+                const auto getPriorityOf = [&mapFrameScreenSize, &mapDemotionKey]( const TextureMipRequest& request )
                 {
-                    const auto it = mapScreenSize.find( request._key );
-                    return it != mapScreenSize.end() ? it->second : 0.0f;
+                    if ( mapDemotionKey.find( request._key ) != mapDemotionKey.end() )
+                        return std::numeric_limits<float32>::max();
+                    const auto it = mapFrameScreenSize.find( request._key );
+                    return it != mapFrameScreenSize.end() ? it->second : 0.0f;
                 };
-                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&getSizeOf]( const TextureMipRequest& lhs, const TextureMipRequest& rhs )
-                { return getSizeOf( lhs ) > getSizeOf( rhs ); } );
-                _impl->_mapScreenSize.clear();
+                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&getPriorityOf]( const TextureMipRequest& lhs, const TextureMipRequest& rhs )
+                { return getPriorityOf( lhs ) > getPriorityOf( rhs ); } );
             }
             listRequest.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
                                 std::make_move_iterator( _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) ) );
@@ -839,11 +851,19 @@ namespace sw
                 UniqueLock<shared_mutex> lock{ _impl->_mutex };
                 const auto               it = _impl->_mapEntry.find( request._key );
                 // 놓였으면 버린다. 다시 읽는 중(`reload` · 디바이스 교체)이면 그쪽이 밉 전부를 올린다.
-                const bool bUpgradable = it != _impl->_mapEntry.end() && it->second._bLoading == false && it->second._bUpgrading == false && it->second._bPublished &&
-                                         it->second._texture != nullptr && it->second._texture->isFullyResident() == false && request._mipCount > 0 &&
-                                         request._firstMip + request._mipCount <= it->second._mipLayout._listMip.size();
-                if ( bUpgradable == false )
+                const bool bReplaceable = it != _impl->_mapEntry.end() && it->second._bLoading == false && it->second._bUpgrading == false && it->second._bPublished &&
+                                          it->second._texture != nullptr && it->second._texture->isRHIValid() && request._mipCount > 0 &&
+                                          request._firstMip + request._mipCount == it->second._mipLayout._listMip.size() &&
+                                          it->second._texture->getMipCount() <= it->second._mipLayout._listMip.size();
+                if ( bReplaceable == false )
                     continue;
+                // 지금 가장 큰 밉과 같으면 바꿀 것이 없다(그사이 다른 요청이 이미 그만큼 올렸거나 내렸다).
+                const uint32 residentFirstMip = static_cast<uint32>( it->second._mipLayout._listMip.size() ) - it->second._texture->getMipCount();
+                if ( request._firstMip == residentFirstMip )
+                    continue;
+                // 내리기는 지금 쥔 예약을 먼저 돌려준다 — 작은 사슬의 예약이 큰 사슬의 예약과 함께 예산을 넘어 내리기가 막히지 않게.
+                if ( request._firstMip > residentFirstMip )
+                    it->second._streamingReservation = TextureStreamingReservation{};
                 it->second._mipLayout.getRange( request._firstMip, request._mipCount, rangeOffset, rangeSize );
                 {
                     ScopedLock<mutex> streamingLock{ _impl->_streamingMutex };
@@ -889,6 +909,109 @@ namespace sw
             _impl->_listReading.push_back( Impl::StreamingRead{ request, rangeSize, pResult } );
         }
         return upgradedCount;
+    }
+
+    void TextureCache::collectStreamingDecisions( const unordered_map<string, float32>& mapFrameScreenSize, const TextureStreamingBudget& budget,
+                                                  unordered_map<string, uint8>& outMapDemotionKey )
+    {
+        // 화면 크기 값은 (화면 크기 × UV 밀도 / 반지름) — 화면에서 UV 한 단위가 덮는 높이 비율의 두 배다(`TextureStreamingSystem`). 텍스처 가로 한 벌이 UV 한 단위이므로
+        // 그 비율 × 뷰 높이가 텍스처 가로에 필요한 텍셀 수다(언리얼 wanted mip 의 화면 텍셀 크기).
+        constexpr float32                 kScreenSizeToUVHeightFraction = 0.5f;
+        const float32                     viewHeight                    = static_cast<float32>( budget._viewHeightPixels );
+        vector<TextureStreamingCandidate> listCandidate;
+        vector<const string*>             listKey;
+        vector<uint8>                     listDemoted;
+        uint64                            residentBytes = 0;
+        {
+            UniqueLock<shared_mutex> lock{ _impl->_mutex };
+            for ( auto& [key, entry] : _impl->_mapEntry )
+            {
+                const bool bStreamable = entry._texture != nullptr && entry._mipLayout._listMip.empty() == false && entry._bPublished && entry._bLoading == false &&
+                                         entry._texture->isRHIValid() && entry._texture->getMipCount() <= entry._mipLayout._listMip.size();
+                if ( bStreamable == false )
+                    continue;
+                const uint32                      mipCount = static_cast<uint32>( entry._mipLayout._listMip.size() );
+                const TextureMipLayout::MipRange& top      = entry._mipLayout._listMip.front();
+                const auto                        it       = mapFrameScreenSize.find( key );
+                if ( it != mapFrameScreenSize.end() )
+                {
+                    entry._idleFrames     = 0;
+                    entry._wantedFirstMip = TextureStreamingPolicy::computeWantedFirstMip( top._width, mipCount, it->second * kScreenSizeToUVHeightFraction * viewHeight );
+                }
+                else if ( entry._idleFrames < UINT32_MAX )
+                {
+                    ++entry._idleFrames;
+                }
+                // 품질이 버리는 밉 위로는 올리지 않는다 — 정책도 그 아래만 본다.
+                const uint32              qualityFirstMip = Texture2D::computeUpgradeFirstMip( entry._mipLayout );
+                TextureStreamingCandidate candidate;
+                candidate._mipCount         = mipCount;
+                candidate._residentFirstMip = mipCount - entry._texture->getMipCount();
+                candidate._wantedFirstMip   = MathUtil::max( entry._wantedFirstMip, qualityFirstMip );
+                candidate._idleFrames       = entry._idleFrames;
+                candidate._topMipBytes      = top._size;
+                residentBytes += candidate.computeResidentBytes( candidate._residentFirstMip );
+                if ( entry._bUpgrading )
+                    continue; // 바꾸는 중 — 바이트는 세고 이번 결정에서는 뺀다
+                listCandidate.push_back( candidate );
+                listKey.push_back( &key );
+                listDemoted.push_back( entry._bDemoted ? SW_TRUE : SW_FALSE );
+            }
+        }
+        TextureStreamingConfig config{};
+        config._idleFramesBeforeRelease = budget._idleFramesBeforeRelease;
+        vector<TextureStreamingDecision> listDecision;
+        TextureStreamingPolicy::decide( vector_reference<const TextureStreamingCandidate>{ listCandidate }, residentBytes, budget._poolBytes, config, listDecision );
+        SW_PROFILE_COUNT( "RT.TextureStreaming.residentBytes", residentBytes );
+        if ( listDecision.empty() )
+            return;
+
+        // 줄에 이미 있는 키는 다시 넣지 않는다(처음 올리기 · 앞서 넣은 결정).
+        vector<TextureMipRequest> listNew;
+        vector<string>            listDemotedKey;
+        vector<string>            listPromotedKey;
+        {
+            ScopedLock<mutex>            lock{ _impl->_streamingMutex };
+            unordered_map<string, uint8> mapQueued;
+            for ( const TextureMipRequest& request : _impl->_listStreamingUpgrade )
+                mapQueued[request._key] = SW_TRUE;
+            for ( const TextureStreamingDecision& decision : listDecision )
+            {
+                const TextureStreamingCandidate& candidate = listCandidate[decision._candidateIndex];
+                const string&                    key       = *listKey[decision._candidateIndex];
+                const bool                       bDemote   = decision._targetFirstMip > candidate._residentFirstMip;
+                // 처음 올리기는 로드가 줄에 넣었다 — 정책이 다시 올리는 것은 예산 때문에 내린 텍스처뿐이다.
+                const bool bSkip = mapQueued.find( key ) != mapQueued.end() || ( bDemote == false && listDemoted[decision._candidateIndex] == SW_FALSE );
+                if ( bSkip )
+                    continue;
+                listNew.push_back( TextureMipRequest{ key, decision._targetFirstMip, candidate._mipCount - decision._targetFirstMip } );
+                if ( bDemote )
+                {
+                    outMapDemotionKey[key] = SW_TRUE;
+                    listDemotedKey.push_back( key );
+                }
+                else
+                {
+                    listPromotedKey.push_back( key );
+                }
+            }
+            _impl->_listStreamingUpgrade.insert( _impl->_listStreamingUpgrade.begin(), listNew.begin(), listNew.end() );
+            if ( listNew.empty() == false )
+                _impl->_bStreamingParked = false; // 내리기가 풀을 비운다 — 쉬던 줄도 다시 본다
+        }
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        for ( const string& key : listDemotedKey )
+        {
+            const auto it = _impl->_mapEntry.find( key );
+            if ( it != _impl->_mapEntry.end() )
+                it->second._bDemoted = true;
+        }
+        for ( const string& key : listPromotedKey )
+        {
+            const auto it = _impl->_mapEntry.find( key );
+            if ( it != _impl->_mapEntry.end() )
+                it->second._bDemoted = false;
+        }
     }
 
     void TextureCache::recordScreenSizes( const vector<string>& listRelativePath, float32 screenSize )
