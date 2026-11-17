@@ -10,7 +10,6 @@
 -->
 <Scenario name="game.empty.navasync" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/navasync.scene.xml"/>
-	<Wait frames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="EmptyNav.ProbePathLength" target="Prober" atLeast="6" timeoutSeconds="5"/>
 	<Expect watch="Nav.PathLength" target="Start" key="Goal" atLeast="6"/>

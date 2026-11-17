@@ -10,7 +10,6 @@
 -->
 <Scenario name="game.empty.zonedune" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Zone.Modules" target="Dune" is="sink,engulf,release,downflow,npcAvoid,pull,dragged,freed,swallow"/>
 	<Expect watch="Zone.Modules" target="QuietDune" is="sink,engulf,release,downflow,pull,dragged,freed,swallow"/>
@@ -19,14 +18,14 @@
 	<Expect watch="Zone.Param" target="QuietDune" key="sink.on" is="Stay"/>
 
 	<DevCommand line="object.place Victim 10.5 0.05 0"/>
-	<Wait frames="40"/>
+	<AdvanceSimulation frames="40"/> <!-- 모래 언덕에 40 프레임 빠진다(빠진 깊이가 시간의 결과 — 시간이 내용) -->
 	<Expect watch="Zone.Sources" target="Victim" is="volume:Dune"/>
 	<Expect watch="Zone.Value" target="Victim" key="zoneDepth01" near="0.17" tolerance="0.05"/>
 	<Expect watch="Ability.HasTag" target="Victim" key="State.Dragged" equals="0"/>
 	<Expect watch="Ability.StackCount" target="Victim" key="GE_Sink" atLeast="1"/>
 
 	<DevCommand line="object.place Victim 9.2 0.05 0"/>
-	<Wait frames="5"/>
+	<WaitUntil watch="Ability.HasTag" target="Victim" key="State.Dragged" equals="1" timeoutFrames="10"/>
 	<Expect watch="Ability.HasTag" target="Victim" key="State.Dragged" equals="1"/>
 	<Expect watch="Session.Flag" key="sandWarnings" atLeast="1"/>
 	<WaitUntil watch="Zone.Value" target="Victim" key="distanceToCenter" atMost="0.75" timeoutSeconds="3"/>
@@ -34,15 +33,15 @@
 	<Expect watch="Ability.HasTag" target="Victim" key="State.Engulfed" equals="1"/>
 
 	<DevCommand line="object.place Villager 9 0.05 -0.5"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="1" timeoutFrames="30"/>
 	<Expect watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="1"/>
 	<Expect watch="AI.Blackboard" target="Villager" key="InHazard" equals="1"/>
 	<DevCommand line="object.place Villager 10.8 0.05 -0.5"/>
-	<Wait frames="5"/>
+	<WaitUntil watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="0" timeoutFrames="10"/>
 	<Expect watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="0"/>
 
 	<DevCommand line="object.place Villager 17.5 0.05 0"/>
-	<Wait frames="130"/>
+	<AdvanceSimulation frames="130"/> <!-- 조용한 언덕에 머문 130 프레임 — 1 초 간격 가라앉힘이 세 번(시간이 내용) -->
 	<Expect watch="Zone.Sources" target="Villager" is="volume:QuietDune"/>
 	<Expect watch="Ability.StackCount" target="Villager" key="GE_Sink" equals="3"/>
 	<Pass/>

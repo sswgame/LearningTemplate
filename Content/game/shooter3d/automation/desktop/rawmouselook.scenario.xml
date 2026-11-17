@@ -19,7 +19,6 @@
 	<!-- 오른쪽으로 10 번 x 40 — 원시 보고가 오고 시선이 돈다 -->
 	<SendInput dx="40" dy="0" count="10"/>
 	<WaitUntil watch="Input.RawMouseEvents" differsFrom="rawBefore" timeoutFrames="60"/>
-	<Wait frames="5"/>
-	<Expect watch="Scene.CameraYaw" differsFrom="yawBefore"/>
+	<WaitUntil watch="Scene.CameraYaw" differsFrom="yawBefore" timeoutFrames="30"/> <!-- 시선이 돌았다 -->
 	<Pass/>
 </Scenario>

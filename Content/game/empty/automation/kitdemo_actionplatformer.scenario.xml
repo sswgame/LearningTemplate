@@ -20,7 +20,7 @@
 	<!-- 구덩이 앞에서 점프(정점 가까이 누른다) -->
 	<WaitUntil watch="KitDemo.Platformer.PlayerX" atLeast="8.4" timeoutFrames="120"/>
 	<Press slot="Key.Space"/>
-	<Wait seconds="0.35"/>
+	<AdvanceSimulation frames="21"/> <!-- 점프 키를 누른 채인 0.35 초(시간이 내용) -->
 	<Release slot="Key.Space"/>
 	<!-- 건너편 체크포인트 — 지닌 비밀이 확정된다 -->
 	<WaitUntil watch="KitDemo.Platformer.Checkpoint" equals="0" timeoutFrames="180"/>

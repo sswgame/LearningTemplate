@@ -63,3 +63,26 @@ SW_TEST_CASE( ScenarioFilesTest, AdvanceSimulationNeedsAFixedFrameTime )
     SW_EXPECT_TRUE( scenario.isAdvanceSimulationFrame( 2 ) );
     SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 3 ) );
 }
+
+// 사진은 다음에 그리는 패킷이 찍는다 - `<Screenshot>` 바로 뒤의 진행 구간 · 입력은 그 프레임 처음에 돌므로, 실행기가 사진이 실릴 때까지 그 프레임을 붙잡는다
+// (`AutomationRunner::holdClockForScreenshot`). 붙잡을 프레임은 처음 할 일이 있는 프레임뿐이다 - 판정만 있는 프레임은 사진 패킷보다 뒤에 돈다.
+SW_TEST_CASE( ScenarioFilesTest, FrameAfterScreenshotKnowsItsFrameStartJob )
+{
+    AutomationScenario scenario;
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.shot\" fixedDelta=\"0.0166667\"><Screenshot file=\"a.ppm\"/><AdvanceSimulation frames=\"3\"/><Pass/></Scenario>", "test.scenario.xml" )
+                         .has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, scenario.getSteps().size() );
+    SW_EXPECT_EQUAL( 0u, scenario.getSteps()[0]._frameIndex );
+    // 사진 프레임(0) 다음 프레임이 진행 구간의 첫 프레임이다 - 사진이 실리기 전에 시작하면 사진이 구간 뒤로 밀린다.
+    SW_EXPECT_FALSE( scenario.hasFrameStartJobAt( 1, 0 ) );
+    SW_EXPECT_TRUE( scenario.hasFrameStartJobAt( 1, 1 ) );
+    SW_EXPECT_FALSE( scenario.hasFrameStartJobAt( 1, 2 ) );
+
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.shot\"><Screenshot file=\"a.ppm\"/><Press slot=\"Key.D\"/><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Pass/></Scenario>", "test.scenario.xml" )
+                         .has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 4 }, scenario.getSteps().size() );
+    // 사진 아래 입력은 다음 프레임 처음에 든다 - 붙잡을 프레임이다. 같은 프레임의 판정은 프레임 끝이라 붙잡지 않는다.
+    SW_EXPECT_EQUAL( 1u, scenario.getSteps()[1]._frameIndex );
+    SW_EXPECT_TRUE( scenario.hasFrameStartJobAt( 1, 1 ) );
+    SW_EXPECT_FALSE( scenario.hasFrameStartJobAt( 2, 1 ) );
+}

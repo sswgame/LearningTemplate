@@ -1,4 +1,4 @@
-// auto_exposure.hlsl — 자동 노출 측정 · 적응(풀스크린 1x1). HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 R32 실수 RT 에 쓴다.
+// auto_exposure.hlsl — 자동 노출 측정 · 적응(풀스크린 1x1). HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 R32G32 실수 RT 의 R 에, 목표 EV 를 G 에 쓴다(G 는 CPU 가 되읽어 적응이 남은 정도를 본다 — FrameAutoExposure::readBackAdaptation).
 // EV 는 평균 휘도가 중간 회색(0.18)일 때 0 이다. 목표는 카메라의 범위(최소 · 최대 EV)로 자른 측정값이고, 밝아질 때와 어두워질 때 다가가는 비율이 다르다(언리얼 Speed Up · Down).
 // 비율이 1 이면(처음 · 컷 프레임) 지난 값을 섞지 않는다 — 새 기록에는 값이 없어 NaN 일 수 있으므로 lerp 가 아니라 고르기다.
 // 원본 · 지난 EV 는 네이티브(DX12 · Vulkan)는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(C++ 가 shaderslot::emulated::getSlot 의 레지스터에 건다)이다.
@@ -58,5 +58,5 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float previousEv = loadHistory();
     const float rate       = ( targetEv > previousEv ) ? SW_ROOT( g_AutoExposureRateUp ) : SW_ROOT( g_AutoExposureRateDown );
     const float adaptedEv  = ( rate >= 1.0f ) ? targetEv : lerp( previousEv, targetEv, rate );
-    return float4( adaptedEv, 0.0f, 0.0f, 1.0f );
+    return float4( adaptedEv, targetEv, 0.0f, 1.0f );
 }

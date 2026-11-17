@@ -12,14 +12,13 @@
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<Wait frames="40"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="distortion_on.ppm"/>
 
 	<DevCommand line="teleport Lens 0 -50 -2"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="distortion_off.ppm"/>
 
-	<Wait frames="4"/>
 	<!-- 렌즈 가운데(화면 가운데)는 왜곡으로 벽 무늬가 비껴 다르다. -->
 	<ExpectImagesDiffer first="distortion_on.ppm" second="distortion_off.ppm" region="0.35,0.3,0.65,0.7" minDiffering="0.05"/>
 	<!-- 렌즈 밖(화면 모서리)은 같다 — 오프셋 0 인 픽셀은 사본 그대로다. -->

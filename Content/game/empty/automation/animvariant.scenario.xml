@@ -12,29 +12,27 @@
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animvariant_base.ppm"/>
 	<LoadScene path="game/empty/maps/animvariant_set.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animvariant_set.ppm"/>
 	<LoadScene path="game/empty/maps/animvariant_graph.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animvariant_graph.ppm"/>
 	<LoadScene path="game/empty/maps/animvariant_linked.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animvariant_linked.ppm"/>
-	<Wait frames="2"/>
 	<ExpectImagesDiffer first="animvariant_base.ppm" second="animvariant_set.ppm" region="0.3,0.1,0.4,0.8" minDiffering="0.005"/>
 	<ExpectImagesDiffer first="animvariant_base.ppm" second="animvariant_graph.ppm" region="0.3,0.1,0.4,0.8" minDiffering="0.005"/>
 	<ExpectImagesDiffer first="animvariant_base.ppm" second="animvariant_linked.ppm" region="0.3,0.1,0.4,0.8" minDiffering="0.005"/>

@@ -10,57 +10,56 @@
 -->
 <Scenario name="game.empty.surfacedeform" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/surfaceinteraction.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Surface.DeformDeepestNear" key="8.6 1.6 0.9" atLeast="0.08" timeoutFrames="60"/> <!-- 붙잡은 도장이 깔때기를 팠다 -->
 	<Expect watch="Surface.DeformHeld" equals="1"/>
 	<Expect watch="Surface.DeformDeepestNear" key="8.6 1.6 0.9" atLeast="0.08"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 판정과 끌기 시작을 다른 프레임에 둔다(프레임 경계) -->
 
 	<DevCommand line="object.place Dragger 6.8 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 끌기 — 0.2 m 마다 두 프레임(지난 자리 → 이번 자리 띠 도장이 시간의 결과) -->
 	<DevCommand line="object.place Dragger 7.0 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 7.2 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 7.4 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 7.6 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 7.8 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 8.0 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 8.2 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 8.4 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 8.6 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 8.8 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.0 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.2 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -2.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -2.0"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -1.8"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -1.6"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -1.4"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -1.2"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -1.0"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -0.8"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<DevCommand line="object.place Dragger 9.4 0 -0.6"/>
-	<Wait frames="4"/>
+	<WaitUntil watch="Surface.DeformStamps" atLeast="20" timeoutFrames="10"/> <!-- 끈 자리마다 도장이 찍혔다 -->
 	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atLeast="0.04"/>
 	<Expect watch="Surface.DeformDepth" key="9.4 -1.2" atLeast="0.04"/>
 	<Expect watch="Surface.DeformDepth" key="7.6 -1.4" near="0" tolerance="0.001"/>
@@ -69,7 +68,7 @@
 
 	<!-- 메워짐 5 초는 게임 시간이 드는 구간이라 시간 배율 4 로 돈다(75 프레임 = 게임 시간 5 초). 메워짐은 속도 × 게임 시간이라 배율과 무관하게 같은 깊이다(surfacefootprint 와 같다). -->
 	<Variable name="gv_timeScale" value="4"/>
-	<Wait frames="75"/>
+	<AdvanceSimulation frames="75"/> <!-- 메워짐 5 초(시간 배율 4 — 시간이 내용) -->
 	<Variable name="gv_timeScale" value="1"/>
 	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atMost="0.035"/>
 	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atLeast="0.02"/>

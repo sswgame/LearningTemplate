@@ -8,14 +8,12 @@
 -->
 <Scenario name="game.empty.meleeduel" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/meleeduel.scene.xml"/>
-	<Wait frames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="5"/>
 	<Expect watch="UnitStats.HP" target="Dummy" equals="30"/>
 
 	<DevCommand line="combat.swing Fighter 10 0.2"/>
 	<WaitUntil watch="UnitStats.HP" target="Dummy" equals="20" timeoutFrames="5"/>
-	<Wait frames="20"/>
+	<AdvanceSimulation frames="20"/> <!-- 한 번 휘두름은 한 번 맞힌다 — 20 프레임 동안 더 깎이지 않는다(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="UnitStats.HP" target="Dummy" equals="20"/>
 	<Expect watch="UnitStats.HP" target="Fighter" equals="50"/>
 

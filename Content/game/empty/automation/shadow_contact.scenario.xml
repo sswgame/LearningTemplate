@@ -13,21 +13,20 @@
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<Launch variable="gv_shadowMapResolution" value="2048"/>
 	<Launch variable="gv_shadowFilter" value="0"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="contact_off.ppm"/>
 	<LoadScene path="game/empty/maps/shadowtest_contact.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<Wait frames="20"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="contact_on.ppm"/>
 	<DevCommand line="gpu.show ContactShadowMask"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="contact_mask_on.ppm"/>
 	<DevCommand line="gpu.show off"/>
-	<Wait frames="2"/>
 	<!-- 마스크를 골든으로 지킨다 — 이 무대는 그림자 맵이 발치까지 덮어 최종 그림에는 접촉 그림자가 거의 보이지 않는다(그림자 맵이 못 잡는 곳을 메우는 기능이다).
 	     끈 무대는 패스가 돌지 않아 마스크 첨부도 없다(견줄 짝이 없다). 패스가 그리지 않으면 마스크가 모두 1(흰색)이 되어 골든과 다르다. -->
 	<ExpectImage file="contact_mask_on.ppm" golden="contact_mask"/>

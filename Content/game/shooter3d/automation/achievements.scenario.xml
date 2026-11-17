@@ -10,16 +10,13 @@
 	<Variable name="gv_shooterAutoPlay" value="1"/>
 	<WaitUntil watch="Stats.Value" key="enemies_killed" atLeast="1" timeoutSeconds="90"/>
 	<Expect watch="Stats.AchievementUnlocked" key="first_blood" equals="1"/>
-	<Wait frames="2"/>
-	<Expect watch="Stats.PlatformAchievementCount" atLeast="1"/>
+	<WaitUntil watch="Stats.PlatformAchievementCount" atLeast="1" timeoutFrames="10"/>
 	<!-- 최대 통계: 기록이 좋아질 때만 바뀌고, 문턱 3 에 닿으면 third_wave 가 풀린다 -->
 	<DevCommand line="stats.add best_wave 3"/>
-	<Wait frames="2"/>
-	<Expect watch="Stats.Value" key="best_wave" atLeast="3"/>
+	<WaitUntil watch="Stats.Value" key="best_wave" atLeast="3" timeoutFrames="10"/>
 	<Expect watch="Stats.AchievementUnlocked" key="third_wave" equals="1"/>
 	<DevCommand line="stats.add best_wave 1"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Stats.PlatformAchievementCount" atLeast="2" timeoutFrames="10"/>
 	<Expect watch="Stats.Value" key="best_wave" atLeast="3"/>
-	<Expect watch="Stats.PlatformAchievementCount" atLeast="2"/>
 	<Pass/>
 </Scenario>

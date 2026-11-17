@@ -10,11 +10,10 @@
 <Scenario name="game.empty.animmirror" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/animmirror.scene.xml"/>
 	<Launch variable="gv_deferredShading" value="0"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 멈추기 전 애니메이션 시각(결정적 자세) -->
 	<Variable name="gv_timeScale" value="0"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="1"/> <!-- 시간 배율 0 이 먹은 뒤에 뼈를 읽는다(프레임 경계) -->
 	<Store watch="Animation.BoneX" target="KnightAim" key="hand.l" as="aimLeft"/>
 	<Store watch="Animation.BoneX" target="KnightAim" key="hand.r" as="aimRight"/>
 	<Expect watch="Animation.BoneX" target="KnightMirrored" key="hand.l" oppositeOf="aimRight" tolerance="0.002"/>

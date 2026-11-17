@@ -217,6 +217,12 @@ namespace sw
         bool isAdvanceSimulationFrame( uint32 frameIndex ) const;
         /** @brief 시나리오 프레임 @p frameIndex 에서 시작하는 `<AdvanceSimulation>` 진행 구간의 프레임 수입니다. 그 프레임에서 시작하는 구간이 없으면 0 입니다. */
         uint32 findAdvanceSimulationFramesStartingAt( uint32 frameIndex ) const;
+        /**
+         * @brief 시나리오 프레임 @p frameIndex 의 처음(입력 재생 · 게임 틱 전)에 할 일이 있으면 true 입니다 — 그 프레임에서 시작하는 `<AdvanceSimulation>` 구간,
+         *        @p firstStepIndex 부터 그 프레임에 적힌 입력 단계 · 입력 전 단계(`_bBeforeInput`).
+         * @details 실행기가 앞 `<Screenshot>` 이 아직 패킷에 실리지 않았을 때 그 프레임을 붙잡을지 정한다 — 그리지 않는 진행이 사진을 밀거나 입력이 사진에 들지 않게.
+         */
+        bool hasFrameStartJobAt( size_t firstStepIndex, uint32 frameIndex ) const;
         /** @brief @p step 과 같은 프레임에 있는 다른 단계 하나를 반환합니다. 없으면 nullptr 입니다(`WaitUntil` 은 그 프레임에 혼자 있어야 한다 — 실행기 준비와 실행기 없는 검사가 함께 쓴다). */
         const AutomationStep* findOtherStepAtSameFrame( const AutomationStep& step ) const;
         /** @brief 실행기와 테스트만 읽는 선언 묶음입니다(`AutomationTestOptions`). 시나리오의 단계 형식과 섞이지 않게 따로 둔다. */

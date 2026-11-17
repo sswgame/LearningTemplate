@@ -8,11 +8,11 @@
 <Scenario name="game.shooter3d.firelook" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<Expect watch="Shooter3D.ShotCount" equals="0"/>
-	<Wait frames="20"/>
+	<WaitUntil watch="Shooter3D.PlayerControllerKind" equals="0" timeoutFrames="30"/> <!-- 자동 플레이를 끄고 플레이어 조종자가 쥐었다 -->
 	<Tap slot="Mouse.Left" hold="1"/>
 	<WaitUntil watch="Shooter3D.ShotCount" equals="1" timeoutFrames="10"/>
 	<!-- 한 프레임 누름은 한 발이다 — 더 쏘지 않는지 보려면 프레임이 흘러야 한다 -->
-	<Wait frames="10"/>
+	<AdvanceSimulation frames="10"/>
 	<Expect watch="Shooter3D.ShotCount" equals="1"/>
 	<!-- 입력 단계는 그 프레임의 틱 전에 들고 Expect 는 틱 뒤에 판정한다 - 같은 프레임에 두면 아래 누름의 첫 발이 위 단언에 든다 -->
 	<Tap slot="Mouse.Left" hold="30"/>

@@ -8,13 +8,12 @@
 -->
 <Scenario name="game.empty.devcommands" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
-	<Wait frames="5"/>
 	<!-- 시각 로그 -->
 	<DevCommand line="visuallog.on"/>
 	<ExpectLog id="DevCommand.Reply" contains="vlog: recording" atLeast="1"/>
 	<DevCommand line="visuallog.status"/>
 	<ExpectLog id="DevCommand.Reply" contains="vlog: recording," atLeast="1"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 기록하는 두 프레임(시간이 내용) -->
 	<DevCommand line="visuallog.off"/>
 	<ExpectLog id="DevCommand.Reply" contains="vlog: stopped" atLeast="1"/>
 	<DevCommand line="visuallog.save {out}/devcommands.vlog.json"/>
@@ -26,18 +25,17 @@
 	<!-- 타임스케일 -->
 	<DevCommand line="timescale 0"/>
 	<ExpectLog id="DevCommand.Reply" contains="time scale = 0" atLeast="1"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 시간 배율 0 인 두 프레임(시간이 내용) -->
 	<DevCommand line="timescale 1"/>
 	<ExpectLog id="DevCommand.Reply" contains="time scale = 1" atLeast="1"/>
 	<!-- 애니메이션 되감기 -->
 	<DevCommand line="anim.rewind.seconds 2"/>
 	<ExpectLog id="DevCommand.Reply" contains="rewind window =" atLeast="1"/>
 	<DevCommand line="anim.rewind on"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 되감기 기록 세 프레임(시간이 내용) -->
 	<!-- 이 씬에는 스켈레톤이 없어 트랙이 없다 — 시각으로 되감기는 트랙이 있어야 하므로(없으면 명령 실패) 되돌리기만 부른다 -->
 	<DevCommand line="anim.rewind.scrub resume"/>
 	<DevCommand line="anim.rewind off"/>
-	<Wait frames="1"/>
 	<!-- 살펴보기 · 범주 · 설정 · 넷 세션 없는 답 -->
 	<DevCommand line="state.hash"/>
 	<DevCommand line="world.cells"/>
@@ -52,6 +50,5 @@
 	<DevCommand line="net.disconnect"/>
 	<DevCommand line="net.reconnect"/>
 	<ExpectLog id="DevCommand.Reply" contains="net session: none" atLeast="3"/>
-	<Wait frames="1"/>
 	<Pass/>
 </Scenario>

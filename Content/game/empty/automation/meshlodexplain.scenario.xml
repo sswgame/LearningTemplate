@@ -8,9 +8,8 @@
 -->
 <Scenario name="game.empty.meshlodexplain" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/cinematic.scene.xml"/>
-	<Wait frames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Mesh.LODIndex" target="BoxLeft" equals="0" timeoutFrames="10"/>
 	<!-- 단계가 하나인 메시는 single, 지금 단계는 0 -->
 	<Expect watch="Mesh.LODIndex" target="BoxLeft" equals="0"/>
 	<DevCommand line="lod.explain BoxLeft"/>

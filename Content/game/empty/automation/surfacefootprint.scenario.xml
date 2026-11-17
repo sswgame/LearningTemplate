@@ -10,13 +10,12 @@
 -->
 <Scenario name="game.empty.surfacefootprint" fixedDelta="0.0166667" timeoutFrames="12000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/surfaceinteraction.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="object.place Walker -3 0.05 0"/>
 	<WaitUntil watch="Surface.FootstepCount" key="Stone" atLeast="2" timeoutSeconds="5"/>
 	<Expect watch="Surface.LastFootstep" is="Stone"/>
 	<Expect watch="Surface.FootprintPlaced" equals="0"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 판정과 다음 자리 옮기기를 다른 프레임에 둔다(프레임 경계) -->
 
 	<DevCommand line="object.place Walker 0 0.05 -2.4"/>
 	<WaitUntil watch="Surface.FootstepCount" key="Snow" atLeast="2" timeoutSeconds="5"/>
@@ -24,78 +23,77 @@
 	<Expect watch="Surface.MoveScale" target="Walker" near="0.8" tolerance="0.01"/>
 	<Expect watch="Surface.FootprintPlaced" atLeast="2"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atLeast="0.05"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 판정과 시간 배율 바꾸기를 다른 프레임에 둔다(프레임 경계) -->
 	<!-- 자국 쌓기 · 메워짐은 게임 시간이 드는 구간이라 시간 배율 4 로 돈다(자리마다 15 프레임 = 게임 시간 1 초, 메워짐 23 초 = 약 350 프레임). 고정 프레임 시간 × 고정 배율이라 실행마다 같다. -->
 	<Variable name="gv_timeScale" value="4"/>
 	<DevCommand line="object.place Walker -1.2 0.05 -1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/> <!-- 자리마다 게임 시간 1 초(배율 4) 서서 발자국을 쌓는다(시간이 내용) -->
 	<DevCommand line="object.place Walker -1.2 0.05 -1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -1.2 0.05 -0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -1.2 0.05 0"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -1.2 0.05 0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -1.2 0.05 1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -1.2 0.05 1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -1.2 0.05 2.4"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 -1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 -1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 -0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 0"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker -0.4 0.05 2.4"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 -1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 -1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 -0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 0"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 0.4 0.05 2.4"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 -1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 -1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 -0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 0"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 0.6"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 1.2"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 1.8"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 2.4"/>
-	<Wait frames="15"/>
+	<AdvanceSimulation frames="15"/>
 	<Screenshot file="surface_footprints.ppm"/>
 	<Expect watch="Surface.FootprintPlaced" atLeast="40"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atLeast="0.05"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atMost="0.0705"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place Walker -3 0.05 0"/>
 	<WaitUntil watch="Surface.DeformDeepestNear" key="0 0 3.2" equals="0" timeoutSeconds="35"/>

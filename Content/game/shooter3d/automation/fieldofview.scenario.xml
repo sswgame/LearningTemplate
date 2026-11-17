@@ -6,7 +6,6 @@
   실행: App -scenario=game/shooter3d/automation/fieldofview.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.fieldofview" fixedDelta="0.0166667" timeoutFrames="60" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Wait frames="1"/>
 	<ExpectVariable name="gv_cameraFieldOfView" value="80" tolerance="0.001"/>
 	<Pass/>
 </Scenario>

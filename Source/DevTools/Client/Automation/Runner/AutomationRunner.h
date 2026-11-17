@@ -82,6 +82,8 @@ namespace sw
         }
         /** @brief 아직 렌더 패킷에 싣지 않은 경로 하나를 꺼냅니다. 없으면 false 입니다. */
         [[nodiscard]] optional<AbsolutePath> takePendingScreenshotPath();
+        /** @brief 요청했지만 아직 우편함에 맡기지 않은 사진이 있으면 true 입니다. */
+        [[nodiscard]] bool hasPendingScreenshot() const { return _listPendingScreenshot.empty() == false; }
         /** @brief 요청한 스크린샷이 아직 다 써지지 않았으면 true 입니다(대기열에 남았거나 렌더 스레드가 덜 썼다). */
         [[nodiscard]] bool hasPendingScreenshot() const { return _listPendingScreenshot.empty() == false || _screenshotCompletedCount < _screenshotRequestedCount; }
     };
@@ -270,6 +272,12 @@ namespace sw
          * @details 그 프레임은 단계를 돌리지 않고 뒤의 입력 이벤트를 한 프레임 민다(`WaitUntil` 과 같다). 벽시계로 `kClockHoldTimeoutSeconds` 를 넘기면 시간 초과로 끝낸다.
          */
         [[nodiscard]] bool holdClockForBackgroundJobs( InputManager& input );
+        /**
+         * @brief 앞 `<Screenshot>` 이 아직 그리는 패킷에 실리지 않았고 이 프레임 처음에 할 일(진행 구간 · 입력 · 입력 전 단계)이 있으면 시계를 한 프레임 붙잡습니다.
+         * @details 사진은 다음에 그리는 패킷이 찍는다 — 그리지 않는 진행 구간이 먼저 시작하면 사진이 구간 뒤로 밀리고, 입력이 먼저 들면 그 틱이 사진에 든다.
+         *          붙잡은 프레임은 그리는 프레임이라 그 패킷이 사진을 싣는다. 처음 할 일이 없는 프레임은 붙잡지 않아 사진 뒤 시나리오 시각이 늘지 않는다.
+         */
+        [[nodiscard]] bool holdClockForScreenshot( InputManager& input );
         /** @brief 시작 씬(`requireStartScene`)이 아직 활성이 아니면 true 입니다 — 로드를 요청하고 기다린다. 못 열면 결과를 정하고 true 입니다. */
         [[nodiscard]] bool holdForStartScene();
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */

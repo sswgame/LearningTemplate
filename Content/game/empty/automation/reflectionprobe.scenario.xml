@@ -9,19 +9,17 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/reflectionprobe.scene.xml"/>
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="probe_off.ppm"/>
-	<Wait frames="2"/>
 	<DevCommand line="scene.layer Probe on"/>
-	<Wait frames="10"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="probe_on.ppm"/>
-	<Wait frames="2"/>
 	<DevCommand line="scene.layer Probe off"/>
-	<Wait frames="10"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="probe_off_again.ppm"/>
-	<Wait frames="5"/>
 	<ExpectImagesDiffer first="probe_off.ppm" second="probe_on.ppm" region="0.2,0.4,0.8,0.95" minDiffering="0.5"/>
 	<ExpectImagesDiffer first="probe_off.ppm" second="probe_off_again.ppm" region="0.2,0.4,0.8,0.95" minDiffering="0" maxDiffering="0.01"/>
 	<Pass/>
