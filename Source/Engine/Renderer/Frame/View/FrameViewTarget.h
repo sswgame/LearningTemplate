@@ -105,6 +105,7 @@ namespace sw
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 지터 없는 것이다. 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
         float4x4 _prevViewProj{};
         /// @brief TAA 서브픽셀 지터 순서입니다. TAA 가 도는 프레임(`_bTAAHistoryWritten`)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
+        /// 순번은 뷰 대상과 함께 처음부터 시작한다 — 자동화 단계마다 뷰 대상을 새로 만든다(`FrameRenderer::discardViewTargets`).
         TemporalJitterSequence _temporalJitter{};
         /**
          * @brief 자동 노출의 적응 EV 기록 둘(1x1 R32 실수 RT)과 그 SRV 입니다. 프레임마다 번갈아 한쪽을 읽고 다른 쪽(`_autoExposureWrite`)에 씁니다.
