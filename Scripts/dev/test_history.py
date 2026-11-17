@@ -14,30 +14,46 @@ Scripts/dev/test_history.py
   py -3 Scripts/dev/test_history.py report [--min-runs 3] [--top 30]
   py -3 Scripts/dev/test_history.py quarantine [--ctest-exclude]              # 표를 검사한다(만료 · 빠진 칸은 실패), --ctest-exclude 는 ctest -E 정규식을 찍는다
   py -3 Scripts/dev/test_history.py costs [--write]                           # 시나리오 → 초 시간표(통과한 실행의 백엔드별 p50 합). --write 는 Config/Dev/ScenarioCosts.json 을 쓴다
+  py -3 Scripts/dev/test_history.py changed --preset <프리셋> [--base origin/main]  # 새로 들어온 · 바뀐 테스트 · 시나리오를 먼저 돈다(아래)
   py -3 Scripts/dev/test_history.py --self-check
 
 묶음 검증(`Scripts/dev/preflight.sh`)이 ctest 마다 보고 폴더를 ingest 하고, ctest 에 격리 표를 `-E` 로 넘긴다.
 
 **시간표(`costs`).** 체인 샤드 나누기(DesignBacklog "샤드 시간 균형" T2)의 입력이다 — 언리얼 Horde · 크로미움 Swarming 처럼 지난 실행 시간으로 나눈다.
 표는 `--write` 로 갱신하고 **사람이 커밋할 때만 바뀐다**(실행마다 다시 나누면 앞 단계가 가리던 결함이 실행마다 드러났다 숨는다). 표에 없는 시나리오는 표의 중앙값이다.
+
+**`changed`(DesignBacklog D4).** push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 더해지거나 바뀐 것은 돈 적이 없다 — 상태 파일 없이
+`git diff --name-status <base>...HEAD` 로 가른다(이력 DB 는 기계마다 달라 쓰지 않는다). 묶음 검증이 build 와 cpu 사이에 부른다(`preflight.sh` 의 `changed` 단계).
+  (a) 바뀐 소스 · 테스트 파일의 기능 폴더(`…/Tests/…` 는 `Tests` 앞, 아니면 그 파일의 폴더 — 테스트가 없으면 한 단계 위)를 그 폴더를 싣는 단위 항목
+      (`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits` — ctest 의 명령을 `ctest --show-only=json-v1` 에서 읽는다)에 `--test-source=` 로 좁혀 돈다.
+  (b) 더해지거나 바뀐 `*.scenario.xml`(골든이 바뀌면 그 시나리오)을 하나씩 제 프로세스로, 그 시나리오가 든 ctest 항목의 백엔드마다 돈다.
+  둘 다 **없는 기준 파일만 쓴다**(`--record-missing-snapshots` · `-scenario-record-missing-golden`) — 쓴 케이스 · 시나리오는 `MissingBaseline` 으로 지고, 쓴 파일(추적 안 된
+  `golden/` · `Snapshots/`)이 있으면 목록을 내고 멈춘다. 통합 담당이 보고 커밋한 뒤 `--from changed` 로 다시 돌려 기록 없이 통과해야 한다.
+  출력은 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 그 파일을 더한 갈래)이고, 끝 줄은 `CHANGED_OK=<sha>` 또는 `CHANGED_FAILED` 다. 새 시나리오가 모든 백엔드에서
+  같은 단언으로 지면 `전제`, 한 백엔드만 지면 `백엔드 <이름>` 으로 묶는다.
 """
 
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import datetime
 import json
 import re
+import shutil
 import sqlite3
 import sys
-from dataclasses import dataclass
+import tempfile
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.exit_code import ExitCode  # noqa: E402
+from common.git import run_git, run_git_or_raise  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
+from common.run_process import ProcessResult, run_process  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
@@ -195,6 +211,526 @@ def make_ctest_exclude(list_entry: Sequence[QuarantineEntry]) -> str:
     return "|".join(f"^{re.escape(entry.test)}$" for entry in list_entry)
 
 
+# ---------------------------------------------------------------------------
+# changed — origin/main 뒤에 들어온 테스트 · 시나리오를 먼저 돈다(DesignBacklog D4)
+# ---------------------------------------------------------------------------
+CHANGED_OUTPUT = Path("Testing") / "Changed"   # 빌드 폴더 아래 이 단계의 로그 · 보고 — 돌 때마다 비운다
+UNIT_ITEM_PATTERN = re.compile(r"^UnitTests(\.[A-Za-z0-9_]+)?$")
+SOURCE_SUFFIXES = (".cpp", ".h", ".hpp", ".inl")
+SCENARIO_SUFFIX = ".scenario.xml"
+PAIR_SUFFIX = re.compile(r"\.[12]\.scenario\.xml$")   # 두 번 기동 쌍(`sequence/` · `statedir/`)은 ctest 가 cmake -P 로 돈다(`-DPAIR=<앞머리>`)
+LAUNCH_VALUE = re.compile(r'variable="([^"]+)"[ \t]+value="([^"]*)"')   # Test/Scenario/CMakeLists.txt 의 sw_read_scenario_launch 와 같은 꼴
+MERGE_SUBJECT = re.compile(r"^Merge (?:remote-tracking )?branch '(?:origin/)?([^']+)'")
+SOURCE_PATH = re.compile(r"(?:^|/)(Source/.+)$")
+# shortcut: 시한을 항목마다 고정한다 — 체인 시한(단계 초 × 단계 수 × 물결)을 한 시나리오로 나눠 읽지 않는다. 한 시나리오가 15 분을 넘는 날 ctest TIMEOUT 속성을 읽는다.
+UNIT_TIMEOUT_SECONDS = 600
+SCENARIO_TIMEOUT_SECONDS = 900
+# 단위 실행의 기준 파일 없음(`SnapshotMissing`)은 시나리오와 같은 이름으로 적는다 — 표의 한 칸이 "기록했으니 보고 커밋할 것" 을 뜻한다.
+UNIT_KIND_ALIAS = {"SnapshotMissing": "MissingBaseline"}
+
+
+@dataclass(frozen=True)
+class ChangedFile:
+    status: str   # git 의 A(새것) · M(바뀐 것)
+    path: str     # 저장소 기준, `/` 구분
+
+
+@dataclass(frozen=True)
+class CtestItem:
+    name: str
+    command: tuple[str, ...]
+    working_directory: str
+
+
+@dataclass
+class ChangedRun:
+    item: str                       # 표의 항목 이름
+    files: list[ChangedFile]        # 이 실행을 고른 바뀐 파일
+    command: list[str]
+    working_directory: str
+    output: Path                    # 단위: 보고 JSON, 시나리오: 보고 폴더
+    timeout_seconds: int
+    is_scenario: bool = False
+    result: ProcessResult | None = field(default=None)
+
+
+@dataclass(frozen=True)
+class ChangedRow:
+    item: str
+    change: str     # 새것 · 바뀐 것
+    kind: str       # 실패 종류(통과는 빈 글)
+    reason: str
+    branch: str
+
+
+def parse_name_status(text: str) -> list[ChangedFile]:
+    """`git diff --name-status --no-renames` — 지운 것은 돌 것이 없어 뺀다. 형식만 바뀐 것(T)은 바뀐 것이다."""
+    list_file: list[ChangedFile] = []
+    for line in text.splitlines():
+        status, _, path = line.partition("\t")
+        if status in ("A", "M", "T") and path:
+            list_file.append(ChangedFile("A" if status == "A" else "M", path.strip().replace("\\", "/")))
+    return list_file
+
+
+def describe_change(list_file: Sequence[ChangedFile]) -> str:
+    return "새것" if any(changed.status == "A" for changed in list_file) else "바뀐 것"
+
+
+def find_feature_folder(path: str, list_test_file: Sequence[str]) -> str | None:
+    """바뀐 파일의 기능 폴더(`/` 로 끝남) — `…/Tests/…` 는 `Tests` 앞, 아니면 그 파일의 폴더. 그 아래 테스트가 없으면 한 단계 위, 그래도 없으면 없음."""
+    parts = path.split("/")
+    parts = parts[:parts.index("Tests")] if "Tests" in parts else parts[:-1]
+    # shortcut: 한 단계 위까지만, `Source/<층>/<기능>/` 보다 넓게는 올라가지 않는다(층 전체는 전체 실행과 같다) — 먼 테스트는 cpu · gpu-release 에서 처음 돈다(D4 남는 위험).
+    for depth in (len(parts), len(parts) - 1):
+        if depth < 3:
+            break
+        folder = "/".join(parts[:depth]) + "/"
+        if any(test.startswith(folder) for test in list_test_file):
+            return folder
+    return None
+
+
+def select_unit_folders(list_changed: Sequence[ChangedFile], list_test_file: Sequence[str]) -> dict[str, list[ChangedFile]]:
+    """기능 폴더 → 그 폴더를 고른 바뀐 파일. 에디터 폴더(`/Editor/`)는 뺀다 — 그 케이스는 `App --test` 에 등록되지 않고 편집기 체인(`editor.unitTests`)이 돈다."""
+    map_folder: dict[str, list[ChangedFile]] = {}
+    for changed in list_changed:
+        if not changed.path.startswith("Source/") or "/Editor/" in changed.path:
+            continue
+        if not (changed.path.endswith(SOURCE_SUFFIXES) or "/Snapshots/" in changed.path):
+            continue
+        folder = find_feature_folder(changed.path, list_test_file)
+        if folder is not None:
+            map_folder.setdefault(folder, []).append(changed)
+    return map_folder
+
+
+def find_golden_scenario(golden_path: str, list_scenario_file: Sequence[str]) -> str | None:
+    """`<폴더>/golden/<시나리오>.<이름>.<백엔드>.ppm`(· 메타 `.golden.json`)의 시나리오(`<폴더>/<시나리오>.scenario.xml`). 이름이 가장 긴 것이 맞다."""
+    folder, _, file_name = golden_path.rpartition("/golden/")
+    list_match = [scenario for scenario in list_scenario_file
+                  if scenario.rpartition("/")[0] == folder and file_name.startswith(scenario.rpartition("/")[2][: -len(SCENARIO_SUFFIX)] + ".")]
+    return max(list_match, key=len) if list_match else None
+
+
+def select_scenarios(list_changed: Sequence[ChangedFile], list_scenario_file: Sequence[str]) -> dict[str, list[ChangedFile]]:
+    """시나리오(Content 기준 리소스 경로) → 그 시나리오를 고른 바뀐 파일(시나리오 파일 · 그 골든)."""
+    map_scenario: dict[str, list[ChangedFile]] = {}
+    for changed in list_changed:
+        if not changed.path.startswith("Content/"):
+            continue
+        if changed.path.endswith(SCENARIO_SUFFIX):
+            scenario: str | None = changed.path
+        elif "/golden/" in changed.path:
+            scenario = find_golden_scenario(changed.path, list_scenario_file)
+        else:
+            scenario = None
+        if scenario is not None:
+            map_scenario.setdefault(scenario[len("Content/"):], []).append(changed)
+    return map_scenario
+
+
+def parse_ctest_items(json_text: str) -> list[CtestItem]:
+    """`ctest --show-only=json-v1` 의 항목(이름 · 명령 · 작업 폴더). 명령이 없는 항목(꺼 둔 것)은 뺀다."""
+    list_item: list[CtestItem] = []
+    for test in json.loads(json_text).get("tests", []):
+        if not test.get("command"):
+            continue
+        working = next((prop["value"] for prop in test.get("properties", []) if prop.get("name") == "WORKING_DIRECTORY"), "")
+        list_item.append(CtestItem(test["name"], tuple(test["command"]), working))
+    return list_item
+
+
+def matches_argument(token: str, key: str) -> bool:
+    """`-key` · `--key` · `-key=값` · `--key=값`."""
+    if not token.startswith("-"):
+        return False
+    bare = token.lstrip("-")
+    return bare == key or bare.startswith(key + "=")
+
+
+def get_argument(command: Sequence[str], key: str) -> str | None:
+    for token in command:
+        if matches_argument(token, key):
+            return token.partition("=")[2]
+    return None
+
+
+def set_argument(command: Sequence[str], key: str, value: str | None, dash: str = "-") -> list[str]:
+    """@p key 를 모두 빼고, 값이 있으면 `<dash>key=값` 을 끝에 둔다."""
+    list_token = [token for token in command if not matches_argument(token, key)]
+    if value is not None:
+        list_token.append(f"{dash}{key}={value}")
+    return list_token
+
+
+def find_dash(command: Sequence[str], key: str) -> str:
+    """그 실행 파일이 쓰는 앞머리 — `App --test` 는 `--`, 봇의 엔진 인자(`-test`)는 `-`."""
+    return "--" if any(token == f"--{key}" or token.startswith(f"--{key}=") for token in command) else "-"
+
+
+def make_unit_runs(list_item: Sequence[CtestItem], map_folder: dict[str, list[ChangedFile]], output: Path) -> list[ChangedRun]:
+    """
+    기능 폴더를 그 폴더를 싣는 단위 항목에 나눈다 — `--test-source` 가 있는 항목(게임 · 온라인 키트)은 제 폴더 아래 것만, 나머지는 `--test-source` 가 없는 항목
+    (엔진 · 활성 게임)이 돈다. 거르개 항목(`UnitTests.OtherWorkingFolder`)은 뺀다. 몫으로 나눈 항목(`UnitTests.<i>`)은 첫 몫 하나에서 몫 인자를 빼고 돈다.
+    """
+    list_unit: list[CtestItem] = []
+    for item in list_item:
+        if not UNIT_ITEM_PATTERN.match(item.name) or get_argument(item.command, "test-filter") is not None:
+            continue
+        shard = get_argument(item.command, "test-shard")
+        if shard is not None and not shard.startswith("0/"):
+            continue
+        list_unit.append(item)
+    list_sourced = [(item, [folder for folder in (get_argument(item.command, "test-source") or "").split(",") if folder]) for item in list_unit]
+    list_general = [item for item, list_owned in list_sourced if not list_owned]
+    map_item_folder: dict[str, list[str]] = {}
+    for folder in map_folder:
+        list_owner = [item for item, list_owned in list_sourced if list_owned and any(folder.startswith(owned) for owned in list_owned)]
+        for item in list_owner or list_general:
+            map_item_folder.setdefault(item.name, []).append(folder)
+    list_run: list[ChangedRun] = []
+    for item in list_unit:
+        list_folder = map_item_folder.get(item.name)
+        if not list_folder:
+            continue
+        name = "UnitTests" if get_argument(item.command, "test-shard") is not None else item.name
+        dash = find_dash(item.command, "test")
+        command = set_argument(item.command, "test-source", ",".join(list_folder), dash)
+        command = set_argument(command, "test-shard", None)
+        command = set_argument(command, "test-report", str(output / f"{name}.json"), dash)
+        command = set_argument(command, "log-file", str(output / f"{name}.log"))
+        command.append(f"{dash}record-missing-snapshots")
+        list_changed = [changed for folder in list_folder for changed in map_folder[folder]]
+        list_run.append(ChangedRun(name, list_changed, command, item.working_directory, output / f"{name}.json", UNIT_TIMEOUT_SECONDS))
+    return list_run
+
+
+def read_launch_arguments(scenario_file: Path) -> list[str]:
+    """시나리오의 `<Launch variable value>` 를 명령줄 인자(`-이름=값`)로 — ctest 체인은 첫 단계의 것만 명령줄로 주므로 바꿔 끼운다."""
+    list_argument: list[str] = []
+    for line in scenario_file.read_text(encoding="utf-8").splitlines():
+        if line.lstrip().startswith("<Launch "):
+            match = LAUNCH_VALUE.search(line)
+            if match:
+                list_argument.append(f"-{match.group(1)}={match.group(2)}")
+    return list_argument
+
+
+def make_scenario_command(item: CtestItem, scenario: str, content_root: Path, output: Path) -> list[str]:
+    """체인 항목의 명령을 시나리오 하나로 — 나누기 · 이어 가기를 빼 모든 백엔드에서 혼자 돌고, 첫 단계의 `<Launch>` 대신 이 시나리오의 것을 준다."""
+    list_path = (get_argument(item.command, "scenario") or "").split(",")
+    command = list(item.command)
+    for argument in read_launch_arguments(content_root / list_path[0]):
+        if argument in command:
+            command.remove(argument)
+    command = set_argument(command, "scenario", scenario)
+    command = set_argument(command, "scenario-backend-split", None)
+    command = set_argument(command, "scenario-backend-split-offset", None)
+    command = set_argument(command, "scenario-keep-going", None)
+    command = set_argument(command, "log-file", str(output / "parent.log"))
+    command = set_argument(command, "scenario-report", str(output / (scenario.rpartition("/")[2][: -len(SCENARIO_SUFFIX)] + ".json")))
+    command.append("-scenario-record-missing-golden")
+    command += read_launch_arguments(content_root / scenario)
+    return command
+
+
+def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, list[ChangedFile]], content_root: Path, build_dir: Path,
+                       output: Path, find_branch: Callable[[str], str]) -> tuple[list[ChangedRun], list[ChangedRow]]:
+    """시나리오마다 실행 하나. 두 번 기동 쌍은 ctest 항목 그대로(기록 없이) 돌고, ctest 항목에 없는 시나리오(조건이 붙은 하위 폴더)는 표에 그렇다고 적는다."""
+    list_run: list[ChangedRun] = []
+    list_row: list[ChangedRow] = []
+    for scenario, list_changed in sorted(map_scenario.items()):
+        folder = output / "scenario" / scenario.replace("/", ".")
+        item = next((item for item in list_item if scenario in (get_argument(item.command, "scenario") or "").split(",")), None)
+        if item is not None:
+            list_run.append(ChangedRun(scenario, list_changed, make_scenario_command(item, scenario, content_root, folder), item.working_directory, folder,
+                                       SCENARIO_TIMEOUT_SECONDS, is_scenario=True))
+            continue
+        pair = PAIR_SUFFIX.sub("", scenario)
+        pair_item = next((item for item in list_item if f"-DPAIR={pair}" in item.command), None) if pair != scenario else None
+        if pair_item is not None:
+            list_run.append(ChangedRun(scenario, list_changed, ["ctest", "-R", f"^{re.escape(pair_item.name)}$", "--output-on-failure"], str(build_dir),
+                                       folder, SCENARIO_TIMEOUT_SECONDS))
+            continue
+        list_row.append(ChangedRow(scenario, describe_change(list_changed), "", "ctest 항목에 없다(조건이 붙은 하위 폴더) — 손으로 돈다",
+                                   find_branch(list_changed[0].path)))
+    return list_run, list_row
+
+
+def get_last_result_line(text: str, prefix: str) -> str:
+    list_line = [line.strip() for line in text.splitlines() if line.strip().startswith(prefix)]
+    return list_line[-1] if list_line else ""
+
+
+def make_one_line(text: str, limit: int = 200) -> str:
+    line = text.strip().splitlines()[0] if text.strip() else ""
+    return line if len(line) <= limit else line[: limit - 1] + "…"
+
+
+def read_unit_rows(run: ChangedRun, map_changed: dict[str, ChangedFile], find_branch: Callable[[str], str]) -> list[ChangedRow]:
+    """단위 실행 하나의 줄 — 진 케이스마다 한 줄(케이스 파일이 바뀐 파일이면 그 파일의 새것/바뀐 것 · 갈래), 보고가 없으면 끝 줄로 한 줄, 다 통과면 한 줄."""
+    result = run.result or ProcessResult(return_code=-1, launched=False)
+    first_branch = find_branch(run.files[0].path)
+    try:
+        report = json.loads(run.output.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        report = None
+    list_row: list[ChangedRow] = []
+    for case in (report or {}).get("cases", []):
+        if case.get("passed") or case.get("skipped"):
+            continue
+        match = SOURCE_PATH.search(str(case.get("file", "")).replace("\\", "/"))
+        changed = map_changed.get(match.group(1)) if match else None
+        kind = UNIT_KIND_ALIAS.get(case.get("failureKind", ""), case.get("failureKind", "")) or "Assertion"
+        list_row.append(ChangedRow(f"{run.item}: {case['name']}", "새것" if changed and changed.status == "A" else "바뀐 것", kind,
+                                   make_one_line((case.get("failures") or [""])[0]), find_branch(changed.path) if changed else first_branch))
+    if list_row:
+        return list_row
+    end_line = get_last_result_line(result.stdout, "TEST_RESULT=")
+    if result.succeeded and report is not None:
+        return [ChangedRow(run.item, describe_change(run.files), "", f"통과 — {report.get('runCount', 0)} 케이스", first_branch)]
+    if result.timed_out:
+        kind = "Timeout"
+    elif end_line:
+        kind = end_line.partition("=")[2].partition(" ")[0]
+    else:
+        kind = "Crash"
+    reason = end_line or make_one_line(result.stderr) or f"종료 코드 {result.return_code}, 끝 줄 없음 — {run.output.with_suffix('.log')}"
+    return [ChangedRow(run.item, describe_change(run.files), kind, reason, first_branch)]
+
+
+def fold_scenario_failures(list_report: Sequence[dict]) -> list[tuple[str, str, str]]:
+    """(종류, 까닭, 묶음) — 같은 (종류 · 단계)로 진 백엔드를 접는다. 돈 백엔드가 둘 이상이고 모두 같이 졌으면 `전제`(시나리오의 가정이 틀렸다), 하나만 졌으면 `백엔드 <이름>`."""
+    list_ran = [report for report in list_report if report.get("result") != "Skipped"]
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for report in list_ran:
+        if report.get("result") in PASSED_RESULTS:
+            continue
+        failure = report.get("failure") or {}
+        groups.setdefault((failure.get("kind") or report.get("result", ""), failure.get("step", "")), []).append(report)
+    list_fold: list[tuple[str, str, str]] = []
+    for (kind, _), group in groups.items():
+        list_backend = sorted(str(report.get("backend", "")) for report in group)
+        if len(list_ran) > 1 and len(group) == len(list_ran):
+            label = "전제"
+        elif len(list_ran) > 1 and len(group) == 1:
+            label = f"백엔드 {list_backend[0]}"
+        else:
+            label = ",".join(list_backend)
+        failure = group[0].get("failure") or {}
+        list_fold.append((kind, make_one_line(failure.get("reason") or group[0].get("reason", "")), label))
+    return list_fold
+
+
+def read_scenario_rows(run: ChangedRun, find_branch: Callable[[str], str]) -> list[ChangedRow]:
+    """시나리오 실행 하나의 줄 — 백엔드 자식 보고(`<이름>.<백엔드>.json`)를 접어 낸다. 보고가 없으면 끝 줄로 한 줄."""
+    result = run.result or ProcessResult(return_code=-1, launched=False)
+    change, branch = describe_change(run.files), find_branch(run.files[0].path)
+    if not run.is_scenario:   # 두 번 기동 쌍 — ctest 의 성패만
+        if result.succeeded:
+            return [ChangedRow(run.item, change, "", "통과(ctest 쌍)", branch)]
+        return [ChangedRow(run.item, change, "Assertion", "ctest 쌍이 졌다 — Testing/Logs 의 그 항목 로그", branch)]
+    by_backend: dict[str, dict] = {}
+    for report in sorted(read_reports([run.output]) if run.output.is_dir() else [], key=lambda report: report["startedAtUnixMs"]):
+        by_backend[str(report.get("backend", ""))] = report   # 같은 백엔드는 마지막 것
+    list_report = list(by_backend.values())
+    if not list_report:
+        end_line = get_last_result_line(result.stdout, "SCENARIO_RESULT=")
+        kind = "Hang" if result.timed_out else "LoadError"
+        return [ChangedRow(run.item, change, kind, end_line or f"보고가 없다(종료 코드 {result.return_code}) — {run.output / 'parent.log'}", branch)]
+    list_fold = fold_scenario_failures(list_report)
+    if not list_fold:
+        return [ChangedRow(run.item, change, "", "통과 — " + ",".join(sorted(by_backend)), branch)]
+    return [ChangedRow(run.item, change, kind, f"[{label}] {reason}", branch) for kind, reason, label in list_fold]
+
+
+def parse_branch(subject: str) -> str:
+    """first-parent 커밋 제목 → 갈래 이름. 병합이 아니면 직접 커밋이다."""
+    match = MERGE_SUBJECT.match(subject)
+    if match:
+        return match.group(1)
+    return f"(직접) {make_one_line(subject, 40)}" if subject else "?"
+
+
+def make_find_branch(project_root: Path, base: str) -> Callable[[str], str]:
+    """파일 → 그 파일을 마지막으로 더한 갈래(`<base>..HEAD` 의 first-parent 커밋 — 병합이면 그 갈래 이름)."""
+    cache: dict[str, str] = {}
+
+    def find(path: str) -> str:
+        if path not in cache:
+            result = run_git(["log", "--first-parent", "--format=%s", "-1", f"{base}..HEAD", "--", path], cwd=project_root)
+            cache[path] = parse_branch(result.stdout.strip()) if result.succeeded else "?"
+        return cache[path]
+    return find
+
+
+def format_changed_table(list_row: Sequence[ChangedRow]) -> list[str]:
+    list_line = ["| 항목 | 새것/바뀐 것 | 실패 종류 | 까닭 | 갈래 |", "| --- | --- | --- | --- | --- |"]
+    for row in list_row:
+        cells = (row.item, row.change, row.kind or "-", row.reason, row.branch)
+        list_line.append("| " + " | ".join(cell.replace("|", "\\|") for cell in cells) + " |")
+    return list_line
+
+
+def list_new_references(status_text: str) -> list[str]:
+    """`git status --porcelain --untracked-files=all` 의 추적 안 된 골든 · 스냅숏 — 이 단계가 처음 쓴 기준 파일이다(앞 실행이 남긴 것도 아직 사람이 보지 않았다)."""
+    return sorted(line[3:].strip() for line in status_text.splitlines()
+                  if line.startswith("?? ") and ("/golden/" in line or "/Snapshots/" in line))
+
+
+def decide_changed(list_row: Sequence[ChangedRow], list_recorded: Sequence[str], sha: str) -> str:
+    return "CHANGED_FAILED" if list_recorded or any(row.kind for row in list_row) else f"CHANGED_OK={sha}"
+
+
+def run_changed(project_root: Path, preset: str, base: str) -> int:
+    build_dir = project_root / "build" / preset
+    if not build_dir.is_dir():
+        print(f"[Changed] {build_dir} 가 없다 — 빌드 뒤에 돈다")
+        print("CHANGED_FAILED")
+        return ExitCode.CHECK_INVALID
+    sha = run_git_or_raise(["rev-parse", "HEAD"], cwd=project_root).strip()
+    list_changed = parse_name_status(run_git_or_raise(["diff", "--name-status", "--no-renames", f"{base}...HEAD"], cwd=project_root))
+    list_test_file = [path for path in run_git_or_raise(["ls-files", "--", "Source"], cwd=project_root).splitlines() if "/Tests/" in path and path.endswith(".cpp")]
+    list_scenario_file = [path for path in run_git_or_raise(["ls-files", "--", "Content"], cwd=project_root).splitlines() if path.endswith(SCENARIO_SUFFIX)]
+    map_folder = select_unit_folders(list_changed, list_test_file)
+    map_scenario = select_scenarios(list_changed, list_scenario_file)
+    print(f"[Changed] {base}...HEAD: 바뀐 파일 {len(list_changed)} · 기능 폴더 {len(map_folder)} · 시나리오 {len(map_scenario)}")
+    if not map_folder and not map_scenario:
+        print(f"CHANGED_OK={sha}")
+        return ExitCode.PASSED
+    shown = run_process(["ctest", "--show-only=json-v1"], cwd=build_dir)
+    if not shown.succeeded:
+        print(f"[Changed] ctest 항목을 읽지 못했다: {make_one_line(shown.stderr or shown.stdout)}")
+        print("CHANGED_FAILED")
+        return ExitCode.VIOLATION
+    list_item = parse_ctest_items(shown.stdout)
+    output = build_dir / CHANGED_OUTPUT
+    shutil.rmtree(output, ignore_errors=True)
+    output.mkdir(parents=True)
+    find_branch = make_find_branch(project_root, base)
+    list_unit_run = make_unit_runs(list_item, map_folder, output)
+    list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, project_root / "Content", build_dir, output, find_branch)
+
+    def execute(run: ChangedRun) -> None:
+        print(f"[Changed] run {run.item}: {' '.join(run.command)}", flush=True)   # `run ` 머리 — preflight.sh 가 이 줄을 빼고 표만 찍는다
+        working = Path(run.working_directory) if run.working_directory else build_dir
+        run.result = run_process(run.command, cwd=working, timeout_seconds=run.timeout_seconds)
+
+    # 단위는 CPU 일이라 함께, 시나리오는 시간 · 그림을 판정하므로 하나씩(묶음 검증의 gpu 단계를 혼자 도는 것과 같은 까닭).
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(list_unit_run))) as pool:
+        list(pool.map(execute, list_unit_run))
+    for run in list_scenario_run:
+        execute(run)
+    map_changed = {changed.path: changed for changed in list_changed}
+    for run in list_unit_run:
+        list_row += read_unit_rows(run, map_changed, find_branch)
+    for run in list_scenario_run:
+        list_row += read_scenario_rows(run, find_branch)
+    for line in format_changed_table(list_row):
+        print(line)
+    list_recorded = list_new_references(run_git_or_raise(["status", "--porcelain", "--untracked-files=all", "--", "Content", "Source"], cwd=project_root))
+    if list_recorded:
+        print(f"[Changed] 처음 쓴 기준 파일 {len(list_recorded)} 개 — 그림 · 글을 보고 커밋한 뒤 `preflight.sh --from changed` 로 기록 없이 통과시킨다:")
+        for path in list_recorded:
+            print(f"  {path}")
+    final = decide_changed(list_row, list_recorded, sha)
+    print(final)
+    return ExitCode.PASSED if final.startswith("CHANGED_OK=") else ExitCode.VIOLATION
+
+
+def run_changed_self_check() -> None:
+    list_changed = parse_name_status("A\tSource/Engine/Foo/Tests/TestFoo.cpp\nM\tSource/Engine/Foo/Foo.cpp\nD\tSource/Gone.cpp\n"
+                                     "M\tSource/Engine/Bar/Deep/Bar.cpp\nM\tSource/Editor/Panel/Tests/TestPanel.cpp\n"
+                                     "A\tSource/Engine/Foo/Tests/Snapshots/FooTest.case.greeting.txt\nM\tSource/Engine/NoTests/X.cpp\n"
+                                     "A\tSource/GameFramework/Kits/Feature/Inv/Tests/TestInv.cpp\n"
+                                     "A\tContent/game/g/automation/new.scenario.xml\nM\tContent/game/g/automation/golden/old.view.dx12.ppm\n"
+                                     "M\tContent/engine/automation/rhiswap/x.scenario.xml\nA\tContent/game/g/automation/sequence/pair.1.scenario.xml\n")
+    assert [changed.status for changed in list_changed].count("A") == 5 and all(changed.path != "Source/Gone.cpp" for changed in list_changed), "지운 파일은 돌 것이 없다"
+    list_test_file = ["Source/Engine/Foo/Tests/TestFoo.cpp", "Source/Engine/Bar/Tests/TestBar.cpp", "Source/Editor/Panel/Tests/TestPanel.cpp",
+                      "Source/GameFramework/Kits/Feature/Inv/Tests/TestInv.cpp"]
+    assert find_feature_folder("Source/Engine/Foo/Foo.cpp", list_test_file) == "Source/Engine/Foo/"
+    assert find_feature_folder("Source/Engine/Bar/Deep/Bar.cpp", list_test_file) == "Source/Engine/Bar/", "테스트 없는 폴더는 한 단계 위"
+    assert find_feature_folder("Source/Engine/NoTests/X.cpp", list_test_file) is None
+    map_folder = select_unit_folders(list_changed, list_test_file)
+    assert sorted(map_folder) == ["Source/Engine/Bar/", "Source/Engine/Foo/", "Source/GameFramework/Kits/Feature/Inv/"], map_folder   # 에디터 · 테스트 없는 폴더는 빠진다
+    assert len(map_folder["Source/Engine/Foo/"]) == 3, "케이스 · 소스 · 스냅숏이 한 폴더로 모인다"
+
+    list_scenario_file = ["Content/game/g/automation/new.scenario.xml", "Content/game/g/automation/old.scenario.xml",
+                          "Content/game/g/automation/old.view.scenario.xml", "Content/engine/automation/rhiswap/x.scenario.xml",
+                          "Content/game/g/automation/sequence/pair.1.scenario.xml"]
+    assert find_golden_scenario("Content/game/g/automation/golden/old.view.dx12.ppm", list_scenario_file) == "Content/game/g/automation/old.view.scenario.xml", "가장 긴 이름"
+    map_scenario = select_scenarios(list_changed, list_scenario_file)
+    assert sorted(map_scenario) == ["engine/automation/rhiswap/x.scenario.xml", "game/g/automation/new.scenario.xml", "game/g/automation/old.view.scenario.xml",
+                                    "game/g/automation/sequence/pair.1.scenario.xml"], map_scenario
+
+    shown = json.dumps({"tests": [
+        {"name": "UnitTests", "command": ["App.exe", "--test", "-unattended", "-log-file=L/UnitTests.log", "--test-report=R/UnitTests.json"],
+         "properties": [{"name": "WORKING_DIRECTORY", "value": "B/Bin"}]},
+        {"name": "UnitTests.OtherWorkingFolder", "command": ["App.exe", "--test", "--test-filter=FileSystemTest.*"]},
+        {"name": "UnitTests.Rpg", "command": ["App.exe", "--test", "-game=Rpg", "--test-source=Source/GameFramework/Kits/Feature/Inv/,Source/Games/Rpg/"]},
+        {"name": "UnitTests.OnlineKits", "command": ["Bot.exe", "-test", "-test-source=Source/GameFramework/Kits/Online/"]},
+        {"name": "Scenario.g", "command": ["App.exe", "-scenario=game/g/automation/first.scenario.xml,game/g/automation/new.scenario.xml", "-scenario-keep-going",
+                                           "-scenario-backends=all", "-scenario-backend-split=independent", "-unattended", "-log-file=L/Scenario.g.log", "-gv_first=1"]},
+        {"name": "Scenario.g.sequence.pair", "command": ["cmake", "-DAPP=App.exe", "-DPAIR=game/g/automation/sequence/pair", "-P", "Run.cmake"]},
+        {"name": "Disabled"}]})
+    list_item = parse_ctest_items(shown)
+    assert [item.name for item in list_item][-1] == "Scenario.g.sequence.pair" and list_item[0].working_directory == "B/Bin"
+    by_item = {run.item: run for run in make_unit_runs(list_item, map_folder, Path("O"))}
+    assert sorted(by_item) == ["UnitTests", "UnitTests.Rpg"], by_item   # 거르개 항목은 빠지고, 온라인 키트는 바뀐 폴더가 없다
+    assert sorted(get_argument(by_item["UnitTests"].command, "test-source").split(",")) == ["Source/Engine/Bar/", "Source/Engine/Foo/"]
+    assert get_argument(by_item["UnitTests.Rpg"].command, "test-source") == "Source/GameFramework/Kits/Feature/Inv/", "게임 항목은 제 폴더 아래 것만"
+    unit_command = by_item["UnitTests"].command
+    assert "--record-missing-snapshots" in unit_command and f"--test-report={Path('O') / 'UnitTests.json'}" in unit_command
+    assert f"-log-file={Path('O') / 'UnitTests.log'}" in unit_command and "-log-file=L/UnitTests.log" not in unit_command
+    assert set_argument(["Bot.exe", "-test", "-test-source=A/"], "test-source", "B/", find_dash(["Bot.exe", "-test"], "test"))[-1] == "-test-source=B/", "봇은 대시 하나"
+
+    with tempfile.TemporaryDirectory() as temporary:
+        content_root = Path(temporary)
+        (content_root / "game/g/automation").mkdir(parents=True)
+        (content_root / "game/g/automation/first.scenario.xml").write_text('<Scenario>\n  <Launch variable="gv_first" value="1"/>\n</Scenario>\n', encoding="utf-8")
+        (content_root / "game/g/automation/new.scenario.xml").write_text('<Scenario>\n\t<Launch variable="gv_new" value="two words"/>\n</Scenario>\n', encoding="utf-8")
+        list_scenario_run, list_row = make_scenario_runs(list_item, {key: value for key, value in map_scenario.items() if "old.view" not in key}, content_root,
+                                                         Path("B"), Path("O"), lambda path: "w-x")
+    command = next(run.command for run in list_scenario_run if run.item == "game/g/automation/new.scenario.xml")
+    assert get_argument(command, "scenario") == "game/g/automation/new.scenario.xml" and get_argument(command, "scenario-backends") == "all"
+    assert get_argument(command, "scenario-backend-split") is None and get_argument(command, "scenario-keep-going") is None, "모든 백엔드에서 혼자"
+    assert "-gv_first=1" not in command and command[-1] == "-gv_new=two words" and "-scenario-record-missing-golden" in command, command
+    assert any(run.command[0] == "ctest" and "^Scenario\\.g\\.sequence\\.pair$" in run.command for run in list_scenario_run), "쌍은 ctest 항목 그대로"
+    assert [row.item for row in list_row] == ["engine/automation/rhiswap/x.scenario.xml"] and list_row[0].kind == "", "체인 밖은 실패가 아니다"
+
+    def make_report(backend: str, result: str, kind: str = "", step: str = "", reason: str = "") -> dict:
+        return {"name": "s", "backend": backend, "result": result, "startedAtUnixMs": 1, "failure": {"kind": kind, "step": step, "reason": reason}}
+    premise = fold_scenario_failures([make_report(backend, "Failed", "Assertion", "#3", "PiP equal") for backend in ("dx11", "dx12", "vk", "gl")])
+    assert premise == [("Assertion", "PiP equal", "전제")], premise
+    single = fold_scenario_failures([make_report("dx11", "Passed"), make_report("vk", "Failed", "GoldenMismatch", "#5", "1.2% differing"), make_report("gl", "Skipped")])
+    assert single == [("GoldenMismatch", "1.2% differing", "백엔드 vk")], single
+    assert parse_branch("Merge branch 'w-st5'") == "w-st5" and parse_branch("Merge branch 'w-a' into main") == "w-a"
+    assert parse_branch("ST-1: 고친다").startswith("(직접) ")
+
+    unit_run = ChangedRun("UnitTests", [ChangedFile("A", "Source/Engine/Foo/Tests/TestFoo.cpp")], [], "", Path("O/none.json"), 1,
+                          result=ProcessResult(return_code=1, stdout="TEST_RESULT=NO_TESTS run=0 failed=0 skipped=0\n"))
+    [no_tests] = read_unit_rows(unit_run, {}, lambda path: "w-u")
+    assert no_tests.kind == "NO_TESTS" and no_tests.change == "새것" and no_tests.branch == "w-u", no_tests
+    with tempfile.TemporaryDirectory() as temporary:
+        report_path = Path(temporary) / "UnitTests.json"
+        report_path.write_text(json.dumps({"runCount": 2, "cases": [
+            {"name": "Foo.new", "file": "D:/repo/Source/Engine/Foo/Tests/TestFoo.cpp", "passed": False, "skipped": False, "failureKind": "SnapshotMissing",
+             "failures": ["TestFoo.cpp(9): no snapshot yet: recorded x"]},
+            {"name": "Foo.old", "file": "D:/repo/Source/Engine/Foo/Tests/TestFoo.cpp", "passed": True, "skipped": False, "failureKind": "", "failures": []}]}),
+            encoding="utf-8")
+        snapshot_run = ChangedRun("UnitTests", list_changed[:1], [], "", report_path, 1, result=ProcessResult(return_code=1))
+        [missing] = read_unit_rows(snapshot_run, {changed.path: changed for changed in list_changed}, lambda path: "w-s")
+    assert missing == ChangedRow("UnitTests: Foo.new", "새것", "MissingBaseline", "TestFoo.cpp(9): no snapshot yet: recorded x", "w-s"), missing
+    rows = [ChangedRow("a", "새것", "", "통과", "w"), ChangedRow("b|c", "바뀐 것", "MissingBaseline", "no golden", "w")]
+    table = format_changed_table(rows)
+    assert table[0] == "| 항목 | 새것/바뀐 것 | 실패 종류 | 까닭 | 갈래 |" and table[3] == "| b\\|c | 바뀐 것 | MissingBaseline | no golden | w |", table
+    assert list_new_references("?? Content/game/g/automation/golden/new.v.dx12.ppm\n?? Saved/x\n M Source/a.cpp\n?? Source/E/Tests/Snapshots/A.b.txt\n") == \
+        ["Content/game/g/automation/golden/new.v.dx12.ppm", "Source/E/Tests/Snapshots/A.b.txt"]
+    assert decide_changed(rows[:1], [], "abc") == "CHANGED_OK=abc"
+    assert decide_changed(rows, [], "abc") == "CHANGED_FAILED" and decide_changed(rows[:1], ["x"], "abc") == "CHANGED_FAILED", "실패 · 처음 쓴 기준 파일은 멈춘다"
+
+
 def run_self_check() -> None:
     connection = sqlite3.connect(":memory:")
     connection.executescript(SCHEMA)
@@ -227,6 +763,7 @@ def run_self_check() -> None:
     except ValueError:
         pass
     assert json.loads(make_scenario_costs_text(map_cost))["scenarioSeconds"] == map_cost
+    run_changed_self_check()
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -244,6 +781,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     quarantine_parser.add_argument("--ctest-exclude", action="store_true")
     costs_parser = sub.add_parser("costs")
     costs_parser.add_argument("--write", action="store_true", help=f"{SCENARIO_COSTS_PATH} 를 쓴다(없으면 찍기만)")
+    changed_parser = sub.add_parser("changed", help="origin/main 뒤에 들어온 테스트 · 시나리오를 먼저 돈다(preflight changed 단계)")
+    changed_parser.add_argument("--preset", required=True, help="빌드 프리셋(build/<프리셋> 의 ctest 항목을 쓴다)")
+    changed_parser.add_argument("--base", default="origin/main", help="돈 적이 있는 쪽(기본 origin/main — push 는 검증한 커밋만 한다)")
     arguments = parser.parse_args(argv)
     if arguments.self_check:
         run_self_check()
@@ -257,8 +797,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if arguments.ctest_exclude and not list_problem:
             print(make_ctest_exclude(list_entry))
         return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
+    if arguments.command == "changed":
+        return run_changed(project_root, arguments.preset, arguments.base)
     if arguments.command not in ("ingest", "report", "costs"):
-        parser.error("ingest · report · quarantine · costs 중 하나")
+        parser.error("ingest · report · quarantine · costs · changed 중 하나")
     connection = open_database(arguments.database or project_root / DEFAULT_DATABASE)
     if arguments.command == "ingest":
         added = ingest(connection, read_reports(arguments.roots), arguments.commit)
