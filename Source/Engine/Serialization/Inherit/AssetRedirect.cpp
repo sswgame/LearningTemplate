@@ -280,7 +280,12 @@ namespace sw
 
     string AssetRedirect::toCacheKey( string_view path )
     {
-        return toCurrentID( FileUtil::normalizePath( path ).str() );
+        // 접은 글을 그대로 돌려준다 — 리다이렉트가 없으면(대부분) 복사 없이 옮긴다(텍스처 화면 크기 기록이 프레임마다 부른다).
+        string key = FileUtil::normalizePath( path ).str();
+        string current;
+        if ( resolve( key, current ) )
+            return current;
+        return key;
     }
 } // namespace sw
 
