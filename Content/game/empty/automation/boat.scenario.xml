@@ -12,7 +12,9 @@
 -->
 <Scenario name="game.empty.boat" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/boat.scene.xml"/>
+	<Launch variable="gv_environmentAnimate" value="0"/> <!-- 시작 전 · 에셋 대기(벽시계) 프레임 수는 실행마다 달라 그동안 흐른 파도 시간이 사진(boat_storm)의 위상을 흔든다 — 그동안 멈춘다 -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Variable name="gv_environmentAnimate" value="1"/> <!-- 여기부터 파도 시간은 결정적 프레임으로만 흐른다 -->
 	<WaitUntil watch="Buoyancy.SubmergedPontoons" atLeast="1" timeoutFrames="120"/>
 	<AdvanceSimulation frames="300"/> <!-- 배가 물에 자리 잡는 5 초(최근 4~8 초 흔들림 최대를 본다 — 시간이 내용) -->
 	<Expect watch="Object.Y" target="Upwind" near="0.25" tolerance="0.2"/>
