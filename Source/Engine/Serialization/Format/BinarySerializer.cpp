@@ -284,7 +284,8 @@ namespace sw
              *         못하면 `ObjectRejected` 입니다. 소프트 읽기의 맨 바깥은 앞을 `NotParsed`, 뒤를 `Rejected` 로 옮긴다(`deserializeSoft`).
              */
             [[nodiscard]] static FieldReadResult deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                                                    const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
+                                                                    const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict,
+                                                                    vector<RestoredPropertyValue>& outListRestored )
             {
                 ByteReader        reader( pData, dataSize );
                 BinaryWireVersion wireVersion{};
@@ -301,8 +302,12 @@ namespace sw
                     bool                  bStop  = false;
                     const FieldReadResult result = readTaggedField( state, reader, bStop );
                     if ( bStop )
+                    {
+                        outListRestored = state._rollback.getRestoredValues();
                         return result;
+                    }
                 }
+                outListRestored = state._rollback.getRestoredValues(); // 범위 검사는 부르는 쪽이 한다 — 되돌린 칸을 넘긴다
 
                 // 스트림에 없던 프로퍼티는 기본값으로 채운다.
                 applyDefaultsToUnmatched( typeInfo, pInstance, context, state._matchedBitmask, state._uniqueMatchedPropHashes );
@@ -532,7 +537,8 @@ namespace sw
     FieldReadResult BinarySerializer::deserializeNested( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                          const SerializeContext& context )
     {
-        const FieldReadResult taggedResult = BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true );
+        vector<RestoredPropertyValue> listRestored; // 읽지 못한 칸을 건너뛰는 엄격 읽기(오브젝트 상태)가 되돌린 칸
+        const FieldReadResult         taggedResult = BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true, listRestored );
         switch ( taggedResult )
         {
             case FieldReadResult::Read:
@@ -540,7 +546,7 @@ namespace sw
                 // 읽기 실패 되돌리기는 읽기 전 값(검사한 적 없는 값)을 돌려놓을 뿐이라 보지 않는다(`SerializeContext::setRestoringValueBeforeRead`).
                 if ( context.isRestoringValueBeforeRead() )
                     return FieldReadResult::Read;
-                return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+                return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
             case FieldReadResult::FieldFailed:
             case FieldReadResult::ObjectRejected:
                 return taggedResult;
@@ -556,7 +562,8 @@ namespace sw
             return SoftReadResult::NotParsed;
         // 소프트 읽기의 태그 루프는 모르는 · 읽지 못한 칸을 orphan 으로 넘기므로, 필드 실패는 스트림이 깨졌을 때뿐이다.
         // 객체째 실패(금지된 필드, 되돌리지 못한 필드)는 스트림을 읽은 뒤의 거절이다(XML · JSON 의 `Rejected` 와 같다).
-        switch ( BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false ) )
+        vector<RestoredPropertyValue> listRestored;
+        switch ( BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false, listRestored ) )
         {
             case FieldReadResult::Read:
                 break;
@@ -565,7 +572,7 @@ namespace sw
             case FieldReadResult::ObjectRejected:
                 return SoftReadResult::Rejected;
         }
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? SoftReadResult::Read : SoftReadResult::Rejected;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored ) ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
     bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,

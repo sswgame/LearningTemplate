@@ -1079,15 +1079,17 @@ namespace sw
         return nullopt;
     }
 
-    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const ObjectAddress instance, const string& prefix, vector<string>& outListError )
+    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const ObjectAddress instance, const string& prefix, vector<string>& outListError,
+                                             const vector<RestoredPropertyValue>* pListRestored )
     {
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            collectPropertyRangeErrors( prop, instance, prefix, outListError );
+            collectPropertyRangeErrors( prop, instance, prefix, outListError, pListRestored );
         }
     }
 
-    void SerializerUtil::collectPropertyRangeErrors( const PropertyInfo& prop, const ObjectAddress instance, const string& prefix, vector<string>& outListError )
+    void SerializerUtil::collectPropertyRangeErrors( const PropertyInfo& prop, const ObjectAddress instance, const string& prefix, vector<string>& outListError,
+                                                     const vector<RestoredPropertyValue>* pListRestored )
     {
         using Internal                  = SerializerUtilInternal;
         const void* const pInstance     = instance.get();
@@ -1096,6 +1098,9 @@ namespace sw
             return;
         const string      path   = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
         const void* const pValue = prop.getRawPtr( pInstance );
+        // 소프트 읽기가 읽기 전 값으로 되돌린 칸은 파일 값이 아니다 — orphan 이 이미 알렸다.
+        if ( pListRestored != nullptr && VectorUtil::contains( *pListRestored, RestoredPropertyValue{ pValue, &prop } ) )
+            return;
         if ( prop._bIsContainer == SW_TRUE )
         {
             // 시퀀스 원소만 본다. 맵과 중첩 컨테이너는 원소 경로를 하나로 정할 수 없어 보지 않는다.
@@ -1117,7 +1122,7 @@ namespace sw
                 float64           value         = 0.0;
                 // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                 if ( pElement != nullptr )
-                    collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError );
+                    collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError, pListRestored );
                 else if ( Internal::readRangeNumber( prop._elementTypeName, ValueAddress{ pElementValue }, value ) )
                     Internal::appendRangeError( elementPath, value, range, outListError );
             }
@@ -1126,7 +1131,7 @@ namespace sw
         const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         if ( pNested != nullptr )
         {
-            collectRangeErrors( *pNested, ObjectAddress{ pValue }, path, outListError );
+            collectRangeErrors( *pNested, ObjectAddress{ pValue }, path, outListError, pListRestored );
             return;
         }
         float64 value = 0.0;
@@ -1134,17 +1139,13 @@ namespace sw
             Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
     }
 
-    bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance, const vector<const PropertyInfo*>& listRestoredProperty )
+    bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance, const vector<RestoredPropertyValue>& listRestored )
     {
-        if ( listRestoredProperty.empty() )
+        if ( listRestored.empty() )
             return isWithinDeclaredRanges( typeInfo, instance );
         // 되돌린 칸이 있는 실패 길이라 빠른 길 없이 칸마다 모은다.
         vector<string> listRangeError;
-        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
-        {
-            if ( VectorUtil::contains( listRestoredProperty, &prop ) == false )
-                collectPropertyRangeErrors( prop, instance, string(), listRangeError );
-        }
+        collectRangeErrors( typeInfo, instance, string(), listRangeError, &listRestored );
         for ( const string& rangeError : listRangeError )
         {
             SW_LOG_ERROR_ID( "Serialization.ValueOutOfRange", "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
@@ -1169,7 +1170,8 @@ namespace sw
 namespace sw
 {
     PropertyReadRollback::PropertyReadRollback()
-        : _bytes{}
+        : _listRestored{}
+        , _bytes{}
         , _pOwnerType{ nullptr }
         , _pProperty{ nullptr }
         , _bOwnedPointerList{ SW_FALSE }
@@ -1192,7 +1194,7 @@ namespace sw
         return false;
     }
 
-    bool PropertyReadRollback::restoreValueBeforeRead( MutableObjectAddress instance, const SerializeContext& context ) const
+    bool PropertyReadRollback::restoreValueBeforeRead( MutableObjectAddress instance, const SerializeContext& context )
     {
         if ( _pOwnerType == nullptr || _pProperty == nullptr ) // keepValueBeforeRead 를 먼저 부른다
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
@@ -1206,7 +1208,11 @@ namespace sw
         SerializeContext restoreContext = context;
         restoreContext.setRestoringValueBeforeRead();
         if ( SerializerUtil::applyPropertyBinary( *_pProperty, instance, _bytes.data(), _bytes.size(), restoreContext ) == FieldReadResult::Read )
+        {
+            if ( _pProperty->_bIsBitField == SW_FALSE ) // 비트필드는 범위가 없다(주소도 없다)
+                _listRestored.push_back( RestoredPropertyValue{ _pProperty->getRawPtr( instance.get() ), _pProperty } );
             return true;
+        }
         SW_LOG_ERROR_ID( "Serialization.RestoreFailed", "%#::%# (%#): the value before the failed read could not be put back - the object is not read", _pOwnerType->_name.c_str(),
                          _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
         return false;

@@ -631,9 +631,8 @@ namespace sw
         bool                   bFieldError{ false };
         bool                   bForbiddenField{ false };
         // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · XML 과 같다).
-        const bool                  bContinuesAfterUnreadable = pOutListOrphan != nullptr;
-        PropertyReadRollback        rollback;
-        vector<const PropertyInfo*> listRestoredProperty; // 읽기 전 값으로 되돌린 칸 — 범위 검사에서 뺀다(파일 값이 아니다)
+        const bool           bContinuesAfterUnreadable = pOutListOrphan != nullptr;
+        PropertyReadRollback rollback;
 
         if ( pOutVersion != nullptr )
             *pOutVersion = 0;
@@ -690,7 +689,6 @@ namespace sw
                         // 읽다 만 값(원소를 채우다 만 컨테이너, 필드를 채우다 만 구조체)을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면 객체째 실패다.
                         if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
                             return FieldReadResult::ObjectRejected;
-                        listRestoredProperty.push_back( pMatched );
                         JSONSerializerInternal::pushUnreadableFieldOrphan( *pOutListOrphan, *pMatched, field );
                     }
                     else
@@ -716,7 +714,7 @@ namespace sw
         const bool bStrictFieldError = pOutListOrphan == nullptr && bFieldError;
         if ( bStrictFieldError )
             return FieldReadResult::FieldFailed;
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestoredProperty ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, rollback.getRestoredValues() ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
     }
 
     FieldReadResult JSONSerializer::readField( const JSONValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& context )
