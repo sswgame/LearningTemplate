@@ -16,6 +16,7 @@
 #include "DevTools/Client/Automation/Runner/AutomationHangWatch.h"
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
 #include "DevTools/Client/Automation/Runner/AutomationPerBackend.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunPolicy.h"
 #include "DevTools/Client/Automation/Runner/AutomationRunner.h"
 #include "DevTools/Client/Automation/Runner/AutomationScenarioChain.h"
 #include "DevTools/Client/Automation/Runner/ScenarioPlayer.h"
@@ -110,6 +111,7 @@ namespace sw
         , _recordPath{}
         , _reportPath{}
         , _workingFolder{}
+        , _runPolicyError{}
         , _startWindowWidth{ 0 }
         , _startWindowHeight{ 0 }
         , _listStartVariable{}
@@ -255,8 +257,12 @@ namespace sw
         engine::getSubsystem<GlobalVariableManager>().collectVariables( listVariable );
         for ( const GlobalVariableInfo* pVariable : listVariable )
             _listStartVariable.emplace_back( pVariable->_name, pVariable->getValueAsString() );
-        _pChain = make_unique<AutomationScenarioChain>();
-        _pChain->begin( AutomationScenarioChain::splitList( scenarioArgument ), bKeepGoing );
+        // 대기 정책(`Config/Dev/ScenarioRun.json`)의 반복 실패 한도. 읽지 못하면 단계마다 읽기 오류로 끝낸다(`startStage`) — 그때 한도는 쓰이지 않는다
+        // (읽기 오류에는 반복 열쇠가 없다). 1 은 그 자리를 채우는 값일 뿐이다.
+        const expected<AutomationRunPolicy> runPolicy = AutomationRunPolicy::load();
+        _runPolicyError                               = runPolicy.has_value() ? string() : AutomationStep::describeReason( runPolicy.error() );
+        _pChain                                       = make_unique<AutomationScenarioChain>();
+        _pChain->begin( AutomationScenarioChain::splitList( scenarioArgument ), bKeepGoing, runPolicy.has_value() ? runPolicy->_repeatedFailureLimit : 1u );
         if ( _pChain->isActive() == false )
         {
             _pChain.reset();
@@ -312,6 +318,9 @@ namespace sw
                 SW_LOG_ERROR_ID( "AutomationSession.RejectedRegistration", "[Scenario] %#", rejectedLine.c_str() );
             _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "a static registration was rejected at startup: " + listRejected.front(), {} ) );
         }
+        // 대기 정책을 읽지 못했으면 단계를 돌리지 않는다 — 정지 시한 · 반복 실패 한도 · 정착 조건의 문턱에 기본값이 없다.
+        if ( _runPolicyError.empty() == false && _pRunner->isActive() )
+            _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, _runPolicyError, {} ) );
         _screenshotBaseline = completedScreenshotCount;
         applyPresentPolicy();
         if ( _pRunner->isActive() )

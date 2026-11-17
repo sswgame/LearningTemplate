@@ -12,7 +12,7 @@
 	<DevCommand line="editor scene.new"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
-	<Screenshot file="emptyscene.ppm"/>
+	<Screenshot file="emptyscene.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="emptyscene.ppm" golden="emptyscene"/>
 	<EditorWaitStable/>

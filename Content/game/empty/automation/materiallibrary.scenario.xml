@@ -12,13 +12,11 @@
 <Scenario name="game.empty.materiallibrary" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/materiallibrary.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="materiallibrary_opaque.ppm"/>
 	<LoadScene path="game/empty/maps/materiallibrary_clear.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="materiallibrary_clear.ppm"/>
 	<ExpectImage file="materiallibrary_opaque.ppm" golden="materiallibrary_opaque" region="0,0,1,1"/>
 	<ExpectImage file="materiallibrary_clear.ppm" golden="materiallibrary_clear" region="0,0,1,1"/>

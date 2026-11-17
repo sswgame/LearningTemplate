@@ -46,7 +46,7 @@ def rewrite_unmarked_lines(text: str, rewrite: Callable[[str], str]) -> str:
 
 
 # ── 리플렉션 프로퍼티의 직렬화 이름 ──
-# `PROPERTY(...)` 가 붙은 멤버 `_bWaitForStability` 는 XML · JSON 에 `waitForStability` 로 적힌다(`XMLFields::getAttributeName` · `JSONFields`).
+# `PROPERTY(...)` 가 붙은 멤버 `_bRequiresForeground` 는 XML · JSON 에 `requiresForeground` 로 적힌다(`XMLFields::getAttributeName` · `JSONFields`).
 # 멤버 이름만 바꾸면 데이터의 속성이 모르는 이름이 된다 — 개명 도구가 같은 규칙으로 직렬화 이름 쌍을 만들어 데이터에도 적용한다.
 # (`XMLSerializer` 는 멤버 이름 `_foo` 를 글자 그대로 적으므로 낱말 치환이 이미 따라간다.)
 
@@ -124,8 +124,8 @@ def replace_serialized_name(text: str, serialized_old: str, serialized_new: str)
 
 
 def check_serialized_rename() -> None:
-    """실제 사례(e15f47d876): 멤버 `_bWaitForStability` 로 옮긴 개명이 시나리오 13 개의 옛 속성 이름을 남겼다."""
-    assert make_serialized_name("_bWaitForStability") == "waitForStability" and make_serialized_name("_fileName") == "fileName"
+    """실제 사례(e15f47d876): 사진 단계의 `_b` 멤버로 옮긴 개명이 시나리오 13 개의 옛 속성 이름을 남겼다(그 멤버는 뒤에 `stability` 글 칸이 되었다)."""
+    assert make_serialized_name("_bRequiresForeground") == "requiresForeground" and make_serialized_name("_fileName") == "fileName"
     assert make_serialized_name("_bias") == "bias" and make_serialized_name("_b") == "b" and make_serialized_name("clips") == "clips"
     header = (
         "#define PROPERTY( ... )\n"

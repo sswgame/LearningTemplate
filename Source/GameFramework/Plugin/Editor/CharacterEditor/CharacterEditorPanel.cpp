@@ -184,12 +184,14 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 열린 Character Editor 가 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다(캡처 뒤 저장소 쓰기는 `LocalStoreRequests` 가 본다). */
-            [[nodiscard]] static bool isThumbnailCapturePending()
+            /** @brief 열린 Character Editor 가 요청한 썸네일 캡처를 아직 거두지 않았으면 진행 중입니다(캡처 뒤 저장소 쓰기는 `LocalStoreRequests` 가 본다). */
+            [[nodiscard]] static AutomationReadiness readThumbnailCapture()
             {
                 const EditorPanelManager*   pManager = editor::findSubsystem<EditorPanelManager>();
                 const CharacterEditorPanel* pPanel   = pManager != nullptr ? pManager->findPanel<CharacterEditorPanel>() : nullptr;
-                return pPanel != nullptr && pPanel->isThumbnailCapturePending();
+                if ( pPanel == nullptr )
+                    return AutomationReadiness::notApplicable();
+                return pPanel->isThumbnailCapturePending() ? AutomationReadiness::waiting( 0, "the Character Editor thumbnail capture is not collected yet" ) : AutomationReadiness::ready();
             }
 
             [[nodiscard]] static bool readBoneGizmoPlaced( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -282,7 +284,7 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( CharacterEditorPanel, CharacterEditorPanel::kPanelID, EditorPanelCategory::Custom, 9020 );
 
-    SW_AUTOMATION_FINISH_BLOCKER( characterEditorThumbnail, "CharacterEditorThumbnail", &CharacterEditorPanelInternal::isThumbnailCapturePending );
+    SW_AUTOMATION_FINISH_BLOCKER( characterEditorThumbnail, "CharacterEditorThumbnail", &CharacterEditorPanelInternal::readThumbnailCapture );
 
     SW_AUTOMATION_WATCH( editorCharacterEditorBodyLayerCount, "Editor.CharacterEditorBodyLayerCount", "Skin layers in the Character Editor appearance selection (published while the Body tab draws)",
                          &CharacterEditorPanelInternal::readBodyLayerCount );

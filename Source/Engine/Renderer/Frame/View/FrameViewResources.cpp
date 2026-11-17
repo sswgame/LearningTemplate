@@ -526,7 +526,7 @@ namespace sw
             }
             Internal::markReads( listAttachment, pass, false, listNeeded );
         }
-        // 사진 앞 정착(`Render.Stable`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_bTAAHistoryWritten`) —
+        // 사진 앞 정착(조건 `RenderTemporalAccumulation`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_bTAAHistoryWritten`) —
         // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
         const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( view._bHistoryReset == SW_TRUE, view._bTAAHistoryWritten == SW_TRUE, view._bTAAHistoryReset == SW_TRUE );
         view._stillFrameCount         = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );

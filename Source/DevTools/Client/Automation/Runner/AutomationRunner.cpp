@@ -78,6 +78,9 @@ namespace sw
         , _bClockHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _assetStableFrameCount{ 0 }
+        , _stableHoldFrame{ kNotStable }
+        , _stabilityStallClock{}
+        , _stabilityPresentedFrames{ 0 }
         , _pHeldStepState{}
         , _pHeldStateStep{ nullptr }
         , _holdFrameCount{ 0 }
@@ -677,6 +680,11 @@ namespace sw
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration != nullptr )
                 limitSeconds += pRegistration->_wallSeconds;
+            // 사진 앞 렌더 정착(`stability="render"`, 기본)은 제 벽시계 상한을 든다 — 옛 사진 앞 정착 대기(`<WaitUntil … timeoutWallSeconds="30">`)가 더하던 몫이다.
+            // 종류 이름을 보는 자리는 여기 하나다(등록의 고정 몫 `withWallBudget` 이면 정착을 기다리지 않는 사진 수십 장이 프로세스 시한을 넘겼다).
+            const string* pStability = step.findAttribute( "stability" );
+            if ( string_view{ step._kind } == "Screenshot" && ( pStability == nullptr || *pStability == "render" ) )
+                limitSeconds += AutomationTimeLimits::kMaxRenderStableWallSeconds;
             const bool bDeclaresWait = step.findAttribute( "timeoutFrames" ) != nullptr || step.findAttribute( "timeoutSeconds" ) != nullptr ||
                                        step.findAttribute( "timeoutWallSeconds" ) != nullptr;
             const expected<AutomationStepArgsUtil::WaitTimeoutArgs> timeout =
@@ -1004,7 +1012,7 @@ namespace sw
 
     bool AutomationRunner::holdClockForBackgroundJobs( InputManager& input )
     {
-        const utf8* pHolder = AutomationStepRegistry::findClockHolder();
+        const utf8* pHolder = AutomationStepRegistry::findClockHolder()._pName;
         if ( pHolder == nullptr )
         {
             if ( _run._clockHoldFrameCount > 0 )
@@ -1061,9 +1069,19 @@ namespace sw
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "WaitUntil gave up after %# frame(s): %#", heldFrameCount, message );
-            _evaluator.addFailure( step, string( textBuilder.view() ), AutomationFailureKind::WaitTimeout );
+            const string* pWatch = step.findAttribute( "watch" );
+            giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), "WaitUntil " + ( pWatch != nullptr ? *pWatch : string() ) );
         }
         return false;
+    }
+
+    void AutomationRunner::giveUpWait( const AutomationStep& step, AutomationFailureKind kind, string_view reason, string_view repeatKey )
+    {
+        _evaluator.addFailure( step, reason, kind );
+        _run._holdFrameCount = 0;
+        _run.clearHeldStepState();
+        _run.clearScreenshotStability();
+        finish( AutomationRunResult::failed( kind, reason, step.describe() ).withRepeatKey( repeatKey ) );
     }
 
     uint32 AutomationRunner::convertSecondsToFrames( float32 seconds ) const

@@ -220,7 +220,11 @@ namespace sw
         uint32 _since{ 0 };
     };
 
-    /** @brief `Screenshot` 의 인자입니다. */
+    /**
+     * @brief `Screenshot` 의 인자입니다.
+     * @details `stability` 는 찍기 전에 무엇을 기다리는지다 — `render`(기본: 에셋 일 · 화면 덮개 + 렌더 정착 조건 `SW_AUTOMATION_STABILITY_CONDITION`), `assets`(에셋 일 · 화면 덮개만 —
+     *          카메라가 움직이는 장면), `none`(그 프레임 그대로 — 디더 등장의 중간 단계처럼 찍는 프레임이 정해져야 할 때). 값 검사는 단계의 검사 함수가 한다.
+     */
     REFLECT()
     struct SW_API AutomationScreenshotParams
     {
@@ -229,7 +233,7 @@ namespace sw
         PROPERTY( Required )
         string _file{};
         PROPERTY()
-        bool _bWaitForStability{ true }; ///< NOLINT(sw-bool-flag): 집합체다
+        string _stability{ "render" };
     };
 
     /** @brief `ExpectImage` 의 인자입니다. */

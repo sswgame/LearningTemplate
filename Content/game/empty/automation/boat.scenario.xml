@@ -70,7 +70,7 @@
 	<Expect watch="Boat.RollPeak" target="Upwind" atMost="1"/> <!-- 실측 0.76 rad — 뒤집힘(≈ 1.5)에 한참 못 미친다 -->
 	<Expect watch="Boat.PitchPeak" target="Upwind" atMost="0.7"/>
 	<Expect watch="Buoyancy.SubmergedPontoons" atLeast="1"/>
-	<Screenshot file="empty/boat_storm.ppm"/>
+	<Screenshot file="empty/boat_storm.ppm" stability="assets"/>
 	<ExpectImage file="empty/boat_storm.ppm" golden="boat_storm"/>
 
 	<!-- 내리기 -->

@@ -17,7 +17,7 @@ Scripts/dev/rename_identifier.py
 - `"scope": "cmake"` — CMake 파일(`*.cmake` · `CMakeLists.txt`)만 바꾼다. CMake 지역 변수처럼 C++ · 파이썬에 같은 철자가 있어도 다른 이름인 것.
   CMake 안의 낙타 이름 · 밑줄 이름은 모두 우리 식별자라 흔한 이름 검사 대신 그 꼴을 본다.
 - `"ban": false` — 옛 이름을 `_bannedNames` 에 올리지 않는다(지역 변수: 옛 철자가 다른 뜻으로 다시 쓰일 수 있다).
-- 리플렉션 프로퍼티(`PROPERTY(...)` 가 붙은 `_` 멤버)는 데이터에 직렬화 이름(`_bWaitForStability` → `waitForStability`,
+- 리플렉션 프로퍼티(`PROPERTY(...)` 가 붙은 `_` 멤버)는 데이터에 직렬화 이름(`_bRequiresForeground` → `requiresForeground`,
   `XMLFields::getAttributeName` 규칙)으로 적힌다 — 그 쌍도 속성 · 요소 · 따옴표 키 자리에서 함께 바꾼다. 같은 직렬화 이름을 다른 멤버도 쓰거나
   흔한 낱말이면 겹친 자리를 알리고 멈춘다. 그 데이터를 손으로 옮긴 뒤 `"serializedName": false` 로 멤버 이름만 바꾼다.
 - `--reapply` — 다른 갈래를 병합한 뒤 같은 쌍 표(`Config/Rules/Renames/`)를 다시 돌린다. 새 이름이 이미 있는 것이 정상이라 겹침 검사를 건너뛴다.

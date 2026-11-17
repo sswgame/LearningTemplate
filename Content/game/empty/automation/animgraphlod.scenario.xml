@@ -18,19 +18,15 @@
 	<AdvanceSimulation frames="30"/> <!-- 멈추기 전 애니메이션 시각(결정적 자세가 사진 내용) -->
 	<Variable name="gv_timeScale" value="0"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animgraphlod_judged.ppm"/>
 	<Variable name="gv_animationLODGrade" value="0"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animgraphlod_grade0.ppm"/>
 	<Variable name="gv_animationLODGrade" value="2"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animgraphlod_grade2.ppm"/>
 	<Variable name="gv_animationLODGrade" value="1"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="animgraphlod_grade1.ppm"/>
 	<Variable name="gv_animationLODGrade" value="-1"/>
 	<ExpectImagesDiffer first="animgraphlod_judged.ppm" second="animgraphlod_grade0.ppm" minDiffering="0" maxDiffering="0.002"/>

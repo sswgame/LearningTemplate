@@ -10,9 +10,9 @@
 <Scenario name="game.empty.terraindeform" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/terraindeform.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Expect watch="Surface.DeformHeld" equals="0"/>
-	<Screenshot file="terraindeform_off.ppm"/>
+	<Screenshot file="terraindeform_off.ppm" stability="assets"/>
 
 	<DevCommand line="scene.layer Stamp on"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
@@ -20,7 +20,6 @@
 	<Expect watch="Surface.DeformHeld" equals="1"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 1.5" atLeast="0.08"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="terraindeform_on.ppm"/>
 
 	<ExpectImagesDiffer first="terraindeform_off.ppm" second="terraindeform_on.ppm" region="0.25,0.35,0.75,1" minDiffering="0.02"/>

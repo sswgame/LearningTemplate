@@ -10,18 +10,17 @@
 -->
 <Scenario name="game.empty.interactionhighlight" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/interactionhighlight.scene.xml"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="base.ppm"/>
 
 	<!-- PickCube 앞 — 외곽선 -->
 	<DevCommand line="teleport Player -1.5 0.5 -0.2"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
-	<Screenshot file="outline.ppm" waitForStability="false"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="outline.ppm" stability="none"/>
 
 	<!-- HideCube 앞(벽 너머) — 감각 모드 -->
 	<DevCommand line="teleport Player 2 0.5 0.8"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
-	<Screenshot file="sense.ppm" waitForStability="false"/>
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="sense.ppm" stability="none"/>
 
 	<ExpectImage file="outline.ppm" golden="outline" region="0.26,0.38,0.42,0.64"/>
 	<ExpectImage file="outline.ppm" golden="outline_2" region="0.62,0.37,0.76,0.60"/>

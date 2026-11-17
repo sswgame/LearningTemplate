@@ -8,7 +8,6 @@
 -->
 <Scenario name="game.empty.sky" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/skyshowcase.scene.xml"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="sky.ppm"/>
 	<ExpectImage file="sky.ppm" golden="sky" region="0.0,0.0,1.0,1.0"/>
 	<ExpectImage file="sky.ppm" golden="sky_2" region="0.0,0.0,1.0,1.0"/>

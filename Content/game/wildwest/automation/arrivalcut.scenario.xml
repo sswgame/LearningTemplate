@@ -24,11 +24,11 @@
 	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="none" timeoutFrames="4"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="ArrivalCutA"/>
 	<Expect watch="Camera.FrameObject" is="ArrivalCutA"/> <!-- 아직 같은 컷이다(컷 길이 약 70 프레임) -->
-	<Screenshot file="wildwest/arrival_a.ppm" waitForStability="false"/> <!-- 골든 없이 두 컷이 다른지만 본다 — 컷(약 70 프레임) 안에서 정착을 기다리면 컷이 지나간다 -->
+	<Screenshot file="wildwest/arrival_a.ppm" stability="none"/> <!-- 골든 없이 두 컷이 다른지만 본다 — 컷(약 70 프레임) 안에서 정착을 기다리면 컷이 지나간다 -->
 	<WaitUntil watch="Camera.FrameObject" is="ArrivalCutB" timeoutSeconds="2"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="ArrivalCutB"/>
 	<Expect watch="Camera.FrameObject" is="ArrivalCutB"/> <!-- 아직 같은 컷이다(컷 길이 약 70 프레임) -->
-	<Screenshot file="wildwest/arrival_b.ppm" waitForStability="false"/>
+	<Screenshot file="wildwest/arrival_b.ppm" stability="none"/>
 
 	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutSeconds="3"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="none"/>

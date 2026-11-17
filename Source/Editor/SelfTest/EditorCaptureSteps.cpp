@@ -217,7 +217,7 @@ namespace sw::editor
                     return true;
                 }
                 // 마젠타(빠진 텍스처 · 디버그 색)는 어느 화면에서든 결함이라 문턱을 적지 않으면 0 이다 — 일부러 빠진 텍스처를 보이는 캡처만 문턱을 적어 푼다.
-                // 비율은 쓰기 워커가 내므로 판정은 `<Pass/>` 로 미룬다(`<ExpectImage>` 와 같다) - 끝 차단 조건(아래 `isWritingCaptureFiles`)이 그때까지 쓰기를 기다린다.
+                // 비율은 쓰기 워커가 내므로 판정은 `<Pass/>` 로 미룬다(`<ExpectImage>` 와 같다) - 끝 차단 조건(아래 `readCaptureFileWrites`)이 그때까지 쓰기를 기다린다.
                 float64 magentaLimit = 0.0;
                 string  magentaDescription;
                 if ( readLimit( step, "maxMagentaFraction", "0", magentaLimit, magentaDescription ) )
@@ -232,16 +232,18 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 캡처의 파일 쓰기(워커)가 남았으면 시나리오 끝을 미룬다 - 단계 사이에는 막지 않는다. 다음 단계가 파일을 지우거나 쓰기 실패 로그가 다음 시나리오에 떨어지지 않게 한다. */
-    static bool isWritingCaptureFiles()
+    static AutomationReadiness readCaptureFileWrites()
     {
         const EditorUICapture* pCapture = findSubsystem<EditorUICapture>(); // 선택: 편집기를 켜지 않은 실행에는 없다
-        return pCapture != nullptr && pCapture->isWritingFiles();
+        if ( pCapture == nullptr )
+            return AutomationReadiness::notApplicable();
+        return pCapture->isWritingFiles() ? AutomationReadiness::waiting( 0, "editor UI capture files are being written" ) : AutomationReadiness::ready();
     }
 } // namespace sw::editor
 
 namespace sw
 {
-    SW_AUTOMATION_FINISH_BLOCKER( editorUICaptureWrites, "EditorUICaptureWrites", &editor::isWritingCaptureFiles );
+    SW_AUTOMATION_FINISH_BLOCKER( editorUICaptureWrites, "EditorUICaptureWrites", &editor::readCaptureFileWrites );
 } // namespace sw
 
 namespace sw::editor

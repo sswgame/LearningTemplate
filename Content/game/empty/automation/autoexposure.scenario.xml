@@ -18,16 +18,16 @@
 	<!-- 첫 장(밝아진 직후 하얗게 날아간 그림)은 배율 1 로 찍는다 — 바뀐 뒤 몇 프레임의 게임 시간이 예전과 같아야 한다. -->
 	<DevCommand line="scene.layer Bright on"/>
 	<Wait frames="2"/>
-	<Screenshot file="exposure_first.ppm"/>
+	<Screenshot file="exposure_first.ppm" stability="assets"/>
 	<!-- 사진 패킷의 틱은 아래 배율 바꾸기(프레임 끝 단계)보다 먼저 돈다 — 첫 장까지 배율 1 이다. -->
 	<!-- 밝은 곳에 다 적응할 때까지도 배율 4 — 되읽은 차가 밝아진 것을 본 뒤(몇 프레임 늦다) 다시 줄어들기를 기다린다. 다 적응한 뒤라 둘째 · 셋째 장(배율 1)은 멈춘 그림이다. -->
 	<Variable name="gv_timeScale" value="4"/>
 	<WaitUntil watch="Render.ExposureAdaptation" atLeast="0.1" timeoutFrames="30"/>
 	<WaitUntil watch="Render.ExposureAdaptation" atMost="0.01" timeoutFrames="200"/>
 	<Variable name="gv_timeScale" value="1"/>
-	<Screenshot file="exposure_adapted.ppm"/>
+	<Screenshot file="exposure_adapted.ppm" stability="assets"/>
 	<Wait frames="30"/>
-	<Screenshot file="exposure_settled.ppm"/>
+	<Screenshot file="exposure_settled.ppm" stability="assets"/>
 	<ExpectImagesDiffer first="exposure_first.ppm" second="exposure_adapted.ppm" region="0.2,0.2,0.8,0.8" minDiffering="0.5"/>
 	<ExpectImagesDiffer first="exposure_adapted.ppm" second="exposure_settled.ppm" region="0.2,0.2,0.8,0.8" minDiffering="0" maxDiffering="0.01"/>
 	<Pass/>

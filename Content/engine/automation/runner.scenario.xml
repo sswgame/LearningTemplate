@@ -9,7 +9,6 @@
 	<Tap slot="Key.ScrollLock" hold="2"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Scene.Transitioning" equals="0"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="frame30.ppm"/>
 	<!-- 화면에 무언가 나갔다(완전히 검지 않다) — 첫 프레임에 그릴 것이 없는 백엔드 결함의 그물 -->
 	<ExpectImage file="frame30.ppm" golden="frame30"/>

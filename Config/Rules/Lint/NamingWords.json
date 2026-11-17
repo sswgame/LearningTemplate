@@ -96,6 +96,13 @@
     "should"
   ],
   "_bannedNames": {
+    "isStableIgnoringMotion": "RenderStabilityUtil::evaluateTemporalAccumulation · evaluateAutoExposure — 사진 앞 정착은 세 값 정착 조건(TAA 는 카메라 기준)이고 합성 0/1 판정은 없다(ST-3, 2026-11-18)",
+    "RenderStabilityThreshold": "없음 — 정착 조건의 문턱은 조건을 등록한 기능이 Config/Dev/ScenarioRun.json 의 _conditions 에서 읽는다(ST-3, 2026-11-18)",
+    "RenderStabilityConfig": "없음 — 배포 엔진 설정(EngineConfig)에 테스트 전용 문턱을 두지 않는다. Config/Dev/ScenarioRun.json 의 _conditions(ST-3, 2026-11-18)",
+    "_renderStability": "없음 — Config/Dev/ScenarioRun.json 의 _conditions(ST-3, 2026-11-18)",
+    "_bWaitForStability": "AutomationScreenshotParams::_stability(render · assets · none)(ST-3, 2026-11-18)",
+    "SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED": "SW_AUTOMATION_FINISH_BLOCKER — 조건이 AutomationReadiness::waiting 으로 무엇 · 진척을 함께 낸다(ST-3, 2026-11-18)",
+    "AutomationBlockFunction": "AutomationReadinessFunction — 조건은 세 값(준비됨 · 해당 없음 · 진행 중)을 낸다(ST-3, 2026-11-18)",
     "_finishReason": "AutomationRunner::_runResult(AutomationRunResult — 결과 · 실패 종류 · 까닭 한 값) — 결과와 까닭이 따로 든 두 변수가 `Failed X at frame 5: <Pass/>` 를 냈다(ST-1, 2026-11-18)",
     "getFinishReason": "AutomationRunner::getRunResult — 까닭은 판정 값의 getReason · describe(ST-1, 2026-11-18)",
     "kFenceFileStem": "kFenceFileName — 울타리 표지 이름은 하나다(작업 도메인 폴더가 프로세스마다 따로라 pid 꼬리가 없다)(2026-11-18, ST-5)",

@@ -12,14 +12,13 @@
 	<!-- 서 있다: 리그가 묶였고(값이 들어간다) 배율은 1 이다. -->
 	<WaitUntil watch="Shooter3D.StrideAppliedCount" atLeast="10" timeoutFrames="120"/>
 	<Expect watch="Shooter3D.StrideScale" near="1" tolerance="0.001"/>
-	<WaitUntil watch="Render.StableIgnoringMotion" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) — 캐릭터가 늘 움직여 물체 움직임은 보지 않는다 -->
 	<Screenshot file="standing.ppm"/>
 	<!-- 뒷걸음 + 달리기 키: 재생 속도 범위에 막힌 몫이 보폭으로 간다. -->
 	<Press slot="Key.S"/>
 	<Press slot="Key.LeftShift"/>
 	<WaitUntil watch="Shooter3D.StrideAppliedCount" atLeast="100" timeoutFrames="120"/> <!-- 뒷걸음 달리기의 보폭이 걸렸다 -->
 	<WaitUntil watch="Shooter3D.StrideScale" atLeast="0.1" timeoutFrames="60"/>
-	<Screenshot file="backward_run.ppm"/>
+	<Screenshot file="backward_run.ppm" stability="assets"/>
 	<Release slot="Key.S"/>
 	<Release slot="Key.LeftShift"/>
 	<!-- 멈춘 뒤 다시 1 로 돌아온다. -->

@@ -10,12 +10,12 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/realtimegi_extras_off.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Render.GIAccumulatedFrames" atLeast="120" timeoutFrames="300"/> <!-- 프로브 GI 가 30 번(주기 4, 섞기 0.25 — 남은 몫 0.75^30) 쌓였다 -->
-	<Screenshot file="realtimegi_extras_off.ppm"/>
+	<Screenshot file="realtimegi_extras_off.ppm" stability="assets"/>
 	<LoadScene path="game/empty/maps/realtimegi_extras.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Render.GIAccumulatedFrames" atLeast="120" timeoutFrames="300"/> <!-- 프로브 GI 가 30 번(주기 4, 섞기 0.25 — 남은 몫 0.75^30) 쌓였다 -->
-	<Screenshot file="realtimegi_extras_on.ppm"/>
+	<Screenshot file="realtimegi_extras_on.ppm" stability="assets"/>
 	<!-- 발광이 물들이는 자리는 발광 큐브 둘레 바닥(화면 아래 y 0.6~0.95)이다 — 위쪽 띠(0.3~0.7)는 그 끝만 걸쳐 0.5% 였다. -->
 	<ExpectImagesDiffer first="realtimegi_extras_off.ppm" second="realtimegi_extras_on.ppm" region="0,0.6,1,0.95" minDiffering="0.05"/>
 	<ExpectImage file="realtimegi_extras_on.ppm" golden="realtimegi_extras"/>

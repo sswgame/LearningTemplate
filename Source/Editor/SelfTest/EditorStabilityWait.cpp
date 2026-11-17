@@ -34,13 +34,13 @@ namespace sw::editor
                                    EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isLayoutStableAfter( _waitSerial );
         const bool                               bSceneStable  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
         const bool                               bAssetsStable = CaptureReadiness::countPendingJobs( pActiveManager ) == 0;
-        const utf8* const                        pPendingJob   = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
+        const AutomationWaitingCondition         pendingJob    = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
         StringBuilder<constant::buffer::kMax256> waitingForBuilder;
         waitingForBuilder.appendFormat( "the editor to settle (screen %#, scene %#, assets %#, work %#)",
                                         bScreenStable ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
-                                        bSceneStable ? "settled" : "transitioning", bAssetsStable ? "settled" : "pending", pPendingJob != nullptr ? pPendingJob : "none" );
+                                        bSceneStable ? "settled" : "transitioning", bAssetsStable ? "settled" : "pending", pendingJob.isWaiting() ? pendingJob._pName : "none" );
         _waitingFor = string( waitingForBuilder.view() );
-        return _stability.advance( bScreenStable, bSceneStable && bAssetsStable && pPendingJob == nullptr );
+        return _stability.advance( bScreenStable, bSceneStable && bAssetsStable && pendingJob.isWaiting() == false );
     }
 
     string EditorStabilityWait::describeOscillation() const

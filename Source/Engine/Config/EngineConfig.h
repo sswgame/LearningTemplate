@@ -144,26 +144,6 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 사진 앞 "렌더가 자리를 잡았다"(`Render.Stable`)의 문턱입니다 — 시간 누적 렌더와 노출 적응이 수렴했다고 볼 값(`RenderStability.h`).
-     * @details 자동화 시나리오가 스크린샷 앞에서 고정 프레임 대기 대신 이 판정을 기다린다(언리얼 자동화 스크린샷의 warm-up · 유니티 Graphics Test Framework 의 `WaitFrames` 자리를 조건으로).
-     */
-    REFLECT()
-    struct SW_API RenderStabilityConfig
-    {
-        REFLECT_BODY();
-
-        /** @brief TAA 기록이 쌓인 정지 프레임(카메라 · 물체가 서 있던 이어진 프레임)이 이만큼 이어져야 한다. 기록 섞는 비율의 역수 몇 배다. */
-        PROPERTY( Min = 1 )
-        uint32 _minStillFrames{};
-        /** @brief 노출 적응의 남은 오차 상한(EV)이 이 아래여야 한다. */
-        PROPERTY( Min = 0.0 )
-        float32 _maxExposureErrorEv{};
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @struct TextureStreamingConfig
      * @brief 텍스처 밉 스트리밍의 정책 값입니다 — 렌더 스레드의 프레임당 제출 수, 위쪽 밉 풀 예산, 올리고 내리는 판단(`TextureStreamingPolicy`)의 값이 한 곳에 있다.
      * @details 언리얼 `r.Streaming.*`(PoolSize · MaxNumTexturesToStreamPerFrame) · 유니티 `QualitySettings.streamingMipmaps*` 자리다.
@@ -395,9 +375,6 @@ namespace sw
 
         PROPERTY()
         CharacterMeshCacheConfig _characterMeshCache{}; ///< 캐릭터 외형이 구운 · 합친 메시 캐시의 예산(게임 모듈이 보는 조각)
-
-        PROPERTY()
-        RenderStabilityConfig _renderStability{}; ///< 사진 앞 정착 판정(`Render.Stable`)의 문턱
 
         PROPERTY()
         RenderConfig _render{}; ///< 렌더러 정책 값(PSO 예산 · …)

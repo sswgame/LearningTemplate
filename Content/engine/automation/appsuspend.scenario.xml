@@ -6,7 +6,7 @@
   실행: App -scenario=engine/automation/appsuspend.scenario.xml -unattended
 -->
 <Scenario name="engine.appsuspend" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 렌더가 선 뒤에 멈춘다 -->
+	<WaitRenderStable/> <!-- 렌더가 선 뒤에 멈춘다 -->
 	<Expect watch="Window.RenderPausedTicks" equals="0"/>
 	<SimulateAppSuspend ticks="5"/>
 	<WaitUntil watch="Window.RenderPausedTicks" equals="5" timeoutFrames="30"/> <!-- 돌아온 뒤 프레임이 이어진다 -->

@@ -1,0 +1,12 @@
+{
+    "_stallFrames": 600,
+    "_repeatedFailureLimit": 3,
+    "_conditions": {
+        "RenderTemporalAccumulation": {
+            "_minStillFrames": 16
+        },
+        "RenderAutoExposure": {
+            "_maxExposureErrorEv": 0.05
+        }
+    }
+}

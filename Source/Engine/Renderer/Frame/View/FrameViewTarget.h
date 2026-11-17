@@ -115,7 +115,7 @@ namespace sw
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
         float4  _autoExposureParams{};
         float32 _autoExposureClock{ 0.0f };    ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)
-        float32 _exposureErrorEv{ 0.0f };      ///< 노출 적응의 남은 오차 상한(EV, `RenderStabilityUtil::advanceExposureError`) — 사진 앞 정착 판정(`Render.Stable`)
+        float32 _exposureErrorEv{ 0.0f };      ///< 노출 적응의 남은 오차 상한(EV, `RenderStabilityUtil::advanceExposureError`) — 사진 앞 정착 조건(`RenderAutoExposure`)
         uint32  _stillFrameCount{ 0 };         ///< TAA 기록을 버리지 않고 카메라 · 물체가 서 있던 이어진 프레임 수(`RenderStabilityUtil::advanceStillFrames`)
         uint32  _cameraStillFrameCount{ 0 };   ///< TAA 기록을 버리지 않고 카메라만 서 있던 이어진 프레임 수 — 물체 움직임은 보지 않는다(끝없이 움직이는 캐릭터 장면의 정착)
         float32 _exposureAdaptationEv{ 0.0f }; ///< 되읽은 지금 EV 와 목표 EV 의 차(절댓값) — 감시 값 `Render.ExposureAdaptation`(`FrameAutoExposure::readBackAdaptation`)

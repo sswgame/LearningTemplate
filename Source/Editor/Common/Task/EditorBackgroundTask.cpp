@@ -84,28 +84,21 @@ namespace sw::editor
      * @details 시나리오의 정지 판정(`EditorStabilityWait`)과 `<Pass/>` 가 이 잡을 기다린다 — 패널이 "Loading..." 을 그리는 동안 찍은 캡처 · 본 값이 정지 상태가 아니었다(데이터 표 창).
      *          언리얼 Automation 이 캡처 앞에서 비동기 일(`FlushAsyncLoading` · 셰이더 컴파일)을 비우는 것과 같은 자리다. 잡은 한 곳(`submitEditorBackgroundJob`)에서 내므로 하나도 빠지지 않는다.
      */
-    static bool isRunningEditorBackgroundJobs()
+    static AutomationReadiness readEditorBackgroundJobs()
     {
         EditorStateStore* pStore       = editor::findSubsystem<EditorStateStore>(); // 선택: 편집기를 켜지 않은 실행에는 없다
         TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
-        return pStore != nullptr && pTaskManager != nullptr && pTaskManager->isStageComplete( pStore->get<EditorBackgroundJob>()._stage ) == false;
-    }
-
-    /** @brief 남은 잡 수와 그중 하나의 이름 — 정지 대기가 오래 걸릴 때 무엇이 끝나지 않는지 로그에 남긴다(`AutomationStepRegistry::describeActiveBlockers`). */
-    static string describeEditorBackgroundJobs()
-    {
-        EditorStateStore* pStore       = editor::findSubsystem<EditorStateStore>();
-        TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
         if ( pStore == nullptr || pTaskManager == nullptr )
-            return "no editor";
-        const TaskStageHandle&                   stage = pStore->get<EditorBackgroundJob>()._stage;
-        StringBuilder<constant::buffer::kMax256> resultBuilder;
-        resultBuilder.appendFormat( "%# job(s) left, one is '%#'", pTaskManager->getStagePendingCount( stage ), pTaskManager->describeStageFirstUnfinished( stage ).c_str() );
-        return string( resultBuilder.view() );
+            return AutomationReadiness::notApplicable();
+        const TaskStageHandle& stage = pStore->get<EditorBackgroundJob>()._stage;
+        if ( pTaskManager->isStageComplete( stage ) )
+            return AutomationReadiness::ready();
+        // 남은 잡 수가 진척이다(오래 기다리면 `AutomationStepRegistry::describeActiveBlockers` 가 그 수를 찍는다).
+        return AutomationReadiness::waiting( static_cast<uint64>( pTaskManager->getStagePendingCount( stage ) ), "editor background jobs (file scan, localization load, reference index) are running" );
     }
 } // namespace sw::editor
 
 namespace sw
 {
-    SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED( editorBackgroundJobs, "EditorBackgroundJobs", &editor::isRunningEditorBackgroundJobs, &editor::describeEditorBackgroundJobs );
+    SW_AUTOMATION_FINISH_BLOCKER( editorBackgroundJobs, "EditorBackgroundJobs", &editor::readEditorBackgroundJobs );
 } // namespace sw

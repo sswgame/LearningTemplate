@@ -9,7 +9,7 @@
 	<!-- 그림 판정의 크기는 UI 배율에 달렸다 — 모니터 DPI 와 상관없이 같게 둔다 -->
 	<Variable name="gv_editorUiScale" value="1.5"/>
 	<EditorWaitStable/>
-	<Screenshot file="stopped.ppm"/>
+	<Screenshot file="stopped.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="stopped.ppm" golden="stopped" region="0.3,0.3,0.9,0.9"/>
 	<EditorWaitStable/>

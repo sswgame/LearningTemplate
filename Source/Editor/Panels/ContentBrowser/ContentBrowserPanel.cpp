@@ -123,10 +123,12 @@ namespace sw::editor
              * @details 스캔은 수 초(Debug 는 수십 초)가 걸린다. 시계가 그동안 가면 고정 프레임의 단언과 이름 바꾸기가 스캔 전의 색인(시나리오의 `<Scratch>` 복사 전 트리)을 쓴다.
              *          언리얼 자동화가 에셋 레지스트리의 스캔이 끝나기를 기다리는 것과 같다.
              */
-            static bool isWaitingForReferenceIndex()
+            static AutomationReadiness readReferenceIndexReadiness()
             {
                 const ContentBrowserPanel* pPanel = findPanel();
-                return pPanel != nullptr && pPanel->isWaitingForReferenceIndex();
+                if ( pPanel == nullptr )
+                    return AutomationReadiness::notApplicable();
+                return pPanel->isWaitingForReferenceIndex() ? AutomationReadiness::waiting( 0, "the reference index has not caught up with the last Content/ change" ) : AutomationReadiness::ready();
             }
 
             /** @brief `content.open <리소스 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
@@ -326,7 +328,7 @@ namespace sw::editor
     SW_AUTOMATION_WALL_WATCH( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
                               "1 when the editor reference index reflects the last Content/ change the editor saw (built, no scan in flight)",
                               &ContentBrowserPanelInternal::readReferenceIndexReady );
-    SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::isWaitingForReferenceIndex );
+    SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::readReferenceIndexReadiness );
     SW_AUTOMATION_WATCH( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
                          &ContentBrowserPanelInternal::readReferenceResultCount );
     SW_AUTOMATION_WATCH( editorThumbnailCacheCount, "Editor.ThumbnailCacheCount", "Texture thumbnails the Content Browser holds as ImGui textures",

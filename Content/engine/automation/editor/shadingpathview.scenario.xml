@@ -17,17 +17,17 @@
 	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Expect watch="Editor.SceneViewMode" equals="0"/>
-	<Screenshot file="shadingpath_lit.ppm"/>
+	<Screenshot file="shadingpath_lit.ppm" stability="assets"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.unlit"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="1" timeoutFrames="90"/>
-	<Screenshot file="shadingpath_unlit.ppm"/>
+	<Screenshot file="shadingpath_unlit.ppm" stability="assets"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<EditorWaitStable/>
 	<EditorClick mark="viewport.viewMode.shadingpath"/>
 	<WaitUntil watch="Editor.SceneViewMode" equals="15" timeoutFrames="90"/>
-	<Screenshot file="shadingpath.ppm"/>
+	<Screenshot file="shadingpath.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImagesDiffer first="shadingpath_lit.ppm" second="shadingpath.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.05"/>
 	<ExpectImagesDiffer first="shadingpath_unlit.ppm" second="shadingpath.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.05"/>

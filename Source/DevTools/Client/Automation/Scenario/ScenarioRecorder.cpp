@@ -524,7 +524,7 @@ namespace sw
         writer.attribute( "startAfter", settings._bStartWhenScenePlaying ? "ScenePlaying" : "Immediately" );
         writer.attribute( "input", "exclusive" );
         // 단계는 적은 순서대로 돈다. 녹화한 프레임 사이의 간격은 시간 자체가 재생 내용이라 `<AdvanceSimulation frames>` 로 옮긴다 — 루트에 늘 fixedDelta 를 쓰므로
-        // 그리지 않고 흘려도 결과가 같다(고정 대기 `<Wait>` 는 쓰지 않는다). 녹화기는 사진을 쓰지 않는다 — 손으로 사진을 더하면 그 앞은 `Render.Stable` 조건 대기다.
+        // 그리지 않고 흘려도 결과가 같다(고정 대기 `<Wait>` 는 쓰지 않는다). 녹화기는 사진을 쓰지 않는다 — 손으로 사진을 더하면 사진 단계가 렌더 정착을 기다린다(`<Screenshot stability>`).
         uint32 frameCursor    = 0;
         auto   waitUntilFrame = [&writer, &frameCursor]( uint32 frame )
         {

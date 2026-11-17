@@ -14,12 +14,14 @@
 #include "DevTools/Client/Automation/Runner/AutomationEvaluator.h"
 #include "DevTools/Client/Automation/Runner/AutomationHangWatch.h"
 #include "DevTools/Client/Automation/Runner/AutomationReportWriter.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunPolicy.h"
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
 #include "DevTools/Client/Automation/Scenario/AutomationFrameStats.h"
 #include "DevTools/Client/Automation/Scenario/AutomationTimeline.h"
 #include "DevTools/DevToolsAPI.h"
 
 #include "Engine/Automation/AutomationResult.h"
+#include "Engine/Automation/Scenario/AutomationReadiness.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Content/AssetID.h"
@@ -38,38 +40,52 @@ namespace sw
     class SW_DEVTOOLS_API AutomationStepTimeline
     {
     public:
-        vector<AbsolutePath>             _listPendingScreenshot;         ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
-        string                           _currentStepKind;               ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
-        string                           _clockHolderName;               ///< 시계를 붙잡은 조건의 이름(로그)
-        string                           _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
-        float64                          _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
-        int32                            _expectedExitCode;              ///< `ExpectExitWithin exitCode` — 엔진이 끝낼 때 요청했어야 할 종료 코드입니다(`QuitRequest`, 창 닫기는 0)
-        float64                          _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
-        const BusyClock*                 _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getCompileBusyClock` — 셰이더 로드 · PSO 생성) — 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
-        int64                            _compileBusyAtStartNanoseconds; ///< 시작 때 `_pCompileBusy` 의 값
-        float64                          _wallEndSeconds;                ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
-        float64                          _lastFrameEndSeconds;           ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
-        float64                          _clockHoldStartSeconds;         ///< 시계 잡기가 시작된 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`)
-        size_t                           _nextStepIndex;                 ///< 다음에 돌 단계의 순번
-        uint32                           _frameIndex;                    ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점과 시한(`timeoutFrames`)의 축. 단계가 시계를 붙잡는 동안은 서 있다
-        uint32                           _currentStepNumber;             ///< `_currentStepKind` 의 파일 순번
-        uint32                           _waitFrameCount;                ///< 시작 조건을 기다린 프레임 수입니다.
-        uint32                           _screenshotRequestedCount;
-        uint32                           _screenshotCompletedCount;
-        uint32                           _advanceSimulationFrameCount; ///< `<AdvanceSimulation>` 으로 맡긴 프레임 수(`AutomationRunner::advanceSimulation`)
-        uint8                            _bFinishWaiting : 1;          ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
-        uint8                            _bClockHeld     : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
-        [[maybe_unused]] uint8           _reserved       : 7;
-        uint32                           _assetStableFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
-        unique_ptr<IAutomationStepState> _pHeldStepState;        ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
-        const AutomationStep*            _pHeldStateStep;        ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
-        uint32                           _holdFrameCount;        ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
-        float64                          _holdStartSeconds;      ///< 지금 단계가 붙잡기 시작한 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`, `<WaitUntil timeoutWallSeconds>` 의 시한 기준)
-        uint32                           _clockHoldFrameCount;   ///< 시계 잡기 조건이 이어서 붙잡은 프레임
-        uint32                           _seenFrameCount;        ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
-        float64                          _waitReportedSeconds;   ///< 지금 대기를 마지막으로 로그에 찍은 단조 시계 초(아직 찍지 않았으면 0 — `reportOngoingWait`)
+        vector<AbsolutePath>   _listPendingScreenshot;         ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        string                 _currentStepKind;               ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
+        string                 _clockHolderName;               ///< 시계를 붙잡은 조건의 이름(로그)
+        string                 _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
+        float64                _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        int32                  _expectedExitCode;              ///< `ExpectExitWithin exitCode` — 엔진이 끝낼 때 요청했어야 할 종료 코드입니다(`QuitRequest`, 창 닫기는 0)
+        float64                _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
+        const BusyClock*       _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getCompileBusyClock` — 셰이더 로드 · PSO 생성) — 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
+        int64                  _compileBusyAtStartNanoseconds; ///< 시작 때 `_pCompileBusy` 의 값
+        float64                _wallEndSeconds;                ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
+        float64                _lastFrameEndSeconds;           ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
+        float64                _clockHoldStartSeconds;         ///< 시계 잡기가 시작된 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`)
+        size_t                 _nextStepIndex;                 ///< 다음에 돌 단계의 순번
+        uint32                 _frameIndex;                    ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점과 시한(`timeoutFrames`)의 축. 단계가 시계를 붙잡는 동안은 서 있다
+        uint32                 _currentStepNumber;             ///< `_currentStepKind` 의 파일 순번
+        uint32                 _waitFrameCount;                ///< 시작 조건을 기다린 프레임 수입니다.
+        uint32                 _screenshotRequestedCount;
+        uint32                 _screenshotCompletedCount;
+        uint32                 _advanceSimulationFrameCount; ///< `<AdvanceSimulation>` 으로 맡긴 프레임 수(`AutomationRunner::advanceSimulation`)
+        uint8                  _bFinishWaiting : 1;          ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
+        uint8                  _bClockHeld     : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        [[maybe_unused]] uint8 _reserved       : 7;
+        uint32                 _assetStableFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
+        /// `<Screenshot stability="render">` 의 렌더 정착(에셋 일 + 정착 조건)이 선 때의 `_holdFrameCount`(서지 않았으면 `kNotStable`) — 그다음 프레임부터 화면 덮개 · 뒤 프레임을 센다
+        uint32                           _stableHoldFrame;
+        AutomationStallClock             _stabilityStallClock;      ///< 렌더 정착 조건의 진척이 그대로인 그린 프레임 수(`ScenarioRun.json` 의 `_stallFrames` 와 견준다)
+        uint64                           _stabilityPresentedFrames; ///< 정지 시한을 마지막으로 센 때의 그린 프레임 수(`RenderPresentCounter`) — 그리지 않은 프레임은 세지 않는다
+        unique_ptr<IAutomationStepState> _pHeldStepState;           ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
+        const AutomationStep*            _pHeldStateStep;           ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
+        uint32                           _holdFrameCount;           ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
+        float64                          _holdStartSeconds;         ///< 지금 단계가 붙잡기 시작한 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`, `<WaitUntil timeoutWallSeconds>` 의 시한 기준)
+        uint32                           _clockHoldFrameCount;      ///< 시계 잡기 조건이 이어서 붙잡은 프레임
+        uint32                           _seenFrameCount;           ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
+        float64                          _waitReportedSeconds;      ///< 지금 대기를 마지막으로 로그에 찍은 단조 시계 초(아직 찍지 않았으면 0 — `reportOngoingWait`)
+        /** @brief `_stableHoldFrame` 의 "아직 서지 않았다" 입니다. */
+        static constexpr uint32 kNotStable = 0xFFFFFFFFu;
+
         AutomationStepTimeline();
 
+        /** @brief 사진 정착의 단계 상태(`_assetStableFrameCount` · `_stableHoldFrame` · 정지 시계)를 지웁니다 — 사진 단계가 놓이거나 포기했다. */
+        void clearScreenshotStability()
+        {
+            _assetStableFrameCount = 0;
+            _stableHoldFrame       = kNotStable;
+            _stabilityStallClock.reset();
+        }
         /** @brief 스크린샷 경로를 대기열에 더합니다(`<Screenshot>`). 렌더 패킷이 한 장씩 꺼내 간다. */
         void requestScreenshot( const AbsolutePath& path );
         /** @brief 붙잡은 단계가 맡긴 상태를 지웁니다(그 단계가 놓였거나 실행이 끝났다). */
@@ -267,7 +283,7 @@ namespace sw
         [[nodiscard]] expected<void, string> prepare();
         /**
          * @brief `WaitUntil` 이 아직 시나리오 시계를 붙잡아야 하면 true 입니다(이 프레임은 세지 않고 뒤의 입력 이벤트를 한 프레임 밉니다).
-         * @details 조건이 참이거나 `timeoutFrames` 를 넘으면(실패로 적는다) false 이고, 그 단계는 끝난다.
+         * @details 조건이 참이면 false 이고 그 단계는 끝난다. 시한을 넘으면 시나리오를 `WaitTimeout` 으로 끝낸다(`giveUpWait` — 포기는 끝이다).
          */
         [[nodiscard]] bool shouldHoldForCondition( const AutomationStep& step, InputManager& input );
         /**
@@ -283,6 +299,12 @@ namespace sw
         [[nodiscard]] bool holdClockForScreenshot( InputManager& input );
         /** @brief 시작 씬(`requireStartScene`)이 아직 활성이 아니면 true 입니다 — 로드를 요청하고 기다린다. 못 열면 결과를 정하고 true 입니다. */
         [[nodiscard]] bool holdForStartScene();
+        /**
+         * @brief 대기(`<WaitUntil>` · 사진 정착 · `<WaitRenderStable/>`)가 시한 · 정지 시한에 걸렸다 — 실패를 적고 시나리오를 끝냅니다(포기는 그 시나리오의 끝이다).
+         * @details 예전에는 실패를 적고 다음 단계로 가서 뒤의 대기가 모두 다시 시한까지 기다렸다(DesignBacklog 실패 1 — 사진마다 수천 프레임).
+         * @param repeatKey 반복 실패 차단의 열쇠(`<단계 종류> <감시 값 · 조건 이름>` — `AutomationRunResult::withRepeatKey`)
+         */
+        void giveUpWait( const AutomationStep& step, AutomationFailureKind kind, string_view reason, string_view repeatKey );
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 엽니다(창 길이는 벽시계 상한 `computeWallLimitSeconds` 에 든다). 아니면 아무것도 하지 않습니다. */
@@ -358,6 +380,8 @@ namespace sw
         TaskFuture<Scene*>            _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         optional<AutomationRunResult> _runResult;              ///< 끝난 판정(도는 중이면 없다 — `isActive`). 결과 · 종류 · 까닭이 한 값이라 따로 놀지 않는다
         AutomationFrameStats          _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
+        /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착을 처음 기다릴 때 읽는다(`holdForRenderStable`) — 정착을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
+        optional<AutomationRunPolicy> _runPolicy{};
         /** @brief 이 실행 안에서 이름 붙여 기억한 글(`storeText`) — 한 시나리오에 몇 개뿐이라 선형으로 찾는다. */
         struct StoredText
         {

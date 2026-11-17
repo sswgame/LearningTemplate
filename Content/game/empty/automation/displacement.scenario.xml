@@ -13,13 +13,11 @@
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<SkipUnless watch="RHI.MaterialTessellation" reason="this backend declares no material tessellation - displaced materials are not drawn (FramePSOManager.DisplacementUnsupported)"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="displacement_off.ppm"/>
 	<LoadScene path="game/empty/maps/displacement.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="displacement_on.ppm"/>
 	<ExpectLog id="FramePSOManager.DisplacementUnsupported" count="0"/>
 	<ExpectImagesDiffer first="displacement_off.ppm" second="displacement_on.ppm" region="0,0.25,1,0.5" minDiffering="0.02"/>
