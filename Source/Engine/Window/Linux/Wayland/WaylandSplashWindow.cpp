@@ -62,7 +62,8 @@ namespace sw
             static constexpr int32  kBarBottomUp    = 30; ///< 창 아래에서 막대 위쪽까지
             static constexpr int32  kBarHeight      = 4;
 
-            static constexpr const utf8* kAppID = "sw-engine-splash";
+            static constexpr const utf8* kAppID          = "sw-engine-splash";
+            static constexpr int         kDispatchFailed = -1; ///< `wl_display_dispatch_pending` 의 실패(연결이 끊겼다)
 
             static void onRegistryGlobal( void* pData, wl_registry* pRegistry, uint32 name, const utf8* pInterface, uint32 version )
             {
@@ -122,6 +123,7 @@ namespace sw
     WaylandSplashWindow::WaylandSplashWindow()
         : ISplashWindow{}
         , _pState{ make_unique<State>() }
+        , _splashThread{}
     {
     }
 
@@ -132,19 +134,33 @@ namespace sw
 
     bool WaylandSplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-        using Internal = WaylandSplashWindowInternal;
-        State& state   = *_pState;
-
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
         createScaledImage(); // 이미지는 부른 쪽이 먼저 읽어 두었다(`SplashWindow::initialize`) — 없으면 글과 진행 막대만 그린다
 
+        const string                  title = StringUtil::isNullOrEmpty( pTitle ) ? string( "SW Engine" ) : string( pTitle );
+        LinuxSplashThread::PaintState initialState;
+        initialState._status   = _status;
+        initialState._progress = _progress;
+        const bool bOpened     = _splashThread.start( [this, title]( LinuxSplashThread& splashThread )
+        { runEventLoop( splashThread, title ); }, initialState );
+        _bOpen                 = bOpened ? SW_TRUE : SW_FALSE;
+        return bOpened;
+    }
+
+    void WaylandSplashWindow::runEventLoop( LinuxSplashThread& splashThread, const string& title )
+    {
+        using Internal = WaylandSplashWindowInternal;
+        State& state   = *_pState;
+
+        // 연결은 이 스레드에서 열고 닫는다 — 모든 객체가 기본 큐 하나에서 이 스레드에만 dispatch 된다(libwayland 는 한 연결을 여러 스레드가 쓸 수 있지만
+        // 그때는 스레드마다 큐와 `wl_display_prepare_read` 를 지켜야 한다 — https://wayland.freedesktop.org/docs/html/apb.html#Client-classwl__display).
         state._pDisplay = wl_display_connect( nullptr );
         if ( state._pDisplay == nullptr )
         {
-            _bOpen = SW_FALSE;
-            return false;
+            splashThread.markFailed();
+            return;
         }
         state._pRegistry = wl_display_get_registry( state._pDisplay );
         wl_registry_add_listener( state._pRegistry, &s_registryListener, &state );
@@ -154,8 +170,9 @@ namespace sw
         if ( bMissingGlobals )
         {
             SW_LOG_ERROR_ID( "WaylandSplash.WaylandSplashCompositorLacks", "Wayland splash: the compositor lacks wl_compositor, wl_shm or xdg_wm_base - no splash window" );
-            dismiss();
-            return false;
+            releaseConnection();
+            splashThread.markFailed();
+            return;
         }
         WaylandShell::answerPings( state._pWmBase );
 
@@ -164,7 +181,7 @@ namespace sw
         state._pToplevel   = xdg_surface_get_toplevel( state._pXdgSurface );
         WaylandShell::acknowledgeConfigures( state._pXdgSurface, &state._bConfigured );
         xdg_toplevel_add_listener( state._pToplevel, &s_toplevelListener, &state );
-        xdg_toplevel_set_title( state._pToplevel, StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle );
+        xdg_toplevel_set_title( state._pToplevel, title.c_str() );
         xdg_toplevel_set_app_id( state._pToplevel, Internal::kAppID );
         // 최소 · 최대 크기를 같게 두어 창 크기를 고정한다(Wayland 클라이언트는 자리를 정하지 못한다 — 컴포지터가 가운데쯤에 놓는다).
         xdg_toplevel_set_min_size( state._pToplevel, static_cast<int32>( _width ), static_cast<int32>( _height ) );
@@ -174,41 +191,67 @@ namespace sw
         if ( WaylandShell::waitForFirstConfigure( state._pDisplay, state._bConfigured ) == false )
         {
             SW_LOG_ERROR_ID( "WaylandSplash.WaylandSplashCompositorClosed", "Wayland splash: the compositor closed the connection before configuring the window" );
-            dismiss();
-            return false;
+            releaseConnection();
+            splashThread.markFailed();
+            return;
         }
 
         state._pPool         = make_unique<WaylandShmBufferPool>();
         state._bPainterReady = state._painter.initialize( Internal::kTextPixelSize ); // 글꼴이 없으면 이유를 남기고 글 없이 그린다
-        _bOpen               = SW_TRUE;
-        updateStatus( _status.c_str() );
-        return true;
+        splashThread.markReady();
+
+        // 핑 응답 · 버퍼 반납을 늘 받는다 — 기동 스레드가 오래 막혀도 컴포지터가 창을 "응답 없음" 으로 보지 않는다.
+        LinuxSplashThread::PaintState paintState;
+        bool                          bPendingDraw = false; // 버퍼가 모두 컴포지터에 있으면 반납을 받은 뒤 다시 그린다
+        for ( ;; )
+        {
+            bool bPrepared = true;
+            while ( wl_display_prepare_read( state._pDisplay ) != 0 )
+            {
+                if ( wl_display_dispatch_pending( state._pDisplay ) == Internal::kDispatchFailed )
+                {
+                    bPrepared = false; // 연결이 끊겼다 — 읽을 준비 없이 끝낸다
+                    break;
+                }
+            }
+            if ( bPrepared == false )
+                break;
+            (void)wl_display_flush( state._pDisplay );
+            LinuxSplashThread::PaintState requested;
+            const uint8                   wakeMask = splashThread.waitForEvents( wl_display_get_fd( state._pDisplay ), requested );
+            if ( ( wakeMask & static_cast<uint8>( LinuxSplashWakeReason::ConnectionReadable ) ) != 0 )
+                (void)wl_display_read_events( state._pDisplay ); // 실패는 아래 dispatch 가 -1 로 알린다
+            else
+                wl_display_cancel_read( state._pDisplay );
+            const bool bLost = wl_display_dispatch_pending( state._pDisplay ) == Internal::kDispatchFailed || ( wakeMask & static_cast<uint8>( LinuxSplashWakeReason::ConnectionLost ) ) != 0;
+            if ( bLost || ( wakeMask & static_cast<uint8>( LinuxSplashWakeReason::Quit ) ) != 0 )
+                break;
+            if ( ( wakeMask & static_cast<uint8>( LinuxSplashWakeReason::Redraw ) ) != 0 )
+            {
+                paintState   = requested;
+                bPendingDraw = true;
+            }
+            if ( bPendingDraw )
+                bPendingDraw = drawStatus( paintState ) == false;
+        }
+        releaseConnection();
     }
 
-    void WaylandSplashWindow::updateStatus( const utf8* pStatus, float32 progress )
+    bool WaylandSplashWindow::drawStatus( const LinuxSplashThread::PaintState& paintState )
     {
-        using Internal = WaylandSplashWindowInternal;
-        if ( _bOpen == SW_FALSE )
-            return;
-
-        if ( StringUtil::isNullOrEmpty( pStatus ) == false )
-            _status = pStatus;
-        if ( progress >= 0.0f )
-            _progress = ( progress > 1.0f ) ? 1.0f : progress;
-
+        using Internal          = WaylandSplashWindowInternal;
         State&     state        = *_pState;
         const bool bNotDrawable = state._pDisplay == nullptr || state._pSurface == nullptr || state._pPool == nullptr;
         if ( bNotDrawable )
-            return;
+            return true; // 그릴 곳이 없다 — 다시 해도 같다
 
-        (void)WaylandShell::pollEvents( state._pDisplay ); // 앞서 보낸 버퍼의 반납과 핑 응답 — 끊긴 연결은 다음 그리기가 버퍼를 못 받아 멈춘다
         WaylandShmBuffer* const pBuffer = state._pPool->acquire( state._pShm, _width, _height );
         if ( pBuffer == nullptr )
-            return; // 전부 컴포지터가 쥐고 있다 — 다음 갱신이 그린다
+            return false; // 전부 컴포지터가 쥐고 있다 — 반납을 받은 뒤 다시 그린다
 
         uint32* const pPixels    = pBuffer->getPixels();
         const size_t  pixelCount = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
-        // 배경 → 이미지(창 크기로 줄여 둔 BGRA, 알파는 쓰지 않는다) → 상태 글 → 진행 막대
+        // 배경 → 이미지(창 크기로 줄여 둔 BGRA, 알파는 쓰지 않는다 — 시작 전에 정해져 바뀌지 않는다) → 상태 글 → 진행 막대
         if ( _listScaledPixel.size() >= pixelCount * 4u )
         {
             for ( size_t index = 0; index < pixelCount; ++index )
@@ -228,10 +271,10 @@ namespace sw
 
         const int32 height = static_cast<int32>( _height );
         if ( state._bPainterReady )
-            (void)state._painter.drawText( pPixels, _width, _height, Internal::kMargin, height - Internal::kTextBaselineUp, _status, Internal::kTextColor );
+            (void)state._painter.drawText( pPixels, _width, _height, Internal::kMargin, height - Internal::kTextBaselineUp, paintState._status, Internal::kTextColor );
 
         const int32   totalBarWidth   = static_cast<int32>( _width ) - Internal::kMargin * 2;
-        const float32 clampedProgress = ( _progress < 0.0f ) ? 0.0f : ( ( _progress > 1.0f ) ? 1.0f : _progress );
+        const float32 clampedProgress = ( paintState._progress < 0.0f ) ? 0.0f : ( ( paintState._progress > 1.0f ) ? 1.0f : paintState._progress );
         const int32   fillWidth       = static_cast<int32>( static_cast<float32>( totalBarWidth ) * clampedProgress );
         const int32   barTop          = height - Internal::kBarBottomUp;
         for ( int32 row = 0; row < Internal::kBarHeight; ++row )
@@ -250,7 +293,24 @@ namespace sw
         wl_surface_damage( state._pSurface, 0, 0, static_cast<int32>( _width ), height );
         pBuffer->markBusy();
         wl_surface_commit( state._pSurface );
-        wl_display_flush( state._pDisplay );
+        (void)wl_display_flush( state._pDisplay );
+        return true;
+    }
+
+    void WaylandSplashWindow::updateStatus( const utf8* pStatus, float32 progress )
+    {
+        if ( _bOpen == SW_FALSE )
+            return;
+
+        if ( StringUtil::isNullOrEmpty( pStatus ) == false )
+            _status = pStatus;
+        if ( progress >= 0.0f )
+            _progress = ( progress > 1.0f ) ? 1.0f : progress;
+
+        LinuxSplashThread::PaintState paintState;
+        paintState._status   = _status;
+        paintState._progress = _progress;
+        _splashThread.requestRedraw( paintState ); // 그리기는 스플래시 스레드가 한다
     }
 
     void WaylandSplashWindow::setProgress( float32 progress )
@@ -259,6 +319,12 @@ namespace sw
     }
 
     void WaylandSplashWindow::dismiss()
+    {
+        _splashThread.stop(); // 스레드가 버퍼 · 표면 · 연결을 놓고 끝난다(`releaseConnection`)
+        _bOpen = SW_FALSE;
+    }
+
+    void WaylandSplashWindow::releaseConnection()
     {
         State& state = *_pState;
         // 버퍼를 먼저 지운다(`wl_buffer` 는 연결이 살아 있을 때만 지울 수 있다). 객체는 만든 순서의 반대로 지운다(toplevel → xdg_surface → surface).
@@ -279,7 +345,7 @@ namespace sw
             wl_registry_destroy( state._pRegistry );
         if ( state._pDisplay != nullptr )
         {
-            wl_display_flush( state._pDisplay );
+            (void)wl_display_flush( state._pDisplay );
             wl_display_disconnect( state._pDisplay );
         }
         state._pToplevel   = nullptr;
@@ -290,7 +356,6 @@ namespace sw
         state._pCompositor = nullptr;
         state._pRegistry   = nullptr;
         state._pDisplay    = nullptr;
-        _bOpen             = SW_FALSE;
     }
 } // namespace sw
 #endif
