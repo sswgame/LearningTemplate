@@ -18,7 +18,6 @@
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripaudiograph/tone.audiograph.xml"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<DevCommand line="panel.saveDocument audiograph"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripaudiograph/tone.audiograph.xml"/>
 	<DevCommand line="panel.reloadDocument audiograph"/>

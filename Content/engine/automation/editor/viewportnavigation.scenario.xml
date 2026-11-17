@@ -41,9 +41,9 @@
 	<EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.5" state="Down"/>
 	<EditorWaitStable/>
 	<EditorKey key="D" state="Down"/>
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 채 둔 시간(비행 거리)이 테스트 내용이다 -->
 	<EditorKey key="D" state="Up"/>
-	<Wait frames="5"/>
+	<EditorWaitStable/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.SceneViewCameraX" differsFrom="xBeforeFly"/>
@@ -53,10 +53,9 @@
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
 	<EditorWaitStable/>
 	<EditorKey key="Alt" state="Down"/>
-	<Wait frames="20"/>
+	<EditorWaitStable/> <!-- Alt 만 누르고 멈춘 상태에서 위치가 그대로다 — 정지 상태의 값이 답이다 -->
 	<Expect watch="Editor.SceneViewCameraX" sameAs="xFlown"/>
 	<Expect watch="Editor.SceneViewOrbitDistance" sameAs="distFlown"/>
-	<Wait frames="5"/>
 	<EditorKey key="Alt" state="Up"/>
 	<!-- 북마크(Ctrl+1 저장 → 키패드 7 직교 → 키패드 5 원근 → 1 불러오기) 뒤에도 위치가 그대로고, 직교 전환 뒤에도 Alt 만 누르면 위치가 그대로다 -->
 	<EditorWaitStable/>
@@ -67,9 +66,8 @@
 	<Store watch="Editor.SceneViewCameraX" as="xOrtho"/>
 	<EditorWaitStable/>
 	<EditorKey key="Alt" state="Down"/>
-	<Wait frames="8"/>
+	<EditorWaitStable/> <!-- Alt 만 누르고 멈춘 상태에서 위치가 그대로다 -->
 	<Expect watch="Editor.SceneViewCameraX" sameAs="xOrtho"/>
-	<Wait frames="1"/>
 	<EditorKey key="Alt" state="Up"/>
 	<EditorWaitStable/>
 	<EditorKey key="Keypad5"/>
@@ -82,13 +80,12 @@
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
 	<EditorWaitStable/>
 	<EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.5" state="Down"/>
-	<Wait frames="10"/>
+	<EditorWaitStable/>
 	<Store watch="Editor.SceneViewOrbitDistance" as="distBeforeFlyWheel"/>
 	<EditorWaitStable/>
 	<EditorWheel dy="3"/>
-	<Wait frames="15"/>
+	<EditorWaitStable/> <!-- 비행 중 휠이 처리된 뒤 멈춘 상태의 궤도 거리 -->
 	<Expect watch="Editor.SceneViewOrbitDistance" sameAs="distBeforeFlyWheel"/>
-	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
 	<EditorWaitStable/>
 	<Pass/>

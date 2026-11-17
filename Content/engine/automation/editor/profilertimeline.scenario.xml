@@ -21,7 +21,7 @@
 	<EditorWaitStable/>
 	<Expect watch="Editor.ProfilerTimelineThreadCount" equals="0"/>
 	<EditorClick mark="profiler.timeline.tab" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="profiler.timeline.tab" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="profiler.timeline.record"/>

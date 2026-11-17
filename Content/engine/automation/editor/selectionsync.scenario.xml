@@ -30,9 +30,9 @@
 	<EditorText value="crate_medium.mesh"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
 	<EditorClick mark="sceneView.canvas" state="Up"/>

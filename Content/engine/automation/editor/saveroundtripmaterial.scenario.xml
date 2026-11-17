@@ -16,7 +16,6 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripmaterial/previewblue.material"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<DevCommand line="panel.saveDocument material"/>
 	<DevCommand line="asset.snapshotScratch scratch/saveroundtripmaterial/previewblue.material"/>
 	<DevCommand line="panel.reloadDocument material"/>

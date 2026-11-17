@@ -61,7 +61,7 @@
 	<ExpectLog id="Profiler.SpikePaused" atLeast="1"/>
 	<!-- 4) Call Tree -->
 	<EditorClick mark="profiler.callTree.tab" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="profiler.callTree.tab" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="profiler.callTree.record"/>

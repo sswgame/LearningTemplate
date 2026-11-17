@@ -16,15 +16,15 @@
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitStable/>
 	<EditorClick mark="packaging.skipBuild" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="packaging.skipBuild" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="packaging.skipCook" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="packaging.skipCook" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="packaging.package" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="packaging.package" state="Up"/>
 	<WaitUntil watch="Editor.PackagingState" equals="1" timeoutWallSeconds="10"/>
 	<EditorWaitStable/>

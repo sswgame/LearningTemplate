@@ -25,7 +25,7 @@
 	<EditorText value="crate"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.saveSearch" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.saveSearch" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName"/>
@@ -33,7 +33,7 @@
 	<EditorText value="Crates"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Up"/>
 	<WaitUntil watch="Editor.ContentSavedSearchCount" equals="1" timeoutFrames="60"/>
 	<EditorClick mark="contentBrowser.search"/>
@@ -44,25 +44,25 @@
 	<EditorWaitStable/>
 	<!-- ② 컬렉션 -->
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.newCollection" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.newCollection" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName"/>
 	<EditorText value="Level Kit"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.collectionName.confirm" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collection.Level Kit"/>
 	<WaitUntil watch="Editor.ContentCollectionItemCount" equals="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="savedsearch/collections.png" maxMagentaFraction="0"/>
 	<EditorClick mark="contentBrowser.collection.close" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.collection.close" state="Up"/>
 	<WaitUntil watch="Editor.ContentCollectionItemCount" equals="-1" timeoutFrames="60"/>
 	<!-- ③ 팔레트도 에셋을 찾는다 -->
