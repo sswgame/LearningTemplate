@@ -341,9 +341,9 @@
 		       text="ディスクから再読み込み(編集を破棄)"
 		       sourceHash="1a5da284e88aa713" />
 		<entry key="EdPlugin.Remove" text="削除" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdPlugin.RemoveAnnouncement" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.RemoveBrokenWires" text="切れた配線を削除" sourceHash="56ba420ceb30c42c" />
 		<entry key="EdPlugin.RemoveLiveEvent" text="ライブイベントを削除" sourceHash="286ec822b6f1b615" />
-		<entry key="EdPlugin.RemoveAnnouncement" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.RemoveSkinLayer" text="削除" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.Rename" text="名前を変更" sourceHash="60320a18282b2b33" />
 		<entry key="EdPlugin.ResetBone" text="ボーンをリセット" sourceHash="559f9c3dcb23c44e" />
@@ -407,6 +407,10 @@
 		<entry key="EdPluginButton.Reload" text="再読み込み" sourceHash="d5b6130b4937488c" />
 		<entry key="EdPluginField.Amount" text="量" sourceHash="ba98a7152d80b949" />
 		<entry key="EdPluginField.Anchor" text="アンカー" sourceHash="beff9ac02dc2c474" />
+		<entry key="EdPluginField.AnnouncementId" text="お知らせ id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
+		       text="お知らせ秒(0 = 削除まで)"
+		       sourceHash="5ca50ca62e3f11de" />
 		<entry key="EdPluginField.BasePreset" text="基準プリセット" sourceHash="fb4ae1042ef82b97" />
 		<entry key="EdPluginField.BodyShape" text="体型" sourceHash="c02e72b17896e8d8" />
 		<entry key="EdPluginField.BodyType" text="体の種類" sourceHash="abd94a00726e12d7" />
@@ -422,10 +426,6 @@
 		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
 		       text="メンテナンス秒(0 = 解除まで)"
 		       sourceHash="14988336ae4ff447" />
-		<entry key="EdPluginField.AnnouncementId" text="お知らせ id" sourceHash="346e643ae672864e" />
-		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
-		       text="お知らせ秒(0 = 削除まで)"
-		       sourceHash="5ca50ca62e3f11de" />
 		<entry key="EdPluginField.OffsetM" text="オフセット(m)" sourceHash="5ec26a29745a2dfc" />
 		<entry key="EdPluginField.Parent" text="親" sourceHash="4eb514ebcb80553d" />
 		<entry key="EdPluginField.PreviewMesh" text="プレビューメッシュ" sourceHash="bf80308374d5e32c" />
@@ -572,6 +572,7 @@
 		<entry key="EdPluginWidget.Account" text="アカウント" sourceHash="846b3790b6e25c1c" />
 		<entry key="EdPluginWidget.AccountIdHex" text="アカウント id(16進数)" sourceHash="b6db0ef22675ed05" />
 		<entry key="EdPluginWidget.ActingRole" text="担当ロール" sourceHash="25bba11d3a172de3" />
+		<entry key="EdPluginWidget.AnnouncementText" text="お知らせ本文" sourceHash="30c28e16a2b1dc84" />
 		<entry key="EdPluginWidget.AssetId" text="アセット id" sourceHash="69d468f7fdd713f4" />
 		<entry key="EdPluginWidget.AuditLog" text="監査ログ" sourceHash="2bd16f12896a150a" />
 		<entry key="EdPluginWidget.BasePreset" text="基準プリセット" sourceHash="fb4ae1042ef82b97" />
@@ -592,7 +593,6 @@
 		       sourceHash="85b0db04bdd7964f" />
 		<entry key="EdPluginWidget.MemoTicket" text="メモ(チケット)" sourceHash="fdcbf34ceeb42ab6" />
 		<entry key="EdPluginWidget.MessageKey" text="メッセージキー" sourceHash="a982200e6ce2d4db" />
-		<entry key="EdPluginWidget.AnnouncementText" text="お知らせ本文" sourceHash="30c28e16a2b1dc84" />
 		<entry key="EdPluginWidget.Options" text="オプション" sourceHash="463b8c4e92751ba5" />
 		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
 		<entry key="EdPluginWidget.Preview" text="プレビュー" sourceHash="417b90913e05bc17" />

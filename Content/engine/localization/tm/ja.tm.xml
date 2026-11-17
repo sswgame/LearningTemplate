@@ -378,6 +378,7 @@
 		<entry source="Remove point" text="点を削除" />
 		<entry source="Remove row" text="行を削除" />
 		<entry source="Rename" text="名前を変更" />
+		<entry source="Render Quality" text="レンダリング品質" />
 		<entry source="Render Scale" text="レンダースケール" />
 		<entry source="Repath distance" text="再経路探索距離" />
 		<entry source="Reports" text="通報" />

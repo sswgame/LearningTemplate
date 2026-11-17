@@ -386,6 +386,7 @@
 		<entry source="Remove point" text="점 빼기" />
 		<entry source="Remove row" text="행 삭제" />
 		<entry source="Rename" text="이름 바꾸기" />
+		<entry source="Render Quality" text="렌더 품질" />
 		<entry source="Render Scale" text="렌더 배율" />
 		<entry source="Repath distance" text="경로 다시 찾기 거리" />
 		<entry source="Reports" text="신고" />

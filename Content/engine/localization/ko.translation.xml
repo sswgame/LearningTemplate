@@ -333,9 +333,9 @@
 		       text="디스크에서 다시 읽기(편집 버림)"
 		       sourceHash="1a5da284e88aa713" />
 		<entry key="EdPlugin.Remove" text="제거" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdPlugin.RemoveAnnouncement" text="공지 지우기" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.RemoveBrokenWires" text="끊어진 선 지우기" sourceHash="56ba420ceb30c42c" />
 		<entry key="EdPlugin.RemoveLiveEvent" text="라이브 이벤트 지우기" sourceHash="286ec822b6f1b615" />
-		<entry key="EdPlugin.RemoveAnnouncement" text="공지 지우기" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.RemoveSkinLayer" text="지우기" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
 		<entry key="EdPlugin.ResetBone" text="뼈 초기화" sourceHash="559f9c3dcb23c44e" />
@@ -397,6 +397,10 @@
 		<entry key="EdPluginButton.Reload" text="다시 불러오기" sourceHash="d5b6130b4937488c" />
 		<entry key="EdPluginField.Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="EdPluginField.Anchor" text="기준" sourceHash="beff9ac02dc2c474" />
+		<entry key="EdPluginField.AnnouncementId" text="공지 id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
+		       text="공지 초(0 = 지울 때까지)"
+		       sourceHash="5ca50ca62e3f11de" />
 		<entry key="EdPluginField.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
 		<entry key="EdPluginField.BodyShape" text="체형" sourceHash="c02e72b17896e8d8" />
 		<entry key="EdPluginField.BodyType" text="몸 종류" sourceHash="abd94a00726e12d7" />
@@ -412,10 +416,6 @@
 		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
 		       text="점검 초(0 = 풀 때까지)"
 		       sourceHash="14988336ae4ff447" />
-		<entry key="EdPluginField.AnnouncementId" text="공지 id" sourceHash="346e643ae672864e" />
-		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
-		       text="공지 초(0 = 지울 때까지)"
-		       sourceHash="5ca50ca62e3f11de" />
 		<entry key="EdPluginField.OffsetM" text="오프셋(m)" sourceHash="5ec26a29745a2dfc" />
 		<entry key="EdPluginField.Parent" text="부모" sourceHash="4eb514ebcb80553d" />
 		<entry key="EdPluginField.PreviewMesh" text="미리보기 메시" sourceHash="bf80308374d5e32c" />
@@ -562,6 +562,7 @@
 		<entry key="EdPluginWidget.Account" text="계정" sourceHash="846b3790b6e25c1c" />
 		<entry key="EdPluginWidget.AccountIdHex" text="계정 id(16진수)" sourceHash="b6db0ef22675ed05" />
 		<entry key="EdPluginWidget.ActingRole" text="맡은 역할" sourceHash="25bba11d3a172de3" />
+		<entry key="EdPluginWidget.AnnouncementText" text="공지 글" sourceHash="30c28e16a2b1dc84" />
 		<entry key="EdPluginWidget.AssetId" text="에셋 id" sourceHash="69d468f7fdd713f4" />
 		<entry key="EdPluginWidget.AuditLog" text="감사 기록" sourceHash="2bd16f12896a150a" />
 		<entry key="EdPluginWidget.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
@@ -580,7 +581,6 @@
 		<entry key="EdPluginWidget.MaintenanceAnnouncement" text="점검 / 공지" sourceHash="85b0db04bdd7964f" />
 		<entry key="EdPluginWidget.MemoTicket" text="메모(티켓)" sourceHash="fdcbf34ceeb42ab6" />
 		<entry key="EdPluginWidget.MessageKey" text="메시지 키" sourceHash="a982200e6ce2d4db" />
-		<entry key="EdPluginWidget.AnnouncementText" text="공지 글" sourceHash="30c28e16a2b1dc84" />
 		<entry key="EdPluginWidget.Options" text="옵션" sourceHash="463b8c4e92751ba5" />
 		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
 		<entry key="EdPluginWidget.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
