@@ -324,11 +324,19 @@ def run_chain(name, record, display):
         if record:
             command.append(app_arguments.flag('scenario-update-golden'))
         started = time.time()
-        result = subprocess.run(['timeout', '3000', *command], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # 출력은 파일로 남긴다 — 행 감시 · 종료 감시는 stderr 에만 까닭을 적는다. 버리면 "exit 12, 보고 없음" 만 남았다(Linux editor.selftests).
+        console_path = f'/tmp/lt.chain.{name}.out'
+        with open(console_path, 'w', encoding='utf-8', errors='replace') as console:
+            result = subprocess.run(['timeout', '3000', *command], cwd=f'{RELEASE}/Bin', env=env, stdout=console, stderr=subprocess.STDOUT)
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             reported = report(name)
-        return name, result.returncode or reported, f'{name} rc={result.returncode} {int(time.time() - started)}초\n{output.getvalue()}'
+        tail = ''
+        if result.returncode != 0:
+            with open(console_path, encoding='utf-8', errors='replace') as console:
+                lines = [line for line in console.read().splitlines() if line.strip()]
+            tail = f'  콘솔 끝 ({console_path}):\n' + ''.join(f'    {line[:240]}\n' for line in lines[-8:])
+        return name, result.returncode or reported, f'{name} rc={result.returncode} {int(time.time() - started)}초\n{output.getvalue()}{tail}'
 
 
 def chain(arguments):
@@ -346,26 +354,28 @@ def chain(arguments):
     return code
 
 
-def run_stage_set(names, env, log_name, record=False):
+def run_stage_set(names, env, log_name, record=False, extra=()):
     """단계 이름 묶음을 부분 체인으로 돌린다. 건너뜀 · 실패가 있어도 끝까지 간다 - 없으면 뒤 단계가 돌지 않아 통과로 착각한다."""
     # 이름은 에디터 단계, `/` 가 든 것은 리소스 경로 그대로(게임 단계 — 예: game/empty/automation/gpumessages.scenario.xml). 에디터는 에디터 단계만 있을 때 켠다.
     listed = ','.join(n if '/' in n else f'engine/automation/editor/{n}.scenario.xml' for n in names)
     editor = [app_arguments.flag('EnableEditor')] if all('/' not in n for n in names) else []
     return subprocess.run(['timeout', '1200', './App', *editor, app_arguments.option('scenario', listed), app_arguments.flag('scenario-keep-going'),
                            app_arguments.flag('unattended'), app_arguments.option('scenario-backends', 'vk'), *window_arguments(), app_arguments.option('log-file', f'{log_name}.log'),
-                           *([app_arguments.flag('scenario-update-golden')] if record else [])],
+                           *([app_arguments.flag('scenario-update-golden')] if record else []), *extra],
                           cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
 
 
 def stages(arguments):
     record = '--record' in arguments  # 체인 전체가 못 도는 구간(앞 단계가 멈춤)의 골든을 기록할 때
-    arguments = [a for a in arguments if a != '--record']
+    # 전역 변수(`-gv_이름=값`)는 앱으로 그대로 넘긴다 — 자체 테스트 하나만(`-gv_editorSelfTestPattern=…`)처럼 시나리오 사본 없이 좁힐 때
+    extra = [a for a in arguments if a.startswith('-gv_')]
+    arguments = [a for a in arguments if a != '--record' and not a.startswith('-gv_')]
     require_current_build()
     code = 0
     with Xvfb():
         env = scenario_env(99)
         for stage_set in arguments:
-            rc = run_stage_set(stage_set.split(','), env, 'x_stages', record)
+            rc = run_stage_set(stage_set.split(','), env, 'x_stages', record, extra)
             print(f'[{stage_set}] rc={rc}')
             code = report_file(f'{RELEASE}/Bin/x_stages.vk.log') or code
     return code
