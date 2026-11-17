@@ -986,6 +986,8 @@ namespace sw
         uint16                  _bFragmentStores                     : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
         uint16                  _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHISwapChainDesc::_bGPUBasedValidation`, R-9)
         uint16                  _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHISwapChainDesc::_bSynchronizationValidation`, R-9)
+        /// @brief 새 번호를 세 링 세트에 바로 쓰는가(장치 생성 때 고정 — `descriptorBindingUpdateUnusedWhilePending` 이 있으면). 없으면 지금 슬롯 세트만 쓰고 나머지는 그 슬롯의 차례에 쓴다(R-6).
+        uint16 _bWriteAllRingSetsNow : 1;
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief GPU 브레드크럼을 남기는 확장입니다(`VulkanBreadcrumbMode`). 장치를 만들 때 정하고, 함수나 표지 버퍼를 얻지 못하면 None 으로 내린다.
@@ -1053,6 +1055,7 @@ namespace sw
         ///        텍스처별 번호 목록은 등록표가 든다(`releaseTexture`). 비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
         RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
         RHIDescriptorRingMirror                                          _bindlessRingMirror; ///< 산 텍스처 번호 다시 쓰기를 링 슬롯마다 그 차례에 쓰도록 예약한다(`_bindlessMutex` 아래 — R-6)
+        RHIDescriptorRingMirror                                          _storageRingMirror;  ///< RW 텍스처 원소를 링 슬롯마다 그 차례에 쓰도록 예약한다(`_bWriteAllRingSetsNow` 가 거짓인 장치만)
 
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler

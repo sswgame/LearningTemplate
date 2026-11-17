@@ -119,6 +119,7 @@ namespace sw
         , _bFragmentStores{ SW_FALSE }
         , _bGPUAssistedValidationRequested{ SW_FALSE }
         , _bSynchronizationValidationRequested{ SW_FALSE }
+        , _bWriteAllRingSetsNow{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _breadcrumbMode{ VulkanBreadcrumbMode::None }
         , _pCmdSetCheckpoint{ nullptr }
@@ -489,6 +490,7 @@ namespace sw
             {
                 UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
                 _bindlessRingMirror.clear();
+                _storageRingMirror.clear();
             }
             if ( _textureSetLayout )
             {
@@ -1234,7 +1236,7 @@ namespace sw
         // 텍스처 세트(set 1)의 두 배열이 쓰는 기능 · 한도다(createDescriptorResources). 데스크톱 드라이버는 모두 넘고, 모바일은 장치마다 다르다(docs/PlatformTargets.md).
         const bool bFeatures = features12.runtimeDescriptorArray == VK_TRUE && features12.descriptorBindingPartiallyBound == VK_TRUE &&
                                features12.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE && features12.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE &&
-                               features12.shaderSampledImageArrayNonUniformIndexing == VK_TRUE && features12.descriptorBindingUpdateUnusedWhilePending == VK_TRUE;
+                               features12.shaderSampledImageArrayNonUniformIndexing == VK_TRUE;
         const bool bLimits = indexing.maxPerStageDescriptorUpdateAfterBindSampledImages >= kBindlessTextureCount &&
                              indexing.maxDescriptorSetUpdateAfterBindSampledImages >= kBindlessTextureCount &&
                              indexing.maxPerStageDescriptorUpdateAfterBindStorageImages >= kBindlessStorageImageCount &&
@@ -1396,14 +1398,16 @@ namespace sw
         vulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = available12.descriptorBindingUniformBufferUpdateAfterBind;
         vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = available12.descriptorBindingStorageBufferUpdateAfterBind;
         vulkan12Features.descriptorBindingUpdateUnusedWhilePending     = available12.descriptorBindingUpdateUnusedWhilePending;
-        vulkan12Features.shaderUniformBufferArrayNonUniformIndexing    = available12.shaderUniformBufferArrayNonUniformIndexing;
-        vulkan12Features.descriptorBindingSampledImageUpdateAfterBind  = available12.descriptorBindingSampledImageUpdateAfterBind;
-        vulkan12Features.descriptorBindingStorageImageUpdateAfterBind  = available12.descriptorBindingStorageImageUpdateAfterBind;
-        vulkan12Features.shaderStorageImageArrayNonUniformIndexing     = available12.shaderStorageImageArrayNonUniformIndexing;
-        vulkan12Features.shaderStorageBufferArrayNonUniformIndexing    = available12.shaderStorageBufferArrayNonUniformIndexing;
-        vulkan12Features.shaderSampledImageArrayNonUniformIndexing     = available12.shaderSampledImageArrayNonUniformIndexing;
-        vulkan12Features.runtimeDescriptorArray                        = available12.runtimeDescriptorArray;
-        vulkan12Features.drawIndirectCount                             = available12.drawIndirectCount;
+        // 링 세트 쓰기 길을 여기서 고정한다 — 기능이 있으면 새 번호를 세 세트에 바로, 없으면(모바일 일부) 지금 슬롯만 쓰고 나머지는 슬롯의 차례에(bindless 에서 빼지 않는다).
+        _bWriteAllRingSetsNow                                         = available12.descriptorBindingUpdateUnusedWhilePending == VK_TRUE ? SW_TRUE : SW_FALSE;
+        vulkan12Features.shaderUniformBufferArrayNonUniformIndexing   = available12.shaderUniformBufferArrayNonUniformIndexing;
+        vulkan12Features.descriptorBindingSampledImageUpdateAfterBind = available12.descriptorBindingSampledImageUpdateAfterBind;
+        vulkan12Features.descriptorBindingStorageImageUpdateAfterBind = available12.descriptorBindingStorageImageUpdateAfterBind;
+        vulkan12Features.shaderStorageImageArrayNonUniformIndexing    = available12.shaderStorageImageArrayNonUniformIndexing;
+        vulkan12Features.shaderStorageBufferArrayNonUniformIndexing   = available12.shaderStorageBufferArrayNonUniformIndexing;
+        vulkan12Features.shaderSampledImageArrayNonUniformIndexing    = available12.shaderSampledImageArrayNonUniformIndexing;
+        vulkan12Features.runtimeDescriptorArray                       = available12.runtimeDescriptorArray;
+        vulkan12Features.drawIndirectCount                            = available12.drawIndirectCount;
         // 셰이더는 DX 패킹(-fvk-use-dx-layout)으로 쿠킹한다. relaxed block layout(1.1 코어)으로 대부분 충분하지만
         // 스칼라 정렬까지 허용해 두면 어떤 구조체든 DX 와 같은 오프셋을 쓸 수 있다.
         vulkan12Features.scalarBlockLayout = available12.scalarBlockLayout;
@@ -3325,8 +3329,9 @@ namespace sw
 
             // UPDATE_UNUSED_WHILE_PENDING: 새 번호 등록은 슬롯 세트 셋에 바로 쓴다 — 진행 중 커맨드가 쓰는 세트지만 그 원소는 쓰지 않는다(펜스 뒤에야 다시 나간 번호).
             // PARTIALLY_BOUND 와 함께면 "동적으로 쓰지 않는 원소" 만 바꿀 수 있다(Vulkan 1.2 VkDescriptorBindingFlagBits). 산 번호 다시 쓰기는 링 슬롯의 차례에만 쓴다(R-6).
-            constexpr VkDescriptorBindingFlags kArrayFlags =
-                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+            // 그 기능이 없는 장치는 깃발을 빼고 세트 쓰기를 링 슬롯의 차례로 미룬다(`_bWriteAllRingSetsNow`).
+            const VkDescriptorBindingFlags kArrayFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
+                                                         ( _bWriteAllRingSetsNow == SW_TRUE ? VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT : 0u );
             VkDescriptorBindingFlags                    arrFlags[kBindingCount] = { kArrayFlags, 0, 0, kArrayFlags };
             VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
             bindingFlagsInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -3522,11 +3527,18 @@ namespace sw
 
     void VulkanRHIDevice::writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout )
     {
-        // 새 번호(등록) · 펜스 뒤 더미 되돌리기는 모든 링 슬롯 세트에 바로 쓴다 — 진행 중 커맨드가 그 원소를 쓰지 않는다(UPDATE_UNUSED_WHILE_PENDING).
-        for ( uint32 slot = 0; slot < constant::render::kMaxFrameCountInFlight; ++slot )
+        // 새 번호(등록) · 펜스 뒤 더미 되돌리기다. 기능이 있으면 모든 링 슬롯 세트에 바로 쓴다 — 진행 중 커맨드가 그 원소를 쓰지 않는다(UPDATE_UNUSED_WHILE_PENDING).
+        // 없으면 지금 기록 슬롯 세트(아직 제출 전 — UPDATE_AFTER_BIND)만 쓰고 나머지 슬롯은 그 차례에 등록표 값으로 쓴다. 부르는 쪽이 `_bindlessMutex` 를 쥐었다.
+        if ( _bWriteAllRingSetsNow == SW_TRUE )
         {
-            writeBindlessTextureSlotAt( slot, index, view, imageLayout );
+            for ( uint32 slot = 0; slot < constant::render::kMaxFrameCountInFlight; ++slot )
+            {
+                writeBindlessTextureSlotAt( slot, index, view, imageLayout );
+            }
+            return;
         }
+        writeBindlessTextureSlotAt( getFrameSlot(), index, view, imageLayout );
+        _bindlessRingMirror.recordRewrite( index );
     }
 
     void VulkanRHIDevice::writeBindlessTextureSlotAt( uint32 slot, RHIDescriptorIndex index, VkImageView view, uint32 imageLayout )
@@ -3564,10 +3576,16 @@ namespace sw
         imageInfo.imageView   = view;
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // 스토리지 이미지는 GENERAL. prepareTextureForUnorderedAccess 가 맞춘다
 
-        // 새 번호만 온다 — 모든 링 슬롯 세트에 바로 쓴다(UPDATE_UNUSED_WHILE_PENDING).
-        for ( const VkDescriptorSet textureSet : _arrTextureSet )
+        // 새 번호만 온다 — 기능이 있으면 모든 링 슬롯 세트에 바로(UPDATE_UNUSED_WHILE_PENDING), 없으면 지금 슬롯 세트만 쓰고 나머지는 그 차례에(`flushBindlessRingSlot`).
+        if ( _bWriteAllRingSetsNow == SW_FALSE )
+            _storageRingMirror.recordRewrite( index );
+        for ( uint32 slot = 0; slot < constant::render::kMaxFrameCountInFlight; ++slot )
         {
-            VkWriteDescriptorSet write{};
+            const bool bWriteThisSlot = _bWriteAllRingSetsNow == SW_TRUE || slot == getFrameSlot() % constant::render::kMaxFrameCountInFlight;
+            if ( bWriteThisSlot == false )
+                continue;
+            const VkDescriptorSet textureSet = _arrTextureSet[slot];
+            VkWriteDescriptorSet  write{};
             write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet          = textureSet;
             write.dstBinding      = shaderslot::bindless::kVkRwTextureBinding;
@@ -3595,14 +3613,33 @@ namespace sw
         UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
         _bindlessRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
         {
-            // 그 사이 놓인 번호는 건너뛴다 — 번호는 펜스 뒤에야 다시 나가고 더미 되돌리기가 모든 세트에 쓴다.
-            VkImageView view{ VK_NULL_HANDLE };
-            uint32      layout{ 0 };
-            if ( _textureRegistry.isLive( index ) && findBindlessSampleView( _textureRegistry.get( index ), view, layout ) )
-            {
-                writeBindlessTextureSlotAt( slot, index, view, layout );
-                SW_PROFILE_COUNT( "RT.Bindless.mirrorWrites", 1 );
-            }
+            // 산 번호는 등록표의 지금 값으로, 그 사이 놓인 번호는 더미로 쓴다(지금 슬롯만 바로 쓰는 장치는 놓인 번호의 다른 세트가 옛 뷰를 든다).
+            VkImageView view{ _bindlessDummyView };
+            uint32      layout{ static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) };
+            if ( _textureRegistry.isLive( index ) && findBindlessSampleView( _textureRegistry.get( index ), view, layout ) == false )
+                return;
+            writeBindlessTextureSlotAt( slot, index, view, layout );
+            SW_PROFILE_COUNT( "RT.Bindless.mirrorWrites", 1 );
+        } );
+        _storageRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
+        {
+            const UAVEntry* const            pEntry     = _uavRegistry.find( index );
+            const VulkanTextureRecord* const pTexture   = pEntry != nullptr && pEntry->_texture != 0 ? resolveTexture( pEntry->_texture ) : nullptr;
+            const VkDescriptorSet            textureSet = getTextureSet( slot );
+            if ( pTexture == nullptr || pTexture->_imageView == VK_NULL_HANDLE || textureSet == VK_NULL_HANDLE )
+                return; // 놓인 RW 원소는 쓰지 않는다 — PARTIALLY_BOUND 라 동적으로 쓰지 않는 원소는 무효여도 된다
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageView   = pTexture->_imageView;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+            VkWriteDescriptorSet write{};
+            write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet          = textureSet;
+            write.dstBinding      = shaderslot::bindless::kVkRwTextureBinding;
+            write.dstArrayElement = index;
+            write.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            write.descriptorCount = 1;
+            write.pImageInfo      = &imageInfo;
+            vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
         } );
     }
 
