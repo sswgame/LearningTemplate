@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
@@ -104,16 +105,26 @@ namespace sw
 
 namespace sw
 {
-    ShadowAtlasLayout ShadowAtlasLayout::make( uint32 atlasResolution, uint32 cascadeCount, uint32 localTileCount )
+    ShadowAtlasLayout ShadowAtlasLayout::make( uint32 atlasResolution, uint32 cascadeCount, uint32 localTileCount, uint32 minLocalTileResolution )
     {
         ShadowAtlasLayout layout{};
         layout._atlasResolution = MathUtil::max( atlasResolution, 4u );
         uint32 cascades         = MathUtil::clamp( cascadeCount, 1u, shaderslot::kShadowCascadeMax );
         if ( localTileCount > 0 )
             cascades = MathUtil::min( cascades, kMaxCascadeWithLocalShadow );
-        layout._cascadeCount  = cascades;
-        layout._bQuadrant     = ( cascades > 1 || localTileCount > 0 ) ? SW_TRUE : SW_FALSE;
-        layout._localCapacity = localTileCount > 0 ? ( shaderslot::kShadowCascadeMax - cascades ) * kLocalCellsPerQuadrant : 0u;
+        layout._cascadeCount = cascades;
+        layout._bQuadrant    = ( cascades > 1 || localTileCount > 0 ) ? SW_TRUE : SW_FALSE;
+        if ( localTileCount == 0 )
+            return layout;
+        // 남은 사분면을 같은 크기의 칸으로 나눈다 — 사분면 하나부터 반씩 줄여 모두 들어가는 가장 큰 칸(하한 아래로는 줄이지 않는다).
+        const uint32 localQuadrantCount = shaderslot::kShadowCascadeMax - cascades;
+        const uint32 half               = layout._atlasResolution / 2u;
+        const uint32 minTile            = MathUtil::clamp( minLocalTileResolution, 1u, half );
+        uint32       tile               = half;
+        while ( localQuadrantCount * ( half / tile ) * ( half / tile ) < localTileCount && tile / 2u >= minTile )
+            tile /= 2u;
+        layout._localTileResolution = tile;
+        layout._localCapacity       = localQuadrantCount * ( half / tile ) * ( half / tile );
         return layout;
     }
 
@@ -127,11 +138,13 @@ namespace sw
 
     ShadowAtlasCell ShadowAtlasLayout::getLocalCell( uint32 tileIndex ) const
     {
-        const uint32 quadrant = _cascadeCount + tileIndex / kLocalCellsPerQuadrant;
-        const uint32 sub      = tileIndex % kLocalCellsPerQuadrant;
-        const uint32 half     = _atlasResolution / 2u;
-        const uint32 quarter  = _atlasResolution / 4u;
-        return ShadowAtlasCell{ ( quadrant & 1u ) * half + ( sub & 1u ) * quarter, ( quadrant >> 1u ) * half + ( sub >> 1u ) * quarter, quarter };
+        const uint32 half             = _atlasResolution / 2u;
+        const uint32 tile             = MathUtil::max( _localTileResolution, 1u );
+        const uint32 tilesPerRow      = MathUtil::max( half / tile, 1u );
+        const uint32 tilesPerQuadrant = tilesPerRow * tilesPerRow;
+        const uint32 quadrant         = _cascadeCount + tileIndex / tilesPerQuadrant;
+        const uint32 indexInQuadrant  = tileIndex % tilesPerQuadrant;
+        return ShadowAtlasCell{ ( quadrant & 1u ) * half + ( indexInQuadrant % tilesPerRow ) * tile, ( quadrant >> 1u ) * half + ( indexInQuadrant / tilesPerRow ) * tile, tile };
     }
 } // namespace sw
 
@@ -194,7 +207,11 @@ namespace sw
             const uint32 tileCount = bPoint ? shaderslot::kPointShadowFaceCount : 1u;
             // 칸이 모자라면 이 빛은 그림자 없이 비춘다. 뒤의 스폿(칸 하나)은 아직 들어갈 수 있으므로 멈추지 않는다.
             if ( usedTileCount + tileCount > layout.getLocalCapacity() )
+            {
+                SW_LOG_WARNING_ONCE_ID( "ShadowSetup.LocalShadowAtlasFull", "Shadow atlas has no room for a point/spot shadow (%# cells of %# texels) - the light is drawn without shadows. Lower _shadowLocalMinTileResolution or the shadow light count",
+                                        layout.getLocalCapacity(), layout.getLocalTileResolution() );
                 continue;
+            }
 
             const float3  position{ light._positionRadius._x, light._positionRadius._y, light._positionRadius._z };
             const float32 radius    = MathUtil::max( light._positionRadius._w, Internal::kLocalMinNearPlane * 2.0f );
@@ -309,7 +326,8 @@ namespace sw
         outFrame.clear();
         populateContactShadows( inoutListLight, outFrame );
         const uint32 cascadeCount = pShadowLight != nullptr ? pShadowLight->getShadowCascadeCount() : 1u;
-        outFrame._layout          = ShadowAtlasLayout::make( atlasResolution, cascadeCount, countLocalTiles( inoutListLight, listShadowLightIndex ) );
+        outFrame._layout =
+            ShadowAtlasLayout::make( atlasResolution, cascadeCount, countLocalTiles( inoutListLight, listShadowLightIndex ), renderConfig._shadowLocalMinTileResolution );
         populateLocalShadows( outFrame._layout, pMainViewProj, renderConfig, listShadowLightIndex, inoutListLight, outFrame );
 
         if ( pShadowLight != nullptr )

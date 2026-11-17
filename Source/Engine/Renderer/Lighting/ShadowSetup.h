@@ -47,24 +47,25 @@ namespace sw
      * @class ShadowAtlasLayout
      * @brief 그림자 아틀라스를 슬롯으로 나눈 배치입니다. 한 프레임의 모든 뷰가 같은 배치를 씁니다.
      * @details 방향광 캐스케이드가 하나이고 점광과 스폿 그림자가 없으면 아틀라스 전체가 그 캐스케이드입니다(아틀라스가 생기기 전과 같은 이미지).
-     *          그 밖에는 네 사분면으로 나눠 캐스케이드가 앞 사분면부터 하나씩 쓰고, 남은 사분면은 2x2 로 나눠 점광과 스폿 슬롯이 됩니다.
-     *          점광과 스폿 그림자가 있으면 캐스케이드는 둘까지입니다(슬롯 여덟 이상을 남깁니다. 점광 하나가 슬롯 여섯입니다).
+     *          그 밖에는 네 사분면으로 나눠 캐스케이드가 앞 사분면부터 하나씩 쓰고(셰이더가 사분면 c 를 원점으로 구한다), 남은 사분면은 점광과 스폿 칸이 됩니다.
+     *          점광과 스폿 칸의 크기는 원하는 칸 수로 정합니다 — 사분면 하나 크기부터 반씩 줄여 모두 들어가는 가장 큰 크기이고, `RenderConfig::_shadowLocalMinTileResolution`
+     *          아래로는 줄이지 않습니다(그때는 뒤의 빛이 그림자를 못 받는다). 유니티 URP 의 추가 광 아틀라스가 빛 수에 따라 칸을 줄이는 것과 같은 자리입니다.
+     *          캐스케이드는 사분면 반 해상도를 지키고, 점광과 스폿 그림자가 있으면 사분면 하나를 남기도록 셋까지입니다(감사 RN-4 — 예전에는 둘로 줄였다).
      */
     class SW_API ShadowAtlasLayout
     {
     public:
-        /// @brief 점광과 스폿 그림자가 있을 때 캐스케이드 수의 상한입니다.
-        static constexpr uint32 kMaxCascadeWithLocalShadow = 2;
-        /// @brief 사분면 하나를 나누는 점광과 스폿 슬롯 수(2x2)입니다.
-        static constexpr uint32 kLocalCellsPerQuadrant = 4;
+        /// @brief 점광과 스폿 그림자가 있을 때 캐스케이드 수의 상한입니다 — 사분면 하나는 점광과 스폿 칸으로 남깁니다.
+        static constexpr uint32 kMaxCascadeWithLocalShadow = shaderslot::kShadowCascadeMax - 1;
 
         /**
          * @brief 배치를 만듭니다.
          * @param atlasResolution 아틀라스 한 변의 텍셀 수(`FrameRenderer::getShadowMapResolution`)
          * @param cascadeCount    방향광이 원하는 캐스케이드 수(1~4)
          * @param localTileCount  점광과 스폿 그림자가 원하는 슬롯 수(점광 6, 스폿 1의 합). 슬롯이 모자라면 뒤의 빛은 그림자가 없습니다.
+         * @param minLocalTileResolution 점광과 스폿 칸 한 변의 하한(`RenderConfig::_shadowLocalMinTileResolution`). 칸 수가 많아도 이보다 작게 나누지 않습니다.
          */
-        static ShadowAtlasLayout make( uint32 atlasResolution, uint32 cascadeCount, uint32 localTileCount );
+        static ShadowAtlasLayout make( uint32 atlasResolution, uint32 cascadeCount, uint32 localTileCount, uint32 minLocalTileResolution );
 
         /** @brief 아틀라스 한 변의 텍셀 수입니다. */
         uint32 getAtlasResolution() const { return _atlasResolution; }
@@ -78,6 +79,8 @@ namespace sw
         ShadowAtlasCell getCascadeCell( uint32 cascadeIndex ) const;
         /** @brief 점광과 스폿 슬롯 수입니다. */
         uint32 getLocalCapacity() const { return _localCapacity; }
+        /** @brief 점광과 스폿 슬롯 한 변의 텍셀 수입니다(슬롯이 없으면 0). */
+        uint32 getLocalTileResolution() const { return _localTileResolution; }
         /** @brief 점광과 스폿 슬롯 t 입니다. */
         ShadowAtlasCell getLocalCell( uint32 tileIndex ) const;
 
@@ -85,6 +88,7 @@ namespace sw
         uint32 _atlasResolution{ 1 };
         uint32 _cascadeCount{ 1 };
         uint32 _localCapacity{ 0 };
+        uint32 _localTileResolution{ 0 };
         uint8  _bQuadrant{ SW_FALSE };
     };
 } // namespace sw

@@ -37,6 +37,8 @@
         "_psoBuildBudgetMicroseconds": 2000,
         "_shadowCascadeSplitLambda": 0.75,
         "_shadowLocalDepthBiasTexels": 1.5,
+        "_shadowLocalMinTileResolution": 128,
+        "_shadowLocalCullSlotLimit": 16,
         "_taaHistoryWeight": 0.9,
         "_textureStreaming": {
             "_uploadsPerFrame": 8,

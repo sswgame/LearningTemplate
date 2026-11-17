@@ -28,7 +28,10 @@ namespace sw
                 config._psoBuildBudgetMicroseconds = 2000;
                 config._shadowCascadeSplitLambda   = 0.75f;
                 config._shadowLocalDepthBiasTexels = 1.5f;
-                config._taaHistoryWeight           = 0.9f;
+                // 칸 하한을 사분면의 반으로 두어 칸 크기를 예전(아틀라스 4분의 1)에 묶는다 — 칸이 모자라는 경우를 본다. 크기가 줄어드는 경우는 따로 본다.
+                config._shadowLocalMinTileResolution = kAtlasResolution / 4u;
+                config._shadowLocalCullSlotLimit     = 16;
+                config._taaHistoryWeight             = 0.9f;
                 return config;
             }
 
@@ -130,7 +133,7 @@ namespace sw
 SW_TEST_CASE( ShadowSetupTest, SingleCascadeUsesTheWholeAtlas )
 {
     using Internal                     = sw::ShadowSetupTestInternal;
-    const sw::ShadowAtlasLayout layout = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 1, 0 );
+    const sw::ShadowAtlasLayout layout = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 1, 0, Internal::kAtlasResolution / 4u );
     SW_EXPECT_EQUAL( layout.getCascadeCount(), 1u );
     SW_EXPECT_EQUAL( layout.getLocalCapacity(), 0u );
     SW_EXPECT_NEAR( layout.getCascadeTileScale(), 1.0f, 1e-6f );
@@ -142,13 +145,14 @@ SW_TEST_CASE( ShadowSetupTest, SingleCascadeUsesTheWholeAtlas )
 }
 
 /**
- * @brief [ShadowSetupTest] 캐스케이드는 사분면을 하나씩, 점광 · 스폿은 남은 사분면의 2x2 칸을 쓰고 칸끼리 겹치지 않는다
- * @details 점광 · 스폿 그림자가 있으면 캐스케이드는 둘까지다(칸 여덟을 남긴다). 셰이더는 캐스케이드 c 의 원점을 사분면 c 로 구한다.
+ * @brief [ShadowSetupTest] 캐스케이드는 사분면을 하나씩, 점광 · 스폿은 남은 사분면을 칸 수에 맞춘 크기로 나눠 쓰고 칸끼리 겹치지 않는다
+ * @details 점광 · 스폿 그림자가 있으면 캐스케이드는 셋까지다(사분면 하나를 남긴다 — 감사 RN-4). 칸 일곱은 사분면 하나에 4x4(아틀라스 8분의 1)로 든다.
+ *          셰이더는 캐스케이드 c 의 원점을 사분면 c 로 구한다.
  */
 SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsTakeTheRest )
 {
     using Internal                       = sw::ShadowSetupTestInternal;
-    const sw::ShadowAtlasLayout cascades = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 4, 0 );
+    const sw::ShadowAtlasLayout cascades = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 4, 0, Internal::kAtlasResolution / 4u );
     SW_EXPECT_EQUAL( cascades.getCascadeCount(), 4u );
     SW_EXPECT_NEAR( cascades.getCascadeTileScale(), 0.5f, 1e-6f );
     for ( uint32 cascadeIndex = 0; cascadeIndex < 4; ++cascadeIndex )
@@ -159,9 +163,11 @@ SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsTakeTheRest )
         SW_EXPECT_EQUAL( cell._y, ( cascadeIndex >> 1u ) * Internal::kAtlasResolution / 2u );
     }
 
-    const sw::ShadowAtlasLayout mixed = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 4, 7 );
-    SW_EXPECT_EQUAL( mixed.getCascadeCount(), sw::ShadowAtlasLayout::kMaxCascadeWithLocalShadow );
-    SW_EXPECT_EQUAL( mixed.getLocalCapacity(), 8u );
+    const sw::ShadowAtlasLayout mixed = sw::ShadowAtlasLayout::make( Internal::kAtlasResolution, 4, 7, 128u );
+    SW_EXPECT_EQUAL( mixed.getCascadeCount(), 3u );
+    SW_EXPECT_EQUAL( mixed.getCascadeTileResolution(), Internal::kAtlasResolution / 2u );
+    SW_EXPECT_EQUAL( mixed.getLocalCapacity(), 16u );
+    SW_EXPECT_EQUAL( mixed.getLocalTileResolution(), Internal::kAtlasResolution / 8u );
     sw::vector<sw::ShadowAtlasCell> listCell;
     for ( uint32 cascadeIndex = 0; cascadeIndex < mixed.getCascadeCount(); ++cascadeIndex )
     {
@@ -170,7 +176,7 @@ SW_TEST_CASE( ShadowSetupTest, CascadesTakeQuadrantsAndLocalCellsTakeTheRest )
     for ( uint32 tileIndex = 0; tileIndex < mixed.getLocalCapacity(); ++tileIndex )
     {
         const sw::ShadowAtlasCell cell = mixed.getLocalCell( tileIndex );
-        SW_EXPECT_EQUAL( cell._size, Internal::kAtlasResolution / 4u );
+        SW_EXPECT_EQUAL( cell._size, Internal::kAtlasResolution / 8u );
         SW_EXPECT_TRUE( cell._x + cell._size <= Internal::kAtlasResolution && cell._y + cell._size <= Internal::kAtlasResolution );
         listCell.push_back( cell );
     }
@@ -609,4 +615,72 @@ SW_TEST_CASE( ShadowSetupTest, ContactShadowChannelsGoToLightsWithLengthDirectio
     SW_EXPECT_FALSE( frame.hasContactShadows() );
     SW_EXPECT_NEAR( listLight[0]._extra._z, 0.0f, 1e-6f );
     SW_EXPECT_NEAR( listLight[5]._extra._z, 0.0f, 1e-6f );
+}
+
+/**
+ * @brief [ShadowSetupTest] 점광 · 스폿 칸은 원하는 칸 수에 맞춰 크기가 바뀐다 — 적으면 사분면 하나, 많으면 하한까지 줄고, 하한에 닿으면 용량이 모자란다(감사 RN-4)
+ * @details 캐스케이드 둘이면 남은 사분면 둘이다. 스폿 하나는 사분면 크기 칸, 점광 하나(6)는 4분의 1 칸(용량 8), 칸 100 은 하한 128 에서 용량 128 로 든다.
+ *          하한을 256 으로 올리면 칸 100 은 용량 32 에 멈춘다. 캐스케이드 수 · 해상도는 칸 수와 상관없이 같다.
+ */
+SW_TEST_CASE( ShadowSetupTest, LocalTileSizeFollowsTheRequestedCount )
+{
+    using Internal          = sw::ShadowSetupTestInternal;
+    const uint32 resolution = Internal::kAtlasResolution;
+
+    const sw::ShadowAtlasLayout single = sw::ShadowAtlasLayout::make( resolution, 2, 1, 128u );
+    SW_EXPECT_EQUAL( single.getCascadeCount(), 2u );
+    SW_EXPECT_EQUAL( single.getLocalTileResolution(), resolution / 2u );
+    SW_EXPECT_EQUAL( single.getLocalCapacity(), 2u );
+    const sw::ShadowAtlasCell singleCell = single.getLocalCell( 0 );
+    SW_EXPECT_EQUAL( singleCell._x, 0u );
+    SW_EXPECT_EQUAL( singleCell._y, resolution / 2u );
+
+    const sw::ShadowAtlasLayout point = sw::ShadowAtlasLayout::make( resolution, 2, 6, 128u );
+    SW_EXPECT_EQUAL( point.getLocalTileResolution(), resolution / 4u );
+    SW_EXPECT_EQUAL( point.getLocalCapacity(), 8u );
+
+    const sw::ShadowAtlasLayout many = sw::ShadowAtlasLayout::make( resolution, 2, 100, 128u );
+    SW_EXPECT_EQUAL( many.getCascadeCount(), 2u );
+    SW_EXPECT_EQUAL( many.getCascadeTileResolution(), resolution / 2u );
+    SW_EXPECT_EQUAL( many.getLocalTileResolution(), 128u );
+    SW_EXPECT_EQUAL( many.getLocalCapacity(), 128u );
+    // 마지막 칸은 아틀라스 오른쪽 아래 구석이다.
+    const sw::ShadowAtlasCell lastCell = many.getLocalCell( many.getLocalCapacity() - 1u );
+    SW_EXPECT_EQUAL( lastCell._x + lastCell._size, resolution );
+    SW_EXPECT_EQUAL( lastCell._y + lastCell._size, resolution );
+
+    const sw::ShadowAtlasLayout atFloor = sw::ShadowAtlasLayout::make( resolution, 2, 100, 256u );
+    SW_EXPECT_EQUAL( atFloor.getLocalTileResolution(), 256u );
+    SW_EXPECT_EQUAL( atFloor.getLocalCapacity(), 32u );
+}
+
+/**
+ * @brief [ShadowSetupTest] 스폿 그림자를 더해도 방향광 캐스케이드 수와 칸 해상도가 그대로다(감사 RN-4 — 예전에는 캐스케이드 셋이 둘로 줄었다)
+ */
+SW_TEST_CASE( ShadowSetupTest, AddingSpotShadowKeepsCascades )
+{
+    using Internal = sw::ShadowSetupTestInternal;
+    sw::Scene scene{ "ShadowKeepCascades" };
+    SW_REQUIRE_NOT_NULL( scene.getObjectManager() );
+    sw::DirectionalLightComponent* pLight = Internal::addSun( scene, 120.0f, 3 );
+    SW_REQUIRE_NOT_NULL( pLight );
+    const sw::float4x4 viewProj = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 8.0f, 0.0f }, sw::float3{ 0.0f, 6.0f, 40.0f } );
+
+    sw::vector<sw::GPULight> listNoLocal;
+    sw::FrameShadowData      without;
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), sw::vector<uint32>{}, listNoLocal, without );
+
+    sw::vector<sw::GPULight> listSpot{ Internal::makeSpotLight( sw::float3{ 2.0f, 4.0f, 12.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) };
+    sw::FrameShadowData      with;
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), sw::vector<uint32>{ 0u }, listSpot, with );
+
+    SW_EXPECT_EQUAL( with._layout.getCascadeCount(), without._layout.getCascadeCount() );
+    SW_EXPECT_EQUAL( with._mainView._cascadeCount, without._mainView._cascadeCount );
+    SW_EXPECT_EQUAL( with._layout.getCascadeTileResolution(), without._layout.getCascadeTileResolution() );
+    SW_EXPECT_NEAR( listSpot[0]._params._x, 1.0f, 1e-6f );
+    SW_REQUIRE_EQUAL( with._listLocalTile.size(), static_cast<size_t>( 1 ) );
+    // 스폿은 남은 사분면(3) 하나를 통째로 받는다.
+    SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._size, Internal::kAtlasResolution / 2u );
+    SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._x, Internal::kAtlasResolution / 2u );
+    SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._y, Internal::kAtlasResolution / 2u );
 }
