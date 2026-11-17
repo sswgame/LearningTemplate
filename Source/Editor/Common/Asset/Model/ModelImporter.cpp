@@ -10,6 +10,7 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
@@ -39,11 +40,13 @@
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -729,9 +732,13 @@ namespace sw::editor
             string_view getRawFolderName() const override { return ModelImportUtil::kRawModelFolder; }
             string_view getStampHeader() const override { return ModelImportUtil::kImportStampHeader; }
             string_view getImportedLabel() const override { return "메시"; }
-            bool        isSourceFile( string_view path ) const override { return ModelImportUtil::isSourceModel( path ); }
-            string      makeImportedPath( string_view sourcePath ) const override { return ModelImporter::makeImportedModelPath( sourcePath ); }
-            uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
+            uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "ModelImport" ); }
+            /** @brief 결과 글이 `_shared/` · 머티리얼 리소스 경로를 적으므로 DDC 키에 리소스 경로를 넣는다. */
+            bool   isImportedPathEmbedded() const override { return true; }
+            void   collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const override { ModelImporter::collectImportedFiles( importedPath, outListPath ); }
+            bool   isSourceFile( string_view path ) const override { return ModelImportUtil::isSourceModel( path ); }
+            string makeImportedPath( string_view sourcePath ) const override { return ModelImporter::makeImportedModelPath( sourcePath ); }
+            uint64 computeSourceHash( string_view sourcePath, string_view assetPath ) const override
             {
                 ModelImportRule rule;
                 if ( findRule( assetPath, rule ) == false )
@@ -939,9 +946,15 @@ namespace sw::editor
         if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == ConfigReadResult::Invalid )
             return true;
         // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
-        const ModelRawImporter importer{ assetPaths, config };
+        const ModelRawImporter           importer{ assetPaths, config };
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "ModelImporter.DerivedDataConfigUnreadable", "Model import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return true;
+        }
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 원본 하나라 직렬과 같다.
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr );
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr, *derivedDataCache );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR_ID( "ModelImporter.ModelImportFailed", "Model import failed: %#", problem.c_str() );
@@ -952,8 +965,12 @@ namespace sw::editor
 
     AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
-        const ModelRawImporter importer{ assetPaths, config };
-        AssetImportSummary     summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        const ModelRawImporter           importer{ assetPaths, config };
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        AssetImportSummary summary =
+            AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>(), *derivedDataCache ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
         if ( mode == AssetImportMode::ImportStale )
             (void)ImportedAssetStore::removeUnreferenced( resourceRoot, summary._listProblem ); // 원본을 고치면 옛 키의 공유 파일이 남는다 — 전체를 다 본 지금 지운다(범위 임포트는 다른 원본의 참조를 몰라 하지 않는다)
         for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
@@ -1099,6 +1116,37 @@ namespace sw::editor
         }
         cgltf_free( pData );
         return hash;
+    }
+
+    void ModelImporter::collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath )
+    {
+        if ( FileUtil::isRegularFile( importedMeshPath ) == false )
+            return;
+        outListPath.push_back( string( importedMeshPath ) );
+        const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
+        if ( FileUtil::isRegularFile( fracturePath ) )
+            outListPath.push_back( fracturePath );
+        const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
+        if ( FileUtil::isDirectory( sideFolder ) == false )
+            return;
+        vector<string> listFile;
+        (void)FileUtil::collectFiles( sideFolder, "", listFile, true ); // 도중에 멈춘 목록은 빠진 파일이 DDC 히트 뒤에 없을 뿐이다 — 해시가 달라 다음 대조가 다시 임포트한다
+        unordered_set<string> uniqueShared;
+        for ( const string& file : listFile )
+        {
+            outListPath.push_back( FileUtil::normalizeSeparators( file ) );
+            string text;
+            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( file, text ) )
+            {
+                vector<string> listShared;
+                ImportedAssetStore::collectReferencedFiles( importedMeshPath, text, listShared );
+                for ( string& shared : listShared )
+                {
+                    if ( FileUtil::isRegularFile( shared ) && uniqueShared.insert( shared ).second )
+                        outListPath.push_back( std::move( shared ) );
+                }
+            }
+        }
     }
 
     uint64 ModelImporter::computeImportedHash( string_view importedMeshPath )

@@ -50,6 +50,8 @@ namespace sw::editor
          * @details 공유 파일은 옆 폴더 밖이라 옆 폴더 해시에 들지 않는다. 지우거나 손대면 어긋남으로 잡히게 참조를 따라가 섞는다.
          */
         [[nodiscard]] static uint64 mixReferencedFiles( string_view importedPath, string_view text, uint64 hash );
+        /** @brief @p importedPath 의 글 @p text 가 가리키는 저장소 파일의 디스크 경로를 정렬해 @p outListPath 에 더합니다(`mixReferencedFiles` 와 같은 풀이 — 풀지 못한 참조는 뺀다). */
+        static void collectReferencedFiles( string_view importedPath, string_view text, vector<string>& outListPath );
 
         /**
          * @brief @p resourceRoot 아래 모든 저장소에서 같은 도메인의 임포트 결과가 가리키지 않는 파일을 지웁니다(원본을 고치면 옛 키의 파일이 남는다).

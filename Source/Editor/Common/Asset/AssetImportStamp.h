@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    class DerivedDataCache;
     class TaskManager;
 } // namespace sw
 
@@ -46,6 +47,14 @@ namespace sw::editor
         }
 
         bool isClean() const { return _listProblem.empty(); }
+
+        /** @brief 시작하지 못한 임포트의 요약입니다(문제 한 줄 — 예: DDC 설정을 읽지 못했다). */
+        static AssetImportSummary makeFailed( string problem )
+        {
+            AssetImportSummary summary;
+            summary._listProblem.push_back( std::move( problem ) );
+            return summary;
+        }
     };
 } // namespace sw::editor
 
@@ -92,6 +101,19 @@ namespace sw::editor
          *          지워도 어긋남으로 잡힌다.
          */
         virtual uint64 computeImportedHash( string_view importedPath ) const;
+        /**
+         * @brief 임포트 결과 파일(절대 경로) 목록입니다. 기본은 결과 파일 하나입니다(있으면). `computeImportedHash` 가 섞는 파일과 같아야 합니다.
+         * @details DDC 가 이 파일들을 (이름, 바이트) 한 덩어리로 담고 히트에서 그대로 되살린다 — 빠진 파일은 히트 뒤에 없다.
+         */
+        virtual void collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const;
+        /** @brief DDC 키에 넣는 임포터 코드 지문(`CookCodeFingerprint::find`)입니다. 0 이면 `Config/Dev/CookCodeInputs.json` 에 없는 것이라 DDC 를 쓰는 임포트가 오류로 멈춥니다. */
+        virtual uint64 findCodeFingerprint() const = 0;
+        /**
+         * @brief 결과 글에 자기 리소스 경로가 박히면 true 입니다(기본 false). 모델은 `_shared/` · 머티리얼 경로를 적는다.
+         * @details true 면 DDC 키에 리소스 경로를 넣고 결과 파일 이름을 리소스 루트 기준으로 담는다. false 면 경로를 키에 넣지 않아 복제본 · 옮긴 원본도 같은 항목을 쓰고
+         *          (유니티는 GUID 를 넣어 복제본을 다시 임포트한다), 결과 파일 이름은 결과 폴더 기준이다.
+         */
+        virtual bool isImportedPathEmbedded() const { return false; }
         /** @brief 임포트하지 않는 원본이면 그 이유를 반환하고, 아니면 nullptr 입니다. */
         virtual const utf8* findUnsupportedReason( string_view sourcePath ) const = 0;
         /**
@@ -129,9 +151,14 @@ namespace sw::editor
          *          파일마다 결과가 자기 칸에 담기고 요약(`_listProblem` 의 순서 · 카운터)과 스탬프 표는 파일 순서대로 합치므로, 결과 바이트 · 스탬프 · 요약은 직렬로 돌 때와 같다.
          *          작업 시스템이 없으면(테스트 하니스 · 서비스 연결 전) 이 스레드가 사슬을 파일 순서대로 돈다. 임포터 로그의 줄 순서만 병렬로 돌 때 파일 사이에서 섞인다.
          * @param resourceRoot `Content/` 의 절대 경로
+         *
+         *          **어긋난 원본은 임포트하기 전에 @p derivedDataCache 를 찾고, 미스면 임포트한 뒤 넣는다**(ImportStale 만). 키 = 임포터 스탬프 머리 + 코드 지문 + 원본 해시
+         *          (원본 바이트 · 규칙 · 임포터 판 · 대상 형식) + (`isImportedPathEmbedded` 면) 리소스 경로. 히트는 임포터를 부르지 않고 결과 파일을 되살린다.
          * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
+         * @param derivedDataCache 결과를 찾고 넣는 DDC(보통 `DerivedDataCache::loadFromConfig` — 부르는 쪽이 읽어 넘긴다, 테스트는 임시 폴더 층)
          */
-        [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager );
+        [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
+                                                           const DerivedDataCache& derivedDataCache );
         /** @brief 리소스 루트 아래 모든 원본 폴더의 원본 경로(루트 기준 — 규칙을 고르는 경로)를 정렬해 돌려줍니다(`importAll` 이 훑는 원본과 같다). */
         [[nodiscard]] static vector<string> collectSourceAssetPaths( string_view resourceRoot, const IRawAssetImporter& importer );
 
@@ -142,9 +169,10 @@ namespace sw::editor
          *          지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다. 사슬과 순서 의존은 범위 안 원본끼리만 따진다.
          *          **범위 밖에서 어긋난 것(규칙 파일만 고친 다른 원본 등)은 보정하지 않는다.** 그 보정은 `App --import-*` 의 전체 대조가 한다.
          *          작업 시스템(@p pTaskManager, `importAll` 과 같음)을 부르는 쪽이 넘기므로 에디터 스레드에서도 워커에서도 부를 수 있다.
+         *          DDC(@p derivedDataCache)는 `importAll` 과 같이 쓴다.
          */
         [[nodiscard]] static AssetImportSummary importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
-                                                               TaskManager* pTaskManager );
+                                                               TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache );
 
         /**
          * @brief 원본 경로를 결과 경로로 바꿉니다(`<x>/<rawFolder>/<y>.<ext>` → `<x>/<importedFolder>/<y><importedExtension>`).

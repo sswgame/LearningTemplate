@@ -235,5 +235,7 @@ namespace sw::editor
         static uint64 computeSourceHash( string_view sourcePath, const ModelImportRule& rule );
         /** @brief 임포트 결과 전체(`.mesh` 와 옆 폴더의 파일들)의 해시를 계산합니다. `.mesh` 가 없으면 0 입니다. */
         static uint64 computeImportedHash( string_view importedMeshPath );
+        /** @brief `computeImportedHash` 가 섞는 결과 파일(`.mesh` · `.fracture` · 옆 폴더 파일 · 그것이 가리키는 공유 파일)을 모읍니다(DDC 덩어리). `.mesh` 가 없으면 아무것도 더하지 않습니다. */
+        static void collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath );
     };
 } // namespace sw::editor
