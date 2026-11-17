@@ -60,6 +60,49 @@ namespace sw
                 return string_view( value.data(), value.size() );
             }
 
+            /** @brief 받는 객체 · 배열 중첩 깊이의 상한입니다. 값을 걷는 쪽(직렬화 · 상속 합치기)이 재귀라 끝없는 중첩은 C 스택을 넘긴다. */
+            static constexpr int32 kMaxValueDepth = 256;
+
+            /**
+             * @brief 엄격 읽기 — 같은 객체 안의 중복 키와 너무 깊은 중첩을 실패로 봅니다. 문제가 없으면 빈 글입니다.
+             * @details nlohmann 은 중복 키를 받아 나중 값으로 덮는다 — 손으로 고친 데이터의 두 번째 칸이 조용히 이긴다. 파서 콜백이 객체마다 받은 키 수를 세고,
+             *          객체가 끝날 때 실제 칸 수보다 많으면 중복이다(키마다 집합에 넣지 않아 읽기 비용이 거의 없다).
+             */
+            static JSONImpl parseStrict( string_view text, sw::string& outProblem )
+            {
+                std::vector<uint32> listKeyCount; // 열린 객체마다 받은 키 수(파서 콜백 안이라 짧게 산다)
+                outProblem.clear();
+                const JSONImpl::parser_callback_t callback = [&listKeyCount, &outProblem]( int depth, JSONImpl::parse_event_t event, JSONImpl& parsed ) -> bool
+                {
+                    switch ( event )
+                    {
+                        case JSONImpl::parse_event_t::object_start:
+                        case JSONImpl::parse_event_t::array_start:
+                            if ( depth > kMaxValueDepth && outProblem.empty() )
+                                outProblem = "nesting deeper than 256 levels";
+                            if ( event == JSONImpl::parse_event_t::object_start )
+                                listKeyCount.push_back( 0 );
+                            break;
+                        case JSONImpl::parse_event_t::key:
+                            if ( listKeyCount.empty() == false )
+                                ++listKeyCount.back();
+                            break;
+                        case JSONImpl::parse_event_t::object_end:
+                            if ( listKeyCount.empty() == false )
+                            {
+                                if ( parsed.is_object() && listKeyCount.back() > parsed.size() && outProblem.empty() )
+                                    outProblem = "an object repeats a key (the later value would silently win)";
+                                listKeyCount.pop_back();
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    return true;
+                };
+                return JSONImpl::parse( text.data(), text.data() + text.size(), callback, false, false );
+            }
+
             /**
              * @brief 키 · 문자열 값 가운데 잘못된 UTF-8 인 첫 글을 찾아, 로그에 실을 수 있게 바꾼 글(`StringUtil::escapeInvalidUTF8`)로 돌려줍니다.
              * @details 재귀 대신 스택으로 돈다 — 파서가 받은 깊은 중첩에서 C 스택을 쓰지 않는다.
@@ -568,10 +611,18 @@ namespace sw
 
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JSONImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
+        string strictProblem;
+        _impl->root = JSONDocumentInternal::parseStrict( jsonText, strictProblem );
         if ( _impl->root.is_discarded() )
         {
             _lastError = JSONDocumentInternal::describeParseError( jsonText, source );
+            SW_LOG_ERROR_ID( "JSON.ParseError", "JSON parse error at %#", _lastError );
+            clear();
+            return false;
+        }
+        if ( strictProblem.empty() == false )
+        {
+            _lastError = string( source ) + ": " + strictProblem;
             SW_LOG_ERROR_ID( "JSON.ParseError", "JSON parse error at %#", _lastError );
             clear();
             return false;
@@ -589,8 +640,9 @@ namespace sw
         }
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JSONImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
-        if ( _impl->root.is_discarded() )
+        string strictProblem;
+        _impl->root = JSONDocumentInternal::parseStrict( jsonText, strictProblem );
+        if ( _impl->root.is_discarded() || strictProblem.empty() == false )
         {
             clear();
             return false;
