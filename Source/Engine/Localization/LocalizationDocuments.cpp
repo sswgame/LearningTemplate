@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
+#include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -463,6 +464,23 @@ namespace sw
     {
         const string normalized = CultureTable::normalizeCode( culture );
         return VectorUtil::contains( _listStagedCulture, normalized );
+    }
+
+    vector<string> LocalizationProject::collectCookedCultures() const
+    {
+        vector<string> listCulture;
+        listCulture.push_back( _sourceCulture );
+        for ( const string& culture : _listStagedCulture )
+        {
+            if ( VectorUtil::contains( listCulture, culture ) == false )
+                listCulture.push_back( culture );
+        }
+        return listCulture;
+    }
+
+    string LocalizationProject::makeCookedTablePath( string_view projectPath, string_view culture ) const
+    {
+        return makeSiblingPath( projectPath, _name + "." + CultureTable::normalizeCode( culture ) + LocalizationBinaryTable::kExtension );
     }
 
     expected<void> LocalizationProject::collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath )

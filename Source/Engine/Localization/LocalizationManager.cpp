@@ -252,12 +252,38 @@ namespace sw
         return bAllRead;
     }
 
+    bool LocalizationManager::readCookedProject( const AssetID& assetID, MountedProject& outProject )
+    {
+        const string_view projectPath = assetID.view();
+        string            text;
+        if ( LocalizationManagerInternal::readLocalizationFile( assetID, text ) == false )
+        {
+            SW_LOG_ERROR_ID( "LocalizationManager.LocalizationProjectCannotRead", "Localization project '%#' cannot be read", projectPath );
+            return false;
+        }
+        if ( const expected<void> read = outProject._project.loadFromXMLText( text, projectPath ); read.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "LocalizationManager.LocalizationProjectNotLoaded", "Localization project is not loaded: %# (%#)", read.error().message(), read.error().detail() );
+            return false;
+        }
+        outProject._projectPath = string( projectPath );
+        outProject._listFilePath.clear();
+        outProject._listFilePath.push_back( outProject._projectPath );
+        outProject._listCookedCulture = outProject._project.collectCookedCultures();
+        return true;
+    }
+
     bool LocalizationManager::mountProject( const AssetID& assetID, LocalizationScope scope )
+    {
+        return mountProjectFrom( assetID, scope, AssetIO::usesSource() ? ContentSource::Source : ContentSource::Cooked );
+    }
+
+    bool LocalizationManager::mountProjectFrom( const AssetID& assetID, LocalizationScope scope, ContentSource source )
     {
         const string_view projectPath = assetID.view();
         MountedProject    mounted;
         mounted._scope       = scope;
-        const bool bComplete = readProject( assetID, mounted );
+        const bool bComplete = source == ContentSource::Cooked ? readCookedProject( assetID, mounted ) : readProject( assetID, mounted );
         if ( mounted._project._name.empty() )
             return false;
 
@@ -289,6 +315,7 @@ namespace sw
             rebuildTablesLocked();
             rebuildLookupChainLocked();
         }
+        syncCookedTables();
         SW_LOG_INFO_ID( "LocalizationManager.MountedLocalizationProject", "Mounted localization project '%#'.", projectPath );
         notifyLanguageChanged( oldLanguage, newLanguage );
         return bComplete;
@@ -357,6 +384,7 @@ namespace sw
             rebuildTablesLocked();
             rebuildLookupChainLocked();
         }
+        syncCookedTables();
         notifyLanguageChanged( oldLanguage, currentLanguage );
     }
 
@@ -674,6 +702,17 @@ namespace sw
             }
         }
 
+        // 쿠킹본으로 올린 프로젝트는 이미 가려낸 이진 표를 그대로 넣는다(낡은 · 검토 번역은 쿠킹이 뺐다).
+        for ( const MountedProject& project : _listProject )
+        {
+            for ( const auto& [culture, cooked] : project._mapCookedTable )
+            {
+                StringTable& table = getOrCreateTableLocked( culture );
+                for ( const auto& [keyHash, text] : cooked.getTexts() )
+                    table.setStringByHash( keyHash, text );
+            }
+        }
+
         // 의사 문화권: 프로젝트 원문을 변환한다(길이와 하드코딩 찾기의 기준은 원문이다).
         vector<string> listCultureCode;
         _cultureTable.collectCultureCodes( listCultureCode );
@@ -690,6 +729,12 @@ namespace sw
                 {
                     pseudoTable.setStringByHash( LocalizationKeyIndex::computeHash( key ), PseudoLocalizer::transform( entry._source, pCulture->_pseudoMode ) );
                 }
+                // 쿠킹본은 원문 문화권의 이진 표가 원문이다(원문 문화권은 늘 조회 사슬에 있어 읽혀 있다).
+                const auto sourceIt = project._mapCookedTable.find( project._project._sourceCulture );
+                if ( sourceIt == project._mapCookedTable.end() )
+                    continue;
+                for ( const auto& [keyHash, text] : sourceIt->second.getTexts() )
+                    pseudoTable.setStringByHash( keyHash, PseudoLocalizer::transform( text, pCulture->_pseudoMode ) );
             }
         }
 
@@ -712,6 +757,83 @@ namespace sw
                 table.setStringByHash( LocalizationKeyIndex::computeHash( key ), entry._text );
             }
         }
+    }
+
+    void LocalizationManager::syncCookedTables()
+    {
+        struct CookedRead
+        {
+            string                  _projectName;
+            string                  _projectPath;
+            string                  _culture;
+            string                  _tablePath;
+            LocalizationBinaryTable _table;
+        };
+        vector<CookedRead> listRead;
+        bool               bAnyOutsideChain{ false };
+        {
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
+            for ( const MountedProject& project : _listProject )
+            {
+                for ( const string& culture : project._listCookedCulture )
+                {
+                    const bool bInChain = VectorUtil::contains( _listLookupCulture, culture );
+                    const bool bLoaded  = project._mapCookedTable.find( culture ) != project._mapCookedTable.end();
+                    bAnyOutsideChain    = bAnyOutsideChain || ( bLoaded && bInChain == false );
+                    if ( bInChain && bLoaded == false )
+                        listRead.push_back( CookedRead{ project._project._name, project._projectPath, culture, project._project.makeCookedTablePath( project._projectPath, culture ), {} } );
+                }
+            }
+        }
+        if ( listRead.empty() && bAnyOutsideChain == false )
+            return;
+
+        for ( CookedRead& read : listRead )
+        {
+            vector<uint8> bytes;
+            if ( AssetIO::readBinaryAsset( AssetID{ read._tablePath }, bytes ) == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.CookedTableMissing", "Cooked content requires the cooked localization table '%#' (project '%#', culture '%#')", read._tablePath,
+                                 read._projectName, read._culture );
+                continue;
+            }
+            if ( const expected<void> parsed = read._table.parse( bytes.data(), bytes.size() ); parsed.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.CookedTableRejected", "Cooked localization table '%#' is not loaded: %#", read._tablePath, parsed.error().message() );
+                continue;
+            }
+            if ( normalizeLanguageCode( read._table.getCulture() ) != read._culture )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.CookedTableCulture", "Cooked localization table '%#' says culture '%#' but '%#' was expected", read._tablePath, read._table.getCulture(),
+                                 read._culture );
+                read._table = LocalizationBinaryTable{};
+            }
+        }
+
+        UniqueLock<shared_mutex> lock{ _mutex };
+        for ( CookedRead& read : listRead )
+        {
+            if ( read._table.getCulture().empty() )
+                continue; // 읽지 못했다 — 사슬의 다음 문화권이 낸다
+            for ( MountedProject& project : _listProject )
+            {
+                // 잠금을 놓은 사이 같은 이름의 프로젝트가 바뀌었으면 옛 경로의 표를 넣지 않는다.
+                if ( project._project._name == read._projectName && project._projectPath == read._projectPath )
+                    project._mapCookedTable[read._culture] = std::move( read._table );
+            }
+        }
+        // 잠금을 놓은 사이 사슬이 다시 바뀌었을 수 있다 — 지금 사슬 밖의 표는 내린다(메모리는 사슬만큼).
+        for ( MountedProject& project : _listProject )
+        {
+            for ( auto it = project._mapCookedTable.begin(); it != project._mapCookedTable.end(); )
+            {
+                if ( VectorUtil::contains( _listLookupCulture, it->first ) )
+                    ++it;
+                else
+                    it = project._mapCookedTable.erase( it );
+            }
+        }
+        rebuildTablesLocked();
     }
 
     void LocalizationManager::rebuildLookupChainLocked()
@@ -745,6 +867,7 @@ namespace sw
             _currentLanguage = code;
             rebuildLookupChainLocked();
         }
+        syncCookedTables();
         SW_LOG_INFO_ID( "LocalizationManager.LanguageChanged", "Language changed: '%#' -> '%#'", oldLanguage.c_str(), code.c_str() );
         // 리소스 조건의 `locale` 축 — 언어별 값 · 경로 교체(`<_when _if="locale.ko">` · `<Remap when>`)가 읽는다. 식의 이름 글자에 '-' 가 없어 `en-US` 는 `locale.en_US` 다.
         // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `ResourceTags` 가 오류를 남긴다.
@@ -763,10 +886,13 @@ namespace sw
 
     void LocalizationManager::setFallbackLanguage( string_view languageCode )
     {
-        string                   code = normalizeLanguageCode( languageCode );
-        UniqueLock<shared_mutex> lock{ _mutex };
-        _fallbackLanguage = std::move( code );
-        rebuildLookupChainLocked();
+        string code = normalizeLanguageCode( languageCode );
+        {
+            UniqueLock<shared_mutex> lock{ _mutex };
+            _fallbackLanguage = std::move( code );
+            rebuildLookupChainLocked();
+        }
+        syncCookedTables();
     }
 
     string LocalizationManager::getFallbackLanguage() const
@@ -779,8 +905,12 @@ namespace sw
     {
         const string                   code = normalizeLanguageCode( languageCode );
         ScopedSharedLock<shared_mutex> lock{ _mutex };
-        const auto                     it = _mapLanguageTable.find( code );
-        if ( it == _mapLanguageTable.end() || it->second->empty() )
+        const auto                     it      = _mapLanguageTable.find( code );
+        const bool                     bLoaded = it != _mapLanguageTable.end() && it->second->empty() == false;
+        // 쿠킹본은 사슬에 든 문화권만 읽어 두므로 고를 수 있는 문화권은 프로젝트가 적은 쿠킹된 문화권이다.
+        const bool bCooked = std::any_of( _listProject.begin(), _listProject.end(), [&code]( const MountedProject& project )
+        { return VectorUtil::contains( project._listCookedCulture, code ); } );
+        if ( bLoaded == false && bCooked == false )
             return false;
         if constexpr ( build::kShipping ) // 배포는 가짜 언어를 고르지 않는다
         {
@@ -808,6 +938,14 @@ namespace sw
                         continue;
                 }
                 listLanguage.push_back( code );
+            }
+            for ( const MountedProject& project : _listProject )
+            {
+                for ( const string& culture : project._listCookedCulture )
+                {
+                    if ( VectorUtil::contains( listLanguage, culture ) == false )
+                        listLanguage.push_back( culture );
+                }
             }
         }
         VectorUtil::sort( listLanguage );

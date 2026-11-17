@@ -22,6 +22,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/ContentSource.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
@@ -108,6 +109,8 @@ namespace sw
         /**
          * @brief 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
          * @details 같은 이름의 프로젝트가 이미 있으면 바꾼다. 원문 테이블 두 개에 같은 키가 있으면 오류이고 앞의 것을 쓴다.
+         *          쿠킹본을 읽는 구성(`AssetIO::usesSource` 가 거짓)은 프로젝트 파일과, 조회 사슬에 든 문화권의 쿠킹된 이진 표(`LocalizationProject::makeCookedTablePath`)만
+         *          읽는다(언리얼 `.locres` — 지금 문화권 + 폴백 사슬만). 언어가 바뀌면 사슬에 새로 든 표를 읽고 빠진 표는 내린다(감사 A-16).
          */
         [[nodiscard]] bool mountProject( const AssetID& assetID, LocalizationScope scope );
         /** @brief 그 범위의 프로젝트를 내립니다. */
@@ -234,16 +237,27 @@ namespace sw
         /** @brief 로드한 프로젝트 하나입니다. 읽은 문서와 그 파일 경로를 가집니다. */
         struct MountedProject
         {
-            LocalizationProject          _project;
-            string                       _projectPath;
-            vector<string>               _listFilePath; ///< 프로젝트, 원문 테이블, 번역 테이블의 경로입니다(있든 없든 포함하며, 새로 생긴 번역 테이블도 다시 읽습니다).
-            map<string, SourceTextEntry> _mapSource;    ///< 원문 테이블들을 합친 것입니다.
-            vector<TranslationTable>     _listTranslation;
-            LocalizationScope            _scope{ LocalizationScope::Game };
+            LocalizationProject                  _project;
+            string                               _projectPath;
+            vector<string>                       _listFilePath; ///< 프로젝트, 원문 테이블, 번역 테이블의 경로입니다(있든 없든 포함하며, 새로 생긴 번역 테이블도 다시 읽습니다).
+            map<string, SourceTextEntry>         _mapSource;    ///< 원문 테이블들을 합친 것입니다.
+            vector<TranslationTable>             _listTranslation;
+            LocalizationScope                    _scope{ LocalizationScope::Game };
+            vector<string>                       _listCookedCulture; ///< 쿠킹본으로 올렸으면 쿠킹된 문화권(`collectCookedCultures`), 소스로 올렸으면 비었다
+            map<string, LocalizationBinaryTable> _mapCookedTable;    ///< 쿠킹본으로 올린 프로젝트의 읽은 이진 표 — 조회 사슬에 든 문화권만
         };
 
         /** @brief 프로젝트 파일 세트를 읽어 @p outProject 를 채웁니다. 프로젝트나 원문 테이블을 읽지 못하면 false 입니다. */
         [[nodiscard]] static bool readProject( const AssetID& assetID, MountedProject& outProject );
+        /** @brief 쿠킹본 구성의 읽기입니다 — 프로젝트 파일만 읽고 쿠킹된 문화권을 적는다. 이진 표는 `syncCookedTables` 가 사슬을 보고 읽는다. */
+        [[nodiscard]] static bool readCookedProject( const AssetID& assetID, MountedProject& outProject );
+        /** @brief `mountProject` 의 본문입니다. @p source 가 무엇을 읽을지 정한다(테스트가 쿠킹본 길을 고른다). */
+        [[nodiscard]] bool mountProjectFrom( const AssetID& assetID, LocalizationScope scope, ContentSource source );
+        /**
+         * @brief 쿠킹본으로 올린 프로젝트의 이진 표를 지금 조회 사슬에 맞춥니다 — 사슬에 든 것은 읽고 빠진 것은 내린 뒤 실행 테이블을 다시 채운다.
+         * @details 읽기는 잠금 밖에서 한다(잠금은 잎 잠금). 사슬을 바꾼 함수가 알림 전에 부른다. 읽지 못한 표는 오류를 남기고 사슬의 다음 문화권으로 넘어간다.
+         */
+        void syncCookedTables();
         /**
          * @brief 올린 프로젝트 · 낱개 표에 들어올 것을 더한 키 전체에서 "같은 64 비트 해시, 다른 키" 를 찾습니다(`_mutex` 를 잡은 상태에서 부릅니다).
          * @details 실행 표는 해시로만 열려 충돌하면 나중 것이 조용히 이긴다. 그래서 들이기 **전에** 검사하고 지면 들이지 않는다.

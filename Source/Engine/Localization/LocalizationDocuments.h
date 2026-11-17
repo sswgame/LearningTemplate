@@ -252,6 +252,13 @@ namespace sw
         static string makeTranslationPath( string_view projectPath, string_view culture );
         /** @brief @p culture 가 출시 문화권(`stagedCultures`)이면 true 입니다. */
         bool isStagedCulture( string_view culture ) const;
+        /** @brief 쿠킹이 이진 번역 표(`.locres`)로 굽는 문화권입니다 — 원문 문화권 다음에 출시 문화권(정규화, 겹침 없음). */
+        vector<string> collectCookedCultures() const;
+        /**
+         * @brief 문화권 하나의 쿠킹된 이진 번역 표 경로(`<폴더>/<이름>.<culture>.locres`)입니다. 쿠커(`LocalizationCooker`)와 쿠킹본을 읽는 런타임이 같은 규칙 하나를 쓴다.
+         * @details 쿠킹 스테이징은 리소스 루트 기준 같은 상대 경로라(`PackCooker`) 리소스 id 그대로 팩에서 찾는다.
+         */
+        string makeCookedTablePath( string_view projectPath, string_view culture ) const;
         /**
          * @brief @p folder 아래 프로젝트마다 그 폴더의 번역 테이블 중 출시 문화권 밖의 것을 @p outListAbsPath 에 더합니다(`FileUtil::normalizePath` 한 절대 경로).
          * @details 팩 쿠킹이 담지 않는다(언리얼 Cultures to Stage — `PackCookParams::_listExcludedSourceFile`).
