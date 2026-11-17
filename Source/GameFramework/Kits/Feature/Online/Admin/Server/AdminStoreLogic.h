@@ -20,8 +20,22 @@ namespace sw
     class ILedgerPolicy;
 
     /** @brief 명령 하나의 입력입니다. 값으로 담으며 작업이 들고 저장소 스레드로 갑니다. */
+    /**
+     * @brief 등급마다 걸 수 있는 기한 있는 제재(채팅 금지 · 정지)의 최대 길이입니다. Super 는 영구 정지까지 걸 수 있어 상한이 없습니다.
+     * @details 상한이 없으면 Operator 가 `INT64_MAX` 까지의 정지로 영구 정지(Super 등급)를 대신한다(감사 O-16). 값은 키트 설정(필수)에서 온다.
+     */
+    struct AdminSanctionLimit
+    {
+        int64 _supportMaxMs{ 0 };  ///< Support 가 걸 수 있는 최대 길이(채팅 금지)
+        int64 _operatorMaxMs{ 0 }; ///< Operator 가 걸 수 있는 최대 길이(채팅 금지 · 정지)
+
+        /** @brief 두 상한이 모두 있으면 true 입니다. */
+        [[nodiscard]] bool isSet() const { return _supportMaxMs > 0 && _operatorMaxMs > 0; }
+    };
+
     struct AdminCommand
     {
+        AdminSanctionLimit       _sanctionLimit{};
         AdminRequest             _request{};
         const ILedgerPolicy*     _pPolicy{ nullptr };
         const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 찾기(접속하지 않은 계정 포함)이다. 계정 키트가 없으면 null 이고 이름 찾기는 UnknownAccount 이다

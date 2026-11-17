@@ -14,6 +14,8 @@
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
+#include <limits>
+
 using namespace sw;
 
 namespace
@@ -23,6 +25,10 @@ namespace
     constexpr AccountID kViewer   = 8;
     constexpr AccountID kPlayer   = 99;
     constexpr int64     kNowMs    = 1700000000000ll;
+    constexpr int64     kDayMs    = 86400000ll;
+
+    constexpr int64 kSupportMaxSanctionMs  = kDayMs; ///< 등급별 제재 최대 길이(키트 설정 값)
+    constexpr int64 kOperatorMaxSanctionMs = 30 * kDayMs;
 
     /** @brief 세션 끊기 호출을 셉니다. */
     class FakeSessionControl final : public IAccountSessionControl
@@ -198,6 +204,8 @@ namespace
             SW_EXPECT_TRUE( AdminStoreLogic::seedRole( _database, kOperator, AdminRole::Operator, kNowMs ) == AdminResult::Ok );
             SW_EXPECT_TRUE( AdminStoreLogic::seedRole( _database, kViewer, AdminRole::Viewer, kNowMs ) == AdminResult::Ok );
             AdminServiceConfig settings;
+            settings._sanctionLimit._supportMaxMs  = kSupportMaxSanctionMs;
+            settings._sanctionLimit._operatorMaxMs = kOperatorMaxSanctionMs;
             if ( bPorts )
             {
                 settings._pDirectory           = &_directory;
@@ -518,4 +526,33 @@ SW_TEST_CASE( AdminServiceTest, RetryableReplyReachesTheServiceAgain )
     finished._result = AdminResult::Ok;
     rig.expectFailureReachesService( AdminMethod::AdjustAsset::kID, OnlineError::kBusy, finished );
     rig.expectFailureReachesService( AdminMethod::AdjustAsset::kID, OnlineError::kUnavailable, finished );
+}
+
+/** @brief [AdminServiceTest] 등급마다 기한 있는 제재의 길이에 상한이 있다 — Operator 의 31 일 정지는 Forbidden(영구 정지를 대신하지 못한다), 30 일은 된다, Super 는 상한이 없다(감사 O-16) */
+SW_TEST_CASE( AdminServiceTest, SanctionLengthIsCappedByRole )
+{
+    AdminFixture rig;
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Suspend, kNowMs + kOperatorMaxSanctionMs + kDayMs ) )._serviceResult.hasError( OnlineError::kForbidden ) );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Suspend, std::numeric_limits<int64>::max() ) )._serviceResult.hasError( OnlineError::kForbidden ) );
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Suspend, kNowMs + kOperatorMaxSanctionMs ) )._serviceResult == AdminResult::Ok );
+    SW_EXPECT_TRUE( rig.call( kSuper, AdminMethod::SetSanction::kID, makeSanction( ServiceSanctionKind::Suspend, kNowMs + 3650 * kDayMs ) )._serviceResult == AdminResult::Ok );
+}
+
+/** @brief [AdminServiceTest] 없는 계정을 대상으로 한 정지는 UnknownAccount 다 — 오타 계정이 Ok 로 끝나지 않는다 */
+SW_TEST_CASE( AdminServiceTest, SanctionOnUnknownAccountIsRefused )
+{
+    AdminFixture rig;
+    AdminRequest request = makeSanction( ServiceSanctionKind::Suspend, kNowMs + kDayMs );
+    request._accountID   = kPlayer + 1;
+    SW_EXPECT_TRUE( rig.call( kOperator, AdminMethod::SetSanction::kID, request )._serviceResult == AdminResult::UnknownAccount );
+}
+
+/** @brief [AdminServiceTest] 등급별 제재 상한이 없으면 서비스가 서지 않는다(폴백 없음) */
+SW_TEST_CASE( AdminServiceTest, InitializeNeedsSanctionLimits )
+{
+    SW_EXPECT_LOG( "AdminService.AdminServiceNeedsSanctionLimit" );
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    AdminService          service;
+    SW_EXPECT_FALSE( service.initialize( &store, AdminServiceConfig{} ) );
 }

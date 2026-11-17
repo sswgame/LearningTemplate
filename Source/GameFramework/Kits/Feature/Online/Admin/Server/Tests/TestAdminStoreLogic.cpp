@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
+#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -18,9 +19,30 @@ namespace
     constexpr AccountID kPlayer   = 99;
     constexpr int64     kNowMs    = 1700000000000ll;
 
+    /** @brief kPlayer 만 있는 계정 이름 색인입니다(대상 계정 확인). */
+    class StoreLogicNameIndex final : public IAccountNameIndex
+    {
+    public:
+        ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& /*connection*/, string_view /*displayName*/, AccountIdentity& /*outIdentity*/ ) const override
+        {
+            return ServiceStoreResult::NotFound;
+        }
+
+        ServiceStoreResult readIdentity( IServiceStoreConnection& /*connection*/, AccountID accountID, AccountIdentity& outIdentity ) const override
+        {
+            if ( accountID != kPlayer )
+                return ServiceStoreResult::NotFound;
+            outIdentity._accountID = accountID;
+            return ServiceStoreResult::Ok;
+        }
+    };
+
+    const StoreLogicNameIndex kStoreLogicNameIndex{};
+
     AdminCommand makeAdjust( AccountID adminID, int64 amount, uint64 keyLow )
     {
         AdminCommand command;
+        command._pNameIndex         = &kStoreLogicNameIndex;
         command._method             = AdminMethod::AdjustAsset::kID;
         command._adminID            = adminID;
         command._keyHigh            = 1;
@@ -115,4 +137,19 @@ SW_TEST_CASE( AdminStoreLogicTest, AccountDeletionErasesTheRole )
     SW_EXPECT_TRUE( database.readRecord( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), record ) == ServiceStoreResult::NotFound );
     SW_EXPECT_TRUE( database.readRecord( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), record ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( AdminStoreLogic::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok ); // 멱등
+}
+
+/** @brief [AdminStoreLogicTest] 없는 계정에 지급하면 UnknownAccount 이고 아무것도 쓰지 않는다. 계정 색인이 없으면 확인할 수 없어 Unavailable 이다(감사 O-16) */
+SW_TEST_CASE( AdminStoreLogicTest, AdjustToUnknownAccountIsRefused )
+{
+    Fixture      fixture;
+    const uint64 hashBefore = fixture.database.computeContentHash();
+    AdminReply   reply;
+    AdminCommand typo        = makeAdjust( kOperator, 100, 8 );
+    typo._request._accountID = kPlayer + 1;
+    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, typo, reply ) == AdminResult::UnknownAccount );
+    AdminCommand noIndex = makeAdjust( kOperator, 100, 9 );
+    noIndex._pNameIndex  = nullptr;
+    SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, noIndex, reply ).hasError( OnlineError::kUnavailable ) );
+    SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBefore );
 }
