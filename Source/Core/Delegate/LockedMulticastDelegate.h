@@ -62,7 +62,8 @@ namespace sw
             , _bBound{ SW_FALSE }
         {
         }
-        ~LockedMulticastDelegate() override = default;
+        /** @brief 출처를 닫습니다 — 다른 스레드에서 진행 중인 해제(그 안의 방송 대기 포함)가 끝난 뒤 멤버가 사라진다. */
+        ~LockedMulticastDelegate() override { closeSubscriptions(); }
 
         LockedMulticastDelegate( const LockedMulticastDelegate& )            = delete;
         LockedMulticastDelegate& operator=( const LockedMulticastDelegate& ) = delete;

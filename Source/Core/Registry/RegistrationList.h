@@ -606,6 +606,13 @@ namespace sw
             , _revision{ 0 }
         {
         }
+        /** @brief 출처를 닫습니다(남은 주인 구독을 무효화한다). */
+        ~NameRegistry() override { closeSubscriptions(); }
+        // 소멸자를 둔 뒤에도 복사 · 이동은 예전 그대로다(복사는 구독을 데려가지 않고 이동은 데려간다 — `SubscriptionSource`).
+        NameRegistry( const NameRegistry& )            = default;
+        NameRegistry& operator=( const NameRegistry& ) = default;
+        NameRegistry( NameRegistry&& )                 = default;
+        NameRegistry& operator=( NameRegistry&& )      = default;
 
         /** @brief 값을 올립니다. 이름이 비었거나 같은 이름이 이미 있으면 올리지 않고 false 입니다(먼저 것을 둡니다). */
         [[nodiscard]] bool add( const hashed_string& name, T value )

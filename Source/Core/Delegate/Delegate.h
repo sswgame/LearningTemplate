@@ -370,6 +370,8 @@ namespace sw
             , _broadcastDepth{ 0 }
         {
         }
+        /** @brief 출처를 닫습니다(진행 중인 구독 해제를 기다린 뒤 항목이 사라진다). */
+        ~MulticastDelegate() override { closeSubscriptions(); }
 
         // ------------------------------------------------------------------------------
         // 복사 · 이동 — broadcast 상태는 값의 일부가 아니다

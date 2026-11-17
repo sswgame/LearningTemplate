@@ -28,7 +28,7 @@ namespace sw
             , _value{ nullptr }
         {
         }
-        ~AtomicSlot() override = default;
+        ~AtomicSlot() override { closeSubscriptions(); }
 
         AtomicSlot( const AtomicSlot& )            = delete;
         AtomicSlot& operator=( const AtomicSlot& ) = delete;
