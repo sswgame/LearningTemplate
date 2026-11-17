@@ -338,34 +338,24 @@ namespace sw
         return *this;
     }
 
-    bool PackManager::findSiblingOverlap( const string& packPath, const string& mountDomain, const PackReader& reader ) const
+    bool PackManager::findSiblingOverlapLocked( const string& packPath, const string& mountDomain, const vector<uint64>& listPathHash, string& outSiblingPath, uint64& outPathHash ) const
     {
-        vector<shared_ptr<PackReader>> listSibling;
+        if ( mountDomain.empty() )
+            return false; // 패치 팩은 형제가 아니다 — 뒤가 이긴다
+        for ( const MountedPack& mounted : _listMountedPack )
         {
-            ScopedLock<mutex> lock{ _vfsMutex };
-            for ( const MountedPack& mounted : _listMountedPack )
-            {
-                // 같은 파일을 다시 붙이는 것은 형제가 아니다(앞 마운트를 바꿔 끼운다).
-                const bool bSibling = mounted._pReader != nullptr && mounted._domainName == mountDomain && FileUtil::isSameDiskPath( mounted._pReader->getPackPath(), packPath ) == false;
-                if ( bSibling )
-                    listSibling.push_back( mounted._pReader );
-            }
-        }
-        if ( listSibling.empty() )
-            return false;
-        vector<uint64> listPathHash;
-        reader.collectPathHashes( listPathHash );
-        for ( const shared_ptr<PackReader>& pSibling : listSibling ) // 읽기는 잠금 밖에서(`findReaderWithFile` 과 같은 규칙)
-        {
+            // 같은 파일을 다시 붙이는 것은 형제가 아니다(앞 마운트를 바꿔 끼운다).
+            const bool bSibling = mounted._pReader != nullptr && mounted._domainName == mountDomain && FileUtil::isSameDiskPath( mounted._pReader->getPackPath(), packPath ) == false;
+            if ( bSibling == false )
+                continue;
             for ( const uint64 pathHash : listPathHash )
             {
-                if ( pSibling->hasFile( pathHash ) == false )
-                    continue;
-                PackFileEntry entry;
-                (void)reader.getFileEntry( pathHash, entry );
-                SW_LOG_ERROR_ID( "PackManager.SiblingPacksOverlap", "Pack %# and %# both hold '%#' in domain '%#' - sibling packs of a domain must not overlap (cook the packs again)", packPath,
-                                 pSibling->getPackPath(), entry._relativePath, mountDomain );
-                return true;
+                if ( mounted._pReader->hasFile( pathHash ) )
+                {
+                    outSiblingPath = mounted._pReader->getPackPath();
+                    outPathHash    = pathHash;
+                    return true;
+                }
             }
         }
         return false;
@@ -437,11 +427,23 @@ namespace sw
         }
 
         // 같은 도메인의 형제 팩(나눈 팩 · 청크)은 항목이 겹치지 않는다 — 겹치면 어느 쪽이 이길지 조용히 정하지 않고 거절한다(뒤가 이기는 것은 패치뿐이다).
-        if ( mountDomain.empty() == false && findSiblingOverlap( normalizedPath, mountDomain, *pReader ) )
-            return false;
-
+        // 검사와 붙이기는 같은 잠금 안이다 — 두 형제를 동시에 붙여도 서로를 놓치지 않는다. 경로 해시는 잠금 밖에서 모으고, 로그는 잠금을 놓은 뒤 쓴다.
+        vector<uint64> listPathHash;
+        if ( mountDomain.empty() == false )
+            pReader->collectPathHashes( listPathHash );
+        string overlapSiblingPath;
+        uint64 overlapPathHash = 0;
         {
-            ScopedLock<mutex> lock{ _vfsMutex };
+            UniqueLock<mutex> lock{ _vfsMutex };
+            if ( findSiblingOverlapLocked( normalizedPath, mountDomain, listPathHash, overlapSiblingPath, overlapPathHash ) )
+            {
+                lock.unlock();
+                PackFileEntry entry;
+                (void)pReader->getFileEntry( overlapPathHash, entry );
+                SW_LOG_ERROR_ID( "PackManager.SiblingPacksOverlap", "Pack %# and %# both hold '%#' in domain '%#' - sibling packs of a domain must not overlap (cook the packs again)",
+                                 normalizedPath, overlapSiblingPath, entry._relativePath, mountDomain );
+                return false;
+            }
 
             // 이미 마운트되어 있으면 이전 팩을 뺀다
             for ( auto it = _listMountedPack.begin(); it != _listMountedPack.end(); ++it )

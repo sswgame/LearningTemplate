@@ -151,7 +151,7 @@ SW_TEST_CASE( PackCookerTest, StagedFilesOnlyDropOtherBackendShaders )
 SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
 {
     PackSplitConfig split;
-    split._maxPackBytes = 1000;
+    split._maxPackBytes = 64 * 1024;
     PackChunkRule& rule = split._listChunkRule.emplace_back();
     rule._name          = "music";
     rule._listPattern.push_back( "audio/music/**" );
@@ -163,11 +163,11 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
         path.push_back( static_cast<utf8>( '0' + index / 10 ) );
         path.push_back( static_cast<utf8>( '0' + index % 10 ) );
         path += ".xml";
-        listEntry.push_back( PackSplitEntry{ path, 90 + uint64{ index } * 3 } );
+        listEntry.push_back( PackSplitEntry{ path, 3000 + uint64{ index } * 7 } ); // 섹터로 올리면 4 KiB 남짓 — 몫마다 열몇 개
     }
-    listEntry.push_back( PackSplitEntry{ "audio/music/a.ogg", 700 } );
-    listEntry.push_back( PackSplitEntry{ "audio/music/b.ogg", 700 } );
-    listEntry.push_back( PackSplitEntry{ "textures/huge.dds", 5000 } );
+    listEntry.push_back( PackSplitEntry{ "audio/music/a.ogg", 40000 } );
+    listEntry.push_back( PackSplitEntry{ "audio/music/b.ogg", 40000 } );
+    listEntry.push_back( PackSplitEntry{ "textures/huge.dds", 200000 } );
 
     const expected<vector<PackPart>> parts = PackCooker::splitIntoParts( listEntry, split );
     SW_REQUIRE_TRUE( parts.has_value() );
@@ -188,7 +188,7 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
     uint32                        musicPartCount = 0;
     for ( const PackPart& part : *parts )
     {
-        SW_EXPECT_TRUE( part._inputBytes <= split._maxPackBytes || part._listPathHash.size() == 1 ); // 한도 안이거나 큰 항목 하나
+        SW_EXPECT_TRUE( part._packBytes + PackCooker::estimateFixedPackBytes() <= split._maxPackBytes || part._listPathHash.size() == 1 ); // 한도 안이거나 큰 항목 하나
         musicPartCount += part._chunk == "music" ? 1u : 0u;
         for ( const uint64 pathHash : part._listPathHash )
         {
@@ -196,12 +196,13 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
         }
     }
     SW_EXPECT_EQUAL( listEntry.size(), mapHashToChunk.size() );
-    SW_EXPECT_EQUAL( 2u, musicPartCount ); // 700 + 700 은 한도를 넘는다
+    SW_EXPECT_EQUAL( 2u, musicPartCount ); // 둘을 합친 어림은 한도를 넘는다
+    SW_EXPECT_TRUE( parts->size() > 4 );   // 기본 청크도 여러 몫으로 나뉜다
     SW_EXPECT_TRUE( mapHashToChunk[PackStreamWriter::makePathHash( "audio/music/a.ogg" )] == "music" );
     SW_EXPECT_TRUE( mapHashToChunk[PackStreamWriter::makePathHash( "data/item07.xml" )].empty() );
 
     // 빈 도메인도 첫 팩이 있고, 파일 이름에 쓸 수 없는 청크 이름은 오류다.
-    const expected<vector<PackPart>> emptyParts = PackCooker::splitIntoParts( {}, split );
+    const expected<vector<PackPart>> emptyParts = PackCooker::splitIntoParts( vector<PackSplitEntry>{}, split );
     SW_REQUIRE_TRUE( emptyParts.has_value() && emptyParts->size() == 1 );
     SW_EXPECT_TRUE( emptyParts->front().isFirstPack() );
     PackSplitConfig badName              = split;

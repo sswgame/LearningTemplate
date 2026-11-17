@@ -11,7 +11,7 @@
     "_maxHolePercent": 25
   },
   "_split": {
-    "_maxPackBytes": 4294967296,
+    "_maxPackBytes": 4294967295,
     "_listChunkRule": []
   },
   "_bExcludeRawShaderSource": true,

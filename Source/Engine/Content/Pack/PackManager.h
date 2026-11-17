@@ -183,10 +183,12 @@ namespace sw
          */
         [[nodiscard]] bool mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath );
         /**
-         * @brief 이미 마운트된 같은 도메인의 형제 팩(나눈 팩 · 청크 — 패치가 아니다) 가운데 @p reader 와 항목이 겹치는 것이 있으면 오류를 남기고 true 입니다.
-         * @details 같은 파일을 다시 붙이는 것(@p packPath 와 같은 경로)은 형제가 아니다. 겹침은 경로 해시로 본다(리더가 열 때 해시와 경로가 맞는 것을 확인했다).
+         * @brief 이미 마운트된 같은 도메인의 형제 팩(나눈 팩 · 청크 — 패치가 아니다) 가운데 @p listPathHash 의 항목을 가진 것이 있으면 그 팩 경로와 해시를 담고 true 입니다.
+         * @details 붙이기와 같은 잠금 안에서 부른다(검사와 붙이기 사이의 틈이 없다). 같은 파일을 다시 붙이는 것(@p packPath 와 같은 경로)은 형제가 아니다.
+         *          잠금 순서는 관리자 → 리더다(`findReaderWithFile` 과 같다). 로그는 부르는 쪽이 잠금을 놓은 뒤 쓴다.
          */
-        [[nodiscard]] bool findSiblingOverlap( const string& packPath, const string& mountDomain, const PackReader& reader ) const;
+        [[nodiscard]] bool findSiblingOverlapLocked( const string& packPath, const string& mountDomain, const vector<uint64>& listPathHash, string& outSiblingPath, uint64& outPathHash ) const
+            SW_REQUIRES_LOCK( _vfsMutex );
         /** @brief 팩을 열어 지움 목록 해시(@p listRemovedPathHash, 정렬됨)와 함께 마운트합니다. `mountPack` 과 `mountPatchPack` 의 본문입니다. */
         [[nodiscard]] bool mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, bool bPatch, const PackIndexTrust* pTrust );
         /**

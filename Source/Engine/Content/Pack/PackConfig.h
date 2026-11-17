@@ -108,8 +108,13 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Required, Min = 1 )
-        uint64 _maxPackBytes{ 0 }; ///< 팩 하나에 담는 원본 바이트 한도(파일 크기가 아니라 담는 항목의 크기 합 — 쿠킹 전에 정해 결정적이다)
+        /**
+         * @brief 팩 파일 하나의 크기 한도입니다. 나누기는 항목마다 섹터로 올린 크기와 색인 줄로 어림해 몫을 고르고(`PackCooker::estimateEntryPackBytes`), 쓰기 끝에 실제 크기가 넘으면 오류다.
+         * @details 형식의 한계가 아니다 — 페이로드 오프셋은 56 비트(`PackFileEntryOnDisk::kMaxDataOffset`)이고 32 비트 칸은 항목 하나의 크기(1 GiB 한도)뿐이다.
+         *          설정 값 4 GiB − 1 은 FAT32 볼륨(SD 카드 · 외장 저장소)의 파일 크기 상한이다.
+         */
+        PROPERTY( Required, Min = 65536 )
+        uint64 _maxPackBytes{ 0 };
 
         PROPERTY( Required )
         vector<PackChunkRule> _listChunkRule; ///< 이름 붙은 청크(빈 목록이면 모두 기본 청크)

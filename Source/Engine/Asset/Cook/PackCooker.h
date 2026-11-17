@@ -25,6 +25,8 @@
 
 #include "Engine/Asset/Cook/PackReachResult.h"
 
+#include <algorithm>
+
 namespace sw
 {
     struct PackConfig;
@@ -64,7 +66,7 @@ namespace sw
 
 namespace sw
 {
-    /** @struct PackSplitEntry @brief 나누기(`PackCooker::splitIntoParts`)의 입력 한 줄 — 도메인 기준 경로와 디스크의 원본 크기입니다. */
+    /** @struct PackSplitEntry @brief 나누기(`PackCooker::splitIntoParts`)의 입력 한 줄 — 도메인 기준 경로와 디스크의 원본 크기입니다(팩 안 크기는 나누기가 어림한다). */
     struct PackSplitEntry
     {
         string _relativePath;
@@ -72,17 +74,17 @@ namespace sw
     };
 
     /** @struct PackPart @brief 도메인 팩 하나의 몫입니다 — 청크(빈 글이면 기본) · 번호와 담을 항목의 경로 해시(오름차순). */
-    struct SW_API PackPart
+    struct PackPart
     {
         string         _chunk;
         uint32         _number{ 0 };
-        uint64         _inputBytes{ 0 };
-        vector<uint64> _listPathHash;
+        uint64         _packBytes{ 0 }; ///< 이 몫의 팩 크기 어림(항목마다 섹터로 올린 페이로드 + 색인 줄 — `PackCooker::estimateEntryPackBytes`)
+        vector<uint64> _listPathHash;   ///< 오름차순
 
         /** @brief 이 몫이 도메인의 첫 팩(기본 청크 0 번 — 정체성 색인을 담는다)인지입니다. */
         bool isFirstPack() const { return _chunk.empty() && _number == 0; }
         /** @brief @p pathHash 항목이 이 몫인지입니다(이진 탐색). */
-        bool contains( uint64 pathHash ) const;
+        bool contains( uint64 pathHash ) const { return std::binary_search( _listPathHash.begin(), _listPathHash.end(), pathHash ); }
     };
 } // namespace sw
 
@@ -107,6 +109,13 @@ namespace sw
          * @return 청크 이름이 비었거나 파일 이름에 쓸 수 없는 글자(글자 · 숫자 · `_` · `-` 밖)이거나 겹치면 오류입니다.
          */
         [[nodiscard]] static expected<vector<PackPart>> splitIntoParts( const vector<PackSplitEntry>& listEntry, const PackSplitConfig& split );
+        /**
+         * @brief 원본 @p sizeBytes 바이트 항목(@p relativePath)이 팩에서 차지할 크기의 어림입니다 — 페이로드를 섹터(`kPackSectorAlignment`)로 올리고 FAT 줄 · 블록 표 줄(가장 작은 블록 기준) ·
+         *        경로를 더한다. 압축은 세지 않는다(줄기만 하므로 위로 어림이다). 데이터 상속을 펼친 글은 커질 수 있어 쓰기 끝의 크기 확인(`cookDomainPack`)이 마지막 문이다.
+         */
+        static uint64 estimateEntryPackBytes( string_view relativePath, uint64 sizeBytes );
+        /** @brief 항목과 상관없는 팩 하나의 고정 크기 어림입니다 — 헤더와 FAT 앞의 섹터 정렬 빈자리. 한도에서 먼저 뺀다. */
+        static uint64 estimateFixedPackBytes();
         /**
          * @brief 팩 하나의 쿠킹 기록 id(`packs/<타깃>/<스테이징 해시>/<팩 이름>`)입니다.
          * @details 기록 자리(`<프로젝트>/Saved/CookRecord`)는 프리셋이 함께 쓰는데 팩의 입력인 스테이징(`--cooked-dir`)은 프리셋마다 다르다 — 스테이징마다 기록을 따로 둔다.
