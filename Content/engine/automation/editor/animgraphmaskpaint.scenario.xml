@@ -23,7 +23,7 @@
 	<Expect watch="Editor.AnimationGraphMaskEntryCount" equals="2"/>
 	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.tab.layers" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="animationGraph.tab.layers" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="animationGraph.mask.0"/>

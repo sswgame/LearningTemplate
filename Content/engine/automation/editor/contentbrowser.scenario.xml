@@ -16,12 +16,12 @@
 	<!-- 체크박스는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.allPacks" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.allPacks" state="Up"/>
 	<WaitUntil watch="Editor.ContentGameRootCount" atLeast="2" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.allPacks" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.allPacks" state="Up"/>
 	<WaitUntil watch="Editor.ContentGameRootCount" equals="1" timeoutFrames="60"/>
 	<!-- 역색인은 워커가 Resource/ 를 훑어 만든다 -->
@@ -43,11 +43,11 @@
 	<EditorWaitStable/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="menu.asset.findReferences" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="menu.asset.findReferences" state="Up"/>
 	<WaitUntil watch="Editor.ReferenceResultCount" atLeast="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="references.png"/>

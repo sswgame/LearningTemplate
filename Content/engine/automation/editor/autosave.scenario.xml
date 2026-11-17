@@ -55,7 +55,7 @@
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.restore.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
@@ -75,7 +75,7 @@
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.restore.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="unsaved.cancel"/>
@@ -89,7 +89,7 @@
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.discard.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.discard.0" state="Up"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
@@ -113,7 +113,7 @@
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.discard.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.discard.0" state="Up"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>

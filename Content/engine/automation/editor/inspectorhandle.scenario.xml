@@ -70,7 +70,7 @@
 	<!-- ⑤ 행 메뉴의 Paste Value 는 비활성 -->
 	<EditorWaitStable/>
 	<EditorClick mark="inspector.label.TypedHandleTestComponent._target" button="1" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="inspector.label.TypedHandleTestComponent._target" button="1" state="Up"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="inspectorhandle/menu.png"/>

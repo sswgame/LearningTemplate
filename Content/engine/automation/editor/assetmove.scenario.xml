@@ -35,7 +35,7 @@
 	<EditorWaitStable/>
 	<CaptureEditorUI file="assetmove/confirm.png" maxMagentaFraction="0"/>
 	<EditorClick mark="contentBrowser.move.confirm" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.move.confirm" state="Up"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Asset.MovedSet" contains="Moved 2 asset(s)" count="1"/>
@@ -53,7 +53,7 @@
 	<EditorWaitStable/>
 	<CaptureEditorUI file="assetmove/refused.png" maxMagentaFraction="0"/>
 	<EditorClick mark="contentBrowser.move.cancel" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.move.cancel" state="Up"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Asset.MovedSet" count="1"/>

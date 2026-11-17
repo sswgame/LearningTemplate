@@ -17,7 +17,7 @@
 	<EditorWaitStable/>
 	<!-- 스켈레톤을 읽어 소켓 부모 본이 몸에 맞는다 -->
 	<EditorClick mark="charactereditor.tab.skeleton" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.skeleton" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadSkeleton"/>
@@ -25,7 +25,7 @@
 	<EditorWaitStable/>
 	<!-- 미리보기 몸은 외형 데이터를 읽어야 선다 -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadData"/>
@@ -36,13 +36,13 @@
 	<EditorWaitStable/>
 	<!-- 소켓을 마지막에 고른다 — 기즈모의 주인이 된다 -->
 	<EditorClick mark="charactereditor.tab.sockets" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.sockets" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.socket.first"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1" timeoutFrames="177"/>
 	<WaitUntil watch="Editor.CharacterEditorSocketGizmoPlaced" equals="1" timeoutFrames="60"/>

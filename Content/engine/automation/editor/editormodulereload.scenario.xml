@@ -37,7 +37,7 @@
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.ReloadCount" atLeast="2"/>
-	<Wait frames="59"/> <!-- 리로드 뒤 도크스페이스가 다시 설 때까지 — 바로 보면 "no main dockspace" -->
+	<EditorWaitStable/> <!-- 리로드 뒤 도크스페이스가 다시 설 때까지 — 바로 보면 "no main dockspace" -->
 	<Expect watch="Editor.ObjectCount" atLeast="1"/>
 	<EditorExpectDockLayout/>
 	<!-- 고친 씬을 열어 둔 채 끝내지 않는다 -->
