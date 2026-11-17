@@ -129,10 +129,11 @@ namespace sw::editor
                 }
                 if ( pPending->_bStable == false )
                 {
-                    const EditorStabilityResult evaluation = pPending->_stability.advance( runner.findActiveObjectManager() );
-                    if ( evaluation == EditorStabilityResult::Oscillating )
+                    const AutomationReadiness readiness = pPending->_stability.advance( runner.findActiveObjectManager() );
+                    const bool                bStalled  = readiness.isWaiting() && pPending->_stability.isStalled();
+                    if ( bStalled )
                         runner.recordFailure( step, pPending->_stability.describeOscillation() ); // 그래도 찍는다 — 움직이는 화면이 결과 파일에 남는다
-                    if ( evaluation == EditorStabilityResult::Waiting )
+                    if ( readiness.isWaiting() && bStalled == false )
                         return runner.holdUntilReady( step, input, false, std::numeric_limits<uint32>::max(), pPending->_stability.describeWait() + " before the UI capture" );
                     pPending->_bStable = true;
                 }

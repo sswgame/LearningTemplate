@@ -21,7 +21,7 @@ namespace sw::editor
     {
     }
 
-    EditorStabilityResult EditorStabilityWait::advance( GameObjectManager* pActiveManager )
+    AutomationReadiness EditorStabilityWait::advance( GameObjectManager* pActiveManager )
     {
         // 번호가 없거나(상태 저장소가 아직 없었다) 지금 번호보다 크면 상태 저장소가 새로 섰다 — 거기서 다시 기다린다.
         if ( _waitSerial == 0 || _waitSerial > EditorSelfTestInput::getStabilityWaitSerial() )
@@ -35,18 +35,20 @@ namespace sw::editor
         const bool                               bSceneStable  = editor::getSubsystem<SceneManager>().isTransitioning() == false;
         const bool                               bAssetsStable = CaptureReadiness::countPendingJobs( pActiveManager ) == 0;
         const AutomationWaitingCondition         pendingJob    = AutomationStepRegistry::findFinishBlocker(); // 뒤에 끝날 일(저장 · 스크린샷 · 캡처 쓰기) — 모듈이 제 일을 등록한다
+        const AutomationReadiness                readiness     = _stability.advance( bScreenStable, bSceneStable && bAssetsStable && pendingJob.isWaiting() == false );
         StringBuilder<constant::buffer::kMax256> waitingForBuilder;
-        waitingForBuilder.appendFormat( "the editor to settle (screen %#, scene %#, assets %#, work %#)",
+        waitingForBuilder.appendFormat( "the editor to settle (screen %#, scene %#, assets %#, work %#; progress %#, idle moving %# frame(s))",
                                         bScreenStable ? "settled" : ( "moving: " + EditorSelfTestInput::describeLastLayoutChange() ).c_str(),
-                                        bSceneStable ? "settled" : "transitioning", bAssetsStable ? "settled" : "pending", pendingJob.isWaiting() ? pendingJob._pName : "none" );
+                                        bSceneStable ? "settled" : "transitioning", bAssetsStable ? "settled" : "pending", pendingJob.isWaiting() ? pendingJob._pName : "none",
+                                        readiness.getProgress(), _stability.getIdleMovingFrames() );
         _waitingFor = string( waitingForBuilder.view() );
-        return _stability.advance( bScreenStable, bSceneStable && bAssetsStable && pendingJob.isWaiting() == false );
+        return readiness;
     }
 
     string EditorStabilityWait::describeOscillation() const
     {
         StringBuilder<constant::buffer::kMax256> resultBuilder;
-        resultBuilder.appendFormat( "the editor screen kept moving for %# frame(s) with no pending work (%#) - a layout that never settles", _stability._idleMovingFrames,
+        resultBuilder.appendFormat( "the editor screen kept moving for %# frame(s) with no pending work (%#) - a layout that never settles", _stability.getIdleMovingFrames(),
                                     EditorSelfTestInput::describeLastLayoutChange().c_str() );
         return string( resultBuilder.view() );
     }

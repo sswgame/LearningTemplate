@@ -232,7 +232,8 @@ namespace sw::editor
             /**
              * @brief 에디터가 멈출 때까지(정지 상태) 시나리오 시계를 붙잡습니다 — 앞 단계가 낳은 일이 다 끝나 새 입력 없이는 더 바뀔 것이 없는 상태(`EditorStabilityWait`).
              * @details 고정 대기(`<Wait frames>`)를 대신한다 — "N 프레임 동안 바뀌지 않았다" 는 N 을 어떻게 잡든 증명이 아니고, 정지 상태에서 본 값이 곧 그 답이다(일어나지 않음을
-             *          보는 단언도 이 뒤에 둔다). 배경 일(시계 잡기 조건)은 실행기가 단계 전에 이미 붙잡는다.
+             *          보는 단언도 이 뒤에 둔다). 배경 일(시계 잡기 조건)은 실행기가 단계 전에 이미 붙잡는다. 할 일 없이 화면이 계속 움직이면(진척 없음) `WaitStalled` 로 시나리오를 끝낸다 —
+             *          예전에는 실패를 적고 다음 단계로 가 뒤의 대기가 같은 진동을 다시 기다렸다.
              */
             static AutomationStepHold holdUntilScreenStable( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
@@ -241,14 +242,18 @@ namespace sw::editor
                 StabilityWaitState* pState = static_cast<StabilityWaitState*>( runner.findHeldStepState( step ) );
                 if ( pState == nullptr )
                     pState = static_cast<StabilityWaitState*>( &runner.setHeldStepState( step, make_unique<StabilityWaitState>() ) );
-                const EditorStabilityResult evaluation = pState->_wait.advance( runner.findActiveObjectManager() );
-                if ( evaluation == EditorStabilityResult::Oscillating )
-                    runner.recordFailure( step, pState->_wait.describeOscillation() );
+                const AutomationReadiness readiness = pState->_wait.advance( runner.findActiveObjectManager() );
+                if ( readiness.isWaiting() && pState->_wait.isStalled() )
+                {
+                    // 포기는 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
+                    const string reason = pState->_wait.describeOscillation();
+                    runner.giveUpWait( step, AutomationFailureKind::WaitStalled, reason, step._kind + " " + EditorStabilityState::kConditionName );
+                    return AutomationStepHold::Skip;
+                }
                 // 진행 중인 일에는 시한이 없다(`EditorStabilityState`) — 끝나지 않으면 시나리오 벽시계 상한이 까닭과 함께 잡는다.
                 // Run 이면 실행기가 상태를 지운다 — 까닭을 먼저 복사해 넘긴다.
                 const string waitingFor = pState->_wait.describeWait();
-                return runner.holdUntilReady( step, input, evaluation == EditorStabilityResult::Ready,
-                                              evaluation == EditorStabilityResult::Oscillating ? 0u : std::numeric_limits<uint32>::max(), waitingFor );
+                return runner.holdUntilReady( step, input, readiness.isWaiting() == false, std::numeric_limits<uint32>::max(), waitingFor );
             }
 
             /**
