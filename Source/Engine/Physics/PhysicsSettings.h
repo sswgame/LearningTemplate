@@ -114,6 +114,9 @@ namespace sw
          */
         PROPERTY( Min = 1, Tooltip = "Bytes of the per-scene temporary block (step, character moves, soft bodies); overflow falls back to the heap with a warning", Units = "bytes" )
         uint32 _tempAllocatorBytes{ 0 };
+        /** @brief 한 씬의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한입니다. 넘으면 씬 전체에서 작은 것 · 오래된 것부터 사라진다(`DebrisBudget`). 0 이면 `validate` 가 오류다. */
+        PROPERTY( Min = 1, Tooltip = "Most falling destruction debris bodies one scene keeps; past it the smallest, oldest pieces scene-wide fade out" )
+        uint32 _maxDebrisBodyCount{ 0 };
         PROPERTY( Tooltip = "Collision layers in index order and what they collide with" )
         vector<PhysicsLayerDef> _listLayer;
         PROPERTY( Tooltip = "Physics materials" )

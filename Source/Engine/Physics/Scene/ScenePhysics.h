@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/DebrisBudget.h"
 #include "Engine/Physics/Scene/PhysicsHookRegistry.h"
 
 namespace sw
@@ -242,12 +243,11 @@ namespace sw
         void deliverFrameEvents();
 
         /**
-         * @brief 이 씬의 파괴 오브젝트들이 든 떨어진 덩어리 바디 수입니다(`gv_destructionMaxDebrisBodies` 예산).
-         * @details 씬마다 따로 센다 — 한 프로세스에 월드가 여럿이면(가상 서버 하니스) 한 월드의 파편이 다른 월드의 예산을 먹지 않게.
+         * @brief 이 씬의 파괴 오브젝트들이 든 떨어진 덩어리 바디 장부입니다(물리 설정 `_maxDebrisBodyCount` 예산 — `DebrisBudget`).
+         * @details 씬마다 따로 든다 — 한 프로세스에 월드가 여럿이면(가상 서버 하니스) 한 월드의 파편이 다른 월드의 예산을 먹지 않게. 프레임 끝 훅 앞에 한 번 고른다.
          */
-        uint32 getDebrisBodyCount() const { return _debrisBodyCount; }
-        /** @brief 위 수를 @p delta 만큼 바꿉니다(파괴 컴포넌트가 바디를 만들고 지울 때). 0 아래로 내려가지 않는다. */
-        void changeDebrisBodyCount( int32 delta );
+        DebrisBudget&       getDebrisBudget() { return _debrisBudget; }
+        const DebrisBudget& getDebrisBudget() const { return _debrisBudget; }
 
     private:
         /** @brief 3D · 2D 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. */
@@ -362,7 +362,7 @@ namespace sw
         PhysicsContactLogEntry                                            _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
         uint64                                                            _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
         uint64                                                            _stepCount;
-        uint32                                                            _debrisBodyCount;
+        DebrisBudget                                                      _debrisBudget;
         float32                                                           _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
         uint8                                                             _bConfigured         : 1;
         uint8                                                             _bFrameHookListStale : 1; ///< 훅 구간을 다시 지어야 한다(등록 · 해제 · `setHookBatchEnabled`)
