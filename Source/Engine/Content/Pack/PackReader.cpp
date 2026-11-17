@@ -470,7 +470,9 @@ namespace sw
         }
         if ( plan._sliceOffset != 0 || plan._sliceSize != outBytes.size() )
         {
-            Memory::move( outBytes.data(), outBytes.data() + plan._sliceOffset, plan._sliceSize );
+            // 빈 조각은 옮기지 않는다 — 빈 버퍼의 data() 는 nullptr 일 수 있어 오프셋을 더하면 UB 다(UBSan, Linux sanitize).
+            if ( plan._sliceSize != 0 )
+                Memory::move( outBytes.data(), outBytes.data() + plan._sliceOffset, plan._sliceSize );
             outBytes.resize( plan._sliceSize );
         }
         return true;
