@@ -146,12 +146,15 @@ namespace sw::editor
             _status = string( "Prefab '" ) + _activePrefabPath + "' could not be spawned - see the log";
             return;
         }
-        _body = pSpawned->getHandle();
-        if ( pSpawned->getComponent<SkeletalMeshComponent>() == nullptr )
+        _body                            = pSpawned->getHandle();
+        SkeletalMeshComponent* pBodyMesh = pSpawned->getComponent<SkeletalMeshComponent>();
+        if ( pBodyMesh == nullptr )
         {
             _status = string( "Prefab '" ) + _activePrefabPath + "' has no skeletal mesh on its root - the ragdoll cannot stand";
             return;
         }
+        // 래그돌 히트 존은 화면 밖에서도 본을 요구한다(`requireBonesWhenNotRendered`) — 미리보기 몸은 고른 프리팹과 상관없이 맞춘다.
+        pBodyMesh->setVisibilityBasedTickOption( VisibilityBasedAnimationTickOption::AlwaysTickPoseAndRefreshBones );
         RagdollComponent* pRagdoll = pSpawned->getComponent<RagdollComponent>();
         if ( pRagdoll == nullptr )
             pRagdoll = pSpawned->addComponent<RagdollComponent>();

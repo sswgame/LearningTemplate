@@ -18,7 +18,7 @@
 			                       _skeletonPath=""
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false"
+			                       _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones"
 			                       _bShareCrowdPose="true" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"

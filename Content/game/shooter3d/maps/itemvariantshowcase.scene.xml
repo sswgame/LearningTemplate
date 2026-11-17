@@ -83,7 +83,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 					                              _bActive="true"
 					                              _presetID="VariantShowcasePlain"
@@ -110,7 +110,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 					                              _bActive="true"
 					                              _presetID="VariantShowcaseGilded"
@@ -137,7 +137,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 					                              _bActive="true"
 					                              _presetID="VariantShowcaseDyed"

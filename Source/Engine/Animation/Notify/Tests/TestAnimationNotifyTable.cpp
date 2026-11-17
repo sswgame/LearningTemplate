@@ -147,3 +147,18 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetSavesOnlyItsDifference )
     SW_EXPECT_EQUAL( baseID, reloaded.getBaseID() );
     SW_EXPECT_EQUAL( sockets.saveToXMLText(), reloaded.saveToXMLText() );
 }
+
+/** @brief [AnimationNotifyTableTest] 소켓으로 맞히는 처리기는 HitWindow 뿐이다 — 그 표를 단 유닛은 화면 밖에서도 본을 갱신해야 한다(`SkeletalMeshComponent::requireBonesWhenNotRendered`). 발소리 · 카메라 흔들림 · 이벤트는 요구하지 않는다(이벤트 맞힘은 시간 단계 알림이다) */
+SW_TEST_CASE( AnimationNotifyTableTest, OnlyHitWindowUsesBonesForHitDetection )
+{
+    const sw::AnimationNotifyHandlerRegistry registry;
+    const sw::IAnimationNotifyHandler*       pHitWindow = registry.findHandler( sw::hashed_string( "HitWindow" ) );
+    SW_REQUIRE_NOT_NULL( pHitWindow );
+    SW_EXPECT_TRUE( pHitWindow->usesBonesForHitDetection() );
+    for ( const sw::utf8* pName : { "PlaySound", "SpawnPrefab", "Footstep", "CameraShake", "AbilityEvent", "MotionWarp" } )
+    {
+        const sw::IAnimationNotifyHandler* pHandler = registry.findHandler( sw::hashed_string( pName ) );
+        SW_REQUIRE_NOT_NULL( pHandler );
+        SW_EXPECT_FALSE( pHandler->usesBonesForHitDetection() );
+    }
+}

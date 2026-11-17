@@ -135,12 +135,15 @@ namespace sw
             state._updateRateDivisor                = level._updateRateDivisor;
             state._bInterpolate                     = level._bInterpolate ? SW_TRUE : SW_FALSE;
         }
-        if ( bVisible == false && settings._offscreenUpdateRateDivisor > 0 )
+        if ( bVisible == false )
         {
-            state._updateRateDivisor = settings._offscreenUpdateRateDivisor;
+            // 화면 밖은 화면 크기가 없다 — 가장 먼 단계를 고르면 판정 캐릭터의 소켓이 끝 본 · 꺼진 IK 로 틀리고, 접힌 블렌드 스페이스가 루트 모션 · 알림을 바꾼다.
+            state._updateRateDivisor = MathUtil::max( settings._offscreenUpdateRateDivisor, 1u );
             state._bInterpolate      = SW_FALSE;
+            state._rateLevel         = 0;
+            state._lodGrade          = 0;
         }
-        if ( pBoneLOD != nullptr )
+        else if ( pBoneLOD != nullptr )
             state._boneLODLevel = static_cast<uint8>( pBoneLOD->selectLevel( state._screenSize ) );
         state._bVertexAnimation = ( settings._vertexAnimationScreenSize > 0.0f && state._screenSize < settings._vertexAnimationScreenSize ) ? SW_TRUE : SW_FALSE;
         return state;
