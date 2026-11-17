@@ -132,3 +132,72 @@ SW_TEST_CASE( PackWriterTest, WriteResultHashEqualsHashOfTheFile )
     SW_EXPECT_EQUAL( static_cast<uint32>( listEntry.size() ), result->_stats._entryCount );
     SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }
+
+// 슬롯 배치는 앞 빌드의 자리를 지키고, 이번 빌드의 빈 자리가 한도를 넘으면 그 빌드에서 바로 촘촘히 다시 놓는다(한 빌드 늦게 걸러지지 않는다).
+SW_TEST_CASE( PackWriterTest, SlotLayoutRepacksWhenThisBuildLeavesTooManyHoles )
+{
+    const string packPath   = test::makeScratchPath( "SwPackWriterSlot.pack" );
+    const string keptPath   = "data/kept.xml";
+    const auto   writeSlots = [&packPath]( const vector<string>& listPath, uint8 fill ) -> optional<PackWriteResult>
+    {
+        vector<std::pair<string, vector<uint8>>> listEntry;
+        for ( const string& path : listPath )
+        {
+            listEntry.emplace_back( path, vector<uint8>( 3 * kPackSectorAlignment, fill ) );
+        }
+        VectorUtil::sort( listEntry, []( const std::pair<string, vector<uint8>>& left, const std::pair<string, vector<uint8>>& right )
+        { return PackStreamWriter::makePathHash( left.first ) < PackStreamWriter::makePathHash( right.first ); } );
+        PackWriterDesc desc    = PackTestUtil::makeDesc( "game/test" );
+        desc._layoutMode       = PackLayoutMode::Slot;
+        desc._previousPackPath = packPath;
+        desc._maxHolePercent   = 25;
+        PackStreamWriter writer;
+        expected<void>   step = writer.open( packPath, desc );
+        for ( size_t index = 0; index < listEntry.size() && step.has_value(); ++index )
+        {
+            step = writer.append( listEntry[index].first, PackEntryStorage::Blocks, std::move( listEntry[index].second ) );
+        }
+        if ( step.has_value() == false )
+            return nullopt;
+        expected<PackWriteResult> closed = writer.close();
+        return closed.has_value() ? optional<PackWriteResult>{ std::move( *closed ) } : nullopt;
+    };
+    const auto readOffset = [&packPath]( const string& path, uint64& outOffset )
+    {
+        PackReader    reader;
+        PackFileEntry entry;
+        const bool    bFound = reader.open( packPath ) && reader.getFileEntry( path, entry );
+        outOffset            = entry._dataOffset;
+        return bFound;
+    };
+
+    SW_REQUIRE_TRUE( writeSlots( { keptPath, "data/a.xml", "data/b.xml", "data/c.xml" }, 1 ).has_value() );
+    uint64 firstOffset = 0;
+    SW_REQUIRE_TRUE( readOffset( keptPath, firstOffset ) );
+
+    // 하나만 지우면 빈 자리가 한도(25 %) 안이다 — 남은 항목은 앞 빌드의 자리를 지킨다. 덮어쓴 팩의 내용 해시도 파일과 같다.
+    const optional<PackWriteResult> kept = writeSlots( { keptPath, "data/a.xml", "data/b.xml" }, 2 );
+    SW_REQUIRE_TRUE( kept.has_value() );
+    uint64 keptOffset = 0;
+    SW_REQUIRE_TRUE( readOffset( keptPath, keptOffset ) );
+    SW_EXPECT_EQUAL( firstOffset, keptOffset );
+    vector<uint8> fileBytes;
+    SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
+    SW_EXPECT_EQUAL( ContentHash::computeBytes( fileBytes ), kept->_contentHash );
+
+    // 셋을 지우면 이번 빌드의 빈 자리가 한도를 넘는다 — 그 자리에서 촘촘히 다시 놓아 남은 항목이 맨 앞(0)에 온다.
+    const optional<PackWriteResult> dense = writeSlots( { keptPath }, 3 );
+    SW_REQUIRE_TRUE( dense.has_value() );
+    uint64 denseOffset = 1;
+    SW_REQUIRE_TRUE( readOffset( keptPath, denseOffset ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, denseOffset );
+    SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
+    SW_EXPECT_EQUAL( ContentHash::computeBytes( fileBytes ), dense->_contentHash );
+    PackReader reader;
+    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( reader.readFile( keptPath, bytes ) );
+    SW_EXPECT_TRUE( bytes == vector<uint8>( 3 * kPackSectorAlignment, uint8{ 3 } ) );
+    reader.close();
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+}

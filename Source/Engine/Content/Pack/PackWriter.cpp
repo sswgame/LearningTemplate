@@ -31,25 +31,11 @@ namespace sw
             static constexpr uint64 kMinParallelBytes = 64 * constant::memory::kBytesPerKilobyte;
             /** @brief 블록이 이 수 미만이면 나누지 않습니다. */
             static constexpr uint32 kMinParallelBlockCount = 2;
-            /** @brief 슬롯 배치가 덮어쓴 파일의 내용 해시를 셀 때 한 번에 읽는 바이트입니다. */
-            static constexpr uint64 kRehashChunkBytes = 4 * constant::memory::kBytesPerMegabyte;
+            /** @brief 슬롯 배치의 빈 자리를 걷어 낼 때(`compactCommitted`) 한 번에 옮기는 바이트입니다. */
+            static constexpr uint64 kCompactChunkBytes = 4 * constant::memory::kBytesPerMegabyte;
 
             /** @brief 오프셋을 섹터 경계로 올립니다. */
             static uint64 alignToPackSector( uint64 offset ) { return MathUtil::align( offset, static_cast<uint64>( kPackSectorAlignment ) ); }
-
-            /** @brief 쓴 파일을 조각으로 읽어 내용 해시를 셉니다. 못 읽으면 오류입니다. */
-            [[nodiscard]] static expected<uint64> hashFileInChunks( string_view path, uint64 fileSize )
-            {
-                uint64        state = ContentHash::kInitialState;
-                vector<uint8> chunk;
-                for ( uint64 offset = 0; offset < fileSize; offset += kRehashChunkBytes )
-                {
-                    if ( FileUtil::readFile( path, chunk, offset, kRehashChunkBytes ) == false || chunk.empty() )
-                        return unexpected( Error{ ErrorKind::ExternalFailure, "written pack cannot be read back for its content hash", path } );
-                    state = ContentHash::appendBytes( state, chunk.data(), chunk.size() );
-                }
-                return state;
-            }
         };
     } // namespace
 } // namespace sw
@@ -124,6 +110,7 @@ namespace sw
         , _stringPoolBytes{}
         , _mapPreviousSlot{}
         , _payloadEnd{ 0 }
+        , _usedPayloadBytes{ 0 }
         , _contentHash{ ContentHash::kInitialState }
         , _lastPathHash{ 0 }
         , _entryCount{ 0 }
@@ -232,23 +219,14 @@ namespace sw
             payloadEnd                     = payloadEnd > usedEnd ? payloadEnd : usedEnd;
             usedBytes += PackWriterInternal::alignToPackSector( placed._size );
         }
-        // 앞 빌드의 빈 자리가 한도를 넘으면 앞 빌드를 버리고 촘촘히 놓는다(한 번 밀리는 대신 낭비가 쌓이지 않는다).
-        const uint64 holeBytes = payloadEnd > usedBytes ? payloadEnd - usedBytes : 0;
-        if ( holeBytes * 100 > payloadEnd * _desc._maxHolePercent || _mapPreviousSlot.empty() )
-        {
-            _mapPreviousSlot.clear();
+        if ( _mapPreviousSlot.empty() )
             return {};
-        }
-        // 앞 자리를 덮어쓸 구역을 0 으로 미리 채운다 — 이 뒤의 쓰기는 앞 자리면 덮고 아니면 끝에 붙는다. 내용 해시는 닫은 뒤 다시 읽어 센다.
-        // shortcut: 슬롯 배치는 페이로드 구역을 한 번 더 쓰고 닫을 때 파일을 다시 읽는다. 슬롯 배치를 배포 쿠킹에 켜면 앞 자리 항목을 먼저 모으는 두 단계 쓰기로 바꾼다.
-        const vector<uint8> zeros( static_cast<size_t>( PackWriterInternal::kRehashChunkBytes ), 0 );
-        for ( uint64 written = 0; written < payloadEnd; written += zeros.size() )
-        {
-            const uint64         size     = payloadEnd - written < zeros.size() ? payloadEnd - written : zeros.size();
-            const expected<void> appended = _file.append( zeros.data(), static_cast<size_t>( size ) );
-            if ( appended.has_value() == false )
-                return appended;
-        }
+        (void)usedBytes; // 빈 자리 판정은 이번 빌드가 다 쓴 뒤에 한다(`close`)
+        // 앞 자리를 덮어쓸 구역을 0 으로 늘린다(성긴 파일의 구멍 — 디스크를 쓰지 않는다). 이 뒤의 쓰기는 앞 자리면 덮고 아니면 끝에 붙는다.
+        // shortcut: 앞 자리를 덮어쓰므로 내용 해시는 닫은 뒤 파일을 조각으로 다시 읽어 센다. 슬롯 배치를 배포 쿠킹에 켜면 덮어쓴 블록의 해시를 자리 순으로 잇는 셈으로 바꾼다.
+        const expected<void> extended = _file.appendZeros( payloadEnd );
+        if ( extended.has_value() == false )
+            return extended;
         _payloadEnd = payloadEnd;
         return {};
     }
@@ -376,6 +354,7 @@ namespace sw
             }
             if ( bKeepSlot == false && storedSize > 0 )
                 _payloadEnd = _file.getSize();
+            _usedPayloadBytes += PackWriterInternal::alignToPackSector( storedSize );
             _listDiskEntry.push_back( diskEntry );
             // 항목 경로 목록은 늘 담는다 — 런타임 폴더 나열이 이것으로 항목 이름을 알고, 리더는 없는 팩을 거절한다.
             _stringPoolBytes.insert( _stringPoolBytes.end(), entry._relativePath.begin(), entry._relativePath.end() );
@@ -420,12 +399,46 @@ namespace sw
         const expected<void> flushed = flushPending();
         if ( flushed.has_value() == false )
             return fail( flushed.error() );
+
+        // 슬롯 배치의 빈 자리는 이번 빌드가 다 쓴 뒤에 판정한다 — 앞 빌드의 빈 자리와 이번에 지운 · 옮긴 항목의 자리를 함께 센다.
+        const bool   bSlotLayout = _mapPreviousSlot.empty() == false;
+        const uint64 regionBytes = _payloadEnd;
+        const uint64 holeBytes   = regionBytes > _usedPayloadBytes ? regionBytes - _usedPayloadBytes : 0;
+        const bool   bCompact    = bSlotLayout && holeBytes * 100 > regionBytes * _desc._maxHolePercent;
+
+        expected<PackWriteResult> written = writeIndexAndCommit();
+        if ( written.has_value() && bCompact )
+        {
+            SW_LOG_INFO_ID( "PackWriter.SlotLayoutCompacted", "Pack layout: %# has %# hole bytes in %# payload bytes (over %# percent) - payloads are packed densely again", _packPath,
+                            holeBytes, regionBytes, _desc._maxHolePercent );
+            written = compactCommitted();
+        }
+        else if ( written.has_value() && bSlotLayout )
+        {
+            const expected<uint64> fileHash = ContentHash::computeFileStream( _packPath );
+            if ( fileHash.has_value() == false )
+                return fail( fileHash.error() );
+            written->_contentHash = *fileHash;
+        }
+        if ( written.has_value() == false )
+            return fail( written.error() );
+        _state              = State::Closed;
+        _stats._entryCount  = _entryCount;
+        const int64 total   = _openWatch.getElapsedNanoseconds();
+        const int64 counted = _stats._compressWallNanos + _stats._writeNanos;
+        _stats._layoutNanos = total > counted ? total - counted : 0;
+        written->_stats     = _stats;
+        return written;
+    }
+
+    expected<PackWriteResult> PackStreamWriter::writeIndexAndCommit()
+    {
         const uint64         payloadEnd = _payloadEnd;
         const expected<void> padded     = padToSector();
         if ( padded.has_value() == false )
-            return fail( padded.error() );
+            return unexpected( padded.error() );
 
-        // 색인 구역은 FAT · 블록 표 · 스트링 풀 · 헤더 순으로 빈틈 없이 잇는다 — `_indexOffset` 부터 파일 끝까지 한 구간이다(색인 서명의 자리).
+        // 색인 구역은 FAT · 블록 표 · 블록 해시 표 · 스트링 풀 · 헤더 순으로 빈틈 없이 잇는다 — `_indexOffset` 부터 파일 끝까지 한 구간이다(색인 서명의 자리).
         PackHeader header{};
         header._magic              = kPackMagic;
         header._formatVersion      = kPackFormatVersion;
@@ -460,7 +473,7 @@ namespace sw
         appendIndex( _stringPoolBytes.data(), _stringPoolBytes.size() );
         appendIndex( &header, sizeof( PackHeader ) );
         if ( writeBytes( _file.getSize(), listIndexByte.data(), listIndexByte.size() ).has_value() == false )
-            return fail( Error{ ErrorKind::ExternalFailure, "pack index could not be written (disk full?)", _packPath } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "pack index could not be written (disk full?)", _packPath } );
 
         PackWriteResult result;
         if ( bBlockHash )
@@ -468,31 +481,54 @@ namespace sw
             PackDigest indexDigest;
             if ( listIndexByte.size() > static_cast<size_t>( MathUtil::kMaxInt32 ) ||
                  _desc._pDigestProvider->computeSHA256( listIndexByte.data(), static_cast<int32>( listIndexByte.size() ), indexDigest._arrByte ) == false )
-                return fail( Error{ ErrorKind::ExternalFailure, "pack index digest could not be computed", _packPath } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "pack index digest could not be computed", _packPath } );
             result._indexDigest = indexDigest;
         }
         result._fileSize    = _file.getSize();
         result._indexOffset = header._indexOffset;
+        result._contentHash = _contentHash; // 덧붙이기만 했을 때의 값 — 앞 자리를 덮어쓴 슬롯 배치는 `close` 가 다시 센다
         const Stopwatch      commitWatch;
         const expected<void> committed = _file.commit();
         _stats._writeNanos += commitWatch.getElapsedNanoseconds();
         if ( committed.has_value() == false )
-            return fail( committed.error() );
-        _state = State::Closed;
-        if ( _mapPreviousSlot.empty() )
-            result._contentHash = _contentHash;
-        else
-        {
-            const expected<uint64> fileHash = PackWriterInternal::hashFileInChunks( _packPath, result._fileSize );
-            if ( fileHash.has_value() == false )
-                return unexpected( fileHash.error() );
-            result._contentHash = *fileHash;
-        }
-        _stats._entryCount  = _entryCount;
-        const int64 total   = _openWatch.getElapsedNanoseconds();
-        const int64 counted = _stats._compressWallNanos + _stats._writeNanos;
-        _stats._layoutNanos = total > counted ? total - counted : 0;
-        result._stats       = _stats;
+            return unexpected( committed.error() );
         return result;
+    }
+
+    expected<PackWriteResult> PackStreamWriter::compactCommitted()
+    {
+        // 바꿔 끼운 슬롯 배치 팩에서 페이로드를 FAT 순서로 촘촘히 옮겨 같은 자리에 다시 쓴다. 블록 표 · 요약은 항목 기준이라 그대로이고 오프셋만 바뀐다.
+        // 원본은 조각으로 읽고(한 벡터로 들지 않는다) 새 파일은 임시 파일에 써서 바꿔 끼운다. 모두 덧붙이기라 내용 해시를 쓰면서 센다.
+        _mapPreviousSlot.clear();
+        _contentHash                = ContentHash::kInitialState;
+        const expected<void> opened = _file.open( _packPath );
+        if ( opened.has_value() == false )
+            return unexpected( opened.error() );
+        vector<uint8> chunk;
+        for ( PackFileEntryOnDisk& diskEntry : _listDiskEntry )
+        {
+            const PackEntryStorage storage    = static_cast<PackEntryStorage>( diskEntry.getStorageValue() );
+            const uint64           oldOffset  = diskEntry.getDataOffset();
+            const uint64           storedSize = diskEntry._compressedSize;
+            if ( storedSize > 0 )
+            {
+                const expected<void> padded = padToSector();
+                if ( padded.has_value() == false )
+                    return unexpected( padded.error() );
+            }
+            const uint64 newOffset = _file.getSize();
+            for ( uint64 copied = 0; copied < storedSize; copied += chunk.size() )
+            {
+                const uint64 size = storedSize - copied < PackWriterInternal::kCompactChunkBytes ? storedSize - copied : PackWriterInternal::kCompactChunkBytes;
+                if ( FileUtil::readFile( _packPath, chunk, oldOffset + copied, size ) == false || chunk.size() != size )
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "slot layout pack cannot be read back for compaction", _packPath } );
+                const expected<void> appended = writeBytes( _file.getSize(), chunk.data(), chunk.size() );
+                if ( appended.has_value() == false )
+                    return unexpected( appended.error() );
+            }
+            diskEntry.setPlacement( newOffset, storage );
+        }
+        _payloadEnd = _file.getSize();
+        return writeIndexAndCommit();
     }
 } // namespace sw

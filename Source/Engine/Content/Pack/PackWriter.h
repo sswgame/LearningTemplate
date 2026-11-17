@@ -13,8 +13,8 @@
  *          - 바이트 안정성(스팀 청크 차이 받기용): 항목은 경로 해시 순으로 놓이고 블록별로 압축하므로 같은 입력이면 같은 바이트다. 항목 하나가 바뀌어도 그 항목의
  *            페이로드 · FAT · 블록 칸 밖은 그대로다. 단 항목을 더하거나 지우거나 섹터를 넘게 키우면 해시 순으로 뒤에 오는 페이로드가 섹터 단위로 밀린다. 밀림을 없애는 것이
  *            슬롯 배치(`PackLayoutMode::Slot`)다: 앞 빌드의 팩(`_previousPackPath`)이 있으면 안 바뀐 항목이 앞 빌드의 자리를 지키며 커진 항목 · 새 항목은 앞 페이로드의
- *            끝 뒤에 붙는다. 지운 항목의 자리는 비어 남고, 앞 빌드 팩의 빈 자리가 `_maxHolePercent` 를 넘으면 앞 빌드를 버리고 촘촘히 놓는다(빈 자리는 한 빌드 늦게 걸러진다 —
- *            스트림 쓰기는 다 쓰기 전에 이번 빌드의 빈 자리를 모른다).
+ *            끝 뒤에 붙는다. 지운 항목의 자리는 비어 남는다(성긴 파일의 구멍). 다 쓴 뒤 이번 빌드의 빈 자리가 `_maxHolePercent` 를 넘으면
+ *            쓴 팩의 페이로드를 촘촘히 옮겨 다시 쓴다(`compactCommitted` — 조각 복사, 드문 길).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -41,7 +41,7 @@ namespace sw
         uint32                _dlcAppID{ 0 };                        ///< 0: 본편 · 공용, >0: DLC AppID
         PackLayoutMode        _layoutMode{ PackLayoutMode::Sorted }; ///< 페이로드 배치(파일 머리말의 "슬롯 배치")
         string                _previousPackPath{};                   ///< `Slot` 에서 앞 빌드의 팩 경로. 없는 파일이면 앞 빌드가 없는 첫 배치이고, 열 수 없으면 경고를 남기고 슬롯 없이 배치한다
-        uint32                _maxHolePercent{ 25 };                 ///< `Slot` 에서 앞 빌드 팩의 페이로드 영역 빈 자리가 이 비율(%)을 넘으면 앞 빌드를 버리고 촘촘히 놓는다
+        uint32                _maxHolePercent{ 25 };                 ///< `Slot` 에서 이번 빌드 페이로드 영역의 빈 자리가 이 비율(%)을 넘으면 촘촘히 다시 놓는다
         string                _mountDomain{};                        ///< 항목 경로 앞에 붙는 리소스 도메인(`engine` · `game/empty` · `dlc/winter`). 비우면 항목이 전체 경로다(패치 팩)
         uint32                _blockSize{ 0 };                       ///< 필수. 압축 전 블록 크기 — `kPackMinBlockSize` ~ `kPackMaxBlockSize` 의 2 의 거듭제곱(PackConfig `_blockSize`)
         uint64                _writeWindowBytes{ 0 };                ///< 필수. 이만큼의 원본을 모아 병렬로 압축한다(PackConfig `_writeWindowBytes`)
@@ -162,6 +162,10 @@ namespace sw
         [[nodiscard]] expected<void> writeBytes( uint64 offset, const uint8* pData, size_t size );
         /** @brief 파일 끝을 섹터 경계까지 0 으로 채웁니다. */
         [[nodiscard]] expected<void> padToSector();
+        /** @brief 남은 바이트를 덧붙인 뒤 색인 구역 · 헤더를 쓰고 바꿔 끼웁니다(`close` 와 `compactCommitted` 가 같이 쓴다). */
+        [[nodiscard]] expected<PackWriteResult> writeIndexAndCommit();
+        /** @brief 슬롯 배치로 바꿔 끼운 팩의 빈 자리가 한도를 넘었을 때, 그 팩의 페이로드를 FAT 순서로 촘촘히 옮겨 같은 자리에 다시 씁니다. */
+        [[nodiscard]] expected<PackWriteResult> compactCommitted();
 
     private:
         PackWriterDesc                      _desc;
@@ -174,9 +178,10 @@ namespace sw
         vector<PackBlockEntryOnDisk>        _listBlock;
         vector<PackDigest>                  _listBlockDigest; ///< `_pDigestProvider` 가 있을 때만 — 블록마다 저장 바이트의 SHA-256
         vector<uint8>                       _stringPoolBytes;
-        unordered_map<uint64, PreviousSlot> _mapPreviousSlot; ///< 비어 있으면 모든 쓰기가 덧붙이기다
-        uint64                              _payloadEnd;      ///< 페이로드 구역의 끝(다음 덧붙이기 자리 앞)
-        uint64                              _contentHash;     ///< 덧붙인 바이트의 내용 해시 상태
+        unordered_map<uint64, PreviousSlot> _mapPreviousSlot;  ///< 비어 있으면 모든 쓰기가 덧붙이기다
+        uint64                              _payloadEnd;       ///< 페이로드 구역의 끝(다음 덧붙이기 자리 앞)
+        uint64                              _usedPayloadBytes; ///< 이번 빌드 항목이 차지한 페이로드(섹터 정렬) — 슬롯 배치의 빈 자리 판정
+        uint64                              _contentHash;      ///< 덧붙인 바이트의 내용 해시 상태
         uint64                              _lastPathHash;
         uint32                              _entryCount;
         PackWriteStats                      _stats;
