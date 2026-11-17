@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 
 namespace
 {
@@ -47,7 +48,7 @@ namespace
         {
         }
 
-        void run( IServiceStoreConnection& connection ) override { _function( connection ); }
+        void run( ServiceReadSetConnection& connection ) override { _function( connection ); }
         void complete() override
         {
             ++_outCompleteCount;
