@@ -696,17 +696,53 @@ SW_TEST_CASE( CultureInfoTest, RootWithoutPluralRulesIsAnError )
 
 /**
  * @brief [CultureInfoTest] 부모 순환(서로를 부모로 가리킴)과 없는 부모는 읽기 오류이고 표는 그대로다
+ * @details 판 0(`parent`)은 판 올림이 `_base` 로 옮기고, 사슬은 카탈로그 항목 상속이 본다(그 오류 로그가 까닭이다).
  */
 SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
 {
-    constexpr const utf8* kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
-    for ( const sw::string& cultures : { sw::string( R"(<culture code="aa" parent="bb" /><culture code="bb" parent="aa" />)" ), sw::string( R"(<culture code="aa" parent="zz" />)" ) } )
+    constexpr const utf8* kLatin  = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    const auto            rejects = [kLatin]( const sw::string& cultures )
     {
         sw::CultureTable         table;
         const sw::expected<void> loaded = table.loadFromXMLText( sw::string( "<CultureTable>" ) + kLatin + "<cultures>" + cultures + "</cultures></CultureTable>", "cycle.cultures.xml" );
         SW_EXPECT_FALSE( loaded );
         SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
+    };
+    {
+        SW_EXPECT_LOG( "DataInheritance.Cycle" );
+        rejects( R"(<culture code="aa" parent="bb" /><culture code="bb" parent="aa" />)" );
     }
+    {
+        SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
+        rejects( R"(<culture code="aa" parent="zz" />)" );
+    }
+}
+
+/**
+ * @brief [CultureInfoTest] 판 1 은 문화권이 리플렉션 원소이고 `_base` 로 같은 표의 부모를 가리킨다 — 패턴 묶음은 적은 스타일만, 규칙 맵 · 목록은 통째로 바뀐다
+ */
+SW_TEST_CASE( CultureInfoTest, BaseChainReadsTheReflectedElements )
+{
+    constexpr const utf8*    kVersion1 = R"XML(<CultureTable formatVersion="1">
+  <numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>
+  <CultureInfo _code="xx" _nativeName="Root" _numberingSystem="latn" _decimalSeparator="," _groupSeparator="." _percentPattern="# %" _currencyCode="EUR" _currencyPattern="# ¤">
+    <_pluralRules><entry key="one">i = 1 and v = 0 @integer 1</entry><entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry></_pluralRules>
+    <_datePatterns _short="dd.MM.yy" _medium="dd.MM.y" _long="d. MMMM y" />
+    <_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+  </CultureInfo>
+  <CultureInfo _code="xx_yy" _base="xx" _nativeName="Child">
+    <_datePatterns _long="y MMMM d" />
+  </CultureInfo>
+</CultureTable>)XML";
+    sw::CultureTable         table;
+    const sw::expected<void> loaded = table.loadFromXMLText( kVersion1, "version1.cultures.xml" );
+    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")" );
+    const sw::CultureInfo* pChild = table.findCulture( "xx_yy" );
+    SW_REQUIRE_NOT_NULL( pChild );
+    SW_EXPECT_EQUAL( sw::string( "," ), pChild->_decimalSeparator );
+    SW_EXPECT_EQUAL( sw::string( "dd.MM.yy" ), sw::string( pChild->findDatePattern( "short" ) ) ); // 구조체 칸 — 적지 않은 스타일은 부모 것
+    SW_EXPECT_EQUAL( sw::string( "y MMMM d" ), sw::string( pChild->findDatePattern( "long" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( sw::CultureInfo::getPluralKeyword( pChild->selectPlural( sw::PluralOperands::makeInteger( 1 ) ) ) ) );
 }
 
 /**

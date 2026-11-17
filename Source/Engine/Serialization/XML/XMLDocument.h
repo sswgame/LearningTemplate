@@ -232,6 +232,8 @@ namespace sw
         string toString() const;
         /** @brief 다른 문서의 서브트리를 이 노드의 자식으로 복사합니다. */
         XMLNode appendClone( XMLNode src ) const;
+        /** @brief 이 노드의 자식 @p child 를 서브트리째 지웁니다. 이 노드의 자식이 아니면 false 이고 아무것도 바꾸지 않습니다(판 올림이 옛 래퍼 원소를 걷어 낼 때). */
+        bool removeChild( XMLNode child ) const;
 
     private:
         /** @brief 값 글 하나를 읽은 결과입니다. 깨진 값은 읽는 함수가 원소 · 이름과 함께 오류로 남깁니다. */
