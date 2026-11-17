@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -100,40 +101,42 @@ namespace sw
 
             static MailboxServiceResult claimCampaign( IServiceStoreConnection& connection, uint64 campaignID, const MailboxClaimInput& input, MailboxClaimReply& outReply )
             {
-                ServiceRecord            campaignRecord;
-                const ServiceStoreResult read = connection.readRecord( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
-                if ( read == ServiceStoreResult::NotFound )
-                    return MailboxResult::NotFound;
-                ServiceMailCampaign campaign;
-                if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord._bytes, campaign ) == false )
-                    return MailboxServiceResult::fail( OnlineError::kUnavailable );
-                if ( campaign.isActive( input._nowMs ) == false )
-                    return MailboxResult::Expired;
-                const string          claimKey = ServiceMailCampaign::makeClaimKey( campaignID, input._accountID );
-                LedgerTransferRequest request;
-                if ( LedgerJournalKey::makeFromToken( "mail.campaign", claimKey, request._journalKey ) == false )
-                    return MailboxServiceResult::fail( OnlineError::kInvalidRequest );
-                request._reason    = "mail.campaign";
-                request._memo      = campaign._titleKey.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
-                request._pPolicy   = input._pPolicy;
-                request._timeMs    = input._nowMs;
-                request._actorID   = input._accountID;
-                request._actorKind = LedgerActorKind::Player;
-                for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
-                {
-                    request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( input._accountID ), attachment._assetID, attachment._amount } );
-                }
+                const string claimKey = ServiceMailCampaign::makeClaimKey( campaignID, input._accountID );
                 for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
                 {
+                    // 캠페인은 시도마다 읽고 그 버전을 커밋 조건으로 건다 — 읽기와 커밋 사이에 운영자가 끝내거나 첨부를 바꾼 캠페인으로 지급하지 않는다.
+                    ServiceReadSetConnection readSet( connection );
+                    ServiceRecord            campaignRecord;
+                    const ServiceStoreResult read = readSet.readRecord( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
+                    if ( read == ServiceStoreResult::NotFound )
+                        return MailboxResult::NotFound;
+                    ServiceMailCampaign campaign;
+                    if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord._bytes, campaign ) == false )
+                        return MailboxServiceResult::fail( OnlineError::kUnavailable );
+                    if ( campaign.isActive( input._nowMs ) == false )
+                        return MailboxResult::Expired;
+                    LedgerTransferRequest request;
+                    if ( LedgerJournalKey::makeFromToken( "mail.campaign", claimKey, request._journalKey ) == false )
+                        return MailboxServiceResult::fail( OnlineError::kInvalidRequest );
+                    request._reason    = "mail.campaign";
+                    request._memo      = campaign._titleKey.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
+                    request._pPolicy   = input._pPolicy;
+                    request._timeMs    = input._nowMs;
+                    request._actorID   = input._accountID;
+                    request._actorKind = LedgerActorKind::Player;
+                    for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
+                    {
+                        request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( input._accountID ), attachment._assetID, attachment._amount } );
+                    }
                     ServiceTransaction   transaction;
                     LedgerTransferResult serviceResult;
-                    const LedgerResult   staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
+                    const LedgerResult   staged = Ledger::stageTransfer( readSet, request, transaction, serviceResult );
                     if ( staged != LedgerResult::Ok )
                         return toResult( staged );
                     if ( serviceResult._bReplayed == SW_TRUE )
                         return MailboxResult::AlreadyClaimed;
                     transaction.put( ServiceMailCampaign::getClaimTable(), claimKey, vector<uint8>{}, ServiceRecord::kAbsentVersion );
-                    const ServiceStoreResult committed = connection.commit( transaction );
+                    const ServiceStoreResult committed = readSet.commit( transaction );
                     if ( committed == ServiceStoreResult::Ok )
                     {
                         collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );

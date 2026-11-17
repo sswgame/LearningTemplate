@@ -40,6 +40,48 @@ namespace
         return balance._amount;
     }
 
+    /** @brief 운영 등급 @p adminID 를 Viewer 로 내립니다(다른 운영자의 강등이 끼어든 것). */
+    void setRoleToViewer( MemoryServiceDatabase& database, AccountID adminID )
+    {
+        ServiceTransaction transaction;
+        transaction.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( adminID ), vector<uint8>{ static_cast<uint8>( AdminRole::Viewer ) } );
+        SW_EXPECT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
+    }
+
+    /**
+     * @brief 첫 커밋 바로 앞에 운영자 강등을 한 번 끼워 넣는 연결입니다.
+     * @details 메모리 저장소는 호출마다 직렬이라 "읽기와 커밋 사이" 의 강등이 저절로 나지 않는다. 이 연결이 그 틈을 만든다.
+     */
+    class InterleavingConnection final : public IServiceStoreConnection
+    {
+    public:
+        InterleavingConnection( MemoryServiceDatabase& database, AccountID adminID )
+            : _database{ database }
+            , _adminID{ adminID }
+        {
+        }
+
+        ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override { return _database.readRecord( table, key, outRecord ); }
+        ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord ) override
+        {
+            return _database.listRecords( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord );
+        }
+        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override
+        {
+            if ( _cutCount == 0 )
+            {
+                ++_cutCount;
+                setRoleToViewer( _database, _adminID );
+            }
+            return _database.commit( transaction, pOutInfo );
+        }
+
+    private:
+        MemoryServiceDatabase& _database;
+        AccountID              _adminID;
+        int32                  _cutCount{ 0 };
+    };
+
     struct Fixture
     {
         MemoryServiceDatabase database;
@@ -115,4 +157,16 @@ SW_TEST_CASE( AdminStoreLogicTest, AccountDeletionErasesTheRole )
     SW_EXPECT_TRUE( database.readRecord( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), record ) == ServiceStoreResult::NotFound );
     SW_EXPECT_TRUE( database.readRecord( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), record ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( AdminStoreLogic::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok ); // 멱등
+}
+
+/** @brief [AdminStoreLogicTest] 등급을 읽은 뒤 커밋 전에 강등된 운영자의 지급은 들어가지 않는다 — 등급 읽기가 커밋 조건이라 다시 읽고 Forbidden 이다(감사 "다음 할 일" 5 번) */
+SW_TEST_CASE( AdminStoreLogicTest, DemotionBetweenReadAndCommitRefusesTheCommand )
+{
+    Fixture reference;
+    setRoleToViewer( reference.database, kOperator ); // 강등만 들어간 저장소 — 지급은 남지 않아야 한다
+    Fixture                fixture;
+    AdminReply             reply;
+    InterleavingConnection connection( fixture.database, kOperator );
+    SW_EXPECT_TRUE( AdminStoreLogic::execute( connection, makeAdjust( kOperator, 100, 9 ), reply ).hasError( OnlineError::kForbidden ) );
+    SW_EXPECT_EQUAL( fixture.database.computeContentHash(), reference.database.computeContentHash() );
 }

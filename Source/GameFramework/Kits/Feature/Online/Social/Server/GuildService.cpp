@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -338,8 +339,10 @@ namespace sw
             {
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
-                    _serviceResult                  = GuildResult{};
-                    const ServiceStoreResult result = runOnce( connection );
+                    _serviceResult = GuildResult{};
+                    // 판단에 쓴 레코드(내 멤버 역할 · 길드 · 대상의 길드)를 모두 커밋 조건으로 — 강등 · 추방된 임원의 초대 · 공지 · 가입 정책이 읽기와 커밋 사이에 통과하지 않는다.
+                    ServiceReadSetConnection readSet( connection );
+                    const ServiceStoreResult result = runOnce( readSet );
                     if ( result == ServiceStoreResult::Ok )
                     {
                         collectMembers( connection );
