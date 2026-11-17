@@ -4,7 +4,7 @@
 > 독자: 플랫폼 백엔드(WebGPU · Android Vulkan) · Emscripten · NDK 빌드를 잇는 세션(에이전트와 사람).
 > 결론: Android 는 Vulkan 1.2 + 디스크립터 인덱싱이 필수다(없으면 장치를 고르지 않는다). 웹은 WebGPU 하나이고 bindless 가 없어 DX11 과 같은 고정 슬롯 모델로 그린다. 대상이 못 주는 것은 능력 깃발(`RHICapabilities`) · 형식 대체 · 쿠킹 변형으로 가르고, 필수인데 없는 것은 오류로 멈춘다.
 
-사용자 결정: Android 지원, iOS 제외, 웹은 최신 브라우저의 WebGPU 만(WebGL2 없음), 콘솔은 대기(갈래를 만들지도 막지도 않는다).
+사용자 결정: Android 지원, iOS 제외, 웹은 최신 브라우저의 WebGPU 만(WebGL2 없음), 콘솔은 대기(갈래를 만들지도 막지도 않는다). 붙여 보지 못한 일(웹 실행 · 웹 온라인 · Android 실기기)은 [NEXT](NEXT.md) 3 절이다.
 
 **원칙(사용자 결정 2026-11-17): 웹 제약은 웹 깃발로만, 다른 플랫폼 기본을 낮추지 않는다.** 웹(WebGPU · wasm32)이 못 하는 것은 능력 깃발(`RHICapabilities`) · 플랫폼 사슬 설정 값 · 쿠킹 변형(`CookContract.json` 백엔드 줄) 가운데 하나로 웹만 가르고, `SW_PLATFORM_WEB` 컴파일 갈래는 최후 수단이다. 공용 상수 · 공용 셰이더 · 공용 예산을 웹 한도에 맞춰 낮추지 않는다(언리얼이 HTML5 제약을 플랫폼 설정 · RHI 기능 수준으로만 가른 것과 같다). "(기억)" 표시 값은 붙이기 전에 그 판의 명세로 다시 확인한다(context7).
 
@@ -58,13 +58,6 @@
 - 품질 등급: `engine.settings.xml` 의 `<AutoDetect platform=… requireNativeBindless=…>` — 플랫폼 기본 RHI 의 정적 능력과 시스템 메모리로 고른다.
 - 에디터: UI 미리보기 견본(`uiresolutions.xml`)이 기기 여백 · density 를 싣고 "돌리기" 로 가로를 본다. 미리보기 화면은 자기 뷰포트의 화면 태그를 그 화면에만 바꿔 끼운다(`ResourceContext::withTagOverride` — 엔진 태그 · 게임 UI 는 그대로, 변형은 캐시에 따로, 저장은 같은 태그로 조건을 되돌린다). 같은 조건의 시나리오는 `engine/automation/screenadapt`(단계 `Touch`).
 - APK: `py -3 -m Scripts android-apk --game <게임>` 이 Android-Shipping 빌드의 `libApp.so` 와 쿠킹한 팩(`assets/Packs`, 압축하지 않는다)을 서명한 디버그 APK(`build/Android-Shipping/Apk/<게임>-debug.apk`)로 묶는다 — Gradle 없이 aapt2 · zipalign(16KB 페이지) · apksigner. 매니페스트 틀은 `cmake/Templates/AndroidManifest.xml`, 값(앱 id · 방향 · 판)은 `Config/Environment/android_package.json`.
-
-## 남은 일(코드를 붙여 보지 못한 것)
-
-- 웹 실행: `py -3 -m Scripts web-check --game Empty`(묶기 · COOP/COEP 서버 · 헤드리스 브라우저 — WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속)를 아직 돌리지 않았다. Web-Shipping 빌드(단계 텍스처 16 계약이 처음 걸린다) 뒤 통합에서 돌린다. 입력 · 클립보드(paste) 판정은 없다 — 배포 빌드에 시나리오 실행기가 없어 앱 반응을 읽을 길이 없다(웹 시나리오를 쿠킹하거나 반응을 페이지로 내보내는 길이 필요하다).
-- 웹 온라인: 스트림은 WebSocket 이다 — 클라이언트 `WebSocketStreamTransport`(Web), 서버는 같은 리슨에서 첫 바이트로 가르는 `WebSocketAcceptTransport`(온라인 서비스 리슨). 남은 것: `ws://` 만이라 https 페이지는 `wss://`(수락 쪽 TLS 종단)가 필요하다. 게임 세션(암호화 UDP)은 브라우저에 UDP 가 없어 아직 길이 없다(WebSocket · WebTransport 위 데이터그램 갈래).
-- 웹 오디오: `Audio/Web/WebAudioBackend`(믹서 스레드 → SPSC 링 `Audio/CircularAudioBuffer` → AudioWorklet `WebAudioBackend.js`, 첫 사용자 몸짓에 `AudioContext.resume`, 워클릿 실패는 `notifyOutputLost` → 다시 열기)는 아직 컴파일 · 실행하지 않았다 — `web-check` 가 `[WebAudio] output started` 줄을 판정한다. Android AAudio(`Audio/Android`)는 실기기에서 장치 분리 → 다시 열기를 본다.
-- Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드(JNI `ClipboardManager`)는 실기기에서 Looper 스레드 제약 없이 읽고 쓰는지 본다.
 
 ## 입력(웹 · Android)
 

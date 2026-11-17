@@ -2,17 +2,15 @@
 
 > 질문: 코드에서 확인한 구조 경계 · 확장 후보는 무엇이고, 각각 어떻게 하기로 정했는가?
 > 독자: 이 저장소에서 일하는 에이전트와 사용자.
-> 결론: 결함 · 성능 병목의 항목 상세는 [CommercialGapAudit](CommercialGapAudit.md), 순서는 [NEXT](NEXT.md) 다. 여기는 설계 후보와 그 판단이고, 판단과 측정의 정본은 "통합 담당 판단" 절이고, 작업자에게 나눠 줄 설계(초안 · 측정 문턱 · 일 목록)는 맨 끝 "코어 · 런타임 설계" 절이다. 끝난 일은 지운다(기록은 git).
+> 결론: 할 일 · 측정 목록은 [NEXT](NEXT.md) 하나다. 여기는 설계 후보와 그 판단(왜 그렇게 정했는가)만 두고, 판단과 측정의 정본은 "통합 담당 판단" 절이고, 작업자에게 나눠 줄 설계(초안 · 측정 문턱)는 맨 끝 "코어 · 런타임 설계" 절이다. 끝난 일은 지운다(기록은 git).
 
 ## 열린 설계 후보
 
 ### 구조와 시스템
 
 - **층 경계:** 엔진 층은 컴파일 의존 규칙으로 막지만 링크 산출물 경계와는 별개다. 실제 순환 · 독립 배포 요구가 확인된 층만 별도 타깃으로 나눈다.
-- **`ModuleSharedAssetCache.h`** 는 여러 장르 · 온라인 카탈로그가 직접 include 한다(그래프 간선 — 결함 증거는 아니다). 사용처가 공유 캐시 계약에 실제로 기대는지 보고 광역 include 는 좁힌다. 모듈 언로드 · 재로드 때 캐시 소유 · 무효화를 테스트한다.
-- **쿠킹이 경로를 조립해 읽는 에셋을 놓칠 수 있다** — `-cooked-content` 로 확인하지 않았다. 실행 확인은 NEXT 6 절.
-- **RHI 형식 지원:** 형식 · 용도 조합은 실제 자원 · 렌더 상태 조합으로 질의하고 미지원 경로는 백엔드별 시나리오로 본다. lavapipe `R16G16_SNORM` 블렌드 거부 기록은 코드가 블렌드 비트 없으면 덮어쓰기로 바꾸므로 옛 증상일 수 있다 — 재현 뒤 갱신.
-- **`AccountTicketConnect` 단위 테스트는 거절 · 종료만 본다.** 루프백 온라인 호스트로 성공 · 만료 · 재시도 실패와 비밀 값이 로그 · 오류에 새지 않는지를 더한다.
+- **`ModuleSharedAssetCache.h`** 를 여러 장르 · 온라인 카탈로그가 직접 include 하는 것은 그래프 간선이지 결함 증거가 아니다 — 쓰는 쪽이 공유 캐시 계약에 기대는지 본 뒤에만 좁힌다.
+- **RHI 형식 지원:** 형식 · 용도 조합은 실제 자원 · 렌더 상태 조합으로 질의하고 미지원 경로는 백엔드별 시나리오로 본다. lavapipe `R16G16_SNORM` 블렌드 거부 기록은 코드가 블렌드 비트 없으면 덮어쓰기로 바꾸므로 옛 증상일 수 있다.
 
 ### 이름과 용어
 
@@ -30,7 +28,6 @@
 ### 데이터 기반 값 · 매직 리터럴
 
 - 늘지 않게 하는 구조(파일 단위 래칫 `Scripts/lint/magic_literals.py`, 기준선 `Config/Rules/Lint/MagicLiteralBaseline.json`, 규칙 [Constants.md](agents/Constants.md) "The ratchet" · "Sentinels")는 섰다.
-- 남은 것: 기준선이 큰 파일(데모 UI · 게임 모드 컴포넌트)의 튜닝 값을 PROPERTY · 카탈로그로, AI · 내비 · 에디터 패널의 남은 `-1`, `find*Index` 무리를 `sw::optional` 로(`sw::expected` Core 밖 이전과 함께 — [Errors](agents/Errors.md)). 키트 규칙 설정 자산은 감사 K-4 로 됐다, 렌더 정책 값은 RN-16 남은 몫.
 - 이미 PROPERTY 인 게임 값(`WildWestGameModeComponent` · `MeadowFarmGameModeComponent`)은 생성자 기본값만 보고 하드코딩으로 세지 않는다. sentinel 은 `-1` 표기가 아니라 도메인 의미와 저장 · 통신 호환성으로 정한다.
 
 ### App 프로세스 종료 코드
@@ -42,12 +39,11 @@
 ### 추가 아키텍처 후보
 
 - **엔진 서비스 슬롯은 프로세스 전역 하나다**(`ServiceSlot.h` · `EngineServices.cpp`, 두 번째 엔진은 `AlreadyBound` 로 거절). 동시 Engine(에디터 다중 미리보기 · 인프로세스 서버+클라이언트)이 실제 요구될 때만 컨텍스트별 슬롯 + 두 인스턴스 격리 테스트.
-- **서브시스템 의존이 두 선언이다** — 등록 `after`(생성 순서)와 `getSubsystemDependencies()`(초기화 · 종료 순서). 의미가 달라 그냥 합치지 않는다. `scope.get<T>()` 가 `after` 에 빠진 타입을 시작 단계에서 오류로 잡는지, 수명 의존 누락을 진단이 잡는지 테스트한다.
+- **서브시스템 의존이 두 선언이다** — 등록 `after`(생성 순서)와 `getSubsystemDependencies()`(초기화 · 종료 순서). 의미가 달라 그냥 합치지 않는다.
 
 ### 셰이더 구조와 디퍼드 · G버퍼
 
 - 디퍼드 파이프라인(`deferredpipeline.xml` — 알베도 · 옥타헤드럴 노멀 · 금속도/거칠기 + 깊이)과 판 번호 있는 G버퍼 명세(`GBufferAttachmentSpec` v1, HLSL `SW_GBUFFER_LAYOUT_VERSION`)는 섰다. 기존 노드로 PBR 표면 조합 · 게임별 `.material` 변형 튜닝은 되지만, 게임 고유 셰이딩 모델 · G버퍼 계약을 아티스트가 단독으로 더하는 것은 토대 밖이다(노드 등록은 엔진 고정).
-- **남은 것:** 공통 `PixelContext` · 표면 평가와 패스별 출력(포워드 색 / G버퍼 인코딩) 분리, 표면 모델 · 필수 입력 선언과 미지원 조합의 쿠킹 실패. Lit · Unlit · Emissive · 툰 · 알파 마스크의 패스 분류 목록부터 만든다.
 - 툰 · 그래프 Emissive 처럼 G버퍼에 담기지 않는 것은 `MATERIAL_FORWARD_ONLY` 가 안전한 길이다. PBR 계열을 실수로 ForwardOnly 로 두면 디퍼드 이득을 잃고, 모든 속성을 G버퍼에 넣으면 대역폭이 는다 — 속성 추가는 남는 채널 · 정밀도 검사 뒤 판을 올린다.
 - **판단(2026-11-17): 박막 · 털 · 스타킹(그물 밑층) · 비단(시엔 + 비등방 · 산란)의 겹친 엽은 포워드 전용으로 둔다.** 겹친 엽 하나가 셰이딩 모델 번호 하나 + 커스텀 데이터 칸(4 채널)을 넘는다 — 박막은 두께 · IOR · 무게, 털은 탄젠트 · 큐티클 기울기 · 색, 비단은 시엔 색 · 거칠기와 비등방 축을 함께 든다. 언리얼 옛 디퍼드는 셰이딩 모델 ID + 커스텀 데이터 칸 방식이고 박막은 없으며 겹친 엽은 Substrate(가변 크기 G버퍼)가 맡는다. 유니티 HDRP 의 Hair · Fabric · StackLit 은 포워드 전용이다. 칸을 늘리면 모든 디퍼드 픽셀의 대역폭이 늘어 소수 머티리얼을 위해 전체가 값을 치른다 — HDRP 와 같이 포워드 전용(`MATERIAL_FORWARD_ONLY`, 디퍼드 파이프라인의 ForwardOnlyOpaque 패스)으로 두고, 홑 엽(시엔 · 비등방 · 산란 · 투과 · 코트)만 번호로 싣는다. 다시 볼 때: 겹친 엽 머티리얼이 화면의 큰 몫을 차지하는 장면에서 ForwardOnly 패스의 GPU 시간이 디퍼드 이득을 넘으면 Substrate 식 가변 칸을 검토한다.
 - 포워드 · 디퍼드는 같은 장면 · 해상도 · 플랫폼에서 GPU 시간 · G버퍼 대역폭 · PSO 수 · 라이트 수 증가로 비교한다. 모바일 · 웹은 측정 전까지 포워드.
@@ -73,15 +69,14 @@
 | 다른 파일 카탈로그로의 연결(무기 → 탄 · 아이템, 격투 기술 → 프레임) | 둘을 쥐는 쪽이 시작할 때 보고 깨지면 서지 않는다 | `WeaponCatalog::checkProjectiles` · `findUnknownItems`(Shooter3DGame · MechArenaWorld). 쿠커는 못 본다 |
 | 원소 자기 칸(모르는 속성 · 범위 밖 · 겹침) | 오류 · 경고와 그 원소 제외 | 각 카탈로그 읽기(`XMLFields`), `ResourceDataSchemaTest` 는 경고도 실패 |
 
-- **남은 것:** `FighterCatalog`(기술 → 프레임)는 그 기술만 빼는 정책이라 계약대로 서지 않게 할지, `ActionPlatformerCatalog` 의 패턴 상태 전이 검사를 표로 옮길 수 있는지 정한다. 상속으로 물려받은 참조 · 다른 팩 참조의 테스트, 잘못된 참조가 쿠킹 · 시작을 통과하는 회귀 테스트를 더한다. 배포 콘텐츠 일괄 검증은 돌리지 않았다.
 - `CropCatalog::fillItemCatalog` 의 아이템 자동 생성은 콘텐츠 계약이라 미검증 참조로 세지 않는다.
 
 ### ReflectionParser · 런타임 Reflection
 
-- **파서 토큰화(측정 후보):** `SourceTokens::tokenizeCursor` 비용은 계측(`ReflectionParser.TokenizeStats`)만 들었다 — 판정은 S8 표. 10% 를 넘으면 토큰 저장소 재사용, 기본 인자 · 매크로 이름 · 별칭 이벤트 fixture 결과는 보존.
+- **파서 토큰화(측정 후보):** `SourceTokens::tokenizeCursor` 비용은 계측(`ReflectionParser.TokenizeStats`)만 들었다 — 판정은 S8. 10% 를 넘으면 토큰 저장소 재사용, 기본 인자 · 매크로 이름 · 별칭 이벤트 fixture 결과는 보존.
 - **유지:** `TypeRegistry::populateLookupCaches` 사전 계산과 `TypeLookupCache` 세대 슬롯 · 조상 테이블. 캐시를 더하거나 등록 · 언로드를 바꾸면 무효화 순서와 모듈 재등록 테스트를 함께.
 - **테스트:** 파서 fixture 8 개가 생성 코드 · 오류를 대조한다. 성능 최적화 전에 증분 없음 · 단일 헤더 · 다중 헤더 기준선을 같은 입력으로 반복 측정한다. 흔들리는 시간 문턱은 CI 에 넣지 않는다.
-- **FUNCTION 리플렉션:** `CallInEditor` 계약은 섰다(a02f95478d — 주인 편집 하나로 감싸 Undo 한 단계 · dirty). 다음은 (1) 인자 있는 메서드를 기존 타입 위젯 · `ReflectCallResult` 오류 표시로, (2) 실사용 반복 작업부터 액션 목록 · 컨텍스트 메뉴, (3) `callWithText` · `bindEventToFunction` 의 콘솔 · 비주얼 배선은 수요가 생길 때 허용 목록 · 수명 · 핫 리로드 검증과 함께. `bindEventToFunction` 소비자는 지금 테스트뿐이다.
+- **FUNCTION 리플렉션:** `CallInEditor` 계약은 섰다(a02f95478d — 주인 편집 하나로 감싸 Undo 한 단계 · dirty). `callWithText` · `bindEventToFunction` 의 콘솔 · 비주얼 배선은 수요가 생길 때만 허용 목록 · 수명 · 핫 리로드 검증과 함께. `bindEventToFunction` 소비자는 지금 테스트뿐이다.
 
 ### 비동기 · 병렬 처리
 
@@ -94,7 +89,7 @@
 | 씬 쿠킹(`SceneCooker::cookAllScenes`) | 씬 쿠킹 시간 합 · 가장 느린 씬 계측은 들었다. 합이 쿠킹 전체를 지배할 때만 — `CookStore` 공유 통계 · `clearAssetCaches` 때문에 캐시 격리 · 결과 병합이 먼저다(루프만 태스크로 감싸지 않는다) |
 | 게임 스레드 에셋 로드 | `AssetLoadProfiler` 로 스톨 상위 에셋 · 단계(IO · decode · upload)를 찾아 지연 로드를 허용하는 경로만 비동기로 |
 | 렌더 패스 기록(`RenderGraph::executeParallel`) | 레벨 폭 계측은 들었다 — 폭 문턱 판정은 S8. 배리어 · 레벨 제출 순서는 그래프 소유 |
-| AI 이동 사슬 | 비동기 경로 요청 줄 · 군중 프레임 일은 섰다. 남은 것: 한 종류 군중 안 나누기(에이전트 수천이면 지역으로 쪼갬), 측정 `load/navcrowd` |
+| AI 이동 사슬 | 비동기 경로 요청 줄 · 군중 프레임 일은 섰다. 한 종류 군중은 `load/navcrowd` 가 문턱을 넘을 때만 지역으로 쪼갠다 |
 | 에디터 UI | MVVM → 입력 큐 → 출력 계약(아래 "에디터 UI 스레드 분리 검토") |
 | 유지(이미 병렬) | 컴포넌트 틱 fork-join, 변환 계층, 애니메이션 비용 기반, 프레임 시스템 병렬(runOnAnyThread), GPU 업로드 · 식생, 셰이더 쿠킹, PackWriter 항목 압축. 틱 비용 기반 분배는 8 게임 중 1 만 이득이라 기본 정책을 바꾸지 않는다 |
 
@@ -124,7 +119,6 @@
 - **2 프리셋 · 규칙 표:** `FractureSettings` 철자 표(원본 해시 형식) · `TextureImportConfig` DXGI 번호(명세) · `Autosave` 까닭 우선순위(의미 규칙)는 코드, 나머지는 이미 데이터다.
 - **3 문화권:** 복수형 · 서수는 CLDR 규칙 글(`PluralRuleSet`), 숫자 체계 · 통화는 문화권 표 칸. 남은 것: 문화권별 통화 기호(필요할 때 칸 추가).
 - **4 에디터 표시:** 입력 오버레이 · 강조 스와치는 테마 토큰. 오버레이 바 표는 바마다 내용 코드가 붙어 코드.
-- **5 게임 규칙 수치(남음):** 게임 모드 컴포넌트의 상태 `switch` 와 키트의 `-1` · 실수 상수를 규칙 카탈로그 · PROPERTY 로.
 
 ### 에디터 기능 · UX
 
@@ -132,7 +126,7 @@
 - **첫 사용(중간):** 빈 상태(새 프로젝트 · 빈 폴더 · 첫 임포트 · Map Check 오류 · 첫 패키징)에 다음 행동을 잇는 것부터. Welcome 화면은 필요가 확인될 때(Godot Project Manager 비교).
 - **시각 저작(높음):** 범용 시각 편집 프레임워크를 만들지 않고 데이터 의미로 고른다 — 위치 · 부착은 뷰포트 · 기즈모, 계층 · 범위는 트리 · 오버레이, 시간은 타임라인, 흐름은 노드 그래프, 조합 · 카탈로그는 표 + 미리보기. 공통 재료는 `EditorPreviewPanel` · `EditorPreviewGizmo` · `EditorTransaction` · `EditorNodeGraph`, 같은 결합이 반복될 때만 공용 헬퍼를 뽑는다.
 - 경계: 편집 UI 는 저장될 에셋을 바꾸고 미리보기는 그 에셋을 소비한다(미리보기 전용 사본 금지). 선택 · 문서가 바뀌면 끌기를 끝내고 빠른 끌기는 Undo 한 단계, 사라진 본 · 소켓 참조는 조용히 버리지 않고 표시. 에셋 값의 기즈모 조작은 데이터 로컬 공간 · Undo 병합 · 문서 dirty 를 그 모델에 잇는다. 첫 사례(애니메이션 마스크 · 소켓)로 공통 코드가 실제로 있는지 본다 — 완료는 XML 왕복 · 다른 스켈레톤 · 재로드 배치 일치 · `uiaudit` · `uicapture` 화면.
-- 타일맵 · 스프라이트 시트의 자동 투명 영역 · 회전 아틀라스는 콘텐츠가 요구할 때 런타임 형식과 함께. 볼륨 안개는 광원 · 범위 표시와 해상도별 `RT.Fog.Volume` 측정이 남았다(`FogComponent` 씬 값이 정본).
+- 타일맵 · 스프라이트 시트의 자동 투명 영역 · 회전 아틀라스는 콘텐츠가 요구할 때 런타임 형식과 함께. 볼륨 안개는 `FogComponent` 씬 값이 정본이다.
 - 제외: 코드 에디터 · 마켓플레이스 · 클라우드 협업 · 원격 빌드 · AI 검색 · 멀티 유저 편집(비용 · 운영 책임을 먼저 정한다).
 
 ### 키트별 무료 상업용 리소스 (CC0 기준)
@@ -156,12 +150,12 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 3. 싱글플레이 조합 후보(`GF_OpenWorldActionAdventure`): 캠페인 진행 · 지역 상태 · 저장 · 동료 관계 · 보스 · 탈것, MMO 의존 없음. DLC(해양 · 수중 · 주거 · 시설 · 관계 · 추가 이야기)는 기존 세이브를 깨지 않는 선택 데이터 · 시스템 확장 — 팩 마운트보다 넓다(퀘스트 · 지역 상태 승계, 시설 소유, 건축 저장).
 4. 말 · 배 · 전투 · 퀘스트는 바로 공유하지 않는다(`WesternHorse` 는 서부극 모델). 공통 탈것 수명 · 입력 · 좌석 인터페이스는 두 번째 사용처로 검증될 때 뽑는다.
 
-수직 슬라이스: MMO 는 `LanternVale`, 싱글은 `Velmora`(확장 팩 · 세이브 승계)가 섰다. 운영형 게임의 누적 업데이트(예: 검은사막 Treasure Codex)는 콘텐츠 목록을 키트에 고정하지 않고 판 붙은 카탈로그 · 선택 팩으로 더한다. 남은 것: 실제 대규모 MMO 부하 목표와 운영 비용.
+수직 슬라이스: MMO 는 `LanternVale`, 싱글은 `Velmora`(확장 팩 · 세이브 승계)가 섰다. 운영형 게임의 누적 업데이트(예: 검은사막 Treasure Codex)는 콘텐츠 목록을 키트에 고정하지 않고 판 붙은 카탈로그 · 선택 팩으로 더한다.
 
 ### 하우징 · 주거 건축 키트
 
 - 경계: `GF_Housing`(부지 소유 · 부품 카탈로그 · 배치 검증 · 미리보기 · 구매 · 회수 · 부지별 저장)은 선택 기능 키트다. 심즈형 욕구 · 가구 효용 · 일정은 생활 시뮬레이션 키트 몫이고, MMO 는 소유 · 최종 판정 · 저장을 서버 권위로. 저장 정본은 부지 id · 안정 배치 id · 부품 id/판 · 변환이다(임시 핸들 금지).
-- **남은 것**(`Source/GameFramework/Kits/Feature/World/Housing/`, 시연 Empty `maps/housing.scene.xml`): 첫 판은 칸 벽 · 축 정렬 부지다. 서버 권위 배치(요청 → 서버 판정 → 부지 상태 방송 · 늦은 참가 — 넷 메시지 영역 · 요청 검증 · 복제 테스트 · 둘 실행 시나리오)가 없다.
+- 첫 판(`Source/GameFramework/Kits/Feature/World/Housing/`, 시연 Empty `maps/housing.scene.xml`)은 칸 벽 · 축 정렬 부지다.
 - 첫 단계에서 넣지 않는 것: 구조 안정성 시뮬레이션, 임의 메시 → 벽 절차 생성, NPC 가구 자동 이용 플래너, 온라인 동시 건축.
 
 ### 핫 리로드와 스크립팅 언어 판단
@@ -190,7 +184,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 
 ### VFX 저작 · 캐릭터 잔상 · 분신
 
-남은 것: 잔상의 GPU · CPU 메모리 측정(`game.empty.afterimage`)과 품질 단계별 상한. 분신은 게임플레이에서 필요할 때 별도 캐릭터 프리팹 · 애니메이션 인스턴스로 — 포즈 재생형인지 AI · 전투 가능한 독립 개체인지 먼저 가른다. 임의 그래프 · 모듈 시스템을 먼저 들이지 않는다.
+잔상은 품질 단계별 상한을 둔다. 분신은 게임플레이에서 필요할 때 별도 캐릭터 프리팹 · 애니메이션 인스턴스로 — 포즈 재생형인지 AI · 전투 가능한 독립 개체인지 먼저 가른다. 임의 그래프 · 모듈 시스템을 먼저 들이지 않는다.
 
 ## 통합 담당 판단(2026-11-08)
 
@@ -202,17 +196,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 - **하지 않기로 정한 것:** Meadow 밭 크기는 소유 타입 상수, Shooter3D 탄착 표면 목록은 코드 상수. 범용 스크립팅 VM · 네이티브 모드 DLL · 원격 명령 서버는 넣지 않는다.
 - **리소스 라이선스(사용자 결정 2026-11-08 — 문제가 되면 다른 리소스):** 저장소의 Quaternius 묶음 여덟은 묶음 페이지가 CC0 이고 QAL 은 소급하지 않아 둔다(근거 `Content/common/credits.md` 머리). 새 리소스는 무료 · 공개 라이선스만(CC0 우선, MIT 처럼 재배포 되는 것은 고지와 함께 — [NEXT](NEXT.md) 리소스 규칙), QAL · CC-BY · 불명확한 것은 다른 CC0 출처로.
 
-**측정과 성능 후보(S8).** 아래 값으로 고치거나, 이득이 없으면 값을 이 표에 적고 닫는다. RHI 스레드 · 에디터 UI 스레드 시제품은 여기서 병목이 나올 때만. "켤 코드" 커밋은 따로라 값이 흔들림 안이면 그 커밋만 되돌린다. 값 칸은 통합 실행이 채운다.
-
-| 후보 | 재는 법(Release, 반복) | 볼 값 | 판정 | 켤 코드 | 값 |
-|---|---|---|---|---|---|
-| 대기 호출 표 | `App --test --test-filter=OnlineServerCallTableTest.CompletionCostByPending` 5 번, 이 커밋과 그 앞 | `OnlineServerCallTableTest.CompletionCost` P 16 · 256 · 4096 의 ns/완료, 부하 봇 서버 `service_store_pending_peak` | 실제 P 에서 차이가 흔들림보다 크면 둔다 | 호출 번호 색인(`OnlineServerCallTable::_mapCall`) | |
-| 반사 검증 중첩 타입 | `--test-filter=ReflectionValidationTest.NestedElementCost` 5 번, 이 커밋과 그 앞 | `ReflectionValidationTest.NestedElementCost` ns/원소 | 차이가 흔들림보다 작으면 되돌린다 | `ReflectionValidationInternal::NestedTypeCache` | |
-| 파서 토큰화 | 스탬프를 지우고 변경 없음 · 헤더 하나 · 모듈 전체 3 번씩 | `ReflectionParser.TokenizeStats` 와 `Done in` | 토큰화가 전체의 10% 를 넘으면 저장소 재사용 | 없음 | |
-| 씬 저장 비동기 | `-game=AbilityArena` 에디터 `game/abilityarena/automation/editor/scenesave` 3 번 | `Scene.save.serialize` · `.write` · `.base` | write 가 16 ms 를 넘고 serialize 보다 크면 write 를 워커로 | 없음 | |
-| 씬 쿠킹 병렬 | `--cook-all` 을 DDC 없이 · 있이 2 번 | `Headless.CookStageTimes` · `SceneCooker.SceneCookTime`(합 · 가장 느린 씬) | scenes 가 쿠킹 벽시계 절반을 넘고 가장 느린 씬이 합의 1/4 아래면 씬 단위 병렬 설계 | 없음(캐시 격리 먼저) | |
-| GPU 업로드 · 텍스처 | shooter3d · meadowvillage 첫 진입, DX12 · Vulkan · GL, `-gv_assetLoadReport=1` × `-gv_gpuUploadQueue=0/1` 3 번 | `Texture` · `TextureUpload` 행, `RT.TextureUpload.pump` · `.submitted` · `.polled` · `.waiting`, `GT.GPUUpload.flush` | pump 가 RT 의 10% 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품 | 없음 | |
-| 렌더 그래프 레벨 폭 | `game/empty/automation/benchmark` · Shooter3D, `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99`, DX12 · Vulkan 3 번 | RT 프레임 중앙값, `RT.Graph.parallelLevel` · `.parallelLevels` · `.parallelPasses` · `.serialPasses` · `.maxLevelWidth` | 3 · 4 가 2 보다 흔들림 밖으로 빠르면 기본값을 바꾼다(그림은 같아야 한다) | 폭 문턱 gv(기본 2) | |
+**측정과 성능 후보(S8).** 재는 일은 [NEXT](NEXT.md) 4 절이다. 재서 이득이 없어 닫은 값만 여기에 한 줄씩 남긴다(판단 기록 — 아직 없다). RHI 스레드 · 에디터 UI 스레드 시제품은 거기서 병목이 나올 때만 만든다.
 
 ### 지역 효과의 범용 구조(사용자 2026-11-08 — 용암 · 바다 · 늪 · 유황 · 독가스)
 
@@ -267,7 +251,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 
 ## 렌더 · RHI 설계(2026-11-17)
 
-"측정 · 설계가 먼저" 라 미뤄 둔 다섯 항목이다. 절마다 문제 → 상용 대조 → 결정과 기각 → API 초안(C++17) → 이전 순서 → 측정 → 일 목록 순이다. 상용 엔진의 내부 이름은 기억 기준이라 작업자가 그 판의 문서로 다시 본다. 일 번호(R6-1 …)는 작업자 한 명이 워크트리 하나에서 끝내는 크기이고 "의존: 없음" 은 바로 맡길 수 있다. 새 린트 규칙은 없다 — 막을 것은 형식(순수 가상 · 주인 타입 · 매개변수 타입 · 로드 오류)으로 막았다.
+"측정 · 설계가 먼저" 라 미뤄 둔 다섯 항목이다. 절마다 문제 → 상용 대조 → 결정과 기각 → API 초안(C++17) → 이전 순서 → 측정 순이다(일 목록은 [NEXT](NEXT.md) 5 절). 상용 엔진의 내부 이름은 기억 기준이라 작업자가 그 판의 문서로 다시 본다. 새 린트 규칙은 없다 — 막을 것은 형식(순수 가상 · 주인 타입 · 매개변수 타입 · 로드 오류)으로 막았다.
 
 ### bindless 번호 고정과 디스크립터 다시 쓰기(설계 2026-11-17, 감사 R-6)
 
@@ -429,17 +413,17 @@ virtual AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint6
 | 무엇 | 시나리오 · 지표 | 판정 |
 |---|---|---|
 | 줄이 쥔 바이트 | `load/*`, 새 게이지 `TextureStreaming.bytesInFlight` | 늘 `_maxBytesInFlight` 아래, 대기 상태 바이트 0 |
-| 첫 화면 | `load/*` × 워커 1 · 4, `Assets.Pending` 이 0 이 되는 시간과 `AssetLoadScope` `Texture` 가 읽은 바이트 | ③ 뒤 읽은 바이트가 2K 이상 텍스처에서 전체의 10 % 아래, 시간은 ② 보다 흔들림 밖으로 느리지 않다(느리면 첫 로드만 전체 읽기로 되돌리고 값을 S8 표에) |
+| 첫 화면 | `load/*` × 워커 1 · 4, `Assets.Pending` 이 0 이 되는 시간과 `AssetLoadScope` `Texture` 가 읽은 바이트 | ③ 뒤 읽은 바이트가 2K 이상 텍스처에서 전체의 10 % 아래, 시간은 ② 보다 흔들림 밖으로 느리지 않다(느리면 첫 로드만 전체 읽기로 되돌리고 값을 S8 에) |
 | 올리기 지연 | 화면에 든 뒤 전체 밉까지의 프레임 수(p95) | ② 앞보다 10 프레임 넘게 늘지 않는다(늘면 `_maxBytesInFlight` · 프레임당 제출 수를 올린다) |
 | 팩 | `-cooked-content` 로 같은 시나리오 | `Pack.RangeReadOnCompressedEntry` 0 |
 
-**일 목록.**
+**R-15 후속 결정(2026-11-17).**
 
-- **R-15 후속 1 (남은 몫) GI 복셀화를 GPU 원본으로** — `SceneVoxelizer.cpp` 가 `MeshCPUView` 대신 GPU 래스터 복셀화(아래 결정)로 읽는다. 정점 풀은 GPU 원본에서 채우고, 스킨 · 모프 휴지 자세는 옮기지 않는다(아래 결정).
+- **R-15 후속 1 GI 복셀화의 원본은 GPU 다** — `SceneVoxelizer.cpp` 는 `MeshCPUView` 대신 GPU 래스터 복셀화(아래 결정)로 읽는다. 정점 풀은 GPU 원본에서 채우고, 스킨 · 모프 휴지 자세는 옮기지 않는다(아래 결정).
   - 업로드 기록 자리 결정(2026-11-17): 프레임 그래프 실행기가 파이프라인과 무관하게 첫 리스트 앞에 고정으로 기록하는 **프레임 업로드 단계** 하나(파이프라인 XML 의 패스가 아니다 — 풀이 안 채워지는 파이프라인이 생길 수 없다). 정점 풀의 GPU 복사 · 상태 전이를 여기서 기록한다. 풀 정점 버퍼는 GPU 전용(`createGPUVertexBuffer`, DX12 default 힙)이고 인덱스는 CPU 인덱스에서 그대로 올린다. 상용 대조: 언리얼 RDG 의 초기 업로드, 유니티 SRP 의 프레임 시작 CommandBuffer.
   - 모프 · 스킨 휴지 자세 결정(2026-11-17): GPU 원본으로 옮기지 않고 **스킨 · 모프 메시는 CPU 정점을 쥔다(Keep)** — 휴지 자세를 Packed 프록시(snorm8 노멀 · half 색)에서 풀면 노멀이 8 비트로 떨어져 CPU float 휴지 자세와 그림이 갈리고(골든), Vulkan 프록시 정점 버퍼에 STORAGE 용도 · DX12 정점 버퍼의 원시 SRV · 새 컴퓨트 PSO 가 든다. 스킨 · 모프 메시는 캐릭터 몫이라 수가 적다 — 놓기를 켤 때(후속 2) `Mesh::hasSkin` · 모프 타깃이 있는 메시는 만드는 쪽이 Keep 으로 정한다. 상용 대조: 언리얼도 스켈레탈 메시는 CPU 스키닝 · 물리 에셋 때문에 CPU 정점을 쥐는 설정이 기본이다.
-  - GI 복셀화 결정(2026-11-17): **기하 셰이더 없는 3 축 투영**으로 간다 — 정점 셰이더가 삼각형 노멀의 가장 큰 축을 골라 그 축 직교 투영으로 그리고, 픽셀 셰이더가 깊이를 복셀 z 로 바꿔 3D UAV 에 원자 쓰기한다(삼각형 축은 컴퓨트 한 번으로 미리 구해 정점 흐름에 싣는다 — 정점 셰이더는 이웃 정점을 모른다). 보존 래스터는 DX12 Tier · Vulkan 확장 · GL/WebGPU 미지원으로 다섯 백엔드에 같은 그림을 못 내 기각하고, 대신 복셀 한 칸만큼 삼각형을 넓히지 않는 대가로 얇은 벽이 빠지는 것은 복셀 크기 절반의 바깥 확장(정점에서 노멀 방향)으로 막는다. 기하 셰이더는 WebGPU · Metal 계열에 없어 기각. 상용 대조: 언리얼 Lumen 의 메시 카드 · 유니티 APV 는 래스터 복셀화가 아니지만, NVIDIA VXGI · CryEngine SVOGI 가 같은 3 축 투영을 쓴다. 구현은 다음 차례.
-- **R-15 후속 2 CPU 정점 놓기 켜기** — `MeshCPUAccess` 를 `Mesh::create` · `MeshCache::request` 에 기본값 없이(절차 메시 Keep, 요청이 갈리면 Keep, 놓인 뒤 Keep 요청이면 `.mesh` 다시 읽기), 업로드가 모두 끝난 뒤 놓고 장치 교체 때 `.mesh` 를 다시 읽는다. 상용 대조: 언리얼 `UStaticMesh::bAllowCPUAccess`(꺼진 메시는 CPU 쓰기 — 물리 쿠킹 · 내비 · 복셀 GI — 를 에셋 설정 단계에서 막는다). 의존: 후속 1.
+  - GI 복셀화 결정(2026-11-17): **기하 셰이더 없는 3 축 투영**으로 간다 — 정점 셰이더가 삼각형 노멀의 가장 큰 축을 골라 그 축 직교 투영으로 그리고, 픽셀 셰이더가 깊이를 복셀 z 로 바꿔 3D UAV 에 원자 쓰기한다(삼각형 축은 컴퓨트 한 번으로 미리 구해 정점 흐름에 싣는다 — 정점 셰이더는 이웃 정점을 모른다). 보존 래스터는 DX12 Tier · Vulkan 확장 · GL/WebGPU 미지원으로 다섯 백엔드에 같은 그림을 못 내 기각하고, 대신 복셀 한 칸만큼 삼각형을 넓히지 않는 대가로 얇은 벽이 빠지는 것은 복셀 크기 절반의 바깥 확장(정점에서 노멀 방향)으로 막는다. 기하 셰이더는 WebGPU · Metal 계열에 없어 기각. 상용 대조: 언리얼 Lumen 의 메시 카드 · 유니티 APV 는 래스터 복셀화가 아니지만, NVIDIA VXGI · CryEngine SVOGI 가 같은 3 축 투영을 쓴다.
+- **R-15 후속 2 CPU 정점 놓기** — `MeshCPUAccess` 는 `Mesh::create` · `MeshCache::request` 에 기본값 없이(절차 메시 Keep, 요청이 갈리면 Keep, 놓인 뒤 Keep 요청이면 `.mesh` 다시 읽기), 업로드가 모두 끝난 뒤 놓고 장치 교체 때 `.mesh` 를 다시 읽는다. 상용 대조: 언리얼 `UStaticMesh::bAllowCPUAccess`(꺼진 메시는 CPU 쓰기 — 물리 쿠킹 · 내비 · 복셀 GI — 를 에셋 설정 단계에서 막는다). 의존: 후속 1.
 
 ### 자동 렌더 배율: GPU 프레임 시간과 뷰 사각형(설계 2026-11-17, 감사 RN-8)
 
@@ -517,7 +501,7 @@ struct RenderViewRect
 | 무엇 | 시나리오 · 지표 | 판정 |
 |---|---|---|
 | 배율 복귀 | 단위 `RenderScaleAdjusterTest`(아래), Shooter3D `benchmark` vsync 켬 + 자동 배율, `RenderPacketBuilder.AutoRenderScale` 로그 | 부하가 걷힌 뒤 `_upFrames` × 단계 수 프레임 안에 1.0 |
-| 한 쌍의 비용 | `game/empty/automation/benchmark` dx12 · vk · gl, 시계 켬 · 끔 5 번, `RT.Frame` p50 | 차이가 흔들림 안(밖이면 값을 S8 표에 적는다 — 시계는 자동 배율이 켜졌을 때만 켜지므로 결정은 그대로다) |
+| 한 쌍의 비용 | `game/empty/automation/benchmark` dx12 · vk · gl, 시계 켬 · 끔 5 번, `RT.Frame` p50 | 차이가 흔들림 안(밖이면 값을 S8 에 적는다 — 시계는 자동 배율이 켜졌을 때만 켜지므로 결정은 그대로다) |
 | 단계 프레임 | 개발 변수로 배율을 0.7 ↔ 1.0 으로 바꾸는 새 시나리오 `renderscalestep`, 새 카운터 `RT.Frame.transientAllocations`, 그 프레임의 `RT.Frame` | 할당 0, 프레임 시간이 중앙값의 1.2 배 아래 |
 | 그림 | `renderscalestep` 의 0.7 그림을 `gv_renderScale=0.7`(다시 만드는 길)의 그림과 견준다, 다섯 백엔드 | 차이 1 % 아래, 화면 가장자리에 사각형 밖 텍셀이 번지지 않는다 |
 
@@ -632,17 +616,13 @@ void mergeDirty( vector<RHIBufferHandle>& listDirty );                          
 
 | 무엇 | 시나리오 · 지표 | 판정 |
 |---|---|---|
-| 들어간 락 제거의 값 | S8 표의 "DX12 기록 경로 락 제거 전후 `bench.json` p50" — 291d69074e 와 그 앞 커밋, `benchmark` · Shooter3D dx12 5 번 | 값을 S8 표에 적고 닫는다(나빠졌으면 그 커밋을 본다) |
+| 들어간 락 제거의 값 | NEXT 4 절 S8 후보의 "DX12 기록 경로 락 제거 전후 `bench.json` p50" — 291d69074e 와 그 앞 커밋, `benchmark` · Shooter3D dx12 5 번 | 값을 S8 에 적고 닫는다(나빠졌으면 그 커밋을 본다) |
 | 미러 락 경합 | 같은 장면 dx12 · vk, `-gv_renderGraphParallelMinWidth=2`, 새 스코프 `RT.Bind.mirrorLockWait`(`RHIConstantBufferMirror::_mutex` 를 기다린 시간)의 합과 새 카운터 `RT.Bind.constantBufferWrites` | 대기 합이 `RT.Graph.parallelLevel` 합의 2 % 를 넘으면 L-2 를 한다. 아래면 값을 적고 닫는다 |
 | L-2 뒤 | 같은 실행의 RT 프레임 중앙값 | 흔들림 밖으로 빨라지지 않으면 되돌린다 |
 
-**일 목록.**
-
-- **L-2 상수 버퍼 기록 값을 레코드로**(문턱을 넘을 때만) — `D3D12RHIDevice.{h,cpp}` · `D3D12RHIResourceFactory.cpp` · `D3D12RHICommandContext.cpp`, Vulkan 대응 셋, `Backend/RHIConstantBufferMirror.{h,cpp}`. 테스트: 기존 `RHIConstantBufferMirrorTest.FillsStaleSlotsOnceAndForgets` 유지 · `SecondWriteInAFrameIsReported`, lightculling · shadow_* · postprocess_* 시나리오 dx12 · vk. 의존: L-1 의 측정, R6-3 · R6-4 와 같은 파일이라 그 뒤.
-
 ## 코어 · 런타임 설계(2026-11-17)
 
-"측정 · 설계가 먼저" 라 미뤄 둔 코어 · 런타임 항목의 설계다. 절마다 문제 · 대조 · 결정과 기각 · 초안 · 이전 순서 · 측정 · 일 목록 순서로 적었고, 일 하나가 작업자 하나의 몫이다(코드 → 린트 → 커밋, 빌드 · 측정은 통합). 줄 번호는 main `caf89e45df` 의 것이다. 측정 값은 위 "측정과 성능 후보(S8)" 표에 줄을 더해 적는다. C++ 초안은 C++17 이고 이름은 작업자가 [NamingCpp](agents/NamingCpp.md) 로 다시 대조한다. 외부 제품의 동작(Keycloak · IoStore · MSVC STL …)은 기억 기준이라 고치기 전에 그 판의 문서로 대조한다.
+"측정 · 설계가 먼저" 라 미뤄 둔 코어 · 런타임 항목의 설계다. 절마다 문제 · 대조 · 결정과 기각 · 초안 · 이전 순서 · 측정 순서로 적었다(일은 [NEXT](NEXT.md) 5 절). 줄 번호는 main `caf89e45df` 의 것이다. 이득이 없어 닫은 측정 값은 위 "측정과 성능 후보(S8)" 에 적는다. C++ 초안은 C++17 이고 이름은 작업자가 [NamingCpp](agents/NamingCpp.md) 로 다시 대조한다. 외부 제품의 동작(Keycloak · IoStore · MSVC STL …)은 기억 기준이라 고치기 전에 그 판의 문서로 대조한다.
 
 | 절 | 측정 없이 바로 하는 것(결함 · 계약) | 측정이 먼저인 것 |
 |---|---|---|
@@ -787,10 +767,6 @@ public:
 
 **측정.** 부하 봇 `login_storm` 을 `_bLightPasswordHash` 없이(새 구성 파일), 해시 처리율의 0.5 · 1 · 2 배 도착률로 돌린다. 도착률 고정은 O-12 의 열린 루프가 있어야 하고, 그 전에는 닫힌 루프로 대기 최고치만 본다. 볼 값: `service_store_pending_peak`, 새 지표 `login_hash_queue_depth` · `login_hash_wait_ms` · `service_requests_shed_total`, 폭주 중 다른 키트(`chat_send` · `leaderboard_top`)의 p99, 프로세스 최고 메모리. **문턱:** 2 배 도착률에서 다른 키트 p99 가 한가할 때의 1.5 배 이내, 저장소 대기 최고치가 상한 식 이내, 최고 메모리가 기준 + `_maxConcurrent × 38 MiB` 이내, 거절은 모두 `kBusy`(시간 초과 · 끊김 0). 고치기 전 값도 같은 표에 남긴다.
 
-| 일 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|
-| O3-5 부하 구성 | `Config/Server/Online/` 실제 해시 구성, `Source/Programs/OnlineLoadBot` 시나리오 | 통합 실행(위 문턱) | O3-3 · O3-4, 도착률은 O-12 |
-
 근본 원인은 "느린 연산과 연결 점유가 한 일에 묶였다" 이다. 같은 모양 후보는 영수증 검증(이미 `_verifications` 로 저장소 밖)과 저장소 일 안의 서명 · 압축이다 — O3-2 작업자가 저장소 람다 안의 `ILoginCrypto` 밖 암호 호출을 한 번 찾아 보고에 적는다.
 
 ### 팩 규모 — 스트림 쓰기 · 블록 표 · 색인 서명 · 해시 캐시(설계 2026-11-17, 감사 A-9 ~ A-12 · 다음 할 일 18)
@@ -868,7 +844,7 @@ AsyncReadHandle    readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offs
 [[nodiscard]] expected<void> ContentHashCache::save() const; // 임시 파일에 쓰고 바꿔 끼운다
 ```
 
-**측정 — 30 만 항목 합성 팩.** `PackScaleTest`(`._tags = "bench"`)가 스크래치 폴더에 합성 팩을 짓는다: `index300k`(30 만 × 256 ~ 1024 B, 세 단계 폴더 · 경로 48 자 안팎), `patch1g`(1 GiB 패치 + 목록), `bulk10g`(2000 × 5 MiB, 절반은 압축되는 바이트 — 디스크 10 GiB 라 손으로만). 고치기 전 값을 먼저 S8 표에 적는다.
+**측정 — 30 만 항목 합성 팩.** `PackScaleTest`(`._tags = "bench"`)가 스크래치 폴더에 합성 팩을 짓는다: `index300k`(30 만 × 256 ~ 1024 B, 세 단계 폴더 · 경로 48 자 안팎), `patch1g`(1 GiB 패치 + 목록), `bulk10g`(2000 × 5 MiB, 절반은 압축되는 바이트 — 디스크 10 GiB 라 손으로만). 고치기 전 값을 먼저 S8 에 적는다.
 
 | 값 | 재는 법 | 문턱 |
 |---|---|---|
@@ -886,7 +862,7 @@ AsyncReadHandle    readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offs
 
 ### 출하 할당기와 컨테이너 복잡도(설계 2026-11-17, 감사 C-6 · C-9 · 다음 할 일 20)
 
-감사의 순서대로 **벤치가 먼저**다. 벤치 숫자가 문턱을 넘은 것만 고치고, 넘지 않으면 값을 S8 표에 적고 닫는다.
+감사의 순서대로 **벤치가 먼저**다. 벤치 숫자가 문턱을 넘은 것만 고치고, 넘지 않으면 값을 S8 에 적고 닫는다.
 
 **C-6 출하 할당기 — 문제.** Shipping 의 `Memory::allocate` · `allocateAligned`(`Source/Core/Memory/Memory.cpp:148-158 · 224-234`)가 `::malloc` · `_aligned_malloc` 그대로다. 스레드 캐시와 크기 등급이 없어 워커가 함께 할당하면 CRT 힙 잠금에서 다툴 수 있다(측정 필요).
 
@@ -954,10 +930,6 @@ public:
 };
 ```
 
-| 일 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|
-| AC-2 `reserve` · `map` 구축(문턱을 넘은 것만) | `unordered_map.h` · `map.h` | `UnorderedMapTest.ReservedInsertsDoNotAllocate` · `MapTest.RangeBuildKeepsTheFirstOfEqualKeys` | AC-1 값 |
-
 근본 원인은 "std 의 이름을 빌리면서 계약 일부만 지켰다" 이다. 같은 모양 후보는 `list.h` · `set.h` · `unordered_set.h` 의 범위 연산과 `string` 의 범위 `append` 다 — AC-1 작업자가 래퍼마다 범위 연산의 본문을 읽어 보고에 적는다.
 
 ### 병렬 오브젝트 남은 몫 — 씬 서비스 파도 · 캐릭터 일괄 이동 · 공간 격자(설계 2026-11-17, NEXT 5-3)
@@ -1001,7 +973,7 @@ class GameThreadKey
 };
 ```
 
-**측정.** 서비스 갱신마다 구간 `GT.Scene.service.<이름>` 을 넣고(`getSubsystemName`), Release 로 `load/characters` · `load/housingbulk` · `load/townsfolk` · Shooter3D `benchmark` 를 3 번씩. **문턱:** 한 단계의 직렬 서비스 합이 어느 시나리오든 0.3 ms 이상이고 서로 겹치지 않는 서비스 둘 이상이 각각 0.1 ms 이상이면 그 둘부터 옮긴다. 아니면 값을 S8 표에 적고 닫는다(서명 나누기도 하지 않는다 — 옮길 서비스가 없으면 형식만 늘어난다). 옮긴 뒤에는 `GT.Scene.tick.FlushEnd` 가 흔들림 밖으로 줄어야 하고 상태 해시(`TestSceneStateHash`)가 같아야 한다.
+**측정.** 서비스 갱신마다 구간 `GT.Scene.service.<이름>` 을 넣고(`getSubsystemName`), Release 로 `load/characters` · `load/housingbulk` · `load/townsfolk` · Shooter3D `benchmark` 를 3 번씩. **문턱:** 한 단계의 직렬 서비스 합이 어느 시나리오든 0.3 ms 이상이고 서로 겹치지 않는 서비스 둘 이상이 각각 0.1 ms 이상이면 그 둘부터 옮긴다. 아니면 값을 S8 에 적고 닫는다(서명 나누기도 하지 않는다 — 옮길 서비스가 없으면 형식만 늘어난다). 옮긴 뒤에는 `GT.Scene.tick.FlushEnd` 가 흔들림 밖으로 줄어야 하고 상태 해시(`TestSceneStateHash`)가 같아야 한다.
 
 **(나) 캐릭터 컨트롤러 3D · 2D 입력은 `ComponentDataStore` 페이지다** — `PhysicsCommandPage<CharacterCommand3D/2D>`(`Engine/Physics/Scene/PhysicsPoseStore.h:181`)로 옮겼다. 남은 병목은 감사 S-8 이다 — `CharacterControllerComponent.cpp:310-377` 이 스텝마다 게임 스레드에서 한 명씩 움직이고 Jolt `ExtendedUpdate` 가 씬 공용 임시 할당자를 쓴다. 설계: 물리 씬에 `moveCharacters( span<const CharacterMoveRequest>, span<CharacterMoveResult> )` 일괄 입구를 두고 백엔드가 레인마다 임시 할당자(S-2)를 들고 병렬 for 로 돈다(유니티 DOTS Character Controller 잡 자리). 감사 37 번 묶음(S-2 · S-7 · S-8)에서 같이 한다. **측정 · 문턱:** `load/characters`(500 명)의 물리 PreStep 을 워커 1 · 4 · 8 로 — 한 워커에서 1 ms 이상일 때만 하고, 4 워커에서 2.5 배 이상 빨라지지 않으면 되돌린다.
 
@@ -1014,12 +986,6 @@ class GameThreadKey
 | 넷 관심 격자(`Core/Network/Replication/NetInterestGrid`) | 엔티티 id 의 점 격자 + 들어오는 · 나가는 반경, `MMOReplicator` · `InterestReplicationPolicy` 가 움직인 것만 `setPoint` | Core 층이라 씬을 모르고, 원본이 서버 엔티티 표이며(씬 컴포넌트가 아닐 수 있다), 이미 증분이다. 밑 구조는 같은 `SpatialHashGrid2D` 다 | 없음 — 언리얼 `UReplicationGraphNode_GridSpatialization2D` 도 씬 가속 구조와 따로 둔다 |
 
 재는 것은 근접 하나다: `GimmickCircuitComponent` 틱에 (노드 수, 후보 수) 카운터 `Gimmick.ProximityCandidates` 를 두고 게임 12 개 `slice` 에서 최고치를 본다.
-
-| 일 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|
-| PO-1 서비스 구간 · 근접 카운터 | `GameObjectManager.cpp`(서비스 갱신 루프) · `GimmickCircuitComponent.cpp` | 통합 측정(위 문턱) | 없음 |
-| PO-2 서명 나누기 + 파도(문턱을 넘을 때만) | `ISceneService.h` · `GameObjectManager.*` · `FrameSystemParallelPlan` · 새 `GameThreadKey.h` · 옮기는 서비스 둘 | `SceneFrameStepTest.ParallelServicesOfAStepRunInOneWave` · `OverlappingAccessRunsInDependencyOrder` · 기존 `EveryStepUpdatesItsRegisteredServicesOnce` | PO-1 값 |
-| PO-3 캐릭터 일괄 이동(감사 37 과 같이, 문턱을 넘을 때만) | `Engine/Physics/**`(물리 씬 인터페이스 · Jolt 구현 · `CharacterControllerComponent.cpp`) | `PhysicsCharacterTest.BatchMoveEqualsOneByOne`(같은 입력의 자세가 같다) | S-2 |
 
 근본 원인은 "실행 자리를 선언으로 말하고 서명으로 말하지 않았다" 이다. 같은 모양은 `ISceneService` 의 렌더 기여 훅(`contributeLights` 등 — 게임 스레드 계약이 주석뿐)에 남아 있다. 패킷 채우기를 병렬로 돌릴 때 같은 열쇠 인자를 쓴다.
 
@@ -1112,18 +1078,11 @@ struct SW_API ReplicatedLayout
 
 **측정.** `net-pair` Shooter3D 에서 폰을 옮기기 전후의 클라이언트당 스냅샷 바이트(손 구조체의 105 % 이내)와 `ReplicatedLayoutTest.EncodeCost`(bench, 엔티티당 ns — 전체 코덱 `FixedLayout::write` 의 1.5 배 이내). 넘으면 해석기의 칸 건너뛰기를 본다.
 
-| 일 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|
-| RF-7 타입 색인(문턱을 넘을 때만) | `Engine/Reflection/TypeInfo.h` · `TypeRegistry.*` · 위 세 표 | `ReflectionTypeRegistryTest.TypeIndexIsReusedWithANewGeneration` | 통합 측정 |
-
 근본 원인은 "리플렉션 칸을 도는 일을 소비자마다 다시 썼다" 이다. 같은 모양 후보는 `ObjectStateSerializer` 의 상태 쓰기 · 읽기 짝과 `ComponentDefaults` 의 기본값 비교다 — RF-4 가 같이 옮긴다.
 
 ## 도구 · 에디터 · 콘텐츠 파이프라인 설계(2026-11-17)
 
-미뤄 둔 항목을 작업자에게 바로 나눠 줄 수 있게 정했다. 절마다 문제(코드 자리) → 상용 대조 → 결정 · 기각 → 초안 → 이전 순서 → 측정 → 일 목록이다. 일의 크기는 S(파일 서넛) · M(한 묶음)이고, "의존" 이 없는 일은 지금 맡길 수 있다. 새 린트 규칙은 없다 — 막을 것은 형식 · API · 로드 오류로 막는다.
-
-- **맡기는 순서:** 남은 일은 측정이 문턱을 넘을 때만 한다 — 그리지 않는 대기(V3 · V4), 체인 샤드(T2), 색인 디스크 캐시(R3), 패널 준비 옮기기(E2), 원본 떼기(S2 · S3, S1 은 사용자 승인 뒤).
-- **사용자 결정:** 공유 DDC 를 둘 자리(NAS · 클라우드 버킷)와 쓰기 권한 머신, 원본 전체를 Git LFS 로 넓히기(호스팅 용량 · 비용)와 이력 다시 쓰기(`git lfs migrate` — 되돌리기 어렵다), 원본을 별도 저장소로 떼기, 밤새 도는 퍼징 · 여러 머신 샤드 분배에 쓸 외부 CI 러너.
+미뤄 둔 항목을 작업자에게 바로 나눠 줄 수 있게 정했다. 절마다 문제(코드 자리) → 상용 대조 → 결정 · 기각 → 초안 → 이전 순서 → 측정이다(일과 사용자 결정 대기는 [NEXT](NEXT.md)). 새 린트 규칙은 없다 — 막을 것은 형식 · API · 로드 오류로 막는다.
 
 ### 머티리얼 그래프 컴파일러를 DevTools 로(설계 2026-11-17, NEXT 5 폴더 자리)
 
@@ -1188,10 +1147,6 @@ public:
 
 **측정.** 재는 법: 새 워크트리에서 `ctest -L import` 를 로컬 DDC 빈 것 · 찬 것 · 공유만 찬 것으로 한 번씩. 판정: 로컬 히트가 전체 임포트의 10 % 이하 시간이면 둔다. 종류별로 공유 히트 시간이 임포트 시간의 1/2 을 넘으면 그 종류는 공유에 쓰지 않는다(작은 텍스처는 왕복이 더 느릴 수 있다).
 
-| 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|---|
-| D3 측정 | 통합 | 위 판정 | — | D2 |
-
 ### 원본 저장소 떼기와 `_source`(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
 **문제.** 원본은 저장소에 있다 — Content 추적 169 MB(골든 ppm 36 · ogg 32 · glb 26 · jpg 20 · hdr 19 · vrm 16 · png 11 MB), LFS 는 출처 폴더 둘(polyhaven · quaternius, 186 파일)뿐이다. `AssetMeta::_source` 는 곁의 파일 이름이다(`AssetDatabase.h:79`).
@@ -1203,7 +1158,7 @@ public:
 2. **뗄 때의 꼴.** `_source` 는 두 꼴만 받는다: 상대 경로(지금) 또는 `store:<SHA-256>/<파일 이름>`(내용 주소 — Git LFS 의 oid 와 같은 해시라 LFS 서버를 그대로 원본 저장소로 쓸 수 있다). 읽는 창구는 하나(`AssetSourceLocator::resolve` → 로컬 `Saved/SourceStore/<해시>`, 없으면 가져오기 도구)이고, 못 가져오면 임포트 오류다. 주소가 곧 원본 내용 해시라 **원본을 받지 않고도 DDC 키를 구한다** — 원본을 만지지 않는 사람은 공유 DDC 의 산출물만 받는다.
 3. 기각 — 서브모듈(원본을 고칠 때마다 두 저장소 커밋, 부분 받기 없음). 기각 — 서술에 절대 경로 · URL(머신마다 다르다).
 
-**일.** S1 `.gitattributes`(S, 사용자 승인 뒤). S2 `AssetSourceLocator` + `AssetMeta::parseXML` 이 두 꼴만 받기 + `asset_identity.py` 같은 규칙(M), S3 `asset-ids --externalize <폴더>`(원본을 올리고 서술을 바꾸고 git 에서 지운다, M) — S2 · S3 는 문턱에 닿을 때 함께 한다(지금 만들면 쓰는 곳이 없다). 남길 테스트: `AssetMetaTest.SourceIsSiblingOrStoreAddress`, `AssetSourceLocatorTest.MissingSourceIsAnImportErrorButCachedOutputLoads`.
+**판정.** S2 · S3 는 문턱에 닿을 때 함께 한다(지금 만들면 쓰는 곳이 없다). S1 은 사용자 결정이다.
 
 ### 에셋별 임포트 예외 칸(설계 2026-11-17, NEXT 5 에셋 GUID 3 단계)
 
@@ -1323,10 +1278,6 @@ public:
 
 **측정이 먼저다.** 합성 트리(테스트가 임시 폴더에 작은 XML 1 만 · 10 만 개, 참조 평균 4)로 지금 값을 잰다: 전체 스캔(`ReferenceIndexReady`) ms, 파일 하나 바뀜의 UI 스레드 ms. 판정: 파일 하나 바뀜이 1 ms 를 넘으면 R1 · R2, 10 만 트리 기동 스캔이 2 초를 넘으면 R3(디스크 캐시). 목표: 바뀜 적용 1 ms 미만, 종류 거르기 5 ms 미만, 캐시가 찬 기동 500 ms 미만(워커 — UI 는 막히지 않는다).
 
-| 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|---|
-| R3 디스크 캐시 | S | `EditorAssetIndex.cpp`(머리에 판 번호 · 참조 칸 표 해시 — 다르면 버린다) | `EditorAssetIndexTest.StaleCacheIsDiscarded` · `.CacheRoundTrips` | R1, R0 판정 |
-
 ### 에디터 첫 패널 · Hierarchy 8000 측정 계획(설계 2026-11-17, NEXT 4)
 
 **문제.** 에디터가 뜬 뒤 첫 패널이 약 1 초 멈춘다 — 패널이 그리기 안에서 동기로 준비한다(후보: `ModulesPanel.cpp:32` 가 draw 에서 부르는 `ModulesModel::ensureLoaded`, `EditorViewportOverlays::ensureLoaded`, 참조 색인 첫 스캔, 트리 걷기). 큐브 8000 씬의 계층 · 인스펙터 비용은 잰 값이 없다.
@@ -1335,18 +1286,7 @@ public:
 
 **결정.** 재서 문턱을 넘는 패널만 고친다. 고치는 꼴은 하나다: 동기 준비를 `onPanelOpened` 가 띄우는 잡으로 옮기고 Model 이 `isReady()` 를 내며, View 는 준비 전 한 줄만 그린다. 시간 문턱은 시나리오 판정에 넣지 않는다(흔들린다) — `ctest -L load` 처럼 혼자 도는 항목이 값을 남기고 통합이 아래 표를 채운다.
 
-| 후보 | 재는 법(Release, 3 번) | 볼 값 | 판정 | 값 |
-|---|---|---|---|---|
-| 첫 패널 | `App -EnableEditor -gv_editorPanelTimes=120 -gv_traceSlowTickMs=100`, `Saved/Editor` 를 지운 것 · 둔 것 | 패널별 `EditorPanelTime` 줄의 max, 느린 프레임 트레이스 수와 그 `GT.Frame` 자식 | 첫 그리기 max 가 50 ms 를 넘는 패널마다 준비를 잡으로. 목표: 100 ms 넘는 프레임 0 | |
-| Hierarchy 정지 | 큐브 8000 씬(루트 8000 · 20×20×20 트리 두 모양 — 시나리오가 `scratch` 에 만든다), 아무것도 안 함 | Hierarchy 의 `EditorPanelTime` avg, 행 다시 짓기 수 | avg 0.5 ms 미만, 구조 세대가 같은 프레임의 수집 · 정렬 0 회(넘으면 세대로 캐시) | |
-| 전체 선택 | 같은 씬에서 Ctrl+A | 그 프레임 ms, 인스펙터 값 행 수와 Inspector 의 `EditorPanelTime` max | 16 ms 미만 | |
-| 한 줄 옮기기 | 같은 씬에서 끌어 옮기기 | 프레임 ms, 거래 바이트 | 형제 순서 절의 판정 | |
-| 칸 누르기 · 끌기 | 8000 선택, 숫자 칸 | 프레임 ms, 기록 수 · 바이트 | 프로퍼티 기록 절의 판정 | |
-| 이름 거르기 | 같은 씬에서 필터에 글자 치기 | 글자마다 프레임 ms | 16 ms 미만(넘으면 거르기를 구조 세대 + 글로 캐시) | |
-
-| 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|---|
-| E2 문턱 넘는 패널 고치기 | 패널마다 S | 그 패널의 Model · `onPanelOpened` | `ModulesModelTest.PanelDrawsBeforeCatalogIsRead` 꼴의 케이스 | E1 의 값 |
+**측정.** 재는 법(첫 패널 · Hierarchy 정지 · 전체 선택 · 이름 거르기)과 문턱은 [NEXT](NEXT.md) 4 절이다.
 
 ### 샤드 시간 균형(설계 2026-11-17, NEXT 5 T3)
 
@@ -1362,10 +1302,6 @@ public:
 - 주의: shooter3d 는 무거운 장면이 함께 돌면 느려져 차례로 돈다(`sequential_scenario_packs`). 둘로 나눠 나란히 돌리면 같은 문제가 반쯤 돌아온다 — 그래서 측정으로 정한다. 그리지 않는 대기(아래 검증 시간 절)가 이 체인을 먼저 줄이므로 그 뒤에도 40 % 를 넘을 때만 한다.
 
 **판정.** 나눈 뒤 Release ctest 벽시계가 10 % 이상 줄지 않으면 되돌린다.
-
-| 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|---|
-| T2 체인 나누기 | M | `Test/Scenario/CMakeLists.txt`, 체인 이름을 푸는 검증 스크립트 셋(`Scripts/dev/` 의 이분 탐색 · Linux 시나리오 · 묶음 검증) | configure 가 나눈 결과를 찍는다(샤드마다 시나리오 수와 예상 초), 샤드 합집합 = 전체 검사 | T1, 검증 시간 절의 V4 뒤 판정 |
 
 ### 리다이렉트 표의 팩 담기(설계 2026-11-17, NEXT 5 R1)
 
@@ -1415,9 +1351,3 @@ public:
 - 기각 — 시나리오 전체 `gv_timeScale`(README: 94 단계 중 17 실패). 기각 — 사진 수 줄이기(판정 범위가 준다). 기각 — 백엔드 함께 돌리기(무거운 장면에서 더 느려 차례로 정한 것이다).
 
 **측정이 먼저다.** 지난 Release 로그의 `[Scenario] … timeline:` 줄에서 shooter3d 의 고정 대기 ms 합과 체인 벽시계를 모은다(새로 재지 않는다). 판정: 고정 대기가 체인의 50 % 이상이면 V3 를 짓고, 그린 프레임 대비 안 그린 프레임 비용이 1/3 이하면 V4 로 간다. 아니면 닫고 `stage reset took` 과 기동을 본다.
-
-| 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
-|---|---|---|---|---|
-| V2 timeline 모으기 | 통합 | — | 위 판정 | 없음 |
-| V3 그리지 않는 대기 | M | Wait 단계 · `AutomationSession`, `IEngineRenderDriver`, `Config/Dev/GoldenImage.json` | `engine/automation/waitrenderoff`(그리며 · 안 그리며 상태 해시 같음, 안 그린 프레임의 렌더 패킷 0), 설정 칸이 없으면 오류인 단위 케이스 | V2 판정 |
-| V4 shooter3d 적용 | M | slice · enemydeath · crowd · bodyviews 시나리오, 골든, `Test/README.md` 의 대기 절 | 체인 통과 + 벽시계 전후 | V3 |

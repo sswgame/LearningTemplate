@@ -92,3 +92,14 @@ Each object has one owning thread; review a change by its ownership map (object 
 - **Frame packets carry full state only.** A packet may be dropped without drawing, so a one-shot diff or notification (glyph atlas upload `GlyphAtlasUpload::_sequence`, retired preview scene keys `_listPendingRetiredSceneKey`) is taken the moment the render thread receives the packet (head of `RenderThread::executePacket`). A new diff added to the packet is taken at the same place.
 - **Worker results and outside notifications** (job results, PSO builder, physics contacts, log listeners): a slot under a lock plus a generation number, with the lock contract in the type (`SW_GUARDED_BY`, clang `-Wthread-safety`). No async read that mutates an object through a raw `this` on a worker — workers produce bytes, the game thread owns the object.
 - **Scene registries** (`ComponentRegistry`, `CameraRegistry`, `TagIndex`): writes take the lock; a read window (`ComponentRegistry::View`) is valid only while nothing registers or unregisters.
+
+## Recurring defect shapes
+
+The 2026-11-12 engine audit (open items in [NEXT](../NEXT.md) section 7) kept finding the same six shapes. Do not fix one symptom at a time — change the type or API so the shape cannot be written.
+
+1. **Identity from a number, sequence or path string without a generation.** Component `name#index`, ids that restart at 1 on every launch, 32-bit name hashes. Use a stable id with a generation (or a GUID for assets).
+2. **One fact known in two places.** Writer and reader versions, a count on the CPU with the list on the GPU, a cache record next to a server memory table. Keep one owner; the other side reads it.
+3. **Failure or truncation not returned as a value, or dropped by the caller.** Triangulation failure, a match roster publish. Return `sw::expected` / `[[nodiscard]]` (see [Errors](Errors.md)).
+4. **Platform windows with optional hooks that still compile when left out.** Focus, text input, sleep, lifetime subscriptions. Make the hook pure virtual.
+5. **Player saves and settings in a strict format with no version upgrade.** User settings version, component identity. Every saved format carries a version and an upgrade step.
+6. **State changes handled by call-order rules instead of values.** Time scale, a transition during a transition. Put the state in a value the next step reads.
