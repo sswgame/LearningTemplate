@@ -17,12 +17,12 @@
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "sw/config/CookContract.gen.h"
-#include "sw/config/ShippingHostDefaults.h"
 
 namespace sw
 {
@@ -327,14 +327,21 @@ namespace sw
             }
 
             /**
-             * @brief 구성 때 베이크한 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류 문장을 담고 빈 목록입니다.
-             * @details 빈 목록은 "읽지 못함" 의 표식이다 — `initialize()` 가 보고 실패로 멈춘다(빈 검색 목록으로 계속하지 않는다).
+             * @brief 구성 때 베이크한 `EngineConfig.json` 사본(이 플랫폼의 덮어쓰기를 덮은 것 — `PlatformConfigOverride`)의 `_listResourcePriority` 입니다. 읽지 못하면 오류 문장을 담고 빈 목록입니다.
+             * @details 빈 목록은 "읽지 못함" 의 표식이다 — `initialize()` 가 보고 실패로 멈춘다(빈 검색 목록으로 계속하지 않는다). 설정 표와 같은 합친 글을 읽어야
+             *          플랫폼이 검색 순서를 바꿨을 때 두 곳이 다른 순서를 보지 않는다.
              */
             static BasePriority readBasePriority()
             {
                 BasePriority result;
+                string       composed;
+                if ( PlatformConfigOverride::composeBakedEngineConfig( composed ) == false )
+                {
+                    result._error = "EngineConfig.json (configure-time copy) could not take its platform override - the override error was logged";
+                    return result;
+                }
                 JSONDocument document;
-                if ( document.parse( shipping_host::kEngineConfigJSON, "EngineConfig.json (configure-time copy)" ) == false )
+                if ( document.parse( composed, "EngineConfig.json (configure-time copy)" ) == false )
                 {
                     result._error = string( "EngineConfig.json (configure-time copy) could not be parsed: " ) + document.getLastError();
                     return result;

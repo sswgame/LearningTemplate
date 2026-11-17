@@ -28,6 +28,8 @@ namespace sw::config
     inline constexpr const utf8* kFileRuntimeEngineConfig = "@SW_FILE_RUNTIME_ENGINE_CONFIG@";
     /** @brief 게임 프리셋 폴더입니다 — 게임마다 `<게임>.json`(`GameSelection::getConfigPath`). */
     inline constexpr const utf8* kDirRuntimeGamePreset = "@SW_DIR_RUNTIME_GAME_PRESET@";
+    /** @brief 호스트 설정의 플랫폼 덮어쓰기 폴더입니다 — `<플랫폼>/EngineConfig.json`(`PlatformConfigOverride`). 파일이 없으면 덮어쓰기가 없다. */
+    inline constexpr const utf8* kDirRuntimePlatformConfig = "@SW_DIR_RUNTIME_PLATFORM_CONFIG@";
     /** @brief 전용 서버 운영 설정(`ServerConfig`) 폴더입니다 — 게임마다 `<게임>.json`(`GameSelection::getServerConfigPath`). 파일이 없을 수 있다(서버가 없는 게임). */
     inline constexpr const utf8* kDirRuntimeServerPreset = "@SW_DIR_RUNTIME_SERVER_PRESET@";
     /** @brief Shipping 이 구운 게임 이름입니다. Dev 는 비어 있다 — 실행할 때 고른다(`GameSelection`). 그래서 Dev 에서 활성 게임을 바꿔도 이 헤더가 바뀌지 않는다. */

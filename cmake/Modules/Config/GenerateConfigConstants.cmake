@@ -48,7 +48,10 @@ else()
 endif()
 
 # 입력이 바뀌면 configure 를 다시 돌려 생성 파일을 새로 만든다 — 프리셋 · 엔진 설정이 빠지면 Shipping 이 옛 값을 굽는다.
+# 플랫폼 덮어쓰기(Config/Platform/<플랫폼>/EngineConfig.json)는 폴더를 지켜본다 — 새 플랫폼 파일이 생겨도 다시 굽는다.
+file(GLOB SW_PLATFORM_CONFIG_OVERRIDES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/${SW_DIR_RUNTIME_PLATFORM_CONFIG}/*/*.json")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+	${SW_PLATFORM_CONFIG_OVERRIDES}
 	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}"
 	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}"
 	"${CMAKE_SOURCE_DIR}/Config/Engine/CookContract.json"

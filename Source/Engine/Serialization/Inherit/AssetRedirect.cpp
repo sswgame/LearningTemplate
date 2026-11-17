@@ -269,6 +269,14 @@ namespace sw
         outAssetID = it->second;
         return true;
     }
+
+    string AssetRedirect::toCurrentID( string_view assetID )
+    {
+        string current;
+        if ( resolve( assetID, current ) )
+            return current;
+        return string{ assetID };
+    }
 } // namespace sw
 
 namespace sw

@@ -48,27 +48,39 @@ namespace sw
     /**
      * @brief 호스트 설정 하나를 어디서 읽는지입니다. `disk`(파일 경로)와 `baked`(configure 때 베이크한 JSON) 두 값뿐입니다.
      * @details 출처를 호출 서명에 둔다. "디스크에 없으면 베이크한 JSON" 같은 연결은 만들 수 없다 — 부르는 쪽(빌드 구성)이 하나를 고른다.
+     *          덮어쓰기 층(`PlatformConfigOverride`)은 같은 출처 종류 안에서만 붙는다 — 디스크 바탕에는 디스크 덮어쓰기 파일(없어도 된다), 구운 바탕에는 구운 덮어쓰기 글(없으면 nullptr).
      */
     class ConfigSource
     {
     public:
-        [[nodiscard]] static ConfigSource disk( string path ) { return ConfigSource( std::move( path ), nullptr ); }
-        [[nodiscard]] static ConfigSource baked( const utf8* pJSON ) { return ConfigSource( string(), pJSON ); }
+        /** @param overridePath 바탕 위에 덮을 선택 파일입니다(비면 덮어쓰기 층이 없다). 파일이 없으면 바탕만 읽는다. */
+        [[nodiscard]] static ConfigSource disk( string path, string overridePath = string() )
+        {
+            return ConfigSource( std::move( path ), std::move( overridePath ), nullptr, nullptr );
+        }
+        /** @param pOverrideJSON 바탕 위에 덮을 구운 글입니다(nullptr 이면 덮어쓰기 층이 없다). */
+        [[nodiscard]] static ConfigSource baked( const utf8* pJSON, const utf8* pOverrideJSON = nullptr ) { return ConfigSource( string(), string(), pJSON, pOverrideJSON ); }
 
         [[nodiscard]] bool          isBaked() const { return _pBakedJSON != nullptr; }
         [[nodiscard]] const string& getPath() const { return _path; }
+        [[nodiscard]] const string& getOverridePath() const { return _overridePath; }
         [[nodiscard]] const utf8*   getBakedJSON() const { return _pBakedJSON; }
+        [[nodiscard]] const utf8*   getBakedOverrideJSON() const { return _pBakedOverrideJSON; }
 
     private:
-        ConfigSource( string path, const utf8* pBakedJSON )
+        ConfigSource( string path, string overridePath, const utf8* pBakedJSON, const utf8* pBakedOverrideJSON )
             : _path{ std::move( path ) }
+            , _overridePath{ std::move( overridePath ) }
             , _pBakedJSON{ pBakedJSON }
+            , _pBakedOverrideJSON{ pBakedOverrideJSON }
         {
         }
 
     private:
         string      _path;
+        string      _overridePath;
         const utf8* _pBakedJSON;
+        const utf8* _pBakedOverrideJSON;
     };
 } // namespace sw
 
@@ -113,24 +125,28 @@ namespace sw
 
         /**
          * @brief 설정 하나를 파일에서 읽어 등록합니다. 테이블에 이미 같은 타입이 있으면 덮어씁니다.
+         * @param overridePath 바탕 위에 덮을 선택 파일입니다(`PlatformConfigOverride::apply` 규칙). 비었거나 파일이 없으면 바탕만 읽는다. 둘 중 어느 파일이 바뀌어도 다시 읽는다.
          * @return 없으면 `Missing`(로그 없음, 부르는 쪽이 기본값을 쓴다), 틀렸으면 `Invalid`(키 이름과 함께 오류를 남겼다)
          * @note 없는 파일은 정상 상태라 `readOptionalTextFile` 한 번으로 읽는다(있는지 묻고 읽지 않는다 - R7).
          */
         template <typename T>
-        [[nodiscard]] ConfigReadResult loadConfigFile( const string& filePath )
+        [[nodiscard]] ConfigReadResult loadConfigFile( const string& filePath, const string& overridePath = string() )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            const string           resolvedPath = resolveConfigPath( filePath );
+            const string           resolvedPath         = resolveConfigPath( filePath );
+            const string           resolvedOverridePath = overridePath.empty() ? string() : resolveConfigPath( overridePath );
             string                 jsonStr;
-            const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, jsonStr );
+            string                 label;
+            const OptionalFileRead read = readLayeredFile( resolvedPath, resolvedOverridePath, jsonStr, label );
             if ( read == OptionalFileRead::Missing )
                 return ConfigReadResult::Missing;
             if ( read == OptionalFileRead::Failed )
-                return ConfigReadResult::Invalid; // 이유는 읽기가 오류로 남겼다
-            if ( loadConfigFromJSON<T>( jsonStr, resolvedPath.c_str() ) == false )
+                return ConfigReadResult::Invalid; // 이유는 읽기 · 합치기가 오류로 남겼다
+            if ( loadConfigFromJSON<T>( jsonStr, label.c_str() ) == false )
                 return ConfigReadResult::Invalid;
-            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, T::StaticType()->_name, SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
+            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, resolvedOverridePath, T::StaticType()->_name,
+                                                          SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
             return ConfigReadResult::Loaded;
         }
 
@@ -142,7 +158,7 @@ namespace sw
         }
 
         /**
-         * @brief 파일에서 읽은 설정 중 경로가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
+         * @brief 파일에서 읽은 설정 중 경로(바탕 또는 덮어쓰기 파일)가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
          * @details 설정 객체는 바꾸지 않고 값만 덮어쓴다. 기동 때 받아 둔 포인터(`Engine::_pEngineConfig`)가 그대로 유효하다. JSON 이
          *          깨졌으면 경고를 남기고 이전 값을 그대로 둔다. 경로는 `FileUtil::isSameDiskPath` 로 비교한다.
          * @return 다시 읽었으면 `Reloaded`, 파일에서 읽은 설정이 아닌 경로면 `NotTracked`, 깨진 파일이면(오류를 남겼다) `Failed`
@@ -209,8 +225,11 @@ namespace sw
         [[nodiscard]] ConfigReadResult loadOptionalConfig( const ConfigSource& source )
         {
             if ( source.isBaked() == false )
-                return loadConfigFile<T>( source.getPath() );
-            return loadConfigFromJSON<T>( string( source.getBakedJSON() ), "baked_config" ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
+                return loadConfigFile<T>( source.getPath(), source.getOverridePath() );
+            string jsonStr = source.getBakedJSON();
+            if ( source.getBakedOverrideJSON() != nullptr && applyOverride( string( jsonStr ), source.getBakedOverrideJSON(), "baked_config override", jsonStr ) == false )
+                return ConfigReadResult::Invalid;
+            return loadConfigFromJSON<T>( jsonStr, "baked_config" ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
         }
 
         /**
@@ -340,34 +359,44 @@ namespace sw
         /** @brief 파일에서 읽은 설정 하나의 경로와 다시 읽는 함수입니다. */
         struct ReloadSource
         {
-            using ReloadFunc = bool ( * )( ConfigManager& manager, const string& resolvedPath );
+            using ReloadFunc = bool ( * )( ConfigManager& manager, const ReloadSource& source );
 
             string        _resolvedPath;
-            hashed_string _typeName;           ///< 리플렉션 타입 이름(`EngineConfig`)
-            ReloadFunc    _pReload{ nullptr }; ///< 배포 빌드는 늘 nullptr(`SW_DEV_ONLY_FUNCTION`)
+            string        _resolvedOverridePath; ///< 덮어쓰기 파일(비면 층이 없다). 지금 없어도 생기면 다시 읽기가 합친다
+            hashed_string _typeName;             ///< 리플렉션 타입 이름(`EngineConfig`)
+            ReloadFunc    _pReload{ nullptr };   ///< 배포 빌드는 늘 nullptr(`SW_DEV_ONLY_FUNCTION`)
         };
 
-        /** @brief T 를 @p resolvedPath 에서 새로 읽어 테이블의 객체에 값으로 덮어씁니다. */
+        /**
+         * @brief 바탕 파일을 읽고 덮어쓰기 파일(@p resolvedOverridePath — 비었거나 없으면 건너뛴다)을 덮은 글을 @p outJSON 에 씁니다. @p outLabel 은 오류 표시용 출처입니다.
+         * @return 바탕이 없으면 `Missing`(로그 없음), 어느 쪽이든 읽지 못했거나 합치지 못했으면 `Failed`(오류를 남겼다)입니다.
+         */
+        [[nodiscard]] static OptionalFileRead readLayeredFile( const string& resolvedPath, const string& resolvedOverridePath, string& outJSON, string& outLabel );
+        /** @brief `PlatformConfigOverride::apply` 를 부릅니다(헤더가 그 형식을 모르게 둔다). */
+        [[nodiscard]] static bool applyOverride( const string& baseJSON, const utf8* pOverrideJSON, const utf8* pOverrideLabel, string& outJSON );
+
+        /** @brief T 를 @p source 의 바탕(+ 덮어쓰기) 파일에서 새로 읽어 테이블의 객체에 값으로 덮어씁니다. */
         template <typename T>
-        [[nodiscard]] static bool reloadFromSource( ConfigManager& manager, const string& resolvedPath )
+        [[nodiscard]] static bool reloadFromSource( ConfigManager& manager, const ReloadSource& source )
         {
             T* pExisting = manager.getConfig<T>();
             if ( pExisting == nullptr )
                 return false;
             string jsonStr;
-            if ( FileUtil::readTextFile( resolvedPath, jsonStr ) == false )
+            string label;
+            if ( readLayeredFile( source._resolvedPath, source._resolvedOverridePath, jsonStr, label ) != OptionalFileRead::Read )
             {
-                SW_LOG_WARNING_ID( "ConfigManager.ConfigReloadCouldNot", "Config reload: could not read %#", resolvedPath.c_str() );
+                SW_LOG_WARNING_ID( "ConfigManager.ConfigReloadCouldNot", "Config reload: could not read %#", source._resolvedPath.c_str() );
                 return false;
             }
             unique_ptr<T> reloaded = make_unique<T>();
-            if ( readConfigJSON( *reloaded, jsonStr, resolvedPath.c_str() ) == false )
+            if ( readConfigJSON( *reloaded, jsonStr, label.c_str() ) == false )
             {
-                SW_LOG_WARNING_ID( "Config.ReloadInvalid", "Config reload: %# is not valid - keeping the previous values", resolvedPath.c_str() );
+                SW_LOG_WARNING_ID( "Config.ReloadInvalid", "Config reload: %# is not valid - keeping the previous values", label.c_str() );
                 return false;
             }
             *pExisting = std::move( *reloaded );
-            SW_LOG_INFO_ID( "ConfigManager.ConfigReloaded", "Config reloaded from %#", resolvedPath.c_str() );
+            SW_LOG_INFO_ID( "ConfigManager.ConfigReloaded", "Config reloaded from %#", label.c_str() );
             manager._onConfigReloaded.broadcast( T::StaticType()->_fullyQualifiedName );
             return true;
         }

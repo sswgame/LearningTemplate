@@ -29,6 +29,8 @@ SW_TEST_CASE( AssetRedirectTest, ResolvesOldIdsAndCollapsesChains )
     SW_REQUIRE_TRUE( sw::AssetRedirect::resolve( "common/data/b.xml", resolved ) );
     SW_EXPECT_EQUAL( sw::string( "common/data/c.xml" ), resolved );
     SW_EXPECT_FALSE( sw::AssetRedirect::resolve( "common/data/c.xml", resolved ) );
+    SW_EXPECT_EQUAL( sw::string( "common/data/c.xml" ), sw::AssetRedirect::toCurrentID( "common/data/a.xml" ) ); // 캐시 키의 한 곳
+    SW_EXPECT_EQUAL( sw::string( "common/data/c.xml" ), sw::AssetRedirect::toCurrentID( "common/data/c.xml" ) );
     sw::AssetRedirect::clear();
     SW_EXPECT_FALSE( sw::AssetRedirect::resolve( "common/data/a.xml", resolved ) );
 }
