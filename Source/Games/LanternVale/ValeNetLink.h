@@ -115,6 +115,18 @@ namespace sw
         uint64 _refusedCount{ 0 };  ///< 주체가 없거나 진행을 읽지 못해 받지 않은 접속
         uint64 _replacedCount{ 0 }; ///< 같은 계정이 다시 붙어 끊은 앞 접속
         uint64 _actionCount{ 0 };   ///< 판정한 행동
+        uint64 _publishCount{ 0 };  ///< 복제기에 올린 엔티티 갱신(`setEntity`) — 바뀐 엔티티만 센다
+    };
+
+    /** @brief 복제기에 마지막으로 올린 엔티티 값입니다. 같으면 다시 올리지 않습니다(언리얼 Push Model · Iris 의 더티 표시 자리). */
+    struct ValePublishedEntity
+    {
+        float3 _position{};
+        int32  _stateValue{ 0 };
+        uint32 _typeID{ 0 };
+
+        bool operator==( const ValePublishedEntity& other ) const { return _position == other._position && _stateValue == other._stateValue && _typeID == other._typeID; }
+        bool operator!=( const ValePublishedEntity& other ) const { return ( *this == other ) == false; }
     };
 
     /**
@@ -174,8 +186,12 @@ namespace sw
         void releaseAgent( int32 connectionID );
         void sendProgress( const ValeAvatarAgent& agent );
         void saveAll();
-        /** @brief 복제 엔티티(아바타 · 놓인 것)를 이번 틱 상태로 올립니다. */
+        /** @brief 복제 엔티티(아바타 · 놓인 것) 가운데 지난번 올린 값과 다른 것만 이번 틱 상태로 올립니다. */
         void publishEntities();
+        /** @brief 엔티티 하나를 올립니다. 지난번 올린 값과 같으면 아무것도 하지 않습니다. */
+        void publishEntity( uint32 entityID, const ValePublishedEntity& value, float32 importance );
+        /** @brief 엔티티를 복제기에서 내립니다. 올린 적이 없으면 아무것도 하지 않습니다. */
+        void removePublishedEntity( uint32 entityID );
 
     private:
         ValeWorld                                         _world;
@@ -188,6 +204,7 @@ namespace sw
         unordered_map<int32, uint64>                      _mapPendingAccount; ///< 진행을 읽는 중인 연결 → 계정
         vector<ValeProfileLoad>                           _listLoadScratch;
         vector<uint8>                                     _listStateScratch;
+        unordered_map<uint32, ValePublishedEntity>        _mapPublished;     ///< 엔티티 id → 복제기에 마지막으로 올린 값
         vector<Subscription>                              _listSubscription; ///< 라우터 등록. 처리기들보다 뒤에 선언한다 — 먼저 풀린다
         ValeServerStats                                   _stats;
         INetPeers*                                        _pPeers;

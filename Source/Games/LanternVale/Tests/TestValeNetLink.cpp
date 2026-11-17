@@ -183,6 +183,52 @@ SW_TEST_CASE( ValeNetLinkTest, ServerAuthorityLoopReachesTheClient )
     SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
 }
 
+/** @brief [ValeNetLinkTest] 가만히 있는 골짜기는 복제기에 다시 올리지 않고, 쓰러뜨린 짐승만 바뀐 것으로 올린다(감사 K-13). */
+SW_TEST_CASE( ValeNetLinkTest, OnlyChangedEntitiesArePublished )
+{
+    ValeLinkTestRig rig( 1 );
+    SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
+    rig.run( rig._server, 0.5f );
+    const uint64 settledCount = rig._server.getStats()._publishCount;
+    SW_EXPECT_EQUAL( uint64{ 4 }, settledCount ); // 아바타 하나 · 짐승 둘 · 버섯 하나를 한 번씩
+    rig.run( rig._server, 0.5f );
+    SW_EXPECT_EQUAL( settledCount, rig._server.getStats()._publishCount ); // 30 틱 동안 바뀐 것이 없다
+
+    // 한 번 친 짐승은 체력이 바뀌어 한 번 더 올라간다.
+    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( kNearCreatureID ) } ) );
+    rig.run( rig._server, 0.3f );
+    SW_EXPECT_EQUAL( settledCount + 1u, rig._server.getStats()._publishCount );
+}
+
+/** @brief [ValeNetLinkTest] 진행 저장소는 디스크 바이트(읽었거나 맡긴 것)와 같은 진행을 다시 쓰지 않는다 — 자동 저장이 그대로인 진행을 쓰지 않는다(감사 K-13). */
+SW_TEST_CASE( ValeNetLinkTest, UnchangedProfileIsNotWrittenAgain )
+{
+    MemoryLocalDatabase database;
+    MemoryLocalStore    store( &database, LocalSealContext{} );
+    ValeProfileStore    profiles;
+    profiles.bindStore( &store );
+    ValeProfile profile;
+    profile._coins = 5;
+    SW_EXPECT_TRUE( profiles.requestSave( 7, profile ) );
+    SW_EXPECT_FALSE( profiles.requestSave( 7, profile ) );
+    SW_EXPECT_EQUAL( uint64{ 1 }, profiles.getSkippedSaveCount() );
+    profile._coins = 6;
+    SW_EXPECT_TRUE( profiles.requestSave( 7, profile ) );
+
+    // 다른 저장소 객체(서버 재시작)는 읽은 바이트를 디스크 값으로 안다 — 읽은 그대로는 쓰지 않는다.
+    vector<ValeProfileLoad> listLoad;
+    profiles.poll( listLoad );
+    SW_EXPECT_EQUAL( uint64{ 2 }, profiles.getSavedCount() );
+    ValeProfileStore restarted;
+    restarted.bindStore( &store );
+    restarted.requestLoad( 7 );
+    restarted.poll( listLoad );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listLoad.size() );
+    SW_REQUIRE_TRUE( listLoad[0]._bFound == SW_TRUE );
+    SW_EXPECT_FALSE( restarted.requestSave( 7, listLoad[0]._profile ) );
+    SW_EXPECT_TRUE( restarted.requestSave( 8, listLoad[0]._profile ) ); // 다른 계정은 따로 센다
+}
+
 /** @brief [ValeNetLinkTest] 파티 초대 · 수락이 서버에서 서고, 쓰러뜨린 짐승의 경험을 두 클라이언트가 나눠 받는다. */
 SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
 {

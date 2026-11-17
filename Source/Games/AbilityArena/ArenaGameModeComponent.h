@@ -33,6 +33,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
+#include "GameFramework/Runtime/World/Lifetime/PrefabPool.h"
 
 #include "Games/AbilityArena/ArenaUnitComponent.h"
 
@@ -203,7 +204,8 @@ namespace sw
         void updateUnitViews();
         void updatePlayerRespawn( float32 deltaTime );
         void logStatus( float32 deltaTime );
-        void pruneProjectiles();
+        /** @brief 탄이 끝나 스스로 숨은 투사체 모습을 풀에 돌려줍니다. 오브젝트를 끄므로 틱 밖(플러시 · 틱 뒤 스폰)에서 부릅니다. */
+        void releaseFinishedProjectiles( GameObjectManager& manager );
         /** @brief 이번 스냅샷으로 투사체를 한 걸음 돌리고, 맞은 유닛에 실은 스펙을 틱 뒤로 미뤄 겁니다. 끝난 탄의 짐을 지웁니다. */
         void stepProjectiles( float32 deltaTime );
         /** @brief 탄 @p projectileID 의 짐을 지웁니다. */
@@ -227,6 +229,8 @@ namespace sw
         AssetRef<PrefabAsset> _casterPrefab;
         PROPERTY( Category = "Prefabs" )
         AssetRef<PrefabAsset> _projectilePrefab;
+        PROPERTY( Required, Category = "Prefabs", DisplayName = "Projectile Pool Size", Tooltip = "Finished projectile views kept switched off for reuse instead of being destroyed", Min = 1 )
+        uint32 _projectilePoolSize;
         PROPERTY( Category = "Prefabs", DisplayName = "Grunt AI Prefab", Tooltip = "AI controller spawned to possess each grunt" )
         AssetRef<PrefabAsset> _gruntAIPrefab;
         PROPERTY( Category = "Prefabs", DisplayName = "Caster AI Prefab", Tooltip = "AI controller spawned to possess each caster" )
@@ -260,23 +264,23 @@ namespace sw
         PROPERTY( Category = "Combat", DisplayName = "Unit Radius", Tooltip = "Body radius of a unit: projectiles start outside it and hit within it plus their own radius", Min = 0.0, Units = m )
         float32 _unitRadius;
 
-        vector<ArenaUnit>        _listUnit;
-        vector<ArenaUnitView>    _listUnitView;
-        vector<GameObjectHandle> _listProjectile; ///< 투사체의 모습(상태 저장 전에 걷는다). 탄 자체는 `_projectiles` 다
-        ProjectileSimulation     _projectiles;
-        vector<ProjectileCargo>  _listProjectileCargo;
-        vector<SpawnRequest>     _listPendingUnit;
-        MaterialTintCache        _tintCache; ///< 플레이어, Grunt, Caster, 투사체 색.
-        float3                   _playerFocus;
-        GameObjectHandle         _playerObject;       ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).
-        GameObjectHandle         _autoBattleObject;   ///< 자동 전투 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
-        float32                  _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 등장하기까지 남은 시간.
-        float32                  _statusLogTimer;
-        uint32                   _wave;
-        uint32                   _killCount;
-        uint32                   _playerShotCount;
-        uint8                    _bUnitsRequested  : 1; ///< 플레이어와 웨이브를 스폰하라고 요청했다(정리하면 다음 틱이 다시 요청한다).
-        uint8                    _bPossessionDirty : 1; ///< 플레이어 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
-        uint8                    _reserved         : 6;
+        vector<ArenaUnit>       _listUnit;
+        vector<ArenaUnitView>   _listUnitView;
+        PrefabPool              _projectilePool; ///< 투사체의 모습(상태 저장 전에 모두 지운다 — 스폰 목록 밖이다). 탄 자체는 `_projectiles` 다
+        ProjectileSimulation    _projectiles;
+        vector<ProjectileCargo> _listProjectileCargo;
+        vector<SpawnRequest>    _listPendingUnit;
+        MaterialTintCache       _tintCache; ///< 플레이어, Grunt, Caster, 투사체 색.
+        float3                  _playerFocus;
+        GameObjectHandle        _playerObject;       ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).
+        GameObjectHandle        _autoBattleObject;   ///< 자동 전투 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
+        float32                 _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 등장하기까지 남은 시간.
+        float32                 _statusLogTimer;
+        uint32                  _wave;
+        uint32                  _killCount;
+        uint32                  _playerShotCount;
+        uint8                   _bUnitsRequested  : 1; ///< 플레이어와 웨이브를 스폰하라고 요청했다(정리하면 다음 틱이 다시 요청한다).
+        uint8                   _bPossessionDirty : 1; ///< 플레이어 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
+        uint8                   _reserved         : 6;
     };
 } // namespace sw

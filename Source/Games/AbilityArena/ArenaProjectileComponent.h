@@ -19,7 +19,7 @@ namespace sw
      * @class ArenaProjectileComponent
      * @brief 투사체 프리팹의 컴포넌트입니다. 디렉터가 탄을 시뮬레이션에 넣은 뒤 모습을 세우고 `bind` 로 그 탄 id 를 줍니다.
      * @details 탄의 운동 · 맞음 · 이펙트는 디렉터의 `ProjectileSimulation` 이 한다(`ArenaGameModeComponent`). 이 컴포넌트는 기본 틱 그룹(`DuringPhysics`)에서
-     *          디렉터가 `PrePhysics` 에 돌린 탄의 위치를 읽기만 하고 자기 메시를 옮긴다. 탄이 끝났으면(맞음 · 사거리 · 판 밖) 자기 오브젝트를 지운다.
+     *          디렉터가 `PrePhysics` 에 돌린 탄의 위치를 읽기만 하고 자기 메시를 옮긴다. 탄이 끝났으면(맞음 · 사거리 · 판 밖) 메시를 숨기고, 디렉터가 틱 밖에서 풀(`PrefabPool`)에 돌려받는다.
      *          탄을 게임 오브젝트로 돌리지 않으므로 탄 수가 늘어도 규칙 비용은 시뮬레이션 하나다. 모습은 상태 저장 전에 디렉터가 걷는다.
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Projectile", Tooltip = "Shows one projectile of the arena game mode's projectile simulation" )
@@ -35,9 +35,12 @@ namespace sw
 
         /** @brief 디렉터 @p gameMode 의 탄 @p projectileID 를 보여 줍니다. @p position 은 쏜 자리(발 높이)이고 모습은 `_visualLift` 만큼 위에 그린다. */
         void bind( GameObjectHandle gameMode, uint32 projectileID, const float3& position );
+        /** @brief 탄이 끝나 숨었습니다 — 디렉터가 풀에 돌려줄 때입니다. */
+        bool isFinished() const { return _bFinished == SW_TRUE; }
 
     private:
         void placeMesh( const float3& position ) const;
+        void setMeshVisible( bool bVisible ) const;
         void finish();
 
     private:

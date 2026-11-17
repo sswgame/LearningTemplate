@@ -10,9 +10,11 @@ namespace sw
     ValeProfileStore::ValeProfileStore()
         : _mapPendingRead{}
         , _mapPendingWrite{}
+        , _mapStoredBytes{}
         , _listCompletionScratch{}
         , _pStore{ nullptr }
         , _savedCount{ 0 }
+        , _skippedSaveCount{ 0 }
     {
     }
 
@@ -30,15 +32,25 @@ namespace sw
         _mapPendingRead[_pStore->submitRead( makeSlotName( accountID ) )] = accountID;
     }
 
-    void ValeProfileStore::requestSave( uint64 accountID, const ValeProfile& profile )
+    bool ValeProfileStore::requestSave( uint64 accountID, const ValeProfile& profile )
     {
         if ( _pStore == nullptr )
-            return;
+            return false;
         BitWriter writer;
         profile.write( writer );
+        vector<uint8> listBytes = writer.releaseBytes();
+        // 견주기는 직렬화한 바이트로 한다 — 진행에 칸이 늘어도 `write` 가 싣는 한 놓치지 않는다.
+        vector<uint8>& listStored = _mapStoredBytes[accountID];
+        if ( listStored == listBytes )
+        {
+            ++_skippedSaveCount;
+            return false;
+        }
+        listStored = listBytes;
         LocalStoreWriteOptions options;
-        options._formatVersion                                                                              = ValeProfile::kFormatVersion;
-        _mapPendingWrite[_pStore->submitWrite( makeSlotName( accountID ), writer.releaseBytes(), options )] = accountID;
+        options._formatVersion                                                                               = ValeProfile::kFormatVersion;
+        _mapPendingWrite[_pStore->submitWrite( makeSlotName( accountID ), std::move( listBytes ), options )] = accountID;
+        return true;
     }
 
     void ValeProfileStore::poll( vector<ValeProfileLoad>& outListLoad )
@@ -61,7 +73,10 @@ namespace sw
                     SW_LOG_INFO_ID( "LanternVale.ProfileSaved", "[LanternVale] profile of account %# saved", accountID );
                 }
                 else
+                {
+                    _mapStoredBytes.erase( accountID ); // 디스크 바이트를 모른다 — 다음 저장이 다시 쓴다
                     SW_LOG_ERROR_ID( "LanternVale.ProfileSaveFailed", "[LanternVale] profile of account %# was not saved (local store result %#)", accountID, static_cast<int32>( completion._result ) );
+                }
                 continue;
             }
             const auto iter = _mapPendingRead.find( completion._requestID );
@@ -77,6 +92,8 @@ namespace sw
                 BitReader reader( completion._bytes.data(), static_cast<int32>( completion._bytes.size() ) );
                 load._bOk    = load._profile.read( reader ) ? SW_TRUE : SW_FALSE;
                 load._bFound = load._bOk;
+                if ( load._bOk == SW_TRUE )
+                    _mapStoredBytes[load._accountID] = completion._bytes; // 그대로인 진행은 다음 자동 저장이 다시 쓰지 않는다
             }
             if ( load._bOk == SW_FALSE )
                 SW_LOG_ERROR_ID( "LanternVale.ProfileLoadFailed", "[LanternVale] profile of account %# could not be read (local store result %#, format %#) - the login is refused so the stored progress is not overwritten",
