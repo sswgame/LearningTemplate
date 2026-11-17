@@ -223,15 +223,15 @@ namespace sw
                 return false;
             }
 
-            /** @brief 섹션 이름의 번호입니다. 비면 `kNoSection`, 없는 이름도 `kNoSection` 입니다(검사가 먼저 본다). */
-            static uint32 findSection( const vector<AnimationMontageSection>& listSection, const hashed_string& name )
+            /** @brief 섹션 이름의 번호입니다. 비거나 없는 이름이면 없음입니다(검사가 먼저 본다). */
+            [[nodiscard]] static optional<uint32> findSection( const vector<AnimationMontageSection>& listSection, const hashed_string& name )
             {
                 for ( uint32 index = 0; index < listSection.size(); ++index )
                 {
                     if ( name.empty() == false && listSection[index]._name == name )
                         return index;
                 }
-                return MontagePoseNode::kNoSection;
+                return nullopt;
             }
 
             /** @brief 클립 처음부터 끝까지 한 섹션이다. */
@@ -259,8 +259,8 @@ namespace sw
                         SW_LOG_ERROR_ID( "AnimationPoseNode.MontageSectionOrder", "Pose node '%#': montage section '%#' must start after the previous section", nodeName, section._name.c_str() );
                         bValid = false;
                     }
-                    const bool bNextKnown   = section._next.empty() || findSection( listSection, section._next ) != MontagePoseNode::kNoSection;
-                    const bool bBranchKnown = section._branch.empty() || findSection( listSection, section._branch ) != MontagePoseNode::kNoSection;
+                    const bool bNextKnown   = section._next.empty() || findSection( listSection, section._next ).has_value();
+                    const bool bBranchKnown = section._branch.empty() || findSection( listSection, section._branch ).has_value();
                     if ( bNextKnown == false || bBranchKnown == false )
                     {
                         SW_LOG_ERROR_ID( "AnimationPoseNode.MontageSectionLink", "Pose node '%#': montage section '%#' links to an unknown section (next '%#', branch '%#')", nodeName, section._name.c_str(),
@@ -289,8 +289,8 @@ namespace sw
                     MontagePoseNode::Section&      target = listSection.emplace_back();
                     target._startSeconds                  = source._startSeconds;
                     target._endSeconds                    = index + 1 < listDef.size() ? listDef[index + 1]._startSeconds : inputLength;
-                    target._next                          = findSection( listDef, source._next );
-                    target._branch                        = findSection( listDef, source._branch );
+                    target._next                          = findSection( listDef, source._next ).value_or( MontagePoseNode::kNoSection ); // 빈 이름은 멈춤 · 갈래 없음
+                    target._branch                        = findSection( listDef, source._branch ).value_or( MontagePoseNode::kNoSection );
                     target._branchParameter               = source._branchParameter;
                     if ( target._endSeconds <= target._startSeconds )
                     {
