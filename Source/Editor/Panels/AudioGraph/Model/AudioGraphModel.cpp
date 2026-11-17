@@ -63,13 +63,13 @@ namespace sw::editor
         return _editGraph.saveToAsset( diskPath );
     }
 
-    bool AudioGraphModel::takeEdit( AudioGraphEdit& outEdit )
+    void AudioGraphModel::publishEdit()
     {
         if ( _pendingEdit._pLabel == nullptr )
-            return false;
-        outEdit      = _pendingEdit;
-        _pendingEdit = AudioGraphEdit{};
-        return true;
+            return;
+        const utf8* const pLabel = _pendingEdit._pLabel;
+        _pendingEdit             = AudioGraphEdit{};
+        recordDocumentEdit( pLabel );
     }
 
     bool AudioGraphModel::isPreviewAudioReady()
