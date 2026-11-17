@@ -84,7 +84,10 @@ namespace sw
     class SW_GF_API ServiceTransaction
     {
     public:
+        /** @brief 한 트랜잭션의 쓰기(put · erase) 상한입니다. 버전 조건(`requireVersion`)은 세지 않는다 — 읽기 집합 연결(`ServiceReadSetConnection`)이 읽은 만큼 덧붙이므로, 함께 세면 쓰기를 상한까지 짠 일(정산 페이지 · 죽은 신청 지우기)이 커밋에서 Invalid 였다. */
         static constexpr int32 kMaxWriteCount = 64;
+        /** @brief 한 트랜잭션의 버전 조건 상한입니다(부르는 쪽이 건 것 + 읽기 집합이 덧붙인 것). */
+        static constexpr int32 kMaxConditionCount = 256;
 
         ServiceTransaction();
 

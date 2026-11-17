@@ -142,7 +142,8 @@ SW_TEST_CASE( SharedAssetTableTest, RefReleaseAndBorrow )
     const FakeAsset                     local{ 42 };
     const sw::SharedAssetRef<FakeAsset> borrowed = sw::SharedAssetRef<FakeAsset>::borrow( &local );
     SW_EXPECT_TRUE( borrowed.get() == &local );
-    SW_EXPECT_TRUE( borrowed.snapshot() == nullptr ); // 소유하지 않는다
+    SW_EXPECT_TRUE( borrowed.snapshot().get() == &local );  // 스냅숏을 쥐는 쪽(워커 일감)도 빌린 값을 읽는다
+    SW_EXPECT_EQUAL( 0L, borrowed.snapshot().use_count() ); // 소유하지 않는다 — 수명은 빌려준 쪽이 지킨다
 }
 
 /**

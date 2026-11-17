@@ -108,6 +108,8 @@ namespace sw
         shared_ptr<const T> snapshot() const
         {
             const WeakInternVersion<const T>* const pVersion = _node._pVersion.load( std::memory_order_acquire );
+            if ( pVersion == nullptr && _pForeign != nullptr )
+                return shared_ptr<const T>( shared_ptr<const T>{}, _pForeign ); // 빌린 값 — 소유하지 않는 별칭이다(수명은 빌려준 쪽이 지킨다, `borrow`). 빼면 빌린 참조의 스냅숏이 비어 워커 일감이 null 을 읽었다
             if ( pVersion == nullptr )
                 return _node._pHeld; // 따라가지 않는 객체 — 목록에 오르지 않아 원자로 다룰 까닭이 없다
             return pVersion->resolveLatestVersion()->_pSelf.lock();

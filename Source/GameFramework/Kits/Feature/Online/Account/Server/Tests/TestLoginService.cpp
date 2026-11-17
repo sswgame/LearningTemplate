@@ -70,6 +70,7 @@ namespace
     {
         LoginServiceConfig settings;
         settings._maxConcurrentPasswordHashes = 4;
+        settings._loginNonceLifetimeMs        = 60000; // 키트 설정의 필수 칸(`_loginNonceLifetimeSeconds`) — 0 이면 nonce 를 내지 못한다
         return settings;
     }
 
