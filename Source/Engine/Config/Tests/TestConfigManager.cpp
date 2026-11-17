@@ -484,3 +484,52 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityAppliesInPlace )
     SW_EXPECT_TRUE( manager.applyRenderQuality( "high" ) );
     SW_EXPECT_EQUAL( baseLimit, pConfig->_render._shadowLocalCullSlotLimit );
 }
+
+/**
+ * @brief [ConfigManagerTest] 이미 읽은 엔진 설정을 덮는 길(품질 단계 바꾸기 · 파일 다시 읽기)은 울타리(렌더 구동기의 "받은 패킷을 모두 끝낸다")를 지난 뒤에만 새 값이 보인다
+ * @details 울타리 안에서 본 값은 옛 값이다 — 렌더 스레드가 앞 패킷을 끝내기 전에는 새 값이 쓰이지 않는다. 첫 읽기와 읽지 못한 다시 읽기는 덮지 않으므로 울타리를 부르지 않는다.
+ */
+SW_TEST_CASE( ConfigManagerTest, InPlaceWriteWaitsForWriteFence )
+{
+    const string basePath    = test::makeScratchPath( "FenceEngineConfig.json" );
+    const string qualityPath = test::makeScratchPath( "FenceRenderQuality.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 4 }, "high": {} })" ) );
+
+    ConfigManager manager;
+    uint32        fenceCount   = 0;
+    uint32        limitAtFence = 0;
+    uint32        widthAtFence = 0;
+    manager.setWriteFence( SW_DELEGATE_LAMBDA( ConfigWriteFenceDelegate, [&]()
+    {
+        ++fenceCount;
+        const EngineConfig* pSeen = manager.getConfig<EngineConfig>();
+        limitAtFence              = pSeen != nullptr ? pSeen->_render._shadowLocalCullSlotLimit : 0u;
+        widthAtFence              = pSeen != nullptr ? pSeen->_window._width : 0u;
+    } ) );
+
+    // 1) 첫 읽기는 덮지 않는다.
+    const EngineConfig* pConfig = manager.loadEngineConfig( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "high" ) );
+    SW_REQUIRE_NOT_NULL( pConfig );
+    SW_EXPECT_EQUAL( 0u, fenceCount );
+    const uint32 baseLimit = pConfig->_render._shadowLocalCullSlotLimit;
+
+    // 2) 단계 바꾸기 — 울타리 안에서는 옛 값, 지난 뒤에는 새 값.
+    SW_EXPECT_TRUE( manager.applyRenderQuality( "low" ) );
+    SW_EXPECT_EQUAL( 1u, fenceCount );
+    SW_EXPECT_EQUAL( baseLimit, limitAtFence );
+    SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
+
+    // 3) 읽지 못하면 덮지 않으므로 기다리지도 않는다.
+    SW_EXPECT_LOG( "Config.RenderQualityUnknownTier" );
+    SW_EXPECT_FALSE( manager.applyRenderQuality( "nope" ) );
+    SW_EXPECT_EQUAL( 1u, fenceCount );
+
+    // 4) 파일 다시 읽기도 같은 울타리를 지난다.
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 1024, 600 ) ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( basePath ) == ReloadResult::Reloaded );
+    SW_EXPECT_EQUAL( 2u, fenceCount );
+    SW_EXPECT_EQUAL( 800u, widthAtFence );
+    SW_EXPECT_EQUAL( 1024u, pConfig->_window._width );
+    manager.setWriteFence( {} );
+}

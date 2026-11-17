@@ -38,6 +38,8 @@ namespace sw
 {
     /** @brief 설정 하나를 파일에서 다시 읽었다는 알림입니다. 인자는 설정 타입의 이름(`T::StaticType()->_fullyQualifiedName`)입니다. */
     using ConfigReloadedDelegate = MulticastDelegate<void( const hashed_string& configTypeName )>;
+    /** @brief 이미 읽은 설정 객체를 제자리에서 덮기 직전에 부르는 울타리입니다 — 그 값을 읽는 다른 스레드(렌더 스레드)가 받은 일을 끝낼 때까지 기다린다. */
+    using ConfigWriteFenceDelegate = Delegate<void()>;
 
     /** @brief 설정 파일 하나를 읽은 결과입니다. 없는 파일을 기본값으로 대신하지 않습니다. 필수 설정이면 오류이고, 없어도 되는 설정만 부르는 쪽이 없음으로 다룹니다. */
     enum class ConfigReadResult : uint8
@@ -202,6 +204,13 @@ namespace sw
          * @return 다시 읽었으면 `Reloaded`, 파일에서 읽은 설정이 아닌 경로면 `NotTracked`, 깨진 파일이면(오류를 남겼다) `Failed`
          */
         [[nodiscard]] ReloadResult reloadConfigFile( string_view changedPath );
+        /**
+         * @brief 이미 읽은 설정을 제자리에서 덮기 직전에 부를 울타리를 겁니다(빈 델리게이트면 뗀다). 렌더 구동기가 "받은 패킷을 모두 끝낸다"(`RenderThread::pollPackets`)를 건다.
+         * @details 렌더 스레드는 앞 패킷을 그리는 동안 `EngineConfig::_render` 를 직접 읽는다(텍스처 업로드 상한 · 그림자 칸 하한 · 컬링 슬롯 · PSO 예산). 게임 스레드가 그 사이에 덮으면
+         *          찢어진 값을 읽는다 — 덮기를 이 울타리 뒤(렌더 스레드가 앞 패킷을 끝냈고 다음 패킷은 아직 게임 스레드에 있다)로 미룬다. 언리얼이 렌더 스레드가 읽는 값을
+         *          `FlushRenderingCommands` 뒤에만 바꾸는 것과 같다. 첫 읽기 · 읽지 못한 다시 읽기는 덮지 않으므로 기다리지 않는다. 덮기는 게임 스레드에서만 한다.
+         */
+        void setWriteFence( ConfigWriteFenceDelegate fence ) { _writeFence = std::move( fence ); }
         /** @brief 설정을 다시 읽을 때마다 호출되는 델리게이트입니다. */
         ConfigReloadedDelegate& onConfigReloaded() { return _onConfigReloaded; }
         /** @brief 다시 읽을 수 있는(파일에서 읽은) 설정 수입니다. */
@@ -239,6 +248,7 @@ namespace sw
             auto         iter = _mapConfig.find( key );
             if ( iter != _mapConfig.end() )
             {
+                waitWriteFence();
                 *static_cast<T*>( iter->second.get() ) = std::move( *newConfig );
             }
             else if ( unique_ptr<IConfig>* pHostSlot = findHostSlot( *T::StaticType() ); pHostSlot != nullptr )
@@ -442,6 +452,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "Config.ReloadInvalid", "Config reload: %# is not valid - keeping the previous values", label.c_str() );
                 return false;
             }
+            manager.waitWriteFence();
             *pExisting = std::move( *reloaded );
             SW_LOG_INFO_ID( "ConfigManager.ConfigReloaded", "Config reloaded from %#", label.c_str() );
             manager._onConfigReloaded.broadcast( T::StaticType()->_fullyQualifiedName );
@@ -476,6 +487,12 @@ namespace sw
          * @details 첫 읽기가 끝나면 자리의 객체가 표(`_mapConfig`)로 옮겨가 자리는 비지만, 객체의 주소는 그대로다.
          */
         unique_ptr<IConfig>* findHostSlot( const TypeInfo& type );
+        /** @brief 걸린 울타리(`setWriteFence`)를 부릅니다 — 이미 읽은 설정 객체를 덮기 직전에만. */
+        void waitWriteFence() const
+        {
+            if ( _writeFence.isBound() )
+                _writeFence();
+        }
         /** @brief `gv_renderQuality` 의 변경 훅 — `applyRenderQuality` 를 부릅니다. */
         void onRenderQualityChanged( GlobalVariableInfo* pInfo );
 
@@ -489,6 +506,7 @@ namespace sw
         unique_ptr<ConfigSource>                   _pEngineSource;                     ///< 엔진 설정을 읽은 출처(`loadEngineConfig`) — 품질 단계만 바꿔 다시 읽는다
         GlobalVariableInfo*                        _pRenderQualityVariable{ nullptr }; ///< 훅을 건 `gv_renderQuality`(기동 범위에서만 건다)
         ConfigReloadedDelegate                     _onConfigReloaded;
+        ConfigWriteFenceDelegate                   _writeFence; ///< 덮기 전 울타리(`setWriteFence`) — 없으면(테스트 · 렌더 없는 호스트) 바로 덮는다
     };
 
 } // namespace sw
