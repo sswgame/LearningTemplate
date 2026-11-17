@@ -1,0 +1,15 @@
+{
+    "backend": "gl",
+    "platform": "windows",
+    "commit": "f0e5340264d151445198c7e2b60115727821a3e7",
+    "recordedUnixMs": 1794910099795,
+    "reason": "missing",
+    "width": 160,
+    "height": 90,
+    "previousDifference": null,
+    "limits": {
+        "maxDifferingFraction": 0.01,
+        "maxMeanDistance": 0.005,
+        "maxDeepRegionPixels": 16
+    }
+}
