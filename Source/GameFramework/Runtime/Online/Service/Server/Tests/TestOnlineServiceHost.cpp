@@ -285,6 +285,7 @@ namespace
             settings._listenAddress                    = NetAddress::makeLoopback( 0 );
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 — 도배 제한 테스트만 낮춘다
             settings._requestBurstPerAccount           = 1000;
+            settings._maxPendingCallsPerService        = 100000;
             return settings;
         }
 
@@ -1076,4 +1077,15 @@ SW_TEST_CASE( OnlineServiceHostTest, TraceIDReachesTheServiceLogContextWithTheAc
     SW_EXPECT_TRUE( rig._serviceA._lastLogContext._traceID == caller._traceID );
     SW_EXPECT_EQUAL( rig._serviceA._lastLogContext._principalID, uint64( 21 ) );
     SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
+}
+
+/** @brief [OnlineServiceHostTest] 서비스마다 기다리는 호출 상한(저장소 대기 상한, 감사 O-3)이 없으면 기동하지 않는다 — 상한 없는 대기열로 조용히 돌지 않는다 */
+SW_TEST_CASE( OnlineServiceHostTest, InitializeRefusesMissingPendingCallLimit )
+{
+    LoopbackStreamNetwork        network{ 13u };
+    unique_ptr<IStreamTransport> transport = network.createTransport();
+    OnlineServiceHostConfig      settings  = HostFixture::makeSettings();
+    settings._maxPendingCallsPerService    = 0;
+    OnlineServiceHost host;
+    SW_EXPECT_FALSE( host.initialize( transport.get(), settings ).has_value() );
 }

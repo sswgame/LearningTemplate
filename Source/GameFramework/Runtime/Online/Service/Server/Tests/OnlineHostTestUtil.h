@@ -141,6 +141,7 @@ namespace sw::test
             settings._pServerBusTransport              = &_bus;
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 이다
             settings._requestBurstPerAccount           = 1000;
+            settings._maxPendingCallsPerService        = 100000;
             {
                 const auto result = _host.initialize( _transport.get(), settings );
                 SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );

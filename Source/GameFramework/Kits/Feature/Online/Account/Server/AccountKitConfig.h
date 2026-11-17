@@ -38,6 +38,12 @@ namespace sw
         /** @brief 주소마다 한꺼번에 받는 로그인 시도 수입니다(부하 봇은 크게). */
         PROPERTY( Min = 1 )
         int32 _attemptBurst{ 10 };
+        /**
+         * @brief 저장소 워커에서 동시에 도는 비밀번호 해시(Argon2id) 상한입니다. 넘는 가입 · 로그인은 저장소를 읽지 않고 `kBusy` 로 끝납니다(감사 O-3).
+         * @details 서버 설정의 저장소 워커 수(`_storeWorkerCount`)보다 작게 두어 원장 · 우편 · 거래가 쓸 워커를 남깁니다. 해시 하나의 메모리(기본 19 MiB)도 이 수만큼만 잡힙니다.
+         */
+        PROPERTY( Required, Min = 1, Max = 64 )
+        int32 _maxConcurrentPasswordHashes{ 0 };
         /** @brief 가벼운 Argon2id 를 씁니다(테스트 · 부하 봇 — DevOnline 단위만, 실제 비용을 재려면 끕니다). */
         PROPERTY()
         bool _bLightPasswordHash{ false };

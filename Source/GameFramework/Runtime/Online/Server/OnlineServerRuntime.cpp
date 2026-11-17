@@ -581,6 +581,7 @@ namespace sw
         hostSettings._pRemoteConfig                     = &parts._remoteConfig;
         hostSettings._requestBurstPerRemote             = parts._config._requestBurstPerRemote;
         hostSettings._maxConnectionsPerRemote           = parts._config._maxConnectionsPerRemote;
+        hostSettings._maxPendingCallsPerService         = parts._config._maxPendingCallsPerService;
         hostSettings._requestBurstPerAccount            = parts._config._requestBurstPerAccount;
         if ( settings._bTLS == SW_TRUE )
         {

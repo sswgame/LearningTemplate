@@ -8,12 +8,14 @@
     "_scheduleRunTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
     "_ttlSweepMinuteOfDay": 300,
     "_ttlBackfillRolloutHours": 24,
+    "_maxPendingCallsPerService": 1024,
     "_publicAddress": "127.0.0.1",
     "_listKit": [
         {
             "_name": "account",
             "_settings": {
                 "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
+                "_maxConcurrentPasswordHashes": 2,
                 "_bLightPasswordHash": true,
                 "_listSeedTestAccount": [
                     {

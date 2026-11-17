@@ -81,17 +81,41 @@ namespace sw
             LoginStoreResult _serviceResult{};
         };
 
-        /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
+        /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다(해시 상한 `PasswordHashBudget` 는 스레드 안전한 공유물이다). */
         struct LoginStoreRun
         {
-            static LoginCallResult runCall( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
-                                            LoginCallInput& inoutInput )
+            /** @brief 비밀번호 해시를 도는 일인지입니다. 이 일만 해시 상한의 자리를 잡는다. */
+            static bool usesPasswordHash( LoginOperation operation )
+            {
+                return operation == LoginOperation::Register || operation == LoginOperation::Login || operation == LoginOperation::LinkCredential;
+            }
+
+            static LoginCallResult runCall( IServiceStoreConnection& connection, ILoginCrypto& crypto, PasswordHashBudget& hashBudget, const LoginServiceConfig& settings,
+                                            const LoginTicketAuthority& authority, LoginCallInput& inoutInput )
             {
                 LoginCallInput& input = inoutInput;
                 LoginCallResult done;
                 done._completion._operation  = input._operation;
                 done._completion._requestTag = input._requestTag;
-                LoginCompletion& completion  = done._completion;
+                const bool bHashes           = usesPasswordHash( input._operation );
+                const bool bEntered          = bHashes && hashBudget.tryAcquire();
+                if ( bHashes && bEntered == false )
+                    done._completion._result = LoginServiceResult::fail( OnlineError::kBusy ); // 읽기 전에 거절한다 — 계정 유무와 무관한 같은 답이다
+                else
+                    runOperation( connection, crypto, settings, authority, input, done );
+                if ( bEntered )
+                    hashBudget.release();
+                // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
+                input._credential._password.clear();
+                input._subject.clear();
+                Memory::wipe( input._arrDeviceSecret, sizeof( input._arrDeviceSecret ) );
+                return done;
+            }
+
+            static void runOperation( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
+                                      LoginCallInput& input, LoginCallResult& done )
+            {
+                LoginCompletion& completion = done._completion;
                 LoginStoreLogic  logic{ connection, crypto, settings, authority, done._serviceResult };
                 const int64      nowMs = input._nowMs.count();
                 switch ( input._operation )
@@ -180,11 +204,6 @@ namespace sw
                     completion._grant._bUpdateRecommended = SW_TRUE;
                     completion._grant._storeURL           = input._storeURL;
                 }
-                // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
-                input._credential._password.clear();
-                input._subject.clear();
-                Memory::wipe( input._arrDeviceSecret, sizeof( input._arrDeviceSecret ) );
-                return done;
             }
 
             static LoginStoreResult runMaintenance( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
@@ -234,9 +253,11 @@ namespace sw
     void LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginServiceConfig& settings,
                                    const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
     {
+        SW_ASSERT( settings._maxConcurrentPasswordHashes >= 1 ); // 키트 설정의 필수 칸이다. 0 이면 모든 가입 · 로그인이 kBusy 로 끝난다
         _store.bindStore( pStore );
         _pCrypto  = pCrypto;
         _settings = settings;
+        _passwordHashBudget.setMaxCount( settings._maxConcurrentPasswordHashes );
         _revocationScanJob.setPeriod( settings._revocationScanMs );
         _ticketAuthority.initialize( pCrypto, arrTicketMasterKey );
         _mapClientToAttemptBucket.initialize( settings._attemptBurst, settings._attemptRefillMs, kMaxTrackedClientCount );
@@ -594,10 +615,11 @@ namespace sw
 
     void LoginService::submitCall( LoginCallInput&& input )
     {
-        ILoginCrypto*               pCrypto    = _pCrypto;
-        const LoginTicketAuthority* pAuthority = &_ticketAuthority; // 저장소 스레드는 읽기만 한다
-        _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
-        { return LoginStoreRun::runCall( connection, *pCrypto, settings, *pAuthority, input ); },
+        ILoginCrypto*               pCrypto     = _pCrypto;
+        PasswordHashBudget*         pHashBudget = &_passwordHashBudget; // 원자 셈이라 워커 여럿이 함께 쓴다
+        const LoginTicketAuthority* pAuthority  = &_ticketAuthority;    // 저장소 스레드는 읽기만 한다
+        _store.submit( [pCrypto, pHashBudget, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
+        { return LoginStoreRun::runCall( connection, *pCrypto, *pHashBudget, settings, *pAuthority, input ); },
                        [this]( LoginCallResult& done )
         { applyCompletion( std::move( done._completion ), done._serviceResult ); } );
     }

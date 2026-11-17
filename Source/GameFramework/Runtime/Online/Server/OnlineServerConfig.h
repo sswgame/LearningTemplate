@@ -133,6 +133,9 @@ namespace sw
         /** @brief 주소(IP)마다 동시에 여는 서비스 연결 상한입니다. 넘는 연결은 바로 닫습니다. 한 주소에서 많이 붙는 부하 봇이나 NAT 뒤 사무실은 올립니다. */
         PROPERTY( Min = 1, Max = 1000000 )
         int32 _maxConnectionsPerRemote{ 64 };
+        /** @brief 서비스(키트) 하나가 응답을 기다리게 둘 호출 상한입니다. 넘는 요청은 저장소에 맡기지 않고 `kBusy`(같은 키로 다시 한다)로 끝납니다 — 저장소 대기열의 상한이다(감사 O-3). */
+        PROPERTY( Required, Min = 1, Max = 1000000 )
+        int32 _maxPendingCallsPerService{ 0 };
         /** @brief 감사 기록(`service_audit`)의 보존 기간 · 쓸기 상한입니다. 기간 0 이면 지우지 않습니다. */
         PROPERTY( Required )
         ServiceTTLConfig _auditRetention{};

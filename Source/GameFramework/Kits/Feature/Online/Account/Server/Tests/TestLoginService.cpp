@@ -62,6 +62,14 @@ namespace
         uint32 _counter{ 0 };
     };
 
+    /** @brief 테스트의 로그인 설정입니다. 해시 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
+    LoginServiceConfig makeLoginServiceSettings()
+    {
+        LoginServiceConfig settings;
+        settings._maxConcurrentPasswordHashes = 4;
+        return settings;
+    }
+
     /** @brief 서버 하나입니다. 영속 데이터는 빌립니다 — 데이터를 같이 쓰면 "서버 둘" 입니다. */
     struct LoginFixture
     {
@@ -71,7 +79,7 @@ namespace
         LoginService              _service;
         uint64                    _nextTag{ 1 };
 
-        explicit LoginFixture( MemoryServiceDatabase& database, const LoginServiceConfig& settings = LoginServiceConfig{} )
+        explicit LoginFixture( MemoryServiceDatabase& database, const LoginServiceConfig& settings = makeLoginServiceSettings() )
             : _store{ &database }
             , _crypto{}
             , _provider{ "fake" }
@@ -158,8 +166,8 @@ namespace
 SW_TEST_CASE( LoginServiceTest, AttemptsAreLimitedPerClientIncludingRegister )
 {
     MemoryServiceDatabase database;
-    LoginServiceConfig    settings;
-    settings._attemptBurst = 2;
+    LoginServiceConfig    settings = makeLoginServiceSettings();
+    settings._attemptBurst         = 2;
     LoginFixture rig( database, settings );
 
     SW_EXPECT_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
@@ -181,8 +189,8 @@ SW_TEST_CASE( LoginServiceTest, AttemptsAreLimitedPerClientIncludingRegister )
 SW_TEST_CASE( LoginServiceTest, SeedAccountsAreNotLimited )
 {
     MemoryServiceDatabase database;
-    LoginServiceConfig    settings;
-    settings._attemptBurst = 1;
+    LoginServiceConfig    settings = makeLoginServiceSettings();
+    settings._attemptBurst         = 1;
     LoginFixture rig( database, settings );
     for ( int32 index = 0; index < 5; ++index )
     {
@@ -454,4 +462,21 @@ SW_TEST_CASE( LoginServiceTest, StoreFailureAndProviderRegistration )
     SW_EXPECT_FALSE( rig._service.registerPlatformProvider( &sameName ) );
     FakePlatformLoginProvider badName( "Bad Name" );
     SW_EXPECT_FALSE( rig._service.registerPlatformProvider( &badName ) );
+}
+
+/** @brief [LoginServiceTest] 해시 상한: 자리가 다 차면 더 들이지 않고, 하나가 나가면 다시 들인다 — 저장소 워커를 해시가 모두 잡지 못한다(감사 O-3) */
+SW_TEST_CASE( LoginServiceTest, PasswordHashBudgetRefusesBeyondLimit )
+{
+    PasswordHashBudget budget;
+    budget.setMaxCount( 2 );
+    SW_EXPECT_TRUE( budget.tryAcquire() );
+    SW_EXPECT_TRUE( budget.tryAcquire() );
+    SW_EXPECT_FALSE( budget.tryAcquire() );
+    budget.release();
+    SW_EXPECT_TRUE( budget.tryAcquire() );
+    budget.release();
+    budget.release();
+
+    PasswordHashBudget unset; // 설정이 빠지면 들이지 않는다(폴백 없음)
+    SW_EXPECT_FALSE( unset.tryAcquire() );
 }

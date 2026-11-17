@@ -61,7 +61,8 @@ namespace sw
                 if ( trustFile.has_value() == false )
                     return unexpected( trustFile.error() );
                 LoginServiceConfig loginSettings;
-                loginSettings._attemptBurst = kitConfig._attemptBurst;
+                loginSettings._attemptBurst                = kitConfig._attemptBurst;
+                loginSettings._maxConcurrentPasswordHashes = kitConfig._maxConcurrentPasswordHashes;
                 // 개발 설정은 DevOnline 단위가 있을 때만 받는다 — 그 단위가 없는 구성(배포)은 기동 오류다.
                 const bool bDevOption = kitConfig._bLightPasswordHash || kitConfig._listSeedTestAccount.empty() == false;
                 if ( bDevOption )

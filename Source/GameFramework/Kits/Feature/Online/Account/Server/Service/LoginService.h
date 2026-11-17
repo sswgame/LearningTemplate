@@ -232,6 +232,7 @@ namespace sw
         size_t                                                             _refreshCursor;
         ServicePeriodicJob                                                 _revocationScanJob;      ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
         ServiceStoreTracker                                                _store;                  ///< 저장소에 맡긴 일의 앞이다
+        PasswordHashBudget                                                 _passwordHashBudget;     ///< 저장소 워커에서 동시에 도는 해시 상한이다(감사 O-3)
         vector<const IAfterDeleteAccount*>                                 _listAfterDeleteAccount; ///< 탈퇴 뒤 키트 정리 훅(`setAfterDeleteAccount`)
     };
 } // namespace sw
