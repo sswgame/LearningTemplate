@@ -11,7 +11,7 @@
   실패 줄의 명령 id 로 그 명령을 고친다. 어느 오브젝트가 달라졌는지는 -gv_automationHashDump=1 로 오브젝트별 해시 로그를 본다.
   둘째 단계는 문서 패널 전수(감사 E-16)다: 글 되돌리기를 가진 문서 패널마다 사본 문서를 열고 panel.expectUndoRoundTrip 이 문서 글을 되돌리기와 같은 길로
   다시 적용 → 다시 직렬화해 같은 글인지 본다(다르면 Ctrl+Z 가 문서를 다른 상태로 돌린다). 문서는 저장 왕복 시나리오(saveroundtrip*)와 같은 원본의 실행마다 새 사본이다.
-  글 되돌리기가 아직 없는 문서 패널(audioevents · input_map · data_table — 감사 E-13, 카탈로그 · 어빌리티 카탈로그 — 창 안 기록, UI 미리보기 — 모델 명령)은 이 단계가 아니다.
+  문서 글이 아니라 창 안 기록(카탈로그 · 어빌리티 카탈로그)이나 모델 명령(UI 미리보기)으로 되돌리는 패널은 글 왕복이 없어 이 단계가 아니다.
   실행: App -EnableEditor -scenario=engine/automation/editor/undocoverage.scenario.xml -unattended
 -->
 <Scenario name="editor.undocoverage" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="Immediately" input="exclusive">
@@ -20,6 +20,9 @@
 	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/undocoveragespriteclip"/>
 	<Scratch from="engine/automation/editor/audiograph" as="scratch/undocoverageaudiograph"/>
 	<Scratch from="game/empty/data/vocabulary" as="scratch/undocoveragebehaviortree"/>
+	<Scratch from="game/empty/audio" as="scratch/undocoverageaudioevents"/>
+	<Scratch from="engine/input" as="scratch/undocoverageinputmap"/>
+	<Scratch from="engine/environment" as="scratch/undocoveragedatatable"/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
@@ -82,6 +85,24 @@
 	<EditorWaitStable/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.expectUndoRoundTrip behavior_tree"/>
+	<DevCommand line="panel.focus audioevents"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoverageaudioevents/empty.audioevents.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.AudioEventEditCount" equals="1" timeoutFrames="60"/>
+	<DevCommand line="panel.expectUndoRoundTrip audioevents"/>
+	<DevCommand line="panel.focus input_map"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoverageinputmap/default.input.xml"/>
+	<EditorWaitStable/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.expectUndoRoundTrip input_map"/>
+	<DevCommand line="panel.focus data_table"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragedatatable/default.surfacekinds.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.DataTableGameDataRowCount" atLeast="1" timeoutWallSeconds="10"/>
+	<DevCommand line="panel.expectUndoRoundTrip data_table"/>
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Pass/>
 </Scenario>
