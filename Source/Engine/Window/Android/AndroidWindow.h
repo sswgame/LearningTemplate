@@ -53,6 +53,14 @@ namespace sw
 
     protected:
         void* getNativeHandle() const override;
+        /**
+         * @brief 화면 키보드를 올리거나 내립니다(`ANativeActivity_showSoftInput` · `hideSoftInput` — 어느 스레드에서 불러도 된다고 NDK 헤더가 적는다).
+         * @details NativeActivity 의 입력 연결은 키 이벤트만 보낸다 — 글자는 키의 유니코드(`queueKeyText`)로 받고, 입력기 조합(한글 · 일본어)은 오지 않는다.
+         *          조합까지 받으려면 GameActivity + GameTextInput 으로 옮겨야 한다(유니티 · 언리얼 Android 는 자바 쪽 입력 연결을 둔다).
+         */
+        void applyTextInputWanted( bool bWanted ) override;
+        /** @brief 받지 않는다 — NativeActivity 에는 글 커서 자리를 입력기에 알리는 API 가 없다(GameTextInput 의 `setImeInsets` 자리). */
+        void applyTextInputArea( const WindowTextInputArea& area ) override { (void)area; }
 
     private:
         /** @brief 지금 표면 크기 · density · 안전 여백을 읽어 크기 콜백까지 맞춥니다(회전 · 크기 변경 · 표면 복귀). */
@@ -67,6 +75,8 @@ namespace sw
         [[nodiscard]] bool queueGamepadKey( AInputEvent* pEvent );
         /** @brief 패드 · 조이스틱 장치의 축 이벤트를 칸에 실어 보냅니다. 그런 장치가 아니면 false 입니다(손가락 길로 간다). */
         [[nodiscard]] bool queueGamepadMotion( AInputEvent* pEvent );
+        /** @brief 글을 원하는 동안 키 누름이 낸 글자(JNI `KeyEvent.getUnicodeChar`)를 확정 글로 모읍니다. NDK 에는 키의 유니코드를 읽는 함수가 없다. */
+        void queueKeyText( AInputEvent* pEvent );
 
         static void  onAppCommand( android_app* pApp, int32 command );
         static int32 onInputEvent( android_app* pApp, AInputEvent* pEvent );

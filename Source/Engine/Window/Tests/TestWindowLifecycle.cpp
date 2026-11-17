@@ -28,6 +28,8 @@ namespace
 
     protected:
         void* getNativeHandle() const override { return nullptr; }
+        void  applyTextInputWanted( bool /*bWanted*/ ) override {}
+        void  applyTextInputArea( const WindowTextInputArea& /*area*/ ) override {}
     };
 } // namespace
 

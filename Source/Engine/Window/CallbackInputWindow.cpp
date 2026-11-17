@@ -9,6 +9,7 @@ namespace sw
     CallbackInputWindow::CallbackInputWindow()
         : IWindow{}
         , _listPendingInput{}
+        , _listPendingText{}
         , _safeInsets{}
         , _contentScale{ 1.0f }
     {
@@ -20,18 +21,35 @@ namespace sw
     {
         // 모은 것을 넘기는 동안 콜백이 더 넣지 못한다(같은 스레드) — 그래도 처리기가 창을 다시 부를 수 있어 사본을 돈다.
         vector<PlatformInputEvent> listInput = std::move( _listPendingInput );
+        vector<PendingText>        listText  = std::move( _listPendingText );
         _listPendingInput.clear();
-        for ( const PlatformInputEvent& input : listInput )
+        _listPendingText.clear();
+        size_t textIndex = 0;
+        for ( size_t inputIndex = 0; inputIndex <= listInput.size(); ++inputIndex )
         {
-            if ( _customHandler.isBound() == false )
-                break;
+            // 이 입력 앞에 온 글을 먼저 넘긴다(받은 차례 — 백스페이스와 글자가 한 프레임에 섞여도 순서가 맞다).
+            for ( ; textIndex < listText.size() && listText[textIndex]._inputPosition <= inputIndex; ++textIndex )
+            {
+                dispatchTextInput( listText[textIndex]._kind, listText[textIndex]._text );
+            }
+            if ( inputIndex == listInput.size() || _customHandler.isBound() == false )
+                continue;
             NativeWindowEvent windowEvent{};
             windowEvent.setNativeWindow( getSurfaceKind(), getNativeHandle() );
             windowEvent._message = NativeWindowEvent::kMessagePlatformInput;
-            windowEvent._lParam  = reinterpret_cast<intptr_t>( &input );
+            windowEvent._lParam  = reinterpret_cast<intptr_t>( &listInput[inputIndex] );
             (void)_customHandler.get()( windowEvent );
         }
         return _bShouldClose == SW_FALSE;
+    }
+
+    void CallbackInputWindow::queueTextInput( WindowTextInputKind kind, string_view text )
+    {
+        PendingText pending;
+        pending._inputPosition = _listPendingInput.size();
+        pending._kind          = kind;
+        pending._text.assign( text.data(), text.size() );
+        _listPendingText.push_back( std::move( pending ) );
     }
 
     void CallbackInputWindow::applyPlatformFocus( bool bFocused )

@@ -496,10 +496,14 @@ namespace sw
         }
         /** @brief `_arrTitle` 을 플랫폼 창의 제목 줄에 겁니다. 창이 아직 없으면 아무것도 하지 않습니다(만들 때 `_arrTitle` 로 겁니다). */
         virtual void applyTitle() {}
-        /** @brief 입력기를 켜거나 끕니다. 값이 바뀔 때만 불린다. 창을 만들 때는 플랫폼의 `initializeWindow` 가 `isTextInputWanted` 로 맞춘다. */
-        virtual void applyTextInputWanted( bool bWanted ) { (void)bWanted; }
-        /** @brief 입력기에 글 커서의 자리를 알립니다. */
-        virtual void applyTextInputArea( const WindowTextInputArea& area ) { (void)area; }
+        /**
+         * @brief 입력기를 켜거나 끕니다(모바일 · 웹은 화면 키보드). 값이 바뀔 때만 불린다. 창을 만들 때는 플랫폼의 `initializeWindow` 가 `isTextInputWanted` 로 맞춘다.
+         * @details 순수 가상이다 — 기본 구현(아무것도 안 함)이 있으면 새 플랫폼 창이 글 입력 길을 빠뜨려도 컴파일된다(웹 · Android 가 그랬다, 감사 P-4).
+         *          못 하는 플랫폼은 재정의해 그 까닭을 적는다(SDL `SDL_StartTextInput` 도 백엔드마다 구현한다).
+         */
+        virtual void applyTextInputWanted( bool bWanted ) = 0;
+        /** @brief 입력기에 글 커서의 자리를 알립니다. 순수 가상인 까닭은 `applyTextInputWanted` 와 같다 — 자리를 받는 API 가 없는 플랫폼은 재정의해 그렇다고 적는다. */
+        virtual void applyTextInputArea( const WindowTextInputArea& area ) = 0;
         /** @brief 조합 · 확정 글을 외부 처리기(`bindCustomMessageHandler`)에 넘깁니다. 플랫폼 창만 부른다. */
         void dispatchTextInput( WindowTextInputKind kind, string_view text );
 

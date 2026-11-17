@@ -6,11 +6,13 @@
  *          수명 이벤트(표면 · 앱 멈춤)도 같은 곳에서 낸다. 크기 변경은 `applyPlatformResize` 하나로 모은다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/PlatformInputEvent.h"
+#include "Engine/Window/WindowTextInput.h"
 
 namespace sw
 {
@@ -37,6 +39,12 @@ namespace sw
         /** @brief 콜백이 받은 입력 하나를 모읍니다(창 스레드 — 브라우저 메인 · ALooper 스레드). */
         void queueInput( const PlatformInputEvent& event ) { _listPendingInput.push_back( event ); }
         /**
+         * @brief 콜백이 받은 조합 · 확정 글 하나를 모읍니다(웹 숨은 글 칸의 `compositionupdate` · `input`, Android 키의 유니코드).
+         * @details `processMessages` 가 앞뒤 입력과 받은 차례대로 데스크톱 창과 같은 글 메시지(`dispatchTextInput` → `kMessageTextInput`)로 넘긴다.
+         *          글은 길이 제한 없이 담는다 — 플랫폼 입력 한 칸에 실으면 고정 크기에서 잘린다(감사 P-4).
+         */
+        void queueTextInput( WindowTextInputKind kind, string_view text );
+        /**
          * @brief 창 포커스가 바뀌었습니다. 상태(`hasFocus` — 프레임 페이싱)를 적고, 값이 바뀌었으면 입력 관리자가 받을 포커스 입력을 모읍니다.
          * @details 상태만 적으면 입력 관리자가 몰라 포커스를 잃기 전에 눌린 키가 눌린 채 남는다(감사 P-3). 그래서 콜백 창에서는 `setFocusState` 를 숨기고 이것만 연다.
          */
@@ -47,7 +55,16 @@ namespace sw
         void applyPlatformResize( uint32 width, uint32 height, float32 contentScale, const float4& safeInsets );
 
     private:
+        /** @brief 모은 글 하나와 그 글이 온 자리(그때까지 모인 입력 수)입니다. 입력 큐를 넓히지 않고 차례만 기억한다. */
+        struct PendingText
+        {
+            size_t              _inputPosition{ 0 };
+            WindowTextInputKind _kind{ WindowTextInputKind::Commit };
+            string              _text;
+        };
+
         vector<PlatformInputEvent> _listPendingInput;
+        vector<PendingText>        _listPendingText;
         float4                     _safeInsets;
         float32                    _contentScale;
     };

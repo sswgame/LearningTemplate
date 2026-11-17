@@ -22,6 +22,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/PlatformInputEvent.h"
+#include "Engine/Window/WindowTextInput.h"
 
 #if defined( SW_PLATFORM_WEB ) || defined( SW_PLATFORM_ANDROID )
     #if defined( SW_PLATFORM_ANDROID )
@@ -278,6 +279,11 @@ namespace sw
     void InputManager::processNativeEvent( const NativeWindowEvent& event )
     {
         using Internal = PlatformInputManagerInternal;
+        if ( event._message == NativeWindowEvent::kMessageTextInput && event._lParam != 0 )
+        {
+            postWindowTextInput( *reinterpret_cast<const WindowTextInputEvent*>( event._lParam ) ); // 데스크톱 창과 같은 글 길(InputManagerX11 짝)
+            return;
+        }
         if ( event._message != NativeWindowEvent::kMessagePlatformInput || event._lParam == 0 )
             return;
         const PlatformInputEvent& input = *reinterpret_cast<const PlatformInputEvent*>( event._lParam );
@@ -329,11 +335,6 @@ namespace sw
                 const RawInputEventType type = input._kind == PlatformInputKind::TouchDown ? RawInputEventType::TouchDown
                                                                                            : ( input._kind == PlatformInputKind::TouchMove ? RawInputEventType::TouchMove : RawInputEventType::TouchUp );
                 postRawEvent( RawInputEvent::makeTouch( type, input._pointerIndex, input._x, input._y ) );
-                break;
-            }
-            case PlatformInputKind::Text:
-            {
-                postRawEvent( RawInputEvent::makeTextInput( string_view( input._arrText ) ) );
                 break;
             }
             case PlatformInputKind::PointerRelative:
