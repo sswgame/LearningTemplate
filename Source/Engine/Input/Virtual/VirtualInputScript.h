@@ -21,7 +21,7 @@ namespace sw
 
         uint32        _frameIndex{ 0 };
         RawInputEvent _event{};
-        uint32        _pressFrameIndex{ kNoPress }; ///< 탭(`addTap`)의 떼기면 그 누르기의 프레임 — 누르기가 이미 나갔으면 시계를 멈춰도 떼기는 제 시간에 난다(`delayEventsFrom`)
+        uint32        _pressFrameIndex{ kNoPress }; ///< 입력 구간의 끝(`addSpanEnd` — 탭의 떼기 · 축 되돌림 · 터치 떼기)이면 그 시작 프레임 — 누르기가 이미 나갔으면 시계를 멈춰도 떼기는 제 시간에 난다(`delayEventsFrom`)
     };
 } // namespace sw
 
@@ -38,6 +38,13 @@ namespace sw
 
         /** @brief @p frameIndex 에 이벤트 하나를 더합니다. */
         void addEvent( uint32 frameIndex, const RawInputEvent& rawEvent );
+        /**
+         * @brief @p startFrameIndex 에 시작한 입력 구간(누름 · 축 · 터치)을 끝내는 이벤트를 @p frameIndex 에 더합니다.
+         * @details 구간의 시작이 이미 나갔으면 시계를 멈춰도(`delayEventsFrom`) 이 끝은 제 프레임에 난다 — 누른 길이는 실제 프레임이다.
+         */
+        void addSpanEnd( uint32 frameIndex, const RawInputEvent& rawEvent, uint32 startFrameIndex );
+        /** @brief 패드 축을 @p startFrameIndex 부터 @p holdFrameCount 프레임 동안 @p value 로 두고 0 으로 돌립니다(끝은 `addSpanEnd`). */
+        void addGamepadAxisHold( uint32 startFrameIndex, uint32 holdFrameCount, uint16 axisIndex, float32 value, uint8 padIndex = 0 );
         /**
          * @brief @p frameIndex 에 누르고 @p holdFrameCount 프레임 뒤에 뗍니다(0 이면 같은 프레임에 떼며, 그래도 한 번 눌린 것으로 인정합니다).
          * @return 슬롯의 장치 종류나 번호를 이벤트로 만들 수 없으면 false 이며, 아무것도 더하지 않습니다.

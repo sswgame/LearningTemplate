@@ -1807,6 +1807,9 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedTypesQueryDoesNotNestTheRegistr
         {
             registry.registerTypeAlias( "sw::DerivedTypesStressAlias", "sw::SampleTestActor" ); // 쓰기 잠금 + 세대 올림
             registry.registerTypeAlias( "sw::DerivedTypesStressBaseAlias", "sw::DummyBase" );   // 자손(DummyActor)의 링크 · 표를 다시 짓게 한다
+            // 쉬지 않고 쓰기 잠금을 다시 잡으면 SRW 잠금(푼 스레드가 곧바로 다시 잡는다)의 읽기 쪽이 굶어 시한을 넘긴다 — 이 테스트가 보는 것은 교착 · 사슬 끊김이지
+            // 기아가 아니다(실제 별칭 등록은 모듈 로드 때뿐이다). yield 로는 양보되지 않아(2026-11-17 측정: 쓰기 4800 회/초, 읽기 35 바퀴에서 멈춤) 잠깐 잔다.
+            sw::ThreadUtil::sleepForMilliseconds( 1 );
         }
     } );
     size_t           visitedCount = 0;

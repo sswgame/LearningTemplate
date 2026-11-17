@@ -87,8 +87,7 @@ namespace sw
         if ( makeSlotEvent( frameIndex, slot, true, pressEvent ) == false || makeSlotEvent( frameIndex + holdFrameCount, slot, false, releaseEvent ) == false )
             return false;
         addEvent( frameIndex, pressEvent );
-        const size_t releaseIndex                 = insertEvent( frameIndex + holdFrameCount, releaseEvent );
-        _listEntry[releaseIndex]._pressFrameIndex = frameIndex;
+        addSpanEnd( frameIndex + holdFrameCount, releaseEvent, frameIndex );
         return true;
     }
 
@@ -121,6 +120,18 @@ namespace sw
     void VirtualInputScript::addGamepadAxis( uint32 frameIndex, uint16 axisIndex, float32 value, uint8 padIndex )
     {
         addEvent( frameIndex, RawInputEvent::makeGamepadAxis( axisIndex, value, padIndex ) );
+    }
+
+    void VirtualInputScript::addGamepadAxisHold( uint32 startFrameIndex, uint32 holdFrameCount, uint16 axisIndex, float32 value, uint8 padIndex )
+    {
+        addEvent( startFrameIndex, RawInputEvent::makeGamepadAxis( axisIndex, value, padIndex ) );
+        addSpanEnd( startFrameIndex + holdFrameCount, RawInputEvent::makeGamepadAxis( axisIndex, 0.0f, padIndex ), startFrameIndex );
+    }
+
+    void VirtualInputScript::addSpanEnd( uint32 frameIndex, const RawInputEvent& rawEvent, uint32 startFrameIndex )
+    {
+        const size_t endIndex                 = insertEvent( frameIndex, rawEvent );
+        _listEntry[endIndex]._pressFrameIndex = startFrameIndex;
     }
 
     void VirtualInputScript::delayEventsFrom( uint32 firstFrameIndex, uint32 frameCount )

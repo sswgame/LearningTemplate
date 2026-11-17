@@ -190,7 +190,7 @@ namespace sw
             /** @brief 디지털 슬롯 하나를 @p frames 동안 누릅니다. */
             [[nodiscard]] static bool holdSlot( VirtualInputScript& script, uint32 frameIndex, const InputSlot& slot, uint32 frames )
             {
-                return script.addSlot( frameIndex, slot, true ) && script.addSlot( frameIndex + frames, slot, false );
+                return script.addTap( frameIndex, slot, frames ); // 떼기는 구간의 끝이다 — 조건 대기가 시계를 멈춰도 제 프레임에 뗀다
             }
 
             /**
@@ -221,10 +221,8 @@ namespace sw
                         const float32 stickX = bYOnly ? 0.0f : valueX;
                         const float32 stickY = bYOnly ? valueX : ( bXOnly ? 0.0f : valueY );
                         script.addGamepadConnection( first, pBinding->_deviceIndex );
-                        script.addGamepadAxis( first, axisX, stickX, pBinding->_deviceIndex );
-                        script.addGamepadAxis( first, static_cast<uint16>( axisX + 1 ), stickY, pBinding->_deviceIndex );
-                        script.addGamepadAxis( first + frames, axisX, 0.0f, pBinding->_deviceIndex );
-                        script.addGamepadAxis( first + frames, static_cast<uint16>( axisX + 1 ), 0.0f, pBinding->_deviceIndex );
+                        script.addGamepadAxisHold( first, frames, axisX, stickX, pBinding->_deviceIndex );
+                        script.addGamepadAxisHold( first, frames, static_cast<uint16>( axisX + 1 ), stickY, pBinding->_deviceIndex );
                         break;
                     }
                     case BindingKind::Vector2DComposite:
