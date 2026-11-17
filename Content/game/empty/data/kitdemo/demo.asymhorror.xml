@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ea5780d3c44840f7861fa902cde7ca21"?>
+<!--
+  장르 키트 시연 — 비대칭 공포 판 하나(maps/kit_asymmetrichorror). 발전기 둘이면 전원, 혼자 고치면 1 초, 스킬 체크 없음. 탈출문은 1 초에 열린다.
+-->
+<AsymmetricHorrorRules survivorSpeed="4" interactRange="2" generatorsRequired="2">
+	<Generator time="1" scales="1,1.5" skillCheckInterval="0" noiseRadius="60" maxRepairers="2"/>
+	<Endgame gateTime="1" collapseTime="2" slowScale="0.5" hatchRemaining="1"/>
+	<Killer id="trapper" speedRatio="1.25" lungeRange="3" hitCooldown="1" terrorRadius="32"/>
+</AsymmetricHorrorRules>
