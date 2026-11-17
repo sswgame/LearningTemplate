@@ -1412,7 +1412,7 @@ using AutomationReadinessFunction = AutomationReadiness ( * )();
 **D2. 대기는 시계가 둘이고(시한 · 정지 시한), 포기는 그 시나리오의 끝이며, 같은 실패가 되풀이되면 체인을 멈춘다.**
 에디터의 `<EditorWaitStable/>` 는 이미 이 모양이다(진행 중인 일에는 시한이 없고, 할 일이 없는데 120 프레임 넘게 움직이면 진다) — 나머지 대기에 넓힌다.
 1. **정지 시한.** `waiting( progress, … )` 의 `progress` 가 `_stallFrames`(ScenarioRun.json) 동안 그대로면 그 단계는 `WaitStalled` 로 진다. 붙잡기 네 종류(캡처 · 끝 · 시작 · 시계)가 한 구현을 쓴다. 시한(`kMaxAssetStabilityFrames` 등)은 나아가고 있는 일의 상한으로만 남는다.
-2. **벽시계 감시 값.** `SW_AUTOMATION_WALL_WATCH` 가 활동 수 함수(`uint64()` — 따르는 바깥 일이 나아가면 느는 수: 읽은 바이트 · 끝난 컴파일 · 자식 출력 길이)를 필수 인자로 받는다(25 자리). `timeoutWallSeconds` 대기는 활동 수가 `_stallWallSeconds` 동안 그대로면 `WaitStalled` 다. 프로세스 층의 정지 시한(`kProcessStallSeconds` — 로그가 안 자라면 죽인다)과 같은 생각을 단계에 둔다.
+2. **벽시계 감시 값.** `SW_AUTOMATION_WALL_WATCH` 가 활동 수 함수(`uint64()` — 따르는 바깥 일이 나아가면 느는 수: 읽은 바이트 · 끝난 컴파일 · 자식 출력 길이)를 필수 인자로 받는다(24 자리 — 10 곳이 활동 수를 내고, 사건 하나를 기다리는 14 곳은 `nullptr` 과 까닭 주석으로 시한만 본다). `timeoutWallSeconds` 대기는 활동 수가 `_stallWallSeconds` 동안 그대로면 `WaitStalled` 다. 프로세스 층의 정지 시한(`kProcessStallSeconds` — 로그가 안 자라면 죽인다)과 같은 생각을 단계에 둔다.
 3. **프레임 감시 값의 `<WaitUntil>`** 은 시한만 본다 — 0/1 값은 뒤집히기 전까지 진척이 보이지 않는다. 무인 실행은 프레임이 실시간보다 빨라 비용이 작다.
 4. **포기는 끝이다.** `<WaitUntil>` · 사진 정착 · 입력 대상 대기가 시한 · 정지 시한에 걸리면 `AutomationStepEnd::Fail` 로 시나리오를 끝낸다. 지금은 실패를 적고 다음 단계로 가서 뒤의 대기가 모두 다시 시한까지 기다린다(실패 1 — 사진마다 수천 프레임).
 5. **반복 실패 차단.** 한 체인에서 같은 실패 열쇠(종류 + 단계 종류 + 감시 값 · 조건 이름)가 `_repeatedFailureLimit`(기본 3) 번 나오면 체인을 `RepeatedFailure` 로 끝내고 남은 단계는 돌지 않은 것으로 적는다. 다시 돌 때는 `--from-stage` 로 잇는다.

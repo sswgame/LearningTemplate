@@ -101,9 +101,10 @@ namespace sw
                          &AutomationUserDataRootInternal::readIsolated );
     SW_AUTOMATION_QUERY_WATCH( userDataRoot, "UserData.Root", "The user data folder of the active game in this run (differs per run - for diagnosis, not <Record>)",
                                &AutomationUserDataRootInternal::readRoot, false, false );
+    // 활동 수 없음: 바뀜은 OS 폴더 도장(항목 수 · 마지막 쓰기 시각)이 한 번 달라지는 사건이라 그 앞에 셀 중간 진척이 없다 — 시한만 본다.
     SW_AUTOMATION_WALL_WATCH( userDataPlatformFolderChanged, "UserData.PlatformFolderChanged",
                               "1 when the person's OS user data folder of the active game changed since this run started (entry count or latest write time)",
-                              &AutomationUserDataRootInternal::readPlatformFolderChanged );
+                              &AutomationUserDataRootInternal::readPlatformFolderChanged, nullptr );
 
     string AutomationUserDataRoot::getBaseFolder()
     {

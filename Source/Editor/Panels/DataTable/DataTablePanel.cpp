@@ -74,13 +74,14 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( DataTablePanel, DataTablePanel::kPanelID, EditorPanelCategory::Tool, 1700 );
+    // 활동 수 없음(셋 다): 표는 워커의 문서 읽기 잡 하나가 다 읽은 뒤 한 번에 넘긴다 — 그 앞에 셀 진척이 없다.
     SW_AUTOMATION_WALL_WATCH( editorDataTableRecordCount, "Editor.DataTableRecordCount", "Records of the localization table the Data Table window holds (fails while it is closed or not loaded)",
-                              &DataTablePanelInternal::readRecordCount );
+                              &DataTablePanelInternal::readRecordCount, nullptr );
     SW_AUTOMATION_WALL_WATCH( editorDataTableVisibleRecordCount, "Editor.DataTableVisibleRecordCount", "Localization rows the Data Table window drew after its search in the last frame",
-                              &DataTablePanelInternal::readVisibleRecordCount );
+                              &DataTablePanelInternal::readVisibleRecordCount, nullptr );
     SW_AUTOMATION_WALL_WATCH( editorDataTableGameDataRowCount, "Editor.DataTableGameDataRowCount",
                               "Rows (elements under the root) of the game data table open in the Data Table window (fails while it is closed or no table is open)",
-                              &DataTablePanelInternal::readGameDataRowCount );
+                              &DataTablePanelInternal::readGameDataRowCount, nullptr );
 
     DataTablePanel::DataTablePanel()
         : EditorDocumentPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }

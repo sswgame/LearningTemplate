@@ -79,6 +79,13 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `Editor.AssetImportBusy` 의 활동 수 — 끝난 원본 임포트의 누적 수입니다. 기다리는 원본이 여럿이면 하나씩 끝날 때마다 오른다. */
+            [[nodiscard]] static uint64 readImportActivity( const GameObjectManager* /*pManager*/ )
+            {
+                const AssetHotReload* pHotReload = findHotReload();
+                return pHotReload != nullptr ? pHotReload->getFinishedImportCount() : 0u;
+            }
+
             /** @brief 감시 값 `Editor.AssetImportFinishedCount` — 끝난 원본 임포트의 누적 수입니다(`WaitUntil` 이 임포트가 시작돼 끝난 것을 알아본다). */
             [[nodiscard]] static bool readImportFinishedCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -785,10 +792,12 @@ namespace sw::editor
 
     // 원본 임포트는 워커에서 돈다 — 시나리오가 원본을 쓴 뒤 결과를 읽으려면 임포트가 끝난 것을 알아야 한다. `Busy` 는 0 이 될 때까지, `FinishedCount` 는 시작 값보다 커질 때까지 기다린다.
     SW_AUTOMATION_WALL_WATCH( editorAssetImportBusy, "Editor.AssetImportBusy", "1 while a changed source (model, texture, heightfield) is being imported or waits for the import",
-                              &AssetHotReloadInternal::readImportBusy );
+                              &AssetHotReloadInternal::readImportBusy, &AssetHotReloadInternal::readImportActivity );
+    // 활동 수 없음: 기다리는 값이 끝난 수 그 자체다 — 임포터는 워커에서 원본 하나를 한 번에 돌아 그 사이의 진척을 내지 않는다.
     SW_AUTOMATION_WALL_WATCH( editorAssetImportFinishedCount, "Editor.AssetImportFinishedCount", "Changed sources whose import finished (success or failure) in this editor session",
-                              &AssetHotReloadInternal::readImportFinishedCount );
+                              &AssetHotReloadInternal::readImportFinishedCount, nullptr );
     // 연쇄 리로드는 파일 감시가 부모 저장을 알린 뒤에 돈다 — 감시는 바깥 일(OS 파일 감시)이라 벽시계로 기다린다(`SW_AUTOMATION_WALL_WATCH`).
+    // 활동 수 없음: OS 파일 감시 알림 하나를 기다린다 — 알림 앞에 셀 진척이 없다.
     SW_AUTOMATION_WALL_WATCH( editorAssetCascadeReloadCount, "Editor.AssetCascadeReloadCount", "Assets reloaded because an asset they inline at load (a _base parent) changed",
-                              &AssetHotReloadInternal::readCascadeReloadCount );
+                              &AssetHotReloadInternal::readCascadeReloadCount, nullptr );
 } // namespace sw::editor

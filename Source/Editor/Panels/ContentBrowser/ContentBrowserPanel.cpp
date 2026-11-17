@@ -325,9 +325,10 @@ namespace sw::editor
     SW_EDITOR_PANEL( ContentBrowserPanel, ContentBrowserPanel::kPanelID, EditorPanelCategory::Core, 600 );
     SW_AUTOMATION_WATCH( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
                          &ContentBrowserPanelInternal::readGameRootCount );
+    // 활동 수 없음: 역색인 스캔은 워커 잡 하나(`EditorAssetIndexScanJob`)가 다 읽은 색인을 끝에 넘긴다 — 읽은 파일 수(`getScannedFileCount`)도 그때에야 보인다.
     SW_AUTOMATION_WALL_WATCH( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
                               "1 when the editor reference index reflects the last Content/ change the editor saw (built, no scan in flight)",
-                              &ContentBrowserPanelInternal::readReferenceIndexReady );
+                              &ContentBrowserPanelInternal::readReferenceIndexReady, nullptr );
     SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::readReferenceIndexReadiness );
     SW_AUTOMATION_WATCH( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
                          &ContentBrowserPanelInternal::readReferenceResultCount );

@@ -71,6 +71,7 @@ namespace sw
         const AutomationStep*            _pHeldStateStep;           ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
         uint32                           _holdFrameCount;           ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
         float64                          _holdStartSeconds;         ///< 지금 단계가 붙잡기 시작한 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`, `<WaitUntil timeoutWallSeconds>` 의 시한 기준)
+        AutomationWallStallClock         _wallStallClock;           ///< `<WaitUntil timeoutWallSeconds>` 가 기다리는 벽시계 감시 값의 활동 수가 그대로인 초(`ScenarioRun.json` 의 `_stallWallSeconds` 와 견준다)
         uint32                           _clockHoldFrameCount;      ///< 시계 잡기 조건이 이어서 붙잡은 프레임
         uint32                           _seenFrameCount;           ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
         float64                          _waitReportedSeconds;      ///< 지금 대기를 마지막으로 로그에 찍은 단조 시계 초(아직 찍지 않았으면 0 — `reportOngoingWait`)
@@ -94,6 +95,7 @@ namespace sw
             _pHeldStepState.reset();
             _pHeldStateStep = nullptr;
             _waitingFor.clear();
+            _wallStallClock.reset();
         }
         /** @brief 아직 렌더 패킷에 싣지 않은 경로 하나를 꺼냅니다. 없으면 false 입니다. */
         [[nodiscard]] optional<AbsolutePath> takePendingScreenshotPath();
@@ -293,6 +295,15 @@ namespace sw
          */
         [[nodiscard]] bool shouldHoldForCondition( const AutomationStep& step, InputManager& input );
         /**
+         * @brief 대기 정책(`_runPolicy`)을 처음 쓸 때 읽습니다(실행기마다 한 번 — 뒤에 올라온 모듈의 정착 조건도 문턱을 받는다). 없거나 틀리면 @p step 의 읽기 오류(LoadError)로 끝내고 nullptr 입니다(기본값이 없다).
+         */
+        [[nodiscard]] const AutomationRunPolicy* loadRunPolicy( const AutomationStep& step );
+        /**
+         * @brief 붙잡은 `WaitUntil` 이 벽시계 감시 값을 기다리면 그 활동 수(`AutomationWatchRegistration::_pActivityFunction`)로 정지 시한(`_stallWallSeconds`)을 겁니다.
+         * @return 계속 붙잡으면 true, 활동 수가 정지 시한 동안 그대로여서 `WaitStalled` 로 끝냈으면(또는 정책을 읽지 못했으면) false 입니다. 활동 수가 없는 감시 값은 늘 true(시한만 본다).
+         */
+        [[nodiscard]] bool holdWhileWallWatchActive( const AutomationStep& step );
+        /**
          * @brief 시계 잡기 조건(`SW_AUTOMATION_CLOCK_HOLDER`, 저장 검증 같은 백그라운드 작업)이 참이면 이 프레임을 세지 않고 true 입니다 — 시작 전이면 시작을 미룹니다.
          * @details 그 프레임은 단계를 돌리지 않고 뒤의 입력 이벤트를 한 프레임 민다(`WaitUntil` 과 같다). 벽시계로 `kClockHoldTimeoutSeconds` 를 넘기면 시간 초과로 끝낸다.
          */
@@ -380,7 +391,7 @@ namespace sw
         TaskFuture<Scene*>            _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         optional<AutomationRunResult> _runResult;              ///< 끝난 판정(도는 중이면 없다 — `isActive`). 결과 · 종류 · 까닭이 한 값이라 따로 놀지 않는다
         AutomationFrameStats          _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
-        /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착을 처음 기다릴 때 읽는다(`holdForRenderStable`) — 정착을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
+        /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착 · 활동 수가 있는 벽시계 감시 값을 처음 기다릴 때 읽는다(`loadRunPolicy`) — 둘을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
         optional<AutomationRunPolicy> _runPolicy{};
         /** @brief 이 실행 안에서 이름 붙여 기억한 글(`storeText`) — 한 시나리오에 몇 개뿐이라 선형으로 찾는다. */
         struct StoredText

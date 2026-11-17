@@ -1,5 +1,6 @@
 {
     "_stallFrames": 600,
+    "_stallWallSeconds": 60,
     "_repeatedFailureLimit": 3,
     "_conditions": {
         "RenderTemporalAccumulation": {
