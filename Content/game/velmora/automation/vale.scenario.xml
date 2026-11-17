@@ -18,50 +18,50 @@
 	<Expect watch="Session.Money" equals="0"/>
 	<!-- 동쪽 고사리숲으로 — 진입이 퀘스트 첫 단계(Enter fernwood)를 센다 -->
 	<ActionAxis name="Move" x="1" seconds="2"/>
-	<Wait seconds="2.1"/>
+	<WaitUntil watch="Velmora.PlayerX" near="12" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.Region" is="fernwood"/>
 	<Expect watch="Velmora.PlayerX" near="12" tolerance="0.2"/>
 	<!-- 봉화(20,4)에서 불을 켠다 -->
 	<ActionAxis name="Move" x="1" seconds="1.3333"/>
-	<Wait seconds="1.45"/>
+	<WaitUntil watch="Velmora.PlayerX" near="20" tolerance="0.05" timeoutSeconds="2.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<ActionAxis name="Move" y="1" seconds="0.6667"/>
-	<Wait seconds="0.8"/>
+	<WaitUntil watch="Velmora.PlayerZ" near="4" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.PlayerX" near="20" tolerance="0.2"/>
 	<Expect watch="Velmora.PlayerZ" near="4" tolerance="0.2"/>
 	<Action name="Velmora.Use"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Session.Flag" key="velmora.beacon.fernwood" atLeast="1" timeoutFrames="10"/> <!-- 봉화가 켜졌다 -->
 	<ExpectLog id="Velmora.BeaconLit" count="1"/>
 	<!-- 야영지(20,-4)에서 쉰다 — 일어설 지역이 고사리숲이 되고 자동 저장 체크포인트가 된다 -->
 	<ActionAxis name="Move" y="-1" seconds="1.3333"/>
-	<Wait seconds="1.45"/>
+	<WaitUntil watch="Velmora.PlayerZ" near="-4" tolerance="0.05" timeoutSeconds="2.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.PlayerZ" near="-4" tolerance="0.2"/>
 	<Action name="Velmora.Use"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Velmora.Respawn" is="fernwood" timeoutFrames="10"/> <!-- 야영지에서 쉬었다 -->
 	<ExpectLog id="Velmora.Rested" count="1"/>
 	<Expect watch="Velmora.Respawn" is="fernwood"/>
 	<WaitUntil watch="Autosave.LastCheckpoint" is="fernwood_camp" timeoutFrames="30"/>
 	<!-- 재의 요새로 — 들어서면 게이트가 닫히고 홀이 열린다 -->
 	<ActionAxis name="Move" y="1" seconds="0.6667"/>
-	<Wait seconds="0.8"/>
+	<WaitUntil watch="Velmora.PlayerZ" near="0" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<ActionAxis name="Move" x="1" seconds="1.75"/>
-	<Wait seconds="1.9"/>
+	<WaitUntil watch="Velmora.PlayerX" near="30.5" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.Region" is="cinderhold"/>
 	<Expect watch="Velmora.Phase" equals="1"/>
 	<Expect watch="Velmora.Alive" equals="1"/>
 	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.Phase" equals="2" timeoutFrames="60"/>
 	<ExpectLog id="Velmora.HallCleared" count="1"/>
 	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="120"/>
 	<Expect watch="Velmora.Alive" equals="1"/>
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.Phase" equals="0" timeoutFrames="60"/>
 	<ExpectLog id="Velmora.RegionCleared" count="1"/>
@@ -76,11 +76,11 @@
 	<DevCommand line="game.save velmora/vale"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
 	<ActionAxis name="Move" x="-1" seconds="1"/>
-	<Wait seconds="1.1"/>
+	<WaitUntil watch="Velmora.PlayerX" near="24.5" tolerance="0.05" timeoutSeconds="2"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.Region" is="fernwood"/>
 	<DevCommand line="game.load velmora/vale"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
-	<Wait frames="3"/>
+	<WaitUntil watch="Velmora.PlayerX" near="30.5" tolerance="0.2" timeoutFrames="10"/> <!-- 불러온 자리로 돌아왔다 -->
 	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
 	<Expect watch="Velmora.Region" is="cinderhold"/>
 	<Expect watch="Velmora.Phase" equals="0"/> <!-- 깬 지역이라 다시 들어서도 게이트가 닫히지 않는다 -->

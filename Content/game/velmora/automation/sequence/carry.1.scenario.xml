@@ -10,29 +10,28 @@
 	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
 	<Expect watch="Mods.ActiveCount" equals="0"/>
 	<ActionAxis name="Move" x="1" seconds="3.3333"/>
-	<Wait seconds="3.45"/>
+	<WaitUntil watch="Velmora.PlayerX" near="20" tolerance="0.05" timeoutSeconds="4.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<ActionAxis name="Move" y="1" seconds="0.6667"/>
-	<Wait seconds="0.8"/>
+	<WaitUntil watch="Velmora.PlayerZ" near="4" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Action name="Velmora.Use"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Session.Flag" key="velmora.beacon.fernwood" atLeast="1" timeoutFrames="10"/> <!-- 봉화가 켜졌다 -->
 	<ExpectLog id="Velmora.BeaconLit" count="1"/>
 	<ActionAxis name="Move" y="-1" seconds="0.6667"/>
-	<Wait seconds="0.8"/>
+	<WaitUntil watch="Velmora.PlayerZ" near="0" tolerance="0.05" timeoutSeconds="1.5"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<ActionAxis name="Move" x="1" seconds="1.75"/>
-	<Wait seconds="1.9"/>
+	<WaitUntil watch="Velmora.PlayerX" near="30.5" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.Phase" equals="1"/>
 	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="180"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Quest.Status" target="ember_oath" is="Completed" timeoutFrames="60"/>
 	<Expect watch="Session.Money" equals="50"/>

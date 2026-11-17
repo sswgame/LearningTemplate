@@ -14,7 +14,7 @@
 	<Expect watch="Quest.Status" target="tide_whispers" is="NotStarted"/>
 	<DevCommand line="game.load velmora/carry"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
-	<Wait frames="3"/>
+	<WaitUntil watch="Velmora.PlayerX" near="30.5" tolerance="0.2" timeoutFrames="10"/> <!-- 불러온 자리로 돌아왔다 -->
 	<!-- 기본 판이 그대로 이어진다 -->
 	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
 	<Expect watch="Quest.Status" target="ember_oath" is="Completed"/>
@@ -23,18 +23,18 @@
 	<Expect watch="Velmora.Hearts" equals="4"/>
 	<!-- 서쪽 확장 지역으로 — 들어서면 확장 퀘스트를 받고 보스가 나온다 -->
 	<ActionAxis name="Move" x="-1" seconds="7"/>
-	<Wait seconds="7.1"/>
+	<WaitUntil watch="Velmora.PlayerX" near="-11.5" tolerance="0.05" timeoutSeconds="8"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.Region" is="tidecaves"/>
 	<Expect watch="Velmora.PlayerX" near="-11.5" tolerance="0.25"/>
 	<Expect watch="Quest.Status" target="tide_whispers" is="Active"/>
 	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="120"/>
 	<Expect watch="Velmora.Alive" equals="1"/>
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
-	<Wait seconds="0.4"/>
+	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Quest.Status" target="tide_whispers" is="Completed" timeoutFrames="60"/>
 	<Expect watch="Session.Money" equals="130"/>
