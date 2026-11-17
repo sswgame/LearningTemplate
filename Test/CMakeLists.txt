@@ -158,6 +158,11 @@ add_test(NAME Scripts.AssetReferenceFieldList
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_asset_reference_field_list.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
+# 에셋 GUID 2 단계 전수 이전 도구 — AssetRef<T> 칸의 경로 글만 GUID 참조로 바꾸고 경로 글 칸 · 임포트 산출물 · 색인에 없는 경로는 바꾸지 않는다.
+add_test(NAME Scripts.MigrateAssetRefs
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_asset_refs.py")
+set_tests_properties(Scripts.MigrateAssetRefs PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")

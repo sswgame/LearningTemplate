@@ -8,7 +8,7 @@
  *          런타임 색인(`AssetRegistry`)으로 지금 경로를 푼다(유니티 직렬화 참조의 guid, Godot 4 `uid://` 와 같다. 언리얼 `FSoftObjectPath` 의 경로 + 리다이렉터를 버린 자리다).
  *          값은 경로와 GUID 를 함께 든다 — 경로를 받는 쓰는 쪽(`path` · `string_view`)은 그대로이고, 쓰기는 GUID 가 있으면 GUID 를 적는다.
  *          옮기는 동안(경로 칸 → GUID 칸 이전, docs/NEXT.md "에셋 정체성(GUID) 2 · 3 단계"): 읽기는 옛 경로 글도 받아 색인으로 GUID 를 찾아 둔다 — 다시 저장하면 GUID 로 바뀐다.
- *          저장소 전체는 `py -3 -m Scripts asset-ref-guids --fix` 가 한 번에 바꿔 쓰고, 그 뒤 경로 글 읽기를 걷는다(확장 → 이전 → 수축).
+ *          저장소 전체는 `py -3 -m Scripts migrate-asset-refs --fix` 가 한 번에 바꿔 쓰고, 그 뒤 경로 글 읽기를 걷는다(확장 → 이전 → 수축).
  *          GUID 가 없는 값(내장 이름 `Cube`, 색인에 없는 경로)은 글 그대로 쓴다. 층이 직렬화라 캐시를 모른다. 캐시로 가는 길은 `Engine/Asset/AssetRef.h` 가 잇는다.
  */
 #pragma once
