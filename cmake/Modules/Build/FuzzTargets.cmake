@@ -35,6 +35,7 @@ function(sw_add_fuzz_target FUZZ_NAME)
 	target_link_libraries(${target_name} PRIVATE ${fuzz_LINK} sw_public_source_includes sw_global_options)
 	target_link_options(${target_name} PRIVATE -fsanitize=fuzzer)
 	target_compile_definitions(${target_name} PRIVATE "SW_LOG_TAG=\"${target_name}\"" "SW_REGISTRAR_MODULE=\"${target_name}\"")
+	sw_configure_pch(${target_name} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 	set_target_properties(${target_name} PROPERTIES SW_FUZZ_TARGET TRUE FOLDER "Test/Fuzz")
 
 	set(corpus_dir "${CMAKE_BINARY_DIR}/Saved/Fuzz/${FUZZ_NAME}")
