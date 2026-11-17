@@ -74,7 +74,9 @@ namespace
  */
 SW_TEST_CASE( PhysicsScene3DTest, MissingCapacityIsLoadError )
 {
-    SW_EXPECT_LOG( "PhysicsSettings.PhysicsSettingsNeedCapacity" );
+    // 빠진 칸은 반사의 `Min = 1` 이 먼저 거절한다(0 은 범위 밖) — validate 의 용량 검사까지 가지 않는다.
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
+    SW_EXPECT_LOG( "PhysicsSettings.PhysicsSettingsTextCould" );
     PhysicsSettings settings;
     SW_EXPECT_FALSE( settings.loadFromXMLText( R"(<PhysicsSettings>
         <_listLayer><PhysicsLayerDef _name="Default"><_listCollidesWith><item>Default</item></_listCollidesWith></PhysicsLayerDef></_listLayer>
