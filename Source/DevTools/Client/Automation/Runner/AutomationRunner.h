@@ -209,6 +209,12 @@ namespace sw
         IAutomationStepState* findHeldStepState( const AutomationStep& step ) const override;
         /** @brief 붙잡은 단계 @p step 의 상태를 맡깁니다 — `holdUntilReady` 가 Run 을 돌려줄 때 · `endRun` 이 지운다. */
         IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) override;
+        /**
+         * @brief 대기(`<WaitUntil>` · 사진 정착 · `<WaitRenderStable/>` · 에디터 입력 대상 · `<EditorWaitStable/>`)가 시한 · 정지 시한에 걸렸다 — 실패를 적고 시나리오를 끝냅니다(포기는 그 시나리오의 끝이다).
+         * @details 예전에는 실패를 적고 다음 단계로 가서 뒤의 대기가 모두 다시 시한까지 기다렸다(DesignBacklog 실패 1 — 사진마다 수천 프레임).
+         * @param repeatKey 반복 실패 차단의 열쇠(`<단계 종류> <감시 값 · 조건 이름>` — `AutomationRunResult::withRepeatKey`)
+         */
+        void giveUpWait( const AutomationStep& step, AutomationFailureKind kind, string_view reason, string_view repeatKey ) override;
         /** @brief 단계가 시나리오를 끝냅니다. `Pass` · `Fail` · `Skip` 을 판정 값(통과 · 단언 실패 · 건너뜀)으로 번역해 `finish` 를 부릅니다. */
         void endScenario( AutomationStepEnd end, string_view reason ) override;
         /** @brief 워커가 낼 값의 상한 판정을 `<Pass/>` 로 미룹니다(`AutomationEvaluator::deferExpectAtMost`). */
@@ -299,12 +305,6 @@ namespace sw
         [[nodiscard]] bool holdClockForScreenshot( InputManager& input );
         /** @brief 시작 씬(`requireStartScene`)이 아직 활성이 아니면 true 입니다 — 로드를 요청하고 기다린다. 못 열면 결과를 정하고 true 입니다. */
         [[nodiscard]] bool holdForStartScene();
-        /**
-         * @brief 대기(`<WaitUntil>` · 사진 정착 · `<WaitRenderStable/>`)가 시한 · 정지 시한에 걸렸다 — 실패를 적고 시나리오를 끝냅니다(포기는 그 시나리오의 끝이다).
-         * @details 예전에는 실패를 적고 다음 단계로 가서 뒤의 대기가 모두 다시 시한까지 기다렸다(DesignBacklog 실패 1 — 사진마다 수천 프레임).
-         * @param repeatKey 반복 실패 차단의 열쇠(`<단계 종류> <감시 값 · 조건 이름>` — `AutomationRunResult::withRepeatKey`)
-         */
-        void giveUpWait( const AutomationStep& step, AutomationFailureKind kind, string_view reason, string_view repeatKey );
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 엽니다(창 길이는 벽시계 상한 `computeWallLimitSeconds` 에 든다). 아니면 아무것도 하지 않습니다. */

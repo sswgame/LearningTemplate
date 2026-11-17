@@ -21,6 +21,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/SelfTest/EditorStabilityWait.h"
 
+#include "Engine/Automation/AutomationResult.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -112,7 +113,7 @@ namespace sw::editor
             /**
              * @brief 레이블에 포인터를 두고(`EditorSelfTestInput::hoverMark`) 그 점이 레이블에 닿지 않으면 실패로 알리고 true 를 반환합니다. 누르기 · 호버 전에 부른다.
              * @details 잘림 검사는 창 밖으로 잘린 것만 잡았다 — 씬 뷰 하단 툴바(같은 창의 자식 오버레이)가 기즈모를 덮어 끌기가 툴바를 눌렀는데 단계는 성공했다(editor.gizmotoplevel).
-             *          아직 판정이 없으면(조준 붙잡기가 시한을 넘겼다) 누르지 않는다 — 옛 좌표로 누르면 엉뚱한 것을 누른다.
+             *          아직 판정이 없으면 누르지 않는다(조준 붙잡기는 시한에 시나리오를 끝내므로 지키는 줄이다) — 옛 좌표로 누르면 엉뚱한 것을 누른다.
              */
             static bool reportUnreachableMark( AutomationStepContext& runner, const AutomationStep& step, const string& mark, const float2& anchor )
             {
@@ -130,8 +131,26 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 입력 단계가 대상이 자리 잡기를 기다리는 최대 프레임 수입니다. 넘기면 단계가 돌며 실패를 적는다. */
+            /** @brief 입력 단계가 대상이 자리 잡기를 기다리는 최대 프레임 수입니다. 넘기면 시나리오가 `WaitTimeout` 으로 끝난다(`holdInputTarget`). */
             static constexpr uint32 kStabilityWaitFrames = 60;
+
+            /**
+             * @brief 입력 단계의 대상 대기 한 프레임입니다 — 아직이면 붙잡고, `kStabilityWaitFrames` 를 다 기다리면 `WaitTimeout` 으로 시나리오를 끝냅니다(Skip — 단계는 돌지 않는다).
+             * @details 예전에는 시한에 실패를 적고 단계를 돌려(옛 좌표로 누르거나 글자를 버렸다) 다음 단계로 갔고, 뒤의 입력 단계가 저마다 다시 시한까지 기다렸다(DesignBacklog D2-4).
+             *          진척을 낼 수 없는 프레임 대기라 시한만 본다(D2-3). 시한(60)이 정지 시한(`_stallFrames`)보다 짧아 진척을 세도 먼저 닿는 것은 시한이다.
+             * @param target 반복 실패 차단의 열쇠 꼬리(레이블 이름 · 받을 곳) — 열쇠는 `<단계 종류> <target>` 이다
+             */
+            static AutomationStepHold holdInputTarget( AutomationStepContext& runner, const AutomationStep& step, InputManager& input, bool bReady, const string& waitingFor,
+                                                       string_view target )
+            {
+                const AutomationStepHold hold = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames, waitingFor );
+                if ( hold != AutomationStepHold::Run || bReady )
+                    return hold;
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "gave up after %# frame(s) waiting for %#", kStabilityWaitFrames, waitingFor.c_str() );
+                runner.giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), string( step._kind ) + " " + string( target ) );
+                return AutomationStepHold::Skip;
+            }
 
             /** @brief 레이블 @p pMark 가 그려졌는지 · 자리 잡았는지 봅니다. 잘려 있으면 그 창을 스크롤해 보이게 하고 자리 잡지 않은 것으로 센다. nullptr(적지 않은 칸)는 둘 다 참입니다. */
             static void checkMark( const string* pMark, bool& inoutDrawn, bool& inoutStable )
@@ -157,7 +176,7 @@ namespace sw::editor
              * @brief 단계가 누를 레이블(`mark` · `toMark`)이 두 프레임 연속 같은 자리에 그려지고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kStabilityWaitFrames`).
              * @details 레이블은 직전 프레임에 그려져야 하고, 창이 열리거나 도킹 · 팝업이 자리를 잡는 중이면 움직인다. 예전에는 그려지기만 보아 시나리오가 입력 앞에 고정 대기(10 프레임 이상)를
              *          두었고(약 260 곳), 부하가 걸린 기계에서는 그것도 모자랐다. 언리얼 Automation Driver 의 "보일 때까지" · Playwright 의 actionability("stable") 확인과 같다.
-             *          기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다. 다 기다려도 그려졌는데 움직이면 실패로 적는다(그려지지 않았으면 단계가 "no editor widget" 을 적는다).
+             *          기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다. 다 기다려도 그려지지 않았거나 움직이면 시나리오가 `WaitTimeout` 으로 끝난다(`holdInputTarget`).
              *          기록을 쓰는 단계가 직접 다시 켠다. 백엔드 교체 · 모듈 리로드가 에디터 컨텍스트를 새로 만들면 새 저장소는 꺼져 있고, 시나리오 준비는 한 번뿐이라 다시 오지 않는다.
              */
             static AutomationStepHold holdUntilMarkStable( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
@@ -171,17 +190,9 @@ namespace sw::editor
                 bool bStable = true;
                 checkMark( pMark, bDrawn, bStable );
                 checkMark( step.findAttribute( "toMark" ), bDrawn, bStable );
-                const bool               bReady = bStable && EditorSelfTestInput::hasPendingEvents() == false;
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames,
-                                                                         "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ) );
-                if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
-                {
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "editor widget '%#' did not settle (same rect two frames in a row, no pending input) within %# frame(s)", pMark->c_str(),
-                                              kStabilityWaitFrames );
-                    runner.recordFailure( step, textBuilder.view() );
-                }
-                return hold;
+                const bool bReady = bStable && EditorSelfTestInput::hasPendingEvents() == false;
+                return holdInputTarget( runner, step, input, bReady,
+                                        "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ), *pMark );
             }
 
             /**
@@ -205,18 +216,11 @@ namespace sw::editor
                 checkMark( step.findAttribute( "toMark" ), bDrawn, bStable );
                 const bool bInputFlushed = EditorSelfTestInput::hasPendingEvents() == false;
                 // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 입구가 프레임마다 붙잡는다. 단계가 놓는다.
-                string                   coverName;
-                const EditorMarkHit      hit    = EditorSelfTestInput::hoverMark( params._mark, params._anchor, coverName );
-                const bool               bReady = bStable && bInputFlushed && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames,
-                                                                         "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
-                if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
-                {
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "editor widget '%#' did not settle under the pointer within %# frame(s)", params._mark, kStabilityWaitFrames );
-                    runner.recordFailure( step, textBuilder.view() );
-                }
-                return hold;
+                string              coverName;
+                const EditorMarkHit hit    = EditorSelfTestInput::hoverMark( params._mark, params._anchor, coverName );
+                const bool          bReady = bStable && bInputFlushed && hit != EditorMarkHit::Pending && hit != EditorMarkHit::Missing;
+                return holdInputTarget( runner, step, input, bReady,
+                                        "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ), params._mark );
             }
 
             /** @brief `EditorWaitStable` 가 붙잡은 동안의 상태입니다(`EditorStabilityWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
@@ -255,19 +259,12 @@ namespace sw::editor
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false || isRelease( step ) )
                     return AutomationStepHold::Run;
-                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetStable();
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames, "the keyboard focus to settle (no pending input)" );
-                if ( hold == AutomationStepHold::Run && bReady == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "the keyboard focus did not settle within %# frame(s)", kStabilityWaitFrames );
-                    runner.recordFailure( step, textBuilder.view() );
-                }
-                return hold;
+                const bool bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetStable();
+                return holdInputTarget( runner, step, input, bReady, "the keyboard focus to settle (no pending input)", "KeyboardFocus" );
             }
 
             /**
-             * @brief 글 단계는 글을 받을 칸이 활성일 때까지 시나리오 시계를 붙잡습니다. 칸이 끝내 없으면 실패입니다.
+             * @brief 글 단계는 글을 받을 칸이 활성일 때까지 시나리오 시계를 붙잡습니다. 칸이 끝내 없으면 시나리오가 `WaitTimeout` 으로 끝납니다.
              * @details ImGui 는 활성 입력 칸이 없는 프레임의 글자를 버린다. 앞 단계(핀 놓기 · 우클릭)가 연 팝업은 입력이 끝난 뒤 몇 프레임 지나서야 열려,
              *          기다리지 않으면 글자가 조용히 사라지고 다음 Enter 가 거르지 않은 맨 위 줄을 고른다. Playwright 의 "입력 가능할 때까지" 와 같은 자리다.
              */
@@ -275,15 +272,8 @@ namespace sw::editor
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run;
-                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetStable() && ImGui::GetIO().WantTextInput;
-                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kStabilityWaitFrames, "a text field to take the keyboard focus (no pending input)" );
-                if ( hold == AutomationStepHold::Run && bReady == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "no text field took the keyboard focus within %# frame(s) - the text would be lost", kStabilityWaitFrames );
-                    runner.recordFailure( step, textBuilder.view() );
-                }
-                return hold;
+                const bool bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetStable() && ImGui::GetIO().WantTextInput;
+                return holdInputTarget( runner, step, input, bReady, "a text field to take the keyboard focus (no pending input - the text would be lost)", "TextField" );
             }
 
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */

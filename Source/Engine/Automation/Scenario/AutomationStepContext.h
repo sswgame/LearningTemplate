@@ -2,7 +2,7 @@
  * @file AutomationStepContext.h
  * @brief 시나리오 단계 함수가 실행기에서 쓰는 것만 담은 좁은 문맥 인터페이스를 정의합니다.
  * @details 단계를 등록하는 쪽(UI · GameFramework · Editor · App)은 이 헤더만 봅니다. 로그 게이트 · 보고 · 종료 코드(`AutomationRunner.h`)를 끌어오지 않는다.
- *          단계가 시나리오를 끝낼 때도 종료 코드(`AutomationResult`)가 아니라 단계 쪽 말(`AutomationStepEnd`)로 말한다 — 어떤 코드로 번역할지는 실행기가 정한다.
+ *          단계가 시나리오를 끝낼 때도 종료 코드(`AutomationResult`)가 아니라 단계 쪽 말(`AutomationStepEnd` · 대기 포기의 실패 종류 `AutomationFailureKind`)로 말한다 — 어떤 코드로 번역할지는 실행기가 정한다.
  *          실행기(`AutomationRunner`)가 구현하고, 테스트는 가짜 문맥으로 단계 함수를 실행기 없이 부를 수 있다.
  */
 #pragma once
@@ -14,6 +14,7 @@
 namespace sw
 {
     enum class AutomationStepHold : uint8;
+    enum class AutomationFailureKind : uint8;
 
     struct AutomationStep;
 
@@ -68,6 +69,12 @@ namespace sw
         virtual IAutomationStepState* findHeldStepState( const AutomationStep& step ) const = 0;
         /** @brief 붙잡고 있는 단계 @p step 의 상태를 맡깁니다(앞 것은 지운다). 그 단계가 놓이거나 실행이 끝나면 실행기가 지운다. 맡긴 상태를 돌려줍니다. */
         virtual IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) = 0;
+        /**
+         * @brief 대기가 시한(`WaitTimeout`) · 정지 시한(`WaitStalled`)에 걸렸다 — 실패를 적고 시나리오를 끝냅니다(포기는 그 시나리오의 끝이다). 부른 붙잡기 함수는 Skip 을 돌려준다.
+         * @details 실패를 적고 다음 단계로 가면 뒤의 대기가 모두 다시 시한까지 기다린다(DesignBacklog 실패 1). 단계가 붙잡기를 포기하는 길은 이것 하나다.
+         * @param repeatKey 반복 실패 차단의 열쇠(`<단계 종류> <대상 · 조건 이름>` — 같은 열쇠가 체인에서 되풀이되면 체인을 멈춘다)
+         */
+        virtual void giveUpWait( const AutomationStep& step, AutomationFailureKind kind, string_view reason, string_view repeatKey ) = 0;
         /** @brief 시나리오를 바로 끝냅니다. 이미 끝났으면 무시합니다. */
         virtual void endScenario( AutomationStepEnd end, string_view reason ) = 0;
         /**
