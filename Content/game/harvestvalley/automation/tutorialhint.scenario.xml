@@ -13,7 +13,7 @@
 	<WaitUntil watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="1" timeoutFrames="90"/>
 	<Release slot="Key.D"/>
 	<!-- 같은 자리에 머물러도 다시 띄우지 않는다 -->
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 반 초 동안 다시 띄우지 않는지 본다(시간이 내용) -->
 	<Expect watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="1"/>
 	<Pass/>
 </Scenario>

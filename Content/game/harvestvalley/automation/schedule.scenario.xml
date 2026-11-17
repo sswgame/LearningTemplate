@@ -12,19 +12,16 @@
 	<WaitUntil watch="Object.Exists" target="Villager.pierre" equals="1" timeoutFrames="60"/>
 	<!-- 0 일은 맑음으로 고정한다 — 비는 판 상태 날씨(farm.weather.xml)가 씨앗으로 고르고, 비 오는 날은 pierre 의 저녁이 집(rain_indoors)이다 -->
 	<DevCommand line="cheat.weather sunny 200000"/>
-	<Wait frames="1"/>
-	<Expect watch="Farm.Raining" equals="0"/>
+	<WaitUntil watch="Farm.Raining" equals="0" timeoutFrames="10"/> <!-- 날씨 명령이 들었다 -->
 	<Expect watch="Clock.Day" equals="0"/>
 	<Expect watch="Schedule.Activity" target="pierre" is="Sleep"/>
 	<Expect watch="Schedule.Activity" target="harvey" is="Sleep"/>
 	<Expect watch="Object.X" target="Villager.pierre" near="22" tolerance="0.05"/>
 	<Expect watch="Object.Z" target="Villager.pierre" near="2" tolerance="0.05"/>
 	<!-- 10 시로 감는다 — pierre 는 가게에서 일하고 harvey 는 병원에 있다. 일정은 다음 틱에 고른다. -->
-	<Wait frames="1"/>
 	<AdvanceGameTime toHour="10"/>
-	<Wait frames="1"/>
+	<WaitUntil watch="Schedule.Activity" target="pierre" is="WorkAt" timeoutFrames="10"/> <!-- 일정이 감은 시각을 받았다 -->
 	<Expect watch="Clock.Hour" near="10" tolerance="0.05"/>
-	<Expect watch="Schedule.Activity" target="pierre" is="WorkAt"/>
 	<Expect watch="Schedule.Phase" target="pierre" is="Performing"/>
 	<Expect watch="Schedule.DistanceToPlace" target="pierre" key="general_store" atMost="1"/>
 	<Expect watch="Schedule.Activity" target="harvey" is="WorkAt"/>
@@ -34,12 +31,10 @@
 	<Expect watch="Object.Z" target="Villager.pierre" near="6" tolerance="1"/>
 	<!-- 16 시 — harvey 는 강가로 갔다(낮에만 가는 블록). pierre 는 아직 가게. -->
 	<AdvanceGameTime toHour="16"/>
-	<Wait frames="1"/>
-	<Expect watch="Schedule.Activity" target="harvey" is="GoTo"/>
+	<WaitUntil watch="Schedule.Activity" target="harvey" is="GoTo" timeoutFrames="10"/> <!-- 일정이 감은 시각을 받았다 -->
 	<Expect watch="Schedule.DistanceToPlace" target="harvey" key="river" atMost="3"/>
 	<Expect watch="Schedule.Activity" target="pierre" is="WorkAt"/>
 	<!-- 16:54 로 감고 시간이 흐르게 둔다(실제 1 초 = 게임 10 분) — 17:00 에 pierre 가 가게를 나서 광장 벤치로 간다. 3 초 안에 벤치에 닿아야 한다. -->
-	<Wait frames="1"/>
 	<AdvanceGameTime toHour="16.9"/>
 	<WaitUntil watch="Schedule.Activity" target="pierre" is="UseObject" timeoutSeconds="2"/>
 	<WaitUntil watch="Schedule.DistanceToTarget" target="pierre" atMost="0.05" timeoutSeconds="3"/>

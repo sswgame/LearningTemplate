@@ -12,14 +12,12 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/surfaceinteraction.scene.xml"/>
 	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 8 0.05 2.8"/>
 	<Wait frames="30"/>
 	<Expect watch="Zone.Sources" target="Walker" is="None"/>
 	<Expect watch="Surface.GroundKind" target="Walker" is="Sand"/>
 	<Expect watch="Surface.MoveScale" target="Walker" near="0.85" tolerance="0.01"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 8 0.05 0"/>
 	<Wait frames="90"/>
 	<Expect watch="Zone.Sources" target="Walker" is="volume:Quicksand"/>
@@ -32,7 +30,6 @@
 	<Expect watch="Surface.DeformDepth" key="8 0" atLeast="0.05"/>
 	<Expect watch="Surface.DeformDepth" key="8 0.6" atMost="-0.02"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="character.jump Walker 4"/>
 	<WaitUntil watch="Zone.EscapeCount" target="Walker" equals="1" timeoutSeconds="1"/>
 	<Wait frames="60"/>
@@ -40,7 +37,6 @@
 	<WaitUntil watch="Zone.EscapeCount" target="Walker" equals="2" timeoutSeconds="1"/>
 	<Expect watch="Ability.Attribute" target="Walker" key="SinkDepth" atMost="0.3"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker -3 0.05 0"/>
 	<Wait frames="30"/>
 	<Expect watch="Zone.Sources" target="Walker" is="None"/>
@@ -48,7 +44,6 @@
 	<Expect watch="Ability.Attribute" target="Walker" key="SinkDepth" equals="0"/>
 	<Expect watch="Zone.SinkVisual" target="Walker" equals="0"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 8 0.05 0"/>
 	<WaitUntil watch="Ability.HasTag" target="Walker" key="State.Engulfed" equals="1" timeoutSeconds="8"/>
 	<Expect watch="Ability.StackCount" target="Walker" key="GE_Sink" equals="9"/>
