@@ -23,6 +23,7 @@ namespace sw
 {
     class GPUMeshMorphPool;
     class GPUVertexAnimationPool;
+    class IRHICommandList;
     class IRHIDevice;
     class Mesh;
 
@@ -156,6 +157,10 @@ namespace sw
          *        인스턴스 버퍼와 메인 뷰 간접 인자가 모두 있으면 true 를 반환합니다.
          */
         bool upload( IRHIDevice* pDevice );
+        /**
+         * @brief 프레임 업로드 단계 — 정점 풀이 쌓은 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록합니다(R-15). 실행기가 파이프라인과 무관하게 첫 리스트 앞에서 부른다(`FramePassExecutor::submitGraph`).
+         */
+        void recordFrameUploads( IRHICommandList& cmd, IRHIDevice& device );
         /** @brief GPU 버퍼를 해제합니다. */
         void releaseGPU( IRHIDevice* pDevice );
 

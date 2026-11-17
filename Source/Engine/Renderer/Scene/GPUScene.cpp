@@ -203,6 +203,15 @@ namespace sw
                     _listScratchPoolMesh.push_back( batch._mesh.get() );
                 }
             }
+            // 풀 메시도 렌더 프록시 정점 버퍼를 가진다 — 풀이 CPU 정점 대신 그 버퍼에서 GPU 복사로 채운다(R-15). 동적 메시(프레임마다 새 메시)는 프록시 없이
+            // CPU 정점을 스테이징으로 올린다(프레임마다 버퍼를 만들지 않는다). 업로드 큐가 넘기기 전에 만드는 메시는 여기서 만들지 않는다(만드는 쪽은 하나다).
+            const bool bCreatedBeforeHandoff = _snapshot._bMeshesCreatedBeforeHandoff == SW_TRUE;
+            for ( Mesh* pMesh : _listScratchPoolMesh )
+            {
+                const bool bNeedsProxy = pMesh != nullptr && pMesh->isDynamic() == false && bCreatedBeforeHandoff == false && pMesh->getRenderData().isRHIValid() == false;
+                if ( bNeedsProxy )
+                    (void)pMesh->getRenderData().initRHI( pDevice ); // 실패하면 풀이 CPU 정점으로 채운다(그쪽이 오류를 남긴다)
+            }
             // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 · 인덱스 버퍼(시작 0)로 돌아간다.
             for ( GPUMeshVertexPool& pool : _arrVertexPool ) // 각 풀이 자기 형식의 메시만 담는다
             {
@@ -258,6 +267,14 @@ namespace sw
                 gpu._indexBuffer     = batch._mesh->getRenderData().getIndexBuffer();
                 gpu._indexStride     = batch._mesh->getRenderData().getIndexStride();
             }
+        }
+    }
+
+    void GPUScene::recordFrameUploads( IRHICommandList& cmd, IRHIDevice& device )
+    {
+        for ( GPUMeshVertexPool& pool : _arrVertexPool )
+        {
+            pool.recordPendingCopies( cmd, device );
         }
     }
 
