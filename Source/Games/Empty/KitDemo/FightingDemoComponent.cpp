@@ -1,0 +1,138 @@
+#include "pch.h"
+
+#include "Games/Empty/KitDemo/FightingDemoComponent.h"
+
+#include "Core/Encoding/FourCCUtil.h"
+
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/StateIO.h"
+
+#include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct FightingDemoComponentInternal
+        {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDFG" );
+            static constexpr uint32 kStateVersion = 1;
+
+            // 캐릭터 카탈로그는 에셋 종류의 접미사가 없어(캐시 전용 종류) AssetRef 로 가리킬 수 없다 — 키트 테스트처럼 글로 읽고 프레임 데이터만 파일에서 받는다.
+            // 체력 10 이라 하단(피해 10) 한 방에 쓰러진다. 버튼 이름 1, 2, 3, 4 가 비트 0 .. 3 이다.
+            static constexpr const utf8* kFighterXML  = R"(<FighterCatalog buttons="1,2,3,4">
+  <Fighter id="basic" name="Basic" health="10" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="low" command="3"/></Fighter>
+</FighterCatalog>)";
+            static constexpr const utf8* kFighterID   = "basic";
+            static constexpr uint16      kLowButton   = 1 << 2; ///< 버튼 "3"
+            static constexpr int32       kRoundsToWin = 1;      ///< 한 라운드로 대전이 끝난다
+            static constexpr int32       kHitFrames   = 2;      ///< 누른 뒤 첫 지속 프레임(발생 3)까지 더 돌리는 프레임
+            static constexpr int32       kAttacker    = 0;
+            static constexpr int32       kDefender    = 1;
+            static constexpr int32       kNoWinner    = -1;
+        };
+    } // namespace
+
+    SW_AUTOMATION_GETTER_WATCH( kitDemoFightingState, "KitDemo.Fighting.State", "Fighting demo state (0 not started, 1 match run finished)", FightingDemoComponent,
+                                &FightingDemoComponent::getDemoState );
+    SW_AUTOMATION_GETTER_WATCH( kitDemoFightingWinner, "KitDemo.Fighting.MatchWinner", "Match winner (0, 1, 2 draw, -1 not over)", FightingDemoComponent,
+                                &FightingDemoComponent::getMatchWinner );
+    SW_AUTOMATION_GETTER_WATCH( kitDemoFightingLoserHealth, "KitDemo.Fighting.LoserHealth", "Health of the knocked out player", FightingDemoComponent,
+                                &FightingDemoComponent::getLoserHealth );
+    SW_AUTOMATION_GETTER_WATCH( kitDemoFightingRounds, "KitDemo.Fighting.WinnerRounds", "Rounds won by player 0", FightingDemoComponent,
+                                &FightingDemoComponent::getWinnerRounds );
+
+    FightingDemoComponent::FightingDemoComponent()
+        : _catalogPath{}
+        , _pCatalog{}
+        , _demoState{ 0 }
+        , _matchWinner{ FightingDemoComponentInternal::kNoWinner }
+        , _loserHealth{ 0 }
+        , _winnerRounds{ 0 }
+    {
+    }
+
+    FightingDemoComponent::~FightingDemoComponent() = default;
+
+    bool FightingDemoComponent::runMatch()
+    {
+        FighterCatalog fighters;
+        if ( fighters.loadFromXMLText( FightingDemoComponentInternal::kFighterXML, *_pCatalog, "KitDemo.Fighting" ) == false )
+        {
+            SW_LOG_ERROR_ID( "KitDemo.FightingFightersFailed", "Fighting demo: the fighter roster did not read against the move catalog - the match does not open" );
+            return false;
+        }
+        const FighterDef* pFighter = fighters.find( hashed_string( FightingDemoComponentInternal::kFighterID ) );
+        if ( pFighter == nullptr )
+            return false;
+        FightingSettings settings;
+        settings._roundsToWin = FightingDemoComponentInternal::kRoundsToWin;
+        FightingMatch match;
+        if ( match.initialize( *pFighter, *pFighter, settings ) == false )
+            return false;
+        // 중립 한 프레임 뒤에 눌러야 "새로 누름" 으로 읽힌다. 하단은 서 있는 상대가 막지 못한다.
+        const InputFrame neutral{};
+        match.advanceFrame( neutral, neutral );
+        InputFrame press{};
+        press._buttons = FightingDemoComponentInternal::kLowButton;
+        match.advanceFrame( press, neutral );
+        for ( int32 frame = 0; frame < FightingDemoComponentInternal::kHitFrames; ++frame )
+        {
+            match.advanceFrame( neutral, neutral );
+        }
+        _matchWinner  = match.getMatchWinner();
+        _loserHealth  = match.getFighter( FightingDemoComponentInternal::kDefender )._health;
+        _winnerRounds = match.getRoundWins( FightingDemoComponentInternal::kAttacker );
+        _demoState    = 1;
+        return true;
+    }
+
+    bool FightingDemoComponent::startGame()
+    {
+        if ( acquireRequired( _catalogPath, _pCatalog ) == false )
+            return false;
+        return runMatch();
+    }
+
+    void FightingDemoComponent::onGameStarted()
+    {
+        SW_LOG_INFO_ID( "KitDemo.FightingDone", "[KitDemo] fighting: player %# won the match, loser health %#, %# rounds", _matchWinner, _loserHealth, _winnerRounds );
+    }
+
+    void FightingDemoComponent::updateGame( float32 deltaTime )
+    {
+        // 한 바퀴는 판을 열 때 끝났다 — 틱마다 돌릴 규칙이 없다.
+        (void)deltaTime;
+    }
+
+    void FightingDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    {
+        // 모습이 없어 세울 오브젝트가 없다.
+        (void)manager;
+        (void)bRespawnViews;
+    }
+
+    void FightingDemoComponent::serializeState( StateIO& io )
+    {
+        io.header( FightingDemoComponentInternal::kStateTag, FightingDemoComponentInternal::kStateVersion );
+        if ( io.isOk() == false )
+            return;
+        int32 demoState    = _demoState;
+        int32 matchWinner  = _matchWinner;
+        int32 loserHealth  = _loserHealth;
+        int32 winnerRounds = _winnerRounds;
+        io.value( demoState );
+        io.value( matchWinner );
+        io.value( loserHealth );
+        io.value( winnerRounds );
+        io.end();
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _demoState    = demoState;
+        _matchWinner  = matchWinner;
+        _loserHealth  = loserHealth;
+        _winnerRounds = winnerRounds;
+    }
+} // namespace sw
