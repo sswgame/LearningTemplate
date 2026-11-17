@@ -357,6 +357,8 @@ namespace sw
         void applyMixer( shared_ptr<AudioMixer> pMixer );
         /** @brief 블록 하나를 렌더해 `_blockOutput`(평면)에 둡니다. */
         void renderBlock();
+        /** @brief 뺏긴 보이스를 줄이는 프레임 수입니다(믹서의 `_voiceStealFadeSeconds`). 믹서가 없으면 0 이다. */
+        uint32 computeStealFadeFrames() const;
         /** @brief 재생 id 나 에미터의 보이스를 멈춥니다. @p fadeSeconds 가 음수면 이벤트의 값을 씁니다. */
         void stopVoices( AudioPlayingID playingID, AudioEmitterID emitterID, float32 fadeSeconds );
         /** @brief 클립을 기다리는 슬롯에 클립이 도착했으면 시작합니다. 디코드에 실패한 클립의 슬롯은 반환합니다. */

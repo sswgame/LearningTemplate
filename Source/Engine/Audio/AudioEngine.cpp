@@ -84,7 +84,7 @@ namespace sw
             ScopedLock<mutex> lock{ _libraryMutex };
             _pGameMixerDesc = std::move( pGameMixerDesc );
         }
-        _voicePool.reset( mixerDesc._maxVoiceCount );
+        _voicePool.reset( mixerDesc._maxVoiceCount, mixerDesc._maxStealFadeVoiceCount );
         _listInstance.clear();
         _listInstance.resize( mixerDesc._maxVoiceCount );
         _blockOutput.allocate( layout );
@@ -174,7 +174,7 @@ namespace sw
         }
         if ( _voicePool.getCount() < _pMixer->getDesc()._maxVoiceCount )
         {
-            _voicePool.growTo( _pMixer->getDesc()._maxVoiceCount );
+            _voicePool.growTo( _pMixer->getDesc()._maxVoiceCount, _pMixer->getDesc()._maxStealFadeVoiceCount );
             _listInstance.resize( _pMixer->getDesc()._maxVoiceCount );
         }
         rebuildAttenuationTable();
@@ -709,7 +709,7 @@ namespace sw
         const optional<uint32> busIndex = resolveBusIndex( command._name );
         if ( busIndex.has_value() == false )
             return;
-        AudioVoiceSlot* pSlot = _voicePool.allocate( command._clipParams._priority );
+        AudioVoiceSlot* pSlot = _voicePool.allocate( command._clipParams._priority, computeStealFadeFrames() );
         if ( pSlot == nullptr )
             return; // 더 낮은 우선순위도 없다 — 버린 수는 게시 상태로 나간다(오디오 스레드는 로그를 남기지 않는다)
         pSlot->_playingID        = command._playingID;
@@ -901,7 +901,7 @@ namespace sw
         const optional<uint32> busIndex = resolveBusIndex( request._bus );
         if ( busIndex.has_value() == false )
             return false;
-        AudioVoiceSlot* pSlot = _voicePool.allocate( kMusicVoicePriority );
+        AudioVoiceSlot* pSlot = _voicePool.allocate( kMusicVoicePriority, computeStealFadeFrames() );
         if ( pSlot == nullptr )
             return false;
         pSlot->_playingID       = request._playingID;
@@ -1181,11 +1181,16 @@ namespace sw
             if ( slot._bVirtual )
             {
                 slot._voice.advanceVirtual( audio::kBlockFrameCount );
+                slot._bMixedLastBlock = false;
                 ++virtualCount;
             }
             else
             {
+                // 예산에서 밀린 보이스는 이번 블록에 0 으로 줄여 섞고 다음 블록에 가상이 된다(`AudioVoicePool::selectRealVoices`).
+                if ( slot._bSilenceThisBlock )
+                    slot._voice.silenceTarget();
                 slot._voice.mix( mixer.getBusInput( slot._busIndex ) );
+                slot._bMixedLastBlock = slot._bSilenceThisBlock == false;
                 ++realCount;
             }
             if ( slot._voice.isFinished() )
@@ -1208,6 +1213,13 @@ namespace sw
 
         _renderedFrameCount += audio::kBlockFrameCount;
         publishState( realCount, virtualCount );
+    }
+
+    uint32 AudioEngine::computeStealFadeFrames() const
+    {
+        if ( _pMixer == nullptr )
+            return 0;
+        return static_cast<uint32>( _pMixer->getDesc()._voiceStealFadeSeconds * static_cast<float32>( audio::kSampleRate ) );
     }
 
     void AudioEngine::sweepRemovedEmitters()
@@ -1245,6 +1257,7 @@ namespace sw
         stats._droppedEventCount      = _droppedEventCount;
         stats._stolenVoiceCount       = _voicePool.getStolenCount();
         stats._droppedVoiceCount      = _voicePool.getDroppedCount();
+        stats._hardStolenVoiceCount   = _voicePool.getHardStolenCount();
         if ( _pMixer != nullptr )
         {
             stats._maxVoiceCount     = _pMixer->getDesc()._maxVoiceCount;
@@ -1587,7 +1600,7 @@ namespace sw
         for ( uint32 pickIndex = 0; pickIndex < pickCount; ++pickIndex )
         {
             const AudioClipEntry& clip  = event._listClip[firstClip + pickIndex];
-            AudioVoiceSlot*       pSlot = _voicePool.allocate( event._priority );
+            AudioVoiceSlot*       pSlot = _voicePool.allocate( event._priority, computeStealFadeFrames() );
             if ( pSlot == nullptr )
                 break; // 더 낮은 우선순위도 없다 — 버린 수는 게시 상태로 나간다
             pSlot->_playingID        = command._playingID;

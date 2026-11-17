@@ -32,7 +32,8 @@ namespace sw
         uint64 _playedEventCount{ 0 };        ///< 지금까지 낸 이벤트 수다. 인스턴스를 만든 이벤트만 센다.
         uint64 _droppedEventCount{ 0 };       ///< 쿨다운, 상한(Reject), 슬롯 부족으로 버린 이벤트 수다.
         uint64 _stolenVoiceCount{ 0 };        ///< 풀이 차서 더 높은 우선순위의 새 보이스에 자리를 내준 보이스 수다(`AudioVoicePool::allocate`).
-        uint64 _droppedVoiceCount{ 0 };       ///< 풀이 차고 더 낮은 우선순위도 없어 버린 새 보이스 수다.
+        uint64 _droppedVoiceCount{ 0 };       ///< 풀이 차고 더 낮은 우선순위도 없어 버린 새 보이스 수다(음악 레이어 포함).
+        uint64 _hardStolenVoiceCount{ 0 };    ///< 뺏은 들리는 보이스 가운데 여분 슬롯이 없어 페이드 없이 끊은 수다(0 이 아니면 믹서의 `_maxStealFadeVoiceCount` 를 늘린다).
         uint32 _maxVoiceCount{ 0 };           ///< 믹서 그래프의 보이스 상한(실제 + 가상)이다. 그래프가 없으면 0 이다.
         uint32 _maxRealVoiceCount{ 0 };       ///< 믹서 그래프의 실제 보이스 상한이다. 넘는 보이스는 가상이 된다.
         uint64 _droppedSubtitleCueCount{ 0 }; ///< 게임 스레드가 가져가지 않아 상한(`AudioPublishedState::kMaxSubtitleCueCount`)을 넘겨 버린 자막 신호 수다.

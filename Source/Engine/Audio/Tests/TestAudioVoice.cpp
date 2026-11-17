@@ -655,11 +655,11 @@ SW_TEST_CASE( AudioVoiceTest, StreamedVoiceEndsAtTheLastFrame )
 SW_TEST_CASE( AudioVoiceTest, HighPriorityStealsWhenPoolIsFull )
 {
     AudioVoicePool pool;
-    pool.reset( 3 );
+    pool.reset( 3, 0 ); // 여분 슬롯이 없으면 뺏긴 보이스는 바로 놓인다
     const int32 arrPriority[] = { 10, 10, 50 };
     for ( uint32 index = 0; index < 3; ++index )
     {
-        AudioVoiceSlot* pSlot = pool.allocate( arrPriority[index] );
+        AudioVoiceSlot* pSlot = pool.allocate( arrPriority[index], 0 );
         SW_REQUIRE_NOT_NULL( pSlot );
         pSlot->_priority   = arrPriority[index];
         pSlot->_playingID  = index + 1;
@@ -667,10 +667,10 @@ SW_TEST_CASE( AudioVoiceTest, HighPriorityStealsWhenPoolIsFull )
     }
     pool.begin()[1]._bVirtual = true; // 둘째(우선순위 10)는 들리지 않는다
 
-    SW_EXPECT_NULL( pool.allocate( 10 ) ); // 같은 우선순위는 뺏지 못한다
+    SW_EXPECT_NULL( pool.allocate( 10, 0 ) ); // 같은 우선순위는 뺏지 못한다
     SW_EXPECT_EQUAL( uint64{ 1 }, pool.getDroppedCount() );
 
-    AudioVoiceSlot* pStolen = pool.allocate( 80 );
+    AudioVoiceSlot* pStolen = pool.allocate( 80, 0 );
     SW_REQUIRE_NOT_NULL( pStolen );
     SW_EXPECT_TRUE( pStolen == pool.begin() + 1 ); // 가장 낮은 우선순위 중 가상 보이스
     SW_EXPECT_TRUE( pStolen->_bInUse );
@@ -678,4 +678,91 @@ SW_TEST_CASE( AudioVoiceTest, HighPriorityStealsWhenPoolIsFull )
     SW_EXPECT_EQUAL( uint64{ 1 }, pool.getStolenCount() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pool.begin()[0]._playingID ) ); // 다른 보이스는 그대로다
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pool.begin()[2]._playingID ) );
+}
+
+/**
+ * @brief [AudioVoiceTest] 들리게 섞이던 보이스를 뺏으면 그 보이스는 자기 슬롯에서 페이드아웃하고(멈춤 예약) 새 보이스는 여분 슬롯을 받는다 — 바로 끊으면 파형이 잘려 클릭이 났다(감사 S-10).
+ *        줄어드는 보이스는 다시 뺏지 않고 산 보이스 수에 세지 않는다. 여분이 없으면 바로 끊고 그 수를 센다.
+ */
+SW_TEST_CASE( AudioVoiceTest, StolenAudibleVoiceFadesOutInItsSlot )
+{
+    using Util                   = AudioVoiceTestUtil;
+    constexpr uint32 kFadeFrames = 480;
+    AudioVoicePool   pool;
+    pool.reset( 2, 1 );
+    for ( uint32 index = 0; index < 2; ++index )
+    {
+        AudioVoiceSlot* pSlot = pool.allocate( 10, kFadeFrames );
+        SW_REQUIRE_NOT_NULL( pSlot );
+        pSlot->_priority        = 10;
+        pSlot->_playingID       = index + 1;
+        pSlot->_bMixedLastBlock = true; // 지난 블록에 들렸다
+        pSlot->_voice.start( Util::makeConstantStereo( 4800, 0.5f ), true, 0, false, 0 );
+    }
+
+    AudioVoiceSlot* pNew = pool.allocate( 80, kFadeFrames );
+    SW_REQUIRE_NOT_NULL( pNew );
+    SW_EXPECT_TRUE( pNew == pool.begin() + 2 );     // 여분 슬롯
+    const AudioVoiceSlot& stolen = pool.begin()[1]; // 같은 우선순위 안에서 나중에 낸 쪽
+    SW_EXPECT_TRUE( stolen._bStolen );
+    SW_EXPECT_TRUE( stolen._bInUse );
+    SW_EXPECT_NEAR( 0.0f, stolen._voice.getFadeTarget(), 0.0f ); // 0 으로 줄이고 멈춘다
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( stolen._playingID ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, pool.getHardStolenCount() );
+
+    // 줄어드는 보이스는 다시 뺏지 않는다 — 남은 산 보이스(1)를 뺏는데 여분이 없어 바로 끊는다.
+    AudioVoiceSlot* pSecond = pool.allocate( 90, kFadeFrames );
+    SW_REQUIRE_NOT_NULL( pSecond );
+    SW_EXPECT_TRUE( pSecond == pool.begin() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pool.getHardStolenCount() );
+    SW_EXPECT_EQUAL( uint64{ 2 }, pool.getStolenCount() );
+}
+
+/**
+ * @brief [AudioVoiceTest] 실제 보이스 예산에서 밀린, 지난 블록에 들리던 보이스는 바로 가상이 되지 않고 한 블록 0 으로 줄여 섞인 뒤 가상이 된다 — 바로 빼면 클릭이 났다(감사 S-10).
+ *        가상인 동안 위치는 이어 가고, 다시 예산에 들면 0 에서 오른다(`ReturningFromVirtualRampsFromZero`).
+ */
+SW_TEST_CASE( AudioVoiceTest, BudgetDemotionSilencesOneBlockFirst )
+{
+    AudioVoicePool pool;
+    pool.reset( 2, 0 );
+    for ( uint32 index = 0; index < 2; ++index )
+    {
+        AudioVoiceSlot* pSlot = pool.allocate( 50, 0 );
+        SW_REQUIRE_NOT_NULL( pSlot );
+        pSlot->_priority        = index == 0 ? 80 : 10;
+        pSlot->_playingID       = index + 1;
+        pSlot->_audibility      = 1.0f;
+        pSlot->_bMixedLastBlock = true;
+    }
+    AudioVoiceSlot& loser = pool.begin()[1];
+
+    pool.selectRealVoices( 0.001f, 1 );
+    SW_EXPECT_FALSE( loser._bVirtual );
+    SW_EXPECT_TRUE( loser._bSilenceThisBlock );
+    SW_EXPECT_FALSE( pool.begin()[0]._bSilenceThisBlock );
+
+    loser._bMixedLastBlock = false; // 엔진이 0 으로 줄여 섞은 뒤 적는 값
+    pool.selectRealVoices( 0.001f, 1 );
+    SW_EXPECT_TRUE( loser._bVirtual );
+    SW_EXPECT_FALSE( loser._bSilenceThisBlock );
+}
+
+/** @brief [AudioVoiceTest] 목표 게인을 0 으로 두면 한 블록 동안 지금 게인에서 0 으로 줄고(클릭 없음) 페이드 상태는 그대로다 */
+SW_TEST_CASE( AudioVoiceTest, SilencedTargetRampsToZeroAcrossTheBlock )
+{
+    using Util = AudioVoiceTestUtil;
+    AudioVoice       voice;
+    AudioBlockBuffer buffer;
+    buffer.allocate( AudioChannelLayout::Stereo );
+    voice.start( Util::makeConstantStereo( audio::kBlockFrameCount * 4, 1.0f ), false, 0, false, 0 );
+    Util::mixCenter( voice, buffer ); // 게인이 1 로 섰다
+    voice.silenceTarget();
+    buffer.clear( audio::kBlockFrameCount );
+    voice.mix( buffer.makeView( audio::kBlockFrameCount ) );
+    const float32* pLeft = Util::getLeft( buffer );
+    SW_EXPECT_TRUE( pLeft[0] > 0.5f );                             // 블록 처음은 아직 크다
+    SW_EXPECT_TRUE( pLeft[audio::kBlockFrameCount - 1] < 0.05f );  // 끝에서 0 에 닿는다
+    SW_EXPECT_NEAR( 1.0f, voice.getFadeGain(), Util::kTolerance ); // 페이드 상태는 그대로다
+    SW_EXPECT_FALSE( voice.isFinished() );
 }

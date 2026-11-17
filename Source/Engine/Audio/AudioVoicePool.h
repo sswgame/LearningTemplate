@@ -43,11 +43,14 @@ namespace sw
         float32          _musicGain{ 1.0f };                               ///< 파라미터로 페이드하는 레이어 게인이다.
         uint64           _startFrame{ 0 };                                 ///< 음악에서 소리가 시작할 렌더 프레임이다. 클립이 늦게 와도 박을 지킨다.
         AudioVirtualMode _virtualMode{ AudioVirtualMode::Virtualize };
-        bool             _bLoop{ SW_FALSE };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bInUse{ false };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bWaitingForClip{ false }; ///< 클립 디코드를 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bPausedRequest{ false };  ///< 클립을 기다리는 동안 들어온 일시정지 요청이다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bVirtual{ false };        ///< 이번 블록에 섞지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bLoop{ SW_FALSE };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bInUse{ false };            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bWaitingForClip{ false };   ///< 클립 디코드를 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bPausedRequest{ false };    ///< 클립을 기다리는 동안 들어온 일시정지 요청이다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bStolen{ false };           ///< 새 보이스에 자리를 내주고 페이드아웃 중이다(다시 뺏지 않고, 끝나면 놓인다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bMixedLastBlock{ false };   ///< 지난 블록에 들리게 섞었다(예산에서 밀리면 한 블록 줄인 뒤 가상이 된다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bSilenceThisBlock{ false }; ///< 이번 블록은 목표 게인 0 으로 섞어 줄인다(가상이 되기 직전 — 클릭 없음) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bVirtual{ false };          ///< 이번 블록에 섞지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**
@@ -57,10 +60,13 @@ namespace sw
     class SW_API AudioVoicePool
     {
     public:
-        /** @brief 슬롯을 모두 버리고 @p count 개의 빈 슬롯으로 둡니다. */
-        void reset( uint32 count );
-        /** @brief 슬롯을 @p count 개까지 늘립니다(줄이지 않는다 — 살아 있는 보이스가 있다). */
-        void growTo( uint32 count );
+        /**
+         * @brief 슬롯을 모두 버리고 보이스 @p count 개와 뺏겨 줄어드는 보이스 @p spareCount 개의 빈 슬롯으로 둡니다.
+         * @details 뺏긴 들리는 보이스는 자기 슬롯에서 짧게 페이드아웃하고(클릭 없음), 새 보이스는 여분 슬롯을 받는다. 여분이 없으면 뺏긴 보이스는 바로 끊긴다.
+         */
+        void reset( uint32 count, uint32 spareCount );
+        /** @brief 슬롯을 늘립니다(줄이지 않는다 — 살아 있는 보이스가 있다). */
+        void growTo( uint32 count, uint32 spareCount );
         void clear() { _listSlot.clear(); }
 
         /**
@@ -69,7 +75,7 @@ namespace sw
          * @details 풀이 차면 우선순위와 상관없이 새 소리를 버렸다 — 총소리가 발소리 때문에 빠졌다(감사 S-10). 언리얼 `MaxConcurrentStreams` 의 낮은 우선순위 뺏기 ·
          *          유니티 `AudioSource.priority`(낮은 쪽이 먼저 빠진다)와 같은 규칙이다. 오디오 스레드는 로그를 남기지 않는다 — 수는 게시 상태(`AudioEngineStats`)로 나간다.
          */
-        AudioVoiceSlot* allocate( int32 priority );
+        AudioVoiceSlot* allocate( int32 priority, uint32 stealFadeFrames );
         /** @brief 슬롯을 돌려줍니다. */
         static void free( AudioVoiceSlot& slot );
 
@@ -82,6 +88,8 @@ namespace sw
         uint32 getCount() const { return static_cast<uint32>( _listSlot.size() ); }
         /** @brief 지금까지 새 보이스에 자리를 주려고 뺏은 보이스 수입니다. */
         uint64 getStolenCount() const { return _stolenCount; }
+        /** @brief 뺏은 보이스 가운데 여분 슬롯이 없어 페이드 없이 바로 끊은 수입니다(클릭 가능 — 0 이 아니면 믹서의 `_maxStealFadeVoiceCount` 를 늘린다). */
+        uint64 getHardStolenCount() const { return _hardStolenCount; }
         /** @brief 지금까지 자리가 없어(빈 슬롯도, 더 낮은 우선순위도 없어) 버린 새 보이스 수입니다. */
         uint64                getDroppedCount() const { return _droppedCount; }
         AudioVoiceSlot*       begin() { return _listSlot.data(); }
@@ -91,8 +99,10 @@ namespace sw
 
     private:
         vector<AudioVoiceSlot> _listSlot;
-        vector<uint32>         _listOrder; ///< 고르기의 작업 목록(블록마다 다시 쓴다)
+        vector<uint32>         _listOrder;         ///< 고르기의 작업 목록(블록마다 다시 쓴다)
+        uint32                 _liveCapacity{ 0 }; ///< 동시에 살아 있을 수 있는 보이스 수(뺏겨 줄어드는 보이스는 세지 않는다)
         uint64                 _stolenCount{ 0 };
+        uint64                 _hardStolenCount{ 0 };
         uint64                 _droppedCount{ 0 };
     };
 } // namespace sw
