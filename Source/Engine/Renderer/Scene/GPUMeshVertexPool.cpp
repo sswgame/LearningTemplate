@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
