@@ -25,15 +25,15 @@ SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "old" ) );
     sw::AtomicFileWriter writer;
     SW_REQUIRE_TRUE( writer.open( path ).has_value() );
-    const sw::uint8 arrHeader[4]{ 0, 0, 0, 0 };
-    const sw::uint8 arrBody[3]{ 'a', 'b', 'c' };
+    const uint8 arrHeader[4]{ 0, 0, 0, 0 };
+    const uint8 arrBody[3]{ 'a', 'b', 'c' };
     SW_REQUIRE_TRUE( writer.append( arrHeader, sizeof( arrHeader ) ).has_value() );
     SW_REQUIRE_TRUE( writer.append( arrBody, sizeof( arrBody ) ).has_value() );
     SW_REQUIRE_TRUE( writer.append( arrBody, sizeof( arrBody ) ).has_value() );
-    const sw::uint8 arrPatched[4]{ 'H', 'E', 'A', 'D' };
+    const uint8 arrPatched[4]{ 'H', 'E', 'A', 'D' };
     SW_REQUIRE_TRUE( writer.writeAt( 0, arrPatched, sizeof( arrPatched ) ).has_value() );
     SW_EXPECT_FALSE( writer.writeAt( 8, arrPatched, sizeof( arrPatched ) ).has_value() ); // 쓴 끝(10)을 넘는다
-    SW_EXPECT_EQUAL( writer.getSize(), static_cast<sw::uint64>( 10 ) );
+    SW_EXPECT_EQUAL( writer.getSize(), static_cast<uint64>( 10 ) );
     SW_REQUIRE_TRUE( writer.commit().has_value() );
 
     sw::string text;
@@ -50,7 +50,7 @@ SW_TEST_CASE( AtomicFileWriterTest, AbandonedWriteLeavesTheOriginal )
     {
         sw::AtomicFileWriter writer;
         SW_REQUIRE_TRUE( writer.open( path ).has_value() );
-        const sw::uint8 arrBody[3]{ 'x', 'y', 'z' };
+        const uint8 arrBody[3]{ 'x', 'y', 'z' };
         SW_REQUIRE_TRUE( writer.append( arrBody, sizeof( arrBody ) ).has_value() );
     }
     sw::string text;
