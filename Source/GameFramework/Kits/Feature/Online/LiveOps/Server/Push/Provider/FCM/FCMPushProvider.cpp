@@ -6,6 +6,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
@@ -18,6 +19,26 @@ namespace sw
         struct FCMPushProviderInternal
         {
             static constexpr int64 kQuotaMinimumRetryMs = constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+
+            /** @brief FCM v1 오류 몸의 `error.details[].errorCode`(`FcmError`)입니다. 없거나 JSON 이 아니면 빈 글이다 — 몸의 아무 자리의 글자를 찾지 않는다. */
+            static string findErrorCode( string_view body )
+            {
+                if ( body.empty() )
+                    return string{};
+                JSONDocument document;
+                if ( document.parse( body, "fcm.error" ) == false )
+                    return string{};
+                const JSONValue listDetail = document.getRoot().get( "error" ).get( "details" );
+                if ( listDetail.isArray() == false )
+                    return string{};
+                for ( size_t index = 0; index < listDetail.size(); ++index )
+                {
+                    const JSONValue detail = listDetail.at( index );
+                    if ( detail.has( "errorCode" ) )
+                        return detail.get( "errorCode" ).asString();
+                }
+                return string{};
+            }
         };
     } // namespace
 } // namespace sw
@@ -124,7 +145,8 @@ namespace sw
             return PushDeliveryStatus::Transient;
         if ( 200 <= statusCode && statusCode <= 299 )
             return PushDeliveryStatus::Delivered;
-        if ( statusCode == HTTPConstant::kStatusNotFound || body.find( "UNREGISTERED" ) != string_view::npos )
+        // 기기를 지우는 것은 FCM 이 토큰이 죽었다고 밝힌 때(`errorCode == "UNREGISTERED"`)뿐이다 — 404 만으로 지우면 끝점 · 프로젝트 설정이 틀린 한 번에 등록이 모두 지워진다(감사 O-15).
+        if ( FCMPushProviderInternal::findErrorCode( body ) == "UNREGISTERED" )
             return PushDeliveryStatus::InvalidToken;
         if ( statusCode == HTTPConstant::kStatusTooManyRequests )
             return PushDeliveryStatus::RateLimited;
