@@ -52,7 +52,7 @@ namespace sw
         const utf8*                getSubsystemName() const override { return kSubsystemName; }
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
-        /** @brief 요청을 넣습니다. 아직 꺼내지 않은 앞 요청은 이 요청으로 바뀝니다. */
+        /** @brief 요청을 넣습니다. 아직 꺼내지 않은 앞 요청은 이 요청으로 바뀝니다. 빈 경로는 오류로 남기고 받지 않습니다(빈 칸이 "요청 없음" 이다). */
         void put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
         /** @brief 넣어 둔 요청을 꺼냅니다(꺼낸 칸은 빈다). 요청이 없으면 false 입니다. */
         [[nodiscard]] bool take( ScreenshotRequest& outRequest );
