@@ -4,9 +4,11 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -43,8 +45,8 @@ namespace sw
             static constexpr float32 kUnitScaleTolerance = 1.0e-4f;
             /// 백만 픽셀 단위 예산을 픽셀 수로 바꾸는 비율입니다.
             static constexpr float64 kPixelsPerMegapixel = 1.0e6;
-            /// 보임을 측정하는 화면의 최대 수입니다(주 시점 + 화면 사각형 뷰).
-            static constexpr uint32 kMaxVisibilityView = kMaxExtraRenderView + 1;
+            /// 보임을 측정하는 화면 수의 구조 상한입니다(주 시점 + 화면 사각형 뷰 — 실제 수는 자리 수 + 1).
+            static constexpr uint32 kMaxVisibilityView = kExtraRenderViewCapacity + 1;
 
             /**
              * @brief 카메라 하나의 뷰 설정입니다 — 출력 설정, 후처리 값, 피사계 심도 렌즈 값, 컷 표시(읽고 지운다).
@@ -166,6 +168,14 @@ namespace sw
         return ( width > 0.0f && height > 0.0f ) ? width / height : ( 16.0f / 9.0f );
     }
 
+    uint32 RenderViewCollector::getMaxExtraViewCount()
+    {
+        const uint32 count = engine::getSubsystem<EngineConfig>()._render._maxExtraViewCount;
+        if ( isValidMaxExtraViewCount( count ) == false )
+            SW_FATAL( "EngineConfig _render._maxExtraViewCount %# is missing or out of range (1..%#)", count, kExtraRenderViewCapacity );
+        return count;
+    }
+
     RenderViewBudget RenderViewCollector::getDefaultBudget()
     {
         RenderViewBudget budget;
@@ -176,11 +186,11 @@ namespace sw
     }
 
     RenderViewCollectResult RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
-                                                                    const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget,
+                                                                    const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, uint32 maxExtraViewCount, const RenderViewBudget& budget,
                                                                     RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
     {
         outListView.clear();
-        // 후보는 자리 수(`kMaxExtraRenderView`)와 무관하게 모두 모은다 — 자리는 스케줄러가 보이는 것 · 늦은 것 먼저 준다(등록 순서로 자르지 않는다).
+        // 후보는 자리 수(@p maxExtraViewCount)와 무관하게 모두 모은다 — 자리는 스케줄러가 보이는 것 · 늦은 것 먼저 준다(등록 순서로 자르지 않는다).
         vector<RenderViewScheduler::Candidate> listCandidate;
         vector<const CameraRenderOutput*>      listCameraOutput;
         for ( CameraComponent* pCamera : manager.getCameraRegistry().getAll() )
@@ -239,13 +249,14 @@ namespace sw
         const uint32 candidateCount = static_cast<uint32>( listCandidate.size() );
 
         // 보임은 사람이 보는 화면 전부에서 측정한다 — 주 시점과 화면 사각형 뷰(분할 화면의 다른 칸에 모니터가 보일 수 있다). 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
-        LODView arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
-        uint32  visibilityViewCount              = 0;
+        LODView      arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
+        const uint32 visibilityViewLimit         = MathUtil::min( maxExtraViewCount, kExtraRenderViewCapacity ) + 1;
+        uint32       visibilityViewCount         = 0;
         arrVisibilityView[visibilityViewCount++] = LODView::make( mainViewProj, mainPosition );
         for ( const RenderViewRequest& request : outListView )
         {
-            // shortcut: 화면 사각형 뷰가 자리 수보다 많으면 넘친 칸은 보는 쪽으로 세지 않는다 — 분할 화면이 여덟 칸을 넘으면 늘린다.
-            if ( request._outputKind == RenderViewOutputKind::ScreenRect && visibilityViewCount < RenderViewCollectorInternal::kMaxVisibilityView )
+            // shortcut: 화면 사각형 뷰가 자리 수보다 많으면 넘친 칸은 보는 쪽으로 세지 않는다 — 분할 화면이 자리 수를 넘으면 Config 를 늘린다.
+            if ( request._outputKind == RenderViewOutputKind::ScreenRect && visibilityViewCount < visibilityViewLimit )
                 arrVisibilityView[visibilityViewCount++] = LODView::make( request._viewProj, request._position );
         }
         uint32 hiddenViewCount = 0;
@@ -262,7 +273,7 @@ namespace sw
 
         vector<uint8> listListed( candidateCount, SW_FALSE );
         vector<uint8> listRender( candidateCount, SW_FALSE );
-        (void)scheduler.schedule( now, listCandidate.data(), candidateCount, kMaxExtraRenderView, budget, listListed.data(), listRender.data() );
+        (void)scheduler.schedule( now, listCandidate.data(), candidateCount, maxExtraViewCount, budget, listListed.data(), listRender.data() );
         // 자리를 얻지 못한 뷰는 목록에서 뺀다(렌더러는 자리 수만큼만 뷰 자원을 둔다). 남은 순서는 등록 순서 그대로다.
         RenderViewCollectResult result;
         result._hiddenCount = hiddenViewCount;
@@ -283,7 +294,7 @@ namespace sw
         return result;
     }
 
-    void RenderViewCollector::appendViewportView( CameraComponent& camera, const ViewportTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView )
+    void RenderViewCollector::appendViewportView( CameraComponent& camera, const ViewportTarget& target, RenderViewMode viewMode, uint32 maxExtraViewCount, vector<RenderViewRequest>& inoutListView )
     {
         if ( target.isValid() == false )
             return;
@@ -302,7 +313,7 @@ namespace sw
         request._position             = camera.getCameraPosition();
         request._transparentSortAxis  = engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( camera.isOrthographic(), camera.getCameraForward() );
         request._bRender              = SW_TRUE;
-        if ( inoutListView.size() >= kMaxExtraRenderView )
+        if ( inoutListView.size() >= maxExtraViewCount )
             inoutListView.back() = request;
         else
             inoutListView.push_back( request );

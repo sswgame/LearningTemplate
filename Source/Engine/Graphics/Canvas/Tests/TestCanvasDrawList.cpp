@@ -271,7 +271,7 @@ SW_TEST_CASE( CanvasDrawListTest, GlyphQuadUsesAtlasRect )
 {
     sw::test::FakeFontRasterizer rasterizer;
     const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
-    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
     const float32                rasterPixelSize = static_cast<float32>( cache.getRasterParams()._pixelSize );
 
     sw::CanvasDrawList   list{};
@@ -292,7 +292,7 @@ SW_TEST_CASE( CanvasDrawListTest, GlyphQuadUsesAtlasRect )
 
     const sw::CachedGlyph* pGlyph = cache.getOrCreateGlyph( face, 'A', 1 )._pGlyph;
     SW_REQUIRE_NOT_NULL( pGlyph );
-    const float32 page = static_cast<float32>( sw::GlyphAtlas::kPageSize );
+    const float32 page = static_cast<float32>( sw::test::kTestGlyphAtlasLayout._pageSize );
     SW_EXPECT_NEAR( static_cast<float32>( pGlyph->_rect._x ) / page, quad._uvRect._x, 1e-6f );
     SW_EXPECT_NEAR( static_cast<float32>( pGlyph->_rect._y + pGlyph->_rect._height ) / page, quad._uvRect._w, 1e-6f );
     SW_REQUIRE_EQUAL( size_t{ 1 }, list._listBatch.size() );
@@ -306,7 +306,7 @@ SW_TEST_CASE( CanvasDrawListTest, DeferredGlyphIsCountedNotDrawn )
 {
     sw::test::FakeFontRasterizer rasterizer;
     const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
-    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
     cache.setRasterBudgetNanoseconds( 1 ); // 프레임의 첫 새 글리프가 예산을 채운다
 
     sw::CanvasDrawList   list{};

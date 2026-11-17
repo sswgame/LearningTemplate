@@ -531,7 +531,8 @@ namespace sw
         {
             glGenVertexArrays( 1, &_vao ); // 빈 VAO — 정점 입력이 없는 셰이더의 드로우
 
-            glGenVertexArrays( 1, &_meshVao ); // 속성은 드로우마다 PSO 의 형식 표대로 켠다(bindVertexInputsForDraw)
+            glGenVertexArrays( 1, &_meshVao ); // 속성은 드로우 때 PSO 의 형식 표대로 켠다 — 사본과 다른 칸만(bindVertexInputsForDraw)
+            _meshVaoAttribShadow.reset();
 
             GLuint defaultTex{ 0 };
             glGenTextures( 1, &defaultTex );
@@ -781,6 +782,7 @@ namespace sw
         if ( _meshVao )
         {
             glDeleteVertexArrays( 1, &_meshVao );
+            _meshVaoAttribShadow.reset();
             _meshVao = 0;
         }
         _gpuBuffers.forEach( []( uint32& name )
@@ -855,6 +857,7 @@ namespace sw
         if ( _meshVao != 0 )
         {
             glDeleteVertexArrays( 1, &_meshVao );
+            _meshVaoAttribShadow.reset();
             _meshVao = 0;
         }
         if ( _defaultSampler != 0 )

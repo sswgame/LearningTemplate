@@ -710,20 +710,27 @@ namespace sw
             return false;
         // 정점 속성은 **공용 표**(PSO 의 메시 정점 형식 — constant::render::getMeshVertexAttributes)에서 건다. DX11 · DX12 · Vulkan 과 같은 표다.
         // VAO 상태는 드로우 사이에 남으므로 PSO 가 읽지 않는 슬롯의 속성은 꺼 둔다 — 켜 둔 채 버퍼가 없으면 코어 프로파일에서 드로우가 거부된다.
+        // 사본(_meshVaoAttribShadow)과 같은 칸은 건너뛴다 — 언리얼 OpenGLDrv 의 속성 사본과 같다(R-16, 예전에는 드로우마다 여섯 칸을 모두 다시 걸었다).
         glBindVertexArray( _pDevice->_meshVao );
+        OpenGLVertexAttribShadow&       shadow          = _pDevice->_meshVaoAttribShadow;
         const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( input._format );
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {
             const RHIVertexAttribute& attribute = pAttributeTable[attributeIndex];
-            if ( arrBuffer[attribute._inputSlot] == 0 )
+            const GLuint              glBuffer  = arrBuffer[attribute._inputSlot];
+            if ( glBuffer == 0 )
             {
-                glDisableVertexAttribArray( attribute._location );
+                if ( shadow.update( attributeIndex, OpenGLVertexAttribShadow::Entry::makeDisabled() ) )
+                    glDisableVertexAttribArray( attribute._location );
                 continue;
             }
-            const RHIBufferBinding& binding = _pState->_geometry._arrVertexSlot[attribute._inputSlot];
-            const GLsizei           stride  = static_cast<GLsizei>( binding._stride );
-            const void* const       pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( binding._offset + attribute._byteOffset ) );
-            glBindBuffer( GL_ARRAY_BUFFER, arrBuffer[attribute._inputSlot] );
+            const RHIBufferBinding&               binding = _pState->_geometry._arrVertexSlot[attribute._inputSlot];
+            const OpenGLVertexAttribShadow::Entry desired{ glBuffer, binding._stride, binding._offset + attribute._byteOffset, attribute._format, attribute._bPerInstance, SW_TRUE };
+            if ( shadow.update( attributeIndex, desired ) == false )
+                continue;
+            const GLsizei     stride  = static_cast<GLsizei>( desired._stride );
+            const void* const pOffset = reinterpret_cast<const void*>( static_cast<uintptr_t>( desired._offset ) );
+            glBindBuffer( GL_ARRAY_BUFFER, glBuffer );
             glEnableVertexAttribArray( attribute._location );
             switch ( attribute._format )
             {

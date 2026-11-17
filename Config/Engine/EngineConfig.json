@@ -38,6 +38,7 @@
         "_shadowCascadeSplitLambda": 0.75,
         "_shadowLocalDepthBiasTexels": 1.5,
         "_taaHistoryWeight": 0.9,
+        "_maxExtraViewCount": 8,
         "_textureStreaming": {
             "_uploadsPerFrame": 8,
             "_upgradesPerFrame": 2,

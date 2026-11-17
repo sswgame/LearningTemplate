@@ -2,25 +2,29 @@
 
 #include "Engine/Text/GlyphAtlas.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
 {
-    GlyphAtlas::GlyphAtlas( GlyphFieldKind kind )
+    GlyphAtlas::GlyphAtlas( GlyphFieldKind kind, const GlyphAtlasLayout& layout )
         : _listPage{}
+        , _layout{ layout }
         , _kind{ kind }
         , _generation{ 0 }
         , _uploadSequence{ 0 }
         , _bFullUploadRequested{ false }
     {
+        if ( layout.isValid() == false )
+            SW_FATAL( "Glyph atlas layout out of range (page size %#, max page count %#)", layout._pageSize, layout._maxPageCount );
     }
 
     void GlyphAtlas::addPage()
     {
         Page page{};
-        page._bytes.assign( static_cast<size_t>( kPageSize ) * kPageSize * getBytesPerTexel(), static_cast<uint8>( 0 ) ); // 0 = 가장 먼 바깥(모든 채널)
-        page._listSkyline.push_back( SkylineNode{ 0, 0, static_cast<uint16>( kPageSize ) } );
+        page._bytes.assign( static_cast<size_t>( _layout._pageSize ) * _layout._pageSize * getBytesPerTexel(), static_cast<uint8>( 0 ) ); // 0 = 가장 먼 바깥(모든 채널)
+        page._listSkyline.push_back( SkylineNode{ 0, 0, static_cast<uint16>( _layout._pageSize ) } );
         page._bWholePageDirty = SW_TRUE;
         _listPage.push_back( std::move( page ) );
     }
@@ -29,19 +33,19 @@ namespace sw
     {
         const uint32 paddedWidth  = width + kPadding * 2;
         const uint32 paddedHeight = height + kPadding * 2;
-        if ( paddedWidth > kPageSize || paddedHeight > kPageSize )
+        if ( paddedWidth > _layout._pageSize || paddedHeight > _layout._pageSize )
             return false;
         for ( uint32 pageIndex = 0; pageIndex <= static_cast<uint32>( _listPage.size() ); ++pageIndex )
         {
             if ( pageIndex == _listPage.size() )
             {
-                if ( _listPage.size() >= kMaxPageCount )
+                if ( _listPage.size() >= _layout._maxPageCount )
                     return false;
                 addPage();
             }
             uint16 x = 0;
             uint16 y = 0;
-            if ( allocateInPage( _listPage[pageIndex], paddedWidth, paddedHeight, x, y ) )
+            if ( allocateInPage( _listPage[pageIndex], _layout._pageSize, paddedWidth, paddedHeight, x, y ) )
             {
                 outRect._page   = static_cast<uint16>( pageIndex );
                 outRect._x      = static_cast<uint16>( x + kPadding );
@@ -54,10 +58,10 @@ namespace sw
         return false;
     }
 
-    bool GlyphAtlas::findFitHeight( const Page& page, size_t nodeIndex, uint32 width, uint32 height, uint32& outY )
+    bool GlyphAtlas::findFitHeight( const Page& page, uint32 pageSize, size_t nodeIndex, uint32 width, uint32 height, uint32& outY )
     {
         const SkylineNode& first = page._listSkyline[nodeIndex];
-        if ( static_cast<uint32>( first._x ) + width > kPageSize )
+        if ( static_cast<uint32>( first._x ) + width > pageSize )
             return false;
         uint32 widthLeft = width;
         uint32 y         = first._y;
@@ -68,7 +72,7 @@ namespace sw
                 return false;
             const SkylineNode& node = page._listSkyline[index];
             y                       = MathUtil::max( y, static_cast<uint32>( node._y ) );
-            if ( y + height > kPageSize )
+            if ( y + height > pageSize )
                 return false;
             widthLeft = node._width >= widthLeft ? 0u : widthLeft - node._width;
             ++index;
@@ -77,7 +81,7 @@ namespace sw
         return true;
     }
 
-    bool GlyphAtlas::allocateInPage( Page& page, uint32 width, uint32 height, uint16& outX, uint16& outY )
+    bool GlyphAtlas::allocateInPage( Page& page, uint32 pageSize, uint32 width, uint32 height, uint16& outX, uint16& outY )
     {
         // 1) 윗변(y + 높이)이 가장 낮은 위치를 고르고, 같으면 마디가 좁은 위치를 고른다(남는 틈이 작다).
         bool   bFound    = false;
@@ -88,7 +92,7 @@ namespace sw
         for ( size_t index = 0; index < page._listSkyline.size(); ++index )
         {
             uint32 y = 0;
-            if ( findFitHeight( page, index, width, height, y ) == false )
+            if ( findFitHeight( page, pageSize, index, width, height, y ) == false )
                 continue;
             const uint32 top       = y + height;
             const uint32 nodeWidth = page._listSkyline[index]._width;
@@ -150,7 +154,7 @@ namespace sw
         const size_t texelBytes = getBytesPerTexel();
         for ( uint32 row = 0; row < rect._height; ++row )
         {
-            uint8* pDest = page._bytes.data() + ( ( static_cast<size_t>( rect._y ) + row ) * kPageSize + rect._x ) * texelBytes;
+            uint8* pDest = page._bytes.data() + ( ( static_cast<size_t>( rect._y ) + row ) * _layout._pageSize + rect._x ) * texelBytes;
             Memory::copy( pDest, pBytes + static_cast<size_t>( row ) * rect._width * texelBytes, static_cast<size_t>( rect._width ) * texelBytes );
         }
         if ( page._bWholePageDirty == SW_FALSE )
@@ -182,7 +186,7 @@ namespace sw
             return false;
         Page& page = _listPage[oldestIndex];
         (void)Memory::set( page._bytes.data(), 0, page._bytes.size() );
-        page._listSkyline.assign( 1, SkylineNode{ 0, 0, static_cast<uint16>( kPageSize ) } );
+        page._listSkyline.assign( 1, SkylineNode{ 0, 0, static_cast<uint16>( _layout._pageSize ) } );
         page._listDirty.clear();
         page._bWholePageDirty = SW_TRUE;
         ++_generation;
@@ -209,8 +213,9 @@ namespace sw
                 GlyphAtlasUpload& upload = outListUpload.emplace_back();
                 upload._page             = static_cast<uint16>( pageIndex );
                 upload._bytesPerTexel    = static_cast<uint8>( getBytesPerTexel() );
-                upload._width            = static_cast<uint16>( kPageSize );
-                upload._height           = static_cast<uint16>( kPageSize );
+                upload._width            = static_cast<uint16>( _layout._pageSize );
+                upload._height           = static_cast<uint16>( _layout._pageSize );
+                upload._pageSize         = static_cast<uint16>( _layout._pageSize );
                 upload._bWholePage       = SW_TRUE;
                 upload._bytes            = page._bytes;
                 page._bWholePageDirty    = SW_FALSE;
@@ -226,11 +231,12 @@ namespace sw
                 upload._y                = rect._y;
                 upload._width            = rect._width;
                 upload._height           = rect._height;
+                upload._pageSize         = static_cast<uint16>( _layout._pageSize );
                 const size_t texelBytes  = getBytesPerTexel();
                 upload._bytes.resize( static_cast<size_t>( rect._width ) * rect._height * texelBytes );
                 for ( uint32 row = 0; row < rect._height; ++row )
                 {
-                    const uint8* pSource = page._bytes.data() + ( ( static_cast<size_t>( rect._y ) + row ) * kPageSize + rect._x ) * texelBytes;
+                    const uint8* pSource = page._bytes.data() + ( ( static_cast<size_t>( rect._y ) + row ) * _layout._pageSize + rect._x ) * texelBytes;
                     Memory::copy( upload._bytes.data() + static_cast<size_t>( row ) * rect._width * texelBytes, pSource, static_cast<size_t>( rect._width ) * texelBytes );
                 }
             }

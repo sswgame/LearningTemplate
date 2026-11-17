@@ -205,13 +205,13 @@ namespace sw
 
         CanvasQuad quad{};
         placeRect( glyphPosition, glyphSize, quad );
-        constexpr float32 kInvPageSize = 1.0f / static_cast<float32>( GlyphAtlas::kPageSize );
-        quad._kind                     = static_cast<uint32>( CanvasQuadKind::Glyph );
-        quad._uvRect                   = float4{ static_cast<float32>( atlasRect._x ) * kInvPageSize, static_cast<float32>( atlasRect._y ) * kInvPageSize,
-                               static_cast<float32>( atlasRect._x + atlasRect._width ) * kInvPageSize,
-                               static_cast<float32>( atlasRect._y + atlasRect._height ) * kInvPageSize };
-        quad._color                    = style._color;
-        quad._borderColor              = style._outlineColor;
+        const float32 invPageSize = 1.0f / static_cast<float32>( glyphCache.getAtlas().getPageSize() );
+        quad._kind                = static_cast<uint32>( CanvasQuadKind::Glyph );
+        quad._uvRect              = float4{ static_cast<float32>( atlasRect._x ) * invPageSize, static_cast<float32>( atlasRect._y ) * invPageSize,
+                               static_cast<float32>( atlasRect._x + atlasRect._width ) * invPageSize,
+                               static_cast<float32>( atlasRect._y + atlasRect._height ) * invPageSize };
+        quad._color               = style._color;
+        quad._borderColor         = style._outlineColor;
         // 아틀라스 값 0..1 은 윤곽에서 ±spread 래스터 픽셀 — 셰이더가 (값 − 0.5) × 이 배율로 화면 픽셀 거리를 만든다.
         if ( glyphCache.getFieldKind() == GlyphFieldKind::MSDF )
             quad._flags |= CanvasQuadFlag::kMultiChannelGlyph;

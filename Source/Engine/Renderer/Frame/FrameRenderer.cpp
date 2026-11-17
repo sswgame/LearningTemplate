@@ -1153,7 +1153,7 @@ namespace sw
             pView->_bSeenThisFrame = SW_FALSE;
         }
 
-        const uint32 requestCount = MathUtil::min( static_cast<uint32>( listRequest.size() ), kMaxExtraRenderView );
+        const uint32 requestCount = MathUtil::min( static_cast<uint32>( listRequest.size() ), RenderViewCollector::getMaxExtraViewCount() );
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
             prepareExtraView( listRequest[requestIndex] );

@@ -66,8 +66,9 @@ namespace sw
          */
         struct AtlasPage
         {
-            vector<uint8>          _bytes{};            ///< 미러(행 우선, `GlyphAtlas::kPageSize` × 텍셀당 바이트 행)
+            vector<uint8>          _bytes{};            ///< 미러(행 우선, `_pageSize` × 텍셀당 바이트 행)
             uint8                  _bytesPerTexel{ 1 }; ///< 미러의 텍셀당 바이트입니다(첫 업로드가 정하고, 페이지 텍스처 형식이 이것을 따른다).
+            uint32                 _pageSize{ 0 };      ///< 미러 · 페이지 텍스처의 한 변(텍셀)입니다(첫 업로드의 `GlyphAtlasUpload::_pageSize`).
             vector<GlyphAtlasRect> _listDirty{};        ///< 아직 내지 못한 구간(미러 기준). `Busy` 로 못 낸 것은 다음 프레임까지 남는다
             RHITextureHandle       _texture{ 0 };
             RHITransferTicket      _registerTicket{}; ///< 새 텍스처의 첫 전체 업로드 티켓. `Complete` 가 된 프레임에 SRV 를 등록하고 비운다

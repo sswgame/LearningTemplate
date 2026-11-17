@@ -6,6 +6,7 @@
 
 #include "Engine/Renderer/Canvas/CanvasGlyphAtlasTexture.h"
 #include "Engine/Text/GlyphAtlas.h"
+#include "Engine/Text/Tests/FakeFontRasterizer.h"
 
 /** @brief [CanvasGlyphAtlasTextureTest] 한 페이지의 구간 업로드가 한도를 넘으면 경계 상자 하나로 합치고, 한도 안이면 그대로 둔다(업로드 비용은 호출 수가 지배한다) */
 SW_TEST_CASE( CanvasGlyphAtlasTextureTest, ManySmallUploadsMergeToBoundingRect )
@@ -39,7 +40,7 @@ SW_TEST_CASE( CanvasGlyphAtlasTextureTest, ManySmallUploadsMergeToBoundingRect )
  */
 SW_TEST_CASE( CanvasGlyphAtlasTextureTest, MissedBatchHealsWithFullUpload )
 {
-    sw::GlyphAtlas     atlas{ sw::GlyphFieldKind::MSDF };
+    sw::GlyphAtlas     atlas{ sw::GlyphFieldKind::MSDF, sw::test::kTestGlyphAtlasLayout };
     sw::GlyphAtlasRect rect{};
     SW_REQUIRE_TRUE( atlas.allocate( 4, 4, rect ) );
     sw::vector<sw::GlyphAtlasUpload> listDropped;
@@ -62,7 +63,7 @@ SW_TEST_CASE( CanvasGlyphAtlasTextureTest, MissedBatchHealsWithFullUpload )
     atlas.takeUploads( listUpload ); // 청한 전체 묶음
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listUpload.size() ) );
     SW_EXPECT_TRUE( listUpload[0]._bFullUpload == SW_TRUE && listUpload[0]._bWholePage == SW_TRUE );
-    SW_EXPECT_EQUAL( bytes[0], listUpload[0]._bytes[( static_cast<size_t>( rect._y ) * sw::GlyphAtlas::kPageSize + rect._x ) * 4] );
+    SW_EXPECT_EQUAL( bytes[0], listUpload[0]._bytes[( static_cast<size_t>( rect._y ) * sw::test::kTestGlyphAtlasLayout._pageSize + rect._x ) * 4] );
     texture.applyUploads( listUpload, &atlas );
     SW_EXPECT_EQUAL( 1u, texture.getPageCount() );
 

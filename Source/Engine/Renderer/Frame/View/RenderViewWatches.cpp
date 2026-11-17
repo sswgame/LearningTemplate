@@ -25,7 +25,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 마지막 수집에서 자리(`kMaxExtraRenderView`)를 얻지 못해 빠진 추가 뷰 수입니다. 렌더러가 없는 실행에는 값이 없다. */
+        /** @brief 마지막 수집에서 자리(`RenderConfig::_maxExtraViewCount`)를 얻지 못해 빠진 추가 뷰 수입니다. 렌더러가 없는 실행에는 값이 없다. */
         [[nodiscard]] bool readOverflowViewCount( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
@@ -37,7 +37,7 @@ namespace sw
         }
     } // namespace
 
-    SW_AUTOMATION_WATCH( renderViewOverflowCount, "RenderView.OverflowCount", "Extra views that got no view slot last frame (more cameras than kMaxExtraRenderView)",
+    SW_AUTOMATION_WATCH( renderViewOverflowCount, "RenderView.OverflowCount", "Extra views that got no view slot last frame (more cameras than EngineConfig _render._maxExtraViewCount)",
                          &readOverflowViewCount );
     SW_AUTOMATION_WATCH( renderViewHiddenCount, "RenderView.HiddenCount", "Extra views the visibility test rested last frame (monitor off screen, behind a wall or too small)",
                          &readHiddenViewCount );

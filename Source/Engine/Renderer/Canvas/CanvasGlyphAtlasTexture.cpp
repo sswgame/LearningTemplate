@@ -119,10 +119,10 @@ namespace sw
 
     void CanvasGlyphAtlasTexture::applyUpload( const GlyphAtlasUpload& upload )
     {
-        constexpr uint32 kPageSize  = GlyphAtlas::kPageSize;
-        const bool       bInside    = static_cast<uint32>( upload._x ) + upload._width <= kPageSize && static_cast<uint32>( upload._y ) + upload._height <= kPageSize;
-        const size_t     texelBytes = upload._bytesPerTexel;
-        const bool       bComplete  = texelBytes > 0 && upload._bytes.size() >= static_cast<size_t>( upload._width ) * upload._height * texelBytes;
+        const uint32 pageSize   = upload._pageSize;
+        const bool   bInside    = static_cast<uint32>( upload._x ) + upload._width <= pageSize && static_cast<uint32>( upload._y ) + upload._height <= pageSize;
+        const size_t texelBytes = upload._bytesPerTexel;
+        const bool   bComplete  = texelBytes > 0 && upload._bytes.size() >= static_cast<size_t>( upload._width ) * upload._height * texelBytes;
         if ( bInside == false || bComplete == false )
         {
             SW_LOG_ERROR_ID( "Canvas.GlyphAtlasUploadX", "Glyph atlas upload (%#,%# %#x%#) on page %# is outside the page or short of bytes - skipped", upload._x, upload._y, upload._width,
@@ -132,14 +132,21 @@ namespace sw
         if ( _listPage.size() <= upload._page )
             _listPage.resize( static_cast<size_t>( upload._page ) + 1 );
         AtlasPage& page = _listPage[upload._page];
-        if ( page._bytes.empty() || upload._bWholePage == SW_TRUE )
+        // shortcut: 아틀라스 모양은 카탈로그를 읽을 때 정해져 실행 중 바뀌지 않는다 — 이미 만든 페이지 텍스처와 한 변이 다르면 버린다. 실행 중 모양 바꾸기를 들일 때 텍스처를 다시 만든다.
+        if ( page._texture != 0 && page._pageSize != pageSize )
+        {
+            SW_LOG_ERROR_ID( "Canvas.GlyphAtlasPageSizeChanged", "Glyph atlas page %# changed size %# -> %# after its texture was created - skipped", upload._page, page._pageSize, pageSize );
+            return;
+        }
+        if ( page._bytes.empty() || upload._bWholePage == SW_TRUE || page._pageSize != pageSize )
         {
             page._bytesPerTexel = upload._bytesPerTexel;
-            page._bytes.assign( static_cast<size_t>( kPageSize ) * kPageSize * texelBytes, 0 );
+            page._pageSize      = pageSize;
+            page._bytes.assign( static_cast<size_t>( pageSize ) * pageSize * texelBytes, 0 );
         }
         for ( uint32 row = 0; row < upload._height; ++row )
         {
-            Memory::copy( page._bytes.data() + ( static_cast<size_t>( upload._y + row ) * kPageSize + upload._x ) * texelBytes,
+            Memory::copy( page._bytes.data() + ( static_cast<size_t>( upload._y + row ) * pageSize + upload._x ) * texelBytes,
                           upload._bytes.data() + static_cast<size_t>( row ) * upload._width * texelBytes, static_cast<size_t>( upload._width ) * texelBytes );
         }
         const bool bPartialRegionDirty = page._bWholePageDirty == SW_FALSE && upload._width > 0 && upload._height > 0;
@@ -185,8 +192,8 @@ namespace sw
         if ( page._texture != 0 )
             return true;
         RHITextureDesc desc{};
-        desc._width              = GlyphAtlas::kPageSize;
-        desc._height             = GlyphAtlas::kPageSize;
+        desc._width              = page._pageSize;
+        desc._height             = page._pageSize;
         desc._mipLevels          = 1;
         desc._format             = page._bytesPerTexel == 4 ? RHIFormat::R8G8B8A8_UNORM : RHIFormat::R8_UNORM;
         desc._bIsShaderResource  = SW_TRUE;
@@ -251,7 +258,7 @@ namespace sw
 
     void CanvasGlyphAtlasTexture::uploadRegions( IRHIResourceFactory& factory, AtlasPage& page )
     {
-        constexpr uint32 kPageSize = GlyphAtlas::kPageSize;
+        const uint32 pageSize = page._pageSize;
         // 구간은 기다리지 않고 잇달아 낸다. 같은 텍스처에 낸 전송은 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3).
         mergeUploadRegions( page._listDirty, kMaxRegionUploadPerPage );
         size_t submittedCount = 0;
@@ -262,7 +269,7 @@ namespace sw
             for ( uint32 row = 0; row < region._height; ++row )
             {
                 Memory::copy( _regionScratchBytes.data() + static_cast<size_t>( row ) * region._width * texelBytes,
-                              page._bytes.data() + ( static_cast<size_t>( region._y + row ) * kPageSize + region._x ) * texelBytes, static_cast<size_t>( region._width ) * texelBytes );
+                              page._bytes.data() + ( static_cast<size_t>( region._y + row ) * pageSize + region._x ) * texelBytes, static_cast<size_t>( region._width ) * texelBytes );
             }
             RHITextureRegionUploadDesc upload{};
             upload._pData                  = _regionScratchBytes.data();

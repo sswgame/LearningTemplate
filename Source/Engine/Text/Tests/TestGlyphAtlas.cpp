@@ -28,8 +28,8 @@ namespace
 /** @brief [GlyphAtlasTest] 같은 순서로 넣으면 같은 자리 — 패킹은 결정적이고 서로 겹치지 않으며 페이지 안에 있다 */
 SW_TEST_CASE( GlyphAtlasTest, PackingIsDeterministicAndDisjoint )
 {
-    sw::GlyphAtlas                 atlasA{ sw::GlyphFieldKind::Sdf };
-    sw::GlyphAtlas                 atlasB{ sw::GlyphFieldKind::Sdf };
+    sw::GlyphAtlas                 atlasA{ sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout };
+    sw::GlyphAtlas                 atlasB{ sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout };
     sw::vector<sw::GlyphAtlasRect> listRectA;
     for ( uint32 index = 0; index < 300; ++index )
     {
@@ -42,8 +42,8 @@ SW_TEST_CASE( GlyphAtlasTest, PackingIsDeterministicAndDisjoint )
         SW_EXPECT_EQUAL( rectA._x, rectB._x );
         SW_EXPECT_EQUAL( rectA._y, rectB._y );
         SW_EXPECT_EQUAL( rectA._page, rectB._page );
-        SW_EXPECT_TRUE( static_cast<uint32>( rectA._x ) + rectA._width <= sw::GlyphAtlas::kPageSize );
-        SW_EXPECT_TRUE( static_cast<uint32>( rectA._y ) + rectA._height <= sw::GlyphAtlas::kPageSize );
+        SW_EXPECT_TRUE( static_cast<uint32>( rectA._x ) + rectA._width <= sw::test::kTestGlyphAtlasLayout._pageSize );
+        SW_EXPECT_TRUE( static_cast<uint32>( rectA._y ) + rectA._height <= sw::test::kTestGlyphAtlasLayout._pageSize );
         listRectA.push_back( rectA );
     }
     uint32 overlapCount = 0;
@@ -62,14 +62,14 @@ SW_TEST_CASE( GlyphAtlasTest, PackingIsDeterministicAndDisjoint )
 /** @brief [GlyphAtlasTest] 페이지 첫 업로드는 전체 한 건, 그 뒤에는 쓴 구간만 정확히 그 바이트로 넘어가고 다시 부르면 0 건 */
 SW_TEST_CASE( GlyphAtlasTest, UploadsCarryOnlyWrittenRegions )
 {
-    sw::GlyphAtlas     atlas{ sw::GlyphFieldKind::Sdf };
+    sw::GlyphAtlas     atlas{ sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout };
     sw::GlyphAtlasRect first{};
     SW_REQUIRE_TRUE( atlas.allocate( 3, 2, first ) );
     sw::vector<sw::GlyphAtlasUpload> listUpload;
     atlas.takeUploads( listUpload );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listUpload.size() ) );
     SW_EXPECT_EQUAL( SW_TRUE, listUpload[0]._bWholePage );
-    SW_EXPECT_EQUAL( static_cast<size_t>( sw::GlyphAtlas::kPageSize ) * sw::GlyphAtlas::kPageSize, listUpload[0]._bytes.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( sw::test::kTestGlyphAtlasLayout._pageSize ) * sw::test::kTestGlyphAtlasLayout._pageSize, listUpload[0]._bytes.size() );
 
     const uint8 arrFirstByte[6]  = { 1, 2, 3, 4, 5, 6 };
     const uint8 arrSecondByte[4] = { 9, 8, 7, 6 };
@@ -94,7 +94,7 @@ SW_TEST_CASE( GlyphAtlasTest, UploadsCarryOnlyWrittenRegions )
         SW_EXPECT_EQUAL( arrSecondByte[index], listUpload[1]._bytes[index] );
     }
     const uint8* pPage = atlas.getPageBytes( 0 );
-    SW_EXPECT_EQUAL( static_cast<uint8>( 4 ), pPage[( static_cast<size_t>( first._y ) + 1 ) * sw::GlyphAtlas::kPageSize + first._x] ); // 둘째 행 첫 바이트
+    SW_EXPECT_EQUAL( static_cast<uint8>( 4 ), pPage[( static_cast<size_t>( first._y ) + 1 ) * sw::test::kTestGlyphAtlasLayout._pageSize + first._x] ); // 둘째 행 첫 바이트
 
     listUpload.clear();
     atlas.takeUploads( listUpload );
@@ -104,9 +104,9 @@ SW_TEST_CASE( GlyphAtlasTest, UploadsCarryOnlyWrittenRegions )
 /** @brief [GlyphAtlasTest] 다 차면 이번 프레임에 안 쓴 가장 오래된 페이지를 비우고 세대가 오르며 전체 업로드가 기록된다 — 모두 이번 프레임이면 비우지 않는다 */
 SW_TEST_CASE( GlyphAtlasTest, FullAtlasEvictsOldestUnusedPage )
 {
-    sw::GlyphAtlas atlas{ sw::GlyphFieldKind::Sdf };
+    sw::GlyphAtlas atlas{ sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout };
     const uint32   size = GlyphAtlasTestUtil::kPageFillSize;
-    for ( uint32 index = 0; index < sw::GlyphAtlas::kMaxPageCount; ++index )
+    for ( uint32 index = 0; index < sw::test::kTestGlyphAtlasLayout._maxPageCount; ++index )
     {
         sw::GlyphAtlasRect rect{};
         SW_REQUIRE_TRUE( atlas.allocate( size, size, rect ) );
@@ -144,24 +144,24 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
     sw::test::FakeFontRasterizer rasterizer;
     rasterizer.setSDFSize( GlyphAtlasTestUtil::kPageFillSize ); // 글리프 하나가 페이지 하나
     const sw::FontFaceID face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
-    sw::GlyphCache       cache( rasterizer, sw::GlyphFieldKind::Sdf );
+    sw::GlyphCache       cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
 
-    for ( uint32 index = 0; index < sw::GlyphAtlas::kMaxPageCount; ++index )
+    for ( uint32 index = 0; index < sw::test::kTestGlyphAtlasLayout._maxPageCount; ++index )
     {
         const sw::CachedGlyph* pGlyph = cache.getOrCreateGlyph( face, 'A' + index, index + 1 )._pGlyph;
         SW_REQUIRE_NOT_NULL( pGlyph );
         SW_EXPECT_EQUAL( index, static_cast<uint32>( pGlyph->_rect._page ) );
     }
-    SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, rasterizer.getRasterizeCount() );
+    SW_EXPECT_EQUAL( sw::test::kTestGlyphAtlasLayout._maxPageCount, rasterizer.getRasterizeCount() );
     SW_EXPECT_NOT_NULL( cache.getOrCreateGlyph( face, 'A' + 1, 9 )._pGlyph ); // 있는 글리프 — 다시 베이크하지 않고 페이지 1 을 프레임 9 에 썼다고 적는다
-    SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, rasterizer.getRasterizeCount() );
+    SW_EXPECT_EQUAL( sw::test::kTestGlyphAtlasLayout._maxPageCount, rasterizer.getRasterizeCount() );
 
     // 아홉째 글리프 — 프레임 9 에 안 쓴 가장 오래된 페이지 0('A')을 비우고 그 자리에 들어간다.
     const sw::CachedGlyph* pNinth = cache.getOrCreateGlyph( face, 'Z', 9 )._pGlyph;
     SW_REQUIRE_NOT_NULL( pNinth );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pNinth->_rect._page ) );
     SW_EXPECT_EQUAL( 1u, pNinth->_atlasGeneration );
-    SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, cache.getGlyphCount() ); // 'A' 는 표에서 빠졌다
+    SW_EXPECT_EQUAL( sw::test::kTestGlyphAtlasLayout._maxPageCount, cache.getGlyphCount() ); // 'A' 는 표에서 빠졌다
 
     const uint32 rasterizedBefore = rasterizer.getRasterizeCount();
     SW_EXPECT_NOT_NULL( cache.getOrCreateGlyph( face, 'A', 10 )._pGlyph );
@@ -181,7 +181,7 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheDefersNewGlyphsOverTheFrameBudget )
 {
     sw::test::FakeFontRasterizer rasterizer;
     const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
-    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
 
     for ( uint32 index = 0; index < 4; ++index ) // 예산 0 = 제한 없음
     {
@@ -211,7 +211,7 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheFrameClockRevivesTheBudgetEveryFrame )
 {
     sw::test::FakeFontRasterizer rasterizer;
     const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
-    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf, sw::test::kTestGlyphAtlasLayout );
     cache.setRasterBudgetNanoseconds( 1 );
     SW_EXPECT_EQUAL( uint64{ 0 }, cache.getFrameIndex() );
 
@@ -236,14 +236,14 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheFrameClockRevivesTheBudgetEveryFrame )
 /** @brief [GlyphAtlasTest] MSDF 아틀라스는 텍셀당 4 바이트다 — 페이지 바이트가 네 배이고, 쓴 구간의 업로드는 행마다 너비 × 4 바이트로 나가며 텍셀당 바이트가 업로드에 실린다 */
 SW_TEST_CASE( GlyphAtlasTest, MSDFAtlasStoresFourBytesPerTexel )
 {
-    sw::GlyphAtlas atlas{ sw::GlyphFieldKind::MSDF };
+    sw::GlyphAtlas atlas{ sw::GlyphFieldKind::MSDF, sw::test::kTestGlyphAtlasLayout };
     SW_EXPECT_EQUAL( 4u, atlas.getBytesPerTexel() );
     sw::GlyphAtlasRect rect{};
     SW_REQUIRE_TRUE( atlas.allocate( 3, 2, rect ) );
     sw::vector<sw::GlyphAtlasUpload> listUpload;
     atlas.takeUploads( listUpload ); // 새 페이지 전체 한 건
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listUpload.size() ) );
-    SW_EXPECT_EQUAL( static_cast<size_t>( sw::GlyphAtlas::kPageSize ) * sw::GlyphAtlas::kPageSize * 4, listUpload[0]._bytes.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( sw::test::kTestGlyphAtlasLayout._pageSize ) * sw::test::kTestGlyphAtlasLayout._pageSize * 4, listUpload[0]._bytes.size() );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( listUpload[0]._bytesPerTexel ) );
     listUpload.clear();
 
@@ -255,7 +255,7 @@ SW_TEST_CASE( GlyphAtlasTest, MSDFAtlasStoresFourBytesPerTexel )
     atlas.write( rect, bytes.data() );
     const uint8* pPage = atlas.getPageBytes( 0 );
     // 둘째 행 첫 텍셀은 쓴 바이트의 (너비 × 4)번째부터다.
-    SW_EXPECT_EQUAL( bytes[static_cast<size_t>( rect._width ) * 4], pPage[( ( static_cast<size_t>( rect._y ) + 1 ) * sw::GlyphAtlas::kPageSize + rect._x ) * 4] );
+    SW_EXPECT_EQUAL( bytes[static_cast<size_t>( rect._width ) * 4], pPage[( ( static_cast<size_t>( rect._y ) + 1 ) * sw::test::kTestGlyphAtlasLayout._pageSize + rect._x ) * 4] );
     atlas.takeUploads( listUpload );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listUpload.size() ) );
     SW_EXPECT_EQUAL( bytes.size(), listUpload[0]._bytes.size() );
@@ -268,16 +268,50 @@ SW_TEST_CASE( GlyphAtlasTest, MSDFCacheUsesTheMSDFRasterizer )
 {
     sw::test::FakeFontRasterizer rasterizer;
     const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
-    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::MSDF );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::MSDF, sw::test::kTestGlyphAtlasLayout );
     SW_EXPECT_TRUE( cache.getFieldKind() == sw::GlyphFieldKind::MSDF );
     const sw::CachedGlyph* pGlyph = cache.getOrCreateGlyph( face, 'A', 1 )._pGlyph;
     SW_REQUIRE_NOT_NULL( pGlyph );
     const sw::GlyphAtlasRect& rect = pGlyph->_rect;
     SW_REQUIRE_TRUE( rect._width > 0 );
     const uint8* pPage = cache.getAtlas().getPageBytes( rect._page );
-    const size_t first = ( static_cast<size_t>( rect._y ) * sw::GlyphAtlas::kPageSize + rect._x ) * 4;
+    const size_t first = ( static_cast<size_t>( rect._y ) * sw::test::kTestGlyphAtlasLayout._pageSize + rect._x ) * 4;
     for ( size_t channel = 0; channel < 4; ++channel )
     {
         SW_EXPECT_EQUAL( static_cast<uint8>( 128 ), pPage[first + channel] );
     }
+}
+
+/** @brief [GlyphAtlasTest] 페이지 모양은 넘긴 값(카탈로그)을 따른다 — 작은 한 변은 업로드 · UV 기준도 작고, 페이지 수 상한을 넘으면 자리를 못 잡는다 */
+SW_TEST_CASE( GlyphAtlasTest, LayoutComesFromCatalogValues )
+{
+    const sw::GlyphAtlasLayout layout{ 256, 2 };
+    sw::GlyphAtlas             atlas{ sw::GlyphFieldKind::Sdf, layout };
+    SW_EXPECT_EQUAL( 256u, atlas.getPageSize() );
+    sw::GlyphAtlasRect rect{};
+    SW_EXPECT_FALSE( atlas.allocate( 300, 10, rect ) ); // 한 변보다 크다
+    SW_REQUIRE_TRUE( atlas.allocate( 200, 200, rect ) );
+    SW_REQUIRE_TRUE( atlas.allocate( 200, 200, rect ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( rect._page ) );
+    SW_EXPECT_FALSE( atlas.allocate( 200, 200, rect ) ); // 두 페이지가 상한
+    sw::vector<sw::GlyphAtlasUpload> listUpload;
+    atlas.takeUploads( listUpload );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listUpload.size() ) );
+    SW_EXPECT_EQUAL( 256u, static_cast<uint32>( listUpload[0]._pageSize ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 256 ) * 256, listUpload[0]._bytes.size() );
+}
+
+/** @brief [GlyphAtlasTest] 카탈로그에 아틀라스 모양이 없거나 범위 밖이면 검사가 진다(기본값으로 대신하지 않는다) */
+SW_TEST_CASE( GlyphAtlasTest, CatalogRejectsMissingAtlasLayout )
+{
+    sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
+    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    SW_EXPECT_TRUE( catalog.validate() );
+    catalog._glyphAtlasPageSize = 0;
+    SW_EXPECT_FALSE( catalog.validate() );
+    catalog._glyphAtlasPageSize = sw::GlyphAtlasLayout::kMaxPageSize + 1;
+    SW_EXPECT_FALSE( catalog.validate() );
+    catalog._glyphAtlasPageSize     = 1024;
+    catalog._glyphAtlasMaxPageCount = 0;
+    SW_EXPECT_FALSE( catalog.validate() );
 }

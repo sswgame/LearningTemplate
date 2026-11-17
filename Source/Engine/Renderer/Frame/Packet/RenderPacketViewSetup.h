@@ -78,7 +78,7 @@ namespace sw
          * @details 개발 도구(`-gv_autoRenderScaleForce`, Shipping 에 없다)만 부르는 창구다 — 런타임은 개발 변수를 읽지 않는다(`MeshLODSystem::setForcedLOD` 와 같은 모양).
          */
         void setForcedAutoRenderScale( float32 scale ) { _forcedAutoRenderScale = scale; }
-        /** @brief 마지막 `collectExtraViews` 에서 자리(`kMaxExtraRenderView`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
+        /** @brief 마지막 `collectExtraViews` 에서 자리(`RenderConfig::_maxExtraViewCount`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
         uint32 getLastOverflowViewCount() const { return _lastOverflowViewCount; }
 
     private:

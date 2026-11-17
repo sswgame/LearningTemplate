@@ -396,10 +396,12 @@ namespace sw
 
         // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
         RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
-        auto              releaseCb = [glBuffer = glName, pTracker, buffer]()
+        OpenGLRHIDevice*  pDevice   = _pDevice;
+        auto              releaseCb = [glBuffer = glName, pTracker, buffer, pDevice]()
         {
             GLuint name = glBuffer;
             glDeleteBuffers( 1, &name );
+            pDevice->_meshVaoAttribShadow.invalidateBuffer( glBuffer ); // 이름이 새 버퍼에 다시 나오면 사본이 같아 보여 지운 버퍼로 그린다
             pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );

@@ -54,8 +54,8 @@ namespace sw
     class SW_API GlyphCache
     {
     public:
-        /** @brief @p kind 의 거리장으로 글리프를 만들어 아틀라스에 올립니다(종류는 만들 때 정해 바뀌지 않는다). */
-        GlyphCache( IFontRasterizer& rasterizer, GlyphFieldKind kind );
+        /** @brief @p kind 의 거리장으로 글리프를 만들어 @p atlasLayout 모양의 아틀라스에 올립니다(종류 · 모양은 만들 때 정해 바뀌지 않는다). */
+        GlyphCache( IFontRasterizer& rasterizer, GlyphFieldKind kind, const GlyphAtlasLayout& atlasLayout );
 
         GlyphCache( const GlyphCache& )            = delete;
         GlyphCache& operator=( const GlyphCache& ) = delete;
