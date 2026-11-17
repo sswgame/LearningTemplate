@@ -144,7 +144,7 @@ namespace sw
 
     uint32 RemoteCallTargets::getFunctionID( const FunctionInfo& function )
     {
-        return function._name.getHash();
+        return function._hashName.getHash();
     }
 
     const FunctionInfo* RemoteCallTargets::findFunctionByID( const TypeInfo& type, uint32 functionID )

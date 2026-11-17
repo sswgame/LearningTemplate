@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Config/ConfigManager.h"

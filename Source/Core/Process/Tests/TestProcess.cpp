@@ -545,7 +545,7 @@ SW_TEST_CASE( ProcessTest, EndWithParentChildEndsWhenReleased )
 #endif
     sw::ProcessOptions options;
     options._bEndWithParent = true;
-    sw::int32 childID{ 0 };
+    int32 childID{ 0 };
     {
         sw::Process proc;
         SW_REQUIRE_TRUE( proc.launch( cmd, options ) );

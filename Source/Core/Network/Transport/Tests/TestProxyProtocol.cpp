@@ -189,7 +189,7 @@ SW_TEST_CASE( ProxyProtocolTest, MalformedHeadersAreInvalid )
 SW_TEST_CASE( ProxyProtocolAcceptTransportTest, TrustedProxyOpensWithClientAddress )
 {
     ProxyRig rig;
-    SW_REQUIRE_TRUE( rig.start( vector<uint32>{ NetAddress::makeLoopback( 0 )._ipv4 } ) );
+    SW_REQUIRE_TRUE( rig.start( vector<uint32>{ NetAddress::makeLoopback( 0 ).getIpv4() } ) );
     vector<uint8> bytes = makeHeader();
     rig.send( vector<uint8>( bytes.begin(), bytes.begin() + 10 ) ); // 잘려 온 머리
     (void)rig.runUntil( [&rig]()
@@ -212,7 +212,7 @@ SW_TEST_CASE( ProxyProtocolAcceptTransportTest, UntrustedSourceAndBadHeaderAreCl
 {
     {
         ProxyRig rig;
-        SW_REQUIRE_TRUE( rig.start( vector<uint32>{ NetAddress::make( 10, 0, 0, 1, 0 )._ipv4 } ) );
+        SW_REQUIRE_TRUE( rig.start( vector<uint32>{ NetAddress::make( 10, 0, 0, 1, 0 ).getIpv4() } ) );
         rig.send( makeHeader() );
         SW_EXPECT_TRUE( rig.runUntil( [&rig]()
         { return rig._clientRecorder.getClosedCount() == 1; } ) );
@@ -221,7 +221,7 @@ SW_TEST_CASE( ProxyProtocolAcceptTransportTest, UntrustedSourceAndBadHeaderAreCl
     }
     {
         ProxyRig rig;
-        SW_REQUIRE_TRUE( rig.start( vector<uint32>{ NetAddress::makeLoopback( 0 )._ipv4 } ) );
+        SW_REQUIRE_TRUE( rig.start( vector<uint32>{ NetAddress::makeLoopback( 0 ).getIpv4() } ) );
         rig.send( vector<uint8>{ 'G', 'E', 'T', ' ' } );
         SW_EXPECT_TRUE( rig.runUntil( [&rig]()
         { return rig._clientRecorder.getClosedCount() == 1; } ) );

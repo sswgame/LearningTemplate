@@ -9,6 +9,7 @@
 #include "Engine/Server/ServerServiceRegistry.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 // 전용 서버의 서버 서비스로 온라인 서비스 조립(`OnlineServerRuntime`)을 띄운다. 서버 설정 옆 `<이름>.online.json` 이 있을 때만 띄운다.

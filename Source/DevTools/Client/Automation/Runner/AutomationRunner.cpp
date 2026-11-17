@@ -638,8 +638,9 @@ namespace sw
     void AutomationRunner::advanceSimulation( uint32 frameCount )
     {
         // 그리지 않고 고정 걸음만 진행한다 — 결과(게임 상태)는 그리며 진행한 것과 같아야 한다(`game.empty.advancesimulation` 이 두 길의 변환 해시를 견준다).
-        const float32 fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
-        if ( engine::getSubsystem<SimulationOnlyFrameQueue>().request( frameCount, fixedFrameDelta ) == false )
+        const float32                   fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
+        SimulationOnlyFrameQueue* const pQueue          = engine::findSubsystem<SimulationOnlyFrameQueue>(); // 클라이언트 호스트 전용 서비스(HostOnly)다 — 없으면 이 단계를 받을 수 없다
+        if ( pQueue == nullptr || pQueue->request( frameCount, fixedFrameDelta ) == false )
         {
             finish( AutomationResult::Failed, "<AdvanceSimulation> could not hand its frames to the simulation-only frame queue" );
             return;

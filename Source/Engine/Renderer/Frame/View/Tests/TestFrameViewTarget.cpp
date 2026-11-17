@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 
 // 뷰의 시간 누적 기록(RN-10) — 매 프레임 그리지 않는 뷰(갱신 주기를 낮춘 CCTV)는 그리는 프레임마다 기록을 버린다. 지난 뷰-투영은 몇 프레임 전인데 물체의 지난 행렬은 한 프레임 전이다.

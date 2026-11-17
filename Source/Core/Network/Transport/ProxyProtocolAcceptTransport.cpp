@@ -35,7 +35,7 @@ namespace sw
     {
         for ( const uint32 trusted : _listTrustedProxy )
         {
-            if ( trusted == address._ipv4 )
+            if ( address.isIpv6() == false && trusted == address.getIpv4() ) // 신뢰 목록은 IPv4 다(PROXY v2 해석기가 TCP over IPv4 만 받는다)
                 return true;
         }
         return false;

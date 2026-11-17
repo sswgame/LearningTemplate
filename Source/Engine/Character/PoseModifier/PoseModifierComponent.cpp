@@ -479,7 +479,7 @@ namespace sw
         if ( pBinding != nullptr )
         {
             if ( pOutSockets != nullptr )
-                *pOutSockets = pBinding->_sockets;
+                *pOutSockets = pBinding->_sockets.snapshot();
             return pManager->resolveComponent( pBinding->_skeletalMesh ); // 강체 연결이면 비어 있다
         }
         // 이름으로 찾는다. 자식(장비 부품)부터 찾고, 없으면 매니저 전체에서 찾는다.

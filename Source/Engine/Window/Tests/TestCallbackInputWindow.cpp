@@ -102,7 +102,7 @@ SW_TEST_CASE( CallbackInputWindowTest, TextInputKeepsOrderWithKeys )
     SW_EXPECT_TRUE( listReceived[0] == "commit:x" );
     SW_EXPECT_TRUE( listReceived[1] == "down" );
     SW_EXPECT_TRUE( listReceived[2] == "composition:\xED\x95\x9C" );
-    SW_EXPECT_TRUE( listReceived[3] == "commit:" + longCommit );
+    SW_EXPECT_TRUE( string_view( listReceived[3] ) == string_view( "commit:" + longCommit ) );
     SW_EXPECT_TRUE( listReceived[4] == "up" );
     SW_EXPECT_TRUE( listReceived[5] == "composition:" );
 

@@ -61,9 +61,9 @@ SW_TEST_CASE( TextureStreamingPolicyTest, OverBudgetDemotesSmallestOnScreenFirst
         Util::make( 0, 2 ), // 화면에서 작다 — 밉 2 면 된다
         Util::make( 0, 1 ),
     };
-    const uint64                     resident = Util::sumResident( listCandidateidate ); // 1360 × 3
+    const uint64                     resident = Util::sumResident( listCandidate ); // 1360 × 3
     vector<TextureStreamingDecision> listDecision;
-    TextureStreamingPolicy::decide( listCandidateidate, resident, resident - 1000, Util::makeConfig(), listDecision );
+    TextureStreamingPolicy::decide( listCandidate, resident, resident - 1000, Util::makeConfig(), listDecision );
     SW_REQUIRE_EQUAL( size_t( 1 ), listDecision.size() ); // 1 번을 밉 2 로 내리면 1280 바이트가 풀려 예산 아래다
     SW_EXPECT_EQUAL( 1u, listDecision[0]._candidateIndex );
     SW_EXPECT_EQUAL( 2u, listDecision[0]._targetFirstMip );
@@ -80,7 +80,7 @@ SW_TEST_CASE( TextureStreamingPolicyTest, UnderBudgetPromotesToWantedMip )
         Util::make( 3, 0, 300 ), // 오래 안 보였다
     };
     vector<TextureStreamingDecision> listDecision;
-    TextureStreamingPolicy::decide( listCandidateidate, Util::sumResident( listCandidateidate ), 1u << 20, Util::makeConfig(), listDecision );
+    TextureStreamingPolicy::decide( listCandidate, Util::sumResident( listCandidate ), 1u << 20, Util::makeConfig(), listDecision );
     SW_REQUIRE_EQUAL( size_t( 2 ), listDecision.size() );
     SW_EXPECT_EQUAL( 1u, listDecision[0]._candidateIndex ); // 화면에서 더 큰 것이 먼저
     SW_EXPECT_EQUAL( 0u, listDecision[0]._targetFirstMip );
@@ -96,16 +96,16 @@ SW_TEST_CASE( TextureStreamingPolicyTest, NoOscillationAtBudgetEdge )
         Util::make( 0, 0 ),
         Util::make( 0, 0 ),
     };
-    const uint64                     budget = Util::sumResident( listCandidateidate ) - 100; // 하나를 한 밉 내리면(1024 풀림) 예산 아래
+    const uint64                     budget = Util::sumResident( listCandidate ) - 100; // 하나를 한 밉 내리면(1024 풀림) 예산 아래
     vector<TextureStreamingDecision> listDecision;
-    TextureStreamingPolicy::decide( listCandidateidate, Util::sumResident( listCandidateidate ), budget, Util::makeConfig(), listDecision );
+    TextureStreamingPolicy::decide( listCandidate, Util::sumResident( listCandidate ), budget, Util::makeConfig(), listDecision );
     SW_REQUIRE_EQUAL( size_t( 1 ), listDecision.size() );
-    Util::apply( listCandidateidate, listDecision );
+    Util::apply( listCandidate, listDecision );
     for ( uint32 frame = 0; frame < 4u; ++frame )
     {
-        TextureStreamingPolicy::decide( listCandidateidate, Util::sumResident( listCandidateidate ), budget, Util::makeConfig(), listDecision );
+        TextureStreamingPolicy::decide( listCandidate, Util::sumResident( listCandidate ), budget, Util::makeConfig(), listDecision );
         SW_EXPECT_TRUE( listDecision.empty() );
-        Util::apply( listCandidateidate, listDecision );
+        Util::apply( listCandidate, listDecision );
     }
-    SW_EXPECT_TRUE( Util::sumResident( listCandidateidate ) <= budget );
+    SW_EXPECT_TRUE( Util::sumResident( listCandidate ) <= budget );
 }

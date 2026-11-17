@@ -141,7 +141,7 @@ namespace sw::editor
 
     void DialogueGraphEdit::linkPins( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, int32 linkID, int32 fromPin, int32 toPin )
     {
-        DialogueLink newLink{};
+        decltype( inoutGraph._listLink )::value_type newLink{};
         newLink._id      = linkID;
         newLink._fromPin = fromPin;
         newLink._toPin   = toPin;

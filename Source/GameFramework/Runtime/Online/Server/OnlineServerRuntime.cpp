@@ -608,9 +608,9 @@ namespace sw
                 for ( const string& text : parts._config._listTrustedProxy )
                 {
                     NetAddress proxy;
-                    if ( NetAddress::parse( text, 0, proxy ) == false )
+                    if ( NetAddress::parse( text, 0, proxy ) == false || proxy.isIpv6() ) // PROXY v2 해석기는 TCP over IPv4 만 받는다
                         return unexpected( Error{ ErrorKind::InvalidArgument, "online config _listTrustedProxy has an entry that is not an IPv4 address", text } );
-                    listTrustedProxy.push_back( proxy._ipv4 );
+                    listTrustedProxy.push_back( proxy.getIpv4() );
                 }
                 platformTransport = make_unique<ProxyProtocolAcceptTransport>( std::move( platformTransport ), std::move( listTrustedProxy ) );
             }

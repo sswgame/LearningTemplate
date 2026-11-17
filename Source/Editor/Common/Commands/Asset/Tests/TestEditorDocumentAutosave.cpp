@@ -11,10 +11,10 @@ namespace
 {
     struct EditorDocumentAutosaveTestInternal
     {
-        static constexpr sw::uint64 kSourceHash = 0x1234u;
+        static constexpr uint64 kSourceHash = 0x1234u;
 
-        static sw::uint64 computeKeptSourceHash( sw::string_view /*documentPath*/ ) { return kSourceHash; }
-        static sw::uint64 computeEditedSourceHash( sw::string_view /*documentPath*/ ) { return kSourceHash + 1u; }
+        static uint64 computeKeptSourceHash( sw::string_view /*documentPath*/ ) { return kSourceHash; }
+        static uint64 computeEditedSourceHash( sw::string_view /*documentPath*/ ) { return kSourceHash + 1u; }
 
         static sw::editor::EditorDocumentAutosaveEntry makeEntry( sw::string_view projectRoot )
         {

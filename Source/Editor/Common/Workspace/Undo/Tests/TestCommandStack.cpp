@@ -19,7 +19,7 @@ namespace
         static constexpr sw::UndoBufferLimit kRoomyLimit{ 128u, 1ull << 20 };
 
         /** @brief 이름 @p pLabel 의 명령입니다. 두 단계가 각각 @p heldBytes 를 쥔다고 적는다. */
-        static sw::CommandStack::Command makeCommand( const sw::editor::UndoStepOwner& owner, const char* pLabel, sw::uint64 heldBytes = 0u )
+        static sw::CommandStack::Command makeCommand( const sw::editor::UndoStepOwner& owner, const char* pLabel, uint64 heldBytes = 0u )
         {
             sw::CommandStack::Command cmd;
             cmd._label = pLabel;

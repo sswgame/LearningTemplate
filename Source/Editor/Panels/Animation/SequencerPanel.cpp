@@ -1140,7 +1140,7 @@ namespace sw::editor
 
     void SequencerPanel::addKeyTrack( SequenceTrackKind kind )
     {
-        if ( _document.addTrack( kind ) )
+        (void)_document.addTrack( kind ); // 알림 · 되돌리기 이름은 Model 이 낸다(E-16)
     }
 
     bool SequencerPanel::findSelectedTrackKeyFrameCount( uint32& outCount ) const

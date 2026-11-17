@@ -25,12 +25,16 @@ namespace sw
     class GameObjectManager;
 } // namespace sw
 
+namespace sw
+{
+    struct AssetIdentityRules; // Engine/Asset/AssetDatabase.h — 엔진 이름 공간이다
+} // namespace sw
+
 namespace sw::editor
 {
     struct EditorAssetImportResult;
 
     class AssetReferenceTracker;
-    struct AssetIdentityRules;
     class EditorAssetImportJob;
     class EditorReferenceIndex;
 

@@ -383,7 +383,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadOnUncompressedEntryMatchesWholeRead )
 
     vector<uint8>   range;
     bool            bSucceeded = false;
-    AsyncReadHandle read       = reader.readRangeAsync( io, HashUtil::computeStringHash64( "maps/deep/cave.xml" ), 1, 4, AsyncIOPriority::Normal,
+    AsyncReadHandle read       = reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "maps/deep/cave.xml" ) ), 1, 4, AsyncIOPriority::Normal,
                                                         SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&range, &bSucceeded]( bool bSuccess, vector<uint8>& bytes )
           {
         bSucceeded = bSuccess;
@@ -394,7 +394,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadOnUncompressedEntryMatchesWholeRead )
     SW_EXPECT_TRUE( bSucceeded );
     SW_EXPECT_TRUE( string( range.begin(), range.end() ) == "Cave" );
 
-    SW_EXPECT_FALSE( reader.readRangeAsync( io, HashUtil::computeStringHash64( "top.txt" ), 3, 3, AsyncIOPriority::Normal, {} ).isValid() ); // 5 바이트 항목의 3+3
+    SW_EXPECT_FALSE( reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "top.txt" ) ), 3, 3, AsyncIOPriority::Normal, {} ).isValid() ); // 5 바이트 항목의 3+3
     io.shutdown();
 }
 
@@ -410,7 +410,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadOnCompressedEntryIsError )
     AsyncFileIO io;
     SW_REQUIRE_TRUE( io.initialize( AsyncFileIOConfig{} ) );
     bool            bCalled = false;
-    AsyncReadHandle read    = reader.readRangeAsync( io, HashUtil::computeStringHash64( "top.txt" ), 0, 2, AsyncIOPriority::Normal,
+    AsyncReadHandle read    = reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "top.txt" ) ), 0, 2, AsyncIOPriority::Normal,
                                                      SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&bCalled]( bool, vector<uint8>& )
        { bCalled = true; } ) );
     SW_EXPECT_FALSE( read.isValid() );

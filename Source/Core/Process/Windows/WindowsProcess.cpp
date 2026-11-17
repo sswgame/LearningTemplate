@@ -50,8 +50,10 @@ namespace sw
                 const wstring fileName = StringUtil::utf8ToUTF16( command._executable.c_str() );
                 if ( fileName.empty() || fileName.find_first_of( L"\\/" ) != wstring::npos )
                     return {};
-                const wstring candidate = fileName.find( L'.' ) == wstring::npos ? fileName + L".exe" : fileName;
-                string        pathValue;
+                wstring candidate = fileName;
+                if ( fileName.find( L'.' ) == wstring::npos )
+                    candidate += L".exe";
+                string pathValue;
                 if ( ProcessEnvironment::tryReadNonEmpty( "PATH", pathValue ) == false )
                     return {};
                 const wstring widePath = StringUtil::utf8ToUTF16( pathValue.c_str() );

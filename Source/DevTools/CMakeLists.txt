@@ -88,4 +88,5 @@ sw_add_reflection_step(DevTools
 	MODULE DevTools
 	HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/Material/MaterialGraph.h"
 	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+	DEFINES SW_DEVTOOLS_EXPORTS
 )

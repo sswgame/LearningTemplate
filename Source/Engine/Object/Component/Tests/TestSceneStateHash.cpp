@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Scene/SceneObjectHash.h"
 
 #include <limits>

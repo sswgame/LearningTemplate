@@ -80,10 +80,9 @@ namespace sw
             outHeader._bLocal = SW_TRUE; // 프록시 자신의 연결이다(건강 검사) — 주소 블록은 무시한다(명세 2.2)
             return ProxyHeaderResult::Parsed;
         }
-        const uint8* pAddress   = pData + kFixedSize;
-        outHeader._source._ipv4 = Internal::readBigEndian32( pAddress );
-        outHeader._source._port = Internal::readBigEndian16( pAddress + Internal::kSourcePortStart );
-        if ( outHeader._source._ipv4 == 0 || outHeader._source._port == 0 )
+        const uint8* pAddress = pData + kFixedSize;
+        outHeader._source     = NetAddress::makeIpv4( Internal::readBigEndian32( pAddress ), Internal::readBigEndian16( pAddress + Internal::kSourcePortStart ) );
+        if ( outHeader._source.getIpv4() == 0 || outHeader._source._port == 0 )
             return ProxyHeaderResult::Invalid; // 쓸 수 없는 출처다
         return ProxyHeaderResult::Parsed;
     }
@@ -95,8 +94,8 @@ namespace sw
         outBytes.push_back( static_cast<uint8>( Internal::kVersion2 | Internal::kCommandProxy ) );
         outBytes.push_back( Internal::kFamilyStreamIpv4 );
         Internal::appendBigEndian16( outBytes, static_cast<uint16>( kIpv4AddressSize ) );
-        Internal::appendBigEndian32( outBytes, source._ipv4 );
-        Internal::appendBigEndian32( outBytes, destination._ipv4 );
+        Internal::appendBigEndian32( outBytes, source.getIpv4() );
+        Internal::appendBigEndian32( outBytes, destination.getIpv4() );
         Internal::appendBigEndian16( outBytes, source._port );
         Internal::appendBigEndian16( outBytes, destination._port );
     }
