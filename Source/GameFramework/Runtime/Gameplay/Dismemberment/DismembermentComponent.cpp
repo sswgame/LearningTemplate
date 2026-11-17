@@ -93,7 +93,7 @@ namespace sw
             static void splitByTriangle( const Mesh& mesh, const DismembermentResult& result, vector<RHIVertex>& outListKeptVertex, vector<MeshSkinVertex>& outListKeptSkin,
                                          vector<RHIVertex>& outListPieceVertex, vector<MeshSkinVertex>& outListPieceSkin )
             {
-                const vector<RHIVertex>&      listVertex    = mesh.getVertices();
+                const vector<RHIVertex>&      listVertex    = mesh.getCPUView().getVertices();
                 const vector<uint32>&         listIndex     = mesh.getIndices();
                 const vector<MeshSkinVertex>& listSkin      = mesh.getSkinVertices();
                 const uint32                  triangleCount = mesh.getIndexCount() / 3;
@@ -120,9 +120,9 @@ namespace sw
             static shared_ptr<Mesh> extractLODLevel( const Mesh& mesh, size_t lodIndex )
             {
                 const MeshLOD&                lod        = mesh.getLODs()[lodIndex];
-                const uint32                  vertexBase = static_cast<uint32>( mesh.getVertices().size() );
+                const uint32                  vertexBase = static_cast<uint32>( mesh.getCPUView().getVertices().size() );
                 const uint32                  indexBase  = mesh.getIndexCount();
-                const vector<RHIVertex>&      listVertex = mesh.getLODVertices();
+                const vector<RHIVertex>&      listVertex = mesh.getCPUView().getLODVertices();
                 const vector<MeshSkinVertex>& listSkin   = mesh.getLODSkinVertices();
                 const vector<uint32>&         listIndex  = mesh.getLODIndices();
                 const uint32                  firstLocal = lod._firstVertex - vertexBase;
@@ -163,7 +163,7 @@ namespace sw
                     shared_ptr<Mesh> kept = Mesh::create();
                     kept->setVertices( std::move( listKeptVertex ) );
                     MeshLODLevel level;
-                    level._listVertex     = kept->getVertices();
+                    level._listVertex     = kept->getCPUView().getVertices();
                     level._listIndex      = kept->getIndices();
                     level._listSkinVertex = std::move( listKeptSkin );
                     level._screenSize     = mesh.getLODs()[lodIndex]._screenSize;

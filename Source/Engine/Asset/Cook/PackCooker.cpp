@@ -491,7 +491,10 @@ namespace sw
                         bytes = std::move( item._listGeneratedByte );
                     if ( bRead == false )
                         return false; // 읽기가 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
-                    step = writer.append( item._relativePath, config._compression.getEntryStorage( item._relativePath ), std::move( bytes ) );
+                    const expected<PackEntryStorage> storage = config._compression.selectEntryStorage( item._relativePath );
+                    if ( storage.has_value() == false )
+                        return false; // 규칙이 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
+                    step = writer.append( item._relativePath, *storage, std::move( bytes ) );
                 }
                 expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
                 if ( closed.has_value() == false )

@@ -76,6 +76,7 @@ namespace
         RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
         void                   updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle        createGPUVertexBuffer( uint32 ) override { return 0; }
         void                   updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         RHIBufferHandle        createIndexBuffer( const void*, uint32 ) override { return 0; }
         void                   destroyBuffer( RHIBufferHandle ) override {}
@@ -85,6 +86,9 @@ namespace
         void                   destroyTexture( RHITextureHandle ) override {}
         RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool                   rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
+        RHIDescriptorIndex     reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
+        bool                   activateReservedBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
         bool                   isTextureReadyToSample( RHITextureHandle ) override { return false; }
         void                   unregisterBindlessTexture( RHIDescriptorIndex ) override {}
         RHIDescriptorIndex     registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }

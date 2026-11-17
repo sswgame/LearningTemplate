@@ -618,6 +618,35 @@ namespace sw
         return pReader->readFileAsync( io, pathHash, priority, onComplete );
     }
 
+    optional<uint64> PackManager::findFileSize( string_view relativePath ) const
+    {
+        if ( relativePath.empty() )
+            return nullopt;
+        uint64                       pathHash{ 0 };
+        string                       pathInPack;
+        const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        return pReader != nullptr ? pReader->findFileSize( pathHash ) : nullopt;
+    }
+
+    AsyncReadHandle PackManager::readRangeAsync( AsyncFileIO& io, string_view relativePath, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                                 const AssetReadCompleteDelegate& onComplete ) const
+    {
+        if ( relativePath.empty() )
+            return AsyncReadHandle{};
+
+        uint64                       pathHash{ 0 };
+        string                       pathInPack;
+        const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        if ( pReader == nullptr )
+            return AsyncReadHandle{};
+        if ( size > UINT32_MAX )
+        {
+            SW_LOG_ERROR_ID( "PackManager.RangeReadTooLarge", "Pack range read of '%#' asks %# bytes - a range is at most 4 GB", relativePath, size );
+            return AsyncReadHandle{};
+        }
+        return pReader->readRangeAsync( io, pathHash, offset, size, priority, onComplete ); // 걸친 블록만 읽어 푼다(Blocks) · 저장 구간 그대로(Stored)
+    }
+
     void PackManager::setDLCEntitlementValidator( DLCEntitlementDelegate validator )
     {
         ScopedLock<mutex> lock{ _vfsMutex };

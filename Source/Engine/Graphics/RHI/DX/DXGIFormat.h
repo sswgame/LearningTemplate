@@ -76,6 +76,8 @@ namespace sw
                 return DXGI_FORMAT_R32_UINT;
             case RHIVertexAttributeFormat::Snorm8x4:
                 return DXGI_FORMAT_R8G8B8A8_SNORM;
+            case RHIVertexAttributeFormat::Half4:
+                return DXGI_FORMAT_R16G16B16A16_FLOAT;
         }
         SW_LOG_ASSERT( false, "Unsupported RHIVertexAttributeFormat: %#", static_cast<uint32>( attribute._format ) );
         return DXGI_FORMAT_UNKNOWN;

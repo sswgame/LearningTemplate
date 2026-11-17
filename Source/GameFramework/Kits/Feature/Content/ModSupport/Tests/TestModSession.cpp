@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
+#include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -41,6 +42,7 @@ namespace
             settings._maxEntryBytes         = 4096;
             settings._packBlockSize         = kPackMinBlockSize;
             settings._listOverridablePrefix = { "testproject/data/" };
+            settings._listStoredExtension   = { ".dds" };
             return settings;
         }
 
@@ -327,4 +329,30 @@ SW_TEST_CASE( ModSessionTest, ModIndexCannotRedirectAKnownGUID )
         SW_EXPECT_FALSE( session.apply( request, Internal::makeSettings() ) );
     }
     (void)AssetRegistry::install( previous );
+}
+
+// 모드 팩도 배포 팩과 같은 저장 방식 규칙(PackEntryStorageRule)을 쓴다 — 범위로 읽는 텍스처(.dds)는 Stored, 글은 블록 압축이다.
+// 변이: 빌더가 저장 방식을 Blocks 로 고정하면(예전 길) 첫 단언이 진다.
+SW_TEST_CASE( ModSessionTest, ModPackStoresTexturesUncompressed )
+{
+    using Internal           = TestModSessionInternal;
+    const string root        = test::makeScratchPath( "ModPackStorage" );
+    const string source      = FileUtil::joinPath( root, ModPackBuilder::kSourceFolderName );
+    const string packPath    = FileUtil::joinPath( root, ModPackBuilder::kPackFileName );
+    const string texturePath = "mods/stone/textures/stone.dds";
+    const string dataPath    = "mods/stone/data/stone.txt";
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, texturePath ), "not really a dds - bytes only" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, dataPath ), "stone" ) );
+    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, packPath, Internal::makeSettings() ) );
+
+    PackReader reader;
+    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    PackFileEntry texture;
+    PackFileEntry data;
+    SW_REQUIRE_TRUE( reader.getFileEntry( texturePath, texture ) );
+    SW_REQUIRE_TRUE( reader.getFileEntry( dataPath, data ) );
+    SW_EXPECT_TRUE( texture._storage == PackEntryStorage::Stored );
+    SW_EXPECT_TRUE( data._storage == PackEntryStorage::Blocks );
+    reader.close();
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

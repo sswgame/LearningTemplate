@@ -70,6 +70,7 @@ namespace sw
         const utf8* _pEntryPoint; ///< 기본 진입점("VSMain")
         const utf8* _pProfileSm5; ///< DXBC(D3D11) 프로파일("vs_5_0"). 없으면 nullptr
         const utf8* _pProfileSm6; ///< DXIL과 SPIR-V 프로파일("vs_6_6")
+        const utf8* _pStageMacro; ///< 컴파일러가 이 단계 컴파일에 넣는 매크로("SW_SHADER_STAGE_VERTEX") — 셰이더가 단계마다 갈리는 길을 한 곳에서 고른다(머티리얼 샘플의 밉 바이어스)
     };
 } // namespace sw
 
@@ -79,14 +80,14 @@ namespace sw
     inline const ShaderStageInfo& getShaderStageInfo( ShaderStage stage ) noexcept
     {
         static constexpr ShaderStageInfo arrInfo[static_cast<size_t>( ShaderStage::Count )] = {
-            {"vs", "VSMain", "vs_5_0", "vs_6_6"}, // Vertex
-            {"ps", "PSMain", "ps_5_0", "ps_6_6"}, // Pixel
-            {"cs", "CSMain", "cs_5_0", "cs_6_6"}, // Compute
-            {"gs", "GSMain", "gs_5_0", "gs_6_6"}, // Geometry
-            {"hs", "HSMain", "hs_5_0", "hs_6_6"}, // Hull
-            {"ds", "DSMain", "ds_5_0", "ds_6_6"}, // Domain
-            {"ms", "MSMain",  nullptr, "ms_6_6"}, // Mesh. SM5 에는 없다
-            {"as", "ASMain",  nullptr, "as_6_6"}, // Amplification. SM5 에는 없다
+            {"vs", "VSMain", "vs_5_0", "vs_6_6",        "SW_SHADER_STAGE_VERTEX"}, // Vertex
+            {"ps", "PSMain", "ps_5_0", "ps_6_6",         "SW_SHADER_STAGE_PIXEL"}, // Pixel
+            {"cs", "CSMain", "cs_5_0", "cs_6_6",       "SW_SHADER_STAGE_COMPUTE"}, // Compute
+            {"gs", "GSMain", "gs_5_0", "gs_6_6",      "SW_SHADER_STAGE_GEOMETRY"}, // Geometry
+            {"hs", "HSMain", "hs_5_0", "hs_6_6",          "SW_SHADER_STAGE_HULL"}, // Hull
+            {"ds", "DSMain", "ds_5_0", "ds_6_6",        "SW_SHADER_STAGE_DOMAIN"}, // Domain
+            {"ms", "MSMain",  nullptr, "ms_6_6",          "SW_SHADER_STAGE_MESH"}, // Mesh. SM5 에는 없다
+            {"as", "ASMain",  nullptr, "as_6_6", "SW_SHADER_STAGE_AMPLIFICATION"}, // Amplification. SM5 에는 없다
         };
         const size_t index = ( stage < ShaderStage::Count ) ? static_cast<size_t>( stage ) : 0;
         return arrInfo[index];

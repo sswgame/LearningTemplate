@@ -31,13 +31,14 @@ namespace sw
 
     bool VulkanRHIRenderPassCache::CompositeKey::operator==( const CompositeKey& other ) const
     {
-        const bool bCompositeKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp || _depthStoreOp != other._depthStoreOp || _depthSlice != other._depthSlice;
+        const bool bCompositeKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp || _depthStoreOp != other._depthStoreOp || _depthSlice != other._depthSlice ||
+                                           _depthMip != other._depthMip;
         if ( bCompositeKeyMismatch )
             return false;
         for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
         {
             const bool bSameAttachment = _arrColor[colorIndex] == other._arrColor[colorIndex] && _arrColorLoadOp[colorIndex] == other._arrColorLoadOp[colorIndex] && _arrColorStoreOp[colorIndex] == other._arrColorStoreOp[colorIndex] &&
-                                         _arrColorSlice[colorIndex] == other._arrColorSlice[colorIndex];
+                                         _arrColorSlice[colorIndex] == other._arrColorSlice[colorIndex] && _arrColorMip[colorIndex] == other._arrColorMip[colorIndex];
             if ( bSameAttachment == false )
                 return false;
         }
@@ -51,6 +52,7 @@ namespace sw
         hash ^= static_cast<size_t>( key._depthLoadOp ) + HashUtil::kGoldenRatio32;
         hash ^= ( static_cast<size_t>( key._depthStoreOp ) << 3 ) + HashUtil::kGoldenRatio32;
         hash ^= static_cast<size_t>( key._depthSlice ) * 2654435761u;
+        hash ^= static_cast<size_t>( key._depthMip ) + HashUtil::kGoldenRatio32; // 밉은 같음 비교가 가른다 — 해시는 퍼뜨리기만 한다
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );

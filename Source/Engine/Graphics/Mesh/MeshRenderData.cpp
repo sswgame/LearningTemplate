@@ -6,6 +6,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -40,8 +41,8 @@ namespace sw
         // 업로드는 CPU 사본을 읽기만 한다 - 원본 메시를 워커(외형 조립)가 함께 읽으므로 const 로 받아 경합 검출기가 쓰기로 보지 않게 한다.
         const vector<uint32>&    listIndex     = _owner.getIndices();
         const vector<uint32>&    listLODIndex  = _owner.getLODIndices();
-        const vector<RHIVertex>& listVertex    = _owner.getVertices();
-        const vector<RHIVertex>& listLODVertex = _owner.getLODVertices();
+        const vector<RHIVertex>& listVertex    = _owner.getCPUView().getVertices();
+        const vector<RHIVertex>& listLODVertex = _owner.getCPUView().getLODVertices();
         vector<uint32>           listDrawIndex;
         if ( listLODIndex.empty() == false )
         {
@@ -57,9 +58,23 @@ namespace sw
         vector<uint8>             listStreamByte( RHIMeshVertexStreams::computeBufferBytes( format, drawVertexCount ) );
         RHIMeshVertexStreams::write( format, listVertex.data(), lod0Count, 0, drawVertexCount, listStreamByte.data() );
         RHIMeshVertexStreams::write( format, listLODVertex.data(), drawVertexCount - lod0Count, lod0Count, drawVertexCount, listStreamByte.data() );
-        const uint32          indexBytes   = _owner.getDrawIndexCount() * static_cast<uint32>( sizeof( uint32 ) );
+        // 인덱스 폭은 그릴 정점 수가 정한다(파일과 같은 규칙 — `MeshAssetFormat::getIndexBytes`). 작은 메시는 uint16 으로 올려 인덱스 바이트가 절반이다(R-15).
+        const uint32   indexStride = MeshAssetFormat::getIndexBytes( drawVertexCount );
+        const uint32   indexCount  = _owner.getDrawIndexCount();
+        vector<uint16> listShortIndex;
+        const void*    pIndexBytes = pDrawIndex;
+        if ( indexStride == sizeof( uint16 ) )
+        {
+            listShortIndex.resize( indexCount );
+            for ( uint32 index = 0; index < indexCount; ++index )
+            {
+                listShortIndex[index] = static_cast<uint16>( pDrawIndex[index] );
+            }
+            pIndexBytes = listShortIndex.data();
+        }
+        const uint32          indexBytes   = indexCount * indexStride;
         const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( listStreamByte.data(), static_cast<uint32>( listStreamByte.size() ) );
-        const RHIBufferHandle indexBuffer  = indexBytes > 0 ? pResource->createIndexBuffer( pDrawIndex, indexBytes ) : 0;
+        const RHIBufferHandle indexBuffer  = indexBytes > 0 ? pResource->createIndexBuffer( pIndexBytes, indexBytes ) : 0;
         if ( vertexBuffer == 0 || indexBuffer == 0 )
         {
             SW_LOG_ERROR_ID( "Mesh.CreateVertexBufferFailedVerts", "createVertexBuffer / createIndexBuffer failed (%# verts, %# indices)", listVertex.size(), listIndex.size() );
@@ -71,6 +86,7 @@ namespace sw
         }
         _vertex.attach( pDevice, vertexBuffer );
         _index.attach( pDevice, indexBuffer );
+        _indexStride = indexStride;
         return true;
     }
 

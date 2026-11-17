@@ -112,6 +112,7 @@ namespace sw
         void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
         void transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
+        void copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
         /** @brief 같은 패스 안의 디스패치 사이는 구현이 순서를 지킨다 — 배리어가 없다. */
         void uavBarrierNative( RHIBufferHandle buffer ) override { (void)buffer; }
 

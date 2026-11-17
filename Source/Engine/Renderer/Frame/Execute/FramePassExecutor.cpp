@@ -61,6 +61,7 @@
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
+#include "Engine/Renderer/Frame/View/ViewTextureMipBiasUtil.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -225,6 +226,9 @@ namespace sw
         // 프레임의 첫 GPU 명령 위치다(Shipping 포함 — 자동 렌더 배율의 입력). 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
         // 프리패스, 업로드, 배리어)이다. 쓸지는 시계가 정한다(`GPUFrameClock::readBack`).
         _state._gpuFrameClock.writeFrameBegin( *_pCmd );
+        // 프레임 업로드 단계 — 파이프라인 XML 의 패스가 아니라 실행기가 첫 리스트 맨 앞에 고정으로 기록한다(언리얼 RDG 초기 업로드 · 유니티 SRP 프레임 시작 CommandBuffer).
+        // 정점 풀의 GPU 복사가 여기 든다 — 어느 파이프라인이든 그리기보다 먼저 풀이 채워진다(R-15).
+        _state._gpuScene.recordFrameUploads( *_pCmd, *pDevice );
 #if SW_PROFILE_COMPILED
         // 프레임 그래프 구간은 프로파일러 기록 중일 때만 쓴다. 게이트는 패스 타임스탬프와 같다(`onGraphPassExecute`).
         const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
@@ -532,6 +536,8 @@ namespace sw
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다. 깊이는 지터 든 행렬로 그렸으므로 역행렬도 그것이다.
         context._passValues.setMatrix( passConstantNames()._invViewProj, raster.invert() );
         context._passValues.setFloat4( passConstantNames()._temporalJitter, float4{ ndcJitter._x, ndcJitter._y, 0.0f, 0.0f } );
+        // 줄여 그려 키우는 뷰는 텍스처를 출력 해상도만큼 선명하게 읽는다(R-15 — 배율 1 이면 0). 렌더 크기는 첨부 풀, 출력 크기는 뷰가 든다.
+        context._passValues.setFloat4( passConstantNames()._textureMipBias, float4{ ViewTextureMipBiasUtil::compute( pool.getHeight(), view._outputHeight ), 0.0f, 0.0f, 0.0f } );
         // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다(지터 없는 것 — 절두체가 프레임마다 흔들리지 않는다).
         _state.getCullInputOf( view ).setViewProjection( viewProj );
 

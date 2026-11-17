@@ -335,6 +335,15 @@ namespace sw
         { return left._folderHash != right._folderHash ? left._folderHash < right._folderHash : left._entryIndex < right._entryIndex; } );
     }
 
+    optional<uint64> PackReader::findFileSize( uint64 pathHash ) const
+    {
+        ScopedLock<mutex>          lock{ _fileMutex };
+        const optional<EntryIndex> entryIndex = findEntryIndex( pathHash );
+        if ( entryIndex.has_value() == false )
+            return nullopt;
+        return static_cast<uint64>( _listEntry[*entryIndex]._uncompressedSize );
+    }
+
     PackReader::ReadPlanResult PackReader::makeReadPlan( uint64 pathHash, uint64 offset, uint64 size, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
     {
         ScopedLock<mutex> lock{ _fileMutex };

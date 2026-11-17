@@ -141,7 +141,7 @@ namespace sw::editor
             _listPendingID.pop_front();
 
             // 디스크 읽기와 디코드는 워커에서 한다. 이미 올라가 있는 텍스처는 준비된 핸들이 바로 온다.
-            const TextureHandle handle = textures.request( assetID, AssetLoadStart::Async );
+            const TextureHandle handle = textures.request( assetID, AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
             if ( handle.isValid() == false )
             {
                 recordFailure( assetID );

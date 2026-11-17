@@ -121,7 +121,7 @@ namespace sw
          */
         MaterialRenderBinding getRenderBinding();
         /**
-         * @brief 그리기 전 동기화입니다 — 레이아웃을 셰이더에 맞추고(`ensureShaderLayout`) 다시 올렸거나 비동기 로드가 끝난 텍스처의 새 SRV 를 받는다(`refreshTextureBindings`).
+         * @brief 그리기 전 동기화입니다 — 레이아웃을 셰이더에 맞추고(`ensureShaderLayout`) 묶음 값을 다시 패킹한다. 텍스처 번호는 받을 일이 없다(R-6 — 캐시가 같은 번호를 다시 묶는다).
          * @details 이 머티리얼을 직접 그리는 `getRenderBinding` 과, 부모 바이트를 복사하는 `MaterialInstance::getRenderBinding` 이 함께 부른다. 예전에는 직접 그릴 때만 불러,
          *          인스턴스로만 그리는 머티리얼(색만 바꾼 식생 구간)은 로드 중 텍스처(회색) 번호를 끝까지 쥐었다. 바뀐 것이 없으면 비교만 해 매 프레임 불러도 싸다.
          */
@@ -207,15 +207,6 @@ namespace sw
         void collectTexturePaths( vector<string>& outListPath ) const;
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
         void releaseTextureAssets();
-        /**
-         * @brief 빌린 텍스처가 다시 업로드되었거나(`TextureCache::reload`) 비동기 로드가 끝났으면 새 SRV 인덱스를 받아 다시 패킹합니다.
-         * @details 로드 중인 텍스처 자리는 로드 중 텍스처(`EngineDefaultAssets::_loadingTexture`)를 샘플하다가, 준비되면 진짜로, 실패하면 누락 텍스처(마젠타)로 바꾼다.
-         * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처와 새 SRV 인덱스를 올리고 옛 인덱스는 반환한다. resolve 때 받은
-         *          인덱스를 바이트(네이티브 bindless)와 슬롯 목록(DX11, GL)에 그대로 가지고 있으면 **반환한 슬롯**을 읽는다. 캐시의 reload
-         *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 싸다(`getRenderBinding` 이 사본을 만들기 전에 부른다).
-         * @return 인덱스가 하나라도 바뀌었으면 true 입니다.
-         */
-        bool refreshTextureBindings();
         /**
          * @brief 머티리얼 텍스처의 **백엔드 SRV 인덱스**를 서수 순서로 반환합니다.
          * @details 네이티브 bindless 가 없는 백엔드(DX11, GL)에서 엔진이 이 순서대로 t16..t31 에 바인딩한다.
@@ -367,8 +358,6 @@ namespace sw
         void rebuildCollectionBindings();
         /** @brief 묶음의 세대가 바뀐 프로퍼티를 지금 값으로 다시 패킹합니다(`syncRenderState`). 그래서 직접 그리는 길과 인스턴스가 부모 바이트를 복사하는 길이 함께 따른다. */
         void syncParameterCollections();
-        /** @brief 서수 @p ordinal 의 텍스처 로드가 끝났으면 대신 빌린 텍스처를 놓고 진짜(실패면 누락 체커)로 바꿉니다(`refreshTextureBindings`). */
-        void resolveArrivedTexture( TextureCache& textures, size_t ordinal );
         /** @brief 런타임 프로퍼티를 Desc 에 다시 씁니다(저장용). */
         void syncDescFromRuntime() const;
 
@@ -397,10 +386,9 @@ namespace sw
         uint32                               _shaderLayoutCacheGeneration;                                        /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
         RHIBackend                           _shaderLayoutBackend;                                                /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 의미가 있다. */
         IRHIDevice*                          _pRHIDevice;
-        uint32                               _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
-        vector<string>                       _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다.
-        vector<TextureHandle>                _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
-        vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
+        vector<string>                       _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath)
+        vector<TextureHandle>                _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를, 실패하면 누락 체커를 가리키는 번호를 쥔다(R-6)
+        vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드가 번호를 내지 못했으면 누락 텍스처, 아니면 빈 문자열
         vector<MaterialTextureIndex>         _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         vector<CollectionBinding>            _listCollectionBinding;   ///< 묶음을 가리키는 프로퍼티(`MaterialParameterCollection`)

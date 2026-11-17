@@ -281,6 +281,7 @@ namespace sw
             VulkanRHIDevice::VulkanLayoutRequest& request = arrRequest[requestCount];
             request._pRecord                              = pResolved;
             request._aspect                               = bDepth ? _pDevice->depthAspectMask() : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+            request._range                                = transition._range;
             switch ( transition._state )
             {
                 case RHITextureState::ShaderResource:
@@ -397,11 +398,13 @@ namespace sw
                 key._arrColorLoadOp[colorIndex]  = static_cast<uint8>( beginInfo._arrLoadOp[colorIndex] );
                 key._arrColorStoreOp[colorIndex] = static_cast<uint8>( beginInfo._arrStoreOp[colorIndex] );
                 key._arrColorSlice[colorIndex]   = beginInfo._arrColorTargetSlice[colorIndex];
+                key._arrColorMip[colorIndex]     = beginInfo._arrColorTargetMip[colorIndex];
             }
             key._depth        = beginInfo._depthTarget;
             key._depthLoadOp  = static_cast<uint8>( beginInfo._depthLoadOp );
             key._depthStoreOp = static_cast<uint8>( beginInfo._depthStoreOp );
             key._depthSlice   = beginInfo._depthTargetSlice;
+            key._depthMip     = beginInfo._depthTargetMip;
 
             if ( _pState->_bRenderPassActive == SW_TRUE )
             {
@@ -415,7 +418,8 @@ namespace sw
                 if ( pTex == nullptr )
                     return RHIRenderPassBeginResult::Failed;
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
+                // 그리는 밉만 옮긴다(면은 전체 — 예전과 같다). 다른 밉을 읽는 다운샘플 체인이 그 밉의 레이아웃을 지킨다(R-10).
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect, RHISubresourceRange{ key._arrColorMip[colorIndex], 1u, 0u, RHISubresourceRange::kAll } );
             }
             if ( key._depth != 0 )
             {
@@ -423,7 +427,7 @@ namespace sw
                 if ( pTex == nullptr )
                     return RHIRenderPassBeginResult::Failed;
                 const uint32 aspect = _pDevice->depthAspectMask();
-                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect, RHISubresourceRange{ key._depthMip, 1u, 0u, RHISubresourceRange::kAll } );
             }
 
             VulkanRHIRenderPassCache::CompositeRecord composite{};
@@ -452,15 +456,16 @@ namespace sw
             if ( colorTarget != 0 )
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex                      = _pDevice->resolveTexture( colorTarget );
-                const bool                            bColorTargetNotRenderable = pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE;
+                const uint32                          mip                       = beginInfo._arrColorTargetMip[0];
+                const bool                            bColorTargetNotRenderable = pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0], mip ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE;
                 if ( bColorTargetNotRenderable )
                     return RHIRenderPassBeginResult::Failed;
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect, RHISubresourceRange{ static_cast<uint16>( mip ), 1u, 0u, RHISubresourceRange::kAll } );
                 renderPass  = pTex->_renderPass;
-                framebuffer = pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] );
-                extent      = { pTex->_width, pTex->_height };
+                framebuffer = pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0], mip );
+                extent      = { MathUtil::max( pTex->_width >> mip, 1u ), MathUtil::max( pTex->_height >> mip, 1u ) };
             }
             else
             {
@@ -654,6 +659,26 @@ namespace sw
         vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
     }
 
+    void VulkanRHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        VkCommandBuffer                      cmd     = commandBuffer();
+        VulkanRHIDevice::VulkanBufferRecord* pSource = _pDevice->resolveAllocatedBuffer( source );
+        VulkanRHIDevice::VulkanBufferRecord* pTarget = _pDevice->resolveAllocatedBuffer( destination );
+        if ( cmd == VK_NULL_HANDLE || pSource == nullptr || pTarget == nullptr || pSource->_buffer == VK_NULL_HANDLE || pTarget->_buffer == VK_NULL_HANDLE )
+            return;
+        if ( _pState->_bRenderPassActive == SW_TRUE ) // 복사는 렌더 패스 밖에서만 기록한다
+        {
+            vkCmdEndRenderPass( cmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+        // 원본 TRANSFER_READ · 도착 TRANSFER_WRITE 배리어는 부르는 쪽의 전이(CopySource · CopyDest)가 걸었다.
+        VkBufferCopy region{};
+        region.srcOffset = sourceOffset;
+        region.dstOffset = destinationOffset;
+        region.size      = sizeBytes;
+        vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
+    }
+
     void VulkanRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
         // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 레지스트리(registerBindlessBufferUAV)의 것이다.
@@ -749,10 +774,12 @@ namespace sw
         namespace bindless = shaderslot::bindless;
 
         // 텍스처 배열 세트(set 1)는 커맨드버퍼가 사는 동안 안 바뀐다. 두 바인드 포인트에 한 번씩 건다.
-        if ( _pState->_bTextureSetBound == SW_FALSE && _pDevice->_textureSet != VK_NULL_HANDLE )
+        // 이번 링 슬롯의 세트다(R-6 — 산 번호 다시 쓰기는 슬롯의 차례에만 그 세트에 쓴다).
+        const VkDescriptorSet textureSet = _pDevice->getTextureSet( _pDevice->getFrameSlot() );
+        if ( _pState->_bTextureSetBound == SW_FALSE && textureSet != VK_NULL_HANDLE )
         {
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &_pDevice->_textureSet, 0, nullptr );
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &_pDevice->_textureSet, 0, nullptr );
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &textureSet, 0, nullptr );
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &textureSet, 0, nullptr );
             _pState->_bTextureSetBound = SW_TRUE;
         }
 

@@ -6,4 +6,10 @@
 -->
 <ModSupportSettings contentVersion="1" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
 	<Overridable prefix="game/velmora/data/"/>
+	<!-- 모드 팩에 압축하지 않고 담는 확장자(PackEntryStorageRule — 배포 팩 PackConfig.json 의 _listStoredExtension 과 같은 값). 밉 스트리밍이 .dds 구간만 읽는다 -->
+	<Stored extension=".dds"/>
+	<Stored extension=".ktx2"/>
+	<Stored extension=".png"/>
+	<Stored extension=".jpg"/>
+	<Stored extension=".ogg"/>
 </ModSupportSettings>

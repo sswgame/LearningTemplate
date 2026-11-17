@@ -92,6 +92,56 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 예약했고 렌더 스레드가 아직 살리지 않은 텍스처 번호와 그 번호가 처음 가리킬 텍스처입니다(`IRHIDevice::reserveBindlessTexture`). */
+    struct RHIBindlessReservationQueue
+    {
+        struct Entry
+        {
+            RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+            RHITextureHandle   _placeholder{ 0 };
+        };
+
+        mutex         _mutex;
+        vector<Entry> _listEntry;   ///< `_mutex` 아래
+        vector<Entry> _listScratch; ///< 렌더 스레드가 꺼내 살리는 임시 목록(`_mutex` 밖에서 쓴다 — 살리기가 장치를 부른다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    RHIDescriptorIndex IRHIDevice::reserveBindlessTexture( RHITextureHandle placeholder )
+    {
+        IRHIResourceFactory* const pFactory = getResourceFactory();
+        if ( pFactory == nullptr || placeholder == 0 )
+            return kInvalidDescriptorIndex;
+        const RHIDescriptorIndex index = pFactory->reserveBindlessTextureIndex();
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
+        ScopedLock<mutex> lock{ _pBindlessReservationQueue->_mutex };
+        _pBindlessReservationQueue->_listEntry.push_back( RHIBindlessReservationQueue::Entry{ index, placeholder } );
+        return index;
+    }
+
+    void IRHIDevice::activateReservedBindlessTextures()
+    {
+        RHIBindlessReservationQueue& queue = *_pBindlessReservationQueue;
+        {
+            ScopedLock<mutex> lock{ queue._mutex };
+            if ( queue._listEntry.empty() )
+                return;
+            queue._listScratch.swap( queue._listEntry );
+        }
+        IRHIResourceFactory* const pFactory = getResourceFactory();
+        for ( const RHIBindlessReservationQueue::Entry& entry : queue._listScratch )
+        {
+            if ( pFactory != nullptr && pFactory->activateReservedBindlessTexture( entry._index, entry._placeholder ) )
+                continue;
+            // 자리 텍스처(로드 중 · 누락 체커)는 기동이 올려 둔다 — 못 살리면 결함이다. 번호는 산 칸이 아니라 해제가 놓지 못하므로 그 번호를 쥔 쪽은 빈 번호를 그린다.
+            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index, entry._placeholder );
+        }
+        queue._listScratch.clear();
+    }
+
     RHICapabilities IRHIDevice::getCapabilities() const
     {
         return RHIAvailability::query( getBackendType() ); // 정적 테이블 — 런타임에 갈리는 능력은 백엔드가 override 한다
@@ -324,8 +374,11 @@ namespace sw
             return;
         }
         IRHIResourceFactory* pFactory = getResourceFactory();
-        if ( pFactory != nullptr )
-            releaseNow( *pFactory, kind, handle );
+        if ( pFactory == nullptr )
+            return;
+        if ( kind == RHIHandleKind::BindlessTexture )
+            activateReservedBindlessTextures(); // 예약만 하고 아직 살리지 않은 번호일 수 있다 — 살려야 해제가 그 칸을 놓는다
+        releaseNow( *pFactory, kind, handle );
     }
 
     void IRHIDevice::flushDeferredHandleReleases()
@@ -341,7 +394,8 @@ namespace sw
         listTaken.extractAll( listHandle );
         IRHIResourceFactory* pFactory = getResourceFactory();
         if ( pFactory == nullptr )
-            return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+            return;                         // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+        activateReservedBindlessTextures(); // 예약한 번호를 먼저 살린다 — 해제할 번호가 아직 살지 않았으면 놓지 못한다
         for ( const RHIDeferredHandleQueue::Entry& entry : listHandle )
         {
             releaseNow( *pFactory, entry._kind, entry._handle );
@@ -376,6 +430,8 @@ namespace sw
         IRHIResourceFactory* pFactory = getResourceFactory();
         if ( pFactory == nullptr )
             return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+        if ( listDue.empty() == false )
+            activateReservedBindlessTextures(); // 예약한 번호를 먼저 살린다 — 해제할 번호가 아직 살지 않았으면 놓지 못한다
         for ( const RHIDeferredHandleQueue::Entry& entry : listDue )
         {
             releaseNow( *pFactory, entry._kind, entry._handle );
@@ -413,6 +469,7 @@ namespace sw
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
+        , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
         , _initPhaseTimings{}
         , _drawDiagnostics{ *this }
@@ -499,6 +556,8 @@ namespace sw
         // 정책 값은 EngineConfig 의 `_rhi` 하나다. 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
         const RHIConfig& rhiConfig                      = engine::getSubsystem<EngineConfig>()._rhi;
         swapChainDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
+        swapChainDesc._uploadStagingBytes               = static_cast<uint64>( rhiConfig._uploadStagingMegabytes ) * constant::memory::kBytesPerMegabyte;
+        swapChainDesc._uploadStagingIdleFrames          = rhiConfig._uploadStagingIdleFrames;
         swapChainDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
         swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
         swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;

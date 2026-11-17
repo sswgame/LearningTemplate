@@ -46,8 +46,10 @@ namespace sw
 
         /** @brief GPU 정점 버퍼 핸들을 반환합니다(그릴 정점 흐름 — LOD 0 뒤에 낮은 단계). */
         RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
-        /** @brief GPU 인덱스 버퍼(uint32) 핸들을 반환합니다(그릴 인덱스 흐름 — LOD 0 뒤에 낮은 단계, 값은 정점 흐름 번호). */
+        /** @brief GPU 인덱스 버퍼 핸들을 반환합니다(그릴 인덱스 흐름 — LOD 0 뒤에 낮은 단계, 값은 정점 흐름 번호). 한 칸의 바이트는 `getIndexStride` 다. */
         RHIBufferHandle getIndexBuffer() const { return _index._buffer; }
+        /** @brief 올린 인덱스 버퍼 한 칸의 바이트입니다(그릴 정점이 65536 개 이하면 2, 아니면 4 — `MeshAssetFormat::getIndexBytes`, R-15). 거는 쪽은 이 값으로 건다. */
+        uint32 getIndexStride() const { return _indexStride; }
         /**
          * @brief 살아 있는 디바이스에 올라가 있는지 반환합니다.
          * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비운다. 그래서 값이 남아
@@ -60,5 +62,6 @@ namespace sw
         /** @brief 정점 · 인덱스 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIDeviceBuffer). 둘은 함께 만들고 함께 놓는다. */
         RHIDeviceBuffer _vertex;
         RHIDeviceBuffer _index;
+        uint32          _indexStride{ sizeof( uint32 ) }; ///< 올릴 때 정한 인덱스 폭(바이트)
     };
 } // namespace sw

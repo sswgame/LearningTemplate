@@ -16,7 +16,7 @@ namespace sw
     void MeshVertexAnimationBaker::skinVertices( const Mesh& skinMesh, const vector<float4x4>& listPalette, vector<float3>& outListPosition,
                                                  vector<float3>& outListNormal )
     {
-        const vector<RHIVertex>&      listVertex = skinMesh.getVertices();
+        const vector<RHIVertex>&      listVertex = skinMesh.getCPUView().getVertices();
         const vector<MeshSkinVertex>& listSkin   = skinMesh.getSkinVertices();
         outListPosition.resize( listVertex.size() );
         outListNormal.resize( listVertex.size() );

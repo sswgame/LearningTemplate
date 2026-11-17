@@ -10,6 +10,7 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackWriter.h"
 
 namespace sw
@@ -45,10 +46,9 @@ namespace sw
                              settings._maxEntryCount );
             return false;
         }
-        // 스트림 쓰기는 경로 해시 순만 받는다 — 첫 번째 훑기에서 경로(정규형 · 크기)를 보고 파일을 하나씩 읽어 정체성 색인을 모은 뒤 해시로 세우고,
-        // 두 번째 훑기에서 하나씩 다시 읽어 담는다. 색인 파일은 모든 파일을 본 뒤에야 바이트가 정해져 해시 순 자리에 끼워 넣는다(팩 전체를 들지 않는다).
-        AssetPackIndex                    identityIndex; // 모드 에셋의 GUID 색인 — 런타임이 도메인 색인 뒤 층으로 합친다(`AssetManager`, 줄은 전체 리소스 id)
-        vector<std::pair<uint64, string>> listOrdered;   // (경로 해시, 원본 파일 경로)
+        AssetPackIndex identityIndex; // 모드 에셋의 GUID 색인 — 런타임이 도메인 색인 뒤 층으로 합친다(`AssetManager`, 줄은 전체 리소스 id)
+        // 스트림 쓰기는 경로 해시 순만 받는다 — 경로를 먼저 다 보고(정규형 · 크기) 해시로 세운 뒤 하나씩 읽어 담는다(팩 전체를 들지 않는다).
+        vector<std::pair<uint64, string>> listOrdered; // (경로 해시, 원본 파일 경로)
         listOrdered.reserve( listFilePath.size() );
         for ( const string& filePath : listFilePath )
         {
@@ -70,16 +70,25 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.FileTooLarge", "Mod source file '%#' is unreadable or larger than %# bytes", relativePath, settings._maxEntryBytes );
                 return false;
             }
-            vector<uint8> bytes;
-            if ( FileUtil::readFile( filePath, bytes ) == false )
-            {
-                SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", filePath );
-                return false;
-            }
-            addIdentity( relativePath, bytes, identityIndex );
             listOrdered.emplace_back( PackStreamWriter::makePathHash( relativePath ), filePath );
         }
-        vector<uint8> listIndexByte;
+        VectorUtil::sort( listOrdered, []( const std::pair<uint64, string>& left, const std::pair<uint64, string>& right )
+        { return left.first < right.first; } );
+
+        // 정체성 색인(모드 에셋의 GUID — 런타임이 도메인 색인 뒤 층으로 합친다, `AssetManager`)은 모든 파일을 본 뒤에야 정해진다. 스트림 쓰기는 경로 해시 순만 받으므로
+        // 색인을 먼저 만들어 그 경로 해시 자리에 끼운다(파일을 한 번 더 읽는다 — 모드 팩은 항목 수 · 크기 상한 안이다).
+        for ( const std::pair<uint64, string>& ordered : listOrdered )
+        {
+            string        relativePath;
+            vector<uint8> bytes;
+            if ( FileUtil::makeRelativePath( contentFolder, ordered.second, relativePath ) == false || FileUtil::readFile( ordered.second, bytes ) == false )
+            {
+                SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", ordered.second );
+                return false;
+            }
+            addIdentity( FileUtil::normalizeSeparators( relativePath ), bytes, identityIndex );
+        }
+        vector<uint8> indexBytes;
         if ( identityIndex._listEntry.empty() == false )
         {
             const expected<string> indexText = identityIndex.makeText();
@@ -88,12 +97,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.IndexInvalid", "Mod '%#' asset index - %# '%#'", contentFolder, indexText.error().message(), indexText.error().detail() );
                 return false;
             }
-            listIndexByte.assign( indexText->begin(), indexText->end() );
+            indexBytes.assign( indexText->begin(), indexText->end() );
+            listOrdered.emplace_back( PackStreamWriter::makePathHash( AssetPackIndex::kFileName ), string{} ); // 빈 원본 경로 = 색인 항목
+            VectorUtil::sort( listOrdered, []( const std::pair<uint64, string>& left, const std::pair<uint64, string>& right )
+            { return left.first < right.first; } );
         }
-        const uint64 indexPathHash = PackStreamWriter::makePathHash( AssetPackIndex::kFileName );
-        bool         bIndexPending = listIndexByte.empty() == false;
-        VectorUtil::sort( listOrdered, []( const std::pair<uint64, string>& left, const std::pair<uint64, string>& right )
-        { return left.first < right.first; } );
 
         PackWriterDesc desc; // 도메인 없음 — 항목이 전체 리소스 경로인 패치 팩이다(`mods/<id>/…` 와 덮어쓰는 기본 리소스가 한 팩에 든다)
         desc._blockSize        = settings._packBlockSize;
@@ -102,14 +110,15 @@ namespace sw
         expected<void>   step = writer.open( packPath, desc );
         for ( size_t index = 0; index < listOrdered.size() && step.has_value(); ++index )
         {
-            if ( bIndexPending && indexPathHash <= listOrdered[index].first ) // 같은 해시면 쓰기가 중복으로 거절한다
-            {
-                step          = writer.append( AssetPackIndex::kFileName, PackEntryStorage::Blocks, std::move( listIndexByte ) );
-                bIndexPending = false;
-                if ( step.has_value() == false )
-                    break;
-            }
             const string& filePath = listOrdered[index].second;
+            if ( filePath.empty() )
+            {
+                const expected<PackEntryStorage> storage = PackEntryStorageRule::select( AssetPackIndex::kFileName, settings._listStoredExtension );
+                if ( storage.has_value() == false )
+                    return false;
+                step = writer.append( AssetPackIndex::kFileName, *storage, std::move( indexBytes ) );
+                continue;
+            }
             string        relativePath;
             vector<uint8> bytes;
             if ( FileUtil::makeRelativePath( contentFolder, filePath, relativePath ) == false || FileUtil::readFile( filePath, bytes ) == false )
@@ -117,10 +126,12 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", filePath );
                 return false;
             }
-            step = writer.append( FileUtil::normalizeSeparators( relativePath ), PackEntryStorage::Blocks, std::move( bytes ) );
+            const string                     entryPath = FileUtil::normalizeSeparators( relativePath );
+            const expected<PackEntryStorage> storage   = PackEntryStorageRule::select( entryPath, settings._listStoredExtension ); // 쿠커와 같은 규칙
+            if ( storage.has_value() == false )
+                return false; // 규칙이 이유를 남겼다
+            step = writer.append( entryPath, *storage, std::move( bytes ) );
         }
-        if ( step.has_value() && bIndexPending )
-            step = writer.append( AssetPackIndex::kFileName, PackEntryStorage::Blocks, std::move( listIndexByte ) );
         const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
         if ( closed.has_value() == false )
         {

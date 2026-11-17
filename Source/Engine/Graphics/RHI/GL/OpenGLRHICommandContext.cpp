@@ -356,10 +356,11 @@ namespace sw
         const bool bUseColorComposite = bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0;
         const bool bDepthAsColor      = bSingleColorTarget && bDepthOnly; // 깊이 텍스처를 컬러 자리로 건 경우 — 그 텍스처를 깊이 첨부로 쓴다
         if ( bUseColorComposite )
-            fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, colorCount, beginInfo._depthTarget, beginInfo._depthTargetSlice );
+            fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, beginInfo._arrColorTargetMip, colorCount, beginInfo._depthTarget,
+                                                   beginInfo._depthTargetSlice, beginInfo._depthTargetMip );
         else if ( bDepthAsColor )
         {
-            fbo                                                 = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, colorHandles[0], beginInfo._arrColorTargetSlice[0] );
+            fbo                                                 = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, nullptr, 0, colorHandles[0], beginInfo._arrColorTargetSlice[0], beginInfo._arrColorTargetMip[0] );
             const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
             if ( pRecord != nullptr && beginInfo._width == 0 )
                 targetWidth = pRecord->_width;
@@ -367,7 +368,7 @@ namespace sw
                 targetHeight = pRecord->_height;
         }
         else if ( bBindColor == false && bHasDepth )
-            fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice );
+            fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice, beginInfo._depthTargetMip );
 
         const bool bOffscreenRequested = bUseColorComposite || bDepthAsColor || ( bBindColor == false && bHasDepth );
         if ( bOffscreenRequested && fbo == 0 )
@@ -548,6 +549,22 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
+    void OpenGLRHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return;
+        const GLuint sourceName = _pDevice->resolveGlBuffer( source );
+        const GLuint targetName = _pDevice->resolveGlBuffer( destination );
+        if ( sourceName == 0 || targetName == 0 )
+            return;
+        // 복사용 바인딩 지점 — 정점 · SSBO 바인딩을 건드리지 않는다. GL 은 명령 순서를 지키므로 상태 전이가 없다(GL 4.3 · GLES 3.0 코어).
+        glBindBuffer( GL_COPY_READ_BUFFER, sourceName );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, targetName );
+        glCopyBufferSubData( GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, static_cast<GLintptr>( sourceOffset ), static_cast<GLintptr>( destinationOffset ), static_cast<GLsizeiptr>( sizeBytes ) );
+        glBindBuffer( GL_COPY_READ_BUFFER, 0 );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+    }
+
     void OpenGLRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
         // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
@@ -724,6 +741,9 @@ namespace sw
                     break;
                 case RHIVertexAttributeFormat::Snorm8x4:
                     glVertexAttribPointer( attribute._location, 4, GL_BYTE, GL_TRUE, stride, pOffset );
+                    break;
+                case RHIVertexAttributeFormat::Half4:
+                    glVertexAttribPointer( attribute._location, 4, GL_HALF_FLOAT, GL_FALSE, stride, pOffset ); // GL 3.0 · GLES 3.0 코어
                     break;
             }
             glVertexAttribDivisor( attribute._location, attribute._bPerInstance != SW_FALSE ? 1u : 0u );

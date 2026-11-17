@@ -63,12 +63,16 @@ namespace sw
         WebGPUBufferRecord();
     };
 
-    /** @brief 텍스처 하나입니다. 샘플용 뷰는 밉 · 면 전부(깊이는 깊이 측면만), 첨부용 뷰는 면마다 밉 0 하나입니다. */
+    /**
+     * @brief 텍스처 하나입니다. 샘플용 뷰는 밉 · 면 전부(깊이는 깊이 측면만), 첨부용 뷰는 (밉, 면) 마다 하나입니다(칸 `mip * 면 수 + slice`).
+     * @details 렌더 타깃 · 깊이만 밉마다 첨부 뷰를 둔다(다운샘플 체인이 밉 하나에 그린다 — R-10). 나머지는 밉 0 의 면 뷰뿐이다.
+     */
     struct WebGPUTextureRecord
     {
-        WGPUTexture                         _texture{ nullptr };
-        WGPUTextureView                     _sampleView{ nullptr };
-        vector<WGPUTextureView>             _listSliceView{};
+        WGPUTexture             _texture{ nullptr };
+        WGPUTextureView         _sampleView{ nullptr };
+        vector<WGPUTextureView> _listSliceView{};
+
         RHITextureDesc                      _desc{};
         WGPUTextureFormat                   _wgpuFormat{ WGPUTextureFormat_Undefined };
         unique_ptr<RHITextureUploadSerials> _pUploadSerials{};              ///< 첫 업로드 · 마지막 업로드 시리얼(등록 가능 판정 — 원자값이라 레코드가 움직여도 자리가 그대로이게 따로 둔다)
@@ -77,6 +81,14 @@ namespace sw
         vector<WGPUTextureView>             _listDepthReadView{};           ///< 면마다 원본의 깊이 측면 2D 뷰(밉 0) — 사본 패스가 읽는다
         vector<WGPUBindGroup>               _listDepthCopyGroup{};          ///< 면마다 사본 패스의 그룹 0(`_listDepthReadView` 하나)
         uint64                              _depthCopySerial{ 0 };          ///< 사본을 마지막으로 채운 프레임 시리얼 — 다른 프레임의 사본을 읽으면 오류로 남긴다
+
+        /** @brief (밉 @p mip, 면 @p slice) 의 첨부 뷰입니다. 없으면 nullptr 입니다. */
+        WGPUTextureView findAttachmentView( uint32 slice, uint32 mip ) const
+        {
+            const uint32 layers    = _desc._arraySize > 0 ? _desc._arraySize : 1u;
+            const size_t viewIndex = static_cast<size_t>( mip ) * layers + slice;
+            return ( slice < layers && viewIndex < _listSliceView.size() ) ? _listSliceView[viewIndex] : nullptr;
+        }
     };
 
     /** @brief 파이프라인 하나입니다. 자동 레이아웃의 그룹 0 과 그 그룹이 받는 바인딩 번호(오름차순)를 함께 듭니다. */

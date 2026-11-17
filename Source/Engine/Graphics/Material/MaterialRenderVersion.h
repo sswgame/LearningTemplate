@@ -39,14 +39,13 @@ namespace sw
     /**
      * @struct MaterialRenderInputs
      * @brief 머티리얼 사본(`Material::getRenderBinding` · `MaterialInstance::getRenderBinding`)을 정하는 입력 전부의 번호입니다.
-     * @details 셋이 모두 같으면 어느 머티리얼도 지난번과 다른 사본을 내지 않는다: 머티리얼 · 인스턴스 · 묶음의 값(`MaterialCache::getRenderValueGeneration`),
-     *          다시 올리거나 비동기로 끝난 텍스처의 SRV(`TextureCache::getReloadGeneration`), 셰이더 레이아웃(`ShaderReflectionLibrary::getCacheGeneration`).
+     * @details 둘이 모두 같으면 어느 머티리얼도 지난번과 다른 사본을 내지 않는다: 머티리얼 · 인스턴스 · 묶음의 값(`MaterialCache::getRenderValueGeneration`),
+     *          셰이더 레이아웃(`ShaderReflectionLibrary::getCacheGeneration`). 텍스처 SRV 는 입력이 아니다 — 업로드 · 핫 리로드가 같은 번호를 다시 묶는다(R-6).
      *          사본이 새 입력을 읽는 길을 더하면 여기에도 더한다 — 빠뜨리면 장면 스냅샷이 사본 맞추기를 건너뛰어 그 변화가 화면에 오르지 않는다.
      */
     struct SW_API MaterialRenderInputs
     {
         uint64 _materialRevision{ 0 };
-        uint32 _textureReloadGeneration{ 0 };
         uint32 _shaderReflectionGeneration{ 0 };
         uint8  _bKnown{ SW_FALSE }; ///< 텍스처 캐시를 볼 수 없으면(엔진 서비스 없음) 모른다 — 같다고 보지 않는다
 
@@ -56,7 +55,7 @@ namespace sw
         [[nodiscard]] bool isSame( const MaterialRenderInputs& other ) const
         {
             return _bKnown == SW_TRUE && other._bKnown == SW_TRUE && _materialRevision == other._materialRevision &&
-                   _textureReloadGeneration == other._textureReloadGeneration && _shaderReflectionGeneration == other._shaderReflectionGeneration;
+                   _shaderReflectionGeneration == other._shaderReflectionGeneration;
         }
     };
 } // namespace sw

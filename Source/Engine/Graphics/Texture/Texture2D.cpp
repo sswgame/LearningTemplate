@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -180,11 +181,7 @@ namespace sw
     {
         const string_view relativePath = assetID.view();
         AssetLoadScope    loadScope( "Texture", relativePath );
-        // 이 장치가 고른 형식 변형이 쿠킹돼 있으면 그것을 읽는다. 접미사가 비면(BC — 데스크톱) 파일을 묻지도 않아 지금까지와 같은 길이다. 변형이 없는 파일(원본 없는 손 DDS)은 그대로 읽고, 장치가 못 쓰는 형식이면 `createTexture2D` 가 오류로 멈춘다.
-        const string formatSuffix = Texture2DInternal::findFormatVariantSuffix();
-        const string variantPath  = formatSuffix.empty() ? string{} : TextureFormatFamily::makeVariantPath( relativePath, formatSuffix );
-        const bool   bReadVariant = variantPath.empty() == false && AssetIO::hasAsset( AssetID{ variantPath } );
-        if ( DDSLoader::loadFromAsset( bReadVariant ? AssetID{ variantPath } : assetID, outImage ) == false || outImage.isValid() == false )
+        if ( DDSLoader::loadFromAsset( AssetID{ findReadPath( assetID ) }, outImage ) == false || outImage.isValid() == false )
         {
             SW_LOG_ERROR_ID( "Texture.LoadFailed", "Texture2D: failed to load '%#'", relativePath );
             return false;
@@ -205,6 +202,105 @@ namespace sw
         return true;
     }
 
+    string Texture2D::findReadPath( const AssetID& assetID )
+    {
+        // 이 장치가 고른 형식 변형이 쿠킹돼 있으면 그것을 읽는다. 접미사가 비면(BC — 데스크톱) 파일을 묻지도 않아 지금까지와 같은 길이다. 변형이 없는 파일(원본 없는 손 DDS)은 그대로 읽고, 장치가 못 쓰는 형식이면 `createTexture2D` 가 오류로 멈춘다.
+        const string_view relativePath = assetID.view();
+        const string      formatSuffix = Texture2DInternal::findFormatVariantSuffix();
+        const string      variantPath  = formatSuffix.empty() ? string{} : TextureFormatFamily::makeVariantPath( relativePath, formatSuffix );
+        const bool        bReadVariant = variantPath.empty() == false && AssetIO::hasAsset( AssetID{ variantPath } );
+        return bReadVariant ? variantPath : string{ relativePath };
+    }
+
+    TextureMipLayout Texture2D::makeMipLayout( const DDSImageData& image )
+    {
+        TextureMipLayout layout;
+        layout._dxgiFormat     = image._dxgiFormat;
+        const RHIFormat format = toRHIFormatFromDXGI( image._dxgiFormat );
+        uint64          offset = image._dataOffset;
+        const uint32    count  = image._mipCount > 0 ? image._mipCount : 1;
+        for ( uint32 mip = 0; mip < count; ++mip )
+        {
+            RHITextureMipSpan span{};
+            if ( computeRHITextureMipLayout( format, image._width, image._height, mip, span ) == false )
+                break; // `readImage` 가 형식을 걸렀다 — 여기서 멈추면 밉 수가 줄어 올리기가 범위를 거절한다
+            TextureMipLayout::MipRange range;
+            range._offset = offset;
+            range._size   = span._sizeBytes;
+            range._width  = span._width;
+            range._height = span._height;
+            offset += span._sizeBytes;
+            layout._listMip.push_back( range );
+        }
+        return layout;
+    }
+
+    uint32 Texture2D::computeUpgradeFirstMip( const TextureMipLayout& layout )
+    {
+        if ( layout._listMip.empty() )
+            return 0;
+        const TextureMipLayout::MipRange& top = layout._listMip.front();
+        return computeMipDrop( toRHIFormatFromDXGI( layout._dxgiFormat ), top._width, top._height, static_cast<uint32>( layout._listMip.size() ), static_cast<int32>( gv_textureMipDrop ) )._mipCount;
+    }
+
+    uint32 Texture2D::computeResidentFirstMip( const TextureMipLayout& layout )
+    {
+        if ( layout._listMip.empty() )
+            return 0;
+        const TextureMipLayout::MipRange& top   = layout._listMip.front();
+        const uint32                      count = static_cast<uint32>( layout._listMip.size() );
+        return computeMipDrop( toRHIFormatFromDXGI( layout._dxgiFormat ), top._width, top._height, count, static_cast<int32>( count ) )._mipCount;
+    }
+
+    Texture2DUploadStep Texture2D::beginUploadTail( IRHIDevice* pDevice, string_view relativePath, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& tailBytes,
+                                                    bool bBlocking )
+    {
+        if ( pDevice == nullptr || relativePath.empty() || firstMip >= layout._listMip.size() )
+            return Texture2DUploadStep::Failed;
+        const uint32 mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
+        uint64       rangeOffset{ 0 };
+        uint64       rangeSize{ 0 };
+        layout.getRange( firstMip, mipCount, rangeOffset, rangeSize );
+        if ( tailBytes.size() != rangeSize )
+        {
+            SW_LOG_ERROR_ID( "Texture.MipRangeSizeMismatch", "Texture2D: the mip range of '%#' is %# bytes but %# were read", relativePath, rangeSize, tailBytes.size() );
+            return Texture2DUploadStep::Failed;
+        }
+        if ( getHandle() != 0 )
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
+        // 읽은 꼬리를 밉 firstMip 이 맨 위인 이미지로 본다 — 바이트는 옮겨 쓰고 끝나면 돌려준다(복사하지 않는다).
+        DDSImageData tailImage;
+        tailImage._width      = layout._listMip[firstMip]._width;
+        tailImage._height     = layout._listMip[firstMip]._height;
+        tailImage._mipCount   = mipCount;
+        tailImage._dxgiFormat = layout._dxgiFormat;
+        tailImage._bytes.swap( tailBytes );
+        DDSImageData              expandedImage;
+        const DDSImageData&       image  = selectDeviceImage( *pDevice, tailImage, expandedImage );
+        const RHIFormat           format = toRHIFormatFromDXGI( image._dxgiFormat );
+        RHITextureDesc            desc{};
+        RHITextureHandle          handle = 0;
+        RHITransferTicket         ticket{};
+        const Texture2DUploadStep step = format != RHIFormat::Unknown ? createAndSubmitMips( *pDevice, relativePath, image, format, Texture2DMipDrop{}, bBlocking, desc, handle, ticket )
+                                                                      : Texture2DUploadStep::Failed;
+        tailImage._bytes.swap( tailBytes );
+        if ( step != Texture2DUploadStep::Submitted )
+            return step;
+        // `_pDevice` 는 제출한 뒤에만 적는다(`beginUploadFromImage` 와 같은 이유). SRV 는 `finishUpload` 가 완료를 본 뒤에 등록한다.
+        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout );
+        _handle.store( handle, std::memory_order_release );
+        _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
+        _uploadTicket     = ticket;
+        _pDevice          = pDevice;
+        _path             = string{ relativePath };
+        _width            = desc._width;
+        _height           = desc._height;
+        _mipCount         = desc._mipLevels;
+        _streamedMipCount = firstMip > qualityFirstMip ? firstMip - qualityFirstMip : 0u;
+        _format           = format;
+        return Texture2DUploadStep::Submitted;
+    }
+
     bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency )
     {
         // 블로킹 헬퍼: 제출 → 대기 → 끝내기. 비동기 로드는 같은 두 단계를 프레임에 나눠 한다(`TextureLoadOperation`).
@@ -218,7 +314,7 @@ namespace sw
         if ( pDevice == nullptr || relativePath.empty() )
             return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
         DDSImageData        expandedImage;
         const DDSImageData& image = selectDeviceImage( *pDevice, sourceImage, expandedImage );
 
@@ -298,7 +394,7 @@ namespace sw
             _uploadTicket               = RHITransferTicket{};
             const bool bOwnsLiveTexture = pDevice != nullptr && _pDevice == pDevice && getHandle() != 0;
             if ( bOwnsLiveTexture )
-                releaseRHI( pDevice );
+                releaseRHIKeepingSRV( pDevice );
             return Texture2DUploadStatus::Failed;
         }
         IRHIResourceFactory* pResource = pDevice->getResourceFactory();
@@ -312,44 +408,79 @@ namespace sw
         if ( status == RHITransferStatus::Failed )
         {
             SW_LOG_ERROR_ID( "Texture.UploadIncomplete", "Texture2D: the upload of '%#' did not complete", _path.c_str() );
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice );
             return Texture2DUploadStatus::Failed;
         }
-        const RHIDescriptorIndex srv = pResource->registerBindlessTexture( getHandle() );
+        // 지키던 번호가 있으면(로드를 시작할 때 예약 · 크기 변경 · 핫 리로드) 새 텍스처로 다시 묶는다 — 번호가 그대로라 머티리얼을 다시 묶지 않는다(R-6). 없으면 새로 등록한다.
+        // 예약한 번호는 렌더 스레드가 살린 뒤에야 다시 묶을 수 있다 — 업로드를 끝내는 이 자리가 먼저 살린다(대개 프레임 시작이 이미 살렸다).
+        const RHIDescriptorIndex keptSRV = getKeptSRV();
+        RHIDescriptorIndex       srv{ kInvalidDescriptorIndex };
+        if ( keptSRV != kInvalidDescriptorIndex )
+        {
+            pDevice->activateReservedBindlessTextures();
+            if ( pResource->rebindBindlessTexture( keptSRV, getHandle() ) )
+                srv = keptSRV;
+        }
+        else
+            srv = pResource->registerBindlessTexture( getHandle() );
         if ( srv == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 지키던 번호는 남긴다 — 부르는 쪽이 누락 체커로 다시 묶는다(그 번호를 쥔 머티리얼이 빈 번호를 그리지 않게)
             return Texture2DUploadStatus::Failed;
         }
+        // 산 번호를 먼저 적고 지키던 번호를 지운다 — `getStableSRV` 가 그 사이에 빈 번호를 보지 않게.
         _srv.store( srv, std::memory_order_release );
+        if ( keptSRV != kInvalidDescriptorIndex )
+            _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket = RHITransferTicket{};
         SW_LOG_INFO_ID( "Texture2D.Texture2DReadyMipsTop", "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
                         static_cast<uint32>( _format ), srv );
         return Texture2DUploadStatus::Ready;
     }
 
-    Texture2DUploadStep Texture2D::beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& sourceImage, bool bBlocking )
+    Texture2DUploadStep Texture2D::beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, bool bBlocking )
     {
         // 다른 디바이스의 텍스처(백엔드 교체 뒤 아직 다시 업로드하지 않은 것)는 그 디바이스로 다시 만들 때 밉 전부가 올라간다(`initRHI`).
-        const bool bUpgradable = pDevice != nullptr && _pDevice == pDevice && _streamedMipCount > 0 && isRHIValid() && _upgrade._ticket.isValid() == false;
-        if ( bUpgradable == false )
+        const bool bReplaceable = pDevice != nullptr && _pDevice == pDevice && isRHIValid() && _upgrade._ticket.isValid() == false;
+        if ( bReplaceable == false || firstMip >= layout._listMip.size() || _mipCount > layout._listMip.size() )
             return Texture2DUploadStep::Failed;
-        DDSImageData        expandedImage;
-        const DDSImageData& image  = selectDeviceImage( *pDevice, sourceImage, expandedImage );
-        const RHIFormat     format = toRHIFormatFromDXGI( image._dxgiFormat );
-        SW_ASSERT( format == _format ); // 같은 파일의 같은 이미지다(`TextureCache` 가 로드 단계의 이미지를 보관했다)
-        const uint32              fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
-        const Texture2DMipDrop    qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        const uint32 residentFirstMip = static_cast<uint32>( layout._listMip.size() ) - _mipCount;
+        if ( firstMip == residentFirstMip )
+            return Texture2DUploadStep::Failed; // 이미 그 밉부터 있다 — 바꿀 것이 없다
+        const uint32 mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
+        uint64       rangeOffset{ 0 };
+        uint64       rangeSize{ 0 };
+        layout.getRange( firstMip, mipCount, rangeOffset, rangeSize );
+        if ( mipBytes.size() != rangeSize )
+        {
+            SW_LOG_ERROR_ID( "Texture.MipRangeSizeMismatch", "Texture2D: the mip range of '%#' is %# bytes but %# were read", _path.c_str(), rangeSize, mipBytes.size() );
+            return Texture2DUploadStep::Failed;
+        }
+        // 읽은 구간을 밉 firstMip 이 맨 위인 이미지로 본다 — 바이트는 옮겨 쓰고 끝나면 돌려준다(복사하지 않는다).
+        DDSImageData mipImage;
+        mipImage._width      = layout._listMip[firstMip]._width;
+        mipImage._height     = layout._listMip[firstMip]._height;
+        mipImage._mipCount   = mipCount;
+        mipImage._dxgiFormat = layout._dxgiFormat;
+        mipImage._bytes.swap( mipBytes );
+        DDSImageData              expandedImage;
+        const DDSImageData&       image  = selectDeviceImage( *pDevice, mipImage, expandedImage );
+        const RHIFormat           format = toRHIFormatFromDXGI( image._dxgiFormat );
         PendingUpgrade            upgrade{};
         RHITextureDesc            desc{};
-        const Texture2DUploadStep step = createAndSubmitMips( *pDevice, _path, image, format, qualityDrop, bBlocking, desc, upgrade._handle, upgrade._ticket );
+        const Texture2DUploadStep step = format == _format ? createAndSubmitMips( *pDevice, _path, image, format, Texture2DMipDrop{}, bBlocking, desc, upgrade._handle, upgrade._ticket )
+                                                           : Texture2DUploadStep::Failed; // 같은 파일이다 — 다르면 다른 형식 변형을 읽었다
+        mipImage._bytes.swap( mipBytes );
         if ( step != Texture2DUploadStep::Submitted )
             return step;
         upgrade._width    = desc._width;
         upgrade._height   = desc._height;
         upgrade._mipCount = desc._mipLevels;
-        _upgrade          = upgrade;
+        // 품질이 버리는 밉보다 위는 늘 없다 — 그보다 아래에서 시작하면(내리기) 그만큼이 다시 올릴 위쪽 밉이다.
+        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout );
+        upgrade._streamedMipCount    = firstMip > qualityFirstMip ? firstMip - qualityFirstMip : 0u;
+        _upgrade                     = upgrade;
         return Texture2DUploadStep::Submitted;
     }
 
@@ -379,19 +510,19 @@ namespace sw
             pResource->destroyTexture( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
-        const RHIDescriptorIndex srv = pResource->registerBindlessTexture( upgrade._handle );
-        if ( srv == kInvalidDescriptorIndex )
+        // 같은 번호가 새 텍스처를 가리키게 한다 — 그 번호를 쥔 머티리얼은 다시 묶지 않는다(R-6, 언리얼 `RHIUpdateTextureReference`). 못 하면 아래쪽 밉 그대로 둔다.
+        if ( pResource->rebindBindlessTexture( getSRV(), upgrade._handle ) == false )
         {
-            SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
+            SW_LOG_ERROR_ID( "Texture.BindlessRebindFailed", "Texture2D: rebindBindlessTexture failed for '%#' - it keeps its lower mips", _path.c_str() );
             pResource->destroyTexture( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
         outRetired._handle = _handle.exchange( upgrade._handle, std::memory_order_acq_rel );
-        outRetired._srv    = _srv.exchange( srv, std::memory_order_acq_rel );
+        outRetired._srv    = kInvalidDescriptorIndex; // 번호는 그대로 산다 — 옛 텍스처만 해제 줄로 간다
         _width             = upgrade._width;
         _height            = upgrade._height;
         _mipCount          = upgrade._mipCount;
-        _streamedMipCount  = 0;
+        _streamedMipCount  = upgrade._streamedMipCount;
         return Texture2DUploadStatus::Ready;
     }
 
@@ -443,7 +574,7 @@ namespace sw
         if ( bInvalidRenderTargetArguments )
             return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
 
         RHITextureDesc desc{};
         desc._width                      = width;
@@ -549,7 +680,7 @@ namespace sw
         if ( pDevice == nullptr || hasCPUBytes() == false )
             return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
         RHITextureDesc desc{};
         desc._width                      = _width;
         desc._height                     = _height;
@@ -615,13 +746,44 @@ namespace sw
         _streamedMipCount  = 0;
     }
 
+    void Texture2D::releaseRHIKeepingSRV( IRHIDevice* pDevice )
+    {
+        const RHIDescriptorIndex kept = takeKeptSRV();
+        releaseRHI( pDevice );
+        _keptSRV.store( kept, std::memory_order_release );
+    }
+
+    void Texture2D::detachRHIKeepingSRV( IRHIDevice* pDevice, Texture2DRetiredResource& outRetired )
+    {
+        // 위쪽 밉을 올리는 중이던 새 텍스처는 버린다(핫 리로드가 밉 전부를 다시 읽는다) — `releaseRHI` 와 같다.
+        if ( _upgrade._handle != 0 && pDevice != nullptr )
+            pDevice->releaseHandle( RHIHandleKind::Texture, _upgrade._handle );
+        _upgrade           = PendingUpgrade{};
+        outRetired._handle = _handle.exchange( 0, std::memory_order_acq_rel );
+        outRetired._srv    = kInvalidDescriptorIndex;
+        // 지키는 번호를 먼저 적고 산 번호를 지운다 — `getStableSRV` 가 그 사이에 빈 번호를 보지 않게. 산 번호가 없으면(앞서 실패해 이미 지키는 중) 지키던 번호를 그대로 둔다.
+        if ( getSRV() != kInvalidDescriptorIndex )
+        {
+            _pKeptSRVDevice.store( pDevice, std::memory_order_release );
+            _keptSRV.store( getSRV(), std::memory_order_release );
+            _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
+        }
+        _uploadTicket     = RHITransferTicket{};
+        _pDevice          = nullptr;
+        _streamedMipCount = 0;
+    }
+
     void Texture2D::clearRHI( IRHIDevice* pDevice )
     {
+        // 지키던 번호는 그 번호를 낸 디바이스와 함께 간다 — 다시 만드는 중이면(`_pDevice` 가 비었다) 아래 검사에 걸리지 않으므로 먼저 본다.
+        if ( _pKeptSRVDevice.load( std::memory_order_acquire ) == pDevice )
+            _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         if ( _pDevice != pDevice )
             return;
         // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다. 새 디바이스에 다시 업로드할 때는 밉 전부가 올라간다(`initRHI`).
-        _handle           = 0;
-        _srv              = kInvalidDescriptorIndex;
+        _handle = 0;
+        _srv    = kInvalidDescriptorIndex;
+        _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;
@@ -630,6 +792,13 @@ namespace sw
 
     void Texture2D::releaseRHI( IRHIDevice* pDevice )
     {
+        // 지키던 번호는 그 번호를 낸 디바이스에 돌려준다 — 예약만 했거나 다시 만드는 중이면 `_pDevice` 가 비어 있으므로 아래 남의 디바이스 검사보다 먼저 본다.
+        if ( pDevice != nullptr && _pKeptSRVDevice.load( std::memory_order_acquire ) == pDevice )
+        {
+            const RHIDescriptorIndex kept = takeKeptSRV();
+            if ( kept != kInvalidDescriptorIndex )
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, kept ); // 올리다 실패했거나 아직 올라오지 않은 텍스처가 지키던 번호(로드 중 텍스처 · 누락 체커를 가리킨다)
+        }
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
         const bool bForeignDeviceWarned = pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice;
         if ( bForeignDeviceWarned )
@@ -646,8 +815,9 @@ namespace sw
             if ( _upgrade._handle != 0 )
                 pDevice->releaseHandle( RHIHandleKind::Texture, _upgrade._handle );
         }
-        _handle           = 0;
-        _srv              = kInvalidDescriptorIndex;
+        _handle = 0;
+        _srv    = kInvalidDescriptorIndex;
+        _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;

@@ -125,7 +125,7 @@ namespace sw::editor
              */
             static bool collectPosedPositions( const MeshComponent& component, const Mesh& mesh, float64 vertexAnimationClock, vector<float3>& outListPosition )
             {
-                const vector<RHIVertex>& listRest = mesh.getVertices();
+                const vector<RHIVertex>& listRest = mesh.getCPUView().getVertices();
                 outListPosition.resize( listRest.size() );
                 const MeshVertexAnimation* pAnimation = mesh.findVertexAnimation();
                 if ( pAnimation != nullptr && pAnimation->isEmpty() == false )

@@ -47,7 +47,7 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
     RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, &arrVertex[0], 1, 0, capacity, listByte.data() );
     RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, &arrVertex[1], 1, 1, capacity, listByte.data() ); // 자리를 받아 이어 쓴다(LOD 단계 · 풀의 메시)
 
-    SW_EXPECT_EQUAL( 2u * ( 12u + 32u ), static_cast<uint32>( listByte.size() ) );
+    SW_EXPECT_EQUAL( 2u * ( 12u + 24u ), static_cast<uint32>( listByte.size() ) ); // 정점 색이 half 라 속성이 24 B(R-15)
     SW_EXPECT_EQUAL( 24u, attributeAt );
     const float32* pPosition = reinterpret_cast<const float32*>( listByte.data() );
     SW_EXPECT_NEAR( 4.0f, pPosition[3], 0.0f ); // 두 번째 정점의 x — 위치는 12 B 씩 붙어 있다
@@ -57,7 +57,7 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
     SW_EXPECT_EQUAL( int8{ -127 }, pAttributes[0]._arrTangent[3] ); // 바이탄젠트 부호
     SW_EXPECT_EQUAL( int8{ 127 }, pAttributes[1]._arrTangent[3] );
     SW_EXPECT_NEAR( 1024.5f, pAttributes[0]._arrUV[0], 0.0f );
-    SW_EXPECT_NEAR( 16.0f, pAttributes[0]._arrColor[0], 0.0f );
+    SW_EXPECT_NEAR( 16.0f, pAttributes[0]._arrColor[0].toFloat(), 0.0f ); // half 가 정확히 담는 값(1 넘는 데이터 — 물의 깊이)
 }
 
 SW_TEST_CASE( RHIMeshVertexStreamsTest, FullKeepsDataCarriedInTangent )

@@ -72,6 +72,7 @@ namespace sw
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) final;
         void transitionBuffers( const RHIBufferTransition* pTransition, uint32 count ) final;
         void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) final;
+        void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) final;
         void uavBarrier( RHIBufferHandle buffer ) final;
 
         // ------------------------------------------------------------------------------
@@ -106,7 +107,9 @@ namespace sw
         /** @brief 여러 전이를 냅니다. 기본은 버퍼마다 `transitionBufferNative` 다 — 네이티브 배리어를 묶을 수 있는 백엔드(DX12 · Vulkan)가 덮어 한 번에 낸다. */
         virtual void transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count );
         virtual void copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) = 0;
-        virtual void uavBarrierNative( RHIBufferHandle buffer )                                                       = 0;
+        /** @brief `copyBufferRegion` 의 백엔드 몸통입니다(렌더 패스는 닫혀 있고 인자는 검사를 지났다). */
+        virtual void copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) = 0;
+        virtual void uavBarrierNative( RHIBufferHandle buffer )                                                                                                     = 0;
         /** @brief 버퍼의 이번 프레임 슬롯(DX11 은 이 리스트의 판)에 씁니다. 두 번째 쓰기 진단은 기반이 이미 했다. */
         virtual void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 

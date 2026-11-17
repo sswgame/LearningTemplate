@@ -118,6 +118,26 @@ namespace sw
 
     Mesh::~Mesh() = default;
 
+    MeshCPUView Mesh::getCPUView() const
+    {
+        if ( _cpuAccess == MeshCPUAccess::Keep )
+            return MeshCPUView{ this };
+        SW_LOG_ERROR_ID( "Mesh.CPUVerticesReleased", "Mesh: CPU vertices were read from a mesh that released them after upload - request it with MeshCPUAccess::Keep" );
+        return MeshCPUView{ nullptr };
+    }
+
+    const vector<RHIVertex>& MeshCPUView::getVertices() const
+    {
+        static const vector<RHIVertex> s_listEmpty;
+        return _pMesh != nullptr ? _pMesh->_listVertex : s_listEmpty;
+    }
+
+    const vector<RHIVertex>& MeshCPUView::getLODVertices() const
+    {
+        static const vector<RHIVertex> s_listEmpty;
+        return _pMesh != nullptr ? _pMesh->_listLODVertex : s_listEmpty;
+    }
+
     shared_ptr<Mesh> Mesh::create()
     {
         // Material 과 MaterialInstance 와 같은 규칙이다. 제어 블록(소멸 코드)이 Engine.dll 에 있어야

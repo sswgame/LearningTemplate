@@ -66,7 +66,7 @@ namespace sw
             static void voxelizeMesh( const MeshComponent& component, Material* pSceneDefault, SceneVoxelGrid& inoutGrid )
             {
                 const Mesh&              mesh     = *component.getRawMesh();
-                const vector<RHIVertex>& vertices = mesh.getVertices();
+                const vector<RHIVertex>& vertices = mesh.getCPUView().getVertices();
                 const vector<uint32>&    indices  = mesh.getIndices();
                 uint32                   first    = 0;
                 uint32                   count    = 0;
