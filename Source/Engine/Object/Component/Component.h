@@ -319,7 +319,8 @@ namespace sw
     class SW_API Component
     {
         friend class GameObject;
-        friend class GameObjectStore; ///< 해체(`destroyComponentInstance`)가 `_pPoolEntry` 의 풀로 반납하고 버킷에서 뺀다
+        friend class GameObjectStore;    ///< 해체(`destroyComponentInstance`)가 `_pPoolEntry` 의 풀로 반납하고 버킷에서 뺀다
+        friend class ComponentStableKey; ///< 고정 지역 id(`_localID`)를 굳히는 곳은 여기 하나다
 
     public:
         REFLECT_BODY();
@@ -597,6 +598,8 @@ namespace sw
         bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
         /** @brief 컴포넌트 이름(해시)을 반환합니다. */
         hashed_string getComponentName() const { return _componentName; }
+        /** @brief 저장된 고정 지역 id 입니다. 0 이면 아직 굳히지 않았다 — 키 · 세이브가 쓰는 값은 `ComponentStableKey::getLocalID` 다. */
+        uint64 getStoredLocalID() const { return _localID; }
 
     private:
         bool isSubTickActiveSlow( uint32 subTickID ) const;
@@ -622,7 +625,14 @@ namespace sw
         uint64      _componentID; ///< 컴포넌트 고유 일련번호
         /** @brief 이름입니다(기본은 타입 이름). 저장되며 컴포넌트 키(`ComponentStableKey`)가 이 이름으로 만들어집니다. 타입이 아닙니다. 타입은 `getTypeName` 을 씁니다. */
         PROPERTY( HideInInspector )
-        hashed_string   _componentName;
+        hashed_string _componentName;
+        /**
+         * @brief 오브젝트 안에서 이 컴포넌트를 가리키는 고정 지역 id 입니다(감사 A-2). 저장되고, 형제를 지우거나 끼우거나 순서를 바꿔도 그대로다.
+         * @details 유니티 fileID · 언리얼 SCS 노드의 변수 GUID 자리다. 덮어쓰기 · 부착 대상 · 세이브 핸들의 키(`ComponentStableKey`)가 이 값이다.
+         *          0 은 "아직 정하지 않음"(옛 파일 · 막 붙인 컴포넌트)이고 그동안의 값은 옛 키 `이름#n` 에서 정해진다 — 형제 구조를 바꾸기 전에 굳힌다(`ComponentStableKey::freezeLocalIDs`).
+         */
+        PROPERTY( HideInInspector )
+        uint64          _localID;
         const TypeInfo* _pTypeInfo; ///< 만들 때 받은 타입이다. `GameObject::attachCreatedComponent` 가 한 번 기록하며, 공개 전이라 원자값이 아니다
         /**
          * @brief 이 인스턴스를 내준 타입 항목(풀과 버킷, `ComponentPoolEntry`)입니다. 힙에서 왔으면 nullptr 입니다. 생성할 때 한 번 기록하고 파괴할 때 읽습니다.

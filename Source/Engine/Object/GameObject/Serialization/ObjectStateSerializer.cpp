@@ -289,7 +289,10 @@ namespace sw
                 return s_typeName;
             }
 
-            /** @brief @p pObject 의 컴포넌트 가운데 안정 키(`타입#n`)의 해시가 @p keyHash 인 것입니다. 없으면 nullptr 입니다. */
+            /**
+             * @brief @p pObject 의 컴포넌트 가운데 안정 키(지역 id 키 `#<16진>`)의 해시가 @p keyHash 인 것입니다. 없으면 nullptr 입니다.
+             * @details 옮기는 동안: 지역 id 키가 맞는 것이 없으면 옛 키(`이름#n`)의 해시로 한 번 더 본다 — 옛 세이브 · 쿠킹본의 핸들이 산다(감사 A-2).
+             */
             static Component* findComponentByKeyHash( GameObject* pObject, uint64 keyHash )
             {
                 Component* pFound = nullptr;
@@ -298,6 +301,15 @@ namespace sw
                     if ( pFound != nullptr || pComp == nullptr )
                         return;
                     if ( hashComponentKey( ComponentStableKey::makeKey( pComp ) ) == keyHash )
+                        pFound = pComp;
+                } );
+                if ( pFound != nullptr )
+                    return pFound;
+                pObject->forEachComponent( [&]( Component* pComp )
+                {
+                    if ( pFound != nullptr || pComp == nullptr )
+                        return;
+                    if ( hashComponentKey( ComponentStableKey::makeLegacyKey( pComp ) ) == keyHash )
                         pFound = pComp;
                 } );
                 return pFound;

@@ -51,10 +51,10 @@ namespace sw
             static constexpr const utf8* kVariantOverrides  = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
             static constexpr uint32      kBinMagic          = FourCCUtil::make( "PFB2" );
             /**
-             * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다).
+             * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다), 4 부터 상태 · 노드의 컴포넌트 키가 고정 지역 id(`_localID` — 감사 A-2)다.
              *        다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다).
              */
-            static constexpr uint32 kBinVersion = 3;
+            static constexpr uint32 kBinVersion = 4;
 
             static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outListPath )
             {

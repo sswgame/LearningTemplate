@@ -104,11 +104,11 @@ namespace sw
             const bool bSkipComponent = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->getTypeInfo() == nullptr;
             if ( bSkipComponent )
                 continue;
-            const hashed_string typeFqn   = pComponent->getTypeInfo()->_fullyQualifiedName;
-            const string        stableKey = ComponentStableKey::makeKey( pComponent );
+            const hashed_string typeFqn = pComponent->getTypeInfo()->_fullyQualifiedName;
             for ( const ObjectIdentity::ComponentEntry& saved : identity._listComponent )
             {
-                if ( saved._typeFqn != typeFqn || saved._stableKey != stableKey )
+                // 지역 id 키 — 옛 세이브의 `이름#n` 도 옮기는 동안 맞춰 본다(`ComponentStableKey::matchesKey`).
+                if ( saved._typeFqn != typeFqn || ComponentStableKey::matchesKey( pComponent, saved._stableKey ) == false )
                     continue;
                 outListRemap.push_back( SavedComponentID{ saved._componentID, pComponent->getComponentID() } );
                 break;
