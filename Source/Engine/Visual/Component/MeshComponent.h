@@ -238,7 +238,7 @@ namespace sw
          * @brief 순간이동(`SceneComponent::teleportTo`)했을 때 `_bAppearOnTeleport` 면 새 자리에서 다시 나타납니다. 틱 중(워커)에도 불리므로 표시만 하고, 씬 프레임의
          *        도착 단계가 등장을 시작한다.
          */
-        void onTeleported() override;
+        void onTeleported( TeleportType type ) override;
         /** @brief 사라지기가 끝났으면(등장 비율 0, 진행 없음) true 입니다. */
         bool isFullyDisappeared() const { return _appearance <= 0.0f && _appearanceRate == 0.0f && _bAwaitingAppearance == SW_FALSE; }
         /**

@@ -176,9 +176,9 @@ namespace sw
         return ( getComponentID() << 16 ) | ( static_cast<uint64>( _motionTeleportSerial.load( std::memory_order_relaxed ) ) & kSerialMask );
     }
 
-    void MeshComponent::onTeleported()
+    void MeshComponent::onTeleported( TeleportType type )
     {
-        ScenePrimitive::onTeleported();
+        ScenePrimitive::onTeleported( type );
         // 화면 속도의 기록을 버린다 — 열쇠가 바뀌어 렌더 쪽이 지난 행렬을 찾지 못한다. 트랜스폼만 바뀐 프레임은 후보를 다시 채우지 않으므로 렌더 상태 더티로 열쇠를 다시 읽게 한다.
         _motionTeleportSerial.fetch_add( 1u, std::memory_order_relaxed );
         markRenderStateDirty();

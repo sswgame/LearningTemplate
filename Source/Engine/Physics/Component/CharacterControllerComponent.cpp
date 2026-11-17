@@ -204,6 +204,18 @@ namespace sw
         { command._pendingLaunch = velocity; } );
     }
 
+    void CharacterControllerComponent::stopMovementImmediately()
+    {
+        // 운동 상태(`_walkVelocity` · `_airVelocity` …)는 물리 스텝만 만진다 — 대기로 넘기고, 그 전에 쌓인 충격 대기는 여기서 지운다.
+        editCommand( []( CharacterCommand3D& command )
+        {
+            command._bPendingStop      = true;
+            command._pendingJumpSpeed  = 0.0f;
+            command._pendingLaunch     = float3{};
+            command._pendingRootMotion = float3{};
+        } );
+    }
+
     void CharacterControllerComponent::addSurfaceVelocity( const float3& velocity )
     {
         editCommand( [&velocity]( CharacterCommand3D& command )
@@ -340,6 +352,7 @@ namespace sw
             command                   = pending;
             pending._pendingJumpSpeed = 0.0f;
             pending._pendingLaunch    = float3{};
+            pending._bPendingStop     = false;
             if ( stepIndex == 0 )
             {
                 pending._pendingRootMotion      = float3{};
@@ -347,6 +360,14 @@ namespace sw
                 pending._pendingMoveScale       = 1.0f;
             }
         } );
+        if ( command._bPendingStop )
+        {
+            _verticalSpeed           = 0.0f;
+            _walkVelocity            = float3{};
+            _fieldVelocity           = float3{};
+            _airVelocity             = float3{};
+            _frameRootMotionVelocity = float3{};
+        }
         float3  moveVelocity = command._moveVelocity;
         float32 jumpSpeed    = command._pendingJumpSpeed;
         bool    bLaunched    = false;

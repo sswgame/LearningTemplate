@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Physics/Component/RigidBodyComponent.h"
 
 using namespace sw;
 
@@ -122,4 +123,49 @@ SW_TEST_CASE( CharacterCommandStoreTest, MoveRequest2DStaysInItsOwnSlot )
     SW_EXPECT_EQUAL( 0.0f, pSecond->getRequestedMoveVelocity() );
     pFirst->setRadius( 0.5f );
     SW_EXPECT_EQUAL( -1.5f, pFirst->getRequestedMoveVelocity() );
+}
+
+/**
+ * @brief [CharacterCommandStoreTest] `TeleportType::ResetPhysics` 순간이동은 "그 자리에 멈춰 놓기" 다 — 떨어지던 속도 · 발사의 공중 관성 · 강체 회전을 잇지 않는다(개발 명령 `object.place`)
+ * @details 바닥 없이 캐릭터는 옆으로 쏘고 강체는 돌려 20 프레임 떨어뜨린 뒤(수직 약 -3 m/s, 수평 5 m/s) 위로 옮긴다. 다음 프레임 속도는 중력 한 프레임어치뿐이다.
+ */
+SW_TEST_CASE( CharacterCommandStoreTest, ResetPhysicsTeleportDropsInheritedMotion )
+{
+    GameObjectManager             manager;
+    CharacterControllerComponent* pCharacter = TestCharacterCommandStoreInternal::addCharacter( manager, "Placed", float3{ 0.0f, 50.0f, 0.0f } );
+    GameObject*                   pCrate     = manager.createGameObject( hashed_string( "PlacedCrate" ) );
+    SW_REQUIRE_NOT_NULL( pCrate );
+    RigidBodyComponent* pBody = pCrate->addComponent<RigidBodyComponent>();
+    SW_REQUIRE_NOT_NULL( pBody );
+    PhysicsShapeDesc3D box;
+    box._type        = PhysicsShapeType3D::Box;
+    box._halfExtents = float3{ 0.5f, 0.5f, 0.5f };
+    pBody->setShape( box );
+    pBody->setBodyType( PhysicsBodyType::Dynamic );
+    pBody->setLocalPosition( float3{ 0.0f, 50.0f, 20.0f } );
+    manager.beginPlay();
+    manager.update( TestCharacterCommandStoreInternal::kFrame ); // 첫 물리 프레임이 캐릭터 · 바디를 짓는다
+
+    pCharacter->launch( float3{ 5.0f, 0.0f, 0.0f } );
+    pBody->setAngularVelocity( float3{ 0.0f, 3.0f, 0.0f } );
+    for ( uint32 frame = 0; frame < 20; ++frame )
+    {
+        manager.update( TestCharacterCommandStoreInternal::kFrame );
+    }
+    SW_REQUIRE_TRUE( pCharacter->getVelocity()._y < -2.0f );
+    SW_REQUIRE_TRUE( pCharacter->getVelocity()._x > 4.0f );
+    SW_REQUIRE_TRUE( pBody->getLinearVelocity()._y < -2.0f );
+
+    pCharacter->teleportTo( float3{ 0.0f, 60.0f, 0.0f }, TeleportType::ResetPhysics );
+    pBody->teleportTo( float3{ 0.0f, 60.0f, 20.0f }, TeleportType::ResetPhysics );
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+
+    const float32 oneFrameOfGravity = 9.81f * TestCharacterCommandStoreInternal::kFrame * 2.0f; // 한 프레임 스텝 수 여유
+    const float3  character         = pCharacter->getVelocity();
+    SW_EXPECT_NEAR( 0.0f, character._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 0.0f, character._z, 1.0e-4f );
+    SW_EXPECT_TRUE( character._y > -oneFrameOfGravity );
+    SW_EXPECT_TRUE( pCharacter->getSimulatedPosition()._y > 59.0f );
+    SW_EXPECT_TRUE( pBody->getLinearVelocity()._y > -oneFrameOfGravity );
+    SW_EXPECT_NEAR( 0.0f, pBody->getAngularVelocity().getLength(), 1.0e-3f );
 }

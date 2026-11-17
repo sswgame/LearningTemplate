@@ -160,6 +160,14 @@ namespace sw
         { command._torque += torque; } );
     }
 
+    void RigidBody2DComponent::resetMotion()
+    {
+        if ( _bodyType != PhysicsBodyType::Dynamic )
+            return;
+        setLinearVelocity( float2{} );
+        setAngularVelocity( 0.0f );
+    }
+
     void RigidBody2DComponent::setLinearVelocity( const float2& velocity )
     {
         _pPosePage->editCommand( getPoseIndex(), [&velocity]( PhysicsBodyCommand<PhysicsDimension2D>& command )
