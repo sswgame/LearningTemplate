@@ -116,13 +116,13 @@ SW_TEST_CASE( LiveReloadLogicTest, CycleFailsSort )
 /** @brief [LiveReloadLogicTest] 섀도 복사본 자리: 이름에 프로세스 꼬리가 없고, 폴더는 실행 뿌리 아래다. 남은 복사본(파일 · Windows 의 복사본 폴더)을 치운다 */
 SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
 {
-    SW_EXPECT_EQUAL( string( "SWGame_3_13435508261" ), ShadowCopyName::make( "SWGame", 3, 13435508261ull ) );
+    SW_EXPECT_EQUAL( string( "SWGame_3" ), ShadowCopyName::make( "SWGame", 3 ) );
     SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ShadowCopyName::getDirectory() ) );
 
     const string directory = test::makeScratchPath( "ShadowCopies" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( directory, "SWGame_1_7" ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_1_7/SWGame.g1.dll" ), "copy" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_2_7.so" ), "copy" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( directory, "SWGame_1" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_1/SWGame.g1.dll" ), "copy" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_2.so" ), "copy" ) );
     SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory ) );
     vector<string> listLeft;
     SW_EXPECT_TRUE( FileUtil::collectFiles( directory, "", listLeft, true ) );

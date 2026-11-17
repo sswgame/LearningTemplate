@@ -8,10 +8,10 @@
 
 namespace sw
 {
-    string ShadowCopyName::make( string_view moduleName, uint32 serial, uint64 sourceMtime )
+    string ShadowCopyName::make( string_view moduleName, uint32 serial )
     {
         StringBuilder<constant::file::kMaxPathSize> nameBuilder;
-        nameBuilder.append( moduleName ).append( '_' ).append( serial ).append( '_' ).append( sourceMtime );
+        nameBuilder.append( moduleName ).append( '_' ).append( serial );
         return string{ nameBuilder.c_str() };
     }
 
@@ -38,7 +38,7 @@ namespace sw
                 ++removedCount;
         }
 
-        // Windows 복사본은 제 폴더(`<모듈>_<번호>_<시각>/<세대 이름>.dll`)에 있다 — 안의 파일을 다 지웠을 때만 폴더를 지운다(아직 매핑된 사본은 남는다).
+        // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 안의 파일을 다 지웠을 때만 폴더를 지운다(아직 매핑된 사본은 남는다).
         for ( const string& folderPath : listFolder )
         {
             vector<string> listCopyFile;

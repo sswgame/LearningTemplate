@@ -53,7 +53,6 @@ namespace sw
     {
         string_view _moduleName;
         string_view _originalModulePath;
-        uint64      _sourceMtime{ 0 };
         bool        _bReplacingLoadedLibrary{ false }; ///< 이미 올라온 라이브러리를 바꾸는 리로드다(거절 로그의 안내 문구만 바뀐다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /** @brief 이 모듈이 의존하는 모듈 가운데 이 매니저가 올린 것입니다. 복사본의 import · NEEDED 를 그 의존의 지금 이름으로 바꿉니다. */
         vector<ShadowCopyModuleLibrary> _listDependencyLibrary;
@@ -68,7 +67,7 @@ namespace sw
      * @struct ModuleShadowCopy
      * @brief 섀도 복사본 파일을 만들고 지웁니다.
      * @details 원본을 한 번 읽어 엔진 ABI 스탬프와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 이 프로세스의 섀도 폴더(`ShadowCopyName::getDirectory`)에 씁니다.
-     *          Windows 는 복사본마다 제 폴더(`<모듈>_<번호>_<시각>/<세대 이름>.dll`)를 쓰고, 리눅스는 파일 하나(`<모듈>_<번호>_<시각>.so`)입니다.
+     *          Windows 는 복사본마다 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)를 쓰고, 리눅스는 파일 하나(`<모듈>_<번호>.so`)입니다.
      *          복사본 이름의 일련번호와 세대 번호는 프로세스 하나에 하나씩 오릅니다.
      */
     struct ModuleShadowCopy

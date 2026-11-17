@@ -701,11 +701,8 @@ namespace sw
             }
         }
 
-        outShadow._sourceMtime = 0;
         outShadow._sourceStamp = FileStamp{};
-        if ( FileUtil::getFileStamp( context._originalModulePath, outShadow._sourceStamp ) )
-            outShadow._sourceMtime = outShadow._sourceStamp._writeTime / static_cast<uint64>( FileUtil::kFileTimeTicksPerSecond );
-        else
+        if ( FileUtil::getFileStamp( context._originalModulePath, outShadow._sourceStamp ) == false )
             SW_LOG_WARNING_ID( "LiveReloadManager.CannotReadTimeNext", "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
@@ -713,7 +710,6 @@ namespace sw
             // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 **전이라** 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
             ShadowCopyParams params;
             populateShadowCopyParams( context, params );
-            params._sourceMtime = outShadow._sourceMtime;
             if ( ModuleShadowCopy::writeShadowCopy( params, _shadowCopySerials, context._libraryName, outShadow._tempPath ) == false )
                 return false;
         }
@@ -898,7 +894,6 @@ namespace sw
         prepared._previousHeads = engine::ModuleRegistrarHeads{};
         ModuleShadowCopy::removeArtifacts( prepared._tempPath );
         prepared._tempPath.clear();
-        prepared._sourceMtime = 0;
         prepared._sourceStamp = FileStamp{};
     }
 

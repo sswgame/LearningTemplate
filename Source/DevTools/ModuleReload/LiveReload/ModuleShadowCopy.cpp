@@ -163,7 +163,7 @@ namespace sw
     bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath )
     {
         ++inoutSerials._reloadCount;
-        const string tempName  = ShadowCopyName::make( params._moduleName, inoutSerials._reloadCount, params._sourceMtime );
+        const string tempName  = ShadowCopyName::make( params._moduleName, inoutSerials._reloadCount );
         const string shadowDir = ShadowCopyName::getDirectory();
 
         // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
@@ -224,7 +224,7 @@ namespace sw
         ModuleShadowCopyInternal::tryDeleteFile( shadowPath );
         ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath ) );
 #if defined( SW_PLATFORM_WINDOWS )
-        // Windows 복사본은 제 폴더(`<모듈>_<번호>_<시각>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
+        // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
         string_view directoryPath;
         FileUtil::getDirectoryPart( shadowPath, directoryPath );
         vector<string> listLeftFile;
