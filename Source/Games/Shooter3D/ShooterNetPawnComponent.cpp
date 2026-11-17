@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
@@ -321,8 +322,11 @@ namespace sw
         movement.setState( next, float3{ next._position._x - before._position._x, 0.0f, next._position._z - before._position._z } * ( 1.0f / _tickInterval ) );
 
         recordEnemies();
-        writeState( next, _bytesScratch );
-        _server.setEntity( kPawnEntityID, kPawnTypeID, _bytesScratch );
+        if ( writeState( next, _bytesScratch ) )
+            _server.setEntity( kPawnEntityID, kPawnTypeID, _bytesScratch );
+        else
+            SW_LOG_ERROR_ID( "ShooterNetPawn.StateOutOfRange", "Pawn state is outside the replicated range (%#, %#, %#) - not replicated this tick", next._position._x,
+                             next._position._y, next._position._z );
         _server.endTick();
         _interest.setEntityPosition( kPawnEntityID, next._position );
         if ( _controllerID >= 0 )
@@ -331,8 +335,8 @@ namespace sw
             if ( bHasInput )
             {
                 const ShooterPlayerComponent* pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
-                writeOwnerState( next, pPlayer != nullptr ? pPlayer->getHitCount() : 0u, pPlayer != nullptr ? pPlayer->getHealth() : 0.0f, _bytesScratch );
-                (void)_server.setOwnerState( _controllerID, inputTick, _bytesScratch ); // 상태는 상한(작은 고정 크기) 안이다
+                if ( writeOwnerState( next, pPlayer != nullptr ? pPlayer->getHitCount() : 0u, pPlayer != nullptr ? pPlayer->getHealth() : 0.0f, _bytesScratch ) )
+                    (void)_server.setOwnerState( _controllerID, inputTick, _bytesScratch ); // 상태는 상한(작은 고정 크기) 안이다
             }
         }
         _interest.updateRelevancy();
@@ -651,56 +655,39 @@ namespace sw
         return true;
     }
 
-    void ShooterNetPawnComponent::writeState( const ShooterMoveState& state, vector<uint8>& outBytes )
+    bool ShooterNetPawnComponent::writeState( const ShooterMoveState& state, vector<uint8>& outBytes )
     {
+        // 칸 선언(`Replicated` · 범위)이 곧 바이트다 — 같은 칸을 손 코덱이 따로 알지 않는다. 스키마는 핸드셰이크가 확인했다(`Shooter3DGame::onRegisterReplicatedTypes`).
         BitWriter writer{ std::move( outBytes ) };
         writer.clear();
-        writer.writeFloat( state._position._x );
-        writer.writeFloat( state._position._y );
-        writer.writeFloat( state._position._z );
-        writer.writeFloat( state._verticalSpeed );
-        writer.writeBool( state._bOnGround == SW_TRUE );
-        outBytes = writer.releaseBytes();
+        const bool bWritten = ReplicatedLayout::writeFull( state, writer );
+        outBytes            = writer.releaseBytes();
+        return bWritten;
     }
 
     bool ShooterNetPawnComponent::readState( const vector<uint8>& bytes, ShooterMoveState& outState )
     {
-        BitReader        reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        ShooterMoveState state;
-        const bool       bFinite = reader.readFiniteFloat( state._position._x ) && reader.readFiniteFloat( state._position._y ) &&
-                             reader.readFiniteFloat( state._position._z ) && reader.readFiniteFloat( state._verticalSpeed );
-        if ( bFinite == false )
-            return false;
-        state._bOnGround = reader.readBool() ? SW_TRUE : SW_FALSE;
-        if ( reader.hasOverflowed() )
-            return false;
-        outState = state;
-        return true;
+        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+        return ReplicatedLayout::readFull( reader, outState, nullptr ) == FixedReadResult::Ok;
     }
 
-    void ShooterNetPawnComponent::writeOwnerState( const ShooterMoveState& state, uint32 confirmedHitCount, float32 health, vector<uint8>& outBytes )
+    bool ShooterNetPawnComponent::writeOwnerState( const ShooterMoveState& state, uint32 confirmedHitCount, float32 health, vector<uint8>& outBytes )
     {
         BitWriter writer{ std::move( outBytes ) };
         writer.clear();
-        writer.writeFloat( state._position._x );
-        writer.writeFloat( state._position._y );
-        writer.writeFloat( state._position._z );
-        writer.writeFloat( state._verticalSpeed );
-        writer.writeBool( state._bOnGround == SW_TRUE );
+        const bool bWritten = ReplicatedLayout::writeFull( state, writer );
         writer.writeVarUint( confirmedHitCount );
         writer.writeFloat( health );
         outBytes = writer.releaseBytes();
+        return bWritten;
     }
 
     bool ShooterNetPawnComponent::readOwnerState( const vector<uint8>& bytes, ShooterMoveState& outState, uint32& outConfirmedHitCount, float32& outHealth )
     {
         BitReader        reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        ShooterMoveState state;
-        const bool       bFinite = reader.readFiniteFloat( state._position._x ) && reader.readFiniteFloat( state._position._y ) &&
-                             reader.readFiniteFloat( state._position._z ) && reader.readFiniteFloat( state._verticalSpeed );
-        if ( bFinite == false )
+        ShooterMoveState state = outState;
+        if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok )
             return false;
-        state._bOnGround               = reader.readBool() ? SW_TRUE : SW_FALSE;
         const uint32 confirmedHitCount = reader.readVarUint32();
         float32      health            = 0.0f;
         if ( reader.readFiniteFloat( health ) == false || reader.hasOverflowed() )

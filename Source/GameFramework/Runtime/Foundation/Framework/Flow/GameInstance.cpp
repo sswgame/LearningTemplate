@@ -272,12 +272,21 @@ namespace sw
             SW_LOG_ERROR_ID( "GameInstance.ContentNotPrepared", "Game instance cannot start - the content configuration (mods) could not be prepared (see the error above)" );
             return false;
         }
-        const IContentConfiguration* const pContent          = game::findSubsystem<IContentConfiguration>();
-        const uint64                       contentConfigHash = pContent != nullptr ? pContent->getContentConfigHash() : 0;
-        GameNetSession&                    netSession        = game::getSubsystem<GameNetSession>(); // `checkEngineServices` 가 있음을 확인했다
+        // 복제 타입도 세션을 열기 전에 정한다 — 그 스키마 해시가 같은 함수로 와이어 버전에 섞인다(`GameNetSession::combineWireContent`).
+        NetMessageChannel replicatedChannel;
+        if ( onRegisterReplicatedTypes( replicatedChannel ) == false )
+        {
+            SW_LOG_ERROR_ID( "GameInstance.ReplicatedTypesNotRegistered", "Game instance cannot start - a replicated type could not be registered (see the error above)" );
+            return false;
+        }
+        const IContentConfiguration* const pContent = game::findSubsystem<IContentConfiguration>();
+        GameNetWireContent                 wireContent;
+        wireContent._contentConfigHash    = pContent != nullptr ? pContent->getContentConfigHash() : 0;
+        wireContent._replicatedSchemaHash = replicatedChannel.computeSchemaHash();
+        GameNetSession& netSession        = game::getSubsystem<GameNetSession>(); // `checkEngineServices` 가 있음을 확인했다
         netSession.getConnectSecurity().setProvider( &game::getSubsystem<INetSecurityProvider>() );
         _bSecuritySet = SW_TRUE;
-        if ( netSession.openFromLaunch( contentConfigHash ) == false )
+        if ( netSession.openFromLaunch( wireContent ) == false )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart5", "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
             return false;

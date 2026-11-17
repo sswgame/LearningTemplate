@@ -109,13 +109,13 @@ namespace sw
         /** @brief 마지막 판정이 되감은 서버 틱 수입니다(서버). 클라이언트의 보간 지연 + 왕복 지연만큼입니다. */
         float32 getLastRewindTicks() const { return _lastRewindTicks; }
 
-        /** @brief 걸음 상태를 바이트로 씁니다(엔티티의 몸). */
-        static void               writeState( const ShooterMoveState& state, vector<uint8>& outBytes );
+        /** @brief 걸음 상태를 바이트로 씁니다(엔티티의 몸 — `ShooterMoveState` 의 복제 칸). 범위 밖 값(아레나 밖 · NaN)이면 false 입니다. */
+        [[nodiscard]] static bool writeState( const ShooterMoveState& state, vector<uint8>& outBytes );
         [[nodiscard]] static bool readState( const vector<uint8>& bytes, ShooterMoveState& outState );
         /** @brief 두 상태가 같다고 볼 만큼 가까운가입니다(재조정 판정 — 자리 `_reconcileTolerance` 안, 땅 여부가 같음). */
         bool isClose( const ShooterMoveState& left, const ShooterMoveState& right ) const;
-        /** @brief 소유자 상태를 바이트로 씁니다 — 걸음 상태 뒤에 서버 판정 결과(맞힌 발 수 · 체력). */
-        static void               writeOwnerState( const ShooterMoveState& state, uint32 confirmedHitCount, float32 health, vector<uint8>& outBytes );
+        /** @brief 소유자 상태를 바이트로 씁니다 — 걸음 상태 뒤에 서버 판정 결과(맞힌 발 수 · 체력). 걸음 상태가 범위 밖이면 false 입니다. */
+        [[nodiscard]] static bool writeOwnerState( const ShooterMoveState& state, uint32 confirmedHitCount, float32 health, vector<uint8>& outBytes );
         [[nodiscard]] static bool readOwnerState( const vector<uint8>& bytes, ShooterMoveState& outState, uint32& outConfirmedHitCount, float32& outHealth );
 
     private:
