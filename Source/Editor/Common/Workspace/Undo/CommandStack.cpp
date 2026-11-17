@@ -126,12 +126,31 @@ namespace sw
         , _interactionDepth{ 0 }
         , _bIsExecuting{ SW_FALSE }
         , _bHistorySuspended{ SW_FALSE }
+        , _pAlive{ sw::make_shared<CommandStack*>( this ) }
         , _listOwnerWatch{}
     {
         SW_ASSERT( limit._maxCommandCount > 0 && limit._maxBytes > 0 ); // 0 이면 기록이 남지 않는다 — 설정 값이 틀렸다
     }
 
-    CommandStack::~CommandStack() = default;
+    CommandStack::~CommandStack()
+    {
+        *_pAlive = nullptr; // 남은 상호작용 핸들은 이제 아무것도 하지 않는다
+    }
+
+    void CommandStackInteractionScope::reset()
+    {
+        if ( _pStack == nullptr )
+            return;
+        if ( *_pStack != nullptr )
+            ( *_pStack )->closeInteraction();
+        _pStack.reset();
+    }
+
+    CommandStackInteractionScope CommandStack::openInteraction()
+    {
+        ++_interactionDepth;
+        return CommandStackInteractionScope{ _pAlive };
+    }
 
     void CommandStack::watchOwners( const Command& cmd )
     {
@@ -266,9 +285,9 @@ namespace sw
         _listPendingTransactionCommand.clear();
     }
 
-    void CommandStack::endInteraction()
+    void CommandStack::closeInteraction()
     {
-        SW_ASSERT( _interactionDepth != 0 ); // 여닫기는 짝이다
+        SW_ASSERT( _interactionDepth != 0 ); // 핸들 하나가 한 번 닫는다
         if ( _interactionDepth != 0 )
             --_interactionDepth;
     }

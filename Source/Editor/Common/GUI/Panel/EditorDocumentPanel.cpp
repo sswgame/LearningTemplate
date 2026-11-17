@@ -178,13 +178,13 @@ namespace sw::editor
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _pDocumentStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit() ) }
+        , _pStackInteraction{ make_unique<CommandStackInteractionScope>() }
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
-        , _bStackInteraction{ SW_FALSE }
         , _reserved{ 0 }
     {
         if ( bLoadOnOpen == false )
@@ -342,13 +342,12 @@ namespace sw::editor
     void EditorDocumentPanel::syncStackInteraction()
     {
         const bool bHolding = _pEditSpan->isHolding();
-        if ( bHolding == ( _bStackInteraction == SW_TRUE ) )
+        if ( bHolding == _pStackInteraction->isOpen() )
             return;
         if ( bHolding )
-            _pDocumentStack->beginInteraction();
+            *_pStackInteraction = _pDocumentStack->openInteraction();
         else
-            _pDocumentStack->endInteraction();
-        _bStackInteraction = bHolding ? SW_TRUE : SW_FALSE;
+            _pStackInteraction->reset();
     }
 
     void EditorDocumentPanel::syncDocumentUndoBaseline()

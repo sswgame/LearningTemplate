@@ -37,6 +37,51 @@ namespace sw
         uint64 _maxBytes;        ///< 쥔 바이트 한도(1 이상 — 명령 이름 · 인자 · 코드 단계가 쥔 자료)
     };
 
+    class CommandStack;
+
+    /**
+     * @class CommandStackInteractionScope
+     * @brief 스택 하나에 연 상호작용(`CommandStack::openInteraction`)의 범위형 핸들입니다 — 사라지거나 `reset` 하면 닫는다. 옮길 수 있고 복사할 수 없다.
+     * @details 예전에는 여닫기(`beginInteraction` · `endInteraction`)를 부르는 쪽이 짝지었다 — 기즈모가 끌기 도중 사라지면(모듈 리로드 · 창 닫기) 닫지 못해 그 스택이
+     *          되돌리기를 영영 거절했다. 스택이 먼저 사라지면 핸들은 아무것도 하지 않는다(스택의 생존 표지를 함께 쥔다). 언리얼 `FScopedTransaction` 과 같은 범위형이다.
+     */
+    class SW_EDITOR_API CommandStackInteractionScope final
+    {
+    public:
+        CommandStackInteractionScope() = default;
+        ~CommandStackInteractionScope() { reset(); }
+        CommandStackInteractionScope( const CommandStackInteractionScope& )            = delete;
+        CommandStackInteractionScope& operator=( const CommandStackInteractionScope& ) = delete;
+        CommandStackInteractionScope( CommandStackInteractionScope&& other ) noexcept
+            : _pStack{ std::move( other._pStack ) }
+        {
+        }
+        CommandStackInteractionScope& operator=( CommandStackInteractionScope&& other ) noexcept
+        {
+            if ( this != &other )
+            {
+                reset();
+                _pStack = std::move( other._pStack );
+            }
+            return *this;
+        }
+
+        /** @brief 상호작용을 쥐고 있으면 true 입니다(스택이 사라졌으면 false). */
+        bool isOpen() const { return _pStack != nullptr && *_pStack != nullptr; }
+        /** @brief 쥔 상호작용을 닫습니다. 쥔 것이 없거나 스택이 사라졌으면 아무것도 하지 않는다. */
+        void reset();
+
+    private:
+        friend class CommandStack;
+        explicit CommandStackInteractionScope( shared_ptr<CommandStack*> pStack )
+            : _pStack{ std::move( pStack ) }
+        {
+        }
+
+    private:
+        shared_ptr<CommandStack*> _pStack; ///< 스택의 생존 표지(`CommandStack::_pAlive`) — 스택이 사라지면 가리키는 값이 nullptr 이다
+    };
+
     /**
      * @class CommandStack
      * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 메인 스택은 `EditorUndoHistory`(편집기 범위)가 소유해 범위에 노출하고, 문서 패널은 문서마다 자기 스택을 멤버로 든다(`EditorDocumentPanel::getDocumentCommandStack`).
@@ -91,13 +136,11 @@ namespace sw
         /** @brief 트랜잭션 진행 여부를 반환합니다. */
         bool isInsideTransaction() const { return _transactionDepth != 0; }
         /**
-         * @brief 여러 프레임에 걸친 상호작용(기즈모 끌기 · 문서 위젯 끌기 — `DocumentEditSpan`)을 엽니다. 닫을 때(`endInteraction`)까지 되돌리기 · 다시 하기 · 이동을 거절한다.
+         * @brief 여러 프레임에 걸친 상호작용(기즈모 끌기 · 문서 위젯 끌기 — `DocumentEditSpan`)을 엽니다. 돌려준 핸들이 닫을 때까지 되돌리기 · 다시 하기 · 이동을 거절한다.
          * @details 상호작용은 시작 전 상태를 쥐고 끝에 한 단계를 올린다. 그 사이에 되돌리면 쥔 "전" 이 낡아 끝의 단계가 되돌린 편집을 다시 덮고 다시 하기 기록을 자른다(감사 E-2).
-         *          언리얼 `UTransBuffer::CanUndo` 가 열린 트랜잭션이 있으면 거절하는 것과 같은 자리다. 여닫기는 짝이다(중첩은 센다).
+         *          언리얼 `UTransBuffer::CanUndo` 가 열린 트랜잭션이 있으면 거절하는 것과 같은 자리다. 닫기는 핸들만 한다(`CommandStackInteractionScope` — 짝을 잊을 수 없다, 중첩은 센다).
          */
-        void beginInteraction() { ++_interactionDepth; }
-        /** @brief `beginInteraction` 으로 연 상호작용 하나를 닫습니다. 열린 것이 없으면 단언합니다. */
-        void endInteraction();
+        [[nodiscard]] CommandStackInteractionScope openInteraction();
         /** @brief 트랜잭션이나 상호작용이 열려 있으면 true 입니다 — 이 동안 `undo` · `redo` · `jumpTo` 는 거절한다. */
         bool isEditOpen() const { return _transactionDepth != 0 || _interactionDepth != 0; }
 
@@ -158,6 +201,10 @@ namespace sw
         [[nodiscard]] bool load( Archive& archive );
 
     private:
+        friend class CommandStackInteractionScope;
+        /** @brief 핸들이 상호작용 하나를 닫습니다. */
+        void closeInteraction();
+
         /** @brief @p cmd(안쪽 명령까지)의 코드 단계 주인마다 사라짐을 한 번 구독합니다(`push`). */
         void watchOwners( const Command& cmd );
         /** @brief 주인이 사라졌다 — 그 명령을 빼고 구독을 놓습니다. */
@@ -200,6 +247,7 @@ namespace sw
             uint64       _ownerID;
             Subscription _subscription;
         };
-        vector<OwnerWatch> _listOwnerWatch; ///< 맨 끝 — 먼저 사라져 주인 쪽 알림 목록에서 빠진다
+        shared_ptr<CommandStack*> _pAlive;         ///< 생존 표지 — 상호작용 핸들이 쥐고, 스택이 사라지면 nullptr 로 비운다
+        vector<OwnerWatch>        _listOwnerWatch; ///< 맨 끝 — 먼저 사라져 주인 쪽 알림 목록에서 빠진다
     };
 } // namespace sw

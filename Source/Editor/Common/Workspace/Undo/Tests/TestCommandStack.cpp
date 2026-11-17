@@ -42,7 +42,7 @@ SW_TEST_CASE( CommandStackTest, RefusesUndoWhileInteractionOpen )
     SW_REQUIRE_TRUE( stack.undo() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, stack.getCurrentIndex() );
 
-    stack.beginInteraction();
+    sw::CommandStackInteractionScope interaction = stack.openInteraction();
     SW_EXPECT_TRUE( stack.isEditOpen() );
     SW_EXPECT_FALSE( stack.canUndo() );
     SW_EXPECT_FALSE( stack.canRedo() );
@@ -52,7 +52,7 @@ SW_TEST_CASE( CommandStackTest, RefusesUndoWhileInteractionOpen )
     SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCurrentIndex() ); // 끄는 동안 되돌리면 끝의 단계가 낡은 "전" 으로 다시 하기를 잘랐다
     SW_EXPECT_TRUE( stack.peekRedoLabel() == "B" );          // 이름은 열린 편집과 무관하다
 
-    stack.endInteraction();
+    interaction.reset();
     SW_EXPECT_TRUE( stack.redo() );
     SW_EXPECT_EQUAL( size_t{ 2 }, stack.getCurrentIndex() );
 }
@@ -112,4 +112,29 @@ SW_TEST_CASE( CommandStackTest, EvictsByCommandCount )
     SW_EXPECT_EQUAL( size_t{ 2 }, stack.getCommandCount() );
     SW_EXPECT_TRUE( stack.getCommand( 0 )._label == "B" );
     SW_EXPECT_EQUAL( size_t{ 2 }, stack.getCurrentIndex() );
+}
+
+/** @brief [CommandStackTest] 상호작용 핸들은 사라질 때 닫는다(기즈모가 끌기 도중 사라져도 스택이 되돌리기를 영영 거절하지 않는다), 스택이 먼저 사라져도 핸들은 안전하다 */
+SW_TEST_CASE( CommandStackTest, InteractionHandleClosesOnDestruction )
+{
+    using Internal = CommandStackTestInternal;
+
+    sw::editor::UndoStepOwner owner;
+    sw::CommandStack          stack{ Internal::kRoomyLimit };
+    stack.push( Internal::makeCommand( owner, "A" ) );
+    {
+        const sw::CommandStackInteractionScope interaction = stack.openInteraction();
+        SW_EXPECT_TRUE( interaction.isOpen() );
+        SW_EXPECT_FALSE( stack.canUndo() );
+    }
+    SW_EXPECT_FALSE( stack.isEditOpen() );
+    SW_EXPECT_TRUE( stack.undo() );
+
+    sw::CommandStackInteractionScope orphan;
+    {
+        sw::CommandStack shortLived{ Internal::kRoomyLimit };
+        orphan = shortLived.openInteraction();
+    }
+    SW_EXPECT_FALSE( orphan.isOpen() );
+    orphan.reset(); // 사라진 스택을 부르지 않는다 — 터지지 않으면 통과다
 }

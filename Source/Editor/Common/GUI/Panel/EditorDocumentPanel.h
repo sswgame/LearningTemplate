@@ -19,6 +19,7 @@
 namespace sw
 {
     class CommandStack;
+    class CommandStackInteractionScope;
 } // namespace sw
 
 namespace sw::editor
@@ -189,7 +190,7 @@ namespace sw::editor
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
-        /** @brief 문서 스택의 상호작용(`CommandStack::beginInteraction`)을 쥔 구간(`DocumentEditSpan::isHolding`)과 맞춥니다 — 끌기 동안 Ctrl+Z · History 가 그 스택을 움직이지 못한다(감사 E-2). */
+        /** @brief 문서 스택의 상호작용(`CommandStack::openInteraction`)을 쥔 구간(`DocumentEditSpan::isHolding`)과 맞춥니다 — 끌기 동안 Ctrl+Z · History 가 그 스택을 움직이지 못한다(감사 E-2). */
         void syncStackInteraction();
         /** @brief 상호작용 구간 하나(@p edit)를 이 문서의 스택(`getDocumentCommandStack`)에 한 단계로 기록하고 dirty 로 표시합니다. */
         void recordDocumentEdit( const DocumentEdit& edit );
@@ -199,22 +200,22 @@ namespace sw::editor
         void markDocumentLoadFailed( string_view reason );
 
     private:
-        EditorAssetType                         _kind;
-        string                                  _loadedAssetPath;
-        string                                  _pendingFocusPath;
-        string                                  _lastSavedDocumentText;
-        Subscription                            _assetsMovedSubscription; ///< 작업 공간의 에셋 옮김 알림 — 열린 문서의 경로를 새 id 로 고친다
-        shared_ptr<EditorDocumentPanel*>        _pUndoTarget;             ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
-        unique_ptr<DocumentEditSpan>            _pEditSpan;               ///< 되돌리기 기준 글과 쥔 상호작용 구간. 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
-        unique_ptr<UndoStepOwner>               _pUndoOwner;              ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
-        unique_ptr<CommandStack>                _pDocumentStack;          ///< 이 문서의 되돌리기 스택(`getDocumentCommandStack`). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
-        vector<string>                          _listRecentPath;
-        vector<string>                          _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
-        fixed_string<constant::buffer::kMax128> _openFilter;
-        uint8                                   _bLoaded           : 1;
-        uint8                                   _bConfirmSwitch    : 1;
-        uint8                                   _bLoadFailed       : 1;
-        uint8                                   _bStackInteraction : 1; ///< 문서 스택에 상호작용을 열어 두었다(`syncStackInteraction`)
-        [[maybe_unused]] uint8                  _reserved          : 4;
+        EditorAssetType                          _kind;
+        string                                   _loadedAssetPath;
+        string                                   _pendingFocusPath;
+        string                                   _lastSavedDocumentText;
+        Subscription                             _assetsMovedSubscription; ///< 작업 공간의 에셋 옮김 알림 — 열린 문서의 경로를 새 id 로 고친다
+        shared_ptr<EditorDocumentPanel*>         _pUndoTarget;             ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
+        unique_ptr<DocumentEditSpan>             _pEditSpan;               ///< 되돌리기 기준 글과 쥔 상호작용 구간. 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
+        unique_ptr<UndoStepOwner>                _pUndoOwner;              ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
+        unique_ptr<CommandStack>                 _pDocumentStack;          ///< 이 문서의 되돌리기 스택(`getDocumentCommandStack`). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
+        unique_ptr<CommandStackInteractionScope> _pStackInteraction;       ///< 쥔 구간 동안 문서 스택에 연 상호작용(`syncStackInteraction`) — 스택 뒤에 두어 먼저 사라진다
+        vector<string>                           _listRecentPath;
+        vector<string>                           _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
+        fixed_string<constant::buffer::kMax128>  _openFilter;
+        uint8                                    _bLoaded        : 1;
+        uint8                                    _bConfirmSwitch : 1;
+        uint8                                    _bLoadFailed    : 1;
+        [[maybe_unused]] uint8                   _reserved       : 4;
     };
 } // namespace sw::editor

@@ -82,8 +82,8 @@ SW_TEST_CASE( HistoryViewModelTest, RefusedWhileEditOpen )
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );
 
-    sw::editor::HistoryViewModel viewModel;
-    stack.beginInteraction();
+    sw::editor::HistoryViewModel     viewModel;
+    sw::CommandStackInteractionScope interaction = stack.openInteraction();
     viewModel.jumpTo( 0 );
     viewModel.undo();
     viewModel.clear();
@@ -94,7 +94,7 @@ SW_TEST_CASE( HistoryViewModelTest, RefusedWhileEditOpen )
     viewModel.gather( state );
     SW_EXPECT_FALSE( state._bCanUndo ); // 끄는 동안 단추가 꺼진다
 
-    stack.endInteraction();
+    interaction.reset();
     viewModel.jumpTo( 0 );
     SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCurrentIndex() );
 }
