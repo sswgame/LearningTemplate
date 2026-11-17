@@ -30,6 +30,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 
 namespace sw::test
 {
@@ -54,6 +55,30 @@ namespace sw::test
                 return false;
             }
 
+            /**
+             * @brief 케이스 실패의 종류입니다 — 보고(판 4)의 `failureKind` 와 종류별 수. 첫 실패 줄의 종류가 그 케이스의 종류다.
+             * @details 같은 "실패" 가 틀린 단언 · 단언 없음 · 선언하지 않은 로그 · 기준 파일 없음을 함께 담으면, 빌드 없이 쓴 테스트를 통합에서 고칠 때 줄마다 읽어 갈라야 했다.
+             */
+            enum class TestFailureKind : uint8
+            {
+                Assertion,
+                NoAssertion,
+                UndeclaredLog,
+                ExpectedLogMissing,
+                SnapshotMissing,
+                SnapshotDiffers,
+                Timeout,
+                Crash,
+                Count,
+            };
+
+            static const utf8* getFailureKindName( TestFailureKind kind )
+            {
+                static constexpr const utf8* kArrName[] = { "Assertion", "NoAssertion", "UndeclaredLog", "ExpectedLogMissing", "SnapshotMissing", "SnapshotDiffers", "Timeout", "Crash" };
+                static_assert( std::size( kArrName ) == static_cast<size_t>( TestFailureKind::Count ), "a failure kind without a name" );
+                return kArrName[static_cast<size_t>( kind )];
+            }
+
             /** @brief 일부러 내는 로그 하나의 선언과 나온 횟수입니다. */
             struct ExpectedLog
             {
@@ -70,6 +95,7 @@ namespace sw::test
                 const TestCaseRegistration* _pCase{ nullptr };
                 vector<ExpectedLog>         _listExpectedLog;
                 vector<string>              _listFailure;
+                TestFailureKind             _firstFailureKind{ TestFailureKind::Assertion }; ///< 첫 실패 줄의 종류(`_listFailure` 가 비면 뜻이 없다)
                 vector<string>              _listUpdatedSnapshot;
                 string                      _skipReason; ///< `SW_TEST_SKIP` 의 까닭과 자리(`파일(줄)`) — 비면 건너뛰지 않았다
                 string                      _scratchFolder;
@@ -142,13 +168,58 @@ namespace sw::test
                 (void)StandardOutput::write( "\n" );
             }
 
-            /** @brief 실패 하나를 적고 바로 찍습니다(잠금을 잡은 채 부르지 않는다 — 표준 출력은 잠금 밖). */
-            static void addFailure( string text )
+            /** @brief 실패 하나를 종류 @p kind 와 함께 적고 바로 찍습니다(잠금을 잡은 채 부르지 않는다 — 표준 출력은 잠금 밖). */
+            static void addFailure( string text, TestFailureKind kind )
             {
                 writeLine( text );
                 CaseState&        state = getState();
                 ScopedLock<mutex> lock{ state._mutex };
+                if ( state._listFailure.empty() )
+                    state._firstFailureKind = kind;
                 state._listFailure.push_back( std::move( text ) );
+            }
+
+            /** @brief `파일(줄): error: 글` 실패 하나를 종류 @p kind 로 적습니다. */
+            static void reportFailureOfKind( const utf8* pFile, int32 line, string_view message, TestFailureKind kind )
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#(%#): error: %#", string( pFile ), line, string( message ) );
+                addFailure( string( textBuilder.view() ), kind );
+            }
+
+            /** @brief 실행의 마지막 표준 출력 줄 `TEST_RESULT=<결과> run=… failed=… skipped=…` 입니다(`WINDOWS_OK=` 와 같은 꼴 — 출력을 잘라 본 쪽도 결과를 읽는다). */
+            static void writeResultLine( const utf8* pResult, uint32 ranCount, uint32 failedCount, uint32 skippedCount )
+            {
+                utf8 arrBuffer[constant::buffer::kMax256];
+                formatstring( arrBuffer, constant::buffer::kMax256, "TEST_RESULT=%# run=%# failed=%# skipped=%#", pResult, ranCount, failedCount, skippedCount );
+                writeLine( arrBuffer );
+            }
+
+            /** @brief 거르개의 쉼표로 가른 패턴마다 @p visit( 패턴, 빼기인지 )를 부릅니다(빈 패턴은 건너뛴다). */
+            template <typename Visit>
+            static void forEachPattern( string_view filter, Visit&& visit )
+            {
+                size_t start = 0;
+                while ( start <= filter.size() )
+                {
+                    const size_t      end     = MathUtil::min( filter.find( ',', start ), filter.size() );
+                    const string_view pattern = filter.substr( start, end - start );
+                    if ( pattern.empty() == false )
+                    {
+                        if ( pattern.front() == '-' )
+                            visit( pattern.substr( 1 ), true );
+                        else
+                            visit( pattern, false );
+                    }
+                    start = end + 1;
+                }
+            }
+
+            /** @brief 케이스 이름 패턴에 올 수 있는 글자인지입니다 — 이름 글자 · `.` · `*` · `?` · `/`. */
+            static bool isNamePatternCharacter( utf8 character )
+            {
+                return ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) || character == '_' ||
+                       character == '.' || character == '*' || character == '?' || character == '/';
             }
 
             /** @brief 케이스 동안 남은 로그를 봅니다. Warning · Error 는 선언한 id 면 세고, 아니면 실패로 적는다. */
@@ -187,8 +258,11 @@ namespace sw::test
                     failure = string( entry._file ) + "(" + to_string( entry._line ) + "): error: unexpected " + ( entry._level == LogLevel::Error ? "Error" : "Warning" ) +
                               " log" + ( entry._pID != nullptr ? string( " [id:" ) + entry._pID + "]" : string( " (no id - give it one to declare it with SW_EXPECT_LOG)" ) ) + ": " +
                               entry._message;
+                    // 붙일 글을 그대로 낸다 — 이 로그가 케이스가 밟는 새 길의 사실이면 이 한 줄을 케이스에 붙인다.
+                    if ( entry._pID != nullptr && state._pCase != nullptr )
+                        failure += string( " - if it is expected, add SW_EXPECT_LOG( \"" ) + entry._pID + "\" ) to " + state._pCase->_pFile + "(" + to_string( state._pCase->_line ) + ")";
                 }
-                addFailure( std::move( failure ) );
+                addFailure( std::move( failure ), TestFailureKind::UndeclaredLog );
             }
 
             /**
@@ -201,6 +275,9 @@ namespace sw::test
                 atomic<int64>       _deadlineNanoseconds{ 0 }; ///< 0 이면 보는 케이스가 없다
                 atomic<int64>       _timeoutMilliseconds{ 0 };
                 atomic<const utf8*> _pCaseName{ nullptr };
+                atomic<uint32>      _ranCount{ 0 }; ///< 지금 실행이 끝낸 케이스 수 — 시한에 끝낼 때 끝 줄(`TEST_RESULT=TIMEOUT`)에 적는다
+                atomic<uint32>      _failedCount{ 0 };
+                atomic<uint32>      _skippedCount{ 0 };
             };
 
             static Watchdog& getWatchdog()
@@ -222,6 +299,9 @@ namespace sw::test
                     const utf8* pName = watchdog._pCaseName.load( std::memory_order_acquire );
                     std::fprintf( stdout, "\n[ TIMEOUT  ] %s did not finish within %lld ms - the run stops here (a stuck case cannot be resumed; raise ._timeoutSeconds if it is just slow)\n",
                                   pName != nullptr ? pName : "(unknown)", static_cast<long long>( watchdog._timeoutMilliseconds.load() ) );
+                    // 끝 줄 — 멈춘 케이스도 돈 것으로 센다(`writeResultLine` 과 같은 꼴).
+                    std::fprintf( stdout, "TEST_RESULT=TIMEOUT run=%u failed=%u skipped=%u\n", static_cast<unsigned>( watchdog._ranCount.load() + 1 ),
+                                  static_cast<unsigned>( watchdog._failedCount.load() + 1 ), static_cast<unsigned>( watchdog._skippedCount.load() ) );
                     std::fflush( stdout );
                     Logger::flushGlobalForCrash();
                     Process::exitImmediately( kTestTimeoutExitCode );
@@ -279,11 +359,18 @@ namespace sw::test
     {
         TestRunnerInternal::Registry& registry = TestRunnerInternal::getRegistry();
         RegistrationResult            result   = RegistrationResult::Added;
+        RegistrationSite              existing{};
         {
             ScopedLock<mutex> lock{ registry._mutex };
             result = registry._registration.add( pRegistration, pRegistration->_pName );
+            if ( const TestCaseRegistration* pExisting = result == RegistrationResult::DuplicateName ? registry._registration.findByName( pRegistration->_pName ) : nullptr; pExisting != nullptr )
+                existing = RegistrationSite{ pExisting->_pFile, pExisting->_line };
         }
-        reportRegistrationRejected( result, "Test case", pRegistration->_pName );
+        // 케이스는 늘 정적 등록이다 — 겹친 이름은 두 자리를 찍고 시작 단계(`run`)가 로드 오류로 멈춘다.
+        if ( result == RegistrationResult::DuplicateName )
+            reportDuplicateRegistration( "Test case", pRegistration->_pName, existing, RegistrationSite{ pRegistration->_pFile, pRegistration->_line } );
+        else
+            reportRegistrationRejected( result, "Test case", pRegistration->_pName );
         _bRegistered = result == RegistrationResult::Added;
     }
 
@@ -335,9 +422,7 @@ namespace sw::test
 
     void reportFailure( const utf8* pFile, int32 line, string_view message )
     {
-        StringBuilder<constant::buffer::kMax256> textBuilder;
-        textBuilder.appendFormat( "%#(%#): error: %#", string( pFile ), line, string( message ) );
-        TestRunnerInternal::addFailure( string( textBuilder.view() ) );
+        TestRunnerInternal::reportFailureOfKind( pFile, line, message, TestRunnerInternal::TestFailureKind::Assertion );
     }
 
     void countAssertion()
@@ -420,8 +505,8 @@ namespace sw::test
             state._listUpdatedSnapshot.push_back( path );
             return true;
         }
-        reportFailure( pFile, line,
-                       string( bHasSnapshot ? "snapshot differs: " : "no snapshot yet: " ) + path + " (run App --test --update-snapshots and review the diff)" );
+        TestRunnerInternal::reportFailureOfKind( pFile, line, string( bHasSnapshot ? "snapshot differs: " : "no snapshot yet: " ) + path + " (run App --test --update-snapshots and review the diff)",
+                                                 bHasSnapshot ? TestRunnerInternal::TestFailureKind::SnapshotDiffers : TestRunnerInternal::TestFailureKind::SnapshotMissing );
         return false;
     }
 
@@ -542,8 +627,11 @@ namespace sw::test
         StringBuilder<constant::buffer::kMax256> textBuilder;
         const string                             exitText = child._exitCode.has_value() ? "exit code " + to_string( *child._exitCode ) : string( "not waited for" );
         textBuilder.appendFormat( "the isolated case %# (%#) - child output:\n%#", child._bTimedOut ? "timed out and was killed" : "failed", exitText, child.getOutputTail( 20 ) );
-        reportFailure( testCase._pFile, testCase._line,
-                       string( textBuilder.view() ) );
+        // 자식이 끝 줄(`TEST_RESULT=`)까지 갔으면 판정으로 진 것이고, 못 갔으면 죽은 것이다.
+        const TestFailureKind kind = child._bTimedOut                                     ? TestFailureKind::Timeout
+                                   : child._output.find( "TEST_RESULT=" ) != string::npos ? TestFailureKind::Assertion
+                                                                                          : TestFailureKind::Crash;
+        reportFailureOfKind( testCase._pFile, testCase._line, string( textBuilder.view() ), kind );
     }
 
     bool isRunningIsolated()
@@ -589,6 +677,41 @@ namespace sw::test
         return matchesFilter( filter, name, {} );
     }
 
+    string TestRunner::findFilterError( string_view filter )
+    {
+        string error;
+        TestRunnerInternal::forEachPattern( filter, [&error]( string_view pattern, [[maybe_unused]] bool bExclude )
+        {
+            if ( error.empty() == false )
+                return;
+            const bool bTag      = pattern.size() >= 2 && pattern.front() == '[' && pattern.back() == ']';
+            const auto isAllowed = [bTag]( utf8 character )
+            { return bTag ? TestRunnerInternal::isNamePatternCharacter( character ) || character == '-' : TestRunnerInternal::isNamePatternCharacter( character ); };
+            const string_view body = bTag ? pattern.substr( 1, pattern.size() - 2 ) : pattern;
+            if ( body.empty() || std::all_of( body.begin(), body.end(), isAllowed ) == false )
+                error = "--test-filter: '" + string( pattern ) + "' is not a case pattern (name characters . * ? / or [tag], a leading - excludes) - separate patterns with a comma";
+        } );
+        return error;
+    }
+
+    vector<string> TestRunner::findUnmatchedPatterns( string_view filter )
+    {
+        vector<string>                listUnmatched;
+        TestRunnerInternal::Registry& registry = TestRunnerInternal::getRegistry();
+        ScopedLock<mutex>             lock{ registry._mutex };
+        TestRunnerInternal::forEachPattern( filter, [&]( string_view pattern, bool bExclude )
+        {
+            if ( bExclude )
+                return; // 빼기 패턴은 맞는 케이스가 없어도 된다(뺄 것이 없을 뿐이다)
+            const auto& listCase = registry._registration.getItems();
+            const bool  bMatched = std::any_of( listCase.begin(), listCase.end(), [pattern]( const TestCaseRegistration* pCase )
+             { return pCase->_bChildRole == false && matchesFilter( pattern, pCase->_pName, pCase->_options._tags ); } );
+            if ( bMatched == false )
+                listUnmatched.emplace_back( pattern );
+        } );
+        return listUnmatched;
+    }
+
     bool TestRunner::matchesFilter( string_view filter, string_view name, string_view tags )
     {
         const auto matchesPattern = [name, tags]( string_view pattern )
@@ -606,28 +729,21 @@ namespace sw::test
             return StringUtil::matchesWildcard( pattern, name );
         };
         // 쉼표로 가른 패턴 — 앞에 `-` 가 붙은 것은 빼기다. 더하기 패턴이 하나도 없으면 모두를 더한 것으로 본다.
-        bool   bIncluded    = false;
-        bool   bHasPositive = false;
-        size_t start        = 0;
-        while ( start <= filter.size() )
+        bool bIncluded    = false;
+        bool bExcluded    = false;
+        bool bHasPositive = false;
+        TestRunnerInternal::forEachPattern( filter, [&]( string_view pattern, bool bExclude )
         {
-            const size_t      end     = MathUtil::min( filter.find( ',', start ), filter.size() );
-            const string_view pattern = filter.substr( start, end - start );
-            if ( pattern.empty() == false )
+            if ( bExclude )
             {
-                if ( pattern.front() == '-' )
-                {
-                    if ( matchesPattern( pattern.substr( 1 ) ) )
-                        return false;
-                }
-                else
-                {
-                    bHasPositive = true;
-                    bIncluded    = bIncluded || matchesPattern( pattern );
-                }
+                bExcluded = bExcluded || matchesPattern( pattern );
+                return;
             }
-            start = end + 1;
-        }
+            bHasPositive = true;
+            bIncluded    = bIncluded || matchesPattern( pattern );
+        } );
+        if ( bExcluded )
+            return false;
         return bHasPositive ? bIncluded : true;
     }
 
@@ -692,9 +808,28 @@ namespace sw::test
 
     bool TestRunner::run( const TestRunOptions& options, vector<string>* pOutListFailure )
     {
-        using Internal                                   = TestRunnerInternal;
-        const bool                          bChildRun    = options._childRole.empty() == false;
-        const bool                          bIsolatedRun = options._isolatedCase.empty() == false; // 부모가 격리 케이스 하나를 돌리라고 띄운 자식
+        using Internal          = TestRunnerInternal;
+        const bool bChildRun    = options._childRole.empty() == false;
+        const bool bIsolatedRun = options._isolatedCase.empty() == false; // 부모가 격리 케이스 하나를 돌리라고 띄운 자식
+        // 시작 때 겹친 정적 등록(케이스 · 감시 값 · 단계 …)이 있으면 돌지 않는다 — 뒤의 등록이 조용히 빠진 채 도는 실행은 통과해도 그 등록을 본 적이 없다.
+        if ( const vector<string> listRejected = collectRejectedStaticRegistrations(); listRejected.empty() == false )
+        {
+            for ( const string& line : listRejected )
+                Internal::writeLine( "[ LOAD ERROR ] " + line );
+            Internal::writeLine( "[ LOAD ERROR ] a static registration was rejected at startup - rename one of the two (both sites are above)" );
+            Internal::writeResultLine( "LOAD_ERROR", 0, 0, 0 );
+            return false;
+        }
+        // 거르개 문법 — 쉼표 밖의 구분자(`:` · `;` · 공백)는 "맞는 케이스 없음" 과 같은 길로 새지 않고 인자 오류다.
+        const bool bFiltered = bChildRun == false && bIsolatedRun == false;
+        if ( const string filterError = bFiltered ? findFilterError( options._filter ) : string{}; filterError.empty() == false )
+        {
+            Internal::writeLine( "[ ARGUMENT ] " + filterError );
+            Internal::writeResultLine( "ARGUMENT_ERROR", 0, 0, 0 );
+            return false;
+        }
+        // 더하기 패턴마다 등록된 케이스 하나는 맞아야 한다(샤드 · 폴더로 거르기 전) — `A.*,Typo.*` 가 A 만 돌고 통과하지 않게.
+        const vector<string>                listUnmatched = bFiltered ? findUnmatchedPatterns( options._filter ) : vector<string>{};
         vector<const TestCaseRegistration*> listCase;
         {
             Internal::Registry& registry = Internal::getRegistry();
@@ -714,11 +849,13 @@ namespace sw::test
         if ( bChildRun && listCase.empty() )
         {
             Internal::writeLine( string( "[  NO TESTS ] no child role (SW_TEST_CHILD_ROLE) is named '" ) + options._childRole + "'" );
+            Internal::writeResultLine( "NO_TESTS", 0, 0, 0 );
             return false;
         }
         if ( bIsolatedRun && listCase.empty() )
         {
             Internal::writeLine( string( "[  NO TESTS ] no case is named '" ) + options._isolatedCase + "' for --test-isolated-case" );
+            Internal::writeResultLine( "NO_TESTS", 0, 0, 0 );
             return false;
         }
         // 이름 순으로 놓은 뒤 섞는다 — 등록 순서(링크 순서)에 기대지 않고, 씨앗이 같으면 어느 빌드에서나 같은 순서다.
@@ -732,6 +869,8 @@ namespace sw::test
             }
             return true;
         }
+        for ( const string& pattern : listUnmatched )
+            Internal::writeLine( "[  NO TESTS ] the pattern '" + pattern + "' matches no registered case - a typo runs nothing" );
         // 비활성 케이스는 돌지 않고 까닭과 함께 센다(지우지 않고 끈 자리가 보고에 남는다).
         vector<const TestCaseRegistration*> listDisabled;
         if ( options._bRunDisabled == false )
@@ -749,6 +888,7 @@ namespace sw::test
         if ( listCase.empty() && options._shardCount <= 1 )
         {
             Internal::writeLine( string( "[  NO TESTS ] no case matches the filter '" ) + options._filter + "' - an empty run is not a pass" );
+            Internal::writeResultLine( "NO_TESTS", 0, 0, 0 );
             return false;
         }
 
@@ -759,6 +899,7 @@ namespace sw::test
         if ( FileUtil::makeAbsolutePath( options._scratchRoot.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test" ) : options._scratchRoot, baseRoot ) == false )
         {
             Internal::writeLine( "[  ERROR   ] the scratch folder cannot be made absolute - no case runs" );
+            Internal::writeResultLine( "FAILED", 0, 0, 0 );
             return false;
         }
         const string                       scratchRoot = FileUtil::joinPath( baseRoot, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
@@ -767,11 +908,16 @@ namespace sw::test
         thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )
             watchThread = thread( ThreadTestAccess::getKey(), &Internal::watchCaseDeadline );
-        const uint32   repeatCount  = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
-        uint32         failedCount  = 0;
-        uint32         skippedCount = 0;
-        uint32         ranCount     = 0;
-        string         caseReport;
+        const uint32        repeatCount  = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
+        uint32              failedCount  = 0;
+        uint32              skippedCount = 0;
+        uint32              ranCount     = 0;
+        uint32              arrKindCount[static_cast<size_t>( Internal::TestFailureKind::Count )]{}; // 종류별 진 케이스 수(보고의 `failureKinds`)
+        string              caseReport;
+        Internal::Watchdog& runWatchdog = Internal::getWatchdog();
+        runWatchdog._ranCount.store( 0, std::memory_order_relaxed );
+        runWatchdog._failedCount.store( 0, std::memory_order_relaxed );
+        runWatchdog._skippedCount.store( 0, std::memory_order_relaxed );
         vector<string> listUpdatedSnapshot;
         const int64    runStart = MonotonicClock::nowNanoseconds();
         utf8           arrBuffer[constant::buffer::kMax1024];
@@ -792,6 +938,7 @@ namespace sw::test
                     state._pCase = pCase;
                     state._listExpectedLog.clear();
                     state._listFailure.clear();
+                    state._firstFailureKind = Internal::TestFailureKind::Assertion;
                     state._listUpdatedSnapshot.clear();
                     state._skipReason.clear();
                     state._assertionCount   = 0;
@@ -824,8 +971,13 @@ namespace sw::test
                 watchdog._deadlineNanoseconds.store( 0, std::memory_order_release );
                 const int64 caseMilliseconds = ( MonotonicClock::nowNanoseconds() - caseStart ) / constant::time::kNanosecondsPerMillisecond;
 
-                vector<string> listLateFailure;
-                string         skipReason;
+                struct LateFailure
+                {
+                    string                    _text;
+                    Internal::TestFailureKind _kind;
+                };
+                vector<LateFailure> listLateFailure;
+                string              skipReason;
                 {
                     ScopedLock<mutex> lock{ state._mutex };
                     state._bActive = SW_FALSE;
@@ -835,7 +987,7 @@ namespace sw::test
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder2;
                         textBuilder2.appendFormat( "%#(%#): error: the case made no assertion - a case that checks nothing is not a pass", string( pCase->_pFile ), pCase->_line );
-                        listLateFailure.push_back( string( textBuilder2.view() ) );
+                        listLateFailure.push_back( LateFailure{ string( textBuilder2.view() ), Internal::TestFailureKind::NoAssertion } );
                     }
                     for ( const TestRunnerInternal::ExpectedLog& expected : state._listExpectedLog )
                     {
@@ -843,19 +995,21 @@ namespace sw::test
                         {
                             StringBuilder<constant::buffer::kMax256> textBuilder;
                             textBuilder.appendFormat( "%#(%#): error: expected log [id:%#] never appeared", string( expected._pFile ), expected._line, expected._id );
-                            listLateFailure.push_back( string( textBuilder.view() ) );
+                            listLateFailure.push_back( LateFailure{ string( textBuilder.view() ), Internal::TestFailureKind::ExpectedLogMissing } );
                         }
                     }
                 }
-                for ( string& failure : listLateFailure )
+                for ( LateFailure& failure : listLateFailure )
                 {
-                    Internal::addFailure( std::move( failure ) );
+                    Internal::addFailure( std::move( failure._text ), failure._kind );
                 }
 
-                vector<string> listFailure;
+                vector<string>            listFailure;
+                Internal::TestFailureKind failureKind = Internal::TestFailureKind::Assertion;
                 {
                     ScopedLock<mutex> lock{ state._mutex };
                     listFailure = state._listFailure;
+                    failureKind = state._firstFailureKind;
                     listUpdatedSnapshot.insert( listUpdatedSnapshot.end(), state._listUpdatedSnapshot.begin(), state._listUpdatedSnapshot.end() );
                     state._pCase = nullptr;
                 }
@@ -871,7 +1025,13 @@ namespace sw::test
                 if ( bSkipped )
                     ++skippedCount;
                 else if ( bPassed == false )
+                {
                     ++failedCount;
+                    ++arrKindCount[static_cast<size_t>( failureKind )];
+                }
+                runWatchdog._ranCount.store( ranCount, std::memory_order_relaxed );
+                runWatchdog._failedCount.store( failedCount, std::memory_order_relaxed );
+                runWatchdog._skippedCount.store( skippedCount, std::memory_order_relaxed );
                 if ( bSkipped )
                     formatstring( arrBuffer, constant::buffer::kMax1024, "[  SKIPPED ] %# (%# ms) - %#", pCase->_pName, caseMilliseconds, skipReason.c_str() );
                 else
@@ -881,7 +1041,8 @@ namespace sw::test
                 caseReport += caseReport.empty() ? "\n" : ",\n";
                 caseReport += string( "    {\"name\": \"" ) + Internal::escapeJSON( pCase->_pName ) + "\", \"file\": \"" + Internal::escapeJSON( pCase->_pFile ) +
                               "\", \"line\": " + to_string( pCase->_line ) + ", \"round\": " + to_string( roundIndex ) + ", \"isolated\": " + ( bIsolate ? "true" : "false" ) +
-                              ", \"passed\": " + ( bPassed ? "true" : "false" ) + ", \"skipped\": " + ( bSkipped ? "true" : "false" ) + ", \"skipReason\": \"" +
+                              ", \"passed\": " + ( bPassed ? "true" : "false" ) + ", \"failureKind\": \"" + ( bPassed || bSkipped ? "" : Internal::getFailureKindName( failureKind ) ) +
+                              "\", \"skipped\": " + ( bSkipped ? "true" : "false" ) + ", \"skipReason\": \"" +
                               Internal::escapeJSON( bSkipped ? skipReason : string{} ) + "\", \"milliseconds\": " + to_string( caseMilliseconds ) + ", \"failures\": [";
                 for ( size_t failureIndex = 0; failureIndex < listFailure.size(); ++failureIndex )
                 {
@@ -912,7 +1073,7 @@ namespace sw::test
 
         // 모두 통과한 실행의 쓰기 폴더는 지운다 — 남기면 실행마다 쌓였다(`Saved/Test` 아래 수백 개). 실패한 실행은 들여다보도록 남기고 보고도 그 안에 쓴다(언리얼 자동화의 실패 산출물).
         // 보고 경로를 준 실행(`--test-report`)은 늘 그 경로에 쓴다.
-        const bool bKeepScratch = failedCount > 0;
+        const bool bKeepScratch = failedCount > 0 || listUnmatched.empty() == false;
         if ( bKeepScratch == false && FileUtil::removeDirectory( scratchRoot ) == false )
             Internal::writeLine( "[ WARNING  ] the scratch folder could not be removed: " + scratchRoot );
         const string reportPath = options._reportPath.empty() == false ? options._reportPath : bKeepScratch ? FileUtil::joinPath( scratchRoot, "report.json" )
@@ -930,7 +1091,13 @@ namespace sw::test
                 report += string( index == 0 ? "" : ", " ) + "{\"name\": \"" + Internal::escapeJSON( listDisabled[index]->_pName ) + "\", \"reason\": \"" +
                           Internal::escapeJSON( listDisabled[index]->_options._disabledReason ) + "\"}";
             }
-            report += "],\n  \"updatedSnapshots\": [";
+            report += "],\n  \"unmatchedPatterns\": [";
+            for ( size_t index = 0; index < listUnmatched.size(); ++index )
+                report += ( index == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listUnmatched[index] ) + "\"";
+            report += "],\n  \"failureKinds\": {";
+            for ( size_t kindIndex = 0; kindIndex < std::size( arrKindCount ); ++kindIndex )
+                report += string( kindIndex == 0 ? "\"" : ", \"" ) + Internal::getFailureKindName( static_cast<Internal::TestFailureKind>( kindIndex ) ) + "\": " + to_string( arrKindCount[kindIndex] );
+            report += "},\n  \"updatedSnapshots\": [";
             for ( size_t index = 0; index < listUpdatedSnapshot.size(); ++index )
             {
                 report += ( index == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listUpdatedSnapshot[index] ) + "\"";
@@ -939,10 +1106,16 @@ namespace sw::test
             if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( reportPath ) ) == false || FileUtil::writeTextFile( reportPath, report ) == false )
             {
                 Internal::writeLine( "[  FAILED  ] could not write the test report " + reportPath );
+                Internal::writeResultLine( "FAILED", ranCount, failedCount, skippedCount );
                 return false;
             }
             Internal::writeLine( "[  REPORT  ] " + reportPath );
         }
-        return failedCount == 0;
+        // 안 맞는 패턴은 돈 케이스가 모두 통과해도 실패다 — 끝 줄에 그 사실을 다시 적는다.
+        for ( const string& pattern : listUnmatched )
+            Internal::writeLine( "[  FAILED  ] the pattern '" + pattern + "' matched no registered case" );
+        const bool bPassedRun = failedCount == 0 && listUnmatched.empty();
+        Internal::writeResultLine( bPassedRun ? "PASSED" : "FAILED", ranCount, failedCount, skippedCount );
+        return bPassedRun;
     }
 } // namespace sw::test

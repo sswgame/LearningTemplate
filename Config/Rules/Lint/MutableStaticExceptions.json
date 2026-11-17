@@ -378,6 +378,11 @@
         },
         {
             "_path": "Source/Core/Registry/RegistrationList.cpp",
+            "_name": "s_staticRegistration",
+            "_why": "정적 등록 공통 틀(StaticRegistrar) 자체의 등록자 사슬 · 겹친 정적 등록 줄 — 시작 단계가 겹친 등록을 로드 오류로 멈추려면 정적 등록자보다 먼저 서야 하므로 상수 초기화 파일 범위에 둔다."
+        },
+        {
+            "_path": "Source/Core/Registry/RegistrationList.cpp",
             "_name": "s_reloadScopeDepth",
             "_why": "정적 등록 공통 틀(RegistrationList) 자체의 사슬 · 핫 리로드 깊이 — 틀이 정적 등록자보다 먼저 서야 하므로 상수 초기화 파일 범위에 둔다."
         },

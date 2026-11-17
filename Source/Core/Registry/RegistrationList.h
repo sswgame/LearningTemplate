@@ -12,6 +12,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/DynamicModules.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -117,6 +118,13 @@ namespace sw
         DuplicateName,  ///< 같은 이름의 다른 객체가 이미 올라 있습니다 — 먼저 것을 둡니다
     };
 
+    /** @struct RegistrationSite @brief 정적 등록이 선 자리(파일 · 줄)입니다 — 겹친 등록을 알릴 때 두 자리를 함께 찍는다. 파일이 nullptr 이면 모르는 자리다. */
+    struct RegistrationSite
+    {
+        const utf8* _pFile{ nullptr };
+        int32       _line{ 0 };
+    };
+
     /**
      * @brief 거절된 등록(`DuplicateName` · `EmptyName` · `NullItem`)을 오류 로그로 남깁니다. `Added` · `AlreadyPresent` 는 아무것도 하지 않습니다.
      * @param pWhat 등록 대상의 영문 이름입니다("Debug HUD section"). 문자열 리터럴이어야 합니다.
@@ -124,6 +132,19 @@ namespace sw
      * @details 로그 id 는 `Registration.DuplicateName` · `Registration.EmptyName` · `Registration.NullItem` 입니다. 레지스트리가 손으로 문구를 쓰지 않도록 `addLogged` 가 부릅니다.
      */
     SW_API void reportRegistrationRejected( RegistrationResult result, const utf8* pWhat, string_view name );
+    /**
+     * @brief 위와 같고, 겹친 이름이면 먼저 오른 항목 @p pExistingItem 의 정적 등록 자리와 지금 등록하는 정적 등록자의 자리를 함께 찍습니다.
+     * @details 정적 등록자(`StaticRegistrar`)가 올리는 중에 거절되면 정적 등록 거절로 센다(`collectRejectedStaticRegistrations`) — 시작 단계(`App --test` · `-scenario`)가 0 이 아니면
+     *          로드 오류로 멈춘다. 예전에는 오류 줄 하나만 남고 뒤의 등록이 조용히 빠져, 두 갈래가 같은 감시 값 · 단계를 더한 것이 전체 검증 중간에야 드러났다.
+     */
+    SW_API void reportRegistrationRejected( RegistrationResult result, const utf8* pWhat, string_view name, const void* pExistingItem );
+    /** @brief 자리를 스스로 아는 정적 등록(테스트 케이스 `SW_TEST_CASE`)이 겹친 이름을 알립니다 — 두 자리를 찍고 정적 등록 거절로 센다. */
+    SW_API void reportDuplicateRegistration( const utf8* pWhat, string_view name, RegistrationSite existing, RegistrationSite rejected );
+    /**
+     * @brief 지금까지 겹친 이름으로 거절된 정적 등록의 줄입니다(두 자리 포함, 앞의 몇 줄만 — 나머지는 수만 `(+N more)` 줄로). 비면 겹친 정적 등록이 없다.
+     * @details 시작 단계가 부른다 — 비지 않으면 로드 오류로 시작하지 않는다(`TestRunner::run` · `AutomationSession::begin`).
+     */
+    [[nodiscard]] SW_API vector<string> collectRejectedStaticRegistrations();
 
     /**
      * @class RegistrationList
@@ -276,7 +297,8 @@ namespace sw
         RegistrationResult addLogged( T* pItem, const utf8* pWhat, string_view name = {}, int32 order = 0 )
         {
             const RegistrationResult result = add( pItem, name, order );
-            reportRegistrationRejected( result, pWhat, name );
+            // 겹친 이름이면 먼저 오른 항목을 넘긴다 — 두 정적 등록의 자리를 함께 찍는다.
+            reportRegistrationRejected( result, pWhat, name, result == RegistrationResult::DuplicateName ? static_cast<const void*>( findByName( name ) ) : nullptr );
             return result;
         }
 
@@ -894,6 +916,37 @@ namespace sw
 namespace sw
 {
     /**
+     * @class StaticRegistrarSite
+     * @brief 정적 등록자(`StaticRegistrar`)의 자리(파일 · 줄)와 살아 있는 등록자 사슬입니다 — 겹친 이름을 알릴 때 먼저 오른 등록과 지금 등록의 자리를 함께 찾는다.
+     * @details 노드는 등록자 자신이라 할당이 없고, 사슬 머리 · 잠금은 상수 초기화다(다른 TU · DLL 의 정적 초기화 · 모듈 언로드 중에도 안전하다 — `RegistrationListBase` 와 같은 모양).
+     *          "올리는 중" 자리는 스레드마다다 — 정적 초기화는 이미지를 올리는 스레드에서 돈다.
+     */
+    class SW_API StaticRegistrarSite
+    {
+    public:
+        StaticRegistrarSite( const StaticRegistrarSite& )            = delete;
+        StaticRegistrarSite& operator=( const StaticRegistrarSite& ) = delete;
+
+        /** @brief 이 스레드가 지금 올리는 중인 정적 등록자의 자리입니다. 올리는 중이 아니면(실행 중 손으로 부른 등록) 빈 값입니다. */
+        [[nodiscard]] static optional<RegistrationSite> findActiveRegistrationSite();
+        /** @brief 항목 @p pItem 을 올린 살아 있는 정적 등록자의 자리입니다(사본). 없으면 빈 값입니다. */
+        [[nodiscard]] static optional<RegistrationSite> findSiteOf( const void* pItem );
+
+    protected:
+        /** @brief 살아 있는 정적 등록자 사슬에 오르고, 이 스레드의 "올리는 중" 자리가 됩니다 — 파생 생성자가 등록 함수를 부르는 동안이다. */
+        StaticRegistrarSite( const void* pItem, RegistrationSite site );
+        ~StaticRegistrarSite();
+        /** @brief 올리기가 끝났다 — "올리는 중" 자리를 놓습니다(파생 생성자 끝에서 부른다). */
+        void endRegistration();
+
+    private:
+        const void*                  _pItem; ///< 올린 항목의 주소(함수 포인터 항목이면 nullptr — 찾지 않는다)
+        RegistrationSite             _site;
+        mutable StaticRegistrarSite* _pPrev; ///< 사슬 이웃 — 정적 `const` 등록자도 이웃이 오르내릴 때 고친다
+        mutable StaticRegistrarSite* _pNext;
+    };
+
+    /**
      * @class StaticRegistrar
      * @brief 정적 등록자의 공통 틀입니다. 만들 때 등록 함수로 올리고, 사라질 때(모듈 언로드 · 프로세스 끝) 올렸던 것만 내리기 함수로 내립니다.
      * @details 기능마다 손으로 쓰던 "등록자 구조체 + 생성자에서 올리기 + 소멸자에서 거절되지 않았으면 내리기" 를 한 벌로 둔다 — 거절된 등록을 내리면 같은 이름의
@@ -903,16 +956,19 @@ namespace sw
      * @tparam TItem 등록 함수가 받는 항목입니다(대개 `const XRegistration*`, 함수 포인터도 된다).
      */
     template <typename TItem>
-    class StaticRegistrar
+    class StaticRegistrar : public StaticRegistrarSite
     {
     public:
         using RegisterFunction   = bool ( * )( TItem item );
         using UnregisterFunction = void ( * )( TItem item );
 
-        StaticRegistrar( TItem item, RegisterFunction pRegister, UnregisterFunction pUnregister )
-            : _item{ pRegister( item ) ? item : TItem{} }
+        /** @param site 등록 매크로가 선 자리(`SW_STATIC_REGISTRATION` 이 `__FILE__` · `__LINE__` 을 넘긴다) — 겹친 이름을 두 자리와 함께 알린다 */
+        StaticRegistrar( TItem item, RegisterFunction pRegister, UnregisterFunction pUnregister, RegistrationSite site = {} )
+            : StaticRegistrarSite{ toAddress( item ), site }
+            , _item{ pRegister( item ) ? item : TItem{} }
             , _pUnregister{ pUnregister }
         {
+            endRegistration();
         }
 
         ~StaticRegistrar()
@@ -925,6 +981,15 @@ namespace sw
         StaticRegistrar& operator=( const StaticRegistrar& ) = delete;
 
     private:
+        /** @brief 항목의 주소입니다 — 객체 포인터만(함수 포인터 항목은 찾지 않는다). */
+        static const void* toAddress( TItem item )
+        {
+            if constexpr ( std::is_pointer_v<TItem> && std::is_object_v<std::remove_pointer_t<TItem>> )
+                return static_cast<const void*>( item );
+            else
+                return nullptr;
+        }
+
         TItem              _item;        ///< 올린 항목. 거절됐으면 빈 값이라 내리지 않는다
         UnregisterFunction _pUnregister; ///< 내리기 함수
     };
@@ -958,12 +1023,12 @@ namespace sw
 /**
  * @brief 기능의 정적 등록자 형식 @p RegistrarType 을 정의합니다(헤더, `namespace sw` 안). @p TItem 을 받아 @p pRegister 로 올리고 @p pUnregister 로 내린다(`StaticRegistrar`).
  */
-#define SW_DEFINE_STATIC_REGISTRAR( RegistrarType, TItem, pRegister, pUnregister )                          \
-    struct RegistrarType final : ::sw::StaticRegistrar<TItem>                                               \
-    {                                                                                                       \
-        explicit RegistrarType( TItem item ) : ::sw::StaticRegistrar<TItem>{ item, pRegister, pUnregister } \
-        {                                                                                                   \
-        }                                                                                                   \
+#define SW_DEFINE_STATIC_REGISTRAR( RegistrarType, TItem, pRegister, pUnregister )                                                                  \
+    struct RegistrarType final : ::sw::StaticRegistrar<TItem>                                                                                       \
+    {                                                                                                                                               \
+        explicit RegistrarType( TItem item, ::sw::RegistrationSite site = {} ) : ::sw::StaticRegistrar<TItem>{ item, pRegister, pUnregister, site } \
+        {                                                                                                                                           \
+        }                                                                                                                                           \
     }
 
 /**
@@ -975,5 +1040,8 @@ namespace sw
     static const RegistrationType sw_##tag##_##id{ __VA_ARGS__ };               \
     static const RegistrarType    sw_##tag##Registrar_##id                      \
     {                                                                           \
-        &sw_##tag##_##id                                                        \
+        &sw_##tag##_##id, ::sw::RegistrationSite                                \
+        {                                                                       \
+            __FILE__, __LINE__                                                  \
+        }                                                                       \
     }
