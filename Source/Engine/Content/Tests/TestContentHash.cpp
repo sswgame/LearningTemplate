@@ -154,6 +154,6 @@ SW_TEST_CASE( ContentHashTest, OwnRewriteOfTheSameSizeIsSeenAtOnce )
         SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected ); // 두 번째는 캐시에서 — 같은 값이어야 한다
     }
     SW_REQUIRE_TRUE( FileUtil::removeFile( path ) );
-    SW_EXPECT_LOG( "File.NotFound" ); // 지운 파일은 못 읽음(0)이고, 파일 계층이 그 사실을 알린다
+    // 지운 파일은 못 읽음(0)이다. 스트림 해시는 크기를 조용히 묻고(tryGetFileSize) 없음을 값(NotFound)으로 돌려주므로 로그는 없다 — 판단은 부른 쪽 몫이다.
     SW_EXPECT_EQUAL( ContentHash::computeFile( path ), uint64( 0 ) );
 }

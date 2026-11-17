@@ -32,7 +32,7 @@ SW_TEST_CASE( VFXPreviewModelTest, ContentHashDetectsASave )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<VFXEffectDef _note=\"saved by the catalog editoR\" />" ) );
     SW_EXPECT_FALSE( VFXPreviewModel::updateContentHash( path, hash ) );
 
-    SW_EXPECT_LOG( "File.NotFound" ); // 지운 파일의 해시 읽기는 읽기 실패로 알린다(ContentHash)
+    // 없는 파일의 해시는 0(못 읽음)이다 — 스트림 해시(ContentHash::computeFileStream)는 크기를 조용히 물어 로그 없이 NotFound 값을 돌려준다.
     SW_EXPECT_FALSE( VFXPreviewModel::updateContentHash( test::makeScratchPath( "missing.vfx.xml" ), hash ) );
 }
 
