@@ -11,8 +11,12 @@
  *          - **검증**: `Validate` 함수는 같은 인자의 `bool validate<함수 이름>( … )` 반사 함수를 짝으로 가진다(`applyDamage` → `validateApplyDamage`).
  *            짝이 없거나 꼴이 다르면 대상 등록이 오류로 멈춘다(실행 중에 찾지 못하는 일이 없다). 서버는 몸을 부르기 전에 짝을 부르고, 거짓이면 언리얼처럼 그 연결을 끊는다 —
  *            검증은 부정행위 탐지이고 게임 규칙의 거절(사거리 밖 · 재사용 대기)은 함수 몸이 한다.
+ *          - **함수 번호**: 함수는 이름 글이 아니라 이름의 32 비트 해시(`hashed_string::getHash` — 대소문자 무시 FNV-1a, 이름 같음 규칙과 같다)로 가리킨다(감사 N-13).
+ *            접속 때 표를 주고받지 않아도 양쪽이 같은 번호를 낸다. 한 타입 사슬 안에서 원격 함수의 번호가 다른 함수와 겹치면 등록이 오류로 멈춘다(언리얼 NetFieldExport 인덱스의 자리).
+ *          - **호출률**: 서버는 연결마다 토큰 버킷으로 `Server` 호출 수를 제한한다(`RemoteCallServerConfig`, 언리얼 RPC DoS Detection). 넘친 호출은 몸을 부르지 않고
+ *            `RateLimited` 로 거절한다 — 끊지 않는다(정상 클라이언트도 지연 뒤 몰아 보낼 수 있다).
  *          - **인자**: 글로 실어 보내고 받는 쪽이 인자 타입으로 읽는다(`ReflectionInvoke::callWithText`). 그래서 원격 함수의 인자는 글 · 수 · bool · 열거형만 된다 —
- *            등록이 확인한다. 인자 수 · 길이 · 함수 이름 길이는 상한이 있고 넘는 메시지는 손상된 것으로 버린다. 함수 이름은 전역 이름 표에 넣지 않고 찾기만 한다(`findInterned`).
+ *            등록이 확인한다. 인자 수 · 길이는 상한이 있고 넘는 메시지는 손상된 것으로 버린다.
  *          수명: 대상의 인스턴스는 빌려 쓴다 — 대상이 사라지기 전에 `unregisterTarget` 을 부른다. 서버는 연결이 닫히면 그 연결이 주인인 대상을 지운다.
  */
 #pragma once
@@ -32,6 +36,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
+#include "GameFramework/Runtime/Online/Guard/TokenBucket.h"
 
 namespace sw
 {
@@ -43,19 +48,21 @@ namespace sw
     /** @brief 반사 함수 호출의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetRemoteCallMessage
     {
-        /** @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 이름(blob) · 인자 수(varuint) · 인자 글(blob 들). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다 */
-        using Call = NetMessageDef<0, NetMessageDirection::Both, NetChannelType::ReliableOrdered>;
-        /** @brief 서버 → 클라이언트. 받지 못한 호출 — 순번(varuint) · 까닭(1 바이트 `RemoteCallError`) */
-        using Rejected = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;
+        /**
+         * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자 글(blob 들). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
+         *        판 2: 함수 이름 글 대신 함수 번호를 싣는다.
+         */
+        using Call = NetMessageDef<0, NetMessageDirection::Both, NetChannelType::ReliableOrdered, 2>;
+        /** @brief 서버 → 클라이언트. 받지 못한 호출 — 순번(varuint) · 까닭(1 바이트 `RemoteCallError`). 판 2: 까닭에 `RateLimited` 가 더해졌다 */
+        using Rejected = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
 
         static constexpr uint8 kCall     = Table::getKindOf<Call>();
         static constexpr uint8 kRejected = Table::getKindOf<Rejected>();
 
-        static constexpr int32 kMaxFunctionNameBytes = 64;  ///< 함수 이름 글의 상한
-        static constexpr int32 kMaxArgumentBytes     = 256; ///< 인자 글 하나의 상한
-        static constexpr int32 kMaxArgumentCount     = 8;   ///< 인자 수의 상한
-        static_assert( 32 + kMaxFunctionNameBytes + kMaxArgumentCount * ( kMaxArgumentBytes + 4 ) <= NetConnection::kMaxReliableMessageSize, "a call must fit one reliable message" );
+        static constexpr int32 kMaxArgumentBytes = 256; ///< 인자 글 하나의 상한
+        static constexpr int32 kMaxArgumentCount = 8;   ///< 인자 수의 상한
+        static_assert( 32 + kMaxArgumentCount * ( kMaxArgumentBytes + 4 ) <= NetConnection::kMaxReliableMessageSize, "a call must fit one reliable message" );
     };
 } // namespace sw
 
@@ -66,7 +73,8 @@ namespace sw
     {
         UnknownTarget = 0, ///< 그 id 의 대상이 없다(이미 사라졌다)
         UnknownFunction,   ///< 대상 타입에 그 이름의 함수가 없다
-        ArgumentMismatch   ///< 인자를 그 타입으로 읽지 못했거나 수가 맞지 않는다
+        ArgumentMismatch,  ///< 인자를 그 타입으로 읽지 못했거나 수가 맞지 않는다
+        RateLimited        ///< 이 연결의 호출률 상한(`RemoteCallServerConfig`)을 넘었다 — 몸을 부르지 않았다
     };
 } // namespace sw
 
@@ -86,6 +94,14 @@ namespace sw
         uint64 _rejectedCount{ 0 };         ///< 거절 알림을 돌려준 호출(대상 · 함수 없음, 인자)
         uint64 _validationFailedCount{ 0 }; ///< 검증 짝이 거짓이라 연결을 끊은 호출
         uint64 _violationCount{ 0 };        ///< 주인 아님 · 역할 · 채널을 어겨 연결을 끊은 호출
+        uint64 _rateLimitedCount{ 0 };      ///< 호출률 상한을 넘어 거절한 호출(`_rejectedCount` 에도 든다)
+    };
+
+    /** @brief 서버의 호출률 상한입니다. 기본값이 없다 — 게임 데이터가 정하고, 0 이하면 `RemoteCallServer::initialize` 가 오류로 멈춘다. */
+    struct RemoteCallServerConfig
+    {
+        int32 _callBurstCount{ 0 };       ///< 연결 하나가 몰아 부를 수 있는 호출 수(버킷 크기)
+        int64 _callRefillIntervalMs{ 0 }; ///< 호출 하나가 다시 차는 간격(밀리초) — 지속 상한은 초당 1000 / 이 값이다
     };
 } // namespace sw
 
@@ -115,6 +131,10 @@ namespace sw
          * @details 어긴 함수마다 오류를 남기고 false 를 반환합니다. 등록이 부른다 — 실행 중에 부를 수 없는 함수를 발견하는 일이 없게.
          */
         static bool validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role );
+        /** @brief 함수의 와이어 번호입니다(이름 해시). */
+        static uint32 getFunctionID( const FunctionInfo& function );
+        /** @brief @p type 의 계층에서 와이어 번호가 @p functionID 인 함수를 찾습니다(파생부터). 없으면 nullptr 입니다. */
+        static const FunctionInfo* findFunctionByID( const TypeInfo& type, uint32 functionID );
         /** @brief @p function 의 검증 짝(`validate<이름>`)을 @p type 의 계층에서 찾습니다. 없으면 nullptr 입니다. */
         static const FunctionInfo* findValidator( const TypeInfo& type, const FunctionInfo& function );
     };
@@ -126,7 +146,7 @@ namespace sw
      * @class RemoteCallServer
      * @brief 서버 쪽입니다. 클라이언트가 부른 `Server` 함수를 주인 · 역할 · 채널 · 검증을 거쳐 부르고, 주인 클라이언트의 `Client` 함수를 부릅니다.
      * @code
-     *     (void)server.initialize( &peers );
+     *     if ( server.initialize( &peers, config ) == false ) ...; // 호출률 상한이 없으면 오류
      *     _subscription = router.registerHandler( &server );
      *     if ( server.registerTarget( creatureID, *Creature::StaticType(), &creature, connectionID ) == false ) ...; // 계약을 어긴 타입은 등록되지 않는다
      *     (void)server.registerSessionTarget( connectionID, *ValeAvatarAgent::StaticType(), &agent );      // 그 연결의 id 0
@@ -138,7 +158,8 @@ namespace sw
     public:
         RemoteCallServer();
 
-        void initialize( INetPeers* pPeers ) { _pPeers = pPeers; }
+        /** @brief 보낼 창구와 호출률 상한을 받습니다. 상한이 0 이하면 오류를 남기고 false 입니다(기본값으로 대신하지 않는다). */
+        [[nodiscard]] bool initialize( INetPeers* pPeers, const RemoteCallServerConfig& config );
         /**
          * @brief 대상을 등록합니다. 연결 @p ownerConnectionID 만 이 대상의 `Server` 함수를 부를 수 있습니다.
          * @return 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::validateRemoteCallContract`), 인스턴스가 없거나, id 가 0(세션)이거나 이미 있으면 오류를 남기고 false 입니다
@@ -175,11 +196,15 @@ namespace sw
         /** @brief 거절 알림을 보내고 셉니다. */
         void sendRejected( int32 connectionID, uint32 sequence, RemoteCallError error );
         /** @brief 규칙을 어긴 연결을 끊고 셉니다. */
-        void disconnectViolator( int32 connectionID, string_view functionName, const utf8* pWhy );
+        void disconnectViolator( int32 connectionID, uint32 functionID, const utf8* pWhy );
+        /** @brief 연결의 호출 버킷에서 하나를 씁니다. 비었으면 false 입니다. */
+        [[nodiscard]] bool tryConsumeCall( int32 connectionID );
 
     private:
         RemoteCallTargets                               _targets;
-        unordered_map<int32, RemoteCallTargets::Target> _mapSession; ///< 연결마다 세션 대상(id 0)
+        unordered_map<int32, RemoteCallTargets::Target> _mapSession;    ///< 연결마다 세션 대상(id 0)
+        unordered_map<int32, TokenBucket>               _mapCallBucket; ///< 연결마다 호출률 버킷. 연결이 닫히면 지운다
+        RemoteCallServerConfig                          _config;
         RemoteCallStats                                 _stats;
         NetMessageWriter                                _messageWriter;
         vector<string>                                  _listReceivedScratch; ///< 받은 호출의 인자 글. 함수 몸이 다시 보내도(`callSession` · `callServer`) 덮이지 않게 보내기와 따로 둔다

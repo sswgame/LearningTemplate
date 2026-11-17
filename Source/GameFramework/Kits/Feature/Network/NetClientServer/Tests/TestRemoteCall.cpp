@@ -16,6 +16,9 @@ namespace
 {
     constexpr uint32 kAvatarID = 11;
 
+    /** @brief 테스트가 넘기지 않는 한 상한에 닿지 않는 호출률이다(한 테스트의 호출이 수십 개 안이다). */
+    constexpr RemoteCallServerConfig kRoomyCallLimit{ 1000, 1000 };
+
     /** @brief 서버 하나와 클라이언트 하나를 루프백으로 잇고, 받은 메시지를 받은 채널 그대로 넘깁니다. */
     struct RemoteCallTestRig
     {
@@ -26,13 +29,13 @@ namespace
         RemoteCallTestAvatar  _clientAvatar;
         int32                 _connectionID{ -1 };
 
-        RemoteCallTestRig()
+        explicit RemoteCallTestRig( const RemoteCallServerConfig& callLimit = kRoomyCallLimit )
         {
             const NetEndpointConfig settings;
             (void)_cluster.addEndpoint( 4300, settings );
             (void)_cluster.addEndpoint( 4400, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
-            _server.initialize( &_cluster.getServer() );
+            SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), callLimit ) );
             _client.initialize( &_cluster.getClient( 0 ) );
             vector<int32> listConnection;
             _cluster.getServer().collectConnected( listConnection );
@@ -67,7 +70,7 @@ namespace
             BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
             writer.writeVarUint( 1 );
             writer.writeVarUint( targetID );
-            writer.writeBlob( reinterpret_cast<const uint8*>( functionName.data() ), static_cast<int32>( functionName.size() ) );
+            writer.writeUint32( hashed_string::computeHash( functionName ) ); // 함수 번호 = 이름 해시(`RemoteCallTargets::getFunctionID`)
             writer.writeVarUint( listArgText.size() );
             for ( const string& text : listArgText )
             {
@@ -247,4 +250,37 @@ SW_TEST_CASE( RemoteCallTest, ClosedConnectionDropsItsTargets )
     server.onConnectionClosed( 3, NetDisconnectReason::Timeout );
     SW_EXPECT_FALSE( server.hasTarget( 5 ) );
     SW_EXPECT_TRUE( server.hasTarget( 6 ) );
+}
+
+/** @brief [RemoteCallTest] 연결이 버킷보다 많이 부르면 넘친 호출은 몸까지 가지 않고 `RateLimited` 로 거절된다 — 끊지는 않는다(감사 N-13, 언리얼 RPC DoS Detection). */
+SW_TEST_CASE( RemoteCallTest, CallsOverTheRateLimitAreRejected )
+{
+    // 다시 차는 간격을 길게 잡아 테스트가 도는 동안 버킷이 차지 않는다.
+    RemoteCallTestRig rig( RemoteCallServerConfig{ 3, 600000 } );
+    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    for ( int32 index = 0; index < 5; ++index )
+    {
+        SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "moveStep", { "1" }, NetChannelType::Unreliable ) == NetHandleResult::Handled );
+    }
+    SW_EXPECT_EQUAL( uint64{ 3 }, rig._server.getStats()._invokedCount );
+    SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._rateLimitedCount );
+    SW_EXPECT_NEAR( 3.0, rig._serverAvatar._movedDistance, 1e-4 );
+    SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( rig._connectionID ) == NetConnectionState::Connected );
+
+    rig.pollUntilDelivered();
+    vector<RemoteCallRejectNotification> listNotification;
+    rig._client.pollRejections( listNotification );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listNotification.size() );
+    SW_EXPECT_TRUE( listNotification[0]._error == RemoteCallError::RateLimited );
+    SW_EXPECT_TRUE( listNotification[1]._error == RemoteCallError::RateLimited );
+}
+
+/** @brief [RemoteCallTest] 호출률 상한이 없으면 서버가 서지 않는다 — 기본값으로 대신하지 않는다. */
+SW_TEST_CASE( RemoteCallTest, ServerRefusesAMissingRateLimit )
+{
+    RemoteCallServer server;
+    SW_EXPECT_LOG( "RemoteCall.RateLimitMissing" );
+    SW_EXPECT_FALSE( server.initialize( nullptr, RemoteCallServerConfig{} ) );
+    SW_EXPECT_LOG( "RemoteCall.RateLimitMissing" );
+    SW_EXPECT_FALSE( server.initialize( nullptr, RemoteCallServerConfig{ 4, 0 } ) );
 }

@@ -5,6 +5,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -87,7 +88,7 @@ namespace sw
                 BitWriter& writer = messageWriter.begin( NetRemoteCallMessage::kCall );
                 writer.writeVarUint( sequence );
                 writer.writeVarUint( targetID );
-                writeText( writer, function._name );
+                writer.writeUint32( RemoteCallTargets::getFunctionID( function ) );
                 writer.writeVarUint( listText.size() );
                 for ( const string& text : listText )
                 {
@@ -101,18 +102,17 @@ namespace sw
             /** @brief 받은 호출 하나의 머리와 인자입니다. */
             struct ReadCall
             {
-                string _functionName{};
                 uint32 _sequence{ 0 };
                 uint32 _targetID{ 0 };
+                uint32 _functionID{ 0 };
             };
 
             /** @brief 호출 메시지를 읽습니다. 상한을 넘거나 깨졌으면 false 입니다. */
             [[nodiscard]] static bool readCall( BitReader& body, ReadCall& outCall, vector<string>& outListText )
             {
-                outCall._sequence = body.readVarUint32();
-                outCall._targetID = body.readVarUint32();
-                if ( readText( body, NetRemoteCallMessage::kMaxFunctionNameBytes, outCall._functionName ) == false )
-                    return false;
+                outCall._sequence          = body.readVarUint32();
+                outCall._targetID          = body.readVarUint32();
+                outCall._functionID        = body.readUint32();
                 const uint64 argumentCount = body.readVarUint();
                 if ( body.hasOverflowed() || argumentCount > static_cast<uint64>( NetRemoteCallMessage::kMaxArgumentCount ) )
                     return false;
@@ -139,6 +139,24 @@ namespace sw
         return iter != _mapTarget.end() ? &iter->second : nullptr;
     }
 
+    uint32 RemoteCallTargets::getFunctionID( const FunctionInfo& function )
+    {
+        return function._name.getHash();
+    }
+
+    const FunctionInfo* RemoteCallTargets::findFunctionByID( const TypeInfo& type, uint32 functionID )
+    {
+        for ( const TypeInfo* pLevel : type.getTypeChain() )
+        {
+            for ( const FunctionInfo& function : pLevel->_listMethod )
+            {
+                if ( getFunctionID( function ) == functionID )
+                    return &function;
+            }
+        }
+        return nullptr;
+    }
+
     const FunctionInfo* RemoteCallTargets::findValidator( const TypeInfo& type, const FunctionInfo& function )
     {
         if ( function._name.empty() )
@@ -159,6 +177,14 @@ namespace sw
                 const bool bClientRole = role != FunctionNetRole::Server && function._metadata->_netRole == FunctionNetRole::Multicast;
                 if ( function._metadata->_netRole != role && bClientRole == false )
                     continue;
+                // 와이어는 이름 해시로 함수를 가리킨다 — 사슬에서 먼저 찾히는 함수가 이 함수(또는 같은 이름의 재정의)가 아니면 번호가 겹친 것이다.
+                const FunctionInfo* pByID = findFunctionByID( type, getFunctionID( function ) );
+                if ( pByID == nullptr || pByID->_name != function._name )
+                {
+                    SW_LOG_ERROR_ID( "RemoteCall.FunctionIDCollision", "Remote function %#::%# has the same wire id (name hash) as %# - rename one of them", type._name.c_str(),
+                                     function._name.c_str(), pByID != nullptr ? pByID->_name.c_str() : "nothing" );
+                    bValid = false;
+                }
                 for ( const FunctionParameterInfo& parameter : function._listParameter )
                 {
                     if ( RemoteCallInternal::isWireParameter( parameter ) )
@@ -192,12 +218,41 @@ namespace sw
     RemoteCallServer::RemoteCallServer()
         : _targets{}
         , _mapSession{}
+        , _mapCallBucket{}
+        , _config{}
         , _stats{}
         , _messageWriter{}
         , _listReceivedScratch{}
         , _listSendScratch{}
         , _pPeers{ nullptr }
     {
+    }
+
+    bool RemoteCallServer::initialize( INetPeers* pPeers, const RemoteCallServerConfig& config )
+    {
+        if ( config._callBurstCount <= 0 || config._callRefillIntervalMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "RemoteCall.RateLimitMissing", "Remote call server needs a call rate limit - burst %# and refill interval %# ms must both be positive (set them in the game data)",
+                             config._callBurstCount, config._callRefillIntervalMs );
+            return false;
+        }
+        _pPeers = pPeers;
+        _config = config;
+        _mapCallBucket.clear();
+        return true;
+    }
+
+    bool RemoteCallServer::tryConsumeCall( int32 connectionID )
+    {
+        const int64 nowMs    = MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond;
+        auto        bucketIt = _mapCallBucket.find( connectionID );
+        if ( bucketIt == _mapCallBucket.end() )
+        {
+            TokenBucket bucket;
+            bucket.initialize( _config._callBurstCount, _config._callRefillIntervalMs, nowMs );
+            bucketIt = _mapCallBucket.emplace( connectionID, bucket ).first;
+        }
+        return bucketIt->second.tryConsume( nowMs );
     }
 
     bool RemoteCallServer::registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID )
@@ -281,6 +336,13 @@ namespace sw
         RemoteCallInternal::ReadCall call;
         if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
             return NetHandleResult::Malformed;
+        // 상한은 대상 · 함수 찾기 앞에서 본다 — 없는 대상 · 함수를 쏟아붓는 호출도 같은 버킷을 쓴다.
+        if ( tryConsumeCall( context._connectionID ) == false )
+        {
+            ++_stats._rateLimitedCount;
+            sendRejected( context._connectionID, call._sequence, RemoteCallError::RateLimited );
+            return NetHandleResult::Handled;
+        }
         const RemoteCallTargets::Target* pTarget = findCallTarget( call._targetID, context._connectionID );
         if ( pTarget == nullptr )
         {
@@ -290,10 +352,10 @@ namespace sw
         // 주인이 아닌 연결의 호출은 남의 아바타를 움직이려는 것이다 — 결함이거나 조작이라 끊는다(언리얼 소유 연결 규칙).
         if ( pTarget->_ownerConnectionID != context._connectionID )
         {
-            disconnectViolator( context._connectionID, call._functionName, "it does not own the target" );
+            disconnectViolator( context._connectionID, call._functionID, "it does not own the target" );
             return NetHandleResult::Handled;
         }
-        const FunctionInfo* pFunction = RemoteCallInternal::findFunction( *pTarget->_pType, call._functionName );
+        const FunctionInfo* pFunction = RemoteCallTargets::findFunctionByID( *pTarget->_pType, call._functionID );
         if ( pFunction == nullptr )
         {
             sendRejected( context._connectionID, call._sequence, RemoteCallError::UnknownFunction );
@@ -301,12 +363,12 @@ namespace sw
         }
         if ( RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, true ) == false )
         {
-            disconnectViolator( context._connectionID, call._functionName, "the function is not a Server function" );
+            disconnectViolator( context._connectionID, call._functionID, "the function is not a Server function" );
             return NetHandleResult::Handled;
         }
         if ( pFunction->_metadata->_bReliable != SW_FALSE && context._channel != NetChannelType::ReliableOrdered )
         {
-            disconnectViolator( context._connectionID, call._functionName, "a Reliable function arrived on an unreliable channel" );
+            disconnectViolator( context._connectionID, call._functionID, "a Reliable function arrived on an unreliable channel" );
             return NetHandleResult::Handled;
         }
         if ( pFunction->_metadata->_bValidate != SW_FALSE )
@@ -324,7 +386,7 @@ namespace sw
             if ( pPassed == nullptr || *pPassed == false )
             {
                 ++_stats._validationFailedCount;
-                SW_LOG_WARNING_ID( "RemoteCall.ValidationFailed", "Remote call %# from connection %# failed its validator - disconnecting the connection", call._functionName.c_str(),
+                SW_LOG_WARNING_ID( "RemoteCall.ValidationFailed", "Remote call %# from connection %# failed its validator - disconnecting the connection", pFunction->_name.c_str(),
                                    context._connectionID );
                 if ( _pPeers != nullptr )
                     _pPeers->disconnect( context._connectionID );
@@ -344,6 +406,7 @@ namespace sw
     {
         (void)reason;
         _mapSession.erase( connectionID );
+        _mapCallBucket.erase( connectionID );
         for ( auto iter = _targets._mapTarget.begin(); iter != _targets._mapTarget.end(); )
         {
             if ( iter->second._ownerConnectionID == connectionID )
@@ -364,10 +427,10 @@ namespace sw
         (void)_messageWriter.send( *_pPeers, connectionID, NetChannelType::ReliableOrdered ); // 끊긴 연결이면 보낼 곳이 없다
     }
 
-    void RemoteCallServer::disconnectViolator( int32 connectionID, string_view functionName, const utf8* pWhy )
+    void RemoteCallServer::disconnectViolator( int32 connectionID, uint32 functionID, const utf8* pWhy )
     {
         ++_stats._violationCount;
-        SW_LOG_WARNING_ID( "RemoteCall.Violation", "Remote call %# from connection %# was refused (%#) - disconnecting the connection", functionName, connectionID, pWhy );
+        SW_LOG_WARNING_ID( "RemoteCall.Violation", "Remote call (function id %#) from connection %# was refused (%#) - disconnecting the connection", functionID, connectionID, pWhy );
         if ( _pPeers != nullptr )
             _pPeers->disconnect( connectionID );
     }
@@ -433,11 +496,11 @@ namespace sw
         if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
             return NetHandleResult::Malformed;
         const RemoteCallTargets::Target* pTarget   = _targets.findTarget( call._targetID );
-        const FunctionInfo*              pFunction = pTarget != nullptr ? RemoteCallInternal::findFunction( *pTarget->_pType, call._functionName ) : nullptr;
+        const FunctionInfo*              pFunction = pTarget != nullptr ? RemoteCallTargets::findFunctionByID( *pTarget->_pType, call._functionID ) : nullptr;
         if ( pFunction == nullptr || RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false ) == false )
         {
             // 클라이언트는 서버를 끊지 않는다 — 대상이 이미 사라졌을 수 있다(서버가 먼저 보냈다). 로그만 남긴다.
-            SW_LOG_WARNING_ID( "RemoteCall.ClientCallDropped", "Remote call %# for target %# was dropped - no such target or Client function here", call._functionName.c_str(), call._targetID );
+            SW_LOG_WARNING_ID( "RemoteCall.ClientCallDropped", "Remote call (function id %#) for target %# was dropped - no such target or Client function here", call._functionID, call._targetID );
             return NetHandleResult::Handled;
         }
         if ( ReflectionInvoke::callWithText( *pFunction, pTarget->_pInstance, _listReceivedScratch ) != ReflectCallResult::Ok )
@@ -452,7 +515,7 @@ namespace sw
         RemoteCallRejectNotification notification;
         notification._sequence = body.readVarUint32();
         const uint32 errorByte = body.readBits( 8 );
-        if ( body.hasOverflowed() || errorByte > static_cast<uint32>( RemoteCallError::ArgumentMismatch ) )
+        if ( body.hasOverflowed() || errorByte > static_cast<uint32>( RemoteCallError::RateLimited ) )
             return NetHandleResult::Malformed;
         notification._error = static_cast<RemoteCallError>( errorByte );
         _rejections.push( notification );
