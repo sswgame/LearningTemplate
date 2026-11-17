@@ -36,12 +36,6 @@ namespace sw::editor
     public:
         /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
         void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
-        /**
-         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
-         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
-         */
-        void recordDocumentEdit( string_view label ) const;
-
         /** @brief 아틀라스를 나눌 열 · 행 수의 범위입니다. */
         static constexpr int32 kMaxSliceCount = 64;
 
@@ -78,6 +72,7 @@ namespace sw::editor
         /** @brief 고른 프레임입니다. 고른 것이 없으면 nullptr 입니다(입력란이 바로 고친다). */
         [[nodiscard]] SpriteClipFrame* editSelectedFrame();
         /** @brief 빈 프레임을 끝에 더하고 고릅니다. */
+        // 편집 연산은 바꿨으면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16). 위젯이 칸을 바로 고친 자리는 아래 commit… 이 알린다.
         void addFrame();
         /** @brief 고른 프레임을 지우고 애니메이션 구간을 그만큼 당깁니다. 프레임이 하나도 남지 않은 구간은 지웁니다(읽기가 버리는 구간을 남기지 않는다). 고른 것이 없으면 false 입니다. */
         bool removeSelectedFrame();
@@ -150,6 +145,14 @@ namespace sw::editor
          *          @p bAddFrame 이거나 고른 프레임이 없으면 새 프레임을 더한다. 맞춘 뒤 폭이나 높이가 0 이면 아무것도 하지 않는다(`None`).
          */
         AtlasPickResult setFrameRegion( const float2& uvFrom, const float2& uvTo, bool bAddFrame );
+        /** @brief 위젯이 아틀라스 경로 칸(`editAtlasPath`)을 다 고쳤습니다 — "Edit Sprite Clip" 으로 알립니다. */
+        void commitAtlasPath() const { recordDocumentEdit( "Edit Sprite Clip" ); }
+        /** @brief 위젯이 고른 프레임의 칸(uv · 시간 · 가장자리 끌기)을 다 고쳤습니다 — "Edit Sprite Frame" 으로 알립니다. */
+        void commitFrameEdit() const { recordDocumentEdit( "Edit Sprite Frame" ); }
+        /** @brief 위젯이 고른 키의 칸(시간 · 위치 · 각도)을 다 고쳤습니다 — "Edit Sprite Key" 로 알립니다. */
+        void commitKeyEdit() const { recordDocumentEdit( "Edit Sprite Key" ); }
+        /** @brief 고른 애니메이션의 반복을 정하고 "Edit Sprite Animation" 으로 알립니다. 고른 애니메이션이 없으면 false 입니다. */
+        bool setSelectedAnimationLoop( bool bLoop );
         /**
          * @brief 고른 프레임의 가장자리 @p edge 를 uv @p position 으로 옮깁니다(픽셀 경계로 맞춘다). 맞은편 가장자리를 넘거나 같아지게는 옮기지 않습니다.
          * @details 좌우가 뒤집힌 프레임(폭 음수)은 뒤집힘을 지킨 채 같은 그림 영역의 가장자리를 옮긴다. 바뀌지 않았으면 false 입니다.
@@ -174,6 +177,29 @@ namespace sw::editor
         int32 getPreviewFrame() const;
 
     private:
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 이 모델의 편집 연산만 부른다(감사 E-16) — 무엇을 고쳤는지와 되돌리기 이름은 모델이 정하고, View 는 연산만 부른다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+        /** @brief 편집 연산의 본문입니다 — 알리지 않는다(공개 연산이 성공하면 알린다). */
+        void            appendFrame();
+        void            applyAddKey();
+        void            applyAddFramesFromGrid();
+        AtlasPickResult applyPickAtlasCell( float32 u, float32 v, bool bAddFrame );
+        AtlasPickResult applySetFrameRegion( const float2& uvFrom, const float2& uvTo, bool bAddFrame );
+        /** @brief 아틀라스 고르기 결과대로 알립니다(프레임을 더했으면 "Add Sprite Frame", 고쳤으면 "Edit Sprite Frame"). */
+        void               recordPickResult( AtlasPickResult result ) const;
+        [[nodiscard]] bool applyRemoveSelectedFrame();
+        [[nodiscard]] bool applyDuplicateSelectedFrame();
+        [[nodiscard]] bool applyMoveSelectedFrame( int32 delta );
+        [[nodiscard]] bool applyCommitSelectedFrameBorder();
+        [[nodiscard]] bool applyRemoveSelectedKey();
+        [[nodiscard]] bool applyAddAnimation();
+        [[nodiscard]] bool applyRemoveSelectedAnimation();
+        [[nodiscard]] bool applyCommitAnimationName();
+        [[nodiscard]] bool applyCommitAnimationRange();
+        [[nodiscard]] bool applyCommitAtlasPixelSize();
         /** @brief 파일과 같은 내용의 새 클립입니다. 아틀라스는 @p atlasPath, 빈 프레임 하나입니다. */
         static SpriteClipAsset makeNewClip( string_view atlasPath );
         SpriteClipAsset        captureClipData() const;

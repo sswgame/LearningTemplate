@@ -145,13 +145,13 @@ namespace sw::editor
         return SpriteClipModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) ? &_clip._listFrame[static_cast<size_t>( _selectedFrame )] : nullptr;
     }
 
-    void SpriteClipModel::addFrame()
+    void SpriteClipModel::appendFrame()
     {
         _clip._listFrame.push_back( SpriteClipFrame{} );
         _selectedFrame = _clip.getFrameCount() - 1;
     }
 
-    bool SpriteClipModel::removeSelectedFrame()
+    bool SpriteClipModel::applyRemoveSelectedFrame()
     {
         const int32 removedFrame = _selectedFrame;
         if ( SpriteClipModelInternal::eraseSelected( _clip._listFrame, _selectedFrame ) == false )
@@ -169,7 +169,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SpriteClipModel::duplicateSelectedFrame()
+    bool SpriteClipModel::applyDuplicateSelectedFrame()
     {
         const SpriteClipFrame* pFrame = editSelectedFrame();
         if ( pFrame == nullptr )
@@ -188,7 +188,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SpriteClipModel::moveSelectedFrame( int32 delta )
+    bool SpriteClipModel::applyMoveSelectedFrame( int32 delta )
     {
         const int32 target = _selectedFrame + delta;
         if ( editSelectedFrame() == nullptr || SpriteClipModelInternal::isValidIndex( _clip._listFrame, target ) == false || delta == 0 )
@@ -198,7 +198,7 @@ namespace sw::editor
         return true;
     }
 
-    void SpriteClipModel::addFramesFromGrid()
+    void SpriteClipModel::applyAddFramesFromGrid()
     {
         const int32 cellCount = _sliceColumns * _sliceRows;
         for ( int32 cell = 0; cell < cellCount; ++cell )
@@ -210,7 +210,7 @@ namespace sw::editor
         _selectedFrame = _clip.getFrameCount() - 1;
     }
 
-    bool SpriteClipModel::commitSelectedFrameBorder()
+    bool SpriteClipModel::applyCommitSelectedFrameBorder()
     {
         SpriteClipFrame* pFrame = editSelectedFrame();
         if ( pFrame == nullptr )
@@ -232,13 +232,13 @@ namespace sw::editor
         return SpriteClipModelInternal::isValidIndex( _clip._listKey, _selectedKey ) ? &_clip._listKey[static_cast<size_t>( _selectedKey )] : nullptr;
     }
 
-    void SpriteClipModel::addKey()
+    void SpriteClipModel::applyAddKey()
     {
         _clip._listKey.push_back( SpriteClipKey{} );
         _selectedKey = static_cast<int32>( _clip._listKey.size() ) - 1;
     }
 
-    bool SpriteClipModel::removeSelectedKey()
+    bool SpriteClipModel::applyRemoveSelectedKey()
     {
         return SpriteClipModelInternal::eraseSelected( _clip._listKey, _selectedKey );
     }
@@ -255,7 +255,7 @@ namespace sw::editor
         return SpriteClipModelInternal::isValidIndex( _clip._listAnimation, _selectedAnimation ) ? &_clip._listAnimation[static_cast<size_t>( _selectedAnimation )] : nullptr;
     }
 
-    bool SpriteClipModel::addAnimation()
+    bool SpriteClipModel::applyAddAnimation()
     {
         if ( _clip._listFrame.empty() )
         {
@@ -282,7 +282,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SpriteClipModel::removeSelectedAnimation()
+    bool SpriteClipModel::applyRemoveSelectedAnimation()
     {
         if ( SpriteClipModelInternal::eraseSelected( _clip._listAnimation, _selectedAnimation ) == false )
             return false;
@@ -290,7 +290,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SpriteClipModel::commitAnimationName()
+    bool SpriteClipModel::applyCommitAnimationName()
     {
         SpriteClipAnimation* pAnimation = editSelectedAnimation();
         if ( pAnimation == nullptr )
@@ -307,7 +307,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SpriteClipModel::commitAnimationRange()
+    bool SpriteClipModel::applyCommitAnimationRange()
     {
         SpriteClipAnimation* pAnimation = editSelectedAnimation();
         if ( pAnimation == nullptr || _clip._listFrame.empty() )
@@ -319,7 +319,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SpriteClipModel::commitAtlasPixelSize()
+    bool SpriteClipModel::applyCommitAtlasPixelSize()
     {
         const float2 oldSize = _clip._atlasPixelSize;
         const float2 newSize{ MathUtil::max( _atlasPixelSizeInput._x, 0.0f ), MathUtil::max( _atlasPixelSizeInput._y, 0.0f ) };
@@ -342,14 +342,14 @@ namespace sw::editor
         _sliceRows    = MathUtil::clamp( _sliceRows, 1, kMaxSliceCount );
     }
 
-    SpriteClipModel::AtlasPickResult SpriteClipModel::pickAtlasCell( float32 u, float32 v, bool bAddFrame )
+    SpriteClipModel::AtlasPickResult SpriteClipModel::applyPickAtlasCell( float32 u, float32 v, bool bAddFrame )
     {
         const optional<int32> cell = AtlasGridUtil::findCellAtUV( u, v, _sliceColumns, _sliceRows );
         if ( cell.has_value() == false )
             return AtlasPickResult::None;
         const bool bAdded = bAddFrame || SpriteClipModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
         if ( bAdded )
-            addFrame();
+            appendFrame();
         _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = AtlasGridUtil::computeCellUVRect( *cell, _sliceColumns, _sliceRows );
         return bAdded ? AtlasPickResult::AddedFrame : AtlasPickResult::EditedFrame;
     }
@@ -373,7 +373,7 @@ namespace sw::editor
         return true;
     }
 
-    SpriteClipModel::AtlasPickResult SpriteClipModel::setFrameRegion( const float2& uvFrom, const float2& uvTo, bool bAddFrame )
+    SpriteClipModel::AtlasPickResult SpriteClipModel::applySetFrameRegion( const float2& uvFrom, const float2& uvTo, bool bAddFrame )
     {
         const float32 left   = snapToAtlasPixel( MathUtil::min( uvFrom._x, uvTo._x ), true );
         const float32 right  = snapToAtlasPixel( MathUtil::max( uvFrom._x, uvTo._x ), true );
@@ -383,7 +383,7 @@ namespace sw::editor
             return AtlasPickResult::None;
         const bool bAdded = bAddFrame || SpriteClipModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
         if ( bAdded )
-            addFrame();
+            appendFrame();
         _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = float4{ left, top, right - left, bottom - top };
         return bAdded ? AtlasPickResult::AddedFrame : AtlasPickResult::EditedFrame;
     }
@@ -525,5 +525,137 @@ namespace sw::editor
     {
         SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
         _pEditRecorder->notifyEdited( label );
+    }
+
+    // 편집 연산 — 바꿨으면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16)
+    void SpriteClipModel::addFrame()
+    {
+        appendFrame();
+        recordDocumentEdit( "Add Sprite Frame" );
+    }
+
+    void SpriteClipModel::addKey()
+    {
+        applyAddKey();
+        recordDocumentEdit( "Add Sprite Key" );
+    }
+
+    void SpriteClipModel::addFramesFromGrid()
+    {
+        applyAddFramesFromGrid();
+        recordDocumentEdit( "Add Sprite Frames" );
+    }
+
+    void SpriteClipModel::recordPickResult( AtlasPickResult result ) const
+    {
+        if ( result == AtlasPickResult::AddedFrame )
+            recordDocumentEdit( "Add Sprite Frame" );
+        else if ( result == AtlasPickResult::EditedFrame )
+            recordDocumentEdit( "Edit Sprite Frame" );
+    }
+
+    SpriteClipModel::AtlasPickResult SpriteClipModel::pickAtlasCell( float32 u, float32 v, bool bAddFrame )
+    {
+        const AtlasPickResult result = applyPickAtlasCell( u, v, bAddFrame );
+        recordPickResult( result );
+        return result;
+    }
+
+    SpriteClipModel::AtlasPickResult SpriteClipModel::setFrameRegion( const float2& uvFrom, const float2& uvTo, bool bAddFrame )
+    {
+        const AtlasPickResult result = applySetFrameRegion( uvFrom, uvTo, bAddFrame );
+        recordPickResult( result );
+        return result;
+    }
+
+    // 편집 연산 — 본문이 바꿨으면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16). View 는 연산만 부른다.
+    bool SpriteClipModel::removeSelectedFrame()
+    {
+        if ( applyRemoveSelectedFrame() == false )
+            return false;
+        recordDocumentEdit( "Remove Sprite Frame" );
+        return true;
+    }
+
+    bool SpriteClipModel::duplicateSelectedFrame()
+    {
+        if ( applyDuplicateSelectedFrame() == false )
+            return false;
+        recordDocumentEdit( "Duplicate Sprite Frame" );
+        return true;
+    }
+
+    bool SpriteClipModel::moveSelectedFrame( int32 delta )
+    {
+        if ( applyMoveSelectedFrame( delta ) == false )
+            return false;
+        recordDocumentEdit( "Move Sprite Frame" );
+        return true;
+    }
+
+    bool SpriteClipModel::commitSelectedFrameBorder()
+    {
+        if ( applyCommitSelectedFrameBorder() == false )
+            return false;
+        recordDocumentEdit( "Edit Sprite Frame" );
+        return true;
+    }
+
+    bool SpriteClipModel::removeSelectedKey()
+    {
+        if ( applyRemoveSelectedKey() == false )
+            return false;
+        recordDocumentEdit( "Remove Sprite Key" );
+        return true;
+    }
+
+    bool SpriteClipModel::addAnimation()
+    {
+        if ( applyAddAnimation() == false )
+            return false;
+        recordDocumentEdit( "Add Sprite Animation" );
+        return true;
+    }
+
+    bool SpriteClipModel::removeSelectedAnimation()
+    {
+        if ( applyRemoveSelectedAnimation() == false )
+            return false;
+        recordDocumentEdit( "Remove Sprite Animation" );
+        return true;
+    }
+
+    bool SpriteClipModel::commitAnimationName()
+    {
+        if ( applyCommitAnimationName() == false )
+            return false;
+        recordDocumentEdit( "Edit Sprite Animation" );
+        return true;
+    }
+
+    bool SpriteClipModel::commitAnimationRange()
+    {
+        if ( applyCommitAnimationRange() == false )
+            return false;
+        recordDocumentEdit( "Edit Sprite Animation" );
+        return true;
+    }
+
+    bool SpriteClipModel::commitAtlasPixelSize()
+    {
+        if ( applyCommitAtlasPixelSize() == false )
+            return false;
+        recordDocumentEdit( "Edit Sprite Atlas Size" );
+        return true;
+    }
+
+    bool SpriteClipModel::setSelectedAnimationLoop( bool bLoop )
+    {
+        SpriteClipAnimation* const pAnimation = editSelectedAnimation();
+        if ( pAnimation == nullptr )
+            return false;
+        pAnimation->_bLoop = bLoop ? SW_TRUE : SW_FALSE;
+        recordDocumentEdit( "Edit Sprite Animation" );
+        return true;
     }
 } // namespace sw::editor

@@ -141,7 +141,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256>& atlasPath = _model.editAtlasPath();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Atlas" ) );
         if ( EditorWidgets::drawAssetPathField( "##Atlas", atlasPath, "atlas", nullptr, nullptr )._bDeactivatedAfterEdit ) // 콘텐츠 브라우저에서 끌어 놓을 수 있다
-            _model.recordDocumentEdit( "Edit Sprite Clip" );
+            _model.commitAtlasPath();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) ) )
             reloadDocument();
@@ -156,17 +156,17 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "SeparateFromAnimationGraph", TextArgumentList().addText( "dirSavedEditor", config::kDirSavedEditor ).addText( "spriteClipDocumentFileName", EditorPaths::kSpriteClipDocumentFileName ) ).c_str() );
     }
 
-    void SpriteClipPanel::drawEditedDragFloat( const utf8* pLabel, float32* pValue, float32 speed, const utf8* pTooltip, const utf8* pUndoLabel )
+    bool SpriteClipPanel::drawEditedDragFloat( const utf8* pLabel, float32* pValue, float32 speed, const utf8* pTooltip )
     {
         // 이름표는 왼쪽 열이다 — ImGui 기본(오른쪽 이름표)은 같은 창의 다른 칸과 줄이 맞지 않았다. 입력을 마칠 때 한 번 기록하므로 칸마다 되돌리기 하나다(묶음 키를 쓰면 다른 프레임의 편집까지 하나로 합쳐졌다).
         EditorWidgets::drawPropertyRowLabel( pLabel );
         ImGui::PushID( pLabel );
         EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), pValue, speed );
         ImGui::PopID();
-        if ( ImGui::IsItemDeactivatedAfterEdit() )
-            _model.recordDocumentEdit( pUndoLabel );
+        const bool bCommitted = ImGui::IsItemDeactivatedAfterEdit();
         if ( pTooltip != nullptr )
             EditorWidgets::drawTooltip( pTooltip );
+        return bCommitted; // 다 고쳤으면 부른 쪽이 모델의 확정 연산을 부른다(되돌리기 이름은 모델이 정한다)
     }
 
     void SpriteClipPanel::drawFrameSection()
@@ -176,25 +176,24 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "AddFrame" ) ) )
         {
             _model.addFrame();
-            _model.recordDocumentEdit( "Add Sprite Frame" );
         }
         EditorSelfTestMarks::record( "spriteClip.addFrame" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RemoveFrame" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveFrame" ) ) && _model.removeSelectedFrame() )
-            _model.recordDocumentEdit( "Remove Sprite Frame" );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveFrame" ) ) )
+            (void)_model.removeSelectedFrame(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorSelfTestMarks::record( "spriteClip.removeFrame" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorSpriteClip", "DuplicateFrame" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "DuplicateFrame" ) ) && _model.duplicateSelectedFrame() )
-            _model.recordDocumentEdit( "Duplicate Sprite Frame" );
+        if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "DuplicateFrame" ) ) )
+            (void)_model.duplicateSelectedFrame(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorSelfTestMarks::record( "spriteClip.duplicateFrame" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "DuplicateFrameTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorSpriteClip", "MoveFrameEarlier" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "MoveFrameEarlier" ) ) && _model.moveSelectedFrame( -1 ) )
-            _model.recordDocumentEdit( "Move Sprite Frame" );
+        if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "MoveFrameEarlier" ) ) )
+            (void)_model.moveSelectedFrame( -1 ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "MoveFrameEarlierTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorSpriteClip", "MoveFrameLater" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "MoveFrameLater" ) ) && _model.moveSelectedFrame( 1 ) )
-            _model.recordDocumentEdit( "Move Sprite Frame" );
+        if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "MoveFrameLater" ) ) )
+            (void)_model.moveSelectedFrame( 1 ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "MoveFrameLaterTip" ) );
 
         const int32 frameCount = static_cast<int32>( _model.getFrames().size() );
@@ -213,14 +212,18 @@ namespace sw::editor
         SpriteClipFrame* pFrame = _model.editSelectedFrame();
         if ( pFrame == nullptr )
             return;
-        drawEditedDragFloat( "u", &pFrame->_uvRect._x, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameUTip" ), "Edit Sprite Frame" );
-        drawEditedDragFloat( "v", &pFrame->_uvRect._y, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ), "Edit Sprite Frame" );
-        drawEditedDragFloat( "w", &pFrame->_uvRect._z, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ), "Edit Sprite Frame" );
-        drawEditedDragFloat( "h", &pFrame->_uvRect._w, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ), "Edit Sprite Frame" );
+        if ( drawEditedDragFloat( "u", &pFrame->_uvRect._x, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameUTip" ) ) )
+            _model.commitFrameEdit();
+        if ( drawEditedDragFloat( "v", &pFrame->_uvRect._y, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ) ) )
+            _model.commitFrameEdit();
+        if ( drawEditedDragFloat( "w", &pFrame->_uvRect._z, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ) ) )
+            _model.commitFrameEdit();
+        if ( drawEditedDragFloat( "h", &pFrame->_uvRect._w, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ) ) )
+            _model.commitFrameEdit();
         EditorWidgets::drawPropertyRowLabel( "durationMs" );
         EditorWidgets::inputInt( SW_WIDGET_ID( "##durationMs" ), &pFrame->_durationMs );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            _model.recordDocumentEdit( "Edit Sprite Frame" );
+            _model.commitFrameEdit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
         drawFrameBorderProperties( *pFrame );
     }
@@ -232,13 +235,13 @@ namespace sw::editor
         float2& atlasSize = _model.editAtlasPixelSize();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSpriteClip", "AtlasSize" ) );
         EditorWidgets::inputFloat2( SW_WIDGET_ID( "##atlasSize" ), &atlasSize._x, "%.0f" );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAtlasPixelSize() )
-            _model.recordDocumentEdit( "Edit Sprite Atlas Size" );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.commitAtlasPixelSize(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasSizeTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSpriteClip", "Border" ) );
         EditorWidgets::inputFloat4( SW_WIDGET_ID( "##border" ), &frame._borderPixels._x, "%.0f" );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitSelectedFrameBorder() )
-            _model.recordDocumentEdit( "Edit Sprite Frame" );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.commitSelectedFrameBorder(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "BorderTip" ) );
     }
 
@@ -274,11 +277,10 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdLabel", "AddKey" ) ) )
         {
             _model.addKey();
-            _model.recordDocumentEdit( "Add Sprite Key" );
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RemoveKey" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveKey" ) ) && _model.removeSelectedKey() )
-            _model.recordDocumentEdit( "Remove Sprite Key" );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveKey" ) ) )
+            (void)_model.removeSelectedKey(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
 
         const int32 keyCount = static_cast<int32>( _model.getKeys().size() );
         for ( int32 keyIndex = 0; keyIndex < keyCount; ++keyIndex )
@@ -294,16 +296,19 @@ namespace sw::editor
         SpriteClipKey* pKey = _model.editSelectedKey();
         if ( pKey == nullptr )
             return;
-        drawEditedDragFloat( "time", &pKey->_time, 0.01f, SW_LOCKEY( "EditorSpriteClip", "KeyTimeTip" ), "Edit Sprite Key" );
-        drawEditedDragFloat( "x", &pKey->_position._x, 0.1f, nullptr, "Edit Sprite Key" );
-        drawEditedDragFloat( "y", &pKey->_position._y, 0.1f, nullptr, "Edit Sprite Key" );
+        if ( drawEditedDragFloat( "time", &pKey->_time, 0.01f, SW_LOCKEY( "EditorSpriteClip", "KeyTimeTip" ) ) )
+            _model.commitKeyEdit();
+        if ( drawEditedDragFloat( "x", &pKey->_position._x, 0.1f, nullptr ) )
+            _model.commitKeyEdit();
+        if ( drawEditedDragFloat( "y", &pKey->_position._y, 0.1f, nullptr ) )
+            _model.commitKeyEdit();
         // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
         float32 angleDeg = MathUtil::toDegree( pKey->_angle );
         EditorWidgets::drawPropertyRowLabel( "angleDeg" );
         if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##angleDeg" ), &angleDeg, 0.5f ) )
             pKey->_angle = MathUtil::toRadian( angleDeg );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            _model.recordDocumentEdit( "Edit Sprite Key" );
+            _model.commitKeyEdit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyAngleTip" ) );
     }
 
@@ -329,7 +334,6 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorSpriteClip", "AddAllCells" ) ) )
         {
             _model.addFramesFromGrid();
-            _model.recordDocumentEdit( "Add Sprite Frames" );
         }
         EditorSelfTestMarks::record( "spriteClip.addAllCells" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AddAllCellsTip" ) );
@@ -450,23 +454,15 @@ namespace sw::editor
         const bool bAdd = pointer.hasModifier( ModifierKey::Shift );
         if ( _dragEdge.has_value() && _bEdgeMoved == SW_TRUE )
         {
-            _model.recordDocumentEdit( "Edit Sprite Frame" ); // 끄는 동안의 가장자리 이동은 되돌리기 하나다
+            _model.commitFrameEdit(); // 끄는 동안의 가장자리 이동은 되돌리기 하나다
         }
         else if ( pointer.wasClickedWithoutDrag( EditorMouseButton::Left ) )
         {
-            const SpriteClipModel::AtlasPickResult result = _model.pickAtlasCell( _dragStartUV._x, _dragStartUV._y, bAdd );
-            if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
-                _model.recordDocumentEdit( "Add Sprite Frame" );
-            else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
-                _model.recordDocumentEdit( "Edit Sprite Frame" );
+            (void)_model.pickAtlasCell( _dragStartUV._x, _dragStartUV._y, bAdd ); // 결과대로 모델이 알린다
         }
         else if ( _dragEdge.has_value() == false )
         {
-            const SpriteClipModel::AtlasPickResult result = _model.setFrameRegion( _dragStartUV, uv, bAdd );
-            if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
-                _model.recordDocumentEdit( "Add Sprite Frame" );
-            else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
-                _model.recordDocumentEdit( "Edit Sprite Frame" );
+            (void)_model.setFrameRegion( _dragStartUV, uv, bAdd ); // 결과대로 모델이 알린다
         }
         _dragEdge.reset();
     }
@@ -480,12 +476,12 @@ namespace sw::editor
     {
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AnimationsNameFirstFrameFrameCountLoopNone" ) );
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "AddAnimation" ) ) && _model.addAnimation() )
-            _model.recordDocumentEdit( "Add Sprite Animation" );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "AddAnimation" ) ) )
+            (void)_model.addAnimation(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorSelfTestMarks::record( "spriteClip.addAnimation" );
         ImGui::SameLine();
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveAnimation" ) ) && _model.removeSelectedAnimation() )
-            _model.recordDocumentEdit( "Remove Sprite Animation" );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RemoveAnimation" ) ) )
+            (void)_model.removeSelectedAnimation(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
 
         const vector<SpriteClipAnimation>& listAnimation  = _model.getAnimations();
         const int32                        animationCount = static_cast<int32>( listAnimation.size() );
@@ -503,24 +499,23 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax64>& animationName = _model.editAnimationName();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Name" ) );
         EditorWidgets::inputText( SW_WIDGET_ID( "##name" ), animationName.data(), animationName.capacity() );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationName() )
-            _model.recordDocumentEdit( "Edit Sprite Animation" );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.commitAnimationName(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationNameTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FirstFrame" ) );
         EditorWidgets::inputInt( SW_WIDGET_ID( "##firstframe" ), &pAnimation->_firstFrame );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationRange() )
-            _model.recordDocumentEdit( "Edit Sprite Animation" );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.commitAnimationRange(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFirstFrameTip" ) );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FrameCount" ) );
         EditorWidgets::inputInt( SW_WIDGET_ID( "##framecount" ), &pAnimation->_frameCount );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationRange() )
-            _model.recordDocumentEdit( "Edit Sprite Animation" );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.commitAnimationRange(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFrameCountTip" ) );
         bool bLoop = pAnimation->_bLoop == SW_TRUE;
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "LoopAlt" ), &bLoop ) )
         {
-            pAnimation->_bLoop = bLoop ? SW_TRUE : SW_FALSE;
-            _model.recordDocumentEdit( "Edit Sprite Animation" );
+            (void)_model.setSelectedAnimationLoop( bLoop );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationLoopTip" ) );
     }
