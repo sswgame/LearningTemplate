@@ -1291,6 +1291,32 @@ namespace sw
             _objectManager->getSubsystem<SceneDataLayerSubsystem>().restoreState( *this, _sceneSettings, std::move( snapshot._dataLayers ) );
     }
 
+    uint32 Scene::remapAssetPaths( const unordered_map<string, string>& mapOldToNew )
+    {
+        uint32     changedCount{ 0 };
+        const auto remapPath = [&mapOldToNew, &changedCount]( string& path )
+        {
+            if ( path.empty() )
+                return;
+            const auto it = mapOldToNew.find( path );
+            if ( it == mapOldToNew.end() )
+                return;
+            path = it->second;
+            ++changedCount;
+        };
+        remapPath( _baseScenePath );
+        for ( auto& [objectID, prefabPath] : _mapPrefabSource )
+            remapPath( prefabPath );
+        for ( auto& [objectID, scenePath] : _mapSceneInstancePath )
+            remapPath( scenePath );
+        for ( SceneDocument::SceneObjectNode& node : _listUnresolvedEntity )
+        {
+            remapPath( node._prefab );
+            remapPath( node._sceneInstance );
+        }
+        return changedCount;
+    }
+
     string_view Scene::getEntityPrefabPath( uint64 objectID ) const
     {
         const auto it = _mapPrefabSource.find( objectID );

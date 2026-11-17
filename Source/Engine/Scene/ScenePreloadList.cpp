@@ -53,15 +53,12 @@ namespace sw
             {
                 if ( pComponent == nullptr || pComponent->isPendingDestroy() )
                     continue;
-                const TypeInfo* pType = pComponent->getTypeInfo();
-                if ( pType == nullptr )
-                    continue;
-                pType->forEachProperty( [pComponent, &outListPath]( const PropertyInfo& prop )
+                ComponentAssetPathUtil::forEachAssetPath( *pComponent, SW_DELEGATE_LAMBDA( AssetPathVisitor, [&outListPath]( const AssetPathValue& value )
                 {
-                    const string_view path = ComponentAssetPathUtil::readAssetPath( prop, pComponent );
+                    const string_view path = value.getPath();
                     if ( ScenePreloadListInternal::isPreloadable( path ) )
                         outListPath.push_back( FileUtil::normalizeSeparators( path ) );
-                }, true );
+                } ) );
             }
         } );
         VectorUtil::sortUnique( outListPath );

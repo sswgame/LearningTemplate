@@ -54,4 +54,17 @@ namespace sw
         PROPERTY()
         AssetRef<AssetRefSampleCatalog> _catalog;
     };
+
+    /** @brief 참조 칸을 구조체 · 구조체 시퀀스 안에 품은 샘플입니다 — 에셋 경로 순회가 중첩 안으로 내려가는지 본다(`ComponentAssetPathUtil::forEachAssetPath`). */
+    REFLECT()
+    struct AssetRefSampleHolder
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        AssetRefSample _inner;
+
+        PROPERTY()
+        vector<AssetRefSample> _listInner;
+    };
 } // namespace sw

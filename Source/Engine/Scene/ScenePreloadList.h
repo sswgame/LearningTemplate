@@ -2,7 +2,7 @@
  * @file ScenePreloadList.h
  * @brief 씬이 쓰는 에셋 경로 목록(`<씬>.preload.json`)의 수집 · 읽고 쓰기입니다. 쿠킹이 굽고, 레벨 전환이 `PreloadSet` 으로 열어 파일을 미리 읽는다.
  * @details **수집은 씬을 지어서 한다.** 씬 문서를 `Scene::instantiate` 로 지으면(프리팹 스폰 · 중첩까지 런타임과 같은 길) 모든 오브젝트의 컴포넌트가 생긴다. 그 컴포넌트의
- *          에셋 경로 프로퍼티(`PROPERTY( AssetPath )` · `AssetType = …`, `ComponentAssetPathUtil::readAssetPath`)를 리플렉션으로 읽어 모은다 — 컴포넌트마다 목록을 코드로
+ *          에셋 경로 프로퍼티(`PROPERTY( AssetPath )` · `AssetType = …`, `ComponentAssetPathUtil::forEachAssetPath` — 시퀀스 · 중첩 구조체 안의 것도)를 리플렉션으로 읽어 모은다 — 컴포넌트마다 목록을 코드로
  *          적지 않아, 새 컴포넌트가 경로 프로퍼티만 달면 자동으로 든다. 머티리얼이 쓰는 텍스처는 싣지 않는다(텍스처는 그것을 쓰는 머티리얼의 고정이 붙든다 — `PreloadSet`).
  *          확장자가 없는 값(`cube` 같은 내장 메시 id)과 씬 경로(`.scene.xml` · `.scene.bin`, 다음 씬으로의 이음이지 이 씬의 에셋이 아니다)는 뺀다.
  *          목록은 경로 오름차순이고 중복이 없다 — 같은 씬은 늘 같은 바이트로 구워져 쿠킹 기록(`CookStore`)이 재사용한다.

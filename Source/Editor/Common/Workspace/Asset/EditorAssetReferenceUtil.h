@@ -34,7 +34,7 @@ namespace sw::editor
          * @return 바꾼 값 수입니다(시퀀스는 원소마다).
          */
         static uint32 remapComponent( Component& component, const unordered_map<string, string>& mapOldToNew, vector<hashed_string>& outListChanged );
-        /** @brief @p scene 의 모든 오브젝트 컴포넌트(`remapComponent` + `onPropertyChanged`), 엔티티의 프리팹 경로, 중첩 프리팹 부품의 프리팹 경로를 고칩니다. 바꾼 참조 수입니다. */
+        /** @brief @p scene 의 조립 기록(`Scene::remapAssetPaths` — 부모 씬 · 인스턴스 씬 · 엔티티 프리팹), 모든 오브젝트 컴포넌트(`remapComponent` + `onPropertyChanged`), 중첩 프리팹 부품의 프리팹 경로를 고칩니다. 바꾼 참조 수입니다. */
         static uint32 remapScene( Scene& scene, const unordered_map<string, string>& mapOldToNew );
     };
 } // namespace sw::editor
