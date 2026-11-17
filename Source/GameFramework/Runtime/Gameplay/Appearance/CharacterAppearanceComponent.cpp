@@ -1688,9 +1688,9 @@ namespace sw
             ++_fitResultRevision;
         }
         else if ( job._bBakeBuilt )
-            AppearanceBakedMeshCache::store( job._bakeKey, job._listBaked, job._listSourceContent );
+            AppearanceBakedMeshCache::store( job._bakeKey, job._listBaked, job._listSource, job._listSourceContent );
         if ( job._bMergeBuilt )
-            AppearanceBakedMeshCache::store( job._mergedKey, { job._merged }, job._listSourceContent );
+            AppearanceBakedMeshCache::store( job._mergedKey, { job._merged }, job._listSource, job._listSourceContent );
         // 합친 메시가 있으면 몸 유닛에 건다. 합치지 못했으면(오류는 워커가 남겼다) 몸 원본만 그려지고 아래 부품별 길로 간다.
         SkeletalMeshComponent* pBodyUnit = _bodyPart >= 0 ? findSkinnedUnit( *pManager, static_cast<uint32>( _bodyPart ) ) : nullptr;
         const bool             bMerged   = job._merged != nullptr && job._listMergePart.empty() == false && pBodyUnit != nullptr && applyMergedMeshes( *pManager, *pBodyUnit, job );

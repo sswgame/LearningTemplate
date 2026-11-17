@@ -124,6 +124,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct CharacterMeshCacheConfig
+     * @brief 캐릭터 외형이 구운 · 합친 메시 캐시(`AppearanceBakedMeshCache`)의 설정입니다. 넘으면 그리는 쪽이 없는 차림을 가장 오래 안 쓴 것부터 뺀다.
+     * @details `EngineConfig` 는 호스트 전용 서비스라 게임 모듈(GameFramework)이 못 본다 — 이 조각만 게임에 보이는 서비스로 따로 건다(`ConfigManager`, 자리는 `EngineConfig::_characterMeshCache`).
+     *          메모리 태그 예산(`MemoryBudget.json` 의 Mesh)보다 작게 둔다. 캐시가 원본 메시도 쥐어 씬을 바꿔도 같은 차림을 다시 짓지 않는다 — 언리얼 Mutable 결과 캐시 · DDC 자리다.
+     */
+    REFLECT()
+    struct SW_API CharacterMeshCacheConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _budgetMegabytes{}; ///< 캐시 예산(MB). 0 이면(키가 없다) 캐시가 처음 남길 때 오류로 멈춘다
+
+        SW_SERVICE_SLOT_CONST( CharacterMeshCacheConfig, Required );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 사진 앞 "렌더가 자리를 잡았다"(`Render.Stable`)의 문턱입니다 — 시간 누적 렌더와 노출 적응이 수렴했다고 볼 값(`RenderStability.h`).
      * @details 자동화 시나리오가 스크린샷 앞에서 고정 프레임 대기 대신 이 판정을 기다린다(언리얼 자동화 스크린샷의 warm-up · 유니티 Graphics Test Framework 의 `WaitFrames` 자리를 조건으로).
      */
@@ -372,6 +392,9 @@ namespace sw
 
         PROPERTY()
         AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
+
+        PROPERTY()
+        CharacterMeshCacheConfig _characterMeshCache{}; ///< 캐릭터 외형이 구운 · 합친 메시 캐시의 예산(게임 모듈이 보는 조각)
 
         PROPERTY()
         RenderStabilityConfig _renderStability{}; ///< 사진 앞 정착 판정(`Render.Stable`)의 문턱

@@ -5,12 +5,14 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
+#include "DevTools/Client/Automation/Runner/AutomationHangWatch.h"
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
 #include "DevTools/Client/Automation/Runner/AutomationPerBackend.h"
 #include "DevTools/Client/Automation/Runner/AutomationRunner.h"
@@ -22,6 +24,7 @@
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/AutomationTimeLimits.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -46,6 +49,36 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @class AutomationShutdownWatch
+         * @brief 시나리오 실행 뒤 프로세스 종료를 지켜보는 행 감시입니다(`IAutomationRuntime::watchShutdown`). 실행기의 감시와 같은 스레드 · 행 처리를 쓴다.
+         * @details 단계 보고는 이미 썼다 — 행 보고 경로를 비워 덮지 않고, stderr 줄과 종료 코드 12 만 남긴다. 크래시 처리기는 넘기지 않는다(종료 도중 서비스가 먼저 내려간다).
+         */
+        class AutomationShutdownWatch final : public IAutomationShutdownWatch
+        {
+        public:
+            explicit AutomationShutdownWatch( string_view lastStage )
+                : _watchdog{}
+            {
+                AutomationHangPayload payload;
+                AutomationHangPayload::assign( payload._scenario, AutomationHangPayload::kScenarioBytes, lastStage );
+                AutomationHangPayload::assign( payload._lastStep, AutomationHangPayload::kLastStepBytes, "process shutdown after the scenario run (engine / module teardown)" );
+                AutomationHangPayload::assign( payload._result, AutomationHangPayload::kResultBytes, getEnumName( AutomationResult::TimedOut ) );
+                const float64 limitSeconds     = AutomationRunner::scaleWallSeconds( AutomationTimeLimits::kShutdownWallSeconds );
+                payload._wallLimitMilliseconds = static_cast<uint32>( limitSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+                _watchdog.publish( payload );
+                AutomationHangWatchdog::Settings settings;
+                settings._startSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) / static_cast<float64>( constant::time::kMicrosecondsPerSecond );
+                settings._limitSeconds = static_cast<float32>( limitSeconds );
+                settings._graceSeconds = AutomationTimeLimits::kHangGraceSeconds;
+                settings._exitCode     = getAutomationExitStatus( AutomationResult::TimedOut );
+                _watchdog.start( settings );
+            }
+
+        private:
+            AutomationHangWatchdog _watchdog; ///< 소멸이 감시를 내린다(`~AutomationHangWatchdog` 가 `stop`)
+        };
+
         /** @brief 시나리오가 첫 씬을 선언하는 `<Launch>` 변수 — 게임 프레임워크가 정의하는 이름이다(`GameInstance`). 체인의 단계는 이 씬을 새로 열고 시작한다. */
         constexpr string_view kStartSceneVariable = "gv_firstScene";
         /** @brief 단계 사이에 앞 씬을 비우는 빈 씬의 이름입니다. */
@@ -551,6 +584,15 @@ namespace sw
     {
         // 끝난 단계의 실행기도 남는다(마지막 단계 · 결과를 남기는 프레임) — 그동안은 끝난 상태를 준다. 녹화만 도는 실행은 시나리오가 없다.
         return _owner._pRunner != nullptr ? &_owner._runStatus : nullptr;
+    }
+
+    unique_ptr<IAutomationShutdownWatch> AutomationSession::Runtime::watchShutdown()
+    {
+        // 시나리오를 돌린 실행(체인이 있다)만 — 사람이 띄운 에디터 · 게임의 종료는 감시하지 않는다.
+        if ( _owner._pChain == nullptr )
+            return nullptr;
+        const string lastStage = _owner._pRunner != nullptr ? _owner._pRunner->getScenario().getName() : string( _owner._pChain->getCurrentPath() );
+        return make_unique<AutomationShutdownWatch>( lastStage );
     }
 
     bool AutomationSession::Runtime::isBusy() const

@@ -61,7 +61,6 @@ namespace sw
         , _clockHolderName{}
         , _exitDeadlineSeconds{ 0.0 }
         , _expectedExitCode{ 0 }
-        , _loadDeadlineSeconds{ 0.0 }
         , _wallStartSeconds{ 0.0 }
         , _pCompileBusy{ nullptr }
         , _compileBusyAtStartNanoseconds{ 0 }
@@ -534,20 +533,17 @@ namespace sw
             const bool bScenarioClockRuns = _result == AutomationResult::Running && _run._bFinishWaiting == false && _run._holdFrameCount == 0;
             if ( bScenarioClockRuns )
                 ++_run._frameIndex;
-            // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝을 정하므로(아래) 벽시계 그물만 본다.
-            const bool bFrameTimeoutReached = _result == AutomationResult::Running && _run._exitDeadlineSeconds <= 0.0 && _run._loadDeadlineSeconds <= 0.0 &&
-                                              _run._frameIndex > _scenario.getTimeoutFrames();
+            // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝을 정하므로(아래) 벽시계 시한 · 행 감시만 본다.
+            const bool bLoad                = _scenario.getTestOptions()._load._bDeclared;
+            const bool bFrameTimeoutReached = _result == AutomationResult::Running && _run._exitDeadlineSeconds <= 0.0 && bLoad == false && _run._frameIndex > _scenario.getTimeoutFrames();
             if ( bFrameTimeoutReached )
                 finish( AutomationResult::TimedOut, "timeoutFrames reached without <Pass/>" );
             // 부하 시나리오의 끝 — 측정 창이 닫혔고(보고를 냈다) 단계가 다 돌았다. 어느 쪽이 먼저 끝나도 된다(창이 먼저면 남은 대기는 제 시한이 묶는다).
-            const FrameProfileSession* const pProfileSession = _run._loadDeadlineSeconds > 0.0 ? engine::findSubsystem<FrameProfileSession>() : nullptr;
+            // 창이 닫히지 않거나(`-gv_profileFrames` 를 함께 줬다) 판정이 멈추면 다른 시나리오와 같은 벽시계 시한 · 행 감시가 끝낸다(측정 창 길이는 상한에 든다 — `computeWallLimitSeconds`).
+            const FrameProfileSession* const pProfileSession = bLoad ? engine::findSubsystem<FrameProfileSession>() : nullptr;
             const bool                       bLoadMeasured   = pProfileSession != nullptr && pProfileSession->isCompleted();
             if ( _result == AutomationResult::Running && bLoadMeasured && _run._nextStepIndex >= listStep.size() )
                 finish( AutomationResult::Passed, "the <Load> measurement window closed and every step ran" );
-            const bool bLoadDeadlineExceeded = _result == AutomationResult::Running && _run._loadDeadlineSeconds > 0.0 && bLoadMeasured == false &&
-                                               _run._loadDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
-            if ( bLoadDeadlineExceeded )
-                finish( AutomationResult::TimedOut, "the <Load> measurement window did not close in time (was -gv_profileFrames also given?)" );
         }
         if ( _bEnded == SW_FALSE )
         {
@@ -588,8 +584,6 @@ namespace sw
             finish( AutomationResult::LoadError, "<Load> could not set gv_profileReportPath" );
             return;
         }
-        // 멈춤 그물 — 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다.
-        _run._loadDeadlineSeconds = AutomationRunnerInternal::readNowSeconds() + 2.0 * static_cast<float64>( seconds ) + AutomationTimeLimits::kLoadDeadlineSlackSeconds;
         SW_LOG_INFO_ID( "Automation.LoadWindowClientsMeshes", "[Scenario] load window %# s (clients %#, meshes %#, movers %#, network '%#')", seconds, load._clientCount, load._meshCount, load._moverCount,
                         load._network.c_str() );
     }
@@ -679,6 +673,10 @@ namespace sw
         // 조건 대기(`timeoutFrames` · `timeoutSeconds`)는 제 시한이 판정한다 — 그 시한만큼(시뮬레이션 초, 실시간 이상으로 도는 기준)을 더해 바깥 그물이 먼저 끝내지 않게 한다.
         // 더하지 않으면 정당하게 긴 대기(게임 상태를 기다리는 시나리오)가 부하 걸린 기계에서 "wall-clock limit" 으로만 졌다(프레임 시한의 "바깥 < 안쪽 대기 합" 과 같은 모양).
         float32 limitSeconds = _scenario.getWallTimeoutSeconds();
+        // 부하 시나리오의 측정 창(워밍업 포함)도 같은 상한에 든다 — 예전에는 따로 둔 배율 없는 그물이 프레임 끝에서만 봐서, 게임 스레드가 측정 뒤 대기에서 멈추면 행 감시 없이 ctest 시한까지 갔다.
+        const AutomationLoad& load = _scenario.getTestOptions()._load;
+        if ( load._bDeclared )
+            limitSeconds += static_cast<float32>( 2.0 * static_cast<float64>( MathUtil::ceil( load._durationSeconds ) ) + AutomationTimeLimits::kLoadDeadlineSlackSeconds );
         for ( const AutomationStep& step : _scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
@@ -719,8 +717,7 @@ namespace sw
 
     void AutomationRunner::finishIfWallClockExceeded()
     {
-        // 부하 시나리오는 측정 창을 닫는 그물(`_run._loadDeadlineSeconds`)이 따로 있어 길이가 `durationSeconds` 에 매인다.
-        const bool bWatches = _result == AutomationResult::Running && _scenario.getTestOptions()._load._bDeclared == false;
+        const bool bWatches = _result == AutomationResult::Running;
         if ( bWatches == false )
             return;
         const float64 elapsedSeconds = readElapsedSecondsWithoutCompile();
@@ -807,7 +804,7 @@ namespace sw
 
     void AutomationRunner::startHangWatchdog()
     {
-        const bool bWatches = _bHangWatchArmed == SW_TRUE && _result == AutomationResult::Running && _scenario.getTestOptions()._load._bDeclared == false;
+        const bool bWatches = _bHangWatchArmed == SW_TRUE && _result == AutomationResult::Running;
         if ( bWatches == false )
             return;
         // 바뀌지 않는 칸은 지금 한 번 채운다. 행에서는 이것만 읽는다(감시 스레드는 실행기 멤버를 건드리지 않는다).
@@ -1154,20 +1151,19 @@ namespace sw
         report._pListMetric          = &_evaluator.getMetricLines();
         report._pListRecord          = &_evaluator.getRecordLines();
         // 실행 환경 — 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 한다.
-        const string  backendName        = findBackendName();
-        const string  lastStep           = describeRunPosition();
-        const string  reproduce          = makeReproduceCommand();
-        const bool    bWatchedByWallTime = _scenario.getTestOptions()._load._bDeclared == false;
-        const float64 wallSeconds        = _run._wallEndSeconds > _run._wallStartSeconds ? _run._wallEndSeconds - _run._wallStartSeconds : 0.0;
-        report._backendName              = backendName;
-        report._gameName                 = _reproduceInput._game;
-        report._startedAt                = _startedAt;
-        report._startedUnixMs            = _startedUnixMs;
-        report._wallMilliseconds         = static_cast<uint32>( wallSeconds * 1000.0 );
-        report._wallLimitMilliseconds    = bWatchedByWallTime ? static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * 1000.0 ) : 0u;
-        report._lastStep                 = lastStep;
-        report._reproduce                = reproduce;
-        report._pTimeline                = &_wallProfile;
+        const string  backendName     = findBackendName();
+        const string  lastStep        = describeRunPosition();
+        const string  reproduce       = makeReproduceCommand();
+        const float64 wallSeconds     = _run._wallEndSeconds > _run._wallStartSeconds ? _run._wallEndSeconds - _run._wallStartSeconds : 0.0;
+        report._backendName           = backendName;
+        report._gameName              = _reproduceInput._game;
+        report._startedAt             = _startedAt;
+        report._startedUnixMs         = _startedUnixMs;
+        report._wallMilliseconds      = static_cast<uint32>( wallSeconds * 1000.0 );
+        report._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * 1000.0 );
+        report._lastStep              = lastStep;
+        report._reproduce             = reproduce;
+        report._pTimeline             = &_wallProfile;
         _reportWriter.write( report );
         updateCrashContext( string( "ended " ) + getEnumName( _result ) );
     }

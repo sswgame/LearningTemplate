@@ -29,6 +29,9 @@
         "_reopenMaxDelayMs": 30000,
         "_clipCacheMegabytes": 192
     },
+    "_characterMeshCache": {
+        "_budgetMegabytes": 128
+    },
     "_renderStability": {
         "_minStillFrames": 16,
         "_maxExposureErrorEv": 0.05

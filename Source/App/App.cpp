@@ -701,6 +701,8 @@ namespace sw
     {
         endMainLoop();
         const int32 exitCode = getExitCode();
+        // 시나리오 실행이면 종료도 감시한다 — 감시는 이 함수 끝(엔진이 다 내려간 뒤)에 놓인다.
+        const unique_ptr<IAutomationShutdownWatch> shutdownWatch = _pAutomation != nullptr ? _pAutomation->watchShutdown() : nullptr;
         shutdown();
         return exitCode;
     }
