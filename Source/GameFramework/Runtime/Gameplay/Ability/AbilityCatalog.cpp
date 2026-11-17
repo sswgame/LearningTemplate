@@ -372,6 +372,14 @@ namespace sw
         outDef._stackingPolicy                = params._stacking;
         outDef._stackExpirationPolicy         = params._stackExpiration;
 
+        // 주기를 적었으면 0 보다 커야 한다 — 0 은 "주기 없음" 과 구별되지 않아 적은 사람의 뜻(도트 · 리젠)이 조용히 사라지거나 매 프레임 돈다(감사 G-8).
+        // 주기는 지속 이펙트에만 뜻이 있다(GAS `Period` 도 Instant 에는 쓰이지 않는다).
+        const bool bPeriodWritten = node.findAttribute( "period" ) != nullptr;
+        if ( bPeriodWritten && ( params._period <= 0.0f || outDef._durationPolicy == EffectDurationPolicy::Instant ) )
+        {
+            SW_LOG_ERROR_ID( "AbilityCatalog.EffectPeriodInvalid", "%#: effect '%#' has period %# - a period must be positive and the effect must not be Instant", sourceName, pID, params._period );
+            return false;
+        }
         const bool bDurationWithoutLength = outDef._durationPolicy == EffectDurationPolicy::HasDuration && outDef._duration._baseValue <= 0.0f;
         if ( bDurationWithoutLength )
             SW_LOG_WARNING_ID( "AbilityCatalog.EffectHasDurationButSeconds", "%#: effect '%#' is HasDuration but 'seconds' is not positive - it expires on the next update", sourceName, pID );

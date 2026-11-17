@@ -73,3 +73,19 @@ SW_TEST_CASE( AbilityCatalogTest, CooldownEffectWithoutGrantedTagIsRejected )
     SW_EXPECT_NULL( catalog.findAbility( "GA_Spam" ) );
     SW_EXPECT_NOT_NULL( catalog.findAbility( "GA_Good" ) );
 }
+
+/** @brief [AbilityCatalogTest] 주기를 0 이하로 적거나 즉시 이펙트에 적은 이펙트는 읽기 오류다 — 조용히 주기 없음 · 매 프레임이 되지 않는다(감사 G-8) */
+SW_TEST_CASE( AbilityCatalogTest, NonPositivePeriodIsRejected )
+{
+    SW_EXPECT_LOG( "AbilityCatalog.EffectPeriodInvalid" ); // 둘 — 같은 id 의 선언 하나가 모두 센다
+    AbilityCatalog catalog;
+    (void)catalog.loadFromXMLText( R"(<AbilityCatalog>
+  <AbilityEffect id="GE_ZeroPeriod" duration="Infinite" period="0"/>
+  <AbilityEffect id="GE_InstantPeriod" duration="Instant" period="1"/>
+  <AbilityEffect id="GE_Regen" duration="Infinite" period="1"/>
+</AbilityCatalog>)",
+                                   "AbilityCatalogTest" );
+    SW_EXPECT_NULL( catalog.findEffect( "GE_ZeroPeriod" ) );
+    SW_EXPECT_NULL( catalog.findEffect( "GE_InstantPeriod" ) );
+    SW_EXPECT_NOT_NULL( catalog.findEffect( "GE_Regen" ) );
+}
