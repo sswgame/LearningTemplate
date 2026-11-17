@@ -181,16 +181,13 @@ namespace sw
                 if ( entry._name == *pIncreaseFrom )
                     pStored = &entry;
             }
-            float64 remembered = 0.0;
-            if ( pStored == nullptr || StringUtil::parseDouble( string_view{ pStored->_text }, remembered ) == false )
+            const expected<bool> increaseMatch = Internal::matchesIncrease( step, value._number, pStored != nullptr ? &pStored->_text : nullptr );
+            if ( increaseMatch.has_value() == false )
             {
-                outMessage = subject + ": no number was stored as '" + *pIncreaseFrom + "' (add <Store as=\"" + *pIncreaseFrom + "\"> on a number watch before this step)";
+                outMessage = subject + " (increaseFrom '" + *pIncreaseFrom + "'): " + AutomationStep::describeReason( increaseMatch.error() );
                 return false;
             }
-            float32 increase = 0.0f;
-            if ( Internal::readFloat( step, "increaseBy", increase ).has_value() == false )
-                return false; // 검사가 본다 — 단계가 바뀌었다(핫 리로드)
-            bOk        = value._number - remembered >= static_cast<float64>( increase );
+            bOk        = *increaseMatch;
             outMatched = bOk;
             outMessage = subject + " increase by " + *step.findAttribute( "increaseBy" ) + " from " + *pIncreaseFrom + " ('" + pStored->_text + "'), got " + valueText;
             return true;

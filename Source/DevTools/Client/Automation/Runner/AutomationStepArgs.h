@@ -90,7 +90,12 @@ namespace sw
         /** @brief 수 비교 하나를 읽습니다. `equals` · `near` · `atLeast` · `atMost` 중 적힌 것이 없으면 오류입니다(정확히 하나인지는 단계의 검사 함수가 봅니다). */
         [[nodiscard]] static expected<NumberComparison> parseNumberComparison( const AutomationStep& step, float32 nearTolerance );
         /** @brief @p comparison 대로 @p value 를 비교합니다. 실패 메시지의 규칙 글을 @p outRule 에 씁니다. */
-        static bool                                    matchesNumber( const NumberComparison& comparison, float64 value, string& outRule );
+        static bool matchesNumber( const NumberComparison& comparison, float64 value, string& outRule );
+        /**
+         * @brief `increaseFrom` · `increaseBy` 비교입니다 — @p value 가 기억한 수(@p pStoredText, `<Store>` 의 글)에서 `increaseBy` 이상 늘었으면 true 입니다.
+         * @details 기억한 값이 없거나(nullptr) 수가 아니면, 또는 `increaseBy` 를 수로 읽지 못하면 오류입니다(`compareWatch` 가 그 이유를 실패로 적는다).
+         */
+        [[nodiscard]] static expected<bool>            matchesIncrease( const AutomationStep& step, float64 value, const string* pStoredText );
         [[nodiscard]] static expected<WaitTimeoutArgs> parseWaitTimeout( const AutomationStep& step );
         [[nodiscard]] static expected<ExpectImageArgs> parseExpectImage( const AutomationStep& step );
 

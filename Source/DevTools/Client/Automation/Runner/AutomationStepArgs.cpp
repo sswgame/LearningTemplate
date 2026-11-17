@@ -11,6 +11,18 @@
 
 namespace sw
 {
+    expected<bool> AutomationStepArgsUtil::matchesIncrease( const AutomationStep& step, float64 value, const string* pStoredText )
+    {
+        float64 remembered = 0.0;
+        if ( pStoredText == nullptr || StringUtil::parseDouble( string_view{ *pStoredText }, remembered ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "no number was stored under increaseFrom (add <Store as=\"<name>\"> on a number watch before this step)" } );
+        const string* pIncrease = step.findAttribute( "increaseBy" );
+        float32       increase  = 0.0f;
+        if ( pIncrease == nullptr || StringUtil::parseFloat( string_view{ *pIncrease }, increase ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "increaseBy needs a number" } );
+        return value - remembered >= static_cast<float64>( increase );
+    }
+
     expected<void> AutomationStepArgsUtil::readFloat( const AutomationStep& step, string_view name, float32& inoutValue )
     {
         const string* pValue = step.findAttribute( name );

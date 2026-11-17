@@ -3,6 +3,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Client/Automation/Runner/AutomationStepArgs.h"
 #include "DevTools/Client/Automation/Tests/ScenarioFileCheck.h"
 
 #include "Engine/Config/GameSelection.h"
@@ -62,4 +63,53 @@ SW_TEST_CASE( ScenarioFilesTest, AdvanceSimulationNeedsAFixedFrameTime )
     SW_EXPECT_TRUE( scenario.isAdvanceSimulationFrame( 1 ) );
     SW_EXPECT_TRUE( scenario.isAdvanceSimulationFrame( 2 ) );
     SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 3 ) );
+}
+
+namespace ScenarioFilesTestUtil
+{
+    /** @brief `<WaitUntil>` 한 줄(@p attributes 는 watch · 시한 뒤에 붙는 비교)을 읽어 실행기와 같은 단계 검사에 넣습니다. */
+    expected<void> validateWaitUntil( const string& attributes, AutomationScenario& outScenario )
+    {
+        const string         text   = "<Scenario name=\"test.increase\" fixedDelta=\"0.0166667\"><WaitUntil watch=\"Scene.ObjectCount\" timeoutFrames=\"10\" " + attributes + "/><Pass/></Scenario>";
+        const expected<void> parsed = outScenario.parse( text, "test.scenario.xml" );
+        if ( parsed.has_value() == false )
+            return parsed;
+        AutomationStepValidateFunction pfnValidate = nullptr;
+        if ( AutomationStepValidation::findValidator( "WaitUntil", pfnValidate ) != AutomationValidatorLookup::Found )
+            return sw::unexpected( Error{ ErrorKind::NotFound, "WaitUntil has no validator in this process" } );
+        return pfnValidate( outScenario.getSteps()[0] );
+    }
+} // namespace ScenarioFilesTestUtil
+
+// `increaseFrom` · `increaseBy` 는 짝이다 — 한쪽만 적으면 무엇에서 늘었는지 몰라 읽을 때(단계 검사) 거절한다. 짝이면 받는다.
+SW_TEST_CASE( ScenarioFilesTest, IncreaseComparisonNeedsBothHalves )
+{
+    AutomationScenario scenario;
+    SW_EXPECT_FALSE( ScenarioFilesTestUtil::validateWaitUntil( "increaseBy=\"60\"", scenario ).has_value() );
+    SW_EXPECT_FALSE( ScenarioFilesTestUtil::validateWaitUntil( "increaseFrom=\"before\"", scenario ).has_value() );
+    SW_EXPECT_FALSE( ScenarioFilesTestUtil::validateWaitUntil( "increaseFrom=\"before\" increaseBy=\"many\"", scenario ).has_value() );
+    SW_EXPECT_TRUE( ScenarioFilesTestUtil::validateWaitUntil( "increaseFrom=\"before\" increaseBy=\"60\"", scenario ).has_value() );
+}
+
+// 실행 때의 판정: 기억한 값이 없거나 수가 아니면 오류, 기억한 값에서 increaseBy 미만으로 늘면 거짓, 이상이면 참이다.
+SW_TEST_CASE( ScenarioFilesTest, IncreaseComparisonCountsFromTheStoredValue )
+{
+    AutomationScenario scenario;
+    SW_REQUIRE_TRUE( ScenarioFilesTestUtil::validateWaitUntil( "increaseFrom=\"before\" increaseBy=\"60\"", scenario ).has_value() );
+    const AutomationStep& step = scenario.getSteps()[0];
+
+    SW_EXPECT_FALSE( AutomationStepArgsUtil::matchesIncrease( step, 200.0, nullptr ).has_value() ); // 그 이름으로 Store 한 적이 없다
+    const string notNumber = "text";
+    SW_EXPECT_FALSE( AutomationStepArgsUtil::matchesIncrease( step, 200.0, &notNumber ).has_value() );
+
+    const string         stored = "100";
+    const expected<bool> below  = AutomationStepArgsUtil::matchesIncrease( step, 159.0, &stored );
+    SW_REQUIRE_TRUE( below.has_value() );
+    SW_EXPECT_FALSE( *below );
+    const expected<bool> exact = AutomationStepArgsUtil::matchesIncrease( step, 160.0, &stored );
+    SW_REQUIRE_TRUE( exact.has_value() );
+    SW_EXPECT_TRUE( *exact );
+    const expected<bool> above = AutomationStepArgsUtil::matchesIncrease( step, 500.0, &stored );
+    SW_REQUIRE_TRUE( above.has_value() );
+    SW_EXPECT_TRUE( *above );
 }
