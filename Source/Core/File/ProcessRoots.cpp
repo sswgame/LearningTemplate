@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw

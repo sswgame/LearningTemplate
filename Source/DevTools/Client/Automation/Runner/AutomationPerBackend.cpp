@@ -33,7 +33,8 @@ namespace sw
     {
         struct AutomationPerBackendInternal
         {
-            static constexpr uint32 kTileColumnCount = 2; ///< 자식 창 바둑판의 열 수 — 백엔드 넷이면 2×2
+            static constexpr uint32      kTileColumnCount  = 2;            ///< 자식 창 바둑판의 열 수 — 백엔드 넷이면 2×2
+            static constexpr const utf8* kKillDumpFileName = "killed.dmp"; ///< 시한에 걸린 자식을 죽이기 전 덤프(자식의 실행 뿌리 아래 — `Process::requestDump`)
             /** @brief 쿠킹 표의 명령줄 이름(표 순서) — 부모가 받는 백엔드 이름은 이것뿐이다(`-vk` 와 같은 철자). */
             static constexpr const utf8* kArrBackendName[] = {
 #define SW_MATRIX_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
@@ -473,10 +474,23 @@ namespace sw
         };
         const auto finishChild = [&]( Internal::Child& child )
         {
-            const bool bKilled = child._process.isRunning() && child._process.terminate( getAutomationExitStatus( AutomationResult::TimedOut ) );
-            if ( bKilled )
-                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - killed", child._backend.c_str(),
-                                 child._killDeadline.isExpired() ? "did not finish within the process limit" : "logged nothing for the stall limit (stopped)" );
+            // 시한에 걸린 자식은 죽이기 전에 모든 스레드의 스택을 남긴다 — 멈춘 까닭(기동 중 교착 · 드라이버 대기)을 다음 실행이 아니라 이 덤프가 가른다.
+            const bool bOverdue = child._process.isRunning();
+            if ( bOverdue )
+            {
+                string where;
+                if ( FileUtil::ensureDirectoryExists( child._runRoot ) == false )
+                    where = "could not create the run root " + child._runRoot;
+                else if ( const expected<string> dump = child._process.requestDump( FileUtil::joinPath( child._runRoot, Internal::kKillDumpFileName ) ); dump.has_value() )
+                    where = *dump;
+                else
+                    where = string( dump.error().message() ) + ": " + string( dump.error().detail() );
+                // POSIX 는 덤프 요청(SIGABRT)으로 이미 끝났을 수 있다 — 그때는 죽일 것이 없다
+                const bool bTaken = child._process.isRunning() == false || child._process.terminate( getAutomationExitStatus( AutomationResult::TimedOut ) );
+                SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendDidNot", "[Scenario] per-backend: %# %# - %# (dump: %#)", child._backend.c_str(),
+                                 child._killDeadline.isExpired() ? "did not finish within the process limit" : "logged nothing for the stall limit (stopped)",
+                                 bTaken ? "killed" : "could not be killed", where.c_str() );
+            }
             const expected<int32> waited = child._process.waitForExit();
             if ( waited.has_value() )
             {
@@ -489,7 +503,7 @@ namespace sw
                                  string( waited.error().detail() ) );
                 child._exitCode = getAutomationExitStatus( AutomationResult::Failed );
             }
-            if ( bKilled )
+            if ( bOverdue )
                 child._exitCode = getAutomationExitStatus( AutomationResult::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
             child._flushThread.join();
             child._bLaunched = false;

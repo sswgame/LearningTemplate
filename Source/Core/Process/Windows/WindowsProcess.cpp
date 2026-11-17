@@ -10,6 +10,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
 
+    #include <DbgHelp.h>
     #include <shellapi.h>
     #include <shlobj.h>
 
@@ -546,6 +547,26 @@ namespace sw
         const int32 processID = _processID.load();
         // Ctrl+Break 는 콘솔 그룹에 간다 — 새 그룹으로 띄운 자식이 아니면 이 프로세스(와 같은 콘솔의 모두)가 받는다.
         return _bNewProcessGroup && processID > 0 && GenerateConsoleCtrlEvent( CTRL_BREAK_EVENT, static_cast<DWORD>( processID ) ) != FALSE;
+    }
+
+    expected<string> Process::requestDump( string_view dumpPath )
+    {
+        const int32 processID = _processID.load();
+        if ( _pNativeHandle == nullptr || processID <= 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the child process is not running - nothing to dump" } );
+        const string path{ dumpPath };
+        // 파일 층(`PlatformFileUtil`)은 이 층 위라 OS 에 바로 연다(구분자는 실행 파일 이름과 같은 규칙으로 바꾼다).
+        const HANDLE hFile = CreateFileW( WindowsProcessInternal::toApplicationName( path ).c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
+        if ( hFile == INVALID_HANDLE_VALUE )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not create the dump file", path } );
+        // 남의 프로세스라 스냅샷이 필요 없다(자기 덤프의 로더 교착은 덤프하는 스레드가 덤프되는 프로세스 안에 있을 때의 일이다 — `WindowsCrashHandler`).
+        constexpr MINIDUMP_TYPE kDumpType = static_cast<MINIDUMP_TYPE>( MiniDumpWithThreadInfo | MiniDumpWithIndirectlyReferencedMemory );
+        const BOOL              bWritten  = MiniDumpWriteDump( static_cast<HANDLE>( _pNativeHandle ), static_cast<DWORD>( processID ), hFile, kDumpType, nullptr, nullptr, nullptr );
+        const DWORD             dumpError = bWritten != FALSE ? ERROR_SUCCESS : GetLastError();
+        CloseHandle( hFile );
+        if ( bWritten == FALSE )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "MiniDumpWriteDump failed on the child process", path + " (error " + to_string( static_cast<uint32>( dumpError ) ) + ")" } );
+        return path;
     }
 
     bool Process::isRunning() const
