@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
@@ -13,6 +14,8 @@
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+
+#include <limits>
 
 namespace sw
 {
@@ -177,6 +180,13 @@ namespace sw
                 const bool bClientRole = role != FunctionNetRole::Server && function._metadata->_netRole == FunctionNetRole::Multicast;
                 if ( function._metadata->_netRole != role && bClientRole == false )
                     continue;
+                // 함수별 상한은 서버가 받는 호출에만 지킨다 — 다른 역할에 적은 상한은 아무도 지키지 않는다.
+                if ( function._metadata->_maxCallsPerSecond > 0 && function._metadata->_netRole != FunctionNetRole::Server )
+                {
+                    SW_LOG_ERROR_ID( "RemoteCall.RateOnNonServerFunction", "Remote function %#::%# has MaxCallsPerSecond but is not a Server function - only the server enforces call rates",
+                                     type._name.c_str(), function._name.c_str() );
+                    bValid = false;
+                }
                 // 와이어는 이름 해시로 함수를 가리킨다 — 사슬에서 먼저 찾히는 함수가 이 함수(또는 같은 이름의 재정의)가 아니면 번호가 겹친 것이다.
                 const FunctionInfo* pByID = findFunctionByID( type, getFunctionID( function ) );
                 if ( pByID == nullptr || pByID->_name != function._name )
@@ -219,6 +229,7 @@ namespace sw
         : _targets{}
         , _mapSession{}
         , _mapCallBucket{}
+        , _mapFunctionCallBucket{}
         , _config{}
         , _stats{}
         , _messageWriter{}
@@ -239,13 +250,31 @@ namespace sw
         _pPeers = pPeers;
         _config = config;
         _mapCallBucket.clear();
+        _mapFunctionCallBucket.clear();
         return true;
     }
 
-    bool RemoteCallServer::tryConsumeCall( int32 connectionID )
+    bool RemoteCallServer::tryConsumeFunctionCall( int32 connectionID, const FunctionInfo& function, int64 nowMs )
     {
-        const int64 nowMs    = MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond;
-        auto        bucketIt = _mapCallBucket.find( connectionID );
+        const uint32 callsPerSecond = function._metadata->_maxCallsPerSecond;
+        if ( callsPerSecond == 0 )
+            return true; // 함수 상한을 적지 않았다 — 연결 상한만 받는다(계약)
+        const uint64 key      = ( static_cast<uint64>( static_cast<uint32>( connectionID ) ) << 32 ) | RemoteCallTargets::getFunctionID( function );
+        auto         bucketIt = _mapFunctionCallBucket.find( key );
+        if ( bucketIt == _mapFunctionCallBucket.end() )
+        {
+            // 한꺼번에 N 번, 그 뒤로 1 초에 N 번 — 다시 차는 간격은 1000 / N 밀리초(적어도 1)다.
+            const int64 refillIntervalMs = MathUtil::max( int64{ 1 }, constant::time::kMillisecondsPerSecond / static_cast<int64>( callsPerSecond ) );
+            TokenBucket bucket;
+            bucket.initialize( static_cast<int32>( MathUtil::min( callsPerSecond, static_cast<uint32>( std::numeric_limits<int32>::max() ) ) ), refillIntervalMs, nowMs );
+            bucketIt = _mapFunctionCallBucket.emplace( key, bucket ).first;
+        }
+        return bucketIt->second.tryConsume( nowMs );
+    }
+
+    bool RemoteCallServer::tryConsumeCall( int32 connectionID, int64 nowMs )
+    {
+        auto bucketIt = _mapCallBucket.find( connectionID );
         if ( bucketIt == _mapCallBucket.end() )
         {
             TokenBucket bucket;
@@ -337,7 +366,8 @@ namespace sw
         if ( RemoteCallInternal::readCall( body, call, _listReceivedScratch ) == false )
             return NetHandleResult::Malformed;
         // 상한은 대상 · 함수 찾기 앞에서 본다 — 없는 대상 · 함수를 쏟아붓는 호출도 같은 버킷을 쓴다.
-        if ( tryConsumeCall( context._connectionID ) == false )
+        const int64 nowMs = MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond;
+        if ( tryConsumeCall( context._connectionID, nowMs ) == false )
         {
             ++_stats._rateLimitedCount;
             sendRejected( context._connectionID, call._sequence, RemoteCallError::RateLimited );
@@ -369,6 +399,12 @@ namespace sw
         if ( pFunction->_metadata->_bReliable != SW_FALSE && context._channel != NetChannelType::ReliableOrdered )
         {
             disconnectViolator( context._connectionID, call._functionID, "a Reliable function arrived on an unreliable channel" );
+            return NetHandleResult::Handled;
+        }
+        if ( tryConsumeFunctionCall( context._connectionID, *pFunction, nowMs ) == false )
+        {
+            ++_stats._rateLimitedCount;
+            sendRejected( context._connectionID, call._sequence, RemoteCallError::RateLimited );
             return NetHandleResult::Handled;
         }
         if ( pFunction->_metadata->_bValidate != SW_FALSE )
@@ -407,6 +443,13 @@ namespace sw
         (void)reason;
         _mapSession.erase( connectionID );
         _mapCallBucket.erase( connectionID );
+        for ( auto iter = _mapFunctionCallBucket.begin(); iter != _mapFunctionCallBucket.end(); )
+        {
+            if ( static_cast<uint32>( iter->first >> 32 ) == static_cast<uint32>( connectionID ) )
+                iter = _mapFunctionCallBucket.erase( iter );
+            else
+                ++iter;
+        }
         for ( auto iter = _targets._mapTarget.begin(); iter != _targets._mapTarget.end(); )
         {
             if ( iter->second._ownerConnectionID == connectionID )

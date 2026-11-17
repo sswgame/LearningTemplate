@@ -287,6 +287,19 @@ namespace sw
                 target._bHasUIMaxRange = SW_TRUE;
             }
 
+            /** @brief 원격 호출의 함수별 초당 상한입니다. 꼴(1 이상의 32 비트 정수 또는 상수 이름)은 `AnnotationApply` 가 이미 봤습니다. 이름이면 이름만 남깁니다. */
+            static void applyMaxCallsPerSecond( ParsedFunctionInfo& target, const string_view value )
+            {
+                const string_view trimmed = StringUtil::trim( value );
+                uint64            parsed  = 0;
+                if ( StringUtil::parseUint64( trimmed, parsed ) == false )
+                {
+                    target._maxCallsPerSecondName = string( trimmed );
+                    return;
+                }
+                target._maxCallsPerSecond = static_cast<uint32>( parsed );
+            }
+
             /** @brief 넷 역할은 토큰 자체가 값입니다(`FUNCTION( Server )` → "Server"). */
             static void applyNetRole( ParsedFunctionInfo& target, const string_view value )
             {

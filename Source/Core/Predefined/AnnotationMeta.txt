@@ -119,6 +119,9 @@ netrole.Client = Client
 netrole.Multicast = Multicast, NetMulticast
 flag.Reliable = Reliable
 flag.Validate = Validate
+# 원격 호출(`RemoteCall`)의 연결마다 · 함수마다 초당 상한(1 이상의 정수 또는 그 생성 코드에서 보이는 정수 상수 이름 — 클래스 상수는 `Type::kName` 으로 적는다).
+# 적지 않은 함수는 연결 상한(`RemoteCallServerConfig`)만 받는다 — 기본값으로 대신하는 것이 아니라 계약이다. `Server` 함수에만 적는다(다른 역할이면 등록이 거절한다)
+count.MaxCallsPerSecond = MaxCallsPerSecond
 flag.CallInEditor = CallInEditor, callInEditor, ExecInEditor
 # 에디터 뷰포트 미리보기가 타입 이름 대신 이 값으로 메서드를 찾는다(EditorViewportPreview). 예: EditorPreview = "DialogueLine"
 string.EditorPreview = EditorPreview

@@ -284,3 +284,35 @@ SW_TEST_CASE( RemoteCallTest, ServerRefusesAMissingRateLimit )
     SW_EXPECT_LOG( "RemoteCall.RateLimitMissing" );
     SW_EXPECT_FALSE( server.initialize( nullptr, RemoteCallServerConfig{ 4, 0 } ) );
 }
+
+/**
+ * @brief [RemoteCallTest] `MaxCallsPerSecond` 를 적은 함수는 연결 상한 안이어도 그 함수의 상한에서 거절된다. 적지 않은 함수는 연결 상한만 받는다(계약)
+ */
+SW_TEST_CASE( RemoteCallTest, PerFunctionRateLimitRejectsOnlyThatFunction )
+{
+    RemoteCallTestRig rig;
+    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    for ( int32 index = 0; index < 4; ++index )
+    {
+        SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "placeMarker", { "9" }, NetChannelType::Unreliable ) == NetHandleResult::Handled );
+    }
+    for ( int32 index = 0; index < 4; ++index )
+    {
+        SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "moveStep", { "1" }, NetChannelType::Unreliable ) == NetHandleResult::Handled );
+    }
+    SW_EXPECT_EQUAL( 9, rig._serverAvatar._lastMarkerID );
+    SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._rateLimitedCount ); // placeMarker 넷 가운데 둘(한꺼번에 2)
+    SW_EXPECT_EQUAL( uint64{ 6 }, rig._server.getStats()._invokedCount );     // placeMarker 둘 + moveStep 넷
+    SW_EXPECT_NEAR( 4.0, rig._serverAvatar._movedDistance, 1e-4 );
+}
+
+/**
+ * @brief [RemoteCallTest] `Server` 가 아닌 함수에 적은 함수별 상한은 지킬 쪽이 없어 등록이 거절된다
+ */
+SW_TEST_CASE( RemoteCallTest, RateOnANonServerFunctionIsRefused )
+{
+    RemoteCallClient         client;
+    RemoteCallTestClientRate target;
+    SW_EXPECT_LOG( "RemoteCall.RateOnNonServerFunction" );
+    SW_EXPECT_FALSE( client.registerTarget( 1, *RemoteCallTestClientRate::StaticType(), &target ) );
+}

@@ -795,6 +795,15 @@ namespace sw
             CodeEmit       fillEmit( fillBuffer );
             fillEmit.push( emit.getIndent() + 1 );
             AnnotationFields::emitRuntimeMetadata( fillEmit, method, "m." );
+            // 함수별 초당 상한 — 상수 이름이면 그 이름을 그대로 쓴다(생성 코드에서 보이지 않으면 컴파일 오류로 멈춘다, 조용히 0 이 되지 않게).
+            if ( method._maxCallsPerSecond > 0 )
+                fillEmit.linef( "m._maxCallsPerSecond = %#u;", method._maxCallsPerSecond );
+            else if ( method._maxCallsPerSecondName.empty() == false )
+            {
+                // 상수가 0 이면 "함수 상한 없음" 과 구별되지 않는다 — 컴파일에서 멈춘다.
+                fillEmit.linef( "static_assert( ( %# ) >= 1, \"MaxCallsPerSecond must be at least 1\" );", method._maxCallsPerSecondName );
+                fillEmit.linef( "m._maxCallsPerSecond = static_cast<::sw::uint32>( %# );", method._maxCallsPerSecondName );
+            }
             fillEmit.flagIf( bConstructor, "m._bConstructor", "SW_TRUE" );
             fillEmit.flagIf( method._bStatic != SW_FALSE, "m._bStatic", "SW_TRUE" );
             fillEmit.flagIf( method._bConst != SW_FALSE, "m._bConst", "SW_TRUE" );

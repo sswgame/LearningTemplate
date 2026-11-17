@@ -14,7 +14,9 @@
  *          - **함수 번호**: 함수는 이름 글이 아니라 이름의 32 비트 해시(`hashed_string::getHash` — 대소문자 무시 FNV-1a, 이름 같음 규칙과 같다)로 가리킨다(감사 N-13).
  *            접속 때 표를 주고받지 않아도 양쪽이 같은 번호를 낸다. 한 타입 사슬 안에서 원격 함수의 번호가 다른 함수와 겹치면 등록이 오류로 멈춘다(언리얼 NetFieldExport 인덱스의 자리).
  *          - **호출률**: 서버는 연결마다 토큰 버킷으로 `Server` 호출 수를 제한한다(`RemoteCallServerConfig`, 언리얼 RPC DoS Detection). 넘친 호출은 몸을 부르지 않고
- *            `RateLimited` 로 거절한다 — 끊지 않는다(정상 클라이언트도 지연 뒤 몰아 보낼 수 있다).
+ *            `RateLimited` 로 거절한다 — 끊지 않는다(정상 클라이언트도 지연 뒤 몰아 보낼 수 있다). 함수에 `FUNCTION( Server, MaxCallsPerSecond = N )` 을 적으면
+ *            연결 버킷 위에 그 연결 · 그 함수의 버킷(초당 N, 한꺼번에 N)을 하나 더 둔다. 적지 않은 함수는 연결 상한만 받는다 — 함수 상한의 기본값이 아니라 계약이다.
+ *            `Server` 가 아닌 함수에 적으면 서버가 지킬 수 없어 등록이 거절한다.
  *          - **인자**: 글로 실어 보내고 받는 쪽이 인자 타입으로 읽는다(`ReflectionInvoke::callWithText`). 그래서 원격 함수의 인자는 글 · 수 · bool · 열거형만 된다 —
  *            등록이 확인한다. 인자 수 · 길이는 상한이 있고 넘는 메시지는 손상된 것으로 버린다.
  *          수명: 대상의 인스턴스는 빌려 쓴다 — 대상이 사라지기 전에 `unregisterTarget` 을 부른다. 서버는 연결이 닫히면 그 연결이 주인인 대상을 지운다.
@@ -94,7 +96,7 @@ namespace sw
         uint64 _rejectedCount{ 0 };         ///< 거절 알림을 돌려준 호출(대상 · 함수 없음, 인자)
         uint64 _validationFailedCount{ 0 }; ///< 검증 짝이 거짓이라 연결을 끊은 호출
         uint64 _violationCount{ 0 };        ///< 주인 아님 · 역할 · 채널을 어겨 연결을 끊은 호출
-        uint64 _rateLimitedCount{ 0 };      ///< 호출률 상한을 넘어 거절한 호출(`_rejectedCount` 에도 든다)
+        uint64 _rateLimitedCount{ 0 };      ///< 호출률 상한(연결 · 함수)을 넘어 거절한 호출(`_rejectedCount` 에도 든다)
     };
 
     /** @brief 서버의 호출률 상한입니다. 기본값이 없다 — 게임 데이터가 정하고, 0 이하면 `RemoteCallServer::initialize` 가 오류로 멈춘다. */
@@ -198,12 +200,15 @@ namespace sw
         /** @brief 규칙을 어긴 연결을 끊고 셉니다. */
         void disconnectViolator( int32 connectionID, uint32 functionID, const utf8* pWhy );
         /** @brief 연결의 호출 버킷에서 하나를 씁니다. 비었으면 false 입니다. */
-        [[nodiscard]] bool tryConsumeCall( int32 connectionID );
+        [[nodiscard]] bool tryConsumeCall( int32 connectionID, int64 nowMs );
+        /** @brief 함수에 `MaxCallsPerSecond` 가 있으면 그 연결 · 그 함수의 버킷에서 하나를 씁니다. 없으면 늘 true(연결 상한만 받는다), 비었으면 false 입니다. */
+        [[nodiscard]] bool tryConsumeFunctionCall( int32 connectionID, const FunctionInfo& function, int64 nowMs );
 
     private:
         RemoteCallTargets                               _targets;
-        unordered_map<int32, RemoteCallTargets::Target> _mapSession;    ///< 연결마다 세션 대상(id 0)
-        unordered_map<int32, TokenBucket>               _mapCallBucket; ///< 연결마다 호출률 버킷. 연결이 닫히면 지운다
+        unordered_map<int32, RemoteCallTargets::Target> _mapSession;            ///< 연결마다 세션 대상(id 0)
+        unordered_map<int32, TokenBucket>               _mapCallBucket;         ///< 연결마다 호출률 버킷. 연결이 닫히면 지운다
+        unordered_map<uint64, TokenBucket>              _mapFunctionCallBucket; ///< (연결 << 32 | 함수 번호)마다 함수 호출률 버킷. 연결이 닫히면 지운다
         RemoteCallServerConfig                          _config;
         RemoteCallStats                                 _stats;
         NetMessageWriter                                _messageWriter;
