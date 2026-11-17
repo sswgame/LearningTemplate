@@ -288,25 +288,35 @@ namespace sw
         // 언리얼 FVulkanSwapChain 과 같은 규칙이다: 요청 → 대체 → 첫 번째 순으로 고르고, 채택한 값을 반환한다
         // (getActualBackBufferFormat → IRHIDevice::getBackBufferFormat). 백버퍼에 그리는 PSO 는 그 값으로
         // 만든다(FrameRenderer::ensurePresentPSO). 렌더타깃 포맷은 PSO 의 일부이지 계약 상수가 아니다.
-        const VkFormat requestedFormat = VulkanRHIUtil::toVulkanTextureFormat( _requestedFormat );
-        const VkFormat arrPreferred[]  = { requestedFormat, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
-
-        VkSurfaceFormatKHR surfaceFormat   = listFormat[0];
-        bool               bFoundPreferred = false;
-        for ( const VkFormat preferred : arrPreferred )
+        // 표면 형식을 RHIFormat 으로 역매핑한 것만 후보다(대응이 없는 형식은 PSO 를 만들 수 없다). 고른 RHIFormat 이 곧 보고 값이라 둘이 어긋날 수 없다(R-8).
+        vector<RHIFormat>          listCandidate;
+        vector<VkSurfaceFormatKHR> listCandidateSurface;
+        for ( const VkSurfaceFormatKHR& availableFormat : listFormat )
         {
-            for ( const VkSurfaceFormatKHR& availableFormat : listFormat )
-            {
-                if ( availableFormat.format == preferred && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
-                {
-                    surfaceFormat   = availableFormat;
-                    bFoundPreferred = true;
-                    break;
-                }
-            }
-            if ( bFoundPreferred )
-                break;
+            if ( availableFormat.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
+                continue;
+            const optional<RHIFormat> mapped = findRHIFormatOfNative( VulkanRHIUtil::kArrTextureFormatRow, &VulkanRHIUtil::TextureFormatRow::_vkFormat, availableFormat.format );
+            if ( mapped.has_value() == false )
+                continue;
+            listCandidate.push_back( *mapped );
+            listCandidateSurface.push_back( availableFormat );
         }
+        const optional<RHIFormat> picked = pickRHISwapChainFormat( _requestedFormat, span<const RHIFormat>{ listCandidate } );
+        if ( picked.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.SwapChainNoMappedFormat", "The surface offers no sRGB-nonlinear format the RHI can map (%# formats) - swap chain creation fails.", static_cast<uint32>( listFormat.size() ) );
+            return false;
+        }
+        VkSurfaceFormatKHR surfaceFormat = listCandidateSurface[0];
+        for ( size_t index = 0; index < listCandidate.size(); ++index )
+        {
+            if ( listCandidate[index] == *picked )
+            {
+                surfaceFormat = listCandidateSurface[index];
+                break;
+            }
+        }
+        const VkFormat requestedFormat = VulkanRHIUtil::toVulkanTextureFormat( _requestedFormat );
         if ( surfaceFormat.format != requestedFormat )
         {
             SW_LOG_INFO_ID( "Vulkan.SwapChainFormatDiffers", "The swap chain adopted a different format than requested (requested VkFormat %#, adopted %#) - back buffer PSOs are built with getBackBufferFormat().",
@@ -442,10 +452,7 @@ namespace sw
             return false;
 
         _imageFormat            = static_cast<uint32>( surfaceFormat.format );
-        _actualBackBufferFormat = ( surfaceFormat.format == requestedFormat )
-                                    ? _requestedFormat
-                                    : ( ( surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM ) ? RHIFormat::B8G8R8A8_UNORM
-                                                                                             : RHIFormat::R8G8B8A8_UNORM );
+        _actualBackBufferFormat = *picked;
         _extentWidth            = imageExtent.width;
         _extentHeight           = imageExtent.height;
         _logicalWidth           = extent.width;
