@@ -18,7 +18,6 @@ namespace sw
         : _arrTitle{}
         , _customHandler{}
         , _accessibilityQuery{}
-        , _onResize{}
         , _onLifecycle{}
         , _lifecycleListeners{}
         , _closeQuery{}
@@ -43,7 +42,41 @@ namespace sw
         , _monitorGeneration{ 0 }
         , _renderPausedTickCount{ 0 }
         , _simulatedInterruptionTicks{ 0 }
+        , _onResize{}
+        , _onModalLoopTick{}
+        , _bResizePending{ SW_FALSE }
+        , _bInModalLoopTick{ SW_FALSE }
+        , _reservedResize{ 0 }
     {
+    }
+
+    void IWindow::notifyResized( const uint32 width, const uint32 height )
+    {
+        if ( width == _width && height == _height )
+            return;
+        _width  = width;
+        _height = height;
+        // 다시 만드는 동안의 크기는 새 창이 이미 가졌다 — 스왑체인은 표면을 다시 만들며 그 크기로 선다.
+        if ( _bRecreating == SW_FALSE )
+            _bResizePending = SW_TRUE;
+    }
+
+    void IWindow::applyPendingResize()
+    {
+        if ( _bResizePending == SW_FALSE )
+            return;
+        _bResizePending = SW_FALSE;
+        if ( _onResize.isBound() )
+            _onResize.get()( _width, _height );
+    }
+
+    void IWindow::tickModalLoop()
+    {
+        if ( _bInModalLoopTick == SW_TRUE || _bRecreating == SW_TRUE || _onModalLoopTick.isBound() == false )
+            return;
+        _bInModalLoopTick = SW_TRUE;
+        _onModalLoopTick.get()();
+        _bInModalLoopTick = SW_FALSE;
     }
 
     void IWindow::notifyLifecycleEvent( const WindowLifecycleEvent event )
@@ -290,6 +323,8 @@ namespace sw
     {
         if ( _arrTitle[0] == '\0' )
             return false;
+        // 모달 루프 틱 안에서 창을 부수면 그 창에서 도는 OS 모달 루프가 사라진 창을 붙든다 — 부르는 쪽(`App::runFrame`)이 건너뛴다.
+        SW_ASSERT( isInModalLoopTick() == false );
 
         // 다시 만들어도 **보이던 창은 보여야 한다**. 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
         //

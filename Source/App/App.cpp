@@ -127,6 +127,7 @@ namespace sw
         , _configReloadedSubscription{}
         , _windowMessageSubscription{}
         , _appLifecycleSubscription{}
+        , _modalLoopTickSubscription{}
         , _pFramePacer{ nullptr }
         , _initializeStartMicro{ 0 }
         , _mainLoopStartMicro{ 0 }
@@ -460,6 +461,7 @@ namespace sw
         // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
         _windowMessageSubscription = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
         _appLifecycleSubscription  = _pWindow->addLifecycleListener( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &App::onAppLifecycle, this ) );
+        _modalLoopTickSubscription = _pWindow->bindModalLoopTickCallback( SW_DELEGATE_METHOD( WindowModalLoopTickDelegate, &App::onWindowModalLoopTick, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
         // 에디터 뷰 카메라는 에디터 모드에서만 연결한다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다"는 뜻이므로 루프에서 모드를
@@ -588,6 +590,8 @@ namespace sw
 
         // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
         _userSettingsHost.update( frameTime._deltaTime );
+        // 메시지 처리 · 화면 설정이 모은 크기 변경을 여기서 마지막 크기로 한 번 적용한다(스왑체인 resize — 감사 P-2). 멈춘 틱은 이 함수에 오지 않아 표면이 없는 동안은 미룬 채 둔다.
+        _pWindow->applyPendingResize();
 
         _launch.getEngine().beginFrame( frameTime._deltaTime, frameTime._unscaledDeltaTime ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
         // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
@@ -622,10 +626,14 @@ namespace sw
         getModuleManager()->endEditorFrame();
 
         // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성은 교체기(메뉴 · 콘솔 교체 + 실패 집계)를 거치고, 배포는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)만 예약한다.
-        if constexpr ( build::kShipping == false )
-            _pBackendSwitcher->applyIfPending();
-        else if ( const RHI* pRHI = _launch.getEngine().getRHI(); pRHI != nullptr && pRHI->hasPendingBackendChange() )
-            (void)getModuleManager()->applyPendingBackendChange( _launch.getEngine() ); // 실패하면 렌더 드라이버가 종료(DeviceLost)를 이미 요청했다
+        // 창 모달 루프 안의 프레임은 건너뛴다 — 교체가 창을 다시 만들면 아직 그 창에서 도는 모달 루프의 HWND 가 사라진다. 예약은 남아 루프가 끝난 뒤 첫 프레임이 한다.
+        if ( _pWindow->isInModalLoopTick() == false )
+        {
+            if constexpr ( build::kShipping == false )
+                _pBackendSwitcher->applyIfPending();
+            else if ( const RHI* pRHI = _launch.getEngine().getRHI(); pRHI != nullptr && pRHI->hasPendingBackendChange() )
+                (void)getModuleManager()->applyPendingBackendChange( _launch.getEngine() ); // 실패하면 렌더 드라이버가 종료(DeviceLost)를 이미 요청했다
+        }
 
         _launch.getEngine().endFrame();
         onStartupFrameEnded();
@@ -675,6 +683,14 @@ namespace sw
             _fixedTimestep.start();
         }
         return runFrame( *_pFramePacer );
+    }
+
+    void App::onWindowModalLoopTick()
+    {
+        // 메인 루프의 `processMessages` 안이다(창 프로시저 → 모달 루프 → WM_TIMER). 루프 밖(기동 · 종료)의 메시지 처리나 멈춘 표면이면 프레임을 돌지 않는다.
+        if ( _pFramePacer == nullptr || _pWindow->isRenderPaused() )
+            return;
+        (void)runFrame( *_pFramePacer ); // 끝내기 요청은 창 닫기를 청하고, 모달 루프가 끝난 뒤 메인 루프의 `processMessages` 가 본다
     }
 
     int32 App::finishMainLoop()

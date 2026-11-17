@@ -36,6 +36,7 @@ namespace sw
     SW_DECLARE_DELEGATE( void, WindowLifecycleDelegate, WindowLifecycleEvent event );
     SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
     SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
+    SW_DECLARE_DELEGATE( void, WindowModalLoopTickDelegate, void );
     SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
     SW_DECLARE_DELEGATE( bool, WindowAccessibilityQueryDelegate, uintptr_t wParam, intptr_t lParam, intptr_t& outResult );
 
@@ -315,8 +316,8 @@ namespace sw
 
         /**
          * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.
-         * @details 크기가 바뀌면 플랫폼의 크기 통보가 `bindResizeCallback` 의 콜백을 부른다. 스왑체인은 이 경로(Engine::onMainWindowResize 가 렌더 스레드를
-         *          기다린 뒤 resize)로만 바뀐다. Win32 는 이 호출 안에서 같은 스레드로 통보하고, X11 은 다음 `processMessages` 에서 통보한다.
+         * @details 크기가 바뀌면 플랫폼의 크기 통보가 대기 크기를 적고, 다음 프레임 시작의 `applyPendingResize` 가 `bindResizeCallback` 의 콜백을 부른다.
+         *          스왑체인은 이 경로(Engine::onMainWindowResize 가 렌더 스레드를 기다린 뒤 resize)로만 바뀐다.
          *          **창 스레드(메인 스레드)에서만 부른다.** `BorderlessFullscreen` 이면 @p width 와 @p height 는 무시하고 모니터 크기를 쓴다.
          * @return 지원하지 않는 플랫폼이면 false 입니다.
          */
@@ -436,8 +437,24 @@ namespace sw
          */
         [[nodiscard]] Subscription bindAccessibilityQueryHandler( WindowAccessibilityQueryDelegate handler ) { return _accessibilityQuery.bind( std::move( handler ) ); }
 
-        /** @brief 창 크기가 바뀔 때 부를 콜백을 겁니다. */
+        /** @brief 창 크기가 바뀔 때 부를 콜백을 겁니다. 플랫폼 통보 안에서가 아니라 `applyPendingResize`(프레임 시작)에서 마지막 크기로 한 번 불린다. */
         [[nodiscard]] Subscription bindResizeCallback( WindowResizeDelegate callback ) { return _onResize.bind( std::move( callback ) ); }
+        /**
+         * @brief 지난 적용 뒤 크기가 바뀌었으면 크기 콜백을 마지막 크기로 한 번 부릅니다. 메인 루프가 프레임 시작에 부른다(모달 루프 틱도 같다).
+         * @details 창 메시지마다 스왑체인을 바꾸면 끌기 한 번에 `waitIdle` + `resize` 가 메시지 수만큼 돌았다(감사 P-2). 언리얼 `FSlateApplication` 도
+         *          크기 통보를 모아 프레임에서 뷰포트를 바꾼다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         */
+        void applyPendingResize();
+        /** @brief 적용을 기다리는 크기 변경이 있는지입니다(`applyPendingResize`). */
+        [[nodiscard]] bool hasPendingResize() const { return _bResizePending == SW_TRUE; }
+        /**
+         * @brief 플랫폼 모달 루프(Win32 창 끌기 · 크기 조절) 동안 메인 루프 대신 프레임을 돌릴 콜백을 겁니다.
+         * @details 그 루프 안에서는 메인 루프의 `processMessages` 가 돌아오지 않아 게임 · 리슨 호스트 · 오디오가 멈췄다(감사 P-2). Godot 은 `WM_ENTERSIZEMOVE` 에
+         *          타이머를 걸어 `WM_TIMER` 에서 `Main::iteration()` 을 부른다 — 같은 모양이다. 재진입은 `tickModalLoop` 가 막는다.
+         */
+        [[nodiscard]] Subscription bindModalLoopTickCallback( WindowModalLoopTickDelegate callback ) { return _onModalLoopTick.bind( std::move( callback ) ); }
+        /** @brief 모달 루프 틱 콜백이 도는 중인지입니다. 그 안에서는 창을 다시 만들면 안 된다(그 창의 모달 루프가 아직 돈다). */
+        [[nodiscard]] bool isInModalLoopTick() const { return _bInModalLoopTick == SW_TRUE; }
         /** @brief 렌더러의 수명 이벤트 처리기를 겁니다(`notifyLifecycleEvent`). 표면을 놓고 다시 짓는 쪽이라 구독자(`addLifecycleListener`) 뒤에 마지막으로 불린다. */
         [[nodiscard]] Subscription bindLifecycleCallback( WindowLifecycleDelegate callback ) { return _onLifecycle.bind( std::move( callback ) ); }
         /**
@@ -509,6 +526,13 @@ namespace sw
          */
         [[nodiscard]] bool storeTitle( const utf8* pTitle );
 
+        /**
+         * @brief 플랫폼 메시지 처리가 새 클라이언트 크기를 받으면 부릅니다. 크기를 적고 적용 대기만 켠다 — 콜백은 `applyPendingResize` 가 부른다.
+         * @details 0 크기(최소화)는 플랫폼이 거른다. 다시 만드는 중(`_bRecreating`)이면 크기만 적는다. 같은 크기면 아무것도 하지 않는다.
+         */
+        void notifyResized( uint32 width, uint32 height );
+        /** @brief 플랫폼 모달 루프 안의 타이머가 부릅니다. 모달 루프 틱 콜백(프레임 하나 — 대기 크기 적용도 그 안이다)을 부른다. 콜백 안에서 다시 오면(중첩 메시지 펌프) 건너뛴다. */
+        void tickModalLoop();
         /** @brief 플랫폼 메시지 처리가 최소화 이벤트를 받으면 부릅니다(`isMinimized`). */
         void setMinimizedState( bool bMinimized ) { _bMinimized = bMinimized ? SW_TRUE : SW_FALSE; }
         /** @brief 플랫폼 메시지 처리가 포커스 이벤트를 받으면 부릅니다(`hasFocus`). */
@@ -524,7 +548,6 @@ namespace sw
         utf8                                            _arrTitle[kTitleCapacity];
         DelegateSlot<WindowMessageHandlerDelegate>      _customHandler;
         DelegateSlot<WindowAccessibilityQueryDelegate>  _accessibilityQuery;
-        DelegateSlot<WindowResizeDelegate>              _onResize;
         DelegateSlot<WindowLifecycleDelegate>           _onLifecycle;
         MulticastDelegate<void( WindowLifecycleEvent )> _lifecycleListeners; ///< `addLifecycleListener` — 렌더러 처리기보다 먼저 불린다
         DelegateSlot<WindowCloseQueryDelegate>          _closeQuery;
@@ -558,5 +581,11 @@ namespace sw
         uint32 _simulatedInterruptionTicks; /**< 흉내 낸 멈춤의 남은 틱입니다(`simulateAppInterruption`). 0 이면 흉내 내지 않습니다. */
 
     private:
+        // 크기 콜백 칸은 기반만 만진다 — 플랫폼이 메시지 처리 안에서 바로 부르는 길(감사 P-2)을 형식으로 막는다. 플랫폼은 `notifyResized` 만 부른다.
+        DelegateSlot<WindowResizeDelegate>        _onResize;
+        DelegateSlot<WindowModalLoopTickDelegate> _onModalLoopTick;
+        uint8                                     _bResizePending   : 1; /**< 적용을 기다리는 크기 변경(`applyPendingResize`). */
+        uint8                                     _bInModalLoopTick : 1; /**< 모달 루프 틱 콜백이 도는 중(`tickModalLoop` 의 재진입 가드). */
+        [[maybe_unused]] uint8                    _reservedResize   : 6;
     };
 } // namespace sw

@@ -644,15 +644,8 @@ namespace sw
                 if ( event.xconfigure.window != static_cast<Window>( _x11Window ) )
                     continue;
 
-                uint32 newW = static_cast<uint32>( event.xconfigure.width );
-                uint32 newH = static_cast<uint32>( event.xconfigure.height );
-                if ( newW != _width || newH != _height )
-                {
-                    _width  = newW;
-                    _height = newH;
-                    if ( _onResize.isBound() )
-                        _onResize.get()( _width, _height );
-                }
+                // 끌기 한 번에 `ConfigureNotify` 가 여럿 온다 — 크기만 적고 스왑체인은 프레임 시작에 한 번 바꾼다(`applyPendingResize`).
+                notifyResized( static_cast<uint32>( event.xconfigure.width ), static_cast<uint32>( event.xconfigure.height ) );
             }
         }
 

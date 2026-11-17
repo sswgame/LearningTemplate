@@ -56,7 +56,7 @@ namespace sw
         /** @brief 창이 지금 보이는지 반환합니다. */
         bool isVisible() const override;
 
-        /** @brief 창 스타일(WS_OVERLAPPEDWINDOW, WS_POPUP)과 위치, 크기를 바꿉니다. 크기 통보는 이 호출 안의 WM_SIZE 로 옵니다. */
+        /** @brief 창 스타일(WS_OVERLAPPEDWINDOW, WS_POPUP)과 위치, 크기를 바꿉니다. 크기는 이 호출 안의 WM_SIZE 가 적고 다음 프레임 시작에 적용된다. */
         bool               setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
         [[nodiscard]] bool canMinimize() const override { return true; }
         bool               setMinimized( bool bMinimized ) override;
@@ -90,7 +90,7 @@ namespace sw
 
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
-        /** @brief `WM_SIZE` 를 처리합니다. 최소화(0x0)는 창 크기로 기억하지 않고, 재진입한 메시지는 크기만 적고 콜백을 건너뜁니다. */
+        /** @brief `WM_SIZE` 를 처리합니다. 최소화(0x0)는 창 크기로 기억하지 않고, 그 밖은 크기만 적습니다(`notifyResized` — 콜백은 프레임 시작). */
         void onSizeMessage( WPARAM wParam, LPARAM lParam );
         /**
          * @brief `WM_SIZE` · `WM_ACTIVATEAPP` 로 최소화 · 포커스 상태를 적습니다.
@@ -102,8 +102,7 @@ namespace sw
 
     private:
         HWND                    _hWnd;
-        [[maybe_unused]] uint8  _bResizing     : 1;
-        [[maybe_unused]] uint8  _reservedWin32 : 6;
+        [[maybe_unused]] uint8  _reservedWin32;
         [[maybe_unused]] uint16 _padding;
     };
 } // namespace sw
