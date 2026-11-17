@@ -77,7 +77,8 @@ endif()
 if(SW_TARGET_TYPE STREQUAL "Client")
 	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 endif()
-# 거꾸로 전용 서버는 클라이언트 전용 소스(`Client/` — 예: 렌더 정착 감시 값 `Automation/Client`)를 짓지 않는다(헤더는 게이트 `serverbuild`). 게임 모듈과 같은 패턴이다(ModuleTargets.cmake).
+# 거꾸로 전용 서버는 클라이언트 전용 소스(`Client/`)를 짓지 않는다(헤더는 게이트 `serverbuild`). 게임 모듈과 같은 패턴이다(ModuleTargets.cmake).
+# 렌더러에 기대는 감시 값 · 조건은 `Client/` 가 아니라 렌더러 폴더 안 주인 곁에 둔다(`Renderer/Frame/View/RenderStabilityWatches.cpp` — 서버는 `Renderer` 를 통째로 짓지 않는다).
 if(SW_TARGET_TYPE STREQUAL "Server")
 	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
 endif()

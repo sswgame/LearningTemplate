@@ -4,8 +4,10 @@
 
 #include "Core/Container/vector.h"
 
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -30,4 +32,26 @@ namespace sw
             pFoliage->refreshFromTerrainEdits();
         }
     }
+
+    namespace
+    {
+        /**
+         * @brief 활성 씬의 폴리지가 지형 편집을 아직 따라가지 못했으면 진행 중(따라가는 폴리지 수)입니다 - 편집 뒤 가라앉는 시간과 다시 계산 사이에 찍힌 사진은 편집 전 배치를 담는다.
+         *        시나리오가 고정 대기로 그 시간을 넉넉히 흘려 숨기던 것을 캡처 쪽이 기다린다(flowterrain 의 지형 편집 뒤 나무 한 그루가 남았다).
+         *        주인 곁에서 등록한다 - 예전에는 자동화 층(11)의 공용 파일이 이 층(8) 헤더를 읽었다.
+         */
+        AutomationReadiness readFoliageFollowingTerrain()
+        {
+            const GameObjectManager* pManager = engine::findActiveObjectManager();
+            uint64                   behind   = 0;
+            if ( pManager != nullptr )
+                for ( const FoliageComponent* pFoliage : pManager->getComponentRegistry().getAll<FoliageComponent>() )
+                {
+                    behind += pFoliage->isBehindTerrainEdits() ? 1u : 0u;
+                }
+            return behind > 0 ? AutomationReadiness::waiting( behind, "foliage still follows a terrain edit" ) : AutomationReadiness::ready();
+        }
+    } // namespace
+
+    SW_AUTOMATION_CAPTURE_BLOCKER( foliageFollowingTerrain, "FoliageFollowingTerrain", &readFoliageFollowingTerrain );
 } // namespace sw
