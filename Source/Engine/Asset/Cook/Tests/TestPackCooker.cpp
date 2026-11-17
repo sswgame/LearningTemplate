@@ -142,3 +142,16 @@ SW_TEST_CASE( PackCookerTest, StagedFilesOnlyDropOtherBackendShaders )
     SW_EXPECT_TRUE( PackCooker::shouldIncludeStagedFile( "shaders/bin/dx12/lit.cso", kShaderFolder, "" ) );
     SW_EXPECT_FALSE( PackCooker::shouldIncludeStagedFile( "shaders/bin/opengl/lit.spv", kShaderFolder, "" ) );
 }
+
+/**
+ * @brief [PackCookerTest] 범위로 읽는 텍스처(`.dds`)가 블록 압축으로 담기면 쿠킹 오류다 — 저장(Stored)이면 통과, 다른 확장자는 어느 쪽이든 통과(MR-3)
+ * @details 변이: 확장자 비교에서 대소문자를 가리면 `.DDS` 가 블록 압축으로 지나간다.
+ */
+SW_TEST_CASE( PackCookerTest, CompressedTextureEntry )
+{
+    SW_EXPECT_LOG( "PackCooker.CompressedTextureEntry" );
+    SW_EXPECT_TRUE( PackCooker::checkTextureEntryStorage( "engine/textures/grass.dds", PackEntryStorage::Stored ) );
+    SW_EXPECT_FALSE( PackCooker::checkTextureEntryStorage( "engine/textures/grass.dds", PackEntryStorage::Blocks ) );
+    SW_EXPECT_FALSE( PackCooker::checkTextureEntryStorage( "engine/textures/GRASS.DDS", PackEntryStorage::Blocks ) );
+    SW_EXPECT_TRUE( PackCooker::checkTextureEntryStorage( "engine/data/table.xml", PackEntryStorage::Blocks ) );
+}

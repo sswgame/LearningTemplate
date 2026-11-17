@@ -23,6 +23,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cook/PackReachResult.h"
+#include "Engine/Content/Pack/PackTypes.h"
 
 namespace sw
 {
@@ -92,7 +93,13 @@ namespace sw
          * @brief 스테이징 산출물(도메인 기준 @p relativePath)을 팩에 담을지 판정합니다 — 빌드 타깃이 빼는 종류와 다른 백엔드의 셰이더 바이너리만 뺀다.
          * @details 셰이더 쿠킹본도 스테이징에 있다(`<쿠킹 폴더>/<도메인>/shaders/bin/<백엔드>`, 쿠커는 모든 백엔드를 굽는다).
          */
-        static bool shouldIncludeStagedFile( string_view relativePath, string_view shaderFolder, string_view buildTarget );
+        /**
+         * @brief 범위로 읽는 텍스처(`.dds` — 밉 스트리밍이 밉 구간만 읽는다, MR-3)가 저장(`Stored`)으로 담기는지 봅니다. 블록 압축이면 오류를 남기고 false 입니다.
+         * @details 블록 압축도 걸친 블록만 풀어 범위를 읽을 수 있지만, BC · ASTC 는 이미 압축이라 이득이 작고 읽을 때마다 푸는 비용만 남는다 — `PackConfig.json` 의
+         *          `_listStoredExtension` 에서 `.dds` 를 빼면 쿠킹이 멈춘다(언리얼 IoStore 도 텍스처 벌크 데이터를 압축하지 않는 설정이 기본이다).
+         */
+        [[nodiscard]] static bool checkTextureEntryStorage( string_view relativePath, PackEntryStorage storage );
+        static bool               shouldIncludeStagedFile( string_view relativePath, string_view shaderFolder, string_view buildTarget );
 
         /**
          * @brief 모든 도메인의 팩을 베이크합니다.
