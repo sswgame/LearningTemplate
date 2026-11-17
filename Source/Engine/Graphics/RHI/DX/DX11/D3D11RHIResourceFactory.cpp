@@ -645,6 +645,7 @@ namespace sw
         record._width     = desc._width;
         record._height    = desc._height;
         record._arraySize = desc._arraySize;
+        record._mipLevels = texDesc.MipLevels > 0 ? texDesc.MipLevels : 1u;
         record._dimension = desc._dimension;
         record._bDepth    = bDepth ? 1 : 0;
         record._reserved  = 0;
@@ -655,15 +656,18 @@ namespace sw
             return 0;
         }
 
-        // 면이 여럿이면 렌더 패스가 면 하나를 타깃으로 고른다 — 면마다 배열 뷰(원소 하나)를 만든다. `_rtv` · `_dsv` 는 면 0 이다.
+        // 면이나 밉이 여럿이면 렌더 패스가 (밉, 면) 하나를 타깃으로 고른다 — 그마다 뷰를 만든다(칸 `mip * 면 수 + slice`). `_rtv` · `_dsv` 는 (0, 0) 이다.
+        const uint32 mipLevels           = record._mipLevels;
+        const bool   bPerSubresourceView = bSliced || mipLevels > 1;
         if ( desc._bIsRenderTarget && bDepth == false )
         {
-            for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
+            for ( uint32 viewIndex = 0; viewIndex < mipLevels * desc._arraySize; ++viewIndex )
             {
+                const uint32                  slice = viewIndex % desc._arraySize;
                 D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
                 rtvDesc.Format                         = toDXGIFormat( desc._format );
                 rtvDesc.ViewDimension                  = bSliced ? D3D11_RTV_DIMENSION_TEXTURE2DARRAY : D3D11_RTV_DIMENSION_TEXTURE2D;
-                rtvDesc.Texture2DArray.MipSlice        = 0;
+                rtvDesc.Texture2DArray.MipSlice        = viewIndex / desc._arraySize; // TEXTURE2D 의 MipSlice 와 같은 자리다
                 rtvDesc.Texture2DArray.FirstArraySlice = slice;
                 rtvDesc.Texture2DArray.ArraySize       = 1;
                 Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
@@ -672,21 +676,22 @@ namespace sw
                     SW_LOG_ERROR_ID( "D3D11.FailedCreateRTVTexture2D", "Failed to create RTV for Texture2D (slice %#).", slice );
                     return 0;
                 }
-                if ( slice == 0 )
+                if ( viewIndex == 0 )
                     record._rtv = rtv;
-                if ( bSliced )
+                if ( bPerSubresourceView )
                     record._listSliceRTV.push_back( std::move( rtv ) );
             }
         }
 
         if ( bDepth )
         {
-            for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
+            for ( uint32 viewIndex = 0; viewIndex < mipLevels * desc._arraySize; ++viewIndex )
             {
+                const uint32                  slice = viewIndex % desc._arraySize;
                 D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
                 dsvDesc.Format                         = toDXGIFormat( constant::render::kDepthStencilFormat );
                 dsvDesc.ViewDimension                  = bSliced ? D3D11_DSV_DIMENSION_TEXTURE2DARRAY : D3D11_DSV_DIMENSION_TEXTURE2D;
-                dsvDesc.Texture2DArray.MipSlice        = 0;
+                dsvDesc.Texture2DArray.MipSlice        = viewIndex / desc._arraySize; // TEXTURE2D 의 MipSlice 와 같은 자리다
                 dsvDesc.Texture2DArray.FirstArraySlice = slice;
                 dsvDesc.Texture2DArray.ArraySize       = 1;
                 Microsoft::WRL::ComPtr<ID3D11DepthStencilView> dsv;
@@ -695,9 +700,9 @@ namespace sw
                     SW_LOG_ERROR_ID( "D3D11.FailedCreateDSVTexture2D", "Failed to create DSV for Texture2D (slice %#).", slice );
                     return 0;
                 }
-                if ( slice == 0 )
+                if ( viewIndex == 0 )
                     record._dsv = dsv;
-                if ( bSliced )
+                if ( bPerSubresourceView )
                     record._listSliceDSV.push_back( std::move( dsv ) );
             }
         }

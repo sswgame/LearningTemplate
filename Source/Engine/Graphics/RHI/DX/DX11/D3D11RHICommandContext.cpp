@@ -160,7 +160,7 @@ namespace sw
                 {
                     D3D11RHIDevice::TextureRecord* pTexture = _pDevice->resolveTexture( colorHandle );
                     if ( pTexture != nullptr )
-                        pRTV = pTexture->findSliceRTV( beginInfo._arrColorTargetSlice[attachmentIndex] );
+                        pRTV = pTexture->findSliceRTV( beginInfo._arrColorTargetSlice[attachmentIndex], beginInfo._arrColorTargetMip[attachmentIndex] );
                 }
                 if ( pRTV == nullptr && attachmentIndex > 0 )
                     break;
@@ -178,7 +178,7 @@ namespace sw
         {
             D3D11RHIDevice::TextureRecord* pDepthTex = _pDevice->resolveTexture( beginInfo._depthTarget );
             if ( pDepthTex != nullptr )
-                pDSV = pDepthTex->findSliceDSV( beginInfo._depthTargetSlice );
+                pDSV = pDepthTex->findSliceDSV( beginInfo._depthTargetSlice, beginInfo._depthTargetMip );
         }
 
         if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear && pDSV != nullptr )
