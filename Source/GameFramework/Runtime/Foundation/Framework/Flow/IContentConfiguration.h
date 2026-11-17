@@ -9,21 +9,30 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "GameFramework/GameFrameworkExports.h"
+
 namespace sw
 {
     class GameInstance;
-    struct ContentPreparationTestAccess;
+    class ContentPreparationToken;
+
+    /**
+     * @brief 테스트가 게임 인스턴스 없이 준비 단계 증표를 받는 유일한 길입니다. 정의는 `Flow/Tests/ContentPreparationTestToken.cpp` 하나뿐이다.
+     * @details 형식으로 닫는다 — 내보낸(`SW_GF_API`) 선언이라 다른 모듈(키트 · 게임)은 이 함수를 정의할 수 없고(가져온 함수의 정의는 컴파일 오류),
+     *          GameFramework 안에서 다시 정의하면 개발 구성 링크가 겹친 심볼로 멈춘다. 배포 구성은 `Tests/` 를 짓지 않으므로 부르는 코드가 링크되지 않는다.
+     */
+    SW_GF_API const ContentPreparationToken& getContentPreparationTokenForTest();
 
     /**
      * @class ContentPreparationToken
      * @brief 콘텐츠 구성을 정하는 준비 단계(`GameInstance::onPrepareContent`)에 있다는 증표입니다. 게임 인스턴스만 만든다 — 구성을 바꾸는 입구(`ModSession::applyForGame`)가 이것을 받아
      *        준비 훅 밖(예: `onInitialize`)에서 부르는 코드는 컴파일되지 않는다(감사 K-9 — 넷 세션 · 첫 씬 · 선언한 데이터를 읽은 뒤에 구성이 바뀌던 길).
-     * @details 복사 · 이동이 막혀 훅이 끝난 뒤로 들고 나가지 못한다. `ContentPreparationTestAccess` 는 키트 테스트만 정의한다(엔진 · 게임 코드에는 정의가 없다).
+     * @details 복사 · 이동이 막혀 훅이 끝난 뒤로 들고 나가지 못한다. 테스트는 `getContentPreparationTokenForTest`(테스트 빌드에만 정의가 있다)로 받는다.
      */
     class ContentPreparationToken
     {
         friend class GameInstance;
-        friend struct ContentPreparationTestAccess;
+        friend const ContentPreparationToken& getContentPreparationTokenForTest();
 
     public:
         ContentPreparationToken( const ContentPreparationToken& )            = delete;
