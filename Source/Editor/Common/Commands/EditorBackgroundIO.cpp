@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -140,7 +140,7 @@ namespace sw::editor
 
         vector<EditorAssetIndexEntry> listEntry;
         const StopToken               stopToken = readStopSignal( pState );
-        EditorAssetIndex::collectEntries( *args.get<const AssetPaths*>( 2 ), listEntry, stopToken );
+        EditorAssetCatalog::collectEntries( *args.get<const AssetPaths*>( 2 ), listEntry, stopToken );
         if ( stopToken.isStopRequested() )
             return;
 
@@ -206,7 +206,7 @@ namespace sw::editor
 
         EditorResourceCatalogCounts counts{};
         const StopToken             stopToken = readStopSignal( pState );
-        EditorAssetIndex::collectCatalogCounts( *args.get<const AssetPaths*>( 2 ), counts, stopToken );
+        EditorAssetCatalog::collectCatalogCounts( *args.get<const AssetPaths*>( 2 ), counts, stopToken );
         if ( stopToken.isStopRequested() )
             return;
 

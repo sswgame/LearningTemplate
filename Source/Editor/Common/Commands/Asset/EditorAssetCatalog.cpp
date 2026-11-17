@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 
 #include "Core/File/FileUtil.h"
 
@@ -11,7 +11,7 @@
 
 namespace sw::editor
 {
-    bool EditorAssetIndex::classifyFile( const AssetPaths& assetPaths, string_view filePath, EditorAssetIndexEntry& outEntry )
+    bool EditorAssetCatalog::classifyFile( const AssetPaths& assetPaths, string_view filePath, EditorAssetIndexEntry& outEntry )
     {
         const EditorAssetTypeRegistration* pInfo = EditorAssetTypeRegistry::findKindInfoForPath( filePath );
         if ( pInfo == nullptr )
@@ -28,7 +28,7 @@ namespace sw::editor
         return true;
     }
 
-    void EditorAssetIndex::collectEntries( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList, const StopToken& stopToken )
+    void EditorAssetCatalog::collectEntries( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList, const StopToken& stopToken )
     {
         outList.clear();
 
@@ -52,7 +52,7 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetIndex::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
+    void EditorAssetCatalog::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
     {
         const uint32 kindCount = EditorAssetTypeRegistry::getKindCount();
         outCounts._listKindCount.clear();
@@ -76,7 +76,7 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetIndex::collectCatalogCounts( const AssetPaths& assetPaths, EditorResourceCatalogCounts& outCounts, const StopToken& stopToken )
+    void EditorAssetCatalog::collectCatalogCounts( const AssetPaths& assetPaths, EditorResourceCatalogCounts& outCounts, const StopToken& stopToken )
     {
         vector<string> listAllFile;
         const string&  resourceRootPath = assetPaths.getRootFolderPath();

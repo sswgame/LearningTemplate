@@ -1,5 +1,5 @@
 /**
- * @file EditorAssetIndex.h
+ * @file EditorAssetCatalog.h
  * @brief Resource 트리를 애셋 종류 등록로 분류합니다 — 퀵 런처 항목과 리소스 카탈로그 개수(ImGui 없음).
  */
 #pragma once
@@ -18,10 +18,10 @@ namespace sw
 namespace sw::editor
 {
     /**
-     * @class EditorAssetIndex
+     * @class EditorAssetCatalog
      * @brief 파일 하나의 종류는 애셋 종류 등록으로 정합니다(`EditorAssetTypeRegistry::findKindInfoForPath`). 퀵 런처 · 카탈로그가 분류를 따로 적지 않습니다.
      */
-    class EditorAssetIndex
+    class EditorAssetCatalog
     {
     public:
         /** @brief 파일 하나를 퀵 런처 항목으로 만듭니다. 리소스 트리 밖이거나 알려진 종류가 아니면 false 이고 항목은 쓰지 않습니다. */

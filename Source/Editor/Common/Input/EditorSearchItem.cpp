@@ -5,8 +5,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
