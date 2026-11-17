@@ -357,6 +357,11 @@ namespace sw
          * @return 슬롯 수(0 이면 쓰지 않음)
          */
         uint32 prepareCascadeCullInputs();
+        /**
+         * @brief 그림자를 드리우는 점광 · 스폿마다의 컬링 슬롯을 맞춥니다(상수 버퍼 · 절두체). 상한은 `RenderConfig::_shadowLocalCullSlotLimit`(감사 RN-5).
+         * @return 이번 프레임에 자기 슬롯을 가진 빛 수(0 이면 모든 타일이 합친 칸)
+         */
+        uint32 prepareLocalShadowCullInputs();
         /** @brief 이 카메라 id 의 추가 뷰입니다. 없으면 새로 만들어 목록 끝에 붙입니다. */
         FrameViewTarget& getOrCreateExtraView( uint64 viewID );
         /** @brief 요청 하나로 추가 뷰를 준비합니다(설정 · 출력 · 렌더 텍스처 빌리기 · 컬링 상수버퍼 · 트랜지언트). 준비하지 못하면 이번 프레임에 그리지 않습니다. */

@@ -195,7 +195,6 @@ namespace sw
             const PassConstantNames&     names     = passConstantNames();
             const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassType::Shadow );
             const uint32                 viewCull  = context._cullViewIndex;
-            context._cullViewIndex                 = _pActiveView->_shadowCullSlot;
             context._shadowCasterFilter            = ShadowCasterFilter::StaticOnly;
             const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
             for ( uint32 tileIndex = 0; tileIndex < static_cast<uint32>( listTile.size() ); ++tileIndex )
@@ -210,6 +209,7 @@ namespace sw
                 viewport._height = static_cast<float32>( tile._cell._size );
                 context._pCmd->setViewport( viewport );
                 context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
+                context._cullViewIndex = findLocalShadowCullSlot( tileIndex );
                 drawSceneMeshes( context, pso, bTransparentBatch );
             }
             context._shadowCasterFilter = ShadowCasterFilter::All;
@@ -263,10 +263,14 @@ namespace sw
                 if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 타일은 그리지 않는다(앞 타일의 행렬로 그리지 않는다)
                     continue;
                 context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
-                // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 점광 · 스폿 타일과 추가 뷰는 합친 칸이다.
+                // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 추가 뷰의 캐스케이드는 합친 칸이다.
+                // 점광 · 스폿 타일은 모든 뷰가 같으므로 어느 뷰든 그 빛의 슬롯이다(슬롯이 없으면 합친 칸).
                 const bool bCascadeSlot = _pActiveView == &_state._mainView && tileIndex < _state._cascadeCullCount;
-                context._cullViewIndex  = bCascadeSlot ? _state._cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
-                const bool bCachedTile  = bCacheLayer && tileIndex >= shadow._cascadeCount &&
+                if ( tileIndex >= shadow._cascadeCount )
+                    context._cullViewIndex = findLocalShadowCullSlot( tileIndex - shadow._cascadeCount );
+                else
+                    context._cullViewIndex = bCascadeSlot ? _state._cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
+                const bool bCachedTile = bCacheLayer && tileIndex >= shadow._cascadeCount &&
                                          _state._shadowCache.getAction( tileIndex - shadow._cascadeCount ) != ShadowCacheTileAction::DrawAll;
                 if ( bCachedTile )
                 {
@@ -280,6 +284,14 @@ namespace sw
             context._passValues.setMatrix( names._lightViewProj, shadow._lightViewProj );
         }
         context._cullViewIndex = viewCull;
+    }
+
+    uint32 FramePassExecutor::findLocalShadowCullSlot( uint32 localTileIndex ) const
+    {
+        const vector<uint32>& listTileLight = _state._frameShadow._listLocalTileLight;
+        if ( localTileIndex < listTileLight.size() && listTileLight[localTileIndex] < _state._localShadowCullCount )
+            return _state._localShadowCullSlotBase + listTileLight[localTileIndex];
+        return _pActiveView->_shadowCullSlot;
     }
 
     void FramePassExecutor::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, const hashed_string& attachmentName )

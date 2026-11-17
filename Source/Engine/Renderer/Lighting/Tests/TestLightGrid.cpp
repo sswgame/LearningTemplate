@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/LightGrid.h"
 
 // 라이트 그리드(클러스터드 라이팅 CPU 생산자)를 GPU 없이 본다. 조회(`LightGrid::collectLights`)는 셰이더 커서(lighting.hlsli LightCursor::begin)와 같은 식이다.
@@ -156,4 +157,98 @@ SW_TEST_CASE( LightGridTest, OrthographicViewUsesLinearSlices )
     }
     grid.collectLights( sw::float3{ -15.0f, 0.0f, -8.0f }, listFound );
     SW_EXPECT_FALSE( Internal::containsLight( listFound, 0u ) );
+}
+
+namespace sw
+{
+    namespace
+    {
+        struct FrameLightCullTestInternal
+        {
+            static GPULight makeTyped( uint32 lightType, const float3& position, float32 radius )
+            {
+                GPULight light       = LightGridTestInternal::makePointLight( position, radius );
+                light._directionType = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( lightType ) };
+                return light;
+            }
+
+            /** @brief 방향광 · 가까운 점광 · 카메라 뒤 점광 · 먼 점광 · 자유 모양 2D 빛(변 둘)의 목록입니다(원소 7). */
+            static vector<GPULight> makeList()
+            {
+                vector<GPULight> listLight;
+                listLight.push_back( makeTyped( shaderslot::kLightTypeDirectional, float3{}, 0.0f ) );
+                listLight.push_back( LightGridTestInternal::makePointLight( float3{ 0.0f, 2.0f, 10.0f }, 5.0f ) );
+                listLight.push_back( LightGridTestInternal::makePointLight( float3{ 0.0f, 2.0f, -50.0f }, 5.0f ) );
+                listLight.push_back( LightGridTestInternal::makePointLight( float3{ 0.0f, 2.0f, 200.0f }, 5.0f ) );
+                listLight.push_back( makeTyped( shaderslot::kLightTypeFreeform2D, float3{ 0.0f, 2.0f, 20.0f }, 5.0f ) );
+                listLight.push_back( makeTyped( shaderslot::kLightTypeFreeform2DEdge, float3{}, 0.0f ) );
+                listLight.push_back( makeTyped( shaderslot::kLightTypeFreeform2DEdge, float3{}, 0.0f ) );
+                return listLight;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+/**
+ * @brief [LightGridTest] 상한 안이면 빛 목록과 번호가 그대로다
+ */
+SW_TEST_CASE( LightGridTest, FrameLightCullKeepsListWithinLimit )
+{
+    using Internal                           = sw::FrameLightCullTestInternal;
+    sw::vector<sw::GPULight>       listLight = Internal::makeList();
+    sw::vector<uint32>             listMap{ 9u };
+    const sw::vector<sw::float4x4> listViewProj{ sw::LightGridTestInternal::makePerspectiveViewProj( sw::float3{ 0.0f, 2.0f, 0.0f }, sw::float3{ 0.0f, 2.0f, 10.0f } ) };
+    SW_EXPECT_EQUAL( sw::GPULightBuffer::cullLightsToLimit( listLight, 7u, listViewProj, listMap ), 7u );
+    SW_EXPECT_EQUAL( listLight.size(), static_cast<size_t>( 7 ) );
+    SW_EXPECT_TRUE( listMap.empty() );
+}
+
+/**
+ * @brief [LightGridTest] 상한을 넘으면 뷰 밖의 빛을 빼고 중요도 순서로 고르며, 꼬리 원소(자유 모양 2D 빛의 변)는 머리와 함께 남거나 빠진다(감사 RN-3)
+ * @details 상한 5 — 방향광(늘) · 가까운 점광 · 2D 빛(셋) 이 남고, 카메라 뒤 점광은 뷰 밖이라 빠지고, 먼 점광은 중요도가 낮아 자리가 없다.
+ *          상한 4 — 2D 빛(셋)은 들어가지 않아 통째로 빠지고 먼 점광이 그 자리에 든다. 남은 원소는 원래 순서다.
+ */
+SW_TEST_CASE( LightGridTest, FrameLightCullDropsOutsideViewAndLeastImportant )
+{
+    using Internal                       = sw::FrameLightCullTestInternal;
+    const uint32                   kNone = sw::constant::invalid_index::kUint32;
+    const sw::vector<sw::float4x4> listViewProj{ sw::LightGridTestInternal::makePerspectiveViewProj( sw::float3{ 0.0f, 2.0f, 0.0f }, sw::float3{ 0.0f, 2.0f, 10.0f } ) };
+
+    sw::vector<sw::GPULight> listLight = Internal::makeList();
+    sw::vector<uint32>       listMap;
+    SW_REQUIRE_EQUAL( sw::GPULightBuffer::cullLightsToLimit( listLight, 5u, listViewProj, listMap ), 5u );
+    SW_REQUIRE_EQUAL( listMap.size(), static_cast<size_t>( 7 ) );
+    SW_EXPECT_EQUAL( listMap[0], 0u );
+    SW_EXPECT_EQUAL( listMap[1], 1u );
+    SW_EXPECT_EQUAL( listMap[2], kNone ); // 카메라 뒤
+    SW_EXPECT_EQUAL( listMap[3], kNone ); // 자리 없음
+    SW_EXPECT_EQUAL( listMap[4], 2u );
+    SW_EXPECT_EQUAL( listMap[5], 3u );
+    SW_EXPECT_EQUAL( listMap[6], 4u );
+    SW_EXPECT_NEAR( listLight[2]._directionType._w, static_cast<float32>( sw::shaderslot::kLightTypeFreeform2D ), 1e-6f );
+    SW_EXPECT_NEAR( listLight[4]._directionType._w, static_cast<float32>( sw::shaderslot::kLightTypeFreeform2DEdge ), 1e-6f );
+
+    sw::vector<sw::GPULight> listSmall = Internal::makeList();
+    SW_REQUIRE_EQUAL( sw::GPULightBuffer::cullLightsToLimit( listSmall, 4u, listViewProj, listMap ), 3u );
+    SW_EXPECT_EQUAL( listMap[3], 2u ); // 먼 점광이 든다
+    SW_EXPECT_EQUAL( listMap[4], kNone );
+    SW_EXPECT_EQUAL( listMap[5], kNone );
+    SW_EXPECT_EQUAL( listMap[6], kNone );
+    SW_EXPECT_NEAR( listSmall[2]._positionRadius._z, 200.0f, 1e-4f );
+}
+
+/**
+ * @brief [LightGridTest] 뷰가 없으면 절두체 판정 없이 세기 × 반경 순서다 — 카메라 뒤 자리의 빛도 남을 수 있다
+ */
+SW_TEST_CASE( LightGridTest, FrameLightCullWithoutViewsUsesPowerTimesRadius )
+{
+    sw::vector<sw::GPULight> listLight;
+    listLight.push_back( sw::LightGridTestInternal::makePointLight( sw::float3{ 0.0f, 0.0f, 0.0f }, 2.0f ) );
+    listLight.push_back( sw::LightGridTestInternal::makePointLight( sw::float3{ 0.0f, 0.0f, -50.0f }, 8.0f ) );
+    listLight.push_back( sw::LightGridTestInternal::makePointLight( sw::float3{ 0.0f, 0.0f, 9.0f }, 4.0f ) );
+    sw::vector<uint32> listMap;
+    SW_REQUIRE_EQUAL( sw::GPULightBuffer::cullLightsToLimit( listLight, 2u, sw::vector<sw::float4x4>{}, listMap ), 2u );
+    SW_EXPECT_EQUAL( listMap[0], sw::constant::invalid_index::kUint32 );
+    SW_EXPECT_EQUAL( listMap[1], 0u );
+    SW_EXPECT_EQUAL( listMap[2], 1u );
 }

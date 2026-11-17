@@ -221,6 +221,20 @@ namespace sw
         PROPERTY( Min = 0.0 )
         float32 _shadowLocalDepthBiasTexels{};
 
+        /**
+         * @brief 점광 · 스폿 그림자 칸 한 변의 하한(텍셀)입니다(`ShadowAtlasLayout::make` — 칸 수가 많으면 칸을 반씩 줄이되 이 아래로는 줄이지 않는다, 감사 RN-4).
+         * @details 유니티 URP 추가 광 그림자 해상도 단계의 가장 낮은 칸 자리다. 이 아래로 줄이면 칸 가장자리 여유(PCF 3 텍셀)가 칸을 다 먹는다.
+         */
+        PROPERTY( Min = 16 )
+        uint32 _shadowLocalMinTileResolution{};
+
+        /**
+         * @brief 그림자를 드리우는 점광 · 스폿마다 따로 둘 그림자 컬링 슬롯의 상한입니다(감사 RN-5). 넘는 빛의 타일은 합친 그림자 칸을 쓴다.
+         * @details 슬롯 하나가 인스턴스 수만큼의 가시 목록 · 간접 인자 버퍼를 가지므로 메모리와 디스패치 수의 상한이다. 언리얼 · 유니티는 그림자 절두체마다 컬링한다.
+         */
+        PROPERTY( Min = 0 )
+        uint32 _shadowLocalCullSlotLimit{};
+
         /** @brief TAA 기록 비율 — 화면이 그대로인 곳의 누적 정도(taa.hlsl `SW_TAA_HISTORY_WEIGHT` 쿠킹 define). 1 이면 이번 그림이 들지 않으므로 1 미만이어야 한다. */
         PROPERTY( Min = 0.0, Max = 0.99 )
         float32 _taaHistoryWeight{};

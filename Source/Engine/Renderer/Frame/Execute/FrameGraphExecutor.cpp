@@ -488,8 +488,9 @@ namespace sw
         // 1) 돌릴 슬롯을 모은다. 돌 수 있는지는 디스패치 전에 정해진다(isCullViewReady) — 그래서 추가 뷰의 그림자 슬롯 조건도 여기서 가린다.
         _listCullJob.clear();
         bool bAllViewsCulled = true;
-        // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿 타일이 없으면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
-        const bool bMainShadowSlotUnused = _state._cascadeCullCount > 0 && _state._frameShadow._listLocalTile.empty();
+        // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿이 모두 자기 슬롯을 가지면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
+        const bool bMainShadowSlotUnused =
+            _state._cascadeCullCount > 0 && _state._localShadowCullCount == static_cast<uint32>( _state._frameShadow._listLocalCullViewProj.size() );
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
         {
             if ( bMainShadowSlotUnused && viewIndex == static_cast<uint32>( RenderViewType::Shadow ) )
@@ -517,6 +518,11 @@ namespace sw
             RenderView& cascadeInput = _state._arrCascadeCullInput[cascadeIndex];
             cascadeInput.setViewProjection( _state._mainView._shadow._arrCascadeTile[cascadeIndex]._viewProj );
             bAllViewsCulled = enqueueCullView( _state._cascadeCullSlotBase + cascadeIndex, cascadeInput, nullptr ) && bAllViewsCulled;
+        }
+        // 점광 · 스폿마다 자기 절두체로 거른다(감사 RN-5). 타일은 모든 뷰가 같아 프레임에 한 번이다. 절두체는 prepareLocalShadowCullInputs 가 맞췄다.
+        for ( uint32 lightIndex = 0; lightIndex < _state._localShadowCullCount; ++lightIndex )
+        {
+            bAllViewsCulled = enqueueCullView( _state._localShadowCullSlotBase + lightIndex, _state._listLocalShadowCullInput[lightIndex], nullptr ) && bAllViewsCulled;
         }
 
         // 2) 모든 슬롯의 버퍼를 UAV 로 — 한 번에 낸다. 간접 인자는 직전 프레임에 IndirectArgument 로, 가시 목록은 ShaderResource 로 두고 끝냈다.

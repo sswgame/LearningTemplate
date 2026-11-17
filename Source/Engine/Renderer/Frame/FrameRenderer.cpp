@@ -535,6 +535,8 @@ namespace sw
         // 범위 나누기는 시뮬레이션(prepareFrame)이 같은 함수로 다시 한다.
         const VFXGPULightAssignment lightAssignment = VFXGPUSimulation::assignLightRanges( _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _listScratchGPULightRange );
         _state._lightBuffer.update( pDevice, _listScratchGridViewProj, producer, lightAssignment._slotCount );
+        // 상한을 넘은 프레임은 빛을 골라 줄여 번호가 당겨진다 — 목록 번호를 싣는 주 시점 그림자 상수(접촉 그림자 채널)를 올라간 번호로 다시 싣는다(updatePassConstants 가 먼저 돌았다).
+        _passExecutor.applyViewShadowConstants( _state._frameContext, _state._mainView._shadow );
     }
 
     LightGridProducer FrameRenderer::selectLightGridProducer()
@@ -694,7 +696,8 @@ namespace sw
         // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 레이아웃을 지금 크기로 다시 만든다.
         const uint32 atlasResolution = getShadowMapResolution();
         if ( _state._frameShadow._layout.getAtlasResolution() != atlasResolution )
-            _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount(), static_cast<uint32>( _state._frameShadow._listLocalTile.size() ) );
+            _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount(), static_cast<uint32>( _state._frameShadow._listLocalTile.size() ),
+                                                                   engine::getSubsystem<EngineConfig>()._render._shadowLocalMinTileResolution );
         // 게임 스레드가 그림자 배치를 만들지 않은 프레임(씬 없음)은 그림자 없는 뷰다. 빛이 없는데 그림자 볼륨을 지어내지 않는다.
         if ( _state._frameShadow._mainView._bValid == SW_FALSE )
             _state._frameShadow._mainView = FrameShadowData::makeUnshadowedView( _state._frameShadow._layout );
@@ -869,6 +872,12 @@ namespace sw
             cascadeInput._cullCb.release( _pDevice );
         }
         _state._cascadeCullCount = 0;
+        // 점광 · 스폿 컬링 상수버퍼도 마찬가지다(prepareLocalShadowCullInputs 가 다시 만든다).
+        for ( RenderView& localInput : _state._listLocalShadowCullInput )
+        {
+            localInput._cullCb.release( _pDevice );
+        }
+        _state._localShadowCullCount = 0;
         _passExecutor.releaseResources();
         _state._deform._meshMorphPool.release( _pDevice );
         _state._deform._vertexAnimationPool.release( _pDevice );
@@ -1179,7 +1188,39 @@ namespace sw
         // 캐스케이드 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다. 슬롯 수가 바뀌면(캐스케이드 수 · 스위치) 새 칸의 버퍼는 다음 업로드가 만든다.
         _state._cascadeCullSlotBase = kFirstExtraCullView + static_cast<uint32>( _state._listExtraView.size() ) * kCullSlotsPerExtraView;
         _state._cascadeCullCount    = prepareCascadeCullInputs();
-        _state._gpuScene.setCullViewCount( _pDevice, _state._cascadeCullSlotBase + _state._cascadeCullCount );
+        // 점광 · 스폿 컬링 슬롯은 캐스케이드 슬롯 뒤다. 잡아 둔 칸(`_listLocalShadowCullInput`) 수만큼 슬롯을 지켜 빛이 들고 나도 슬롯 수가 흔들리지 않는다.
+        _state._localShadowCullSlotBase = _state._cascadeCullSlotBase + _state._cascadeCullCount;
+        _state._localShadowCullCount    = prepareLocalShadowCullInputs();
+        _state._gpuScene.setCullViewCount( _pDevice, _state._localShadowCullSlotBase + static_cast<uint32>( _state._listLocalShadowCullInput.size() ) );
+    }
+
+    uint32 FrameRenderer::prepareLocalShadowCullInputs()
+    {
+        const uint32 slotLimit = engine::getSubsystem<EngineConfig>()._render._shadowLocalCullSlotLimit;
+        // 상한이 줄었으면(설정을 다시 읽었다) 넘는 칸을 놓는다. 그 밖에는 줄이지 않는다.
+        while ( _state._listLocalShadowCullInput.size() > slotLimit )
+        {
+            _state._listLocalShadowCullInput.back()._cullCb.release( _pDevice );
+            _state._listLocalShadowCullInput.pop_back();
+        }
+        if ( _pDevice == nullptr )
+            return 0;
+        const FrameShadowData& frame      = _state._frameShadow;
+        const uint32           lightCount = MathUtil::min( static_cast<uint32>( frame._listLocalCullViewProj.size() ), slotLimit );
+        if ( _state._listLocalShadowCullInput.size() < lightCount )
+            _state._listLocalShadowCullInput.resize( lightCount );
+        for ( uint32 lightIndex = 0; lightIndex < lightCount; ++lightIndex )
+        {
+            RenderView& input = _state._listLocalShadowCullInput[lightIndex];
+            if ( input._cullCb.isValid() == false && input._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) ) == false )
+            {
+                // 만들지 못하면 이 프레임은 모든 타일이 합친 칸이다(같은 그림, 컬링만 덜 좁다).
+                SW_LOG_ERROR_ID( "FrameRenderer.FailedCreateLocalShadowCullConstant", "Failed to create the cull constant buffer of point/spot shadow %# - the combined shadow cull slot is used this frame", lightIndex );
+                return 0;
+            }
+            input.setViewProjection( frame._listLocalCullViewProj[lightIndex] );
+        }
+        return lightCount;
     }
 
     uint32 FrameRenderer::prepareCascadeCullInputs()
