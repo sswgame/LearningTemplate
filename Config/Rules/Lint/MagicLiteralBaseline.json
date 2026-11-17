@@ -63,7 +63,7 @@
     "Source/Core/Memory/PoolAllocator.h": {"integer": 2},
     "Source/Core/Module/ModuleLibraryUtil.cpp": {"integer": 1},
     "Source/Core/Network/Connection/NetChallenge.cpp": {"integer": 2},
-    "Source/Core/Network/Connection/NetConnection.cpp": {"minus-one": 1, "float": 7, "integer": 13},
+    "Source/Core/Network/Connection/NetConnection.cpp": {"minus-one": 1, "float": 6, "integer": 13},
     "Source/Core/Network/Connection/NetEndpoint.cpp": {"float": 1, "integer": 17},
     "Source/Core/Network/Connection/NetEndpointThread.cpp": {"float": 1},
     "Source/Core/Network/Connection/NetFlowLog.cpp": {"integer": 1},
