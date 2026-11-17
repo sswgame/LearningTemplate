@@ -356,10 +356,11 @@ namespace sw
         const bool bUseColorComposite = bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0;
         const bool bDepthAsColor      = bSingleColorTarget && bDepthOnly; // 깊이 텍스처를 컬러 자리로 건 경우 — 그 텍스처를 깊이 첨부로 쓴다
         if ( bUseColorComposite )
-            fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, colorCount, beginInfo._depthTarget, beginInfo._depthTargetSlice );
+            fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, beginInfo._arrColorTargetMip, colorCount, beginInfo._depthTarget,
+                                                   beginInfo._depthTargetSlice, beginInfo._depthTargetMip );
         else if ( bDepthAsColor )
         {
-            fbo                                                 = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, colorHandles[0], beginInfo._arrColorTargetSlice[0] );
+            fbo                                                 = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, nullptr, 0, colorHandles[0], beginInfo._arrColorTargetSlice[0], beginInfo._arrColorTargetMip[0] );
             const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
             if ( pRecord != nullptr && beginInfo._width == 0 )
                 targetWidth = pRecord->_width;
@@ -367,7 +368,7 @@ namespace sw
                 targetHeight = pRecord->_height;
         }
         else if ( bBindColor == false && bHasDepth )
-            fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice );
+            fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice, beginInfo._depthTargetMip );
 
         const bool bOffscreenRequested = bUseColorComposite || bDepthAsColor || ( bBindColor == false && bHasDepth );
         if ( bOffscreenRequested && fbo == 0 )

@@ -810,7 +810,7 @@ namespace sw
             GLuint fbo{ 0 };
             glGenFramebuffers( 1, &fbo );
             glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-            OpenGLRHIDevice::attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0, record, 0 );
+            OpenGLRHIDevice::attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0, record, 0, 0 );
             const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
             glBindFramebuffer( GL_FRAMEBUFFER, 0 );
             if ( status != GL_FRAMEBUFFER_COMPLETE )
