@@ -280,6 +280,40 @@ namespace sw
         return handle;
     }
 
+    void D3D12RHIDevice::copyBindlessDescriptorToRingSlot( uint32 slot, RHIDescriptorIndex index )
+    {
+        const bool bCannotCopy = _cbvHeap == nullptr || _offlineViewHeap == nullptr || index >= kBindlessDescriptorCapacity;
+        if ( bCannotCopy )
+            return;
+        D3D12_CPU_DESCRIPTOR_HANDLE destination = _cbvHeap->GetCPUDescriptorHandleForHeapStart();
+        destination.ptr += static_cast<SIZE_T>( getBindlessRingBase( slot ) + index ) * _cbvDescriptorSize;
+        _device->CopyDescriptorsSimple( 1, destination, offlineDescriptorAt( index ), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    }
+
+    void D3D12RHIDevice::copyBindlessDescriptorToAllRingSlots( RHIDescriptorIndex index )
+    {
+        // 슬롯 0 은 등록이 같은 칸(힙 시작 구간)에 이미 만들었다 — 나머지 사본만 채운다.
+        for ( uint32 slot = 1; slot < kBindlessRingCopyCount; ++slot )
+        {
+            copyBindlessDescriptorToRingSlot( slot, index );
+        }
+    }
+
+    void D3D12RHIDevice::flushBindlessRingSlot()
+    {
+        // 미러를 비우므로 배타 락이다(rebind 가 같은 락 아래에서 예약한다). 죽은 번호(그 사이 해제)는 건너뛴다 — 번호는 펜스 뒤에야 다시 나간다.
+        UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
+        const uint32             slot = _frameRing.currentIndex();
+        _bindlessRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
+        {
+            if ( _srvRegistry.isLive( index ) )
+            {
+                copyBindlessDescriptorToRingSlot( slot, index );
+                SW_PROFILE_COUNT( "RT.Bindless.mirrorWrites", 1 );
+            }
+        } );
+    }
+
     uint32 D3D12RHIDevice::acquireOnlineBlock()
     {
         ScopedLock<mutex> lock{ _onlineBlockMutex };
@@ -771,7 +805,7 @@ namespace sw
         _rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
 
         D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc{};
-        cbvHeapDesc.NumDescriptors = kMaxShaderVisibleDescriptors;
+        cbvHeapDesc.NumDescriptors = kShaderVisibleHeapDescriptorCount; // bindless 구간을 링 슬롯마다 한 벌(R-6)
         cbvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         cbvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         if ( isHrSuccess( _device->CreateDescriptorHeap( &cbvHeapDesc, IID_PPV_ARGS( _cbvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
@@ -817,6 +851,7 @@ namespace sw
             onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
             _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
             _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
+            copyBindlessDescriptorToAllRingSlots( kNullTextureBindlessIndex );
             _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         }
         {
@@ -943,6 +978,10 @@ namespace sw
         _renderPassRegistry.clear();
         _srvRegistry.clear();
         _uavRegistry.clear();
+        {
+            UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
+            _bindlessRingMirror.clear();
+        }
         _bindlessIndexAllocator.reset( kNullTextureBindlessIndex + 1 );
         for ( uint32 index = 0; index < kBindlessDescriptorCapacity; ++index )
         {
@@ -1446,7 +1485,10 @@ namespace sw
         // 새 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다. 넘어가지 못했으면(장치 제거) 지금 칸은
         // GPU 가 아직 읽는 중일 수 있으니 건드리지 않는다.
         if ( bAdvanced )
+        {
             fillConstantBufferSlot();
+            flushBindlessRingSlot();
+        }
     }
 
     bool D3D12RHIDevice::waitForFenceValue( uint64 fenceValue )
@@ -1929,9 +1971,10 @@ namespace sw
         pList->SetDescriptorHeaps( 1, heaps );
         if ( _rootSignature == nullptr )
             return;
-        // 유일한 테이블(텍스처 배열)이 힙 시작을 가리킨다. 리스트가 사는 동안 바뀌지 않는다. 같은 루트 시그니처를
-        // 그래픽스/컴퓨트 두 바인드 포인트에 건다(루트 인자는 바인드 포인트별로 따로 산다). 상수버퍼는 이후 루트 CBV 로, t/u 는 슬롯 테이블로 건다.
-        const D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
+        // 유일한 테이블(텍스처 배열)이 이번 링 슬롯의 bindless 사본을 가리킨다(R-6 — 산 번호 다시 쓰기는 슬롯의 차례에만 그 사본에 쓴다). 리스트가 사는 동안 바뀌지 않는다.
+        // 같은 루트 시그니처를 그래픽스/컴퓨트 두 바인드 포인트에 건다(루트 인자는 바인드 포인트별로 따로 산다). 상수버퍼는 이후 루트 CBV 로, t/u 는 슬롯 테이블로 건다.
+        D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
+        heapStart.ptr += static_cast<UINT64>( getBindlessRingBase( _frameRing.currentIndex() ) ) * _cbvDescriptorSize;
         pList->SetGraphicsRootSignature( _rootSignature.Get() );
         pList->SetGraphicsRootDescriptorTable( kBindlessTextureTableParam, heapStart );
         pList->SetComputeRootSignature( _rootSignature.Get() );
@@ -1947,7 +1990,9 @@ namespace sw
         if ( _rootSignature == nullptr )
             return;
         pList->SetComputeRootSignature( _rootSignature.Get() );
-        pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, _cbvHeap->GetGPUDescriptorHandleForHeapStart() );
+        D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
+        heapStart.ptr += static_cast<UINT64>( getBindlessRingBase( _frameRing.currentIndex() ) ) * _cbvDescriptorSize; // 이번 링 슬롯의 bindless 사본(R-6)
+        pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
     }
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )

@@ -18,6 +18,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIBindlessReadSlot.h"
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
@@ -233,6 +234,16 @@ namespace sw
         D3D12_CPU_DESCRIPTOR_HANDLE shaderVisibleCPUAt( uint32 index ) const;
         /** @brief 셰이더 가시 힙의 index 번째 GPU 핸들을 반환합니다(루트 테이블 인자). */
         D3D12_GPU_DESCRIPTOR_HANDLE shaderVisibleGPUAt( uint32 index ) const;
+        /**
+         * @brief 번호 @p index 의 오프라인 뷰를 링 슬롯 @p slot 의 bindless 사본에 복사합니다(`CopyDescriptorsSimple`).
+         * @details 새 번호 등록은 모든 슬롯에 바로 쓴다(그 번호는 펜스 뒤에야 다시 나가 진행 중 프레임이 읽지 않는다). 산 번호의 다시 쓰기는
+         *          `_bindlessRingMirror` 에 예약하고 링이 그 슬롯에 들어온 직후에만 쓴다(`flushBindlessRingSlot`) — 진행 중 커맨드가 읽는 디스크립터를 덮지 않는다.
+         */
+        void copyBindlessDescriptorToRingSlot( uint32 slot, RHIDescriptorIndex index );
+        /** @brief 새 번호 @p index 의 디스크립터를 모든 링 사본에 씁니다(등록 · null 텍스처). */
+        void copyBindlessDescriptorToAllRingSlots( RHIDescriptorIndex index );
+        /** @brief 링이 지금 슬롯에 들어온 직후(앞 사용의 펜스를 지난 뒤, 기록 전) 그 슬롯의 예약된 다시 쓰기를 사본에 씁니다. `waitForRingSlot` 이 부른다. */
+        void flushBindlessRingSlot();
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷이 여기서 나옵니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getFormat(); }
 
@@ -431,9 +442,18 @@ namespace sw
         static constexpr uint32 kBindlessDescriptorCapacity  = 32768;
         static constexpr uint32 kOnlineBlockDescriptorCount  = 512;
         static constexpr uint32 kOnlineBlockCount            = ( kMaxShaderVisibleDescriptors - kBindlessDescriptorCapacity ) / kOnlineBlockDescriptorCount;
-        static constexpr uint32 kOfflineNullSRVIndex         = kBindlessDescriptorCapacity;     ///< 바인딩되지 않은 t 슬롯을 채우는 null 버퍼 SRV
-        static constexpr uint32 kOfflineNullUAVIndex         = kBindlessDescriptorCapacity + 1; ///< 바인딩되지 않은 u 슬롯을 채우는 null 버퍼 UAV
-        static constexpr uint32 kOfflineDescriptorCount      = kBindlessDescriptorCapacity + 2;
+        /// @brief bindless 구간의 링 사본 수입니다(프레임 링 슬롯마다 한 벌 — 감사 R-6). 0 번은 힙 시작, 나머지는 온라인 블록 뒤에 잇는다(`getBindlessRingBase`).
+        static constexpr uint32 kBindlessRingCopyCount = constant::render::kMaxFrameCountInFlight;
+        /// @brief 셰이더 가시 힙의 실제 칸 수입니다(bindless 구간 + 온라인 블록 + 링 사본 둘).
+        static constexpr uint32 kShaderVisibleHeapDescriptorCount = kMaxShaderVisibleDescriptors + ( kBindlessRingCopyCount - 1u ) * kBindlessDescriptorCapacity;
+        /** @brief 링 슬롯 @p slot 의 bindless 구간이 셰이더 가시 힙에서 시작하는 칸입니다. 루트 텍스처 테이블이 이 칸을 가리킨다. */
+        static constexpr uint32 getBindlessRingBase( uint32 slot )
+        {
+            return ( slot % kBindlessRingCopyCount ) == 0 ? 0u : kMaxShaderVisibleDescriptors + ( ( slot % kBindlessRingCopyCount ) - 1u ) * kBindlessDescriptorCapacity;
+        }
+        static constexpr uint32 kOfflineNullSRVIndex    = kBindlessDescriptorCapacity;     ///< 바인딩되지 않은 t 슬롯을 채우는 null 버퍼 SRV
+        static constexpr uint32 kOfflineNullUAVIndex    = kBindlessDescriptorCapacity + 1; ///< 바인딩되지 않은 u 슬롯을 채우는 null 버퍼 UAV
+        static constexpr uint32 kOfflineDescriptorCount = kBindlessDescriptorCapacity + 2;
         /// @brief 레지스트리 0번은 null Texture2D SRV 로 비워 둡니다. 등록은 1번부터 받습니다.
         /// @details 이 힙은 CBV, 버퍼 SRV, 텍스처 SRV, UAV 가 한 인덱스 공간을 씁니다. 0 으로 초기화된 텍스처 인덱스(머티리얼 없는 배치의 폴백 원소 등)가
         ///          그 위치의 상수 버퍼나 구조 버퍼를 Texture2D 로 읽으면 값이 정의되지 않습니다(채널마다 NaN). null 뷰는 0 을 읽습니다.
@@ -857,6 +877,7 @@ namespace sw
         vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _listOffscreenDSVPage SW_GUARDED_BY( _offscreenViewMutex );
         unordered_map<RHIBufferHandle, uint32>                                     _mapCbAlignedSize;
         unordered_map<RHIBufferHandle, void*>                                      _mapCbMapped;
+        RHIDescriptorRingMirror _bindlessRingMirror                                SW_GUARDED_BY( _bindlessMutex ); ///< 산 번호 다시 쓰기를 링 슬롯마다 그 차례에 쓰도록 예약한다(R-6)
         RHIConstantBufferMirror _constantBufferMirror                              SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;

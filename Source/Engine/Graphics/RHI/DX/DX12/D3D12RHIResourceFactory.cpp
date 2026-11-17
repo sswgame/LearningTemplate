@@ -1250,10 +1250,38 @@ namespace sw
 
     bool D3D12RHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
     {
-        (void)index;
-        (void)texture;
-        SW_LOG_ERROR_ONCE_ID( "RHI.RebindNotImplemented", "D3D12: rebindBindlessTexture needs the per-slot descriptor ring - not implemented yet" );
-        return false;
+        _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
+        ID3D12Resource* const pResource = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        if ( pResource == nullptr || _pDevice->isTextureReadyToRegister( texture ) == false )
+            return false;
+        const D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( texture );
+        if ( pTextureRecord != nullptr && pTextureRecord->_bOffscreen != SW_FALSE && pTextureRecord->_offscreen._dimension != RHITextureDimension::Texture2D )
+            return false;
+
+        UniqueLock<shared_mutex>                      lock{ _pDevice->_bindlessMutex };
+        const D3D12RHIDevice::BindlessResourceRecord* pPrevious = _pDevice->_srvRegistry.find( index );
+        if ( pPrevious == nullptr || pPrevious->_texture == 0 )
+            return false; // 산 텍스처 번호가 아니다(버퍼 번호를 텍스처로 다시 묶지 않는다)
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MipLevels           = pResource->GetDesc().MipLevels;
+        const DXGI_FORMAT resourceFormat      = pResource->GetDesc().Format;
+        srvDesc.Format                        = ( resourceFormat == DXGI_FORMAT_R24G8_TYPELESS || resourceFormat == DXGI_FORMAT_D24_UNORM_S8_UINT ) ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : resourceFormat;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+        // 오프라인 뷰는 지금 덮는다 — 슬롯 테이블은 기록 때 복사해 가고 병렬 기록 중에는 여기 오지 않는다. 셰이더 가시 사본은 진행 중 프레임이 읽으므로
+        // 덮지 않고 링 슬롯마다 그 차례에 쓴다(`_bindlessRingMirror` → `flushBindlessRingSlot`). 늦어도 다음 프레임부터 새 텍스처다.
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
+        _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
+        D3D12RHIDevice::BindlessResourceRecord record{ pResource, handle._cpu, handle._offline };
+        record._texture = texture;
+        if ( _pDevice->_srvRegistry.rebind( index, record ) == false )
+            return false;
+        _pDevice->publishBindlessReadSlot( index, D3D12RHIDevice::BindlessReadRegistry::ShaderResource, record );
+        _pDevice->_bindlessRingMirror.recordRewrite( index );
+        return true;
     }
 
     void D3D12RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
@@ -1293,6 +1321,8 @@ namespace sw
             SW_FATAL( "D3D12: bindless index %# was written twice without a release", index );
         _pDevice->publishBindlessReadSlot( index, registry == BindlessRegistry::UnorderedAccess ? D3D12RHIDevice::BindlessReadRegistry::UnorderedAccess : D3D12RHIDevice::BindlessReadRegistry::ShaderResource,
                                            record );
+        // 새 번호는 모든 링 사본에 바로 쓴다 — 펜스 뒤에야 다시 나간 번호라 진행 중 프레임이 읽지 않는다(R-6).
+        _pDevice->copyBindlessDescriptorToAllRingSlots( index );
     }
 
     void D3D12RHIResourceFactory::releaseBindlessSlot( RHIDescriptorIndex index )
