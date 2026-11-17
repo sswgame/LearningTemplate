@@ -240,7 +240,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 런타임에 액션의 키 바인딩을 바꿉니다. 바인딩 종류는 그대로이며, Chord 는 방아쇠만 바뀌고 수식 키는 남습니다.
-         * @details 키 하나로 바꿀 수 없는 종류(합성 축, 스틱 등)면 바꾸지 않고 경고를 남긴 뒤 false 를 반환한다(`BindingKinds::getRebindSlotIndex`).
+         * @details 키 하나로 바꿀 수 없는 종류(합성 축, 스틱 등)면 바꾸지 않고 경고를 남긴 뒤 false 를 반환한다(`BindingKinds::findRebindSlotIndex`).
          *          단일 키로 바꿔 버리면 에디터에서 `Ctrl+S` 를 다시 잡을 때 수식 키가, A/D 축을 다시 잡을 때 축이 사라지기 때문이다.
          *          가상 커서가 마우스로 바꾸는 패드 버튼으로 바꾸려 해도 거절한다(맵 읽기와 같은 검사, `reportVirtualCursorConflict`).
          */
@@ -267,7 +267,7 @@ namespace sw
          */
         [[nodiscard]] bool findSameLayerInputConflict( const hashed_string& action, uint32 bindIndex, hashed_string& outOtherAction ) const;
         /**
-         * @brief 바인딩 @p bindIndex 가 리바인딩으로 바꾸는 슬롯(`BindingKinds::getRebindSlotIndex`)의 현재 키를 반환합니다.
+         * @brief 바인딩 @p bindIndex 가 리바인딩으로 바꾸는 슬롯(`BindingKinds::findRebindSlotIndex`)의 현재 키를 반환합니다.
          * @return 액션이나 바인딩이 없거나 키 하나로 바꿀 수 없는 종류면 false 입니다.
          */
         [[nodiscard]] bool findRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const;

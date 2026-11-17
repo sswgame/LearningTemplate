@@ -30,11 +30,11 @@ namespace sw
             BindingKind _kind;              ///< 테이블 위치와 열거자가 어긋나지 않는지 확인하려고 가진 자기 값입니다.
             const utf8* _pXMLName;          ///< XML `kind` 특성에 적는 이름입니다.
             uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수입니다(0 이면 특정 키를 점유하지 않음).
-            uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯입니다(`BindingKinds::kNoRebindSlot` 이면 키 하나로는 못 바꿈).
+            uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯입니다(`kNoRebind` 이면 키 하나로는 못 바꿈).
             bool        _bRelative;         ///< 이번 프레임의 이동량인지 나타냅니다. 묶지 않고, 액션 값 단계에서 반전하지 않습니다(`BindingKinds::isRelative`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
-        constexpr uint32 kNoRebind = BindingKinds::kNoRebindSlot;
+        constexpr uint32 kNoRebind = constant::invalid_index::kUint32; // 표 칸의 없음 — 밖으로는 `BindingKinds::findRebindSlotIndex` 가 optional 로 낸다
 
         // 종류를 추가하면 이 테이블에 한 줄을 더한다. 빠뜨리면 아래 static_assert 가 컴파일을 막는다.
         constexpr BindingKindInfo kArrBindingKindInfo[] = {
@@ -83,10 +83,12 @@ namespace sw
         return BindingKind::Count;
     }
 
-    uint32 BindingKinds::getRebindSlotIndex( BindingKind kind )
+    optional<uint32> BindingKinds::findRebindSlotIndex( BindingKind kind )
     {
         const BindingKindInfo* pInfo = findBindingKindInfo( kind );
-        return ( pInfo != nullptr ) ? pInfo->_rebindSlotIndex : kNoRebindSlot;
+        if ( pInfo == nullptr || pInfo->_rebindSlotIndex == kNoRebind )
+            return nullopt;
+        return pInfo->_rebindSlotIndex;
     }
 
     uint32 BindingKinds::getConflictSlotCount( BindingKind kind )
