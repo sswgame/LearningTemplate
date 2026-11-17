@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="a2b0fe3e1f234b3280bad759e5aa93d1"?>
+<!--
+  장르 키트 시연 — 한 바퀴 경기(maps/kit_kartracing). 반지름 100 쯤의 고리, 체크포인트 · 아이템 상자 · 패드 없음.
+-->
+<KartTrackCatalog>
+	<Track id="ring" name="Ring" width="12" laps="1" samples="16">
+		<Point x="100" z="0"/><Point x="0" z="100"/><Point x="-100" z="0"/><Point x="0" z="-100"/>
+	</Track>
+</KartTrackCatalog>
