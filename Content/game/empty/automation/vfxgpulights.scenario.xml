@@ -13,15 +13,14 @@
 -->
 <Scenario name="game.empty.vfxgpulights" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/vfxgpulights.scene.xml"/>
-	<Wait frames="60"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="settled.ppm"/>
 	<Wait frames="90"/>
 	<Screenshot file="lit.ppm" waitForStability="false"/>
 	<Wait frames="2"/>
 	<DevCommand line="teleport Effect 0 -200 2"/>
-	<Wait frames="148"/>
+	<AdvanceSimulation frames="148"/> <!-- 효과를 치운 뒤 빛이 꺼지는 148 프레임(시간이 내용 — 판정 없는 사진) -->
 	<Screenshot file="away.ppm" waitForStability="false"/>
-	<Wait frames="10"/>
 	<ExpectImage file="lit.ppm" golden="lit" region="0.1,0.45,0.9,0.95"/>
 	<Pass/>
 </Scenario>

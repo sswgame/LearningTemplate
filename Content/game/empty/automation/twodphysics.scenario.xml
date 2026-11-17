@@ -21,7 +21,7 @@
 	<WaitUntil watch="Object.Y" target="Hero" near="0" tolerance="0.1" timeoutFrames="180"/>
 	<!-- 힌지: 판이 내려오되 축 아래 판 길이의 반을 넘지 않는다 -->
 	<WaitUntil watch="Object.Y" target="Plank" atMost="3" timeoutFrames="120"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/> <!-- 판이 1 초 매달려도 축 아래 반 길이를 넘지 않는다(시간이 내용) -->
 	<Expect watch="Object.Y" target="Plank" atLeast="2.3"/>
 	<Expect watch="Object.X" target="Plank" atLeast="-1.6"/>
 	<!-- 폭탄: 시작 1.5 초에 터져 상자를 깬다 -->
@@ -31,7 +31,7 @@
 	<Screenshot file="freeform_on.ppm" waitForStability="false"/>
 	<Wait frames="1"/>
 	<DevCommand line="teleport WindowLight 100 100 0"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 빛을 치운 뒤 2 프레임 장면(깨진 조각이 움직여 Render.Stable 이 서지 않는다) -->
 	<Screenshot file="freeform_off.ppm" waitForStability="false"/>
 	<ExpectImagesDiffer first="freeform_on.ppm" second="freeform_off.ppm" region="0.6,0.05,0.95,0.45" minDiffering="0.05"/>
 	<Pass/>
