@@ -125,8 +125,8 @@ namespace sw
          *          이 규칙은 부모를 따라가는 `isSameTypeName` 과 같다. `_typeID` 를 쓰지 않는 이유도 그 사본이다. 사본은 자기 id 를 따로 가진다.
          *          등록이나 해제로 부모 체인이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고,
          *          등록 배치가 끝날 때(`populateLookupCaches`)나 첫 상속 검사가 테이블을 다시 만든다.
-         *          원자값으로 둔 이유는 `_parentLink` 와 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
-         *          등록과 캐스트가 동시에 실행되는 경우는 `_parentLink` 와 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
+         *          레지스트리에 든 타입의 표는 **쓰기 쪽만** 짓는다 — `TypeRegistry` 가 독점 잠금 안에서(`relinkAffectedLocked`). 읽기는 잠금 없이 원자값만 본다.
+         *          예전에는 첫 상속 검사(읽기)도 표를 지어, 등록이 비운 표를 읽기가 낡은 사슬로 다시 적을 수 있었다. 레지스트리 밖 사본만 첫 검사가 짓는다.
          */
         TypeCastHeader _castHeader;
         size_t         _size;
@@ -172,14 +172,14 @@ namespace sw
          * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)`(shared_mutex 잠금과 해시맵 조회)을 부르지 않도록,
          *          등록 배치가 끝날 때(`TypeRegistry::populateLookupCaches`) 한 번 찾아 둔다. 그러면 조상을 따라가는 비용은 포인터 역참조 몇 번이다.
          *
-         *          **타입을 해제하면 이 값을 비운다.** `TypeInfo` 의 주소는 고정이라 옮겨지지는 않지만,
-         *          모듈 해제 뒤에는 묘비가 된 부모를 가리킬 수 있다. 그래서 해제할 때 남은 타입 전부의 이 값을 비우고,
-         *          비어 있으면 `getParentType()` 이 이름으로 다시 찾는다. 원자값으로 둔 이유는, 배치 밖에서 등록한 타입(테스트)은
-         *          첫 조회가 여러 스레드에서 동시에 올 수 있기 때문이다. 같은 값을 쓰는 경쟁이라 relaxed 로 충분하다.
+         *          **레지스트리에 든 타입은 쓰기 쪽만 이 값을 바꾼다.** 등록 · 별칭 · 해제가 바뀐 타입과 자손의 부모를 독점 잠금 안에서 이름으로 다시 찾아
+         *          새 값으로 바로 바꾼다(`TypeRegistry::relinkAffectedLocked` — 비웠다가 잠금 밖에서 다시 찾던 틈이 없다). 그래서 읽기(`getParentType`)는
+         *          레지스트리를 잠그지 않는다 — 예전에는 세대가 오를 때마다 부모가 미등록인 타입마다 `findType` 을 잠가, 별칭을 쉬지 않고 거는 쓰기와
+         *          `getDerivedTypes` 가 잠금을 다투다 시한에 걸렸다. 레지스트리 밖 사본만 첫 조회가 이름으로 찾는다(여러 스레드가 같은 값을 써 relaxed 로 충분하다).
          */
         mutable TypeParentLink _parentLink;
         /**
-         * @brief `_parentFQN` 을 이름으로 찾아 봤지만 찾지 못했던 때의 타입 테이블 세대입니다. 0 이면 아직 찾아 보지 않았습니다.
+         * @brief `_parentFQN` 을 이름으로 찾아 봤지만 찾지 못했던 때의 타입 테이블 세대입니다. 0 이면 아직 찾아 보지 않았습니다. 레지스트리 밖 사본만 씁니다.
          * @details 등록되지 않은 기반 타입은 이름만 적혀 있다. 부모를 물을 때마다(계층 프로퍼티 조회, 이름 따라가기, 기본값 체인 수집)
          *          레지스트리를 잠그고 다시 찾지 않도록, 세대가 같으면 결과도 같으므로 세대를 적어 두고 등록이나 해제로 세대가 바뀔 때만 다시 찾는다.
          */
@@ -276,10 +276,16 @@ namespace sw
             bool bDerived = false;
             return _castHeader.tryCompare( pTarget->_castHeader, bDerived ) ? bDerived : isDerivedFromSlow( pTarget );
         }
-        /** @brief 조상 테이블이 없을 때의 경로입니다. 만들 수 있으면 만들어서 답하고, 아니면 부모 포인터를 따라갑니다. */
+        /** @brief 조상 테이블이 없을 때의 경로입니다. 레지스트리 밖 사본은 만들어서 답하고, 아니면 부모 포인터를 따라갑니다. */
         bool isDerivedFromSlow( const TypeInfo* pTarget ) const;
-        /** @brief 부모 포인터를 이름으로 다시 찾습니다. 등록 배치가 끝날 때 `TypeRegistry` 가 부릅니다. */
-        void resolveParentType() const;
+        /** @brief 레지스트리가 찾은 부모로 부모 포인터를 바꿉니다. `TypeRegistry` 가 독점 잠금 안에서만 부릅니다(`relinkAffectedLocked`). 자기 자신은 nullptr 로 둡니다. */
+        void linkParentType( const TypeInfo* pParent ) const
+        {
+            _parentLink._pType.store( pParent != this ? pParent : nullptr, std::memory_order_release ); // 읽기가 잠금 없이 부모의 칸을 따라간다
+            _parentMissGeneration.store( 0, std::memory_order_relaxed );
+        }
+        /** @brief 레지스트리가 가진 타입이면 true 입니다(`registerClass` 가 내용 세대를 적는다). 사본 · 미등록은 0 이라 false 입니다. */
+        bool isRegistryOwned() const { return _contentGeneration != 0; }
         /** @brief 부모 포인터와 "찾지 못했다"는 기록을 비웁니다. 해제 뒤에는 부모가 사라졌을 수 있으므로 `TypeRegistry` 가 부릅니다. */
         void clearParentType() const
         {
@@ -297,7 +303,7 @@ namespace sw
          * @details 이름이 없거나, 순환이거나, 테이블보다 깊으면 `kAncestorDepthNone` 을 적고 false 를 반환한다. 그 타입은 다음
          *          등록이나 해제까지 부모 포인터를 따라가서 답한다. 찾을 수 없는 부모(REFLECT 가 아닌 기반이나 아직 로드되지 않은
          *          모듈)는 체인의 끝으로 본다. 그 부모가 등록되는 순간 `registerClass` 가 테이블을 비운다.
-         *          등록 배치가 끝날 때 `TypeRegistry` 가 부르고, 배치 밖의 타입은 첫 상속 검사가 부른다.
+         *          레지스트리에 든 타입은 `TypeRegistry` 가 독점 잠금 안에서만 부른다(쓰는 쪽이 하나다). 레지스트리 밖 사본은 첫 상속 검사가 부른다.
          */
         bool computeAncestorDisplay() const;
         /** @brief 조상 테이블을 비웁니다. 체인이 바뀔 수 있는 등록과 해제 뒤에 `TypeRegistry` 가 부릅니다. */
@@ -442,7 +448,8 @@ namespace sw
 
     private:
         /**
-         * @brief 부모 TypeInfo 입니다. 찾아 둔 것이 없으면 이름으로 찾아 기록합니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다.
+         * @brief 부모 TypeInfo 입니다. 부모가 없거나 등록되지 않았으면 nullptr 입니다. 레지스트리에 든 타입은 잠그지 않고 링크만 읽고,
+         *        레지스트리 밖 사본만 찾아 둔 것이 없을 때 이름으로 찾아 기록합니다.
          * @details 비공개다 — 밖에서 `p = p->getParentType()` 으로 손으로 걸으면 고리 방지가 빠진다(고리 사슬에서 끝나지 않았다). 사슬은 `getTypeChain` 한 곳이 걷는다.
          */
         const TypeInfo* getParentType() const;
