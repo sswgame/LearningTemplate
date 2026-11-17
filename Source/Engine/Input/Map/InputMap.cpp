@@ -724,10 +724,12 @@ namespace sw
         return layerA == layerB || ( isLayerActiveInternal( layerA ) && isLayerActiveInternal( layerB ) );
     }
 
-    uint32 InputMap::getActionSourceIndex( const hashed_string& action ) const
+    optional<uint32> InputMap::findActionSourceIndex( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr ? pEntry->_definition._sourceIndex : 0;
+        if ( pEntry == nullptr )
+            return nullopt;
+        return pEntry->_definition._sourceIndex;
     }
 
     bool InputMap::isActionOverride( const hashed_string& action ) const

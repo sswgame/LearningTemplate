@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -103,8 +104,8 @@ namespace sw
         uint32 getSourceCount() const { return static_cast<uint32>( _listSource.size() ); }
         /** @brief 읽은 파일 @p sourceIndex 의 리소스 id 입니다. */
         const string& getSourceAssetPath( uint32 sourceIndex ) const { return _listSource[sourceIndex]._assetPath; }
-        /** @brief 액션을 마지막으로 정한 파일 번호입니다(패널이 보이고 저장이 돌려보낸다). 없는 액션이면 0 입니다. */
-        uint32 getActionSourceIndex( const hashed_string& action ) const;
+        /** @brief 액션을 마지막으로 정한 파일 번호입니다(패널이 보이고 저장이 돌려보낸다). 없는 액션이면 없음입니다. */
+        [[nodiscard]] optional<uint32> findActionSourceIndex( const hashed_string& action ) const;
         /** @brief 액션이 앞 파일의 것을 `<override>` 로 덮은 것이면 true 입니다. */
         bool isActionOverride( const hashed_string& action ) const;
         /**

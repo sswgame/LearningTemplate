@@ -55,8 +55,8 @@ SW_TEST_CASE( InputMapBundleTest, SettingsFileStacksMapsInOrder )
     SW_EXPECT_TRUE( Util::firstSlot( map, "Use" ) == InputSlot::fromKey( Key::F ) );
     SW_EXPECT_TRUE( map.findBindingLayer( hashed_string( "Use" ), 0 ) == hashed_string( "Common" ) );
     SW_EXPECT_TRUE( map.isActionOverride( hashed_string( "Use" ) ) );
-    SW_EXPECT_EQUAL( uint32{ 2 }, map.getActionSourceIndex( hashed_string( "Use" ) ) );
-    SW_EXPECT_EQUAL( uint32{ 1 }, map.getActionSourceIndex( hashed_string( "Move" ) ) );
+    SW_EXPECT_TRUE( map.findActionSourceIndex( hashed_string( "Use" ) ) == uint32{ 2 } );
+    SW_EXPECT_TRUE( map.findActionSourceIndex( hashed_string( "Move" ) ) == uint32{ 1 } );
 }
 
 /**

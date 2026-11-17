@@ -183,9 +183,10 @@ namespace sw::editor
 
     string InputMapModel::describeActionSource( const hashed_string& action ) const
     {
-        if ( _inputMap.hasAction( action ) == false || _inputMap.getSourceCount() == 0 )
+        const optional<uint32> sourceIndex = _inputMap.findActionSourceIndex( action );
+        if ( sourceIndex.has_value() == false || _inputMap.getSourceCount() == 0 )
             return {};
-        return _inputMap.getSourceAssetPath( _inputMap.getActionSourceIndex( action ) );
+        return _inputMap.getSourceAssetPath( *sourceIndex );
     }
 
     bool InputMapModel::recordEdit( bool bChanged )
