@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationEvaluator.h"
@@ -37,7 +38,7 @@ namespace sw
     class SW_DEVTOOLS_API AutomationStepTimeline
     {
     public:
-        vector<string>                   _listPendingScreenshot;         ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        vector<AbsolutePath>             _listPendingScreenshot;         ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
         string                           _currentStepKind;               ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
         string                           _clockHolderName;               ///< 시계를 붙잡은 조건의 이름(로그)
         string                           _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
@@ -70,7 +71,7 @@ namespace sw
         AutomationStepTimeline();
 
         /** @brief 스크린샷 경로를 대기열에 더합니다(`<Screenshot>`). 렌더 패킷이 한 장씩 꺼내 간다. */
-        void requestScreenshot( string path );
+        void requestScreenshot( const AbsolutePath& path );
         /** @brief 붙잡은 단계가 맡긴 상태를 지웁니다(그 단계가 놓였거나 실행이 끝났다). */
         void clearHeldStepState()
         {
@@ -79,7 +80,7 @@ namespace sw
             _waitingFor.clear();
         }
         /** @brief 아직 렌더 패킷에 싣지 않은 경로 하나를 꺼냅니다. 없으면 false 입니다. */
-        [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
+        [[nodiscard]] optional<AbsolutePath> takePendingScreenshotPath();
         /** @brief 요청한 스크린샷이 아직 다 써지지 않았으면 true 입니다(대기열에 남았거나 렌더 스레드가 덜 썼다). */
         [[nodiscard]] bool hasPendingScreenshot() const { return _listPendingScreenshot.empty() == false || _screenshotCompletedCount < _screenshotRequestedCount; }
     };

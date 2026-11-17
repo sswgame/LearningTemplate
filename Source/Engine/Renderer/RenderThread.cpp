@@ -803,12 +803,12 @@ namespace sw
         return false;
     }
 
-    void RenderThread::requestScreenshot( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    void RenderThread::requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
-            SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotRequestedHost", "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath );
+            SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotRequestedHost", "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath.str() );
             return;
         }
         pMailbox->put( filePath, sourceTexture, sourceFormat );

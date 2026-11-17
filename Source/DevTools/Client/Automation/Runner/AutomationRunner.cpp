@@ -86,19 +86,19 @@ namespace sw
     {
     }
 
-    void AutomationStepTimeline::requestScreenshot( string path )
+    void AutomationStepTimeline::requestScreenshot( const AbsolutePath& path )
     {
-        _listPendingScreenshot.push_back( std::move( path ) );
+        _listPendingScreenshot.push_back( path );
         ++_screenshotRequestedCount;
     }
 
-    bool AutomationStepTimeline::takePendingScreenshotPath( string& outPath )
+    optional<AbsolutePath> AutomationStepTimeline::takePendingScreenshotPath()
     {
         if ( _listPendingScreenshot.empty() )
-            return false;
-        outPath = _listPendingScreenshot.front();
+            return nullopt;
+        optional<AbsolutePath> path = _listPendingScreenshot.front();
         _listPendingScreenshot.erase( _listPendingScreenshot.begin() );
-        return true;
+        return path;
     }
 } // namespace sw
 
@@ -185,9 +185,10 @@ namespace sw
     void AutomationRunner::forwardPendingScreenshot()
     {
         ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-        string                        path;
-        if ( pMailbox != nullptr && pMailbox->isPacketSlotFree() && _run.takePendingScreenshotPath( path ) )
-            (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
+        if ( pMailbox == nullptr || pMailbox->isPacketSlotFree() == false )
+            return;
+        if ( const optional<AbsolutePath> path = _run.takePendingScreenshotPath(); path.has_value() )
+            (void)pMailbox->putForNextPacket( *path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
     }
 
     void AutomationRunner::acquireWriteFilter()
