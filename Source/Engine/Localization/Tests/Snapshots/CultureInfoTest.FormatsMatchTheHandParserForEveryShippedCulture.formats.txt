@@ -1,0 +1,208 @@
+ar
+  integer  -١٬٢٣٤٬٥٦٧
+  decimal  ١٬٢٣٤٫٥
+  percent  ٢٦٪؜
+  currency SAR ١٬٢٣٤٫٥٠ | $ ٩٩٫٠٠
+  date.short ٧‏/٣‏/٢٠٢٦
+  date.medium ٠٧‏/٠٣‏/٢٠٢٦
+  date.long ٧ مارس ٢٠٢٦
+  time.short ٢:٠٥ م
+  time.medium ٢:٠٥:٠٩ م
+  plural  zero one two few few many many other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans Arabic rtl=1
+de
+  integer  -1.234.567
+  decimal  1.234,5
+  percent  26 %
+  currency 1.234,50 € | 99,00 $
+  date.short 07.03.26
+  date.medium 07.03.2026
+  date.long 7. März 2026
+  time.short 14:05
+  time.medium 14:05:09
+  plural  other one other other other other other other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans rtl=0
+en
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency $1,234.50 | $99.00
+  date.short 3/7/26
+  date.medium Mar 7, 2026
+  date.long March 7, 2026
+  time.short 2:05 PM
+  time.medium 2:05:09 PM
+  plural  other one other other other other other other other
+  ordinal one two few other other one two few 
+  fonts   Noto Sans rtl=0
+en_gb
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency £1,234.50 | $99.00
+  date.short 07/03/2026
+  date.medium 7 Mar 2026
+  date.long 7 March 2026
+  time.short 14:05
+  time.medium 14:05:09
+  plural  other one other other other other other other other
+  ordinal one two few other other one two few 
+  fonts   Noto Sans rtl=0
+es
+  integer  -1.234.567
+  decimal  1.234,5
+  percent  26 %
+  currency 1.234,50 € | 99,00 $
+  date.short 7/3/26
+  date.medium 7 mar 2026
+  date.long 7 de marzo de 2026
+  time.short 14:05
+  time.medium 14:05:09
+  plural  other one other other other other other other other
+  ordinal one other one other other one other one 
+  fonts   Noto Sans rtl=0
+fa
+  integer  -۱٬۲۳۴٬۵۶۷
+  decimal  ۱٬۲۳۴٫۵
+  percent  ۲۶٪
+  currency ۱٬۲۳۴٫۵۰ IRR | ۹۹٫۰۰ $
+  date.short ۲۰۲۶/۳/۷
+  date.medium ۷ مارس ۲۰۲۶
+  date.long ۷ مارس ۲۰۲۶
+  time.short ۱۴:۰۵
+  time.medium ۱۴:۰۵:۰۹
+  plural  one one other other other other other other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans Arabic rtl=1
+fr
+  integer  -1 234 567
+  decimal  1 234,5
+  percent  26 %
+  currency 1 234,50 € | 99,00 $
+  date.short 07/03/2026
+  date.medium 7 mars 2026
+  date.long 7 mars 2026
+  time.short 14:05
+  time.medium 14:05:09
+  plural  one one other other other other other other one
+  ordinal one other other other other other other other 
+  fonts   Noto Sans rtl=0
+he
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency 1,234.50 ILS | 99.00 $
+  date.short 7.3.2026
+  date.medium 7 במרץ 2026
+  date.long 7 במרץ 2026
+  time.short 14:05
+  time.medium 14:05:09
+  plural  other one two other other other other other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans Hebrew rtl=1
+ja
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency ¥1,234 | $99.00
+  date.short 2026/03/07
+  date.medium 2026/03/07
+  date.long 2026年3月7日
+  time.short 14:05
+  time.medium 14:05:09
+  plural  other other other other other other other other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans JP rtl=0
+ko
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency ₩1,234 | $99.00
+  date.short 26. 3. 7.
+  date.medium 2026. 3. 7.
+  date.long 2026년 3월 7일
+  time.short 오후 2:05
+  time.medium 오후 2:05:09
+  plural  other other other other other other other other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans KR rtl=0
+pl
+  integer  -1 234 567
+  decimal  1 234,5
+  percent  26%
+  currency 1 234,50 zł | 99,00 $
+  date.short 7.03.2026
+  date.medium 7 mar 2026
+  date.long 7 marca 2026
+  time.short 14:05
+  time.medium 14:05:09
+  plural  many one few few many many many many other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans rtl=0
+qps_ploc
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency $1,234.50 | $99.00
+  date.short 3/7/26
+  date.medium Mar 7, 2026
+  date.long March 7, 2026
+  time.short 2:05 PM
+  time.medium 2:05:09 PM
+  plural  other one other other other other other other other
+  ordinal one two few other other one two few 
+  fonts   Noto Sans rtl=0
+qps_plocm
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency $1,234.50 | $99.00
+  date.short 3/7/26
+  date.medium Mar 7, 2026
+  date.long March 7, 2026
+  time.short 2:05 PM
+  time.medium 2:05:09 PM
+  plural  other one other other other other other other other
+  ordinal one two few other other one two few 
+  fonts   Noto Sans rtl=1
+ru
+  integer  -1 234 567
+  decimal  1 234,5
+  percent  26 %
+  currency 1 234,50 ₽ | 99,00 $
+  date.short 07.03.2026
+  date.medium 7 мар. 2026 г.
+  date.long 7 марта 2026 г.
+  time.short 14:05
+  time.medium 14:05:09
+  plural  many one few few many many one one other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans rtl=0
+zh
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency ¥1,234.50 | $99.00
+  date.short 2026/3/7
+  date.medium 2026年3月7日
+  date.long 2026年3月7日
+  time.short 14:05
+  time.medium 14:05:09
+  plural  other other other other other other other other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans SC rtl=0
+zh_tw
+  integer  -1,234,567
+  decimal  1,234.5
+  percent  26%
+  currency NT$1,234.50 | $99.00
+  date.short 2026/3/7
+  date.medium 2026年3月7日
+  date.long 2026年3月7日
+  time.short 下午 2:05
+  time.medium 下午 2:05:09
+  plural  other other other other other other other other other
+  ordinal other other other other other other other other 
+  fonts   Noto Sans TC rtl=0
