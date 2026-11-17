@@ -18,6 +18,7 @@
 namespace sw
 {
     struct DirectionalShadowProjection;
+    struct RenderConfig;
 
     class DirectionalLightComponent;
 
@@ -160,14 +161,15 @@ namespace sw
          * @brief 한 프레임의 그림자 배치를 만듭니다. @p inoutListLight 에서 그림자를 드리우는 점광과 스폿의 원소에 그림자 슬롯(`_params.x`, `_params.w`)을 씁니다.
          * @param pShadowLight          그림자 맵의 방향광(`DirectionalLightComponent::findShadowCasting`). 없으면 주 시점은 그림자 없는 뷰(`makeUnshadowedView`)입니다.
          * @param pMainViewProj         주 시점 카메라의 뷰-투영. 없으면 고정 볼륨입니다.
+         * @param renderConfig          렌더 정책(캐스케이드 분할 · 점광 · 스폿 깊이 바이어스 — `EngineConfig::_render`)
          * @param listShadowLightIndex  `collectSceneLights` 가 준 그림자를 드리우는 점광과 스폿의 원소 번호
          * @details 주 시점 그림자(`outFrame._mainView`)는 늘 유효합니다. 그림자 빛이 없을 때 키 라이트로 볼륨을 대신 만들지 않습니다.
          */
-        static void populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution, const vector<uint32>& listShadowLightIndex,
-                                   vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
+        static void populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution, const RenderConfig& renderConfig,
+                                   const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
 
         /** @brief 추가 뷰 하나의 방향광 그림자입니다. 그림자 빛이 없으면 프레임의 주 시점 값을 그대로 씁니다. */
-        static ViewShadowData makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const FrameShadowData& frame );
+        static ViewShadowData makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const RenderConfig& renderConfig, const FrameShadowData& frame );
 
         /**
          * @brief 그림자 없는 뷰입니다 — 행렬은 기본값이고, 그림자를 받는 방향광이 없으므로 셰이더는 이 볼륨을 읽지 않습니다.
@@ -186,7 +188,7 @@ namespace sw
          *          슬롯 사각형과 바이어스 — 그 원소의 `_directionType` 은 PCSS 의 (가까운 면, 먼 면, 거리 1 m 의 텍셀 길이, 원천 반지름)), 그릴 타일, 경계 구를 더합니다. 점광의 면은 +X −X +Y −Y +Z −Z 순서이고 시야각은 90°에 PCF 여유 텍셀을 더한 것입니다.
          * @param pPriorityViewProj 주 시점 카메라의 뷰-투영(우선순위의 기준). nullptr 이면 목록 순서입니다.
          */
-        static void populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const vector<uint32>& listShadowLightIndex,
+        static void populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const RenderConfig& renderConfig, const vector<uint32>& listShadowLightIndex,
                                           vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
 
         /**

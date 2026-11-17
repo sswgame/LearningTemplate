@@ -126,7 +126,9 @@ namespace sw
     /**
      * @struct RenderConfig
      * @brief 렌더러 정책 값입니다(감사 RN-16 — C++ 상수에 흩어졌던 렌더 정책을 이 한 자리로 옮긴다. 언리얼 `r.*` 콘솔 변수의 바탕 층 · 유니티 SRP 에셋 자리).
-     * @details 지금은 렌더 스레드의 PSO 예산 하나다. 셰이더 쪽 값(TAA 기록 비율 · 라이트 그리드 크기)은 쿠킹 define 으로 옮길 다음 몫이다.
+     * @details 셰이더가 읽는 값은 쿠킹 define 한 경로로만 간다(`ShaderCompiler::appendEngineDefines` — 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다).
+     *          C++ 가 읽는 값은 부르는 쪽이 이 구조체를 인자로 넘긴다. 셰이더 버퍼 배치를 정하는 상수(라이트 그리드 16x9x24 · 프레임 라이트 상한 1024)는
+     *          binding_slots.hlsli 한 곳이 C++ · HLSL 의 공통 원천이고 groupshared 크기 · 스레드 수를 컴파일 때 검사하므로 여기 두지 않는다.
      */
     REFLECT()
     struct SW_API RenderConfig
@@ -139,6 +141,18 @@ namespace sw
          */
         PROPERTY( Min = 1, Meta = "Units=us" )
         uint32 _psoBuildBudgetMicroseconds{};
+
+        /** @brief 방향광 캐스케이드 분할에서 로그 분할의 몫(0 = 균등, 1 = 로그) — GPU Gems 3 실용 분할(언리얼 CascadeDistributionExponent · 유니티 분할 비율 자리). */
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _shadowCascadeSplitLambda{};
+
+        /** @brief 점광 · 스폿 그림자의 깊이 바이어스(텍셀 수) — 원근 칸은 텍셀 크기가 거리에 비례하므로 셰이더가 거리를 곱한다(`FrameShadowData::populateLocalShadows`). */
+        PROPERTY( Min = 0.0 )
+        float32 _shadowLocalDepthBiasTexels{};
+
+        /** @brief TAA 기록 비율 — 화면이 그대로인 곳의 누적 정도(taa.hlsl `SW_TAA_HISTORY_WEIGHT` 쿠킹 define). 1 이면 이번 그림이 들지 않으므로 1 미만이어야 한다. */
+        PROPERTY( Min = 0.0, Max = 0.99 )
+        float32 _taaHistoryWeight{};
     };
 } // namespace sw
 
