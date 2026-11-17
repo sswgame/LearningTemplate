@@ -77,6 +77,10 @@ endif()
 if(SW_TARGET_TYPE STREQUAL "Client")
 	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 endif()
+# 거꾸로 전용 서버는 클라이언트 전용 소스(`Client/` — 예: 렌더 정착 감시 값 `Automation/Client`)를 짓지 않는다(헤더는 게이트 `serverbuild`). 게임 모듈과 같은 패턴이다(ModuleTargets.cmake).
+if(SW_TARGET_TYPE STREQUAL "Server")
+	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+endif()
 
 # 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)
