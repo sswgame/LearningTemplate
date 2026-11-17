@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
@@ -175,6 +176,7 @@ namespace sw::editor
         , _lastSavedDocumentText{}
         , _assetsMovedSubscription{}
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
+        , _pEditRecorder{ make_unique<DocumentEditRecorder>( DocumentEditRecorder::RecordDelegate::create<&EditorDocumentPanel::notifyDocumentEdited>( this ) ) }
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _pDocumentStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit() ) }

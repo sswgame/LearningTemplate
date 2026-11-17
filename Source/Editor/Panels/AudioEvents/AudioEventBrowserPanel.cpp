@@ -107,7 +107,7 @@ namespace sw::editor
 {
     AudioEventBrowserPanel::AudioEventBrowserPanel()
         : EditorDocumentPanel( EditorAssetType{ EditorAssetTypeIDs::kData }, false )
-        , _edit{}
+        , _edit{ getDocumentEditRecorder() }
         , _grid{}
         , _libraryGrid{}
         , _listEventName{}
@@ -128,7 +128,17 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::onEventEdited( const PropertyInfo& /*prop*/ )
     {
-        _edit.markEdited();
+        _edit.markEdited( "Edit Audio Event" );
+    }
+
+    string AudioEventBrowserPanel::captureDocumentText() const
+    {
+        return _edit.captureText();
+    }
+
+    void AudioEventBrowserPanel::applyDocumentText( string_view text )
+    {
+        (void)_edit.applyText( text ); // 스스로 만든 글이다 — 읽지 못하면 사본은 그대로이고 읽기가 이유를 남겼다
     }
 
     bool AudioEventBrowserPanel::canAcceptDocumentPath( string_view assetPath ) const
@@ -151,17 +161,9 @@ namespace sw::editor
         return _edit.saveDocument();
     }
 
-    void AudioEventBrowserPanel::syncDocumentDirty()
-    {
-        if ( _edit.isDirty() )
-            markDocumentDirty();
-        else
-            clearDocumentDirty();
-    }
-
     void AudioEventBrowserPanel::drawLibraryEditor()
     {
-        ImGui::BeginDisabled( _edit.isDirty() == false );
+        ImGui::BeginDisabled( isDocumentDirty() == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "SaveEdits" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패는 saveToAsset 가 오류로 남기고 사본은 그대로다
         ImGui::EndDisabled();
@@ -171,10 +173,12 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) )
         {
             _edit.end();
+            clearDocumentDirty();   // 사본을 버렸다 — 쓸 편집이 없다
+            resetDocumentHistory(); // 남은 단계는 버린 사본의 글이다
             return;
         }
         EditorSelfTestMarks::record( "audioevents.stopEditing" );
-        if ( _edit.isDirty() )
+        if ( isDocumentDirty() )
         {
             ImGui::SameLine();
             EditorThemeUtil::textMuted( SW_LOCKEY( "EditorAudioEvents", "Unsaved" ) );
@@ -302,7 +306,7 @@ namespace sw::editor
             return;
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) );
-        ImGui::BeginDisabled( _edit.isDirty() ); // 다른 파일을 고치는 중에 저장하지 않은 것이 있으면 바꾸지 않는다
+        ImGui::BeginDisabled( isDocumentDirty() ); // 다른 파일을 고치는 중에 저장하지 않은 것이 있으면 바꾸지 않는다
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) )
         {
             // 콘텐츠 브라우저와 같은 문서 열기 길이다. "고치기 그만" 뒤의 같은 라이브러리는 이미 열린 문서라 포커스가 바뀌지 않으므로 다시 읽는다.
