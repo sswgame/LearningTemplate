@@ -101,7 +101,7 @@ namespace sw
         {
             const expected<void> checked = AssetRegistryInternal::checkLayer( layer );
             if ( checked.has_value() == false )
-                return unexpected( Error{ checked.error().kind(), checked.error().message(), layer._sourceName + ": " + string( checked.error().detail() ) } );
+                return unexpected( Error{ checked.error().kind(), checked.error().message().data(), layer._sourceName + ": " + string( checked.error().detail() ) } );
             for ( const AssetRegistryEntry& entry : layer._listEntry )
             {
                 registry.put( entry._guid, entry._assetID );
