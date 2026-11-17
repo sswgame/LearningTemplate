@@ -262,7 +262,8 @@ namespace sw
                                   descriptionSize <= text.size() - headerSize;
         if ( bHeaderValid == false )
         {
-            SW_LOG_WARNING_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path, kEntryHeader );
+            // 옛 형식 항목(형식을 올린 뒤 한 번)이 대부분이라 정보 로그다 — 다시 구우면 새 형식으로 덮인다.
+            SW_LOG_INFO_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path, kEntryHeader );
             return false;
         }
         if ( text.substr( headerSize, static_cast<size_t>( descriptionSize ) ) != keyDescription )
