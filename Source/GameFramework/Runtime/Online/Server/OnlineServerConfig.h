@@ -136,6 +136,12 @@ namespace sw
         /** @brief 서비스(키트) 하나가 응답을 기다리게 둘 호출 상한입니다. 넘는 요청은 저장소에 맡기지 않고 `kBusy`(같은 키로 다시 한다)로 끝납니다 — 저장소 대기열의 상한이다(감사 O-3). */
         PROPERTY( Required, Min = 1, Max = 1000000 )
         int32 _maxPendingCallsPerService{ 0 };
+        /**
+         * @brief 서비스 리슨 앞의 L4 프록시(AWS NLB · HAProxy) IPv4 주소 목록입니다. 비우면 프록시 없이 클라이언트가 바로 붙는다(빈 목록도 적어야 한다 — 배치를 숨은 기본값으로 정하지 않는다).
+         * @details 적으면 이 주소에서 온 연결만 받고 PROXY protocol v2 머리로 실제 클라이언트 주소를 얻는다 — 주소 단위 제한(연결 · 시도)이 프록시 하나로 뭉치지 않는다. 다른 출처는 닫는다(감사 O-17).
+         */
+        PROPERTY( Required )
+        vector<string> _listTrustedProxy{};
         /** @brief 감사 기록(`service_audit`)의 보존 기간 · 쓸기 상한입니다. 기간 0 이면 지우지 않습니다. */
         PROPERTY( Required )
         ServiceTTLConfig _auditRetention{};

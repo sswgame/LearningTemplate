@@ -9,6 +9,7 @@
     "_ttlSweepMinuteOfDay": 300,
     "_ttlBackfillRolloutHours": 24,
     "_maxPendingCallsPerService": 1024,
+    "_listTrustedProxy": [],
     "_listKit": [
         {
             "_name": "account",
