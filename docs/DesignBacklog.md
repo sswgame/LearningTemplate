@@ -10,7 +10,7 @@
 
 - **층 경계:** 엔진 층은 컴파일 의존 규칙으로 막지만 링크 산출물 경계와는 별개다. 실제 순환 · 독립 배포 요구가 확인된 층만 별도 타깃으로 나눈다.
 - **`ModuleSharedAssetCache.h`** 는 여러 장르 · 온라인 카탈로그가 직접 include 한다(그래프 간선 — 결함 증거는 아니다). 사용처가 공유 캐시 계약에 실제로 기대는지 보고 광역 include 는 좁힌다. 모듈 언로드 · 재로드 때 캐시 소유 · 무효화를 테스트한다.
-- **쿠킹이 경로를 조립해 읽는 에셋을 놓칠 수 있다** — `-cooked-content` 로 확인하지 않았다. 실제 자리는 감사 K-7, 순서는 NEXT 7 절.
+- **쿠킹이 경로를 조립해 읽는 에셋을 놓칠 수 있다** — `-cooked-content` 로 확인하지 않았다. 감사 K-7 의 자리(키트 맵 배치 · 뷰 표)는 됐다(8b0296fcd5 — `RuleViewCatalog`), 실행 확인은 NEXT 6 절.
 - **RHI 형식 지원:** 형식 · 용도 조합은 실제 자원 · 렌더 상태 조합으로 질의하고 미지원 경로는 백엔드별 시나리오로 본다. lavapipe `R16G16_SNORM` 블렌드 거부 기록은 코드가 블렌드 비트 없으면 덮어쓰기로 바꾸므로 옛 증상일 수 있다 — 재현 뒤 갱신.
 - **`AccountTicketConnect` 단위 테스트는 거절 · 종료만 본다.** 루프백 온라인 호스트로 성공 · 만료 · 재시도 실패와 비밀 값이 로그 · 오류에 새지 않는지를 더한다.
 
@@ -30,7 +30,7 @@
 ### 데이터 기반 값 · 매직 리터럴
 
 - 늘지 않게 하는 구조(파일 단위 래칫 `Scripts/lint/magic_literals.py`, 기준선 `Config/Rules/Lint/MagicLiteralBaseline.json`, 규칙 [Constants.md](agents/Constants.md) "The ratchet" · "Sentinels")는 섰다.
-- 남은 것: 기준선이 큰 파일(데모 UI · 게임 모드 컴포넌트)의 튜닝 값을 PROPERTY · 카탈로그로, AI · 내비 · 에디터 패널의 남은 `-1`, `find*Index` 무리를 `sw::optional` 로(`sw::expected` Core 밖 이전과 함께 — [Errors](agents/Errors.md)). 키트 규칙 수치는 감사 K-4, 렌더 정책 값은 RN-16.
+- 남은 것: 기준선이 큰 파일(데모 UI · 게임 모드 컴포넌트)의 튜닝 값을 PROPERTY · 카탈로그로, AI · 내비 · 에디터 패널의 남은 `-1`, `find*Index` 무리를 `sw::optional` 로(`sw::expected` Core 밖 이전과 함께 — [Errors](agents/Errors.md)). 키트 규칙 설정 자산은 감사 K-4 로 됐다, 렌더 정책 값은 RN-16 남은 몫.
 - 이미 PROPERTY 인 게임 값(`WildWestGameModeComponent` · `MeadowFarmGameModeComponent`)은 생성자 기본값만 보고 하드코딩으로 세지 않는다. sentinel 은 `-1` 표기가 아니라 도메인 의미와 저장 · 통신 호환성으로 정한다.
 
 ### App 프로세스 종료 코드
@@ -104,7 +104,7 @@
 
 - **판단: 전용 업로드 스레드는 넣지 않는다.** 언리얼에서 렌더 스레드 밖의 대표 스레드는 업로드 스레드가 아니라 RHI Thread(플랫폼 중립 명령 → API 실행, 제출 순서 보존)이고 텍스처 스트리밍은 별개 시스템이다.
 - 메시 GPU 생성은 `GPUUploadQueue::flush` 가 `runParallel` 로 나누고 GT 가 기다린다(`GT.GPUUpload.flush`) — 보이는 메시는 그 프레임에 있다는 계약 때문이다. 대기를 없애려면 계약(선요청 · 준비 전 제외)을 바꿔야 한다.
-- 텍스처는 IO → 디코드(로드 작업) → 렌더 스레드 생성 · 제출(프레임 예산) → 티켓 폴링이 이미 있다. 업로드 계측(`AssetLoadScope` `Texture` · `TextureUpload`, `RT.TextureUpload.pump` · 제출 · 폴링 · 대기 수)은 들었다 — 판정은 S8. 스트리밍 구조 결함은 감사 R-6.
+- 텍스처는 IO → 디코드(로드 작업) → 렌더 스레드 생성 · 제출(프레임 예산) → 티켓 폴링이 이미 있다. 업로드 계측(`AssetLoadScope` `Texture` · `TextureUpload`, `RT.TextureUpload.pump` · 제출 · 폴링 · 대기 수)은 들었다 — 판정은 S8. 스트리밍 구조 결함(감사 R-6)은 됐다 — 번호 고정 · 밉 범위 대기 줄(w-rhi e7275a2d50 외).
 - DX12 · Vulkan 전송은 그래픽스 큐로 제출된다(별도 copy queue 없음). CPU 제출을 옮겨도 GPU 복사 시간은 줄지 않는다 — copy queue 는 중첩 이득 측정이 있을 때만.
 - RT 의 RHI 실행이 병목이면(S8: pump 가 RT 의 10% 초과) 업로드 스레드가 아니라 명령 순서 · CPU 소유권을 보존하는 RHI Thread 형 시제품을 검토한다.
 
@@ -124,7 +124,7 @@
 - **2 프리셋 · 규칙 표:** `FractureSettings` 철자 표(원본 해시 형식) · `TextureImportConfig` DXGI 번호(명세) · `Autosave` 까닭 우선순위(의미 규칙)는 코드, 나머지는 이미 데이터다.
 - **3 문화권:** 복수형 · 서수는 CLDR 규칙 글(`PluralRuleSet`), 숫자 체계 · 통화는 문화권 표 칸. 남은 것: 문화권별 통화 기호(필요할 때 칸 추가).
 - **4 에디터 표시:** 입력 오버레이 · 강조 스와치는 테마 토큰. 오버레이 바 표는 바마다 내용 코드가 붙어 코드.
-- **5 게임 규칙 수치(남음):** 게임 모드 컴포넌트의 상태 `switch` 와 키트의 `-1` · 실수 상수를 규칙 카탈로그 · PROPERTY 로. 키트 설정을 C++ 기본값으로 만드는 자리와 제안은 감사 K-4 가 정본이다.
+- **5 게임 규칙 수치(남음):** 게임 모드 컴포넌트의 상태 `switch` 와 키트의 `-1` · 실수 상수를 규칙 카탈로그 · PROPERTY 로. 키트 설정을 C++ 기본값으로 만들던 자리는 감사 K-4 로 됐다.
 
 ### 에디터 기능 · UX
 
@@ -263,7 +263,7 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 
 - **결정:** 유료 재화 · 귀속 아이템처럼 계정 사이 이전이 막힌 자산은 길드 창고를 거쳐서도 **맡긴 당사자가 허용한 권한 안에서만** 다른 계정으로 간다. 허용이 없으면 맡긴 사람만 꺼낸다.
 - **구조(들어감):** 원장 정책 `ILedgerPolicy::isTransferable`(PlayFab Economy v2 · Steam Inventory 처럼 정의의 속성 — 거래 `isTradable` 과 같은 표, 화폐는 `_bPaid` 가 아니면 이전 가능). 이전 불가 자산은 맡긴 사람별 보유자(`esc/guild/<길드>.<계정>`)에 들고 맡긴 사람은 `social_guild_depositor` 에 적는다(원장이 보유자를 열거하지 못해 해산 확인 · 창고 목록이 이것으로 몫을 찾는다). 꺼내기는 `_depositorID` 로 몫을 적고 본인이거나 허용(`social_guild_storage_grant`, 남은 한도를 같은 트랜잭션에서 줄인다)이 있을 때만 옮긴다. 허용 부여 · 회수 `GuildGrantWithdrawal` · `GuildRevokeWithdrawal` 은 맡긴 사람만, 멱등 키 필수, 한도는 덮어쓴다(WoW 길드 은행 출금 한도와 같다, 맡긴 사람마다 32 개). 맡긴 사람이 떠나거나 내보내지면 몫을 같은 트랜잭션에서 돌려주고(몫의 자산 종류는 원장 다리 상한 16 까지) 기록 · 허용을 지운다. 허용을 받은 멤버가 떠나면 받은 허용도 지우고, 부여 · 회수는 지우지 않는 멱등 기록(`ServiceIdempotency`, 범위 `guild/<계정>`)으로 회수 뒤 늦게 온 같은 부여를 무시한다.
-- **남은 것:** 창고 목록의 128 개 잘림(쪽 읽기 없음)은 감사 O-18 에 있다.
+- **됐다:** 창고 목록의 128 개 잘림(쪽 읽기 없음)은 목록 읽기를 `ServiceRecordReader` 하나로 모아 닫았다(24d308a704, 감사 O-18).
 - **확인:** `TestGuildService` — `NonTransferableShareNeedsDepositorGrant` · `DepositorShareBlocksDissolution` · `DepositorShareReturnsOnLeaveAndKick` · `ReceivedGrantEndsWithMembership` · `LateGrantReplayAfterRevokeChangesNothing`.
 
 ## 렌더 · RHI 설계(2026-11-17)
@@ -273,6 +273,8 @@ MMO(검은사막류 — 지속 월드 · 경제 · 길드 경쟁)와 싱글 캠�
 **맡기는 순서.** 바로: R6-1 · R6-2 · MR-1 · RS-1 · RS-3 · PS-1 · L-1(파일이 겹치지 않는다 — R6-1 과 L-1 만 DX12 · Vulkan 팩터리 파일의 서로 다른 함수를 만진다). 그 뒤: R6-3 · R6-4(R6-1 뒤) → R6-5 → MR-2 → MR-3 · R6-6, RS-2(RS-1 뒤), RS-4(RS-3 뒤), PS-2 → PS-3(PS-1 뒤). 측정이 먼저인 것: L-2(상수 버퍼 미러 락), R6-6 의 UV 밀도 쿠킹, PS-3 의 512 개 한도 풀기.
 
 ### bindless 번호 고정과 디스크립터 다시 쓰기(설계 2026-11-17, 감사 R-6)
+
+**상태(2026-11-17).** 됐다(w-rhi e7275a2d50 · e85123e290 · f2a7bd8227 · d5ec621ff5 · d0739ed69c, 통합 묶음 5). 아래 일 목록은 기록이다.
 
 **문제.**
 
@@ -381,6 +383,8 @@ public:
 
 ### 텍스처 스트리밍 밉 범위 대기 줄(설계 2026-11-17, 감사 R-6 · A-12)
 
+**상태(2026-11-17).** 됐다(R-6 위와 같음, A-12 92caa26b99 · d7879d98b2 · 0e9998941f · c0de5273e5). 아래 일 목록은 기록이다.
+
 **문제.** 대기 줄 원소가 DDS 전체를 쥔다 — `TextureCache::Impl::StreamingUpgrade{ _key, unique_ptr<DDSImageData> _pImage }`(`TextureCache.cpp:112-117`). 첫 로드도 아래쪽 밉만 올리면서 파일 전체를 읽는다(`Texture2D::readImage` → `DDSLoader::loadFromAsset`). 500 장이면 마지막 텍스처의 바이트가 250 프레임 동안 RAM 에 있다. 팩은 항목을 통째로만 읽는다(`PackReader::readFile` · `readFileAsync`, 감사 A-12).
 
 **상용 대조.**
@@ -461,6 +465,8 @@ virtual AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint6
 - **R-15 후속 2 CPU 정점 놓기 켜기** — `MeshCPUAccess` 를 `Mesh::create` · `MeshCache::request` 에 기본값 없이(절차 메시 Keep, 요청이 갈리면 Keep, 놓인 뒤 Keep 요청이면 `.mesh` 다시 읽기), 업로드가 모두 끝난 뒤 놓고 장치 교체 때 `.mesh` 를 다시 읽는다. 상용 대조: 언리얼 `UStaticMesh::bAllowCPUAccess`(꺼진 메시는 CPU 쓰기 — 물리 쿠킹 · 내비 · 복셀 GI — 를 에셋 설정 단계에서 막는다). 의존: 후속 1.
 
 ### 자동 렌더 배율: GPU 프레임 시간과 뷰 사각형(설계 2026-11-17, 감사 RN-8)
+
+**상태(2026-11-17).** 됐다(w-rs RS-1 ~ RS-4, 0192f36c87 등). 아래 일 목록은 기록이다.
 
 **문제.**
 
@@ -692,6 +698,8 @@ void mergeDirty( vector<RHIBufferHandle>& listDirty );                          
 
 ### 구독의 제어 블록 — 출처보다 오래 사는 잠금과 해제 중 대기(설계 2026-11-17, 감사 C-20 · 다음 할 일 42)
 
+**상태(2026-11-17).** 됐다(7a2fdb301c · 82019d36b9). 아래 일 목록은 기록이다.
+
 **문제.** `Subscription::reset`(`Source/Core/Delegate/Subscription.h:208-223`)에 해제 뒤 사용이 넷 있다.
 
 1. `_pSource` 를 잠금 없이 읽고 그 포인터의 `_listLock` 을 잡는다 — 그 사이 출처가 소멸하면 해제된 메모리의 잠금을 잡는다.
@@ -770,6 +778,8 @@ private:
 
 ### 비밀번호 해시 연산 줄과 저장소 대기 상한(설계 2026-11-17, 감사 O-3 · 다음 할 일 30)
 
+**상태(2026-11-17).** 됐다(65e5d95e66 · 256e4296bc). 아래 일 목록은 기록이다.
+
 작업자는 `security-and-hardening` 을 먼저 부른다.
 
 **문제.** 로그인 일 하나(`LoginService::submitCall`, `LoginService.cpp:595` → `LoginStoreRun::runCall`)가 저장소 워커에서 읽기 · Argon2id · 커밋을 모두 한다. 해시 자리는 `LoginStoreLogic.cpp` 의 `registerAccount`(:526), `login`(:590, 매개변수가 바뀌면 :611 에서 한 번 더), `linkCredential`(:958), 없는 이름의 시간 맞추기 `burnPasswordHash`(:1436)다. 해시 하나가 19 MiB · 2 회라 워커(연결) 수만큼의 동시 로그인이 원장 · 우편 · 거래의 일을 뒤에 세운다. `SQLConnectionPool::submit`(`SQLConnectionPool.cpp:138-149`)의 대기열은 상한이 없어 넘치는 요청이 메모리로 쌓인다.
@@ -846,6 +856,8 @@ public:
 근본 원인은 "느린 연산과 연결 점유가 한 일에 묶였다" 이다. 같은 모양 후보는 영수증 검증(이미 `_verifications` 로 저장소 밖)과 저장소 일 안의 서명 · 압축이다 — O3-2 작업자가 저장소 람다 안의 `ILoginCrypto` 밖 암호 호출을 한 번 찾아 보고에 적는다.
 
 ### 팩 규모 — 스트림 쓰기 · 블록 표 · 색인 서명 · 해시 캐시(설계 2026-11-17, 감사 A-9 ~ A-12 · 다음 할 일 18)
+
+**상태(2026-11-17).** 됐다(감사 "닫힌 항목" 의 A-9 ~ A-12). 아래 일 목록은 기록이다.
 
 **문제.**
 
@@ -948,6 +960,8 @@ AsyncReadHandle    readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offs
 근본 원인은 "팩 하나를 한 벡터로 다룬다" 이다. 같은 모양 후보는 DDC 저장(`DerivedDataCache::store` 가 출력 통째)과 `PackPatchBuilder` 의 앞 빌드 팩 읽기다 — PK-3 작업자가 통째 읽는 자리를 세어 보고에 적는다.
 
 ### 출하 할당기와 컨테이너 복잡도(설계 2026-11-17, 감사 C-6 · C-9 · 다음 할 일 20)
+
+**상태(2026-11-17).** C-6 은 됐다(7d45366fc3 — `SW_MEMORY_BACKEND`). C-9 는 벤치(b5ba46b9c0)만 들어가 남았다(감사 "다음 할 일" 20).
 
 감사의 순서대로 **벤치가 먼저**다. 벤치 숫자가 문턱을 넘은 것만 고치고, 넘지 않으면 값을 S8 표에 적고 닫는다.
 
@@ -1324,6 +1338,8 @@ REFLECT() struct SW_API AssetImportOverride { REFLECT_BODY();
 
 ### 형제 순서: 분수 색인 키(설계 2026-11-17, 감사 E-6 · 41)
 
+**상태(2026-11-17).** 됐다(2dedf077aa · 9e09eb48e0 · 0570bb915c · 202752449f). 아래 일 목록은 기록이다.
+
 **문제.** `EditorSiblingOrder.cpp:40-52` `renumber` 가 형제 번호를 0 부터 다시 매기며 바뀐 형제마다 전체 XML 스냅샷 → `commitModify` 한다. 루트 8000 에서 한 줄을 옮기면 직렬화 16000 회, 씬 파일 8000 줄이 바뀐다. 번호는 `GameObject::_siblingIndex`(`uint16`, 65535 에서 막힘)이고 에디터 계층 창만 읽는다("틱 · 렌더 순서에는 쓰지 않는다", `GameObject.h:188`).
 
 **대조.** 유니티는 조밀한 `m_RootOrder` 의 병합 충돌 때문에 2022.2 에 루트 순서를 `SceneRoots` 목록으로 옮겼다. Godot 은 `.tscn` 의 노드 순서가 곧 순서다. 언리얼 아웃라이너는 순서를 저장하지 않는다(이름 정렬 + 폴더). 협업 도구(Figma · Linear)는 분수 색인(fractional indexing) — 옮긴 항목 하나의 키만 바꾼다.
@@ -1356,6 +1372,8 @@ struct SiblingOrderKey
 | O3 옮기기 · 기록 | M | `EditorSiblingOrder.cpp`(`renumber` 삭제), `hierarchyorder.scenario.xml` | `EditorSiblingOrderTest.MoveRecordsOneObject` · `.TiesKeepObjectIDOrder`, 시나리오 8000 단계 | O1 · O2 |
 
 ### 인스펙터 프로퍼티 단위 기록(설계 2026-11-17, 감사 E-7 · 41)
+
+**상태(2026-11-17).** 됐다(b5d41ba310 · f628a08bfc · 8a936f0fa3). 아래 일 목록은 기록이다.
 
 **문제.** `InspectorPropertyUndo.cpp:23-27` 이 위젯이 활성화되면 `InspectorEditRecorder::beginEdit` 을 부르고, 그것이 선택 전체를 `captureSnapshot` 한다(`InspectorEditRecorder.cpp` `captureSelectionBeforeEdit`). 닫기는 `IsItemDeactivatedAfterEdit` 뿐이라 누르기만 하고 나오면 스냅샷이 세션 끝까지 남는다. 커밋은 대상마다 스냅샷을 한 번 더 찍는다 — 8000 선택에서 숫자 한 칸이 전체 XML 16000 개다.
 
@@ -1394,6 +1412,8 @@ void applyPropertyText( UndoStepContext& context, const PropertyEditTarget& targ
 | P3 전수 · 규모 | M | `EditorUndoCoverage.cpp`(프로퍼티 전수), 8000 선택 시나리오 단계 | `editor/undocoverage` 프로퍼티 단계, 아래 측정 절의 값 | P1 |
 
 ### 에디터 에셋 색인(설계 2026-11-17, 감사 E-8 · 41)
+
+**상태(2026-11-17).** 됐다(5735b0e93d · 9882baddff · a5c1b68391 · 2931d1876e). 아래 일 목록은 기록이다.
 
 **문제.** `AssetReferenceTracker` 는 `Content/` 변경 번호가 바뀌면 전체를 다시 스캔하고, `EditorReferenceIndex::refreshFile` 은 UI 스레드에서 전체 `removeIf` + 정렬을 하며, 색인은 디스크에 없어 기동마다 전체다. 참조는 "경로처럼 보이는 글" 을 찾는 텍스트 검색이다. 선택 팝업 · Open 은 트리를 동기로 걷는다(`EditorContentScan`).
 
