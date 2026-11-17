@@ -15,6 +15,8 @@
  * 질의는 잠그지 않고 마지막에 낸 스냅샷(칸 표의 사본과 그 세대)을 읽는다. 쓰기는 잠금 아래 작업 표를 고치고 세대를 올리며, 세대가 지난 스냅샷을 본 첫 질의가
  * 잠금 아래 새 스냅샷을 내고 다음 질의들은 다시 잠그지 않는다(기믹이 고정 스텝 워커에서 함께 묻는다 — 예전에는 질의마다 공유 잠금을 잡았다). 옛 스냅샷은
  * 읽는 쪽이 아직 들고 있을 수 있어 바로 지우지 않고, 틱이 없는 프레임 자리(`Destroy` 단계)에서 `releaseRetiredSnapshots` 가 놓는다.
+ * 새 스냅샷은 칸 목록을 통째로 복사하지 않는다 — 칸은 고치지 않는 공유 목록이라 지난 스냅샷의 칸 포인터를 그대로 받고, 지난 스냅샷 뒤에 바뀐 칸(`_listDirtyKey`)만
+ * 새로 복사한다(태그 하나를 바꾼 뒤의 첫 질의가 오브젝트 수가 아니라 칸 수와 바뀐 칸 크기에 비례한다 — 언리얼 Mass 가 바뀐 청크만 다시 짓는 것과 같은 자리).
  * 언리얼 Mass 의 아키타입 버전 · 유니티 `EntityQuery` 의 순서 버전처럼 세대가 같으면 지난 답의 바탕을 그대로 쓴다.
  */
 #pragma once
@@ -78,8 +80,8 @@ namespace sw
         /** @brief 질의가 읽는 칸 표의 사본입니다. 내면 고치지 않습니다. */
         struct Snapshot
         {
-            unordered_map<uint64, vector<GameObject*>> _mapKeyToObject{};
-            uint64                                     _generation{ 0 };
+            unordered_map<uint64, shared_ptr<const vector<GameObject*>>> _mapKeyToObject{}; ///< 빈 칸은 넣지 않는다. 칸은 스냅샷끼리 나눠 갖는다
+            uint64                                                       _generation{ 0 };
         };
 
         /** @brief 지금 세대의 스냅샷입니다. 낡았으면 잠금 아래 새로 냅니다. */
@@ -100,6 +102,7 @@ namespace sw
         unordered_map<uint64, vector<GameObject*>> _mapKeyToObject       SW_GUARDED_BY( _mutex ); ///< 태그 id(조상 포함) → 오브젝트. 빈 칸도 용량을 위해 남긴다
         unordered_map<const TagComponent*, Record> _mapComponentToRecord SW_GUARDED_BY( _mutex );
         vector<uint64> _listScratchKey                                   SW_GUARDED_BY( _mutex ); ///< `update` 가 새 칸을 모으는 버퍼
+        mutable vector<uint64> _listDirtyKey                             SW_GUARDED_BY( _mutex ); ///< 지금 낸 스냅샷 뒤에 바뀐 칸(중복 있음). 새 스냅샷은 이 칸만 복사한다
         mutable vector<unique_ptr<Snapshot>> _listSnapshot               SW_GUARDED_BY( _mutex ); ///< 낸 스냅샷 전부(끝이 지금 것). 옛 것은 `releaseRetiredSnapshots` 가 놓는다
         mutable atomic<const Snapshot*>                                  _pPublished;             ///< 질의가 읽는 스냅샷(늘 차 있다)
         atomic<uint64>                                                   _generation;
