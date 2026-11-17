@@ -127,83 +127,11 @@ namespace sw
         struct PlatformInputManagerInternal
         {
     #if defined( SW_PLATFORM_WEB )
-            /** @brief DOM code 와 엔진 키 이름이 다른 것만 적는다 — 나머지(KeyA → A, Digit1, F1, Enter, Numpad0 …)는 이름 규칙으로 맞는다. */
-            struct CodeMapping
-            {
-                const utf8* _pDomCode;
-                const utf8* _pKeyName;
-            };
-            static constexpr CodeMapping kArrCodeMapping[] = {
-                {   "ArrowLeft",         "Left"},
-                {  "ArrowRight",        "Right"},
-                {     "ArrowUp",           "Up"},
-                {   "ArrowDown",         "Down"},
-                {   "ShiftLeft",    "LeftShift"},
-                {  "ShiftRight",   "RightShift"},
-                { "ControlLeft",  "LeftControl"},
-                {"ControlRight", "RightControl"},
-                {     "AltLeft",      "LeftAlt"},
-                {    "AltRight",     "RightAlt"},
-                {    "MetaLeft",    "LeftSuper"},
-                {   "MetaRight",   "RightSuper"},
-                { "ContextMenu",         "Menu"},
-                { "BracketLeft",  "LeftBracket"},
-                {"BracketRight", "RightBracket"},
-                {       "Quote",   "Apostrophe"},
-                {   "Backquote",        "Grave"},
-            };
-
-            static Key mapKey( const PlatformInputEvent& input )
-            {
-                const string_view code( input._arrText );
-                for ( const CodeMapping& mapping : kArrCodeMapping )
-                {
-                    if ( code == mapping._pDomCode )
-                        return KeyCodeUtil::fromName( mapping._pKeyName );
-                }
-                constexpr string_view kLetterPrefix = "Key"; // "KeyA" → "A"
-                if ( code.size() == kLetterPrefix.size() + 1 && code.substr( 0, kLetterPrefix.size() ) == kLetterPrefix )
-                    return KeyCodeUtil::fromName( code.substr( kLetterPrefix.size() ) );
-                return KeyCodeUtil::fromName( code );
-            }
+            // 키 표는 모든 플랫폼에서 짓는다(InputKeyTable — 데스크톱 단위 테스트 PlatformInputTest 가 본다). 여기는 플랫폼 입력에서 code 를 꺼내 넘기기만 한다.
+            static Key mapKey( const PlatformInputEvent& input ) { return InputKeyTable::mapWebKeyCode( string_view( input._arrText ) ); }
     #elif defined( SW_PLATFORM_ANDROID )
-            static Key mapKey( const PlatformInputEvent& input ) { return InputKeyTable::mapAndroidKeyCode( input._keyCode ); }
-
-            /**
-             * @brief 패드 장치의 키 번호를 엔진 버튼으로 옮깁니다. 엔진 버튼이 없는 키(L2 · R2 디지털 — 방아쇠는 축이 준다, 모드 키)는 Count 입니다.
-             * @details https://developer.android.com/develop/ui/views/touch-and-input/game-controllers/controller-input — 얼굴 버튼 BUTTON_A/B/X/Y, 어깨 L1/R1, 스틱 누름 THUMBL/R, START · SELECT,
-             *          D패드는 패드에 따라 DPAD 키 또는 HAT 축으로 온다(둘 다 받는다).
-             */
-            static GamepadButton mapGamepadKey( int32 code )
-            {
-                struct CodeButton
-                {
-                    int32         _code;
-                    GamepadButton _button;
-                };
-                static constexpr CodeButton kArrCode[] = {
-                    {     AKEYCODE_BUTTON_A,             GamepadButton::A},
-                    {     AKEYCODE_BUTTON_B,             GamepadButton::B},
-                    {     AKEYCODE_BUTTON_X,             GamepadButton::X},
-                    {     AKEYCODE_BUTTON_Y,             GamepadButton::Y},
-                    {    AKEYCODE_BUTTON_L1,  GamepadButton::LeftShoulder},
-                    {    AKEYCODE_BUTTON_R1, GamepadButton::RightShoulder},
-                    {AKEYCODE_BUTTON_THUMBL,     GamepadButton::LeftThumb},
-                    {AKEYCODE_BUTTON_THUMBR,    GamepadButton::RightThumb},
-                    { AKEYCODE_BUTTON_START,         GamepadButton::Start},
-                    {AKEYCODE_BUTTON_SELECT,          GamepadButton::Back},
-                    {      AKEYCODE_DPAD_UP,        GamepadButton::DPadUp},
-                    {    AKEYCODE_DPAD_DOWN,      GamepadButton::DPadDown},
-                    {    AKEYCODE_DPAD_LEFT,      GamepadButton::DPadLeft},
-                    {   AKEYCODE_DPAD_RIGHT,     GamepadButton::DPadRight},
-                };
-                for ( const CodeButton& entry : kArrCode )
-                {
-                    if ( entry._code == code )
-                        return entry._button;
-                }
-                return GamepadButton::Count;
-            }
+            static Key           mapKey( const PlatformInputEvent& input ) { return InputKeyTable::mapAndroidKeyCode( input._keyCode ); }
+            static GamepadButton mapGamepadKey( int32 code ) { return InputKeyTable::mapAndroidGamepadKeyCode( code ); }
 
             /** @brief 해트 축 하나(@p value)를 D패드 두 버튼(@p negative · @p positive)의 원시 이벤트로 냅니다 — 해트 값 하나가 두 버튼의 상태를 다 정한다. */
             static void postHatAxis( InputManager& manager, float32 value, GamepadButton negative, GamepadButton positive, uint8 padIndex )
