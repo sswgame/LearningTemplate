@@ -1,7 +1,7 @@
 /**
  * @file CultureInfo.h
  * @brief 문화권(culture) 데이터와 그 테이블(`*.cultures.xml`)을 정의합니다. 복수형 규칙, 숫자 체계, 통화, 숫자와 날짜 형식, 쓰기 방향, 폰트 대체 목록을 담습니다.
- * @details 문화권의 모든 내용(복수형 · 서수 규칙 글, 숫자 글자, 통화 기호와 소수 자리, 숫자 기호, 날짜 패턴, 월 이름, 폰트 목록)은 데이터다 — 언어 하나를 더하는 일은 표에 `<culture>` 한 장이다.
+ * @details 문화권의 모든 내용(복수형 · 서수 규칙 글, 숫자 글자, 통화 기호와 소수 자리, 숫자 기호, 날짜 패턴, 월 이름, 폰트 목록)은 데이터다 — 언어 하나를 더하는 일은 표에 `<CultureInfo>` 한 장이다.
  *          코드는 CLDR 형식의 부분 집합을 읽고 쓸 뿐이다(복수형 규칙 문법 `PluralRules.h`, 날짜 패턴 기호 y, M, d, H, h, m, s, a, z). ICU 는 들이지 않는다.
  */
 #pragma once
@@ -47,7 +47,8 @@ namespace sw
         Count
     };
 
-    /** @brief 의사 로컬라이제이션 방식입니다(`*.cultures.xml` 의 `pseudo`). */
+    /** @brief 의사 로컬라이제이션 방식입니다(`*.cultures.xml` 의 `_pseudoMode`). */
+    ENUM()
     enum class PseudoLocaleMode : uint8
     {
         None = 0,
@@ -78,11 +79,43 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 날짜 패턴 묶음(CLDR dateFormats 의 short · medium · long)입니다. 물려받을 때 적은 스타일만 덮는다(상속 규칙 표의 구조체 칸). */
+    REFLECT()
+    struct SW_API CultureDatePatternSet
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _short;
+        PROPERTY( Required )
+        string _medium;
+        PROPERTY( Required )
+        string _long;
+    };
+
+    /** @brief 시각 패턴 묶음(CLDR timeFormats 의 short · medium)입니다. */
+    REFLECT()
+    struct SW_API CultureTimePatternSet
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _short;
+        PROPERTY( Required )
+        string _medium;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct CultureInfo
-     * @brief 문화권 하나의 형식 데이터입니다. 부모(`parent`)에서 적지 않은 필드를 물려받은 뒤의 값입니다.
-     * @details `<culture>` 의 속성은 이 구조체의 `PROPERTY` 가 스키마다(`XMLFields::readProperties` — 모르는 속성 · 읽지 못한 값 · 필수 칸).
-     *          부모가 없는 문화권만 `digits` 가 필수다(`RequiredAtRoot` — 부모를 가리키는 `parent` 가 적히면 물려받는다). 자식 요소(규칙 · 패턴 · 목록)는 손 읽기다.
+     * @brief 문화권 하나의 형식 데이터입니다. 표의 `<CultureInfo>` 한 장을 부모(`_base`)와 합친 뒤 리플렉션 XML 직렬화로 읽은 값입니다.
+     * @details 이 구조체의 `PROPERTY` 가 곧 스키마다 — 칸 목록을 파서가 따로 알지 않는다. 부모 병합은 카탈로그 항목 상속(`DataCatalogInheritance`,
+     *          규칙 줄은 `datacataloginheritance.xml` 의 `CultureTable`)이 읽기 전에 끝내므로, 읽는 쪽에는 부모가 없다. 그래서 `Required` 가
+     *          "사슬의 뿌리가 꼭 적는 칸" 이다(자식은 뿌리에서 물려받아 늘 채워진다). 생성자의 초기값은 표 밖에서 만드는 `CultureInfo{}`(불변 문화권)의 값이고,
+     *          표 읽기는 그 값으로 빈 칸을 메우지 않는다(필수 칸이 빠지면 오류).
+     *          복수형 규칙은 범주 키워드 → CLDR 규칙 글의 맵으로 읽고 `PluralRuleSet` 으로 컴파일한다(`_pluralRuleSet`).
      */
     REFLECT()
     struct SW_API CultureInfo
@@ -92,40 +125,47 @@ namespace sw
         /** @brief 숫자 글자 수입니다(0 ~ 9). */
         static constexpr uint32 kDigitCount = 10;
 
-        PROPERTY( Name = "code", Required, Tooltip = "Culture code in its normalized form (ko_kr)" )
-        string _code; ///< 원본 철자(`ko_kr`)
-        PROPERTY( Name = "parent", InheritParent, Tooltip = "Culture whose fields this one inherits" )
-        string _parentCode; ///< 물려받는 문화권(없으면 빈 값)
+        PROPERTY( Required, Tooltip = "Culture code in its normalized form (ko_kr) - the catalog key that _base points at" )
+        string _code;
         PROPERTY( Tooltip = "Name in its own language (language menu)" )
-        string _nativeName; ///< 자기 언어로 쓴 이름(언어 선택 메뉴)
-        PROPERTY( Name = "digits", RequiredAtRoot, Tooltip = "Numbering system id declared in <numberingSystems>" )
+        string _nativeName;
+        PROPERTY( Required, Tooltip = "Numbering system id declared in <numberingSystems>" )
         string _numberingSystem; ///< 숫자 체계 id(`latn` · `arab` — 표의 `<numberingSystems>`)
-        PROPERTY()
+        PROPERTY( Required )
         string _decimalSeparator;
-        PROPERTY()
+        PROPERTY( Required )
         string _groupSeparator;
-        PROPERTY()
+        PROPERTY( Required )
         string _percentPattern; ///< `#` 위치에 숫자가 들어갑니다(`#%`, `# %`).
-        PROPERTY()
+        PROPERTY( Required )
         string _currencyCode; ///< 이 문화권의 기본 통화(ISO 4217, `KRW`)입니다.
+        PROPERTY( Required )
+        string _currencyPattern; ///< `#` 위치에 숫자가, `¤` 위치에 통화 기호가 들어갑니다(`¤#`, `# ¤`).
+        PROPERTY( Required )
+        CultureDatePatternSet _datePatterns;
+        PROPERTY( Required )
+        CultureTimePatternSet _timePatterns;
         PROPERTY()
-        string                                 _currencyPattern; ///< `#` 위치에 숫자가, `¤` 위치에 통화 기호가 들어갑니다(`¤#`, `# ¤`).
-        string                                 _dateShort;
-        string                                 _dateMedium;
-        string                                 _dateLong;
-        string                                 _timeShort;
-        string                                 _timeMedium;
-        vector<string>                         _listMonthName;         ///< 12 개이며 날짜 패턴의 `MMMM` 에 씁니다.
-        vector<string>                         _listMonthAbbreviation; ///< 12 개이며 `MMM` 에 씁니다.
-        vector<string>                         _listDayPeriod;         ///< 2 개(오전, 오후)이며 `a` 에 씁니다.
-        vector<string>                         _listFont;              ///< 폰트 대체 목록입니다(패밀리 이름이며 앞이 우선). UI 폰트 렌더러가 읽습니다.
-        vector<string>                         _listDigit;             ///< 숫자 체계의 글자 0 ~ 9(10 개, UTF-8 한 글자씩)
-        PluralRuleSet                          _pluralRules;           ///< 복수형(`plural`) 규칙(`<pluralRules>`)
-        PluralRuleSet                          _ordinalRules;          ///< 서수(`selectordinal`) 규칙(`<ordinalRules>`)
-        shared_ptr<const vector<CurrencyInfo>> _pCurrencyList;         ///< 표의 통화 목록(`<currencies>`). 표가 문화권을 읽을 때 걸어 준다
-        PseudoLocaleMode                       _pseudoMode;
+        vector<string> _listMonthName; ///< 12 개이며 날짜 패턴의 `MMMM` 에 씁니다.
         PROPERTY()
-        uint8 _bRightToLeft : 1; ///< 속성 `rightToLeft`
+        vector<string> _listMonthAbbreviation; ///< 12 개이며 `MMM` 에 씁니다.
+        PROPERTY()
+        vector<string> _listDayPeriod; ///< 2 개(오전, 오후)이며 `a` 에 씁니다.
+        PROPERTY()
+        vector<string> _listFont; ///< 폰트 대체 목록입니다(패밀리 이름이며 앞이 우선). UI 폰트 렌더러가 읽습니다.
+        PROPERTY( Required, Tooltip = "Plural category keyword -> CLDR rule text with its samples (empty when every number is other)" )
+        map<string, string> _pluralRules;
+        PROPERTY( Tooltip = "Ordinal category keyword -> CLDR rule text with its samples" )
+        map<string, string> _ordinalRules;
+        PROPERTY()
+        PseudoLocaleMode _pseudoMode;
+        PROPERTY()
+        uint8 _bRightToLeft : 1;
+
+        vector<string>                         _listDigit;      ///< 숫자 체계의 글자 0 ~ 9(10 개, UTF-8 한 글자씩) — 표가 `_numberingSystem` 으로 걸어 준다
+        PluralRuleSet                          _pluralRuleSet;  ///< `_pluralRules` 를 컴파일한 것(`plural`)
+        PluralRuleSet                          _ordinalRuleSet; ///< `_ordinalRules` 를 컴파일한 것(`selectordinal`)
+        shared_ptr<const vector<CurrencyInfo>> _pCurrencyList;  ///< 표의 통화 목록(`<currencies>`). 표가 문화권을 읽을 때 걸어 준다
 
         CultureInfo();
 
@@ -174,22 +214,23 @@ namespace sw
 {
     /**
      * @class CultureTable
-     * @brief 문화권 테이블(`*.cultures.xml`)입니다. 부모를 따라 필드를 물려받고, 지역이 붙은 코드(`ko_kr`)는 없으면 언어(`ko`)로 찾습니다.
-     * @details 형식(CLDR 의 numberingSystems · currencyData · plurals 를 한 파일에 모은 모양):
+     * @brief 문화권 테이블(`*.cultures.xml`)입니다. 문화권은 카탈로그 항목이라 `_base` 로 부모를 가리키고 적은 칸만 덮으며, 지역이 붙은 코드(`ko_kr`)는 없으면 언어(`ko`)로 찾습니다.
+     * @details 형식(판 1, CLDR 의 numberingSystems · currencyData · plurals 를 한 파일에 모은 모양 — 문화권 원소는 `CultureInfo` 의 리플렉션 XML 이다):
      * @code
-     *     <CultureTable>
+     *     <CultureTable formatVersion="1">
      *         <numberingSystems><numberingSystem id="latn" digits="0123456789"/><numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩"/></numberingSystems>
      *         <currencies><currency code="KRW" symbol="₩" digits="0"/></currencies>
-     *         <cultures>
-     *             <culture code="ru" nativeName="Русский" digits="latn" …>
-     *                 <pluralRules one="v = 0 and i % 10 = 1 and i % 100 != 11" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14" many="…"/>
-     *                 <monthNames><item>…</item></monthNames>
-     *             </culture>
-     *         </cultures>
+     *         <CultureInfo _code="ru" _nativeName="Русский" _numberingSystem="latn" …>
+     *             <_pluralRules><entry key="one">v = 0 and i % 10 = 1 and i % 100 != 11 @integer …</entry>…</_pluralRules>
+     *             <_datePatterns _short="…" _medium="…" _long="…"/>
+     *             <_listMonthName><item>…</item></_listMonthName>
+     *         </CultureInfo>
+     *         <CultureInfo _code="ru_ua" _base="ru" _nativeName="…"/>
      *     </CultureTable>
      * @endcode
-     *          부모가 없는 문화권은 `<pluralRules>`(비어 있으면 모든 수가 other)와 `digits` 가 꼭 있어야 한다. 모르는 필드 · 범주 · 숫자 체계, 틀린 규칙 글, 글자가 10 개가 아닌 숫자 체계,
-     *          겹친 id · 코드, 없는 부모, 부모 순환은 로드 오류이고 표는 그대로 남는다. 숫자 체계와 통화는 앞서 읽은 파일의 것도 쓰고, 같은 id 는 바꾼다.
+     *          부모 병합(순서 · 순환 · 없는 부모)은 `DataCatalogInheritance` 가 하고, 필수 칸(`PROPERTY( Required )` — 뿌리가 적는다)은 리플렉션 스키마가 본다.
+     *          모르는 칸 · 범주 · 숫자 체계, 틀린 규칙 글, 글자가 10 개가 아닌 숫자 체계, 겹친 id · 코드, 없는 부모, 부모 순환은 로드 오류이고 표는 그대로 남는다.
+     *          숫자 체계와 통화는 앞서 읽은 파일의 것도 쓰고, 같은 id 는 바꾼다. 판 0(`<cultures><culture code parent …>`)은 판 올림(`SW_ASSET_FORMAT_UPGRADE`)이 판 1 로 고쳐 읽는다.
      */
     class SW_API CultureTable
     {
@@ -200,8 +241,8 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `CultureInfo.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "CultureTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `CultureInfo.cpp` 의 `SW_ASSET_TYPE`). 판 1 은 문화권을 리플렉션 원소 · `_base` 상속으로 적는다. */
+        static constexpr AssetTypeDef kAssetType{ "CultureTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 1, {} };
 
         /** @brief 언어 코드의 정규 표기입니다. 소문자로 쓰고 `-` 는 `_` 로 바꿉니다(`ko-KR` → `ko_kr`). */
         static string normalizeCode( string_view code );

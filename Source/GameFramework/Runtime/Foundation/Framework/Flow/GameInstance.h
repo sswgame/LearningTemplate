@@ -15,6 +15,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -167,6 +168,15 @@ namespace sw
          *          세이브 봉투 머리에 적는다(`GameStateSnapshot`). 걸지 않으면 구성 없음이다.
          */
         [[nodiscard]] virtual bool onPrepareContent() { return true; }
+        /**
+         * @brief 이 게임이 복제하는 타입(`PROPERTY( Replicated )` 칸의 스냅샷 구조체)을 엔티티 타입 번호로 등록하는 파생 훅입니다. 네트워크 세션을 열기 전에 한 번 부릅니다.
+         * @details 등록한 스키마 해시가 와이어 버전에 섞여(`GameNetSession::combineWireContent`) 칸 순서 · 범위가 다른 빌드는 핸드셰이크에서 갈린다. 실패하면 게임을 띄우지 않는다.
+         */
+        [[nodiscard]] virtual bool onRegisterReplicatedTypes( NetMessageChannel& outChannel )
+        {
+            (void)outChannel;
+            return true;
+        }
         /** @brief 팩 설정을 읽은 뒤 부르는 파생 초기화 훅입니다. */
         virtual bool onInitialize() { return true; }
         /** @brief 파생 종료 훅입니다. */

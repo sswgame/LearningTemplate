@@ -8,6 +8,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -288,16 +289,19 @@ namespace sw
                                             const SerializeContext& context )
             {
                 const void* const pInstance = instance.get();
-                typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+                // 칸 차례(기반부터)는 걷기 한 곳이 정한다 — 쓰기 · 읽기 · 문서가 같은 차례를 본다(`ReflectPropertyVisitor`).
+                const ReflectPropertyVisitor propertyVisitor{ context.getTypeRegistry(), ReflectVisitOptions{} };
+                (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
                 {
+                    const PropertyInfo& prop = field._property;
                     if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
-                        return;
+                        return ReflectVisitFlow::Continue;
 
                     if ( prop._bIsBitField == SW_TRUE )
                     {
                         const bool bVal = prop.getValue<bool>( pInstance );
                         backend.writeAttribute( prop._name.c_str(), bVal ? "true" : "false" );
-                        return;
+                        return ReflectVisitFlow::Continue;
                     }
 
                     const ValueAddress propValue{ prop.getRawPtr( pInstance ) };
@@ -306,7 +310,7 @@ namespace sw
                     {
                         // 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
                         if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && prop._containerWrapper->getSize( propValue.get() ) == 0 )
-                            return; // 글 칸과 같은 규칙 — 스키마가 생략을 허락한 빈 목록은 쓰지 않는다
+                            return ReflectVisitFlow::Continue; // 글 칸과 같은 규칙 — 스키마가 생략을 허락한 빈 목록은 쓰지 않는다
                         backend.beginMap( prop._name.c_str() );
                         ContainerWriter writer( backend, context );
                         ContainerVisitor::write( propValue, prop.getContainerShape(), writer, context );
@@ -329,12 +333,13 @@ namespace sw
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
                             if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && ss.size() == 0 )
-                                return;
+                                return ReflectVisitFlow::Continue;
 
                             backend.writeAttribute( prop._name.c_str(), ss.c_str() );
                         }
                     }
-                }, true /* 상속 PROPERTY 포함 */ );
+                    return ReflectVisitFlow::Continue;
+                } );
             }
 
             /**

@@ -7,11 +7,13 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Localization/TimeZoneInfo.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -25,10 +27,8 @@ namespace sw
             static constexpr const utf8* kArrCategoryName[] = { "zero", "one", "two", "few", "many", "other" };
             static_assert( SW_COUNT_OF( kArrCategoryName ) == static_cast<size_t>( PluralCategory::Count ), "kArrCategoryName must name every PluralCategory" );
 
-            /** @brief 문화권 요소의 자식 요소 이름입니다(규칙 묶음 둘, 패턴 묶음 둘과 문자열 목록 넷). */
-            static constexpr string_view kArrCultureChild[] = { "pluralRules", "ordinalRules", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations", "dayPeriods", "fonts" };
-            /** @brief 표 루트의 자식 요소 이름입니다(숫자 체계 · 통화는 없어도 된다 — 앞서 읽은 파일의 것을 쓴다). */
-            static constexpr string_view kArrTablePart[] = { "numberingSystems", "currencies", "cultures" };
+            /** @brief 표 루트의 자식 요소 이름입니다(숫자 체계 · 통화는 없어도 된다 — 앞서 읽은 파일의 것을 쓴다). 문화권은 `CultureInfo` 원소다. */
+            static constexpr string_view kArrTablePart[] = { "numberingSystems", "currencies", "CultureInfo" };
 
             template <size_t N>
             static bool isListed( const string_view ( &arrName )[N], string_view name )
@@ -37,20 +37,6 @@ namespace sw
                 {
                     if ( listed == name )
                         return true;
-                }
-                return false;
-            }
-
-            /** @brief 문화권 요소에서 알려지지 않은 첫 자식 이름을 @p outName 에 적고 true 를 반환합니다. 속성은 스키마(`readProperties`)가 본다. */
-            [[nodiscard]] static bool findUnknownChild( const XMLNode& entry, string& outName )
-            {
-                for ( XMLNode child = entry.findChild(); child.isValid(); child = child.findNextSibling() )
-                {
-                    if ( isListed( kArrCultureChild, string_view{ child.getName() } ) == false )
-                    {
-                        outName = child.getName();
-                        return true;
-                    }
                 }
                 return false;
             }
@@ -86,176 +72,93 @@ namespace sw
                 return text;
             }
 
-            /** @brief 문자열 목록 요소(`<monthNames><item>…</item></monthNames>`)를 읽습니다. 원소가 `<item>` 이 아니면 false 입니다. */
-            [[nodiscard]] static bool readStringArray( const XMLNode& listNode, vector<string>& outList )
-            {
-                outList.clear();
-                for ( XMLNode element = listNode.findChild(); element.isValid(); element = element.findNextSibling() )
-                {
-                    if ( string_view{ element.getName() } != "item" )
-                        return false;
-                    outList.push_back( string{ element.getText() } );
-                }
-                return true;
-            }
-
-            /** @brief 패턴 모음(`<datePatterns short="…" medium="…" long="…" />`)을 읽습니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static expected<void> readPatternGroup( const XMLNode& group, string* pShort, string* pMedium, string* pLong )
-            {
-                if ( group.findChild().isValid() )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "patterns take attributes only", group.getName() } );
-                for ( XMLAttribute attribute = group.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    const string_view styleName{ attribute.getName() };
-                    string*           pTarget = nullptr;
-                    if ( styleName == "short" )
-                        pTarget = pShort;
-                    else if ( styleName == "medium" )
-                        pTarget = pMedium;
-                    else if ( styleName == "long" )
-                        pTarget = pLong;
-                    if ( pTarget == nullptr )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown pattern style", styleName } );
-                    *pTarget = string{ attribute.getValue() };
-                }
-                return {};
-            }
-
             /**
-             * @brief 규칙 묶음 요소(`<pluralRules one="…" few="…"/>`, 적힌 것만)로 @p outRules 를 통째로 바꿉니다. 부모의 규칙은 섞지 않는다 — 범주 하나만 물려받으면 규칙이 겹친다.
-             * @details 속성 이름이 범주 키워드이고 값이 CLDR 규칙 글(보기 `@integer` · `@decimal` 까지, other 는 보기만)이다. 빈 요소는 "모든 수가 other" 다.
-             *          모르는 범주 · 틀린 글 · 보기 없는 규칙 · other 가 빠진 묶음 · 보기와 어긋난 규칙(CLDR 과 다르게 고친 글)이면 false 입니다.
+             * @brief 범주 키워드 → 규칙 글 맵(`_pluralRules` · `_ordinalRules`, 적힌 것만)을 컴파일해 @p outRules 를 통째로 바꿉니다. 부모의 규칙은 섞지 않는다 — 상속 규칙 표에서
+             *        이 칸은 구조체 칸이 아니라 통째로 바뀐다(범주 하나만 물려받으면 규칙이 겹친다).
+             * @details 키가 범주 키워드이고 값이 CLDR 규칙 글(보기 `@integer` · `@decimal` 까지, other 는 보기만)이다. 빈 맵은 "모든 수가 other" 다.
+             *          모르는 범주 · 틀린 글 · 보기 없는 규칙 · other 가 빠진 묶음 · 보기와 어긋난 규칙(CLDR 과 다르게 고친 글)이면 오류입니다.
              */
-            [[nodiscard]] static expected<void> applyRuleSet( const XMLNode& entry, const utf8* pElementName, PluralRuleSet& outRules )
+            [[nodiscard]] static expected<void> compileRuleSet( const map<string, string>& mapRule, const utf8* pFieldName, PluralRuleSet& outRules )
             {
-                const XMLNode rules = entry.findChild( pElementName );
-                if ( rules.isValid() == false )
-                    return {};
-                if ( rules.findChild().isValid() )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "plural rule elements take attributes only", pElementName } );
                 PluralRuleSet ruleSet;
-                bool          bAnyRule  = false;
                 bool          bHasOther = false;
-                for ( XMLAttribute attribute = rules.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                for ( const auto& [keyword, ruleText] : mapRule )
                 {
-                    if ( const expected<void> compiled = ruleSet.compileRule( attribute.getName(), attribute.getValue() ); compiled.has_value() == false )
-                        return unexpected( Error{ compiled.error().kind(), compiled.error().message().data(), pElementName }.appendDetail( ": " ).appendDetail( compiled.error().detail() ) );
+                    if ( const expected<void> compiled = ruleSet.compileRule( keyword, ruleText ); compiled.has_value() == false )
+                        return unexpected( Error{ compiled.error().kind(), compiled.error().message().data(), pFieldName }.appendDetail( ": " ).appendDetail( compiled.error().detail() ) );
                     // 규칙 글은 CLDR 글을 보기째 붙여 넣은 것이어야 한다 — 보기가 규칙과 CLDR plurals.xml 의 대조다(`PluralRuleSet::verifySamples`).
                     PluralCategory category = PluralCategory::Other;
-                    const bool     bKnown   = CultureInfo::tryParsePluralKeyword( attribute.getName(), category );
+                    const bool     bKnown   = CultureInfo::tryParsePluralKeyword( keyword, category );
                     SW_ASSERT( bKnown ); // `compileRule` 이 모르는 범주를 거절했다
                     (void)bKnown;
                     if ( ruleSet.countSamples( category ) == 0 )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "a category has no @integer / @decimal samples - paste the whole CLDR rule text", pElementName }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a category has no @integer / @decimal samples - paste the whole CLDR rule text", pFieldName }
                                                .appendDetail( ": " )
-                                               .appendDetail( attribute.getName() ) );
-                    bAnyRule  = true;
+                                               .appendDetail( keyword ) );
                     bHasOther = bHasOther || category == PluralCategory::Other;
                 }
-                if ( bAnyRule && bHasOther == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "other samples are missing - paste every category of the CLDR rules, other included", pElementName } );
+                if ( mapRule.empty() == false && bHasOther == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "other samples are missing - paste every category of the CLDR rules, other included", pFieldName } );
                 const expected<void> samplesMatch = ruleSet.verifySamples();
                 if ( samplesMatch.has_value() == false )
-                    return unexpected( Error{ samplesMatch.error().kind(), samplesMatch.error().message().data(), pElementName }.appendDetail( ": " ).appendDetail( samplesMatch.error().detail() ) );
+                    return unexpected( Error{ samplesMatch.error().kind(), samplesMatch.error().message().data(), pFieldName }.appendDetail( ": " ).appendDetail( samplesMatch.error().detail() ) );
                 outRules = std::move( ruleSet );
                 return {};
             }
 
-            /**
-             * @brief 숫자 체계(@p mapNumberingSystem 의 id — 스키마가 읽은 `_numberingSystem`, 물려받았을 수 있다)의 글자와 의사 로케일을 덮어씁니다. 모르는 이름이면 오류입니다.
-             * @details `pseudo` 는 손 읽기다 — 소문자 철자(`accented`)가 데이터 형식이고, 물려받지 않는 칸이다(`resolveEntry`).
-             */
-            [[nodiscard]] static expected<void> applyScriptProperties( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
-            {
-                const auto systemIt = mapNumberingSystem.find( inoutInfo._numberingSystem );
-                if ( systemIt == mapNumberingSystem.end() )
-                    return unexpected( Error{ ErrorKind::NotFound, "unknown digits (declare it in <numberingSystems>)", inoutInfo._numberingSystem } );
-                inoutInfo._listDigit = systemIt->second;
-                if ( entry.findAttribute( "pseudo" ) != nullptr )
-                {
-                    const string pseudoName{ entry.getAttributeText( "pseudo" ) };
-                    if ( pseudoName == "accented" )
-                        inoutInfo._pseudoMode = PseudoLocaleMode::Accented;
-                    else if ( pseudoName == "mirrored" )
-                        inoutInfo._pseudoMode = PseudoLocaleMode::Mirrored;
-                    else
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown pseudo (accented, mirrored)", pseudoName } );
-                }
-                return {};
-            }
-
-            /** @brief 문자열 목록 필드 한 칸의 규칙입니다. `_expectedCount` 가 0 이 아니면 그 개수여야 합니다. */
+            /** @brief 개수가 정해진 문자열 목록 칸 하나의 규칙입니다. 빈 목록(뿌리가 적지 않음)은 받는다 — 패턴이 그 글자를 쓰지 않는 문화권이 있다. */
             struct ListFieldRow
             {
-                const utf8*    _pName;
                 vector<string> CultureInfo::* _pMember;
                 size_t                        _expectedCount;
                 const utf8*                   _pError;
             };
 
             static constexpr ListFieldRow kArrListField[] = {
-                {        "monthNames",         &CultureInfo::_listMonthName, 12,          "monthNames must be 12 strings"},
-                {"monthAbbreviations", &CultureInfo::_listMonthAbbreviation, 12,  "monthAbbreviations must be 12 strings"},
-                {        "dayPeriods",         &CultureInfo::_listDayPeriod,  2,           "dayPeriods must be 2 strings"},
-                {             "fonts",              &CultureInfo::_listFont,  0, "fonts must be a list of <item> strings"},
+                {        &CultureInfo::_listMonthName, 12,         "_listMonthName must be 12 strings"},
+                {&CultureInfo::_listMonthAbbreviation, 12, "_listMonthAbbreviation must be 12 strings"},
+                {        &CultureInfo::_listDayPeriod,  2,          "_listDayPeriod must be 2 strings"},
             };
 
-            /** @brief 날짜 · 시간 패턴 모음과 문자열 목록 필드를 덮어씁니다. 모양이 틀리면 false 입니다. */
-            [[nodiscard]] static expected<void> applyPatternAndListProperties( const XMLNode& entry, CultureInfo& inoutInfo )
+            /**
+             * @brief 합친(부모 없는) `<CultureInfo>` 원소 하나를 리플렉션으로 읽고, 규칙 글 · 숫자 체계 · 목록 개수를 확인합니다.
+             * @details 필수 칸은 읽기 전에 모은다(`collectMissingRequired`) — 표 읽기는 까닭을 오류 값으로 돌려주는 API 다.
+             */
+            [[nodiscard]] static expected<CultureInfo> readCulture( const XMLNode& element, const map<string, vector<string>>& mapNumberingSystem )
             {
-                const XMLNode datePatterns = entry.findChild( "datePatterns" );
-                if ( datePatterns.isValid() )
-                {
-                    if ( expected<void> read = readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong ); read.has_value() == false )
-                        return read;
-                }
-                const XMLNode timePatterns = entry.findChild( "timePatterns" );
-                if ( timePatterns.isValid() )
-                {
-                    if ( expected<void> read = readPatternGroup( timePatterns, &inoutInfo._timeShort, &inoutInfo._timeMedium, nullptr ); read.has_value() == false )
-                        return read;
-                }
+                const TypeInfo& type = *CultureInfo::StaticType();
+                const string    rawCode{ element.getAttributeText( "_code" ) };
+                vector<string>  listMissing;
+                XMLSerializer::collectMissingRequired( element, type, listMissing );
+                if ( listMissing.empty() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a required culture field is missing - the root of the _base chain writes it", rawCode }
+                                           .appendDetail( ": " )
+                                           .appendDetail( listMissing.front() ) );
+                CultureInfo               info;
+                vector<SchemaOrphanValue> listOrphan;
+                if ( XMLSerializer::deserializeElementSoft( &info, type, element, &listOrphan ) != SoftReadResult::Read || listOrphan.empty() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture field is unknown or unreadable", rawCode }
+                                           .appendDetail( ": " )
+                                           .appendDetail( listOrphan.empty() ? string_view{} : string_view{ listOrphan.front()._writtenName } ) );
+                const string code = CultureTable::normalizeCode( info._code );
+                if ( code != info._code )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture code must be written in its normalized form", info._code }.appendDetail( " -> " ).appendDetail( code ) );
+                expected<void> checked = compileRuleSet( info._pluralRules, "_pluralRules", info._pluralRuleSet );
+                if ( checked.has_value() )
+                    checked = compileRuleSet( info._ordinalRules, "_ordinalRules", info._ordinalRuleSet );
+                if ( checked.has_value() == false )
+                    return unexpected( Error{ checked.error().kind(), checked.error().message().data(), code }.appendDetail( ": " ).appendDetail( checked.error().detail() ) );
+                const auto systemIt = mapNumberingSystem.find( info._numberingSystem );
+                if ( systemIt == mapNumberingSystem.end() )
+                    return unexpected( Error{ ErrorKind::NotFound, "unknown _numberingSystem (declare it in <numberingSystems>)", code }.appendDetail( ": " ).appendDetail( info._numberingSystem ) );
+                info._listDigit = systemIt->second;
                 for ( const ListFieldRow& row : kArrListField )
                 {
-                    const XMLNode field = entry.findChild( row._pName );
-                    if ( field.isValid() == false )
-                        continue;
-                    vector<string>& list      = inoutInfo.*( row._pMember );
-                    const bool      bBadField = readStringArray( field, list ) == false || ( row._expectedCount != 0 && list.size() != row._expectedCount );
-                    if ( bBadField )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, row._pError, row._pName } );
+                    const vector<string>& list = info.*( row._pMember );
+                    if ( list.empty() == false && list.size() != row._expectedCount )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, row._pError, code } );
                 }
-                return {};
-            }
-
-            /**
-             * @brief 한 문화권 요소의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). 속성은 스키마로 읽는다 — 부모가 없을 때만 `digits` 필수(`RequiredAtRoot`).
-             * @param sourceName 오류 줄에 쓰는 이름(문화권 코드)입니다.
-             */
-            [[nodiscard]] static expected<void> applyProperties( const XMLNode& entry, string_view sourceName, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
-            {
-                string unknownName;
-                if ( findUnknownChild( entry, unknownName ) )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown field", unknownName } );
-
-                // 스키마 읽기의 첫 문제를 오류의 자세한 글로 옮긴다(표 읽기는 오류를 돌려주는 API 다 — `LocalizationDocuments::readEntryProperties` 와 같은 모양).
-                string                   firstIssue;
-                const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* /*pID*/, string_view text )
-                {
-                    string& first = *static_cast<string*>( pContext );
-                    if ( first.empty() )
-                        first = string( text );
-                },
-                                               &firstIssue };
-                if ( XMLFields::readProperties( entry, &inoutInfo, *CultureInfo::StaticType(), sourceName, { "pseudo" }, nullptr, sink ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture field is missing or unreadable", firstIssue } );
-                if ( expected<void> applied = applyRuleSet( entry, "pluralRules", inoutInfo._pluralRules ); applied.has_value() == false )
-                    return applied;
-                if ( expected<void> applied = applyRuleSet( entry, "ordinalRules", inoutInfo._ordinalRules ); applied.has_value() == false )
-                    return applied;
-                if ( expected<void> applied = applyScriptProperties( entry, mapNumberingSystem, inoutInfo ); applied.has_value() == false )
-                    return applied;
-                return applyPatternAndListProperties( entry, inoutInfo );
+                return info;
             }
 
             /**
@@ -326,90 +229,200 @@ namespace sw
                 return {};
             }
 
-            /** @brief 문화권 요소 하나를 풀어 본 결과입니다(실패는 결과의 오류다). */
-            enum class ResolveResult : uint8
+            /** @brief 판 0 의 이름과 판 1 의 칸 이름 한 쌍입니다. */
+            struct RenamedName
             {
-                Resolved, ///< @p inoutMapResolved 에 더했다.
-                Deferred, ///< 부모가 아직 풀리지 않았다. 다음 바퀴에서 다시 본다.
+                const utf8* _pOld;
+                const utf8* _pNew;
             };
 
-            /** @brief `<cultures>` 의 자식을 모읍니다. 요소 이름이나 코드가 틀렸거나 코드가 겹치면 그 까닭입니다. */
-            [[nodiscard]] static expected<void> collectEntries( const XMLNode& cultures, vector<XMLNode>& outListPending, vector<string>& outListFileCode )
+            /** @brief 문화권 속성입니다(`pseudo` 는 값 철자도 바뀌어 따로 본다). */
+            static constexpr RenamedName kArrRenamedAttribute[] = {
+                {            "code",             "_code"},
+                {          "parent",             "_base"},
+                {      "nativeName",       "_nativeName"},
+                {          "digits",  "_numberingSystem"},
+                {"decimalSeparator", "_decimalSeparator"},
+                {  "groupSeparator",   "_groupSeparator"},
+                {  "percentPattern",   "_percentPattern"},
+                {    "currencyCode",     "_currencyCode"},
+                { "currencyPattern",  "_currencyPattern"},
+                {     "rightToLeft",     "_bRightToLeft"},
+            };
+
+            /** @brief 문자열 목록 원소입니다(원소 안은 그대로 `<item>` 이다). */
+            static constexpr RenamedName kArrRenamedList[] = {
+                {        "monthNames",         "_listMonthName"},
+                {"monthAbbreviations", "_listMonthAbbreviation"},
+                {        "dayPeriods",         "_listDayPeriod"},
+                {             "fonts",              "_listFont"},
+            };
+
+            /** @brief 패턴 스타일 속성입니다(`short` → `_short`). */
+            static constexpr RenamedName kArrRenamedStyle[] = {
+                { "short",  "_short"},
+                {"medium", "_medium"},
+                {  "long",   "_long"},
+            };
+
+            /** @brief 판 0 의 뿌리가 적지 않으면 코드 초기값을 쓰던 글 칸입니다. 판 1 은 필수 칸이라 판 올림이 그 값을 적는다. */
+            struct RootDefaultRow
             {
-                for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
+                const utf8* _pName;
+                string CultureInfo::* _pMember;
+            };
+
+            static constexpr RootDefaultRow kArrRootDefault[] = {
+                {"_decimalSeparator", &CultureInfo::_decimalSeparator},
+                {  "_groupSeparator",   &CultureInfo::_groupSeparator},
+                {  "_percentPattern",   &CultureInfo::_percentPattern},
+                {    "_currencyCode",     &CultureInfo::_currencyCode},
+                { "_currencyPattern",  &CultureInfo::_currencyPattern},
+            };
+
+            /** @brief @p name 이 표 @p arrRow 의 옛 이름이면 새 이름, 아니면 @p pName 그대로입니다(모르는 이름은 읽기가 모르는 칸으로 거절한다). */
+            template <size_t N>
+            static const utf8* rename( const RenamedName ( &arrRow )[N], const utf8* pName )
+            {
+                for ( const RenamedName& row : arrRow )
                 {
-                    const string rawCode{ entry.getAttributeText( "code" ) };
-                    if ( string_view{ entry.getName() } != "culture" || rawCode.empty() )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "<cultures> holds only <culture code=\"…\"> elements", entry.getName() } );
-                    if ( VectorUtil::contains( outListFileCode, rawCode ) )
-                        return unexpected( Error{ ErrorKind::AlreadyExists, "a culture is written twice", rawCode } );
-                    outListFileCode.push_back( rawCode );
-                    outListPending.push_back( entry );
+                    if ( string_view{ pName } == row._pOld )
+                        return row._pNew;
                 }
-                return {};
+                return pName;
             }
 
             /**
-             * @brief 문화권 요소 하나를 부모의 값 위에 얹어 풀고 @p inoutMapResolved 에 더합니다.
-             * @param mapExisting 이미 테이블에 있는 문화권입니다. 부모가 이 파일 안에 없을 때만 부모로 씁니다.
+             * @brief 판 0 의 패턴 묶음(`<datePatterns short medium long/>`)을 판 1 칸(@p pNewName)으로 씁니다.
+             *        뿌리면 빠진 스타일에 판 0 의 코드 초기값(@p listRootDefault, 스타일 차례)을 적습니다.
              */
-            [[nodiscard]] static expected<ResolveResult> resolveEntry( const XMLNode& entry, const vector<string>& listFileCode, const map<string, CultureInfo>& mapExisting,
-                                                                       const map<string, vector<string>>& mapNumberingSystem, map<string, CultureInfo>& inoutMapResolved )
+            static void upgradePatterns( const XMLNode& entry, const utf8* pOldName, const utf8* pNewName, const vector<string>& listRootDefault, bool bRoot, const XMLNode& out )
             {
-                const string rawCode{ entry.getAttributeText( "code" ) };
-                const string code = CultureTable::normalizeCode( rawCode );
-                if ( code != rawCode )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture code must be written in its normalized form", rawCode }.appendDetail( " -> " ).appendDetail( code ) );
-                const string parentCode = CultureTable::normalizeCode( entry.getAttributeText( "parent" ) );
-                CultureInfo  info;
-                if ( parentCode.empty() == false )
+                const XMLNode old = entry.findChild( pOldName );
+                if ( old.isValid() == false && bRoot == false )
+                    return;
+                const XMLNode patterns = out.appendChild( pNewName );
+                for ( XMLAttribute attribute = old.isValid() ? old.getFirstAttribute() : XMLAttribute{}; attribute.isValid(); attribute = attribute.getNext() )
                 {
-                    const auto resolvedIt = inoutMapResolved.find( parentCode );
-                    const auto existingIt = mapExisting.find( parentCode );
-                    const bool bInFile    = VectorUtil::contains( listFileCode, parentCode );
-                    if ( resolvedIt != inoutMapResolved.end() )
-                        info = resolvedIt->second;
-                    else if ( bInFile == false && existingIt != mapExisting.end() )
-                        info = existingIt->second;
-                    else
-                        return ResolveResult::Deferred;
+                    patterns.appendAttribute( rename( kArrRenamedStyle, attribute.getName() ), attribute.getValue() );
                 }
-                else if ( entry.findChild( "pluralRules" ).isValid() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture without a parent needs <pluralRules> (empty when every number is other)", rawCode } );
-                info._nativeName.clear();
-                if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo" ) == nullptr )
-                    info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
-                if ( const expected<void> applied = applyProperties( entry, rawCode, mapNumberingSystem, info ); applied.has_value() == false )
-                    return unexpected( Error{ applied.error().kind(), applied.error().message().data(), rawCode }.appendDetail( ": " ).appendDetail( applied.error().detail() ) );
-                // 스키마는 적힌 글 그대로 읽었다 — 코드는 정규형만 받았고(위), 부모는 정규형으로 둔다(찾기 열쇠).
-                info._code             = code;
-                info._parentCode       = parentCode;
-                inoutMapResolved[code] = std::move( info );
-                return ResolveResult::Resolved;
+                for ( size_t index = 0; bRoot && index < listRootDefault.size(); ++index )
+                {
+                    if ( patterns.findAttribute( kArrRenamedStyle[index]._pNew ) == nullptr )
+                        patterns.appendAttribute( kArrRenamedStyle[index]._pNew, string_view{ listRootDefault[index] } );
+                }
             }
 
-            /** @brief @p cultures 의 문화권을 모두 풉니다. 부모가 먼저 해석되도록 몇 바퀴 돕니다. 한 바퀴에 아무것도 해석하지 못하면 남은 것은 없는 부모이거나 순환입니다. */
-            [[nodiscard]] static expected<void> resolveAll( const XMLNode& cultures, const map<string, CultureInfo>& mapExisting, const map<string, vector<string>>& mapNumberingSystem,
-                                                            map<string, CultureInfo>& outMapResolved )
+            /** @brief 판 0 의 규칙 묶음(`<pluralRules one="…"/>`)을 판 1 맵(`<_pluralRules><entry key="one">…</entry></_pluralRules>`)으로 씁니다. 자식 원소가 있으면 false 입니다. */
+            [[nodiscard]] static bool upgradeRules( const XMLNode& entry, const utf8* pOldName, const utf8* pNewName, const XMLNode& out )
             {
-                vector<XMLNode> listPending;
-                vector<string>  listFileCode; // 파일에 적힌 코드(부모가 이 파일 안에 있는지 판정한다)
-                if ( expected<void> collected = collectEntries( cultures, listPending, listFileCode ); collected.has_value() == false )
-                    return collected;
-                while ( listPending.empty() == false )
+                const XMLNode old = entry.findChild( pOldName );
+                if ( old.isValid() == false )
+                    return true;
+                if ( old.findChild().isValid() )
+                    return false; // 판 0 도 속성만 받았다
+                const XMLNode rules = out.appendChild( pNewName );
+                for ( XMLAttribute attribute = old.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
-                    vector<XMLNode> listNext;
-                    for ( const XMLNode& entry : listPending )
+                    const XMLNode rule = rules.appendChild( kXMLEntryTag );
+                    rule.appendAttribute( kXMLKeyAttr, attribute.getName() );
+                    rule.setValue( attribute.getValue() );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 판 0 의 `<culture>` 하나를 판 1 의 `<CultureInfo>` 로 @p out 에 씁니다. 판 0 의 읽기 규칙을 데이터로 옮긴다 —
+             *        뿌리가 적지 않은 글 칸 · 패턴은 코드 초기값, 자식은 이름(`nativeName`)을 물려받지 않고, 의사 방식은 부모가 의사 문화권일 때만 끊는다.
+             */
+            [[nodiscard]] static bool upgradeEntry( const XMLNode& entry, const vector<string>& listPseudoCode, const XMLNode& out )
+            {
+                const bool bRoot = entry.findAttribute( "parent" ) == nullptr;
+                for ( XMLAttribute attribute = entry.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    if ( string_view{ attribute.getName() } != "pseudo" )
                     {
-                        const expected<ResolveResult> result = resolveEntry( entry, listFileCode, mapExisting, mapNumberingSystem, outMapResolved );
-                        if ( result.has_value() == false )
-                            return unexpected( result.error() );
-                        if ( *result == ResolveResult::Deferred )
-                            listNext.push_back( entry );
+                        out.appendAttribute( rename( kArrRenamedAttribute, attribute.getName() ), attribute.getValue() );
+                        continue;
                     }
-                    if ( listNext.size() == listPending.size() )
-                        return unexpected( Error{ ErrorKind::Cycle, "a culture has an unknown parent or a parent cycle", listNext.front().getAttributeText( "code" ) } );
-                    listPending = std::move( listNext );
+                    const string_view value{ attribute.getValue() };
+                    if ( value != "accented" && value != "mirrored" )
+                        return false;
+                    out.appendAttribute( "_pseudoMode", value == "accented" ? "Accented" : "Mirrored" );
+                }
+                const CultureInfo defaults;
+                if ( bRoot )
+                {
+                    for ( const RootDefaultRow& row : kArrRootDefault )
+                    {
+                        if ( out.findAttribute( row._pName ) == nullptr )
+                            out.appendAttribute( row._pName, string_view{ defaults.*( row._pMember ) } );
+                    }
+                }
+                else
+                {
+                    if ( out.findAttribute( "_nativeName" ) == nullptr )
+                        out.appendAttribute( "_nativeName", "" );
+                    const string parentCode = CultureTable::normalizeCode( entry.getAttributeText( "parent" ) );
+                    if ( out.findAttribute( "_pseudoMode" ) == nullptr && VectorUtil::contains( listPseudoCode, parentCode ) )
+                        out.appendAttribute( "_pseudoMode", "None" );
+                }
+                if ( upgradeRules( entry, "pluralRules", "_pluralRules", out ) == false || upgradeRules( entry, "ordinalRules", "_ordinalRules", out ) == false )
+                    return false;
+                upgradePatterns( entry, "datePatterns", "_datePatterns", { defaults._datePatterns._short, defaults._datePatterns._medium, defaults._datePatterns._long }, bRoot, out );
+                upgradePatterns( entry, "timePatterns", "_timePatterns", { defaults._timePatterns._short, defaults._timePatterns._medium }, bRoot, out );
+                for ( XMLNode child = entry.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    const string_view name{ child.getName() };
+                    const bool        bConverted = name == "pluralRules" || name == "ordinalRules" || name == "datePatterns" || name == "timePatterns";
+                    if ( bConverted == false )
+                        out.appendClone( child ).setName( rename( kArrRenamedList, child.getName() ) );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 판 0 → 1 판 올림입니다(`SW_ASSET_FORMAT_UPGRADE`). `<cultures>` 래퍼 안의 `<culture code parent …>` 를 루트 바로 아래의
+             *        `<CultureInfo _code _base …>`(리플렉션 칸 이름, 카탈로그 항목)로 옮긴다. 판 0 도 거절하던 모양(틀린 의사 방식 철자, 규칙 묶음 안의 원소)이면 false 입니다.
+             */
+            [[nodiscard]] static bool upgradeVersion0( FormatUpgradePayload& payload )
+            {
+                const XMLNode root     = payload._root;
+                const XMLNode cultures = root.findChild( "cultures" );
+                if ( cultures.isValid() == false )
+                    return true;
+                vector<string> listPseudoCode; // 판 0 은 의사 방식을 물려주지 않았다 — 그 부모를 가리키는 자식만 끊는다
+                for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
+                {
+                    if ( entry.findAttribute( "pseudo" ) != nullptr )
+                        listPseudoCode.push_back( CultureTable::normalizeCode( entry.getAttributeText( "code" ) ) );
+                }
+                for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
+                {
+                    if ( string_view{ entry.getName() } != "culture" )
+                    {
+                        (void)root.appendClone( entry ); // 이름 그대로 — 읽기가 모르는 원소로 거절한다
+                        continue;
+                    }
+                    if ( upgradeEntry( entry, listPseudoCode, root.appendChild( CultureInfo::StaticType()->_name.c_str() ) ) == false )
+                        return false;
+                }
+                return root.removeChild( cultures );
+            }
+
+            /** @brief 합친 표 루트의 `<CultureInfo>` 를 모두 읽어 @p outMapCulture 에 둡니다. 겹친 코드는 오류입니다. */
+            [[nodiscard]] static expected<void> readCultures( const XMLNode& root, const map<string, vector<string>>& mapNumberingSystem, map<string, CultureInfo>& outMapCulture )
+            {
+                const utf8* const pElementName = CultureInfo::StaticType()->_name.c_str();
+                for ( XMLNode element = root.findChild( pElementName ); element.isValid(); element = element.findNextSibling( pElementName ) )
+                {
+                    expected<CultureInfo> read = readCulture( element, mapNumberingSystem );
+                    if ( read.has_value() == false )
+                        return unexpected( read.error() );
+                    if ( outMapCulture.find( read->_code ) != outMapCulture.end() )
+                        return unexpected( Error{ ErrorKind::AlreadyExists, "a culture is written twice", read->_code } );
+                    string code = read->_code;
+                    outMapCulture.emplace( std::move( code ), std::move( *read ) );
                 }
                 return {};
             }
@@ -440,7 +453,6 @@ namespace sw
 
     CultureInfo::CultureInfo()
         : _code{}
-        , _parentCode{}
         , _nativeName{}
         , _numberingSystem{ "latn" }
         , _decimalSeparator{ "." }
@@ -448,32 +460,37 @@ namespace sw
         , _percentPattern{ "#%" }
         , _currencyCode{ "USD" }
         , _currencyPattern{ "\xC2\xA4#" }
-        , _dateShort{ "y-MM-dd" }
-        , _dateMedium{ "y-MM-dd" }
-        , _dateLong{ "y-MM-dd" }
-        , _timeShort{ "HH:mm" }
-        , _timeMedium{ "HH:mm:ss" }
+        , _datePatterns{}
+        , _timePatterns{}
         , _listMonthName{}
         , _listMonthAbbreviation{}
         , _listDayPeriod{}
         , _listFont{}
-        , _listDigit{ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }
         , _pluralRules{}
         , _ordinalRules{}
-        , _pCurrencyList{}
         , _pseudoMode{ PseudoLocaleMode::None }
         , _bRightToLeft{ SW_FALSE }
+        , _listDigit{ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }
+        , _pluralRuleSet{}
+        , _ordinalRuleSet{}
+        , _pCurrencyList{}
     {
+        // 불변 문화권(`CultureInfo{}`)의 패턴이다. 표 읽기는 이 값으로 빈 칸을 메우지 않는다(필수 칸) — 판 0 의 판 올림만 옛 규칙대로 뿌리에 적는다.
+        _datePatterns._short  = "y-MM-dd";
+        _datePatterns._medium = "y-MM-dd";
+        _datePatterns._long   = "y-MM-dd";
+        _timePatterns._short  = "HH:mm";
+        _timePatterns._medium = "HH:mm:ss";
     }
 
     PluralCategory CultureInfo::selectPlural( const PluralOperands& operands ) const
     {
-        return _pluralRules.select( operands );
+        return _pluralRuleSet.select( operands );
     }
 
     PluralCategory CultureInfo::selectOrdinal( const PluralOperands& operands ) const
     {
-        return _ordinalRules.select( operands );
+        return _ordinalRuleSet.select( operands );
     }
 
     void CultureInfo::appendDigits( string& inoutText, string_view asciiDigits ) const
@@ -619,21 +636,21 @@ namespace sw
     string_view CultureInfo::findDatePattern( string_view styleName ) const
     {
         if ( styleName.empty() || styleName == "medium" )
-            return _dateMedium;
+            return _datePatterns._medium;
         if ( styleName == "short" )
-            return _dateShort;
+            return _datePatterns._short;
         if ( styleName == "long" || styleName == "full" )
-            return _dateLong;
+            return _datePatterns._long;
         return {};
     }
 
     string_view CultureInfo::findTimePattern( string_view styleName ) const
     {
         if ( styleName.empty() || styleName == "short" )
-            return _timeShort;
+            return _timePatterns._short;
         const bool bLongTimeStyle = styleName == "medium" || styleName == "long" || styleName == "full";
         if ( bLongTimeStyle )
-            return _timeMedium;
+            return _timePatterns._medium;
         return {};
     }
 
@@ -754,39 +771,50 @@ namespace sw
 
     expected<void> CultureTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XMLDocument document;
-        XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "CultureTable", root ) != XMLRootStatus::Found )
-        {
-            if ( document.getLastError().empty() == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", document.getLastError() } );
+        // 판을 먼저 올린다 — 판 0 의 `parent` 는 판 1 의 `_base` 가 되어야 아래 합치기가 본다.
+        XMLDocument       source;
+        const string_view bodyText = FileUtil::skipUTF8Bom( xmlText );
+        if ( source.parse( bodyText, sourceName ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", source.getLastError() } );
+        const XMLNode sourceRoot = source.getRoot( "CultureTable" );
+        if ( sourceRoot.isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "root must be <CultureTable>", sourceName } );
-        }
-        const XMLNode cultures = root.findChild( "cultures" );
+        const bool bUpgrade = AssetXMLFormat::readXMLVersion( sourceRoot ) != kAssetType._formatVersion;
+        if ( bUpgrade && AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, sourceRoot ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the culture table format version cannot be raised to the current one", sourceName } );
+
+        // 문화권의 부모 병합은 카탈로그 항목 상속이다(`datacataloginheritance.xml` 의 `CultureTable` 줄) — 순서 · 순환 · 없는 부모도 거기서 오류다.
+        const string upgradedText = bUpgrade ? source.saveToString() : string{};
+        XMLDocument  document;
+        if ( document.parseData( bUpgrade ? string_view{ upgradedText } : bodyText, sourceName ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the culture table could not be read or its _base chain could not be flattened", document.getLastError() } );
+        const XMLNode root = document.getRoot( "CultureTable" );
         string        unknownPart;
         for ( XMLNode part = root.findChild(); part.isValid() && unknownPart.empty(); part = part.findNextSibling() )
         {
             if ( CultureInfoInternal::isListed( CultureInfoInternal::kArrTablePart, string_view{ part.getName() } ) == false )
                 unknownPart = part.getName();
         }
-        const bool bBadRoot = cultures.isValid() == false || root.getFirstAttribute().isValid() || cultures.getFirstAttribute().isValid() || unknownPart.empty() == false;
-        if ( bBadRoot )
+        for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid() && unknownPart.empty(); attribute = attribute.getNext() )
         {
-            Error error{ ErrorKind::InvalidArgument, "root must be <CultureTable>[<numberingSystems>][<currencies>]<cultures><culture code=\"…\" …/>…</cultures></CultureTable>", sourceName };
-            if ( unknownPart.empty() == false )
-                error.appendDetail( ": unknown <" ).appendDetail( unknownPart ).appendDetail( ">" );
-            return unexpected( error );
+            if ( string_view{ attribute.getName() } != AssetXMLFormat::kXMLAttrName )
+                unknownPart = attribute.getName();
         }
+        if ( unknownPart.empty() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "root must be <CultureTable formatVersion>[<numberingSystems>][<currencies>]<CultureInfo _code=\"…\" …/>…</CultureTable>", sourceName }
+                                   .appendDetail( ": unknown <" )
+                                   .appendDetail( unknownPart )
+                                   .appendDetail( ">" ) );
 
         // 숫자 체계 · 통화를 먼저 사본에 얹는다 — 문화권이 id 로 가리키고, 어느 하나라도 틀리면 표를 바꾸지 않는다.
         map<string, vector<string>> mapNumberingSystem = _mapNumberingSystem;
         vector<CurrencyInfo>        listCurrency       = _pCurrencyList != nullptr ? *_pCurrencyList : vector<CurrencyInfo>{};
-        map<string, CultureInfo>    mapResolved;
+        map<string, CultureInfo>    mapRead;
         expected<void>              read = CultureInfoInternal::readNumberingSystems( root.findChild( "numberingSystems" ), mapNumberingSystem );
         if ( read.has_value() )
             read = CultureInfoInternal::readCurrencies( root.findChild( "currencies" ), listCurrency );
         if ( read.has_value() )
-            read = CultureInfoInternal::resolveAll( cultures, _mapCulture, mapNumberingSystem, mapResolved );
+            read = CultureInfoInternal::readCultures( root, mapNumberingSystem, mapRead );
         if ( read.has_value() == false )
         {
             read.error().prependDetail( ": " ).prependDetail( sourceName );
@@ -794,7 +822,7 @@ namespace sw
         }
         _mapNumberingSystem = std::move( mapNumberingSystem );
         _pCurrencyList      = make_shared<const vector<CurrencyInfo>>( std::move( listCurrency ) );
-        for ( auto& [code, info] : mapResolved )
+        for ( auto& [code, info] : mapRead )
         {
             _mapCulture[code] = std::move( info );
         }
@@ -873,4 +901,5 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( CultureTable, CultureTable::kAssetType );
+    SW_ASSET_FORMAT_UPGRADE( cultureTableVersion0, "CultureTable", 0, 1, &CultureInfoInternal::upgradeVersion0 );
 } // namespace sw

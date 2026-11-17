@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Diff/ObjectDiffSerializer.h"
 
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -19,14 +20,17 @@ namespace sw
         vector<uint8> modifiedBytes;
         bool          bAllWritten = true;
 
-        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+        // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`) — 받는 쪽(`deserializeDiff`)이 이름 해시로 짝을 찾아 차례에 기대지 않지만, 쓰는 바이트는 바이너리 쓰기와 같은 차례다.
+        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+        (void)propertyVisitor.visitProperties( typeInfo, pModifiedInstance, [&]( const ReflectVisitConstField& field )
         {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false || bAllWritten == false )
-                return;
+            const PropertyInfo& prop = field._property;
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
+                return ReflectVisitFlow::Continue;
             const void* pCdoPtr        = prop.getRawPtr( pCdoInstance );
             const void* pModifiedValue = prop.getRawPtr( pModifiedInstance );
             if ( prop._bIsBitField == SW_FALSE && ( pCdoPtr == nullptr || pModifiedValue == nullptr ) )
-                return;
+                return ReflectVisitFlow::Continue;
 
             cdoBytes.clear();
             modifiedBytes.clear();
@@ -54,10 +58,10 @@ namespace sw
                 SW_LOG_ERROR_ID( "ObjectDiff.CannotWrittenDiffValue", "%#::%# (%#) cannot be written to a diff: it or a value inside it has no binary, enum, struct or text handler", typeInfo._name.c_str(),
                                  prop._name.c_str(), prop._typeName.c_str() );
                 bAllWritten = false;
-                return;
+                return ReflectVisitFlow::Stop;
             }
             if ( cdoBytes == modifiedBytes )
-                return;
+                return ReflectVisitFlow::Continue;
 
             const uint32 nameHash   = prop.getNameHash();
             const uint32 size       = static_cast<uint32>( modifiedBytes.size() );
@@ -66,7 +70,8 @@ namespace sw
             outDiffBytes.insert( outDiffBytes.end(), pHashBytes, pHashBytes + sizeof( uint32 ) );
             outDiffBytes.insert( outDiffBytes.end(), pSizeBytes, pSizeBytes + sizeof( uint32 ) );
             outDiffBytes.insert( outDiffBytes.end(), modifiedBytes.begin(), modifiedBytes.end() );
-        }, true /* 상속 PROPERTY 포함 */ );
+            return ReflectVisitFlow::Continue;
+        } );
 
         if ( bAllWritten == false )
             outDiffBytes.clear();

@@ -569,6 +569,15 @@ namespace sw
         return XMLNode{ cloned.internal_object() };
     }
 
+    bool XMLNode::removeChild( XMLNode child ) const
+    {
+        pugi::xml_node pNode  = XMLDocumentInternal::asNode( _pNode );
+        pugi::xml_node pChild = XMLDocumentInternal::asNode( child._pNode );
+        if ( pNode.empty() || pChild.empty() || pChild.parent() != pNode )
+            return false;
+        return pNode.remove_child( pChild );
+    }
+
     XMLDocument::XMLDocument()
         : _impl{ make_unique<Impl>() }
         , _bLastErrorNotFound{ SW_FALSE }

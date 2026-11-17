@@ -191,6 +191,13 @@
 		<Entry name="Notify" key="name"/>
 		<Entry name="FootContact" key="notify"/>
 	</Catalog>
+	<!-- 문화권 표: 문화권(리플렉션 원소 CultureInfo)이 _base 로 부모 문화권을 가리킨다(CLDR 로캘 상속 root → ko → ko_KR 자리). 패턴 묶음은 적은 스타일만 덮고, 복수형 규칙 맵 · 목록은 통째로 바뀐다. -->
+	<Catalog root="CultureTable">
+		<Entry name="CultureInfo" key="_code">
+			<Field name="_datePatterns"/>
+			<Field name="_timePatterns"/>
+		</Entry>
+	</Catalog>
 	<Catalog root="VoxelBlockCatalog">
 		<Entry name="Block" key="id"/>
 	</Catalog>
