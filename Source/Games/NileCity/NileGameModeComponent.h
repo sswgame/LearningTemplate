@@ -25,6 +25,7 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -71,6 +72,8 @@ namespace sw
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const CitySimulation& getCity() const { return _city; }
+        /** @brief 건물 id → 모델 표입니다. 판을 열기 전에는 nullptr 입니다. */
+        const RuleViewCatalog* getBuildingViews() const { return _pBuildingViews.get(); }
         /** @brief 커서가 땅 위에 있으면 true 를 반환하고, @p outTile 과 @p outSize 에 타일과 선택한 것의 크기(타일 수)를 채웁니다. */
         [[nodiscard]] bool findCursor( int2& outTile, int32& outSize ) const;
         /** @brief 일꾼 종류와 서비스의 모습을 반환합니다. 아직 없으면 비어 있습니다. */
@@ -136,6 +139,8 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "City Data", Tooltip = "City catalog XML" )
         AssetRef<CityCatalog> _cityDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Building Views", Tooltip = "Building id to kit model table (*.views.xml); a building without a row is drawn as a coloured block" )
+        AssetRef<RuleViewCatalog> _buildingViewPath;
         PROPERTY( Category = "Data", DisplayName = "Auto Plan", AssetPath, Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
         string _autoPlanPath;
         PROPERTY( Category = "Prefabs" )
@@ -232,6 +237,7 @@ namespace sw
         float4 _cartColor;
 
         SharedAssetRef<CityCatalog>          _pCatalog;
+        SharedAssetRef<RuleViewCatalog>      _pBuildingViews; ///< 건물 id → 모델(`_buildingViewPath`)
         CitySimulation                       _city;
         ConsumerLease                        _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
         Wallet                               _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.

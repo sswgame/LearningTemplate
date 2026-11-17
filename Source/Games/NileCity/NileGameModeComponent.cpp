@@ -72,6 +72,7 @@ namespace sw
 {
     NileGameModeComponent::NileGameModeComponent()
         : _cityDataPath{}
+        , _buildingViewPath{}
         , _autoPlanPath{}
         , _groundPrefab{}
         , _roadPrefab{}
@@ -119,6 +120,7 @@ namespace sw
         , _traderColor{ 1.0f, 0.6f, 0.2f, 1.0f }
         , _cartColor{ 0.45f, 0.3f, 0.15f, 1.0f }
         , _pCatalog{}
+        , _pBuildingViews{}
         , _city{}
         , _wallet{}
         , _clock{}
@@ -227,8 +229,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool NileGameModeComponent::startGame()
     {
-        if ( acquireRequired( _cityDataPath, _pCatalog ) == false )
+        if ( acquireRequired( _cityDataPath, _pCatalog ) == false || acquireRequired( _buildingViewPath, _pBuildingViews ) == false )
             return false;
+        // 집은 단계마다 모델이 바뀐다 — 뷰 표에 빠진 단계가 있으면 그 단계만 조용히 색 상자가 되므로 시작할 때 막는다.
+        for ( const CityBuildingDef& def : _pCatalog->getBuildings() )
+        {
+            if ( def._kind != CityBuildingKind::House )
+                continue;
+            bool bComplete = NileBuildingComponent::findView( *_pBuildingViews, def, 0, false ) != nullptr; // 빈 땅
+            for ( int32 level = 0; level < static_cast<int32>( _pCatalog->getHouseLevels().size() ); ++level )
+            {
+                bComplete = bComplete && NileBuildingComponent::findView( *_pBuildingViews, def, level, true ) != nullptr;
+            }
+            if ( bComplete )
+                continue;
+            SW_LOG_ERROR_ID( "NileGameMode.HouseViewMissing", "[Nile] %# needs '%#.empty' and '%#.<level>' rows for every house level - the city does not open", _buildingViewPath.c_str(),
+                             def._id.c_str(), def._id.c_str() );
+            return false;
+        }
         if ( _clock.initialize( makeClockSettings() ) == false )
             return false; // 범위 밖(달 길이 `_secondsPerMonth` 등)은 시계가 오류를 남겼다
         _wallet.clear();
@@ -589,7 +607,7 @@ namespace sw
         if ( pDef == nullptr )
             return;
         // 모델이 있는 건물은 팔레트 머티리얼, 밭 · 조각상은 색 상자다. 단계 · 사람에 따른 모델 · 높이는 뷰가 맞춘다.
-        const bool  bModel    = NileBuildingComponent::hasModel( *pDef );
+        const bool  bModel    = NileBuildingComponent::hasModel( *_pBuildingViews, *pDef );
         GameObject* pBuilding = spawnPrefab( manager, bModel ? _modelBuildingPrefab : _blockBuildingPrefab, "NileBuilding" );
         if ( pBuilding == nullptr )
             return;
@@ -641,8 +659,7 @@ namespace sw
     {
         if ( _listModelMesh.empty() == false )
             return;
-        vector<string> listModelPath;
-        NileBuildingComponent::collectModelPaths( listModelPath );
+        const vector<string> listModelPath = _pBuildingViews->makeAllMeshPaths();
         // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 미리 쥐는 것이 목적이라 지금 쓰지 않는다(뷰의 `MeshComponent` 가 같은 로드를 받는다).
         // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
         for ( const string& path : listModelPath )

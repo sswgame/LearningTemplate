@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2d72ab58db40cc1124f6e8c649d5a84a"?>
+<!-- StarSkirmish 의 유닛 id → Kenney Space Kit 모델(규칙 → 뷰 카탈로그 RuleViewCatalog). units.xml 의 모든 유닛이 한 줄씩 있어야 한다(없으면 판을 열지 않는다).
+     mesh = 메시 에셋(쿠킹 도달 계산이 이 칸을 본다), width = 모델의 가로 폭(가장 넓은 수평 축, m).
+     키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 폭을 두고 Footprint Fill · Unit Fill 로 늘린다. -->
+<RuleViewCatalog>
+  <!-- 자원 -->
+  <View id="minerals" mesh="game/starskirmish/models/rock_crystals.mesh" width="0.85"/>
+  <View id="rich_minerals" mesh="game/starskirmish/models/rock_crystals.mesh" width="0.85"/>
+  <View id="geyser" mesh="game/starskirmish/models/crater.mesh" width="0.83"/>
+
+  <!-- 건물 -->
+  <View id="command_center" mesh="game/starskirmish/models/hangar_large_a.mesh" width="3.0"/>
+  <View id="supply_depot" mesh="game/starskirmish/models/machine_generator.mesh" width="0.7"/>
+  <View id="refinery" mesh="game/starskirmish/models/structure.mesh" width="1.0"/>
+  <View id="barracks" mesh="game/starskirmish/models/hangar_small_a.mesh" width="2.0"/>
+  <View id="academy" mesh="game/starskirmish/models/machine_wireless.mesh" width="0.75"/>
+  <View id="factory" mesh="game/starskirmish/models/hangar_round_a.mesh" width="3.27"/>
+  <View id="starport" mesh="game/starskirmish/models/platform_large.mesh" width="2.0"/>
+  <View id="bunker" mesh="game/starskirmish/models/turret_double.mesh" width="0.9"/>
+  <View id="missile_turret" mesh="game/starskirmish/models/turret_single.mesh" width="0.72"/>
+
+  <!-- 유닛 -->
+  <View id="worker" mesh="game/starskirmish/models/craft_miner.mesh" width="2.6"/>
+  <View id="marine" mesh="game/starskirmish/models/craft_speeder_a.mesh" width="2.1"/>
+  <View id="firebat" mesh="game/starskirmish/models/craft_speeder_b.mesh" width="2.03"/>
+  <View id="vulture" mesh="game/starskirmish/models/craft_racer.mesh" width="2.03"/>
+  <View id="tank" mesh="game/starskirmish/models/craft_cargo_a.mesh" width="2.45"/>
+  <View id="goliath" mesh="game/starskirmish/models/craft_speeder_b.mesh" width="2.03"/>
+  <View id="wraith" mesh="game/starskirmish/models/craft_racer.mesh" width="2.03"/>
+</RuleViewCatalog>

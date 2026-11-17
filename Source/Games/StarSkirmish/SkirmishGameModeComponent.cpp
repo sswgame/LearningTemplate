@@ -314,7 +314,7 @@ namespace sw
         // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
         if ( _unitModels.getCount() == 0 )
         {
-            for ( const string& path : _pUnitModelCatalog->makeAllModelPaths() )
+            for ( const string& path : _pUnitModelCatalog->makeAllMeshPaths() )
             {
                 _unitModels.add( MeshCache::request( path ) );
             }
@@ -526,7 +526,7 @@ namespace sw
         const RTSUnit* pUnit = _match.getWorld().findUnit( slot._shownID );
         if ( pUnit == nullptr )
             return;
-        const SkirmishUnitModel* pModel = _pUnitModelCatalog->find( pUnit->_pDef->_id );
+        const RuleViewDef* pModel = _pUnitModelCatalog->find( pUnit->_pDef->_id );
         if ( pModel == nullptr )
             return;
         GameObject* pObject = spawnPrefab( manager, _unitPrefab, "SkirmishUnit" );
@@ -539,7 +539,7 @@ namespace sw
             // 모델은 유닛 종류마다 정해져 바뀌지 않는다. 그래서 여기(게임 스레드)에서 지정한다. 색, 위치, 크기, 방향은 뷰가 맞춘다.
             if ( _listUnitLook.empty() )
                 prepareUnitLooks( pMesh->getMaterial() );
-            pMesh->setMeshID( SkirmishUnitComponent::makeModelPath( pModel->_model.c_str() ) );
+            pMesh->setMeshID( pModel->_mesh.path() );
         }
         SkirmishUnitComponent* pView = pObject->getComponent<SkirmishUnitComponent>();
         if ( pView != nullptr )
@@ -797,7 +797,7 @@ namespace sw
             SW_LOG_ERROR_ID( "SkirmishGameMode.UnitNoRow", "%#: unit '%#' of %# has no row in %#", kOwner, def._id.c_str(), _unitDataPath.c_str(), _unitModelPath.c_str() );
             bValid = false;
         }
-        for ( const SkirmishUnitModel& model : _pUnitModelCatalog->getAll() )
+        for ( const RuleViewDef& model : _pUnitModelCatalog->getAll() )
         {
             if ( _pCatalog->find( model._id ) != nullptr )
                 continue;

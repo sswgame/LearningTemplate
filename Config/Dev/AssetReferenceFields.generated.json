@@ -605,6 +605,7 @@
       "listField": [
         "_autoPlanPath",
         "_blockBuildingPrefab",
+        "_buildingViewPath",
         "_cityDataPath",
         "_groundPrefab",
         "_modelBuildingPrefab",
@@ -612,6 +613,7 @@
         "_walkerPrefab",
         "autoPlanPath",
         "blockBuildingPrefab",
+        "buildingViewPath",
         "cityDataPath",
         "groundPrefab",
         "modelBuildingPrefab",
