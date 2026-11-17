@@ -9,6 +9,18 @@ namespace sw
 {
     namespace
     {
+        /** @brief 이 스레드에서 초기화 중인 서브시스템 하나입니다(`SubsystemCollection::initializeAt` 의 스택 객체 — 안쪽 목록의 기동이 바깥 것을 가린다). */
+        struct SubsystemInitializeFrame
+        {
+            SubsystemCollection*      _pCollection; ///< 초기화를 부른 목록
+            uint32                    _index;       ///< 초기화 중인 자리
+            const ISubsystem*         _pUndeclared; ///< 의존 선언 없이 얻은 첫 서브시스템(없으면 nullptr)
+            SubsystemInitializeFrame* _pOuter;      ///< 바깥 프레임(없으면 nullptr)
+        };
+
+        /** @brief 이 스레드에서 초기화 중인 서브시스템(가장 안쪽)입니다. `initializeAt` 만 걸고 푼다. */
+        thread_local SubsystemInitializeFrame* t_pInitializeFrame = nullptr;
+
         struct SubsystemCollectionInternal
         {
             /** @brief 이름의 노드 자리입니다. 없으면 비어 있습니다. */
@@ -115,9 +127,59 @@ namespace sw
 
     SubsystemInitResult SubsystemCollection::initializeAt( uint32 index )
     {
-        ISubsystem&           subsystem = *_listEntry[index]._pSubsystem;
-        const ScopedMemoryTag subsystemMemoryTag{ subsystem.getSubsystemMemoryTag() };
-        return subsystem.initializeSubsystem();
+        ISubsystem&              subsystem = *_listEntry[index]._pSubsystem;
+        const ScopedMemoryTag    subsystemMemoryTag{ subsystem.getSubsystemMemoryTag() };
+        SubsystemInitializeFrame frame{ this, index, nullptr, t_pInitializeFrame };
+        t_pInitializeFrame               = &frame;
+        const SubsystemInitResult result = subsystem.initializeSubsystem();
+        t_pInitializeFrame               = frame._pOuter;
+        if ( frame._pUndeclared == nullptr )
+            return result;
+        // 의존 선언 없이 같은 목록의 서브시스템을 얻었다 — 선 것은 내리고 기동을 멈춘다(부른 쪽이 앞에 "failed to initialize" 를 붙인다).
+        if ( result != SubsystemInitResult::Failed )
+        {
+            subsystem.stopSubsystem();
+            subsystem.shutdownSubsystem();
+        }
+        _error = string( "looked up '" ) + frame._pUndeclared->getSubsystemName() + "' without declaring it as a dependency";
+        return SubsystemInitResult::Failed;
+    }
+
+    bool SubsystemCollection::isDependencyOf( uint32 index, uint32 dependencyIndex ) const
+    {
+        vector<uint8>  listVisited( _listEntry.size(), SW_FALSE );
+        vector<uint32> listPending{ index };
+        while ( listPending.empty() == false )
+        {
+            const uint32 current = listPending.back();
+            listPending.pop_back();
+            for ( const uint32 next : _listDependency[current] )
+            {
+                if ( next == dependencyIndex )
+                    return true;
+                if ( listVisited[next] == SW_TRUE )
+                    continue;
+                listVisited[next] = SW_TRUE;
+                listPending.push_back( next );
+            }
+        }
+        return false;
+    }
+
+    void SubsystemCollection::recordInitializeLookup( const ISubsystem& target )
+    {
+        SubsystemInitializeFrame* const pFrame = t_pInitializeFrame;
+        if ( pFrame == nullptr || pFrame->_pUndeclared != nullptr )
+            return;
+        const SubsystemCollection& collection = *pFrame->_pCollection;
+        for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( collection._listEntry.size() ); ++targetIndex )
+        {
+            if ( collection._listEntry[targetIndex]._pSubsystem != &target )
+                continue;
+            if ( targetIndex != pFrame->_index && collection.isDependencyOf( pFrame->_index, targetIndex ) == false )
+                pFrame->_pUndeclared = &target;
+            return;
+        }
     }
 
     bool SubsystemCollection::initializeAll( SubsystemHostMask host )
@@ -158,7 +220,7 @@ namespace sw
                 _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pClockNanos() - startNanos ) / 1000 } );
             if ( result == SubsystemInitResult::Failed )
             {
-                _error = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to initialize";
+                _error = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to initialize" + ( _error.empty() ? string{} : string( ": " ) + _error );
                 return false;
             }
             _listInitialized.push_back( index );
@@ -265,7 +327,7 @@ namespace sw
         {
             if ( initializeAt( index ) == SubsystemInitResult::Failed )
             {
-                _error     = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to restart";
+                _error     = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to restart" + ( _error.empty() ? string{} : string( ": " ) + _error );
                 bRestarted = false;
                 break;
             }

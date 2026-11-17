@@ -133,7 +133,7 @@ namespace sw
         TSubsystem& addSubsystem( unique_ptr<TSubsystem> subsystem )
         {
             TSubsystem& added       = _collection.add( std::move( subsystem ) );
-            const bool  bRegistered = registerEntry( getSubsystemTypeHash<TSubsystem>(), &added, true, TSubsystem::kModuleVisibility );
+            const bool  bRegistered = registerEntry( getSubsystemTypeHash<TSubsystem>(), &added, &added, TSubsystem::kModuleVisibility );
             SW_ASSERT( bRegistered );
             (void)bRegistered;
             return added;
@@ -148,7 +148,7 @@ namespace sw
         {
             static_assert( std::is_base_of_v<TInterface, TObject>, "SubsystemScope::expose needs a base interface" );
             // 소유한 서브시스템을 드러낸 칸은 그 서브시스템과 함께 지워져야 한다(destroyAll).
-            return registerEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &object ), isOwnedEntry( getSubsystemTypeHash<TObject>() ) );
+            return registerEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &object ), findOwner( getSubsystemTypeHash<TObject>() ) );
         }
 
         /**
@@ -160,7 +160,7 @@ namespace sw
         [[nodiscard]] bool exposeMember( TOwner& owner, TInterface& member )
         {
             (void)owner;
-            return registerEntry( getSubsystemTypeHash<TInterface>(), &member, isOwnedEntry( getSubsystemTypeHash<TOwner>() ) );
+            return registerEntry( getSubsystemTypeHash<TInterface>(), &member, findOwner( getSubsystemTypeHash<TOwner>() ) );
         }
 
         /**
@@ -174,7 +174,7 @@ namespace sw
         [[nodiscard]] bool publish( TObject& object )
         {
             static_assert( std::is_base_of_v<TInterface, TObject>, "SubsystemScope::publish needs a base interface" );
-            return publishEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &object ), isOwnedEntry( getSubsystemTypeHash<TObject>() ) );
+            return publishEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &object ), findOwner( getSubsystemTypeHash<TObject>() ) );
         }
 
         /**
@@ -187,7 +187,7 @@ namespace sw
         {
             static_assert( std::is_base_of_v<TInterface, TPart>, "SubsystemScope::publishPart needs a base interface of the part" );
             (void)owner; // 소유 여부를 정하는 타입만 쓴다
-            return publishEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &part ), isOwnedEntry( getSubsystemTypeHash<TOwner>() ) );
+            return publishEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &part ), findOwner( getSubsystemTypeHash<TOwner>() ) );
         }
 
         /**
@@ -214,7 +214,7 @@ namespace sw
             using TPlain = std::remove_const_t<T>;
             if ( pObject == nullptr || findOwnEntry( getSubsystemTypeHash<TPlain>() ) != nullptr || findOwnEntry( getSubsystemTypeHash<const TPlain>() ) != nullptr )
                 return false;
-            return registerEntry( getSubsystemTypeHash<T>(), const_cast<TPlain*>( pObject ), false );
+            return registerEntry( getSubsystemTypeHash<T>(), const_cast<TPlain*>( pObject ), nullptr );
         }
 
         /** @brief 타입 @p T(건 때와 같은 const)로 빌려 건 객체를 풉니다. 소유한 서브시스템은 풀지 않습니다. */
@@ -231,7 +231,11 @@ namespace sw
             return findInLocator<T>( *this );
         }
 
-        /** @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredService`, 소유한 서브시스템을 초기화 뒤에 묻는 자리). */
+        /**
+         * @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredService`, 소유한 서브시스템을 초기화 뒤에 묻는 자리).
+         * @details 같은 목록의 서브시스템을 초기화 중에 찾으면(`find` · `get` · `locateSubsystem` 모두) 찾는 쪽이 그것을 의존으로 선언했어야 한다 — 아니면 그 초기화가 진다
+         *          (`SubsystemCollection::recordInitializeLookup`).
+         */
         template <class T>
         T& get() const
         {
@@ -267,7 +271,7 @@ namespace sw
         {
             uint64                    _typeHash;                                                 ///< 걸린 타입의 해시
             void*                     _pObject;                                                  ///< 걸린 객체(그 타입으로 바꾼 주소)
-            bool                      _bOwned;                                                   ///< 이 범위의 컬렉션이 소유한 서브시스템이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            ISubsystem*               _pOwner;                                                   ///< 이 칸을 가진, 이 범위의 컬렉션이 소유한 서브시스템(빌려 건 칸은 nullptr). 초기화 중 조회의 의존 검사가 쓴다
             bool                      _bPublished{ false };                                      ///< 매단 부모 범위의 조회에도 보이면 true(`publish`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             SubsystemModuleVisibility _moduleVisibility{ SubsystemModuleVisibility::ScopeOnly }; ///< 모듈 서비스 범위에도 보이는지(소유한 서브시스템의 `kModuleVisibility`)
         };
@@ -282,17 +286,19 @@ namespace sw
         /** @brief 매단 자식 범위를 매단 역순으로 지웁니다(`shutdownAll` · `destroyAll` 의 첫 단계). */
         void destroyMountedScopes();
         /** @brief 칸을 더합니다. 이 범위의 칸에 같은 타입이 이미 있으면 false 입니다. */
-        [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, bool bOwned, SubsystemModuleVisibility moduleVisibility = SubsystemModuleVisibility::ScopeOnly );
+        [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, ISubsystem* pOwner, SubsystemModuleVisibility moduleVisibility = SubsystemModuleVisibility::ScopeOnly );
         /** @brief 칸을 공개합니다. 같은 객체로 이미 걸렸으면 표시만 더하고, 다른 객체로 걸렸으면 false 입니다. */
-        [[nodiscard]] bool publishEntry( uint64 typeHash, void* pObject, bool bOwned );
+        [[nodiscard]] bool publishEntry( uint64 typeHash, void* pObject, ISubsystem* pOwner );
         /** @brief 이 범위 자신의 칸에서만 찾습니다(자식 · 상위는 보지 않는다). */
         const Entry* findOwnEntry( uint64 typeHash ) const;
         /** @brief 공개한 칸을 이 범위와 그 자식에서 찾습니다(매단 부모가 부른다). */
         void* findPublished( uint64 typeHash ) const;
         /** @brief 빌려 건 칸 하나를 지웁니다. */
         void unregisterBorrowed( uint64 typeHash );
-        /** @brief @p typeHash 칸이 소유한 서브시스템이면 true 입니다. */
-        bool isOwnedEntry( uint64 typeHash ) const;
+        /** @brief @p typeHash 칸을 가진 소유한 서브시스템입니다. 빌려 건 칸 · 없는 칸이면 nullptr 입니다. */
+        ISubsystem* findOwner( uint64 typeHash ) const;
+        /** @brief 찾은 칸의 객체를 돌려줍니다. 소유한 서브시스템의 칸이면 초기화 중 의존 검사에 알린다(`SubsystemCollection::recordInitializeLookup`). */
+        static void* resolveEntry( const Entry& entry );
 
     private:
         SubsystemCollection _collection; ///< 소유한 서브시스템

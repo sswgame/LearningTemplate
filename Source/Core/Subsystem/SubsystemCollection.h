@@ -131,6 +131,19 @@ namespace sw
          */
         [[nodiscard]] static expected<SubsystemGraph> computeGraph( const vector<SubsystemNode>& listNode );
 
+        /**
+         * @brief 이 스레드에서 초기화 중인 서브시스템이 범위 조회로 @p target 을 얻었음을 알립니다(`SubsystemScope` 의 조회가 소유한 칸을 돌려줄 때 부른다).
+         * @details @p target 이 지금 초기화 중인 목록(가장 안쪽)의 것인데 그 서브시스템 자신도, 선언한 의존(간접 포함 — 역방향 의존 칸으로 생긴 것도)도 아니면 그 초기화는 진다:
+         *          `initializeAt` 이 종료를 부르고 `Failed` 로 바꾸며 `getError` 에 두 이름을 적는다. 의존을 빼먹은 조회는 이름 순서가 우연히 맞으면 지나가다가
+         *          서브시스템 하나를 더하는 순간 아직 서지 않은 객체를 읽는다 — 그 모양을 기동에서 바로 멈춘다(언리얼 `InitializeDependency` 가 맡는 자리).
+         *          다른 목록(상위 범위 · 매단 자식)의 객체는 범위 수명이 지키므로 보지 않는다. 초기화 밖 · 다른 스레드의 조회는 아무 일도 하지 않는다.
+         */
+        static void recordInitializeLookup( const ISubsystem& target );
+
+    private:
+        /** @brief @p dependencyIndex 가 @p index 의 의존(간접 포함)이면 true 입니다. */
+        bool isDependencyOf( uint32 index, uint32 dependencyIndex ) const;
+
     private:
         /** @brief 서브시스템 하나와 그것을 넘긴 타입으로 소멸시키는 함수입니다. */
         struct Entry

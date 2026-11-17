@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -73,7 +74,91 @@ namespace
     {
         int32 _value{ 0 };
     };
+
+    /** @brief 초기화에서 같은 범위의 `ScopeProbeSubsystem` 을 찾는 서브시스템입니다 — 의존 선언(@p listDependency)이 그 조회를 덮는지 본다. 종료가 불리면 @p pShutDown 을 켭니다. */
+    class ScopeLookupSubsystem final : public ISubsystem
+    {
+    public:
+        ScopeLookupSubsystem( const SubsystemScope& scope, const utf8* pName, vector<const utf8*> listDependency, bool* pShutDown )
+            : _scope{ scope }
+            , _pName{ pName }
+            , _listDependency{ std::move( listDependency ) }
+            , _pShutDown{ pShutDown }
+        {
+        }
+        SubsystemInitResult initializeSubsystem() override
+        {
+            (void)_scope.get<ScopeProbeSubsystem>();
+            return SubsystemInitResult::Succeeded;
+        }
+        void                    shutdownSubsystem() override { *_pShutDown = true; }
+        const utf8*             getSubsystemName() const override { return _pName; }
+        span<const utf8* const> getSubsystemDependencies() const override { return _listDependency; }
+
+    private:
+        const SubsystemScope& _scope;
+        const utf8*           _pName;
+        vector<const utf8*>   _listDependency;
+        bool*                 _pShutDown;
+    };
+
+    /** @brief 의존만 잇는 빈 서브시스템입니다(간접 의존을 본다). */
+    class ScopeRelaySubsystem final : public ISubsystem
+    {
+    public:
+        SubsystemInitResult     initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                    shutdownSubsystem() override {}
+        const utf8*             getSubsystemName() const override { return "ScopeRelay"; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { "ScopeProbe" };
+            return kArrDependency;
+        }
+    };
 } // namespace
+
+/**
+ * @brief [SubsystemScopeTest] 초기화에서 같은 목록의 서브시스템을 의존 선언 없이 찾으면 기동이 지고, 오류가 두 이름을 적으며, 선 것은 종료가 불린다
+ * @details 찾는 쪽 이름("ZLookup")이 뒤라 이름 순서로는 대상이 먼저 선다 — 우연히 맞는 순서여도 선언이 빠졌으면 진다(서브시스템 하나를 더하면 순서가 바뀐다).
+ */
+SW_TEST_CASE( SubsystemScopeTest, UndeclaredLookupDuringInitializeFailsStartup )
+{
+    bool           bShutDown = false;
+    SubsystemScope scope;
+    (void)scope.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
+    (void)scope.emplaceSubsystem<ScopeLookupSubsystem>( scope, "ZLookup", vector<const utf8*>{}, &bShutDown );
+    SW_EXPECT_FALSE( scope.getCollection().initializeAll( SubsystemHostMask::All ) );
+    const string& error = scope.getCollection().getError();
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "'ZLookup' failed to initialize" ), error.c_str() );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "looked up 'ScopeProbe' without declaring it as a dependency" ), error.c_str() );
+    SW_EXPECT_TRUE( bShutDown );                                                          // 선 것은 내린다 — 종료 목록에서 빠져도 자원을 쥔 채 남지 않는다
+    SW_EXPECT_EQUAL( size_t( 1 ), scope.getCollection().getInitializedIndices().size() ); // 대상만 선 채로 남아 `shutdownAll` 이 내린다
+}
+
+/**
+ * @brief [SubsystemScopeTest] 직접 · 간접으로 선언한 의존과 빌려 건 객체 · 상위 범위의 서브시스템은 초기화 중에 찾아도 된다
+ */
+SW_TEST_CASE( SubsystemScopeTest, DeclaredLookupDuringInitializeIsAllowed )
+{
+    bool           bDirectShutDown   = false;
+    bool           bIndirectShutDown = false;
+    SubsystemScope scope;
+    (void)scope.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
+    (void)scope.emplaceSubsystem<ScopeRelaySubsystem>();
+    (void)scope.emplaceSubsystem<ScopeLookupSubsystem>( scope, "Direct", vector<const utf8*>{ "ScopeProbe" }, &bDirectShutDown );
+    (void)scope.emplaceSubsystem<ScopeLookupSubsystem>( scope, "Indirect", vector<const utf8*>{ "ScopeRelay" }, &bIndirectShutDown );
+    SW_EXPECT_TRUE_MSG( scope.getCollection().initializeAll( SubsystemHostMask::All ), scope.getCollection().getError().c_str() );
+    SW_EXPECT_FALSE( bDirectShutDown );
+    SW_EXPECT_FALSE( bIndirectShutDown );
+
+    // 상위 범위에 선 서브시스템은 범위 수명이 지킨다 — 자식 목록의 의존 선언과 무관하다.
+    bool           bChildShutDown = false;
+    SubsystemScope child{ &scope };
+    (void)child.emplaceSubsystem<ScopeLookupSubsystem>( scope, "Child", vector<const utf8*>{}, &bChildShutDown );
+    SW_EXPECT_TRUE_MSG( child.getCollection().initializeAll( SubsystemHostMask::All ), child.getCollection().getError().c_str() );
+    child.destroyAll();
+    SW_EXPECT_TRUE( bChildShutDown );
+}
 
 /**
  * @brief [SubsystemScopeTest] 소유한 서브시스템과 빌려 건 객체를 타입으로 찾고, 인터페이스로도 드러낸다
