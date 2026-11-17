@@ -12,6 +12,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -174,7 +175,7 @@ namespace sw
         int32                            getStartingCash() const { return _startingCash; }
         const vector<ParkRidePlacement>& getPlacements() const { return _listPlacement; }
         /** @brief 파일에서 읽을 때 받은 같은 팩의 코스터 레이아웃입니다(공유 캐시의 한 벌). 글에서 읽었으면 nullptr 입니다. */
-        const shared_ptr<const CoasterLayoutCatalog>& getCoasterLayouts() const { return _pCoasterLayouts; }
+        const SharedAssetRef<CoasterLayoutCatalog>& getCoasterLayouts() const { return _pCoasterLayouts; }
 
     private:
         /**
@@ -187,11 +188,11 @@ namespace sw
         [[nodiscard]] bool loadCoaster( const XMLNode& node, const CoasterLayoutCatalog& layouts, string_view sourceName );
 
     private:
-        vector<ParkRidePlacement>              _listPlacement;
-        float3                                 _gatePosition;
-        int32                                  _entryFee;
-        int32                                  _startingCash;
-        shared_ptr<const CoasterLayoutCatalog> _pCoasterLayouts; ///< 파일에서 읽을 때 받은 코스터 레이아웃(공유 캐시의 한 벌)
+        vector<ParkRidePlacement>            _listPlacement;
+        float3                               _gatePosition;
+        int32                                _entryFee;
+        int32                                _startingCash;
+        SharedAssetRef<CoasterLayoutCatalog> _pCoasterLayouts; ///< 파일에서 읽을 때 받은 코스터 레이아웃(공유 캐시의 한 벌)
     };
 
     /**

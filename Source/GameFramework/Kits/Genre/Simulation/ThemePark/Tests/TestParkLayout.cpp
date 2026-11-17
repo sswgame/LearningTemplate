@@ -74,4 +74,10 @@ SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
     const shared_ptr<const ParkLayout> pFresh = SharedAssetCache<ParkLayout>::acquire( layoutID );
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_EQUAL( 9, pFresh->getEntryFee() ); // 다시 받은 쪽이 새 값을 본다
+
+    // 배치가 멤버로 쥔 코스터 레이아웃(`SharedAssetRef`)은 다시 받지 않아도 다시 읽힌 판을 본다 — 스냅숏은 옛 판 그대로다.
+    const shared_ptr<const CoasterLayoutCatalog> pCoasterSnapshot = SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterID );
+    SW_REQUIRE_TRUE( SharedAssetCache<CoasterLayoutCatalog>::reloadShared( coasterID ) );
+    SW_EXPECT_TRUE( pFresh->getCoasterLayouts().get() == SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterID ).get() );
+    SW_EXPECT_TRUE( pFresh->getCoasterLayouts().get() != pCoasterSnapshot.get() );
 }

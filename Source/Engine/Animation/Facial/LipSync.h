@@ -123,7 +123,7 @@ namespace sw
     };
 
     /**
-     * @brief 립싱크 분석 표를 경로마다 한 벌 나눠 줍니다("lipsync", 인스턴스화는 `LipSync.cpp`). 다시 읽으면 표에서 떼어 냅니다(쥔 쪽은 다시 받아야 새 내용을 본다).
+     * @brief 립싱크 분석 표를 경로마다 한 벌 나눠 줍니다("lipsync", 인스턴스화는 `LipSync.cpp`). 다시 읽으면 새 판을 넣습니다(멤버로 쥐는 쪽은 `SharedAssetRef` 로 새 판을 본다).
      * @details 얼굴 컴포넌트마다 엔진 기본 표를 다시 읽지 않는다(첫 말하기에서 받는다). 오프라인 임포트(`--import-lipsync`)도 같은 한 벌을 읽는다.
      */
     SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, LipSyncSettings );

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
@@ -122,15 +124,15 @@ namespace sw
             }
 
         private:
-            shared_ptr<const MatchModeCatalog> _pCatalog; ///< 설정 `_catalog` 의 공유 캐시 한 벌
-            vector<MatchModeDef>               _listMode;
-            PartyLobbyService                  _partyLobby;
-            MatchQueueService                  _queue;
-            MatchmakingServer                  _server;
-            MatchServerAgent                   _agent; ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
-            int32                              _maxPartySize;
-            int32                              _reconnectGraceMs;
-            uint8                              _bGameServer : 1;
+            SharedAssetRef<MatchModeCatalog> _pCatalog; ///< 설정 `_catalog` 의 공유 캐시 한 벌
+            vector<MatchModeDef>             _listMode;
+            PartyLobbyService                _partyLobby;
+            MatchQueueService                _queue;
+            MatchmakingServer                _server;
+            MatchServerAgent                 _agent; ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
+            int32                            _maxPartySize;
+            int32                            _reconnectGraceMs;
+            uint8                            _bGameServer : 1;
         };
     } // namespace
 } // namespace sw

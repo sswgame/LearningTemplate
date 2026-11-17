@@ -15,6 +15,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -69,7 +70,7 @@ namespace sw
         PROPERTY( Category = "Socket", DisplayName = "Socket Set", Tooltip = "Sockets and markers asset (*.sockets.xml)" )
         AssetRef<SocketSet> _socketSetPath;
 
-        shared_ptr<const SocketSet> _socketSet;       ///< 공유 캐시의 한 벌. 다시 읽혀도 이 객체는 바뀌지 않고, 다시 받아야 새 내용이다.
-        Subscription                _boneRequirement; ///< 소켓 부모 본(가상 본의 두 끝 포함)을 유닛 본 LOD 의 핵심 본으로 지키는 구독
+        SharedAssetRef<SocketSet> _socketSet;       ///< 공유 캐시의 한 벌. 다시 읽히면 새 판을 본다.
+        Subscription              _boneRequirement; ///< 소켓 부모 본(가상 본의 두 끝 포함)을 유닛 본 LOD 의 핵심 본으로 지키는 구독
     };
 } // namespace sw

@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -192,6 +193,15 @@ namespace sw
                 return true;
             reportMissingAsset( path );
             return false;
+        }
+        /** @brief 멤버로 쥐어 다시 읽힌 판을 따라가는 @p outAsset 판입니다(`SharedAssetRef`). */
+        template <typename TAsset>
+        [[nodiscard]] bool acquireRequired( string_view path, SharedAssetRef<TAsset>& outAsset ) const
+        {
+            shared_ptr<const TAsset> pAsset;
+            const bool               bAcquired = acquireRequired( path, pAsset );
+            outAsset                           = std::move( pAsset );
+            return bAcquired;
         }
         /** @brief 입력 맵의 동작이 눌려 있으면 true 입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). */
         [[nodiscard]] bool isActionDown( const hashed_string& action ) const;

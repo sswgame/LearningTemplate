@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -125,17 +126,17 @@ namespace sw
         PROPERTY( Category = "Housing", DisplayName = "Ghost Blocked Prefab", Tooltip = "Unit box (1 m, base at y 0) shown where a part cannot go" )
         AssetRef<PrefabAsset> _ghostBlockedPrefab;
 
-        shared_ptr<const HousingPartCatalog> _pCatalog;
-        HousingLayout                        _layout;
-        Wallet                               _wallet;
-        vector<PartView>                     _listView;
-        HousingCandidate                     _ghostCandidate;
-        HousingPlaceCheck                    _ghostCheck;
-        GameObjectHandle                     _ghost;
-        uint32                               _viewRevision; ///< 뷰가 맞춘 레이아웃 판
-        HousingPlaceResult                   _lastResult;
-        uint8                                _bGhostShown : 1; ///< 미리보기를 켰다
-        uint8                                _bGhostDirty : 1; ///< 고스트를 다시 세울 차례다
-        uint8                                _reserved    : 6;
+        SharedAssetRef<HousingPartCatalog> _pCatalog;
+        HousingLayout                      _layout;
+        Wallet                             _wallet;
+        vector<PartView>                   _listView;
+        HousingCandidate                   _ghostCandidate;
+        HousingPlaceCheck                  _ghostCheck;
+        GameObjectHandle                   _ghost;
+        uint32                             _viewRevision; ///< 뷰가 맞춘 레이아웃 판
+        HousingPlaceResult                 _lastResult;
+        uint8                              _bGhostShown : 1; ///< 미리보기를 켰다
+        uint8                              _bGhostDirty : 1; ///< 고스트를 다시 세울 차례다
+        uint8                              _reserved    : 6;
     };
 } // namespace sw

@@ -18,6 +18,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -264,7 +265,7 @@ namespace sw
         vector<ShooterArenaBox>             _listBox;
         vector<ShooterEnemyView>            _listEnemyView;
         shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
-        shared_ptr<const SpawnTable>        _pTable;
+        SharedAssetRef<SpawnTable>          _pTable;
         AIDirector                          _director;
         vector<AIDirectorEvent>             _listDirectorEvent;
         vector<EnemyRecord>                 _listEnemy;

@@ -15,6 +15,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/GameConfig.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
@@ -59,7 +60,7 @@ namespace sw
         /** @brief 지역 효과 시연의 어빌리티 클래스(기본 — Generic · Combat 세트, ApplyEffects)입니다. */
         AbilityClassRegistry _abilityClasses;
         /** @brief 지역 효과 시연의 이펙트 · 어빌리티 · 세트입니다(공유 캐시의 한 벌). 어빌리티 시스템과 지역 프로필이 게임 서비스로 찾는다. */
-        shared_ptr<const AbilityCatalog> _pAbilityCatalog;
+        SharedAssetRef<AbilityCatalog> _pAbilityCatalog;
     };
 } // namespace sw
 

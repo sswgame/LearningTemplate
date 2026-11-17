@@ -23,6 +23,7 @@
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -212,28 +213,28 @@ namespace sw
         void refreshSkinPalette();
 
     private:
-        AnimationCrowdBucketKey         _key;
-        shared_ptr<const Skeleton>      _skeleton;
-        shared_ptr<const AnimationClip> _clip;
-        shared_ptr<const AnimationClip> _nextClip; ///< 섞기 묶음의 들어가는 클립(아니면 nullptr)
-        shared_ptr<Mesh>                _mesh;
-        AnimationSkinSlot               _skinSlot;
-        vector<optional<uint32>>        _listTrackToBone;
-        vector<optional<uint32>>        _listNextTrackToBone;
-        Pose                            _localPose;
-        Pose                            _nextPose;
-        Pose                            _scratchTrackPose;
-        vector<float4x4>                _listModelSpace;
-        vector<float4x4>                _listSkinPalette;
-        float64                         _idleStartTime;
-        float64                         _variationSpan;   ///< 변형 한 구간의 시간 폭이다(클립 길이 / 구간 수)
-        float64                         _blendStartClock; ///< 섞기 묶음이 생긴 군중 시계
-        float32                         _nextStartTime;   ///< 섞기 묶음이 생길 때 들어가는 클립의 시각
-        float32                         _blendAlpha;
-        uint32                          _memberCount;
-        uint32                          _visibleMemberCount;
-        uint32                          _referenceCount;
-        uint32                          _evaluationCount;
+        AnimationCrowdBucketKey       _key;
+        SharedAssetRef<Skeleton>      _skeleton;
+        SharedAssetRef<AnimationClip> _clip;
+        SharedAssetRef<AnimationClip> _nextClip; ///< 섞기 묶음의 들어가는 클립(아니면 nullptr)
+        shared_ptr<Mesh>              _mesh;
+        AnimationSkinSlot             _skinSlot;
+        vector<optional<uint32>>      _listTrackToBone;
+        vector<optional<uint32>>      _listNextTrackToBone;
+        Pose                          _localPose;
+        Pose                          _nextPose;
+        Pose                          _scratchTrackPose;
+        vector<float4x4>              _listModelSpace;
+        vector<float4x4>              _listSkinPalette;
+        float64                       _idleStartTime;
+        float64                       _variationSpan;   ///< 변형 한 구간의 시간 폭이다(클립 길이 / 구간 수)
+        float64                       _blendStartClock; ///< 섞기 묶음이 생긴 군중 시계
+        float32                       _nextStartTime;   ///< 섞기 묶음이 생길 때 들어가는 클립의 시각
+        float32                       _blendAlpha;
+        uint32                        _memberCount;
+        uint32                        _visibleMemberCount;
+        uint32                        _referenceCount;
+        uint32                        _evaluationCount;
     };
 } // namespace sw
 

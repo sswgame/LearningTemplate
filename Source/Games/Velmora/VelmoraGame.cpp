@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/GameConfig.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
@@ -42,10 +43,10 @@ namespace sw
          * @brief 이 세션의 확장 팩 · 모드(`-gv_modList`)입니다. 카탈로그를 읽기 전에 적용한다 — 확장 팩은 지역 · 퀘스트 · 몬스터 표에 층으로 항목을 더하므로(`<Layer>`)
          *        먼저 읽은 표가 층 없는 내용을 쥐지 않게. 요청한 팩을 올리지 못하면 게임을 띄우지 않는다(요청과 다른 구성으로 조용히 돌지 않는다).
          */
-        unique_ptr<ModSession>                 _mods;
-        shared_ptr<const VelmoraRegionCatalog> _pRegionCatalog;
-        shared_ptr<const QuestCatalog>         _pQuestCatalog;
-        shared_ptr<const MonsterCatalog>       _pMonsterCatalog;
+        unique_ptr<ModSession>               _mods;
+        SharedAssetRef<VelmoraRegionCatalog> _pRegionCatalog;
+        SharedAssetRef<QuestCatalog>         _pQuestCatalog;
+        shared_ptr<const MonsterCatalog>     _pMonsterCatalog;
     };
 } // namespace sw
 

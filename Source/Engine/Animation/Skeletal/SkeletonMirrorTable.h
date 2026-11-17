@@ -15,6 +15,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -104,9 +105,9 @@ namespace sw
         const vector<uint32>* find( const Skeleton& skeleton, string_view sourceLabel );
 
     private:
-        shared_ptr<const SkeletonMirrorTable> _table;
-        vector<uint32>                        _listMirroredBone;
-        IdentityToken                         _builtRevision;  ///< 짝 번호 표를 만든 표 내용 토큰이다
-        const Skeleton*                       _pBuiltSkeleton; ///< 짝 번호 표를 만든 스켈레톤이다(동일성만 확인한다)
+        SharedAssetRef<SkeletonMirrorTable> _table;
+        vector<uint32>                      _listMirroredBone;
+        IdentityToken                       _builtRevision;  ///< 짝 번호 표를 만든 표 내용 토큰이다
+        const Skeleton*                     _pBuiltSkeleton; ///< 짝 번호 표를 만든 스켈레톤이다(동일성만 확인한다)
     };
 } // namespace sw

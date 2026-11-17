@@ -2,6 +2,8 @@
 
 #include "Core/Network/DevOnlineExtension.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
@@ -165,7 +167,7 @@ namespace sw
 
         private:
             shared_ptr<const CurrencyCatalog>                            _pCurrencyCatalog; ///< 공유 캐시의 한 벌
-            shared_ptr<const OfferCatalog>                               _pOfferCatalog;    ///< 공유 캐시의 한 벌
+            SharedAssetRef<OfferCatalog>                                 _pOfferCatalog;    ///< 공유 캐시의 한 벌
             unique_ptr<IReceiptValidator>                                _pFakeValidator;   ///< `_bFakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
             ReceiptProviderSet                                           _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
             ReceiptValidatorRegistry                                     _receiptRegistry;

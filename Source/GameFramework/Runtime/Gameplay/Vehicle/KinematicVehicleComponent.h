@@ -12,6 +12,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -70,11 +71,11 @@ namespace sw
             float32        sampleHeight( float32 x, float32 z ) const override;
             VehicleSurface sampleSurface( float32 x, float32 z ) const override;
 
-            GameObjectManager*                 _pManager;       ///< 이 차의 씬(등록된 동안). nullptr 이면 평면이다
-            shared_ptr<const SurfaceKindTable> _pSurfaceTable;  ///< 표면 종류 표(시작에서 받는다)
-            uint64                             _ownerID;        ///< 광선이 건너뛸 이 차의 오브젝트
-            float32                            _fallbackHeight; ///< 맞지 않을 때의 높이
-            float32                            _probeTop;       ///< 광선을 쏘는 높이(차 위)
+            GameObjectManager*               _pManager;       ///< 이 차의 씬(등록된 동안). nullptr 이면 평면이다
+            SharedAssetRef<SurfaceKindTable> _pSurfaceTable;  ///< 표면 종류 표(시작에서 받는다)
+            uint64                           _ownerID;        ///< 광선이 건너뛸 이 차의 오브젝트
+            float32                          _fallbackHeight; ///< 맞지 않을 때의 높이
+            float32                          _probeTop;       ///< 광선을 쏘는 높이(차 위)
         };
 
         /** @brief 레일 모듈이면 `_rail` 오브젝트의 스플라인 월드 곡선을 모터에 겁니다. 없으면 오류를 남기고 false 입니다. */

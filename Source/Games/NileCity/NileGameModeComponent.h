@@ -16,6 +16,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -233,7 +234,7 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Cart Color", Tooltip = "Colour of a cart walker" )
         float4 _cartColor;
 
-        shared_ptr<const CityCatalog>        _pCatalog;
+        SharedAssetRef<CityCatalog>          _pCatalog;
         CitySimulation                       _city;
         ConsumerLease                        _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
         Wallet                               _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.

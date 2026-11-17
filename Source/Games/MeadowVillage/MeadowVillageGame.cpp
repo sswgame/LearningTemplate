@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
@@ -35,10 +36,10 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        shared_ptr<const CropCatalog>         _pCropCatalog;       ///< 공유 캐시의 한 벌(게임 범위 서비스)
-        shared_ptr<const CreatureLifeCatalog> _pCreatureCatalog;   ///< 공유 캐시의 한 벌(게임 범위 서비스)
-        shared_ptr<const ReputationCatalog>   _pFriendshipCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
-        shared_ptr<const QuestCatalog>        _pQuestCatalog;      ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<CropCatalog>         _pCropCatalog;       ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<CreatureLifeCatalog> _pCreatureCatalog;   ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<ReputationCatalog>   _pFriendshipCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<QuestCatalog>        _pQuestCatalog;      ///< 공유 캐시의 한 벌(게임 범위 서비스)
     };
 } // namespace sw
 

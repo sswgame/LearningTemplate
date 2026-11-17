@@ -7,7 +7,7 @@
  *          그 모듈이 인스턴스화해 모듈 서브시스템이 소유하며 모듈 수명으로 오르내립니다(`SW_MODULE_SHARED_ASSET_CACHE`) — 예전 `GameDataCache<T>` 의 자리다. 멤버 정의는 이 헤더에 두지 않고
  *          `SharedAssetCacheDefinition.h` 에 두며, 에셋 종류의 .cpp 하나가 그것을 포함해 명시적으로 인스턴스화합니다. 쓰는 쪽 헤더는
  *          `SW_DECLARE_SHARED_ASSET_CACHE( <그 이미지의 _EXTERN_TEMPLATE 매크로>, 에셋 );` 만 둡니다 — 한 종류의 표는 한 이미지에만 있습니다.
- *          다시 읽기는 늘 표에서 떼어 내고(쥔 객체는 바뀌지 않는다 — A-7) 옛 객체를 살려 두는 동작은 쥔 쪽의 `shared_ptr` 가 맡습니다(세대 수로 옛 표를 들고 있지 않는다). 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
+ *          다시 읽기는 쥔 객체를 바꾸지 않고 새 판을 넣는다(A-7). 스냅숏은 쥔 쪽의 `shared_ptr` 가, 다시 읽힌 판을 따라가기는 `SharedAssetRef` 가 맡습니다(세대 수로 옛 표를 들고 있지 않는다). 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
  *
  *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그)은 그 종류의 정의(`AssetTypeDef` — 이름과 `AssetTypeLoader`) 한 벌에만 적습니다.
  *          인스턴스화 · 캐시 등록 · 종류 등록은 `SW_SHARED_ASSET_CACHE( id, 에셋, 정의 )`(Engine) 또는 `SW_MODULE_SHARED_ASSET_CACHE( id, 에셋, 내보내기, 정의 )`(모듈) 한 줄이고,
@@ -106,8 +106,8 @@ namespace sw
         /** @brief 경로의 에셋을 나눠 받습니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서 읽는다). 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다. */
         static shared_ptr<const AssetType> acquire( string_view path );
         /**
-         * @brief 사용 중이면 다시 읽히는지 본 뒤 표에서 떼어 내고 다시 읽은 횟수를 올립니다(틱 밖, 게임 스레드). 읽지 못하면 그대로이고 false 입니다.
-         * @details 쥔 쪽은 옛 객체를 그대로 읽고, `AssetReloadWatch` 로 횟수가 바뀐 것을 보면 다시 `acquire` 해 새 객체를 받습니다.
+         * @brief 사용 중이면 새로 읽어 새 판으로 넣고 다시 읽은 횟수를 올립니다(틱 밖, 게임 스레드). 읽지 못하면 그대로이고 false 입니다.
+         * @details `shared_ptr` 로 쥔 쪽은 옛 객체를 그대로 읽고, `SharedAssetRef` 로 쥔 쪽은 새 판을 본다. 지어 둔 것은 `AssetReloadWatch` 로 횟수를 보고 다시 짓는다.
          */
         [[nodiscard]] static bool reloadShared( string_view path );
 
