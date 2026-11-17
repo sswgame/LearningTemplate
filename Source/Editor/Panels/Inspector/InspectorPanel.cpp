@@ -280,7 +280,7 @@ namespace sw::editor
                     shown = row._valueText.c_str();
                 fixed_string<constant::buffer::kMax256>& buffer = bEditing ? _importEditBuffer : shown;
                 ImGui::SetNextItemWidth( -FLT_MIN );
-                ImGui::InputText( "##value", buffer.data(), buffer.capacity() );
+                EditorWidgets::inputText( SW_WIDGET_ID( "##value" ), buffer.data(), buffer.capacity() );
                 if ( ImGui::IsItemDeactivatedAfterEdit() && string_view{ buffer.c_str() } != string_view{ row._valueText } )
                 {
                     pendingKey   = row._key;

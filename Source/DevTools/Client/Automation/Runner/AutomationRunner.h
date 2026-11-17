@@ -82,10 +82,10 @@ namespace sw
         }
         /** @brief 아직 렌더 패킷에 싣지 않은 경로 하나를 꺼냅니다. 없으면 false 입니다. */
         [[nodiscard]] optional<AbsolutePath> takePendingScreenshotPath();
-        /** @brief 요청했지만 아직 우편함에 맡기지 않은 사진이 있으면 true 입니다. */
-        [[nodiscard]] bool hasPendingScreenshot() const { return _listPendingScreenshot.empty() == false; }
+        /** @brief 요청했지만 아직 우편함(렌더 패킷)에 맡기지 않은 사진이 있으면 true 입니다 — 렌더 스레드가 다 썼는지는 `hasPendingScreenshot` 이 본다. */
+        [[nodiscard]] bool hasQueuedScreenshot() const { return _listPendingScreenshot.empty() == false; }
         /** @brief 요청한 스크린샷이 아직 다 써지지 않았으면 true 입니다(대기열에 남았거나 렌더 스레드가 덜 썼다). */
-        [[nodiscard]] bool hasPendingScreenshot() const { return _listPendingScreenshot.empty() == false || _screenshotCompletedCount < _screenshotRequestedCount; }
+        [[nodiscard]] bool hasPendingScreenshot() const { return hasQueuedScreenshot() || _screenshotCompletedCount < _screenshotRequestedCount; }
     };
 } // namespace sw
 
