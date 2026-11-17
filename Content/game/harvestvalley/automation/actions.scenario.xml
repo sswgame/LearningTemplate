@@ -19,7 +19,6 @@
 	<Wait seconds="0.6"/>
 	<Expect watch="Farm.FarmerX" near="8" tolerance="0.2"/>
 	<!-- 물뿌리개를 들었다가 괭이로 돌아온다(연속 액션). -->
-	<Wait frames="1"/>
 	<Action name="Farm.Tool2"/>
 	<WaitUntil watch="Farm.FarmerTool" equals="1" timeoutFrames="30"/>
 	<Action name="Farm.Tool1"/>
