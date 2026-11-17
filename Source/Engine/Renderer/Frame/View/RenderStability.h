@@ -1,17 +1,22 @@
 /**
  * @file RenderStability.h
- * @brief 사진 앞 "렌더가 자리를 잡았다" 판정입니다 — 시간 누적 렌더(TAA 기록이 쌓인 정지 프레임 수) · 노출 적응 수렴(남은 노출 오차의 상한) · 에셋 일 없음.
- * @details 주 렌더러가 프레임마다 주 시점의 값을 올리고(`RenderStabilitySample::publish`, 렌더 스레드가 쓰고 게임 스레드가 읽는다), 감시 값 `Render.StillFrames` · `Render.ExposureErrorEv` ·
- *          `Render.Stable` 가 읽는다(`AutomationCaptureWatches.cpp`). 문턱은 엔진 설정 `EngineConfig::_renderStability` 이다(기본값 없음).
- *          - 정지 프레임: TAA 기록을 버리지 않았고(컷 · 첫 프레임 · TAA 가 빠진 뒤가 아님) 카메라 뷰-투영이 그대로이며 물체도 움직이지 않은 프레임이 이어진 수다.
+ * @brief 사진 앞 "렌더가 자리를 잡았다" 판정입니다 — 시간 누적 렌더(TAA 기록이 쌓인 카메라 정지 프레임 수) · 노출 적응 수렴(남은 노출 오차의 상한).
+ * @details 주 렌더러가 프레임마다 주 시점의 값을 올리고(`RenderStabilitySample::publish`, 렌더 스레드가 쓰고 게임 스레드가 읽는다), 렌더 정착 조건 둘(`RenderTemporalAccumulation` ·
+ *          `RenderAutoExposure`, `RenderStability.cpp` 의 `SW_AUTOMATION_STABILITY_CONDITION`)과 진단 감시 값(`Render.StillFrames` · `Render.ExposureErrorEv` …)이 읽는다.
+ *          사진 단계(`<Screenshot stability="render">`)가 에셋 일과 이 조건을 기다린다. 문턱은 `Config/Dev/ScenarioRun.json` 의 `_conditions` 이다(배포 엔진 설정에 두지 않는다).
+ *          - 정지 프레임: TAA 기록을 버리지 않았고(컷 · 첫 프레임 · TAA 가 빠진 뒤가 아님) 카메라 뷰-투영이 그대로인 프레임이 이어진 수다. 조건은 카메라 기준이다 — 캐릭터가 늘 숨 쉬는
+ *            장면은 물체 움직임이 끝나지 않아 물체까지 보면 영영 "진행 중" 이었다. 고정 프레임 시간의 결정적 실행에서는 움직이는 장면도 같은 프레임이면 같은 그림이다.
  *            지터 누적이 수렴하려면 이 수가 기록 섞는 비율의 역수 몇 배는 되어야 한다(언리얼 TAA 의 히스토리 수렴, 자동화 스크린샷 앞 "warm-up frames").
+ *            TAA 를 돌리지 않는 뷰(Forward · 후처리 꺼짐)는 해당 없음이다 — 기다릴 누적이 없다.
  *          - 노출 오차: 기록을 버린 프레임은 측정값을 그대로 쓰므로 0 이고, 카메라가 움직인 프레임은 목표가 범위 끝까지 바뀔 수 있으므로 (최대 EV − 최소 EV) 로 되돌린다.
- *            정지 프레임마다 지수 적응의 남은 비율(1 − 다가가는 비율, 밝아짐 · 어두워짐 가운데 느린 쪽)을 곱한다 — GPU 값을 읽지 않는 상한이다.
+ *            정지 프레임마다 지수 적응의 남은 비율(1 − 다가가는 비율, 밝아짐 · 어두워짐 가운데 느린 쪽)을 곱한다 — GPU 값을 읽지 않는 상한이다. 자동 노출을 재지 않는 뷰는 해당 없음이다.
  *            카메라가 서 있어도 화면 밝기가 바뀌는 일(불이 켜짐 · 물체 등장)은 보지 않는다 — 그 경우는 시나리오가 그 사건을 먼저 기다린다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "Engine/Automation/Scenario/AutomationReadiness.h"
 
 namespace sw
 {
@@ -23,8 +28,10 @@ namespace sw
         /// 되읽은 노출 적응의 지금 EV 와 목표 EV 의 차(절댓값, EV — `FrameAutoExposure` 가 GPU 기록을 몇 프레임 늦게 읽는다). 기록을 버린 뒤에도 장면 밝기가 바뀌면 다시 커진다.
         /// 자동 노출을 쓰지 않거나 아직 읽은 값이 없으면 0
         float32 _exposureAdaptationEv{ 0.0f };
-        uint32  _giAccumulatedFrames{ 0 };   ///< 실시간 프로브 GI 기록이 0 에서 다시 쌓기 시작한 뒤 갱신한 프레임 수(`RealtimeProbeUpdater`). 실시간 볼륨이 없으면 0
-        uint32  _cameraStillFrameCount{ 0 }; ///< 카메라만 서 있던 이어진 프레임 수(TAA 기록이 쌓인 프레임 — 물체 움직임은 보지 않는다)
+        uint32  _giAccumulatedFrames{ 0 };          ///< 실시간 프로브 GI 기록이 0 에서 다시 쌓기 시작한 뒤 갱신한 프레임 수(`RealtimeProbeUpdater`). 실시간 볼륨이 없으면 0
+        uint32  _cameraStillFrameCount{ 0 };        ///< 카메라만 서 있던 이어진 프레임 수(TAA 기록이 쌓인 프레임 — 물체 움직임은 보지 않는다)
+        uint8   _bTemporalAccumulation{ SW_FALSE }; ///< 이번 프레임 주 시점이 TAA 를 돌렸다(`FrameViewTarget::_bTAAHistoryWritten`). 아니면 TAA 조건은 해당 없음이다
+        uint8   _bAutoExposure{ SW_FALSE };         ///< 이번 프레임 주 시점이 노출을 쟀다(`FrameViewTarget::_bAutoExposureThisFrame`). 아니면 노출 조건은 해당 없음이다
 
         /** @brief 렌더 스레드가 주 시점의 이번 값을 올립니다(엔진 범위 서브시스템이 든다 — `RenderStability.cpp`). */
         static void publish( const RenderStabilitySample& sample );
@@ -46,21 +53,14 @@ namespace sw
         [[nodiscard]] static uint64 read();
     };
 
-    /** @brief `EngineConfig::_renderStability` 의 문턱 두 개입니다(판정 함수가 받는 모양). */
-    struct RenderStabilityThreshold
-    {
-        uint32  _minStillFrames{ 0 };        ///< 정지 프레임이 이만큼 이어져야 한다
-        float32 _maxExposureErrorEv{ 0.0f }; ///< 노출 오차 상한이 이 아래여야 한다
-    };
-
     /** @struct RenderStabilityUtil @brief 정착 값의 갱신과 판정입니다(순수 함수 — 단위 테스트가 바로 부른다). */
     struct SW_API RenderStabilityUtil
     {
-        /** @brief 이번 프레임의 정지 프레임 수입니다. 기록을 버렸거나 카메라 · 물체가 움직였으면 0, 아니면 하나 늘린다. */
+        /** @brief 이번 프레임의 정지 프레임 수입니다. 기록을 버렸거나 카메라 · 물체가 움직였으면 0, 아니면 하나 늘린다(카메라 정지 프레임은 @p bObjectMotion 을 false 로 넘긴다). */
         [[nodiscard]] static uint32 advanceStillFrames( uint32 previous, bool bTAAHistoryReset, bool bCameraStill, bool bObjectMotion );
         /**
          * @brief 이번 프레임에 시간 누적을 처음부터 다시 쌓는가 — 뷰 기록을 버렸거나, 이번 프레임에 TAA 를 돌리는데 그 기록이 버려졌다.
-         * @details TAA 를 쓰지 않는 파이프라인 · 뷰(Forward 등)는 TAA 기록이 늘 "버림" 이라 그것만 보면 정지 프레임이 영원히 0 이었다(사진 앞 `Render.Stable` 이 끝내 서지 않았다).
+         * @details TAA 를 쓰지 않는 파이프라인 · 뷰(Forward 등)는 TAA 기록이 늘 "버림" 이라 그것만 보면 정지 프레임이 영원히 0 이었다(사진 앞 정착이 끝내 서지 않았다 — 지금은 그 뷰의 TAA 조건이 해당 없음이다).
          */
         [[nodiscard]] static bool isAccumulationReset( bool bHistoryReset, bool bTAAThisFrame, bool bTAAHistoryReset );
         /**
@@ -71,14 +71,13 @@ namespace sw
          * @param slowerAdaptRate 이번 프레임에 목표로 다가간 비율(밝아짐 · 어두워짐 가운데 작은 쪽, 0..1)
          */
         [[nodiscard]] static float32 advanceExposureError( float32 previous, bool bReset, bool bMoved, float32 rangeEv, float32 slowerAdaptRate );
-        /** @brief 정지 프레임 · 노출 오차 · 남은 에셋 일(@p pendingJobCount)이 모두 문턱 안이면 true 입니다. */
-        [[nodiscard]] static bool isStable( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold );
         /**
-         * @brief 물체 움직임을 보지 않는 정착입니다 — 에셋 일이 없고, 카메라 정지 프레임이 문턱을 넘고, 되읽은 노출 적응 차이가 문턱 안이면 true 입니다.
-         * @details 캐릭터가 늘 숨 쉬는 장면은 물체 움직임이 끝나지 않아 `isStable` 이 서지 않는다(정지 프레임 · 노출 오차 상한이 늘 처음으로 돌아간다). 고정 프레임 시간의
-         *          결정적 실행에서는 움직이는 장면도 같은 프레임이면 같은 그림이라 카메라 쪽 시간 누적만 쌓이면 된다(언리얼 · 유니티 그래픽 테스트의 정해진 정착 프레임과 같은 자리).
+         * @brief TAA 정착 조건(`RenderTemporalAccumulation`)입니다 — TAA 를 돌리지 않으면 해당 없음, 카메라 정지 프레임이 @p minStillFrames 이상이면 준비됨, 아니면 진행 중(진척은 정지 프레임 수).
+         * @details 카메라가 계속 움직이면 진척이 0 에 머물러 정지 시한(`_stallFrames`)에 진다 — 움직이는 카메라는 `stability="assets"` 로 찍는다.
          */
-        [[nodiscard]] static bool isStableIgnoringMotion( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold );
+        [[nodiscard]] static AutomationReadiness evaluateTemporalAccumulation( const RenderStabilitySample& sample, uint32 minStillFrames );
+        /** @brief 노출 정착 조건(`RenderAutoExposure`)입니다 — 노출을 재지 않으면 해당 없음, 오차 상한이 @p maxErrorEv 이하면 준비됨, 아니면 진행 중(진척은 오차 상한의 비트). */
+        [[nodiscard]] static AutomationReadiness evaluateAutoExposure( const RenderStabilitySample& sample, float32 maxErrorEv );
     };
 
 } // namespace sw

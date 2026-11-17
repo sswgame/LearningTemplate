@@ -64,7 +64,7 @@ SW_TEST_CASE( AutomationRunResultTest, UnhandledLogsBecomeTheReason )
 SW_TEST_CASE( AutomationRunResultTest, ChainStageLineCarriesTheResult )
 {
     AutomationScenarioChain chain;
-    chain.begin( { "game/a.scenario.xml", "game/b.scenario.xml", "game/c.scenario.xml" } );
+    chain.begin( { "game/a.scenario.xml", "game/b.scenario.xml", "game/c.scenario.xml" }, false, 3 );
     SW_EXPECT_TRUE( chain.onStageEnded( AutomationRunResult::passed(), "game.a" ) );
     SW_EXPECT_EQUAL( string( "chain stage 1/3 Passed (game.a)" ), chain.describeStageEnd( 0, AutomationRunResult::passed(), "game.a" ) );
     const AutomationRunResult failed = AutomationRunResult::passed().concludeWithFailures( "frame 9 <ExpectImage> #4: differs from its golden: 2.1%", AutomationFailureKind::GoldenMismatch );
@@ -75,6 +75,27 @@ SW_TEST_CASE( AutomationRunResultTest, ChainStageLineCarriesTheResult )
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( chain.describeFailedStages().size() ) );
     SW_EXPECT_EQUAL( string( "2/3 game.b: GoldenMismatch - frame 9 <ExpectImage> #4: differs from its golden: 2.1%" ), chain.describeFailedStages()[0] );
     SW_EXPECT_TRUE( chain.getFinalResult() == AutomationResult::Failed );
+}
+
+/**
+ * @brief [AutomationRunResultTest] `keepGoing` 체인도 같은 대기 실패(종류 + 반복 열쇠)가 한도만큼 나오면 멈추고 끝 표에 `RepeatedFailure` 줄을 남긴다 — 다른 열쇠 · 열쇠 없는 실패는 세지 않는다
+ * @details 변이: 열쇠를 세지 않으면 넷째 단계로 넘어가 셋째 단언이 진다. 종류를 열쇠에 넣지 않으면 시한 · 정지가 한데 세여 둘째 단언이 진다(DesignBacklog D2-5).
+ */
+SW_TEST_CASE( AutomationRunResultTest, RepeatedWaitFailureStopsTheChain )
+{
+    AutomationScenarioChain chain;
+    chain.begin( { "a", "b", "c", "d", "e", "f" }, true, 2 );
+    const AutomationRunResult stalled   = AutomationRunResult::failed( AutomationFailureKind::WaitStalled, "no progress", "<Screenshot> #2" ).withRepeatKey( "Screenshot RenderTemporalAccumulation" );
+    const AutomationRunResult timedOut  = AutomationRunResult::failed( AutomationFailureKind::WaitTimeout, "too long", "<Screenshot> #2" ).withRepeatKey( "Screenshot RenderTemporalAccumulation" );
+    const AutomationRunResult assertion = AutomationRunResult::failed( AutomationFailureKind::Assertion, "x", "<Expect> #1" );
+    SW_EXPECT_TRUE( chain.onStageEnded( stalled, "a" ) );
+    SW_EXPECT_TRUE( chain.onStageEnded( timedOut, "b" ) );  // 종류가 다르다
+    SW_EXPECT_TRUE( chain.onStageEnded( assertion, "c" ) ); // 열쇠가 없다 — 대기의 포기가 아니다
+    SW_EXPECT_FALSE( chain.onStageEnded( stalled, "d" ) );
+    SW_EXPECT_EQUAL( string( "RepeatedFailure - WaitStalled Screenshot RenderTemporalAccumulation x2" ), chain.getRepeatedFailureLine() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( chain.getSkippedStageCount() ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( chain.describeFailedStages().back(), "- chain stopped" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( chain.describeStageEnd( 3, stalled, "d" ), "RepeatedFailure" ) );
 }
 
 /** @brief [AutomationRunResultTest] 부모 요약은 (단계 · 종류 · 까닭)이 같은 실패를 백엔드로 접는다 — 모든 백엔드가 진 것(전제)과 하나만 진 것(백엔드)이 갈린다 */

@@ -783,7 +783,7 @@ namespace sw
         if ( bMainDrew )
         {
             FrameFog::publishMainVolumeState( _pFrameRenderer->getFogVolumeState() );
-            RenderStabilitySample::publish( _pFrameRenderer->getMainStabilitySample() ); // 사진 앞 정착 판정(`Render.Stable`)
+            RenderStabilitySample::publish( _pFrameRenderer->getMainStabilitySample() ); // 사진 앞 렌더 정착 조건(`RenderStability.cpp`)
         }
 
         // 미리보기 씬(에디터 툴 창)은 씬마다의 렌더러로 자기 타깃에 그린다(`OffscreenSceneRenderers` — 캡처와 같은 길). 사라진 씬의 렌더러는 그 씬과 함께 내린다.

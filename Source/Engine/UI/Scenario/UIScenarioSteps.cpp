@@ -109,17 +109,20 @@ namespace sw
              * @brief 로딩 화면이 떠 있으면 게임 입력이 막혀 있고 그림이 덮여 있습니다. `ScenePlaying` 시나리오는 로딩 화면이 사라질 때까지 시작하지 않고, 화면 캡처도 미뤄집니다.
              * @details 화면 UI 를 막은 동안(멈춘 에디터, `isOnScreenSuppressed`)은 로딩 화면이 그려지지도 입력을 막지도 않는다 — 그동안 닫을 게임 update 가 돌지 않아 남아 있을 뿐이다.
              */
-            static bool isLoadingScreenBlocking()
+            static AutomationReadiness readLoadingScreen()
             {
                 const UISystem* pUISystem = engine::findSubsystem<UISystem>();
-                return pUISystem != nullptr && pUISystem->isInitialized() && pUISystem->isOnScreenSuppressed() == false && pUISystem->isLoadingScreenShown();
+                if ( pUISystem == nullptr || pUISystem->isInitialized() == false )
+                    return AutomationReadiness::notApplicable();
+                const bool bCovering = pUISystem->isOnScreenSuppressed() == false && pUISystem->isLoadingScreenShown();
+                return bCovering ? AutomationReadiness::waiting( 0, "the loading screen is shown" ) : AutomationReadiness::ready();
             }
         };
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( uiActiveScreen, "UI.ActiveScreen", "Document path of the active UI screen (the top screen taking input and focus); none for a code screen or no screen",
                                &UIScenarioStepsInternal::readActiveScreen, false, false );
-    SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIScenarioStepsInternal::isLoadingScreenBlocking );
+    SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIScenarioStepsInternal::readLoadingScreen );
     SW_AUTOMATION_STEP( uiLayoutDump, UIScenarioSteps::kLayoutDumpKind, &UIScenarioStepsInternal::runLayoutDump, &AutomationStep::validateProperties<AutomationFileStepParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( uiExpect, UIScenarioSteps::kExpectUIKind, &UIScenarioStepsInternal::runExpectUI, &UIScenarioSteps::validateExpectUI, AutomationStepOptions{} );
 } // namespace sw

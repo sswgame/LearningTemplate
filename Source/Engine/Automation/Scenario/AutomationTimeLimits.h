@@ -51,6 +51,11 @@ namespace sw
          * @details 고정 프레임 시간(60 Hz)에서 10 초다 — 첫 프레임에 큰 씬의 텍스처 수백 장이 워커에 줄을 서도 넉넉하다.
          */
         static constexpr uint32 kMaxAssetStabilityFrames = 600;
+        /**
+         * @brief 사진 앞 렌더 정착(`<Screenshot stability="render">` · `<WaitRenderStable/>` — 에셋 일 + 정착 조건)을 기다리는 벽시계 상한(초, `gv_scenarioWallScale` 배)입니다.
+         * @details 나아가고 있는 일의 상한일 뿐이다 — 진척이 멈춘 조건은 정지 시한(`ScenarioRun.json` 의 `_stallFrames`)이 먼저 끝낸다. 옛 사진 앞 정착 대기(`<WaitUntil … timeoutWallSeconds="30">`)의 값이다.
+         */
+        static constexpr float32 kMaxRenderStableWallSeconds = 30.0f;
         /** @brief `<Pass/>` 가 뒤의 일(`SW_AUTOMATION_FINISH_BLOCKER`)을 기다리는 최대 프레임 수입니다. 60 Hz 에서 10 초 - 캡처 수십 장의 파일 쓰기가 워커에 줄을 서도 넉넉하다. */
         static constexpr uint32 kMaxFinishWaitFrames = 600;
         /** @brief 체인(`-scenario=a,b,c`)의 단계 하나가 프로세스 시한에 더하는 몫(초)입니다. 에디터 체인(125 단계, Debug)은 혼자 돌아도 2 분 남짓이다. */

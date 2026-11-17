@@ -16,16 +16,19 @@ namespace sw
     namespace
     {
         /**
-         * @brief 화면 페이드가 그림을 덮고 있으면 true 입니다(캡처 차단 조건). 로딩 화면이 닫힌 뒤 실제 시간으로 걷히므로 그동안 찍으면 어두운 화면이 찍힌다.
+         * @brief 화면 페이드가 그림을 덮고 있으면 진행 중입니다(캡처 차단 조건). 로딩 화면이 닫힌 뒤 실제 시간으로 걷히므로 그동안 찍으면 어두운 화면이 찍힌다.
          * @details 페이드는 입력을 막지 않아 시나리오 시작은 미루지 않는다. 화면 UI 를 막은 동안(멈춘 에디터)은 그려지지 않으니 덮지 않는다.
          */
-        bool isScreenFadeCoveringCapture()
+        AutomationReadiness readScreenFade()
         {
             const LoadingScreenController* pController = game::findSubsystem<LoadingScreenController>();
             const UISystem*                pUISystem   = pController != nullptr ? pController->getUISystem() : nullptr;
-            return pUISystem != nullptr && pUISystem->isOnScreenSuppressed() == false && pController->findFadeScreen() != nullptr;
+            if ( pUISystem == nullptr )
+                return AutomationReadiness::notApplicable();
+            const bool bCovering = pUISystem->isOnScreenSuppressed() == false && pController->findFadeScreen() != nullptr;
+            return bCovering ? AutomationReadiness::waiting( 0, "a screen fade covers the picture" ) : AutomationReadiness::ready();
         }
     } // namespace
 
-    SW_AUTOMATION_CAPTURE_BLOCKER( screenFade, "ScreenFade", &isScreenFadeCoveringCapture );
+    SW_AUTOMATION_CAPTURE_BLOCKER( screenFade, "ScreenFade", &readScreenFade );
 } // namespace sw

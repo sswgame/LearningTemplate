@@ -21,6 +21,8 @@ namespace sw
      *          못 도는 것이라 그때는 멈춘다. 앞 단계가 만든 상태(씬, 올라온 모듈, 백엔드)는 다음 단계가 이어받는다 — 프로세스가 하나이기 때문이다. 단계마다 시나리오 프레임은 0 부터 다시 센다(시작 조건이
      *          그 단계에서 다시 참이 되는 프레임이 0). 멈추면 나머지는 돌리지 않고, 프로세스의 결과는 처음으로 통과하지 못한 단계의 결과다.
      *          `CloseWindow` 로 끝나는 단계는 마지막이어야 한다(창이 닫히면 루프가 끝난다). 게임 스레드에서만 쓴다.
+     *          `keepGoing` 이어도 같은 대기 실패(종류 + 반복 열쇠 `AutomationRunResult::getRepeatKey`)가 `repeatedFailureLimit` 번 나오면 멈춘다(`RepeatedFailure`) — 같은 대기가 단계마다
+     *          시한까지 기다리며 지던 체인(DesignBacklog 실패 1 — Empty 체인 74 분)의 상한이 한도 × 정지 시한이 된다. 남은 단계는 돌지 않은 것으로 남고 `--from-stage` 로 잇는다.
      */
     class SW_DEVTOOLS_API AutomationScenarioChain
     {
@@ -32,8 +34,11 @@ namespace sw
         /** @brief 단계 @p stageIndex(0 부터)의 보고 경로입니다. 단계가 하나면 @p reportPath 그대로이고, 여럿이면 확장자 앞에 `.<번호>`(1 부터)를 붙입니다. 빈 경로는 빈 채로 둡니다. */
         static string makeStageReportPath( string_view reportPath, size_t stageIndex, size_t stageCount );
 
-        /** @brief 목록으로 시작합니다. 빈 목록이면 끝난 것으로 봅니다. @p bKeepGoing 이면 실패한 단계 뒤에도 다음 단계를 돌립니다. */
-        void begin( vector<string> listPath, bool bKeepGoing = false );
+        /**
+         * @brief 목록으로 시작합니다. 빈 목록이면 끝난 것으로 봅니다. @p bKeepGoing 이면 실패한 단계 뒤에도 다음 단계를 돌립니다.
+         * @param repeatedFailureLimit 같은 대기 실패가 이만큼 나오면 체인을 멈춘다(`ScenarioRun.json` 의 `_repeatedFailureLimit`, 1 이상)
+         */
+        void begin( vector<string> listPath, bool bKeepGoing, uint32 repeatedFailureLimit );
 
         /** @brief 아직 돌릴 단계가 있습니다(시작했고 끝나지 않았다). */
         bool   isActive() const { return _bBegun && _bFinished == false; }
@@ -64,20 +69,36 @@ namespace sw
          * @param stageIndex 방금 끝난 단계 번호
          */
         string describeStageEnd( size_t stageIndex, const AutomationRunResult& runResult, string_view scenarioName ) const;
-        /** @brief 체인 끝 표 — 진 단계마다 `<번호>/<수> <이름>: <종류> - <까닭>` 한 줄(체인 순서)입니다. 진 단계가 없으면 빈 목록입니다. */
+        /** @brief 체인 끝 표 — 진 단계마다 `<번호>/<수> <이름>: <종류> - <까닭>` 한 줄(체인 순서)입니다. 반복 실패로 멈췄으면 마지막 줄이 `RepeatedFailure - …` 입니다. */
         const vector<string>& describeFailedStages() const { return _listFailedStageLine; }
+        /** @brief 반복 실패로 멈췄으면 그 한 줄(`RepeatedFailure - WaitStalled Screenshot RenderTemporalAccumulation x3`)입니다. 아니면 빈 글입니다. */
+        const string& getRepeatedFailureLine() const { return _repeatedFailureLine; }
 
     private:
-        vector<string>   _listPath;
-        vector<string>   _listFailedStageLine; ///< 진 단계의 끝 표 줄(`describeFailedStages`)
-        size_t           _stageIndex;
-        size_t           _skippedStageCount;
-        size_t           _failedStageCount;
-        size_t           _skippedResultCount;
-        AutomationResult _firstNonPassResult; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
-        AutomationResult _finalResult;
-        uint8            _bKeepGoing : 1;
-        uint8            _bBegun     : 1;
-        uint8            _bFinished  : 1;
+        /** @brief 진 단계의 반복 열쇠 하나와 나온 수입니다. */
+        struct RepeatCount
+        {
+            string _key{};
+            uint32 _count{ 0 };
+        };
+
+        /** @brief 진 판정 @p runResult 의 반복 열쇠를 세고, 한도에 닿았으면 true 입니다(열쇠가 없는 실패는 세지 않는다). */
+        [[nodiscard]] bool countRepeat( const AutomationRunResult& runResult );
+
+    private:
+        vector<string>      _listPath;
+        vector<string>      _listFailedStageLine; ///< 진 단계의 끝 표 줄(`describeFailedStages`)
+        vector<RepeatCount> _listRepeatCount;     ///< 대기 실패의 열쇠별 수(한 체인에 몇 개뿐이라 선형으로 찾는다)
+        string              _repeatedFailureLine; ///< 반복 실패로 멈춘 까닭(`getRepeatedFailureLine`)
+        uint32              _repeatedFailureLimit;
+        size_t              _stageIndex;
+        size_t              _skippedStageCount;
+        size_t              _failedStageCount;
+        size_t              _skippedResultCount;
+        AutomationResult    _firstNonPassResult; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
+        AutomationResult    _finalResult;
+        uint8               _bKeepGoing : 1;
+        uint8               _bBegun     : 1;
+        uint8               _bFinished  : 1;
     };
 } // namespace sw

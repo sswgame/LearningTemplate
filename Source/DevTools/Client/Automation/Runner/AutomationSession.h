@@ -173,6 +173,7 @@ namespace sw
         string                              _recordPath;               ///< `-scenario-record` 경로(비면 녹화하지 않는다)
         string                              _reportPath;               ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
         string                              _workingFolder;            ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
+        string                              _runPolicyError;           ///< 대기 정책(`Config/Dev/ScenarioRun.json`)을 읽지 못한 까닭(읽었으면 빈 글) — 단계마다 읽기 오류로 끝낸다
         uint32                              _startWindowWidth;         ///< 시작할 때의 주 창 클라이언트 너비(둘째 단계부터 이 크기에서 시작한다, 창이 없으면 0)
         uint32                              _startWindowHeight;        ///< 시작할 때의 주 창 클라이언트 높이
         vector<pair<string, string>>        _listStartVariable;        ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다

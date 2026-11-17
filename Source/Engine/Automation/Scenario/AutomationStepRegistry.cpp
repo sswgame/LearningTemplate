@@ -5,6 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Registry/RegistrationList.h"
 
+#include "Engine/Serialization/JSON/JSONDocument.h"
+
 namespace sw
 {
     namespace
@@ -20,16 +22,35 @@ namespace sw
                 /** @brief 검사 함수만 올린 등록(`SW_AUTOMATION_STEP_VALIDATOR` — 단계를 등록하는 모듈이 없는 프로세스가 속성을 검사하게 한다)입니다. */
                 static SW_DEFINE_REGISTRATION_LIST( getValidators, const AutomationStepValidatorRegistration, "AutomationStepValidator", RegistrationOrder::Insertion, true )
 
-                /** @brief 범위가 @p minimumScope 이상인 조건 중 지금 참인 첫 조건의 이름입니다. 없으면 nullptr 입니다. */
-                /** @brief @p minimumScope 이상(넓은 범위가 좁은 범위를 포함)인 조건 가운데 지금 막는 것입니다. `Finish` 는 어느 범위에도 들지 않는다. */
-                static const utf8* findBlocking( AutomationBlockScope minimumScope )
+                /**
+                 * @brief @p isInScope 가 고른 조건 가운데 지금 진행 중인 첫 조건입니다. 해당 없음 · 준비됨은 막지 않는다.
+                 */
+                template <typename TScopeFilter>
+                static AutomationWaitingCondition findWaiting( TScopeFilter isInScope )
             {
                 for ( const AutomationBlocker* pBlocker : getBlockers().getItems() )
                 {
-                    if ( pBlocker->_scope != AutomationBlockScope::Finish && pBlocker->_scope >= minimumScope && pBlocker->_pIsBlocking() )
-                        return pBlocker->_pName;
+                    if ( isInScope( pBlocker->_scope ) == false )
+                        continue;
+                    const AutomationReadiness readiness = pBlocker->_pReadiness();
+                    if ( readiness.isWaiting() )
+                        return AutomationWaitingCondition{ pBlocker->_pName, readiness.getWhat(), readiness.getProgress() };
                 }
-                return nullptr;
+                return AutomationWaitingCondition{};
+            }
+
+            /** @brief @p minimumScope 이상(넓은 범위가 좁은 범위를 포함)인 조건 가운데 지금 막는 것입니다. `Finish` · `RenderStable` 은 어느 범위에도 들지 않는다(enum 순서가 그 아래다). */
+            static AutomationWaitingCondition findBlocking( AutomationBlockScope minimumScope )
+            {
+                return findWaiting( [minimumScope]( AutomationBlockScope scope )
+                { return scope >= minimumScope; } );
+            }
+
+            /** @brief 범위가 정확히 @p scope 인 조건 가운데 지금 막는 것입니다(`Finish` · `RenderStable`). */
+            static AutomationWaitingCondition findExactly( AutomationBlockScope exactScope )
+            {
+                return findWaiting( [exactScope]( AutomationBlockScope scope )
+                { return scope == exactScope; } );
             }
         };
     } // namespace
@@ -75,7 +96,7 @@ namespace sw
 
     bool AutomationStepRegistry::registerBlocker( const AutomationBlocker* pBlocker )
     {
-        const bool bInvalidBlockerRegistration = pBlocker == nullptr || pBlocker->_pName == nullptr || pBlocker->_pIsBlocking == nullptr;
+        const bool bInvalidBlockerRegistration = pBlocker == nullptr || pBlocker->_pName == nullptr || pBlocker->_pReadiness == nullptr;
         if ( bInvalidBlockerRegistration )
             return false;
         return AutomationStepRegistryInternal::getBlockers().addLogged( pBlocker, "Automation blocker", pBlocker->_pName ) == RegistrationResult::Added;
@@ -88,27 +109,27 @@ namespace sw
 
     bool AutomationStepRegistry::isStartBlocked()
     {
-        return AutomationStepRegistryInternal::findBlocking( AutomationBlockScope::Start ) != nullptr;
+        return AutomationStepRegistryInternal::findBlocking( AutomationBlockScope::Start ).isWaiting();
     }
 
-    const utf8* AutomationStepRegistry::findCaptureBlocker()
+    AutomationWaitingCondition AutomationStepRegistry::findCaptureBlocker()
     {
         return AutomationStepRegistryInternal::findBlocking( AutomationBlockScope::Capture );
     }
 
-    const utf8* AutomationStepRegistry::findClockHolder()
+    AutomationWaitingCondition AutomationStepRegistry::findClockHolder()
     {
         return AutomationStepRegistryInternal::findBlocking( AutomationBlockScope::Clock );
     }
 
-    const utf8* AutomationStepRegistry::findFinishBlocker()
+    AutomationWaitingCondition AutomationStepRegistry::findFinishBlocker()
     {
-        for ( const AutomationBlocker* pBlocker : AutomationStepRegistryInternal::getBlockers().getItems() )
-        {
-            if ( pBlocker->_scope == AutomationBlockScope::Finish && pBlocker->_pIsBlocking() )
-                return pBlocker->_pName;
-        }
-        return nullptr;
+        return AutomationStepRegistryInternal::findExactly( AutomationBlockScope::Finish );
+    }
+
+    AutomationWaitingCondition AutomationStepRegistry::findStabilityCondition()
+    {
+        return AutomationStepRegistryInternal::findExactly( AutomationBlockScope::RenderStable );
     }
 
     string AutomationStepRegistry::describeActiveBlockers()
@@ -116,14 +137,29 @@ namespace sw
         string text;
         for ( const AutomationBlocker* pBlocker : AutomationStepRegistryInternal::getBlockers().getItems() )
         {
-            if ( pBlocker->_pIsBlocking() == false )
+            if ( pBlocker->_scope == AutomationBlockScope::RenderStable )
+                continue; // 정착 조건은 그것을 기다리는 사진 단계만 막는다 — 그 단계의 대기 까닭(`holdForRenderStable`)이 이름 · 진척을 찍는다
+            const AutomationReadiness readiness = pBlocker->_pReadiness();
+            if ( readiness.isWaiting() == false )
                 continue;
             if ( text.empty() == false )
                 text += ", ";
-            text += pBlocker->_pName;
-            if ( pBlocker->_pDescribe != nullptr )
-                text += " (" + pBlocker->_pDescribe() + ")";
+            text += string( pBlocker->_pName ) + " (" + readiness.getWhat() + ", progress " + to_string( readiness.getProgress() ) + ")";
         }
         return text.empty() ? string( "none" ) : text;
+    }
+
+    expected<void> AutomationStepRegistry::configureConditions( const JSONValue& conditions )
+    {
+        for ( const AutomationBlocker* pBlocker : AutomationStepRegistryInternal::getBlockers().getItems() )
+        {
+            if ( pBlocker->_pConfigure == nullptr )
+                continue;
+            if ( conditions.isValid() == false || conditions.has( pBlocker->_pName ) == false )
+                return unexpected( Error{ ErrorKind::NotFound, "ScenarioRun.json _conditions needs an entry for the registered condition", pBlocker->_pName } );
+            if ( expected<void> configured = pBlocker->_pConfigure( conditions.get( pBlocker->_pName ) ); configured.has_value() == false )
+                return configured;
+        }
+        return {};
     }
 } // namespace sw

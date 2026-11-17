@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 
+#include "Engine/Automation/Scenario/AutomationReadiness.h"
+
 namespace sw
 {
     struct AutomationStep;
@@ -139,34 +141,50 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 지금 막아야 하면 true 입니다(로딩 화면이 게임 입력을 막는 동안, 화면 페이드가 그림을 덮는 동안). 게임 스레드입니다. */
-    using AutomationBlockFunction = bool ( * )();
-    /** @brief 막고 있는 조건이 지금 무엇 때문에 막는지 한 줄로 냅니다(오래 기다릴 때 로그 — `AutomationStepRegistry::describeActiveBlockers`). */
-    using AutomationBlockDescribeFunction = string ( * )();
+    class JSONValue;
+
+    /**
+     * @brief 조건의 문턱을 `Config/Dev/ScenarioRun.json` 의 `_conditions.<조건 이름>` 에서 읽어 조건을 등록한 기능이 제 자리에 둡니다. 칸이 없거나 틀리면 그 칸이 대상인 오류입니다.
+     * @details 공용 구조체에 칸을 더하지 않는다 — 기능마다 칸을 더하던 닫힌 집합체(배포 엔진 설정의 사진 정착 문턱 칸)가 세 갈래의 충돌 자리였다(DesignBacklog 실패 9).
+     */
+    using AutomationConditionConfigureFunction = expected<void> ( * )( const JSONValue& config );
 
     /** @brief 차단 조건이 무엇을 미루는지입니다. 넓은 쪽이 좁은 쪽을 포함한다 — 시작을 미루는 조건은 캡처도 미룬다. */
     enum class AutomationBlockScope : uint8
     {
-        Finish,  ///< `<Pass/>` 만 미룹니다 - 단계는 막지 않는 뒤의 일(편집기 UI 캡처의 파일 쓰기)이 시나리오 끝 전에 마치게 한다. 넓은 범위에 들지 않는다(같은 범위만 본다).
-        Capture, ///< 화면 캡처만 미룹니다(화면 페이드 — 입력은 막지 않으므로 시작은 미루지 않는다).
-        Start,   ///< `ScenePlaying` 시작과 캡처를 미룹니다(로딩 화면).
-        Clock,   ///< 시작 · 캡처를 미루고 도는 시나리오의 시계도 멈춥니다(`SW_AUTOMATION_CLOCK_HOLDER`).
+        Finish,       ///< `<Pass/>` 만 미룹니다 - 단계는 막지 않는 뒤의 일(편집기 UI 캡처의 파일 쓰기)이 시나리오 끝 전에 마치게 한다. 넓은 범위에 들지 않는다(같은 범위만 본다).
+        RenderStable, ///< 사진 앞 렌더 정착(`<Screenshot stability="render">` · `<WaitRenderStable/>`)만 기다립니다 — TAA 기록 · 노출 적응. 넓은 범위에 들지 않는다(같은 범위만 본다).
+        Capture,      ///< 화면 캡처만 미룹니다(화면 페이드 — 입력은 막지 않으므로 시작은 미루지 않는다).
+        Start,        ///< `ScenePlaying` 시작과 캡처를 미룹니다(로딩 화면).
+        Clock,        ///< 시작 · 캡처를 미루고 도는 시나리오의 시계도 멈춥니다(`SW_AUTOMATION_CLOCK_HOLDER`).
     };
 
     /**
      * @struct AutomationBlocker
-     * @brief 시나리오 시작 · 시계 · 화면 캡처를 미루는 조건 하나입니다. 실행기보다 위 계층(UI 의 로딩 화면, 게임 프레임워크의 화면 페이드)이 아래로 등록하며,
+     * @brief 시나리오 시작 · 시계 · 화면 캡처를 미루는 조건 하나입니다. 실행기보다 위 계층(UI 의 로딩 화면, 게임 프레임워크의 화면 페이드, 렌더러의 TAA 기록)이 아래로 등록하며,
      *        실행기는 그 계층을 include 하지 않습니다.
-     * @details `Clock` 은 결과를 로그로 늦게 내는 백그라운드 작업(저장 검증)이 쓴다. 시계가 그 작업보다 앞서 가면 뒤 단계(임시 폴더 지우기)가 작업이 읽을 파일을 바꾸고,
+     * @details 조건은 세 값(`AutomationReadiness`)을 낸다 — 해당 없음은 막지 않고, 진행 중은 진척 수와 무엇을 기다리는지를 낸다(`bool` 조건은 등록할 수 없다).
+     *          `Clock` 은 결과를 로그로 늦게 내는 백그라운드 작업(저장 검증)이 쓴다. 시계가 그 작업보다 앞서 가면 뒤 단계(임시 폴더 지우기)가 작업이 읽을 파일을 바꾸고,
      *          결과 줄이 다음 시나리오 창에 떨어진다. 언리얼 자동화가 셰이더 · 에셋 컴파일을 기다린 뒤 다음 명령을 도는 것과 같다.
      *          `Capture` 는 그림을 덮는 것(페이드)이다 — 캡처가 자리 잡은 화면을 찍게 한다(`AutomationCaptureUtil::isReadyForCapture`).
+     *          `RenderStable` 은 그 상태를 만든 기능이 제 폴더에서 등록한다(TAA 기록은 `Renderer/Frame/View/RenderStability.cpp`) — 실행기는 조건 이름만 안다.
      */
     struct AutomationBlocker
     {
-        const utf8*                     _pName; ///< 로그와 중복 판정에 쓰는 이름입니다.
-        AutomationBlockFunction         _pIsBlocking;
-        AutomationBlockScope            _scope;
-        AutomationBlockDescribeFunction _pDescribe{ nullptr }; ///< 없으면 이름만 찍는다
+        const utf8*                          _pName; ///< 로그 · 중복 판정 · `ScenarioRun.json` 의 `_conditions` 칸 이름입니다.
+        AutomationReadinessFunction          _pReadiness;
+        AutomationBlockScope                 _scope;
+        AutomationConditionConfigureFunction _pConfigure{ nullptr }; ///< 문턱을 읽는 함수(없으면 문턱이 없는 조건)
+    };
+
+    /** @brief 지금 기다리는 조건 하나(이름 · 무엇 · 진척)입니다. 기다리는 것이 없으면 이름이 nullptr 입니다. */
+    struct AutomationWaitingCondition
+    {
+        const utf8* _pName{ nullptr };
+        const utf8* _pWhat{ nullptr };
+        uint64      _progress{ 0 };
+
+        [[nodiscard]] bool isWaiting() const { return _pName != nullptr; }
     };
 } // namespace sw
 
@@ -195,19 +213,23 @@ namespace sw
         /** @brief 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
         [[nodiscard]] static bool registerBlocker( const AutomationBlocker* pBlocker );
         static void               unregisterBlocker( const AutomationBlocker* pBlocker );
-        /** @brief 시작을 미루는 조건(`Start` · `Clock`) 중 하나라도 참이면 true 입니다. */
+        /** @brief 시작을 미루는 조건(`Start` · `Clock`) 중 하나라도 진행 중이면 true 입니다. */
         static bool isStartBlocked();
-        /** @brief 지금 화면 캡처를 미루는 조건(모든 범위)의 이름입니다. 없으면 nullptr 입니다. */
-        static const utf8* findCaptureBlocker();
-        /** @brief 지금 시계를 잡고 있는 조건(`Clock`)의 이름입니다. 없으면 nullptr 입니다. */
-        static const utf8* findClockHolder();
-        /** @brief 지금 시나리오 끝(`<Pass/>`)을 미루는 조건(`Finish` 만)의 이름입니다. 없으면 nullptr 입니다. */
-        static const utf8* findFinishBlocker();
-        /**
-         * @brief 지금 막고 있는 조건 모두를 "이름 (까닭)" 으로 잇습니다. 없으면 "none" 입니다.
-         * @details 까닭(`_pDescribe`)은 작업 풀을 훑는 것처럼 비쌀 수 있어 매 프레임이 아니라 오래 기다릴 때의 보고(`AutomationRunner::reportOngoingWait`)만 부른다.
-         */
+        /** @brief 지금 화면 캡처를 미루는 조건(`Capture` · `Start` · `Clock`)의 첫 진행 중인 것입니다. */
+        static AutomationWaitingCondition findCaptureBlocker();
+        /** @brief 지금 시계를 잡고 있는 조건(`Clock`)의 첫 진행 중인 것입니다. */
+        static AutomationWaitingCondition findClockHolder();
+        /** @brief 지금 시나리오 끝(`<Pass/>`)을 미루는 조건(`Finish` 만)의 첫 진행 중인 것입니다. */
+        static AutomationWaitingCondition findFinishBlocker();
+        /** @brief 사진 앞 렌더 정착 조건(`RenderStable` 만)의 첫 진행 중인 것입니다. 해당 없음은 막지 않는다. */
+        static AutomationWaitingCondition findStabilityCondition();
+        /** @brief 지금 진행 중인 조건(정착 조건 `RenderStable` 은 빼고) 모두를 "이름 (무엇, progress N)" 으로 잇습니다. 없으면 "none" 입니다. 오래 기다릴 때의 보고(`AutomationRunner::reportOngoingWait`)가 부른다. */
         static string describeActiveBlockers();
+        /**
+         * @brief 문턱을 읽는 조건마다 @p conditions(`ScenarioRun.json` 의 `_conditions`)에서 제 이름의 칸을 넘깁니다. 칸이 없거나 조건이 거절하면 그 오류입니다(첫 오류에서 멈춘다).
+         * @details 시나리오를 시작할 때마다 부른다(`AutomationRunPolicy::load`) — 뒤에 올라온 모듈의 조건도 문턱을 받는다.
+         */
+        [[nodiscard]] static expected<void> configureConditions( const JSONValue& conditions );
     };
 } // namespace sw
 
@@ -219,7 +241,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_AUTOMATION_START_BLOCKER` · `SW_AUTOMATION_CLOCK_HOLDER` · `SW_AUTOMATION_CAPTURE_BLOCKER` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
+    /** @brief `SW_AUTOMATION_START_BLOCKER` · `SW_AUTOMATION_CLOCK_HOLDER` · `SW_AUTOMATION_CAPTURE_BLOCKER` · `SW_AUTOMATION_STABILITY_CONDITION` 이 두는 정적 등록자입니다(공통 틀 `StaticRegistrar`). */
     SW_DEFINE_STATIC_REGISTRAR( AutomationBlockerRegistrar, const AutomationBlocker*, &AutomationStepRegistry::registerBlocker, &AutomationStepRegistry::unregisterBlocker );
 } // namespace sw
 
@@ -240,20 +262,23 @@ namespace sw
             &sw_automationStep_##id                                                                                                                       \
         }
 
-    /** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 화면 캡처도 미뤄집니다. */
-    #define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking ) SW_STATIC_REGISTRATION( automationStartBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Start )
+    /** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 진행 중(`AutomationReadiness::waiting`)인 동안 시나리오가 시작하지 않고 화면 캡처도 미뤄집니다. */
+    #define SW_AUTOMATION_START_BLOCKER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationStartBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Start )
 
-    /** @brief 시계 잡기 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 도는 시나리오의 시계가 멈춥니다(`AutomationBlockScope::Clock`). */
-    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pIsHolding ) SW_STATIC_REGISTRATION( automationClockHolder, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsHolding, ::sw::AutomationBlockScope::Clock )
+    /** @brief 시계 잡기 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 진행 중인 동안 시나리오가 시작하지 않고 도는 시나리오의 시계가 멈춥니다(`AutomationBlockScope::Clock`). */
+    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationClockHolder, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Clock )
 
     /** @brief 시나리오 끝(`<Pass/>`)만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계 사이에는 돌게 두고 끝나기 전에만 기다릴 뒤의 일이 씁니다(`AutomationBlockScope::Finish`). */
-    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pIsBlocking ) SW_STATIC_REGISTRATION( automationFinishBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Finish )
-
-    /** @brief `SW_AUTOMATION_FINISH_BLOCKER` 와 같되, 오래 기다릴 때 무엇이 남았는지 내는 @p pDescribe(`string()`)를 함께 등록합니다. */
-    #define SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED( id, pName, pIsBlocking, pDescribe ) SW_STATIC_REGISTRATION( automationFinishBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Finish, pDescribe )
+    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationFinishBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Finish )
 
     /** @brief 화면 캡처만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그림을 덮지만 입력은 막지 않는 것(화면 페이드)이 씁니다(`AutomationBlockScope::Capture`). */
-    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pIsBlocking ) SW_STATIC_REGISTRATION( automationCaptureBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pIsBlocking, ::sw::AutomationBlockScope::Capture )
+    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationCaptureBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Capture )
+
+    /**
+     * @brief 사진 앞 렌더 정착 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그 상태(TAA 기록 · 노출 적응)를 만든 기능이 제 폴더에서 등록한다(`AutomationBlockScope::RenderStable`).
+     * @param pConfigure 문턱을 `ScenarioRun.json` 의 `_conditions.<pName>` 에서 읽는 함수(`AutomationConditionConfigureFunction`) — 칸이 없으면 시나리오가 읽기 오류로 시작하지 않는다
+     */
+    #define SW_AUTOMATION_STABILITY_CONDITION( id, pName, pReadiness, pConfigure ) SW_STATIC_REGISTRATION( automationStabilityCondition, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::RenderStable, pConfigure )
 
 #else
 
@@ -262,12 +287,12 @@ namespace sw
         [[maybe_unused]] static constexpr auto                        sw_automationStepRunUnused_##id      = pRun;      \
         [[maybe_unused]] static constexpr auto                        sw_automationStepValidateUnused_##id = pValidate; \
         [[maybe_unused]] static constexpr ::sw::AutomationStepOptions sw_automationStepOptionsUnused_##id  = options
-    #define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking )  [[maybe_unused]] static constexpr auto sw_automationStartBlockerUnused_##id = pIsBlocking
-    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pIsHolding )    [[maybe_unused]] static constexpr auto sw_automationClockHolderUnused_##id = pIsHolding
-    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pIsBlocking ) [[maybe_unused]] static constexpr auto sw_automationFinishBlockerUnused_##id = pIsBlocking
-    #define SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED( id, pName, pIsBlocking, pDescribe )                     \
-        [[maybe_unused]] static constexpr auto sw_automationFinishBlockerUnused_##id         = pIsBlocking; \
-        [[maybe_unused]] static constexpr auto sw_automationFinishBlockerDescribeUnused_##id = pDescribe
-    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pIsBlocking ) [[maybe_unused]] static constexpr auto sw_automationCaptureBlockerUnused_##id = pIsBlocking
+    #define SW_AUTOMATION_START_BLOCKER( id, pName, pReadiness )   [[maybe_unused]] static constexpr auto sw_automationStartBlockerUnused_##id = pReadiness
+    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pReadiness )    [[maybe_unused]] static constexpr auto sw_automationClockHolderUnused_##id = pReadiness
+    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pReadiness )  [[maybe_unused]] static constexpr auto sw_automationFinishBlockerUnused_##id = pReadiness
+    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pReadiness ) [[maybe_unused]] static constexpr auto sw_automationCaptureBlockerUnused_##id = pReadiness
+    #define SW_AUTOMATION_STABILITY_CONDITION( id, pName, pReadiness, pConfigure )                               \
+        [[maybe_unused]] static constexpr auto sw_automationStabilityConditionUnused_##id          = pReadiness; \
+        [[maybe_unused]] static constexpr auto sw_automationStabilityConditionConfigureUnused_##id = pConfigure
 
 #endif // !SW_SHIPPING

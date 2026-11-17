@@ -1,4 +1,4 @@
-// RenderStabilityTest — 사진 앞 정착 판정(`RenderStabilityUtil`): 정지 프레임은 기록을 버리거나 움직이면 0 부터, 노출 오차 상한은 기록을 버리면 0 · 움직이면 범위 끝 · 정지면 지수로 준다.
+// RenderStabilityTest — 사진 앞 정착(`RenderStabilityUtil`): 정지 프레임은 기록을 버리거나 움직이면 0 부터, 노출 오차 상한은 기록을 버리면 0 · 움직이면 범위 끝 · 정지면 지수로 준다. 정착 조건은 세 값이다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -44,37 +44,40 @@ SW_TEST_CASE( RenderStabilityTest, ExposureErrorDecaysOnlyWhileStill )
     SW_EXPECT_NEAR( 0.0f, RenderStabilityUtil::advanceExposureError( 2.0f, false, true, 0.0f, 0.5f ), 0.0f );
 }
 
-/** @brief [RenderStabilityTest] 정착은 정지 프레임 · 노출 오차 · 남은 에셋 일이 모두 문턱 안일 때만이다 */
-SW_TEST_CASE( RenderStabilityTest, StableNeedsEveryCondition )
+/**
+ * @brief [RenderStabilityTest] TAA 조건은 카메라 정지 프레임만 본다 — 캐릭터가 늘 숨 쉬는 장면(물체 정지 프레임 0)도 서고, TAA 를 돌리지 않는 뷰는 해당 없음이다
+ * @details 변이: 물체까지 본 정지 프레임(`_stillFrameCount`)을 보면 둘째 단언이 진다. TAA 를 안 돌리는 뷰를 진행 중으로 두면 첫 단언이 진다(Forward 뷰가 시한까지 기다렸다 — 실패 1).
+ */
+SW_TEST_CASE( RenderStabilityTest, TemporalAccumulationLooksAtTheCameraOnly )
 {
-    const RenderStabilityThreshold threshold{ 16, 0.05f };
-    RenderStabilitySample          sample;
-    sample._stillFrameCount = 16;
-    sample._exposureErrorEv = 0.04f;
-    SW_EXPECT_TRUE( RenderStabilityUtil::isStable( sample, 0, threshold ) );
-    SW_EXPECT_FALSE( RenderStabilityUtil::isStable( sample, 1, threshold ) ); // 에셋 일이 남았다
-    sample._stillFrameCount = 15;
-    SW_EXPECT_FALSE( RenderStabilityUtil::isStable( sample, 0, threshold ) );
-    sample._stillFrameCount = 16;
-    sample._exposureErrorEv = 0.06f;
-    SW_EXPECT_FALSE( RenderStabilityUtil::isStable( sample, 0, threshold ) );
+    RenderStabilitySample sample{};
+    sample._bTemporalAccumulation = SW_FALSE;
+    SW_EXPECT_TRUE( RenderStabilityUtil::evaluateTemporalAccumulation( sample, 16 ).isNotApplicable() );
+    sample._bTemporalAccumulation   = SW_TRUE;
+    sample._stillFrameCount         = 0; // 캐릭터가 숨 쉰다
+    sample._cameraStillFrameCount   = 16;
+    const AutomationReadiness ready = RenderStabilityUtil::evaluateTemporalAccumulation( sample, 16 );
+    SW_EXPECT_FALSE( ready.isWaiting() );
+    SW_EXPECT_FALSE( ready.isNotApplicable() );
+    sample._cameraStillFrameCount     = 5;
+    const AutomationReadiness waiting = RenderStabilityUtil::evaluateTemporalAccumulation( sample, 16 );
+    SW_EXPECT_TRUE( waiting.isWaiting() );
+    SW_EXPECT_EQUAL( 5ull, static_cast<unsigned long long>( waiting.getProgress() ) ); // 진척은 쌓인 정지 프레임 수 — 카메라가 계속 움직이면 0 에 머문다
 }
 
-/**
- * @brief [RenderStabilityTest] 물체 움직임을 보지 않는 정착은 카메라 정지 프레임 · 되읽은 노출 적응 · 에셋 일만 본다 — 늘 움직이는 캐릭터 장면도 선다
- * @details 변이: 정지 프레임(물체 포함)을 보면 첫 단언이 진다. 에셋 일을 빼면 셋째가 진다.
- */
-SW_TEST_CASE( RenderStabilityTest, StableIgnoringMotionLooksAtTheCameraOnly )
+/** @brief [RenderStabilityTest] 노출 조건은 재지 않는 뷰에서 해당 없음, 오차 상한이 문턱 이하면 준비됨, 위면 진행 중이고 상한이 줄면 진척이 바뀐다 */
+SW_TEST_CASE( RenderStabilityTest, AutoExposureWaitsForTheErrorBound )
 {
-    const RenderStabilityThreshold threshold{ 16, 0.05f };
-    RenderStabilitySample          sample{};
-    sample._stillFrameCount       = 0; // 캐릭터가 숨 쉰다
-    sample._exposureErrorEv       = 8.0f;
-    sample._cameraStillFrameCount = 16;
-    sample._exposureAdaptationEv  = 0.01f;
-    SW_EXPECT_TRUE( RenderStabilityUtil::isStableIgnoringMotion( sample, 0, threshold ) );
-    SW_EXPECT_FALSE( RenderStabilityUtil::isStable( sample, 0, threshold ) );
-    SW_EXPECT_FALSE( RenderStabilityUtil::isStableIgnoringMotion( sample, 1, threshold ) );
-    sample._exposureAdaptationEv = 0.5f;
-    SW_EXPECT_FALSE( RenderStabilityUtil::isStableIgnoringMotion( sample, 0, threshold ) );
+    RenderStabilitySample sample{};
+    sample._exposureErrorEv = 8.0f;
+    SW_EXPECT_TRUE( RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f ).isNotApplicable() );
+    sample._bAutoExposure                  = SW_TRUE;
+    const AutomationReadiness wideError    = RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f );
+    sample._exposureErrorEv                = 4.0f;
+    const AutomationReadiness smallerError = RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f );
+    SW_EXPECT_TRUE( wideError.isWaiting() );
+    SW_EXPECT_TRUE( smallerError.isWaiting() );
+    SW_EXPECT_TRUE( wideError.getProgress() != smallerError.getProgress() );
+    sample._exposureErrorEv = 0.04f;
+    SW_EXPECT_FALSE( RenderStabilityUtil::evaluateAutoExposure( sample, 0.05f ).isWaiting() );
 }

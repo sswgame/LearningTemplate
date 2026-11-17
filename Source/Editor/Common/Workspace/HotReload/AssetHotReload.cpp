@@ -128,11 +128,13 @@ namespace sw::editor
                 return leafName == kFenceFileName && FileUtil::isSameDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), makeFenceMarkerPath() );
             }
 
-            /** @brief 시작 차단 조건 — 시나리오 사본 폴더를 새로 만든 뒤 파일 감시가 그 쓰기를 알릴 때까지 참입니다. 에디터가 없으면 막지 않습니다. */
-            static bool isFenceBlocking()
+            /** @brief 시작 차단 조건 — 시나리오 사본 폴더를 새로 만든 뒤 파일 감시가 그 쓰기를 알릴 때까지 진행 중입니다. 에디터가 없으면 해당 없음입니다. */
+            static AutomationReadiness readFenceReadiness()
             {
                 AssetHotReload* pHotReload = findHotReload(); // 에디터 컨텍스트가 없으면 nullptr — 막지 않는다
-                return pHotReload != nullptr && pHotReload->pollContentWatchFence();
+                if ( pHotReload == nullptr )
+                    return AutomationReadiness::notApplicable();
+                return pHotReload->pollContentWatchFence() ? AutomationReadiness::waiting( 0, "the file watch has not reported the scratch copy yet" ) : AutomationReadiness::ready();
             }
 
             /**
@@ -779,7 +781,7 @@ namespace sw::editor
 namespace sw::editor
 {
     // 사본을 감시가 알리기 전에 시나리오가 콘텐츠 색인을 읽으면 낡은 색인이 맞다고 보인다 — 시작 전에 표지 사건으로 한 번 기다린다(ContentBrowserWatchAndScan CW1).
-    SW_AUTOMATION_START_BLOCKER( contentWatchFence, "ContentWatchFence", &AssetHotReloadInternal::isFenceBlocking );
+    SW_AUTOMATION_START_BLOCKER( contentWatchFence, "ContentWatchFence", &AssetHotReloadInternal::readFenceReadiness );
 
     // 원본 임포트는 워커에서 돈다 — 시나리오가 원본을 쓴 뒤 결과를 읽으려면 임포트가 끝난 것을 알아야 한다. `Busy` 는 0 이 될 때까지, `FinishedCount` 는 시작 값보다 커질 때까지 기다린다.
     SW_AUTOMATION_WALL_WATCH( editorAssetImportBusy, "Editor.AssetImportBusy", "1 while a changed source (model, texture, heightfield) is being imported or waits for the import",

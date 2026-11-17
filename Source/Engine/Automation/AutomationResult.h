@@ -100,6 +100,18 @@ namespace sw
             return failed( AutomationFailureKind::UnhandledLog, reason, {} );
         }
 
+        /**
+         * @brief 반복 실패 차단(`AutomationScenarioChain` — `ScenarioRun.json` 의 `_repeatedFailureLimit`)의 열쇠 @p key 를 붙인 사본입니다.
+         * @details 대기의 포기(시한 · 정지)만 붙인다 — `<단계 종류> <감시 값 · 조건 이름>`(`WaitUntil Scene.Transitioning`, `Screenshot RenderTemporalAccumulation`). 종류는 열쇠에 따로 든다.
+         *          같은 대기가 단계마다 시한까지 기다리며 지는 체인(실패 1 — 사진마다 수천 프레임)을 몇 번 만에 멈추게 한다.
+         */
+        [[nodiscard]] AutomationRunResult withRepeatKey( string_view key ) const
+        {
+            AutomationRunResult copy = *this;
+            copy._repeatKey          = string( key );
+            return copy;
+        }
+
         AutomationResult getResult() const { return _result; }
         /** @brief 진 판정이면 true 입니다(통과 · 건너뜀이 아니다). 종류(`getFailureKind`)는 이때만 뜻이 있다. */
         bool                  isFailure() const { return _result != AutomationResult::Passed && _result != AutomationResult::Skipped; }
@@ -108,6 +120,8 @@ namespace sw
         const string& getReason() const { return _reason; }
         /** @brief 진 단계의 자리입니다(모르면 빈 글). */
         const string& getStepLocation() const { return _stepLocation; }
+        /** @brief 반복 실패 차단의 열쇠입니다(대기의 포기가 아니면 빈 글 — `withRepeatKey`). */
+        const string& getRepeatKey() const { return _repeatKey; }
         bool          isSkippedByBuild() const { return _bSkippedByBuild == 1; }
         /** @brief 끝 줄에 붙이는 한 줄입니다 — 진 판정은 `<종류> - <까닭>`, 건너뜀은 까닭, 통과는 빈 글. 줄바꿈은 공백으로 바꾼다(끝 줄이 한 줄이게). */
         string describe() const
@@ -129,6 +143,7 @@ namespace sw
             , _reserved{ 0 }
             , _reason{ reason }
             , _stepLocation{ stepLocation }
+            , _repeatKey{}
         {
         }
 
@@ -161,5 +176,6 @@ namespace sw
         [[maybe_unused]] uint8 _reserved        : 7;
         string                 _reason;
         string                 _stepLocation;
+        string                 _repeatKey; ///< 반복 실패 차단의 열쇠(`withRepeatKey`)
     };
 } // namespace sw

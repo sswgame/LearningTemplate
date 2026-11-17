@@ -8,14 +8,17 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     /**
      * @class RenderStabilityStatusHolder
      * @brief 주 렌더러의 마지막 정착 값(렌더 스레드가 쓰고 게임 스레드가 읽는다)을 엔진 범위에서 듭니다 — 엔진을 다시 세우면 새로 선다(`FrameFogVolumeStatus` 와 같은 모양).
+     * @details 렌더 정착 조건의 문턱(`ScenarioRun.json` 의 `_conditions`)도 여기 든다 — 게임 스레드가 시나리오 시작 때 쓰고(`configure*`) 조건이 읽는다. 읽기 전이면 없다(기본값이 없다).
      */
     class RenderStabilityStatusHolder final : public ISubsystem
     {
@@ -29,6 +32,9 @@ namespace sw
             , _exposureAdaptationBits{ 0 }
             , _giAccumulatedFrames{ 0 }
             , _cameraStillFrameCount{ 0 }
+            , _flags{ 0 }
+            , _minStillFrames{}
+            , _maxExposureErrorEv{}
         {
         }
 
@@ -47,6 +53,8 @@ namespace sw
             _exposureAdaptationBits.store( adaptationBits, std::memory_order_relaxed );
             _giAccumulatedFrames.store( sample._giAccumulatedFrames, std::memory_order_relaxed );
             _cameraStillFrameCount.store( sample._cameraStillFrameCount, std::memory_order_relaxed );
+            _flags.store( ( sample._bTemporalAccumulation != SW_FALSE ? kTemporalAccumulationFlag : 0u ) | ( sample._bAutoExposure != SW_FALSE ? kAutoExposureFlag : 0u ),
+                          std::memory_order_relaxed );
         }
 
         RenderStabilitySample load() const
@@ -59,19 +67,34 @@ namespace sw
             Memory::copy( &sample._exposureAdaptationEv, &adaptationBits, sizeof( adaptationBits ) );
             sample._giAccumulatedFrames   = _giAccumulatedFrames.load( std::memory_order_relaxed );
             sample._cameraStillFrameCount = _cameraStillFrameCount.load( std::memory_order_relaxed );
+            const uint32 flags            = _flags.load( std::memory_order_relaxed );
+            sample._bTemporalAccumulation = ( flags & kTemporalAccumulationFlag ) != 0 ? SW_TRUE : SW_FALSE;
+            sample._bAutoExposure         = ( flags & kAutoExposureFlag ) != 0 ? SW_TRUE : SW_FALSE;
             return sample;
         }
 
         void   addPresentedFrame() { _presentedFrameCount.fetch_add( 1, std::memory_order_relaxed ); }
         uint64 loadPresentedFrames() const { return _presentedFrameCount.load( std::memory_order_relaxed ); }
 
+        // 게임 스레드만 쓰고 읽는다(시나리오 시작 때 `ScenarioRun.json` 에서).
+        void                     setMinStillFrames( uint32 minStillFrames ) { _minStillFrames = minStillFrames; }
+        void                     setMaxExposureErrorEv( float32 maxErrorEv ) { _maxExposureErrorEv = maxErrorEv; }
+        const optional<uint32>&  getMinStillFrames() const { return _minStillFrames; }
+        const optional<float32>& getMaxExposureErrorEv() const { return _maxExposureErrorEv; }
+
     private:
-        atomic<uint32> _stillFrameCount;
-        atomic<uint32> _exposureErrorBits;      ///< `float32` 의 비트(원자 실수 대신)
-        atomic<uint64> _presentedFrameCount;    ///< 장치의 프레임 끝에 넘긴 프레임 수(`RenderPresentCounter`)
-        atomic<uint32> _exposureAdaptationBits; ///< `float32` 의 비트
-        atomic<uint32> _giAccumulatedFrames;
-        atomic<uint32> _cameraStillFrameCount;
+        static constexpr uint32 kTemporalAccumulationFlag = 1u << 0;
+        static constexpr uint32 kAutoExposureFlag         = 1u << 1;
+
+        atomic<uint32>    _stillFrameCount;
+        atomic<uint32>    _exposureErrorBits;      ///< `float32` 의 비트(원자 실수 대신)
+        atomic<uint64>    _presentedFrameCount;    ///< 장치의 프레임 끝에 넘긴 프레임 수(`RenderPresentCounter`)
+        atomic<uint32>    _exposureAdaptationBits; ///< `float32` 의 비트
+        atomic<uint32>    _giAccumulatedFrames;
+        atomic<uint32>    _cameraStillFrameCount;
+        atomic<uint32>    _flags;              ///< `kTemporalAccumulationFlag` · `kAutoExposureFlag`
+        optional<uint32>  _minStillFrames;     ///< TAA 조건의 문턱(`_conditions.RenderTemporalAccumulation._minStillFrames`)
+        optional<float32> _maxExposureErrorEv; ///< 노출 조건의 문턱(`_conditions.RenderAutoExposure._maxExposureErrorEv`)
 
         SW_SERVICE_SLOT( RenderStabilityStatusHolder, Required );
     };
@@ -96,14 +119,24 @@ namespace sw
         return start * ( 1.0f - MathUtil::clamp( slowerAdaptRate, 0.0f, 1.0f ) );
     }
 
-    bool RenderStabilityUtil::isStable( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold )
+    AutomationReadiness RenderStabilityUtil::evaluateTemporalAccumulation( const RenderStabilitySample& sample, uint32 minStillFrames )
     {
-        return pendingJobCount == 0 && sample._stillFrameCount >= threshold._minStillFrames && sample._exposureErrorEv <= threshold._maxExposureErrorEv;
+        if ( sample._bTemporalAccumulation == SW_FALSE )
+            return AutomationReadiness::notApplicable();
+        if ( sample._cameraStillFrameCount >= minStillFrames )
+            return AutomationReadiness::ready();
+        return AutomationReadiness::waiting( sample._cameraStillFrameCount, "the camera has not held still long enough for the TAA history" );
     }
 
-    bool RenderStabilityUtil::isStableIgnoringMotion( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold )
+    AutomationReadiness RenderStabilityUtil::evaluateAutoExposure( const RenderStabilitySample& sample, float32 maxErrorEv )
     {
-        return pendingJobCount == 0 && sample._cameraStillFrameCount >= threshold._minStillFrames && sample._exposureAdaptationEv <= threshold._maxExposureErrorEv;
+        if ( sample._bAutoExposure == SW_FALSE )
+            return AutomationReadiness::notApplicable();
+        if ( sample._exposureErrorEv <= maxErrorEv )
+            return AutomationReadiness::ready();
+        uint32 errorBits = 0; // 오차 상한은 정지 프레임마다 준다 — 그 비트가 진척이다(카메라가 계속 움직이면 범위 끝에 머문다)
+        Memory::copy( &errorBits, &sample._exposureErrorEv, sizeof( errorBits ) );
+        return AutomationReadiness::waiting( errorBits, "auto exposure is still adapting" );
     }
 
     void RenderStabilitySample::publish( const RenderStabilitySample& sample )
@@ -127,4 +160,57 @@ namespace sw
     }
 
     SW_ENGINE_SERVICE_SUBSYSTEM( RenderStabilityStatusHolder, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderStabilityStatusHolder ) );
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 문턱이 없을 때의 진행 중입니다 — 기본값으로 지나가지 않고 정지 시한에 이 까닭으로 진다. */
+        constexpr const utf8* kNoThresholdWhat = "no threshold - Config/Dev/ScenarioRun.json _conditions was not loaded";
+
+        /** @brief 조건 `RenderTemporalAccumulation` 입니다(`RenderStabilityUtil::evaluateTemporalAccumulation`). */
+        AutomationReadiness readTemporalAccumulation()
+        {
+            const RenderStabilityStatusHolder& holder         = engine::getSubsystem<RenderStabilityStatusHolder>();
+            const optional<uint32>&            minStillFrames = holder.getMinStillFrames();
+            if ( minStillFrames.has_value() == false )
+                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
+            return RenderStabilityUtil::evaluateTemporalAccumulation( holder.load(), *minStillFrames );
+        }
+
+        /** @brief 조건 `RenderAutoExposure` 입니다(`RenderStabilityUtil::evaluateAutoExposure`). */
+        AutomationReadiness readAutoExposure()
+        {
+            const RenderStabilityStatusHolder& holder     = engine::getSubsystem<RenderStabilityStatusHolder>();
+            const optional<float32>&           maxErrorEv = holder.getMaxExposureErrorEv();
+            if ( maxErrorEv.has_value() == false )
+                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
+            return RenderStabilityUtil::evaluateAutoExposure( holder.load(), *maxErrorEv );
+        }
+
+        /** @brief `_conditions.RenderTemporalAccumulation` 의 `_minStillFrames`(1 이상) — TAA 기록 섞는 비율의 역수 몇 배다. */
+        expected<void> configureTemporalAccumulation( const JSONValue& config )
+        {
+            const optional<uint32> minStillFrames = config.readRequired<uint32>( "_minStillFrames" );
+            if ( minStillFrames.has_value() == false || *minStillFrames == 0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "needs _minStillFrames (1 or more)", "ScenarioRun.json _conditions.RenderTemporalAccumulation" } );
+            engine::getSubsystem<RenderStabilityStatusHolder>().setMinStillFrames( *minStillFrames );
+            return {};
+        }
+
+        /** @brief `_conditions.RenderAutoExposure` 의 `_maxExposureErrorEv`(0 이상, EV). */
+        expected<void> configureAutoExposure( const JSONValue& config )
+        {
+            const optional<float32> maxErrorEv = config.readRequired<float32>( "_maxExposureErrorEv" );
+            if ( maxErrorEv.has_value() == false || *maxErrorEv < 0.0f )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "needs _maxExposureErrorEv (0 or more, EV)", "ScenarioRun.json _conditions.RenderAutoExposure" } );
+            engine::getSubsystem<RenderStabilityStatusHolder>().setMaxExposureErrorEv( *maxErrorEv );
+            return {};
+        }
+    } // namespace
+
+    // 사진 앞 렌더 정착 — 이력을 든 렌더러 곁에서 등록한다(실행기는 조건 이름만 안다). 실시간 GI 누적(`_giAccumulatedFrames`)은 옛 정착 판정에 없어 넣지 않았다 — 넣으면 GI 장면의 사진 시점이 바뀐다.
+    SW_AUTOMATION_STABILITY_CONDITION( renderTemporalAccumulation, "RenderTemporalAccumulation", &readTemporalAccumulation, &configureTemporalAccumulation );
+    SW_AUTOMATION_STABILITY_CONDITION( renderAutoExposure, "RenderAutoExposure", &readAutoExposure, &configureAutoExposure );
 } // namespace sw

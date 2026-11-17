@@ -3,6 +3,7 @@
     "_types": ["string", "hashed_string", "DataPath", "AssetID", "TagID", "vector<string>", "vector<hashed_string>", "vector<DataPath>"],
     "_typePrefixes": ["AssetRef<"],
     "_exceptions": {
+        "Source/Engine/Automation/Scenario/AutomationRunnerParams.h::AutomationScreenshotParams::_stability": "(2) 다른 데이터를 가리키지 않는 모드(render · assets · none) — 기본은 렌더 정착을 기다리는 render, 모르는 값은 <Screenshot> 검사(validateScreenshot)가 읽기 오류로 낸다",
         "Source/Engine/Physics/Component/RigidBodyComponent.h::RigidBodyComponent::_layer": "(1) 엔진 물리 설정(Content/engine/physics/physicssettings.xml)의 기본 층 — 유니티 Default 층과 같다. 모르는 이름은 Validate 와 ScenePhysics.UnknownPhysicsLayerUsing 오류",
         "Source/Engine/Physics/Component/RigidBody2DComponent.h::RigidBody2DComponent::_layer": "(1) 엔진 물리 설정의 기본 층(Default). 모르는 이름은 Validate · ScenePhysics.UnknownPhysicsLayerUsing",
         "Source/Engine/Physics/Component/CharacterControllerComponent.h::CharacterControllerComponent::_layer": "(1) 엔진 물리 설정의 캐릭터 층(Character). 모르는 이름은 Validate · ScenePhysics.UnknownPhysicsLayerUsing",
