@@ -36,7 +36,7 @@ namespace sw::editor
 
     class AssetReferenceTracker;
     class EditorAssetImportJob;
-    class EditorReferenceIndex;
+    class EditorAssetIndex;
 
     /**
      * @class AssetHotReload
@@ -104,11 +104,11 @@ namespace sw::editor
         void discardChangedPaths();
 
         /** @brief 에디터 전역의 참조 역색인입니다. 아직 스캔하지 않았으면 `isReady` 가 false 다. */
-        [[nodiscard]] const EditorReferenceIndex& getReferenceIndex() const;
+        [[nodiscard]] const EditorAssetIndex& getReferenceIndex() const;
         /** @brief 참조 역색인이 에디터가 본 마지막 `Content/` 변경까지 반영했으면 true 입니다(`AssetReferenceTracker::isCurrent`). */
         [[nodiscard]] bool isReferenceIndexCurrent() const;
         /** @brief 이름 바꾸기와 옮기기가 참조를 고치며 갱신할 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 nullptr 입니다(`AssetReferenceTracker::findCurrentIndex`). */
-        [[nodiscard]] EditorReferenceIndex* findCurrentReferenceIndex();
+        [[nodiscard]] EditorAssetIndex* findCurrentReferenceIndex();
         /** @brief 진행 중인 역색인 스캔을 버리고 새로 스캔합니다. 에디터가 파일을 옮긴 직후 부른다(`AssetReferenceTracker::restartPendingScan`). */
         void restartPendingReferenceScan();
         /** @brief 역색인 스캔이 워커에서 진행 중이면 true 입니다. */

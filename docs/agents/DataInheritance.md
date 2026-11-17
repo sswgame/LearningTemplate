@@ -128,7 +128,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 ## 도구가 묻는 것
 
 - 이 칸이 어디서 왔나: `DataInheritance::flatten` 의 `DataInheritanceProvenance`(`findOrigin( "_listPass[Present]._cullMode" )`), 프리팹은 `PrefabCache::findFieldOrigin`.
-- 이 부모의 자식 목록: `DataInheritance::collectChildren`(파일을 훑는다). 에디터는 `EditorReferenceIndex::findReferrers` 도 같은 답을 준다.
+- 이 부모의 자식 목록: `DataInheritance::collectChildren`(파일을 훑는다). 에디터는 `EditorAssetIndex::findReferrers` 도 같은 답을 준다.
 
 ## 애니메이션 · 스프라이트 형식의 열쇠
 

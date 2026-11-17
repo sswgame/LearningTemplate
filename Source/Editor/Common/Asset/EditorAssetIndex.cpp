@@ -446,7 +446,7 @@ namespace sw::editor
                 for ( const EditorAssetLink& link : itEntry->second._listLink )
                 {
                     if ( link._target == key )
-                        outListReference.push_back( EditorAssetReference{ referrerID, targetID, link._line, link._bInlined } );
+                        outListReference.push_back( EditorAssetReference{ referrerID, targetID, link._line, link._bInlined, AssetRegistry::isReferenceText( key ) } );
                 }
             }
         }
@@ -472,7 +472,7 @@ namespace sw::editor
                 targetID = *path;
             }
             if ( _data._mapEntry.contains( targetID ) )
-                outListReference.push_back( EditorAssetReference{ referrerID, targetID, link._line, link._bInlined } );
+                outListReference.push_back( EditorAssetReference{ referrerID, targetID, link._line, link._bInlined, AssetRegistry::isReferenceText( link._target ) } );
         }
     }
 

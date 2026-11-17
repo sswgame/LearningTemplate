@@ -14,7 +14,6 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 
@@ -27,6 +26,16 @@ namespace sw
 
 namespace sw::editor
 {
+    /** @brief 참조 하나입니다(질의 결과). @p _referrerPath 의 텍스트 안에 @p _targetPath 가 적혀 있습니다 — 경로로든 GUID 로든. */
+    struct EditorAssetReference
+    {
+        string _referrerPath;      ///< 리소스 id(`game/empty/maps/destructionshowcase.scene.xml`, 소문자)
+        string _targetPath;        ///< 리소스 id(소문자). GUID 참조는 지금 경로로 푼 것
+        uint32 _line{ 0 };         ///< 1 부터 시작하는 줄 번호
+        bool   _bInlined{ false }; ///< `_base="…"` 칸이다 — 참조자가 로드할 때 대상을 펼쳐 넣으므로 대상이 바뀌면 다시 읽는다(`AssetReloadCascade`). 경로만 적은 칸은 아니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bByGUID{ false };  ///< GUID 참조(`guid:<32자>`)로 적었다 — 대상을 옮겨도 글을 고칠 것이 없다(옮기기의 다시 쓰기가 건너뛴다). NOLINT(sw-bool-flag): 위 칸과 같은 집합체
+    };
+
     /**
      * @brief 텍스트 에셋 하나가 적은 참조 하나입니다. 대상은 글에 적힌 그대로의 열쇠다 — 소문자 리소스 id 이거나 GUID 참조 `guid:<32자>`.
      * @details 대상이 지금 있는지는 적을 때가 아니라 물을 때 본다. 그래서 파일이 생기거나 사라져도 다른 파일을 다시 읽지 않는다(증분의 바탕).
@@ -59,7 +68,7 @@ namespace sw::editor
     /**
      * @class EditorAssetIndex
      * @brief 리소스 트리의 에셋 색인입니다. 전체 스캔은 워커(`scan`), 바뀐 파일의 적용(`applyChanges`)과 질의는 UI 스레드에서만 합니다.
-     * @details 바뀐 파일 하나의 비용은 그 파일의 참조 수에 비례한다 — 전체 목록을 지우거나 정렬하지 않는다(옛 `EditorReferenceIndex::refreshFile` 은 전체 `removeIf` + 정렬).
+     * @details 바뀐 파일 하나의 비용은 그 파일의 참조 수에 비례한다 — 전체 목록을 지우거나 정렬하지 않는다(이 색인 앞의 참조 역색인은 파일 하나에도 전체 `removeIf` + 정렬을 했다).
      *          참조는 텍스트에서 `engine/` · `common/` · `game/` · `editor/` · `scratch/` 로 시작하는 경로와 GUID 참조(`guid:<32자>`)다. GUID 참조는 물을 때 지금 경로로 푼다 —
      *          대상을 옮겨도 참조자는 그대로다(옮기기가 글을 고칠 필요가 없다).
      *          정체성은 텍스트 에셋의 머리(`AssetGUIDHeader`)와 원본 곁 `.meta` 에서 읽는다(런타임 `AssetRegistry` 의 줄은 파일 감시가 따로 고친다).

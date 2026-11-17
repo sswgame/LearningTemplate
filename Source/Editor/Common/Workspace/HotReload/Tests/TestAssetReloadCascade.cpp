@@ -10,7 +10,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -23,8 +23,9 @@ namespace
 {
     using sw::editor::AssetReloadCascade;
     using sw::editor::EditorAssetReference;
-    using sw::editor::EditorReferenceIndex;
-    using sw::editor::EditorReferenceIndexData;
+    using sw::editor::EditorAssetIndex;
+    using sw::editor::EditorAssetIndexData;
+    using sw::editor::EditorAssetLink;
 
     /** @brief 머티리얼만 펼쳐 넣는 종류로 본다(표의 칸 `AssetReferenceUse::InlinedAtLoad` 와 같은 판정 — 표 자체는 `MaterialRouteInlinesReferences` 가 본다). */
     bool shouldInlineMaterial( sw::string_view assetID )
@@ -32,21 +33,25 @@ namespace
         return sw::StringUtil::endsWith( assetID, ".material" );
     }
 
-    /** @brief (참조자, 대상) 쌍으로 색인을 짓는다. @p listEdge 는 `_base` 칸이고 @p listPlainEdge 는 경로만 적은 칸이다. 질의는 대상 순서의 이분 탐색이라 정렬해 넣는다. */
-    void buildIndex( EditorReferenceIndex& outIndex, std::initializer_list<std::pair<const char*, const char*>> listEdge, std::initializer_list<std::pair<const char*, const char*>> listPlainEdge = {} )
+    /** @brief (참조자, 대상) 쌍으로 색인을 짓는다(디스크 없이 `applyText`). @p listEdge 는 `_base` 칸이고 @p listPlainEdge 는 경로만 적은 칸이다. 대상은 빈 파일로 넣는다. */
+    void buildIndex( EditorAssetIndex& outIndex, std::initializer_list<std::pair<const char*, const char*>> listEdge, std::initializer_list<std::pair<const char*, const char*>> listPlainEdge = {} )
     {
-        EditorReferenceIndexData data{};
+        sw::unordered_map<sw::string, sw::string> mapText;
         for ( const auto& [pReferrer, pTarget] : listEdge )
         {
-            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ).str(), sw::FileUtil::normalizePath( pTarget ).str(), 1u, true } );
+            mapText[pReferrer] += "<I _base=\"" + sw::string( pTarget ) + "\"/>\n";
+            (void)mapText[pTarget];
         }
         for ( const auto& [pReferrer, pTarget] : listPlainEdge )
         {
-            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ).str(), sw::FileUtil::normalizePath( pTarget ).str(), 1u, false } );
+            mapText[pReferrer] += "<I path=\"" + sw::string( pTarget ) + "\"/>\n";
+            (void)mapText[pTarget];
         }
-        sw::VectorUtil::sort( data._listReference, []( const EditorAssetReference& left, const EditorAssetReference& right )
-        { return left._targetPath != right._targetPath ? left._targetPath < right._targetPath : left._referrerPath < right._referrerPath; } );
-        outIndex.assign( std::move( data ) );
+        outIndex.assign( EditorAssetIndexData{} );
+        for ( const auto& [assetID, text] : mapText )
+        {
+            outIndex.applyText( assetID, text );
+        }
     }
 
     sw::string makeMaterialText( const char* pName, const sw::string& parentID, const char* pRoughness )
@@ -94,7 +99,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     SW_REQUIRE_TRUE( child->loadFromAsset( sw::AssetID{ childID } ) );
     SW_EXPECT_EQUAL( sw::string( "0.5" ), readRoughness( *child ) );
 
-    EditorReferenceIndex index;
+    EditorAssetIndex index;
     buildIndex( index, {
                            { childID.c_str(), parentID.c_str() }
     } );
@@ -115,7 +120,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
  */
 SW_TEST_CASE( AssetReloadCascadeTest, ThreeLevelChainReloadsInDependencyOrder )
 {
-    EditorReferenceIndex index;
+    EditorAssetIndex index;
     buildIndex( index, {
                            {"game/t/z_parent.material",    "game/t/grand.material"},
                            { "game/t/a_child.material", "game/t/z_parent.material"},
@@ -137,7 +142,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ThreeLevelChainReloadsInDependencyOrder )
 /** @brief [AssetReloadCascadeTest] 참조자 사이의 순환은 오류이고 아무것도 다시 읽지 않는다(방문 집합 덕에 계획은 끝난다) */
 SW_TEST_CASE( AssetReloadCascadeTest, ReferenceCycleIsAnError )
 {
-    EditorReferenceIndex index;
+    EditorAssetIndex index;
     buildIndex( index, {
                            {"game/t/a.material", "game/t/base.material"},
                            {"game/t/a.material",    "game/t/b.material"},
@@ -169,18 +174,17 @@ SW_TEST_CASE( AssetReloadCascadeTest, CatalogRouteInlinesReferences )
 /** @brief [AssetReloadCascadeTest] XML 주석에 적은 `_base="…"` 는 상속 참조가 아니다 - 주석이 닫힌 뒤의 칸은 그대로 상속이다 */
 SW_TEST_CASE( AssetReloadCascadeTest, IndexIgnoresBaseInsideXMLComment )
 {
-    const sw::vector<sw::string>     listKnownID{ "game/t/a.xml", "game/t/b.xml" };
-    sw::vector<EditorAssetReference> listReference;
-    constexpr sw::string_view        kText = R"(<R><!-- <I _base="game/t/a.xml"/> --><I _base="game/t/b.xml"/></R>)";
-    EditorReferenceIndex::extractReferences( "game/t/child.xml", kText, listKnownID, listReference );
-    for ( const EditorAssetReference& reference : listReference )
+    sw::vector<EditorAssetLink> listLink;
+    constexpr sw::string_view   kText = R"(<R><!-- <I _base="game/t/a.xml"/> --><I _base="game/t/b.xml"/></R>)";
+    EditorAssetIndex::extractLinks( kText, listLink );
+    for ( const EditorAssetLink& link : listLink )
     {
-        SW_EXPECT_EQUAL( reference._targetPath == "game/t/b.xml", static_cast<bool>( reference._bInlined ) );
+        SW_EXPECT_EQUAL( link._target == "game/t/b.xml", static_cast<bool>( link._bInlined ) );
     }
     bool bFoundInherited = false;
-    for ( const EditorAssetReference& reference : listReference )
+    for ( const EditorAssetLink& link : listLink )
     {
-        bFoundInherited = bFoundInherited || reference._targetPath == "game/t/b.xml";
+        bFoundInherited = bFoundInherited || link._target == "game/t/b.xml";
     }
     SW_EXPECT_TRUE( bFoundInherited );
 }
@@ -188,17 +192,16 @@ SW_TEST_CASE( AssetReloadCascadeTest, IndexIgnoresBaseInsideXMLComment )
 /** @brief [AssetReloadCascadeTest] 역색인은 `_base` 칸을 다른 경로 칸과 가른다 - 항목 상속은 `#` 앞 파일이 대상이고, 이름이 비슷한 칸(`my_base`)은 아니다 */
 SW_TEST_CASE( AssetReloadCascadeTest, IndexMarksBaseReferences )
 {
-    const sw::vector<sw::string>     listKnownID{ "game/t/a.xml", "game/t/b.xml", "game/t/c.xml", "game/t/d.xml", "game/t/e.xml" };
-    sw::vector<EditorAssetReference> listReference;
-    constexpr sw::string_view        kText = R"(<R><I _base="game/t/a.xml#id"/><I _base='game/t/b.xml'/><I item="game/t/c.xml"/><I my_base="game/t/d.xml"/><I _base = "game/t/e.xml"/></R>)";
-    EditorReferenceIndex::extractReferences( "game/t/child.xml", kText, listKnownID, listReference );
-    SW_REQUIRE_EQUAL( size_t{ 5 }, listReference.size() );
-    SW_EXPECT_EQUAL( sw::string( "game/t/a.xml" ), listReference[0]._targetPath );
-    SW_EXPECT_TRUE( listReference[0]._bInlined );
-    SW_EXPECT_TRUE( listReference[1]._bInlined );
-    SW_EXPECT_FALSE( listReference[2]._bInlined );
-    SW_EXPECT_FALSE( listReference[3]._bInlined );
-    SW_EXPECT_TRUE( listReference[4]._bInlined );
+    sw::vector<EditorAssetLink> listLink;
+    constexpr sw::string_view   kText = R"(<R><I _base="game/t/a.xml#id"/><I _base='game/t/b.xml'/><I item="game/t/c.xml"/><I my_base="game/t/d.xml"/><I _base = "game/t/e.xml"/></R>)";
+    EditorAssetIndex::extractLinks( kText, listLink );
+    SW_REQUIRE_EQUAL( size_t{ 5 }, listLink.size() );
+    SW_EXPECT_EQUAL( sw::string( "game/t/a.xml" ), listLink[0]._target );
+    SW_EXPECT_TRUE( listLink[0]._bInlined );
+    SW_EXPECT_TRUE( listLink[1]._bInlined );
+    SW_EXPECT_FALSE( listLink[2]._bInlined );
+    SW_EXPECT_FALSE( listLink[3]._bInlined );
+    SW_EXPECT_TRUE( listLink[4]._bInlined );
 }
 
 /**
@@ -209,7 +212,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, CatalogFollowsOnlyBaseReferences )
 {
     const auto inlinesCatalog = []( sw::string_view assetID )
     { return sw::StringUtil::endsWith( assetID, ".xml" ); };
-    EditorReferenceIndex index;
+    EditorAssetIndex index;
     buildIndex( index,
                 {
                     {"game/t/z_child.xml", "common/data/base.xml"},
@@ -229,7 +232,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, CatalogBaseCycleIsAnError )
 {
     const auto inlinesCatalog = []( sw::string_view assetID )
     { return sw::StringUtil::endsWith( assetID, ".xml" ); };
-    EditorReferenceIndex index;
+    EditorAssetIndex index;
     buildIndex( index, {
                            {"game/t/a.xml", "common/data/base.xml"},
                            {"game/t/a.xml",         "game/t/b.xml"},

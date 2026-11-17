@@ -159,6 +159,7 @@ SW_TEST_CASE( EditorAssetIndexTest, MoveKeepsReferrers )
     index.findDependencies( "game/a/level.scene.xml", listDependency );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listDependency.size() );
     SW_EXPECT_EQUAL( string( "game/b/hero.prefab.xml" ), listDependency[0]._targetPath );
+    SW_EXPECT_TRUE( listDependency[0]._bByGUID ); // 옮기기의 다시 쓰기가 건너뛴다 — 고칠 글이 없다
     SW_EXPECT_EQUAL( string( "game/b/hit.ogg" ), listDependency[1]._targetPath );
 }
 

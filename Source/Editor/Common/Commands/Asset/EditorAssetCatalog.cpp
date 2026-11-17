@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -50,6 +51,31 @@ namespace sw::editor
             if ( classifyFile( assetPaths, file, entry ) )
                 outList.push_back( std::move( entry ) );
         }
+    }
+
+    void EditorAssetCatalog::collectEntries( const AssetPaths& assetPaths, const EditorAssetIndex& index, vector<EditorAssetIndexEntry>& outList )
+    {
+        outList.clear();
+        const string& resourceFolder = assetPaths.getRootFolderPath();
+        if ( resourceFolder.empty() )
+            return;
+        vector<string> listAssetID;
+        index.collectAssetIDs( listAssetID );
+        outList.reserve( listAssetID.size() );
+        for ( const string& assetID : listAssetID )
+        {
+            EditorAssetIndexEntry entry{};
+            if ( classifyFile( assetPaths, FileUtil::joinPath( resourceFolder, assetID ), entry ) )
+                outList.push_back( std::move( entry ) );
+        }
+    }
+
+    void EditorAssetCatalog::collectEntriesOnUIThread( const AssetPaths& assetPaths, const EditorAssetIndex& index, vector<EditorAssetIndexEntry>& outList )
+    {
+        if ( index.isReady() )
+            collectEntries( assetPaths, index, outList );
+        else
+            collectEntries( assetPaths, outList );
     }
 
     void EditorAssetCatalog::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
