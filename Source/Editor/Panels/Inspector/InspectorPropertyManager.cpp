@@ -528,9 +528,8 @@ namespace sw::editor
                 T          edited   = *pValue;
                 const bool bChanged = drawValueWidget( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
-                // atomic<bool> 은 다른 스레드가 쓰는 값이므로 되돌리기 기록에 넣지 않는다.
-                if constexpr ( std::is_same_v<T, bool> )
-                    InspectorPropertyUndo::trackRowEdit( model );
+                // 위젯 → 추적 → 쓰기 차례(`InspectorPropertyUndo`). atomic<bool> 을 되돌리기에서 빼는 일은 모델이 한다(`PropertyGridModel::ensureEditSpan`).
+                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
@@ -716,7 +715,7 @@ namespace sw::editor
                 else
                     bChanged = drawNameInput( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
-                // 인턴 인덱스 하나이므로 되돌리기는 스냅샷 한 번이다. 인턴된 문자열은 해제되지 않으므로 이전 인덱스는 언제나 유효하다.
+                // 되돌리기는 프로퍼티 값 글(이름 글)로 남는다 — 인턴된 문자열은 해제되지 않으므로 되돌린 이름도 언제나 다시 인턴된다.
                 InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged && bApplied == false )
                     model.setRowValue( row._rowID, TaskValue{ edited } );

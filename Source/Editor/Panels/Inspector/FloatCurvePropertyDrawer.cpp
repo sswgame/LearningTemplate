@@ -30,6 +30,7 @@ namespace sw::editor
          * @brief 편집기는 작업 사본을 고치고, 마칠 때(끌기를 놓음 · 메뉴 동작) 한 번 값에 입힌다 — 되돌리기 한 줄(모델의 `setPropertyText`).
          * @details 값은 값 행의 글(`_valueText`)로 받아 곡선으로 읽는다(글이 바뀐 때만 다시 읽는다). 열린 팝업은 하나뿐이라 상태도 하나입니다.
          *          끄는 중이 아니면 프레임마다 값에서 사본을 다시 떠서 Undo · 다른 편집이 바로 보입니다.
+         *          위젯 추적(`InspectorPropertyUndo::trackRowEdit`)을 부르지 않는다 — 끄는 동안은 사본만 고치고 마칠 때 한 번 쓰므로 한 번 쓰기 구간이다.
          */
         class FloatCurvePropertyDrawer final : public IInspectorProperty
         {

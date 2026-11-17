@@ -1374,6 +1374,7 @@ void applyPropertyText( UndoStepContext& context, const PropertyEditTarget& targ
 - 확장 영역(`IInspectorComponent` — 트랜스폼 · 카메라 …, 컴포넌트에 바로 써 모델을 지나지 않는다): 그룹 위젯이 활성화될 때 **그 컴포넌트 하나의 프로퍼티 전부**의 값 글을 찍고, 풀릴 때 바뀐 프로퍼티만 같은 단계로 남긴다. 유니티 `Undo.RecordObject`(대상 하나를 찍고 차이를 `PropertyModification` 으로) · 언리얼 `Modify` + 트랜잭션 차이와 같다. 기각 — 오브젝트 스냅샷 유지(단위가 둘로 갈린다), 확장마다 모델 쓰기 길로 옮기기(회전 도 표시처럼 프로퍼티와 1:1 이 아닌 입력이 있다 — Godot 도 커스텀 에디터는 `emit_changed` 로 프로퍼티 단위만 받는다).
 - 구간 표(`PropertyEditSpanSet`)는 그리드 모델이 하나씩 든다 — 인스펙터 창이 둘이어도 서로의 구간을 닫지 않는다. 고아 구간은 "다음 `gather`" 가 아니라 그리드의 프레임 끝(`EditorPropertyGrid::endFrame`)이 닫는다: 한 그리드가 한 프레임에 카드마다 모으므로 모으기로는 다른 카드의 활성 위젯과 가릴 수 없다.
 - 구간 하나 = 데이터 단계 한 쌍이고 대상 목록을 인자로 든다(8000 선택이 명령 8000 개가 아니다). 단계 인자에 씬 키를 더했다(미리보기 창 — `ObjectSnapshot` 과 같은 규칙), 스택은 `EditorTransaction::recordObjectCommand` 가 오브젝트의 씬으로 고른다.
+- P2: View 는 위젯 → `InspectorPropertyUndo::trackRowEdit( model )` → 쓰기 명령 차례만 지킨다(위젯은 바뀌지 않은 프레임에도 추적한다 — 끄는 동안 그리지 않은 프레임이 고아로 닫히지 않게). 팝업 · 선택기 · 놓을 때 한 번 쓰는 그리기 확장은 추적 없이 쓰는 한 번 쓰기 구간이다. 되돌리기에서 빼는 타입(`atomic<bool>` — 다른 스레드가 쓴다)은 View 의 분기가 아니라 모델이 가린다.
 - 컨테이너 편집(원소 더하기 · 지우기 · 맵 항목)도 같은 구간을 탄다 — 예전 스냅샷은 주 선택만 찍어 다중 선택의 나머지가 되돌아가지 않았다. 메서드 호출(`invokeMethod`)만 오브젝트 스냅샷으로 남는다(무엇을 바꿀지 모른다).
 
 **판정.** 8000 선택에서 칸을 누르고 나오기 → 기록 0 · 프레임 증가 1 ms 미만. 숫자 칸 끌기 → 구간 열기 프레임 16 ms 미만, 거래 1 MB 미만.

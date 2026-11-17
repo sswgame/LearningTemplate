@@ -1100,7 +1100,10 @@ namespace sw::editor
         const RowBinding* pRoot = findValueBinding( binding._rootRowID );
         if ( pRoot == nullptr )
             return;
-        const PropertyInfo& rootProp = *pRoot->_pProp;
+        const PropertyInfo&          rootProp = *pRoot->_pProp;
+        const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( rootProp._typeName.c_str() );
+        if ( pBuiltin != nullptr && static_cast<ReflectBuiltinIndex>( pBuiltin->_index ) == ReflectBuiltinIndex::katomic_bool )
+            return; // 다른 스레드가 쓰는 값이라 되돌리기에 넣지 않는다(되돌리면 런타임이 쓴 값을 덮는다)
         if ( _editSpans.continueHeld( string_view{ rootProp._name.c_str() } ) )
             return;
         const string undoLabel = label.empty() ? InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( rootProp ).c_str() ) : string{ label };
