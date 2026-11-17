@@ -281,6 +281,7 @@ namespace sw
             VulkanRHIDevice::VulkanLayoutRequest& request = arrRequest[requestCount];
             request._pRecord                              = pResolved;
             request._aspect                               = bDepth ? _pDevice->depthAspectMask() : static_cast<uint32>( VK_IMAGE_ASPECT_COLOR_BIT );
+            request._range                                = transition._range;
             switch ( transition._state )
             {
                 case RHITextureState::ShaderResource:
@@ -397,11 +398,13 @@ namespace sw
                 key._arrColorLoadOp[colorIndex]  = static_cast<uint8>( beginInfo._arrLoadOp[colorIndex] );
                 key._arrColorStoreOp[colorIndex] = static_cast<uint8>( beginInfo._arrStoreOp[colorIndex] );
                 key._arrColorSlice[colorIndex]   = beginInfo._arrColorTargetSlice[colorIndex];
+                key._arrColorMip[colorIndex]     = beginInfo._arrColorTargetMip[colorIndex];
             }
             key._depth        = beginInfo._depthTarget;
             key._depthLoadOp  = static_cast<uint8>( beginInfo._depthLoadOp );
             key._depthStoreOp = static_cast<uint8>( beginInfo._depthStoreOp );
             key._depthSlice   = beginInfo._depthTargetSlice;
+            key._depthMip     = beginInfo._depthTargetMip;
 
             if ( _pState->_bRenderPassActive == SW_TRUE )
             {
@@ -415,7 +418,8 @@ namespace sw
                 if ( pTex == nullptr )
                     return RHIRenderPassBeginResult::Failed;
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
+                // 그리는 밉만 옮긴다(면은 전체 — 예전과 같다). 다른 밉을 읽는 다운샘플 체인이 그 밉의 레이아웃을 지킨다(R-10).
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect, RHISubresourceRange{ key._arrColorMip[colorIndex], 1u, 0u, RHISubresourceRange::kAll } );
             }
             if ( key._depth != 0 )
             {
@@ -423,7 +427,7 @@ namespace sw
                 if ( pTex == nullptr )
                     return RHIRenderPassBeginResult::Failed;
                 const uint32 aspect = _pDevice->depthAspectMask();
-                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect );
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, aspect, RHISubresourceRange{ key._depthMip, 1u, 0u, RHISubresourceRange::kAll } );
             }
 
             VulkanRHIRenderPassCache::CompositeRecord composite{};
@@ -452,15 +456,16 @@ namespace sw
             if ( colorTarget != 0 )
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex                      = _pDevice->resolveTexture( colorTarget );
-                const bool                            bColorTargetNotRenderable = pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE;
+                const uint32                          mip                       = beginInfo._arrColorTargetMip[0];
+                const bool                            bColorTargetNotRenderable = pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0], mip ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE;
                 if ( bColorTargetNotRenderable )
                     return RHIRenderPassBeginResult::Failed;
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
+                _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect, RHISubresourceRange{ static_cast<uint16>( mip ), 1u, 0u, RHISubresourceRange::kAll } );
                 renderPass  = pTex->_renderPass;
-                framebuffer = pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] );
-                extent      = { pTex->_width, pTex->_height };
+                framebuffer = pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0], mip );
+                extent      = { MathUtil::max( pTex->_width >> mip, 1u ), MathUtil::max( pTex->_height >> mip, 1u ) };
             }
             else
             {

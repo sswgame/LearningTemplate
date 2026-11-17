@@ -3628,10 +3628,9 @@ namespace sw
         poolSet._cursor = 0;
     }
 
-    void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record,
-                                                   uint32 targetLayout, uint32 aspect )
+    void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect, const RHISubresourceRange& range )
     {
-        const VulkanLayoutRequest request{ &record, targetLayout, aspect };
+        const VulkanLayoutRequest request{ &record, targetLayout, aspect, range };
         transitionTextureLayouts( cmd, &request, 1 );
     }
 
@@ -3659,29 +3658,46 @@ namespace sw
             VulkanTextureRecord* const pRecord = request._pRecord;
             if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE )
                 continue;
-            // 확인과 기록이 비교 교환 하나다 — 같은 레벨의 두 워커가 같은 이미지를 옮기면 이긴 쪽 하나만 배리어를 쏜다(`RHITrackedState`).
-            uint32 layoutBefore{ 0 };
-            if ( pRecord->_layout.transitionTo( request._targetLayout, layoutBefore ) == false )
+            // 프레임 밖 기록이면 바꾸기 전 레이아웃 전체를 떠 둔다(버린 리스트를 다음 프레임이 되돌린다).
+            const bool                         bOutsideFrame = _bFrameStarted == SW_FALSE;
+            RHITrackedSubresourceState<uint32> layoutSnapshot;
+            if ( bOutsideFrame )
+                layoutSnapshot = pRecord->_layout;
+            // 확인과 기록이 한 번이다 — 같은 레벨의 두 워커가 같은 이미지를 옮기면 한쪽만 배리어를 쏜다(`RHITrackedSubresourceState`). 일부 밉 · 면이면 서브리소스마다 쏜다(R-10).
+            const uint32 mipLevels = pRecord->_mipLevels > 0 ? pRecord->_mipLevels : 1u;
+            const uint32 emitted   = pRecord->_layout.transitionTo( request._range, request._targetLayout, [&]( uint32 subresource, uint32 layoutBefore )
+              {
+                VkPipelineStageFlags  barrierSrcStage{ 0 };
+                VkPipelineStageFlags  barrierDstStage{ 0 };
+                VkImageMemoryBarrier& barrier = arrBarrier[barrierCount];
+                fillImageLayoutBarrier( pRecord->_image, layoutBefore, request._targetLayout, request._aspect, barrier, barrierSrcStage, barrierDstStage );
+                if ( subresource != RHITrackedSubresourceState<uint32>::kWholeResource )
+                {
+                    barrier.subresourceRange.baseMipLevel   = subresource % mipLevels;
+                    barrier.subresourceRange.levelCount     = 1;
+                    barrier.subresourceRange.baseArrayLayer = subresource / mipLevels;
+                    barrier.subresourceRange.layerCount     = 1;
+                }
+                srcStage |= barrierSrcStage;
+                dstStage |= barrierDstStage;
+                if ( ++barrierCount == kBarrierChunk )
+                    flushBarriers();
+            } );
+            if ( emitted == 0 )
                 continue;
             if ( bReported == false )
             {
                 reportBarrierDuringRecording( "transitionTextureLayouts" );
                 bReported = true;
             }
-            VkPipelineStageFlags barrierSrcStage{ 0 };
-            VkPipelineStageFlags barrierDstStage{ 0 };
-            fillImageLayoutBarrier( pRecord->_image, layoutBefore, request._targetLayout, request._aspect, arrBarrier[barrierCount], barrierSrcStage, barrierDstStage );
-            srcStage |= barrierSrcStage;
-            dstStage |= barrierDstStage;
-            rememberDroppedFrameLayout( cmd, pRecord->_image, layoutBefore );
-            if ( ++barrierCount == kBarrierChunk )
-                flushBarriers();
+            if ( bOutsideFrame )
+                rememberDroppedFrameLayout( cmd, pRecord->_image, layoutSnapshot );
         }
         if ( barrierCount > 0 )
             flushBarriers();
     }
 
-    void VulkanRHIDevice::rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, uint32 layoutBefore )
+    void VulkanRHIDevice::rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, const RHITrackedSubresourceState<uint32>& layoutBefore )
     {
         // 프레임 밖에서 기록한 리스트는 제출되지 않을 수 있다(시작되지 못한 프레임). 리스트마다 처음 바꾸는 이미지의 옛 레이아웃을 적어 두어 다음 프레임이 되돌린다.
         if ( _bFrameStarted != SW_FALSE )
@@ -3693,7 +3709,12 @@ namespace sw
             bKnown = bKnown || ( entry._cmd == cmd && entry._image == image );
         }
         if ( bKnown == false )
-            _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, image, layoutBefore } );
+        {
+            VulkanPendingLayout& pending = _listDroppedFrameLayout.emplace_back();
+            pending._cmd                 = cmd;
+            pending._image               = image;
+            pending._oldLayout           = layoutBefore;
+        }
     }
 
     void VulkanRHIDevice::beginImageAlias( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 aspect )
@@ -3706,11 +3727,14 @@ namespace sw
         memoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
         memoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
 
-        const uint32         layout = record._layout.load();
-        VkImageMemoryBarrier imageBarrier{};
-        uint32               imageBarrierCount{ 0 };
-        if ( layout != static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED ) )
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr );
+        // 추적 레이아웃(서브리소스마다일 수 있다)으로 UNDEFINED 에서 옮겨 내용을 버린다. UNDEFINED 인 서브리소스는 다음 전이가 이미 거기서 출발한다.
+        const uint32 mipLevels = record._mipLevels > 0 ? record._mipLevels : 1u;
+        record._layout.forEachState( [&]( uint32 subresource, uint32 layout )
         {
+            if ( layout == static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED ) )
+                return;
+            VkImageMemoryBarrier imageBarrier{};
             imageBarrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             imageBarrier.srcAccessMask               = VK_ACCESS_MEMORY_WRITE_BIT;
             imageBarrier.dstAccessMask               = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
@@ -3722,9 +3746,47 @@ namespace sw
             imageBarrier.subresourceRange.aspectMask = aspect;
             imageBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
             imageBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-            imageBarrierCount                        = 1;
-        }
-        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &memoryBarrier, 0, nullptr, imageBarrierCount, &imageBarrier );
+            if ( subresource != RHITrackedSubresourceState<uint32>::kWholeResource )
+            {
+                imageBarrier.subresourceRange.baseMipLevel   = subresource % mipLevels;
+                imageBarrier.subresourceRange.levelCount     = 1;
+                imageBarrier.subresourceRange.baseArrayLayer = subresource / mipLevels;
+                imageBarrier.subresourceRange.layerCount     = 1;
+            }
+            vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageBarrier );
+        } );
+    }
+
+    void VulkanRHIDevice::recordLayoutDetour( VkCommandBuffer cmd, const VulkanTextureRecord& record, uint32 aspect, uint32 detourLayout, bool bLeave, uint32 srcAccess,
+                                              uint32 dstAccess, VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage )
+    {
+        const uint32 mipLevels = record._mipLevels > 0 ? record._mipLevels : 1u;
+        record._layout.forEachState( [&]( uint32 subresource, uint32 tracked )
+        {
+            VkImageMemoryBarrier barrier{};
+            barrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.srcAccessMask               = srcAccess;
+            barrier.dstAccessMask               = dstAccess;
+            barrier.oldLayout                   = static_cast<VkImageLayout>( bLeave ? tracked : detourLayout );
+            barrier.newLayout                   = static_cast<VkImageLayout>( bLeave ? detourLayout : tracked );
+            barrier.srcQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image                       = record._image;
+            barrier.subresourceRange.aspectMask = aspect;
+            barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+            barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+            if ( subresource != RHITrackedSubresourceState<uint32>::kWholeResource )
+            {
+                barrier.subresourceRange.baseMipLevel   = subresource % mipLevels;
+                barrier.subresourceRange.levelCount     = 1;
+                barrier.subresourceRange.baseArrayLayer = subresource / mipLevels;
+                barrier.subresourceRange.layerCount     = 1;
+            }
+            // UNDEFINED 로 "돌아가는" 배리어는 쓸 수 없다(명세 — newLayout 은 UNDEFINED 가 될 수 없다). 그 서브리소스는 복사로 정의된 레이아웃에 남는다 — 추적은 부르는 쪽이 고친다.
+            if ( barrier.newLayout == VK_IMAGE_LAYOUT_UNDEFINED )
+                return;
+            vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        } );
     }
 
     void VulkanRHIDevice::restoreDroppedFrameLayouts()
@@ -3740,7 +3802,7 @@ namespace sw
             {
                 if ( entry._image == record._image )
                 {
-                    record._layout.store( entry._oldLayout );
+                    record._layout = entry._oldLayout;
                     break;
                 }
             }
@@ -3882,18 +3944,20 @@ namespace sw
                 return false;
         }
 
-        // 면마다 프레임버퍼 하나(면 뷰가 첨부). 면이 하나면 `_framebuffer` 하나다.
-        const uint32 sliceCount = record._listSliceView.empty() ? 1u : static_cast<uint32>( record._listSliceView.size() );
-        for ( uint32 slice = 0; slice < sliceCount; ++slice )
+        // (밉, 면) 마다 프레임버퍼 하나(그 뷰가 첨부, 크기는 그 밉의 크기). 하나뿐이면 `_framebuffer` 하나다.
+        const uint32 layerCount = record._arrayLayers > 0 ? record._arrayLayers : 1u;
+        const uint32 viewCount  = record._listSliceView.empty() ? 1u : static_cast<uint32>( record._listSliceView.size() );
+        for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
         {
-            const VkImageView       attachment = record.findAttachmentView( slice );
+            const uint32            mip        = viewIndex / layerCount;
+            const VkImageView       attachment = record.findAttachmentView( viewIndex % layerCount, mip );
             VkFramebufferCreateInfo fbInfo{};
             fbInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
             fbInfo.renderPass      = record._renderPass;
             fbInfo.attachmentCount = 1;
             fbInfo.pAttachments    = &attachment;
-            fbInfo.width           = record._width;
-            fbInfo.height          = record._height;
+            fbInfo.width           = MathUtil::max( record._width >> mip, 1u );
+            fbInfo.height          = MathUtil::max( record._height >> mip, 1u );
             fbInfo.layers          = 1;
             VkFramebuffer framebuffer{ VK_NULL_HANDLE };
             if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &framebuffer ) != VK_SUCCESS )
@@ -3901,7 +3965,7 @@ namespace sw
                 destroyOffscreenFramebuffer( record );
                 return false;
             }
-            if ( slice == 0 )
+            if ( viewIndex == 0 )
                 record._framebuffer = framebuffer;
             if ( record._listSliceView.empty() == false )
                 record._listSliceFramebuffer.push_back( framebuffer );
@@ -3990,12 +4054,13 @@ namespace sw
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             VulkanTextureRecord* pTex                    = resolveTexture( key._arrColor[colorIndex] );
-            const bool           bInvalidColorAttachment = pTex == nullptr || pTex->findAttachmentView( key._arrColorSlice[colorIndex] ) == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE;
+            const uint32         mip                     = key._arrColorMip[colorIndex];
+            const bool           bInvalidColorAttachment = pTex == nullptr || pTex->findAttachmentView( key._arrColorSlice[colorIndex], mip ) == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE;
             if ( bInvalidColorAttachment )
                 return false;
-            arrFbAttachment[colorIndex] = pTex->findAttachmentView( key._arrColorSlice[colorIndex] );
-            width                       = pTex->_width;
-            height                      = pTex->_height;
+            arrFbAttachment[colorIndex] = pTex->findAttachmentView( key._arrColorSlice[colorIndex], mip );
+            width                       = MathUtil::max( pTex->_width >> mip, 1u );
+            height                      = MathUtil::max( pTex->_height >> mip, 1u );
             spec.addColor( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
             spec._arrColorStoreOp[colorIndex] = VulkanRHIUtil::toVulkanStoreOp( static_cast<RHIRenderPassStoreOp>( key._arrColorStoreOp[colorIndex] ) );
@@ -4005,15 +4070,15 @@ namespace sw
         if ( key._depth != 0 )
         {
             VulkanTextureRecord* pTex                    = resolveTexture( key._depth );
-            const bool           bInvalidDepthAttachment = pTex == nullptr || pTex->findAttachmentView( key._depthSlice ) == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE;
+            const bool           bInvalidDepthAttachment = pTex == nullptr || pTex->findAttachmentView( key._depthSlice, key._depthMip ) == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE;
             if ( bInvalidDepthAttachment )
                 return false;
-            arrFbAttachment[attachCount] = pTex->findAttachmentView( key._depthSlice );
+            arrFbAttachment[attachCount] = pTex->findAttachmentView( key._depthSlice, key._depthMip );
             ++attachCount;
             if ( width == 0 )
             {
-                width  = pTex->_width;
-                height = pTex->_height;
+                width  = MathUtil::max( pTex->_width >> key._depthMip, 1u );
+                height = MathUtil::max( pTex->_height >> key._depthMip, 1u );
             }
             spec.setDepth( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );

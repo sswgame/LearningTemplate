@@ -398,13 +398,13 @@ namespace sw
             VkRenderPass                 _renderPass{ nullptr };
             uint32                       _format{ 0 };    ///< VkFormat
             uint32                       _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
-            /// @brief VkImageLayout(UNDEFINED=0)입니다. 병렬 기록 워커가 락 없이 비교 교환으로 바꾼다(`transitionTextureLayout` — DX12 `TextureRecord::_state` 와 같은 형식).
-            RHITrackedState<uint32> _layout;
-            uint32                  _width{ 0 };
-            uint32                  _height{ 0 };
-            uint32                  _mipLevels{ 1 };
-            uint32                  _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
-            RHITextureDimension     _dimension{ RHITextureDimension::Texture2D };
+            /// @brief VkImageLayout(UNDEFINED=0)입니다. 서브리소스(밉 × 면) 단위다(R-10 — DX12 `TextureRecord::_state` 와 같은 형식). 병렬 기록 워커가 함께 바꾼다.
+            RHITrackedSubresourceState<uint32> _layout;
+            uint32                             _width{ 0 };
+            uint32                             _height{ 0 };
+            uint32                             _mipLevels{ 1 };
+            uint32                             _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
+            RHITextureDimension                _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
             RHITextureUploadSerials _uploadSerials;
             /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
@@ -412,23 +412,26 @@ namespace sw
             uint8          _bRenderTarget : 1;
             uint8          _bDepthStencil : 1;
             uint8          _reserved      : 6;
-            /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
+            /// @brief 면이 여럿이거나 밉이 여럿일 때 (밉, 면) 마다의 2D 뷰(렌더 패스 첨부용 — 밉 하나 · 면 하나)와 단일 RT 프레임버퍼입니다. 칸은 `mip * _arrayLayers + slice` 다.
+            ///        이때 `_imageView` 는 셰이더가 보는 전체 뷰입니다(첨부는 밉 하나여야 한다 — R-10).
             vector<VkImageView>   _listSliceView;
             vector<VkFramebuffer> _listSliceFramebuffer;
 
-            /** @brief 면 `slice` 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr 입니다. */
-            VkImageView findAttachmentView( uint32 slice ) const
+            /** @brief (밉 `mip`, 면 `slice`) 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr 입니다. */
+            VkImageView findAttachmentView( uint32 slice, uint32 mip ) const
             {
                 if ( _listSliceView.empty() )
-                    return slice == 0 ? _imageView : nullptr;
-                return slice < _listSliceView.size() ? _listSliceView[slice] : nullptr;
+                    return ( slice == 0 && mip == 0 ) ? _imageView : nullptr;
+                const size_t viewIndex = static_cast<size_t>( mip ) * _arrayLayers + slice;
+                return ( slice < _arrayLayers && viewIndex < _listSliceView.size() ) ? _listSliceView[viewIndex] : nullptr;
             }
-            /** @brief 면 `slice` 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr 입니다. */
-            VkFramebuffer findSliceFramebuffer( uint32 slice ) const
+            /** @brief (밉 `mip`, 면 `slice`) 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr 입니다. */
+            VkFramebuffer findSliceFramebuffer( uint32 slice, uint32 mip ) const
             {
                 if ( _listSliceFramebuffer.empty() )
-                    return slice == 0 ? _framebuffer : nullptr;
-                return slice < _listSliceFramebuffer.size() ? _listSliceFramebuffer[slice] : nullptr;
+                    return ( slice == 0 && mip == 0 ) ? _framebuffer : nullptr;
+                const size_t viewIndex = static_cast<size_t>( mip ) * _arrayLayers + slice;
+                return ( slice < _arrayLayers && viewIndex < _listSliceFramebuffer.size() ) ? _listSliceFramebuffer[viewIndex] : nullptr;
             }
         };
 
@@ -444,13 +447,14 @@ namespace sw
             VulkanTextureRecord* _pRecord{ nullptr };
             uint32               _targetLayout{ 0 }; ///< VkImageLayout
             uint32               _aspect{ 0 };       ///< VkImageAspectFlags
+            RHISubresourceRange  _range{};           ///< 옮길 밉 · 면(기본 전체 — R-10)
         };
         /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
         struct VulkanPendingLayout
         {
-            VkCommandBuffer _cmd{ nullptr };
-            VkImage         _image{ nullptr };
-            uint32          _oldLayout{ 0 };
+            VkCommandBuffer                    _cmd{ nullptr };
+            VkImage                            _image{ nullptr };
+            RHITrackedSubresourceState<uint32> _oldLayout; ///< 처음 바꾸기 전의 서브리소스 레이아웃 전체
         };
 
         /**
@@ -753,7 +757,13 @@ namespace sw
         static void fillImageLayoutBarrier( VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32, VkImageMemoryBarrier& barrier, VkPipelineStageFlags& srcStage,
                                             VkPipelineStageFlags& dstStage );
         /** @brief 프레임 밖 기록이면 @p cmd 가 처음 바꾼 @p image 의 옛 레이아웃을 버린 프레임 기록에 적습니다(다음 `beginFrame` 이 되돌린다). 프레임 안이면 아무것도 하지 않는다. */
-        void rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, uint32 layoutBefore );
+        void rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, const RHITrackedSubresourceState<uint32>& layoutBefore );
+        /**
+         * @brief 전송 리스트 @p cmd 에 텍스처를 추적 레이아웃에서 @p detourLayout 으로(@p bLeave) 또는 그 반대로 옮기는 배리어를 기록합니다. 추적 값은 바꾸지 않는다.
+         * @details 레이아웃이 서브리소스마다 갈라졌으면 서브리소스마다 낸다(R-10). 같은 레이아웃이어도 접근 순서를 위해 배리어를 낸다.
+         */
+        void recordLayoutDetour( VkCommandBuffer cmd, const VulkanTextureRecord& record, uint32 aspect, uint32 detourLayout, bool bLeave, uint32 srcAccess, uint32 dstAccess,
+                                 VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage );
 
         /**
          * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인, 배리어, 기록이 한 덩어리입니다.**
@@ -765,7 +775,7 @@ namespace sw
          *          세 동작은 `RHITrackedState::transitionTo` 의 비교 교환 하나다 — 이긴 워커만 배리어를 쏜다(락 없음).
          * @note 이미 그 레이아웃이면 아무것도 하지 않습니다.
          */
-        void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
+        void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect, const RHISubresourceRange& range = RHISubresourceRange{} );
         /**
          * @brief 여러 텍스처를 `vkCmdPipelineBarrier` 한 번으로 옮깁니다(`transitionTextureLayout` 의 묶음 — 단일도 이 길이다).
          * @details 원소마다 레코드 레이아웃을 비교 교환으로 옮기고, 이긴 것의 이미지 배리어만 모은다. 단계 마스크는 호출 하나에 하나라(명세 vkCmdPipelineBarrier — srcStageMask ·
