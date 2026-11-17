@@ -2,9 +2,10 @@
  * @file SharedAssetTable.h
  * @brief 경로 → 약한 참조 에셋 표 하나입니다. 경로로 나눠 주는 캐시(스켈레톤 · 클립 · 물리 에셋 · 캐릭터 데이터 표)가 같은 구현을 씁니다.
  * @details 같은 경로는 같은 객체를 받고, 마지막 사용자가 놓으면 사라집니다(표는 `WeakInternTable`). 읽기(파일 IO)는 잠금 밖에서 하고, 같은 경로의
- *          동시 요청은 진행 중 표가 같은 로드 작업(`SharedAssetLoadOperation`)으로 묶습니다. 다시 읽기는 `detachShared` 하나입니다 — 표에서 떼어 내고 다시 읽은 횟수(`getReloadCount`)를
- *          올리며, 쓰는 쪽은 그 값이 달라졌을 때 다시 받아 자기가 지은 것(래그돌 · 알림 표 풀이)을 다시 짓습니다. 표는 `const` 값만 들어 나눠 준 객체를 제자리에서 바꿀 길이 없습니다 —
- *          워커가 쥔 `shared_ptr<const T>` 를 읽는 동안 게임 스레드가 내용을 덮는 경쟁(A-7)을 형식으로 막는다. 언리얼도 다시 읽기는 새 객체를 짓고 참조를 바꾼다.
+ *          동시 요청은 진행 중 표가 같은 로드 작업(`SharedAssetLoadOperation`)으로 묶습니다. 다시 읽기(`reloadShared`)는 새 객체를 새 판으로 넣고 옛 판이 그것을 가리키게 하며
+ *          다시 읽은 횟수(`getReloadCount`)를 올립니다. 표는 `const` 값만 들어 나눠 준 객체를 제자리에서 바꿀 길이 없습니다 — 워커가 쥔 `shared_ptr<const T>` 를 읽는 동안
+ *          게임 스레드가 내용을 덮는 경쟁(A-7)을 형식으로 막는다. 멤버로 쥔 쪽은 `SharedAssetRef` 로 쥐어 새 판을 읽고, 지어 둔 것(래그돌 · 알림 표 풀이)은 횟수가 바뀌면
+ *          다시 짓습니다. 언리얼도 다시 읽기는 새 객체를 짓고 참조를 바꾼다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -102,23 +103,24 @@ namespace sw
         shared_ptr<const AssetType> findLive( string_view path ) const { return _table.findLive( makeKey( path ) ); }
 
         /**
-         * @brief 사용 중이면 다시 읽히는지 본 뒤 표에서 떼어 내고 다시 읽은 횟수를 올립니다. 읽지 못하면 그대로이고 false 입니다.
-         * @details 쥔 쪽(다른 스레드 포함)은 옛 객체를 끝까지 그대로 읽고, 횟수가 바뀐 것을 보고(`AssetReloadWatch`) 다시 `acquire` 하면 새로 읽은 객체를 받습니다.
-         *          shortcut: 확인용으로 읽은 결과를 버리고 다음 `acquire` 가 다시 읽는다(한 번 더 읽음) — 다시 읽기가 배포 경로에서 잦아지면 확인한 객체를 다음 요청까지 들어 둔다.
+         * @brief 사용 중이면 새로 읽어 새 판으로 넣고 다시 읽은 횟수를 올립니다(게임 스레드, 틱 밖). 읽지 못하거나 아무도 쥐지 않았으면 그대로이고 false 입니다.
+         * @details 쥔 객체는 바뀌지 않는다 — `shared_ptr<const T>` 로 쥔 쪽(다른 스레드 포함)은 옛 객체를 끝까지 읽고, `SharedAssetRef` 로 쥔 쪽은 다음 읽기부터 새 객체를 본다.
+         *          다음 `acquire` 도 새 객체를 받는다.
          */
-        [[nodiscard]] bool detachShared( string_view path, LoadFunction load )
+        [[nodiscard]] bool reloadShared( string_view path, LoadFunction load )
         {
             if ( findLive( path ) == nullptr || load == nullptr )
                 return false;
-            AssetType fresh;
-            if ( load( toAssetID( path ), fresh ) == false )
+            shared_ptr<AssetType> fresh = sw::make_shared<AssetType>();
+            if ( load( toAssetID( path ), *fresh ) == false )
                 return false;
-            _table.erase( makeKey( path ) );
+            if ( _table.replaceLive( makeKey( path ), std::move( fresh ) ) == false )
+                return false; // 읽는 사이 마지막 사용자가 놓았다 — 다음 `acquire` 가 새로 읽는다
             _reloadCount.fetch_add( 1, std::memory_order_release );
             return true;
         }
 
-        /** @brief 이 표에서 다시 읽은(또는 떼어 낸) 횟수입니다. 쓰는 쪽은 값이 바뀌면 지은 것을 다시 짓습니다. */
+        /** @brief 이 표에서 다시 읽은 횟수입니다. 쓰는 쪽은 값이 바뀌면 지은 것을 다시 짓습니다. */
         uint32 getReloadCount() const { return _reloadCount.load( std::memory_order_acquire ); }
 
         /** @brief 살아 있는 항목 수입니다. */

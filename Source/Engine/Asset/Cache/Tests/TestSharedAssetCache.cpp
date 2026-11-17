@@ -6,6 +6,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
@@ -70,7 +71,7 @@ namespace
 } // namespace
 
 /**
- * @brief [SharedAssetCacheTest] 모듈 캐시는 같은 경로에 같은 객체를 주고, 다시 읽으면 쥔 쪽은 옛 객체를 지키며 다시 받은 쪽은 새 내용을 보고, 내리면 레지스트리에서 빠지는지 검증
+ * @brief [SharedAssetCacheTest] 모듈 캐시는 같은 경로에 같은 객체를 주고, 다시 읽으면 스냅숏은 옛 객체를 지키고 참조와 다시 받은 쪽은 새 내용을 보며, 내리면 레지스트리에서 빠지는지 검증
  */
 SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
 {
@@ -85,6 +86,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
 
         const shared_ptr<const SharedAssetCacheTestAsset> held  = Util::Cache::acquire( id );
         const shared_ptr<const SharedAssetCacheTestAsset> again = Util::Cache::acquire( id );
+        const SharedAssetRef<SharedAssetCacheTestAsset>   ref   = Util::Cache::acquire( id ); // 멤버로 쥐는 쪽의 모양
         SW_REQUIRE_TRUE( held != nullptr );
         SW_EXPECT_TRUE( held.get() == again.get() );
         SW_EXPECT_TRUE( pCache->isCached( id ) );
@@ -97,7 +99,8 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
         SW_REQUIRE_TRUE( Util::Cache::reloadShared( id ) );
         watch.markSeen();
         SW_EXPECT_EQUAL( reloadsBefore + 1, watch.getSeenCount() );
-        SW_EXPECT_EQUAL( string( "first" ), held->_text ); // 쥔 쪽은 옛 객체 그대로(Detach)
+        SW_EXPECT_EQUAL( string( "first" ), held->_text ); // 스냅숏은 옛 객체 그대로
+        SW_EXPECT_EQUAL( string( "second" ), ref->_text ); // 참조로 쥔 쪽은 다시 받지 않아도 새 내용을 본다
 
         // 쓰는 쪽은 횟수가 바뀐 것을 보고 다시 받는다 — 새 내용이다.
         const shared_ptr<const SharedAssetCacheTestAsset> fresh = Util::Cache::acquire( id );

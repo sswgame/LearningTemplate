@@ -96,7 +96,7 @@ namespace sw
     template <typename AssetType>
     bool SharedAssetCache<AssetType>::reloadIn( SharedAssetTable<AssetType>& table, string_view path )
     {
-        return table.detachShared( path, &SharedAssetCacheType<AssetType>::load );
+        return table.reloadShared( path, &SharedAssetCacheType<AssetType>::load );
     }
 
     template <typename AssetType>
