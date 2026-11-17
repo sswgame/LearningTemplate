@@ -201,6 +201,8 @@ namespace sw::editor
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
+        /** @brief 이 문서(이미 읽은 문서)의 자동 저장 복원 청이 있으면 사본 글을 되돌릴 수 있는 편집 한 단계로 적용합니다(`updateFocusedDocument` 가 그리기마다 부른다). */
+        void applyPendingAutosaveRestore();
         /** @brief 문서 스택의 상호작용(`CommandStack::openInteraction`)을 쥔 구간(`DocumentEditSpan::isHolding`)과 맞춥니다 — 끌기 동안 Ctrl+Z · History 가 그 스택을 움직이지 못한다(감사 E-2). */
         void syncStackInteraction();
         /** @brief 상호작용 구간 하나(@p edit)를 이 문서의 스택(`getDocumentCommandStack`)에 한 단계로 기록하고 dirty 로 표시합니다. */

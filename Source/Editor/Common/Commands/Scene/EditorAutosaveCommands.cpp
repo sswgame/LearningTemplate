@@ -405,20 +405,6 @@ namespace sw::editor
                 return true;
             }
 
-            static bool runRestoreDocument( const vector<string>& listArgument, string& outReply )
-            {
-                int32 index{ 0 };
-                if ( listArgument.size() != 1 || StringUtil::parseInt( listArgument[0], index ) == false || index < 0 )
-                    return false;
-                if ( EditorAutosaveCommands::restoreDocument( static_cast<uint32>( index ) ) == false )
-                {
-                    outReply = "document copy " + listArgument[0] + " was not restored (refused, unreadable or no such copy)";
-                    return false;
-                }
-                outReply = "opening the document of copy " + listArgument[0];
-                return true;
-            }
-
             [[nodiscard]] static bool readRestoredCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 if ( editor::findSubsystem<EditorStateStore>() == nullptr )
@@ -442,8 +428,6 @@ namespace sw::editor
                          &EditorAutosaveCommandsInternal::readRecoverableDocumentCount );
     SW_AUTOMATION_WATCH( editorAutosaveDocumentRestoredCount, "Editor.AutosaveDocumentRestoredCount", "Document copies restored this session",
                          &EditorAutosaveCommandsInternal::readRestoredDocumentCount );
-    SW_DEV_COMMAND( AutosaveRestoreDocument, "autosave.restoreDocument", "autosave.restoreDocument <index>",
-                    "Restore document copy <index> of Recovered Work (opens the document and applies the copy)", &EditorAutosaveCommandsInternal::runRestoreDocument );
     SW_AUTOMATION_WATCH( editorAutosaveRestoredCount, "Editor.AutosaveRestoredCount", "Autosave copies restored this session", &EditorAutosaveCommandsInternal::readRestoredCount );
 
     void EditorAutosaveCommands::tick()
@@ -490,20 +474,26 @@ namespace sw::editor
         const string arrSlotName[] = { makeSlotName( sourceID ), EditorAutosaveCommandsInternal::makeUntitledSlotName( editor::getSubsystem<SceneManager>().getSceneGeneration() ) };
         for ( const string& slotName : arrSlotName )
         {
-            const string slotFolder = FileUtil::joinPath( state._sessionFolder, slotName );
-            if ( FileUtil::isDirectory( slotFolder ) )
+            const string slotFolder     = FileUtil::joinPath( state._sessionFolder, slotName );
+            const bool   bPendingFolder = state._pendingSnapshotID.empty() == false && FileUtil::isSameDiskPath( slotFolder, state._pendingSlotFolder );
+            if ( bPendingFolder == false && FileUtil::isDirectory( slotFolder ) )
                 (void)FileUtil::removeDirectory( slotFolder );
         }
         // 이미 저장한 씬은 복구 후보에서도 빼고 그 사본(넘겨받은 세션의 것)도 지운다 — 저장한 원본이 사본보다 새것이다
         vector<EditorAutosaveEntry>& listEntry = state._listRecoverable;
+        // 단, 복원을 청한 사본은 남긴다 — dirty 원본에서 복원을 누르고 미저장 확인에서 Save 를 고르면 원본 저장이 먼저 와서, 지우면 곧 열 사본이 없어 씬 읽기가 졌다(감사 E-1).
+        // 그 사본은 열린 뒤 `finishPendingRestore` 가 지운다 — 사용자가 고른 것은 사본으로 돌아가는 일이다.
+        const string pendingSlotFolder = state._pendingSnapshotID.empty() ? string{} : state._pendingSlotFolder;
+        const auto   isPendingCopy     = [&pendingSlotFolder]( const EditorAutosaveEntry& entry )
+        { return pendingSlotFolder.empty() == false && FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( entry._snapshotAbs ), pendingSlotFolder ); };
         for ( const EditorAutosaveEntry& entry : listEntry )
         {
             const string entrySlotFolder = FileUtil::getDirectoryPart( entry._snapshotAbs );
-            if ( entry._sourceID == sourceID && FileUtil::isDirectory( entrySlotFolder ) )
+            if ( entry._sourceID == sourceID && isPendingCopy( entry ) == false && FileUtil::isDirectory( entrySlotFolder ) )
                 (void)FileUtil::removeDirectory( entrySlotFolder );
         }
-        listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [sourceID]( const EditorAutosaveEntry& entry )
-        { return entry._sourceID == sourceID; } ),
+        listEntry.erase( std::remove_if( listEntry.begin(), listEntry.end(), [sourceID, &isPendingCopy]( const EditorAutosaveEntry& entry )
+        { return entry._sourceID == sourceID && isPendingCopy( entry ) == false; } ),
                          listEntry.end() );
     }
 
@@ -541,6 +531,12 @@ namespace sw::editor
         if ( index >= state._listRecoverableDocument.size() )
             return false;
         const EditorDocumentAutosaveEntry& entry = state._listRecoverableDocument[index];
+        // 씬 복원과 같은 입구 규칙이다 — Play 중에는 거절한다(Stop 이 되돌릴 상태 위에 사본을 얹지 않는다, 감사 E-1)
+        if ( EditorPlaySession::isStopped() == false )
+        {
+            SW_LOG_WARNING_ID( "EditorAutosaveCommands.DocumentRestoreDuringPlay", "Autosave: document '%#' was not restored - stop playing first", entry._documentPath );
+            return false;
+        }
         if ( entry._refusal.empty() == false )
         {
             SW_LOG_WARNING_ID( "EditorAutosaveCommands.DocumentRestoreRefused", "Autosave: document '%#' was not restored - %#", entry._documentPath, entry._refusal );

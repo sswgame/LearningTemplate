@@ -97,6 +97,7 @@ namespace sw::editor
                 entry._documentPath = Internal::readMetaValue( metaText, "document" );
                 entry._projectRoot  = Internal::readMetaValue( metaText, "project" );
                 (void)StringUtil::parseUint64( Internal::readMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면 0 — 새 문서로 본다
+                (void)StringUtil::parseInt64( Internal::readMetaValue( metaText, "saved" ), entry._savedTicks );              // 없으면 0 — 창이 "-" 로 보인다
                 entry._textAbs = file.substr( 0, file.size() - string_view( Internal::kMetaSuffix ).size() ) + Internal::kTextSuffix;
                 if ( entry._documentPath.empty() || FileUtil::exists( entry._textAbs ) == false )
                     continue; // 짝이 없는 메타 — 복구할 글이 없다

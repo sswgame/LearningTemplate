@@ -30,6 +30,7 @@ namespace sw::editor
         string _textAbs;                ///< 사본 글 파일의 디스크 경로(복구 후보)
         string _projectRoot;            ///< 사본을 쓴 프로젝트 루트
         uint64 _sourceContentHash{ 0 }; ///< 사본을 쓸 때 원본 파일의 내용 해시(`ContentHash`). 0 은 원본이 아직 없는 새 문서다
+        int64  _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금 — 복구 후보만, 메타에서 읽는다)
         string _refusal;                ///< 복원할 수 없는 이유(비면 복원할 수 있다)
 
         /** @brief 세션 폴더 안 문서 사본 폴더 이름입니다(씬 칸과 겹치지 않는다 — 씬 칸은 `.scene.xml` 사본을 든다). */

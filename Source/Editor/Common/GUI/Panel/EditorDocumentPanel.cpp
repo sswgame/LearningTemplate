@@ -37,6 +37,7 @@ namespace sw::editor
 {
     void EditorDocumentPanel::updateFocusedDocument()
     {
+        applyPendingAutosaveRestore();
         if ( _bConfirmSwitch == SW_TRUE )
         {
             drawUnsavedDocumentPopup();
@@ -303,6 +304,21 @@ namespace sw::editor
         string restoredText;
         if ( _loadedAssetPath.empty() == false && EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText ) )
             restoreDocumentFromUndo( restoredText );
+    }
+
+    void EditorDocumentPanel::applyPendingAutosaveRestore()
+    {
+        // 복원할 문서가 이미 열려 있으면 읽기가 다시 오지 않는다 — 그 자리에서 사본 글을 되돌릴 수 있는 편집 한 단계로 적용한다(감사 E-1). 열려 있지 않은 문서는 읽은 직후(`markDocumentLoaded`)에 적용한다.
+        string restoredText;
+        if ( isDocumentLoaded() == false || _bLoadFailed == SW_TRUE || _loadedAssetPath.empty() ||
+             EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText ) == false )
+            return;
+        const string before = captureDocumentText();
+        applyDocumentText( restoredText );
+        _pEditSpan->resetBaseline( restoredText );
+        syncStackInteraction();
+        if ( before != restoredText )
+            recordDocumentEdit( DocumentEdit{ before, restoredText, "Restore Autosave Copy" } );
     }
 
     DocumentAutosaveResult EditorDocumentPanel::takeAutosaveCopy( string& outDocumentPath, string& outText )
