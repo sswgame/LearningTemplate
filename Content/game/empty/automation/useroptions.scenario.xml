@@ -19,19 +19,16 @@
 	<Screenshot file="base.ppm"/>
 
 	<!-- 렌더 스케일 0.5 -->
-	<Wait frames="10"/>
 	<Variable name="gv_renderScale" value="0.5"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="scale.ppm" waitForStability="false"/>
 	<!-- 같은 배율을 FSR 1(EASU + RCAS)로 키운다 — RCAS 가 대상 픽셀을 정점 UV 로 구한다(GL 기본 프레임버퍼는 조각 좌표 원점이 달라 SV_Position 을 쓰지 않는다) -->
 	<Variable name="gv_upscaler" value="1"/>
-	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="scale_fsr.ppm" waitForStability="false"/>
 	<Variable name="gv_upscaler" value="0"/>
-	<Wait frames="5"/>
 	<Variable name="gv_renderScale" value="1"/>
 
 	<!-- 시야 거리 0.05 — 먼 평면 100 m 가 5 m 가 되어 카메라(-6)에서 먼 큐브가 잘린다 -->
@@ -39,7 +36,6 @@
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="distance.ppm" waitForStability="false"/>
-	<Wait frames="5"/>
 	<Variable name="gv_viewDistanceScale" value="1"/>
 
 	<!-- 후처리 품질 0 — SSAO · 블룸을 건너뛴다 -->
@@ -47,7 +43,6 @@
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="postlow.ppm" waitForStability="false"/>
-	<Wait frames="5"/>
 	<Variable name="gv_postQuality" value="3"/>
 
 	<!-- 색각 보정 1(적색약) -->
@@ -55,7 +50,6 @@
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="colorvision.ppm" waitForStability="false"/>
-	<Wait frames="5"/>
 	<Variable name="gv_colorVisionMode" value="0"/>
 
 	<ExpectImage file="scale.ppm" golden="scale" region="0.05,0.15,0.95,0.75"/>

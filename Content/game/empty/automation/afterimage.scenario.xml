@@ -15,8 +15,7 @@
 	<Expect watch="Afterimage.Visible" atMost="6"/>
 	<Screenshot file="afterimage_still.ppm"/>
 	<DevCommand line="object.place Actor 1.5 0 0"/>
-	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
-	<AdvanceSimulation frames="7"/> <!-- 옮긴 뒤 잔상이 쌓이는 시간(시간이 내용) -->
+	<AdvanceSimulation frames="8"/> <!-- 옮긴 뒤 잔상이 쌓이는 시간(시간이 내용) -->
 	<DevCommand line="object.place Actor 3 0 0"/>
 	<AdvanceSimulation frames="8"/>
 	<Expect watch="Afterimage.Visible" atLeast="2"/>

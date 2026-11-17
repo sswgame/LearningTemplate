@@ -445,7 +445,7 @@ namespace sw
             updateCrashContext( "started" );
             startLoadWindow();
         }
-        else if ( holdClockForBackgroundJobs( input ) )
+        else if ( holdClockForBackgroundJobs( input ) || holdClockForScreenshot( input ) )
         {
             return; // 이 프레임은 단계를 돌리지 않는다(`onFrameEnd` 도 `_run._bClockHeld` 를 본다)
         }
@@ -994,6 +994,18 @@ namespace sw
         _run._pHeldStepState = std::move( state );
         _run._pHeldStateStep = &step;
         return *_run._pHeldStepState;
+    }
+
+    bool AutomationRunner::holdClockForScreenshot( InputManager& input )
+    {
+        const ScreenshotRequestQueue* const pMailbox        = engine::findSubsystem<ScreenshotRequestQueue>();
+        const bool                          bWaitsForPacket = _run.hasPendingScreenshot() || ( pMailbox != nullptr && pMailbox->isPacketSlotFree() == false );
+        if ( bWaitsForPacket == false || _scenario.hasFrameStartJobAt( _run._nextStepIndex, _run._frameIndex ) == false )
+            return false;
+        _run._bClockHeld = SW_TRUE; // 다음 프레임의 `holdClockForBackgroundJobs` 가 푼다
+        // 이 프레임에 낼 입력 이벤트를 한 프레임 밀어 시나리오 프레임과 맞춘다(`holdClockForBackgroundJobs` 와 같다).
+        _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
+        return true;
     }
 
     bool AutomationRunner::holdClockForBackgroundJobs( InputManager& input )

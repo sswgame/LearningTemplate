@@ -72,7 +72,6 @@
 	<ExpectImage file="empty/boat_storm.ppm" golden="boat_storm"/>
 
 	<!-- 내리기 -->
-	<Wait frames="1"/>
 	<Dismount rider="Helmsman"/>
 	<WaitUntil watch="Pawn.Seat" target="Helmsman" is="none" timeoutFrames="30"/>
 	<Expect watch="Pawn.Controller" target="Helmsman" is="Captain"/>

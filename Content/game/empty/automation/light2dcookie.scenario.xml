@@ -11,7 +11,6 @@
 	<Launch variable="gv_renderPipeline" value="engine/pipeline/forward2dpipeline.xml"/>
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="cookie_left.ppm"/>
-	<Wait frames="1"/>
 	<DevCommand line="teleport CookieLight 4.5 0 0"/>
 	<DevCommand line="teleport PlainLight -4.5 0 0"/>
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->

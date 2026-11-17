@@ -14,8 +14,7 @@
 	<Screenshot file="dither_full.ppm"/>
 
 	<!-- 프레임 60 에 옮기면 프레임 61 부터 오른다. 프레임 N 에 요청한 사진은 프레임 N+1 의 그림이라 등장 비율은 (N + 1 - 60) / 240 이다. -->
-	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
-	<AdvanceSimulation frames="19"/> <!-- 순간이동 앞 간격 -->
+	<AdvanceSimulation frames="20"/> <!-- 순간이동 앞 간격 -->
 	<DevCommand line="teleport DitherCube 0 1 0"/>
 	<Screenshot file="dither_0.ppm" waitForStability="false"/>
 	<Wait frames="59"/>

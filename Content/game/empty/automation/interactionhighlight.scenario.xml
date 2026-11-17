@@ -14,13 +14,11 @@
 	<Screenshot file="base.ppm"/>
 
 	<!-- PickCube 앞 — 외곽선 -->
-	<Wait frames="10"/>
 	<DevCommand line="teleport Player -1.5 0.5 -0.2"/>
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="outline.ppm" waitForStability="false"/>
 
 	<!-- HideCube 앞(벽 너머) — 감각 모드 -->
-	<Wait frames="10"/>
 	<DevCommand line="teleport Player 2 0.5 0.8"/>
 	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="sense.ppm" waitForStability="false"/>

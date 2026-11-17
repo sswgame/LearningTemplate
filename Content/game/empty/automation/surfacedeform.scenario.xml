@@ -68,8 +68,7 @@
 
 	<!-- 메워짐 5 초는 게임 시간이 드는 구간이라 시간 배율 4 로 돈다(75 프레임 = 게임 시간 5 초). 메워짐은 속도 × 게임 시간이라 배율과 무관하게 같은 깊이다(surfacefootprint 와 같다). -->
 	<Variable name="gv_timeScale" value="4"/>
-	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
-	<AdvanceSimulation frames="74"/> <!-- 메워짐 5 초(시간 배율 4 — 시간이 내용) -->
+	<AdvanceSimulation frames="75"/> <!-- 메워짐 5 초(시간 배율 4 — 시간이 내용) -->
 	<Variable name="gv_timeScale" value="1"/>
 	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atMost="0.035"/>
 	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atLeast="0.02"/>

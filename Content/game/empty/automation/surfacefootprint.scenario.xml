@@ -94,7 +94,6 @@
 	<Expect watch="Surface.FootprintPlaced" atLeast="40"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atLeast="0.05"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atMost="0.0705"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place Walker -3 0.05 0"/>
 	<WaitUntil watch="Surface.DeformDeepestNear" key="0 0 3.2" equals="0" timeoutSeconds="35"/>

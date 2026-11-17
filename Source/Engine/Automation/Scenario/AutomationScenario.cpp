@@ -289,6 +289,21 @@ namespace sw
         return 0;
     }
 
+    bool AutomationScenario::hasFrameStartJobAt( size_t firstStepIndex, uint32 frameIndex ) const
+    {
+        if ( findAdvanceSimulationFramesStartingAt( frameIndex ) > 0 )
+            return true;
+        for ( size_t stepIndex = firstStepIndex; stepIndex < _listStep.size() && _listStep[stepIndex]._frameIndex <= frameIndex; ++stepIndex )
+        {
+            const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( _listStep[stepIndex]._kind );
+            // 읽기(`parseSteps`)가 프레임 처음 단계를 가르는 것과 같은 모양이다 — 실행 함수가 없는 입력 단계와 입력 전 단계. 기다리기만 하는 단계는 빼다.
+            const bool bRunsAtFrameStart = pRegistration != nullptr && pRegistration->isWaitOnly() == false && ( pRegistration->_pRun == nullptr || pRegistration->_bBeforeInput );
+            if ( _listStep[stepIndex]._frameIndex == frameIndex && bRunsAtFrameStart )
+                return true;
+        }
+        return false;
+    }
+
     const AutomationStep* AutomationScenario::findOtherStepAtSameFrame( const AutomationStep& step ) const
     {
         for ( const AutomationStep& otherStep : _listStep )

@@ -33,7 +33,6 @@
 	<Wait frames="1"/>
 	<DevCommand line="move GameCamera 0.35 1.6 -6"/>
 	<Screenshot file="moving.ppm" waitForStability="false"/>
-	<Wait frames="1"/>
 	<DevCommand line="move GameCamera 0.40 1.6 -6"/>
 
 	<!-- 가운데(붙은 상자의 안쪽)는 움직이는 동안에도 서 있을 때와 같다 — 속도가 0 이라 모션 블러가 섞지 않고 TAA 기록이 제자리다. -->

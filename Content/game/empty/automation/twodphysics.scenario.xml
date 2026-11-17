@@ -29,7 +29,6 @@
 	<WaitUntil watch="Fracture.DynamicBodies" target="Crate" atLeast="1" timeoutFrames="30"/>
 	<!-- 다각형 빛: 밝힌 자리(오른쪽 위)의 벽이 빛을 치우면 달라진다 -->
 	<Screenshot file="freeform_on.ppm" waitForStability="false"/>
-	<Wait frames="1"/>
 	<DevCommand line="teleport WindowLight 100 100 0"/>
 	<AdvanceSimulation frames="2"/> <!-- 빛을 치운 뒤 2 프레임 장면(깨진 조각이 움직여 Render.Stable 이 서지 않는다) -->
 	<Screenshot file="freeform_off.ppm" waitForStability="false"/>
