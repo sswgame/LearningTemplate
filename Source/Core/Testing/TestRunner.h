@@ -21,24 +21,36 @@ namespace sw
 
 namespace sw::test
 {
+    /**
+     * @brief 스냅숏(`SW_EXPECT_SNAPSHOT`)을 쓰는 범위입니다 — 명령줄 깃발 둘(`--record-missing-snapshots` · `--update-snapshots`)을 값 하나로 받는다.
+     * @details `Missing` 은 없는 것만 쓰고 그 케이스를 `SnapshotMissing` 으로 지게 한다(사람이 보고 커밋한 뒤 기록 없이 다시 돌려 통과해야 한다 — preflight `changed` 단계).
+     *          다른 스냅숏 · 진 스냅숏은 덮지 않는다 — `All`(`--update-snapshots`)은 진 것도 써서 바뀐 케이스의 회귀를 가린다.
+     */
+    enum class SnapshotWriteMode : uint8
+    {
+        Off,     ///< 쓰지 않는다 — 없거나 다르면 실패
+        Missing, ///< 없는 것만 쓰고 실패로 알린다(`--record-missing-snapshots`)
+        All,     ///< 없거나 다른 것을 쓰고 통과한다(`--update-snapshots`)
+    };
+
     /** @struct TestRunOptions @brief 실행기의 명령줄 값입니다. */
     struct TestRunOptions
     {
-        string        _filter{ "*" };             ///< 케이스 이름 와일드카드(쉼표로 여럿, 앞에 `-` 면 뺀다)
-        string        _sourceFolder{};            ///< 비지 않으면 정의한 파일 경로에 이 폴더(`/` 구분, 쉼표로 여럿, 예: `Source/Editor/`)가 든 케이스만 돈다 — 에디터 이미지의 케이스를 에디터 안에서, 게임이 싣는 키트 케이스를 그 게임으로(`--test-source`)
-        string        _reportPath{};              ///< JSON 보고를 쓸 경로(비면 실패한 실행만 남겨 둔 쓰기 폴더 `<뿌리>/<프로세스>/report.json` 에 쓴다 — 모두 통과한 실행은 폴더째 지운다)
-        string        _scratchRoot{};             ///< 케이스별 쓰기 폴더의 뿌리(비면 `Saved/Test`)
-        string        _childRole{};               ///< 비지 않으면 이 자식 역할(`SW_TEST_CHILD_ROLE`) 하나만 돈다 — 거르개 · 샤드 · 반복은 보지 않는다(`runChildRole` 이 띄운 자식)
-        string        _childArgument{};           ///< 자식 역할이 `getChildRoleArgument` 로 받는 값
-        string        _isolatedCase{};            ///< 비지 않으면 이 케이스(`._bIsolated` 인 보통 케이스) 하나만 이 프로세스에서 돈다 — 부모 실행기가 격리 케이스마다 띄운 자식이다. 거르개 · 샤드 · 반복은 보지 않는다
-        uint32        _seed{ 0 };                 ///< 순서 섞기 씨앗(0 이면 시각에서 고르고 찍는다)
-        uint32        _repeatCount{ 1 };          ///< 같은 순서를 몇 번 돌지(간헐 실패를 찾는다). 회차마다 씨앗을 하나씩 올린다
-        uint32        _shardIndex{ 0 };           ///< 이 프로세스가 도는 몫(0 부터)
-        uint32        _shardCount{ 1 };           ///< 몫 수 — 케이스는 이름 해시로 나뉜다(섞기 · 거르개와 무관하게 늘 같은 몫)
-        bool          _bUpdateSnapshots{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        bool          _bListOnly{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool          _bRunDisabled{ false };     ///< `_disabledReason` 이 있는 케이스도 돈다(고친 뒤 확인) NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        CrashHandler* _pCrashHandler{ nullptr };  ///< 도는 케이스 이름을 문맥(`TestCase`)에 적을 크래시 처리기 — 크래시 보고에 어느 케이스였는지 남는다. nullptr 이면 적지 않는다
+        string            _filter{ "*" };    ///< 케이스 이름 와일드카드(쉼표로 여럿, 앞에 `-` 면 뺀다)
+        string            _sourceFolder{};   ///< 비지 않으면 정의한 파일 경로에 이 폴더(`/` 구분, 쉼표로 여럿, 예: `Source/Editor/`)가 든 케이스만 돈다 — 에디터 이미지의 케이스를 에디터 안에서, 게임이 싣는 키트 케이스를 그 게임으로(`--test-source`)
+        string            _reportPath{};     ///< JSON 보고를 쓸 경로(비면 실패한 실행만 남겨 둔 쓰기 폴더 `<뿌리>/<프로세스>/report.json` 에 쓴다 — 모두 통과한 실행은 폴더째 지운다)
+        string            _scratchRoot{};    ///< 케이스별 쓰기 폴더의 뿌리(비면 `Saved/Test`)
+        string            _childRole{};      ///< 비지 않으면 이 자식 역할(`SW_TEST_CHILD_ROLE`) 하나만 돈다 — 거르개 · 샤드 · 반복은 보지 않는다(`runChildRole` 이 띄운 자식)
+        string            _childArgument{};  ///< 자식 역할이 `getChildRoleArgument` 로 받는 값
+        string            _isolatedCase{};   ///< 비지 않으면 이 케이스(`._bIsolated` 인 보통 케이스) 하나만 이 프로세스에서 돈다 — 부모 실행기가 격리 케이스마다 띄운 자식이다. 거르개 · 샤드 · 반복은 보지 않는다
+        uint32            _seed{ 0 };        ///< 순서 섞기 씨앗(0 이면 시각에서 고르고 찍는다)
+        uint32            _repeatCount{ 1 }; ///< 같은 순서를 몇 번 돌지(간헐 실패를 찾는다). 회차마다 씨앗을 하나씩 올린다
+        uint32            _shardIndex{ 0 };  ///< 이 프로세스가 도는 몫(0 부터)
+        uint32            _shardCount{ 1 };  ///< 몫 수 — 케이스는 이름 해시로 나뉜다(섞기 · 거르개와 무관하게 늘 같은 몫)
+        SnapshotWriteMode _snapshotWriteMode{ SnapshotWriteMode::Off };
+        bool              _bListOnly{ false };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bRunDisabled{ false };    ///< `_disabledReason` 이 있는 케이스도 돈다(고친 뒤 확인) NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        CrashHandler*     _pCrashHandler{ nullptr }; ///< 도는 케이스 이름을 문맥(`TestCase`)에 적을 크래시 처리기 — 크래시 보고에 어느 케이스였는지 남는다. nullptr 이면 적지 않는다
     };
 
     /**

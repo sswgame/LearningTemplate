@@ -99,7 +99,7 @@ namespace sw
         const vector<string>& getFailures() const { return _listFailure; }
         /** @brief 첫 실패 줄의 종류입니다(실패가 없으면 단언 — 읽는 쪽은 `getFailures` 가 비지 않을 때만 쓴다). */
         AutomationFailureKind getFirstFailureKind() const { return _firstFailureKind; }
-        /** @brief `-scenario-update-golden` 으로 이 실행이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */
+        /** @brief 기록 실행(`-scenario-update-golden` · `-scenario-record-missing-golden`)이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */
         const vector<string>& getUpdatedGoldens() const { return _listUpdatedGolden; }
         /** @brief 통과했지만 허용치에 가까운 골든의 비교 줄입니다(`GoldenResult::PassNearLimit`, 기록 모드가 아닐 때). 기록 모드로 다시 뜰 목록이다. */
         const vector<string>& getNearLimitGoldens() const { return _listNearLimitGolden; }
@@ -164,7 +164,7 @@ namespace sw
         void prepareWatches( const AutomationScenario& scenario );
         /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p backendTag 는 단언한 때의 백엔드). 판정은 `AutomationGoldenUtil::evaluate` · `decide` 한 식이다. */
         void evaluateImage( AutomationStepContext& context, const AutomationStep& step, string_view backendTag );
-        /** @brief 기록 모드에서 골든 @p goldenID 와 그 메타(`*.golden.json`)를 씁니다. @p pPrevious 는 쓰기 전 골든과의 차이(견주지 못했으면 nullptr)입니다. */
+        /** @brief 기록 실행에서 골든 @p goldenID 와 그 메타(`*.golden.json`)를 씁니다. @p pPrevious 는 쓰기 전 골든과의 차이(견주지 못했으면 nullptr)입니다. */
         void writeGolden( AutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
                           const AutomationImageDifference* pPrevious, const AutomationGoldenLimits& limits );
         /** @brief 미룬 `<ExpectImagesDiffer>` 하나를 판정합니다. */
@@ -185,7 +185,7 @@ namespace sw
         vector<DeferredAtMostCheck>      _listDeferredAtMost;                                   ///< 시나리오 끝에서 판정할 값 상한(편집기 UI 캡처의 마젠타 비율)
         string                           _goldenFolderID;                                       ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
         string                           _goldenPrefix;                                         ///< 골든 파일 이름의 앞머리(시나리오 이름)
-        bool                             _bUpdateGolden{ false };                               ///< `-scenario-update-golden` — 없거나 · 근접 · 진 골든을 지금 그림으로 쓴다 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        expected<GoldenWriteMode>        _goldenWriteMode{ GoldenWriteMode::Off };              ///< 골든을 쓰는 범위(`-scenario-record-missing-golden` · `-scenario-update-golden`) — 두 깃발을 함께 주면 이미지 단언마다 그 이유로 진다
         vector<string>                   _listUnhandledLog;                                     ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
         vector<string>                   _listAllowedLogID;                                     ///< 이 실행에서 허용 항목이 맞은 로그 id
         vector<string>                   _listMetricLine;                                       ///< 보고에 적는 지표 값

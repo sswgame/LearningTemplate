@@ -2,11 +2,13 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -92,18 +94,33 @@ namespace sw
         return bNear ? GoldenResult::PassNearLimit : GoldenResult::Pass;
     }
 
-    GoldenAction AutomationGoldenUtil::decide( bool bHasGolden, bool bCompared, GoldenResult result, bool bUpdateGolden )
+    GoldenAction AutomationGoldenUtil::decide( bool bHasGolden, bool bCompared, GoldenResult result, GoldenWriteMode recording )
     {
         const bool bPass = bCompared && result == GoldenResult::Pass;
         if ( bPass )
             return GoldenAction::Keep;
-        if ( bUpdateGolden )
+        if ( recording == GoldenWriteMode::All )
             return GoldenAction::Write;
         if ( bHasGolden == false )
-            return GoldenAction::FailMissing;
+            return recording == GoldenWriteMode::Missing ? GoldenAction::WriteMissing : GoldenAction::FailMissing;
         if ( bCompared == false )
             return GoldenAction::FailUnreadable;
         return result == GoldenResult::PassNearLimit ? GoldenAction::KeepNearLimit : GoldenAction::Fail;
+    }
+
+    expected<GoldenWriteMode> AutomationGoldenUtil::readWriteMode()
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return GoldenWriteMode::Off;
+        bool                      bUpdate        = false;
+        bool                      bRecordMissing = false;
+        const CommandLineManager& commandLine    = engine::getSubsystem<CommandLineManager>();
+        (void)commandLine.getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdate );
+        (void)commandLine.getArgument( CommandLineArgument::SCENARIO_RECORD_MISSING_GOLDEN, bRecordMissing );
+        if ( bUpdate && bRecordMissing )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "-scenario-update-golden rewrites every golden and -scenario-record-missing-golden only the missing ones - pick one" } );
+        return bUpdate ? GoldenWriteMode::All : bRecordMissing ? GoldenWriteMode::Missing
+                                                               : GoldenWriteMode::Off;
     }
 
     const utf8* AutomationGoldenUtil::describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult result )
