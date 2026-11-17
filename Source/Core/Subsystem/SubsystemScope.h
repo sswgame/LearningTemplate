@@ -59,6 +59,15 @@ namespace sw
             (void)typeHash;
             return nullptr;
         }
+        /**
+         * @brief 이 범위 자신의 칸 @p typeHash 를 가진, 이 범위의 컬렉션이 소유한 서브시스템입니다. 빌려 건 칸 · 없는 칸 · 매단 자식의 칸이면 nullptr 입니다.
+         * @details 엔진 서비스 칸(`ServiceSlot::_pOwner`)이 바인딩 때 한 번 묻는다 — 칸 길 조회도 범위 조회와 같은 초기화 의존 검사를 지나게 한다.
+         */
+        virtual const ISubsystem* findOwnerInScope( uint64 typeHash ) const
+        {
+            (void)typeHash;
+            return nullptr;
+        }
     };
 
     /**
@@ -264,6 +273,7 @@ namespace sw
         void*                    findInScope( uint64 typeHash ) const override;
         const ISubsystemLocator* getParentScope() const override { return _pParent; }
         void*                    findHostModuleVisibleInScope( uint64 typeHash ) const override;
+        const ISubsystem*        findOwnerInScope( uint64 typeHash ) const override { return findOwner( typeHash ); }
 
     private:
         /** @brief 조회 칸 하나입니다. */

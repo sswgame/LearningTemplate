@@ -64,6 +64,21 @@ namespace sw
         // 2) 서비스 창구
         // ------------------------------------------------------------------------------
         /**
+         * @brief 칸 @p slot 을 읽었음을 초기화 중 의존 검사(`SubsystemCollection::recordInitializeLookup`)에 알립니다 — 칸 길도 범위 조회와 같은 검사를 지난다.
+         * @details 칸은 `initializeAll` 앞에 묶여 아직 서지 않은 서브시스템을 줄 수 있다. 초기화 밖에서는 스레드 지역 값 하나를 읽고 끝나고(범위 길과 같다),
+         *          창구는 프레임마다 많이 불리므로 배포(Shipping)에서는 통째로 빠진다(`SW_DO_CHECKS` — 언리얼 `DO_CHECK` 자리). 빌려 건 객체(`_pOwner` 없음)는 볼 것이 없다.
+         */
+        SW_INLINE void recordServiceSlotLookup( const ServiceSlot& slot )
+        {
+#if defined( SW_DO_CHECKS )
+            if ( slot._pOwner != nullptr )
+                SubsystemCollection::recordInitializeLookup( *slot._pOwner );
+#else
+            (void)slot;
+#endif
+        }
+
+        /**
          * @brief 엔진 서비스 @p T 입니다. 바인딩 뒤에는 늘 있다 — 비었으면 부른 쪽의 잘못이라 멈춥니다.
          * @details 필수 칸(`SW_SERVICE_SLOT( T, Required )`)만 됩니다. 비어 있을 수 있는 칸(`Optional`)과 칸이 없는 타입은 컴파일 오류이고 `findSubsystem<T>()` 를 씁니다.
          *          칸 선언은 타입 헤더에 있으므로 그 헤더를 include 해야 한다(앞으로 선언만으로는 칸이 보이지 않는다).
@@ -76,7 +91,9 @@ namespace sw
             if constexpr ( Slot::kRegistered )
             {
                 static_assert( Slot::kRequirement == ServiceRequirement::Required, "engine::getSubsystem<T>: this slot may be empty (Optional) - use engine::findSubsystem<T>()" );
-                void* const pService = Slot::getSlot()._pBound;
+                const ServiceSlot& slot     = Slot::getSlot();
+                void* const        pService = slot._pBound;
+                recordServiceSlotLookup( slot );
                 if ( pService == nullptr )
                     ::sw::internal::reportMissingRequiredService( Slot::kTypeName ); // 모든 구성에서 멈춘다 — `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 널을 역참조했다
                 return *static_cast<typename Slot::Access*>( pService );
@@ -94,7 +111,9 @@ namespace sw
             using Slot = ServiceSlotOf<std::remove_const_t<T>>;
             if constexpr ( Slot::kRegistered )
             {
-                return static_cast<typename Slot::Access*>( Slot::getSlot()._pBound );
+                const ServiceSlot& slot = Slot::getSlot();
+                recordServiceSlotLookup( slot );
+                return static_cast<typename Slot::Access*>( slot._pBound );
             }
             else
             {
