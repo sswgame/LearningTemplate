@@ -113,6 +113,50 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
 }
 
 /**
+ * @brief [SharedAssetCacheTest] 모듈을 내리면 그 모듈이 올린 캐시 항목이 함께 사라지고(쥔 쪽은 옛 값을 그대로 읽는다), 다시 올리면 빈 표에서 새로 읽는지 검증
+ * @details 캐시의 수명은 모듈 서브시스템이다(`SharedAssetCacheSubsystem` — 모듈의 자식 범위가 떼일 때 종료 · 소멸). 다시 올린 모듈이 앞 이미지의 항목을 받으면
+ *          고친 파일을 보지 못하고, 앞 이미지가 지은 객체(그 모듈 코드의 소멸자)를 쥐게 된다.
+ */
+SW_TEST_CASE( SharedAssetCacheTest, ModuleUnloadDropsEntriesAndReloadStartsFresh )
+{
+    using Util = SharedAssetCacheTestUtil;
+    const test::ScopedScratchDomain domain;
+    const string                    id = test::ScopedScratchDomain::makeID( "module.txt" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "module.txt" ), "first" ) );
+
+    shared_ptr<const SharedAssetCacheTestAsset> held;
+    SharedAssetRef<SharedAssetCacheTestAsset>   ref;
+    {
+        const Util::ScopedModuleCache loaded;
+        held = Util::Cache::acquire( id ).snapshot();
+        ref  = Util::Cache::acquire( id );
+        SW_REQUIRE_TRUE( held != nullptr );
+        AssetCacheBase* const pCache = engine::getSubsystem<AssetManager>().findAssetCache( Util::Cache::kAssetKindName );
+        SW_REQUIRE_TRUE( pCache != nullptr );
+        SW_EXPECT_TRUE( pCache->isCached( id ) );
+    }
+    // 내렸다 — 레지스트리에 없고, 쥔 쪽은 표보다 오래 살아 옛 값을 읽는다.
+    SW_EXPECT_TRUE( engine::getSubsystem<AssetManager>().findAssetCache( Util::Cache::kAssetKindName ) == nullptr );
+    SW_EXPECT_EQUAL( string( "first" ), held->_text );
+    SW_EXPECT_EQUAL( string( "first" ), ref->_text );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "module.txt" ), "second" ) );
+    {
+        const Util::ScopedModuleCache reloaded;
+        AssetCacheBase* const         pCache = engine::getSubsystem<AssetManager>().findAssetCache( Util::Cache::kAssetKindName );
+        SW_REQUIRE_TRUE( pCache != nullptr );
+        SW_EXPECT_FALSE( pCache->isCached( id ) ); // 앞 이미지의 항목을 이어 받지 않는다
+        SW_EXPECT_EQUAL( size_t( 0 ), pCache->getCachedCount() );
+
+        const shared_ptr<const SharedAssetCacheTestAsset> fresh = Util::Cache::acquire( id ).snapshot();
+        SW_REQUIRE_TRUE( fresh != nullptr );
+        SW_EXPECT_TRUE( fresh.get() != held.get() );
+        SW_EXPECT_EQUAL( string( "second" ), fresh->_text );
+        SW_EXPECT_EQUAL( string( "first" ), ref->_text ); // 내린 표의 참조는 새 표의 판을 따라가지 않는다 — 다시 받아야 한다
+    }
+}
+
+/**
  * @brief [SharedAssetCacheTest] 다시 읽기 감시는 받은 뒤에는 낡지 않고, 다시 읽히면 `isStale` 이 알리며(적지 않는다) `takeChanged` 는 다시 읽기마다 한 번만 참인지 검증
  */
 SW_TEST_CASE( SharedAssetCacheTest, ReloadWatchReportsEachReloadOnce )
