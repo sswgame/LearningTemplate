@@ -95,7 +95,6 @@ namespace sw
         , _shaderLayoutCacheGeneration{ 0 }
         , _shaderLayoutBackend{}
         , _pRHIDevice{ nullptr }
-        , _textureReloadGeneration{ 0 }
         , _listAcquiredTexturePath{}
         , _listTextureLoad{}
         , _listBorrowedTexturePath{}
@@ -180,7 +179,6 @@ namespace sw
         // 머티리얼 텍스처를 t16..t31 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
         const bool    bNativeBindless = pRHI->supportsNativeBindlessSampling();
         TextureCache& textures        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-        _textureReloadGeneration      = textures.getReloadGeneration();
         for ( const MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialPacking::isTextureType( prop._type ) == false )
@@ -200,107 +198,37 @@ namespace sw
                 continue;
             }
 
-            // 진짜 텍스처는 늘 워커가 읽고, 다 읽기 전에는 로드 중 텍스처(회색)를 그리다가 `refreshTextureBindings` 가 바꾼다 — 언리얼 · 유니티도 스트리밍이 끝날
-            // 때까지 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다). 못 읽으면 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
-            TextureHandle    load = textures.request( prop._assetPath, AssetLoadStart::Async );
-            string           borrowedPath;
-            const Texture2D* pTexture = load.isReady() ? load.getOperation()->getTexture() : nullptr;
-            if ( pTexture == nullptr )
+            // 진짜 텍스처는 늘 워커가 읽는다. 캐시가 로드를 시작할 때 번호를 예약해 로드 중 텍스처(회색)를 가리키게 하고, 업로드가 끝나면 같은 번호를 진짜 텍스처로,
+            // 실패하면 마젠타 체커로 다시 묶는다(R-6) — 그 번호를 한 번 받아 쥐면 된다(밉 올리기 · 핫 리로드도 같은 번호). 언리얼 · 유니티도 스트리밍이 끝날 때까지
+            // 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다).
+            TextureHandle      load = textures.request( prop._assetPath, AssetLoadStart::Async );
+            string             borrowedPath;
+            RHIDescriptorIndex srv = load.isValid() ? load.getOperation()->getStableSRV() : kInvalidDescriptorIndex;
+            if ( srv == kInvalidDescriptorIndex )
             {
-                const bool bLoading = load.isLoading();
-                if ( bLoading == false )
+                // 시작 전에 실패했거나(경로 · 디바이스 없음) 번호를 예약하지 못했다 — 마젠타 체커를 빌린다. 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
+                SW_LOG_ERROR_ID( "Material.MaterialTextureCouldNot", "Material '%#': texture '%#' for '%#' has no bindless index (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
+                                 prop._assetPath.c_str(), prop._name.c_str(), load.hasFailed() ? load.getError().c_str() : "no index was reserved" );
+                borrowedPath              = engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
+                const Texture2D* pStandIn = textures.acquire( borrowedPath );
+                if ( pStandIn == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "Material.MaterialTextureCouldNot", "Material '%#': texture '%#' for '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
-                                     prop._assetPath.c_str(), prop._name.c_str(), load.getError().c_str() );
-                    load.reset();
-                }
-                borrowedPath = bLoading ? engine::getSubsystem<EngineDefaultAssets>()._loadingTexture.get() : engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
-                pTexture     = textures.acquire( borrowedPath );
-                if ( pTexture == nullptr )
-                {
-                    // 로드 중 텍스처와 체커는 엔진 필수 데이터다. 그것마저 없으면 흰색으로 그리지 않고 머티리얼 초기화가 실패한다.
-                    SW_LOG_ERROR_ID( "Material.MaterialTextureNotReady", "Material '%#': texture '%#' for '%#' is not ready and the stand-in texture '%#' could not be loaded either", _desc._name.c_str(),
-                                     prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
+                    // 체커는 엔진 필수 데이터다. 그것마저 없으면 흰색으로 그리지 않고 머티리얼 초기화가 실패한다.
+                    SW_LOG_ERROR_ID( "Material.MaterialTextureNotReady", "Material '%#': texture '%#' for '%#' has no bindless index and the stand-in texture '%#' could not be loaded either",
+                                     _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
                     return false;
                 }
+                srv = pStandIn->getSRV();
             }
 
             _listAcquiredTexturePath.push_back( prop._assetPath );
             _listTextureLoad.push_back( std::move( load ) );
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
-            _listMaterialTextureSRV.push_back( pTexture->getSRV() );
+            _listMaterialTextureSRV.push_back( srv );
             _listMaterialTextureName.emplace_back( prop._name.c_str() );
-            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSRV() : ordinal );
+            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? srv : ordinal );
         }
         return true;
-    }
-
-    bool Material::refreshTextureBindings()
-    {
-        const bool bTextureRefreshUnavailable = _listAcquiredTexturePath.empty() || _pRHIDevice == nullptr || engine::areEngineServicesBound() == false;
-        if ( bTextureRefreshUnavailable )
-            return false;
-        TextureCache& textures   = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-        const uint32  generation = textures.getReloadGeneration();
-        if ( generation == _textureReloadGeneration )
-            return false;
-        _textureReloadGeneration = generation;
-
-        // resolveTextureAssets 가 프로퍼티 순서대로(빌리지 못한 것은 건너뛰고) 쌓았으므로 같은 순서로 맞춰 간다. 슬롯 바인딩 백엔드(DX11 · GL)의
-        // 바이트에는 인덱스가 아니라 서수가 실려 있어 바꿀 것이 슬롯 목록뿐이다.
-        const bool bNativeBindless = _pRHIDevice->supportsNativeBindlessSampling();
-        bool       bChanged{ false };
-        size_t     ordinal{ 0 };
-        for ( const MaterialProperty& prop : _data._listProperty )
-        {
-            const bool bOrdinalOutOfRange = ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listBorrowedTexturePath.size() || ordinal >= _listMaterialTextureSRV.size();
-            if ( bOrdinalOutOfRange )
-                break;
-            if ( MaterialPacking::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
-                continue;
-            resolveArrivedTexture( textures, ordinal );
-            const string&            boundPath = _listBorrowedTexturePath[ordinal].empty() ? _listAcquiredTexturePath[ordinal] : _listBorrowedTexturePath[ordinal];
-            const Texture2D*         pTexture  = textures.find( boundPath );
-            const RHIDescriptorIndex srv       = pTexture != nullptr ? pTexture->getSRV() : kInvalidDescriptorIndex;
-            if ( srv != _listMaterialTextureSRV[ordinal] )
-            {
-                _listMaterialTextureSRV[ordinal] = srv;
-                if ( bNativeBindless )
-                    setTextureParameter( hashed_string( prop._name.c_str() ), srv );
-                else
-                    _bufferGeneration.bump(); // 슬롯 바인딩 백엔드는 슬롯 목록만 바뀐다 — 렌더 사본이 그 목록을 싣는다
-                bChanged = true;
-            }
-            ++ordinal;
-        }
-        return bChanged;
-    }
-
-    void Material::resolveArrivedTexture( TextureCache& textures, size_t ordinal )
-    {
-        TextureHandle& load       = _listTextureLoad[ordinal];
-        string&        borrowed   = _listBorrowedTexturePath[ordinal];
-        const bool     bNoArrival = load.isValid() == false || load.isLoading() || borrowed.empty();
-        if ( bNoArrival )
-            return;
-        // 로드가 끝났다 — 대신 빌린 로드 중 텍스처를 놓고 진짜로 바꾼다. 실패면 마젠타 체커를 빌린다(흰색이면 빠진 것을 알 수 없다).
-        string standIn = std::move( borrowed );
-        borrowed.clear();
-        if ( load.hasFailed() )
-        {
-            SW_LOG_ERROR_ID( "Material.MaterialTextureCouldNot2", "Material '%#': texture '%#' could not be loaded (%#) — sampling the missing-texture checker.", _desc._name.c_str(),
-                             _listAcquiredTexturePath[ordinal].c_str(), load.getError().c_str() );
-            load.reset();
-            borrowed = engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
-            if ( textures.acquire( borrowed ) == nullptr )
-            {
-                // 체커는 엔진 필수 데이터다 — 못 읽으면 로드 중 텍스처를 그대로 둔다(오류는 남았다).
-                SW_LOG_ERROR_ID( "Material.MaterialMissingTextureChecker", "Material '%#': the missing-texture checker '%#' could not be loaded either", _desc._name.c_str(), borrowed.c_str() );
-                borrowed = std::move( standIn );
-                return;
-            }
-        }
-        textures.release( standIn );
     }
 
     optional<uint32> Material::findTextureSlot( hashed_string name ) const
@@ -399,7 +327,6 @@ namespace sw
         // 맞춘 값이 낡는다. 맞춰져 있으면 비교만 한다. 디바이스가 없는(초기화 전) 머티리얼은 그리지 않으므로(`MaterialInitState`) 맞출 백엔드가 없다.
         if ( _pRHIDevice != nullptr )
             (void)ensureShaderLayout( _pRHIDevice->getBackendType() ); // 실패 오류는 맞추는 쪽이 남겼고, 바이트가 비어 렌더 스레드가 건너뛴다
-        (void)refreshTextureBindings();                                // 다시 올리거나 비동기 로드가 끝난 텍스처의 새 SRV(캐시 세대가 그대로면 비교만)
         syncParameterCollections();                                    // 묶음의 값이 바뀌었으면 프로퍼티를 다시 패킹한다(묶은 칸이 없으면 빈 순회)
     }
 

@@ -374,8 +374,11 @@ namespace sw
             return;
         }
         IRHIResourceFactory* pFactory = getResourceFactory();
-        if ( pFactory != nullptr )
-            releaseNow( *pFactory, kind, handle );
+        if ( pFactory == nullptr )
+            return;
+        if ( kind == RHIHandleKind::BindlessTexture )
+            activateReservedBindlessTextures(); // 예약만 하고 아직 살리지 않은 번호일 수 있다 — 살려야 해제가 그 칸을 놓는다
+        releaseNow( *pFactory, kind, handle );
     }
 
     void IRHIDevice::flushDeferredHandleReleases()
@@ -391,7 +394,8 @@ namespace sw
         listTaken.extractAll( listHandle );
         IRHIResourceFactory* pFactory = getResourceFactory();
         if ( pFactory == nullptr )
-            return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+            return;                         // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+        activateReservedBindlessTextures(); // 예약한 번호를 먼저 살린다 — 해제할 번호가 아직 살지 않았으면 놓지 못한다
         for ( const RHIDeferredHandleQueue::Entry& entry : listHandle )
         {
             releaseNow( *pFactory, entry._kind, entry._handle );
@@ -426,6 +430,8 @@ namespace sw
         IRHIResourceFactory* pFactory = getResourceFactory();
         if ( pFactory == nullptr )
             return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+        if ( listDue.empty() == false )
+            activateReservedBindlessTextures(); // 예약한 번호를 먼저 살린다 — 해제할 번호가 아직 살지 않았으면 놓지 못한다
         for ( const RHIDeferredHandleQueue::Entry& entry : listDue )
         {
             releaseNow( *pFactory, entry._kind, entry._handle );

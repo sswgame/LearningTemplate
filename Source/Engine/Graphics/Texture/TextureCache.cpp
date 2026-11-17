@@ -21,6 +21,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -144,9 +145,11 @@ namespace sw
         shared_mutex                            _mutex;
         /// @brief 항목의 `_bLoading` 이 내려갈 때 깨운다. 태스크 대기가 아니다 — 맵 잠금 아래의 항목 상태를 기다리고, 올리는 쪽(`reload` · `resizeRenderTarget`)은 태스크 없이 디바이스 스레드에서 돈다.
         std::condition_variable_any                    _cvLoaded;
-        atomic<uint32>                                 _reloadGeneration{ 0 };   ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
-        atomic<IRHIDevice*>                            _pBoundDevice{ nullptr }; ///< 엔진이 붙인 디바이스(`bindDevice`) — 게임 스레드 요청 · 해제가 쓴다
-        string _formatVariantSuffix                    SW_GUARDED_BY( _mutex );  ///< 붙은 장치가 고른 형식 변형 접미사(`getFormatVariantSuffix` — 비면 임포트한 DDS 그대로)
+        mutex                                          _standInMutex;               ///< 자리 텍스처를 올리는 쪽 하나만(`ensureStandInTextures`)
+        atomic<Texture2D*>                             _pLoadingStandIn{ nullptr }; ///< 예약한 번호가 처음 가리킬 로드 중 텍스처(이 캐시가 참조 하나를 쥔다)
+        atomic<Texture2D*>                             _pMissingStandIn{ nullptr }; ///< 실패한 로드의 번호를 다시 묶을 누락 체커(이 캐시가 참조 하나를 쥔다)
+        atomic<IRHIDevice*>                            _pBoundDevice{ nullptr };    ///< 엔진이 붙인 디바이스(`bindDevice`) — 게임 스레드 요청 · 해제가 쓴다
+        string _formatVariantSuffix                    SW_GUARDED_BY( _mutex );     ///< 붙은 장치가 고른 형식 변형 접미사(`getFormatVariantSuffix` — 비면 임포트한 DDS 그대로)
         mutex                                          _awaitingMutex;
         vector<shared_ptr<TextureLoadOperation>>       _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다, `_awaitingMutex`)
         vector<shared_ptr<TextureLoadOperation>>       _listUploading;      ///< 업로드를 제출했고 끝남 확인을 기다리는 로드(`completePendingLoads` 가 폴링한다, `_awaitingMutex`)
@@ -283,6 +286,23 @@ namespace sw
         }
 
         /**
+         * @brief 텍스처 번호 @p index 를 누락 체커로 다시 묶습니다(올리다 실패 — 그 번호를 쥔 머티리얼이 옛 텍스처 · 빈 칸을 그리지 않게, R-6).
+         * @details 디바이스를 쓰는 스레드에서 부른다(등록표를 바꾼다). 체커가 없으면(엔진 서비스 없음) 오류를 남기고 번호를 놓은 뒤 false 다.
+         */
+        bool pointAtMissingChecker( IRHIDevice& device, RHIDescriptorIndex index, const string& key )
+        {
+            device.activateReservedBindlessTextures(); // 예약만 하고 아직 살리지 않은 번호일 수 있다
+            const Texture2D* const     pMissing  = _pMissingStandIn.load( std::memory_order_acquire );
+            IRHIResourceFactory* const pResource = device.getResourceFactory();
+            const bool                 bChecker  = pMissing != nullptr && pMissing->isRHIValid() && pResource != nullptr;
+            if ( bChecker && pResource->rebindBindlessTexture( index, pMissing->getHandle() ) )
+                return true;
+            SW_LOG_ERROR_ID( "TextureCache.MissingCheckerRebindFailed", "TextureCache: the bindless index %# of '%#' could not point at the missing-texture checker - releasing it", index, key.c_str() );
+            device.releaseHandle( RHIHandleKind::BindlessTexture, index );
+            return false;
+        }
+
+        /**
          * @brief 로드 작업의 완료 단계가 끝났음을 항목에 적습니다. 성공하면 공개하고 로드 작업 몫의 참조를 하나 셉니다. 실패하면 아무도 쥐지 않은 항목을 지웁니다.
          * @details 진행 중 표시를 내리는 곳은 여기 하나다 — 로드 단계가 실패해도 완료 단계를 거쳐 여기로 온다(`TextureLoadOperation` 머리말).
          */
@@ -305,9 +325,6 @@ namespace sw
                     _mapEntry.erase( it );
                 }
             }
-            // 새 SRV 가 생겼다 — 로드 중 텍스처를 빌려 둔 머티리얼이 다시 받게 한다(진행 중 표시를 내린 뒤에 올린다: `reload` 와 같은 순서).
-            if ( bReady )
-                _reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
             _cvLoaded.notify_all();
         }
     };
@@ -353,6 +370,37 @@ namespace sw
         _impl->_pBoundDevice.store( pDevice, std::memory_order_release );
     }
 
+    void TextureCache::ensureStandInTextures()
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return; // 도구 · 테스트 — 자리 텍스처가 없으면 번호를 예약하지 않는다(업로드가 끝날 때 등록한다)
+        const auto isResident = []( const Texture2D* pTexture )
+        { return pTexture != nullptr && pTexture->isRHIValid(); };
+        if ( isResident( _impl->_pLoadingStandIn.load( std::memory_order_acquire ) ) && isResident( _impl->_pMissingStandIn.load( std::memory_order_acquire ) ) )
+            return;
+        // 처음이거나 디바이스 교체로 GPU 자원을 잃었다 — 동기로 (다시) 올린다. 캐시는 자리 텍스처마다 참조 하나만 쥔다(다시 올릴 때 받은 참조는 곧바로 놓는다).
+        const ScopedLock<mutex>    lock{ _impl->_standInMutex };
+        const EngineDefaultAssets& defaults      = engine::getSubsystem<EngineDefaultAssets>();
+        const auto                 ensureStandIn = [this, &isResident]( atomic<Texture2D*>& slot, const string& path )
+        {
+            Texture2D* const pHeld = slot.load( std::memory_order_acquire );
+            if ( isResident( pHeld ) )
+                return;
+            Texture2D* const pAcquired = acquire( path );
+            if ( pAcquired == nullptr )
+            {
+                // 엔진 필수 데이터다 — 없으면 예약하지 않고(머티리얼은 체커를 빌린다) 오류를 남긴다.
+                SW_LOG_ERROR_ID( "TextureCache.StandInTextureMissing", "TextureCache: the stand-in texture '%#' could not be loaded - bindless indices are not reserved for loading textures", path.c_str() );
+                return;
+            }
+            if ( pHeld != nullptr )
+                release( path );
+            slot.store( pAcquired, std::memory_order_release );
+        };
+        ensureStandIn( _impl->_pLoadingStandIn, defaults._loadingTexture.get() );
+        ensureStandIn( _impl->_pMissingStandIn, defaults._missingTexture.get() );
+    }
+
     string TextureCache::getFormatVariantSuffix() const
     {
         const ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
@@ -370,6 +418,11 @@ namespace sw
             pFailed->markFailedWithoutLoad( key.empty() ? "the texture path is empty" : "there is no device to upload to" );
             return TextureHandle{ std::move( pFailed ) };
         }
+
+        // 비동기 요청은 자리 텍스처를 먼저 올려 둔다(잠금 밖 — 동기 `acquire` 로 올린다). 새 항목의 번호가 처음 가리킬 텍스처다(R-6).
+        if ( start == AssetLoadStart::Async )
+            ensureStandInTextures();
+        Texture2D* const pLoadingStandIn = _impl->_pLoadingStandIn.load( std::memory_order_acquire );
 
         // 디스크 읽기와 GPU 생성은 잠금 밖에서 한다. 잠금 안에서는 "진행 중" 표시(_bLoading)와 그 로드의 로드 작업만 적고, 같은 키를 동시에
         // 원한 쪽은 같은 로드 작업을 받는다(이중 생성 없음). Texture2D 는 unique_ptr 이라 맵이 원소를 옮겨도 주소가 그대로다. 진행 중인 항목은
@@ -447,6 +500,17 @@ namespace sw
                 pOperation->_renderTargetHeight = sizeIter->second._height;
             }
         }
+        // 번호를 예약해 로드 중 텍스처를 가리키게 한다 — 업로드가 끝나면 같은 번호를 진짜 텍스처로 다시 묶는다(R-6). 잠금 안에서 맡겨, 같은 로드를 받는 다른 요청도
+        // 처음부터 같은 번호를 본다. 동기 요청도 자리 텍스처가 이미 있으면 예약한다 — 그 로드를 기다리던 비동기 요청이 번호 없는 로드를 받지 않게.
+        const bool bReserve = pLoadingStandIn != nullptr && pLoadingStandIn != pTexture && pLoadingStandIn->isRHIValid() && pTexture->getKeptSRV() == kInvalidDescriptorIndex;
+        if ( bReserve )
+        {
+            const RHIDescriptorIndex reserved = pDevice->reserveBindlessTexture( pLoadingStandIn->getHandle() );
+            if ( reserved != kInvalidDescriptorIndex )
+                pTexture->attachReservedSRV( reserved, pDevice );
+            else
+                SW_LOG_ERROR_ID( "TextureCache.ReserveBindlessFailed", "TextureCache: no bindless index could be reserved for '%#' - materials sample the missing-texture checker instead", key.c_str() );
+        }
         _impl->_mapEntry[key]._pLoadOperation = pOperation;
         lock.unlock();
 
@@ -495,6 +559,8 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return 0;
+        // 0) 예약한 번호를 살린다 — 이번에 끝나는 로드가 그 번호를 다시 묶는다(R-6). 프레임 시작도 살리지만 차단 판(`finishPendingLoads`)은 프레임 밖에서도 돈다.
+        pDevice->activateReservedBindlessTextures();
         // 1) 이미 제출한 로드의 끝남 확인 — 값싼 폴링이라 상한 없이 모두 한다. 끝나지 않은 로드 작업은 `onUploadSubmitted` 가 목록에 다시 넣는다.
         vector<shared_ptr<TextureLoadOperation>> listUploading;
         {
@@ -572,7 +638,7 @@ namespace sw
             }
             if ( pErased != nullptr )
                 pErased->releaseRHI( pDevice );
-            // 밉을 올려도 SRV 번호는 그대로다(`rebindBindlessTexture` — R-6) — 머티리얼을 다시 묶지 않으므로 세대를 올리지 않는다.
+            // 밉을 올려도 SRV 번호는 그대로다(`rebindBindlessTexture` — R-6) — 머티리얼은 다시 묶지 않는다.
             if ( bUpgraded )
                 ++upgradedCount;
             _impl->_cvLoaded.notify_all();
@@ -813,14 +879,20 @@ namespace sw
         }
         lock.unlock();
 
-        // 이전 프레임이 옛 텍스처와 그 bindless 인덱스를 읽고 있을 수 있다. 기다리지 않고 옛 자원을 해제 줄에 넘긴다(RHIAsyncUploads U13 — `waitIdle` 을 지웠다):
-        // 게임 스레드가 `releaseRetiredTextures` 로 `releaseHandle` 하면 이미 만든 패킷이 끝난 뒤에 핸들 · 인덱스가 돌아가고(스트리밍 교체와 같은 길), 새 텍스처는 새 핸들 · 인덱스를 받는다.
-        // 그래서 옛 인덱스를 새 텍스처가 곧바로 물려받아 이전 프레임을 오염시키는 일이 없다. 세대를 올려 빌려 간 머티리얼이 새 인덱스를 다시 받게 한다(아래).
+        // 이전 프레임이 옛 텍스처를 읽고 있을 수 있다. 기다리지 않고 옛 텍스처를 해제 줄에 넘긴다(RHIAsyncUploads U13 — `waitIdle` 을 지웠다): 게임 스레드가
+        // `releaseRetiredTextures` 로 `releaseHandle` 하면 이미 만든 패킷이 끝난 뒤에 돌아간다(스트리밍 교체와 같은 길). SRV 번호는 지켜 새 텍스처로 다시 묶는다 —
+        // 번호의 디스크립터는 고리 칸마다 따로라 이전 프레임의 칸은 옛 텍스처를 가리킨 채 끝난다(R-6).
         Texture2DRetiredResource retired{};
         pTexture->detachRHIKeepingSRV( pDevice, retired ); // 새 렌더 타깃이 같은 SRV 번호를 받는다(R-6)
         const bool bReady = pTexture->createRenderTarget( pDevice, key, width, height, constant::render::kOffscreenColorFormat );
         if ( bReady == false )
+        {
             SW_LOG_ERROR_ID( "TextureCache.FailedResizeRenderTexture", "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
+            // 지키던 번호는 해제 줄로 간 옛 타깃을 가리킨다 — 누락 체커로 다시 묶는다(그 번호를 쥔 머티리얼이 해제된 텍스처를 그리지 않게). 텍스처는 계속 그 번호를 지킨다.
+            const RHIDescriptorIndex kept = pTexture->getKeptSRV();
+            if ( kept != kInvalidDescriptorIndex && _impl->pointAtMissingChecker( *pDevice, kept, key ) == false )
+                (void)pTexture->takeKeptSRV(); // 놓았다
+        }
 
         lock.lock();
         const auto            it = _impl->_mapEntry.find( key );
@@ -835,10 +907,7 @@ namespace sw
         }
         lock.unlock();
         if ( pErased != nullptr )
-            pErased->releaseRHI( pDevice ); // 장치 호출은 잠금 밖에서(잠금은 잎 잠금, 결정 5-3)
-        // SRV 번호는 그대로다(R-6) — 만들지 못했을 때만 번호가 사라지므로 빌려 간 머티리얼이 다시 받게 한다(진행 중 표시를 내린 뒤에 올린다).
-        if ( bReady == false )
-            _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+            pErased->releaseRHI( pDevice ); // 장치 호출은 잠금 밖에서(잠금은 잎 잠금, 결정 5-3) — 지키던 번호도 함께 놓는다
         _impl->_cvLoaded.notify_all();
         return bReady;
     }
@@ -855,11 +924,6 @@ namespace sw
         if ( bReady == false )
             return nullptr;
         return it->second._texture.get();
-    }
-
-    uint32 TextureCache::getReloadGeneration() const
-    {
-        return _impl != nullptr ? _impl->_reloadGeneration.load( std::memory_order_acquire ) : 0u;
     }
 
     void TextureCache::requestRegionUpdate( string_view relativePath, uint32 x, uint32 y, uint32 width, uint32 height, vector<uint8> rgbaBytes )
@@ -1052,6 +1116,11 @@ namespace sw
             _impl->_listStreamingUpgrade.clear(); // 위쪽 밉을 기다리던 텍스처도 함께 사라진다
             _impl->_listUpgrading.clear();        // 위쪽 밉을 올리는 중이던 것도 같다
         }
+        {
+            ScopedLock<mutex> standInLock{ _impl->_standInMutex };
+            _impl->_pLoadingStandIn.store( nullptr, std::memory_order_release ); // 항목과 함께 사라진다
+            _impl->_pMissingStandIn.store( nullptr, std::memory_order_release );
+        }
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
         getTextureCacheStats().recordClear();
@@ -1071,18 +1140,36 @@ namespace sw
         , _renderTargetHeight{ TextureCache::kDefaultRenderTargetSize }
         , _source{ source }
         , _residency{ TextureResidency::Full }
+        , _failedSRV{ kInvalidDescriptorIndex }
+        , _pFailedSRVDevice{ nullptr }
         , _bHoldsReference{ SW_FALSE }
     {
     }
 
     TextureLoadOperation::~TextureLoadOperation()
     {
-        if ( _bHoldsReference == false )
-            return;
-        // 캐시가 먼저 사라졌으면(종료) 놓을 항목이 없다.
+        // 캐시가 먼저 사라졌으면(종료) 놓을 항목 · 번호가 없다.
         const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
-        if ( pCache != nullptr )
+        if ( pCache == nullptr )
+            return;
+        // 실패한 로드가 맡은 번호(누락 체커)를 놓는다 — 그 번호를 받은 디바이스가 아직 붙어 있을 때만(바뀌었으면 옛 디바이스와 함께 갔다).
+        const RHIDescriptorIndex failedSRV        = _failedSRV.load( std::memory_order_acquire );
+        IRHIDevice* const        pFailedSRVDevice = _pFailedSRVDevice.load( std::memory_order_acquire );
+        const bool               bReleaseFailed   = failedSRV != kInvalidDescriptorIndex && pFailedSRVDevice != nullptr &&
+                                    pFailedSRVDevice == pCache->_pBoundDevice.load( std::memory_order_acquire );
+        if ( bReleaseFailed )
+            pFailedSRVDevice->releaseHandle( RHIHandleKind::BindlessTexture, failedSRV );
+        if ( _bHoldsReference )
             pCache->releaseReference( getPath(), _pDevice.load( std::memory_order_acquire ) );
+    }
+
+    RHIDescriptorIndex TextureLoadOperation::getStableSRV() const
+    {
+        const RHIDescriptorIndex failedSRV = _failedSRV.load( std::memory_order_acquire );
+        if ( failedSRV != kInvalidDescriptorIndex )
+            return failedSRV;
+        // 실패해 번호를 맡기 전이면 텍스처가 지키는 번호다 — 맡을 때 이 값을 먼저 적고 텍스처의 번호를 지우므로 그 사이에 빈 번호를 보지 않는다.
+        return _pTexture != nullptr ? _pTexture->getStableSRV() : kInvalidDescriptorIndex;
     }
 
     shared_ptr<Texture2D> TextureLoadOperation::getAsset() const
@@ -1180,6 +1267,19 @@ namespace sw
         if ( bReady && bHasTopMipsLeft )
             cache.queueStreamingUpgrade( getPath(), std::move( _pImage ) );
         _pImage.reset();
+        // 실패 — 텍스처가 지키던 번호(예약 · 옛 텍스처)를 이 로드 작업이 맡아 누락 체커로 다시 묶는다. 실패한 항목은 지워질 수 있으므로(`finishLoad`) 텍스처에 두지 않는다(R-6).
+        IRHIDevice* const pDevice      = _pDevice.load( std::memory_order_acquire );
+        const bool        bTakeKeptSRV = bReady == false && _pTexture != nullptr && pDevice != nullptr && _pTexture->getKeptSRV() != kInvalidDescriptorIndex;
+        if ( bTakeKeptSRV )
+        {
+            const RHIDescriptorIndex kept = _pTexture->getKeptSRV();
+            _failedSRV.store( kept, std::memory_order_release ); // 먼저 적는다 — `getStableSRV` 가 그 사이에 빈 번호를 보지 않게
+            (void)_pTexture->takeKeptSRV();
+            if ( cache.pointAtMissingChecker( *pDevice, kept, getPath() ) )
+                _pFailedSRVDevice.store( pDevice, std::memory_order_release );
+            else
+                _failedSRV.store( kInvalidDescriptorIndex, std::memory_order_release ); // 놓았다
+        }
         cache.finishLoad( getPath(), bReady );
         if ( bReady == false )
         {
@@ -1305,7 +1405,13 @@ namespace sw
         _impl->_retired.add( pDevice, retired );
         const bool bReloaded = pTexture->loadFromAsset( pDevice, AssetID{ key } );
         if ( bReloaded == false )
+        {
             SW_LOG_ERROR_ID( "TextureCache.HotReloadFailedTexture", "Hot-Reload failed for Texture %#", key.c_str() );
+            // 지키던 번호는 해제 줄로 간 옛 텍스처를 가리킨다 — 누락 체커로 다시 묶는다. 텍스처는 그 번호를 계속 지키고 다음 업로드가 다시 묶는다(R-6).
+            const RHIDescriptorIndex kept = pTexture->getKeptSRV();
+            if ( kept != kInvalidDescriptorIndex && _impl->pointAtMissingChecker( *pDevice, kept, key ) == false )
+                (void)pTexture->takeKeptSRV(); // 놓았다
+        }
 
         lock.lock();
         const auto            it = _impl->_mapEntry.find( key );
@@ -1320,11 +1426,7 @@ namespace sw
         }
         lock.unlock();
         if ( pErased != nullptr )
-            pErased->releaseRHI( pDevice );
-        // 다시 올린 텍스처는 같은 SRV 번호를 받았다(R-6). 실패했을 때만 번호가 사라지므로 빌려 간 머티리얼이 다시 받게 한다.
-        // 세대는 진행 중 표시를 내린 **뒤에** 올린다 — 먼저 올리면 새 세대를 본 쪽의 find 가 아직 nullptr 를 받고 그 세대를 소비해 버린다.
-        if ( bReloaded == false )
-            _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+            pErased->releaseRHI( pDevice ); // 지키던 번호도 함께 놓는다
         _impl->_cvLoaded.notify_all();
     }
 } // namespace sw

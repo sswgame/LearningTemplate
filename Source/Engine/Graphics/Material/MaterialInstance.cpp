@@ -134,7 +134,6 @@ namespace sw
         , _overrideRevision{}
         , _renderDataOverrideRevision{ 0 }
         , _pTextureDevice{ nullptr }
-        , _textureReloadGeneration{ 0 }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _previousPermutationHash{ 0 }
@@ -251,10 +250,10 @@ namespace sw
             const bool bNativeBindless = pDevice != nullptr && pDevice->supportsNativeBindlessSampling();
             for ( const TextureOverride& texture : _listTextureOverride )
             {
-                const Texture2D* pTexture = texture.findReadyTexture();
-                if ( pTexture == nullptr )
+                const RHIDescriptorIndex srv = texture.getStableSRV();
+                if ( srv == kInvalidDescriptorIndex )
                     continue;
-                const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ pTexture->getSRV() } : findTextureSlot( texture._name );
+                const optional<uint32> textureBinding = bNativeBindless ? optional<uint32>{ srv } : findTextureSlot( texture._name );
                 if ( textureBinding.has_value() && *textureBinding != kInvalidDescriptorIndex )
                     _pParentMaterial->packTextureIntoBuffer( texture._name, *textureBinding, data->_bytes );
             }
@@ -325,8 +324,8 @@ namespace sw
                 texture._load.reset();
                 texture._acquiredPath = texture._assetPath;
                 bChanged              = true;
-                // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 부모의 텍스처가 보인다(`Material` 의 텍스처 자리와 같은 길, 언리얼 MID 도
-                // 스트리밍 중인 텍스처 파라미터는 낮은 밉 · 기본 텍스처로 그린다). 업로드가 끝나면 리로드 세대가 올라 아래에서 다시 패킹한다.
+                // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 로드 중 텍스처가 보인다(`Material` 의 텍스처 자리와 같은 길, 언리얼 MID 도
+                // 스트리밍 중인 텍스처 파라미터는 낮은 밉 · 기본 텍스처로 그린다). 요청이 곧바로 번호를 주고 업로드가 끝나면 같은 번호를 다시 묶으므로(R-6) 다시 패킹하지 않는다.
                 if ( texture._assetPath.empty() == false )
                     texture._load = textures.request( texture._assetPath, AssetLoadStart::Async );
             }
@@ -335,19 +334,13 @@ namespace sw
                 SW_LOG_WARNING_ID( "MaterialInstance.MaterialInstanceTextureCouldNot", "MaterialInstance '%#': texture '%#' for '%#' could not be loaded (%#) — the parent's texture stays.", _desc._name.c_str(),
                                    texture._assetPath.c_str(), texture._name.c_str(), texture._load.getError().c_str() );
                 texture._load.reset(); // 경로는 적어 두었다 — 다시 묻지 않는다(같은 경로를 다시 주면 `setTextureParameter` 가 다시 시도하게 한다)
+                bChanged = true;       // 쥐던 번호(누락 체커)를 놓았다 — 부모의 텍스처로 다시 패킹한다
             }
         }
         // 지운 덮어쓰기(빈 경로)는 놓은 뒤 뺀다.
         VectorUtil::removeIf( _listTextureOverride, []( const TextureOverride& texture )
         { return texture._assetPath.empty() && texture._load.isValid() == false; } );
 
-        // 다시 올린 텍스처는 같은 객체에 새 SRV 를 받았고, 비동기 로드가 끝난 텍스처는 처음 SRV 를 받았다 — 다시 패킹한다.
-        const uint32 reloadGeneration = textures.getReloadGeneration();
-        if ( reloadGeneration != _textureReloadGeneration )
-        {
-            _textureReloadGeneration = reloadGeneration;
-            bChanged                 = true;
-        }
         return bChanged;
     }
 
@@ -393,12 +386,12 @@ namespace sw
         }
         for ( const TextureOverride& texture : _listTextureOverride )
         {
-            const Texture2D* pTexture = texture.findReadyTexture();
-            if ( pTexture == nullptr )
+            const RHIDescriptorIndex srv = texture.getStableSRV();
+            if ( srv == kInvalidDescriptorIndex )
                 continue;
             const optional<uint32> slot = findTextureSlot( texture._name );
             if ( slot.has_value() && *slot < slotCount )
-                pOutSlot[*slot] = pTexture->getSRV();
+                pOutSlot[*slot] = srv;
         }
     }
 

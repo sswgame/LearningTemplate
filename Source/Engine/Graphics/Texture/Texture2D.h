@@ -129,7 +129,7 @@ namespace sw
         /**
          * @brief `beginUpgradeResidency` 가 낸 업로드가 끝났는지 보고, 끝났으면 새 텍스처를 bindless 에 등록해 바꿔 끼웁니다(렌더 스레드).
          * @details 옛 자원은 @p outRetired 로 내놓는다: 게임 스레드가 이미 만든 패킷이 옛 SRV 번호를 값으로 가지고 있으므로 그 패킷이 끝난 뒤에 해제한다(`TextureCache::releaseRetiredTextures`).
-         *          SRV 가 바뀌므로 부르는 쪽이 리로드 세대를 올려 머티리얼이 새 번호를 다시 받게 한다.
+         *          SRV 번호는 그대로 새 텍스처로 다시 묶는다(R-6) — 머티리얼은 다시 받지 않는다.
          * @return `Ready` 면 바꿔 끼웠다. `Failed` 면 아래쪽 밉 그대로이고 새 텍스처는 지웠다(장치 교체로 낸 업로드가 사라진 경우 포함).
          */
         [[nodiscard]] Texture2DUploadStatus finishUpgradeResidency( IRHIDevice* pDevice, bool bBlocking, Texture2DRetiredResource& outRetired );
@@ -146,6 +146,8 @@ namespace sw
          * @details 렌더 타깃 크기 변경 · 핫 리로드가 쓴다 — 번호가 그대로라 그 번호를 쥔 머티리얼을 다시 묶지 않는다(감사 R-6). 번호는 그동안 옛 텍스처를 가리키고, 옛 텍스처는 해제 줄이 펜스 뒤에 지운다.
          */
         void detachRHIKeepingSRV( IRHIDevice* pDevice, Texture2DRetiredResource& outRetired );
+        /** @brief `releaseRHI` 와 같지만 지키던 번호는 남깁니다(올리다 실패 — 부르는 쪽이 그 번호를 누락 체커로 다시 묶는다). */
+        void releaseRHIKeepingSRV( IRHIDevice* pDevice );
         /** @brief 품질 설정이 남긴 밉 사슬이 모두 GPU 에 있으면 true 입니다(스트리밍이 아직 위쪽 밉을 올리지 않았으면 false). */
         bool isFullyResident() const { return _streamedMipCount == 0; }
         /** @brief 아직 GPU 에 없는 위쪽 밉 수입니다(품질 설정이 버린 밉은 세지 않는다). */
@@ -197,6 +199,25 @@ namespace sw
         RHITextureHandle getHandle() const { return _handle.load( std::memory_order_acquire ); }
         /** @brief bindless SRV 번호입니다. 게임 스레드(머티리얼)가 읽는 동안 렌더 스레드가 바꿔 끼울 수 있어 원자값으로 읽는다. */
         RHIDescriptorIndex getSRV() const { return _srv.load( std::memory_order_acquire ); }
+        /**
+         * @brief 수명 내내 같은 SRV 번호입니다 — 올라왔으면 그 번호, 올리는 중이면 지키는 번호(로드 중 텍스처 · 옛 텍스처 · 누락 체커를 가리킨다)입니다(R-6).
+         * @details 머티리얼은 이 번호를 한 번 받아 쥔다 — 첫 업로드 · 밉 올리기 · 크기 변경 · 핫 리로드가 같은 번호를 다시 묶으므로 다시 받지 않는다.
+         */
+        RHIDescriptorIndex getStableSRV() const
+        {
+            const RHIDescriptorIndex srv = getSRV();
+            return srv != kInvalidDescriptorIndex ? srv : _keptSRV.load( std::memory_order_acquire );
+        }
+        /** @brief @p pDevice 에서 로드를 시작할 때 예약한 번호 @p index 를 맡습니다(`IRHIDevice::reserveBindlessTexture` — 로드 중 텍스처를 가리킨다). 업로드가 끝나면 이 번호로 다시 묶는다. */
+        void attachReservedSRV( RHIDescriptorIndex index, IRHIDevice* pDevice )
+        {
+            _pKeptSRVDevice.store( pDevice, std::memory_order_release );
+            _keptSRV.store( index, std::memory_order_release );
+        }
+        /** @brief 지키던 번호를 넘겨줍니다(실패한 로드의 번호를 로드 작업이 맡는다). */
+        RHIDescriptorIndex takeKeptSRV() { return _keptSRV.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel ); }
+        /** @brief 지키는 번호입니다(없으면 kInvalidDescriptorIndex). */
+        RHIDescriptorIndex getKeptSRV() const { return _keptSRV.load( std::memory_order_acquire ); }
         uint32             getWidth() const { return _width; }
         uint32             getHeight() const { return _height; }
         RHIFormat          getFormat() const { return _format; }
@@ -256,8 +277,11 @@ namespace sw
         string                     _path;
         atomic<RHITextureHandle>   _handle;
         atomic<RHIDescriptorIndex> _srv;
-        /// @brief 다시 만드는 동안 지키는 SRV 번호입니다(`detachRHIKeepingSRV` — 렌더 타깃 크기 변경 · 핫 리로드). 다음 `finishUpload` 가 새 텍스처로 다시 묶는다(R-6).
-        RHIDescriptorIndex       _keptSRV{ kInvalidDescriptorIndex };
+        /// @brief 올리는 동안 지키는 SRV 번호입니다 — 로드를 시작할 때 예약한 번호(`attachReservedSRV`)이거나 다시 만드는 텍스처의 번호(`detachRHIKeepingSRV`)다.
+        ///        다음 `finishUpload` 가 새 텍스처로 다시 묶는다(R-6). 게임 스레드가 `getStableSRV` 로 읽으므로 원자값이다.
+        atomic<RHIDescriptorIndex> _keptSRV{ kInvalidDescriptorIndex };
+        /// @brief `_keptSRV` 를 낸 디바이스입니다 — 다시 만드는 동안은 `_pDevice` 가 비므로 따로 둔다. 그 디바이스가 내려가면(`clearRHI` · `releaseRHI`) 번호도 버린다.
+        atomic<IRHIDevice*>      _pKeptSRVDevice{ nullptr };
         RHITransferTicket        _uploadTicket{}; ///< 제출했고 `finishUpload` 가 끝내지 않은 업로드의 티켓(무효면 없음). 디바이스를 쓰는 스레드만 만지는 값이다
         PendingUpgrade           _upgrade{};      ///< 제출했고 `finishUpgradeResidency` 가 끝내지 않은 위쪽 밉 업로드(티켓이 무효면 없음). 디바이스를 쓰는 스레드만 만진다
         uint32                   _width;

@@ -218,7 +218,7 @@ namespace sw
         if ( pDevice == nullptr || relativePath.empty() )
             return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
         DDSImageData        expandedImage;
         const DDSImageData& image = selectDeviceImage( *pDevice, sourceImage, expandedImage );
 
@@ -298,7 +298,7 @@ namespace sw
             _uploadTicket               = RHITransferTicket{};
             const bool bOwnsLiveTexture = pDevice != nullptr && _pDevice == pDevice && getHandle() != 0;
             if ( bOwnsLiveTexture )
-                releaseRHI( pDevice );
+                releaseRHIKeepingSRV( pDevice );
             return Texture2DUploadStatus::Failed;
         }
         IRHIResourceFactory* pResource = pDevice->getResourceFactory();
@@ -312,29 +312,31 @@ namespace sw
         if ( status == RHITransferStatus::Failed )
         {
             SW_LOG_ERROR_ID( "Texture.UploadIncomplete", "Texture2D: the upload of '%#' did not complete", _path.c_str() );
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice );
             return Texture2DUploadStatus::Failed;
         }
-        // 지키던 번호가 있으면(크기 변경 · 핫 리로드) 새 텍스처로 다시 묶는다 — 번호가 그대로라 머티리얼을 다시 묶지 않는다(R-6). 없으면 새로 등록한다.
-        const RHIDescriptorIndex keptSRV = _keptSRV;
-        _keptSRV                         = kInvalidDescriptorIndex;
-        RHIDescriptorIndex srv{ kInvalidDescriptorIndex };
+        // 지키던 번호가 있으면(로드를 시작할 때 예약 · 크기 변경 · 핫 리로드) 새 텍스처로 다시 묶는다 — 번호가 그대로라 머티리얼을 다시 묶지 않는다(R-6). 없으면 새로 등록한다.
+        // 예약한 번호는 렌더 스레드가 살린 뒤에야 다시 묶을 수 있다 — 업로드를 끝내는 이 자리가 먼저 살린다(대개 프레임 시작이 이미 살렸다).
+        const RHIDescriptorIndex keptSRV = getKeptSRV();
+        RHIDescriptorIndex       srv{ kInvalidDescriptorIndex };
         if ( keptSRV != kInvalidDescriptorIndex )
         {
+            pDevice->activateReservedBindlessTextures();
             if ( pResource->rebindBindlessTexture( keptSRV, getHandle() ) )
                 srv = keptSRV;
-            else
-                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, keptSRV ); // 옛 텍스처는 해제 줄로 갔다 — 그 번호를 남기지 않는다
         }
         else
             srv = pResource->registerBindlessTexture( getHandle() );
         if ( srv == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 지키던 번호는 남긴다 — 부르는 쪽이 누락 체커로 다시 묶는다(그 번호를 쥔 머티리얼이 빈 번호를 그리지 않게)
             return Texture2DUploadStatus::Failed;
         }
+        // 산 번호를 먼저 적고 지키던 번호를 지운다 — `getStableSRV` 가 그 사이에 빈 번호를 보지 않게.
         _srv.store( srv, std::memory_order_release );
+        if ( keptSRV != kInvalidDescriptorIndex )
+            _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket = RHITransferTicket{};
         SW_LOG_INFO_ID( "Texture2D.Texture2DReadyMipsTop", "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
                         static_cast<uint32>( _format ), srv );
@@ -455,7 +457,7 @@ namespace sw
         if ( bInvalidRenderTargetArguments )
             return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
 
         RHITextureDesc desc{};
         desc._width                      = width;
@@ -561,7 +563,7 @@ namespace sw
         if ( pDevice == nullptr || hasCPUBytes() == false )
             return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
-            releaseRHI( pDevice );
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
         RHITextureDesc desc{};
         desc._width                      = _width;
         desc._height                     = _height;
@@ -627,6 +629,13 @@ namespace sw
         _streamedMipCount  = 0;
     }
 
+    void Texture2D::releaseRHIKeepingSRV( IRHIDevice* pDevice )
+    {
+        const RHIDescriptorIndex kept = takeKeptSRV();
+        releaseRHI( pDevice );
+        _keptSRV.store( kept, std::memory_order_release );
+    }
+
     void Texture2D::detachRHIKeepingSRV( IRHIDevice* pDevice, Texture2DRetiredResource& outRetired )
     {
         // 위쪽 밉을 올리는 중이던 새 텍스처는 버린다(핫 리로드가 밉 전부를 다시 읽는다) — `releaseRHI` 와 같다.
@@ -635,20 +644,29 @@ namespace sw
         _upgrade           = PendingUpgrade{};
         outRetired._handle = _handle.exchange( 0, std::memory_order_acq_rel );
         outRetired._srv    = kInvalidDescriptorIndex;
-        _keptSRV           = _srv.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel );
-        _uploadTicket      = RHITransferTicket{};
-        _pDevice           = nullptr;
-        _streamedMipCount  = 0;
+        // 지키는 번호를 먼저 적고 산 번호를 지운다 — `getStableSRV` 가 그 사이에 빈 번호를 보지 않게. 산 번호가 없으면(앞서 실패해 이미 지키는 중) 지키던 번호를 그대로 둔다.
+        if ( getSRV() != kInvalidDescriptorIndex )
+        {
+            _pKeptSRVDevice.store( pDevice, std::memory_order_release );
+            _keptSRV.store( getSRV(), std::memory_order_release );
+            _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
+        }
+        _uploadTicket     = RHITransferTicket{};
+        _pDevice          = nullptr;
+        _streamedMipCount = 0;
     }
 
     void Texture2D::clearRHI( IRHIDevice* pDevice )
     {
+        // 지키던 번호는 그 번호를 낸 디바이스와 함께 간다 — 다시 만드는 중이면(`_pDevice` 가 비었다) 아래 검사에 걸리지 않으므로 먼저 본다.
+        if ( _pKeptSRVDevice.load( std::memory_order_acquire ) == pDevice )
+            _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         if ( _pDevice != pDevice )
             return;
         // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다. 새 디바이스에 다시 업로드할 때는 밉 전부가 올라간다(`initRHI`).
-        _handle           = 0;
-        _srv              = kInvalidDescriptorIndex;
-        _keptSRV          = kInvalidDescriptorIndex;
+        _handle = 0;
+        _srv    = kInvalidDescriptorIndex;
+        _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;
@@ -657,6 +675,13 @@ namespace sw
 
     void Texture2D::releaseRHI( IRHIDevice* pDevice )
     {
+        // 지키던 번호는 그 번호를 낸 디바이스에 돌려준다 — 예약만 했거나 다시 만드는 중이면 `_pDevice` 가 비어 있으므로 아래 남의 디바이스 검사보다 먼저 본다.
+        if ( pDevice != nullptr && _pKeptSRVDevice.load( std::memory_order_acquire ) == pDevice )
+        {
+            const RHIDescriptorIndex kept = takeKeptSRV();
+            if ( kept != kInvalidDescriptorIndex )
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, kept ); // 올리다 실패했거나 아직 올라오지 않은 텍스처가 지키던 번호(로드 중 텍스처 · 누락 체커를 가리킨다)
+        }
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
         const bool bForeignDeviceWarned = pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice;
         if ( bForeignDeviceWarned )
@@ -667,17 +692,15 @@ namespace sw
             // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( getSRV() != kInvalidDescriptorIndex )
                 pDevice->releaseHandle( RHIHandleKind::BindlessTexture, getSRV() );
-            if ( _keptSRV != kInvalidDescriptorIndex )
-                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, _keptSRV ); // 다시 만들다 실패한 텍스처가 지키던 번호
             if ( getHandle() != 0 )
                 pDevice->releaseHandle( RHIHandleKind::Texture, getHandle() );
             // 위쪽 밉을 올리는 중이던 새 텍스처도 내린다(등록 전이라 SRV 는 없다).
             if ( _upgrade._handle != 0 )
                 pDevice->releaseHandle( RHIHandleKind::Texture, _upgrade._handle );
         }
-        _handle           = 0;
-        _srv              = kInvalidDescriptorIndex;
-        _keptSRV          = kInvalidDescriptorIndex;
+        _handle = 0;
+        _srv    = kInvalidDescriptorIndex;
+        _keptSRV.store( kInvalidDescriptorIndex, std::memory_order_release );
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;
