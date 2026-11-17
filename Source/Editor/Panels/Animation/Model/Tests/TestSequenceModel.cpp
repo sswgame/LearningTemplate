@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
 #include "Editor/Panels/Animation/Model/SequenceModel.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
@@ -843,4 +844,38 @@ SW_TEST_CASE( SequenceModelTest, EditOperationNotifiesOnceWithModelName )
     SW_EXPECT_TRUE( document.addBinding( "Hero" ) != 0u );
     SW_EXPECT_EQUAL( count, 1u );
     SW_EXPECT_TRUE( lastLabel == "Add Sequence Binding" );
+}
+
+/**
+ * @brief [SequenceModelTest] 채널 값 끌기는 끄는 동안 알림이 여러 번 와도 놓을 때 되돌리기 한 단계다(상호작용 구간 — 문서 패널의 `notifyDocumentEdited` 와 같은 `DocumentEditSpan` 길)
+ * @details 감사 E-16 으로 알림이 놓을 때 한 번에서 값마다로 바뀌었다 — 구간이 묶지 못하면 끌기 한 번이 프레임마다 한 단계가 된다(감사 P0-1 의 되풀이).
+ */
+SW_TEST_CASE( SequenceModelTest, ChannelDragIsOneUndoStep )
+{
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Transform ) );
+    DocumentEditSpan span;
+    span.resetBaseline( document._asset.toXML() );
+    bool       bInteracting{ true };
+    uint32     stepCount{ 0 };
+    uint32     notifyCount{ 0 };
+    const auto capture = [&document]()
+    { return document._asset.toXML(); };
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&]( string_view label )
+    {
+        ++notifyCount;
+        if ( span.notifyEdited( label, bInteracting, capture ).has_value() )
+            ++stepCount;
+    } ) };
+    document.bindDocumentEditRecorder( recorder );
+
+    SequenceKeyTrack& track = document._asset._listTrack[0];
+    for ( uint32 frameIndex = 1; frameIndex <= 5; ++frameIndex ) // 끄는 프레임마다 값이 바뀐다
+        (void)document.setChannelValue( track, 0, 0.0f, static_cast<float32>( frameIndex ) );
+    SW_EXPECT_TRUE( notifyCount >= 5u );
+    SW_EXPECT_EQUAL( stepCount, 0u ); // 끄는 동안은 쥔다
+    bInteracting = false;             // 놓았다(`flushDocumentInteraction`)
+    if ( span.isHolding() && span.finish( capture() ).has_value() )
+        ++stepCount;
+    SW_EXPECT_EQUAL( stepCount, 1u );
 }
