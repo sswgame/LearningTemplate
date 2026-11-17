@@ -40,6 +40,8 @@ namespace sw
         , _autoPlayPrefab{}
         , _player{}
         , _terrainSeed{ 20261003 }
+        , _chunkCountX{ 0 }
+        , _chunkCountZ{ 0 }
         , _chunkBuildsPerFrame{ 4 }
         , _statusLogInterval{ 5.0f }
         , _waterBlock{}
@@ -193,7 +195,7 @@ namespace sw
         }
         if ( bBlocksKnown == false )
             return false;
-        if ( _world.initialize( kChunkCountX, kChunkCountZ, pCatalog ) == false )
+        if ( _world.initialize( _chunkCountX, _chunkCountZ, pCatalog ) == false )
             return false;
         // 광석 · 눈도 지형 생성기가 같은 씨앗으로 놓는다(감사 K-8). 깊을수록 철이다.
         VoxelTerrainSettings settings;
@@ -226,11 +228,14 @@ namespace sw
     void VoxelGameModeComponent::spawnChunks( GameObjectManager& manager )
     {
         // 청크마다 오브젝트 하나를 스폰합니다. 처음에는 전부 메싱하고, 이후에는 바뀐 청크만 한 프레임에 몇 개씩 메싱합니다.
-        const GameObjectHandle gameMode = getOwner()->getHandle();
-        _listChunk.assign( static_cast<size_t>( kChunkCountX * kChunkCountZ ), GameObjectHandle{} );
-        for ( int32 chunkZ = 0; chunkZ < kChunkCountZ; ++chunkZ )
+        // 청크 수는 월드가 정본이다(씬 데이터로 `initialize` 했거나 같은 수로 복원했다).
+        const GameObjectHandle gameMode    = getOwner()->getHandle();
+        const int32            chunkCountX = _world.getChunkCountX();
+        const int32            chunkCountZ = _world.getChunkCountZ();
+        _listChunk.assign( static_cast<size_t>( chunkCountX * chunkCountZ ), GameObjectHandle{} );
+        for ( int32 chunkZ = 0; chunkZ < chunkCountZ; ++chunkZ )
         {
-            for ( int32 chunkX = 0; chunkX < kChunkCountX; ++chunkX )
+            for ( int32 chunkX = 0; chunkX < chunkCountX; ++chunkX )
             {
                 GameObject*          pObject = spawnPrefab( manager, _chunkPrefab, "VoxelChunk" );
                 VoxelChunkComponent* pChunk  = pObject != nullptr ? pObject->getComponent<VoxelChunkComponent>() : nullptr;
@@ -244,12 +249,12 @@ namespace sw
                 pMesh->setLocalPosition( float3{ static_cast<float32>( chunkX * kVoxelChunkSize ), 0.0f, static_cast<float32>( chunkZ * kVoxelChunkSize ) } );
                 pChunk->assignChunk( gameMode, chunkX, chunkZ );
                 pChunk->requestRebuild();
-                _listChunk[static_cast<size_t>( chunkZ * kChunkCountX + chunkX )] = pObject->getHandle();
+                _listChunk[static_cast<size_t>( chunkZ * chunkCountX + chunkX )] = pObject->getHandle();
             }
         }
-        for ( int32 chunkZ = 0; chunkZ < kChunkCountZ; ++chunkZ )
+        for ( int32 chunkZ = 0; chunkZ < chunkCountZ; ++chunkZ )
         {
-            for ( int32 chunkX = 0; chunkX < kChunkCountX; ++chunkX )
+            for ( int32 chunkX = 0; chunkX < chunkCountX; ++chunkX )
             {
                 _world.clearChunkDirty( chunkX, chunkZ ); // 방금 전부 메싱을 요청했습니다.
             }
@@ -267,8 +272,9 @@ namespace sw
         const float3                position      = pPlayer != nullptr ? pPlayer->getBody().getPosition() : float3{ 0.0f, 0.0f, 0.0f };
         const int32                 playerChunkX  = static_cast<int32>( position._x ) / kVoxelChunkSize;
         const int32                 playerChunkZ  = static_cast<int32>( position._z ) / kVoxelChunkSize;
+        const int32                 chunkCountX   = _world.getChunkCountX();
         int32                       builtCount    = 0;
-        for ( int32 ring = 0; ring < MathUtil::max( kChunkCountX, kChunkCountZ ) && builtCount < _chunkBuildsPerFrame; ++ring )
+        for ( int32 ring = 0; ring < MathUtil::max( chunkCountX, _world.getChunkCountZ() ) && builtCount < _chunkBuildsPerFrame; ++ring )
         {
             for ( int32 chunkZ = playerChunkZ - ring; chunkZ <= playerChunkZ + ring && builtCount < _chunkBuildsPerFrame; ++chunkZ )
             {
@@ -278,7 +284,7 @@ namespace sw
                     if ( bOnRing == false || _world.isChunkDirty( chunkX, chunkZ ) == false )
                         continue;
                     _world.clearChunkDirty( chunkX, chunkZ );
-                    const GameObject*    pObject = pManager->resolveGameObject( _listChunk[static_cast<size_t>( chunkZ * kChunkCountX + chunkX )] );
+                    const GameObject*    pObject = pManager->resolveGameObject( _listChunk[static_cast<size_t>( chunkZ * chunkCountX + chunkX )] );
                     VoxelChunkComponent* pChunk  = pObject != nullptr ? pObject->getComponent<VoxelChunkComponent>() : nullptr;
                     if ( pChunk != nullptr )
                         pChunk->requestRebuild();

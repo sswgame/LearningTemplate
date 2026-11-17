@@ -48,9 +48,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32 kChunkCountX = 8;
-        static constexpr int32 kChunkCountZ = 8;
-
         VoxelGameModeComponent();
         virtual ~VoxelGameModeComponent() override;
 
@@ -94,6 +91,10 @@ namespace sw
         GameObjectHandle _player;
         PROPERTY( Category = "World", DisplayName = "Terrain Seed", Tooltip = "Same seed, same island" )
         int32 _terrainSeed;
+        PROPERTY( Required, Category = "World", DisplayName = "Chunk Count X", Tooltip = "World width in chunks (each chunk is 16 blocks wide)", Min = 1 )
+        int32 _chunkCountX;
+        PROPERTY( Required, Category = "World", DisplayName = "Chunk Count Z", Tooltip = "World depth in chunks (each chunk is 16 blocks wide)", Min = 1 )
+        int32 _chunkCountZ;
         PROPERTY( Category = "World", DisplayName = "Chunk Builds Per Frame", Tooltip = "Changed chunks handed out for meshing each frame, nearest to the body first", Min = 1 )
         int32 _chunkBuildsPerFrame;
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )

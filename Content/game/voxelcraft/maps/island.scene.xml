@@ -153,6 +153,8 @@
 					                        _autoPlayPrefab="game/voxelcraft/prefabs/autoplay_ai.prefab.xml"
 					                        _player="3"
 					                        _terrainSeed="20261003"
+					                        _chunkCountX="8"
+					                        _chunkCountZ="8"
 					                        _chunkBuildsPerFrame="4"
 					                        _waterBlock="water"
 					                        _stoneBlock="stone"
