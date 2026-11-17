@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="44812712569947ed9b7f20d4c8ade402"?>
+<!--
+  장르 키트 시연 — 기체 대전 키트(GF_MechArena)의 판 한 바퀴: 팀 A · B 에 기체 하나씩(코스트 300, 게이지 600) → A 가 B 격추 → 리스폰 → 다시 격추 → B 게이지 0, 판 끝, A 승리.
+  감시 값: KitDemo.MechArena.State(0 시작 전, 1 마침) · .WinningTeam · .WinnerKills · .LoserGauge.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.kit.mecharena" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/kit_mecharena.scene.xml"/>
+	<WaitUntil watch="KitDemo.MechArena.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.MechArena.WinningTeam" equals="0"/>
+	<Expect watch="KitDemo.MechArena.WinnerKills" equals="2"/>
+	<Expect watch="KitDemo.MechArena.LoserGauge" equals="0"/>
+	<ExpectLog id="KitDemo.MechArenaDone" count="1"/>
+	<Pass/>
+</Scenario>

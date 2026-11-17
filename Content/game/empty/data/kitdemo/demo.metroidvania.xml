@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c830a74ff6714a32a3696db5c2f5b1b8"?>
+<!--
+  장르 키트 시연 — 메트로배니아 죽음과 휴식 한 바퀴(maps/kit_metroidvania). 쉬는 곳 bench, 보통 적 husk(5 geo) · 보스 hornet(300 geo).
+-->
+<Metroidvania currency="geo">
+	<Rules flaskCharges="2" flaskMaxCharges="3" flaskHeal="30" flaskHealPerUpgrade="10" riposteMultiplier="3" riposteTime="1" attackStamina="15" dodgeStamina="20" guardStaminaPerDamage="1" guardChip="0.25" corpseRadius="2"/>
+	<Health max="100" poise="30" poiseBreakDuration="1"/>
+	<Stamina max="100" regenRate="0" regenDelay="0"/>
+	<Parry><Window grade="Perfect" early="0.25" late="0.25"/></Parry>
+	<Site id="bench" area="hall" rest="true"/>
+	<Enemy id="husk" currency="5"/>
+	<Enemy id="hornet" boss="true" flag="boss.hornet" currency="300"/>
+</Metroidvania>
