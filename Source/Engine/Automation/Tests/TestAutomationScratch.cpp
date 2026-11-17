@@ -22,6 +22,11 @@ SW_TEST_CASE( AutomationScratchTest, TellsOtherProcessInstancesApart )
     SW_EXPECT_FALSE( sw::AutomationScratch::isOtherProcessInstance( "scratch/assetmanage_pabc/probe.material" ) );
     SW_EXPECT_FALSE( sw::AutomationScratch::isOtherProcessInstance( "game/empty/assetmanage_p1/probe.material" ) );
     SW_EXPECT_FALSE( sw::AutomationScratch::isOtherProcessInstance( "scratchpad_p1/x.material" ) );
+    // 가져오기 사본은 한 층 아래다(scratch/import/<이름>_p<pid>) — 예전 판정은 scratch/ 바로 아래만 봐 남의 가져오기를 집었다(editor.assetmove File.NotFound)
+    const sw::string otherNested = "scratch/import/editor.assetidentity_p" + sw::to_string( sw::Process::getCurrentProcessID() + 1 );
+    SW_EXPECT_TRUE( sw::AutomationScratch::isOtherProcessInstance( otherNested + "/flickerlight.prefab.xml" ) );
+    SW_EXPECT_TRUE( sw::AutomationScratch::isOtherProcessInstance( otherNested ) );
+    SW_EXPECT_FALSE( sw::AutomationScratch::isOtherProcessInstance( sw::AutomationScratch::makeInstanceID( "scratch/import/editor.assetidentity" ) + "/flickerlight.prefab.xml" ) );
 }
 
 /**
