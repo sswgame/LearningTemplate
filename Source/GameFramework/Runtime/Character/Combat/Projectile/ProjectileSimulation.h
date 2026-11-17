@@ -142,6 +142,32 @@ namespace sw
     class SW_GF_API ProjectileSimulation
     {
     public:
+        /**
+         * @brief 상태 바이트(`serializeState`)에서 탄 한 줄의 칸 자리입니다. 줄 끝(깃발 다음)에서 잰 거리이고, 정의 이름은 길이(4) 뒤 글자라 줄 앞에 놓인다.
+         * @details 깨진 바이트를 만드는 테스트가 손으로 세지 않고 이 값을 쓴다 — 칸을 더하면 여기 한 곳만 고친다(손으로 센 세 테스트가 G-10 뒤 함께 낡았다).
+         */
+        struct StateOffsetFromEnd
+        {
+            static constexpr size_t kFlags       = 1;
+            static constexpr size_t kBounceLeft  = 5;
+            static constexpr size_t kPierceLeft  = 9;
+            static constexpr size_t kHitCursor   = 10;
+            static constexpr size_t kHitTargets  = 42;
+            static constexpr size_t kTarget      = 46;
+            static constexpr size_t kTeam        = 50;
+            static constexpr size_t kOwner       = 54;
+            static constexpr size_t kPayload     = 58;
+            static constexpr size_t kID          = 62;
+            static constexpr size_t kRestitution = 66;
+            static constexpr size_t kRadius      = 74;
+            static constexpr size_t kRange       = 90;
+            static constexpr size_t kLifetime    = 94;
+            static constexpr size_t kDamage      = 106;
+            static constexpr size_t kVelocity    = 118;
+            static constexpr size_t kPosition    = 130;
+            static constexpr size_t kNameLength  = 134; ///< 이름 글자를 뺀 한 줄의 바이트 수이기도 하다
+        };
+
         ProjectileSimulation();
 
         /** @brief 탄이 머무는 평면의 법선입니다(2D · 지면 위). 0 벡터면 제약이 없습니다. 상태가 아니라 설정이라 저장하지 않습니다. */

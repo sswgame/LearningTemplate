@@ -210,6 +210,8 @@ SW_TEST_CASE( ProxyProtocolAcceptTransportTest, TrustedProxyOpensWithClientAddre
 /** @brief [ProxyProtocolAcceptTransportTest] 신뢰 밖 출처는 위로 알리지 않고 닫는다 — 머리로 주소를 속이지 못한다. 신뢰 프록시의 틀린 머리도 닫는다 */
 SW_TEST_CASE( ProxyProtocolAcceptTransportTest, UntrustedSourceAndBadHeaderAreClosed )
 {
+    SW_EXPECT_LOG( "ProxyProtocolAcceptTransport.UntrustedSource" ); // 믿는 목록 밖의 출처(첫 경우)
+    SW_EXPECT_LOG( "ProxyProtocolAcceptTransport.InvalidHeader" );   // 믿는 프록시가 보낸 깨진 머리(둘째 경우)
     {
         ProxyRig rig;
         SW_REQUIRE_TRUE( rig.start( vector<uint32>{ NetAddress::make( 10, 0, 0, 1, 0 ).getIpv4() } ) );

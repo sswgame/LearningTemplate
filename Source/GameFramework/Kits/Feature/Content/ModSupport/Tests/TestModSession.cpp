@@ -304,3 +304,32 @@ SW_TEST_CASE( ModSessionTest, ModAssetsResolveByGUIDWhileApplied )
     }
     SW_EXPECT_FALSE( AssetRegistry::resolve( guid ).has_value() );
 }
+
+/**
+ * @brief [ModSessionTest] 모드 팩 색인이 이미 풀리는 GUID(기본 에셋)를 자기 파일로 돌리면 적용을 거절한다 — 덮어쓰기는 밝힌 `<Override>` 로만 한다
+ */
+SW_TEST_CASE( ModSessionTest, ModIndexCannotRedirectAKnownGUID )
+{
+    using Internal = TestModSessionInternal;
+    SW_EXPECT_LOG( "ModSession.IndexRedirectsAsset" );
+    test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
+    const string            root    = test::makeScratchPath( "ModIndexRedirectRoot" );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const string            source  = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, "lantern" ), ModPackBuilder::kSourceFolderName );
+    SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000beef"?><Lamp/>)" ) );
+    const AssetGUID guid = *AssetGUID::tryParse( "0000000000000000000000000000beef" );
+
+    AssetManager& assets = engine::getSubsystem<AssetManager>();
+    // 같은 GUID 가 이미 기본 에셋으로 풀리게 둔다 — 프로세스 표에 한 줄을 더해 걸고, 끝에 원래 표로 되돌린다.
+    const AssetRegistry previous = AssetRegistry::install( AssetRegistry{} );
+    AssetRegistry       withBase = previous;
+    withBase.put( guid, "data/welcome.xml" );
+    (void)AssetRegistry::install( withBase );
+    {
+        ModSession session( assets );
+        SW_EXPECT_FALSE( session.apply( request, Internal::makeSettings() ) );
+    }
+    (void)AssetRegistry::install( previous );
+}

@@ -5740,7 +5740,8 @@
 				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAutosave.RestoreDocumentTooltip" source="Open the document with this copy as unsaved changes. Save to keep it">
+		<entry key="EditorAutosave.RestoreDocumentTooltip"
+		       source="Open the document with this copy as unsaved changes. Save to keep it">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>

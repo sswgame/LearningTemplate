@@ -16,6 +16,7 @@ namespace
 /** @brief [SimulationOnlyFrameQueueTest] 벽시계 실행(고정 프레임 시간 0)은 거절한다 — 그리기를 건너뛰면 프레임 시간이 바뀌어 결과가 달라진다 */
 SW_TEST_CASE( SimulationOnlyFrameQueueTest, RefusesWallClockRuns )
 {
+    SW_EXPECT_LOG( "SimulationOnlyFrameQueue.NeedsFixedDelta" );
     SimulationOnlyFrameQueue frames;
     SW_EXPECT_FALSE( frames.request( 10, 0.0f ) );
     SW_EXPECT_EQUAL( 0u, frames.getRemainingCount() );
@@ -40,6 +41,7 @@ SW_TEST_CASE( SimulationOnlyFrameQueueTest, SkipsExactlyTheRequestedFrames )
 /** @brief [SimulationOnlyFrameQueueTest] 재생 중 고정 프레임 시간이 풀리면 남은 요청을 버리고 그린다(벽시계로 건너뛰지 않는다) */
 SW_TEST_CASE( SimulationOnlyFrameQueueTest, DropsTheRestWhenTheFixedDeltaIsReleased )
 {
+    SW_EXPECT_LOG( "SimulationOnlyFrameQueue.FixedDeltaReleased" );
     SimulationOnlyFrameQueue frames;
     SW_REQUIRE_TRUE( frames.request( 5, kFixedDelta ) );
     SW_EXPECT_TRUE( frames.beginFrame( kFixedDelta ) == FrameDrawMode::SimulationOnly );

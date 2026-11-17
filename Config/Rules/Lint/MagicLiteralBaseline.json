@@ -914,7 +914,6 @@
     "Source/GameFramework/Runtime/Character/Combat/Killcam/KillcamComponent.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Character/Combat/Killcam/KillcamShot.cpp": {"minus-one": 1, "float": 4},
     "Source/GameFramework/Runtime/Character/Combat/LockOnSelector.cpp": {"float": 1},
-    "Source/GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Character/Combat/TurnOrder.cpp": {"float": 1, "integer": 1},
     "Source/GameFramework/Runtime/Character/Combat/Weapon/Ballistics.cpp": {"float": 7},
     "Source/GameFramework/Runtime/Character/Combat/Weapon/Weapon.cpp": {"float": 1},

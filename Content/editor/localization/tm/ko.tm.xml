@@ -532,6 +532,7 @@
 		<entry source="Delete preset" text="프리셋 삭제" />
 		<entry source="Delete refused" text="삭제 거절" />
 		<entry source="Delete selected keys" text="선택한 키 지우기" />
+		<entry source="Delete the copy of this document" text="이 문서의 사본을 지웁니다" />
 		<entry source="Delete the selected binding. Remove the items and tracks that use it first."
 		       text="선택한 바인딩을 지웁니다. 그것을 쓰는 항목과 트랙을 먼저 지우세요." />
 		<entry source="Delete the selected camera cut. The cut just before it grows to fill the gap."
@@ -580,6 +581,7 @@
 		<entry source="Document animation to preview. The preview never plays Open by itself - the document values are what you see until you play one."
 		       text="미리 볼 문서 애니메이션입니다. 미리보기는 Open 을 스스로 재생하지 않습니다 — 재생하기 전에는 문서 값이 보입니다." />
 		<entry source="Document save failed" text="문서를 저장하지 못했습니다" />
+		<entry source="Documents" text="문서" />
 		<entry source="Don't Save" text="저장 안 함" />
 		<entry source="Double-click to open" text="더블클릭하면 엽니다" />
 		<entry source="Down" text="아래로" />
@@ -1357,6 +1359,8 @@
 		<entry source="Open the audio graph editor" text="오디오 그래프 편집기를 엽니다" />
 		<entry source="Open the audio mixer" text="오디오 믹서를 엽니다" />
 		<entry source="Open the character editor panel" text="캐릭터 편집 패널을 엽니다" />
+		<entry source="Open the document with this copy as unsaved changes. Save to keep it"
+		       text="이 사본을 저장하지 않은 변경으로 문서를 엽니다. 남기려면 저장하세요" />
 		<entry source="Open the gimmick graph panel" text="기믹 그래프 패널을 엽니다" />
 		<entry source="Open the material graph editor" text="머티리얼 그래프 편집기를 엽니다" />
 		<entry source="Open the mesh modifier stack panel" text="메시 모디파이어 스택 패널을 엽니다" />

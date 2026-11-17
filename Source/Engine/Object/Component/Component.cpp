@@ -54,6 +54,13 @@ namespace sw
                     }
                     return count != 0;
                 }
+                if ( name == "GameObjectHandle" )
+                {
+                    // objectID 는 매니저가 만든 순서로 매긴다 — 같은 입력 · 같은 순서의 실행에서 같은 값이라 결정적이다
+                    const uint64 objectID = static_cast<const GameObjectHandle*>( pValue )->objectID();
+                    inoutBuilder.addBytes( &objectID, sizeof( objectID ) );
+                    return true;
+                }
                 if ( name == "string" )
                 {
                     const string& text = *static_cast<const string*>( pValue );

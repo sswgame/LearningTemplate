@@ -151,12 +151,13 @@ namespace
         OnlineServerRuntimeConfig makeSettings( std::initializer_list<const utf8*> listKitName )
         {
             OnlineServerRuntimeConfig settings;
-            settings._bTLS                  = SW_FALSE;
-            settings._pClock                = &_clock;
-            settings._pTransport            = _transport.get();
-            settings._config._ioThreadCount = 0;
-            settings._store._driver         = kMemoryStoreDriverName;
-            settings._cache._driver         = kMemoryStoreDriverName;
+            settings._bTLS                              = SW_FALSE;
+            settings._pClock                            = &_clock;
+            settings._pTransport                        = _transport.get();
+            settings._config._ioThreadCount             = 0;
+            settings._config._maxPendingCallsPerService = 100000; // 온라인 서버 설정 파일의 값 — 필수 칸이다
+            settings._store._driver                     = kMemoryStoreDriverName;
+            settings._cache._driver                     = kMemoryStoreDriverName;
             for ( const utf8* pName : listKitName )
             {
                 OnlineServerKitEntry& entry = settings._config._listKit.emplace_back();
