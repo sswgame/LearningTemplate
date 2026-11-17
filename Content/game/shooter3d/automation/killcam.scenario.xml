@@ -8,8 +8,8 @@
 <Scenario name="game.shooter3d.killcam" fixedDelta="0.0166667" timeoutFrames="200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<DevCommand line="camera.preset killcam"/>
 	<!-- 프리셋 블렌드가 끝나고 렌더(피사계 심도 · TAA · 노출)가 자리 잡을 때까지 -->
-	<WaitUntil watch="CameraManager.Blending" equals="0" timeoutSeconds="3"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<WaitUntil watch="CameraManager.Blending" target="PlayerCamera" equals="0" timeoutSeconds="3"/>
+	<WaitUntil watch="Render.StableIgnoringMotion" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) — 캐릭터가 늘 움직여 물체 움직임은 보지 않는다 -->
 	<Screenshot file="killcam.ppm"/>
 	<ExpectImage file="killcam.ppm" golden="killcam" region="0,0,1,1"/>
 	<Pass/>

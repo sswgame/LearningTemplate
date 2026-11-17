@@ -19,7 +19,7 @@
 	<AllowLog id="GPUBreadcrumbs.DeviceLostBackendLeaves" reason="손실을 처음 본 백엔드의 브레드크럼 보고"/>
 	<AllowLog id="Render.DeviceLostRecreate" reason="Recreate 정책이 장치를 다시 만든다 — 이 시나리오가 보는 것"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 렌더가 선 뒤에 장치를 잃는다 -->
+	<WaitUntil watch="Render.StableIgnoringMotion" equals="1" timeoutWallSeconds="30"/> <!-- 렌더가 선 뒤에 장치를 잃는다 -->
 	<Expect watch="Render.DeviceRecreateCount" equals="0"/>
 	<DevCommand line="rhi.removeDevice"/>
 	<WaitUntil watch="Render.DeviceRecreateCount" equals="1" timeoutFrames="600"/>
@@ -27,7 +27,7 @@
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
 	<ExpectLog id="Render.DeviceLostQuit" count="0"/>
 	<!-- 다시 만든 장치로 계속 그린다 — 사진이 써져야 Pass 가 끝난다 -->
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 다시 만든 장치로 다시 자리 잡았다 -->
+	<WaitUntil watch="Render.StableIgnoringMotion" equals="1" timeoutWallSeconds="30"/> <!-- 다시 만든 장치로 다시 자리 잡았다 -->
 	<Screenshot file="devicerecreate.ppm"/>
 	<Pass/>
 </Scenario>
