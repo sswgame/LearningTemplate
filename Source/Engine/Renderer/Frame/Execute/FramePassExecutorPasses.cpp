@@ -1265,7 +1265,7 @@ namespace sw
             context._world = element._world;
             context._pCmd->setPipelineState( pass._pso ); // 정점 슬롯을 비운다 — 메시 스트림은 그 뒤에 건다
             RHIMeshVertexStreams::bind( *context._pCmd, mesh.getRenderData().getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
-            context._pCmd->setIndexBuffer( mesh.getRenderData().getIndexBuffer(), sizeof( uint32 ), 0 );
+            context._pCmd->setIndexBuffer( mesh.getRenderData().getIndexBuffer(), mesh.getRenderData().getIndexStride(), 0 );
             commitBindlessTextureBindings( context );
             if ( bindForDraw( context, pass._pso, kInvalidDescriptorIndex ) )
                 context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );

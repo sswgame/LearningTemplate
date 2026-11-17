@@ -224,6 +224,7 @@ namespace sw
                 gpu._vertexBuffer    = pool.getVertexBuffer();
                 gpu._attributeOffset = pool.getAttributeOffset();
                 gpu._indexBuffer     = pool.getIndexBuffer();
+                gpu._indexStride     = sizeof( uint32 );
                 gpu._baseVertex      = placement._baseVertex;
                 gpu._firstIndex      = placement._firstIndex + batch._sectionFirstIndex;
                 continue;
@@ -244,6 +245,7 @@ namespace sw
                     gpu._vertexBuffer    = batch._mesh->getRenderData().getVertexBuffer();
                     gpu._attributeOffset = batch._mesh->getAttributeStreamOffset();
                     gpu._indexBuffer     = batch._mesh->getRenderData().getIndexBuffer();
+                    gpu._indexStride     = batch._mesh->getRenderData().getIndexStride();
                 }
                 else
                     SW_LOG_ERROR_ONCE_ID( "GPUScene.MeshNotCreatedBeforeHandoff", "A mesh in the snapshot has no vertex buffer although the upload queue owns its creation - it is not drawn" );
@@ -254,6 +256,7 @@ namespace sw
                 gpu._vertexBuffer    = batch._mesh->getRenderData().getVertexBuffer();
                 gpu._attributeOffset = batch._mesh->getAttributeStreamOffset();
                 gpu._indexBuffer     = batch._mesh->getRenderData().getIndexBuffer();
+                gpu._indexStride     = batch._mesh->getRenderData().getIndexStride();
             }
         }
     }

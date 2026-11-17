@@ -109,10 +109,28 @@ SW_TEST_CASE( MeshIndicesTest, AssetRoundTripKeepsIndicesAndSections )
     SW_EXPECT_EQUAL( 3u, read._listSection[1]._indexCount );
 
     // 마지막 인덱스(파일의 인덱스 끝 = 덩어리 앞)를 정점 밖 번호로 바꾸면 읽기가 진다.
-    const size_t lastIndexOffset = sw::MeshAssetFormat::kHeaderSize + 4u * sw::MeshAssetFormat::kVertexSize + 5u * sizeof( uint32 );
+    const size_t lastIndexOffset = sw::MeshAssetFormat::kHeaderSize + 4u * sw::MeshAssetFormat::kVertexSize + 5u * sw::MeshAssetFormat::getIndexBytes( 4u );
     bytes[lastIndexOffset]       = 9;
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetIndexOutOfRange" );
     SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+}
+
+/**
+ * @brief [MeshIndicesTest] 인덱스 폭은 정점 수가 정한다 — 65536 개 이하면 2 바이트, 넘으면 4 바이트이고, 작은 메시의 `.mesh` 는 인덱스를 2 바이트로 싣는다(R-15)
+ * @details 예전엔 모든 메시가 uint32 인덱스였다(작은 메시도 인덱스 바이트가 두 배). 경계(65536 · 65537)를 함께 본다.
+ */
+SW_TEST_CASE( MeshIndicesTest, IndexWidthFollowsVertexCount )
+{
+    SW_EXPECT_EQUAL( 2u, sw::MeshAssetFormat::getIndexBytes( 4u ) );
+    SW_EXPECT_EQUAL( 2u, sw::MeshAssetFormat::getIndexBytes( 65536u ) );
+    SW_EXPECT_EQUAL( 4u, sw::MeshAssetFormat::getIndexBytes( 65537u ) );
+
+    sw::MeshAssetData data{};
+    data._listVertex = makeQuadVertices();
+    data._listIndex  = makeQuadIndices();
+    sw::vector<uint8> bytes;
+    sw::MeshAssetFormat::makeBytes( data, bytes );
+    SW_EXPECT_EQUAL( static_cast<size_t>( sw::MeshAssetFormat::kHeaderSize + 4u * sw::MeshAssetFormat::kVertexSize + 6u * sizeof( uint16 ) ), bytes.size() );
 }
 
 /**

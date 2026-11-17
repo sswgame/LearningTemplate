@@ -804,7 +804,7 @@ namespace sw
         if ( headBinding._vertexBuffer != inoutState._boundVertexBuffer )
         {
             RHIMeshVertexStreams::bind( *context._pCmd, headBinding._vertexBuffer, headBinding._attributeOffset, head._mesh->getVertexFormat() );
-            context._pCmd->setIndexBuffer( headBinding._indexBuffer, sizeof( uint32 ), 0 );
+            context._pCmd->setIndexBuffer( headBinding._indexBuffer, headBinding._indexStride, 0 );
             inoutState._boundVertexBuffer = headBinding._vertexBuffer;
         }
 
