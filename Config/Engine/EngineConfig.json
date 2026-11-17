@@ -29,6 +29,9 @@
         "_reopenMaxDelayMs": 30000,
         "_clipCacheMegabytes": 192
     },
+    "_render": {
+        "_psoBuildBudgetMicroseconds": 2000
+    },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",
     "_shaderTimeRolloverSeconds": 3600.0

@@ -124,6 +124,27 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct RenderConfig
+     * @brief 렌더러 정책 값입니다(감사 RN-16 — C++ 상수에 흩어졌던 렌더 정책을 이 한 자리로 옮긴다. 언리얼 `r.*` 콘솔 변수의 바탕 층 · 유니티 SRP 에셋 자리).
+     * @details 지금은 렌더 스레드의 PSO 예산 하나다. 셰이더 쪽 값(TAA 기록 비율 · 라이트 그리드 크기)은 쿠킹 define 으로 옮길 다음 몫이다.
+     */
+    REFLECT()
+    struct SW_API RenderConfig
+    {
+        REFLECT_BODY();
+
+        /**
+         * @brief 빌더 스레드를 쓰지 않는 백엔드(GL)에서 렌더 스레드가 한 프레임에 머티리얼 PSO 를 만드는 시간 예산(µs)입니다(`FramePSOManager::pollMaterialPSOBuilds`).
+         * @details 줄이 있으면 예산과 상관없이 최소 하나는 만든다. 언리얼 `r.ShaderPipelineCache.BatchTime` 자리다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=us" )
+        uint32 _psoBuildBudgetMicroseconds{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @enum RHIDeviceLostPolicy
      * @brief 렌더 장치를 잃었을 때(TDR · 드라이버 재시작 · 개발 명령 `rhi.removeDevice`) 엔진이 할 일입니다. `EngineRenderDriver` 가 프레임마다 `IRHIDevice::isDeviceLost` 를 보고 고른다.
      * @details 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 뒤 종료하고 Godot 4 도 치명 오류로 끝낸다(기본값 `Quit`).
@@ -199,6 +220,9 @@ namespace sw
 
         PROPERTY()
         AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
+
+        PROPERTY()
+        RenderConfig _render{}; ///< 렌더러 정책 값(PSO 예산 · …)
 
         /**
          * @brief 창이 배경(포커스 없음)일 때도 패드 입력을 게임에 넣을지입니다(감사 P-10).
