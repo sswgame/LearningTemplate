@@ -365,3 +365,30 @@ SW_TEST_CASE( ModuleCatalogTest, MissingFolderIsAnError )
     const string  error = Util::describe( catalog.loadDirectory( test::makeScratchPath( "SwNoSuchModuleFolder" ) ) );
     SW_EXPECT_TRUE( error.find( "does not exist" ) != string::npos );
 }
+
+/**
+ * @brief [ModuleCatalogTest] 개발 전용 공유 모듈(GameFrameworkDev — 종류 GameFramework, 의존 GameFramework, 구성 Dev)은 개발 구성에서 GameFramework 다음 · 키트 앞에 오르고, 배포 구성에는 없다
+ * @details 배포에서 빠지는 것은 폴더 패턴이 아니라 매니페스트의 구성 칸이다(설계 2026-11-17 H1 — 새 매니페스트 칸 · 새 종류 없이).
+ */
+SW_TEST_CASE( ModuleCatalogTest, DevOnlySharedModuleLoadsAfterItsDependency )
+{
+    ModuleCatalog catalog;
+    Util::add( catalog, Util::makeManifest( "GameFramework", ModuleKind::GameFramework ) );
+    ModuleManifest developer     = Util::makeManifest( "GameFrameworkDev", ModuleKind::GameFramework, { "GameFramework" } );
+    developer._configurationMask = static_cast<uint8>( ModuleConfiguration::Dev );
+    Util::add( catalog, std::move( developer ) );
+    Util::add( catalog, Util::makeManifest( "GF_Kit", ModuleKind::Kit, { "GameFramework" } ) );
+
+    ModuleResolution dev;
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), dev ).has_value() );
+    SW_EXPECT_TRUE( dev.isActive( "GameFrameworkDev" ) );
+    SW_EXPECT_TRUE( Util::getIndexOf( dev, "GameFramework" ) < Util::getIndexOf( dev, "GameFrameworkDev" ) );
+
+    ModuleResolveContext shippingContext = Util::makeContext();
+    shippingContext._configuration       = ModuleConfiguration::Shipping;
+    ModuleResolution shipping;
+    SW_REQUIRE_TRUE( catalog.resolve( shippingContext, shipping ).has_value() );
+    SW_EXPECT_FALSE( shipping.isActive( "GameFrameworkDev" ) );
+    SW_EXPECT_TRUE( shipping.isActive( "GameFramework" ) );
+    SW_EXPECT_TRUE( Util::findReason( shipping, "GameFrameworkDev" ) == "not built for Shipping" );
+}
