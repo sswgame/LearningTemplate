@@ -149,6 +149,7 @@ namespace sw::editor
         if ( _pJob->request( command, ProcessRoots::get()._project.str() ) == false )
             return false;
         _listLine.clear();
+        _liveLineCount   = 0;
         _progress        = PackagingProgress{};
         _progress._state = PackagingState::Running;
         SW_LOG_INFO_ID( "PackagingPanel.PackagingStarted", "Packaging started: %#", command.toCommandLine() );
@@ -165,6 +166,7 @@ namespace sw::editor
                 return;
             const size_t lineCountBefore = _listLine.size();
             _pJob->takeLines( _listLine );
+            _liveLineCount += static_cast<uint32>( _listLine.size() - lineCountBefore );
             for ( size_t lineIndex = lineCountBefore; lineIndex < _listLine.size(); ++lineIndex )
                 (void)PackagingProgress::parseLine( _listLine[lineIndex], _progress ); // 진입점이 찍지 않은 줄(빌드 · 쿠커 출력)은 지나친다
             if ( _progress._state != PackagingState::Running )

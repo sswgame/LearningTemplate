@@ -34,8 +34,8 @@ namespace sw::editor
 
         /** @brief 지금 패키징 상태입니다(감시 값 `Editor.PackagingState`). */
         PackagingState getState() const { return _model.getState(); }
-        /** @brief 지금까지 보인 출력 줄 수입니다(감시 값 `Editor.PackagingLineCount` — 도는 동안에도 는다). */
-        uint32 getLineCount() const { return static_cast<uint32>( _model.getLines().size() ); }
+        /** @brief 이번 실행에서 끝나기 전에 받은 출력 줄 수입니다(감시 값 `Editor.PackagingLiveLineCount`). */
+        uint32 getLiveLineCount() const { return _model.getLiveLineCount(); }
         /** @brief 지금 설정으로 진입점 명령을 만듭니다(작업 폴더는 저장소 루트). */
         ProcessCommand makeCommand() const { return _model.makeCommand(); }
         /** @brief 패키징을 띄웁니다. 이미 돌면 false 입니다. */

@@ -43,12 +43,12 @@ namespace sw::editor
                 return pPanels->findPanel<PackagingPanel>();
             }
 
-            [[nodiscard]] static bool readPackagingLineCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readPackagingLiveLineCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const PackagingPanel* pPanel = findPanel();
                 if ( pPanel == nullptr )
                     return false;
-                outValue = static_cast<float64>( pPanel->getLineCount() );
+                outValue = static_cast<float64>( pPanel->getLiveLineCount() );
                 return true;
             }
 
@@ -69,8 +69,8 @@ namespace sw::editor
     SW_EDITOR_PANEL( PackagingPanel, PackagingPanel::kPanelID, EditorPanelCategory::Tool, 2050 );
     SW_AUTOMATION_WALL_WATCH( editorPackagingState, "Editor.PackagingState", "Packaging window: 0 idle, 1 running, 2 succeeded, 3 failed",
                               &PackagingPanelInternal::readPackagingState );
-    SW_AUTOMATION_WALL_WATCH( editorPackagingLineCount, "Editor.PackagingLineCount", "Packaging window: output lines shown so far (they arrive while the packaging runs)",
-                              &PackagingPanelInternal::readPackagingLineCount );
+    SW_AUTOMATION_WALL_WATCH( editorPackagingLiveLineCount, "Editor.PackagingLiveLineCount", "Packaging window: output lines received this run before the packaging finished",
+                              &PackagingPanelInternal::readPackagingLiveLineCount );
 
     PackagingPanel::PackagingPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
