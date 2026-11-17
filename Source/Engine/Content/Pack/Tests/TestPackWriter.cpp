@@ -84,18 +84,18 @@ SW_TEST_CASE( PackWriterTest, OutOfOrderAppendIsAnError )
 
     PackStreamWriter outOfOrder;
     SW_REQUIRE_TRUE( outOfOrder.open( packPath, PackTestUtil::makeDesc( "game/test" ) ).has_value() );
-    SW_REQUIRE_TRUE( outOfOrder.append( first, vector<uint8>{ 1, 2, 3 } ).has_value() );
-    const expected<void> refused = outOfOrder.append( second, vector<uint8>{ 4 } );
+    SW_REQUIRE_TRUE( outOfOrder.append( first, PackEntryStorage::Blocks, vector<uint8>{ 1, 2, 3 } ).has_value() );
+    const expected<void> refused = outOfOrder.append( second, PackEntryStorage::Blocks, vector<uint8>{ 4 } );
     SW_REQUIRE_FALSE( refused.has_value() );
     SW_EXPECT_TRUE( refused.error().kind() == ErrorKind::InvalidArgument );
-    SW_EXPECT_FALSE( outOfOrder.append( "z.txt", vector<uint8>{} ).has_value() ); // 한 번 실패한 쓰기는 끝났다
+    SW_EXPECT_FALSE( outOfOrder.append( "z.txt", PackEntryStorage::Blocks, vector<uint8>{} ).has_value() ); // 한 번 실패한 쓰기는 끝났다
     SW_EXPECT_FALSE( outOfOrder.close().has_value() );
     SW_EXPECT_FALSE( FileUtil::exists( packPath ) );
 
     PackStreamWriter twice;
     SW_REQUIRE_TRUE( twice.open( packPath, PackTestUtil::makeDesc( "game/test" ) ).has_value() );
-    SW_REQUIRE_TRUE( twice.append( "Data/Same.xml", vector<uint8>{ 1 } ).has_value() );
-    const expected<void> duplicate = twice.append( "data/same.xml", vector<uint8>{ 2 } );
+    SW_REQUIRE_TRUE( twice.append( "Data/Same.xml", PackEntryStorage::Blocks, vector<uint8>{ 1 } ).has_value() );
+    const expected<void> duplicate = twice.append( "data/same.xml", PackEntryStorage::Blocks, vector<uint8>{ 2 } );
     SW_REQUIRE_FALSE( duplicate.has_value() );
     SW_EXPECT_TRUE( duplicate.error().kind() == ErrorKind::AlreadyExists );
     SW_EXPECT_FALSE( twice.close().has_value() );
@@ -119,7 +119,7 @@ SW_TEST_CASE( PackWriterTest, WriteResultHashEqualsHashOfTheFile )
     SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionType::Zlib ) ).has_value() );
     for ( std::pair<string, vector<uint8>>& entry : listEntry )
     {
-        SW_REQUIRE_TRUE( writer.append( entry.first, std::move( entry.second ) ).has_value() );
+        SW_REQUIRE_TRUE( writer.append( entry.first, PackEntryStorage::Blocks, std::move( entry.second ) ).has_value() );
     }
     const expected<PackWriteResult> result = writer.close();
     SW_REQUIRE_TRUE( result.has_value() );

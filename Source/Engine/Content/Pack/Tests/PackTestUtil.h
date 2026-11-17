@@ -43,7 +43,7 @@ namespace sw
             expected<void>   step = writer.open( packPath, desc );
             for ( size_t index = 0; index < listEntry.size() && step.has_value(); ++index )
             {
-                step = writer.append( listEntry[index].first, std::move( listEntry[index].second ) );
+                step = writer.append( listEntry[index].first, PackEntryStorage::Blocks, std::move( listEntry[index].second ) );
             }
             const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
             if ( closed.has_value() == false )

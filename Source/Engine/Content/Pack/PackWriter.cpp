@@ -59,11 +59,17 @@ namespace sw
     /** @brief 블록 하나의 압축 결과 칸입니다. 병렬 구간에서 블록마다 자기 칸에만 쓰고, 읽는 일은 직렬 쓰기 단계가 합니다. */
     struct PackStreamWriter::BlockSlot
     {
-        const uint8*  _pSource{ nullptr }; ///< 창에 든 원본 안 이 블록의 시작
-        uint32        _rawSize{ 0 };
-        uint32        _crc32{ 0 };
-        vector<uint8> _listPayload; ///< 코덱이 낸 바이트. 코덱이 없으면 비어 있고 원본을 그대로 쓴다. 코덱이 있는데 비면 압축이 실패한 것이다(빈 블록은 없다)
-        int64         _nanos{ 0 };
+        const uint8*       _pSource{ nullptr }; ///< 창에 든 원본 안 이 블록의 시작
+        uint32             _rawSize{ 0 };
+        uint32             _crc32{ 0 };
+        ICompressionCodec* _pCodec{ nullptr }; ///< 이 블록의 코덱. 팩 코덱이 `None` 이거나 항목이 `Stored` 면 nullptr 이고 원본을 그대로 쓴다
+        vector<uint8>      _listPayload;       ///< 코덱이 낸 바이트. 코덱이 없으면 비어 있다. 코덱이 있는데 비면 압축이 실패한 것이다(빈 블록은 없다)
+        int64              _nanos{ 0 };
+
+        /** @brief 파일에 쓸 바이트입니다. */
+        const uint8* getStoredData() const { return _pCodec != nullptr ? _listPayload.data() : _pSource; }
+        /** @brief 파일에 쓸 크기입니다. */
+        size_t getStoredSize() const { return _pCodec != nullptr ? _listPayload.size() : _rawSize; }
     };
 
     /**
@@ -73,9 +79,8 @@ namespace sw
      */
     struct PackStreamWriter::CompressJob
     {
-        BlockSlot*         _pSlot{ nullptr };
-        ICompressionCodec* _pCodec{ nullptr }; ///< nullptr 이면 압축하지 않는다(`PackCompressionType::None`)
-        int32              _compressionLevel{ 0 };
+        BlockSlot* _pSlot{ nullptr };
+        int32      _compressionLevel{ 0 };
 
         /** @brief 블록 [start, end) 를 돕니다. */
         void run( uint32 start, uint32 end )
@@ -89,13 +94,14 @@ namespace sw
         void compressOne( BlockSlot& inoutSlot ) const
         {
             const Stopwatch stopwatch;
-            inoutSlot._crc32 = HashUtil::computeCRC32( inoutSlot._pSource, inoutSlot._rawSize );
-            if ( _pCodec != nullptr )
+            inoutSlot._crc32          = HashUtil::computeCRC32( inoutSlot._pSource, inoutSlot._rawSize );
+            ICompressionCodec* pCodec = inoutSlot._pCodec;
+            if ( pCodec != nullptr )
             {
-                const size_t bound = _pCodec->compressBound( inoutSlot._rawSize );
+                const size_t bound = pCodec->compressBound( inoutSlot._rawSize );
                 size_t       compressedSize{ 0 };
                 inoutSlot._listPayload.resize( bound );
-                const bool bCompressed = bound != 0 && _pCodec->compress( inoutSlot._pSource, inoutSlot._rawSize, inoutSlot._listPayload.data(), bound, compressedSize, _compressionLevel );
+                const bool bCompressed = bound != 0 && pCodec->compress( inoutSlot._pSource, inoutSlot._rawSize, inoutSlot._listPayload.data(), bound, compressedSize, _compressionLevel );
                 inoutSlot._listPayload.resize( bCompressed ? compressedSize : 0 );
             }
             inoutSlot._nanos = stopwatch.getElapsedNanoseconds();
@@ -203,8 +209,8 @@ namespace sw
             for ( const string& path : listPath )
             {
                 PackFileEntry entry;
-                if ( reader.getFileEntry( path, entry ) && entry._compressedSize != 0 ) // 빈 항목은 자리를 차지하지 않는다
-                    listPlaced.push_back( { entry._pathHash, entry._dataOffset, entry._compressedSize } );
+                if ( reader.getFileEntry( path, entry ) && entry._compressedSize != 0 )                    // 빈 항목은 자리를 차지하지 않는다
+                    listPlaced.push_back( { entry._pathHash, entry._dataOffset, entry._compressedSize } ); // 조회 결과(`PackFileEntry`)의 오프셋이다
             }
         }
         VectorUtil::sort( listPlaced, []( const Placed& left, const Placed& right )
@@ -247,11 +253,12 @@ namespace sw
         return {};
     }
 
-    expected<void> PackStreamWriter::append( string_view relativePath, vector<uint8> bytes )
+    expected<void> PackStreamWriter::append( string_view relativePath, PackEntryStorage storage, vector<uint8> bytes )
     {
         if ( _state != State::Open )
             return unexpected( Error{ ErrorKind::InvalidArgument, "pack stream writer is not open (or failed earlier)", relativePath } );
         PendingEntry entry;
+        entry._storage      = storage;
         entry._relativePath = FileUtil::normalizeSeparators( relativePath );
         entry._pathHash     = HashUtil::computeStringHash64( entry._relativePath );
         entry._bytes        = std::move( bytes );
@@ -290,6 +297,7 @@ namespace sw
                 BlockSlot slot;
                 slot._pSource = entry._bytes.data() + offset;
                 slot._rawSize = static_cast<uint32>( entry._bytes.size() - offset < _desc._blockSize ? entry._bytes.size() - offset : _desc._blockSize );
+                slot._pCodec  = entry._storage == PackEntryStorage::Stored ? nullptr : _pCodec;
                 listSlot.push_back( std::move( slot ) );
             }
         }
@@ -299,7 +307,6 @@ namespace sw
         // 2. 압축 · CRC 는 블록마다 독립이라 병렬이다. 작은 창은 나누지 않는다 — 서비스가 없거나 워커가 없으면 `runParallel` 이 이 스레드에서 차례로 돈다.
         CompressJob job;
         job._pSlot                = listSlot.data();
-        job._pCodec               = _pCodec;
         job._compressionLevel     = _desc._compressionLevel;
         const uint32    slotCount = static_cast<uint32>( listSlot.size() );
         const uint32    threshold = _pendingBytes >= PackWriterInternal::kMinParallelBytes ? PackWriterInternal::kMinParallelBlockCount : slotCount + 1;
@@ -317,9 +324,9 @@ namespace sw
             {
                 const BlockSlot& slot = listSlot[index];
                 _stats._compressCPUNanos += slot._nanos;
-                if ( _pCodec != nullptr && slot._listPayload.empty() )
+                if ( slot._pCodec != nullptr && slot._listPayload.empty() )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "pack codec failed to compress a block", entry._relativePath } );
-                storedSize += _pCodec != nullptr ? slot._listPayload.size() : slot._rawSize;
+                storedSize += slot.getStoredSize();
             }
             if ( storedSize > MathUtil::kMaxUInt32 )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "compressed pack entry does not fit the 32-bit entry fields", entry._relativePath } );
@@ -338,9 +345,11 @@ namespace sw
                 dataOffset = _file.getSize();
             }
 
+            if ( dataOffset > PackFileEntryOnDisk::kMaxDataOffset )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "pack payload offset does not fit the 56-bit placement field", entry._relativePath } );
             PackFileEntryOnDisk diskEntry{};
-            diskEntry._pathHash         = entry._pathHash;
-            diskEntry._dataOffset       = dataOffset;
+            diskEntry._pathHash = entry._pathHash;
+            diskEntry.setPlacement( dataOffset, entry._storage );
             diskEntry._compressedSize   = static_cast<uint32>( storedSize );
             diskEntry._uncompressedSize = static_cast<uint32>( entry._bytes.size() );
             diskEntry._firstBlock       = static_cast<uint32>( _listBlock.size() );
@@ -349,8 +358,8 @@ namespace sw
             for ( size_t blockIndex = 0; blockIndex < blockCount; ++blockIndex, ++slotIndex )
             {
                 const BlockSlot&     slot    = listSlot[slotIndex];
-                const uint8*         pStored = _pCodec != nullptr ? slot._listPayload.data() : slot._pSource;
-                const size_t         size    = _pCodec != nullptr ? slot._listPayload.size() : slot._rawSize;
+                const uint8*         pStored = slot.getStoredData();
+                const size_t         size    = slot.getStoredSize();
                 const expected<void> written = writeBytes( dataOffset + compressedEnd, pStored, size );
                 if ( written.has_value() == false )
                     return written;

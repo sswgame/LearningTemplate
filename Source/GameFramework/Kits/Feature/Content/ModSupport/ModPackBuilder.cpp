@@ -68,7 +68,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", filePath );
                 return false;
             }
-            step = writer.append( FileUtil::normalizeSeparators( relativePath ), std::move( bytes ) );
+            step = writer.append( FileUtil::normalizeSeparators( relativePath ), PackEntryStorage::Blocks, std::move( bytes ) );
         }
         const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
         if ( closed.has_value() == false )

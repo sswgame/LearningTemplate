@@ -3,7 +3,8 @@
     "_codec": "Zlib",
     "_level": 0,
     "_blockSize": 131072,
-    "_writeWindowBytes": 67108864
+    "_writeWindowBytes": 67108864,
+    "_listStoredExtension": [ ".dds", ".ktx2", ".png", ".jpg", ".ogg" ]
   },
   "_layout": {
     "_mode": "Sorted",

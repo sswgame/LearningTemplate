@@ -430,7 +430,7 @@ namespace sw
              * @brief 모은 항목을 경로 해시 순으로 세워 하나씩 읽고 @p outputPath 에 스트림으로 씁니다. 항목은 하나씩(창 크기까지)만 들고 내용 해시를 함께 센다.
              * @return 같은 경로가 두 번이거나 읽기 · 쓰기가 실패하면 이유를 오류로 남기고 false 입니다.
              */
-            [[nodiscard]] static bool writePackItems( const PackWriterDesc& writerDesc, const string& outputPath, const PackCookParams& params, const DataCatalogReferenceRules& references,
+            [[nodiscard]] static bool writePackItems( const PackConfig& config, const PackWriterDesc& writerDesc, const string& outputPath, const PackCookParams& params, const DataCatalogReferenceRules& references,
                                                       vector<PackItem>& inoutListItem, PackCookTiming& ioTiming, PackWriteResult& outResult )
             {
                 VectorUtil::sort( inoutListItem, []( const PackItem& left, const PackItem& right )
@@ -450,7 +450,7 @@ namespace sw
                         bytes = std::move( item._listGeneratedByte );
                     if ( bRead == false )
                         return false; // 읽기가 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
-                    step = writer.append( item._relativePath, std::move( bytes ) );
+                    step = writer.append( item._relativePath, config._compression.getEntryStorage( item._relativePath ), std::move( bytes ) );
                 }
                 expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
                 if ( closed.has_value() == false )
@@ -616,7 +616,7 @@ namespace sw
                 listItem.push_back( std::move( indexItem ) );
 
                 PackWriteResult writeResult;
-                if ( writePackItems( writerDesc, outputPath, params, references, listItem, ioTiming, writeResult ) == false )
+                if ( writePackItems( config, writerDesc, outputPath, params, references, listItem, ioTiming, writeResult ) == false )
                     return kFailed;
                 ioTiming._write.add( writeResult._stats );
                 SW_LOG_INFO_ID( "PackCooker.PackCookWroteFiles", "Pack cook: wrote %# (%# files, %# bytes before compression)", outputPath, writeResult._stats._entryCount,

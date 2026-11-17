@@ -46,8 +46,8 @@ namespace
             for ( const std::pair<string, string>& added : _listAdded )
             {
                 PackFileEntryOnDisk entry;
-                entry._pathHash         = HashUtil::computeStringHash64( added.first );
-                entry._dataOffset       = _listData.size();
+                entry._pathHash = HashUtil::computeStringHash64( added.first );
+                entry.setPlacement( _listData.size(), PackEntryStorage::Blocks );
                 entry._compressedSize   = static_cast<uint32>( added.second.size() );
                 entry._uncompressedSize = static_cast<uint32>( added.second.size() );
                 entry._firstBlock       = static_cast<uint32>( _listBlock.size() );
@@ -329,8 +329,8 @@ SW_TEST_CASE( PackReaderTest, EntryPayloadMustLieInsideTheFile )
     SW_EXPECT_LOG( "PackReader.FailedLoadFATIndex" );
     const PackTestFile file;
     PackReader         reader;
-    PackImage          farOffset        = Util::makeValidImage();
-    farOffset._listEntry[0]._dataOffset = 1ull << 40;
+    PackImage          farOffset = Util::makeValidImage();
+    farOffset._listEntry[0].setPlacement( 1ull << 40, PackEntryStorage::Blocks );
     SW_EXPECT_FALSE( file.open( farOffset, reader ) );
 
     PackImage hugeSize                       = Util::makeValidImage();
@@ -509,4 +509,73 @@ SW_TEST_CASE( PackReaderTest, CorruptBlockIsRefused )
     SW_REQUIRE_TRUE( reader.readRange( pathHash, 10, kPackMinBlockSize, bytes ) );                    // 블록 0 · 1
     SW_EXPECT_TRUE( bytes.size() == kPackMinBlockSize && bytes[0] == static_cast<uint8>( content[10] ) );
     SW_EXPECT_TRUE( reader.readRange( pathHash, 3 * kPackMinBlockSize, 10, bytes ) ); // 블록 3
+}
+
+// ---------------------------------------------------------------------- 항목 저장 방식
+
+// `Stored` 항목은 팩 코덱과 상관없이 블록의 저장 바이트가 원본이다 — 범위 읽기가 풀기 없이 같은 구간을 준다. 같은 팩의 `Blocks` 항목은 그대로 풀린다.
+SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
+{
+    const string  packPath  = test::makeScratchPath( "SwPackReaderStored.pack" );
+    const uint32  blockSize = PackTestUtil::kBlockSize;
+    vector<uint8> stored( 2 * blockSize + 321 );
+    for ( size_t index = 0; index < stored.size(); ++index )
+    {
+        stored[index] = static_cast<uint8>( ( index * 131 ) ^ ( index >> 7 ) );
+    }
+    const vector<uint8> compressed( 3 * blockSize, uint8{ 'z' } );
+    const string        storedPath     = "textures/rock.dds";
+    const string        compressedPath = "data/level.xml";
+    const bool          bStoredFirst   = PackStreamWriter::makePathHash( storedPath ) < PackStreamWriter::makePathHash( compressedPath );
+    PackStreamWriter    writer;
+    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionType::Zlib ) ).has_value() );
+    for ( uint32 order = 0; order < 2; ++order )
+    {
+        const bool bStored = ( order == 0 ) == bStoredFirst;
+        SW_REQUIRE_TRUE( writer.append( bStored ? storedPath : compressedPath, bStored ? PackEntryStorage::Stored : PackEntryStorage::Blocks, bStored ? stored : compressed ).has_value() );
+    }
+    SW_REQUIRE_TRUE( writer.close().has_value() );
+
+    PackReader reader;
+    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    PackFileEntry entry;
+    SW_REQUIRE_TRUE( reader.getFileEntry( storedPath, entry ) );
+    SW_EXPECT_TRUE( entry._storage == PackEntryStorage::Stored );
+    SW_EXPECT_EQUAL( entry._uncompressedSize, entry._compressedSize ); // 압축하지 않았다
+    SW_REQUIRE_TRUE( reader.getFileEntry( compressedPath, entry ) );
+    SW_EXPECT_TRUE( entry._storage == PackEntryStorage::Blocks && entry._compressedSize < entry._uncompressedSize );
+
+    const uint64  storedHash = HashUtil::computeStringHash64( storedPath );
+    vector<uint8> whole;
+    SW_REQUIRE_TRUE( reader.readFile( storedHash, whole ) );
+    SW_REQUIRE_TRUE( whole == stored );
+    const std::pair<uint32, uint32> arrRange[] = {
+        {                                       0,       128},
+        {                           blockSize - 3,         6},
+        {                          blockSize + 10, blockSize},
+        {static_cast<uint32>( stored.size() ) - 9,         9}
+    };
+    for ( const std::pair<uint32, uint32>& range : arrRange )
+    {
+        vector<uint8> slice;
+        SW_REQUIRE_TRUE( reader.readRange( storedHash, range.first, range.second, slice ) );
+        SW_EXPECT_TRUE( slice == vector<uint8>( stored.begin() + range.first, stored.begin() + range.first + range.second ) );
+    }
+    SW_REQUIRE_TRUE( reader.readFile( compressedPath, whole ) );
+    SW_EXPECT_TRUE( whole == compressed );
+    reader.close();
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+}
+
+// 저장 방식은 디스크 값이다 — 모르는 값의 항목이 있는 팩은 열지 않는다.
+SW_TEST_CASE( PackReaderTest, UnknownEntryStorageIsRefused )
+{
+    SW_EXPECT_LOG( "PackReader.UnknownEntryStorage" );
+    SW_EXPECT_LOG( "PackReader.FailedLoadFATIndex" );
+    const PackTestFile file;
+    PackReader         reader;
+    PackImage          image = Util::makeValidImage();
+    image._listEntry[0].setPlacement( image._listEntry[0].getDataOffset(), static_cast<PackEntryStorage>( kPackEntryStorageCount ) );
+    SW_EXPECT_FALSE( file.open( image, reader ) );
+    SW_EXPECT_FALSE( reader.isOpen() );
 }

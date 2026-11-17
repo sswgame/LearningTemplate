@@ -33,7 +33,7 @@ namespace
             expected<void>   step = writer.open( packPath, desc );
             for ( size_t index = 0; index < listEntry.size() && step.has_value(); ++index )
             {
-                step = writer.append( listEntry[index].first, std::move( listEntry[index].second ) );
+                step = writer.append( listEntry[index].first, PackEntryStorage::Blocks, std::move( listEntry[index].second ) );
             }
             if ( step.has_value() == false )
                 return nullopt;
@@ -144,8 +144,8 @@ SW_TEST_CASE( PackPatchTest, PatchOverTwoGiBIsAccepted )
 
     // 색인 구역: FAT · 블록 표 · 블록 해시 표 · 스트링 풀 · 헤더(쓰는 쪽과 같은 배치).
     PackFileEntryOnDisk fileEntry{};
-    fileEntry._pathHash         = HashUtil::computeStringHash64( entryPath );
-    fileEntry._dataOffset       = payloadOffset;
+    fileEntry._pathHash = HashUtil::computeStringHash64( entryPath );
+    fileEntry.setPlacement( payloadOffset, PackEntryStorage::Blocks );
     fileEntry._compressedSize   = payloadSize;
     fileEntry._uncompressedSize = payloadSize;
     fileEntry._firstBlock       = 0;

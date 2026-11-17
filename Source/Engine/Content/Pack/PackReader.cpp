@@ -269,7 +269,8 @@ namespace sw
             return false;
         const PackFileEntryOnDisk& diskEntry = _listEntry[*entryIndex];
         outEntry._pathHash                   = diskEntry._pathHash;
-        outEntry._dataOffset                 = diskEntry._dataOffset;
+        outEntry._dataOffset                 = diskEntry.getDataOffset();
+        outEntry._storage                    = static_cast<PackEntryStorage>( diskEntry.getStorageValue() ); // 열 때 범위를 확인했다
         outEntry._compressedSize             = diskEntry._compressedSize;
         outEntry._uncompressedSize           = diskEntry._uncompressedSize;
         outEntry._firstBlock                 = diskEntry._firstBlock;
@@ -345,14 +346,16 @@ namespace sw
         const uint32 endBlock     = length == 0 ? firstBlock : static_cast<uint32>( ( offset + length - 1 ) / blockSize + 1 );
         const size_t tableBegin   = static_cast<size_t>( entry._firstBlock ) + firstBlock;
         outPlan._storedBegin      = firstBlock == 0 || length == 0 ? 0 : _listBlock[tableBegin - 1]._compressedEnd;
-        outPlan._storedOffset     = entry._dataOffset + outPlan._storedBegin;
+        outPlan._storedOffset     = entry.getDataOffset() + outPlan._storedBegin;
         outPlan._firstBlockIndex  = firstBlock;
         outPlan._uncompressedSize = entry._uncompressedSize;
         outPlan._blockSize        = blockSize;
         outPlan._sliceOffset      = static_cast<uint32>( offset - static_cast<uint64>( firstBlock ) * blockSize );
         outPlan._sliceSize        = static_cast<uint32>( length );
-        outPlan._compression      = static_cast<PackCompressionType>( _header._compressionType );
-        outPlan._bVerifyCRC       = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
+        // `Stored` 항목은 팩 코덱과 상관없이 블록의 저장 바이트가 원본이다 — 풀기 없이 복사만 한다.
+        const bool bStored   = static_cast<PackEntryStorage>( entry.getStorageValue() ) == PackEntryStorage::Stored;
+        outPlan._compression = bStored ? PackCompressionType::None : static_cast<PackCompressionType>( _header._compressionType );
+        outPlan._bVerifyCRC  = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
         outPlan._listBlock.assign( _listBlock.begin() + tableBegin, _listBlock.begin() + tableBegin + ( endBlock - firstBlock ) );
         outPlan._pDigestProvider = _pDigestProvider;
         if ( _pDigestProvider != nullptr ) // 신뢰를 받아 열었으면 블록 해시 표가 있다(`loadIndexTable`)
@@ -747,10 +750,17 @@ namespace sw
     bool PackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 payloadEnd, uint32 expectedFirstBlock ) const
     {
         // 페이로드가 페이로드 구역(FAT 앞) 안에 있어야 한다. **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
-        if ( diskEntry._dataOffset > payloadEnd || diskEntry._compressedSize > payloadEnd - diskEntry._dataOffset )
+        // 저장 방식은 디스크 값이다 — 모르는 값을 어느 방식으로도 읽지 않는다.
+        if ( diskEntry.getStorageValue() >= kPackEntryStorageCount )
+        {
+            SW_LOG_ERROR_ID( "PackReader.UnknownEntryStorage", "Pack entry has an unknown storage method %#: %#", static_cast<uint32>( diskEntry.getStorageValue() ), _packFilePath );
+            return false;
+        }
+        const uint64 dataOffset = diskEntry.getDataOffset();
+        if ( dataOffset > payloadEnd || diskEntry._compressedSize > payloadEnd - dataOffset )
         {
             SW_LOG_ERROR_ID( "PackReader.PackEntryPayloadLies", "Pack entry payload lies outside the payload region %# (offset %#, size %#, region end %#)",
-                             _packFilePath, diskEntry._dataOffset, diskEntry._compressedSize, payloadEnd );
+                             _packFilePath, dataOffset, diskEntry._compressedSize, payloadEnd );
             return false;
         }
 

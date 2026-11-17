@@ -113,10 +113,11 @@ namespace sw
         [[nodiscard]] expected<void> open( string_view packPath, const PackWriterDesc& desc );
 
         /**
-         * @brief 팩 안 경로 @p relativePath 에 @p bytes 를 담습니다. 창이 차면 그 자리에서 압축해 씁니다.
+         * @brief 팩 안 경로 @p relativePath 에 @p bytes 를 @p storage 방식으로 담습니다. 창이 차면 그 자리에서 압축해 씁니다.
+         * @param storage 이미 압축된 형식은 `Stored`(쿠커는 PackConfig `_listStoredExtension` 으로 정한다)
          * @return 경로 해시가 앞 항목보다 크지 않거나(순서 · 중복), 항목이 리더의 크기 한도를 넘거나, 압축 · 쓰기가 실패하면 오류입니다.
          */
-        [[nodiscard]] expected<void> append( string_view relativePath, vector<uint8> bytes );
+        [[nodiscard]] expected<void> append( string_view relativePath, PackEntryStorage storage, vector<uint8> bytes );
 
         /** @brief 남은 항목과 색인 구역 · 헤더를 쓰고 대상 파일과 바꿔 끼웁니다. 성공이든 실패든 이 쓰기는 닫힌다. */
         [[nodiscard]] expected<PackWriteResult> close();
@@ -135,9 +136,10 @@ namespace sw
         /** @brief 창에 모아 둔 항목 하나입니다. */
         struct PendingEntry
         {
-            string        _relativePath;
-            uint64        _pathHash{ 0 };
-            vector<uint8> _bytes;
+            string           _relativePath;
+            uint64           _pathHash{ 0 };
+            vector<uint8>    _bytes;
+            PackEntryStorage _storage{ PackEntryStorage::Blocks };
         };
         /** @brief 앞 빌드 팩에서 항목 하나가 차지한 자리입니다. */
         struct PreviousSlot

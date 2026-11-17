@@ -190,12 +190,13 @@ namespace sw
                     }
                     const Source& source = listSource[sourceIt->second];
                     vector<uint8> bytes;
-                    if ( listReader[source._packIndex].readFile( source._pathInPack, bytes ) == false )
+                    PackFileEntry sourceEntry;
+                    if ( listReader[source._packIndex].getFileEntry( source._pathInPack, sourceEntry ) == false || listReader[source._packIndex].readFile( source._pathInPack, bytes ) == false )
                     {
                         SW_LOG_ERROR_ID( "PackPatchBuilder.PackCouldNotRead", "Pack '%#' could not read '%#'", listPackPath[source._packIndex], source._pathInPack );
                         return false;
                     }
-                    step = writer.append( changedPath, std::move( bytes ) );
+                    step = writer.append( changedPath, sourceEntry._storage, std::move( bytes ) ); // 저장 방식은 새 빌드의 팩이 정한 그대로
                 }
                 const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
                 if ( closed.has_value() == false )

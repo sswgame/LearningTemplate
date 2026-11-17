@@ -67,6 +67,22 @@ namespace sw
         Slot        ///< 앞 빌드의 팩이 있으면 안 바뀐 항목이 앞 빌드의 자리(슬롯)를 지키고 새 항목 · 커진 항목은 앞 페이로드 끝 뒤에 붙는다
     };
 
+    /**
+     * @enum PackEntryStorage
+     * @brief 항목 하나의 저장 방식입니다(FAT 칸 `_placement` 의 위 8 비트). 언리얼 pak 항목의 압축 방식 번호 자리다.
+     * @details 이미 압축된 형식(BCn `.dds` · `.ktx2` · 이미지 · 오디오)은 다시 압축해도 줄지 않고 범위 읽기마다 풀기만 든다 — `Stored` 로 담으면 범위 읽기가
+     *          풀기 없이 그 블록의 바이트를 그대로 준다(첫 로드의 머리 + 꼬리 읽기). 블록 · CRC · 블록 요약은 두 방식이 같다. 쿠커가 항목마다 정한다(PackConfig `_listStoredExtension`).
+     *          **값은 디스크에 박힌다. 새 방식은 뒤에 덧붙이고 `kPackEntryStorageCount` 를 올린다** — 리더는 그 밖의 값을 거절한다.
+     */
+    ENUM()
+    enum class PackEntryStorage : uint8
+    {
+        Blocks = 0, ///< 블록마다 팩 코덱으로 압축한다(코덱이 `None` 이면 그대로)
+        Stored = 1, ///< 압축하지 않는다 — 블록의 저장 바이트가 곧 원본이다
+    };
+    /** @brief `PackEntryStorage` 값의 수입니다(리더가 범위를 본다). */
+    inline constexpr uint8 kPackEntryStorageCount = 2;
+
     // **값은 디스크에 박힌다. 새 코덱은 뒤에 덧붙이기만 한다.** 기존 값을 옮기면 이미 쿠킹된 팩을
     // 못 읽는다. 스트림 쪽 `CompressionCodecType` 과는 일부러 값이 다르다(독립된 포맷이다).
 
@@ -155,15 +171,28 @@ namespace sw
     /**
      * @struct PackFileEntryOnDisk
      * @brief 디스크에 저장되는 파일 할당 테이블(FAT) 항목 하나(32바이트)입니다.
+     * @details 페이로드 오프셋과 저장 방식은 한 칸(`_placement`)에 함께 든다 — 오프셋 56 비트(64 PiB)면 넉넉하고 항목이 32 바이트로 남는다. 칸은 접근 함수로만 읽고 쓴다.
      */
     struct PackFileEntryOnDisk
     {
+        /** @brief `_placement` 에서 오프셋이 차지하는 아래 비트 수입니다. */
+        static constexpr uint32 kDataOffsetBits = 56;
+        /** @brief 오프셋이 담길 수 있는 가장 큰 값입니다. */
+        static constexpr uint64 kMaxDataOffset = ( uint64{ 1 } << kDataOffsetBits ) - 1;
+
         uint64 _pathHash{ 0 };         ///< 팩 안 경로의 대소문자 무시 FNV-1a 64비트 해시 (offset 0)
-        uint64 _dataOffset{ 0 };       ///< 팩 파일 안 페이로드 시작 오프셋(섹터 정렬) (offset 8)
+        uint64 _placement{ 0 };        ///< 아래 56 비트 = 페이로드 시작 오프셋, 위 8 비트 = 저장 방식(`PackEntryStorage`) (offset 8)
         uint32 _compressedSize{ 0 };   ///< 압축된 데이터 크기(무압축이면 원본 크기) (offset 16)
         uint32 _uncompressedSize{ 0 }; ///< 압축 해제 후 원본 크기 (offset 20)
         uint32 _firstBlock{ 0 };       ///< 블록 표 안 이 항목의 첫 블록. 블록 수는 `ceil( _uncompressedSize / _blockSize )`(빈 항목은 0)이고 FAT 순서대로 이어진다 (offset 24)
         uint32 _stringPoolOffset{ 0 }; ///< 스트링 풀 안 항목 경로 오프셋(NUL 종료, 해시가 `_pathHash` 와 같아야 한다) (offset 28)
+
+        /** @brief 페이로드 시작 오프셋입니다. */
+        uint64 getDataOffset() const { return _placement & kMaxDataOffset; }
+        /** @brief 저장 방식의 디스크 값입니다 — 리더가 `kPackEntryStorageCount` 안인지 본 뒤에 `PackEntryStorage` 로 읽는다. */
+        uint8 getStorageValue() const { return static_cast<uint8>( _placement >> kDataOffsetBits ); }
+        /** @brief 오프셋과 저장 방식을 적습니다. @p dataOffset 은 `kMaxDataOffset` 이하여야 한다(쓰는 쪽이 먼저 본다). */
+        void setPlacement( uint64 dataOffset, PackEntryStorage storage ) { _placement = ( dataOffset & kMaxDataOffset ) | ( static_cast<uint64>( storage ) << kDataOffsetBits ); }
     };
 
     /**
@@ -172,7 +201,7 @@ namespace sw
      */
     struct PackBlockEntryOnDisk
     {
-        uint32 _compressedEnd{ 0 }; ///< 항목 `_dataOffset` 기준 이 블록의 저장 바이트 누적 끝 (offset 0)
+        uint32 _compressedEnd{ 0 }; ///< 항목 페이로드 시작 기준 이 블록의 저장 바이트 누적 끝 (offset 0)
         uint32 _crc32{ 0 };         ///< 압축 전 블록의 CRC32 (offset 4)
     };
 } // namespace sw
@@ -204,7 +233,7 @@ namespace sw
     static_assert( offsetof( PackHeader, _reserved ) == offsetof( PackHeader, _blockSize ) + sizeof( uint32 ) );
     static_assert( sizeof( PackFileEntryOnDisk ) == 32, "PackFileEntryOnDisk must be exactly 32 bytes" );
     static_assert( offsetof( PackFileEntryOnDisk, _pathHash ) == 0 );
-    static_assert( offsetof( PackFileEntryOnDisk, _dataOffset ) == 8 );
+    static_assert( offsetof( PackFileEntryOnDisk, _placement ) == 8 );
     static_assert( offsetof( PackFileEntryOnDisk, _compressedSize ) == 16 );
     static_assert( offsetof( PackFileEntryOnDisk, _uncompressedSize ) == 20 );
     static_assert( offsetof( PackFileEntryOnDisk, _firstBlock ) == 24 );
@@ -221,12 +250,13 @@ namespace sw
      */
     struct PackFileEntry
     {
-        uint64 _pathHash{ 0 };
-        uint64 _dataOffset{ 0 };
-        uint32 _compressedSize{ 0 };
-        uint32 _uncompressedSize{ 0 };
-        uint32 _firstBlock{ 0 };
-        string _relativePath; ///< 스트링 풀에서 읽은 팩 안 경로(해시가 `_pathHash` 와 맞는 것을 열 때 확인했다)
+        uint64           _pathHash{ 0 };
+        uint64           _dataOffset{ 0 };
+        uint32           _compressedSize{ 0 };
+        uint32           _uncompressedSize{ 0 };
+        uint32           _firstBlock{ 0 };
+        PackEntryStorage _storage{ PackEntryStorage::Blocks };
+        string           _relativePath; ///< 스트링 풀에서 읽은 팩 안 경로(해시가 `_pathHash` 와 맞는 것을 열 때 확인했다)
     };
 
 } // namespace sw

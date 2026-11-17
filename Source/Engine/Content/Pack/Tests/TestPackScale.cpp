@@ -103,7 +103,7 @@ namespace sw
                 for ( size_t order = 0; order < listOrder.size() && step.has_value(); ++order )
                 {
                     const uint32 index = listOrder[order];
-                    step               = writer.append( makeEntryPath( index ), makeEntryBytes( index, listSize[index] ) );
+                    step               = writer.append( makeEntryPath( index ), PackEntryStorage::Blocks, makeEntryBytes( index, listSize[index] ) );
                 }
                 if ( step.has_value() == false )
                     return nullopt;
