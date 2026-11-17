@@ -4,8 +4,6 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
-
 namespace sw::editor
 {
     vector<hashed_string> RetargetProfileEdit::parseNames( string_view text )
@@ -87,8 +85,4 @@ namespace sw::editor
         return true;
     }
 
-    void RetargetProfileEdit::recordDocumentEdit( const DocumentEditRecorder& recorder, string_view label )
-    {
-        recorder.notifyEdited( label );
-    }
 } // namespace sw::editor

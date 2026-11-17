@@ -13,15 +13,12 @@
 
 namespace sw::editor
 {
-    class DocumentEditRecorder;
     /**
      * @struct RetargetProfileEdit
      * @brief 본 이름 글과 새 항목 규칙입니다.
      */
     struct RetargetProfileEdit
     {
-        /** @brief 문서를 고쳤음을 문서 패널의 창구 @p recorder 로 알립니다 — 되돌리기 한 단계와 미저장이 된다(감사 E-16: 문서 편집 알림은 Model 만 낸다). */
-        static void recordDocumentEdit( const DocumentEditRecorder& recorder, string_view label );
         /** @brief "a, b" 를 이름 목록으로 읽습니다. */
         static vector<hashed_string> parseNames( string_view text );
         /** @brief 이름 목록을 "a, b" 로 잇습니다. */
