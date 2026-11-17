@@ -114,11 +114,15 @@ namespace sw::editor
         void pollExternalChange( float64 nowSeconds );
         /** @brief 고친 것이 있는 채로 소켓 파일이 디스크에서 바뀌었으면 true 입니다. */
         bool hasExternalChange() const { return _bExternalChange; }
-        /** @brief 소켓 · 포즈 모델 가운데 미저장이 있으면 true 입니다. */
-        bool isDirty() const { return _sockets.isDirty() || _pose.isDirty(); }
-        /** @brief 미저장인 소켓 · 포즈 파일을 씁니다. 하나라도 못 쓰면 false 이고 까닭은 상태 줄에 남습니다. */
+        /**
+         * @brief 이 문서가 여는 파일(소켓 · 레퍼런스 포즈 · 몸 데이터 셋) 가운데 미저장이 있으면 true 입니다.
+         * @details 패널의 미저장 표시 · 닫기 확인 · 모두 저장이 이 하나를 본다 — 몸 데이터가 빠져 있어 창을 닫으면 몸 편집이 조용히 사라졌다(감사 G-12).
+         *          외형 선택은 파일이 아니라 사용자 프리셋 저장소에 쓰므로 여기에 들지 않는다(프리셋 저장 단추가 따로 표시한다).
+         */
+        bool isDirty() const { return _sockets.isDirty() || _pose.isDirty() || isBodyDataDirty(); }
+        /** @brief 미저장인 파일(`isDirty` 의 목록)을 씁니다. 하나라도 못 쓰면 false 이고 까닭은 상태 줄에 남습니다. */
         [[nodiscard]] bool saveFiles( float64 nowSeconds );
-        /** @brief `saveFiles` 가 쓸 리소스 id 입니다(미저장인 소켓 · 포즈 파일). */
+        /** @brief `saveFiles` 가 쓸 파일입니다(소켓 · 포즈는 리소스 id, 몸 데이터는 디스크 경로). */
         void collectFilesToSave( vector<string>& outListAssetID ) const;
         /** @brief 두 모델을 마지막으로 읽거나 저장한 상태로 돌립니다. 외형 선택은 파일 문서가 아니라 건드리지 않습니다. */
         void revert();
