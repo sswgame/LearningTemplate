@@ -210,19 +210,19 @@ static uint2 Bindless::getEngineTextureSize( uint index, [[maybe_unused]] uint e
     g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( index ) )].GetDimensions( size.x, size.y );
     return size;
 }
-/** @brief 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, PassTexture::gatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다. */
+/** @brief @p uv 는 텍스처 전체 기준이다(부르는 쪽 FSR 이 뷰 사각형을 루트 상수로 직접 잰다 — 뷰 사각형 변환을 하지 않는다, 세 채널 같게). 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, PassTexture::gatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다. */
 static float4 Bindless::gatherEngineChannel( uint index, [[maybe_unused]] uint emulatedSlot, uint channel, float2 uv )
 {
     const uint slot = Bindless::textureSlot( index );
     #if defined( __spirv__ )
     if ( channel == 0u )
-        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), PassTexture::toViewRectUV( uv ) );
+        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
     if ( channel == 1u )
         return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherGreen( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherBlue( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
     #else
     if ( channel == 0u )
-        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( g_SwSampler3, PassTexture::toViewRectUV( uv ) );
+        return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( g_SwSampler3, uv );
     if ( channel == 1u )
         return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherGreen( g_SwSampler3, uv );
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherBlue( g_SwSampler3, uv );
