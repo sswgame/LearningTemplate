@@ -29,6 +29,7 @@ option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (E
 
 # 모듈(Engine · ModuleManager · RHI 백엔드 하나 · GameFramework · 키트 · 활성 게임 · DevTools)을 한 실행 파일에 정적으로 링크한다(언리얼 `IS_MONOLITHIC`).
 # 배포는 늘 켜고(아래), 개발 구성 중에는 모듈을 동적으로 올리지 못하는 플랫폼(웹 · Android — 프리셋 Web-Release · Android-Release)이 켠다.
+# Windows 의 Ninja-Release-Static 은 같은 구성을 데스크톱에서 먼저 짓고 시나리오로 확인하는 자리다.
 # 켜면 동적 로딩을 전제한 것(핫 리로드 `DevTools/ModuleReload` · 에디터 모듈 · RHI 백엔드 DLL · 모듈 매니페스트 해석)을 짓지 않고, 그 코드는 `SW_WITH_DYNAMIC_MODULES`
 # (Core/Foundation/DynamicModules.h)로 컴파일에서 빠진다. 배포인지(진단 · 개발 도구 · 테스트 · 자동화 실행기)는 `SW_SHIPPING_BUILD` 가 따로 정한다 — 정적 개발 구성은
 # DevTools(자동화 실행기 · 콘솔)와 테스트를 담는다(감사 P-9, 언리얼 Development + Gauntlet).
