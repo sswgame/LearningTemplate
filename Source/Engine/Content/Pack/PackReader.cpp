@@ -2,6 +2,7 @@
 
 #include "Engine/Content/Pack/PackReader.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/array.h"
@@ -19,20 +20,29 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
     {
-        /** @brief 폴더 색인의 키입니다 — 아스키 소문자로 접습니다(폴더 비교가 대소문자를 무시하며 `StringUtil::startsWith` 와 같은 접기입니다). */
-        string makeFolderKey( string_view folder )
+        struct PackReaderInternal
         {
-            string key( folder.data(), folder.size() );
-            for ( utf8& ch : key )
+            /**
+             * @brief 항목 경로의 폴더(마지막 '/' 앞)입니다. '/' 가 없으면 팩 맨 위(빈 글)이고, 맨 앞 '/' 이거나 '/' 로 끝나는 경로(폴더 이름이 비거나 파일 이름이 빔)는
+             *        어느 폴더의 항목도 아니라 nullopt 입니다.
+             */
+            static optional<string_view> findFolder( string_view path )
             {
-                ch = StringUtil::toLowerChar( ch );
+                const size_t slash = path.rfind( '/' );
+                if ( slash == string_view::npos )
+                    return string_view{};
+                const bool bHasFolderAndName = 0 < slash && slash + 1 < path.size();
+                if ( bHasFolderAndName == false )
+                    return nullopt;
+                return path.substr( 0, slash );
             }
-            return key;
-        }
+        };
     } // namespace
 } // namespace sw
 
@@ -43,9 +53,9 @@ namespace sw
         , _file{}
         , _packFilePath{}
         , _header{}
-        , _mapEntry{}
+        , _listEntry{}
         , _listBlock{}
-        , _mapFolderEntry{}
+        , _listFolderEntry{}
         , _mountDomain{}
         , _stringPoolBytes{}
     {
@@ -61,9 +71,9 @@ namespace sw
         , _file{}
         , _packFilePath{}
         , _header{}
-        , _mapEntry{}
+        , _listEntry{}
         , _listBlock{}
-        , _mapFolderEntry{}
+        , _listFolderEntry{}
         , _mountDomain{}
         , _stringPoolBytes{}
     {
@@ -88,9 +98,9 @@ namespace sw
         _file            = std::move( other._file );
         _packFilePath    = std::move( other._packFilePath );
         _header          = other._header;
-        _mapEntry        = std::move( other._mapEntry );
+        _listEntry       = std::move( other._listEntry );
         _listBlock       = std::move( other._listBlock );
-        _mapFolderEntry  = std::move( other._mapFolderEntry );
+        _listFolderEntry = std::move( other._listFolderEntry );
         _mountDomain     = std::move( other._mountDomain );
         _stringPoolBytes = std::move( other._stringPoolBytes );
         other._file.close();
@@ -201,9 +211,9 @@ namespace sw
         _file.close();
         _packFilePath.clear();
         _header = PackHeader{};
-        _mapEntry.clear();
+        _listEntry.clear();
         _listBlock.clear();
-        _mapFolderEntry.clear();
+        _listFolderEntry.clear();
         _mountDomain.clear();
         _stringPoolBytes.clear();
     }
@@ -214,10 +224,27 @@ namespace sw
         return _file.isValid();
     }
 
+    optional<PackReader::EntryIndex> PackReader::findEntryIndex( uint64 pathHash ) const
+    {
+        // FAT 은 경로 해시 오름차순이고 같은 해시가 없다(열 때 확인했다) — 이진 탐색이다. 30 만 항목에 19 단계.
+        const auto it = std::lower_bound( _listEntry.begin(), _listEntry.end(), pathHash, []( const PackFileEntryOnDisk& entry, uint64 hash )
+        { return entry._pathHash < hash; } );
+        if ( it == _listEntry.end() || it->_pathHash != pathHash )
+            return nullopt;
+        return static_cast<EntryIndex>( it - _listEntry.begin() );
+    }
+
+    string_view PackReader::getEntryPath( EntryIndex entryIndex ) const
+    {
+        const string_view pool{ _stringPoolBytes.data(), _stringPoolBytes.size() };
+        const uint32      offset = _listEntry[entryIndex]._stringPoolOffset;
+        return pool.substr( offset, pool.find( '\0', offset ) - offset );
+    }
+
     bool PackReader::hasFile( uint64 pathHash ) const
     {
         ScopedLock<mutex> lock{ _fileMutex };
-        return _mapEntry.find( pathHash ) != _mapEntry.end();
+        return findEntryIndex( pathHash ).has_value();
     }
 
     bool PackReader::hasFile( string_view relativePath ) const
@@ -227,12 +254,17 @@ namespace sw
 
     bool PackReader::getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const
     {
-        ScopedLock<mutex> lock{ _fileMutex };
-        auto              it = _mapEntry.find( pathHash );
-        if ( it == _mapEntry.end() )
+        ScopedLock<mutex>          lock{ _fileMutex };
+        const optional<EntryIndex> entryIndex = findEntryIndex( pathHash );
+        if ( entryIndex.has_value() == false )
             return false;
-
-        outEntry = it->second;
+        const PackFileEntryOnDisk& diskEntry = _listEntry[*entryIndex];
+        outEntry._pathHash                   = diskEntry._pathHash;
+        outEntry._dataOffset                 = diskEntry._dataOffset;
+        outEntry._compressedSize             = diskEntry._compressedSize;
+        outEntry._uncompressedSize           = diskEntry._uncompressedSize;
+        outEntry._firstBlock                 = diskEntry._firstBlock;
+        outEntry._relativePath.assign( getEntryPath( *entryIndex ) );
         return true;
     }
 
@@ -244,74 +276,83 @@ namespace sw
     void PackReader::collectAllEntryPaths( vector<string>& outListPath ) const
     {
         ScopedLock<mutex> lock{ _fileMutex };
-        outListPath.reserve( outListPath.size() + _mapEntry.size() );
-        for ( const auto& mapItem : _mapEntry )
+        outListPath.reserve( outListPath.size() + _listEntry.size() );
+        for ( EntryIndex entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
-            outListPath.emplace_back( mapItem.second._relativePath );
+            outListPath.emplace_back( getEntryPath( entryIndex ) );
         }
     }
 
     void PackReader::collectFolderEntries( string_view folder, vector<string>& outListPath ) const
     {
-        // 폴더 색인(`populateFolderIndex`)에서 그 폴더의 항목만 읽는다 — 팩 전체를 잠금 안에서 훑지 않는다(항목 N 개에 호출마다 O(N) 이었다).
+        // 폴더 색인(`populateFolderIndex`)에서 그 폴더의 항목만 읽는다 — 팩 전체를 잠금 안에서 훑지 않는다. 경로 해시는 대소문자를 무시하므로 폴더 비교도 그렇다.
+        const uint64      folderHash = HashUtil::computeStringHash64( folder );
         ScopedLock<mutex> lock{ _fileMutex };
-        const auto        itFolder = _mapFolderEntry.find( makeFolderKey( folder ) );
-        if ( itFolder == _mapFolderEntry.end() )
-            return;
-        outListPath.reserve( outListPath.size() + itFolder->second.size() );
-        for ( const uint64 pathHash : itFolder->second )
+        const auto        range = std::equal_range( _listFolderEntry.begin(), _listFolderEntry.end(), FolderEntry{ folderHash, 0 },
+                                                    []( const FolderEntry& left, const FolderEntry& right )
+               { return left._folderHash < right._folderHash; } );
+        for ( auto it = range.first; it != range.second; ++it )
         {
-            const auto itEntry = _mapEntry.find( pathHash );
-            if ( itEntry != _mapEntry.end() )
-                outListPath.emplace_back( itEntry->second._relativePath );
+            // 해시가 같은 다른 폴더(충돌)는 글로 거른다.
+            const string_view           path      = getEntryPath( it->_entryIndex );
+            const optional<string_view> entryRoot = PackReaderInternal::findFolder( path );
+            if ( entryRoot.has_value() && StringUtil::equals( *entryRoot, folder, true ) )
+                outListPath.emplace_back( path );
         }
     }
 
     void PackReader::populateFolderIndex()
     {
-        _mapFolderEntry.clear();
-        for ( const auto& mapItem : _mapEntry )
+        _listFolderEntry.clear();
+        _listFolderEntry.reserve( _listEntry.size() );
+        for ( EntryIndex entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
-            const string_view path( mapItem.second._relativePath );
-            // 폴더는 마지막 '/' 앞까지다. '/' 가 없으면 팩 맨 위, 맨 앞 '/' 이거나 '/' 로 끝나는 경로(폴더 이름이 비거나 파일 이름이 빔)는 어느 폴더의 항목도 아니다.
-            const size_t slash = path.rfind( '/' );
-            if ( slash == string_view::npos )
-            {
-                _mapFolderEntry[string{}].push_back( mapItem.first );
-                continue;
-            }
-            const bool bHasFolderAndName = 0 < slash && slash + 1 < path.size();
-            if ( bHasFolderAndName )
-                _mapFolderEntry[makeFolderKey( path.substr( 0, slash ) )].push_back( mapItem.first );
+            const optional<string_view> folder = PackReaderInternal::findFolder( getEntryPath( entryIndex ) );
+            if ( folder.has_value() )
+                _listFolderEntry.push_back( FolderEntry{ HashUtil::computeStringHash64( *folder ), entryIndex } );
         }
+        VectorUtil::sort( _listFolderEntry, []( const FolderEntry& left, const FolderEntry& right )
+        { return left._folderHash != right._folderHash ? left._folderHash < right._folderHash : left._entryIndex < right._entryIndex; } );
     }
 
-    bool PackReader::makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
+    PackReader::ReadPlanResult PackReader::makeReadPlan( uint64 pathHash, uint64 offset, uint64 size, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
     {
         ScopedLock<mutex> lock{ _fileMutex };
         if ( _file.isValid() == false )
-            return false;
+            return ReadPlanResult::Missing;
+        const optional<EntryIndex> entryIndex = findEntryIndex( pathHash );
+        if ( entryIndex.has_value() == false )
+            return ReadPlanResult::Missing;
 
-        const auto it = _mapEntry.find( pathHash );
-        if ( it == _mapEntry.end() )
-            return false;
+        const PackFileEntryOnDisk& entry   = _listEntry[*entryIndex];
+        const uint64               rawSize = entry._uncompressedSize;
+        const uint64               length  = size == kToEntryEnd && offset <= rawSize ? rawSize - offset : size;
+        if ( offset > rawSize || length > rawSize - offset )
+            return ReadPlanResult::OutsideEntry;
 
-        const PackFileEntry& entry = it->second;
-        const uint32         count = ( entry._uncompressedSize + _header._blockSize - 1 ) / _header._blockSize; // 열 때 블록 줄이 표 안인 것을 확인했다
-        outPlan._dataOffset        = entry._dataOffset;
-        outPlan._uncompressedSize  = entry._uncompressedSize;
-        outPlan._blockSize         = _header._blockSize;
-        outPlan._compression       = static_cast<PackCompressionType>( _header._compressionType );
-        outPlan._bVerifyCRC        = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
-        outPlan._listBlock.assign( _listBlock.begin() + entry._firstBlock, _listBlock.begin() + entry._firstBlock + count );
+        // 걸친 블록 [first, last] 만 읽는다. 열 때 항목의 블록 줄이 표 안이고 누적 끝이 오르는 것을 확인했다.
+        const uint32 blockSize    = _header._blockSize;
+        const uint32 firstBlock   = static_cast<uint32>( offset / blockSize );
+        const uint32 endBlock     = length == 0 ? firstBlock : static_cast<uint32>( ( offset + length - 1 ) / blockSize + 1 );
+        const size_t tableBegin   = static_cast<size_t>( entry._firstBlock ) + firstBlock;
+        outPlan._storedBegin      = firstBlock == 0 || length == 0 ? 0 : _listBlock[tableBegin - 1]._compressedEnd;
+        outPlan._storedOffset     = entry._dataOffset + outPlan._storedBegin;
+        outPlan._firstBlockIndex  = firstBlock;
+        outPlan._uncompressedSize = entry._uncompressedSize;
+        outPlan._blockSize        = blockSize;
+        outPlan._sliceOffset      = static_cast<uint32>( offset - static_cast<uint64>( firstBlock ) * blockSize );
+        outPlan._sliceSize        = static_cast<uint32>( length );
+        outPlan._compression      = static_cast<PackCompressionType>( _header._compressionType );
+        outPlan._bVerifyCRC       = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
+        outPlan._listBlock.assign( _listBlock.begin() + tableBegin, _listBlock.begin() + tableBegin + ( endBlock - firstBlock ) );
         outFile = _file;
-        return true;
+        return ReadPlanResult::Ready;
     }
 
     bool PackReader::decodeStoredBytes( const PackReadPlan& plan, string_view packPath, const vector<uint8>& storedBytes, vector<uint8>& outBytes )
     {
         outBytes.clear();
-        // 블록 i 의 저장 바이트는 [끝(i-1), 끝(i)), 원본은 [i × 블록 크기, 그 + 원본 블록 크기) 다. 열 때 누적 끝이 오름차순이고 마지막이 항목의 저장 크기인 것을 확인했다.
+        // 블록 k(항목 안 번호 first + k)의 저장 바이트는 [끝(k-1), 끝(k)) 에서 계획의 시작(`_storedBegin`)을 뺀 자리다.
         ICompressionCodec* pCodec = nullptr;
         if ( plan._compression != PackCompressionType::None )
         {
@@ -323,40 +364,48 @@ namespace sw
                 return false;
             }
         }
-        // 원본 크기는 파일에서 온 값이다. 블록마다 저장 바이트로 나올 수 있는 크기인지 본 뒤에만 resize 한다(B-5).
-        uint32 storedBegin = 0;
-        for ( size_t index = 0; index < plan._listBlock.size(); ++index )
+        const auto getRawSize = [&plan]( size_t blockOrdinal ) -> size_t
         {
-            const uint32 storedSize = plan._listBlock[index]._compressedEnd - storedBegin;
-            const uint64 rawBegin   = static_cast<uint64>( index ) * plan._blockSize;
-            const uint64 rawSize    = plan._uncompressedSize - rawBegin < plan._blockSize ? plan._uncompressedSize - rawBegin : plan._blockSize;
+            const uint64 rawBegin = static_cast<uint64>( plan._firstBlockIndex + blockOrdinal ) * plan._blockSize;
+            return static_cast<size_t>( plan._uncompressedSize - rawBegin < plan._blockSize ? plan._uncompressedSize - rawBegin : plan._blockSize );
+        };
+        // 원본 크기는 파일에서 온 값이다. 블록마다 저장 바이트로 나올 수 있는 크기인지 본 뒤에만 resize 한다(B-5).
+        uint32 storedBegin = plan._storedBegin;
+        size_t decodedSize = 0;
+        for ( size_t ordinal = 0; ordinal < plan._listBlock.size(); ++ordinal )
+        {
+            const uint32 storedSize = plan._listBlock[ordinal]._compressedEnd - storedBegin;
+            const size_t rawSize    = getRawSize( ordinal );
             const bool   bFits      = pCodec != nullptr ? rawSize <= pCodec->decompressBound( storedSize ) : rawSize == storedSize;
             if ( bFits == false )
             {
-                SW_LOG_ERROR_ID( "PackReader.OriginalSizeEntryExceeds", "A block's original size does not fit its stored size in pack %# (%# from %# stored bytes)", packPath, rawSize, storedSize );
+                SW_LOG_ERROR_ID( "PackReader.OriginalSizeEntryExceeds", "A block's original size does not fit its stored size in pack %# (%# from %# stored bytes)", packPath,
+                                 static_cast<uint64>( rawSize ), storedSize );
                 return false;
             }
-            storedBegin = plan._listBlock[index]._compressedEnd;
+            storedBegin = plan._listBlock[ordinal]._compressedEnd;
+            decodedSize += rawSize;
         }
-        if ( storedBytes.size() != storedBegin )
+        if ( storedBytes.size() != storedBegin - plan._storedBegin )
             return false;
 
-        outBytes.resize( plan._uncompressedSize );
-        storedBegin = 0;
-        for ( size_t index = 0; index < plan._listBlock.size(); ++index )
+        // 통째 읽기는 결과 버퍼에 바로 풀고, 범위 읽기는 걸친 블록을 푼 뒤 그 범위만 남긴다.
+        outBytes.resize( decodedSize );
+        storedBegin = plan._storedBegin;
+        for ( size_t ordinal = 0; ordinal < plan._listBlock.size(); ++ordinal )
         {
-            const PackBlockEntryOnDisk& block      = plan._listBlock[index];
-            const uint8*                pStored    = storedBytes.data() + storedBegin;
+            const PackBlockEntryOnDisk& block      = plan._listBlock[ordinal];
+            const uint8*                pStored    = storedBytes.data() + ( storedBegin - plan._storedBegin );
             const size_t                storedSize = block._compressedEnd - storedBegin;
-            uint8*                      pRaw       = outBytes.data() + static_cast<size_t>( index ) * plan._blockSize;
-            const size_t                rawSize    = outBytes.size() - static_cast<size_t>( index ) * plan._blockSize < plan._blockSize ? outBytes.size() - static_cast<size_t>( index ) * plan._blockSize : plan._blockSize;
+            uint8*                      pRaw       = outBytes.data() + ordinal * plan._blockSize;
+            const size_t                rawSize    = getRawSize( ordinal );
             storedBegin                            = block._compressedEnd;
-            size_t decodedSize{ rawSize };
+            size_t decoded{ rawSize };
             if ( pCodec == nullptr )
                 Memory::copy( pRaw, pStored, rawSize );
-            else if ( pCodec->decompress( pStored, storedSize, pRaw, rawSize, decodedSize ) == false || decodedSize != rawSize )
+            else if ( pCodec->decompress( pStored, storedSize, pRaw, rawSize, decoded ) == false || decoded != rawSize )
             {
-                SW_LOG_ERROR_ID( "PackReader.DecompressionFailedEntryPack", "Decompression failed for block %# of an entry in pack: %#", static_cast<uint64>( index ), packPath );
+                SW_LOG_ERROR_ID( "PackReader.DecompressionFailedEntryPack", "Decompression failed for block %# of an entry in pack: %#", static_cast<uint64>( plan._firstBlockIndex + ordinal ), packPath );
                 outBytes.clear();
                 return false;
             }
@@ -364,32 +413,51 @@ namespace sw
             const uint32 computedCRC = plan._bVerifyCRC ? HashUtil::computeCRC32( pRaw, rawSize ) : block._crc32;
             if ( computedCRC != block._crc32 )
             {
-                SW_LOG_ERROR_ID( "PackReader.CRC32ChecksumMismatchPack", "CRC32 checksum mismatch in block %# of pack %# (computed 0x%# vs expected 0x%#)", static_cast<uint64>( index ), packPath,
-                                 Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ), Fmt( block._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
+                SW_LOG_ERROR_ID( "PackReader.CRC32ChecksumMismatchPack", "CRC32 checksum mismatch in block %# of pack %# (computed 0x%# vs expected 0x%#)",
+                                 static_cast<uint64>( plan._firstBlockIndex + ordinal ), packPath, Fmt( computedCRC, Format( 8, Format::Padding::Zero ).hex() ),
+                                 Fmt( block._crc32, Format( 8, Format::Padding::Zero ).hex() ) );
                 outBytes.clear();
                 return false;
             }
         }
+        if ( plan._sliceOffset != 0 || plan._sliceSize != outBytes.size() )
+        {
+            Memory::move( outBytes.data(), outBytes.data() + plan._sliceOffset, plan._sliceSize );
+            outBytes.resize( plan._sliceSize );
+        }
         return true;
     }
 
-    bool PackReader::readFile( uint64 pathHash, vector<uint8>& outBytes ) const
+    bool PackReader::readPlanned( uint64 pathHash, uint64 offset, uint64 size, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        PackReadPlan    plan{};
-        AsyncFileHandle file;
-        if ( makeReadPlan( pathHash, plan, file ) == false )
+        PackReadPlan         plan{};
+        AsyncFileHandle      file;
+        const ReadPlanResult planned = makeReadPlan( pathHash, offset, size, plan, file );
+        if ( planned == ReadPlanResult::OutsideEntry )
+            SW_LOG_ERROR_ID( "PackReader.RangeOutsideEntry", "Pack range read [%#, +%#) lies outside the entry with path hash %#", offset, size, pathHash );
+        if ( planned != ReadPlanResult::Ready )
             return false;
 
         // 읽기는 잠금 밖이다 — 위치 지정 읽기라 다른 스레드의 읽기와 겹쳐도 된다.
         vector<uint8> storedBytes;
         storedBytes.resize( plan.getStoredSize() );
-        if ( file.readAt( plan._dataOffset, storedBytes.data(), storedBytes.size() ) == false )
+        if ( file.readAt( plan._storedOffset, storedBytes.data(), storedBytes.size() ) == false )
         {
-            SW_LOG_ERROR_ID( "PackReader.ReadErrorPackBytes", "Read error in pack %# (%# bytes at offset %#)", file.getPath(), storedBytes.size(), plan._dataOffset );
+            SW_LOG_ERROR_ID( "PackReader.ReadErrorPackBytes", "Read error in pack %# (%# bytes at offset %#)", file.getPath(), storedBytes.size(), plan._storedOffset );
             return false;
         }
         return decodeStoredBytes( plan, file.getPath(), storedBytes, outBytes );
+    }
+
+    bool PackReader::readFile( uint64 pathHash, vector<uint8>& outBytes ) const
+    {
+        return readPlanned( pathHash, 0, kToEntryEnd, outBytes );
+    }
+
+    bool PackReader::readRange( uint64 pathHash, uint64 offset, uint32 size, vector<uint8>& outBytes ) const
+    {
+        return readPlanned( pathHash, offset, size, outBytes );
     }
 
     bool PackReader::readFile( string_view relativePath, vector<uint8>& outBytes ) const
@@ -410,13 +478,26 @@ namespace sw
 
     AsyncReadHandle PackReader::readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const
     {
-        PackReadPlan    plan{};
-        AsyncFileHandle file;
-        if ( makeReadPlan( pathHash, plan, file ) == false )
+        return readPlannedAsync( io, pathHash, 0, kToEntryEnd, priority, onComplete );
+    }
+
+    AsyncReadHandle PackReader::readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint32 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const
+    {
+        return readPlannedAsync( io, pathHash, offset, size, priority, onComplete );
+    }
+
+    AsyncReadHandle PackReader::readPlannedAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const
+    {
+        PackReadPlan         plan{};
+        AsyncFileHandle      file;
+        const ReadPlanResult planned = makeReadPlan( pathHash, offset, size, plan, file );
+        if ( planned == ReadPlanResult::OutsideEntry )
+            SW_LOG_ERROR_ID( "PackReader.RangeOutsideEntry", "Pack range read [%#, +%#) lies outside the entry with path hash %#", offset, size, pathHash );
+        if ( planned != ReadPlanResult::Ready )
             return AsyncReadHandle{};
 
         // 완료는 리더가 아니라 계획 · 파일 핸들 사본을 든다 — 그 사이 팩을 내려도 끝까지 읽고 푼다.
-        return io.readRange( file, plan._dataOffset, plan.getStoredSize(), priority,
+        return io.readRange( file, plan._storedOffset, plan.getStoredSize(), priority,
                              SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [plan, file, onComplete]( AsyncReadResult& result )
         {
             vector<uint8> bytes;
@@ -424,7 +505,7 @@ namespace sw
             if ( result.isSucceeded() )
                 bSuccess = decodeStoredBytes( plan, file.getPath(), result._bytes, bytes );
             else if ( result._status != AsyncIOStatus::Canceled )
-                SW_LOG_ERROR_ID( "PackReader.ReadErrorPackOffset", "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIO::getStatusName( result._status ), plan._dataOffset );
+                SW_LOG_ERROR_ID( "PackReader.ReadErrorPackOffset", "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIO::getStatusName( result._status ), plan._storedOffset );
             if ( onComplete.isBound() )
                 onComplete( bSuccess, bytes );
         } ) );
@@ -504,23 +585,21 @@ namespace sw
             return false;
         }
 
-        _mapEntry.clear();
-        _mapEntry.reserve( _header._fileCount );
         uint32 expectedFirstBlock = 0;
-        for ( const auto& diskEntry : listDiskEntry )
+        for ( size_t entryIndex = 0; entryIndex < listDiskEntry.size(); ++entryIndex )
         {
+            const PackFileEntryOnDisk& diskEntry = listDiskEntry[entryIndex];
+            // FAT 은 경로 해시 오름차순이어야 한다 — 리더는 정렬을 믿고 이진 탐색한다. 같은 해시 둘도 거절한다(어느 쪽이 이길지 조용히 정하지 않는다).
+            if ( entryIndex > 0 && diskEntry._pathHash <= listDiskEntry[entryIndex - 1]._pathHash )
+            {
+                SW_LOG_ERROR_ID( "PackReader.UnsortedIndex", "Pack index is not in ascending path hash order (entry %#) - cook it again: %#", static_cast<uint64>( entryIndex ), _packFilePath );
+                return false;
+            }
             // **항목도 페이로드 구역 안을 가리켜야 하고 블록 줄이 맞아야 한다.** `readFile` 은 항목 · 블록이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
             // 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다. 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
             if ( validateFileEntry( diskEntry, _header._indexOffset, expectedFirstBlock ) == false )
                 return false;
             expectedFirstBlock += static_cast<uint32>( ( static_cast<uint64>( diskEntry._uncompressedSize ) + _header._blockSize - 1 ) / _header._blockSize );
-
-            PackFileEntry memEntry{};
-            memEntry._pathHash         = diskEntry._pathHash;
-            memEntry._dataOffset       = diskEntry._dataOffset;
-            memEntry._compressedSize   = diskEntry._compressedSize;
-            memEntry._uncompressedSize = diskEntry._uncompressedSize;
-            memEntry._firstBlock       = diskEntry._firstBlock;
 
             // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아 풀 **밖까지** 훑는다. 종결자가 풀 안에 없거나
             // (끊긴 다운로드 · 손상) 경로의 해시가 항목과 다르면 이 팩의 나열이 읽을 수 없는 이름을 내놓으므로 팩을 거절한다.
@@ -530,14 +609,12 @@ namespace sw
                 SW_LOG_ERROR_ID( "PackReader.PackEntryPathLies", "Pack entry path lies outside the string pool or is empty (offset %#): %#", static_cast<uint32>( diskEntry._stringPoolOffset ), _packFilePath );
                 return false;
             }
-            memEntry._relativePath.assign( pool.substr( diskEntry._stringPoolOffset, terminator - diskEntry._stringPoolOffset ) );
-            if ( HashUtil::computeStringHash64( memEntry._relativePath ) != diskEntry._pathHash )
+            const string_view path = pool.substr( diskEntry._stringPoolOffset, terminator - diskEntry._stringPoolOffset );
+            if ( HashUtil::computeStringHash64( path ) != diskEntry._pathHash )
             {
-                SW_LOG_ERROR_ID( "PackReader.PackEntryPathDoes", "Pack entry path '%#' does not match its path hash: %#", memEntry._relativePath, _packFilePath );
+                SW_LOG_ERROR_ID( "PackReader.PackEntryPathDoes", "Pack entry path '%#' does not match its path hash: %#", path, _packFilePath );
                 return false;
             }
-
-            _mapEntry.insert_or_assign( diskEntry._pathHash, std::move( memEntry ) );
         }
         // 블록 표는 항목들의 블록을 FAT 순서로 빈틈 없이 잇는다 — 남는 줄이 있으면 쓰는 쪽과 읽는 쪽이 형식을 다르게 본다.
         if ( expectedFirstBlock != _header._blockCount )
@@ -546,6 +623,7 @@ namespace sw
             return false;
         }
 
+        _listEntry = std::move( listDiskEntry );
         populateFolderIndex();
         return true;
     }

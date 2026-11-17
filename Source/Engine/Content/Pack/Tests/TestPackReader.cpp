@@ -6,6 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Pack/PackReader.h"
+#include "Engine/Content/Pack/Tests/PackTestUtil.h"
 
 using namespace sw;
 
@@ -412,4 +413,100 @@ SW_TEST_CASE( PackReaderTest, ChecksumIsOptionalByFlag )
     SW_REQUIRE_TRUE( file.open( image, reader ) );
     vector<uint8> bytes;
     SW_EXPECT_TRUE( reader.readFile( image.getPath( 0 ), bytes ) );
+}
+
+// ---------------------------------------------------------------------- 정렬 배열 색인 · 범위 읽기
+
+// 리더는 FAT 을 그대로 들고 이진 탐색한다 — 경로 해시 오름차순이 아니거나 같은 해시가 둘이면 열지 않는다.
+SW_TEST_CASE( PackReaderTest, UnsortedIndexIsRefused )
+{
+    SW_EXPECT_LOG( "PackReader.UnsortedIndex" );
+    SW_EXPECT_LOG( "PackReader.FailedLoadFATIndex" );
+    const PackTestFile file;
+    PackReader         reader;
+    PackImage          swapped = Util::makeValidImage();
+    std::swap( swapped._listEntry[0], swapped._listEntry[1] );
+    SW_EXPECT_FALSE( file.open( swapped, reader ) );
+    SW_EXPECT_FALSE( reader.isOpen() );
+
+    PackImage duplicated               = Util::makeValidImage();
+    duplicated._listEntry[1]._pathHash = duplicated._listEntry[0]._pathHash;
+    SW_EXPECT_FALSE( file.open( duplicated, reader ) );
+}
+
+// 범위 읽기는 걸친 블록만 읽어 풀고, 결과는 통째 읽기에서 같은 범위를 자른 것과 같다. 항목 밖 범위는 오류다.
+SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
+{
+    const string  packPath  = test::makeScratchPath( "SwPackReaderRange.pack" );
+    const uint32  blockSize = PackTestUtil::kBlockSize;
+    vector<uint8> content( 4 * blockSize + 777 );
+    for ( size_t index = 0; index < content.size(); ++index )
+    {
+        content[index] = static_cast<uint8>( index < content.size() / 2 ? ( index * 31 ) ^ ( index >> 9 ) : index / 4096 );
+    }
+    vector<std::pair<string, vector<uint8>>> listEntry;
+    listEntry.emplace_back( "textures/mips.dds", content );
+    listEntry.emplace_back( "small.txt", vector<uint8>{ 'h', 'i' } );
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionType::Zlib ), listEntry ) );
+
+    PackReader reader;
+    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    const uint64  pathHash = HashUtil::computeStringHash64( "textures/mips.dds" );
+    vector<uint8> whole;
+    SW_REQUIRE_TRUE( reader.readFile( pathHash, whole ) );
+    SW_REQUIRE_TRUE( whole == content );
+
+    const uint32                    size       = static_cast<uint32>( content.size() );
+    const std::pair<uint32, uint32> arrRange[] = {
+        {                0,             1},
+        {                0,     blockSize},
+        {    blockSize - 1,             2},
+        {        blockSize,     blockSize},
+        {              100, 3 * blockSize},
+        {         size - 7,             7},
+        {             size,             0},
+        {                0,          size},
+        {2 * blockSize + 5,             0},
+    };
+    for ( const std::pair<uint32, uint32>& range : arrRange )
+    {
+        vector<uint8> slice;
+        SW_REQUIRE_TRUE( reader.readRange( pathHash, range.first, range.second, slice ) );
+        SW_EXPECT_TRUE( slice == vector<uint8>( whole.begin() + range.first, whole.begin() + range.first + range.second ) );
+    }
+
+    SW_EXPECT_LOG( "PackReader.RangeOutsideEntry" );
+    vector<uint8> outside;
+    SW_EXPECT_FALSE( reader.readRange( pathHash, size - 1, 2, outside ) );
+    SW_EXPECT_FALSE( reader.readRange( pathHash, uint64{ size } + 1, 0, outside ) );
+    SW_EXPECT_FALSE( reader.readRange( HashUtil::computeStringHash64( "nope.dds" ), 0, 1, outside ) );
+    reader.close();
+    SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
+}
+
+// 블록 하나가 망가지면 그 블록에 걸친 읽기만 거절한다 — 다른 블록의 범위 읽기는 된다.
+SW_TEST_CASE( PackReaderTest, CorruptBlockIsRefused )
+{
+    SW_EXPECT_LOG( "PackReader.CRC32ChecksumMismatchPack" );
+    string content( 3 * kPackMinBlockSize + 10, 'a' );
+    for ( size_t index = 0; index < content.size(); ++index )
+    {
+        content[index] = static_cast<utf8>( 'a' + index % 26 );
+    }
+    PackImage image;
+    image.add( "big.bin", content );
+    image.finalize();
+    image._listData[2 * kPackMinBlockSize + 5] ^= 0x5Au; // 블록 2 안
+    const PackTestFile file;
+    PackReader         reader;
+    SW_REQUIRE_TRUE( file.open( image, reader ) );
+    const uint64  pathHash = HashUtil::computeStringHash64( "big.bin" );
+    vector<uint8> bytes;
+    SW_EXPECT_FALSE( reader.readFile( pathHash, bytes ) );
+    SW_EXPECT_TRUE( bytes.empty() );
+    SW_EXPECT_FALSE( reader.readRange( pathHash, 2 * kPackMinBlockSize, 1, bytes ) );
+    SW_EXPECT_FALSE( reader.readRange( pathHash, kPackMinBlockSize, 2 * kPackMinBlockSize, bytes ) ); // 블록 1 · 2 에 걸친다
+    SW_REQUIRE_TRUE( reader.readRange( pathHash, 10, kPackMinBlockSize, bytes ) );                    // 블록 0 · 1
+    SW_EXPECT_TRUE( bytes.size() == kPackMinBlockSize && bytes[0] == static_cast<uint8>( content[10] ) );
+    SW_EXPECT_TRUE( reader.readRange( pathHash, 3 * kPackMinBlockSize, 10, bytes ) ); // 블록 3
 }
