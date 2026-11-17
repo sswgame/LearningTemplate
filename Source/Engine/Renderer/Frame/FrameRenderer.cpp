@@ -443,16 +443,16 @@ namespace sw
         // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
         // 결정적 실행이면 상한 없이 모두 올리고 업로드 끝남까지 이 자리에서 기다린다.
         // 프레임당 상한 · 스트리밍 풀 예산은 `EngineConfig::_render`(Config/Engine/EngineConfig.json)가 정본이다.
-        const RenderConfig& renderConfig = engine::getSubsystem<EngineConfig>()._render;
+        const TextureStreamingConfig& streamingConfig = engine::getSubsystem<EngineConfig>()._render._textureStreaming;
         if ( bFinishAssetJobs )
             (void)textures.finishPendingLoads( pDevice );
         else
-            (void)textures.completePendingLoads( pDevice, renderConfig._textureUploadsPerFrame );
+            (void)textures.completePendingLoads( pDevice, streamingConfig._uploadsPerFrame );
         // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
         // 결정적 실행도 풀 예산은 지킨다(예산은 장면 내용으로만 정해져 결정적이다) — 풀리는 것은 프레임당 제출 수뿐이다.
         TextureStreamingBudget streamingBudget;
-        streamingBudget._maxUpgradesPerFrame = bFinishAssetJobs ? UINT32_MAX : renderConfig._textureStreamingUpgradesPerFrame;
-        streamingBudget._poolBytes           = static_cast<uint64>( renderConfig._textureStreamingPoolMegabytes ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._maxUpgradesPerFrame = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
+        streamingBudget._poolBytes           = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
         (void)textures.updateStreaming( pDevice, streamingBudget );
     }
 

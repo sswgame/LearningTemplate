@@ -124,6 +124,39 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct TextureStreamingConfig
+     * @brief 텍스처 밉 스트리밍의 정책 값입니다 — 렌더 스레드의 프레임당 제출 수, 위쪽 밉 풀 예산, 올리고 내리는 판단(`TextureStreamingPolicy`)의 값이 한 곳에 있다.
+     * @details 언리얼 `r.Streaming.*`(PoolSize · MaxNumTexturesToStreamPerFrame) · 유니티 `QualitySettings.streamingMipmaps*` 자리다.
+     */
+    REFLECT()
+    struct SW_API TextureStreamingConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 비동기 텍스처 로드 수의 상한입니다(`TextureCache::completePendingLoads` — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게). */
+        PROPERTY( Min = 1 )
+        uint32 _uploadsPerFrame{};
+
+        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한입니다(`TextureCache::updateStreaming` — 텍스처 하나가 밉 사슬 전부라 첫 로드보다 무겁다). */
+        PROPERTY( Min = 1 )
+        uint32 _upgradesPerFrame{};
+
+        /**
+         * @brief 밉 스트리밍이 위쪽 밉으로 올린 텍스처 바이트 합의 상한(MB)입니다(`TextureStreamingPool` · `TextureStreamingPolicy` — 언리얼 `r.Streaming.PoolSize`).
+         * @details 메모리 태그 예산(`MemoryBudget.json` 의 Texture — 모든 텍스처의 경고선)보다 작게 둔다. 그 나머지가 아래쪽 밉 · 렌더 텍스처 · CPU 텍스처 몫이다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _poolMegabytes{};
+
+        /** @brief 화면 크기를 알리지 않은 지 이만큼 지난 텍스처는 필요 없는 것으로 본다 — 예산을 넘으면 가장 먼저 내리고, 다시 보일 때까지 올리지 않는다(`TextureStreamingPolicy`). */
+        PROPERTY( Min = 1 )
+        uint32 _idleFramesBeforeRelease{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct RenderConfig
      * @brief 렌더러 정책 값입니다(감사 RN-16 — C++ 상수에 흩어졌던 렌더 정책을 이 한 자리로 옮긴다. 언리얼 `r.*` 콘솔 변수의 바탕 층 · 유니티 SRP 에셋 자리).
      * @details 셰이더가 읽는 값은 쿠킹 define 한 경로로만 간다(`ShaderCompiler::appendEngineDefines` — 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다).
@@ -154,20 +187,9 @@ namespace sw
         PROPERTY( Min = 0.0, Max = 0.99 )
         float32 _taaHistoryWeight{};
 
-        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 비동기 텍스처 로드 수의 상한입니다(`TextureCache::completePendingLoads` — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게). */
-        PROPERTY( Min = 1 )
-        uint32 _textureUploadsPerFrame{};
-
-        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한입니다(`TextureCache::updateStreaming` — 텍스처 하나가 밉 사슬 전부라 첫 로드보다 무겁다). */
-        PROPERTY( Min = 1 )
-        uint32 _textureStreamingUpgradesPerFrame{};
-
-        /**
-         * @brief 밉 스트리밍이 위쪽 밉으로 올린 텍스처 바이트 합의 상한(MB)입니다(`TextureStreamingPool` — 언리얼 `r.Streaming.PoolSize`). 넘는 텍스처는 아래쪽 밉 그대로다.
-         * @details 메모리 태그 예산(`MemoryBudget.json` 의 Texture — 모든 텍스처의 경고선)보다 작게 둔다. 그 나머지가 아래쪽 밉 · 렌더 텍스처 · CPU 텍스처 몫이다.
-         */
-        PROPERTY( Min = 1, Meta = "Units=MB" )
-        uint32 _textureStreamingPoolMegabytes{};
+        /** @brief 텍스처 밉 스트리밍 설정입니다(프레임당 제출 수 · 풀 예산 · 내리기까지의 유휴 프레임 — `TextureStreamingConfig`). 스트리밍 값은 이 칸 한 곳이다. */
+        PROPERTY()
+        TextureStreamingConfig _textureStreaming{};
     };
 } // namespace sw
 

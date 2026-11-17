@@ -665,7 +665,7 @@ namespace sw
                                          it->second._texture != nullptr && it->second._texture->isFullyResident() == false;
                 if ( bUpgradable == false )
                     continue;
-                // 풀 예산(`RenderConfig::_textureStreamingPoolMegabytes`) — 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받는다 — 작은 것이 건너뛰어 채우지 않는다).
+                // 풀 예산(`TextureStreamingConfig::_poolMegabytes`) — 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받는다 — 작은 것이 건너뛰어 채우지 않는다).
                 optional<TextureStreamingReservation> reservation = _impl->_streamingPool.tryReserve( upgrade._pImage->_bytes.size(), budget._poolBytes );
                 bOverBudget                                       = reservation.has_value() == false;
                 if ( bOverBudget == false )

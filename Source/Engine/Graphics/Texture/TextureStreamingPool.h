@@ -45,7 +45,7 @@ namespace sw
     /**
      * @class TextureStreamingPool
      * @brief 밉 스트리밍이 위쪽 밉으로 올린 텍스처의 바이트 합과 예산입니다(언리얼 `r.Streaming.PoolSize` · 유니티 Mipmap Streaming 의 메모리 예산 자리).
-     * @details 예산(`RenderConfig::_textureStreamingPoolMegabytes`)을 넘는 승급은 예약을 받지 못한다 — 그 텍스처는 아래쪽 밉 그대로다. 예약은 텍스처 항목이 쥐고
+     * @details 예산(`TextureStreamingConfig::_poolMegabytes`)을 넘는 승급은 예약을 받지 못한다 — 그 텍스처는 아래쪽 밉 그대로다. 예약은 텍스처 항목이 쥐고
      *          항목이 사라질 때 돌려준다. 첫 로드의 아래쪽 밉 · 렌더 텍스처 · CPU 텍스처는 세지 않는다(풀 밖이다).
      */
     class SW_API TextureStreamingPool

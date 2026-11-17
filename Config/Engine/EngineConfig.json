@@ -34,9 +34,12 @@
         "_shadowCascadeSplitLambda": 0.75,
         "_shadowLocalDepthBiasTexels": 1.5,
         "_taaHistoryWeight": 0.9,
-        "_textureUploadsPerFrame": 8,
-        "_textureStreamingUpgradesPerFrame": 2,
-        "_textureStreamingPoolMegabytes": 768
+        "_textureStreaming": {
+            "_uploadsPerFrame": 8,
+            "_upgradesPerFrame": 2,
+            "_poolMegabytes": 768,
+            "_idleFramesBeforeRelease": 300
+        }
     },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",
