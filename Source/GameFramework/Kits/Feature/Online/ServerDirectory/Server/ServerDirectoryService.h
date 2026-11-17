@@ -127,17 +127,17 @@ namespace sw
         /** @brief 지금 @p kind 에 걸린 점검이 @p accountID 를 막으면 true 입니다. 계정 서버와 게임 서버가 조립 단계에서 물을 수 있습니다. 막으면 그 점검 창을 @p pOutWindow 에 채웁니다. */
         bool isBlockedByMaintenance( string_view kind, AccountID accountID, UnixMilliseconds nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
 
-        // 변경 함수들이며 비동기이다. 완료는 takeCompletions 로 받는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
-        void setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
-        void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postAnnouncement( const ServiceAnnouncement& announcement, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag );
-        void removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        // 변경 함수들이며 비동기이다. 완료는 takeCompletions 로 받는다. @p actor 는 감사 기록의 GM 계정과 허락 가드이다 — 가드가 거절하면 kForbidden 과 거절 감사 줄이다.
+        void setMaintenance( const MaintenanceWindow& window, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
+        void clearMaintenance( string_view scope, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void postAnnouncement( const ServiceAnnouncement& announcement, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag );
+        void removeAnnouncement( uint64 announcementID, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag ) override;
 
         void takeCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
 
         // IServerDirectoryControl — GM 키트가 서버 조립 문맥으로 부른다
-        void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void setMaintenance( const ServerDirectoryMaintenanceChange& change, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
 
         uint64 getStatusRevision() const { return _statusRevision; }

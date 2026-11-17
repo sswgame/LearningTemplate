@@ -2,6 +2,7 @@
  * @file ServerDirectoryControl.h
  * @brief 서버 디렉터리의 점검과 공지를 바꾸는 인터페이스입니다. 서버 디렉터리 키트가 구현해 서버 조립 문맥(`OnlineServerKitContext::_kits`)에 내놓고, GM 키트가 읽어 부릅니다.
  * @details - 키트끼리 include 하지 않도록 값은 기반 타입으로만 주고받습니다. 서버 디렉터리 키트가 자기 형식(`MaintenanceWindow`, `ServiceAnnouncement`)으로 옮기고 같은 규칙으로 검사합니다.
+ *          - 변경은 운영자 권한 증명(`ServiceOperator`)을 받아야만 부를 수 있습니다. 가드가 쓰는 저장 일 안에서 허락을 보고, 거절하면 Forbidden 과 거절 감사 줄을 남깁니다.
  *          - 변경은 비동기입니다. 결과는 부른 쪽이 준 요청 태그와 함께 `takeControlCompletions` 로 받습니다. 감사 기록은 구현이 변경과 같은 트랜잭션에 씁니다.
  *          - 서비스 스레드 하나에서만 씁니다.
  */
@@ -11,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 
 namespace sw
@@ -48,6 +50,7 @@ namespace sw
         Ok = 0,
         Invalid,    ///< 규칙에 맞지 않는 값이다
         NotFound,   ///< 없는 공지나 점검이다
+        Forbidden,  ///< 운영자 가드가 허락하지 않았다(등급 부족 · 그사이 강등)
         Unavailable ///< 저장소를 쓸 수 없다. 다시 하면 된다
     };
 
@@ -63,7 +66,7 @@ namespace sw
 {
     /**
      * @class IServerDirectoryControl
-     * @brief 점검과 공지를 바꾸는 창입니다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 입니다.
+     * @brief 점검과 공지를 바꾸는 창입니다. @p actor 는 감사 기록의 GM 계정과 그 허락 확인입니다(라이브 운영 `ILiveEventControl` 과 같다).
      */
     class IServerDirectoryControl
     {
@@ -74,10 +77,10 @@ namespace sw
         IServerDirectoryControl( const IServerDirectoryControl& )            = delete;
         IServerDirectoryControl& operator=( const IServerDirectoryControl& ) = delete;
 
-        virtual void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
-        virtual void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )                            = 0;
-        virtual void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                = 0;
-        virtual void removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                                        = 0;
+        virtual void setMaintenance( const ServerDirectoryMaintenanceChange& change, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
+        virtual void clearMaintenance( string_view scope, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )                            = 0;
+        virtual void postAnnouncement( const ServerDirectoryAnnouncementChange& change, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag )                = 0;
+        virtual void removeAnnouncement( uint64 announcementID, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag )                                        = 0;
         /** @brief 끝난 변경을 @p outListCompletion 뒤에 붙입니다. */
         virtual void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) = 0;
     };
