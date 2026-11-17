@@ -100,6 +100,16 @@ namespace sw
     }
 
     template <typename AssetType>
+    const WeakInternVersion<const AssetType>* SharedAssetCache<AssetType>::findVersion( const shared_ptr<const AssetType>& pAsset )
+    {
+        if ( pAsset == nullptr )
+            return nullptr;
+        // 캐시가 없으면(캐시 없이 지은 객체를 쥔 테스트 · 모듈이 서기 전) 이 캐시에서 온 객체가 아니다 — 따라갈 판이 없다.
+        AssetCacheBase* const pCache = SharedAssetCacheLookup::findCache( SharedAssetCacheType<AssetType>::getKindName() );
+        return pCache != nullptr ? static_cast<SharedAssetCache<AssetType>*>( pCache )->_pTable->findVersion( pAsset ) : nullptr;
+    }
+
+    template <typename AssetType>
     uint32 SharedAssetCache<AssetType>::getReloadCount()
     {
         return getTable().getReloadCount();

@@ -99,6 +99,9 @@ namespace sw
             return bLoaded;
         }
 
+        /** @brief 이 표가 나눠 준 @p pAsset 의 판입니다(`SharedAssetRef` 가 따라갈 사슬의 머리). 이 표에서 오지 않았으면 nullptr 입니다. */
+        const WeakInternVersion<const AssetType>* findVersion( const shared_ptr<const AssetType>& pAsset ) const { return _table.findVersion( pAsset ); }
+
         /** @brief 그 경로를 지금 쥔 에셋입니다. 없으면 nullptr 입니다. */
         shared_ptr<const AssetType> findLive( string_view path ) const { return _table.findLive( makeKey( path ) ); }
 

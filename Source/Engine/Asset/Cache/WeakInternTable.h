@@ -44,33 +44,9 @@ namespace sw
     };
 
     /**
-     * @struct WeakInternVersionDeleter
-     * @brief 표가 나눠 준 포인터의 삭제자입니다. 그 값의 판(칸 주인)을 쥐고, 마지막 사용자가 놓으면 놓습니다. `std::get_deleter` 로 판을 찾는 손잡이이기도 하다.
-     */
-    template <typename ValueType>
-    struct WeakInternVersionDeleter
-    {
-        shared_ptr<WeakInternVersion<ValueType>> _pVersion;
-
-        // 표준 라이브러리에 따라 삭제자 객체는 약한 참조가 모두 사라질 때까지 남는다 — 칸의 약한 참조가 판을 붙들지 않게 여기서 놓는다.
-        void operator()( ValueType* ) { _pVersion.reset(); }
-    };
-
-    /**
-     * @brief 표가 나눠 준 포인터 @p pValue 의 판입니다. 표에서 오지 않은 포인터(테스트가 지은 값 등)면 nullptr 입니다.
-     * @details 나눠 준 포인터가 살아 있는 동안 판도 산다(삭제자가 쥔다).
-     */
-    template <typename ValueType>
-    WeakInternVersion<ValueType>* findWeakInternVersion( const shared_ptr<ValueType>& pValue )
-    {
-        WeakInternVersionDeleter<ValueType>* pDeleter = std::get_deleter<WeakInternVersionDeleter<ValueType>>( pValue );
-        return pDeleter != nullptr ? pDeleter->_pVersion.get() : nullptr;
-    }
-
-    /**
      * @class WeakInternTable
      * @brief 키 하나에 살아 있는 값 하나를 약한 참조로 듭니다. 소유는 받아 간 쪽에 있습니다.
-     * @details 나눠 주는 포인터는 삭제자(`WeakInternVersionDeleter`)가 값을 감싼 칸 주인(`LiveOwner`, 값의 판)을 쥔 포인터입니다. 마지막 사용자가 놓으면 칸 주인의 소멸자가 표에서 자기 칸을 지우고,
+     * @details 나눠 주는 포인터는 값을 감싼 칸 주인(`LiveOwner`, 값의 판)의 별칭 포인터입니다. 마지막 사용자가 놓으면 칸 주인의 소멸자가 표에서 자기 칸을 지우고,
      *          그 뒤(잠금 밖)에 값이 사라집니다 — 값의 소멸자가 같은 표의 다른 값을 놓아도 잠금이 겹치지 않습니다.
      * @tparam KeyType   표의 키입니다(`==` 와 @p KeyHash 로 찾습니다).
      * @tparam ValueType 나눠 줄 값의 타입입니다.
@@ -132,13 +108,26 @@ namespace sw
             old = it->second.lock();
             if ( old == nullptr )
                 return false;
-            WeakInternVersion<ValueType>* const pOldVersion = findWeakInternVersion( old );
+            WeakInternVersion<ValueType>* const pOldVersion = _pState->_mapVersion[old.get()]; // 칸의 값은 늘 판 표에 있다(`makeLive`)
             const shared_ptr<ValueType>         fresh       = makeLive( key, std::move( value ) );
             it->second                                      = fresh;
             // 칸의 값은 늘 최신 판이다 — 옛 판에는 아직 다음 판이 없다. 소유를 먼저 적고 원자 포인터로 알린다.
             pOldVersion->_pNextValue = fresh;
-            pOldVersion->_pNext.store( findWeakInternVersion( fresh ), std::memory_order_release );
+            pOldVersion->_pNext.store( _pState->_mapVersion[fresh.get()], std::memory_order_release );
             return true;
+        }
+
+        /**
+         * @brief 이 표가 나눠 준 @p pValue 의 판입니다. 이 표에서 오지 않은 포인터면 nullptr 입니다. 워커에서 불러도 됩니다(잠급니다).
+         * @details 판은 @p pValue 가 사는 동안 산다(칸 주인이 판이다). 따라가는 참조(`SharedAssetRef`)가 받을 때 한 번 찾는다.
+         */
+        WeakInternVersion<ValueType>* findVersion( const shared_ptr<ValueType>& pValue ) const
+        {
+            if ( pValue == nullptr )
+                return nullptr;
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            const auto        it = _pState->_mapVersion.find( pValue.get() );
+            return it != _pState->_mapVersion.end() ? it->second : nullptr;
         }
 
         /**
@@ -192,20 +181,22 @@ namespace sw
         }
 
     private:
-        /** @brief @p value 를 감싼 칸 주인을 짓고 나눠 줄 포인터를 만듭니다(삭제자가 칸 주인을 쥔다). 잠금 안에서 부른다. */
+        /** @brief @p value 를 감싼 칸 주인을 짓고 판 표에 올린 뒤 나눠 줄 별칭 포인터를 만듭니다. 잠금 안에서 부른다. */
         shared_ptr<ValueType> makeLive( const KeyType& key, shared_ptr<ValueType> value ) const
         {
             ValueType* const            pValue = value.get();
             const shared_ptr<LiveOwner> pOwner = sw::make_shared<LiveOwner>( _pState, key, std::move( value ) );
-            return shared_ptr<ValueType>( pValue, WeakInternVersionDeleter<ValueType>{ pOwner }, sw::Allocator<ValueType>{} );
+            _pState->_mapVersion[pValue]       = pOwner.get();
+            return shared_ptr<ValueType>{ pOwner, pValue };
         }
 
     private:
         /** @brief 잠금과 칸들입니다. 칸 주인이 약한 참조로 들어, 표가 먼저 사라져도 값을 놓을 때 지울 곳이 없을 뿐입니다. */
         struct State
         {
-            mutable mutex                                                  _mutex;
-            unordered_map<KeyType, weak_ptr<ValueType>, KeyHash> _mapValue SW_GUARDED_BY( _mutex );
+            mutable mutex                                                         _mutex;
+            unordered_map<KeyType, weak_ptr<ValueType>, KeyHash> _mapValue        SW_GUARDED_BY( _mutex );
+            unordered_map<const void*, WeakInternVersion<ValueType>*> _mapVersion SW_GUARDED_BY( _mutex ); ///< 값 주소 → 판(칸 주인). `clear` 뒤에도 산 값은 남고 칸 주인이 지운다
         };
 
         /** @brief 나눠 준 값 하나(한 판)를 소유하는 칸 주인입니다. 마지막 사용자가 놓으면 소멸자가 자기 칸을 지웁니다. */
@@ -232,7 +223,8 @@ namespace sw
                 if ( pState == nullptr )
                     return;
                 ScopedLock<mutex> lock{ pState->_mutex };
-                const auto        it = pState->_mapValue.find( _key );
+                pState->_mapVersion.erase( this->_pValue );
+                const auto it = pState->_mapValue.find( _key );
                 // 그 사이 `erase` 뒤에 같은 키로 새 값이 들었으면 그 칸은 살아 있다 — 만료된 칸(곧 이 주인의 칸)만 지운다.
                 if ( it != pState->_mapValue.end() && it->second.expired() )
                     pState->_mapValue.erase( it );

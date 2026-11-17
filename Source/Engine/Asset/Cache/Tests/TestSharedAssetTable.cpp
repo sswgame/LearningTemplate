@@ -66,7 +66,7 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadLeavesSnapshotAndRefFollows )
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> held;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/b.clip", &loadFake, held ) );
-    const sw::SharedAssetRef<FakeAsset> ref{ held };
+    const sw::SharedAssetRef<FakeAsset> ref{ held, table.findVersion( held ) };
     const uint32                        reloadsBefore = table.getReloadCount();
 
     s_bLoadFails = true;
@@ -100,7 +100,7 @@ SW_TEST_CASE( SharedAssetTableTest, RefFollowLatestReleasesOldVersions )
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> first;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/d.clip", &loadFake, first ) );
-    sw::SharedAssetRef<FakeAsset>       ref{ first };
+    sw::SharedAssetRef<FakeAsset>       ref{ first, table.findVersion( first ) };
     const sw::weak_ptr<const FakeAsset> weakFirst = first;
     first.reset();
     SW_REQUIRE_TRUE( table.reloadShared( "game/x/d.clip", &loadFake ) );
@@ -121,7 +121,7 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadWhileWorkerReads )
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> held;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/c.clip", &loadFake, held ) );
-    const sw::SharedAssetRef<FakeAsset> ref{ held };
+    const sw::SharedAssetRef<FakeAsset> ref{ held, table.findVersion( held ) };
     const int32                         seenGeneration = held->_generation;
     sw::atomic<bool>                    bStop{ false };
     sw::atomic<int32>                   changedCount{ 0 };

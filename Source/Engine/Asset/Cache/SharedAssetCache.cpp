@@ -21,6 +21,12 @@ namespace sw
         return *pCache;
     }
 
+    AssetCacheBase* SharedAssetCacheLookup::findCache( const utf8* pKindName )
+    {
+        AssetManager* const pAssetManager = engine::findSubsystem<AssetManager>();
+        return pAssetManager != nullptr ? pAssetManager->findAssetCache( pKindName ) : nullptr;
+    }
+
     Subscription SharedAssetCacheLookup::registerModuleCache( AssetCacheBase& cache, AssetCacheReloadFunction pReload )
     {
         // 모듈 서브시스템은 엔진 서비스가 선 뒤에 선다(`engine::registerModuleTypes`).
