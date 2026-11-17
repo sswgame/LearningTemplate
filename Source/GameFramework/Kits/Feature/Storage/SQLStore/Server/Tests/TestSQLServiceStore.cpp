@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 
 namespace
 {
@@ -268,7 +269,7 @@ namespace
             recordCommit( listLine, connection, "same key twice", twice, info );
             recordCommit( listLine, connection, "empty transaction", ServiceTransaction{}, info );
             vector<ServiceRecord> listRecord;
-            addLine( listLine, "list zero", connection.listRecords( kTable, "", "", 0, false, listRecord ) );
+            addLine( listLine, "list zero", ServiceRecordReader::readPage( connection, kTable, "", "", 0, false, listRecord )._result );
             return listLine;
         }
 
@@ -277,7 +278,7 @@ namespace
                               const hashed_string& table = kTable )
         {
             vector<ServiceRecord>                    listRecord;
-            const ServiceStoreResult                 result = connection.listRecords( table, prefix, cursor, maxCount, bDescending, listRecord );
+            const ServiceStoreResult                 result = ServiceRecordReader::readPage( connection, table, prefix, cursor, maxCount, bDescending, listRecord )._result;
             StringBuilder<constant::buffer::kMax256> lineBuilder;
             lineBuilder.appendFormat( "%#: %#", step, static_cast<int32>( result ) );
             string line{ lineBuilder.view() };
@@ -382,8 +383,8 @@ SW_TEST_CASE( SQLServiceStoreTest, ValuesTravelAsParameters )
     SW_REQUIRE_TRUE( SQLServiceStoreTestUtil::run( fixture._store, [&]( IServiceStoreConnection& connection )
     {
         vector<ServiceRecord> listRecord;
-        (void)connection.listRecords( kTable, hostile, hostile, 3, false, listRecord ); // 문장만 본다
-        (void)connection.listRecords( kTable, hostile, hostile, 3, true, listRecord );
+        (void)ServiceRecordReader::readPage( connection, kTable, hostile, hostile, 3, false, listRecord )._result; // 문장만 본다
+        (void)ServiceRecordReader::readPage( connection, kTable, hostile, hostile, 3, true, listRecord )._result;
     } ) );
     const vector<test::FakeSQLDriver::Statement> listStatement = fixture._driver.getStatements();
     SW_REQUIRE_EQUAL( size_t( 2 ), listStatement.size() );
@@ -543,7 +544,7 @@ SW_TEST_CASE( SQLServiceStoreTest, ReadFailuresAreUnavailable )
         SW_REQUIRE_TRUE( SQLServiceStoreTestUtil::run( fixture._store, [&]( IServiceStoreConnection& connection )
         {
             vector<ServiceRecord> listRecord;
-            listResult = connection.listRecords( kTable, "", "", 1, false, listRecord );
+            listResult = ServiceRecordReader::readPage( connection, kTable, "", "", 1, false, listRecord )._result;
         } ) );
         SW_EXPECT_TRUE( listResult == ServiceStoreResult::Unavailable );
     }

@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -585,7 +586,7 @@ namespace sw
     ServiceStoreResult EconomyStoreLogic::listDeliveries( IServiceStoreConnection& connection, int32 maxCount, vector<ReceiptDeliveryTask>& outListTask )
     {
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult read = connection.listRecords( getDeliveryTable(), "", "", maxCount, false, listRecord );
+        const ServiceStoreResult read = ServiceRecordReader::readPage( connection, getDeliveryTable(), "", "", maxCount, false, listRecord )._result;
         if ( read != ServiceStoreResult::Ok )
             return read;
         for ( const ServiceRecord& record : listRecord )

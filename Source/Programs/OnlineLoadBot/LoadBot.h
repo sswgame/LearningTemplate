@@ -28,6 +28,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotGameSession.h"
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"
+#include "Programs/OnlineLoadBot/LoadBotSchedule.h"
 
 namespace sw
 {
@@ -134,6 +135,7 @@ namespace sw
         ConsumerLease              _socialLease;
         ConsumerLease              _matchmakingLease;
         GameRandom                 _random;
+        LoadBotSchedule            _schedule; ///< 기다림이 끝나는 시각과 지연을 잴 기준 시각이다(시나리오 `_pacing`)
         vector<Frame>              _listFrame;
         vector<AccountClientReply> _listAccountReply;
         vector<ChatMessage>        _listChatMessage;
@@ -146,7 +148,7 @@ namespace sw
         StreamConnectionHandle     _connection;
         AccountID                  _accountID;
         MonotonicMilliseconds      _waitUntilMs;
-        int64                      _requestStartUs;
+        int64                      _requestStartUs; ///< 지연을 잴 기준 시각이다 — 열린 루프면 보내려던 시각이다
         int32                      _botIndex;
         int32                      _sendSequence;
         AccountClientOperation     _pendingAccountOperation;

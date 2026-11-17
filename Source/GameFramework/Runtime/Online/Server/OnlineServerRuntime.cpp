@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Transport/ProxyProtocolAcceptTransport.h"
 #include "Core/Network/Transport/WebSocketAcceptTransport.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/Clock.h"
@@ -237,7 +238,8 @@ namespace sw
         optional<Error>                     _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
         ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
         UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
-        optional<int32>                     _healthCheckIndex; ///< 헬스 표에 올린 검사(표가 없으면 비어 있다)
+        optional<int32>                     _healthCheckIndex;  ///< 헬스 표에 올린 검사(표가 없으면 비어 있다)
+        int32                               _reportedLoad{ 0 }; ///< 마지막으로 등록에 알린 부하 — 늘어난 만큼 서버 사이의 좌석 예약을 확정한다
         uint8                               _bRegistered{ SW_FALSE };
         explicit Parts( const IClock& clock )
             : _clock{ clock }
@@ -581,6 +583,7 @@ namespace sw
         hostSettings._pRemoteConfig                     = &parts._remoteConfig;
         hostSettings._requestBurstPerRemote             = parts._config._requestBurstPerRemote;
         hostSettings._maxConnectionsPerRemote           = parts._config._maxConnectionsPerRemote;
+        hostSettings._maxPendingCallsPerService         = parts._config._maxPendingCallsPerService;
         hostSettings._requestBurstPerAccount            = parts._config._requestBurstPerAccount;
         if ( settings._bTLS == SW_TRUE )
         {
@@ -598,6 +601,19 @@ namespace sw
         {
             // 플레이어 서비스 리슨은 브라우저 클라이언트(WebSocket)도 받는다 — 첫 바이트로 가르는 장식자라 원시 TCP 클라이언트는 그대로 지난다.
             unique_ptr<IStreamTransport> platformTransport = StreamTransportFactory::createPlatformTransport();
+            // 프록시 뒤 배치면 PROXY v2 머리가 TLS · WebSocket 보다 먼저 온다 — 그 장식자가 플랫폼 전송 바로 위에 선다(감사 O-17)
+            if ( platformTransport != nullptr && parts._config._listTrustedProxy.empty() == false )
+            {
+                vector<uint32> listTrustedProxy;
+                for ( const string& text : parts._config._listTrustedProxy )
+                {
+                    NetAddress proxy;
+                    if ( NetAddress::parse( text, 0, proxy ) == false )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "online config _listTrustedProxy has an entry that is not an IPv4 address", text } );
+                    listTrustedProxy.push_back( proxy._ipv4 );
+                }
+                platformTransport = make_unique<ProxyProtocolAcceptTransport>( std::move( platformTransport ), std::move( listTrustedProxy ) );
+            }
             if ( platformTransport != nullptr )
                 parts._ownedTransport = make_unique<WebSocketAcceptTransport>( std::move( platformTransport ) );
             pTransport = parts._ownedTransport.get();
@@ -672,7 +688,11 @@ namespace sw
         }
         if ( parts._bRegistered == SW_TRUE )
         {
-            parts._registration.setLoad( parts._host.getConnectionCount() );
+            const int32 load = parts._host.getConnectionCount();
+            parts._registration.setLoad( load );
+            if ( load > parts._reportedLoad ) // 들어온 만큼 예약을 확정한다 — 부하와 예약을 두 번 세지 않게(누가 예약한 좌석인지는 가리지 않는다: 늘어난 부하는 예약된 사람이 먼저다)
+                parts._registration.confirmSeats( load - parts._reportedLoad, static_cast<int64>( parts._config._seatReservationSeconds ) * constant::time::kMillisecondsPerSecond );
+            parts._reportedLoad = load;
             parts._registration.update( nowMs );
         }
         if ( nowMs >= parts._nextRemoteConfigReloadMs )

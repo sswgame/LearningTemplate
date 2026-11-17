@@ -4,6 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -164,7 +165,7 @@ namespace sw
     {
         outNextCursor.clear();
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult result = connection.listRecords( getTable(), subjectPrefix, cursor, maxCount, true, listRecord );
+        const ServiceStoreResult result = ServiceRecordReader::readPage( connection, getTable(), subjectPrefix, cursor, maxCount, true, listRecord )._result;
         if ( result != ServiceStoreResult::Ok )
             return result;
         for ( const ServiceRecord& record : listRecord )

@@ -220,10 +220,63 @@ namespace sw
                 return AdminResult::Ok;
             }
 
+            /** @brief @p role 이 거는 제재가 등급의 최대 길이 안이면 true 입니다. 풀기(지난 시각 · 0)는 늘 된다. */
+            static bool isSanctionWithinLimit( const AdminCommand& command, AdminRole role )
+            {
+                const int64 lengthMs = command._request._untilMs - command._nowMs;
+                if ( role >= AdminRole::Super || lengthMs <= 0 )
+                    return true;
+                const int64 maxMs = role == AdminRole::Support ? command._sanctionLimit._supportMaxMs : command._sanctionLimit._operatorMaxMs;
+                return lengthMs <= maxMs; // 상한이 없으면(0) 어떤 기한도 넘는다 — 설정이 빠진 조립은 기한 있는 제재를 걸지 못한다
+            }
+
+            /** @brief 대상 계정 @p accountID 가 있는지 계정 키트의 이름 색인으로 봅니다. 색인이 없으면 확인할 수 없어 Unavailable 이다(오타 계정에 재화가 Ok 로 들어가지 않게). */
+            static AdminServiceResult checkTargetExists( IServiceStoreConnection& connection, const AdminCommand& command, AccountID accountID )
+            {
+                if ( command._pNameIndex == nullptr )
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
+                AccountIdentity          identity;
+                const ServiceStoreResult found = command._pNameIndex->readIdentity( connection, accountID, identity );
+                if ( found == ServiceStoreResult::NotFound )
+                    return AdminResult::UnknownAccount;
+                return found == ServiceStoreResult::Ok ? AdminServiceResult{ AdminResult::Ok } : AdminServiceResult::fail( OnlineError::kUnavailable );
+            }
+
+            /** @brief 계정 하나를 대상으로 바꾸는 명령이면 그 계정, 일괄 우편이면 받는 계정 모두가 있는지 봅니다. */
+            static AdminServiceResult checkTargets( IServiceStoreConnection& connection, const AdminCommand& command )
+            {
+                switch ( command._method )
+                {
+                    case AdminMethod::AdjustAsset::kID:
+                    case AdminMethod::SetSanction::kID:
+                    case AdminMethod::SendMail::kID:
+                    case AdminMethod::SetRole::kID:
+                    {
+                        return checkTargetExists( connection, command, command._request._accountID );
+                    }
+                    case AdminMethod::BulkMail::kID:
+                    {
+                        for ( const AccountID recipient : command._request._listAccountID )
+                        {
+                            const AdminServiceResult checked = checkTargetExists( connection, command, recipient );
+                            if ( checked != AdminResult::Ok )
+                                return checked;
+                        }
+                        return AdminResult::Ok;
+                    }
+                    default:
+                    {
+                        return AdminResult::Ok;
+                    }
+                }
+            }
+
             static AdminServiceResult stageEffect( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply )
             {
                 const AdminRequest& request = command._request;
-                ServiceAuditEntry   audit;
+                if ( const AdminServiceResult checked = checkTargets( connection, command ); checked != AdminResult::Ok )
+                    return checked;
+                ServiceAuditEntry audit;
                 audit._actor              = ServiceAuditLog::makeOperatorActor( command._adminID );
                 audit._subject            = makeSubject( request._accountID );
                 audit._memo               = request._memo;
@@ -440,6 +493,8 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
         if ( AdminStoreLogicInternal::isWellFormed( command ) == false )
             return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kInvalidRequest ) );
+        if ( command._method == AdminMethod::SetSanction::kID && AdminStoreLogicInternal::isSanctionWithinLimit( command, role ) == false )
+            return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) ); // 등급의 최대 길이를 넘는 제재는 윗 등급의 일이다
         if ( AdminMethod::isForwardedMethod( command._method ) )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급과 형식만 확인했다. 효과와 감사 기록은 서비스가 넘긴 키트(서버 디렉터리, 라이브 운영)가 쓴다
         if ( command._method == AdminMethod::LookupAccount::kID )

@@ -10,6 +10,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -621,7 +622,7 @@ namespace sw
         if ( maxCount <= 0 )
             return ServiceStoreResult::Ok;
         vector<ServiceRecord>    listQueued;
-        const ServiceStoreResult listed = connection.listRecords( getDeletionQueueTable(), "", "", maxCount, false, listQueued );
+        const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getDeletionQueueTable(), "", "", maxCount, false, listQueued )._result;
         if ( listed != ServiceStoreResult::Ok )
             return listed;
         for ( const ServiceRecord& queued : listQueued )
@@ -677,7 +678,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( getCarryTable(), "", cursor, LedgerInternal::kListPageSize, false, listRecord );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getCarryTable(), "", cursor, LedgerInternal::kListPageSize, false, listRecord )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             for ( const ServiceRecord& record : listRecord )
@@ -761,7 +762,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( getBalanceTable(), prefix, cursor, LedgerInternal::kListPageSize, false, listRecord );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getBalanceTable(), prefix, cursor, LedgerInternal::kListPageSize, false, listRecord )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             for ( ServiceRecord& record : listRecord )
@@ -808,7 +809,7 @@ namespace sw
         string prefix = holder.makeKey();
         prefix.push_back( '/' );
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listed = connection.listRecords( getHistoryTable(), prefix, cursor, maxCount, true, listRecord );
+        const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getHistoryTable(), prefix, cursor, maxCount, true, listRecord )._result;
         if ( listed != ServiceStoreResult::Ok )
             return listed;
         const size_t journalOffset = prefix.size() + static_cast<size_t>( LedgerInternal::kTimeHexWidth ) + 1;

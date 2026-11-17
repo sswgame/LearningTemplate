@@ -59,8 +59,8 @@ namespace sw::editor
             return unexpected( tlsContext.error() );
         }
         _tlsContext = std::move( *tlsContext );
-        OnlineServiceClientConfig settings{ OnlineClientSecurity::tls( *_tlsContext ) };
-        settings._transportSettings._ioThreadCount = 0; // 에디터 프레임의 update 가 전송을 돌린다
+        OnlineServiceClientConfig settings{ OnlineClientSecurity::tls( *_tlsContext ), OnlineRetryPolicy::none() }; // 운영 도구 — 사람이 오류를 보고 다시 한다
+        settings._transportSettings._ioThreadCount = 0;                                                             // 에디터 프레임의 update 가 전송을 돌린다
         settings._serverAddress                    = serverAddress;
         settings._gameBuild                        = string( gameBuild );
         if ( expected<void> started = _client.initialize( _pTransport.get(), settings ); started.has_value() == false )

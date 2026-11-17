@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -462,7 +463,7 @@ namespace sw
             {
                 string prefix = ServiceKeyUtil::makeHex64( accountID );
                 prefix.push_back( '/' );
-                return connection.listRecords( getAccountExternalTable(), prefix, "", kMaxLinkCount, false, outListLink );
+                return ServiceRecordReader::readPage( connection, getAccountExternalTable(), prefix, "", kMaxLinkCount, false, outListLink )._result;
             }
 
             static AccountIdentity makeIdentity( uint64 accountID, const ProfileRecord& profile )
@@ -1203,7 +1204,7 @@ namespace sw
         if ( maxCount <= 0 )
             return 0;
         vector<ServiceRecord> listDue;
-        if ( _connection.listRecords( Internal::getDeletionTable(), "", "", maxCount, false, listDue ) != ServiceStoreResult::Ok )
+        if ( ServiceRecordReader::readPage( _connection, Internal::getDeletionTable(), "", "", maxCount, false, listDue )._result != ServiceStoreResult::Ok )
             return 0;
         int32 purgedCount = 0;
         for ( const ServiceRecord& due : listDue )
@@ -1236,7 +1237,7 @@ namespace sw
     {
         using Internal = LoginStoreLogicInternal;
         vector<ServiceRecord> listQueued;
-        if ( _connection.listRecords( Internal::getAfterDeleteTable(), "", "", maxCount, false, listQueued ) != ServiceStoreResult::Ok )
+        if ( ServiceRecordReader::readPage( _connection, Internal::getAfterDeleteTable(), "", "", maxCount, false, listQueued )._result != ServiceStoreResult::Ok )
             return;
         for ( const ServiceRecord& queued : listQueued )
         {
@@ -1342,7 +1343,7 @@ namespace sw
     {
         using Internal = LoginStoreLogicInternal;
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listResult = connection.listRecords( Internal::getRevokeTable(), "", "", maxCount, false, listRecord );
+        const ServiceStoreResult listResult = ServiceRecordReader::readPage( connection, Internal::getRevokeTable(), "", "", maxCount, false, listRecord )._result;
         if ( listResult != ServiceStoreResult::Ok )
             return listResult;
         for ( ServiceRecord& record : listRecord )
@@ -1414,23 +1415,40 @@ namespace sw
     LoginServiceResult LoginStoreLogic::recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs )
     {
         using Internal = LoginStoreLogicInternal;
-        Internal::AccountRecord account;
-        if ( Internal::decodeAccount( accountBytes, account ) == false )
-            return LoginServiceResult::fail( OnlineError::kUnavailable );
-        ++account._failedCount;
-        LoginServiceResult result = LoginResult::WrongCredentials;
-        if ( account._failedCount >= _settings._maxFailedCount )
+        ServiceRecord current;
+        current._bytes   = accountBytes;
+        current._version = accountVersion;
+        // 틀린 시도가 동시에 겹치면(워커 여럿 · 서버 여럿) 조건부 쓰기가 Conflict 다 — 다시 읽어 센다. 버리면 겹친 만큼 덜 세어 잠금을 비켜 간다(감사 O-14).
+        // 주소마다의 시도 버킷은 프로세스 메모리라 서버 여럿에서는 이 계정 단위 셈이 유일한 막이다.
+        for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
-            account._failedCount   = 0;
-            account._lockedUntilMs = nowMs + _settings._lockoutMs;
-            outRetryAfterMs        = _settings._lockoutMs;
-            result                 = LoginResult::AccountLocked;
+            Internal::AccountRecord account;
+            if ( Internal::decodeAccount( current._bytes, account ) == false )
+                return LoginServiceResult::fail( OnlineError::kUnavailable );
+            if ( account._lockedUntilMs > nowMs )
+            {
+                outRetryAfterMs = account._lockedUntilMs - nowMs; // 겹친 시도가 먼저 잠갔다
+                return LoginResult::AccountLocked;
+            }
+            ++account._failedCount;
+            LoginServiceResult result = LoginResult::WrongCredentials;
+            if ( account._failedCount >= _settings._maxFailedCount )
+            {
+                account._failedCount   = 0;
+                account._lockedUntilMs = nowMs + _settings._lockoutMs;
+                outRetryAfterMs        = _settings._lockoutMs;
+                result                 = LoginResult::AccountLocked;
+            }
+            ServiceTransaction transaction;
+            transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), current._version );
+            const ServiceStoreResult committed = _connection.commit( transaction );
+            if ( committed != ServiceStoreResult::Conflict )
+                return result; // 저장소 장애면 세지 못했어도 같은 답이다 — 있는 계정만 다른 답을 내면 계정 열거가 된다
+            const ServiceStoreResult reread = _connection.readRecord( Internal::getAccountTable(), nameKey, current );
+            if ( reread != ServiceStoreResult::Ok )
+                return LoginResult::WrongCredentials; // 지워졌거나 읽지 못했다 — 없는 계정과 같은 답이다
         }
-        ServiceTransaction transaction;
-        transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), accountVersion );
-        // 틀린 시도가 동시에 겹치면 하나는 세지 못한다(Conflict). 시도 제한(버킷)이 따로 막으므로 다시 읽지 않는다.
-        (void)_connection.commit( transaction );
-        return result;
+        return LoginResult::WrongCredentials; // 겹침이 상한을 넘었다. 다른 답(kBusy)은 계정이 있다는 신호라 쓰지 않는다
     }
 
     void LoginStoreLogic::burnPasswordHash( string_view password )

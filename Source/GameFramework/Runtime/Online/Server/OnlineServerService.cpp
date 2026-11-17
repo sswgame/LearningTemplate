@@ -28,15 +28,22 @@ namespace sw
         public:
             /** @brief 설정을 읽어 런타임을 세웁니다. 서버 설정이 없거나 온라인 설정 파일이 없으면 할 일 없이 성공입니다. */
             [[nodiscard]] expected<void> initialize( const ServerServiceContext& context ) override;
-            void                         shutdown() override { _runtime.shutdown(); }
-            void                         update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
-            int32                        getConnectionCount() const override { return _runtime.getConnectionCount(); }
-            int32                        getOpenJobCount() const override { return _runtime.getOpenJobCount(); }
-            void                         beginShutdown( const ServerShutdownNotice& notification ) override { _runtime.beginShutdown( notification ); }
+            void                         shutdown() override
+            {
+                if ( _pKitDirectory != nullptr )
+                    _pKitDirectory->withdraw( &_runtime.getContext()._kits ); // 키트가 내려가기 전에 게임 모듈의 창구에서 거둔다
+                _pKitDirectory = nullptr;
+                _runtime.shutdown();
+            }
+            void  update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
+            int32 getConnectionCount() const override { return _runtime.getConnectionCount(); }
+            int32 getOpenJobCount() const override { return _runtime.getOpenJobCount(); }
+            void  beginShutdown( const ServerShutdownNotice& notification ) override { _runtime.beginShutdown( notification ); }
 
         private:
             SystemMonotonicClock _clock; ///< 런타임이 빌린다(메모리 캐시 만료 · 외부 HTTP 시한). 런타임보다 먼저 선언한다
             OnlineServerRuntime  _runtime;
+            ServerKitDirectory*  _pKitDirectory{ nullptr }; ///< 공개한 호스트 창구(호스트 소유). 공개하지 않았으면 nullptr
         };
     } // namespace
 } // namespace sw
@@ -93,7 +100,12 @@ namespace sw
         settings._tlsPrivateKeyFile  = serverConfig._tlsPrivateKeyFile;
         if ( ServerSecret::read( serverConfig._tlsPrivateKeySecretEnvironment, settings._tlsPrivateKeyPassphrase ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the TLS private key passphrase environment variable is not set", serverConfig._tlsPrivateKeySecretEnvironment } );
-        return _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds() ); // 예외 — 호스트 최상위(서버 서비스의 뿌리)가 시각을 정한다
+        if ( expected<void> started = _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds() ); started.has_value() == false ) // 예외 — 호스트 최상위(서버 서비스의 뿌리)가 시각을 정한다
+            return started;
+        _pKitDirectory = context._pKitDirectory;
+        if ( _pKitDirectory != nullptr )
+            _pKitDirectory->publish( &_runtime.getContext()._kits ); // 게임 서버 코드가 키트 인터페이스(백필 …)를 찾는다
+        return {};
     }
 
     /** @brief 서버 서비스 중 앞쪽에 둔다. 게임과 키트가 올린 서버 서비스가 온라인 서비스를 볼 수 있게 한다. */

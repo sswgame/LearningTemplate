@@ -11,6 +11,7 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -22,8 +23,9 @@ namespace sw
     {
         struct ServerDirectoryServiceInternal
         {
-            static constexpr int32 kMaxMaintenanceRow = 64;
-            static constexpr int32 kPercentScale      = 100;
+            static constexpr int32 kMaxMaintenanceRow     = 64;   ///< 점검 표를 한 번에 읽는 쪽 크기이다
+            static constexpr int32 kMaxMaintenanceRowRead = 1024; ///< 점검 표를 다 읽는 상한이다. 넘으면 이전 상태를 둔다(뒤의 점검을 조용히 버리면 그 범위가 열린다)
+            static constexpr int32 kPercentScale          = 100;
 
             static const hashed_string& getMaintenanceTable()
             {
@@ -110,9 +112,18 @@ namespace sw
             using Internal = ServerDirectoryServiceInternal;
             ServiceStoreRead<ServerDirectoryTables> read;
             vector<ServiceRecord>                   listRecord;
-            read._result = connection.listRecords( Internal::getMaintenanceTable(), "", "", Internal::kMaxMaintenanceRow, false, listRecord );
+            // 점검은 막는 규칙이라 다 읽는다 — 첫 쪽만 읽으면 그 뒤 범위의 점검이 조용히 빠져 열렸다(감사 O-18 의 fail-open)
+            const ServiceRecordRead maintenance =
+                ServiceRecordReader::readAll( connection, Internal::getMaintenanceTable(), "", Internal::kMaxMaintenanceRow, Internal::kMaxMaintenanceRowRead, false, listRecord );
+            read._result = maintenance._result;
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
+            if ( maintenance._bTruncated == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryMaintenanceTooMany", "Server directory has more than %# maintenance records - kept the previous state", Internal::kMaxMaintenanceRowRead );
+                read._result = ServiceStoreResult::Invalid;
+                return read;
+            }
             for ( const ServiceRecord& record : listRecord )
             {
                 MaintenanceWindow window;
@@ -127,9 +138,19 @@ namespace sw
                 read._value._listMaintenance.push_back( std::move( window ) );
             }
             listRecord.clear();
-            read._result = connection.listRecords( Internal::getAnnouncementTable(), "", "", ServerDirectoryLimit::kMaxAnnouncementCount * 4, false, listRecord );
+            const ServiceRecordRead announcementRead = ServiceRecordReader::readAll( connection, Internal::getAnnouncementTable(), "", ServerDirectoryLimit::kMaxAnnouncementCount,
+                                                                                     ServerDirectoryLimit::kMaxAnnouncementCount * 4, false, listRecord );
+            read._result                             = announcementRead._result;
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
+            if ( announcementRead._bTruncated == SW_TRUE )
+            {
+                // 지난 공지가 쌓여 상한에 닿으면 새 공지가 조용히 빠졌다 — 이전 값을 두고 알린다(만료 정리가 지난 것을 지운다)
+                SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryAnnouncementTooMany", "Server directory has more than %# notice records - kept the previous state",
+                                 ServerDirectoryLimit::kMaxAnnouncementCount * 4 );
+                read._result = ServiceStoreResult::Invalid;
+                return read;
+            }
             for ( const ServiceRecord& record : listRecord )
             {
                 ServiceAnnouncement announcement;
@@ -178,7 +199,7 @@ namespace sw
         for ( const string& kind : settings._listServerKind )
         {
             unique_ptr<ServerRegistryReader>& reader = _listReader.emplace_back( make_unique<ServerRegistryReader>() );
-            reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs );
+            reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs, settings._seatReservationTTLMs );
         }
         _store.bindStore( dependencies._pStore );
         _reloadJob.setPeriod( settings._reloadPeriodMs );               // 첫 틱에 한 번 읽는다

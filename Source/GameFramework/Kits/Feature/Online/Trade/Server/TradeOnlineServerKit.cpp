@@ -49,6 +49,7 @@ namespace sw
         public:
             TradeOnlineServerKit()
                 : _policy{}
+                , _serviceSettings{}
                 , _service{}
                 , _server{}
             {
@@ -61,8 +62,10 @@ namespace sw
                     return result;
                 if ( kitConfig._listTradablePrefix.empty() )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the trade kit needs at least one _listTradablePrefix entry (an asset id prefix)" } );
-                _policy._listTradablePrefix = std::move( kitConfig._listTradablePrefix );
-                _policy._maxLegsPerSide     = kitConfig._maxLegsPerSide;
+                _policy._listTradablePrefix       = std::move( kitConfig._listTradablePrefix );
+                _policy._maxLegsPerSide           = kitConfig._maxLegsPerSide;
+                _serviceSettings._inviteTimeoutMs = kitConfig._inviteTimeoutMs;
+                _serviceSettings._idleTimeoutMs   = kitConfig._idleTimeoutMs;
                 if ( expected<void> result = registerServerService( context, entry, &_server ); result.has_value() == false )
                     return result;
                 return addTTLRule( context, entry,
@@ -71,7 +74,7 @@ namespace sw
 
             expected<void> start( OnlineServerKitContext& context ) override
             {
-                _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, TradeServiceConfig{} );
+                _service.initialize( context._pStore, &_policy, context._kits.find<const ILedgerPolicy>(), context._serverID, _serviceSettings );
                 // 상대 찾기는 필수 키트라 정렬이 없으면 기동 오류로 막았다.
                 _server.initialize( &_service, &context._kits.get<IAccountDirectory>(), context._kits.find<IAccountPresence>(), context._pMetricRegistry );
                 _server.setBalanceNotification( context._kits.find<IBalanceChangedListener>() ); // 경제 키트(정산 잔액 변경 알림)
@@ -118,9 +121,10 @@ namespace sw
             }
 
         private:
-            PrefixTradePolicy _policy;
-            TradeService      _service;
-            TradeServer       _server;
+            PrefixTradePolicy  _policy;
+            TradeServiceConfig _serviceSettings; ///< 키트 설정의 시한(필수)
+            TradeService       _service;
+            TradeServer        _server;
         };
     } // namespace
 } // namespace sw

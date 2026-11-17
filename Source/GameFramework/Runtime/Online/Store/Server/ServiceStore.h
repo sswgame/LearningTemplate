@@ -134,6 +134,13 @@ namespace sw
 
         /** @brief 레코드 하나를 읽습니다. 없으면 NotFound 를 반환하고, @p outRecord 는 비며 버전은 `kAbsentVersion` 입니다. */
         [[nodiscard]] virtual ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) = 0;
+        /** @brief 트랜잭션을 모두 적용하거나 아무것도 적용하지 않습니다. */
+        [[nodiscard]] virtual ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) = 0;
+
+    protected:
+        // 목록 읽기는 `ServiceRecordReader` 만 부른다 — 결과에 다음 쪽 · 잘림을 싣지 않는 한 쪽 읽기를 서비스 코드가 직접 부르지 못하게 한다(감사 O-18). 구현(메모리 · SQL)은 겹쳐 쓴다.
+        friend struct ServiceRecordReader;
+
         /**
          * @brief @p keyPrefix 로 시작하는 키를 키 순서로 @p outListRecord 뒤에 붙입니다. 키, 바이트, 버전을 담습니다.
          * @param cursorKey 비어 있지 않으면 이 키 다음부터(오름차순) 또는 이전부터(내림차순) 읽는다. 이 키 자체는 뺀다.
@@ -142,8 +149,6 @@ namespace sw
          */
         [[nodiscard]] virtual ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
                                                               vector<ServiceRecord>& outListRecord ) = 0;
-        /** @brief 트랜잭션을 모두 적용하거나 아무것도 적용하지 않습니다. */
-        [[nodiscard]] virtual ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) = 0;
     };
 } // namespace sw
 

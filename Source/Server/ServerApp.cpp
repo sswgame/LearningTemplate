@@ -100,6 +100,8 @@ namespace sw
         , _reloadStopsServices{}
         , _serverConfigPath{}
         , _serverServiceContext{}
+        , _kitDirectory{}
+        , _kitLocator{ _kitDirectory }
         , _pServerConfig{ nullptr }
         , _drainDeadlineMs{ 0 }
         , _tickCount{ 0 }
@@ -311,9 +313,11 @@ namespace sw
                 _serverServiceContext._pServerConfig    = _pServerConfig;
                 _serverServiceContext._pMetricRegistry  = _observability.getMetricRegistry();
                 _serverServiceContext._pHealthRegistry  = _observability.getHealthRegistry();
+                _serverServiceContext._pKitDirectory    = &_kitDirectory;
                 // 게임 쪽(네트워크 세션)에는 공유 형식인 설정과 지표 레지스트리만 건다 — 서버 서비스 문맥은 `Engine/Server/` 형식이라 클라이언트와 함께 짓는 코드가 알면 안 된다.
                 engine::getSubsystem<GameNetSession>().bindMetricRegistry( _observability.getMetricRegistry() ); // 게임 포트 지표(감사 N-7) — 게임이 포트를 열 때 샤드마다 올린다
-                return _launch.getHostScope().bind( _pServerConfig );                                            // `engine::findSubsystem<const ServerConfig>()` 로 찾는다
+                // 키트 창구는 게임 모듈 범위에도 걸린다(`GameModuleManager::fillModuleServiceScope`) — 게임 서버 코드가 백필 같은 키트 인터페이스를 찾는다
+                return _launch.getHostScope().bind( _pServerConfig ) && _launch.getHostScope().bind<IServerKitLocator>( &_kitLocator ); // `engine::findSubsystem<const ServerConfig>()` 로 찾는다
             }
             case HostServiceID::Game:
             {
@@ -371,6 +375,7 @@ namespace sw
             case HostServiceID::ServiceContext:
             {
                 _launch.getHostScope().unbind<const ServerConfig>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+                _launch.getHostScope().unbind<IServerKitLocator>();
                 // 세션은 엔진 종료에 닫힌다(관측보다 늦다) — 지운 레지스트리에 쓰지 않게 여기서 푼다.
                 engine::getSubsystem<GameNetSession>().bindMetricRegistry( nullptr );
                 return;

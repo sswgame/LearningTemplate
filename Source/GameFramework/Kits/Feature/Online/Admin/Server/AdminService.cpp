@@ -35,6 +35,11 @@ namespace sw
             SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsStore", "AdminService needs a store" );
             return false;
         }
+        if ( settings._sanctionLimit.isSet() == false )
+        {
+            SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsSanctionLimit", "AdminService needs the per-role sanction limits (_supportMaxSanctionDays, _operatorMaxSanctionDays)" );
+            return false;
+        }
         _store.bindStore( pStore );
         _settings = settings;
         initializeCalls( settings._pMetricRegistry, "admin" );
@@ -73,14 +78,15 @@ namespace sw
         _mapCallToExtra[callID] = extra;
 
         AdminCommand command;
-        command._request    = request;
-        command._pPolicy    = _settings._pPolicy;
-        command._pNameIndex = _settings._pNameIndex;
-        command._adminID    = adminID;
-        command._keyHigh    = idempotencyKey._high;
-        command._keyLow     = idempotencyKey._low;
-        command._nowMs      = nowMs.count();
-        command._method     = method;
+        command._request       = request;
+        command._pPolicy       = _settings._pPolicy;
+        command._pNameIndex    = _settings._pNameIndex;
+        command._sanctionLimit = _settings._sanctionLimit;
+        command._adminID       = adminID;
+        command._keyHigh       = idempotencyKey._high;
+        command._keyLow        = idempotencyKey._low;
+        command._nowMs         = nowMs.count();
+        command._method        = method;
 
         AdminServiceResult refused{ AdminResult::Ok };
         if ( _store.hasStore() == false )

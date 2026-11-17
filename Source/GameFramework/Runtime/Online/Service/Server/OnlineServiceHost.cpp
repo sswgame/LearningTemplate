@@ -234,6 +234,8 @@ namespace sw
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( pTransport == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs a stream transport" } );
+        if ( settings._maxPendingCallsPerService < 1 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs _maxPendingCallsPerService of at least 1 (the online server config sets it)" } );
         _settings          = settings;
         _listenerTransport = make_unique<ListenerTransport>( pTransport, settings._pAdminTransport );
         _pServerBus        = settings._pServerBusTransport != nullptr ? make_unique<ServerBus>( *settings._pServerBusTransport ) : nullptr;

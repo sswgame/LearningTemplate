@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -44,9 +45,17 @@ namespace sw
         {
             ServiceStoreRead<vector<LiveEventDef>> read;
             vector<ServiceRecord>                  listRecord;
-            read._result = connection.listRecords( LiveOpsServiceInternal::getEventTable(), "", "", LiveOpsLimit::kMaxEventCount, false, listRecord );
+            const ServiceRecordRead                listed = ServiceRecordReader::readAll( connection, LiveOpsServiceInternal::getEventTable(), "", LiveOpsLimit::kMaxEventCount, LiveOpsLimit::kMaxEventCount, false, listRecord );
+            read._result                                  = listed._result;
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
+            if ( listed._bTruncated == SW_TRUE )
+            {
+                // 상한 뒤 이벤트를 조용히 버리면 그 이벤트가 꺼진다 — 이전 값을 두고 알린다(감사 O-18)
+                SW_LOG_ERROR_ID( "LiveOpsService.LiveOpsEventTableTooLarge", "LiveOps event table has more than %# events - kept the previous events", LiveOpsLimit::kMaxEventCount );
+                read._result = ServiceStoreResult::Invalid;
+                return read;
+            }
             for ( const ServiceRecord& record : listRecord )
             {
                 LiveEventDef definition;

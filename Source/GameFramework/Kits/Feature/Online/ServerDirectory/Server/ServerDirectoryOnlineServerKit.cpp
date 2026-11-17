@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryServer.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
@@ -51,9 +53,10 @@ namespace sw
                 if ( context._pRouter == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the server directory needs a cache" } );
                 ServerDirectoryDependencies dependencies;
-                dependencies._pStore  = context._pStore;
-                dependencies._pRouter = context._pRouter;
-                dependencies._pBus    = context._pBus;
+                dependencies._pStore            = context._pStore;
+                dependencies._pRouter           = context._pRouter;
+                dependencies._pBus              = context._pBus;
+                _settings._seatReservationTTLMs = static_cast<int64>( context._pConfig->_seatReservationSeconds ) * constant::time::kMillisecondsPerSecond;
                 _service.initialize( dependencies, _settings );
                 _server.initialize( &_service, context._pMetricRegistry );
                 return {};

@@ -229,7 +229,7 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, HeldTicketTimesOutWaitingForTheT
 SW_TEST_CASE( AccountTicketConnectLoopbackTest, LateServerIsReachedWithinTheBackoffCap )
 {
     // 틀리면: 서버가 없는 동안 시한 전에 포기하면 첫 Pending 단언이, 재접속 간격에 상한이 없으면 두 번째 Received 단언이 진다.
-    const int64      maxBackoffMs = OnlineServiceClientConfig{ OnlineClientSecurity::plaintextLoopback() }._maxBackoffMs;
+    const int64      maxBackoffMs = OnlineServiceClientConfig{ OnlineClientSecurity::plaintextLoopback(), OnlineRetryPolicy::none() }._maxBackoffMs;
     TicketConnectRig rig;
     SW_REQUIRE_TRUE( rig.begin( 60000 ).has_value() );
     const expected<AccountTicketStep> waiting = rig.runUntilSettled( 20000 );

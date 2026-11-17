@@ -213,6 +213,7 @@ if(TARGET OnlineLoadBot)
 			list(APPEND list_online_kit_test_folder "${kit_relative}/")
 		endif()
 	endforeach()
+	list(APPEND list_online_kit_test_folder "Source/Programs/OnlineLoadBot/") # 봇 자체의 테스트(보내기 방식 · 시나리오 읽기)
 	if(list_online_kit_test_folder)
 		list(JOIN list_online_kit_test_folder "," online_kit_test_source)
 		add_test(NAME UnitTests.OnlineKits

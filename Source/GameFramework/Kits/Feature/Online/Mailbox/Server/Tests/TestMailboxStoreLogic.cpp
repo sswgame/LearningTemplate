@@ -33,7 +33,7 @@ namespace
         int64 _cap;
     };
 
-    string sendReward( MemoryServiceDatabase& database, string_view idempotencyKey, string_view assetID, int64 amount, int64 expiresMs = 0 )
+    string sendReward( MemoryServiceDatabase& database, string_view idempotencyKey, string_view assetID, int64 amount, int64 expiresMs = 0, int64 createdMs = kNowMs )
     {
         ServiceMailMessage message;
         if ( amount > 0 )
@@ -42,7 +42,7 @@ namespace
         message._idempotencyKey     = string( idempotencyKey );
         message._fundingHolder      = LedgerHolder::makeMint();
         message._recipientAccountID = kRecipient;
-        message._createdMs          = kNowMs;
+        message._createdMs          = createdMs;
         message._expiresMs          = expiresMs;
         ServiceTransaction transaction;
         string             mailKey;
@@ -262,4 +262,24 @@ SW_TEST_CASE( MailboxStoreLogicTest, ExpiryBurnsWhenTheSenderIsDeleted )
     vector<LedgerBalance> listEscrow;
     SW_REQUIRE_TRUE( Ledger::listBalances( database, ServiceMail::makeEscrowHolder( playerMail ), listEscrow ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listEscrow.empty() );
+}
+
+/** @brief [MailboxStoreLogicTest] 모두 받기는 최근 한 쪽(50 통) 뒤의 첨부 우편도 받는다 — 최근 우편이 모두 첨부 없는 알림이어도 오래된 보상을 놓치지 않는다(감사 O-18) */
+SW_TEST_CASE( MailboxStoreLogicTest, ClaimAllReachesPastTheFirstPage )
+{
+    MemoryServiceDatabase database;
+    const FixedCapPolicy  policy{ 0 };
+    for ( int32 index = 0; index < 3; ++index )
+    {
+        (void)sendReward( database, "old.reward." + to_string( index ), "gold", 10, 0, kNowMs - 100000 + index );
+    }
+    for ( int32 index = 0; index < 60; ++index )
+    {
+        (void)sendReward( database, "notice." + to_string( index ), "gold", 0, 0, kNowMs + index ); // 첨부 없는 최근 알림
+    }
+    MailboxClaimReply reply;
+    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( database, kRecipient, kNowMs + 1000, kClaimedMs, &policy, reply ) == MailboxResult::Ok );
+    SW_EXPECT_EQUAL( 3, reply._claimedCount );
+    SW_EXPECT_FALSE( reply._bMoreRemaining );
+    SW_EXPECT_EQUAL( readBalance( database, kRecipient, "gold" ), int64( 30 ) );
 }
