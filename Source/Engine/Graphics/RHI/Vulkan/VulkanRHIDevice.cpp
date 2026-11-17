@@ -2166,6 +2166,7 @@ namespace sw
         // 잃은 장치는 기다리지 않는다 — 끝나지 않을 일을 기다리게 되거나(TDR 중의 드라이버) 같은 손실만 다시 듣는다.
         if ( _device && isDeviceLost() == false )
         {
+            flushPendingDeviceLocalUploadsNow(); // 프레임 없이 기다리는 쪽(도구 · 테스트 · 크기 바꾸기)도 쌓인 첫 내용을 본다
             {
                 ScopedLock<mutex> queueLock{ _queueMutex };
                 reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "waitIdle: vkDeviceWaitIdle" );
@@ -2468,6 +2469,7 @@ namespace sw
 
         _bFrameStarted                     = SW_TRUE;
         _recordingState._bRenderPassActive = SW_FALSE;
+        recordPendingDeviceLocalUploads(); // 프레임 밖 · 워커가 만든 정적 버퍼의 첫 내용 — 이 프레임의 어느 그리기보다 앞이다
 
         constexpr float32 kDefaultViewportX        = 0.0f;
         constexpr float32 kDefaultViewportMinDepth = 0.0f;
@@ -2505,6 +2507,7 @@ namespace sw
         }
 
         // 열린 렌더 패스는 공용 `IRHIDevice::endFrame` 이 이미 닫았다.
+        recordPendingDeviceLocalUploads();
         requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "endFrame: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
 
@@ -2762,6 +2765,7 @@ namespace sw
 
         // 지금까지의 프레임 세그먼트를 닫아 제출 순서에 넣고, 그 뒤에 이 리스트의 버퍼를 잇는다.
         _frameStreamContext->endRenderPass(); // 공용 패스 상태와 함께 닫는다(IRHICommandContext)
+        recordPendingDeviceLocalUploads();    // 이 리스트가 읽을 수 있는 정적 버퍼의 첫 내용은 리스트보다 앞 세그먼트에 든다(제출 순서 = 실행 순서)
         requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "executeCommandList: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         _listPendingSubmit.push_back( listBuffer );
@@ -2805,12 +2809,92 @@ namespace sw
         _listPendingSubmit.clear();
     }
 
+    bool VulkanRHIDevice::isRecordingFrameOnThisThread() const
+    {
+        return _bFrameStarted != SW_FALSE && _activeFrameBuffer != VK_NULL_HANDLE && std::this_thread::get_id() == _renderThreadID.load( std::memory_order_relaxed );
+    }
+
+    void VulkanRHIDevice::recordDeviceLocalUploadCopy( VkCommandBuffer cmd, RHIBufferHandle staging, RHIBufferHandle destination, uint32 sizeBytes )
+    {
+        VulkanBufferRecord* const pSource = resolveAllocatedBuffer( staging );
+        VulkanBufferRecord* const pTarget = resolveAllocatedBuffer( destination );
+        if ( cmd == VK_NULL_HANDLE || pSource == nullptr || pTarget == nullptr || pSource->_buffer == VK_NULL_HANDLE || pTarget->_buffer == VK_NULL_HANDLE )
+            return; // 도착이 그사이 놓였다 — 올릴 곳이 없다
+        VkBufferCopy region{};
+        region.size = sizeBytes;
+        vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
+        // 새 버퍼라 앞 읽기가 없다 — 복사 뒤 읽기(정점 입력 · 셰이더 · 간접 인자)만 막는다.
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType                             = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.srcQueueFamilyIndex               = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex               = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer                            = pTarget->_buffer;
+        barrier.offset                            = 0;
+        barrier.size                              = VK_WHOLE_SIZE;
+        barrier.srcAccessMask                     = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask                     = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        constexpr VkPipelineStageFlags kReadStage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, kReadStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
+    }
+
+    void VulkanRHIDevice::flushPendingDeviceLocalUploadsNow()
+    {
+        vector<PendingDeviceLocalUpload> listUpload;
+        {
+            ScopedLock<mutex> lock{ _deviceLocalUploadMutex };
+            if ( _listPendingDeviceLocalUpload.empty() )
+                return;
+            listUpload.swap( _listPendingDeviceLocalUpload );
+        }
+        IRHIResourceFactory* const pFactory = getResourceFactory();
+        if ( _oneShotCommandPool != VK_NULL_HANDLE )
+        {
+            VulkanOneShotCommands oneShot( _device, _oneShotCommandPool, _oneShotMutex, _graphicsQueue, _queueMutex );
+            if ( oneShot.isValid() )
+            {
+                for ( const PendingDeviceLocalUpload& upload : listUpload )
+                {
+                    recordDeviceLocalUploadCopy( oneShot.get(), upload._staging, upload._destination, upload._sizeBytes );
+                }
+                if ( oneShot.endSubmitAndWait() == false )
+                    reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "flushPendingDeviceLocalUploadsNow: one-shot submit" );
+            }
+        }
+        for ( const PendingDeviceLocalUpload& upload : listUpload )
+        {
+            if ( pFactory != nullptr )
+                pFactory->destroyBuffer( upload._staging );
+        }
+    }
+
+    void VulkanRHIDevice::recordPendingDeviceLocalUploads()
+    {
+        if ( _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE )
+            return;
+        vector<PendingDeviceLocalUpload> listUpload;
+        {
+            ScopedLock<mutex> lock{ _deviceLocalUploadMutex };
+            if ( _listPendingDeviceLocalUpload.empty() )
+                return;
+            listUpload.swap( _listPendingDeviceLocalUpload );
+        }
+        IRHIResourceFactory* const pFactory = getResourceFactory();
+        for ( const PendingDeviceLocalUpload& upload : listUpload )
+        {
+            recordDeviceLocalUploadCopy( _activeFrameBuffer, upload._staging, upload._destination, upload._sizeBytes );
+            if ( pFactory != nullptr )
+                pFactory->destroyBuffer( upload._staging ); // 펜스 뒤에 놓인다(복사가 끝난 뒤)
+        }
+    }
+
     void VulkanRHIDevice::submitFrameJobNow( VkSemaphore signal )
     {
         if ( _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE )
             return;
         // 세그먼트가 비어 있어도 닫아 넣는다(빈 버퍼 하나의 비용) — 신호는 그 앞의 모든 그래픽스 일을 덮어야 한다.
         _frameStreamContext->endRenderPass();
+        recordPendingDeviceLocalUploads();
         requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "submitFrameJobNow: vkEndCommandBuffer" );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         submitPendingGraphics( signal );

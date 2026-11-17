@@ -361,31 +361,26 @@ namespace sw
     {
         if ( handle == 0 )
             return 0;
-        // 만들 때의 첫 내용은 일회성 커맨드버퍼로 올리고 기다린다 — 워커 스레드도 만든다(`_bThreadSafeResourceCreation`)라 프레임 커맨드버퍼에 기록할 수 없다.
-        // 스테이징은 호스트 보임 버퍼 하나를 만들어 쓰고 바로 놓는다(복사가 끝난 뒤다 — 대기했다).
-        const RHIBufferHandle                      staging   = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, pData, 0, VulkanBufferMemory::HostVisible );
-        VulkanRHIDevice::VulkanBufferRecord* const pSource   = _pDevice->resolveAllocatedBuffer( staging );
-        VulkanRHIDevice::VulkanBufferRecord* const pTarget   = _pDevice->resolveAllocatedBuffer( handle );
-        bool                                       bUploaded = pSource != nullptr && pTarget != nullptr && _pDevice->_oneShotCommandPool != VK_NULL_HANDLE;
-        if ( bUploaded )
+        // 첫 내용은 호스트 보임 스테이징에 쓰고 복사는 기다리지 않는다 — 렌더 스레드가 프레임을 기록 중이면 지금 세그먼트에 바로, 아니면(워커 · 프레임 밖) 줄에 쌓아
+        // 렌더 스레드가 다음 세그먼트 끝(리스트 제출 · 프레임 끝)이나 프레임 시작에 한 번에 기록한다. 그 버퍼를 읽는 리스트는 그 뒤에 제출되므로 복사가 먼저 실행된다.
+        // 스테이징은 복사를 기록한 뒤 펜스 지연 해제다(DX12 스테이징 슬롯과 같은 자리 — CPU 대기 없음).
+        const RHIBufferHandle staging = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, pData, 0, VulkanBufferMemory::HostVisible );
+        if ( staging == 0 )
         {
-            VulkanOneShotCommands oneShot( _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue, _pDevice->_queueMutex );
-            bUploaded = oneShot.isValid();
-            if ( bUploaded )
-            {
-                VkBufferCopy region{};
-                region.size = sizeBytes;
-                vkCmdCopyBuffer( oneShot.get(), pSource->_buffer, pTarget->_buffer, 1, &region );
-                bUploaded = oneShot.endSubmitAndWait(); // 큐가 끝낼 때까지 기다린다 — 그 뒤 첫 사용은 다음 제출이라 배리어가 필요 없다
-            }
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.DeviceLocalUploadFailed", "Failed to create a %#-byte staging buffer for a device-local upload", sizeBytes );
+            destroyBuffer( handle );
+            return 0;
         }
-        if ( staging != 0 )
+        if ( _pDevice->isRecordingFrameOnThisThread() )
+        {
+            _pDevice->_frameStreamContext->endRenderPass(); // 복사는 패스 밖이다
+            _pDevice->recordDeviceLocalUploadCopy( _pDevice->_activeFrameBuffer, staging, handle, sizeBytes );
             destroyBuffer( staging );
-        if ( bUploaded )
             return handle;
-        SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.DeviceLocalUploadFailed", "Failed to upload %# bytes into a device-local buffer", sizeBytes );
-        destroyBuffer( handle );
-        return 0;
+        }
+        ScopedLock<mutex> lock{ _pDevice->_deviceLocalUploadMutex };
+        _pDevice->_listPendingDeviceLocalUpload.push_back( VulkanRHIDevice::PendingDeviceLocalUpload{ staging, handle, sizeBytes } );
+        return handle;
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )

@@ -830,6 +830,14 @@ namespace sw
          *        디스크리트 GPU 가 PCIe 로 읽는다). `DeviceLocal` 은 초기 데이터를 받지 않는다 — 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
          */
         RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory );
+        /** @brief 스테이징 → 기기 로컬 복사 하나와 뒤의 읽기 배리어(정점 입력 · 셰이더)를 @p cmd 에 기록합니다. */
+        void recordDeviceLocalUploadCopy( VkCommandBuffer cmd, RHIBufferHandle staging, RHIBufferHandle destination, uint32 sizeBytes );
+        /** @brief 쌓인 기기 로컬 업로드를 지금 프레임 세그먼트에 모두 기록하고 스테이징을 지연 해제합니다(렌더 스레드 — 세그먼트를 닫기 직전 · 프레임 시작). */
+        void recordPendingDeviceLocalUploads();
+        /** @brief 쌓인 기기 로컬 업로드를 일회성 커맨드버퍼로 내고 기다립니다 — 프레임 없이 장치를 기다리는 자리(`waitIdleInternal`)만 부른다. */
+        void flushPendingDeviceLocalUploadsNow();
+        /** @brief 이 스레드가 지금 프레임 스트림을 기록하는 렌더 스레드면 true 입니다 — 그때는 업로드를 줄에 쌓지 않고 바로 기록한다(같은 프레임의 그리기보다 앞). */
+        bool isRecordingFrameOnThisThread() const;
         /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
         void restoreDroppedFrameLayouts();
 
@@ -910,6 +918,15 @@ namespace sw
          */
         VkCommandPool _oneShotCommandPool;
         mutex         _oneShotMutex;
+        /// @brief 기기 로컬 버퍼의 첫 내용 업로드 줄입니다(`VulkanRHIResourceFactory::uploadDeviceLocal`) — 아무 스레드나 쌓고 렌더 스레드가 프레임 세그먼트 끝에서 한 번에 기록한다.
+        struct PendingDeviceLocalUpload
+        {
+            RHIBufferHandle _staging{ 0 };     ///< 호스트 보임 스테이징(복사를 기록한 뒤 펜스 지연 해제)
+            RHIBufferHandle _destination{ 0 }; ///< 기기 로컬 도착
+            uint32          _sizeBytes{ 0 };
+        };
+        mutex                            _deviceLocalUploadMutex;
+        vector<PendingDeviceLocalUpload> _listPendingDeviceLocalUpload; ///< `_deviceLocalUploadMutex` 아래
         /**
          * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit`, `vkQueueWaitIdle`, `vkQueuePresentKHR`, `vkDeviceWaitIdle`)을 보호합니다.
          * @details VkQueue 는 외부 동기화 대상이다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있다.

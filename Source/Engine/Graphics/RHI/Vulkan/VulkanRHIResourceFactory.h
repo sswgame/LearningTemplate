@@ -24,7 +24,7 @@ namespace sw
         void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                               const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
-        /** @brief 기기 로컬 버퍼 @p handle 에 첫 내용 @p pData 를 스테이징 복사로 올리고 기다립니다. 실패하면 버퍼를 놓고 0 입니다. */
+        /** @brief 기기 로컬 버퍼 @p handle 에 첫 내용 @p pData 를 스테이징 복사로 올립니다(기다리지 않는다 — 렌더 스레드가 그 버퍼를 읽는 리스트보다 앞에 기록한다). 실패하면 버퍼를 놓고 0 입니다. */
         RHIBufferHandle          uploadDeviceLocal( RHIBufferHandle handle, const void* pData, uint32 sizeBytes );
         RHIBufferHandle          createGPUVertexBuffer( uint32 sizeBytes ) override;
         void                     updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
