@@ -107,19 +107,19 @@ namespace sw
     {
         struct Entry
         {
-            unique_ptr<Texture2D>          _texture;
-            weak_ptr<TextureLoadOperation> _pLoadOperation; ///< 진행 중인 로드(`request`) — 같은 경로의 요청은 이 로드 작업을 받는다
-            uint32                         _refCount{ 0 };
-            bool                           _bLoading{ false };    ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                           _bPublished{ false };  ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                           _bPinned{ false };     ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                           _bUpgrading{ false };  ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            TextureStreamingReservation    _streamingReservation; ///< 위쪽 밉 승급이 풀(`_streamingPool`)에서 쥔 바이트 — 항목이 사라지면 돌려준다(지우는 자리마다 빼지 않는다)
-            TextureMipLayout               _mipLayout;            ///< 위쪽 밉을 다시 읽을 파일 구간(로드가 끝날 때 적는다 — 픽셀은 쥐지 않는다, MR-2)
-            string                         _mipReadPath;          ///< 그 구간을 읽을 경로(형식 변형이 있으면 변형 파일 — 첫 로드가 읽은 파일과 같다)
-            uint32                         _idleFrames{ 0 };      ///< 화면 크기를 알리지 않은 `updateStreaming` 수(R6-6)
-            uint32                         _wantedFirstMip{ 0 };  ///< 마지막으로 알린 화면 크기가 요구한 가장 큰 밉(R6-6)
-            bool                           _bDemoted{ false };    ///< 예산 때문에 내렸다 — 다시 보이면 정책이 다시 올린다(처음 올리기는 로드가 줄에 넣는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            unique_ptr<Texture2D>           _texture;
+            weak_ptr<TextureLoadOperation>  _pLoadOperation; ///< 진행 중인 로드(`request`) — 같은 경로의 요청은 이 로드 작업을 받는다
+            uint32                          _refCount{ 0 };
+            bool                            _bLoading{ false };    ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bPublished{ false };  ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bPinned{ false };     ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bUpgrading{ false };  ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            TextureStreamingReservationSlot _streamingReservation; ///< 밉 스트리밍이 풀(`_streamingPool`)에서 쥔 바이트 — 항목이 사라지면 돌려준다(지우는 자리마다 빼지 않는다). 바꾸다 실패하면 옛 크기 그대로다
+            TextureMipLayout                _mipLayout;            ///< 위쪽 밉을 다시 읽을 파일 구간(로드가 끝날 때 적는다 — 픽셀은 쥐지 않는다, MR-2)
+            string                          _mipReadPath;          ///< 그 구간을 읽을 경로(형식 변형이 있으면 변형 파일 — 첫 로드가 읽은 파일과 같다)
+            uint32                          _idleFrames{ 0 };      ///< 화면 크기를 알리지 않은 `updateStreaming` 수(R6-6)
+            uint32                          _wantedFirstMip{ 0 };  ///< 마지막으로 알린 화면 크기가 요구한 가장 큰 밉(R6-6)
+            bool                            _bDemoted{ false };    ///< 예산 때문에 내렸다 — 다시 보이면 정책이 다시 올린다(처음 올리기는 로드가 줄에 넣는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief 범위 읽기 하나의 결과입니다 — IO 완료(다른 스레드)가 바이트를 넣고 상태를 올린다. 렌더 스레드는 상태가 `Reading` 이 아닐 때만 바이트를 만진다. */
         struct StreamingReadResult
@@ -672,9 +672,12 @@ namespace sw
                 SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bUpgrading );
                 it->second._bUpgrading = false;
                 if ( bUpgraded )
+                {
                     _impl->_retired.add( pDevice, retired );
+                    it->second._streamingReservation.commitChange(); // 새 크기가 옛 크기를 대신한다
+                }
                 else
-                    it->second._streamingReservation = TextureStreamingReservation{}; // 아래쪽 밉 그대로다 — 풀에 돌려준다
+                    it->second._streamingReservation.abandonChange(); // 옛 밉 그대로다 — 새 크기의 예약만 돌려주고 지금 크기는 그대로 센다
                 if ( it->second._refCount == 0 && it->second._bPinned == false )
                 {
                     pErased = std::move( it->second._texture );
@@ -861,9 +864,8 @@ namespace sw
                 const uint32 residentFirstMip = static_cast<uint32>( it->second._mipLayout._listMip.size() ) - it->second._texture->getMipCount();
                 if ( request._firstMip == residentFirstMip )
                     continue;
-                // 내리기는 지금 쥔 예약을 먼저 돌려준다 — 작은 사슬의 예약이 큰 사슬의 예약과 함께 예산을 넘어 내리기가 막히지 않게.
-                if ( request._firstMip > residentFirstMip )
-                    it->second._streamingReservation = TextureStreamingReservation{};
+                // 내리기는 작아지므로 예산을 보지 않는다 — 옛 크기의 예약과 함께 예산을 넘어 내리기가 막히지 않게(바꾸는 동안 두 크기를 함께 센다).
+                const bool bShrink = request._firstMip > residentFirstMip;
                 it->second._mipLayout.getRange( request._firstMip, request._mipCount, rangeOffset, rangeSize );
                 {
                     ScopedLock<mutex> streamingLock{ _impl->_streamingMutex };
@@ -872,13 +874,13 @@ namespace sw
                 if ( bOverInFlight == false )
                 {
                     // 풀 예산(`TextureStreamingConfig::_poolMegabytes`) — 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받는다 — 작은 것이 건너뛰어 채우지 않는다).
-                    optional<TextureStreamingReservation> reservation = _impl->_streamingPool.tryReserve( rangeSize, budget._poolBytes );
+                    optional<TextureStreamingReservation> reservation = _impl->_streamingPool.tryReserve( rangeSize, bShrink ? UINT64_MAX : budget._poolBytes );
                     bOverBudget                                       = reservation.has_value() == false;
                     if ( bOverBudget == false )
                     {
-                        it->second._streamingReservation = std::move( reservation.value() );
-                        it->second._bUpgrading           = true; // 읽는 동안 항목을 지킨다(놓여도 지우지 않는다) — 다시 읽기는 끝을 기다린다
-                        readPath                         = it->second._mipReadPath;
+                        it->second._streamingReservation.beginChange( std::move( reservation.value() ) );
+                        it->second._bUpgrading = true; // 읽는 동안 항목을 지킨다(놓여도 지우지 않는다) — 다시 읽기는 끝을 기다린다
+                        readPath               = it->second._mipReadPath;
                     }
                 }
             }
