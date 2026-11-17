@@ -318,6 +318,13 @@ namespace sw
          *          잔재 정리가 남의 쓰는 중인 파일을 지우지 않게 한다. 이름이 규칙과 다르면 false.
          */
         [[nodiscard]] static bool isAbandonedWriteTemp( string_view path );
+        /** @brief @p targetPath 옆의 원자적 쓰기 임시 경로입니다(`<원본>.tmp<pid>_<번호>` — `isAbandonedWriteTemp` 가 알아보는 이름). 다 쓴 뒤 `replaceFile` 로 바꿔 끼운다. */
+        static string makeWriteTempPath( string_view targetPath );
+        /**
+         * @brief 다 쓴 임시 파일 @p tempPath(`makeWriteTempPath`)를 @p targetPath 와 원자적으로 바꿔 끼웁니다 — `writeFile` 의 뒤 절반(쓰기 게이트 · 읽기 전용 거절 · 재시도 · 쓰기 기록)과 같다.
+         * @return 바꾸지 못하면 임시 파일을 지우고 false 입니다. 대상은 그대로다.
+         */
+        [[nodiscard]] static bool replaceFile( string_view tempPath, string_view targetPath );
         /**
          * @brief 파일 삭제를 시도만 합니다 — 지우지 못해도 알리지 않습니다. 없었거나 삭제했으면 true 입니다.
          * @details 실패가 예상된 정리에만 씁니다(아직 매핑된 모듈 DLL 의 그림자 사본 — 다음 시작 · 종료의 정리가 지운다). 그 밖은 `removeFile`.
@@ -428,5 +435,50 @@ namespace sw
         [[nodiscard]] static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
         [[nodiscard]] static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class AtomicFileWriter
+     * @brief 큰 파일을 조각으로 이어 쓰고 끝에 원자적으로 바꿔 끼우는 쓰기입니다(`FileUtil::writeFile` 의 스트림 꼴 — 같은 임시 파일 규칙 · 쓰기 게이트 · 바꿔 끼우기).
+     * @details 내용을 한 벡터로 들지 않고 쓰는 쪽(팩 스트림 쓰기)이 쓴다. 이미 쓴 자리를 덮는 `writeAt` 은 머리를 끝에 채우는 형식(헤더의 오프셋 표)의 자리다.
+     *          `commit` 전에 소멸하거나 쓰기가 한 번이라도 실패하면 임시 파일을 지우고 원본은 그대로다. 언리얼 `IFileManager::CreateFileWriter` + 임시 이름 바꾸기 자리.
+     */
+    class SW_API AtomicFileWriter
+    {
+    public:
+        AtomicFileWriter();
+        ~AtomicFileWriter();
+        AtomicFileWriter( const AtomicFileWriter& )            = delete;
+        AtomicFileWriter& operator=( const AtomicFileWriter& ) = delete;
+
+        /** @brief @p filePath 옆의 임시 파일을 엽니다. 이미 열려 있거나 쓸 수 없는 대상이면 오류입니다. */
+        [[nodiscard]] expected<void> open( string_view filePath );
+        /** @brief 끝에 @p size 바이트를 덧붙입니다. */
+        [[nodiscard]] expected<void> append( const uint8* pData, size_t size );
+        /**
+         * @brief 끝에 0 @p size 바이트를 덧붙입니다 — 쓰지 않고 건너뛰어 성긴 파일의 구멍으로 둔다(`PlatformFileUtil::markSparse`). 큰 빈 구역(슬롯 배치의 앞 빌드 자리 · 2 GiB 넘는 테스트 팩)의 자리다.
+         */
+        [[nodiscard]] expected<void> appendZeros( uint64 size );
+        /** @brief 쓰는 임시 파일을 성긴 파일로 표시합니다(`PlatformFileUtil::markSparse`). 못 하는 볼륨이면 false — `appendZeros` 가 0 을 실제로 쓴다. */
+        [[nodiscard]] bool markSparse();
+        /** @brief 이미 쓴 구간 [@p offset, @p offset + @p size) 를 덮습니다. 쓴 끝을 넘으면 오류입니다. 다음 `append` 는 다시 끝에 붙는다. */
+        [[nodiscard]] expected<void> writeAt( uint64 offset, const uint8* pData, size_t size );
+        /** @brief 지금까지 쓴 바이트 수입니다(다음 `append` 의 오프셋). */
+        uint64 getSize() const { return _size; }
+        /** @brief 닫고 원본과 바꿔 끼웁니다. 실패하면 임시 파일을 지우고 오류입니다. 어느 쪽이든 이 쓰기는 닫힌다. */
+        [[nodiscard]] expected<void> commit();
+
+    private:
+        /** @brief 열린 임시 파일을 닫고 지웁니다(실패 · 소멸의 정리). */
+        void discard();
+
+    private:
+        FILE*  _pFile;
+        string _filePath;
+        string _tempPath;
+        uint64 _size;
     };
 } // namespace sw

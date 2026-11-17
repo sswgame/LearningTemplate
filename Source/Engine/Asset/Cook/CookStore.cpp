@@ -44,22 +44,25 @@ namespace sw
             return false;
         }
         // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.
-        vector<uint8> bytes;
-        const bool    bOutputCurrent = FileUtil::isRegularFile( outputPath ) && FileUtil::readFile( outputPath, bytes ) && hashOutput( bytes ) == record._outputHash;
+        // 해시는 내용 해시 캐시로 구한다 — 도장(크기 · 시각)이 지난번과 같으면 큰 팩을 다시 읽지 않는다.
+        const bool bOutputCurrent = FileUtil::isRegularFile( outputPath ) && hashOutputFile( outputPath ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
-        bytes.clear();
-        if ( _derivedDataCache.find( record._key, bytes ) == false )
+        // DDC 의 출력을 출력 옆 임시 파일로 복사하고, 그 해시가 기록과 같을 때만 출력과 바꿔 끼운다 — 다르면 출력 자리를 건드리지 않는다(메모리로 들지도 않는다).
+        const string tempPath = FileUtil::makeWriteTempPath( outputPath );
+        if ( _derivedDataCache.find( record._key, tempPath ) == false )
         {
-            SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );
+            (void)FileUtil::tryRemoveFile( tempPath );
+            SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry (or it could not be copied) - cooked again", outputID );
             return false;
         }
-        if ( hashOutput( bytes ) != record._outputHash )
+        if ( hashOutputFile( tempPath ) != record._outputHash )
         {
+            (void)FileUtil::tryRemoveFile( tempPath );
             SW_LOG_WARNING_ID( "CookStore.CookDDCEntryDoes", "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
             return false;
         }
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::replaceFile( tempPath, outputPath ) == false )
         {
             SW_LOG_WARNING_ID( "CookStore.CookCouldNotWrite", "Cook: could not write '%#' from the DDC - cooked again", outputPath );
             return false;
@@ -67,15 +70,15 @@ namespace sw
         return true;
     }
 
-    uint64 CookStore::hashOutput( const vector<uint8>& bytes ) const
+    uint64 CookStore::hashOutputFile( string_view outputPath ) const
     {
         const Stopwatch watch;
-        const uint64    hash = ContentHash::computeBytes( bytes );
+        const uint64    hash = ContentHash::computeFile( outputPath );
         _outputHashNanos += watch.getElapsedNanoseconds();
         return hash;
     }
 
-    CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
+    optional<CookResult> CookStore::checkFinishedJob( const CookJob& job, CookStep step, string_view outputID )
     {
         if ( step == CookStep::Skipped )
             return CookResult::Skipped;
@@ -87,15 +90,37 @@ namespace sw
             SW_LOG_ERROR_ID( "Cook.NoInputRecorded", "Cook: '%#' recorded no input - its cooker read its sources around AssetIO, so a change would not cook it again", outputID );
             return CookResult::Failed;
         }
-        vector<uint8> bytes;
-        if ( FileUtil::readFile( outputPath, bytes ) == false )
+        return nullopt;
+    }
+
+    CookResult CookStore::finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, string_view outputPath ) const
+    {
+        const optional<CookResult> finished = checkFinishedJob( job, step._step, outputID );
+        if ( finished.has_value() )
+            return *finished;
+        const CookRecord record = CookRecord::make( job, step._outputHash );
+        if ( _derivedDataCache.store( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        {
+            SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore2", "Cook: could not store '%#' in the DDC or write its record", outputID );
+            return CookResult::Failed;
+        }
+        return CookResult::Cooked;
+    }
+
+    CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
+    {
+        const optional<CookResult> finished = checkFinishedJob( job, step, outputID );
+        if ( finished.has_value() )
+            return *finished;
+        // 출력 해시는 파일을 조각으로 읽어 센다(내용 해시 캐시가 그 값을 남긴다). DDC 에는 파일을 복사한다 — 출력을 한 벡터로 들지 않는다.
+        const uint64 outputHash = hashOutputFile( outputPath );
+        if ( outputHash == 0 )
         {
             SW_LOG_ERROR_ID( "CookStore.CookReportedWrittenBut", "Cook: '%#' was reported written but cannot be read back", outputPath );
             return CookResult::Failed;
         }
-        // 출력 파일은 쿠커가 쓰므로 다시 읽는 것은 DDC 저장에 어차피 필요하다. 해시는 그 바이트를 한 번만 훑는다(`hashOutput` 이 시간도 잰다).
-        const CookRecord record = CookRecord::make( job, hashOutput( bytes ) );
-        if ( _derivedDataCache.store( record._key, bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        const CookRecord record = CookRecord::make( job, outputHash );
+        if ( _derivedDataCache.store( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;

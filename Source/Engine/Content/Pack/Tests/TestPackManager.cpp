@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Content/Pack/Tests/PackTestUtil.h"
 
 // 팩 가상 파일 시스템 — 도메인 팩은 도메인을 뗀 경로로, 패치 팩은 전체 경로로 담는다. 도메인이 붙은 키와 없는 키 모두에서 패치의 교체 · 지움이 보이고, dlc 팩도 찾는다.
 // 도메인은 팩이 적은 마운트 도메인이다 — 파일 이름과 상관없다.
@@ -16,19 +16,10 @@ namespace
 {
     struct TestPackManagerInternal
     {
-        static vector<uint8> toBytes( string_view text ) { return vector<uint8>( text.begin(), text.end() ); }
-
         /** @brief @p packPath 에 항목들을 담은 팩을 씁니다. @p mountDomain 이 비면 패치 팩이다(항목이 전체 경로). */
         static bool writePack( const string& packPath, string_view mountDomain, const vector<std::pair<string, string>>& listEntry )
         {
-            PackWriterDesc desc;
-            desc._mountDomain = string{ mountDomain };
-            PackWriter writer( desc );
-            for ( const std::pair<string, string>& entry : listEntry )
-            {
-                writer.addBytes( entry.first, toBytes( entry.second ) );
-            }
-            return writer.writePackFile( packPath );
+            return PackTestUtil::writeTextPack( packPath, mountDomain, listEntry );
         }
 
         static string read( const PackManager& packs, string_view path )
@@ -183,12 +174,11 @@ SW_TEST_CASE( PackManagerTest, DLCPackNeedsAnEntitlementValidator )
     const string root = test::makeScratchPath( "Packs" );
     const string dlc  = FileUtil::joinPath( root, "paid.pack" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    PackWriterDesc desc;
-    desc._mountDomain = "dlc/paid";
-    desc._dlcAppID    = 4242;
-    PackWriter writer( desc );
-    writer.addBytes( "maps/gold.txt", TestPackManagerInternal::toBytes( "gold" ) );
-    SW_REQUIRE_TRUE( writer.writePackFile( dlc ) );
+    PackWriterDesc desc = PackTestUtil::makeDesc( "dlc/paid" );
+    desc._dlcAppID      = 4242;
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( dlc, desc, {
+                                                             { "maps/gold.txt", vector<uint8>{ 'g', 'o', 'l', 'd' } }
+    } ) );
 
     PackManager packs;
     {
@@ -205,4 +195,39 @@ SW_TEST_CASE( PackManagerTest, DLCPackNeedsAnEntitlementValidator )
     { return appID == 4242; } ) );
     SW_EXPECT_TRUE( packs.mountPack( dlc, 1 ) );
     SW_EXPECT_EQUAL( string( "gold" ), TestPackManagerInternal::read( packs, "dlc/paid/maps/gold.txt" ) );
+}
+
+/**
+ * @brief [PackManagerTest] 같은 도메인의 형제 팩(나눈 팩 · 청크)은 항목이 겹치면 붙지 않는다 — 어느 쪽이 이길지 조용히 정하지 않는다(뒤가 이기는 것은 패치뿐)
+ * @details 겹치지 않는 형제는 함께 붙어 한 도메인으로 읽히고, 같은 파일을 다시 붙이는 것은 형제가 아니다.
+ */
+SW_TEST_CASE( PackManagerTest, SiblingPacksOverlapIsAnError )
+{
+    using Internal      = TestPackManagerInternal;
+    const string root   = test::makeScratchPath( "SplitPacks" );
+    const string first  = FileUtil::joinPath( root, "game_split.pack" );
+    const string second = FileUtil::joinPath( root, "game_split.1.pack" );
+    const string clash  = FileUtil::joinPath( root, "game_split.2.pack" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( Internal::writePack( first, "game/split", {
+                                                                   { "maps/a.txt", "a" }
+    } ) );
+    SW_REQUIRE_TRUE( Internal::writePack( second, "game/split", {
+                                                                    { "maps/b.txt", "b" }
+    } ) );
+    SW_REQUIRE_TRUE( Internal::writePack( clash, "game/split", {
+                                                                   { "maps/a.txt", "again" }
+    } ) );
+
+    PackManager packs;
+    SW_REQUIRE_TRUE( packs.mountPack( first, 1 ) );
+    SW_REQUIRE_TRUE( packs.mountPack( second, 1 ) );
+    SW_EXPECT_EQUAL( string( "a" ), Internal::read( packs, "game/split/maps/a.txt" ) );
+    SW_EXPECT_EQUAL( string( "b" ), Internal::read( packs, "game/split/maps/b.txt" ) );
+    {
+        SW_EXPECT_LOG( "PackManager.SiblingPacksOverlap" );
+        SW_EXPECT_FALSE( packs.mountPack( clash, 1 ) );
+    }
+    SW_EXPECT_TRUE( packs.mountPack( first, 1 ) ); // 같은 파일을 다시 붙인다 — 앞 마운트를 바꿔 끼운다
+    SW_EXPECT_EQUAL( size_t{ 2 }, packs.getMountedPackCount() );
 }

@@ -9,7 +9,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -39,6 +39,7 @@ namespace
             settings._maxPackBytes          = 1u << 20;
             settings._maxEntryCount         = 8;
             settings._maxEntryBytes         = 4096;
+            settings._packBlockSize         = kPackMinBlockSize;
             settings._listOverridablePrefix = { "testproject/data/" };
             return settings;
         }
@@ -179,14 +180,8 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
     // 밝히지 않은 기본 리소스를 덮어쓰는 항목.
     const auto writePack = [&installFolder]( string_view id, const vector<std::pair<string, string>>& listEntry )
     {
-        PackWriterDesc desc;
-        PackWriter     writer( desc );
-        for ( const std::pair<string, string>& entry : listEntry )
-        {
-            writer.addBytes( entry.first, vector<uint8>( entry.second.begin(), entry.second.end() ) );
-        }
         return TestModSessionInternal::writeManifest( installFolder, id ) &&
-               writer.writePackFile( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kPackFileName ) );
+               PackTestUtil::writeTextPack( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kPackFileName ), "", listEntry );
     };
     SW_REQUIRE_TRUE( writePack( "sneaky", {
                                               {         Internal::kBasePath, "modded"},

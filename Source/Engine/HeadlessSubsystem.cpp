@@ -248,6 +248,8 @@ namespace sw
                 }
                 params._writerDesc._compression      = packConfig._compression._codec;
                 params._writerDesc._compressionLevel = packConfig._compression._level;
+                params._writerDesc._blockSize        = packConfig._compression._blockSize;
+                params._writerDesc._writeWindowBytes = packConfig._compression._writeWindowBytes;
                 return PackPatchBuilder::makePatch( params );
             }
 

@@ -2,6 +2,7 @@
 
 #include "Engine/Asset/Cook/PackCooker.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
@@ -65,8 +66,26 @@ namespace sw
             /** @brief 팩 쿠킹 전체의 단계별 시간입니다(요약 로그). 팩 여럿이 더해 가고, 단계는 한 스레드에서 차례로 돌므로 합이 곧 그 단계에 쓴 시간이다. */
             struct PackCookTiming
             {
-                PackWriteStats _write;          ///< 압축 · 배치 · 파일 쓰기(`PackWriter`)
+                PackWriteStats _write;          ///< 압축 · 배치 · 파일 쓰기(`PackStreamWriter`)
                 int64          _readNanos{ 0 }; ///< 원본 · 스테이징 파일 읽기
+            };
+
+            /** @brief 팩 항목의 바이트를 어디서 얻는지입니다. */
+            enum class PackItemSource : uint8
+            {
+                Source,    ///< 소스 트리의 파일(데이터 상속을 펼치고 참조를 본다 — `readSourceFile`)
+                Staged,    ///< 스테이징 산출물(그대로 — `readStagedFile`)
+                Generated, ///< 쿠커가 만든 바이트(`AssetPackIndex`)
+            };
+
+            /** @brief 팩에 담을 항목 하나입니다. 모두 모아 경로 해시 순으로 세운 뒤 하나씩 읽어 스트림 쓰기에 넘긴다(팩 전체를 한 번에 들지 않는다). */
+            struct PackItem
+            {
+                uint64         _pathHash{ 0 };
+                string         _relativePath;
+                string         _absPath;
+                PackItemSource _source{ PackItemSource::Source };
+                vector<uint8>  _listGeneratedByte; ///< `Generated` 의 바이트
             };
 
             /** @brief 고르기 결과입니다 — 담을 원본 id, 닿았지만 제외 규칙이 뺀 원본 id(모두 정규화한 리소스 id), 스테이징 산출물의 고르기입니다. */
@@ -390,9 +409,9 @@ namespace sw
              * @details 팩은 마운트된 팩이 아니라 느슨한 트리 · 스테이징(리소스 루트 밖)에서 베이크하므로 디스크 경로로 읽는다. 예전에는 `FileUtil` 로 읽고 입력을 손으로 기록했다(같은 일 둘).
              *          읽기 시간에는 입력 해시가 들어 있다.
              */
-            static bool addFile( PackWriter& writer, string_view relativePath, const string& absPath, PackCookTiming& ioTiming )
+            [[nodiscard]] static bool readStagedFile( const string& absPath, PackCookTiming& ioTiming, vector<uint8>& outBytes )
             {
-                vector<uint8>   bytes;
+                vector<uint8>&  bytes = outBytes;
                 const Stopwatch readWatch;
                 const bool      bRead = AssetIO::readBinaryFile( absPath, bytes );
                 ioTiming._readNanos += readWatch.getElapsedNanoseconds();
@@ -401,7 +420,6 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNot", "Pack cook: could not read '%#'", absPath );
                     return false;
                 }
-                writer.addBytes( relativePath, std::move( bytes ) );
                 return true;
             }
 
@@ -411,10 +429,10 @@ namespace sw
              *          펼치지 못하면 쿠킹 실패다 — 부모 없이 자식 칸만 담지 않는다. 카탈로그 참조 규칙(@p references)이 있는 루트는 펼친 글로 참조를 보고, 필수 참조가 깨졌으면
              *          쿠킹 실패다 — 런타임 카탈로그 읽기와 같은 표 · 같은 검사라 실행해야 드러나던 깨진 id 가 팩에 담기지 않는다.
              */
-            static bool addSourceFile( PackWriter& writer, string_view relativePath, const string& absPath, string_view contentRoot, const DataCatalogReferenceRules& references,
-                                       PackCookTiming& ioTiming )
+            [[nodiscard]] static bool readSourceFile( string_view relativePath, const string& absPath, string_view contentRoot, const DataCatalogReferenceRules& references,
+                                                      PackCookTiming& ioTiming, vector<uint8>& outBytes )
             {
-                vector<uint8>   bytes;
+                vector<uint8>&  bytes = outBytes;
                 const Stopwatch readWatch;
                 const bool      bRead = AssetIO::readBinaryFile( absPath, bytes );
                 ioTiming._readNanos += readWatch.getElapsedNanoseconds();
@@ -425,10 +443,7 @@ namespace sw
                 }
                 const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
                 if ( AssetCookPath::isCookableSource( relativePath ) )
-                {
-                    writer.addBytes( relativePath, std::move( bytes ) );
                     return true;
-                }
                 DataInheritanceDiskSource source{ contentRoot };
                 string                    flatText;
                 bool                      bComposed = false;
@@ -448,9 +463,43 @@ namespace sw
                     }
                 }
                 if ( bComposed )
-                    writer.addBytes( relativePath, vector<uint8>( flatText.begin(), flatText.end() ) );
-                else
-                    writer.addBytes( relativePath, std::move( bytes ) );
+                    bytes.assign( flatText.begin(), flatText.end() );
+                return true;
+            }
+
+            /**
+             * @brief 모은 항목을 경로 해시 순으로 세워 하나씩 읽고 @p outputPath 에 스트림으로 씁니다. 항목은 하나씩(창 크기까지)만 들고 내용 해시를 함께 센다.
+             * @return 같은 경로가 두 번이거나 읽기 · 쓰기가 실패하면 이유를 오류로 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writePackItems( const PackConfig& config, const PackWriterDesc& writerDesc, const string& outputPath, const PackCookParams& params, const DataCatalogReferenceRules& references,
+                                                      vector<PackItem>& inoutListItem, PackCookTiming& ioTiming, PackWriteResult& outResult )
+            {
+                VectorUtil::sort( inoutListItem, []( const PackItem& left, const PackItem& right )
+                { return left._pathHash < right._pathHash; } );
+                PackStreamWriter writer;
+                expected<void>   step = writer.open( outputPath, writerDesc );
+                for ( size_t index = 0; index < inoutListItem.size() && step.has_value(); ++index )
+                {
+                    PackItem&     item = inoutListItem[index];
+                    vector<uint8> bytes;
+                    bool          bRead = true;
+                    if ( item._source == PackItemSource::Source )
+                        bRead = readSourceFile( item._relativePath, item._absPath, params._resourceRoot, references, ioTiming, bytes );
+                    else if ( item._source == PackItemSource::Staged )
+                        bRead = readStagedFile( item._absPath, ioTiming, bytes );
+                    else
+                        bytes = std::move( item._listGeneratedByte );
+                    if ( bRead == false )
+                        return false; // 읽기가 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
+                    step = writer.append( item._relativePath, config._compression.getEntryStorage( item._relativePath ), std::move( bytes ) );
+                }
+                expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
+                if ( closed.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.PackWriteFailed", "Pack cook: could not write %# - %# '%#'", outputPath, closed.error().message(), closed.error().detail() );
+                    return false;
+                }
+                outResult = std::move( *closed );
                 return true;
             }
 
@@ -493,7 +542,7 @@ namespace sw
 
             /**
              * @brief 팩 쿠킹 요약 한 줄을 남깁니다 — 단계별 ms 로 병렬 압축의 효과를 잰다.
-             * @details `compress` 는 `벽시계 / CPU 합` 이다(CPU 합이 직렬로 돌았다면 든 시간이라 둘의 비가 병렬 효과). `hash` 는 입력 내용 해시(`addFile`)와 출력 내용 해시(`CookStore` 의 재사용 판정 · 기록)에 쓴 시간이고,
+             * @details `compress` 는 `벽시계 / CPU 합` 이다(CPU 합이 직렬로 돌았다면 든 시간이라 둘의 비가 병렬 효과). `hash` 는 입력 내용 해시(`readSourceFile` · `readStagedFile`)와 출력 내용 해시(`CookStore` 의 재사용 판정 · 기록)에 쓴 시간이고,
              *          바뀐 것 없는 실행에서는 출력 해시가 거의 전부다. `other` 는 총 시간에서 나머지 단계를 뺀 몫이다 — 출력 읽기 · DDC 저장 · 기록 쓰기 · 폴더 훑기.
              */
             static void logSummary( uint32 packCount, uint32 failedCount, string_view target, int64 totalNanos, int64 hashNanos, const PackCookTiming& timing )
@@ -507,36 +556,29 @@ namespace sw
                                 write._writeNanos / constant::time::kNanosecondsPerMillisecond, otherNanos / constant::time::kNanosecondsPerMillisecond, write._entryCount, write._inputBytes );
             }
 
-            /** @brief 도메인 하나의 팩을 @p outputPath 에 씁니다. 작업 범위 안에서 부른다. 단계별 시간은 @p ioTiming 에 더한다. */
-            static CookStep cookDomainPack( const PackConfig& config, const PackCookParams& params, const string& domain, const string& outputPath, const PackSelection& selection,
-                                            PackCookTiming& ioTiming )
+            /** @brief 도메인 하나에서 담을 항목의 목록과 알릴 것(낡은 잔재 · 뺀 셰이더 바이너리)입니다. 파일은 읽지 않는다(목록만). */
+            struct DomainListing
+            {
+                vector<PackItem>  _listItem;
+                vector<string>    _listStale;
+                DroppedShaderList _droppedRequested; ///< 닿은 출처가 요청했는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
+                DroppedShaderList _droppedOther;     ///< 닿지 않은 출처만 요청했거나 요청 밖(낡은 잔재 등) — 정보 줄
+            };
+
+            /**
+             * @brief 도메인의 원본 · 스테이징 목록에서 담을 항목을 고릅니다(정체성 색인 항목은 넣지 않는다 — 첫 팩의 작업이 만든다). 나누기와 팩 작업이 같은 함수를 써 같은 목록을 본다.
+             * @details 목록은 `CookJob::collectFiles` 로 읽어 작업 안이면 그 작업의 입력이 된다(파일이 생기거나 사라지면 다시 굽는다).
+             */
+            [[nodiscard]] static bool collectDomainItems( const PackConfig& config, const PackCookParams& params, const string& domain, const PackSelection& selection, DomainListing& outListing )
             {
                 const string domainDir = FileUtil::joinPath( params._resourceRoot, domain );
                 const string stagedDir = FileUtil::joinPath( params._cookedDir, domain );
+                const auto   addItem   = [&outListing]( const string& relativePath, const string& absPath, PackItemSource source )
+                { outListing._listItem.push_back( PackItem{ PackStreamWriter::makePathHash( relativePath ), relativePath, absPath, source, {} } ); };
 
-                PackWriterDesc writerDesc;
-                writerDesc._compression      = config._compression._codec;
-                writerDesc._compressionLevel = config._compression._level;
-                writerDesc._layoutMode       = config._layout._mode;
-                writerDesc._maxHolePercent   = static_cast<uint32>( config._layout._maxHolePercent );
-                writerDesc._previousPackPath = outputPath; // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
-                writerDesc._mountDomain      = domain;
-                PackWriter writer( writerDesc );
-
-                // 카탈로그 참조 규칙 — 표도 이 작업의 입력이다(리소스 읽기). 못 읽으면 검사 없이 굽지 않는다.
-                DataCatalogReferenceRules references;
-                if ( references.loadFromAsset() == false )
-                    return CookStep::Failed;
-                // 정체성 규칙 — 팩마다 GUID → 팩 안 경로 색인을 담는다(`AssetPackIndex`). 못 읽으면 색인 없이 굽지 않는다.
-                AssetIdentityRules identityRules;
-                AssetPackIndex     identityIndex;
-                if ( identityRules.load( ProcessRoots::get()._project.str() ) == false )
-                    return CookStep::Failed;
-                // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 베이크한다(`CookJob::collectFiles` 가 기록한다).
                 vector<string> listSourceFile;
                 if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
-                    return CookStep::Failed;
-                vector<string> listStale;
+                    return false;
                 for ( const string& absPath : listSourceFile )
                 {
                     string relativePath;
@@ -549,24 +591,17 @@ namespace sw
                     // 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가 없을 때 그것으로 물러나 실패를 가리므로 넣지 않는다.
                     if ( AssetCookPath::isCookedOutput( relativePath ) )
                     {
-                        listStale.push_back( relativePath );
+                        outListing._listStale.push_back( relativePath );
                         continue;
                     }
                     if ( selection._setIncluded.contains( makeAssetID( domain, relativePath ) ) == false )
                         continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachResult`)
-                    if ( addSourceFile( writer, relativePath, absPath, params._resourceRoot, references, ioTiming ) == false ||
-                         addPackedIdentity( identityRules, domain, relativePath, absPath, identityIndex ) == false )
-                        return CookStep::Failed;
+                    addItem( relativePath, absPath, PackItemSource::Source );
                 }
-                if ( listStale.empty() == false )
-                    SW_LOG_WARNING_ID( "PackCooker.PackCookStaleCooked", "Pack cook: %# has %# stale cooked files in the source tree (first: %#) - delete them; they are not packed", domain, listStale.size(),
-                                       listStale.front() );
 
                 vector<string> listStagedFile;
                 if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
-                    return CookStep::Failed;
-                DroppedShaderList droppedRequested; // 닿은 출처가 요청했는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
-                DroppedShaderList droppedOther;     // 닿지 않은 출처만 요청했거나 요청 밖(낡은 잔재 등) — 정보 줄
+                    return false;
                 for ( const string& absPath : listStagedFile )
                 {
                     string relativePath;
@@ -579,34 +614,188 @@ namespace sw
                     {
                         const string assetID = makeAssetID( domain, relativePath );
                         if ( StringUtil::contains( assetID, "/shaders/bin/" ) )
-                            ( PackCooker::isRequestedByReachedOrigin( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) ? droppedRequested : droppedOther ).add( relativePath );
+                            ( PackCooker::isRequestedByReachedOrigin( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) ? outListing._droppedRequested : outListing._droppedOther )
+                                .add( relativePath );
                         continue;
                     }
-                    if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
-                        return CookStep::Failed;
+                    addItem( relativePath, absPath, PackItemSource::Staged );
                 }
-                if ( droppedRequested._count > 0 )
+                return true;
+            }
+
+            /** @brief 목록을 고르며 본 것(낡은 잔재 · 뺀 셰이더 바이너리)을 한 번 알립니다 — 나누기 단계가 부른다(팩 몫마다 되풀이하지 않는다). */
+            static void logListingNotes( const PackCookParams& params, const string& domain, const DomainListing& listing )
+            {
+                if ( listing._listStale.empty() == false )
+                    SW_LOG_WARNING_ID( "PackCooker.PackCookStaleCooked", "Pack cook: %# has %# stale cooked files in the source tree (first: %#) - delete them; they are not packed", domain,
+                                       listing._listStale.size(), listing._listStale.front() );
+                if ( listing._droppedRequested._count > 0 )
                     SW_LOG_WARNING_ID( "PackCooker.PackCookDroppedRequestedShader",
                                        "Pack cook: %# drops %# requested %# shader binaries whose source shader is not reached from the cook roots - the runtime will not find them (first: %#)",
-                                       domain, droppedRequested._count, params._shaderFolder, droppedRequested._names );
-                if ( droppedOther._count > 0 )
-                    SW_LOG_INFO_ID( "PackCooker.PackCookDroppedShaderBinaries", "Pack cook: %# drops %# %# shader binaries outside the cook requests (first: %#)", domain, droppedOther._count,
-                                    params._shaderFolder, droppedOther._names );
+                                       domain, listing._droppedRequested._count, params._shaderFolder, listing._droppedRequested._names );
+                if ( listing._droppedOther._count > 0 )
+                    SW_LOG_INFO_ID( "PackCooker.PackCookDroppedShaderBinaries", "Pack cook: %# drops %# %# shader binaries outside the cook requests (first: %#)", domain,
+                                    listing._droppedOther._count, params._shaderFolder, listing._droppedOther._names );
+            }
 
-                const expected<string> indexText = identityIndex.makeText();
-                if ( indexText.has_value() == false )
+            /** @brief 팩 몫 작업의 설정 해시입니다 — 도메인의 고르기 해시에 청크 · 번호 · 담을 경로 해시를 섞는다(경계가 옮겨지면 다시 굽는다). */
+            static uint64 computePartHash( uint64 selectionHash, const PackPart& part )
+            {
+                uint64 hash = HashUtil::computeStringHash64( part._chunk.c_str(), part._chunk.size(), false, selectionHash );
+                hash        = HashUtil::appendValue64( hash, part._number );
+                for ( const uint64 pathHash : part._listPathHash )
                 {
-                    SW_LOG_ERROR_ID( "PackCooker.PackCookIndexInvalid", "Pack cook: %# asset index - %# '%#'", domain, indexText.error().message(), indexText.error().detail() );
-                    return CookStep::Failed;
+                    hash = HashUtil::appendValue64( hash, pathHash );
                 }
-                writer.addBytes( AssetPackIndex::kFileName, vector<uint8>( indexText->begin(), indexText->end() ) );
+                return hash;
+            }
 
-                PackWriteStats writeStats;
-                if ( writer.writePackFile( outputPath, &writeStats ) == false )
-                    return CookStep::Failed;
-                ioTiming._write.add( writeStats );
-                SW_LOG_INFO_ID( "PackCooker.PackCookWroteFiles", "Pack cook: wrote %# (%# files, %# bytes before compression)", outputPath, writer.getEntryCount(), writeStats._inputBytes );
-                return CookStep::Written;
+            /** @brief 팩 폴더의 쿠커 장부 파일 이름입니다 — 쿠커가 쓴 팩 파일 이름을 한 줄씩 적는다(팩이 아니라 싣지 않는다). 형제 팩 정리는 이 장부에 있는 것만 지운다. */
+            static constexpr string_view kCookedPackLedgerName = "CookedPacks.txt";
+
+            /** @brief 팩 폴더의 장부를 읽습니다. 없으면 빈 장부입니다. 읽지 못하면 false 입니다. */
+            [[nodiscard]] static bool readCookedPackLedger( const string& packOutputDir, unordered_set<string>& outSetName )
+            {
+                const string ledgerPath = FileUtil::joinPath( packOutputDir, kCookedPackLedgerName );
+                if ( FileUtil::isRegularFile( ledgerPath ) == false )
+                    return true;
+                string text;
+                if ( FileUtil::readTextFile( ledgerPath, text ) == false )
+                    return false;
+                size_t lineStart = 0;
+                while ( lineStart < text.size() )
+                {
+                    size_t lineEnd         = text.find( '\n', lineStart );
+                    lineEnd                = lineEnd == string::npos ? text.size() : lineEnd;
+                    const string_view name = StringUtil::trim( string_view( text ).substr( lineStart, lineEnd - lineStart ) );
+                    if ( name.empty() == false )
+                        outSetName.insert( string( name ) );
+                    lineStart = lineEnd + 1;
+                }
+                return true;
+            }
+
+            /** @brief 장부를 이름 순으로 씁니다. */
+            [[nodiscard]] static bool writeCookedPackLedger( const string& packOutputDir, const unordered_set<string>& setName )
+            {
+                vector<string> listName( setName.begin(), setName.end() );
+                VectorUtil::sort( listName );
+                string text;
+                for ( const string& name : listName )
+                {
+                    text.append( name ).append( "\n" );
+                }
+                return FileUtil::ensureDirectoryExists( packOutputDir ) && FileUtil::writeTextFile( FileUtil::joinPath( packOutputDir, kCookedPackLedgerName ), text );
+            }
+
+            /**
+             * @brief 팩 폴더에서 도메인의 형제 팩(`<도메인>.*.pack`) 가운데 이번 쿠킹이 쓰지 않은 것을 정리합니다. 기본 이름(`<도메인>.pack`)은 늘 쓰므로 건드리지 않는다.
+             * @details 지우는 것은 쿠커 장부(@p inoutSetLedger — 지난 쿠킹들이 쓴 팩)에 있는 것뿐이고, 장부에서도 뺀다. 장부에 없는 형제는 사람이 둔 파일일 수 있어 경고만 남긴다
+             *          (그대로 두면 마운트가 같은 도메인의 겹침으로 거절할 수 있다).
+             * @return 목록을 못 읽거나 지우지 못하면 이유를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool removeStaleSiblingPacks( const string& packOutputDir, const string& domain, const vector<string>& listWrittenName, unordered_set<string>& inoutSetLedger )
+            {
+                if ( FileUtil::isDirectory( packOutputDir ) == false )
+                    return true;
+                vector<string> listPackFile;
+                if ( FileUtil::collectFiles( packOutputDir, ".pack", listPackFile, false ) == false )
+                    return false;
+                const string baseName = PackCooker::makePackFileName( domain );
+                const string prefix   = baseName.substr( 0, baseName.size() - string_view( ".pack" ).size() ) + ".";
+                bool         bAllGone = true;
+                for ( const string& packPath : listPackFile )
+                {
+                    string_view fileName;
+                    FileUtil::getFileNamePart( packPath, fileName );
+                    const string name     = string( fileName );
+                    const bool   bSibling = StringUtil::startsWith( fileName, prefix ) && name != baseName;
+                    if ( bSibling == false || VectorUtil::contains( listWrittenName, name ) )
+                        continue;
+                    if ( inoutSetLedger.contains( name ) == false )
+                    {
+                        SW_LOG_WARNING_ID( "PackCooker.PackCookUnknownSibling", "Pack cook: %# looks like a split pack of %# but the cooker did not write it (not in %#) - it is left; remove it if it is stale",
+                                           packPath, domain, kCookedPackLedgerName );
+                        continue;
+                    }
+                    if ( FileUtil::removeFile( packPath ) )
+                    {
+                        inoutSetLedger.erase( name );
+                        SW_LOG_INFO_ID( "PackCooker.PackCookRemovedSibling", "Pack cook: removed %# - %# is split into fewer packs now", packPath, domain );
+                    }
+                    else
+                        bAllGone = false;
+                }
+                return bAllGone;
+            }
+
+            /**
+             * @brief 도메인의 팩 몫 하나(@p part)를 @p outputPath 에 씁니다. 작업 범위 안에서 부른다. 단계별 시간은 @p ioTiming 에 더한다.
+             * @details 목록(@p listing)은 나누기가 한 번 고른 것을 받아 이 몫의 경로 해시만 담는다 — 목록이 바뀌면 몫의 경로 해시가 설정 해시에 들어 있어 다시 굽는다.
+             *          첫 팩(기본 청크 0 번)은 도메인 전체의 정체성 색인을 함께 담는다.
+             */
+            static CookStreamedStep cookDomainPack( const PackConfig& config, const PackCookParams& params, const string& domain, const string& outputPath, const DomainListing& listing,
+                                                    const PackPart& part, PackCookTiming& ioTiming )
+            {
+                constexpr CookStreamedStep kFailed{ CookStep::Failed, 0 };
+
+                PackWriterDesc writerDesc;
+                writerDesc._compression      = config._compression._codec;
+                writerDesc._compressionLevel = config._compression._level;
+                writerDesc._layoutMode       = config._layout._mode;
+                writerDesc._maxHolePercent   = static_cast<uint32>( config._layout._maxHolePercent );
+                writerDesc._previousPackPath = outputPath; // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
+                writerDesc._mountDomain      = domain;     // 형제 팩도 같은 도메인을 적는다 — 리더는 그대로 붙이고 마운트가 겹침을 거절한다
+                writerDesc._blockSize        = config._compression._blockSize;
+                writerDesc._writeWindowBytes = config._compression._writeWindowBytes;
+
+                // 카탈로그 참조 규칙 — 표도 이 작업의 입력이다(리소스 읽기). 못 읽으면 검사 없이 굽지 않는다.
+                DataCatalogReferenceRules references;
+                if ( references.loadFromAsset() == false )
+                    return kFailed;
+                vector<PackItem> listItem;
+                for ( const PackItem& item : listing._listItem )
+                {
+                    if ( part.contains( item._pathHash ) )
+                        listItem.push_back( item );
+                }
+                if ( part.isFirstPack() )
+                {
+                    // 정체성 규칙 — 도메인의 GUID → 팩 안 경로 색인을 첫 팩에 담는다(`AssetPackIndex`). 못 읽으면 색인 없이 굽지 않는다.
+                    AssetIdentityRules identityRules;
+                    AssetPackIndex     identityIndex;
+                    if ( identityRules.load( ProcessRoots::get()._project.str() ) == false )
+                        return kFailed;
+                    for ( const PackItem& item : listing._listItem ) // 색인은 도메인 전체다 — 다른 몫에 담긴 원본도 센다
+                    {
+                        if ( item._source == PackItemSource::Source && addPackedIdentity( identityRules, domain, item._relativePath, item._absPath, identityIndex ) == false )
+                            return kFailed;
+                    }
+                    const expected<string> indexText = identityIndex.makeText();
+                    if ( indexText.has_value() == false )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.PackCookIndexInvalid", "Pack cook: %# asset index - %# '%#'", domain, indexText.error().message(), indexText.error().detail() );
+                        return kFailed;
+                    }
+                    PackItem indexItem{ PackStreamWriter::makePathHash( AssetPackIndex::kFileName ), string( AssetPackIndex::kFileName ), {}, PackItemSource::Generated, {} };
+                    indexItem._listGeneratedByte.assign( indexText->begin(), indexText->end() );
+                    listItem.push_back( std::move( indexItem ) );
+                }
+
+                PackWriteResult writeResult;
+                if ( writePackItems( config, writerDesc, outputPath, params, references, listItem, ioTiming, writeResult ) == false )
+                    return kFailed;
+                // 나누기의 어림은 압축 전 · 펼치기 전 크기다 — 데이터 상속을 펼친 글이 커져 한도를 넘었으면 오류로 멈춘다(한도는 FAT32 같은 바깥 상한이라 넘긴 팩은 못 싣는다).
+                if ( writeResult._fileSize > config._split._maxPackBytes )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.PackOverSplitLimit", "Pack cook: %# is %# bytes - over the %#-byte split limit (expanded text grew past the estimate); lower _split._maxPackBytes or add a chunk rule",
+                                     outputPath, writeResult._fileSize, config._split._maxPackBytes );
+                    return kFailed;
+                }
+                ioTiming._write.add( writeResult._stats );
+                SW_LOG_INFO_ID( "PackCooker.PackCookWroteFiles", "Pack cook: wrote %# (%# files, %# bytes before compression)", outputPath, writeResult._stats._entryCount,
+                                writeResult._stats._inputBytes );
+                return CookStreamedStep{ CookStep::Written, writeResult._contentHash };
             }
         };
     } // namespace
@@ -614,12 +803,108 @@ namespace sw
 
 namespace sw
 {
-    string PackCooker::makePackFileName( string_view domain )
+    string PackCooker::makePackFileName( string_view domain, string_view chunk, uint32 number )
     {
         string name = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( domain ).str() );
         std::replace( name.begin(), name.end(), '/', '_' );
+        // 기본 청크 0 번은 예전 이름 그대로다 — 배포 스크립트(`Scripts/package/pack.py`) · 도구가 아는 이름이고 나누지 않는 도메인이 대부분이다.
+        if ( chunk.empty() == false )
+            name.append( "." ).append( chunk );
+        if ( chunk.empty() == false || number > 0 )
+        {
+            StringBuilder<constant::buffer::kMax32> numberText;
+            numberText.appendFormat( ".%#", number );
+            name.append( numberText.view() );
+        }
         name += ".pack";
         return name;
+    }
+
+    uint64 PackCooker::estimateEntryPackBytes( string_view relativePath, uint64 sizeBytes )
+    {
+        const uint64 sector     = kPackSectorAlignment;
+        const uint64 blockCount = ( sizeBytes + kPackMinBlockSize - 1 ) / kPackMinBlockSize;
+        return ( sizeBytes + sector - 1 ) / sector * sector + sizeof( PackFileEntryOnDisk ) + blockCount * sizeof( PackBlockEntryOnDisk ) + relativePath.size() + 1;
+    }
+
+    uint64 PackCooker::estimateFixedPackBytes()
+    {
+        return sizeof( PackHeader ) + kPackSectorAlignment;
+    }
+
+    expected<vector<PackPart>> PackCooker::splitIntoParts( const vector<PackSplitEntry>& listEntry, const PackSplitConfig& split )
+    {
+        // 청크 이름은 파일 이름의 한 마디다 — 비었거나 다른 글자가 들었거나 겹치면 이름이 어긋난다.
+        for ( size_t ruleIndex = 0; ruleIndex < split._listChunkRule.size(); ++ruleIndex )
+        {
+            const string& name       = split._listChunkRule[ruleIndex]._name;
+            bool          bNameValid = name.empty() == false;
+            for ( const utf8 letter : name )
+            {
+                const bool bLetterOrDigit = ( 'a' <= letter && letter <= 'z' ) || ( 'A' <= letter && letter <= 'Z' ) || ( '0' <= letter && letter <= '9' );
+                bNameValid                = bNameValid && ( bLetterOrDigit || letter == '_' || letter == '-' );
+            }
+            for ( size_t otherIndex = 0; otherIndex < ruleIndex; ++otherIndex )
+            {
+                bNameValid = bNameValid && StringUtil::equals( split._listChunkRule[otherIndex]._name, name, true ) == false;
+            }
+            if ( bNameValid == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "pack chunk name must be unique and use letters, digits, '_' and '-'", name } );
+        }
+
+        // 청크마다(기본이 먼저, 그다음 규칙 순서) 항목을 경로 해시 순으로 놓는다.
+        struct Placed
+        {
+            uint64 _pathHash{ 0 };
+            uint64 _sizeBytes{ 0 };
+        };
+        vector<vector<Placed>> listChunkPlaced( split._listChunkRule.size() + 1 );
+        for ( const PackSplitEntry& entry : listEntry )
+        {
+            size_t chunkIndex = 0;
+            for ( size_t ruleIndex = 0; ruleIndex < split._listChunkRule.size() && chunkIndex == 0; ++ruleIndex )
+            {
+                for ( const string& pattern : split._listChunkRule[ruleIndex]._listPattern )
+                {
+                    if ( StringUtil::matchesPathPattern( pattern, entry._relativePath ) )
+                    {
+                        chunkIndex = ruleIndex + 1;
+                        break;
+                    }
+                }
+            }
+            listChunkPlaced[chunkIndex].push_back( Placed{ PackStreamWriter::makePathHash( entry._relativePath ), estimateEntryPackBytes( entry._relativePath, entry._sizeBytes ) } );
+        }
+
+        // 몫의 예산은 한도에서 팩 하나의 고정 크기를 뺀 것이다. 항목 크기는 팩 안 어림이다(섹터 패딩 · 색인 줄).
+        const uint64     budget = split._maxPackBytes > estimateFixedPackBytes() ? split._maxPackBytes - estimateFixedPackBytes() : 0;
+        vector<PackPart> listPart;
+        for ( size_t chunkIndex = 0; chunkIndex < listChunkPlaced.size(); ++chunkIndex )
+        {
+            vector<Placed>& listPlaced = listChunkPlaced[chunkIndex];
+            if ( listPlaced.empty() && chunkIndex > 0 )
+                continue; // 빈 이름 청크는 팩을 만들지 않는다. 기본 청크 0 번은 늘 있다(마운트 도메인 · 정체성 색인)
+            VectorUtil::sort( listPlaced, []( const Placed& left, const Placed& right )
+            { return left._pathHash < right._pathHash; } );
+            PackPart part;
+            part._chunk = chunkIndex == 0 ? string{} : split._listChunkRule[chunkIndex - 1]._name;
+            for ( const Placed& placed : listPlaced )
+            {
+                const bool bOverLimit = part._listPathHash.empty() == false && placed._sizeBytes > budget - std::min( part._packBytes, budget );
+                if ( bOverLimit )
+                {
+                    PackPart next;
+                    next._chunk  = part._chunk;
+                    next._number = part._number + 1;
+                    listPart.push_back( std::move( part ) );
+                    part = std::move( next );
+                }
+                part._listPathHash.push_back( placed._pathHash );
+                part._packBytes += placed._sizeBytes;
+            }
+            listPart.push_back( std::move( part ) );
+        }
+        return listPart;
     }
 
     bool PackCooker::isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )
@@ -759,20 +1044,75 @@ namespace sw
         PackCookerInternal::PackCookTiming timing;
         const Stopwatch                    totalWatch;
         const int64                        outputHashStart = store.getOutputHashNanos(); // 이 쿠킹의 몫만 센다
+        unordered_set<string>              setLedger;                                    // 이 팩 폴더에 쿠커가 쓴 팩(형제 팩 정리의 근거)
+        if ( PackCookerInternal::readCookedPackLedger( params._packOutputDir, setLedger ) == false )
+        {
+            SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnreadable", "Pack cook: the cooked pack ledger in %# could not be read", params._packOutputDir );
+            return false;
+        }
         for ( const string& domain : listDomain )
         {
-            const string packName   = makePackFileName( domain );
-            const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
-            // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.
-            const string outputID    = makeRecordID( desc._target, params._cookedDir, packName );
-            CookJobDesc  domainDesc  = desc;
-            domainDesc._settingsHash = PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection );
-            const CookResult result  = store.cookFile( domainDesc, outputID, outputPath, [&]()
-             { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath, selection, timing ); } );
-            if ( result == CookResult::Failed )
+            // 나누기는 쿠킹 전에 정한다 — 목록과 디스크 크기만 본다. 목록은 여기서 한 번 고르고 몫마다 나눠 넘긴다. 목록 · 크기 묻기는 리소스 읽기가 아니라
+            // 쿠킹 세션의 작업 밖 읽기 막기(`CookJob::recordReadInput` · `allowDiskRead` — `AssetIO` 읽기만 본다)에 걸리지 않는다. 몫의 경로 해시가 몫 작업의
+            // 설정 해시에 들어가 파일이 생기거나 사라지거나 다른 몫의 크기가 바뀌어 경계가 옮겨지면 다시 굽는다.
+            PackCookerInternal::DomainListing listing;
+            if ( PackCookerInternal::collectDomainItems( config, params, domain, selection, listing ) == false )
+            {
                 ++failedCount;
-            else if ( result != CookResult::Skipped )
-                ++outPackCount;
+                continue;
+            }
+            PackCookerInternal::logListingNotes( params, domain, listing );
+            vector<PackSplitEntry> listSplitEntry;
+            listSplitEntry.reserve( listing._listItem.size() );
+            bool bSized = true;
+            for ( const PackCookerInternal::PackItem& item : listing._listItem )
+            {
+                uint64 sizeBytes = 0;
+                bSized           = bSized && FileUtil::tryGetFileSize( item._absPath, sizeBytes );
+                listSplitEntry.push_back( PackSplitEntry{ item._relativePath, sizeBytes } );
+            }
+            if ( bSized == false )
+            {
+                SW_LOG_ERROR_ID( "PackCooker.PackSplitCannotSize", "Pack cook: a file of %# could not be sized to split the pack", domain );
+                ++failedCount;
+                continue;
+            }
+            const expected<vector<PackPart>> split = splitIntoParts( listSplitEntry, config._split );
+            if ( split.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "PackCooker.PackSplitInvalid", "Pack cook: %# could not be split - %# '%#'", domain, split.error().message(), split.error().detail() );
+                ++failedCount;
+                continue;
+            }
+
+            vector<string> listWrittenName;
+            for ( const PackPart& part : *split )
+            {
+                const string packName   = makePackFileName( domain, part._chunk, part._number );
+                const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
+                listWrittenName.push_back( packName );
+                // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.
+                const string outputID   = makeRecordID( desc._target, params._cookedDir, packName );
+                CookJobDesc  partDesc   = desc;
+                partDesc._settingsHash  = PackCookerInternal::computePartHash( PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection ), part );
+                const CookResult result = store.cookStreamedFile( partDesc, outputID, outputPath, [&]()
+                { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath, listing, part, timing ); } );
+                if ( result == CookResult::Failed )
+                    ++failedCount;
+                else if ( result != CookResult::Skipped )
+                {
+                    ++outPackCount;
+                    setLedger.insert( packName );
+                }
+            }
+            // 지난 쿠킹이 더 잘게 나눴으면 이번에 쓰지 않은 형제 팩이 남는다 — 남으면 마운트가 같은 도메인의 겹침으로 거절하거나 지운 항목을 되살린다.
+            if ( PackCookerInternal::removeStaleSiblingPacks( params._packOutputDir, domain, listWrittenName, setLedger ) == false )
+                ++failedCount;
+        }
+        if ( PackCookerInternal::writeCookedPackLedger( params._packOutputDir, setLedger ) == false )
+        {
+            SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnwritable", "Pack cook: the cooked pack ledger in %# could not be written", params._packOutputDir );
+            ++failedCount;
         }
         PackCookerInternal::logSummary( outPackCount, failedCount, desc._target, totalWatch.getElapsedNanoseconds(),
                                         store.getOutputHashNanos() - outputHashStart, timing );

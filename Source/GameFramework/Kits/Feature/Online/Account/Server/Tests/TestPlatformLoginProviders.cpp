@@ -3,6 +3,7 @@
 // 애플 주소 · 폼 이름은 애플 문서(Sign in with Apple REST API — Generate and validate tokens, Revoke tokens, 2026-11-07 대조)와 같게 비교한다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/String/StringUtil.h"
@@ -18,7 +19,6 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
-#include "GameFramework/Runtime/Online/Security/Tests/FakeNetSecurityProvider.h"
 
 using namespace sw;
 
