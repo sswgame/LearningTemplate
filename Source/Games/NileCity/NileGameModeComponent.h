@@ -25,7 +25,9 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -90,13 +92,6 @@ namespace sw
         bool               hasPendingSpawn() const override;
 
     private:
-        /** @brief 시뮬레이션 건물 타일 하나의 모습입니다(같은 번호). 타일이 다른 건물로 다시 쓰이면 오브젝트를 바꿔 스폰합니다. */
-        struct BuildingSlot
-        {
-            GameObjectHandle       _object{};
-            const CityBuildingDef* _pShownDef{ nullptr }; ///< 스폰했거나 스폰할 건물(nullptr 이면 없다). 틱이 쓰고 틱이 끝난 뒤 맞춘다.
-        };
-
     private:
         /** @brief 이 도시의 시뮬레이션 설정입니다(`startGame` 과 복원이 같은 설정으로 `initialize` 합니다). */
         /** @brief 나일 달력입니다. 아케트, 페레트, 셰무가 각각 네 달씩(열두 달)이며, 계절 하루가 한 달입니다. */
@@ -105,10 +100,13 @@ namespace sw
         void settleMonths();
         /** @brief 처음이거나 정리한 뒤에 땅, 모든 도로, 모든 건물, 일꾼 풀을 스폰합니다. */
         void spawnAll( GameObjectManager& manager );
-        void spawnTerrain( GameObjectManager& manager );
-        void spawnRoad( GameObjectManager& manager, int32 tileIndex );
-        void spawnBuilding( GameObjectManager& manager, int32 buildingIndex );
-        void spawnWalkers( GameObjectManager& manager, size_t count );
+        /** @brief 바뀐 도로 · 건물 슬롯의 오브젝트를 지우고 다시 스폰합니다(틱 뒤, 게임 스레드). */
+        void             flushViews( GameObjectManager& manager );
+        void             spawnTerrain( GameObjectManager& manager );
+        GameObjectHandle spawnRoad( GameObjectManager& manager, size_t tileIndex );
+        /** @brief 건물 하나의 오브젝트를 스폰합니다. 단계 · 사람에 따른 모델 · 높이는 뷰가 맞춘다. */
+        GameObjectHandle spawnBuilding( GameObjectManager& manager, size_t buildingIndex, const CityBuildingDef& def );
+        void             spawnWalkers( GameObjectManager& manager, size_t count );
         /** @brief 일꾼 종류와 서비스마다 모습 인스턴스를 만듭니다(뷰가 워커에서 고릅니다). */
         void prepareWalkerLooks( Material* pMaterial );
         /** @brief 건물 모델 로드를 미리 맡겨 둡니다(워커가 읽는다 — 집 단계가 바뀔 때 뷰가 받는 메시가 이미 읽혀 있거나 읽는 중이다). */
@@ -236,34 +234,30 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Cart Color", Tooltip = "Colour of a cart walker" )
         float4 _cartColor;
 
-        SharedAssetRef<CityCatalog>          _pCatalog;
-        SharedAssetRef<RuleViewCatalog>      _pBuildingViews; ///< 건물 id → 모델(`_buildingViewPath`)
-        CitySimulation                       _city;
-        ConsumerLease                        _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
-        Wallet                               _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
-        WorldClock                           _clock;          ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
-        NileCityPlanner                      _planner;
-        vector<CityEvent>                    _listEvent;
-        vector<WorldClockEvent>              _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
-        vector<const CityBuildingDef*>       _listTool;       ///< 0은 도로(nullptr)다.
-        vector<GameObjectHandle>             _listRoadObject; ///< 타일마다 하나이며, 도로가 아니면 무효다. 틱이 끝난 뒤에만 바뀐다.
-        vector<uint8>                        _listRoadShown;  ///< 타일마다 스폰했거나 스폰할 도로. 틱이 쓴다.
-        vector<BuildingSlot>                 _listBuildingSlot;
-        vector<GameObjectHandle>             _listWalkerObject;
-        vector<int32>                        _listPendingRoad;     ///< 스폰하거나 지울 도로 타일(틱이 끝난 뒤 처리).
-        vector<int32>                        _listPendingBuilding; ///< 다시 스폰할 건물 타일(틱이 끝난 뒤 처리).
-        MaterialTintCache                    _tintCache;           ///< 땅, 건물, 일꾼 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>> _listWalkerLook;      ///< 일꾼 종류 x 16 + 서비스.
-        vector<MeshHandle>                   _listModelMesh;       ///< 건물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 집 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        size_t                               _wantedWalkerCount;   ///< 스폰할 일꾼 풀 크기(틱이 쓴다).
-        int2                                 _cursorTile;
-        float32                              _timeScale;
-        int32                                _selectedTool;
-        int32                                _monthCount;
-        int32                                _evolvedCount; ///< 이번 달 올라간 집 수(월말 로그).
-        uint8                                _bCursorValid    : 1;
-        uint8                                _bPaused         : 1;
-        uint8                                _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY 와 전역 변수와는 별개다).
-        uint8                                _reserved        : 5;
+        SharedAssetRef<CityCatalog>                _pCatalog;
+        SharedAssetRef<RuleViewCatalog>            _pBuildingViews; ///< 건물 id → 모델(`_buildingViewPath`)
+        CitySimulation                             _city;
+        ConsumerLease                              _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
+        Wallet                                     _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
+        WorldClock                                 _clock;          ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
+        NileCityPlanner                            _planner;
+        vector<CityEvent>                          _listEvent;
+        vector<WorldClockEvent>                    _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).
+        vector<const CityBuildingDef*>             _listTool;       ///< 0은 도로(nullptr)다.
+        SimulationViewSync<uint8>                  _roadViews;      ///< 타일 번호 → 도로(1)이면 보도 조각 하나.
+        SimulationViewSync<const CityBuildingDef*> _buildingViews;  ///< 건물 번호 → 지금 건물 정의(허물렸으면 nullptr). 다른 건물로 다시 쓰이면 오브젝트를 바꾼다.
+        vector<GameObjectHandle>                   _listWalkerObject;
+        MaterialTintCache                          _tintCache;         ///< 땅, 건물, 일꾼 색(같은 색은 나눠 쓴다).
+        vector<shared_ptr<MaterialInstance>>       _listWalkerLook;    ///< 일꾼 종류 x 16 + 서비스.
+        vector<MeshHandle>                         _listModelMesh;     ///< 건물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 집 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
+        size_t                                     _wantedWalkerCount; ///< 스폰할 일꾼 풀 크기(틱이 쓴다).
+        int2                                       _cursorTile;
+        GameSpeedControl                           _speed; ///< 배속 · 일시정지(디렉터가 쥐고 도시 · 달력이 받는다)
+        int32                                      _selectedTool;
+        int32                                      _monthCount;
+        int32                                      _evolvedCount; ///< 이번 달 올라간 집 수(월말 로그).
+        uint8                                      _bCursorValid    : 1;
+        uint8                                      _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY 와 전역 변수와는 별개다).
+        uint8                                      _reserved        : 6;
     };
 } // namespace sw

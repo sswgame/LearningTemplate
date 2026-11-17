@@ -16,6 +16,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw
@@ -65,7 +66,7 @@ namespace sw
         AssetRef<PrefabAsset> _tilePrefab;
         PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Min = 0 )
         int32 _startingGold;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held", Min = 1.0 )
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
         float32 _fastTimeScale;
         PROPERTY( Category = "Look", DisplayName = "Ready Color", Tooltip = "Tile tint when the crop is fully grown" )
         float4 _readyColor;
@@ -81,6 +82,7 @@ namespace sw
         FarmField                _field;
         MaterialTintCache        _tintCache;
         vector<GameObjectHandle> _listTileView;
+        GameSpeedControl         _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
         uint8                    _bViewsDirty : 1;
         uint8                    _reserved    : 7;
     };

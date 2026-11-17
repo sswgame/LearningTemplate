@@ -30,7 +30,9 @@
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/StarSkirmish/SkirmishLockstepLink.h"
@@ -99,7 +101,7 @@ namespace sw
         void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
-        bool               hasPendingSpawn() const override { return _listPendingUnit.empty() == false; }
+        bool               hasPendingSpawn() const override { return _unitViews.hasPending(); }
 
     private:
         /** @brief 컴퓨터 상대(`SkirmishMatch::findAI`)마다 실행기 하나를 내놓는 어댑터입니다. 리플렉션 컴포넌트가 인터페이스를 직접 상속하지 않게 멤버로 둔다. */
@@ -116,18 +118,10 @@ namespace sw
             const SkirmishGameModeComponent& _owner;
         };
 
-        /** @brief 유닛 ID 슬롯 하나의 모습입니다. 틱이 보일 유닛을 정하고, 틱이 끝난 뒤 오브젝트를 맞춥니다. */
-        struct UnitSlot
-        {
-            RTSUnitID        _shownID{}; ///< 스폰했거나 스폰할 유닛(무효면 없다).
-            GameObjectHandle _object{};
-            uint32           _stamp{ 0 };
-        };
-
     private:
         /** @brief 절벽 타일마다 절벽 프리팹 하나를 놓습니다 — 고르기 · 돌리기는 타일 자리의 해시라 판마다 같습니다. */
-        void spawnCliffs( GameObjectManager& manager );
-        void spawnUnit( GameObjectManager& manager, int32 slotIndex );
+        void             spawnCliffs( GameObjectManager& manager );
+        GameObjectHandle spawnUnit( GameObjectManager& manager, RTSUnitID unitID );
         /** @brief 유닛 모습 인스턴스(팀 또는 자원과 선택 여부 조합)를 만듭니다(뷰가 워커에서 고릅니다). */
         void prepareUnitLooks( Material* pMaterial );
 
@@ -254,20 +248,17 @@ namespace sw
         SkirmishLockstepLink                 _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
         RTSSelection                         _selection;
         vector<RTSEvent>                     _listEvent;
-        vector<UnitSlot>                     _listUnitSlot;
-        vector<int32>                        _listPendingUnit; ///< 모습을 맞출 유닛 슬롯(틱이 끝난 뒤 처리).
-        MaterialTintCache                    _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>> _listUnitLook;    ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
-        AssetReadySet                        _unitModels;      ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
+        SimulationViewSync<RTSUnitID>        _unitViews;    ///< 유닛 슬롯 번호 → 보일 유닛(죽음 · 안개면 없다). 틱이 쌓고 틱 뒤에 맞춘다.
+        MaterialTintCache                    _tintCache;    ///< 유닛 색(같은 색은 나눠 쓴다).
+        vector<shared_ptr<MaterialInstance>> _listUnitLook; ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
+        AssetReadySet                        _unitModels;   ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
         float3                               _dragStart;
         float3                               _dragPoint;
-        float32                              _timeScale;
-        uint32                               _frameStamp;
+        GameSpeedControl                     _speed; ///< 배속 · 일시정지(락스텝 대전에서는 쓰지 않는다)
         uint8                                _bHuman             : 1;
         uint8                                _bDragging          : 1;
         uint8                                _bDragPointValid    : 1;
         uint8                                _bAttackMovePending : 1;
-        uint8                                _bPaused            : 1;
-        uint8                                _reserved           : 3;
+        uint8                                _reserved           : 4;
     };
 } // namespace sw

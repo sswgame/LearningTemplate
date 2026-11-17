@@ -15,6 +15,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw
@@ -80,7 +81,7 @@ namespace sw
         int32 _roadToX;
         PROPERTY( Category = "Layout", DisplayName = "Road End Y", Min = 0 )
         int32 _roadToY;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held", Min = 1.0 )
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
         float32 _fastTimeScale;
         PROPERTY( Category = "Look", DisplayName = "Building Color" )
         float4 _buildingColor;
@@ -90,6 +91,7 @@ namespace sw
         CitySimulation           _city;
         MaterialTintCache        _tintCache;
         vector<GameObjectHandle> _listTileView;
+        GameSpeedControl         _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
         uint8                    _bLaidOut    : 1;
         uint8                    _bViewsDirty : 1;
         uint8                    _reserved    : 6;
