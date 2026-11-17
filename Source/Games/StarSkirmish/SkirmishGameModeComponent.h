@@ -145,8 +145,8 @@ namespace sw
         void               trainFromPrimary( int32 productIndex );
         void               handleEvents();
         /** @brief 포인터가 가리키는 땅(y = 0) 위치를 반환합니다(`getMousePositionNormalized`). 맵 밖이면 false 입니다. */
-        [[nodiscard]] bool       findGroundPoint( const InputManager& input, float3& outPoint ) const;
-        CameraDirectorComponent* findCameraRig() const;
+        [[nodiscard]] bool             findGroundPoint( const InputManager& input, float3& outPoint ) const;
+        const CameraDirectorComponent* findCameraRig() const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Unit Data", Tooltip = "Unit catalog XML" )

@@ -384,26 +384,26 @@ namespace sw
         return pManager != nullptr && pPlayerPawn != nullptr && ControlSystem::isPawnControlledBy( *pManager, *pPlayerPawn, _autoBattleObject );
     }
 
-    PawnComponent* ArenaGameModeComponent::findPlayerPawn() const
+    const PawnComponent* ArenaGameModeComponent::findPlayerPawn() const
     {
         return findOn<PawnComponent>( _playerObject );
     }
 
-    AbilityComponent* ArenaGameModeComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
+    const AbilityComponent* ArenaGameModeComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
     {
-        const GameObject*    pFromOwner = from.getOwner();
-        GameObjectManager*   pManager   = getObjectManager();
-        const ArenaUnitView* pNearest   = pFromOwner != nullptr ? findNearestHostileView( pFromOwner->getHandle(), maxRange ) : nullptr;
-        GameObject*          pTarget    = pNearest != nullptr && pManager != nullptr ? pManager->resolveGameObject( pNearest->_object ) : nullptr;
+        const GameObject*        pFromOwner = from.getOwner();
+        const GameObjectManager* pManager   = getObjectManager();
+        const ArenaUnitView*     pNearest   = pFromOwner != nullptr ? findNearestHostileView( pFromOwner->getHandle(), maxRange ) : nullptr;
+        const GameObject*        pTarget    = pNearest != nullptr && pManager != nullptr ? pManager->resolveGameObject( pNearest->_object ) : nullptr;
         return pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
     }
 
     void ArenaGameModeComponent::launchProjectile( const AbilityComponent& from, const float3& facing, const hashed_string& projectileID, const AbilityEffectSpec& spec,
                                                    const AbilityEffectSpec& extraSpec ) const
     {
-        const GameObject*    pFrom     = from.getOwner();
-        const ArenaUnitView* pFromView = pFrom != nullptr ? findUnitView( pFrom->getHandle() ) : nullptr;
-        GameObjectManager*   pManager  = getObjectManager();
+        const GameObject*        pFrom     = from.getOwner();
+        const ArenaUnitView*     pFromView = pFrom != nullptr ? findUnitView( pFrom->getHandle() ) : nullptr;
+        const GameObjectManager* pManager  = getObjectManager();
         if ( pFromView == nullptr || pManager == nullptr )
             return;
 
@@ -416,12 +416,12 @@ namespace sw
         request._bFromPlayer  = from.getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
         // 어빌리티는 워커(유닛의 틱)에서 쏘고, 오브젝트는 틱이 끝난 뒤 게임 스레드에서 스폰한다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
         const TComponentHandle<ArenaGameModeComponent> self{ this };
-        pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
+        pManager->executeOrDeferPostTickOnScene( [self, request]( GameObjectManager& sceneManager )
         {
-            ArenaGameModeComponent* pGameMode = pManager->resolveComponent( self );
+            ArenaGameModeComponent* pGameMode = sceneManager.resolveComponent( self );
             if ( pGameMode != nullptr )
                 pGameMode->spawnProjectile( request );
-        } ) );
+        } );
     }
 
     const ArenaGameModeComponent* ArenaGameModeComponent::findForUnit( const AbilityComponent& unit )
@@ -563,7 +563,7 @@ namespace sw
     void ArenaGameModeComponent::syncPlayerPossession( GameObjectManager& manager )
     {
         _bPossessionDirty    = SW_FALSE;
-        PawnComponent* pPawn = findPlayerPawn();
+        PawnComponent* pPawn = findOn<PawnComponent>( _playerObject );
         if ( pPawn == nullptr )
             return;
         if ( isAutoPlayOn() )

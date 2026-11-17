@@ -9,18 +9,18 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/assetidentity.scenario.xml -unattended
 -->
 <Scenario name="editor.assetidentity" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.removeImportFolder scratch/import/editor.assetidentity"/>
 	<!-- ① 가져오기 — 새 GUID -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.import common/prefabs/gimmicks/horror/flickerlight.prefab.xml scratch/import/editor.assetidentity"/>
 	<DevCommand line="asset.import common/sql/localstore/0001_local_slot.sql scratch/import/editor.assetidentity"/>
 	<!-- ② 내용 바꾸기 — GUID 그대로 -->
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.replaceContent scratch/import/editor.assetidentity/flickerlight.prefab.xml common/prefabs/gimmicks/horror/hidingspot.prefab.xml"/>
 	<DevCommand line="asset.replaceContent scratch/import/editor.assetidentity/0001_local_slot.sql common/sql/servicestore/0001_records.sql"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<DevCommand line="asset.removeImportFolder scratch/import/editor.assetidentity"/>
-	<EditorWaitSettled/>
+	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

@@ -164,10 +164,18 @@ namespace sw
         /** @brief 스폰한 오브젝트 목록을 모두 지우고 비웁니다(모습을 통째로 다시 세울 때). */
         static void destroySpawned( GameObjectManager& manager, vector<GameObjectHandle>& inoutListHandle );
         /** @brief 씬 칸이 가리키는 오브젝트입니다. 매니저나 오브젝트가 없으면 nullptr 입니다. */
-        GameObject* findGameObject( GameObjectHandle handle ) const;
+        /** @details const 판은 읽기 전용 오브젝트를 돌려준다 — const 함수(틱에서 읽는 자리)가 쓰기 가능한 오브젝트를 꺼내지 못하게(`getObjectManager` 와 같은 쌍). */
+        const GameObject* findGameObject( GameObjectHandle handle ) const;
+        GameObject*       findGameObject( GameObjectHandle handle );
         /** @brief 씬 칸이 가리키는 오브젝트의 @p TComponent 입니다. 없으면 nullptr 입니다. 오브젝트 형식을 의존 이름으로 받아 이 헤더가 오브젝트를 include 하지 않는다. */
         template <typename TComponent, typename TObject = GameObject>
-        TComponent* findOn( GameObjectHandle handle ) const
+        const TComponent* findOn( GameObjectHandle handle ) const
+        {
+            const TObject* pObject = findGameObject( handle );
+            return pObject != nullptr ? pObject->template getComponent<TComponent>() : nullptr;
+        }
+        template <typename TComponent, typename TObject = GameObject>
+        TComponent* findOn( GameObjectHandle handle )
         {
             TObject* pObject = findGameObject( handle );
             return pObject != nullptr ? pObject->template getComponent<TComponent>() : nullptr;
@@ -194,8 +202,11 @@ namespace sw
         /** @brief 틱 뒤에 낼 소리를 쌓는 큐입니다. */
         GameSoundQueue& getSoundQueue() { return _soundQueue; }
         /** @brief 지금 상태의 모습이 서 있으면 true 입니다(걷으면 다음 플러시까지 false). */
-        bool               areViewsSpawned() const { return _bViewsSpawned == SW_TRUE; }
-        GameObjectManager* getObjectManager() const;
+        bool areViewsSpawned() const { return _bViewsSpawned == SW_TRUE; }
+        /** @brief 이 게임 모드가 사는 씬의 읽기 매니저입니다. const 함수(틱에서 읽는 자리)는 이쪽만 받는다 — 쓰기는 `executeOrDeferPostTickOnScene` 으로 미룬다. */
+        const GameObjectManager* getObjectManager() const;
+        /** @brief 쓰기 가능한 매니저입니다. 틱 밖(플러시 · 틱 뒤 일)에서만 부른다 — 틱 중이면 `GameObject::getMutableManager` 가 단언한다. */
+        GameObjectManager* getObjectManager();
 
     private:
         /** @brief 필수 에셋을 받지 못했다는 오류를 남깁니다(`GameMode.RequiredAssetMissing`). 템플릿 밖에 두어 헤더가 로그를 끌어오지 않게 한다. */
