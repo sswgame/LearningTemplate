@@ -18,6 +18,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValueVisitor.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionCast.h"
@@ -316,25 +317,28 @@ namespace sw
              *          비우지 않는다 — 값이 조용히 사라지는 폴백이다.
              */
             template <typename TVisitor>
-            static bool visitAllProperties( TVisitor& visitor, GameObject* pObject, ObjectIDSpace idSpace, const utf8* pLeafKind )
+            static bool visitAllProperties( const TypeRegistry& registry, TVisitor& visitor, GameObject* pObject, ObjectIDSpace idSpace, const utf8* pLeafKind )
             {
-                bool bAllVisited = true;
+                // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`). 잎(핸들)까지 내려가는 일은 `ReflectedValueVisitor` 의 몫이라 최상위 칸만 받는다.
+                const ReflectPropertyVisitor propertyVisitor{ registry, ReflectVisitOptions{} };
+                bool                         bAllVisited = true;
                 for ( Component* pComp : pObject->getComponents() )
                 {
                     const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
                     if ( pTypeInfo == nullptr || visitor.hasLeaf( *pTypeInfo ) == false )
                         continue;
-                    for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
+                    (void)propertyVisitor.visitProperties( *pTypeInfo, static_cast<void*>( pComp ), [&]( const ReflectVisitField& field )
                     {
-                        if ( visitor.visitProperty( MutableObjectAddress{ pComp }, *pTypeInfo, prop ) )
-                            continue;
-                        if ( idSpace != ObjectIDSpace::Saved )
-                            continue;
-                        SW_LOG_ERROR_ID( "Object.PropertyCannotRemap", "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
-                                                                       "container, or a copy failed) - the load fails",
-                                         pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str(), pLeafKind );
-                        bAllVisited = false;
-                    }
+                        const bool bVisited = visitor.visitProperty( MutableObjectAddress{ field._pObject }, *pTypeInfo, field._property );
+                        if ( bVisited == false && idSpace == ObjectIDSpace::Saved )
+                        {
+                            SW_LOG_ERROR_ID( "Object.PropertyCannotRemap", "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
+                                                                           "container, or a copy failed) - the load fails",
+                                             pTypeInfo->_fullyQualifiedName.c_str(), field._property._name.c_str(), pObject->getName().c_str(), pLeafKind );
+                            bAllVisited = false;
+                        }
+                        return ReflectVisitFlow::Continue;
+                    } );
                 }
                 return bAllVisited;
             }
@@ -975,8 +979,8 @@ namespace sw
         ReflectedValueVisitor<ComponentHandle, decltype( filter ), decltype( remapComponent )> componentVisitor( registry, ObjectStateSerializerInternal::getComponentHandleTypeName(), filter,
                                                                                                                  remapComponent );
 
-        bool bAllRemapped = ObjectStateSerializerInternal::visitAllProperties( objectVisitor, pObject, _idSpace, "object handles" );
-        bAllRemapped      = ObjectStateSerializerInternal::visitAllProperties( componentVisitor, pObject, _idSpace, "component handles" ) && bAllRemapped;
+        bool bAllRemapped = ObjectStateSerializerInternal::visitAllProperties( registry, objectVisitor, pObject, _idSpace, "object handles" );
+        bAllRemapped      = ObjectStateSerializerInternal::visitAllProperties( registry, componentVisitor, pObject, _idSpace, "component handles" ) && bAllRemapped;
         // 대상이 있는데 대상 타입이 아닌 핸들(`resolveComponentReference` 가 이유를 로그에 남겼다)은 어느 id 공간이든 로드 오류다.
         return bAllRemapped && bInvalid == false;
     }
