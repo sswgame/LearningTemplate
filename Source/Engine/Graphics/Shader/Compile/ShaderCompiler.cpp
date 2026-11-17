@@ -781,6 +781,11 @@ namespace sw
         // 엔진 define 은 모든 컴파일에 더한다(appendEngineDefines) — 값이 도구 지문에 섞여 표를 바꾸면 모든 셰이더 캐시가 다시 컴파일된다.
         ShaderCompileDesc desc = requestDesc;
         appendEngineDefines( desc._listDefine );
+        // 단계 매크로 — 네 백엔드 컴파일 경로(DXC → DXIL · SPIR-V → GL · WGSL, FXC → DXBC)가 모두 이 함수를 지나므로 여기 한 곳에서 넣는다.
+        ShaderMacroDefine stageDefine;
+        stageDefine._name  = getShaderStageInfo( desc._stage )._pStageMacro;
+        stageDefine._value = "1";
+        desc._listDefine.push_back( std::move( stageDefine ) );
         ShaderCompileResult result{};
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );

@@ -682,15 +682,24 @@ static float4 MaterialTexture::sampleMipColor( uint index, float2 uv )
 }
     #endif
 
-    #if defined( SW_NATIVE_BINDLESS )
+    // 머티리얼 텍스처 샘플의 단계 갈래는 여기 한 곳이다(R-15) — 픽셀 단계는 뷰의 밉 바이어스(PassCB g_TextureMipBias.x = log2(렌더 높이 / 출력 높이), 배율 1 이면 0)를
+    // 더해 업스케일한 화면에서 텍스처가 흐려지지 않게 하고(언리얼 r.ViewTextureMipBias · FSR 권장), 미분이 없는 단계(정점 · 컴퓨트 등)는 밉 0 이다. 단계 매크로는
+    // 셰이더 컴파일러가 컴파일마다 넣는다(SW_SHADER_STAGE_*, ShaderStageInfo). GL · WGSL 은 SPIR-V 에서 옮겨지며 각각 texture(…, bias) · textureSampleBias 가 된다.
+    #if defined( SW_SHADER_STAGE_PIXEL )
+        #if defined( SW_NATIVE_BINDLESS )
 static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
 {
     // 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    return Bindless::sampleArrayWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+    const uint slot = Bindless::textureSlot( index );
+            #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleBias( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, g_TextureMipBias.x );
+            #else
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleBias( g_SwSampler0, uv, g_TextureMipBias.x ); // 머티리얼 샘플러는 정적 0 번(아래 #error 가 지킨다)
+            #endif
 }
-    #else
+        #else
 static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
 {
     // 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
@@ -699,76 +708,82 @@ static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
     // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 슬롯의 결합 샘플러(엔진이 머티리얼 샘플러를 건다)로 읽는다.
     switch ( index )
     {
-        #if defined( SW_SEPARATE_SAMPLER_EMULATION )
+            #if defined( SW_SEPARATE_SAMPLER_EMULATION )
         case 0u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex0, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex0.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 1u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex1, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex1.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 2u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex2, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex2.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 3u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex3, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex3.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 4u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex4, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex4.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 5u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex5, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex5.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 6u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex6, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex6.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 7u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex7, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex7.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 8u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex8, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex8.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 9u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex9, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex9.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 10u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex10, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex10.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 11u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex11, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex11.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 12u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex12, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex12.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 13u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex13, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex13.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 14u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex14, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return g_SwMaterialTex14.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
         case 15u:
-            return Bindless::sampleSlotWith( g_SwMaterialTex15, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-        #else
+            return g_SwMaterialTex15.SampleBias( g_SwSampler0, uv, g_TextureMipBias.x );
+            #else
         case 0u:
-            return g_SwMaterialTex0.Sample( g_SwMaterialTex0Sampler, uv );
+            return g_SwMaterialTex0.SampleBias( g_SwMaterialTex0Sampler, uv, g_TextureMipBias.x );
         case 1u:
-            return g_SwMaterialTex1.Sample( g_SwMaterialTex1Sampler, uv );
+            return g_SwMaterialTex1.SampleBias( g_SwMaterialTex1Sampler, uv, g_TextureMipBias.x );
         case 2u:
-            return g_SwMaterialTex2.Sample( g_SwMaterialTex2Sampler, uv );
+            return g_SwMaterialTex2.SampleBias( g_SwMaterialTex2Sampler, uv, g_TextureMipBias.x );
         case 3u:
-            return g_SwMaterialTex3.Sample( g_SwMaterialTex3Sampler, uv );
+            return g_SwMaterialTex3.SampleBias( g_SwMaterialTex3Sampler, uv, g_TextureMipBias.x );
         case 4u:
-            return g_SwMaterialTex4.Sample( g_SwMaterialTex4Sampler, uv );
+            return g_SwMaterialTex4.SampleBias( g_SwMaterialTex4Sampler, uv, g_TextureMipBias.x );
         case 5u:
-            return g_SwMaterialTex5.Sample( g_SwMaterialTex5Sampler, uv );
+            return g_SwMaterialTex5.SampleBias( g_SwMaterialTex5Sampler, uv, g_TextureMipBias.x );
         case 6u:
-            return g_SwMaterialTex6.Sample( g_SwMaterialTex6Sampler, uv );
+            return g_SwMaterialTex6.SampleBias( g_SwMaterialTex6Sampler, uv, g_TextureMipBias.x );
         case 7u:
-            return g_SwMaterialTex7.Sample( g_SwMaterialTex7Sampler, uv );
+            return g_SwMaterialTex7.SampleBias( g_SwMaterialTex7Sampler, uv, g_TextureMipBias.x );
         case 8u:
-            return g_SwMaterialTex8.Sample( g_SwMaterialTex8Sampler, uv );
+            return g_SwMaterialTex8.SampleBias( g_SwMaterialTex8Sampler, uv, g_TextureMipBias.x );
         case 9u:
-            return g_SwMaterialTex9.Sample( g_SwMaterialTex9Sampler, uv );
+            return g_SwMaterialTex9.SampleBias( g_SwMaterialTex9Sampler, uv, g_TextureMipBias.x );
         case 10u:
-            return g_SwMaterialTex10.Sample( g_SwMaterialTex10Sampler, uv );
+            return g_SwMaterialTex10.SampleBias( g_SwMaterialTex10Sampler, uv, g_TextureMipBias.x );
         case 11u:
-            return g_SwMaterialTex11.Sample( g_SwMaterialTex11Sampler, uv );
+            return g_SwMaterialTex11.SampleBias( g_SwMaterialTex11Sampler, uv, g_TextureMipBias.x );
         case 12u:
-            return g_SwMaterialTex12.Sample( g_SwMaterialTex12Sampler, uv );
+            return g_SwMaterialTex12.SampleBias( g_SwMaterialTex12Sampler, uv, g_TextureMipBias.x );
         case 13u:
-            return g_SwMaterialTex13.Sample( g_SwMaterialTex13Sampler, uv );
+            return g_SwMaterialTex13.SampleBias( g_SwMaterialTex13Sampler, uv, g_TextureMipBias.x );
         case 14u:
-            return g_SwMaterialTex14.Sample( g_SwMaterialTex14Sampler, uv );
+            return g_SwMaterialTex14.SampleBias( g_SwMaterialTex14Sampler, uv, g_TextureMipBias.x );
         case 15u:
-            return g_SwMaterialTex15.Sample( g_SwMaterialTex15Sampler, uv );
-        #endif
+            return g_SwMaterialTex15.SampleBias( g_SwMaterialTex15Sampler, uv, g_TextureMipBias.x );
+            #endif
         default:
             return float4( 1, 1, 1, 1 );
     }
+}
+        #endif
+    #else
+static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
+{
+    return MaterialTexture::sampleLevelZero( index, uv ); // 암시 미분이 없는 단계 — 밉 0
 }
     #endif
 

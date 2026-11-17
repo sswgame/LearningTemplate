@@ -231,7 +231,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     // 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motion_blur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
     float4x4 g_PrevViewProj;
     // 이번 프레임의 TAA 투영 지터 — xy 는 NDC 오프셋(g_ViewProj · g_InvViewProj 에만 들었다, g_PrevViewProj 에는 없다), zw 는 0. TAA 가 돌지 않는 뷰는 0 이다(C++ TemporalJitterSequence).
-    float4   g_TemporalJitter;
+    float4 g_TemporalJitter;
+    // 머티리얼 텍스처의 밉 바이어스 — x = log2(렌더 높이 / 출력 높이)(배율 1 이면 0, 업스케일하면 음수). 픽셀 단계 머티리얼 샘플만 더한다(binding_texture.hlsli MaterialTexture::sampleIndexTexture)
+    float4   g_TextureMipBias;
     float4x4 g_World;
     float4   g_KeyLightDirIntensity;
     float4   g_KeyLightColor;

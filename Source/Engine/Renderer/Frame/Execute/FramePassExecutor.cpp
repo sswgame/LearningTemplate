@@ -61,6 +61,7 @@
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 #include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
+#include "Engine/Renderer/Frame/View/ViewTextureMipBiasUtil.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -528,6 +529,8 @@ namespace sw
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다. 깊이는 지터 든 행렬로 그렸으므로 역행렬도 그것이다.
         context._passValues.setMatrix( passConstantNames()._invViewProj, raster.invert() );
         context._passValues.setFloat4( passConstantNames()._temporalJitter, float4{ ndcJitter._x, ndcJitter._y, 0.0f, 0.0f } );
+        // 줄여 그려 키우는 뷰는 텍스처를 출력 해상도만큼 선명하게 읽는다(R-15 — 배율 1 이면 0). 렌더 크기는 첨부 풀, 출력 크기는 뷰가 든다.
+        context._passValues.setFloat4( passConstantNames()._textureMipBias, float4{ ViewTextureMipBiasUtil::compute( pool.getHeight(), view._outputHeight ), 0.0f, 0.0f, 0.0f } );
         // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다(지터 없는 것 — 절두체가 프레임마다 흔들리지 않는다).
         _state.getCullInputOf( view ).setViewProjection( viewProj );
 
