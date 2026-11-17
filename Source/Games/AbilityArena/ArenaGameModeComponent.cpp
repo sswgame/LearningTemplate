@@ -172,6 +172,7 @@ namespace sw
         , _gruntPrefab{}
         , _casterPrefab{}
         , _projectilePrefab{}
+        , _projectilePoolSize{ 0 }
         , _gruntAIPrefab{}
         , _casterAIPrefab{}
         , _autoBattleAIPrefab{}
@@ -190,7 +191,7 @@ namespace sw
         , _unitRadius{ 0.5f }
         , _listUnit{}
         , _listUnitView{}
-        , _listProjectile{}
+        , _projectilePool{ string{}, 0 }
         , _projectiles{}
         , _listProjectileCargo{}
         , _listPendingUnit{}
@@ -230,7 +231,12 @@ namespace sw
         }
         if ( bSetsKnown == false )
             return false;
-        _wave = 0;
+        // 투사체 모습은 끝나면 지우지 않고 꺼 두었다가 다시 쓴다(유니티 `ObjectPool` · 언리얼 액터 풀링 자리). 앞 판의 풀이 남았으면 지우고 새로 세운다.
+        GameObjectManager* pManager = getObjectManager();
+        if ( pManager != nullptr )
+            _projectilePool.destroyAll( *pManager );
+        _projectilePool = PrefabPool( _projectilePrefab.path(), _projectilePoolSize );
+        _wave           = 0;
         return true;
     }
 
@@ -290,7 +296,6 @@ namespace sw
         {
             updateUnits( deltaTime );
             updatePlayerRespawn( deltaTime );
-            pruneProjectiles();
             logStatus( deltaTime );
         }
         updateUnitViews();
@@ -310,8 +315,10 @@ namespace sw
     {
         _listUnit.clear();
         _listUnitView.clear();
-        _listProjectile.clear();
-        _projectiles.clear(); // 짐(스펙)은 런타임 값이라 상태에 싣지 않는다 — 모습과 함께 걷는다
+        GameObjectManager* pManager = getObjectManager();
+        if ( pManager != nullptr )
+            _projectilePool.destroyAll( *pManager ); // 풀의 모습은 스폰 목록(`despawnViews`) 밖이다 — 상태 저장 전에 직접 지운다
+        _projectiles.clear();                        // 짐(스펙)은 런타임 값이라 상태에 싣지 않는다 — 모습과 함께 걷는다
         _listProjectileCargo.clear();
         _listPendingUnit.clear();
         _playerRespawnTimer = -1.0f;
@@ -483,6 +490,7 @@ namespace sw
             (void)spawnUnit( manager, request ); // 하나가 실패해도 나머지는 스폰한다. 실패한 플레이어는 다시 등장할 시간이 지나면 다시 스폰한다.
         }
         _listPendingUnit.clear();
+        releaseFinishedProjectiles( manager );
         syncPlayerPossession( manager );
     }
 
@@ -615,21 +623,23 @@ namespace sw
         if ( request._bFromPlayer == SW_TRUE )
             ++_playerShotCount;
 
-        // 모습은 탄을 읽기만 한다(`ArenaProjectileComponent`). 모습이 없어도 탄은 난다.
-        GameObject*               pObject = spawnPrefab( *pManager, _projectilePrefab, "ArenaProjectile" );
+        // 모습은 탄을 읽기만 한다(`ArenaProjectileComponent`). 모습이 없어도 탄은 난다. 끝난 모습을 먼저 돌려받아 다시 쓴다.
+        releaseFinishedProjectiles( *pManager );
+        GameObject*               pObject = _projectilePool.acquire( *pManager, "ArenaProjectile" );
         ArenaProjectileComponent* pView   = pObject != nullptr ? pObject->getComponent<ArenaProjectileComponent>() : nullptr;
         if ( pView == nullptr )
         {
             if ( pObject != nullptr )
-                pManager->destroyGameObject( pObject );
+            {
+                SW_LOG_ERROR_ID( "ArenaGameMode.ProjectilePrefabNoView", "[Arena] projectile prefab '%#' has no ArenaProjectileComponent - the shot flies unseen", _projectilePrefab.c_str() );
+                _projectilePool.destroyAll( *pManager );
+            }
             return;
         }
         MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
             applyTint( *pMesh, Internal::kProjectileTint );
         pView->bind( getOwner()->getHandle(), cargo._projectileID, origin );
-        pruneProjectiles();
-        _listProjectile.push_back( pObject->getHandle() );
     }
 
     const ProjectileState* ArenaGameModeComponent::findProjectile( uint32 projectileID ) const
@@ -820,7 +830,7 @@ namespace sw
             [[maybe_unused]] const int32 health = static_cast<int32>( *healthValue );
             [[maybe_unused]] const int32 mana   = static_cast<int32>( *manaValue );
             SW_LOG_INFO_ID( "ArenaGameMode.WaveKillsPlayerHP", "[Arena] wave %# · kills %# · player HP %# · MP %# · units %# · projectiles %#", _wave, _killCount, health, mana,
-                            static_cast<uint32>( _listUnit.size() ), static_cast<uint32>( _listProjectile.size() ) );
+                            static_cast<uint32>( _listUnit.size() ), _projectilePool.getBusyCount() );
         }
     }
 
@@ -829,18 +839,14 @@ namespace sw
         return VectorUtil::containsBy<&SpawnRequest::_kind>( _listPendingUnit, kind );
     }
 
-    void ArenaGameModeComponent::pruneProjectiles()
+    void ArenaGameModeComponent::releaseFinishedProjectiles( GameObjectManager& manager )
     {
-        // 다 쓴 투사체는 스스로 지운다. 목록에는 상태를 저장하기 전에 정리할 것만 남기므로, 유효하지 않은 핸들은 덜어 낸다.
-        GameObjectManager* pManager = getObjectManager();
-        for ( size_t projectileIndex = _listProjectile.size(); projectileIndex > 0; --projectileIndex )
+        // 다 쓴 모습은 틱에서 스스로 숨는다(`ArenaProjectileComponent::isFinished`). 끄기는 구조 변경이라 여기(틱 밖)서 풀에 돌려준다.
+        _projectilePool.releaseBusyIf( manager, []( const GameObject& object )
         {
-            if ( pManager == nullptr || pManager->resolveGameObject( _listProjectile[projectileIndex - 1] ) == nullptr )
-            {
-                _listProjectile[projectileIndex - 1] = _listProjectile.back();
-                _listProjectile.pop_back();
-            }
-        }
+            const ArenaProjectileComponent* pView = object.getComponent<ArenaProjectileComponent>();
+            return pView == nullptr || pView->isFinished();
+        } );
     }
 
 } // namespace sw

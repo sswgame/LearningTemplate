@@ -27,6 +27,7 @@ namespace sw
         _projectileID = projectileID;
         _bFinished    = SW_FALSE;
         placeMesh( position );
+        setMeshVisible( true ); // 풀에서 다시 꺼낸 모습은 끝날 때 숨긴 그대로다
     }
 
     void ArenaProjectileComponent::onTick( TickContext& context )
@@ -52,14 +53,18 @@ namespace sw
             pMesh->setLocalPosition( position + float3{ 0.0f, _visualLift, 0.0f } );
     }
 
+    void ArenaProjectileComponent::setMeshVisible( bool bVisible ) const
+    {
+        GameObject*    pOwner = getOwner();
+        MeshComponent* pMesh  = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh != nullptr )
+            pMesh->setVisible( bVisible );
+    }
+
     void ArenaProjectileComponent::finish()
     {
-        _bFinished                        = SW_TRUE;
-        const GameObject*        pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        // 틱에서 부른다 — 지우기는 명령 버퍼로 틱 뒤에 한다.
-        if ( pManager != nullptr )
-            pManager->executeOrDeferPostTickOnComponent( *this, []( ArenaProjectileComponent& self, GameObjectManager& sceneManager )
-            { sceneManager.destroyGameObject( self.getOwner() ); } );
+        // 지우지 않는다 — 디렉터가 틱 밖에서 풀에 돌려받아 꺼 두었다가 다음 탄에 다시 쓴다(`ArenaGameModeComponent::releaseFinishedProjectiles`).
+        _bFinished = SW_TRUE;
+        setMeshVisible( false );
     }
 } // namespace sw
