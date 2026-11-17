@@ -379,6 +379,7 @@ namespace sw
             /** @brief 라우터에 달기 전에 역할을 정합니다 — 맡는 종류가 역할마다 다르다. */
             void   setRole( GameNetRole role ) { _role = role; }
             uint8  getMessageRangeBase() const override { return GameNetSessionMessage::Table::kRangeBase; }
+            uint32 getWireVersion() const override { return GameNetSessionMessage::Table::computeWireVersion(); }
             uint16 getMessageKindMask() const override;
             /** @brief 표(`GameNetSessionMessage::Table`)가 종류를 세션의 `receive` 오버로드로 나눈다. */
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;

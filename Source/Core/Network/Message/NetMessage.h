@@ -10,6 +10,7 @@
  *          연결 사건(열림, 닫힘)도 라우터가 메시지보다 먼저 처리기에 알린다. 그래서 키트는 수신 가드나 연결 수명을 직접 배선하지 않고 자기 종류만 읽으면 된다.
  */
 #pragma once
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
@@ -94,8 +95,17 @@ namespace sw
         INetMessageHandler( const INetMessageHandler& )            = default;
         INetMessageHandler& operator=( const INetMessageHandler& ) = default;
 
+        /** @brief 표를 쓰지 않는 처리기(연결 사건만 받는다)의 `getWireVersion` 값입니다. 라우터는 이 처리기의 영역을 상대에게 알리지 않는다. */
+        static constexpr uint32 kNoMessageTable = 0;
+
         /** @brief 맡은 영역의 첫 값입니다(키트는 `NetKitMessageRange::kClientServer` 등). 게임 영역(0x80..)은 16개씩 나눠 여럿이 맡을 수 있습니다. */
         virtual uint8 getMessageRangeBase() const = 0;
+        /**
+         * @brief 이 처리기가 보내거나 받는 메시지 표의 와이어 판입니다(`NetMessageTable::computeWireVersion`). 표를 쓰지 않으면 `kNoMessageTable` 입니다.
+         * @details 순수 가상이라 빠뜨릴 수 없다 — 표 기반 처리기(`NetTableHandler`)는 표에서 저절로 낸다. 라우터가 영역마다 이 값을 상대와 맞춰 보고,
+         *          다르면 그 연결을 끊는다(`NetMessageRouter`). 받는 종류가 없어도(보내기만 하는 서버 쪽) 보내는 표의 판을 낸다 — 그래야 받는 쪽과 맞춰 본다.
+         */
+        virtual uint32 getWireVersion() const = 0;
         /** @brief 영역 안에서 맡는 종류의 마스크입니다. 비트 n 이 (영역 + n)에 해당하며, 한 영역을 여럿이 나눠 맡을 때 겹치지 않게 고릅니다. 0이면 사건만 받습니다. */
         virtual uint16 getMessageKindMask() const { return 0xFFFFu; }
         /**
@@ -149,6 +159,12 @@ namespace sw
     /**
      * @class NetMessageRouter
      * @brief 받은 메시지를 종류(첫 바이트)마다 맡은 처리기 하나에게 바로 전달합니다(종류 256개짜리 테이블). 연결 사건은 메시지보다 먼저 모든 처리기에 알립니다.
+     *        영역마다 쓰는 메시지 표의 판을 상대와 맞춰 보고, 다르면 그 연결을 끊습니다(아래 "판 맞춤").
+     * @details 판 맞춤: 키트 처리기는 접속한 뒤에 등록되므로(게임이 링크를 세우는 첫 틱) 접속 핸드셰이크 판(`NetEndpointConfig::_wireVersion`)에 섞을 수 없다.
+     *          그래서 라우터가 맡는다 — 처리기의 판(`INetMessageHandler::getWireVersion`, 순수 가상)을 연결이 열릴 때와 등록이 바뀐 다음 `poll` 에서 상대 모두에게
+     *          알리고(`NetMessageRange::kRouterWireVersionKind`), 상대가 알린 판은 연결마다 들고 있다가 양쪽이 같은 영역을 쓰면 견준다. 다르면 오류를 남기고 그 연결을 끊고,
+     *          같은 `poll` 안의 그 연결 메시지는 처리기에 넘기지 않는다. 상대가 아직 등록하지 않은 영역은 견주지 않는다(뒤에 등록하면 그때 알려 온다).
+     *          게임이 표 판을 손으로 섞던 방식(`NetWireVersion::combine`)은 빠뜨릴 수 있었다 — 섞는 게임이 하나도 없었다.
      * @details - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
      *            구독이 사라지면 처리기가 빠진다. 라우터가 먼저 사라지면 구독은 무효가 된다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(빈 구독).
      *          - `poll` 는 엔드포인트에서 사건과 메시지를 잠금 한 번에 꺼내(`INetPeers::pollInbound` — 엔드포인트 하나든 포트 샤드 묶음이든) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
@@ -204,15 +220,33 @@ namespace sw
         void rebuildKindTable();
         /** @brief 전달 통지 하나를 그 종류를 보내는 처리기에 넘깁니다. 없으면 세고 버립니다. */
         void dispatchNotification( const NetDeliveryNotification& notification );
+        /** @brief 영역 @p rangeBase 를 쓰는 이 쪽 처리기의 표 판입니다. 없으면 `kNoMessageTable` 입니다. */
+        uint32 findWireVersion( uint8 rangeBase ) const;
+        /** @brief 이 쪽 처리기의 판 알림을 @p connectionID 에(-1 이면 상대 모두에게) 보냅니다. 알릴 판이 없으면 보내지 않습니다. */
+        void sendWireVersions( INetPeers& peers, int32 connectionID );
+        /** @brief 상대 @p connectionID 의 판 알림을 읽어 들고 이 쪽과 견줍니다. 깨졌거나 다르면 연결을 끊습니다. */
+        void receiveWireVersions( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 들고 있는 상대 판과 이 쪽 판을 견주어 다른 연결을 끊습니다. 다르면 true 입니다. */
+        bool disconnectOnWireVersionMismatch( INetPeers& peers, int32 connectionID );
+
+        /** @brief 상대가 알린 영역 하나의 표 판입니다. */
+        struct PeerWireVersion
+        {
+            uint32 _wireVersion{ 0 };
+            uint8  _rangeBase{ 0 };
+        };
 
     private:
-        vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다. 사건만 받는 처리기는 등록마다 하나씩 오르므로(중복 허용) `RegistrationList` 가 아니다.
-        INetMessageHandler*         _arrKindHandler[kKindCount];
-        INetMessageHandler*         _arrNotificationHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
-        NetMessageKindStatsTable    _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
-        NetInbound                  _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
-        uint64                      _malformedCount;
-        uint64                      _unclaimedNotificationCount;
+        vector<INetMessageHandler*>                   _listHandler; ///< 등록 순서대로 보관한다. 사건만 받는 처리기는 등록마다 하나씩 오르므로(중복 허용) `RegistrationList` 가 아니다.
+        INetMessageHandler*                           _arrKindHandler[kKindCount];
+        INetMessageHandler*                           _arrNotificationHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
+        NetMessageKindStatsTable                      _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
+        NetInbound                                    _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
+        uint64                                        _malformedCount;
+        uint64                                        _unclaimedNotificationCount;
+        unordered_map<int32, vector<PeerWireVersion>> _mapPeerWireVersion;    ///< 연결마다 상대가 알린 표 판. 연결이 닫히면 지운다
+        vector<int32>                                 _listRefusedConnection; ///< 이번 `poll` 에서 판이 달라 끊은 연결 — 남은 메시지를 넘기지 않는다
+        uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다
         /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<INetMessageHandler> _subscriptions{ ItemSubscriptionList<INetMessageHandler>::ReleaseFunction::create<&NetMessageRouter::releaseHandler>( this ) };
     };

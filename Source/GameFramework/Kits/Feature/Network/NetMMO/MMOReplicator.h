@@ -156,6 +156,7 @@ namespace sw
         MMOReplicator();
 
         uint8  getMessageRangeBase() const override { return NetMMOMessage::Table::kRangeBase; }
+        uint32 getWireVersion() const override { return NetMMOMessage::Table::computeWireVersion(); } // 받지 않고 보내기만 한다 — 보내는 표의 판을 낸다
         uint16 getMessageKindMask() const override { return 0; }
         uint16 getNotifiedKindMask() const override { return NetMMOMessage::Table::makeMask<NetMMOMessage::Update>(); }
         /** @brief 받는 종류가 없으므로 라우터는 부르지 않는다. 직접 전달하면 NotMine 이다. */
