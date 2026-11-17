@@ -38,6 +38,7 @@ namespace sw
         , _mapKeyToObject{}
         , _mapComponentToRecord{}
         , _listScratchKey{}
+        , _listDirtyKey{}
         , _listSnapshot{}
         , _pPublished{ nullptr }
         , _generation{ 0 }
@@ -57,10 +58,21 @@ namespace sw
         const uint64 current = _generation.load( std::memory_order_relaxed );
         if ( pSnapshot->_generation == current )
             return *pSnapshot;
+        // 지난 스냅샷의 칸을 나눠 받고 바뀐 칸만 새로 복사한다(파일 머리말의 "세대 스냅샷").
         unique_ptr<Snapshot> fresh = make_unique<Snapshot>();
-        fresh->_mapKeyToObject     = _mapKeyToObject;
+        fresh->_mapKeyToObject     = pSnapshot->_mapKeyToObject;
         fresh->_generation         = current;
-        pSnapshot                  = fresh.get();
+        VectorUtil::sortUnique( _listDirtyKey );
+        for ( const uint64 key : _listDirtyKey )
+        {
+            const auto workingIt = _mapKeyToObject.find( key );
+            if ( workingIt == _mapKeyToObject.end() || workingIt->second.empty() )
+                fresh->_mapKeyToObject.erase( key );
+            else
+                fresh->_mapKeyToObject.insert_or_assign( key, shared_ptr<const vector<GameObject*>>{ make_shared<vector<GameObject*>>( workingIt->second ) } );
+        }
+        _listDirtyKey.clear();
+        pSnapshot = fresh.get();
         _listSnapshot.push_back( std::move( fresh ) );
         _pPublished.store( pSnapshot, std::memory_order_release );
         return *pSnapshot;
@@ -102,6 +114,7 @@ namespace sw
             for ( const uint64 key : _listScratchKey )
             {
                 _mapKeyToObject[key].push_back( pOwner );
+                _listDirtyKey.push_back( key );
             }
             _mapComponentToRecord.emplace( &tagComponent, Record{ pOwner, _listScratchKey } );
         }
@@ -131,10 +144,10 @@ namespace sw
         for ( const TagID& tag : listRequired )
         {
             const auto bucketIt = snapshot._mapKeyToObject.find( tag._id );
-            if ( bucketIt == snapshot._mapKeyToObject.end() || bucketIt->second.empty() )
+            if ( bucketIt == snapshot._mapKeyToObject.end() )
                 return;
-            if ( pSmallest == nullptr || bucketIt->second.size() < pSmallest->size() )
-                pSmallest = &bucketIt->second;
+            if ( pSmallest == nullptr || bucketIt->second->size() < pSmallest->size() )
+                pSmallest = bucketIt->second.get();
         }
         const bool bCheckOtherTags = listRequired.size() > 1;
         for ( GameObject* pObject : *pSmallest )
@@ -149,6 +162,7 @@ namespace sw
     {
         for ( const uint64 key : record._listKey )
         {
+            _listDirtyKey.push_back( key );
             const auto bucketIt = _mapKeyToObject.find( key );
             // 넣을 때 칸마다 한 번 넣었다. 없으면 색인이 깨진 것이다.
             [[maybe_unused]] const bool bRemoved = bucketIt != _mapKeyToObject.end() && VectorUtil::removeSingleSwap( bucketIt->second, record._pOwner );

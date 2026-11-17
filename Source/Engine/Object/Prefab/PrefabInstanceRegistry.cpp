@@ -18,13 +18,17 @@ namespace sw
         : _pManager{ &manager }
         , _mapNestedPart{}
         , _nextRegistration{ 0 }
+        , _lastPruneStructureGeneration{ kPruneNeeded }
     {
     }
 
     void PrefabInstanceRegistry::update( float32 deltaTime )
     {
         (void)deltaTime;
+        if ( _lastPruneStructureGeneration == _pManager->getStructureGeneration() )
+            return;
         pruneDestroyedParts();
+        _lastPruneStructureGeneration = _pManager->getStructureGeneration();
     }
 
     void PrefabInstanceRegistry::pruneDestroyedParts()
@@ -51,11 +55,13 @@ namespace sw
         part._prefabPath        = string{ prefabPath };
         part._partKey           = string{ partKey };
         ++_nextRegistration;
+        _lastPruneStructureGeneration = kPruneNeeded;
     }
 
     void PrefabInstanceRegistry::restoreNestedPart( uint64 objectID, const PrefabNestedPart& part )
     {
-        _mapNestedPart[objectID] = part;
+        _mapNestedPart[objectID]      = part;
+        _lastPruneStructureGeneration = kPruneNeeded;
         // 복원한 순서보다 뒤에 기록하는 부품이 늘 뒤에 오게 한다.
         _nextRegistration = MathUtil::max( _nextRegistration, part._registrationOrder + 1 );
     }

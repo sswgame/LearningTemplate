@@ -153,7 +153,7 @@ namespace sw
         _hashTime = 0.0f;
     }
 
-    void DestructionReplicationServer::registerObject( uint32 netID, FractureComponentBase& component )
+    void DestructionReplicationServer::registerObject( NetObjectID netID, FractureComponentBase& component )
     {
         component.setAuthority( true );
         Entry* pEntry = findEntry( netID );
@@ -168,7 +168,7 @@ namespace sw
         pEntry->_sentEventCount = static_cast<uint32>( component.getEventLog()._listEvent.size() );
     }
 
-    DestructionReplicationServer::Entry* DestructionReplicationServer::findEntry( uint32 netID )
+    DestructionReplicationServer::Entry* DestructionReplicationServer::findEntry( NetObjectID netID )
     {
         return VectorUtil::findBy<&Entry::_netID>( _listEntry, netID );
     }
@@ -198,7 +198,7 @@ namespace sw
 
     NetHandleResult DestructionReplicationServer::receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, BitReader& body )
     {
-        const uint32 netID = body.readVarUint32();
+        const NetObjectID netID = body.readVarUint();
         if ( body.hasOverflowed() || context._connectionID < 0 )
             return NetHandleResult::Malformed;
         if ( findEntry( netID ) != nullptr )
@@ -206,7 +206,7 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void DestructionReplicationServer::queueRequest( int32 connectionID, uint32 netID )
+    void DestructionReplicationServer::queueRequest( int32 connectionID, NetObjectID netID )
     {
         // (연결, netID) 하나에 요청 하나 — 같은 요청을 거듭 보내도 줄은 늘지 않는다. 예전에는 받은 요청마다 쌓아 1 만 개(약 40 KB)면 창이 빌 때까지
         // 매 틱 1 만 번 직렬화했다(감사 N-5, 언리얼 RPC DoS 감지 자리). 줄의 길이는 연결 수 × 파괴 엔티티 수로 묶인다.
@@ -403,9 +403,9 @@ namespace sw
             writer.writeBool( bRest );
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
-            // 개수는 끝에서야 알 수 있으므로 몇 개를 실을지 먼저 정한다. 예산 안에서 남은 최대 개수로 정한다.
+            // 개수는 끝에서야 알 수 있으므로 몇 개를 실을지 먼저 정한다. 예산 안에서 남은 최대 개수로 정한다(머리 — 번호 9 바이트 · 틱 · 개수 — 를 20 바이트로 잡는다).
             const int32  perPoseBytes = bRest ? 30 : 15;
-            const size_t room         = static_cast<size_t>( MathUtil::max( 1, ( Internal::kPoseMessageBudget - 16 ) / perPoseBytes ) );
+            const size_t room         = static_cast<size_t>( MathUtil::max( 1, ( Internal::kPoseMessageBudget - 20 ) / perPoseBytes ) );
             const size_t count        = MathUtil::min( room, listPose.size() - start );
             writer.writeVarUint( count );
             bool bPosesWritten = true;
@@ -473,7 +473,7 @@ namespace sw
         _clock.initialize( clockSettings );
     }
 
-    void DestructionReplicationClient::registerObject( uint32 netID, FractureComponentBase& component )
+    void DestructionReplicationClient::registerObject( NetObjectID netID, FractureComponentBase& component )
     {
         component.setAuthority( false );
         Entry* pEntry = findEntry( netID );
@@ -488,14 +488,14 @@ namespace sw
         _clock.setSampleInterval( MathUtil::max( _clock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
     }
 
-    void DestructionReplicationClient::skipNextEvent( uint32 netID )
+    void DestructionReplicationClient::skipNextEvent( NetObjectID netID )
     {
         Entry* pEntry = findEntry( netID );
         if ( pEntry != nullptr )
             ++pEntry->_skipCount;
     }
 
-    DestructionReplicationClient::Entry* DestructionReplicationClient::findEntry( uint32 netID )
+    DestructionReplicationClient::Entry* DestructionReplicationClient::findEntry( NetObjectID netID )
     {
         return VectorUtil::findBy<&Entry::_netID>( _listEntry, netID );
     }
@@ -516,7 +516,7 @@ namespace sw
 
     DestructionReplicationClient::Entry* DestructionReplicationClient::readEntry( BitReader& reader, NetHandleResult& outEarly )
     {
-        const uint32 netID = reader.readVarUint32();
+        const NetObjectID netID = reader.readVarUint();
         if ( reader.hasOverflowed() )
         {
             outEarly = NetHandleResult::Malformed;
@@ -680,10 +680,10 @@ namespace sw
 
     void DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
     {
-        using Internal     = DestructionReplicationInternal;
-        const uint32 netID = reader.readVarUint32();
-        const uint32 tick  = reader.readVarUint32();
-        const uint64 count = reader.readVarUint();
+        using Internal          = DestructionReplicationInternal;
+        const NetObjectID netID = reader.readVarUint();
+        const uint32      tick  = reader.readVarUint32();
+        const uint64      count = reader.readVarUint();
         if ( reader.hasOverflowed() )
             return;
         Entry* pEntry = findEntry( netID );

@@ -88,8 +88,8 @@ namespace sw
             FractureComponent* pFracture = pObject->getComponent<FractureComponent>();
             if ( pFracture == nullptr )
                 continue;
-            const uint32 netID       = table.findID( *pObject );
-            const bool   bRegistered = _mapEntryIndex.contains( netID );
+            const NetObjectID netID       = table.findID( *pObject );
+            const bool        bRegistered = _mapEntryIndex.contains( netID );
             if ( netID == 0 || bRegistered )
                 continue;
             _mapEntryIndex.emplace( netID, static_cast<uint32>( _listEntry.size() ) );
@@ -105,7 +105,7 @@ namespace sw
         }
     }
 
-    void DestructionNetSession::collectObjectIDs( vector<uint32>& outListNetID ) const
+    void DestructionNetSession::collectObjectIDs( vector<NetObjectID>& outListNetID ) const
     {
         outListNetID.clear();
         for ( const Entry& entry : _listEntry )
@@ -164,7 +164,7 @@ namespace sw
         StateHashBuilder builder;
         for ( const DestructionHashRecord& record : listEntryHash )
         {
-            builder.addUint32( record._netID );
+            builder.addBytes( &record._netID, sizeof( record._netID ) );
             builder.addBytes( &record._hash, sizeof( record._hash ) );
         }
         return builder.getHash();
@@ -178,7 +178,7 @@ namespace sw
         return true;
     }
 
-    string_view DestructionNetSession::findObjectName( uint32 netID ) const
+    string_view DestructionNetSession::findObjectName( NetObjectID netID ) const
     {
         const auto it = _mapEntryIndex.find( netID );
         return it != _mapEntryIndex.end() ? string_view{ _listEntry[it->second]._name } : string_view{};

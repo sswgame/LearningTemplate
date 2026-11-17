@@ -41,6 +41,7 @@
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/NetObjectID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
@@ -53,11 +54,11 @@ namespace sw
     /** @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetDestructionMessage
     {
-        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableUnordered>;  ///< 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
-        using Snapshot        = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>; ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지). 판 2: 조각이 아니라 메시지 하나로 보낸다
-        using Pose            = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable>;         ///< 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다
-        using Hash            = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;    ///< (이벤트 수, 상태 해시)
-        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered>;    ///< 스냅숏을 요청한다
+        using Event           = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableUnordered, 2>; ///< 판 2: 오브젝트 번호가 64 비트(`NetObjectID`). 이벤트 하나. 받는 쪽이 번호로 순서를 맞춘다
+        using Snapshot        = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 3>;   ///< 오브젝트 하나의 상태 스냅숏(64 KB 까지). 판 2: 조각이 아니라 메시지 하나로 보낸다. 판 3: 번호 64 비트
+        using Pose            = NetMessageDef<2, NetMessageDirection::ToClient, NetChannelType::Unreliable, 2>;        ///< 판 2: 번호 64 비트. 덩어리 자세. 움직이는 중에는 비신뢰, 멈추면 신뢰 순서로 보낸다
+        using Hash            = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>;   ///< (이벤트 수, 상태 해시). 판 2: 번호 64 비트
+        using SnapshotRequest = NetMessageDef<4, NetMessageDirection::ToServer, NetChannelType::ReliableOrdered, 2>;   ///< 스냅숏을 요청한다. 판 2: 번호 64 비트
         using Table           = NetMessageTable<NetKitMessageRange::kDestruction, Event, Snapshot, Pose, Hash, SnapshotRequest>;
 
         static constexpr uint8 kEvent           = Table::getKindOf<Event>();
@@ -121,7 +122,7 @@ namespace sw
 
         void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 서버 쪽은 권한을 켜며, 같은 번호가 이미 있으면 교체합니다. */
-        void registerObject( uint32 netID, FractureComponentBase& component );
+        void registerObject( NetObjectID netID, FractureComponentBase& component );
         /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. */
         void update( uint32 serverTick );
 
@@ -146,21 +147,21 @@ namespace sw
         {
             vector<ChunkSendState>                  _listChunk{};
             TComponentHandle<FractureComponentBase> _component{};
-            uint32                                  _netID{ 0 };
+            NetObjectID                             _netID{ 0 };
             uint32                                  _sentEventCount{ 0 };
             float32                                 _poseTime{ 0.0f };
         };
 
         struct Request
         {
-            int32  _connectionID{ constant::invalid_index::kInt32 };
-            uint32 _netID{ 0 };
+            int32       _connectionID{ constant::invalid_index::kInt32 };
+            NetObjectID _netID{ 0 };
         };
 
         FractureComponentBase* resolve( const Entry& entry ) const;
         /** @brief 스냅숏 요청을 줄에 넣습니다. 같은 (연결, netID) 가 이미 있으면 넣지 않는다. */
-        void   queueRequest( int32 connectionID, uint32 netID );
-        Entry* findEntry( uint32 netID );
+        void   queueRequest( int32 connectionID, NetObjectID netID );
+        Entry* findEntry( NetObjectID netID );
         void   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
         /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false 를 반환하고, 호출한 쪽이 요청을 다음 `update` 로 미룹니다. */
         [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID );
@@ -204,11 +205,11 @@ namespace sw
 
         void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 권한을 끄므로 충돌이 이벤트를 만들지 않습니다. */
-        void registerObject( uint32 netID, FractureComponentBase& component );
+        void registerObject( NetObjectID netID, FractureComponentBase& component );
         /** @brief 월드 틱 앞에 부릅니다. 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 진행해 덩어리 자세를 보간합니다. */
         void update( float32 deltaTime );
         /** @brief 테스트용 결함 주입입니다. 그 오브젝트의 다음 이벤트 하나를 적용하지 않고 건너뛰며, 해시 불일치에서 스냅숏 복구까지의 흐름을 확인할 때 씁니다. */
-        void skipNextEvent( uint32 netID );
+        void skipNextEvent( NetObjectID netID );
 
         // 표의 메시지 — 이벤트, 스냅숏, 자세, 해시를 받는다. 같은 영역의 스냅숏 요청은 서버가 받는다
         NetHandleResult receive( NetDestructionMessage::Event, const NetMessageContext& context, BitReader& body );
@@ -254,14 +255,14 @@ namespace sw
             vector<HashCheck>                       _listHashCheck{};
             vector<ChunkTrack>                      _listChunk{};
             TComponentHandle<FractureComponentBase> _component{};
-            uint32                                  _netID{ 0 };
+            NetObjectID                             _netID{ 0 };
             uint32                                  _nextEventIndex{ 0 };
             uint32                                  _skipCount{ 0 };
             uint8                                   _bAwaitingSnapshot{ SW_FALSE };
         };
 
         FractureComponentBase* resolve( const Entry& entry ) const;
-        Entry*                 findEntry( uint32 netID );
+        Entry*                 findEntry( NetObjectID netID );
         /** @brief 오브젝트 id 를 읽어 그 항목을 찾습니다. 깨졌으면 Malformed, 이 클라이언트에 없으면 Handled(소비하고 버린다)를 @p outEarly 에 두고 nullptr 입니다. */
         Entry* readEntry( BitReader& reader, NetHandleResult& outEarly );
         void   handleEvent( Entry& entry, const BufferedEvent& received );

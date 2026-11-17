@@ -58,7 +58,11 @@ namespace sw
         PrefabInstanceRegistry( const PrefabInstanceRegistry& )            = delete;
         PrefabInstanceRegistry& operator=( const PrefabInstanceRegistry& ) = delete;
 
-        /** @brief 놓인 오브젝트의 항목을 거둡니다(`pruneDestroyedParts`). 매니저가 파괴를 처리한 뒤(`DestroyPost`) 부릅니다. */
+        /**
+         * @brief 놓인 오브젝트의 항목을 거둡니다(`pruneDestroyedParts`). 매니저가 파괴를 처리한 뒤(`DestroyPost`) 부릅니다.
+         * @details 매니저의 구조 세대(`GameObjectManager::getStructureGeneration` — 생성 · 파괴 표시 · 놓기마다 오른다)가 지난 거두기 뒤로 그대로이고
+         *          그 뒤 기록도 없으면 표를 훑지 않는다(예전에는 프레임마다 부품 수만큼 id 를 찾았다).
+         */
         void update( float32 deltaTime ) override;
         /** @brief 매니저에 더는 없는 오브젝트의 항목을 지웁니다. 삭제 대기(아직 놓지 않은) 오브젝트의 항목은 남깁니다. */
         void pruneDestroyedParts();
@@ -99,5 +103,9 @@ namespace sw
         GameObjectManager*                      _pManager;         ///< 이 레지스트리를 가진 매니저(빌림)
         unordered_map<uint64, PrefabNestedPart> _mapNestedPart;    ///< 부품 오브젝트 id → 기록
         uint64                                  _nextRegistration; ///< 다음 기록에 줄 순서
+        /// 마지막으로 표를 훑었을 때의 매니저 구조 세대. 기록하면 `kPruneNeeded` 로 되돌린다(없는 id 로 기록한 항목도 다음 프레임에 거둔다)
+        uint64 _lastPruneStructureGeneration;
+        /** @brief 구조 세대가 갖지 않는 값입니다(세대는 오브젝트 id 를 위 비트에 둔 값에서 오르기만 한다 — `GameObjectStore::getStructureGeneration`). */
+        static constexpr uint64 kPruneNeeded = ~uint64{ 0 };
     };
 } // namespace sw

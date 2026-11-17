@@ -29,6 +29,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/NetObjectID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
@@ -43,8 +44,8 @@ namespace sw
     /** @brief 페어드 애니메이션 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetPairedAnimationMessage
     {
-        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>; ///< 세션 상태(시작 · 늦은 참가)
-        using SessionEnd   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>; ///< 세션 끝(id) — 상태 메시지 뒤에 닿아야 한다
+        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered, 2>; ///< 세션 상태(시작 · 늦은 참가). 판 2: 참가 오브젝트 번호 64 비트(`NetObjectID`)
+        using SessionEnd   = NetMessageDef<1, NetMessageDirection::ToClient, NetChannelType::ReliableOrdered>;    ///< 세션 끝(id) — 상태 메시지 뒤에 닿아야 한다
         using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 
         static constexpr uint8 kSessionState = Table::getKindOf<SessionState>();
@@ -60,13 +61,13 @@ namespace sw
      */
     struct SW_KIT_API PairedAnimationNetState
     {
-        /** @brief 스냅숏 바이트의 상한입니다(역할 하나가 5 바이트 남짓 — 역할 수백 개까지). 넘으면 쓰지 않습니다. */
+        /** @brief 스냅숏 바이트의 상한입니다(역할 하나가 9 바이트 남짓 — 역할 수백 개까지). 넘으면 쓰지 않습니다. */
         static constexpr int32 kMaxSnapshotBytes = 2048;
         /** @brief 역할 수의 상한입니다. 깨진 바이트가 큰 수를 말해도 그만큼 잡지 않습니다. */
         static constexpr uint32 kMaxRoleCount = 64;
 
         string                         _assetPath{};
-        vector<uint32>                 _listRoleNetID{};
+        vector<NetObjectID>            _listRoleNetID{};
         PairedAnimationSessionSnapshot _snapshot{};
 
         /** @brief 본문에 씁니다. 경로가 `constant::file::kMaxPathSize` 이상이거나 역할 수가 상한을 넘으면 쓰지 않고 false 입니다. */
