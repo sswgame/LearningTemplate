@@ -218,6 +218,7 @@ namespace sw
             const float32 nearPlane = MathUtil::max( radius * Internal::kLocalNearFraction, Internal::kLocalMinNearPlane );
             light._params._x        = 1.0f;
             light._params._w        = static_cast<float32>( usedTileCount * shaderslot::kShadowTileElementCount );
+            const uint32 lightSlot  = static_cast<uint32>( outFrame._listLocalBound.size() );
 
             for ( uint32 faceIndex = 0; faceIndex < tileCount; ++faceIndex )
             {
@@ -239,6 +240,7 @@ namespace sw
                 const float4x4 viewProj    = float4x4::makeLookAt( position, position + forward, up ) *
                                           float4x4::makePerspectiveFieldOfView( fieldOfView, 1.0f, nearPlane, radius );
                 outFrame._listLocalTile.push_back( ShadowTileDraw{ viewProj, cell } );
+                outFrame._listLocalTileLight.push_back( lightSlot );
 
                 // 셰이딩은 아틀라스 자리를 접은 행렬로 투영한다 — 클립 공간 변환이라 원근 나눗셈 뒤에도 칸 안에 떨어진다.
                 outFrame._listTileElement.push_back( Internal::makeMatrixElement( viewProj * Internal::makeAtlasPlacement( cell, atlasResolution ) ) );
@@ -256,6 +258,10 @@ namespace sw
                 outFrame._listTileElement.push_back( info );
             }
             outFrame._listLocalBound.push_back( float4{ position._x, position._y, position._z, radius } );
+            // 그림자 컬링 절두체 — 스폿은 그 타일(원뿔을 덮는 원근)이고, 점광은 면 여섯이 덮는 경계 구의 상자다(면마다 나누면 슬롯이 여섯 배다).
+            outFrame._listLocalCullViewProj.push_back( bSpot ? outFrame._listLocalTile.back()._viewProj
+                                                             : float4x4::makeLookAt( position, position + float3::Forward, float3::Up ) *
+                                                                   float4x4::makeOrthographicOffCenter( -radius, radius, -radius, radius, -radius, radius ) );
             usedTileCount += tileCount;
         }
     }

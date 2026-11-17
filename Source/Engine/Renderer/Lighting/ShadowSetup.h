@@ -128,6 +128,8 @@ namespace sw
         vector<GPULight>       _listTileElement{};                             ///< 라이트 버퍼의 빛 뒤에 붙는 타일 원소(타일마다 `shaderslot::kShadowTileElementCount` 개)
         vector<ShadowTileDraw> _listLocalTile{};                               ///< 점광과 스폿 타일. 모든 뷰의 그림자 패스가 자기 아틀라스에 같은 슬롯으로 그린다
         vector<float4>         _listLocalBound{};                              ///< 그림자를 드리우는 점광과 스폿의 경계 구(xyz 중심, w 반경). 그림자 컬링 상자에 더한다
+        vector<uint32>         _listLocalTileLight{};                          ///< 점광과 스폿 타일마다 그 빛의 번호(`_listLocalBound` · `_listLocalCullViewProj` 의 번호). 점광의 면 여섯은 같은 번호다
+        vector<float4x4>       _listLocalCullViewProj{};                       ///< 빛마다의 그림자 컬링 절두체 — 스폿은 그 타일의 뷰-투영, 점광은 경계 구를 덮는 직교 상자(감사 RN-5, 빛마다 컬링 슬롯)
         float4                 _contactShadowLights{ kNoContactShadowLights }; ///< 접촉 그림자 채널 넷의 빛 원소 번호(-1 = 빈 채널) — `g_ContactShadowLights`
 
         /** @brief 값을 비웁니다. 저장소는 남깁니다. */
@@ -138,6 +140,8 @@ namespace sw
             _listTileElement.clear();
             _listLocalTile.clear();
             _listLocalBound.clear();
+            _listLocalTileLight.clear();
+            _listLocalCullViewProj.clear();
             _contactShadowLights = kNoContactShadowLights;
         }
 
@@ -188,6 +192,7 @@ namespace sw
          * @brief 점광과 스폿에 아틀라스 슬롯을 우선순위 순서로 나눠 줍니다. 슬롯이 모자란 빛은 그림자 없이 비춥니다.
          * @details 우선순위는 화면 크기의 대리값(경계 구 반경 / 카메라 깊이)이 큰 빛부터입니다. 언리얼이 그림자 해상도와 아틀라스 위치를 투영한 화면 반경으로
          *          고르는 것과 같은 기준입니다. @p pPriorityViewProj 가 없으면(카메라 없음) 목록 순서입니다. 값이 같으면 목록 순서를 지킵니다.
+         *          빛마다 경계 구와 그림자 컬링 절두체(`_listLocalCullViewProj`)를, 타일마다 그 빛의 번호(`_listLocalTileLight`)를 더합니다.
          *          슬롯을 받은 빛 원소에 `_params.x = 1`, `_params.w = 첫 타일 원소의 상대 번호` 를 쓰고, 타일마다 라이트 버퍼 원소 둘(아틀라스 위치를 접은 뷰-투영,
          *          슬롯 사각형과 바이어스 — 그 원소의 `_directionType` 은 PCSS 의 (가까운 면, 먼 면, 거리 1 m 의 텍셀 길이, 원천 반지름)), 그릴 타일, 경계 구를 더합니다. 점광의 면은 +X −X +Y −Y +Z −Z 순서이고 시야각은 90°에 PCF 여유 텍셀을 더한 것입니다.
          * @param pPriorityViewProj 주 시점 카메라의 뷰-투영(우선순위의 기준). nullptr 이면 목록 순서입니다.

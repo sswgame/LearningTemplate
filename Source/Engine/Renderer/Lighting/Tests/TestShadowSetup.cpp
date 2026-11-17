@@ -684,3 +684,47 @@ SW_TEST_CASE( ShadowSetupTest, AddingSpotShadowKeepsCascades )
     SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._x, Internal::kAtlasResolution / 2u );
     SW_EXPECT_EQUAL( with._listLocalTile[0]._cell._y, Internal::kAtlasResolution / 2u );
 }
+
+/**
+ * @brief [ShadowSetupTest] 점광 · 스폿마다 그림자 컬링 절두체가 하나씩이고 타일은 자기 빛의 번호를 안다(감사 RN-5 — 빛마다 컬링 슬롯)
+ * @details 점광의 면 여섯은 같은 빛 번호이고 그 절두체는 경계 구를 덮는 상자다(구 안의 점은 안, 구 밖으로 멀리 떨어진 점은 밖). 스폿의 절두체는 그 타일의 뷰-투영이다.
+ */
+SW_TEST_CASE( ShadowSetupTest, LocalLightsCarryTheirOwnCullFrustum )
+{
+    using Internal = sw::ShadowSetupTestInternal;
+    const sw::float3         pointPosition{ 10.0f, 3.0f, -4.0f };
+    sw::vector<sw::GPULight> listLight;
+    listLight.push_back( Internal::makePointLight( pointPosition, 6.0f ) );
+    listLight.push_back( Internal::makeSpotLight( sw::float3{ -5.0f, 4.0f, 2.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
+    const sw::vector<uint32> listShadowIndex{ 0u, 1u };
+    sw::FrameShadowData      frame;
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
+
+    SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 7 ) );
+    SW_REQUIRE_EQUAL( frame._listLocalTileLight.size(), frame._listLocalTile.size() );
+    SW_REQUIRE_EQUAL( frame._listLocalCullViewProj.size(), frame._listLocalBound.size() );
+    SW_REQUIRE_EQUAL( frame._listLocalCullViewProj.size(), static_cast<size_t>( 2 ) );
+    for ( uint32 tileIndex = 0; tileIndex < 6; ++tileIndex )
+    {
+        SW_EXPECT_EQUAL( frame._listLocalTileLight[tileIndex], 0u );
+    }
+    SW_EXPECT_EQUAL( frame._listLocalTileLight[6], 1u );
+
+    const sw::float4x4& pointCull = frame._listLocalCullViewProj[0];
+    for ( const sw::float3& offset : {
+              sw::float3{5.5f,  0.0f,  0.0f},
+              sw::float3{0.0f, -5.5f,  0.0f},
+              sw::float3{0.0f,  0.0f,  5.5f},
+              sw::float3{0.0f,  0.0f, -5.5f}
+    } )
+    {
+        const sw::float3 ndc = Internal::projectToNdc( pointPosition + offset, pointCull );
+        SW_EXPECT_TRUE( sw::MathUtil::abs( ndc._x ) <= 1.0f && sw::MathUtil::abs( ndc._y ) <= 1.0f && 0.0f <= ndc._z && ndc._z <= 1.0f );
+    }
+    const sw::float3 farNdc = Internal::projectToNdc( pointPosition + sw::float3{ 20.0f, 0.0f, 0.0f }, pointCull );
+    SW_EXPECT_FALSE( sw::MathUtil::abs( farNdc._x ) <= 1.0f );
+
+    const sw::float4x4& spotCull = frame._listLocalCullViewProj[1];
+    SW_EXPECT_NEAR( spotCull._11, frame._listLocalTile[6]._viewProj._11, 1e-6f );
+    SW_EXPECT_NEAR( spotCull._43, frame._listLocalTile[6]._viewProj._43, 1e-6f );
+}

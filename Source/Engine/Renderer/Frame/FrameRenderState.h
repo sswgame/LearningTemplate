@@ -109,6 +109,15 @@ namespace sw
         uint32     _cascadeCullSlotBase{ 0 }; ///< 캐스케이드 컬링 슬롯의 첫 번호
         uint32     _cascadeCullCount{ 0 };    ///< 이번 프레임 캐스케이드 컬링 슬롯 수. 0 이면 합친 칸(`_shadowCullSlot`) 하나로 모든 타일을 거른다
         /**
+         * @brief 그림자를 드리우는 점광 · 스폿마다의 그림자 컬링 입력입니다(감사 RN-5 — 예전에는 모든 점광 · 스폿 타일이 방향광 볼륨까지 합친 칸 하나를 그렸다).
+         * @details 슬롯은 캐스케이드 슬롯 뒤에 붙는다(`_localShadowCullSlotBase` + 빛 번호). 빛 번호는 `FrameShadowData::_listLocalBound` 의 번호(우선순위 순서)이고
+         *          앞 `_localShadowCullCount` 개 빛만 자기 슬롯을 가진다(상한 `RenderConfig::_shadowLocalCullSlotLimit`). 나머지는 합친 칸이다.
+         *          목록은 줄이지 않는다 — 슬롯 수가 바뀌면 GPU 장면을 통째로 다시 올리므로 빛이 들고 나도 칸 수를 지킨다.
+         */
+        vector<RenderView> _listLocalShadowCullInput{};
+        uint32             _localShadowCullSlotBase{ 0 }; ///< 점광 · 스폿 컬링 슬롯의 첫 번호
+        uint32             _localShadowCullCount{ 0 };    ///< 이번 프레임에 자기 컬링 슬롯을 가진 빛 수
+        /**
          * @brief 프레임 단위 패스 상태입니다. 직렬 경로에서 쓰며 병렬 패스의 시드가 됩니다.
          * @details 병렬 기록에서는 패스마다 이것을 복사해 각자의 커맨드 리스트와 상수 버퍼를 붙인다.
          */

@@ -306,6 +306,8 @@ namespace sw
          *          @p bCacheLayer 면 그림자 캐시가 캐시하는 점광 · 스폿 타일(`ShadowCache::getAction` 이 DrawAll 이 아닌 것)은 캐시 층을 옮기고 움직이는 배치만 그린다.
          */
         void drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer );
+        /** @brief 점광 · 스폿 타일 @p localTileIndex 를 그릴 컬링 슬롯입니다. 그 빛이 자기 슬롯을 가지면 그것이고(감사 RN-5), 아니면 지금 뷰의 합친 그림자 칸입니다. */
+        uint32 findLocalShadowCullSlot( uint32 localTileIndex ) const;
         /** @brief 그림자 캐시 층을 그래프 기록 전에 만듭니다(그림자 아틀라스와 같은 형식 · 크기). 기록 중에는 자원을 만들 수 없다. */
         void prepareShadowCacheLayerResource();
         /**
