@@ -24,5 +24,6 @@
         "scenario.play": "시나리오 세션 안에서 재생기를 또 세우지 않는다 - 재생은 시퀀서 항목 Scenario 와 콘솔이 쓴다",
         "scenario.stop": "scenario.play 의 짝",
         "scene.leakcurve": "씬을 여러 번 다시 읽는 측정 - 체인 시간을 크게 늘리고 씬을 바꾼다"
-    }
+    },
+    "_logIDs": {}
 }

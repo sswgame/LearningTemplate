@@ -188,6 +188,11 @@ add_test(NAME Scripts.ScenarioBisect
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_scenario_bisect.py")
 set_tests_properties(Scripts.ScenarioBisect PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# 기능 참조 린트(feature-refs)의 낡은 기대 로그 id — 기대 · 허용이 가리키는 id 를 내는 코드가 없으면 위반, 도우미 · #define 을 거친 id 는 정의로 친다.
+add_test(NAME Scripts.FeatureReferences
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/lint/tests/test_feature_references.py")
+set_tests_properties(Scripts.FeatureReferences PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")

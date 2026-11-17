@@ -8,7 +8,6 @@
   실행: App -scenario=game/shooter3d/automation/audiolistener.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.audiolistener" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<AllowLog id="Audio.DeviceLost" reason="장치 없는 러너에서도 오프라인으로 돈다"/>
 	<DevCommand line="camera.preset orbit"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<WaitUntil watch="Audio.InstanceCount" atLeast="2" timeoutWallSeconds="10"/>
