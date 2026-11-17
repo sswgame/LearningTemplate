@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -129,8 +130,8 @@ namespace sw
         /** @brief 레이어 · 재질이 하나 이상인지, 이름이 겹치지 않는지, 레이어가 32 개 이하인지, 충돌 목록의 이름이 모두 존재하는 레이어인지 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate() const;
 
-        /** @brief 레이어 이름의 번호를 찾습니다. 없으면 false 를 반환합니다. */
-        [[nodiscard]] bool findLayerIndex( const hashed_string& name, uint8& outIndex ) const;
+        /** @brief 레이어 이름의 번호를 찾습니다. */
+        [[nodiscard]] optional<uint8> findLayerIndex( const hashed_string& name ) const;
         /** @brief 재질을 찾습니다. 없으면 nullptr 입니다. */
         const PhysicsMaterialDef* findMaterial( const hashed_string& name ) const;
         /** @brief 레이어 테이블을 대칭 행렬로 풉니다. 테이블에 없는 레이어 번호는 아무것과도 부딪히지 않습니다. */

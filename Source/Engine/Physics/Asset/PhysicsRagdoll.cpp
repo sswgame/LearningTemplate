@@ -47,14 +47,12 @@ namespace sw
 
             static uint8 resolveLayer( const PhysicsRagdollOptions& options, const hashed_string& layerName )
             {
-                uint8      layer             = 0;
-                const bool bUnknownLayerName = options._pSettings != nullptr && layerName.empty() == false && options._pSettings->findLayerIndex( layerName, layer ) == false;
-                if ( bUnknownLayerName )
-                {
+                if ( options._pSettings == nullptr || layerName.empty() )
+                    return 0;
+                const optional<uint8> layer = options._pSettings->findLayerIndex( layerName );
+                if ( layer.has_value() == false )
                     SW_LOG_ERROR_ID( "PhysicsRagdoll.RagdollBodyNamesUnknown", "Ragdoll body names unknown layer '%#' - using layer 0", layerName.c_str() );
-                    layer = 0;
-                }
-                return layer;
+                return layer.value_or( uint8{ 0 } );
             }
         };
     } // namespace
