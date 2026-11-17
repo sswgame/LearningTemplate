@@ -92,6 +92,7 @@ namespace sw
         beginInfo._width                                = activePool().getWidth();
         beginInfo._height                               = activePool().getHeight();
         beginInfo._colorTargetCount                     = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
+        bool bViewSized                                 = false;
         for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
         {
             const TransientAttachmentPool::Attachment target = findTransientAttachment( pColorNames[colorTargetIndex] );
@@ -111,13 +112,30 @@ namespace sw
                                      pColorNames[colorTargetIndex].c_str() );
                 return false;
             }
+            if ( colorTargetIndex == 0 )
+                bViewSized = target._bViewSized != 0;
             beginInfo._arrLoadOp[colorTargetIndex]  = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
             beginInfo._arrStoreOp[colorTargetIndex] = target._ops._storeOp;
             if ( pTargetClearColor != nullptr )
                 beginInfo._arrClearColor[colorTargetIndex] = pTargetClearColor[colorTargetIndex];
         }
         context._pCmd->beginRenderPass( beginInfo );
+        applyViewRectViewport( context, beginInfo._width, beginInfo._height, bViewSized );
         return true;
+    }
+
+    void FramePassExecutor::applyViewRectViewport( FramePassContext& context, uint32 targetWidth, uint32 targetHeight, bool bViewSized ) const
+    {
+        // 렌더 패스는 타깃 전체를 뷰포트 · 가위로 연다. 뷰 크기 첨부는 사각형 안만 그린다(자동 렌더 배율 — 풀은 그대로). 사각형이 풀 전체면 바꾸지 않는다.
+        const uint32 width  = _pActiveView->scaleToRect( targetWidth, bViewSized, true );
+        const uint32 height = _pActiveView->scaleToRect( targetHeight, bViewSized, false );
+        if ( width == targetWidth && height == targetHeight )
+            return;
+        RHIViewport viewport{};
+        viewport._width  = static_cast<float32>( width );
+        viewport._height = static_cast<float32>( height );
+        context._pCmd->setViewport( viewport );
+        context._pCmd->setScissorRect( RHIScissorRect{ 0, 0, width, height } );
     }
 
     void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, const hashed_string& depthName, RHIRenderPassLoadOp depthLoad )
@@ -136,6 +154,7 @@ namespace sw
         beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
         beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
         context._pCmd->beginRenderPass( beginInfo );
+        applyViewRectViewport( context, beginInfo._width, beginInfo._height, depth._texture == 0 || depth._bViewSized != 0 );
     }
 
     uint32 FramePassExecutor::computeShadowTileCountPerView() const

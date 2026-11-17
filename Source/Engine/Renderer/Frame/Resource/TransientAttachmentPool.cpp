@@ -55,7 +55,8 @@ namespace sw
         factory.setTextureDebugName( handle, name.c_str() );
         const RHIDescriptorIndex srv = factory.registerBindlessTexture( handle );
         Attachment               attachment{ handle, srv, kInvalidDescriptorIndex, desc._width, desc._height, format, ops };
-        attachment._bPlaced = 1;
+        attachment._bPlaced    = 1;
+        attachment._bViewSized = 1;
         _mapAttachment.emplace( name, attachment );
         SW_PROFILE_COUNT( "RT.Frame.transientPlacements", 1 ); // 힙에 겹쳐 놓은 첨부 — 서술이 다른 첨부와 바이트를 나눈다
         return true;
@@ -70,8 +71,11 @@ namespace sw
     bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops,
                                             uint32 resolutionDivisor, bool bUnorderedAccess )
     {
-        return allocateSized( pDevice, name, format, bDepth, ops, computeScaledExtent( _width, resolutionDivisor ),
-                              computeScaledExtent( _height, resolutionDivisor ), bUnorderedAccess );
+        if ( allocateSized( pDevice, name, format, bDepth, ops, computeScaledExtent( _width, resolutionDivisor ), computeScaledExtent( _height, resolutionDivisor ), bUnorderedAccess ) ==
+             false )
+            return false;
+        _mapAttachment.find( name )->second._bViewSized = 1;
+        return true;
     }
 
     bool TransientAttachmentPool::allocateSized( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width,

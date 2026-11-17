@@ -21,11 +21,12 @@ namespace sw
     /** @brief 입자 그리기 하나의 공통 값입니다. */
     struct SceneParticleBatchDesc
     {
-        float4x4      _world{};               ///< 방출기 행렬(행벡터 규약)
-        hashed_string _texturePath{};         ///< 입자 텍스처(리소스 id)
-        float32       _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율
-        uint8         _bAdditive{ SW_FALSE }; ///< 더하기 블렌드면 SW_TRUE
-        uint8         _bRibbon{ SW_FALSE };   ///< 띠면 SW_TRUE
+        float4x4      _world{};                       ///< 방출기 행렬(행벡터 규약)
+        hashed_string _texturePath{};                 ///< 입자 텍스처(리소스 id)
+        float32       _sizeScale{ 1.0f };             ///< 방출기 행렬의 최대 축 배율
+        uint8         _bAdditive{ SW_FALSE };         ///< 더하기 블렌드면 SW_TRUE
+        uint8         _bRibbon{ SW_FALSE };           ///< 띠면 SW_TRUE
+        VFXSortMode   _sortMode{ VFXSortMode::None }; ///< 방출기 안 입자의 그리는 순서(`VFXEmitterDef::_sortMode`)
     };
 
     /** @class ISceneParticleSink @brief 입자 그리기를 받는 쪽입니다(렌더러의 `GPUSceneBuilder`). 낸 순서가 정렬 전 후보 순서입니다. */

@@ -179,6 +179,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderVFXMeshInstance; ///< GPU 메시 입자의 인스턴스 쓰기(컴퓨트)
         PROPERTY( Required )
+        DataPath _shaderVFXParticleSort; ///< GPU 방출기 안 입자의 그리는 순서(컴퓨트, `VFXSortMode`)
+        PROPERTY( Required )
         DataPath _shaderDepthHistory; ///< 뷰의 깊이 히스토리 복사(풀스크린) — GPU 입자의 깊이 충돌이 읽는다
         PROPERTY( Required )
         DataPath _shaderAutoExposure; ///< 자동 노출 측정 · 적응(풀스크린 1x1) — 톤맵이 그 EV 를 읽는다

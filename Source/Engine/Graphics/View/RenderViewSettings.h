@@ -151,7 +151,8 @@ namespace sw
     struct RenderViewSettings
     {
         float4  _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 출력 안의 사각형(x, y, 너비, 높이. 0..1, 왼쪽 위 원점). 렌더 텍스처는 항상 전체다.
-        float32 _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
+        float32 _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도 — 첨부 풀의 크기(바뀌면 풀을 다시 만든다)
+        float32 _rectScale{ 1.0f };                    ///< 풀 안에서 그리는 사각형의 배율(자동 렌더 배율, 0 초과 1 이하) — 바뀌어도 풀을 다시 만들지 않는다(`FrameViewTarget::updateViewRect`)
         /// @brief 이 뷰를 그리는 카메라의 후처리 값(노출 · 블룸 배율 · 비네트 · 채도 · 대비 · 레터박스)입니다. 후처리를 끈 뷰와 표면 값을 보이는 보기 모드는 읽지 않습니다.
         PostProcessValues _postProcess{};
         /**

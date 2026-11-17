@@ -441,6 +441,11 @@ namespace sw
         // 원본 텍셀의 기본값은 프레임 텍셀이다. 원본 역할 입력을 바인딩하는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
         context._passValues.setFloat4( passConstantNames()._sourceTexel,
                                        float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
+        // 뷰 사각형 — 풀은 최대 크기 그대로이고 자동 렌더 배율은 이 사각형만 줄인다(`FrameViewTarget::updateViewRect`). 배율 1 이면 셰이더의 UV 변환이 값을 바꾸지 않는다.
+        const FrameRendererUtil::ViewRectConstants viewRect =
+            FrameRendererUtil::makeViewRectConstants( view._rect._width, view._rect._height, pool.getWidth(), pool.getHeight(), view._previousRectScale );
+        context._passValues.setFloat4( passConstantNames()._viewRectScale, viewRect._scale );
+        context._passValues.setFloat4( passConstantNames()._viewRectSize, viewRect._size );
         // 카메라별 후처리 값(PostProcessValues)도 뷰마다다. 중립 값(노출 0, 배율 1, 비네트 · 레터박스 0)이면 셰이더 결과가 전역 값과 같다.
         const PostProcessValues& post = view._settings._postProcess;
         float4                   bloomParams{ kDefaultBloomParams };

@@ -46,8 +46,8 @@ namespace sw
                 float32 _inputHeight{ 0.0f };
                 float32 _outputWidth{ 0.0f };
                 float32 _outputHeight{ 0.0f };
-                float32 _reserved0{ 0.0f };
-                float32 _reserved1{ 0.0f };
+                float32 _inputTextureWidth{ 0.0f }; ///< EASU: 원본 텍스처 전체 크기(게더 UV) — 입력 크기는 그 안의 뷰 사각형이다
+                float32 _inputTextureHeight{ 0.0f };
                 float32 _sharpness{ 0.0f };
             };
             static_assert( sizeof( RootConstants ) == 8 * sizeof( uint32 ), "fsr1.hlsl 의 루트 상수와 크기가 같아야 한다" );
@@ -80,7 +80,7 @@ namespace sw
         view._bUpscaleThisFrame                         = SW_FALSE;
         const TransientAttachmentPool& pool             = view._transientPool;
         const bool                     bSpatial         = static_cast<int32>( gv_upscaler ) == Internal::kUpscalerSpatial;
-        const bool                     bSmaller         = pool.getWidth() < viewportWidth || pool.getHeight() < viewportHeight;
+        const bool                     bSmaller         = view._rect._width < viewportWidth || view._rect._height < viewportHeight; // 그리는 사각형이 화면보다 작다(풀 배율 · 자동 렌더 배율)
         const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.isEmpty() == false;
         const RenderGraphPassDesc*     pTonemap         = FrameAutoExposure::findTonemapPass( _pipeline );
         const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_type == RenderPassType::Present;
@@ -150,12 +150,14 @@ namespace sw
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
-        constants._source            = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._inputWidth        = static_cast<float32>( source._width );
-        constants._inputHeight       = static_cast<float32>( source._height );
-        constants._outputWidth       = static_cast<float32>( view._upscaleWidth );
-        constants._outputHeight      = static_cast<float32>( view._upscaleHeight );
-        constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
+        constants._source             = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
+        constants._inputWidth         = static_cast<float32>( view.scaleToRect( source._width, source._bViewSized != 0, true ) );
+        constants._inputHeight        = static_cast<float32>( view.scaleToRect( source._height, source._bViewSized != 0, false ) );
+        constants._inputTextureWidth  = static_cast<float32>( source._width );
+        constants._inputTextureHeight = static_cast<float32>( source._height );
+        constants._outputWidth        = static_cast<float32>( view._upscaleWidth );
+        constants._outputHeight       = static_cast<float32>( view._upscaleHeight );
+        constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
             cmd.bindShaderResource( source._srv, kSourceSlot );
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );

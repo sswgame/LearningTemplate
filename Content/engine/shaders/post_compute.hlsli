@@ -44,9 +44,10 @@ static float3 PostCompute::getParams()
     return float3( SW_ROOT( g_PostParam0 ), SW_ROOT( g_PostParam1 ), SW_ROOT( g_PostParam2 ) );
 }
 
+/** @brief 원본에서 뷰 사각형이 덮는 크기(px)입니다 — C++ 이 원본 텍셀을 사각형 기준으로 준다(텍스처 전체가 아니다, 자동 렌더 배율). */
 static int2 PostCompute::getSourceSize()
 {
-    return int2( Bindless::getEngineTextureSize( SW_ROOT( g_PostSourceIndex ), 0u ) );
+    return int2( round( 1.0f / float2( SW_ROOT( g_PostSourceTexelX ), SW_ROOT( g_PostSourceTexelY ) ) ) );
 }
 
 /** @brief 원본 텍셀 하나를 읽습니다. 가장자리 밖은 클램프한다(픽셀 구현의 클램프 샘플러와 같다). */

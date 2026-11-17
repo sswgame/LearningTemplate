@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -31,9 +32,12 @@ namespace sw
             static constexpr uint32 kFloatsPerColumn   = 4;
             static constexpr uint32 kRootConstantCount = kRootColumn0 + kColumnCount * kFloatsPerColumn;
             static_assert( kRootConstantCount <= shaderslot::kRootConstantDwords, "particle root constants exceed the four-backend budget" );
-            /** @brief 플래그 칸의 비트입니다 — particle.hlsl 의 kParticleFlag* 와 같다. */
+            /** @brief 플래그 칸의 비트입니다 — particle.hlsl 의 kParticleFlag* 와 같다. 위 비트는 순서 구간이다(`VFXParticleRenderer::kRootFlagOrderShift`). */
             static constexpr uint32 kFlagAdditive = 1u << 0;
             static constexpr uint32 kFlagRibbon   = 1u << 1;
+            static_assert( kFlagRibbon < ( 1u << VFXParticleRenderer::kRootFlagOrderShift ), "particle flags overlap the order range bits" );
+            /** @brief 순서 구간의 첫 칸이 플래그 칸 위 비트에 들어가는 한계입니다(넘으면 순서 없이 그리고 오류를 한 번 남긴다). */
+            static constexpr uint32 kMaxOrderFirst = ( 0xFFFFFFFFu >> VFXParticleRenderer::kRootFlagOrderShift ) - 1u;
 
             /** @brief GPU 방출기의 버퍼 안 시작 위치 자리표입니다 — 자기 렌더 입력 버퍼를 0 부터 읽는다. */
             static constexpr uint32 kNoSharedBase = constant::invalid_index::kUint32;
@@ -51,6 +55,7 @@ namespace sw
         , _listBatchBase{}
         , _listTexture{}
         , _particleBuffer{}
+        , _orderBuffer{}
         , _gpuSimulation{}
         , _uploadedParticleCount{ 0 }
     {
@@ -58,13 +63,14 @@ namespace sw
 
     VFXParticleRenderer::~VFXParticleRenderer() = default;
 
-    void VFXParticleRenderer::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
+    void VFXParticleRenderer::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, vector_reference<const uint32> listParticleOrder,
+                                            const vector<GPUVFXMeshEmitter>& listMeshEmitter, vector_reference<const VFXGPUParticleSortJob> listGPUSortJob, uint32 gpuOrderCount,
                                             const VFXSimulationFrameInput& input )
     {
         _listBatchBase.clear();
         _uploadedParticleCount = 0;
         // GPU 방출기의 상태는 배치가 없는 프레임에도 정리해야 한다(멈춘 효과의 버퍼를 놓는다) — 빈 목록이어도 부른다.
-        _gpuSimulation.prepareFrame( device, listBatch, listMeshEmitter, input );
+        _gpuSimulation.prepareFrame( device, listBatch, listMeshEmitter, listGPUSortJob, gpuOrderCount, input );
         if ( listBatch.empty() )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.Upload" );
@@ -86,7 +92,24 @@ namespace sw
             added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( batch._texturePath.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
         }
 
-        // 2) 입자 — CPU 방출기들을 이어 한 버퍼에 담는다(같은 프레임에 버퍼를 두 번 갱신하지 않는다). GPU 방출기는 자기 렌더 입력 버퍼를 읽는다.
+        // 2) 순서 목록 — 정렬 모드가 있는 방출기의 구간들(게임 스레드가 뷰마다 만들었다). 비어도 한 칸을 올려 슬롯을 늘 건다.
+        const uint32 orderCount = MathUtil::max( 1u, static_cast<uint32>( listParticleOrder.size() ) );
+        if ( _orderBuffer._capacityElements < orderCount || _orderBuffer.isValid() == false )
+        {
+            const uint32 capacity =
+                MathUtil::max( orderCount, static_cast<uint32>( static_cast<float32>( _orderBuffer._capacityElements ) * VFXParticleRendererInternal::kParticleBufferGrowth ) );
+            _orderBuffer.release( &device );
+            if ( _orderBuffer.ensureCapacity( &device, sizeof( uint32 ), capacity, RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
+            {
+                SW_LOG_ERROR_ID( "VFXParticleRenderer.FailedCreateOrderBuffer", "Failed to create the particle order buffer (%# entries) - particles are not drawn", capacity );
+                return;
+            }
+        }
+        const uint32 emptyOrder = 0;
+        const void*  pOrderData = listParticleOrder.empty() ? static_cast<const void*>( &emptyOrder ) : static_cast<const void*>( listParticleOrder.data() );
+        _orderBuffer.upload( &device, pOrderData, orderCount * static_cast<uint32>( sizeof( uint32 ) ) );
+
+        // 3) 입자 — CPU 방출기들을 이어 한 버퍼에 담는다(같은 프레임에 버퍼를 두 번 갱신하지 않는다). GPU 방출기는 자기 렌더 입력 버퍼를 읽는다.
         _listUploadScratch.clear();
         for ( const GPUParticleBatch& batch : listBatch )
         {
@@ -130,6 +153,11 @@ namespace sw
         const bool         bSharedReady    = _uploadedParticleCount > 0 && _particleBuffer.isValid();
         RHIDescriptorIndex boundParticles  = kInvalidDescriptorIndex;
         uint32             drawnBatchCount = 0;
+        if ( _orderBuffer.isValid() == false )
+            return 0; // prepareFrame 이 만들지 못했다(오류를 남겼다)
+        // 순서 목록은 CPU 정렬 목록과 GPU 정렬 버퍼 둘이다 — 방출기마다의 구간은 플래그 칸 위 비트로 가고, 목록은 바뀔 때만 다시 건다.
+        RHIDescriptorIndex boundOrder = _orderBuffer._srv;
+        cmd.bindStructuredBuffer( boundOrder, shaderslot::kParticleOrderBuffer );
         for ( const GPUTransparentParticleSlot& slot : listSlot )
         {
             using Root              = VFXParticleRendererInternal;
@@ -152,7 +180,21 @@ namespace sw
             uint32 arrRoot[Root::kRootConstantCount]{};
             arrRoot[Root::kRootParticleBase] = bGPUBatch ? 0u : _listBatchBase[batchIndex];
             arrRoot[Root::kRootFlags]        = ( batch._bAdditive == SW_TRUE ? Root::kFlagAdditive : 0u ) | ( batch._bRibbon == SW_TRUE ? Root::kFlagRibbon : 0u );
-            arrRoot[Root::kRootSizeScale]    = BitUtil::floatToBits( batch._sizeScale );
+            // 정렬하는 방출기는 이 뷰의 순서 구간을 싣는다(첫 칸 + 1, 0 = 순서 없음). CPU 방출기는 게임 스레드가 정렬한 목록, GPU 방출기는 컴퓨트가 이번 프레임에 쓴 버퍼다
+            // (정렬 일이 기록되지 않은 GPU 방출기는 옛 칸을 읽지 않게 순서 없이 그린다).
+            const bool               bHasOrder = slot._order._first != constant::invalid_index::kUint32;
+            const bool               bOrdered  = bHasOrder && ( bGPUBatch == false || _gpuSimulation.isBatchSorted( batchIndex ) );
+            const RHIDescriptorIndex orderSRV  = bGPUBatch ? _gpuSimulation.getOrderSRV() : _orderBuffer._srv;
+            if ( bOrdered && orderSRV != boundOrder )
+            {
+                cmd.bindStructuredBuffer( orderSRV, shaderslot::kParticleOrderBuffer );
+                boundOrder = orderSRV;
+            }
+            if ( bOrdered && slot._order._first <= Root::kMaxOrderFirst )
+                arrRoot[Root::kRootFlags] |= ( slot._order._first + 1u ) << kRootFlagOrderShift;
+            else if ( bOrdered )
+                SW_LOG_ERROR_ONCE_ID( "VFXParticleRenderer.OrderRangeTooFar", "Particle order list is too long for the root flags (%# entries) - an emitter draws unsorted", slot._order._first );
+            arrRoot[Root::kRootSizeScale] = BitUtil::floatToBits( batch._sizeScale );
             if ( bNativeBindless )
             {
                 arrRoot[Root::kRootTexture] = srv; // 전역 번호
@@ -198,6 +240,7 @@ namespace sw
     {
         _listTexture.clear(); // 입자 텍스처의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
         _particleBuffer.release( pDevice );
+        _orderBuffer.release( pDevice );
         _gpuSimulation.release( pDevice );
         _listBatchBase.clear();
         _uploadedParticleCount = 0;

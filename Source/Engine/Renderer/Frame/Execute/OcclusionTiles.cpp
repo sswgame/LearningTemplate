@@ -82,9 +82,10 @@ namespace sw
         pCmd->setComputePipelineState( pso );
         Internal::RootConstants constants{};
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D — GPU 입자와 같다).
-        constants._depthIndex  = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUAV ) : 0u;
-        constants._depthWidth  = depth._width;
-        constants._depthHeight = depth._height;
+        constants._depthIndex = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUAV ) : 0u;
+        // 지난 프레임 사각형만 읽는다(자동 렌더 배율 — 사각형 밖은 옛 깊이다). 사각형 밖 타일은 셰이더가 "가리지 않음"(깊이 1)으로 쓴다.
+        constants._depthWidth  = target.scaleToPreviousRect( depth._width, true );
+        constants._depthHeight = target.scaleToPreviousRect( depth._height, false );
         constants._columnCount = target._occlusionColumns;
         constants._rowCount    = target._occlusionRows;
         constants._tileSize    = FrameRendererUtil::kOcclusionTileSize;
@@ -160,8 +161,8 @@ namespace sw
         meta._viewProj                                  = view._depthHistoryViewProj;
         meta._columns                                   = view._occlusionColumns;
         meta._rows                                      = view._occlusionRows;
-        meta._depthWidth                                = static_cast<float32>( depth._width );
-        meta._depthHeight                               = static_cast<float32>( depth._height );
+        meta._depthWidth                                = static_cast<float32>( view.scaleToPreviousRect( depth._width, true ) ); // 타일을 지은 크기와 같다(지난 사각형)
+        meta._depthHeight                               = static_cast<float32>( view.scaleToPreviousRect( depth._height, false ) );
         meta._bValid                                    = view._bHistoryReset == SW_FALSE ? SW_TRUE : SW_FALSE;
         // 타일은 이 프레임의 컬링이 읽으므로 복사 뒤 SRV 상태로 되돌린다(`recordOcclusionTiles` 가 끝낸 상태).
         if ( _readback.request( *pCmd, view._occlusionTiles._buffer, RHIBufferState::ShaderResource, next ) )
@@ -179,7 +180,7 @@ namespace sw
         inoutParams._arrOcclusionGrid[0]      = view._occlusionColumns;
         inoutParams._arrOcclusionGrid[1]      = view._occlusionRows;
         inoutParams._arrOcclusionGrid[2]      = FrameRendererUtil::kOcclusionTileSize;
-        inoutParams._arrOcclusionDepthSize[0] = static_cast<float32>( depth._width );
-        inoutParams._arrOcclusionDepthSize[1] = static_cast<float32>( depth._height );
+        inoutParams._arrOcclusionDepthSize[0] = static_cast<float32>( view.scaleToPreviousRect( depth._width, true ) ); // 화면 UV → 지난 사각형 픽셀
+        inoutParams._arrOcclusionDepthSize[1] = static_cast<float32>( view.scaleToPreviousRect( depth._height, false ) );
     }
 } // namespace sw
