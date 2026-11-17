@@ -107,6 +107,13 @@ namespace sw
         return &sessionIt->second._token;
     }
 
+    void AccountServer::handleCall( OnlineServerCall<AccountMethod::IssueLoginNonce> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_FALSE };
+        _pLoginService->issueLoginNonce( context._remoteKey, context._nowMs, call._callID );
+    }
+
     void AccountServer::handleCall( OnlineServerCall<AccountMethod::Register> call, const OnlineCallContext& context, const AccountCredentialRequest& request )
     {
         _mapCallToPending[call._callID] = PendingCall{ context._connection, SW_FALSE };
@@ -294,6 +301,11 @@ namespace sw
             case LoginOperation::ListLinks:
             {
                 bWritten = AccountProtocol::MessageTypes::write( body, AccountLinkReply{ completion._linkSummary, completion._result._result } );
+                break;
+            }
+            case LoginOperation::IssueLoginNonce:
+            {
+                bWritten = AccountProtocol::MessageTypes::write( body, AccountNonceReply{ completion._loginNonce, completion._result._result } );
                 break;
             }
             case LoginOperation::Register:

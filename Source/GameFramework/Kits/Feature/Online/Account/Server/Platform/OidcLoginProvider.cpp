@@ -26,6 +26,16 @@ namespace sw
     {
     }
 
+    bool OidcLoginProvider::findServerNonce( const vector<uint8>& ticketBytes, string& outNonce ) const
+    {
+        if ( _settings._bRequireNonce == SW_FALSE )
+            return false;
+        const string_view text( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
+        const size_t      bar = text.find( '|' );
+        outNonce              = bar == string_view::npos ? string{} : string( text.substr( bar + 1 ) ); // 없으면 빈 글 — 로그인 서비스가 거절한다
+        return true;
+    }
+
     uint64 OidcLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
     {
         (void)nowMs;

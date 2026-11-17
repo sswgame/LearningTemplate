@@ -44,6 +44,15 @@ namespace sw
          */
         PROPERTY( Required, Min = 1, Max = 64 )
         int32 _maxConcurrentPasswordHashes{ 0 };
+        /** @brief 서버 전체(휘발 저장소)에서 창 하나에 주소마다 받는 로그인 · 가입 시도 수입니다. 서버마다의 버킷(`_attemptBurst`)은 서버 여럿이면 곱해지므로 이 셈이 한도다(감사 O-14). */
+        PROPERTY( Required, Min = 1, Max = 100000000 )
+        int32 _sharedAttemptLimit{ 0 };
+        /** @brief 위 시도 창의 길이(초)입니다. */
+        PROPERTY( Required, Min = 1, Max = 86400 )
+        int32 _sharedAttemptWindowSeconds{ 0 };
+        /** @brief 서버가 낸 외부 로그인 nonce 의 수명(초)입니다. 이 안에 제공자 로그인을 마쳐야 합니다(감사 O-13). */
+        PROPERTY( Required, Min = 1, Max = 3600 )
+        int32 _loginNonceLifetimeSeconds{ 0 };
         /** @brief 가벼운 Argon2id 를 씁니다(테스트 · 부하 봇 — DevOnline 단위만, 실제 비용을 재려면 끕니다). */
         PROPERTY()
         bool _bLightPasswordHash{ false };
