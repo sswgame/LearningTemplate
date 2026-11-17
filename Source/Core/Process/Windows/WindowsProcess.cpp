@@ -270,6 +270,17 @@ namespace sw
             _pStdOutRead = nullptr;
         }
 
+        // POSIX 와 같은 계약 — 도는 자식은 `_releaseMode` 대로 죽이거나 끝날 때까지 기다린 뒤 놓는다(Windows 는 좀비가 없지만 두 플랫폼이 같은 일을 한다).
+        if ( _pNativeHandle != nullptr && WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT )
+        {
+            if ( _releaseMode == ProcessReleaseMode::Terminate )
+                (void)terminate();
+            else
+                SW_LOG_WARNING_ID( "Process.WaitingOnRelease", "Releasing a running child (pid %#) - waiting for it to exit; call terminate() first or launch with ProcessReleaseMode::Terminate",
+                                   _processID.load() );
+            (void)WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), INFINITE );
+        }
+
         if ( _pNativeThread != nullptr )
         {
             CloseHandle( static_cast<HANDLE>( _pNativeThread ) );
@@ -282,7 +293,7 @@ namespace sw
             _pNativeHandle = nullptr;
         }
 
-        // 핸들만 닫는다(KILL_ON_JOB_CLOSE 를 걸지 않았다) — 객체를 놓아도 자식은 산다, `terminate` 를 부르지 않은 자식을 죽이지 않는 것이 계약이다.
+        // 자식은 위에서 끝났다. Job 은 핸들만 닫는다(KILL_ON_JOB_CLOSE 를 걸지 않았다) — 자식이 떼어 띄운 손자는 죽이지 않는다.
         if ( _pNativeJob != nullptr )
         {
             CloseHandle( static_cast<HANDLE>( _pNativeJob ) );
@@ -382,6 +393,7 @@ namespace sw
         _pStdOutRead      = pipes._hOutRead;
         _pStdInWrite      = pipes._hInWrite;
         _bNewProcessGroup = options._bNewProcessGroup;
+        _releaseMode      = options._releaseMode;
         _processID.store( static_cast<int32>( pi.dwProcessId ) );
 
         return true;
