@@ -157,7 +157,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MeadowTown.TownCannotStartCreature", "[Meadow] the town cannot start - the creature catalog is not loaded" );
             return false;
         }
-        return outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} );
+        return outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize );
     }
 
     bool MeadowTownGameModeComponent::validateViews( const CreatureLifeCatalog& catalog ) const

@@ -148,6 +148,8 @@ namespace sw
         , _abilityCatalog{}
         , _listHabitatOrder{}
         , _appeal{}
+        , _rules{}
+        , _rulesCount{ 0 }
     {
     }
 
@@ -183,6 +185,7 @@ namespace sw
         // 종은 능력 · 서식지를 가리키므로 표의 순서대로 읽고, 가리키는 id 는 모두 읽은 뒤 확인한다.
         using Element                          = XMLCatalogElement<CreatureLifeCatalog>;
         static constexpr Element kArrElement[] = {
+            Element::of<&CreatureLifeCatalog::loadRules>( "Rules" ),
             Element::of<&CreatureLifeCatalog::loadHabitat>( "Habitat" ),
             Element::of<&CreatureLifeCatalog::loadAbility>( "Ability" ),
             Element::of<&CreatureLifeCatalog::loadSpecies>( "Species" ),
@@ -190,7 +193,12 @@ namespace sw
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement );
         rebuildHabitatOrder();
-
+        // 규칙은 데이터에만 있다 — 한 번도 `<Rules>` 를 읽지 못한 카탈로그는 로드 실패다(마을이 C++ 기본값으로 열리지 않는다, 감사 K-4).
+        if ( _rulesCount == 0 )
+        {
+            SW_LOG_ERROR_ID( "CreatureLifeCatalog.RulesMissing", "%#: <CreatureLifeCatalog> needs one <Rules .../> line (every rule value is data)", sourceName );
+            return 0;
+        }
         return result._loadedCount;
     }
 
@@ -249,6 +257,19 @@ namespace sw
         if ( bValid )
             (void)_speciesCatalog.add( species );
         return bValid;
+    }
+
+    bool CreatureLifeCatalog::loadRules( const XMLNode& node, string_view sourceName )
+    {
+        CreatureTownSettings rules;
+        if ( XMLFields::readProperties( node, rules, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "CreatureLifeCatalog.RulesInvalid", "%#: <Rules> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        _rules = rules; // 덧씌우는 파일(합치기)은 규칙 전체를 바꾼다 — 칸 일부만 두지 않는다
+        ++_rulesCount;
+        return true;
     }
 
     bool CreatureLifeCatalog::loadAppeal( const XMLNode& node, string_view sourceName )

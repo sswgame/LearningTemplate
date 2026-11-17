@@ -170,6 +170,37 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 마을 규칙의 수치입니다. 호감도 점수는 생물마다의 평판(`ReputationState` 의 세력이며 종 id 와 같습니다)에 더합니다.
+     * @details 규칙 자산이다 — 생물 카탈로그의 `<Rules …/>` 한 줄이 모든 칸을 적는다(`Required`, 없으면 카탈로그 로드가 실패한다). 마을은 카탈로그에서만 받으므로
+     *          게임이 C++ 기본값으로 마을을 열 길이 없다(감사 K-4, Lyra `ExperienceDefinition` · 유니티 `ScriptableObject` 와 같은 자리).
+     */
+    REFLECT()
+    struct SW_KIT_API CreatureTownSettings
+    {
+        REFLECT_BODY();
+        PROPERTY( Required )
+        hashed_string _houseObject{}; ///< 집을 지으면 그 셀에 놓이는 오브젝트
+        PROPERTY( Required, Min = 0 )
+        int32 _talkPoints{}; ///< 하루 한 번 대화할 때의 점수
+        PROPERTY( Required, Min = 0 )
+        int32 _giftPoints{}; ///< 좋아하지 않는 선물의 점수
+        PROPERTY( Required, Min = 0 )
+        int32 _likedGiftPoints{}; ///< 좋아하는 선물의 점수
+        PROPERTY( Required, Min = 0 )
+        int32 _foodPoints{}; ///< 좋아하는 음식의 점수
+        PROPERTY( Required, Min = 0 )
+        int32 _requestPoints{}; ///< 부탁을 끝냈을 때의 점수
+        PROPERTY( Required )
+        uint32 _randomSeed{}; ///< 방문 확률에 쓰는 시드
+        /** @brief 공유 땅에서 막힘으로 얻는 오브젝트입니다(다른 키트의 길찾기가 피합니다). 나머지(풀, 꽃)는 막힘 없이 얻습니다. */
+        PROPERTY( Name = "blockingObjects", Required )
+        vector<hashed_string> _listBlockingObject{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class CreatureLifeCatalog
      * @brief 카탈로그의 XML 형식입니다.
      * @code
@@ -182,6 +213,7 @@ namespace sw
      *                abilities="plant_tree" requests="sprout_berries"/>
      *       <Ability id="plant_tree" uses="2"><Rule from="empty" to="tree"/></Ability>
      *       <Ability id="rock_smash" uses="1"><Rule from="rock" to="empty" yield="stone" count="1"/></Ability>
+     *       <Rules houseObject="house" talkPoints="5" giftPoints="10" likedGiftPoints="30" foodPoints="20" requestPoints="50" randomSeed="7100" blockingObjects="house,tree,rock"/>
      *       <Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/><Tier name="Village" min="40"/></Appeal>
      *     </CreatureLifeCatalog>
      * @endcode
@@ -208,6 +240,8 @@ namespace sw
         const vector<HabitatDef>&         getHabitats() const { return _habitatCatalog.getAll(); }
         const vector<CreatureSpeciesDef>& getSpecies() const { return _speciesCatalog.getAll(); }
         const TownAppealDef&              getAppeal() const { return _appeal; }
+        /** @brief 규칙(`<Rules>`)입니다. 로드에 성공한 카탈로그는 반드시 한 줄을 가진다. */
+        const CreatureTownSettings& getRules() const { return _rules; }
         /** @brief 서식지를 맞춰 볼 순서(차지하는 셀이 많은 것 먼저, 같으면 읽은 순서)의 index 를 반환합니다. */
         const vector<int32>& getHabitatMatchOrder() const { return _listHabitatOrder; }
 
@@ -222,6 +256,8 @@ namespace sw
         [[nodiscard]] bool loadSpecies( const XMLNode& node, string_view sourceName );
         /** @brief `<Appeal>` 과 `<Tier>` 를 읽습니다. 오류면 지금 매력도를 바꾸지 않고 false 입니다. */
         [[nodiscard]] bool loadAppeal( const XMLNode& node, string_view sourceName );
+        /** @brief `<Rules>` 한 줄을 읽습니다. 칸이 빠졌거나 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool loadRules( const XMLNode& node, string_view sourceName );
         void               rebuildHabitatOrder();
 
     private:
@@ -230,6 +266,8 @@ namespace sw
         GameCatalog<CreatureAbilityDef> _abilityCatalog;
         vector<int32>                   _listHabitatOrder;
         TownAppealDef                   _appeal;
+        CreatureTownSettings            _rules;
+        int32                           _rulesCount; ///< 읽은 `<Rules>` 줄 수(1 이상이어야 로드가 성공한다)
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CreatureLifeCatalog>::acquire` 로 한 벌을 받습니다. */
