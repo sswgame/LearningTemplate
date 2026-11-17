@@ -112,7 +112,7 @@ namespace sw
          * @details 넘치면 멈추지 않고 힙에서 받는다(`JoltTempAllocator`, Jolt `TempAllocatorImplWithMallocFallback` 과 같은 길) — 그 스텝을 카운터
          *          (`Physics.TempAllocator.fallbacks`)와 씬마다 한 번의 경고로 알린다. 경고가 나면 이 값을 `Physics.TempAllocator.peakBytes` 보다 크게 올린다.
          */
-        PROPERTY( Min = 1, Tooltip = "Bytes of the per-scene temporary block (step, character moves, soft bodies); overflow falls back to the heap with a warning", Units = "bytes" )
+        PROPERTY( Min = 1, Tooltip = "Bytes of the per-scene temporary block (step, character moves, soft bodies); overflow falls back to the heap with a warning" )
         uint32 _tempAllocatorBytes{ 0 };
         PROPERTY( Tooltip = "Collision layers in index order and what they collide with" )
         vector<PhysicsLayerDef> _listLayer;

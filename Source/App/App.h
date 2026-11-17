@@ -38,6 +38,7 @@ namespace sw
     class FramePacer;
     class IRHIDevice;
     class IWindow;
+    enum class WindowLifecycleEvent : uint8;
 } // namespace sw
 
 namespace sw

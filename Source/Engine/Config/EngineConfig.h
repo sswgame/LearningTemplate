@@ -205,7 +205,7 @@ namespace sw
          * @details XInput · evdev 는 창과 상관없이 읽혀, 끄지 않으면 다른 창을 쓰는 동안 패드가 게임을 움직인다. SDL `JOYSTICK_ALLOW_BACKGROUND_EVENTS`(기본 끔)와 같은 자리다.
          */
         PROPERTY()
-        bool32 _bBackgroundGamepadInput{};
+        bool _bBackgroundGamepadInput{};
 
         PROPERTY()
         RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)

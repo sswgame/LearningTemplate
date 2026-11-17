@@ -272,18 +272,13 @@ SW_TEST_CASE( OpsHTTPEndpointTest, GameNetSessionMetricsReachTheMetricsPath )
     {
         session.update(); // 네트워크 스레드가 센 것을 게임 스레드가 지표로 옮긴다
         (void)OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1", &metrics, nullptr, 0, {}, response );
-        return response.find( "net_rejected_packets_total{shard=\"0\"} 1
-" ) != string::npos;
+        return response.find( "net_rejected_packets_total{shard=\"0\"} 1\n" ) != string::npos;
     } );
     SW_EXPECT_TRUE_MSG( bRejectedSeen, response.c_str() );
-    SW_EXPECT_TRUE( response.find( "net_connections{shard=\"0\"} 0
-" ) != string::npos );
-    SW_EXPECT_TRUE( response.find( "net_authentication_failures_total{shard=\"0\"} 0
-" ) != string::npos );
-    SW_EXPECT_TRUE( response.find( "net_replay_rejected_packets_total{shard=\"0\"} 0
-" ) != string::npos );
-    SW_EXPECT_TRUE( response.find( "net_disconnects_total{shard=\"0\",reason=\"Timeout\"} 0
-" ) != string::npos ); // 사유마다 시리즈가 열거에서 선다
+    SW_EXPECT_TRUE( response.find( "net_connections{shard=\"0\"} 0\n" ) != string::npos );
+    SW_EXPECT_TRUE( response.find( "net_authentication_failures_total{shard=\"0\"} 0\n" ) != string::npos );
+    SW_EXPECT_TRUE( response.find( "net_replay_rejected_packets_total{shard=\"0\"} 0\n" ) != string::npos );
+    SW_EXPECT_TRUE( response.find( "net_disconnects_total{shard=\"0\",reason=\"Timeout\"} 0\n" ) != string::npos ); // 사유마다 시리즈가 열거에서 선다
     SW_EXPECT_TRUE( response.find( "reason=\"None\"" ) == string::npos );                                           // None 은 끊김 사유가 아니다
 
     session.bindMetricRegistry( nullptr ); // 레지스트리보다 세션이 늦게 닫힌다(전용 서버와 같은 순서)
