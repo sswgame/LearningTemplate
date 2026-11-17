@@ -101,7 +101,7 @@ namespace sw
 
     void SkeletonMirrorBoneMap::setTable( shared_ptr<const SkeletonMirrorTable> table )
     {
-        _table          = std::move( table );
+        _table          = SharedAssetRef<SkeletonMirrorTable>{ std::move( table ) };
         _pBuiltSkeleton = nullptr;
         _listMirroredBone.clear();
     }

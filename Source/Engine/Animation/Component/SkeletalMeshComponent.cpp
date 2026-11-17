@@ -268,7 +268,7 @@ namespace sw
 
     void SkeletalMeshComponent::assignSkeleton( shared_ptr<const Skeleton> skeleton )
     {
-        _skeleton = ( skeleton != nullptr ) ? std::move( skeleton ) : SkeletalMeshComponentInternal::getImplicitSkeleton();
+        _skeleton = SharedAssetRef<Skeleton>{ ( skeleton != nullptr ) ? std::move( skeleton ) : SkeletalMeshComponentInternal::getImplicitSkeleton() };
         resetPoseBuffers();
     }
 
@@ -279,7 +279,7 @@ namespace sw
 
     bool SkeletalMeshComponent::hasDataSkeleton() const
     {
-        return _skeleton != SkeletalMeshComponentInternal::getImplicitSkeleton();
+        return _skeleton.get() != SkeletalMeshComponentInternal::getImplicitSkeleton().get();
     }
 
     void SkeletalMeshComponent::setSkinSourceMesh( shared_ptr<Mesh> source )
@@ -304,13 +304,13 @@ namespace sw
         shared_ptr<const Skeleton> skeleton;
         if ( _skeletonPath.empty() == false )
         {
-            skeleton = SharedAssetCache<Skeleton>::acquire( _skeletonPath );
+            skeleton = SharedAssetCache<Skeleton>::acquire( _skeletonPath ).snapshot();
             if ( skeleton == nullptr )
                 SW_LOG_ERROR_ID( "SkeletalMeshComponent.SkeletonCouldNotLoaded", "Skeleton '%#' could not be loaded - using a one-bone implicit skeleton", _skeletonPath.c_str() );
         }
         if ( skeleton == nullptr )
             skeleton = SkeletalMeshComponentInternal::getImplicitSkeleton();
-        if ( skeleton != _skeleton )
+        if ( skeleton.get() != _skeleton.get() )
             assignSkeleton( std::move( skeleton ) );
         // 본 LOD · 미러 표는 이 스켈레톤의 곁 파일이다 — 스켈레톤을 정한 뒤다.
         resolveBoneLOD();
@@ -340,22 +340,22 @@ namespace sw
             setBoneLOD( nullptr ); // 없으면 조용히 본 LOD 없이 간다
             return;
         }
-        shared_ptr<const SkeletonBoneLOD> boneLOD = SharedAssetCache<SkeletonBoneLOD>::acquire( path );
-        if ( boneLOD != _boneLOD )
+        shared_ptr<const SkeletonBoneLOD> boneLOD = SharedAssetCache<SkeletonBoneLOD>::acquire( path ).snapshot();
+        if ( boneLOD.get() != _boneLOD.get() )
             setBoneLOD( std::move( boneLOD ) );
     }
 
     void SkeletalMeshComponent::resolveMirrorTable()
     {
         const string                          path  = findSidePath( &SkeletonMirrorTable::makePathForSkeleton );
-        shared_ptr<const SkeletonMirrorTable> table = path.empty() ? nullptr : SharedAssetCache<SkeletonMirrorTable>::acquire( path ); // 못 읽으면 읽는 쪽이 오류를 남겼다
+        shared_ptr<const SkeletonMirrorTable> table = path.empty() ? nullptr : SharedAssetCache<SkeletonMirrorTable>::acquire( path ).snapshot(); // 못 읽으면 읽는 쪽이 오류를 남겼다
         if ( table.get() != _mirrorBoneMap.findTable() )
             _mirrorBoneMap.setTable( std::move( table ) );
     }
 
     void SkeletalMeshComponent::setBoneLOD( shared_ptr<const SkeletonBoneLOD> boneLOD )
     {
-        _boneLOD       = std::move( boneLOD );
+        _boneLOD       = SharedAssetRef<SkeletonBoneLOD>{ std::move( boneLOD ) };
         _bBoneLODDirty = SW_TRUE;
         refreshBoneLODMasks();
     }
@@ -702,7 +702,7 @@ namespace sw
         const bool                   bOwnPoseDiffers = hasPoseWriter() || hasActiveMorphWeights();
         if ( bLeaderShared == false || bOwnPoseDiffers )
             return false;
-        AnimationCrowdBucket* pBucket = crowd.joinFollowerBucket( _pCrowdBucket, *pLeader->_pCrowdBucket, _skeleton, _skinSourceMesh, _skinningMethod );
+        AnimationCrowdBucket* pBucket = crowd.joinFollowerBucket( _pCrowdBucket, *pLeader->_pCrowdBucket, _skeleton.snapshot(), _skinSourceMesh, _skinningMethod );
         if ( pBucket == nullptr )
             return false;
         enterCrowdBucket( crowd, *pBucket, bVisible );
@@ -772,7 +772,7 @@ namespace sw
         if ( clip != nullptr && bBlending )
         {
             // 반복 클립 둘 사이의 페이드 — 같은 프레임에 같은 전이를 시작한 유닛과 섞기 묶음을 나눈다(VAT 로 가지 않는다).
-            AnimationCrowdBucket* pBlendBucket = nextClip != nullptr ? crowd.joinBlendBucket( _pCrowdBucket, request, _skeleton, _skinSourceMesh, clip, nextClip ) : nullptr;
+            AnimationCrowdBucket* pBlendBucket = nextClip != nullptr ? crowd.joinBlendBucket( _pCrowdBucket, request, _skeleton.snapshot(), _skinSourceMesh, clip, nextClip ) : nullptr;
             if ( pBlendBucket != nullptr )
             {
                 enterCrowdBucket( crowd, *pBlendBucket, bVisible );
@@ -808,7 +808,7 @@ namespace sw
                     return;
                 }
             }
-            AnimationCrowdBucket* pBucket = crowd.joinBucket( _pCrowdBucket, request, _skeleton, _skinSourceMesh, clip );
+            AnimationCrowdBucket* pBucket = crowd.joinBucket( _pCrowdBucket, request, _skeleton.snapshot(), _skinSourceMesh, clip );
             if ( pBucket != nullptr )
             {
                 enterCrowdBucket( crowd, *pBucket, bVisible );
@@ -844,7 +844,7 @@ namespace sw
 
     bool SkeletalMeshComponent::beginAnimationFrame( float32 deltaSeconds, uint64 frameIndex )
     {
-        // 스켈레톤이 제자리에서 다시 읽혔으면(에셋 핫 리로드) 본 수가 달라질 수 있다 — 포즈 버퍼를 다시 맞춘다.
+        // 스켈레톤을 바꿨으면(다시 받은 스켈레톤 · `setSkeleton`) 본 수가 달라질 수 있다 — 포즈 버퍼를 다시 맞춘다.
         if ( _localPose.getBoneCount() != _skeleton->getBoneCount() )
             resetPoseBuffers();
         refreshSkinBinding();
@@ -852,7 +852,7 @@ namespace sw
         const uint32 morphTargetCount = getMorphTargetCount();
         if ( _listMorphWeight.size() != morphTargetCount )
             _listMorphWeight.assign( morphTargetCount, 0.0f );
-        // 본 LOD 표가 제자리에서 다시 읽혔거나(핫 리로드) 스킨 원본 · 핵심 본이 바뀌었으면 마스크를 다시 짓는다(열쇠가 같으면 비교만 한다).
+        // 본 LOD 표를 다시 받았거나(핫 리로드) 스킨 원본 · 핵심 본이 바뀌었으면 마스크를 다시 짓는다(열쇠가 같으면 비교만 한다).
         refreshBoneLODMasks();
         bool bActive = _bPoseDirty == SW_TRUE || _leader.isValid();
         for ( const IAnimationPhaseTask* pTask : _listTask )

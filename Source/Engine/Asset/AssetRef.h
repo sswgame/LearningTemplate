@@ -27,7 +27,7 @@ namespace sw
     template <typename T>
     struct AssetRefCache
     {
-        static shared_ptr<const T>  acquire( string_view path ) { return SharedAssetCache<T>::acquire( path ); }
+        static SharedAssetRef<T>    acquire( string_view path ) { return SharedAssetCache<T>::acquire( path ); }
         static SharedAssetHandle<T> request( string_view path ) { return SharedAssetCache<T>::request( path ); }
     };
 

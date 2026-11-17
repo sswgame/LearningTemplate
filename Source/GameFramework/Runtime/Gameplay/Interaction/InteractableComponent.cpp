@@ -105,7 +105,7 @@ namespace sw
             SW_LOG_ERROR_ID( "InteractableComponent.InteractionNoCatalogPath", "Interaction '%#' has no catalog path - set Catalog", _interactionID.c_str() );
             return;
         }
-        _pCatalog = SharedAssetCache<InteractionCatalog>::acquire( _catalogPath );
+        _pCatalog = SharedAssetCache<InteractionCatalog>::acquire( _catalogPath ).snapshot();
         _pDef     = _pCatalog != nullptr ? _pCatalog->findInteraction( _interactionID ) : nullptr;
         if ( _pDef == nullptr )
             SW_LOG_ERROR_ID( "InteractableComponent.InteractionNot", "Interaction '%#' is not in %#", _interactionID.c_str(), _catalogPath.c_str() );

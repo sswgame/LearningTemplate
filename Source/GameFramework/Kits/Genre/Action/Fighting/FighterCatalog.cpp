@@ -170,7 +170,7 @@ namespace sw
             SW_LOG_ERROR_ID( "FighterCatalog.FileNeedsMoves", "%#: <FighterCatalog> read from a file needs moves=\"<move catalog path>\"", sourceName );
             return 0;
         }
-        const shared_ptr<const MoveCatalog> pMoves = SharedAssetCache<MoveCatalog>::acquire( movesPath );
+        const shared_ptr<const MoveCatalog> pMoves = SharedAssetCache<MoveCatalog>::acquire( movesPath ).snapshot();
         if ( pMoves == nullptr )
         {
             SW_LOG_ERROR_ID( "FighterCatalog.MovesCouldNot", "%#: the move catalog '%#' could not be read", sourceName, movesPath );

@@ -23,7 +23,9 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/PoseInertializer.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -129,6 +131,7 @@ namespace sw
         AnimationPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
         void                            finishAnimationFrame( SkeletalMeshComponent& skeletalMesh ) override;
         void                            onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh ) override;
+        void                            prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
         bool                            describeSharedPose( AnimationSharedPoseRequest& outRequest ) const override;
         shared_ptr<const AnimationClip> findSharedPoseClip( const AnimationClip* pClip ) const override;
         void                            collectDebugState( AnimationDebugState& inoutState ) const override;
@@ -283,7 +286,7 @@ namespace sw
          * @brief 시퀀서 덮어쓰기 슬롯입니다. 시퀀서가 클립과 시간을 정해 그래프 결과 위에 @p weight 만큼 섞습니다. 시간은 시퀀서가 진행시킵니다.
          * @param clip nullptr 이거나 weight 가 0 이면 덮어쓰기가 꺼집니다.
          */
-        void setSequencerOverride( shared_ptr<const AnimationClip> clip, float32 time, float32 weight );
+        void setSequencerOverride( const SharedAssetRef<AnimationClip>& clip, float32 time, float32 weight );
         /**
          * @brief 클립 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다.
          * @details 시퀀서 애니메이션 구간도 이 규칙으로 클립을 푼다 — 가져온 클립 파일은 내용 해시 이름이라 손으로 적는 시퀀스는 셋의 클립 이름을 쓴다.
@@ -414,19 +417,19 @@ namespace sw
         /** @brief 레이어 하나의 실행 상태입니다. */
         struct LayerState
         {
-            AnimationLayerDef               _desc;
-            shared_ptr<const AnimationClip> _clip;
-            LinkedLayerGraph*               _pLinkedGraph{ nullptr }; ///< 슬롯 레이어를 채운 그래프다(`_listLinkedGraph` 안). 클립 레이어와 비어 있는 슬롯은 nullptr 이다
-            AnimationPlayer                 _player;
-            vector<float32>                 _listBoneWeight; ///< 본 마스크(본 수 크기)다. 스켈레톤이 바뀌면 다시 만든다
-            const Skeleton*                 _pMaskSkeleton{ nullptr };
-            const AnimationGraphLayerDef*   _pGraphLayer{ nullptr };      ///< 그래프 레이어면 그 데이터다(`_graph` 안). 코드 레이어면 nullptr 이다
-            const AnimationBoneMaskDef*     _pBoneMask{ nullptr };        ///< 그래프 레이어의 본 마스크다(`_graph` 안). nullptr 이면 `_desc._maskRootBone` 을 쓴다
-            Pose                            _additiveReference;           ///< 가산 기준(클립 시각 0, 본 포즈)
-            PoseInertializer                _inertializer;                ///< 다시 시작할 때 끊긴 레이어 포즈에서 이어 간다(`_desc._halfLifeSeconds` 가 0 보다 클 때)
-            PoseHistory                     _history;                     ///< 화면에 얹힌 지난 레이어 포즈다(inertialization 의 출발 · 속도)
-            AnimationLODFade                _lodFade;                     ///< 그래프 레이어의 LOD 가중치다(`max_lod`). 코드 레이어는 1 그대로다
-            uint8                           _bRestartPending{ SW_FALSE }; ///< 다음 평가에서 inertialization 을 시작한다
+            AnimationLayerDef             _desc;
+            SharedAssetRef<AnimationClip> _clip;
+            LinkedLayerGraph*             _pLinkedGraph{ nullptr }; ///< 슬롯 레이어를 채운 그래프다(`_listLinkedGraph` 안). 클립 레이어와 비어 있는 슬롯은 nullptr 이다
+            AnimationPlayer               _player;
+            vector<float32>               _listBoneWeight; ///< 본 마스크(본 수 크기)다. 스켈레톤이 바뀌면 다시 만든다
+            const Skeleton*               _pMaskSkeleton{ nullptr };
+            const AnimationGraphLayerDef* _pGraphLayer{ nullptr };      ///< 그래프 레이어면 그 데이터다(`_graph` 안). 코드 레이어면 nullptr 이다
+            const AnimationBoneMaskDef*   _pBoneMask{ nullptr };        ///< 그래프 레이어의 본 마스크다(`_graph` 안). nullptr 이면 `_desc._maskRootBone` 을 쓴다
+            Pose                          _additiveReference;           ///< 가산 기준(클립 시각 0, 본 포즈)
+            PoseInertializer              _inertializer;                ///< 다시 시작할 때 끊긴 레이어 포즈에서 이어 간다(`_desc._halfLifeSeconds` 가 0 보다 클 때)
+            PoseHistory                   _history;                     ///< 화면에 얹힌 지난 레이어 포즈다(inertialization 의 출발 · 속도)
+            AnimationLODFade              _lodFade;                     ///< 그래프 레이어의 LOD 가중치다(`max_lod`). 코드 레이어는 1 그대로다
+            uint8                         _bRestartPending{ SW_FALSE }; ///< 다음 평가에서 inertialization 을 시작한다
 
             /** @brief 이번 프레임에 얹는 가중치입니다(레이어 가중치 × LOD 가중치). */
             float32 computeAppliedWeight() const { return _desc._weight * _lodFade._weight; }
@@ -448,6 +451,11 @@ namespace sw
         void requestClipLoad( const hashed_string& clipName );
         /** @brief 요청한 클립이 다 읽혔으면 표에 넣고 그래프를 지은 뒤 미뤄 둔 재생을 합니다. 아직 읽는 중이면 false 입니다. */
         [[nodiscard]] bool finishClipLoadsIfComplete();
+        /**
+         * @brief 클립이 다시 읽혔으면 클립을 빌린 것(레이어 · 그래프 플레이어 · 블렌드 스페이스의 날 포인터, 트랙 → 본 표)을 새 판으로 다시 짓습니다(게임 스레드, 단계 앞).
+         * @details 셋을 같은 경로로 다시 거는 길(`setAnimationSetPath`)이라 상태와 위상을 잇는다. 옛 판은 다시 읽은 뒤 한 프레임 넘게 살아 있어(`SharedAssetTable::followRefs`) 그 사이 날 포인터가 끊기지 않는다.
+         */
+        void refreshReloadedClips();
         /** @brief 시작 상태를 재생합니다(핫 리로드로 되살아났으면 그 상태 · 시각에서 잇는다). */
         void startInitialState();
         /** @brief 클립을 기다리는 동안 미룬 재생(코드의 `play`, 없으면 시작 상태)을 합니다. */
@@ -554,13 +562,13 @@ namespace sw
         PROPERTY( Category = "Sync", DisplayName = "Sync Weight", Tooltip = "Leader is the member with the largest weight", Min = 0.0 )
         float32 _syncWeight;
 
-        SkeletalAnimatorBinding        _binding;
-        SkeletalAnimatorClipSource     _clipSource;          ///< 상태 이름을 블렌드 스페이스 상태 · 클립으로 해석한다(`_graphPlayer` 가 빌린다)
-        Subscription                   _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        AnimationGraphAsset            _graph;
-        AnimationGraphPlayer           _graphPlayer;
-        AnimationParameterSet          _parameters;
-        shared_ptr<const AnimationSet> _animationSet; ///< `_animationSetPath` 의 셋(`refreshAnimationSet`)
+        SkeletalAnimatorBinding      _binding;
+        SkeletalAnimatorClipSource   _clipSource;          ///< 상태 이름을 블렌드 스페이스 상태 · 클립으로 해석한다(`_graphPlayer` 가 빌린다)
+        Subscription                 _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        AnimationGraphAsset          _graph;
+        AnimationGraphPlayer         _graphPlayer;
+        AnimationParameterSet        _parameters;
+        SharedAssetRef<AnimationSet> _animationSet; ///< `_animationSetPath` 의 셋(`refreshAnimationSet`)
         /** @brief 시작 때 요청한 클립 하나입니다. */
         struct ClipLoad
         {
@@ -568,11 +576,12 @@ namespace sw
             SharedAssetHandle<AnimationClip> _load;
         };
 
-        unordered_map<hashed_string, shared_ptr<const AnimationClip>> _mapClip;
+        unordered_map<hashed_string, SharedAssetRef<AnimationClip>>   _mapClip;
         vector<ClipLoad>                                              _listClipLoad;      ///< 시작 때 요청해 아직 표에 넣지 않은 클립(`requestClipLoads`)
         hashed_string                                                 _deferredPlayState; ///< 클립을 기다리는 동안 미룬 `play` 의 상태
         float32                                                       _deferredPlayBlend; ///< 미룬 `play` 의 섞기 시간
         unordered_map<const AnimationClip*, vector<optional<uint32>>> _mapTrackToBone;
+        AssetReloadWatch<AnimationClip>                               _clipReload; ///< 클립을 빌린 것을 지은 때의 클립 캐시 다시 읽기 횟수(`refreshReloadedClips`)
         const Skeleton*                                               _pTrackMapSkeleton;
         vector<LayerState>                                            _listLayer;
         vector<LayerState>                                            _listGraphLayer;  ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다
@@ -598,7 +607,7 @@ namespace sw
         PoseHistory                                                   _baseHistory;          ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다
         Pose                                                          _carryOverPose;        ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
         PoseInertializer                                              _inertializer;         ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
-        shared_ptr<const AnimationClip>                               _sequencerClip;
+        SharedAssetRef<AnimationClip>                                 _sequencerClip;
         BoneTransform                                                 _rootMotionDelta;
         SkeletalMeshComponent*                                        _pSkeletalMesh;
         IAnimationNotifyListener*                                     _pNotifyListener;

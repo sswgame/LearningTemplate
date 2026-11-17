@@ -362,7 +362,7 @@ namespace sw
         settings._clock._daysPerSeason    = _daysPerSeason;
         settings._pItemCatalog            = &_itemCatalog;
         settings._inventorySlotCount      = kBagSlotCount;
-        settings._pWeatherCatalog         = _pWeatherCatalog.get(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
+        settings._pWeatherCatalog         = _pWeatherCatalog.snapshot(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
         SessionStateInitResult initResult = SessionStateInitResult::Refused;
         SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, settings, initResult );
         if ( pState == nullptr )

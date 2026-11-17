@@ -314,5 +314,5 @@ namespace sw
      * 감독이 국면 · 풀 번호로 읽으므로 다시 읽기는 떼어 낸다(`Detach`).
      */
     SW_MODULE_SHARED_ASSET_CACHE( AIDirector, AIDirectorProfile, SW_GF_API,
-                                  AssetTypeDef::makeDataFile( "aidirector", AssetPathRule{ {}, {}, ".director.xml" }, AssetTypeLoader::of<AIDirectorProfile>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
+                                  AssetTypeDef::makeDataFile( "aidirector", AssetPathRule{ {}, {}, ".director.xml" }, AssetTypeLoader::of<AIDirectorProfile>( MemoryTag::Game ) ) );
 } // namespace sw

@@ -253,7 +253,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
         vector<string> listExpected = listLayerBase;
         listExpected.push_back( "mods/tide/layer" );
         SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listExpected );
-        const shared_ptr<const QuestCatalog> pQuests = SharedAssetCache<QuestCatalog>::acquire( basePath );
+        const shared_ptr<const QuestCatalog> pQuests = SharedAssetCache<QuestCatalog>::acquire( basePath ).snapshot();
         SW_REQUIRE_TRUE( pQuests != nullptr );
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "base_quest" ) ) != nullptr ); // 원본 항목은 그대로
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "tide_quest" ) ) != nullptr ); // 층이 더한 항목

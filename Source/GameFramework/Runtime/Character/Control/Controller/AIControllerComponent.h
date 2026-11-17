@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Navigation/INavMover.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -120,22 +121,22 @@ namespace sw
         PROPERTY( Category = "AI", DisplayName = "Behavior Tree", Tooltip = "Behavior tree (.bt.xml) that decides every think; its leaves are the ai.* actions and its conditions read the blackboard the controller fills" )
         AssetRef<BehaviorTreeAsset> _behaviorTree;
 
-        shared_ptr<const BehaviorTreeAsset> _pBehaviorTree; ///< 읽은 트리(공유 캐시의 한 벌). 실행기가 그 트리를 가리킨다
-        BehaviorTreeRunner                  _runner;
-        Blackboard                          _blackboard;
-        hashed_string                       _stateName; ///< 판단의 지금 상태(`setStateName`)
-        ControlIntent                       _pending;   ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
-        float3                              _destination;
-        float3                              _focusPoint;
-        uint32                              _heldButtonMask; ///< `holdButton` 으로 누르고 있는 버튼
-        NavMoveStatus                       _moveStatus;     ///< 내비 에이전트가 없을 때의 상태
-        uint8                               _bHasDestination  : 1;
-        uint8                               _bHasFocus        : 1;
-        uint8                               _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다
-        uint8                               _bStopPending     : 1; ///< 다음 틱에 내비 에이전트를 멈춘다
-        uint8                               _bWarnedDriveMode : 1; ///< 내비 에이전트가 SteerOnly 가 아니라고 경고했다
-        uint8                               _bTreeRequired    : 1; ///< 트리 없이 판단하지 못한다(`requireBehaviorTree`)
-        uint8                               _bTreePrepared    : 1; ///< 트리 읽기를 한 번 해 봤다(성공이든 실패든)
-        [[maybe_unused]] uint8              _reserved         : 1;
+        SharedAssetRef<BehaviorTreeAsset> _pBehaviorTree; ///< 읽은 트리(공유 캐시의 한 벌). 실행기가 그 트리를 가리킨다
+        BehaviorTreeRunner                _runner;
+        Blackboard                        _blackboard;
+        hashed_string                     _stateName; ///< 판단의 지금 상태(`setStateName`)
+        ControlIntent                     _pending;   ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
+        float3                            _destination;
+        float3                            _focusPoint;
+        uint32                            _heldButtonMask; ///< `holdButton` 으로 누르고 있는 버튼
+        NavMoveStatus                     _moveStatus;     ///< 내비 에이전트가 없을 때의 상태
+        uint8                             _bHasDestination  : 1;
+        uint8                             _bHasFocus        : 1;
+        uint8                             _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다
+        uint8                             _bStopPending     : 1; ///< 다음 틱에 내비 에이전트를 멈춘다
+        uint8                             _bWarnedDriveMode : 1; ///< 내비 에이전트가 SteerOnly 가 아니라고 경고했다
+        uint8                             _bTreeRequired    : 1; ///< 트리 없이 판단하지 못한다(`requireBehaviorTree`)
+        uint8                             _bTreePrepared    : 1; ///< 트리 읽기를 한 번 해 봤다(성공이든 실패든)
+        [[maybe_unused]] uint8            _reserved         : 1;
     };
 } // namespace sw

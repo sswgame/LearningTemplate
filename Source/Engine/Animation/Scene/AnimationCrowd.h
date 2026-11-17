@@ -212,7 +212,8 @@ namespace sw
         void refreshSkinPalette();
 
     private:
-        AnimationCrowdBucketKey         _key;
+        AnimationCrowdBucketKey _key;
+        // 묶음은 지을 때 클립 · 스켈레톤으로 트랙 → 본 표를 짓는다 — 다시 읽힌 판을 따라가면 표가 어긋나므로 받은 판(스냅숏)을 쥔다. 다시 읽힌 뒤 드는 쪽은 새 판의 새 묶음을 받는다.
         shared_ptr<const Skeleton>      _skeleton;
         shared_ptr<const AnimationClip> _clip;
         shared_ptr<const AnimationClip> _nextClip; ///< 섞기 묶음의 들어가는 클립(아니면 nullptr)

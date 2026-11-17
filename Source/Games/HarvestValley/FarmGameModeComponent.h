@@ -18,6 +18,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -278,33 +279,33 @@ namespace sw
                   Tooltip = "Growing models of crops without their own (the first for stages 0 and 1, then one per stage); required" )
         vector<AssetRef<MeshAssetFormat>> _listDefaultGrowingModel;
 
-        shared_ptr<const CropCatalog>    _pCropCatalog;
-        shared_ptr<const WeatherCatalog> _pWeatherCatalog;
-        ItemCatalog                      _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
-        FarmField                        _field;
-        FarmShippingBin                  _shipment;  ///< 출하함에 든 것(하루 끝에 팔린다).
-        vector<hashed_string>            _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
-        MaterialTintCache                _tintCache; ///< 흙과 작물 색(같은 색은 나눠 쓴다).
-        vector<CropLook>                 _listCropLook;
-        vector<MeshHandle>               _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        shared_ptr<MaterialInstance>     _arrSoilLook[3];
-        shared_ptr<MaterialInstance>     _plainCropLook;
-        shared_ptr<MaterialInstance>     _witheredCropLook;
-        float3                           _playerPosition;
-        float3                           _facing;
-        float3                           _shippingBinPosition;
-        float3                           _shopPosition;
-        GameObjectHandle                 _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
-        int32                            _stamina;
-        int32                            _selectedSeedIndex;
-        int32                            _lastLoggedHour;
-        int32                            _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
-        float32                          _hourOfDay;  ///< 뷰가 읽는 시각.
-        FarmTool                         _tool;
-        FarmTool                         _lastUsedTool;
-        uint32                           _toolUseCount;
-        uint8                            _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
-        uint8                            _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
-        uint8                            _reserved         : 6;
+        SharedAssetRef<CropCatalog>    _pCropCatalog;
+        SharedAssetRef<WeatherCatalog> _pWeatherCatalog;
+        ItemCatalog                    _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
+        FarmField                      _field;
+        FarmShippingBin                _shipment;  ///< 출하함에 든 것(하루 끝에 팔린다).
+        vector<hashed_string>          _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
+        MaterialTintCache              _tintCache; ///< 흙과 작물 색(같은 색은 나눠 쓴다).
+        vector<CropLook>               _listCropLook;
+        vector<MeshHandle>             _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
+        shared_ptr<MaterialInstance>   _arrSoilLook[3];
+        shared_ptr<MaterialInstance>   _plainCropLook;
+        shared_ptr<MaterialInstance>   _witheredCropLook;
+        float3                         _playerPosition;
+        float3                         _facing;
+        float3                         _shippingBinPosition;
+        float3                         _shopPosition;
+        GameObjectHandle               _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
+        int32                          _stamina;
+        int32                          _selectedSeedIndex;
+        int32                          _lastLoggedHour;
+        int32                          _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
+        float32                        _hourOfDay;  ///< 뷰가 읽는 시각.
+        FarmTool                       _tool;
+        FarmTool                       _lastUsedTool;
+        uint32                         _toolUseCount;
+        uint8                          _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
+        uint8                          _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
+        uint8                          _reserved         : 6;
     };
 } // namespace sw

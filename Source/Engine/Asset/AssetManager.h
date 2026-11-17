@@ -97,9 +97,14 @@ namespace sw
         void garbageCollectUnusedAssets();
         /**
          * @brief 로드 축 태그 · 덮어쓰기 층이 바뀌어 결과가 달라진 리소스(`ResourceComposition::takePendingReload`)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
-         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다 — 태그는 틱 중에도 바뀌고(데이터 레이어) 공유 캐시의 제자리 다시 읽기는 틱 밖에서만 한다. 배포 구성에도 있다.
+         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다 — 태그는 틱 중에도 바뀌고(데이터 레이어) 공유 캐시의 다시 읽기(표에서 떼어 냄)는 틱 밖에서만 한다. 배포 구성에도 있다.
          */
         uint32 reloadComposedDependents();
+        /**
+         * @brief 공유 캐시의 다시 읽기 정리가 남긴 옛 판을 놓습니다(사슬 정리의 프레임 경계 — `SharedAssetTable::collectRetired`). 놓은 수를 돌려줍니다.
+         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다. 다시 읽은 뒤 두 번째 경계에서 놓여, 날 포인터를 빌린 쪽이 그 사이의 틱에서 다시 짓는다.
+         */
+        size_t collectRetiredAssetVersions();
         /**
          * @brief 내용이 바뀐 리소스 @p listAssetID(팩을 붙이거나 뗐다 — 모드)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
          * @details 쥔 캐시가 제자리 다시 읽기를 못 하면(`AssetCacheBase::reloadComposed` 가 false — GPU 수명 캐시) 그 id 를 @p outListStale 뒤에 덧붙인다 —

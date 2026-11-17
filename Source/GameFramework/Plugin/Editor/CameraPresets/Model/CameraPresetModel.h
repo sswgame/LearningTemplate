@@ -11,6 +11,8 @@
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/Runtime/Character/Camera/CameraPreset.h"
 
 namespace sw
@@ -63,10 +65,10 @@ namespace sw::editor
         [[nodiscard]] bool takeViewportPose( const float2& imageSize, CameraPresetViewportPose& outPose );
 
     private:
-        shared_ptr<const CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(읽기 전에는 빈 표)
-        int32                                 _selectedIndex;
-        float32                               _targetYawDegrees;   ///< Follow · FirstPerson · ThirdPerson 이 따르는 대상 요(도)
-        uint8                                 _bViewportDirty : 1; ///< 다음 `takeViewportPose` 가 뷰포트 카메라를 프리셋 자리에 놓는다
-        string                                _status;
+        SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(읽기 전에는 빈 표)
+        int32                               _selectedIndex;
+        float32                             _targetYawDegrees;   ///< Follow · FirstPerson · ThirdPerson 이 따르는 대상 요(도)
+        uint8                               _bViewportDirty : 1; ///< 다음 `takeViewportPose` 가 뷰포트 카메라를 프리셋 자리에 놓는다
+        string                              _status;
     };
 } // namespace sw::editor

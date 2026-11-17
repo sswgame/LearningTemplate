@@ -30,7 +30,7 @@ namespace sw
 
     /** 격자가 옛 테이블을 가리키므로 제자리에서 바꾸지 않고 떼어 낸다. 스키마 테스트와 카탈로그 편집기도 이 정의로 파일을 읽는다. */
     SW_MODULE_SHARED_ASSET_CACHE( ElementRules, ElementRuleCatalog, SW_GF_API,
-                                  ElementRuleCatalog::kAssetType.withLoader( AssetTypeLoader::of<ElementRuleCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
+                                  ElementRuleCatalog::kAssetType.withLoader( AssetTypeLoader::of<ElementRuleCatalog>( MemoryTag::Game ) ) );
 } // namespace sw
 
 namespace sw

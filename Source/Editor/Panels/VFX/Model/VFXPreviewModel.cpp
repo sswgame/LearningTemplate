@@ -171,7 +171,7 @@ namespace sw::editor
         if ( _loadedDiskPath.empty() == false )
             (void)updateContentHash( _loadedDiskPath, _loadedContentHash );
         // 미리 보기의 표는 씬의 효과와 같은 한 벌을 읽는다(공유 캐시 — 핫 리로드가 떼어 낸 새 객체도 다시 열면 받는다).
-        const shared_ptr<const VFXEffectDef> pEffect = SharedAssetCache<VFXEffectDef>::acquire( assetPath );
+        const shared_ptr<const VFXEffectDef> pEffect = SharedAssetCache<VFXEffectDef>::acquire( assetPath ).snapshot();
         if ( pEffect == nullptr )
         {
             _status = "The effect could not be read - see the log";

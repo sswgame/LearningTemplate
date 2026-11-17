@@ -177,7 +177,7 @@ namespace sw
     bool ParkGameModeComponent::startGame()
     {
         // 배치는 공유 캐시의 한 벌이다. 코스터 레이아웃은 배치가 같은 팩에서 받아 쥔 그 한 벌을 쓴다 — 게임 모드가 코스터 경로를 따로 적지 않는다(기준 하나).
-        shared_ptr<const ParkLayout> pLayout;
+        SharedAssetRef<ParkLayout> pLayout;
         if ( acquireRequired( _parkDataPath, pLayout ) == false )
             return false;
         const ParkLayout& layout = *pLayout;

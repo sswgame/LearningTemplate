@@ -204,6 +204,16 @@ namespace sw
         return reloadedCount;
     }
 
+    size_t AssetManager::collectRetiredAssetVersions()
+    {
+        size_t releasedCount = 0;
+        for ( AssetCacheBase* pCache : _registeredAssetCache.getItems() ) // 프레임마다 돈다 — 목록을 복사하지 않는다
+        {
+            releasedCount += pCache->collectRetiredVersions();
+        }
+        return releasedCount;
+    }
+
     uint32 AssetManager::reloadChangedPaths( const vector<string>& listAssetID, vector<string>& outListStale )
     {
         const vector<AssetCacheBase*> listCache     = getAllAssetCache();

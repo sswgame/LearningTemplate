@@ -582,6 +582,7 @@ namespace sw
         GeneratedStamp stamp;
         stamp._sourcePath     = inputFile;
         stamp._inputWriteTime = inputWriteTime;
+        stamp._argsHash       = _incrementalCheck.getArgsHash();
         stamp._listDependency = listDependency;
         for ( size_t typeIndex = 0; typeIndex < parsed._listType.size(); ++typeIndex )
         {

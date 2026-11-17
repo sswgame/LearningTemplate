@@ -126,7 +126,7 @@ namespace sw
         }
 
         _space._bPlanar = asset->isPlanar() ? SW_TRUE : SW_FALSE;
-        _asset          = asset; // 노드 묶기가 대상 이름을 찾는다
+        _asset          = SharedAssetRef<RigAsset>{ asset }; // 노드 묶기가 대상 이름을 찾는다
         RigBindContext bindContext{};
         bindContext._pSkeleton = &skeleton;
         bindContext._pInstance = this;

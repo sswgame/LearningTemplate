@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -12,6 +13,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
@@ -237,10 +239,26 @@ namespace sw
         }
         /**
          * @brief 카탈로그(종류 `TCatalog::kDataKind`)를 공유 캐시에서 받아 @p outCatalog 에 쥐고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다.
-         * @details 사본을 읽지 않는다 — 같은 파일을 쥔 컴포넌트 · 에디터와 한 벌을 나누고, 제자리 다시 읽기가 게임 범위로 찾는 쪽에도 닿는다(같은 객체).
+         * @details 사본을 읽지 않는다 — 같은 파일을 쥔 컴포넌트 · 에디터와 한 벌을 나눈다. 받은 때의 판(스냅숏)을 쥔다 — 번호를 지어 두어 일부러 옛 판을 쥐는 종류(떼어 내는 카탈로그)만 쓴다.
+         *          다시 읽힌 판을 따라가야 하면 `loadRequiredCatalog`(`SharedAssetRef`)를 쓴다.
          */
         template <class TCatalog>
-        [[nodiscard]] bool loadRequiredCatalog( shared_ptr<const TCatalog>& outCatalog )
+        [[nodiscard]] bool loadRequiredCatalogSnapshot( shared_ptr<const TCatalog>& outCatalog )
+        {
+            if ( loadRequiredData( TCatalog::kDataKind, [&outCatalog]( const string& path )
+            {
+                outCatalog = SharedAssetCache<TCatalog>::acquire( path ).snapshot();
+                return outCatalog != nullptr;
+            } ) == false )
+                return false;
+            return bindScopedService( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
+        }
+        /**
+         * @brief 멤버로 쥐는 카탈로그(@p outCatalog)를 받아 게임 범위에 겁니다. 다시 읽히면 `update` 가 범위의 칸도 새 판으로 바꿔 건다 — 찾는 쪽이 옛 판을 계속 보지 않게.
+         * @details @p outCatalog 는 이 인스턴스의 멤버라 인스턴스와 수명이 같아야 한다(다시 걸기가 그 주소를 쥔다).
+         */
+        template <class TCatalog>
+        [[nodiscard]] bool loadRequiredCatalog( SharedAssetRef<TCatalog>& outCatalog )
         {
             if ( loadRequiredData( TCatalog::kDataKind, [&outCatalog]( const string& path )
             {
@@ -248,7 +266,24 @@ namespace sw
                 return outCatalog != nullptr;
             } ) == false )
                 return false;
-            return bindScopedService( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
+            if ( bindScopedService( outCatalog.get() ) == false ) // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
+                return false;
+            followScopedService( outCatalog );
+            return true;
+        }
+        /** @brief 게임 범위에 건 @p ref 의 칸을 다시 읽힌 판으로 따라 바꾸게 합니다(`update` 앞머리 — 틱 밖). @p ref 는 인스턴스보다 오래 살아야 한다. */
+        template <class TCatalog>
+        void followScopedService( const SharedAssetRef<TCatalog>& ref )
+        {
+            const SharedAssetRef<TCatalog>* const pRef = &ref;
+            _listFollowedService.push_back( Delegate<void()>::create( [this, pRef]()
+            {
+                const TCatalog* const pLatest = pRef->get();
+                if ( pLatest == nullptr || _gameScope.find<const TCatalog>() == pLatest )
+                    return;
+                _gameScope.unbind<const TCatalog>();
+                (void)_gameScope.bind( pLatest ); // 방금 푼 칸이라 겹치지 않는다
+            } ) );
         }
 
         /**
@@ -328,12 +363,13 @@ namespace sw
         GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
         SaveLock                          _saveLock;            ///< 세이브 막기 문 — 게임 범위(씬 흐름이 빌린다)보다 먼저 서고 늦게 진다
         SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        shared_ptr<const ItemCatalog>     _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
+        SharedAssetRef<ItemCatalog>       _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
         unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;  ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
         unique_ptr<AutosaveManager>       _pAutosave;           ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
         unique_ptr<IGameDevPart>          _pDevPart;            ///< 게임 `Dev/` 의 개발 전용 부분(`IGameDevPartFactory` — 배포 구성에는 공장이 없어 비었다). `onInitialize` 뒤에 서고 `onShutdown` 앞에 진다
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        vector<Delegate<void()>>          _listFollowedService; ///< 다시 읽힌 카탈로그를 범위의 칸에 다시 거는 일(`followScopedService`)
         vector<Subscription>              _listSlotRequest;     ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
         SaveSlotCounts                    _saveSlotCounts;      ///< 성공한 세이브 슬롯 쓰기 · 읽기 수
         /** @brief 찍은 씬이 열리기를 기다리는 세이브 하나입니다(`onSaveSlotRead` → `onSaveSceneLoaded`). */

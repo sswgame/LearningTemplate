@@ -131,10 +131,10 @@ SW_TEST_CASE( AnimationSetTest, LoopsStopWithAnError )
     const string                    self = test::ScopedScratchDomain::makeID( "loop.animset.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "loop.animset.xml" ), "<AnimationSet formatVersion=\"0\" _base=\"" + self + "\"/>" ) );
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
-    SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "loop.animset.xml" ).view() ) == nullptr );
+    SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "loop.animset.xml" ).view() ).snapshot() == nullptr );
 
     const string selfSet = test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "setloop.animset.xml" ), "<AnimationSet formatVersion=\"0\"><clip name=\"a\" set=\"" + selfSet + "\"/></AnimationSet>" ) );
     SW_EXPECT_LOG( "AnimationSet.ChainTooDeep" );
-    SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).view() ) == nullptr );
+    SW_EXPECT_TRUE( SharedAssetCache<AnimationSet>::acquire( test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).view() ).snapshot() == nullptr );
 }

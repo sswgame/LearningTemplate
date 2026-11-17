@@ -246,7 +246,7 @@ namespace sw
 
     void PoseModifierComponent::setRigAsset( shared_ptr<const RigAsset> asset )
     {
-        _asset = std::move( asset );
+        _asset = SharedAssetRef<RigAsset>{ std::move( asset ) };
         bindRig();
     }
 
@@ -262,7 +262,7 @@ namespace sw
 
     void PoseModifierComponent::setOwnSockets( shared_ptr<const SocketSet> sockets )
     {
-        _ownSockets = std::move( sockets );
+        _ownSockets = SharedAssetRef<SocketSet>{ std::move( sockets ) };
         bindRig();
     }
 
@@ -276,7 +276,7 @@ namespace sw
     {
         SkeletalMeshBinding binding{};
         binding._name         = skeletalMeshName;
-        binding._sockets      = std::move( sockets );
+        binding._sockets      = SharedAssetRef<SocketSet>{ std::move( sockets ) };
         binding._skeletalMesh = TComponentHandle<SkeletalMeshComponent>{ pSkeletalMesh };
         for ( SkeletalMeshBinding& existing : _listUnitBinding )
         {
@@ -295,7 +295,7 @@ namespace sw
     {
         SkeletalMeshBinding binding{};
         binding._name        = skeletalMeshName;
-        binding._sockets     = std::move( sockets );
+        binding._sockets     = SharedAssetRef<SocketSet>{ std::move( sockets ) };
         binding._rigidObject = ( pObject != nullptr ) ? pObject->getHandle() : GameObjectHandle{};
         for ( SkeletalMeshBinding& existing : _listUnitBinding )
         {
@@ -314,7 +314,7 @@ namespace sw
     {
         SkeletalMeshBinding binding{};
         binding._name                  = skeletalMeshName;
-        binding._sockets               = std::move( sockets );
+        binding._sockets               = SharedAssetRef<SocketSet>{ std::move( sockets ) };
         binding._rigidFrame            = TComponentHandle<SceneComponent>{ pFrame };
         SkeletalMeshBinding* pExisting = VectorUtil::findIf( _listUnitBinding, [&skeletalMeshName]( const SkeletalMeshBinding& existing )
         { return existing._name == skeletalMeshName; } );
@@ -419,7 +419,7 @@ namespace sw
             return;
 
         const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath.path();
-        if ( _instance.initialize( _asset, _pSkeletalMesh->getSkeleton(), &_socketResolver, label ) == false )
+        if ( _instance.initialize( _asset.snapshot(), _pSkeletalMesh->getSkeleton(), &_socketResolver, label ) == false )
         {
             SW_LOG_ERROR_ID( "PoseModifier.RigCouldNotBound", "Rig '%#' could not be bound to '%#'", label.c_str(), pOwner->getName().c_str() );
             return;
@@ -694,7 +694,7 @@ namespace sw
         vector<RigSpringCollider> listCollider;
         // 물리 에셋은 래그돌과 같은 공유 캐시의 한 벌이다(사본을 읽지 않는다).
         const bool                           bWanted = _physicsAssetPath.empty() == false && _pSkeletalMesh != nullptr;
-        const shared_ptr<const PhysicsAsset> pAsset  = bWanted ? SharedAssetCache<PhysicsAsset>::acquire( _physicsAssetPath ) : nullptr;
+        const shared_ptr<const PhysicsAsset> pAsset  = bWanted ? SharedAssetCache<PhysicsAsset>::acquire( _physicsAssetPath ).snapshot() : nullptr;
         if ( bWanted && pAsset == nullptr )
             SW_LOG_ERROR_ID( "PoseModifier.PhysicsAssetCouldNot", "Physics asset '%#' could not be loaded for spring colliders", _physicsAssetPath.c_str() );
         if ( pAsset != nullptr )

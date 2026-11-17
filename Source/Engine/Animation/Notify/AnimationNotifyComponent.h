@@ -16,6 +16,7 @@
 #include "Engine/Animation/Notify/AnimationNotifyTable.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -161,7 +162,7 @@ namespace sw
         AssetRef<AnimationNotifyTable> _notifyTablePath;
 
         AnimationNotifyListenerBinding         _binding;
-        shared_ptr<const AnimationNotifyTable> _table;
+        SharedAssetRef<AnimationNotifyTable>   _table;
         vector<ActiveState>                    _listActiveState;
         vector<AnimationNotifyAction>          _listAction;
         vector<AnimationFiredNotify>           _listPendingFired;    ///< 2D 에서 워커가 복사한 이번 틱의 알림이다.

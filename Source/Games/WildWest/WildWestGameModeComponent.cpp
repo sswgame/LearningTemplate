@@ -115,7 +115,7 @@ namespace sw
         SessionStateSettings settings{};
         settings._clock._secondsPerDay = _secondsPerDay;
         settings._pReputationCatalog   = &_pWesternCatalog->getHonorReputation();
-        settings._pWeatherCatalog      = _pWeatherCatalog.get();
+        settings._pWeatherCatalog      = _pWeatherCatalog.snapshot();
         SessionStateComponent* pState  = SessionStateComponent::openOnOwner( *this, settings );
         if ( pState == nullptr )
             return false; // 까닭은 판 상태가 남겼다
