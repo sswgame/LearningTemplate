@@ -18,6 +18,8 @@
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackReachResult.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
@@ -323,6 +325,45 @@ namespace sw
                 }
                 // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다.
                 return AssetPaths::collectGamePackDomains( params._resourceRoot, outListDomain );
+            }
+
+            /**
+             * @brief 굽는 게임 팩마다 그 게임 프리셋(`Config/Game/<게임>.json`)의 쿠킹 규칙(`GameConfig::_cookRules`)을 @p inoutRules 뒤에 합칩니다(`PackCookRules::mergeGameRules`).
+             * @details 굽지 않는 게임의 규칙은 합치지 않는다. 게임 규칙의 항상 담기 패턴은 그 게임 팩 루트 아래로 묶여 다른 게임 팩에 새지 않는다. 프리셋을 읽지 못하면 오류입니다.
+             *          파일 이름 순으로 합친다(결과가 디렉터리 순서에 기대지 않게). 합친 규칙은 설정 해시에 들어가 게임 규칙이 바뀌면 다시 굽는다.
+             */
+            [[nodiscard]] static bool mergeGameCookRules( const PackCookParams& params, const vector<string>& listDomain, PackCookRules& inoutRules )
+            {
+                const string   folder = FileUtil::joinPath( params._projectRoot, GameConfig::kConfigFolder );
+                vector<string> listConfigPath;
+                const bool     bListed = FileUtil::forEachDirectoryEntry( folder, false, [&listConfigPath]( const DirectoryEntry& entry )
+                    {
+                    if ( entry._bDirectory == false && StringUtil::endsWith( entry._path, ".json" ) )
+                        listConfigPath.emplace_back( entry._path );
+                    return true;
+                } );
+                if ( bListed == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.GameConfigFolderUnreadable", "Pack cook: the game preset folder %# could not be listed - game cook rules cannot be merged", folder );
+                    return false;
+                }
+                std::sort( listConfigPath.begin(), listConfigPath.end() );
+                for ( const string& configPath : listConfigPath )
+                {
+                    GameConfig gameConfig;
+                    if ( ConfigManager::readConfigFile( gameConfig, configPath ) != ConfigReadResult::Loaded )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.GameConfigUnreadable", "Pack cook: the game preset %# could not be read (reasons above)", configPath );
+                        return false;
+                    }
+                    const PathKey packRoot = FileUtil::normalizePath( gameConfig._packRoot.get() );
+                    for ( const string& domain : listDomain )
+                    {
+                        if ( FileUtil::normalizePath( domain ) == packRoot )
+                            inoutRules.mergeGameRules( packRoot.str(), gameConfig._cookRules );
+                    }
+                }
+                return true;
             }
 
             /** @brief 작업 키의 설정 해시입니다 — 담는 규칙과 팩 바이트를 정하는 값 모두(설정 전체 · 셰이더 폴더 · 빌드 타깃). 설정을 글로 못 쓰면 오류입니다. */
@@ -667,7 +708,7 @@ namespace sw
         return false;
     }
 
-    bool PackCooker::cookAllPacks( const PackConfig& config, const PackCookParams& params, const CookStore& store, uint32& outPackCount )
+    bool PackCooker::cookAllPacks( const PackConfig& engineConfig, const PackCookParams& params, const CookStore& store, uint32& outPackCount )
     {
         outPackCount = 0;
         const bool bMissingParam =
@@ -688,9 +729,20 @@ namespace sw
         }
 
         CookJobDesc desc;
-        desc._cookerName                    = "Pack";
-        desc._codeFingerprint               = CookCodeFingerprint::find( "Pack" );
-        desc._target                        = params._buildTarget + "-" + params._shaderFolder;
+        desc._cookerName      = "Pack";
+        desc._codeFingerprint = CookCodeFingerprint::find( "Pack" );
+        desc._target          = params._buildTarget + "-" + params._shaderFolder;
+
+        // 엔진 규칙 뒤에 굽는 게임들의 규칙을 합친 사본이 이 쿠킹의 설정이다(언리얼 DefaultGame.ini 의 쿠킹 설정이 엔진 기본을 덮는 자리). 작업 범위 안에서 읽는다.
+        PackConfig config = engineConfig;
+        {
+            CookJobDesc rulesDesc = desc;
+            rulesDesc._cookerName = "PackGameRules";
+            const CookJob gameRulesJob{ rulesDesc };
+            if ( PackCookerInternal::mergeGameCookRules( params, listDomain, config._cookRules ) == false )
+                return false;
+        }
+
         const expected<uint64> settingsHash = PackCookerInternal::computeSettingsHash( config, params );
         if ( settingsHash.has_value() == false )
         {

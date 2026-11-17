@@ -434,3 +434,62 @@ SW_TEST_CASE( PackReachabilityTest, StagedOutputsFollowTheirSource )
     SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/cook.stamp" ) );
     SW_EXPECT_TRUE( staged.isSelected( "engine", "shaders/bin/dx12/reflection.manifest" ) );
 }
+
+/**
+ * @brief [PackReachabilityTest] 게임 쿠킹 규칙은 엔진 규칙 뒤에 합쳐진다 — 같은 이름 규칙 · 같은 id 칸은 게임 쪽이 이기고, 나머지는 덧붙는다. 항상 담기 패턴은 그 게임 팩 루트 아래로 묶인다
+ */
+SW_TEST_CASE( PackReachabilityTest, GameCookRulesMergeAfterTheEngineRules )
+{
+    PackCookRules       rules = PackEntryCatalogTestUtil::makeRules();
+    GameCookRules       game;
+    PackAlwaysCookRule& models = game._listAlwaysCook.emplace_back();
+    models._name               = "UnitModels";
+    models._listPattern.push_back( "models/**" );
+    PackAlwaysCookRule& maps = game._listAlwaysCook.emplace_back();
+    maps._name               = "Maps"; // 엔진 규칙과 같은 이름 — 게임 쪽이 이긴다
+    maps._listPattern.push_back( "levels/**" );
+    PackEntryIDField& villagers = game._listEntryIDField.emplace_back();
+    villagers._field            = "_listVillagerPreset";
+    villagers._kind             = "preset";
+    PackEntryIDField& body      = game._listEntryIDField.emplace_back();
+    body._field                 = "body"; // 엔진 칸과 같은 이름 — 게임 쪽이 이긴다
+    body._kind                  = "preset";
+
+    rules.mergeGameRules( "game/x/", game );
+    SW_REQUIRE_EQUAL( size_t( 2 ), rules._listAlwaysCook.size() );
+    SW_EXPECT_EQUAL( string( "Maps" ), rules._listAlwaysCook[0]._name );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rules._listAlwaysCook[0]._listPattern.size() );
+    SW_EXPECT_EQUAL( string( "game/x/levels/**" ), rules._listAlwaysCook[0]._listPattern[0] );
+    SW_EXPECT_EQUAL( string( "game/x/models/**" ), rules._listAlwaysCook[1]._listPattern[0] );
+    SW_REQUIRE_EQUAL( size_t( 3 ), rules._listEntryIDField.size() );
+    SW_EXPECT_EQUAL( string( "preset" ), rules._listEntryIDField[1]._kind ); // body 칸이 게임 값으로 바뀌었다
+    SW_EXPECT_EQUAL( string( "_listVillagerPreset" ), rules._listEntryIDField[2]._field );
+}
+
+/** @brief [PackReachabilityTest] 한 게임의 항상 담기 규칙은 다른 게임 팩의 같은 자리 파일을 담지 않는다(모든 게임을 한 번에 구워도 새지 않는다) */
+SW_TEST_CASE( PackReachabilityTest, GameCookRulesDoNotLeakIntoOtherGames )
+{
+    AssetReferenceFields params;
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, "" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", "<Scene/>" );
+    files._listGameDomain.push_back( "game/y" );
+    Util::addText( files, source, "game/y/data/gamesettings.xml", "<GameSettings><startMap>game/y/maps/b.scene.xml</startMap></GameSettings>" );
+    Util::addText( files, source, "game/y/maps/b.scene.xml", "<Scene/>" );
+    Util::addBinary( files, "game/x/models/unit.mesh" );
+    Util::addBinary( files, "game/y/models/unit.mesh" );
+
+    PackCookRules       rules = Util::makeRules();
+    GameCookRules       gameX;
+    PackAlwaysCookRule& models = gameX._listAlwaysCook.emplace_back();
+    models._name               = "UnitModels_JoinedFromName";
+    models._listPattern.push_back( "models/**" );
+    rules.mergeGameRules( "game/x", gameX );
+
+    PackReachResult result;
+    SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
+    SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/models/unit.mesh" ) ) );
+    SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/y/models/unit.mesh" ) ) );
+}
