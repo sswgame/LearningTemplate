@@ -184,12 +184,13 @@ namespace sw
         /** @brief 부모 GameObject 입니다. primary SceneComponent 의 부모를 소유한 오브젝트를 반환합니다. */
         GameObject* getParent() const;
         /**
-         * @brief 같은 부모 아래(부모가 없으면 씬의 루트들 사이) 형제 중 표시 순서입니다. 작을수록 앞이고 같으면 오브젝트 id 순입니다(유니티 sibling index).
-         * @details 씬 파일에 저장되고 에디터의 계층 창이 그 순서로 그립니다. 틱 · 렌더 순서에는 쓰지 않는다. 값은 형제 수 안에서 0 부터 센 자리이고 65535 로 막힌다.
+         * @brief 같은 부모 아래(부모가 없으면 씬의 루트들 사이) 형제 사이의 정렬 키입니다. 작을수록 앞이고 같으면 오브젝트 id 순입니다.
+         * @details 씬 파일에 저장되고 에디터의 계층 창이 그 순서로 그립니다. 틱 · 렌더 순서에는 쓰지 않는다. 값은 자리가 아니라 사이에 틈을 둔 분수 색인 키다
+         *          (`editor::SiblingOrderKey` — 한 줄 옮기기는 옮긴 오브젝트의 키 하나만 바꾼다, 설계 E-6). 옛 씬의 0 부터 센 자리도 그대로 유효한 키다.
          */
-        uint16 getSiblingIndex() const { return _siblingIndex; }
-        /** @brief 형제 사이의 표시 순서를 정하고, 바뀌었으면 매니저의 구조 세대를 올립니다. 되돌리기 기록은 부르는 쪽(`EditorSiblingOrder`)이 합니다. */
-        void setSiblingIndex( uint16 siblingIndex );
+        uint32 getSiblingOrder() const { return _siblingOrder; }
+        /** @brief 형제 사이의 정렬 키를 정하고, 바뀌었으면 매니저의 구조 세대를 올립니다. 되돌리기 기록은 부르는 쪽(`EditorSiblingOrder`)이 합니다. */
+        void setSiblingOrder( uint32 siblingOrder );
         /**
          * @brief 이 오브젝트(자식 오브젝트는 제외)의 켜진 씬 컴포넌트들이 그리거나 부딪히는 것을 덮는 **월드** 상자입니다. 크기가 있는 것이 없으면 false 를 반환합니다.
          * @details 에디터의 바닥과 표면 붙이기, 프레이밍이 크기를 이 함수 하나로 측정한다(`SceneComponent::getWorldBox`).
@@ -489,10 +490,10 @@ namespace sw
         bool          _bBeingDestroyed;          ///< 소멸자 안이다. 컴포넌트를 새로 붙이지 않는다(`allocateComponentStorage`). 소유 스레드만 읽고 쓴다
         bool          _bTransient;               ///< 실행 중에 세운 파생 오브젝트다 — 스냅샷 · 상태 해시가 건너뛴다(`setTransient`)
         /**
-         * @brief 형제 사이의 표시 순서입니다(`getSiblingIndex`). 클래스 끝의 꼬리 패딩에 들어가 오브젝트 크기를 늘리지 않으므로, 앞쪽으로 옮기지 않는다.
+         * @brief 형제 사이의 정렬 키입니다(`getSiblingOrder`). 클래스 끝에 두어 꼬리 패딩을 먼저 쓴다 — `uint16` 자리에서 넓혀 크기가 늘 수 있다(설계 E-6 이 8 바이트까지 받아들였다).
          */
         PROPERTY( HideInInspector )
-        uint16 _siblingIndex;
+        uint32 _siblingOrder;
         /** @brief 월드 스트리밍이 셀에 넣지 않고 늘 올려 둔다(`setAlwaysLoaded`). 쿠커만 읽는다 — 틱 · 렌더는 보지 않는다. */
         PROPERTY( Tooltip = "World streaming keeps this object loaded instead of placing it in a cell" )
         bool _bAlwaysLoaded;

@@ -92,7 +92,7 @@ namespace sw
         , _bKeptWhenParentDestroyed{ false }
         , _bBeingDestroyed{ false }
         , _bTransient{ false }
-        , _siblingIndex{ 0 }
+        , _siblingOrder{ 0 }
         , _bAlwaysLoaded{ false }
     {
     }
@@ -312,11 +312,11 @@ namespace sw
             pChildSc->detachFromComponent( rule );
     }
 
-    void GameObject::setSiblingIndex( uint16 siblingIndex )
+    void GameObject::setSiblingOrder( uint32 siblingOrder )
     {
-        if ( _siblingIndex == siblingIndex )
+        if ( _siblingOrder == siblingOrder )
             return;
-        _siblingIndex = siblingIndex;
+        _siblingOrder = siblingOrder;
         if ( _pOwnerManager != nullptr )
             _pOwnerManager->notifyStructureChanged();
     }

@@ -1,5 +1,5 @@
 <?asset guid="f80f0f8c07bd8580697aa1e83a793468"?>
-<Scene formatVersion="2" name="AssetMove">
+<Scene formatVersion="3" name="AssetMove">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

@@ -1,5 +1,5 @@
 <?asset guid="efba2ec29be47bca685fe4f466e144fa"?>
-<Scene formatVersion="2" name="WildWest">
+<Scene formatVersion="3" name="WildWest">
 	<SceneSettings _bStreaming="true" _unloadMargin="8" _maxCellLoadsPerFrame="2">
 		<_cellGrid _cellSize="16" _loadingRadius="32" />
 	</SceneSettings>

@@ -1,5 +1,5 @@
 <?asset guid="d63096a5047335fdd498e9c6a6362263"?>
-<Prefab formatVersion="0" name="Turret">
+<Prefab formatVersion="1" name="Turret">
 	<GameObject _schemaVersion="0" _name="Turret" _bActive="true">
 		<_listComponent>
 			<SceneComponent _componentName="SceneComponent"

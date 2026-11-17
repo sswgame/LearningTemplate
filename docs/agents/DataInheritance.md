@@ -184,7 +184,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 프리팹은 `<GameObject>` 대신 씬 인스턴스와 같은 `<PrefabOverrides>` 를 적는다.
 
 ```xml
-<Prefab formatVersion="0" _base="game/abilityarena/prefabs/caster.prefab.xml" name="ArenaGrunt">
+<Prefab formatVersion="1" _base="game/abilityarena/prefabs/caster.prefab.xml" name="ArenaGrunt">
 	<PrefabOverrides>
 		<Override key="ArenaUnitComponent#0">
 			<ArenaUnitComponent _kind="Grunt" />
@@ -200,7 +200,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 씬은 프리팹과 같은 모델을 쓰고, 런타임은 펼친 엔티티 목록 하나만 본다. 구현: `SceneDocument::expandSceneInstances` · `Scene::instantiateNodes` · `SceneDataLayerSubsystem`.
 
 ```xml
-<Scene formatVersion="2" name="Town">
+<Scene formatVersion="3" name="Town">
 	<SceneSettings …>
 		<_listDataLayer><SceneDataLayerDef _name="Winter" _bInitiallyActive="false" /></_listDataLayer>
 	</SceneSettings>

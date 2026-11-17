@@ -249,7 +249,7 @@ namespace sw
          */
         uint64 getStructureGeneration() const;
         /**
-         * @brief 구조 세대를 올립니다. 구조를 바꾸는 세터(오브젝트 생성 · 파괴 · `GameObject::setName` · `setSiblingIndex` · 부착과 떼기 · 컴포넌트 붙이기와 떼기)만 부릅니다.
+         * @brief 구조 세대를 올립니다. 구조를 바꾸는 세터(오브젝트 생성 · 파괴 · `GameObject::setName` · `setSiblingOrder` · 부착과 떼기 · 컴포넌트 붙이기와 떼기)만 부릅니다.
          * @details 편집 명령 쪽에서 부르지 않는다. 세터 한 곳에서 올려야 되돌리기 · 스크립트 · 게임 코드의 같은 변경을 빠뜨리지 않는다.
          */
         void notifyStructureChanged();

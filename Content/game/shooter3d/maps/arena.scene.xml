@@ -1,5 +1,5 @@
 <?asset guid="12d39350b79eb1e5903098fceef6374f"?>
-<Scene formatVersion="2" name="Shooter3D">
+<Scene formatVersion="3" name="Shooter3D">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

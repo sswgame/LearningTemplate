@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Serialization/GameObjectFormatUpgrade.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
@@ -525,6 +526,8 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( Prefab, PrefabAsset::kAssetType );
+    // 판 1: 형제 순서 칸 `_siblingIndex` → `_siblingOrder`(분수 색인 키, 설계 E-6)
+    SW_ASSET_FORMAT_UPGRADE( prefabSiblingOrder, "Prefab", 0, 1, &GameObjectFormatUpgrade::renameSiblingIndex );
 
     string PrefabInstanceNode::makePartKey( size_t index ) const
     {

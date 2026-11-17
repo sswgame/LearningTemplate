@@ -484,6 +484,17 @@ namespace sw
         pNode.set_name( pName );
     }
 
+    bool XMLNode::renameAttribute( const utf8* pOldName, const utf8* pNewName ) const
+    {
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
+        if ( pNode.empty() || pOldName == nullptr || pNewName == nullptr )
+            return false;
+        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pOldName );
+        if ( pAttr.empty() )
+            return false;
+        return pAttr.set_name( pNewName );
+    }
+
     void XMLNode::setValue( const utf8* pValue ) const
     {
         pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );

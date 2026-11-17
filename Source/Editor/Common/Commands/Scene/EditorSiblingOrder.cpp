@@ -43,10 +43,10 @@ namespace sw::editor
                 {
                     GameObject*  pSibling = listSibling[position];
                     const uint32 desired  = position < kMaxSiblingIndex ? static_cast<uint32>( position ) : kMaxSiblingIndex;
-                    if ( pSibling->getSiblingIndex() == desired )
+                    if ( pSibling->getSiblingOrder() == desired )
                         continue;
                     const ObjectSnapshot before = EditorTransaction::captureSnapshot( pSibling );
-                    pSibling->setSiblingIndex( static_cast<uint16>( desired ) );
+                    pSibling->setSiblingOrder( desired );
                     EditorSceneCommands::commitModify( transaction, pSibling, before, getUndoLabel() );
                 }
             }
@@ -67,8 +67,8 @@ namespace sw::editor
 
     bool EditorSiblingOrder::isBefore( const GameObject* pLeft, const GameObject* pRight )
     {
-        if ( pLeft->getSiblingIndex() != pRight->getSiblingIndex() )
-            return pLeft->getSiblingIndex() < pRight->getSiblingIndex();
+        if ( pLeft->getSiblingOrder() != pRight->getSiblingOrder() )
+            return pLeft->getSiblingOrder() < pRight->getSiblingOrder();
         return pLeft->getObjectID() < pRight->getObjectID();
     }
 

@@ -17,7 +17,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorSiblingOrder
-     * @brief 형제 순서(`GameObject::getSiblingIndex`)를 읽고 고치는 동작입니다. 유니티의 `Transform.SetSiblingIndex` 와 하이어라키 끌기, 언리얼 아웃라이너 폴더에 해당합니다.
+     * @brief 형제 순서(`GameObject::getSiblingOrder`)를 읽고 고치는 동작입니다. 유니티의 `Transform.SetSiblingIndex` 와 하이어라키 끌기, 언리얼 아웃라이너 폴더에 해당합니다.
      * @details 순서는 (형제 번호, 오브젝트 id) 입니다. 번호가 모두 0 인 옛 씬은 오브젝트 id 순, 곧 파일 순서 그대로입니다. 끌어 놓으면 형제 전체를 0 부터 다시 매깁니다.
      *          바뀐 오브젝트마다 되돌리기 기록이 있고 한 단계로 묶입니다. 순서는 계층 창이 그리는 순서이고 틱이나 렌더 순서와는 무관합니다.
      *          폴더는 `Editor.Folder` 태그가 붙은 빈 오브젝트입니다. 트랜스폼이 있어 자식이 따라 움직이며, 유니티의 빈 오브젝트와 같습니다.

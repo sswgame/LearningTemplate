@@ -1,5 +1,5 @@
 <?asset guid="16e1bef4436f6fbbe8a7530e7a6840cd"?>
-<Prefab formatVersion="0" name="Spring3D">
+<Prefab formatVersion="1" name="Spring3D">
 	<GameObject _schemaVersion="0" _name="Spring3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _componentName="RigidBodyComponent"

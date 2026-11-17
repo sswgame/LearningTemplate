@@ -1,5 +1,5 @@
 <?asset guid="b3fdbd2e29297cae9d6c89508393807e"?>
-<Scene formatVersion="2" name="RenderTest3D">
+<Scene formatVersion="3" name="RenderTest3D">
 	<!-- 렌더 기능 시나리오(automation/motionblur · ditherappear)의 무대 — 애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다.
 	     카메라는 시나리오가 순간이동으로 옮긴다(teleport GameCamera …). DitherCube 는 순간이동하면 4 초 동안 디더로 다시 나타난다(_bAppearOnTeleport). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

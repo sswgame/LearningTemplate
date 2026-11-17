@@ -1,5 +1,5 @@
 <?asset guid="b2606b780093d01afe80ad275d2bb27d"?>
-<Prefab formatVersion="0" name="OneWayPlatform3D">
+<Prefab formatVersion="1" name="OneWayPlatform3D">
 	<GameObject _schemaVersion="0" _name="OneWayPlatform3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _componentName="RigidBodyComponent"

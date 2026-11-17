@@ -1,6 +1,6 @@
 <?asset guid="616fe42030b5499cf999d0d0cacfc4b4"?>
 <!-- 해골 전사 몸(KayKit 해골 리그 — skeleton_warrior.physics.xml 과 같은 41 뼈). 외형 프리셋 SkeletonWarrior 로 몸 · 투구 · 도끼를 하나로 합친다. 래그돌 미리보기 시나리오(editor/ragdollpreview)가 쓴다. -->
-<Prefab formatVersion="0" name="SkeletonWarrior">
+<Prefab formatVersion="1" name="SkeletonWarrior">
 	<GameObject _schemaVersion="0" _name="SkeletonWarrior" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"

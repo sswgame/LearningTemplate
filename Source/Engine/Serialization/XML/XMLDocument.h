@@ -215,6 +215,8 @@ namespace sw
 
         /** @brief 노드 이름을 설정합니다. */
         void setName( const utf8* pName ) const;
+        /** @brief 속성 @p pOldName 의 이름을 @p pNewName 으로 바꿉니다(값 · 자리는 그대로). 없으면 false 입니다. 판 올림 단계가 칸 이름을 바꿀 때 쓴다. */
+        bool renameAttribute( const utf8* pOldName, const utf8* pNewName ) const;
         /** @brief 노드 값을 설정합니다. */
         void setValue( const utf8* pValue ) const;
         /** @brief 노드 값을 설정합니다. */

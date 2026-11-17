@@ -1,5 +1,5 @@
 <?asset guid="f4a5b41a07c0573adc8d89767e9fb7ed"?>
-<Prefab formatVersion="0" name="ArenaProjectile">
+<Prefab formatVersion="1" name="ArenaProjectile">
 	<GameObject _schemaVersion="0" _name="ArenaProjectile" _bActive="true">
 		<_listComponent>
 			<MeshComponent _componentName="MeshComponent"

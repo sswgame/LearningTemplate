@@ -1,5 +1,5 @@
 <?asset guid="5bf7a42b8c87f365f06a3edf4311a15c"?>
-<Prefab formatVersion="0" _base="common/prefabs/gimmicks/platformer/spring.prefab.xml" name="JumpPad">
+<Prefab formatVersion="1" _base="common/prefabs/gimmicks/platformer/spring.prefab.xml" name="JumpPad">
 	<PrefabOverrides>
 		<Override key="BoxCollider2DComponent#0">
 			<BoxCollider2DComponent _offsetScale="2,0.5" />
