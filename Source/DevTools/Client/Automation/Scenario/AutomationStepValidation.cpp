@@ -150,7 +150,7 @@ namespace sw
             }
             if ( pFrameEndStep != nullptr )
             {
-                return unexpected( Error{ ErrorKind::InvalidArgument, "a frame-start step runs before the judging step written above it - put <Wait frames=\"1\"/> between them",
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a frame-start step runs before the judging step written above it - put <AdvanceSimulation frames=\"1\"/> between them",
                                           step.describe() }
                                        .appendDetail( " before " )
                                        .appendDetail( pFrameEndStep->describe() ) );

@@ -213,6 +213,8 @@ namespace sw
         AutomationStartCondition      getStartCondition() const { return _startCondition; }
         VirtualInputMode              getInputMode() const { return _inputMode; }
         const vector<AutomationStep>& getSteps() const { return _listStep; }
+        /** @brief 시나리오 프레임 @p frameIndex 가 `<AdvanceSimulation>` 이 흘리는 프레임이면 true 입니다(실행기가 그 프레임을 시뮬레이션 진행으로 돌린다 — `AutomationRunner::advanceSimulationFrame`). */
+        bool isAdvanceSimulationFrame( uint32 frameIndex ) const;
         /** @brief @p step 과 같은 프레임에 있는 다른 단계 하나를 반환합니다. 없으면 nullptr 입니다(`WaitUntil` 은 그 프레임에 혼자 있어야 한다 — 실행기 준비와 실행기 없는 검사가 함께 쓴다). */
         const AutomationStep* findOtherStepAtSameFrame( const AutomationStep& step ) const;
         /** @brief 실행기와 테스트만 읽는 선언 묶음입니다(`AutomationTestOptions`). 시나리오의 단계 형식과 섞이지 않게 따로 둔다. */
@@ -239,7 +241,16 @@ namespace sw
         [[nodiscard]] expected<void> parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile );
 
     private:
+        /** @brief `<AdvanceSimulation>` 하나가 흘리는 프레임 구간입니다([첫 프레임, 첫 프레임 + 수)). */
+        struct AdvanceSpan
+        {
+            uint32 _firstFrame{ 0 };
+            uint32 _frameCount{ 0 };
+        };
+
+    private:
         vector<AutomationStep>   _listStep;
+        vector<AdvanceSpan>      _listAdvanceSpan; ///< `<AdvanceSimulation>` 구간(적은 순서 — 프레임 순이다)
         AutomationTestOptions    _testOptions;
         string                   _name;
         string                   _sourcePath;
@@ -249,5 +260,7 @@ namespace sw
         uint32                   _startTimeoutFrames;
         AutomationStartCondition _startCondition;
         VirtualInputMode         _inputMode;
+        uint8                    _bFixedDeltaDeclared : 1; ///< 루트에 `fixedDelta` 를 적었다(`<AdvanceSimulation>` 은 이것이 있어야 받는다)
+        [[maybe_unused]] uint8   _reservedScenario    : 7;
     };
 } // namespace sw

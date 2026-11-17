@@ -72,6 +72,7 @@ namespace sw
         , _waitFrameCount{ 0 }
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
+        , _advanceSimulationFrameCount{ 0 }
         , _bFinishWaiting{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
         , _reserved{ 0 }
@@ -446,6 +447,8 @@ namespace sw
             return; // 이 프레임은 단계를 돌리지 않는다(`onFrameEnd` 도 `_run._bClockHeld` 를 본다)
         }
         _evaluator.setFrameIndex( _run._frameIndex );
+        if ( _run._holdFrameCount == 0 && _scenario.isAdvanceSimulationFrame( _run._frameIndex ) )
+            advanceSimulationFrame();
         // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
         const vector<AutomationStep>& listStep = _scenario.getSteps();
         for ( size_t stepIndex = _run._nextStepIndex; stepIndex < listStep.size() && listStep[stepIndex]._frameIndex == _run._frameIndex; ++stepIndex )
@@ -620,6 +623,12 @@ namespace sw
         if ( kind == AutomationFrameKind::StepRan )
             _wallProfile.recordStepFrame( _run._currentStepKind, nowSeconds - _run._lastFrameEndSeconds );
         _run._lastFrameEndSeconds = nowSeconds;
+    }
+
+    void AutomationRunner::advanceSimulationFrame()
+    {
+        // shortcut: 매 걸음 그린다(다른 프레임과 같다) — 그리지 않고 고정 걸음만 진행하는 엔진 입구가 서면 이 자리에서 부른다.
+        ++_run._advanceSimulationFrameCount;
     }
 
     void AutomationRunner::reportOngoingWait()
