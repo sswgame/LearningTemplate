@@ -15,6 +15,7 @@ namespace sw
     MatchServerAgent::MatchServerAgent()
         : _mutex{}
         , _mapAccountToExpiresMs{}
+        , _bReadRequested{ SW_FALSE }
         , _mapRecordToExpiresMs{}
         , _mapRequestToRecord{}
         , _pRouter{ nullptr }
@@ -81,9 +82,11 @@ namespace sw
 
     void MatchServerAgent::update( UnixMilliseconds nowMs )
     {
-        _nowMs = nowMs.count();
+        _nowMs              = nowMs.count();
+        bool bReadRequested = false;
         {
             ScopedLock<mutex> lock{ _mutex };
+            bReadRequested = _bReadRequested != SW_FALSE;
             for ( auto expectedIt = _mapAccountToExpiresMs.begin(); expectedIt != _mapAccountToExpiresMs.end(); )
             {
                 if ( _nowMs >= expectedIt->second )
@@ -99,8 +102,12 @@ namespace sw
             else
                 ++recordIt;
         }
-        if ( _pRouter == nullptr || _listRequestID != 0 || _nowMs < _nextListReadMs )
+        if ( _pRouter == nullptr || _listRequestID != 0 || ( _nowMs < _nextListReadMs && bReadRequested == false ) )
             return;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _bReadRequested = SW_FALSE; // 이 읽기가 지금까지의 요청을 덮는다
+        }
         _nextListReadMs = _nowMs + kRecordRefreshMs;
         _listRequestID  = _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, kMaxRecordCount ),
                                             EphemeralStoreRouter::ReplyDelegate::create<&MatchServerAgent::onListReply>( this ), _replyOwner );
@@ -160,7 +167,10 @@ namespace sw
     bool MatchServerAgent::isAccepted( AccountID accountID ) const
     {
         ScopedLock<mutex> lock{ _mutex };
-        return _mapAccountToExpiresMs.find( accountID ) != _mapAccountToExpiresMs.end();
+        const bool        bAccepted = _mapAccountToExpiresMs.find( accountID ) != _mapAccountToExpiresMs.end();
+        if ( bAccepted == false )
+            _bReadRequested = SW_TRUE; // 한 틱에 목록 읽기 하나뿐이다(기다리는 읽기가 있으면 더 내지 않는다)
+        return bAccepted;
     }
 
     int32 MatchServerAgent::getExpectedCount() const

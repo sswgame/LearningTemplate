@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchBackfillSender.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchmakingServer.h"
@@ -33,6 +34,7 @@ namespace sw
                 , _queue{}
                 , _server{}
                 , _agent{}
+                , _backfill{}
                 , _maxPartySize{ 0 }
                 , _reconnectGraceMs{ 0 }
                 , _bGameServer{ SW_FALSE }
@@ -64,7 +66,9 @@ namespace sw
                     return {};
                 // 배정받은 계정만 게임 포트에 들이는 정책이다. 계정 키트의 `gameConnect` 가 `start` 에서 찾는다.
                 _agent.initialize( context._serverDescriptor._serverID );
-                return exposeInterface<IConnectAdmission>( context, entry, _agent );
+                _backfill.initialize( &_queue, context._serverDescriptor ); // 채운 사람이 접속할 곳은 디렉터리에 올린 이 서버의 설명이다
+                return exposeInterface<IConnectAdmission>( context, entry, _agent ).and_then( [&]
+                { return exposeInterface<IMatchBackfillSender>( context, entry, _backfill ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override
@@ -127,7 +131,8 @@ namespace sw
             PartyLobbyService                  _partyLobby;
             MatchQueueService                  _queue;
             MatchmakingServer                  _server;
-            MatchServerAgent                   _agent; ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
+            MatchServerAgent                   _agent;    ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
+            MatchBackfillSender                _backfill; ///< `gameServer` 일 때만 건다 — 경기 중 빈 슬롯을 맡기는 입구
             int32                              _maxPartySize;
             int32                              _reconnectGraceMs;
             uint8                              _bGameServer : 1;

@@ -57,7 +57,7 @@ namespace sw
         /** @brief 시한이 지난 접속 예정자를 지우고, 주기가 되면 명단 기록 목록을 읽습니다. */
         void update( UnixMilliseconds nowMs );
 
-        /** @brief 접속 예정자이면 true 입니다. 접속 인증기가 네트워크 스레드에서 부릅니다. */
+        /** @brief 접속 예정자이면 true 입니다. 접속 인증기가 네트워크 스레드에서 부릅니다. 아니면 다음 `update` 가 주기를 기다리지 않고 목록을 읽는다 — Found 는 기록이 남은 뒤에 가므로 막 배정받은 사람의 재시도가 1 초 주기에 막히지 않는다. */
         bool  isAccepted( AccountID accountID ) const override;
         int32 getExpectedCount() const;
 
@@ -70,6 +70,7 @@ namespace sw
     private:
         mutable mutex                                          _mutex;                  ///< 접속 예정자 목록을 지킨다(인증기는 네트워크 스레드)
         unordered_map<AccountID, int64> _mapAccountToExpiresMs SW_GUARDED_BY( _mutex ); ///< 접속 예정자와 받는 시한이다
+        mutable uint8 _bReadRequested                          SW_GUARDED_BY( _mutex ); ///< 명단에 없는 계정이 접속을 시도했다. 다음 `update` 가 목록을 바로 읽는다
         unordered_map<string, int64>                           _mapRecordToExpiresMs;   ///< 읽었거나 읽는 중인 기록 이름과 끝나는 시각이다. 같은 기록을 다시 읽지 않는다
         unordered_map<uint64, string>                          _mapRequestToRecord;     ///< 기다리는 기록 읽기이다
         EphemeralStoreRouter*                                  _pRouter;
