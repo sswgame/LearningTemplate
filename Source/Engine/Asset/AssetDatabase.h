@@ -75,10 +75,26 @@ namespace sw
     };
 
     /**
+     * @struct AssetImportOverride
+     * @brief 에셋 한 개의 임포트 예외 한 칸입니다 — 폴더 규칙(기본값)과 다른 값만 적는다(유니티 `.meta` 임포터 블록 · Godot `.import` `[params]` 의 자리).
+     * @details Engine 은 임포터 설정 형식(Editor)을 모르므로 글 쌍이다. 칸 이름 · 값의 검증은 임포터가 규칙 사슬을 푼 뒤 마지막 층으로 같은 파서에 넣어 한다.
+     */
+    REFLECT()
+    struct SW_API AssetImportOverride
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, InheritKey )
+        string _key; ///< 규칙 파일과 같은 칸 이름("animationCodec" · "generateMips")
+        PROPERTY( Required )
+        string _value; ///< 그 칸의 값 글(규칙 파일 JSON 값의 글 표기)
+    };
+
+    /**
      * @struct AssetMeta
      * @brief 원본 곁의 서술 `<파일>.meta` 한 장입니다 — `<AssetMeta _guid="…" _source="…"/>`. 읽고 쓰는 곳은 이 구조체 하나입니다.
      * @details `_source` 는 원본 파일의 자리(서술 폴더 기준 상대 경로)다 — 지금은 곁의 파일 이름이고, 원본을 LFS · 별도 저장소로 뗄 때(3 단계) 그 자리를 가리킨다.
-     *          그 에셋만의 임포트 예외(기본값은 폴더 규칙)는 칸이 생길 때 여기에 더한다. 모르는 속성 · 빠진 칸은 오류다(엄격한 읽기).
+     *          그 에셋만의 임포트 예외는 `_listImportOverride` 에 차이만 든다(기본값은 폴더 규칙 — 우선순위는 프리셋 < 규칙 < 서술). 모르는 속성 · 빠진 칸은 오류다(엄격한 읽기).
      */
     REFLECT()
     struct SW_API AssetMeta
@@ -92,6 +108,8 @@ namespace sw
         string _guid; ///< 정체성(`AssetGUID` 글 표기)
         PROPERTY( Required )
         string _source; ///< 원본 파일(서술 폴더 기준 상대 경로)
+        PROPERTY( SkipIfEmpty )
+        vector<AssetImportOverride> _listImportOverride; ///< 이 에셋만의 임포트 예외(비면 쓰지 않는다)
 
         /** @brief XML 글로 씁니다. */
         string toXML() const;
@@ -99,8 +117,8 @@ namespace sw
         [[nodiscard]] optional<AssetGUID> parseXML( string_view text, string_view sourceLabel );
         /** @brief 원본 @p sourcePath 의 서술 경로(`<경로>.meta`)입니다. */
         static string makePath( string_view sourcePath );
-        /** @brief 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. */
-        static string makeText( string_view sourcePath, const AssetGUID& guid );
+        /** @brief 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 를 함께 든다(복사 · 옮기기는 예외를 지킨다). */
+        static string makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {} );
     };
 
     /** @brief 색인을 짓다 만난 결함의 종류입니다. */

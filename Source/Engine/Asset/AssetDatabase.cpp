@@ -125,11 +125,12 @@ namespace sw
         return string( sourcePath ) + string( kExtension );
     }
 
-    string AssetMeta::makeText( string_view sourcePath, const AssetGUID& guid )
+    string AssetMeta::makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride )
     {
         AssetMeta meta;
-        meta._guid   = guid.toString();
-        meta._source = FileUtil::getFileNamePart( sourcePath );
+        meta._guid               = guid.toString();
+        meta._source             = FileUtil::getFileNamePart( sourcePath );
+        meta._listImportOverride = listOverride;
         return meta.toXML();
     }
 
@@ -152,12 +153,19 @@ namespace sw
                 break;
             }
             case AssetIdentityKind::Source:
-                if ( FileUtil::writeTextFile( AssetMeta::makePath( absPath ), AssetMeta::makeText( assetID, guid ) ) )
+            {
+                // 베낀 서술의 임포트 예외는 지킨다(유니티 Duplicate 와 같다) — 복사본은 새 에셋이지만 같은 임포트 설정이다. 읽지 못한 서술은 오류를 남기고 예외 없이 새로 쓴다(복사본의 정체성이 먼저다).
+                AssetMeta  copied;
+                string     copiedText;
+                const bool bCopied = FileUtil::isRegularFile( AssetMeta::makePath( absPath ) ) && FileUtil::readTextFile( AssetMeta::makePath( absPath ), copiedText ) &&
+                                     copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
+                if ( FileUtil::writeTextFile( AssetMeta::makePath( absPath ), AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
                 {
                     AssetRegistry::record( guid, assetID );
                     return true;
                 }
                 break;
+            }
         }
         SW_LOG_ERROR_ID( "AssetIdentity.AssignFailed", "Could not give '%#' its asset GUID - run py -3 -m Scripts asset-ids --fix", assetID );
         return false;
