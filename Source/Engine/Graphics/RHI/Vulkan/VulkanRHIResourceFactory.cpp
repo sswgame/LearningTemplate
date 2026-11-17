@@ -81,6 +81,8 @@ namespace sw
                     return VK_FORMAT_R32_UINT;
                 case RHIVertexAttributeFormat::Snorm8x4:
                     return VK_FORMAT_R8G8B8A8_SNORM;
+                case RHIVertexAttributeFormat::Half4:
+                    return VK_FORMAT_R16G16B16A16_SFLOAT; // 정점 입력 필수 지원 형식(VK 명세 필수 형식 표)
             }
             SW_LOG_ASSERT( false, "Unsupported RHIVertexAttributeFormat: %#", static_cast<uint32>( format ) );
             return VK_FORMAT_UNDEFINED;

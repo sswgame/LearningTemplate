@@ -219,6 +219,8 @@ namespace sw
                     return WGPUVertexFormat_Uint32;
                 case RHIVertexAttributeFormat::Snorm8x4:
                     return WGPUVertexFormat_Snorm8x4;
+                case RHIVertexAttributeFormat::Half4:
+                    return WGPUVertexFormat_Float16x4;
             }
             return WGPUVertexFormat_Float32x4;
         }

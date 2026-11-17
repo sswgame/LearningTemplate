@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/Half.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
@@ -29,9 +30,10 @@ namespace sw
         int8    _arrNormal[4];  ///< snorm8 — w 는 0
         int8    _arrTangent[4]; ///< snorm8 — w 는 바이탄젠트 부호(±127 = ±1)
         float32 _arrUV[2];      ///< 물이 월드 좌표를 싣는다 — half 로 줄이지 않는다
-        float32 _arrColor[4];
+        /// half — 감사 R-15(float4 16 B → 8 B). 8 비트 unorm(언리얼 `FColor`)이 아닌 까닭: 물이 정점 색에 깊이(1 넘음)와 부호 있는 흐름을 싣는다. 색은 half 의 11 비트 가수로 충분하다
+        half _arrColor[4];
     };
-    static_assert( sizeof( RHIPackedMeshAttributes ) == 32, "packed mesh attributes are 32 bytes (imported by four backends' layouts)" );
+    static_assert( sizeof( RHIPackedMeshAttributes ) == 24, "packed mesh attributes are 24 bytes (imported by four backends' layouts)" );
 
     /** @brief `RHIMeshVertexFormat::HighPrecision` 의 속성 스트림 원소입니다(슬롯 2). `RHIVertex` 에서 위치를 뺀 모양이다. */
     struct RHIHighPrecisionMeshAttributes
@@ -62,6 +64,7 @@ namespace sw
         Float4,
         Uint1,    ///< 32비트 부호 없는 정수 하나(셰이더는 uint 로 받는다)
         Snorm8x4, ///< 부호 있는 8비트 넷, [-1, 1] 로 정규화(셰이더는 float 로 받는다)
+        Half4,    ///< 16비트 부동소수 넷(셰이더는 float 로 받는다) — Packed 메시의 정점 색
     };
 
     struct RHIVertexAttribute
@@ -151,7 +154,7 @@ namespace sw
             { "POSITION", 0, RHIVertexAttributeFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
             { "NORMAL", 1, RHIVertexAttributeFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
             { "TEXCOORD", 2, RHIVertexAttributeFormat::Float2, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrUV ), kMeshAttributeSlot, SW_FALSE },
-            { "COLOR", 3, RHIVertexAttributeFormat::Float4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
+            { "COLOR", 3, RHIVertexAttributeFormat::Half4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
             { "TANGENT", 4, RHIVertexAttributeFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
             { "SW_INSTANCESLOT", 5, RHIVertexAttributeFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
         };

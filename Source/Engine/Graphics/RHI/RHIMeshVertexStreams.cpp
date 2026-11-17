@@ -53,7 +53,8 @@ namespace sw
             }
             attributes._arrTangent[3] = vertex._arrTangent[3] < 0.0f ? int8{ -127 } : int8{ 127 }; // 바이탄젠트 부호 — 0 은 +로 둔다(MikkTSpace 가 0 을 내지 않는다)
             Memory::copy( attributes._arrUV, vertex._arrUV, sizeof( attributes._arrUV ) );
-            Memory::copy( attributes._arrColor, vertex._arrColor, sizeof( attributes._arrColor ) );
+            for ( uint32 channel = 0; channel < 4; ++channel )
+                attributes._arrColor[channel] = half::fromFloat( vertex._arrColor[channel] ); // R-15 — 정점 색은 half(65504 넘는 값은 무한대가 된다)
             Memory::copy( pOutAttribute + static_cast<size_t>( vertexIndex ) * sizeof( RHIPackedMeshAttributes ), &attributes, sizeof( attributes ) );
         }
     }

@@ -726,6 +726,9 @@ namespace sw
                 case RHIVertexAttributeFormat::Snorm8x4:
                     glVertexAttribPointer( attribute._location, 4, GL_BYTE, GL_TRUE, stride, pOffset );
                     break;
+                case RHIVertexAttributeFormat::Half4:
+                    glVertexAttribPointer( attribute._location, 4, GL_HALF_FLOAT, GL_FALSE, stride, pOffset ); // GL 3.0 · GLES 3.0 코어
+                    break;
             }
             glVertexAttribDivisor( attribute._location, attribute._bPerInstance != SW_FALSE ? 1u : 0u );
         }
