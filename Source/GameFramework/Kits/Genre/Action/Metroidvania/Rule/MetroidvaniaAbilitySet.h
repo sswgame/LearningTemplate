@@ -34,8 +34,8 @@ namespace sw
 
         MetroidvaniaAbilitySet();
 
-        /** @brief 카탈로그와 기본 몸 설정을 설정합니다. 기본 설정의 벽 점프, 공중 점프, 공중 대시, 대시는 잠겨 있고(능력이 연다), 얻은 능력은 비웁니다. */
-        void initialize( const MetroidvaniaCatalog* pCatalog, const PlatformerSettings& baseSettings );
+        /** @brief 카탈로그와 그 기본 몸 규칙(`getBaseMotor` — 데이터, 감사 K-4)으로 엽니다. 기본 규칙의 벽 점프, 공중 점프, 공중 대시, 대시는 잠겨 있고(능력이 연다), 얻은 능력은 비웁니다. */
+        void initialize( const MetroidvaniaCatalog& catalog );
 
         /** @brief 능력을 얻고 플래그를 켭니다. 새로 얻었으면 true 를 반환하고, 이미 있거나 모르는 능력이면 false 를 반환합니다. */
         bool grantAbility( const hashed_string& abilityID, GameFlags& flags );

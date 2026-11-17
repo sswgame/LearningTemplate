@@ -33,6 +33,7 @@ namespace sw
         , _pickupCatalog{}
         , _enemyCatalog{}
         , _rules{}
+        , _baseMotor{}
     {
     }
 
@@ -48,7 +49,19 @@ namespace sw
         bValid                            = Internal::readOptionalChild( root, "Rules", sourceName, rules ) && bValid;
         bValid                            = Internal::readOptionalChild( root, "Health", sourceName, health ) && bValid;
         bValid                            = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
-        rules._currency                   = rootDef._currency;
+        // 기본 몸 규칙도 데이터에만 있다 — 능력 집합이 C++ 기본값으로 몸을 열지 않는다(감사 K-4).
+        PlatformerSettings baseMotor;
+        const XMLNode      motorNode = root.findChild( "BaseMotor" );
+        if ( !motorNode )
+        {
+            SW_LOG_ERROR_ID( "MetroidvaniaCatalog.BaseMotorMissing", "%#: needs one <BaseMotor .../> line (every movement rule value is data)", sourceName );
+            bValid = false;
+        }
+        else if ( XMLFields::readProperties( motorNode, baseMotor, sourceName ) == false )
+        {
+            bValid = false;
+        }
+        rules._currency = rootDef._currency;
 
         HealthSettings& healthMachine     = rules._health;
         healthMachine._maxHealth          = health._maxHealth;
@@ -76,7 +89,8 @@ namespace sw
         }
         if ( bValid == false )
             return false;
-        _rules = rules;
+        _rules     = rules;
+        _baseMotor = baseMotor;
         return true;
     }
 
@@ -92,6 +106,7 @@ namespace sw
             Element::known( "Health" ),
             Element::known( "Stamina" ),
             Element::known( "Parry" ),
+            Element::known( "BaseMotor" ),
             Element::of<&MetroidvaniaCatalog::loadAbility>( "Ability" ),
             Element::of<&MetroidvaniaCatalog::loadCharm>( "Charm" ),
             Element::of<&MetroidvaniaCatalog::_mapCatalog>( "Map" ),
