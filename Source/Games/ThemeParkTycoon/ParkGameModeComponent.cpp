@@ -566,10 +566,10 @@ namespace sw
             [[maybe_unused]] const RidePlacement& placement = _listPlacement[static_cast<size_t>( _selectedPlacement )];
             SW_LOG_INFO_ID( "ParkGameMode.Selected", "[Park] selected %# (%#)", placement._ride._name.c_str(), placement._rideIndex >= 0 ? "built" : "not built - B to build" );
         }
-        const int32 rideIndex = findSelectedRideIndex();
-        if ( rideIndex >= 0 )
+        if ( const optional<int32> selectedRide = findSelectedRideIndex() )
         {
-            const ParkRide& ride = _simulation.getRides()[static_cast<size_t>( rideIndex )];
+            const int32     rideIndex = *selectedRide;
+            const ParkRide& ride      = _simulation.getRides()[static_cast<size_t>( rideIndex )];
             if ( inputMap.wasActionTriggered( hashed_string( "Park.ToggleOpen" ) ) )
             {
                 _simulation.setRideOpen( rideIndex, ride._bOpen == SW_FALSE );
@@ -678,11 +678,14 @@ namespace sw
         }
     }
 
-    int32 ParkGameModeComponent::findSelectedRideIndex() const
+    optional<int32> ParkGameModeComponent::findSelectedRideIndex() const
     {
         if ( _selectedPlacement < 0 || _selectedPlacement >= static_cast<int32>( _listPlacement.size() ) )
-            return -1;
-        return _listPlacement[static_cast<size_t>( _selectedPlacement )]._rideIndex;
+            return nullopt;
+        const int32 rideIndex = _listPlacement[static_cast<size_t>( _selectedPlacement )]._rideIndex;
+        if ( rideIndex < 0 ) // 아직 짓지 않은 자리
+            return nullopt;
+        return rideIndex;
     }
 } // namespace sw
 

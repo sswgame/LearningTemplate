@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -108,12 +109,12 @@ namespace sw
         void             spawnCoasterView( GameObjectManager& manager, int32 coasterIndex );
         void             spawnPath( GameObjectManager& manager, const float3& from, const float3& to );
 
-        void  updateInput( const InputManager& input );
-        void  updateRides( float32 deltaTime );
-        void  updateCameraOverride();
-        void  logStatus( float32 deltaTime, bool bForce );
-        void  logThoughts() const;
-        int32 findSelectedRideIndex() const;
+        void                          updateInput( const InputManager& input );
+        void                          updateRides( float32 deltaTime );
+        void                          updateCameraOverride();
+        void                          logStatus( float32 deltaTime, bool bForce );
+        void                          logThoughts() const;
+        [[nodiscard]] optional<int32> findSelectedRideIndex() const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Park Layout", AssetPath, Tooltip = "Gate, cash and ride placement XML" )

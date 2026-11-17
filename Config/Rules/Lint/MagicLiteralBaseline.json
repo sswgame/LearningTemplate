@@ -1024,7 +1024,7 @@
     "Source/Games/StarSkirmish/SkirmishUnitComponent.cpp": {"float": 5},
     "Source/Games/ThemeParkTycoon/CoasterCarComponent.cpp": {"minus-one": 1},
     "Source/Games/ThemeParkTycoon/FlatRideComponent.cpp": {"minus-one": 1},
-    "Source/Games/ThemeParkTycoon/ParkGameModeComponent.cpp": {"minus-one": 9, "float": 15},
+    "Source/Games/ThemeParkTycoon/ParkGameModeComponent.cpp": {"minus-one": 8, "float": 15},
     "Source/Games/ThemeParkTycoon/ParkGameModeComponent.h": {"minus-one": 2},
     "Source/Games/ThemeParkTycoon/ParkGuestComponent.cpp": {"minus-one": 3},
     "Source/Games/Velmora/VelmoraGameModeComponent.cpp": {"float": 24},
