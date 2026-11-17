@@ -433,10 +433,8 @@ namespace sw
         using Internal           = FrameViewResourcesInternal;
         const bool bObjectMotion = sceneState._bObjectMotion == SW_TRUE;
         // 모션 블러의 속도는 카메라(지난 뷰-투영과의 차이)와 물체(화면 속도)다. 컷이거나 둘 다 서 있으면 모든 픽셀이 원본이다(motion_blur.hlsl).
-        const bool bCameraStill = Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
-        const bool bMotionStill = view._bHistoryReset == SW_TRUE || ( bCameraStill && bObjectMotion == false );
-        // 사진 앞 정착(`Render.Stable`) — TAA 기록이 쌓인 정지 프레임 수. 기록을 버리는 판정은 `beginViewHistory` 가 이미 했다.
-        view._stillFrameCount                              = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, view._bTAAHistoryReset == SW_TRUE, bCameraStill, bObjectMotion );
+        const bool                          bCameraStill   = Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
+        const bool                          bMotionStill   = view._bHistoryReset == SW_TRUE || ( bCameraStill && bObjectMotion == false );
         const vector<RenderGraphPassDesc>&  listPass       = _pipeline.getGraphPass();
         const vector<RenderPassAttachment>& listAttachment = _pipeline.getDesc()._listAttachment;
         TransientAttachmentPool&            pool           = view._transientPool;
@@ -528,6 +526,10 @@ namespace sw
             }
             Internal::markReads( listAttachment, pass, false, listNeeded );
         }
+        // 사진 앞 정착(`Render.Stable`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_bTAAHistoryWritten`) —
+        // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
+        const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( view._bHistoryReset == SW_TRUE, view._bTAAHistoryWritten == SW_TRUE, view._bTAAHistoryReset == SW_TRUE );
+        view._stillFrameCount         = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).
         PassSelectionResult result{};
         result._bTargetsRebound = bForwardSet ? SW_TRUE : SW_FALSE;

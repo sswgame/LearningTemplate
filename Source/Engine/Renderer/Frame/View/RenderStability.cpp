@@ -78,6 +78,11 @@ namespace sw
         return bStill ? previous + 1u : 0u;
     }
 
+    bool RenderStabilityUtil::isAccumulationReset( bool bHistoryReset, bool bTAAThisFrame, bool bTAAHistoryReset )
+    {
+        return bHistoryReset || ( bTAAThisFrame && bTAAHistoryReset );
+    }
+
     float32 RenderStabilityUtil::advanceExposureError( float32 previous, bool bReset, bool bMoved, float32 rangeEv, float32 slowerAdaptRate )
     {
         const float32 range = MathUtil::max( 0.0f, rangeEv );

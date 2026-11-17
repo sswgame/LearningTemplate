@@ -58,6 +58,11 @@ namespace sw
         /** @brief 이번 프레임의 정지 프레임 수입니다. 기록을 버렸거나 카메라 · 물체가 움직였으면 0, 아니면 하나 늘린다. */
         [[nodiscard]] static uint32 advanceStillFrames( uint32 previous, bool bTAAHistoryReset, bool bCameraStill, bool bObjectMotion );
         /**
+         * @brief 이번 프레임에 시간 누적을 처음부터 다시 쌓는가 — 뷰 기록을 버렸거나, 이번 프레임에 TAA 를 돌리는데 그 기록이 버려졌다.
+         * @details TAA 를 쓰지 않는 파이프라인 · 뷰(Forward 등)는 TAA 기록이 늘 "버림" 이라 그것만 보면 정지 프레임이 영원히 0 이었다(사진 앞 `Render.Stable` 이 끝내 서지 않았다).
+         */
+        [[nodiscard]] static bool isAccumulationReset( bool bHistoryReset, bool bTAAThisFrame, bool bTAAHistoryReset );
+        /**
          * @brief 이번 프레임의 노출 오차 상한(EV)입니다.
          * @param bReset 기록을 버린 프레임 — 측정값을 그대로 써 오차가 없다
          * @param bMoved 카메라가 움직였다 — 목표가 범위 끝까지 바뀔 수 있다

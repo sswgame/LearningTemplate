@@ -20,6 +20,15 @@ SW_TEST_CASE( RenderStabilityTest, StillFramesRestartOnResetOrMotion )
     SW_EXPECT_EQUAL( 0u, RenderStabilityUtil::advanceStillFrames( count, false, true, true ) );   // 물체가 움직였다
 }
 
+/** @brief [RenderStabilityTest] 시간 누적 리셋은 뷰 기록을 버렸거나, 이번 프레임에 TAA 를 돌리는데 그 기록이 버려졌을 때뿐이다 — TAA 없는 뷰는 TAA 기록 버림을 보지 않는다 */
+SW_TEST_CASE( RenderStabilityTest, AccumulationResetIgnoresTAAWhenTheViewHasNone )
+{
+    SW_EXPECT_FALSE( RenderStabilityUtil::isAccumulationReset( false, false, true ) ); // Forward 뷰 — TAA 기록은 늘 "버림"
+    SW_EXPECT_TRUE( RenderStabilityUtil::isAccumulationReset( false, true, true ) );   // TAA 를 돌리는데 기록을 버렸다
+    SW_EXPECT_TRUE( RenderStabilityUtil::isAccumulationReset( true, false, false ) );  // 컷 · 첫 프레임
+    SW_EXPECT_FALSE( RenderStabilityUtil::isAccumulationReset( false, true, false ) );
+}
+
 /**
  * @brief [RenderStabilityTest] 노출 오차 상한 — 기록을 버린 프레임은 측정값을 그대로 써 0, 카메라가 움직인 프레임은 범위 끝까지, 정지 프레임마다 (1 − 다가간 비율) 을 곱한다.
  *        고정 노출(범위 0)은 늘 0 이다.
