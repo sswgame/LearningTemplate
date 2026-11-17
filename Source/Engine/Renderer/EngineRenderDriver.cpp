@@ -29,6 +29,7 @@
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
+#include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
@@ -132,6 +133,22 @@ namespace sw
     {
         if ( _pRenderThread != nullptr )
             _pRenderThread->waitIdle( reason );
+    }
+
+    void EngineRenderDriver::discardViewTargets()
+    {
+        if ( _pRenderThread == nullptr )
+            return; // 렌더 스레드가 없으면 그린 적이 없다 — 버릴 기록이 없다
+        // 받은 패킷(앞 단계의 프레임)을 먼저 끝낸다 — 버린 뒤에 그것이 그려지면 새 뷰 대상에 앞 단계의 기록이 남는다.
+        _pRenderThread->pollPackets();
+        RenderThread* const pRenderThread = _pRenderThread;
+        _pRenderThread->enqueueCommand( SW_DELEGATE_LAMBDA( RenderCommandDelegate, [pRenderThread]( IRHIDevice& )
+        {
+            if ( FrameRenderer* const pFrameRenderer = pRenderThread->getFrameRenderer() )
+                pFrameRenderer->discardViewTargets();
+            if ( OffscreenSceneRenderers* const pOffscreenRenderers = pRenderThread->getOffscreenRenderers() )
+                pOffscreenRenderers->discardViewTargets();
+        } ) );
     }
 
     void EngineRenderDriver::setScenarioCaptureEnabled( const bool bEnabled )

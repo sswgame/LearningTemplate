@@ -1337,6 +1337,22 @@ namespace sw
         _postProcessMaterials.prepareView( view );
     }
 
+    void FrameRenderer::discardViewTargets()
+    {
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+        {
+            releaseExtraView( *pView );
+        }
+        _state._listExtraView.clear();
+        releaseTransientResources(); // 주 시점의 풀 · 기록, 렌더 타깃 목록, 캡처 — 다음 `ensureTransientResources` 가 다시 만든다
+        releaseViewTransparentOrder( _state._mainView );
+        _state._mainView._commandList.reset();
+        // 같은 자리에 새로 만든다 — 협력 객체(캡처의 풀 참조 · `FramePassExecutor::_pActiveView`)가 이 주소를 쥐고, 풀은 뮤텍스를 들어 옮길 수 없다.
+        // 멤버를 하나씩 되돌리지 않는다: 그 목록은 새 기록 멤버를 빠뜨린다(지터 순번이 그랬다 — 골든이 체인 위치에 따라 1.8 % 갈렸다).
+        _state._mainView.~FrameViewTarget();
+        sw_placement_new( &_state._mainView ) FrameViewTarget{};
+    }
+
     void FrameRenderer::releaseExtraView( FrameViewTarget& view )
     {
         _viewResources.releaseViewTransients( view );
