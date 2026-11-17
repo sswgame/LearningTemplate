@@ -659,7 +659,7 @@ namespace sw
         _passExecutor.applyViewShadowConstants( context, _state._mainView._shadow );
         _state.view( RenderViewType::Shadow ).setViewProjection( _state._mainView._shadow._cullViewProj );
 
-        beginViewHistory( _state._mainView );
+        _state._mainView.beginViewHistory();
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
         const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj, captureViewPassSceneState() );
@@ -693,16 +693,6 @@ namespace sw
         _state._postProcessTextures.pruneUnused();
         _postProcessMaterials.pruneUnused();
         _passExecutor.applyViewPassConstants( context, _state._mainView );
-    }
-
-    void FrameRenderer::beginViewHistory( FrameViewTarget& view )
-    {
-        view._bHistoryReset = ( view._bHasHistory == SW_FALSE || view._settings._bCut == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-        view._bHasHistory   = SW_TRUE;
-        // TAA 기록은 TAA 가 도는 프레임만 쓴다. 지난 프레임이 쓰지 않았으면 기록은 그 앞 화면이라 버린다 — 뷰 상태(후처리 켬)가 바뀐 첫 프레임이다.
-        // 지난 프레임에 TAA 가 돌았는지는 그 프레임의 패스 고르기(`applyViewPassSelection`)가 남긴 `_bTAAHistoryWritten` 하나다 — 실행도 같은 결과를 본다.
-        // 후처리 뒤의 효과(피사계 심도 · 모션 블러)가 켜지고 꺼지는 것은 TAA 뒤라 기록과 무관하다.
-        view._bTAAHistoryReset = ( view._bHistoryReset == SW_TRUE || view._bTAAHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
     }
 
     void FrameRenderer::ensurePassResources()
@@ -1085,6 +1075,10 @@ namespace sw
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
             prepareExtraView( listRequest[requestIndex] );
+            // 그리지 않는 프레임(갱신 주기 · 예산 · 숨음)을 적는다 — 다음에 그리는 프레임은 시간 누적 기록을 버린다(물체의 지난 행렬은 한 프레임 전 것이라 어긋난다).
+            FrameViewTarget& view = getOrCreateExtraView( listRequest[requestIndex]._viewID );
+            if ( view._bRenderThisFrame == SW_FALSE )
+                view.markFrameSkipped();
         }
 
         // 이번 요청에 없는 뷰(카메라가 사라졌다)는 놓는다. 남은 뷰의 컬링 칸은 목록 순서로 고정 칸 뒤에 붙는다 — 뷰마다 둘(시점, 그림자).
@@ -1212,7 +1206,7 @@ namespace sw
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
         (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
-        beginViewHistory( view );
+        view.beginViewHistory();
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
         (void)_viewResources.applyViewPassSelection( view, request._viewProj, captureViewPassSceneState() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );

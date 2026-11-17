@@ -347,11 +347,6 @@ namespace sw
         void applyViewTransparentOrder( FrameViewTarget& view );
         /** @brief 뷰 하나의 투명 순서 자원(순번 테이블, 슬롯 스트림)을 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransparentOrder( FrameViewTarget& view );
-        /**
-         * @brief 뷰의 이번 프레임 시간 누적 기록을 시작합니다 — 기록을 버릴지(`_bHistoryReset`: 이 풀로 처음 그리거나 컷)를 정하고 그렸다고 표시합니다.
-         * @details 셋업에서 뷰마다 프레임에 한 번 부른다(주 시점은 `updatePassConstants`, 추가 뷰는 `prepareExtraView`). 컬링(가림)이 기록 전에 돌므로 그리기 때(`applyViewProjection`)가 아니라 여기서 정한다.
-         */
-        void beginViewHistory( FrameViewTarget& view );
         /** @brief 트랜지언트 텍스처를 해제합니다. */
         void releaseTransientResources();
 

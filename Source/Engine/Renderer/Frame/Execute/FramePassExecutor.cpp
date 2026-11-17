@@ -499,9 +499,11 @@ namespace sw
     {
         // TAA 가 도는 뷰만 서브픽셀 지터를 래스터 행렬에 싣는다(언리얼 TAA · 유니티 URP/HDRP · Godot 의 Halton 지터). 지터 든 행렬은 이 함수 안에만 있다 —
         // 컬링 · 지난 뷰-투영(속도 기준)은 받은 @p viewProj(지터 없음)를 쓰고, 화면 속도는 셰이더가 `g_TemporalJitter` 를 빼서 물체 · 카메라 움직임만 남긴다.
-        const TransientAttachmentPool& pool      = view._transientPool;
-        const float2                   ndcJitter = view._bTAAHistoryWritten == SW_TRUE ? view._temporalJitter.advance( pool.getWidth(), pool.getHeight() ) : float2{};
-        const float4x4                 raster    = TemporalJitterSequence::applyToViewProjection( viewProj, ndcJitter );
+        const TransientAttachmentPool& pool = view._transientPool;
+        // 기록을 버리는 프레임(처음 · 컷 · 건너뛴 프레임 뒤)은 이번 원본만 남으므로 지터하지 않는다 — 한 장짜리 그림이 흔들리기만 한다.
+        const bool     bJitter   = view._bTAAHistoryWritten == SW_TRUE && view._bTAAHistoryReset == SW_FALSE;
+        const float2   ndcJitter = bJitter ? view._temporalJitter.advance( pool.getWidth(), pool.getHeight() ) : float2{};
+        const float4x4 raster    = TemporalJitterSequence::applyToViewProjection( viewProj, ndcJitter );
         context._passValues.setMatrix( passConstantNames()._viewProj, raster );
         // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다. 깊이는 지터 든 행렬로 그렸으므로 역행렬도 그것이다.

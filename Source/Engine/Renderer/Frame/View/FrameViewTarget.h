@@ -144,10 +144,28 @@ namespace sw
          *          `beginViewHistory` 가 `_bHistoryReset` 과 같은 자리에서 정한다(기능마다 따로 정하지 않는다).
          */
         uint8 _bTAAHistoryReset{ SW_TRUE };
+        uint8 _bFrameSkipped{ SW_FALSE };          ///< 지난번 그린 뒤 그리지 않은 프레임이 있었다(`markFrameSkipped`) — 다음 `beginViewHistory` 가 기록을 버린다
         uint8 _bTAAHistoryWritten{ SW_FALSE };     ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
         uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
         uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
         uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
         uint8 _bUpscaleThisFrame{ SW_FALSE };      ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
+
+        /**
+         * @brief 이번 프레임 시간 누적 기록을 시작합니다 — 기록을 버릴지(`_bHistoryReset`)를 정하고 그렸다고 표시합니다.
+         * @details 버리는 때: 이 풀로 처음 그린다 · 컷 · 지난번 그린 뒤 건너뛴 프레임이 있다(갱신 주기를 낮춘 CCTV — 뷰의 지난 뷰-투영은 몇 프레임 전인데 물체의 지난 행렬은
+         *          한 프레임 전이라 속도가 어긋난다. 언리얼 SceneCapture 처럼 매 프레임 그리지 않는 뷰는 시간 누적을 쓰지 않는다). 셋업에서 그리는 뷰마다 프레임에 한 번 부른다
+         *          (주 시점은 `FrameRenderer::updatePassConstants`, 추가 뷰는 `prepareExtraView`). 컬링(가림)이 기록 전에 돌므로 그리기 때(`applyViewProjection`)가 아니라 여기서 정한다.
+         *          TAA 기록은 지난 프레임이 TAA 를 돌지 않았어도 버린다(`_bTAAHistoryWritten` 은 지난 프레임의 패스 고르기 결과다) — 그 기록은 그 앞 화면이다.
+         */
+        void beginViewHistory()
+        {
+            _bHistoryReset    = ( _bHasHistory == SW_FALSE || _settings._bCut == SW_TRUE || _bFrameSkipped == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+            _bHasHistory      = SW_TRUE;
+            _bFrameSkipped    = SW_FALSE;
+            _bTAAHistoryReset = ( _bHistoryReset == SW_TRUE || _bTAAHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        }
+        /** @brief 이번 프레임에 이 뷰를 그리지 않습니다 — 다음에 그리는 프레임은 시간 누적 기록을 버립니다. */
+        void markFrameSkipped() { _bFrameSkipped = SW_TRUE; }
     };
 } // namespace sw
