@@ -712,6 +712,9 @@ namespace sw
         {
             pBackend->wake();
         } ) );
+        // 백엔드 스레드는 이미 돈다 — 띄운 뒤 위 묶기 전에 들어온 요청은 아무도 깨우지 않았다(IOCP 스레드는 완료 포트에서 INFINITE 로 잔다).
+        // 기동 직후 텍스처 로더 열다섯이 모두 그 요청을 기다리며 멈췄다(shooter3d dx11 자식, 죽이기 전 덤프). 묶은 뒤 한 번 깨워 그 사이 쌓인 것을 꺼내게 한다.
+        pBackend->wake();
         _backend = std::move( backend );
         SW_LOG_INFO_ID( "AsyncFileIO.AsyncFileIOStarted", "Async file IO started (backend %#)", getBackendName( _backend->getKind() ) );
         return true;
