@@ -49,7 +49,7 @@ SW_TEST_CASE( EditorSiblingOrderTest, MoveRecordsOneObject )
     {
         sw::GameObject* pObject = manager.createGameObject( sw::hashed_string( pName ) );
         SW_REQUIRE_NOT_NULL( pObject );
-        pObject->setSiblingOrder( static_cast<sw::uint32>( listSibling.size() + 1 ) * sw::editor::SiblingOrderKey::kAppendStep );
+        pObject->setSiblingOrder( static_cast<uint32>( listSibling.size() + 1 ) * sw::editor::SiblingOrderKey::kAppendStep );
         listSibling.push_back( pObject );
     }
     sw::GameObject* pMoved = listSibling[3];
@@ -57,7 +57,7 @@ SW_TEST_CASE( EditorSiblingOrderTest, MoveRecordsOneObject )
 
     sw::vector<Order::SiblingOrderEdit> listEdit;
     Order::planKeys( listSibling, 1, listEdit );
-    SW_REQUIRE_EQUAL( static_cast<sw::uint32>( listEdit.size() ), 1u );
+    SW_REQUIRE_EQUAL( static_cast<uint32>( listEdit.size() ), 1u );
     SW_EXPECT_TRUE( listEdit[0]._pObject == pMoved );
     Internal::applyEdits( listEdit );
 
@@ -92,7 +92,7 @@ SW_TEST_CASE( EditorSiblingOrderTest, TiesKeepObjectIDOrder )
     Internal::moveInList( listSibling, pMoved, 0 ); // C 를 맨 앞으로
     sw::vector<Order::SiblingOrderEdit> listEdit;
     Order::planKeys( listSibling, 0, listEdit );
-    SW_EXPECT_EQUAL( static_cast<sw::uint32>( listEdit.size() ), 3u ); // 같은 키 사이에는 틈이 없다 — 다시 편다
+    SW_EXPECT_EQUAL( static_cast<uint32>( listEdit.size() ), 3u ); // 같은 키 사이에는 틈이 없다 — 다시 편다
     Internal::applyEdits( listEdit );
     listSorted = listSibling;
     Order::sortSiblings( listSorted );

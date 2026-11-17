@@ -170,7 +170,7 @@ SW_TEST_CASE( MeshIndicesTest, CPUViewReadsKeptVertices )
     sw::vector<sw::RHIVertex>      listVertex( 3 );
     listVertex[1]._arrPosition[0] = 1.0f;
     listVertex[2]._arrPosition[1] = 1.0f;
-    SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), sw::vector<sw::uint32>{ 0, 1, 2 } ) );
+    SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), sw::vector<uint32>{ 0, 1, 2 } ) );
     SW_EXPECT_TRUE( mesh->getCPUAccess() == sw::MeshCPUAccess::Keep );
     const sw::MeshCPUView view = mesh->getCPUView();
     SW_EXPECT_TRUE( view.isAvailable() );

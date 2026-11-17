@@ -999,7 +999,7 @@ namespace sw
     bool AutomationRunner::holdClockForScreenshot( InputManager& input )
     {
         const ScreenshotRequestQueue* const pMailbox        = engine::findSubsystem<ScreenshotRequestQueue>();
-        const bool                          bWaitsForPacket = _run.hasPendingScreenshot() || ( pMailbox != nullptr && pMailbox->isPacketSlotFree() == false );
+        const bool                          bWaitsForPacket = _run.hasQueuedScreenshot() || ( pMailbox != nullptr && pMailbox->isPacketSlotFree() == false );
         if ( bWaitsForPacket == false || _scenario.hasFrameStartJobAt( _run._nextStepIndex, _run._frameIndex ) == false )
             return false;
         _run._bClockHeld = SW_TRUE; // 다음 프레임의 `holdClockForBackgroundJobs` 가 푼다

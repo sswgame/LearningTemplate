@@ -144,7 +144,7 @@ namespace sw
                 string_view       value = StringUtil::trim( text.substr( opPos + 2 ) );
                 int64             number{ 0 };
                 if ( StringUtil::parseInt64( value, number ) )
-                    return "static_cast<::sw::int64>( " + read + " ) " + string( op ) + " " + string( value );
+                    return "static_cast<::int64>( " + read + " ) " + string( op ) + " " + string( value );
                 // 한정해 적어도(`Mode::Orbit`) 끝 이름을 칸의 타입으로 다시 한정한다 — 적은 한정자가 다른 열거형이어도 칸과 맞춘다.
                 value = ParserUtil::scopeLeaf( value );
                 return read + " " + string( op ) + " ::std::decay_t<decltype( " + read + " )>::" + string( value );
@@ -814,7 +814,7 @@ namespace sw
             {
                 // 상수가 0 이면 "함수 상한 없음" 과 구별되지 않는다 — 컴파일에서 멈춘다.
                 fillEmit.linef( "static_assert( ( %# ) >= 1, \"MaxCallsPerSecond must be at least 1\" );", method._maxCallsPerSecondName );
-                fillEmit.linef( "m._maxCallsPerSecond = static_cast<::sw::uint32>( %# );", method._maxCallsPerSecondName );
+                fillEmit.linef( "m._maxCallsPerSecond = static_cast<::uint32>( %# );", method._maxCallsPerSecondName );
             }
             fillEmit.flagIf( bConstructor, "m._bConstructor", "SW_TRUE" );
             fillEmit.flagIf( method._bStatic != SW_FALSE, "m._bStatic", "SW_TRUE" );

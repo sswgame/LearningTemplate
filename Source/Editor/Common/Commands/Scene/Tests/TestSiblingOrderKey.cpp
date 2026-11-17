@@ -13,14 +13,14 @@
  */
 SW_TEST_CASE( SiblingOrderKeyTest, BetweenBisects )
 {
-    using Key                             = sw::editor::SiblingOrderKey;
-    const sw::optional<sw::uint32> middle = Key::between( 100u, 200u );
+    using Key                         = sw::editor::SiblingOrderKey;
+    const sw::optional<uint32> middle = Key::between( 100u, 200u );
     SW_REQUIRE_TRUE( middle.has_value() );
     SW_EXPECT_EQUAL( *middle, 150u );
-    const sw::optional<sw::uint32> front = Key::between( sw::nullopt, 3u );
+    const sw::optional<uint32> front = Key::between( sw::nullopt, 3u );
     SW_REQUIRE_TRUE( front.has_value() );
     SW_EXPECT_TRUE( *front < 3u );
-    const sw::optional<sw::uint32> farFront = Key::between( sw::nullopt, Key::kAppendStep * 3 );
+    const sw::optional<uint32> farFront = Key::between( sw::nullopt, Key::kAppendStep * 3 );
     SW_REQUIRE_TRUE( farFront.has_value() );
     SW_EXPECT_EQUAL( *farFront, Key::kAppendStep * 2 );
 }
@@ -35,11 +35,11 @@ SW_TEST_CASE( SiblingOrderKeyTest, ExhaustedGapAsksRespace )
     SW_EXPECT_FALSE( Key::between( 0u, 0u ).has_value() ); // 옛 씬의 같은 번호
     SW_EXPECT_FALSE( Key::between( 9u, 4u ).has_value() );
     SW_EXPECT_FALSE( Key::between( sw::nullopt, 0u ).has_value() );
-    SW_EXPECT_FALSE( Key::between( std::numeric_limits<sw::uint32>::max(), sw::nullopt ).has_value() );
+    SW_EXPECT_FALSE( Key::between( std::numeric_limits<uint32>::max(), sw::nullopt ).has_value() );
 
-    sw::vector<sw::uint32> listKey;
+    sw::vector<uint32> listKey;
     Key::spread( 5u, listKey );
-    SW_REQUIRE_EQUAL( static_cast<sw::uint32>( listKey.size() ), 5u );
+    SW_REQUIRE_EQUAL( static_cast<uint32>( listKey.size() ), 5u );
     for ( size_t index = 1; index < listKey.size(); ++index )
         SW_EXPECT_TRUE( listKey[index] - listKey[index - 1] >= 2u ); // 다시 편 뒤에는 이웃 사이마다 틈이 있다
     SW_EXPECT_TRUE( listKey.front() > 0u );                          // 맨 앞에도 넣을 틈이 있다
@@ -53,8 +53,8 @@ SW_TEST_CASE( SiblingOrderKeyTest, AppendKeepsStep )
     using Key = sw::editor::SiblingOrderKey;
     SW_EXPECT_EQUAL( *Key::between( sw::nullopt, sw::nullopt ), Key::kAppendStep );
     SW_EXPECT_EQUAL( *Key::between( Key::kAppendStep, sw::nullopt ), Key::kAppendStep * 2 );
-    constexpr sw::uint32           kNearEnd = std::numeric_limits<sw::uint32>::max() - 10u;
-    const sw::optional<sw::uint32> tail     = Key::between( kNearEnd, sw::nullopt );
+    constexpr uint32           kNearEnd = std::numeric_limits<uint32>::max() - 10u;
+    const sw::optional<uint32> tail     = Key::between( kNearEnd, sw::nullopt );
     SW_REQUIRE_TRUE( tail.has_value() );
     SW_EXPECT_TRUE( *tail > kNearEnd );
 }
