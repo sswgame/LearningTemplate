@@ -8,11 +8,11 @@
 -->
 <Scenario name="game.empty.mountslope" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/mountslope.scene.xml"/>
-	<Wait frames="20"/>
+	<AdvanceSimulation frames="20"/> <!-- 말이 땅에 서는 20 프레임 -->
 	<!-- 의도는 월드 방향이다 — 둘 다 +Z(비탈 위쪽)를 본다 -->
 	<Intent pawn="HorseFlat" move="0,1" frames="420"/>
 	<Intent pawn="HorseHill" move="0,1" frames="420"/>
-	<Wait frames="360"/>
+	<AdvanceSimulation frames="360"/> <!-- 6 초 달린다(속도 · 오른 높이가 시간의 결과 — 시간이 내용) -->
 	<Expect watch="Mount.Gait" target="HorseFlat" equals="3"/>
 	<Expect watch="Mount.Gait" target="HorseHill" equals="3"/>
 	<Expect watch="Mount.Speed" target="HorseFlat" near="8" tolerance="0.05"/>

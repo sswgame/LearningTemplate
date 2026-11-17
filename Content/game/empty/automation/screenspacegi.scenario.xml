@@ -14,7 +14,6 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Wait frames="120"/>
 	<Screenshot file="screenspacegi.ppm"/>
-	<Wait frames="10"/>
 	<ExpectImage file="screenspacegi.ppm" golden="screenspacegi"/>
 	<Pass/>
 </Scenario>

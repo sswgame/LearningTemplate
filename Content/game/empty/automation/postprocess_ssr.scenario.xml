@@ -12,25 +12,32 @@
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<Wait frames="40"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="ppssr_off.ppm"/>
 
 	<DevCommand line="scene.layer SSR on"/>
-	<Wait frames="10"/>
+	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="ppssr_on.ppm"/>
 	<DevCommand line="scene.layer SSR off"/>
-	<Wait frames="10"/>
+	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="ppssr_back.ppm"/>
 
 	<DevCommand line="scene.layer BloomLamp on"/>
-	<Wait frames="10"/>
+	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="ppssr_lamp.ppm"/>
 	<DevCommand line="scene.layer LensFlare on"/>
-	<Wait frames="10"/>
+	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="ppssr_flare.ppm"/>
 
-	<Wait frames="5"/>
 	<ExpectImagesDiffer first="ppssr_off.ppm" second="ppssr_on.ppm" region="0,0.5,1,1" minDiffering="0.05"/>
 	<ExpectImagesDiffer first="ppssr_off.ppm" second="ppssr_back.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.001"/>
 	<ExpectImagesDiffer first="ppssr_lamp.ppm" second="ppssr_flare.ppm" region="0,0,1,1" minDiffering="0.02"/>

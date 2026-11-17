@@ -16,30 +16,29 @@
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<Wait frames="40"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="settled.ppm"/>
 
 	<!-- 켬: 정지 → 한 걸음(움직이는 사진) → 정지(멈춘 사진) -->
 	<Wait frames="20"/>
 	<Variable name="gv_motionBlur" value="1"/>
 	<DevCommand line="teleport GameCamera 0 1.6 -6"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 카메라가 출발점에 그려진 채 서 있다(다음 순간이동이 한 걸음 움직임이 된다) -->
 	<DevCommand line="teleport GameCamera 0.25 1.6 -6"/>
 	<Screenshot file="moving_on.ppm" waitForStability="false"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="still_on.ppm" waitForStability="false"/>
 
 	<!-- 끔: 같은 순서를 64 프레임 뒤에 -->
 	<Wait frames="4"/>
 	<Variable name="gv_motionBlur" value="0"/>
 	<DevCommand line="teleport GameCamera 0 1.6 -6"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 카메라가 출발점에 그려진 채 서 있다(다음 순간이동이 한 걸음 움직임이 된다) -->
 	<DevCommand line="teleport GameCamera 0.25 1.6 -6"/>
 	<Screenshot file="moving_off.ppm" waitForStability="false"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="still_off.ppm" waitForStability="false"/>
 
-	<Wait frames="6"/>
 	<ExpectImage file="moving_on.ppm" golden="moving_on" region="0.05,0.15,0.95,0.75"/>
 	<ExpectImage file="still_on.ppm" golden="still_on" region="0.05,0.15,0.95,0.75"/>
 	<Variable name="gv_motionBlur" value="1"/>

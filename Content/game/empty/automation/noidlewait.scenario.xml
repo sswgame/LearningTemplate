@@ -7,13 +7,13 @@
 -->
 <Scenario name="game.empty.noidlewait" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 시작 렌더가 자리 잡은 뒤의 GPU 대기 수를 기준으로 둔다 -->
 	<Store watch="RHI.GPUIdleWaits" as="beforeLoad"/>
 	<LoadScene path="game/empty/maps/fogshowcase.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 씬 교체 뒤 렌더가 자리 잡을 때까지 GPU 대기가 없었다 -->
 	<Expect watch="RHI.GPUIdleWaits" sameAs="beforeLoad"/>
 	<Pass/>
 </Scenario>
