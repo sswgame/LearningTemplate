@@ -11,6 +11,7 @@
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Renderer/Frame/View/RenderStability.h"
 
 namespace sw::editor
 {
@@ -66,6 +67,12 @@ namespace sw::editor
             return readRenderTargetPanelValue( 0, outValue );
         }
 
+        /** @brief `Editor.RenderTargetSnapshotReady` 의 활동 수 — 그린 프레임 수입니다. 되읽기는 GPU 가 프레임을 넘겨야 도착한다 — 그리기가 멈추면 스냅숏도 오지 않는다. */
+        [[nodiscard]] uint64 readRenderTargetActivity( const GameObjectManager* /*pManager*/ )
+        {
+            return RenderPresentCounter::read();
+        }
+
         [[nodiscard]] bool readRenderTargetSelectedDepth( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             return readRenderTargetPanelValue( 1, outValue );
@@ -93,7 +100,7 @@ namespace sw::editor
     } // namespace
 
     SW_AUTOMATION_WALL_WATCH( editorRenderTargetSnapshotReady, "Editor.RenderTargetSnapshotReady", "1 when the Render Targets panel holds a CPU snapshot of the picked target",
-                              &readRenderTargetSnapshotReady );
+                              &readRenderTargetSnapshotReady, &readRenderTargetActivity );
     SW_AUTOMATION_WATCH( editorRenderTargetSelectedDepth, "Editor.RenderTargetSelectedDepth", "1 when the Render Targets panel shows a depth attachment",
                          &readRenderTargetSelectedDepth );
     SW_AUTOMATION_WATCH( editorRenderTargetChannel, "Editor.RenderTargetChannel", "Channel the Render Targets panel shows: 0 RGBA, 1 R, 2 G, 3 B, 4 A",

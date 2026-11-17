@@ -85,6 +85,7 @@ namespace sw
         , _pHeldStateStep{ nullptr }
         , _holdFrameCount{ 0 }
         , _holdStartSeconds{ 0.0 }
+        , _wallStallClock{}
         , _clockHoldFrameCount{ 0 }
         , _seenFrameCount{ 0 }
         , _waitReportedSeconds{ 0.0 }
@@ -1061,7 +1062,7 @@ namespace sw
         const AutomationStepHold                       hold           = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds, waitingFor )
                                                                                               : holdUntilReady( step, input, bReady, timeoutFrames, waitingFor );
         if ( hold == AutomationStepHold::Hold )
-            return true;
+            return holdWhileWallWatchActive( step );
         // 처음부터 참이던 조건도 남긴다 - 고정 대기를 조건 대기로 바꿀 때 "기다리지 않고 지나간" 단언(일어나지 않음을 보는 부정형일 수 있다)을 가려낸다.
         if ( bReady && heldFrameCount == 0 )
             SW_LOG_INFO_ID( "Automation.AlreadyTrue", "[Scenario] %# was already true", step.describe().c_str() );
@@ -1073,6 +1074,41 @@ namespace sw
             giveUpWait( step, AutomationFailureKind::WaitTimeout, textBuilder.view(), "WaitUntil " + ( pWatch != nullptr ? *pWatch : string() ) );
         }
         return false;
+    }
+
+    bool AutomationRunner::holdWhileWallWatchActive( const AutomationStep& step )
+    {
+        // 벽시계 감시 값만 활동 수를 낸다(`SW_AUTOMATION_WALL_WATCH`) — 프레임 감시 값의 대기는 시한만 본다(DesignBacklog D2-3).
+        const string*                      pWatch        = step.findAttribute( "watch" );
+        const AutomationWatchRegistration* pRegistration = pWatch != nullptr ? AutomationWatchRegistry::find( *pWatch ) : nullptr;
+        if ( pRegistration == nullptr || pRegistration->_pActivityFunction == nullptr )
+            return true;
+        const AutomationRunPolicy* pPolicy = loadRunPolicy( step );
+        if ( pPolicy == nullptr )
+            return false;
+        const uint64  activity         = pRegistration->_pActivityFunction( findActiveObjectManager() );
+        const float64 unchangedSeconds = _run._wallStallClock.advance( pRegistration->_pName, activity, readNowSecondsWithoutCompile() ); // 시한(`holdUntilReadyWithin`)과 같은 시계
+        if ( unchangedSeconds < scaleWallSeconds( static_cast<float32>( pPolicy->_stallWallSeconds ) ) )
+            return true;
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "WaitUntil stalled - %# made no progress (activity %#) for %# s", pRegistration->_pName, activity, static_cast<uint32>( unchangedSeconds ) );
+        giveUpWait( step, AutomationFailureKind::WaitStalled, textBuilder.view(), "WaitUntil " + *pWatch );
+        return false;
+    }
+
+    const AutomationRunPolicy* AutomationRunner::loadRunPolicy( const AutomationStep& step )
+    {
+        if ( _runPolicy.has_value() == false )
+        {
+            const expected<AutomationRunPolicy> runPolicy = AutomationRunPolicy::load();
+            if ( runPolicy.has_value() == false )
+            {
+                finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, AutomationStep::describeReason( runPolicy.error() ), step.describe() ) );
+                return nullptr;
+            }
+            _runPolicy = *runPolicy;
+        }
+        return &*_runPolicy;
     }
 
     void AutomationRunner::giveUpWait( const AutomationStep& step, AutomationFailureKind kind, string_view reason, string_view repeatKey )

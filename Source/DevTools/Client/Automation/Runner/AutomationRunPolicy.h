@@ -1,6 +1,6 @@
 /**
  * @file AutomationRunPolicy.h
- * @brief 시나리오 실행의 대기 정책(`Config/Dev/ScenarioRun.json`)입니다 — 정지 시한(`_stallFrames`) · 반복 실패 차단(`_repeatedFailureLimit`) · 정착 조건의 문턱(`_conditions`).
+ * @brief 시나리오 실행의 대기 정책(`Config/Dev/ScenarioRun.json`)입니다 — 정지 시한(`_stallFrames` · `_stallWallSeconds`) · 반복 실패 차단(`_repeatedFailureLimit`) · 정착 조건의 문턱(`_conditions`).
  * @details 정착 조건의 문턱은 조건을 등록한 기능이 제 칸을 읽는다(`AutomationStepRegistry::configureConditions`) — 이 구조체에 칸을 더하지 않는다.
  *          칸이 하나라도 없거나 범위 밖이면 읽기가 오류다(기본값이 없다). 상용 엔진 비교: Gauntlet 의 하트비트 간격 · 테스트 설정 파일 자리.
  */
@@ -24,6 +24,11 @@ namespace sw
          * @details 그린 프레임으로 센다 — 장치를 다시 만드는 동안처럼 그리지 않는 프레임은 조건이 나아갈 기회가 없다.
          */
         uint32 _stallFrames{ 0 };
+        /**
+         * @brief 벽시계 감시 값(`SW_AUTOMATION_WALL_WATCH`)을 기다리는 `<WaitUntil timeoutWallSeconds>` 는 그 활동 수가 이만큼의 초(컴파일을 뺀 시계 · `gv_scenarioWallScale` 배율) 동안 그대로면 `WaitStalled` 로 진다(1 이상).
+         * @details 바깥 일은 프레임이 실시간보다 빨리 돌아 프레임으로 셀 수 없다. 시한(`timeoutWallSeconds`)은 나아가고 있는 일의 상한으로만 남는다.
+         */
+        uint32 _stallWallSeconds{ 0 };
         /** @brief 한 체인에서 같은 대기 실패(종류 + 단계 + 감시 값 · 조건 이름)가 이만큼 나오면 체인을 `RepeatedFailure` 로 멈춘다(1 이상). */
         uint32 _repeatedFailureLimit{ 0 };
 

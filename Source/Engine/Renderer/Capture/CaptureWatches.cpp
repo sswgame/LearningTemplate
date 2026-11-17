@@ -23,6 +23,12 @@ namespace sw
             return true;
         }
 
+        /** @brief `Assets.Pending` 의 활동 수 — 남은 일 수 그 자체입니다(로드 · 업로드 · PSO 하나가 끝날 때마다 바뀐다). */
+        [[nodiscard]] uint64 readAssetsActivity( const GameObjectManager* pManager )
+        {
+            return AutomationCaptureUtil::countPendingJobs( pManager );
+        }
+
         /** @brief 받았지만 아직 쓰지 않은 스크린샷(에디터 툴바 · 개발 명령 `screenshot` · 패킷 사진)이 있으면 진행 중입니다 — 시나리오가 그 파일 · 로그를 보기 전에 끝나게 한다. */
         AutomationReadiness readScreenshotRequests()
         {
@@ -32,6 +38,6 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_WALL_WATCH( assetsPending, "Assets.Pending", "Meshes still loading, waiting for animation or dithering in, plus textures still loading or uploading and batches waiting for their material PSO (0 = settled)",
-                              &readAssetsPending );
+                              &readAssetsPending, &readAssetsActivity );
     SW_AUTOMATION_FINISH_BLOCKER( screenshotRequests, "ScreenshotRequests", &readScreenshotRequests );
 } // namespace sw

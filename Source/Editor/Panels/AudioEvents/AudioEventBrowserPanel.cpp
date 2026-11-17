@@ -99,6 +99,13 @@ namespace sw::editor
                 outValue = static_cast<float64>( pAudio->getEngine().getStats()._playedEventCount );
                 return true;
             }
+
+            /** @brief `Editor.AudioEventsPlayed` 의 활동 수 — 오디오 스레드가 지금까지 렌더한 프레임 수입니다(게시가 멈추면 값도 멈춘다). */
+            [[nodiscard]] static uint64 readAudioActivity( const GameObjectManager* /*pManager*/ )
+            {
+                IAudioService* pAudio = AudioEventBrowserUtil::findAudioService();
+                return pAudio != nullptr && pAudio->isInitialized() ? pAudio->getEngine().getStats()._renderedFrameCount : 0u;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -460,6 +467,6 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorAudioEventEditCount, "Editor.AudioEventEditCount", "Events in the library copy the Audio Events window edits (0 while not editing)",
                          &AudioEventBrowserPanelInternal::readEditCount );
     SW_AUTOMATION_WALL_WATCH( editorAudioEventsPlayed, "Editor.AudioEventsPlayed", "Audio events the audio thread admitted, as it last published (follows the audio thread)",
-                              &AudioEventBrowserPanelInternal::readPlayedCount );
+                              &AudioEventBrowserPanelInternal::readPlayedCount, &AudioEventBrowserPanelInternal::readAudioActivity );
     SW_EDITOR_COMMAND( AudioEventBrowserOpen, "window.audioEvents", &AudioEventBrowserPanelInternal::openPanel, nullptr, NoScene );
 } // namespace sw::editor

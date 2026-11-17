@@ -101,7 +101,8 @@ namespace sw
 
     SW_AUTOMATION_WATCH( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &readSceneObjectCount );
     SW_AUTOMATION_WATCH( sceneCameraYaw, "Scene.CameraYaw", "Yaw (degrees) the active scene's game camera looks along (world +Z is 0, toward +X is positive)", &readSceneCameraYaw );
-    SW_AUTOMATION_WALL_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning );
+    // 활동 수 없음: 비동기 씬 로드는 워커 잡 하나가 다 지은 씬을 끝에 넘긴다 — 프리로드 진행(`SceneManager::tryGetLoadProgress`)은 쿠킹한 프리로드 목록이 있을 때만 있어 Dev 실행에서는 낼 수 없다.
+    SW_AUTOMATION_WALL_WATCH( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight", &readSceneTransitioning, nullptr );
     SW_AUTOMATION_WATCH( sceneTransformHash, "Scene.TransformHash", "Order-independent hash of every object's name and world position (1 mm) - equal across backends",
                          &readSceneTransformHash );
 } // namespace sw

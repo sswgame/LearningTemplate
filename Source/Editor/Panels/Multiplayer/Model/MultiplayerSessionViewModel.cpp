@@ -101,6 +101,16 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `Editor.NetPlayStopping` 의 활동 수 — 끝나 거둔 세션 프로세스 수입니다(하나씩 끝날 때마다 오른다). */
+            [[nodiscard]] static uint64 readStoppingActivity( const GameObjectManager* /*pManager*/ )
+            {
+                const EditorNetPlaySession* pSession = MultiplayerSessionViewModel::findSession();
+                uint64                      exited   = 0;
+                for ( int32 processIndex = 0; pSession != nullptr && processIndex < pSession->getProcessCount(); ++processIndex )
+                    exited += pSession->getProcessStatus( processIndex )._bRunning ? 0u : 1u;
+                return exited;
+            }
+
             /**
              * @brief `netplay.stop` — 모두에 정상 종료를 알리고 멈춤을 시작합니다(기다리지 않는다).
              * @details 끝은 감시 값 `Editor.NetPlayStopping` == 0 이고, 그때 `Multiplayer session stopped` 줄(합친 트레이스 경로)이 남는다.
@@ -165,10 +175,11 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorNetPlayProcessCount, "Editor.NetPlayProcessCount", "Processes of the running multiplayer session (server and clients, 0 when stopped)",
                          &MultiplayerSessionViewModelInternal::readProcessCount );
     SW_AUTOMATION_WALL_WATCH( editorNetPlayStopping, "Editor.NetPlayStopping", "1 while a stopped multiplayer session is still reaping its processes and merging traces",
-                              &MultiplayerSessionViewModelInternal::readStopping );
+                              &MultiplayerSessionViewModelInternal::readStopping, &MultiplayerSessionViewModelInternal::readStoppingActivity );
+    // 활동 수 없음: 답 하나(`state.objectline`)가 오는 사건을 기다린다 — 묻고 답이 올 때까지 셀 진척이 없다.
     SW_AUTOMATION_WALL_WATCH( editorNetPlayObjectHashReports, "Editor.NetPlayObjectHashReports",
                               "state.objectline replies received from the session's processes so far (remember it, send the command, wait until it differs)",
-                              &MultiplayerSessionViewModelInternal::readObjectHashReports );
+                              &MultiplayerSessionViewModelInternal::readObjectHashReports, nullptr );
     SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server and have not lost it since",
                          &MultiplayerSessionViewModelInternal::readConnectedClients );
     SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>] [scene=<resource path>]", "Start the editor's multi-process play session",

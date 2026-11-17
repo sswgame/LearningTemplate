@@ -739,6 +739,8 @@ namespace sw
 
     SW_AUTOMATION_WATCH( saveWritten, "Save.Written", "Game state save slots written successfully by the running game", &GameInstanceInternal::readSlotCount<true> );
     // 막기는 씬 로드(워커)와 세이브 읽기(저장소)의 끝을 따르므로 벽시계 감시 값이다.
-    SW_AUTOMATION_WALL_WATCH( saveBlocked, "Save.Blocked", "1 while the running game's save gate refuses saving (scene loading, broken restore, cutscene)", &GameInstanceInternal::readSaveBlocked );
+    // 활동 수 없음: 저장 잠금은 게임 상태(씬 로드 · 깨진 복원 · 컷신)가 풀어 주는 문이다 — 셀 수 있는 일의 양이 아니다.
+    SW_AUTOMATION_WALL_WATCH( saveBlocked, "Save.Blocked", "1 while the running game's save gate refuses saving (scene loading, broken restore, cutscene)", &GameInstanceInternal::readSaveBlocked,
+                              nullptr );
     SW_AUTOMATION_WATCH( saveLoaded, "Save.Loaded", "Game state save slots read and restored successfully by the running game", &GameInstanceInternal::readSlotCount<false> );
 } // namespace sw

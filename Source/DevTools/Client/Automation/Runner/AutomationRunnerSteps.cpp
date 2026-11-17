@@ -675,17 +675,9 @@ namespace sw
          */
         static AutomationStepHold holdForRenderStable( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
         {
-            // 정책 · 문턱은 처음 기다릴 때 읽는다(실행기마다 한 번 — 뒤에 올라온 모듈의 조건도 문턱을 받는다). 없으면 읽기 오류다(기본값이 없다).
-            if ( runner._runPolicy.has_value() == false )
-            {
-                const expected<AutomationRunPolicy> runPolicy = AutomationRunPolicy::load();
-                if ( runPolicy.has_value() == false )
-                {
-                    runner.finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, AutomationStep::describeReason( runPolicy.error() ), step.describe() ) );
-                    return AutomationStepHold::Skip;
-                }
-                runner._runPolicy = *runPolicy;
-            }
+            const AutomationRunPolicy* pPolicy = runner.loadRunPolicy( step );
+            if ( pPolicy == nullptr )
+                return AutomationStepHold::Skip;
             const uint32                     pendingJobCount = AutomationCaptureUtil::countPendingJobs( runner.findActiveObjectManager() );
             const AutomationWaitingCondition condition       = AutomationStepRegistry::findStabilityCondition();
             if ( pendingJobCount == 0 && condition.isWaiting() == false )
@@ -701,7 +693,7 @@ namespace sw
             }
             const string conditionName = condition.isWaiting() ? string( condition._pName ) : string( "Assets.Pending" );
             const string repeatKey     = string( step._kind ) + " " + conditionName;
-            if ( runner._run._stabilityStallClock.getUnchangedCount() >= runner._runPolicy->_stallFrames )
+            if ( runner._run._stabilityStallClock.getUnchangedCount() >= pPolicy->_stallFrames )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "the render did not settle - %# made no progress for %# drawn frame(s): %#", conditionName.c_str(), runner._run._stabilityStallClock.getUnchangedCount(),

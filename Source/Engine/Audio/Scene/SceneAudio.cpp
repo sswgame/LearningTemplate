@@ -94,6 +94,20 @@ namespace sw
                 outValue = static_cast<float64>( pEngine->getClipStore().getCachedBytes() );
                 return true;
             }
+
+            /** @brief `Audio.InstanceCount` 의 활동 수 — 오디오 스레드가 지금까지 렌더한 프레임 수입니다(게시가 멈추면 값도 멈춘다). */
+            [[nodiscard]] static uint64 readAudioActivity( const GameObjectManager* pManager )
+            {
+                const AudioEngine* pEngine = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioEngine() : nullptr;
+                return pEngine != nullptr ? pEngine->getStats()._renderedFrameCount : 0u;
+            }
+
+            /** @brief `Audio.ClipCacheBytes` 의 활동 수 — 디코드해 캐시에 든 바이트 그 자체입니다(워커가 디코드를 넣을 때마다 바뀐다). */
+            [[nodiscard]] static uint64 readClipCacheActivity( const GameObjectManager* pManager )
+            {
+                const AudioEngine* pEngine = pManager != nullptr ? pManager->getSubsystem<SceneAudio>().findAudioEngine() : nullptr;
+                return pEngine != nullptr ? pEngine->getClipStore().getCachedBytes() : 0u;
+            }
         };
     } // namespace
 } // namespace sw
@@ -104,9 +118,10 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( audioEmitterDistance, "Audio.EmitterDistance", "Distance from the listener to where the target emitter sounds (m); 0 inside an ambient volume", &SceneAudioInternal::readEmitterDistance, true,
                                false );
     // 오디오 스레드가 명령을 옮겨야 값이 바뀐다 — 벽시계 시한으로 기다린다.
-    SW_AUTOMATION_WALL_WATCH( audioInstanceCount, "Audio.InstanceCount", "Sound event instances alive in the audio engine", &SceneAudioInternal::readInstanceCount );
+    SW_AUTOMATION_WALL_WATCH( audioInstanceCount, "Audio.InstanceCount", "Sound event instances alive in the audio engine", &SceneAudioInternal::readInstanceCount, &SceneAudioInternal::readAudioActivity );
     // 디코드 결과는 워커가 넣는다 — 같은 까닭으로 벽시계 시한이다.
-    SW_AUTOMATION_WALL_WATCH( audioClipCacheBytes, "Audio.ClipCacheBytes", "Decoded bytes held by the audio clip cache", &SceneAudioInternal::readClipCacheBytes );
+    SW_AUTOMATION_WALL_WATCH( audioClipCacheBytes, "Audio.ClipCacheBytes", "Decoded bytes held by the audio clip cache", &SceneAudioInternal::readClipCacheBytes,
+                              &SceneAudioInternal::readClipCacheActivity );
 } // namespace sw
 
 namespace sw

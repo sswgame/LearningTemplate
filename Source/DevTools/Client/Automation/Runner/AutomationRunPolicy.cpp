@@ -15,16 +15,18 @@ namespace sw
         JSONDocument document;
         if ( document.parse( jsonText, sourceName ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the scenario run policy is not JSON", sourceName } );
-        const JSONValue        root           = document.getRoot();
-        const optional<uint32> stallFrames    = root.readRequired<uint32>( "_stallFrames" );
-        const optional<uint32> repeatedLimit  = root.readRequired<uint32>( "_repeatedFailureLimit" );
-        const bool             bHasConditions = root.has( "_conditions" ) && root.get( "_conditions" ).getType() == JSONType::Object;
-        if ( stallFrames.has_value() == false || repeatedLimit.has_value() == false || bHasConditions == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the scenario run policy needs _stallFrames, _repeatedFailureLimit and the _conditions object", sourceName } );
-        if ( *stallFrames == 0 || *repeatedLimit == 0 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the scenario run policy is out of range (_stallFrames and _repeatedFailureLimit are 1 or more)", sourceName } );
+        const JSONValue        root             = document.getRoot();
+        const optional<uint32> stallFrames      = root.readRequired<uint32>( "_stallFrames" );
+        const optional<uint32> stallWallSeconds = root.readRequired<uint32>( "_stallWallSeconds" );
+        const optional<uint32> repeatedLimit    = root.readRequired<uint32>( "_repeatedFailureLimit" );
+        const bool             bHasConditions   = root.has( "_conditions" ) && root.get( "_conditions" ).getType() == JSONType::Object;
+        if ( stallFrames.has_value() == false || stallWallSeconds.has_value() == false || repeatedLimit.has_value() == false || bHasConditions == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the scenario run policy needs _stallFrames, _stallWallSeconds, _repeatedFailureLimit and the _conditions object", sourceName } );
+        if ( *stallFrames == 0 || *stallWallSeconds == 0 || *repeatedLimit == 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the scenario run policy is out of range (_stallFrames, _stallWallSeconds and _repeatedFailureLimit are 1 or more)", sourceName } );
         AutomationRunPolicy policy;
         policy._stallFrames          = *stallFrames;
+        policy._stallWallSeconds     = *stallWallSeconds;
         policy._repeatedFailureLimit = *repeatedLimit;
         return policy;
     }

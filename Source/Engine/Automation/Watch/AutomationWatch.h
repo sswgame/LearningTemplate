@@ -20,6 +20,11 @@ namespace sw
     using AutomationWatchFunction = bool ( * )( const GameObjectManager* pManager, float64& outValue );
     /** @brief 씬을 도는 감시 값 함수입니다(`SW_AUTOMATION_SCENE_WATCH`). 레지스트리가 순회 열쇠를 넘긴다 — 틱 코드는 열쇠가 없다(`SceneIterationKey`). */
     using AutomationSceneWatchFunction = bool ( * )( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue );
+    /**
+     * @brief 벽시계 감시 값의 활동 수 함수입니다(`SW_AUTOMATION_WALL_WATCH`). 따르는 바깥 일이 나아가면 바뀌는 수(읽은 바이트 · 남은 일 수 · 받은 출력 줄 수)를 냅니다.
+     * @details `<WaitUntil timeoutWallSeconds>` 는 이 수가 `ScenarioRun.json` 의 `_stallWallSeconds` 동안 그대로면 `WaitStalled` 로 진다. 게임 스레드에서 프레임마다 부른다 — 비싼 훑기를 하지 않는다.
+     */
+    using AutomationWatchActivityFunction = uint64 ( * )( const GameObjectManager* pManager );
 
     /**
      * @struct AutomationWatchValue
@@ -137,6 +142,8 @@ namespace sw
         bool                         _bNeedsKey;      ///< 단계에 `key` 가 꼭 있어야 합니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                         _bWallClock;     ///< 값이 엔진 프레임이 아니라 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시)을 따라 바뀝니다 — `WaitUntil` 은 `timeoutWallSeconds` 만 받는다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         AutomationSceneWatchFunction _pSceneFunction; ///< 씬을 도는 감시 값(인자 없음, 수) — 레지스트리가 순회 열쇠를 넘긴다
+        /// 벽시계 감시 값의 활동 수(`_bWallClock` 만). nullptr 은 진척을 낼 수 없는 바깥 일이다 — 그 대기는 시한만 본다(등록 자리에 까닭을 적는다)
+        AutomationWatchActivityFunction _pActivityFunction{ nullptr };
     };
 } // namespace sw
 
@@ -184,8 +191,10 @@ namespace sw
      * @brief 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시 · 워커 비동기 로드 · GPU 회수)을 따라 바뀌는 감시 값을 등록합니다. 인자는 `SW_AUTOMATION_WATCH` 와 같습니다.
      * @details 시나리오는 프레임을 실시간보다 빨리 돌리므로 프레임 · 시뮬레이션 초 시한은 바깥 일에 몇 초를 주는지 정하지 못한다(1400 프레임이 1 초였다 — 부하 걸린 기계에서 패키징이 졌다).
      *          그래서 이 값을 기다리는 `WaitUntil` 은 `timeoutWallSeconds` 만 받고, 다른 시한은 로드 오류다(언리얼 Gauntlet 의 외부 프로세스 대기도 벽시계 시한이다).
+     *          @p pActivity(`AutomationWatchActivityFunction`)는 필수 인자다 — 활동 수가 정지 시한(`_stallWallSeconds`) 동안 그대로면 대기는 시한을 기다리지 않고 `WaitStalled` 로 진다
+     *          (Gauntlet 하트비트 · 프로세스 층의 `kProcessStallSeconds` 와 같은 생각). 낼 진척이 없는 일(사건 하나 — OS 파일 감시 알림)만 nullptr 을 주고 그 자리에 까닭을 적는다.
      */
-    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, true, nullptr )
+    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, true, nullptr, pActivity )
 
     /**
      * @brief 질의 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계의 `target`(오브젝트 이름 · NPC id) · `key`(블랙보드 키 · 장소 id)를 받고 수나 글을 냅니다.
@@ -196,8 +205,10 @@ namespace sw
 #else
 
 // 자동화를 뺀 배포본: 등록하지 않고 본문 함수만 붙잡는다(`Engine/Automation/Watch/AutomationHooksEnabled.h`).
-    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction )                                     [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
-    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction )                                [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
+    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
+    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity )                 \
+        [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id         = pFunction; \
+        [[maybe_unused]] static constexpr auto sw_automationWatchActivityUnused_##id = pActivity
     #define SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, pSceneFunction )                          [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pSceneFunction
     #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pQueryFunction
 
