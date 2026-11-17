@@ -11,24 +11,23 @@
 	<Variable name="gv_nileAutoPlay" value="0"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
 	<MousePosition x="0.5" y="0.5"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 커서 칸이 포인터 자리를 받는다(프레임 경계 — 커서 칸 감시 값이 없다) -->
 	<Tap slot="Mouse.Left" hold="1"/>
 	<!-- 사람의 누름처럼 여러 프레임(6) 누른다. 한 프레임짜리 누름은 UI 층이 켜지기 전에 떼어져, 같은 Esc 의 Back 이 메뉴를 닫는 결함을 가렸다 -->
-	<Wait frames="8"/>
+	<AdvanceSimulation frames="8"/> <!-- 짓기와 메뉴 열기를 다른 프레임에 둔다(프레임 경계 — 짓기 감시 값이 없다) -->
 	<Tap slot="Key.Escape" hold="6"/>
 	<!-- 화면 상태는 감시 값이 아니라 ExpectUI 로 본다 — 누름이 끝난 뒤에 -->
-	<Wait frames="6"/>
+	<AdvanceSimulation frames="6"/>
 	<ExpectUI screen="engine/ui/pause.ui.xml"/>
-	<!-- 메뉴가 떠 있다: B 는 UI 뒤로가기라 메뉴를 닫고, 같은 B 로 허물지는 않는다(일어나지 않는 것을 보므로 고정 대기) -->
-	<Wait frames="2"/>
+	<!-- 메뉴가 떠 있다: B 는 UI 뒤로가기라 메뉴를 닫고, 같은 B 로 허물지는 않는다(일어나지 않는 것을 보므로 시간이 내용 — AdvanceSimulation) -->
 	<Tap slot="Gamepad.B" hold="1"/>
-	<Wait frames="22"/>
+	<AdvanceSimulation frames="22"/> <!-- 일어나지 않음 — 시간이 내용 -->
 	<ExpectUI screen="none"/>
 	<ExpectLog id="Nile.Demolished" count="0"/>
 	<!-- 메뉴를 닫은 뒤의 오른쪽 버튼은 디렉터의 것이다 -->
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/> <!-- 메뉴가 닫힌 뒤 UI 소비가 풀린다(프레임 경계 — 감시 값이 없다) -->
 	<Tap slot="Mouse.Right" hold="1"/>
-	<Wait frames="6"/>
+	<AdvanceSimulation frames="6"/> <!-- 허물기 로그가 남는다(프레임 경계 — 감시 값이 없다) -->
 	<ExpectLog id="Nile.Demolished" count="1"/>
 	<Pass/>
 </Scenario>

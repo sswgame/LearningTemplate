@@ -9,12 +9,11 @@
 	<Variable name="gv_nileAutoPlay" value="0"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
 	<MousePosition x="0.5" y="0.5"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 커서 칸이 포인터 자리를 받는다(프레임 경계 — 커서 칸 감시 값이 없다) -->
 	<Tap slot="Mouse.Left" hold="1"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/> <!-- 짓기와 허물기를 다른 프레임에 둔다(프레임 경계 — 이미 도로면 돈이 바뀌지 않아 볼 값이 없다) -->
 	<Tap slot="Mouse.Right" hold="1"/>
-	<!-- 허물기 로그는 감시 값이 없어 몇 프레임 뒤에 센다. -->
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/> <!-- 허물기 로그가 남는다(프레임 경계 — 감시 값이 없다) -->
 	<ExpectLog id="Nile.Demolished" count="1"/>
 	<Pass/>
 </Scenario>
