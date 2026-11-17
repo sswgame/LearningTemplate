@@ -64,6 +64,8 @@ namespace sw
         uint32 getLastOverflowViewCount() const { return _views.getLastOverflowViewCount(); }
         /** @brief 마지막 프레임의 자동 렌더 배율입니다(`RenderPacketViewSetup::getLastAutoRenderScale` — 감시 값 `Render.AutoRenderScale`). */
         float32 getLastAutoRenderScale() const { return _views.getLastAutoRenderScale(); }
+        /** @brief 자동 렌더 배율을 고정합니다(0 = 풂, 개발 도구 전용 창구 — `RenderPacketViewSetup::setForcedAutoRenderScale`). */
+        void setForcedAutoRenderScale( float32 scale ) { _views.setForcedAutoRenderScale( scale ); }
         /** @brief 씬 스냅샷 빌더가 머티리얼이 달라도 배치를 합치는지 반환합니다(없으면 false). 백엔드 교체 뒤 로그가 읽습니다. */
         bool isMergeBatchesAcrossMaterials() const;
 
