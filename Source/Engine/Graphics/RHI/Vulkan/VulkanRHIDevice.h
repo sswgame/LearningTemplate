@@ -826,10 +826,10 @@ namespace sw
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
         /**
          * @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다.
-         * @param memory 메모리 자리 — CPU 가 매핑해 쓰는 버퍼(상수 링 · 읽기 · 스테이징)만 `HostVisible`, GPU 가 그리며 읽는 정적 자원은 `DeviceLocal` 이다(호스트 메모리에서 그리면
+         * @param placement 메모리 자리 — CPU 가 매핑해 쓰는 버퍼(상수 링 · 읽기 · 스테이징)만 `HostVisible`, GPU 가 그리며 읽는 정적 자원은 `DeviceLocal` 이다(호스트 메모리에서 그리면
          *        디스크리트 GPU 가 PCIe 로 읽는다). `DeviceLocal` 은 초기 데이터를 받지 않는다 — 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
          */
-        RHIBufferHandle createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory );
+        RHIBufferHandle createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory placement );
         /// @brief 업로드 스테이징 블록입니다 — 호스트 보임 버퍼 하나를 매핑해 두고 앞에서부터 나눠 쓴다(전용이면 그 업로드 하나 몫).
         struct UploadStagingBlock
         {

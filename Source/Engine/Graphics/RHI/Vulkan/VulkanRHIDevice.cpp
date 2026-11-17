@@ -748,11 +748,11 @@ namespace sw
         return true;
     }
 
-    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory )
+    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory placement )
     {
         if ( _device == nullptr || sizeBytes == 0 )
             return 0;
-        if ( memory == VulkanBufferMemory::DeviceLocal && pInitialData != nullptr )
+        if ( placement == VulkanBufferMemory::DeviceLocal && pInitialData != nullptr )
         {
             SW_LOG_ERROR_ID( "Vulkan.DeviceLocalInitialData", "createVulkanBuffer: a device-local buffer takes no initial data - upload it with a staging copy" );
             return 0;
@@ -777,8 +777,8 @@ namespace sw
         vkGetBufferMemoryRequirements( _device, buffer, &memRequirements );
 
         uint32       memoryTypeIndex{ 0 };
-        const uint32 memoryProperties = memory == VulkanBufferMemory::DeviceLocal ? static_cast<uint32>( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT )
-                                                                                  : static_cast<uint32>( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
+        const uint32 memoryProperties = placement == VulkanBufferMemory::DeviceLocal ? static_cast<uint32>( VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT )
+                                                                                     : static_cast<uint32>( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
         if ( findMemoryType( memRequirements.memoryTypeBits, memoryProperties, memoryTypeIndex ) == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
