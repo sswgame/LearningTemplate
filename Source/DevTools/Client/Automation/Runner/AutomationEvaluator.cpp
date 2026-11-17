@@ -2,7 +2,6 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationEvaluator.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -496,10 +495,16 @@ namespace sw
             context.recordFailure( step, "could not judge the image: " + AutomationStep::describeReason( _goldenPolicy.error() ) );
             return;
         }
-        const AutomationGoldenPolicy&                  policy = *_goldenPolicy;
-        const AutomationStepArgsUtil::ExpectImageArgs& args   = *parsedArgs;
-        const AutomationGoldenLimits                   limits = args.resolveLimits( policy._limits );
-        const string                                   file   = step.readValidatedProperties<AutomationExpectImageParams>()._file;
+        if ( _goldenWriteMode.has_value() == false )
+        {
+            context.recordFailure( step, "could not judge the image: " + AutomationStep::describeReason( _goldenWriteMode.error() ) );
+            return;
+        }
+        const GoldenWriteMode                          recording = *_goldenWriteMode;
+        const AutomationGoldenPolicy&                  policy    = *_goldenPolicy;
+        const AutomationStepArgsUtil::ExpectImageArgs& args      = *parsedArgs;
+        const AutomationGoldenLimits                   limits    = args.resolveLimits( policy._limits );
+        const string                                   file      = step.readValidatedProperties<AutomationExpectImageParams>()._file;
         const expected<AutomationImage>                loaded =
             AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
         { return AutomationImage::reduce( image, args._region ); } );
@@ -531,11 +536,11 @@ namespace sw
                    to_string( limits._maxDeepRegionPixels ) + ") - " + kArrResultName[static_cast<uint32>( evaluation )];
             SW_LOG_INFO_ID( "Automation.Image", "[Scenario] image %#", line.c_str() );
             _listMetricLine.push_back( line );
-            // 기록 모드는 앞 골든과의 차이라 같은 골든의 실행 사이 흔들림이 아니다 — 일반 실행만 모은다.
-            if ( _bUpdateGolden == false )
+            // 모두 쓰는 기록 실행은 앞 골든과의 차이라 같은 골든의 실행 사이 흔들림이 아니다 — 있는 골든을 덮지 않는 실행만 모은다.
+            if ( recording != GoldenWriteMode::All )
                 _listGoldenSample.push_back( AutomationGoldenSample{ goldenID, difference, limits } );
         }
-        switch ( AutomationGoldenUtil::decide( bHasGolden, bCompared, evaluation, _bUpdateGolden ) )
+        switch ( AutomationGoldenUtil::decide( bHasGolden, bCompared, evaluation, recording ) )
         {
             case GoldenAction::Keep:
             {
@@ -554,9 +559,16 @@ namespace sw
                 writeGolden( context, step, reduced, goldenID, backendTag, AutomationGoldenUtil::describeWriteReason( bHasGolden, bCompared, evaluation ), bCompared ? &difference : nullptr, limits );
                 return;
             }
+            case GoldenAction::WriteMissing:
+            {
+                // 처음 쓴 골든은 아직 사람이 보지 않았다 — 지고 보고의 `updatedGoldens` 에 남아, 그림을 보고 커밋한 뒤 기록 없이 다시 돌려 통과해야 한다.
+                writeGolden( context, step, reduced, goldenID, backendTag, AutomationGoldenUtil::describeWriteReason( bHasGolden, bCompared, evaluation ), nullptr, limits );
+                addFailure( step, "no golden " + goldenID + " yet - recorded it now; review the image, commit it and run again without recording", AutomationFailureKind::MissingBaseline );
+                return;
+            }
             case GoldenAction::FailMissing:
             {
-                addFailure( step, "no golden " + goldenID + " yet - run with -scenario-update-golden and review the image", AutomationFailureKind::MissingBaseline );
+                addFailure( step, "no golden " + goldenID + " yet - run with -scenario-record-missing-golden and review the image", AutomationFailureKind::MissingBaseline );
                 return;
             }
             case GoldenAction::FailUnreadable:
@@ -663,12 +675,10 @@ namespace sw
         _listNearLimitGolden.clear();
         _listGoldenSample.clear();
         _recordingCommit.clear();
-        _goldenPolicy   = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
-        _goldenFolderID = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/" + kAutomationGoldenFolder;
-        _goldenPrefix   = scenario.getName();
-        _bUpdateGolden  = false;
-        if ( engine::areEngineServicesBound() )
-            (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, _bUpdateGolden );
+        _goldenPolicy    = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
+        _goldenFolderID  = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/" + kAutomationGoldenFolder;
+        _goldenPrefix    = scenario.getName();
+        _goldenWriteMode = AutomationGoldenUtil::readWriteMode(); // 두 깃발을 함께 줬으면 이미지 단언마다 그 이유로 진다(정책 파일과 같은 길)
         _logCapture.start();
     }
 } // namespace sw

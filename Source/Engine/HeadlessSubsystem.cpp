@@ -331,7 +331,19 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::TEST_SEED, seed );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_REPEAT, repeatCount );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_REPORT, options._reportPath );
-                (void)commandLine.getArgument( CommandLineArgument::UPDATE_SNAPSHOTS, options._bUpdateSnapshots );
+                bool bUpdateSnapshots        = false;
+                bool bRecordMissingSnapshots = false;
+                (void)commandLine.getArgument( CommandLineArgument::UPDATE_SNAPSHOTS, bUpdateSnapshots );
+                (void)commandLine.getArgument( CommandLineArgument::RECORD_MISSING_SNAPSHOTS, bRecordMissingSnapshots );
+                if ( bUpdateSnapshots && bRecordMissingSnapshots )
+                {
+                    SW_LOG_ERROR_ID( "Headless.SnapshotFlagsConflict", "--update-snapshots rewrites every snapshot and --record-missing-snapshots only the missing ones - pick one" );
+                    inoutState._bFailed = SW_TRUE;
+                    return true;
+                }
+                options._snapshotWriteMode = bUpdateSnapshots        ? test::SnapshotWriteMode::All
+                                           : bRecordMissingSnapshots ? test::SnapshotWriteMode::Missing
+                                                                     : test::SnapshotWriteMode::Off;
                 (void)commandLine.getArgument( CommandLineArgument::TEST_RUN_DISABLED, options._bRunDisabled );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_CHILD_ROLE, options._childRole );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_CHILD_ARG, options._childArgument );

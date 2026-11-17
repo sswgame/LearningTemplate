@@ -103,8 +103,8 @@ namespace sw::test
                 uint32                      _declaredErrorLineCount{ 0 }; ///< 실행 전체에서 선언과 맞은 Error 줄 수(`kDeclaredErrorLinesPrefix` 줄로 알린다)
                 bool                        _bIsolatedRun{ false };       ///< 격리 케이스의 자식 프로세스로 띄워졌다(`--test-isolated-case`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 uint32                      _assertionCount{ 0 };
-                bool                        _bUpdateSnapshots{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-                bool                        _bActive{ SW_FALSE };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                SnapshotWriteMode           _snapshotWriteMode{ SnapshotWriteMode::Off };
+                bool                        _bActive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 케이스 등록표입니다. 정적 초기화(모듈 이미지 로드)에서 채우고 내릴 때 뺀다 — 함수 안 정적이다(초기화 순서). */
@@ -478,11 +478,11 @@ namespace sw::test
         countAssertion();
         TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
         string                         caseName;
-        bool                           bUpdate = false;
+        SnapshotWriteMode              recording = SnapshotWriteMode::Off;
         {
             ScopedLock<mutex> lock{ state._mutex };
-            caseName = state._pCase != nullptr ? state._pCase->_pName : "";
-            bUpdate  = state._bUpdateSnapshots;
+            caseName  = state._pCase != nullptr ? state._pCase->_pName : "";
+            recording = state._snapshotWriteMode;
         }
         const string path = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getDirectoryPart( pFile ), "Snapshots" ),
                                                 TestRunnerInternal::toFileName( caseName ) + "." + string( name ) + ".txt" );
@@ -493,7 +493,9 @@ namespace sw::test
         expected.erase( std::remove( expected.begin(), expected.end(), '\r' ), expected.end() );
         if ( bHasSnapshot && expected == normalized )
             return true;
-        if ( bUpdate )
+        // 없는 것만 쓰는 실행(`Missing`)은 있는 스냅숏을 덮지 않는다 — 다르면 아래에서 진다.
+        const bool bWrite = recording == SnapshotWriteMode::All || ( recording == SnapshotWriteMode::Missing && bHasSnapshot == false );
+        if ( bWrite )
         {
             const bool bWritten = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) ) && FileUtil::writeTextFile( path, normalized );
             if ( bWritten == false )
@@ -501,11 +503,20 @@ namespace sw::test
                 reportFailure( pFile, line, "could not write the snapshot " + path );
                 return false;
             }
-            ScopedLock<mutex> lock{ state._mutex };
-            state._listUpdatedSnapshot.push_back( path );
-            return true;
+            {
+                ScopedLock<mutex> lock{ state._mutex };
+                state._listUpdatedSnapshot.push_back( path );
+            }
+            if ( recording == SnapshotWriteMode::All )
+                return true;
+            // 처음 쓴 스냅숏은 아직 사람이 보지 않았다 — 지고 목록에 남아, 보고 커밋한 뒤 기록 없이 다시 돌려 통과해야 한다.
+            TestRunnerInternal::reportFailureOfKind( pFile, line, "no snapshot yet: recorded " + path + " - review it, commit it and run again without recording",
+                                                     TestRunnerInternal::TestFailureKind::SnapshotMissing );
+            return false;
         }
-        TestRunnerInternal::reportFailureOfKind( pFile, line, string( bHasSnapshot ? "snapshot differs: " : "no snapshot yet: " ) + path + " (run App --test --update-snapshots and review the diff)",
+        TestRunnerInternal::reportFailureOfKind( pFile, line,
+                                                 string( bHasSnapshot ? "snapshot differs: " : "no snapshot yet: " ) + path +
+                                                     " (run App --test --record-missing-snapshots for a new one, --update-snapshots to rewrite, and review the diff)",
                                                  bHasSnapshot ? TestRunnerInternal::TestFailureKind::SnapshotDiffers : TestRunnerInternal::TestFailureKind::SnapshotMissing );
         return false;
     }
@@ -617,6 +628,17 @@ namespace sw::test
         // 자식은 이 케이스 하나만 같은 판정 규칙으로 돈다(`--test-isolated-case`). 크래시 · 교착 · 강제 종료는 종료 코드로 이 케이스의 실패가 되고 부모 실행은 이어진다.
         vector<string> listArgument{ "-test", "-test-isolated-case=" + string( testCase._pName ), "-unattended",
                                      "-log-file=" + makeScratchPath( toFileName( testCase._pName ) + ".isolated.log" ) };
+        // 스냅숏 기록 범위를 자식에 넘긴다 — 넘기지 않으면 격리 케이스의 스냅숏은 기록 실행에서도 쓰이지 않고 진다.
+        SnapshotWriteMode recording = SnapshotWriteMode::Off;
+        {
+            CaseState&        state = getState();
+            ScopedLock<mutex> lock{ state._mutex };
+            recording = state._snapshotWriteMode;
+        }
+        if ( recording == SnapshotWriteMode::Missing )
+            listArgument.push_back( "-record-missing-snapshots" );
+        else if ( recording == SnapshotWriteMode::All )
+            listArgument.push_back( "-update-snapshots" );
         ChildRunResult child;
         launchSelf( std::move( listArgument ), timeoutSeconds, child );
         countAssertion();
@@ -941,12 +963,12 @@ namespace sw::test
                     state._firstFailureKind = Internal::TestFailureKind::Assertion;
                     state._listUpdatedSnapshot.clear();
                     state._skipReason.clear();
-                    state._assertionCount   = 0;
-                    state._bUpdateSnapshots = options._bUpdateSnapshots;
-                    state._scratchFolder    = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), to_string( roundIndex ) );
-                    state._childArgument    = options._childArgument;
-                    state._bIsolatedRun     = bIsolatedRun;
-                    state._bActive          = SW_TRUE;
+                    state._assertionCount    = 0;
+                    state._snapshotWriteMode = options._snapshotWriteMode;
+                    state._scratchFolder     = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), to_string( roundIndex ) );
+                    state._childArgument     = options._childArgument;
+                    state._bIsolatedRun      = bIsolatedRun;
+                    state._bActive           = SW_TRUE;
                 }
                 LogOnce::beginScope(); // 한 번만 알리는 로그(`LogOnce`)도 케이스마다 처음이다 — 앞 케이스 · 앞 회차가 알렸다고 기대 로그가 사라지지 않게
                 Internal::writeLine( string( "[ RUN      ] " ) + pCase->_pName );

@@ -3,11 +3,14 @@
 # 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.*.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
 # --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --dry-run 은 돌릴 명령만 차례대로 찍는다(스크립트를 고친 뒤 확인).
 # --self-check 는 판정 요약(print_results)의 자체 검사만 하고 끝난다(빌드 · 테스트 없이). 끝 줄 SELF_CHECK_OK.
-# --from build|cpu|gpu-release|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
+# --from build|changed|cpu|gpu-release|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
 #   build       lint --all(뒤에서) ‖ Debug 빌드 → 임포트 → (Release → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
+#               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
+#               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
 #   cpu         Debug ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버 단위 → launch-args → shipping-check --skip-build(기동만). 시간을 판정하지 않는 CPU 일만 겹친다.
 #   gpu-release Release ctest 전체 — 시나리오 그림 · 골든 · 기록 대조의 정본(모든 게임 · 네 백엔드).
 #   (없앤 gpu-debug: Debug 로 같은 체인을 한 번 더 돌던 단계 14.6 분 — 단언 · 검사가 SW_DO_CHECKS 로 Release 에도 들어 Release 체인이 지난다. Core/Foundation/Macros.h 4-1)
@@ -66,10 +69,11 @@ if [ $SELF_CHECK -eq 1 ]; then
 fi
 case "$FROM" in
   build) STAGE=1 ;;
-  cpu) STAGE=2 ;;
-  gpu-release) STAGE=3 ;;
+  changed) STAGE=2 ;;
+  cpu) STAGE=3 ;;
+  gpu-release) STAGE=4 ;;
   linux) STAGE=5 ;;
-  *) echo "--from 은 build · cpu · gpu-release · linux 중 하나다: $FROM"; exit 2 ;;
+  *) echo "--from 은 build · changed · cpu · gpu-release · linux 중 하나다: $FROM"; exit 2 ;;
 esac
 
 windows_failed() {
@@ -159,6 +163,17 @@ job_lint() {
   return $RC
 }
 
+# 새로 들어온 · 바뀐 테스트 · 시나리오만 먼저(DesignBacklog D4). 표와 끝 줄을 찍고, 지면 뒤 단계를 시작하지 않는다 — 끝 줄은 CHANGED_FAILED 다.
+run_changed() {
+  echo "== changed $(date +%T)"
+  run build/verify.changed.log py -3 Scripts/dev/test_history.py changed --preset Ninja-Release
+  local RC=$?
+  [ $DRY -eq 1 ] || grep -v "^\[Changed\] run " build/verify.changed.log | tr -d '\r'
+  [ $RC -eq 0 ] && return 0
+  echo "CHANGED_FAILED sha=$SHA - build/verify.changed.log (cpu · gpu-release 를 시작하지 않는다)"
+  exit 1
+}
+
 job_debug_cpu() {
   run_ctest Ninja-Debug nogpu -L nogpu || return 1
   # App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 보고 줄은 판정을 바꾸지 않는다.
@@ -214,18 +229,23 @@ if [ $STAGE -le 1 ]; then
 else
   # --from 으로 build 를 건너뛰어도 뒤 단계가 돌릴 프리셋은 증분 빌드한다 — 짓지 않으면 고친 커밋 대신 옛 바이너리가 돌아 고친 테스트가 다시 진다
   # (2026-11-13 --from cpu 의 Release 단위). 바뀐 것이 없으면 몇 초다. 배포 프리셋은 --from cpu 의 shipping-check 가 직접 짓는다.
-  [ $STAGE -eq 2 ] && { build_preset Ninja-Debug; build_preset Ninja-Debug-Server; }
-  [ $STAGE -le 3 ] && build_preset Ninja-Release
+  [ $STAGE -le 3 ] && { build_preset Ninja-Debug; build_preset Ninja-Debug-Server; }
+  [ $STAGE -le 4 ] && build_preset Ninja-Release
+  # 임포트는 build 단계가 했다 — 거기서 시작하지 않았으면 첫 테스트 단계 앞에서 한다(changed 는 ctest 고정 단계 없이 App 을 바로 띄운다).
+  [ $STAGE -le 3 ] && { run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"; }
 fi
 
 if [ $STAGE -le 2 ]; then
-  [ $STAGE -eq 2 ] && { run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"; }
+  run_changed
+fi
+
+if [ $STAGE -le 3 ]; then
   start_job "Debug nogpu" job_debug_cpu
   start_job "server · tools · shipping" job_server_tools
   wait_jobs
 fi
 
-if [ $STAGE -le 3 ]; then
+if [ $STAGE -le 4 ]; then
   run_ctest Ninja-Release all || windows_failed "Ninja-Release ctest"
 fi
 

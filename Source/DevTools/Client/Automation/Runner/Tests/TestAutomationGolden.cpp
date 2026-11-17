@@ -89,20 +89,30 @@ SW_TEST_CASE( AutomationGoldenTest, ResultPerAxis )
 /** @brief [AutomationGoldenTest] 기록 모드는 근접 · 실패 · 없는 · 크기가 다른 골든을 다시 쓰고 통과는 둔다. 일반 실행은 근접을 알리기만 하고 진 것만 실패다 */
 SW_TEST_CASE( AutomationGoldenTest, RecordModeRewritesNearLimit )
 {
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::PassNearLimit, true ) == GoldenAction::Write );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Fail, true ) == GoldenAction::Write );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( false, false, GoldenResult::Fail, true ) == GoldenAction::Write );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, false, GoldenResult::Fail, true ) == GoldenAction::Write );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Pass, true ) == GoldenAction::Keep );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::PassNearLimit, GoldenWriteMode::All ) == GoldenAction::Write );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Fail, GoldenWriteMode::All ) == GoldenAction::Write );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( false, false, GoldenResult::Fail, GoldenWriteMode::All ) == GoldenAction::Write );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, false, GoldenResult::Fail, GoldenWriteMode::All ) == GoldenAction::Write );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Pass, GoldenWriteMode::All ) == GoldenAction::Keep );
 
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Pass, false ) == GoldenAction::Keep );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::PassNearLimit, false ) == GoldenAction::KeepNearLimit );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Fail, false ) == GoldenAction::Fail );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( false, false, GoldenResult::Fail, false ) == GoldenAction::FailMissing );
-    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, false, GoldenResult::Fail, false ) == GoldenAction::FailUnreadable );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Pass, GoldenWriteMode::Off ) == GoldenAction::Keep );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::PassNearLimit, GoldenWriteMode::Off ) == GoldenAction::KeepNearLimit );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Fail, GoldenWriteMode::Off ) == GoldenAction::Fail );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( false, false, GoldenResult::Fail, GoldenWriteMode::Off ) == GoldenAction::FailMissing );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, false, GoldenResult::Fail, GoldenWriteMode::Off ) == GoldenAction::FailUnreadable );
 
     SW_EXPECT_TRUE( string_view{ AutomationGoldenUtil::describeWriteReason( true, true, GoldenResult::PassNearLimit ) } == "near-limit" );
     SW_EXPECT_TRUE( string_view{ AutomationGoldenUtil::describeWriteReason( false, false, GoldenResult::Fail ) } == "missing" );
+}
+
+/** @brief [AutomationGoldenTest] 없는 것만 쓰는 실행(`changed` 단계)은 없는 골든만 쓰고 지며, 있는 골든은 근접 · 실패 · 크기 달라짐이어도 덮지 않고 일반 실행처럼 판정한다 */
+SW_TEST_CASE( AutomationGoldenTest, RecordMissingWritesOnlyMissing )
+{
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( false, false, GoldenResult::Fail, GoldenWriteMode::Missing ) == GoldenAction::WriteMissing );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Pass, GoldenWriteMode::Missing ) == GoldenAction::Keep );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::PassNearLimit, GoldenWriteMode::Missing ) == GoldenAction::KeepNearLimit );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, true, GoldenResult::Fail, GoldenWriteMode::Missing ) == GoldenAction::Fail );
+    SW_EXPECT_TRUE( AutomationGoldenUtil::decide( true, false, GoldenResult::Fail, GoldenWriteMode::Missing ) == GoldenAction::FailUnreadable );
 }
 
 /** @brief [AutomationGoldenTest] 정책은 칸 여섯이 모두 있어야 하고 범위 안이어야 한다 — 기본값으로 떨어지지 않는다 */

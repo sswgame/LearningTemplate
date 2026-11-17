@@ -67,13 +67,18 @@ namespace sw
                 if ( FileUtil::isPathUnderRoot( rootPath, path ) == false )
                     return {};
                 const string target = FileUtil::makeComparableDiskPath( path );
-                // 골든 갱신 실행(`-scenario-update-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.
-                // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
-                bool bUpdateGolden = false;
+                // 골든 기록 실행(`-scenario-update-golden` · `-scenario-record-missing-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.
+                // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 무엇을 덮을지는 판정(`AutomationGoldenUtil::decide`)이 가른다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
+                bool bUpdateGolden        = false;
+                bool bRecordMissingGolden = false;
                 if ( engine::areEngineServicesBound() )
-                    (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
+                {
+                    const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+                    (void)commandLine.getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
+                    (void)commandLine.getArgument( CommandLineArgument::SCENARIO_RECORD_MISSING_GOLDEN, bRecordMissingGolden );
+                }
                 const bool bGoldenFolder = FileUtil::getFileNamePart( FileUtil::getDirectoryPart( target ) ) == kAutomationGoldenFolder;
-                if ( bUpdateGolden && bGoldenFolder && target.find( "/automation/" ) != string::npos )
+                if ( ( bUpdateGolden || bRecordMissingGolden ) && bGoldenFolder && target.find( "/automation/" ) != string::npos )
                     return {};
                 return unexpected( Error{ ErrorKind::Unsupported, "an automation run may write under Resource only inside this folder (declare <Scratch>); this path is a tracked original", AutomationScratch::kScratchDomain } );
             }

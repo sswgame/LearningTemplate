@@ -25,12 +25,25 @@ namespace sw
         Fail,          ///< 한 축이라도 허용치를 넘었다
     };
 
+    /**
+     * @brief 이 실행이 골든을 쓰는 범위입니다 — 명령줄 깃발 둘(`-scenario-record-missing-golden` · `-scenario-update-golden`)을 값 하나로 받는다.
+     * @details `Missing` 은 없는 골든만 쓰고 그 시나리오를 `MissingBaseline` 으로 지게 한다(preflight `changed` 단계 — 사람이 그림을 보고 커밋한 뒤 기록 없이 다시 돌려 통과해야 한다).
+     *          있는 골든은 근접 · 실패여도 덮지 않는다 — `All` 은 진 골든도 써서 바뀐 시나리오의 회귀를 가린다.
+     */
+    enum class GoldenWriteMode : uint8
+    {
+        Off,     ///< 쓰지 않는다
+        Missing, ///< 없는 골든만 쓰고 실패로 알린다
+        All,     ///< 없거나 · 크기가 다르거나 · 근접 · 진 골든을 쓰고 통과한다
+    };
+
     /** @brief 판정이 낸 뒤 판정기가 할 일입니다(`AutomationGoldenUtil::decide`). */
     enum class GoldenAction : uint8
     {
         Keep,           ///< 통과 — 골든을 그대로 둔다
         KeepNearLimit,  ///< 통과지만 근접 — 보고의 `nearLimitGoldens[]` 와 경고 줄로 알린다
-        Write,          ///< 기록 모드 — 없거나 · 크기가 다르거나 · 근접 · 실패한 골든을 지금 그림으로 쓴다
+        Write,          ///< 기록 모드(`All`) — 없거나 · 크기가 다르거나 · 근접 · 실패한 골든을 지금 그림으로 쓴다
+        WriteMissing,   ///< 없는 것만 쓰는 모드(`Missing`) — 없는 골든을 쓰고 `MissingBaseline` 으로 진다
         FailMissing,    ///< 골든이 없다
         FailUnreadable, ///< 골든과 견주지 못했다(크기가 다르다)
         Fail,           ///< 허용치를 넘었다
@@ -92,8 +105,10 @@ namespace sw
 
         /** @brief 판정입니다 — 한 축이라도 상한을 넘으면 `Fail`, 한 축이라도 상한 × @p nearLimitRatio 를 넘으면 `PassNearLimit`, 아니면 `Pass`. */
         [[nodiscard]] static GoldenResult evaluate( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio );
-        /** @brief 판정 뒤 할 일입니다. 기록 모드(@p bUpdateGolden)는 `Pass` 가 아닌 모든 골든을 쓴다 — 근접도 쓴다. */
-        [[nodiscard]] static GoldenAction decide( bool bHasGolden, bool bCompared, GoldenResult result, bool bUpdateGolden );
+        /** @brief 판정 뒤 할 일입니다. `All` 은 `Pass` 가 아닌 모든 골든을 쓴다 — 근접도 쓴다. `Missing` 은 없는 골든만 쓴다. */
+        [[nodiscard]] static GoldenAction decide( bool bHasGolden, bool bCompared, GoldenResult result, GoldenWriteMode recording );
+        /** @brief 명령줄 깃발 둘을 읽습니다. 둘 다 주면 오류입니다(없는 것만 쓸지 모두 쓸지 하나를 고른다). 엔진 서비스가 없으면 `Off` 입니다. */
+        [[nodiscard]] static expected<GoldenWriteMode> readWriteMode();
         /** @brief 메타의 `_reason` 글입니다(`decide` 가 `Write` 인 까닭). */
         [[nodiscard]] static const utf8* describeWriteReason( bool bHasGolden, bool bCompared, GoldenResult result );
 
