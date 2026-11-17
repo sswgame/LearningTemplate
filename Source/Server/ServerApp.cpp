@@ -256,7 +256,7 @@ namespace sw
             (void)ProcessEnvironment::tryReadNonEmpty( config._opsTokenEnvironment, opsToken ); // 없으면 인증 없이 — 그때는 루프백 · 사설 바인드만
             if ( NetAddress::parse( config._opsListenAddress, static_cast<uint16>( config._opsPort ), opsAddress ) == false )
             {
-                SW_LOG_ERROR_ID( "Server.CheckOpsListenAddress", "Server config _opsListenAddress '%#' is not an IPv4 address", config._opsListenAddress.c_str() );
+                SW_LOG_ERROR_ID( "Server.CheckOpsListenAddress", "Server config _opsListenAddress '%#' is not an IP address", config._opsListenAddress.c_str() );
                 bValid = false;
             }
             else if ( opsToken.empty() && OpsHTTPEndpoint::isBindAllowedWithoutToken( opsAddress ) == false )
@@ -271,7 +271,7 @@ namespace sw
             NetAddress adminAddress;
             if ( NetAddress::parse( config._adminListenAddress, static_cast<uint16>( config._adminServicePort ), adminAddress ) == false || adminAddress.isLoopbackOrPrivate() == false )
             {
-                SW_LOG_ERROR_ID( "Server.CheckAdminListenAddress", "Server config _adminListenAddress '%#' must be a loopback or private IPv4 address (the GM port is never public)", config._adminListenAddress.c_str() );
+                SW_LOG_ERROR_ID( "Server.CheckAdminListenAddress", "Server config _adminListenAddress '%#' must be a loopback or private IP address (the GM port is never public)", config._adminListenAddress.c_str() );
                 bValid = false;
             }
         }

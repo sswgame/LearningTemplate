@@ -24,10 +24,11 @@ namespace sw
         UDPNetTransport& operator=( const UDPNetTransport& ) = delete;
 
         /**
-         * @brief 포트를 엽니다(0 = 아무 포트 — 클라이언트). @p bLoopbackOnly 가 true 이면 이 기계(127.0.0.1)의 상대만 받는다 — 테스트 · 개발 실행용.
+         * @brief 포트를 엽니다(0 = 아무 포트 — 클라이언트). @p bLoopbackOnly 가 true 이면 이 기계(127.0.0.1 · `::1`)의 상대만 받는다 — 테스트 · 개발 실행용.
          * @param sharing 포트 샤딩의 한 포트 판(`UDPPortSharing::ReusePort`, 리눅스만). 기본은 배타 소켓.
+         * @param family IPv6 는 이중 스택 소켓이라 IPv4 상대에게도 보내고 받는다(보낼 때 IPv4 사상 주소로 바꾼다). IPv4 소켓은 IPv6 상대에게 보내지 못한다(보내기 실패).
          */
-        [[nodiscard]] bool open( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing = UDPPortSharing::Exclusive );
+        [[nodiscard]] bool open( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing = UDPPortSharing::Exclusive, NetAddressFamily family = NetAddressFamily::Ipv4 );
         void               close();
         bool               isOpen() const;
 
@@ -40,6 +41,10 @@ namespace sw
         NetAddress getLocalAddress() const override { return _localAddress; }
         bool       waitForReceive( float64 timeoutSeconds ) override;
         void       wake() override;
+
+    private:
+        /** @brief 이 소켓의 주소군에 맞춘 받는 쪽 주소입니다 — IPv6 소켓이면 IPv4 상대를 IPv4 사상 주소로 바꾼다. */
+        NetAddress toSocketAddress( const NetAddress& to ) const { return _localAddress.isIpv6() ? to.toIpv4Mapped() : to; }
 
     private:
         NetAddress _localAddress;

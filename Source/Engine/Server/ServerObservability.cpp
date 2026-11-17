@@ -95,7 +95,7 @@ namespace sw
         OpsHTTPEndpointConfig opsSettings;
         if ( NetAddress::parse( config._opsListenAddress, static_cast<uint16>( config._opsPort ), opsSettings._bindAddress ) == false )
         {
-            SW_LOG_ERROR_ID( "Server.ServerConfigOpsListenAddressNot", "Server config _opsListenAddress '%#' is not an IPv4 address", config._opsListenAddress.c_str() );
+            SW_LOG_ERROR_ID( "Server.ServerConfigOpsListenAddressNot", "Server config _opsListenAddress '%#' is not an IP address", config._opsListenAddress.c_str() );
             return false;
         }
         opsSettings._bindAddress._port = static_cast<uint16>( config._opsPort ); // 포트는 `_opsPort` 가 기준이다(주소 필드에 포트를 적어도 무시한다).

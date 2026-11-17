@@ -132,17 +132,14 @@ namespace sw
         /** @brief 연결된 슬롯 번호를 @p outListConnection 에 비운 뒤 담습니다. */
         void collectConnected( vector<int32>& outListConnection ) const;
 
-        /** @brief 주소 맵의 키입니다(IPv4 와 포트). */
-        static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
-
     private:
         /** @brief 살아 있는 목록에서 @p slotIndex 의 자리입니다(정렬돼 있어 이분 탐색). 없으면 비어 있습니다. */
         [[nodiscard]] optional<size_t> findLive( int32 slotIndex ) const;
 
     private:
-        vector<NetEndpointSlot>      _listSlot;
-        vector<NetLiveSlot>          _listLiveSlot;     ///< 살아 있는 슬롯, 번호 오름차순 — 순서를 번호 순으로 두어 사건 · 메시지를 꺼내는 순서가 예전 전 슬롯 훑기와 같다.
-        vector<int32>                _listFreeSlot;     ///< 빈 슬롯, 번호 내림차순 — 끝이 가장 낮은 번호다.
-        unordered_map<uint64, int32> _mapSlotByAddress; ///< 연결이 많아도 패킷마다 선형 탐색하지 않게 한다.
+        vector<NetEndpointSlot>                            _listSlot;
+        vector<NetLiveSlot>                                _listLiveSlot;     ///< 살아 있는 슬롯, 번호 오름차순 — 순서를 번호 순으로 두어 사건 · 메시지를 꺼내는 순서가 예전 전 슬롯 훑기와 같다.
+        vector<int32>                                      _listFreeSlot;     ///< 빈 슬롯, 번호 내림차순 — 끝이 가장 낮은 번호다.
+        unordered_map<NetAddress, int32, NetAddress::Hash> _mapSlotByAddress; ///< 연결이 많아도 패킷마다 선형 탐색하지 않게 한다. 키는 주소 전체다 — 줄인 키는 IPv6 두 상대를 한 슬롯에 묶는다
     };
 } // namespace sw

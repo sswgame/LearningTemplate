@@ -28,21 +28,22 @@ namespace sw
         close();
     }
 
-    bool UDPNetTransport::open( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing )
+    bool UDPNetTransport::open( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing, NetAddressFamily family )
     {
         close();
-        _socketHandle = PlatformSocketUtil::openUDPSocket( port, bLoopbackOnly, sharing );
+        _socketHandle = PlatformSocketUtil::openUDPSocket( port, bLoopbackOnly, sharing, family );
         if ( _socketHandle == PlatformSocketUtil::kInvalidSocket )
             return false;
-        _wakeSocketHandle = PlatformSocketUtil::openUDPSocket( 0, true, UDPPortSharing::Exclusive );
+        _wakeSocketHandle = PlatformSocketUtil::openUDPSocket( 0, true, UDPPortSharing::Exclusive, NetAddressFamily::Ipv4 ); // 깨우기는 이 기계 안이라 주소군과 상관없다
         if ( _wakeSocketHandle == PlatformSocketUtil::kInvalidSocket )
         {
             SW_LOG_ERROR_ID( "Net.WakeSocketFailed", "UDPNetTransport: cannot open the loopback wake socket - the network thread could not be woken for queued sends" );
             close();
             return false;
         }
-        _wakeAddress  = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _wakeSocketHandle ) );
-        _localAddress = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _socketHandle ) );
+        _wakeAddress           = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _wakeSocketHandle ) );
+        const uint16 boundPort = PlatformSocketUtil::getBoundPort( _socketHandle );
+        _localAddress          = family == NetAddressFamily::Ipv6 ? NetAddress::makeIpv6Loopback( boundPort ) : NetAddress::makeLoopback( boundPort );
         return true;
     }
 
@@ -64,7 +65,7 @@ namespace sw
         const bool bCannotSendPacket = isOpen() == false || size <= 0 || size > kNetMaxPacketSize;
         if ( bCannotSendPacket )
             return false;
-        return PlatformSocketUtil::sendTo( _socketHandle, to, pData, size );
+        return PlatformSocketUtil::sendTo( _socketHandle, toSocketAddress( to ), pData, size );
     }
 
     int32 UDPNetTransport::sendBatch( const NetDatagramView* pViews, int32 count )
@@ -80,8 +81,11 @@ namespace sw
             const int32     last       = first + PlatformSocketUtil::kMaxBatch < count ? first + PlatformSocketUtil::kMaxBatch : count;
             for ( int32 index = first; index < last; ++index )
             {
-                if ( pViews[index]._size > 0 && pViews[index]._size <= kNetMaxPacketSize )
-                    arrValid[validCount++] = pViews[index];
+                if ( pViews[index]._size <= 0 || pViews[index]._size > kNetMaxPacketSize )
+                    continue;
+                arrValid[validCount]     = pViews[index];
+                arrValid[validCount]._to = toSocketAddress( pViews[index]._to );
+                ++validCount;
             }
             sentCount += PlatformSocketUtil::sendBatch( _socketHandle, arrValid, validCount );
         }

@@ -52,3 +52,19 @@ SW_TEST_CASE( NetChallengeTest, ZeroSeedDrawsAnUnpredictableSecret )
     const NetAddress address = NetAddress::makeLoopback( 4000 );
     SW_EXPECT_TRUE( first.makeToken( address, 1, 0.0 ) != second.makeToken( address, 1, 0.0 ) );
 }
+
+/**
+ * @brief [NetChallengeTest] 값은 IPv6 주소 전체에 묶인다 — 같은 /64 의 다른 상대 · 같은 바이트의 IPv4 주소로는 통과하지 못한다(감사 N-14)
+ */
+SW_TEST_CASE( NetChallengeTest, TokenIsBoundToTheWholeIpv6Address )
+{
+    NetChallenge challenge;
+    challenge.initialize( 99 );
+    constexpr uint8  kArrHost[NetAddress::kByteCount]      = { 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 };
+    constexpr uint8  kArrNeighbour[NetAddress::kByteCount] = { 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 };
+    const NetAddress address                               = NetAddress::makeIpv6( kArrHost, 4000 );
+    const uint64     token                                 = challenge.makeToken( address, 5, 12.0 );
+    SW_EXPECT_TRUE( challenge.isTokenValid( address, 5, token, 12.0 ) );
+    SW_EXPECT_FALSE( challenge.isTokenValid( NetAddress::makeIpv6( kArrNeighbour, 4000 ), 5, token, 12.0 ) );
+    SW_EXPECT_FALSE( challenge.isTokenValid( NetAddress::make( 0x20, 0x01, 0x0d, 0xb8, 4000 ), 5, token, 12.0 ) ); // 앞 4 바이트가 같은 IPv4
+}
