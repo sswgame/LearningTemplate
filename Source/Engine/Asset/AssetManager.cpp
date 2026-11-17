@@ -418,6 +418,29 @@ namespace sw
                                    listIssue.size(), listIssue.front().toString() );
             listLayer.push_back( database.makeRegistryLayer( roots._content.str() ) );
         }
+        // 패치 · 모드 팩이 실은 자기 색인(줄은 전체 리소스 id) — 도메인 층 뒤에 쌓아 그 팩의 새 에셋과 옮긴 줄이 이긴다. 색인을 싣지 않은 패치 팩(바뀐 파일만)은 건너뛴다.
+        vector<string> listPatchText;
+        vector<string> listPatchSource;
+        if ( _pPackManager->collectPatchPackTexts( AssetPackIndex::kFileName, listPatchText, listPatchSource ) == false )
+        {
+            SW_LOG_ERROR_ID( "AssetManager.PatchIndexUnreadable", "A patch or mod pack has an unreadable %#", AssetPackIndex::kFileName );
+            return false;
+        }
+        for ( size_t patchIndex = 0; patchIndex < listPatchText.size(); ++patchIndex )
+        {
+            const expected<AssetPackIndex> index = AssetPackIndex::parseText( listPatchText[patchIndex], listPatchSource[patchIndex] );
+            if ( index.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "AssetManager.PatchIndexInvalid", "%# of '%#' - %# '%#'", AssetPackIndex::kFileName, listPatchSource[patchIndex], index.error().message(), index.error().detail() );
+                return false;
+            }
+            AssetRegistryLayer layer{ listPatchSource[patchIndex], {} };
+            for ( const AssetPackIndexEntry& entry : index->_listEntry )
+            {
+                layer._listEntry.push_back( AssetRegistryEntry{ entry._guid, entry._path } );
+            }
+            listLayer.push_back( std::move( layer ) );
+        }
         expected<AssetRegistry> registry = AssetRegistry::merge( listLayer );
         if ( registry.has_value() == false )
         {

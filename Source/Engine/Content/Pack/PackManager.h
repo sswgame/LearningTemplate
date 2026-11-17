@@ -145,6 +145,12 @@ namespace sw
          *          그 파일을 패치 팩이 덮었으면 읽기(`readTextFile`)가 패치의 것을 준다.
          */
         vector<string> getMountedDomainsByPriority() const;
+        /**
+         * @brief 마운트된 패치 팩(도메인 없음 — 패치 사슬 · 모드)마다 팩 루트의 @p fileName 글을 낮은 우선순위부터 @p outListText 에 덧붙입니다. 그 파일이 없는 팩은 건너뛴다.
+         * @details 모드 팩이 자기 에셋의 GUID 색인(`assetindex.xml`, 줄은 전체 리소스 id)을 싣는다 — 런타임 색인이 도메인 색인 뒤 층으로 합친다(`AssetManager`).
+         *          @p outListSource 에는 그 팩 파일 경로를 같은 순서로 덧붙인다. 읽기가 지면 false 입니다.
+         */
+        [[nodiscard]] bool collectPatchPackTexts( string_view fileName, vector<string>& outListText, vector<string>& outListSource ) const;
 
         /**
          * @brief 디렉터리 안의 .pack 파일을 훑어 표준 우선순위로 마운트하고, 패치 목록(`*.packpatch.xml`)이 있으면 그 패치를 사슬 순서로 적용합니다.
