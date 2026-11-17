@@ -23,6 +23,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeTypes.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 
 namespace sw
 {
@@ -110,7 +111,7 @@ namespace sw
         TradeServiceResult evaluateFunds( const TradeSide& side );
 
     private:
-        IServiceStoreConnection&  _connection;
+        ServiceReadSetConnection  _connection; ///< 읽은 레코드를 다음 커밋의 조건으로 붙인다(커밋마다 비우므로 시도마다 다시 읽는다)
         const ITradePolicy&       _policy;
         const ILedgerPolicy*      _pLedgerPolicy;
         const TradeServiceConfig& _settings;

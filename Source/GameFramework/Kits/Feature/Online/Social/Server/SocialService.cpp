@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -146,14 +147,11 @@ namespace sw
                     inoutTransaction.put( getLinkTable(), key, encodeLink( newState, nowMs.count() ), record._version );
             }
 
-            /** @brief 개수 변화를 트랜잭션에 붙입니다. 바뀌지 않아도 버전은 확인합니다. 상한 판정의 근거가 그사이 바뀌면 안 되기 때문입니다. */
+            /** @brief 개수 변화를 트랜잭션에 붙입니다. 바뀌지 않은 개수(상한 판정의 근거)의 버전 조건은 읽기 집합 연결(`ServiceReadSetConnection`)이 붙인다. */
             static void stageCounts( ServiceTransaction& inoutTransaction, const string& key, const ServiceRecord& record, SocialCounts counts, const SocialCounts& delta )
             {
                 if ( delta.isZero() )
-                {
-                    inoutTransaction.requireVersion( getCountTable(), key, record._version );
                     return;
-                }
                 addCounts( counts, delta );
                 inoutTransaction.put( getCountTable(), key, encodeCounts( counts ), record._version );
             }
@@ -246,7 +244,9 @@ namespace sw
                     return;
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
-                    const ServiceStoreResult commitResult = runOnce( connection );
+                    // 두 링크 · 두 개수를 읽어 정한다 — 쓰지 않는 쪽(바뀌지 않은 상대 링크)도 판단의 근거라 모두 커밋 조건이다(시도마다 새 읽기 집합).
+                    ServiceReadSetConnection readSet( connection );
+                    const ServiceStoreResult commitResult = runOnce( readSet );
                     if ( commitResult == ServiceStoreResult::Ok )
                         return;
                     if ( commitResult != ServiceStoreResult::Conflict )
