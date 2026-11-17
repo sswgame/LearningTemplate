@@ -316,6 +316,6 @@ namespace sw
 
 namespace sw
 {
-    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<RhythmChart>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( RhythmChart, RhythmChart, SW_KIT_API, AssetTypeDef::makeCacheOnly( "RhythmChart", AssetTypeLoader::of<RhythmChart>( MemoryTag::Game ) ) );
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<RhythmChart>::acquire`). 접미사(`.chart.xml`)로 가르는 종류라 타입 있는 참조(`AssetRef`)가 가리킬 수 있다. */
+    SW_MODULE_SHARED_ASSET_CACHE( RhythmChart, RhythmChart, SW_KIT_API, RhythmChart::kAssetType.withLoader( AssetTypeLoader::of<RhythmChart>( MemoryTag::Game ) ) );
 } // namespace sw

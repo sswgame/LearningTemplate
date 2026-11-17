@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4ee10b45c6d441dcb59fe4c704b68435"?>
+<!--
+  장르 키트 시연 — 몬스터 사냥 계약 하나(maps/kit_monsterhuntrpg). griffin 계약은 단서 셋(두 단계)을 순서대로 찾으면 풀리고, 보상 100 에 한도 1.5 배(150)까지 흥정한다.
+  ghoul 은 두 번 처치마다 지식이 한 단계 오르고 1 단계에서 오일 약점을 알린다.
+-->
+<MonsterHuntCatalog>
+	<Alchemy maxToxicity="100" toxicityDecay="2" alcohol="spirit"/>
+	<Combat stamina="100" regen="10" delay="1" fast="0" strong="10" dodge="5" roll="10" adrenalineMax="3" adrenalinePerHit="0.1" adrenalineLoss="1" adrenalineBonus="0.1" intensityStat="signIntensity"/>
+	<Monster id="ghoul" category="Necrophage" maxKnowledge="3" readLevel="3" killsPerLevel="2" killCap="2" investigateLevel="1">
+		<Weakness kind="Oil" id="necro_oil" knowledge="1"/>
+	</Monster>
+	<Item id="necro_oil" kind="Oil" element="Silver" hits="2" charges="1"/>
+	<Contract id="griffin" reward="100" limit="1.5" angerMax="1" angerScale="1" angerPerRound="0.1">
+		<Step id="tracks">
+			<Clue id="blood" position="0,0,0" radius="2" order="0"/>
+			<Clue id="feather" position="10,0,0" radius="2" order="1"/>
+		</Step>
+		<Step id="nest"><Clue id="eggs" position="20,0,0" radius="1" order="0"/></Step>
+	</Contract>
+</MonsterHuntCatalog>

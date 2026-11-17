@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f2b4449bd12d4d61b876f1801fb7d1be"?>
+<!--
+  장르 키트 시연 — 파티 아레나 키트(GF_PartyArena)의 라운드 시리즈 한 바퀴: 세 사람 · 순위 점수 3 · 2 · 1 · 우승 5 점 → 라운드 점수 10 · 5 · 1 을 두 번 → 0 번이 6 점으로 우승.
+  감시 값: KitDemo.PartyArena.State(0 시작 전, 1 마침) · .Winner · .WinnerTotal · .Rounds.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.kit_partyarena" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/kit_partyarena.scene.xml"/>
+	<WaitUntil watch="KitDemo.PartyArena.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.PartyArena.Winner" equals="0"/>
+	<Expect watch="KitDemo.PartyArena.WinnerTotal" equals="6"/>
+	<Expect watch="KitDemo.PartyArena.Rounds" equals="2"/>
+	<ExpectLog id="KitDemo.PartyArenaDone" count="1"/>
+	<Pass/>
+</Scenario>

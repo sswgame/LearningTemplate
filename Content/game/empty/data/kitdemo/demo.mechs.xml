@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f813057bdc3a4c8c8920a208c511e7e1"?>
+<!--
+  장르 키트 시연 — 기체 대전 판 하나(maps/kit_mecharena). 무기 없는 기체 하나(코스트 300 · 체력 100) — 팀 게이지는 코스트 x 2 = 600 이라 두 번 격추되면 바닥난다.
+-->
+<MechCatalog deckCostLimit="2000">
+	<Mech id="plain" name="Plain" cost="300" hp="100" boostRegen="0"/>
+</MechCatalog>

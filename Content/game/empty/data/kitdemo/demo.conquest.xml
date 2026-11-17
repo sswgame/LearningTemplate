@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8b513f2b5f93488993f7c3e1924d7948"?>
+<!--
+  장르 키트 시연 — 횡스크롤 정복 판 하나(maps/kit_sidescrollconquest). 성문 · 성벽 · 주둔군 · 웨이브가 없어 창병이 서 있기만 해도 1 초 만에 점령한다.
+  거점: 본진(x 0, 플레이어) · 전초기지(x 20, 중립) · 요새(x 100, 적).
+-->
+<ConquestCatalog>
+	<Rules fixedStep="0.5" captureTime="1" waveInterval="0"/>
+	<Unit id="spear" hp="40" damage="10" range="1" speed="2"/>
+	<Site id="home" x="0" owner="Player"/>
+	<Site id="outpost" x="20"/>
+	<Site id="keep" x="100" owner="Enemy"/>
+</ConquestCatalog>
