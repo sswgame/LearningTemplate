@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="88fd79e4364c4ce9bc3b60ba874b33da"?>
+<!--
+  장르 키트 시연 — 클래식 JRPG 전투 하나(maps/kit_classicjrpg). 용사(힘 40, 민첩 50)가 먼저 움직여 체력 1 인 frail 을 한 번에 쓰러뜨리고 경험치 31 · 골드 7 을 받는다(레벨 곡선 100 이라 레벨은 그대로).
+-->
+<JRPGCatalog>
+	<ExperienceCurve base="100" exponent="0" maxLevel="30"/>
+	<Class id="hero" name="Hero" hp="100" mp="10" str="40" agi="50" vit="20" intellect="10" luck="5" growHP="10" growMP="2" growStr="2" growAgi="1" growVit="2" growIntellect="2" growLuck="0" attackType="Sword"/>
+	<Enemy id="frail" name="Frail" hp="1" str="0" agi="1" vit="0" exp="31" gold="7"/>
+</JRPGCatalog>
