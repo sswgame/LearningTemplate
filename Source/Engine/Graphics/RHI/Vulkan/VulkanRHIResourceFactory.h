@@ -13,17 +13,19 @@ namespace sw
     public:
         explicit VulkanRHIResourceFactory( VulkanRHIDevice* pDevice )
             : _pDevice{ pDevice } {}
-        RHIPipelineStateHandle   createPipelineStateNative( const RHIPipelineStateDesc& desc ) override;
-        RHIPipelineStateHandle   createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) override;
-        void                     destroyPipelineState( RHIPipelineStateHandle pso ) override;
-        RHIRenderPassHandle      createRenderPass( const RHIRenderPassDesc& desc ) override;
-        void                     destroyRenderPass( RHIRenderPassHandle pass ) override;
-        RHIBufferHandle          createConstantBuffer( uint32 size ) override;
-        void                     updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        RHIBufferHandle          createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
-        void                     updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle          createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc ) override;
+        RHIPipelineStateHandle createComputePipelineStateNative( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine ) override;
+        void                   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
+        void                   destroyRenderPass( RHIRenderPassHandle pass ) override;
+        RHIBufferHandle        createConstantBuffer( uint32 size ) override;
+        void                   updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        RHIBufferHandle        createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+        void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                              const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        /** @brief 기기 로컬 버퍼 @p handle 에 첫 내용 @p pData 를 스테이징 복사로 올리고 기다립니다. 실패하면 버퍼를 놓고 0 입니다. */
+        RHIBufferHandle          uploadDeviceLocal( RHIBufferHandle handle, const void* pData, uint32 sizeBytes );
         RHIBufferHandle          createGPUVertexBuffer( uint32 sizeBytes ) override;
         void                     updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle          createIndexBuffer( const void* pData, uint32 sizeBytes ) override;

@@ -303,6 +303,9 @@ namespace sw
         const bool                          bTracked      = pBufferRecord != nullptr && pBufferRecord->_bTrackedState != SW_FALSE;
         const D3D12_RESOURCE_STATES         stateBefore   = bTracked ? pBufferRecord->_state.load() : D3D12_RESOURCE_STATE_COMMON;
 
+        // 끝낸 뒤 둘 읽기 상태는 버퍼 종류가 정한다(정점 · 인덱스 · 구조 — `BufferRecord::_uploadReadState`). 추적하지 않는 버퍼는 셰이더 읽기다.
+        constexpr D3D12_RESOURCE_STATES kShaderReadState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        const D3D12_RESOURCE_STATES     readState        = bTracked ? pBufferRecord->_uploadReadState : kShaderReadState;
         if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
         {
             D3D12_RESOURCE_BARRIER toCopyDest{};
@@ -327,18 +330,17 @@ namespace sw
         // 올린 뒤에는 **셰이더 읽기** 상태로 둔다. 주의: UAV 로 끝내면 그래픽스가 SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 데이터 · 라이트, 회전
         // 인스턴스가 없을 때의 인스턴스 버퍼)가 UAV 상태로 읽힌다(GPU 검증이 짚고, 드라이버 관용에 기대 동작한다). 컴퓨트로 쓰는 버퍼는 쓰기 전에
         // `transitionBuffer( UnorderedAccess )` 가 기록된 상태에서 옮긴다.
-        constexpr D3D12_RESOURCE_STATES kShaderReadState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        D3D12_RESOURCE_BARRIER          toShaderRead{};
+        D3D12_RESOURCE_BARRIER toShaderRead{};
         toShaderRead.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         toShaderRead.Transition.pResource   = pDest;
         toShaderRead.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        toShaderRead.Transition.StateAfter  = kShaderReadState;
+        toShaderRead.Transition.StateAfter  = readState;
         toShaderRead.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         pList->ResourceBarrier( 1, &toShaderRead );
         // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
 
         if ( bTracked )
-            pBufferRecord->_state.store( kShaderReadState );
+            pBufferRecord->_state.store( readState );
     }
 
     // 길이를 나누지 않는다: 서브리소스 · 풋프린트 · 스테이징 복사 · 상태 전이의 순서가 곧 뜻이다.
@@ -675,7 +677,25 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
-        return createUploadBuffer( pData, sizeBytes );
+        // 정적 정점은 default 힙에 둔다 — 업로드 힙(시스템 메모리)에서 그리면 디스크리트 GPU 가 그릴 때마다 PCIe 로 읽는다(언리얼 · 유니티의 정적 버퍼도 default 힙 + 복사).
+        // 내용은 스테이징 복사로 올린다(`updateStructuredBufferRegions` — 이번 프레임 리스트보다 먼저 실행된다).
+        if ( pData == nullptr || sizeBytes == 0 )
+            return 0;
+        constexpr D3D12_RESOURCE_STATES kVertexRead =
+            D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        return createDefaultBufferWithData( pData, sizeBytes, kVertexRead );
+    }
+
+    RHIBufferHandle D3D12RHIResourceFactory::createDefaultBufferWithData( const void* pData, uint32 sizeBytes, D3D12_RESOURCE_STATES readState )
+    {
+        const RHIBufferHandle handle = createGPUVertexBuffer( sizeBytes );
+        if ( handle == 0 )
+            return 0;
+        if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
+            pRecord->_uploadReadState = readState; // 핸들을 돌려주기 전이라 락 없이 쓴다
+        const RHIBufferCopyRegion region{ 0, 0, sizeBytes };
+        updateStructuredBufferRegions( handle, pData, &region, 1 );
+        return handle;
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
@@ -691,7 +711,10 @@ namespace sw
             return 0;
         const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
         if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
-            pRecord->_bTrackedState = SW_TRUE; // 핸들을 돌려주기 전이라 락 없이 켠다(`createStructuredBuffer` 와 같다)
+        {
+            pRecord->_bTrackedState   = SW_TRUE; // 핸들을 돌려주기 전이라 락 없이 켠다(`createStructuredBuffer` 와 같다)
+            pRecord->_uploadReadState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        }
         return handle;
     }
 
@@ -701,21 +724,12 @@ namespace sw
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;
+        // 정점 · 인덱스 버퍼는 default 힙이다(정적 자원을 시스템 메모리에서 그리지 않는다) — 스테이징 복사로 쓴다. 복사는 이번 프레임 리스트보다 먼저 실행되고
+        // 앞 프레임이 읽는 조각이 아님은 부르는 쪽이 지킨다(IRHIResourceFactory::updateGeometryBufferRegions). 범위는 여기서 본다.
         ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
         if ( pDest == nullptr )
             return;
-
-        // 정점 버퍼는 업로드 힙(createUploadBuffer)이라 복사의 목적지가 될 수 없다. 매핑해 CPU 가 직접 쓴다 — 앞 프레임이 읽는 조각이 아님은
-        // 부르는 쪽이 지킨다(IRHIResourceFactory::updateGeometryBufferRegions).
-        const uint64      bufferBytes = pDest->GetDesc().Width;
-        const D3D12_RANGE noRead{ 0, 0 };
-        void*             pMapped{ nullptr };
-        if ( isHrSuccess( pDest->Map( 0, &noRead, &pMapped ), "Map" ) == false || pMapped == nullptr )
-        {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateGeometryBufferRegionsFailedMapVertex", "updateGeometryBufferRegions: failed to map the vertex or index buffer" );
-            return;
-        }
-        const uint8* pBase = static_cast<const uint8*>( pBaseSource );
+        const uint64 bufferBytes = pDest->GetDesc().Width;
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
@@ -724,32 +738,16 @@ namespace sw
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateGeometryBufferRegionsRegionOutsideByte", "updateGeometryBufferRegions: region [%#, +%#) is outside the %#-byte vertex or index buffer; skipped", region._dstOffset, region._sizeBytes, bufferBytes );
                 continue;
             }
-            Memory::copy( static_cast<uint8*>( pMapped ) + region._dstOffset, pBase + region._srcOffset, region._sizeBytes );
+            updateStructuredBufferRegions( buffer, pBaseSource, &region, 1 );
         }
-        pDest->Unmap( 0, nullptr );
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
     {
-        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 인덱스 버퍼는 구조버퍼가 아니라 정점 버퍼처럼
-        // 업로드 힙의 GENERIC_READ 로 둔다. 그 상태가 INDEX_BUFFER 읽기를 포함하므로 전이 없이 걸 수 있다.
-        return createUploadBuffer( pData, sizeBytes );
-    }
-
-    RHIBufferHandle D3D12RHIResourceFactory::createUploadBuffer( const void* pData, uint32 sizeBytes )
-    {
-        const bool bInvalidUploadBufferRequest = _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0;
-        if ( bInvalidUploadBufferRequest )
+        // 정적 인덱스도 default 힙 + 스테이징 복사다(`createVertexBuffer` 와 같은 까닭).
+        if ( pData == nullptr || sizeBytes == 0 )
             return 0;
-
-        Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-        void*                                  pMapped{ nullptr };
-        if ( _pDevice->createMappedUploadBuffer( sizeBytes, buffer, pMapped ) == false )
-            return 0;
-        Memory::copy( pMapped, pData, sizeBytes );
-        buffer->Unmap( 0, nullptr );
-
-        return _pDevice->storeBuffer( buffer );
+        return createDefaultBufferWithData( pData, sizeBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER );
     }
 
     void D3D12RHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )

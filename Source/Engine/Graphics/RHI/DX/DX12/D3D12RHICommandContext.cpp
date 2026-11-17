@@ -74,7 +74,8 @@ namespace sw
                 case RHIBufferState::CopyDest:
                     return D3D12_RESOURCE_STATE_COPY_DEST;
                 case RHIBufferState::VertexOrConstant:
-                    return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+                    // 정점 버퍼는 셰이더도 읽는다(모프 · 스킨 컴퓨트가 풀을 SRV 로) — 읽기 상태는 합칠 수 있다. GPU 전용 정점 버퍼(R-15)가 이 상태로 돌아온다.
+                    return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
                 case RHIBufferState::Index:
                     return D3D12_RESOURCE_STATE_INDEX_BUFFER;
                 case RHIBufferState::CopySource:

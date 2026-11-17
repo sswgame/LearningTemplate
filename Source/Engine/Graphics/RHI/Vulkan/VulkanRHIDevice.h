@@ -157,6 +157,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Vulkan 버퍼의 메모리 자리입니다(`VulkanRHIDevice::createVulkanBuffer`). 기본값이 없다 — 만드는 쪽이 CPU 가 쓰는지로 고른다. */
+    enum class VulkanBufferMemory : uint8
+    {
+        HostVisible, ///< HOST_VISIBLE | HOST_COHERENT — CPU 가 매핑해 쓴다(상수 링 · 읽기 버퍼)
+        DeviceLocal  ///< DEVICE_LOCAL — GPU 가 그리며 읽는다(정점 · 인덱스 · 구조 버퍼). 내용은 스테이징 복사로 들어온다
+    };
+} // namespace sw
+
+namespace sw
+{
     class VulkanRHICommandList;
 
     /**
@@ -814,8 +824,12 @@ namespace sw
         [[nodiscard]] bool ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key, VulkanRHIRenderPassCache::CompositeRecord& outRecord );
         /** @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 빼서 GPU 펜스 뒤에 파괴합니다. */
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
-        /** @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다. */
-        RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize );
+        /**
+         * @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다.
+         * @param memory 메모리 자리 — CPU 가 매핑해 쓰는 버퍼(상수 링 · 읽기 · 스테이징)만 `HostVisible`, GPU 가 그리며 읽는 정적 자원은 `DeviceLocal` 이다(호스트 메모리에서 그리면
+         *        디스크리트 GPU 가 PCIe 로 읽는다). `DeviceLocal` 은 초기 데이터를 받지 않는다 — 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
+         */
+        RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory );
         /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
         void restoreDroppedFrameLayouts();
 

@@ -94,7 +94,7 @@ namespace sw
         const uint32 aligned = MathUtil::align( size, constant::render::kConstantBufferAlignment );
         const uint32 total   = aligned * constant::render::kMaxFrameCountInFlight;
         // 칸 크기는 레코드가 표에 오르기 전에 적힌다 — 렌더 스레드가 드로우마다 락 없이 읽는다.
-        return _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr, aligned );
+        return _pDevice->createVulkanBuffer( total, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, nullptr, aligned, VulkanBufferMemory::HostVisible ); // 링 칸을 CPU 가 매핑해 쓴다
     }
 
     void VulkanRHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -140,7 +140,8 @@ namespace sw
         // TRANSFER_SRC: 어느 구조 버퍼든 비동기 되읽기(`copyBufferToReadback`)의 원본이 될 수 있다 — IRHICommandList 계약이 원본을 가리지 않는다(다른 백엔드는 복사 원본 제한이 없다).
         constexpr uint32 usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        return _pDevice->createVulkanBuffer( static_cast<uint32>( totalBytes ), usage, nullptr, 0 );
+        // 구조 버퍼는 GPU 가 읽고 쓴다(인스턴스 · 컬링 · 라이트 그리드) — 기기 로컬이다. 갱신은 늘 스테이징 복사다(`updateStructuredBufferRegions`).
+        return _pDevice->createVulkanBuffer( static_cast<uint32>( totalBytes ), usage, nullptr, 0, VulkanBufferMemory::DeviceLocal );
     }
 
     bool VulkanRHIResourceFactory::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )
@@ -328,9 +329,11 @@ namespace sw
 
         // 앞 프레임의 읽기(셰이더 · 간접 인자 · 컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
         // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다. 보수적인 마스크로 양쪽을 다 덮는다.
-        constexpr VkAccessFlags        kConsumerAccess = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-        constexpr VkPipelineStageFlags kConsumerStage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                                                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+        // 정점 · 인덱스 버퍼도 이 길로 올린다(기기 로컬 정적 자원 · 정점 풀 — R-15) — 정점 입력 단계의 읽기도 덮는다.
+        constexpr VkAccessFlags kConsumerAccess = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+                                                  VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT;
+        constexpr VkPipelineStageFlags kConsumerStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 
         VkBufferMemoryBarrier barrier{};
         barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -354,13 +357,46 @@ namespace sw
             _pDevice->reportQueueResult( static_cast<int32>( oneShot->getLastResult() ), "updateStructuredBuffer: one-shot submit" );
     }
 
+    RHIBufferHandle VulkanRHIResourceFactory::uploadDeviceLocal( RHIBufferHandle handle, const void* pData, uint32 sizeBytes )
+    {
+        if ( handle == 0 )
+            return 0;
+        // 만들 때의 첫 내용은 일회성 커맨드버퍼로 올리고 기다린다 — 워커 스레드도 만든다(`_bThreadSafeResourceCreation`)라 프레임 커맨드버퍼에 기록할 수 없다.
+        // 스테이징은 호스트 보임 버퍼 하나를 만들어 쓰고 바로 놓는다(복사가 끝난 뒤다 — 대기했다).
+        const RHIBufferHandle                      staging   = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, pData, 0, VulkanBufferMemory::HostVisible );
+        VulkanRHIDevice::VulkanBufferRecord* const pSource   = _pDevice->resolveAllocatedBuffer( staging );
+        VulkanRHIDevice::VulkanBufferRecord* const pTarget   = _pDevice->resolveAllocatedBuffer( handle );
+        bool                                       bUploaded = pSource != nullptr && pTarget != nullptr && _pDevice->_oneShotCommandPool != VK_NULL_HANDLE;
+        if ( bUploaded )
+        {
+            VulkanOneShotCommands oneShot( _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue, _pDevice->_queueMutex );
+            bUploaded = oneShot.isValid();
+            if ( bUploaded )
+            {
+                VkBufferCopy region{};
+                region.size = sizeBytes;
+                vkCmdCopyBuffer( oneShot.get(), pSource->_buffer, pTarget->_buffer, 1, &region );
+                bUploaded = oneShot.endSubmitAndWait(); // 큐가 끝낼 때까지 기다린다 — 그 뒤 첫 사용은 다음 제출이라 배리어가 필요 없다
+            }
+        }
+        if ( staging != 0 )
+            destroyBuffer( staging );
+        if ( bUploaded )
+            return handle;
+        SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.DeviceLocalUploadFailed", "Failed to upload %# bytes into a device-local buffer", sizeBytes );
+        destroyBuffer( handle );
+        return 0;
+    }
+
     RHIBufferHandle VulkanRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
     {
         // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 구조버퍼에는 VK_BUFFER_USAGE_INDEX_BUFFER_BIT 가 없어
         // vkCmdBindIndexBuffer 에 거는 것이 용도 위반이므로 인덱스 용도로 따로 만든다.
         if ( pData == nullptr )
             return 0;
-        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, pData, 0 );
+        // 정적 인덱스는 기기 로컬 + 스테이징 복사다(호스트 메모리에서 그리지 않는다).
+        const RHIBufferHandle handle = _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0, VulkanBufferMemory::DeviceLocal );
+        return uploadDeviceLocal( handle, pData, sizeBytes );
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
@@ -368,15 +404,17 @@ namespace sw
         // 인덱스 버퍼와 같은 경로다(디바이스의 `createVulkanBuffer` 가 용도 `_usage` 까지 기록에 남긴다).
         if ( pData == nullptr )
             return 0;
-        // TRANSFER_SRC: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion).
-        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, pData, 0 );
+        // TRANSFER_SRC: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion). 정적 정점은 기기 로컬 + 스테이징 복사다.
+        const RHIBufferHandle handle =
+            _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0, VulkanBufferMemory::DeviceLocal );
+        return uploadDeviceLocal( handle, pData, sizeBytes );
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
     {
-        // 복사의 도착 · 원본(풀을 다시 꾸릴 때 옛 풀이 원본이다). 메모리는 엔진의 다른 Vulkan 버퍼처럼 호스트 보임이다 — 기기 로컬로 옮기는 일은 버퍼 할당 전체의 몫이다.
+        // 복사의 도착 · 원본(풀을 다시 꾸릴 때 옛 풀이 원본이다). 기기 로컬이다.
         constexpr uint32 usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        return _pDevice->createVulkanBuffer( sizeBytes, usage, nullptr, 0 );
+        return _pDevice->createVulkanBuffer( sizeBytes, usage, nullptr, 0, VulkanBufferMemory::DeviceLocal );
     }
 
     void VulkanRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
@@ -396,13 +434,7 @@ namespace sw
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateGeometryBufferRegionsHandleNotGeometry", "updateGeometryBufferRegions: the handle is not a vertex or index buffer" );
             return;
         }
-        void* pMapped{ nullptr };
-        if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, VK_WHOLE_SIZE, 0, &pMapped ) != VK_SUCCESS || pMapped == nullptr )
-        {
-            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateGeometryBufferRegionsFailedMapVertex", "updateGeometryBufferRegions: failed to map the vertex or index buffer memory" );
-            return;
-        }
-        const uint8* pBase = static_cast<const uint8*>( pBaseSource );
+        // 정점 · 인덱스 버퍼는 기기 로컬이다 — 매핑하지 않고 스테이징 복사로 쓴다(복사는 이번 프레임 패스보다 먼저, 앞 프레임이 읽는 조각이 아님은 부르는 쪽이 지킨다).
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
@@ -411,9 +443,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.UpdateGeometryBufferRegionsRegionOutsideByte", "updateGeometryBufferRegions: region [%#, +%#) is outside the %#-byte vertex or index buffer; skipped", region._dstOffset, region._sizeBytes, pRecord->_sizeBytes );
                 continue;
             }
-            Memory::copy( static_cast<uint8*>( pMapped ) + region._dstOffset, pBase + region._srcOffset, region._sizeBytes );
+            updateStructuredBufferRegions( buffer, pBaseSource, &region, 1 );
         }
-        vkUnmapMemory( _pDevice->_device, pRecord->_memory );
     }
 
     void VulkanRHIResourceFactory::destroyBuffer( RHIBufferHandle buffer )
@@ -989,8 +1020,8 @@ namespace sw
         const bool bInvalidReadbackRequest = elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
         if ( bInvalidReadbackRequest )
             return 0;
-        // 모든 Vulkan 버퍼가 HOST_VISIBLE | HOST_COHERENT 메모리다(createVulkanBuffer) — 복사 도착지 용도로 만들면 맵해 읽을 수 있다.
-        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0 );
+        // 읽기 버퍼는 CPU 가 맵해 읽는다 — 호스트 보임이다.
+        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr, 0, VulkanBufferMemory::HostVisible );
     }
 
     bool VulkanRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )

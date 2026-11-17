@@ -413,6 +413,8 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
             TrackedState                           _state;
             uint8                                  _bTrackedState{ SW_FALSE };
+            /// @brief 스테이징 업로드(`updateStructuredBufferRegions`)가 끝낸 뒤 둘 읽기 상태입니다 — 구조 버퍼는 셰이더 읽기, 정점 버퍼는 정점 + 셰이더 읽기, 인덱스 버퍼는 인덱스 읽기.
+            D3D12_RESOURCE_STATES _uploadReadState{ D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
         };
 
         /// @brief 기록 경로가 오프스크린 레코드에서 읽는 항목입니다. `findOffscreenTargetView` 가 복사해 줍니다.

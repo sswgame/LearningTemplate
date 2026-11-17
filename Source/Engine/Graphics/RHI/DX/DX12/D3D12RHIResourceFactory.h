@@ -68,8 +68,8 @@ namespace sw
          * @details `createTexture2D` 와 `createPlacedTexture2D` 가 같은 몸을 쓴다 — 서술 · 뷰 · 상태 규칙이 두 벌로 갈리지 않게.
          */
         RHITextureHandle createTextureResource( const RHITextureDesc& desc, ID3D12Heap* pHeap, uint64 offsetBytes );
-        /** @brief 내용을 채워 업로드 힙 버퍼(GENERIC_READ)를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
-        RHIBufferHandle createUploadBuffer( const void* pData, uint32 sizeBytes );
+        /** @brief default 힙 버퍼를 만들고 @p pData 를 스테이징 복사로 올립니다. 올린 뒤 @p readState 에 둔다(정점 · 인덱스 — 정적 자원을 시스템 메모리에서 그리지 않는다). */
+        RHIBufferHandle createDefaultBufferWithData( const void* pData, uint32 sizeBytes, D3D12_RESOURCE_STATES readState );
         /**
          * @brief bindless 힙에서 디스크립터 인덱스를 하나 가져옵니다.
          * @param lock 부르는 쪽이 **이미 잡고 있는** `_bindlessMutex` 잠금.
