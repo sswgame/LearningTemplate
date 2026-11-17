@@ -283,6 +283,11 @@ namespace sw
          *          위반이 없으면 글을 만들지 않고 첫 위반에서 멈추는 빠른 길로 끝납니다.
          */
         [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
+        /**
+         * @brief 위와 같되 소프트 읽기가 읽기 전 값으로 되돌린 칸(@p listRestoredProperty — orphan 으로 넘긴 칸)은 보지 않습니다.
+         * @details 되돌린 칸은 파일 값이 아니라 읽기 전 값이고(새 객체면 0), 그 칸의 잘못은 orphan 이 이미 알렸다 — 보면 모르는 키 하나가 범위 밖 오류 묶음으로 덧나 알려진다.
+         */
+        [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance, const vector<const PropertyInfo*>& listRestoredProperty );
 
         /** @brief 프로퍼티 목록에서 키(철자 그대로)에 맞는 프로퍼티 메타데이터를 찾습니다. 지금 이름을 모두 본 뒤에 옛 이름(Alias)을 봅니다. */
         static const PropertyInfo* matchProperty( PropertyListView listProp, string_view keyRaw );

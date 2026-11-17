@@ -1134,6 +1134,24 @@ namespace sw
             Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
     }
 
+    bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance, const vector<const PropertyInfo*>& listRestoredProperty )
+    {
+        if ( listRestoredProperty.empty() )
+            return isWithinDeclaredRanges( typeInfo, instance );
+        // 되돌린 칸이 있는 실패 길이라 빠른 길 없이 칸마다 모은다.
+        vector<string> listRangeError;
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        {
+            if ( VectorUtil::contains( listRestoredProperty, &prop ) == false )
+                collectPropertyRangeErrors( prop, instance, string(), listRangeError );
+        }
+        for ( const string& rangeError : listRangeError )
+        {
+            SW_LOG_ERROR_ID( "Serialization.ValueOutOfRange", "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
+        }
+        return listRangeError.empty();
+    }
+
     bool SerializerUtil::isWithinDeclaredRanges( const TypeInfo& typeInfo, const ObjectAddress instance )
     {
         if ( SerializerUtilInternal::isEveryValueWithinRange( typeInfo, instance ) )
@@ -1184,8 +1202,10 @@ namespace sw
                              _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
             return false;
         }
-        // 이 빌드가 방금 쓴 바이트라 되읽지 못하면 코덱의 결함이다 — 읽다 만 값을 받지 않고 멈춘다.
-        if ( SerializerUtil::applyPropertyBinary( *_pProperty, instance, _bytes.data(), _bytes.size(), context ) == FieldReadResult::Read )
+        // 이 빌드가 방금 쓴 바이트라 되읽지 못하면 코덱의 결함이다 — 읽다 만 값을 받지 않고 멈춘다. 읽기 전 값은 검사한 적이 없어 범위를 보지 않는다.
+        SerializeContext restoreContext = context;
+        restoreContext.setRestoringValueBeforeRead();
+        if ( SerializerUtil::applyPropertyBinary( *_pProperty, instance, _bytes.data(), _bytes.size(), restoreContext ) == FieldReadResult::Read )
             return true;
         SW_LOG_ERROR_ID( "Serialization.RestoreFailed", "%#::%# (%#): the value before the failed read could not be put back - the object is not read", _pOwnerType->_name.c_str(),
                          _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );

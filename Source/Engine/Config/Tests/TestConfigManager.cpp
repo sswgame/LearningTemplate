@@ -287,6 +287,13 @@ SW_TEST_CASE( ConfigManagerTest, PlatformOverrideFileLayersOnTheBase )
         ConfigManager manager;
         SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ) ) );
     }
+
+    // 5) 구조체 칸 안의 모르는 키도 모르는 키 하나로 끝난다 — 읽지 못한 `_render` 를 읽기 전 값(새 객체의 0, 범위 밖)으로 되돌리는 길이 범위 검사로 덧나지 않는다.
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_render": { "_shadowCullSlots": 4 } })" ) );
+    {
+        ConfigManager manager;
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ) ) );
+    }
 }
 
 /**

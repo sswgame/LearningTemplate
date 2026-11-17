@@ -537,6 +537,9 @@ namespace sw
         {
             case FieldReadResult::Read:
                 // 선언된 범위는 읽기 공통 끝에서 본다(JSON · XML 과 같다). 범위 밖 값은 성공으로 돌아오지 않는다.
+                // 읽기 실패 되돌리기는 읽기 전 값(검사한 적 없는 값)을 돌려놓을 뿐이라 보지 않는다(`SerializeContext::setRestoringValueBeforeRead`).
+                if ( context.isRestoringValueBeforeRead() )
+                    return FieldReadResult::Read;
                 return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
             case FieldReadResult::FieldFailed:
             case FieldReadResult::ObjectRejected:

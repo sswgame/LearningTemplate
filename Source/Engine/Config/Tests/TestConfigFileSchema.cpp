@@ -116,12 +116,35 @@ namespace
             return bApplied;
         }
 
+        /**
+         * @brief 렌더 품질 단계 표를 실제 로드 길로 읽습니다 — 단계마다 커밋된 엔진 설정(같은 폴더의 `EngineConfig.json`) 위에 덮어(`ConfigSource::withRenderQuality`) 엄격하게 읽는다.
+         * @details 단계는 `_render` 안쪽만 적으므로 단계 하나만으로는 형식이 서지 않는다 — 바탕 위에 덮은 글이 읽히는지가 이 파일의 검사다.
+         */
+        [[nodiscard]] static bool loadRenderQuality( const sw::string& absolutePath )
+        {
+            sw::string       text;
+            sw::JSONDocument tiers;
+            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false || tiers.parse( text ) == false || tiers.getRoot().isObject() == false )
+                return false;
+            const sw::string enginePath = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( absolutePath ), "EngineConfig.json" );
+            bool             bAllRead   = tiers.getRoot().getMemberNames().empty() == false;
+            for ( const sw::string& tier : tiers.getRoot().getMemberNames() )
+            {
+                sw::ConfigManager manager;
+                const bool        bRead = manager.loadHostConfig<sw::EngineConfig>( sw::ConfigSource::disk( enginePath ).withRenderQuality( absolutePath, tier ) ) != nullptr;
+                SW_EXPECT_TRUE_MSG( bRead, absolutePath + ": tier '" + tier + "' does not load over the engine config" );
+                bAllRead = bAllRead && bRead;
+            }
+            return bAllRead;
+        }
+
         /** @brief 앞의 줄이 먼저 맞습니다. */
         static constexpr ConfigKind kArrKind[] = {
             {                    "Config/Engine/EngineConfig.json",                                                                                     "",              &loadBaseLayer<sw::EngineConfig>},
             {                    "Config/Engine/MemoryBudget.json",                                                                                     "",                             &loadMemoryBudget},
             {                      "Config/Engine/PackConfig.json",                                                                                     "",                &loadBaseLayer<sw::PackConfig>},
             {                     "Config/Engine/RenderScale.json",                                                                                     "", &loadBaseLayer<sw::RenderScaleAdjusterConfig>},
+            {                   "Config/Engine/RenderQuality.json",                                                                                     "",                            &loadRenderQuality},
             {                    "Config/Engine/CookContract.json",                                      "Scripts/generate/configure_files.py (configure)",                                       nullptr},
             {       "Config/Engine/ClientOnlyTypes.generated.json",           "Scripts/generate/client_only_types.py (py -3 -m Scripts client-only-types)",                                       nullptr},
             {                "Config/Engine/ProcessExitCodes.json",                                   "Scripts/generate/process_exit_codes.py (configure)",                                       nullptr},

@@ -74,6 +74,7 @@ namespace sw
             , _purpose{ purpose }
             , _bSkipUnknownProperties{ SW_FALSE }
             , _bSkipUnreadableProperties{ SW_FALSE }
+            , _bRestoringValueBeforeRead{ SW_FALSE }
             , _reservedFlags{ 0 } {}
 
         // ------------------------------------------------------------------------------
@@ -116,6 +117,17 @@ namespace sw
             return setSkipUnreadableProperties( bAllow );
         }
 
+        /**
+         * @brief 읽기 실패 되돌리기(`PropertyReadRollback::restoreValueBeforeRead`) 전용 문맥으로 만듭니다 — 구조체 칸의 읽기 공통 끝이 `Min` · `Max` 를 보지 않는다.
+         * @details 되돌리는 바이트는 방금 같은 객체에서 쓴 **읽기 전 값**이다. 파일 값이 아니라 검사한 적이 없고, 기본값 없이 파일에만 값이 있는 형식(`EngineConfig::_render`)의
+         *          새 객체는 0 이라 범위 밖이다 — 검사하면 되돌리기가 실패해 모르는 키 하나가 "범위 밖 · 되돌리지 못함" 으로 바뀌어 알려졌다.
+         */
+        SerializeContext& setRestoringValueBeforeRead()
+        {
+            _bRestoringValueBeforeRead = SW_TRUE;
+            return *this;
+        }
+
         // ------------------------------------------------------------------------------
         // 3) 조회: 타입 이름 → 등록된 writer/reader
         // ------------------------------------------------------------------------------
@@ -131,6 +143,8 @@ namespace sw
         bool shouldSkipUnknownProperties() const { return _bSkipUnknownProperties == SW_TRUE; }
         /** @brief 타입에 있는데 값을 읽지 못한 필드를 건너뛰고 계속하는지(`setSkipUnreadableProperties`) 반환합니다. */
         bool shouldSkipUnreadableProperties() const { return _bSkipUnreadableProperties == SW_TRUE; }
+        /** @brief 읽기 실패 되돌리기 문맥(`setRestoringValueBeforeRead`)이면 true 입니다 — 선언된 범위를 보지 않는다. */
+        bool isRestoringValueBeforeRead() const { return _bRestoringValueBeforeRead == SW_TRUE; }
         /**
          * @brief 저장 목적입니다. 만들 때 정하고 바꾸지 않습니다.
          * @details 목적이 쓰지 않는 필드는 읽을 때도 지금 값 그대로다(기본값을 채우지 않는다). 세이브는 옵트인 타입의 나머지 필드를, 저작 읽기는 `RuntimeState` 를 덮지 않는다.
@@ -241,7 +255,8 @@ namespace sw
         SerializePurpose       _purpose;
         uint8                  _bSkipUnknownProperties    : 1;
         uint8                  _bSkipUnreadableProperties : 1;
-        [[maybe_unused]] uint8 _reservedFlags             : 6;
+        uint8                  _bRestoringValueBeforeRead : 1;
+        [[maybe_unused]] uint8 _reservedFlags             : 5;
     };
 
 } // namespace sw
