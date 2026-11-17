@@ -444,8 +444,20 @@ namespace sw
         createInfo.presentMode      = presentMode;
         createInfo.clipped          = VK_TRUE;
 
-        if ( vkCreateSwapchainKHR( device, &createInfo, nullptr, &_swapChain ) != VK_SUCCESS )
+        createInfo.oldSwapchain = _retiredSwapChain;
+
+        const VkResult createResult = vkCreateSwapchainKHR( device, &createInfo, nullptr, &_swapChain );
+        // 넘긴 옛 스왑체인은 생성 결과와 상관없이 은퇴했다(명세 vkCreateSwapchainKHR) — 여기서 놓는다. 이미지는 GPU 가 쉰 뒤라(재생성 앞 vkDeviceWaitIdle) 쓰는 곳이 없다.
+        if ( _retiredSwapChain != nullptr )
+        {
+            vkDestroySwapchainKHR( device, _retiredSwapChain, nullptr );
+            _retiredSwapChain = nullptr;
+        }
+        if ( createResult != VK_SUCCESS )
+        {
+            _swapChain = nullptr;
             return false;
+        }
 
         if ( enumerateVk( _listImage, "vkGetSwapchainImagesKHR", [device, this]( uint32* pCount, VkImage* pData )
         { return vkGetSwapchainImagesKHR( device, _swapChain, pCount, pData ); } ) == false )
@@ -571,10 +583,35 @@ namespace sw
         _listImageAvailableSemaphore.clear();
     }
 
+    void VulkanRHISwapChain::retireForRecreate( VkDevice device )
+    {
+        if ( device == nullptr )
+            return;
+        // 지난 create 가 생성까지 가지 못해 물려줄 것이 남았는데 지금 것도 있으면, 지금 것을 넘기고 옛것은 놓는다(넘길 수 있는 것은 은퇴하지 않은 하나다).
+        if ( _swapChain != nullptr )
+        {
+            if ( _retiredSwapChain != nullptr )
+                vkDestroySwapchainKHR( device, _retiredSwapChain, nullptr );
+            _retiredSwapChain = _swapChain;
+            _swapChain        = nullptr;
+        }
+        destroyCurrent( device );
+    }
+
     void VulkanRHISwapChain::destroy( VkDevice device )
     {
         if ( device == nullptr )
             return;
+        destroyCurrent( device );
+        if ( _retiredSwapChain != nullptr )
+        {
+            vkDestroySwapchainKHR( device, _retiredSwapChain, nullptr );
+            _retiredSwapChain = nullptr;
+        }
+    }
+
+    void VulkanRHISwapChain::destroyCurrent( VkDevice device )
+    {
 
         for ( VkFramebuffer framebuffer : _listFramebuffer )
         {

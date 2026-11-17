@@ -894,8 +894,32 @@ namespace sw
 
         VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
         loadSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPassLoad = createRenderPassFromSpec( loadSpec );
+        _renderPassLoad        = createRenderPassFromSpec( loadSpec );
+        _renderPassImageFormat = _swapChain.getImageFormat();
         return _renderPassLoad != VK_NULL_HANDLE;
+    }
+
+    bool VulkanRHIDevice::rebuildRenderPassIfFormatChanged()
+    {
+        if ( _swapChain.getImageFormat() == _renderPassImageFormat )
+            return true;
+        // 다시 만든 스왑체인의 형식이 바뀌었다(표면이 다른 형식만 준다 — 모니터 이동 · HDR 전환). 옛 형식의 렌더 패스로 프레임버퍼를 만들면 첨부 형식이 어긋난다(R-8).
+        // GPU 는 재생성 앞에서 쉬었다. 창 스왑체인의 프레임버퍼도 같은 렌더 패스를 쓰므로 함께 다시 짓는다.
+        SW_LOG_INFO_ID( "Vulkan.SwapChainRenderPassFormatChanged", "The swap chain format changed (VkFormat %# -> %#) - rebuilding the swap chain render passes", _renderPassImageFormat,
+                        _swapChain.getImageFormat() );
+        if ( _renderPassLoad != VK_NULL_HANDLE )
+            vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
+        if ( _renderPass != VK_NULL_HANDLE )
+            vkDestroyRenderPass( _device, _renderPass, nullptr );
+        _renderPass     = VK_NULL_HANDLE;
+        _renderPassLoad = VK_NULL_HANDLE;
+        if ( createRenderPass() == false )
+            return false;
+        for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
+        {
+            (void)rebuildWindowSwapChain( *pWindow, pWindow->getExtentWidth(), pWindow->getExtentHeight() ); // 실패 알림은 안에서 남긴다. 다음 획득이 다시 본다
+        }
+        return true;
     }
 
     bool VulkanRHIDevice::supportsValidationLayer()
@@ -1673,7 +1697,7 @@ namespace sw
     bool VulkanRHIDevice::rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height )
     {
         swapChain.destroySemaphores( _device );
-        swapChain.destroy( _device );
+        swapChain.retireForRecreate( _device ); // 같은 서피스 — 옛 스왑체인을 oldSwapchain 으로 물려준다
         if ( swapChain.create( _physicalDevice, _device, width, height ) == false )
             return false; // 서피스 크기 0(최소화)은 오류가 아니다 — 다음 획득이 다시 시도한다
         const bool bBuilt = swapChain.createFramebuffers( _device, _renderPass ) && swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight );
@@ -1770,7 +1794,8 @@ namespace sw
         // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 다시 만든다.
         destroyFrameFences();
         _swapChain.destroySemaphores( _device );
-        _swapChain.destroy( _device );
+        // 옛 스왑체인은 새 생성의 oldSwapchain 으로 물려준다(같은 서피스 — 표시 엔진이 자원을 넘겨받는다, R-8).
+        _swapChain.retireForRecreate( _device );
 
         // 실패하면 부르는 쪽이 다음 프레임에 다시 시도한다(최소화 · 복원 중에는 서피스 크기가 잠시 0 이라 실패한다). 알림은 연달아
         // 실패하는 동안 한 번이다.
@@ -1782,6 +1807,8 @@ namespace sw
                 return false;
             pFailedStep = "swapchain";
         }
+        else if ( rebuildRenderPassIfFormatChanged() == false )
+            pFailedStep = "swapchain render pass";
         else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
             pFailedStep = "swapchain framebuffers";
         else if ( _swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight ) == false )

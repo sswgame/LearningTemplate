@@ -217,6 +217,8 @@ namespace sw
         /** @brief present 모드를 새 VSync 값으로 바꾸도록 스왑체인을 다음 `beginFrame` 에서 다시 만들게 표시합니다. */
         void               applyVSyncInternal() override;
         [[nodiscard]] bool createRenderPass();
+        /** @brief 다시 만든 스왑체인의 형식이 렌더 패스를 만든 형식과 다르면 스왑체인 렌더 패스(CLEAR · LOAD)와 창 스왑체인의 프레임버퍼를 다시 짓습니다(R-8). GPU 가 쉰 뒤 부른다. */
+        [[nodiscard]] bool rebuildRenderPassIfFormatChanged();
         /** @brief 프레임을 엽니다(펜스 대기, 스왑체인 이미지 획득, 커맨드 버퍼 기록 시작). */
         void beginFrameInternal() override;
 
@@ -856,11 +858,12 @@ namespace sw
         /// @brief 창 하나의 서피스, 스왑체인, 백버퍼입니다. 이미지, 뷰, 프레임버퍼, 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
 
-        VkRenderPass _renderPass;           ///< 스왑체인 렌더 패스(loadOp=CLEAR)
-        VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더 패스의 loadOp=LOAD 변형이다. 한 프레임에 백버퍼를
-                                            ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 올릴 때) 앞의 내용을 보존한다.
-        VkRenderPass  _offscreenRenderPass; ///< 게임 뷰와 RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
-        VkCommandPool _commandPool;         ///< 프레임 버퍼와 프레임 세그먼트용 풀이다. 렌더 스레드만 쓴다.
+        VkRenderPass _renderPass;                  ///< 스왑체인 렌더 패스(loadOp=CLEAR)
+        VkRenderPass _renderPassLoad;              ///< 같은 스왑체인 렌더 패스의 loadOp=LOAD 변형이다. 한 프레임에 백버퍼를
+                                                   ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 올릴 때) 앞의 내용을 보존한다.
+        uint32        _renderPassImageFormat{ 0 }; ///< `_renderPass` 를 만든 스왑체인 이미지 형식(VkFormat) — 재생성 때 바뀌면 다시 짓는다
+        VkRenderPass  _offscreenRenderPass;        ///< 게임 뷰와 RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
+        VkCommandPool _commandPool;                ///< 프레임 버퍼와 프레임 세그먼트용 풀이다. 렌더 스레드만 쓴다.
         /**
          * @brief 프레임 밖에서 제출하고 기다리는 일회성 제출(구조 버퍼 갱신, GPU 시계 읽기) 전용 풀입니다. `_oneShotMutex` 가 보호합니다. 텍스처 전송은 `_transferCommandPool` 을 쓴다.
          * @details 커맨드 풀은 외부 동기화 대상이다. 게임 스레드나 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
