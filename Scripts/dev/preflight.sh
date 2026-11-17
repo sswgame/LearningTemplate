@@ -7,7 +7,7 @@
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
 # 단계(시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을 판정하므로 GPU 단계는 혼자 돈다):
-#   build       lint --all(뒤에서) ‖ Debug 빌드 → 임포트 → (Release → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
+#   build       lint --all(뒤에서) ‖ Debug 빌드 → (바뀐 파일 clang-tidy, 뒤에서) ‖ 임포트 → (Release → 서버 빌드 ‖ 배포 프리셋 셋 빌드 · 쿠킹). 배포 빌드는 증분 빌드의 링크 꼬리에 비는 코어를 쓴다(2026-11-13: CPU 단계 11.5 분 중 9 분이 배포 빌드였다).
 #   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed — DesignBacklog D4). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
 #               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
@@ -174,6 +174,16 @@ run_changed() {
   exit 1
 }
 
+job_tidy() {
+  # 정적 분석: 이 묶음이 바꾼 파일(origin/main 기준)만 — 방금 지은 Debug 의 컴파일 DB 를 쓴다. 오류로 오르는 검사는 .clang-tidy 의 WarningsAsErrors.
+  echo "== tidy $(date +%T)"
+  run build/Ninja-Debug/Testing/Logs/verify.tidy.log py -3 -m Scripts tidy --changed origin/main
+  local RC=$?
+  [ $DRY -eq 1 ] || tail -n 25 build/Ninja-Debug/Testing/Logs/verify.tidy.log
+  echo "tidy exit=$RC"
+  return $RC
+}
+
 job_debug_cpu() {
   run_ctest Ninja-Debug nogpu -L nogpu || return 1
   # App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 보고 줄은 판정을 바꾸지 않는다.
@@ -220,6 +230,7 @@ mkdir -p build
 if [ $STAGE -le 1 ]; then
   start_job "lint --all" job_lint
   build_preset Ninja-Debug
+  start_job "clang-tidy" job_tidy
   # 임포트를 먼저 끝낸다 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게(ctest 의 고정 단계 ImportedAssets 는 아래에서 곧바로 끝난다).
   run_ctest Ninja-Debug import -L import || windows_failed "Ninja-Debug import"
   start_job "shipping build" job_shipping_build
