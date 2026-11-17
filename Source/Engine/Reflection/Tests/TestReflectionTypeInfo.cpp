@@ -1787,27 +1787,37 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeAliasDoesNotOverwriteALiveTarget )
 }
 
 /**
- * @brief [ReflectionTypeRegistryTest] getDerivedTypes 는 쓰기 잠금을 기다리는 다른 스레드가 있어도 멈추지 않는다
- * @details 예전에는 공유 잠금을 쥔 채 `isDerivedFrom` → `getParentType` → `findType` 이 같은 잠금을 다시 잡아, 그 사이 기다리는 쓰기 잠금(등록이 세대를 올린다)과
- *          맞물려 멈출 수 있었다. 옳은 구현은 잠금 안에서 포인터만 모은다.
+ * @brief [ReflectionTypeRegistryTest] getDerivedTypes · 캐스트는 별칭을 쉬지 않고 거는 쓰기와 함께 돌아도 멈추지 않고 답이 흔들리지 않는다
+ * @details 예전에는 사슬 걷기(`getParentType`)가 세대가 오를 때마다 부모가 미등록인 타입마다 `findType` 을 잠가, 쉬지 않는 쓰기 잠금과 다투다 Release 에서
+ *          시한에 걸렸다. 또 등록이 부모 링크 · 조상 표를 비운 뒤 잠금 밖에서 다시 지어, 그 틈에 읽기가 끊긴 사슬을 보거나 표를 함께 지었다.
+ *          지금은 쓰기가 독점 잠금 안에서 링크 · 표를 새 값으로 바로 바꾸고(`relinkAffectedLocked`) 읽기는 잠그지 않는다.
+ *          쓰기는 `DummyBase` 에 별칭을 걸어 `DummyActor`(자손)를 매번 다시 잇게 하고, 읽기는 그 사이 파생 검사가 늘 참인지 본다.
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedTypesQueryDoesNotNestTheRegistryLock, ._tags = "slow", ._timeoutSeconds = 60.0f )
 {
-    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
-    sw::atomic<bool>  bStop{ false };
-    sw::thread        writer( sw::ThreadTestAccess::getKey(), [&registry, &bStop]()
-           {
+    sw::TypeRegistry&         registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::TypeInfo* const pBase    = registry.findType<sw::DummyBase>();
+    const sw::TypeInfo* const pDerived = registry.findType<sw::DummyActor>();
+    SW_REQUIRE_NOT_NULL( pBase );
+    SW_REQUIRE_NOT_NULL( pDerived );
+    sw::atomic<bool> bStop{ false };
+    sw::thread       writer( sw::ThreadTestAccess::getKey(), [&registry, &bStop]()
+          {
         while ( bStop.load() == false )
         {
-            registry.registerTypeAlias( "sw::DerivedTypesStressAlias", "sw::SampleTestActor" ); // 쓰기 잠금 + 세대 올림(부모 찾기를 다시 하게 한다)
+            registry.registerTypeAlias( "sw::DerivedTypesStressAlias", "sw::SampleTestActor" ); // 쓰기 잠금 + 세대 올림
+            registry.registerTypeAlias( "sw::DerivedTypesStressBaseAlias", "sw::DummyBase" );   // 자손(DummyActor)의 링크 · 표를 다시 짓게 한다
         }
     } );
-    size_t            visitedCount = 0;
+    size_t           visitedCount = 0;
+    uint32           brokenCount  = 0;
     for ( uint32 round = 0; round < 2000; ++round )
     {
         visitedCount += registry.getDerivedTypes<sw::SampleTestActor>().size();
+        brokenCount += pDerived->isDerivedFrom( pBase ) && pDerived->getTypeChain().size() >= 2 ? 0u : 1u;
     }
     bStop.store( true );
     writer.join();
     SW_EXPECT_EQUAL( size_t( 0 ), visitedCount ); // 파생이 없는 타입 — 답은 비어 있고, 멈추지 않고 여기까지 왔다
+    SW_EXPECT_EQUAL( 0u, brokenCount );           // 다시 잇는 동안에도 사슬이 끊기지 않았다
 }

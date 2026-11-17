@@ -380,8 +380,10 @@ namespace sw
 
     const TypeInfo* TypeInfo::getParentType() const
     {
-        const TypeInfo* pParent = _parentLink._pType.load( std::memory_order_relaxed );
-        if ( pParent != nullptr || _parentFQN.empty() )
+        const TypeInfo* pParent = _parentLink._pType.load( std::memory_order_acquire );
+        // 레지스트리에 든 타입은 쓰기 쪽이 독점 잠금 안에서 링크를 바꿔 둔다(`TypeRegistry::relinkAffectedLocked`) — 비어 있으면 부모가 미등록이다.
+        // 잠그지 않는다: 쓰기가 잠금을 쥔 채 사슬을 걷고(조상 표), 읽기가 세대마다 잠그면 별칭을 쉬지 않고 거는 쓰기와 잠금을 다툰다.
+        if ( pParent != nullptr || _parentFQN.empty() || isRegistryOwned() )
             return pParent;
 
         // 찾지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
@@ -398,12 +400,6 @@ namespace sw
         else
             _parentMissGeneration.store( generation, std::memory_order_release );
         return pParent;
-    }
-
-    void TypeInfo::resolveParentType() const
-    {
-        clearParentType();
-        (void)getParentType();
     }
 
     bool TypeInfo::isDerivedFrom( const hashed_string& targetFqn ) const
@@ -435,13 +431,13 @@ namespace sw
 
     bool TypeInfo::isDerivedFromSlow( const TypeInfo* pTarget ) const
     {
-        // 헤더의 인라인 버전이 nullptr, 자기 자신, 양쪽 모두 테이블이 있는 경우를 걸렀다. 아직 만들지 않은 쪽은 여기서
-        // 만든다(배치 밖에서 등록된 타입, 레지스트리 밖 사본, 해제 뒤 첫 조회). 만들 수 없는 쪽은 아래 순회가 답한다.
+        // 헤더의 인라인 버전이 nullptr, 자기 자신, 양쪽 모두 테이블이 있는 경우를 걸렀다. 레지스트리 밖 사본은 아직 만들지 않은 표를 여기서 만든다.
+        // 레지스트리에 든 타입의 표는 쓰기 쪽만 짓는다 — 읽기가 함께 지으면 등록이 비운 표를 낡은 사슬로 다시 적을 수 있다. 표가 없으면 아래 순회가 답한다.
         uint8 selfDepth = _castHeader._ancestorDepth.load( std::memory_order_acquire );
-        if ( selfDepth == constant::reflection::kAncestorDepthUnknown && computeAncestorDisplay() )
+        if ( selfDepth == constant::reflection::kAncestorDepthUnknown && isRegistryOwned() == false && computeAncestorDisplay() )
             selfDepth = _castHeader._ancestorDepth.load( std::memory_order_acquire );
         uint8 targetDepth = pTarget->_castHeader._ancestorDepth.load( std::memory_order_acquire );
-        if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->computeAncestorDisplay() )
+        if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->isRegistryOwned() == false && pTarget->computeAncestorDisplay() )
             targetDepth = pTarget->_castHeader._ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
         {
