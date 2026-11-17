@@ -10,8 +10,10 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "sw/config/ConfigConstants.h"
 #include "sw/config/ShippingHostDefaults.h"
 
 using namespace sw;
@@ -211,4 +213,77 @@ SW_TEST_CASE( ConfigManagerTest, ValidFileWithNestedStructLoads )
     SW_REQUIRE_NOT_NULL( manager.getConfig<EngineConfig>() );
     SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );
     SW_EXPECT_TRUE( manager.getConfig<EngineConfig>()->_window._defaultRHI == RHIBackend::Vulkan );
+}
+
+/**
+ * @brief [ConfigManagerTest] 플랫폼 덮어쓰기 합치기 — 둘 다 객체인 칸은 키마다 안으로, 값 · 배열은 덮어쓰기가 통째로 이기고, 객체가 아닌 덮어쓰기는 오류다
+ */
+SW_TEST_CASE( ConfigManagerTest, PlatformOverrideMergesObjectsAndReplacesValues )
+{
+    string merged;
+    SW_REQUIRE_TRUE( PlatformConfigOverride::apply( R"({"_a":1,"_list":[1,2],"_window":{"_width":800,"_height":600}})",
+                                                    R"({"_list":[3],"_window":{"_width":1280},"_new":true})", "test override", merged ) );
+    JSONDocument document;
+    SW_REQUIRE_TRUE( document.parse( merged ) );
+    const JSONValue root = document.getRoot();
+    SW_EXPECT_EQUAL( 1, root.get( "_a" ).read<int32>().value_or( 0 ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), root.get( "_list" ).size() ); // 배열은 원소 단위로 섞지 않는다
+    SW_EXPECT_EQUAL( 1280, root.get( "_window" ).get( "_width" ).read<int32>().value_or( 0 ) );
+    SW_EXPECT_EQUAL( 600, root.get( "_window" ).get( "_height" ).read<int32>().value_or( 0 ) ); // 객체 칸은 덮은 키만 바뀐다
+    SW_EXPECT_TRUE( root.get( "_new" ).isValid() );                                             // 모르는 키는 옮긴다 — 엄격 읽기가 이름으로 알린다
+
+    SW_EXPECT_LOG( "Config.OverrideNotObject" );
+    SW_EXPECT_FALSE( PlatformConfigOverride::apply( R"({"_a":1})", "[1]", "test override", merged ) );
+    SW_EXPECT_TRUE( PlatformConfigOverride::makeEngineConfigPath( "Android" ) == FileUtil::joinPath( FileUtil::joinPath( config::kDirRuntimePlatformConfig, "Android" ), "EngineConfig.json" ) );
+}
+
+/**
+ * @brief [ConfigManagerTest] 디스크 설정에 덮어쓰기 파일이 바탕 위에 선다 — 없으면 바탕만, 덮어쓰기의 모르는 키는 오류, 덮어쓰기 파일이 바뀌어도 제자리에서 다시 읽는다
+ * @details 언리얼 플랫폼 ini 층(`Config/<Platform>/<Platform>Engine.ini`)과 같은 자리(A-23). 엔진 기동은 `PlatformConfigOverride::makeEngineConfigPath()` 를 넘긴다.
+ */
+SW_TEST_CASE( ConfigManagerTest, PlatformOverrideFileLayersOnTheBase )
+{
+    const string basePath     = test::makeScratchPath( "LayeredEngineConfig.json" );
+    const string overridePath = test::makeScratchPath( "LayeredEngineConfig.Platform.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
+
+    // 1) 덮어쓰기 파일이 없으면 바탕만 읽는다(선택 층).
+    {
+        ConfigManager manager;
+        SW_REQUIRE_TRUE( manager.loadConfigFile<EngineConfig>( basePath, overridePath ) == ConfigReadResult::Loaded );
+        SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );
+    }
+
+    // 2) 덮어쓰기는 적은 키만 바꾸고, 덮어쓰기 파일이 바뀌면 다시 읽는다.
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_window": { "_width": 1280 } })" ) );
+    {
+        ConfigManager manager;
+        SW_REQUIRE_TRUE( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ) ) != nullptr );
+        const EngineConfig* pConfig = manager.getConfig<EngineConfig>();
+        SW_EXPECT_EQUAL( 1280u, pConfig->_window._width );
+        SW_EXPECT_EQUAL( 600u, pConfig->_window._height );
+
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_window": { "_width": 1920 } })" ) );
+        SW_EXPECT_TRUE( manager.reloadConfigFile( overridePath ) == ReloadResult::Reloaded );
+        SW_EXPECT_TRUE( manager.getConfig<EngineConfig>() == pConfig );
+        SW_EXPECT_EQUAL( 1920u, pConfig->_window._width );
+    }
+
+    // 3) 구운 바탕에는 구운 덮어쓰기 글이 같은 규칙으로 선다(정적 구성의 길).
+    {
+        ConfigManager manager;
+        const string  baked  = makeEngineConfigJSON( 640, 480 );
+        EngineConfig* pBaked = manager.loadHostConfig<EngineConfig>( ConfigSource::baked( baked.c_str(), R"({ "_window": { "_height": 360 } })" ) );
+        SW_REQUIRE_NOT_NULL( pBaked );
+        SW_EXPECT_EQUAL( 640u, pBaked->_window._width );
+        SW_EXPECT_EQUAL( 360u, pBaked->_window._height );
+    }
+
+    // 4) 덮어쓰기의 모르는 키는 바탕과 같은 엄격 읽기에서 진다 — 기본값으로 떨어지지 않는다.
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_windw": { "_width": 1280 } })" ) );
+    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    {
+        ConfigManager manager;
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ) ) );
+    }
 }

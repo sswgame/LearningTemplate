@@ -24,6 +24,9 @@ FILE_RUNTIME_ENGINE_CONFIG = "Config/Engine/EngineConfig.json"
 DIR_SAVED_EDITOR = "Saved/Editor"
 # 게임 프리셋 폴더 — 게임마다 `<게임>.json` 하나(팩 루트 — 시작 씬은 팩의 gamesettings). Dev 는 실행할 때 고른 게임(`-game=`), Shipping 은 구운 게임의 것을 쓴다.
 DIR_RUNTIME_GAME_PRESET = "Config/Game"
+# 호스트 설정의 플랫폼 덮어쓰기 폴더 — `<플랫폼>/EngineConfig.json`(플랫폼 이름은 SW_PLATFORM_NAME: Windows · Linux · Android · Web). 없으면 덮어쓰기가 없다.
+# 언리얼의 플랫폼 ini 층(`Config/<Platform>/<Platform>Engine.ini` 가 DefaultEngine.ini 를 덮는다)과 같은 자리. 정적 구성은 configure 가 굽는다.
+DIR_RUNTIME_PLATFORM_CONFIG = "Config/Platform"
 # 전용 서버 운영 설정 폴더 — `<게임>.json`(ServerConfig). Shipping 도 굽지 않고 디스크에서 읽는다.
 DIR_RUNTIME_SERVER_PRESET = "Config/Server"
 # 빌드의 활성 게임 이름을 담는 파일(Dev, `Bin/Modules/<이 이름>`) — `-game=` 이 없을 때 `GameSelection` 이 읽는다. 엔진 TU 에 게임 이름을 굽지 않으려고 파일로 둔다.
