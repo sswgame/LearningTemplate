@@ -843,7 +843,7 @@ namespace sw
         /// @brief 닫은 업로드 커맨드버퍼 하나와 그 복사가 읽는 블록들입니다 — 제출한 뒤 GPU 가 끝나면 함께 돌려받는다.
         struct UploadBatch
         {
-            VkCommandBuffer            _buffer{ VK_NULL_HANDLE };
+            VkCommandBuffer            _buffer{ nullptr };
             vector<UploadStagingBlock> _listBlock;
         };
         /** @brief 버퍼 복사 하나(원본 → 도착 구간)와 앞뒤 배리어(앞 읽기 → 전송 쓰기 → 정점 입력 · 셰이더 · 간접 인자 · 전송 읽기)를 @p cmd 에 기록합니다. */
@@ -958,8 +958,8 @@ namespace sw
         /// @brief 다른 스레드 · 프레임 밖 업로드를 담는 업로드 커맨드버퍼(`recordUploadCopy`)와 그 스테이징 — 모두 `_uploadMutex` 아래다.
         ///        렌더 스레드가 그래픽스 큐에 낼 때 이 버퍼를 같은 제출 배열 맨 앞에 둔다(`takeUploadBatch`) — 같은 제출의 어느 세그먼트보다 먼저 실행된다.
         mutex                      _uploadMutex;
-        VkCommandPool              _uploadCommandPool{ VK_NULL_HANDLE };
-        VkCommandBuffer            _openUploadBuffer{ VK_NULL_HANDLE };
+        VkCommandPool              _uploadCommandPool{ nullptr };
+        VkCommandBuffer            _openUploadBuffer{ nullptr };
         UploadStagingBlock         _openStagingBlock;
         vector<UploadStagingBlock> _listUsedStagingBlock;         ///< 열린 업로드 버퍼가 다 쓴 블록 · 전용 블록(제출과 함께 펜스 뒤 해제에 건다)
         vector<UploadStagingBlock> _listFreeStagingBlock;         ///< 펜스가 지나 돌려받은 블록

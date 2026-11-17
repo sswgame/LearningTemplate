@@ -283,8 +283,8 @@ namespace sw::editor
         }
         if ( guid.has_value() )
         {
-            inoutData._mapPathToGUID[assetID] = *guid;
-            inoutData._mapGUIDToPath[*guid]   = assetID;
+            inoutData._mapPathToGUID.insert_or_assign( assetID, *guid ); // AssetGUID 는 기본 생성이 없다(무효 GUID 는 optional 로만) — operator[] 대신
+            inoutData._mapGUIDToPath[*guid] = assetID;
         }
     }
 

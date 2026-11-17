@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -738,7 +739,7 @@ namespace sw
         unordered_map<string, float32> mapFrameScreenSize;
         {
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
-            mapFrameScreenSize.swap( _impl->_mapScreenSize );
+            std::swap( mapFrameScreenSize, _impl->_mapScreenSize ); // sw::unordered_map 은 멤버 swap 이 없다 — 이동 생성 · 대입으로 바꾼다
         }
         unordered_map<string, uint8> mapDemotionKey; ///< 이번에 내리기로 한 키 — 줄에서 먼저 낸다(풀을 비워 올리기가 들어온다)
         if ( budget._viewHeightPixels > 0 )
