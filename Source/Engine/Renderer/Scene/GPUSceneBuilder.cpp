@@ -1195,6 +1195,7 @@ namespace sw
             batch._texturePath      = desc._texturePath;
             batch._sizeScale        = desc._sizeScale;
             batch._bAdditive        = desc._bAdditive;
+            batch._sortMode         = desc._sortMode;
         }
     };
 

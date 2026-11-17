@@ -8,9 +8,25 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     struct VFXEmitterDef;
+
+    /**
+     * @brief 방출기 안에서 입자를 그리는 순서입니다(`VFXEmitterDef::_sortMode`). 알파 블렌드 빌보드만 쓴다 — 더하기 블렌드는 순서와 무관하고, 띠는 태어난 순서가 모양이다.
+     * @details 언리얼 나이아가라 렌더러의 `SortMode`(ViewDepth · ViewDistance), 유니티 `ParticleSystemRenderer.sortMode`(Distance · OldestInFront · YoungestInFront),
+     *          Godot `draw_order`(View Depth · Lifetime · Reverse Lifetime) 자리다. 나이 순서는 수명 비율(`GPUParticle::_rotationLife.y`)로 잰다.
+     */
+    ENUM()
+    enum class VFXSortMode : uint8
+    {
+        None,          ///< 풀 순서 그대로(정렬 비용 없음)
+        ViewDepth,     ///< 그리는 뷰에서 먼 입자부터 — 뷰마다 순서가 다르다
+        OldestFirst,   ///< 수명 비율이 큰(오래된) 입자부터 — 어린 입자가 위에 보인다
+        YoungestFirst, ///< 수명 비율이 작은(어린) 입자부터 — 오래된 입자가 위에 보인다
+    };
 } // namespace sw
 
 namespace sw

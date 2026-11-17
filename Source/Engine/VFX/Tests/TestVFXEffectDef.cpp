@@ -415,6 +415,57 @@ SW_TEST_CASE( VFXEffectDefTest, MeshModeRules )
     SW_EXPECT_FALSE( withTexture.validate( "test" ) );
 }
 
+/** @brief [VFXEffectDefTest] 더하기 블렌드는 그리는 순서와 무관하다 — 정렬 모드를 주면 로드 오류다(알파 빌보드는 받는다) */
+SW_TEST_CASE( VFXEffectDefTest, AdditiveWithSortModeIsLoadError )
+{
+    SW_EXPECT_LOG( "VFXEffectDef.VFXEmitter" );
+    VFXEmitterDef additive = Util::makeEmitter();
+    additive._blendMode    = VFXBlendMode::Additive;
+    additive._sortMode     = VFXSortMode::ViewDepth;
+    SW_EXPECT_FALSE( additive.validate( "test" ) );
+    additive._sortMode = VFXSortMode::None;
+    SW_EXPECT_TRUE( additive.validate( "test" ) );
+    VFXEmitterDef alpha = Util::makeEmitter();
+    alpha._sortMode     = VFXSortMode::OldestFirst;
+    SW_EXPECT_TRUE( alpha.validate( "test" ) );
+}
+
+/** @brief [VFXEffectDefTest] 띠는 태어난 순서가 모양이고 메시는 머티리얼이 그린다 — 정렬 모드를 주면 로드 오류다 */
+SW_TEST_CASE( VFXEffectDefTest, RibbonWithSortModeIsLoadError )
+{
+    SW_EXPECT_LOG( "VFXEffectDef.VFXEmitter" );
+    VFXEmitterDef ribbon = Util::makeEmitter();
+    ribbon._renderMode   = VFXRenderMode::Ribbon;
+    ribbon._sortMode     = VFXSortMode::YoungestFirst;
+    SW_EXPECT_FALSE( ribbon.validate( "test" ) );
+    VFXEmitterDef mesh = Util::makeMeshEmitter();
+    mesh._sortMode     = VFXSortMode::ViewDepth;
+    SW_EXPECT_FALSE( mesh.validate( "test" ) );
+}
+
+/** @brief [VFXEffectDefTest] GPU 로 도는 방출기의 뷰 깊이 정렬은 워크그룹 하나(512)까지다 — 넘으면 정렬을 건너뛰지 않고 로드 오류다. CPU 전용 방출기는 한도가 없다 */
+SW_TEST_CASE( VFXEffectDefTest, GPUViewDepthOverSortLimitIsLoadError )
+{
+    SW_EXPECT_LOG( "VFXEffectDef.VFXEmitter" );
+    VFXEmitterDef gpu = Util::makeEmitter();
+    gpu._sortMode     = VFXSortMode::ViewDepth;
+    gpu._maxParticles = VFXEmitterDef::kMaxGPUSortedParticles;
+    SW_EXPECT_TRUE( gpu.computeSupportedTargets().has( VFXSimulationTarget::GPU ) );
+    SW_EXPECT_TRUE( gpu.validate( "test" ) );
+    gpu._maxParticles = VFXEmitterDef::kMaxGPUSortedParticles + 1u;
+    SW_EXPECT_FALSE( gpu.validate( "test" ) );
+    gpu._sortMode = VFXSortMode::OldestFirst; // 설계(RN-15 결정 5)는 뷰 깊이만 한도를 묻는다
+    SW_EXPECT_TRUE( gpu.validate( "test" ) );
+
+    VFXEmitterDef cpuOnly      = Util::makeEmitter();
+    cpuOnly._sortMode          = VFXSortMode::ViewDepth;
+    cpuOnly._maxParticles      = 4096;
+    cpuOnly._collision._mode   = VFXCollisionMode::Bounce;
+    cpuOnly._collision._method = VFXCollisionMethod::PhysicsRaycast; // CPU 전용 모듈
+    SW_EXPECT_FALSE( cpuOnly.computeSupportedTargets().has( VFXSimulationTarget::GPU ) );
+    SW_EXPECT_TRUE( cpuOnly.validate( "test" ) );
+}
+
 /** @brief [VFXEffectDefTest] 효과는 방출기가 하나 이상이고 이름이 겹치지 않으며, 방출기 하나의 오류도 효과를 지게 한다 */
 SW_TEST_CASE( VFXEffectDefTest, EffectValidationRules )
 {

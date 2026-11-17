@@ -258,6 +258,9 @@ namespace sw
     {
         REFLECT_BODY();
 
+        /// @brief GPU 방출기가 `ViewDepth` 로 정렬할 수 있는 입자 수입니다(워크그룹 하나의 바이토닉 정렬 — instance_sort.hlsl 의 SW_SORT_MAX_ELEMENTS, PS-3 이 계약 검사로 묶는다).
+        static constexpr uint32 kMaxGPUSortedParticles = 512;
+
         PROPERTY( InheritKey, Meta = "NotLocalizable", Tooltip = "Emitter name, unique inside the effect; a _base variant matches emitters by it" )
         string _name{};
         PROPERTY( Tooltip = "Shape each particle draws as" )
@@ -266,6 +269,8 @@ namespace sw
         AssetRef<Texture2D> _texturePath{};
         PROPERTY( Tooltip = "How particle colour blends with the scene (Billboard and Ribbon; Mesh uses its material)" )
         VFXBlendMode _blendMode{ VFXBlendMode::Alpha };
+        PROPERTY( Tooltip = "Order particles are drawn in (alpha-blended Billboard only; ViewDepth on a GPU emitter sorts at most kMaxGPUSortedParticles)" )
+        VFXSortMode _sortMode{ VFXSortMode::None };
         PROPERTY( Tooltip = "Mesh and material of each particle (Mesh render mode only)" )
         VFXMeshRenderDef _mesh{};
         PROPERTY( Tooltip = "The emitter restarts after _duration instead of stopping" )

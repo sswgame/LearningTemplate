@@ -76,6 +76,7 @@ namespace sw
                 {   "_renderMode",      &everyTarget, false},
                 {  "_texturePath",      &everyTarget, false},
                 {    "_blendMode",      &everyTarget, false},
+                {     "_sortMode",      &everyTarget, false},
                 {         "_mesh",      &meshTargets, false},
                 {     "_bLooping",      &everyTarget, false},
                 { "_maxParticles",      &everyTarget, false},
@@ -188,6 +189,18 @@ namespace sw
             bValid             = Check::expect( _texturePath.empty() == false, sourceLabel, _name, "_texturePath is required" ) && bValid;
             const bool bNoMesh = _mesh._meshID.empty() && _mesh._materialPath.empty();
             bValid             = Check::expect( bNoMesh, sourceLabel, _name, "_mesh is only for the Mesh render mode" ) && bValid;
+        }
+        // 정렬은 알파 블렌드 빌보드만 뜻이 있다 — 더하기는 순서와 무관하고, 띠는 태어난 순서가 모양이며, 메시는 머티리얼이 그린다. 뜻 없는 값은 조용히 무시하지 않고 로드를 멈춘다.
+        if ( _sortMode != VFXSortMode::None )
+        {
+            bValid = Check::expect( _blendMode == VFXBlendMode::Alpha, sourceLabel, _name, "_sortMode needs the Alpha blend mode (Additive does not depend on draw order)" ) && bValid;
+            bValid = Check::expect( _renderMode == VFXRenderMode::Billboard, sourceLabel, _name, "_sortMode is only for the Billboard render mode (a ribbon's shape is its birth order)" ) && bValid;
+            // GPU 정렬은 워크그룹 하나에 담기는 만큼이다. 넘으면 정렬을 건너뛰지 않고 로드를 멈춘다(CPU 정렬은 한도가 없다).
+            const bool bGPUViewDepth = _sortMode == VFXSortMode::ViewDepth && computeSupportedTargets().has( VFXSimulationTarget::GPU );
+            if ( bGPUViewDepth )
+                bValid = Check::expect( _maxParticles <= kMaxGPUSortedParticles, sourceLabel, _name,
+                                        "_sortMode ViewDepth on a GPU emitter sorts at most 512 particles - lower _maxParticles or use a CPU-only module" ) &&
+                         bValid;
         }
         const uint32 minParticles = _renderMode == VFXRenderMode::Ribbon ? 2u : 1u;
         bValid                    = Check::expect( _maxParticles >= minParticles, sourceLabel, _name, "_maxParticles must be 1 or more (2 or more for a ribbon)" ) && bValid;

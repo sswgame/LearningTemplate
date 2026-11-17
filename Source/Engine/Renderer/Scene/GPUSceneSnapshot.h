@@ -346,12 +346,13 @@ namespace sw
         /** @brief 입자의 출처입니다 — CPU 시뮬레이션의 입자 배열(비지 않는다 — 빈 방출기는 싣지 않는다)이거나 GPU 시뮬레이션의 요청이다. */
         using Source = std::variant<shared_ptr<const vector<GPUParticle>>, VFXGPUEmitterRequest>;
 
-        Source        _source{};              ///< 입자의 출처(위)
-        float4x4      _world{};               ///< 방출기 행렬(행벡터 규약)
-        hashed_string _texturePath{};         ///< 입자 텍스처(리소스 id)
-        float32       _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
-        uint8         _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VFXBlendMode::Additive`)면 SW_TRUE
-        uint8         _bRibbon{ SW_FALSE };   ///< 띠(`VFXRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
+        Source        _source{};                      ///< 입자의 출처(위)
+        float4x4      _world{};                       ///< 방출기 행렬(행벡터 규약)
+        hashed_string _texturePath{};                 ///< 입자 텍스처(리소스 id)
+        float32       _sizeScale{ 1.0f };             ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
+        uint8         _bAdditive{ SW_FALSE };         ///< 더하기 블렌드(`VFXBlendMode::Additive`)면 SW_TRUE
+        uint8         _bRibbon{ SW_FALSE };           ///< 띠(`VFXRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
+        VFXSortMode   _sortMode{ VFXSortMode::None }; ///< 방출기 안 입자의 그리는 순서 — 렌더 스레드가 뷰마다 순서 목록을 만든다(`VFXParticleOrder`)
 
         /** @brief CPU 시뮬레이션의 입자입니다. GPU 시뮬레이션이면 nullptr 입니다. */
         const vector<GPUParticle>* findCPUParticles() const
