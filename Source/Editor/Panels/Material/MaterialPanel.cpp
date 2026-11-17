@@ -292,6 +292,7 @@ namespace sw::editor
         : EditorPreviewPanel{ EditorAssetType{ Material::kAssetType }, false }
         , _model{}
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
     }
 
     void MaterialPanel::drawDocumentContent()
@@ -333,7 +334,7 @@ namespace sw::editor
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _model.commitName();
-            notifyDocumentEdited( "Edit Material Name" );
+            _model.recordDocumentEdit( "Edit Material Name" );
             applyLivePreview();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
@@ -342,7 +343,7 @@ namespace sw::editor
         if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Shader" ), shaderPath, ".hlsl" ) )
         {
             _model.setShaderPath( shaderPath );
-            notifyDocumentEdited( "Edit Material Shader" );
+            _model.recordDocumentEdit( "Edit Material Shader" );
         }
         ImGui::EndGroup();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ShaderTip" ) );
@@ -392,7 +393,7 @@ namespace sw::editor
             }
             if ( bChanged )
             {
-                notifyDocumentEdited( "Edit Material Property" ); // 슬라이더 끌기 한 번은 상호작용 구간 하나 = 되돌리기 한 단계(감사 P0-1)
+                _model.recordDocumentEdit( "Edit Material Property" ); // 슬라이더 끌기 한 번은 상호작용 구간 하나 = 되돌리기 한 단계(감사 P0-1)
                 applyLivePreview();
             }
             ImGui::PopID();

@@ -11,6 +11,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
@@ -351,5 +352,11 @@ namespace sw::editor
         }
         _previewPath = previewPaths._materialPath;
         _preview.syncPreviewSubject( pScene, _previewPath );
+    }
+
+    void MaterialGraphModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

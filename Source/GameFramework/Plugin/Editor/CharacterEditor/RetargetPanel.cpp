@@ -283,7 +283,7 @@ namespace sw::editor
     void RetargetPanel::markEdited( const utf8* pLabel )
     {
         _status.clear(); // "Saved" 같은 앞 결과는 고친 뒤에는 맞지 않다
-        notifyDocumentEdited( pLabel );
+        RetargetProfileEdit::recordDocumentEdit( getDocumentEditRecorder(), pLabel );
         syncFromProfile();
     }
 

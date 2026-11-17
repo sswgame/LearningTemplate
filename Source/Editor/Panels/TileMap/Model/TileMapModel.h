@@ -2,7 +2,7 @@
  * @file TileMapModel.h
  * @brief 타일맵 페인터의 모델 — 편집 중인 맵 · 타일셋, 고른 레이어 · 도구 · 브러시 값, 칠하기 · 채우기 · 스포이트 · 엣지 워프, 읽기 · 쓰기 · 되돌리기 글. ImGui 를 모릅니다.
  * @details 패널(`TileMapPanel`)은 그리기 · 캔버스 보기(확대 · 이동) · 입력 읽기만 하고, 상태와 명령은 모두 이것이 든다 — 인스펙터 `Model/` 과 같은 선이다
- *          (유니티 Tile Palette 창이 Tilemap 데이터와 브러시를 따로 두는 것과 같다). 편집한 명령은 true 를 반환하고, 되돌리기 기록은 패널이 남긴다(`notifyDocumentEdited`).
+ *          (유니티 Tile Palette 창이 Tilemap 데이터와 브러시를 따로 두는 것과 같다). 편집한 명령은 true 를 반환하고, 되돌리기 기록은 `recordDocumentEdit` 로 남긴다(문서 패널의 창구).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -19,6 +19,7 @@
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /**
      * @struct TileMapToolInput
      * @brief 캔버스에서 이번 프레임에 읽은 왼쪽 버튼 입력입니다. 패널이 ImGui 에서 읽어 넘깁니다.
@@ -38,6 +39,14 @@ namespace sw::editor
     class TileMapModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+
         /** @brief 작업 공간이 포커스한 에셋 경로입니다(비면 없음). 창이 작업 공간 헤더를 보지 않게 여기서 읽는다(MVVM 계약). 에디터가 서 있을 때만 부른다. */
         static const string& getFocusedAssetPath();
         /** @brief @p path(리소스 경로 또는 디스크 경로)에 도구 문서 파일이 있으면 true 입니다 — 읽기(`EditorToolAssetCommands::loadTileMap`)와 같은 해석이다. */
@@ -229,9 +238,10 @@ namespace sw::editor
         PaintLayer                              _layer;
         TileFlagLayer                           _flagLayer;
         PaintTool                               _tool;
-        bool                                    _bErase;            ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        uint8                                   _bStrokeActive : 1; ///< 지난 프레임에 칠하고 있었다. 이번 프레임은 `_lastPaintCell` 에서 이어서 칠한다
-        uint8                                   _bDragActive   : 1; ///< Rect · Line 도구로 누른 채 드래그하고 있다
-        uint8                                   _bAwaitRelease : 1; ///< 스포이트로 집은 버튼을 아직 놓지 않았다 — 놓을 때까지 칠하지 않는다
+        bool                                    _bErase;                   ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        uint8                                   _bStrokeActive : 1;        ///< 지난 프레임에 칠하고 있었다. 이번 프레임은 `_lastPaintCell` 에서 이어서 칠한다
+        uint8                                   _bDragActive   : 1;        ///< Rect · Line 도구로 누른 채 드래그하고 있다
+        uint8                                   _bAwaitRelease : 1;        ///< 스포이트로 집은 버튼을 아직 놓지 않았다 — 놓을 때까지 칠하지 않는다
+        const DocumentEditRecorder*             _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

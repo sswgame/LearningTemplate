@@ -22,6 +22,7 @@ namespace sw
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /**
      * @class MaterialModel
      * @brief 머티리얼 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -29,6 +30,14 @@ namespace sw::editor
     class MaterialModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+
         MaterialModel();
 
         // ------------------------------------------------------------------------------
@@ -85,8 +94,9 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax128> _name;
         fixed_string<constant::buffer::kMax256> _shaderPath;
         string                                  _status;
-        string                                  _previewMaterialPath; ///< 미리보기 구에 건 머티리얼 경로(비면 다음 `syncPreviewSubject` 가 다시 건다)
-        float32                                 _previewRedMinusBlue; ///< 지난 그리기의 미리보기 평균 (R - B)
-        uint8                                   _bPreviewDrawn : 1;   ///< 지난 그리기에서 미리보기를 그렸다
+        string                                  _previewMaterialPath;      ///< 미리보기 구에 건 머티리얼 경로(비면 다음 `syncPreviewSubject` 가 다시 건다)
+        float32                                 _previewRedMinusBlue;      ///< 지난 그리기의 미리보기 평균 (R - B)
+        uint8                                   _bPreviewDrawn : 1;        ///< 지난 그리기에서 미리보기를 그렸다
+        const DocumentEditRecorder*             _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

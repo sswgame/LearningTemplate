@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/Panel/EditorGraphDocumentPanel.h"
 
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -56,5 +57,10 @@ namespace sw::editor
     {
         const ImVec2 position = ed::GetNodePosition( toNodeID( nodeID ) );
         return float2{ position.x, position.y };
+    }
+
+    void EditorGraphDocumentPanelBase::recordGraphEdit( string_view label ) const
+    {
+        getDocumentEditRecorder().notifyEdited( label );
     }
 } // namespace sw::editor

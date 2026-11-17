@@ -67,6 +67,7 @@ namespace sw::editor
         , _listMenu{}
         , _removal{}
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
         _nodeGraph.setCommentsEnabled( true );
         // 색은 데이터(값의 형식)에만 쓴다 — float · float2 · float3 · float4 순서다.
         _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Graph", "FlowPin" ), SW_THEME_COLOR( "Graph", "Sensor" ), SW_THEME_COLOR( "Graph", "Operator" ), SW_THEME_COLOR( "Graph", "Actuator" ) } );
@@ -469,7 +470,7 @@ namespace sw::editor
         _model.refreshPreview( getPreviewScene(), getLoadedAssetPath() );
         MaterialGraphEdit edit;
         if ( _model.takeEdit( edit ) )
-            notifyDocumentEdited( edit._pLabel );
+            _model.recordDocumentEdit( edit._pLabel );
     }
 
     SW_EDITOR_PANEL( MaterialGraphPanel, MaterialGraphPanel::kPanelID, EditorPanelCategory::Tool, 1301 );

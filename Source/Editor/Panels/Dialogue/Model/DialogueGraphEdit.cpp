@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
 
@@ -126,5 +127,10 @@ namespace sw::editor
             }
         }
         inoutNode._listChoice.erase( inoutNode._listChoice.begin() + static_cast<std::ptrdiff_t>( choiceIndex ) );
+    }
+
+    void DialogueGraphEdit::recordDocumentEdit( const DocumentEditRecorder& recorder, string_view label )
+    {
+        recorder.notifyEdited( label );
     }
 } // namespace sw::editor

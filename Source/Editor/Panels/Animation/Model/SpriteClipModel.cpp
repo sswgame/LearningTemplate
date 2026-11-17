@@ -12,6 +12,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -518,5 +519,11 @@ namespace sw::editor
         _selectedFrame       = MathUtil::min( _selectedFrame, _clip.getFrameCount() - 1 );
         _selectedKey         = MathUtil::min( _selectedKey, static_cast<int32>( _clip._listKey.size() ) - 1 );
         selectAnimation( MathUtil::min( _selectedAnimation, static_cast<int32>( _clip._listAnimation.size() ) - 1 ) );
+    }
+
+    void SpriteClipModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

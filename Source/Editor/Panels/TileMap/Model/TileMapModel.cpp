@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "Engine/Localization/LocText.h"
@@ -782,5 +783,11 @@ namespace sw::editor
     bool TileMapModel::hasDocumentFile( string_view path )
     {
         return EditorToolAssetCommands::hasToolDocument( path );
+    }
+
+    void TileMapModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

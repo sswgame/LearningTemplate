@@ -173,7 +173,7 @@ namespace sw::editor
         {
             const utf8* pEdit = _layerEditor.draw( _graph );
             if ( pEdit != nullptr )
-                notifyDocumentEdited( pEdit );
+                AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), pEdit );
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
@@ -201,7 +201,7 @@ namespace sw::editor
                     if ( bClipState == false && kind._kindID == SW_COUNT_OF( AnimationGraphPanelInternal::kArrClipStateName ) )
                         ImGui::SeparatorText( SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeSection" ) );
                     if ( ImGui::MenuItem( kind._pName ) && addNodeOfKind( kind._kindID ) != 0 )
-                        notifyDocumentEdited( "Add Animation Graph Node" );
+                        AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Add Animation Graph Node" );
                     EditorSelfTestMarks::record( ( string( "animationGraph.add." ) + kind._pName ).c_str() );
                     EditorWidgets::drawTooltip( bClipState ? arrClipTip[kind._kindID] : SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeTip" ) );
                 }
@@ -378,7 +378,7 @@ namespace sw::editor
             link._fromNode = AnimationGraphPanelInternal::pinNodeID( fromPin );
             link._toNode   = AnimationGraphPanelInternal::pinNodeID( toPin );
             _graph._listLink.push_back( link );
-            notifyDocumentEdited( "Link Animation Graph Nodes" );
+            AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Link Animation Graph Nodes" );
         }
 
         vector<EditorGraphNodeKind> listKind;
@@ -391,7 +391,7 @@ namespace sw::editor
             if ( nodeID != 0 )
             {
                 placeNodeOnNextDraw( nodeID, canvasPosition );
-                notifyDocumentEdited( "Add Animation Graph Node" );
+                AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Add Animation Graph Node" );
             }
         }
 
@@ -584,7 +584,7 @@ namespace sw::editor
         link._toNode   = _listSelectionOrder.back();
         _graph._listLink.push_back( link );
         _selectedLinkID = link._id;
-        notifyDocumentEdited( "Link Animation Graph Nodes" );
+        AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Link Animation Graph Nodes" );
     }
 
     uint32 AnimationGraphPanel::countConditionLinks() const
@@ -639,7 +639,7 @@ namespace sw::editor
         if ( bStateNameCommitted )
         {
             pNode->_name = _nameEditBuffer;
-            notifyDocumentEdited( "Rename Animation State" );
+            AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Rename Animation State" );
         }
         const utf8* const arrLoop[] = { "Default", "Loop", "Once" };
         int32             loopIndex = pNode->_loop.has_value() == false ? 0 : ( *pNode->_loop ? 1 : 2 );
@@ -649,7 +649,7 @@ namespace sw::editor
         if ( EditorWidgets::combo( SW_WIDGET_ID( "##stateLoop" ), &loopIndex, arrLoop, 3 ) )
         {
             pNode->_loop = loopIndex == 0 ? optional<bool>{} : optional<bool>( loopIndex == 1 );
-            notifyDocumentEdited( "Edit Animation State" );
+            AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Animation State" );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateLoopTip" ) );
         if ( pNode->hasPoseNode() )
@@ -770,7 +770,7 @@ namespace sw::editor
         if ( bEdited && AnimationPoseNodeRegistry::isSatisfiedBy( *pType, edited, node._name ) )
         {
             node._poseNode = std::move( edited );
-            notifyDocumentEdited( "Edit Animation Pose Node" );
+            AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Animation Pose Node" );
         }
     }
 
@@ -871,6 +871,6 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "TransitionBlendTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         if ( bEdited )
-            notifyDocumentEdited( "Edit Animation Transition" );
+            AnimationGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Animation Transition" );
     }
 } // namespace sw::editor

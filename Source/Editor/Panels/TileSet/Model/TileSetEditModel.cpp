@@ -6,6 +6,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 namespace sw::editor
 {
@@ -355,5 +356,11 @@ namespace sw::editor
             _selectedRule = ruleCount - 1;
         if ( _selectedRule.has_value() && *_selectedRule < 0 )
             _selectedRule = nullopt;
+    }
+
+    void TileSetEditModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

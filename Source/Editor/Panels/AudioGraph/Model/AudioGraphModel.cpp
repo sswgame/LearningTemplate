@@ -8,6 +8,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -222,5 +223,11 @@ namespace sw::editor
         if ( pNode == nullptr || pNode->_name.isEqual( previousName, NameCase::CaseSensitive ) )
             return;
         AudioGraphEditUtil::replaceNodeReferences( _editGraph, previousName, pNode->_name );
+    }
+
+    void AudioGraphModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

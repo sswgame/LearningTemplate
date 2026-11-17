@@ -4,6 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
+
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/BehaviorTreeSchema.h"
 #include "Engine/Behavior/ConditionExpr.h"
@@ -481,5 +483,11 @@ namespace sw::editor
         if ( _rootID >= 0 )
             writeNode( _rootID, root );
         return document.saveToString();
+    }
+
+    void BehaviorTreeEditModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

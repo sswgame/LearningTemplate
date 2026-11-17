@@ -12,12 +12,15 @@
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /**
      * @struct DialogueGraphEdit
      * @brief 대화 그래프 명령 묶음입니다.
      */
     struct DialogueGraphEdit
     {
+        /** @brief 문서를 고쳤음을 문서 패널의 창구 @p recorder 로 알립니다 — 되돌리기 한 단계와 미저장이 된다(감사 E-16: 문서 편집 알림은 Model 만 낸다). */
+        static void recordDocumentEdit( const DocumentEditRecorder& recorder, string_view label );
         /** @brief Resource 상대 경로 @p path 의 대화 그래프 문서를 읽습니다(`EditorToolAssetCommands::loadDialogueGraph`). 창(View)이 커맨드 헤더를 보지 않게 여기를 지난다. */
         static ToolAssetLoadResult loadGraph( DialogueGraphAsset& outGraph, string_view path );
         /** @brief 대화 그래프 문서를 @p path 에 씁니다. 실패하면 커맨드가 오류를 남기고 false 입니다. */

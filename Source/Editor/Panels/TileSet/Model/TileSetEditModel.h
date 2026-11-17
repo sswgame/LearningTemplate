@@ -18,6 +18,7 @@
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /**
      * @class TileSetEditModel
      * @brief 타일셋 편집 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -25,6 +26,14 @@ namespace sw::editor
     class TileSetEditModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+
         TileSetEditModel();
 
         // ------------------------------------------------------------------------------
@@ -103,9 +112,10 @@ namespace sw::editor
         void clampSelection();
 
     private:
-        TileSetContent  _content;
-        string          _status;
-        int32           _selectedBrush;
-        optional<int32> _selectedRule;
+        TileSetContent              _content;
+        string                      _status;
+        int32                       _selectedBrush;
+        optional<int32>             _selectedRule;
+        const DocumentEditRecorder* _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

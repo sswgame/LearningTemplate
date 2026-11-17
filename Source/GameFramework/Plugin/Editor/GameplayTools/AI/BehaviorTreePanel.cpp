@@ -99,6 +99,7 @@ namespace sw::editor
         , _bSelectPending{ SW_FALSE }
         , _bGridEdited{ SW_FALSE }
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() );        // 문서 편집 알림은 모델이 낸다(감사 E-16)
         _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
         _nodeGraph.setAutoLayout( true );                                    // 노드 자리는 트리 배치(layoutTree)가 정한다 — 정렬 메뉴를 감춘다(언리얼 BT 에디터도 자동 배치)
     }
@@ -545,7 +546,7 @@ namespace sw::editor
     {
         _bLayoutPending = SW_TRUE;
         _statusText.clear();
-        notifyDocumentEdited( pLabel );
+        _model.recordDocumentEdit( pLabel );
     }
 
     float32 BehaviorTreePanel::layoutNode( int32 id, uint32 depth, float32& inoutNextRow )
@@ -696,7 +697,7 @@ namespace sw::editor
         if ( bEdited )
         {
             _statusText.clear();
-            notifyDocumentEdited( "Edit Behavior Node" ); // 연속 편집은 상호작용 구간 하나라 한 번의 되돌리기다
+            _model.recordDocumentEdit( "Edit Behavior Node" ); // 연속 편집은 상호작용 구간 하나라 한 번의 되돌리기다
         }
     }
 

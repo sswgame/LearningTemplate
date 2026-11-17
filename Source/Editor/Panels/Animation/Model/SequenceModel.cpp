@@ -6,6 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
+
 #include <algorithm>
 
 namespace sw::editor
@@ -801,5 +803,11 @@ namespace sw::editor
     bool SequenceModel::hasSelectedItem() const
     {
         return 0 <= _selectedItem && _selectedItem < static_cast<int32>( _asset._listItem.size() );
+    }
+
+    void SequenceModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

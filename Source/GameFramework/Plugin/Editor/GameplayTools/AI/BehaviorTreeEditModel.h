@@ -22,6 +22,7 @@ namespace sw
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /** @brief 편집 중인 노드 하나입니다. 칸은 런타임과 같은 `BehaviorTreeNodeData` 이고(종류에 맞는 칸만 뜻이 있다), 편집기는 번호 · 부모 · 자식 목록만 더한다. */
     struct BehaviorTreeEditNode : BehaviorTreeNodeData
     {
@@ -50,6 +51,14 @@ namespace sw::editor
     class BehaviorTreeEditModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+
         /** @brief 노드가 없는 빈 문서로 되돌립니다. */
         void clear();
         /**
@@ -123,6 +132,7 @@ namespace sw::editor
         vector<BehaviorTreeEditNode> _listNode{};
         int32                        _rootID{ -1 };
         int32                        _nextID{ 1 };
-        string                       _baseID{}; ///< 읽은 글의 `_base`. `makeSaveText` 가 부모와의 차이로 쓴다
+        string                       _baseID{};                 ///< 읽은 글의 `_base`. `makeSaveText` 가 부모와의 차이로 쓴다
+        const DocumentEditRecorder*  _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

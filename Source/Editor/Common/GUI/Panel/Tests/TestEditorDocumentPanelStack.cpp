@@ -7,6 +7,7 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -30,7 +31,7 @@ namespace
         void edit( string_view text )
         {
             _text = string{ text };
-            notifyDocumentEdited( "Probe Edit" );
+            getDocumentEditRecorder().notifyEdited( "Probe Edit" ); // 패널의 Model 이 하는 일 — 창구로 알린다
         }
         /** @brief 디스크에서 다시 읽은 것처럼 @p text 로 문서를 읽습니다(`reloadDocument`). */
         void reloadFrom( string_view text )

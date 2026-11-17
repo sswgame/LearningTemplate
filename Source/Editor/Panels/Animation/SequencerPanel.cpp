@@ -277,6 +277,7 @@ namespace sw::editor
         , _keyDragDelta{ 0 }
         , _bExpanded{ true }
     {
+        _document.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
         (void)_document.addItem( SequenceItemKind::Event, "Event" );
         _document._asset._listItem[0]._name = "Intro";
     }
@@ -361,7 +362,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _document.hasCopiedItem() == false );
         if ( ImGui::Button( pPasteItem ) && _document.pasteItem( _currentFrame ).has_value() )
         {
-            notifyDocumentEdited( "Paste Sequence Item" );
+            _document.recordDocumentEdit( "Paste Sequence Item" );
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
@@ -383,14 +384,14 @@ namespace sw::editor
         if ( listItem.size() >= itemCountBefore && _sequence->_bDraftOpened == SW_FALSE )
             _document._selectedItem = selectedItem;
         if ( SequenceClipTiming::hasTimingChanged( _listTimingBefore, listItem ) )
-            notifyDocumentEdited( "Edit Sequence Timeline" );
+            _document.recordDocumentEdit( "Edit Sequence Timeline" );
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
 
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "CinematicNote" ) );                 // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
         (void)EditorWidgets::drawTextFieldMultiline( "##CinematicNote", _cinematicNote, 2 ); // 바뀐 때는 아래 IsItemDeactivatedAfterEdit 가 본다
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            notifyDocumentEdited( "Edit Sequence Note" );
+            _document.recordDocumentEdit( "Edit Sequence Note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
     }
 
@@ -455,7 +456,7 @@ namespace sw::editor
         if ( ImGui::Button( pAdd ) && bHasSelection )
         {
             const uint32 bindingID = _document.addBinding( _sceneState._selectionName.c_str() );
-            notifyDocumentEdited( "Add Sequence Binding" );
+            _document.recordDocumentEdit( "Add Sequence Binding" );
             bindSelectionTo( bindingID );
         }
         ImGui::EndDisabled();
@@ -476,7 +477,7 @@ namespace sw::editor
         const bool bUsed = _document._asset.countBindingUses( _document._selectedBinding ) > 0;
         ImGui::BeginDisabled( _document._asset.findBinding( _document._selectedBinding ) == nullptr || bUsed );
         if ( ImGui::Button( pDelete ) && _document.removeBinding( _document._selectedBinding ) )
-            notifyDocumentEdited( "Delete Sequence Binding" );
+            _document.recordDocumentEdit( "Delete Sequence Binding" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteBindingTip" ) );
 
@@ -489,7 +490,7 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSequencer", "BindingNameLabel" ), SW_LOCKEY( "EditorSequencer", "BindingNameTip" ) );
             (void)EditorWidgets::drawTextField( "##bindingName", name, -1.0f );
             if ( ImGui::IsItemDeactivatedAfterEdit() && _document.renameBinding( binding._id, name ) )
-                notifyDocumentEdited( "Rename Sequence Binding" );
+                _document.recordDocumentEdit( "Rename Sequence Binding" );
             break;
         }
     }
@@ -501,7 +502,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _document._asset.findBinding( _document._selectedBinding ) == nullptr );
         if ( ImGui::Button( pAddCut ) && _document.addCameraCut( _currentFrame ).has_value() )
         {
-            notifyDocumentEdited( "Add Camera Cut" );
+            _document.recordDocumentEdit( "Add Camera Cut" );
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
@@ -558,7 +559,7 @@ namespace sw::editor
         const utf8* const pSplit = SW_LOCKEY( "EditorSequencer", "SplitCut" );
         if ( ImGui::Button( pSplit ) && _document.splitCameraCut( _currentFrame ).has_value() )
         {
-            notifyDocumentEdited( "Split Camera Cut" );
+            _document.recordDocumentEdit( "Split Camera Cut" );
             previewCurrentFrame();
         }
         EditorSelfTestMarks::record( "sequencer.splitCut" );
@@ -575,7 +576,7 @@ namespace sw::editor
         ImGui::BeginDisabled( bCutSelected == false );
         if ( ImGui::Button( pDelete ) && _document.removeCameraCut( _document._selectedItem ) )
         {
-            notifyDocumentEdited( "Delete Camera Cut" );
+            _document.recordDocumentEdit( "Delete Camera Cut" );
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
@@ -587,7 +588,7 @@ namespace sw::editor
         ImGui::BeginDisabled( bCutSelected == false || pSelected->_binding == _document._selectedBinding || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
         if ( ImGui::Button( pCamera ) && _document.setCutCamera( _document._selectedItem, _document._selectedBinding ) )
         {
-            notifyDocumentEdited( "Set Camera Cut Camera" );
+            _document.recordDocumentEdit( "Set Camera Cut Camera" );
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
@@ -765,7 +766,7 @@ namespace sw::editor
                 // 거절되면 칸이 항목의 값으로 돌아간다. 비운 채 치는 동안에는 아래 안내가 그 사실을 미리 알린다.
                 if ( bEdited && _document.commitItemEdit() )
                 {
-                    notifyDocumentEdited( "Edit Sequence Item" );
+                    _document.recordDocumentEdit( "Edit Sequence Item" );
                     previewCurrentFrame();
                 }
                 if ( _document.isItemAcceptable( edit ) == false )
@@ -780,7 +781,7 @@ namespace sw::editor
         const utf8* const pCreate = SW_LOCKEY( "EditorSequencer", "CreateItemButton" );
         ImGui::BeginDisabled( _document.isItemAcceptable( _document._itemEdit ) == false );
         if ( ImGui::Button( pCreate ) && _document.commitItemDraft().has_value() )
-            notifyDocumentEdited( "Add Sequence Item" );
+            _document.recordDocumentEdit( "Add Sequence Item" );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "sequencer.item.create" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CreateItemTip" ) );
@@ -824,7 +825,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "DeleteTrack" ) ) );
         ImGui::BeginDisabled( _document._selectedTrack < 0 );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "DeleteTrack" ) ) && _document.removeSelectedTrack() )
-            notifyDocumentEdited( "Delete Sequence Track" );
+            _document.recordDocumentEdit( "Delete Sequence Track" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteTrackTip" ) );
         // 순서는 파일의 트랙 순서다(재생 결과는 같다 — 트랙은 서로 다른 값을 몬다). 언리얼 Sequencer 는 트리 줄을 끌어 바꾼다.
@@ -833,7 +834,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pMoveUp ) );
         ImGui::BeginDisabled( _document._selectedTrack <= 0 || _document._selectedTrack >= trackCount );
         if ( ImGui::Button( pMoveUp ) && _document.moveTrack( _document._selectedTrack, _document._selectedTrack - 1 ) )
-            notifyDocumentEdited( "Move Sequence Track" );
+            _document.recordDocumentEdit( "Move Sequence Track" );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "sequencer.moveTrackUp" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "MoveTrackUpTip" ) );
@@ -841,7 +842,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pMoveDown ) );
         ImGui::BeginDisabled( _document._selectedTrack < 0 || _document._selectedTrack + 1 >= trackCount );
         if ( ImGui::Button( pMoveDown ) && _document.moveTrack( _document._selectedTrack, _document._selectedTrack + 1 ) )
-            notifyDocumentEdited( "Move Sequence Track" );
+            _document.recordDocumentEdit( "Move Sequence Track" );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "sequencer.moveTrackDown" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "MoveTrackDownTip" ) );
@@ -858,7 +859,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _document.hasCopiedKeys() == false || _document._selectedTrack < 0 );
         if ( ImGui::Button( pPasteKeys ) && _document.pasteKeys( _currentFrame ) > 0 )
         {
-            notifyDocumentEdited( "Paste Sequence Keys" );
+            _document.recordDocumentEdit( "Paste Sequence Keys" );
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
@@ -869,7 +870,7 @@ namespace sw::editor
         ImGui::BeginDisabled( _document.getSelectedKeys().empty() );
         if ( ImGui::Button( pDeleteKeys ) && _document.removeSelectedKeys() > 0 )
         {
-            notifyDocumentEdited( "Delete Sequence Keys" );
+            _document.recordDocumentEdit( "Delete Sequence Keys" );
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
@@ -957,7 +958,7 @@ namespace sw::editor
             // 놓을 때 한 번 옮긴다 — 되돌리기 한 단계, 정수 프레임 스냅. 타임라인 밖으로 나가는 끌기는 옮기지 않는다.
             if ( _keyDragDelta != 0 && _document.moveSelectedKeys( _keyDragDelta ) )
             {
-                notifyDocumentEdited( "Move Sequence Keys" );
+                _document.recordDocumentEdit( "Move Sequence Keys" );
                 previewCurrentFrame();
             }
             _keyDragTrack = -1;
@@ -996,7 +997,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( pTooltip );
         if ( ImGui::IsItemDeactivatedAfterEdit() == false )
             return;
-        notifyDocumentEdited( "Edit Sequence Track" );
+        _document.recordDocumentEdit( "Edit Sequence Track" );
         if ( bPreviewOnEdit )
             previewCurrentFrame();
     }
@@ -1026,7 +1027,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorSequencer", "KeyButton" ) ) )
         {
             track.setKey( frame, pArrCurrent, kSequenceMaxChannelCount );
-            notifyDocumentEdited( "Add Sequence Key" );
+            _document.recordDocumentEdit( "Add Sequence Key" );
         }
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "sequencer.addKey" );
@@ -1037,7 +1038,7 @@ namespace sw::editor
         if ( ImGui::Button( pDeleteKey ) && track.removeKeysAt( frame ) )
         {
             _document.clearKeySelection(); // 지운 키를 고른 채 두지 않는다
-            notifyDocumentEdited( "Delete Sequence Key" );
+            _document.recordDocumentEdit( "Delete Sequence Key" );
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
@@ -1104,7 +1105,7 @@ namespace sw::editor
                 previewCurrentFrame();
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sequence Key" );
+                _document.recordDocumentEdit( "Edit Sequence Key" );
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.channel.%#", channelIndex );
             EditorSelfTestMarks::record( mark.c_str() );
@@ -1148,7 +1149,7 @@ namespace sw::editor
             if ( EditorCurveEditorState::drawEditor( _curveState, "sequencer.curve" ) )
             {
                 channel = _curveState._working;
-                notifyDocumentEdited( "Edit Sequence Curve" );
+                _document.recordDocumentEdit( "Edit Sequence Curve" );
                 previewCurrentFrame();
             }
         }
@@ -1158,7 +1159,7 @@ namespace sw::editor
     void SequencerPanel::addKeyTrack( SequenceTrackKind kind )
     {
         if ( _document.addTrack( kind ) )
-            notifyDocumentEdited( "Add Sequence Track" );
+            _document.recordDocumentEdit( "Add Sequence Track" );
     }
 
     bool SequencerPanel::findSelectedTrackKeyFrameCount( uint32& outCount ) const

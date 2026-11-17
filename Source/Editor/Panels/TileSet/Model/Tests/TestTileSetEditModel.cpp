@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileSet/Model/TileSetEditModel.h"
 
 #include "Engine/TileMap/TileSetAsset.h"
@@ -114,4 +115,21 @@ SW_TEST_CASE( TileSetEditModelTest, ViolationsAreShownNotSaved )
     SW_EXPECT_EQUAL( 2, restored.getContent()._columnCount );
     SW_EXPECT_FALSE( model.saveDocument( "never/written.tileset.xml" ) );
     SW_EXPECT_FALSE( model.getStatus().empty() );
+}
+
+/** @brief [TileSetEditModelTest] 문서 편집 알림은 Model 이 문서 패널의 창구로 낸다(감사 E-16 — View 는 `notifyDocumentEdited` 를 부를 수 없다) */
+SW_TEST_CASE( TileSetEditModelTest, RecordDocumentEditGoesToTheBoundRecorder )
+{
+    uint32                     count{ 0 };
+    string                     lastLabel;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    {
+        ++count;
+        lastLabel = string{ label };
+    } ) };
+    TileSetEditModel           model;
+    model.bindDocumentEditRecorder( recorder );
+    model.recordDocumentEdit( "Edit Tile Set" );
+    SW_EXPECT_EQUAL( count, 1u );
+    SW_EXPECT_TRUE( lastLabel == "Edit Tile Set" );
 }

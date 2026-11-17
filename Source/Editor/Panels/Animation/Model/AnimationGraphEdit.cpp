@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"
@@ -33,5 +34,10 @@ namespace sw::editor
     const AnimationPoseNodeType* AnimationGraphEdit::findPoseNodeType( const hashed_string& typeName )
     {
         return getSubsystem<AnimationPoseNodeRegistry>().findType( typeName );
+    }
+
+    void AnimationGraphEdit::recordDocumentEdit( const DocumentEditRecorder& recorder, string_view label )
+    {
+        recorder.notifyEdited( label );
     }
 } // namespace sw::editor

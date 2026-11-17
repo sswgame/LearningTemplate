@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -156,5 +157,11 @@ namespace sw::editor
         GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         GameObject*        pSubject = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( kPreviewSubjectName ) ) : nullptr;
         return pSubject != nullptr ? pSubject->getComponent<MeshComponent>() : nullptr;
+    }
+
+    void MaterialModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
     }
 } // namespace sw::editor

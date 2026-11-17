@@ -17,6 +17,7 @@
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /** @brief 프레임 사각형의 가장자리 하나입니다(아틀라스 위에서 끌어 고친다). */
     enum class SpriteFrameEdge : uint8
     {
@@ -33,6 +34,14 @@ namespace sw::editor
     class SpriteClipModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+
         /** @brief 아틀라스를 나눌 열 · 행 수의 범위입니다. */
         static constexpr int32 kMaxSliceCount = 64;
 
@@ -188,5 +197,6 @@ namespace sw::editor
         int32                                   _sliceRows;      ///< 아틀라스를 나눌 행 수
         float32                                 _previewSeconds; ///< 미리보기 구간 시작부터 흐른 시간(초)
         uint8                                   _bPreviewPlaying : 1;
+        const DocumentEditRecorder*             _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

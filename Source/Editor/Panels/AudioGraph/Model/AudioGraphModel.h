@@ -23,9 +23,10 @@ namespace sw
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /**
      * @struct AudioGraphEdit
-     * @brief 모델이 사본을 고친 일 하나입니다. 패널이 되돌리기 이름으로 문서 기반에 넘긴다(`EditorDocumentPanel::notifyDocumentEdited` — 끌기 한 번은 상호작용 구간이 한 단계로 묶는다).
+     * @brief 모델이 사본을 고친 일 하나입니다. 패널이 되돌리기 이름으로 문서 기반에 넘긴다(`recordDocumentEdit` — 끌기 한 번은 상호작용 구간이 한 단계로 묶는다).
      */
     struct AudioGraphEdit
     {
@@ -39,6 +40,14 @@ namespace sw::editor
     class AudioGraphModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+
         /** @brief 옮긴 것으로 보는 위치 차이(캔버스 좌표)입니다. 부동소수 반올림을 고침으로 읽지 않는다. */
         static constexpr float32 kMoveEpsilon = 0.5f;
 
@@ -128,12 +137,13 @@ namespace sw::editor
         void clearNodeRefs();
 
     private:
-        AudioGraphDef  _editGraph;         ///< 고치는 중인 그래프 사본(파일에서 읽음)
-        vector<uint32> _listOrder;         ///< 처리 순서 버퍼
-        AudioPlayingID _previewID;         ///< 미리 듣기의 재생 id 다(0 = 없음).
-        AudioGraphEdit _pendingEdit;       ///< 패널이 아직 가져가지 않은 편집
-        int32          _selectedNode;      ///< 고른 노드 번호(-1 = 없음)
-        int32          _pendingPlacedNode; ///< 다음 캔버스 프레임에서 위치를 정할 새 노드 번호(-1 = 없음)
-        int32          _placingNode;       ///< 이번 캔버스 프레임에 위치를 정하는 노드 번호(-1 = 없음). `beginCanvasFrame` 만 바꾼다
+        AudioGraphDef               _editGraph;                ///< 고치는 중인 그래프 사본(파일에서 읽음)
+        vector<uint32>              _listOrder;                ///< 처리 순서 버퍼
+        AudioPlayingID              _previewID;                ///< 미리 듣기의 재생 id 다(0 = 없음).
+        AudioGraphEdit              _pendingEdit;              ///< 패널이 아직 가져가지 않은 편집
+        int32                       _selectedNode;             ///< 고른 노드 번호(-1 = 없음)
+        int32                       _pendingPlacedNode;        ///< 다음 캔버스 프레임에서 위치를 정할 새 노드 번호(-1 = 없음)
+        int32                       _placingNode;              ///< 이번 캔버스 프레임에 위치를 정하는 노드 번호(-1 = 없음). `beginCanvasFrame` 만 바꾼다
+        const DocumentEditRecorder* _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

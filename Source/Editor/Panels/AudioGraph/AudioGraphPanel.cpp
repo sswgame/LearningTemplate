@@ -60,7 +60,8 @@ namespace sw::editor
         , _nodeGrid{}
         , _removal{}
     {
-        _nodeGraph.setCommentsEnabled( true ); // 주석 상자는 그래프 파일에 실린다(`AudioGraphDef::_listComment`)
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
+        _nodeGraph.setCommentsEnabled( true );                        // 주석 상자는 그래프 파일에 실린다(`AudioGraphDef::_listComment`)
     }
 
     bool AudioGraphPanel::canAcceptDocumentPath( string_view assetPath ) const
@@ -376,7 +377,7 @@ namespace sw::editor
         // 이번 그리기에서 캔버스 · 그리드가 고친 일을 문서 기반에 넘긴다 — 되돌리기 단계와 dirty 가 여기서 선다.
         AudioGraphEdit edit;
         if ( _model.takeEdit( edit ) )
-            notifyDocumentEdited( edit._pLabel );
+            _model.recordDocumentEdit( edit._pLabel );
     }
 
     SW_EDITOR_PANEL( AudioGraphPanel, AudioGraphPanel::kPanelID, EditorPanelCategory::Tool, 2102 );

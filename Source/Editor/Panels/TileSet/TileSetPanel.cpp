@@ -132,6 +132,7 @@ namespace sw::editor
         , _nameBuffer{}
         , _nameBrush{ -1 }
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
     }
 
     ToolAssetLoadResult TileSetPanel::loadDocument()
@@ -199,17 +200,17 @@ namespace sw::editor
         atlas = string_view( content._atlasPath );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Atlas" ) );
         if ( EditorWidgets::drawAssetPathField( "##TileSetAtlas", atlas, "atlas", nullptr, "tileSet.atlasPath" )._bDeactivatedAfterEdit && _model.setAtlasPath( atlas.c_str() ) )
-            notifyDocumentEdited( "Edit Tile Set Atlas" );
+            _model.recordDocumentEdit( "Edit Tile Set Atlas" );
         int32 grid[2] = { content._columnCount, content._rowCount };
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Grid" ), SW_LOCKEY( "EditorTileSet", "GridTip" ) );
         EditorWidgets::inputInt2( SW_WIDGET_ID( "##TileSetGrid" ), grid );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setAtlasGrid( grid[0], grid[1] ) )
-            notifyDocumentEdited( "Edit Tile Set Grid" );
+            _model.recordDocumentEdit( "Edit Tile Set Grid" );
         float32 tileSize = content._tileSize;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "TileSize" ), SW_LOCKEY( "EditorTileSet", "TileSizeTip" ) );
         EditorWidgets::inputFloat( SW_WIDGET_ID( "##TileSetTileSize" ), &tileSize, 0.0f, 0.0f, "%.3f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setTileSize( tileSize ) )
-            notifyDocumentEdited( "Edit Tile Set Tile Size" );
+            _model.recordDocumentEdit( "Edit Tile Set Tile Size" );
         drawIssues( nullopt, nullopt ); // 타일셋 전체의 문제
     }
 
@@ -220,20 +221,20 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddTile" ) ) )
         {
             _model.addBrush( false );
-            notifyDocumentEdited( "Add Tile Brush" );
+            _model.recordDocumentEdit( "Add Tile Brush" );
         }
         EditorSelfTestMarks::record( "tileSet.addTile" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorTileSet", "AddRuleTile" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddRuleTile" ) ) )
         {
             _model.addBrush( true );
-            notifyDocumentEdited( "Add Rule Tile Brush" );
+            _model.recordDocumentEdit( "Add Rule Tile Brush" );
         }
         EditorSelfTestMarks::record( "tileSet.addRuleTile" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
         ImGui::BeginDisabled( _model.findSelectedBrush() == nullptr );
         if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##brush" ) ) && _model.removeSelectedBrush() )
-            notifyDocumentEdited( "Remove Tile Brush" );
+            _model.recordDocumentEdit( "Remove Tile Brush" );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "tileSet.removeBrush" );
 
@@ -283,7 +284,7 @@ namespace sw::editor
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             if ( _model.renameSelectedBrush( _nameBuffer ) )
-                notifyDocumentEdited( "Rename Tile Brush" );
+                _model.recordDocumentEdit( "Rename Tile Brush" );
             else
                 _nameBuffer = brush._name.c_str(); // 거절한 이름은 칸에서도 되돌린다(까닭은 상태 줄)
         }
@@ -291,19 +292,19 @@ namespace sw::editor
         bool bSolid = brush._bSolid == SW_TRUE;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Solid" ), SW_LOCKEY( "EditorTileSet", "SolidTip" ) );
         if ( ImGui::Checkbox( "##TileSetSolid", &bSolid ) && _model.setSelectedSolid( bSolid ) )
-            notifyDocumentEdited( "Edit Tile Brush" );
+            _model.recordDocumentEdit( "Edit Tile Brush" );
         EditorSelfTestMarks::record( "tileSet.solid" );
         int32 navCost = static_cast<int32>( brush._navCost );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "NavCost" ), SW_LOCKEY( "EditorTileSet", "NavCostTip" ) );
         EditorWidgets::inputInt( SW_WIDGET_ID( "##TileSetNavCost" ), &navCost );
         if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setSelectedNavCost( navCost ) )
-            notifyDocumentEdited( "Edit Tile Brush" );
+            _model.recordDocumentEdit( "Edit Tile Brush" );
         if ( brush.isRuleTile() )
         {
             bool bOutsideSame = brush._bOutsideIsSame == SW_TRUE;
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "OutsideSame" ), SW_LOCKEY( "EditorTileSet", "OutsideSameTip" ) );
             if ( ImGui::Checkbox( "##TileSetOutside", &bOutsideSame ) && _model.setSelectedOutsideSame( bOutsideSame ) )
-                notifyDocumentEdited( "Edit Tile Brush" );
+                _model.recordDocumentEdit( "Edit Tile Brush" );
         }
     }
 
@@ -332,20 +333,20 @@ namespace sw::editor
                 drawIssues( _model.getSelectedBrush(), ruleIndex );
             }
             if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddRule" ) ) && _model.addRule() )
-                notifyDocumentEdited( "Add Tile Rule" );
+                _model.recordDocumentEdit( "Add Tile Rule" );
             EditorSelfTestMarks::record( "tileSet.addRule" );
             const bool bRuleSelected = _model.getSelectedRule().has_value();
             ImGui::BeginDisabled( bRuleSelected == false );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##rule" ) ) && _model.removeSelectedRule() )
-                notifyDocumentEdited( "Remove Tile Rule" );
+                _model.recordDocumentEdit( "Remove Tile Rule" );
             EditorSelfTestMarks::record( "tileSet.removeRule" );
             EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
             if ( ImGui::ArrowButton( "##ruleUp", ImGuiDir_Up ) && _model.moveSelectedRule( -1 ) )
-                notifyDocumentEdited( "Reorder Tile Rules" );
+                _model.recordDocumentEdit( "Reorder Tile Rules" );
             EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
             if ( ImGui::ArrowButton( "##ruleDown", ImGuiDir_Down ) && _model.moveSelectedRule( 1 ) )
-                notifyDocumentEdited( "Reorder Tile Rules" );
+                _model.recordDocumentEdit( "Reorder Tile Rules" );
             ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileSet", "RuleOrderTip" ) );
         }
@@ -378,7 +379,7 @@ namespace sw::editor
             }
             ImGui::PushID( 2000 + neighbor );
             if ( ImGui::Button( Internal::getNeighborLabel( rule._arrNeighbor[neighbor] ), ImVec2{ buttonSide, buttonSide } ) && _model.cycleNeighbor( neighbor ) )
-                notifyDocumentEdited( "Edit Tile Rule Pattern" );
+                _model.recordDocumentEdit( "Edit Tile Rule Pattern" );
             Internal::recordIndexedMark( "tileSet.neighbor", neighbor );
             ImGui::PopID();
         }
@@ -398,7 +399,7 @@ namespace sw::editor
         }
         ImGui::BeginDisabled( visual._listFrameCell.size() <= 1 );
         if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "RemoveLastFrame" ) ) && _model.removeLastFrame() )
-            notifyDocumentEdited( "Remove Tile Frame" );
+            _model.recordDocumentEdit( "Remove Tile Frame" );
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "tileSet.removeLastFrame" );
         if ( visual._listFrameCell.size() > 1 )
@@ -407,7 +408,7 @@ namespace sw::editor
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Fps" ) );
             EditorWidgets::inputFloat( SW_WIDGET_ID( "##TileSetFps" ), &fps, 0.0f, 0.0f, "%.2f" );
             if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setFramesPerSecond( fps ) )
-                notifyDocumentEdited( "Edit Tile Frames" );
+                _model.recordDocumentEdit( "Edit Tile Frames" );
         }
     }
 
@@ -475,7 +476,7 @@ namespace sw::editor
                 const bool   bInGrid = 0 <= column && column < content._columnCount && 0 <= row && row < content._rowCount;
                 const bool   bAppend = EditorInputGUI::readPointer().hasModifier( ModifierKey::Shift );
                 if ( bInGrid && _model.pickCell( row * content._columnCount + column, bAppend ) )
-                    notifyDocumentEdited( bAppend ? "Add Tile Frame" : "Pick Tile Cell" );
+                    _model.recordDocumentEdit( bAppend ? "Add Tile Frame" : "Pick Tile Cell" );
             }
         }
         ImGui::EndChild();

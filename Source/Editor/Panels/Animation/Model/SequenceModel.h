@@ -16,6 +16,7 @@
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /** @brief 고른 키 하나 — 트랙 번호와 키 프레임입니다(채널마다 같은 프레임의 키는 하나로 고른다, 언리얼 Sequencer 의 키 마름모와 같다). */
     struct SequenceKeyRef
     {
@@ -69,6 +70,14 @@ namespace sw::editor
         uint32            _selectedBinding; ///< 고른 바인딩 id(0 이면 없음). 새 항목 · 트랙 · 컷의 대상입니다
 
         SequenceModel();
+
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
+         */
+        void recordDocumentEdit( string_view label ) const;
 
         // 문서 교체
         /** @brief 되돌리기가 준 애셋으로 바꿉니다. 없어진 항목 · 트랙 · 바인딩을 가리키지 않게 고른 번호를 맞추고 키 선택을 비웁니다. */
@@ -240,13 +249,14 @@ namespace sw::editor
         [[nodiscard]] bool hasSelectedItem() const;
 
     private:
-        vector<SequenceKeyRef>    _listSelectedKey; ///< 고른 키(트랙 · 프레임)
-        vector<SequenceCopiedKey> _listCopiedKey;   ///< 복사한 키(`copySelectedKeys`)
-        SequenceTrackItem         _copiedItem;      ///< 복사한 항목(`copySelectedItem`)
-        int32                     _viewFirstFrame;  ///< 보이는 첫 프레임(맞춘 상태면 쓰지 않는다)
-        int32                     _viewFrameSpan;   ///< 보이는 폭(0 이하면 타임라인 전체 — 타임라인 길이가 바뀌어도 따라간다)
-        uint8                     _bItemDraft  : 1; ///< `_itemEdit` 이 아직 문서에 없는 초안입니다
-        uint8                     _bItemCopied : 1; ///< `_copiedItem` 이 찼다
-        [[maybe_unused]] uint8    _reserved    : 6;
+        vector<SequenceKeyRef>      _listSelectedKey; ///< 고른 키(트랙 · 프레임)
+        vector<SequenceCopiedKey>   _listCopiedKey;   ///< 복사한 키(`copySelectedKeys`)
+        SequenceTrackItem           _copiedItem;      ///< 복사한 항목(`copySelectedItem`)
+        int32                       _viewFirstFrame;  ///< 보이는 첫 프레임(맞춘 상태면 쓰지 않는다)
+        int32                       _viewFrameSpan;   ///< 보이는 폭(0 이하면 타임라인 전체 — 타임라인 길이가 바뀌어도 따라간다)
+        uint8                       _bItemDraft  : 1; ///< `_itemEdit` 이 아직 문서에 없는 초안입니다
+        uint8                       _bItemCopied : 1; ///< `_copiedItem` 이 찼다
+        [[maybe_unused]] uint8      _reserved    : 6;
+        const DocumentEditRecorder* _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor
