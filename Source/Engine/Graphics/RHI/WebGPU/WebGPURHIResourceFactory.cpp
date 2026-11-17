@@ -826,6 +826,22 @@ namespace sw
         return _pDevice->_textureTable.rebind( index, WebGPUBindlessEntry{ texture, SW_TRUE } );
     }
 
+    RHIDescriptorIndex WebGPURHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureTable.reserveIndex();
+    }
+
+    bool WebGPURHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "WebGPU.activateReservedBindlessTexture" );
+        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
+        if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
+            return false;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureTable.assign( index, WebGPUBindlessEntry{ texture, SW_TRUE } );
+    }
+
     void WebGPURHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessTexture" );

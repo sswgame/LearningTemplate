@@ -1284,6 +1284,41 @@ namespace sw
         return true;
     }
 
+    RHIDescriptorIndex D3D12RHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        // 힙 번호 발급기만 건드린다 — 뷰 · 읽기 칸은 그대로라 기록 경로가 읽는 상태를 바꾸지 않는다(어느 스레드든).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return acquireBindlessIndex( lock );
+    }
+
+    bool D3D12RHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
+        ID3D12Resource* const pResource = texture != 0 && _pDevice->_cbvHeap != nullptr ? _pDevice->resolveTexture( texture ) : nullptr;
+        if ( pResource == nullptr || _pDevice->isTextureReadyToRegister( texture ) == false )
+            return false;
+        const D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( texture );
+        if ( pTextureRecord != nullptr && pTextureRecord->_bOffscreen != SW_FALSE && pTextureRecord->_offscreen._dimension != RHITextureDimension::Texture2D )
+            return false;
+
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        if ( _pDevice->_srvRegistry.isLive( index ) || _pDevice->_uavRegistry.isLive( index ) )
+            return false;
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MipLevels           = pResource->GetDesc().MipLevels;
+        const DXGI_FORMAT resourceFormat      = pResource->GetDesc().Format;
+        srvDesc.Format                        = ( resourceFormat == DXGI_FORMAT_R24G8_TYPELESS || resourceFormat == DXGI_FORMAT_D24_UNORM_S8_UINT ) ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : resourceFormat;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+        // 새 번호다(예약은 펜스 뒤에야 다시 나간 번호를 준다) — 등록과 같이 힙 · 오프라인 뷰를 쓰고 모든 링 사본에 복사한다(`writeBindlessRecord`).
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
+        _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
+        _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture );
+        return true;
+    }
+
     void D3D12RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         // DX12 는 텍스처와 버퍼가 같은 셰이더 가시 힙을 나눠 쓰므로 인덱스 공간이 하나다.

@@ -92,6 +92,56 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 예약했고 렌더 스레드가 아직 살리지 않은 텍스처 번호와 그 번호가 처음 가리킬 텍스처입니다(`IRHIDevice::reserveBindlessTexture`). */
+    struct RHIBindlessReservationQueue
+    {
+        struct Entry
+        {
+            RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
+            RHITextureHandle   _placeholder{ 0 };
+        };
+
+        mutex         _mutex;
+        vector<Entry> _listEntry;   ///< `_mutex` 아래
+        vector<Entry> _listScratch; ///< 렌더 스레드가 꺼내 살리는 임시 목록(`_mutex` 밖에서 쓴다 — 살리기가 장치를 부른다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    RHIDescriptorIndex IRHIDevice::reserveBindlessTexture( RHITextureHandle placeholder )
+    {
+        IRHIResourceFactory* const pFactory = getResourceFactory();
+        if ( pFactory == nullptr || placeholder == 0 )
+            return kInvalidDescriptorIndex;
+        const RHIDescriptorIndex index = pFactory->reserveBindlessTextureIndex();
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
+        ScopedLock<mutex> lock{ _pBindlessReservationQueue->_mutex };
+        _pBindlessReservationQueue->_listEntry.push_back( RHIBindlessReservationQueue::Entry{ index, placeholder } );
+        return index;
+    }
+
+    void IRHIDevice::activateReservedBindlessTextures()
+    {
+        RHIBindlessReservationQueue& queue = *_pBindlessReservationQueue;
+        {
+            ScopedLock<mutex> lock{ queue._mutex };
+            if ( queue._listEntry.empty() )
+                return;
+            queue._listScratch.swap( queue._listEntry );
+        }
+        IRHIResourceFactory* const pFactory = getResourceFactory();
+        for ( const RHIBindlessReservationQueue::Entry& entry : queue._listScratch )
+        {
+            if ( pFactory != nullptr && pFactory->activateReservedBindlessTexture( entry._index, entry._placeholder ) )
+                continue;
+            // 자리 텍스처(로드 중 · 누락 체커)는 기동이 올려 둔다 — 못 살리면 결함이다. 번호는 산 칸이 아니라 해제가 놓지 못하므로 그 번호를 쥔 쪽은 빈 번호를 그린다.
+            SW_LOG_ERROR_ID( "RHI.ReservedBindlessActivateFailed", "%#: the reserved bindless index %# could not point at texture %#", getBackendName(), entry._index, entry._placeholder );
+        }
+        queue._listScratch.clear();
+    }
+
     RHICapabilities IRHIDevice::getCapabilities() const
     {
         return RHIAvailability::query( getBackendType() ); // 정적 테이블 — 런타임에 갈리는 능력은 백엔드가 override 한다
@@ -413,6 +463,7 @@ namespace sw
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
+        , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
         , _initPhaseTimings{}
         , _drawDiagnostics{ *this }

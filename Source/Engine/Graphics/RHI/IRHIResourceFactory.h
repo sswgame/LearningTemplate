@@ -319,6 +319,17 @@ namespace sw
          */
         [[nodiscard]] virtual bool rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) = 0;
         /**
+         * @brief 텍스처 번호 하나만 예약합니다. **어느 스레드에서든** 부른다(병렬 기록 중에도 — 번호 발급기만 짧은 잠금으로 건드리고 기록 경로가 읽는 칸은 바꾸지 않는다).
+         * @details 예약한 번호는 아직 산 칸이 아니다 — `activateReservedBindlessTexture` 가 렌더 스레드에서 디스크립터를 쓰고 살린다(`IRHIDevice::reserveBindlessTexture` 가 둘을 잇는다).
+         *          텍스처 캐시가 로드를 시작할 때 번호를 정해 두어, 로드가 끝나도 번호가 바뀌지 않게 한다(감사 R-6 — 언리얼 `FD3D12BindlessDescriptorManager` 도 할당은 스레드 안전이고 갱신은 뒤에 한다).
+         * @return 표가 차면 kInvalidDescriptorIndex 입니다.
+         */
+        [[nodiscard]] virtual RHIDescriptorIndex reserveBindlessTextureIndex() = 0;
+        /**
+         * @brief 예약한 번호 @p index 에 @p texture 를 등록해 산 칸으로 만듭니다(렌더 스레드, 병렬 기록 밖 — 등록과 같은 조건). 실패하면 false 이고 번호는 예약된 채 남는다.
+         */
+        [[nodiscard]] virtual bool activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) = 0;
+        /**
          * @brief 살아 있는 텍스처의 첫 업로드가 끝나 등록 · 샘플해도 되는지 묻습니다(전송한 적이 없으면 true, 없는 핸들이면 false). 오류를 남기지 않습니다.
          * @details 받은 핸들의 내력을 모르는 쪽(에디터 UI 가 패널에서 받는 텍스처)이 등록 전에 묻는다 — 끝날 때까지 그 텍스처를 그리지 않고 다음 프레임에 다시 묻는다.
          *          예전에는 "넘기는 쪽이 첫 업로드를 끝낸 것만 넘긴다" 는 약속뿐이라 창 실행의 체인에서 가끔 `RHI.RegisterBeforeTransferDone` 가 났다.

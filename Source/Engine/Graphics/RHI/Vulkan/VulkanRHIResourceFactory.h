@@ -46,6 +46,8 @@ namespace sw
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
         [[nodiscard]] bool              rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
+        RHIDescriptorIndex              reserveBindlessTextureIndex() override;
+        [[nodiscard]] bool              activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;

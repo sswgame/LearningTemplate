@@ -193,6 +193,15 @@ namespace sw
             store( index, entry );
             return true;
         }
+        /**
+         * @brief 번호 하나만 받습니다(값은 넣지 않는다 — 산 칸이 아니다). 표가 차면 kInvalidDescriptorIndex 입니다.
+         * @details 번호 예약(`IRHIResourceFactory::reserveBindlessTextureIndex`)이 쓴다 — 칸 값은 그대로라 기록 경로가 읽는 상태를 바꾸지 않는다. 뒤에 `assign` 이 값을 넣는다.
+         */
+        [[nodiscard]] RHIDescriptorIndex reserveIndex()
+        {
+            uint32 index{ 0 };
+            return _pAllocator->tryAllocate( index ) ? static_cast<RHIDescriptorIndex>( index ) : kInvalidDescriptorIndex;
+        }
         /** @brief 디스크립터를 쓰지 않는 백엔드의 `allocate` 입니다. */
         [[nodiscard]] RHIDescriptorIndex allocate( const TEntry& entry )
         {

@@ -86,6 +86,8 @@ namespace
         RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
         bool                   rebindBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
+        RHIDescriptorIndex     reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
+        bool                   activateReservedBindlessTexture( RHIDescriptorIndex, RHITextureHandle ) override { return false; }
         bool                   isTextureReadyToSample( RHITextureHandle ) override { return false; }
         void                   unregisterBindlessTexture( RHIDescriptorIndex ) override {}
         RHIDescriptorIndex     registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }

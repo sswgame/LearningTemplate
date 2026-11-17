@@ -835,6 +835,25 @@ namespace sw
         return _pDevice->_textureRegistry.rebind( index, texture );
     }
 
+    RHIDescriptorIndex D3D11RHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        // 번호 발급기만 건드린다 — 칸 값은 그대로라 기록 경로의 풀이에 닿지 않는다(어느 스레드든).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.reserveIndex();
+    }
+
+    bool D3D11RHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
+        D3D11RHIDevice::TextureRecord* pRecord         = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        const bool                     bCannotActivate = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotActivate )
+            return false;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.assign( index, texture );
+    }
+
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );

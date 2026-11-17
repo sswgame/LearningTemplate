@@ -945,6 +945,27 @@ namespace sw
         return _pDevice->_textureRegistry.rebind( index, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
     }
 
+    RHIDescriptorIndex OpenGLRHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        // 번호 발급기만 건드린다(어느 스레드든 — GL 컨텍스트가 필요 없다).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.reserveIndex();
+    }
+
+    bool OpenGLRHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        if ( texture == 0 )
+            return false;
+        ScopedOpenGLContext                         contextScope( _pDevice );
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord         = _pDevice->resolveTexture( texture );
+        const bool                                  bCannotActivate = pRecord == nullptr || _pDevice->getGlTextureName( texture ) == 0 || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotActivate )
+            return false;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.assign( index, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
+    }
+
     void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         ScopedOpenGLContext      contextScope( _pDevice );

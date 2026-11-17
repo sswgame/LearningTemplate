@@ -1318,6 +1318,32 @@ namespace sw
         return true;
     }
 
+    RHIDescriptorIndex VulkanRHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        // 번호 발급기만 건드린다 — 세트 원소는 쓰지 않는다(활성화가 렌더 스레드에서 쓴다). 어느 스레드든.
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.reserveIndex();
+    }
+
+    bool VulkanRHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
+        VulkanRHIDevice::VulkanTextureRecord* const pResolved = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        VkImageView                                 view{ VK_NULL_HANDLE };
+        uint32                                      layout{ 0 };
+        const bool                                  bCannotActivate = pResolved == nullptr || _pDevice->hasTextureSet() == false ||
+                                     _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_uploadSerials, texture ) == false ||
+                                     _pDevice->findBindlessSampleView( texture, view, layout ) == false;
+        if ( bCannotActivate )
+            return false;
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        if ( _pDevice->_textureRegistry.isLive( index ) )
+            return false;
+        // 새 번호다 — 등록과 같은 길로 세트에 쓴다(`writeBindlessTextureSlot` — 장치에 맞는 링 쓰기).
+        _pDevice->writeBindlessTextureSlot( index, view, layout );
+        return _pDevice->_textureRegistry.assign( index, texture );
+    }
+
     void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
