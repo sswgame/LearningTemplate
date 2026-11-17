@@ -29,11 +29,13 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -447,8 +449,11 @@ namespace sw
             return; // 이 프레임은 단계를 돌리지 않는다(`onFrameEnd` 도 `_run._bClockHeld` 를 본다)
         }
         _evaluator.setFrameIndex( _run._frameIndex );
-        if ( _run._holdFrameCount == 0 && _scenario.isAdvanceSimulationFrame( _run._frameIndex ) )
-            advanceSimulationFrame();
+        if ( _run._holdFrameCount == 0 )
+        {
+            if ( const uint32 advanceFrames = _scenario.findAdvanceSimulationFramesStartingAt( _run._frameIndex ); advanceFrames > 0 )
+                advanceSimulation( advanceFrames );
+        }
         // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
         const vector<AutomationStep>& listStep = _scenario.getSteps();
         for ( size_t stepIndex = _run._nextStepIndex; stepIndex < listStep.size() && listStep[stepIndex]._frameIndex == _run._frameIndex; ++stepIndex )
@@ -625,10 +630,16 @@ namespace sw
         _run._lastFrameEndSeconds = nowSeconds;
     }
 
-    void AutomationRunner::advanceSimulationFrame()
+    void AutomationRunner::advanceSimulation( uint32 frameCount )
     {
-        // shortcut: 매 걸음 그린다(다른 프레임과 같다) — 그리지 않고 고정 걸음만 진행하는 엔진 입구가 서면 이 자리에서 부른다.
-        ++_run._advanceSimulationFrameCount;
+        // 그리지 않고 고정 걸음만 진행한다 — 결과(게임 상태)는 그리며 진행한 것과 같아야 한다(`game.empty.advancesimulation` 이 두 길의 변환 해시를 견준다).
+        const float32 fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
+        if ( engine::getSubsystem<SimulationOnlyFrameQueue>().request( frameCount, fixedFrameDelta ) == false )
+        {
+            finish( AutomationResult::Failed, "<AdvanceSimulation> could not hand its frames to the simulation-only frame queue" );
+            return;
+        }
+        _run._advanceSimulationFrameCount += frameCount;
     }
 
     void AutomationRunner::reportOngoingWait()

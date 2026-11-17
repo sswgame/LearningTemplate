@@ -56,7 +56,7 @@ namespace sw
         uint32                           _waitFrameCount;                ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                           _screenshotRequestedCount;
         uint32                           _screenshotCompletedCount;
-        uint32                           _advanceSimulationFrameCount; ///< `<AdvanceSimulation>` 으로 진행한 프레임 수(`AutomationRunner::advanceSimulationFrame`)
+        uint32                           _advanceSimulationFrameCount; ///< `<AdvanceSimulation>` 으로 맡긴 프레임 수(`AutomationRunner::advanceSimulation`)
         uint8                            _bFinishWaiting : 1;          ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
         uint8                            _bClockHeld     : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         [[maybe_unused]] uint8           _reserved       : 7;
@@ -284,10 +284,11 @@ namespace sw
          */
         void recordTimelineFrame( size_t stepIndexBefore );
         /**
-         * @brief `<AdvanceSimulation>` 이 흘리는 프레임 하나를 진행합니다 — 그 단계의 실행부는 여기 한 곳이다.
-         * @details 지금은 다른 프레임과 같이 그리며 진행한다(결과는 같다). 그리지 않고 고정 걸음만 진행하는 엔진 입구가 서면 여기서 부른다(시뮬레이션 결과는 같고 렌더만 건너뛴다).
+         * @brief `<AdvanceSimulation>` 진행 구간(@p frameCount 프레임)이 시작하는 프레임에 한 번 부릅니다 — 그 단계의 실행부는 여기 한 곳이다.
+         * @details 엔진의 그리지 않는 진행 줄(`SimulationOnlyFrameQueue`)에 그 프레임 수를 고정 프레임 시간으로 맡긴다 — 시뮬레이션 결과는 같고 렌더만 건너뛴다.
+         *          맡기지 못하면(줄이 거절) 시나리오 실패다. 실행기는 그대로 그 프레임 수를 흘린다.
          */
-        void advanceSimulationFrame();
+        void advanceSimulation( uint32 frameCount );
         /** @brief 단계 · 시계 잡기 조건이 오래 붙잡고 있으면 무엇을 기다리는지 기다리는 동안 찍습니다(`AutomationTimeLimits::kWaitReportFirstSeconds`). */
         void reportOngoingWait();
         /**

@@ -279,6 +279,16 @@ namespace sw
         return false;
     }
 
+    uint32 AutomationScenario::findAdvanceSimulationFramesStartingAt( uint32 frameIndex ) const
+    {
+        for ( const AdvanceSpan& span : _listAdvanceSpan )
+        {
+            if ( span._firstFrame == frameIndex )
+                return span._frameCount;
+        }
+        return 0;
+    }
+
     const AutomationStep* AutomationScenario::findOtherStepAtSameFrame( const AutomationStep& step ) const
     {
         for ( const AutomationStep& otherStep : _listStep )

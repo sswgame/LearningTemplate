@@ -6,13 +6,13 @@
 -->
 <Scenario name="game.voxelcraft.slice" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_voxelAutoPlay" value="0"/>
-	<!-- 시작 60 프레임은 옛 시나리오 그대로 둔다 — 몸이 자리를 잡는 시뮬레이션 시간(걷기 거리를 그 뒤부터 잰다). -->
-	<Wait frames="60"/>
+	<!-- 몸이 땅에 내려앉을 때까지(걷기 거리를 그 뒤부터 잰다). -->
+	<WaitUntil watch="VoxelCraft.OnGround" equals="1" timeoutFrames="120"/>
 	<Expect watch="VoxelCraft.ControllerKind" equals="0"/>
 
 	<!-- 걷기: W 를 1 초 — 몸이 1 m 넘게 간다. -->
 	<Press slot="Key.W"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/> <!-- 누른 채인 1 초가 시험 내용이다 -->
 	<Release slot="Key.W"/>
 	<WaitUntil watch="VoxelCraft.WalkedDistance" atLeast="1" timeoutFrames="30"/>
 
@@ -26,16 +26,16 @@
 
 	<!-- 부수기: 아래를 보고 왼쪽 버튼을 4 초 — 블록이 하나 넘게 부서진다. -->
 	<MouseDelta x="0" y="400"/>
-	<Wait frames="5"/>
+	<WaitUntil watch="VoxelCraft.ControlPitch" atMost="-0.5" timeoutFrames="30"/> <!-- 시선이 아래로 돌았다 -->
 	<Press slot="Mouse.Left"/>
-	<Wait frames="240"/>
+	<WaitUntil watch="VoxelCraft.BrokenCount" atLeast="1" timeoutSeconds="6"/> <!-- 누른 채 블록이 부서질 때까지 -->
 	<Release slot="Mouse.Left"/>
 	<WaitUntil watch="VoxelCraft.BrokenCount" atLeast="1" timeoutFrames="30"/>
 
 	<!-- 자동 플레이 = AI 조종자의 빙의. 얼마 동안 AI 가 몸을 움직이게 둔 뒤 끄면 플레이어 조종자가 다시 쥐고 키가 먹는다. -->
 	<Variable name="gv_voxelAutoPlay" value="1"/>
 	<WaitUntil watch="VoxelCraft.ControllerKind" equals="1" timeoutFrames="30"/>
-	<Wait frames="280"/>
+	<WaitUntil watch="AI.State" target="VoxelAutoPlay" is="Break" timeoutSeconds="12"/> <!-- AI 가 몸을 움직여 부수기에 들어갔다 -->
 	<Variable name="gv_voxelAutoPlay" value="0"/>
 	<WaitUntil watch="VoxelCraft.ControllerKind" equals="0" timeoutFrames="30"/>
 	<Tap slot="Key.Digit5" hold="1"/>
