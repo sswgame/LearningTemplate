@@ -79,7 +79,6 @@ namespace sw
         bool hasPendingSpawn() const override;
 
     private:
-        void decorateTerrain();
         void spawnChunks( GameObjectManager& manager );
         void scheduleRebuilds();
         void logStatus( float32 deltaTime );
@@ -112,6 +111,14 @@ namespace sw
         hashed_string _coalOreBlock;
         PROPERTY( Category = "Blocks", DisplayName = "Iron Ore" )
         hashed_string _ironOreBlock;
+        PROPERTY( Category = "World", DisplayName = "Snow Height", Tooltip = "Grass tops at or above this height get a snow cap", Min = 0 )
+        int32 _snowHeight;
+        PROPERTY( Category = "World", DisplayName = "Coal Ore Chance", Tooltip = "Chance that an underground stone block becomes coal", Min = 0.0, Max = 1.0 )
+        float32 _coalOreChance;
+        PROPERTY( Category = "World", DisplayName = "Iron Ore Chance", Tooltip = "Chance that an underground stone block below the iron height becomes iron", Min = 0.0, Max = 1.0 )
+        float32 _ironOreChance;
+        PROPERTY( Category = "World", DisplayName = "Iron Ore Max Height", Tooltip = "Iron is placed only below this height", Min = 0 )
+        int32 _ironOreMaxHeight;
 
         VoxelWorld               _world;
         vector<GameObjectHandle> _listChunk;          ///< 청크 번호(z × 청크 수 X + x) 순서입니다.

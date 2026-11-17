@@ -47,6 +47,52 @@ namespace sw
                     placeBlock( world, x, y, z, logBlock );
                 }
             }
+
+            /** @brief 높은 풀 꼭대기의 눈과 돌 속 광석입니다. 광석 해시는 나무와 다른 소금을 섞은 같은 씨앗이다. */
+            static void decorate( VoxelWorld& world, const VoxelTerrainSettings& settings, VoxelBlockIndex grassBlock, VoxelBlockIndex stoneBlock )
+            {
+                const VoxelBlockCatalog& catalog   = *world.getCatalog();
+                const VoxelBlockIndex    snowBlock = settings._snowBlock.empty() ? kVoxelAirBlock : catalog.findBlockIndex( settings._snowBlock );
+                vector<VoxelBlockIndex>  listOreBlock;
+                listOreBlock.reserve( settings._listOreLayer.size() );
+                for ( const VoxelOreLayer& layer : settings._listOreLayer )
+                {
+                    listOreBlock.push_back( catalog.findBlockIndex( layer._block ) );
+                }
+                constexpr uint32 kOreSalt = 0x27d4eb2fu;
+                for ( int32 z = 0; z < world.getSizeZ(); ++z )
+                {
+                    for ( int32 x = 0; x < world.getSizeX(); ++x )
+                    {
+                        const optional<int32> foundTop = world.findTopSolidY( x, z );
+                        if ( foundTop.has_value() == false )
+                            continue; // 빈 기둥에는 눈도 광석도 없다
+                        const int32 topY           = *foundTop;
+                        const bool  bShouldSnowCap = snowBlock != kVoxelAirBlock && topY >= settings._snowHeight && world.getBlock( x, topY, z ) == grassBlock;
+                        if ( bShouldSnowCap )
+                            (void)world.setBlock( x, topY, z, snowBlock );
+                        if ( listOreBlock.empty() || stoneBlock == kVoxelAirBlock )
+                            continue;
+                        for ( int32 y = 1; y < topY - 3; ++y )
+                        {
+                            if ( world.getBlock( x, y, z ) != stoneBlock )
+                                continue;
+                            const float32 roll      = HashUtil::toUnitFloat( HashUtil::hashCoord( x, y, z, settings._seed ^ kOreSalt ) );
+                            float32       threshold = 0.0f;
+                            for ( size_t layerIndex = 0; layerIndex < listOreBlock.size(); ++layerIndex )
+                            {
+                                const VoxelOreLayer& layer = settings._listOreLayer[layerIndex];
+                                threshold += layer._chance;
+                                if ( roll >= threshold )
+                                    continue;
+                                if ( y < layer._maxHeight )
+                                    placeBlock( world, x, y, z, listOreBlock[layerIndex] );
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -141,6 +187,7 @@ namespace sw
                 }
             }
         }
+        VoxelTerrainInternal::decorate( world, settings, grassBlock, stoneBlock );
         world.markAllChunksDirty();
         return report;
     }
