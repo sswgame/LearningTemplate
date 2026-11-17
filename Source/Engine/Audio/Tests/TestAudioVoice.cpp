@@ -7,6 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioVoice.h"
+#include "Engine/Audio/AudioVoicePool.h"
 
 using namespace sw;
 
@@ -645,4 +646,36 @@ SW_TEST_CASE( AudioVoiceTest, StreamedVoiceEndsAtTheLastFrame )
     SW_EXPECT_NEAR( 0.5f, pLeft[2], Util::kTolerance );
     SW_EXPECT_NEAR( 0.0f, pLeft[3], 0.0f );
     SW_EXPECT_TRUE( voice.isFinished() );
+}
+
+/**
+ * @brief [AudioVoiceTest] 풀이 차면 새 보이스가 더 낮은 우선순위 보이스를 뺏는다 — 전에는 우선순위와 상관없이 새 소리를 버렸다(감사 S-10).
+ *        같은 우선순위 안에서는 가상 보이스가 먼저 뺏긴다. 같거나 낮은 우선순위의 새 보이스는 뺏지 못하고 버린 수로 센다.
+ */
+SW_TEST_CASE( AudioVoiceTest, HighPriorityStealsWhenPoolIsFull )
+{
+    AudioVoicePool pool;
+    pool.reset( 3 );
+    const int32 arrPriority[] = { 10, 10, 50 };
+    for ( uint32 index = 0; index < 3; ++index )
+    {
+        AudioVoiceSlot* pSlot = pool.allocate( arrPriority[index] );
+        SW_REQUIRE_NOT_NULL( pSlot );
+        pSlot->_priority   = arrPriority[index];
+        pSlot->_playingID  = index + 1;
+        pSlot->_audibility = 1.0f;
+    }
+    pool.begin()[1]._bVirtual = true; // 둘째(우선순위 10)는 들리지 않는다
+
+    SW_EXPECT_NULL( pool.allocate( 10 ) ); // 같은 우선순위는 뺏지 못한다
+    SW_EXPECT_EQUAL( uint64{ 1 }, pool.getDroppedCount() );
+
+    AudioVoiceSlot* pStolen = pool.allocate( 80 );
+    SW_REQUIRE_NOT_NULL( pStolen );
+    SW_EXPECT_TRUE( pStolen == pool.begin() + 1 ); // 가장 낮은 우선순위 중 가상 보이스
+    SW_EXPECT_TRUE( pStolen->_bInUse );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pStolen->_playingID ) ); // 비운 채로 준다
+    SW_EXPECT_EQUAL( uint64{ 1 }, pool.getStolenCount() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pool.begin()[0]._playingID ) ); // 다른 보이스는 그대로다
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pool.begin()[2]._playingID ) );
 }

@@ -21,8 +21,9 @@ namespace sw
         _listOrder.reserve( count );
     }
 
-    AudioVoiceSlot* AudioVoicePool::allocate()
+    AudioVoiceSlot* AudioVoicePool::allocate( int32 priority )
     {
+        AudioVoiceSlot* pVictim = nullptr;
         for ( AudioVoiceSlot& slot : _listSlot )
         {
             if ( slot._bInUse == false )
@@ -31,8 +32,28 @@ namespace sw
                 slot._bInUse = true;
                 return &slot;
             }
+            if ( slot._priority >= priority )
+                continue;
+            // 뺏을 쪽은 가장 낮은 우선순위 → 가상(들리지 않아 끊어도 소리가 없다) → 덜 들리는 것 → 나중에 낸 것이다.
+            const bool bBetterVictim = pVictim == nullptr || slot._priority < pVictim->_priority ||
+                                       ( slot._priority == pVictim->_priority &&
+                                         ( slot._bVirtual != pVictim->_bVirtual ? slot._bVirtual
+                                                                                : ( slot._audibility != pVictim->_audibility ? slot._audibility < pVictim->_audibility
+                                                                                                                             : slot._playingID > pVictim->_playingID ) ) );
+            if ( bBetterVictim )
+                pVictim = &slot;
         }
-        return nullptr;
+        if ( pVictim == nullptr )
+        {
+            ++_droppedCount;
+            return nullptr;
+        }
+        // shortcut: 들리는 보이스를 뺏으면 이 블록에서 바로 끊긴다(클릭 가능) — 한 블록 페이드로 넘기려면 뺏긴 보이스가 그 블록 동안 슬롯을 쥐어야 해 풀 밖 가상 기록이 먼저다.
+        free( *pVictim );
+        ++_stolenCount;
+        *pVictim         = AudioVoiceSlot{};
+        pVictim->_bInUse = true;
+        return pVictim;
     }
 
     void AudioVoicePool::free( AudioVoiceSlot& slot )

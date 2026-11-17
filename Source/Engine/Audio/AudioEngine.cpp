@@ -709,12 +709,9 @@ namespace sw
         const optional<uint32> busIndex = resolveBusIndex( command._name );
         if ( busIndex.has_value() == false )
             return;
-        AudioVoiceSlot* pSlot = _voicePool.allocate();
+        AudioVoiceSlot* pSlot = _voicePool.allocate( command._clipParams._priority );
         if ( pSlot == nullptr )
-        {
-            SW_LOG_WARNING_ID( "AudioEngine.VoicePoolExhaustedDropped", "Voice pool exhausted - dropped %#", command._path.c_str() );
-            return;
-        }
+            return; // 더 낮은 우선순위도 없다 — 버린 수는 게시 상태로 나간다(오디오 스레드는 로그를 남기지 않는다)
         pSlot->_playingID        = command._playingID;
         pSlot->_clipPath         = command._path;
         pSlot->_busName          = command._name;
@@ -904,7 +901,7 @@ namespace sw
         const optional<uint32> busIndex = resolveBusIndex( request._bus );
         if ( busIndex.has_value() == false )
             return false;
-        AudioVoiceSlot* pSlot = _voicePool.allocate();
+        AudioVoiceSlot* pSlot = _voicePool.allocate( kMusicVoicePriority );
         if ( pSlot == nullptr )
             return false;
         pSlot->_playingID       = request._playingID;
@@ -916,7 +913,7 @@ namespace sw
         pSlot->_musicGain       = request._gain;
         pSlot->_startFrame      = request._startFrame;
         pSlot->_fadeInSeconds   = request._fadeInSeconds;
-        pSlot->_priority        = 100;
+        pSlot->_priority        = kMusicVoicePriority;
         pSlot->_virtualMode     = AudioVirtualMode::KeepReal; // 박을 지키려면 가상으로 빠지지 않는다
         pSlot->_bLoop           = request._bLoop;
         pSlot->_bWaitingForClip = true;
@@ -1246,6 +1243,8 @@ namespace sw
         stats._peakRealVoiceCount     = _peakRealVoiceCount;
         stats._playedEventCount       = _playedEventCount;
         stats._droppedEventCount      = _droppedEventCount;
+        stats._stolenVoiceCount       = _voicePool.getStolenCount();
+        stats._droppedVoiceCount      = _voicePool.getDroppedCount();
         if ( _pMixer != nullptr )
         {
             stats._maxVoiceCount     = _pMixer->getDesc()._maxVoiceCount;
@@ -1588,12 +1587,9 @@ namespace sw
         for ( uint32 pickIndex = 0; pickIndex < pickCount; ++pickIndex )
         {
             const AudioClipEntry& clip  = event._listClip[firstClip + pickIndex];
-            AudioVoiceSlot*       pSlot = _voicePool.allocate();
+            AudioVoiceSlot*       pSlot = _voicePool.allocate( event._priority );
             if ( pSlot == nullptr )
-            {
-                SW_LOG_WARNING_ID( "AudioEngine.VoicePoolExhaustedDropped2", "Voice pool exhausted - dropped event '%#'", event._name.c_str() );
-                break;
-            }
+                break; // 더 낮은 우선순위도 없다 — 버린 수는 게시 상태로 나간다
             pSlot->_playingID        = command._playingID;
             pSlot->_emitterID        = command._emitterID;
             pSlot->_clipPath         = clip._path;

@@ -63,8 +63,13 @@ namespace sw
         void growTo( uint32 count );
         void clear() { _listSlot.clear(); }
 
-        /** @brief 빈 슬롯을 비운 채로 잡습니다. 없으면 nullptr 입니다. */
-        AudioVoiceSlot* allocate();
+        /**
+         * @brief 우선순위 @p priority 의 새 보이스에 슬롯을 비운 채로 잡습니다. 빈 슬롯이 없으면 그보다 우선순위가 **낮은** 보이스 하나를 뺏습니다
+         *        (같은 우선순위 안에서는 가상 → 덜 들리는 것 → 나중에 낸 것 순서로 고른다). 뺏을 것도 없으면 nullptr 이고 버린 수를 셉니다.
+         * @details 풀이 차면 우선순위와 상관없이 새 소리를 버렸다 — 총소리가 발소리 때문에 빠졌다(감사 S-10). 언리얼 `MaxConcurrentStreams` 의 낮은 우선순위 뺏기 ·
+         *          유니티 `AudioSource.priority`(낮은 쪽이 먼저 빠진다)와 같은 규칙이다. 오디오 스레드는 로그를 남기지 않는다 — 수는 게시 상태(`AudioEngineStats`)로 나간다.
+         */
+        AudioVoiceSlot* allocate( int32 priority );
         /** @brief 슬롯을 돌려줍니다. */
         static void free( AudioVoiceSlot& slot );
 
@@ -74,7 +79,11 @@ namespace sw
          */
         void selectRealVoices( float32 inaudible, uint32 maxRealCount );
 
-        uint32                getCount() const { return static_cast<uint32>( _listSlot.size() ); }
+        uint32 getCount() const { return static_cast<uint32>( _listSlot.size() ); }
+        /** @brief 지금까지 새 보이스에 자리를 주려고 뺏은 보이스 수입니다. */
+        uint64 getStolenCount() const { return _stolenCount; }
+        /** @brief 지금까지 자리가 없어(빈 슬롯도, 더 낮은 우선순위도 없어) 버린 새 보이스 수입니다. */
+        uint64                getDroppedCount() const { return _droppedCount; }
         AudioVoiceSlot*       begin() { return _listSlot.data(); }
         AudioVoiceSlot*       end() { return _listSlot.data() + _listSlot.size(); }
         const AudioVoiceSlot* begin() const { return _listSlot.data(); }
@@ -83,5 +92,7 @@ namespace sw
     private:
         vector<AudioVoiceSlot> _listSlot;
         vector<uint32>         _listOrder; ///< 고르기의 작업 목록(블록마다 다시 쓴다)
+        uint64                 _stolenCount{ 0 };
+        uint64                 _droppedCount{ 0 };
     };
 } // namespace sw

@@ -72,6 +72,8 @@ namespace sw
     public:
         /** @brief 리스너 슬롯 수입니다. 분할 화면 4개를 지원합니다. */
         static constexpr uint32 kMaxListenerCount = 4;
+        /** @brief 음악 레이어 보이스의 우선순위입니다. 박을 지키려고 풀이 차도 다른 소리에 뺏기지 않게 높다(`AudioVoicePool::allocate`). */
+        static constexpr int32 kMusicVoicePriority = 100;
 
         AudioEngine();
         ~AudioEngine() override;
