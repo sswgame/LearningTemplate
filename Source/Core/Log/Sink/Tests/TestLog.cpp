@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
@@ -17,15 +18,18 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 #include "Core/Testing/ThreadTestAccess.h"
 
+#include <cstdlib>
 #include <cstring>
 
 // 로그 — 전역 싱크 · 폴더, 레벨마다 리스너까지 닿기, 런타임 상세도, 컴파일 상한, id 로 찾기, 서식 치환, 잘못된 UTF-8, 호출자,
 // 여러 스레드 · 큰 묶음 · 리스너 붙였다 떼기, 출력 장치 상한, 잘못된 바이트만 바꾸기, 같은 이름 파일의 호출자, 시간별 파일 장치,
-// 자식 역할(`SW_TEST_CHILD_ROLE`)로 보는 교착 · 콘솔 · stderr · 싱크 없는 리스너.
+// 자식 역할(`SW_TEST_CHILD_ROLE`)로 보는 교착 · 콘솔 · stderr · 싱크 없는 리스너, 크래시 flush 가 장치 락에서 기다리지 않기, 큐가 찬 줄의 순서.
 // 옛 `ReleaseListenerCodeWithinDropsOnlyThatRange` 는 옮기지 않았다 — `removeListenerCodeWithin` 이 지금 싱크에 없다.
 // 케이스가 일부러 내는 Warning · Error 는 테스트 id(`Test.Log*`)를 붙이고 `SW_EXPECT_LOG` 로 적는다(실행기가 그 밖의 Warning · Error 를 실패로 센다).
 
@@ -158,6 +162,54 @@ namespace
         [[nodiscard]] bool     open() override { return true; }
         void                   close() override {}
         void                   write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+    };
+
+    /**
+     * @brief `gate` 를 담은 줄의 `write` 에서 장치 락을 쥔 채 문이 열리기를 기다리는 테스트용 출력 장치입니다(락을 쥔 채 멈춘 장치 — 크래시한 스레드 · 막힌 콘솔).
+     * @details 받은 줄 가운데 `Order <번호>` 의 번호를 받은 순서대로 모은다. 문은 시한이 지나면 스스로 열린다 — 결함이 있어도 테스트가 멈추지 않고 진다.
+     */
+    class BlockingLogOutput final : public sw::ILogOutput
+    {
+    public:
+        sw::atomic<bool>   _bHeld{ false };
+        sw::atomic<bool>   _bOpen{ false };
+        sw::atomic<uint32> _skippedCount{ 0 }; ///< `writeWithoutWaiting` 이 락을 잡지 못해 버린 줄 수
+
+        [[nodiscard]] bool open() override { return true; }
+        void               close() override {}
+        void               write( const sw::LogRecord& record ) override
+        {
+            sw::ScopedLock<sw::mutex> lock{ _mutex };
+            if ( record._formatted.find( "gate" ) != sw::string::npos )
+            {
+                _bHeld.store( true );
+                (void)sw::test::waitUntil( [this]()
+                { return _bOpen.load(); } );
+            }
+            const size_t orderStart = record._formatted.find( "Order " );
+            if ( orderStart != sw::string::npos )
+                _listOrder.push_back( static_cast<uint32>( std::strtoul( record._formatted.c_str() + orderStart + 6, nullptr, 10 ) ) );
+        }
+        void writeWithoutWaiting( const sw::LogRecord& record ) override
+        {
+            if ( _mutex.try_lock() == false )
+            {
+                _skippedCount.fetch_add( 1 );
+                return;
+            }
+            (void)record;
+            _mutex.unlock();
+        }
+        /** @brief 받은 번호들입니다(싱크를 내린 뒤 읽는다). */
+        sw::vector<uint32> takeOrder()
+        {
+            sw::ScopedLock<sw::mutex> lock{ _mutex };
+            return std::move( _listOrder );
+        }
+
+    private:
+        sw::mutex                     _mutex;
+        sw::vector<uint32> _listOrder SW_GUARDED_BY( _mutex );
     };
 
 } // namespace
@@ -911,4 +963,71 @@ SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported, ._tags = "slo
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.ListenerWithoutASinkChild", {}, kLogChildTimeoutSeconds );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() ); // 기다리지 못했으면 값이 없어 진다
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "needs a global log sink" ), child.getOutputTail() );
+}
+
+/**
+ * @brief [LogTest] 크래시 flush 는 장치 락에서 기다리지 않는다 — 락을 쥔 채 멈춘 장치의 줄은 버리고 돌아온다
+ * @details 예전에는 큐에 남은 줄을 `write` 로 넘겨, 장치 락을 쥔 채 죽은 스레드가 있으면 크래시 보고가 멈춤이 됐다.
+ */
+SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
+{
+    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "crash.log" ) );
+    sw::unique_ptr<BlockingLogOutput> output    = sw::make_unique<BlockingLogOutput>();
+    BlockingLogOutput* const          pBlocking = output.get();
+    SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
+    logger.initialize();
+
+    logger.writeLog( sw::LogLevel::Info, "Test", "gate", __FILE__, __LINE__ );
+    SW_REQUIRE_TRUE( sw::test::waitUntil( [pBlocking]()
+    { return pBlocking->_bHeld.load(); } ) ); // 작업 스레드가 장치 락을 쥔 채 멈췄다
+    logger.writeLog( sw::LogLevel::Info, "Test", "left in the queue", __FILE__, __LINE__ );
+
+    logger.flushForCrash();
+    const bool bReturnedWhileHeld = pBlocking->_bOpen.load() == false; // 문이 시한으로 열리기 전에 돌아왔다
+    pBlocking->_bOpen.store( true );
+    logger.shutdown();
+    SW_EXPECT_TRUE( bReturnedWhileHeld );
+    SW_EXPECT_EQUAL( 1u, pBlocking->_skippedCount.load() );
+}
+
+/**
+ * @brief [LogTest] 큐가 차도 줄은 남긴 순서대로 장치에 닿는다 — 찬 큐의 줄이 큐에 먼저 들어간 줄을 앞지르지 않는다
+ * @details 예전에는 큐가 차면 그 줄을 부른 스레드에서 바로 써, 큐에 남은 앞 줄들보다 먼저 나갔다(크래시 직전 줄의 원인 · 결과가 뒤집힌다).
+ *          작업 스레드를 장치 안에 붙잡아 큐를 채운 뒤 문을 연다. 옳은 구현은 시간과 무관하게 이기고, 결함은 문이 열린 직후의 락 경쟁에서 드러난다.
+ */
+SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
+{
+    sw::ConsoleLogOutput::setMuted( true ); // 5000 줄을 테스트 출력에 쏟지 않는다
+    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "order.log" ) );
+    sw::unique_ptr<BlockingLogOutput> output    = sw::make_unique<BlockingLogOutput>();
+    BlockingLogOutput* const          pBlocking = output.get();
+    SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
+    logger.initialize();
+
+    logger.writeLog( sw::LogLevel::Info, "Test", "gate", __FILE__, __LINE__ );
+    SW_REQUIRE_TRUE( sw::test::waitUntil( [pBlocking]()
+    { return pBlocking->_bHeld.load(); } ) );
+
+    constexpr uint32 kLineCount = 5000; // 큐(4096)보다 많다
+    sw::thread       writer( sw::ThreadTestAccess::getKey(), [&logger]()
+          {
+        utf8 arrLine[64]{};
+        for ( uint32 index = 0; index < kLineCount; ++index )
+        {
+            sw::formatstring( arrLine, static_cast<uint32>( sizeof( arrLine ) ), "Order %#", index );
+            logger.writeLog( sw::LogLevel::Info, "Test", arrLine, __FILE__, __LINE__ );
+        }
+    } );
+    sw::ThreadUtil::sleepForMilliseconds( 100 ); // 쓰는 스레드가 큐를 채우고 넘칠 시간 — 짧아도 옳은 구현은 지지 않는다
+    pBlocking->_bOpen.store( true );
+    writer.join();
+    logger.shutdown();
+    sw::ConsoleLogOutput::setMuted( false );
+
+    const sw::vector<uint32> listOrder = pBlocking->takeOrder();
+    SW_REQUIRE_EQUAL( size_t( kLineCount ), listOrder.size() );
+    for ( uint32 index = 0; index < kLineCount; ++index )
+    {
+        SW_REQUIRE_EQUAL( index, listOrder[index] );
+    }
 }
