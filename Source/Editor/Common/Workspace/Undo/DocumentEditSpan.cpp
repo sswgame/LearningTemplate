@@ -20,7 +20,7 @@ namespace sw::editor
         _bHolding = SW_FALSE;
     }
 
-    optional<DocumentEdit> DocumentEditSpan::notifyEdited( string_view label, string after, bool bInteracting )
+    optional<DocumentEdit> DocumentEditSpan::notifyEditedText( string_view label, string after, bool bInteracting )
     {
         if ( after == _baseline )
         {

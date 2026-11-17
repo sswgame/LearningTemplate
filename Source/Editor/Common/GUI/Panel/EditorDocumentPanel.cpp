@@ -387,7 +387,9 @@ namespace sw::editor
         // (`flushDocumentInteraction`). 예전에는 합치기 키로 합쳤는데 기록이 거래 구간 안이라 병합에 닿지 않아 끌기 한 번이 프레임마다 한 단계였고, 한도(128)를 넘겨
         // 씬 편집 기록까지 밀어냈다. 언리얼이 누를 때 FScopedTransaction 을 열고 뗄 때 닫는 것과 같은 모양이다.
         // 바뀐 것이 없으면 아무것도 하지 않는다 — 매 프레임 알리는 패널이 활성 위젯(글 칸) 동안 dirty 로 표시하면 제목이 바뀌어 그 칸이 포커스를 잃는다.
-        const optional<DocumentEdit> edit = _pEditSpan->notifyEdited( label, captureDocumentText(), isWidgetInteractionActive() );
+        // 직렬화는 구간이 필요할 때만 한다(시작 · 끝 두 번 — 감사 E-9). 끄는 동안의 알림은 표시만 한다.
+        const optional<DocumentEdit> edit = _pEditSpan->notifyEdited( label, isWidgetInteractionActive(), [this]()
+        { return captureDocumentText(); } );
         syncStackInteraction();
         if ( edit.has_value() )
             recordDocumentEdit( *edit );
