@@ -252,10 +252,11 @@ void PixelContext::readMaterial( MaterialInterpolants input )
 /**
  * @brief 보간한 이번 · 지난 클립 위치로 화면 속도(이번 UV - 지난 UV)를 정한다 — 나누기는 픽셀마다 한다(정점에서 나누면 큰 삼각형에서 틀린다).
  * @details 지난 위치가 카메라 뒤(w ≤ 0)면 속도를 0 으로 둔다 — 재투영할 자리가 없다(읽는 쪽은 이번 자리의 기록을 쓴다). UV 의 y 는 NDC 와 반대다(motion_blur.hlsl 과 같은 식).
+ *          이번 위치는 TAA 지터를 실은 래스터 행렬의 것이라 지터(g_TemporalJitter.xy)를 뺀다 — 지난 위치(g_PrevViewProj)는 지터가 없다. 빼지 않으면 서 있는 화면도 속도가 흔들린다.
  */
 void MaterialInterpolants::storeSurfaceVelocity()
 {
-    const float2 currentNdc  = _velocityClip.xy / _velocityClip.w;
+    const float2 currentNdc  = _velocityClip.xy / _velocityClip.w - g_TemporalJitter.xy;
     const float2 previousNdc = _velocityPrevClip.xy / max( _velocityPrevClip.w, 1e-5f );
     g_SurfaceVelocity        = ( _velocityPrevClip.w > 0.0f ) ? ( currentNdc - previousNdc ) * float2( 0.5f, -0.5f ) : float2( 0.0f, 0.0f );
 }
