@@ -34,6 +34,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/Model/EditorGraphEditSession.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 
@@ -76,6 +77,8 @@ namespace sw::editor
         string getGraphClipboardKind() const { return string{ getDocumentKind().getID() }; }
         /** @brief 캔버스 안에서 노드 @p nodeID 의 캔버스 좌표입니다. */
         float2 getCanvasNodePosition( int32 nodeID ) const;
+        /** @brief 이 그래프 문서의 편집 알림 입구입니다 — 패널은 명령 묶음(`DialogueGraphEdit` · `AnimationGraphEdit`)에 넘기기만 한다(알림 · 이름은 명령이 낸다, 감사 E-16). */
+        const EditorGraphEditSession& getGraphEditSession() const { return _graphEditSession; }
 
     private:
         /**
@@ -92,6 +95,7 @@ namespace sw::editor
             float2 _position{};
         };
 
+        EditorGraphEditSession   _graphEditSession;      /**< 명령 묶음이 고친 뒤 알리는 입구(`getGraphEditSession`). */
         EditorNodeGraph          _nodeGraph;             /**< 캔버스 컨텍스트. 패널마다 하나씩 소유한다. */
         NodeEditorBindFunction   _bindModuleCopy;        /**< 패널 모듈의 imgui-node-editor 사본에 편집기를 거는 함수. */
         const utf8*              _pNodeMoveEditLabel;    /**< 노드 이동 Undo 이름. */

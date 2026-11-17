@@ -14,6 +14,7 @@ namespace sw::editor
 {
     EditorGraphDocumentPanelBase::EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, NodeEditorBindFunction bindModuleCopy )
         : EditorDocumentPanel{ kind, true }
+        , _graphEditSession{ getDocumentEditRecorder() }
         , _nodeGraph{}
         , _bindModuleCopy{ bindModuleCopy }
         , _pNodeMoveEditLabel{ pNodeMoveEditLabel }

@@ -12,15 +12,39 @@
 
 namespace sw::editor
 {
-    class DocumentEditRecorder;
+    class EditorGraphEditSession;
     /**
      * @struct DialogueGraphEdit
      * @brief 대화 그래프 명령 묶음입니다.
      */
     struct DialogueGraphEdit
     {
-        /** @brief 문서를 고쳤음을 문서 패널의 창구 @p recorder 로 알립니다 — 되돌리기 한 단계와 미저장이 된다(감사 E-16: 문서 편집 알림은 Model 만 낸다). */
-        static void recordDocumentEdit( const DocumentEditRecorder& recorder, string_view label );
+        // ------------------------------------------------------------------------------
+        // 편집 명령 — 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16 — 창은 알림 · 이름을 모른다)
+        // ------------------------------------------------------------------------------
+        /** @brief 창이 노드를 하나 더했습니다 — "Add Dialogue Node". */
+        static void commitNodeAdded( const EditorGraphEditSession& session );
+        /** @brief 그래프를 기본으로 되돌렸습니다 — "Reset Dialogue Graph". */
+        static void commitGraphReset( const EditorGraphEditSession& session );
+        /** @brief 핀 @p fromPin → @p toPin 링크(번호 @p linkID)를 더하고 "Link Dialogue Nodes" 로 알립니다. */
+        static void linkPins( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, int32 linkID, int32 fromPin, int32 toPin );
+        /** @brief 화자 이름 칸을 다 고쳤습니다 — "Rename Dialogue Speaker". */
+        static void commitSpeakerRename( const EditorGraphEditSession& session );
+        /** @brief 화자를 더하고 "Add Dialogue Speaker" 로 알립니다. 새 화자 id 입니다. */
+        static uint32 addSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, string_view name );
+        /** @brief 화자를 지우고(노드의 화자도 비운다) "Remove Dialogue Speaker" 로 알립니다. */
+        static void removeSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, uint32 speakerID );
+        /** @brief 노드 칸(글 · 조건 · 명령 · 동작 칸)을 다 고쳤습니다 — "Edit Dialogue Node". */
+        static void commitNodeEdit( const EditorGraphEditSession& session );
+        /** @brief 노드의 화자를 @p speakerID 로 정하고 "Edit Dialogue Node" 로 알립니다. */
+        static void setNodeSpeaker( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, uint32 speakerID );
+        /** @brief 노드의 동작 명령을 @p command 로 정하고 "Edit Dialogue Node" 로 알립니다. */
+        static void setNodeActionCommand( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view command );
+        /** @brief 선택지 @p choiceIndex 를 지우고(그 핀의 링크도) "Edit Dialogue Node" 로 알립니다. */
+        static void removeChoice( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, DialogueAssetNode& inoutNode, size_t choiceIndex );
+        /** @brief 선택지 @p text 를 끝에 더하고 "Edit Dialogue Node" 로 알립니다. */
+        static void addChoice( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view text );
+
         /** @brief Resource 상대 경로 @p path 의 대화 그래프 문서를 읽습니다(`EditorToolAssetCommands::loadDialogueGraph`). 창(View)이 커맨드 헤더를 보지 않게 여기를 지난다. */
         static ToolAssetLoadResult loadGraph( DialogueGraphAsset& outGraph, string_view path );
         /** @brief 대화 그래프 문서를 @p path 에 씁니다. 실패하면 커맨드가 오류를 남기고 false 입니다. */

@@ -157,7 +157,7 @@ namespace sw::editor
                     if ( ImGui::MenuItem( info._pName ) )
                     {
                         addNode( info._type );
-                        DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Add Dialogue Node" );
+                        DialogueGraphEdit::commitNodeAdded( getGraphEditSession() );
                     }
                     fixed_string<constant::buffer::kMax64> markKey;
                     formatstring( markKey.data(), markKey.capacity(), "dialogueGraph.add.%#", info._pName );
@@ -180,7 +180,7 @@ namespace sw::editor
             {
                 ensureDefaults();
                 _nodeGraph.requestContentFit();
-                DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Reset Dialogue Graph" );
+                DialogueGraphEdit::commitGraphReset( getGraphEditSession() );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ResetDefaultTip" ) );
             drawPreviewToolbar();
@@ -257,12 +257,7 @@ namespace sw::editor
         int32 toPin{ 0 };
         if ( _nodeGraph.queryNewLink( SW_DELEGATE_METHOD( Delegate<bool( int32, EditorGraphPinInfo& )>, &DialogueGraphPanel::findGraphPin, this ), fromPin, toPin ) )
         {
-            DialogueLink newLink{};
-            newLink._id      = nextLinkID();
-            newLink._fromPin = fromPin;
-            newLink._toPin   = toPin;
-            _graph._listLink.push_back( newLink );
-            DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Link Dialogue Nodes" );
+            DialogueGraphEdit::linkPins( _graph, getGraphEditSession(), nextLinkID(), fromPin, toPin );
         }
 
         // 빈 곳을 오른쪽 클릭하면 노드 검색 팝업이 열린다. 고른 노드는 오른쪽 클릭한 위치에 놓는다.
@@ -277,7 +272,7 @@ namespace sw::editor
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
         {
             placeNodeOnNextDraw( addNode( static_cast<DialogueAssetNodeKind>( kindID ) ), canvasPosition );
-            DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Add Dialogue Node" );
+            DialogueGraphEdit::commitNodeAdded( getGraphEditSession() );
         }
 
         // 복사 · 잘라내기 · 붙여 넣기 · 복제(Ctrl+C · X · V · D). 잘라내기는 지우기 요청을 내므로 지우기 처리보다 먼저다.
@@ -340,13 +335,12 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( speaker._id ) );
             EditorWidgets::drawTextField( "##SpeakerName", speaker._name );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
-                DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Rename Dialogue Speaker" );
+                DialogueGraphEdit::commitSpeakerRename( getGraphEditSession() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakerNameTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
             {
-                DialogueGraphEdit::removeSpeaker( _graph, speaker._id );
-                DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Remove Dialogue Speaker" );
+                DialogueGraphEdit::removeSpeaker( _graph, getGraphEditSession(), speaker._id );
                 ImGui::PopID();
                 break;
             }
@@ -355,8 +349,7 @@ namespace sw::editor
         }
         if ( ImGui::Button( SW_LOCKEY( "EditorDialogueGraph", "AddSpeaker" ) ) )
         {
-            DialogueGraphEdit::addSpeaker( _graph, "Speaker" );
-            DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Add Dialogue Speaker" );
+            (void)DialogueGraphEdit::addSpeaker( _graph, getGraphEditSession(), "Speaker" );
         }
     }
 
@@ -602,7 +595,7 @@ namespace sw::editor
     {
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), node._actionCommand );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+            DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );
 
         if ( _actionPropertiesText != node._actionCommand || _actionProperties.isValid() == false )
@@ -626,8 +619,7 @@ namespace sw::editor
             {
                 if ( ImGui::Selectable( name.c_str(), string_view{ name } == currentName ) )
                 {
-                    node._actionCommand = name;
-                    DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+                    DialogueGraphEdit::setNodeActionCommand( node, getGraphEditSession(), name );
                 }
             }
             ImGui::EndCombo();
@@ -652,7 +644,7 @@ namespace sw::editor
             return;
         *_pActionTargetText   = GameActionCall::formatText( *_pActionEntry, _actionProperties );
         _actionPropertiesText = *_pActionTargetText;
-        DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+        DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
     }
 
     void DialogueGraphPanel::drawNodeProperties( DialogueNode& node, const DialogueNodeInfo& info )
@@ -666,16 +658,14 @@ namespace sw::editor
             {
                 if ( ImGui::Selectable( SW_LOCKEY( "EditorDialogueGraph", "NoSpeaker" ), node._speaker == kDialogueNoSpeaker ) && node._speaker != kDialogueNoSpeaker )
                 {
-                    node._speaker = kDialogueNoSpeaker;
-                    DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+                    DialogueGraphEdit::setNodeSpeaker( node, getGraphEditSession(), kDialogueNoSpeaker );
                 }
                 for ( const DialogueSpeaker& speaker : _graph._listSpeaker )
                 {
                     ImGui::PushID( static_cast<int32>( speaker._id ) );
                     if ( ImGui::Selectable( speaker._name.c_str(), node._speaker == speaker._id ) && node._speaker != speaker._id )
                     {
-                        node._speaker = speaker._id;
-                        DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+                        DialogueGraphEdit::setNodeSpeaker( node, getGraphEditSession(), speaker._id );
                     }
                     ImGui::PopID();
                 }
@@ -693,7 +683,7 @@ namespace sw::editor
                 if ( EditorWidgets::inputTextMultiline( SW_WIDGET_ID( "##Text" ), textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
                     node._text = textBuf.c_str();
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+                    DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "TextTip" ) );
                 break;
             }
@@ -701,7 +691,7 @@ namespace sw::editor
             {
                 EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Condition" ), "Condition" ), node._condition );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+                    DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ConditionTip" ) );
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorDialogueGraph", "ConditionExample" ) );
                 break;
@@ -726,12 +716,11 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( choiceIndex ) );
             EditorWidgets::drawTextField( "##Choice", node._listChoice[choiceIndex] );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
-                DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+                DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
             {
-                DialogueGraphEdit::removeChoice( _graph, node, choiceIndex );
-                DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+                DialogueGraphEdit::removeChoice( _graph, getGraphEditSession(), node, choiceIndex );
                 ImGui::PopID();
                 break;
             }
@@ -741,8 +730,7 @@ namespace sw::editor
 
         if ( ImGui::Button( "+ Add Choice Option" ) )
         {
-            node._listChoice.push_back( "New choice option" );
-            DialogueGraphEdit::recordDocumentEdit( getDocumentEditRecorder(), "Edit Dialogue Node" );
+            DialogueGraphEdit::addChoice( node, getGraphEditSession(), "New choice option" );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AddChoiceTip" ) );
     }

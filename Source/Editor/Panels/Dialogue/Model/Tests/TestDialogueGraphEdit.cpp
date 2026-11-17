@@ -2,6 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/GUI/Panel/Model/EditorGraphEditSession.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/Dialogue/Model/DialogueGraphEdit.h"
 
 using namespace sw;
@@ -67,4 +69,22 @@ SW_TEST_CASE( DialogueGraphEditTest, RemovingOutOfRangeChangesNothing )
     DialogueGraphEdit::removeChoice( graph, graph._listNode[2], 9 );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( graph._listNode[2]._listChoice.size() ) );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( graph._listLink.size() ) );
+}
+
+/** @brief [DialogueGraphEditTest] 그래프 편집 명령 한 번은 공용 그래프 입구로 알림 한 번이고 되돌리기 이름은 명령이 정한다(감사 E-16) */
+SW_TEST_CASE( DialogueGraphEditTest, SessionCommandNotifiesOnceWithItsName )
+{
+    uint32                       count{ 0 };
+    string                       lastLabel;
+    const DocumentEditRecorder   recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    {
+        ++count;
+        lastLabel = string{ label };
+    } ) };
+    const EditorGraphEditSession session{ recorder };
+    DialogueGraphAsset           graph;
+    const uint32                 speakerID = DialogueGraphEdit::addSpeaker( graph, session, "Guard" );
+    SW_EXPECT_TRUE( speakerID != kDialogueNoSpeaker );
+    SW_EXPECT_EQUAL( count, 1u );
+    SW_EXPECT_TRUE( lastLabel == "Add Dialogue Speaker" );
 }
