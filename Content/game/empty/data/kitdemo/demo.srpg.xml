@@ -6,6 +6,8 @@
   경비병은 이동 0 이라 제자리에 서고, 이웃한 아군만 칠 수 있다.
 -->
 <SRPGCatalog>
+  <!-- 규칙(SRPGSettings) — 모든 칸이 필수다. 확률은 %, 보정은 %p -->
+  <Rules baseHit="70" baseCrit="5" critPercent="150" minimumDamage="10" sizeHitStep="5" moraleStart="100" moraleMin="50" moraleMax="150" moraleOnHit="2" moraleOnKill="5" moraleOnEvade="3" moraleOnDamaged="1" supportDefenseReduction="50" syncDamagePercent="50" dodgePerCell="5" dodgeMax="30" xpHit="10" xpKill="30" xpLevelStep="2" turnMode="Phases" zoneOfControl="false" supportAttack="true" supportDefense="true" syncAttack="false" moveDodge="false" mapFriendlyFire="false"/>
 	<PilotCurve base="100" exponent="0" maxLevel="30"/>
 	<UnitCurve base="10" exponent="0" maxLevel="10"/>
 	<Terrain id="plain" name="Plain"/>
