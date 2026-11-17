@@ -26,5 +26,14 @@ namespace sw
             path.appendFormat( "ShaderCache/vk_pipeline_cache_%08x_%08x_%08x.bin", vendorID, deviceID, driverVersion );
             return string{ path.c_str() };
         }
+
+        /**
+         * @brief 주기 저장을 할 때인지 봅니다. 지난 저장(@p lastSaveNanoseconds) 뒤로 주기(@p intervalNanoseconds)가 지났고, 캐시 크기가 지난 저장 때와 다르면 true 입니다.
+         * @details 크기만 묻는 것은 싸다(`vkGetPipelineCacheData` 에 버퍼 없이). 새 파이프라인이 없으면 크기가 같아 디스크를 건드리지 않는다 — 종료 저장은 바이트를 비교한다.
+         */
+        static constexpr bool isPeriodicSaveDue( int64 nowNanoseconds, int64 lastSaveNanoseconds, int64 intervalNanoseconds, uint64 cacheBytes, uint64 lastSavedBytes )
+        {
+            return intervalNanoseconds > 0 && nowNanoseconds - lastSaveNanoseconds >= intervalNanoseconds && cacheBytes != lastSavedBytes;
+        }
     };
 } // namespace sw

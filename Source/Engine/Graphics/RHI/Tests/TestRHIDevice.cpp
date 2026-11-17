@@ -421,6 +421,19 @@ SW_TEST_CASE( VulkanPipelineCacheFileTest, FileIsPerDeviceAndDriver )
     SW_EXPECT_FALSE( hardware == VulkanPipelineCacheFile::makeRelativePath( 0x10DEu, 0x2684u, 0x8A3C0001u ) ); // 드라이버 갱신
 }
 
+/**
+ * @brief [VulkanPipelineCacheFileTest] 파이프라인 캐시는 주기가 지나고 크기가 바뀌었을 때 저장한다(R-13)
+ * @details 예전엔 종료 때만 저장해 실행 중에 죽으면 그 실행의 컴파일이 모두 사라졌다. 크기가 그대로면 새 파이프라인이 없으므로 디스크를 건드리지 않는다.
+ */
+SW_TEST_CASE( VulkanPipelineCacheFileTest, PeriodicSaveNeedsIntervalAndGrowth )
+{
+    constexpr int64 kInterval = 1000;
+    SW_EXPECT_TRUE( VulkanPipelineCacheFile::isPeriodicSaveDue( 1000, 0, kInterval, 200u, 100u ) );
+    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 999, 0, kInterval, 200u, 100u ) );  // 주기 전
+    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 5000, 0, kInterval, 100u, 100u ) ); // 새 파이프라인 없음
+    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 5000, 0, 0, 200u, 100u ) );         // 주기 없음(설정 누락은 초기화가 막는다)
+}
+
 /** @brief [RHIAvailabilityTest] 다른 백엔드: 지금 것이 아니고 이 플랫폼에서 되는 것이다. Windows 는 DX12 ↔ DX11, Linux 는 Vulkan ↔ OpenGL 이다 */
 SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
 {

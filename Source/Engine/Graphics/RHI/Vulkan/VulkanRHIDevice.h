@@ -656,8 +656,12 @@ namespace sw
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         [[nodiscard]] bool initializePipelineCache();
-        /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다. */
+        /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다(종료). */
         void savePipelineCache();
+        /** @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다). */
+        void writePipelineCacheFile();
+        /** @brief 주기(`RHISwapChainDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 디스크에 씁니다(R-13). 프레임 시작이 부른다. */
+        void savePipelineCacheIfDue();
 
         /**
          * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
@@ -1043,6 +1047,9 @@ namespace sw
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
+        int64                                     _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHISwapChainDesc::_pipelineCacheSaveIntervalSeconds`)
+        int64                                     _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
+        uint64                                    _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
 
         /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
         VulkanMemoryAccount _memoryAccount;

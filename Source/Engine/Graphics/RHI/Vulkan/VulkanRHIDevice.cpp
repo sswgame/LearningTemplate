@@ -9,6 +9,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -223,6 +224,12 @@ namespace sw
             return false;
         }
         _allocationCountReserve = desc._allocationCountReserve;
+        if ( desc._pipelineCacheSaveIntervalSeconds <= 0.0 )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the Vulkan backend does not start" );
+            return false;
+        }
+        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( desc._pipelineCacheSaveIntervalSeconds );
 
         // 검증 스위치(EngineConfig _rhi)는 검증 레이어가 있는 구성에서만 듣는다. 없는 구성에서 켜 두었으면 듣지 않는다고 알린다.
         _bGPUAssistedValidationRequested     = desc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
@@ -1932,6 +1939,8 @@ namespace sw
         {
             SW_LOG_INFO_ID( "Vulkan.LoadedPipelineCacheBytes", "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
         }
+        _pipelineCacheLastSaveNanoseconds = MonotonicClock::nowNanoseconds();
+        _pipelineCacheLastSavedBytes      = static_cast<uint64>( listCacheData.size() );
         return _pipelineCache != VK_NULL_HANDLE;
     }
 
@@ -1939,7 +1948,30 @@ namespace sw
     {
         if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
             return;
+        writePipelineCacheFile();
+        vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
+        _pipelineCache = VK_NULL_HANDLE;
+    }
 
+    void VulkanRHIDevice::savePipelineCacheIfDue()
+    {
+        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
+            return;
+        const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
+        if ( nowNanoseconds - _pipelineCacheLastSaveNanoseconds < _pipelineCacheSaveIntervalNanoseconds )
+            return;
+        // 크기만 묻는다(버퍼 없이) — 새 파이프라인이 없으면 디스크를 건드리지 않는다. 캐시는 내부 동기화라 워커의 파이프라인 생성과 겹쳐도 된다(외부 동기화 깃발을 쓰지 않는다).
+        size_t cacheBytes{ 0 };
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &cacheBytes, nullptr ), "vkGetPipelineCacheData (size)" ) == false )
+            return;
+        if ( VulkanPipelineCacheFile::isPeriodicSaveDue( nowNanoseconds, _pipelineCacheLastSaveNanoseconds, _pipelineCacheSaveIntervalNanoseconds, static_cast<uint64>( cacheBytes ),
+                                                         _pipelineCacheLastSavedBytes ) )
+            writePipelineCacheFile();
+        _pipelineCacheLastSaveNanoseconds = nowNanoseconds;
+    }
+
+    void VulkanRHIDevice::writePipelineCacheFile()
+    {
         size_t dataSize{ 0 };
         // 캐시를 읽지 못하면 오류로 남기고 저장만 건너뛴다(다음 실행이 파이프라인을 새로 만들 뿐이다).
         if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) && dataSize > 0 )
@@ -1959,11 +1991,9 @@ namespace sw
                     SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );
+                _pipelineCacheLastSavedBytes = static_cast<uint64>( dataSize );
             }
         }
-
-        vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
-        _pipelineCache = VK_NULL_HANDLE;
     }
 
     void VulkanRHIDevice::reportQueueResult( int32 result, const utf8* pWhere )
@@ -2294,6 +2324,7 @@ namespace sw
         const bool bCannotStartFrame = _width == 0 || _height == 0 || isDeviceLost();
         if ( bCannotStartFrame )
             return;
+        savePipelineCacheIfDue(); // 실행 중에 죽어도 주기 앞까지의 컴파일이 남는다(R-13)
 
         // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 **영영** 건너뛴다
         // (창이 검은 채로 멈춤).
