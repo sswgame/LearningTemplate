@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -44,9 +45,17 @@ namespace sw
         {
             ServiceStoreRead<vector<LiveEventDef>> read;
             vector<ServiceRecord>                  listRecord;
-            read._result = connection.listRecords( LiveOpsServiceInternal::getEventTable(), "", "", LiveOpsLimit::kMaxEventCount, false, listRecord );
+            const ServiceRecordRead                listed = ServiceRecordReader::readAll( connection, LiveOpsServiceInternal::getEventTable(), "", LiveOpsLimit::kMaxEventCount, LiveOpsLimit::kMaxEventCount, false, listRecord );
+            read._result                                  = listed._result;
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
+            if ( listed._bTruncated == SW_TRUE )
+            {
+                // 상한 뒤 이벤트를 조용히 버리면 그 이벤트가 꺼진다 — 이전 값을 두고 알린다(감사 O-18)
+                SW_LOG_ERROR_ID( "LiveOpsService.LiveOpsEventTableTooLarge", "LiveOps event table has more than %# events - kept the previous events", LiveOpsLimit::kMaxEventCount );
+                read._result = ServiceStoreResult::Invalid;
+                return read;
+            }
             for ( const ServiceRecord& record : listRecord )
             {
                 LiveEventDef definition;
@@ -293,7 +302,7 @@ namespace sw
         return false;
     }
 
-    void LiveOpsService::putEvent( const LiveEventDef& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
+    void LiveOpsService::putEvent( const LiveEventDef& definition, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( LiveEventRules::isValid( definition ) == false )
         {
@@ -307,7 +316,8 @@ namespace sw
             return;
         }
         pendingJob._key                 = definition._eventID;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._pGuard              = actor._pGuard;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
         pendingJob._auditEntry._action  = "liveops.event.put";
         pendingJob._auditEntry._subject = "liveops/" + definition._eventID;
         pendingJob._auditEntry._memo    = string( memo );
@@ -315,7 +325,7 @@ namespace sw
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    void LiveOpsService::putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
+    void LiveOpsService::putEventJSON( string_view definitionJSON, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         LiveEventDef definition;
         if ( LiveOpsProtocol::readEventJSON( definitionJSON, definition ) == false )
@@ -323,7 +333,7 @@ namespace sw
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsServiceResult::fail( OnlineError::kInvalidRequest ) } ); // JSON 이 아니거나 모르는 필드가 있다
             return;
         }
-        putEvent( definition, actorID, memo, nowMs, requestTag ); // 규칙 검사는 같은 길(`LiveEventRules::isValid`)이다
+        putEvent( definition, actor, memo, nowMs, requestTag ); // 규칙 검사는 같은 길(`LiveEventRules::isValid`)이다
     }
 
     void LiveOpsService::collectEventJSON( vector<string>& outListJSON ) const
@@ -354,13 +364,15 @@ namespace sw
                 result = LiveEventControlResult::Ok;
             else if ( completion._result.hasError( OnlineError::kInvalidRequest ) )
                 result = LiveEventControlResult::Invalid;
+            else if ( completion._result.hasError( OnlineError::kForbidden ) )
+                result = LiveEventControlResult::Forbidden;
             else if ( completion._result == LiveOpsResult::NotFound )
                 result = LiveEventControlResult::NotFound;
             outListCompletion.push_back( LiveEventControlCompletion{ completion._requestTag, result } );
         }
     }
 
-    void LiveOpsService::removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
+    void LiveOpsService::removeEvent( string_view eventID, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( LiveOpsLimit::isValidKey( eventID, LiveOpsLimit::kMaxIDSize ) == false )
         {
@@ -369,7 +381,8 @@ namespace sw
         }
         ServiceAuditedWrite pendingJob;
         pendingJob._key                 = string( eventID );
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._pGuard              = actor._pGuard;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
         pendingJob._auditEntry._action  = "liveops.event.remove";
         pendingJob._auditEntry._subject = "liveops/" + pendingJob._key;
         pendingJob._auditEntry._memo    = string( memo );
@@ -382,11 +395,12 @@ namespace sw
         pendingJob._table = LiveOpsServiceInternal::getEventTable();
         _store.submit( [pendingJob = std::move( pendingJob )]( IServiceStoreConnection& connection )
         { return pendingJob.commit( connection ); },
-                       [this, requestTag]( ServiceStoreResult result )
+                       [this, requestTag]( ServiceAuditedWriteResult result )
         {
-            const LiveOpsServiceResult serviceResult = result == ServiceStoreResult::Ok       ? LiveOpsServiceResult{ LiveOpsResult::Ok }
-                                                     : result == ServiceStoreResult::NotFound ? LiveOpsServiceResult{ LiveOpsResult::NotFound }
-                                                                                              : LiveOpsServiceResult::fail( OnlineError::kUnavailable );
+            const LiveOpsServiceResult serviceResult = result == ServiceAuditedWriteResult::Ok        ? LiveOpsServiceResult{ LiveOpsResult::Ok }
+                                                     : result == ServiceAuditedWriteResult::NotFound  ? LiveOpsServiceResult{ LiveOpsResult::NotFound }
+                                                     : result == ServiceAuditedWriteResult::Forbidden ? LiveOpsServiceResult::fail( OnlineError::kForbidden )
+                                                                                                      : LiveOpsServiceResult::fail( OnlineError::kUnavailable );
             applyWrite( requestTag, serviceResult );
         } );
     }

@@ -36,7 +36,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-#include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -85,7 +85,7 @@ namespace sw::editor
             // 하나다.
             //   - 반환형을 맞춘다: `commandNewScene` (대상은 `bool` 을 반환하는데 테이블은 `void()` 를 요구한다)
             //   - 인자를 고정한다: `commandAlign<TAxis>` (대상이 축과 정렬 두 인자를 받는다)
-            //   - 대상을 찾아온다: `commandUndo` (`findSubsystem<CommandStack>()`)
+            //   - 대상을 찾아온다: `commandUndo` (`EditorUndoEntry` 가 포커스 창의 스택을 찾는다)
             //
             // 인자를 고정하는 경우에도 값마다 함수를 하나씩 만들지 않는다. 축처럼 값만 다른 것은 템플릿 인자로 받는다.
             // ------------------------------------------------------------------------------
@@ -120,19 +120,10 @@ namespace sw::editor
             }
 
             // 포커스된 툴 창(미리보기 씬)이 자기 스택을 걸었으면 그것을 — 미리보기 창의 Undo 가 메인 씬 기록을 건드리지 않는다.
-            static void commandUndo()
-            {
-                CommandStack* pStack = getFocusedCommandStack();
-                if ( pStack != nullptr )
-                    pStack->undo();
-            }
+            /** @brief 되돌리기 입구는 하나다(`EditorUndoEntry`) — History 창과 같은 판정을 거친다. */
+            static void commandUndo() { (void)EditorUndoEntry::undo(); }
 
-            static void commandRedo()
-            {
-                CommandStack* pStack = getFocusedCommandStack();
-                if ( pStack != nullptr )
-                    pStack->redo();
-            }
+            static void commandRedo() { (void)EditorUndoEntry::redo(); }
 
             static void commandCompileGame()
             {

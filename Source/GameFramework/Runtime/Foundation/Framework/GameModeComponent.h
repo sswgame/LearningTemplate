@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -185,9 +186,19 @@ namespace sw
          * @details `GameInstance::loadRequiredCatalog` 의 디렉터판이다. 받는 쪽이 `SharedAssetCache` 헤더를 include 한다(이 헤더는 앞 선언만 한다).
          */
         template <typename TAsset>
-        [[nodiscard]] bool acquireRequired( string_view path, shared_ptr<const TAsset>& outAsset ) const
+        [[nodiscard]] bool acquireRequiredSnapshot( string_view path, shared_ptr<const TAsset>& outAsset ) const
         {
-            outAsset = path.empty() ? nullptr : SharedAssetCache<TAsset>::acquire( path );
+            outAsset = path.empty() ? nullptr : SharedAssetCache<TAsset>::acquire( path ).snapshot();
+            if ( outAsset != nullptr )
+                return true;
+            reportMissingAsset( path );
+            return false;
+        }
+        /** @brief `acquireRequired` 와 같고 멤버로 쥐어 다시 읽힌 판을 따라갑니다(`SharedAssetRef`). 받은 때의 판을 일부러 쥘 종류(번호를 지어 둔 떼어 내는 종류)는 `acquireRequiredSnapshot` 이다. */
+        template <typename TAsset>
+        [[nodiscard]] bool acquireRequired( string_view path, SharedAssetRef<TAsset>& outAsset ) const
+        {
+            outAsset = path.empty() ? SharedAssetRef<TAsset>{} : SharedAssetCache<TAsset>::acquire( path );
             if ( outAsset != nullptr )
                 return true;
             reportMissingAsset( path );

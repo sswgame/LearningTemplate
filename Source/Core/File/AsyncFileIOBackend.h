@@ -144,8 +144,11 @@ namespace sw
         /** @brief 새 요청이 들어올 때 백엔드를 깨우는 콜백을 겁니다. */
         void setWakeDelegate( const Delegate<void()>& wakeDelegate ) { _wakeDelegate.set( wakeDelegate ); }
 
-        /** @brief 요청을 넣습니다. 멈추는 중이면 false 이고 요청은 그대로입니다(부르는 쪽이 `ShutDown` 으로 끝낸다). */
-        [[nodiscard]] bool push( const shared_ptr<AsyncReadRequest>& pRequest );
+        /**
+         * @brief 요청을 넣습니다. 넣었으면 `Pending` 입니다. 멈췄으면 그 까닭(`ShutDown` · 백엔드가 죽었으면 `ReadFailed`)이고 요청은 그대로입니다 — 부르는 쪽이
+         *        그 결과로 바로 끝낸다(`completeDetached`).
+         */
+        [[nodiscard]] AsyncIOStatus push( const shared_ptr<AsyncReadRequest>& pRequest );
         /** @brief 큐에 넣지 못한(시작 전 · 내리는 중 · 경로 없음) 요청을 @p status 로 바로 끝냅니다. 완료 콜백은 부른 스레드에서 돕니다. */
         static void completeDetached( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIOStatus status );
         /** @brief 취소합니다(`AsyncReadHandle::cancel` 의 설명). */
@@ -169,6 +172,12 @@ namespace sw
 
         /** @brief 멈춥니다 — 새 요청을 받지 않고 큐에 남은 것을 `Canceled` 로 끝낸 뒤 백엔드를 깨웁니다. */
         void requestStop();
+        /**
+         * @brief 백엔드의 IO 스레드가 더 일할 수 없습니다(완료 포트 · io_uring 실패). 큐에 남은 것과 뒤에 오는 요청을 `ReadFailed` 로 바로 끝냅니다.
+         * @details 이것 없이 IO 스레드만 나가면 큐는 요청을 계속 받아 아무도 꺼내지 않아 영영 끝나지 않는다(`waitIdle` · 로딩 화면이 멈춘다).
+         *          OS 에 이미 건 요청은 OS 가 `OVERLAPPED` · 버퍼를 쥐고 있어 여기서 끝내지 않는다.
+         */
+        void stopForBackendFailure();
         /** @brief 멈추는 중이면 true 입니다. */
         bool isStopping() const;
         /** @brief 백엔드가 꺼내 아직 `finish` 하지 않은 요청 수입니다. */
@@ -188,6 +197,8 @@ namespace sw
         void deliver( const shared_ptr<AsyncReadRequest>& pRequest, bool bInline );
         /** @brief 완료 콜백을 부르고 요청을 끝난 것으로 표시합니다. */
         void runDelivery( const shared_ptr<AsyncReadRequest>& pRequest );
+        /** @brief 새 요청을 @p stopStatus 로 거절하게 하고 큐에 남은 것을 @p queuedStatus 로 끝낸 뒤 백엔드를 깨웁니다(`requestStop` · `stopForBackendFailure`). */
+        void stop( AsyncIOStatus stopStatus, AsyncIOStatus queuedStatus );
 
     private:
         mutable mutex _mutex;
@@ -202,6 +213,7 @@ namespace sw
         uint32 _inFlightCount                                                       SW_GUARDED_BY( _mutex );
         uint32 _outstandingCount                                                    SW_GUARDED_BY( _mutex );
         bool _bStopping                                                             SW_GUARDED_BY( _mutex );
+        AsyncIOStatus _stopStatus                                                   SW_GUARDED_BY( _mutex ); ///< 멈춘 뒤 새 요청의 결과(`ShutDown` · `ReadFailed`)
         /** @brief 태스크로 실은 완료 전달 전부입니다. 생성자에서 만든다 — 전달은 여러 I/O 스레드가 내므로 그 뒤에는 원자 `addTask` 만 한다. */
         TaskStageHandle _deliveryStage;
     };

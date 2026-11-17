@@ -387,6 +387,8 @@ namespace sw
     {
         _autoExposure.releaseAutoExposureHistory( view );
         _upscale.releaseUpscaleIntermediate( view );
+        view._postProcessChainBeforeTonemap.release( _pDevice );
+        view._postProcessChainAfterTonemap.release( _pDevice );
         view._bOcclusionTilesThisFrame = SW_FALSE;
         if ( _pDevice == nullptr )
         {

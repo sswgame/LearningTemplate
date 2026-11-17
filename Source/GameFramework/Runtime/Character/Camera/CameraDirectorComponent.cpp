@@ -161,8 +161,8 @@ namespace sw
         setTickGroup( TickGroup::PostPhysics );
         if ( _catalogPath.empty() == false )
         {
-            // 프리셋 표는 공유 캐시의 한 벌이다 — 같은 표를 쓰는 디렉터 · 에디터가 같은 객체를 읽고, 다시 읽기가 제자리로 닿는다.
-            shared_ptr<const CameraPresetCatalog> pLoaded = SharedAssetCache<CameraPresetCatalog>::acquire( _catalogPath );
+            // 프리셋 표는 공유 캐시의 한 벌이다 — 같은 표를 쓰는 디렉터 · 에디터가 같은 객체를 읽고, 다시 읽은 판이 이 참조에 닿는다.
+            SharedAssetRef<CameraPresetCatalog> pLoaded = SharedAssetCache<CameraPresetCatalog>::acquire( _catalogPath );
             if ( pLoaded == nullptr )
                 SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetsDidNot", "Camera presets '%#' did not load", _catalogPath.c_str() );
             else

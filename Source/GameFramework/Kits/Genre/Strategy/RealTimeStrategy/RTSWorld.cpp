@@ -212,9 +212,15 @@ namespace sw
     {
     }
 
-    bool RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height, const RTSSettings& settings )
+    bool RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height )
     {
-        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR_ID( "RTSWorld.RTSWorldNeedsCatalog", "RTSWorld: no unit catalog - the rules are read from its <Rules>" );
+            return false;
+        }
+        const RTSSettings& settings   = pCatalog->getRules();
+        const string       rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
             SW_LOG_ERROR_ID( "RTSWorld.RTSWorldRefusedSettings", "RTSWorld: refused settings - %#", rangeError.c_str() );
@@ -474,21 +480,22 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 시간
     // ------------------------------------------------------------------------------
-    void RTSWorld::update( float32 deltaTime )
+    float32 RTSWorld::update( float32 deltaTime, float32 timeScale )
     {
         if ( _pCatalog == nullptr )
-            return;
+            return 0.0f;
         // 다른 키트가 땅을 얻거나 반납했으면 땅 격자를 다시 칠한다. 흐름장은 격자 리비전이 바뀌면 스스로 다시 구한다.
         if ( _land.isBound() && _land.getRevision() != _landRevision )
         {
             repaintGrid();
             _landRevision = _land.getRevision();
         }
-        const int32 stepCount = _stepTimer.consume( deltaTime );
+        const int32 stepCount = _stepTimer.consumeScaled( deltaTime, timeScale );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepFixed( _stepTimer.getStep() );
         }
+        return static_cast<float32>( stepCount ) * _stepTimer.getStep();
     }
 
     void RTSWorld::pollEvents( const ConsumerLease& lease, vector<RTSEvent>& outListEvent )

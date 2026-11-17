@@ -94,6 +94,7 @@ namespace sw
 
     FunctionMetadata::FunctionMetadata() noexcept
         : _pEditor{ nullptr }
+        , _maxCallsPerSecond{ 0 }
         , _netRole{ FunctionNetRole::Local }
         , _bReliable{ SW_FALSE }
         , _bValidate{ SW_FALSE }

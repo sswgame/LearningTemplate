@@ -9,7 +9,8 @@
             "keyEnvironment": "SW_SHOOTER3D_APNS_KEY",
             "keyId": "SHOOTERKEY",
             "teamId": "SHOOTERTEAM",
-            "topic": "com.example.shooter3d"
+            "topic": "com.example.shooter3d",
+            "tokenRefreshMinSeconds": 1200
         }
     ]
 }

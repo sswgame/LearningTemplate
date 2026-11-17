@@ -59,7 +59,9 @@ SW_TEST_CASE( EditorSceneSettingsCommandsTest, InvalidSettingsAreRejectedWithout
     using Commands = sw::editor::EditorSceneSettingsCommands;
     using Internal = EditorSceneSettingsCommandsTestInternal;
 
-    sw::CommandStack   stack;
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );

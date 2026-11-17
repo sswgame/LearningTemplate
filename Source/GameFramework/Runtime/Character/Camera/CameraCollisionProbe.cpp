@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
@@ -38,7 +39,7 @@ namespace sw
     {
     }
 
-    bool CameraBoxCollisionProbe::sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const
+    bool CameraBoxCollisionProbe::sweepSphere( const float3& from, const float3& to, float32 radius, const vector<hashed_string>& /*listLayer*/, float32& outDistance ) const
     {
         const float3  displacement = to - from;
         const float32 length       = displacement.getLength();
@@ -60,23 +61,31 @@ namespace sw
     {
     }
 
-    bool SceneCameraProbe::sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const
+    bool SceneCameraProbe::sweepSphere( const float3& from, const float3& to, float32 radius, const vector<hashed_string>& listLayer, float32& outDistance ) const
     {
         const float3  displacement = to - from;
         const float32 length       = displacement.getLength();
         if ( length <= MathUtil::kEpsilon )
             return false;
-        // 강체 — 세상의 막는 것(Default · Static)만. 래그돌 뼈 · 파편 · 캐릭터 캡슐에 암이 걸리지 않게 한다.
+        // 프리셋이 적은 레이어(보통 세상의 막는 것)만 — 래그돌 뼈 · 파편 · 캐릭터 캡슐에 암이 걸리지 않게 한다. 물리 설정이 없는 씬은 레이어가 없어 모두 본다.
         uint32                 layerMask = MathUtil::kMaxUInt32;
         const PhysicsSettings* pSettings = _manager.getSubsystem<sw::ScenePhysics>().findSettings();
-        uint8                  layer     = 0;
         if ( pSettings != nullptr )
         {
             layerMask = 0;
-            if ( pSettings->findLayerIndex( hashed_string( "Default" ), layer ) )
-                layerMask |= 1u << layer;
-            if ( pSettings->findLayerIndex( hashed_string( "Static" ), layer ) )
-                layerMask |= 1u << layer;
+            for ( const hashed_string& layerID : listLayer )
+            {
+                uint8 layer = 0;
+                if ( pSettings->findLayerIndex( layerID, layer ) )
+                {
+                    layerMask |= 1u << layer;
+                    continue;
+                }
+                const string_view layerName( layerID.c_str() );
+                SW_LOG_ERROR_ONCE_FOR_ID( "CameraProbe.UnknownLayer", layerName, "camera collision layer '%#' is not a physics layer - the arm ignores it", layerID.c_str() );
+            }
+            if ( layerMask == 0 )
+                return false;
         }
         float32         nearest = length;
         bool            bHit    = false;

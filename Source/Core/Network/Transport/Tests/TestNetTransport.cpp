@@ -137,3 +137,65 @@ SW_TEST_CASE( NetTransportTest, LoopbackDeliversInSendOrderOnNextUpdate )
     SW_EXPECT_EQUAL( uint64{ 5 }, network.getDeliveredCount() );
     SW_EXPECT_EQUAL( uint64{ 1 }, network.getDroppedCount() );
 }
+
+/**
+ * @brief [NetTransportTest] IPv6 루프백(`::1`)으로 실제 UDP 데이터그램이 오가고, 받은 주소는 IPv6 그대로다(감사 N-14)
+ * @details IPv6 를 끈 기계에서는 소켓이 열리지 않아 건너뜀으로 보고한다(`SW_TEST_SKIP`) — IPv4 로 대신 열지 않는다(`PlatformSocketUtil::openUDPSocket`).
+ */
+SW_TEST_CASE( NetTransportTest, UDPTransportSendsDatagramsOverIpv6Loopback )
+{
+    UDPNetTransport server;
+    UDPNetTransport client;
+    // IPv6 를 끈 기계(WSL · 컨테이너)는 `::1` 소켓을 열지 못한다 — 통과도 실패도 아닌 건너뜀으로 보고한다(요약 줄 · 보고에 까닭이 남는다).
+    if ( server.open( 0, true, UDPPortSharing::Exclusive, NetAddressFamily::Ipv6 ) == false )
+        SW_TEST_SKIP( "this machine cannot open an IPv6 loopback (::1) UDP socket - IPv6 is off (WSL, containers)" );
+    SW_REQUIRE_TRUE( client.open( 0, true, UDPPortSharing::Exclusive, NetAddressFamily::Ipv6 ) );
+    const NetAddress serverAddress = server.getLocalAddress();
+    SW_EXPECT_TRUE( serverAddress.isIpv6() && serverAddress.isLoopback() && serverAddress._port != 0 );
+    const uint8 arrData[4] = { 6, 7, 8, 9 };
+    SW_REQUIRE_TRUE( client.send( serverAddress, arrData, 4 ) );
+    NetAddress    from{};
+    vector<uint8> buffer;
+    SW_REQUIRE_TRUE( receiveUDPTestDatagramWithin( server, [&]()
+    { return server.receive( from, buffer ); } ) );
+    SW_EXPECT_EQUAL( 4, static_cast<int32>( buffer.size() ) );
+    SW_EXPECT_TRUE( from == client.getLocalAddress() ); // ::1 과 보낸 포트
+
+    // IPv4 소켓은 IPv6 상대에게 보내지 못한다 — 다른 주소군으로 바꿔 보내지 않는다.
+    UDPNetTransport ipv4Only;
+    SW_REQUIRE_TRUE( ipv4Only.open( 0, true ) );
+    SW_EXPECT_FALSE( ipv4Only.send( serverAddress, arrData, 4 ) );
+}
+
+/**
+ * @brief [NetTransportTest] IPv6 주소 글은 RFC 4291 로 읽고 RFC 5952 로 쓴다. IPv4 사상 주소는 IPv4 로 되돌린다. 깨진 글은 false 다(감사 N-14)
+ */
+SW_TEST_CASE( NetTransportTest, Ipv6AddressTextRoundTrips )
+{
+    NetAddress parsed{};
+    SW_REQUIRE_TRUE( NetAddress::parse( "[::1]:7777", 1, parsed ) );
+    SW_EXPECT_TRUE( parsed == NetAddress::makeIpv6Loopback( 7777 ) );
+    SW_EXPECT_TRUE( parsed.toString() == "[::1]:7777" );
+    SW_REQUIRE_TRUE( NetAddress::parse( "2001:DB8:0:0:1:0:0:1", 3000, parsed ) ); // 대괄호가 없으면 포트도 없다
+    SW_EXPECT_EQUAL( 3000, static_cast<int32>( parsed._port ) );
+    SW_EXPECT_TRUE( parsed.toString() == "[2001:db8::1:0:0:1]:3000" ); // 같은 길이의 0 구간은 앞의 것을 줄인다
+    SW_EXPECT_TRUE( parsed.toMaskedString() == "2001:db8::x" );        // 앞 48 비트 — 포트와 사람을 가린다
+    SW_REQUIRE_TRUE( NetAddress::parse( "[::]:5", 1, parsed ) );
+    SW_EXPECT_TRUE( parsed.isAnyInterface() && parsed.isIpv6() );
+    SW_REQUIRE_TRUE( NetAddress::parse( "[fd12:3456::7]:9", 1, parsed ) );
+    SW_EXPECT_TRUE( parsed.isPrivate() && parsed.isLoopbackOrPrivate() );
+    SW_REQUIRE_TRUE( NetAddress::parse( "[::ffff:c000:280]:80", 1, parsed ) ); // 192.0.2.128 의 사상 주소
+    SW_EXPECT_TRUE( parsed == NetAddress::make( 192, 0, 2, 128, 80 ) );
+    SW_EXPECT_TRUE( NetAddress::make( 192, 0, 2, 128, 80 ).toIpv4Mapped().toUnmapped() == NetAddress::make( 192, 0, 2, 128, 80 ) );
+
+    SW_EXPECT_FALSE( NetAddress::parse( "[::1", 1, parsed ) );
+    SW_EXPECT_FALSE( NetAddress::parse( "[::1]7777", 1, parsed ) );
+    SW_EXPECT_FALSE( NetAddress::parse( "[::1]:0", 1, parsed ) );
+    SW_EXPECT_FALSE( NetAddress::parse( "1::2::3", 1, parsed ) );
+    SW_EXPECT_FALSE( NetAddress::parse( ":::", 1, parsed ) );
+    SW_EXPECT_FALSE( NetAddress::parse( "12345::1", 1, parsed ) );
+    SW_EXPECT_FALSE( NetAddress::parse( "1:2:3:4:5:6:7:8:9", 1, parsed ) );
+    SW_EXPECT_FALSE( NetAddress::parse( "1:2:3:4:5:6:7::8", 1, parsed ) ); // `::` 는 묶음 하나 이상이다
+    SW_EXPECT_FALSE( NetAddress::parse( "1.2.3.4.5", 1, parsed ) );
+    SW_EXPECT_TRUE( NetAddress::makeLoopback( 1 ) != NetAddress::makeIpv6Loopback( 1 ) );
+}

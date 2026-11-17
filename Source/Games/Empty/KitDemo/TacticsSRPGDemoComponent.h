@@ -15,6 +15,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
@@ -108,15 +109,15 @@ namespace sw
         PROPERTY( Category = "Units", DisplayName = "Pilot", Tooltip = "Pilot id (catalog) every unit flies with" )
         hashed_string _pilot;
 
-        shared_ptr<const SRPGCatalog> _pCatalog;
-        SRPGBattlefield               _field;
-        SRPGCommanderAI               _ai;
-        ConsumerLease                 _eventLease;
-        vector<SRPGEvent>             _listEvent;
-        int2                          _cursor;
-        int2                          _lastStep; ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
-        int32                         _selectedUnit;
-        TacticsDemoResult             _result;
-        GrowthLog                     _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
+        SharedAssetRef<SRPGCatalog> _pCatalog;
+        SRPGBattlefield             _field;
+        SRPGCommanderAI             _ai;
+        ConsumerLease               _eventLease;
+        vector<SRPGEvent>           _listEvent;
+        int2                        _cursor;
+        int2                        _lastStep; ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 칸을 옮긴다
+        int32                       _selectedUnit;
+        TacticsDemoResult           _result;
+        GrowthLog                   _growthLog; ///< 레벨 오름과 그 출처(명중 · 격파) — 표시용이라 저장하지 않는다
     };
 } // namespace sw

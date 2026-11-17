@@ -65,6 +65,8 @@
 						        _herbRespawnSeconds="5"
 						        _maxMoveStep="12"
 						        _moveSpeed="6"
+						        _remoteCallBurstCount="20"
+						        _remoteCallRefillMilliseconds="50"
 						        _worldHalfExtent="64"
 						        _partyMaxSize="4"
 						        _partyShareRange="30"

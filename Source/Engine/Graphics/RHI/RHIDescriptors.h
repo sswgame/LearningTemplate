@@ -293,6 +293,14 @@ namespace sw
         /// @brief 링보다 큰 전송 한 장을 링 밖의 일회성 버퍼로 받는 상한(바이트)입니다(`gv_rhiStagingSingleMaxMegabytes`). 링을 쓰는 백엔드(GL · Vulkan)가 업로드 · 되읽기 링에 같이 쓰고,
         ///        0 이면 링보다 큰 한 장은 `Rejected` 입니다. 리플렉션하지 않는다.
         uint64 _stagingSoloMaxBytes{ 0 };
+        /// @brief 장치 메모리 할당 수 한도에서 남겨 둘 칸입니다(`EngineConfig::_rhi._allocationCountReserve`). 할당을 세는 백엔드(Vulkan)는 0 이면 초기화를 거절한다. 리플렉션하지 않는다.
+        uint32 _allocationCountReserve{ 0 };
+        /// @brief 파이프라인 캐시 저장 주기(초)입니다(`EngineConfig::_rhi._pipelineCacheSaveIntervalSeconds`). 캐시를 디스크에 두는 백엔드(Vulkan)는 0 이하면 초기화를 거절한다. 리플렉션하지 않는다.
+        float64 _pipelineCacheSaveIntervalSeconds{ 0.0 };
+        /// @brief GPU 기반 검증을 켭니다(`EngineConfig::_rhi._bGPUBasedValidation`, 디버그 레이어가 켜진 구성만). 리플렉션하지 않는다.
+        bool _bGPUBasedValidation{ false };
+        /// @brief Vulkan 동기화 검증을 켭니다(`EngineConfig::_rhi._bSynchronizationValidation`, 검증 레이어가 켜진 구성만). 리플렉션하지 않는다.
+        bool _bSynchronizationValidation{ false };
 
         /**
          * @brief Win32 표면의 `HWND` 를 @p outHandle 에 `void*` 로 담고 true 입니다. 창이 없으면(핸들이 nullptr, 오프스크린) @p outHandle 이 nullptr 이고 true 입니다.
@@ -417,13 +425,32 @@ namespace sw
     };
 
     /**
+     * @struct RHISubresourceRange
+     * @brief 텍스처의 밉 · 면(배열 칸) 구간입니다. 개수 `kAll` 은 "처음부터 끝까지" 다(기본값 — 자원 전체).
+     * @details 언리얼 `FRHITransitionInfo` 의 MipIndex · ArraySlice(전부는 `AllSubresources`), Godot RD 의 슬라이스 범위와 같은 자리다.
+     */
+    struct RHISubresourceRange
+    {
+        static constexpr uint16 kAll = 0xFFFFu;
+
+        uint16 _firstMip{ 0 };
+        uint16 _mipCount{ kAll };
+        uint16 _firstSlice{ 0 };
+        uint16 _sliceCount{ kAll };
+
+        /** @brief 밉 하나 · 면 하나입니다. */
+        static constexpr RHISubresourceRange makeSingle( uint16 mip, uint16 slice ) { return RHISubresourceRange{ mip, 1u, slice, 1u }; }
+    };
+
+    /**
      * @struct RHITextureTransition
      * @brief 텍스처 하나의 상태 전이입니다(`IRHICommandList::transitionTextures` 의 한 원소). 그래프 레벨 프롤로그가 레벨의 장벽을 모은다.
      */
     struct RHITextureTransition
     {
-        RHITextureHandle _texture{ 0 };
-        RHITextureState  _state{ RHITextureState::ShaderResource };
+        RHITextureHandle    _texture{ 0 };
+        RHITextureState     _state{ RHITextureState::ShaderResource };
+        RHISubresourceRange _range{}; ///< 옮길 밉 · 면(기본은 전체). 밉 하나를 그리며 다른 밉을 읽는 체인이 쓴다(R-10)
     };
 } // namespace sw
 
@@ -835,6 +862,8 @@ namespace sw
         RHIRenderPassLoadOp    _depthLoadOp;                               ///< 깊이 로드 동작 (4 bytes)
         uint16                 _arrColorTargetSlice[kMaxColorAttachments]; ///< RT별로 그릴 면(배열 원소, 큐브 면). 2D 는 0 (8 bytes)
         uint16                 _depthTargetSlice;                          ///< 깊이 타깃의 그릴 면 (2 bytes)
+        uint8                  _arrColorTargetMip[kMaxColorAttachments];   ///< RT별로 그릴 밉(다운샘플 체인 — R-10). 0 이 가장 큰 밉 (4 bytes)
+        uint8                  _depthTargetMip;                            ///< 깊이 타깃의 그릴 밉 (1 byte)
         uint8                  _clearStencil;                              ///< 스텐실 클리어 값. 깊이 로드가 Clear 일 때 함께 쓴다 (1 byte)
         uint8                  _bBindColor    : 1;                         ///< 컬러 바인딩 여부 (1 byte)
         [[maybe_unused]] uint8 _reservedFlags : 7;

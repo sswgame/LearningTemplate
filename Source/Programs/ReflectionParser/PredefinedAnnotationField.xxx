@@ -103,3 +103,4 @@ REGISTER_ANNOTATION_FIELD_FN( Function, Meta, _listCustomMeta, appendCustomMeta,
 REGISTER_ANNOTATION_FIELD_FN( Function, NetRole, _netRole, applyNetRole, Runtime )
 REGISTER_ANNOTATION_FIELD( Function, Reliable, _bReliable, Runtime )
 REGISTER_ANNOTATION_FIELD( Function, Validate, _bValidate, Runtime )
+REGISTER_ANNOTATION_FIELD_FN( Function, MaxCallsPerSecond, _maxCallsPerSecond, applyMaxCallsPerSecond, Manual )

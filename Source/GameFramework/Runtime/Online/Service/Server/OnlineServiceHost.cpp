@@ -22,8 +22,22 @@ namespace sw
             static constexpr size_t kMaxTrackedBucketCount = 100000;
             static constexpr int64  kHelloSweepIntervalMs  = 250; ///< Hello 기한을 넘긴 연결을 찾는 간격 — 연결 표를 틱마다 돌지 않는다
 
-            /** @brief 주소마다의 도배 제한 단위 — 포트는 빼고 IP 만(포트를 바꿔 새 연결로 우회하지 못하게). */
-            static uint64 makeRemoteKey( const NetAddress& remote ) { return static_cast<uint64>( remote._ipv4 ) + 1; }
+            /**
+             * @brief 주소마다의 도배 제한 단위 — 포트는 빼고 IP 만(포트를 바꿔 새 연결로 우회하지 못하게). IPv6 는 앞 64 비트(/64)다 — 가입자 하나가 /64 를 통째로 받으므로
+             *        주소 하나로 세면 주소를 바꿔 가며 우회한다(Cloudflare · nginx 의 IPv6 제한 단위와 같다).
+             * @details IPv4 키는 2^32 + 1 아래이고 IPv6 키는 맨 위 비트를 켜 두 군이 겹치지 않는다.
+             */
+            static uint64 makeRemoteKey( const NetAddress& remote )
+            {
+                if ( remote.isIpv6() == false )
+                    return static_cast<uint64>( remote.getIpv4() ) + 1;
+                uint64 prefix = 0;
+                for ( int32 index = 0; index < 8; ++index )
+                {
+                    prefix = ( prefix << 8 ) | remote._arrByte[index];
+                }
+                return HashUtil::mix64( prefix ) | ( uint64{ 1 } << 63 );
+            }
 
             /** @brief 노출이 @p exposure 인 서비스가 이 연결의 요청을 받는지입니다. GM 서비스는 GM 리슨의 연결만 받는다(GM 리슨이 없으면 기동이 멈춘다). */
             static bool isServedOn( OnlineServiceExposure exposure, bool bAdminConnection )
@@ -234,6 +248,8 @@ namespace sw
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( pTransport == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs a stream transport" } );
+        if ( settings._maxPendingCallsPerService < 1 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "online service host needs _maxPendingCallsPerService of at least 1 (the online server config sets it)" } );
         _settings          = settings;
         _listenerTransport = make_unique<ListenerTransport>( pTransport, settings._pAdminTransport );
         _pServerBus        = settings._pServerBusTransport != nullptr ? make_unique<ServerBus>( *settings._pServerBusTransport ) : nullptr;

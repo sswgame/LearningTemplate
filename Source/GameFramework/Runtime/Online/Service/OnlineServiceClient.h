@@ -154,18 +154,36 @@ namespace sw
         }
     };
 
+    /**
+     * @brief 서버가 "다시 하라" 고 답한 요청의 재시도 정책입니다. 기본값이 없어 연결을 세우는 쪽이 반드시 고릅니다(`OnlineServiceClientConfig` 생성자).
+     * @details - 다시 보내는 범주: `kBusy`(저장소 대기 상한 · 버전 충돌 — 적용하지 않았다), `kRateLimited`(받기 전에 거절), `kUnavailable` 은 멱등 키가 있는 요청만(커밋이 적용됐는지 모른다).
+     *          - 대기는 지터를 섞은 지수 백오프(`ExponentialBackoff`, 상한 `_maxBackoffMs`)이고, 요청 시한 안에서만 다시 한다. 같은 요청 id · 멱등 키로 보내며 콜백은 마지막 답으로 한 번 불린다.
+     *          - 지터가 없으면 과부하로 거절된 클라이언트가 한꺼번에 돌아와 같은 폭주를 되풀이한다(AWS SDK · gRPC 재시도 정책의 지터 백오프 · 최대 시도 수).
+     */
+    struct OnlineRetryPolicy
+    {
+        int32 _maxRetryCount{ 0 }; ///< 처음 보낸 뒤 다시 보내는 최대 횟수이다. 0 이면 다시 보내지 않는다
+
+        /** @brief 다시 보내지 않습니다 — 부하 봇(거절 비율을 재야 한다) · 운영 도구(사람이 오류를 본다)가 고른다. */
+        static OnlineRetryPolicy none() { return OnlineRetryPolicy{ 0 }; }
+        /** @brief 최대 @p maxRetryCount 번 다시 보냅니다. 값은 설정(게임 설정 `_onlineRequestRetryLimit`)에서 온다. */
+        static OnlineRetryPolicy make( int32 maxRetryCount ) { return OnlineRetryPolicy{ maxRetryCount }; }
+    };
+
     struct OnlineServiceClientConfig
     {
 
         OnlineClientSecurity  _security;
+        OnlineRetryPolicy     _retryPolicy;
         StreamTransportConfig _transportSettings{}; ///< 자기 엔드포인트 모드. `_ioThreadCount == 0` 이면 `tick` 이 전송을 처리한다
         StreamEndpointConfig  _endpointSettings{};
         NetAddress            _serverAddress{};
         string                _gameBuild{}; ///< Hello 에 싣는 게임 빌드 글(64 B 이하)
         int64                 _maxBackoffMs{ 5000 };
         uint8                 _platform{ 0 };
-        explicit OnlineServiceClientConfig( OnlineClientSecurity security )
+        OnlineServiceClientConfig( OnlineClientSecurity security, OnlineRetryPolicy retryPolicy )
             : _security{ security }
+            , _retryPolicy{ retryPolicy }
         {
         }
     };
@@ -264,17 +282,23 @@ namespace sw
             OnlineResponseDelegate _onResponse{};
             uint64                 _requestID{ 0 };
             MonotonicMilliseconds  _deadlineMs{ 0 };
+            MonotonicMilliseconds  _retryAtMs{ 0 };       ///< 재시도 대기열(`_listRetryCall`)에서 다시 보낼 시각이다
+            ExponentialBackoff     _retryBackoff{ 0, 1 }; ///< 첫 재시도에 씨앗을 운영체제 난수로 바꾼다
+            int32                  _retryCount{ 0 };
             uint16                 _method{ 0 };
             OnlineRequestKind      _kind{ OnlineRequestKind::Session };
             uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 처리하던 중 `cancelRequests` 가 취소 표시했다. 부르지도 보내지도 않는다
         };
 
+        /** @brief 보낸 요청입니다. 재시도할 수 있게 보낸 그대로를 쥔다(재시도 정책이 없으면 몸은 비운다). */
         struct PendingCall
         {
-            OnlineResponseDelegate _onResponse{};
-            uint64                 _requestID{ 0 };
-            uint16                 _method{ 0 }; ///< `cancelRequests` 가 영역으로 가린다
+            QueuedCall _call{};
         };
+
+        /** @brief 서버 답 @p response 가 다시 보낼 범주이고 정책 · 시한 안이면 @p inoutCall 을 재시도 대기열에 넣고 true 입니다. */
+        [[nodiscard]] bool scheduleRetry( QueuedCall& inoutCall, const NetResponse& response );
+        void               updateRetries();
 
         void sendHello();
         void sendQueuedCall( QueuedCall& call );
@@ -297,6 +321,7 @@ namespace sw
         OnlineServiceClientConfig          _settings; ///< `initialize` 전에는 자리표시(공유 엔드포인트 값)다
         vector<IOnlineClientService*>      _listService;
         vector<QueuedCall>                 _listQueuedCall;
+        vector<QueuedCall>                 _listRetryCall;    ///< 서버가 다시 하라고 답해 백오프를 기다리는 요청이다
         vector<vector<QueuedCall>*>        _listDrainingCall; ///< `flushQueuedCalls` · `failQueuedCalls` 가 꺼내 도는 지역 목록(겹쳐 불리면 여럿)
         unordered_map<uint64, PendingCall> _mapPendingCall;   ///< 요청 클라이언트의 id → 부른 쪽
         unique_ptr<StreamMessageEndpoint>  _ownedEndpoint;

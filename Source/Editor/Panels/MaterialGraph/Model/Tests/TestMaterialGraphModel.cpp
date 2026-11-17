@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/MaterialGraph/Model/MaterialGraphModel.h"
 
 using namespace sw;
@@ -89,4 +90,23 @@ SW_TEST_CASE( MaterialGraphModelTest, IssuesFollowEdits )
     model.setValue( 0, "BaseColor", "1 0 0" );
     model.refreshCompile( "game/x/materials/a.matgraph.xml" );
     SW_EXPECT_TRUE( model.getIssues().empty() );
+}
+
+/** @brief [MaterialGraphModelTest] 노드 넣기 한 번은 그리기 끝(publishEdit)에 알림 한 번이고, 이름은 모델이 정한다(감사 E-16) */
+SW_TEST_CASE( MaterialGraphModelTest, AddNodeNotifiesOnceWithModelName )
+{
+    uint32                     count{ 0 };
+    string                     lastLabel;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    {
+        ++count;
+        lastLabel = string{ label };
+    } ) };
+    MaterialGraphModel         model;
+    model.bindDocumentEditRecorder( recorder );
+    SW_REQUIRE_TRUE( model.addNode( "Multiply", float2{ 0.0f, 0.0f } ) );
+    model.publishEdit();
+    model.publishEdit();
+    SW_EXPECT_EQUAL( count, 1u );
+    SW_EXPECT_TRUE( lastLabel == "Add Material Graph Node" );
 }

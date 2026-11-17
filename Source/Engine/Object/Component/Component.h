@@ -319,7 +319,8 @@ namespace sw
     class SW_API Component
     {
         friend class GameObject;
-        friend class GameObjectStore; ///< 해체(`destroyComponentInstance`)가 `_pPoolEntry` 의 풀로 반납하고 버킷에서 뺀다
+        friend class GameObjectStore;    ///< 해체(`destroyComponentInstance`)가 `_pPoolEntry` 의 풀로 반납하고 버킷에서 뺀다
+        friend class ComponentStableKey; ///< 고정 지역 id(`_localID`)를 굳히는 곳은 여기 하나다
 
     public:
         REFLECT_BODY();
@@ -456,11 +457,13 @@ namespace sw
          */
         virtual void onModuleUnloading( string_view moduleName ) { (void)moduleName; }
         /**
-         * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 아무것도 넣지 않습니다(렌더 · 연출 컴포넌트).
+         * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
-         *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 파생 타입은 부모 것을 먼저 부른다.
+         *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 칸을 손으로 나열하지 않으므로 새 상태 칸이 빠질 수 없다
+         *          (`StateHashTest.EveryStateFieldChangesTheHash`). 재정의는 리플렉션 밖 상태(물리 바디의 속도처럼 칸이 아닌 값)를 **더할** 때만 두고, 부모 것을 먼저 부른다.
+         *          접을 수 없는 형식의 상태 칸(맵 · 핸들)은 선언 결함이라 이유와 함께 멈춘다 — 빼고 접으면 그 칸이 어긋나도 해시가 같다.
          */
-        virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const { (void)inoutBuilder; }
+        virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const;
         /**
          * @brief 리플렉션 값을 직렬화기로 **직접** 쓴 뒤 부릅니다. 프로퍼티마다 `onPropertyChanged` 를 부르고, 그다음 `onPostLoad` 를 부릅니다(언리얼의
          *        `PostEditChangeProperty`, 유니티의 `OnValidate` 에 해당).
@@ -597,6 +600,8 @@ namespace sw
         bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
         /** @brief 컴포넌트 이름(해시)을 반환합니다. */
         hashed_string getComponentName() const { return _componentName; }
+        /** @brief 저장된 고정 지역 id 입니다. 0 이면 아직 굳히지 않았다 — 키 · 세이브가 쓰는 값은 `ComponentStableKey::getLocalID` 다. */
+        uint64 getStoredLocalID() const { return _localID; }
 
     private:
         bool isSubTickActiveSlow( uint32 subTickID ) const;
@@ -622,7 +627,14 @@ namespace sw
         uint64      _componentID; ///< 컴포넌트 고유 일련번호
         /** @brief 이름입니다(기본은 타입 이름). 저장되며 컴포넌트 키(`ComponentStableKey`)가 이 이름으로 만들어집니다. 타입이 아닙니다. 타입은 `getTypeName` 을 씁니다. */
         PROPERTY( HideInInspector )
-        hashed_string   _componentName;
+        hashed_string _componentName;
+        /**
+         * @brief 오브젝트 안에서 이 컴포넌트를 가리키는 고정 지역 id 입니다(감사 A-2). 저장되고, 형제를 지우거나 끼우거나 순서를 바꿔도 그대로다.
+         * @details 유니티 fileID · 언리얼 SCS 노드의 변수 GUID 자리다. 덮어쓰기 · 부착 대상 · 세이브 핸들의 키(`ComponentStableKey`)가 이 값이다.
+         *          0 은 "아직 정하지 않음"(옛 파일 · 막 붙인 컴포넌트)이고 그동안의 값은 옛 키 `이름#n` 에서 정해진다 — 형제 구조를 바꾸기 전에 굳힌다(`ComponentStableKey::freezeLocalIDs`).
+         */
+        PROPERTY( HideInInspector )
+        uint64          _localID;
         const TypeInfo* _pTypeInfo; ///< 만들 때 받은 타입이다. `GameObject::attachCreatedComponent` 가 한 번 기록하며, 공개 전이라 원자값이 아니다
         /**
          * @brief 이 인스턴스를 내준 타입 항목(풀과 버킷, `ComponentPoolEntry`)입니다. 힙에서 왔으면 nullptr 입니다. 생성할 때 한 번 기록하고 파괴할 때 읽습니다.

@@ -322,3 +322,56 @@ SW_TEST_CASE( LoginStoreLogicTest, DeletedAccountIDIsNeverReused )
     SW_EXPECT_TRUE( secondID != 0 );
     SW_EXPECT_TRUE( secondID != firstID );
 }
+
+namespace
+{
+    /** @brief 첫 커밋 직전에 다른 워커의 틀린 로그인 하나를 끼워 넣는 연결입니다 — 둘이 같은 판의 계정 레코드를 읽고 겹쳐 쓴다. */
+    class RacingLoginConnection final : public IServiceStoreConnection
+    {
+    public:
+        explicit RacingLoginConnection( Fixture& fixture )
+            : _fixture{ fixture }
+        {
+        }
+
+        ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override
+        {
+            return _fixture.database.readRecord( table, key, outRecord );
+        }
+
+        ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
+                                        vector<ServiceRecord>& outListRecord ) override
+        {
+            return _fixture.database.listRecords( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord );
+        }
+
+        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo ) override
+        {
+            if ( _bRaced == SW_FALSE )
+            {
+                _bRaced = SW_TRUE;
+                LoginGrant grant;
+                SW_EXPECT_TRUE( _fixture.login( "Erin_06", "wrong horse!", grant ) == LoginResult::WrongCredentials ); // 다른 워커가 먼저 센다
+            }
+            return _fixture.database.commit( transaction, pOutInfo );
+        }
+
+    private:
+        Fixture& _fixture;
+        uint8    _bRaced{ SW_FALSE };
+    };
+} // namespace
+
+/** @brief [LoginStoreLogicTest] 동시에 겹친 틀린 비밀번호도 모두 센다 — 상한 2 에서 겹친 두 번이면 잠긴다(Conflict 를 버리면 한 번만 세어 잠금을 비켜 갔다, 감사 O-14) */
+SW_TEST_CASE( LoginStoreLogicTest, RacingFailuresAreAllCounted )
+{
+    Fixture fixture;
+    fixture.settings._maxFailedCount = 2;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Erin_06", "correct horse" ) == LoginResult::Ok );
+    RacingLoginConnection racing{ fixture };
+    LoginStoreResult      storeResult;
+    LoginStoreLogic       logic( racing, fixture.crypto, fixture.settings, fixture.ticketAuthority, storeResult );
+    LoginGrant            grant;
+    SW_EXPECT_TRUE( logic.login( LoginCredential{ "Erin_06", "wrong horse!" }, kNowMs, grant ) == LoginResult::AccountLocked );
+    SW_EXPECT_TRUE( fixture.login( "Erin_06", "correct horse", grant ) == LoginResult::AccountLocked );
+}

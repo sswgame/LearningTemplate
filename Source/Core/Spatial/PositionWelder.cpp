@@ -14,7 +14,23 @@ namespace sw
             /** @brief 셀 한 변 = 허용 오차 × 이 값. 2 면 오차 안의 이웃은 축마다 한 쪽에만 있다. */
             static constexpr float32 kCellSizeInTolerance = 2.0f;
 
-            static int64 toCell( float32 value, float32 cellSize ) { return static_cast<int64>( MathUtil::floor( value / cellSize ) ); }
+            /** @brief 셀 좌표 상한입니다. 이웃 셀(±1)을 더해도 넘치지 않게 int64 끝에서 떨어뜨린다. */
+            static constexpr float64 kMaxCellCoord = 4.0e18;
+
+            /**
+             * @brief @p value 가 든 셀 좌표입니다. 범위를 넘는 값 · 무한대는 끝 셀로, NaN 은 아래 끝 셀로 묶는다.
+             * @details 유한하지 않은 값을 그대로 정수로 바꾸면 정의되지 않은 동작이고(x86 은 INT64_MIN), 그 셀에 ±1 을 더하면 넘친다. 이런 점은 거리 판정이
+             *          늘 지므로(NaN · 무한대 거리) 어느 셀에 두어도 따로 남는다.
+             */
+            static int64 toCell( float32 value, float32 cellSize )
+            {
+                const float64 scaled = static_cast<float64>( MathUtil::floor( value / cellSize ) ); // 나누기는 float32 그대로 — 셀 안 위치(`findLowerProbeCell`)와 같은 계산
+                if ( ( scaled > -kMaxCellCoord ) == false )                                         // NaN 도 여기로 온다
+                    return static_cast<int64>( -kMaxCellCoord );
+                if ( scaled > kMaxCellCoord )
+                    return static_cast<int64>( kMaxCellCoord );
+                return static_cast<int64>( scaled );
+            }
 
             /** @brief 축 하나에서 볼 두 셀 중 작은 쪽입니다. 셀 안 위치가 앞쪽 절반이면 앞 셀과 자기 셀, 아니면 자기 셀과 다음 셀입니다. */
             static int64 findLowerProbeCell( float32 value, float32 cellSize, int64 cell )

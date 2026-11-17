@@ -200,6 +200,12 @@ namespace sw
             }
             def._listStock.push_back( stock );
         }
+        // 손님이 판 값이 산 값보다 크면 사고 되파는 것만으로 돈이 무한히 는다(감사 G-8). 읽기 끝에서 거절하고 쿠커도 같은 읽기를 돈다.
+        if ( def._sellMultiplier > def._buyMultiplier )
+        {
+            SW_LOG_ERROR_ID( "Shop.SellAboveBuy", "%#: shop '%#' pays more for an item (sellMultiplier %#) than it asks (buyMultiplier %#)", sourceName, pID, def._sellMultiplier, def._buyMultiplier );
+            bValid = false;
+        }
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "Shop.ShopInvalidFieldsSkipped", "%#: shop '%#' has invalid fields - skipped", sourceName, pID );

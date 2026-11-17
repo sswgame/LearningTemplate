@@ -5,6 +5,8 @@
  *          `-Wswitch-enum` 대신 `static_assert` 가 빠뜨림과 칸 밀림을 잡는다. 언리얼 `GPixelFormats`(형식마다 블록 · 바이트 · 플랫폼 형식 한 줄)와 같은 모양이다(기억).
  */
 #pragma once
+#include "Core/Container/span.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
@@ -128,5 +130,44 @@ namespace sw
     {
         const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
         return info._blockWidth == 1 ? info._blockBytes : 0;
+    }
+
+    /**
+     * @brief 백엔드 형식 표 @p arrRow 에서 네이티브 값 @p nativeValue 의 RHIFormat 을 찾습니다(역매핑). 없으면 `nullopt` 입니다.
+     * @details 정방향 표 하나를 거꾸로 훑는다 — 역방향 표를 따로 두면 형식을 더할 때 한쪽만 고친다. `Unknown` 행은 찾지 않는다(첨부 없음).
+     */
+    template <typename TRow, size_t kRowCount, typename TNative>
+    optional<RHIFormat> findRHIFormatOfNative( const TRow ( &arrRow )[kRowCount], TNative TRow::* pNativeField, TNative nativeValue )
+    {
+        for ( const TRow& row : arrRow )
+        {
+            if ( row._format != RHIFormat::Unknown && row.*pNativeField == nativeValue )
+                return row._format;
+        }
+        return nullopt;
+    }
+
+    /**
+     * @brief 표면이 줄 수 있는 형식 @p listAvailable 에서 스왑체인 형식을 고릅니다. 요청 → BGRA8 → RGBA8 → 표면의 첫 형식 순이고, 고를 것이 없으면 `nullopt`(생성 실패)입니다.
+     * @details 고른 값이 곧 `getBackBufferFormat` 이 보고하는 값이다 — 예전 Vulkan 은 선호 형식이 없을 때 표면의 첫 형식을 쓰면서 RGBA8 이라고 보고했다(R-8).
+     *          @p listAvailable 은 백엔드가 RHIFormat 으로 역매핑한 것만 담는다(대응이 없는 표면 형식은 고를 수 없다). 언리얼 `FVulkanSwapChain` 과 같은 순서다.
+     */
+    inline optional<RHIFormat> pickRHISwapChainFormat( RHIFormat requested, span<const RHIFormat> listAvailable )
+    {
+        const RHIFormat arrPreferred[] = { requested, RHIFormat::B8G8R8A8_UNORM, RHIFormat::R8G8B8A8_UNORM };
+        for ( const RHIFormat preferred : arrPreferred )
+        {
+            for ( const RHIFormat available : listAvailable )
+            {
+                if ( available == preferred )
+                    return available;
+            }
+        }
+        for ( const RHIFormat available : listAvailable )
+        {
+            if ( isRHIFormatRenderable( available ) && isRHIFormatDepth( available ) == false )
+                return available;
+        }
+        return nullopt;
     }
 } // namespace sw

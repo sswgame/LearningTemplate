@@ -42,15 +42,31 @@ namespace sw::editor
         bool isHolding() const { return _bHolding == SW_TRUE; }
 
         /**
-         * @brief 편집을 알립니다. @p bInteracting 이면 구간을 열거나 이어 쥐고 아무것도 내지 않는다. 아니면 기준 → @p after 를 낸다.
+         * @brief 편집을 알립니다. @p bInteracting 이면 구간을 열거나 이어 쥐고 아무것도 내지 않는다. 아니면 기준 → 지금 글을 낸다.
+         * @param capture 지금 문서 전체 글을 만드는 함수(`string()`)입니다. **필요할 때만 부른다** — 이미 쥔 구간을 이어 쥘 때는 부르지 않는다.
+         * @details 예전에는 알림마다 문서 전체를 직렬화해 기준과 견줬다 — 끌기 · 칠하기는 매 프레임 알려 타일맵 512² 면 프레임마다 MB 단위였다(감사 E-9).
+         *          직렬화는 구간의 시작(바뀌었는지)과 끝(`finish`) 두 번이다. 언리얼 dirty 깃발 · Godot 프로퍼티 do/undo 처럼 끄는 동안은 표시만 한다.
          * @return 기록할 편집입니다. 바뀐 것이 없거나 구간을 쥐었으면 비어 있다(쥐었는지는 `isHolding`).
          */
-        [[nodiscard]] optional<DocumentEdit> notifyEdited( string_view label, string after, bool bInteracting );
+        template <typename TCapture>
+        [[nodiscard]] optional<DocumentEdit> notifyEdited( string_view label, bool bInteracting, TCapture&& capture )
+        {
+            if ( bInteracting && isHolding() )
+            {
+                _pendingLabel = string{ label }; // 쥔 구간을 잇는다 — 끝 글은 `finish` 가 한 번 만든다
+                return nullopt;
+            }
+            return notifyEditedText( label, capture(), bInteracting );
+        }
         /**
          * @brief 구간이 끝났습니다 — 쥔 구간을 (기준, @p after) 로 냅니다. 쥔 것이 없거나 처음 글로 돌아왔으면 비어 있다.
          * @details 쥔 구간이 있을 때만 부른다(`isHolding`) — @p after 는 문서 전체 글이라 부르는 쪽이 그때만 만든다.
          */
         [[nodiscard]] optional<DocumentEdit> finish( string after );
+
+    private:
+        /** @brief 지금 글 @p after 로 편집을 판정합니다(`notifyEdited` 가 글이 필요할 때만 부른다). */
+        [[nodiscard]] optional<DocumentEdit> notifyEditedText( string_view label, string after, bool bInteracting );
 
     private:
         string                 _baseline;     ///< 구간 전 글(마지막으로 기록한 글)

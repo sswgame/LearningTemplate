@@ -18,6 +18,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/SkeletonMirrorTable.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -101,7 +102,7 @@ namespace sw
         /** @brief 스킨 원본 메시입니다(없으면 nullptr). 잔상(`PoseAfterimageComponent`)이 같은 원본 · 고정 포즈로 사본을 그린다. */
         const shared_ptr<Mesh>& getSkinSourceMesh() const { return _skinSourceMesh; }
         /** @brief 스켈레톤의 공유 포인터입니다(잔상 사본이 같은 스켈레톤을 쥔다). 데이터 스켈레톤이 없으면 암묵 스켈레톤이다. */
-        const shared_ptr<const Skeleton>& getSharedSkeleton() const { return _skeleton; }
+        const SharedAssetRef<Skeleton>& getSharedSkeleton() const { return _skeleton; }
 
         /**
          * @brief 로컬 포즈입니다. 기본 포즈 단계의 작업이 여기에 씁니다. 군중 묶음과 나누는 중이면 묶음의 포즈이며, 그때는 포즈 단계가 돌지 않아 아무도 쓰지 않습니다.
@@ -337,8 +338,8 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Update Rate Divisor", Tooltip = "Build the pose every N frames (animation LOD)", Min = 1.0, Max = 16.0 )
         uint32 _updateRateDivisor;
         PROPERTY( Category = "Animation", DisplayName = "Skinning Method", Tooltip = "Linear blends bone matrices; Dual Quaternion keeps volume at twisted joints" )
-        SkinningMethod             _skinningMethod;
-        shared_ptr<const Skeleton> _skeleton;
+        SkinningMethod           _skinningMethod;
+        SharedAssetRef<Skeleton> _skeleton;
         /// @brief 스킨드 메시의 공유 원본입니다. 동일성 확인과 핫 리로드 대조에 씁니다. 이 컴포넌트의 메시는 그 복사본입니다.
         shared_ptr<Mesh>                                _skinSourceMesh;
         IdentityToken                                   _skinSourceContentID; ///< 스킨 원본 메시의 내용 토큰(들고 있어 지운 원본의 주소가 새 메시와 같아 보이지 않는다)
@@ -358,7 +359,7 @@ namespace sw
         SkeletalMeshLODClient                           _lodClient;
         Subscription                                    _lodRegistration; ///< LOD 클라이언트 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         AnimationLODState                               _lodState;
-        shared_ptr<const SkeletonBoneLOD>               _boneLOD;
+        SharedAssetRef<SkeletonBoneLOD>                 _boneLOD;
         vector<vector<uint8>>                           _listBoneLODMask;      ///< 본 LOD 단계 n + 1 의 본 마스크
         IdentityToken                                   _boneLODRevision;      ///< 마스크를 만든 본 LOD 내용 토큰이다(비면 다시 만든다)
         const Skeleton*                                 _pBoneLODMaskSkeleton; ///< 마스크를 만든 스켈레톤이다(동일성만 확인한다)

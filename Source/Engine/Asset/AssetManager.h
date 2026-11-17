@@ -2,7 +2,7 @@
  * @file AssetManager.h
  * @brief 팩 에셋(스키마, Material, Texture, Prefab, Mesh)을 한곳에서 관리하는 파사드입니다. `Engine` 가 `EngineServiceCollection` 으로 소유합니다.
  * @note
- *   포함: PackManager, 에셋 캐시 레지스트리. 에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다).
+ *   포함: PackManager, 에셋 캐시 레지스트리, 런타임 GUID 색인을 거는 일(`AssetRegistry` — 마운트한 팩의 `assetindex.xml` · 소스 트리의 저작 색인).
  *   기능 캐시(Material, Texture, Prefab, Mesh, Skeleton, Fracture 등)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
  *   매니저는 생성자에서 등록 테이블을 훑어 캐시를 모두 만들어 소유합니다(코드로 만드는 값 테이블 `WeakInternCache` 파생도 같다). 타입으로 찾을 때는 `getAssetCache<T>()` 를 씁니다.
  *   제외(수명이 다름):
@@ -97,9 +97,14 @@ namespace sw
         void garbageCollectUnusedAssets();
         /**
          * @brief 로드 축 태그 · 덮어쓰기 층이 바뀌어 결과가 달라진 리소스(`ResourceComposition::takePendingReload`)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
-         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다 — 태그는 틱 중에도 바뀌고(데이터 레이어) 공유 캐시의 제자리 다시 읽기는 틱 밖에서만 한다. 배포 구성에도 있다.
+         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다 — 태그는 틱 중에도 바뀌고(데이터 레이어) 공유 캐시의 다시 읽기(표에서 떼어 냄)는 틱 밖에서만 한다. 배포 구성에도 있다.
          */
         uint32 reloadComposedDependents();
+        /**
+         * @brief 공유 캐시의 다시 읽기 정리가 남긴 옛 판을 놓습니다(사슬 정리의 프레임 경계 — `SharedAssetTable::collectRetired`). 놓은 수를 돌려줍니다.
+         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다. 다시 읽은 뒤 두 번째 경계에서 놓여, 날 포인터를 빌린 쪽이 그 사이의 틱에서 다시 짓는다.
+         */
+        size_t collectRetiredAssetVersions();
         /**
          * @brief 내용이 바뀐 리소스 @p listAssetID(팩을 붙이거나 뗐다 — 모드)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
          * @details 쥔 캐시가 제자리 다시 읽기를 못 하면(`AssetCacheBase::reloadComposed` 가 false — GPU 수명 캐시) 그 id 를 @p outListStale 뒤에 덧붙인다 —
@@ -162,6 +167,12 @@ namespace sw
          */
         void warnAboutRemainingModuleCaches() const;
 
+        /**
+         * @brief 지금 마운트한 콘텐츠로 GUID 색인을 다시 지어 겁니다(`installAssetRegistry` — 콘텐츠 정책은 팩 매니저의 것). 런타임에 팩을 붙이거나 뗀 뒤(모드 · 패치) 부른다.
+         * @details 패치 팩이 도메인 색인(`<도메인>/assetindex.xml`)을 덮었으면 덮은 것을 읽는다. 못 지으면 오류를 남기고 false 이며 있던 색인을 그대로 둔다 — 부르는 쪽이 붙인 팩을 되돌린다.
+         */
+        [[nodiscard]] bool rebuildAssetRegistry() const;
+
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         PackManager&       getPackManager();
         const PackManager& getPackManager() const;
@@ -198,6 +209,13 @@ namespace sw
         void releaseAssetCache( AssetCacheBase* pCache );
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         AssetCacheBase& getBuiltInAssetCache( string_view assetKindName ) const;
+        /**
+         * @brief 마운트한 콘텐츠의 GUID ↔ 리소스 id 색인을 지어 프로세스 표에 겁니다(`AssetRegistry::install`). 참조(`AssetRef<T>` 의 `guid:`)가 이것으로 풀린다.
+         * @details 쿠킹한 팩(@p source 가 `Cooked`)은 마운트한 도메인마다 `<도메인>/assetindex.xml` 을 낮은 우선순위부터 합친다(뒤 마운트 패치 · DLC 가 이긴다). 도메인 팩에 색인이 없거나
+         *          틀렸거나 한 팩 안에서 겹치면 오류다 — 쿠킹은 늘 색인을 담는다(`PackCooker`). 소스 트리는 저작 색인(`AssetDatabase::scan`)이 층 하나다 — 결함(겹친 GUID ·
+         *          짝 잃은 `.meta`)은 경고로 남기고 결함 파일은 색인에 들지 않는다(그 GUID 참조는 읽을 때 오류다). 규칙 파일을 못 읽으면 false 입니다.
+         */
+        [[nodiscard]] bool installAssetRegistry( ContentSource source ) const;
 
     private:
         mutable mutex                      _loadStageMutex;

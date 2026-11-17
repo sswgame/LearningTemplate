@@ -14,7 +14,7 @@
 	<Preset id="thirdperson">
 		<View mode="ThirdPerson" offset="0.75,0.2,0" distance="3.8" pitch="0.13963" />
 		<Lens fieldOfViewY="1.2217" nearPlane="0.05" farPlane="150" />
-		<Collision radius="0.25" minDistance="0.4" recoverTime="0.35" />
+		<Collision radius="0.25" minDistance="0.4" recoverTime="0.35" layers="Default,Static" />
 		<Confiner pitchMin="-1.0472" pitchMax="1.2217" />
 	</Preset>
 	<!-- 궤도 — 오른쪽 버튼을 끌어 돌리고 휠로 당긴다. 움직이는 쪽을 조금 미리 본다. -->
@@ -25,7 +25,7 @@
 		<Input lookSensitivity="0.004" lookWhileHeld="true" zoomStep="0.85" />
 		<Confiner pitchMin="-0.087266" pitchMax="1.3963" zoomMin="3" zoomMax="30" />
 		<Framing lookAheadTime="0.25" lookAheadSmoothing="0.3" />
-		<Collision radius="0.3" minDistance="1" recoverTime="0.5" />
+		<Collision radius="0.3" minDistance="1" recoverTime="0.5" layers="Default,Static" />
 	</Preset>
 	<!-- CCTV — 아레나 모서리 높이 박힌 카메라가 플레이어를 따라 돈다(데드존 안의 움직임은 놔두고, 손떨림 조금). -->
 	<Preset id="cctv">
@@ -63,7 +63,7 @@
 		<View mode="Orbit" offset="0,0.2,0" distance="3.2" pitch="0.2618" yaw="3.14159" />
 		<Lens focalLength="50" sensorSize="36,24" focusDistance="3.2" aperture="2" nearPlane="0.05" farPlane="150" />
 		<Damping positionTime="0.25" orientationTime="0.1" />
-		<Collision radius="0.25" minDistance="0.8" recoverTime="0.3" />
+		<Collision radius="0.25" minDistance="0.8" recoverTime="0.3" layers="Default,Static" />
 		<PostProcess saturation="0.8" contrast="1.1" vignetteIntensity="0.35" />
 	</Preset>
 	<!-- 킬캠으로 들어갈 때는 짧게 이어 바꾼다. 나올 때는 기본 블렌드다. -->

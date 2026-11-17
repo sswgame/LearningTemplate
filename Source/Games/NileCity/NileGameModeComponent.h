@@ -16,6 +16,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -95,7 +96,6 @@ namespace sw
 
     private:
         /** @brief 이 도시의 시뮬레이션 설정입니다(`startGame` 과 복원이 같은 설정으로 `initialize` 합니다). */
-        CitySettings makeCitySettings() const;
         /** @brief 나일 달력입니다. 아케트, 페레트, 셰무가 각각 네 달씩(열두 달)이며, 계절 하루가 한 달입니다. */
         WorldClockSettings makeClockSettings() const;
         /** @brief 이번 틱의 달력 알림에서 달이 넘어갈 때마다 도시를 결산합니다(같은 시점에 해가 바뀌었으면 범람이 일어납니다). */
@@ -152,8 +152,6 @@ namespace sw
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "City", DisplayName = "Starting Money", Min = 0 )
         int32 _startingMoney;
-        PROPERTY( Category = "City", DisplayName = "Service Duration", Tooltip = "Seconds a walker's service lasts at a house", Min = 1.0, Units = s )
-        float32 _serviceDuration;
         PROPERTY( Category = "Look", DisplayName = "Road Tile Scale", Tooltip = "Scale of the path piece so one road tile fills a cell", Min = 0.0 )
         float32 _roadTileScale;
         PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
@@ -233,7 +231,7 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Cart Color", Tooltip = "Colour of a cart walker" )
         float4 _cartColor;
 
-        shared_ptr<const CityCatalog>        _pCatalog;
+        SharedAssetRef<CityCatalog>          _pCatalog;
         CitySimulation                       _city;
         ConsumerLease                        _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
         Wallet                               _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.

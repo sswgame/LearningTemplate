@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 
 namespace sw
@@ -19,6 +20,7 @@ namespace sw
     enum class LiveEventControlResult : uint8
     {
         Ok = 0,
+        Forbidden,  ///< 쓰는 일 안에서 본 운영자 등급이 모자라다(그사이 강등)
         Invalid,    ///< JSON 이 아니거나 정의가 규칙에 맞지 않는다
         NotFound,   ///< 없는 이벤트이다
         Unavailable ///< 저장소를 쓸 수 없다. 다시 하면 된다
@@ -48,8 +50,8 @@ namespace sw
         ILiveEventControl& operator=( const ILiveEventControl& ) = delete;
 
         /** @brief JSON 정의 하나를 올리거나 같은 id 를 덮어씁니다. */
-        virtual void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
-        virtual void removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )         = 0;
+        virtual void putEventJSON( string_view definitionJSON, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
+        virtual void removeEvent( string_view eventID, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )         = 0;
         /** @brief 이 서버가 마지막으로 읽은 정의를 JSON 글로 @p outListJSON 에 담습니다(비운 뒤 채운다). */
         virtual void collectEventJSON( vector<string>& outListJSON ) const = 0;
         /** @brief 끝난 바꾸기를 @p outListCompletion 뒤에 붙입니다. */

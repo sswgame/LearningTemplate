@@ -9,6 +9,9 @@
 """
 import collections, pathlib, re, sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+import common  # noqa: F401,E402 — 출력 인코딩을 UTF-8 로 맞춘다(cp949 콘솔에서 표의 '—' 가 UnicodeEncodeError 로 멈췄다)
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'Source'
 args = [a for a in sys.argv[1:] if not a.startswith('--')]

@@ -86,7 +86,8 @@ namespace sw
 
         /**
          * @brief 사용 중인 메시를 파일에서 **제자리에서** 다시 읽습니다. 그 메시를 가진 컴포넌트 모두가 새 정점을 봅니다.
-         * @details 틱 밖(게임 스레드)에서만 부릅니다. `Mesh::setVertices` 가 내용 번호를 바꾸므로 정점 풀과 업로드 큐가 다시 업로드합니다.
+         * @details 틱 밖(게임 스레드)에서만 부릅니다. 바꾸기 전에 에셋 워커를 끝내고(`AssetManager::finishPendingAssetJobs`) 렌더 스레드를 비운다 — 다른 스레드가 읽는 중에 덮지 않는다.
+         *          `Mesh::setVertices` 가 내용 번호를 바꾸므로 정점 풀과 업로드 큐가 다시 업로드합니다.
          * @return 사용 중이었고 다시 읽었으면 true. 아무도 쓰지 않거나 읽을 수 없으면(옛 정점 그대로) false 입니다.
          */
         [[nodiscard]] static bool reloadShared( string_view path );

@@ -28,8 +28,11 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _maxPartySize{ 4 };
         /** @brief 떠난 계정을 파티와 로비에 남겨 둘 밀리초입니다. 0 이면 바로 뺍니다. */
-        PROPERTY( Min = 0 )
-        int32 _reconnectGraceMs{ 60000 };
+        PROPERTY( Required, Min = 0, Max = 3600000 )
+        int32 _reconnectGraceMs{ 0 };
+        /** @brief 빠지기가 권한 서버의 확인 답을 기다리는 밀리초입니다. 넘으면 권한 서버가 없는 것으로 보고 빠진 것으로 끝냅니다(감사 O-18). */
+        PROPERTY( Required, Min = 1, Max = 60000 )
+        int32 _cancelConfirmWaitMs{ 0 };
         /**
          * @brief 이 서버가 매칭이 배정하는 전용 게임 서버인지입니다.
          * @details 켜면 배정 주제(`mm.assign.<서버 id>`)를 받아 배정받은 계정만 게임 포트에 들입니다. 받아들이기 정책(`IConnectAdmission`)을 문맥에 내놓고 계정 키트의 `gameConnect` 가 씁니다.

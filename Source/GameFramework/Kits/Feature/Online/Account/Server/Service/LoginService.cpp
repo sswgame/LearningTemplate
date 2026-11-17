@@ -9,8 +9,10 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
 
@@ -23,6 +25,22 @@ namespace sw
             static constexpr utf8 kMinimumBuildKey[]     = "account.minimum_build.";
             static constexpr utf8 kRecommendedBuildKey[] = "account.recommended_build.";
             static constexpr utf8 kStoreURLKey[]         = "account.store_url.";
+            static constexpr utf8 kAttemptKeyPrefix[]    = "login/attempt/";
+            static constexpr utf8 kNonceKeyPrefix[]      = "login/nonce/";
+
+            /** @brief 서버가 낸 모양(소문자 16진 `LoginConstant::kLoginNonceTextSize` 글자)인지입니다. 캐시 키 규칙 밖의 글자가 키에 들어가지 않게 먼저 본다. */
+            static bool isValidLoginNonce( string_view nonce )
+            {
+                if ( nonce.size() != static_cast<size_t>( LoginConstant::kLoginNonceTextSize ) )
+                    return false;
+                for ( const utf8 character : nonce )
+                {
+                    const bool bHex = ( character >= '0' && character <= '9' ) || ( character >= 'a' && character <= 'f' );
+                    if ( bHex == false )
+                        return false;
+                }
+                return true;
+            }
 
             /** @brief 돌아가며 다시 읽는 차례가 해시 맵의 순서에 기대지 않게(결정적이게) 계정 id 로 정렬합니다. */
             struct SessionRefLess
@@ -81,17 +99,41 @@ namespace sw
             LoginStoreResult _serviceResult{};
         };
 
-        /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
+        /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다(해시 상한 `PasswordHashBudget` 는 스레드 안전한 공유물이다). */
         struct LoginStoreRun
         {
-            static LoginCallResult runCall( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
-                                            LoginCallInput& inoutInput )
+            /** @brief 비밀번호 해시를 도는 일인지입니다. 이 일만 해시 상한의 자리를 잡는다. */
+            static bool usesPasswordHash( LoginOperation operation )
+            {
+                return operation == LoginOperation::Register || operation == LoginOperation::Login || operation == LoginOperation::LinkCredential;
+            }
+
+            static LoginCallResult runCall( IServiceStoreConnection& connection, ILoginCrypto& crypto, PasswordHashBudget& hashBudget, const LoginServiceConfig& settings,
+                                            const LoginTicketAuthority& authority, LoginCallInput& inoutInput )
             {
                 LoginCallInput& input = inoutInput;
                 LoginCallResult done;
                 done._completion._operation  = input._operation;
                 done._completion._requestTag = input._requestTag;
-                LoginCompletion& completion  = done._completion;
+                const bool bHashes           = usesPasswordHash( input._operation );
+                const bool bEntered          = bHashes && hashBudget.tryAcquire();
+                if ( bHashes && bEntered == false )
+                    done._completion._result = LoginServiceResult::fail( OnlineError::kBusy ); // 읽기 전에 거절한다 — 계정 유무와 무관한 같은 답이다
+                else
+                    runOperation( connection, crypto, settings, authority, input, done );
+                if ( bEntered )
+                    hashBudget.release();
+                // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
+                input._credential._password.clear();
+                input._subject.clear();
+                Memory::wipe( input._arrDeviceSecret, sizeof( input._arrDeviceSecret ) );
+                return done;
+            }
+
+            static void runOperation( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
+                                      LoginCallInput& input, LoginCallResult& done )
+            {
+                LoginCompletion& completion = done._completion;
                 LoginStoreLogic  logic{ connection, crypto, settings, authority, done._serviceResult };
                 const int64      nowMs = input._nowMs.count();
                 switch ( input._operation )
@@ -174,17 +216,17 @@ namespace sw
                         completion._result = logic.cancelDeletion( input._token, nowMs );
                         break;
                     }
+                    case LoginOperation::IssueLoginNonce:
+                    {
+                        completion._result = LoginServiceResult::fail( OnlineError::kInternal ); // 저장 일로 맡기지 않는다(`issueLoginNonce`)
+                        break;
+                    }
                 }
                 if ( completion._result == LoginResult::Ok && input._bUpdateRecommended == SW_TRUE )
                 {
                     completion._grant._bUpdateRecommended = SW_TRUE;
                     completion._grant._storeURL           = input._storeURL;
                 }
-                // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
-                input._credential._password.clear();
-                input._subject.clear();
-                Memory::wipe( input._arrDeviceSecret, sizeof( input._arrDeviceSecret ) );
-                return done;
             }
 
             static LoginStoreResult runMaintenance( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
@@ -234,9 +276,11 @@ namespace sw
     void LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginServiceConfig& settings,
                                    const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
     {
+        SW_ASSERT( settings._maxConcurrentPasswordHashes >= 1 ); // 키트 설정의 필수 칸이다. 0 이면 모든 가입 · 로그인이 kBusy 로 끝난다
         _store.bindStore( pStore );
         _pCrypto  = pCrypto;
         _settings = settings;
+        _passwordHashBudget.setMaxCount( settings._maxConcurrentPasswordHashes );
         _revocationScanJob.setPeriod( settings._revocationScanMs );
         _ticketAuthority.initialize( pCrypto, arrTicketMasterKey );
         _mapClientToAttemptBucket.initialize( settings._attemptBurst, settings._attemptRefillMs, kMaxTrackedClientCount );
@@ -249,7 +293,10 @@ namespace sw
         _mapAccountToIdentity.clear();
         _mapNameKeyToAccount.clear();
         _verifications.cancelAll(); // 답을 기다리던 요청은 버린다 — 연결이 닫히며 호스트가 답 없는 요청을 끝낸다
-        _revocations.cancelAll();   // 철회 대기열 항목은 저장소에 남아 다음 기동이 다시 한다
+        _cacheReplyOwner.reset();   // 기다리던 캐시 답이 이 객체를 부르지 않게 한다
+        _cacheRequests.cancelAll();
+        _pRouter = nullptr;
+        _revocations.cancelAll(); // 철회 대기열 항목은 저장소에 남아 다음 기동이 다시 한다
         _registeredPlatformProvider.clear();
         _eventBuffer.clear();
         _remoteRevokeBuffer.clear();
@@ -348,6 +395,95 @@ namespace sw
         }
     }
 
+    void LoginService::attachCache( EphemeralStoreRouter* pRouter )
+    {
+        SW_ASSERT( pRouter != nullptr );
+        _pRouter         = pRouter;
+        _cacheReplyOwner = pRouter->openReplyOwner();
+    }
+
+    void LoginService::onCacheReply( const EphemeralReply& reply )
+    {
+        (void)_cacheRequests.answer( reply._requestID, reply ); // 모르는 번호는 취소한 일의 늦은 답이다
+    }
+
+    template <typename TContinue>
+    void LoginService::checkSharedAttempt( uint64 clientKey, LoginOperation operation, uint64 requestTag, const LoginGrant& grant, TContinue&& onAllowed )
+    {
+        if ( _pRouter == nullptr || _settings._sharedAttemptLimit <= 0 )
+        {
+            onAllowed();
+            return;
+        }
+        const string key       = string( LoginServiceInternal::kAttemptKeyPrefix ) + ServiceKeyUtil::makeHex64( clientKey );
+        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeIncrement( key, 1, _settings._sharedAttemptWindowMs ),
+                                                   EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
+        if ( requestID == 0 )
+        {
+            onAllowed(); // 맡기지 못했다(라우터가 오류 로그를 남겼다) — 이 서버의 버킷은 이미 지났다
+            return;
+        }
+        const bool bTracked = _cacheRequests.track( requestID, 0, [this, operation, requestTag, grant, onAllowed = std::forward<TContinue>( onAllowed )]( const EphemeralReply& reply ) mutable
+        {
+            const bool bOverLimit = reply._result == EphemeralResult::Ok && reply._integer > _settings._sharedAttemptLimit;
+            if ( bOverLimit == false )
+            {
+                onAllowed(); // 캐시에 닿지 못했으면(Unavailable) 이 서버의 버킷만으로 막는다
+                return;
+            }
+            LoginGrant limited    = grant;
+            limited._retryAfterMs = _settings._sharedAttemptWindowMs; // 창이 끝날 때까지 — 위 끝이다
+            pushImmediate( operation, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), limited );
+        } );
+        SW_ASSERT( bTracked ); // 라우터 요청 번호는 겹치지 않는다
+        (void)bTracked;
+    }
+
+    void LoginService::issueLoginNonce( uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        LoginGrant limited;
+        if ( consumeAttempt( clientKey, nowMs, limited._retryAfterMs ) == false )
+        {
+            pushImmediate( LoginOperation::IssueLoginNonce, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), limited );
+            return;
+        }
+        uint8      arrNonce[LoginConstant::kLoginNonceSize]{};
+        const bool bReady = _pRouter != nullptr && _settings._loginNonceLifetimeMs > 0 && _pCrypto != nullptr &&
+                            _pCrypto->fillRandom( arrNonce, LoginConstant::kLoginNonceSize );
+        if ( bReady == false )
+        {
+            pushImmediate( LoginOperation::IssueLoginNonce, requestTag, LoginServiceResult::fail( OnlineError::kUnavailable ), LoginGrant{} );
+            return;
+        }
+        string nonce;
+        for ( int32 offset = 0; offset < LoginConstant::kLoginNonceSize; offset += static_cast<int32>( sizeof( uint64 ) ) )
+        {
+            uint64 word = 0;
+            Memory::copy( &word, arrNonce + offset, sizeof( uint64 ) );
+            nonce += ServiceKeyUtil::makeHex64( word );
+        }
+        Memory::wipe( arrNonce, sizeof( arrNonce ) );
+        const uint64 requestID =
+            _pRouter->submit( EphemeralRequest::makeSet( string( LoginServiceInternal::kNonceKeyPrefix ) + nonce, vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ),
+                              EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
+        if ( requestID == 0 )
+        {
+            pushImmediate( LoginOperation::IssueLoginNonce, requestTag, LoginServiceResult::fail( OnlineError::kUnavailable ), LoginGrant{} );
+            return;
+        }
+        (void)_cacheRequests.track( requestID, 0, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
+        {
+            LoginCompletion completion;
+            completion._operation  = LoginOperation::IssueLoginNonce;
+            completion._requestTag = requestTag;
+            completion._result     = reply._result == EphemeralResult::Ok ? LoginServiceResult{ LoginResult::Ok } : LoginServiceResult::fail( OnlineError::kUnavailable );
+            if ( reply._result == EphemeralResult::Ok )
+                completion._loginNonce = nonce;
+            if ( requestTag != 0 )
+                _completionBuffer.push( std::move( completion ) );
+        } );
+    }
+
     void LoginService::registerAccount( const LoginCredential& credential, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
         LoginGrant limited; // 가입도 비싼 비밀번호 해시를 돌린다 - 로그인과 같은 버킷으로 막지 않으면 해시로 서버를 묶을 수 있다
@@ -356,7 +492,8 @@ namespace sw
             pushImmediate( LoginOperation::Register, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), limited );
             return;
         }
-        seedAccount( credential, nowMs, requestTag );
+        checkSharedAttempt( clientKey, LoginOperation::Register, requestTag, limited, [this, credential, nowMs, requestTag]()
+        { seedAccount( credential, nowMs, requestTag ); } );
     }
 
     void LoginService::seedAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
@@ -384,7 +521,8 @@ namespace sw
         input._credential         = credential;
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
-        submitCall( std::move( input ) );
+        checkSharedAttempt( clientKey, LoginOperation::Login, requestTag, buildGrant, [this, input = std::move( input )]() mutable
+        { submitCall( std::move( input ) ); } );
     }
 
     void LoginService::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
@@ -406,7 +544,8 @@ namespace sw
         Memory::copy( input._arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
-        submitCall( std::move( input ) );
+        checkSharedAttempt( clientKey, LoginOperation::GuestLogin, requestTag, buildGrant, [this, input = std::move( input )]() mutable
+        { submitCall( std::move( input ) ); } );
     }
 
     void LoginService::platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
@@ -424,7 +563,8 @@ namespace sw
             pushImmediate( LoginOperation::PlatformLogin, requestTag, LoginServiceResult::fail( OnlineError::kRateLimited ), buildGrant );
             return;
         }
-        beginVerification( LoginOperation::PlatformLogin, provider, ticketBytes, LoginSessionToken{}, buildGrant, nowMs, requestTag );
+        checkSharedAttempt( clientKey, LoginOperation::PlatformLogin, requestTag, buildGrant, [this, provider = string( provider ), ticketBytes, buildGrant, nowMs, requestTag]()
+        { beginVerification( LoginOperation::PlatformLogin, provider, ticketBytes, LoginSessionToken{}, buildGrant, nowMs, requestTag ); } );
     }
 
     void LoginService::resumeSession( const LoginSessionToken& token, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
@@ -445,7 +585,8 @@ namespace sw
         input._token              = token;
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
-        submitCall( std::move( input ) );
+        checkSharedAttempt( clientKey, LoginOperation::Resume, requestTag, buildGrant, [this, input = std::move( input )]() mutable
+        { submitCall( std::move( input ) ); } );
     }
 
     void LoginService::validateSession( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
@@ -594,10 +735,11 @@ namespace sw
 
     void LoginService::submitCall( LoginCallInput&& input )
     {
-        ILoginCrypto*               pCrypto    = _pCrypto;
-        const LoginTicketAuthority* pAuthority = &_ticketAuthority; // 저장소 스레드는 읽기만 한다
-        _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
-        { return LoginStoreRun::runCall( connection, *pCrypto, settings, *pAuthority, input ); },
+        ILoginCrypto*               pCrypto     = _pCrypto;
+        PasswordHashBudget*         pHashBudget = &_passwordHashBudget; // 원자 셈이라 워커 여럿이 함께 쓴다
+        const LoginTicketAuthority* pAuthority  = &_ticketAuthority;    // 저장소 스레드는 읽기만 한다
+        _store.submit( [pCrypto, pHashBudget, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
+        { return LoginStoreRun::runCall( connection, *pCrypto, *pHashBudget, settings, *pAuthority, input ); },
                        [this]( LoginCallResult& done )
         { applyCompletion( std::move( done._completion ), done._serviceResult ); } );
     }
@@ -740,6 +882,45 @@ namespace sw
         if ( bTicketOk == false )
         {
             pushImmediate( operation, requestTag, LoginResult::ProviderRejected, LoginGrant{} );
+            return;
+        }
+        string nonce;
+        if ( pProvider->findServerNonce( ticketBytes, nonce ) == false )
+        {
+            startVerification( operation, provider, ticketBytes, token, buildGrant, nowMs, requestTag );
+            return;
+        }
+        // 서버가 낸 nonce 를 먼저 지운다 — 지워졌으면(Ok) 처음 쓰는 것이다. 없으면 이미 썼거나 서버가 낸 적 없다. 휘발 저장소 하나라 서버 여럿에서 한 번이다(감사 O-13).
+        if ( LoginServiceInternal::isValidLoginNonce( nonce ) == false || _pRouter == nullptr )
+        {
+            pushImmediate( operation, requestTag, LoginResult::ProviderRejected, LoginGrant{} );
+            return;
+        }
+        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeErase( string( LoginServiceInternal::kNonceKeyPrefix ) + nonce ),
+                                                   EphemeralStoreRouter::ReplyDelegate::create<&LoginService::onCacheReply>( this ), _cacheReplyOwner );
+        if ( requestID == 0 )
+        {
+            pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} );
+            return;
+        }
+        (void)_cacheRequests.track( requestID, 0, [this, operation, provider = string( provider ), ticketBytes, token, buildGrant, nowMs, requestTag]( const EphemeralReply& reply )
+        {
+            if ( reply._result == EphemeralResult::Ok )
+                startVerification( operation, provider, ticketBytes, token, buildGrant, nowMs, requestTag );
+            else if ( reply._result == EphemeralResult::NotFound )
+                pushImmediate( operation, requestTag, LoginResult::ProviderRejected, LoginGrant{} ); // 다시 쓴 토큰이거나 지난 nonce 다
+            else
+                pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} ); // 캐시에 닿지 못했다 — 새 nonce 로 다시 한다
+        } );
+    }
+
+    void LoginService::startVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
+                                          const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        IPlatformLoginProvider* pProvider = _registeredPlatformProvider.findByName( provider );
+        if ( pProvider == nullptr )
+        {
+            pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} );
             return;
         }
         PendingVerification pending;

@@ -44,7 +44,7 @@ namespace sw
             SW_LOG_ERROR_ID( "DebugChannel.DebugChannelNeedsToken", "Debug channel needs a token (the caller passes it in DebugChannelConfig::_token) - not started" );
             return false;
         }
-        if ( settings._bindAddress._ipv4 != NetAddress::makeLoopback( 0 )._ipv4 )
+        if ( settings._bindAddress.isLoopback() == false )
         {
             SW_LOG_ERROR_ID( "DebugChannel.DebugChannelBindsLoopback", "Debug channel binds to the loopback address only (got %#) - not started", settings._bindAddress.toString().c_str() );
             return false;

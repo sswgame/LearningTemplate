@@ -29,6 +29,16 @@ namespace sw
     };
 
     /**
+     * @struct RenderGraphAliasJoin
+     * @brief 한 수명으로 묶을 두 후보(`RenderGraphAliasPlan::joinLifetimes` 에 넘기는 목록의 번호)입니다 — 꺼진 효과의 출력이 원본을 가리키는 짝(`kBypassesToSource`).
+     */
+    struct RenderGraphAliasJoin
+    {
+        uint32 _source{ 0 };
+        uint32 _target{ 0 };
+    };
+
+    /**
      * @struct RenderGraphAliasPlan
      * @brief 계획의 결과입니다. 별칭 이름 → 텍스처를 가진 첨부 이름. 맵에 없는 후보는 자기 텍스처를 가진다.
      */
@@ -40,6 +50,11 @@ namespace sw
          *          결과는 입력 순서에 따라 결정적이다(같은 파이프라인이면 같은 계획 — 뷰마다 · 프레임마다 같다).
          */
         static RenderGraphAliasPlan build( const vector<RenderGraphAliasCandidate>& listCandidate );
+        /**
+         * @brief @p listJoin 으로 이어진 후보들을 한 묶음으로 보고, 묶음의 모든 후보에 묶음 전체의 레벨 구간(가장 이른 첫 레벨 · 가장 늦은 끝 레벨)을 줍니다.
+         * @details 짝마다 둘만 맞추면 사슬(A ← B ← C)에서 A 가 C 의 끝을 받지 못한다 — 묶음을 union-find 로 모은 뒤 한 번에 맞춘다.
+         */
+        static void joinLifetimes( vector<RenderGraphAliasCandidate>& listCandidate, const vector<RenderGraphAliasJoin>& listJoin );
 
         unordered_map<hashed_string, hashed_string> _mapAliasToOwner;
         uint32                                      _ownerCount{ 0 }; ///< 실제로 만들 텍스처 수(후보 수 - 별칭 수)

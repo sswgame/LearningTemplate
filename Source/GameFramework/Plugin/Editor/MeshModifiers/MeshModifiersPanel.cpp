@@ -348,9 +348,10 @@ namespace sw::editor
         EditorSelfTestMarks::record( "meshmodifiers.useSelection" );
         if ( bUseSelection )
         {
-            GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject(); // 메인 씬의 선택(위 `UseSelectionForParam` 과 같다)
-            if ( session.setTarget( pObject ) == false )
-                SW_LOG_WARNING_ID( "MeshModifiersPanel.MeshModifiersNeedObject", "Mesh modifiers need an object whose mesh component uses a .mesh asset" );
+            GameObject*          pObject = editor::getMainSceneSelection().getPrimaryObject(); // 메인 씬의 선택(위 `UseSelectionForParam` 과 같다)
+            const expected<void> picked  = session.setTarget( pObject );
+            if ( picked.has_value() == false )
+                SW_LOG_WARNING_ID( "MeshModifiersPanel.MeshModifiersNeedObject", "Mesh modifiers could not take the selection: %# (%#)", picked.error().message(), picked.error().detail() );
         }
         ImGui::SameLine();
         if ( session.hasTarget() )

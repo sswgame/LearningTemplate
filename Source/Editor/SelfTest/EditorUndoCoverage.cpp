@@ -142,9 +142,8 @@ namespace sw::editor
                 if ( indexAfter > indexBefore + 1 )
                     SW_LOG_ERROR_ID( "Editor.UndoCoverageSteps", "Undo coverage: '%#' pushed %# undo steps for one run (its transaction did not group them)", commandID.c_str(),
                                      static_cast<uint64>( indexAfter - indexBefore ) );
-                while ( stack.getCurrentIndex() > indexBefore )
+                while ( stack.getCurrentIndex() > indexBefore && stack.undo() ) // 거절되면(열린 편집) 멈춘다 — 아래 해시 비교가 실패로 알린다
                 {
-                    stack.undo();
                 }
                 uint64 restored = 0;
                 if ( computeEditedSceneHash( restored ) == false )

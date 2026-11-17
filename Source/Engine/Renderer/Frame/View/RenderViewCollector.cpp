@@ -173,18 +173,16 @@ namespace sw
         return budget;
     }
 
-    uint32 RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
-                                                   const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget,
-                                                   RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
+    RenderViewCollectResult RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
+                                                                    const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget,
+                                                                    RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
     {
         outListView.clear();
-        RenderViewScheduler::Candidate arrCandidate[kMaxExtraRenderView]{};
-        const CameraRenderOutput*      arrCameraOutput[kMaxExtraRenderView]{};
-        uint32                         candidateCount = 0;
+        // 후보는 자리 수(`kMaxExtraRenderView`)와 무관하게 모두 모은다 — 자리는 스케줄러가 보이는 것 · 늦은 것 먼저 준다(등록 순서로 자르지 않는다).
+        vector<RenderViewScheduler::Candidate> listCandidate;
+        vector<const CameraRenderOutput*>      listCameraOutput;
         for ( CameraComponent* pCamera : manager.getCameraRegistry().getAll() )
         {
-            if ( candidateCount >= kMaxExtraRenderView )
-                break;
             const bool bNotExtraViewCamera = pCamera == pMainCamera || CameraRegistry::isUsableCamera( pCamera ) == false || pCamera->getRole() == CameraRole::Viewport;
             if ( bNotExtraViewCamera )
                 continue;
@@ -226,16 +224,16 @@ namespace sw
             request._position            = pCamera->getCameraPosition();
             request._transparentSortAxis = engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( pCamera->isOrthographic(), pCamera->getCameraForward() );
 
-            RenderViewScheduler::Candidate& candidate = arrCandidate[candidateCount];
+            RenderViewScheduler::Candidate& candidate = listCandidate.emplace_back();
             candidate._viewID                         = request._viewID;
             candidate._updateRate                     = MathUtil::max( 0.0f, output._updateRate );
             candidate._pixelCount                     = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputWidth ), request._settings._resolutionScale, zoom ) *
                                     FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputHeight ), request._settings._resolutionScale, zoom );
-            candidate._bBudgeted            = request._outputKind == RenderViewOutputKind::RenderTexture ? SW_TRUE : SW_FALSE;
-            arrCameraOutput[candidateCount] = &output;
+            candidate._bBudgeted = request._outputKind == RenderViewOutputKind::RenderTexture ? SW_TRUE : SW_FALSE;
+            listCameraOutput.push_back( &output );
             outListView.push_back( request );
-            ++candidateCount;
         }
+        const uint32 candidateCount = static_cast<uint32>( listCandidate.size() );
 
         // 보임은 사람이 보는 화면 전부에서 측정한다 — 주 시점과 화면 사각형 뷰(분할 화면의 다른 칸에 모니터가 보일 수 있다). 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
         LODView arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
@@ -243,28 +241,43 @@ namespace sw
         arrVisibilityView[visibilityViewCount++] = LODView::make( mainViewProj, mainPosition );
         for ( const RenderViewRequest& request : outListView )
         {
-            if ( request._outputKind == RenderViewOutputKind::ScreenRect )
+            // shortcut: 화면 사각형 뷰가 자리 수보다 많으면 넘친 칸은 보는 쪽으로 세지 않는다 — 분할 화면이 여덟 칸을 넘으면 늘린다.
+            if ( request._outputKind == RenderViewOutputKind::ScreenRect && visibilityViewCount < RenderViewCollectorInternal::kMaxVisibilityView )
                 arrVisibilityView[visibilityViewCount++] = LODView::make( request._viewProj, request._position );
         }
         uint32 hiddenViewCount = 0;
         for ( uint32 index = 0; index < candidateCount; ++index )
         {
-            const CameraRenderOutput& output = *arrCameraOutput[index];
+            const CameraRenderOutput& output = *listCameraOutput[index];
             if ( output._visibilityObject.isValid() == false )
                 continue;
-            const float32 screenSize      = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, arrVisibilityView, visibilityViewCount, pMainOcclusion );
-            const bool    bVisible        = screenSize > 0.0f && screenSize >= output._minScreenSize;
-            arrCandidate[index]._bVisible = bVisible ? SW_TRUE : SW_FALSE;
+            const float32 screenSize       = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, arrVisibilityView, visibilityViewCount, pMainOcclusion );
+            const bool    bVisible         = screenSize > 0.0f && screenSize >= output._minScreenSize;
+            listCandidate[index]._bVisible = bVisible ? SW_TRUE : SW_FALSE;
             hiddenViewCount += bVisible ? 0u : 1u;
         }
 
-        uint8 arrRender[kMaxExtraRenderView]{};
-        (void)scheduler.schedule( now, arrCandidate, candidateCount, budget, arrRender );
+        vector<uint8> listListed( candidateCount, SW_FALSE );
+        vector<uint8> listRender( candidateCount, SW_FALSE );
+        (void)scheduler.schedule( now, listCandidate.data(), candidateCount, kMaxExtraRenderView, budget, listListed.data(), listRender.data() );
+        // 자리를 얻지 못한 뷰는 목록에서 뺀다(렌더러는 자리 수만큼만 뷰 자원을 둔다). 남은 순서는 등록 순서 그대로다.
+        RenderViewCollectResult result;
+        result._hiddenCount = hiddenViewCount;
+        uint32 keptCount    = 0;
         for ( uint32 index = 0; index < candidateCount; ++index )
         {
-            outListView[index]._bRender = arrRender[index];
+            if ( listListed[index] == SW_FALSE )
+            {
+                ++result._overflowCount;
+                continue;
+            }
+            if ( keptCount != index )
+                outListView[keptCount] = std::move( outListView[index] );
+            outListView[keptCount]._bRender = listRender[index];
+            ++keptCount;
         }
-        return hiddenViewCount;
+        outListView.resize( keptCount );
+        return result;
     }
 
     void RenderViewCollector::appendViewportView( CameraComponent& camera, const ViewportTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView )

@@ -66,7 +66,7 @@ namespace sw
                 world.set<GameFlagsWriteSlot>( &flags );
 
                 // 1) 행동 트리: 경보가 꺼져 있으면 켠다.
-                const shared_ptr<const BehaviorTreeAsset> pTree = SharedAssetCache<BehaviorTreeAsset>::acquire( folder + "/guard.bt.xml" );
+                const shared_ptr<const BehaviorTreeAsset> pTree = SharedAssetCache<BehaviorTreeAsset>::acquire( folder + "/guard.bt.xml" ).snapshot();
                 if ( pTree == nullptr )
                 {
                     outReply = "the behavior tree could not be read (see the log)";
@@ -79,7 +79,7 @@ namespace sw
                 (void)runner.tick( blackboard, nullptr, 0.0f ); // 결과는 플래그로 본다
 
                 // 2) 스케줄: 경보가 켜진 날에만 문으로 가고, 도착하면 visits 를 올린다.
-                const shared_ptr<const ScheduleCatalog> pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( folder + "/watch.schedules.xml" );
+                const shared_ptr<const ScheduleCatalog> pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( folder + "/watch.schedules.xml" ).snapshot();
                 if ( pCatalog == nullptr )
                 {
                     outReply = "the schedule could not be read (see the log)";

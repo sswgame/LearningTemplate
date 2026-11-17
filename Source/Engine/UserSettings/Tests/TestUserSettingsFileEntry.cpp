@@ -88,7 +88,7 @@ SW_TEST_CASE( UserSettingsFileEntryTest, NewerFileIsNotRewrittenAsOlder )
     SW_REQUIRE_TRUE( text.has_value() );
     sw::JSONDocument doc;
     SW_REQUIRE_TRUE( doc.parse( *text, "test" ) );
-    SW_EXPECT_EQUAL( sw::uint32{ 2 }, doc.getRoot().get( "versions" ).get( "engine" ).read<sw::uint32>().value() );
+    SW_EXPECT_EQUAL( uint32{ 2 }, doc.getRoot().get( "versions" ).get( "engine" ).read<uint32>().value() );
     SW_EXPECT_EQUAL( size_t{ 0 }, doc.getRoot().get( "values" ).size() );
 }
 
@@ -124,12 +124,12 @@ SW_TEST_CASE( UserSettingsFileEntryTest, UnknownKeysAndOwnersAreKeptAsWritten )
     sw::JSONDocument doc;
     SW_REQUIRE_TRUE( doc.parse( *text, "test" ) );
     const sw::JSONValue versions = doc.getRoot().get( "versions" );
-    SW_EXPECT_EQUAL( sw::uint32{ 1 }, versions.get( "engine" ).read<sw::uint32>().value() );
-    SW_EXPECT_EQUAL( sw::uint32{ 4 }, versions.get( "debughud" ).read<sw::uint32>().value() );
+    SW_EXPECT_EQUAL( uint32{ 1 }, versions.get( "engine" ).read<uint32>().value() );
+    SW_EXPECT_EQUAL( uint32{ 4 }, versions.get( "debughud" ).read<uint32>().value() );
     const sw::JSONValue values = doc.getRoot().get( "values" );
     SW_EXPECT_TRUE( values.get( "debug.hud" ).isBool() );
     SW_EXPECT_TRUE( values.get( "debug.list" ).isArray() && values.get( "debug.list" ).size() == 2 );
-    SW_EXPECT_EQUAL( 0.25, values.get( "audio.master" ).read<sw::float64>().value() );
+    SW_EXPECT_EQUAL( 0.25, values.get( "audio.master" ).read<float64>().value() );
 }
 
 /**

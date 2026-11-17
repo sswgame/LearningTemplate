@@ -262,6 +262,8 @@ namespace sw::editor
             else
                 SW_LOG_INFO_ID( "CharacterEditorModel.ReferencePoseFileSaved", "Reference pose file saved to %#", writePath->c_str() );
         }
+        if ( isBodyDataDirty() && saveBodyData() == false )
+            bSaved = false; // 까닭은 saveBodyData 가 상태 줄에 남겼다
         if ( bSaved )
             _status.clear();
         return bSaved;
@@ -273,6 +275,11 @@ namespace sw::editor
             outListAssetID.push_back( string( _paths._socketPath.c_str() ) );
         if ( _pose.isDirty() )
             outListAssetID.push_back( string( _paths._refPosePath.c_str() ) );
+        for ( const BodyDataEditModel* pModel : { &_bodyShapes, &_bodyProfiles, &_visuals } )
+        {
+            if ( pModel->isDirty() && pModel->getDiskPath().empty() == false )
+                outListAssetID.push_back( pModel->getDiskPath() );
+        }
     }
 
     void CharacterEditorModel::revert()
@@ -630,7 +637,7 @@ namespace sw::editor
         if ( _paths._animationSet.empty() )
             return;
         // 런타임과 같은 공유 캐시의 한 벌을 읽는다(사본을 읽지 않는다).
-        const shared_ptr<const AnimationSet> pAnimationSet = SharedAssetCache<AnimationSet>::acquire( string_view( _paths._animationSet.c_str() ) );
+        const shared_ptr<const AnimationSet> pAnimationSet = SharedAssetCache<AnimationSet>::acquire( string_view( _paths._animationSet.c_str() ) ).snapshot();
         if ( pAnimationSet == nullptr )
             return;                                                          // 셋이 까닭을 남겼다
         for ( const AnimationSetEntry& entry : pAnimationSet->getEntries() ) // 표는 이름순이다

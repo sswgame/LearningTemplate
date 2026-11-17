@@ -19,8 +19,8 @@ namespace
     {
         sw::CommandStack::Command cmd;
         cmd._label = "owned";
-        cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), owner );
-        cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), owner );
+        cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), owner, 0u );
+        cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&doNothing>(), owner, 0u );
         return cmd;
     }
 } // namespace
@@ -28,7 +28,9 @@ namespace
 /** @brief [CommandStackOwnerTest] 주인이 사라지면 그 주인의 코드 단계를 가진 명령이 스택에서 빠진다(전역 스택 목록 없이 구독으로) */
 SW_TEST_CASE( CommandStackOwnerTest, OwnerReleaseDropsItsCommands )
 {
-    sw::CommandStack stack;
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     {
         sw::editor::UndoStepOwner owner;
         stack.push( makeOwnedCommand( owner ) );
@@ -43,7 +45,9 @@ SW_TEST_CASE( CommandStackOwnerTest, StackReleasedBeforeOwner )
 {
     sw::editor::UndoStepOwner owner;
     {
-        sw::CommandStack stack;
+        sw::CommandStack stack{
+            sw::UndoBufferLimit{ 128u, 1ull << 20 }
+        };
         stack.push( makeOwnedCommand( owner ) );
         SW_EXPECT_TRUE( stack.getCommandCount() == 1u );
     }

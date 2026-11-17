@@ -10,6 +10,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include <thread>
@@ -181,5 +182,30 @@ namespace sw
     struct TickModeMainDerivedTestComponent : public TickModeMainTestComponent
     {
         REFLECT_BODY();
+    };
+
+    /**
+     * @brief 해체될 때(`onDestroy`) 같은 매니저에 오브젝트를 하나 만드는 컴포넌트입니다(`TestObjectLifetime.cpp` — 씬을 비우는 중의 생성).
+     * @details 게임 코드의 "죽을 때 파편 · 드롭을 남긴다" 와 같은 모양이다. 만든 수를 테스트가 준 칸에 센다.
+     */
+    REFLECT( HideInMenu )
+    struct LifetimeSpawnOnDestroyTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        static constexpr const utf8* kSpawnedName = "SpawnedDuringTeardown";
+
+        uint32* _pSpawnCount{ nullptr };
+
+        void onDestroy() override
+        {
+            Component::onDestroy();
+            GameObjectManager* const pManager = getOwner() != nullptr ? getOwner()->getMutableManager() : nullptr;
+            if ( pManager == nullptr )
+                return;
+            (void)pManager->createGameObject( hashed_string( kSpawnedName ) );
+            if ( _pSpawnCount != nullptr )
+                ++*_pSpawnCount;
+        }
     };
 } // namespace sw

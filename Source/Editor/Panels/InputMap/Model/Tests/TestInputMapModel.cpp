@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/InputMap/Model/InputMapModel.h"
 
 using namespace sw;
@@ -25,12 +26,21 @@ namespace
         }
     };
     using Util = InputMapModelTestUtil;
+
+    /** @brief 편집 알림을 세는 창구입니다(문서 패널 대신). */
+    struct InputMapModelTestRecorder
+    {
+        uint32               _count{ 0 };
+        DocumentEditRecorder _recorder{ DocumentEditRecorder::RecordDelegate::create( [this]( string_view )
+        { ++_count; } ) };
+    };
 } // namespace
 
 /** @brief [InputMapModelTest] 경로가 게임 설정 파일이면 묶음을 읽고, 액션마다 그것을 정한 파일을 보인다 */
 SW_TEST_CASE( InputMapModelTest, GameSettingsPathOpensTheBundle )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     SW_EXPECT_FALSE( document.isBundlePath() );
     SW_REQUIRE_TRUE( document.editInputMapPath().commit( "game/empty/input/bundletest/data/gamesettings.xml" ) );
     SW_EXPECT_TRUE( document.isBundlePath() );
@@ -41,34 +51,39 @@ SW_TEST_CASE( InputMapModelTest, GameSettingsPathOpensTheBundle )
     SW_EXPECT_TRUE( document.describeActionSource( hashed_string( "Missing" ) ).empty() );
 }
 
-// 바뀐 편집만 저장하지 않은 표시를 켠다 — 패널이 후속 처리를 쓰지 않아도 표시가 맞다.
+// 바뀐 편집만 알린다(미저장 · 되돌리기) — 패널이 후속 처리를 쓰지 않아도 표시가 맞다.
 SW_TEST_CASE( InputMapModelTest, EditsThatChangeNothingStayClean )
 {
-    InputMapModel document;
-    SW_EXPECT_FALSE( document.isDirty() );
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
+    SW_EXPECT_EQUAL( documentRecorder._count, 0u ); // 알린 편집이 없다
     SW_EXPECT_FALSE( document.createAction( "", InputActionValueType::Boolean ) );
     SW_EXPECT_FALSE( document.setBindingNegate( hashed_string( "Missing" ), 0, true ) );
     SW_EXPECT_FALSE( document.removeBinding( hashed_string( "Missing" ), 0 ) );
     SW_EXPECT_FALSE( document.deleteAction( hashed_string( "Missing" ) ) );
     SW_EXPECT_FALSE( document.setLayerEnabled( hashed_string( "Missing" ), false ) ); // 없는 레이어
-    SW_EXPECT_FALSE( document.isDirty() );
+    SW_EXPECT_EQUAL( documentRecorder._count, 0u );                                   // 알린 편집이 없다
 }
 
 SW_TEST_CASE( InputMapModelTest, EditsThatChangeTheMapMarkItDirty )
 {
-    InputMapModel created;
+    InputMapModelTestRecorder createdRecorder;
+    InputMapModel             created{ createdRecorder._recorder };
     SW_EXPECT_TRUE( created.createAction( "Jump", InputActionValueType::Boolean ) );
-    SW_EXPECT_TRUE( created.isDirty() );
+    SW_EXPECT_TRUE( createdRecorder._count > 0u ); // 편집을 알렸다(미저장 · 되돌리기)
 
-    InputMapModel reset;
+    InputMapModelTestRecorder resetRecorder;
+
+    InputMapModel reset{ resetRecorder._recorder };
     reset.resetAllBindingsToDefault();
-    SW_EXPECT_TRUE( reset.isDirty() );
+    SW_EXPECT_TRUE( resetRecorder._count > 0u ); // 편집을 알렸다(미저장 · 되돌리기)
 }
 
 // 결함: 레이어를 같은 값으로 "바꿔도" 저장하지 않은 표시가 켜졌고, 없는 레이어도 그랬다.
 SW_TEST_CASE( InputMapModelTest, LayerToggleMarksDirtyOnlyWhenItChanges )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     SW_REQUIRE_TRUE( document.createLayer( "Menu", 3 ) );
     SW_EXPECT_EQUAL( 3, document.getInputMap().getLayerPriority( hashed_string( "Menu" ) ) );
     SW_EXPECT_FALSE( document.createLayer( "Menu", 4 ) ); // 있는 이름은 우선순위를 덮지 않는다
@@ -82,7 +97,8 @@ SW_TEST_CASE( InputMapModelTest, LayerToggleMarksDirtyOnlyWhenItChanges )
 // 결함: 있는 이름으로 만들면 아무것도 만들지 않고 "만들었다" 고 입력칸을 비웠고, 저장하지 않은 표시까지 켰다.
 SW_TEST_CASE( InputMapModelTest, CreatingAnExistingActionIsRefused )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     SW_REQUIRE_TRUE( document.createAction( "Jump", InputActionValueType::Axis1D ) );
     SW_EXPECT_TRUE( document.getSelectedAction() == "Jump" ); // 만들자마자 바인딩을 더할 수 있다
     SW_EXPECT_FALSE( document.canCreateAction( "Jump" ) );
@@ -93,7 +109,8 @@ SW_TEST_CASE( InputMapModelTest, CreatingAnExistingActionIsRefused )
 
 SW_TEST_CASE( InputMapModelTest, DeletingTheSelectedActionClearsTheSelection )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     SW_REQUIRE_TRUE( document.createAction( "Jump", InputActionValueType::Boolean ) );
     SW_REQUIRE_TRUE( document.createAction( "Run", InputActionValueType::Boolean ) );
     SW_REQUIRE_TRUE( document.deleteAction( hashed_string( "Jump" ) ) );
@@ -106,20 +123,22 @@ SW_TEST_CASE( InputMapModelTest, DeletingTheSelectedActionClearsTheSelection )
 // 키 잡기: 바인딩이 없는 액션이면 바뀌지 않고, 잡기는 끝난다.
 SW_TEST_CASE( InputMapModelTest, KeyCaptureWithoutABindingLeavesTheMapClean )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     document.selectAction( "Missing" );
     document.beginKeyCapture( 0 );
     SW_EXPECT_TRUE( document.isCapturingKey() );
     SW_EXPECT_FALSE( document.finishKeyCapture( Key::A ) );
     SW_EXPECT_FALSE( document.isCapturingKey() );
-    SW_EXPECT_FALSE( document.isDirty() );
+    SW_EXPECT_EQUAL( documentRecorder._count, 0u );         // 알린 편집이 없다
     SW_EXPECT_FALSE( document.finishKeyCapture( Key::A ) ); // 잡는 중이 아니다
 }
 
 // 결함: 만든 액션에 바인딩을 더할 길이 없어, 새 액션은 영영 발화하지 않았다.
 SW_TEST_CASE( InputMapModelTest, NewBindingGoesToTheLayerOfTheLastBinding )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     document.beginNewBindingCapture();
     SW_EXPECT_FALSE( document.isCapturingKey() ); // 고른 액션이 없다
 
@@ -127,7 +146,7 @@ SW_TEST_CASE( InputMapModelTest, NewBindingGoesToTheLayerOfTheLastBinding )
     const hashed_string action( "Jump" );
     SW_REQUIRE_EQUAL( uint32{ 1 }, document.getInputMap().getBindingCount( action ) );
     SW_EXPECT_TRUE( document.getInputMap().findBindingLayer( action, 0 ) == document.getInputMap().getDefaultLayerName() );
-    SW_EXPECT_TRUE( document.isDirty() );
+    SW_EXPECT_TRUE( documentRecorder._count > 0u ); // 편집을 알렸다(미저장 · 되돌리기)
 
     SW_REQUIRE_TRUE( document.createLayer( "Menu", 0 ) );
     SW_REQUIRE_TRUE( document.setBindingLayer( action, 0, hashed_string( "Menu" ) ) );
@@ -140,9 +159,10 @@ SW_TEST_CASE( InputMapModelTest, NewBindingGoesToTheLayerOfTheLastBinding )
 // 결함: 다시 잡기가 수식 키를 볼 수 없어 Ctrl+S 를 Ctrl+D 로 옮기지 못했고, Ctrl 을 누르는 순간 Ctrl 이 키로 잡혔다.
 SW_TEST_CASE( InputMapModelTest, CaptureTakesTheWholeCombination )
 {
-    InputMapModel       document;
-    const hashed_string action( "Save" );
-    const uint8         ctrl = static_cast<uint8>( ModifierKey::Ctrl );
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
+    const hashed_string       action( "Save" );
+    const uint8               ctrl = static_cast<uint8>( ModifierKey::Ctrl );
     Util::addKeyBinding( document, "Save", Key::S, ctrl );
 
     document.beginKeyCapture( 0 );
@@ -178,7 +198,8 @@ SW_TEST_CASE( InputMapModelTest, CaptureTakesTheWholeCombination )
 // 수식 키를 혼자 눌렀다 떼면 그 키 자신이다(달리기의 Shift).
 SW_TEST_CASE( InputMapModelTest, CaptureTakesAModifierAloneWhenReleased )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     Util::addKeyBinding( document, "Run", Key::A );
 
     document.beginKeyCapture( 0 );
@@ -197,7 +218,8 @@ SW_TEST_CASE( InputMapModelTest, CaptureTakesAModifierAloneWhenReleased )
 
 SW_TEST_CASE( InputMapModelTest, EscapeCancelsTheCapture )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     SW_REQUIRE_TRUE( document.createAction( "Run", InputActionValueType::Boolean ) );
     document.beginNewBindingCapture();
     InputMapCaptureFrame escape{};
@@ -210,9 +232,10 @@ SW_TEST_CASE( InputMapModelTest, EscapeCancelsTheCapture )
 // 패드 버튼은 단일 바인딩과 새 바인딩만 받는다. 단축키에 넣으면 파일이 이름 붙이지 못한다.
 SW_TEST_CASE( InputMapModelTest, SlotCaptureOnlyFitsSingleBindings )
 {
-    InputMapModel       document;
-    const hashed_string action( "Run" );
-    const InputSlot     button = InputSlot::fromGamepadButton( GamepadButton::RightShoulder, 0 );
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
+    const hashed_string       action( "Run" );
+    const InputSlot           button = InputSlot::fromGamepadButton( GamepadButton::RightShoulder, 0 );
     Util::addKeyBinding( document, "Run", Key::A, static_cast<uint8>( ModifierKey::Ctrl ) );
 
     document.beginKeyCapture( 0 );
@@ -247,7 +270,8 @@ SW_TEST_CASE( InputMapModelTest, PropertiesTheFileCannotKeepAreNotEditable )
 // 표기는 수식 키까지 보인다. 슬롯 하나만 보이면 Ctrl+S 가 S 로 읽힌다.
 SW_TEST_CASE( InputMapModelTest, BindingTextShowsTheModifiers )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     Util::addKeyBinding( document, "Save", Key::S, static_cast<uint8>( ModifierKey::Ctrl ) );
     const string text = document.describeBinding( hashed_string( "Save" ), 0 );
     SW_EXPECT_TRUE( text.find( "Ctrl" ) != string::npos );
@@ -257,7 +281,8 @@ SW_TEST_CASE( InputMapModelTest, BindingTextShowsTheModifiers )
 // 필터는 이름과 키 표기를 본다.
 SW_TEST_CASE( InputMapModelTest, FilterLooksAtNameAndKey )
 {
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     Util::addKeyBinding( document, "Jump", Key::Space );
     Util::addKeyBinding( document, "Fire", Key::F );
 
@@ -346,10 +371,30 @@ SW_TEST_CASE( InputMapConflictsTest, ViewIsSeenFromTheAction )
 SW_TEST_CASE( InputMapConflictsTest, CaptureWarnsWhenItOverlaps )
 {
     SW_EXPECT_LOG( "InputMapModel.BindingConflictsSameLayer" );
-    InputMapModel document;
+    InputMapModelTestRecorder documentRecorder;
+    InputMapModel             document{ documentRecorder._recorder };
     Util::addKeyBinding( document, "Jump", Key::Space );
     Util::addKeyBinding( document, "Fire", Key::F );
     document.beginKeyCapture( 0 );
     SW_EXPECT_TRUE( document.finishKeyCapture( Key::Space ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, document.getConflicts().size() );
+}
+
+/** @brief [InputMapModelTest] 맵 편집은 문서 패널의 창구로 알리고(되돌리기 한 단계), 되돌리기 글을 적용하면 맵과 미저장 표시가 돌아온다(감사 E-13) */
+SW_TEST_CASE( InputMapModelTest, EditNotifiesAndUndoTextRoundTrips )
+{
+    InputMapModelTestRecorder recorder;
+    InputMapModel             document{ recorder._recorder };
+    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "engine/input/default.input.xml" ) );
+    SW_REQUIRE_TRUE( document.reload() );
+    const string before = document.captureText();
+    SW_REQUIRE_TRUE( before.empty() == false );
+
+    SW_REQUIRE_TRUE( document.createAction( "UndoProbe", InputActionValueType::Boolean ) );
+    SW_EXPECT_EQUAL( recorder._count, 1u );
+
+    SW_REQUIRE_TRUE( document.applyText( before ) );
+    SW_EXPECT_FALSE( document.getInputMap().hasAction( hashed_string( "UndoProbe" ) ) );
+    SW_EXPECT_TRUE( document.captureText() == before ); // 저장한 글로 돌아왔다(미저장 판정은 문서 패널이 글로 한다)
+    SW_EXPECT_TRUE( document.captureText() == before );
 }

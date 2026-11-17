@@ -104,3 +104,26 @@ SW_TEST_CASE( CameraDirectorTest, StateRoundTripKeepsTheBlendStack )
     SW_EXPECT_TRUE( untouched.getActivePresetID() == hashed_string( "orbit" ) );
     SW_EXPECT_EQUAL( 1u, untouched.getLayerCount() );
 }
+
+/** @brief [CameraCollisionProbeTest] `<Collision>` 에 막는 레이어(layers)가 없으면 그 프리셋을 넣지 않는 오류다 — 코드가 레이어 이름을 짐작하면 없는 이름에서 암 충돌이 조용히 꺼진다(감사 G-11) */
+SW_TEST_CASE( CameraCollisionProbeTest, MissingLayersIsAnError )
+{
+    SW_EXPECT_LOG( "CameraPreset.CollisionNeedsLayers" );
+    SW_EXPECT_LOG( "CameraPreset.PresetInvalidFieldsSkipped" );
+    CameraPresetCatalog catalog;
+    (void)catalog.loadFromXMLText( R"(<CameraPresetCatalog>
+    <Preset id="bare">
+        <View mode="Orbit" pitch="0.4" yaw="0" distance="8" offset="0,1,0"/>
+        <Collision radius="0.25" minDistance="0.4" recoverTime="0.3"/>
+    </Preset>
+    <Preset id="layered">
+        <View mode="Orbit" pitch="0.4" yaw="0" distance="8" offset="0,1,0"/>
+        <Collision radius="0.25" minDistance="0.4" recoverTime="0.3" layers="Default,Static"/>
+    </Preset>
+</CameraPresetCatalog>)",
+                                   "test.cameras.xml" );
+    SW_EXPECT_NULL( catalog.find( hashed_string( "bare" ) ) );
+    const CameraPresetDef* pLayered = catalog.find( hashed_string( "layered" ) );
+    SW_REQUIRE_NOT_NULL( pLayered );
+    SW_EXPECT_EQUAL( size_t( 2 ), pLayered->_collision._listLayer.size() );
+}

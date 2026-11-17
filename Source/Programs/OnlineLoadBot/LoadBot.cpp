@@ -17,6 +17,8 @@ namespace sw
     {
         struct LoadBotInternal
         {
+            static constexpr int64 kMicrosecondsPerMs = 1000;
+
             struct StatusName
             {
                 SocialPresenceStatus _status;
@@ -86,6 +88,7 @@ namespace sw
         , _matchmakingClient{}
         , _liveOpsClient{}
         , _random{ static_cast<uint32>( LoadBotInternal::makeBotKey( pRunner->getScenario()._seed, botIndex ) ) }
+        , _schedule{ pRunner->getScenario()._pacing }
         , _listFrame{}
         , _listAccountReply{}
         , _listChatMessage{}
@@ -138,6 +141,7 @@ namespace sw
 
     void LoadBot::start()
     {
+        _schedule.start( _pRunner->getNowUs() );
         _connection  = _pRunner->connectBot( _botIndex );
         _bConnecting = _connection.isValid() ? SW_TRUE : SW_FALSE;
         if ( _connection.isValid() == false )
@@ -163,7 +167,7 @@ namespace sw
     {
         _bConnecting     = SW_FALSE;
         _bConnectionOpen = SW_TRUE;
-        OnlineServiceClientConfig settings{ OnlineClientSecurity::sharedEndpoint() }; // TLS 는 실행기의 공유 엔드포인트가 정한다
+        OnlineServiceClientConfig settings{ OnlineClientSecurity::sharedEndpoint(), OnlineRetryPolicy::none() }; // TLS 는 실행기의 공유 엔드포인트가 정한다. 다시 보내지 않는다 — 봇은 kBusy · kRateLimited 비율을 잰다
         settings._gameBuild = LoadBotInternal::kGameBuild;
         if ( _client.initializeOnSharedEndpoint( pEndpoint, pRequestClient, handle, settings ) == false )
             stop();
@@ -279,22 +283,24 @@ namespace sw
 
     void LoadBot::startStep( const LoadBotStep& step, MonotonicMilliseconds nowMs )
     {
-        _pendingAction  = step._action;
-        _requestStartUs = _pRunner->getNowUs();
+        _pendingAction    = step._action;
+        const int64 nowUs = _pRunner->getNowUs();
+        if ( step._action == LoadBotAction::Wait )
+        {
+            const int32 waitMs = _random.nextInt( static_cast<int32>( step._minMs ), static_cast<int32>( step._maxMs ) );
+            const int64 wakeUs = _schedule.addWait( static_cast<int64>( waitMs ) * LoadBotInternal::kMicrosecondsPerMs, nowUs );
+            _waitUntilMs       = LoadBotRunner::kRunStart + wakeUs / LoadBotInternal::kMicrosecondsPerMs; // 열린 루프에서 이미 지났으면 다음 틱에 바로 보낸다
+            advance();
+            return;
+        }
+        if ( step._action == LoadBotAction::Repeat )
+        {
+            _listFrame.push_back( Frame{ &step._listStep, 0, step._count } ); // 단계를 묶기만 한다 — 시각표를 건드리지 않는다
+            return;
+        }
+        _requestStartUs = _schedule.beginStep( nowUs );
         switch ( step._action )
         {
-            case LoadBotAction::Wait:
-            {
-                const int32 waitMs = _random.nextInt( static_cast<int32>( step._minMs ), static_cast<int32>( step._maxMs ) );
-                _waitUntilMs       = nowMs + waitMs;
-                advance();
-                return;
-            }
-            case LoadBotAction::Repeat:
-            {
-                _listFrame.push_back( Frame{ &step._listStep, 0, step._count } );
-                return;
-            }
             case LoadBotAction::WaitMatch:
             {
                 _awaitKind   = AwaitKind::Match;

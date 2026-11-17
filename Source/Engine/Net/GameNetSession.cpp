@@ -319,7 +319,7 @@ namespace sw
         const bool bResolved = PlatformSocketUtil::resolveAddress( gv_netConnectAddress.get(), kDefaultPort, outParams._serverAddress );
         if ( bResolved == false || outParams._serverAddress.isValid() == false )
         {
-            SW_LOG_ERROR_ID( "GameNetSession.GvNetConnectAddressDidNot", "gv_netConnectAddress '%#' did not resolve to an IPv4 address with a port", gv_netConnectAddress.get() );
+            SW_LOG_ERROR_ID( "GameNetSession.GvNetConnectAddressDidNot", "gv_netConnectAddress '%#' did not resolve to an IP address with a port", gv_netConnectAddress.get() );
             return GameNetLaunch::Invalid;
         }
         outParams._role = GameNetRole::Client;
@@ -332,15 +332,16 @@ namespace sw
         NetAddress listenAddress;
         if ( NetAddress::parse( config._listenAddress, 0, listenAddress ) == false )
         {
-            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigListenAddressNot", "Server config _listenAddress '%#' is not an IPv4 address - the game port stays closed", config._listenAddress.c_str() );
+            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigListenAddressNot", "Server config _listenAddress '%#' is not an IP address - the game port stays closed", config._listenAddress.c_str() );
             return false;
         }
-        // UDP 전송은 루프백 · 모든 인터페이스 두 가지로만 묶는다. 다른 주소를 조용히 모든 인터페이스로 바꾸지 않는다.
+        // UDP 전송은 루프백 · 모든 인터페이스 두 가지로만 묶는다(주소군마다 — `::` 는 이중 스택). 다른 주소를 조용히 모든 인터페이스로 바꾸지 않는다.
         const bool bLoopbackOnly = listenAddress.isLoopback();
-        const bool bAnyInterface = listenAddress._ipv4 == NetAddress::makeAnyInterface( 0 )._ipv4;
+        const bool bAnyInterface = listenAddress.isAnyInterface();
         if ( bLoopbackOnly == false && bAnyInterface == false )
         {
-            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigListenAddressGame", "Server config _listenAddress '%#' - the game port binds only 0.0.0.0 or 127.0.0.1", config._listenAddress.c_str() );
+            SW_LOG_ERROR_ID( "GameNetSession.ServerConfigListenAddressGame", "Server config _listenAddress '%#' - the game port binds only 0.0.0.0, 127.0.0.1, :: or ::1",
+                             config._listenAddress.c_str() );
             return false;
         }
         if ( config._gamePort < 0 || constant::network::kMaxPort < config._gamePort )
@@ -353,6 +354,7 @@ namespace sw
         outParams._listenPort       = static_cast<uint16>( config._gamePort );
         outParams._shardCount       = config._gamePortShardCount;
         outParams._bLoopbackOnly    = bLoopbackOnly;
+        outParams._listenFamily     = listenAddress._family;
         outParams._bShardsSharePort = config._bGamePortReuse;
         if ( GameNetSessionInternal::isValidShardLayout( outParams ) == false )
         {
@@ -413,10 +415,11 @@ namespace sw
         unique_ptr<Shard> shard = make_unique<Shard>();
         shard->_transport       = make_unique<UDPNetTransport>();
         // 클라이언트는 서버 주소가 정한다 — 다른 기계의 서버면 그 답을 받아야 하므로 루프백에만 묶을 수 없다.
-        const bool           bServer       = params._role == GameNetRole::Server;
-        const bool           bLoopbackOnly = bServer ? params._bLoopbackOnly : params._serverAddress.isLoopback();
-        const UDPPortSharing sharing       = params._bShardsSharePort ? UDPPortSharing::ReusePort : UDPPortSharing::Exclusive;
-        if ( shard->_transport->open( transportPort, bLoopbackOnly, sharing ) == false )
+        const bool             bServer       = params._role == GameNetRole::Server;
+        const bool             bLoopbackOnly = bServer ? params._bLoopbackOnly : params._serverAddress.isLoopback();
+        const NetAddressFamily family        = bServer ? params._listenFamily : params._serverAddress._family;
+        const UDPPortSharing   sharing       = params._bShardsSharePort ? UDPPortSharing::ReusePort : UDPPortSharing::Exclusive;
+        if ( shard->_transport->open( transportPort, bLoopbackOnly, sharing, family ) == false )
         {
             SW_LOG_ERROR_ID( "GameNetSession.NetSessionCouldNot", "Net session could not open UDP port %# (in use?)", transportPort );
             return nullptr;

@@ -9,6 +9,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
@@ -34,9 +35,9 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        AbilityClassRegistry                _abilityClasses;     ///< 이 게임의 어빌리티 클래스(코드)
-        shared_ptr<const AbilityCatalog>    _pAbilityCatalog;    ///< 어빌리티 데이터(공유 캐시의 한 벌)
-        shared_ptr<const ProjectileCatalog> _pProjectileCatalog; ///< 투사체 어빌리티가 쏘는 탄(공유 캐시의 한 벌)
+        AbilityClassRegistry              _abilityClasses;     ///< 이 게임의 어빌리티 클래스(코드)
+        SharedAssetRef<AbilityCatalog>    _pAbilityCatalog;    ///< 어빌리티 데이터(공유 캐시의 한 벌)
+        SharedAssetRef<ProjectileCatalog> _pProjectileCatalog; ///< 투사체 어빌리티가 쏘는 탄(공유 캐시의 한 벌)
     };
 } // namespace sw
 

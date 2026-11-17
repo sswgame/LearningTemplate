@@ -4,6 +4,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierStack.h"
@@ -183,4 +184,43 @@ SW_TEST_CASE( MeshModifierSweepTest, TwistKeepsHeightAndRadius )
         SW_EXPECT_TRUE( MathUtil::abs( before._y - after._y ) < 1e-3f );
         SW_EXPECT_TRUE( MathUtil::abs( radiusBefore - radiusAfter ) < 1e-3f );
     }
+}
+
+namespace
+{
+    /** @brief 삼각형 하나짜리 절차 메시입니다(`.mesh` 에셋 없이 세션을 시험한다). */
+    MeshAssetData makeTriangleData()
+    {
+        MeshAssetData data;
+        for ( int32 corner = 0; corner < 3; ++corner )
+        {
+            RHIVertex vertex{};
+            vertex._arrPosition[0] = corner == 1 ? 1.0f : 0.0f;
+            vertex._arrPosition[1] = corner == 2 ? 1.0f : 0.0f;
+            vertex._arrPosition[2] = 0.0f;
+            data._listVertex.push_back( vertex );
+            data._listIndex.push_back( static_cast<uint32>( corner ) );
+        }
+        return data;
+    }
+} // namespace
+
+/** @brief [MeshModifierSessionTest] 저장하지 않은 스택이 있으면 대상을 바꾸지 않는다 — 세션이 거절하고 스택 · 대상이 그대로다(패널 버튼 밖의 길이 편집을 지우지 않는다, 감사 G-12) */
+SW_TEST_CASE( MeshModifierSessionTest, SetTargetRefusesWhenUnsaved )
+{
+    MeshModifierSession session;
+    SW_REQUIRE_TRUE( session.setTargetData( GameObjectHandle{}, "test/procedural_a.mesh", makeTriangleData() ).has_value() );
+    SW_EXPECT_FALSE( session.isStackUnsaved() );
+    session.applyEdit( [&session]()
+    { SW_EXPECT_TRUE( session.getStack().addModifier( "twist" ).has_value() ); } );
+    SW_REQUIRE_TRUE( session.isStackUnsaved() );
+
+    const expected<void> refused = session.setTargetData( GameObjectHandle{}, "test/procedural_b.mesh", makeTriangleData() );
+    SW_REQUIRE_FALSE( refused.has_value() );
+    SW_EXPECT_TRUE( refused.error().kind() == ErrorKind::AlreadyExists );
+    SW_EXPECT_EQUAL( string( "test/procedural_a.mesh" ), session.getMeshPath() );
+    SW_EXPECT_EQUAL( 1, session.getStack().getModifierCount() );
+    SW_EXPECT_TRUE( session.canUndo() );
+    SW_EXPECT_FALSE( session.setTarget( nullptr ).has_value() ); // 대상 고르기도 같은 거절이다
+    SW_EXPECT_EQUAL( 1, session.getStack().getModifierCount() );
 }

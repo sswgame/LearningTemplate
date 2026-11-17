@@ -38,6 +38,8 @@ namespace sw
         static constexpr int32 kMaxReasonCodeSize     = 64;
         static constexpr int32 kMaxLoginNameWireSize  = kMaxLoginNameSize * 4; ///< 요청이 싣는 이름의 상한(UTF-8 바이트)이다. 규칙 검사는 서버가 해 사유를 돌려준다
         static constexpr int32 kMaxServerIDSize       = 32;
+        static constexpr int32 kLoginNonceSize        = 16;                  ///< 서버가 내는 외부 로그인 nonce 의 난수 바이트이다(`IssueLoginNonce`)
+        static constexpr int32 kLoginNonceTextSize    = kLoginNonceSize * 2; ///< nonce 글(소문자 16진)의 길이이다
         static constexpr int32 kMaxStoreURLSize       = 512;
         static constexpr int32 kMaxProviderCount      = 32;
     };

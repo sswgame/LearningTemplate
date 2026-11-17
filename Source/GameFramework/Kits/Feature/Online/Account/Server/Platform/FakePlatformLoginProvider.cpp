@@ -27,14 +27,26 @@ namespace sw
         , _submittedCount{ 0 }
         , _bRevocationEnabled{ SW_FALSE }
         , _bRevocationUnavailable{ SW_FALSE }
+        , _bRequireServerNonce{ SW_FALSE }
     {
+    }
+
+    bool FakePlatformLoginProvider::findServerNonce( const vector<uint8>& ticketBytes, string& outNonce ) const
+    {
+        if ( _bRequireServerNonce == SW_FALSE )
+            return false;
+        const string_view text( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
+        const size_t      bar = text.find( '|' );
+        outNonce              = bar == string_view::npos ? string{} : string( text.substr( bar + 1 ) );
+        return true;
     }
 
     uint64 FakePlatformLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
     {
         (void)nowMs;
-        PendingTicket& pending  = _listPending.emplace_back();
-        pending._text           = string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
+        PendingTicket&    pending = _listPending.emplace_back();
+        const string_view text( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
+        pending._text           = string( text.substr( 0, text.find( '|' ) ) ); // nonce 는 로그인 서비스가 이미 소비했다
         pending._verificationID = _verificationIDAllocator.allocate();
         ++_submittedCount;
         return pending._verificationID;

@@ -19,7 +19,7 @@ SW_TEST_CASE( GPUPassTimelineTest, SlotLayoutDoesNotOverlap )
     const uint32 firstFrame   = FrameRendererUtil::findFramePassTimestampSlot( 0 );
     const uint32 lastFrame    = FrameRendererUtil::findFramePassTimestampSlot( FrameRendererUtil::kGPUTimedFramePassCapacity - 1u ) + 1u;
     SW_EXPECT_TRUE( firstFrame > lastViewSlot );
-    SW_EXPECT_TRUE( lastFrame < FrameRendererUtil::kGPUTimestampSlotComputeBegin );
+    SW_EXPECT_TRUE( lastFrame <= FrameRendererUtil::kGPUTimestampReservedSlotBegin );
     SW_EXPECT_EQUAL( FrameRendererUtil::findFramePassTimestampSlot( 1 ), firstFrame + 2u );
     SW_EXPECT_EQUAL( FrameRendererUtil::findFramePassTimestampSlot( FrameRendererUtil::kGPUTimedFramePassCapacity ), constant::invalid_index::kUint32 );
     SW_EXPECT_TRUE( FrameRendererUtil::kGPUTimestampSlotFrameBegin < constant::render::kMaxGPUTimestampSlot );

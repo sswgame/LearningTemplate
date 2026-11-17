@@ -142,6 +142,7 @@ namespace sw
 
         uint8           getMessageRangeBase() const final { return TTable::kRangeBase; }
         uint16          getMessageKindMask() const final { return kReceivedMask; }
+        uint32          getWireVersion() const final { return TTable::computeWireVersion(); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) final
         {
             ReceiveVisitor visitor{ static_cast<TDerived&>( *this ), context, body };

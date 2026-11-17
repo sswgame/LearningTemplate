@@ -1,6 +1,7 @@
 # 리플렉션 파서의 도구 입력 사례 하나를 돈다 — 산출물이 입력만으로 정해지는가(결정성)와, 도구 입력(설정 · 템플릿 · 철자 표)이 깨졌을 때 멈추는가.
 #   MODE=determinism        같은 입력으로 두 번 생성한다(둘째는 스탬프를 지워 다시 파싱하게 한다). 산출물 바이트가 같고, 내용이 같으면 다시 쓰지 않아 시각도 그대로다
 #                           (`GeneratedFileUtil::writeIfChanged` — 다시 쓰면 그 파일을 include 하는 TU 가 모두 다시 컴파일된다).
+#   MODE=args-changed       같은 입력 · 같은 도구로 `--module` 만 바꿔 다시 돈다. 파일 시각은 그대로라도 다시 파싱해야 한다(스탬프의 `args` 줄 — A-8).
 #   MODE=broken-config      설정 파일이 JSON 이 아니다.
 #   MODE=broken-templates   템플릿 폴더에서 템플릿 하나가 빠졌다.
 #   MODE=broken-spelling    철자 표의 첫 줄이 [scope] 절 밖의 바인딩이다.
@@ -17,6 +18,7 @@ file(MAKE_DIRECTORY "${WORK_DIR}/out")
 set(annotation_meta "${ANNOTATION_META}")
 set(templates "${TEMPLATES}")
 set(config "${CONFIG}")
+set(module_name "ParserFixture")
 
 # 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
 string(REPLACE "|" ";" list_target_arg_value "${TARGET_ARGS}")
@@ -34,7 +36,7 @@ function(sw_run_parser out_exit_code out_text)
 			--builtins "${BUILTINS}"
 			--annotation-meta "${annotation_meta}"
 			--emit-templates "${templates}"
-			--module "ParserFixture"
+			--module "${module_name}"
 			--module-local
 			--config "${config}"
 			--include "${GENERATED_DIR}"
@@ -90,6 +92,27 @@ if(MODE STREQUAL "determinism")
 			message(FATAL_ERROR "${generated}: same bytes were written again (time ${time} -> ${time_again}) - every includer recompiles")
 		endif()
 	endforeach()
+	return()
+endif()
+
+if(MODE STREQUAL "args-changed")
+	sw_run_parser(exit_code output)
+	if(NOT exit_code EQUAL 0)
+		message(FATAL_ERROR "first run exited ${exit_code}\n${output}")
+	endif()
+	if(NOT EXISTS "${gen_cpp}.stamp")
+		message(FATAL_ERROR "the first run wrote no stamp")
+	endif()
+	file(READ "${gen_cpp}.stamp" first_stamp)
+	set(module_name "ParserFixtureRenamed")
+	sw_run_parser(exit_code output)
+	if(NOT exit_code EQUAL 0)
+		message(FATAL_ERROR "second run exited ${exit_code}\n${output}")
+	endif()
+	file(READ "${gen_cpp}.stamp" second_stamp)
+	if(second_stamp STREQUAL first_stamp)
+		message(FATAL_ERROR "--module changed but the parser kept the old output (the stamp did not record the command line)")
+	endif()
 	return()
 endif()
 

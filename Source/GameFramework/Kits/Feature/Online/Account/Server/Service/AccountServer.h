@@ -83,6 +83,7 @@ namespace sw
         void handleCall( OnlineServerCall<AccountMethod::ListLinks> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<AccountMethod::RequestDeletion> call, const OnlineCallContext& context, const OnlineNoBody& request );
         void handleCall( OnlineServerCall<AccountMethod::CancelDeletion> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<AccountMethod::IssueLoginNonce> call, const OnlineCallContext& context, const OnlineNoBody& request );
 
         // IOnlineServerService
         /** @brief 두 리슨 모두에서 받습니다 — GM 도구도 GM 포트에서 로그인합니다. */

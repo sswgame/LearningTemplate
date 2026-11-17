@@ -99,16 +99,23 @@ namespace sw
         return static_cast<int32>( MathUtil::min<int64>( window, _definition._maxRatingWindow ) );
     }
 
-    MatchmakingServiceResult MatchMaker::addBackfill( const MatchBackfillRequest& request )
+    bool MatchMaker::isBackfillShapeValid( const MatchModeDef& mode, const MatchBackfillRequest& request )
     {
-        const bool bShapeOk = request._modeID == _definition._modeID && static_cast<int32>( request._listOpenSlot.size() ) == _definition._teamCount && request._matchID != 0;
+        const bool bShapeOk = request._modeID == mode._modeID && static_cast<int32>( request._listOpenSlot.size() ) == mode._teamCount && request._matchID != 0;
         if ( bShapeOk == false )
-            return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
+            return false;
         for ( const int32 openSlot : request._listOpenSlot )
         {
-            if ( openSlot < 0 || openSlot > _definition._teamSize )
-                return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
+            if ( openSlot < 0 || openSlot > mode._teamSize )
+                return false;
         }
+        return true;
+    }
+
+    MatchmakingServiceResult MatchMaker::addBackfill( const MatchBackfillRequest& request )
+    {
+        if ( isBackfillShapeValid( _definition, request ) == false )
+            return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         for ( MatchBackfillRequest& existing : _listBackfill )
         {
             if ( existing._matchID == request._matchID )

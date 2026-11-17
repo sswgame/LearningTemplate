@@ -82,8 +82,9 @@ namespace sw
              *          차거나 백신이 파일을 잡거나 쓰는 도중 죽을 때 씬 · 에셋이 빈 파일로 남는데 저장은 성공으로 보입니다. 4 KB 보다
              *          작은 쓰기는 stdio 버퍼에 머물다 `fclose` 에서야 디스크로 가므로, 가득 찬 디스크는 `fclose` 만 알려 줍니다.
              *          언리얼 `FFileHelper::SaveArrayToFile` 과 같은 방식(임시 파일 → 이름 바꾸기)입니다.
+             *          @p durability 가 `Durable` 이면 닫기 전에 내용을, 바꿔 끼운 뒤 폴더 항목을 저장 장치까지 내린다 — 전원이 나가도 옛 것이거나 새 것이다.
              */
-            [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size )
+            [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size, FileSyncMode durability )
             {
                 const string filePath = FileUtil::normalizeSeparators( fileName );
                 if ( FileUtil::isWriteAllowed( filePath ) == false )
@@ -113,7 +114,7 @@ namespace sw
                 }
 
                 const size_t written          = ( size > 0 ) ? std::fwrite( pData, 1, size, pFile ) : 0;
-                const bool   bFlushed         = std::fflush( pFile ) == 0;
+                const bool   bFlushed         = std::fflush( pFile ) == 0 && ( durability == FileSyncMode::Fast || PlatformFileUtil::flushToStorage( pFile ) );
                 const bool   bClosed          = std::fclose( pFile ) == 0;
                 const bool   bWriteIncomplete = written != size || bFlushed == false || bClosed == false;
                 if ( bWriteIncomplete )
@@ -129,6 +130,8 @@ namespace sw
                 {
                     if ( PlatformFileUtil::replaceFile( tempPath.c_str(), filePath.c_str() ) )
                     {
+                        if ( durability == FileSyncMode::Durable && PlatformFileUtil::flushDirectoryToStorage( FileUtil::getDirectoryPart( filePath ).c_str() ) == false )
+                            SW_LOG_WARNING_ID( "File.DirectoryFlushFailed", "Replaced %# but could not flush its folder entry to storage", filePath.c_str() );
                         FileUtil::recordFileCreated();
                         PlatformFileUtil::recordFileWritten( filePath );
                         return true;
@@ -138,6 +141,23 @@ namespace sw
                 SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
                 discardTempFile( tempPath );
                 return false;
+            }
+
+            /** @brief `writeFile` · `writeFileDurable` 의 본체입니다 — 크기를 확인하고 원자적으로 씁니다. */
+            [[nodiscard]] static bool writeBytes( string_view fileName, const uint8* pData, const uint64 size, const FileSyncMode durability )
+            {
+                if ( size == 0 || pData == nullptr )
+                    return false;
+                // 32 비트 대상(wasm32)은 size_t 가 uint64 보다 좁다 — 메모리에 있는 버퍼라 넘을 수 없지만, 넘는 값이 오면 잘라 쓰지 않고 거절한다.
+                if constexpr ( sizeof( size_t ) < sizeof( uint64 ) )
+                {
+                    if ( size > static_cast<uint64>( std::numeric_limits<size_t>::max() ) )
+                    {
+                        SW_LOG_ERROR_ID( "File.WriteTooLarge", "Writing %# refused: %# bytes do not fit this target's address space", fileName, size );
+                        return false;
+                    }
+                }
+                return FileUtilInternal::writeAtomically( fileName, pData, static_cast<size_t>( size ), durability );
             }
 
             /**
@@ -843,18 +863,12 @@ namespace sw
 
     bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )
     {
-        if ( size == 0 || pData == nullptr )
-            return false;
-        // 32 비트 대상(wasm32)은 size_t 가 uint64 보다 좁다 — 메모리에 있는 버퍼라 넘을 수 없지만, 넘는 값이 오면 잘라 쓰지 않고 거절한다.
-        if constexpr ( sizeof( size_t ) < sizeof( uint64 ) )
-        {
-            if ( size > static_cast<uint64>( std::numeric_limits<size_t>::max() ) )
-            {
-                SW_LOG_ERROR_ID( "File.WriteTooLarge", "Writing %# refused: %# bytes do not fit this target's address space", fileName, size );
-                return false;
-            }
-        }
-        return FileUtilInternal::writeAtomically( fileName, pData, static_cast<size_t>( size ) );
+        return FileUtilInternal::writeBytes( fileName, pData, size, FileSyncMode::Fast );
+    }
+
+    bool FileUtil::writeFileDurable( string_view fileName, const uint8* pData, const uint64 size )
+    {
+        return FileUtilInternal::writeBytes( fileName, pData, size, FileSyncMode::Durable );
     }
 
     bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
@@ -921,7 +935,12 @@ namespace sw
 
     bool FileUtil::writeTextFile( string_view fileName, string_view text )
     {
-        return FileUtilInternal::writeAtomically( fileName, text.data(), text.size() );
+        return FileUtilInternal::writeAtomically( fileName, text.data(), text.size(), FileSyncMode::Fast );
+    }
+
+    bool FileUtil::writeTextFileDurable( string_view fileName, string_view text )
+    {
+        return FileUtilInternal::writeAtomically( fileName, text.data(), text.size(), FileSyncMode::Durable );
     }
 
     bool FileUtil::appendTextFile( string_view fileName, string_view text )

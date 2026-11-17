@@ -65,7 +65,7 @@ namespace sw
             return surface;
         const float3 from{ x, _probeTop, z };
         const float3 to{ x, _probeTop - Internal::kProbeLength, z };
-        if ( SurfaceSample::sampleBelow( *_pManager, _pSurfaceTable, from, to, _ownerID, false, sample ) == false || sample._pKind == nullptr )
+        if ( SurfaceSample::sampleBelow( *_pManager, _pSurfaceTable.snapshot(), from, to, _ownerID, false, sample ) == false || sample._pKind == nullptr )
             return surface; // 맞은 것이 없다 — 평면 위(구름 저항 0). 표에 없는 재질은 질의가 이름마다 오류를 남겼다
         surface._rollingResistance = sample._pKind->_rollingResistance;
         surface._gripScale         = sample._pKind->_gripScale;
@@ -106,7 +106,7 @@ namespace sw
         if ( pOwner == nullptr || pRoot == nullptr )
             return;
 
-        const shared_ptr<const KinematicVehicleSettings> pTuning = _tuning.acquire();
+        const shared_ptr<const KinematicVehicleSettings> pTuning = _tuning.acquire().snapshot();
         if ( pTuning == nullptr )
         {
             SW_LOG_ERROR_ID( "KinematicVehicle.TuningMissing", "'%#': vehicle tuning '%#' did not load; the vehicle does not move", pOwner->getName().c_str(), _tuning.c_str() );
@@ -119,7 +119,7 @@ namespace sw
         _ground._probeTop       = start._y + KinematicVehicleComponentInternal::kProbeAbove;
         if ( _bUsePhysicsGround )
         {
-            _ground._pSurfaceTable = SurfaceKindTable::findDefault();
+            _ground._pSurfaceTable = SharedAssetRef<SurfaceKindTable>{ SurfaceKindTable::findDefault() };
             if ( _ground._pSurfaceTable == nullptr )
                 return; // 표를 읽지 못했다 — `findDefault` 가 오류를 남겼다. 표면 없이 달리지 않는다
         }

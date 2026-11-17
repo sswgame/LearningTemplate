@@ -63,8 +63,9 @@ namespace sw
     SubsystemInitResult ConfigManager::initializeSubsystem()
     {
         // 읽은 값은 호스트 자리(`getHostEngineConfig` · `getHostGameConfig`)에 담긴다 - 서비스 표가 그 주소를 이미 쥐고 있다.
-        // 배포는 디스크의 `Config/` 를 보지 않고 베이크한 JSON(엔진 설정 · 베이크한 게임의 프리셋)만 읽는다. 그 밖의 설정은 두 구성 모두 디스크 파일이 필수다.
-        if constexpr ( build::kShipping )
+        // 정적 구성(배포 · 웹 · Android 개발 — 기기에 프로젝트 폴더가 없다)은 디스크의 `Config/` 를 보지 않고 베이크한 JSON(엔진 설정 · 베이크한 게임의 프리셋)만 읽는다.
+        // 그 밖의 설정은 모든 구성에서 디스크 파일이 필수다.
+        if constexpr ( build::kStaticModules )
         {
             EngineConfig probe;
             if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )
@@ -73,10 +74,10 @@ namespace sw
                 return SubsystemInitResult::Failed;
             }
         }
-        const ConfigSource engineSource = build::kShipping ? ConfigSource::baked( shipping_host::kEngineConfigJSON ) : ConfigSource::disk( config::kFileRuntimeEngineConfig );
+        const ConfigSource engineSource = build::kStaticModules ? ConfigSource::baked( shipping_host::kEngineConfigJSON ) : ConfigSource::disk( config::kFileRuntimeEngineConfig );
         if ( loadHostConfig<EngineConfig>( engineSource ) == nullptr )
             return SubsystemInitResult::Failed;
-        const ConfigSource gameSource = build::kShipping ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
+        const ConfigSource gameSource = build::kStaticModules ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
         if ( loadHostConfig<GameConfig>( gameSource ) == nullptr )
             return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;

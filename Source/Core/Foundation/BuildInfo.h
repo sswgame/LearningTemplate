@@ -32,6 +32,17 @@ namespace sw::build
 #else
     inline constexpr bool kShipping = false;
 #endif
+#if defined( SW_STATIC_MODULES )
+    /**
+     * @brief 모듈(엔진 · RHI 백엔드 · GameFramework · 키트 · 게임)을 한 실행 파일에 정적으로 링크한 구성이면 true 입니다 — 배포 전부와 웹 · Android 개발 구성.
+     * @details 정적 구성은 게임 하나를 굽고(`config::kShippingGameName` — `-game=` 을 보지 않는다), 설정을 디스크의 프로젝트 폴더가 아니라 구운 JSON 으로 읽는다
+     *          (기기에는 프로젝트 폴더가 없다). 에디터 모듈 · 핫 리로드가 없다. 값만 다른 갈래는 이 상수를, 헤더 · 함수가 없는 갈래는 `SW_WITH_DYNAMIC_MODULES` 를 쓴다.
+     */
+    inline constexpr bool kStaticModules = true;
+#else
+    inline constexpr bool kStaticModules = false;
+#endif
+    static_assert( kShipping == false || kStaticModules, "a shipping build links its modules statically (SW_STATIC_MODULES)" );
     /** @brief 이 빌드에 클라이언트 코드(창 · 렌더 · 입력 장치 · 오디오 장치)가 들어 있으면 true 입니다(Game · Client). */
     inline constexpr bool kWithClientCode = string_view( kTargetName ) != "Server";
     /** @brief 이 빌드에 서버 코드가 들어 있으면 true 입니다(Game · Server). */

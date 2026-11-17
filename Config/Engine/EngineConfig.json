@@ -33,7 +33,25 @@
         "_minStillFrames": 16,
         "_maxExposureErrorEv": 0.05
     },
+    "_render": {
+        "_psoBuildBudgetMicroseconds": 2000,
+        "_shadowCascadeSplitLambda": 0.75,
+        "_shadowLocalDepthBiasTexels": 1.5,
+        "_taaHistoryWeight": 0.9,
+        "_textureStreaming": {
+            "_uploadsPerFrame": 8,
+            "_upgradesPerFrame": 2,
+            "_poolMegabytes": 768,
+            "_idleFramesBeforeRelease": 300
+        }
+    },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",
+    "_rhi": {
+        "_allocationCountReserve": 256,
+        "_pipelineCacheSaveIntervalSeconds": 300.0,
+        "_bGPUBasedValidation": false,
+        "_bSynchronizationValidation": false
+    },
     "_shaderTimeRolloverSeconds": 3600.0
 }

@@ -52,12 +52,12 @@ namespace sw
 
         /**
          * @brief 주 시점 카메라를 고르고(씬 뷰가 주 출력이면 씬 뷰 카메라, 아니면 게임 카메라) 주 시점 설정 · 뷰-투영 · 보기 모드를 @p packet 에 싣습니다.
-         * @details 쓸 카메라가 없으면 한 번 오류로 알립니다(기본 카메라로 대신 그리지 않는다). 자동 렌더 배율은 카메라와 상관없이 프레임마다 한 번 갱신합니다.
+         * @details 쓸 카메라가 없으면 한 번 오류로 알립니다(기본 카메라로 대신 그리지 않는다). 자동 렌더 배율은 카메라와 상관없이 프레임마다 한 번 렌더러의 GPU 프레임 표본으로 갱신합니다.
          * @param sceneViewCameraProvider 씬 뷰 카메라 조회입니다. 씬 뷰가 있을 때만, 씬 틱과 기본 카메라 보장 **뒤에** 부릅니다.
          * @details 주 출력 크기는 패킷에 이미 풀려 있다(`RenderPacketBuilder::populateScene` 이 백버퍼 크기까지 푼다).
          */
         RenderPacketMainView setupMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene& activeScene,
-                                            float32 deltaTime, const FrameRenderer* pFrameRenderer );
+                                            const FrameRenderer* pFrameRenderer );
         /**
          * @brief 추가 뷰(캡처 카메라 · 화면 사각형) 중 이번 프레임에 그릴 것을 갱신 주기 · 보이는가 · 예산으로 고르고(쉬는 뷰도 실린다), 씬 뷰를 주 출력 여부에 맞춰 넣거나 뺍니다.
          * @details 주 시점 그림자가 정해진 **뒤에** 부릅니다(추가 뷰의 그림자는 그 뒤 `RenderPacketSceneCollector::populateViewShadows`).
@@ -71,10 +71,15 @@ namespace sw
         void resolvePostProcessMaterials( RenderFramePacket& packet );
         /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` — 게임 스레드). */
         uint32 getLastHiddenViewCount() const { return _lastHiddenViewCount; }
+        /** @brief 마지막 `collectExtraViews` 에서 자리(`kMaxExtraRenderView`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
+        uint32 getLastOverflowViewCount() const { return _lastOverflowViewCount; }
 
     private:
-        /** @brief 자동 렌더 배율(`gv_autoRenderScale`)에 이번 프레임 시간(초)을 넣고 주 시점 배율에 곱할 값을 돌려줍니다. 꺼져 있으면 1 입니다. */
-        float32 updateAutoRenderScale( float32 deltaTime );
+        /**
+         * @brief 자동 렌더 배율(`gv_autoRenderScale`)에 렌더러의 GPU 프레임 표본(`GPUFrameClock`)을 넣고 주 시점 배율에 곱할 값을 돌려줍니다. 꺼져 있으면 1 입니다.
+         * @details 장치에 타임스탬프가 없으면 오류를 한 번 남기고 끕니다(벽시계로 대신하지 않는다).
+         */
+        float32 updateAutoRenderScale( const FrameRenderer* pFrameRenderer );
 
     private:
         /** @brief 추가 뷰(CCTV, 백미러, PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기, 예산)입니다. */
@@ -83,6 +88,7 @@ namespace sw
         float64 _renderViewClock;
         /** @brief 마지막 수집에서 보임 판정으로 쉰 추가 뷰 수입니다(`getLastHiddenViewCount`). */
         uint32 _lastHiddenViewCount;
+        uint32 _lastOverflowViewCount; ///< 마지막 수집에서 자리를 얻지 못한 추가 뷰 수(`getLastOverflowViewCount`)
         /** @brief 뷰의 후처리 블렌더블이 가리키는 머티리얼의 참조와 렌더 사본입니다(`resolvePostProcessMaterials`). */
         PostProcessMaterialSet _postProcessMaterials;
         /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */

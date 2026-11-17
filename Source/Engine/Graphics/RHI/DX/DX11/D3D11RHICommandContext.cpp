@@ -426,7 +426,7 @@ namespace sw
         _pContext->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
-    void D3D11RHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void D3D11RHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         const bool bInvalidConstantUpdate = _pContext == nullptr || _pDevice == nullptr || buffer == 0 || pData == nullptr;
         if ( bInvalidConstantUpdate )

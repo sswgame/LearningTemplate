@@ -72,7 +72,7 @@ namespace sw
         const CityCatalog* pCatalog = game::findSubsystem<const CityCatalog>();
         if ( pCatalog == nullptr )
             return false;
-        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, CitySettings{}, state.makeRefs() ) == false )
+        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, state.makeRefs() ) == false )
             return false;
         // 땅은 놓기 전에 빌린다 — 이미 놓인 도로 · 건물은 땅을 얻지 않는다(CitySimulation::bindLand).
         outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
@@ -88,8 +88,21 @@ namespace sw
             return false;
         if ( initResult == SessionStateInitResult::Fresh )
         {
-            pState->getWallet().add( CitySettings{}._currency, _startingDeben );
-            pState->getWallet().add( RTSSettings{}._mineralCurrency, _startingMinerals );
+            // 광물 통화는 RTS 규칙 자산(유닛 카탈로그의 <Rules>)의 것이다 — C++ 기본값을 짐작하지 않는다(감사 K-4)
+            const RTSCatalog* pUnits = game::findSubsystem<const RTSCatalog>();
+            if ( pUnits == nullptr )
+            {
+                SW_LOG_ERROR_ID( "FrontierCity.UnitCatalogMissing", "[Frontier] the unit catalog is not loaded - the starting minerals have no currency" );
+                return false;
+            }
+            const CityCatalog* pCity = game::findSubsystem<const CityCatalog>();
+            if ( pCity == nullptr )
+            {
+                SW_LOG_ERROR_ID( "FrontierCity.CityCatalogMissing", "[Frontier] the city catalog is not loaded - the starting money has no currency" );
+                return false;
+            }
+            pState->getWallet().add( pCity->getRules()._currency, _startingDeben );
+            pState->getWallet().add( pUnits->getRules()._mineralCurrency, _startingMinerals );
         }
         if ( initializeCity( _city, *pState ) == false )
         {
@@ -131,7 +144,7 @@ namespace sw
         const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( FrontierTownData::kFastForwardAction ) );
         if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
             return;
-        _city.update( deltaTime * pState->getClock().getTimeScale() ); // 시계와 같은 배율 — 시계만 밀면 빨리 감는 동안 결산만 잦고 생산 · 일꾼은 1 배속이다(감사 K-2, 유니티 Time.timeScale 자리)
+        (void)_city.update( deltaTime, pState->getClock().getTimeScale() ); // 시계와 같은 배율 — 시계만 밀면 빨리 감는 동안 결산만 잦고 생산 · 일꾼은 1 배속이다(감사 K-2, 유니티 Time.timeScale 자리)
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )

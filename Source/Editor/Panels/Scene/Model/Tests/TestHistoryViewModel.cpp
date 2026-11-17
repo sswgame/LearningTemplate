@@ -20,8 +20,8 @@ namespace
         {
             sw::CommandStack::Command cmd;
             cmd._label = pLabel;
-            cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
-            cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner );
+            cmd._undo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner, 0u );
+            cmd._redo  = sw::editor::UndoStep::makeTransient( sw::Delegate<void()>::create<&HistoryViewModelTestInternal::doNothing>(), owner, 0u );
             return cmd;
         }
     };
@@ -33,7 +33,9 @@ SW_TEST_CASE( HistoryViewModelTest, GatherAndJumpFollowTheStack )
     using Internal = HistoryViewModelTestInternal;
 
     sw::editor::UndoStepOwner owner;
-    sw::CommandStack          stack;
+    sw::CommandStack          stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     stack.push( Internal::makeCommand( owner, "Move" ) );
     stack.push( Internal::makeCommand( owner, "" ) );
 
@@ -63,4 +65,36 @@ SW_TEST_CASE( HistoryViewModelTest, GatherAndJumpFollowTheStack )
     viewModel.undo();
     viewModel.gather( state );
     SW_EXPECT_TRUE( state._currentIndex == 0u );
+}
+
+/** @brief [HistoryViewModelTest] History 의 이동은 Ctrl+Z 와 같은 입구다 — 스택에 열린 편집(끌기 상호작용)이 있으면 jumpTo · undo · 지우기가 아무것도 바꾸지 않는다(감사 E-2) */
+SW_TEST_CASE( HistoryViewModelTest, RefusedWhileEditOpen )
+{
+    using Internal = HistoryViewModelTestInternal;
+
+    sw::editor::UndoStepOwner owner;
+    sw::CommandStack          stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
+    stack.push( Internal::makeCommand( owner, "Move" ) );
+
+    sw::SubsystemScope scope;
+    SW_REQUIRE_TRUE( scope.bind( &stack ) );
+    const sw::editor::ScopedEditorScope scopedEditor( scope );
+
+    sw::editor::HistoryViewModel     viewModel;
+    sw::CommandStackInteractionScope interaction = stack.openInteraction();
+    viewModel.jumpTo( 0 );
+    viewModel.undo();
+    viewModel.clear();
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCurrentIndex() );
+
+    sw::editor::HistoryViewState state;
+    viewModel.gather( state );
+    SW_EXPECT_FALSE( state._bCanUndo ); // 끄는 동안 단추가 꺼진다
+
+    interaction.reset();
+    viewModel.jumpTo( 0 );
+    SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCurrentIndex() );
 }

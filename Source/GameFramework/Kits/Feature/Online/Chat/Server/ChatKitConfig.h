@@ -9,6 +9,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
 namespace sw
@@ -27,5 +28,8 @@ namespace sw
         /** @brief 채팅 기록(귓속말 · 길드 · 파티 포함)의 TTL 입니다. TTL 쓸기가 보낸 뒤 이 기간이 지난 기록을 지웁니다(개인정보 보존 기간). */
         PROPERTY( Required )
         ServiceTTLConfig _historyTTL{};
+        /** @brief 도배 방지(토큰 버킷 · 같은 글 반복)의 한도입니다. 코드 기본값이 없다. */
+        PROPERTY( Required )
+        ChatSpamConfig _spam{};
     };
 } // namespace sw

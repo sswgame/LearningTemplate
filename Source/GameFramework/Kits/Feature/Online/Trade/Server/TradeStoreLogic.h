@@ -23,6 +23,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeTypes.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 
 namespace sw
 {
@@ -31,11 +32,11 @@ namespace sw
     class IServiceStoreConnection;
     class ServiceTransaction;
 
-    /** @brief 거래 서비스 설정입니다. 시간은 밀리초입니다. */
+    /** @brief 거래 서비스 설정입니다. 시간은 밀리초입니다. 둘 다 필수(거래 키트 설정)이며 코드 기본값이 없다 — 0 이면 `TradeService::initialize` 가 멈춘다(감사 O-18). */
     struct TradeServiceConfig
     {
-        int64 _idleTimeoutMs{ TradeConstant::kIdleTimeoutMs };
-        int64 _inviteTimeoutMs{ TradeConstant::kInviteTimeoutMs };
+        int64 _idleTimeoutMs{ 0 };   ///< 수락한 거래가 움직임 없이 열려 있을 수 있는 시간이다(`_idleTimeoutMs`)
+        int64 _inviteTimeoutMs{ 0 }; ///< 신청이 답을 기다리는 시간이다(`_inviteTimeoutMs`)
     };
 } // namespace sw
 
@@ -110,7 +111,7 @@ namespace sw
         TradeServiceResult evaluateFunds( const TradeSide& side );
 
     private:
-        IServiceStoreConnection&  _connection;
+        ServiceReadSetConnection  _connection; ///< 읽은 레코드를 다음 커밋의 조건으로 붙인다(커밋마다 비우므로 시도마다 다시 읽는다)
         const ITradePolicy&       _policy;
         const ILedgerPolicy*      _pLedgerPolicy;
         const TradeServiceConfig& _settings;

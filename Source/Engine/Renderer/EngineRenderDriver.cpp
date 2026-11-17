@@ -23,6 +23,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
@@ -225,7 +226,7 @@ namespace sw
         _pRHI->getDevice().resize( width, height );
     }
 
-    void EngineRenderDriver::submitFrame( const float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
+    void EngineRenderDriver::submitFrame( const float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, const FrameDrawMode drawMode )
     {
         // 장치를 잃었으면 검은 화면으로 계속 돌지 않는다 — 렌더 스레드가 잃은 프레임을 Present 한 다음 게임 스레드 프레임에서 정책대로 끝낸다.
         if ( _pRHI != nullptr && _pRHI->hasDevice() && _bDeviceLostHandled == SW_FALSE )
@@ -276,8 +277,13 @@ namespace sw
         {
             SW_MEMORY_SCOPE( RenderCPU );
             RenderFramePacket& packet = _pPacketBuilder->beginPacket();
-            // 이 프레임을 찍어 달라고 맡긴 것(`ScreenshotRequestQueue::putForNextPacket`)은 다음에 그리는 이 패킷에 싣는다.
-            if ( ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>() )
+            // 그리지 않는 프레임도 패킷은 똑같이 짓는다 — 짓기가 게임 상태를 건드리는 몫(LOD 뷰 · 그려진 화면비 · 컷 소비)과 GPU 장면의 고친 구간이 그리는 실행과 같아야 한다.
+            packet._drawMode = drawMode;
+            if ( const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>() )
+                packet._simulationOnlySerial = pSimulationOnly->getLastSkippedSerial();
+            // 이 프레임을 찍어 달라고 맡긴 것(`ScreenshotRequestQueue::putForNextPacket`)은 다음에 그리는 이 패킷에 싣는다. 그리지 않는 패킷은 싣지 않는다(다음에 그리는 패킷이 받는다).
+            ScreenshotRequestQueue* const pMailbox = drawMode == FrameDrawMode::Draw ? engine::findSubsystem<ScreenshotRequestQueue>() : nullptr;
+            if ( pMailbox != nullptr )
                 (void)pMailbox->takeForPacket( packet._screenshotPath );
 
             _pPacketBuilder->populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_pRHI, _pFrameRenderer );

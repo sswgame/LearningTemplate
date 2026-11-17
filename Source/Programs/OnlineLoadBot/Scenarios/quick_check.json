@@ -2,6 +2,7 @@
     "_name": "quick_check",
     "_seed": 3,
     "_region": "kr",
+    "_pacing": "closed",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "directory_status" },

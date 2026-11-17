@@ -6,12 +6,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Time/WallClock.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchBackfill.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -22,12 +24,29 @@
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
+#include "ModuleAPI/Service/IServerKitLocator.h"
+
 namespace sw
 {
     namespace
     {
         struct ShooterNetPawnComponentInternal
         {
+            /**
+             * @brief 조종하던 계정 @p accountID 가 나갔다고 매칭에 알려 그 자리를 채우게 합니다(경기 중 백필).
+             * @details 전용 서버에 매칭 키트가 `gameServer` 로 서 있을 때만 창구가 있다 — 클라이언트 · 한 프로세스 재생 · 매칭 없는 서버는 아무것도 하지 않는다.
+             *          경기 · 팀은 게임이 적지 않고 키트가 읽은 명단에서 찾는다. 명단 밖 접속(개발 접속)이면 NotQueued 로 끝나고 맡기지 않는다.
+             */
+            static void reportPlayerLeft( uint64 accountID )
+            {
+                IMatchBackfillSender* const pBackfill = findServerKit<IMatchBackfillSender>( game::findSubsystem<IServerKitLocator>() );
+                if ( pBackfill == nullptr )
+                    return;
+                const MatchmakingServiceResult result = pBackfill->submitPlayerLeft( static_cast<AccountID>( accountID ), WallClock::nowUnixMilliseconds() );
+                if ( result.isFailed() )
+                    SW_LOG_WARNING_ID( "Shooter.BackfillPlayerLeftFailed", "[Shooter] backfill for the player who left %# was refused (error %#)", accountID, result._errorCode );
+            }
+
             /** @brief 한 프레임에 따라잡는 고정 틱 상한입니다. 멈춘 뒤의 긴 프레임이 틱을 몰아 돌리지 않게 한다(남은 시간은 버린다). */
             static constexpr int32 kMaxTicksPerFrame = 4;
 
@@ -125,6 +144,7 @@ namespace sw
         , _sentClaimCount{ 0 }
         , _confirmedClaimCount{ 0 }
         , _rejectedClaimCount{ 0 }
+        , _controllerAccountID{ 0 }
         , _controllerID{ -1 }
         , _role{ Role::None }
         , _bPendingTriggerLook{ SW_FALSE }
@@ -187,11 +207,12 @@ namespace sw
             }
             _role = Role::Client;
         }
-        _accumulator    = 0.0f;
-        _tick           = 0;
-        _nextInputTick  = kInputTickUnknown;
-        _reconciledTick = 0;
-        _controllerID   = -1;
+        _accumulator         = 0.0f;
+        _tick                = 0;
+        _nextInputTick       = kInputTickUnknown;
+        _reconciledTick      = 0;
+        _controllerAccountID = 0;
+        _controllerID        = -1;
         pMovement->setNetDriven( true );
         // 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
         if ( ControlSystem* pControl = ControlSystem::find( *getOwner()->getMutableManager() ) )
@@ -277,8 +298,11 @@ namespace sw
         const bool bControllerGone = _controllerID < 0 || peers.getConnectionState( _controllerID ) != NetConnectionState::Connected;
         if ( bControllerGone )
         {
-            _controllerID  = listConnection.empty() ? -1 : listConnection.front();
-            _nextInputTick = kInputTickUnknown;
+            if ( _controllerAccountID != 0 )
+                ShooterNetPawnComponentInternal::reportPlayerLeft( _controllerAccountID ); // 끊긴 연결의 주체는 이 틱에 이미 0 이라 맡을 때 적어 둔 계정을 쓴다
+            _controllerID        = listConnection.empty() ? -1 : listConnection.front();
+            _controllerAccountID = _controllerID >= 0 ? peers.getConnectionPrincipal( _controllerID ) : 0; // 접속 티켓이 정한 계정 — 클라이언트가 보낸 값이 아니다
+            _nextInputTick       = kInputTickUnknown;
             if ( pRemote != nullptr )
             {
                 pRemote->clearReceived();

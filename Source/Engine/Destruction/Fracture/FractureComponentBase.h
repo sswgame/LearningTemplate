@@ -35,6 +35,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
@@ -357,7 +358,7 @@ namespace sw
 
         shared_ptr<const FractureAsset>        _asset;
         unique_ptr<IFracturePhysics>           _physics;
-        shared_ptr<const DestructionProfile>   _pProfile; ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
+        SharedAssetRef<DestructionProfile>     _pProfile; ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
         DestructionState                       _state;
         DestructionEventLog                    _eventLog;
         vector<FractureGroupPose>              _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다.

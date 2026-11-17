@@ -44,41 +44,6 @@ namespace sw
     /** @brief 유닛 id 입니다. 죽은 유닛의 슬롯이 다시 쓰여도 세대가 달라서 옛 id 로는 찾을 수 없습니다. */
     using RTSUnitID = SlotHandle;
 
-    /**
-     * @brief 규칙의 수치입니다. 시간 단위는 게임 초입니다.
-     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `RTSWorld::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
-     */
-    REFLECT()
-    struct SW_KIT_API RTSSettings
-    {
-        REFLECT_BODY();
-        PROPERTY( Min = 0.001, Max = 1.0 )
-        float32 _fixedStep{ 0.05f }; ///< 시뮬레이션 한 걸음의 길이(20 Hz, 스타크래프트의 게임 틱과 비슷하다)
-        PROPERTY( Min = 0.0 )
-        float32 _minimumDamage{ 0.5f }; ///< 방어가 높아도 최소한 이만큼은 피해가 들어간다
-        PROPERTY( Min = 0.0 )
-        float32 _repathInterval{ 0.5f }; ///< 움직이는 목표를 쫓을 때 경로를 다시 구하는 간격
-        PROPERTY( Min = 0.0 )
-        float32 _visionInterval{ 0.25f }; ///< 안개를 다시 칠하는 간격
-        PROPERTY( Min = 0.0 )
-        float32 _interactSlack{ 0.35f }; ///< 채취, 건설, 반납에서 닿았다고 보는 가장자리 거리
-        PROPERTY( Min = 0.0 )
-        float32 _resourceSearchRadius{ 8.0f }; ///< 광물이 바닥났을 때 대신할 광물을 찾는 반경
-        PROPERTY( Min = 0.0, Max = 1.0 )
-        float32 _constructionStartRatio{ 0.1f }; ///< 건설을 시작한 건물이 처음 가지는 체력 비율
-        PROPERTY( Min = 0.0 )
-        float32 _underAttackCooldown{ 10.0f }; ///< "공격받고 있다" 알림의 간격(플레이어마다 적용)
-        PROPERTY( Min = 1 )
-        int32 _productionQueueMax{ 5 };
-        PROPERTY( Min = 1 )
-        int32 _flowFieldGroupSize{ 6 }; ///< 이 수 이상을 한 곳으로 보내면 A* 대신 흐름장 하나를 쓴다
-        PROPERTY( Min = 1 )
-        int32 _bucketSize{ 4 }; ///< 이웃 탐색 버킷의 한 변 길이(셀 수)
-        PROPERTY()
-        hashed_string _mineralCurrency{ "Minerals" }; ///< 플레이어 지갑에서 광물로 쓰는 통화
-        PROPERTY()
-        hashed_string _gasCurrency{ "Gas" }; ///< 플레이어 지갑에서 가스로 쓰는 통화
-    };
 } // namespace sw
 
 namespace sw
@@ -245,8 +210,11 @@ namespace sw
 
         RTSWorld();
 
-        /** @brief 카탈로그와 격자 크기, 설정으로 판을 비웁니다. 크기가 1 보다 작거나 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 판은 그대로입니다(1 로 올려 받지 않는다). */
-        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, int32 width, int32 height, const RTSSettings& settings );
+        /**
+         * @brief 카탈로그와 격자 크기로 판을 비웁니다. 규칙은 카탈로그의 `<Rules>`(`RTSCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4).
+         * @details 카탈로그가 없거나 크기가 1 보다 작으면 오류를 남기고 false 를 반환하며 판은 그대로입니다(1 로 올려 받지 않는다).
+         */
+        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, int32 width, int32 height );
         /** @brief 지형이 막힌 곳(절벽, 물)을 지정합니다. 유닛을 놓기 전에 칠합니다. */
         void setTerrainBlocked( int32 x, int32 y, bool bBlocked );
         /**
@@ -289,8 +257,11 @@ namespace sw
          */
         int32 applyCommand( int32 player, const RTSCommand& command );
 
-        /** @brief 시간을 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다. */
-        void update( float32 deltaTime );
+        /**
+         * @brief 실제 프레임 시간 @p deltaTime 을 배속 @p timeScale 로 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다.
+         * @return 이번에 진행한 월드 시간(걸음 수 × 걸음)입니다. 월드와 같이 도는 것(AI · 시계)은 이 값으로 돌려 월드와 어긋나지 않게 한다(감사 K-6).
+         */
+        float32 update( float32 deltaTime, float32 timeScale );
         /** @brief 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
         [[nodiscard]] bool claimEvents( ConsumerLease& outLease ) { return _eventBuffer.claim( outLease ); }
         void               pollEvents( const ConsumerLease& lease, vector<RTSEvent>& outListEvent );

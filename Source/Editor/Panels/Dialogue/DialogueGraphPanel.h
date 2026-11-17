@@ -91,6 +91,6 @@ namespace sw::editor
         string                    _actionError;          ///< 글을 풀지 못한 까닭
         vector<string>            _listActionName;       ///< 고르기 목록
         const ActionEntry*        _pActionEntry;         ///< `_actionProperties` 의 등록 줄
-        string*                   _pActionTargetText;    ///< 그리는 동안만 쓴다 — 칸을 고치면 이 글을 고친다
+        DialogueNode*             _pActionTargetNode;    ///< 그리는 동안만 쓴다 — 칸을 고치면 이 노드의 명령을 모델 연산으로 고친다
     };
 } // namespace sw::editor

@@ -87,7 +87,8 @@ namespace sw
      *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 프레임 그래프(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
      *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과, 언리얼 Niagara GPU 압축 · 유니티 VFX Graph dead list 와 같은 선)를 디스패치하고, 메시 방출기는 이어서 인스턴스 칸을 쓴다(vfx_mesh_instance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
      *          올라온 프레임도 그리기 전에 다시 쓴다). 빌보드 · 띠는 투명 패스가 렌더 입력을 t11 에 걸고 간접 인자로 그린다(`VFXParticleRenderer::drawBatches`).
-     *          이번 프레임에 없는 재생 번호의 상태는 놓는다(멈췄거나 다시 재생했거나 컴포넌트가 사라졌다). 다시 나타나면 처음부터 다시 돌아 같은 결과에 닿는다.
+     *          이번 프레임에 없고 재생 토큰을 이 상태만 든 재생(다시 재생했거나 컴포넌트가 사라졌다)의 상태는 놓는다. 숨었다 다시 실린 재생은 상태를 이어 쓰고,
+     *          수명 창보다 오래 밀린 단계는 일정만 옮긴다(`VFXEmitterClock::skipExpiredSteps`) — 처음부터 빨리감지 않는다.
      */
     class SW_API VFXGPUSimulation
     {
@@ -129,6 +130,11 @@ namespace sw
         /** @brief 모든 상태를 놓습니다(디바이스가 없으면 핸들만 잊습니다). */
         void release( IRHIDevice* pDevice );
 
+        /**
+         * @brief 이번 프레임의 디스패치를 다 돌고도 남는 단계 수의 최댓값입니다(방출기 하나가 디스패치 상한 `SW_VFX_MAX_STEPS_PER_DISPATCH` 보다 밀렸다).
+         * @details 그리지 않고 진행한 프레임(`SimulationOnlyFrameQueue`) 뒤에 따라잡는 중이면 0 이 아니다 — 캡처 준비가 이것이 0 이 될 때까지 기다린다.
+         */
+        uint64 getPendingStepCount() const { return _pendingStepCount; }
         /** @brief 지금 든 GPU 방출기 상태의 수입니다(테스트와 진단용). */
         uint32 getEmitterStateCount() const { return static_cast<uint32>( _mapState.size() ); }
 
@@ -182,7 +188,7 @@ namespace sw
         void prepareParticleEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
         /** @brief 메시 방출기마다 방출기 상태를 갖추고 시뮬레이션과 메시 인스턴스 쓰기를 더합니다. */
         void prepareMeshEmitters( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter );
-        /** @brief 이번 프레임에 없는 재생(멈춤 · 다시 재생 · 컴포넌트 제거)의 GPU 버퍼를 놓습니다. */
+        /** @brief 이번 프레임에 없고 재생 토큰이 끝난 재생(다시 재생 · 컴포넌트 제거)의 GPU 버퍼를 놓습니다. */
         void releaseStaleEmitters( IRHIDevice& device );
         /** @brief 모은 매개변수 단어를 버퍼에 올립니다. 버퍼를 잡지 못하면 이번 프레임의 디스패치를 모두 비웁니다. */
         void uploadParamBuffer( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch );
@@ -210,6 +216,7 @@ namespace sw
         vector<VFXGPULightRange>                        _listLightRange;               ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
         VFXSimulationFrameInput                         _frameInput;                   ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
         RHIStructuredBuffer                             _paramBuffer;
+        uint64                                          _pendingStepCount; ///< `getPendingStepCount`
         uint8                                           _bPipelineMissingLogged     : 1;
         uint8                                           _bMeshPipelineMissingLogged : 1;
         uint8                                           _bLightOverflowLogged       : 1;

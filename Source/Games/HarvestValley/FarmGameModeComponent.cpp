@@ -8,7 +8,6 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -209,11 +208,6 @@ namespace sw
         logStatus( false );
     }
 
-    void FarmGameModeComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
-    {
-        GameModeComponent::foldStateHash( inoutBuilder ); // 날씨 난수는 판 상태(`SessionStateComponent` 의 날씨)가 쥐고 싣는다
-    }
-
     void FarmGameModeComponent::serializeState( StateIO& io )
     {
         io.header( FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
@@ -368,7 +362,7 @@ namespace sw
         settings._clock._daysPerSeason    = _daysPerSeason;
         settings._pItemCatalog            = &_itemCatalog;
         settings._inventorySlotCount      = kBagSlotCount;
-        settings._pWeatherCatalog         = _pWeatherCatalog.get(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
+        settings._pWeatherCatalog         = _pWeatherCatalog.snapshot(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
         SessionStateInitResult initResult = SessionStateInitResult::Refused;
         SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, settings, initResult );
         if ( pState == nullptr )

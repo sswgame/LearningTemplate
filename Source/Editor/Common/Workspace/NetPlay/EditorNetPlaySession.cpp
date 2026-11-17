@@ -384,6 +384,7 @@ namespace sw::editor
         const ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), executablePath, std::move( listArgument ) );
         ProcessOptions       options;
         options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
+        options._bEndWithParent     = true; // 에디터가 죽으면 서버 · 클라이언트도 끝난다 — 고아가 포트를 쥐고 남지 않게(감사 E-15, 언리얼 PIE 별도 프로세스와 같다)
         if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
         {
             SW_LOG_ERROR_ID( "NetPlay.CouldNotLaunch", "Could not launch %#: %#", label, command.toCommandLine() );

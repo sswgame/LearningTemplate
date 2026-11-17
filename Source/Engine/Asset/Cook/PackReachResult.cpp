@@ -110,19 +110,19 @@ namespace sw
             /** @brief 한 번의 훑기 상태입니다. 담은 집합과 읽을 차례(글 에셋)를 든다. */
             struct ReachTraversal
             {
-                const AssetReferenceFields&     _params;
-                const PackCookRules&            _rules;
-                const PackReachFiles&           _files;
-                const IPackReachSource&         _source;
-                unordered_set<string>           _setUnfollowedField;
-                unordered_set<string>&          _setIncluded;
-                unordered_set<string>&          _setReferencedExcluded;
-                vector<string>                  _listPending;      ///< 담았고 아직 훑지 않은 파일
-                unordered_map<string, string>   _mapIDFieldKind;   ///< id 칸 이름 → 이름 공간
-                unordered_set<string>           _setWholeCatalog;  ///< 모든 항목이 쓰이는 카탈로그 파일
-                unordered_set<string>           _setNamedEntry;    ///< 불린 항목(`<이름 공간>\t<id>`)
-                vector<NamedEntry>              _listPendingEntry; ///< 불렸고 아직 찾아보지 않은 항목
-                vector<unique_ptr<CatalogFile>> _listCatalog;      ///< 연 카탈로그 파일
+                const AssetReferenceFields&                            _params;
+                const PackCookRules&                                   _rules;
+                const PackReachFiles&                                  _files;
+                const IPackReachSource&                                _source;
+                unordered_set<string>                                  _setUnfollowedField;
+                unordered_set<string>&                                 _setIncluded;
+                unordered_set<string>&                                 _setReferencedExcluded;
+                vector<string>                                         _listPending;      ///< 담았고 아직 훑지 않은 파일
+                unordered_map<string, vector<const PackEntryIDField*>> _mapIDFieldKind;   ///< id 칸 이름 → 그 이름의 칸들(팩마다 닿는 범위가 다를 수 있다 — `PackRuleScope`)
+                unordered_set<string>                                  _setWholeCatalog;  ///< 모든 항목이 쓰이는 카탈로그 파일
+                unordered_set<string>                                  _setNamedEntry;    ///< 불린 항목(`<이름 공간>\t<id>`)
+                vector<NamedEntry>                                     _listPendingEntry; ///< 불렸고 아직 찾아보지 않은 항목
+                vector<unique_ptr<CatalogFile>>                        _listCatalog;      ///< 연 카탈로그 파일
                 // 아래 색인은 찾기마다 목록 · 집합 전체를 훑지 않으려는 것이다(불린 항목 수 × 연 항목 수, 폴더 참조 수 × 파일 수). 값의 순서는 예전 훑기의 순서(연 순서 · 집합 순서) 그대로다.
                 unordered_map<string, vector<CatalogEntrySlot>> _mapEntrySlot;      ///< `<이름 공간>\t<id>` → 연 카탈로그의 그 항목들(연 순서)
                 unordered_map<string, vector<CatalogFile*>>     _mapCatalogByID;    ///< 카탈로그 파일 id → 연 카탈로그
@@ -168,7 +168,7 @@ namespace sw
                     }
                     for ( const PackEntryIDField& idField : rules._listEntryIDField )
                     {
-                        _mapIDFieldKind[idField._field] = idField._kind;
+                        _mapIDFieldKind[idField._field].push_back( &idField );
                     }
                 }
 
@@ -211,27 +211,39 @@ namespace sw
                     }
                 }
 
-                /** @brief @p node 와 그 아래의 id 칸(속성 · 요소 글 · `<item>` 목록)이 부르는 항목을 적습니다. */
-                void collectNamedEntries( XMLNode node )
+                /** @brief 파일 @p assetID 안의 칸 @p fieldName 이 id 칸이면 그 이름 공간, 아니면 nullptr 입니다 — 그 파일의 팩에 닿는 칸만 본다(`PackRuleScope`). */
+                const string* findIDFieldKind( string_view fieldName, string_view assetID ) const
+                {
+                    const auto itField = _mapIDFieldKind.find( string( fieldName ) );
+                    if ( itField == _mapIDFieldKind.end() )
+                        return nullptr;
+                    for ( const PackEntryIDField* pField : itField->second )
+                    {
+                        if ( pField->_scope.isApplicableTo( assetID ) )
+                            return &pField->_kind;
+                    }
+                    return nullptr;
+                }
+
+                /** @brief 파일 @p assetID 의 @p node 와 그 아래의 id 칸(속성 · 요소 글 · `<item>` 목록)이 부르는 항목을 적습니다. */
+                void collectNamedEntries( XMLNode node, const string& assetID )
                 {
                     for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                     {
-                        const auto itKind = _mapIDFieldKind.find( string( attribute.getName() ) );
-                        if ( itKind != _mapIDFieldKind.end() )
-                            markNamedTokens( itKind->second, attribute.getValue() );
+                        if ( const string* pKind = findIDFieldKind( attribute.getName(), assetID ); pKind != nullptr )
+                            markNamedTokens( *pKind, attribute.getValue() );
                     }
                     for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
                     {
-                        const auto itKind = _mapIDFieldKind.find( string( child.getName() ) );
-                        if ( itKind != _mapIDFieldKind.end() )
+                        if ( const string* pKind = findIDFieldKind( child.getName(), assetID ); pKind != nullptr )
                         {
-                            markNamedTokens( itKind->second, child.getText() );
+                            markNamedTokens( *pKind, child.getText() );
                             for ( XMLNode item = child.findChild( kItemElement ); item.isValid(); item = item.findNextSibling( kItemElement ) )
                             {
-                                markNamedTokens( itKind->second, item.getText() );
+                                markNamedTokens( *pKind, item.getText() );
                             }
                         }
-                        collectNamedEntries( child );
+                        collectNamedEntries( child, assetID );
                     }
                 }
 
@@ -266,7 +278,7 @@ namespace sw
                         return;
                     ioEntry._bVisited = SW_TRUE;
                     followReferences( string_view( catalog._text ).substr( ioEntry._start, ioEntry._end - ioEntry._start ), catalog._assetID );
-                    collectNamedEntries( ioEntry._node );
+                    collectNamedEntries( ioEntry._node, catalog._assetID );
                     markNamed( catalog._pRule->_kind, ioEntry._node.getAttributeText( kEntryBaseAttribute ) );
                 }
 
@@ -311,7 +323,7 @@ namespace sw
                         if ( StringUtil::equals( listSpan[index]._node.getName(), string_view( rule._entryElement ) ) == false )
                         {
                             followReferences( allText.substr( listSpan[index]._start, end - listSpan[index]._start ), assetID ); // 항목이 아닌 요소는 늘 쓰인다
-                            collectNamedEntries( listSpan[index]._node );
+                            collectNamedEntries( listSpan[index]._node, assetID );
                             continue;
                         }
                         CatalogEntry& entry = catalog._listEntry.emplace_back();
@@ -417,6 +429,8 @@ namespace sw
                     {
                         if ( rule._bAutomationOnly && _files._automation == PackAutomationContent::Excluded )
                             continue; // 자동화 없는 배포 - 시나리오는 읽히지 않는다
+                        if ( rule._scope.isApplicableTo( assetID ) == false )
+                            continue; // 이 팩에는 닿지 않는 규칙이다(다른 게임의 규칙 · 이 게임이 덮은 엔진 규칙)
                         const bool bMatches = std::any_of( rule._listPattern.begin(), rule._listPattern.end(), [&assetID]( const string& pattern )
                         { return StringUtil::matchesPathPattern( pattern, assetID ); } );
                         if ( bMatches )
@@ -561,7 +575,7 @@ namespace sw
                     XMLDocument document;
                     // 깨진 글은 런타임도 읽지 못한다 - 경로 칸은 위에서 이미 따라갔고, 이 글이 부르는 항목은 없다.
                     if ( document.parse( text, assetID ) )
-                        collectNamedEntries( document.getRoot() );
+                        collectNamedEntries( document.getRoot(), assetID );
                 }
 
                 void run()

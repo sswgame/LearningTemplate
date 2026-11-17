@@ -140,3 +140,34 @@ SW_TEST_CASE( TransientLeasePoolTest, IdleSlotsAreReleasedOnce )
     SW_EXPECT_TRUE( reused._bCreated != 0 );
     SW_EXPECT_TRUE( kept._slot != reused._slot );
 }
+
+/**
+ * @brief [RenderGraphAliasPlanTest] 꺼진 효과 셋이 잇따라 원본을 가리키는 사슬(A ← B ← C ← D)은 모두 사슬 전체의 구간을 받는다(RN-12)
+ * @details 짝마다 둘만 맞추면 A 는 C · D 의 끝 레벨을 받지 못해, D 를 읽는 패스가 도는 동안 A 의 텍스처를 다른 첨부에 넘긴다. 짝의 순서를 뒤섞어도 같아야 한다.
+ */
+SW_TEST_CASE( RenderGraphAliasPlanTest, JoinLifetimesSpansWholeBypassChain )
+{
+    vector<RenderGraphAliasCandidate> listCandidate = {
+        {    hashed_string( "A" ), 7, 1, 2},
+        {    hashed_string( "B" ), 7, 3, 3},
+        {    hashed_string( "C" ), 7, 4, 4},
+        {    hashed_string( "D" ), 7, 5, 6},
+        {hashed_string( "Other" ), 7, 4, 4}, // 사슬 밖 — 그대로다
+    };
+    const vector<RenderGraphAliasJoin> listJoin = {
+        {2u, 3u}, // C ← D
+        {0u, 1u}, // A ← B
+        {1u, 2u}, // B ← C
+    };
+    RenderGraphAliasPlan::joinLifetimes( listCandidate, listJoin );
+    for ( uint32 index = 0; index < 4u; ++index )
+    {
+        SW_EXPECT_EQUAL( 1u, listCandidate[index]._firstLevel );
+        SW_EXPECT_EQUAL( 6u, listCandidate[index]._lastLevel );
+    }
+    SW_EXPECT_EQUAL( 4u, listCandidate[4]._firstLevel );
+    SW_EXPECT_EQUAL( 4u, listCandidate[4]._lastLevel );
+    // 사슬이 레벨 1 ~ 6 을 쥐므로 레벨 4 의 Other 는 A 의 텍스처를 빌리지 못한다.
+    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::build( listCandidate );
+    SW_EXPECT_TRUE( plan.findOwner( hashed_string( "Other" ) ).empty() );
+}

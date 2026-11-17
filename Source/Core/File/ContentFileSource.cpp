@@ -68,6 +68,12 @@ namespace sw
     {
         return io.readFile( path, priority, onComplete ); // 파일 열기는 백엔드 스레드가 한다
     }
+
+    AsyncReadHandle DiskContentFileSource::readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                                           const AsyncReadCompleteDelegate& onComplete ) const
+    {
+        return io.readRange( path, offset, size, priority, onComplete ); // 파일 열기는 백엔드 스레드가 한다
+    }
 } // namespace sw
 
 namespace sw
@@ -141,6 +147,12 @@ namespace sw
     AsyncReadHandle MemoryContentFileSource::readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const
     {
         return io.readRange( open( path ), 0, AsyncFileIO::kWholeFile, priority, onComplete );
+    }
+
+    AsyncReadHandle MemoryContentFileSource::readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                                             const AsyncReadCompleteDelegate& onComplete ) const
+    {
+        return io.readRange( open( path ), offset, size, priority, onComplete ); // 메모리 핸들의 구간 복사
     }
 } // namespace sw
 
