@@ -64,9 +64,14 @@ namespace sw
         void serializeState( StateIO& io ) override;
 
         // ---- 자동화 감시 값이 읽는 것(게임 스레드, 틱 뒤) ----
-        int32 getPopulation() const;
-        int64 getMoney() const;
-        int32 getMonthCount() const { return _monthCount; }
+        int32  getPopulation() const;
+        int64  getMoney() const;
+        int32  getMonthCount() const { return _monthCount; }
+        int32  getSelectedTool() const { return _selectedTool; }   ///< 0 은 도로, 그 뒤는 카탈로그 건물 순서다
+        uint32 getBuildCount() const { return _buildCount; }       ///< 이번 판에 깔거나 지은 수(도로 · 건물, 성공만)
+        uint32 getDemolishCount() const { return _demolishCount; } ///< 이번 판에 허문 수
+        /** @brief 커서가 땅 위 타일에 있으면 true 를 반환하고 @p outTile 에 그 타일을 채웁니다(지난 틱의 판정). */
+        [[nodiscard]] bool findCursorTile( int2& outTile ) const;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const CitySimulation& getCity() const { return _city; }
@@ -256,7 +261,9 @@ namespace sw
         float32                              _timeScale;
         int32                                _selectedTool;
         int32                                _monthCount;
-        int32                                _evolvedCount; ///< 이번 달 올라간 집 수(월말 로그).
+        int32                                _evolvedCount;  ///< 이번 달 올라간 집 수(월말 로그).
+        uint32                               _buildCount;    ///< 자동화 감시 값 `Nile.BuildCount` — 저장하지 않는 이번 판 수
+        uint32                               _demolishCount; ///< 자동화 감시 값 `Nile.DemolishCount` — 저장하지 않는 이번 판 수
         uint8                                _bCursorValid    : 1;
         uint8                                _bPaused         : 1;
         uint8                                _bAutoPlanToggle : 1; ///< P 로 켠 자동 계획(PROPERTY 와 전역 변수와는 별개다).

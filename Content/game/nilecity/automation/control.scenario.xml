@@ -9,11 +9,17 @@
 	<Variable name="gv_nileAutoPlay" value="0"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
 	<MousePosition x="0.5" y="0.5"/>
-	<AdvanceSimulation frames="2"/> <!-- 커서 칸이 포인터 자리를 받는다(프레임 경계 — 커서 칸 감시 값이 없다) -->
+	<WaitUntil watch="Nile.CursorCellX" atLeast="0" timeoutFrames="10"/> <!-- 커서가 포인터 아래 땅 칸을 잡았다 -->
+	<Store watch="Nile.CursorCellX" as="cellX"/>
+	<Store watch="Nile.CursorCellZ" as="cellZ"/>
+	<Store watch="Nile.BuildCount" as="builds"/>
+	<Store watch="Nile.DemolishCount" as="demolishes"/>
 	<Tap slot="Mouse.Left" hold="1"/>
-	<AdvanceSimulation frames="4"/> <!-- 짓기와 허물기를 다른 프레임에 둔다(프레임 경계 — 이미 도로면 돈이 바뀌지 않아 볼 값이 없다) -->
+	<WaitUntil watch="Nile.BuildCount" differsFrom="builds" timeoutFrames="10"/> <!-- 도로를 깔았다 -->
 	<Tap slot="Mouse.Right" hold="1"/>
-	<AdvanceSimulation frames="4"/> <!-- 허물기 로그가 남는다(프레임 경계 — 감시 값이 없다) -->
+	<WaitUntil watch="Nile.DemolishCount" differsFrom="demolishes" timeoutFrames="10"/> <!-- 허물었다 -->
+	<Expect watch="Nile.CursorCellX" sameAs="cellX"/> <!-- 깐 칸을 허물었다 -->
+	<Expect watch="Nile.CursorCellZ" sameAs="cellZ"/>
 	<ExpectLog id="Nile.Demolished" count="1"/>
 	<Pass/>
 </Scenario>
