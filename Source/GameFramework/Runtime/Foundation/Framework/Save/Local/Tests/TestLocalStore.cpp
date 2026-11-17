@@ -198,3 +198,39 @@ SW_TEST_CASE( LocalDeviceKeyTest, GarbageKeyFileIsKeptAsideAndReplaced )
 {
     expectUnreadableKeyFileIsReplaced( "device_key_garbage", "not a key" );
 }
+
+/**
+ * @brief [LocalStoreFileTest] 슬롯을 쓸 때 직전 세대(`.prev`)를 남기고, 지금 파일의 봉투 검사가 지면 그것으로 돌아가 읽고 경고한다. 둘 다 지면 Corrupt 다
+ * @details 예전에는 한 세대만 있어 깨진 세이브(장치 결함 · 밖에서 고친 파일)는 그대로 잃었다.
+ */
+SW_TEST_CASE( LocalStoreFileTest, CorruptSlotFallsBackToThePreviousGeneration )
+{
+    FileLocalFixture fixture;
+    using Contract = test::LocalStoreContract;
+    SW_REQUIRE_TRUE( Contract::write( fixture.getStore(), "save/slot0", Contract::makeText( "first" ) ) == LocalStoreResult::Ok );
+    SW_REQUIRE_TRUE( Contract::write( fixture.getStore(), "save/slot0", Contract::makeText( "second" ) ) == LocalStoreResult::Ok );
+    fixture._store.reset(); // 쓰기를 마친 뒤 파일을 직접 고친다
+
+    const string slotPath     = fixture._directStorage.makeSlotPath( "save/slot0" );
+    const string previousPath = slotPath + FileLocalSlotStorage::kPreviousGenerationSuffix;
+    SW_REQUIRE_TRUE( FileUtil::isRegularFile( previousPath ) );
+    const uint8 arrGarbage[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
+    SW_REQUIRE_TRUE( FileUtil::writeFile( slotPath, arrGarbage, sizeof( arrGarbage ) ) );
+
+    fixture.restart();
+    {
+        SW_EXPECT_LOG( "LocalStore.ReadPreviousGeneration" );
+        const LocalStoreCompletion recovered = Contract::read( fixture.getStore(), "save/slot0" );
+        SW_EXPECT_TRUE( recovered._result == LocalStoreResult::Ok );
+        SW_EXPECT_TRUE( recovered._bytes == Contract::makeText( "first" ) );
+    }
+
+    fixture._store.reset();
+    SW_REQUIRE_TRUE( FileUtil::writeFile( previousPath, arrGarbage, sizeof( arrGarbage ) ) );
+    fixture.restart();
+    SW_EXPECT_TRUE( Contract::read( fixture.getStore(), "save/slot0" )._result == LocalStoreResult::Corrupt );
+
+    fixture._store.reset();
+    SW_REQUIRE_TRUE( fixture._directStorage.eraseSlot( "save/slot0" ) == LocalStoreResult::Ok );
+    SW_EXPECT_FALSE( FileUtil::exists( previousPath ) ); // 지우기는 직전 세대도 지운다
+}
