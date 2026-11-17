@@ -484,3 +484,18 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
     SW_EXPECT_EQUAL( SW_TRUE, status._listAnnouncement[0]._bLiteralText );
     SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
 }
+
+/** @brief [ServerDirectoryServiceTest] 점검 표는 첫 쪽(64 행) 뒤까지 다 읽는다 — 앞 범위의 점검이 많아도 뒤 범위(game)의 점검이 빠져 열리지 않는다(감사 O-18) */
+SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBeyondTheFirstPageStillBlocks )
+{
+    DirectoryServiceFixture rig;
+    const UnixMilliseconds  nowMs{ kNowMs };
+    for ( int32 index = 0; index < 70; ++index )
+    {
+        rig.writeMaintenanceDirectly( makeWindow( "aa" + to_string( 100 + index ) ) ); // 키 순서로 game 앞에 온다
+    }
+    rig.writeMaintenanceDirectly( makeWindow( "game" ) );
+    rig._service.notifyChanged();
+    rig.tick( kNowMs );
+    SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
+}

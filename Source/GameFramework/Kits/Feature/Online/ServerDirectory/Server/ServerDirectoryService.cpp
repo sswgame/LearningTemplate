@@ -22,8 +22,9 @@ namespace sw
     {
         struct ServerDirectoryServiceInternal
         {
-            static constexpr int32 kMaxMaintenanceRow = 64;
-            static constexpr int32 kPercentScale      = 100;
+            static constexpr int32 kMaxMaintenanceRow     = 64;   ///< 점검 표를 한 번에 읽는 쪽 크기이다
+            static constexpr int32 kMaxMaintenanceRowRead = 1024; ///< 점검 표를 다 읽는 상한이다. 넘으면 이전 상태를 둔다(뒤의 점검을 조용히 버리면 그 범위가 열린다)
+            static constexpr int32 kPercentScale          = 100;
 
             static const hashed_string& getMaintenanceTable()
             {
@@ -110,9 +111,25 @@ namespace sw
             using Internal = ServerDirectoryServiceInternal;
             ServiceStoreRead<ServerDirectoryTables> read;
             vector<ServiceRecord>                   listRecord;
-            read._result = connection.listRecords( Internal::getMaintenanceTable(), "", "", Internal::kMaxMaintenanceRow, false, listRecord );
-            if ( read._result != ServiceStoreResult::Ok )
-                return read;
+            // 점검은 막는 규칙이라 다 읽는다 — 첫 쪽만 읽으면 그 뒤 범위의 점검이 조용히 빠져 열렸다(감사 O-18 의 fail-open)
+            string cursorKey;
+            for ( ;; )
+            {
+                vector<ServiceRecord> listPage;
+                read._result = connection.listRecords( Internal::getMaintenanceTable(), "", cursorKey, Internal::kMaxMaintenanceRow, false, listPage );
+                if ( read._result != ServiceStoreResult::Ok )
+                    return read;
+                listRecord.insert( listRecord.end(), listPage.begin(), listPage.end() );
+                if ( static_cast<int32>( listRecord.size() ) > Internal::kMaxMaintenanceRowRead )
+                {
+                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryMaintenanceTooMany", "Server directory has more than %# maintenance records - kept the previous state", Internal::kMaxMaintenanceRowRead );
+                    read._result = ServiceStoreResult::Invalid;
+                    return read;
+                }
+                if ( static_cast<int32>( listPage.size() ) < Internal::kMaxMaintenanceRow )
+                    break;
+                cursorKey = listPage.back()._key;
+            }
             for ( const ServiceRecord& record : listRecord )
             {
                 MaintenanceWindow window;
