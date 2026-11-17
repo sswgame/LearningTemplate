@@ -29,14 +29,13 @@
 	<Variable name="gv_arenaAutoPlay" value="0"/>
 	<WaitUntil watch="Arena.PlayerControllerKind" equals="0" timeoutFrames="60"/>
 	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
-	<Wait frames="1"/>
 	<DevCommand line="game.save abilityarena/slice"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
-	<Wait seconds="1"/>
+	<AdvanceSimulation frames="60"/> <!-- 저장 · 복원 사이 세계를 더 돌린다(시간이 내용) -->
 	<DevCommand line="game.load abilityarena/slice"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
 	<RecordStateHash key="restored"/>
-	<Wait seconds="1"/>
+	<AdvanceSimulation frames="60"/> <!-- 저장 · 복원 사이 세계를 더 돌린다(시간이 내용) -->
 	<DevCommand line="game.load abilityarena/slice"/>
 	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
 	<ExpectStateHash key="restored"/>
