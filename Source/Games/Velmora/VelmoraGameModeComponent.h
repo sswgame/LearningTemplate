@@ -72,6 +72,7 @@ namespace sw
         int32                getHealthQuarters() const { return _campaign.getVitals().computeHealthQuarters(); }
         int32                getHeartCount() const { return _campaign.getVitals().getHeartCount(); }
         int32                getAliveEnemyCount() const { return _room.getAliveEnemyCount(); }
+        bool                 isAttackReady() const { return _room.isAttackReady(); }
         int32                getFallCount() const { return _fallCount; }
         const hashed_string& getCurrentRegion() const { return _currentRegion; }
         const hashed_string& getRespawnRegion() const { return _campaign.getRespawnRegion(); }

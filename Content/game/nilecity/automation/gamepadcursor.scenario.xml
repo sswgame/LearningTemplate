@@ -12,22 +12,21 @@
 	<Variable name="gv_nileAutoPlay" value="0"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
 	<MousePosition x="0.1" y="0.5"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/> <!-- 커서가 시작 자리를 받는다(프레임 경계 — 픽셀 자리는 창 크기에 달려 조건으로 못 쓴다) -->
 	<Store watch="Input.MouseX" as="before"/>
 	<Store watch="Input.MouseY" as="beforeY"/>
 	<!-- 왼쪽 스틱 X(축 0)를 30 프레임 끝까지 민다 -->
 	<GamepadAxis axis="0" value="1"/>
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 누른 채인 구간(시간이 내용) -->
 	<GamepadAxis axis="0" value="0"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Input.MouseX" atLeast="300" timeoutFrames="10"/> <!-- 커서가 문턱 너머로 갔다 -->
 	<Expect watch="Input.MouseX" differsFrom="before"/>
-	<Expect watch="Input.MouseX" atLeast="300"/>
 	<!-- 스틱 X 만 밀었으니 Y 는 그대로다 -->
 	<Expect watch="Input.MouseY" sameAs="beforeY"/>
-	<!-- 스틱을 놓으면 커서가 선다 — 움직이지 않는 것을 보므로 고정 대기다 -->
-	<Wait frames="4"/>
+	<!-- 스틱을 놓으면 커서가 선다 — 움직이지 않는 것을 보므로 시간이 내용이다(AdvanceSimulation) -->
+	<AdvanceSimulation frames="4"/>
 	<Store watch="Input.MouseX" as="stopped"/>
-	<Wait frames="20"/>
+	<AdvanceSimulation frames="20"/> <!-- 20 프레임 동안 서 있다(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="Input.MouseX" sameAs="stopped"/>
 	<Pass/>
 </Scenario>

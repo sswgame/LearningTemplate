@@ -50,6 +50,24 @@ namespace sw
                 return static_cast<int32>( kind ) * kWalkerLookStride + static_cast<int32>( service );
             }
 
+            /** @brief 감시 값 `Nile.CursorCellX` · `Nile.CursorCellZ` 입니다. 커서가 땅 밖이면 값이 없습니다. */
+            static bool readCursorCellX( const NileGameModeComponent& mode, float64& outValue )
+            {
+                int2 tile{};
+                if ( mode.findCursorTile( tile ) == false )
+                    return false;
+                outValue = static_cast<float64>( tile._x );
+                return true;
+            }
+            static bool readCursorCellZ( const NileGameModeComponent& mode, float64& outValue )
+            {
+                int2 tile{};
+                if ( mode.findCursorTile( tile ) == false )
+                    return false;
+                outValue = static_cast<float64>( tile._y );
+                return true;
+            }
+
             /** @brief 오브젝트 메시를 위치와 크기로 둡니다. 메시가 없으면 nullptr 입니다. */
             static MeshComponent* placeMesh( GameObject* pObject, const float3& position, const float3& scale )
             {
@@ -66,6 +84,13 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( nilePopulation, "Nile.Population", "Population of the city", NileGameModeComponent, &NileGameModeComponent::getPopulation );
     SW_AUTOMATION_GETTER_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", NileGameModeComponent, &NileGameModeComponent::getMoney );
     SW_AUTOMATION_GETTER_WATCH( nileMonth, "Nile.Month", "Months the city has run", NileGameModeComponent, &NileGameModeComponent::getMonthCount );
+    SW_AUTOMATION_GETTER_WATCH( nileTool, "Nile.Tool", "Selected build tool (0 road, then the catalog buildings in order)", NileGameModeComponent, &NileGameModeComponent::getSelectedTool );
+    SW_AUTOMATION_GETTER_WATCH( nileBuildCount, "Nile.BuildCount", "Roads laid and buildings placed this game (successes only)", NileGameModeComponent, &NileGameModeComponent::getBuildCount );
+    SW_AUTOMATION_GETTER_WATCH( nileDemolishCount, "Nile.DemolishCount", "Tiles demolished this game", NileGameModeComponent, &NileGameModeComponent::getDemolishCount );
+    SW_AUTOMATION_COMPONENT_WATCH( nileCursorCellX, "Nile.CursorCellX", "Ground tile X under the pointer; absent while the pointer is off the ground", NileGameModeComponent,
+                                   &NileGameModeComponentInternal::readCursorCellX );
+    SW_AUTOMATION_COMPONENT_WATCH( nileCursorCellZ, "Nile.CursorCellZ", "Ground tile Z (city row) under the pointer; absent while the pointer is off the ground", NileGameModeComponent,
+                                   &NileGameModeComponentInternal::readCursorCellZ );
 } // namespace sw
 
 namespace sw
@@ -141,6 +166,8 @@ namespace sw
         , _selectedTool{ 0 }
         , _monthCount{ 0 }
         , _evolvedCount{ 0 }
+        , _buildCount{ 0 }
+        , _demolishCount{ 0 }
         , _bCursorValid{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bAutoPlanToggle{ SW_FALSE }
@@ -243,8 +270,10 @@ namespace sw
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
 
         _listEvent.clear();
-        _monthCount   = 0;
-        _evolvedCount = 0;
+        _monthCount    = 0;
+        _evolvedCount  = 0;
+        _buildCount    = 0;
+        _demolishCount = 0;
         _listTool.clear();
         _listTool.push_back( nullptr );
         for ( const CityBuildingDef& def : _pCatalog->getBuildings() )
@@ -734,7 +763,10 @@ namespace sw
         if ( inputMap.wasActionPressed( placeAction ) || ( _selectedTool == 0 && inputMap.isActionDown( placeAction ) ) )
             placeSelected();
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Demolish" ) ) && _city.demolish( _cursorTile._x, _cursorTile._y ) )
+        {
+            ++_demolishCount;
             SW_LOG_INFO_ID( "Nile.Demolished", "[Nile] demolished (%#, %#)", _cursorTile._x, _cursorTile._y );
+        }
     }
 
     void NileGameModeComponent::updateCursor( const InputManager& input )
@@ -751,6 +783,14 @@ namespace sw
         _bCursorValid = _city.findTile( _cursorTile._x, _cursorTile._y ) != nullptr ? SW_TRUE : SW_FALSE;
     }
 
+    bool NileGameModeComponent::findCursorTile( int2& outTile ) const
+    {
+        if ( _bCursorValid == SW_FALSE )
+            return false;
+        outTile = _cursorTile;
+        return true;
+    }
+
     void NileGameModeComponent::placeSelected()
     {
         const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
@@ -758,6 +798,8 @@ namespace sw
         {
             // 도로는 끌어서 깐다. 이미 도로인 타일은 조용히 넘어간다.
             const CityPlaceResult result = _city.placeRoad( _cursorTile._x, _cursorTile._y );
+            if ( result == CityPlaceResult::Ok )
+                ++_buildCount;
             if ( result == CityPlaceResult::NotEnoughMoney || result == CityPlaceResult::BadTerrain )
                 SW_LOG_INFO_ID( "NileGameMode.CannotLayRoad", "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, getEnumName( result ) );
             return;
@@ -765,6 +807,7 @@ namespace sw
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
         if ( result == CityPlaceResult::Ok )
         {
+            ++_buildCount;
             SW_LOG_INFO_ID( "NileGameMode.BuiltLeft", "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
             getSoundQueue().queueEvent( NileGameModeComponentInternal::kEventBuilt );
         }
