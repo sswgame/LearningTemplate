@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchModeCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchBackfillSender.h"
@@ -78,11 +80,12 @@ namespace sw
                 if ( _partyLobby.initialize( context._pRouter, context._serverID, _maxPartySize ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "matchmaking setting _maxPartySize is out of range (the party lobby service logged the range)" } );
                 MatchQueueDependencies dependencies;
-                dependencies._pRouter     = context._pRouter;
-                dependencies._pBus        = context._pBus;
-                dependencies._pPartyLobby = &_partyLobby;
-                dependencies._serverID    = context._serverID;
-                dependencies._pStatSource = context._kits.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
+                dependencies._pRouter              = context._pRouter;
+                dependencies._pBus                 = context._pBus;
+                dependencies._pPartyLobby          = &_partyLobby;
+                dependencies._serverID             = context._serverID;
+                dependencies._seatReservationTTLMs = static_cast<int64>( context._pConfig->_seatReservationSeconds ) * constant::time::kMillisecondsPerSecond;
+                dependencies._pStatSource          = context._kits.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
                 if ( _queue.initialize( dependencies, _listMode ) == false )
                 {
                     _partyLobby.shutdown(); // 실패한 start 는 `stop` 이 보지 않으므로 세운 파티 · 로비를 여기서 내린다

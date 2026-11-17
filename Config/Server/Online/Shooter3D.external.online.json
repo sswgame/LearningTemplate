@@ -10,6 +10,7 @@
     "_ttlBackfillRolloutHours": 24,
     "_maxPendingCallsPerService": 1024,
     "_listTrustedProxy": [],
+    "_seatReservationSeconds": 30,
     "_listKit": [
         {
             "_name": "account",

@@ -196,6 +196,11 @@ namespace sw
     bool MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDef>& listMode )
     {
         SW_ASSERT( dependencies._pRouter != nullptr );
+        if ( dependencies._seatReservationTTLMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueNoSeatReservation", "MatchQueue: the seat reservation window is missing (_seatReservationSeconds in the online config)" );
+            return false;
+        }
         for ( const MatchModeDef& mode : listMode )
         {
             if ( mode._ratingStat.empty() == false && dependencies._pStatSource == nullptr )
@@ -222,7 +227,7 @@ namespace sw
             ModeState& state       = _mapModeState[mode._modeID];
             state._maker           = std::move( maker );
             state._reader          = make_unique<ServerRegistryReader>();
-            state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs );
+            state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs, dependencies._seatReservationTTLMs );
             if ( dependencies._pBus == nullptr )
                 state._bAuthority = SW_TRUE; // 서버가 한 대이므로 항상 권한을 가진다
         }

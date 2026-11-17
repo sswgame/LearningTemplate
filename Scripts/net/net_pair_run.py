@@ -86,6 +86,7 @@ def write_configs(out_dir: Path, game_port: int, service_port: int, account: str
         "_ttlBackfillRolloutHours": 0,
         "_maxPendingCallsPerService": 1024,
         "_listTrustedProxy": [],
+        "_seatReservationSeconds": 30,
         "_listKit": [
             {"_name": "account", "_settings": {
                 "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},

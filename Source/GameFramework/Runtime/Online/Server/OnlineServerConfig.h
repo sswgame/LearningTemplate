@@ -142,6 +142,9 @@ namespace sw
          */
         PROPERTY( Required )
         vector<string> _listTrustedProxy{};
+        /** @brief 서버를 고른 뒤 그 좌석을 서버 사이에 잡아 두는 시간(초)입니다. 이 안에 게임 서버가 부하로 확정하지 않으면 풀린다(Agones 할당과 같은 자리, 감사 O-18). */
+        PROPERTY( Required, Min = 1, Max = 3600 )
+        int32 _seatReservationSeconds{ 0 };
         /** @brief 감사 기록(`service_audit`)의 보존 기간 · 쓸기 상한입니다. 기간 0 이면 지우지 않습니다. */
         PROPERTY( Required )
         ServiceTTLConfig _auditRetention{};

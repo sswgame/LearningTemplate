@@ -93,6 +93,7 @@ namespace
             ServerDirectoryServiceConfig settings;
             settings._listServerKind.push_back( "game" );
             settings._registryRefreshPeriodMs = 1;
+            settings._seatReservationTTLMs    = 30000;
             _service.initialize( dependencies, settings );
         }
 

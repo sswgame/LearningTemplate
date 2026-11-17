@@ -199,7 +199,7 @@ namespace sw
         for ( const string& kind : settings._listServerKind )
         {
             unique_ptr<ServerRegistryReader>& reader = _listReader.emplace_back( make_unique<ServerRegistryReader>() );
-            reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs );
+            reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs, settings._seatReservationTTLMs );
         }
         _store.bindStore( dependencies._pStore );
         _reloadJob.setPeriod( settings._reloadPeriodMs );               // 첫 틱에 한 번 읽는다

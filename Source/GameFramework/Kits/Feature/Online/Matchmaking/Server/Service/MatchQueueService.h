@@ -55,6 +55,7 @@ namespace sw
         IAccountStatSource*   _pStatSource{ nullptr }; ///< 실력 모드(`_ratingStat` 이 있는 모드)가 있으면 필수이다. 클라이언트는 실력을 보내지 않는다
         uint64                _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
         int64                 _registryRefreshPeriodMs{ 2000 };
+        int64                 _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`). 0 이면 `initialize` 가 거절한다
     };
 } // namespace sw
 

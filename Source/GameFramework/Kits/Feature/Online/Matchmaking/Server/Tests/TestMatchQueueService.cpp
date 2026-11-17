@@ -137,9 +137,10 @@ namespace
         MatchQueueDependencies makeDependencies()
         {
             MatchQueueDependencies dependencies;
-            dependencies._pRouter  = &_router;
-            dependencies._pBus     = _bus.get();
-            dependencies._serverID = _serverID;
+            dependencies._pRouter              = &_router;
+            dependencies._seatReservationTTLMs = 30000;
+            dependencies._pBus                 = _bus.get();
+            dependencies._serverID             = _serverID;
             return dependencies;
         }
 
