@@ -169,9 +169,11 @@ namespace sw
         /** @brief XML 문자열에서 읽습니다(테스트와 도구용). 코스터 카탈로그는 쥐지 않습니다(`getCoasterLayouts` 가 빈다). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName = {} );
 
-        const float3&                    getGatePosition() const { return _gatePosition; }
-        int32                            getEntryFee() const { return _entryFee; }
-        int32                            getStartingCash() const { return _startingCash; }
+        const float3& getGatePosition() const { return _gatePosition; }
+        int32         getEntryFee() const { return _entryFee; }
+        int32         getStartingCash() const { return _startingCash; }
+        /** @brief 공원 규칙(`<Rules>`)입니다. 로드에 성공한 배치는 반드시 한 줄을 가진다(정문 · 입장료는 루트 속성이 따로 정한다). */
+        const ThemeParkSettings&         getRules() const { return _rules; }
         const vector<ParkRidePlacement>& getPlacements() const { return _listPlacement; }
         /** @brief 파일에서 읽을 때 받은 같은 팩의 코스터 레이아웃입니다(공유 캐시의 한 벌). 글에서 읽었으면 nullptr 입니다. */
         const shared_ptr<const CoasterLayoutCatalog>& getCoasterLayouts() const { return _pCoasterLayouts; }
@@ -185,8 +187,11 @@ namespace sw
         [[nodiscard]] bool loadRoot( const XMLCatalogRoot& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
         [[nodiscard]] bool loadFlatRide( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadCoaster( const XMLNode& node, const CoasterLayoutCatalog& layouts, string_view sourceName );
+        [[nodiscard]] bool loadRules( const XMLNode& node, string_view sourceName );
 
     private:
+        ThemeParkSettings                      _rules;
+        int32                                  _rulesCount; ///< 이번 로드에서 읽은 `<Rules>` 줄 수(0 이면 로드 실패)
         vector<ParkRidePlacement>              _listPlacement;
         float3                                 _gatePosition;
         int32                                  _entryFee;

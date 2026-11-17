@@ -182,6 +182,7 @@ namespace sw
             return false;
         const ParkLayout& layout = *pLayout;
         _pLayoutCatalog          = layout.getCoasterLayouts();
+        _settings                = layout.getRules(); // 공원 규칙은 배치 데이터의 <Rules> 다(감사 K-4)
         _settings._gatePosition  = layout.getGatePosition();
         _settings._entryFee      = layout.getEntryFee();
         _startingCash            = layout.getStartingCash();

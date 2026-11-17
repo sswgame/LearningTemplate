@@ -5,6 +5,7 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/Model/ParkLayoutModel.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -36,7 +37,7 @@ namespace
 
         static string makeLayout( const string& body )
         {
-            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"5\">" ) + body + "</ParkLayout>";
+            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"5\">" ) + kParkRules + body + "</ParkLayout>";
         }
 
         /** @brief 평지 둘(서로 먼 자리, 입구는 영역 밖)과 코스터 하나입니다. */

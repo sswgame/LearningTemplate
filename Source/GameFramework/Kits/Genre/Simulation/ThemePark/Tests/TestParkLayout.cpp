@@ -8,6 +8,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
+
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -35,7 +37,7 @@ namespace
         /** @brief 평지 하나와 코스터 하나의 배치입니다. @p pEntryFee 가 입장료입니다. */
         static string makeLayout( const utf8* pEntryFee )
         {
-            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"" ) + pEntryFee + "\">" +
+            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"" ) + pEntryFee + "\">" + kParkRules +
                    "<FlatRide id=\"cups\" name=\"Spinning Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" "
                    "x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/>"
                    "<Coaster layout=\"family\" x=\"90\" z=\"0\" heading=\"0\" color=\"0.3,0.75,0.4,1\" capacity=\"16\" loadTime=\"15\" cost=\"4000\"/>"
@@ -71,4 +73,14 @@ SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/rides.xml" ), Util::makeLayout( "9" ) ) );
     SW_REQUIRE_TRUE( SharedAssetCache<ParkLayout>::reloadShared( layoutID ) );
     SW_EXPECT_EQUAL( 9, pHeld->getEntryFee() ); // 제자리 다시 읽기 — 쥔 객체가 새 값을 본다
+}
+
+/** @brief [ParkLayoutTest] 공원 규칙(`<Rules>`) 없는 배치는 읽히지 않는다 — 공원이 C++ 기본값으로 열리지 않는다(감사 K-4). 규칙 줄의 통화가 공원 돈의 통화다 */
+SW_TEST_CASE( ParkLayoutTest, LayoutWithoutRulesIsRefused )
+{
+    SW_EXPECT_LOG( "ParkLayout.RulesMissing" );
+    sw::CoasterLayoutCatalog layouts;
+    sw::ParkLayout           bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( "<ParkLayout gateX=\"0\" gateZ=\"0\" startingCash=\"1000\" entryFee=\"0\"><FlatRide id=\"cups\" name=\"Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/></ParkLayout>", layouts, "ParkLayoutTest" ) );
+    SW_EXPECT_TRUE( sw::ThemeParkTestRules::make()._currency == sw::hashed_string( "Cash" ) );
 }
