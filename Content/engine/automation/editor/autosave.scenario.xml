@@ -98,7 +98,7 @@
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.restore.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.PlayState" equals="1"/>
@@ -149,7 +149,6 @@
 	<!-- 사본은 연 문서 경로가 있는 문서만 둔다 — 실행마다 새 사본 문서를 연다(원본을 건드리지 않는다) -->
 	<DevCommand line="asset.openScratch scratch/autosaveinputmap/default.input.xml"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<EditorClick mark="inputMap.filter"/>
 	<EditorWaitStable/>
@@ -175,7 +174,7 @@
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.restoreDocument.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.restoreDocument.0" state="Up"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus input_map"/>
@@ -212,7 +211,7 @@
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
 	<EditorClick mark="recoveredWork.restore.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="unsaved.save"/>
