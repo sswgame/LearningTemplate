@@ -6,6 +6,7 @@
 #include "Core/Name/TagID.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/SiblingOrderKey.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
@@ -18,9 +19,6 @@ namespace sw::editor
     {
         struct EditorSiblingOrderInternal
         {
-            /** @brief `uint16` 로 저장하는 형제 번호의 상한입니다. 형제가 이보다 많으면 뒤쪽은 같은 번호가 되어 오브젝트 id 순으로 가른다. */
-            static constexpr uint32 kMaxSiblingIndex = 65535;
-
             static const utf8* getUndoLabel()
             {
                 return "Reorder GameObject";
@@ -35,19 +33,14 @@ namespace sw::editor
                     EditorSceneCommands::collectRootsInOrder( manager, outListSibling );
             }
 
-            /** @brief 목록의 순서대로 형제 번호를 0 부터 다시 매깁니다. 바뀐 오브젝트마다 되돌리기를 남깁니다(호출하는 쪽의 트랜잭션 안). */
-            static void renumber( const vector<GameObject*>& listSibling )
+            /** @brief 정한 키를 쓰고 오브젝트마다 (id, 키) 데이터 단계를 남깁니다(호출하는 쪽의 트랜잭션 안 — 한 단계로 묶인다). */
+            static void applyKeys( EditorTransaction& transaction, const vector<EditorSiblingOrder::SiblingOrderEdit>& listEdit )
             {
-                EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-                for ( size_t position = 0; position < listSibling.size(); ++position )
+                for ( const EditorSiblingOrder::SiblingOrderEdit& edit : listEdit )
                 {
-                    GameObject*  pSibling = listSibling[position];
-                    const uint32 desired  = position < kMaxSiblingIndex ? static_cast<uint32>( position ) : kMaxSiblingIndex;
-                    if ( pSibling->getSiblingOrder() == desired )
-                        continue;
-                    const ObjectSnapshot before = EditorTransaction::captureSnapshot( pSibling );
-                    pSibling->setSiblingOrder( desired );
-                    EditorSceneCommands::commitModify( transaction, pSibling, before, getUndoLabel() );
+                    const uint32 beforeKey = edit._pObject->getSiblingOrder();
+                    edit._pObject->setSiblingOrder( edit._key );
+                    transaction.recordSiblingOrder( edit._pObject, beforeKey, edit._key, getUndoLabel() );
                 }
             }
 
@@ -81,6 +74,34 @@ namespace sw::editor
     {
         parent.getChildren( outListChild );
         sortSiblings( outListChild );
+    }
+
+    void EditorSiblingOrder::planKeys( const vector<GameObject*>& listSibling, size_t movedPosition, vector<SiblingOrderEdit>& outListEdit )
+    {
+        outListEdit.clear();
+        if ( movedPosition >= listSibling.size() )
+            return;
+        GameObject*            pMoved   = listSibling[movedPosition];
+        const optional<uint32> previous = movedPosition > 0 ? optional<uint32>{ listSibling[movedPosition - 1]->getSiblingOrder() } : optional<uint32>{ nullopt };
+        const optional<uint32> next     = movedPosition + 1 < listSibling.size() ? optional<uint32>{ listSibling[movedPosition + 1]->getSiblingOrder() } : optional<uint32>{ nullopt };
+        const uint32           current  = pMoved->getSiblingOrder();
+        const bool             bFits    = ( previous.has_value() == false || *previous < current ) && ( next.has_value() == false || current < *next );
+        if ( bFits )
+            return;
+        const optional<uint32> key = SiblingOrderKey::between( previous, next );
+        if ( key.has_value() )
+        {
+            outListEdit.push_back( SiblingOrderEdit{ pMoved, *key } );
+            return;
+        }
+        // 틈이 없다(옛 씬의 같은 키 · 다 찬 틈) — 이 부모의 형제만 고르게 다시 편다.
+        vector<uint32> listKey;
+        SiblingOrderKey::spread( static_cast<uint32>( listSibling.size() ), listKey );
+        for ( size_t position = 0; position < listSibling.size(); ++position )
+        {
+            if ( listSibling[position]->getSiblingOrder() != listKey[position] )
+                outListEdit.push_back( SiblingOrderEdit{ listSibling[position], listKey[position] } );
+        }
     }
 
     bool EditorSiblingOrder::moveBeside( GameObjectManager& manager, GameObject* pDragged, GameObject* pTarget, bool bAfter, const GameObject* pSkip )
@@ -123,7 +144,9 @@ namespace sw::editor
             }
         }
         listSibling.insert( listSibling.begin() + static_cast<ptrdiff_t>( insertPosition ), pDragged );
-        Internal::renumber( listSibling );
+        vector<SiblingOrderEdit> listEdit;
+        planKeys( listSibling, insertPosition, listEdit );
+        Internal::applyKeys( transaction, listEdit );
         EditorTransaction::endTransaction();
         return true;
     }

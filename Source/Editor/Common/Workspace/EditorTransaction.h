@@ -62,6 +62,9 @@ namespace sw::editor
         void recordModify( GameObject* pObj, const ObjectSnapshot& before, const ObjectSnapshot& after,
                            string_view label = "Modify GameObject" );
 
+        /** @brief 오브젝트 하나의 형제 순서 키 바꿈(@p beforeKey → @p afterKey)을 Undo/Redo 에 기록합니다. 같으면 기록하지 않습니다. 길은 `recordModify` 와 같다(미리보기 씬이면 그 창의 스택). */
+        void recordSiblingOrder( GameObject* pObj, uint32 beforeKey, uint32 afterKey, string_view label );
+
         /** @brief 게임오브젝트 생성을 Undo/Redo에 등록합니다. */
         void recordCreation( GameObject* pObj, string_view label = "Create GameObject" );
 

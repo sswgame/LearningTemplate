@@ -270,6 +270,36 @@ namespace sw::editor
         EditorTransactionInternal::pushCommand( pStack, ObjectSnapshot::makeModify( *pSceneManager, *pObj, before, after, label ) );
     }
 
+    void EditorTransaction::recordSiblingOrder( GameObject* pObj, uint32 beforeKey, uint32 afterKey, string_view label )
+    {
+        if ( pObj == nullptr || beforeKey == afterKey )
+            return;
+
+        SceneManager*          pSceneManager = editor::findSubsystem<SceneManager>();
+        const EditorSelection* pPreviewScope = EditorTransactionInternal::findPreviewScopeOf( *pObj );
+        if ( pPreviewScope != nullptr )
+        {
+            // 창의 스택에 남긴다 — 메인 씬은 dirty 가 아니다(`recordObjectLifetime` 과 같다).
+            CommandStack* pPreviewStack = pPreviewScope->findPreviewCommandStack();
+            if ( pSceneManager == nullptr || pPreviewStack == nullptr )
+            {
+                SW_LOG_ERROR_ID( "EditorTransaction.NoSceneManagerSiblingOrder", "No SceneManager - the sibling order edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
+                return;
+            }
+            pPreviewStack->push( ObjectSnapshot::makeSiblingOrder( *pSceneManager, *pObj, beforeKey, afterKey, label ) );
+            return;
+        }
+
+        // 선택 조회(②): `recordModify` 와 같다.
+        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
+        if ( pStack == nullptr || pSceneManager == nullptr )
+        {
+            EditorTransaction::markActiveSceneDirty();
+            return;
+        }
+        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshot::makeSiblingOrder( *pSceneManager, *pObj, beforeKey, afterKey, label ) );
+    }
+
     void EditorTransaction::recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit )
     {
         if ( pObj == nullptr )

@@ -3,7 +3,8 @@
 <!--
   에디터 시나리오 — Hierarchy 형제 순서와 폴더: TestSprite(셋째 줄)를 고르고 scene.moveSiblingUp 으로 한 칸 올리면 둘째 줄이 되고, 되돌리면 셋째 줄로 돌아온다.
   scene.moveSiblingDown 은 한 칸 내려 간다. scene.createFolder 는 빈 폴더 오브젝트를 하나 만들고(오브젝트 수 +1) 되돌리기 한 줄로 사라진다.
-  (끌어 놓기는 ImGui 끌기 · 놓기라 EditorTest 의 EditorSiblingOrderTest 가 놓는 자리 판정과 옮기기를 본다.)
+  (끌어 놓기는 ImGui 끌기 · 놓기라 EditorTest 의 EditorSiblingOrderTest 가 옮기기의 키 계획을 본다.) 옮기기 기록은 (id, 정렬 키) 데이터 단계라
+  거래 바이트(Editor.LastUndoBytes)가 작다 — 루트 8000 판정(설계 E-6: +1 단계 · 1 KB 미만)은 큐브 8000 씬을 짓는 측정 시나리오(E1, editor/load/hierarchy8000)에 붙는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/hierarchyorder.scenario.xml -unattended
 -->
 <Scenario name="editor.hierarchyorder" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
@@ -25,6 +26,17 @@
 	<DevCommand line="editor scene.moveSiblingUp"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
+	<!-- 옮기기 기록은 (id, 정렬 키) 데이터 단계다 — 오브젝트 스냅샷(전체 XML)이 아니다(분수 색인, 설계 E-6). 옛 씬의 같은 키를 다시 펴도 형제 수만큼의 작은 쌍이다 -->
+	<Expect watch="Editor.LastUndoBytes" atMost="1024"/>
+	<EditorWaitStable/>
+	<!-- 다시 펴진 뒤의 옮기기는 옮긴 오브젝트 하나의 키다 -->
+	<DevCommand line="editor scene.moveSiblingDown"/>
+	<WaitUntil watch="Editor.HierarchyRowIndex" equals="2" timeoutFrames="60"/>
+	<Expect watch="Editor.UndoCount" equals="2"/>
+	<Expect watch="Editor.LastUndoBytes" atMost="256"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+Z"/>
+	<WaitUntil watch="Editor.HierarchyRowIndex" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="2" timeoutFrames="60"/>

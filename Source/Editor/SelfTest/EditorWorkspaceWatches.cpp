@@ -143,6 +143,20 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief Ctrl+Z 가 되돌릴 명령(위치 바로 앞)이 쥔 바이트입니다(`CommandStack::measureHeldBytes`). 되돌릴 것이 없으면 0 — 거래 하나의 크기 판정(설계 E-6 · E-7). */
+        [[nodiscard]] bool readLastUndoBytes( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const CommandStack* pStack = editor::getFocusedCommandStack();
+            if ( pStack == nullptr ) // 필수 서비스: 없으면 버그
+            {
+                SW_LOG_ERROR_ID( "EditorWorkspaceWatches.WatchEditorLastUndoBytesCommandStack", "[Scenario] watch Editor.LastUndoBytes: CommandStack is missing" );
+                return false;
+            }
+            const size_t index = pStack->getCurrentIndex();
+            outValue           = index > 0 ? static_cast<float64>( CommandStack::measureHeldBytes( pStack->getCommand( index - 1 ) ) ) : 0.0;
+            return true;
+        }
+
         /** @brief Ctrl+Z 가 가는 스택의 위치입니다(`readUndoCount` 와 같은 스택). */
         [[nodiscard]] bool readUndoIndex( const GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -403,6 +417,7 @@ namespace sw::editor
                          &readSelectedIsEditorCamera );
     SW_AUTOMATION_WATCH( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack Ctrl+Z goes to (the focused document panel's stack, else the main stack)", &readUndoCount );
     SW_AUTOMATION_WATCH( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack Ctrl+Z goes to (commands not undone)", &readUndoIndex );
+    SW_AUTOMATION_WATCH( editorLastUndoBytes, "Editor.LastUndoBytes", "Bytes the command Ctrl+Z would undo holds (name and steps; 0 when there is nothing to undo)", &readLastUndoBytes );
     SW_AUTOMATION_WATCH( editorToolFocusIsMain, "Editor.ToolFocusIsMain", "1 when the scene and undo stack tools aim at are the main scene's (0 while a preview window holds the focus)",
                          &readToolFocusIsMain );
     SW_AUTOMATION_QUERY_WATCH( editorSceneHash, "Editor.SceneHash", "Hash of the edited scene content (every object's name, parent and saved state; the scene view camera is left out)",

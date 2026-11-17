@@ -18,12 +18,20 @@ namespace sw::editor
     /**
      * @struct EditorSiblingOrder
      * @brief 형제 순서(`GameObject::getSiblingOrder`)를 읽고 고치는 동작입니다. 유니티의 `Transform.SetSiblingIndex` 와 하이어라키 끌기, 언리얼 아웃라이너 폴더에 해당합니다.
-     * @details 순서는 (형제 번호, 오브젝트 id) 입니다. 번호가 모두 0 인 옛 씬은 오브젝트 id 순, 곧 파일 순서 그대로입니다. 끌어 놓으면 형제 전체를 0 부터 다시 매깁니다.
-     *          바뀐 오브젝트마다 되돌리기 기록이 있고 한 단계로 묶입니다. 순서는 계층 창이 그리는 순서이고 틱이나 렌더 순서와는 무관합니다.
+     * @details 순서는 (형제 정렬 키, 오브젝트 id) 입니다. 키가 모두 0 인 옛 씬은 오브젝트 id 순, 곧 파일 순서 그대로입니다. 끌어 놓으면 옮긴 오브젝트의 키 하나만
+     *          앞 · 뒤 이웃 사이로 바꾸고(분수 색인 `SiblingOrderKey`, 설계 E-6), 틈이 다 찼을 때만 그 부모의 형제를 고르게 다시 편다. 기록은 (id, 키) 데이터 단계이고
+     *          한 단계로 묶입니다. 순서는 계층 창이 그리는 순서이고 틱이나 렌더 순서와는 무관합니다.
      *          폴더는 `Editor.Folder` 태그가 붙은 빈 오브젝트입니다. 트랜스폼이 있어 자식이 따라 움직이며, 유니티의 빈 오브젝트와 같습니다.
      */
     struct EditorSiblingOrder
     {
+        /** @struct SiblingOrderEdit @brief 옮기기 한 번이 정한 키 하나입니다(`planKeys`). */
+        struct SiblingOrderEdit
+        {
+            GameObject* _pObject; ///< 키가 바뀌는 형제
+            uint32      _key;     ///< 새 키
+        };
+
         /** @brief 폴더 오브젝트에 붙는 태그입니다. */
         static constexpr const utf8* kFolderTagName = "Editor.Folder";
 
@@ -33,12 +41,17 @@ namespace sw::editor
         static void sortSiblings( vector<GameObject*>& inoutListSibling );
         /** @brief @p parent 의 자식을 표시 순서로 모읍니다(먼저 비운다). */
         static void collectChildrenInOrder( const GameObject& parent, vector<GameObject*>& outListChild );
+        /**
+         * @brief 표시 순서 목록 @p listSibling 의 @p movedPosition 자리에 옮겨 넣은 오브젝트가 그 자리에 서도록 바꿀 키를 정합니다(먼저 비운다). 키는 아직 쓰지 않는다.
+         * @details 이미 앞 · 뒤 키 사이에 있으면 비고, 사이에 틈이 있으면 옮긴 오브젝트 하나, 틈이 없으면(옛 씬의 같은 키 · 다 찬 틈) 형제 전체를 고르게 편 키 중 바뀐 것들이다.
+         */
+        static void planKeys( const vector<GameObject*>& listSibling, size_t movedPosition, vector<SiblingOrderEdit>& outListEdit );
 
         /**
          * @brief @p pDragged 를 @p pTarget 의 앞(@p bAfter 가 false) 또는 뒤 형제로 옮깁니다. 부모가 다르면 먼저 재부모(월드 위치 유지)합니다.
          * @param pSkip 형제 목록에서 뺄 오브젝트입니다(계층 창이 보이지 않는 에디터 카메라). nullptr 이면 빼지 않는다.
          * @return 옮겼으면 true 입니다. 같은 오브젝트거나 순환이 생기거나 편집이 막혔으면(Play) false 이고 아무것도 바꾸지 않는다.
-         * @details 되돌리기는 한 단계(`Reorder GameObject`)입니다. 형제의 번호는 0 부터 형제 수만큼 다시 매기며 65535 로 막힌다.
+         * @details 되돌리기는 한 단계(`Reorder GameObject`)입니다. 기록은 키가 바뀐 오브젝트마다 (id, 키) 한 쌍이다 — 보통 옮긴 오브젝트 하나다(`planKeys`).
          */
         [[nodiscard]] static bool moveBeside( GameObjectManager& manager, GameObject* pDragged, GameObject* pTarget, bool bAfter, const GameObject* pSkip = nullptr );
         /** @brief @p pObject 를 형제 사이에서 한 단계 위(@p bDown 이 false) 또는 아래로 옮깁니다. 이미 끝이면 false 입니다. */
