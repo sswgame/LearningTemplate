@@ -163,9 +163,10 @@ namespace sw
         uint8   _layer{ 0 };
         /**
          * @brief 캐릭터를 따라다니는 속 바디(키네마틱, 같은 캡슐)를 둔다(3D, Jolt `mInnerBodyShape`). 천 · 헤어 같은 소프트 바디와 센서가 캐릭터를 몸으로 느낀다.
-         * @details 끄면(기본) 캐릭터는 이동 질의로만 세계와 닿아 소프트 바디가 몸을 뚫고 지나간다. 켜면 속 바디가 다른 움직이는 바디를 더 세게 밀 수 있어 쓰는 게임이 고른다.
+         * @details 켜는 것이 기본이다(감사 S-7) — 끄면 캐릭터는 이동 질의로만 세계와 닿아 트리거에 잡히지 않고 소프트 바디가 몸을 뚫고 지나간다.
+         *          속 바디는 다른 움직이는 바디를 더 세게 밀 수 있어 끌 수 있다. 언리얼 캡슐(실제 바디) · Jolt 샘플(속 바디)과 같은 기본이다.
          */
-        bool _bInnerBody{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bInnerBody{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     using PhysicsCharacterDesc3D = PhysicsCharacterDesc<PhysicsDimension3D>;

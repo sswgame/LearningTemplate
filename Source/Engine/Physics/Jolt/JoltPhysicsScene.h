@@ -119,6 +119,72 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @class JoltTempAllocator
+     * @brief 고정 블록에서 쌓아 받고, 넘치면 힙으로 가는 Jolt 임시 할당자입니다 — Jolt `TempAllocatorImplWithMallocFallback` 과 같은 길에 최고 사용량 · 폴백 수를 더했다.
+     * @details 블록만 쓰는 `TempAllocatorImpl` 은 넘치면 `std::abort()` 라 크래시 처리기도 타지 않았다(감사 S-2).
+     *          Jolt 처럼 한 번에 한 스레드만 부른다(받고 놓는 차례가 스택이다) — 카운터에 잠금이 없다.
+     */
+    class JoltTempAllocator final : public JPH::TempAllocator
+    {
+    public:
+        explicit JoltTempAllocator( uint32 byteSize )
+            : _block{ byteSize }
+            , _fallback{}
+            , _peakBytes{ 0 }
+            , _fallbackCount{ 0 }
+        {
+        }
+
+        void* Allocate( JPH::uint size ) override
+        {
+            if ( _block.CanAllocate( size ) )
+            {
+                void* const pAddress = _block.Allocate( size );
+                _peakBytes           = _block.GetUsage() > _peakBytes ? _block.GetUsage() : _peakBytes;
+                return pAddress;
+            }
+            ++_fallbackCount;
+            return _fallback.Allocate( size );
+        }
+
+        void Free( void* pAddress, JPH::uint size ) override
+        {
+            if ( pAddress == nullptr )
+                return;
+            if ( _block.OwnsMemory( pAddress ) )
+                _block.Free( pAddress, size );
+            else
+                _fallback.Free( pAddress, size );
+        }
+
+        /** @brief 블록 크기(바이트, `PhysicsSettings::_tempAllocatorBytes`)입니다. */
+        size_t getByteSize() const { return _block.GetSize(); }
+        /** @brief 지난 `consumePeakBytes` 뒤 블록의 최고 사용량(바이트)을 돌려주고 비웁니다. 폴백 몫은 들지 않는다. */
+        size_t consumePeakBytes()
+        {
+            const size_t peakBytes = _peakBytes;
+            _peakBytes             = 0;
+            return peakBytes;
+        }
+        /** @brief 지난 `consumeFallbackCount` 뒤 힙으로 간 할당 수를 돌려주고 비웁니다. */
+        uint32 consumeFallbackCount()
+        {
+            const uint32 count = _fallbackCount;
+            _fallbackCount     = 0;
+            return count;
+        }
+
+    private:
+        JPH::TempAllocatorImpl   _block;
+        JPH::TempAllocatorMalloc _fallback;
+        size_t                   _peakBytes;
+        uint32                   _fallbackCount;
+    };
+} // namespace sw
+
+namespace sw
+{
     class JoltPhysicsScene;
 
     /**
@@ -221,9 +287,12 @@ namespace sw
         PhysicsCharacterHandle  createCharacter( const PhysicsCharacterDesc3D& desc ) override;
         void                    destroyCharacter( PhysicsCharacterHandle character ) override;
         PhysicsCharacterState3D moveCharacter( PhysicsCharacterHandle character, const float3& velocity, float32 deltaTime ) override;
+        void                    moveCharacters( span<const PhysicsCharacterMove3D> listMove, float32 deltaTime ) override;
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float3& position ) override;
         bool                    setCharacterSize( PhysicsCharacterHandle character, float32 radius, float32 halfHeight ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState3D& outState ) const override;
+        /** @brief @p body 가 캐릭터의 속 바디인지입니다(캐릭터 이동이 속 바디에 막히지 않게 거른다). */
+        bool isCharacterInnerBody( PhysicsBodyHandle body ) const;
 
         PhysicsVehicleHandle createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc ) override;
         void                 destroyVehicle( PhysicsVehicleHandle vehicle ) override;
@@ -351,19 +420,24 @@ namespace sw
         bool isPairAsleep( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB ) const;
         /** @brief 지금 깨어 있는 강체를 `_listMovedBody` 에 붙입니다(스텝 앞 · 뒤에 한 번씩). */
         void appendActiveBodies();
+        /** @brief 임시 블록의 최고 사용량 · 폴백 수를 카운터로 내고, 처음 넘친 스텝에 한 번 경고합니다(스텝 끝). */
+        void reportTempAllocator();
 
     private:
-        PhysicsSettings                           _settings;
-        JoltBroadPhaseLayers                      _broadPhaseLayers;
-        JoltObjectVsBroadPhaseFilter              _objectVsBroadPhaseFilter;
-        JoltObjectLayerPairFilter                 _objectLayerPairFilter;
-        JoltContactListener                       _contactListener; ///< `_system` 에 등록한 접촉 콜백이다(`_system` 보다 먼저 생기고 나중에 사라진다)
-        JPH::TempAllocatorImpl                    _tempAllocator;
-        JPH::PhysicsSystem                        _system;
-        JoltJobSystem*                            _pJobSystem;
-        vector<JPH::Ref<JoltPhysicsMaterial>>     _listJoltMaterial; ///< `_settings._listMaterial` 과 같은 순서다.
-        SlotHandleTable<BodyRecord>               _bodies;
-        SlotHandleTable<JointRecord>              _joints;
+        PhysicsSettings                       _settings;
+        JoltBroadPhaseLayers                  _broadPhaseLayers;
+        JoltObjectVsBroadPhaseFilter          _objectVsBroadPhaseFilter;
+        JoltObjectLayerPairFilter             _objectLayerPairFilter;
+        JoltContactListener                   _contactListener; ///< `_system` 에 등록한 접촉 콜백이다(`_system` 보다 먼저 생기고 나중에 사라진다)
+        JoltTempAllocator                     _tempAllocator;   ///< 스텝 · 캐릭터 · 소프트 바디가 나눠 쓴다(넘치면 힙 — `_bTempFallbackWarned`)
+        JPH::PhysicsSystem                    _system;
+        JoltJobSystem*                        _pJobSystem;
+        vector<JPH::Ref<JoltPhysicsMaterial>> _listJoltMaterial; ///< `_settings._listMaterial` 과 같은 순서다.
+        SlotHandleTable<BodyRecord>           _bodies;
+        SlotHandleTable<JointRecord>          _joints;
+        /// 캐릭터끼리 막는다(Jolt 샘플과 같은 단순 목록 — 모든 캐릭터 쌍을 본다). `_characters` 보다 먼저 선언해 나중에 사라진다.
+        /// shortcut: 레이어 표를 보지 않고 모든 캐릭터가 서로 막는다, 캐릭터끼리 통과하는 레이어가 생기면 `CharacterVsCharacterCollision` 을 구현해 표를 본다.
+        JPH::CharacterVsCharacterCollisionSimple  _characterVsCharacter;
         SlotHandleTable<CharacterRecord>          _characters;
         JoltVehicleSet                            _vehicles;   ///< 바퀴 차(`_system` 뒤에 선언 — 먼저 사라진다)
         JoltSoftBodySet                           _softBodies; ///< 소프트 바디(`_system` · `_tempAllocator` 뒤에 선언)
@@ -377,5 +451,6 @@ namespace sw
         vector<PhysicsBodyHandle>                 _listMovedBody;                ///< 마지막 스텝 앞 · 뒤에 깨어 있던 바디(`getMovedBodies`, 핸들 순)
         JPH::BodyIDVector                         _listActiveBodyID;             ///< `appendActiveBodies` 가 다시 쓰는 버퍼(할당을 재사용한다)
         uint32                                    _bodyCount;
+        uint8                                     _bTempFallbackWarned : 1; ///< 임시 블록이 넘쳐 힙으로 간 것을 이 씬에서 이미 경고했다(씬마다 한 번)
     };
 } // namespace sw

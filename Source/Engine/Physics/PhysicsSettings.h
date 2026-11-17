@@ -97,6 +97,23 @@ namespace sw
          */
         PROPERTY( Min = 1, Max = kMaxWorkerCount2D, Tooltip = "Threads a 2D scene steps with (1 = single thread; more starts dedicated Box2D workers per scene)" )
         uint32 _workerCount2D{ 1 };
+        /**
+         * @brief 3D 씬 하나가 담는 바디 수 · 바디 쌍 수 · 접촉 제약 수의 상한입니다(Jolt `PhysicsSystem::Init`). 데이터가 적어야 한다 — 0 이면 `validate` 가 오류다.
+         * @details 쌍 · 접촉이 넘치면 그 스텝의 접촉 일부를 버리고 경고한다(`JoltPhysicsScene.JoltStepReportedOverflow`). 언리얼 `MaxBodies` · Jolt 샘플 `cMaxBodies` 자리.
+         */
+        PROPERTY( Min = 1, Tooltip = "Most bodies one 3D scene holds" )
+        uint32 _maxBodyCount{ 0 };
+        PROPERTY( Min = 1, Tooltip = "Most body pairs the 3D broad phase keeps per step" )
+        uint32 _maxBodyPairCount{ 0 };
+        PROPERTY( Min = 1, Tooltip = "Most contact constraints a 3D step solves" )
+        uint32 _maxContactCount{ 0 };
+        /**
+         * @brief 3D 씬 하나의 임시 할당 블록 크기(바이트)입니다 — 스텝 · 캐릭터 이동 · 소프트 바디가 나눠 쓴다. 0 이면 `validate` 가 오류다.
+         * @details 넘치면 멈추지 않고 힙에서 받는다(`JoltTempAllocator`, Jolt `TempAllocatorImplWithMallocFallback` 과 같은 길) — 그 스텝을 카운터
+         *          (`Physics.TempAllocator.fallbacks`)와 씬마다 한 번의 경고로 알린다. 경고가 나면 이 값을 `Physics.TempAllocator.peakBytes` 보다 크게 올린다.
+         */
+        PROPERTY( Min = 1, Tooltip = "Bytes of the per-scene temporary block (step, character moves, soft bodies); overflow falls back to the heap with a warning", Units = "bytes" )
+        uint32 _tempAllocatorBytes{ 0 };
         PROPERTY( Tooltip = "Collision layers in index order and what they collide with" )
         vector<PhysicsLayerDef> _listLayer;
         PROPERTY( Tooltip = "Physics materials" )
