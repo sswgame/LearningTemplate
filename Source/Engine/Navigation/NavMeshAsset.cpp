@@ -119,8 +119,9 @@ namespace sw
         }
         if ( backendName != NavMeshBackend::getBackendName() || backendVersion != NavMeshBackend::getBackendFormatVersion() )
         {
-            SW_LOG_WARNING_ID( "NavMeshAsset.CookedNavmeshBackendV", "'%#' was cooked by navmesh backend '%#' v%# - this build uses '%#' v%#", sourceLabel, backendName.c_str(), backendVersion,
-                               NavMeshBackend::getBackendName(), NavMeshBackend::getBackendFormatVersion() );
+            // 낡은 쿠킹본은 쿠킹이 빠졌다는 뜻이다(쿠킹은 코드 지문으로 다시 굽는다) — 경고로 넘기면 배포본이 매 기동 런타임 베이크로 조용히 느려진다.
+            SW_LOG_ERROR_ID( "NavMeshAsset.CookedNavmeshBackendV", "'%#' was cooked by navmesh backend '%#' v%# - this build uses '%#' v%#; cook again", sourceLabel, backendName.c_str(), backendVersion,
+                             NavMeshBackend::getBackendName(), NavMeshBackend::getBackendFormatVersion() );
             return false;
         }
         const bool bEntriesRead = reader.readList( _listEntry, entryCount, NavMeshAssetInternal::kMinEntryBytes, [&]( NavMeshAssetEntry& entry ) -> bool

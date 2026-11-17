@@ -30,10 +30,15 @@ namespace sw
             static constexpr int32 kMaxQueryNodeCount = 4096;
             /** @brief 경로가 지나는 폴리곤의 상한입니다. */
             static constexpr int32 kMaxPathPolyCount = 512;
-            /** @brief 폴리곤 참조 비트(Detour 32 비트 참조) 중 타일과 폴리곤에 줄 수 있는 비트 수입니다(나머지 10 비트는 세대입니다). */
-            static constexpr uint32 kTileAndPolyBits = 22;
-            /** @brief 타일 비트의 상한(나머지가 타일당 폴리곤)입니다. */
-            static constexpr uint32 kMaxTileBits = 14;
+            /**
+             * @brief 내비메시 하나가 담는 타일 자리의 상한입니다. 64 비트 참조(`DT_POLYREF64`)의 타일 비트(28)가 정한다 — 32 비트 참조는 2^14 였다(감사 S-6).
+             * @details 모든 비트가 1 인 번호는 남긴다(군중의 "모르는 링크" 표시). 타일당 폴리곤 비트(20)는 Recast 타일의 꼭짓점 상한(0xffff)보다 넉넉하다.
+             */
+            static constexpr uint64 kMaxTileSlotCount = ( uint64{ 1 } << DT_TILE_BITS ) - 1u;
+            /** @brief 폴리 참조의 비트 수(64)입니다. 쿠킹본 백엔드 판의 아래 자리입니다(`getBackendFormatVersion`). */
+            static constexpr uint32 kPolyRefBitCount = static_cast<uint32>( sizeof( dtPolyRef ) * 8u );
+            /** @brief 쿠킹본 백엔드 판에서 Detour 판을 올려 놓는 자리 값입니다(판 = Detour 판 × 이 값 + 참조 비트 수). */
+            static constexpr uint32 kBackendVersionDetourScale = 1000;
 
             static void* allocate( size_t size, rcAllocHint hint )
             {
@@ -63,16 +68,6 @@ namespace sw
                     return true;
                 }();
                 (void)s_bRouted;
-            }
-
-            static uint32 computeBitCount( uint32 value )
-            {
-                uint32 bits = 0;
-                while ( ( 1u << bits ) < value )
-                {
-                    ++bits;
-                }
-                return bits;
             }
 
             /** @brief 링크 그림의 활 높이(두 끝 거리에 대한 비율)와 마디 수입니다. */
@@ -400,13 +395,13 @@ namespace sw
         _maxY = bounds._max._y + agentType._height;
 
         // 장애물 캐시는 타일 자리마다 높이 층 여럿을 내비메시 타일로 짓는다 — 자리 수가 층 상한만큼 곱해진다.
-        const bool   bTileCache   = agentType._obstacleMode == NavObstacleMode::TileCache;
-        const uint32 slotsPerTile = bTileCache ? RecastTileCache::kMaxLayerCount : 1u;
-        const uint32 tileBits     = Internal::computeBitCount( static_cast<uint32>( _grid.getTileCount() ) * slotsPerTile );
-        if ( tileBits > Internal::kMaxTileBits )
+        const bool   bTileCache    = agentType._obstacleMode == NavObstacleMode::TileCache;
+        const uint32 slotsPerTile  = bTileCache ? RecastTileCache::kMaxLayerCount : 1u;
+        const uint64 tileSlotCount = static_cast<uint64>( _grid._tileCountX ) * static_cast<uint64>( _grid._tileCountZ ) * slotsPerTile; // int32 곱은 큰 경계에서 넘친다
+        if ( tileSlotCount > Internal::kMaxTileSlotCount )
         {
-            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshNeedsTilesMost", "Navmesh '%#' needs %# tiles - at most %# fit in a 32-bit polygon reference; raise the tile size", agentType._name.c_str(),
-                             _grid.getTileCount(), 1u << Internal::kMaxTileBits );
+            SW_LOG_ERROR_ID( "RecastNavMesh.NavmeshNeedsTilesMost", "Navmesh '%#' needs %# tile slots - at most %# fit in a 64-bit polygon reference; raise the tile size", agentType._name.c_str(),
+                             tileSlotCount, Internal::kMaxTileSlotCount );
             _grid = NavTileGrid{};
             return false;
         }
@@ -416,8 +411,8 @@ namespace sw
         params.orig[2]    = _grid._origin._z;
         params.tileWidth  = tileWorldSize;
         params.tileHeight = tileWorldSize;
-        params.maxTiles   = static_cast<int32>( 1u << tileBits );
-        params.maxPolys   = static_cast<int32>( 1u << ( Internal::kTileAndPolyBits - tileBits ) );
+        params.maxTiles   = static_cast<int32>( tileSlotCount ); // 64 비트 참조는 비트를 나누지 않는다 — 자리 수만큼만 잡는다
+        params.maxPolys   = static_cast<int32>( 1u << DT_POLY_BITS );
         _pNavMesh         = dtAllocNavMesh();
         if ( _pNavMesh == nullptr || dtStatusFailed( _pNavMesh->init( &params ) ) )
         {
@@ -780,7 +775,7 @@ namespace sw
         if ( polyRef == 0 )
             return false;
         outLocation._position = float3( arrNearest );
-        outLocation._poly     = static_cast<NavPolyRef>( polyRef );
+        outLocation._poly     = RecastQueryUtil::toNavPolyRef( polyRef );
         return true;
     }
 
@@ -999,8 +994,9 @@ namespace sw
 
     uint32 NavMeshBackend::getBackendFormatVersion()
     {
-        // Detour 타일 바이트의 버전(DT_NAVMESH_VERSION)이다. 라이브러리가 그 버전을 올리면 쿠킹본이 낡는다.
-        return static_cast<uint32>( DT_NAVMESH_VERSION );
+        // Detour 타일 바이트의 버전(DT_NAVMESH_VERSION)과 폴리 참조 폭이다. 참조 폭은 타일 바이트 안의 링크 배열 크기(`dtLink`)를 바꾸는데
+        // DT_NAVMESH_VERSION 은 그대로라 따로 싣는다 — 32 비트 참조로 구운 옛 쿠킹본(판 7)은 읽기에서 거절된다(감사 S-6).
+        return static_cast<uint32>( DT_NAVMESH_VERSION ) * RecastNavMeshInternal::kBackendVersionDetourScale + RecastNavMeshInternal::kPolyRefBitCount;
     }
 
     unique_ptr<INavMesh> NavMeshBackend::createNavMesh()
