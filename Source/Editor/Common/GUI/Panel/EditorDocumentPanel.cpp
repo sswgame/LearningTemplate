@@ -183,6 +183,7 @@ namespace sw::editor
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
+        , _bStackInteraction{ SW_FALSE }
         , _reserved{ 0 }
     {
         if ( bLoadOnOpen == false )
@@ -332,20 +333,35 @@ namespace sw::editor
         if ( _pEditSpan->isHolding() == false || isWidgetInteractionActive() )
             return;
         const optional<DocumentEdit> edit = _pEditSpan->finish( captureDocumentText() );
+        syncStackInteraction(); // 기록 전에 닫는다 — 기록은 열린 상호작용과 무관하지만 다음 Ctrl+Z 는 이 단계를 되돌려야 한다
         if ( edit.has_value() )
             recordDocumentEdit( *edit );
+    }
+
+    void EditorDocumentPanel::syncStackInteraction()
+    {
+        const bool bHolding = _pEditSpan->isHolding();
+        if ( bHolding == ( _bStackInteraction == SW_TRUE ) )
+            return;
+        if ( bHolding )
+            _pDocumentStack->beginInteraction();
+        else
+            _pDocumentStack->endInteraction();
+        _bStackInteraction = bHolding ? SW_TRUE : SW_FALSE;
     }
 
     void EditorDocumentPanel::syncDocumentUndoBaseline()
     {
         _lastSavedDocumentText = captureDocumentText();
         _pEditSpan->resetBaseline( _lastSavedDocumentText ); // 문서를 다시 읽었거나 저장했다 — 쥔 구간의 기준선이 없다
+        syncStackInteraction();
     }
 
     void EditorDocumentPanel::restoreDocumentFromUndo( string_view text )
     {
         applyDocumentText( text );
         _pEditSpan->resetBaseline( string{ text } );
+        syncStackInteraction();
         if ( EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( text == _lastSavedDocumentText ) )
             clearDocumentDirty();
         else
@@ -372,6 +388,7 @@ namespace sw::editor
         // 씬 편집 기록까지 밀어냈다. 언리얼이 누를 때 FScopedTransaction 을 열고 뗄 때 닫는 것과 같은 모양이다.
         // 바뀐 것이 없으면 아무것도 하지 않는다 — 매 프레임 알리는 패널이 활성 위젯(글 칸) 동안 dirty 로 표시하면 제목이 바뀌어 그 칸이 포커스를 잃는다.
         const optional<DocumentEdit> edit = _pEditSpan->notifyEdited( label, captureDocumentText(), isWidgetInteractionActive() );
+        syncStackInteraction();
         if ( edit.has_value() )
             recordDocumentEdit( *edit );
         else if ( _pEditSpan->isHolding() )

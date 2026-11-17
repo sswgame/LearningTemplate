@@ -78,6 +78,11 @@ namespace sw::editor
          *          redo 가 잘리며, 그것을 되돌리면 A 의 XML(컴포넌트 id 포함)이 B 에 들어간다.
          */
         void endDrag();
+        /**
+         * @brief 드래그를 받을 스택(메인 선택은 메인 스택, 미리보기 선택은 그 창의 스택)에 상호작용을 엽니다(`CommandStack::beginInteraction`). 이미 열었으면 아무것도 하지 않는다.
+         * @details 끄는 동안 Ctrl+Z · History 가 그 스택을 움직이면, 끝의 단계가 쥔 "전" 이 낡아 되돌린 편집을 다시 덮고 다시 하기 기록을 자른다(감사 E-2). 닫기는 `endDrag` 다.
+         */
+        void openStackInteraction();
         /** @brief 드래그 대상 선택의 범위에서 핸들을 풉니다. */
         GameObject* findTracked( GameObjectHandle handle ) const;
         /** @brief 드래그 하나를 대상 선택의 범위에 기록합니다. */

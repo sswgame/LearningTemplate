@@ -189,6 +189,8 @@ namespace sw::editor
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
+        /** @brief 문서 스택의 상호작용(`CommandStack::beginInteraction`)을 쥔 구간(`DocumentEditSpan::isHolding`)과 맞춥니다 — 끌기 동안 Ctrl+Z · History 가 그 스택을 움직이지 못한다(감사 E-2). */
+        void syncStackInteraction();
         /** @brief 상호작용 구간 하나(@p edit)를 이 문서의 스택(`getDocumentCommandStack`)에 한 단계로 기록하고 dirty 로 표시합니다. */
         void recordDocumentEdit( const DocumentEdit& edit );
         /** @brief 읽었거나 새 문서임을 표시합니다. 저장을 허용하고 되돌리기 기준을 맞춥니다. */
@@ -209,9 +211,10 @@ namespace sw::editor
         vector<string>                          _listRecentPath;
         vector<string>                          _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128> _openFilter;
-        uint8                                   _bLoaded        : 1;
-        uint8                                   _bConfirmSwitch : 1;
-        uint8                                   _bLoadFailed    : 1;
-        [[maybe_unused]] uint8                  _reserved       : 5;
+        uint8                                   _bLoaded           : 1;
+        uint8                                   _bConfirmSwitch    : 1;
+        uint8                                   _bLoadFailed       : 1;
+        uint8                                   _bStackInteraction : 1; ///< 문서 스택에 상호작용을 열어 두었다(`syncStackInteraction`)
+        [[maybe_unused]] uint8                  _reserved          : 4;
     };
 } // namespace sw::editor

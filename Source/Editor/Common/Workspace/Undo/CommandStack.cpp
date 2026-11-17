@@ -122,6 +122,7 @@ namespace sw
         , _index{ 0 }
         , _suspendedIndex{ 0 }
         , _transactionDepth{ 0 }
+        , _interactionDepth{ 0 }
         , _bIsExecuting{ SW_FALSE }
         , _bHistorySuspended{ SW_FALSE }
         , _listOwnerWatch{}
@@ -239,35 +240,45 @@ namespace sw
         _listPendingTransactionCommand.clear();
     }
 
+    void CommandStack::endInteraction()
+    {
+        SW_ASSERT( _interactionDepth != 0 ); // 여닫기는 짝이다
+        if ( _interactionDepth != 0 )
+            --_interactionDepth;
+    }
+
     bool CommandStack::canUndo() const
     {
-        return _index > 0;
+        return _index > 0 && isEditOpen() == false;
     }
 
     bool CommandStack::canRedo() const
     {
-        return _index < _listCommand.size();
+        return _index < _listCommand.size() && isEditOpen() == false;
     }
 
-    void CommandStack::undo()
+    bool CommandStack::undo()
     {
+        // 열린 편집(거래 · 상호작용)이 있으면 거절한다 — 입구(Ctrl+Z · History · 시나리오)가 몇이든 스택 하나가 막는다(감사 E-2).
         if ( canUndo() == false || _bIsExecuting )
-            return;
+            return false;
         --_index;
         _bIsExecuting = SW_TRUE;
         execute( _listCommand[_index], true );
         _bIsExecuting = SW_FALSE;
+        return true;
     }
 
-    void CommandStack::redo()
+    bool CommandStack::redo()
     {
         if ( canRedo() == false || _bIsExecuting )
-            return;
+            return false;
         const size_t targetIndex = _index;
         ++_index;
         _bIsExecuting = SW_TRUE;
         execute( _listCommand[targetIndex], false );
         _bIsExecuting = SW_FALSE;
+        return true;
     }
 
     void CommandStack::notifyObjectEdit( const ObjectEditEvent& event ) const
@@ -441,14 +452,14 @@ namespace sw
 
     const string& CommandStack::peekUndoLabel() const
     {
-        if ( canUndo() == false )
+        if ( _index == 0 ) // 이름은 열린 편집과 무관하다(메뉴 글이 끌기 동안 깜빡이지 않게)
             return _empty;
         return _listCommand[_index - 1]._label;
     }
 
     const string& CommandStack::peekRedoLabel() const
     {
-        if ( canRedo() == false )
+        if ( _index >= _listCommand.size() )
             return _empty;
         return _listCommand[_index]._label;
     }
@@ -457,19 +468,18 @@ namespace sw
     {
         // 재진입 플래그를 여기서도 본다. undo/redo 콜백 안에서 부르면 아래 `undo()` 가 그 플래그 때문에 아무것도 하지 않아 `_index` 가
         // 줄지 않고 `while` 이 끝나지 않는다.
-        if ( _bIsExecuting )
+        if ( _bIsExecuting || isEditOpen() )
             return;
 
         if ( targetIndex > _listCommand.size() )
             targetIndex = _listCommand.size();
 
-        while ( _index > targetIndex && canUndo() )
+        // 거절되면(단계가 편집을 열었다) 멈춘다 — `_index` 가 줄지 않으면 `while` 이 끝나지 않는다.
+        while ( _index > targetIndex && undo() )
         {
-            undo();
         }
-        while ( _index < targetIndex && canRedo() )
+        while ( _index < targetIndex && redo() )
         {
-            redo();
         }
     }
 } // namespace sw

@@ -79,15 +79,25 @@ namespace sw
         void cancelTransaction();
         /** @brief 트랜잭션 진행 여부를 반환합니다. */
         bool isInsideTransaction() const { return _transactionDepth != 0; }
+        /**
+         * @brief 여러 프레임에 걸친 상호작용(기즈모 끌기 · 문서 위젯 끌기 — `DocumentEditSpan`)을 엽니다. 닫을 때(`endInteraction`)까지 되돌리기 · 다시 하기 · 이동을 거절한다.
+         * @details 상호작용은 시작 전 상태를 쥐고 끝에 한 단계를 올린다. 그 사이에 되돌리면 쥔 "전" 이 낡아 끝의 단계가 되돌린 편집을 다시 덮고 다시 하기 기록을 자른다(감사 E-2).
+         *          언리얼 `UTransBuffer::CanUndo` 가 열린 트랜잭션이 있으면 거절하는 것과 같은 자리다. 여닫기는 짝이다(중첩은 센다).
+         */
+        void beginInteraction() { ++_interactionDepth; }
+        /** @brief `beginInteraction` 으로 연 상호작용 하나를 닫습니다. 열린 것이 없으면 단언합니다. */
+        void endInteraction();
+        /** @brief 트랜잭션이나 상호작용이 열려 있으면 true 입니다 — 이 동안 `undo` · `redo` · `jumpTo` 는 거절한다. */
+        bool isEditOpen() const { return _transactionDepth != 0 || _interactionDepth != 0; }
 
-        /** @brief 실행 취소 가능 여부를 반환합니다. */
+        /** @brief 실행 취소 가능 여부를 반환합니다. 편집이 열려 있으면(`isEditOpen`) false 입니다. */
         bool canUndo() const;
-        /** @brief 다시 실행 가능 여부를 반환합니다. */
+        /** @brief 다시 실행 가능 여부를 반환합니다. 편집이 열려 있으면(`isEditOpen`) false 입니다. */
         bool canRedo() const;
-        /** @brief 이전 명령을 취소합니다. */
-        void undo();
-        /** @brief 취소한 명령을 다시 실행합니다. */
-        void redo();
+        /** @brief 이전 명령을 취소합니다. 할 것이 없거나 실행 중이거나 편집이 열려 있으면 거절하고 false 입니다. */
+        bool undo();
+        /** @brief 취소한 명령을 다시 실행합니다. 할 것이 없거나 실행 중이거나 편집이 열려 있으면 거절하고 false 입니다. */
+        bool redo();
         /** @brief 스택을 비웁니다. 알림 처리기는 그대로 둡니다. 보관해 둔 내역(`suspendHistory`)도 그대로입니다. */
         void clear();
         /**
@@ -111,7 +121,7 @@ namespace sw
         size_t getCurrentIndex() const { return _index; }
         /** @brief 특정 인덱스의 명령 정보를 반환합니다. */
         const Command& getCommand( size_t index ) const { return _listCommand[index]; }
-        /** @brief 특정 인덱스 위치로 연속 undo/redo를 실행하여 점프합니다. */
+        /** @brief 특정 인덱스 위치로 연속 undo/redo를 실행하여 점프합니다. 편집이 열려 있으면(`isEditOpen`) 거절합니다. */
         void jumpTo( size_t targetIndex );
 
         /** @brief 데이터 명령의 알림 처리기를 겁니다. 칸 주인은 하나다(이미 걸려 있으면 단언) — 구독이 풀리면 빈다. */
@@ -165,6 +175,7 @@ namespace sw
         size_t                           _suspendedIndex; ///< 보관한 내역의 위치
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth;
+        uint32 _interactionDepth; ///< 열린 상호작용 수(`beginInteraction`)
         uint8  _bIsExecuting      : 1;
         uint8  _bHistorySuspended : 1; ///< 보관한 내역이 있다
         /** @struct OwnerWatch @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
