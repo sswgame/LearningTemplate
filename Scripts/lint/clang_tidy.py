@@ -172,7 +172,9 @@ def main(argv: list[str] | None = None) -> int:
             for index, future in enumerate(futures, 1):
                 file_path, return_code, output = future.result()
                 for line in output.splitlines():
-                    if match := DIAGNOSTIC_PATTERN.match(line.strip()):
+                    match = DIAGNOSTIC_PATTERN.match(line.strip())
+                    # 시스템 헤더(MSVC STL 등)에 찍힌 것은 우리 코드의 매크로 · 템플릿이 끌고 들어간 것이라 그 자리를 고칠 수 없다 — 이 트리 밖은 세지 않는다.
+                    if match and Path(match["path"]).resolve().is_relative_to(tree_root.resolve()):
                         key = (str(Path(match["path"]).resolve()).lower(), int(match["line"]), int(match["column"]), match["check"])
                         if key not in diagnostics:
                             diagnostics[key] = {"path": str(Path(match["path"]).resolve()), "line": int(match["line"]),
