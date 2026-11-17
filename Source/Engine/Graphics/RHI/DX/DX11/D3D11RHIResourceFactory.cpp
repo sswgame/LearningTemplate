@@ -851,7 +851,7 @@ namespace sw
         if ( bCannotActivate )
             return false;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureRegistry.assign( index, texture );
+        return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

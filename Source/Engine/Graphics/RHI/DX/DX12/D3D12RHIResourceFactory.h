@@ -4,6 +4,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 #include <shared_mutex>
@@ -114,10 +115,10 @@ namespace sw
         /**
          * @brief 레지스트리의 슬롯 `index` 에 리소스, 핸들 쌍, 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 기록합니다. 슬롯이 모자라면 늘립니다.
          * @details 다섯 등록 경로(텍스처 SRV, 구조 버퍼 SRV, CBV, 버퍼 UAV, 텍스처 UAV)가 같이 씁니다.
-         *          인덱스를 집은 잠금 안에서 부릅니다.
+         *          인덱스를 집은 잠금 안에서 부릅니다. @p link 는 번호가 자원의 것인가(등록) · 받은 쪽의 것인가(예약)다(`RHIBindlessLink`).
          */
         void writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource, const BindlessHandleSet& handle,
-                                  RHIBufferHandle buffer, RHITextureHandle texture );
+                                  RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link );
 
         /** @brief 텍스처와 버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시합니다). */
         void releaseBindlessSlot( RHIDescriptorIndex index );

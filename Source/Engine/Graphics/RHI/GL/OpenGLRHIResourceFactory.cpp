@@ -963,7 +963,7 @@ namespace sw
         if ( bCannotActivate )
             return false;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureRegistry.assign( index, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
+        return _pDevice->_textureRegistry.assign( index, OpenGLRHIDevice::BindlessTextureRecord{ texture }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

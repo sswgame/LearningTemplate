@@ -1181,7 +1181,7 @@ namespace sw
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
-        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture );
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture, RHIBindlessLink::Owned );
         return index;
     }
 
@@ -1220,7 +1220,7 @@ namespace sw
             _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
             _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
-            writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
+            writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0, RHIBindlessLink::Owned );
             return index;
         }
 
@@ -1238,7 +1238,7 @@ namespace sw
             }
         }
 
-        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0, RHIBindlessLink::Owned );
         return index;
     }
 
@@ -1315,7 +1315,7 @@ namespace sw
         const BindlessHandleSet handle = bindlessHandlesAt( index );
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
-        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture );
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
         return true;
     }
 
@@ -1344,7 +1344,7 @@ namespace sw
     }
 
     void D3D12RHIResourceFactory::writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource,
-                                                       const BindlessHandleSet& handle, RHIBufferHandle buffer, RHITextureHandle texture )
+                                                       const BindlessHandleSet& handle, RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link )
     {
         RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& target =
             ( registry == BindlessRegistry::UnorderedAccess ) ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
@@ -1352,7 +1352,7 @@ namespace sw
         record._buffer  = buffer;
         record._texture = texture;
         // 번호는 `acquireBindlessIndex` 가 발급기에서 받았다 — 산 칸이면 발급기를 거치지 않은 번호라 멈춘다.
-        if ( target.assign( index, record ) == false )
+        if ( target.assign( index, record, link ) == false )
             SW_FATAL( "D3D12: bindless index %# was written twice without a release", index );
         _pDevice->publishBindlessReadSlot( index, registry == BindlessRegistry::UnorderedAccess ? D3D12RHIDevice::BindlessReadRegistry::UnorderedAccess : D3D12RHIDevice::BindlessReadRegistry::ShaderResource,
                                            record );
@@ -1420,7 +1420,7 @@ namespace sw
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._cpu );
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
 
-        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, buffer, 0 );
+        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, buffer, 0, RHIBindlessLink::Owned );
         return index;
     }
 
@@ -1449,7 +1449,7 @@ namespace sw
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._cpu );
         _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
 
-        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, 0, texture );
+        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, 0, texture, RHIBindlessLink::Owned );
         return index;
     }
 

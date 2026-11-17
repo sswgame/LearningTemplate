@@ -1341,7 +1341,7 @@ namespace sw
             return false;
         // 새 번호다 — 등록과 같은 길로 세트에 쓴다(`writeBindlessTextureSlot` — 장치에 맞는 링 쓰기).
         _pDevice->writeBindlessTextureSlot( index, view, layout );
-        return _pDevice->_textureRegistry.assign( index, texture );
+        return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
 
     void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

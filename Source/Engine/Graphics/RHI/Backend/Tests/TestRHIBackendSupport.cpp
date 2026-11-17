@@ -236,6 +236,30 @@ SW_TEST_CASE( RHIBindlessRegistryTest, DestroyOfPreviousOwnerKeepsReboundIndex )
 }
 
 /**
+ * @brief [RHIBindlessRegistryTest] 예약해 살린 번호(빌린 칸)는 가리키는 텍스처를 부숴도 놓이지 않는다 — 번호를 받은 쪽(텍스처 캐시)이 `release` 로만 놓는다(R-6)
+ * @details 변이: `store` 가 빌린 칸도 주인 목록에 올리면 로드 중 텍스처를 부술 때 그 텍스처를 가리키던 예약 번호가 모두 풀려 다른 자원에 다시 나간다.
+ */
+SW_TEST_CASE( RHIBindlessRegistryTest, BorrowedIndexSurvivesTargetDestroy )
+{
+    RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
+    const RHIDescriptorIndex                                         index = registry.reserveIndex();
+    SW_REQUIRE_TRUE( registry.assign( index, 5, RHIBindlessLink::Borrowed ) );
+    SW_EXPECT_TRUE( registry.getLink( index ) == RHIBindlessLink::Borrowed );
+    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( 5 ) );
+    uint32 releasedCount{ 0 };
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, 5, [&releasedCount]( RHIDescriptorIndex )
+    { ++releasedCount; } );
+    SW_EXPECT_EQUAL( 0u, releasedCount );
+    SW_EXPECT_TRUE( registry.isLive( index ) );
+
+    SW_REQUIRE_TRUE( registry.rebind( index, 6 ) ); // 진짜 텍스처로 옮겨도 빌린 칸이다
+    SW_EXPECT_TRUE( registry.getLink( index ) == RHIBindlessLink::Borrowed );
+    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( 6 ) );
+    SW_EXPECT_TRUE( registry.release( index, RHIBindlessReuse::AfterFence ) );
+    SW_EXPECT_TRUE( registry.getLink( index ) == RHIBindlessLink::Owned ); // 비운 칸은 기본으로 돌아간다
+}
+
+/**
  * @brief [BindlessReadSlotTest] 놓은 번호는 살아 있지 않고, 종류(텍스처 · 버퍼)가 다르면 살아 있지 않다 — 진단이 락 없이 이 칸만 본다(L-1)
  */
 SW_TEST_CASE( BindlessReadSlotTest, RetiredIndexIsNotLive )

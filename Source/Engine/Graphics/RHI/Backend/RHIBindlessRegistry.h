@@ -25,6 +25,18 @@ namespace sw
     };
 
     /**
+     * @brief 산 칸과 그 칸이 가리키는 자원의 관계입니다(`RHIBindlessRegistry::assign`).
+     * @details 등록한 번호(`registerBindlessTexture`)는 자원의 것이라 자원을 부술 때 함께 놓인다(`releaseTexture`). 예약한 번호(`reserveBindlessTextureIndex`)는
+     *          번호를 받은 쪽(텍스처 캐시 항목)의 것이고 가리키는 자원은 빌린 것이다 — 로드 중 텍스처 · 누락 체커 · 진짜 텍스처로 옮겨 다니므로, 지금 가리키는
+     *          자원을 부순다고 번호를 놓으면 그 번호를 쥔 머티리얼이 다른 자원이 받은 칸을 읽는다(감사 R-6). 이 번호는 받은 쪽이 `release` 로만 놓는다.
+     */
+    enum class RHIBindlessLink : uint8
+    {
+        Owned,   ///< 자원의 번호 — 주인 목록에 올라 자원을 부술 때 함께 놓인다
+        Borrowed ///< 번호를 받은 쪽의 것 — 주인 목록에 오르지 않고 `release` 로만 놓인다(다시 묶어도 그대로)
+    };
+
+    /**
      * @brief 등록표 칸 하나가 어느 자원의 번호인가입니다. 버퍼 · 텍스처 핸들은 값 공간이 겹치므로(둘 다 `uint64`) 종류를 따로 든다. 0 이면 그 종류의 주인이 없다.
      */
     struct RHIBindlessOwner
@@ -138,6 +150,7 @@ namespace sw
         void clear()
         {
             _listEntry.clear();
+            _listLink.clear();
             _mapBufferIndex.clear();
             _mapTextureIndex.clear();
             if ( _pAllocator == &_ownAllocator )
@@ -161,18 +174,19 @@ namespace sw
                 _pAllocator->free( index );
                 return kInvalidDescriptorIndex;
             }
-            store( static_cast<RHIDescriptorIndex>( index ), entry );
+            store( static_cast<RHIDescriptorIndex>( index ), entry, RHIBindlessLink::Owned );
             return static_cast<RHIDescriptorIndex>( index );
         }
         /**
          * @brief 발급기에서 먼저 받은 번호 @p index 에 값을 넣습니다(그 번호에 디스크립터를 먼저 만드는 쪽 — DX12 의 뷰 생성은 번호로 핸들을 계산한다).
-         * @details 같은 번호가 이미 산 칸이면 덮지 않고 false 다 — 발급기를 거치지 않은 번호가 들어온 결함이다.
+         * @details 같은 번호가 이미 산 칸이면 덮지 않고 false 다 — 발급기를 거치지 않은 번호가 들어온 결함이다. @p link 는 번호가 누구의 것인가다 — 예약한 번호를
+         *          살리는 쪽은 `Borrowed` 를 준다(가리키는 자원을 부숴도 놓이지 않는다). 기본값을 두지 않는다 — 부르는 쪽마다 정한다.
          */
-        bool assign( RHIDescriptorIndex index, const TEntry& entry )
+        bool assign( RHIDescriptorIndex index, const TEntry& entry, RHIBindlessLink link )
         {
             if ( entry == TEntry{} || isLive( index ) )
                 return false;
-            store( index, entry );
+            store( index, entry, link );
             return true;
         }
         /**
@@ -187,10 +201,14 @@ namespace sw
                 return false;
             if ( pOutPrevious != nullptr )
                 *pOutPrevious = _listEntry[index];
+            const RHIBindlessLink  link          = getLink( index ); // 다시 묶어도 번호의 주인은 그대로다
             const RHIBindlessOwner previousOwner = TOwnerOf{}( _listEntry[index] );
-            unlinkOwner( _mapBufferIndex, previousOwner._buffer, index );
-            unlinkOwner( _mapTextureIndex, previousOwner._texture, index );
-            store( index, entry );
+            if ( link == RHIBindlessLink::Owned )
+            {
+                unlinkOwner( _mapBufferIndex, previousOwner._buffer, index );
+                unlinkOwner( _mapTextureIndex, previousOwner._texture, index );
+            }
+            store( index, entry, link );
             return true;
         }
         /**
@@ -219,10 +237,14 @@ namespace sw
                 return false;
             if ( pOutEntry != nullptr )
                 *pOutEntry = _listEntry[index];
-            const RHIBindlessOwner owner = TOwnerOf{}( _listEntry[index] );
-            unlinkOwner( _mapBufferIndex, owner._buffer, index );
-            unlinkOwner( _mapTextureIndex, owner._texture, index );
+            if ( getLink( index ) == RHIBindlessLink::Owned )
+            {
+                const RHIBindlessOwner owner = TOwnerOf{}( _listEntry[index] );
+                unlinkOwner( _mapBufferIndex, owner._buffer, index );
+                unlinkOwner( _mapTextureIndex, owner._texture, index );
+            }
             _listEntry[index] = TEntry{};
+            _listLink[index]  = static_cast<uint8>( RHIBindlessLink::Owned );
             if ( reuse == RHIBindlessReuse::Immediately )
                 _pAllocator->free( index );
             return true;
@@ -236,7 +258,7 @@ namespace sw
         {
             releaseOwned( _mapBufferIndex, buffer, reuse, fnReleased );
         }
-        /** @brief 텍스처 @p texture 의 산 칸을 모두 비우고 칸마다 @p fnReleased( index ) 를 부릅니다(텍스처를 부술 때). */
+        /** @brief 텍스처 @p texture 의 산 칸을 모두 비우고 칸마다 @p fnReleased( index ) 를 부릅니다(텍스처를 부술 때). 빌린 칸(`RHIBindlessLink::Borrowed`)은 놓지 않는다. */
         template <typename FnReleased>
         void releaseTexture( RHIBindlessReuse reuse, RHITextureHandle texture, FnReleased&& fnReleased )
         {
@@ -263,17 +285,25 @@ namespace sw
         uint32 getSlotCount() const { return static_cast<uint32>( _listEntry.size() ); }
         /** @brief 버퍼 @p buffer 의 산 칸 수입니다. */
         uint32 getBufferIndexCount( RHIBufferHandle buffer ) const { return countOwned( _mapBufferIndex, buffer ); }
-        /** @brief 텍스처 @p texture 의 산 칸 수입니다. */
+        /** @brief 산 칸 @p index 가 누구의 번호인가입니다(산 칸이 아니면 `Owned`). */
+        RHIBindlessLink getLink( RHIDescriptorIndex index ) const { return index < _listLink.size() ? static_cast<RHIBindlessLink>( _listLink[index] ) : RHIBindlessLink::Owned; }
+        /** @brief 텍스처 @p texture 의 산 칸 수입니다(빌린 칸은 세지 않는다). */
         uint32 getTextureIndexCount( RHITextureHandle texture ) const { return countOwned( _mapTextureIndex, texture ); }
 
     private:
         using OwnerIndexMap = unordered_map<uint64, vector<RHIDescriptorIndex>>;
 
-        void store( RHIDescriptorIndex index, const TEntry& entry )
+        void store( RHIDescriptorIndex index, const TEntry& entry, RHIBindlessLink link )
         {
             if ( index >= _listEntry.size() )
+            {
                 _listEntry.resize( index + 1 );
-            _listEntry[index]            = entry;
+                _listLink.resize( index + 1, static_cast<uint8>( RHIBindlessLink::Owned ) );
+            }
+            _listEntry[index] = entry;
+            _listLink[index]  = static_cast<uint8>( link );
+            if ( link == RHIBindlessLink::Borrowed )
+                return; // 빌린 칸은 주인 목록에 오르지 않는다 — 가리키는 자원을 부숴도 놓이지 않는다
             const RHIBindlessOwner owner = TOwnerOf{}( entry );
             if ( owner._buffer != 0 )
                 _mapBufferIndex[owner._buffer].push_back( index );
@@ -324,6 +354,7 @@ namespace sw
 
     private:
         vector<TEntry>             _listEntry;
+        vector<uint8>              _listLink;        ///< 칸마다 `RHIBindlessLink`(`_listEntry` 와 같은 길이)
         OwnerIndexMap              _mapBufferIndex;  ///< 버퍼 → 그 버퍼의 산 칸 번호들
         OwnerIndexMap              _mapTextureIndex; ///< 텍스처 → 그 텍스처의 산 칸 번호들
         RHIBindlessIndexAllocator  _ownAllocator;

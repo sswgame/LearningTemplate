@@ -839,7 +839,7 @@ namespace sw
         if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
             return false;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        return _pDevice->_textureTable.assign( index, WebGPUBindlessEntry{ texture, SW_TRUE } );
+        return _pDevice->_textureTable.assign( index, WebGPUBindlessEntry{ texture, SW_TRUE }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
     void WebGPURHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

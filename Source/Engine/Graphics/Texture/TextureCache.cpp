@@ -1390,6 +1390,15 @@ namespace sw
                 _impl->_cvLoaded.wait( lock );
                 continue;
             }
+            // 자리 텍스처(로드 중 · 누락 체커)는 다시 읽지 않는다 — 예약한 번호들이 빌린 칸으로 그 GPU 텍스처를 가리키므로(`RHIBindlessLink::Borrowed`) 옛 텍스처를 부수면
+            // 그 디스크립터가 해제된 자원을 가리킨다. 다음 실행에 반영된다(엔진 필수 데이터라 바꿀 일이 드물다).
+            const Texture2D* const pFound     = it->second._texture.get();
+            const bool             bIsStandIn = pFound == _impl->_pLoadingStandIn.load( std::memory_order_acquire ) || pFound == _impl->_pMissingStandIn.load( std::memory_order_acquire );
+            if ( bIsStandIn )
+            {
+                SW_LOG_WARNING_ID( "TextureCache.StandInHotReloadSkipped", "Hot-Reload skipped for stand-in texture %# - restart to see the change", key.c_str() );
+                return;
+            }
             it->second._bLoading = true;
             pTexture             = it->second._texture.get();
             break;
