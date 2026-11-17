@@ -126,12 +126,6 @@ namespace sw
                 }
                 return scene.getActiveGameCamera();
             }
-
-            /** @brief BugReport 폴더들의 기본 루트(`Saved/BugReports`)입니다. */
-            static string makeDefaultRoot()
-            {
-                return FileUtil::joinPath( ProcessRoots::get()._saved.str(), BugReport::kFolderName );
-            }
         };
 
         struct BugReportDevCommandsInternal
@@ -196,7 +190,7 @@ namespace sw
             {
                 if ( listArgument.size() > 1 || engine::areEngineServicesBound() == false )
                     return false;
-                const string folder = listArgument.empty() ? BugReport::findLatestDirectory( BugReportInternal::makeDefaultRoot() ) : listArgument[0];
+                const string folder = listArgument.empty() ? BugReport::findLatestDirectory( BugReport::getRoot() ) : listArgument[0];
                 if ( BugReport::goTo( engine::getSubsystem<SceneManager>(), folder, outReply ) == false )
                     return false;
                 BugReport recorded;
@@ -400,7 +394,7 @@ namespace sw
         inputs._report._platform           = build::kPlatformName;
         inputs._report._target             = build::kTargetName;
         inputs._report._configHash         = BugReportInternal::computeConfigHash();
-        inputs._root                       = BugReportInternal::makeDefaultRoot();
+        inputs._root                       = BugReport::getRoot();
         inputs._localTime                  = ScreenshotLocalTime::getLocalTimeNow();
         inputs._bRequestScreenshot         = true;
 
@@ -512,9 +506,15 @@ namespace sw
         return true;
     }
 
+    string BugReport::getRoot()
+    {
+        const ProcessRoots& roots = ProcessRoots::get();
+        return FileUtil::joinPath( roots._bRunFromParent == 1 ? roots._run.str() : roots._saved.str(), kFolderName );
+    }
+
     bool BugReport::goTo( SceneManager& sceneManager, string_view directory, string& outReply )
     {
-        const string folder = directory.empty() ? findLatestDirectory( BugReportInternal::makeDefaultRoot() ) : string( directory );
+        const string folder = directory.empty() ? findLatestDirectory( BugReport::getRoot() ) : string( directory );
         BugReport    report;
         if ( folder.empty() || readInfo( folder, report ) == false )
         {

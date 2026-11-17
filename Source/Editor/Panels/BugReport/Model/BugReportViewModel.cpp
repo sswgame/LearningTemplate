@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
@@ -22,18 +21,6 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct BugReportViewModelInternal
-        {
-            /** @brief BugReport 폴더들의 루트입니다(`BugReport::makeInputs` 가 쓰는 경로와 같다). */
-            static string makeRoot()
-            {
-                return FileUtil::joinPath( ProcessRoots::get()._saved.str(), BugReport::kFolderName );
-            }
-        };
-    } // namespace
-
     BugReportViewModel::BugReportViewModel()
         : _listRow{}
         , _bRowsDirty{ SW_TRUE }
@@ -67,7 +54,7 @@ namespace sw::editor
     {
         _listRow.clear();
         vector<string> listFolder;
-        if ( FileUtil::collectFolders( BugReportViewModelInternal::makeRoot(), listFolder, false ) == false )
+        if ( FileUtil::collectFolders( BugReport::getRoot(), listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
         VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )

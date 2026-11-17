@@ -43,6 +43,11 @@ namespace sw
          *          예전에는 상태마다 pid 꼬리(`run_p<pid>` · `editor_p<pid>` · `scratch/<이름>_p<pid>`)로 이름을 짓고 자식마다 죽은 형제의 폴더를 거뒀다. Gauntlet 이 역할마다 주는 산출물 폴더와 같은 자리다.
          */
         AbsolutePath _run;
+        /**
+         * @brief 실행 뿌리를 부모가 줬다(`kRunRootVariable`) — 이 프로세스는 더 큰 실행(백엔드별 체인 · 두 번 기동 짝)의 일부다.
+         * @details 사람에게 남기는 산출물(버그 리포트)도 이때는 실행 뿌리 아래에 둔다 — 동시에 도는 형제가 한 폴더의 "가장 최근" 을 다투지 않고, 사람의 `Saved` 를 테스트가 채우지 않는다.
+         */
+        uint8 _bRunFromParent : 1;
 
         /** @brief 루트들입니다. 처음 부를 때 정하고 그 뒤로 바뀌지 않는다. 정하지 못하면 멈춥니다. */
         [[nodiscard]] static const ProcessRoots& get();

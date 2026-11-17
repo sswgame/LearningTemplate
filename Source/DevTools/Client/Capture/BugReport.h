@@ -32,6 +32,12 @@ namespace sw
     {
         /** @brief 저장 폴더(`constant::path::kSavedFolder`) 아래 BugReport 폴더 이름입니다. */
         static constexpr const utf8* kFolderName = "BugReports";
+        /**
+         * @brief BugReport 폴더들의 루트입니다 — 모으기 · `goTo` 의 "가장 최근" · 버그 리포트 창이 모두 이 한 곳을 읽는다.
+         * @details 혼자 뜬 실행은 `Saved/BugReports`, 부모가 실행 뿌리를 준 실행(백엔드별 체인의 자식)은 `<실행 뿌리>/BugReports` 다.
+         *          예전에는 네 백엔드 자식이 `Saved/BugReports` 하나를 같이 써서, 앞서 간 형제가 다음 단계에서 모은 폴더를 `bugreport.goto` 가 "가장 최근" 으로 집었다(editor.bugreport dx12 가 카메라 0 자리로 갔다).
+         */
+        [[nodiscard]] static string getRoot();
         /** @brief 정보 파일 이름입니다. */
         static constexpr const utf8* kInfoFileName = "info.txt";
         /** @brief 스크린샷 파일 이름입니다(다음 프레임에 쓰입니다). */

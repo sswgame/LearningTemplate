@@ -60,10 +60,11 @@ namespace sw
 #endif
 
             /** @brief 실행 뿌리입니다 — 부모가 준 폴더(`kRunRootVariable`), 없으면 이 실행만의 이름(`<pid>-<시작 ns>` — Windows 가 pid 를 다시 써도 겹치지 않는다). */
-            static string findRunRoot( const string& binary )
+            static string findRunRoot( const string& binary, bool& bOutFromParent )
             {
                 string run;
-                if ( ProcessEnvironment::tryReadNonEmpty( kRunRootVariable, run ) )
+                bOutFromParent = ProcessEnvironment::tryReadNonEmpty( kRunRootVariable, run );
+                if ( bOutFromParent )
                     return run;
                 const string runsFolder = FileUtil::joinPath( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "Automation/Runs" );
                 return FileUtil::joinPath( runsFolder, to_string( Process::getCurrentProcessID() ) + "-" + to_string( MonotonicClock::nowNanoseconds() ) );
@@ -84,6 +85,8 @@ namespace sw
                 if ( project.empty() )
                     SW_FATAL( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", constant::path::kContentFolder, binary, constant::path::kPacksFolder );
 
+                bool         bRunFromParent = false;
+                const string run            = findRunRoot( binary, bRunFromParent );
                 ProcessRoots roots{
                     requireAbsolute( binary, "binary" ),
                     requireAbsolute( project, "project" ),
@@ -91,7 +94,8 @@ namespace sw
                     requireAbsolute( FileUtil::joinPath( binary, constant::path::kPacksFolder ), "packs" ),
                     requireAbsolute( FileUtil::joinPath( binary, constant::path::kSavedFolder ), "saved" ),
                     requireAbsolute( FileUtil::joinPath( project, constant::path::kSavedFolder ), "derived data" ),
-                    requireAbsolute( findRunRoot( binary ), "run" ),
+                    requireAbsolute( run, "run" ),
+                    static_cast<uint8>( bRunFromParent ? 1 : 0 ),
                 };
                 return roots;
             }
