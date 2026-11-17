@@ -844,7 +844,7 @@ namespace sw
 
     bool SkeletalMeshComponent::beginAnimationFrame( float32 deltaSeconds, uint64 frameIndex )
     {
-        // 스켈레톤이 제자리에서 다시 읽혔으면(에셋 핫 리로드) 본 수가 달라질 수 있다 — 포즈 버퍼를 다시 맞춘다.
+        // 스켈레톤을 바꿨으면(다시 받은 스켈레톤 · `setSkeleton`) 본 수가 달라질 수 있다 — 포즈 버퍼를 다시 맞춘다.
         if ( _localPose.getBoneCount() != _skeleton->getBoneCount() )
             resetPoseBuffers();
         refreshSkinBinding();
@@ -852,7 +852,7 @@ namespace sw
         const uint32 morphTargetCount = getMorphTargetCount();
         if ( _listMorphWeight.size() != morphTargetCount )
             _listMorphWeight.assign( morphTargetCount, 0.0f );
-        // 본 LOD 표가 제자리에서 다시 읽혔거나(핫 리로드) 스킨 원본 · 핵심 본이 바뀌었으면 마스크를 다시 짓는다(열쇠가 같으면 비교만 한다).
+        // 본 LOD 표를 다시 받았거나(핫 리로드) 스킨 원본 · 핵심 본이 바뀌었으면 마스크를 다시 짓는다(열쇠가 같으면 비교만 한다).
         refreshBoneLODMasks();
         bool bActive = _bPoseDirty == SW_TRUE || _leader.isValid();
         for ( const IAnimationPhaseTask* pTask : _listTask )

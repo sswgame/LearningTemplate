@@ -49,13 +49,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 파일이 바뀐 에셋을 쥔 쪽에 어떻게 보이는가입니다. */
-    enum class SharedAssetReloadMode : uint8
-    {
-        InPlace, ///< 쥔 객체를 제자리에서 바꾼다(`SharedAssetTable::reloadShared`). 모두가 다음 읽기부터 새 내용을 본다
-        Detach,  ///< 표에서 떼어 낸다(`SharedAssetTable::detachShared`). 쥔 쪽은 옛 객체를 끝까지 쥐고, 다시 `acquire` 하면 새 객체를 받는다
-    };
-
     /**
      * @struct AssetPathRule
      * @brief 데이터 파일 종류가 어느 경로의 파일인지 적은 선언입니다(접두 · 포함 · 접미, 대소문자 무시). 빈 칸은 보지 않습니다.
@@ -83,23 +76,22 @@ namespace sw
         using LoadIntoFunction  = bool ( * )( const AssetID& assetID, void* pOutAsset );
         using CheckLoadFunction = bool ( * )( const AssetID& assetID );
 
-        LoadIntoFunction      _pLoadInto{ nullptr };                         ///< 만들어 둔 에셋에 읽습니다(공유 캐시). 읽지 못하면 오류를 남기고 false 입니다
-        CheckLoadFunction     _pCheckLoad{ nullptr };                        ///< 새 에셋에 읽어 보고 버립니다. 모르는 키 · 열거자 · 참조는 로더가 알리고 false 입니다
-        MemoryTag             _memoryTag{ MemoryTag::Asset };                ///< 읽는 동안 거는 할당 태그
-        SharedAssetReloadMode _reloadMode{ SharedAssetReloadMode::InPlace }; ///< 공유 캐시의 다시 읽기 방식
+        LoadIntoFunction  _pLoadInto{ nullptr };          ///< 만들어 둔 에셋에 읽습니다(공유 캐시). 읽지 못하면 오류를 남기고 false 입니다
+        CheckLoadFunction _pCheckLoad{ nullptr };         ///< 새 에셋에 읽어 보고 버립니다. 모르는 키 · 열거자 · 참조는 로더가 알리고 false 입니다
+        MemoryTag         _memoryTag{ MemoryTag::Asset }; ///< 읽는 동안 거는 할당 태그
 
         /** @brief `bool TAsset::loadFromAsset( const AssetID& )` 로 읽는 종류입니다. */
         template <typename TAsset>
-        [[nodiscard]] static constexpr AssetTypeLoader of( MemoryTag memoryTag = MemoryTag::Asset, SharedAssetReloadMode reloadMode = SharedAssetReloadMode::InPlace )
+        [[nodiscard]] static constexpr AssetTypeLoader of( MemoryTag memoryTag = MemoryTag::Asset )
         {
-            return with<TAsset, &loadFromAssetOf<TAsset>>( memoryTag, reloadMode );
+            return with<TAsset, &loadFromAssetOf<TAsset>>( memoryTag );
         }
 
         /** @brief 문맥이 더 필요해 함수 @p pfnLoad 로 읽는 종류입니다. */
         template <typename TAsset, bool ( *pfnLoad )( const AssetID&, TAsset& )>
-        [[nodiscard]] static constexpr AssetTypeLoader with( MemoryTag memoryTag = MemoryTag::Asset, SharedAssetReloadMode reloadMode = SharedAssetReloadMode::InPlace )
+        [[nodiscard]] static constexpr AssetTypeLoader with( MemoryTag memoryTag = MemoryTag::Asset )
         {
-            return AssetTypeLoader{ &loadInto<TAsset, pfnLoad>, &checkLoad<TAsset, pfnLoad>, memoryTag, reloadMode };
+            return AssetTypeLoader{ &loadInto<TAsset, pfnLoad>, &checkLoad<TAsset, pfnLoad>, memoryTag };
         }
 
     private:

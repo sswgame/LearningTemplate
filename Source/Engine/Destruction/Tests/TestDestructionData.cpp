@@ -351,9 +351,9 @@ SW_TEST_CASE( FractureGraphTest, IsValidExplainsWhatIsWrong )
 }
 
 /**
- * @brief [DestructionProfileTest] 같은 경로는 공유 캐시의 같은 객체이고, 다시 읽기는 쥔 객체를 제자리에서 바꾸는지 검증(`InPlace` — 파괴 오브젝트는 다시 읽은 횟수로 상태를 다시 시작한다)
+ * @brief [DestructionProfileTest] 같은 경로는 공유 캐시의 같은 객체이고, 다시 읽기는 쥔 객체를 바꾸지 않고 떼어 내며 다시 받으면 새 값인지 검증(파괴 오브젝트는 다시 읽은 횟수로 다시 받아 상태를 다시 시작한다)
  */
-SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadsInPlace )
+SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadDetaches )
 {
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "concrete.destruction.xml" ).str();
@@ -372,6 +372,9 @@ SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadsInPlace
     SW_REQUIRE_TRUE( SharedAssetCache<DestructionProfile>::reloadShared( id ) );
     watch.markSeen();
     SW_EXPECT_EQUAL( reloadsBefore + 1, watch.getSeenCount() );
-    SW_EXPECT_NEAR( 5.0f, pHeld->_density, 0.0001f ); // 쥔 쪽이 같은 객체에서 새 값을 본다
-    SW_EXPECT_TRUE( SharedAssetCache<DestructionProfile>::acquire( id ).get() == pHeld.get() );
+    SW_EXPECT_NEAR( 3.0f, pHeld->_density, 0.0001f ); // 쥔 객체는 바뀌지 않는다(A-7)
+    const shared_ptr<const DestructionProfile> pFresh = SharedAssetCache<DestructionProfile>::acquire( id );
+    SW_REQUIRE_TRUE( pFresh != nullptr );
+    SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
+    SW_EXPECT_NEAR( 5.0f, pFresh->_density, 0.0001f );
 }

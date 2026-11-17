@@ -16,7 +16,7 @@
 namespace sw
 {
     /** 쪼갠 조각의 바디와 렌더링이 이전 형상을 가리킨 채 내용만 바뀌면 안 되므로 제자리로 바꾸지 않고 떼어 낸다. */
-    SW_SHARED_ASSET_CACHE( FractureAsset, FractureAsset, FractureAsset::kAssetType.withLoader( AssetTypeLoader::of<FractureAsset>( MemoryTag::Physics, SharedAssetReloadMode::Detach ) ) );
+    SW_SHARED_ASSET_CACHE( FractureAsset, FractureAsset, FractureAsset::kAssetType.withLoader( AssetTypeLoader::of<FractureAsset>( MemoryTag::Physics ) ) );
 } // namespace sw
 
 namespace sw

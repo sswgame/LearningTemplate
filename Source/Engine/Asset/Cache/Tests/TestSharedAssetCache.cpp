@@ -33,7 +33,7 @@ namespace sw
     struct SharedAssetCacheTraits<SharedAssetCacheTestAsset>
     {
         static constexpr AssetTypeDef kType =
-            AssetTypeDef::makeCacheOnly( "SharedAssetCacheTestAsset", AssetTypeLoader::with<SharedAssetCacheTestAsset, &SharedAssetCacheTestAsset::load>( MemoryTag::Game, SharedAssetReloadMode::Detach ) );
+            AssetTypeDef::makeCacheOnly( "SharedAssetCacheTestAsset", AssetTypeLoader::with<SharedAssetCacheTestAsset, &SharedAssetCacheTestAsset::load>( MemoryTag::Game ) );
     };
 
     template class SharedAssetCache<SharedAssetCacheTestAsset>;

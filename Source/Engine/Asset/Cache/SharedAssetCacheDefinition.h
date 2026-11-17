@@ -3,7 +3,7 @@
  * @brief `SharedAssetCache` 의 멤버 정의입니다. 에셋 종류를 명시적으로 인스턴스화하는 .cpp 만 포함합니다(Engine · GameFramework · 키트 · 게임).
  * @details 그 .cpp 는 이 헤더를 포함하고 `SW_SHARED_ASSET_CACHE( id, 에셋, 정의 );`(Engine) 또는
  *          `SW_MODULE_SHARED_ASSET_CACHE( id, 에셋, 내보내기 매크로, 정의 );`(모듈, `Engine/Module/ModuleSharedAssetCache.h`) 한 줄로(`namespace sw` 안) 종류 정의 · 명시적 인스턴스화 ·
- *          캐시 레지스트리 등록 · 종류 등록(`SW_ASSET_TYPE`)을 함께 합니다. 정의는 `AssetTypeDef` 값이고 로더(`AssetTypeLoader`)가 읽는 함수 · 메모리 태그 · 다시 읽기 방식을 든다 —
+ *          캐시 레지스트리 등록 · 종류 등록(`SW_ASSET_TYPE`)을 함께 합니다. 정의는 `AssetTypeDef` 값이고 로더(`AssetTypeLoader`)가 읽는 함수 · 메모리 태그를 든다 —
  *          캐시가 따로 적는 특성 표는 없다. 정의의 이름이 레지스트리의 종류 이름이다.
  */
 #pragma once
@@ -31,8 +31,7 @@ namespace sw
         static constexpr const AssetTypeDef& kDef = SharedAssetCacheTraits<AssetType>::kType;
         static_assert( kDef._loader._pLoadInto != nullptr, "a shared asset cache needs a loader in its asset type definition (AssetTypeLoader::of / with)" );
 
-        static constexpr MemoryTag             kMemoryTag  = kDef._loader._memoryTag;
-        static constexpr SharedAssetReloadMode kReloadMode = kDef._loader._reloadMode;
+        static constexpr MemoryTag kMemoryTag = kDef._loader._memoryTag;
 
         /** @brief 레지스트리의 종류 이름입니다(정의의 이름 — 등록 줄의 글자라 끝이 0 이다). */
         static const utf8* getKindName() { return kDef._name.data(); }
@@ -97,10 +96,7 @@ namespace sw
     template <typename AssetType>
     bool SharedAssetCache<AssetType>::reloadIn( SharedAssetTable<AssetType>& table, string_view path )
     {
-        if constexpr ( SharedAssetCacheType<AssetType>::kReloadMode == SharedAssetReloadMode::InPlace )
-            return table.reloadShared( path, &SharedAssetCacheType<AssetType>::load );
-        else
-            return table.detachShared( path, &SharedAssetCacheType<AssetType>::load );
+        return table.detachShared( path, &SharedAssetCacheType<AssetType>::load );
     }
 
     template <typename AssetType>

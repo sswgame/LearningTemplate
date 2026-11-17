@@ -223,7 +223,7 @@ namespace sw
 
     void FacialAnimationComponent::loadRig()
     {
-        // 리그는 공유 캐시의 한 벌이다 — 제자리 다시 읽기 뒤 핫 리로드가 이 칸을 알리면 같은 객체를 다시 받고 번호를 다시 짓는다.
+        // 리그는 공유 캐시의 한 벌이다 — 다시 읽기 뒤 핫 리로드가 이 칸을 알리면 새 객체를 다시 받고 번호를 다시 짓는다.
         shared_ptr<const FacialRig> pRig = _facialRigPath.acquire();
         if ( _facialRigPath.empty() == false && pRig == nullptr )
             SW_LOG_ERROR_ID( "FacialAnimation.FacialRigCouldNot", "Facial rig '%#' could not be loaded", getFacialRigPath().c_str() );

@@ -46,7 +46,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ParkLayoutTest] 같은 경로는 공유 캐시의 같은 객체이고, 로더가 같은 팩(배치 종류의 접미를 뗀 곳)의 코스터 레이아웃을 공유 캐시의 한 벌로 쥐며, 다시 읽기는 제자리인지 검증
+ * @brief [ParkLayoutTest] 같은 경로는 공유 캐시의 같은 객체이고, 로더가 같은 팩(배치 종류의 접미를 뗀 곳)의 코스터 레이아웃을 공유 캐시의 한 벌로 쥐며, 다시 읽기는 쥔 객체를 바꾸지 않고 다시 받은 쪽이 새 값을 보는지 검증
  * @details 팩은 테스트 도메인(`testproject/park`) 안에 있다 — 같은 팩의 종류 파일은 팩이 어디 있는지(`game/` 접두)가 아니라 두 종류의 접미 규칙으로 찾는다(`GamePackDataUtil::tryMakeSiblingKindPath`).
  */
 SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
@@ -70,5 +70,8 @@ SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/rides.xml" ), Util::makeLayout( "9" ) ) );
     SW_REQUIRE_TRUE( SharedAssetCache<ParkLayout>::reloadShared( layoutID ) );
-    SW_EXPECT_EQUAL( 9, pHeld->getEntryFee() ); // 제자리 다시 읽기 — 쥔 객체가 새 값을 본다
+    SW_EXPECT_EQUAL( 5, pHeld->getEntryFee() ); // 쥔 객체는 바뀌지 않는다(A-7)
+    const shared_ptr<const ParkLayout> pFresh = SharedAssetCache<ParkLayout>::acquire( layoutID );
+    SW_REQUIRE_TRUE( pFresh != nullptr );
+    SW_EXPECT_EQUAL( 9, pFresh->getEntryFee() ); // 다시 받은 쪽이 새 값을 본다
 }

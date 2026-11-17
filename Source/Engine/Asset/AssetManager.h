@@ -97,7 +97,7 @@ namespace sw
         void garbageCollectUnusedAssets();
         /**
          * @brief 로드 축 태그 · 덮어쓰기 층이 바뀌어 결과가 달라진 리소스(`ResourceComposition::takePendingReload`)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
-         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다 — 태그는 틱 중에도 바뀌고(데이터 레이어) 공유 캐시의 제자리 다시 읽기는 틱 밖에서만 한다. 배포 구성에도 있다.
+         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다 — 태그는 틱 중에도 바뀌고(데이터 레이어) 공유 캐시의 다시 읽기(표에서 떼어 냄)는 틱 밖에서만 한다. 배포 구성에도 있다.
          */
         uint32 reloadComposedDependents();
         /**

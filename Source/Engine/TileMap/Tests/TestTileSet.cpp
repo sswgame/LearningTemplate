@@ -166,7 +166,7 @@ SW_TEST_CASE_EACH( TileSetTest, MalformedTileLayerIsALoadError, kArrBadTileLayer
 
 /**
  * @brief [TileSetTest] 같은 경로는 공유 캐시의 같은 객체이고, 다시 읽으면 쥔 쪽은 옛 타일셋을 지키며 다시 받은 쪽은 새 타일셋을 받는지 검증
- * @details 맵이 칸마다 지은 브러시 번호가 제자리에서 바뀐 브러시 목록과 어긋나지 않게 떼어 낸다(`Detach`) — 렌더러는 다시 읽은 횟수를 보고 새 객체로 다시 짓는다.
+ * @details 맵이 칸마다 지은 브러시 번호가 제자리에서 바뀐 브러시 목록과 어긋나지 않게 떼어 낸다(공유 캐시는 늘 떼어 낸다) — 렌더러는 다시 읽은 횟수를 보고 새 객체로 다시 짓는다.
  */
 SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
 {
