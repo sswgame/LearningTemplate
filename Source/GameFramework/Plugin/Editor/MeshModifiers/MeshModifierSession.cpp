@@ -254,6 +254,8 @@ namespace sw::editor
         , _bInputBoundsDirty{ SW_TRUE }
         , _bMirrorEditing{ SW_FALSE }
         , _bPreviewPlaying{ SW_FALSE }
+        , _bUnsavedStale{ SW_TRUE }
+        , _bUnsavedCached{ SW_FALSE }
         , _cpuPreviewMesh{}
         , _originalMesh{}
         , _listGPUProgram{}
@@ -327,15 +329,22 @@ namespace sw::editor
         _sourceBounds = MeshModifierBounds::makeFromPoints( _listSourcePosition );
         (void)loadSidecar();                         // 사이드카가 없으면 빈 스택으로 시작한다
         _savedStackText = _stack.makeJSONText( -1 ); // 사이드카가 없으면 빈 스택이 저장된 상태다(못 만들면 오류 값 - 저장되지 않은 것으로 본다)
-        _bPreviewDirty  = SW_TRUE;
+        markDirty();
         return {};
     }
 
     bool MeshModifierSession::isStackUnsaved() const
     {
-        // 지금 글이나 저장 글을 못 만들면(잘못된 UTF-8) 저장되지 않은 것으로 본다 - 저장을 시도하면 이유가 남는다.
-        const expected<string> current = _stack.makeJSONText( -1 );
-        return hasTarget() && ( current.has_value() == false || _savedStackText.has_value() == false || *current != *_savedStackText );
+        if ( hasTarget() == false )
+            return false;
+        if ( _bUnsavedStale )
+        {
+            // 지금 글이나 저장 글을 못 만들면(잘못된 UTF-8) 저장되지 않은 것으로 본다 - 저장을 시도하면 이유가 남는다.
+            const expected<string> current = _stack.makeJSONText( -1 );
+            _bUnsavedCached                = current.has_value() == false || _savedStackText.has_value() == false || *current != *_savedStackText;
+            _bUnsavedStale                 = SW_FALSE;
+        }
+        return _bUnsavedCached;
     }
 
     void MeshModifierSession::revertStackToSaved()
@@ -346,7 +355,7 @@ namespace sw::editor
         if ( _savedStackText.has_value() == false || _stack.readJSONText( *_savedStackText ) == false )
             SW_LOG_ERROR_ID( "MeshModifierSession.MeshModifierStackCould", "Mesh modifier stack of %# could not be restored to its saved state - undo brings the edits back", _meshPath.c_str() );
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        _bPreviewDirty = SW_TRUE;
+        markDirty();
     }
 
     void MeshModifierSession::shutdownSubsystem()
@@ -384,8 +393,8 @@ namespace sw::editor
         _inputBounds          = MeshModifierBounds{};
         _selectedControlPoint = -1;
         _history.clear();
-        _savedStackText     = string{};
-        _bPreviewDirty      = SW_TRUE;
+        _savedStackText = string{};
+        markDirty();
         _bStagePreviewDirty = SW_TRUE;
         _bInputBoundsDirty  = SW_TRUE;
     }
@@ -416,7 +425,7 @@ namespace sw::editor
             return false;
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다. 실패해도 빈 스택이다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        _bPreviewDirty = SW_TRUE;
+        markDirty();
         return true;
     }
 
@@ -430,7 +439,7 @@ namespace sw::editor
             return false;
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        _bPreviewDirty = SW_TRUE;
+        markDirty();
         return true;
     }
 
@@ -675,6 +684,7 @@ namespace sw::editor
             return false;
         }
         _savedStackText = _stack.makeJSONText( -1 );
+        _bUnsavedStale  = SW_TRUE;
         SW_LOG_INFO_ID( "MeshModifierSession.MeshModifierStackSaved", "Mesh modifier stack saved to %#", path.c_str() );
         return true;
     }
@@ -693,7 +703,7 @@ namespace sw::editor
         }
         _savedStackText = _stack.makeJSONText( -1 );
         _selectedIndex  = _stack.getModifierCount() > 0 ? 0 : -1;
-        _bPreviewDirty  = SW_TRUE;
+        markDirty();
         return true;
     }
 

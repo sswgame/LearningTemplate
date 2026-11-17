@@ -80,8 +80,12 @@ namespace sw::editor
         bool               canUndo() const { return _history.canUndo(); }
         bool               canRedo() const { return _history.canRedo(); }
 
-        /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. */
-        void markDirty() { _bPreviewDirty = SW_TRUE; }
+        /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. 다음 `isStackUnsaved` 도 저장 글을 다시 비교합니다. */
+        void markDirty()
+        {
+            _bPreviewDirty = SW_TRUE;
+            _bUnsavedStale = SW_TRUE;
+        }
         /** @brief 되돌리기 기록 → 편집 → 미리보기 표시를 한 동작으로 합니다. 패널이 순서를 쓰지 않으므로 어느 단계도 빠뜨릴 수 없습니다. */
         template <typename TEdit>
         void applyEdit( TEdit&& edit )
@@ -125,6 +129,7 @@ namespace sw::editor
         /**
          * @brief 스택이 마지막으로 읽거나 쓴 사이드카(없었으면 빈 스택)와 다르면 true 입니다. 패널의 미저장 표시 · 닫기 확인이 이 값을 본다.
          * @details 저장 글(`MeshModifierStack::makeJSONText`)끼리 비교한다 — 되돌리기로 저장한 상태에 돌아오면 다시 false 다. 대상이 없으면 false 입니다.
+         *          비교 결과는 스택이 바뀔 때(`markDirty` · 되돌리기 · 읽기 · 쓰기)까지 들고 있다 — 패널이 그리기마다 물어도 직렬화하지 않는다(감사 E-9, 언리얼 dirty 깃발).
          */
         bool isStackUnsaved() const;
         /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 상태로 돌립니다(되돌리기 기록에 남긴다). 대상이 없으면 아무것도 하지 않습니다. */
@@ -232,8 +237,10 @@ namespace sw::editor
         uint8                       _bInputBoundsDirty  : 1;
         uint8                       _bMirrorEditing     : 1;
         uint8                       _bPreviewPlaying    : 1;
-        shared_ptr<Mesh>            _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
-        shared_ptr<Mesh>            _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
+        mutable uint8               _bUnsavedStale      : 1; ///< `_bUnsavedCached` 가 낡았다(스택이나 저장 글이 바뀐 뒤 아직 비교하지 않았다)
+        mutable uint8               _bUnsavedCached     : 1; ///< 마지막 `isStackUnsaved` 비교 결과
+        shared_ptr<Mesh>            _cpuPreviewMesh;         ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
+        shared_ptr<Mesh>            _originalMesh;           ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
         vector<float4>              _listGPUProgram;
         int32                       _gpuBlockingIndex;
         MeshModifierMesh            _previewMesh;
