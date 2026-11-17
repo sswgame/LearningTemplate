@@ -1,5 +1,5 @@
 // EXPECT-GEN: m._maxCallsPerSecond = 5u
-// EXPECT-GEN: m._maxCallsPerSecond = static_cast<::sw::uint32>( sw::fixture::kFixtureCallRate )
+// EXPECT-GEN: m._maxCallsPerSecond = static_cast<::uint32>( sw::fixture::kFixtureCallRate )
 #pragma once
 #include "Core/Foundation/Types.h"
 

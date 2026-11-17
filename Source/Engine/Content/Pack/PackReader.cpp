@@ -665,16 +665,20 @@ namespace sw
         }
         _mountDomain.assign( pool.substr( 0, domainEnd ) );
 
-        uint32 expectedFirstBlock = 0;
-        for ( size_t entryIndex = 0; entryIndex < listDiskEntry.size(); ++entryIndex )
+        // FAT 은 경로 해시 오름차순이어야 한다 — 리더는 정렬을 믿고 이진 탐색한다. 같은 해시 둘도 거절한다(어느 쪽이 이길지 조용히 정하지 않는다).
+        // 항목 검사보다 먼저 FAT 전체를 본다 — 순서가 바뀐 FAT 은 블록 줄도 어긋나므로, 뒤에서 보면 원인 대신 블록 불일치로 보고된다.
+        for ( size_t entryIndex = 1; entryIndex < listDiskEntry.size(); ++entryIndex )
         {
-            const PackFileEntryOnDisk& diskEntry = listDiskEntry[entryIndex];
-            // FAT 은 경로 해시 오름차순이어야 한다 — 리더는 정렬을 믿고 이진 탐색한다. 같은 해시 둘도 거절한다(어느 쪽이 이길지 조용히 정하지 않는다).
-            if ( entryIndex > 0 && diskEntry._pathHash <= listDiskEntry[entryIndex - 1]._pathHash )
+            if ( listDiskEntry[entryIndex]._pathHash <= listDiskEntry[entryIndex - 1]._pathHash )
             {
                 SW_LOG_ERROR_ID( "PackReader.UnsortedIndex", "Pack index is not in ascending path hash order (entry %#) - cook it again: %#", static_cast<uint64>( entryIndex ), _packFilePath );
                 return false;
             }
+        }
+        uint32 expectedFirstBlock = 0;
+        for ( size_t entryIndex = 0; entryIndex < listDiskEntry.size(); ++entryIndex )
+        {
+            const PackFileEntryOnDisk& diskEntry = listDiskEntry[entryIndex];
             // **항목도 페이로드 구역 안을 가리켜야 하고 블록 줄이 맞아야 한다.** `readFile` 은 항목 · 블록이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
             // 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다. 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
             if ( validateFileEntry( diskEntry, _header._indexOffset, expectedFirstBlock ) == false )

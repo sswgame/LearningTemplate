@@ -57,6 +57,7 @@ SW_TEST_CASE( DerivedDataCacheTest, SharedHitFillsLocal )
  */
 SW_TEST_CASE( DerivedDataCacheTest, KeyCollisionIsAMiss )
 {
+    SW_EXPECT_LOG( "DDC.KeyCollision" ); // 충돌 미스는 경고로 남는다 — 조용히 다시 구우면 키 서술 결함이 묻힌다
     const DerivedDataCacheFixture fixture;
     const DerivedDataCache        cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
     SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
@@ -72,6 +73,7 @@ SW_TEST_CASE( DerivedDataCacheTest, KeyCollisionIsAMiss )
  */
 SW_TEST_CASE( DerivedDataCacheTest, CorruptPayloadIsAMiss )
 {
+    SW_EXPECT_LOG( "DDC.PayloadCorrupt" ); // 깨진 본문은 경고, 잘린 머리는 옛 형식과 같은 정보 로그(DDC.EntryInvalid)다
     const DerivedDataCacheFixture fixture;
     const DerivedDataCache        cache = fixture.makeLayered( DerivedDataAccess::ReadOnly );
     SW_REQUIRE_TRUE( cache.store( kKey, "job-a", kPayload ) );
