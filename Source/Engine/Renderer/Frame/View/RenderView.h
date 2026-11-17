@@ -33,8 +33,12 @@ namespace sw
     inline constexpr uint32 kFirstExtraCullView = static_cast<uint32>( RenderViewType::Count );
     /// @brief 추가 뷰 하나가 쓰는 컬링 슬롯 수입니다 — 자기 시점 하나, 자기 그림자 패스 하나(뷰마다 그림자 볼륨이 다르다).
     inline constexpr uint32 kCullSlotsPerExtraView = 2;
-    /// @brief 한 프레임에 가질 수 있는 추가 뷰의 최대 수입니다(컬링 슬롯, 상수 버퍼, 트랜지언트 풀이 뷰마다 하나씩 있습니다).
-    inline constexpr uint32 kMaxExtraRenderView = 8;
+    /**
+     * @brief 추가 뷰 자리 수(`RenderConfig::_maxExtraViewCount`)가 넘을 수 없는 구조 상한입니다 — 보임 판정의 스택 배열이 이 크기다.
+     * @details 한 프레임의 실제 자리 수는 Config 값이다(컬링 슬롯, 상수 버퍼, 트랜지언트 풀이 뷰마다 하나씩 있다 — 8 상수였다, 감사 RN-16).
+     *          언리얼은 씬 캡처 · 분할 화면 수를 설정으로 두고, 유니티는 카메라 수 제한이 없다.
+     */
+    inline constexpr uint32 kExtraRenderViewCapacity = 32;
 
     /** @brief 추가 뷰의 렌더링 결과가 가는 곳입니다. */
     enum class RenderViewOutputKind : uint8

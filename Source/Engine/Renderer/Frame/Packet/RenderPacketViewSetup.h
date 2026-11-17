@@ -71,7 +71,7 @@ namespace sw
         void resolvePostProcessMaterials( RenderFramePacket& packet );
         /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` — 게임 스레드). */
         uint32 getLastHiddenViewCount() const { return _lastHiddenViewCount; }
-        /** @brief 마지막 `collectExtraViews` 에서 자리(`kMaxExtraRenderView`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
+        /** @brief 마지막 `collectExtraViews` 에서 자리(`RenderConfig::_maxExtraViewCount`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
         uint32 getLastOverflowViewCount() const { return _lastOverflowViewCount; }
 
     private:

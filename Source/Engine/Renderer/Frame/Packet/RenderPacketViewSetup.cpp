@@ -166,12 +166,13 @@ namespace sw
     {
         // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
         _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );
+        const uint32 maxExtraViewCount = RenderViewCollector::getMaxExtraViewCount();
         if ( _renderViewScheduler != nullptr && activeScene.getObjectManager() != nullptr )
         {
             // 주 시점 가림 타일 사본 — 렌더러가 몇 프레임 늦게 되읽은 것이다(가림 컬링이 꺼졌으면 nullptr).
             const shared_ptr<const OcclusionTileSnapshot> pOcclusion = pFrameRenderer != nullptr ? pFrameRenderer->getOcclusionSnapshot() : nullptr;
             const RenderViewCollectResult                 result     = RenderViewCollector::collectExtraViews( *activeScene.getObjectManager(), mainView._pCamera, packet._viewProj, packet._cameraPos, mainView._outputWidth, mainView._outputHeight,
-                                                                                                               mainView._autoRenderScale, _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, pOcclusion.get(),
+                                                                                                               mainView._autoRenderScale, _renderViewClock, maxExtraViewCount, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, pOcclusion.get(),
                                                                                                                packet._listView );
             _lastHiddenViewCount                                     = result._hiddenCount;
             _lastOverflowViewCount                                   = result._overflowCount;
@@ -180,7 +181,7 @@ namespace sw
         if ( views.isSceneViewMain() )
             RenderViewCollector::removeScreenRectViews( packet._listView );
         else if ( mainView._pSceneViewCamera != nullptr && mainView._pSceneViewCamera != mainView._pCamera )
-            RenderViewCollector::appendViewportView( *mainView._pSceneViewCamera, views._scene, mainView._sceneViewMode, packet._listView );
+            RenderViewCollector::appendViewportView( *mainView._pSceneViewCamera, views._scene, mainView._sceneViewMode, maxExtraViewCount, packet._listView );
         // 뷰가 다 정해졌다 — 블렌더블을 머티리얼로 푼다(뷰마다 볼륨을 섞은 값이 다르다).
         resolvePostProcessMaterials( packet );
     }

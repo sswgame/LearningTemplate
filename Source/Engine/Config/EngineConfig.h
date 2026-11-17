@@ -187,6 +187,13 @@ namespace sw
         PROPERTY( Min = 0.0, Max = 0.99 )
         float32 _taaHistoryWeight{};
 
+        /**
+         * @brief 한 프레임에 자리를 받는 추가 뷰(캡처 카메라 · 화면 사각형 · 에디터 씬 뷰)의 수입니다. 넘치면 스케줄러가 보이는 뷰 · 늦은 뷰 먼저 준다(`RenderViewScheduler`).
+         * @details 뷰마다 컬링 슬롯 둘 · 상수 버퍼 · 트랜지언트 풀이 하나씩 든다. 상한은 `kExtraRenderViewCapacity`(RenderView.h)와 같다 — 범위 밖이면 첫 프레임이 멈춘다(`RenderViewCollector::getMaxExtraViewCount`).
+         */
+        PROPERTY( Min = 1, Max = 32 )
+        uint32 _maxExtraViewCount{};
+
         /** @brief 텍스처 밉 스트리밍 설정입니다(프레임당 제출 수 · 풀 예산 · 내리기까지의 유휴 프레임 — `TextureStreamingConfig`). 스트리밍 값은 이 칸 한 곳이다. */
         PROPERTY()
         TextureStreamingConfig _textureStreaming{};
