@@ -95,7 +95,6 @@ namespace sw
 
     private:
         /** @brief 이 도시의 시뮬레이션 설정입니다(`startGame` 과 복원이 같은 설정으로 `initialize` 합니다). */
-        CitySettings makeCitySettings() const;
         /** @brief 나일 달력입니다. 아케트, 페레트, 셰무가 각각 네 달씩(열두 달)이며, 계절 하루가 한 달입니다. */
         WorldClockSettings makeClockSettings() const;
         /** @brief 이번 틱의 달력 알림에서 달이 넘어갈 때마다 도시를 결산합니다(같은 시점에 해가 바뀌었으면 범람이 일어납니다). */
@@ -152,8 +151,6 @@ namespace sw
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "City", DisplayName = "Starting Money", Min = 0 )
         int32 _startingMoney;
-        PROPERTY( Category = "City", DisplayName = "Service Duration", Tooltip = "Seconds a walker's service lasts at a house", Min = 1.0, Units = s )
-        float32 _serviceDuration;
         PROPERTY( Category = "Look", DisplayName = "Road Tile Scale", Tooltip = "Scale of the path piece so one road tile fills a cell", Min = 0.0 )
         float32 _roadTileScale;
         PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )

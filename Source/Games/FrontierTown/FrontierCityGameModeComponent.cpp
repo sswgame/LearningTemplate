@@ -72,7 +72,7 @@ namespace sw
         const CityCatalog* pCatalog = game::findSubsystem<const CityCatalog>();
         if ( pCatalog == nullptr )
             return false;
-        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, CitySettings{}, state.makeRefs() ) == false )
+        if ( outCity.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, state.makeRefs() ) == false )
             return false;
         // 땅은 놓기 전에 빌린다 — 이미 놓인 도로 · 건물은 땅을 얻지 않는다(CitySimulation::bindLand).
         outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
@@ -95,7 +95,13 @@ namespace sw
                 SW_LOG_ERROR_ID( "FrontierCity.UnitCatalogMissing", "[Frontier] the unit catalog is not loaded - the starting minerals have no currency" );
                 return false;
             }
-            pState->getWallet().add( CitySettings{}._currency, _startingDeben );
+            const CityCatalog* pCity = game::findSubsystem<const CityCatalog>();
+            if ( pCity == nullptr )
+            {
+                SW_LOG_ERROR_ID( "FrontierCity.CityCatalogMissing", "[Frontier] the city catalog is not loaded - the starting money has no currency" );
+                return false;
+            }
+            pState->getWallet().add( pCity->getRules()._currency, _startingDeben );
             pState->getWallet().add( pUnits->getRules()._mineralCurrency, _startingMinerals );
         }
         if ( initializeCity( _city, *pState ) == false )

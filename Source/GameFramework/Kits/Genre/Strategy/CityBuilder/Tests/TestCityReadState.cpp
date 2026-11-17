@@ -17,6 +17,7 @@ namespace
 {
     constexpr int32       kCitySize   = 4;
     constexpr const utf8* kCatalogXML = R"(<CityCatalog roadCost="1">
+  <Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="30" immigrationInterval="1.5" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
   <Good id="grain" name="Grain"/>
   <Building id="hut" name="Hut" kind="House" size="1" cost="1"/>
   <Building id="garden" name="Garden" kind="Decoration" size="2" cost="1"/>
@@ -150,7 +151,7 @@ namespace
         CityReadStateTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kCatalogXML, "CityReadStateTest" ) );
-            _wallet.add( sw::CitySettings{}._currency, 1000 );
+            _wallet.add( _catalog.getRules()._currency, 1000 );
             SW_REQUIRE_TRUE( open( _city ) );
         }
 
@@ -158,7 +159,7 @@ namespace
         {
             sw::SessionStateRefs refs;
             refs._pWallet = &_wallet;
-            return outCity.initialize( &_catalog, kCitySize, kCitySize, sw::CitySettings{}, refs );
+            return outCity.initialize( &_catalog, kCitySize, kCitySize, refs );
         }
     };
 } // namespace
@@ -419,4 +420,16 @@ SW_TEST_CASE_F( CityReadStateTest, RefusesCityValuesOutOfRange )
 
     SW_EXPECT_NEAR( 5.0f, _city.getTime(), 1.0e-5f );
     SW_EXPECT_EQUAL( 2, _city.getWorkforce() );
+}
+
+/** @brief [CityCatalogTest] 규칙(`<Rules>`) 없는 도시 카탈로그는 로드가 실패한다 — 도시가 C++ 기본값으로 열리지 않는다(감사 K-4) */
+SW_TEST_CASE( CityCatalogTest, CatalogWithoutRulesIsRefused )
+{
+    SW_EXPECT_LOG( "CityCatalog.RulesMissing" );
+    sw::CityCatalog bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
+    sw::CitySimulation   city;
+    sw::SessionStateRefs refs;
+    SW_EXPECT_LOG( "CitySimulation.CitySimulationNeedsCatalog" );
+    SW_EXPECT_FALSE( city.initialize( nullptr, 4, 4, refs ) );
 }

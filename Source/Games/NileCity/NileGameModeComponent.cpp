@@ -80,7 +80,6 @@ namespace sw
         , _walkerPrefab{}
         , _cameraRig{}
         , _startingMoney{ 1500 }
-        , _serviceDuration{ 60.0f }
         , _roadTileScale{ 4.8f }
         , _secondsPerMonth{ 20.0f }
         , _riverCenterX{ 9.0f }
@@ -232,10 +231,9 @@ namespace sw
             return false;
         if ( _clock.initialize( makeClockSettings() ) == false )
             return false; // 범위 밖(달 길이 `_secondsPerMonth` 등)은 시계가 오류를 남겼다
-        const CitySettings citySettings = makeCitySettings();
         _wallet.clear();
-        _wallet.add( citySettings._currency, _startingMoney );
-        if ( _city.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() ) == false )
+        _wallet.add( _pCatalog->getRules()._currency, _startingMoney );
+        if ( _city.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeRefs() ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         if ( _city.claimEvents( _cityEventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
@@ -293,14 +291,6 @@ namespace sw
         SessionStateRefs refs;
         refs._pWallet = &_wallet;
         return refs;
-    }
-
-    CitySettings NileGameModeComponent::makeCitySettings() const
-    {
-        // 순회 서비스가 남는 시간을 키트 기본값(30초)보다 길게 잡는다. 이 도시의 도로망에서 일꾼 하나가 고리를 다 도는 데 그만큼 걸리기 때문이다.
-        CitySettings settings;
-        settings._serviceDuration = _serviceDuration;
-        return settings;
     }
 
     NileCityLayout NileGameModeComponent::makeCityLayout() const
@@ -446,7 +436,7 @@ namespace sw
         {
             // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
             if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
-                 io.check( restoredCity.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() ) ) == false )
+                 io.check( restoredCity.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeRefs() ) ) == false )
                 return;
         }
         io.value( io.isWriting() ? _city : restoredCity );
