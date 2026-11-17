@@ -8,7 +8,6 @@
   실행: App -scenario=engine/automation/isolation.scenario.xml -unattended
 -->
 <Scenario name="engine.isolation" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Wait frames="1"/>
 	<Expect watch="UserData.Isolated" equals="1"/>
 	<Expect watch="UserData.PlatformFolderChanged" equals="0"/>
 	<Pass/>

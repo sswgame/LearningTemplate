@@ -18,58 +18,51 @@
 	<Variable name="gv_timeScale" value="0"/>
 	<DevCommand line="hud on"/>
 	<WaitUntil watch="DebugHUD.Shown" equals="1" timeoutFrames="60"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="debughud_on.ppm"/>
 	<DevCommand line="hud off"/>
 	<WaitUntil watch="DebugHUD.Shown" equals="0" timeoutFrames="60"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="debughud_off.ppm"/>
 	<Variable name="gv_timeScale" value="1"/>
 	<!-- 마스터 단축키 — Ctrl 을 누른 채 F3 -->
-	<Wait frames="2"/>
 	<Press slot="Key.LeftControl"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- Ctrl 이 먼저 눌린 프레임 뒤에 F3 (프레임 경계) -->
 	<Tap slot="Key.F3"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- F3 탭이 끝난 뒤에 Ctrl 을 뗀다(프레임 경계) -->
 	<Release slot="Key.LeftControl"/>
 	<WaitUntil watch="DebugHUD.Shown" equals="1" timeoutFrames="84"/>
 	<Expect watch="DebugHUD.SectionCount" atLeast="1"/>
 	<Expect watch="DebugHUD.SectionShown" equals="0"/>
 	<Expect watch="DebugHUD.Corner" equals="0"/>
 	<!-- 섹션 켜기 · 모서리 -->
-	<Wait frames="2"/>
 	<DevCommand line="hud physics on"/>
 	<WaitUntil watch="DebugHUD.SectionShown" equals="1" timeoutFrames="60"/>
-	<Wait frames="1"/>
 	<DevCommand line="hud corner bottomRight"/>
 	<WaitUntil watch="DebugHUD.Corner" equals="3" timeoutFrames="60"/>
-	<Wait frames="1"/>
 	<DevCommand line="hud corner topRight"/>
 	<WaitUntil watch="DebugHUD.Corner" equals="1" timeoutFrames="60"/>
 	<!-- 섹션 끄기 -->
-	<Wait frames="1"/>
 	<DevCommand line="hud physics off"/>
 	<WaitUntil watch="DebugHUD.SectionShown" equals="0" timeoutFrames="60"/>
 	<!-- 설정 창(모달) — 열린 동안 활성 화면, B 로 닫는다 -->
-	<Wait frames="1"/>
 	<DevCommand line="hud window"/>
 	<WaitUntil watch="DebugHUD.WindowOpen" equals="1" timeoutFrames="60"/>
 	<ExpectUI screen="engine/ui/debughud.ui.xml"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 모달이 열린 프레임 뒤에 B 가 닿는다(프레임 경계) -->
 	<Tap slot="Gamepad.B"/>
 	<WaitUntil watch="DebugHUD.WindowOpen" equals="0" timeoutFrames="60"/>
 	<!-- 마스터 단축키로 끈다 -->
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="5"/> <!-- B 의 뗌이 들어간 뒤에 단축키를 누른다(프레임 경계) -->
 	<Press slot="Key.LeftControl"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- Ctrl 이 먼저 눌린 프레임 뒤에 F3 (프레임 경계) -->
 	<Tap slot="Key.F3"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- F3 탭이 끝난 뒤에 Ctrl 을 뗀다(프레임 경계) -->
 	<Release slot="Key.LeftControl"/>
 	<WaitUntil watch="DebugHUD.Shown" equals="0" timeoutFrames="60"/>
-	<Wait frames="1"/>
 	<DevCommand line="hud corner topLeft"/>
 	<DevCommand line="hud opacity 0.85"/>
-	<Wait frames="4"/>
+	<WaitUntil watch="DebugHUD.Corner" equals="0" timeoutFrames="60"/> <!-- 기본 모서리로 돌아갔다 -->
 	<!-- HUD 패널(기본 섹션 넷)은 화면의 몇 % 다 — 상한 1% 는 렌더 흔들림 몫이고, HUD 가 사진에 새면 넘는다 -->
 	<ExpectImagesDiffer first="debughud_on.ppm" second="debughud_off.ppm" minDiffering="0" maxDiffering="0.01"/>
 	<Pass/>

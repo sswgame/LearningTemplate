@@ -8,14 +8,15 @@
   실행: App -scenario=engine/automation/modulereload.scenario.xml -unattended
 -->
 <Scenario name="engine.modulereload" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
-	<Wait frames="60"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/> <!-- 첫 씬이 선 뒤에 갈아 끼운다 -->
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<DevCommand line="module.reload SWGame"/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.ReloadCount" atLeast="1"/>
 	<Expect watch="Scene.ObjectCount" atLeast="1"/>
-	<Wait frames="10"/>
+	<AdvanceSimulation frames="10"/> <!-- 갈아 끼운 모듈로 씬이 몇 프레임 돈 뒤에 다시 갈아 끼운다(시간이 내용) -->
 	<DevCommand line="module.reload SWGame"/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
