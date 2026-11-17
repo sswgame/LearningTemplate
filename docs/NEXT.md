@@ -105,7 +105,6 @@
 - **S-8 [37] 캐릭터 이동이 차례로 돈다** — `moveCharacters` 는 섰고 구현이 차례, `ExtendedUpdate` 가 씬 공용 `_tempAllocator` 를 받는다. 상용: 유니티 DOTS Character Controller 잡. 제안 레인별 임시 할당자. 확인: `load/*` 캐릭터 500 PreStep(워커 1 · 4 · 8)을 먼저 잰다(PO-3).
 - **N-11 [43] 송신률 조절 없음** — `NetEndpoint.cpp` 토큰 버킷이 고정. 상용: ENet RTT 스로틀, 유니티 Transport. 확인: `NetEmulation` 손실 20 % 의 `_resentMessageCount` 를 먼저 잰다.
 - **RN-16 [46] 품질 단계 없음** — `EngineConfig._render` 값의 품질 단계별 덮어쓰기 묶음(A-23 플랫폼 층과 같은 합치기). 상용: 언리얼 스케일러빌리티 그룹, 유니티 SRP 품질 에셋. 확인: 로드 검증 단위 테스트.
-- **A-19 [47] 프리로드가 같은 바이트를 두 번 읽는다** — `PreloadSet` 이 읽고 버린 뒤 `pinAsset` 이 다시. 상용: 언리얼 `FStreamableHandle`. 확인: 프리로드한 에셋의 읽기 횟수 1.
 - **A-24 [47]** 리플렉션 묶음 TU 가 헤더 하나에 전체를 다시 파싱 — 1 절 5-4 리플렉션.
 - **K-11 [50] 슈터 적이 매번 스폰** — `spawnPrefab` 이 풀 정책(데이터)을 받는다(아레나 투사체는 `PrefabPool`). 상용: Lyra · Boss Room 풀. 확인: Tracy `GameModeFlush`.
 - **K-12 [50] 복셀 월드 전량 상주 · 면마다 정점 6** — "청크 좌표 → 청크" 사전 + 생성 · 저장 훅, 그리디 메싱 + 타일 UV 셰이더(`VoxelMesher.cpp`). 확인: Tracy `VoxelMesher::fillChunkMesh`.

@@ -110,10 +110,10 @@ namespace sw
         void clear() override;
         /**
          * @brief 머티리얼 경로(`Material::kAssetType`)면 참조 하나를 확보하고(`acquire`) 다음 `initializePending` 에 초기화를 맡긴 뒤,
-         *        놓을 때 `release` 하는 토큰을 돌려줍니다. 아니면 nullptr 입니다.
+         *        놓을 때 `release` 하는 토큰을 돌려줍니다(로드는 없다 — 읽기는 초기화가 한다). 아니면 빈 토큰입니다.
          * @details 초기화가 머티리얼의 텍스처를 확보하므로(비동기 로드) 머티리얼 고정이 그 텍스처도 붙든다.
          */
-        shared_ptr<const void> pinAsset( string_view relativePath ) override;
+        AssetPin pinAsset( string_view relativePath ) override;
         /**
          * @brief 고정한 머티리얼 가운데 초기화를 마친 것의 PSO 미리 만들기 값을 꺼냅니다(렌더 스레드, 기록 전 — `FramePSOManager::warmPinnedMaterialPSOs`).
          * @details 고정(`pinAsset`)이 줄에 넣고, 게임 스레드의 `initializePending` 이 초기화를 마친 것을 값으로 옮긴다(초기화 전이면 셰이더 경로 · define 을 모른다).

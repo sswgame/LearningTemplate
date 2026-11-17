@@ -65,6 +65,19 @@ namespace sw
 
 namespace sw
 {
+    class AssetLoadOperation;
+
+    /**
+     * @struct AssetPin
+     * @brief 캐시가 에셋 하나를 붙든 결과입니다(`AssetCacheBase::pinAsset`). 토큰이 비면 그 종류를 고정하는 캐시가 없다.
+     * @details 로드를 같이 내주는 것은 프리로드가 그 로드의 끝남 · 실패를 보고 따로 읽지 않게 하려는 것이다(언리얼 `FStreamableHandle` 이 로드한 객체를 핸들이 쥔다 — 감사 A-19).
+     */
+    struct AssetPin
+    {
+        shared_ptr<const void>         _token{}; ///< 사는 동안 에셋을 붙드는 토큰
+        shared_ptr<AssetLoadOperation> _pLoad{}; ///< 그 에셋을 읽는 로드. 비면 읽기는 그 종류의 다른 단계가 한다(머티리얼 — 게임 스레드 초기화)
+    };
+
     /**
      * @class AssetCacheBase
      * @brief 경로 키 에셋 캐시가 공통으로 답해야 하는 것들입니다.
@@ -100,13 +113,13 @@ namespace sw
         virtual size_t getCachedCount() const = 0;
 
         /**
-         * @brief @p relativePath 가 이 캐시가 다루는 종류의 경로면 로드를 걸고(워커), 그 에셋을 붙드는 토큰을 돌려줍니다. 이 캐시의 종류가 아니면 nullptr 입니다.
+         * @brief @p relativePath 가 이 캐시가 다루는 종류의 경로면 로드를 걸고(워커), 그 에셋을 붙드는 토큰과 로드를 돌려줍니다. 이 캐시의 종류가 아니면 빈 토큰입니다.
          * @details 캐시가 약한 참조인 종류(메시 · 프리팹)는 미리 읽은 에셋이 쓰기 전에 사라질 수 있다 — 토큰이 사는 동안 남는다(`AssetPinSet`, 언리얼
          *          `FStreamableHandle` 의 유지). 로드가 실패해도 토큰은 나온다(실패는 그 종류의 로드가 알린다). 기본은 고정하지 않는 캐시다 —
          *          스스로 수명을 쥐는 표(오디오 · 현지화 다시 읽기)와 디바이스가 있어야 요청하는 텍스처가 그렇다(텍스처는 그것을 쓰는 머티리얼의 고정이 붙든다).
          * @warning 토큰은 캐시(곧 `AssetManager`)보다 먼저 놓습니다.
          */
-        virtual shared_ptr<const void> pinAsset( string_view relativePath )
+        virtual AssetPin pinAsset( string_view relativePath )
         {
             (void)relativePath;
             return {};

@@ -285,11 +285,12 @@ namespace sw
         return requestWith( assetRelativePath, AssetLoadStart::Async );
     }
 
-    shared_ptr<const void> PrefabCache::pinAsset( string_view relativePath )
+    AssetPin PrefabCache::pinAsset( string_view relativePath )
     {
         if ( AssetTypeRegistry::isPathOfType( relativePath, PrefabAsset::kAssetType ) == false )
             return {};
-        return request( relativePath ).getOperation();
+        const shared_ptr<PrefabLoadOperation> pOperation = request( relativePath ).getOperation();
+        return AssetPin{ pOperation, pOperation };
     }
 
     PrefabHandle PrefabCache::requestWith( string_view assetRelativePath, AssetLoadStart start )

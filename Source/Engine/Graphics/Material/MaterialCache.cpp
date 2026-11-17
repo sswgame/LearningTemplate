@@ -336,7 +336,7 @@ namespace sw
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
-    shared_ptr<const void> MaterialCache::pinAsset( string_view relativePath )
+    AssetPin MaterialCache::pinAsset( string_view relativePath )
     {
         if ( AssetTypeRegistry::isPathOfType( relativePath, Material::kAssetType ) == false )
             return {};
@@ -351,7 +351,8 @@ namespace sw
                 _impl->_listPSOWarmKey.push_back( key );
             _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
         }
-        return shared_ptr<const void>( pMaterial, MaterialCachePinRelease{ this, key } );
+        // 읽기는 게임 스레드의 초기화(`initializePending`)가 한 번 한다 — 내줄 로드가 없다.
+        return AssetPin{ shared_ptr<const void>( pMaterial, MaterialCachePinRelease{ this, key } ), {} };
     }
 
     void MaterialCache::takePSOWarmEntries( vector<MaterialPSOWarmEntry>& outListEntry )

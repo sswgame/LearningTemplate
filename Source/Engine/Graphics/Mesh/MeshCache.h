@@ -106,8 +106,8 @@ namespace sw
         size_t getCachedCount() const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
-        /** @brief `.mesh` 경로면 `request` 의 로드 작업(곧 메시)을 붙드는 토큰입니다. 아니면 nullptr 입니다. */
-        shared_ptr<const void> pinAsset( string_view relativePath ) override;
+        /** @brief `.mesh` 경로면 `request` 의 로드 작업(곧 메시)을 토큰 겸 로드로 내줍니다. 아니면 빈 토큰입니다. */
+        AssetPin pinAsset( string_view relativePath ) override;
 
     private:
         /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
