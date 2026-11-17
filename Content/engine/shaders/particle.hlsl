@@ -3,6 +3,7 @@
 // 빌보드: 인스턴스 = 입자. 사각형은 카메라를 본다 — 화면 x · y 축의 월드 방향을 g_InvViewProj 로 입자 깊이에서 되돌려 구한다(원근 · 직교 모두 — PassCB 를 늘리지 않는다).
 // 띠: 인스턴스 = 이웃 입자 둘(태어난 순서로 놓여 있다 — VFXCPUSimulation::writeParticles)을 잇는 마디. 폭은 입자 크기이고, 마디 방향과 시선의 외적으로 편다.
 // 출력은 프리멀티플라이 알파다(PSO _bPremultipliedAlpha — One/InvSrcAlpha). 더하기 블렌드는 알파를 0 으로 내서 같은 PSO 로 그린다.
+// 정렬 모드가 있는 방출기(C++ VFXSortMode)는 순서 목록(g_SwParticleOrder)의 이 뷰 구간으로 입자를 고른다 — 입자 데이터는 옮기지 않는다(언리얼 나이아가라의 정렬 인덱스 버퍼와 같다).
 
 // 이 셰이더는 루트 상수 블록을 직접 선언한다(binding.hlsli 의 그래픽스 블록 g_SwMaterialCount 대신).
 #define SW_OWN_ROOT_CONSTANTS 1
@@ -16,13 +17,14 @@ struct GPUParticle
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( GPUParticle, g_SwParticles, SW_SLOT_PASS_SRV );
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwParticleOrder, SW_SLOT_PARTICLE_ORDER_SRV ); // 입자 번호 순서 목록(C++ GPUSceneSnapshot::_listParticleOrder)
 
 // 칸 순서는 C++ VFXParticleRenderer 의 kRoot* 와 같다. 스칼라만 둔다 — float4 를 두면 DX12 루트 상수 · Vulkan 푸시 상수 · UBO 에뮬의 채움 규칙이 갈린다.
 SW_ROOT_CONSTANTS_BEGIN
 {
     uint  g_SwParticleBase;      // 이 방출기의 첫 입자 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않아 시작을 여기로 받는다
     uint  g_SwParticleTexture;   // DX12/Vulkan 은 bindless 전역 번호, DX11/GL 은 서수 0(머티리얼 텍스처 슬롯 t16)
-    uint  g_SwParticleFlags;     // kParticleFlag* 비트(C++ VFXParticleRenderer 의 kFlag* 와 같다)
+    uint  g_SwParticleFlags;     // 아래 두 비트는 kParticleFlag*(C++ VFXParticleRenderer 의 kFlag*), 위 비트는 순서 구간의 첫 칸 + 1(0 = 순서 없음, kParticleOrderShift)
     float g_SwParticleSizeScale; // 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
     float g_SwParticleColumn0X;  // 방출기 행렬(행벡터 규약)의 열 0..2 — 월드 = dot( float4( 로컬, 1 ), 열 )
     float g_SwParticleColumn0Y;
@@ -41,6 +43,15 @@ SW_ROOT_CONSTANTS_END
 
 static const uint kParticleFlagAdditive = 1u; // 더하기 — 알파를 0 으로 낸다
 static const uint kParticleFlagRibbon   = 2u; // 띠 — 인스턴스가 이웃 입자 둘을 잇는 마디다
+static const uint kParticleOrderShift   = 2u; // 순서 구간이 시작하는 비트(C++ VFXParticleRenderer::kRootFlagOrderShift) — 루트 상수 16 칸이 다 차서 플래그와 함께 싣는다
+
+// 인스턴스 번호 → 이 방출기의 입자 번호(공유 버퍼 안). 순서 구간이 있으면 그 구간의 칸을, 없으면 인스턴스 번호를 그대로 쓴다.
+uint resolveParticleIndex( uint instanceId )
+{
+    const uint orderStart = SW_ROOT( g_SwParticleFlags ) >> kParticleOrderShift;
+    const uint particle   = orderStart != 0u ? g_SwParticleOrder[orderStart - 1u + instanceId] : instanceId;
+    return SW_ROOT( g_SwParticleBase ) + particle;
+}
 
 struct PSInput
 {
@@ -106,7 +117,7 @@ PSInput ribbonVertex( uint vertexID, uint instanceId )
 PSInput billboardVertex( uint vertexID, uint instanceId )
 {
     PSInput           output;
-    const GPUParticle particle   = g_SwParticles[SW_ROOT( g_SwParticleBase ) + instanceId];
+    const GPUParticle particle   = g_SwParticles[resolveParticleIndex( instanceId )];
     const float3      center     = toWorld( particle._positionSize.xyz );
     const float4      centerClip = mul( float4( center, 1.0f ), g_ViewProj );
     const float2      corner     = kCornerTable[vertexID % 6u];

@@ -20,6 +20,7 @@
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Presentation/InstanceCustomData.h"
+#include "Engine/Renderer/VFX/VFXParticleOrder.h"
 #include "Engine/VFX/VFXParticle.h"
 
 #include <variant>
@@ -308,6 +309,8 @@ namespace sw
     {
         uint32 _particleBatchIndex{ 0 }; ///< `GPUSceneSnapshot::_listParticleBatch` 의 번호
         uint32 _drawPosition{ 0 };       ///< 이 뷰의 투명 배치 순서에서 이 입자보다 먼저 그리는 배치 수
+        /// @brief 이 뷰에서 방출기 안 입자를 그리는 순서(`GPUSceneSnapshot::_listParticleOrder` 의 구간). 정렬하지 않는 방출기(`VFXSortMode::None` · GPU 방출기)는 무효 구간이다
+        VFXParticleOrder _order{};
     };
 } // namespace sw
 
@@ -495,6 +498,11 @@ namespace sw
          * @details 메시 배치가 그대로인 프레임에도 카메라와 방출기가 움직이므로 입자 그리기와 함께 매번 다시 정한다(`GPUSceneBuilder::populateParticleBatches`).
          */
         vector<GPUTransparentParticleSlot> _listParticleSlot;
+        /**
+         * @brief 방출기 안 입자의 그리는 순서(입자 번호) 목록입니다. 자리마다의 구간(`GPUTransparentParticleSlot::_order`)이 가리킨다 — 주 시점 구간이 앞, 추가 뷰 구간이 뒤다.
+         * @details 입자 데이터는 옮기지 않는다(뷰들이 입자 버퍼 하나를 함께 쓴다). `ViewDepth` 는 (방출기, 뷰)마다, 나이 순서는 방출기마다 구간 하나다(`GPUSceneBuilder::assignParticleOrders`).
+         */
+        vector<uint32> _listParticleOrder;
         /** @brief GPU 로 시뮬레이션하는 메시 방출기들입니다. 입자 그리기와 같이 매번 다시 모은다(인스턴스 칸은 배치 구성을 따른다). */
         vector<GPUVFXMeshEmitter> _listVFXMeshEmitter;
 
@@ -523,6 +531,7 @@ namespace sw
         {
             _listParticleBatch.clear();
             _listParticleSlot.clear();
+            _listParticleOrder.clear();
             _listVFXMeshEmitter.clear();
         }
 

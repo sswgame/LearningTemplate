@@ -104,6 +104,8 @@ namespace sw
          *          슬롯을 나눠 쓴다.
          */
         inline constexpr uint32 kPassBuffer = SW_SLOT_PASS_SRV;
+        /// @brief 입자 순서 목록(particle.hlsl 의 g_SwParticleOrder)입니다. 비어 있던 t0..t3 의 칸이라 띠(t4..)와 겹치지 않는다.
+        inline constexpr uint32 kParticleOrderBuffer = SW_SLOT_PARTICLE_ORDER_SRV;
         /**
          * @brief 지금 뷰의 라이트 그리드(g_SwLightGrid, `uint` 단어 배열)입니다. 뷰마다의 그리드가 이어 붙어 있고 PassCB `g_SwLightGridBase` 가 첫 단어입니다.
          * @details CPU 생산자(`LightGrid`)는 동적 버퍼로, GPU 생산자(light_grid.hlsl)는 기본 힙 UAV 버퍼로 같은 슬롯에 바인딩한다. 셰이더는 생산자를 모른다.
@@ -427,6 +429,7 @@ namespace sw
             inline constexpr const utf8* kVertexAnimation      = "g_SwVertexAnimation";    ///< t10(그래픽스). 정점 애니메이션(VAT) 테이블
             inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t11(캔버스 패스). 화면 2D 사각형
             inline constexpr const utf8* kParticles            = "g_SwParticles";          ///< t11(투명 패스의 입자 그리기). 방출기 하나의 입자(particle.hlsl)
+            inline constexpr const utf8* kParticleOrder        = "g_SwParticleOrder";      ///< t3(투명 패스의 입자 그리기). 정렬 모드가 있는 방출기의 입자 번호 순서(particle.hlsl)
             inline constexpr const utf8* kLightGrid            = "g_SwLightGrid";          ///< t12(그래픽스). 뷰마다의 라이트 그리드 단어
             inline constexpr const utf8* kLightProbes          = "g_SwLightProbes";        ///< t13(그래픽스). 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개)
             inline constexpr const utf8* kSkinResultOffsets    = "g_SwSkinResultOffsets";  ///< t14(그래픽스). 스킨 칸 → 결과 시작 표

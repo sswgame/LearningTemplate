@@ -211,6 +211,8 @@ namespace sw
         const vector<GPUVFXMeshEmitter>& getVFXMeshEmitters() const { return _snapshot._listVFXMeshEmitter; }
         /** @brief 주 시점에서 입자 그리기의 순서와 메시 투명 배치 사이의 자리를 반환합니다(`GPUSceneSnapshot::_listParticleSlot`). */
         const vector<GPUTransparentParticleSlot>& getParticleSlots() const { return _snapshot._listParticleSlot; }
+        /** @brief 방출기 안 입자의 그리는 순서 목록입니다(`GPUSceneSnapshot::_listParticleOrder` — 자리의 `_order` 구간이 가리킨다). */
+        const vector<uint32>& getParticleOrder() const { return _snapshot._listParticleOrder; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 싣고 온 것)입니다. 없으면 nullptr 입니다. */
         const GPUViewTransparentOrder* findViewTransparentOrder( uint64 viewID ) const;
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
