@@ -11,6 +11,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/CharacterLODSettings.h"
@@ -192,6 +193,14 @@ namespace sw
                 _cachedBytes = 0;
             }
             const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+            /** @brief 구운 메시를 모두 놓습니다 — 자동화 단계 사이(`SW_AUTOMATION_STAGE_RESET`)에 새 프로세스처럼 비운다. */
+            void clear()
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                _mapEntry.clear();
+                _cachedBytes = 0;
+            }
 
             /** @brief @p budgetBytes 를 넘는 동안 그리는 쪽이 없는 항목을 가장 오래 안 쓴 것부터 뺍니다. @p keepKey 는 방금 넣은 항목이다. */
             void evictOverBudgetLocked( uint64 keepKey, uint64 budgetBytes ) SW_REQUIRES_LOCK( _mutex )
@@ -427,4 +436,17 @@ namespace sw
 namespace sw
 {
     SW_MODULE_SUBSYSTEM( Engine, AppearanceBakedMeshTable, AppearanceBakedMeshTable );
+
+    namespace
+    {
+        /** @brief 단계 되돌리기 — 앞 단계가 구운 차림을 다음 단계가 그대로 쓰면 에셋 일이 빨리 끝나 사진 시점이 혼자 돈 실행과 달라진다(shooter3d killcam 16 대 22 프레임). */
+        void resetAppearanceBakedMeshes()
+        {
+            AppearanceBakedMeshTable* const pTable = game::findSubsystem<AppearanceBakedMeshTable>();
+            if ( pTable != nullptr )
+                pTable->clear();
+        }
+    } // namespace
+
+    SW_AUTOMATION_STAGE_RESET( appearanceBakedMeshes, "AppearanceBakedMeshTable", &resetAppearanceBakedMeshes );
 } // namespace sw
