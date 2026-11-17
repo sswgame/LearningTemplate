@@ -9,9 +9,8 @@
 	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/computepasspipeline.xml"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<Wait frames="40"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="computeswap.ppm"/>
-	<Wait frames="5"/>
 	<ExpectImage file="computeswap.ppm" golden="computeswap"/>
 	<Pass/>
 </Scenario>

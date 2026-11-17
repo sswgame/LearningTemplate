@@ -6,13 +6,13 @@
 -->
 <Scenario name="game.empty.debugger.hotreloadlayout" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="Immediately" input="exclusive">
 	<LoadScene path="game/empty/maps/hotreloadprobe.scene.xml" timeoutFrames="600"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="HotReload.ProbeKept" equals="42" timeoutFrames="30"/> <!-- 탐침이 값을 받았다 -->
 	<Expect watch="HotReload.ProbeKept" equals="42"/>
 	<Expect watch="HotReload.ProbeAdded" equals="0"/>
 	<Store watch="HotReload.ProbeVersion" as="before"/>
 	<DevCommand line="module.reload SWGame"/>
 	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutWallSeconds="600"/>
-	<Wait frames="5"/>
+	<WaitUntil watch="HotReload.ProbeVersion" differsFrom="before" timeoutFrames="30"/> <!-- 새 모듈의 코드가 돈다 -->
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<Expect watch="HotReload.ProbeKept" equals="42"/>
 	<Expect watch="HotReload.ProbeAdded" equals="7"/>

@@ -9,19 +9,18 @@
 -->
 <Scenario name="game.empty.afterimage" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/afterimage.scene.xml"/>
-	<Wait frames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Afterimage.CaptureCount" atLeast="3" timeoutSeconds="3"/>
 	<Expect watch="Afterimage.Visible" atLeast="1"/>
 	<Expect watch="Afterimage.Visible" atMost="6"/>
 	<Screenshot file="afterimage_still.ppm"/>
 	<DevCommand line="object.place Actor 1.5 0 0"/>
-	<Wait frames="8"/>
+	<Wait frames="1"/> <!-- 앞 사진을 찍는 그리는 프레임(AdvanceSimulation 은 사진을 다음 그리는 프레임으로 미룬다) -->
+	<AdvanceSimulation frames="7"/> <!-- 옮긴 뒤 잔상이 쌓이는 시간(시간이 내용) -->
 	<DevCommand line="object.place Actor 3 0 0"/>
-	<Wait frames="8"/>
+	<AdvanceSimulation frames="8"/>
 	<Expect watch="Afterimage.Visible" atLeast="2"/>
 	<Screenshot file="afterimage_moved.ppm" waitForStability="false"/>
-	<Wait frames="2"/>
 	<ExpectImagesDiffer first="afterimage_still.ppm" second="afterimage_moved.ppm" minDiffering="0.02"/>
 	<Pass/>
 </Scenario>

@@ -10,7 +10,6 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/autoexposure.scene.xml"/>
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<!-- 어두운 벽에 다 적응한다(속도 3/s, 3 초면 0.01 % 안). 적응은 게임 시계라 시간 배율 4 로 45 프레임 = 게임 시간 3 초다. -->
 	<Variable name="gv_timeScale" value="4"/>
@@ -29,7 +28,6 @@
 	<Screenshot file="exposure_adapted.ppm"/>
 	<Wait frames="30"/>
 	<Screenshot file="exposure_settled.ppm"/>
-	<Wait frames="5"/>
 	<ExpectImagesDiffer first="exposure_first.ppm" second="exposure_adapted.ppm" region="0.2,0.2,0.8,0.8" minDiffering="0.5"/>
 	<ExpectImagesDiffer first="exposure_adapted.ppm" second="exposure_settled.ppm" region="0.2,0.2,0.8,0.8" minDiffering="0" maxDiffering="0.01"/>
 	<Pass/>
