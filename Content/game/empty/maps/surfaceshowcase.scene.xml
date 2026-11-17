@@ -1,5 +1,5 @@
 <?asset guid="07845e585059eef826a43f9603c15eca"?>
-<Scene formatVersion="2" name="SurfaceShowcase">
+<Scene formatVersion="3" name="SurfaceShowcase">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

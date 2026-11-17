@@ -3,13 +3,16 @@
 // 루프백으로 잇는다 — 저장 규칙은 LoginStoreLogicTest, 서비스 규칙은 LoginServiceTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
@@ -34,10 +37,6 @@ namespace
                 pOut[index] = static_cast<uint8>( ++_counter );
             }
             return true;
-        }
-        bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& /*params*/, uint8* pOut, int32 outSize ) override
-        {
-            return fill( reinterpret_cast<const uint8*>( password.data() ), static_cast<int32>( password.size() ), pSalt, saltSize, pOut, outSize );
         }
         bool computeKeyedHash( const uint8* pKey, int32 keySize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) override
         {
@@ -67,6 +66,43 @@ namespace
         uint32 _counter{ 0 };
     };
 
+    /**
+     * @brief 결정적인 가짜 비밀번호 해시입니다. 부른 수와 "작업 풀 워커가 아닌 스레드에서 불렸다" 를 셉니다(스레드 안전 — 워커가 부른다).
+     * @details 메모리 저장소는 맡긴 스레드(테스트 스레드)에서 일을 돌리므로, 해시가 저장소 일 안에서 돌면 워커가 아닌 스레드에서 불린다(감사 O-3 이전 모양).
+     */
+    class FakeWorkerHasher final : public IPasswordHasher
+    {
+    public:
+        atomic<int32> _callCount{ 0 };
+        atomic<int32> _offWorkerCount{ 0 };
+
+        bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut, int32 outSize ) override
+        {
+            (void)params;
+            const TaskManager* pTaskManager = game::findSubsystem<TaskManager>();
+            if ( pTaskManager == nullptr || pTaskManager->isWorkerThread() == false )
+                _offWorkerCount.fetch_add( 1, std::memory_order_relaxed );
+            _callCount.fetch_add( 1, std::memory_order_relaxed );
+            uint64 hash = HashUtil::kFNVOffset64;
+            for ( const utf8 character : password )
+            {
+                hash = HashUtil::fnvStep64( hash, static_cast<uint8>( character ) );
+            }
+            for ( int32 index = 0; index < saltSize; ++index )
+            {
+                hash = HashUtil::fnvStep64( hash, pSalt[index] );
+            }
+            for ( int32 index = 0; index < outSize; ++index )
+            {
+                hash        = HashUtil::fnvStep64( hash, static_cast<uint8>( index ) );
+                pOut[index] = static_cast<uint8>( hash >> 24 );
+            }
+            return true;
+        }
+    };
+
+    constexpr int64 kHashWaitMs = 10000; ///< 테스트가 해시 하나를 기다리는 상한(실패해도 멈추지 않게)
+
     /** @brief 맨 요청(`sendRequest`)의 답을 받습니다. 깨진 몸을 그대로 보내는 테스트가 씁니다. */
     struct RawResponseSink
     {
@@ -80,11 +116,12 @@ namespace
         }
     };
 
-    /** @brief 테스트의 로그인 설정입니다. 해시 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
+    /** @brief 테스트의 로그인 설정입니다. 해시 줄 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
     LoginServiceConfig makeAccountServerLoginSettings()
     {
         LoginServiceConfig settings;
-        settings._maxConcurrentPasswordHashes = 4;
+        settings._maxConcurrentPasswordHashes = 2;
+        settings._maxQueuedPasswordHashes     = 64;
         return settings;
     }
 
@@ -95,6 +132,7 @@ namespace
     struct AccountServerFixture
     {
         FakeBindingCrypto                   _crypto{};
+        FakeWorkerHasher                    _hasher{};
         LoginService                        _loginService{};
         AccountServer                       _accountServer{};
         vector<unique_ptr<AccountClient>>   _listAccount{};
@@ -104,7 +142,7 @@ namespace
         {
             _pRig = make_unique<test::OnlineTestFixture>( false );
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
-            _loginService.initialize( &_pRig->_server._store, &_crypto, settings, arrMasterKey );
+            SW_EXPECT_TRUE( _loginService.initialize( &_pRig->_server._store, &_crypto, &_hasher, game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
             _accountServer.initialize( &_loginService, AccountServerConfig{} );
             SW_EXPECT_TRUE( _pRig->_server._host.registerServerService( &_accountServer ) );
             _pRig->_server.start();
@@ -133,7 +171,16 @@ namespace
         OnlineServiceClient& getClient( int32 index ) { return _pRig->_clients.getClient( index ); }
         OnlineServiceHost&   getHost() { return _pRig->_server._host; }
 
-        void poll() { test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 12 ); }
+        /** @brief 서버 · 클라이언트를 돌립니다. 해시는 작업 풀에서 돌므로 사이사이 해시를 기다린다(끝난 해시는 다음 update 가 잇는다). */
+        void poll()
+        {
+            for ( int32 round = 0; round < 4; ++round )
+            {
+                test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 4 );
+                (void)_loginService.waitForPasswordHashes( kHashWaitMs );
+            }
+            test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 4 );
+        }
 
         vector<AccountClientReply> takeAll( int32 index )
         {

@@ -94,6 +94,29 @@ namespace sw
                 return MathUtil::max( 1u, static_cast<uint32>( rectPixels ) / upscaleZoom );
             return MathUtil::max( 1u, static_cast<uint32>( rectPixels * resolutionScale + 0.5f ) );
         }
+        /** @brief 뷰 사각형 상수 둘입니다(PassCB `g_ViewRectScale` · `g_ViewRectSize`, binding.hlsli 1 절). */
+        struct ViewRectConstants
+        {
+            float4 _scale; ///< xy 이번 사각형 / 풀 배율, zw 지난 프레임의 그 배율(지난 프레임 첨부 — TAA 히스토리)
+            float4 _size;  ///< xy 사각형 픽셀, zw 1 / 풀 픽셀(셰이더가 가장자리 반 텍셀 안쪽 상한을 구한다)
+        };
+        /**
+         * @brief 첨부 풀(@p poolWidth × @p poolHeight) 안에서 뷰가 그리는 사각형(원점 0,0)의 셰이더 상수를 냅니다. 사각형이 풀을 다 덮으면 배율이 정확히 1 이라 그림이 같습니다.
+         * @details 언리얼 `FViewInfo::ViewRect` 와 `BufferUVMax`, 유니티 HDRP `_RTHandleScale` 자리다. 자동 렌더 배율은 풀을 다시 만들지 않고 이 사각형만 줄인다(RS-4).
+         *          사각형은 풀보다 클 수 없다(풀은 최대 크기로 잡는다) — 넘으면 풀 크기로 자른다. 풀이 비었으면 배율 1, 크기 0 이다.
+         */
+        static ViewRectConstants makeViewRectConstants( uint32 rectWidth, uint32 rectHeight, uint32 poolWidth, uint32 poolHeight, const float2& previousScale )
+        {
+            ViewRectConstants constants{};
+            const uint32      width  = MathUtil::min( rectWidth, poolWidth );
+            const uint32      height = MathUtil::min( rectHeight, poolHeight );
+            const float32     scaleX = poolWidth > 0 ? static_cast<float32>( width ) / static_cast<float32>( poolWidth ) : 1.0f;
+            const float32     scaleY = poolHeight > 0 ? static_cast<float32>( height ) / static_cast<float32>( poolHeight ) : 1.0f;
+            constants._scale         = float4{ scaleX, scaleY, previousScale._x, previousScale._y };
+            constants._size          = float4{ static_cast<float32>( width ), static_cast<float32>( height ), poolWidth > 0 ? 1.0f / static_cast<float32>( poolWidth ) : 0.0f,
+                                      poolHeight > 0 ? 1.0f / static_cast<float32>( poolHeight ) : 0.0f };
+            return constants;
+        }
         /**
          * @brief 정수 업스케일 뷰를 출력 사각형 가운데에 놓는 한 축의 시작 픽셀입니다. 남는 픽셀은 양쪽에 반씩(왼쪽 · 위가 내림) 띠로 남습니다.
          */
@@ -572,6 +595,7 @@ namespace sw
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러가 화면 속도를 구한다, motion_blur.hlsl). 처음 · 컷 프레임은 이번 것과 같다.
         hashed_string _prevViewProj{ "g_PrevViewProj" };
         hashed_string _temporalJitter{ "g_TemporalJitter" }; ///< 이번 프레임 투영 지터(xy, NDC) — 화면 속도가 뺀다
+        hashed_string _textureMipBias{ "g_TextureMipBias" }; ///< 머티리얼 텍스처 밉 바이어스(x = log2(렌더 높이 / 출력 높이), `ViewTextureMipBiasUtil`)
         hashed_string _world{ "g_World" };
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
         hashed_string _keyLightColor{ "g_KeyLightColor" };
@@ -643,6 +667,10 @@ namespace sw
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };
+        /// @brief 뷰 사각형 배율(xy 이번, zw 지난 프레임)입니다. binding.hlsli PassCB, `FrameRendererUtil::makeViewRectConstants`.
+        hashed_string _viewRectScale{ "g_ViewRectScale" };
+        /// @brief 뷰 사각형 크기(xy 픽셀)와 풀 텍셀(zw = 1 / 풀 픽셀)입니다.
+        hashed_string _viewRectSize{ "g_ViewRectSize" };
         hashed_string _flags{ "g_Flags" };
         /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 InstanceData::load 가 범위를 제한합니다.
         hashed_string _swInstanceCount{ "g_SwInstanceCount" };

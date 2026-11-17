@@ -21,7 +21,7 @@ namespace
         listCorner.reserve( mesh.getIndexCount() );
         for ( const uint32 index : mesh.getIndices() )
         {
-            listCorner.push_back( mesh.getVertices()[index] );
+            listCorner.push_back( mesh.getCPUView().getVertices()[index] );
         }
         return listCorner;
     }
@@ -62,7 +62,7 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIDWhileCreateMakesNew )
     SW_EXPECT_TRUE( freshA.get() != sharedA.get() );
 
     // 5. 공유본과 새로 만든 것의 기하는 같아야 한다.
-    SW_EXPECT_EQUAL( freshA->getVertices().size(), sharedA->getVertices().size() );
+    SW_EXPECT_EQUAL( freshA->getCPUView().getVertices().size(), sharedA->getCPUView().getVertices().size() );
 
     // 6. 모르는 id 는 둘 다 nullptr.
     SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "NoSuchShape" ) == nullptr );
@@ -80,7 +80,7 @@ SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
         const sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::acquirePrimitive( pMeshID );
         SW_REQUIRE_NOT_NULL( mesh );
         float32 farthest = 0.0f;
-        for ( const sw::RHIVertex& vertex : mesh->getVertices() )
+        for ( const sw::RHIVertex& vertex : mesh->getCPUView().getVertices() )
         {
             const sw::float3 position( vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] );
             farthest = sw::MathUtil::max( farthest, position.getLength() );
@@ -170,7 +170,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
     {
         sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pID );
         SW_REQUIRE_TRUE( mesh != nullptr );
-        const sw::vector<sw::RHIVertex>& listVertex = mesh->getVertices();
+        const sw::vector<sw::RHIVertex>& listVertex = mesh->getCPUView().getVertices();
         SW_REQUIRE_TRUE( listVertex.size() >= 3 );
 
         uint32 badLengthCount = 0;
@@ -218,7 +218,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
     // 이것이 틀리면 바닥이 **옆을 보는 것처럼** 칠해진다(정점 노멀이 없던 시절의 그 증상이다).
     sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
     SW_REQUIRE_TRUE( plane != nullptr );
-    const sw::vector<sw::RHIVertex>& listPlaneVertex = plane->getVertices();
+    const sw::vector<sw::RHIVertex>& listPlaneVertex = plane->getCPUView().getVertices();
     SW_REQUIRE_FALSE( listPlaneVertex.empty() );
     uint32 notUpCount = 0;
     for ( const sw::RHIVertex& vertex : listPlaneVertex )
@@ -242,7 +242,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
         sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pID );
         SW_REQUIRE_TRUE( mesh != nullptr );
         uint32 badCount = 0;
-        for ( const sw::RHIVertex& vertex : mesh->getVertices() )
+        for ( const sw::RHIVertex& vertex : mesh->getCPUView().getVertices() )
         {
             const sw::float3 normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
             const sw::float3 tangent{ vertex._arrTangent[0], vertex._arrTangent[1], vertex._arrTangent[2] };
@@ -347,7 +347,7 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
         for ( const sw::Mesh* pMesh : { acquired.get(), created.get() } )
         {
             bool bAllWhite = true;
-            for ( const sw::RHIVertex& vertex : pMesh->getVertices() )
+            for ( const sw::RHIVertex& vertex : pMesh->getCPUView().getVertices() )
             {
                 bAllWhite = bAllWhite && vertex._arrColor[0] == 1.0f && vertex._arrColor[1] == 1.0f && vertex._arrColor[2] == 1.0f && vertex._arrColor[3] == 1.0f;
             }
@@ -377,7 +377,7 @@ SW_TEST_CASE( MeshPrimitiveTest, DensePlaneIsAFinelySplitFloor )
     float32       maxX    = -1.0f;
     uint32        notUp   = 0;
     uint32        offGrid = 0;
-    for ( const sw::RHIVertex& vertex : dense->getVertices() )
+    for ( const sw::RHIVertex& vertex : dense->getCPUView().getVertices() )
     {
         minX = sw::MathUtil::min( minX, vertex._arrPosition[0] );
         maxX = sw::MathUtil::max( maxX, vertex._arrPosition[0] );

@@ -19,7 +19,9 @@
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
+#include "Games/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
+#include "Games/Shooter3D/ShooterNetPawnComponent.h"
 #include "Games/Shooter3D/ShooterOnlineFlow.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
@@ -37,6 +39,8 @@ namespace sw
     protected:
         bool onInitialize() override;
         void onUpdate( float32 deltaTime ) override;
+        /** @brief 폰의 걸음 상태(`ShooterMoveState` 의 복제 칸)를 폰 엔티티 타입으로 등록합니다 — 칸이 다른 빌드는 핸드셰이크에서 갈린다. */
+        [[nodiscard]] bool onRegisterReplicatedTypes( NetMessageChannel& outChannel ) override;
 
     private:
         /** @brief 탄마다 이 게임의 두 표면(적의 몸 `Body`, 상자 · 바닥 `Cover`)에 맞음 표 줄이 있는지 봅니다. 없으면 탄마다 오류를 남기고 false 입니다(탄착이 말없이 사라지지 않게). */
@@ -64,6 +68,11 @@ namespace sw
     }
 
     Shooter3DGame::~Shooter3DGame() = default;
+
+    bool Shooter3DGame::onRegisterReplicatedTypes( NetMessageChannel& outChannel )
+    {
+        return outChannel.registerReplicatedType<ShooterMoveState>( static_cast<uint8>( ShooterNetPawnComponent::kPawnTypeID ) );
+    }
 
     bool Shooter3DGame::onInitialize()
     {

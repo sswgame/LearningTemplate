@@ -178,6 +178,8 @@ namespace sw
         VFXSimulation,
         /// @brief GPU 메시 입자를 메시 인스턴스 배치의 인스턴스 칸에 쓰는 컴퓨트(vfx_mesh_instance.hlsl)입니다. 인스턴스 애니메이션 · 컬링 앞에 돈다.
         VFXMeshInstance,
+        /// @brief GPU 방출기 안 입자의 그리는 순서를 만드는 컴퓨트(vfx_particle_sort.hlsl, `VFXSortMode`)입니다. 시뮬레이션 뒤 같은 패스의 다른 디스패치다(워크그룹 하나가 정렬 일 하나).
+        VFXParticleSort,
         /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depth_history.hlsl)입니다. 프레임 그래프 리스트에서 그린다.
         DepthHistory,
         /**
@@ -262,7 +264,7 @@ namespace sw
     /**
      * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FrameGraphExecutor`).
      * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
-     *          InstanceSort · IndirectArgsReset · VFXMeshInstance 는 GPUCull · VFXSimulation 패스 안의 다른 디스패치라 따로 선언하지 않는다.
+     *          InstanceSort · IndirectArgsReset · VFXMeshInstance · VFXParticleSort 는 GPUCull · VFXSimulation 패스 안의 다른 디스패치라 따로 선언하지 않는다.
      */
     constexpr bool isFramePassType( RenderPassType type )
     {

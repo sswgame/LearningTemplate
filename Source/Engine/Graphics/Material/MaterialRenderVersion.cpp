@@ -6,7 +6,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
 {
@@ -24,10 +23,9 @@ namespace sw
         inputs._shaderReflectionGeneration = ShaderReflectionLibrary::getCacheGeneration();
         if ( engine::areEngineServicesBound() == false )
             return inputs; // 머티리얼 · 텍스처 캐시를 볼 수 없다 — 모르는 값이다(건너뛰지 않는다)
-        AssetManager& assets            = engine::getSubsystem<AssetManager>();
-        inputs._materialRevision        = assets.getAssetCache<MaterialCache>().getRenderValueGeneration();
-        inputs._textureReloadGeneration = assets.getAssetCache<TextureCache>().getReloadGeneration();
-        inputs._bKnown                  = SW_TRUE;
+        AssetManager& assets     = engine::getSubsystem<AssetManager>();
+        inputs._materialRevision = assets.getAssetCache<MaterialCache>().getRenderValueGeneration();
+        inputs._bKnown           = SW_TRUE;
         return inputs;
     }
 } // namespace sw

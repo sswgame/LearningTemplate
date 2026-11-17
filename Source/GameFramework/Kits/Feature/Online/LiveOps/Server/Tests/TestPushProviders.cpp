@@ -2,6 +2,7 @@
 // APNs 는 HTTP/2 전용이라 가짜 서버가 없어 요청 만들기와 응답 분류를 정적 함수로 본다. 결과에 따른 재시도 · 기기 지우기는 PushDispatcherTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Testing/TestFramework.h"
@@ -14,7 +15,6 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
-#include "GameFramework/Runtime/Online/Security/Tests/FakeNetSecurityProvider.h"
 
 using namespace sw;
 
@@ -338,6 +338,7 @@ SW_TEST_CASE( PushProviderSetTest, ReadEntry )
         SW_EXPECT_EQUAL( string( "b" ), config._topic );
         SW_EXPECT_EQUAL( int64( 1200 ), config._tokenRefreshMinSeconds );
     }
+    SW_EXPECT_LOG( "JSON.WrongType" ); // 문자열 "1200" 줄 — 형식이 틀린 칸의 거절 로그가 이 구간이 보려는 동작이다
     for ( const utf8* pText : {
               R"({"kind":"fcm"})",
               R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","tokenRefreshMinSeconds":1200})",

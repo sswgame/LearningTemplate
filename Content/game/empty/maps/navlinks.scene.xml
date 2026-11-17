@@ -1,5 +1,5 @@
 <?asset guid="44b826144b13ef341049710ac3239c54"?>
-<Scene formatVersion="2" name="NavLinks">
+<Scene formatVersion="3" name="NavLinks">
 	<!-- 내비 시나리오(automation/navlinks)의 무대 — 바닥(Y 0)과 2 m 높고 4 m 떨어진 단(Y 2)은 내비메시로 이어지지 않는다. JumpLink(NavMeshLinkComponent, 종류 Jump)가 바닥 끝과 단 끝을 잇고,
 	     Barrier(NavMeshObstacleComponent, 상자)가 Start 와 Goal 사이를 뚫어 길이 돌아간다. 언리얼 NavLink Proxy · 동적 장애물, 유니티 NavMeshLink · NavMeshObstacle(Carve)의 자리.
 	     Walker 의 에이전트(Humanoid)가 내비메시를 굽게 한다. -->

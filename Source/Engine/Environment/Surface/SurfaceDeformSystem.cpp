@@ -296,7 +296,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "Surface.DeformTextureFailed", "Surface deform texture '%#' (%#x%#) could not be created", path.c_str(), resolution, resolution );
                 return;
             }
-            _texture     = cache.request( path, AssetLoadStart::Async ); // CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다 — 렌더 스레드가 올린다
+            _texture     = cache.request( path, AssetLoadStart::Async, TextureStreamingGroup::NeverStream ); // CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다 — 렌더 스레드가 올린다
             _texturePath = std::move( path );
             _grid.clearDirtyRect();
             return;

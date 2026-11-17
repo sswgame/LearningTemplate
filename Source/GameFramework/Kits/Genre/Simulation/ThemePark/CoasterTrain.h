@@ -8,8 +8,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/FixedStepTimer.h"
 
-#include "Engine/Physics/PhysicsSystem.h"
-
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 
@@ -18,49 +16,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 물리 매개변수
     // ------------------------------------------------------------------------------
-    /**
-     * @brief 승차 평가(강도 · 멀미 · 흥분, 0..`_maxRating`)를 측정값에서 내는 계수입니다(타이쿤의 평가 공식). 공원마다 데이터로 바꾼다.
-     * @details 강도 = 누르는 G × `_intensityPerPositiveG` + 띄우는 G × … + 최고 속도 / `_intensitySpeedScale`. 흥분은 강도가 `_excitementIntensityLimit`
-     *          를 넘은 만큼 깎인다("너무 무서우면 안 탄다").
-     */
-    struct CoasterRatingWeights
-    {
-        float32 _maxRating{ 10.0f };
-        float32 _intensityPerPositiveG{ 0.9f };
-        float32 _intensityPerNegativeG{ 1.5f };
-        float32 _intensityPerLateralG{ 1.2f };
-        float32 _intensitySpeedScale{ 15.0f }; ///< 최고 속도(m/s)를 이 값으로 나눠 강도에 더한다
-        float32 _nauseaPerLateralG{ 1.5f };
-        float32 _nauseaPerInversion{ 1.0f };
-        float32 _nauseaPerAirtime{ 0.3f }; ///< 에어타임 1 초가 더하는 멀미
-        float32 _nauseaPerIntensity{ 0.25f };
-        float32 _excitementSpeedScale{ 10.0f }; ///< 최고 속도(m/s)를 이 값으로 나눠 흥분에 더한다
-        float32 _excitementPerAirtime{ 0.6f };
-        float32 _excitementPerInversion{ 0.8f };
-        float32 _excitementPerDrop{ 0.3f };
-        float32 _excitementDropHeightScale{ 15.0f }; ///< 가장 큰 낙하 높이(m)를 이 값으로 나눠 흥분에 더한다
-        float32 _excitementLengthScale{ 400.0f };    ///< 코스 길이(m)를 이 값으로 나눠 흥분에 더한다
-        float32 _excitementIntensityLimit{ 8.0f };   ///< 강도가 이보다 크면 넘은 만큼 흥분을 깎는다
-    };
-
-    /** @brief 열차 물리의 상수입니다. 단위는 m, s, m/s, m/s^2 입니다. */
-    struct CoasterPhysicsParams
-    {
-        float32              _gravity{ PhysicsSystem::getConfiguredGravityMagnitude() }; ///< 기본은 설정된 물리 중력이다
-        float32              _rollingResistance{ 0.012f };                               ///< 구름 저항 계수 μ 이다. 감속은 μg 이다
-        float32              _dragCoefficient{ 0.0004f };                                ///< 공기 저항이다. 감속은 k·v^2 이다
-        float32              _liftSpeed{ 4.0f };                                         ///< 체인이 끄는 속도이다. 열차가 그보다 느리면 이 속도로 끈다
-        float32              _stationSpeed{ 3.0f };                                      ///< 스테이션이 맞추는 속도(출발과 도착)
-        float32              _boosterSpeed{ 22.0f };                                     ///< 부스터가 올려 주는 속도 상한
-        float32              _boosterAcceleration{ 9.0f };
-        float32              _brakeSpeed{ 5.0f }; ///< 브레이크가 내리는 속도
-        float32              _brakeDeceleration{ 10.0f };
-        float32              _fixedStep{ 1.0f / 240.0f };  ///< 적분 간격이다. `step` 은 프레임 시간을 이 간격으로 나눠 돈다
-        float32              _stallSpeed{ 0.3f };          ///< 승차 평가에서 이 속도보다 느리면 "거의 멈춤" 으로 본다(m/s)
-        float32              _stallSeconds{ 3.0f };        ///< 승차 평가에서 체인, 스테이션, 부스터 밖에서 이 시간 동안 거의 멈춰 있으면 멈춤으로 본다(s)
-        float32              _gForceWarmupSeconds{ 0.5f }; ///< 승차 평가에서 출발 직후 이 시간 동안은 G 를 측정하지 않는다(첫 차분이 없기 때문이다, s)
-        CoasterRatingWeights _ratingWeights{};             ///< `CoasterRideStats::analyze` 가 평가를 낼 때 쓴다
-    };
+    // 열차 물리 상수(`CoasterPhysicsParams`)와 평가 계수(`CoasterRatingWeights`)는 규칙 자산이라 코스터 레이아웃 카탈로그 곁(CoasterTrack.h)에 있다(감사 K-4).
 } // namespace sw
 
 namespace sw

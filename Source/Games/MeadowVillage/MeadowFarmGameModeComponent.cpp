@@ -20,13 +20,23 @@ namespace sw
     namespace
     {
         /** @brief 칸 상태의 색입니다 — 다 자람 · 물 줌 · 갈았음 · 갈지 않음 순서로 먼저 맞는 것(값은 디렉터의 PROPERTY). */
-        const float4& findTileColor( const FarmTile& tile, const float4& readyColor, const float4& wateredColor, const float4& tilledColor, const float4& grassColor )
+        /** @brief 밭 칸의 모습입니다(뷰 동기화의 규칙 id — 바뀐 칸만 다시 칠한다). 0 은 "칸 없음" 이다. */
+        enum TileLook : uint8
+        {
+            kTileLookNone = 0,
+            kTileLookGrass,
+            kTileLookTilled,
+            kTileLookWatered,
+            kTileLookReady,
+        };
+
+        uint8 findTileLook( const FarmTile& tile )
         {
             if ( tile._bReady != SW_FALSE )
-                return readyColor;
+                return kTileLookReady;
             if ( tile._bWatered != SW_FALSE )
-                return wateredColor;
-            return tile._bTilled != SW_FALSE ? tilledColor : grassColor;
+                return kTileLookWatered;
+            return tile._bTilled != SW_FALSE ? kTileLookTilled : kTileLookGrass;
         }
     } // namespace
 } // namespace sw
@@ -44,7 +54,8 @@ namespace sw
         , _tileSpacing{ 1.0f }
         , _field{}
         , _tintCache{}
-        , _listTileView{}
+        , _tileViews{}
+        , _speed{}
         , _bViewsDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -114,8 +125,8 @@ namespace sw
             return;
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
         const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) );
-        if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
-            return;
+        if ( _speed.setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false || pState->getClock().setTimeScale( _speed.getTimeScale() ) == false )
+            return; // 배속은 디렉터의 GameSpeedControl 이 쥐고 공유 시계가 받는다(감사 K-10)
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
@@ -170,31 +181,47 @@ namespace sw
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
-        destroySpawned( manager, _listTileView );
-        spawnField( manager );
+        // 모습이 바뀐 칸만 지우고 다시 스폰한다(예전에는 한 칸만 바뀌어도 밭 전체를 다시 만들었다, 감사 K-10). 처음이거나 정리한 뒤면 슬롯이 비어 모두 쌓인다.
+        if ( bRespawnViews )
+            _tileViews.clear();
+        collectFieldViews();
+        _tileViews.flush( [&manager]( GameObjectHandle& inoutHandle )
+        { destroySpawned( manager, inoutHandle ); },
+                          [this, &manager]( size_t tileIndex, uint8 look )
+        { return spawnTileView( manager, tileIndex, look ); } );
         _bViewsDirty = SW_FALSE;
     }
 
     void MeadowFarmGameModeComponent::onViewsDespawned()
     {
-        _listTileView.clear();
+        _tileViews.clear();
     }
 
-    void MeadowFarmGameModeComponent::spawnField( GameObjectManager& manager )
+    void MeadowFarmGameModeComponent::collectFieldViews()
     {
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {
             for ( int32 x = 0; x < kFieldWidth; ++x )
             {
                 const FarmTile* pTile = _field.findTile( x, y );
-                GameObject*     pView = pTile != nullptr ? spawnPrefab( manager, _tilePrefab, "MeadowFarmTile" ) : nullptr;
-                MeshComponent*  pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
-                if ( pMesh == nullptr )
-                    continue;
-                pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * _tileSpacing, 0.0f, ( static_cast<float32>( y ) + 0.5f ) * _tileSpacing } );
-                _tintCache.apply( *pMesh, findTileColor( *pTile, _readyColor, _wateredColor, _tilledColor, _grassColor ) );
-                _listTileView.push_back( pView->getHandle() );
+                _tileViews.show( static_cast<size_t>( y * kFieldWidth + x ), pTile != nullptr ? findTileLook( *pTile ) : uint8{ kTileLookNone } );
             }
         }
+    }
+
+    GameObjectHandle MeadowFarmGameModeComponent::spawnTileView( GameObjectManager& manager, size_t tileIndex, uint8 look )
+    {
+        const int32    x     = static_cast<int32>( tileIndex ) % kFieldWidth;
+        const int32    y     = static_cast<int32>( tileIndex ) / kFieldWidth;
+        GameObject*    pView = spawnPrefab( manager, _tilePrefab, "MeadowFarmTile" );
+        MeshComponent* pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
+            return pView != nullptr ? pView->getHandle() : GameObjectHandle{};
+        const float4& color = look == kTileLookReady ? _readyColor : look == kTileLookWatered ? _wateredColor
+                                                               : look == kTileLookTilled      ? _tilledColor
+                                                                                              : _grassColor;
+        pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * _tileSpacing, 0.0f, ( static_cast<float32>( y ) + 0.5f ) * _tileSpacing } );
+        _tintCache.apply( *pMesh, color );
+        return pView->getHandle();
     }
 } // namespace sw

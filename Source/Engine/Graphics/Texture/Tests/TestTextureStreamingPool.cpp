@@ -44,3 +44,29 @@ SW_TEST_CASE( TextureStreamingPoolTest, ReservationReturnsBytesOnce )
     }
     SW_EXPECT_EQUAL( uint64( 0 ), pool.getUsedBytes() );
 }
+
+/**
+ * @brief [TextureStreamingPoolTest] 밉 바꾸기가 실패하면 예약은 실제 크기(옛 크기) 그대로다 — 성공하면 새 크기가 옛 크기를 대신한다(R6-6 내리기 실패)
+ * @details 변이: 실패 갈래가 예약을 비우면(예전 길) 텍스처는 큰 채인데 풀이 0 을 세어 첫 단언 묶음이 진다.
+ */
+SW_TEST_CASE( TextureStreamingPoolTest, FailedChangeKeepsActualBytes )
+{
+    constexpr uint64                kBudget = 100;
+    TextureStreamingPool            pool;
+    TextureStreamingReservationSlot slot;
+    slot.beginChange( std::move( pool.tryReserve( 80, kBudget ).value() ) );
+    slot.commitChange(); // 80 바이트로 올라갔다
+    SW_EXPECT_EQUAL( uint64( 80 ), pool.getUsedBytes() );
+
+    // 내리기(20 바이트) — 작아지므로 예산을 보지 않는다. 바꾸는 동안 두 크기를 함께 센다.
+    slot.beginChange( std::move( pool.tryReserve( 20, UINT64_MAX ).value() ) );
+    SW_EXPECT_EQUAL( uint64( 100 ), pool.getUsedBytes() );
+    slot.abandonChange(); // 실패 — 텍스처는 80 바이트 그대로다
+    SW_EXPECT_EQUAL( uint64( 80 ), slot.getBytes() );
+    SW_EXPECT_EQUAL( uint64( 80 ), pool.getUsedBytes() );
+
+    slot.beginChange( std::move( pool.tryReserve( 20, UINT64_MAX ).value() ) );
+    slot.commitChange(); // 성공 — 20 바이트가 80 바이트를 대신한다
+    SW_EXPECT_EQUAL( uint64( 20 ), slot.getBytes() );
+    SW_EXPECT_EQUAL( uint64( 20 ), pool.getUsedBytes() );
+}

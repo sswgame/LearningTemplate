@@ -69,7 +69,7 @@ namespace sw
         pUnit->setMaterialPath( settings._combatEnemyMaterial );
         pUnit->setSkeletonPath( settings._combatEnemySkeleton );
         pUnit->resolveRenderAssets();
-        pUnit->setAnimateWhenOffscreen( true );
+        pUnit->setVisibilityBasedTickOption( VisibilityBasedAnimationTickOption::AlwaysTickPoseAndRefreshBones );
         pUnit->setLocalPosition( position );
         // KayKit 모델은 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다.
         pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );

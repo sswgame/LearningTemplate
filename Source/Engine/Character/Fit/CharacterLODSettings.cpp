@@ -107,7 +107,7 @@ namespace sw
             {
                 if ( indexCount == 0 )
                     return 0;
-                const vector<RHIVertex>& listVertex  = mesh.getVertices();
+                const vector<RHIVertex>& listVertex  = mesh.getCPUView().getVertices();
                 const uint32*            pSource     = mesh.getIndices().data() + firstIndex;
                 const size_t             targetCount = MathUtil::max( static_cast<size_t>( static_cast<float32>( indexCount / 3u ) * rule._triangleRatio ), size_t( 1 ) ) * 3u;
                 const size_t             start       = outListIndex.size();
@@ -132,7 +132,7 @@ namespace sw
         if ( settings._listLevel.empty() || inoutMesh.getIndexCount() == 0 )
             return true;
         const vector<MeshSection>&    listSection = inoutMesh.getSections();
-        const vector<RHIVertex>&      listVertex  = inoutMesh.getVertices();
+        const vector<RHIVertex>&      listVertex  = inoutMesh.getCPUView().getVertices();
         const vector<MeshSkinVertex>& listSkin    = inoutMesh.getSkinVertices();
         vector<MeshLODLevel>          listLevel;
         vector<uint32>                listLevelIndex;

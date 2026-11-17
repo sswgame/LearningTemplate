@@ -5740,7 +5740,8 @@
 				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAutosave.RestoreDocumentTooltip" source="Open the document with this copy as unsaved changes. Save to keep it">
+		<entry key="EditorAutosave.RestoreDocumentTooltip"
+		       source="Open the document with this copy as unsaved changes. Save to keep it">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
@@ -6815,6 +6816,21 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorInspector.ImportDefaultRule" source="Defaults (no folder rule matches)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ImportRule" source="Folder rule">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ImportSettings" source="Import Settings">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorInspector.LockedToObject" source="Locked to this object - click to follow the selection">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
@@ -6912,6 +6928,16 @@
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.RevertImportOverride" source="Revert">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.RevertImportOverrideTooltip" source="Remove this asset's override and use the folder rule's value">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.RevertToPrefab" source="Revert this object to the contents of the source prefab file">

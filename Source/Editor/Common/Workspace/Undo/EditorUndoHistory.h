@@ -11,6 +11,8 @@
 
 namespace sw::editor
 {
+    struct EditorToolDefaults;
+
     /**
      * @class EditorUndoHistory
      * @brief 메인 `CommandStack` 의 주인입니다. 편집기 범위에 스택을 걸어 `findSubsystem<CommandStack>()` 이 찾게 한다.
@@ -31,7 +33,7 @@ namespace sw::editor
          * @brief 설정(`EditorToolDefaults` — editortooldefaults.json 의 `_undoMaxCommandCount` · `_undoBufferMegabytes`)이 정한 스택 하나의 한도입니다.
          * @details 메인 스택과 문서 창 스택(`EditorDocumentPanel`)이 같은 값을 쓴다. 도구 기본값은 에디터 컨텍스트가 서기 전에 걸린다 — 없으면 `getSubsystem` 이 멈춘다(대신 쓸 값이 없다).
          */
-        [[nodiscard]] static UndoBufferLimit readConfiguredLimit();
+        [[nodiscard]] static UndoBufferLimit readConfiguredLimit( const EditorToolDefaults& defaults );
 
         static constexpr const utf8* kSubsystemName = "EditorUndoHistory";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }

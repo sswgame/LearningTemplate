@@ -98,26 +98,26 @@ namespace sw
         int32 _chunkBuildsPerFrame;
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
-        // ---- 블록 이름입니다. 블록 카탈로그(data/blocks.xml)의 id 이고, 게임을 시작할 때 모두 있는지 확인합니다 ----
-        PROPERTY( Category = "Blocks", DisplayName = "Water", Tooltip = "Spawn spots on this block are skipped" )
+        // ---- 블록 이름 · 지형 규칙(광석 확률 · 높이)입니다. 씬 데이터가 정본이고 C++ 기본값이 없다(필수 칸 — 빠지면 씬 로드 실패, 감사 K-4). 블록 id 는 게임을 시작할 때 모두 있는지 확인합니다 ----
+        PROPERTY( Required, Category = "Blocks", DisplayName = "Water", Tooltip = "Spawn spots on this block are skipped" )
         hashed_string _waterBlock;
-        PROPERTY( Category = "Blocks", DisplayName = "Stone", Tooltip = "Ore replaces this block underground" )
+        PROPERTY( Required, Category = "Blocks", DisplayName = "Stone", Tooltip = "Ore replaces this block underground" )
         hashed_string _stoneBlock;
-        PROPERTY( Category = "Blocks", DisplayName = "Grass", Tooltip = "High peaks of this block get a snow cap" )
+        PROPERTY( Required, Category = "Blocks", DisplayName = "Grass", Tooltip = "High peaks of this block get a snow cap" )
         hashed_string _grassBlock;
-        PROPERTY( Category = "Blocks", DisplayName = "Snow" )
+        PROPERTY( Required, Category = "Blocks", DisplayName = "Snow" )
         hashed_string _snowBlock;
-        PROPERTY( Category = "Blocks", DisplayName = "Coal Ore" )
+        PROPERTY( Required, Category = "Blocks", DisplayName = "Coal Ore" )
         hashed_string _coalOreBlock;
-        PROPERTY( Category = "Blocks", DisplayName = "Iron Ore" )
+        PROPERTY( Required, Category = "Blocks", DisplayName = "Iron Ore" )
         hashed_string _ironOreBlock;
-        PROPERTY( Category = "World", DisplayName = "Snow Height", Tooltip = "Grass tops at or above this height get a snow cap", Min = 0 )
+        PROPERTY( Required, Category = "World", DisplayName = "Snow Height", Tooltip = "Grass tops at or above this height get a snow cap", Min = 0 )
         int32 _snowHeight;
-        PROPERTY( Category = "World", DisplayName = "Coal Ore Chance", Tooltip = "Chance that an underground stone block becomes coal", Min = 0.0, Max = 1.0 )
+        PROPERTY( Required, Category = "World", DisplayName = "Coal Ore Chance", Tooltip = "Chance that an underground stone block becomes coal", Min = 0.0, Max = 1.0 )
         float32 _coalOreChance;
-        PROPERTY( Category = "World", DisplayName = "Iron Ore Chance", Tooltip = "Chance that an underground stone block below the iron height becomes iron", Min = 0.0, Max = 1.0 )
+        PROPERTY( Required, Category = "World", DisplayName = "Iron Ore Chance", Tooltip = "Chance that an underground stone block below the iron height becomes iron", Min = 0.0, Max = 1.0 )
         float32 _ironOreChance;
-        PROPERTY( Category = "World", DisplayName = "Iron Ore Max Height", Tooltip = "Iron is placed only below this height", Min = 0 )
+        PROPERTY( Required, Category = "World", DisplayName = "Iron Ore Max Height", Tooltip = "Iron is placed only below this height", Min = 0 )
         int32 _ironOreMaxHeight;
 
         VoxelWorld               _world;

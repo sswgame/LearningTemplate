@@ -173,6 +173,15 @@ namespace sw
         copyBufferToReadbackNative( source, readback, sizeBytes );
     }
 
+    void IRHICommandContext::copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        // 빈 복사 · 같은 버퍼(겹칠 수 있다 — DX12 · Vulkan 은 미정의)는 기록하지 않는다. 범위 검사는 백엔드가 버퍼 크기를 아는 곳에서 한다.
+        if ( sizeBytes == 0 || destination == 0 || source == 0 || destination == source )
+            return;
+        endRenderPass();
+        copyBufferRegionNative( destination, destinationOffset, source, sourceOffset, sizeBytes );
+    }
+
     void IRHICommandContext::uavBarrier( RHIBufferHandle buffer )
     {
         endRenderPass();

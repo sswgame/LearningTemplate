@@ -212,8 +212,6 @@ namespace sw::editor
             _model.endTarget();
         }
         _bFavoritesOnly = SW_FALSE;
-        // 편집 알림(다중 선택의 나머지에 값 적용)이 끝난 뒤에 되돌리기를 남긴다.
-        InspectorPropertyUndo::commitFinishedEdits();
     }
 
     void EditorPropertyGrid::drawFavoriteProperties( const EditorPropertyGridTarget& target )
@@ -554,7 +552,10 @@ namespace sw::editor
         }
         ImGui::SetNextItemWidth( -FLT_MIN );
         ImGui::BeginDisabled( row._bDisabled != SW_FALSE );
-        const bool bTreeOpen = drawRowWidget( row );
+        // 되돌리기 구간은 행 단위다 — 행을 그리는 사이 활성 위젯이 그려졌으면 그 행의 구간이 이어진다(위젯 여럿인 행도 하나다).
+        const bool bActiveDrawnBefore = InspectorPropertyUndo::isActiveItemDrawn();
+        const bool bTreeOpen          = drawRowWidget( row );
+        InspectorPropertyUndo::trackRow( _model, row._rowID, bActiveDrawnBefore );
         _listOpenScope.push_back( OpenRowScope{ row._rowID, row._depth, static_cast<uint8>( bTreeOpen ? 1 : 0 ) } );
     }
 

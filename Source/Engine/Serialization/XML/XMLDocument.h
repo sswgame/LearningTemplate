@@ -215,6 +215,8 @@ namespace sw
 
         /** @brief 노드 이름을 설정합니다. */
         void setName( const utf8* pName ) const;
+        /** @brief 속성 @p pOldName 의 이름을 @p pNewName 으로 바꿉니다(값 · 자리는 그대로). 없으면 false 입니다. 판 올림 단계가 칸 이름을 바꿀 때 쓴다. */
+        bool renameAttribute( const utf8* pOldName, const utf8* pNewName ) const;
         /** @brief 노드 값을 설정합니다. */
         void setValue( const utf8* pValue ) const;
         /** @brief 노드 값을 설정합니다. */
@@ -232,6 +234,8 @@ namespace sw
         string toString() const;
         /** @brief 다른 문서의 서브트리를 이 노드의 자식으로 복사합니다. */
         XMLNode appendClone( XMLNode src ) const;
+        /** @brief 이 노드의 자식 @p child 를 서브트리째 지웁니다. 이 노드의 자식이 아니면 false 이고 아무것도 바꾸지 않습니다(판 올림이 옛 래퍼 원소를 걷어 낼 때). */
+        bool removeChild( XMLNode child ) const;
 
     private:
         /** @brief 값 글 하나를 읽은 결과입니다. 깨진 값은 읽는 함수가 원소 · 이름과 함께 오류로 남깁니다. */

@@ -13,9 +13,13 @@ Scripts/dev/test_history.py
   py -3 Scripts/dev/test_history.py ingest <보고 폴더…> [--commit <sha>]     # 기본 DB: Saved/TestHistory/history.sqlite
   py -3 Scripts/dev/test_history.py report [--min-runs 3] [--top 30]
   py -3 Scripts/dev/test_history.py quarantine [--ctest-exclude]              # 표를 검사한다(만료 · 빠진 칸은 실패), --ctest-exclude 는 ctest -E 정규식을 찍는다
+  py -3 Scripts/dev/test_history.py costs [--write]                           # 시나리오 → 초 시간표(통과한 실행의 백엔드별 p50 합). --write 는 Config/Dev/ScenarioCosts.json 을 쓴다
   py -3 Scripts/dev/test_history.py --self-check
 
 묶음 검증(`Scripts/dev/preflight.sh`)이 ctest 마다 보고 폴더를 ingest 하고, ctest 에 격리 표를 `-E` 로 넘긴다.
+
+**시간표(`costs`).** 체인 샤드 나누기(DesignBacklog "샤드 시간 균형" T2)의 입력이다 — 언리얼 Horde · 크로미움 Swarming 처럼 지난 실행 시간으로 나눈다.
+표는 `--write` 로 갱신하고 **사람이 커밋할 때만 바뀐다**(실행마다 다시 나누면 앞 단계가 가리던 결함이 실행마다 드러났다 숨는다). 표에 없는 시나리오는 표의 중앙값이다.
 """
 
 from __future__ import annotations
@@ -37,6 +41,7 @@ from common.paths import get_project_root  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
+SCENARIO_COSTS_PATH = Path("Config") / "Dev" / "ScenarioCosts.json"
 # 건너뜀(환경이 없어 돌지 않았다)은 실패가 아니다 — 흔들림 · 실패 수에서 통과 쪽에 둔다(단위 테스트 보고의 `skipped` 와 같은 뜻).
 PASSED_RESULTS = frozenset({"Passed", "Skipped"})
 SCHEMA = """
@@ -128,6 +133,30 @@ def compute_stats(connection: sqlite3.Connection, min_runs: int) -> list[TestSta
     return sorted(list_stats, key=lambda stats: (-stats.flakiness, -stats.get_trend(), stats.name))
 
 
+def compute_scenario_costs(connection: sqlite3.Connection) -> dict[str, float]:
+    """시나리오 → 초. 통과한 실행만(진 실행은 시간 제한에서 잘린다), 백엔드마다 p50 을 내 더한다 — 체인은 한 시나리오를 백엔드마다 차례로 돈다."""
+    rows = connection.execute("SELECT name, backend, wallMilliseconds FROM run WHERE result = 'Passed'").fetchall()
+    groups: dict[str, dict[str, list[float]]] = {}
+    for name, backend, wall in rows:
+        groups.setdefault(name, {}).setdefault(backend, []).append(float(wall))
+    return {name: round(sum(compute_percentile(list_wall, 0.5) for list_wall in by_backend.values()) / 1000.0, 1)
+            for name, by_backend in sorted(groups.items())}
+
+
+def find_scenario_cost(map_cost: dict[str, float], name: str) -> float:
+    """표의 초. 표에 없는 시나리오(새로 더했다)는 표의 중앙값이다. 표가 비면 나눌 근거가 없어 오류다."""
+    if name in map_cost:
+        return map_cost[name]
+    if not map_cost:
+        raise ValueError(f"{SCENARIO_COSTS_PATH} 가 비었다 — `test_history.py costs --write` 로 먼저 쓴다")
+    return compute_percentile(list(map_cost.values()), 0.5)
+
+
+def make_scenario_costs_text(map_cost: dict[str, float]) -> str:
+    return json.dumps({"_comment": "test_history.py costs --write 가 쓴다 — 시나리오 → 초(통과한 실행의 백엔드별 p50 합). 사람이 커밋할 때만 바뀐다",
+                       "scenarioSeconds": map_cost}, ensure_ascii=False, indent=2) + "\n"
+
+
 @dataclass(frozen=True)
 class QuarantineEntry:
     test: str
@@ -183,6 +212,21 @@ def run_self_check() -> None:
     assert skip_stats.failures == 0 and skip_stats.flakiness == 0.0, "건너뜀은 실패가 아니다"
     assert compute_percentile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.95) == 10.0
     assert make_ctest_exclude([QuarantineEntry("Scenario.a.b", "r", datetime.date(2030, 1, 1))]) == r"^Scenario\.a\.b$"
+    # 시간표: 통과한 실행만, 백엔드별 p50 을 더한다. 표에 없는 이름은 중앙값, 빈 표는 오류.
+    list_cost = [{"name": "c", "result": result, "startedAtUnixMs": 100 + index, "wallMilliseconds": wall, "backend": backend}
+                 for index, (result, wall, backend) in enumerate([("Passed", 1000, "dx12"), ("Passed", 3000, "dx12"), ("Passed", 2000, "dx12"),
+                                                                 ("Failed", 90000, "dx12"), ("Passed", 500, "vulkan")])]
+    assert ingest(connection, list_cost, "abc") == 5
+    map_cost = compute_scenario_costs(connection)
+    assert map_cost["c"] == 2.5, map_cost   # dx12 p50 2 초 + vulkan 0.5 초, 진 90 초는 빠진다
+    assert find_scenario_cost(map_cost, "c") == 2.5
+    assert find_scenario_cost({"x": 1.0, "y": 3.0, "z": 9.0}, "new") == 3.0
+    try:
+        find_scenario_cost({}, "new")
+        raise AssertionError("빈 표는 오류여야 한다")
+    except ValueError:
+        pass
+    assert json.loads(make_scenario_costs_text(map_cost))["scenarioSeconds"] == map_cost
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -198,6 +242,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     report_parser.add_argument("--top", type=int, default=30)
     quarantine_parser = sub.add_parser("quarantine")
     quarantine_parser.add_argument("--ctest-exclude", action="store_true")
+    costs_parser = sub.add_parser("costs")
+    costs_parser.add_argument("--write", action="store_true", help=f"{SCENARIO_COSTS_PATH} 를 쓴다(없으면 찍기만)")
     arguments = parser.parse_args(argv)
     if arguments.self_check:
         run_self_check()
@@ -211,12 +257,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         if arguments.ctest_exclude and not list_problem:
             print(make_ctest_exclude(list_entry))
         return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-    if arguments.command not in ("ingest", "report"):
-        parser.error("ingest · report · quarantine 중 하나")
+    if arguments.command not in ("ingest", "report", "costs"):
+        parser.error("ingest · report · quarantine · costs 중 하나")
     connection = open_database(arguments.database or project_root / DEFAULT_DATABASE)
     if arguments.command == "ingest":
         added = ingest(connection, read_reports(arguments.roots), arguments.commit)
         print(f"[TestHistory] {added} 보고를 더했다")
+        return ExitCode.PASSED
+    if arguments.command == "costs":
+        map_cost = compute_scenario_costs(connection)
+        if not map_cost:
+            print("[TestHistory] 통과한 실행이 없다 — 시간표를 쓰지 않는다")
+            return ExitCode.VIOLATION
+        if arguments.write:
+            (project_root / SCENARIO_COSTS_PATH).write_text(make_scenario_costs_text(map_cost), encoding="utf-8", newline="\n")
+            print(f"[TestHistory] {SCENARIO_COSTS_PATH} 에 {len(map_cost)} 시나리오를 썼다")
+        else:
+            for name, seconds in sorted(map_cost.items(), key=lambda item: -item[1]):
+                print(f"  {name}: {seconds:.1f} s")
         return ExitCode.PASSED
     for stats in compute_stats(connection, arguments.min_runs)[: arguments.top]:
         print(f"  {stats.name} [{stats.backend}] 실행 {stats.runs} · 실패 {stats.failures} · 흔들림 {stats.flakiness:.2f} · p95 {stats.p95_recent:.0f} ms (추세 x{stats.get_trend():.2f})")

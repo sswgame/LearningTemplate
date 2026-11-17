@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="556456cd3ca74158a4952980ef2e6b8a"?>
+<!--
+  에디터 시나리오 — 인스펙터 Import Settings 절(설계 M3): 텍스처 원본(사본 splash.png — 폴더 규칙 Editor_Splash, generateMips false)을 고르면 인스펙터가 칸마다 해석한 값을 보이고,
+  generateMips 칸에 true 를 치면 그 에셋 서술(.meta)에 예외 한 칸이 차이로 써지며(되돌리기 한 단계), 되돌리면 서술이 바이트 그대로 돌아온다.
+  예외는 임포터와 같은 해석(resolveRule)을 먼저 통과해야 써진다 — 모르는 키 · 틀린 값은 쓰지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/importsettings.scenario.xml -unattended
+-->
+<Scenario name="editor.importsettings" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Scratch from="editor/textures_raw" as="scratch/importsettings/textures_raw"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
+	<DevCommand line="asset.snapshotScratch scratch/importsettings/textures_raw/splash.png.meta"/>
+	<DevCommand line="asset.select scratch/importsettings/textures_raw/splash.png"/>
+	<DevCommand line="panel.focus inspector"/>
+	<EditorWaitStable/>
+	<!-- 칸을 고쳐 서술에 예외를 쓴다 -->
+	<EditorClick mark="inspector.import.generateMips"/>
+	<EditorWaitStable/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorText value="true"/>
+	<EditorKey key="Enter"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.expectScratchContains scratch/importsettings/textures_raw/splash.png.meta generateMips"/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<!-- 되돌리기 한 번에 서술이 바이트 그대로 -->
+	<DevCommand line="editor edit.undo"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/importsettings/textures_raw/splash.png.meta"/>
+	<!-- 다시 하기 뒤 Revert 단추가 예외를 지운다 -->
+	<DevCommand line="editor edit.redo"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.expectScratchContains scratch/importsettings/textures_raw/splash.png.meta generateMips"/>
+	<EditorClick mark="inspector.import.revert.generateMips"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.expectScratchUnchanged scratch/importsettings/textures_raw/splash.png.meta"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

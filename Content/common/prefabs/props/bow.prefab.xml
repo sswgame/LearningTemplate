@@ -1,5 +1,5 @@
 <?asset guid="76f9aad5290360d3ee649bb9055d42f3"?>
-<Prefab formatVersion="0" name="Bow">
+<Prefab formatVersion="1" name="Bow">
 	<GameObject _schemaVersion="0" _name="Bow" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
@@ -18,7 +18,7 @@
 			                       _skeletonPath="common/models/props/bow/bow.skeleton.xml"
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath=""

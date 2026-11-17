@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="ebe1ee0199aa4bc9aed8f95ba4b08090"?>
+<!--
+  장르 키트 시연 — 클래식 JRPG 키트(GF_ClassicJRPG)의 전투 한 바퀴: 용사 하나 대 frail(체력 1) → 공격 한 번 → 승리, 경험치 31 은 용사가, 골드 7 은 지갑으로.
+  감시 값: KitDemo.ClassicJRPG.State(0 시작 전, 1 마침) · .Result · .HeroExp · .Gold.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.kit_classicjrpg" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/kit_classicjrpg.scene.xml"/>
+	<WaitUntil watch="KitDemo.ClassicJRPG.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.ClassicJRPG.Result" equals="1"/>
+	<Expect watch="KitDemo.ClassicJRPG.HeroExp" equals="31"/>
+	<Expect watch="KitDemo.ClassicJRPG.Gold" equals="7"/>
+	<ExpectLog id="KitDemo.ClassicJRPGDone" count="1"/>
+	<Pass/>
+</Scenario>

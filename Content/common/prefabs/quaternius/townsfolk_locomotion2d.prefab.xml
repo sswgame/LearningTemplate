@@ -1,5 +1,5 @@
 <?asset guid="f3919d16d3a664535069fbcd67544d5b"?>
-<Prefab formatVersion="0" name="TownsfolkLocomotion2D">
+<Prefab formatVersion="1" name="TownsfolkLocomotion2D">
 	<GameObject _schemaVersion="0" _name="TownsfolkLocomotion2D" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
@@ -18,7 +18,7 @@
 			                       _skeletonPath=""
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/ubc_locomotion2d.animgraph.xml"

@@ -23,6 +23,7 @@ namespace sw
 {
 
     struct RHIDeferredHandleQueue;
+    struct RHIBindlessReservationQueue;
     struct RHIMemoryBudget;
 
     class IRenderSurface;
@@ -262,6 +263,15 @@ namespace sw
          *          주의: 게임 스레드가 프레임을 넘기지 않는 동안에는 미룬 핸들이 쌓인다 — `waitIdle` · 렌더 스레드 해제 · `shutdown` 이 모두 내린다.
          */
         void releaseHandle( RHIHandleKind kind, uint64 handle );
+        /**
+         * @brief 텍스처 번호 하나를 예약하고 @p placeholder 를 가리키게 할 일을 줄에 넣습니다. **어느 스레드에서든** 부른다(감사 R-6 — 텍스처 캐시가 로드를 시작할 때).
+         * @details 번호는 곧바로 돌려주지만 산 칸은 렌더 스레드가 `activateReservedBindlessTextures` 로 디스크립터를 쓴 뒤다. 그 함수는 프레임 시작(`beginFrame`)과
+         *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseHandle( BindlessTexture )`).
+         * @return 표가 차면 kInvalidDescriptorIndex 입니다.
+         */
+        [[nodiscard]] RHIDescriptorIndex reserveBindlessTexture( RHITextureHandle placeholder );
+        /** @brief 예약한 번호를 모두 살립니다(렌더 스레드, 병렬 기록 밖). 살리지 못한 번호는 오류를 남긴다(자리 텍스처가 없는 결함이라 번호는 돌려받지 않는다). */
+        void activateReservedBindlessTextures();
         /** @brief 미뤄 둔 핸들을 기한과 무관하게 모두 해제합니다. `waitIdle` 에서, 렌더 스레드를 세우거나 해제할 때, `shutdown` 에서 부릅니다. */
         void flushDeferredHandleReleases();
         /** @brief 렌더 스레드에 프레임 하나를 넘겼음을 알립니다(`RenderThread::submit`). */
@@ -313,6 +323,7 @@ namespace sw
         {
             assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
             _constantBufferWriteLog.beginFrame();
+            activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
             beginFrameInternal();
         }
         /**
@@ -713,6 +724,8 @@ namespace sw
         unique_ptr<RHIMemoryTracker> _memoryTracker;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
         unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
+        /// @brief 예약했고 아직 살리지 않은 텍스처 번호입니다(`reserveBindlessTexture` · `activateReservedBindlessTextures`).
+        unique_ptr<RHIBindlessReservationQueue> _pBindlessReservationQueue;
         /// @brief 남긴 bindless 인덱스 보고 자리입니다(getBindlessIndexReportLog 참고). 장치와 함께 생기고 사라진다.
         unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).

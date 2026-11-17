@@ -1,5 +1,5 @@
 <?asset guid="54ee8ee63c5cd0d39a39de4c5065ef6a"?>
-<Prefab formatVersion="0" name="ParkGuest">
+<Prefab formatVersion="1" name="ParkGuest">
 	<GameObject _schemaVersion="0" _name="ParkGuest" _bActive="true">
 		<_listComponent>
 			<MeshComponent _componentName="MeshComponent"

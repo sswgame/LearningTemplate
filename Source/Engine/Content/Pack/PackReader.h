@@ -1,10 +1,10 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/AsyncFileIO.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -13,11 +13,27 @@
 
 namespace sw
 {
+    class INetSecurityProvider;
+
+    /**
+     * @struct PackIndexTrust
+     * @brief 서명 채널의 팩을 열 때 믿을 색인 요약입니다 — 서명을 확인한 패치 목록의 `indexSHA256` 과 SHA-256 제공자(`PackManager` 가 채운다).
+     * @details 리더는 여는 핸들로 읽은 색인 구역의 요약이 이것과 같을 때만 열고, 읽을 때마다 블록 요약을 견준다. 제공자는 리더보다 오래 산다(프로세스 범위 서브시스템).
+     */
+    struct PackIndexTrust
+    {
+        INetSecurityProvider* _pProvider{ nullptr };
+        PackDigest            _indexDigest{};
+    };
+
     /**
      * @class PackReader
-     * @brief .pack(SWPK) 바이너리 아카이브 하나를 열고 64비트 해시로 O(1) 파일 읽기를 하는 VFS 리더입니다.
+     * @brief .pack(SWPK) 바이너리 아카이브 하나를 열고 64비트 경로 해시로 항목을 읽는 VFS 리더입니다.
      * @details 파일은 `AsyncFileHandle`(위치 지정 읽기)로 엽니다. 공유 파일 위치가 없어 여러 스레드의 `readFile` 이 잠금 없이 동시에 읽고,
      *          잠금은 색인을 찾는 동안만 쥡니다(압축 해제 · CRC 는 잠금 밖). 같은 핸들로 `readFileAsync` 가 비동기 IO 에 구간 읽기를 겁니다.
+     *          **색인은 디스크 그대로다.** FAT(경로 해시 오름차순 — 아니면 열지 않는다)을 정렬 배열로 들고 이진 탐색하며, 경로는 스트링 풀을 가리키고
+     *          폴더 나열은 (폴더 해시, 항목 번호) 정렬 배열이다. 예전에는 항목마다 경로 사본을 지은 해시 맵 둘을 들었다(감사 A-12) — 항목당 48 B + 풀이다.
+     *          범위 읽기(`readRange`)는 걸친 블록만 읽어 푼다(밉 범위 읽기 R-6 의 자리).
      */
     class SW_API PackReader
     {
@@ -32,11 +48,12 @@ namespace sw
         PackReader& operator=( PackReader&& other ) noexcept;
 
         /**
-         * @brief .pack 파일을 열고 헤더와 FAT 인덱스 테이블을 메모리에 로드합니다.
+         * @brief .pack 파일을 열고 헤더와 FAT · 블록 표 · 스트링 풀을 메모리에 로드합니다.
          * @param packFilePath .pack 파일의 실제 경로
-         * @return 유효한 SWPK 아카이브이고 인덱스를 읽었으면 true 입니다.
+         * @param pTrust 서명 채널이면 믿을 색인 요약. 있으면 색인 구역의 SHA-256 이 같고 블록 해시 표가 있을 때만 열고, 읽을 때 블록 요약을 견준다
+         * @return 유효한 SWPK 아카이브이고 인덱스를 읽었으면 true 입니다. FAT 이 경로 해시 오름차순이 아니면(같은 해시 둘 포함) 거절합니다.
          */
-        [[nodiscard]] bool open( string_view packFilePath );
+        [[nodiscard]] bool open( string_view packFilePath, const PackIndexTrust* pTrust = nullptr );
 
         /**
          * @brief 열려 있는 팩 파일을 닫고 인덱스 메모리를 해제합니다. 진행 중인 읽기는 제 파일 핸들 사본으로 끝까지 읽습니다.
@@ -46,13 +63,13 @@ namespace sw
         /** @brief 팩 파일이 열려 있는지 반환합니다. */
         bool isOpen() const;
 
-        /** @brief 64비트 경로 해시로 파일이 있는지 확인합니다(O(1)). */
+        /** @brief 64비트 경로 해시로 파일이 있는지 확인합니다(이진 탐색). */
         bool hasFile( uint64 pathHash ) const;
 
-        /** @brief 가상 상대 경로로 파일이 있는지 확인합니다(O(1)). */
+        /** @brief 가상 상대 경로로 파일이 있는지 확인합니다. */
         bool hasFile( string_view relativePath ) const;
 
-        /** @brief 파일 항목의 메타데이터를 찾습니다. */
+        /** @brief 파일 항목의 메타데이터를 찾습니다(경로는 스트링 풀에서 복사한다). */
         bool getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const;
         bool getFileEntry( string_view relativePath, PackFileEntry& outEntry ) const;
 
@@ -66,8 +83,11 @@ namespace sw
         /** @brief 팩에 든 모든 항목의 팩 안 경로(하위 폴더 포함)를 @p outListPath 뒤에 덧붙입니다. 순서는 정하지 않습니다(패치 목록 셈이 정렬한다). */
         void collectAllEntryPaths( vector<string>& outListPath ) const;
 
+        /** @brief 팩에 든 모든 항목의 경로 해시를 오름차순으로 @p outListPathHash 뒤에 덧붙입니다(FAT 순서 그대로 — 경로를 짓지 않는다). */
+        void collectPathHashes( vector<uint64>& outListPathHash ) const;
+
         /**
-         * @brief 팩 안의 파일 데이터를 읽어 CRC32 를 검증하고 압축을 풀어 반환합니다.
+         * @brief 팩 안의 파일 데이터를 읽어 블록마다 압축을 풀고 CRC32 를 검증해 반환합니다.
          * @param pathHash 64비트 경로 해시
          * @param outBytes 압축을 푼 원본 데이터 버퍼
          * @return 파일을 읽고 CRC32 무결성 검증에 성공하면 true 입니다.
@@ -81,17 +101,22 @@ namespace sw
         [[nodiscard]] bool readTextFile( string_view relativePath, string& outText ) const;
 
         /**
+         * @brief 항목의 원본 [@p offset, @p offset + @p size) 만 읽습니다. 걸친 블록만 디스크에서 읽어 풀고 CRC 를 맞춥니다.
+         * @return 항목이 없거나, 범위가 항목 밖이거나(오류 로그), 읽기 · 풀기 · CRC 가 실패하면 false 입니다. 결과는 같은 범위를 통째 읽기에서 자른 것과 같다.
+         */
+        [[nodiscard]] bool readRange( uint64 pathHash, uint64 offset, uint64 size, vector<uint8>& outBytes ) const;
+
+        /**
          * @brief 항목 하나를 @p io 로 비동기로 읽습니다. 압축 해제 · CRC 는 IO 완료를 받은 쪽(엔진은 태스크 워커)에서 하고 @p onComplete 를 부릅니다.
          * @details 리더를 닫거나 지워도 걸린 읽기는 끝납니다(파일 핸들과 항목 정보를 요청이 들고 간다). 항목이 없으면 아무것도 걸지 않고
          *          유효하지 않은 핸들을 돌려줍니다 — 그때 @p onComplete 는 불리지 않습니다.
          * @return 건 읽기의 핸들(취소 · 기다리기). 항목이 없으면 `isValid() == false` 입니다.
          */
         AsyncReadHandle readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
+
         /**
-         * @brief 항목 하나의 구간 [@p offset, @p offset + @p size)(원본 바이트 기준)를 @p io 로 비동기로 읽습니다 — 텍스처 밉 범위(`TextureMipLayout`).
-         * @details 무압축 항목만 읽는다 — 저장 위치에 구간을 더해 그대로 읽는다. 압축 항목은 구간을 풀 수 없어 오류(`Pack.RangeReadOnCompressedEntry`)이고 쿠킹이 `.dds` 를 무압축으로 싣는다
-         *          (블록 단위 압축 — 감사 A-12 — 이 들어오면 이 함수 안쪽만 바뀐다). 구간이 항목 밖이면 오류다. CRC 는 항목 전체의 것이라 구간 읽기는 대조하지 않는다.
-         *          항목이 없거나 오류면 아무것도 걸지 않고 유효하지 않은 핸들을 돌려준다 — 그때 @p onComplete 는 불리지 않는다(`readFileAsync` 와 같은 약속).
+         * @brief `readRange` 의 비동기 꼴입니다 — 텍스처 밉 범위(`TextureMipLayout`). 걸친 블록만 읽어 IO 완료를 받은 쪽에서 풀고 CRC 를 맞춘다(압축 항목도 된다).
+         * @details 항목이 없거나 범위가 항목 밖이면(오류 로그) 아무것도 걸지 않고 유효하지 않은 핸들입니다 — 그때 @p onComplete 는 불리지 않는다(`readFileAsync` 와 같은 약속).
          */
         AsyncReadHandle readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
 
@@ -111,50 +136,81 @@ namespace sw
         string getMountDomain() const;
 
     private:
-        /** @brief 항목 하나를 읽고 풀 때 필요한 것 — 잠금 안에서 찍어 두고 잠금 밖에서 씁니다. */
-        struct PackReadPlan
-        {
-            uint64              _dataOffset{ 0 };
-            uint32              _compressedSize{ 0 };
-            uint32              _uncompressedSize{ 0 };
-            uint32              _crc32{ 0 };
-            PackCompressionType _compression{ PackCompressionType::None };
-            bool                _bVerifyCRC{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        /** @brief `_listEntry` 안 번호입니다. */
+        using EntryIndex = uint32;
 
-            /** @brief 디스크에서 읽을 바이트 수입니다(비압축이면 원본 크기). */
-            uint32 getStoredSize() const { return _compression == PackCompressionType::None ? _uncompressedSize : _compressedSize; }
+        /** @brief 폴더 나열 색인 한 줄 — 폴더(마지막 '/' 앞, 대소문자 무시) 경로 해시와 그 바로 아래 항목입니다. (폴더 해시, 항목 번호) 순으로 세운다. */
+        struct FolderEntry
+        {
+            uint64     _folderHash{ 0 };
+            EntryIndex _entryIndex{ 0 };
         };
 
-        /** @brief @p pathHash 항목의 읽기 계획과 파일 핸들 사본을 잠금 안에서 찍습니다. 없거나 닫혔으면 false 입니다. */
-        bool makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const;
         /**
-         * @brief 디스크에서 읽은 바이트(@p storedBytes)를 풀고 CRC 를 맞춰 @p outBytes 에 담습니다. 동기 · 비동기 읽기가 같은 길을 씁니다.
+         * @brief 항목 하나의 원본 범위를 읽고 풀 때 필요한 것 — 잠금 안에서 찍어 두고 잠금 밖에서 씁니다. 걸친 블록 줄을 사본으로 든다(비동기 완료가 리더보다 오래 산다).
+         */
+        struct PackReadPlan
+        {
+            uint64                       _storedOffset{ 0 };     ///< 첫 블록의 저장 바이트가 파일에서 시작하는 자리
+            uint32                       _storedBegin{ 0 };      ///< 첫 블록의 저장 바이트가 항목 안에서 시작하는 자리(앞 블록의 누적 끝)
+            uint32                       _firstBlockIndex{ 0 };  ///< 항목 안 첫 블록 번호
+            uint32                       _uncompressedSize{ 0 }; ///< 항목의 원본 크기(마지막 블록의 크기를 정한다)
+            uint32                       _blockSize{ 0 };
+            uint32                       _sliceOffset{ 0 }; ///< 푼 블록들 안에서 돌려줄 범위의 시작
+            uint32                       _sliceSize{ 0 };   ///< 돌려줄 크기
+            PackCompressionType          _compression{ PackCompressionType::None };
+            bool                         _bVerifyCRC{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            vector<PackBlockEntryOnDisk> _listBlock;                  ///< 걸친 블록 줄
+            vector<PackDigest>           _listBlockDigest;            ///< 걸친 블록의 요약 — 신뢰를 받아 연 팩만(아니면 비어 있다)
+            INetSecurityProvider*        _pDigestProvider{ nullptr }; ///< 블록 요약을 셀 제공자 — 신뢰를 받아 연 팩만
+
+            /** @brief 디스크에서 읽을 바이트 수입니다. */
+            uint32 getStoredSize() const { return _listBlock.empty() ? 0 : _listBlock.back()._compressedEnd - _storedBegin; }
+        };
+
+        /** @brief `makeReadPlan` 의 결과입니다(잠금 안에서는 로그를 쓰지 않는다 — 범위 밖은 부른 쪽이 알린다). */
+        enum class ReadPlanResult : uint8
+        {
+            Ready,
+            Missing,      ///< 항목이 없거나 닫혔다
+            OutsideEntry, ///< 범위가 항목 밖이다
+        };
+
+        /** @brief `makeReadPlan` 의 크기로 주면 @p offset 부터 항목 끝까지입니다. */
+        static constexpr uint64 kToEntryEnd = ~uint64{ 0 };
+
+        /** @brief @p pathHash 를 이진 탐색합니다. 없으면 nullopt 입니다. */
+        optional<EntryIndex> findEntryIndex( uint64 pathHash ) const SW_REQUIRES_LOCK( _fileMutex );
+        /** @brief 항목 @p entryIndex 의 경로(스트링 풀 안)입니다. 열 때 풀 안의 종결자를 확인했다. */
+        string_view getEntryPath( EntryIndex entryIndex ) const SW_REQUIRES_LOCK( _fileMutex );
+        /** @brief @p pathHash 항목의 원본 [@p offset, @p offset + @p size) 읽기 계획과 파일 핸들 사본을 잠금 안에서 찍습니다. */
+        ReadPlanResult makeReadPlan( uint64 pathHash, uint64 offset, uint64 size, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const;
+        /** @brief 계획대로 동기로 읽어 풉니다(`readFile` · `readRange` 의 본문). */
+        [[nodiscard]] bool readPlanned( uint64 pathHash, uint64 offset, uint64 size, vector<uint8>& outBytes ) const;
+        /** @brief 계획대로 비동기 읽기를 겁니다(`readFileAsync` · `readRangeAsync` 의 본문). */
+        AsyncReadHandle readPlannedAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
+        /**
+         * @brief 디스크에서 읽은 걸친 블록의 저장 바이트(@p storedBytes)를 블록마다 풀고 CRC 를 맞춘 뒤 계획의 범위를 @p outBytes 에 담습니다. 동기 · 비동기 읽기가 같은 길을 씁니다.
          * @param packPath 실패 로그에 적을 팩 경로
          */
-        static bool decodeStoredBytes( const PackReadPlan& plan, string_view packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes );
+        static bool decodeStoredBytes( const PackReadPlan& plan, string_view packPath, const vector<uint8>& storedBytes, vector<uint8>& outBytes );
 
         /**
-         * @brief 헤더가 말하는 인덱스 · 스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.
+         * @brief 헤더가 말하는 인덱스 · 블록 표 · 스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.
          * @details 헤더의 수는 파일에서 온 값입니다. 그것을 그대로 믿고 `resize` 하면 손상된 팩
          *          하나가 거대한 할당 요청이 됩니다. `_indexSize` 와 `_fileCount` 가 같은 것을
          *          두 번 말하는 것도 여기서 맞춰 봅니다.
-         * @param outFileSize 실제 파일 크기입니다. 항목 검사(`validateFileEntry`)가 같은 값을 씁니다.
+         * @param fileSize 실제 파일 크기입니다(헤더는 마지막 `sizeof( PackHeader )` 바이트다).
          */
-        bool validateHeaderGeometry( uint64& outFileSize ) const SW_REQUIRES_LOCK( _fileMutex );
-        /** @brief FAT 항목 하나가 파일 안을 가리키는지, 크기가 다룰 만한지 봅니다. */
-        bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const SW_REQUIRES_LOCK( _fileMutex );
-        [[nodiscard]] bool loadIndexTable() SW_REQUIRES_LOCK( _fileMutex );
+        bool validateHeaderGeometry( uint64 fileSize ) const SW_REQUIRES_LOCK( _fileMutex );
+        /** @brief FAT 항목 하나가 페이로드 구역 안을 가리키는지, 크기가 다룰 만한지, 블록 줄이 앞 항목에 이어지고 그 누적 끝이 항목 크기와 맞는지 봅니다. */
+        bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 payloadEnd, uint32 expectedFirstBlock ) const SW_REQUIRES_LOCK( _fileMutex );
+        [[nodiscard]] bool loadIndexTable( const PackIndexTrust* pTrust ) SW_REQUIRES_LOCK( _fileMutex );
         /**
-         * @brief `_mapEntry` 의 항목을 폴더별로 모아 `_mapFolderEntry` 를 짓습니다(`loadIndexTable` 이 항목을 다 읽은 뒤 한 번 부릅니다).
-         * @details 폴더 나열(`collectFolderEntries`)이 팩 전체를 잠금 안에서 훑지 않고 그 폴더의 항목만 읽게 합니다. 폴더 안의 순서는 `_mapEntry` 의 순서입니다.
+         * @brief 항목을 폴더별로 세운 `_listFolderEntry` 를 짓습니다(`loadIndexTable` 이 항목을 다 읽은 뒤 한 번 부릅니다).
+         * @details 폴더 나열(`collectFolderEntries`)이 팩 전체를 잠금 안에서 훑지 않고 그 폴더의 항목만 읽게 합니다.
          */
         void populateFolderIndex() SW_REQUIRES_LOCK( _fileMutex );
-        /**
-         * @brief 압축 항목을 풀어 @p outBytes 를 @p uncompressedSize 로 채웁니다. **할당도 여기서 합니다.**
-         * @details 엔트리의 원본 크기는 파일에서 온 값입니다. 코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 비교한 뒤에만
-         *          resize 하도록 할당과 해제를 한 함수에 묶었습니다 — 부르는 쪽이 먼저 resize 하는 모양을 쓸 수 없게 하려는 것입니다(B-5).
-         */
-        static bool decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, size_t uncompressedSize, vector<uint8>& outBytes );
         /**
          * @brief @p other 의 파일 · 헤더 · 인덱스를 넘겨받고 @p other 의 파일 핸들을 비웁니다. 두 쪽의 `_fileMutex` 를 잡은 채로 부릅니다.
          * @details 이동 생성자와 이동 대입이 함께 씁니다. 멤버를 더하면 여기 한 곳만 고칩니다.
@@ -164,15 +220,17 @@ namespace sw
         void closeLocked() SW_REQUIRES_LOCK( _fileMutex );
 
     private:
-        mutable mutex                                  _fileMutex;
-        AsyncFileHandle _file                          SW_GUARDED_BY( _fileMutex ); ///< 위치 지정 읽기 핸들(사본을 든 읽기는 닫힌 뒤에도 끝까지 읽는다)
-        string _packFilePath                           SW_GUARDED_BY( _fileMutex );
-        PackHeader _header                             SW_GUARDED_BY( _fileMutex );
-        unordered_map<uint64, PackFileEntry> _mapEntry SW_GUARDED_BY( _fileMutex );
-        /// 폴더(아스키 소문자, 끝 '/' 없음, 팩 맨 위는 빈 문자열) → 그 폴더 바로 아래 항목의 경로 해시. `populateFolderIndex` 가 짓고 읽기만 한다
-        unordered_map<string, vector<uint64>> _mapFolderEntry SW_GUARDED_BY( _fileMutex );
-        string _mountDomain                                   SW_GUARDED_BY( _fileMutex ); ///< 스트링 풀 맨 앞의 마운트 도메인
-        vector<utf8>                                          _stringPoolBytes;
+        mutable mutex                           _fileMutex;
+        AsyncFileHandle _file                   SW_GUARDED_BY( _fileMutex ); ///< 위치 지정 읽기 핸들(사본을 든 읽기는 닫힌 뒤에도 끝까지 읽는다)
+        string _packFilePath                    SW_GUARDED_BY( _fileMutex );
+        PackHeader _header                      SW_GUARDED_BY( _fileMutex );
+        vector<PackFileEntryOnDisk> _listEntry  SW_GUARDED_BY( _fileMutex ); ///< 디스크 FAT 그대로(경로 해시 오름차순 — 열 때 확인했다)
+        vector<PackBlockEntryOnDisk> _listBlock SW_GUARDED_BY( _fileMutex ); ///< 디스크 블록 표 그대로
+        vector<FolderEntry> _listFolderEntry    SW_GUARDED_BY( _fileMutex ); ///< (폴더 해시, 항목 번호) 오름차순. `populateFolderIndex` 가 짓고 읽기만 한다
+        string _mountDomain                     SW_GUARDED_BY( _fileMutex ); ///< 스트링 풀 맨 앞의 마운트 도메인
+        vector<utf8> _stringPoolBytes           SW_GUARDED_BY( _fileMutex );
+        vector<PackDigest> _listBlockDigest     SW_GUARDED_BY( _fileMutex ); ///< 블록 해시 표(`PackFlag::HasBlockHash` 일 때)
+        INetSecurityProvider* _pDigestProvider  SW_GUARDED_BY( _fileMutex ); ///< 신뢰를 받아 열었으면 블록 요약을 셀 제공자, 아니면 nullptr
     };
 
 } // namespace sw

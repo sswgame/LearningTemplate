@@ -1,7 +1,7 @@
 /**
  * @file PluralRules.h
  * @brief CLDR 복수형 규칙 글(`i = 1 and v = 0 @integer 1`, `v = 0 and i % 10 = 2..4 and i % 100 != 12..14 @integer 2~4, 22~24, …`)을 읽어 범주를 고르는 규칙 묶음과 그 피연산자입니다.
- * @details 규칙은 문화권 데이터(`*.cultures.xml` 의 `<pluralRules one="…" other="…"/>` · `<ordinalRules …/>`)이고, 코드는 CLDR 문법(UTS #35 Part 3 "Language Plural Rules")만 안다 —
+ * @details 규칙은 문화권 데이터(`*.cultures.xml` 의 `<_pluralRules><entry key="one">…</entry></_pluralRules>` · `<_ordinalRules>`)이고, 코드는 CLDR 문법(UTS #35 Part 3 "Language Plural Rules")만 안다 —
  *          언어를 더할 때 코드를 고치지 않는다(언리얼 · ICU 는 CLDR plurals.xml 을 그대로 쓴다).
  *          지원하는 문법: `condition = and_condition ('or' and_condition)*`, `and_condition = relation ('and' relation)*`,
  *          `relation = operand (('mod' | '%') value)? ('=' | '!=') range_list`, `range_list = (value | value'..'value) (',' …)*`.

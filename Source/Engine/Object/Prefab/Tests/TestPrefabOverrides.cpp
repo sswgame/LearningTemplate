@@ -299,3 +299,12 @@ SW_TEST_CASE( PrefabOverridesTest, OverrideFollowsComponentWhenAnEarlierSiblingI
     SW_REQUIRE_EQUAL( 1u, Util::countComponents( doc ) );
     SW_EXPECT_TRUE( string_view( Util::findComponent( doc, 0 ).findAttribute( "_mesh" ) ) == "changed.mesh" );
 }
+
+/** @brief [PrefabOverridesTest] 기본값을 뺀 글도 컴포넌트의 지역 id(`_localID` — 정체)를 남긴다 — 빼면 다시 읽은 부착 키(#16진)가 컴포넌트를 찾지 못했다 */
+SW_TEST_CASE( PrefabOverridesTest, OmitDefaultValuesKeepsComponentLocalID )
+{
+    const string state = R"(<GameObject _schemaVersion="0" _name="Lamp"><_listComponent><SceneComponent _componentName="SceneComponent" _localID="9027683366464785044"/></_listComponent></GameObject>)";
+    string       trimmed;
+    SW_REQUIRE_TRUE( PrefabOverrides::omitDefaultValues( state, trimmed ) );
+    SW_EXPECT_TRUE( trimmed.find( "_localID=\"9027683366464785044\"" ) != string::npos );
+}

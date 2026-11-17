@@ -52,7 +52,7 @@ SW_TEST_CASE( ObjectLifetimeTest, ComponentRemovedFromADyingObjectIsDeferred )
 
     manager.destroyGameObject( pObject );
     SW_REQUIRE_TRUE( pObject->removeComponent( pTickComponent ) );
-    SW_REQUIRE_EQUAL( size_t( 1 ), pObject->getComponentCount() ); // 아직 해체하지 않았다 — 지연 파괴가 오브젝트와 함께 거둔다
+    SW_REQUIRE_EQUAL( size_t( 1 ), pObject->getComponents().size() ); // 아직 해체하지 않았다(삭제 대기로 목록에 남는다) — 지연 파괴가 오브젝트와 함께 거둔다
     SW_EXPECT_TRUE( pTickComponent->isPendingDestroy() );
 
     manager.update( kFrameSeconds );

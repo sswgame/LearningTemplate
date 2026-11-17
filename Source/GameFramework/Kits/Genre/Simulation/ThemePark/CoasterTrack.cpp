@@ -411,6 +411,9 @@ namespace sw
     // CoasterLayoutCatalog
     // ------------------------------------------------------------------------------
     CoasterLayoutCatalog::CoasterLayoutCatalog()
+        : _physics{}
+        , _physicsCount{ 0 }
+        , _ratingCount{ 0 }
     {
     }
 
@@ -419,10 +422,45 @@ namespace sw
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<CoasterLayoutCatalog>;
         static constexpr Element kArrElement[] = {
+            Element::of<&CoasterLayoutCatalog::loadPhysics>( "Physics" ),
+            Element::of<&CoasterLayoutCatalog::loadRating>( "Rating" ),
             Element::of<&CoasterLayoutCatalog::loadLayout>( "Layout" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        // 열차 물리 · 평가 계수는 데이터에만 있다 — 한 번도 읽지 못한 카탈로그는 로드 실패다(열차가 C++ 기본값으로 열리지 않는다, 감사 K-4).
+        if ( _physicsCount == 0 || _ratingCount == 0 )
+        {
+            SW_LOG_ERROR_ID( "CoasterLayoutCatalog.PhysicsMissing", "%#: <CoasterLayoutCatalog> needs one <Physics .../> and one <Rating .../> line (every coaster rule value is data)", sourceName );
+            return 0;
+        }
         return result._loadedCount;
+    }
+
+    bool CoasterLayoutCatalog::loadPhysics( const XMLNode& node, string_view sourceName )
+    {
+        CoasterPhysicsParams physics;
+        if ( XMLFields::readProperties( node, physics, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "CoasterLayoutCatalog.PhysicsInvalid", "%#: <Physics> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        physics._ratingWeights = _physics._ratingWeights; // 평가 계수는 `<Rating>` 줄이 따로 정한다
+        _physics               = physics;                 // 덧씌우는 파일(합치기)은 규칙 전체를 바꾼다 — 칸 일부만 두지 않는다
+        ++_physicsCount;
+        return true;
+    }
+
+    bool CoasterLayoutCatalog::loadRating( const XMLNode& node, string_view sourceName )
+    {
+        CoasterRatingWeights weights;
+        if ( XMLFields::readProperties( node, weights, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "CoasterLayoutCatalog.RatingInvalid", "%#: <Rating> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        _physics._ratingWeights = weights;
+        ++_ratingCount;
+        return true;
     }
 
     bool CoasterLayoutCatalog::loadLayout( const XMLNode& node, string_view sourceName )

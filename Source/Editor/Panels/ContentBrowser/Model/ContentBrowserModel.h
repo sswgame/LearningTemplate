@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListingEntry.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -251,7 +251,7 @@ namespace sw::editor
         /** @brief 에셋의 참조(@p bDependencies 면 의존)를 찾습니다. 결과는 `getReferenceSearch` 입니다. */
         void showReferences( string_view absolutePath, bool bDependencies );
         /** @brief 에디터 전역의 참조 역색인입니다(`AssetHotReload::getReferenceIndex`). */
-        static const EditorReferenceIndex& getReferenceIndex();
+        static const EditorAssetIndex& getReferenceIndex();
         /** @brief 역색인 스캔이 워커에서 진행 중이면 true 입니다. */
         static bool isReferenceScanPending();
 
@@ -274,7 +274,7 @@ namespace sw::editor
         /** @brief 목록과 폴더 트리를 다시 읽게 하고 @p absolutePath 를 고릅니다. 이 변경 전에 시작한 색인 스캔은 버린다. */
         void selectAfterFileChange( string_view absolutePath );
         /** @brief 옮기기가 고칠 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 nullptr 입니다. */
-        EditorReferenceIndex* findCurrentReferenceIndex();
+        EditorAssetIndex* findCurrentReferenceIndex();
         /** @brief 역색인이 따라왔으면 미뤄 둔 옮기기를 실행합니다(`tick`). */
         void applyPendingMove();
 

@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
@@ -89,6 +90,19 @@ namespace sw
         vector<const IAfterDeleteAccount*> _listAfterDeleteAccount{}; ///< 탈퇴 정리가 부를 키트 훅(정리 일에만 싣는다)
     };
 
+    /**
+     * @brief 진행 중인 비밀번호 요청 하나입니다(가입 · 로그인 · 이름 연동). 서비스 스레드만 만지고, 단계 사이에 입력 · 해시 줄 자리 · 로그인 문제를 듭니다.
+     * @details 비밀번호는 로그인만 끝날 때까지 든다(커밋이 "그사이 바뀌었다" 고 하면 다시 해시한다). 가입 · 연동은 해시를 맡기며 지운다. 저장소 일로는 가지 않는다.
+     */
+    struct LoginPasswordCall
+    {
+        LoginCallInput               _input{};
+        optional<PasswordHashTicket> _ticket{};    ///< 해시 줄 자리 — 해시를 맡기면 줄이 가져간다
+        PasswordHashChallenge        _challenge{}; ///< 로그인의 읽기 단계가 낸 문제
+        PasswordHashRecord           _prepared{};  ///< 가입 · 연동의 새 비밀번호, 로그인의 다시 해시(새 솔트 · 설정 매개변수)
+        int32                        _restartCount{ 0 };
+    };
+
     namespace
     {
         /** @brief 로그인 요청 · 정리 일이 완료로 넘기는 값입니다. */
@@ -99,30 +113,37 @@ namespace sw
             LoginStoreResult _serviceResult{};
         };
 
-        /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다(해시 상한 `PasswordHashBudget` 는 스레드 안전한 공유물이다). */
+        /** @brief 비밀번호 로그인의 읽기 단계가 넘기는 값입니다. */
+        struct LoginChallengeRead
+        {
+            PasswordHashChallenge _challenge{};
+            LoginGrant            _grant{};
+            LoginServiceResult    _result{ LoginResult::Ok };
+        };
+
+        /** @brief 비밀번호 로그인의 커밋 단계가 넘기는 값입니다. `_bHashStale` 이면 그사이 솔트 · 매개변수가 바뀌어 읽기부터 다시 한다. */
+        struct LoginCommitResult
+        {
+            LoginCallResult _done{};
+            uint8           _bHashStale : 1;
+
+            LoginCommitResult()
+                : _bHashStale{ SW_FALSE }
+            {
+            }
+        };
+
+        /** @brief 저장소 스레드에서 도는 로그인 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
         struct LoginStoreRun
         {
-            /** @brief 비밀번호 해시를 도는 일인지입니다. 이 일만 해시 상한의 자리를 잡는다. */
-            static bool usesPasswordHash( LoginOperation operation )
-            {
-                return operation == LoginOperation::Register || operation == LoginOperation::Login || operation == LoginOperation::LinkCredential;
-            }
-
-            static LoginCallResult runCall( IServiceStoreConnection& connection, ILoginCrypto& crypto, PasswordHashBudget& hashBudget, const LoginServiceConfig& settings,
-                                            const LoginTicketAuthority& authority, LoginCallInput& inoutInput )
+            static LoginCallResult runCall( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
+                                            LoginCallInput& inoutInput )
             {
                 LoginCallInput& input = inoutInput;
                 LoginCallResult done;
                 done._completion._operation  = input._operation;
                 done._completion._requestTag = input._requestTag;
-                const bool bHashes           = usesPasswordHash( input._operation );
-                const bool bEntered          = bHashes && hashBudget.tryAcquire();
-                if ( bHashes && bEntered == false )
-                    done._completion._result = LoginServiceResult::fail( OnlineError::kBusy ); // 읽기 전에 거절한다 — 계정 유무와 무관한 같은 답이다
-                else
-                    runOperation( connection, crypto, settings, authority, input, done );
-                if ( bEntered )
-                    hashBudget.release();
+                runOperation( connection, crypto, settings, authority, input, done );
                 // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
                 input._credential._password.clear();
                 input._subject.clear();
@@ -139,16 +160,12 @@ namespace sw
                 switch ( input._operation )
                 {
                     case LoginOperation::Register:
-                    {
-                        uint64 accountID                  = 0;
-                        completion._result                = logic.registerAccount( input._credential, &accountID );
-                        completion._identity._accountID   = accountID;
-                        completion._identity._displayName = input._credential._loginName;
-                        break;
-                    }
                     case LoginOperation::Login:
+                    case LoginOperation::LinkCredential:
                     {
-                        completion._result = logic.login( input._credential, nowMs, completion._grant );
+                        // 비밀번호 요청은 해시 줄을 지나는 길(`submitPasswordCall`)로만 온다 — 저장소 일에서 해시하지 않는다.
+                        SW_ASSERT( false && "password requests go through LoginService::submitPasswordCall" );
+                        completion._result = LoginServiceResult::fail( OnlineError::kUnavailable );
                         break;
                     }
                     case LoginOperation::GuestLogin:
@@ -184,11 +201,6 @@ namespace sw
                     case LoginOperation::Revoke:
                     {
                         completion._result = logic.revokeAccountSessions( input._accountID, input._revokeReason, nowMs );
-                        break;
-                    }
-                    case LoginOperation::LinkCredential:
-                    {
-                        completion._result = logic.linkCredential( input._token, input._credential, nowMs, completion._identity );
                         break;
                     }
                     case LoginOperation::LinkPlatform:
@@ -242,6 +254,60 @@ namespace sw
                     (void)logic.purgeDueDeletions( input._nowMs.count(), input._purgeCount, input._listAfterDeleteAccount );
                 return serviceResult;
             }
+
+            /** @brief 비밀번호 요청의 완료 틀입니다(작업 종류 · 요청 태그). */
+            static LoginCompletion makePasswordCompletion( const LoginPasswordCall& call )
+            {
+                LoginCompletion completion;
+                completion._operation  = call._input._operation;
+                completion._requestTag = call._input._requestTag;
+                return completion;
+            }
+
+            /** @brief 비밀번호 로그인의 읽기 단계입니다(저장소 스레드). 비밀번호는 오지 않는다. */
+            static LoginChallengeRead runReadChallenge( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings,
+                                                        const LoginTicketAuthority& authority, const string& loginName, int64 nowMs )
+            {
+                LoginStoreResult   unused;
+                LoginStoreLogic    logic{ connection, crypto, settings, authority, unused };
+                LoginChallengeRead read;
+                read._result = logic.readLoginChallenge( loginName, nowMs, read._challenge, read._grant );
+                return read;
+            }
+
+            /** @brief 가입 · 이름 연동의 커밋 단계입니다(저장소 스레드). @p input 의 비밀번호는 이미 지웠다 — 해시를 마친 @p prepared 만 쓴다. */
+            static LoginCallResult runNewPasswordCommit( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings,
+                                                         const LoginTicketAuthority& authority, const LoginCallInput& input, const PasswordHashRecord& prepared )
+            {
+                LoginCallResult done;
+                done._completion._operation  = input._operation;
+                done._completion._requestTag = input._requestTag;
+                LoginStoreLogic logic{ connection, crypto, settings, authority, done._serviceResult };
+                if ( input._operation == LoginOperation::Register )
+                {
+                    uint64 accountID                        = 0;
+                    done._completion._result                = logic.registerAccount( input._credential, prepared, &accountID );
+                    done._completion._identity._accountID   = accountID;
+                    done._completion._identity._displayName = input._credential._loginName;
+                    return done;
+                }
+                done._completion._result = logic.linkCredential( input._token, input._credential, prepared, input._nowMs.count(), done._completion._identity );
+                return done;
+            }
+
+            /** @brief 비밀번호 로그인의 커밋 단계입니다(저장소 스레드). */
+            static LoginCommitResult runLoginCommit( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& authority,
+                                                     const LoginCallInput& input, const PasswordHashChallenge& challenge, const PasswordHashResult& hashResult )
+            {
+                LoginCommitResult commit;
+                commit._done._completion._operation  = input._operation;
+                commit._done._completion._requestTag = input._requestTag;
+                LoginStoreLogic logic{ connection, crypto, settings, authority, commit._done._serviceResult };
+                bool            bHashStale       = false;
+                commit._done._completion._result = logic.commitLogin( challenge, hashResult, input._nowMs.count(), commit._done._completion._grant, bHashStale );
+                commit._bHashStale               = bHashStale ? SW_TRUE : SW_FALSE;
+                return commit;
+            }
         };
     } // namespace
 } // namespace sw
@@ -270,24 +336,48 @@ namespace sw
         , _revocationScanJob{}
         , _store{}
         , _listAfterDeleteAccount{}
+        , _hashQueue{}
+        , _mapPasswordCall{}
+        , _mapHashJobToCall{}
+        , _listHashCompletionScratch{}
+        , _nextPasswordCallID{ 1 }
     {
     }
 
-    void LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginServiceConfig& settings,
-                                   const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
+    LoginService::~LoginService() = default; // 비밀번호 요청(`LoginPasswordCall`)이 이 파일에서 완전한 형식이다
+
+    expected<void> LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, IPasswordHasher* pHasher, TaskManager* pTaskManager, const LoginServiceConfig& settings,
+                                             const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
     {
-        SW_ASSERT( settings._maxConcurrentPasswordHashes >= 1 ); // 키트 설정의 필수 칸이다. 0 이면 모든 가입 · 로그인이 kBusy 로 끝난다
+        // 비밀번호 해시는 작업 풀 위의 상한 있는 줄에서만 돈다 — 작업 풀 · 해시 구현이 없으면 기동 오류다(저장소 워커로 대신하지 않는다, 감사 O-3).
+        if ( pTaskManager == nullptr || pHasher == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the login service needs the task manager and a password hasher - password hashing does not run on store workers" } );
+        PasswordHashQueueConfig hashSettings;
+        hashSettings._maxConcurrentPasswordHashes = settings._maxConcurrentPasswordHashes;
+        hashSettings._maxQueuedPasswordHashes     = settings._maxQueuedPasswordHashes;
+        if ( expected<void> queued = _hashQueue.initialize( *pTaskManager, *pHasher, hashSettings ); queued.has_value() == false )
+            return queued;
         _store.bindStore( pStore );
         _pCrypto  = pCrypto;
         _settings = settings;
-        _passwordHashBudget.setMaxCount( settings._maxConcurrentPasswordHashes );
         _revocationScanJob.setPeriod( settings._revocationScanMs );
         _ticketAuthority.initialize( pCrypto, arrTicketMasterKey );
         _mapClientToAttemptBucket.initialize( settings._attemptBurst, settings._attemptRefillMs, kMaxTrackedClientCount );
+        return {};
     }
 
     void LoginService::shutdown()
     {
+        // 도는 해시는 끝까지 기다리고(워커가 쓰는 칸을 먼저 놓지 않는다) 답은 버린다 — 연결이 닫히며 호스트가 답 없는 요청을 끝낸다.
+        _listHashCompletionScratch.clear();
+        _hashQueue.shutdown( _listHashCompletionScratch );
+        _listHashCompletionScratch.clear();
+        for ( auto& entry : _mapPasswordCall )
+        {
+            StringUtil::wipeSecret( entry.second->_input._credential._password );
+        }
+        _mapPasswordCall.clear();
+        _mapHashJobToCall.clear();
         _ticketAuthority.shutdown();
         _mapAccountToSession.clear();
         _mapAccountToIdentity.clear();
@@ -328,6 +418,12 @@ namespace sw
             {
                 (void)_verifications.answer( ProviderRequestKey{ pProvider, verification._verificationID }, verification ); // 모르는 번호(내린 뒤의 답)는 버린다
             }
+        }
+        _listHashCompletionScratch.clear();
+        (void)_hashQueue.pollCompletions( _listHashCompletionScratch );
+        for ( const PasswordHashCompletion& completion : _listHashCompletionScratch )
+        {
+            continueAfterHash( completion );
         }
         updateRevocations( nowMs );
     }
@@ -500,7 +596,8 @@ namespace sw
     {
         LoginCallInput input = makeCallInput( LoginOperation::Register, requestTag, nowMs );
         input._credential    = credential;
-        submitCall( std::move( input ) );
+        if ( submitPasswordCall( std::move( input ) ) == false && requestTag == 0 )
+            SW_LOG_WARNING_ID( "LoginService.SeedAccountBusy", "seed account '%#' was not registered - the password hash queue is full (raise _maxQueuedPasswordHashes)", credential._loginName.c_str() );
     }
 
     void LoginService::login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
@@ -522,7 +619,7 @@ namespace sw
         input._bUpdateRecommended = buildGrant._bUpdateRecommended;
         input._storeURL           = buildGrant._storeURL;
         checkSharedAttempt( clientKey, LoginOperation::Login, requestTag, buildGrant, [this, input = std::move( input )]() mutable
-        { submitCall( std::move( input ) ); } );
+        { (void)submitPasswordCall( std::move( input ) ); } ); // 해시 자리가 없으면 kBusy 완료를 이미 쌓았다
     }
 
     void LoginService::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
@@ -624,7 +721,7 @@ namespace sw
         LoginCallInput input = makeCallInput( LoginOperation::LinkCredential, requestTag, nowMs );
         input._token         = token;
         input._credential    = credential;
-        submitCall( std::move( input ) );
+        (void)submitPasswordCall( std::move( input ) ); // 자리가 없으면 kBusy 완료를 이미 쌓았다
     }
 
     void LoginService::linkPlatform( const LoginSessionToken& token, string_view provider, const vector<uint8>& ticketBytes, UnixMilliseconds nowMs, uint64 requestTag )
@@ -735,13 +832,201 @@ namespace sw
 
     void LoginService::submitCall( LoginCallInput&& input )
     {
-        ILoginCrypto*               pCrypto     = _pCrypto;
-        PasswordHashBudget*         pHashBudget = &_passwordHashBudget; // 원자 셈이라 워커 여럿이 함께 쓴다
-        const LoginTicketAuthority* pAuthority  = &_ticketAuthority;    // 저장소 스레드는 읽기만 한다
-        _store.submit( [pCrypto, pHashBudget, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
-        { return LoginStoreRun::runCall( connection, *pCrypto, *pHashBudget, settings, *pAuthority, input ); },
+        ILoginCrypto*               pCrypto    = _pCrypto;
+        const LoginTicketAuthority* pAuthority = &_ticketAuthority; // 저장소 스레드는 읽기만 한다
+        _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input )]( IServiceStoreConnection& connection ) mutable
+        { return LoginStoreRun::runCall( connection, *pCrypto, settings, *pAuthority, input ); },
                        [this]( LoginCallResult& done )
         { applyCompletion( std::move( done._completion ), done._serviceResult ); } );
+    }
+
+    bool LoginService::submitPasswordCall( LoginCallInput&& input )
+    {
+        // 자리부터 잡는다 — 없으면 읽기 전에 kBusy(다시 시도, 멱등 응답으로 기억하지 않는다). 계정이 있든 없든 같은 답이다.
+        optional<PasswordHashTicket> ticket = _hashQueue.tryReserve();
+        if ( ticket.has_value() == false )
+        {
+            StringUtil::wipeSecret( input._credential._password );
+            pushImmediate( input._operation, input._requestTag, LoginServiceResult::fail( OnlineError::kBusy ), LoginGrant{} );
+            return false;
+        }
+        if ( input._operation != LoginOperation::Login )
+        {
+            // 가입 · 연동은 형식 밖 입력에 해시를 치르지 않는다(자리는 티켓 소멸이 돌려준다).
+            const LoginServiceResult valid = LoginStoreLogic::validateNewCredential( input._credential );
+            if ( valid != LoginResult::Ok )
+            {
+                StringUtil::wipeSecret( input._credential._password );
+                pushImmediate( input._operation, input._requestTag, valid, LoginGrant{} );
+                return true;
+            }
+        }
+        const uint64                  callID = _nextPasswordCallID++;
+        unique_ptr<LoginPasswordCall> pCall  = make_unique<LoginPasswordCall>();
+        pCall->_input                        = std::move( input );
+        pCall->_ticket                       = std::move( ticket );
+        LoginPasswordCall& call              = *pCall;
+        _mapPasswordCall.emplace( callID, std::move( pCall ) );
+        if ( call._input._operation == LoginOperation::Login )
+            submitLoginRead( callID );
+        else
+            submitPasswordHash( callID, call );
+        return true;
+    }
+
+    void LoginService::submitLoginRead( uint64 callID )
+    {
+        const auto callIt = _mapPasswordCall.find( callID );
+        if ( callIt == _mapPasswordCall.end() )
+            return;
+        ILoginCrypto*               pCrypto    = _pCrypto;
+        const LoginTicketAuthority* pAuthority = &_ticketAuthority;
+        const string                loginName  = callIt->second->_input._credential._loginName; // 비밀번호는 저장소 일로 가지 않는다
+        const int64                 nowMs      = callIt->second->_input._nowMs.count();
+        _store.submit( [pCrypto, pAuthority, settings = _settings, loginName, nowMs]( IServiceStoreConnection& connection )
+        { return LoginStoreRun::runReadChallenge( connection, *pCrypto, settings, *pAuthority, loginName, nowMs ); },
+                       [this, callID]( LoginChallengeRead& read )
+        {
+            const auto readIt = _mapPasswordCall.find( callID );
+            if ( readIt == _mapPasswordCall.end() )
+                return; // 서비스를 내렸다
+            LoginPasswordCall& call = *readIt->second;
+            if ( read._result != LoginResult::Ok )
+            {
+                LoginCompletion completion = LoginStoreRun::makePasswordCompletion( call );
+                completion._result         = read._result;
+                completion._grant          = read._grant;
+                finishPasswordCall( callID, std::move( completion ), LoginStoreResult{} );
+                return;
+            }
+            call._challenge = read._challenge;
+            submitPasswordHash( callID, call );
+        } );
+    }
+
+    void LoginService::submitPasswordHash( uint64 callID, LoginPasswordCall& call )
+    {
+        SW_ASSERT( call._ticket.has_value() && "a password call holds its hash queue seat until it hashes" );
+        PasswordHashRequest request;
+        request._password = call._input._credential._password;
+        bool bSaltFilled  = true;
+        if ( call._input._operation == LoginOperation::Login )
+        {
+            request._arrSpec[0]._params = call._challenge._params;
+            Memory::copy( request._arrSpec[0]._arrSalt, call._challenge._arrSalt, LoginConstant::kSaltSize );
+            request._specCount = 1;
+            if ( call._challenge._bRehash == SW_TRUE )
+            {
+                // 매개변수가 바뀐 계정 — 비밀번호를 아는 지금 새 솔트 · 설정 매개변수로도 계산해 둔다(커밋이 바꾼다).
+                call._prepared._params      = _settings._passwordHashParams;
+                bSaltFilled                 = _pCrypto->fillRandom( call._prepared._arrSalt, LoginConstant::kSaltSize );
+                request._arrSpec[1]._params = call._prepared._params;
+                Memory::copy( request._arrSpec[1]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
+                request._specCount = 2;
+            }
+        }
+        else
+        {
+            call._prepared._params      = _settings._passwordHashParams;
+            bSaltFilled                 = _pCrypto->fillRandom( call._prepared._arrSalt, LoginConstant::kSaltSize );
+            request._arrSpec[0]._params = call._prepared._params;
+            Memory::copy( request._arrSpec[0]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
+            request._specCount = 1;
+            StringUtil::wipeSecret( call._input._credential._password ); // 가입 · 연동은 다시 해시할 일이 없다 — 줄에 넘긴 사본만 남는다
+        }
+        if ( bSaltFilled == false )
+        {
+            StringUtil::wipeSecret( request._password );
+            LoginCompletion completion = LoginStoreRun::makePasswordCompletion( call );
+            completion._result         = LoginServiceResult::fail( OnlineError::kUnavailable );
+            finishPasswordCall( callID, std::move( completion ), LoginStoreResult{} );
+            return;
+        }
+        const uint64 jobID = _hashQueue.submit( std::move( *call._ticket ), std::move( request ) );
+        call._ticket.reset();
+        _mapHashJobToCall[jobID] = callID;
+    }
+
+    void LoginService::continueAfterHash( const PasswordHashCompletion& completion )
+    {
+        const auto jobIt = _mapHashJobToCall.find( completion._jobID );
+        if ( jobIt == _mapHashJobToCall.end() )
+            return;
+        const uint64 callID = jobIt->second;
+        _mapHashJobToCall.erase( jobIt );
+        const auto callIt = _mapPasswordCall.find( callID );
+        if ( callIt == _mapPasswordCall.end() )
+            return;
+        LoginPasswordCall& call = *callIt->second;
+        if ( completion._bComputed == SW_FALSE )
+        {
+            LoginCompletion failed = LoginStoreRun::makePasswordCompletion( call );
+            failed._result         = LoginServiceResult::fail( OnlineError::kUnavailable );
+            finishPasswordCall( callID, std::move( failed ), LoginStoreResult{} );
+            return;
+        }
+        ILoginCrypto*               pCrypto    = _pCrypto;
+        const LoginTicketAuthority* pAuthority = &_ticketAuthority;
+        LoginCallInput              input      = call._input;
+        StringUtil::wipeSecret( input._credential._password ); // 커밋은 해시만 쓴다 — 비밀번호는 저장소 일로 가지 않는다
+        if ( call._input._operation != LoginOperation::Login )
+        {
+            Memory::copy( call._prepared._arrHash, completion._arrHash[0], LoginConstant::kPasswordHashSize );
+            _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input ), prepared = call._prepared]( IServiceStoreConnection& connection )
+            { return LoginStoreRun::runNewPasswordCommit( connection, *pCrypto, settings, *pAuthority, input, prepared ); },
+                           [this, callID]( LoginCallResult& done )
+            { finishPasswordCall( callID, std::move( done._completion ), done._serviceResult ); } );
+            return;
+        }
+        PasswordHashResult hashResult;
+        Memory::copy( hashResult._arrHash, completion._arrHash[0], LoginConstant::kPasswordHashSize );
+        if ( call._challenge._bRehash == SW_TRUE )
+        {
+            hashResult._rehash = call._prepared;
+            Memory::copy( hashResult._rehash._arrHash, completion._arrHash[1], LoginConstant::kPasswordHashSize );
+            hashResult._bHasRehash = SW_TRUE;
+        }
+        _store.submit( [pCrypto, pAuthority, settings = _settings, input = std::move( input ), challenge = call._challenge, hashResult]( IServiceStoreConnection& connection )
+        { return LoginStoreRun::runLoginCommit( connection, *pCrypto, settings, *pAuthority, input, challenge, hashResult ); },
+                       [this, callID]( LoginCommitResult& commit )
+        {
+            const auto commitIt = _mapPasswordCall.find( callID );
+            if ( commitIt == _mapPasswordCall.end() )
+                return; // 서비스를 내렸다
+            LoginPasswordCall& pending = *commitIt->second;
+            if ( commit._bHashStale == SW_TRUE && pending._restartCount < LoginStoreLogic::kMaxHashRestartCount )
+            {
+                // 해시하는 사이 비밀번호 · 매개변수가 바뀌었다 — 읽기부터 다시 한다. 자리를 다시 잡는다(없으면 kBusy).
+                ++pending._restartCount;
+                pending._ticket = _hashQueue.tryReserve();
+                if ( pending._ticket.has_value() )
+                {
+                    submitLoginRead( callID );
+                    return;
+                }
+                LoginCompletion busy = LoginStoreRun::makePasswordCompletion( pending );
+                busy._result         = LoginServiceResult::fail( OnlineError::kBusy );
+                finishPasswordCall( callID, std::move( busy ), LoginStoreResult{} );
+                return;
+            }
+            finishPasswordCall( callID, std::move( commit._done._completion ), commit._done._serviceResult );
+        } );
+    }
+
+    void LoginService::finishPasswordCall( uint64 callID, LoginCompletion&& completion, const LoginStoreResult& serviceResult )
+    {
+        const auto callIt = _mapPasswordCall.find( callID );
+        if ( callIt == _mapPasswordCall.end() )
+            return;
+        LoginPasswordCall& call = *callIt->second;
+        if ( completion._result == LoginResult::Ok && call._input._bUpdateRecommended == SW_TRUE )
+        {
+            completion._grant._bUpdateRecommended = SW_TRUE;
+            completion._grant._storeURL           = call._input._storeURL;
+        }
+        StringUtil::wipeSecret( call._input._credential._password );
+        _mapPasswordCall.erase( callIt );
+        applyCompletion( std::move( completion ), serviceResult );
     }
 
     void LoginService::submitMaintenance( LoginMaintenanceInput&& input )

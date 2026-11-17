@@ -97,7 +97,7 @@ namespace sw
 
     void ActionPlatformerDemoComponent::placeBody( const float2& position )
     {
-        _body.initialize( PlatformerSettings{}, _pCatalog->getBodySettings() );
+        _body.initialize( *_pCatalog );
         _body.setPosition( position );
     }
 
@@ -228,7 +228,7 @@ namespace sw
         ActionStageRun       restoredRun;
         if ( io.isReading() )
         {
-            restoredBody.initialize( PlatformerSettings{}, _pCatalog->getBodySettings() );
+            restoredBody.initialize( *_pCatalog );
             restoredRun.bindCatalog( _pCatalog.get() );
         }
         io.value( io.isWriting() ? _body : restoredBody );

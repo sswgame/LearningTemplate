@@ -9,7 +9,8 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Content/Pack/PackReader.h"
+#include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -39,7 +40,9 @@ namespace
             settings._maxPackBytes          = 1u << 20;
             settings._maxEntryCount         = 8;
             settings._maxEntryBytes         = 4096;
+            settings._packBlockSize         = kPackMinBlockSize;
             settings._listOverridablePrefix = { "testproject/data/" };
+            settings._listStoredExtension   = { ".dds" };
             return settings;
         }
 
@@ -93,14 +96,14 @@ SW_TEST_CASE( ModSessionTest, SourceModOverridesAndReleases )
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         SW_EXPECT_EQUAL( string( "modded" ), Internal::read( Internal::kBasePath ) ); // 패치 팩이 붙인 디스크 도메인의 낱개 파일 위에 선다
         SW_EXPECT_EQUAL( string( "lamp" ), Internal::read( "mods/lantern/data/lamp.txt" ) );
         SW_REQUIRE_EQUAL( size_t{ 1 }, session.getDigest()._listEntry.size() );
         SW_EXPECT_TRUE( session.getDigest()._configHash != 0 );
 
         SW_EXPECT_LOG( "ModSession.AppliedTwice" ); // 구성은 세션 시작 때 한 번 고정한다
-        SW_EXPECT_FALSE( session.apply( request, Internal::makeSettings() ) );
+        SW_EXPECT_FALSE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
     }
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
     SW_EXPECT_EQUAL( string( "base" ), Internal::read( Internal::kBasePath ) );
@@ -123,7 +126,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
     uint64 sourceHash = 0;
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         sourceHash = session.getDigest()._configHash;
     }
     SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, FileUtil::joinPath( modDir, ModPackBuilder::kPackFileName ), Internal::makeSettings() ) );
@@ -132,7 +135,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
     ModAllowList allowList;
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         SW_EXPECT_EQUAL( sourceHash, session.getDigest()._configHash );
         SW_EXPECT_EQUAL( string( "modded" ), Internal::read( Internal::kBasePath ) );
         allowList._listEntry = session.getDigest()._listEntry; // 운영자가 이 내용을 허락한다
@@ -144,7 +147,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
     serverRequest._pAllowList       = &allowList;
     ModSession server( assets );
     SW_EXPECT_LOG( "ModAllowList.Mismatch" );
-    SW_EXPECT_FALSE( server.apply( serverRequest, Internal::makeSettings() ) );
+    SW_EXPECT_FALSE( server.apply( getContentPreparationTokenForTest(), serverRequest, Internal::makeSettings() ) );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
     SW_EXPECT_EQUAL( string( "base" ), Internal::read( Internal::kBasePath ) );
 }
@@ -160,7 +163,7 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
     const auto    tryApply = [&assets, &root]( vector<string> listID )
     {
         ModSession session( assets );
-        const bool bApplied = session.apply( TestModSessionInternal::makeRequest( root, std::move( listID ) ), TestModSessionInternal::makeSettings() );
+        const bool bApplied = session.apply( getContentPreparationTokenForTest(), TestModSessionInternal::makeRequest( root, std::move( listID ) ), TestModSessionInternal::makeSettings() );
         return bApplied || assets.getPackManager().hasPatchPacks(); // 실패한 적용은 아무것도 남기지 않는다
     };
     const string installFolder = Internal::makeRequest( root, {} )._installFolder;
@@ -179,14 +182,8 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
     // 밝히지 않은 기본 리소스를 덮어쓰는 항목.
     const auto writePack = [&installFolder]( string_view id, const vector<std::pair<string, string>>& listEntry )
     {
-        PackWriterDesc desc;
-        PackWriter     writer( desc );
-        for ( const std::pair<string, string>& entry : listEntry )
-        {
-            writer.addBytes( entry.first, vector<uint8>( entry.second.begin(), entry.second.end() ) );
-        }
         return TestModSessionInternal::writeManifest( installFolder, id ) &&
-               writer.writePackFile( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kPackFileName ) );
+               PackTestUtil::writeTextPack( FileUtil::joinPath( FileUtil::joinPath( installFolder, id ), ModPackBuilder::kPackFileName ), "", listEntry );
     };
     SW_REQUIRE_TRUE( writePack( "sneaky", {
                                               {         Internal::kBasePath, "modded"},
@@ -249,7 +246,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         vector<string> listExpected = listLayerBase;
         listExpected.push_back( "mods/tide/layer" );
         SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listExpected );
@@ -266,7 +263,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     ModSession sneaky( assets );
     SW_EXPECT_LOG( "ModSession.UndeclaredLayer" );
-    SW_EXPECT_FALSE( sneaky.apply( request, Internal::makeSettings() ) );
+    SW_EXPECT_FALSE( sneaky.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
     SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listLayerBase );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
@@ -276,7 +273,7 @@ SW_TEST_CASE( ModSessionTest, NoModsChangesNothing )
 {
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     ModSession    session( assets );
-    SW_EXPECT_TRUE( session.apply( TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ), {} ), TestModSessionInternal::makeSettings() ) );
+    SW_EXPECT_TRUE( session.apply( getContentPreparationTokenForTest(), TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ), {} ), TestModSessionInternal::makeSettings() ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, session.getDigest()._configHash );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
@@ -299,8 +296,63 @@ SW_TEST_CASE( ModSessionTest, ModAssetsResolveByGUIDWhileApplied )
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
         SW_EXPECT_EQUAL( string( "mods/lantern/data/lamp.xml" ), AssetRegistry::resolve( guid ).value_or( string{} ) );
     }
     SW_EXPECT_FALSE( AssetRegistry::resolve( guid ).has_value() );
+}
+
+/**
+ * @brief [ModSessionTest] 모드 팩 색인이 이미 풀리는 GUID(기본 에셋)를 자기 파일로 돌리면 적용을 거절한다 — 덮어쓰기는 밝힌 `<Override>` 로만 한다
+ */
+SW_TEST_CASE( ModSessionTest, ModIndexCannotRedirectAKnownGUID )
+{
+    using Internal = TestModSessionInternal;
+    SW_EXPECT_LOG( "ModSession.IndexRedirectsAsset" );
+    test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
+    const string            root    = test::makeScratchPath( "ModIndexRedirectRoot" );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const string            source  = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, "lantern" ), ModPackBuilder::kSourceFolderName );
+    SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000beef"?><Lamp/>)" ) );
+    const AssetGUID guid = *AssetGUID::tryParse( "0000000000000000000000000000beef" );
+
+    AssetManager& assets = engine::getSubsystem<AssetManager>();
+    // 같은 GUID 가 이미 기본 에셋으로 풀리게 둔다 — 프로세스 표에 한 줄을 더해 걸고, 끝에 원래 표로 되돌린다.
+    const AssetRegistry previous = AssetRegistry::install( AssetRegistry{} );
+    AssetRegistry       withBase = previous;
+    withBase.put( guid, "data/welcome.xml" );
+    (void)AssetRegistry::install( withBase );
+    {
+        ModSession session( assets );
+        SW_EXPECT_FALSE( session.apply( request, Internal::makeSettings() ) );
+    }
+    (void)AssetRegistry::install( previous );
+}
+
+// 모드 팩도 배포 팩과 같은 저장 방식 규칙(PackEntryStorageRule)을 쓴다 — 범위로 읽는 텍스처(.dds)는 Stored, 글은 블록 압축이다.
+// 변이: 빌더가 저장 방식을 Blocks 로 고정하면(예전 길) 첫 단언이 진다.
+SW_TEST_CASE( ModSessionTest, ModPackStoresTexturesUncompressed )
+{
+    using Internal           = TestModSessionInternal;
+    const string root        = test::makeScratchPath( "ModPackStorage" );
+    const string source      = FileUtil::joinPath( root, ModPackBuilder::kSourceFolderName );
+    const string packPath    = FileUtil::joinPath( root, ModPackBuilder::kPackFileName );
+    const string texturePath = "mods/stone/textures/stone.dds";
+    const string dataPath    = "mods/stone/data/stone.txt";
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, texturePath ), "not really a dds - bytes only" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, dataPath ), "stone" ) );
+    SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, packPath, Internal::makeSettings() ) );
+
+    PackReader reader;
+    SW_REQUIRE_TRUE( reader.open( packPath ) );
+    PackFileEntry texture;
+    PackFileEntry data;
+    SW_REQUIRE_TRUE( reader.getFileEntry( texturePath, texture ) );
+    SW_REQUIRE_TRUE( reader.getFileEntry( dataPath, data ) );
+    SW_EXPECT_TRUE( texture._storage == PackEntryStorage::Stored );
+    SW_EXPECT_TRUE( data._storage == PackEntryStorage::Blocks );
+    reader.close();
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

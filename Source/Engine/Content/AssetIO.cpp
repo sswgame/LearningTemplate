@@ -245,6 +245,54 @@ namespace sw
         return handle;
     }
 
+    optional<uint64> AssetIO::findAssetSize( const AssetID& id )
+    {
+        optional<uint64> size;
+        (void)readResourceCommon(
+            id.view(), nullptr,
+            [&size]( string_view absPath )
+        {
+            const AsyncFileHandle file = ContentFileSource::getCurrent().open( absPath );
+            if ( file.isValid() == false )
+                return false;
+            size = file.getSize();
+            return true;
+        },
+            [&size]( const PackManager& packManager, string_view key, string& )
+        {
+            size = packManager.findFileSize( key );
+            return size.has_value();
+        } );
+        return size;
+    }
+
+    AsyncReadHandle AssetIO::readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete )
+    {
+        const string_view relativePath = id.view();
+        AsyncFileIO&      io           = engine::getSubsystem<AsyncFileIO>();
+        AsyncReadHandle   handle;
+        if ( CookJob::allowAsyncRead( id ) == false )
+            return handle; // 쿠킹 작업의 입력으로 기록할 수 없다(`readBinaryAssetAsync` 와 같다)
+        // 찾는 순서는 전체 읽기와 같은 함수 하나다 — 구간 읽기만 다른 파일을 읽는 길이 없다.
+        (void)readResourceCommon(
+            relativePath, nullptr,
+            [&io, &handle, offset, size, priority, &onComplete]( string_view absPath )
+        {
+            handle = ContentFileSource::getCurrent().readRangeAsync( io, absPath, offset, size, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
+            {
+                if ( onComplete.isBound() )
+                    onComplete( result.isSucceeded(), result._bytes );
+            } ) );
+            return handle.isValid();
+        },
+            [&io, &handle, offset, size, priority, &onComplete]( const PackManager& packManager, string_view key, string& )
+        {
+            handle = packManager.readRangeAsync( io, key, offset, size, priority, onComplete );
+            return handle.isValid();
+        } );
+        return handle;
+    }
+
     bool AssetIO::hasAsset( const AssetID& id )
     {
         // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — 경로 교체, OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.

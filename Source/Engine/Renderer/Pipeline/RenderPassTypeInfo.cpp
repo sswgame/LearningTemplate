@@ -402,6 +402,13 @@ namespace sw
                         info._flags          = Flag::kCompute;
                         break;
                     }
+                    case RenderPassType::VFXParticleSort:
+                    {
+                        // 렌더 입력 · 인자를 구조 버퍼로 읽고 순서 버퍼 UAV 에 쓴다 — 그룹공유 바이토닉 정렬이라 간접 인자 능력과 무관하다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXParticleSort;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
                     case RenderPassType::DepthHistory:
                     {
                         // 깊이 없이 R32 실수 RT 하나에 풀스크린 삼각형을 그린다(입력은 C++ 가 직접 건다 — 파이프라인 패스가 아니라 입력 계약이 없다).

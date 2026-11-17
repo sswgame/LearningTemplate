@@ -7,6 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
@@ -132,6 +133,10 @@ namespace sw::editor
             }
         }
 
+        // 한 파일 예외는 그 에셋의 서술에 든다 — 규칙 파일에 두면 옮기거나 이름을 바꿀 때 조용히 빗나간다.
+        if ( AssetImportRuleUtil::rejectSingleFilePatterns( _listRule, "TextureImportConfig" ) == false )
+            return clearAndFail();
+
         SW_LOG_INFO_ID( "TextureImportConfig.LoadedTextureImportConfigPresetsRules", "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
 
         // 조건 없는 규칙은 나머지를 받는 규칙이라 맨 끝에 하나만 둔다. 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 오류로 멈춘다 — 그 위치를 이름으로 짚어 준다.
@@ -238,6 +243,23 @@ namespace sw::editor
             }
         }
         match._error = "TextureImportConfig: shared source '" + string( relativePath ) + "' names rule '" + sharedRule + "' which is not in the config. Import its model again.";
+        return match;
+    }
+
+    TextureImportRuleMatch TextureImportConfig::resolveRule( string_view relativePath, const vector<AssetImportOverride>& listOverride ) const
+    {
+        TextureImportRuleMatch match = findMatchingRule( relativePath );
+        if ( match.hasError() || listOverride.empty() )
+            return match;
+        const string label = "TextureImportConfig override of '" + string( relativePath ) + "'";
+        JSONDocument doc;
+        if ( const expected<void> built = AssetImportRuleUtil::makeOverrideObject( listOverride, { "name", "filter", "inherits" }, doc ); built.has_value() == false )
+        {
+            match._error = AssetImportRuleUtil::describeOverrideError( label, built.error() );
+            return match;
+        }
+        if ( JSONFields::readProperties( doc.getRoot(), match._rule, label ) == false )
+            match._error = label + ": an import override in the .meta is not a texture rule setting or its value cannot be read (see the error above).";
         return match;
     }
 

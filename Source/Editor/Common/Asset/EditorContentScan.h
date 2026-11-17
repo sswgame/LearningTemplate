@@ -20,6 +20,11 @@ namespace sw::editor
      */
     struct EditorContentScan
     {
+        /**
+         * @brief 리소스 id @p assetID(디스크 표기)가 에디터 목록에 보이는 파일이면 true 입니다 — 다른 프로세스의 시나리오 사본과 원본 곁 서술(`.meta`)은 아니다.
+         * @details 트리 훑기(`collectFiles`)와 에셋 색인의 한 파일 갱신(`EditorAssetIndex::applyChanges`)이 같은 규칙을 이것 하나로 쓴다.
+         */
+        [[nodiscard]] static bool isListedFile( string_view assetID );
         /** @brief @p folder(리소스 루트 아래 디스크 경로) 아래 파일입니다. 확장자 @p extension 이 비면 모두입니다. */
         [[nodiscard]] static bool collectFiles( string_view contentRoot, string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive,
                                                 const StopToken& stopToken = {} );

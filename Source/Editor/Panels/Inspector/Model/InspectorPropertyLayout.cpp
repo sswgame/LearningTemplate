@@ -9,6 +9,7 @@
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -32,18 +33,21 @@ namespace sw::editor
     {
         outListGroup.clear();
         // 상속분은 기반 → 파생 순으로 온다(파생이 같은 이름을 다시 선언하면 그 위치에서 바뀐다 — `TypeInfo::getPropertiesWithBase`).
-        type.forEachProperty( [&]( const PropertyInfo& prop )
+        // 차례는 걷기 한 곳(`ReflectPropertyVisitor`)이 정한다. 인스턴스 없이 스키마만 걷는다.
+        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+        (void)propertyVisitor.visitProperties( type, static_cast<const void*>( nullptr ), [&]( const ReflectVisitConstField& field )
         {
+            const PropertyInfo& prop = field._property;
             if ( prop._metadata->getEditor()._bHideInInspector == SW_TRUE )
-                return;
+                return ReflectVisitFlow::Continue;
             for ( const hashed_string& drawnName : listDrawnName )
             {
                 if ( drawnName == prop._name )
-                    return;
+                    return ReflectVisitFlow::Continue;
             }
             const string label = getPropertyLabel( prop );
             if ( filter.matchesAny( { string_view{ prop._name.c_str() }, string_view{ label }, string_view{ prop._metadata->getEditor()._category.c_str() } } ) == false )
-                return;
+                return ReflectVisitFlow::Continue;
 
             const string_view       category = prop._metadata->getEditor()._category.empty() ? string_view{ "General" } : string_view{ prop._metadata->getEditor()._category.c_str() };
             InspectorPropertyGroup* pGroup   = nullptr;
@@ -61,7 +65,8 @@ namespace sw::editor
                 pGroup = &outListGroup.back();
             }
             pGroup->_listProperty.push_back( &prop );
-        }, true );
+            return ReflectVisitFlow::Continue;
+        } );
     }
 
     string InspectorPropertyLayout::getPropertyLabel( const PropertyInfo& prop )

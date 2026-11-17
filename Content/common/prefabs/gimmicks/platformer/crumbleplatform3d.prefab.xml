@@ -1,5 +1,5 @@
 <?asset guid="9ac2874f1266e5b1dea454f088237fd5"?>
-<Prefab formatVersion="0" name="CrumblePlatform3D">
+<Prefab formatVersion="1" name="CrumblePlatform3D">
 	<GameObject _schemaVersion="0" _name="CrumblePlatform3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _componentName="RigidBodyComponent"

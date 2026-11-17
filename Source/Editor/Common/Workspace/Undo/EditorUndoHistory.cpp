@@ -25,9 +25,8 @@ namespace sw::editor
         };
     } // namespace
 
-    UndoBufferLimit EditorUndoHistory::readConfiguredLimit()
+    UndoBufferLimit EditorUndoHistory::readConfiguredLimit( const EditorToolDefaults& defaults )
     {
-        const EditorToolDefaults& defaults = getEditorToolDefaults();
         return UndoBufferLimit{ defaults._undoMaxCommandCount, static_cast<uint64>( defaults._undoBufferMegabytes ) * EditorUndoHistoryInternal::kBytesPerMegabyte };
     }
 

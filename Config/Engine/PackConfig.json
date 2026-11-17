@@ -1,11 +1,18 @@
 {
   "_compression": {
     "_codec": "Zlib",
-    "_level": 0
+    "_level": 0,
+    "_blockSize": 131072,
+    "_writeWindowBytes": 67108864,
+    "_listStoredExtension": [ ".dds", ".ktx2", ".png", ".jpg", ".ogg" ]
   },
   "_layout": {
     "_mode": "Sorted",
     "_maxHolePercent": 25
+  },
+  "_split": {
+    "_maxPackBytes": 4294967295,
+    "_listChunkRule": []
   },
   "_bExcludeRawShaderSource": true,
   "_listGlobalExcludeDirectory": [

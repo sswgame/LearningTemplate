@@ -4,6 +4,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 #include <shared_mutex>
@@ -29,6 +30,7 @@ namespace sw
         void                            updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                        const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle                 createGPUVertexBuffer( uint32 sizeBytes ) override;
         void                            updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
         void                            destroyBuffer( RHIBufferHandle buffer ) override;
@@ -49,6 +51,9 @@ namespace sw
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
+        RHIDescriptorIndex              reserveBindlessTextureIndex() override;
+        [[nodiscard]] bool              activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
@@ -63,8 +68,8 @@ namespace sw
          * @details `createTexture2D` 와 `createPlacedTexture2D` 가 같은 몸을 쓴다 — 서술 · 뷰 · 상태 규칙이 두 벌로 갈리지 않게.
          */
         RHITextureHandle createTextureResource( const RHITextureDesc& desc, ID3D12Heap* pHeap, uint64 offsetBytes );
-        /** @brief 내용을 채워 업로드 힙 버퍼(GENERIC_READ)를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
-        RHIBufferHandle createUploadBuffer( const void* pData, uint32 sizeBytes );
+        /** @brief default 힙 버퍼를 만들고 @p pData 를 스테이징 복사로 올립니다. 올린 뒤 @p readState 에 둔다(정점 · 인덱스 — 정적 자원을 시스템 메모리에서 그리지 않는다). */
+        RHIBufferHandle createDefaultBufferWithData( const void* pData, uint32 sizeBytes, D3D12_RESOURCE_STATES readState );
         /**
          * @brief bindless 힙에서 디스크립터 인덱스를 하나 가져옵니다.
          * @param lock 부르는 쪽이 **이미 잡고 있는** `_bindlessMutex` 잠금.
@@ -111,10 +116,10 @@ namespace sw
         /**
          * @brief 레지스트리의 슬롯 `index` 에 리소스, 핸들 쌍, 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 기록합니다. 슬롯이 모자라면 늘립니다.
          * @details 다섯 등록 경로(텍스처 SRV, 구조 버퍼 SRV, CBV, 버퍼 UAV, 텍스처 UAV)가 같이 씁니다.
-         *          인덱스를 집은 잠금 안에서 부릅니다.
+         *          인덱스를 집은 잠금 안에서 부릅니다. @p link 는 번호가 자원의 것인가(등록) · 받은 쪽의 것인가(예약)다(`RHIBindlessLink`).
          */
         void writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource, const BindlessHandleSet& handle,
-                                  RHIBufferHandle buffer, RHITextureHandle texture );
+                                  RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link );
 
         /** @brief 텍스처와 버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시합니다). */
         void releaseBindlessSlot( RHIDescriptorIndex index );

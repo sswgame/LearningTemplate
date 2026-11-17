@@ -8,7 +8,7 @@
 -->
 <Scenario name="game.empty.gameplaydebug" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/gimmickshowcase.scene.xml"/>
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 발판 · 나무통이 땅에 닿는 30 프레임 — 접촉 기록이 쌓인다(시간이 내용) -->
 	<DevCommand line="debug.target clear"/>
 	<!-- 범용 Action 추적: 켜 두고 끝에서 본다(이 무대가 동작을 부르지 않으면 "on, no call yet" — 섹션은 그래도 돈다) -->
 	<DevCommand line="action.trace on"/>
@@ -27,7 +27,7 @@
 	<ExpectLog id="DebugHUD.PrintLine" contains=": Begin " atLeast="1"/>
 	<!-- 캐릭터 이동: 스텝 기록을 켜고 몇 프레임 돈 뒤 본다(이 무대에 캐릭터가 없으면 target: none 한 줄 — 섹션은 그래도 돈다) -->
 	<DevCommand line="movement.history on"/>
-	<Wait frames="10"/>
+	<AdvanceSimulation frames="10"/> <!-- 스텝 기록 10 프레임(시간이 내용) -->
 	<DevCommand line="hud.print movement"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="[movement] target: " atLeast="1"/>
 	<DevCommand line="movement.history off"/>

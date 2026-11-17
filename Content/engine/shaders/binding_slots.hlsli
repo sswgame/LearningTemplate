@@ -145,6 +145,10 @@
 // 투명 패스의 입자 그리기는 입자(StructuredBuffer<GPUParticle> g_SwParticles, particle.hlsl). 두 그리기는 같은 패스에서 겹치지 않는다.
 #define SW_SLOT_PASS_SRV 11
 
+// 입자 순서 목록 (StructuredBuffer<uint> g_SwParticleOrder, particle.hlsl) — 정렬 모드가 있는 방출기가 (루트 상수의 구간 + SV_InstanceID) 번째 칸에서 입자 번호를 읽는다.
+// 비어 있던 t0..t3 의 칸 하나다(네 백엔드의 t 띠 · DX12 테이블 · Vulkan 범위 안이라 띠를 옮기지 않는다). 투명 패스의 입자 그리기만 건다.
+#define SW_SLOT_PARTICLE_ORDER_SRV 3
+
 // 지금 뷰의 라이트 그리드 (StructuredBuffer<uint> g_SwLightGrid) — 클러스터드 라이팅의 빛 목록(배치는 10 절 SW_LIGHT_GRID_*).
 // 뷰마다 그리드 하나가 이 버퍼에 이어 붙고, PassCB g_SwLightGridBase 가 지금 뷰의 첫 단어다. 만드는 쪽은 둘이다 — CPU(LightGrid, 동적 버퍼)와
 // GPU 컴퓨트(light_grid.hlsl, 기본 힙 UAV). 셰이더는 어느 쪽이 만들었는지 모른다(lighting.hlsli LightGrid::loadWord 하나만 읽는다).

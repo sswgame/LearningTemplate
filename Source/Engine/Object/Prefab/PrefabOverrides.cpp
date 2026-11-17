@@ -640,7 +640,11 @@ namespace sw
                 continue;
             }
             PrefabOverridesInternal::collectDifferences( component, defaultElement, false, listAttribute, listChild );
-            const XMLNode   element   = outList.appendChild( component.getName() );
+            const XMLNode element = outList.appendChild( component.getName() );
+            // 지역 id 는 기본값과 견줄 칸이 아니라 컴포넌트의 정체다 — 덮어쓰기 비교(collectDifferences)는 빼지만 저장 글에는 늘 남긴다.
+            // 빼면 다시 읽은 컴포넌트의 id 가 0 이라 부착 키(#16진)를 찾지 못해 기본값 빼기 대조가 늘 졌다(PrefabAsset.DefaultOmitMismatch).
+            if ( const utf8* pLocalID = component.findAttribute( PrefabOverridesInternal::kLocalID ); pLocalID != nullptr )
+                element.appendAttribute( PrefabOverridesInternal::kLocalID, pLocalID );
             const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
             if ( pTypeInfo != nullptr )
             {

@@ -24,6 +24,7 @@ namespace sw
                                                                        const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createBuffer( const RHIBufferDesc& desc ) override;
         RHIBufferHandle                 createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle                 createGPUVertexBuffer( uint32 sizeBytes ) override;
         void                            updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
         void                            destroyBuffer( RHIBufferHandle buffer ) override;
@@ -40,6 +41,9 @@ namespace sw
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
+        RHIDescriptorIndex              reserveBindlessTextureIndex() override;
+        [[nodiscard]] bool              activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) override;
         bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
         void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
         RHIDescriptorIndex              registerBindlessBufferSRV( RHIBufferHandle buffer ) override;

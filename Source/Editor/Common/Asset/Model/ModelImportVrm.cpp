@@ -12,6 +12,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
@@ -162,7 +163,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarNamesNodes", "VRM '%#': avatar names nodes that are not skin joints (%# bones): %#", sourcePath, listMissing.size(), Internal::joinNames( listMissing ).c_str() );
     }
 
-    bool ModelImportVrm::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeVrmAvatar( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._avatar.isEmpty() )
@@ -170,7 +171,7 @@ namespace sw::editor
         if ( result._listIgnoredAvatarKey.empty() == false )
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarValuesNot", "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
         const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarDef::kExtension ) );
-        if ( FileUtil::ensureDirectoryExists( sideFolder ) == false || FileUtil::writeTextFile( avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
+        if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAvatar", "Failed to write avatar %#", avatarPath.c_str() );
             return false;
@@ -183,7 +184,7 @@ namespace sw::editor
         if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
         {
             const string facialPath = FileUtil::joinPath( sideFolder, string( stem ) + string( FacialRig::kExtension ) );
-            if ( FileUtil::writeTextFile( facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFacialRig", "Failed to write facial rig %#", facialPath.c_str() );
                 return false;
@@ -194,7 +195,7 @@ namespace sw::editor
         if ( bHasSpringRig )
         {
             const string rigPath = FileUtil::joinPath( sideFolder, string( stem ) + string( RigAsset::kExtension ) );
-            if ( FileUtil::writeTextFile( rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSpringRig", "Failed to write spring rig %#", rigPath.c_str() );
                 return false;
@@ -240,7 +241,7 @@ namespace sw::editor
         // 문서 트리로 만들어 엔진 XML 서식으로 저장한다(이스케이프는 문서가 한다) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XMLAssetMerge).
         XMLDocument   prefabDocument;
         const XMLNode prefab = prefabDocument.appendRoot( "Prefab" );
-        prefab.appendAttribute( "formatVersion", "0" );
+        prefab.appendAttribute( "formatVersion", "1" ); // `PrefabAsset::kAssetType._formatVersion`
         prefab.appendAttribute( "name", stem );
         const XMLNode gameObject = prefab.appendChild( "GameObject" );
         gameObject.appendAttribute( "_schemaVersion", "0" );
@@ -277,7 +278,7 @@ namespace sw::editor
             return false;
         }
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        const bool   bWritten   = prefabDocument.saveToFile( prefabPath );
+        const bool   bWritten   = ImportedAssetStore::writeTextWithIdentity( assetPaths, prefabPath, prefabDocument.saveToString() );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write section prefab %#", prefabPath.c_str() );

@@ -18,6 +18,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -37,6 +38,17 @@ namespace sw
          *          무엇이 텍스트인지를 해시가 따로 알지 않는다.
          */
         static uint64 computeBytes( const uint8* pData, size_t size );
+        /** @brief 조각으로 세는 내용 해시의 첫 상태입니다. `appendBytes( kInitialState, …)` 를 이어 부른 값이 이어 붙인 바이트의 `computeBytes` 와 같다(팩 스트림 쓰기). */
+        static constexpr uint64 kInitialState = HashUtil::kFNVOffset64;
+        /** @brief 상태 @p state 에 @p size 바이트를 더한 내용 해시 상태입니다. */
+        static uint64 appendBytes( uint64 state, const uint8* pData, size_t size );
+        /**
+         * @brief 파일을 조각(`kStreamChunkBytes`)으로 읽어 내용 해시를 셉니다 — 캐시를 보지 않고, 파일을 한 벡터로 들지 않는다(큰 팩 · 모드 팩).
+         * @return 열거나 읽지 못하면 오류입니다. 빈 파일은 `kInitialState` 다.
+         */
+        [[nodiscard]] static expected<uint64> computeFileStream( string_view absPath, uint64* pOutByteCount = nullptr );
+        /** @brief `computeFileStream` 이 한 번에 읽는 바이트입니다. */
+        static constexpr uint64 kStreamChunkBytes = 4 * constant::memory::kBytesPerMegabyte;
         /** @brief 바이트의 내용 해시입니다. */
         static uint64 computeBytes( const vector<uint8>& bytes ) { return computeBytes( bytes.data(), bytes.size() ); }
         /**

@@ -45,6 +45,11 @@ namespace sw
         /** @brief @p inoutTransaction 에 줄을 넣습니다("없어야 한다" 조건). 줄이 틀리면 트랜잭션이 Invalid 가 되게 넣는다(효과도 커밋되지 않는다). */
         static void stageEntry( ServiceTransaction& inoutTransaction, const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow );
         /**
+         * @brief 권한이 없어 거절한 운영 요청을 감사 줄 하나로 따로 커밋합니다(효과는 없다). 동작 코드는 `<요청 동작>.denied` 이다.
+         * @details 고유 값은 새 난수라 같은 요청이 나중에 허락돼도 효과 줄의 키와 겹치지 않는다. 커밋 실패는 경고 로그만 남기고 거절은 그대로다.
+         */
+        static void commitRejection( IServiceStoreConnection& connection, const ServiceAuditEntry& requestedEntry );
+        /**
          * @brief @p subjectPrefix 로 시작하는 줄을 최근 것부터 읽습니다.
          * @param cursor 앞 호출의 @p outNextCursor(처음은 빈 글)
          * @param outNextCursor 더 있을 수 있으면 다음 호출의 커서, 끝이면 빈 글
@@ -76,11 +81,20 @@ namespace sw
         [[nodiscard]] virtual ServiceStoreResult checkAllowed( IServiceStoreConnection& connection ) const = 0;
     };
 
-    /** @brief 운영 쓰기를 거는 사람과 그 허락 확인입니다. 가드는 필수다 — 없으면 쓰기를 거절한다. */
+    /**
+     * @brief 운영 쓰기를 거는 사람과 그 허락 확인(권한 증명)입니다. 운영 요청 처리기(라이브 운영 · 서버 디렉터리)는 이것을 받아야만 부를 수 있다.
+     * @details 기본 생성자가 없어 가드를 적지 않고는 만들 수 없다. 가드가 null 이면 `ServiceAuditedWrite::commit` 이 거절하고 감사 줄을 남긴다.
+     */
     struct ServiceOperator
     {
-        uint64                               _actorID{ 0 };
-        shared_ptr<const IServiceWriteGuard> _pGuard{};
+        uint64                               _actorID;
+        shared_ptr<const IServiceWriteGuard> _pGuard;
+
+        ServiceOperator( uint64 actorID, shared_ptr<const IServiceWriteGuard> pGuard )
+            : _actorID{ actorID }
+            , _pGuard{ std::move( pGuard ) }
+        {
+        }
     };
 
     /** @brief 운영 쓰기 하나의 결과입니다. */
@@ -88,7 +102,7 @@ namespace sw
     {
         Ok = 0,
         NotFound,   ///< 지울 레코드가 없다
-        Forbidden,  ///< 가드가 허락하지 않았다(그사이 강등 등) — 가드가 없는 쓰기도 여기다
+        Forbidden,  ///< 가드가 허락하지 않았다(그사이 강등 등) — 가드가 없는 쓰기도 여기다. 거절 감사 줄(`<동작>.denied`)을 남긴다
         Unavailable ///< 닿지 못했거나 그사이 바뀌었다(다시 하면 된다)
     };
 

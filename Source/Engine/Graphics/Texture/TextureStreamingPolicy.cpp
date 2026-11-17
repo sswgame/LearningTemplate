@@ -13,6 +13,7 @@ namespace sw
     {
         struct TextureStreamingPolicyInternal
         {
+            static constexpr uint32 kPercentScale = 100; ///< 비율(%)의 분모
             /** @brief 유휴를 반영한 필요한 밉입니다 — 오래 안 보인 텍스처는 가장 작은 밉만 있으면 된다. */
             static uint32 computeWantedFirstMip( const TextureStreamingCandidate& candidate, const TextureStreamingConfig& config )
             {
@@ -38,6 +39,17 @@ namespace sw
             mipBytes = MathUtil::max( mipBytes / 4u, uint64( 1 ) );
         }
         return total;
+    }
+
+    uint32 TextureStreamingPolicy::computeWantedFirstMip( uint32 topWidth, uint32 mipCount, float32 requiredTexels )
+    {
+        const uint32 lastMip = mipCount > 0 ? mipCount - 1u : 0u;
+        if ( requiredTexels <= 0.0f )
+            return lastMip;
+        uint32 mip = 0;
+        while ( mip < lastMip && static_cast<float32>( MathUtil::max( topWidth >> ( mip + 1u ), 1u ) ) >= requiredTexels )
+            ++mip;
+        return mip;
     }
 
     void TextureStreamingPolicy::decide( vector_reference<const TextureStreamingCandidate> listCandidate, uint64 residentBytes, uint64 budgetBytes, const TextureStreamingConfig& config,
@@ -70,8 +82,8 @@ namespace sw
                     break;
                 const TextureStreamingCandidate& candidate = listCandidate[index];
                 const uint32                     lastMip   = candidate._mipCount > 0 ? candidate._mipCount - 1u : 0u;
-                if ( candidate._residentFirstMip >= lastMip )
-                    continue; // 더 내릴 밉이 없다
+                if ( candidate._residentFirstMip >= lastMip || candidate._framesSinceChange < config._minFramesBetweenChanges )
+                    continue; // 더 내릴 밉이 없거나 막 바꿨다
                 // 필요한 것보다 많이 들었으면 필요한 밉까지, 이미 필요한 만큼이면 한 밉 — 예산이 화면보다 우선이다.
                 const uint32 target = MathUtil::min( lastMip, MathUtil::max( candidate._residentFirstMip + 1u, listWanted[index] ) );
                 resident -= candidate.computeResidentBytes( candidate._residentFirstMip ) - candidate.computeResidentBytes( target );
@@ -87,14 +99,16 @@ namespace sw
                 return listWanted[lhs] < listWanted[rhs];
             return listCandidate[lhs]._idleFrames < listCandidate[rhs]._idleFrames;
         } );
+        // 올리기 선 — 예산에서 여유를 뺀다. 내리기는 예산을 넘을 때라 둘 사이에서는 아무것도 바꾸지 않는다.
+        const uint64 promoteBudget = budgetBytes - budgetBytes / Internal::kPercentScale * MathUtil::min( config._promoteBudgetMarginPercent, Internal::kPercentScale );
         for ( const uint32 index : listOrder )
         {
             const TextureStreamingCandidate& candidate = listCandidate[index];
             const uint32                     wanted    = listWanted[index];
-            if ( wanted >= candidate._residentFirstMip )
-                continue; // 이미 필요한 만큼 있다(더 많은 것은 예산을 넘을 때만 내린다)
+            if ( wanted >= candidate._residentFirstMip || candidate._framesSinceChange < config._minFramesBetweenChanges )
+                continue; // 이미 필요한 만큼 있거나(더 많은 것은 예산을 넘을 때만 내린다) 막 바꿨다
             const uint64 cost = candidate.computeResidentBytes( wanted ) - candidate.computeResidentBytes( candidate._residentFirstMip );
-            if ( resident + cost > budgetBytes )
+            if ( resident + cost > promoteBudget )
                 continue;
             resident += cost;
             outListDecision.push_back( TextureStreamingDecision{ index, wanted } );

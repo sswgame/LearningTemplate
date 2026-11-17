@@ -48,7 +48,13 @@ namespace sw
 
     bool ServiceTransaction::isWellFormed() const
     {
-        if ( _listWrite.empty() || static_cast<int32>( _listWrite.size() ) > kMaxWriteCount )
+        int32 conditionCount = 0;
+        for ( const ServiceWrite& write : _listWrite )
+        {
+            conditionCount += write._kind == ServiceWrite::Kind::Require ? 1 : 0;
+        }
+        const int32 writeCount = static_cast<int32>( _listWrite.size() ) - conditionCount;
+        if ( _listWrite.empty() || writeCount > kMaxWriteCount || conditionCount > kMaxConditionCount )
             return false;
         for ( size_t writeIndex = 0; writeIndex < _listWrite.size(); ++writeIndex )
         {

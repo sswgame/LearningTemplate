@@ -295,8 +295,9 @@ namespace sw
         unique_ptr<CoasterRuntime> pCoaster = make_unique<CoasterRuntime>();
         pCoaster->_pTrack                   = make_unique<CoasterTrack>( builder.makeTrack( true ) );
         pCoaster->_placementIndex           = placementIndex;
-        outStats                            = CoasterRideStats::analyze( *pCoaster->_pTrack, CoasterPhysicsParams{} );
-        if ( pCoaster->_train.initialize( pCoaster->_pTrack.get(), CoasterPhysicsParams{}, 0.0f ) == false )
+        const CoasterPhysicsParams& physics = _pLayoutCatalog->getPhysics(); // 규칙 자산(`coasters.xml` 의 `<Physics>` · `<Rating>`)
+        outStats                            = CoasterRideStats::analyze( *pCoaster->_pTrack, physics );
+        if ( pCoaster->_train.initialize( pCoaster->_pTrack.get(), physics, 0.0f ) == false )
             return nullptr;
         return pCoaster;
     }

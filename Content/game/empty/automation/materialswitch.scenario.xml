@@ -11,9 +11,8 @@
 -->
 <Scenario name="game.empty.materialswitch" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/toonshowcase.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="materialswitch_on.ppm"/>
 	<DevCommand line="matswitch game/empty/materials/toonshowcase_toon.material Outline 0"/>
 	<Wait frames="1"/>
@@ -23,9 +22,9 @@
 	<Wait frames="1"/>
 	<Expect watch="Assets.Pending" equals="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="20"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="materialswitch_off.ppm"/>
-	<Wait frames="2"/>
 	<ExpectImagesDiffer first="materialswitch_on.ppm" second="materialswitch_off.ppm" minDiffering="0.0005" maxDiffering="0.2"/>
 	<Pass/>
 </Scenario>

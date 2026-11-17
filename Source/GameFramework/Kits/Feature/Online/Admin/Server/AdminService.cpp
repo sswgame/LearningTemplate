@@ -191,6 +191,8 @@ namespace sw
         if ( pControl == nullptr )
             return false;
         const AdminRequest& request = pending._request;
+        // 등급 확인을 쓰는 저장 일 안에서 다시 한다(라이브 운영 전달과 같다) — 앞 일의 확인과 쓰기 사이에 강등되면 쓰기가 Forbidden 이고 거절 감사 줄이 남는다.
+        const ServiceOperator actor{ pending._adminID, AdminStoreLogic::makeRoleGuard( pending._adminID, AdminProtocol::getRequiredRole( pending._method, request._sanctionKind ) ) };
         switch ( pending._method )
         {
             case AdminMethod::SetMaintenance::kID:
@@ -201,12 +203,12 @@ namespace sw
                 change._messageKey         = request._messageKey;
                 change._startMs            = request._startMs;
                 change._endMs              = request._endMs;
-                pControl->setMaintenance( change, pending._adminID, request._memo, pending._nowMs, callID );
+                pControl->setMaintenance( change, actor, request._memo, pending._nowMs, callID );
                 return true;
             }
             case AdminMethod::ClearMaintenance::kID:
             {
-                pControl->clearMaintenance( request._scope, pending._adminID, request._memo, pending._nowMs, callID );
+                pControl->clearMaintenance( request._scope, actor, request._memo, pending._nowMs, callID );
                 return true;
             }
             case AdminMethod::PostAnnouncement::kID:
@@ -218,12 +220,12 @@ namespace sw
                 change._endMs          = request._endMs;
                 change._priority       = request._priority;
                 change._bLiteralText   = request._bLiteralText;
-                pControl->postAnnouncement( change, pending._adminID, pending._nowMs, callID );
+                pControl->postAnnouncement( change, actor, pending._nowMs, callID );
                 return true;
             }
             case AdminMethod::RemoveAnnouncement::kID:
             {
-                pControl->removeAnnouncement( request._announcementID, pending._adminID, pending._nowMs, callID );
+                pControl->removeAnnouncement( request._announcementID, actor, pending._nowMs, callID );
                 return true;
             }
             default:
@@ -302,6 +304,8 @@ namespace sw
                 result = AdminResult::Ok;
             else if ( completion._result == ServerDirectoryControlResult::Invalid )
                 result = AdminServiceResult::fail( OnlineError::kInvalidRequest );
+            else if ( completion._result == ServerDirectoryControlResult::Forbidden )
+                result = AdminServiceResult::fail( OnlineError::kForbidden );
             else if ( completion._result == ServerDirectoryControlResult::NotFound )
                 result = AdminResult::NotFound;
             finishForwardedCall( completion._requestTag, result );

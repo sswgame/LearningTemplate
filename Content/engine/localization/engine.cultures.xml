@@ -1,4 +1,4 @@
-<CultureTable>
+<CultureTable formatVersion="1">
 	<numberingSystems>
 		<numberingSystem id="latn" digits="0123456789" />
 		<numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩" />
@@ -16,593 +16,582 @@
 		<currency code="RUB" symbol="₽" digits="2" />
 		<currency code="SAR" symbol="SAR" digits="2" />
 	</currencies>
-	<cultures>
-		<culture code="ar"
-		         nativeName="العربية"
-		         rightToLeft="true"
-		         digits="arab"
-		         decimalSeparator="٫"
-		         groupSeparator="٬"
-		         percentPattern="#٪؜"
-		         currencyCode="SAR"
-		         currencyPattern="¤ #">
-			<pluralRules zero="n = 0 @integer 0 @decimal 0.0, 0.00, 0.000, 0.0000" one="n = 1 @integer 1 @decimal 1.0, 1.00, 1.000, 1.0000" two="n = 2 @integer 2 @decimal 2.0, 2.00, 2.000, 2.0000" few="n % 100 = 3..10 @integer 3~10, 103~110, 1003, … @decimal 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 103.0, 1003.0, …" many="n % 100 = 11..99 @integer 11~26, 111, 1011, … @decimal 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 111.0, 1011.0, …" other="@integer 100~102, 200~202, 300~302, 400~402, 500~502, 600, 1000, 10000, 100000, 1000000, … @decimal 0.1~0.9, 1.1~1.7, 10.1, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="d‏/M‏/y" medium="dd‏/MM‏/y" long="d MMMM y" />
-			<timePatterns short="h:mm a" medium="h:mm:ss a" />
-			<monthNames>
-				<item>يناير</item>
-				<item>فبراير</item>
-				<item>مارس</item>
-				<item>أبريل</item>
-				<item>مايو</item>
-				<item>يونيو</item>
-				<item>يوليو</item>
-				<item>أغسطس</item>
-				<item>سبتمبر</item>
-				<item>أكتوبر</item>
-				<item>نوفمبر</item>
-				<item>ديسمبر</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>يناير</item>
-				<item>فبراير</item>
-				<item>مارس</item>
-				<item>أبريل</item>
-				<item>مايو</item>
-				<item>يونيو</item>
-				<item>يوليو</item>
-				<item>أغسطس</item>
-				<item>سبتمبر</item>
-				<item>أكتوبر</item>
-				<item>نوفمبر</item>
-				<item>ديسمبر</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>ص</item>
-				<item>م</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans Arabic</item>
-				<item>Segoe UI</item>
-				<item>Noto Sans</item>
-			</fonts>
-		</culture>
-		<culture code="de" digits="latn"
-		         nativeName="Deutsch"
-		         decimalSeparator=","
-		         groupSeparator="."
-		         percentPattern="# %"
-		         currencyCode="EUR"
-		         currencyPattern="# ¤">
-			<pluralRules one="i = 1 and v = 0 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="dd.MM.yy" medium="dd.MM.y" long="d. MMMM y" />
-			<timePatterns short="HH:mm" medium="HH:mm:ss" />
-			<monthNames>
-				<item>Januar</item>
-				<item>Februar</item>
-				<item>März</item>
-				<item>April</item>
-				<item>Mai</item>
-				<item>Juni</item>
-				<item>Juli</item>
-				<item>August</item>
-				<item>September</item>
-				<item>Oktober</item>
-				<item>November</item>
-				<item>Dezember</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>Jan.</item>
-				<item>Feb.</item>
-				<item>März</item>
-				<item>Apr.</item>
-				<item>Mai</item>
-				<item>Juni</item>
-				<item>Juli</item>
-				<item>Aug.</item>
-				<item>Sept.</item>
-				<item>Okt.</item>
-				<item>Nov.</item>
-				<item>Dez.</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>AM</item>
-				<item>PM</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans</item>
-				<item>Arial</item>
-			</fonts>
-		</culture>
-		<culture code="en"
-		         nativeName="English"
-		         rightToLeft="false"
-		         digits="latn"
-		         decimalSeparator="."
-		         groupSeparator=","
-		         percentPattern="#%"
-		         currencyCode="USD"
-		         currencyPattern="¤#">
-			<pluralRules one="i = 1 and v = 0 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<ordinalRules one="n % 10 = 1 and n % 100 != 11 @integer 1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …" two="n % 10 = 2 and n % 100 != 12 @integer 2, 22, 32, 42, 52, 62, 72, 82, 102, 1002, …" few="n % 10 = 3 and n % 100 != 13 @integer 3, 23, 33, 43, 53, 63, 73, 83, 103, 1003, …" other="@integer 0, 4~18, 100, 1000, 10000, 100000, 1000000, …" />
-			<datePatterns short="M/d/yy" medium="MMM d, y" long="MMMM d, y" />
-			<timePatterns short="h:mm a" medium="h:mm:ss a" />
-			<monthNames>
-				<item>January</item>
-				<item>February</item>
-				<item>March</item>
-				<item>April</item>
-				<item>May</item>
-				<item>June</item>
-				<item>July</item>
-				<item>August</item>
-				<item>September</item>
-				<item>October</item>
-				<item>November</item>
-				<item>December</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>Jan</item>
-				<item>Feb</item>
-				<item>Mar</item>
-				<item>Apr</item>
-				<item>May</item>
-				<item>Jun</item>
-				<item>Jul</item>
-				<item>Aug</item>
-				<item>Sep</item>
-				<item>Oct</item>
-				<item>Nov</item>
-				<item>Dec</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>AM</item>
-				<item>PM</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans</item>
-				<item>Arial</item>
-			</fonts>
-		</culture>
-		<culture code="en_gb" parent="en" nativeName="English (UK)" currencyCode="GBP">
-			<datePatterns short="dd/MM/y" medium="d MMM y" long="d MMMM y" />
-			<timePatterns short="HH:mm" medium="HH:mm:ss" />
-			<dayPeriods>
-				<item>am</item>
-				<item>pm</item>
-			</dayPeriods>
-		</culture>
-		<culture code="es" digits="latn"
-		         nativeName="Español"
-		         decimalSeparator=","
-		         groupSeparator="."
-		         percentPattern="# %"
-		         currencyCode="EUR"
-		         currencyPattern="# ¤">
-			<pluralRules one="n = 1 @integer 1 @decimal 1.0, 1.00, 1.000, 1.0000" many="e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5 @integer 1000000, 1c6, 2c6, 3c6, 4c6, 5c6, 6c6, … @decimal 1.0000001c6, 1.1c6, 2.0000001c6, 2.1c6, 3.0000001c6, 3.1c6, …" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1c3, 2c3, 3c3, 4c3, 5c3, 6c3, … @decimal 0.0~0.9, 1.1~1.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 1.0001c3, 1.1c3, 2.0001c3, 2.1c3, 3.0001c3, 3.1c3, …" />
-			<ordinalRules one="n % 10 = 1,3 and n % 100 != 11 @integer 1, 3, 13, 21, 23, 31, 33, 41, 101, 1001, …" other="@integer 0, 2, 4~12, 14~18, 100, 1000, 10000, 100000, 1000000, …" />
-			<datePatterns short="d/M/yy" medium="d MMM y" long="d 'de' MMMM 'de' y" />
-			<timePatterns short="H:mm" medium="H:mm:ss" />
-			<monthNames>
-				<item>enero</item>
-				<item>febrero</item>
-				<item>marzo</item>
-				<item>abril</item>
-				<item>mayo</item>
-				<item>junio</item>
-				<item>julio</item>
-				<item>agosto</item>
-				<item>septiembre</item>
-				<item>octubre</item>
-				<item>noviembre</item>
-				<item>diciembre</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>ene</item>
-				<item>feb</item>
-				<item>mar</item>
-				<item>abr</item>
-				<item>may</item>
-				<item>jun</item>
-				<item>jul</item>
-				<item>ago</item>
-				<item>sept</item>
-				<item>oct</item>
-				<item>nov</item>
-				<item>dic</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>a. m.</item>
-				<item>p. m.</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans</item>
-				<item>Arial</item>
-			</fonts>
-		</culture>
-		<culture code="fa"
-		         nativeName="فارسی"
-		         rightToLeft="true"
-		         digits="arabext"
-		         decimalSeparator="٫"
-		         groupSeparator="٬"
-		         percentPattern="#٪"
-		         currencyCode="IRR"
-		         currencyPattern="# ¤">
-			<pluralRules one="i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04" other="@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="y/M/d" medium="d MMM y" long="d MMMM y" />
-			<timePatterns short="H:mm" medium="H:mm:ss" />
-			<monthNames>
-				<item>ژانویه</item>
-				<item>فوریه</item>
-				<item>مارس</item>
-				<item>آوریل</item>
-				<item>مه</item>
-				<item>ژوئن</item>
-				<item>ژوئیه</item>
-				<item>اوت</item>
-				<item>سپتامبر</item>
-				<item>اکتبر</item>
-				<item>نوامبر</item>
-				<item>دسامبر</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>ژانویه</item>
-				<item>فوریه</item>
-				<item>مارس</item>
-				<item>آوریل</item>
-				<item>مه</item>
-				<item>ژوئن</item>
-				<item>ژوئیه</item>
-				<item>اوت</item>
-				<item>سپتامبر</item>
-				<item>اکتبر</item>
-				<item>نوامبر</item>
-				<item>دسامبر</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>ق.ظ.</item>
-				<item>ب.ظ.</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans Arabic</item>
-				<item>Segoe UI</item>
-				<item>Noto Sans</item>
-			</fonts>
-		</culture>
-		<culture code="fr" digits="latn"
-		         nativeName="Français"
-		         decimalSeparator=","
-		         groupSeparator=" "
-		         percentPattern="# %"
-		         currencyCode="EUR"
-		         currencyPattern="# ¤">
-			<pluralRules one="i = 0..1 @integer 0, 1 @decimal 0.0~1.5" many="e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5 @integer 1000000, 1c6, 2c6, 3c6, 4c6, 5c6, 6c6, … @decimal 1.0000001c6, 1.1c6, 2.0000001c6, 2.1c6, 3.0000001c6, 3.1c6, …" other="@integer 2~17, 100, 1000, 10000, 100000, 1c3, 2c3, 3c3, 4c3, 5c3, 6c3, … @decimal 2.0~3.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 1.0001c3, 1.1c3, 2.0001c3, 2.1c3, 3.0001c3, 3.1c3, …" />
-			<ordinalRules one="n = 1 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, …" />
-			<datePatterns short="dd/MM/y" medium="d MMM y" long="d MMMM y" />
-			<timePatterns short="HH:mm" medium="HH:mm:ss" />
-			<monthNames>
-				<item>janvier</item>
-				<item>février</item>
-				<item>mars</item>
-				<item>avril</item>
-				<item>mai</item>
-				<item>juin</item>
-				<item>juillet</item>
-				<item>août</item>
-				<item>septembre</item>
-				<item>octobre</item>
-				<item>novembre</item>
-				<item>décembre</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>janv.</item>
-				<item>févr.</item>
-				<item>mars</item>
-				<item>avr.</item>
-				<item>mai</item>
-				<item>juin</item>
-				<item>juil.</item>
-				<item>août</item>
-				<item>sept.</item>
-				<item>oct.</item>
-				<item>nov.</item>
-				<item>déc.</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>AM</item>
-				<item>PM</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans</item>
-				<item>Arial</item>
-			</fonts>
-		</culture>
-		<culture code="he"
-		         nativeName="עברית"
-		         rightToLeft="true"
-		         digits="latn"
-		         decimalSeparator="."
-		         groupSeparator=","
-		         percentPattern="#%"
-		         currencyCode="ILS"
-		         currencyPattern="# ¤">
-			<pluralRules one="i = 1 and v = 0 or i = 0 and v != 0 @integer 1 @decimal 0.0~0.9, 0.00~0.05" two="i = 2 and v = 0 @integer 2" other="@integer 0, 3~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.0~2.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="d.M.y" medium="d בMMM y" long="d בMMMM y" />
-			<timePatterns short="H:mm" medium="H:mm:ss" />
-			<monthNames>
-				<item>ינואר</item>
-				<item>פברואר</item>
-				<item>מרץ</item>
-				<item>אפריל</item>
-				<item>מאי</item>
-				<item>יוני</item>
-				<item>יולי</item>
-				<item>אוגוסט</item>
-				<item>ספטמבר</item>
-				<item>אוקטובר</item>
-				<item>נובמבר</item>
-				<item>דצמבר</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>ינו׳</item>
-				<item>פבר׳</item>
-				<item>מרץ</item>
-				<item>אפר׳</item>
-				<item>מאי</item>
-				<item>יוני</item>
-				<item>יולי</item>
-				<item>אוג׳</item>
-				<item>ספט׳</item>
-				<item>אוק׳</item>
-				<item>נוב׳</item>
-				<item>דצמ׳</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>לפנה״צ</item>
-				<item>אחה״צ</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans Hebrew</item>
-				<item>Segoe UI</item>
-				<item>Noto Sans</item>
-			</fonts>
-		</culture>
-		<culture code="ja" digits="latn" nativeName="日本語" currencyCode="JPY" currencyPattern="¤#">
-			<pluralRules other="@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="y/MM/dd" medium="y/MM/dd" long="y年M月d日" />
-			<timePatterns short="H:mm" medium="H:mm:ss" />
-			<monthNames>
-				<item>1月</item>
-				<item>2月</item>
-				<item>3月</item>
-				<item>4月</item>
-				<item>5月</item>
-				<item>6月</item>
-				<item>7月</item>
-				<item>8月</item>
-				<item>9月</item>
-				<item>10月</item>
-				<item>11月</item>
-				<item>12月</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>1月</item>
-				<item>2月</item>
-				<item>3月</item>
-				<item>4月</item>
-				<item>5月</item>
-				<item>6月</item>
-				<item>7月</item>
-				<item>8月</item>
-				<item>9月</item>
-				<item>10月</item>
-				<item>11月</item>
-				<item>12月</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>午前</item>
-				<item>午後</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans JP</item>
-				<item>Yu Gothic UI</item>
-				<item>Meiryo</item>
-				<item>Noto Sans</item>
-			</fonts>
-		</culture>
-		<culture code="ko" digits="latn" nativeName="한국어" currencyCode="KRW" currencyPattern="¤#">
-			<pluralRules other="@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="yy. M. d." medium="y. M. d." long="y년 M월 d일" />
-			<timePatterns short="a h:mm" medium="a h:mm:ss" />
-			<monthNames>
-				<item>1월</item>
-				<item>2월</item>
-				<item>3월</item>
-				<item>4월</item>
-				<item>5월</item>
-				<item>6월</item>
-				<item>7월</item>
-				<item>8월</item>
-				<item>9월</item>
-				<item>10월</item>
-				<item>11월</item>
-				<item>12월</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>1월</item>
-				<item>2월</item>
-				<item>3월</item>
-				<item>4월</item>
-				<item>5월</item>
-				<item>6월</item>
-				<item>7월</item>
-				<item>8월</item>
-				<item>9월</item>
-				<item>10월</item>
-				<item>11월</item>
-				<item>12월</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>오전</item>
-				<item>오후</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans KR</item>
-				<item>Malgun Gothic</item>
-				<item>Apple SD Gothic Neo</item>
-				<item>Noto Sans</item>
-			</fonts>
-		</culture>
-		<culture code="pl" digits="latn"
-		         nativeName="Polski"
-		         decimalSeparator=","
-		         groupSeparator=" "
-		         percentPattern="#%"
-		         currencyCode="PLN"
-		         currencyPattern="# ¤">
-			<pluralRules one="i = 1 and v = 0 @integer 1" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14 @integer 2~4, 22~24, 32~34, 42~44, 52~54, 62, 102, 1002, …" many="v = 0 and i != 1 and i % 10 = 0..1 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 12..14 @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …" other="@decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="d.MM.y" medium="d MMM y" long="d MMMM y" />
-			<timePatterns short="HH:mm" medium="HH:mm:ss" />
-			<monthNames>
-				<item>stycznia</item>
-				<item>lutego</item>
-				<item>marca</item>
-				<item>kwietnia</item>
-				<item>maja</item>
-				<item>czerwca</item>
-				<item>lipca</item>
-				<item>sierpnia</item>
-				<item>września</item>
-				<item>października</item>
-				<item>listopada</item>
-				<item>grudnia</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>sty</item>
-				<item>lut</item>
-				<item>mar</item>
-				<item>kwi</item>
-				<item>maj</item>
-				<item>cze</item>
-				<item>lip</item>
-				<item>sie</item>
-				<item>wrz</item>
-				<item>paź</item>
-				<item>lis</item>
-				<item>gru</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>AM</item>
-				<item>PM</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans</item>
-				<item>Arial</item>
-			</fonts>
-		</culture>
-		<culture code="qps_ploc" parent="en" nativeName="[Ƥşḗŭḓǿ Ȧƈƈḗƞŧḗḓ]" pseudo="accented" />
-		<culture code="qps_plocm"
-		         parent="en"
-		         nativeName="[Ƥşḗŭḓǿ Ḿīřřǿřḗḓ]"
-		         rightToLeft="true"
-		         pseudo="mirrored" />
-		<culture code="ru" digits="latn"
-		         nativeName="Русский"
-		         decimalSeparator=","
-		         groupSeparator=" "
-		         percentPattern="# %"
-		         currencyCode="RUB"
-		         currencyPattern="# ¤">
-			<pluralRules one="v = 0 and i % 10 = 1 and i % 100 != 11 @integer 1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …" few="v = 0 and i % 10 = 2..4 and i % 100 != 12..14 @integer 2~4, 22~24, 32~34, 42~44, 52~54, 62, 102, 1002, …" many="v = 0 and i % 10 = 0 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 11..14 @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …" other="@decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="dd.MM.y" medium="d MMM y 'г'." long="d MMMM y 'г'." />
-			<timePatterns short="HH:mm" medium="HH:mm:ss" />
-			<monthNames>
-				<item>января</item>
-				<item>февраля</item>
-				<item>марта</item>
-				<item>апреля</item>
-				<item>мая</item>
-				<item>июня</item>
-				<item>июля</item>
-				<item>августа</item>
-				<item>сентября</item>
-				<item>октября</item>
-				<item>ноября</item>
-				<item>декабря</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>янв.</item>
-				<item>февр.</item>
-				<item>мар.</item>
-				<item>апр.</item>
-				<item>мая</item>
-				<item>июн.</item>
-				<item>июл.</item>
-				<item>авг.</item>
-				<item>сент.</item>
-				<item>окт.</item>
-				<item>нояб.</item>
-				<item>дек.</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>AM</item>
-				<item>PM</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans</item>
-				<item>Arial</item>
-			</fonts>
-		</culture>
-		<culture code="zh" digits="latn" nativeName="简体中文" currencyCode="CNY" currencyPattern="¤#">
-			<pluralRules other="@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
-			<datePatterns short="y/M/d" medium="y年M月d日" long="y年M月d日" />
-			<timePatterns short="HH:mm" medium="HH:mm:ss" />
-			<monthNames>
-				<item>一月</item>
-				<item>二月</item>
-				<item>三月</item>
-				<item>四月</item>
-				<item>五月</item>
-				<item>六月</item>
-				<item>七月</item>
-				<item>八月</item>
-				<item>九月</item>
-				<item>十月</item>
-				<item>十一月</item>
-				<item>十二月</item>
-			</monthNames>
-			<monthAbbreviations>
-				<item>1月</item>
-				<item>2月</item>
-				<item>3月</item>
-				<item>4月</item>
-				<item>5月</item>
-				<item>6月</item>
-				<item>7月</item>
-				<item>8月</item>
-				<item>9月</item>
-				<item>10月</item>
-				<item>11月</item>
-				<item>12月</item>
-			</monthAbbreviations>
-			<dayPeriods>
-				<item>上午</item>
-				<item>下午</item>
-			</dayPeriods>
-			<fonts>
-				<item>Noto Sans SC</item>
-				<item>Microsoft YaHei</item>
-				<item>Noto Sans</item>
-			</fonts>
-		</culture>
-		<culture code="zh_tw" parent="zh" nativeName="繁體中文" currencyCode="TWD">
-			<timePatterns short="a h:mm" medium="a h:mm:ss" />
-			<fonts>
-				<item>Noto Sans TC</item>
-				<item>Microsoft JhengHei</item>
-				<item>Noto Sans</item>
-			</fonts>
-		</culture>
-	</cultures>
+	<CultureInfo _code="ar" _nativeName="العربية" _numberingSystem="arab" _decimalSeparator="٫" _groupSeparator="٬" _percentPattern="#٪؜" _currencyCode="SAR" _currencyPattern="¤ #" _bRightToLeft="true">
+		<_pluralRules>
+			<entry key="zero">n = 0 @integer 0 @decimal 0.0, 0.00, 0.000, 0.0000</entry>
+			<entry key="one">n = 1 @integer 1 @decimal 1.0, 1.00, 1.000, 1.0000</entry>
+			<entry key="two">n = 2 @integer 2 @decimal 2.0, 2.00, 2.000, 2.0000</entry>
+			<entry key="few">n % 100 = 3..10 @integer 3~10, 103~110, 1003, … @decimal 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 103.0, 1003.0, …</entry>
+			<entry key="many">n % 100 = 11..99 @integer 11~26, 111, 1011, … @decimal 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 111.0, 1011.0, …</entry>
+			<entry key="other">@integer 100~102, 200~202, 300~302, 400~402, 500~502, 600, 1000, 10000, 100000, 1000000, … @decimal 0.1~0.9, 1.1~1.7, 10.1, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="d‏/M‏/y" _medium="dd‏/MM‏/y" _long="d MMMM y" />
+		<_timePatterns _short="h:mm a" _medium="h:mm:ss a" />
+		<_listMonthName>
+			<item>يناير</item>
+			<item>فبراير</item>
+			<item>مارس</item>
+			<item>أبريل</item>
+			<item>مايو</item>
+			<item>يونيو</item>
+			<item>يوليو</item>
+			<item>أغسطس</item>
+			<item>سبتمبر</item>
+			<item>أكتوبر</item>
+			<item>نوفمبر</item>
+			<item>ديسمبر</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>يناير</item>
+			<item>فبراير</item>
+			<item>مارس</item>
+			<item>أبريل</item>
+			<item>مايو</item>
+			<item>يونيو</item>
+			<item>يوليو</item>
+			<item>أغسطس</item>
+			<item>سبتمبر</item>
+			<item>أكتوبر</item>
+			<item>نوفمبر</item>
+			<item>ديسمبر</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>ص</item>
+			<item>م</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans Arabic</item>
+			<item>Segoe UI</item>
+			<item>Noto Sans</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="de" _nativeName="Deutsch" _numberingSystem="latn" _decimalSeparator="," _groupSeparator="." _percentPattern="# %" _currencyCode="EUR" _currencyPattern="# ¤">
+		<_pluralRules>
+			<entry key="one">i = 1 and v = 0 @integer 1</entry>
+			<entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="dd.MM.yy" _medium="dd.MM.y" _long="d. MMMM y" />
+		<_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+		<_listMonthName>
+			<item>Januar</item>
+			<item>Februar</item>
+			<item>März</item>
+			<item>April</item>
+			<item>Mai</item>
+			<item>Juni</item>
+			<item>Juli</item>
+			<item>August</item>
+			<item>September</item>
+			<item>Oktober</item>
+			<item>November</item>
+			<item>Dezember</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>Jan.</item>
+			<item>Feb.</item>
+			<item>März</item>
+			<item>Apr.</item>
+			<item>Mai</item>
+			<item>Juni</item>
+			<item>Juli</item>
+			<item>Aug.</item>
+			<item>Sept.</item>
+			<item>Okt.</item>
+			<item>Nov.</item>
+			<item>Dez.</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>AM</item>
+			<item>PM</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans</item>
+			<item>Arial</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="en" _nativeName="English" _numberingSystem="latn" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="USD" _currencyPattern="¤#" _bRightToLeft="false">
+		<_pluralRules>
+			<entry key="one">i = 1 and v = 0 @integer 1</entry>
+			<entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_ordinalRules>
+			<entry key="one">n % 10 = 1 and n % 100 != 11 @integer 1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …</entry>
+			<entry key="two">n % 10 = 2 and n % 100 != 12 @integer 2, 22, 32, 42, 52, 62, 72, 82, 102, 1002, …</entry>
+			<entry key="few">n % 10 = 3 and n % 100 != 13 @integer 3, 23, 33, 43, 53, 63, 73, 83, 103, 1003, …</entry>
+			<entry key="other">@integer 0, 4~18, 100, 1000, 10000, 100000, 1000000, …</entry>
+		</_ordinalRules>
+		<_datePatterns _short="M/d/yy" _medium="MMM d, y" _long="MMMM d, y" />
+		<_timePatterns _short="h:mm a" _medium="h:mm:ss a" />
+		<_listMonthName>
+			<item>January</item>
+			<item>February</item>
+			<item>March</item>
+			<item>April</item>
+			<item>May</item>
+			<item>June</item>
+			<item>July</item>
+			<item>August</item>
+			<item>September</item>
+			<item>October</item>
+			<item>November</item>
+			<item>December</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>Jan</item>
+			<item>Feb</item>
+			<item>Mar</item>
+			<item>Apr</item>
+			<item>May</item>
+			<item>Jun</item>
+			<item>Jul</item>
+			<item>Aug</item>
+			<item>Sep</item>
+			<item>Oct</item>
+			<item>Nov</item>
+			<item>Dec</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>AM</item>
+			<item>PM</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans</item>
+			<item>Arial</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="en_gb" _base="en" _nativeName="English (UK)" _currencyCode="GBP">
+		<_datePatterns _short="dd/MM/y" _medium="d MMM y" _long="d MMMM y" />
+		<_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+		<_listDayPeriod>
+			<item>am</item>
+			<item>pm</item>
+		</_listDayPeriod>
+	</CultureInfo>
+	<CultureInfo _code="es" _nativeName="Español" _numberingSystem="latn" _decimalSeparator="," _groupSeparator="." _percentPattern="# %" _currencyCode="EUR" _currencyPattern="# ¤">
+		<_pluralRules>
+			<entry key="one">n = 1 @integer 1 @decimal 1.0, 1.00, 1.000, 1.0000</entry>
+			<entry key="many">e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5 @integer 1000000, 1c6, 2c6, 3c6, 4c6, 5c6, 6c6, … @decimal 1.0000001c6, 1.1c6, 2.0000001c6, 2.1c6, 3.0000001c6, 3.1c6, …</entry>
+			<entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1c3, 2c3, 3c3, 4c3, 5c3, 6c3, … @decimal 0.0~0.9, 1.1~1.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 1.0001c3, 1.1c3, 2.0001c3, 2.1c3, 3.0001c3, 3.1c3, …</entry>
+		</_pluralRules>
+		<_ordinalRules>
+			<entry key="one">n % 10 = 1,3 and n % 100 != 11 @integer 1, 3, 13, 21, 23, 31, 33, 41, 101, 1001, …</entry>
+			<entry key="other">@integer 0, 2, 4~12, 14~18, 100, 1000, 10000, 100000, 1000000, …</entry>
+		</_ordinalRules>
+		<_datePatterns _short="d/M/yy" _medium="d MMM y" _long="d 'de' MMMM 'de' y" />
+		<_timePatterns _short="H:mm" _medium="H:mm:ss" />
+		<_listMonthName>
+			<item>enero</item>
+			<item>febrero</item>
+			<item>marzo</item>
+			<item>abril</item>
+			<item>mayo</item>
+			<item>junio</item>
+			<item>julio</item>
+			<item>agosto</item>
+			<item>septiembre</item>
+			<item>octubre</item>
+			<item>noviembre</item>
+			<item>diciembre</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>ene</item>
+			<item>feb</item>
+			<item>mar</item>
+			<item>abr</item>
+			<item>may</item>
+			<item>jun</item>
+			<item>jul</item>
+			<item>ago</item>
+			<item>sept</item>
+			<item>oct</item>
+			<item>nov</item>
+			<item>dic</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>a. m.</item>
+			<item>p. m.</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans</item>
+			<item>Arial</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="fa" _nativeName="فارسی" _numberingSystem="arabext" _decimalSeparator="٫" _groupSeparator="٬" _percentPattern="#٪" _currencyCode="IRR" _currencyPattern="# ¤" _bRightToLeft="true">
+		<_pluralRules>
+			<entry key="one">i = 0 or n = 1 @integer 0, 1 @decimal 0.0~1.0, 0.00~0.04</entry>
+			<entry key="other">@integer 2~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.1~2.6, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="y/M/d" _medium="d MMM y" _long="d MMMM y" />
+		<_timePatterns _short="H:mm" _medium="H:mm:ss" />
+		<_listMonthName>
+			<item>ژانویه</item>
+			<item>فوریه</item>
+			<item>مارس</item>
+			<item>آوریل</item>
+			<item>مه</item>
+			<item>ژوئن</item>
+			<item>ژوئیه</item>
+			<item>اوت</item>
+			<item>سپتامبر</item>
+			<item>اکتبر</item>
+			<item>نوامبر</item>
+			<item>دسامبر</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>ژانویه</item>
+			<item>فوریه</item>
+			<item>مارس</item>
+			<item>آوریل</item>
+			<item>مه</item>
+			<item>ژوئن</item>
+			<item>ژوئیه</item>
+			<item>اوت</item>
+			<item>سپتامبر</item>
+			<item>اکتبر</item>
+			<item>نوامبر</item>
+			<item>دسامبر</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>ق.ظ.</item>
+			<item>ب.ظ.</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans Arabic</item>
+			<item>Segoe UI</item>
+			<item>Noto Sans</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="fr" _nativeName="Français" _numberingSystem="latn" _decimalSeparator="," _groupSeparator=" " _percentPattern="# %" _currencyCode="EUR" _currencyPattern="# ¤">
+		<_pluralRules>
+			<entry key="one">i = 0..1 @integer 0, 1 @decimal 0.0~1.5</entry>
+			<entry key="many">e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5 @integer 1000000, 1c6, 2c6, 3c6, 4c6, 5c6, 6c6, … @decimal 1.0000001c6, 1.1c6, 2.0000001c6, 2.1c6, 3.0000001c6, 3.1c6, …</entry>
+			<entry key="other">@integer 2~17, 100, 1000, 10000, 100000, 1c3, 2c3, 3c3, 4c3, 5c3, 6c3, … @decimal 2.0~3.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, 1.0001c3, 1.1c3, 2.0001c3, 2.1c3, 3.0001c3, 3.1c3, …</entry>
+		</_pluralRules>
+		<_ordinalRules>
+			<entry key="one">n = 1 @integer 1</entry>
+			<entry key="other">@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, …</entry>
+		</_ordinalRules>
+		<_datePatterns _short="dd/MM/y" _medium="d MMM y" _long="d MMMM y" />
+		<_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+		<_listMonthName>
+			<item>janvier</item>
+			<item>février</item>
+			<item>mars</item>
+			<item>avril</item>
+			<item>mai</item>
+			<item>juin</item>
+			<item>juillet</item>
+			<item>août</item>
+			<item>septembre</item>
+			<item>octobre</item>
+			<item>novembre</item>
+			<item>décembre</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>janv.</item>
+			<item>févr.</item>
+			<item>mars</item>
+			<item>avr.</item>
+			<item>mai</item>
+			<item>juin</item>
+			<item>juil.</item>
+			<item>août</item>
+			<item>sept.</item>
+			<item>oct.</item>
+			<item>nov.</item>
+			<item>déc.</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>AM</item>
+			<item>PM</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans</item>
+			<item>Arial</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="he" _nativeName="עברית" _numberingSystem="latn" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="ILS" _currencyPattern="# ¤" _bRightToLeft="true">
+		<_pluralRules>
+			<entry key="one">i = 1 and v = 0 or i = 0 and v != 0 @integer 1 @decimal 0.0~0.9, 0.00~0.05</entry>
+			<entry key="two">i = 2 and v = 0 @integer 2</entry>
+			<entry key="other">@integer 0, 3~17, 100, 1000, 10000, 100000, 1000000, … @decimal 1.0~2.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="d.M.y" _medium="d בMMM y" _long="d בMMMM y" />
+		<_timePatterns _short="H:mm" _medium="H:mm:ss" />
+		<_listMonthName>
+			<item>ינואר</item>
+			<item>פברואר</item>
+			<item>מרץ</item>
+			<item>אפריל</item>
+			<item>מאי</item>
+			<item>יוני</item>
+			<item>יולי</item>
+			<item>אוגוסט</item>
+			<item>ספטמבר</item>
+			<item>אוקטובר</item>
+			<item>נובמבר</item>
+			<item>דצמבר</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>ינו׳</item>
+			<item>פבר׳</item>
+			<item>מרץ</item>
+			<item>אפר׳</item>
+			<item>מאי</item>
+			<item>יוני</item>
+			<item>יולי</item>
+			<item>אוג׳</item>
+			<item>ספט׳</item>
+			<item>אוק׳</item>
+			<item>נוב׳</item>
+			<item>דצמ׳</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>לפנה״צ</item>
+			<item>אחה״צ</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans Hebrew</item>
+			<item>Segoe UI</item>
+			<item>Noto Sans</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="ja" _nativeName="日本語" _numberingSystem="latn" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="JPY" _currencyPattern="¤#">
+		<_pluralRules>
+			<entry key="other">@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="y/MM/dd" _medium="y/MM/dd" _long="y年M月d日" />
+		<_timePatterns _short="H:mm" _medium="H:mm:ss" />
+		<_listMonthName>
+			<item>1月</item>
+			<item>2月</item>
+			<item>3月</item>
+			<item>4月</item>
+			<item>5月</item>
+			<item>6月</item>
+			<item>7月</item>
+			<item>8月</item>
+			<item>9月</item>
+			<item>10月</item>
+			<item>11月</item>
+			<item>12月</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>1月</item>
+			<item>2月</item>
+			<item>3月</item>
+			<item>4月</item>
+			<item>5月</item>
+			<item>6月</item>
+			<item>7月</item>
+			<item>8月</item>
+			<item>9月</item>
+			<item>10月</item>
+			<item>11月</item>
+			<item>12月</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>午前</item>
+			<item>午後</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans JP</item>
+			<item>Yu Gothic UI</item>
+			<item>Meiryo</item>
+			<item>Noto Sans</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="ko" _nativeName="한국어" _numberingSystem="latn" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="KRW" _currencyPattern="¤#">
+		<_pluralRules>
+			<entry key="other">@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="yy. M. d." _medium="y. M. d." _long="y년 M월 d일" />
+		<_timePatterns _short="a h:mm" _medium="a h:mm:ss" />
+		<_listMonthName>
+			<item>1월</item>
+			<item>2월</item>
+			<item>3월</item>
+			<item>4월</item>
+			<item>5월</item>
+			<item>6월</item>
+			<item>7월</item>
+			<item>8월</item>
+			<item>9월</item>
+			<item>10월</item>
+			<item>11월</item>
+			<item>12월</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>1월</item>
+			<item>2월</item>
+			<item>3월</item>
+			<item>4월</item>
+			<item>5월</item>
+			<item>6월</item>
+			<item>7월</item>
+			<item>8월</item>
+			<item>9월</item>
+			<item>10월</item>
+			<item>11월</item>
+			<item>12월</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>오전</item>
+			<item>오후</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans KR</item>
+			<item>Malgun Gothic</item>
+			<item>Apple SD Gothic Neo</item>
+			<item>Noto Sans</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="pl" _nativeName="Polski" _numberingSystem="latn" _decimalSeparator="," _groupSeparator=" " _percentPattern="#%" _currencyCode="PLN" _currencyPattern="# ¤">
+		<_pluralRules>
+			<entry key="one">i = 1 and v = 0 @integer 1</entry>
+			<entry key="few">v = 0 and i % 10 = 2..4 and i % 100 != 12..14 @integer 2~4, 22~24, 32~34, 42~44, 52~54, 62, 102, 1002, …</entry>
+			<entry key="many">v = 0 and i != 1 and i % 10 = 0..1 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 12..14 @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …</entry>
+			<entry key="other">@decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="d.MM.y" _medium="d MMM y" _long="d MMMM y" />
+		<_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+		<_listMonthName>
+			<item>stycznia</item>
+			<item>lutego</item>
+			<item>marca</item>
+			<item>kwietnia</item>
+			<item>maja</item>
+			<item>czerwca</item>
+			<item>lipca</item>
+			<item>sierpnia</item>
+			<item>września</item>
+			<item>października</item>
+			<item>listopada</item>
+			<item>grudnia</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>sty</item>
+			<item>lut</item>
+			<item>mar</item>
+			<item>kwi</item>
+			<item>maj</item>
+			<item>cze</item>
+			<item>lip</item>
+			<item>sie</item>
+			<item>wrz</item>
+			<item>paź</item>
+			<item>lis</item>
+			<item>gru</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>AM</item>
+			<item>PM</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans</item>
+			<item>Arial</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="qps_ploc" _base="en" _nativeName="[Ƥşḗŭḓǿ Ȧƈƈḗƞŧḗḓ]" _pseudoMode="Accented">
+	</CultureInfo>
+	<CultureInfo _code="qps_plocm" _base="en" _nativeName="[Ƥşḗŭḓǿ Ḿīřřǿřḗḓ]" _pseudoMode="Mirrored" _bRightToLeft="true">
+	</CultureInfo>
+	<CultureInfo _code="ru" _nativeName="Русский" _numberingSystem="latn" _decimalSeparator="," _groupSeparator=" " _percentPattern="# %" _currencyCode="RUB" _currencyPattern="# ¤">
+		<_pluralRules>
+			<entry key="one">v = 0 and i % 10 = 1 and i % 100 != 11 @integer 1, 21, 31, 41, 51, 61, 71, 81, 101, 1001, …</entry>
+			<entry key="few">v = 0 and i % 10 = 2..4 and i % 100 != 12..14 @integer 2~4, 22~24, 32~34, 42~44, 52~54, 62, 102, 1002, …</entry>
+			<entry key="many">v = 0 and i % 10 = 0 or v = 0 and i % 10 = 5..9 or v = 0 and i % 100 = 11..14 @integer 0, 5~19, 100, 1000, 10000, 100000, 1000000, …</entry>
+			<entry key="other">@decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="dd.MM.y" _medium="d MMM y 'г'." _long="d MMMM y 'г'." />
+		<_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+		<_listMonthName>
+			<item>января</item>
+			<item>февраля</item>
+			<item>марта</item>
+			<item>апреля</item>
+			<item>мая</item>
+			<item>июня</item>
+			<item>июля</item>
+			<item>августа</item>
+			<item>сентября</item>
+			<item>октября</item>
+			<item>ноября</item>
+			<item>декабря</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>янв.</item>
+			<item>февр.</item>
+			<item>мар.</item>
+			<item>апр.</item>
+			<item>мая</item>
+			<item>июн.</item>
+			<item>июл.</item>
+			<item>авг.</item>
+			<item>сент.</item>
+			<item>окт.</item>
+			<item>нояб.</item>
+			<item>дек.</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>AM</item>
+			<item>PM</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans</item>
+			<item>Arial</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="zh" _nativeName="简体中文" _numberingSystem="latn" _decimalSeparator="." _groupSeparator="," _percentPattern="#%" _currencyCode="CNY" _currencyPattern="¤#">
+		<_pluralRules>
+			<entry key="other">@integer 0~15, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …</entry>
+		</_pluralRules>
+		<_datePatterns _short="y/M/d" _medium="y年M月d日" _long="y年M月d日" />
+		<_timePatterns _short="HH:mm" _medium="HH:mm:ss" />
+		<_listMonthName>
+			<item>一月</item>
+			<item>二月</item>
+			<item>三月</item>
+			<item>四月</item>
+			<item>五月</item>
+			<item>六月</item>
+			<item>七月</item>
+			<item>八月</item>
+			<item>九月</item>
+			<item>十月</item>
+			<item>十一月</item>
+			<item>十二月</item>
+		</_listMonthName>
+		<_listMonthAbbreviation>
+			<item>1月</item>
+			<item>2月</item>
+			<item>3月</item>
+			<item>4月</item>
+			<item>5月</item>
+			<item>6月</item>
+			<item>7月</item>
+			<item>8月</item>
+			<item>9月</item>
+			<item>10月</item>
+			<item>11月</item>
+			<item>12月</item>
+		</_listMonthAbbreviation>
+		<_listDayPeriod>
+			<item>上午</item>
+			<item>下午</item>
+		</_listDayPeriod>
+		<_listFont>
+			<item>Noto Sans SC</item>
+			<item>Microsoft YaHei</item>
+			<item>Noto Sans</item>
+		</_listFont>
+	</CultureInfo>
+	<CultureInfo _code="zh_tw" _base="zh" _nativeName="繁體中文" _currencyCode="TWD">
+		<_timePatterns _short="a h:mm" _medium="a h:mm:ss" />
+		<_listFont>
+			<item>Noto Sans TC</item>
+			<item>Microsoft JhengHei</item>
+			<item>Noto Sans</item>
+		</_listFont>
+	</CultureInfo>
 </CultureTable>

@@ -73,6 +73,11 @@ namespace sw
         void prepare( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const GPULightBuffer& lightBuffer, const SkyGradient& sky, bool bHasSky, bool bPipelineReady );
         /** @brief 이번 프레임에 컴퓨트가 도는지입니다. */
         [[nodiscard]] bool isActive() const { return _bActive == SW_TRUE; }
+        /**
+         * @brief 기록을 0 에서 다시 쌓거나 복셀(점유 · 발광)이 바뀐 뒤 갱신한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다 — 감시 값 `Render.GIAccumulatedFrames`.
+         * @details 복셀이 바뀌어도 기록은 0 으로 돌리지 않고 섞어 따라간다 — 그래서 섞는 비율의 초기 가속(`_framesSinceReset`)과 따로 센다.
+         */
+        [[nodiscard]] uint32 getAccumulatedFrames() const { return _bActive == SW_TRUE ? _framesSinceInputChange : 0u; }
         /** @brief 컴퓨트를 기록합니다(라이트 업로드 뒤 · 조명 패스 앞). @p placeholderSRV 는 라이트가 없는 프레임에 t0 에 거는 자리표입니다. */
         void dispatch( IRHICommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV );
         /** @brief 버퍼를 놓습니다. */
@@ -86,6 +91,7 @@ namespace sw
         vector<shared_ptr<const SceneVoxelGrid>> _listHeldGrid;   ///< 지금 복셀 버퍼에 올라간 격자들(포인터 비교가 믿을 수 있도록 붙들고 있는다)
         vector<uint64>                           _listHistoryKey; ///< 기록이 만들어진 볼륨 구성(볼륨 번호 · 프로브 수가 번갈아) - 달라지면 기록을 0 으로 되돌린다
         uint32                                   _framesSinceReset{ 0 };
+        uint32                                   _framesSinceInputChange{ 0 }; ///< 기록을 되돌리거나 복셀이 바뀐 뒤의 갱신 프레임 수(`getAccumulatedFrames`)
         uint32                                   _frameCounter{ 0 };
         uint32                                   _totalProbes{ 0 };
         uint8                                    _bActive{ SW_FALSE };

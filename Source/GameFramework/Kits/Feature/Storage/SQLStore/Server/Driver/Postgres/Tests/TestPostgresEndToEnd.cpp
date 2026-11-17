@@ -573,6 +573,10 @@ namespace
                 _mapMigration[static_cast<int32>( parseInt( listParam[0] ) )] = listParam[2];
                 result._tag                                                   = "INSERT 0 1";
             }
+            else if ( StringUtil::startsWith( sql, "INSERT INTO sw_schema_breaking" ) )
+            {
+                result._tag = "INSERT 0 1"; // shortcut: 값을 두지 않는다 — 이 서버의 기록은 늘 이 빌드의 목록과 같아 Breaking 표를 읽는 길(더 새 DB)에 들지 않는다. 그 길을 여기서 볼 때 둔다
+            }
             else if ( sql.find( "sw_record" ) != string::npos )
             {
                 runRecordStatement( sql, listParam, result );

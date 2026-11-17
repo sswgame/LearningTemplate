@@ -82,7 +82,7 @@ SW_TEST_CASE( MeshMergeTest, SectionedPartsMergeOnlyThePickedSections )
     SW_EXPECT_EQUAL( 18u, merged.getIndexCount() );
     // 첫 구간의 첫 정점은 몸의 정점 8(s2 의 첫 정점)이고 스킨도 그 정점 것이다.
     const uint32 firstCorner = merged.getIndices()[merged.getSections()[0]._firstIndex];
-    SW_EXPECT_NEAR( 8.0f, merged.getVertices()[firstCorner]._arrPosition[0], 1e-6f );
+    SW_EXPECT_NEAR( 8.0f, merged.getCPUView().getVertices()[firstCorner]._arrPosition[0], 1e-6f );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( merged.getSkinVertices()[firstCorner]._arrJoint[0] ) );
     SW_EXPECT_EQUAL( 4u, merged.getSkinBoneCount() );
 
@@ -120,7 +120,7 @@ SW_TEST_CASE( MeshMergeTest, PartsWithAnotherBindPoseMoveToTheFirstPose )
     const expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( listPart, nullptr );
     SW_REQUIRE_TRUE( result.has_value() );
     SW_EXPECT_TRUE( result->_mesh->getSkinBinding().matches( body->getSkinBinding() ) );
-    const vector<RHIVertex>& listVertex = result->_mesh->getVertices();
+    const vector<RHIVertex>& listVertex = result->_mesh->getCPUView().getVertices();
     SW_REQUIRE_TRUE( listVertex.size() == 8u );
     SW_EXPECT_NEAR( 0.0f, listVertex[1]._arrPosition[2], 1e-4f ); // 몸은 그대로다
     SW_EXPECT_NEAR( 5.0f, listVertex[5]._arrPosition[2], 1e-4f ); // 옷의 본 1 정점은 옮겼다

@@ -1,5 +1,5 @@
 <?asset guid="77504283fb81eb184edae8cc469874f6"?>
-<Scene formatVersion="2" name="PickFloor">
+<Scene formatVersion="3" name="PickFloor">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

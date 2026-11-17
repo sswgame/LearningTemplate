@@ -2,10 +2,10 @@
 // 암호는 가짜 AEAD(`FakeNetSecurityProvider`, 키 · nonce · AAD 를 섞은 태그)로 본다 — 실제 AES-GCM 은 OpenSSL 제공자의 몫이다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
-#include "GameFramework/Runtime/Online/Security/Tests/FakeNetSecurityProvider.h"
 
 using namespace sw;
 

@@ -65,10 +65,10 @@ namespace sw
     {
     }
 
-    void MetroidvaniaAbilitySet::initialize( const MetroidvaniaCatalog* pCatalog, const PlatformerSettings& baseSettings )
+    void MetroidvaniaAbilitySet::initialize( const MetroidvaniaCatalog& catalog )
     {
-        _pCatalog                     = pCatalog;
-        _baseSettings                 = baseSettings;
+        _pCatalog                     = &catalog;
+        _baseSettings                 = catalog.getBaseMotor();
         _baseSettings._bWallJump      = SW_FALSE;
         _baseSettings._extraJumpCount = 0;
         _baseSettings._airDashCount   = 0;

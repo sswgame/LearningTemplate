@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Serialization/ByteStream.h"
 
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -464,21 +465,24 @@ namespace sw
         }
         ByteWriter writer( outListBuffer );
         uint32     propCount{ static_cast<uint32>( listUnknown.size() ) };
-        for ( const PropertyInfo& prop : listProp )
+        // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`) — 세는 걸음과 쓰는 걸음이 같은 칸을 같은 차례로 본다.
+        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+        (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
         {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
-                continue;
-            ++propCount;
-        }
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, field._property, context ) )
+                ++propCount;
+            return ReflectVisitFlow::Continue;
+        } );
         outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + static_cast<size_t>( propCount ) * 32 );
         SW_ASSERT( propCount <= BinarySerializerInternal::kTaggedCountMask );
         // 머리의 위 8비트가 버전이다(`kTaggedVersionShift` 설명 참고). 읽는 쪽이 이 스트림의 enum 을 이름으로 읽을지 값으로 읽을지 여기서 안다.
         writer.writePod( propCount | ( static_cast<uint32>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kTaggedVersionShift ) );
 
-        for ( const PropertyInfo& prop : listProp )
+        const bool bAllWritten = propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
         {
+            const PropertyInfo& prop = field._property;
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
-                continue;
+                return ReflectVisitFlow::Continue;
 
             uint32 hashVal = prop.getNameHash();
             writer.writePod( hashVal );
@@ -498,12 +502,15 @@ namespace sw
                 // 쓰는 순간 멈춘다. 계속 쓰면 세이브는 써지고 로드에서 이 값이 빠진다. 알림은 호출마다 한다(타입마다 한 번이면 테스트 순서에 따라 결과가 달라진다).
                 SW_LOG_ERROR_ID( "BinarySerializer.CannotWrittenValueInside", "%#::%# (%#) cannot be written: it or a value inside it has no binary, enum, struct or text handler - the object is not written",
                                  typeInfo._name.c_str(), prop._name.c_str(), prop._typeName.c_str() );
-                return false;
+                return ReflectVisitFlow::Stop;
             }
 
             uint32 payloadSize = static_cast<uint32>( writer.getByteCount() - payloadStart );
             writer.writePodAt( sizeHeaderPos, payloadSize );
-        }
+            return ReflectVisitFlow::Continue;
+        } );
+        if ( bAllWritten == false )
+            return false;
         // 모르는 칸은 읽을 때의 (이름 해시, 기록 타입 해시, 크기, 값) 그대로 뒤에 싣는다 — 이 칸을 아는 빌드가 다시 읽으면 제 값이다.
         for ( const SchemaOrphanValue& unknown : listUnknown )
         {

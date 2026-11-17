@@ -516,6 +516,17 @@ namespace sw
         pNode.set_name( pName );
     }
 
+    bool XMLNode::renameAttribute( const utf8* pOldName, const utf8* pNewName ) const
+    {
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
+        if ( pNode.empty() || pOldName == nullptr || pNewName == nullptr )
+            return false;
+        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pOldName );
+        if ( pAttr.empty() )
+            return false;
+        return pAttr.set_name( pNewName );
+    }
+
     void XMLNode::setValue( const utf8* pValue ) const
     {
         pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
@@ -556,6 +567,15 @@ namespace sw
             return {};
         pugi::xml_node cloned = pNode.append_copy( pSrc );
         return XMLNode{ cloned.internal_object() };
+    }
+
+    bool XMLNode::removeChild( XMLNode child ) const
+    {
+        pugi::xml_node pNode  = XMLDocumentInternal::asNode( _pNode );
+        pugi::xml_node pChild = XMLDocumentInternal::asNode( child._pNode );
+        if ( pNode.empty() || pChild.empty() || pChild.parent() != pNode )
+            return false;
+        return pNode.remove_child( pChild );
     }
 
     XMLDocument::XMLDocument()

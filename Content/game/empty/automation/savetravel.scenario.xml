@@ -8,7 +8,6 @@
 -->
 <Scenario name="game.empty.savetravel" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
-	<Wait frames="2"/>
 	<Store watch="Scene.ObjectCount" as="savedCount"/>
 	<DevCommand line="game.save savetravel/a"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>

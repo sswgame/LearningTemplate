@@ -127,6 +127,15 @@ SW_TEST_CASE_EACH( CrashInjectionTest, EveryCrashKindLeavesAReport, kArrCrashCas
     SW_REQUIRE_TRUE_MSG( child._bLaunched && child._bTimedOut == false, param._pName );
     SW_EXPECT_TRUE_MSG( ( child._exitCode.has_value() && *child._exitCode != 0 ), param._pName + string( " - last output:" ) + child.getOutputTail() );
     expectCrashFiles( folder, param._pName );
+    #if defined( SW_PLATFORM_WINDOWS )
+    // 접근 위반의 자세한 이유(쓰기 · 대상 주소 · 모듈)는 필터가 아닌 보고 스레드가 만든다 — 그 길이 끊기지 않았는지 본다.
+    if ( param._kind == CrashInjectionKind::AccessViolation )
+    {
+        string stackText;
+        SW_EXPECT_TRUE( FileUtil::readTextFile( findReportFile( folder, "stack.txt" ), stackText ) );
+        SW_EXPECT_TRUE_MSG( stackText.find( " - write of 0x" ) != string::npos, stackText );
+    }
+    #endif
 }
 
 /**

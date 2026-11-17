@@ -14,15 +14,14 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/cinematic.scene.xml"/>
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
-	<Wait frames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutFrames="10"/> <!-- 게임 카메라가 그린다 -->
 	<Expect watch="Camera.FrameObject" is="GameCamera"/>
 	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>
 	<Expect watch="CameraManager.PendingCamera" target="GameCamera" is="none"/>
 	<Expect watch="Cinematic.CutCamera" target="Director" is="none"/>
 	<Expect watch="Appearance.Preset" target="Actor" is="SkeletonMinion"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 판정과 재생 시작을 다른 프레임에 둔다(프레임 경계) -->
 
 	<PlaySequence object="Director"/>
 	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="CutA" timeoutSeconds="1.5"/>
@@ -30,13 +29,13 @@
 	<WaitUntil watch="Camera.FrameObject" is="CutA" timeoutSeconds="1"/>
 	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="none" timeoutFrames="4"/>
 	<Expect watch="Cinematic.CutCamera" target="Director" is="CutA"/>
-	<Wait frames="8"/>
+	<AdvanceSimulation frames="8"/> <!-- 컷 A 뒤 8 프레임 장면(시퀀스 시각이 사진 내용) -->
 	<Screenshot file="cinematic_a.ppm"/>
 	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="CutB" timeoutSeconds="1.5"/>
 	<WaitUntil watch="Camera.FrameObject" is="CutB" timeoutSeconds="1"/>
 	<Expect watch="Cinematic.CutCamera" target="Director" is="CutB"/>
 	<WaitUntil watch="Appearance.Preset" target="Actor" is="SkeletonWarrior" timeoutFrames="4"/>
-	<Wait frames="8"/>
+	<AdvanceSimulation frames="8"/> <!-- 컷 B 뒤 8 프레임 장면(시퀀스 시각이 사진 내용) -->
 	<Screenshot file="cinematic_b.ppm"/>
 	<!-- ⑦ 구간 항목(프레임 72 — 사진 뒤): 자막의 화자는 씬 오브젝트 이름이 아니라 바인딩 3 의 표시 이름이다. 클립은 Actor 셋의 이름으로 풀린다(못 풀면 SequenceSpan.AnimationClipMissing 오류). -->
 	<WaitUntil watch="UI.SubtitleSpeaker" is="Actor" timeoutSeconds="1"/>
@@ -48,7 +47,7 @@
 	<WaitUntil watch="CameraManager.Blending" target="GameCamera" equals="0" timeoutSeconds="1"/>
 	<Expect watch="Object.DistanceTo" target="GameCamera" key="GameplayView" atMost="0.01"/>
 	<WaitSequence object="Director"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Sequence.History" target="Director" key="Finished" equals="1" timeoutFrames="10"/> <!-- 끝난 기록이 남았다 -->
 	<!-- ⑥ 바인딩 · 기록(컷씬 디버거가 읽는 것): 바인딩 1 · 3 은 이름이 아니라 씬의 표로 CutA · Actor 에 묶였고, 한 번 끝났고, 외형 이벤트 하나 · 카메라 신호(대기 뷰 둘 · 컷 둘 · 시작 · 끝)가 남았다. -->
 	<Expect watch="Sequence.BoundObject" target="Director" key="1" is="CutA"/>
 	<Expect watch="Sequence.BoundObject" target="Director" key="3" is="Actor"/>

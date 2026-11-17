@@ -112,7 +112,8 @@ namespace sw
             case RenderPassType::VFXSimulation:
             {
                 // 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고(VFXMeshInstance — 같은 패스의 두 번째 디스패치), 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다.
-                _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
+                _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ),
+                                                           _psoManager.getEnginePSO( RenderPassType::VFXParticleSort ) );
                 break;
             }
             case RenderPassType::InstanceAnimation:
@@ -368,7 +369,7 @@ namespace sw
                 if ( base == GPUMeshMorphPool::kInvalidBase )
                     continue;
                 _state._deform._listScratchRestResult.clear();
-                for ( const RHIVertex& vertex : pMesh->getVertices() )
+                for ( const RHIVertex& vertex : pMesh->getCPUView().getVertices() )
                 {
                     _state._deform._listScratchRestResult.push_back( GPUDeformResult::fromVertex( vertex ) );
                 }
@@ -661,6 +662,7 @@ namespace sw
         VFXSimulationFrameInput input{};
         input._bSimulationPipelineReady = _psoManager.getEnginePSO( RenderPassType::VFXSimulation ) != 0;
         input._bMeshPipelineReady       = _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) != 0;
+        input._bSortPipelineReady       = _psoManager.getEnginePSO( RenderPassType::VFXParticleSort ) != 0;
         input._bNativeBindless          = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         input._instanceBuffer           = _state._gpuScene.getInstanceBuffer();
         input._instanceUAV              = _state._gpuScene.getInstanceUAV();
@@ -675,10 +677,11 @@ namespace sw
             const TransientAttachmentPool::Attachment depth = _state._mainView._transientPool.find( attachmentNames()._sceneDepth );
             input._depth._texture                           = _state._mainView._depthHistory;
             input._depth._uav                               = _state._mainView._depthHistoryUAV;
-            input._depth._width                             = depth._width;
-            input._depth._height                            = depth._height;
-            input._depth._viewProj                          = _state._mainView._depthHistoryViewProj;
-            input._depth._eye                               = _state._mainView._depthHistoryEye;
+            // 지난 프레임 사각형 크기다(자동 렌더 배율) — 셰이더가 화면 UV 에 곱해 사각형 안 텍셀만 읽는다.
+            input._depth._width    = _state._mainView.scaleToPreviousRect( depth._width, true );
+            input._depth._height   = _state._mainView.scaleToPreviousRect( depth._height, false );
+            input._depth._viewProj = _state._mainView._depthHistoryViewProj;
+            input._depth._eye      = _state._mainView._depthHistoryEye;
         }
         return input;
     }

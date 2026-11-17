@@ -36,8 +36,12 @@ namespace sw
             /** @brief 그 파일이 있는지 확인합니다. 없는 번역 테이블을 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
             static bool hasLocalizationFile( const AssetID& assetID ) { return AssetIO::hasAsset( assetID ); }
 
-            /** @brief @p code 와 그 부모들을 사슬 끝에 붙입니다(이미 있으면 건너뜀). */
-            static void appendWithParents( const CultureTable& cultures, string code, vector<string>& inoutListChain )
+            /**
+             * @brief @p code 와 그 부모 코드들(`ko_kr` → `ko`)을 사슬 끝에 붙입니다(이미 있으면 건너뜀).
+             * @details 로캘 맞추기다(CLDR 의 잘라 내기 폴백) — 문화권 데이터의 `_base` 상속과 다르다. `_base` 는 표를 읽을 때 합쳐 사라지고(쿠킹본도 같다), 읽은 값을 따라
+             *          사슬이 갈리면 개발 실행과 쿠킹 실행이 다른 사슬을 본다.
+             */
+            static void appendWithParents( string code, vector<string>& inoutListChain )
             {
                 uint32 guard{ 0 };
                 while ( code.empty() == false && guard < 8 )
@@ -50,9 +54,7 @@ namespace sw
                     }
                     if ( bPresent == false )
                         inoutListChain.push_back( code );
-                    const CultureInfo* pCulture   = cultures.findCulture( code );
-                    const bool         bHasParent = pCulture != nullptr && pCulture->_parentCode.empty() == false;
-                    code                          = bHasParent ? pCulture->_parentCode : CultureTable::makeParentCode( code );
+                    code = CultureTable::makeParentCode( code );
                 }
             }
 
@@ -715,11 +717,11 @@ namespace sw
     void LocalizationManager::rebuildLookupChainLocked()
     {
         _listLookupCulture.clear();
-        LocalizationManagerInternal::appendWithParents( _cultureTable, _currentLanguage, _listLookupCulture );
-        LocalizationManagerInternal::appendWithParents( _cultureTable, _fallbackLanguage, _listLookupCulture );
+        LocalizationManagerInternal::appendWithParents( _currentLanguage, _listLookupCulture );
+        LocalizationManagerInternal::appendWithParents( _fallbackLanguage, _listLookupCulture );
         for ( const MountedProject& project : _listProject )
         {
-            LocalizationManagerInternal::appendWithParents( _cultureTable, project._project._sourceCulture, _listLookupCulture );
+            LocalizationManagerInternal::appendWithParents( project._project._sourceCulture, _listLookupCulture );
         }
 
         const CultureInfo* pCulture = _cultureTable.resolveCulture( _currentLanguage );
@@ -834,8 +836,8 @@ namespace sw
         ScopedSharedLock<shared_mutex> lock{ _mutex };
         vector<string>                 listChain;
         const string                   code = languageCode.empty() ? _currentLanguage : normalizeLanguageCode( languageCode );
-        LocalizationManagerInternal::appendWithParents( _cultureTable, code, listChain );
-        LocalizationManagerInternal::appendWithParents( _cultureTable, _fallbackLanguage, listChain );
+        LocalizationManagerInternal::appendWithParents( code, listChain );
+        LocalizationManagerInternal::appendWithParents( _fallbackLanguage, listChain );
         for ( const string& candidate : listChain )
         {
             const CultureInfo* pCulture = _cultureTable.findCulture( candidate );

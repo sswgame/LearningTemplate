@@ -3,7 +3,7 @@
   하우징 대량 가구 부하(GF_Housing) — 24 x 24 칸 · 1 층 부지 하나와 넉넉한 지갑(20000 골드). 카탈로그는 시연과 같은 data/housingparts.xml 이다.
   부하 시나리오 automation/load/housingbulk.scenario.xml 이 housing.fill 로 바닥 576 · 탁자 288 을 놓고 프레임 측정 창을 연다.
 -->
-<Scene formatVersion="2" name="HousingBulk">
+<Scene formatVersion="3" name="HousingBulk">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

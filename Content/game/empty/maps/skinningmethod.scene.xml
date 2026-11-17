@@ -1,5 +1,5 @@
 <?asset guid="c479885fe7d33d79fcbd5f53fc95415e"?>
-<Scene formatVersion="2" name="SkinningMethod">
+<Scene formatVersion="3" name="SkinningMethod">
 	<!-- 시나리오 automation/skinningmethod 의 무대 — 기사 하나를 선형 스키닝(SkinningMethod::Linear)으로 그린다. skinningmethod_dq 가 이 씬을 물려받아 방식만 듀얼 쿼터니언으로 바꾼다.
 	     어깨 · 팔꿈치처럼 회전이 다른 본 둘이 섞인 정점에서 두 그림이 달라진다(DQ 는 비튼 관절이 가늘어지지 않는다). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
@@ -75,7 +75,7 @@
 					                       _updateRateDivisor="1"
 					                       _skinningMethod="Linear"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"

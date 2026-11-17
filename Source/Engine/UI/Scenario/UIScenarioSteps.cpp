@@ -14,6 +14,7 @@
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
@@ -71,6 +72,20 @@ namespace sw
                 return pScreen->getDocumentPath();
             }
 
+            /** @brief 감시 값 `UI.ActiveScreen` 입니다. 활성 화면의 문서 경로이고, 코드 화면이거나 없으면 `none` 입니다(`ExpectUI screen` 과 같은 규칙). */
+            [[nodiscard]] static bool readActiveScreen( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                (void)query;
+                const UISystem* pUISystem = engine::findSubsystem<UISystem>();
+                if ( pUISystem == nullptr || pUISystem->isInitialized() == false )
+                {
+                    outValue.setText( "no UI system" );
+                    return false;
+                }
+                outValue.setText( describeActiveScreen( *pUISystem ) );
+                return true;
+            }
+
             static bool runExpectUI( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const UISystem& ui = engine::getSubsystem<UISystem>();
@@ -102,6 +117,8 @@ namespace sw
         };
     } // namespace
 
+    SW_AUTOMATION_QUERY_WATCH( uiActiveScreen, "UI.ActiveScreen", "Document path of the active UI screen (the top screen taking input and focus); none for a code screen or no screen",
+                               &UIScenarioStepsInternal::readActiveScreen, false, false );
     SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIScenarioStepsInternal::isLoadingScreenBlocking );
     SW_AUTOMATION_STEP( uiLayoutDump, UIScenarioSteps::kLayoutDumpKind, &UIScenarioStepsInternal::runLayoutDump, &AutomationStep::validateProperties<AutomationFileStepParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( uiExpect, UIScenarioSteps::kExpectUIKind, &UIScenarioStepsInternal::runExpectUI, &UIScenarioSteps::validateExpectUI, AutomationStepOptions{} );

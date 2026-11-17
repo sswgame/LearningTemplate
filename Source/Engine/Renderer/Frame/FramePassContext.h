@@ -49,6 +49,7 @@ namespace sw
         RHIBufferHandle _lastCbBuffer{ 0 };
         uint32          _lastCbValuesVersion{ 0 };
         uint32          _lastCbRegistryVersion{ 0 };
+        uint64          _lastCbLayoutHash{ 0 }; ///< 마지막으로 올린 엔진 CB 배치(`ShaderBindingLayout::getEngineCbLayoutHash`) — 다르면 같은 값이라도 바이트가 다르다
         /**
          * @brief 마지막으로 리소스를 **실제로 바인딩한** PSO 입니다.
          * @details 슬롯 상태는 PSO 단위다. `setPipelineState` 는 이전 PSO 가 바인딩한 t/u 슬롯이 다음 PSO 로
@@ -91,6 +92,7 @@ namespace sw
             _lastCbBuffer          = 0;
             _lastCbValuesVersion   = 0;
             _lastCbRegistryVersion = 0;
+            _lastCbLayoutHash      = 0;
             _lastBindPSO           = 0;
             _lastLayoutPSO         = 0;
             _pLastLayout           = nullptr;

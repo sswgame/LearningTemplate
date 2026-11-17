@@ -1,5 +1,5 @@
 <?asset guid="90cbb4f05fdded45420b9d292fbd21b4"?>
-<Prefab formatVersion="0" name="ScareTrigger">
+<Prefab formatVersion="1" name="ScareTrigger">
 	<GameObject _schemaVersion="0" _name="ScareTrigger" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"

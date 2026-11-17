@@ -319,6 +319,15 @@ namespace sw
         return _pDevice->createIndexBuffer( pData, sizeBytes );
     }
 
+    RHIBufferHandle OpenGLRHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        // GL 버퍼는 어느 것이든 glCopyBufferSubData 의 도착이 된다 — 0 으로 채운 정점 버퍼와 같다.
+        if ( sizeBytes == 0 )
+            return 0;
+        const vector<uint8> listZero( sizeBytes, uint8{ 0 } );
+        return createVertexBuffer( listZero.data(), sizeBytes );
+    }
+
     RHIBufferHandle OpenGLRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
         const bool bInvalidVertexBufferRequest = _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0;
@@ -810,7 +819,7 @@ namespace sw
             GLuint fbo{ 0 };
             glGenFramebuffers( 1, &fbo );
             glBindFramebuffer( GL_FRAMEBUFFER, fbo );
-            OpenGLRHIDevice::attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0, record, 0 );
+            OpenGLRHIDevice::attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0, record, 0, 0 );
             const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
             glBindFramebuffer( GL_FRAMEBUFFER, 0 );
             if ( status != GL_FRAMEBUFFER_COMPLETE )
@@ -928,6 +937,42 @@ namespace sw
         // 이중 해제 · 다른 공간 번호는 `RHIBindlessRegistry::release` 가 거절한다.
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
+    }
+
+    bool OpenGLRHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        if ( texture == 0 )
+            return false;
+        ScopedOpenGLContext                         contextScope( _pDevice );
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord       = _pDevice->resolveTexture( texture );
+        const bool                                  bCannotRebind = pRecord == nullptr || _pDevice->getGlTextureName( texture ) == 0 || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotRebind )
+            return false;
+        // 기록 때 번호를 텍스처 이름으로 풀므로 등록표 값만 바꾼다(다음 바인딩부터 새 텍스처).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.rebind( index, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
+    }
+
+    RHIDescriptorIndex OpenGLRHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        // 번호 발급기만 건드린다(어느 스레드든 — GL 컨텍스트가 필요 없다).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.reserveIndex();
+    }
+
+    bool OpenGLRHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        if ( texture == 0 )
+            return false;
+        ScopedOpenGLContext                         contextScope( _pDevice );
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord         = _pDevice->resolveTexture( texture );
+        const bool                                  bCannotActivate = pRecord == nullptr || _pDevice->getGlTextureName( texture ) == 0 || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotActivate )
+            return false;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.assign( index, OpenGLRHIDevice::BindlessTextureRecord{ texture }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

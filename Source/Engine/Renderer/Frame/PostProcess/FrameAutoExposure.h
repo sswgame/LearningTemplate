@@ -62,6 +62,14 @@ namespace sw
         void recordAutoExposure( FramePassContext& context, const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const;
 
     private:
+        /**
+         * @brief 지난 프레임에 쓴 기록 칸(지금 EV · 목표 EV)을 비동기로 되읽어 둘의 차를 `FrameViewTarget::_exposureAdaptationEv` 에 둡니다(감시 값 `Render.ExposureAdaptation`).
+         * @details 한 번에 읽기 하나 — 읽는 중이면 끝났는지만 묻고, 끝났으면 값을 두고 다음 프레임에 다시 낸다. 기다리지 않는다. 몇 프레임 늦은 값이다.
+         *          `Render.ExposureErrorEv`(GPU 를 읽지 않는 상한)는 카메라가 서 있으면 장면 밝기가 바뀌어도 줄기만 한다 — 이 값은 GPU 가 잰 목표를 보므로 밝기 변화 뒤에도 맞다.
+         */
+        void readBackAdaptation( FrameViewTarget& view ) const;
+
+    private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
         const RenderPipelineAsset& _pipeline;
         const FramePSOManager&     _psoManager;

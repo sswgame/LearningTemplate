@@ -221,7 +221,8 @@
 	<Expect watch="Editor.AutosaveRestoredCount" differsFrom="restoredBeforeSave"/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
-	<ExpectLog id="EditorAutosaveCommands.RestoreAbandoned" count="0"/>
+	<!-- 버린 복원 청은 ④ 의 미저장 확인 Cancel 한 번뿐이다(다음 씬 전환이 알린다 — 사본은 Recovered Work 에 남는다). ⑧ 의 복원은 위의 복원 수가 본다 -->
+	<ExpectLog id="EditorAutosaveCommands.RestoreAbandoned" count="1"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

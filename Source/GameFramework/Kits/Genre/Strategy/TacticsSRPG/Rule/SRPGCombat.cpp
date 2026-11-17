@@ -56,7 +56,7 @@ namespace sw
             {
                 const SRPGSettings& settings  = field.getSettings();
                 const SRPGUnit*     pDefender = field.findUnit( defenderIndex );
-                if ( settings._bSupportDefense == SW_FALSE || pDefender == nullptr )
+                if ( settings._bSupportDefense == false || pDefender == nullptr )
                     return nullopt;
                 optional<int32> bestIndex;
                 int32           bestHP = 0;
@@ -85,7 +85,7 @@ namespace sw
             {
                 SRPGStrikePreview best{};
                 const SRPGUnit*   pAttacker = field.findUnit( attackerIndex );
-                if ( field.getSettings()._bSupportAttack == SW_FALSE || pAttacker == nullptr )
+                if ( field.getSettings()._bSupportAttack == false || pAttacker == nullptr )
                     return best;
                 for ( int32 index = 0; index < static_cast<int32>( field.getUnits().size() ); ++index )
                 {
@@ -106,7 +106,7 @@ namespace sw
             {
                 outListStrike.clear();
                 const SRPGUnit* pAttacker = field.findUnit( attackerIndex );
-                if ( field.getSettings()._bSyncAttack == SW_FALSE || pAttacker == nullptr )
+                if ( field.getSettings()._bSyncAttack == false || pAttacker == nullptr )
                     return;
                 for ( int32 index = 0; index < static_cast<int32>( field.getUnits().size() ); ++index )
                 {
@@ -336,7 +336,7 @@ namespace sw
         if ( field.collectMapCells( attackerIndex, weaponIndex, aimCell, listCell ) == false )
             return outResult._status = SRPGWeaponStatus::InvalidWeapon;
 
-        const bool                bFriendlyFire = field.getSettings()._bMapFriendlyFire == SW_TRUE;
+        const bool                bFriendlyFire = field.getSettings()._bMapFriendlyFire;
         vector<SRPGStrikePreview> listStrike;
         for ( const int2& cell : listCell )
         {

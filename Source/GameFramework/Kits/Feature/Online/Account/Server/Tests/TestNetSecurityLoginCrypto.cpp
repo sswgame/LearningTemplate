@@ -47,7 +47,7 @@ SW_TEST_CASE( NetSecurityLoginCryptoTest, KeyedHashMatchesRfc5869 )
 /** @brief [NetSecurityLoginCryptoTest] Argon2id 는 같은 암호 · 솔트면 같은 해시, 솔트가 다르면 다른 해시다. 기동 확인(`isPasswordHashSupported`)도 통과한다. */
 SW_TEST_CASE( NetSecurityLoginCryptoTest, PasswordHashIsDeterministicPerSalt )
 {
-    NetSecurityLoginCrypto      crypto{ &game::getSubsystem<INetSecurityProvider>() };
+    NetSecurityPasswordHasher   crypto{ &game::getSubsystem<INetSecurityProvider>() };
     const NetPasswordHashParams params = NetSecurityLoginCryptoTestUtil::makeSmallParams();
     SW_REQUIRE_TRUE( crypto.isPasswordHashSupported( params ) );
 
@@ -90,5 +90,6 @@ SW_TEST_CASE( NetSecurityLoginCryptoTest, RandomFillsAndMissingProviderFails )
     uint8                  arrOut[16] = {};
     SW_EXPECT_FALSE( missing.fillRandom( arrOut, 16 ) );
     SW_EXPECT_FALSE( missing.computeKeyedHash( arrOut, 16, nullptr, 0, arrOut, 16 ) );
-    SW_EXPECT_FALSE( missing.computePasswordHash( "x", arrOut, 16, NetSecurityLoginCryptoTestUtil::makeSmallParams(), arrOut, 16 ) );
+    NetSecurityPasswordHasher missingHasher{ nullptr };
+    SW_EXPECT_FALSE( missingHasher.computePasswordHash( "x", arrOut, 16, NetSecurityLoginCryptoTestUtil::makeSmallParams(), arrOut, 16 ) );
 }

@@ -7,6 +7,7 @@
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 
 #include <cstring>
 
@@ -83,13 +84,14 @@ namespace
     constexpr size_t kMechPositionsSize    = 48; ///< 위치, 속도, 앞, 대시 방향
     constexpr size_t kMechTimersSize       = 12; ///< 대시, 경직, 변형 쿨다운
     constexpr size_t kMechInputSize        = 20; ///< 이동 둘, 스킬 슬롯, 깃발 여덟
-    // `ProjectileSimulation::writeState` 의 탄 하나(정의 이름 길이 4 + "missile" 7, 위치 12, 속도 12 뒤에 실수 11 개, id, 반응 번호, 정수 6 개, 깃발). 특수기 탄의 정의 이름은 슬롯의 탄이다
-    constexpr size_t kMechProjectileSize        = 112;
-    constexpr size_t kMechProjectileVelocity    = 23;
-    constexpr size_t kMechProjectileRange       = 51;
-    constexpr size_t kMechProjectileRestitution = 75;
-    constexpr size_t kMechProjectilePayload     = 83;
-    constexpr size_t kMechProjectileOwner       = 87;
+    // 탄 한 줄(정의 이름 "missile" 7 글자). 칸 자리는 줄 끝에서 잰 `StateOffsetFromEnd` 를 줄 앞에서 잰 자리로 바꿔 쓴다.
+    using ProjectileAt                          = ProjectileSimulation::StateOffsetFromEnd;
+    constexpr size_t kMechProjectileSize        = ProjectileAt::kNameLength + 7;
+    constexpr size_t kMechProjectileVelocity    = kMechProjectileSize - ProjectileAt::kVelocity;
+    constexpr size_t kMechProjectileRange       = kMechProjectileSize - ProjectileAt::kRange;
+    constexpr size_t kMechProjectileRestitution = kMechProjectileSize - ProjectileAt::kRestitution;
+    constexpr size_t kMechProjectilePayload     = kMechProjectileSize - ProjectileAt::kPayload;
+    constexpr size_t kMechProjectileOwner       = kMechProjectileSize - ProjectileAt::kOwner;
 
     /** @brief 카탈로그와 판 하나입니다. 팀은 A(0), B(1)로 시작합니다. */
     struct MechArenaRulesTest

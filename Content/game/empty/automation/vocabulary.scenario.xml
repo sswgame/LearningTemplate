@@ -8,7 +8,6 @@
 -->
 <Scenario name="game.empty.vocabulary" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
-	<Wait frames="2"/>
 	<DevCommand line="vocabulary.check game/empty/data/vocabulary"/>
 	<Expect watch="Vocabulary.Flag" key="alarm" equals="1"/>
 	<Expect watch="Vocabulary.Flag" key="visits" equals="1"/>

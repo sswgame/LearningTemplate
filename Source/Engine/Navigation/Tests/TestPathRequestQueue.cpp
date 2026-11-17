@@ -138,8 +138,9 @@ SW_TEST_CASE( PathRequestQueueTest, DroppedTicketFreesSlot )
 
     DoublingQueue::Ticket overwritten = queue.request( makeJob( 4 ) );
     overwritten                       = queue.request( makeJob( 5 ) ); // 앞 요청을 덮으면 버려진다
+    const uint32 preparedBefore       = solver._preparedCount;         // 앞 구간의 넘기기는 누적 수에 이미 들었다
     queue.launch( "Test", nullptr, kAll );
-    SW_EXPECT_EQUAL( 1u, solver._preparedCount ); // 덮인 요청은 넘기지 않았다
+    SW_EXPECT_EQUAL( preparedBefore + 1u, solver._preparedCount ); // 덮인 요청은 넘기지 않았다
     (void)queue.complete();
     DoublingJob job;
     SW_REQUIRE_TRUE( queue.takeResult( overwritten, job ) == sw::PathRequestState::Ready );

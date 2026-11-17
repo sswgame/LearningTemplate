@@ -1,5 +1,5 @@
 <?asset guid="b272764141ac6ded55b5d83c8afd10a5"?>
-<Prefab formatVersion="0" name="HousingWall">
+<Prefab formatVersion="1" name="HousingWall">
 	<GameObject _schemaVersion="0" _name="HousingWall" _bActive="true">
 		<_listComponent>
 			<SceneComponent _localPosition="0,0,0"

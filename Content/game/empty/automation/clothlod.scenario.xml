@@ -10,9 +10,8 @@
 <Scenario name="game.empty.clothlod" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/clothlod.scene.xml"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Cloth.IterationCount" equals="6" timeoutFrames="60"/> <!-- 천 시뮬레이션이 가까운 단계로 돈다 -->
 	<Expect watch="Cloth.LODGrade" equals="0"/>
 	<Expect watch="Cloth.LODSuspended" equals="0"/>
 	<Expect watch="Cloth.IterationCount" equals="6"/>

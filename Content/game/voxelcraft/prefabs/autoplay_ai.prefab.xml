@@ -1,5 +1,5 @@
 <?asset guid="9916123fb7af96865ecf507801d4e0da"?>
-<Prefab formatVersion="0" name="VoxelAutoPlay">
+<Prefab formatVersion="1" name="VoxelAutoPlay">
 	<GameObject _schemaVersion="0" _name="VoxelAutoPlay" _bActive="true">
 		<_listComponent>
 			<VoxelAutoPlayControllerComponent _componentName="VoxelAutoPlayControllerComponent"

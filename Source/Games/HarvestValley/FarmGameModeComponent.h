@@ -116,10 +116,12 @@ namespace sw
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         /** @brief 공유 시계의 시각(0~24)입니다. 디렉터가 틱마다 옮겨 적으며, 뷰는 PostUpdate 에서 이것만 읽습니다. */
-        float32            getHourOfDay() const { return _hourOfDay; }
-        const FarmField&   getField() const { return _field; }
-        const float3&      getPlayerPosition() const { return _playerPosition; }
-        bool               isRaining() const { return _bRaining == SW_TRUE; }
+        float32          getHourOfDay() const { return _hourOfDay; }
+        const FarmField& getField() const { return _field; }
+        const float3&    getPlayerPosition() const { return _playerPosition; }
+        bool             isRaining() const { return _bRaining == SW_TRUE; }
+        /** @brief 지난 틱에 농부가 걸었으면(이동 의도가 있었으면) true 입니다. 농부는 물리 없이 위치를 옮겨 `Object.Speed` 로는 볼 수 없다. */
+        bool               isFarmerWalking() const { return _bFarmerWalking == SW_TRUE; }
         [[nodiscard]] bool readDaylight( float32& outHourOfDay, bool& outbPrecipitating ) const override
         {
             outHourOfDay      = _hourOfDay;
@@ -306,6 +308,7 @@ namespace sw
         uint32                         _toolUseCount;
         uint8                          _bRaining         : 1; ///< 판 상태 날씨의 비를 디렉터가 틱마다 옮겨 적은 것(뷰가 읽는다 — 저장하지 않는다, 날씨는 판 상태가 싣는다)
         uint8                          _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
-        uint8                          _reserved         : 6;
+        uint8                          _bFarmerWalking   : 1; ///< 지난 틱에 이동 의도가 있었다(`isFarmerWalking` — 저장하지 않는다)
+        uint8                          _reserved         : 5;
     };
 } // namespace sw

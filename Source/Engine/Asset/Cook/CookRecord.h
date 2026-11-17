@@ -28,8 +28,6 @@ namespace sw
         uint64            _outputHash{ 0 };
         vector<CookInput> _listInput;
 
-        /** @brief 끝난 작업 @p job 과 출력 바이트로 기록을 만듭니다. */
-        static CookRecord make( const CookJob& job, const vector<uint8>& outputBytes );
         /** @brief 출력 해시를 이미 구했을 때의 기록 만들기입니다(`CookStore` 가 시간을 재며 한 번만 해시한다 — 바이트를 다시 훑지 않는다). */
         static CookRecord make( const CookJob& job, uint64 outputHash );
 
@@ -64,10 +62,13 @@ namespace sw
         /** @brief 로컬 DDC 루트(`<프로젝트>/Saved/DDC`)입니다. */
         static string makeLocalRootPath();
 
-        /** @brief 키의 출력을 읽습니다. 없으면 false 입니다. */
-        [[nodiscard]] bool find( uint64 key, vector<uint8>& outBytes ) const;
-        /** @brief 키의 출력을 씁니다. 같은 키가 이미 있으면 덮어씁니다(같은 입력은 같은 바이트여야 한다 — 쿠킹은 결정적이다). */
-        [[nodiscard]] bool store( uint64 key, const vector<uint8>& bytes ) const;
+        /**
+         * @brief 키의 출력을 파일 @p outputPath 로 복사합니다(부모 폴더를 만든다). 없거나 복사하지 못하면 false 입니다.
+         * @details 출력은 파일로만 오간다 — 메모리 벡터를 받지 않아 큰 출력(팩)을 통째로 드는 모양을 쓸 수 없다. 내용 확인은 부르는 쪽이 복사한 파일로 한다.
+         */
+        [[nodiscard]] bool find( uint64 key, string_view outputPath ) const;
+        /** @brief 파일 @p sourcePath 를 키의 출력으로 복사해 둡니다. 같은 키가 이미 있으면 덮어씁니다(같은 입력은 같은 바이트여야 한다 — 쿠킹은 결정적이다). */
+        [[nodiscard]] bool store( uint64 key, string_view sourcePath ) const;
         /** @brief 키의 파일 경로입니다. */
         string makePath( uint64 key ) const;
 

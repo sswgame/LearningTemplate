@@ -1,5 +1,5 @@
 <?asset guid="5288c309f1fa54916c03185bcffe1ef0"?>
-<Prefab formatVersion="0" _base="common/prefabs/kaykit/knight_cape.prefab.xml" name="RoundShield">
+<Prefab formatVersion="1" _base="common/prefabs/kaykit/knight_cape.prefab.xml" name="RoundShield">
 	<PrefabOverrides>
 		<Override key="MeshComponent#0">
 			<MeshComponent _meshID="common/models/kaykit/knight/parts/round_shield.mesh" />

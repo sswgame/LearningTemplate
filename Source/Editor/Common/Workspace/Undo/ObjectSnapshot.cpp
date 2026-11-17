@@ -133,6 +133,16 @@ namespace sw
                 notify( context, pTarget->getObjectID(), ObjectEditKind::Modified );
             }
 
+            /** @brief 기록한 씬에서 @p objectID 의 형제 순서 키를 @p key 로 정합니다. 없으면 아무것도 하지 않습니다(데이터 단계). */
+            static void applySiblingOrder( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID, uint32 key )
+            {
+                GameObject* pTarget = findObject( findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey ), objectID );
+                if ( pTarget == nullptr )
+                    return;
+                pTarget->setSiblingOrder( key );
+                notify( context, pTarget->getObjectID(), ObjectEditKind::Modified );
+            }
+
             /** @brief 기록한 씬에서 @p objectID 를 없앱니다(자식까지). 알림은 없애기 전 — 받는 쪽이 아직 오브젝트를 찾을 수 있다(데이터 단계). */
             static void destroy( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID )
             {
@@ -192,6 +202,17 @@ namespace sw
         cmd._label = string{ label };
         cmd._undo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, before );
         cmd._redo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, after );
+        return cmd;
+    }
+
+    CommandStack::Command ObjectSnapshot::makeSiblingOrder( SceneManager& sceneManager, const GameObject& obj, uint32 beforeKey, uint32 afterKey, string_view label )
+    {
+        const uint32          sceneKey = ObjectSnapshotInternal::computeSceneKey( sceneManager, obj );
+        const uint64          objectID = obj.getObjectID();
+        CommandStack::Command cmd{};
+        cmd._label = string{ label };
+        cmd._undo  = SW_UNDO_STEP( ObjectSnapshotInternal::applySiblingOrder, sceneKey, objectID, beforeKey );
+        cmd._redo  = SW_UNDO_STEP( ObjectSnapshotInternal::applySiblingOrder, sceneKey, objectID, afterKey );
         return cmd;
     }
 

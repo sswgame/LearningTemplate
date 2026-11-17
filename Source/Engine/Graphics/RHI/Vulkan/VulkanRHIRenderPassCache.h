@@ -64,6 +64,8 @@ namespace sw
             uint8            _depthStoreOp{ 0 };                       ///< `RHIRenderPassStoreOp`
             uint16           _arrColorSlice[kMaxColorAttachments]{};   ///< 첨부마다 그릴 면
             uint16           _depthSlice{ 0 };
+            uint8            _arrColorMip[kMaxColorAttachments]{}; ///< 첨부마다 그릴 밉(R-10)
+            uint8            _depthMip{ 0 };
             /** @brief 키가 같으면 true 를 반환합니다. */
             bool operator==( const CompositeKey& other ) const;
         };

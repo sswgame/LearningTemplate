@@ -164,7 +164,9 @@ class LinkMigration:
         prefab_root = find_child(root, "Prefab")
         if own is not None and prefab_root is not None:
             own_map = component_key_map(find_child(prefab_root, "GameObject"))
-            for index, node in enumerate(own.list_node):
+            list_node_here: list[Element] = []
+            collect_nodes(prefab_root, list_node_here)   # 위치 · 속성은 지금 고치는 글에서 읽는다(생성 때 읽은 글은 이미 이전된 글과 어긋난다)
+            for index, node in enumerate(list_node_here):
                 if NODE_LOCAL_ID not in node.attributes:
                     list_edit.append((node.start + 1 + len(node.name), 0, f' {NODE_LOCAL_ID}="{own.list_node_key[index]}"'))
                 attach = node.attributes.get("attach", "")

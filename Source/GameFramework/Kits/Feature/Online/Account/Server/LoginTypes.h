@@ -1,9 +1,8 @@
 /**
  * @file LoginTypes.h
- * @brief 계정 키트(서버)의 공통 타입입니다. 설정, 자격, 발급 결과, 이벤트와 암호 인터페이스(`ILoginCrypto`)를 정의합니다. 와이어 타입(결과, 토큰, 티켓)은 공유 모듈 `GF_Account` 의 `AccountTypes.h` 에 있습니다.
+ * @brief 계정 키트(서버)의 공통 타입입니다. 설정, 자격, 발급 결과, 이벤트와 암호 인터페이스(`ILoginCrypto` · `IPasswordHasher`)를 정의합니다. 와이어 타입(결과, 토큰, 티켓)은 공유 모듈 `GF_Account` 의 `AccountTypes.h` 에 있습니다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -44,45 +43,10 @@ namespace sw
         int64                 _sharedAttemptWindowMs{ 0 };                                                                      ///< 서버 사이에 나누는 주소 단위 시도 창(휘발 저장소 INCR + TTL)의 길이이다. 0 이면 나누지 않는다(캐시 없는 단위 테스트)
         int64                 _loginNonceLifetimeMs{ 0 };                                                                       ///< 서버가 낸 외부 로그인 nonce 의 수명이다. 0 이면 nonce 를 내지 못한다(Unavailable)
         int32                 _sharedAttemptLimit{ 0 };                                                                         ///< 창 하나에 주소마다 받는 시도 수(서버 전체)이다. 키트 설정(필수)에서 채운다
-        int32                 _maxConcurrentPasswordHashes{ 0 };                                                                ///< 저장소 워커에서 동시에 도는 비밀번호 해시 상한이다(`PasswordHashBudget`). 1 이상이어야 하며 조립은 키트 설정(필수)에서 채운다
+        int32                 _maxConcurrentPasswordHashes{ 0 };                                                                ///< 동시에 도는 비밀번호 해시 상한이다(`PasswordHashQueue`, 작업 풀 위). 1 이상이어야 하며 키트 설정(필수)에서 채운다
+        int32                 _maxQueuedPasswordHashes{ 0 };                                                                    ///< 자리를 기다리는 비밀번호 해시 상한이다. 넘으면 읽기 전에 `kBusy` 다. 1 이상이어야 하며 키트 설정(필수)에서 채운다
         LoginDuplicatePolicy  _duplicatePolicy{ LoginDuplicatePolicy::KickExisting };
         uint8                 _bKeepGuestDeviceAfterLink{ SW_TRUE }; ///< 연동한 뒤에도 같은 장치가 게스트 비밀로 들어올 수 있게 한다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @class PasswordHashBudget
-     * @brief 동시에 도는 비밀번호 해시 수의 상한입니다. 저장소 워커 여럿이 함께 씁니다(스레드 안전).
-     * @details 해시(Argon2id, 기본 19 MiB × 2 회)는 저장소 워커에서 돈다. 상한이 없으면 로그인 폭주가 워커를 모두 잡아 원장 · 우편 · 거래가 뒤에 선다(감사 O-3).
-     *          자리가 없으면 해시도 저장소 읽기도 하지 않고 `kBusy` 로 끝낸다 — 계정이 있든 없든 같은 답이라 계정 열거에 쓰이지 않는다.
-     *          OWASP Password Storage 의 "KDF 동시 실행 제한", 세마포어의 시도 획득(`try_acquire`)과 같다.
-     */
-    class PasswordHashBudget
-    {
-    public:
-        /** @brief 상한을 정합니다. 해시를 맡기기 전(서비스 `initialize`)에 부릅니다. */
-        void  setMaxCount( int32 maxCount ) { _maxCount = maxCount; }
-        int32 getMaxCount() const { return _maxCount; }
-
-        /** @brief 자리가 있으면 하나 잡고 true 입니다. 잡았으면 끝에 `release` 를 부릅니다. */
-        [[nodiscard]] bool tryAcquire()
-        {
-            int32 current = _count.load( std::memory_order_relaxed );
-            while ( current < _maxCount )
-            {
-                if ( _count.compare_exchange_weak( current, current + 1, std::memory_order_acquire, std::memory_order_relaxed ) )
-                    return true;
-            }
-            return false;
-        }
-
-        void release() { (void)_count.fetch_sub( 1, std::memory_order_release ); }
-
-    private:
-        atomic<int32> _count{ 0 };
-        int32         _maxCount{ 0 };
     };
 } // namespace sw
 
@@ -121,8 +85,8 @@ namespace sw
     /**
      * @class ILoginCrypto
      * @brief 로그인 키트가 쓰는 암호 연산의 인터페이스입니다. 실제 구현은 `INetSecurityProvider`(OpenSSL)를 감싼 `NetSecurityLoginCrypto` 이고, 테스트는 결과가 결정적인 가짜 구현을 씁니다.
-     * @details 모든 함수는 스레드 안전해야 한다. 해시는 저장소 워커에서, 접속 티켓 확인은 네트워크 스레드에서 부르기 때문이다.
-     *          실패하면 false 를 반환하며 호출하는 쪽은 `StoreUnavailable` 처럼 다룬다.
+     * @details 모든 함수는 스레드 안전해야 한다. 저장소 워커(다이제스트), 네트워크 스레드(접속 티켓 확인)에서 부르기 때문이다.
+     *          실패하면 false 를 반환하며 호출하는 쪽은 `StoreUnavailable` 처럼 다룬다. 느린 비밀번호 해시는 여기 없다 — `IPasswordHasher` 를 받은 해시 줄만 부른다(감사 O-3).
      */
     class ILoginCrypto
     {
@@ -135,10 +99,29 @@ namespace sw
 
         /** @brief 운영체제의 암호용 난수를 채웁니다. */
         [[nodiscard]] virtual bool fillRandom( uint8* pOut, int32 size ) = 0;
-        /** @brief 느린 비밀번호 해시(Argon2id)를 계산합니다. */
-        [[nodiscard]] virtual bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut,
-                                                        int32 outSize ) = 0;
         /** @brief 키를 쓰는 해시(HKDF-SHA256, 추출과 확장, 정보는 @p pInfo)를 계산합니다. 토큰 다이제스트, 티켓 태그, 티켓 비밀, 장치와 외부 주체의 다이제스트에 씁니다. */
         [[nodiscard]] virtual bool computeKeyedHash( const uint8* pKey, int32 keySize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class IPasswordHasher
+     * @brief 느린 비밀번호 해시(Argon2id)입니다. 해시 줄(`PasswordHashQueue`)만 받고 작업 풀 워커에서 부른다 — 저장소 일(`LoginStoreLogic`)은 이것을 받지 않아 저장소
+     *        스레드에서 해시가 컴파일되지 않는다(감사 O-3, 해시 하나가 19 MiB · 2 회라 저장소 워커를 잡으면 원장 · 우편 · 거래가 뒤에 선다).
+     * @details 스레드 안전해야 한다. 실패하면 false 이고 부른 쪽은 `kUnavailable` 로 다룬다.
+     */
+    class IPasswordHasher
+    {
+    public:
+        IPasswordHasher()          = default;
+        virtual ~IPasswordHasher() = default;
+
+        IPasswordHasher( const IPasswordHasher& )            = delete;
+        IPasswordHasher& operator=( const IPasswordHasher& ) = delete;
+
+        [[nodiscard]] virtual bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut,
+                                                        int32 outSize ) = 0;
     };
 } // namespace sw

@@ -112,7 +112,7 @@ def move_sidecar(root: Path, old_path: str, new_path: str) -> None:
     if meta is None:
         raise RuntimeError(f"{old_meta} 를 읽지 못했다 — 손으로 고친 뒤 다시 옮긴다")
     git_move(root, old_meta, new_meta)
-    (root / new_meta).write_bytes(make_meta_text(new_path, meta[0]).encode("utf-8"))
+    (root / new_meta).write_bytes(make_meta_text(new_path, meta[0], meta[2]).encode("utf-8"))
     result = run_git(["add", new_meta], cwd=root)
     if not result.succeeded:
         raise RuntimeError(f"git add {new_meta} 실패: {result.stderr.strip()}")

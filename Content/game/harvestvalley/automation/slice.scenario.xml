@@ -13,7 +13,7 @@
 	<WaitUntil watch="Appearance.MergedSections" target="Farmer" equals="10" timeoutSeconds="10"/>
 	<!-- 오른쪽으로 0.5 초(2 m) 걷고 선 뒤에 잰다. -->
 	<ActionAxis name="Move" x="1" seconds="0.5"/>
-	<WaitUntil watch="Object.Speed" target="Farmer" atMost="0.01" timeoutSeconds="2"/> <!-- 선 뒤에 잰다 -->
+	<WaitUntil watch="Farm.FarmerWalking" equals="0" timeoutSeconds="2"/> <!-- 선 뒤에 잰다(농부는 물리 없이 옮겨 Object.Speed 가 없다) -->
 	<Expect watch="Farm.FarmerX" near="8" tolerance="0.2"/>
 	<!-- 물뿌리개를 들었다가 괭이로 돌아온다(연속 액션). -->
 	<Action name="Farm.Tool2"/>
@@ -22,7 +22,7 @@
 	<WaitUntil watch="Farm.FarmerTool" equals="0" timeoutFrames="30"/>
 	<!-- 위로 0.45 초 걸어 밭(Z 0 부터) 앞 타일을 바라보고 선다 — 그리고 사용(괭이로 갈기, 체력 4). -->
 	<ActionAxis name="Move" y="1" seconds="0.45"/>
-	<WaitUntil watch="Object.Speed" target="Farmer" atMost="0.01" timeoutSeconds="2"/> <!-- 선 뒤에 잰다 -->
+	<WaitUntil watch="Farm.FarmerWalking" equals="0" timeoutSeconds="2"/> <!-- 선 뒤에 잰다(농부는 물리 없이 옮겨 Object.Speed 가 없다) -->
 	<Action name="Farm.Use"/>
 	<WaitUntil watch="Farm.TilledCount" equals="1" timeoutFrames="60"/>
 	<Record watch="Farm.FarmerX"/>

@@ -64,6 +64,21 @@ namespace
         return balance._amount;
     }
 
+    /** @brief 운영자 @p adminID 의 거절 감사 줄(`admin.command.denied`) 수입니다. */
+    int32 countDeniedOf( MemoryServiceDatabase& database, AccountID adminID )
+    {
+        vector<ServiceAuditEntry> listEntry;
+        string                    nextCursor;
+        SW_EXPECT_TRUE( ServiceAuditLog::listEntries( database, ServiceAuditLog::makeOperatorActor( adminID ) + "/", "", 16, listEntry, nextCursor ) == ServiceStoreResult::Ok );
+        int32 count = 0;
+        for ( const ServiceAuditEntry& entry : listEntry )
+        {
+            if ( entry._action == "admin.command.denied" )
+                ++count;
+        }
+        return count;
+    }
+
     /** @brief 운영 등급 @p adminID 를 Viewer 로 내립니다(다른 운영자의 강등이 끼어든 것). */
     void setRoleToViewer( MemoryServiceDatabase& database, AccountID adminID )
     {
@@ -118,15 +133,16 @@ namespace
     };
 } // namespace
 
-/** @brief [AdminStoreLogicTest] 조회 등급(Viewer)은 지급할 수 없다 — Forbidden 이고 저장소는 그대로다. 등급이 없는 계정도 같다 */
+/** @brief [AdminStoreLogicTest] 조회 등급(Viewer)은 지급할 수 없다 — Forbidden 이고 원장은 그대로이며 거절 감사 줄이 남는다. 등급이 없는 계정도 같다 */
 SW_TEST_CASE( AdminStoreLogicTest, ViewerCannotAdjustAssets )
 {
-    Fixture      fixture;
-    const uint64 hashBefore = fixture.database.computeContentHash();
-    AdminReply   reply;
+    Fixture    fixture;
+    AdminReply reply;
     SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kViewer, 100, 1 ), reply ).hasError( OnlineError::kForbidden ) );
     SW_EXPECT_TRUE( AdminStoreLogic::execute( fixture.database, makeAdjust( kPlayer, 100, 2 ), reply ).hasError( OnlineError::kForbidden ) );
-    SW_EXPECT_EQUAL( fixture.database.computeContentHash(), hashBefore );
+    SW_EXPECT_EQUAL( getGoldOf( fixture.database ), int64( 0 ) );
+    SW_EXPECT_EQUAL( 1, countDeniedOf( fixture.database, kViewer ) );
+    SW_EXPECT_EQUAL( 1, countDeniedOf( fixture.database, kPlayer ) );
 }
 
 /** @brief [AdminStoreLogicTest] 운영 등급의 지급은 같은 멱등 키로 다시 보내도 한 번만 적용된다(감사 기록도 하나) */
@@ -207,7 +223,8 @@ SW_TEST_CASE( AdminStoreLogicTest, DemotionBetweenReadAndCommitRefusesTheCommand
     AdminReply             reply;
     InterleavingConnection connection( fixture.database, kOperator );
     SW_EXPECT_TRUE( AdminStoreLogic::execute( connection, makeAdjust( kOperator, 100, 9 ), reply ).hasError( OnlineError::kForbidden ) );
-    SW_EXPECT_EQUAL( fixture.database.computeContentHash(), reference.database.computeContentHash() );
+    SW_EXPECT_EQUAL( getGoldOf( fixture.database ), getGoldOf( reference.database ) );
+    SW_EXPECT_EQUAL( 1, countDeniedOf( fixture.database, kOperator ) );
 }
 
 /** @brief [AdminStoreLogicTest] 라이브 운영 쓰기의 등급 가드는 쓰는 일 안에서 등급을 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등되면 커밋이 지고, 다시 하면 Forbidden 이다(감사 "다음 할 일" 5 번) */

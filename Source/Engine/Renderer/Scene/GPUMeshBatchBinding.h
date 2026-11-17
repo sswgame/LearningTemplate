@@ -24,6 +24,7 @@ namespace sw
         RHIBufferHandle _vertexBuffer{ 0 };    ///< [위치 구간][속성 구간] 정점 버퍼(RHIMeshVertexStreams) — 형식은 배치 메시의 `getVertexFormat()`
         uint32          _attributeOffset{ 0 }; ///< `_vertexBuffer` 에서 속성 구간이 시작하는 바이트(슬롯 2 를 여기서 건다)
         RHIBufferHandle _indexBuffer{ 0 };
+        uint32          _indexStride{ sizeof( uint32 ) }; ///< 인덱스 한 칸의 바이트(풀은 4, 풀 밖 메시는 `MeshRenderData::getIndexStride` — R-15)
         /**
          * @brief 정점 풀 안에서 이 메시의 시작 위치(정점 단위)입니다. 간접 인자의 baseVertex 가 됩니다. 풀 밖의 메시는 0 이며 자기 정점 · 인덱스 버퍼를 씁니다.
          * @details upload() 에서 채운다. 같은 풀 버퍼를 쓰는 배치들은 정점 · 인덱스 버퍼를 다시 바인딩하지 않고 멀티 드로우로 묶인다.

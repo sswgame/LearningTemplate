@@ -25,6 +25,13 @@ namespace sw
     class IRHICommandList;
     class Texture2D;
 
+    /** @brief 첨부 풀 안에서 뷰가 그리는 구간입니다(원점 0,0, 픽셀). 언리얼 `FViewInfo::ViewRect` 자리다. */
+    struct RenderViewRect
+    {
+        uint32 _width{ 0 };
+        uint32 _height{ 0 };
+    };
+
     /**
      * @brief 뷰 하나가 프레임을 넘어 유지하는 상태입니다. 트랜지언트 풀, 추가 뷰의 컬링 입력, TAA 히스토리, 직렬 커맨드 리스트, 출력 텍스처가 들어 있습니다.
      * @details 주 시점은 `_mainView` 이고(컬링 입력은 `_arrView[Main]`), 추가 뷰는 카메라 id(`_viewID`)로 찾는다. 패스 코드는 지금 그리는 뷰
@@ -107,9 +114,13 @@ namespace sw
         RHIDescriptorIndex _arrAutoExposureSRV[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
         float4  _autoExposureParams{};
-        float32 _autoExposureClock{ 0.0f }; ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)
-        float32 _exposureErrorEv{ 0.0f };   ///< 노출 적응의 남은 오차 상한(EV, `RenderStabilityUtil::advanceExposureError`) — 사진 앞 정착 판정(`Render.Stable`)
-        uint32  _stillFrameCount{ 0 };      ///< TAA 기록을 버리지 않고 카메라 · 물체가 서 있던 이어진 프레임 수(`RenderStabilityUtil::advanceStillFrames`)
+        float32 _autoExposureClock{ 0.0f };    ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)
+        float32 _exposureErrorEv{ 0.0f };      ///< 노출 적응의 남은 오차 상한(EV, `RenderStabilityUtil::advanceExposureError`) — 사진 앞 정착 판정(`Render.Stable`)
+        uint32  _stillFrameCount{ 0 };         ///< TAA 기록을 버리지 않고 카메라 · 물체가 서 있던 이어진 프레임 수(`RenderStabilityUtil::advanceStillFrames`)
+        float32 _exposureAdaptationEv{ 0.0f }; ///< 되읽은 지금 EV 와 목표 EV 의 차(절댓값) — 감시 값 `Render.ExposureAdaptation`(`FrameAutoExposure::readBackAdaptation`)
+        /// 자동 노출 기록(지금 EV · 목표 EV)을 되읽는 중인 티켓입니다. 무효면 읽는 중이 아니다. 렌더 스레드가 프레임을 넘어 쥐므로 `PendingReadback`(쥔 동안 대기 전송 단언)이 아니라
+        /// 날 티켓으로 둔다(`RenderThread::readRequestedRenderTarget` 와 같다) — 놓기는 `FrameAutoExposure::releaseAutoExposureHistory`.
+        RHITransferTicket _exposureReadbackTicket{};
         /// @brief 이번 프레임 이 뷰가 읽는 컬러 그레이딩 LUT 입니다(읽힌 것만, 없으면 nullptr). 셋업(`applyViewPassConstants`)이 정하고 패스가 역할 이름으로 건다 — 수명은 `FramePostProcessTextureSet` 가 쥔다.
         const Texture2D* _pColorGradingLUT{ nullptr };
         /// @brief 이번 프레임 이 뷰가 읽는 블룸 먼지 마스크입니다(읽힌 것만, 없으면 nullptr). LUT 와 같은 규칙이다.
@@ -157,6 +168,14 @@ namespace sw
         uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
         uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
         uint8 _bUpscaleThisFrame{ SW_FALSE };      ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
+        /// @brief 사각형 배율의 하한입니다(풀 배율 `_resolutionScale` 의 하한과 같다).
+        static constexpr float32 kMinRectScale = 0.1f;
+        /// @brief 이번 프레임 그리는 사각형입니다(`updateViewRect`). 풀이 없으면 0 이다.
+        RenderViewRect _rect{};
+        /// @brief 지난 프레임의 사각형 / 풀 배율입니다 — TAA 히스토리처럼 지난 프레임 첨부를 읽는 셰이더가 쓴다.
+        float2 _previousRectScale{ 1.0f, 1.0f };
+        /// @brief 지난 프레임에 실제로 그린 사각형(픽셀)입니다 — 깊이 히스토리를 읽는 쪽이 그대로 쓴다(`scaleToPreviousRect`).
+        RenderViewRect _previousRect{};
 
         /**
          * @brief 이번 프레임 시간 누적 기록을 시작합니다 — 기록을 버릴지(`_bHistoryReset`)를 정하고 그렸다고 표시합니다.
@@ -174,5 +193,55 @@ namespace sw
         }
         /** @brief 이번 프레임에 이 뷰를 그리지 않습니다 — 다음에 그리는 프레임은 시간 누적 기록을 버립니다. */
         void markFrameSkipped() { _bFrameSkipped = SW_TRUE; }
+
+        /**
+         * @brief 풀 크기는 그대로 두고 그리는 사각형만 @p rectScale 로 정합니다(자동 렌더 배율). 지난 사각형 배율은 `_previousRectScale` 로 옮깁니다.
+         * @details 풀(첨부 · TAA · 깊이 히스토리)은 다시 만들지 않는다 — 할당이 0 이고 히스토리가 남는다. 지난 프레임 첨부는 지난 배율로 읽는다(PassCB g_ViewRectScale.zw).
+         *          풀을 만든 뒤(`FrameViewResources::updateViewTransients`) 셋업에서 프레임마다 한 번 부른다.
+         */
+        void updateViewRect( float32 rectScale )
+        {
+            _previousRect         = _rect;
+            _previousRectScale    = computeRectScale();
+            const float32 scale   = rectScale < kMinRectScale ? kMinRectScale : ( rectScale > 1.0f ? 1.0f : rectScale );
+            const uint32  poolW   = _transientPool.getWidth();
+            const uint32  poolH   = _transientPool.getHeight();
+            const uint32  scaledW = static_cast<uint32>( static_cast<float32>( poolW ) * scale + 0.5f );
+            const uint32  scaledH = static_cast<uint32>( static_cast<float32>( poolH ) * scale + 0.5f );
+            _rect._width          = poolW == 0 ? 0u : ( scaledW < 1u ? 1u : ( scaledW > poolW ? poolW : scaledW ) );
+            _rect._height         = poolH == 0 ? 0u : ( scaledH < 1u ? 1u : ( scaledH > poolH ? poolH : scaledH ) );
+        }
+        /** @brief 이번 사각형 / 풀 배율입니다. 풀이나 사각형이 없으면 1 입니다. */
+        float2 computeRectScale() const
+        {
+            const uint32 poolW = _transientPool.getWidth();
+            const uint32 poolH = _transientPool.getHeight();
+            if ( poolW == 0 || poolH == 0 || _rect._width == 0 || _rect._height == 0 )
+                return float2::UnitScale;
+            return float2{ static_cast<float32>( _rect._width ) / static_cast<float32>( poolW ), static_cast<float32>( _rect._height ) / static_cast<float32>( poolH ) };
+        }
+        /**
+         * @brief 첨부 한 축(@p attachmentExtent)에서 사각형이 덮는 픽셀 수입니다. 풀 크기를 따르지 않는 첨부(그림자 맵)나 사각형이 풀 전체면 그대로입니다.
+         * @details 나눗수 첨부(반해상도)는 비율로 올림한다 — 사각형 가장자리 픽셀이 빠지지 않게.
+         */
+        /**
+         * @brief 지난 프레임 첨부 한 축(@p attachmentExtent — 깊이 히스토리)에서 지난 프레임이 실제로 그린 사각형 픽셀 수입니다(`_previousRect` 그대로 — 배율로 다시 셈하지 않아 1 픽셀도 어긋나지 않는다).
+         * @details 깊이 히스토리를 읽는 쪽(가림 타일 · 컬링의 가림 판정 · GPU 입자 깊이 충돌)은 화면 UV 에 이 크기를 곱해 텍셀을 고른다 — 사각형 밖 옛 깊이를 읽지 않는다.
+         *          지난 사각형이 없으면(처음 그리는 프레임) 첨부 전체이고, 첨부보다 크지 않다.
+         */
+        uint32 scaleToPreviousRect( uint32 attachmentExtent, bool bHorizontal ) const
+        {
+            const uint32 previous = bHorizontal ? _previousRect._width : _previousRect._height;
+            return previous == 0 || previous > attachmentExtent ? attachmentExtent : previous;
+        }
+        uint32 scaleToRect( uint32 attachmentExtent, bool bViewSized, bool bHorizontal ) const
+        {
+            const uint32 pool = bHorizontal ? _transientPool.getWidth() : _transientPool.getHeight();
+            const uint32 rect = bHorizontal ? _rect._width : _rect._height;
+            if ( bViewSized == false || pool == 0 || rect == 0 || rect >= pool )
+                return attachmentExtent;
+            const uint64 scaled = ( static_cast<uint64>( attachmentExtent ) * rect + pool - 1u ) / pool;
+            return scaled < 1u ? 1u : static_cast<uint32>( scaled );
+        }
     };
 } // namespace sw

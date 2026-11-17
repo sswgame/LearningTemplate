@@ -23,6 +23,7 @@ namespace sw
 {
     class GPUMeshMorphPool;
     class GPUVertexAnimationPool;
+    class IRHICommandList;
     class IRHIDevice;
     class Mesh;
 
@@ -156,6 +157,10 @@ namespace sw
          *        인스턴스 버퍼와 메인 뷰 간접 인자가 모두 있으면 true 를 반환합니다.
          */
         bool upload( IRHIDevice* pDevice );
+        /**
+         * @brief 프레임 업로드 단계 — 정점 풀이 쌓은 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록합니다(R-15). 실행기가 파이프라인과 무관하게 첫 리스트 앞에서 부른다(`FramePassExecutor::submitGraph`).
+         */
+        void recordFrameUploads( IRHICommandList& cmd, IRHIDevice& device );
         /** @brief GPU 버퍼를 해제합니다. */
         void releaseGPU( IRHIDevice* pDevice );
 
@@ -211,6 +216,12 @@ namespace sw
         const vector<GPUVFXMeshEmitter>& getVFXMeshEmitters() const { return _snapshot._listVFXMeshEmitter; }
         /** @brief 주 시점에서 입자 그리기의 순서와 메시 투명 배치 사이의 자리를 반환합니다(`GPUSceneSnapshot::_listParticleSlot`). */
         const vector<GPUTransparentParticleSlot>& getParticleSlots() const { return _snapshot._listParticleSlot; }
+        /** @brief 방출기 안 입자의 그리는 순서 목록입니다(`GPUSceneSnapshot::_listParticleOrder` — 자리의 `_order` 구간이 가리킨다). */
+        const vector<uint32>& getParticleOrder() const { return _snapshot._listParticleOrder; }
+        /** @brief GPU 방출기의 정렬 일입니다(`GPUSceneSnapshot::_listGPUParticleSort`). */
+        const vector<VFXGPUParticleSortJob>& getGPUParticleSortJobs() const { return _snapshot._listGPUParticleSort; }
+        /** @brief GPU 순서 버퍼가 담아야 할 칸 수입니다. */
+        uint32 getGPUParticleOrderCount() const { return _snapshot._gpuParticleOrderCount; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 싣고 온 것)입니다. 없으면 nullptr 입니다. */
         const GPUViewTransparentOrder* findViewTransparentOrder( uint64 viewID ) const;
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */

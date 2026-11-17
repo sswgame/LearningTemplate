@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="306de8f0049b45eba8657af6eec73b69"?>
+<!--
+  장르 키트 시연 — 메트로배니아 키트(GF_Metroidvania)의 죽음과 휴식 한 바퀴: bench 에서 쉼 → husk(5) · hornet(300) 처치 → cave 에서 죽어 305 geo 시체 → 같은 자리에서 되찾음.
+  감시 값: KitDemo.Metroidvania.State(0 시작 전, 1 마침) · .CorpseCurrency · .RecoveredBalance · .RespawnAtRest.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.kit_metroidvania" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/kit_metroidvania.scene.xml"/>
+	<WaitUntil watch="KitDemo.Metroidvania.State" equals="1" timeoutFrames="120"/>
+	<Expect watch="KitDemo.Metroidvania.CorpseCurrency" equals="305"/>
+	<Expect watch="KitDemo.Metroidvania.RecoveredBalance" equals="305"/>
+	<Expect watch="KitDemo.Metroidvania.RespawnAtRest" equals="1"/>
+	<ExpectLog id="KitDemo.MetroidvaniaDone" count="1"/>
+	<Pass/>
+</Scenario>

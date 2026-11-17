@@ -1,5 +1,5 @@
 <?asset guid="a9e8a957e56c90ae636299fce2a53cf5"?>
-<Prefab formatVersion="0" name="Villager">
+<Prefab formatVersion="1" name="Villager">
 	<GameObject _schemaVersion="0" _name="Villager" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
@@ -18,7 +18,7 @@
 			                       _skeletonPath=""
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/ubc_townsfolk.animgraph.xml"

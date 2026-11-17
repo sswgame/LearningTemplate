@@ -40,6 +40,7 @@
 
 namespace sw
 {
+    class IRHICommandList;
     class IRHIDevice;
     class Mesh;
 
@@ -98,6 +99,15 @@ namespace sw
         /** @brief 버퍼를 놓습니다. 디바이스가 바뀌거나 내려갈 때 부릅니다. */
         void release( IRHIDevice* pDevice );
 
+        /**
+         * @brief 쌓인 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록하고 다 쓴 옛 풀 버퍼를 지연 해제합니다 — 프레임 업로드 단계(실행기가 첫 리스트 앞에 고정으로 부른다).
+         * @details 원본은 CopySource, 도착은 CopyDest 로 옮겨 복사하고 다시 VertexOrConstant 로 돌린다(R-15 — 풀은 CPU 정점 대신 GPU 원본에서 채운다). 쌓인 순서대로 기록한다 —
+         *          다시 꾸린 옛 풀이 아직 받지 못한 복사가 새 풀 복사보다 먼저 들어간다.
+         */
+        void recordPendingCopies( IRHICommandList& cmd, IRHIDevice& device );
+        /** @brief 아직 기록하지 않은 GPU 복사 수입니다(테스트 · 진단). */
+        uint32 getPendingCopyCount() const { return static_cast<uint32>( _listPendingCopy.size() ); }
+
     private:
         /** @brief 풀에 든 메시 하나의 기록입니다. */
         struct Entry
@@ -133,6 +143,21 @@ namespace sw
 
         /** @brief 메시의 그릴 정점 흐름(LOD 0 뒤에 낮은 단계)을 `_listScratchByte`([위치 구간 @p vertexCapacity 칸][속성 구간])의 @p firstVertex 칸부터 원본에서 바로 씁니다. */
         void writeDrawVertices( const Mesh& mesh, uint32 firstVertex, uint32 vertexCapacity );
+        /**
+         * @brief 메시 하나를 풀의 @p firstVertex 칸에 채울 일을 쌓습니다 — 렌더 프록시 정점 버퍼가 있으면 GPU 복사(위치 · 속성 두 구간), 없으면(동적 메시) CPU 정점을 스테이징으로 올린다.
+         * @return 채울 원본이 없으면(프록시도 CPU 정점도 없다) false 입니다.
+         */
+        [[nodiscard]] bool queueMeshFill( IRHIDevice& device, const Mesh& mesh, uint32 firstVertex, uint32 vertexCapacity );
+
+        /** @brief 쌓인 GPU 복사 하나입니다(도착은 그때의 풀 버퍼 — 다시 꾸리면 바뀐다). */
+        struct PendingCopy
+        {
+            RHIBufferHandle _destination{ 0 };
+            uint64          _destinationOffset{ 0 };
+            RHIBufferHandle _source{ 0 };
+            uint64          _sourceOffset{ 0 };
+            uint64          _sizeBytes{ 0 };
+        };
 
     private:
         RHIMeshVertexFormat _format;
@@ -154,5 +179,7 @@ namespace sw
         vector<RHIBufferCopyRegion> _listScratchIndexRegion;
         uint64                      _updateCount;
         uint32                      _liveVertexCount;
+        vector<PendingCopy>         _listPendingCopy;   ///< 다음 프레임 업로드 단계가 기록할 GPU 복사(쌓인 순서)
+        vector<RHIBufferHandle>     _listRetiredBuffer; ///< 다시 꾸려 비운 옛 풀 정점 버퍼 — 그것을 읽는 복사를 기록한 뒤 지연 해제한다
     };
 } // namespace sw

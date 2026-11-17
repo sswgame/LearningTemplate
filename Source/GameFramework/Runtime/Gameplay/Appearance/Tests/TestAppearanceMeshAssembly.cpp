@@ -88,7 +88,7 @@ SW_TEST_CASE( AppearanceMeshAssemblyTest, BakesBodyShapeThenMergesPartsIntoOneMe
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listBaked.size() ) );
     SW_REQUIRE_TRUE( listBaked[0] != nullptr );
     SW_EXPECT_TRUE( listBaked[1] == nullptr );                                                     // 옷에는 그 이름의 모프가 없다 — 바꿀 것이 없어 원본을 그린다
-    SW_EXPECT_NEAR( 1.0f, listBaked[0]->getVertices()[0]._arrPosition[2], 1e-5f );                 // 2 × 0.5 를 레스트에 구웠다
+    SW_EXPECT_NEAR( 1.0f, listBaked[0]->getCPUView().getVertices()[0]._arrPosition[2], 1e-5f );    // 2 × 0.5 를 레스트에 구웠다
     SW_EXPECT_FALSE( listBaked[0]->findMorphTargetIndex( hashed_string( "Heavy" ) ).has_value() ); // 구운 모프는 사본에서 빠진다
 
     vector<MeshMergePart>           listMergePart;
@@ -107,7 +107,7 @@ SW_TEST_CASE( AppearanceMeshAssemblyTest, BakesBodyShapeThenMergesPartsIntoOneMe
     SW_EXPECT_TRUE( mesh.getSections()[0]._name == hashed_string( "Body" ) );
     SW_EXPECT_TRUE( mesh.getSections()[1]._name == hashed_string( "Torso.Shirt" ) );
     SW_EXPECT_EQUAL( 12u, mesh.getVertexCount() );
-    SW_EXPECT_NEAR( 1.0f, mesh.getVertices()[0]._arrPosition[2], 1e-5f );
+    SW_EXPECT_NEAR( 1.0f, mesh.getCPUView().getVertices()[0]._arrPosition[2], 1e-5f );
 
     // 합칠 조각이 없으면 까닭과 함께 거절한다.
     const vector<MeshMergePart>      listEmpty;

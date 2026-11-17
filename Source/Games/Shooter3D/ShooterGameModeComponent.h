@@ -84,6 +84,29 @@ namespace sw
         PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
         string _preset{};
     };
+
+    /**
+     * @brief 웨이브(감독 순환 + 1)마다 적 한 기가 세지는 규칙입니다. 체력 = (`_baseHealth` + `_healthPerWave` × 웨이브) × max(`_minHealthScale`, 감독 배율),
+     *        속도 = min(`_maxSpeed`, `_baseSpeed` + `_speedPerWave` × 웨이브). 감독이 정하는 것은 언제 몇 기를 낼지이고, 세기는 이 규칙 데이터다(감사 K-4 — 예전에는 코드 리터럴).
+     * @details 모든 칸이 필수이고 0 보다 커야 한다 — 씬에 적지 않으면 0 이라 범위 검사가 감독을 열지 않는다(폴백 없음).
+     */
+    REFLECT()
+    struct ShooterEnemyWaveRules
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.001, Tooltip = "Enemy health on wave 0" )
+        float32 _baseHealth{};
+        PROPERTY( Required, Min = 0.0, Tooltip = "Health added each wave" )
+        float32 _healthPerWave{};
+        PROPERTY( Required, Min = 0.001, Max = 1.0, Tooltip = "Smallest director health scale an enemy keeps" )
+        float32 _minHealthScale{};
+        PROPERTY( Required, Min = 0.001, Tooltip = "Enemy speed on wave 0" )
+        float32 _baseSpeed{};
+        PROPERTY( Required, Min = 0.0, Tooltip = "Speed added each wave" )
+        float32 _speedPerWave{};
+        PROPERTY( Required, Min = 0.001, Tooltip = "Speed cap" )
+        float32 _maxSpeed{};
+    };
 } // namespace sw
 
 namespace sw
@@ -239,6 +262,8 @@ namespace sw
         vector<ShooterEnemyKind> _listEnemyKind;
         PROPERTY( Category = "Enemies", DisplayName = "Elite Enemy", Tooltip = "Enemy kind of the elite encounter" )
         ShooterEnemyKind _eliteEnemyKind;
+        PROPERTY( Required, Category = "Enemies", DisplayName = "Enemy Growth", Tooltip = "How enemy health and speed grow each wave (rule data)" )
+        ShooterEnemyWaveRules _enemyGrowth;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Object with the ShooterPlayerComponent" )
         GameObjectHandle _player;
         PROPERTY( Category = "Scene", DisplayName = "Spawn Points", Tooltip = "Enemies rise at these objects, in order" )

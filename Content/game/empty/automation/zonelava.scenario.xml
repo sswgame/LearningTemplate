@@ -10,7 +10,6 @@
 -->
 <Scenario name="game.empty.zonelava" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Nav.AreaCost" key="Humanoid:Lava" equals="-1"/>
 	<Expect watch="Nav.AreaCost" key="Spirit:Lava" equals="1"/>
@@ -18,7 +17,7 @@
 	<WaitUntil watch="Nav.PathLength" target="SpiritStart" key="NavGoal" atMost="12.6" timeoutSeconds="10"/>
 
 	<DevCommand line="object.place Walker 22 -0.95 0"/>
-	<Wait frames="70"/>
+	<AdvanceSimulation frames="70"/> <!-- 용암에 70 프레임(탄 양이 시간의 결과 — 시간이 내용) -->
 	<Expect watch="Zone.Sources" target="Walker" is="surface:Lava"/>
 	<Expect watch="Ability.HasTag" target="Walker" key="State.Burning" equals="1"/>
 	<Expect watch="Ability.Attribute" target="Walker" key="Health" atMost="62"/>
@@ -27,7 +26,7 @@
 
 	<DevCommand line="object.place Walker 0 0.05 -6"/>
 	<DevCommand line="object.place Spirit 22 -0.95 1.5"/>
-	<Wait frames="130"/>
+	<AdvanceSimulation frames="130"/> <!-- 정령은 130 프레임 동안 타지 않는다(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="Zone.Sources" target="Spirit" is="surface:Lava"/>
 	<Expect watch="Ability.Attribute" target="Spirit" key="Health" equals="100"/>
 	<Expect watch="Ability.HasTag" target="Spirit" key="State.Burning" equals="0"/>

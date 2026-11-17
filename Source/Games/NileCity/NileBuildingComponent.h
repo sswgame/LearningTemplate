@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
 
 namespace sw
 {
@@ -20,7 +21,7 @@ namespace sw
     /**
      * @class NileBuildingComponent
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다.
-     * @details 모델은 Kenney City Kit (Suburban)입니다. 집은 단계(0..7)마다 더 큰 집 모델로 바뀌고 빈 땅은 낮은 울타리입니다. 밭 · 조각상은 색 상자이고
+     * @details 모델은 Kenney City Kit (Suburban)이고 건물 id → 모델은 디렉터의 뷰 표(`buildings.views.xml`)가 정합니다. 집은 단계(0..7)마다 더 큰 집 모델로 바뀌고 빈 땅은 낮은 울타리입니다. 밭 · 조각상은 색 상자이고
      *          집이 아니면 단계가 모습을 바꾸지 않습니다. 건물 종류가 바뀌면(허물고 다른 것을 지었다) 디렉터가 오브젝트를 바꿔 세웁니다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "Nile Building View", Tooltip = "Shows one building of the Nile game mode city" )
@@ -38,21 +39,17 @@ namespace sw
         /** @brief 따라갈 디렉터와 건물 번호를 정합니다(디렉터가 스폰한 뒤 부른다). */
         void assignBuilding( GameObjectHandle gameMode, int32 buildingIndex );
 
-        /** @brief 이 건물 종류가 키트 모델로 그려지면 true(밭 · 조각상은 색 상자) 입니다. */
-        static bool hasModel( const CityBuildingDef& def );
-        /** @brief 건물의 모델 이름입니다. 색 상자로 남는 것은 nullptr 입니다. */
-        static const utf8* findModel( const CityBuildingDef& def, int32 level, bool bInhabited );
-        /** @brief 이 뷰가 고를 수 있는 모델 경로를 모두 모읍니다(디렉터가 미리 잡는다). */
-        static void   collectModelPaths( vector<string>& outListPath );
-        static string makeModelPath( const utf8* pName );
+        /** @brief 이 건물 종류가 키트 모델로 그려지면 true(뷰 표에 줄이 없는 밭 · 조각상은 색 상자) 입니다. */
+        static bool hasModel( const RuleViewCatalog& views, const CityBuildingDef& def );
+        /**
+         * @brief 건물의 뷰(모델 · 폭)입니다. 줄이 없으면 nullptr 이고 색 상자로 남는다.
+         * @details 집은 `<id>.empty`(빈 땅) · `<id>.<단계>`(사는 집) 줄을 찾고, 다른 건물은 건물 id 줄을 찾는다(감사 K-7 — 모델 표 · 경로를 코드가 들지 않는다).
+         */
+        static const RuleViewDef* findView( const RuleViewCatalog& views, const CityBuildingDef& def, int32 level, bool bInhabited );
 
     private:
         PROPERTY( Category = "Building", DisplayName = "Building Index", Tooltip = "Slot in the simulation building list" )
         int32 _buildingIndex;
-        PROPERTY( Category = "Building", DisplayName = "Model Scale", Min = 0.0 )
-        float32 _modelScale;
-        PROPERTY( Category = "Building", DisplayName = "Decoration Scale", Tooltip = "Extra scale for trees and planters, which are modelled smaller than the houses", Min = 0.0 )
-        float32 _decorationScale;
 
         int32 _shownKey; ///< 지금 그린 단계 × 2 + 사람(−1 이면 아직 없다)
     };

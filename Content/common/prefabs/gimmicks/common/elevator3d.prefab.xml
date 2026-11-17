@@ -1,5 +1,5 @@
 <?asset guid="5fcf821b9e121537f9e2f87333945251"?>
-<Prefab formatVersion="0" name="Elevator3D">
+<Prefab formatVersion="1" name="Elevator3D">
 	<GameObject _schemaVersion="0" _name="Elevator3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _componentName="RigidBodyComponent"

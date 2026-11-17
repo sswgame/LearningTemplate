@@ -1772,7 +1772,9 @@
 		<entry key="EditorAudioGraph.StopPreview" text="미리 듣기 멈춤" sourceHash="f83bedb815ca8289" />
 		<entry key="EditorAudioGraph.Unsaved" text="* 저장하지 않은 변경" sourceHash="6e6e4d288ea76fc4" />
 		<entry key="EditorAutosave.CanRestore" text="되살릴 수 있음" sourceHash="135fcc139c5c2497" />
-		<entry key="EditorAutosave.DiscardDocumentTooltip" text="이 문서의 사본을 지웁니다" sourceHash="041e72cd72ff08ba" />
+		<entry key="EditorAutosave.DiscardDocumentTooltip"
+		       text="이 문서의 사본을 지웁니다"
+		       sourceHash="041e72cd72ff08ba" />
 		<entry key="EditorAutosave.DiscardTooltip"
 		       text="이 씬의 사본을 모두 지웁니다"
 		       sourceHash="b049aae9e7c74d25" />

@@ -188,7 +188,7 @@
 - **K-11 오브젝트 풀이 한 곳에서만 쓰인다** (성능 — 측정 필요) — `PrefabPool` 은 슈터 탄착뿐, 아레나 탄 · 슈터 적은 매번 스폰. 상용: Lyra · Boss Room 풀. 제안: `spawnPrefab` 이 풀 정책(데이터)을 받는다. 확인: Tracy `GameModeFlush`.
 - **K-12 복셀 월드가 고정 크기 전량 상주이고 메셔가 면마다 정점 6 개다** (성능 · 구조) — `VoxelGameModeComponent.h:51-52`, `VoxelMesher.cpp:119-123 · 160-188`. 제안: "청크 좌표 → 청크" 사전 + 생성 · 저장 훅, 그리디 메싱. 확인: Tracy `VoxelMesher::fillChunkMesh`.
 - **K-13 LanternVale 서버가 변경과 무관하게 전원을 저장하고 매 틱 전 엔티티를 다시 싣는다** (성능) — `ValeNetLink.cpp:343-389`. 상용: Push Model · Iris. 제안: 프로필 저장 세대, 바뀔 때만 `setEntity`. 확인: `net-pair mmo` 자동 저장 쓰기 수.
-- **K-14 (보강) 장르 키트 17 개에 쓰는 게임 · 시연이 없다** (구조 · 테스트) — BattleRoyale · Fighting · MechArena · Metroidvania · CardGame · KartRacing · PartyArena · Rhythm · AsymmetricHorror · CoopScavenger · GhostHunt · SurvivalHorror · ClassicJRPG · MonsterCollector · MonsterHuntRPG · RestaurantSim · SideScrollConquest 가 `Source/Games` 에서 include 되지 않는다. 게임 폴더의 규칙 클래스(`SkirmishMatch` · `NileCityPlanner`)는 단위 테스트가 없다. 제안: Empty `KitDemo` 키트마다 한 씬 + `slice` 시나리오를 키트 완료 조건으로. 확인: `game.empty.kit.<이름>`.
+- **K-14 (보강) 장르 키트 17 개에 쓰는 게임 · 시연이 없다** (구조 · 테스트) — BattleRoyale · Fighting · MechArena · Metroidvania · CardGame · KartRacing · PartyArena · Rhythm · AsymmetricHorror · CoopScavenger · GhostHunt · SurvivalHorror · ClassicJRPG · MonsterCollector · MonsterHuntRPG · RestaurantSim · SideScrollConquest 가 `Source/Games` 에서 include 되지 않는다. 게임 폴더의 규칙 클래스(`SkirmishMatch` · `NileCityPlanner`)는 단위 테스트가 없다. 제안: Empty `KitDemo` 키트마다 한 씬 + `slice` 시나리오를 키트 완료 조건으로. 확인: `game.empty.kit_<이름>`(시나리오 이름 = 파일 이름 `automation/kit_<이름>.scenario.xml`).
 
 ### 에디터
 

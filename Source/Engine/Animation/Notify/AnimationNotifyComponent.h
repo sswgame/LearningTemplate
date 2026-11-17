@@ -157,6 +157,8 @@ namespace sw
         void processFootContacts( float32 deltaSeconds );
         /** @brief 테이블의 발 닿음 본을 같은 오브젝트 유닛의 본 LOD 핵심 본으로 알립니다 — 빠지면 발이 레퍼런스 포즈로 굳어 발소리가 나지 않는다. */
         void requireFootBones();
+        /** @brief 테이블에 소켓으로 맞히는 처리기(`usesBonesForHitDetection`, `HitWindow`)가 있으면 유닛이 화면 밖에서도 본을 갱신하는지 봅니다(아니면 로드 오류). */
+        void requireBonesForHitDetection() const;
 
         PROPERTY( Category = "Animation", DisplayName = "Notify Table", Tooltip = "Notify name to handler table (*.notifies.xml)" )
         AssetRef<AnimationNotifyTable> _notifyTablePath;

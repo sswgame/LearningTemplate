@@ -36,6 +36,7 @@ namespace sw
         ~VelmoraGame() override;
 
     protected:
+        bool onPrepareContent( const ContentPreparationToken& token ) override;
         bool onInitialize() override;
 
     private:
@@ -65,11 +66,17 @@ namespace sw
 
     VelmoraGame::~VelmoraGame() = default;
 
+    bool VelmoraGame::onPrepareContent( const ContentPreparationToken& token )
+    {
+        // 확장 팩은 준비 훅에서만 올린다 — 넷 세션을 열기 전(구성 해시가 와이어 버전에 섞인다) · 선언한 데이터와 첫 씬을 읽기 전이다. 구성 창구로도 걸어
+        // 세이브 머리에 켠 팩이 적힌다(예전에는 onInitialize 에서 올려 해시 0 · 세이브에 구성 없음이었다, 감사 K-9).
+        _mods = make_unique<ModSession>( game::getSubsystem<AssetManager>() );
+        return _mods->applyForGame( token, game::getSubsystem<const GameConfig>()._packRoot.get() ) && getGameScope().bind( _mods.get() ) &&
+               getGameScope().bind<IContentConfiguration>( _mods.get() );
+    }
+
     bool VelmoraGame::onInitialize()
     {
-        _mods = make_unique<ModSession>( game::getSubsystem<AssetManager>() );
-        if ( _mods->applyForGame( game::getSubsystem<const GameConfig>()._packRoot.get() ) == false || getGameScope().bind( _mods.get() ) == false )
-            return false;
         // 필수 데이터 — 디렉터 · 액션 룸이 게임 서비스로 찾는다(코드 폴백 없음). 못 읽으면 게임을 띄우지 않는다.
         if ( loadRequiredCatalog( _pRegionCatalog ) == false || loadRequiredCatalog( _pQuestCatalog ) == false || loadRequiredCatalogSnapshot( _pMonsterCatalog ) == false )
             return false;

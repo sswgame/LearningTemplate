@@ -12,7 +12,7 @@
 	<WaitUntil watch="PairedAnimation.SessionState" target="Lead" equals="1" timeoutFrames="120"/>
 	<Expect watch="MotionWarping.OpenWindows" equals="1"/>
 	<Expect watch="LocomotionWarping.PlayRateHeld" equals="1"/>
-	<Wait frames="45"/>
+	<WaitUntil watch="MotionWarping.OpenWindows" equals="0" timeoutFrames="60"/> <!-- 워핑 창이 닫혔다 -->
 	<Expect watch="MotionWarping.OpenWindows" equals="0"/>
 	<Expect watch="Object.DistanceTo" target="Partner" key="LeadFront" atMost="0.1"/>
 	<WaitUntil watch="PoseRetarget.Retargeting" equals="1" timeoutFrames="60"/>

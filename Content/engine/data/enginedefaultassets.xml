@@ -71,6 +71,7 @@
                      _shaderLightGrid="engine/shaders/light_grid.hlsl"
                      _shaderVFXSimulation="engine/shaders/vfx_simulate.hlsl"
                      _shaderVFXMeshInstance="engine/shaders/vfx_mesh_instance.hlsl"
+                     _shaderVFXParticleSort="engine/shaders/vfx_particle_sort.hlsl"
                      _shaderDepthHistory="engine/shaders/depth_history.hlsl"
                      _shaderAutoExposure="engine/shaders/auto_exposure.hlsl"
                      _shaderUpscale="engine/shaders/fsr1.hlsl"

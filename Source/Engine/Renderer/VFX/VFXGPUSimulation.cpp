@@ -3,8 +3,10 @@
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 
 #include "Core/Hash/HashUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -133,9 +135,15 @@ namespace sw
         , _listTransitionBeforeSimulate{}
         , _listTransitionAfterSimulate{}
         , _listTransitionBeforeMesh{}
+        , _listTransitionBeforeSort{}
+        , _listTransitionAfterSort{}
+        , _listSortDispatch{}
+        , _listBatchState{}
+        , _listBatchSorted{}
         , _listLightRange{}
         , _frameInput{}
         , _paramBuffer{}
+        , _orderBuffer{}
         , _pendingStepCount{ 0 }
         , _bPipelineMissingLogged{ SW_FALSE }
         , _bMeshPipelineMissingLogged{ SW_FALSE }
@@ -175,7 +183,7 @@ namespace sw
     }
 
     void VFXGPUSimulation::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
-                                         const VFXSimulationFrameInput& input )
+                                         vector_reference<const VFXGPUParticleSortJob> listSortJob, uint32 gpuOrderCount, const VFXSimulationFrameInput& input )
     {
         _frameInput       = input;
         _pendingStepCount = 0;
@@ -183,6 +191,9 @@ namespace sw
         _listMeshDispatch.clear();
         _listParamWord.clear();
         _listBatchDrawSource.assign( listBatch.size(), nullptr );
+        _listSortDispatch.clear();
+        _listBatchState.assign( listBatch.size(), nullptr );
+        _listBatchSorted.assign( listBatch.size(), SW_FALSE );
         for ( auto& [runID, pState] : _mapState )
         {
             (void)runID;
@@ -203,6 +214,7 @@ namespace sw
             SW_PROFILE_SCOPE( "RT.VFX.SimulationPrepare" );
             prepareParticleEmitters( device, listBatch );
             prepareMeshEmitters( device, listBatch, listMeshEmitter );
+            prepareParticleSortJobs( device, listBatch, listSortJob, gpuOrderCount );
         }
 
         releaseStaleEmitters( device );
@@ -259,6 +271,60 @@ namespace sw
             const VFXGPULightRange lightRange = batchIndex < _listLightRange.size() ? _listLightRange[batchIndex] : VFXGPULightRange{};
             appendSimulation( *pState, *pRequest, batch._world, batch._bRibbon == SW_TRUE, lightRange );
             _listBatchDrawSource[batchIndex] = &pState->_drawSource;
+            _listBatchState[batchIndex]      = pState;
+        }
+    }
+
+    void VFXGPUSimulation::prepareParticleSortJobs( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, vector_reference<const VFXGPUParticleSortJob> listSortJob,
+                                                    uint32 gpuOrderCount )
+    {
+        using Internal = VFXGPUSimulationInternal;
+        if ( listSortJob.empty() )
+            return;
+        // 정렬 PSO 가 없으면 순서 없이 그린다(옛 순서 칸을 읽지 않게 배치를 정렬 안 됨으로 둔다) — 시뮬레이션 PSO 와 같은 규칙으로 한 번 알린다.
+        if ( _frameInput._bSortPipelineReady == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "VFXGPUSimulation.VFXParticleSortPSO", "The VFX particle sort compute PSO is missing - sorted GPU emitters draw unsorted" );
+            return;
+        }
+        constexpr RHIBufferUsage kOrderUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
+        const bool               bOrderReady = _orderBuffer.ensureCapacity( &device, static_cast<uint32>( sizeof( uint32 ) ), MathUtil::max( 1u, gpuOrderCount ), kOrderUsage, true, true, nullptr ) &&
+                                 _orderBuffer._uav != kInvalidDescriptorIndex && _orderBuffer._srv != kInvalidDescriptorIndex;
+        if ( bOrderReady == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "VFXGPUSimulation.FailedCreateOrderBuffer", "Failed to create the GPU particle order buffer (%# entries) - sorted GPU emitters draw unsorted", gpuOrderCount );
+            return;
+        }
+        // 배치마다 일이 하나라도 빠지면(상태를 만들지 못했다) 그 배치는 순서 없이 그린다 — 일부 뷰만 옛 칸을 읽지 않게.
+        vector<uint8> listBatchMissing( _listBatchState.size(), SW_FALSE );
+        for ( const VFXGPUParticleSortJob& job : listSortJob )
+        {
+            const EmitterState* pState = job._batchIndex < _listBatchState.size() ? _listBatchState[job._batchIndex] : nullptr;
+            if ( pState == nullptr )
+            {
+                if ( job._batchIndex < listBatchMissing.size() )
+                    listBatchMissing[job._batchIndex] = SW_TRUE;
+                continue;
+            }
+            const uint32 paramRow = static_cast<uint32>( _listParamWord.size() / Internal::kWordsPerRow );
+            const bool   bUseAxis = job._axis.getLengthSquared() > MathUtil::kEpsilon;
+            Internal::appendRow( _listParamWord, job._orderFirst, static_cast<uint32>( job._sortMode ), 0u, 0u );
+            // 방출기 행렬의 열 0..2(행벡터 규약 — 셰이더가 dot( float4( 로컬, 1 ), 열 ) 로 월드 좌표를 얻는다, particle.hlsl 과 같다).
+            const float4x4& world = listBatch[job._batchIndex]._world;
+            Internal::appendRow( _listParamWord, BitUtil::floatToBits( world._11 ), BitUtil::floatToBits( world._21 ), BitUtil::floatToBits( world._31 ), BitUtil::floatToBits( world._41 ) );
+            Internal::appendRow( _listParamWord, BitUtil::floatToBits( world._12 ), BitUtil::floatToBits( world._22 ), BitUtil::floatToBits( world._32 ), BitUtil::floatToBits( world._42 ) );
+            Internal::appendRow( _listParamWord, BitUtil::floatToBits( world._13 ), BitUtil::floatToBits( world._23 ), BitUtil::floatToBits( world._33 ), BitUtil::floatToBits( world._43 ) );
+            Internal::appendRow( _listParamWord, BitUtil::floatToBits( job._eye._x ), BitUtil::floatToBits( job._eye._y ), BitUtil::floatToBits( job._eye._z ), bUseAxis ? 1u : 0u );
+            Internal::appendRow( _listParamWord, BitUtil::floatToBits( job._axis._x ), BitUtil::floatToBits( job._axis._y ), BitUtil::floatToBits( job._axis._z ), 0u );
+            SortDispatch& dispatch            = _listSortDispatch.emplace_back();
+            dispatch._pState                  = pState;
+            dispatch._paramRow                = paramRow;
+            _listBatchSorted[job._batchIndex] = SW_TRUE;
+        }
+        for ( size_t batchIndex = 0; batchIndex < listBatchMissing.size(); ++batchIndex )
+        {
+            if ( listBatchMissing[batchIndex] != SW_FALSE )
+                _listBatchSorted[batchIndex] = SW_FALSE;
         }
     }
 
@@ -311,7 +377,7 @@ namespace sw
     void VFXGPUSimulation::uploadParamBuffer( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch )
     {
         using Internal              = VFXGPUSimulationInternal;
-        const bool bNothingToUpload = _listDispatch.empty() && _listMeshDispatch.empty();
+        const bool bNothingToUpload = _listDispatch.empty() && _listMeshDispatch.empty() && _listSortDispatch.empty();
         if ( bNothingToUpload )
             return;
         const uint32 rowCount = static_cast<uint32>( _listParamWord.size() / Internal::kWordsPerRow );
@@ -321,7 +387,9 @@ namespace sw
             SW_LOG_ERROR_ID( "VFXGPUSimulation.FailedCreateVFXSimulation", "Failed to create the VFX simulation parameter buffer (%# rows) - GPU-simulated emitters are not drawn", rowCount );
             _listDispatch.clear();
             _listMeshDispatch.clear();
+            _listSortDispatch.clear();
             _listBatchDrawSource.assign( listBatch.size(), nullptr );
+            _listBatchSorted.assign( listBatch.size(), SW_FALSE );
             return;
         }
         _paramBuffer.upload( &device, _listParamWord.data(), static_cast<uint32>( _listParamWord.size() * sizeof( uint32 ) ) );
@@ -334,6 +402,19 @@ namespace sw
         _listTransitionBeforeSimulate.clear();
         _listTransitionAfterSimulate.clear();
         _listTransitionBeforeMesh.clear();
+        _listTransitionBeforeSort.clear();
+        _listTransitionAfterSort.clear();
+        // 정렬 — 인자(살아 있는 수)를 SRV 로 읽고 순서 버퍼에 쓴 뒤, 인자는 간접 그리기로 · 순서는 정점 셰이더 읽기로 돌린다.
+        if ( _listSortDispatch.empty() == false )
+        {
+            _listTransitionBeforeSort.push_back( RHIBufferTransition{ _orderBuffer._buffer, RHIBufferState::UnorderedAccess } );
+            _listTransitionAfterSort.push_back( RHIBufferTransition{ _orderBuffer._buffer, RHIBufferState::ShaderResource } );
+        }
+        for ( const SortDispatch& dispatch : _listSortDispatch )
+        {
+            _listTransitionBeforeSort.push_back( RHIBufferTransition{ dispatch._pState->_argsBuffer._buffer, RHIBufferState::ShaderResource } );
+            _listTransitionAfterSort.push_back( RHIBufferTransition{ dispatch._pState->_argsBuffer._buffer, RHIBufferState::IndirectArgument } );
+        }
         const bool bLightBufferReady = _frameInput._lightUAV != kInvalidDescriptorIndex && _frameInput._lightBuffer != 0;
         bool       bAnyLights        = false;
         for ( const Dispatch& dispatch : _listDispatch )
@@ -590,9 +671,9 @@ namespace sw
         cmd.uavBarrier( state._particleBuffer._buffer );
     }
 
-    void VFXGPUSimulation::recordDispatches( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO ) const
+    void VFXGPUSimulation::recordDispatches( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO, RHIPipelineStateHandle sortPSO ) const
     {
-        const bool bNothingToDispatch = ( _listDispatch.empty() && _listMeshDispatch.empty() ) || simulationPSO == 0 || _paramBuffer.isValid() == false;
+        const bool bNothingToDispatch = ( _listDispatch.empty() && _listMeshDispatch.empty() && _listSortDispatch.empty() ) || simulationPSO == 0 || _paramBuffer.isValid() == false;
         if ( bNothingToDispatch )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.Simulate" );
@@ -625,6 +706,27 @@ namespace sw
                 cmd.uavBarrier( _frameInput._lightBuffer ); // 다음 방출기가 같은 버퍼의 다른 슬롯 범위를 쓴다 — 범위가 겹치지 않아도 상태 추적을 맞춘다
         }
         cmd.transitionBuffers( _listTransitionAfterSimulate.data(), static_cast<uint32>( _listTransitionAfterSimulate.size() ) );
+
+        // 정렬 — 방출기(ViewDepth 는 방출기 × 뷰)마다 워크그룹 하나가 살아 있는 입자를 정렬해 순서 버퍼의 그 구간에 쓴다(vfx_particle_sort.hlsl).
+        // g_VFXParams(t0) / g_VFXParticles(t1) / g_VFXArgs(t2) / g_VFXOrderRW(u0) / 루트 상수 g_VFXSortParamBase. 레지스터와 1:1 이다.
+        const bool bSortReady = _listSortDispatch.empty() == false && sortPSO != 0 && _orderBuffer.isValid();
+        if ( bSortReady )
+        {
+            SW_PROFILE_SCOPE( "RT.VFX.SortParticles" );
+            cmd.transitionBuffers( _listTransitionBeforeSort.data(), static_cast<uint32>( _listTransitionBeforeSort.size() ) );
+            cmd.setComputePipelineState( sortPSO );
+            for ( const SortDispatch& dispatch : _listSortDispatch )
+            {
+                const EmitterState& state = *dispatch._pState;
+                cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
+                cmd.bindComputeShaderResource( state._particleBuffer._srv, 1 );
+                cmd.bindComputeShaderResource( state._argsBuffer._srv, 2 );
+                cmd.bindComputeUAV( _orderBuffer._uav, 0 );
+                cmd.setComputeRootConstants( 0, 1, &dispatch._paramRow );
+                cmd.dispatchCompute( 1, 1, 1 );
+            }
+            cmd.transitionBuffers( _listTransitionAfterSort.data(), static_cast<uint32>( _listTransitionAfterSort.size() ) );
+        }
 
         // 메시 입자 — 렌더 입력을 인스턴스 칸으로 옮긴다. 인스턴스 애니메이션 · 컬링이 이어서 이 버퍼를 읽는다.
         const bool bMeshWrites = _listMeshDispatch.empty() == false && meshInstancePSO != 0 && _frameInput._instanceUAV != kInvalidDescriptorIndex;
@@ -663,6 +765,12 @@ namespace sw
         }
         _mapState.clear();
         _paramBuffer.release( pDevice );
+        _orderBuffer.release( pDevice );
+        _listSortDispatch.clear();
+        _listBatchState.clear();
+        _listBatchSorted.clear();
+        _listTransitionBeforeSort.clear();
+        _listTransitionAfterSort.clear();
         _listDispatch.clear();
         _listMeshDispatch.clear();
         _listBatchDrawSource.clear();

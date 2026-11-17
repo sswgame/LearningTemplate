@@ -2,135 +2,203 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorEditRecorder.h"
 
-#include "Core/Container/string.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Container/vector.h"
 
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw::editor
 {
+    // ------------------------------------------------------------------------------
+    // 구간 표
+    // ------------------------------------------------------------------------------
+    void PropertyEditSpanSet::open( uint64 key, PropertyEditSpan&& span )
+    {
+        closeHeld();
+        _held         = std::move( span );
+        _heldKey      = key;
+        _bHasHeld     = SW_TRUE;
+        _bHeldTouched = SW_FALSE;
+    }
+
+    void PropertyEditSpanSet::touch( uint64 key )
+    {
+        if ( isHeld( key ) )
+            _bHeldTouched = SW_TRUE;
+    }
+
+    void PropertyEditSpanSet::collectClosed( vector<PropertyEditSpan>& outListClosed )
+    {
+        // 이번 프레임에 위젯이 활성이 아니었다 — 풀렸거나(놓은 프레임의 쓰기까지 담았다), 사라졌거나(해제를 받을 수 없다), 한 번 쓰기였다.
+        if ( _bHasHeld != SW_FALSE && _bHeldTouched == SW_FALSE )
+            closeHeld();
+        _bHeldTouched = SW_FALSE;
+        outListClosed = std::move( _listClosed );
+        _listClosed.clear();
+    }
+
+    void PropertyEditSpanSet::clear()
+    {
+        _held         = PropertyEditSpan{};
+        _heldKey      = 0;
+        _bHasHeld     = SW_FALSE;
+        _bHeldTouched = SW_FALSE;
+        _listClosed.clear();
+    }
+
+    void PropertyEditSpanSet::closeHeld()
+    {
+        if ( _bHasHeld == SW_FALSE )
+            return;
+        _listClosed.push_back( std::move( _held ) );
+        _held     = PropertyEditSpan{};
+        _heldKey  = 0;
+        _bHasHeld = SW_FALSE;
+    }
+
+    // ------------------------------------------------------------------------------
+    // 찍기 · 기록
+    // ------------------------------------------------------------------------------
     namespace
     {
         struct InspectorEditRecorderInternal
         {
-            /** @brief 편집이 시작된 위젯 하나의 "편집 전" 스냅샷입니다. 대상은 위젯이 풀릴 때까지 여러 프레임을 넘기므로 핸들로 듭니다. */
-            struct PendingEdit
+            /** @brief 컴포넌트 @p pComponent(nullptr 이면 @p owner 자신)의 @p prop 을 구간 대상으로 더합니다. */
+            static void appendTarget( PropertyEditSpan& span, const GameObject& owner, const Component* pComponent, const PropertyInfo& prop )
             {
-                vector<ObjectSnapshot>   _listBefore;
-                vector<GameObjectHandle> _listTarget; ///< 선택한 오브젝트 전부(다중 선택이면 인스펙터가 같은 값을 나머지에 입힌다)
-                string                   _label;
-                EditorSelection*         _pPreviewSelection{ nullptr }; ///< 미리보기 창의 선택을 고쳤으면 그 선택(기록은 그 창의 스택). 메인이면 nullptr
+                const void* pInstance = pComponent != nullptr ? static_cast<const void*>( pComponent ) : static_cast<const void*>( &owner );
+                span._listTarget.push_back( PropertyEditTarget::make( owner, pComponent ) );
+                span._listPath.push_back( string{ prop._name.c_str() } );
+                span._listBefore.push_back( SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+            }
+
+            /** @brief 단계 하나의 값 글 표 — 같은 글은 한 벌만 든다(다중 선택은 대개 값이 하나다). */
+            struct TextTable
+            {
+                vector<string>                _listText;
+                vector<uint32>                _listIndex;
+                unordered_map<string, uint32> _mapIndex;
+
+                void add( const string& text )
+                {
+                    const auto [iter, bInserted] = _mapIndex.try_emplace( text, static_cast<uint32>( _listText.size() ) );
+                    if ( bInserted )
+                        _listText.push_back( text );
+                    _listIndex.push_back( iter->second );
+                }
             };
 
-            /** @brief 기록기의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
-            struct State
+            /** @brief 구간 @p span 의 바뀐 대상 가운데 경로가 @p path 인 것을 한 명령으로 거래 @p transaction 에 남깁니다. */
+            static void recordPath( EditorTransaction& transaction, const PropertyEditSpan& span, const vector<size_t>& listChanged, const vector<string>& listAfter,
+                                    const string& path )
             {
-                unordered_map<uint32, PendingEdit> _mapPending;   ///< 편집 중인 위젯 표(위젯 id 열쇠)
-                vector<PendingEdit>                _listFinished; ///< 위젯이 풀린 편집
-            };
-
-            static State& getState() { return getEditorState<State>(); }
-
-            /** @brief 겨누는 선택의 오브젝트 전부의 "편집 전" 스냅샷을 찍습니다. @p pLabel 이 널이면 "Property" 입니다. */
-            static PendingEdit captureSelectionBeforeEdit( const utf8* pLabel )
-            {
-                EditorContext& context = editor::getSubsystem<EditorContext>();
-                // 인스펙터가 겨누는 선택이다 — 미리보기 창의 선택이면 그 씬의 오브젝트다.
-                EditorSelection* pFocused = editor::getFocusedSelection();
-                if ( pFocused == nullptr ) // 컨텍스트가 있으면 메인 선택이 있다 — 겨누는 창이 없어도 그것을 돌려준다
-                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
-                EditorSelection&    selection = *pFocused;
-                vector<GameObject*> listSelected;
-                selection.getSelectedObjects( listSelected );
-                if ( listSelected.empty() && selection.isPreviewScope() == false )
+                vector<PropertyEditTarget> listTarget;
+                TextTable                  before;
+                TextTable                  after;
+                GameObject*                pRecordOwner = nullptr;
+                for ( size_t changed = 0; changed < listChanged.size(); ++changed )
                 {
-                    GameObject* pSelected = context.getSubsystem<EditorWorkspace>().getSelectedObject();
-                    if ( pSelected != nullptr )
-                        listSelected.push_back( pSelected );
+                    const size_t index = listChanged[changed];
+                    if ( span._listPath[index] != path )
+                        continue;
+                    listTarget.push_back( span._listTarget[index] );
+                    before.add( span._listBefore[index] );
+                    after.add( listAfter[changed] );
+                    if ( pRecordOwner == nullptr )
+                        pRecordOwner = PropertyEditTarget::findObject( span._sceneKey, span._listTarget[index]._objectID );
                 }
-                PendingEdit pending;
-                for ( GameObject* pSelected : listSelected )
-                {
-                    pending._listTarget.push_back( pSelected->getHandle() );
-                    pending._listBefore.push_back( EditorTransaction::captureSnapshot( pSelected ) );
-                }
-                pending._label             = ( pLabel != nullptr ) ? pLabel : "Property";
-                pending._pPreviewSelection = selection.isPreviewScope() ? &selection : nullptr;
-                return pending;
+                if ( pRecordOwner == nullptr )
+                    return;
+                CommandStack::Command command{};
+                command._label = span._label;
+                command._undo  = SW_UNDO_STEP( PropertyEditTarget::applyPropertyText, span._sceneKey, path, listTarget, before._listText, before._listIndex );
+                command._redo  = SW_UNDO_STEP( PropertyEditTarget::applyPropertyText, span._sceneKey, path, listTarget, after._listText, after._listIndex );
+                transaction.recordObjectCommand( *pRecordOwner, std::move( command ) );
             }
         };
     } // namespace
 
-    void InspectorEditRecorder::beginEdit( uint32 widgetID, const utf8* pLabel )
+    PropertyEditSpan PropertyEditSpan::captureProperty( const GameObject& owner, const Component* pComponent, const PropertyInfo& prop,
+                                                        const Delegate<void( vector<Component*>& )>& collectEditTargets, string_view label )
     {
-        using Internal                             = InspectorEditRecorderInternal;
-        Internal::getState()._mapPending[widgetID] = Internal::captureSelectionBeforeEdit( pLabel );
+        PropertyEditSpan span;
+        span._sceneKey = PropertyEditTarget::findSceneKey( owner );
+        span._label    = string{ label };
+        vector<Component*> listComponent;
+        if ( collectEditTargets.isBound() )
+            collectEditTargets( listComponent );
+        if ( listComponent.empty() )
+        {
+            InspectorEditRecorderInternal::appendTarget( span, owner, pComponent, prop );
+            return span;
+        }
+        span._listTarget.reserve( listComponent.size() );
+        span._listPath.reserve( listComponent.size() );
+        span._listBefore.reserve( listComponent.size() );
+        for ( const Component* pEdited : listComponent )
+        {
+            if ( pEdited != nullptr && pEdited->getOwner() != nullptr )
+                InspectorEditRecorderInternal::appendTarget( span, *pEdited->getOwner(), pEdited, prop );
+        }
+        return span;
     }
 
-    void InspectorEditRecorder::finishEdit( uint32 widgetID )
+    PropertyEditSpan PropertyEditSpan::captureComponent( const Component& component, string_view label )
     {
-        InspectorEditRecorderInternal::State& state = InspectorEditRecorderInternal::getState();
-        const auto                            iter  = state._mapPending.find( widgetID );
-        if ( iter == state._mapPending.end() )
+        PropertyEditSpan span;
+        span._label              = string{ label };
+        const GameObject* pOwner = component.getOwner();
+        const TypeInfo*   pType  = component.getTypeInfo();
+        if ( pOwner == nullptr || pType == nullptr )
+            return span;
+        span._sceneKey = PropertyEditTarget::findSceneKey( *pOwner );
+        for ( const PropertyInfo& prop : pType->getPropertiesWithBase() )
+        {
+            InspectorEditRecorderInternal::appendTarget( span, *pOwner, &component, prop );
+        }
+        return span;
+    }
+
+    void PropertyEditSpan::commit( vector<PropertyEditSpan>& inoutListSpan )
+    {
+        if ( inoutListSpan.empty() )
             return;
-        state._listFinished.push_back( std::move( iter->second ) );
-        state._mapPending.erase( iter );
-    }
-
-    void InspectorEditRecorder::recordImmediateEdit( const utf8* pLabel )
-    {
-        using Internal = InspectorEditRecorderInternal;
-        Internal::getState()._listFinished.push_back( Internal::captureSelectionBeforeEdit( pLabel ) );
-    }
-
-    void InspectorEditRecorder::commitFinishedEdits()
-    {
-        EditorTransaction                                   transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        vector<InspectorEditRecorderInternal::PendingEdit>& listFinished = InspectorEditRecorderInternal::getState()._listFinished;
-        // 플레이 중 편집은 기록하지 않는다 — 편집 내역은 맡겨 두었고(`CommandStack::suspendHistory`) Stop 이 스냅샷으로 되돌린다.
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
-            listFinished.clear();
+            inoutListSpan.clear();
             return;
         }
-        for ( const InspectorEditRecorderInternal::PendingEdit& edit : listFinished )
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다 — 이번 마감의 명령들은 되돌리기 한 단계다
+        for ( const PropertyEditSpan& span : inoutListSpan )
         {
-            const string label = InspectorPropertyLayout::makeUndoLabel( edit._label.c_str() );
-            if ( edit._pPreviewSelection != nullptr )
+            vector<size_t> listChanged;
+            vector<string> listAfter;
+            vector<string> listPath; // 바뀐 대상의 경로(겹치지 않게) — 확장 영역만 여럿이다
+            string         afterText;
+            for ( size_t index = 0; index < span._listTarget.size(); ++index )
             {
-                // 미리보기 창의 편집은 그 창의 스택에 남긴다. 그 사이 창이 닫혔거나 다른 선택을 겨누면 선택이 없을 수 있어 남기지 않는다.
-                if ( editor::getFocusedSelection() != edit._pPreviewSelection )
+                // 그 사이 사라진 대상(지웠거나 미리보기 창을 닫았다)은 빠진다 — 되돌릴 곳이 없다.
+                GameObject* pObject = PropertyEditTarget::findObject( span._sceneKey, span._listTarget[index]._objectID );
+                if ( pObject == nullptr || span._listTarget[index].readValueText( *pObject, span._listPath[index], afterText ) == false || afterText == span._listBefore[index] )
                     continue;
-                for ( size_t index = 0; index < edit._listTarget.size(); ++index )
-                {
-                    GameObject* pTarget = edit._pPreviewSelection->findObject( edit._listTarget[index] );
-                    if ( pTarget != nullptr )
-                        edit._pPreviewSelection->recordModify( *pTarget, edit._listBefore[index], EditorTransaction::captureSnapshot( pTarget ), label );
-                }
-                continue;
+                listChanged.push_back( index );
+                listAfter.push_back( std::move( afterText ) );
+                afterText = string{};
+                if ( VectorUtil::contains( listPath, span._listPath[index] ) == false )
+                    listPath.push_back( span._listPath[index] );
             }
-            const bool bCompound = edit._listTarget.size() > 1;
-            if ( bCompound )
-                EditorTransaction::beginTransaction( label ); // 여러 오브젝트의 같은 편집은 되돌리기 한 번이다
-            for ( size_t index = 0; index < edit._listTarget.size(); ++index )
-            {
-                GameObject*          pTarget       = editor::findGameObject( edit._listTarget[index] );
-                const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTarget );
-                transaction.recordModify( pTarget, edit._listBefore[index], afterSnapshot, label );
-            }
-            if ( bCompound )
-                EditorTransaction::endTransaction();
+            for ( const string& path : listPath )
+                InspectorEditRecorderInternal::recordPath( transaction, span, listChanged, listAfter, path );
         }
-        listFinished.clear();
+        inoutListSpan.clear();
     }
 } // namespace sw::editor

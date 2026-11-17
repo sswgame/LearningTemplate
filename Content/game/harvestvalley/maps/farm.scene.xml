@@ -1,5 +1,5 @@
 <?asset guid="b9575a0d56eec95a98d8322f327bcf9e"?>
-<Scene formatVersion="2" name="HarvestValley">
+<Scene formatVersion="3" name="HarvestValley">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -743,7 +743,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/ubc_farmer.animgraph.xml"

@@ -201,6 +201,15 @@ namespace sw
         return createFilledBuffer( pData, sizeBytes, D3D11_BIND_VERTEX_BUFFER );
     }
 
+    RHIBufferHandle D3D11RHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        // DX11 의 정점 버퍼는 원래 DEFAULT 사용이라 복사(`CopySubresourceRegion`)의 도착이 된다 — 0 으로 채워 만든다(채움 함수가 내용을 요구한다).
+        if ( sizeBytes == 0 )
+            return 0;
+        const vector<uint8> listZero( sizeBytes, uint8{ 0 } );
+        return createFilledBuffer( listZero.data(), sizeBytes, D3D11_BIND_VERTEX_BUFFER );
+    }
+
     void D3D11RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
         _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
@@ -645,6 +654,7 @@ namespace sw
         record._width     = desc._width;
         record._height    = desc._height;
         record._arraySize = desc._arraySize;
+        record._mipLevels = texDesc.MipLevels > 0 ? texDesc.MipLevels : 1u;
         record._dimension = desc._dimension;
         record._bDepth    = bDepth ? 1 : 0;
         record._reserved  = 0;
@@ -655,15 +665,18 @@ namespace sw
             return 0;
         }
 
-        // 면이 여럿이면 렌더 패스가 면 하나를 타깃으로 고른다 — 면마다 배열 뷰(원소 하나)를 만든다. `_rtv` · `_dsv` 는 면 0 이다.
+        // 면이나 밉이 여럿이면 렌더 패스가 (밉, 면) 하나를 타깃으로 고른다 — 그마다 뷰를 만든다(칸 `mip * 면 수 + slice`). `_rtv` · `_dsv` 는 (0, 0) 이다.
+        const uint32 mipLevels           = record._mipLevels;
+        const bool   bPerSubresourceView = bSliced || mipLevels > 1;
         if ( desc._bIsRenderTarget && bDepth == false )
         {
-            for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
+            for ( uint32 viewIndex = 0; viewIndex < mipLevels * desc._arraySize; ++viewIndex )
             {
+                const uint32                  slice = viewIndex % desc._arraySize;
                 D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
                 rtvDesc.Format                         = toDXGIFormat( desc._format );
                 rtvDesc.ViewDimension                  = bSliced ? D3D11_RTV_DIMENSION_TEXTURE2DARRAY : D3D11_RTV_DIMENSION_TEXTURE2D;
-                rtvDesc.Texture2DArray.MipSlice        = 0;
+                rtvDesc.Texture2DArray.MipSlice        = viewIndex / desc._arraySize; // TEXTURE2D 의 MipSlice 와 같은 자리다
                 rtvDesc.Texture2DArray.FirstArraySlice = slice;
                 rtvDesc.Texture2DArray.ArraySize       = 1;
                 Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
@@ -672,21 +685,22 @@ namespace sw
                     SW_LOG_ERROR_ID( "D3D11.FailedCreateRTVTexture2D", "Failed to create RTV for Texture2D (slice %#).", slice );
                     return 0;
                 }
-                if ( slice == 0 )
+                if ( viewIndex == 0 )
                     record._rtv = rtv;
-                if ( bSliced )
+                if ( bPerSubresourceView )
                     record._listSliceRTV.push_back( std::move( rtv ) );
             }
         }
 
         if ( bDepth )
         {
-            for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
+            for ( uint32 viewIndex = 0; viewIndex < mipLevels * desc._arraySize; ++viewIndex )
             {
+                const uint32                  slice = viewIndex % desc._arraySize;
                 D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
                 dsvDesc.Format                         = toDXGIFormat( constant::render::kDepthStencilFormat );
                 dsvDesc.ViewDimension                  = bSliced ? D3D11_DSV_DIMENSION_TEXTURE2DARRAY : D3D11_DSV_DIMENSION_TEXTURE2D;
-                dsvDesc.Texture2DArray.MipSlice        = 0;
+                dsvDesc.Texture2DArray.MipSlice        = viewIndex / desc._arraySize; // TEXTURE2D 의 MipSlice 와 같은 자리다
                 dsvDesc.Texture2DArray.FirstArraySlice = slice;
                 dsvDesc.Texture2DArray.ArraySize       = 1;
                 Microsoft::WRL::ComPtr<ID3D11DepthStencilView> dsv;
@@ -695,9 +709,9 @@ namespace sw
                     SW_LOG_ERROR_ID( "D3D11.FailedCreateDSVTexture2D", "Failed to create DSV for Texture2D (slice %#).", slice );
                     return 0;
                 }
-                if ( slice == 0 )
+                if ( viewIndex == 0 )
                     record._dsv = dsv;
-                if ( bSliced )
+                if ( bPerSubresourceView )
                     record._listSliceDSV.push_back( std::move( dsv ) );
             }
         }
@@ -815,6 +829,38 @@ namespace sw
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         // 이중 해제 · 다른 공간 번호는 `RHIBindlessRegistry::release` 가 거절한다.
         (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
+    }
+
+    bool D3D11RHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
+        D3D11RHIDevice::TextureRecord* pRecord       = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        const bool                     bCannotRebind = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotRebind )
+            return false;
+        // 기록 때 번호를 자원으로 풀므로 등록표 값만 바꾼다(다음 바인딩부터 새 텍스처).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.rebind( index, texture );
+    }
+
+    RHIDescriptorIndex D3D11RHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        // 번호 발급기만 건드린다 — 칸 값은 그대로라 기록 경로의 풀이에 닿지 않는다(어느 스레드든).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.reserveIndex();
+    }
+
+    bool D3D11RHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
+        D3D11RHIDevice::TextureRecord* pRecord         = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        const bool                     bCannotActivate = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotActivate )
+            return false;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

@@ -74,7 +74,8 @@ namespace sw
                 case RHIBufferState::CopyDest:
                     return D3D12_RESOURCE_STATE_COPY_DEST;
                 case RHIBufferState::VertexOrConstant:
-                    return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+                    // 정점 버퍼는 셰이더도 읽는다(모프 · 스킨 컴퓨트가 풀을 SRV 로) — 읽기 상태는 합칠 수 있다. GPU 전용 정점 버퍼(R-15)가 이 상태로 돌아온다.
+                    return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
                 case RHIBufferState::Index:
                     return D3D12_RESOURCE_STATE_INDEX_BUFFER;
                 case RHIBufferState::CopySource:
@@ -119,12 +120,12 @@ namespace sw
         const D3D12RHIDevice::BindlessReadSlot* const pSlot = _pDevice->findBindlessReadSlot( index, bUAV );
         if ( pSlot == nullptr )
             return 0;
-        D3D12_GPU_VIRTUAL_ADDRESS address = pSlot->_gpuAddress.load( std::memory_order_relaxed );
+        D3D12_GPU_VIRTUAL_ADDRESS address = pSlot->getGPUAddress();
         if ( bConstantBuffer && address != 0 )
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다(링이 아니면 크기가 0 이다).
             // updateConstantBuffer 가 이번 프레임 슬롯에 썼으므로 같은 슬롯 주소를 건다.
-            const uint32 alignedSize = pSlot->_cbAlignedSize.load( std::memory_order_relaxed );
+            const uint32 alignedSize = pSlot->getCBAlignedSize();
             address += static_cast<D3D12_GPU_VIRTUAL_ADDRESS>( _pDevice->_frameRing.currentIndex() ) * alignedSize;
         }
         return address;
@@ -135,7 +136,7 @@ namespace sw
         const D3D12RHIDevice::BindlessReadSlot* const pSlot = _pDevice->findBindlessReadSlot( index, bUAV );
         if ( pSlot == nullptr )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
-        return D3D12_CPU_DESCRIPTOR_HANDLE{ static_cast<SIZE_T>( pSlot->_offlineView.load( std::memory_order_relaxed ) ) };
+        return D3D12_CPU_DESCRIPTOR_HANDLE{ static_cast<SIZE_T>( pSlot->getOfflineView() ) };
     }
 
     bool D3D12RHICommandContext::allocateOnlineDescriptors( uint32 count, uint32& outBase )
@@ -1103,6 +1104,18 @@ namespace sw
             return;
         // 읽기 힙 버퍼는 만들 때부터 COPY_DEST 로 둔다(만든 곳 `createReadbackBuffer`) — 배리어가 없다. 원본은 부르는 쪽이 COPY_SOURCE 로 옮겨 두었다.
         commandListForRecord()->CopyBufferRegion( pTarget, 0, pSource, 0, sizeBytes );
+    }
+
+    void D3D12RHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        if ( _pCmdList == nullptr )
+            return;
+        ID3D12Resource* pSource = _pDevice->resolveBuffer( source );
+        ID3D12Resource* pTarget = _pDevice->resolveBuffer( destination );
+        if ( pSource == nullptr || pTarget == nullptr )
+            return;
+        // 원본은 COPY_SOURCE, 도착은 COPY_DEST 로 부르는 쪽이 옮겨 두었다(`transitionBuffers`). 범위가 버퍼 밖이면 디버그 레이어가 잡는다 — 같은 버퍼는 위에서 걸렀다.
+        commandListForRecord()->CopyBufferRegion( pTarget, destinationOffset, pSource, sourceOffset, sizeBytes );
     }
 
 } // namespace sw

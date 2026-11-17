@@ -1,7 +1,7 @@
 <?asset guid="3fb6a4f54820eb03dcc95be04a8ffbee"?>
 <!-- 독가스 구름(런타임 영역) — 유황 분출구(zones/sulfurvent.zone.xml)가 들어온 캐릭터 자리에 뿌린다(object.spawn).
      같은 지역 볼륨에 수명(6 초 뒤 오브젝트째 사라진다)과 퍼짐(초당 0.5 m, 2 m 까지)을 둔다 — 프로필은 살포된 가스(poisonspread). -->
-<Prefab formatVersion="0" name="ZoneGas">
+<Prefab formatVersion="1" name="ZoneGas">
 	<GameObject _schemaVersion="0" _name="ZoneGas" _bActive="true">
 		<_listComponent>
 			<SceneComponent _componentName="SceneComponent"

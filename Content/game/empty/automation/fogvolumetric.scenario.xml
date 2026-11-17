@@ -13,29 +13,26 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Expect watch="Render.FogVolumeState" equals="1"/>
 	<Screenshot file="fog_plain.ppm"/>
-	<Wait frames="2"/>
 	<LoadScene path="game/empty/maps/fogvolumetric.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="fog_volume.ppm"/>
-	<Wait frames="5"/>
 	<ExpectImagesDiffer first="fog_plain.ppm" second="fog_volume.ppm" region="0.2,0.3,0.8,0.45" minDiffering="0.2"/>
 	<Expect watch="Render.FogVolumeState" equals="6"/>
 	<Variable name="gv_fogDebugView" value="Compare"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="fog_compare.ppm"/>
-	<Wait frames="2"/>
 	<ExpectImagesDiffer first="fog_volume.ppm" second="fog_compare.ppm" region="0.55,0.3,0.8,0.45" minDiffering="0.2"/>
 	<Variable name="gv_fogDebugView" value="Scattering"/>
 	<Variable name="gv_fogDebugSlice" value="24"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="fog_slice.ppm"/>
-	<Wait frames="2"/>
 	<ExpectImagesDiffer first="fog_volume.ppm" second="fog_slice.ppm" region="0.2,0.3,0.8,0.45" minDiffering="0.2"/>
 	<Variable name="gv_fogDebugView" value="None"/>
 	<Pass/>

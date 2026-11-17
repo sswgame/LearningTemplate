@@ -1,5 +1,5 @@
 <?asset guid="3da3664708f38521f730b73e45868aec"?>
-<Scene formatVersion="2" name="ItemVariantShowcase">
+<Scene formatVersion="3" name="ItemVariantShowcase">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -83,7 +83,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 					                              _bActive="true"
 					                              _presetID="VariantShowcasePlain"
@@ -110,7 +110,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 					                              _bActive="true"
 					                              _presetID="VariantShowcaseGilded"
@@ -137,7 +137,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 					                              _bActive="true"
 					                              _presetID="VariantShowcaseDyed"

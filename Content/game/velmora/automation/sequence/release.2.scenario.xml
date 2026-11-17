@@ -10,7 +10,7 @@
 	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
 	<DevCommand line="game.load velmora/release"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
-	<Wait frames="3"/>
+	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="10"/> <!-- 복원(표 밖 자리를 일어설 자리로 옮김까지 한 번에 한다) 뒤 첫 틱이 지역을 다시 정했다 -->
 	<ExpectLog id="Velmora.PlayerOutsideRegions" count="1"/>
 	<Expect watch="Velmora.PlayerX" near="0" tolerance="0.05"/>
 	<Expect watch="Velmora.Region" is="hearth"/>
@@ -18,7 +18,7 @@
 	<Expect watch="Quest.Status" target="ember_oath" is="Active"/>
 	<!-- 다시 걸을 수 있다 — 동쪽으로 1 초 -->
 	<ActionAxis name="Move" x="1" seconds="1"/>
-	<Wait seconds="1.1"/>
+	<WaitUntil watch="Velmora.PlayerX" near="6" tolerance="0.05" timeoutSeconds="2"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.PlayerX" near="6" tolerance="0.2"/>
 	<Pass/>
 </Scenario>

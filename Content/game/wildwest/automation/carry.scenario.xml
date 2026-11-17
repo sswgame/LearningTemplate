@@ -8,28 +8,27 @@
 -->
 <Scenario name="game.wildwest.carry" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_wildWestAutoPlay" value="0"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="60"/> <!-- 키 입력을 받을 조종자가 쥐었다 -->
 	<Expect watch="Grab.Held" target="Player" is="none"/>
 	<Press slot="Key.R"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 누른 채인 구간(시간이 내용) -->
 	<Release slot="Key.R"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 멀리서 눌러도 들지 않는다(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="Grab.Held" target="Player" is="none"/>
 
 	<DevCommand line="teleport Player 48 0.05 -2.8"/>
-	<Wait frames="5"/>
+	<WaitUntil watch="Object.DistanceTo" target="SupplyCrate" key="Player" atMost="1.5" timeoutFrames="10"/> <!-- 손 닿는 곳에 섰다 -->
 	<Press slot="Key.R"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 누른 채인 구간(시간이 내용) -->
 	<Release slot="Key.R"/>
 	<WaitUntil watch="Grab.Held" target="Player" is="SupplyCrate" timeoutFrames="10"/>
 
 	<DevCommand line="teleport Player 44 0.05 -6"/>
 	<WaitUntil watch="Object.DistanceTo" target="SupplyCrate" key="Player" atMost="1.6" timeoutFrames="10"/>
 	<Expect watch="Object.X" target="SupplyCrate" atMost="45"/>
-	<Wait frames="2"/>
 
 	<Press slot="Key.R"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 누른 채인 구간(시간이 내용) -->
 	<Release slot="Key.R"/>
 	<WaitUntil watch="Grab.Held" target="Player" is="none" timeoutFrames="10"/>
 	<WaitUntil watch="Object.Y" target="SupplyCrate" atMost="0.3" timeoutSeconds="3"/>

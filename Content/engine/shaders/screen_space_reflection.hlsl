@@ -47,7 +47,7 @@ int classifyRayPoint( float3 position, float2 depthSize, out float2 outUv )
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     const float2 uv        = input._uv;
-    const float2 depthSize = float2( Bindless::getEngineTextureSize( SW_ENGINE_ROLE( SceneDepth ) ) );
+    const float2 depthSize = float2( PassTexture::getViewRectSize() ); // 텍셀 번호는 사각형 기준이다(풀이 사각형보다 클 수 있다)
     const float  depth     = loadSceneDepth( uv, depthSize );
     float        roughness;
     float        metallic;

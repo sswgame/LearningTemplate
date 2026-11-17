@@ -21,17 +21,8 @@ namespace sw
 {
     namespace
     {
-        /** @brief 허락을 따로 보지 않는 가드입니다. shortcut: 서버 디렉터리 제어 API 가 운영자 가드를 받게 되면 지운다. */
-        class OpenWriteGuard final : public IServiceWriteGuard
-        {
-        public:
-            ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
-        };
-
         struct ServerDirectoryServiceInternal
         {
-            static shared_ptr<const IServiceWriteGuard> getOpenGuard() { return make_shared<const OpenWriteGuard>(); }
-
             static constexpr int32 kMaxMaintenanceRow     = 64;   ///< 점검 표를 한 번에 읽는 쪽 크기이다
             static constexpr int32 kMaxMaintenanceRowRead = 1024; ///< 점검 표를 다 읽는 상한이다. 넘으면 이전 상태를 둔다(뒤의 점검을 조용히 버리면 그 범위가 열린다)
             static constexpr int32 kPercentScale          = 100;
@@ -421,7 +412,7 @@ namespace sw
         return nullptr;
     }
 
-    void ServerDirectoryService::setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::setMaintenance( const MaintenanceWindow& window, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidWindow( window ) == false )
@@ -437,7 +428,8 @@ namespace sw
         }
         pendingJob._table               = Internal::getMaintenanceTable();
         pendingJob._key                 = window._scope;
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._pGuard              = actor._pGuard;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
         pendingJob._auditEntry._action  = "sd.maintenance.set";
         pendingJob._auditEntry._subject = "sd/" + window._scope;
         pendingJob._auditEntry._memo    = string( memo );
@@ -445,7 +437,7 @@ namespace sw
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    void ServerDirectoryService::clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::clearMaintenance( string_view scope, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( scope != MaintenanceWindow::kScopeAll && ServerRecord::isValidName( scope ) == false )
@@ -456,7 +448,8 @@ namespace sw
         ServiceAuditedWrite pendingJob;
         pendingJob._table               = Internal::getMaintenanceTable();
         pendingJob._key                 = string( scope );
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._pGuard              = actor._pGuard;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
         pendingJob._auditEntry._action  = "sd.maintenance.clear";
         pendingJob._auditEntry._subject = "sd/" + string( scope );
         pendingJob._auditEntry._memo    = string( memo );
@@ -464,7 +457,7 @@ namespace sw
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    void ServerDirectoryService::postAnnouncement( const ServiceAnnouncement& announcement, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::postAnnouncement( const ServiceAnnouncement& announcement, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidAnnouncement( announcement ) == false )
@@ -480,7 +473,8 @@ namespace sw
         }
         pendingJob._table               = Internal::getAnnouncementTable();
         pendingJob._key                 = ServiceKeyUtil::makeHex64( announcement._announcementID );
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._pGuard              = actor._pGuard;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
         pendingJob._auditEntry._action  = "sd.notice.post";
         pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
         pendingJob._auditEntry._after   = announcement._text;
@@ -507,20 +501,21 @@ namespace sw
         return rule;
     }
 
-    void ServerDirectoryService::removeAnnouncement( uint64 announcementID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::removeAnnouncement( uint64 announcementID, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         ServiceAuditedWrite pendingJob;
         pendingJob._table               = Internal::getAnnouncementTable();
         pendingJob._key                 = ServiceKeyUtil::makeHex64( announcementID );
-        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actorID );
+        pendingJob._pGuard              = actor._pGuard;
+        pendingJob._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( actor._actorID );
         pendingJob._auditEntry._action  = "sd.notice.remove";
         pendingJob._auditEntry._subject = "sd/notice/" + pendingJob._key;
         pendingJob._auditEntry._timeMs  = nowMs.count();
         submitWrite( std::move( pendingJob ), requestTag );
     }
 
-    void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::setMaintenance( const ServerDirectoryMaintenanceChange& change, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         MaintenanceWindow window;
         window._listAllowedAccount = change._listAllowedAccount;
@@ -528,10 +523,10 @@ namespace sw
         window._messageKey         = change._messageKey;
         window._startMs            = change._startMs;
         window._endMs              = change._endMs;
-        setMaintenance( window, actorID, memo, nowMs, requestTag );
+        setMaintenance( window, actor, memo, nowMs, requestTag );
     }
 
-    void ServerDirectoryService::postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::postAnnouncement( const ServerDirectoryAnnouncementChange& change, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag )
     {
         ServiceAnnouncement announcement;
         announcement._text           = change._text;
@@ -540,7 +535,7 @@ namespace sw
         announcement._endMs          = change._endMs;
         announcement._priority       = change._priority;
         announcement._bLiteralText   = change._bLiteralText;
-        postAnnouncement( announcement, actorID, nowMs, requestTag );
+        postAnnouncement( announcement, actor, nowMs, requestTag );
     }
 
     void ServerDirectoryService::takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion )
@@ -554,6 +549,8 @@ namespace sw
                 result = ServerDirectoryControlResult::Ok;
             else if ( completion._result.hasError( OnlineError::kInvalidRequest ) )
                 result = ServerDirectoryControlResult::Invalid;
+            else if ( completion._result.hasError( OnlineError::kForbidden ) )
+                result = ServerDirectoryControlResult::Forbidden;
             else if ( completion._result == ServerDirectoryResult::NotFound )
                 result = ServerDirectoryControlResult::NotFound;
             outListCompletion.push_back( ServerDirectoryControlCompletion{ completion._requestTag, result } );
@@ -562,8 +559,6 @@ namespace sw
 
     void ServerDirectoryService::submitWrite( ServiceAuditedWrite&& pendingJob, uint64 requestTag )
     {
-        // shortcut: 서버 디렉터리 운영 쓰기는 아직 등급 가드를 받지 않는다(Admin 이 앞 일에서 등급을 본다) — 제어 API 가 `ServiceOperator` 를 받게 되면 그 가드로 바꾼다.
-        pendingJob._pGuard = ServerDirectoryServiceInternal::getOpenGuard();
         _store.submit( [pendingJob = std::move( pendingJob )]( IServiceStoreConnection& connection )
         { return pendingJob.commit( connection ); },
                        [this, requestTag]( ServiceAuditedWriteResult result )

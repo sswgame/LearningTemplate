@@ -15,6 +15,8 @@ sw_glob_source_tree(list_game_framework_source RECURSE "*.cpp" "*.c" "*.h" "*.hp
 list(FILTER list_game_framework_source EXCLUDE REGEX "Kits/")
 # 에디터 확장(Plugin/Editor/)은 따로 짓는 모듈이다(GF_EditorPlugin_<이름>) - GameFramework DLL(배포본 포함)에 섞지 않는다.
 list(FILTER list_game_framework_source EXCLUDE REGEX "Plugin/")
+# 개발 전용 공유 모듈(Developer/ — GameFrameworkDev)은 따로 짓는다 — 배포 GameFramework 에 섞지 않는다(아래 add_subdirectory).
+list(FILTER list_game_framework_source EXCLUDE REGEX "/Developer/")
 # 클라이언트 전용 소스(Client/ — HUD · 마커 · 로딩 화면)는 전용 서버가 짓지 않는다(cmake/Modules/Build/ExcludedSources.cmake).
 # 서버 전용 소스(Server/ — 온라인 서버 조립, 서비스 호스트 · 메모리 저장소 · 캐시 · 버스 구현)는 클라이언트 구성이 짓지 않는다.
 if(SW_TARGET_TYPE STREQUAL "Server")
@@ -112,6 +114,9 @@ foreach(tier IN LISTS SW_GAMEFRAMEWORK_TIER_LIST)
 endforeach()
 
 add_subdirectory(Kits)
+
+# 개발 전용 공유 모듈 GameFrameworkDev(매니페스트가 배포에서 끈다 — 디렉터리 안에서 `sw_skip_inactive_module` 로 돌아간다)
+add_subdirectory(Developer)
 
 # 에디터 확장 - EditorModule 과 GameFramework(또는 키트)를 링크하는 Dev 전용 SHARED 모듈(`sw_add_editor_extension`, 매니페스트 GF_EditorPlugin_<이름>.module.json)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Plugin/Editor/CMakeLists.txt")

@@ -454,6 +454,11 @@ virtual AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint6
 - **MR-1 밉 배치와 범위 읽기 입구** — `Asset/Image/TextureMipLayout.{h,cpp}`(새 파일), `DDSLoader.{h,cpp}`(머리 풀이를 공유), `Core/File/ContentFileSource.{h,cpp}` · `BundledContentFileSource.h` · 팩 소스, `PackReader.{h,cpp}`(무압축 구간 · 압축 항목 오류). 테스트: `TextureMipLayoutTest.OffsetsMatchWholeFileDecode`(BC1 · BC7 · RGBA8 · ASTC) · `TruncatedFileIsError`, `ContentFileSourceTest.RangeMatchesWholeRead`(소스마다), `PackReaderTest.RangeReadOnCompressedEntryIsError`. 의존: 없음.
 - **MR-2 올리기 줄을 밉 요청으로** — `TextureCache.cpp`(`StreamingUpgrade` → `TextureMipRequest`, 읽는 중 목록, 바이트 상한), `Texture2D.{h,cpp}`(`beginUploadMips`, `computeMipDrop` 을 배치로). 테스트: `TextureCacheStreamingTest.QueueHoldsNoImageBytes` · `BytesInFlightStaysUnderCap` · `ReleasedWhileReadingIsDropped`. 의존: MR-1(R6-5 와 같은 파일이라 그 뒤에 맡긴다).
 - **MR-3 첫 로드를 머리 + 꼬리로, 쿠킹 규칙** — `TextureLoadOperation`(`TextureCache.cpp`), `PackConfig.h` · 쿠킹 검사. 테스트: `TextureCacheStreamingTest.FirstLoadReadsTailOnly`, 쿠킹 사례 `PackCooker.CompressedTextureEntry`. 의존: MR-2.
+- **R-15 후속 1 CPU 정점의 GPU 원본 이전** — 정점 풀 다시 꾸리기(`GPUMeshVertexPool.cpp` — 렌더 프록시 버퍼에서 GPU 복사) · 모프 휴지 자세(`GPUMeshMorphPool.cpp` · `FrameGraphExecutor.cpp` 모프 진단 — GPU 휴지 자세) · GI 복셀화(`SceneVoxelizer.cpp` — GPU 래스터 복셀화)가 `MeshCPUView` 대신 GPU 원본을 읽는다. 의존: `MeshCPUView` 도입(첫걸음, 들어감).
+  - 업로드 기록 자리 결정(2026-11-17): 프레임 그래프 실행기가 파이프라인과 무관하게 첫 리스트 앞에 고정으로 기록하는 **프레임 업로드 단계** 하나(파이프라인 XML 의 패스가 아니다 — 풀이 안 채워지는 파이프라인이 생길 수 없다). 정점 풀의 GPU 복사 · 상태 전이를 여기서 기록한다. 풀 정점 버퍼는 GPU 전용(`createGPUVertexBuffer`, DX12 default 힙)이고 인덱스는 CPU 인덱스에서 그대로 올린다. 상용 대조: 언리얼 RDG 의 초기 업로드, 유니티 SRP 의 프레임 시작 CommandBuffer.
+  - 모프 · 스킨 휴지 자세 결정(2026-11-17): GPU 원본으로 옮기지 않고 **스킨 · 모프 메시는 CPU 정점을 쥔다(Keep)** — 휴지 자세를 Packed 프록시(snorm8 노멀 · half 색)에서 풀면 노멀이 8 비트로 떨어져 CPU float 휴지 자세와 그림이 갈리고(골든), Vulkan 프록시 정점 버퍼에 STORAGE 용도 · DX12 정점 버퍼의 원시 SRV · 새 컴퓨트 PSO 가 든다. 스킨 · 모프 메시는 캐릭터 몫이라 수가 적다 — 놓기를 켤 때(후속 2) `Mesh::hasSkin` · 모프 타깃이 있는 메시는 만드는 쪽이 Keep 으로 정한다. 상용 대조: 언리얼도 스켈레탈 메시는 CPU 스키닝 · 물리 에셋 때문에 CPU 정점을 쥐는 설정이 기본이다.
+  - GI 복셀화 결정(2026-11-17): **기하 셰이더 없는 3 축 투영**으로 간다 — 정점 셰이더가 삼각형 노멀의 가장 큰 축을 골라 그 축 직교 투영으로 그리고, 픽셀 셰이더가 깊이를 복셀 z 로 바꿔 3D UAV 에 원자 쓰기한다(삼각형 축은 컴퓨트 한 번으로 미리 구해 정점 흐름에 싣는다 — 정점 셰이더는 이웃 정점을 모른다). 보존 래스터는 DX12 Tier · Vulkan 확장 · GL/WebGPU 미지원으로 다섯 백엔드에 같은 그림을 못 내 기각하고, 대신 복셀 한 칸만큼 삼각형을 넓히지 않는 대가로 얇은 벽이 빠지는 것은 복셀 크기 절반의 바깥 확장(정점에서 노멀 방향)으로 막는다. 기하 셰이더는 WebGPU · Metal 계열에 없어 기각. 상용 대조: 언리얼 Lumen 의 메시 카드 · 유니티 APV 는 래스터 복셀화가 아니지만, NVIDIA VXGI · CryEngine SVOGI 가 같은 3 축 투영을 쓴다. 구현은 다음 차례.
+- **R-15 후속 2 CPU 정점 놓기 켜기** — `MeshCPUAccess` 를 `Mesh::create` · `MeshCache::request` 에 기본값 없이(절차 메시 Keep, 요청이 갈리면 Keep, 놓인 뒤 Keep 요청이면 `.mesh` 다시 읽기), 업로드가 모두 끝난 뒤 놓고 장치 교체 때 `.mesh` 를 다시 읽는다. 상용 대조: 언리얼 `UStaticMesh::bAllowCPUAccess`(꺼진 메시는 CPU 쓰기 — 물리 쿠킹 · 내비 · 복셀 GI — 를 에셋 설정 단계에서 막는다). 의존: 후속 1.
 
 ### 자동 렌더 배율: GPU 프레임 시간과 뷰 사각형(설계 2026-11-17, 감사 RN-8)
 
@@ -853,8 +858,8 @@ public:
 
 **결정.**
 
-1. **형식 3 판 — 색인을 끝에.** 구역 순서를 헤더 · 페이로드 · FAT · 블록 표 · (블록 해시 표) · 스트링 풀 하나로 한다(지금의 `Slot` 배치 순서, 리더는 이미 헤더의 오프셋만 믿는다). `PackLayoutMode` 는 페이로드 자리 규칙으로만 남는다.
-2. **스트림 쓰기.** 항목을 경로 해시 순으로 하나씩(병렬 압축은 바이트 창 `_writeWindowBytes` 안에서, 쓰기는 순서대로) 읽고 · 압축하고 · 이어 쓴 뒤 색인과 헤더를 쓴다. 쓰는 동안 내용 해시와 색인 SHA-256 을 섞어 돌려주므로 다시 읽지 않는다.
+1. **형식 3 판 — 색인을 끝에.** 구역 순서를 헤더 · 페이로드 · FAT · 블록 표 · (블록 해시 표) · 스트링 풀 하나로 한다(지금의 `Slot` 배치 순서, 리더는 이미 헤더의 오프셋만 믿는다). `PackLayoutMode` 는 페이로드 자리 규칙으로만 남는다. 구현(PK-3): 헤더는 **파일 끝**(96 B, 언리얼 pak `FPakInfo` 자리) — 앞에 두면 마지막에 정해지는 칸 때문에 앞에서부터 쓰며 내용 해시를 셀 수 없다. 색인 구역은 `_indexOffset` 부터 파일 끝까지 한 구간이다.
+2. **스트림 쓰기.** 항목을 경로 해시 순으로 하나씩(병렬 압축은 바이트 창 `_writeWindowBytes` 안에서, 쓰기는 순서대로) 읽고 · 압축하고 · 이어 쓴 뒤 색인과 헤더를 쓴다. 쓰는 동안 내용 해시와 색인 SHA-256 을 섞어 돌려주므로 다시 읽지 않는다. 구현(PK-3): 색인 SHA-256 은 PK-5 가 `PackWriteResult::_indexOffset` 구간으로 센다(쓰기가 보안 제공자를 알지 않게).
 3. **블록 표.** 모든 항목을 `_blockSize`(PackConfig, 2 의 거듭제곱 64 ~ 256 KiB — 첫 값 128 KiB)로 잘라 블록마다 압축한다. 작은 항목은 블록 하나다. CRC 는 블록마다로 옮긴다. `readRange` 가 걸친 블록만 읽는다.
 4. **색인 서명.** 패치 목록은 팩 전체 대신 **색인 구역**(헤더 · FAT · 블록 표 · 블록 해시 표 · 스트링 풀)의 SHA-256 을 서명한다. 리더가 여는 핸들로 색인을 검증한 뒤에만 마운트하고(검증한 핸들이 곧 읽는 핸들), 서명 채널의 팩(`PackFlag::HasBlockHash`)은 읽을 때 블록마다 SHA-256 을 견준다. 기동 비용은 색인 크기에만 비례하고 2 GiB 한도가 사라진다.
 5. **정렬 배열 색인.** 리더는 디스크 FAT 을 그대로 든다(정렬이 아니면 마운트 거절, 이진 탐색). 경로는 스트링 풀을 가리키는 `string_view`, 폴더 나열은 (폴더 해시, 항목 번호) 정렬 배열이다.
@@ -1315,6 +1320,8 @@ REFLECT() struct SW_API AssetImportOverride { REFLECT_BODY();
 | M2 임포터 · 규칙 이전 | M | `Editor/Common/Asset/Model/ModelImportConfig.*` · `Texture/TextureImporter.*`, `Config/Editor/*ImportConfig.json`, 해당 `.meta` | `ModelImportConfigTest.MetaOverrideWinsOverRule` · `.UnknownOverrideKeyIsAnError` · `.SingleFilePatternIsRejected` | M1 |
 | M3 인스펙터 절 | M | Inspector Model · View | `editor/uicapture` 단계, 예외 고치기 → Ctrl+Z 시나리오 | M2 · P1 |
 
+**M3 에서 정한 것(2026-11-17).** 인스펙터는 오브젝트를 고르지 않았고 고른 에셋이 서술을 가진 원본(`models_raw/` · `textures_raw/`)이면 Import Settings 를 보인다(`InspectorContent::ImportSettings`, 모델 `InspectorImportSettings`). 줄은 규칙 구조체의 리플렉션 칸(규칙 파일 키 이름)마다 해석한 값이고, 예외 칸은 서술의 JSON 값 글 그대로 진한 이름 + Revert 단추, 규칙 칸은 흐린 이름이다(강조색 없음 — app-screens). 고친 값은 임포터와 같은 `resolveRule` 로 먼저 해석해 통과할 때만 서술에 쓴다(폴백 없음). 서술 쓰기는 작업 공간 스택의 데이터 단계(서술 글 전 · 후)이고 씬 dirty 는 아니며, 쓰기 · 되돌리기 모두 `AssetHotReload::applySavedAsset` 으로 그 원본을 다시 임포트한다. 언리얼은 `UAssetImportData` 를 Details 에 보이고 Reimport 를 따로 누르게 하나, 유니티처럼 고치면 바로 적용한다(차이 한 칸이라 비용이 작다). 확인: `editor/importsettings`(고치기 → 되돌리기 → 바이트 같음, Revert) · `editor/uicapture` 의 `ui_import_settings.png`.
+
 ### 형제 순서: 분수 색인 키(설계 2026-11-17, 감사 E-6 · 41)
 
 **문제.** `EditorSiblingOrder.cpp:40-52` `renumber` 가 형제 번호를 0 부터 다시 매기며 바뀐 형제마다 전체 XML 스냅샷 → `commitModify` 한다. 루트 8000 에서 한 줄을 옮기면 직렬화 16000 회, 씬 파일 8000 줄이 바뀐다. 번호는 `GameObject::_siblingIndex`(`uint16`, 65535 에서 막힘)이고 에디터 계층 창만 읽는다("틱 · 렌더 순서에는 쓰지 않는다", `GameObject.h:188`).
@@ -1370,11 +1377,19 @@ void applyPropertyText( UndoStepContext& context, const PropertyEditTarget& targ
 - 스냅샷으로 남는 것: 구조 편집(생성 · 삭제 · 컴포넌트 추가 · 삭제). 한 쓰기가 다른 칸을 고치는 타입(`onPropertyChanged`)이 되돌리기에서 어긋나는지는 추측하지 않고 `editor/undocoverage` 의 전수 단계(프로퍼티마다 편집 → 되돌리기 → 상태 글 해시가 편집 전과 같다)가 가린다 — 지는 프로퍼티만 거래에 오브젝트 스냅샷을 함께 싣는다.
 - 기각 — 감사의 임시안(`IsItemDeactivated` 에서 pending 지우기만): 누수는 막지만 선택 전체 직렬화가 남는다.
 
+**P1 에서 정한 것(2026-11-17).**
+- 확장 영역(`IInspectorComponent` — 트랜스폼 · 카메라 …, 컴포넌트에 바로 써 모델을 지나지 않는다): 그룹 위젯이 활성화될 때 **그 컴포넌트 하나의 프로퍼티 전부**의 값 글을 찍고, 풀릴 때 바뀐 프로퍼티만 같은 단계로 남긴다. 유니티 `Undo.RecordObject`(대상 하나를 찍고 차이를 `PropertyModification` 으로) · 언리얼 `Modify` + 트랜잭션 차이와 같다. 기각 — 오브젝트 스냅샷 유지(단위가 둘로 갈린다), 확장마다 모델 쓰기 길로 옮기기(회전 도 표시처럼 프로퍼티와 1:1 이 아닌 입력이 있다 — Godot 도 커스텀 에디터는 `emit_changed` 로 프로퍼티 단위만 받는다).
+- 구간 표(`PropertyEditSpanSet`)는 그리드 모델이 하나씩 든다 — 인스펙터 창이 둘이어도 서로의 구간을 닫지 않는다. 고아 구간은 "다음 `gather`" 가 아니라 그리드의 프레임 끝(`EditorPropertyGrid::endFrame`)이 닫는다: 한 그리드가 한 프레임에 카드마다 모으므로 모으기로는 다른 카드의 활성 위젯과 가릴 수 없다.
+- 구간 하나 = 데이터 단계 한 쌍이고 대상 목록을 인자로 든다(8000 선택이 명령 8000 개가 아니다). 단계 인자에 씬 키를 더했다(미리보기 창 — `ObjectSnapshot` 과 같은 규칙), 스택은 `EditorTransaction::recordObjectCommand` 가 오브젝트의 씬으로 고른다.
+- P2 · P3: 구간 키는 위젯이 아니라 **행**(깊이 0 프로퍼티의 행 키)이다 — 쓰기가 그 행의 구간을 열거나 잇고, 그리드가 행을 그리는 사이 활성 위젯이 그려졌으면(ImGui `EndGroup` 과 같은 `ActiveIdIsAlive` 판정) 잇고, 활성이 아닌 프레임의 마감(놓은 프레임의 쓰기까지 담아 그 프레임에 오른다)이 닫는다. 그리기 확장은 되돌리기를 모르고 쓰기 명령만 부른다(추적 호출 9 곳을 지웠다). 위젯 하나 기준이던 P1 은 벡터 축 셋(`drawVec3Control`)처럼 위젯 여럿인 행에서 X · Y 축을 끌면 프레임마다 한 단계가 되었다(그 전 스냅샷 길은 아예 기록하지 않았다). 언리얼 프로퍼티 체인 편집 구간(`NotifyPreChange` ~ `NotifyPostChange`)과 같은 선. 되돌리기에서 빼는 타입(`atomic<bool>` — 다른 스레드가 쓴다)은 모델이 가린다.
+- P3 규모: 단계 인자는 (씬 키, 프로퍼티 경로 하나, 대상 목록 — 오브젝트 id · 컴포넌트 지역 id 16 바이트, 값 글 표 + 대상마다 번호)다. 다중 선택은 대개 값이 하나라 8000 선택의 거래가 약 0.3 MB 다(대상마다 글 키 · 경로를 들면 1.3 MB 로 판정을 넘었다). 확인은 `editor/inspectorundoscale`(8000 선택: 누르기만 → 기록 0, 끌기 → 기록 1 · 1 MB 이하, Ctrl+Z 한 번에 씬 해시)와 `editor/undocoverage` 의 프로퍼티 전수(`editor.undoCoverageProperties` — 숫자 · 체크 · 벡터 칸을 인스펙터 모델로 고치고 되돌려 해시를 맞댄다). 전수가 `PropertyMismatch` 로 이름을 내는 프로퍼티만 거래에 오브젝트 스냅샷을 함께 싣는다 — 지금은 그런 칸을 모른다(통합 검증에서 나오면 그때 단다).
+- 컨테이너 편집(원소 더하기 · 지우기 · 맵 항목)도 같은 구간을 탄다 — 예전 스냅샷은 주 선택만 찍어 다중 선택의 나머지가 되돌아가지 않았다. 메서드 호출(`invokeMethod`)만 오브젝트 스냅샷으로 남는다(무엇을 바꿀지 모른다).
+
 **판정.** 8000 선택에서 칸을 누르고 나오기 → 기록 0 · 프레임 증가 1 ms 미만. 숫자 칸 끌기 → 구간 열기 프레임 16 ms 미만, 거래 1 MB 미만.
 
 | 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
 |---|---|---|---|---|
-| P1 단계 · 편집 구간 | M | `PropertyEditStep.h/.cpp`(새), `PropertyGridModel.cpp`, `InspectorEditRecorder.*`(축소) | `InspectorEditRecorderTest.DeactivateWithoutEditDropsPending` · `.EditRecordsOnePropertyPerTarget` · `.UndoRestoresValueThroughModelPath` · `.OrphanedSpanClosesOnNextGather` | 없음 |
+| P1 단계 · 편집 구간 | M | `PropertyEditStep.h/.cpp`(새), `PropertyGridModel.cpp`, `InspectorEditRecorder.*`(축소) | `InspectorEditRecorderTest.DeactivateWithoutEditDropsPending` · `.EditRecordsOnePropertyPerTarget` · `.UndoRestoresValueThroughModelPath` · `.OrphanedSpanClosesAtFrameEnd` | 없음 |
 | P2 View 정리 | S | `InspectorPropertyUndo.cpp`, `IInspectorProperty` 구현들의 호출 순서 주석 | 기존 `editor/inspector*` 시나리오 | P1 |
 | P3 전수 · 규모 | M | `EditorUndoCoverage.cpp`(프로퍼티 전수), 8000 선택 시나리오 단계 | `editor/undocoverage` 프로퍼티 단계, 아래 측정 절의 값 | P1 |
 

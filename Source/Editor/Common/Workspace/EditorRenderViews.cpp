@@ -188,7 +188,7 @@ namespace sw::editor
             pendingPathBuilder.appendFormat( "%#editor/view%#", TextureCache::kRenderTargetPrefix, _nextTargetSerial++ );
             view._pendingPath = string( pendingPathBuilder.view() );
             textures.declareRenderTarget( view._pendingPath, width, height );
-            view._pendingTexture = textures.request( view._pendingPath, AssetLoadStart::Async );
+            view._pendingTexture = textures.request( view._pendingPath, AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
             view._pendingWidth   = width;
             view._pendingHeight  = height;
             if ( view._pendingTexture.isValid() == false )

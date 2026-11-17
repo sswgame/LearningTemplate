@@ -60,7 +60,7 @@ namespace sw::editor
         /** @brief 새 프리팹의 틀입니다. 구성 요소가 없는 게임 오브젝트 하나입니다. */
         constexpr EditorNewAssetTemplate kPrefabTemplate{
             "prefab", "Prefab", "new_prefab", ".prefab.xml", nullptr,
-            "<Prefab formatVersion=\"0\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
+            "<Prefab formatVersion=\"1\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
             "\t\t<_listComponent>\n\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n",
             nullptr };
 

@@ -16,6 +16,7 @@ namespace
 {
     constexpr int32       kTownSize   = 4;
     constexpr const utf8* kCatalogXML = R"(<CreatureLifeCatalog>
+  <Rules houseObject="house" talkPoints="5" giftPoints="10" likedGiftPoints="30" foodPoints="20" requestPoints="50" randomSeed="7100" blockingObjects="house,tree,rock"/>
   <Habitat id="grove" name="Grove" capacity="1">
     <Key symbol="T" object="tree"/>
     <Row cells="T"/>
@@ -126,7 +127,7 @@ namespace
         CreatureTownReadStateTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kCatalogXML, "CreatureTownReadStateTest" ) );
-            SW_REQUIRE_TRUE( _town.initialize( &_catalog, sw::SessionStateRefs{}, kTownSize, kTownSize, sw::CreatureTownSettings{} ) );
+            SW_REQUIRE_TRUE( _town.initialize( &_catalog, sw::SessionStateRefs{}, kTownSize, kTownSize ) );
         }
     };
 } // namespace
@@ -144,7 +145,7 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RealAndCraftedStatesRead )
     sw::Archive written;
     _town.writeState( written );
     sw::CreatureTown restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_catalog, sw::SessionStateRefs{}, kTownSize, kTownSize, sw::CreatureTownSettings{} ) );
+    SW_REQUIRE_TRUE( restored.initialize( &_catalog, sw::SessionStateRefs{}, kTownSize, kTownSize ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( size_t( 1 ), restored.getCreatures().size() );
@@ -311,4 +312,19 @@ SW_TEST_CASE_F( CreatureTownReadStateTest, RefusesBrokenHousesAndRequests )
 
     SW_EXPECT_EQUAL( 0, _town.getCreatures()[0]._house );
     SW_EXPECT_EQUAL( size_t( 1 ), _town.getHouses()[0]._listResident.size() );
+}
+
+/** @brief [CreatureTownReadStateTest] 규칙(`<Rules>`) 없는 생물 카탈로그는 로드가 실패하고, 칸이 빠진 규칙 줄도 거절된다 — 마을이 C++ 기본값으로 열리지 않는다(감사 K-4) */
+SW_TEST_CASE( CreatureTownReadStateTest, CatalogWithoutRulesIsRefused )
+{
+    SW_EXPECT_LOG( "CreatureLifeCatalog.RulesMissing" );
+    SW_EXPECT_LOG( "CreatureLifeCatalog.RulesInvalid" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    SW_EXPECT_LOG( "CreatureTown.CreatureTownNeedsCatalog" );
+    sw::CreatureLifeCatalog bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CreatureLifeCatalog><Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal></CreatureLifeCatalog>)", "CreatureTownReadStateTest" ) );
+    sw::CreatureLifeCatalog partial;
+    SW_EXPECT_FALSE( partial.loadFromXMLText( R"(<CreatureLifeCatalog><Rules talkPoints="5"/><Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal></CreatureLifeCatalog>)", "CreatureTownReadStateTest" ) );
+    sw::CreatureTown town;
+    SW_EXPECT_FALSE( town.initialize( nullptr, sw::SessionStateRefs{}, kTownSize, kTownSize ) );
 }

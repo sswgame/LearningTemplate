@@ -16,8 +16,12 @@ namespace sw
     /** @struct VirtualInputScriptEntry @brief 프레임 하나에 낼 이벤트 하나입니다. */
     struct VirtualInputScriptEntry
     {
+        /** @brief 탭의 떼기가 아니면 이 값입니다. */
+        static constexpr uint32 kNoPress = UINT32_MAX;
+
         uint32        _frameIndex{ 0 };
         RawInputEvent _event{};
+        uint32        _pressFrameIndex{ kNoPress }; ///< 입력 구간의 끝(`addSpanEnd` — 탭의 떼기 · 축 되돌림 · 터치 떼기)이면 그 시작 프레임 — 누르기가 이미 나갔으면 시계를 멈춰도 떼기는 제 시간에 난다(`delayEventsFrom`)
     };
 } // namespace sw
 
@@ -34,6 +38,13 @@ namespace sw
 
         /** @brief @p frameIndex 에 이벤트 하나를 더합니다. */
         void addEvent( uint32 frameIndex, const RawInputEvent& rawEvent );
+        /**
+         * @brief @p startFrameIndex 에 시작한 입력 구간(누름 · 축 · 터치)을 끝내는 이벤트를 @p frameIndex 에 더합니다.
+         * @details 구간의 시작이 이미 나갔으면 시계를 멈춰도(`delayEventsFrom`) 이 끝은 제 프레임에 난다 — 누른 길이는 실제 프레임이다.
+         */
+        void addSpanEnd( uint32 frameIndex, const RawInputEvent& rawEvent, uint32 startFrameIndex );
+        /** @brief 패드 축을 @p startFrameIndex 부터 @p holdFrameCount 프레임 동안 @p value 로 두고 0 으로 돌립니다(끝은 `addSpanEnd`). */
+        void addGamepadAxisHold( uint32 startFrameIndex, uint32 holdFrameCount, uint16 axisIndex, float32 value, uint8 padIndex = 0 );
         /**
          * @brief @p frameIndex 에 누르고 @p holdFrameCount 프레임 뒤에 뗍니다(0 이면 같은 프레임에 떼며, 그래도 한 번 눌린 것으로 인정합니다).
          * @return 슬롯의 장치 종류나 번호를 이벤트로 만들 수 없으면 false 이며, 아무것도 더하지 않습니다.
@@ -59,6 +70,8 @@ namespace sw
         /**
          * @brief @p firstFrameIndex 이후(포함)의 이벤트를 @p frameCount 프레임 뒤로 밉니다. 이미 낸 이벤트는 그대로입니다.
          * @details 시나리오가 조건을 기다리며 시계를 멈춰 두는 동안(`WaitUntil`) 입력 단계가 시나리오 프레임과 같은 프레임에 나도록 쓴다.
+         *          누르기가 이미 나간 탭의 떼기는 밀지 않는다 — 누름 길이는 실제 프레임이다. 밀면 `<Tap>` 바로 뒤의 조건 대기 내내 키가 눌린 채였다
+         *          (pixeltown 의 걸음이 대기 동안 멈추지 않았다).
          */
         void delayEventsFrom( uint32 firstFrameIndex, uint32 frameCount );
         /** @brief 이벤트를 모두 지웁니다. */
@@ -69,6 +82,13 @@ namespace sw
 
         uint32 getEntryCount() const { return static_cast<uint32>( _listEntry.size() ); }
 
+    private:
+        /** @brief 슬롯 하나의 누르기 · 떼기 이벤트를 만듭니다. 이벤트로 만들 수 없는 슬롯이면 false 입니다. */
+        [[nodiscard]] bool makeSlotEvent( uint32 frameIndex, const InputSlot& slot, bool bDown, RawInputEvent& outEvent ) const;
+        /** @brief 이벤트를 프레임 순서 자리에 넣고 그 위치를 돌려줍니다. */
+        size_t insertEvent( uint32 frameIndex, const RawInputEvent& rawEvent );
+
+    public:
     private:
         /** @brief @p frameIndex 까지 더한 마지막 커서 위치(`addMousePosition`)입니다. 없으면 (0, 0) 입니다. */
         int2 findPointerPosition( uint32 frameIndex ) const;

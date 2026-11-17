@@ -20,6 +20,7 @@
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Presentation/InstanceCustomData.h"
+#include "Engine/Renderer/VFX/VFXParticleOrder.h"
 #include "Engine/VFX/VFXParticle.h"
 
 #include <variant>
@@ -308,6 +309,8 @@ namespace sw
     {
         uint32 _particleBatchIndex{ 0 }; ///< `GPUSceneSnapshot::_listParticleBatch` 의 번호
         uint32 _drawPosition{ 0 };       ///< 이 뷰의 투명 배치 순서에서 이 입자보다 먼저 그리는 배치 수
+        /// @brief 이 뷰에서 방출기 안 입자를 그리는 순서(`GPUSceneSnapshot::_listParticleOrder` 의 구간). 정렬하지 않는 방출기(`VFXSortMode::None` · GPU 방출기)는 무효 구간이다
+        VFXParticleOrder _order{};
     };
 } // namespace sw
 
@@ -346,12 +349,13 @@ namespace sw
         /** @brief 입자의 출처입니다 — CPU 시뮬레이션의 입자 배열(비지 않는다 — 빈 방출기는 싣지 않는다)이거나 GPU 시뮬레이션의 요청이다. */
         using Source = std::variant<shared_ptr<const vector<GPUParticle>>, VFXGPUEmitterRequest>;
 
-        Source        _source{};              ///< 입자의 출처(위)
-        float4x4      _world{};               ///< 방출기 행렬(행벡터 규약)
-        hashed_string _texturePath{};         ///< 입자 텍스처(리소스 id)
-        float32       _sizeScale{ 1.0f };     ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
-        uint8         _bAdditive{ SW_FALSE }; ///< 더하기 블렌드(`VFXBlendMode::Additive`)면 SW_TRUE
-        uint8         _bRibbon{ SW_FALSE };   ///< 띠(`VFXRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
+        Source        _source{};                      ///< 입자의 출처(위)
+        float4x4      _world{};                       ///< 방출기 행렬(행벡터 규약)
+        hashed_string _texturePath{};                 ///< 입자 텍스처(리소스 id)
+        float32       _sizeScale{ 1.0f };             ///< 방출기 행렬의 최대 축 배율 — 입자 크기에 곱한다
+        uint8         _bAdditive{ SW_FALSE };         ///< 더하기 블렌드(`VFXBlendMode::Additive`)면 SW_TRUE
+        uint8         _bRibbon{ SW_FALSE };           ///< 띠(`VFXRenderMode::Ribbon`)면 SW_TRUE — 입자는 태어난 순서이고 이웃끼리 잇는다(입자 둘 이상)
+        VFXSortMode   _sortMode{ VFXSortMode::None }; ///< 방출기 안 입자의 그리는 순서 — 렌더 스레드가 뷰마다 순서 목록을 만든다(`VFXParticleOrder`)
 
         /** @brief CPU 시뮬레이션의 입자입니다. GPU 시뮬레이션이면 nullptr 입니다. */
         const vector<GPUParticle>* findCPUParticles() const
@@ -494,6 +498,15 @@ namespace sw
          * @details 메시 배치가 그대로인 프레임에도 카메라와 방출기가 움직이므로 입자 그리기와 함께 매번 다시 정한다(`GPUSceneBuilder::populateParticleBatches`).
          */
         vector<GPUTransparentParticleSlot> _listParticleSlot;
+        /**
+         * @brief 방출기 안 입자의 그리는 순서(입자 번호) 목록입니다. 자리마다의 구간(`GPUTransparentParticleSlot::_order`)이 가리킨다 — 주 시점 구간이 앞, 추가 뷰 구간이 뒤다.
+         * @details 입자 데이터는 옮기지 않는다(뷰들이 입자 버퍼 하나를 함께 쓴다). `ViewDepth` 는 (방출기, 뷰)마다, 나이 순서는 방출기마다 구간 하나다(`GPUSceneBuilder::assignParticleOrders`).
+         */
+        vector<uint32> _listParticleOrder;
+        /** @brief GPU 방출기의 정렬 일입니다(자리의 `_order` 구간은 GPU 순서 버퍼 안의 자리다 — `VFXGPUSimulation` 이 정렬해 쓴다). */
+        vector<VFXGPUParticleSortJob> _listGPUParticleSort;
+        /** @brief GPU 순서 버퍼가 담아야 할 칸 수입니다(정렬 일 구간의 합). */
+        uint32 _gpuParticleOrderCount{ 0 };
         /** @brief GPU 로 시뮬레이션하는 메시 방출기들입니다. 입자 그리기와 같이 매번 다시 모은다(인스턴스 칸은 배치 구성을 따른다). */
         vector<GPUVFXMeshEmitter> _listVFXMeshEmitter;
 
@@ -522,6 +535,9 @@ namespace sw
         {
             _listParticleBatch.clear();
             _listParticleSlot.clear();
+            _listParticleOrder.clear();
+            _listGPUParticleSort.clear();
+            _gpuParticleOrderCount = 0;
             _listVFXMeshEmitter.clear();
         }
 

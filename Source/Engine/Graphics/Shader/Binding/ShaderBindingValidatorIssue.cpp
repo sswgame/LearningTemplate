@@ -327,6 +327,9 @@ namespace sw
                          slotAt( vk::kTShift, shaderslot::kPassBuffer ), slotAt( 0, shaderslot::kPassBuffer ) );
             addReserved( list, shaderslot::resname::kParticles, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kPassBuffer ), slotAt( 0, shaderslot::kPassBuffer ),
                          slotAt( vk::kTShift, shaderslot::kPassBuffer ), slotAt( 0, shaderslot::kPassBuffer ) );
+            // 입자 순서 목록 t3 (네 백엔드 공통 — 비어 있던 t0..t3 의 칸): 입자 정점 셰이더가 (루트 상수의 구간 + SV_InstanceID) 번째 칸에서 입자 번호를 읽는다.
+            addReserved( list, shaderslot::resname::kParticleOrder, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kParticleOrderBuffer ),
+                         slotAt( 0, shaderslot::kParticleOrderBuffer ), slotAt( vk::kTShift, shaderslot::kParticleOrderBuffer ), slotAt( 0, shaderslot::kParticleOrderBuffer ) );
             // 라이트 그리드 t12 (네 백엔드 공통): 조명 식의 커서(lighting.hlsli LightGrid::loadWord)가 읽는다.
             addReserved( list, shaderslot::resname::kLightGrid, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kLightGridBuffer ), slotAt( 0, shaderslot::kLightGridBuffer ),
                          slotAt( vk::kTShift, shaderslot::kLightGridBuffer ), slotAt( 0, shaderslot::kLightGridBuffer ) );

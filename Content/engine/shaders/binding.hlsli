@@ -187,7 +187,13 @@ struct PassTexture
     static float2 sampleVelocityPoint( float2 uv );   // 화면 속도(이번 UV - 지난 UV) — 불투명 지오메트리 패스의 출력(SceneVelocity)
     static float2 sampleDistortionPoint( float2 uv ); // 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스의 출력(SceneDistortion)
     static float4 sampleLight2dCookieAtlas( float2 uv );
-    static float4 sampleContactShadow( float2 uv ); // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
+    static float4 sampleContactShadow( float2 uv );  // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
+    static float4 sampleAlbedoPrevious( float2 uv ); // 지난 프레임 첨부를 알베도 역할로 건 패스(TAA 히스토리) — 지난 프레임의 사각형 배율로 읽는다
+    static float2 toViewRectUV( float2 uv );         // 화면 UV(0..1) → 풀 UV(사각형 안, 가장자리는 반 텍셀 안쪽). 그림자 · 쿠키 아틀라스처럼 뷰 크기가 아닌 텍스처에는 쓰지 않는다
+    static float2 toPreviousViewRectUV( float2 uv ); // 같은 변환을 지난 프레임 사각형으로
+    static uint2 getViewRectSize();                  // 텍셀 번호로 읽는 쪽의 크기 — 풀(텍스처)이 아니라 사각형
+    static float2 toSourceViewRectUV( float2 uv );   // 원본 역할(반해상도일 수 있다)의 변환 — 반 텍셀을 원본의 실제 텍셀로 잰다
+    static float2 scaleToViewRect( float2 uv, float2 scale, float2 texel );
 };
 
 /** @brief 머티리얼이 준 텍스처 번호를 읽는다(11-3 절). 에뮬 백엔드의 번호는 머티리얼 슬롯 서수다. */
@@ -231,7 +237,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     // 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motion_blur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
     float4x4 g_PrevViewProj;
     // 이번 프레임의 TAA 투영 지터 — xy 는 NDC 오프셋(g_ViewProj · g_InvViewProj 에만 들었다, g_PrevViewProj 에는 없다), zw 는 0. TAA 가 돌지 않는 뷰는 0 이다(C++ TemporalJitterSequence).
-    float4   g_TemporalJitter;
+    float4 g_TemporalJitter;
+    // 머티리얼 텍스처의 밉 바이어스 — x = log2(렌더 높이 / 출력 높이)(배율 1 이면 0, 업스케일하면 음수). 픽셀 단계 머티리얼 샘플만 더한다(binding_texture.hlsli MaterialTexture::sampleIndexTexture)
+    float4   g_TextureMipBias;
     float4x4 g_World;
     float4   g_KeyLightDirIntensity;
     float4   g_KeyLightColor;
@@ -284,6 +292,10 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_OutlineColor;
     float4 g_OutlineParams;
     float4 g_SourceTexel; // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
+    // 뷰 사각형(C++ FrameRendererUtil::makeViewRectConstants) — 첨부 풀 안에서 이 뷰가 그리는 구간(원점 0,0). 자동 렌더 배율은 풀을 다시 만들지 않고 이 구간만 줄인다(언리얼 ViewRect).
+    // g_ViewRectScale: xy 이번 사각형 / 풀 배율, zw 지난 프레임의 그 배율(TAA 히스토리). g_ViewRectSize: xy 사각형 픽셀, zw 1 / 풀 픽셀. UV 변환은 PassTexture 한 곳이다(11-3 절).
+    float4 g_ViewRectScale;
+    float4 g_ViewRectSize;
     // 하늘 그러데이션(스카이 패스 sky.hlsl, C++ SkyGradient) — 천정(rgb, w 지평선 지수) · 지평선(rgb) · 땅(rgb, w 세기). 씬에 하늘이 없으면 스카이 패스가 돌지 않는다
     float4 g_SkyZenith;
     float4 g_SkyHorizon;

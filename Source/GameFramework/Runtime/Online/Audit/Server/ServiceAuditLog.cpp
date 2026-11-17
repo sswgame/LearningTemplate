@@ -160,6 +160,19 @@ namespace sw
         inoutTransaction.put( getExpiryTable(), indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
     }
 
+    void ServiceAuditLog::commitRejection( IServiceStoreConnection& connection, const ServiceAuditEntry& requestedEntry )
+    {
+        ServiceAuditEntry rejected = requestedEntry;
+        rejected._action += ".denied";
+        const NetIdempotencyKey unique = NetIdempotencyKey::makeRandom();
+        ServiceTransaction      transaction;
+        stageEntry( transaction, rejected, unique._high, unique._low );
+        const ServiceStoreResult committed = connection.commit( transaction );
+        if ( committed != ServiceStoreResult::Ok )
+            SW_LOG_WARNING_ID( "ServiceAuditLog.RejectionNotRecorded", "Denied operator request '%#' on '%#' could not be audited (result %#)", rejected._action, rejected._subject,
+                               static_cast<int32>( committed ) );
+    }
+
     ServiceStoreResult ServiceAuditLog::listEntries( IServiceStoreConnection& connection, string_view subjectPrefix, string_view cursor, int32 maxCount,
                                                      vector<ServiceAuditEntry>& outListEntry, string& outNextCursor )
     {
@@ -187,11 +200,15 @@ namespace sw
         if ( _pGuard == nullptr )
         {
             SW_LOG_ERROR_ID( "ServiceAuditLog.WriteWithoutGuard", "Operator write to '%#/%#' has no guard - refused", _table.c_str(), _key.c_str() );
+            ServiceAuditLog::commitRejection( connection, _auditEntry );
             return ServiceAuditedWriteResult::Forbidden;
         }
         const ServiceStoreResult allowed = _pGuard->checkAllowed( connection );
         if ( allowed == ServiceStoreResult::NotFound )
+        {
+            ServiceAuditLog::commitRejection( connection, _auditEntry );
             return ServiceAuditedWriteResult::Forbidden;
+        }
         if ( allowed != ServiceStoreResult::Ok )
             return ServiceAuditedWriteResult::Unavailable;
         ServiceRecord            current;

@@ -2,6 +2,8 @@
 
 #include "Engine/Content/Pack/PackConfig.h"
 
+#include "Core/Log/Logger.h"
+
 namespace sw
 {
     namespace
@@ -60,5 +62,24 @@ namespace sw
             PackConfigInternal::mergeScoped( _listEntryIDField, gameField, root, []( const PackEntryIDField& field ) -> const string&
             { return field._field; } );
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    expected<PackEntryStorage> PackEntryStorageRule::select( string_view relativePath, const vector<string>& listStoredExtension )
+    {
+        for ( const string& extension : listStoredExtension )
+        {
+            if ( StringUtil::endsWith( relativePath, extension, true ) )
+                return PackEntryStorage::Stored;
+        }
+        if ( StringUtil::endsWith( relativePath, kRangeReadExtension, true ) )
+        {
+            SW_LOG_ERROR_ID( "PackEntryStorageRule.CompressedTextureEntry", "Pack: '%#' would be block-compressed - mip streaming reads texture ranges; add '.dds' to the stored extensions",
+                             relativePath );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a range-read texture must be stored uncompressed", relativePath } );
+        }
+        return PackEntryStorage::Blocks;
     }
 } // namespace sw

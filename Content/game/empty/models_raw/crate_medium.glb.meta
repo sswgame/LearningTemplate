@@ -1,1 +1,5 @@
-<AssetMeta _guid="54c6729c87c6e28ec55f6ec295ba4cc6" _source="crate_medium.glb" />
+<AssetMeta _guid="54c6729c87c6e28ec55f6ec295ba4cc6" _source="crate_medium.glb">
+	<_listImportOverride>
+		<AssetImportOverride _key="fracture" _value='{"volume": "Bounds", "pattern": "Uniform", "pieces": 24, "seed": 3, "levels": [4], "interiorColor": "0.62, 0.45, 0.28, 1.0"}' />
+	</_listImportOverride>
+</AssetMeta>

@@ -6,12 +6,13 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+    // Android 커널은 Linux 라 futex 시스템 호출이 있다 — 주소 대기가 없는 웹의 폴백에 묶지 않는다(Godot 의 OS_Android 도 OS_Unix 를 물려받는다).
     #include <linux/futex.h>
     #include <sys/syscall.h>
     #include <sys/time.h>
     #include <unistd.h>
-#elif defined( SW_PLATFORM_POSIX )
+#elif defined( SW_PLATFORM_WEB )
     #include <condition_variable>
     #include <mutex>
 #else
@@ -26,7 +27,7 @@ namespace sw
         static_assert( sizeof( atomic<uint32> ) == sizeof( uint32 ), "atomic<uint32> must be exactly the 32-bit word" );
         static_assert( std::is_standard_layout_v<atomic<uint32>>, "atomic<uint32> must be standard layout for address waits" );
 
-#if defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+#if defined( SW_PLATFORM_WEB )
         /**
          * @brief 주소 대기 기능이 없는 플랫폼의 폴백입니다. 주소 해시로 고른 버킷의 뮤텍스와 조건 변수를 씁니다.
          * @details 깨우는 쪽도 같은 버킷의 뮤텍스를 잡고 알리므로, 잠드는 쪽이 뮤텍스 안에서 값을 다시 확인하고 잠드는 사이에
@@ -59,9 +60,9 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         WaitOnAddress( &word, &expected, sizeof( uint32 ), INFINITE );
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAIT_PRIVATE, expected, nullptr, nullptr, 0 );
-#elif defined( SW_PLATFORM_POSIX )
+#elif defined( SW_PLATFORM_WEB )
         FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         std::unique_lock<std::mutex>   lock{ bucket._mutex };
         if ( word.load( std::memory_order_acquire ) == expected )
@@ -75,13 +76,13 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return WaitOnAddress( &word, &expected, sizeof( uint32 ), timeoutMilli ) != FALSE;
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         struct timespec timeout;
         timeout.tv_sec     = static_cast<time_t>( timeoutMilli / 1000u );
         timeout.tv_nsec    = static_cast<int64>( ( timeoutMilli % 1000u ) * 1000000u );
         const int64 result = syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAIT_PRIVATE, expected, &timeout, nullptr, 0 );
         return result == 0 || word.load( std::memory_order_acquire ) != expected;
-#elif defined( SW_PLATFORM_POSIX )
+#elif defined( SW_PLATFORM_WEB )
         FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         std::unique_lock<std::mutex>   lock{ bucket._mutex };
         if ( word.load( std::memory_order_acquire ) != expected )
@@ -96,9 +97,9 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         WakeByAddressSingle( &word );
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0 );
-#elif defined( SW_PLATFORM_POSIX )
+#elif defined( SW_PLATFORM_WEB )
         FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         {
             std::scoped_lock<std::mutex> lock{ bucket._mutex };
@@ -113,9 +114,9 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         WakeByAddressAll( &word );
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         syscall( SYS_futex, reinterpret_cast<uint32*>( &word ), FUTEX_WAKE_PRIVATE, INT32_MAX, nullptr, nullptr, 0 );
-#elif defined( SW_PLATFORM_POSIX )
+#elif defined( SW_PLATFORM_WEB )
         FutexFallbackInternal::Bucket& bucket = FutexFallbackInternal::getBucketOf( &word );
         {
             std::scoped_lock<std::mutex> lock{ bucket._mutex };

@@ -133,7 +133,7 @@ SW_TEST_CASE( EditorViewportRayPickTest, VertexAnimatedMeshPicksDrawnPose )
     const uint32           vertexCount = mesh->getVertexCount();
     sw::vector<sw::float3> listPosition;
     sw::vector<sw::float3> listNormal;
-    for ( const sw::RHIVertex& vertex : mesh->getVertices() )
+    for ( const sw::RHIVertex& vertex : mesh->getCPUView().getVertices() )
     {
         listPosition.push_back( sw::float3{ vertex._arrPosition[0] + 5.0f, vertex._arrPosition[1], vertex._arrPosition[2] } );
         listNormal.push_back( sw::float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] } );

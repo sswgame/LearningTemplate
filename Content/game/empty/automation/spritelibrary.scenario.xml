@@ -7,17 +7,15 @@
 -->
 <Scenario name="game.empty.spritelibrary" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/spritelibrary_base.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="spritelibrary_base.ppm"/>
 	<LoadScene path="game/empty/maps/spritelibrary_variant.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="spritelibrary_variant.ppm"/>
-	<Wait frames="2"/>
 	<ExpectImagesDiffer first="spritelibrary_base.ppm" second="spritelibrary_variant.ppm" region="0.35,0.25,0.65,0.75" minDiffering="0.5"/>
 	<Pass/>
 </Scenario>

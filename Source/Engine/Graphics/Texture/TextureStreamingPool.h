@@ -43,6 +43,34 @@ namespace sw
 namespace sw
 {
     /**
+     * @class TextureStreamingReservationSlot
+     * @brief 텍스처 항목 하나가 풀에서 쥔 예약과, 밉을 바꾸는 동안 함께 쥔 새 크기의 예약입니다(올리기 · 내리기 — R6-6).
+     * @details 바꾸기가 실패하면 텍스처는 옛 크기 그대로이므로 옛 예약을 그대로 둔다(`abandonChange`) — 0 으로 돌리면 풀이 실제보다 작게 센다. 성공하면 새 예약이 옛 예약을 밀어낸다.
+     *          바꾸는 동안은 두 크기를 함께 센다(올리기는 그만큼 보수적으로 예산을 본다, 내리기는 예산을 보지 않는다 — 작아진다).
+     */
+    class SW_API TextureStreamingReservationSlot
+    {
+    public:
+        /** @brief 바꾸기를 시작합니다 — 새 크기의 예약 @p pending 을 함께 쥔다. */
+        void beginChange( TextureStreamingReservation pending ) { _pending = std::move( pending ); }
+        /** @brief 바꿨다 — 새 예약이 옛 예약을 대신한다(옛 바이트는 풀에 돌아간다). */
+        void commitChange() { _current = std::move( _pending ); }
+        /** @brief 바꾸지 못했다 — 새 예약만 돌려주고 옛 예약(실제 크기)은 그대로 둔다. */
+        void abandonChange() { _pending = TextureStreamingReservation{}; }
+        /** @brief 지금 텍스처 크기로 쥔 바이트입니다. */
+        uint64 getBytes() const { return _current.getBytes(); }
+        /** @brief 바꾸는 동안 함께 쥔 새 크기의 바이트입니다(바꾸지 않을 때 0). */
+        uint64 getPendingBytes() const { return _pending.getBytes(); }
+
+    private:
+        TextureStreamingReservation _current;
+        TextureStreamingReservation _pending;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class TextureStreamingPool
      * @brief 밉 스트리밍이 위쪽 밉으로 올린 텍스처의 바이트 합과 예산입니다(언리얼 `r.Streaming.PoolSize` · 유니티 Mipmap Streaming 의 메모리 예산 자리).
      * @details 예산(`TextureStreamingConfig::_poolMegabytes`)을 넘는 승급은 예약을 받지 못한다 — 그 텍스처는 아래쪽 밉 그대로다. 예약은 텍스처 항목이 쥐고

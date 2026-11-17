@@ -59,7 +59,9 @@ namespace sw
     uint32 ModSetDigest::foldWireVersion( uint32 wireVersion ) const
     {
         // 섞는 규칙은 넷 세션 한 곳이다 — 게임 인스턴스가 세션을 열 때 이 구성 해시(`IContentConfiguration`)를 같은 함수로 섞는다.
-        return GameNetSession::combineContentConfigHash( wireVersion, _listEntry.empty() ? uint64{ 0 } : _configHash );
+        GameNetWireContent wireContent;
+        wireContent._contentConfigHash = _listEntry.empty() ? uint64{ 0 } : _configHash;
+        return GameNetSession::combineWireContent( wireVersion, wireContent );
     }
 
     string ModSetDigest::describeDifference( const ModSetDigest& other ) const

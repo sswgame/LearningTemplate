@@ -1,1 +1,5 @@
-<AssetMeta _guid="a711fc6518d843a8ee4561426c29ec3e" _source="barrel.gltf" />
+<AssetMeta _guid="a711fc6518d843a8ee4561426c29ec3e" _source="barrel.gltf">
+	<_listImportOverride>
+		<AssetImportOverride _key="fracture" _value='{"pattern": "Uniform", "pieces": 20, "seed": 11, "levels": [3], "interiorColor": "0.35, 0.33, 0.3, 1.0"}' />
+	</_listImportOverride>
+</AssetMeta>

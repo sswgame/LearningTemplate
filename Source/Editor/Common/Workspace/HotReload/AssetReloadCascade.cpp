@@ -8,11 +8,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 
 namespace sw::editor
 {
-    bool AssetReloadCascade::planDependents( const EditorReferenceIndex& index, string_view changedID, AssetInlinesReferencesFunc pfnInlinesReferences, vector<string>& outListOrder )
+    bool AssetReloadCascade::planDependents( const EditorAssetIndex& index, string_view changedID, AssetInlinesReferencesFunc pfnInlinesReferences, vector<string>& outListOrder )
     {
         outListOrder.clear();
         // 0 번이 바뀐 에셋이고, 나머지는 그것을 (사슬로) 펼쳐 넣는 참조자다. 방문 집합이 같은 참조자를 두 번 넣지 않고 순환에서도 끝나게 한다.

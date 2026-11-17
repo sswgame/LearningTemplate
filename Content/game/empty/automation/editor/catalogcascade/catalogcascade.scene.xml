@@ -1,5 +1,5 @@
 <?asset guid="87f064cdabf32d46359918eaea12fe95"?>
-<Scene formatVersion="2" name="CatalogCascade">
+<Scene formatVersion="3" name="CatalogCascade">
 	<!-- 카탈로그 연쇄 리로드 확인(editor/catalogcascade)의 무대 — 상호작용 대상 넷이 부모 표를 물려받은 두 자식 표의 항목을 쥔다. 쥔 쪽이 있어야 공유 캐시가 표를 들고 연쇄가 그 표를 다시 읽는다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

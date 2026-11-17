@@ -8,9 +8,7 @@
 -->
 <Scenario name="game.empty.grabcarry" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/grabcarry.scene.xml"/>
-	<Wait frames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="30"/>
 	<Expect watch="Grab.Held" target="Hand" is="none"/>
 	<Expect watch="Gimmick.OccupantWeight" target="Plate" equals="0"/>
 
@@ -24,10 +22,9 @@
 	<Expect watch="Grab.Held" target="Hand" is="none"/>
 	<WaitUntil watch="Gimmick.OccupantWeight" target="Plate" near="40" tolerance="0.01" timeoutSeconds="3"/>
 	<WaitUntil watch="Object.Y" target="Crate" atMost="0.3" timeoutSeconds="3"/>
-	<Wait frames="1"/>
 
 	<LoadScene path="game/empty/maps/dismemberment.scene.xml" timeoutFrames="600"/>
-	<Wait frames="5"/>
+	<WaitUntil watch="Object.Exists" target="Skeleton" equals="1" timeoutFrames="30"/> <!-- 새 씬이 섰다 -->
 	<Expect watch="Object.Exists" target="Keeper" equals="1"/>
 	<Expect watch="Object.Exists" target="Crate" equals="0"/>
 	<Expect watch="Object.Exists" target="Skeleton" equals="1"/>

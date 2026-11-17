@@ -41,6 +41,8 @@ namespace sw
         , _grading{}
         , _bodySettings{}
         , _parryRules{}
+        , _motorSettings{}
+        , _motorCount{ 0 }
     {
     }
 
@@ -55,6 +57,7 @@ namespace sw
             Element::of<&ActionPlatformerCatalog::loadGrading>( "Grading" ),
             Element::of<&ActionPlatformerCatalog::_bodySettings>( "Body" ),
             Element::of<&ActionPlatformerCatalog::_parryRules>( "Parry" ),
+            Element::of<&ActionPlatformerCatalog::loadMotor>( "Motor" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 등급표는 점수를 등급으로 바꾸는 유일한 근거다 — 코드가 대신 정한 표를 쓰지 않는다.
@@ -63,7 +66,26 @@ namespace sw
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.NeedsGradingLeastOne", "%#: needs <Grading> with at least one <Grade id=\"..\" min=\"..\"/>", sourceName );
             return 0;
         }
+        // 몸의 움직임 규칙도 데이터에만 있다 — 게임이 C++ 기본값으로 몸을 열 길이 없다(감사 K-4).
+        if ( _motorCount == 0 )
+        {
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.MotorMissing", "%#: needs one <Motor .../> line (every movement rule value is data)", sourceName );
+            return 0;
+        }
         return result._loadedCount;
+    }
+
+    bool ActionPlatformerCatalog::loadMotor( const XMLNode& node, string_view sourceName )
+    {
+        PlatformerSettings motor;
+        if ( XMLFields::readProperties( node, motor, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.MotorInvalid", "%#: <Motor> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        _motorSettings = motor; // 덧씌우는 파일(합치기)은 규칙 전체를 바꾼다 — 칸 일부만 두지 않는다
+        ++_motorCount;
+        return true;
     }
 
     bool ActionPlatformerCatalog::loadGrading( const XMLNode& node, string_view sourceName )

@@ -5,6 +5,8 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -13,19 +15,37 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
+#include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/Texture/TextureLayerBake.h"
 
 namespace sw
 {
     struct DDSImageData;
 
+    /**
+     * @brief 텍스처가 밉 스트리밍(아래쪽 밉 먼저 · 예산 내리기)을 받는가입니다 — 언리얼 `TextureGroup` · `NeverStream`, 유니티 `streamingMipmaps` 자리. 요청하는 쪽이 정한다(기본값 없음).
+     * @details 화면 크기를 알리는 길(`TextureStreamingSystem` — 메시 머티리얼)이 있는 텍스처만 `Streamable` 이다. 그 밖(UI · 스프라이트 · 폰트 · 렌더 타깃 소비자 · 굽기 · 도구)은 화면 크기를 몰라
+     *          늘 "안 보임" 으로 잡히므로 `NeverStream` 으로 밉 전부를 올리고 내리지 않는다. 같은 텍스처를 둘이 요청하면 `NeverStream` 이 이긴다(누군가 밉 전부가 필요하다).
+     */
+    enum class TextureStreamingGroup : uint8
+    {
+        Streamable,  ///< 메시 머티리얼 — 비동기 로드는 아래쪽 밉부터, 예산을 넘으면 정책이 내린다
+        NeverStream, ///< 밉 전부를 올리고 내리지 않는다
+    };
+
     /** @brief 한 프레임의 텍스처 밉 스트리밍 예산입니다(`TextureCache::updateStreaming`). 값은 `RenderConfig`(Config/Engine/EngineConfig.json `_render`)가 정본이다. */
     struct TextureStreamingBudget
     {
-        uint32 _maxUpgradesPerFrame{ 0 }; ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
-        uint64 _poolBytes{ 0 };           ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
+        uint32 _maxUpgradesPerFrame{ 0 };        ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
+        uint64 _poolBytes{ 0 };                  ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
+        uint64 _maxBytesInFlight{ 0 };           ///< 범위로 읽는 중 · 제출을 기다리는 위쪽 밉 바이트 합의 상한(MR-2 — 하나가 이보다 크면 혼자일 때만 읽는다)
+        uint32 _viewHeightPixels{ 0 };           ///< 주 뷰의 높이(픽셀) — 화면 크기를 필요한 밉으로 바꾼다(0 이면 화면을 모른다 — 올리고 내리는 판단을 하지 않는다, R6-6)
+        uint32 _idleFramesBeforeRelease{ 0 };    ///< 화면 크기를 알리지 않은 지 이만큼 지나면 필요 없는 것으로 본다(`TextureStreamingConfig::_idleFramesBeforeRelease`)
+        uint32 _minFramesBetweenChanges{ 0 };    ///< 밉을 바꾼 뒤 다시 바꾸기까지의 최소 프레임(`TextureStreamingConfig::_minFramesBetweenChanges`)
+        uint32 _promoteBudgetMarginPercent{ 0 }; ///< 올리기가 남기는 예산 여유(%)(`TextureStreamingConfig::_promoteBudgetMarginPercent`)
     };
 
     class IRHIDevice;
@@ -75,14 +95,18 @@ namespace sw
          * @details 로드는 두 단계다. DDS 읽기와 확인은 워커에서(`Texture2D::readImage`), GPU 업로드는 디바이스를 쓰는 스레드에서 한다 — DX11 은 즉시 컨텍스트로,
          *          GL 은 스레드에 묶인 컨텍스트로 올리므로 워커에서 올릴 수 없다. 업로드는 렌더 스레드가 프레임마다 `completePendingLoads` 로 하거나, 그 스레드에서
          *          `wait()` 한 쪽이 그 자리에서 한다. 렌더 텍스처 · CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다.
-         *          **수명 계약**: 핸들이 준비된 텍스처의 참조 하나를 쥐고, 마지막 핸들이 사라질 때 놓는다. 업로드가 끝나면 `getReloadGeneration` 이 올라
-         *          로드 중 텍스처를 빌려 둔 머티리얼이 새 SRV 를 받는다(`Material::refreshTextureBindings`).
+         *          **수명 계약**: 핸들이 준비된 텍스처의 참조 하나를 쥐고, 마지막 핸들이 사라질 때 놓는다.
+         *          **SRV 번호 계약(R-6)**: 새로 읽는 항목은 시작할 때 번호를 예약해 로드 중 텍스처를 가리키게 하고(`IRHIDevice::reserveBindlessTexture`), 업로드가 끝나면
+         *          같은 번호를 진짜 텍스처로, 실패하면 누락 체커로 다시 묶는다. 받은 쪽은 `TextureLoadOperation::getStableSRV` 를 한 번 받아 쥐면 된다 — 밉 올리기 · 핫 리로드 ·
+         *          크기 변경도 같은 번호를 다시 묶는다(언리얼 `FD3D12BindlessDescriptorManager` 도 번호 할당은 스레드 안전이고 디스크립터 갱신은 렌더 스레드가 나중에 한다).
+         *          자리 텍스처(엔진 기본 에셋의 로드 중 텍스처 · 누락 체커)는 처음 비동기 요청이 동기로 올려 둔다. 엔진 서비스가 없으면(도구 · 테스트) 예약하지 않는다.
          *          같은 경로를 읽는 중인 로드를 받으면 그 로드가 올릴 디바이스를 @p pDevice 로 바꾼다 — 앞서 요청한 디바이스는 이미 내려갔을 수 있다.
          * @param start 새 로드의 로드 단계(디스크 읽기)를 어디서 시작하는가입니다. `OnCallingThread` 여도 업로드는 `wait()` 나 펌프가 한다.
          * @details 디바이스는 받지 않는다 — 엔진이 붙인 디바이스(`bindDevice`)에 올린다. 게임 스레드 · 에디터는 RHI 를 모른다(언리얼 `UTexture` 게임 스레드 API 와 같다).
          *          예전에는 디바이스를 인자로 받아 에디터 패널 · 인스펙터 · 게임 인터페이스까지 디바이스가 관통했다.
          */
-        TextureHandle request( string_view relativePath, AssetLoadStart start );
+        /// @param group 밉 스트리밍을 받는가(`TextureStreamingGroup`) — 메시 머티리얼만 `Streamable` 이다. 같은 텍스처를 `NeverStream` 으로 요청하면 그것이 이긴다.
+        TextureHandle request( string_view relativePath, AssetLoadStart start, TextureStreamingGroup group );
         /** @brief 올릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). 붙은 디바이스가 없으면 `request` 는 실패 핸들을 돌려준다. */
         void bindDevice( IRHIDevice* pDevice );
         /**
@@ -113,9 +137,13 @@ namespace sw
         /**
          * @brief 아래쪽 밉만 올린 텍스처(비동기 로드, `TextureResidency::StreamingBase`)의 위쪽 밉을 업로드합니다(렌더 스레드, 기록 전, `completePendingLoads` 뒤). 바꿔 끼운 수를 반환합니다.
          * @details 텍스처 밉 스트리밍(계획 PreloadAndLOD P6)이다 — 첫 화면은 작은 밉으로 빨리 나오고 위쪽 밉은 한 프레임에 @p maxCount 개씩 들어온다(먼저 읽힌 것부터).
-         *          새 GPU 텍스처 · SRV 로 바꿔 끼우고 리로드 세대를 올려 머티리얼이 새 번호를 받게 한다. 옛 자원은 게임 스레드가 해제한다(`releaseRetiredTextures`).
+         *          새 GPU 텍스처로 바꿔 끼우고 SRV 번호는 그대로 다시 묶는다(R-6 — 머티리얼은 다시 받지 않는다). 옛 텍스처는 게임 스레드가 해제한다(`releaseRetiredTextures`).
          *          그 사이 놓인 텍스처 · 다른 디바이스의 텍스처는 건너뛴다(다시 업로드할 때 밉 전부가 올라간다).
          *          풀 예산(`TextureStreamingBudget::_poolBytes`)을 넘는 승급은 내지 않는다 — 그 텍스처부터 줄에 남아 아래쪽 밉 그대로다(예약은 `TextureStreamingPool`).
+         *          줄은 밉 요청(`TextureMipRequest`)만 든다(MR-2): 꺼낼 때 그 밉 구간을 IO 스레드가 범위로 읽고(`AssetIO::readBinaryAssetRangeAsync`), 다 읽은 것을 다음 호출이
+         *          제출한다. 읽는 중 · 제출 대기 바이트의 합은 `TextureStreamingBudget::_maxBytesInFlight` 아래다. 읽는 사이 마지막 참조가 놓인 텍스처는 올리지 않고 버린다.
+         *          내리기(R6-6): 알린 화면 크기를 필요한 밉으로 바꿔 항목에 적고, 풀 예산을 넘으면 `TextureStreamingPolicy` 가 고른 텍스처를 작은 밉 사슬로 다시 만들어 같은 SRV 번호에
+         *          다시 묶는다(읽기 · 제출은 올리기와 같은 줄). 내린 텍스처가 다시 보이고 예산이 남으면 필요한 밉까지 다시 올린다.
          */
         uint32 updateStreaming( IRHIDevice* pDevice, const TextureStreamingBudget& budget );
         /**
@@ -162,8 +190,8 @@ namespace sw
         /**
          * @brief 이미 만든 렌더 텍스처를 새 크기로 다시 만듭니다(렌더 스레드, 기록 전에). 크기가 같거나 아직 없으면 크기만 알리고 false 입니다.
          * @details 언리얼 `UTextureRenderTarget2D::ResizeTarget` 에 해당합니다. 위젯이 그리기 크기를 바꾼 캔버스 대상처럼, 먼저 만든 크기가 낡은 경우에 씁니다.
-         *          `Texture2D` 객체는 **그대로 두고** GPU 자원만 바꿉니다(빌린 포인터가 그대로 유효합니다). 새 SRV 인덱스를 받으므로 `reload` 처럼 세대를 증가시켜
-         *          머티리얼이 인덱스를 다시 받게 합니다. 옛 자원을 읽는 프레임이 끝나도록 디바이스를 기다리므로 크기가 바뀔 때만 부릅니다.
+         *          `Texture2D` 객체는 **그대로 두고** GPU 자원만 바꿉니다(빌린 포인터가 그대로 유효합니다). SRV 번호는 지켜 새 타깃으로 다시 묶으므로(R-6)
+         *          머티리얼은 다시 받지 않는다. 만들지 못하면 그 번호를 누락 체커로 다시 묶는다. 옛 타깃은 해제 줄로 가므로 기다리지 않는다.
          * @return 다시 만들었으면 true 입니다. 실패는 로그를 남깁니다.
          */
         bool resizeRenderTarget( string_view relativePath, uint32 width, uint32 height, IRHIDevice* pDevice );
@@ -180,12 +208,6 @@ namespace sw
          *          저장하지 말고 그 자리에서 쓰십시오. 오래 보관해야 하면 `acquire` 와 `release` 짝으로 빌립니다.
          */
         const Texture2D* find( string_view relativePath ) const;
-        /**
-         * @brief 텍스처의 SRV 가 바뀌었을 수 있는 횟수입니다(`reload` · `resizeRenderTarget` 이 다시 올렸거나, 비동기 로드의 업로드가 끝났다).
-         * @details 다시 업로드하면 같은 `Texture2D` 에 **새 SRV 인덱스**가 붙고, 비동기 로드가 끝나면 로드 중 텍스처 대신 읽을 SRV 가 생깁니다. 머티리얼은 resolve 때
-         *          받은 인덱스를 보관하므로, 이 값이 바뀌면 다시 받습니다(`Material::refreshTextureBindings`, 렌더 사본을 만들기 전에 `Material::getRenderBinding` 이 부릅니다).
-         */
-        uint32 getReloadGeneration() const;
         /**
          * @brief 이미 가진 텍스처의 사각형 구간을 새 픽셀로 바꿔 달라고 맡깁니다(게임 스레드, 지형 스플랫 칠하기). 실제 업로드는 렌더 스레드의 `flushRegionUpdates` 가 합니다.
          * @details @p rgbaBytes 는 RGBA8 순서의 빈틈없는 행(`width × 4` 바이트) × @p height 입니다. 텍스처가 BGRA8 이면 렌더 스레드가 채널을 바꿔 업로드하고,
@@ -249,6 +271,16 @@ namespace sw
         friend class TextureLoadOperation; // 로드 작업이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
         struct Impl;
 
+        /**
+         * @brief 자리 텍스처(로드 중 텍스처 · 누락 체커)를 올려 둡니다(비동기 요청이 잠금 밖에서 부른다). 엔진 서비스가 없으면 아무것도 하지 않는다.
+         * @details 동기 `acquire` 로 올리므로 다시 이 함수로 들어오지 않는다. 디바이스 교체로 GPU 자원을 잃었으면 다시 올린다.
+         */
+        void ensureStandInTextures();
+        /**
+         * @brief 이번 프레임의 화면 크기(@p mapFrameScreenSize)를 항목의 필요한 밉 · 유휴 프레임에 적고, `TextureStreamingPolicy` 가 고른 내리기 · 다시 올리기를 줄 앞에 넣습니다(R6-6).
+         * @details 내리기로 한 키를 @p outMapDemotionKey 에 담는다 — `updateStreaming` 이 줄에서 먼저 낸다. 바꾸는 중인 항목은 바이트만 세고 결정에서 뺀다.
+         */
+        void collectStreamingDecisions( const unordered_map<string, float32>& mapFrameScreenSize, const TextureStreamingBudget& budget, unordered_map<string, uint8>& outMapDemotionKey );
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
         uint32 processPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
@@ -294,10 +326,17 @@ namespace sw
          * @details 디바이스 교체 · 크기 바꾸기로 값이 바뀐다 — 게임 코드는 같은지만 본다(RHI 형식 · `Texture2D.h` 를 모르고 다시 구울지 정한다).
          */
         uint64 getResidentIdentity() const;
+        /**
+         * @brief 이 로드의 텍스처를 가리키는 bindless 번호입니다 — 머티리얼이 한 번 받아 쥔다(R-6). 로드 중이면 로드 중 텍스처, 끝나면 진짜 텍스처, 실패하면 누락 체커를 가리킨다.
+         * @details 어느 스레드에서든 부른다. 예약하지 못한 로드(엔진 서비스 없음 · 표가 참)와 시작 전에 실패한 로드는 kInvalidDescriptorIndex 다 — 받는 쪽이 누락 체커를 따로 빌린다.
+         */
+        RHIDescriptorIndex getStableSRV() const;
 
     private:
         [[nodiscard]] expected<void> runLoad() override;
-        bool                         hasCompletion() const override { return true; }
+        /** @brief 스트리밍 로드의 읽기입니다(워커) — 머리로 밉 구간을 구하고 꼬리 밉(스트리밍 기반이 올리는 밉부터 끝까지)만 읽는다(MR-3). 읽은 바이트 수를 돌려줍니다. */
+        [[nodiscard]] expected<uint64> readHeadAndTail();
+        bool                           hasCompletion() const override { return true; }
         /** @brief 완료 1단계 — 텍스처를 만들고 업로드를 제출합니다(`Texture2D::beginUploadFromImage`). 블로킹이면 이어서 끝까지 기다립니다. */
         [[nodiscard]] expected<AssetCompletionStep> beginCompletion( bool bBlocking ) override;
         /** @brief 완료 2단계 — 업로드가 끝났는지 보고 bindless 에 등록해 항목을 공개합니다(`Texture2D::finishUpload`). */
@@ -310,9 +349,13 @@ namespace sw
         [[nodiscard]] expected<AssetCompletionStep> concludeCompletion( TextureCache::Impl& cache, bool bReady );
 
     private:
-        friend class TextureCache;               // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다
-        unique_ptr<DDSImageData>     _pImage;    ///< 로드 단계가 읽은 그림(파일만). 완료 단계가 올리고 버린다
-        string                       _loadError; ///< 로드 단계의 실패 이유 — 완료 단계가 드러낸다
+        friend class TextureCache;                  // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다
+        unique_ptr<DDSImageData>     _pImage;       ///< 로드 단계가 읽은 그림(파일만). 완료 단계가 올리고 버린다
+        string                       _readPath;     ///< 로드 단계가 실제로 읽은 파일(형식 변형이면 변형 파일) — 위쪽 밉을 범위로 다시 읽는다(MR-2)
+        TextureMipLayout             _mipLayout;    ///< 머리로 구한 밉 구간(스트리밍 로드만 — MR-3)
+        vector<uint8>                _tailBytes;    ///< 머리 + 꼬리로 읽은 꼬리 밉 바이트(스트리밍 로드만 — `_pImage` 대신). 완료 단계가 올리고 버린다
+        uint32                       _tailFirstMip; ///< 꼬리의 가장 큰 밉
+        string                       _loadError;    ///< 로드 단계의 실패 이유 — 완료 단계가 드러낸다
         weak_ptr<TextureCache::Impl> _pCache;
         atomic<IRHIDevice*>          _pDevice;  ///< 올릴 디바이스 — 마지막으로 요청한 쪽 · 펌프가 자기 것으로 바꾼다(처음 요청한 디바이스는 이미 내려갔을 수 있다)
         Texture2D*                   _pTexture; ///< 항목의 텍스처 객체(항목이 소유한다)
@@ -320,6 +363,8 @@ namespace sw
         uint32                       _renderTargetHeight;
         Source                       _source;
         TextureResidency             _residency;           ///< 파일을 업로드할 밉 범위 — 비동기 로드는 아래쪽 밉부터(`TextureCache::request`)
+        atomic<RHIDescriptorIndex>   _failedSRV;           ///< 실패한 로드가 맡은 번호(누락 체커를 가리킨다) — 이 로드 작업이 사라질 때 놓는다
+        atomic<IRHIDevice*>          _pFailedSRVDevice;    ///< `_failedSRV` 를 받은 디바이스 — 놓을 때 아직 붙은 디바이스인지 본다
         uint8                        _bHoldsReference : 1; ///< 항목의 참조 하나를 쥐었는가(완료에 성공했거나 캐시 적중)
     };
 } // namespace sw

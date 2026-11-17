@@ -39,6 +39,7 @@
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -640,7 +641,7 @@ namespace sw::editor
              * @details 언리얼이 임포트 때 기존 USkeleton 을 고르는 일을 내용 대조로 저절로 한다. 공용 폴더는 옆 폴더 밖이라 다시 임포트해도 지워지지 않는다.
              *          원본이 사라져 아무도 가리키지 않는 파일은 남는다(스켈레톤 하나는 작다).
              */
-            [[nodiscard]] static bool writeSharedSkeleton( const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
+            [[nodiscard]] static bool writeSharedSkeleton( const AssetPaths& assetPaths, const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
             {
                 const string normalized = FileUtil::normalizeSeparators( outputPath );
                 const string marker     = "/" + string( ModelImportUtil::kImportedModelFolder ) + "/";
@@ -650,15 +651,18 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.ImportedMeshOutsideModels", "Imported mesh '%#' is not under a '%#' folder - the shared skeleton has no place", outputPath, ModelImportUtil::kImportedModelFolder );
                     return false;
                 }
-                const string text = skeleton.toXML();
-                const uint64 hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, text.data(), text.size() );
-                outSharedPath     = normalized.substr( 0, folderEnd + marker.size() ) + string( ModelImportUtil::kSharedSkeletonFolder ) + "/skeleton_" + to_string( hash ) + string( Skeleton::kExtension );
+                const string body           = skeleton.toXML();
+                const uint64 hash           = HashUtil::appendBytes64( HashUtil::kFNVOffset64, body.data(), body.size() );
+                outSharedPath               = normalized.substr( 0, folderEnd + marker.size() ) + string( ModelImportUtil::kSharedSkeletonFolder ) + "/skeleton_" + to_string( hash ) + string( Skeleton::kExtension );
+                const optional<string> text = ImportedAssetStore::makeTextWithIdentity( assetPaths, outSharedPath, body );
+                if ( text.has_value() == false )
+                    return false;
 
                 // 잠그지 않는다: 이름이 내용 지문이라 워커 둘이 같은 파일을 써도 같은 글이고, `writeTextFile` 은 저마다의 임시 파일에 쓴 뒤 바꿔 끼운다.
                 string existing;
-                if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == text )
+                if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == *text )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, text ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, *text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", outSharedPath.c_str() );
                     return false;
@@ -703,7 +707,7 @@ namespace sw::editor
                                     imported._stats._maxError * 1000.0f );
                 }
                 const string setPath = FileUtil::joinPath( sideFolder, string( stem ) + string( AnimationSet::kExtension ) );
-                if ( FileUtil::writeTextFile( setPath, animationSet.saveToString() ) == false )
+                if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, setPath, animationSet.saveToString() ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationSet", "Failed to write animation set %#", setPath.c_str() );
                     return false;
@@ -734,7 +738,7 @@ namespace sw::editor
             uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
             {
                 ModelImportRule rule;
-                if ( findRule( assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
                 return ModelImporter::computeSourceHash( sourcePath, rule );
             }
@@ -745,24 +749,33 @@ namespace sw::editor
                 return nullptr;
             }
             /** @brief 규칙에 몸 메시(`body_surface`)가 있으면 그 메시의 임포트 결과(`transferBodySurface` 가 `MeshCache` 로 읽는다)를 읽으므로 몸 메시를 임포트한 뒤에 직렬로 임포트합니다. */
-            bool hasOrderDependency( string_view assetPath ) const override
+            bool hasOrderDependency( string_view sourcePath, string_view assetPath ) const override
             {
-                const ModelImportRuleMatch match = _config.findMatchingRule( assetPath );
-                return match.hasError() == false && match._rule._bodySurface.empty() == false; // 겹침 오류는 importSource 가 전한다
+                vector<AssetImportOverride> listOverride;
+                if ( AssetImportRuleUtil::readMetaOverrides( sourcePath, listOverride ) == false )
+                    return false; // 서술 오류는 importSource 가 다시 만나 임포트를 멈춘다
+                const ModelImportRuleMatch match = _config.resolveRule( assetPath, listOverride );
+                return match.hasError() == false && match._rule._bodySurface.empty() == false; // 겹침 · 예외 오류는 importSource 가 전한다
             }
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
             {
                 ModelImportRule rule;
-                if ( findRule( assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return false;
                 return ModelImporter::importModel( _assetPaths, sourcePath, rule, importedPath );
             }
 
         private:
-            /** @brief 리소스 경로에 맞는 규칙을 @p outRule 에 담습니다. 규칙이 겹치면 오류를 남기고 false 입니다. 맞는 규칙이 없으면 기본 규칙이고 true 입니다. */
-            [[nodiscard]] bool findRule( string_view assetPath, ModelImportRule& outRule ) const
+            /**
+             * @brief 리소스 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
+             * @return 규칙이 겹치거나 서술 · 예외를 읽지 못하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] bool findRule( string_view sourcePath, string_view assetPath, ModelImportRule& outRule ) const
             {
-                ModelImportRuleMatch match = _config.findMatchingRule( assetPath );
+                vector<AssetImportOverride> listOverride;
+                if ( AssetImportRuleUtil::readMetaOverrides( sourcePath, listOverride ) == false )
+                    return false;
+                ModelImportRuleMatch match = _config.resolveRule( assetPath, listOverride );
                 if ( match.hasError() )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.ImportRuleRejected", "%#", match._error.c_str() );
@@ -897,16 +910,16 @@ namespace sw::editor
             return false;
         // 스켈레톤은 내용당 한 벌이고, 모델 옆 파일은 그것을 가리키는 차이 없는 변형이다 — 데이터가 적은 경로(프리팹 · 본 LOD · 리타깃 프로필)는 그대로다.
         string sharedSkeletonPath;
-        if ( Internal::writeSharedSkeleton( result._skeleton, outputPath, sharedSkeletonPath ) == false )
+        if ( Internal::writeSharedSkeleton( assetPaths, result._skeleton, outputPath, sharedSkeletonPath ) == false )
             return false;
         skeletonFileData._base    = assetPaths.toAssetID( sharedSkeletonPath );
         const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
-        if ( FileUtil::ensureParentDirectoryExists( skeletonPath ) == false || FileUtil::writeTextFile( skeletonPath, skeletonFileData.toXML() ) == false )
+        if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, skeletonPath, skeletonFileData.toXML() ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
-        if ( ModelImportVrm::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
+        if ( ModelImportVrm::writeVrmAvatar( assetPaths, result, sourcePath, sideFolder, stem ) == false )
             return false;
         if ( ModelImportVrm::writeSectionPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
             return false;

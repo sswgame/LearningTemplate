@@ -9,12 +9,11 @@
 -->
 <Scenario name="game.empty.debugsources" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/cinematic.scene.xml"/>
-	<Wait frames="10"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="debug.target clear"/>
 	<DevCommand line="anim.rewind on"/>
 	<PlaySequence object="Director"/>
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 재생 30 프레임 — 시퀀스가 돌고 되감기 트랙에 프레임이 쌓인다(시간이 내용) -->
 	<!-- ① 컷씬: 대상 오브젝트의 플레이어 — 재생 중, 바인딩 셋이 모두 풀렸다(경고 없음) -->
 	<DevCommand line="debug.target Director"/>
 	<ExpectLog id="DevCommand.Reply" contains="debug.target: Director #" atLeast="1"/>

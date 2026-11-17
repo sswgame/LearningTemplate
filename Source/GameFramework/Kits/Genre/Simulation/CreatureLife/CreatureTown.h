@@ -17,6 +17,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
@@ -27,25 +28,10 @@ namespace sw
     struct SessionStateRefs;
 
     class Archive;
-    class CreatureLifeCatalog;
     class Inventory;
     class QuestLog;
     class ReputationState;
     class WeatherSystem;
-
-    /** @brief 마을 규칙의 수치입니다. 호감도 점수는 생물마다의 평판(`ReputationState` 의 세력이며 종 id 와 같습니다)에 더합니다. */
-    struct CreatureTownSettings
-    {
-        hashed_string _houseObject{ "house" }; ///< 집을 지으면 그 셀에 놓이는 오브젝트
-        int32         _talkPoints{ 5 };        ///< 하루 한 번 대화할 때의 점수
-        int32         _giftPoints{ 10 };       ///< 좋아하지 않는 선물의 점수
-        int32         _likedGiftPoints{ 30 };  ///< 좋아하는 선물의 점수
-        int32         _foodPoints{ 20 };       ///< 좋아하는 음식의 점수
-        int32         _requestPoints{ 50 };    ///< 부탁을 끝냈을 때의 점수
-        uint32        _randomSeed{ 7100u };    ///< 방문 확률에 쓰는 시드
-        /** @brief 공유 땅에서 막힘으로 얻는 오브젝트입니다(다른 키트의 길찾기가 피합니다). 나머지(풀, 꽃)는 막힘 없이 얻습니다. */
-        vector<hashed_string> _listBlockingObject{ hashed_string( "house" ), hashed_string( "tree" ), hashed_string( "rock" ) };
-    };
 } // namespace sw
 
 namespace sw
@@ -177,11 +163,11 @@ namespace sw
         CreatureTown();
 
         /**
-         * @brief 크기를 정하고 모든 셀을 비웁니다. @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). 평판, 부탁 일지, 시계는 없어도 됩니다(평판이 없으면 호감도 0, 일지가 없으면 부탁 없음, 시계가 없으면 0일).
+         * @brief 크기를 정하고 모든 셀을 비웁니다. 규칙 수치는 @p pCatalog 의 `<Rules>` 에서만 받는다(없으면 false, 감사 K-4). @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). 평판, 부탁 일지, 시계는 없어도 됩니다(평판이 없으면 호감도 0, 일지가 없으면 부탁 없음, 시계가 없으면 0일).
          * @param refs 빌려 쓰는 공유 상태이다. 마을은 `_pReputation`(호감도이며 세력 `creature.<종 id>`), `_pQuestLog`(부탁 일지), `_pClock`(날)을 쓰며 마을보다 오래 살아야 한다. 여러 장르가 섞인 게임은 `SessionStateComponent::makeRefs()` 로 얻는다.
          * @return 크기가 1 이상이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        [[nodiscard]] bool initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings );
+        [[nodiscard]] bool initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height );
 
         /**
          * @brief 공유 땅을 빌립니다. 마을 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이미 놓인 오브젝트의 셀을 얻고, 그 뒤로는 오브젝트를 놓을 때 얻고 비우면 반납합니다.

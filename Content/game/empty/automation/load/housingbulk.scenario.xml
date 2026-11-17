@@ -9,13 +9,12 @@
 <Scenario name="game.empty.load.housingbulk" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/housing_bulk.scene.xml"/>
 	<Load durationSeconds="15"/>
-	<Wait frames="5"/>
 	<Expect watch="Housing.LandBound" target="HousingPlot" equals="0"/>
 	<DevCommand line="housing.fill HousingPlot floor 0"/>
 	<ExpectLog id="DevCommand.Reply" contains="filled 576 - Ok placements 576" count="1"/>
 	<DevCommand line="housing.fill HousingPlot table 0"/>
 	<ExpectLog id="DevCommand.Reply" contains="filled 288 - Ok placements 864" count="1"/>
-	<Wait frames="1"/>
+	<WaitUntil watch="Housing.PlacementCount" target="HousingPlot" equals="864" timeoutFrames="10"/>
 	<Expect watch="Housing.PlacementCount" target="HousingPlot" equals="864"/>
 	<Expect watch="Housing.Funds" target="HousingPlot" equals="8480"/>
 	<WaitUntil watch="Housing.ViewCount" target="HousingPlot" equals="864" timeoutFrames="120"/>
