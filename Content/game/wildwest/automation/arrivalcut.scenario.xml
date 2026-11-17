@@ -23,9 +23,13 @@
 	<WaitUntil watch="Camera.FrameObject" is="ArrivalCutA" timeoutSeconds="2"/>
 	<WaitUntil watch="CameraManager.PendingCamera" target="GameCamera" is="none" timeoutFrames="4"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="ArrivalCutA"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 컷 카메라에서 TAA · 노출 기록이 찼다 -->
+	<Expect watch="Camera.FrameObject" is="ArrivalCutA"/> <!-- 아직 같은 컷이다(컷 길이 약 70 프레임) -->
 	<Screenshot file="wildwest/arrival_a.ppm" waitForStability="false"/>
 	<WaitUntil watch="Camera.FrameObject" is="ArrivalCutB" timeoutSeconds="2"/>
 	<Expect watch="Cinematic.CutCamera" target="ArrivalDirector" is="ArrivalCutB"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 컷 카메라에서 TAA · 노출 기록이 찼다 -->
+	<Expect watch="Camera.FrameObject" is="ArrivalCutB"/> <!-- 아직 같은 컷이다(컷 길이 약 70 프레임) -->
 	<Screenshot file="wildwest/arrival_b.ppm" waitForStability="false"/>
 
 	<WaitUntil watch="Camera.FrameObject" is="GameCamera" timeoutSeconds="3"/>
