@@ -186,7 +186,9 @@ SW_TEST_CASE( PackPatchTest, PatchOverTwoGiBIsAccepted )
 
     AtomicFileWriter file;
     SW_REQUIRE_TRUE( file.open( packPath ).has_value() );
-    SW_REQUIRE_TRUE( file.appendZeros( payloadOffset ).has_value() ); // 성긴 파일의 구멍 — 디스크를 쓰지 않는다
+    if ( file.markSparse() == false )
+        SW_TEST_SKIP( "the scratch volume cannot hold sparse files - a 2.5 GiB pack would be written for real" ); // 소멸하는 쓰기가 임시 파일을 지운다
+    SW_REQUIRE_TRUE( file.appendZeros( payloadOffset ).has_value() );                                             // 성긴 파일의 구멍 — 디스크를 쓰지 않는다
     SW_REQUIRE_TRUE( file.append( pPayload, payloadSize ).has_value() );
     SW_REQUIRE_TRUE( file.append( listIndexByte.data(), listIndexByte.size() ).has_value() );
     SW_REQUIRE_TRUE( file.commit().has_value() );

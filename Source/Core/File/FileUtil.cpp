@@ -1504,6 +1504,11 @@ namespace sw
         return {};
     }
 
+    bool AtomicFileWriter::markSparse()
+    {
+        return _pFile != nullptr && PlatformFileUtil::markSparse( _pFile );
+    }
+
     expected<void> AtomicFileWriter::appendZeros( uint64 size )
     {
         if ( _pFile == nullptr )

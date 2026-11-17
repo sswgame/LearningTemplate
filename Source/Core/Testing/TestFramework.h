@@ -278,6 +278,11 @@ namespace sw::test
     SW_API bool checkNear( float64 expected, float64 actual, float64 tolerance, const utf8* pExpression, const utf8* pFile, int32 line );
     /** @brief `SW_EXPECT_TRUE` · `SW_EXPECT_FALSE` · `SW_REQUIRE_TRUE` 의 본체입니다. */
     SW_API bool checkCondition( bool bPassed, const utf8* pExpression, const utf8* pFile, int32 line );
+    /**
+     * @brief `SW_TEST_SKIP` 의 본체입니다 — 건너뛴 이유를 로그(`Test.CaseSkipped`)로 남기고 확인 하나로 센다(확인 없는 케이스의 실패로 보지 않는다).
+     * @details 이 기계 · 볼륨이 케이스의 전제를 갖추지 못했을 때만 쓴다(성긴 파일을 못 만드는 볼륨). 전제가 코드의 결함이면 건너뛰지 말고 실패시킨다.
+     */
+    SW_API void reportSkip( string_view reason, const utf8* pFile, int32 line );
 } // namespace sw::test
 
 #if !defined( SW_SHIPPING )
@@ -383,6 +388,13 @@ namespace sw::test
 #define SW_EXPECT_FALSE_MSG( condition, message ) \
     (void)::sw::test::checkConditionWithMessage( !static_cast<bool>( condition ), "!(" #condition ")", ( message ), __FILE__, __LINE__ )
 
+/** @brief 이유를 남기고 이 케이스를 여기서 끝냅니다(케이스 함수 본문에서만 — `reportSkip`). */
+#define SW_TEST_SKIP( reason )                                    \
+    do                                                            \
+    {                                                             \
+        ::sw::test::reportSkip( ( reason ), __FILE__, __LINE__ ); \
+        return;                                                   \
+    } while ( false )
 /** @brief 조건이 참이어야 하고, 아니면 이 케이스를 바로 끝냅니다(케이스 함수 본문에서만). */
 #define SW_REQUIRE_TRUE( condition )                                                                                 \
     do                                                                                                               \

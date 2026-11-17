@@ -569,6 +569,12 @@ namespace sw::test
         return bPassed;
     }
 
+    void reportSkip( string_view reason, const utf8* pFile, int32 line )
+    {
+        countAssertion();
+        SW_LOG_INFO_ID( "Test.CaseSkipped", "%#(%#): case skipped - %#", pFile, line, reason );
+    }
+
     bool TestRunner::matchesFilter( string_view filter, string_view name )
     {
         return matchesFilter( filter, name, {} );

@@ -444,6 +444,8 @@ namespace sw
          * @brief 끝에 0 @p size 바이트를 덧붙입니다 — 쓰지 않고 건너뛰어 성긴 파일의 구멍으로 둔다(`PlatformFileUtil::markSparse`). 큰 빈 구역(슬롯 배치의 앞 빌드 자리 · 2 GiB 넘는 테스트 팩)의 자리다.
          */
         [[nodiscard]] expected<void> appendZeros( uint64 size );
+        /** @brief 쓰는 임시 파일을 성긴 파일로 표시합니다(`PlatformFileUtil::markSparse`). 못 하는 볼륨이면 false — `appendZeros` 가 0 을 실제로 쓴다. */
+        [[nodiscard]] bool markSparse();
         /** @brief 이미 쓴 구간 [@p offset, @p offset + @p size) 를 덮습니다. 쓴 끝을 넘으면 오류입니다. 다음 `append` 는 다시 끝에 붙는다. */
         [[nodiscard]] expected<void> writeAt( uint64 offset, const uint8* pData, size_t size );
         /** @brief 지금까지 쓴 바이트 수입니다(다음 `append` 의 오프셋). */
