@@ -368,7 +368,15 @@ namespace sw
         // 인덱스 버퍼와 같은 경로다(디바이스의 `createVulkanBuffer` 가 용도 `_usage` 까지 기록에 남긴다).
         if ( pData == nullptr )
             return 0;
-        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData, 0 );
+        // TRANSFER_SRC: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion).
+        return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, pData, 0 );
+    }
+
+    RHIBufferHandle VulkanRHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        // 복사의 도착 · 원본(풀을 다시 꾸릴 때 옛 풀이 원본이다). 메모리는 엔진의 다른 Vulkan 버퍼처럼 호스트 보임이다 — 기기 로컬로 옮기는 일은 버퍼 할당 전체의 몫이다.
+        constexpr uint32 usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        return _pDevice->createVulkanBuffer( sizeBytes, usage, nullptr, 0 );
     }
 
     void VulkanRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )

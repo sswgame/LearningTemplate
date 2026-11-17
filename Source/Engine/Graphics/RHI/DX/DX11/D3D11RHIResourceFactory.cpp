@@ -201,6 +201,15 @@ namespace sw
         return createFilledBuffer( pData, sizeBytes, D3D11_BIND_VERTEX_BUFFER );
     }
 
+    RHIBufferHandle D3D11RHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        // DX11 의 정점 버퍼는 원래 DEFAULT 사용이라 복사(`CopySubresourceRegion`)의 도착이 된다 — 0 으로 채워 만든다(채움 함수가 내용을 요구한다).
+        if ( sizeBytes == 0 )
+            return 0;
+        const vector<uint8> listZero( sizeBytes, uint8{ 0 } );
+        return createFilledBuffer( listZero.data(), sizeBytes, D3D11_BIND_VERTEX_BUFFER );
+    }
+
     void D3D11RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
         _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );

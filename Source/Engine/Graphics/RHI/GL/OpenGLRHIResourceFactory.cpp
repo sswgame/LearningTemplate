@@ -319,6 +319,15 @@ namespace sw
         return _pDevice->createIndexBuffer( pData, sizeBytes );
     }
 
+    RHIBufferHandle OpenGLRHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        // GL 버퍼는 어느 것이든 glCopyBufferSubData 의 도착이 된다 — 0 으로 채운 정점 버퍼와 같다.
+        if ( sizeBytes == 0 )
+            return 0;
+        const vector<uint8> listZero( sizeBytes, uint8{ 0 } );
+        return createVertexBuffer( listZero.data(), sizeBytes );
+    }
+
     RHIBufferHandle OpenGLRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
         const bool bInvalidVertexBufferRequest = _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0;

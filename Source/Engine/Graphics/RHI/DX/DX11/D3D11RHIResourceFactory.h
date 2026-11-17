@@ -28,6 +28,7 @@ namespace sw
         void                            updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                        const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle                 createGPUVertexBuffer( uint32 sizeBytes ) override;
         void                            updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle                 createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
         void                            destroyBuffer( RHIBufferHandle buffer ) override;

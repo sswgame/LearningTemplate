@@ -382,7 +382,14 @@ namespace sw
     RHIBufferHandle WebGPURHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
         // 메시 풀은 정점을 저장 버퍼로도 읽는다(모프 · 스킨 컴퓨트) — Storage 를 함께 준다.
-        return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, pData, "SW Vertex Buffer" );
+        // CopySrc: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion).
+        return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc, pData, "SW Vertex Buffer" );
+    }
+
+    RHIBufferHandle WebGPURHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        // 내용 없이 만든 버퍼는 0 으로 시작한다(명세). 복사의 도착 · 원본(다시 꾸릴 때 옛 풀이 원본이다).
+        return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc, nullptr, "SW GPU Vertex Buffer" );
     }
 
     void WebGPURHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )

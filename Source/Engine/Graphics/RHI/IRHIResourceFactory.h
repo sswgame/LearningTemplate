@@ -91,6 +91,13 @@ namespace sw
 
         /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::getMeshVertexAttributes`)이 정합니다. */
         [[nodiscard]] virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
+        /**
+         * @brief 내용 없이 GPU 쪽에만 있는 정점 버퍼를 만듭니다 — GPU 복사(`IRHICommandList::copyBufferRegion`)의 도착이 되는 버퍼다(감사 R-15 — 정점 풀이 CPU 정점 대신 GPU 원본에서 채운다).
+         * @details `createVertexBuffer` 의 버퍼는 DX12 업로드 힙이라 복사 도착이 될 수 없다. 이 버퍼는 CPU 가 쓰지 않는다(`updateGeometryBufferRegions` 를 받지 않는다) — 내용은 복사로만 들어온다.
+         *          백엔드: DX12 default 힙(상태 추적, COMMON 으로 시작) · Vulkan 전송 도착 · 원본 용도(호스트 보임 메모리 — 엔진의 모든 Vulkan 버퍼와 같다) · DX11 DEFAULT ·
+         *          GL 빈 `glBufferData` · WebGPU CopyDst · CopySrc. 처음 내용은 0 이다(DX12 · Vulkan 은 정해지지 않아 복사 전에는 읽지 않는다).
+         */
+        [[nodiscard]] virtual RHIBufferHandle createGPUVertexBuffer( uint32 sizeBytes ) = 0;
 
         /**
          * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 **여러 조각**을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.

@@ -678,6 +678,23 @@ namespace sw
         return createUploadBuffer( pData, sizeBytes );
     }
 
+    RHIBufferHandle D3D12RHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        if ( _pDevice->_device == nullptr || sizeBytes == 0 )
+            return 0;
+        // default 힙 — 복사의 도착이 된다(업로드 힙 `createVertexBuffer` 는 못 된다). 구조 버퍼처럼 상태를 추적한다(COMMON 으로 시작, 그리기 전 VertexOrConstant 로 옮긴다).
+        const D3D12_HEAP_PROPERTIES            heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
+        const D3D12_RESOURCE_DESC              resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
+        Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
+        if ( isHrSuccess( _pDevice->_device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS( buffer.GetAddressOf() ) ),
+                          "CreateCommittedResource" ) == false )
+            return 0;
+        const RHIBufferHandle handle = _pDevice->storeBuffer( buffer );
+        if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
+            pRecord->_bTrackedState = SW_TRUE; // 핸들을 돌려주기 전이라 락 없이 켠다(`createStructuredBuffer` 와 같다)
+        return handle;
+    }
+
     void D3D12RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
         _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );

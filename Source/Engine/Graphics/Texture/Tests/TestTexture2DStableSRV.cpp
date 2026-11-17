@@ -127,6 +127,7 @@ namespace
         RHIBufferHandle        createStructuredBuffer( uint32, uint32 ) override { return 0; }
         void                   updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         RHIBufferHandle        createVertexBuffer( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle        createGPUVertexBuffer( uint32 ) override { return 0; }
         void                   updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
         RHIBufferHandle        createIndexBuffer( const void*, uint32 ) override { return 0; }
         void                   destroyBuffer( RHIBufferHandle ) override {}
