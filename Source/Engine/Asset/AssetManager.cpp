@@ -370,6 +370,11 @@ namespace sw
         return SubsystemInitResult::Succeeded;
     }
 
+    bool AssetManager::rebuildAssetRegistry() const
+    {
+        return installAssetRegistry( _pPackManager->getContentSource() );
+    }
+
     bool AssetManager::installAssetRegistry( const ContentSource source ) const
     {
         vector<AssetRegistryLayer> listLayer;

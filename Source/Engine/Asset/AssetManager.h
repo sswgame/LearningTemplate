@@ -162,6 +162,12 @@ namespace sw
          */
         void warnAboutRemainingModuleCaches() const;
 
+        /**
+         * @brief 지금 마운트한 콘텐츠로 GUID 색인을 다시 지어 겁니다(`installAssetRegistry` — 콘텐츠 정책은 팩 매니저의 것). 런타임에 팩을 붙이거나 뗀 뒤(모드 · 패치) 부른다.
+         * @details 패치 팩이 도메인 색인(`<도메인>/assetindex.xml`)을 덮었으면 덮은 것을 읽는다. 못 지으면 오류를 남기고 false 이며 있던 색인을 그대로 둔다 — 부르는 쪽이 붙인 팩을 되돌린다.
+         */
+        [[nodiscard]] bool rebuildAssetRegistry() const;
+
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         PackManager&       getPackManager();
         const PackManager& getPackManager() const;
