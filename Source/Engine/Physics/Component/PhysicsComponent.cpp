@@ -103,10 +103,12 @@ namespace sw
         SceneComponent::onEndPlay();
     }
 
-    void PhysicsComponent::onTeleported()
+    void PhysicsComponent::onTeleported( TeleportType type )
     {
-        SceneComponent::onTeleported();
+        SceneComponent::onTeleported( type );
         _bTeleportPending.store( true, std::memory_order_release );
+        if ( type == TeleportType::ResetPhysics )
+            resetMotion();
     }
 
     void PhysicsComponent::onPropertyChanged( hashed_string propertyName )

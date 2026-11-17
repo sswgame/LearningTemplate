@@ -220,7 +220,7 @@ namespace sw
         setLocalPosition( float3::transform( worldPosition, _pParent->getWorldMatrix().invert() ) );
     }
 
-    void SceneComponent::teleportTo( const float3& worldPosition )
+    void SceneComponent::teleportTo( const float3& worldPosition, TeleportType type )
     {
         setWorldPosition( worldPosition );
         // 이 아래에 붙은 모두가 함께 옮겨졌다 — 재귀 없이 스택으로 돈다(깊은 계층에서도 스택이 자라지 않는다).
@@ -230,7 +230,7 @@ namespace sw
         {
             SceneComponent* pNode = listPending.back();
             listPending.pop_back();
-            pNode->onTeleported();
+            pNode->onTeleported( type );
             for ( SceneComponent* pChild : pNode->_listChild )
             {
                 if ( pChild != nullptr )

@@ -131,7 +131,10 @@ namespace sw
                     outReply = "no object named '" + listArgument[0] + "' with a scene component in the active scene";
                     return false;
                 }
-                pScene->setLocalPosition( position );
+                // 결정: "그 자리에 멈춰 놓기" 다(언리얼 `SetActorLocation( …, ETeleportType::ResetPhysics )` · 고도 `teleport`) — 순간이동으로 경로를 쓸지 않고,
+                // 옮기기 전 운동(내려앉던 캐릭터 · 떨어지던 강체의 속도)을 잇지 않는다. 인자는 로컬 위치라 부모가 있으면 월드로 바꿔 넘긴다.
+                const SceneComponent* pParent = pScene->getParent();
+                pScene->teleportTo( pParent != nullptr ? float3::transform( position, pParent->getWorldMatrix() ) : position, TeleportType::ResetPhysics );
                 outReply = "placed " + listArgument[0];
                 return true;
             }
@@ -141,6 +144,6 @@ namespace sw
     SW_DEV_SCENE_COMMAND( SceneTree, "scene.tree", "scene.tree [limit]", "List the objects of the active scene (id, name, parent, active, components)", &SceneInspectCommandsInternal::runTree );
     SW_DEV_COMMAND( ObjectDump, "object.dump", "object.dump <name>", "Print the components and property values of a named object of the active scene",
                     &SceneInspectCommandsInternal::runObjectDump );
-    SW_DEV_COMMAND( ObjectPlace, "object.place", "object.place <name> <x> <y> <z>", "Put a named object of the active scene at a local position (scenarios move the camera to change LOD)",
+    SW_DEV_COMMAND( ObjectPlace, "object.place", "object.place <name> <x> <y> <z>", "Teleport a named object of the active scene to a local position and stop its motion (scenarios move the camera to change LOD)",
                     &SceneInspectCommandsInternal::runObjectPlace );
 } // namespace sw

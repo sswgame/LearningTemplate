@@ -59,6 +59,11 @@ namespace sw
          */
         void launch( const float3& velocity );
         /**
+         * @brief 이어받은 운동을 다음 스텝에 모두 지웁니다 — 수직 속도 · 걷는 속도 · 필드 속도 · 공중 관성, 그리고 그 전에 쌓인 점프 · 발사 · 루트 모션 대기(언리얼 CharacterMovement `StopMovementImmediately`).
+         * @details 요청 속도(`setMoveVelocity`)는 조종 입력이라 남긴다. 순간이동(`teleportTo`)과 함께 부르면 "그 자리에 멈춰 놓기" 다(언리얼 `ETeleportType::ResetPhysics`). 아무 스레드에서 불러도 됩니다.
+         */
+        void stopMovementImmediately();
+        /**
          * @brief 딛고 선 면의 속도(컨베이어 · 흐르는 물, 월드 m/s)를 이번 물리 프레임에 더합니다. 프레임마다 다시 불러야 이어집니다(여럿이면 합).
          * @details 아무 스레드에서 불러도 됩니다. 트랜스폼을 직접 옮기면 순간이동이라 벽을 지나므로, 면이 나르는 것은 이것으로 넘깁니다.
          */
@@ -135,6 +140,8 @@ namespace sw
         void               setMaxSlopeAngle( float32 angle );
 
     protected:
+        /** @brief `stopMovementImmediately` 입니다(`TeleportType::ResetPhysics`). */
+        void resetMotion() override { stopMovementImmediately(); }
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         /** @brief 이번 스텝의 속도를 정해 씬에 이동을 넣습니다(`ScenePhysics::queueCharacterMove` — 씬이 모든 캐릭터를 한 번에 옮긴다, 감사 S-8). */
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;

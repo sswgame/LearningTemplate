@@ -49,6 +49,16 @@ namespace sw
 namespace sw
 {
     /**
+     * @enum TeleportType
+     * @brief 순간이동이 물리 운동을 어떻게 다루는지입니다(언리얼 `ETeleportType`).
+     */
+    enum class TeleportType : uint8
+    {
+        TeleportPhysics, ///< 경로를 쓸지 않고 옮긴다 — 속도는 잇는다(리스폰 뒤에도 떨어지던 몸은 계속 떨어진다)
+        ResetPhysics,    ///< 옮기고 운동(강체 속도 · 캐릭터 이동 상태)도 지운다 — "그 자리에 멈춰 놓기"
+    };
+
+    /**
      * @class SceneComponent
      * @brief 로컬 트랜스폼, 부모-자식 계층, float64 로 누적한 월드 위치(LWC), 카메라 상대 행렬을 제공하는 씬 컴포넌트입니다.
      * @details **트랜스폼 값은 이 객체 안에 없다.** 로컬 TRS, 월드 행렬, LWC 는 전역 `SceneTransformStorage` 의 슬롯에 있고, 이 객체는
@@ -95,8 +105,9 @@ namespace sw
         /**
          * @brief 이 컴포넌트(또는 조상)가 순간이동했을 때 불립니다(`teleportTo`). 물리 바디를 가진 파생 타입이 다음 step 에서 이동 경로를 쓸지 않게 표시합니다.
          * @details 틱 중에도 불린다(자식 오브젝트가 붙어 있으면 그 오브젝트의 컴포넌트에도). 원자적으로 표시만 하고, 물리는 step 직전에 읽는다.
+         *          @p type 이 `ResetPhysics` 면 물리 컴포넌트가 운동도 지운다.
          */
-        virtual void onTeleported() {}
+        virtual void onTeleported( TeleportType type ) { (void)type; }
 
         /** @brief 상태 해시에 월드 위치 · 로컬 회전 · 로컬 스케일을 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
@@ -129,8 +140,9 @@ namespace sw
          * @details 언리얼의 `SetActorLocation( …, ETeleportType::TeleportPhysics )`, 유니티의 `Rigidbody.position` 대입에 해당한다. 이 컴포넌트와 그
          *          아래에 붙은 모든 것(자식 오브젝트 포함)이 순간이동한 것으로 취급한다(`onTeleported`). 그냥 옮기면(`setWorldPosition`) 빠른 바디가 그 경로에
          *          놓인 것과 겹친다. 리스폰이나 문 통과처럼 실제로 지나가지 않은 이동은 이 함수를 쓴다.
+         *          @p type 이 `ResetPhysics` 면 아래 물리 컴포넌트의 운동도 지운다(언리얼 `ETeleportType::ResetPhysics`, 고도 `teleport`).
          */
-        void teleportTo( const float3& worldPosition );
+        void teleportTo( const float3& worldPosition, TeleportType type = TeleportType::TeleportPhysics );
         /**
          * @brief 월드 트랜스폼(행렬)을 정합니다. 부모 기준으로 분해해 로컬 위치, 회전, 스케일을 씁니다(언리얼의 `SetWorldTransform`).
          * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` 이며 `makeFromYawPitchRoll` 의 역)으로 기록한다. ImGuizmo 의 XYZ

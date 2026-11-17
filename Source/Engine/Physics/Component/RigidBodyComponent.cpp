@@ -195,6 +195,14 @@ namespace sw
         } );
     }
 
+    void RigidBodyComponent::resetMotion()
+    {
+        if ( _bodyType != PhysicsBodyType::Dynamic )
+            return;
+        setLinearVelocity( float3{} );
+        setAngularVelocity( float3{} );
+    }
+
     void RigidBodyComponent::wake()
     {
         _pPosePage->editCommand( getPoseIndex(), []( PhysicsBodyCommand<PhysicsDimension3D>& command )

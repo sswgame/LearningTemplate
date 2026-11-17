@@ -90,8 +90,8 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 플레이가 끝나면 백엔드 객체를 놓습니다. */
         void onEndPlay() override;
-        /** @brief 다음 물리 프레임에 바디를 그 자리로 순간이동시키고 보간을 끊습니다. */
-        void onTeleported() override;
+        /** @brief 다음 물리 프레임에 바디를 그 자리로 순간이동시키고 보간을 끊습니다. `ResetPhysics` 면 운동도 지웁니다(`resetMotion`). */
+        void onTeleported( TeleportType type ) override;
         /** @brief 값이 바뀌면(에디터 · 코드) 다음 물리 프레임에 백엔드 객체를 다시 만듭니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
 
@@ -103,6 +103,8 @@ namespace sw
     protected:
         /** @brief 시뮬레이션에 들 상태인지입니다 — 시작했고, 켜졌고, 지워지는 중이 아니다. */
         bool isSimulated() const;
+        /** @brief `TeleportType::ResetPhysics` 순간이동이 부릅니다 — 이어받은 운동을 다음 물리 프레임에 지운다(틱 워커에서도 불리므로 입력 칸에 넘긴다). 기본은 할 일 없음. */
+        virtual void resetMotion() {}
         /** @brief 순간이동 표시를 읽고 지웁니다. */
         bool consumeTeleport() { return _bTeleportPending.exchange( false, std::memory_order_acq_rel ); }
         /** @brief 다음 물리 프레임에 백엔드 객체를 다시 만들게 합니다(게임 스레드 — 세터 · 속성 변경). */
