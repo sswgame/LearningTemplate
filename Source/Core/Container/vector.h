@@ -982,15 +982,76 @@ namespace sw
     template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32>>
     inline typename vector<T, Allocator>::iterator vector<T, Allocator>::insert( const_iterator pos, InputIt first, InputIt last )
     {
-        const size_t startOffset = static_cast<size_t>( pos - _pData );
-        size_t       offset      = startOffset;
-        for ( auto it = first; it != last; ++it )
+        using Category      = typename std::iterator_traits<InputIt>::iterator_category;
+        const size_t offset = static_cast<size_t>( pos - _pData );
+        SW_ASSERT( offset <= _size );
+        if ( offset > _size )
+            return _pData + _size;
+
+        // 입력 반복자는 한 번만 읽을 수 있어 개수를 미리 모른다 — 임시 벡터로 모은 뒤 전방 반복자 길로 옮겨 넣는다.
+        if constexpr ( std::is_base_of_v<std::forward_iterator_tag, Category> == false )
         {
-            insert( _pData + offset, *it );
-            ++offset;
+            vector<T> listGathered;
+            for ( ; first != last; ++first )
+                listGathered.emplace_back( *first );
+            return insert( pos, std::make_move_iterator( listGathered.begin() ), std::make_move_iterator( listGathered.end() ) );
         }
-        // 넣는 도중 버퍼가 늘면 `pos` 는 옛 버퍼를 가리킨다 — `pos - _pData`(새 버퍼)로 계산하면 엉뚱한 곳을 돌려준다.
-        return _pData + startOffset;
+        else
+        {
+            // 범위가 이 벡터 안이면(`v.insert( v.begin(), v.begin() + 1, v.end() )`) 키우기 · 밀기가 원본을 옮기거나 덮는다 — 먼저 복사본으로 뜬다.
+            if constexpr ( std::is_pointer_v<InputIt> && std::is_same_v<std::remove_cv_t<std::remove_pointer_t<InputIt>>, T> )
+            {
+                const T* pFirst = first;
+                if ( _size > 0 && pFirst >= _pData && pFirst < _pData + _size )
+                {
+                    vector<T> listCopy( first, last );
+                    return insert( _pData + offset, std::make_move_iterator( listCopy.begin() ), std::make_move_iterator( listCopy.end() ) );
+                }
+            }
+
+            const size_t count = static_cast<size_t>( std::distance( first, last ) );
+            if ( count == 0 )
+                return _pData + offset;
+            if ( count > ( ~size_t{ 0 } ) - _size )
+                return _pData + offset;
+
+            SW_SCOPED_RACE_WRITE();
+            // 한 번 키우고 꼬리를 한 번 민다(감사 C-9 — 원소마다 한 칸 삽입은 O(개수 × 꼬리)에 재할당이 여러 번이었다. 언리얼 `TArray::Insert` 와 같은 모양).
+            if ( _size + count > _capacity )
+                reserveInternal( MathUtil::max( _capacity * 2, _size + count ) );
+
+            const size_t tailCount = _size - offset;
+            if constexpr ( std::is_trivially_copyable_v<T> )
+            {
+                if ( tailCount > 0 )
+                    std::memmove( static_cast<void*>( _pData + offset + count ), static_cast<const void*>( _pData + offset ), tailCount * sizeof( T ) );
+                T* pTarget = _pData + offset;
+                for ( ; first != last; ++first, ++pTarget )
+                    sw_placement_new( pTarget ) T( *first );
+            }
+            else
+            {
+                // `insert( pos, count, value )` 와 같은 규칙: 뒤에서부터 옮기고, 살아 있는 슬롯은 대입 · 빈 슬롯은 생성한다.
+                for ( size_t movedCount = 0; movedCount < tailCount; ++movedCount )
+                {
+                    const size_t fromIndex = _size - 1 - movedCount;
+                    const size_t toIndex   = fromIndex + count;
+                    if ( toIndex >= _size )
+                        sw_placement_new( ( _pData + ( toIndex ) ) ) T( std::move( _pData[fromIndex] ) );
+                    else
+                        _pData[toIndex] = std::move( _pData[fromIndex] );
+                }
+                for ( size_t targetIndex = offset; first != last; ++first, ++targetIndex )
+                {
+                    if ( targetIndex < _size )
+                        _pData[targetIndex] = *first;
+                    else
+                        sw_placement_new( ( _pData + ( targetIndex ) ) ) T( *first );
+                }
+            }
+            _size += count;
+            return _pData + offset;
+        }
     }
 
     template <typename T, typename Allocator>

@@ -309,12 +309,7 @@ namespace sw
             TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
             if ( pContainerTyped->size() <= index )
                 return false;
-            auto it = pContainerTyped->begin();
-            for ( size_t step = 0; step < index; ++step )
-            {
-                ++it;
-            }
-            pContainerTyped->erase( it );
+            pContainerTyped->erase( pContainerTyped->begin() + static_cast<std::ptrdiff_t>( index ) ); // 링 deque 는 임의 접근이다
             return true;
         }
     };

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/deque.h"
+#include "Core/Container/ChunkedArray.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
@@ -89,7 +89,7 @@ namespace
             serverSettings._snapshotBudgetBytes = 300; // 예산이 모자라 우선도가 결과를 바꾼다
             IReplicationPolicy* pPolicy         = bReference ? static_cast<IReplicationPolicy*>( &reference ) : static_cast<IReplicationPolicy*>( &interest );
             SW_EXPECT_TRUE( server.initialize( &cluster.getServer(), serverSettings, pPolicy ) );
-            deque<ReplicationClient> listReplication;
+            ChunkedArray<ReplicationClient> listReplication; // 메시지 처리기(NetTableHandler)라 주소가 걸린다 — 옮기지 않는다
             for ( int32 index = 0; index < cluster.getClientCount(); ++index )
             {
                 listReplication.emplace_back();

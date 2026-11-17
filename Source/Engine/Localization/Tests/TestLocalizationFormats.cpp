@@ -10,6 +10,7 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
+#include "Engine/Localization/LocalizationCooker.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/Tests/LocalizationTestUtil.h"
@@ -562,8 +563,71 @@ namespace sw
     struct LocalizationManagerTestAccess
     {
         static void setCheckKeyHash( LocalizationManager& manager, LocalizationKeyIndex::KeyHashFunction pKeyHash ) { manager._pCheckKeyHash = pKeyHash; }
+        /** @brief 쿠킹본 구성의 올리기 길입니다(실행 구성은 `AssetIO::usesSource` 가 고른다). */
+        [[nodiscard]] static bool mountCooked( LocalizationManager& manager, const AssetID& projectID ) { return manager.mountProjectFrom( projectID, LocalizationScope::Game, ContentSource::Cooked ); }
+        /** @brief 지금 읽어 둔 쿠킹된 이진 표 수입니다(조회 사슬만큼인지 본다). */
+        static size_t countCookedTables( const LocalizationManager& manager )
+        {
+            ScopedSharedLock<shared_mutex> lock{ manager._mutex };
+            size_t                         count = 0;
+            for ( const LocalizationManager::MountedProject& project : manager._listProject )
+                count += project._mapCookedTable.size();
+            return count;
+        }
     };
 } // namespace sw
+
+/**
+ * @brief [LocalizationBinaryTableTest] 쿠커가 원문 · 출시 문화권의 표를 굽고, 쿠킹본 구성은 저작 XML 없이 조회 사슬의 표만 읽는다(감사 A-16)
+ */
+SW_TEST_CASE( LocalizationBinaryTableTest, CookedProjectReadsOnlyTheLookupChain )
+{
+    using sw::test::LocalizationTestUtil;
+    const sw::test::ScopedScratchDomain domain;
+    const sw::string                    folder  = domain.getFolder();
+    const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ])" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
+    const sw::string staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
+    LocalizationTestUtil::writeTranslation( folder, "ko", "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + staleHash + "\" }" );
+    LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.start": { "text": "開始" })" );
+
+    // 쿠커와 같은 길: 원문 + 출시 문화권만 굽는다(ja 는 번역 중이라 굽지 않는다).
+    sw::LocalizationProject projectDoc;
+    SW_REQUIRE_TRUE( projectDoc.loadFromFile( project ) );
+    const sw::vector<sw::string> listCulture = projectDoc.collectCookedCultures();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listCulture.size() );
+    SW_EXPECT_EQUAL( sw::string( "en" ), listCulture[0] );
+    SW_EXPECT_EQUAL( sw::string( "ko" ), listCulture[1] );
+    const sw::AssetID projectID = sw::test::ScopedScratchDomain::toID( project );
+    for ( const sw::string& culture : listCulture )
+    {
+        sw::vector<uint8> bytes;
+        SW_REQUIRE_TRUE( sw::LocalizationCooker::cookCulture( projectID, culture, bytes ) );
+        SW_REQUIRE_TRUE( sw::FileUtil::writeFile( projectDoc.makeCookedTablePath( project, culture ), bytes.data(), bytes.size() ) );
+    }
+
+    // 배포본에는 저작 표가 없다 — 지워도 읽힌다.
+    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::joinPath( folder, "test.strings.xml" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::removeFile( sw::FileUtil::joinPath( folder, "ja.translation.xml" ) ) );
+
+    sw::LocalizationManager runtime;
+    SW_REQUIRE_TRUE( sw::LocalizationManagerTestAccess::mountCooked( runtime, projectID ) );
+    SW_EXPECT_TRUE( runtime.hasLanguage( "ko" ) ); // 아직 읽지 않았어도 고를 수 있다
+    SW_EXPECT_FALSE( runtime.hasLanguage( "ja" ) );
+    SW_REQUIRE_NOT_NULL( runtime.findStringByText( "ui.start" ) );
+    SW_EXPECT_EQUAL( sw::string( "Start" ), sw::string( runtime.findStringByText( "ui.start" ) ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), sw::LocalizationManagerTestAccess::countCookedTables( runtime ) ); // 사슬은 en 하나
+
+    SW_REQUIRE_TRUE( runtime.setCurrentLanguage( "ko" ) );
+    SW_EXPECT_EQUAL( sw::string( "시작" ), sw::string( runtime.findStringByText( "ui.start" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "Quit" ), sw::string( runtime.findStringByText( "ui.quit" ) ) ); // 낡은 번역은 굽지 않아 원문으로 넘어간다
+    SW_EXPECT_EQUAL( size_t( 2 ), sw::LocalizationManagerTestAccess::countCookedTables( runtime ) );
+
+    SW_REQUIRE_TRUE( runtime.setCurrentLanguage( "en" ) );
+    SW_EXPECT_EQUAL( sw::string( "Start" ), sw::string( runtime.findStringByText( "ui.start" ) ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), sw::LocalizationManagerTestAccess::countCookedTables( runtime ) ); // 사슬에서 빠진 ko 는 내렸다
+}
 
 namespace
 {

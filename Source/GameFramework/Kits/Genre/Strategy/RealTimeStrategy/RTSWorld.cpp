@@ -149,7 +149,7 @@ namespace sw
             }
 
             /** @brief 읽은 빈 슬롯 목록을 봅니다. 겹치거나 살아 있는 슬롯을 내주면 `allocateUnit` 이 살아 있는 유닛을 덮어씁니다. */
-            [[nodiscard]] static bool areFreeSlotsValid( const vector<uint32>& listFreeSlot, const deque<RTSUnit>& listUnit )
+            [[nodiscard]] static bool areFreeSlotsValid( const vector<uint32>& listFreeSlot, const ChunkedArray<RTSUnit>& listUnit )
             {
                 vector<uint8> listSeen( listUnit.size(), SW_FALSE );
                 for ( const uint32 slot : listFreeSlot )
@@ -1848,15 +1848,15 @@ namespace sw
         io.count( Internal::kMinUnitStateBytes, unitCount );
         if ( io.isOk() == false )
             return;
-        deque<RTSUnit> restoredUnit;
-        vector<uint32> restoredGeneration;
-        vector<uint8>  listFlowFieldOrder; // 무리 이동 명령마다 흐름장이 있었는지(유닛, 명령 순서)
+        ChunkedArray<RTSUnit> restoredUnit;
+        vector<uint32>        restoredGeneration;
+        vector<uint8>         listFlowFieldOrder; // 무리 이동 명령마다 흐름장이 있었는지(유닛, 명령 순서)
         if ( io.isReading() )
         {
             restoredGeneration.resize( unitCount );
         }
-        deque<RTSUnit>& listUnit       = io.isWriting() ? _listUnit : restoredUnit;
-        vector<uint32>& listGeneration = io.isWriting() ? _listGeneration : restoredGeneration;
+        ChunkedArray<RTSUnit>& listUnit       = io.isWriting() ? _listUnit : restoredUnit;
+        vector<uint32>&        listGeneration = io.isWriting() ? _listGeneration : restoredGeneration;
         for ( uint32 index = 0; index < unitCount; ++index )
         {
             io.value( listGeneration[index] );
