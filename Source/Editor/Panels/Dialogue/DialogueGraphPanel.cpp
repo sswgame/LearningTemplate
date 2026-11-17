@@ -108,7 +108,7 @@ namespace sw::editor
         , _actionError{}
         , _listActionName{}
         , _pActionEntry{ nullptr }
-        , _pActionTargetText{ nullptr }
+        , _pActionTargetNode{ nullptr }
     {
         _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Graph", "FlowPin" ) } ); // 흐름 핀 하나
     }
@@ -331,11 +331,11 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakersTip" ) );
         for ( size_t speakerIndex = 0; speakerIndex < _graph._listSpeaker.size(); ++speakerIndex )
         {
-            DialogueSpeaker& speaker = _graph._listSpeaker[speakerIndex];
+            const DialogueSpeaker& speaker = _graph._listSpeaker[speakerIndex];
             ImGui::PushID( static_cast<int32>( speaker._id ) );
-            EditorWidgets::drawTextField( "##SpeakerName", speaker._name );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                DialogueGraphEdit::commitSpeakerRename( getGraphEditSession() );
+            string speakerName = speaker._name;
+            if ( EditorWidgets::drawTextField( "##SpeakerName", speakerName ) )
+                (void)DialogueGraphEdit::renameSpeaker( _graph, getGraphEditSession(), speaker._id, speakerName );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SpeakerNameTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
@@ -593,9 +593,10 @@ namespace sw::editor
 
     void DialogueGraphPanel::drawActionProperties( DialogueNode& node )
     {
-        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), node._actionCommand );
-        if ( ImGui::IsItemDeactivatedAfterEdit() )
-            DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
+        // 칸은 사본을 고치고 바뀐 프레임마다 모델 연산으로 넣는다 — 끄는 동안의 여러 알림은 문서 창의 상호작용 구간이 한 단계로 묶는다.
+        string commandText = node._actionCommand;
+        if ( EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), commandText ) )
+            DialogueGraphEdit::setNodeActionCommand( node, getGraphEditSession(), commandText );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );
 
         if ( _actionPropertiesText != node._actionCommand || _actionProperties.isValid() == false )
@@ -629,22 +630,21 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", _actionError.c_str() );
             return;
         }
-        _pActionTargetText = &node._actionCommand;
+        _pActionTargetNode = &node;
         EditorPropertyGridTarget target{};
         target._pInstance = _actionProperties.getInstance();
         target._pType     = _actionProperties.getType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &DialogueGraphPanel::onActionFieldEdited, this );
         _actionGrid.drawProperties( target, nullptr, {} );
-        _pActionTargetText = nullptr;
+        _pActionTargetNode = nullptr;
     }
 
     void DialogueGraphPanel::onActionFieldEdited( const PropertyInfo& /*prop*/ )
     {
-        if ( _pActionTargetText == nullptr || _pActionEntry == nullptr )
+        if ( _pActionTargetNode == nullptr || _pActionEntry == nullptr )
             return;
-        *_pActionTargetText   = GameActionCall::formatText( *_pActionEntry, _actionProperties );
-        _actionPropertiesText = *_pActionTargetText;
-        DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
+        DialogueGraphEdit::setNodeActionCommand( *_pActionTargetNode, getGraphEditSession(), GameActionCall::formatText( *_pActionEntry, _actionProperties ) );
+        _actionPropertiesText = _pActionTargetNode->_actionCommand;
     }
 
     void DialogueGraphPanel::drawNodeProperties( DialogueNode& node, const DialogueNodeInfo& info )
@@ -681,17 +681,15 @@ namespace sw::editor
                 fixed_string<constant::buffer::kMax512> textBuf{ node._text.c_str() };
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "Text" ) ); // 폭 전체 칸이라 이름표는 위에
                 if ( EditorWidgets::inputTextMultiline( SW_WIDGET_ID( "##Text" ), textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
-                    node._text = textBuf.c_str();
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
+                    DialogueGraphEdit::setNodeText( node, getGraphEditSession(), textBuf.c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "TextTip" ) );
                 break;
             }
             case DialogueNodeBody::Condition:
             {
-                EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Condition" ), "Condition" ), node._condition );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
+                string conditionText = node._condition;
+                if ( EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Condition" ), "Condition" ), conditionText ) )
+                    DialogueGraphEdit::setNodeCondition( node, getGraphEditSession(), conditionText );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "ConditionTip" ) );
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorDialogueGraph", "ConditionExample" ) );
                 break;
@@ -714,9 +712,9 @@ namespace sw::editor
         for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
         {
             ImGui::PushID( static_cast<int32>( choiceIndex ) );
-            EditorWidgets::drawTextField( "##Choice", node._listChoice[choiceIndex] );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                DialogueGraphEdit::commitNodeEdit( getGraphEditSession() );
+            string choiceText = node._listChoice[choiceIndex];
+            if ( EditorWidgets::drawTextField( "##Choice", choiceText ) )
+                (void)DialogueGraphEdit::setChoiceText( node, getGraphEditSession(), choiceIndex, choiceText );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
             {

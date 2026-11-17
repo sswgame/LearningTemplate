@@ -28,14 +28,18 @@ namespace sw::editor
         static void commitGraphReset( const EditorGraphEditSession& session );
         /** @brief 핀 @p fromPin → @p toPin 링크(번호 @p linkID)를 더하고 "Link Dialogue Nodes" 로 알립니다. */
         static void linkPins( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, int32 linkID, int32 fromPin, int32 toPin );
-        /** @brief 화자 이름 칸을 다 고쳤습니다 — "Rename Dialogue Speaker". */
-        static void commitSpeakerRename( const EditorGraphEditSession& session );
+        /** @brief 화자 @p speakerID 의 이름을 @p name 으로 정하고 "Rename Dialogue Speaker" 로 알립니다. 없는 id 면 고치지 않고 false 입니다. */
+        static bool renameSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, uint32 speakerID, string_view name );
         /** @brief 화자를 더하고 "Add Dialogue Speaker" 로 알립니다. 새 화자 id 입니다. */
         static uint32 addSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, string_view name );
         /** @brief 화자를 지우고(노드의 화자도 비운다) "Remove Dialogue Speaker" 로 알립니다. */
         static void removeSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, uint32 speakerID );
-        /** @brief 노드 칸(글 · 조건 · 명령 · 동작 칸)을 다 고쳤습니다 — "Edit Dialogue Node". */
-        static void commitNodeEdit( const EditorGraphEditSession& session );
+        /** @brief 노드 대사를 @p text 로 정하고 "Edit Dialogue Node" 로 알립니다. 칸을 고치는 프레임마다 불러도 된다 — 문서 창의 상호작용 구간이 놓을 때 한 단계로 묶는다. */
+        static void setNodeText( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view text );
+        /** @brief 노드 조건식을 @p condition 으로 정하고 "Edit Dialogue Node" 로 알립니다. */
+        static void setNodeCondition( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view condition );
+        /** @brief 선택지 @p choiceIndex 의 글을 @p text 로 정하고 "Edit Dialogue Node" 로 알립니다. 범위 밖이면 고치지 않고 false 입니다. */
+        static bool setChoiceText( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, size_t choiceIndex, string_view text );
         /** @brief 노드의 화자를 @p speakerID 로 정하고 "Edit Dialogue Node" 로 알립니다. */
         static void setNodeSpeaker( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, uint32 speakerID );
         /** @brief 노드의 동작 명령을 @p command 로 정하고 "Edit Dialogue Node" 로 알립니다. */

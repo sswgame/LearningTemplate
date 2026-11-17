@@ -149,9 +149,17 @@ namespace sw::editor
         session.recordDocumentEdit( "Link Dialogue Nodes" );
     }
 
-    void DialogueGraphEdit::commitSpeakerRename( const EditorGraphEditSession& session )
+    bool DialogueGraphEdit::renameSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, uint32 speakerID, string_view name )
     {
-        session.recordDocumentEdit( "Rename Dialogue Speaker" );
+        for ( DialogueSpeaker& speaker : inoutGraph._listSpeaker )
+        {
+            if ( speaker._id != speakerID )
+                continue;
+            speaker._name = string{ name };
+            session.recordDocumentEdit( "Rename Dialogue Speaker" );
+            return true;
+        }
+        return false;
     }
 
     uint32 DialogueGraphEdit::addSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, string_view name )
@@ -167,9 +175,25 @@ namespace sw::editor
         session.recordDocumentEdit( "Remove Dialogue Speaker" );
     }
 
-    void DialogueGraphEdit::commitNodeEdit( const EditorGraphEditSession& session )
+    void DialogueGraphEdit::setNodeText( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view text )
     {
+        inoutNode._text = string{ text };
         session.recordDocumentEdit( "Edit Dialogue Node" );
+    }
+
+    void DialogueGraphEdit::setNodeCondition( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view condition )
+    {
+        inoutNode._condition = string{ condition };
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+    }
+
+    bool DialogueGraphEdit::setChoiceText( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, size_t choiceIndex, string_view text )
+    {
+        if ( choiceIndex >= inoutNode._listChoice.size() )
+            return false;
+        inoutNode._listChoice[choiceIndex] = string{ text };
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+        return true;
     }
 
     void DialogueGraphEdit::setNodeSpeaker( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, uint32 speakerID )

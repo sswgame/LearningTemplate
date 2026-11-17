@@ -88,3 +88,27 @@ SW_TEST_CASE( DialogueGraphEditTest, SessionCommandNotifiesOnceWithItsName )
     SW_EXPECT_EQUAL( count, 1u );
     SW_EXPECT_TRUE( lastLabel == "Add Dialogue Speaker" );
 }
+
+/** @brief [DialogueGraphEditTest] 노드 칸 고치기(대사 · 조건 · 선택지 · 화자 이름)는 모델 연산이 값을 쓰고 알린다 — 창이 노드 칸을 직접 고치지 않는다 */
+SW_TEST_CASE( DialogueGraphEditTest, FieldOpsWriteAndNotify )
+{
+    uint32                       count{ 0 };
+    const DocumentEditRecorder   recorder{ DocumentEditRecorder::RecordDelegate::create( [&count]( string_view /*label*/ )
+    { ++count; } ) };
+    const EditorGraphEditSession session{ recorder };
+    DialogueGraphAsset           graph;
+    DialogueGraphEdit::makeDefaultGraph( graph );
+    DialogueAssetNode& node = graph._listNode[1];
+    DialogueGraphEdit::setNodeText( node, session, "Hello" );
+    DialogueGraphEdit::setNodeCondition( node, session, "flag.met" );
+    DialogueGraphEdit::addChoice( node, session, "Yes" );
+    SW_EXPECT_TRUE( DialogueGraphEdit::setChoiceText( node, session, node._listChoice.size() - 1, "No" ) );
+    SW_EXPECT_FALSE( DialogueGraphEdit::setChoiceText( node, session, node._listChoice.size(), "Out" ) );
+    const uint32 speakerID = DialogueGraphEdit::addSpeaker( graph, session, "Guard" );
+    SW_EXPECT_TRUE( DialogueGraphEdit::renameSpeaker( graph, session, speakerID, "Captain" ) );
+    SW_EXPECT_TRUE( node._text == "Hello" );
+    SW_EXPECT_TRUE( node._condition == "flag.met" );
+    SW_EXPECT_TRUE( node._listChoice.back() == "No" );
+    SW_EXPECT_TRUE( graph.findSpeaker( speakerID )->_name == "Captain" );
+    SW_EXPECT_EQUAL( count, 6u ); // 범위 밖 선택지는 알리지 않는다
+}
