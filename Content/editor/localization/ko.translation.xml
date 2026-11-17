@@ -2294,6 +2294,11 @@
 		<entry key="EditorInspector.FollowingSelection"
 		       text="선택을 따라가는 중입니다 - 클릭하면 이 오브젝트에 고정합니다"
 		       sourceHash="79fd1c17624d40c4" />
+		<entry key="EditorInspector.ImportDefaultRule"
+		       text="기본값(맞는 폴더 규칙 없음)"
+		       sourceHash="36bf0996e451c8a6" />
+		<entry key="EditorInspector.ImportRule" text="폴더 규칙" sourceHash="567bfc2f62ea0ab9" />
+		<entry key="EditorInspector.ImportSettings" text="임포트 설정" sourceHash="b28f48e5565c4501" />
 		<entry key="EditorInspector.LockedToObject"
 		       text="이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다"
 		       sourceHash="2949005a455de65b" />
@@ -2331,6 +2336,10 @@
 		<entry key="EditorInspector.ResetToDefaultTooltip"
 		       text="기본값으로 되돌립니다"
 		       sourceHash="c5048076828b961a" />
+		<entry key="EditorInspector.RevertImportOverride" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="EditorInspector.RevertImportOverrideTooltip"
+		       text="이 에셋의 덮어쓰기를 지우고 폴더 규칙의 값을 씁니다"
+		       sourceHash="f73befbb9ad2fbe3" />
 		<entry key="EditorInspector.RevertToPrefab"
 		       text="프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다"
 		       sourceHash="964d25ac99ae2eeb" />

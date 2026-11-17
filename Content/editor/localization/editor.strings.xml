@@ -6935,7 +6935,8 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInspector.RevertImportOverrideTooltip" source="Remove this asset's override and use the folder rule's value">
+		<entry key="EditorInspector.RevertImportOverrideTooltip"
+		       source="Remove this asset's override and use the folder rule's value">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>

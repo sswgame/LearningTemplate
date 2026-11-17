@@ -518,6 +518,7 @@
 		<entry source="Dedicated Server" text="전용 서버" />
 		<entry source="Default" text="기본값" />
 		<entry source="Default look" text="기본 모습" />
+		<entry source="Defaults (no folder rule matches)" text="기본값(맞는 폴더 규칙 없음)" />
 		<entry source="Del" text="삭제" />
 		<entry source="Delete" text="삭제" />
 		<entry source="Delete Action" text="액션 삭제" />
@@ -744,6 +745,7 @@
 		<entry source="Fog settings" text="안개 설정" />
 		<entry source="Fold identical log lines into one and show the count in front"
 		       text="같은 로그 줄을 한 줄로 접고 앞에 횟수를 적습니다" />
+		<entry source="Folder rule" text="폴더 규칙" />
 		<entry source="Folder the packaged build is staged into" text="패키지 빌드를 스테이징할 폴더입니다" />
 		<entry source="Follow" text="따라가기" />
 		<entry source="Follow new logs while scrolled to the bottom. Scrolling up to read pauses it; scrolling back to the bottom resumes it"
@@ -864,6 +866,7 @@
 		<entry source="Icons" text="아이콘" />
 		<entry source="Id of the appearance preset the target object wears."
 		       text="대상 오브젝트가 입을 외형 프리셋의 id 입니다." />
+		<entry source="Import Settings" text="임포트 설정" />
 		<entry source="Import external files (textures, shaders, sounds, ...) into the current folder"
 		       text="외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다" />
 		<entry source="Import..." text="가져오기..." />
@@ -1737,6 +1740,8 @@
 		       text="선택한 위젯과 그 자식을 지웁니다(실행 취소로 되돌립니다). 뿌리는 지울 수 없습니다." />
 		<entry source="Remove this action and its bindings from the map. Reload brings it back until you save."
 		       text="이 액션과 바인딩을 맵에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다." />
+		<entry source="Remove this asset's override and use the folder rule's value"
+		       text="이 에셋의 덮어쓰기를 지우고 폴더 규칙의 값을 씁니다" />
 		<entry source="Remove this binding from the action. Reload brings it back until you save."
 		       text="이 바인딩을 액션에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다." />
 		<entry source="Remove this bone's entries so it takes its parent's weight again."
