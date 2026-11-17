@@ -128,7 +128,7 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::onEventEdited( const PropertyInfo& /*prop*/ )
     {
-        _edit.markEdited( "Edit Audio Event" );
+        _edit.markPropertyEdited();
     }
 
     string AudioEventBrowserPanel::captureDocumentText() const

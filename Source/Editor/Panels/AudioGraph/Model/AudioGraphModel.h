@@ -76,8 +76,16 @@ namespace sw::editor
         AudioGraphDef& editGraph() { return _editGraph; }
         /** @brief 속성 그리드가 사본을 고쳤습니다. */
         void markEdited() { recordEdit( "Edit Audio Graph" ); }
-        /** @brief 캔버스가 주석 상자(`editGraph()._listComment`)를 고쳤습니다. */
-        void markCommentsEdited( const utf8* pLabel ) { recordEdit( pLabel ); }
+        /** @brief 캔버스가 주석 상자에 한 일의 종류입니다 — 되돌리기 이름은 모델이 고른다(감사 E-16). */
+        enum class CommentEdit : uint8
+        {
+            Add,
+            Rename,
+            Move,
+            Delete
+        };
+        /** @brief 캔버스가 주석 상자를 고쳤습니다 — 종류에 맞는 되돌리기 이름으로 쌓는다. */
+        void markCommentsEdited( CommentEdit edit );
         /**
          * @brief 이번 그리기에서 고친 일이 있으면 그 이름(모델이 정한다)으로 문서 편집을 알리고 비웁니다. 패널이 그리기 끝에 한 번 부른다.
          * @details 한 그리기 안의 여러 편집은 마지막 이름 하나로 넘긴다(되돌리기 한 단계). 알림 · 이름은 모델 안에서 끝난다(감사 E-16).

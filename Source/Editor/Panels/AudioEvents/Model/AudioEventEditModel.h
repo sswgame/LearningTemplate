@@ -31,8 +31,8 @@ namespace sw::editor
         /** @brief 사본을 파일에 씁니다. 검사를 통과하지 못하면 쓰지 않고 false 입니다(미저장 표시는 문서 패널이 든다). */
         [[nodiscard]] bool saveDocument();
 
-        /** @brief 속성 그리드가 사본을 고쳤습니다 — 편집을 알립니다(끄는 동안은 상호작용 구간 하나). */
-        void markEdited( string_view label );
+        /** @brief 속성 그리드가 사본을 고쳤습니다 — "Edit Audio Event" 로 알립니다(끄는 동안은 상호작용 구간 하나, 이름은 모델이 정한다 — 감사 E-16). */
+        void markPropertyEdited() const { recordDocumentEdit( "Edit Audio Event" ); }
         /** @brief @p libraryName 을 고치는 중이면 true 입니다. */
         bool isEditing( const hashed_string& libraryName ) const { return _libraryName.empty() == false && _libraryName == libraryName; }
         bool isEditingAny() const { return _libraryName.empty() == false; }
@@ -53,6 +53,10 @@ namespace sw::editor
         string captureText() const;
         /** @brief 되돌리기가 준 글로 사본을 다시 읽습니다. 고치던 이벤트가 사라졌으면 첫 이벤트를 고릅니다. 고치는 중이 아니거나 읽지 못하면 false 입니다. */
         bool applyText( string_view text );
+
+    private:
+        /** @brief 문서를 고쳤음을 알립니다(이 모델의 편집 연산만 부른다 — 감사 E-16). */
+        void recordDocumentEdit( string_view label ) const;
 
     private:
         const DocumentEditRecorder* _pRecorder; ///< 편집 알림 창구(문서 패널이 쥔다)

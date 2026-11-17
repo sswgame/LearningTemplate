@@ -359,4 +359,10 @@ namespace sw::editor
         SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
         _pEditRecorder->notifyEdited( label );
     }
+
+    void MaterialGraphModel::markCommentsEdited( CommentEdit edit )
+    {
+        static constexpr const utf8* kArrLabel[] = { "Add Material Graph Comment", "Rename Material Graph Comment", "Move Material Graph Comment", "Delete Material Graph Comment" };
+        recordEdit( kArrLabel[static_cast<uint32>( edit )], false );
+    }
 } // namespace sw::editor

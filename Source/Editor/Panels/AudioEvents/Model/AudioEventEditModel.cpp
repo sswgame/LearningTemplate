@@ -19,7 +19,7 @@ namespace sw::editor
     {
     }
 
-    void AudioEventEditModel::markEdited( string_view label )
+    void AudioEventEditModel::recordDocumentEdit( string_view label ) const
     {
         _pRecorder->notifyEdited( label );
     }
@@ -74,7 +74,7 @@ namespace sw::editor
     void AudioEventEditModel::duplicateEvent()
     {
         _eventName = AudioEventBrowserUtil::duplicateEvent( _library, _eventName );
-        markEdited( "Duplicate Audio Event" );
+        recordDocumentEdit( "Duplicate Audio Event" );
     }
 
     bool AudioEventEditModel::removeEvent()
@@ -82,7 +82,7 @@ namespace sw::editor
         if ( AudioEventBrowserUtil::removeEvent( _library, _eventName ) == false )
             return false;
         _eventName = _library._listEvent.empty() ? hashed_string{} : _library._listEvent.front()._name;
-        markEdited( "Delete Audio Event" );
+        recordDocumentEdit( "Delete Audio Event" );
         return true;
     }
 } // namespace sw::editor

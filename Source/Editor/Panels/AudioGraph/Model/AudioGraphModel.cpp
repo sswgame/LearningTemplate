@@ -230,4 +230,10 @@ namespace sw::editor
         SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
         _pEditRecorder->notifyEdited( label );
     }
+
+    void AudioGraphModel::markCommentsEdited( CommentEdit edit )
+    {
+        static constexpr const utf8* kArrLabel[] = { "Add Audio Graph Comment", "Rename Audio Graph Comment", "Move Audio Graph Comment", "Delete Audio Graph Comment" };
+        recordEdit( kArrLabel[static_cast<uint32>( edit )] );
+    }
 } // namespace sw::editor
