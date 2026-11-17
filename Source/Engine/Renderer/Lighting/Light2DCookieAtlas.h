@@ -72,6 +72,7 @@ namespace sw
             uint32           _cell{ 0 };
             uint8            _bUsed{ SW_FALSE };
             uint8            _bFailureReported{ SW_FALSE }; ///< 못 읽은 쿠키의 오류를 한 번만 남긴다(실패한 핸들을 쥐어 프레임마다 다시 읽지 않는다)
+            uint8            _bRedrawNextFrame{ SW_FALSE }; ///< 다시 묶은 SRV 번호는 다음 프레임부터 새 텍스처를 보인다(D3D12 · Vulkan 링 사본) — 처음 그린 다음 프레임에 한 번 더 그린다
 
             /** @brief 준비된 쿠키 텍스처입니다. 읽는 중이거나 못 읽었으면 nullptr 입니다. */
             const Texture2D* findReadyTexture() const { return _load.isReady() ? _load.getOperation()->getTexture() : nullptr; }

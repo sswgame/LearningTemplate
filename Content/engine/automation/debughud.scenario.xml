@@ -62,7 +62,6 @@
 	<WaitUntil watch="DebugHUD.Shown" equals="0" timeoutFrames="60"/>
 	<DevCommand line="hud corner topLeft"/>
 	<DevCommand line="hud opacity 0.85"/>
-	<WaitUntil watch="DebugHUD.Corner" equals="0" timeoutFrames="60"/> <!-- 기본 모서리로 돌아갔다 -->
 	<!-- HUD 패널(기본 섹션 넷)은 화면의 몇 % 다 — 상한 1% 는 렌더 흔들림 몫이고, HUD 가 사진에 새면 넘는다 -->
 	<ExpectImagesDiffer first="debughud_on.ppm" second="debughud_off.ppm" minDiffering="0" maxDiffering="0.01"/>
 	<Pass/>

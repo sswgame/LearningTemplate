@@ -146,11 +146,14 @@ namespace sw
                 continue;
             const RHITextureHandle handle = pTexture->getHandle();
             // 내용이 바뀌면(밉 올리기 · 핫 리로드 · 장치 교체) 텍스처 핸들이 바뀐다 — SRV 번호는 그대로라(R-6) 핸들로 견준다. 전역 다시 읽기 세대는 보지 않는다.
-            const bool bRedraw = bAtlasRecreated || handle != entry._drawnHandle;
-            if ( bRedraw && handle != 0 )
+            const bool bChanged = bAtlasRecreated || handle != entry._drawnHandle;
+            if ( ( bChanged || entry._bRedrawNextFrame == SW_TRUE ) && handle != 0 )
             {
                 _listPendingDraw.push_back( CellDraw{ entry._cell, pTexture } );
                 entry._drawnHandle = handle;
+                // 블릿은 쿠키를 SRV 번호로 읽는다. 로드 때 예약한 번호를 업로드가 다시 묶으면 셰이더 가시 사본은 다음 프레임부터 새 텍스처라(D3D12 · Vulkan),
+                // 이번 블릿은 로드 중 자리 텍스처를 구웠을 수 있다 — 다음 프레임에 한 번 더 그린다.
+                entry._bRedrawNextFrame = bChanged ? SW_TRUE : SW_FALSE;
             }
         }
     }
