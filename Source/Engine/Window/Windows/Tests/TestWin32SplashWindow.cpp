@@ -1,4 +1,5 @@
 // Win32SplashWindowTest — 스플래시 창은 기동 스레드가 막혀도 답한다(감사 P-13). Windows 클라이언트 빌드만(데스크톱 세션이 있어야 창을 만든다).
+// 이미지(textures/splash.dds)는 읽지 않는다 — `initialize` 는 에셋을 읽지 않고(`loadSplashImage` 는 부른 쪽의 몫), 이미지 없는 빈 스플래시로 창 응답만 본다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

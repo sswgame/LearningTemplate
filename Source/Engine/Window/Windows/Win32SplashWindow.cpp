@@ -102,8 +102,7 @@ namespace sw
         Gdiplus::GdiplusStartupInput gdiplusStartupInput{};
         Gdiplus::GdiplusStartup( reinterpret_cast<ULONG_PTR*>( &_gdiplusToken ), &gdiplusStartupInput, nullptr );
 
-        // 채널 뒤집기는 여기 있지 않다. `loadSplashImage()` 가 **모든 플랫폼에** BGRA 를 보장한다.
-        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시이며, 로드가 이유를 알린다
+        // 이미지는 부른 쪽이 먼저 읽어 두었다(`SplashWindow::initialize` → `loadSplashImage`, 모든 플랫폼에 BGRA). 없으면 빈 스플래시다.
 
         storePaintState();
         const wstring wsTitle = StringUtil::isNullOrEmpty( pTitle ) ? L"SW Engine Splash" : StringUtil::utf8ToUTF16( pTitle );

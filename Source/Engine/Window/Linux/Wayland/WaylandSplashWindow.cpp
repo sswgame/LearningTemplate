@@ -138,9 +138,7 @@ namespace sw
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
-        if ( loadSplashImage() == false )
-            SW_LOG_INFO_ID( "WaylandSplash.WaylandSplashNoSplash", "Wayland splash: no splash image - the status text and progress bar are drawn on the plain background" ); // 로드가 이유를 알렸다
-        createScaledImage();
+        createScaledImage(); // 이미지는 부른 쪽이 먼저 읽어 두었다(`SplashWindow::initialize`) — 없으면 글과 진행 막대만 그린다
 
         state._pDisplay = wl_display_connect( nullptr );
         if ( state._pDisplay == nullptr )

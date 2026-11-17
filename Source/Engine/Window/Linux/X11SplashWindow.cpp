@@ -40,8 +40,7 @@ namespace sw
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
-        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시이며, 로드가 이유를 알린다
-        createScaledImage();
+        createScaledImage(); // 이미지는 부른 쪽이 먼저 읽어 두었다(`SplashWindow::initialize`) — 없으면 빈 스플래시다
 
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )

@@ -35,6 +35,8 @@ namespace sw
         if ( _pImpl == nullptr )
             return false;
 
+        if ( _pImpl->loadSplashImage() == false )
+            SW_LOG_INFO_ID( "SplashWindow.SplashWindowNoImage", "Splash window: no splash image - the status text and progress bar are drawn on the plain background" ); // 로드가 이유를 알렸다
         const bool bOpened = _pImpl->initialize( pTitle, pInitialStatus, width, height );
         if ( bOpened == false )
             SW_LOG_INFO_ID( "SplashWindow.SplashWindowCouldNot", "Splash window: could not be opened (no display connection) - starting without it" );
