@@ -719,3 +719,116 @@ SW_TEST_CASE( VectorTest, ResizeForOverwriteKeepsExistingValues )
     SW_EXPECT_EQUAL( bytes.capacity(), capacity );
     SW_EXPECT_EQUAL( bytes[1], uint8{ 11 } );
 }
+
+namespace
+{
+    /** @brief 이동 · 복사 대입 · 생성 수를 셉니다(범위 삽입이 꼬리를 한 번만 미는지 본다). */
+    struct MoveCountedValue
+    {
+        static int32 s_moveCount;
+
+        int32 _value = 0;
+
+        MoveCountedValue( int32 value = 0 )
+            : _value{ value }
+        {
+        }
+        MoveCountedValue( const MoveCountedValue& other ) = default;
+        MoveCountedValue( MoveCountedValue&& other ) noexcept
+            : _value{ other._value }
+        {
+            ++s_moveCount;
+        }
+        MoveCountedValue& operator=( const MoveCountedValue& other ) = default;
+        MoveCountedValue& operator=( MoveCountedValue&& other ) noexcept
+        {
+            _value = other._value;
+            ++s_moveCount;
+            return *this;
+        }
+    };
+
+    int32 MoveCountedValue::s_moveCount = 0;
+
+    /** @brief 한 번만 읽을 수 있는 입력 반복자입니다(개수를 미리 알 수 없는 범위). */
+    struct SingleReadIterator
+    {
+        using iterator_category = std::input_iterator_tag;
+        using value_type        = int32;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = const int32*;
+        using reference         = const int32&;
+
+        const int32* _pCurrent = nullptr;
+
+        reference           operator*() const { return *_pCurrent; }
+        SingleReadIterator& operator++()
+        {
+            ++_pCurrent;
+            return *this;
+        }
+        bool operator==( const SingleReadIterator& other ) const { return _pCurrent == other._pCurrent; }
+        bool operator!=( const SingleReadIterator& other ) const { return _pCurrent != other._pCurrent; }
+    };
+} // namespace
+
+/**
+ * @brief [VectorTest] 범위 삽입은 꼬리를 한 번만 민다(감사 C-9)
+ * @details 원소마다 한 칸 삽입하면 꼬리 원소가 넣는 개수만큼 옮겨진다(O(개수 × 꼬리)). 한 번 키우고 한 번 밀면 꼬리 원소마다 한 번이다.
+ */
+SW_TEST_CASE( VectorTest, RangeInsertMovesTheTailOnce )
+{
+    static constexpr int32       kTail   = 8;
+    static constexpr int32       kInsert = 100;
+    sw::vector<MoveCountedValue> list;
+    list.reserve( kTail + kInsert );
+    for ( int32 index = 0; index < kTail; ++index )
+        list.emplace_back( 1000 + index );
+    sw::vector<MoveCountedValue> listSource;
+    for ( int32 index = 0; index < kInsert; ++index )
+        listSource.emplace_back( index );
+
+    MoveCountedValue::s_moveCount = 0;
+    const auto iter               = list.insert( list.begin() + 2, listSource.begin(), listSource.end() );
+    SW_EXPECT_EQUAL( kTail - 2, MoveCountedValue::s_moveCount );
+    SW_EXPECT_TRUE( iter == list.begin() + 2 );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( kTail + kInsert ), list.size() );
+    SW_EXPECT_EQUAL( 1000, list[0]._value );
+    SW_EXPECT_EQUAL( 1001, list[1]._value );
+    for ( int32 index = 0; index < kInsert; ++index )
+        SW_EXPECT_EQUAL( index, list[2 + index]._value );
+    for ( int32 index = 2; index < kTail; ++index )
+        SW_EXPECT_EQUAL( 1000 + index, list[kInsert + index]._value );
+}
+
+/**
+ * @brief [VectorTest] 범위 삽입은 자기 범위 · 입력 반복자 · 바이트 복사 원소에서 같은 결과를 낸다
+ * @details 자기 범위는 키우기가 원본을 옮기므로 먼저 떠야 하고, 입력 반복자는 개수를 몰라 임시로 모은다.
+ */
+SW_TEST_CASE( VectorTest, RangeInsertHandlesSelfRangeAndInputIterators )
+{
+    {
+        sw::vector<int32> list{ 1, 2, 3 };
+        list.insert( list.begin() + 1, list.begin(), list.end() ); // 용량 3 → 재할당이 겹친다
+        const int32 arrExpected[] = { 1, 1, 2, 3, 2, 3 };
+        SW_REQUIRE_EQUAL( size_t( 6 ), list.size() );
+        for ( size_t index = 0; index < list.size(); ++index )
+            SW_EXPECT_EQUAL( arrExpected[index], list[index] );
+    }
+    {
+        const int32       arrSource[] = { 7, 8, 9 };
+        sw::vector<int32> list{ 1, 2 };
+        list.insert( list.end() - 1, SingleReadIterator{ arrSource }, SingleReadIterator{ arrSource + 3 } );
+        const int32 arrExpected[] = { 1, 7, 8, 9, 2 };
+        SW_REQUIRE_EQUAL( size_t( 5 ), list.size() );
+        for ( size_t index = 0; index < list.size(); ++index )
+            SW_EXPECT_EQUAL( arrExpected[index], list[index] );
+    }
+    {
+        sw::vector<string> list{ "a", "d" };
+        const string       arrSource[] = { "b", "c" };
+        list.insert( list.begin() + 1, std::begin( arrSource ), std::end( arrSource ) );
+        SW_REQUIRE_EQUAL( size_t( 4 ), list.size() );
+        SW_EXPECT_TRUE( list[0] == "a" && list[1] == "b" && list[2] == "c" && list[3] == "d" );
+    }
+}

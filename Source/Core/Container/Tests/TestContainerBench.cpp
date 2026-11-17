@@ -174,7 +174,7 @@ SW_TEST_CASE( ContainerBenchTest, MapRangeBuild, ._tags = "bench", ._disabledRea
 
 /**
  * @brief [ContainerBenchTest] 64 B 원소 1 만 번 `push_back` + `pop_front` 의 할당 수와 시간입니다. 문턱: 원소당 할당 0.5 번 이상이면 AC-3(링 버퍼 + `ChunkedArray`).
- * @details Windows · Linux 둘 다 잰다 — MSVC STL 은 8 B 넘는 원소마다 블록 하나를 잡는다.
+ * @details Windows · Linux 둘 다 잰다 — 옛 `std::deque` 래퍼는 MSVC STL 이 8 B 넘는 원소마다 블록 하나를 잡았다. 링(감사 C-9) 뒤로는 첫 키우기 몇 번(8 → 128)뿐이라 원소당 0 에 가깝다.
  */
 SW_TEST_CASE( ContainerBenchTest, DequeChurn, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다" )
 {

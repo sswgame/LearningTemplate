@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/deque.h"
+#include "Core/Container/ChunkedArray.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
 #include "Core/Testing/ThreadTestAccess.h"
@@ -169,7 +169,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, RunsOnWorkerAndCompletesOnPoll )
     string              error;
     SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 2 ) ) );
 
-    deque<PoolJobResult> listServiceResult( 16 );
+    ChunkedArray<PoolJobResult> listServiceResult( 16 ); // 일이 결과 칸 주소를 든다
     for ( PoolJobResult& serviceResult : listServiceResult )
     {
         pool.submit( sw::make_unique<PoolTestJob>( serviceResult ) );
@@ -234,9 +234,9 @@ SW_TEST_CASE( SQLConnectionPoolTest, FailedReconnectBacksOffAndRecovers )
 
     driver.setAllowedOpenCount( 0 );
     driver.loseAllConnections();
-    const int32          attemptsBefore = driver.getOpenCount();
-    constexpr int32      kJobCount      = 32;
-    deque<PoolJobResult> listServiceResult( kJobCount );
+    const int32                 attemptsBefore = driver.getOpenCount();
+    constexpr int32             kJobCount      = 32;
+    ChunkedArray<PoolJobResult> listServiceResult( kJobCount );
     for ( PoolJobResult& serviceResult : listServiceResult )
     {
         pool.submit( sw::make_unique<PoolTestJob>( serviceResult ) );
@@ -291,8 +291,8 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
     { pool.shutdown(); } };
 
     // 종료가 깃발을 세웠는지는 새 일이 그 자리에서 취소되는 것으로 본다. 그 전의 일은 줄에 서고 워커는 문에 잡혀 있어 칸을 만지지 않는다.
-    deque<PoolJobResult> listProbe;
-    const bool           bStopping = test::waitUntil( [&]()
+    ChunkedArray<PoolJobResult> listProbe;
+    const bool                  bStopping = test::waitUntil( [&]()
     {
         PoolJobResult& probe = listProbe.emplace_back();
         pool.submit( sw::make_unique<PoolTestJob>( probe ) );

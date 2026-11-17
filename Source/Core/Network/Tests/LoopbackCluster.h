@@ -5,7 +5,7 @@
  *          씬 · 오브젝트 · 라우터까지 세우는 판은 GameFramework 의 `NetSimHarness` 를 쓴다.
  */
 #pragma once
-#include "Core/Container/deque.h"
+#include "Core/Container/ChunkedArray.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
@@ -66,11 +66,11 @@ namespace sw::test
         bool areClientsConnected() const;
 
     private:
-        LoopbackNetwork              _network;
-        deque<NetEmulationTransport> _listEmulation; ///< 엔드포인트마다 — deque 라 주소가 움직이지 않는다(엔드포인트가 들고 있다)
-        deque<NetEndpoint>           _listEndpoint;  ///< deque — NetEndpoint 는 옮길 수 없다(잠금을 품는다)
-        deque<NetEndpointThread>     _listThread;    ///< `startThreads` 뒤에만 — 엔드포인트와 같은 번호
-        float64                      _time;
-        uint32                       _seed;
+        LoopbackNetwork                     _network;
+        ChunkedArray<NetEmulationTransport> _listEmulation; ///< 엔드포인트마다 — ChunkedArray 라 주소가 움직이지 않는다(엔드포인트가 들고 있다)
+        ChunkedArray<NetEndpoint>           _listEndpoint;  ///< ChunkedArray — NetEndpoint 는 옮길 수 없다(잠금을 품는다)
+        ChunkedArray<NetEndpointThread>     _listThread;    ///< `startThreads` 뒤에만 — 엔드포인트와 같은 번호
+        float64                             _time;
+        uint32                              _seed;
     };
 } // namespace sw::test
