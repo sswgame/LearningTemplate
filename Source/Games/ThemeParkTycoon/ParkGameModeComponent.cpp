@@ -310,10 +310,8 @@ namespace sw
         if ( io.isOk() == false )
             return;
         ThemeParkSimulation restoredSimulation;
-        if ( io.isReading() )
-        {
-            restoredSimulation.initialize( _settings, makeRefs() );
-        }
+        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, makeRefs() ) ) == false )
+            return;
         ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
         io.value( simulation );
         uint32 placementCount = static_cast<uint32>( _listPlacement.size() );

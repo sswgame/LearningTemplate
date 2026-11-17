@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 

@@ -45,6 +45,7 @@ namespace sw
     struct LoginRevocationEntry;
     struct LoginStoreResult;
 
+    class EphemeralStoreRouter;
     class IServiceStore;
     class LoginSecretVault;
     class RemoteConfig;
