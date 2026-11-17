@@ -307,6 +307,13 @@ namespace sw
          *          잔재 정리가 남의 쓰는 중인 파일을 지우지 않게 한다. 이름이 규칙과 다르면 false.
          */
         [[nodiscard]] static bool isAbandonedWriteTemp( string_view path );
+        /** @brief @p targetPath 옆의 원자적 쓰기 임시 경로입니다(`<원본>.tmp<pid>_<번호>` — `isAbandonedWriteTemp` 가 알아보는 이름). 다 쓴 뒤 `replaceFile` 로 바꿔 끼운다. */
+        static string makeWriteTempPath( string_view targetPath );
+        /**
+         * @brief 다 쓴 임시 파일 @p tempPath(`makeWriteTempPath`)를 @p targetPath 와 원자적으로 바꿔 끼웁니다 — `writeFile` 의 뒤 절반(쓰기 게이트 · 읽기 전용 거절 · 재시도 · 쓰기 기록)과 같다.
+         * @return 바꾸지 못하면 임시 파일을 지우고 false 입니다. 대상은 그대로다.
+         */
+        [[nodiscard]] static bool replaceFile( string_view tempPath, string_view targetPath );
         /**
          * @brief 파일 삭제를 시도만 합니다 — 지우지 못해도 알리지 않습니다. 없었거나 삭제했으면 true 입니다.
          * @details 실패가 예상된 정리에만 씁니다(아직 매핑된 모듈 DLL 의 그림자 사본 — 다음 시작 · 종료의 정리가 지운다). 그 밖은 `removeFile`.

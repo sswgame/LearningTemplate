@@ -48,16 +48,24 @@ namespace sw
         const bool bOutputCurrent = FileUtil::isRegularFile( outputPath ) && hashOutputFile( outputPath ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
-        // DDC 의 출력을 파일로 복사하고 복사한 파일의 해시를 기록과 견준다 — 출력을 메모리로 들지 않는다.
-        if ( _derivedDataCache.find( record._key, outputPath ) == false )
+        // DDC 의 출력을 출력 옆 임시 파일로 복사하고, 그 해시가 기록과 같을 때만 출력과 바꿔 끼운다 — 다르면 출력 자리를 건드리지 않는다(메모리로 들지도 않는다).
+        const string tempPath = FileUtil::makeWriteTempPath( outputPath );
+        if ( _derivedDataCache.find( record._key, tempPath ) == false )
         {
+            (void)FileUtil::tryRemoveFile( tempPath );
             SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry (or it could not be copied) - cooked again", outputID );
             return false;
         }
-        if ( hashOutputFile( outputPath ) != record._outputHash )
+        if ( hashOutputFile( tempPath ) != record._outputHash )
         {
+            (void)FileUtil::tryRemoveFile( tempPath );
             SW_LOG_WARNING_ID( "CookStore.CookDDCEntryDoes", "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
-            return false; // 다시 굽는 쿠커가 출력을 덮어쓴다
+            return false;
+        }
+        if ( FileUtil::replaceFile( tempPath, outputPath ) == false )
+        {
+            SW_LOG_WARNING_ID( "CookStore.CookCouldNotWrite", "Cook: could not write '%#' from the DDC - cooked again", outputPath );
+            return false;
         }
         return true;
     }

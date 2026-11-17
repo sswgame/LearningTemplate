@@ -126,15 +126,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", filePath.c_str() );
                     return false;
                 }
-                const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
-                // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
-                StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
-                tempPathBuilder.append( filePath.c_str() )
-                    .append( ".tmp" )
-                    .append( processID )
-                    .append( '_' )
-                    .append( s_writeCounters._tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
-                outTempPath = string{ tempPathBuilder.c_str() };
+                outTempPath = FileUtil::makeWriteTempPath( filePath );
                 outFilePath = filePath;
                 return true;
             }
@@ -1336,6 +1328,31 @@ namespace sw
         recordFileCreated();                                // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
         PlatformFileUtil::recordFileWritten( destination ); // 복사는 원본의 쓰기 시각을 옮길 수 있다 — 도장만으로는 대상이 바뀐 것을 모른다
         return true;
+    }
+
+    string FileUtil::makeWriteTempPath( string_view targetPath )
+    {
+        const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
+        // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
+        StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
+        tempPathBuilder.append( FileUtil::normalizeSeparators( targetPath ).c_str() )
+            .append( ".tmp" )
+            .append( processID )
+            .append( '_' )
+            .append( FileUtilInternal::s_writeCounters._tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
+        return string{ tempPathBuilder.c_str() };
+    }
+
+    bool FileUtil::replaceFile( string_view tempPath, string_view targetPath )
+    {
+        string filePath;
+        string unusedTempPath;
+        if ( FileUtilInternal::beginAtomicWrite( targetPath, filePath, unusedTempPath ) == false )
+        {
+            (void)tryRemoveFile( tempPath );
+            return false;
+        }
+        return FileUtilInternal::finishAtomicWrite( FileUtil::normalizeSeparators( tempPath ), filePath );
     }
 
     bool FileUtil::isAbandonedWriteTemp( string_view path )
