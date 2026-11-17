@@ -13,6 +13,7 @@
 
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
@@ -191,6 +192,90 @@ SW_TEST_CASE( RHIBindlessRegistryTest, ReleasesOnlyOwnerIndices )
 
     registry.clear();
     SW_EXPECT_EQUAL( 0u, registry.getBufferIndexCount( 8 ) );
+}
+
+/**
+ * @brief [RHIBindlessRegistryTest] 다시 묶기는 번호를 그대로 두고 값과 주인을 옮긴다 — 새 주인의 목록에 오르고 옛 주인의 목록에서 빠진다(감사 R-6)
+ * @details 예전엔 밉이 오를 때마다 새 텍스처가 새 번호를 받아 그 번호를 쥔 모든 머티리얼이 다시 묶였다.
+ */
+SW_TEST_CASE( RHIBindlessRegistryTest, RebindKeepsIndexAndMovesOwner )
+{
+    RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
+    const RHIDescriptorIndex                                         index = registry.allocate( 5 );
+    RHITextureHandle                                                 previous{ 0 };
+    SW_EXPECT_TRUE( registry.rebind( index, 6, &previous ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 5 ), previous );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 6 ), registry.get( index ) );
+    SW_EXPECT_EQUAL( 0u, registry.getTextureIndexCount( 5 ) );
+    SW_EXPECT_EQUAL( 1u, registry.getTextureIndexCount( 6 ) );
+
+    SW_EXPECT_FALSE( registry.rebind( index, 0 ) );      // 빈 값
+    SW_EXPECT_FALSE( registry.rebind( index + 1u, 7 ) ); // 산 칸이 아니다
+    SW_EXPECT_TRUE( registry.release( index, RHIBindlessReuse::AfterFence ) );
+    SW_EXPECT_FALSE( registry.rebind( index, 7 ) ); // 해제 대기 칸
+}
+
+/**
+ * @brief [RHIBindlessRegistryTest] 다시 묶은 뒤 옛 텍스처를 부숴도 번호는 산다 — 옛 주인의 목록에 그 번호가 없다
+ */
+SW_TEST_CASE( RHIBindlessRegistryTest, DestroyOfPreviousOwnerKeepsReboundIndex )
+{
+    RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
+    const RHIDescriptorIndex                                         index = registry.allocate( 5 );
+    SW_REQUIRE_TRUE( registry.rebind( index, 6 ) );
+    uint32 releasedCount{ 0 };
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, 5, [&releasedCount]( RHIDescriptorIndex )
+    { ++releasedCount; } );
+    SW_EXPECT_EQUAL( 0u, releasedCount );
+    SW_EXPECT_TRUE( registry.isLive( index ) );
+    registry.releaseTexture( RHIBindlessReuse::AfterFence, 6, [&releasedCount]( RHIDescriptorIndex )
+    { ++releasedCount; } );
+    SW_EXPECT_EQUAL( 1u, releasedCount );
+    SW_EXPECT_FALSE( registry.isLive( index ) );
+}
+
+/**
+ * @brief [RHIDescriptorRingMirrorTest] 다시 쓴 번호는 슬롯마다 한 번, 그 슬롯의 차례에만 쓰인다 — 같은 번호를 거듭 예약해도 한 번이다(감사 R-6)
+ */
+SW_TEST_CASE( RHIDescriptorRingMirrorTest, RewriteReachesEverySlotOnce )
+{
+    RHIDescriptorRingMirror mirror;
+    mirror.recordRewrite( 9 );
+    mirror.recordRewrite( 9 );
+    mirror.recordRewrite( 4 );
+    for ( uint32 slot = 0; slot < constant::render::kMaxFrameCountInFlight; ++slot )
+    {
+        vector<RHIDescriptorIndex> listWritten;
+        mirror.flushSlot( slot, [&listWritten]( RHIDescriptorIndex index )
+        { listWritten.push_back( index ); } );
+        SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listWritten.size() );
+        SW_EXPECT_EQUAL( 0u, mirror.getPendingCount( slot ) );
+        // 다시 들어와도 쓸 것이 없다.
+        uint32 secondCount{ 0 };
+        mirror.flushSlot( slot, [&secondCount]( RHIDescriptorIndex )
+        { ++secondCount; } );
+        SW_EXPECT_EQUAL( 0u, secondCount );
+    }
+}
+
+/**
+ * @brief [RHIDescriptorRingMirrorTest] 그 사이 놓인 번호는 쓰는 쪽이 등록표를 보고 건너뛴다 — 미러는 예약만 하고 값은 등록표가 든다
+ */
+SW_TEST_CASE( RHIDescriptorRingMirrorTest, ReleasedIndexIsSkipped )
+{
+    RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> registry;
+    RHIDescriptorRingMirror                                          mirror;
+    const RHIDescriptorIndex                                         index = registry.allocate( 5 );
+    SW_REQUIRE_TRUE( registry.rebind( index, 6 ) );
+    mirror.recordRewrite( index );
+    SW_REQUIRE_TRUE( registry.release( index, RHIBindlessReuse::AfterFence ) );
+    uint32 writtenCount{ 0 };
+    mirror.flushSlot( 0, [&registry, &writtenCount]( RHIDescriptorIndex pending )
+    {
+        if ( registry.isLive( pending ) )
+            ++writtenCount;
+    } );
+    SW_EXPECT_EQUAL( 0u, writtenCount );
 }
 
 /**

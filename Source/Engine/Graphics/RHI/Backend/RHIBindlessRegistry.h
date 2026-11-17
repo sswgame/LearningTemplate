@@ -175,6 +175,24 @@ namespace sw
             store( index, entry );
             return true;
         }
+        /**
+         * @brief 산 칸 @p index 가 @p entry 를 가리키게 합니다(번호는 그대로 — 감사 R-6). 옛 값의 주인 목록에서 빼고 새 값의 주인 목록에 넣는다.
+         * @details 값과 주인 목록을 함께 옮긴다 — `find` 로 값을 고쳐 쓰는 길을 두지 않는 까닭(주인 목록과 어긋난다)을 지킨다. 옛 자원을 부수는 일은 부르는 쪽이다
+         *          (그 파괴는 옛 주인의 목록에 이 번호가 없으므로 번호를 놓지 않는다). 언리얼 `RHIUpdateTextureReference`, Godot `texture_replace` 와 같은 자리다.
+         * @return 산 칸이 아니거나 빈 값이면 false 이고 아무것도 바꾸지 않는다.
+         */
+        bool rebind( RHIDescriptorIndex index, const TEntry& entry, TEntry* pOutPrevious = nullptr )
+        {
+            if ( entry == TEntry{} || isLive( index ) == false )
+                return false;
+            if ( pOutPrevious != nullptr )
+                *pOutPrevious = _listEntry[index];
+            const RHIBindlessOwner previousOwner = TOwnerOf{}( _listEntry[index] );
+            unlinkOwner( _mapBufferIndex, previousOwner._buffer, index );
+            unlinkOwner( _mapTextureIndex, previousOwner._texture, index );
+            store( index, entry );
+            return true;
+        }
         /** @brief 디스크립터를 쓰지 않는 백엔드의 `allocate` 입니다. */
         [[nodiscard]] RHIDescriptorIndex allocate( const TEntry& entry )
         {

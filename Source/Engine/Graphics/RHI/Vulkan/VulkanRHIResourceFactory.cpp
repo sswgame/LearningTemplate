@@ -1298,6 +1298,14 @@ namespace sw
                                                    _pDevice->_frameFenceRing.getRecordingSerial() );
     }
 
+    bool VulkanRHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        (void)index;
+        (void)texture;
+        SW_LOG_ERROR_ONCE_ID( "RHI.RebindNotImplemented", "Vulkan: rebindBindlessTexture needs the per-slot descriptor set ring - not implemented yet" );
+        return false;
+    }
+
     void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );

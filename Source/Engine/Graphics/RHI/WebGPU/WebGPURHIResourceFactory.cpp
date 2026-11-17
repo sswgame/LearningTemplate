@@ -815,6 +815,17 @@ namespace sw
         return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( *pRecord->_pUploadSerials );
     }
 
+    bool WebGPURHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "WebGPU.rebindBindlessTexture" );
+        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
+        if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
+            return false;
+        // 바인드 그룹은 기록 때 번호를 뷰로 풀어 그 뷰로 캐시한다(`WebGPUBindGroupCache` — 번호 키가 아니다). 등록표 값만 바꾸면 다음 그룹이 새 뷰를 쓴다.
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureTable.rebind( index, WebGPUBindlessEntry{ texture, SW_TRUE } );
+    }
+
     void WebGPURHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessTexture" );

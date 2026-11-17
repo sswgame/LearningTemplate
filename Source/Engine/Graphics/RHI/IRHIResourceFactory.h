@@ -310,6 +310,15 @@ namespace sw
          */
         virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
         /**
+         * @brief 산 텍스처 번호 @p index 가 @p texture 를 가리키게 합니다. 번호는 그대로다(감사 R-6 — 밉 올리기 · 내리기 · 크기 변경 · 핫 리로드가 머티리얼을 다시 묶지 않는다).
+         * @details 조건은 등록과 같다(첫 업로드가 끝난 Texture2D, 병렬 기록 밖). 번호와 주인별 번호 목록의 자리만 옮기고 옛 텍스처는 부르는 쪽이 부순다(그 파괴는 이 번호를 놓지 않는다).
+         *          에뮬레이션(DX11 · GL · WebGPU)은 기록 때 번호를 자원으로 풀므로 등록표 값만 바꾼다. 네이티브 bindless(DX12 · Vulkan)는 진행 중 프레임이 읽는
+         *          디스크립터를 덮지 않도록 링 슬롯마다의 사본에 그 슬롯의 차례에 쓴다(`RHIDescriptorRingMirror`) — 늦어도 다음 프레임부터 보인다.
+         *          언리얼 `RHIUpdateTextureReference` · Godot `texture_replace` 자리다.
+         * @return 산 번호가 아니거나 텍스처가 조건에 맞지 않으면 false 이고 아무것도 바꾸지 않는다.
+         */
+        [[nodiscard]] virtual bool rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) = 0;
+        /**
          * @brief 살아 있는 텍스처의 첫 업로드가 끝나 등록 · 샘플해도 되는지 묻습니다(전송한 적이 없으면 true, 없는 핸들이면 false). 오류를 남기지 않습니다.
          * @details 받은 핸들의 내력을 모르는 쪽(에디터 UI 가 패널에서 받는 텍스처)이 등록 전에 묻는다 — 끝날 때까지 그 텍스처를 그리지 않고 다음 프레임에 다시 묻는다.
          *          예전에는 "넘기는 쪽이 첫 업로드를 끝낸 것만 넘긴다" 는 약속뿐이라 창 실행의 체인에서 가끔 `RHI.RegisterBeforeTransferDone` 가 났다.

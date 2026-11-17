@@ -822,6 +822,19 @@ namespace sw
         (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
+    bool D3D11RHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
+        D3D11RHIDevice::TextureRecord* pRecord       = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        const bool                     bCannotRebind = pRecord == nullptr || pRecord->_srv == nullptr || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotRebind )
+            return false;
+        // 기록 때 번호를 자원으로 풀므로 등록표 값만 바꾼다(다음 바인딩부터 새 텍스처).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.rebind( index, texture );
+    }
+
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );

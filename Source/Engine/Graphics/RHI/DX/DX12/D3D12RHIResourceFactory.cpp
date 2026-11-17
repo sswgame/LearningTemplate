@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -1244,6 +1245,14 @@ namespace sw
     {
         _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
         releaseBindlessSlot( index );
+    }
+
+    bool D3D12RHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        (void)index;
+        (void)texture;
+        SW_LOG_ERROR_ONCE_ID( "RHI.RebindNotImplemented", "D3D12: rebindBindlessTexture needs the per-slot descriptor ring - not implemented yet" );
+        return false;
     }
 
     void D3D12RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

@@ -930,6 +930,21 @@ namespace sw
         (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
+    bool OpenGLRHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        if ( texture == 0 )
+            return false;
+        ScopedOpenGLContext                         contextScope( _pDevice );
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord       = _pDevice->resolveTexture( texture );
+        const bool                                  bCannotRebind = pRecord == nullptr || _pDevice->getGlTextureName( texture ) == 0 || pRecord->_dimension != RHITextureDimension::Texture2D ||
+                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_uploadSerials, texture ) == false;
+        if ( bCannotRebind )
+            return false;
+        // 기록 때 번호를 텍스처 이름으로 풀므로 등록표 값만 바꾼다(다음 바인딩부터 새 텍스처).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureRegistry.rebind( index, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
+    }
+
     void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         ScopedOpenGLContext      contextScope( _pDevice );
