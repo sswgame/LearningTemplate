@@ -285,6 +285,7 @@ namespace sw
         {
             _busTopicBuffer.push( ChatBusTopicChange{ _serverTopic, SW_TRUE } );                                          // 다른 서버가 보낸 귓속말을 받는다
             _busTopicBuffer.push( ChatBusTopicChange{ string( ServiceSanctionBus::kChangedTopic.getName() ), SW_TRUE } ); // GM 이 제재를 바꿨을 때 받는다. 자기 서버가 낸 것도 포함한다
+            _busTopicBuffer.push( ChatBusTopicChange{ string( ChatBus::kMemberRemovalTopic.getName() ), SW_TRUE } );      // 다른 서버가 그룹 채널에서 뺀 계정을 이 서버의 멤버에서도 뺀다
         }
         return true;
     }
@@ -444,6 +445,17 @@ namespace sw
         const auto memberIt = _mapAccountToMember.find( accountID );
         if ( memberIt != _mapAccountToMember.end() )
             removeLocalMember( accountID, memberIt->second, string( channelID ) );
+    }
+
+    void ChatService::removeGroupMember( AccountID accountID, string_view channelID )
+    {
+        removeMember( accountID, channelID );
+        if ( _dependencies._pBus == nullptr )
+            return;
+        ChatMemberRemoval removal;
+        removal._channelID = string( channelID );
+        removal._accountID = accountID;
+        (void)ChatBus::kMemberRemovalTopic.publish( *_dependencies._pBus, removal ); // 실패는 발행이 로그에 남겼다 — 그 서버의 멤버는 계정이 떠날 때 빠진다
     }
 
     void ChatService::removeAccount( AccountID accountID )
@@ -663,6 +675,13 @@ namespace sw
             ServiceSanctionChanged changed;
             if ( ServiceSanctionBus::kChangedTopic.read( busMessage, changed ) == ServerBusReadResult::Read )
                 refreshSanction( changed._accountID ); // 못 읽으면 묵힘 시한 안에 다시 읽는다
+            return;
+        }
+        if ( ChatBus::kMemberRemovalTopic.matches( busMessage ) )
+        {
+            ChatMemberRemoval removal;
+            if ( ChatBus::kMemberRemovalTopic.read( busMessage, removal ) == ServerBusReadResult::Read )
+                removeMember( removal._accountID, removal._channelID ); // 자기 서버가 낸 것도 받는다 — 이미 뺐으면 아무것도 하지 않는다
             return;
         }
         ChatMessage               message;

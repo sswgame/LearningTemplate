@@ -57,7 +57,7 @@ namespace sw
             void removeGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID ) override
             {
                 if ( _pService != nullptr )
-                    _pService->removeMember( accountID, makeChannelID( kind, groupID ) );
+                    _pService->removeGroupMember( accountID, makeChannelID( kind, groupID ) ); // 그 계정이 다른 서버에 접속해 있어도 빠진다
             }
 
         private:

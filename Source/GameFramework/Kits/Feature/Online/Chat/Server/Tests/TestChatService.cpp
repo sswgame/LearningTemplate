@@ -735,3 +735,23 @@ SW_TEST_CASE( ChatServiceTest, HistoryHidesBlockedSenders )
     SW_EXPECT_EQUAL( string( "from bob" ), bobView._listHistory[0]._text );
     SW_EXPECT_EQUAL( size_t( 2 ), rig.history( kAlice )._listHistory.size() );
 }
+
+/** @brief [ChatServiceTest] 길드 추방처럼 그룹 채널에서 뺀 계정은 다른 서버에 접속해 있어도 그 서버의 멤버에서 빠진다(버스) — 처리한 서버만 고쳐 길드 채팅이 계속 닿던 구멍(감사 O-18) */
+SW_TEST_CASE( ChatServiceTest, GroupRemovalReachesTheMembersServer )
+{
+    MemoryServiceDatabase database;
+    LocalServerBusHub     hub;
+    ChatFixture           rigA( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
+    rigB._directory._listOnline = vector<AccountID>{ kBob };
+    rigA.poll();
+    rigB.poll();
+    const string guildChannel = ChatChannelID::makeGuild( 7 );
+    SW_REQUIRE_TRUE( rigB._service.addMember( kBob, guildChannel, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok );
+    SW_EXPECT_TRUE( rigB.history( kBob, guildChannel )._result == ChatResult::Ok );
+
+    rigA._service.removeGroupMember( kBob, guildChannel ); // 추방을 처리한 서버는 A 다
+    rigA.poll();
+    rigB.poll();
+    SW_EXPECT_TRUE( rigB.history( kBob, guildChannel )._result == ChatResult::NotMember );
+}

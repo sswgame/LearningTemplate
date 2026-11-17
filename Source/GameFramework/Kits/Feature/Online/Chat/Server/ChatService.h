@@ -175,6 +175,11 @@ namespace sw
         // 서버 시스템(길드, 파티, GM)이 부르는 함수이며 완료는 없다
         [[nodiscard]] ChatServiceResult addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs );
         void                            removeMember( AccountID accountID, string_view channelID );
+        /**
+         * @brief 그룹 채널(길드 · 파티)에서 계정을 뺍니다. 이 서버의 멤버에서 빼고, 버스로 다른 채팅 서버에도 알립니다.
+         * @details 길드 추방을 처리한 서버가 그 계정이 접속한 서버가 아니면 예전에는 그 서버에 멤버가 남아 길드 채팅을 계속 받았다(감사 O-18).
+         */
+        void removeGroupMember( AccountID accountID, string_view channelID );
         /** @brief GM 이 제재를 바꿨을 때 부릅니다. 다음 말하기 전에 다시 읽습니다. */
         void refreshSanction( AccountID accountID );
         /** @brief 계정이 이 서버를 떠났을 때 부릅니다. 모든 채널에서 뺍니다. */
