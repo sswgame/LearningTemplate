@@ -106,3 +106,33 @@ SW_TEST_CASE_EACH( TestRunnerTest, ShardIsBelowTheCount, kArrShardCount )
 {
     SW_EXPECT_TRUE( TestRunner::getShardOf( "Any.case", param ) < param );
 }
+
+/** @brief 자식 역할 — 환경이 없다고 건너뛴다(단언 없음). */
+SW_TEST_CHILD_ROLE( TestRunnerTest, SkipChildSkipsWithAReason )
+{
+    SW_TEST_SKIP( "the child has no such environment" );
+}
+
+/** @brief 자식 역할 — 까닭 없이 건너뛴다(실패여야 한다). */
+SW_TEST_CHILD_ROLE( TestRunnerTest, SkipChildWithoutAReason )
+{
+    SW_TEST_SKIP( "" );
+}
+
+/**
+ * @brief [TestRunnerTest] 건너뛴 케이스는 통과로 세지 않고 건너뜀 줄 · 수 · 까닭이 따로 남으며, 단언 0 건 규칙에 걸리지 않는다(실행은 성공). 까닭 없는 건너뜀은 실패다
+ */
+SW_TEST_CASE( TestRunnerTest, SkippedCaseIsReportedApartFromPassAndFail, ._tags = "slow", ._timeoutSeconds = 240.0f )
+{
+    constexpr float32              kChildTimeoutSeconds = 120.0f;
+    const sw::test::ChildRunResult skipped              = sw::test::runChildRole( "TestRunnerTest.SkipChildSkipsWithAReason", {}, kChildTimeoutSeconds );
+    SW_EXPECT_TRUE( skipped._exitCode.has_value() && *skipped._exitCode == 0 );
+    SW_EXPECT_TRUE( skipped._output.find( "[  SKIPPED ] TestRunnerTest.SkipChildSkipsWithAReason" ) != string::npos );
+    SW_EXPECT_TRUE( skipped._output.find( "the child has no such environment" ) != string::npos );
+    SW_EXPECT_TRUE( skipped._output.find( "0 passed, 0 failed, 1 skipped" ) != string::npos );
+    SW_EXPECT_TRUE( skipped._output.find( "made no assertion" ) == string::npos );
+
+    const sw::test::ChildRunResult noReason = sw::test::runChildRole( "TestRunnerTest.SkipChildWithoutAReason", {}, kChildTimeoutSeconds );
+    SW_EXPECT_TRUE( noReason._exitCode.has_value() && *noReason._exitCode != 0 );
+    SW_EXPECT_TRUE( noReason._output.find( "SW_TEST_SKIP needs a reason" ) != string::npos );
+}

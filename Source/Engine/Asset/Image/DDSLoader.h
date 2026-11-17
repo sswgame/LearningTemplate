@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -97,6 +98,32 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct DDSHeaderInfo
+     * @brief DDS 머리(매직 · 머리 · DX10 머리)를 푼 결과입니다 — 픽셀을 읽지 않고 크기 · 형식 · 밉 · 층과 픽셀이 시작하는 자리를 안다(`DDSLoader::parseHeader`).
+     */
+    struct DDSHeaderInfo
+    {
+        uint32        _width{ 0 };
+        uint32        _height{ 0 };
+        uint32        _depth{ 1 };
+        uint32        _mipCount{ 1 };
+        uint32        _layerCount{ 1 }; ///< 배열 원소 × 큐브 면 — 바이트는 층마다 밉 사슬 하나씩이다
+        uint32        _dxgiFormat{ 0 };
+        uint32        _dataOffset{ 0 }; ///< 파일 처음에서 픽셀이 시작하는 자리(매직 + 머리 + DX10 머리)
+        DDSFormatSize _formatSize{};    ///< 형식의 블록 크기(읽기가 쓰는 표의 줄)
+        uint8         _bIsBgra{ 0 };
+        uint8         _bCompressed{ 0 };
+
+        /** @brief 층 하나 · 밉 하나의 바이트입니다(블록 수 × 블록 바이트 × 그 밉의 깊이). */
+        [[nodiscard]] uint64 computeMipBytes( uint32 mip ) const;
+        /** @brief 머리가 말하는 픽셀 바이트 전체입니다(층 × 밉 사슬) — 파일 길이는 `_dataOffset` 에 이것을 더한 것과 같아야 한다. */
+        [[nodiscard]] uint64 computePayloadBytes() const;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct DDSLoader
      * @brief 외부 라이브러리 없이 표준 DDS 헤더와 바이너리 데이터를 직접 파싱하는 가벼운 로더입니다.
      */
@@ -111,6 +138,11 @@ namespace sw
          * @brief 메모리 버퍼에서 DDS 텍스처를 로드합니다.
          */
         [[nodiscard]] static bool loadFromMemory( const uint8* pBuffer, size_t bufferSize, DDSImageData& outImage );
+        /**
+         * @brief 머리만 풉니다(@p bufferSize 는 머리 이상이면 된다 — 픽셀은 읽지 않는다). 전체 읽기(`loadFromMemory`)와 밉 배치(`TextureMipLayout::parse`)가 같은 풀이를 쓴다.
+         * @details 실패하면 이유를 로그(`DDS.*`)로 남기고 오류를 돌려준다.
+         */
+        [[nodiscard]] static expected<DDSHeaderInfo> parseHeader( const uint8* pBuffer, size_t bufferSize );
 
         /**
          * @brief 로더가 아는 옛 머리 FourCC 표입니다(읽기가 쓰는 표 그대로).

@@ -5,6 +5,8 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
@@ -14,9 +16,12 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 
 #include <iterator>
+#include <thread>
 
 using namespace sw;
 
@@ -42,6 +47,56 @@ namespace
         test::FakeRHIDevice* _pDevice;
     };
 } // namespace
+
+/**
+ * @brief [RHIRenderResourceTest] 장치가 리소스에 통보하는 동안 다른 스레드가 그 리소스를 파괴하면 단언한다(R-17)
+ * @details 통보는 잠금 밖이라(통보가 다른 리소스를 파괴할 수 있다) 다른 스레드의 파괴를 막지 못한다 — 예전엔 아무도 알리지 않아 해제 후 사용으로 끝났다.
+ *          통보받는 쪽은 `this` 를 다시 읽지 않는다(파괴된 뒤라). 래치는 바깥 원자값이다.
+ */
+SW_TEST_CASE( RHIRenderResourceTest, DestroyWhileNotifiedFromAnotherThreadAsserts )
+{
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
+
+    struct NotifyLatch
+    {
+        atomic<uint32> _stage{ 0 }; ///< 0 통보 전, 1 통보 안, 2 파괴 끝
+    };
+    class LatchedResource final : public RHIRenderResource
+    {
+    public:
+        explicit LatchedResource( NotifyLatch* pLatch )
+            : _pLatch{ pLatch }
+        {
+        }
+        void releaseRHI( IRHIDevice* ) override
+        {
+            NotifyLatch* const pLatch = _pLatch; // 아래 기다림 동안 이 객체가 파괴된다 — 래치 주소만 쥔다
+            pLatch->_stage.store( 1 );
+            while ( pLatch->_stage.load() != 2 )
+                ThreadUtil::yield();
+        }
+        void clearRHI( IRHIDevice* ) override {}
+
+    private:
+        NotifyLatch* _pLatch;
+    };
+
+    NotifyLatch               latch;
+    LatchedResource* const    pResource = new LatchedResource( &latch );
+    test::ScopedAssertCapture assertCapture;
+    std::thread               destroyThread( [&latch, pResource]()
+    {
+        while ( latch._stage.load() != 1 )
+            ThreadUtil::yield();
+        delete pResource;
+        latch._stage.store( 2 );
+    } );
+    test::FakeRHIDevice       device;
+    RHIRenderResource::releaseAllForDevice( &device );
+    destroyThread.join();
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+}
 
 /**
  * @brief [RHIDeviceTest] 백엔드 이름 · 셰이더 타깃 · 정적 능력 조회는 모두 기술자 표 한 줄을 읽고, 표에 없는 값은 "Unknown" 이고 만들 수 없다
@@ -329,6 +384,54 @@ SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
     SW_EXPECT_EQUAL( 2u, kVulkanRequiredMinor );
     SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 5u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( kVulkanRequiredMinor ) ); // vulkan1.2 → SPIR-V 1.5
     SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 6u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( 3u ) );                   // vulkan1.3 → SPIR-V 1.6
+}
+
+/**
+ * @brief [VulkanMemoryAccountTest] 장치 메모리 할당 수가 한도에서 남길 칸에 닿으면 더 받지 않고, 해제하면 다시 받는다(R-4)
+ * @details 자원마다 `VkDeviceMemory` 하나라 한도(`maxMemoryAllocationCount`, 데스크톱도 흔히 4096)를 넘기면 드라이버가 실패하거나 정의되지 않은 동작이다 — 예전엔 아무도 세지 않았다.
+ */
+SW_TEST_CASE( VulkanMemoryAccountTest, RefusesPastTheReserve )
+{
+    VulkanMemoryAccount account;
+    account.setLimit( 10u, 2u );
+    SW_EXPECT_EQUAL( 8u, account.getUsableCount() );
+    for ( uint32 index = 0; index < 8u; ++index )
+    {
+        SW_EXPECT_TRUE( account.tryAcquire() );
+    }
+    SW_EXPECT_FALSE( account.tryAcquire() );
+    SW_EXPECT_EQUAL( 8u, account.getLiveCount() );
+    account.release();
+    SW_EXPECT_TRUE( account.tryAcquire() );
+
+    VulkanMemoryAccount reserveOverLimit;
+    reserveOverLimit.setLimit( 4u, 4u );
+    SW_EXPECT_FALSE( reserveOverLimit.tryAcquire() );
+}
+
+/**
+ * @brief [VulkanPipelineCacheFileTest] 파이프라인 캐시 파일이 장치 · 드라이버마다 따로다(R-13)
+ * @details 파일이 하나면 하드웨어 → software → 하드웨어 실행이 하드웨어 캐시를 덮어(드라이버가 다른 장치의 데이터를 버린다) 매번 처음부터 컴파일한다.
+ */
+SW_TEST_CASE( VulkanPipelineCacheFileTest, FileIsPerDeviceAndDriver )
+{
+    const string hardware = VulkanPipelineCacheFile::makeRelativePath( 0x10DEu, 0x2684u, 0x8A3C0000u );
+    SW_EXPECT_TRUE( hardware == "ShaderCache/vk_pipeline_cache_000010de_00002684_8a3c0000.bin" );
+    SW_EXPECT_FALSE( hardware == VulkanPipelineCacheFile::makeRelativePath( 0x10005u, 0u, 1u ) );              // software(lavapipe)
+    SW_EXPECT_FALSE( hardware == VulkanPipelineCacheFile::makeRelativePath( 0x10DEu, 0x2684u, 0x8A3C0001u ) ); // 드라이버 갱신
+}
+
+/**
+ * @brief [VulkanPipelineCacheFileTest] 파이프라인 캐시는 주기가 지나고 크기가 바뀌었을 때 저장한다(R-13)
+ * @details 예전엔 종료 때만 저장해 실행 중에 죽으면 그 실행의 컴파일이 모두 사라졌다. 크기가 그대로면 새 파이프라인이 없으므로 디스크를 건드리지 않는다.
+ */
+SW_TEST_CASE( VulkanPipelineCacheFileTest, PeriodicSaveNeedsIntervalAndGrowth )
+{
+    constexpr int64 kInterval = 1000;
+    SW_EXPECT_TRUE( VulkanPipelineCacheFile::isPeriodicSaveDue( 1000, 0, kInterval, 200u, 100u ) );
+    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 999, 0, kInterval, 200u, 100u ) );  // 주기 전
+    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 5000, 0, kInterval, 100u, 100u ) ); // 새 파이프라인 없음
+    SW_EXPECT_FALSE( VulkanPipelineCacheFile::isPeriodicSaveDue( 5000, 0, 0, 200u, 100u ) );         // 주기 없음(설정 누락은 초기화가 막는다)
 }
 
 /** @brief [RHIAvailabilityTest] 다른 백엔드: 지금 것이 아니고 이 플랫폼에서 되는 것이다. Windows 는 DX12 ↔ DX11, Linux 는 Vulkan ↔ OpenGL 이다 */

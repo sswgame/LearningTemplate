@@ -44,7 +44,9 @@ namespace sw
         void processBackfills( int64 nowMs, vector<MatchBackfilled>& outListBackfilled );
         /** @brief 빈 슬롯 요청을 넣습니다. 같은 경기 id 가 있으면 바꿉니다. 모드가 다르거나 팀 수가 다르거나 빈 슬롯이 음수면 Invalid 입니다. */
         MatchmakingServiceResult addBackfill( const MatchBackfillRequest& request );
-        int32                    getBackfillCount() const { return static_cast<int32>( _listBackfill.size() ); }
+        /** @brief @p request 가 모드 @p mode 의 모양(모드 id, 팀 수, 팀마다 0 ~ 팀 인원의 빈 슬롯, 경기 id)에 맞으면 true 입니다. 권한 서버의 `addBackfill` 과 버스로 보내기 전의 확인이 같은 규칙을 쓴다. */
+        [[nodiscard]] static bool isBackfillShapeValid( const MatchModeDef& mode, const MatchBackfillRequest& request );
+        int32                     getBackfillCount() const { return static_cast<int32>( _listBackfill.size() ); }
 
         /** @brief 티켓을 넣습니다. 인원이 0이거나 팀 인원을 넘으면 PartyTooLarge, 같은 id 가 있으면 AlreadyQueued 를 반환합니다. */
         MatchmakingServiceResult addTicket( const MatchTicket& ticket );

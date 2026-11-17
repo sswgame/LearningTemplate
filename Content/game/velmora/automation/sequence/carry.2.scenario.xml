@@ -22,7 +22,6 @@
 	<Expect watch="Session.Money" equals="50"/>
 	<Expect watch="Velmora.Hearts" equals="4"/>
 	<!-- 서쪽 확장 지역으로 — 들어서면 확장 퀘스트를 받고 보스가 나온다 -->
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="-1" seconds="7"/>
 	<Wait seconds="7.1"/>
 	<Expect watch="Velmora.Region" is="tidecaves"/>
@@ -30,7 +29,6 @@
 	<Expect watch="Quest.Status" target="tide_whispers" is="Active"/>
 	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="120"/>
 	<Expect watch="Velmora.Alive" equals="1"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="Velmora.Attack"/>
 	<Wait seconds="0.4"/>
 	<Action name="Velmora.Attack"/>

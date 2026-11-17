@@ -105,7 +105,7 @@ namespace sw
                 const KartRacer& kart          = _race._listRacer[racerIndex];
                 const bool       bOwnerGrace   = racer == projectile._owner && projectile._age < _race._settings._ownerGrace;
                 const bool       bNotTarget    = pItem->_kind == KartItemKind::LeaderShell && racer != projectile._target;
-                const bool       bSkipHitCheck = kart._bFinished == SW_TRUE || bOwnerGrace || bNotTarget || racer == projectile._lastHit;
+                const bool       bSkipHitCheck = kart._bFinished == SW_TRUE || bOwnerGrace || bNotTarget || projectile.hasHit( racer );
                 if ( bSkipHitCheck )
                     continue;
                 if ( float3::getHorizontalDistanceSquared( kart._motor.getPosition(), to ) > reach * reach )

@@ -16,6 +16,9 @@ sw_glob_source_tree(MODULE_HOST_SOURCES RECURSE "*.cpp" "*.c" "*.h" "*.hpp")
 
 if(SW_SHIPPING_BUILD)
 	sw_remove_excluded_sources(MODULE_HOST_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+endif()
+# 정적 모듈 구성(배포 · 웹 · Android 개발)은 정적이다 — 호스트와 DevTools 가 한 실행 파일이라 등록 · 상태가 한 벌이다.
+if(SW_STATIC_MODULES)
 	set(module_manager_lib_type STATIC)
 else()
 	set(module_manager_lib_type SHARED)

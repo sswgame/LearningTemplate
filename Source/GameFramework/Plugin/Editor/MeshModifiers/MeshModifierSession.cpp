@@ -285,22 +285,39 @@ namespace sw::editor
     {
     }
 
-    bool MeshModifierSession::setTarget( GameObject* pObject )
+    expected<void> MeshModifierSession::setTarget( GameObject* pObject )
     {
-        clearTarget();
+        if ( isStackUnsaved() )
+            return unexpected( Error{ ErrorKind::AlreadyExists, "the mesh modifier stack has unsaved edits - save or revert it before picking another mesh", _meshPath } );
         if ( pObject == nullptr )
-            return false;
+        {
+            clearTarget();
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no object to modify" } );
+        }
         const MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh == nullptr || MeshAssetFormat::isMeshAssetPath( pMesh->getMeshID() ) == false )
-            return false;
-        if ( MeshAssetFormat::loadFromAsset( AssetID{ pMesh->getMeshID() }, _sourceData ) == false )
         {
-            SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierTargetCould", "Mesh modifier target '%#' could not be read", pMesh->getMeshID().c_str() );
-            return false;
+            clearTarget();
+            return unexpected( Error{ ErrorKind::Unsupported, "the object has no mesh component with a .mesh asset" } );
         }
+        MeshAssetData sourceData;
+        if ( MeshAssetFormat::loadFromAsset( AssetID{ pMesh->getMeshID() }, sourceData ) == false )
+        {
+            clearTarget();
+            return unexpected( Error{ ErrorKind::ExternalFailure, "mesh modifier target could not be read", pMesh->getMeshID().c_str() } );
+        }
+        return setTargetData( pObject->getHandle(), pMesh->getMeshID().c_str(), std::move( sourceData ) );
+    }
+
+    expected<void> MeshModifierSession::setTargetData( GameObjectHandle target, string_view meshPath, MeshAssetData sourceData )
+    {
+        if ( isStackUnsaved() )
+            return unexpected( Error{ ErrorKind::AlreadyExists, "the mesh modifier stack has unsaved edits - save or revert it before picking another mesh", _meshPath } );
+        clearTarget();
+        _sourceData = std::move( sourceData );
         MeshModifierSessionInternal::expandToTriangleList( _sourceData );
-        _meshPath = pMesh->getMeshID();
-        _target   = pObject->getHandle();
+        _meshPath = string( meshPath );
+        _target   = target;
 
         _listSourcePosition.reserve( _sourceData._listVertex.size() );
         for ( const RHIVertex& vertex : _sourceData._listVertex )
@@ -311,7 +328,7 @@ namespace sw::editor
         (void)loadSidecar();                         // 사이드카가 없으면 빈 스택으로 시작한다
         _savedStackText = _stack.makeJSONText( -1 ); // 사이드카가 없으면 빈 스택이 저장된 상태다(못 만들면 오류 값 - 저장되지 않은 것으로 본다)
         _bPreviewDirty  = SW_TRUE;
-        return true;
+        return {};
     }
 
     bool MeshModifierSession::isStackUnsaved() const

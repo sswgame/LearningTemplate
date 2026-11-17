@@ -169,10 +169,10 @@ namespace sw
                 if ( slot._pMapped != nullptr )
                     vkUnmapMemory( dev, mem );
                 RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
-                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker]()
+                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker, pDevice = _pDevice]()
                 {
                     vkDestroyBuffer( dev, buf, nullptr );
-                    vkFreeMemory( dev, mem, nullptr );
+                    pDevice->freeDeviceMemory( mem );
                     pTracker->recordFree( RHIMemoryKey::makeDeviceObject( mem ) );
                 } ),
                                                            _pDevice->_frameFenceRing.getRecordingSerial() );
@@ -210,13 +210,13 @@ namespace sw
             allocInfo.sType                   = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
             allocInfo.allocationSize          = memoryRequirements.size;
             allocInfo.memoryTypeIndex         = memoryTypeIndex;
-            const bool bSlotMemorySetupFailed = vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &slot._memory ) != VK_SUCCESS ||
+            const bool bSlotMemorySetupFailed = _pDevice->allocateDeviceMemory( allocInfo, slot._memory ) == false ||
                                                 vkBindBufferMemory( _pDevice->_device, slot._buffer, slot._memory, 0 ) != VK_SUCCESS ||
                                                 vkMapMemory( _pDevice->_device, slot._memory, 0, VK_WHOLE_SIZE, 0, &slot._pMapped ) != VK_SUCCESS;
             if ( bSlotMemorySetupFailed )
             {
                 if ( slot._memory != VK_NULL_HANDLE )
-                    vkFreeMemory( _pDevice->_device, slot._memory, nullptr );
+                    _pDevice->freeDeviceMemory( slot._memory );
                 vkDestroyBuffer( _pDevice->_device, slot._buffer, nullptr );
                 slot             = VulkanRHIDevice::StructuredUploadSlot{};
                 slot._resetFence = _pDevice->_frameFenceRing.getRecordingSerial();
@@ -430,12 +430,12 @@ namespace sw
         VkDeviceMemory    mem      = owned._memory;
         VkDevice          dev      = _pDevice->_device;
         RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker, buffer]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pTracker, buffer, pDevice = _pDevice]()
         {
             if ( buf != VK_NULL_HANDLE )
                 vkDestroyBuffer( dev, buf, nullptr );
             if ( mem != VK_NULL_HANDLE )
-                vkFreeMemory( dev, mem, nullptr );
+                pDevice->freeDeviceMemory( mem );
             // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
             pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         } ),
@@ -570,9 +570,9 @@ namespace sw
         allocInfo.allocationSize                            = sizeBytes;
         allocInfo.memoryTypeIndex                           = memoryTypeIndex;
         shared_ptr<VulkanRHIDevice::VulkanHeapMemory> pHeap = make_shared<VulkanRHIDevice::VulkanHeapMemory>();
-        if ( isVkSuccess( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &pHeap->_memory ), "vkAllocateMemory (transient heap)" ) == false )
+        if ( _pDevice->allocateDeviceMemory( allocInfo, pHeap->_memory ) == false )
             return 0;
-        pHeap->_device                      = _pDevice->_device;
+        pHeap->_pOwner                      = _pDevice;
         pHeap->_sizeBytes                   = sizeBytes;
         pHeap->_memoryTypeIndex             = memoryTypeIndex;
         const RHITransientHeapHandle handle = _pDevice->_nextTransientHeap++;
@@ -667,7 +667,7 @@ namespace sw
             allocInfo.allocationSize  = memRequirements.size;
             allocInfo.memoryTypeIndex = memoryTypeIndex;
 
-            if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &record._memory ) != VK_SUCCESS )
+            if ( _pDevice->allocateDeviceMemory( allocInfo, record._memory ) == false )
             {
                 vkDestroyImage( _pDevice->_device, record._image, nullptr );
                 SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedAllocateMemoryTexture2D", "Failed to allocate memory for Texture2D." );
@@ -677,7 +677,7 @@ namespace sw
             if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 ), "vkBindImageMemory (Texture2D)" ) == false )
             {
                 vkDestroyImage( _pDevice->_device, record._image, nullptr );
-                vkFreeMemory( _pDevice->_device, record._memory, nullptr );
+                _pDevice->freeDeviceMemory( record._memory );
                 return 0;
             }
         }
@@ -702,7 +702,7 @@ namespace sw
         if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record._imageView ) != VK_SUCCESS )
         {
             vkDestroyImage( _pDevice->_device, record._image, nullptr );
-            vkFreeMemory( _pDevice->_device, record._memory, nullptr );
+            _pDevice->freeDeviceMemory( record._memory );
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.FailedCreateVkImageViewTexture2D", "Failed to create VkImageView for Texture2D." );
             return 0;
         }
@@ -1152,7 +1152,7 @@ namespace sw
         RHIMemoryTracker*   pTracker = &_pDevice->getMemoryTracker();
         // placed 텍스처는 힙 메모리 참조를 대리자가 펜스까지 든다 — 대리자가 놓이면서 마지막 참조면 메모리가 풀린다(`VulkanHeapMemory`).
         const RHIResourceReleaseDelegate releaseDelegate =
-            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture, heapMemory = owned._heapMemory]()
+            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture, heapMemory = owned._heapMemory, pDevice = _pDevice]()
         {
             (void)heapMemory;
             for ( VkImageView sliceView : listSliceView )
@@ -1166,7 +1166,7 @@ namespace sw
             if ( image != VK_NULL_HANDLE )
                 vkDestroyImage( dev, image, nullptr );
             if ( mem != VK_NULL_HANDLE )
-                vkFreeMemory( dev, mem, nullptr );
+                pDevice->freeDeviceMemory( mem );
             // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
             pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
         } );

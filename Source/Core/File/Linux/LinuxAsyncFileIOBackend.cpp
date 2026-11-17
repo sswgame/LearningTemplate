@@ -237,6 +237,7 @@ namespace sw
                     if ( bRetryableError )
                         continue;
                     SW_LOG_ERROR_ID( "AsyncFileIO.IoUringEnterFailed", "io_uring_enter failed (errno %#)", errno );
+                    _pQueue->stopForBackendFailure(); // 밀린 요청 · 새 요청이 아무도 꺼내지 않는 큐에서 영영 기다리지 않게
                     return;
                 }
                 // 커널이 받은 SQE 만큼 줄인다(EINTR 로 일부만 받았으면 남은 것은 다음 enter 가 낸다).

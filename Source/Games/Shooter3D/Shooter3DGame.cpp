@@ -8,6 +8,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
@@ -42,10 +43,10 @@ namespace sw
         [[nodiscard]] bool checkImpacts() const;
 
     private:
-        shared_ptr<const WeaponCatalog>     _pWeaponCatalog;     ///< 공유 캐시의 한 벌(게임 범위 서비스)
-        shared_ptr<const ProjectileCatalog> _pProjectileCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
-        ShooterOnlineFlow                   _onlineFlow;         ///< 온라인 키트를 쓰는 흐름(게임 범위 서비스). 연결은 세션(`OnlineSession`)이 맡는다
-        ShooterAutoPlayOptions              _autoPlayOptions;    ///< 모든 월드의 자동 플레이 조종자가 읽는 값(게임 범위 서비스)
+        SharedAssetRef<WeaponCatalog>     _pWeaponCatalog;     ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<ProjectileCatalog> _pProjectileCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        ShooterOnlineFlow                 _onlineFlow;         ///< 온라인 키트를 쓰는 흐름(게임 범위 서비스). 연결은 세션(`OnlineSession`)이 맡는다
+        ShooterAutoPlayOptions            _autoPlayOptions;    ///< 모든 월드의 자동 플레이 조종자가 읽는 값(게임 범위 서비스)
     };
 } // namespace sw
 

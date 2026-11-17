@@ -178,7 +178,7 @@ namespace sw::editor
                 using Util                   = ZoneVolumeInspectorUtil;
                 ZoneVolumeComponent* pVolume = static_cast<ZoneVolumeComponent*>( pComponent );
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "ZoneModules" ) );
-                const shared_ptr<const ZoneProfile> pPreset = pVolume->getProfileRef().acquire();
+                const shared_ptr<const ZoneProfile> pPreset = pVolume->getProfileRef().acquire().snapshot();
                 if ( pPreset == nullptr )
                 {
                     EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorTip", "ZoneNoProfile" ) );

@@ -211,7 +211,7 @@ SW_TEST_CASE( RigAssetTest, RetargetChildSavesOnlyItsDifference )
     SW_EXPECT_TRUE( saved.find( "head_b" ) != string::npos );
     SW_EXPECT_TRUE( saved.find( "LeftArm" ) == string::npos ); // 물려받은 사슬은 적지 않는다
 
-    const shared_ptr<const RetargetProfile> pReloaded = SharedAssetCache<RetargetProfile>::acquire( test::ScopedScratchDomain::makeID( "child.retarget.xml" ).view() );
+    const shared_ptr<const RetargetProfile> pReloaded = SharedAssetCache<RetargetProfile>::acquire( test::ScopedScratchDomain::makeID( "child.retarget.xml" ).view() ).snapshot();
     SW_REQUIRE_TRUE( pReloaded != nullptr );
     SW_EXPECT_EQUAL( profile.toXML(), pReloaded->toXML() );
     SW_EXPECT_EQUAL( baseID, pReloaded->getBaseID() );

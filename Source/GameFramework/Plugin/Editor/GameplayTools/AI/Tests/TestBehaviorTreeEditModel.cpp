@@ -8,6 +8,7 @@
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
 
 using namespace sw;
@@ -51,4 +52,28 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, VariantSavesOnlyItsDifference )
     const expected<string> plainSaved = plain.makeSaveText();
     SW_REQUIRE_TRUE( plainSaved.has_value() );
     SW_EXPECT_EQUAL( plain.write(), *plainSaved );
+}
+
+/** @brief [BehaviorTreeEditModelTest] 편집 연산 한 번은 알림 한 번이고 되돌리기 이름은 모델이 정한다. 트리를 다시 읽어도(parse) 알림 창구는 그대로다(감사 E-16) */
+SW_TEST_CASE( BehaviorTreeEditModelTest, EditNotifiesOnceAndParseKeepsTheRecorder )
+{
+    uint32                     count{ 0 };
+    string                     lastLabel;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    {
+        ++count;
+        lastLabel = string{ label };
+    } ) };
+    BehaviorTreeEditModel      model;
+    model.bindDocumentEditRecorder( recorder );
+    const expected<int32> root = model.addNode( -1, BehaviorNodeKind::Selector );
+    SW_REQUIRE_TRUE( root.has_value() );
+    SW_EXPECT_EQUAL( count, 1u );
+    SW_EXPECT_TRUE( lastLabel == "Add Behavior Node" );
+
+    SW_REQUIRE_TRUE( model.parse( model.write() ).has_value() ); // 읽기는 편집이 아니다
+    SW_EXPECT_EQUAL( count, 1u );
+    SW_EXPECT_TRUE( model.setNodeName( model.getRootID(), "Renamed" ) );
+    SW_EXPECT_EQUAL( count, 2u );
+    SW_EXPECT_TRUE( lastLabel == "Edit Behavior Node" );
 }

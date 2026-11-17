@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -83,8 +84,12 @@ namespace sw
         /** @brief 초기 상태로 만듭니다. */
         ScreenTransitionManager();
 
-        /** @brief 범용 전환 시퀀스(FadeOut → onExecute 콜백 실행 → FadeIn)를 시작합니다. */
-        void beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration = 0.35f, float32 fadeInDuration = 0.35f );
+        /**
+         * @brief 범용 전환 시퀀스(FadeOut → onExecute 콜백 실행 → FadeIn)를 시작합니다.
+         * @details 어두워지는 중(`Phase::FadeOut`)이면 `AlreadyExists` 로 거절한다 — 받으면 아직 안 부른 앞 액션을 덮어 잃는다(G-13, 언리얼 `SeamlessTravel` 도 진행 중 새 이동을 거절한다).
+         *          액션 안(`Phase::Loading`, "다음 맵이 또 전환을 건다")과 밝아지는 중에는 받는다 — 앞 액션은 이미 불렸다.
+         */
+        [[nodiscard]] expected<void> beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration = 0.35f, float32 fadeInDuration = 0.35f );
 
         /** @brief 전환 FSM 과 페이드 알파를 갱신합니다. */
         void update( float32 deltaTime );

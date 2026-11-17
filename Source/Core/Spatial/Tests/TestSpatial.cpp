@@ -480,3 +480,12 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DUpdateWithinACellMovesTheBound )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFound.size() ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( grid.getActiveBucketCount() ) );
 }
+
+/** @brief [SpatialTest] 1 이하 셀 크기(0.5 m 격자)도 그대로 쓴다 — 예전에는 말없이 기본값(64)으로 바꿨다 */
+SW_TEST_CASE( SpatialTest, SpatialHashGridKeepsACellSizeAtOrBelowOne )
+{
+    const sw::SpatialHashGrid2D halfMeterGrid{ 0.5f };
+    SW_EXPECT_EQUAL( 0.5f, halfMeterGrid.getCellSize() );
+    const sw::SpatialHashGrid2D unitGrid{ 1.0f };
+    SW_EXPECT_EQUAL( 1.0f, unitGrid.getCellSize() );
+}

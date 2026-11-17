@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
@@ -263,12 +264,52 @@ namespace sw
         // 옮긴다. "실패 경로마다 잊지 말고 비우기" 를 사람이 지키는 대신 구조로 못 박는다.
         outImage = DDSImageData{};
 
-        DDSImageData image;
+        const expected<DDSHeaderInfo> header = parseHeader( pBuffer, bufferSize );
+        if ( header.has_value() == false )
+            return false;
+        const DDSHeaderInfo& info       = header.value();
+        const size_t         dataOffset = info._dataOffset;
+        DDSImageData         image;
+        image._width       = info._width;
+        image._height      = info._height;
+        image._depth       = info._depth;
+        image._mipCount    = info._mipCount;
+        image._layerCount  = info._layerCount;
+        image._dxgiFormat  = info._dxgiFormat;
+        image._bIsBgra     = info._bIsBgra;
+        image._bCompressed = info._bCompressed;
+
+        // 머리만 있고 픽셀이 없으면 실패다 — 성공은 곧 `isValid()` 여야 한다(빈 바이트로 텍스처를 만들지 않게).
+        if ( bufferSize <= dataOffset )
+        {
+            SW_LOG_ERROR_ID( "DDS.Truncated", "DDS has no pixel data after its header." );
+            return false;
+        }
+
+        // 픽셀 바이트는 형식 · 크기 · 밉 · 층으로 정해진다. 짧으면 업로드가 버퍼 밖을 읽고, 길면 형식이나 밉 수를 잘못 읽은 것이다(DirectXTex 도 크기를 셈해 견준다).
+        const size_t payloadSize   = bufferSize - dataOffset;
+        const uint64 expectedBytes = info.computePayloadBytes();
+        if ( payloadSize != expectedBytes )
+        {
+            SW_LOG_ERROR_ID( "DDS.PayloadSizeMismatch", "DDS pixel data is %# bytes but DXGI format %# at %# x %# x %#, %# mips, %# layers needs %# bytes.", payloadSize,
+                             image._dxgiFormat, image._width, image._height, image._depth, image._mipCount, image._layerCount, expectedBytes );
+            return false;
+        }
+        image._bytes.resize( payloadSize );
+        Memory::copy( image._bytes.data(), pBuffer + dataOffset, payloadSize );
+
+        outImage = std::move( image );
+        return true;
+    }
+
+    expected<DDSHeaderInfo> DDSLoader::parseHeader( const uint8* pBuffer, size_t bufferSize )
+    {
+        DDSHeaderInfo image;
 
         if ( pBuffer == nullptr || bufferSize < sizeof( uint32 ) + sizeof( DDSFileHeader ) )
         {
             SW_LOG_ERROR_ID( "DDS.Truncated", "DDS buffer is null or smaller than minimum header size." );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
         }
 
         const uint32 magic = *reinterpret_cast<const uint32*>( pBuffer );
@@ -278,25 +319,25 @@ namespace sw
                 "DDS.InvalidMagic", "Invalid DDS magic: 0x%# (expected 0x%#).",
                 Fmt( magic, Format( 8, Format::Padding::Zero ).hex() ),
                 Fmt( static_cast<uint32>( DDSFormat::kMagic ), Format( 8, Format::Padding::Zero ).hex() ) );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
         }
 
         const DDSFileHeader* pHeader = reinterpret_cast<const DDSFileHeader*>( pBuffer + sizeof( uint32 ) );
         if ( pHeader->_size != DDSFormat::kHeaderSize || pHeader->_pixelFormat._size != sizeof( DDSPixelFormatHeader ) )
         {
             SW_LOG_ERROR_ID( "DDS.CorruptHeader", "Corrupted DDS header size (%#, expected %#).", pHeader->_size, DDSFormat::kHeaderSize );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
         }
         if ( pHeader->_width == 0 || pHeader->_height == 0 )
         {
             SW_LOG_ERROR_ID( "DDS.CorruptHeader", "DDS header has an empty size (%# x %#).", pHeader->_width, pHeader->_height );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
         }
 
         image._width    = pHeader->_width;
         image._height   = pHeader->_height;
-        image._depth    = ( pHeader->_depth > 0 ) ? pHeader->_depth : 1;
-        image._mipCount = ( pHeader->_mipMapCount > 0 ) ? pHeader->_mipMapCount : 1;
+        image._depth    = ( pHeader->_depth > 0 ) ? pHeader->_depth : 1u;
+        image._mipCount = ( pHeader->_mipMapCount > 0 ) ? pHeader->_mipMapCount : 1u;
 
         size_t dataOffset = sizeof( uint32 ) + sizeof( DDSFileHeader );
 
@@ -305,14 +346,14 @@ namespace sw
             if ( bufferSize < dataOffset + sizeof( DDSHeaderDxt10 ) )
             {
                 SW_LOG_ERROR_ID( "DDS.Truncated", "DDS buffer truncated before DX10 header." );
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
             }
 
             const DDSHeaderDxt10* pDxt10 = reinterpret_cast<const DDSHeaderDxt10*>( pBuffer + dataOffset );
             if ( pDxt10->_arraySize == 0 )
             {
                 SW_LOG_ERROR_ID( "DDS.CorruptHeader", "DDS DX10 header has an array size of 0." );
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
             }
             image._dxgiFormat = pDxt10->_dxgiFormat;
             image._layerCount = pDxt10->_arraySize * ( ( pDxt10->_miscFlag & DDSFormat::kDx10MiscTextureCubeFlag ) != 0 ? 6u : 1u );
@@ -334,7 +375,7 @@ namespace sw
         const bool bBgraFormat = image._dxgiFormat == kDXGIFormatB8G8R8A8Unorm || image._dxgiFormat == kDXGIFormatB8G8R8X8Unorm ||
                                  image._dxgiFormat == kDXGIFormatB8G8R8A8UnormSRGB;
         if ( bBgraFormat )
-            image._bIsBgra = SW_TRUE;
+            image._bIsBgra = 1;
 
         // **못 알아본 포맷은 실패다.** `_dxgiFormat == 0` 인 채로 true 를 돌려주면 알아보지 못한 이미지가
         // "성공적으로 로드된 이미지" 로 흘러 나간다(`isValid()` 도 포맷을 본다).
@@ -345,46 +386,38 @@ namespace sw
                 Fmt( pHeader->_pixelFormat._flags, Format( 8, Format::Padding::Zero ).hex() ),
                 Fmt( pHeader->_pixelFormat._fourCC, Format( 8, Format::Padding::Zero ).hex() ),
                 pHeader->_pixelFormat._rgbBitCount );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
         }
         // 형식은 알지만 크기 표에 없으면(DX10 머리가 적은 아무 번호) 바이트 수를 셀 수 없다 — 읽지 않는다.
         const DDSFormatSize* pSize = DDSLoaderInternal::findFormatSize( image._dxgiFormat );
         if ( pSize == nullptr )
         {
             SW_LOG_ERROR_ID( "DDS.UnsupportedFormat", "Unsupported DXGI format %# in the DDS header — the loader has no block size for it.", image._dxgiFormat );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
         }
-        image._bCompressed = pSize->_blockWidth > 1 ? SW_TRUE : SW_FALSE;
+        image._bCompressed = pSize->_blockWidth > 1 ? 1 : 0;
+        image._formatSize  = *pSize;
 
         const uint32 fullMipCount = DDSLoaderInternal::computeFullMipCount( image._width, image._height, image._depth );
         if ( image._mipCount > fullMipCount )
         {
             SW_LOG_ERROR_ID( "DDS.CorruptHeader", "DDS header lists %# mips but a %# x %# x %# image has at most %#.", image._mipCount, image._width, image._height, image._depth,
                              fullMipCount );
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a readable DDS header" } );
         }
 
-        // 머리만 있고 픽셀이 없으면 실패다 — 성공은 곧 `isValid()` 여야 한다(빈 바이트로 텍스처를 만들지 않게).
-        if ( bufferSize <= dataOffset )
-        {
-            SW_LOG_ERROR_ID( "DDS.Truncated", "DDS has no pixel data after its header." );
-            return false;
-        }
+        image._dataOffset = static_cast<uint32>( dataOffset );
+        return image;
+    }
 
-        // 픽셀 바이트는 형식 · 크기 · 밉 · 층으로 정해진다. 짧으면 업로드가 버퍼 밖을 읽고, 길면 형식이나 밉 수를 잘못 읽은 것이다(DirectXTex 도 크기를 셈해 견준다).
-        const size_t payloadSize   = bufferSize - dataOffset;
-        const uint64 expectedBytes = DDSLoaderInternal::computeLayerBytes( *pSize, image._width, image._height, image._depth, image._mipCount ) * image._layerCount;
-        if ( payloadSize != expectedBytes )
-        {
-            SW_LOG_ERROR_ID( "DDS.PayloadSizeMismatch", "DDS pixel data is %# bytes but DXGI format %# at %# x %# x %#, %# mips, %# layers needs %# bytes.", payloadSize,
-                             image._dxgiFormat, image._width, image._height, image._depth, image._mipCount, image._layerCount, expectedBytes );
-            return false;
-        }
-        image._bytes.resize( payloadSize );
-        Memory::copy( image._bytes.data(), pBuffer + dataOffset, payloadSize );
+    uint64 DDSHeaderInfo::computeMipBytes( uint32 mip ) const
+    {
+        return DDSLoaderInternal::computeLayerBytes( _formatSize, MathUtil::max( _width >> mip, 1u ), MathUtil::max( _height >> mip, 1u ), MathUtil::max( _depth >> mip, 1u ), 1 );
+    }
 
-        outImage = std::move( image );
-        return true;
+    uint64 DDSHeaderInfo::computePayloadBytes() const
+    {
+        return DDSLoaderInternal::computeLayerBytes( _formatSize, _width, _height, _depth, _mipCount ) * _layerCount;
     }
 
     vector<DDSLegacyFourCC> DDSLoader::getLegacyFourCCTable()

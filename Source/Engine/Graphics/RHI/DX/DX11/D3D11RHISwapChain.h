@@ -34,8 +34,9 @@ namespace sw
         /**
          * @brief 디바이스와 함께 만들어진 스왑체인을 넘겨받습니다.
          * @param swapChainFlags 생성에 쓴 DXGI 플래그. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
+         * @return DXGI 창 연결(Alt+Enter)을 끄지 못하면 false 이고 넘겨받지 않습니다.
          */
-        void attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags );
+        [[nodiscard]] bool attach( IDXGISwapChain* pSwapChain, HWND hWnd, uint32 width, uint32 height, uint32 swapChainFlags );
 
         /** @brief @p source(메인 창)와 같은 서술로 @p hWnd 에 스왑체인을 만듭니다. 실패하면 이유를 남기고 false 입니다. */
         [[nodiscard]] bool createLike( ID3D11Device* pDevice, const D3D11RHISwapChain& source, HWND hWnd, uint32 width, uint32 height );

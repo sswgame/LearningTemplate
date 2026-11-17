@@ -167,6 +167,11 @@ namespace sw
          *          3D 내용을 실은 채 주 시점이 없으면 오류로 한 번 알립니다. 주 시점은 `RenderFramePacket::setMainView` 로 싣습니다.
          */
         [[nodiscard]] bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
+        /**
+         * @brief 그리지 않는 패킷(`FrameDrawMode::SimulationOnly`)을 받습니다 — 텍스처 업로드와 GPU 장면 사본 · 고친 구간만 받고, 뷰마다 시간 누적 기록을 다음에 그릴 때 버리게 표시한다.
+         * @details 기록 · 제출하지 않는다(렌더 스레드가 Present 도 하지 않는다). 그 밖의 패킷 값(라이트 · 캔버스 · 추가 뷰)은 다음 패킷이 통째로 다시 싣는다.
+         */
+        void executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet );
         // ------------------------------------------------------------------------------
         // 3) 조회
         // ------------------------------------------------------------------------------
@@ -349,11 +354,6 @@ namespace sw
         void applyViewTransparentOrder( FrameViewTarget& view );
         /** @brief 뷰 하나의 투명 순서 자원(순번 테이블, 슬롯 스트림)을 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransparentOrder( FrameViewTarget& view );
-        /**
-         * @brief 뷰의 이번 프레임 시간 누적 기록을 시작합니다 — 기록을 버릴지(`_bHistoryReset`: 이 풀로 처음 그리거나 컷)를 정하고 그렸다고 표시합니다.
-         * @details 셋업에서 뷰마다 프레임에 한 번 부른다(주 시점은 `updatePassConstants`, 추가 뷰는 `prepareExtraView`). 컬링(가림)이 기록 전에 돌므로 그리기 때(`applyViewProjection`)가 아니라 여기서 정한다.
-         */
-        void beginViewHistory( FrameViewTarget& view );
         /** @brief 트랜지언트 텍스처를 해제합니다. */
         void releaseTransientResources();
 
@@ -400,6 +400,10 @@ namespace sw
          * @details 데칼이 있는데 파이프라인에 Decal 패스가 없으면(포워드) 한 번 경고한다 — 덮을 G버퍼가 없다.
          */
         void prepareFrameDecals();
+        /** @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다(그리는 패킷 · 그리지 않는 패킷 공통). */
+        void updateTextureUploads( IRHIDevice* pDevice );
+        /** @brief GPU 장면(인스턴스 · 배치 표)을 올립니다 — 간접 인자 방식 · 모프 풀 · 정점 풀을 먼저 맞춘다(그리는 패킷 · 그리지 않는 패킷 공통). */
+        void uploadGPUScene( IRHIDevice* pDevice );
         /**
          * @brief 이번 프레임의 라이트 그리드 생산자입니다. 진단 정책(`RenderDiagnosticsPolicy::_lightGridProducer`, 기본 GPU)이 고르고, Shipping 은 GPU 로 고정입니다.
          * @details GPU 를 골랐는데 컴퓨트 PSO 가 없으면 오류를 한 번 남기고 그리드 없이 그린다 — 채우지 않은 그리드 버퍼를 셰이더가 읽게 두지 않는다.
@@ -475,6 +479,7 @@ namespace sw
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameRendererStatus _status;
+        RHIFormat           _passResourcesBackBufferFormat{ RHIFormat::Unknown }; ///< 출력 패스 PSO 를 만든 백버퍼 형식 — 바뀌면 `ensurePassResources` 가 빠진 변형을 더한다
         uint8               _bCallbacksBound            : 1;
         uint8               _bPassResourcesReady        : 1;
         uint8               _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)

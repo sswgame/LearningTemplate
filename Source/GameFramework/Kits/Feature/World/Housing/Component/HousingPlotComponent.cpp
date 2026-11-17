@@ -522,7 +522,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || pOwner->getPrimarySceneComponent() == nullptr )
             return false;
-        shared_ptr<const HousingPartCatalog> pCatalog = _pCatalog;
+        SharedAssetRef<HousingPartCatalog> pCatalog = _pCatalog;
         if ( pCatalog == nullptr && _partCatalog.empty() == false )
             pCatalog = _partCatalog.acquire();
         if ( pCatalog == nullptr )
@@ -716,7 +716,7 @@ namespace sw
             context.addError( "no part catalog" );
             return;
         }
-        const shared_ptr<const HousingPartCatalog> pCatalog = _partCatalog.acquire();
+        const shared_ptr<const HousingPartCatalog> pCatalog = _partCatalog.acquire().snapshot();
         if ( pCatalog == nullptr )
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;

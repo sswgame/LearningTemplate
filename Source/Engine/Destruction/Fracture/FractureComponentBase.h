@@ -11,7 +11,7 @@
  *          **예산과 정리(Chaos 의 Remove on Sleep).** 떨어진 그룹이 잠든 채 `sleepRemoveTime` 이 지나면 바디를 제거한다.
  *          `keepCollisionVolume` 이상인 큰 덩어리는 잠든 바디를 남겨 충돌을 유지한다.
  *          작은 파편(`smallDebrisVolume` 미만)은 `lifetime` 이 지난 뒤 `fadeTime` 동안 줄어들며 사라진다.
- *          떨어진 그룹의 바디가 `maxBodies`(그리고 전역 `gv_destructionMaxDebrisBodies`)를 넘으면 가장 오래된 작은 파편부터 사라지게 한다.
+ *          떨어진 그룹의 바디가 `maxBodies` 를 넘으면 이 오브젝트의 가장 오래된 작은 파편부터, 씬 상한(물리 설정 `_maxDebrisBodyCount`)을 넘으면 씬 전체에서 그렇게 고른 파편(`DebrisBudget`)이 사라진다.
  *          움직이는 바디도 없고 사라지는 중인 조각도 없으면, 현재 자세를 정적 메시 둘에 베이크하고 스킨드 메시를 숨긴다(프레임 비용 0).
  *          다시 피해를 받으면 스킨드 메시로 돌아간다.
  *
@@ -35,6 +35,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
@@ -43,6 +44,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
+#include "Engine/Physics/Scene/DebrisBudget.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -317,8 +319,10 @@ namespace sw
         void applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes );
         /** @brief 쌓인 자세 목표(`FractureNetworkSync`)를 그룹에 반영합니다. 처음 받은 그룹은 바디를 키네마틱으로 바꿉니다. */
         void applyDriveTargets();
-        /** @brief 씬의 파편 바디 수(예산)를 바꿉니다. */
-        void changeDebrisBodyCount( int32 delta );
+        /** @brief 그룹 @p groupID 의 떨어진 바디를 씬의 파편 장부(`DebrisBudget`)에 올립니다. @p bLarge 면 충돌을 남기는 큰 덩어리다(작은 것을 먼저 지운다). */
+        void addDebrisBody( uint32 groupID, bool bLarge );
+        /** @brief 그룹의 바디를 장부에서 내립니다(바디를 지울 때마다). */
+        void removeDebrisBody( uint32 groupID );
         /** @brief 받는 쪽이면 현재 상태의 (사건 수, 해시)를 최근 해시 테이블에 기록합니다. */
         void recordRecentStateHash();
 
@@ -354,7 +358,7 @@ namespace sw
 
         shared_ptr<const FractureAsset>        _asset;
         unique_ptr<IFracturePhysics>           _physics;
-        shared_ptr<const DestructionProfile>   _pProfile; ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
+        SharedAssetRef<DestructionProfile>     _pProfile; ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
         DestructionState                       _state;
         DestructionEventLog                    _eventLog;
         vector<FractureGroupPose>              _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다.
@@ -377,6 +381,7 @@ namespace sw
         float32                                _lastPoseMicroseconds;
         float32                                _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
         uint32                                 _nextSpawnOrder;
+        DebrisOwnerID                          _debrisOwner;     ///< 씬 파편 장부의 주인 번호(첫 바디를 올릴 때 받는다)
         uint32                                 _stillFrameCount; ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
         AssetReloadWatch<DestructionProfile>   _profileReload;   ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수
         uint8                                  _bStateReady;

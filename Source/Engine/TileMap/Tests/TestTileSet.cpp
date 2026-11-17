@@ -166,7 +166,7 @@ SW_TEST_CASE_EACH( TileSetTest, MalformedTileLayerIsALoadError, kArrBadTileLayer
 
 /**
  * @brief [TileSetTest] 같은 경로는 공유 캐시의 같은 객체이고, 다시 읽으면 쥔 쪽은 옛 타일셋을 지키며 다시 받은 쪽은 새 타일셋을 받는지 검증
- * @details 맵이 칸마다 지은 브러시 번호가 제자리에서 바뀐 브러시 목록과 어긋나지 않게 떼어 낸다(`Detach`) — 렌더러는 다시 읽은 횟수를 보고 새 객체로 다시 짓는다.
+ * @details 맵이 칸마다 지은 브러시 번호가 제자리에서 바뀐 브러시 목록과 어긋나지 않게 떼어 낸다(공유 캐시는 늘 떼어 낸다) — 렌더러는 다시 읽은 횟수를 보고 새 객체로 다시 짓는다.
  */
 SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
 {
@@ -174,8 +174,8 @@ SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
     const sw::string                    id = sw::test::ScopedScratchDomain::makeID( "ground.tileset.xml" ).str();
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "ground.tileset.xml" ), kTileSetXML ) );
 
-    const sw::shared_ptr<const sw::TileSetAsset> pHeld  = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
-    const sw::shared_ptr<const sw::TileSetAsset> pAgain = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
+    const sw::shared_ptr<const sw::TileSetAsset> pHeld  = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
+    const sw::shared_ptr<const sw::TileSetAsset> pAgain = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
     SW_EXPECT_NEAR( 1.0f, pHeld->getTileSize(), 0.0001f );
@@ -188,7 +188,7 @@ SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
     SW_REQUIRE_TRUE( sw::SharedAssetCache<sw::TileSetAsset>::reloadShared( id ) );
     SW_EXPECT_NEAR( 1.0f, pHeld->getTileSize(), 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
 
-    const sw::shared_ptr<const sw::TileSetAsset> pFresh = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
+    const sw::shared_ptr<const sw::TileSetAsset> pFresh = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
     SW_EXPECT_NEAR( 2.0f, pFresh->getTileSize(), 0.0001f );

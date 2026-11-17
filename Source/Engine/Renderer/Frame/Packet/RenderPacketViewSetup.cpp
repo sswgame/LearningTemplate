@@ -28,6 +28,7 @@ namespace sw
         : _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _lastHiddenViewCount{ 0 }
+        , _lastOverflowViewCount{ 0 }
         , _postProcessMaterials{}
         , _renderScaleAdjuster{ nullptr }
         , _bAutoRenderScaleActive{ SW_FALSE }
@@ -169,9 +170,11 @@ namespace sw
         {
             // 주 시점 가림 타일 사본 — 렌더러가 몇 프레임 늦게 되읽은 것이다(가림 컬링이 꺼졌으면 nullptr).
             const shared_ptr<const OcclusionTileSnapshot> pOcclusion = pFrameRenderer != nullptr ? pFrameRenderer->getOcclusionSnapshot() : nullptr;
-            _lastHiddenViewCount                                     = RenderViewCollector::collectExtraViews( *activeScene.getObjectManager(), mainView._pCamera, packet._viewProj, packet._cameraPos, mainView._outputWidth, mainView._outputHeight,
+            const RenderViewCollectResult                 result     = RenderViewCollector::collectExtraViews( *activeScene.getObjectManager(), mainView._pCamera, packet._viewProj, packet._cameraPos, mainView._outputWidth, mainView._outputHeight,
                                                                                                                mainView._autoRenderScale, _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, pOcclusion.get(),
                                                                                                                packet._listView );
+            _lastHiddenViewCount                                     = result._hiddenCount;
+            _lastOverflowViewCount                                   = result._overflowCount;
         }
         // 씬 뷰 — 주 출력이면 게임 화면의 일부(화면 사각형 뷰)를 빼고, 게임 뷰와 함께면 자기 RT 에 그리는 추가 뷰로 싣는다.
         if ( views.isSceneViewMain() )

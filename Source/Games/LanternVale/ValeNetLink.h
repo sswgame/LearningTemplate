@@ -154,6 +154,7 @@ namespace sw
 
         uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
         uint16          getMessageKindMask() const override { return 0; }
+        uint32          getWireVersion() const override { return kNoMessageTable; } // 연결 사건만 받는다 — 게임 메시지는 키트 표(RemoteCall · MMO)가 싣는다
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         void            onConnectionOpened( int32 connectionID ) override;
         void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;

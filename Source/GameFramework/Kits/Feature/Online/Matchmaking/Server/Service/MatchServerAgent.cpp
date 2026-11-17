@@ -15,7 +15,9 @@ namespace sw
     MatchServerAgent::MatchServerAgent()
         : _mutex{}
         , _mapAccountToExpiresMs{}
+        , _bReadRequested{ SW_FALSE }
         , _mapRecordToExpiresMs{}
+        , _mapAccountToSeat{}
         , _mapRequestToRecord{}
         , _pRouter{ nullptr }
         , _replyOwner{}
@@ -48,6 +50,7 @@ namespace sw
         _replyOwner.reset(); // 기다리던 답이 이 객체를 부르지 않게 지운다
         _mapRequestToRecord.clear();
         _mapRecordToExpiresMs.clear();
+        _mapAccountToSeat.clear();
         _listRequestID = 0;
         _pRouter       = nullptr;
     }
@@ -68,6 +71,19 @@ namespace sw
 
     void MatchServerAgent::acceptMatch( const MatchFormed& match, int64 expiresMs )
     {
+        for ( size_t team = 0; team < match._listTeam.size(); ++team )
+        {
+            for ( const MatchMember& member : match._listTeam[team]._listMember )
+            {
+                MatchSeat& seat     = _mapAccountToSeat[member._accountID]; // 백필 기록도 같은 경기 id · 팀 수를 싣는다
+                seat._modeID        = match._modeID;
+                seat._matchID       = match._matchID;
+                seat._expiresMs     = seat._expiresMs > expiresMs ? seat._expiresMs : expiresMs;
+                seat._team          = static_cast<int32>( team );
+                seat._teamCount     = static_cast<int32>( match._listTeam.size() );
+                seat._averageRating = match._averageRating;
+            }
+        }
         ScopedLock<mutex> lock{ _mutex };
         for ( const MatchFormedTeam& team : match._listTeam )
         {
@@ -79,11 +95,23 @@ namespace sw
         }
     }
 
+    bool MatchServerAgent::takeSeat( AccountID accountID, MatchSeat& outSeat )
+    {
+        const auto seatIt = _mapAccountToSeat.find( accountID );
+        if ( seatIt == _mapAccountToSeat.end() || seatIt->second._expiresMs <= _nowMs )
+            return false;
+        outSeat = std::move( seatIt->second );
+        _mapAccountToSeat.erase( seatIt );
+        return true;
+    }
+
     void MatchServerAgent::update( UnixMilliseconds nowMs )
     {
-        _nowMs = nowMs.count();
+        _nowMs              = nowMs.count();
+        bool bReadRequested = false;
         {
             ScopedLock<mutex> lock{ _mutex };
+            bReadRequested = _bReadRequested != SW_FALSE;
             for ( auto expectedIt = _mapAccountToExpiresMs.begin(); expectedIt != _mapAccountToExpiresMs.end(); )
             {
                 if ( _nowMs >= expectedIt->second )
@@ -92,6 +120,13 @@ namespace sw
                     ++expectedIt;
             }
         }
+        for ( auto seatIt = _mapAccountToSeat.begin(); seatIt != _mapAccountToSeat.end(); )
+        {
+            if ( _nowMs >= seatIt->second._expiresMs )
+                seatIt = _mapAccountToSeat.erase( seatIt );
+            else
+                ++seatIt;
+        }
         for ( auto recordIt = _mapRecordToExpiresMs.begin(); recordIt != _mapRecordToExpiresMs.end(); )
         {
             if ( _nowMs >= recordIt->second )
@@ -99,8 +134,12 @@ namespace sw
             else
                 ++recordIt;
         }
-        if ( _pRouter == nullptr || _listRequestID != 0 || _nowMs < _nextListReadMs )
+        if ( _pRouter == nullptr || _listRequestID != 0 || ( _nowMs < _nextListReadMs && bReadRequested == false ) )
             return;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _bReadRequested = SW_FALSE; // 이 읽기가 지금까지의 요청을 덮는다
+        }
         _nextListReadMs = _nowMs + kRecordRefreshMs;
         _listRequestID  = _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, kMaxRecordCount ),
                                             EphemeralStoreRouter::ReplyDelegate::create<&MatchServerAgent::onListReply>( this ), _replyOwner );
@@ -160,7 +199,10 @@ namespace sw
     bool MatchServerAgent::isAccepted( AccountID accountID ) const
     {
         ScopedLock<mutex> lock{ _mutex };
-        return _mapAccountToExpiresMs.find( accountID ) != _mapAccountToExpiresMs.end();
+        const bool        bAccepted = _mapAccountToExpiresMs.find( accountID ) != _mapAccountToExpiresMs.end();
+        if ( bAccepted == false )
+            _bReadRequested = SW_TRUE; // 한 틱에 목록 읽기 하나뿐이다(기다리는 읽기가 있으면 더 내지 않는다)
+        return bAccepted;
     }
 
     int32 MatchServerAgent::getExpectedCount() const

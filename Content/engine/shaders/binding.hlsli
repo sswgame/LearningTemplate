@@ -235,6 +235,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4x4 g_InvViewProj;
     // 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motion_blur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
     float4x4 g_PrevViewProj;
+    // 이번 프레임의 TAA 투영 지터 — xy 는 NDC 오프셋(g_ViewProj · g_InvViewProj 에만 들었다, g_PrevViewProj 에는 없다), zw 는 0. TAA 가 돌지 않는 뷰는 0 이다(C++ TemporalJitterSequence).
+    float4   g_TemporalJitter;
     float4x4 g_World;
     float4   g_KeyLightDirIntensity;
     float4   g_KeyLightColor;
@@ -741,13 +743,15 @@ static float3 Transform::computeWorldPositionFromDepth( float2 uv, float deviceD
 
 /**
  * @brief 깊이로 복원한 월드 위치를 지난 뷰-투영(g_PrevViewProj)으로 옮긴 화면 UV 입니다 — 카메라 움직임만의 재투영(하늘 · 속도 없는 픽셀).
+ * @details 이 픽셀의 깊이는 지터를 실은 래스터에서 왔고 지난 뷰-투영에는 지터가 없다. 지터(g_TemporalJitter.xy)를 더해 "UV - 화면 속도" 와 같은 자리를 낸다
+ *          (화면 속도는 이번 위치에서 지터를 뺀다 — material_shader_main.hlsli). 카메라가 서 있으면 이 UV 는 이 픽셀 그대로다.
  * @param outPreviousClipW 지난 클립 w — 0 이하면 지난 프레임에 카메라 뒤였다
  */
 static float2 Transform::computeCameraPreviousUv( float2 uv, float deviceDepth, out float outPreviousClipW )
 {
     const float3 worldPosition = Transform::computeWorldPositionFromDepth( uv, deviceDepth );
     const float4 previousClip  = mul( float4( worldPosition, 1.0f ), g_PrevViewProj );
-    const float2 previousNdc   = previousClip.xy / max( abs( previousClip.w ), 1e-5f ) * sign( previousClip.w );
+    const float2 previousNdc   = previousClip.xy / max( abs( previousClip.w ), 1e-5f ) * sign( previousClip.w ) + g_TemporalJitter.xy;
     outPreviousClipW           = previousClip.w;
     return previousNdc * float2( 0.5f, -0.5f ) + 0.5f;
 }

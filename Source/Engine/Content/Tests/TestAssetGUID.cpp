@@ -26,6 +26,21 @@ SW_TEST_CASE( AssetGUIDTest, TextRoundTripsAndCreateGivesDistinctValues )
     SW_EXPECT_EQUAL( first.computeHash(), parsedAgain->computeHash() );
 }
 
+/**
+ * @brief [AssetGUIDTest] 이름 기반 GUID 는 같은 이름(대소문자 무관)이면 같고, 이름이 다르면 다르며, 글 표기로 왕복한다 — 임포트 결과의 정체성이다
+ */
+SW_TEST_CASE( AssetGUIDTest, FromNameIsDeterministicAndDistinct )
+{
+    const AssetGUID first = AssetGUID::fromName( "common/models/kaykit/knight/knight.skeleton.xml" );
+    SW_EXPECT_TRUE( first == AssetGUID::fromName( "common/models/kaykit/knight/knight.skeleton.xml" ) );
+    SW_EXPECT_TRUE( first == AssetGUID::fromName( "Common/Models/KayKit/Knight/Knight.skeleton.xml" ) );
+    SW_EXPECT_TRUE( first != AssetGUID::fromName( "common/models/kaykit/knight/knight.animset.xml" ) );
+    SW_EXPECT_TRUE( first != AssetGUID::fromName( "common/models/kaykit/rogue/rogue.skeleton.xml" ) );
+    const optional<AssetGUID> parsed = AssetGUID::tryParse( first.toString() );
+    SW_REQUIRE_TRUE( parsed.has_value() );
+    SW_EXPECT_TRUE( *parsed == first );
+}
+
 SW_TEST_CASE( AssetGUIDTest, RejectsOtherSpellingsAndTheZeroValue )
 {
     SW_EXPECT_FALSE( AssetGUID::tryParse( "0123456789ABCDEF0011223344556677" ).has_value() );     // 대문자

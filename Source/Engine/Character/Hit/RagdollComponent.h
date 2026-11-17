@@ -27,6 +27,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -208,7 +209,7 @@ namespace sw
         RagdollAnimationBinding        _binding;
         Subscription                   _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         Subscription                   _boneRequirement;     ///< 바디 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requirePhysicsBones`)
-        shared_ptr<const PhysicsAsset> _asset;
+        SharedAssetRef<PhysicsAsset>   _asset;
         PhysicsRagdoll                 _ragdoll;
         vector<hashed_string>          _listBoneName;
         vector<float32>                _listBodyWeight;       ///< 바디마다 물리 섞임 가중치다.

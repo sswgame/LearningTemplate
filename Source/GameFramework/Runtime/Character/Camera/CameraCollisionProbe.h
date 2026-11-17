@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
+#include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -31,10 +32,11 @@ namespace sw
         virtual ~ICameraCollisionProbe()                                 = default;
 
         /**
-         * @brief 반지름 @p radius 의 구를 @p from 에서 @p to 로 쓸 때 처음 닿는 곳까지의 거리를 구합니다.
+         * @brief 반지름 @p radius 의 구를 @p from 에서 @p to 로 쓸 때 물리 레이어 @p listLayer(프리셋 `<Collision layers>`)에서 처음 닿는 곳까지의 거리를 구합니다.
+         * @details 레이어는 언리얼 SpringArm `ProbeChannel` 자리다 — 코드에 레이어 이름을 박지 않는다(감사 G-11). 상자 목록 질의는 레이어를 보지 않는다.
          * @return 닿으면 true 이고 @p outDistance 는 @p from 에서 닿은 중심까지의 거리이다. 안 닿으면 false 이다.
          */
-        virtual bool sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const = 0;
+        virtual bool sweepSphere( const float3& from, const float3& to, float32 radius, const vector<hashed_string>& listLayer, float32& outDistance ) const = 0;
     };
 } // namespace sw
 
@@ -53,7 +55,7 @@ namespace sw
         void clear() { _listBox.clear(); }
         bool isEmpty() const { return _listBox.empty(); }
 
-        bool sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const override;
+        bool sweepSphere( const float3& from, const float3& to, float32 radius, const vector<hashed_string>& listLayer, float32& outDistance ) const override;
 
     private:
         vector<AABB> _listBox;
@@ -65,7 +67,7 @@ namespace sw
     /**
      * @class SceneCameraProbe
      * @brief 씬의 3D 물리(구 쓸기)와 2D 물리(XY 평면의 원 쓸기, 2D 콜라이더 포함) 중 가까운 쪽을 고르는 질의입니다.
-     * @details 레이어 `Default` 와 `Static` 만 보고, 대상의 바디는 모두 건너뛴다(피벗이 대상 자신의 바디 안에 있다).
+     * @details 프리셋이 적은 레이어만 보고(물리 설정에 없는 이름은 오류를 한 번 알리고 뺀다), 대상의 바디는 모두 건너뛴다(피벗이 대상 자신의 바디 안에 있다).
      *          카메라 디렉터의 기본 암 충돌 질의이다. 강체 벽과 바닥(RigidBody)이 있는 씬도, 2D 콜라이더만 있는 씬도 모두 막는다.
      */
     class SW_GF_API SceneCameraProbe final : public ICameraCollisionProbe
@@ -73,7 +75,7 @@ namespace sw
     public:
         SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectID );
 
-        bool sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const override;
+        bool sweepSphere( const float3& from, const float3& to, float32 radius, const vector<hashed_string>& listLayer, float32& outDistance ) const override;
 
     private:
         const GameObjectManager& _manager;

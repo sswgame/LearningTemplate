@@ -234,22 +234,23 @@ namespace sw
             /** @brief 도구 지문을 구합니다(`ShaderCookStamp::getToolchainFingerprint` 의 본체). 상수와 엔진 define 만으로 정해져 OS · 파일과 무관하다. */
             static uint64 computeToolchainFingerprint()
             {
-                static const uint64 s_fingerprint = []
+                static const uint64 s_baseFingerprint = []
                 {
                     // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)은 Vulkan 요구 판이다.
                     constexpr uint32 kVulkanTargetVersion = constant::render::kVulkanRequiredMajor * 1000 + constant::render::kVulkanRequiredMinor;
-                    uint64           hash                 = ShaderCookStamp::makeToolchainFingerprint( CookCodeFingerprint::find( "ShaderCompiler" ), kVulkanTargetVersion, CookCodeFingerprint::getShaderCompilerVersion() );
-                    // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 요청 desc 로 키를 만드는 캐시도 표가 바뀌면 낡는다.
-                    vector<ShaderMacroDefine> listDefine;
-                    ShaderCompiler::appendEngineDefines( listDefine );
-                    for ( const ShaderMacroDefine& define : listDefine )
-                    {
-                        hash = HashUtil::computeStringHash64( define._name, false, hash );
-                        hash = HashUtil::computeStringHash64( define._value, false, hash );
-                    }
-                    return hash;
+                    return ShaderCookStamp::makeToolchainFingerprint( CookCodeFingerprint::find( "ShaderCompiler" ), kVulkanTargetVersion, CookCodeFingerprint::getShaderCompilerVersion() );
                 }();
-                return s_fingerprint;
+                // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 요청 desc 로 키를 만드는 캐시도 표가 바뀌면 낡는다. 렌더 정책 값(EngineConfig `_render`)은
+                // 설정을 다시 읽으면 바뀌므로 부를 때마다 섞는다(한 번 잡아 두면 새 값으로 컴파일한 바이트와 옛 값의 캐시가 같은 키를 쓴다).
+                uint64                    hash = s_baseFingerprint;
+                vector<ShaderMacroDefine> listDefine;
+                ShaderCompiler::appendEngineDefines( listDefine );
+                for ( const ShaderMacroDefine& define : listDefine )
+                {
+                    hash = HashUtil::computeStringHash64( define._name, false, hash );
+                    hash = HashUtil::computeStringHash64( define._value, false, hash );
+                }
+                return hash;
             }
 
             /** @brief 헤더 키를 만들 때 헤더가 어느 루트 아래인지 가르는 항목입니다(자기 도메인, 다른 include 루트 도메인). */
@@ -397,7 +398,7 @@ namespace sw
              *          것인가" 를 파일 시간이 아니라 내용으로 확인하기 위한 것이다. 파일 시간은
              *          `git clone` 이 모두 체크아웃 시각으로 덮어써서 비교 자체가 무의미해진다.
              *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 이고, 소스가 연 헤더마다 `<해시> <소스 경로>?<헤더 키>` 줄이 더 있다(`makeHeaderKey`).
-             *          해시는 CR 을 뺀 바이트로 계산한다(`ContentHash::computeFile`). 판정 쪽과 같은 함수다.
+             *          해시는 원시 바이트로 계산한다(`ContentHash::computeFile`). 판정 쪽과 같은 함수다.
              * @param resolver include 규칙 — 다른 include 루트 도메인의 자리
              * @param sourceShadersDir 소스 폴더(`<리소스 루트>/<domain>/shaders`) — 스탬프 키가 이 폴더 기준이다
              * @param binDirectory 매니페스트를 쓴 폴더(`<쿠킹 스테이징>/<domain>/shaders/bin/<rhi>`)

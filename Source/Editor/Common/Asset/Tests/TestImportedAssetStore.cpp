@@ -1,4 +1,4 @@
-// 임포트 결과 공유 — 합치기 판단(내용 + 설정), 값 차이만 적기, 슬롯 왕복, 안 쓰는 파일 지우기.
+// 임포트 결과 공유 — 합치기 판단(내용 + 설정), 값 차이만 적기, 슬롯 왕복, 안 쓰는 파일 지우기, 결과의 결정적 GUID 머리.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -11,6 +11,7 @@
 #include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
@@ -258,4 +259,56 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedTextureSourceUsesRuleInItsFolder )
     SW_EXPECT_FALSE( none._bMatched ); // 설정 파일이 없을 때 고른 기본 규칙
     SW_EXPECT_FALSE( none.hasError() );
     SW_EXPECT_TRUE( config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( "game/x", "gone", "aaaa", ".png" ) ).hasError() );
+}
+
+/**
+ * @brief [ImportedAssetStoreTest] 임포트 결과 글은 GUID 머리를 갖고, 같은 자리에 다시 임포트하면 같은 GUID, 다른 결과끼리는 다른 GUID 다
+ * @details 결과는 커밋하지 않아 무작위 GUID 를 둘 곳이 없다 — 머리가 없으면 에셋 색인이 결함(`MissingHeader`)으로 세고, 다시 임포트할 때마다 바뀌면 GUID 참조가 끊긴다.
+ */
+SW_TEST_CASE( ImportedAssetStoreTest, ImportedTextGetsStableDistinctIdentity )
+{
+    using Util = ImportedAssetStoreTestUtil;
+    const test::EditorScratchDomain domain;
+    const AssetPaths&               assetPaths = editor::getSubsystem<AssetPaths>();
+    const auto                      readGUID   = []( const string& path ) -> optional<AssetGUID>
+    {
+        string text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return nullopt;
+        const AssetGUIDHeader header = AssetGUIDHeader::read( text );
+        return header._state == AssetGUIDHeaderState::Found ? header._guid : nullopt;
+    };
+
+    // 모델 옆 결과 — 두 번 써도(다시 임포트) 같은 GUID 다.
+    const string skeletonPath = domain.makeDiskPath( "models/knight/knight.skeleton.xml" );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeTextWithIdentity( assetPaths, skeletonPath, R"(<Skeleton formatVersion="0"/>)" ) );
+    const optional<AssetGUID> first = readGUID( skeletonPath );
+    SW_REQUIRE_TRUE( first.has_value() );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeTextWithIdentity( assetPaths, skeletonPath, R"(<Skeleton formatVersion="0"/>)" ) );
+    const optional<AssetGUID> again = readGUID( skeletonPath );
+    SW_REQUIRE_TRUE( again.has_value() );
+    SW_EXPECT_TRUE( *first == *again );
+
+    // 슬롯 머티리얼과 공유 머티리얼 — 다른 결과라 GUID 가 다르고, 공유 파일은 같은 바이트라 다시 써도 한 벌이다.
+    ModelImportMaterial::SharedMaterialText shared;
+    SW_REQUIRE_TRUE( ModelImportMaterial::makeSharedMaterialText( Util::makeFull( "slot_a", "0.5", "common/textures/a.dds" ), Util::kTemplate, "engine/materials/pbrmaterial.material", shared ) );
+    const string           sharedPath = domain.makeDiskPath( "models/_shared/materials/" + shared._key + ".material" );
+    const optional<string> sharedText = ImportedAssetStore::makeTextWithIdentity( assetPaths, sharedPath, shared._text );
+    SW_REQUIRE_TRUE( sharedText.has_value() );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( sharedPath, sharedText->data(), sharedText->size() ) );
+    const optional<string> sharedTextAgain = ImportedAssetStore::makeTextWithIdentity( assetPaths, sharedPath, shared._text );
+    SW_REQUIRE_TRUE( sharedTextAgain.has_value() );
+    SW_EXPECT_TRUE( ImportedAssetStore::writeIfAbsent( sharedPath, sharedTextAgain->data(), sharedTextAgain->size() ) );
+    const string slotPath = domain.makeDiskPath( "models/knight/materials/slot_a.material" );
+    SW_REQUIRE_TRUE( ImportedAssetStore::writeTextWithIdentity( assetPaths, slotPath, ModelImportMaterial::makeSlotMaterialText( "slot_a", assetPaths.toAssetID( sharedPath ) ) ) );
+
+    const optional<AssetGUID> sharedGUID = readGUID( sharedPath );
+    const optional<AssetGUID> slotGUID   = readGUID( slotPath );
+    SW_REQUIRE_TRUE( sharedGUID.has_value() && slotGUID.has_value() );
+    SW_EXPECT_TRUE( *sharedGUID != *slotGUID );
+    SW_EXPECT_TRUE( *sharedGUID != *first );
+    SW_EXPECT_TRUE( *slotGUID != *first );
+
+    // 머리를 단 슬롯도 그대로 읽힌다(파서는 처리 지시를 문서에 올리지 않는다).
+    SW_EXPECT_EQUAL( assetPaths.toAssetID( sharedPath ), ModelImportMaterial::findSharedMaterial( domain.makeDiskPath( "models/knight" ), "slot_a" ) );
 }

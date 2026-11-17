@@ -50,6 +50,16 @@ namespace sw
         [[nodiscard]] uint32 takeDueSteps( float32 deltaSeconds );
         /** @brief 단계 하나(@p stepSeconds)만큼 방출기 시간을 옮기고 그 단계에 만들 입자를 돌려줍니다. 방출이 끝났으면 0 개입니다. */
         [[nodiscard]] VFXSpawnStep spawnStep( float32 stepSeconds );
+        /**
+         * @brief 입자 수명 창(단계 수)입니다 — 지금부터 이만큼 앞선 단계에 태어난 입자는 모두 죽었다(모듈은 수명을 `_lifetimeMax` 보다 늘리지 않는다).
+         */
+        [[nodiscard]] static uint64 getLifetimeWindowSteps( const VFXEmitterDef& def, float32 stepSeconds );
+        /**
+         * @brief @p doneStepCount 에서 @p targetStepCount 까지 밀린 단계가 수명 창보다 길면, 창 밖 단계를 입자 없이 지나가고 지나간 단계 수를 돌려줍니다.
+         * @details 지나간 단계에 태어난 입자는 목표 단계에 모두 죽었으므로 돌릴 까닭이 없다 — 일정(입자 번호 · 버스트 · 반복)만 `spawnStep` 을 부른 것과 같게 옮긴다.
+         *          GPU 방출기가 오래 밀린 재생을 다시 실을 때 처음부터 빨리감지 않게 한다(나이아가라의 warm-up 상한과 같은 자리).
+         */
+        [[nodiscard]] uint64 skipExpiredSteps( uint64 doneStepCount, uint64 targetStepCount, float32 stepSeconds );
         /** @brief 방출기 시간을 0 으로 되돌립니다(같은 데이터면 같은 일정이 다시 나온다). */
         void restart();
 

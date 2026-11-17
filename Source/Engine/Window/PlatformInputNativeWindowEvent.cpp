@@ -34,8 +34,10 @@ namespace sw
 
     bool NativeWindowEvent::isKeyboardInput() const
     {
+        if ( _message == kMessageTextInput )
+            return true; // 조합 · 확정 글(`CallbackInputWindow::queueTextInput`) — X11 · Wayland 짝과 같다
         const PlatformInputEvent* const pInput = findPlatformInput( *this );
-        return pInput != nullptr && ( pInput->_kind == PlatformInputKind::KeyDown || pInput->_kind == PlatformInputKind::KeyUp || pInput->_kind == PlatformInputKind::Text );
+        return pInput != nullptr && ( pInput->_kind == PlatformInputKind::KeyDown || pInput->_kind == PlatformInputKind::KeyUp );
     }
 
     bool NativeWindowEvent::isInputRelease() const

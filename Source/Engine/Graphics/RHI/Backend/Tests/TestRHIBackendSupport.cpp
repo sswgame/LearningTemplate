@@ -421,6 +421,48 @@ SW_TEST_CASE( RHITrackedStateTest, TransitionReportsBeforeOnce )
 }
 
 /**
+ * @brief [RHITrackedSubresourceStateTest] 밉 하나만 옮기면 그 서브리소스만 배리어를 내고, 나머지는 옛 상태로 남는다(R-10)
+ * @details 예전 추적은 자원 하나에 값 하나라 밉 하나를 렌더 타깃으로 쓰려면 전체를 옮겨야 했다(다른 밉을 읽는 다운샘플이 같은 자원에서 불가능).
+ */
+SW_TEST_CASE( RHITrackedSubresourceStateTest, PartialTransitionSplitsAndCollapses )
+{
+    RHITrackedSubresourceState<uint32> state;
+    state.initialize( 4u, 2u, 1u );
+    vector<uint32> listEmitted;
+    vector<uint32> listBefore;
+    const auto     record = [&listEmitted, &listBefore]( uint32 subresource, uint32 before )
+    {
+        listEmitted.push_back( subresource );
+        listBefore.push_back( before );
+    };
+
+    // 면 1 의 밉 2 하나 — 서브리소스 2 + 1 * 4 = 6.
+    SW_EXPECT_EQUAL( 1u, state.transitionTo( RHISubresourceRange::makeSingle( 2u, 1u ), 9u, record ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEmitted.size() );
+    SW_EXPECT_EQUAL( 6u, listEmitted[0] );
+    SW_EXPECT_EQUAL( 1u, listBefore[0] );
+    uint32 whole{ 0 };
+    SW_EXPECT_FALSE( state.tryLoadWhole( whole ) );
+    SW_EXPECT_EQUAL( 9u, state.loadSubresource( 6u ) );
+    SW_EXPECT_EQUAL( 1u, state.loadSubresource( 2u ) );
+
+    // 같은 서브리소스를 같은 상태로 — 낼 것이 없다.
+    SW_EXPECT_EQUAL( 0u, state.transitionTo( RHISubresourceRange::makeSingle( 2u, 1u ), 9u, record ) );
+
+    // 전체를 옮기면 남은 일곱 칸만 배리어를 내고 값 하나로 접힌다.
+    listEmitted.clear();
+    SW_EXPECT_EQUAL( 7u, state.transitionTo( RHISubresourceRange{}, 9u, record ) );
+    SW_EXPECT_TRUE( state.tryLoadWhole( whole ) );
+    SW_EXPECT_EQUAL( 9u, whole );
+
+    // 접힌 뒤 전체 전이는 배리어 하나(모든 서브리소스)다.
+    listEmitted.clear();
+    SW_EXPECT_EQUAL( 1u, state.transitionTo( RHISubresourceRange{}, 3u, record ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listEmitted.size() );
+    SW_EXPECT_EQUAL( RHITrackedSubresourceState<uint32>::kWholeResource, listEmitted[0] );
+}
+
+/**
  * @brief [RHITrackedStateTest] 여러 워커가 같은 자원을 같은 상태로 옮기면 배리어를 낼 쪽은 하나다(병렬 레벨 기록 — 락 없는 비교 교환)
  */
 SW_TEST_CASE( RHITrackedStateTest, ConcurrentTransitionHasOneWinner )

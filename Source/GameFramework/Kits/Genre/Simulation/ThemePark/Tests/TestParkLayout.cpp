@@ -8,6 +8,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
+
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -35,7 +37,7 @@ namespace
         /** @brief 평지 하나와 코스터 하나의 배치입니다. @p pEntryFee 가 입장료입니다. */
         static string makeLayout( const utf8* pEntryFee )
         {
-            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"" ) + pEntryFee + "\">" +
+            return string( "<ParkLayout gateX=\"20\" gateZ=\"-40\" startingCash=\"14000\" entryFee=\"" ) + pEntryFee + "\">" + kParkRules +
                    "<FlatRide id=\"cups\" name=\"Spinning Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" "
                    "x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/>"
                    "<Coaster layout=\"family\" x=\"90\" z=\"0\" heading=\"0\" color=\"0.3,0.75,0.4,1\" capacity=\"16\" loadTime=\"15\" cost=\"4000\"/>"
@@ -46,7 +48,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ParkLayoutTest] 같은 경로는 공유 캐시의 같은 객체이고, 로더가 같은 팩(배치 종류의 접미를 뗀 곳)의 코스터 레이아웃을 공유 캐시의 한 벌로 쥐며, 다시 읽기는 제자리인지 검증
+ * @brief [ParkLayoutTest] 같은 경로는 공유 캐시의 같은 객체이고, 로더가 같은 팩(배치 종류의 접미를 뗀 곳)의 코스터 레이아웃을 공유 캐시의 한 벌로 쥐며, 다시 읽기는 쥔 객체를 바꾸지 않고 다시 받은 쪽이 새 값을 보는지 검증
  * @details 팩은 테스트 도메인(`testproject/park`) 안에 있다 — 같은 팩의 종류 파일은 팩이 어디 있는지(`game/` 접두)가 아니라 두 종류의 접미 규칙으로 찾는다(`GamePackDataUtil::tryMakeSiblingKindPath`).
  */
 SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
@@ -58,17 +60,36 @@ SW_TEST_CASE( ParkLayoutTest, SharedCacheHoldsTheSamePackCoasterLayouts )
     const string layoutID  = test::ScopedScratchDomain::makeID( "park/data/rides.xml" ).str();
     const string coasterID = test::ScopedScratchDomain::makeID( "park/data/coasters.xml" ).str();
 
-    const shared_ptr<const ParkLayout> pHeld  = SharedAssetCache<ParkLayout>::acquire( layoutID );
-    const shared_ptr<const ParkLayout> pAgain = SharedAssetCache<ParkLayout>::acquire( layoutID );
+    const shared_ptr<const ParkLayout> pHeld  = SharedAssetCache<ParkLayout>::acquire( layoutID ).snapshot();
+    const shared_ptr<const ParkLayout> pAgain = SharedAssetCache<ParkLayout>::acquire( layoutID ).snapshot();
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
     SW_EXPECT_EQUAL( 5, pHeld->getEntryFee() );
     SW_EXPECT_EQUAL( size_t{ 2 }, pHeld->getPlacements().size() );
     // 배치가 쥔 코스터 레이아웃은 같은 팩 파일의 공유 캐시 한 벌이다(게임 모드가 경로를 따로 적지 않는다).
     SW_REQUIRE_TRUE( pHeld->getCoasterLayouts() != nullptr );
-    SW_EXPECT_TRUE( pHeld->getCoasterLayouts().get() == SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterID ).get() );
+    SW_EXPECT_TRUE( pHeld->getCoasterLayouts().get() == SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterID ).snapshot().get() );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "park/data/rides.xml" ), Util::makeLayout( "9" ) ) );
     SW_REQUIRE_TRUE( SharedAssetCache<ParkLayout>::reloadShared( layoutID ) );
-    SW_EXPECT_EQUAL( 9, pHeld->getEntryFee() ); // 제자리 다시 읽기 — 쥔 객체가 새 값을 본다
+    SW_EXPECT_EQUAL( 5, pHeld->getEntryFee() ); // 쥔 객체는 바뀌지 않는다(A-7)
+    const shared_ptr<const ParkLayout> pFresh = SharedAssetCache<ParkLayout>::acquire( layoutID ).snapshot();
+    SW_REQUIRE_TRUE( pFresh != nullptr );
+    SW_EXPECT_EQUAL( 9, pFresh->getEntryFee() ); // 다시 받은 쪽이 새 값을 본다
+
+    // 배치가 멤버로 쥔 코스터 레이아웃(`SharedAssetRef`)은 다시 받지 않아도 다시 읽힌 판을 본다 — 스냅숏은 옛 판 그대로다.
+    const shared_ptr<const CoasterLayoutCatalog> pCoasterSnapshot = SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterID ).snapshot();
+    SW_REQUIRE_TRUE( SharedAssetCache<CoasterLayoutCatalog>::reloadShared( coasterID ) );
+    SW_EXPECT_TRUE( pFresh->getCoasterLayouts().get() == SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterID ).snapshot().get() );
+    SW_EXPECT_TRUE( pFresh->getCoasterLayouts().get() != pCoasterSnapshot.get() );
+}
+
+/** @brief [ParkLayoutTest] 공원 규칙(`<Rules>`) 없는 배치는 읽히지 않는다 — 공원이 C++ 기본값으로 열리지 않는다(감사 K-4). 규칙 줄의 통화가 공원 돈의 통화다 */
+SW_TEST_CASE( ParkLayoutTest, LayoutWithoutRulesIsRefused )
+{
+    SW_EXPECT_LOG( "ParkLayout.RulesMissing" );
+    sw::CoasterLayoutCatalog layouts;
+    sw::ParkLayout           bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( "<ParkLayout gateX=\"0\" gateZ=\"0\" startingCash=\"1000\" entryFee=\"0\"><FlatRide id=\"cups\" name=\"Cups\" excitement=\"2\" intensity=\"1\" nausea=\"1\" cycleTime=\"40\" capacity=\"16\" price=\"3\" runningCost=\"3\" cost=\"2000\" x=\"45\" z=\"0\" entranceX=\"45\" entranceZ=\"-10\" shape=\"Cylinder\" sizeX=\"6\" sizeY=\"2\" sizeZ=\"6\" color=\"1,1,1,1\"/></ParkLayout>", layouts, "ParkLayoutTest" ) );
+    SW_EXPECT_TRUE( sw::ThemeParkTestRules::make()._currency == sw::hashed_string( "Cash" ) );
 }

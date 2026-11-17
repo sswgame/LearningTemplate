@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -61,7 +62,7 @@ namespace sw
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 버퍼의 이번 프레임 슬롯에 씁니다. `IRHIResourceFactory::updateConstantBuffer` 와 같은 일이며, 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다. */
-        void                     updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        void                     updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void                     bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void                     bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         void                     bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
@@ -94,13 +95,6 @@ namespace sw
 
     private:
         /**
-         * @brief `blitTexture` 의 복사 대상을 한 상태에서 다른 상태로 전이합니다.
-         * @details 스왑체인 백버퍼(`dst == 0`)의 상태는 스왑체인 객체만 바꾼다. 여기서 배리어를 따로 쏘고 상태를 직접 대입하면
-         *          그 두 벌이 어긋날 수 있다. 오프스크린만 자기 레코드를 갱신한다.
-         */
-        void transitionBlitDst( RHITextureHandle dst, ID3D12Resource* pDstResource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter );
-
-        /**
          * @brief 등록된 bindless 인덱스의 버퍼 GPU 주소입니다. 루트 CBV 에 그대로 바인딩합니다(t 와 u 는 슬롯 테이블이라 이 경로를 쓰지 않습니다).
          * @details 락 없이 고정 크기 읽기 표를 봅니다(`D3D12RHIDevice::BindlessReadSlot`).
          * @param bUAV true 면 UAV 레지스트리, false 면 SRV/CBV 레지스트리입니다.
@@ -128,12 +122,15 @@ namespace sw
         void requireComputePipelineForDispatch() const;
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
         [[nodiscard]] bool bindIndexBufferForDraw();
-        void               transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
+        /** @brief @p texture 의 @p range 를 @p newState 로 옮기는 배리어를 바로 냅니다. */
+        void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState, const RHISubresourceRange& range = RHISubresourceRange{} );
         /**
-         * @brief @p texture 를 @p requestedState 로 옮길 배리어를 @p outBarrier 에 채웁니다. 추적 상태의 비교 교환에서 이겼을 때만 true 다 — 그 배리어는 부르는 쪽이 낸다.
-         * @details 오프스크린 텍스처(RTV · DSV 를 가진)만 상태를 추적한다. 나머지는 COMMON 에서 암묵 승격되므로 false 다.
+         * @brief @p texture 의 @p range 를 @p requestedState 로 옮길 배리어를 `_listBarrierScratch` 에 더합니다(서브리소스마다일 수 있다 — R-10). 더한 수를 돌려준다.
+         * @details 오프스크린 텍스처(RTV · DSV 를 가진)만 상태를 추적한다. 나머지는 COMMON 에서 암묵 승격되므로 0 이다. 같은 상태로 먼저 옮긴 워커가 있으면 그 서브리소스는 더하지 않는다.
          */
-        [[nodiscard]] bool makeTextureBarrier( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState, D3D12_RESOURCE_BARRIER& outBarrier );
+        uint32 appendTextureBarriers( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState, const RHISubresourceRange& range );
+        /** @brief 모은 배리어를 한 번에 내고 비웁니다. */
+        void flushBarrierScratch();
         /** @brief 묶음 원소 하나가 옮길 D3D12 상태입니다. 그 상태로 옮길 텍스처가 아니면(추적하지 않거나 첨부가 없으면) false 다. */
         [[nodiscard]] bool findTextureTransitionState( const RHITextureTransition& transition, D3D12_RESOURCE_STATES& outState ) const;
         /**
@@ -144,10 +141,11 @@ namespace sw
         D3D12_RESOURCE_STATES toQueueState( D3D12_RESOURCE_STATES state ) const;
 
     private:
-        D3D12RHIDevice*            _pDevice;
-        ID3D12GraphicsCommandList* _pCmdList;
-        D3D12RecordingState*       _pState;
-        uint8                      _bComputeQueueList; ///< COMPUTE 리스트에 기록하는가(setComputeQueueList)
+        D3D12RHIDevice*                _pDevice;
+        ID3D12GraphicsCommandList*     _pCmdList;
+        D3D12RecordingState*           _pState;
+        uint8                          _bComputeQueueList;  ///< COMPUTE 리스트에 기록하는가(setComputeQueueList)
+        vector<D3D12_RESOURCE_BARRIER> _listBarrierScratch; ///< 텍스처 전이 배리어를 모으는 임시 목록(이 리스트의 기록 스레드만 쓴다)
     };
 } // namespace sw
 #endif

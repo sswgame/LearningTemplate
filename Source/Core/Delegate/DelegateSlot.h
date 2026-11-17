@@ -25,7 +25,8 @@ namespace sw
     public:
         using delegate_type = TDelegate;
 
-        DelegateSlot()                                 = default;
+        DelegateSlot() = default;
+        ~DelegateSlot() override { closeSubscriptions(); }
         DelegateSlot( const DelegateSlot& )            = delete;
         DelegateSlot& operator=( const DelegateSlot& ) = delete;
         /** @brief 칸과 그 구독을 함께 옮깁니다(구독이 새 자리를 가리킨다). 칸을 담은 객체가 옮겨질 때 쓴다. */

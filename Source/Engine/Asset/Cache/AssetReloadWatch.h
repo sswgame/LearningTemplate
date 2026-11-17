@@ -4,7 +4,7 @@
  * @details 에셋 종류가 칸의 형식에 들어 있어 다른 종류의 횟수와 대조할 수 없고, 대조와 갱신이 한 곳이라 갱신을 빠뜨려 매 틱 다시 짓는 일이 없습니다.
  *          캐시의 횟수(`SharedAssetCache::getReloadCount`)는 비공개이고 이 형식만 읽는다(friend) — 손 대조 칸(`_seen…ReloadCount`)을 형식으로 막는다.
  *          여러 캐시의 판을 굽기 키에 넣는 자리도 감시를 종류마다 두고 본 값(`getSeenCount`)을 섞는다. 저장 구분(`SaveReloadGuard`)은 이 형식의 일이 아닙니다.
- *          언리얼 `FCoreUObjectDelegates::OnObjectPropertyChanged` · Godot `Resource::changed` 는 구독이고 여기는 틱에서 묻는 쪽이다 — 쥔 객체를 제자리에서 바꾸는 캐시라 틱 밖 콜백을 두지 않는다(기억에 의존).
+ *          언리얼 `FCoreUObjectDelegates::OnObjectPropertyChanged` · Godot `Resource::changed` 는 구독이고 여기는 틱에서 묻는 쪽이다 — 다시 읽기는 표에서 떼어 낼 뿐 쥔 객체를 바꾸지 않으므로 쥔 쪽이 틱에서 물어 다시 받으면 된다(기억에 의존).
  */
 #pragma once
 #include "Core/Foundation/Types.h"

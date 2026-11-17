@@ -49,7 +49,18 @@ namespace sw
         const string path = makeSlotPath( slot );
         if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             return LocalStoreResult::IOError;
-        return FileUtil::writeFile( path, envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+        // 지금 파일을 한 세대 남긴다(언리얼 SaveGame 백업 슬롯 자리). 못 남기면 쓰지 않는다 — 다음 쓰기가 덮어 둘 다 잃는 일을 막는다.
+        if ( FileUtil::isRegularFile( path ) && FileUtil::copyFile( path, path + kPreviousGenerationSuffix ) == false )
+            return LocalStoreResult::IOError;
+        return FileUtil::writeFileDurable( path, envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
+    }
+
+    LocalStoreResult FileLocalSlotStorage::readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
+    {
+        const string path = makeSlotPath( slot ) + kPreviousGenerationSuffix;
+        if ( FileUtil::isRegularFile( path ) == false )
+            return LocalStoreResult::NotFound;
+        return FileUtil::readFile( path, outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::eraseSlot( const string& slot )
@@ -57,6 +68,10 @@ namespace sw
         const string path = makeSlotPath( slot );
         if ( FileUtil::isRegularFile( path ) == false )
             return LocalStoreResult::NotFound;
+        // 직전 세대도 지운다 — 남기면 지운 슬롯이 다음 쓰기의 깨진 읽기에서 되살아난다
+        const string previousPath = path + kPreviousGenerationSuffix;
+        if ( FileUtil::isRegularFile( previousPath ) && FileUtil::removeFile( previousPath ) == false )
+            return LocalStoreResult::IOError;
         return FileUtil::removeFile( path ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 

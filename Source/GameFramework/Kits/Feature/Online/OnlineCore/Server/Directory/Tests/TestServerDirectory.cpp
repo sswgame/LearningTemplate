@@ -17,7 +17,8 @@
 
 namespace
 {
-    constexpr int64 kNowMs = 1700000000000ll;
+    constexpr int64 kNowMs             = 1700000000000ll;
+    constexpr int64 kSeatReservationMs = 30000; ///< 서버 사이 좌석 예약 창(서버 설정 값)
 
     sw::ServerStatus makeStatus( uint64 serverID, sw::string_view region, int32 load, int32 capacity )
     {
@@ -346,7 +347,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
     rig.pollAll();
 
     sw::ServerRegistryReader reader;
-    reader.initialize( &rig._router, "game", 2000 );
+    reader.initialize( &rig._router, "game", 2000, kSeatReservationMs );
     reader.update( now );
     SW_EXPECT_TRUE( reader.isRefreshing() );
     rig.pollAll();
@@ -374,7 +375,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
     SW_EXPECT_EQUAL( uint64( 2 ), reader.getRefreshCount() );
     SW_REQUIRE_EQUAL( size_t( 1 ), reader.getSnapshot().size() );
     SW_EXPECT_EQUAL( uint64( 1 ), reader.getSnapshot()[0]._descriptor._serverID );
-    SW_EXPECT_EQUAL( 0, reader.getSnapshot()[0]._load ); // 새 스냅숏은 고른 인원을 잊는다(기록의 부하가 원본이다)
+    SW_EXPECT_EQUAL( 2, reader.getSnapshot()[0]._load ); // 새 스냅숏은 기록의 부하에 서버 사이의 좌석 예약(1 에 고른 둘)을 더한다
 }
 
 /**
@@ -397,7 +398,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderDropsExpiredServerAndCleansIndex )
     rig.pollAll();
 
     sw::ServerRegistryReader reader;
-    reader.initialize( &rig._router, "game", 2000 );
+    reader.initialize( &rig._router, "game", 2000, kSeatReservationMs );
     reader.update( now + sw::ServerRegistration::kRecordTTLMs );
     rig.pollAll();
     SW_REQUIRE_EQUAL( size_t( 1 ), reader.getSnapshot().size() );
@@ -426,7 +427,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderShutdownCancelsPendingReads )
 
     {
         sw::ServerRegistryReader reader;
-        reader.initialize( &rig._router, "game", 2000 );
+        reader.initialize( &rig._router, "game", 2000, kSeatReservationMs );
         reader.update( now );
         SW_EXPECT_EQUAL( 1, rig._router.getPendingCount() );
         reader.shutdown();
@@ -438,4 +439,62 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderShutdownCancelsPendingReads )
     }
     rig.pollAll(); // 지워진 읽는 쪽의 답이 와도 부르지 않는다
     SW_EXPECT_EQUAL( 0, rig._router.getPendingCount() );
+}
+
+/**
+ * @brief [ServerDirectoryTest] 좌석 예약은 배정하는 서버 사이에 나눈다 — A 가 고른 좌석을 B 의 다음 읽기가 보아 넘치게 채우지 않는다. 게임 서버가 확정하면 빠지고, 확정이 없으면 창이 끝나 풀린다(감사 O-18)
+ */
+SW_TEST_CASE( ServerDirectoryTest, SeatReservationsAreSharedConfirmedAndExpire )
+{
+    DirectoryFixture           rig;
+    const sw::UnixMilliseconds now{ kNowMs };
+    sw::ServerRegistration     game;
+    SW_REQUIRE_TRUE( game.initialize( &rig._router, makeStatus( 1, "kr", 0, 2 )._descriptor ) );
+    game.setState( sw::ServerState::Open );
+    game.update( now );
+    rig.pollAll();
+
+    sw::ServerRegistryReader readerA; // 배정하는 서버 둘
+    sw::ServerRegistryReader readerB;
+    readerA.initialize( &rig._router, "game", 2000, kSeatReservationMs );
+    readerB.initialize( &rig._router, "game", 2000, kSeatReservationMs );
+    readerA.update( now );
+    rig.pollAll();
+    sw::ServerSelectionQuery query = makeQuery( "kr" );
+    query._seatCount               = 2;
+    sw::ServerStatus picked;
+    SW_REQUIRE_TRUE( readerA.pickServer( query, now, picked ) ); // 정원 2 를 모두 잡았다
+    rig.pollAll();
+
+    readerB.update( now );
+    rig.pollAll();
+    SW_EXPECT_FALSE( readerB.pickServer( query, now, picked ) ); // 예약이 서버 사이에 보인다 — 예전에는 B 도 같은 서버를 골랐다
+
+    game.setLoad( 2 ); // 들어와 부하로 잡혔다
+    game.update( now );
+    game.confirmSeats( 2, kSeatReservationMs );
+    rig.pollAll();
+    readerB.requestRefresh();
+    readerB.update( now );
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t( 1 ), readerB.getSnapshot().size() );
+    SW_EXPECT_EQUAL( 2, readerB.getSnapshot()[0]._load ); // 부하와 예약을 두 번 세지 않는다
+
+    game.setLoad( 0 ); // 다시 비었다 — 이번에는 확정하지 않는 예약
+    game.update( now );
+    rig.pollAll();
+    readerB.requestRefresh();
+    readerB.update( now );
+    rig.pollAll();
+    SW_REQUIRE_TRUE( readerB.pickServer( query, now, picked ) );
+    rig.pollAll();
+    readerA.requestRefresh();
+    readerA.update( now );
+    rig.pollAll();
+    SW_EXPECT_FALSE( readerA.pickServer( query, now, picked ) );
+    rig._clock.advanceMilliseconds( kSeatReservationMs ); // 예약 창이 끝났다 — 확정하지 않은 좌석이 풀린다
+    readerA.requestRefresh();
+    readerA.update( now );
+    rig.pollAll();
+    SW_EXPECT_TRUE( readerA.pickServer( query, now, picked ) );
 }

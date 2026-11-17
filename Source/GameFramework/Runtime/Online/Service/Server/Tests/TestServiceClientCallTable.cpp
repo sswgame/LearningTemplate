@@ -150,7 +150,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
     kit->_pOwner                                          = &kit;
     kit->_pResponseCount                                  = &responseCount;
     SW_REQUIRE_TRUE( client.registerClientService( kit.get() ) );
-    OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextLoopback() };
+    OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextLoopback(), OnlineRetryPolicy::none() };
     settings._serverAddress                    = NetAddress::makeLoopback( 1 ); // 평문은 루프백에만 맺는다 — 서버는 없다
     settings._transportSettings._ioThreadCount = 0;                             // 루프백 전송은 IO 스레드를 두지 않는다
     {
@@ -323,7 +323,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, PlaintextToANonLoopbackAddressIsRefuse
     LoopbackStreamNetwork        network( 5u );
     unique_ptr<IStreamTransport> transport = network.createTransport();
     OnlineServiceClient          client;
-    OnlineServiceClientConfig    settings{ OnlineClientSecurity::plaintextLoopback() };
+    OnlineServiceClientConfig    settings{ OnlineClientSecurity::plaintextLoopback(), OnlineRetryPolicy::none() };
     SW_REQUIRE_TRUE( NetAddress::parse( "203.0.113.7", 7780, settings._serverAddress ) ); // 문서용 주소(TEST-NET-3)
     settings._transportSettings._ioThreadCount = 0;
     const auto failed1                         = client.initialize( transport.get(), settings );

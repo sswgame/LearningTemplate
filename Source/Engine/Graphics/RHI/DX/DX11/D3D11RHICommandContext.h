@@ -45,7 +45,7 @@ namespace sw
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다. Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 다른 스레드의 팩토리 갱신과 같은 버퍼를 다툴 수 있어 `D3D11ImmediateContext::lock()` 으로 묶습니다. */
-        void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;

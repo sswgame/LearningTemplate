@@ -14,6 +14,13 @@ namespace sw
     {
     }
 
+    LocalStoreResult MemoryLocalDatabase::readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
+    {
+        (void)slot;
+        (void)outEnvelopeBytes;
+        return LocalStoreResult::NotFound;
+    }
+
     LocalStoreResult MemoryLocalDatabase::readSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
     {
         ScopedLock<mutex> lock{ _mutex };

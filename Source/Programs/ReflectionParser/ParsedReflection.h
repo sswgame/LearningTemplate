@@ -338,8 +338,10 @@ namespace sw
         string                       _category;
         string                       _displayName;
         string                       _tooltip;
-        string                       _editorPreview; ///< `EditorPreview = "..."` — 에디터 뷰포트 미리보기가 이 메서드를 찾는 종류
+        string                       _editorPreview;         ///< `EditorPreview = "..."` — 에디터 뷰포트 미리보기가 이 메서드를 찾는 종류
+        string                       _maxCallsPerSecondName; ///< `MaxCallsPerSecond = kName` — 상수 이름이면 생성 코드가 그 이름을 그대로 쓴다(못 찾으면 컴파일 오류)
         vector<pair<string, string>> _listCustomMeta;
+        uint32                       _maxCallsPerSecond; ///< `MaxCallsPerSecond = 5` — 원격 호출의 함수별 초당 상한. 0 이면 적지 않았다
         FunctionNetRole              _netRole;
         uint8                        _bReliable     : 1;
         uint8                        _bValidate     : 1;
@@ -359,7 +361,9 @@ namespace sw
             , _displayName{}
             , _tooltip{}
             , _editorPreview{}
+            , _maxCallsPerSecondName{}
             , _listCustomMeta{}
+            , _maxCallsPerSecond{ 0 }
             , _netRole{ FunctionNetRole::Local }
             , _bReliable{ SW_FALSE }
             , _bValidate{ SW_FALSE }

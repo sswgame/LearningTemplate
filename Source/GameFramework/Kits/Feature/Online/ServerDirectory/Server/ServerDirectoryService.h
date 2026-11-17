@@ -43,6 +43,7 @@ namespace sw
         vector<string> _listServerKind{};                ///< 배정과 목록을 받는 서버 종류이다(예: "game")
         int64          _reloadPeriodMs{ 30000 };         ///< 점검과 공지를 다시 읽는 주기이다
         int64          _registryRefreshPeriodMs{ 2000 }; ///< 서버 목록을 다시 읽는 주기이다
+        int64          _seatReservationTTLMs{ 0 };       ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`)
         int64          _staleMs{ 15000 };                ///< 하트비트가 이보다 오래된 서버는 고르지 않는다
     };
 } // namespace sw

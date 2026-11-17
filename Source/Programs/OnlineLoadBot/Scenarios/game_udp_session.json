@@ -1,5 +1,6 @@
 {
     "_name": "game_udp_session",
+    "_pacing": "closed",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "game_connect" },

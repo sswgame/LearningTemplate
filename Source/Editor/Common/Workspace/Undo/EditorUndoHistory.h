@@ -20,6 +20,19 @@ namespace sw::editor
     class SW_EDITOR_API EditorUndoHistory final : public EditorSubsystem
     {
     public:
+        /** @brief 메인 스택을 @p limit 한도로 만듭니다(`readConfiguredLimit`). */
+        explicit EditorUndoHistory( const UndoBufferLimit& limit )
+            : _stack{ limit }
+            , _sceneInvalidatedSubscription{}
+        {
+        }
+
+        /**
+         * @brief 설정(`EditorToolDefaults` — editortooldefaults.json 의 `_undoMaxCommandCount` · `_undoBufferMegabytes`)이 정한 스택 하나의 한도입니다.
+         * @details 메인 스택과 문서 창 스택(`EditorDocumentPanel`)이 같은 값을 쓴다. 도구 기본값은 에디터 컨텍스트가 서기 전에 걸린다 — 없으면 `getSubsystem` 이 멈춘다(대신 쓸 값이 없다).
+         */
+        [[nodiscard]] static UndoBufferLimit readConfiguredLimit();
+
         static constexpr const utf8* kSubsystemName = "EditorUndoHistory";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
         SubsystemInitResult          initializeSubsystem() override;

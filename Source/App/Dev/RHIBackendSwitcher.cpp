@@ -4,6 +4,7 @@
 
 #include "App/EditorModuleManager.h"
 
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -45,6 +46,7 @@ namespace sw
 
         struct RHIBackendSwitcherInternal
         {
+#if SW_WITH_DYNAMIC_MODULES
             /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
             [[nodiscard]] static expected<void> prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
             {
@@ -97,6 +99,7 @@ namespace sw
                 SW_LOG_INFO_ID( "App.Requested", "%# -> requested %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
                 return true;
             }
+#endif // SW_WITH_DYNAMIC_MODULES — 정적 모듈 구성에는 `SwapBackend` 단계가 없다(백엔드 하나)
 
             /**
              * @brief 개발 명령 `rhi.removeDevice [driverWaitMs]` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 엔진이 Config 정책(`EngineConfig::_deviceLostPolicy`)대로 끝나는지 — 멈추지 않고 정한 종료 코드로 — 보는 데 쓴다.
@@ -234,6 +237,7 @@ namespace sw
         return pRHI != nullptr && pRHI->hasPendingBackendChange();
     }
 
+#if SW_WITH_DYNAMIC_MODULES
     bool RHIBackendSwitcher::requestSwap( RHIBackend backend )
     {
         GlobalVariableInfo* pBackendVariable = findRHIBackendSwitcherVariable();
@@ -243,6 +247,7 @@ namespace sw
         pBackendVariable->setValueAsInt( static_cast<int32>( backend ) );
         return true;
     }
+#endif
 
     void RHIBackendSwitcher::initialize( Engine* pEngine, EditorModuleManager* pGameModuleManager, bool bEnableEditor )
     {
@@ -313,7 +318,19 @@ namespace sw
         _bHandlingChange = SW_TRUE;
 
         const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
+#if SW_WITH_DYNAMIC_MODULES
         pRHI->schedulePendingBackendChange( requestedBackend );
+#else
+        // 정적 모듈 구성은 백엔드 하나를 Engine 에 링크했다 — 다른 백엔드로 갈 길이 없다. 값을 되돌리고 알린다(C++ 대입이라 이 콜백을 다시 부르지 않는다).
+        if ( requestedBackend != pRHI->getCommittedBackend() )
+        {
+            SW_LOG_ERROR_ID( "App.BackendSwapStaticModules", "gv_rhiBackend: this build links one RHI backend statically (SW_STATIC_MODULES) - it cannot switch to %#; restart a desktop Dev build to change backends",
+                             RHI::getBackendTypeName( requestedBackend ) );
+            GlobalVariableInfo* const pBackendVariable = findRHIBackendSwitcherVariable();
+            if ( pBackendVariable != nullptr )
+                *static_cast<RHIBackend*>( pBackendVariable->_pData ) = pRHI->getCommittedBackend();
+        }
+#endif
 
         _bHandlingChange = SW_FALSE;
     }
@@ -329,7 +346,9 @@ namespace sw
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
                     "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that the engine then answers by _deviceLostPolicy (Quit: exit code DeviceLost; Recreate: a new device) without hanging; with a wait, the render thread first blocks that long where the fence wait is",
                     &RHIBackendSwitcherInternal::runRemoveDevice );
+#if SW_WITH_DYNAMIC_MODULES
     SW_AUTOMATION_STEP( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherInternal::runSwapBackend, &AutomationBackendSteps::validateSwapBackend, AutomationStepOptions{}.withPrepare( &RHIBackendSwitcherInternal::prepareSwapBackend ).withWallBudget( AutomationBackendSteps::kSwapBackendWallSeconds ) );
+#endif
     // 설명의 백엔드 목록은 쿠킹 표에서 만든다(줄 순서 = 열거값) — 손으로 적은 목록이 WebGPU 를 빠뜨렸다.
 #define SW_RHI_BACKEND_WATCH_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) " " #Backend
     SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "Backend the device runs on, as the RHIBackend value counted from 0 in this order:" SW_RHI_BACKEND_TABLE( SW_RHI_BACKEND_WATCH_NAME_ROW ),

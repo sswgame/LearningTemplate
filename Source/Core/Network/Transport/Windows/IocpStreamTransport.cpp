@@ -63,7 +63,7 @@ namespace sw
             static constexpr int32     kCompletionBatch          = 64;
             static constexpr int32     kLoopWaitMilli            = 100;
             static constexpr int64     kSweepIntervalNanoseconds = 100 * constant::time::kNanosecondsPerMillisecond;
-            static constexpr DWORD     kAcceptAddressBytes       = sizeof( sockaddr_in ) + 16;
+            static constexpr DWORD     kAcceptAddressBytes       = sizeof( sockaddr_in6 ) + 16; ///< AcceptEx 의 주소 칸 — 두 주소군 다 든다
 
             /** @brief 확장 함수(AcceptEx, ConnectEx)를 얻습니다. 함수 포인터 변수에 바로 받으므로 객체와 함수 포인터 사이의 캐스트가 없습니다. */
             template <typename TFunction>
@@ -76,7 +76,10 @@ namespace sw
                 return pFunction;
             }
 
-            static SOCKET openStreamSocket() { return WSASocketW( AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED ); }
+            static SOCKET openStreamSocket( NetAddressFamily family )
+            {
+                return WSASocketW( NativeSocketAddress::toNativeFamily( family ), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED );
+            }
 
             static void setNoDelay( SOCKET socket, bool bTCPNoDelay )
             {
@@ -465,6 +468,7 @@ namespace sw
         StopSource                                         _stop;
         atomic<bool>                                       _bExitThreads{ false }; ///< I/O 스레드가 끝난다. 종료 키는 깨우기만 한다(한 배치에서 종료 키 여럿을 한 스레드가 가져갈 수 있다).
         uint16                                             _listenPort{ 0 };
+        NetAddressFamily                                   _listenFamily{ NetAddressFamily::Ipv4 }; ///< 리슨 소켓의 주소군 — 받기 칸의 소켓을 같은 군으로 연다
         uint8                                              _bInitialized{ SW_FALSE };
 
         // ---- 슬롯 ----
@@ -598,7 +602,7 @@ namespace sw
         void postAccept( uint32 slotIndex )
         {
             IocpAcceptSlot& slot = _arrAcceptSlot[slotIndex];
-            slot._socket         = Internal::openStreamSocket();
+            slot._socket         = Internal::openStreamSocket( _listenFamily ); // AcceptEx 는 리슨 소켓과 같은 주소군의 소켓을 받는다
             if ( slot._socket == INVALID_SOCKET )
             {
                 SW_LOG_ERROR_ID( "IocpStreamTransport.WSASocketWFailedAcceptSlot", "WSASocketW failed for an accept slot (%#)", WSAGetLastError() );
@@ -630,8 +634,8 @@ namespace sw
             if ( bAcceptUsable )
             {
                 (void)setsockopt( accepted, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, reinterpret_cast<const utf8*>( &_listenSocket ), sizeof( _listenSocket ) );
-                sockaddr_in remote{};
-                int32       length = sizeof( remote );
+                sockaddr_storage remote{};
+                int32            length = sizeof( remote );
                 (void)getpeername( accepted, reinterpret_cast<sockaddr*>( &remote ), &length );
                 const bool bFull = _openCount.load( std::memory_order_relaxed ) >= _settings->_maxConnections;
                 if ( bFull || CreateIoCompletionPort( reinterpret_cast<HANDLE>( accepted ), _completionPort, Internal::kSocketKey, 0 ) == nullptr )
@@ -857,17 +861,20 @@ namespace sw
         State& state = *_state;
         if ( state._bInitialized == SW_FALSE || state._listenSocket != INVALID_SOCKET )
             return false;
-        const SOCKET listenSocket = IocpStreamTransportInternal::openStreamSocket();
+        const SOCKET listenSocket = IocpStreamTransportInternal::openStreamSocket( bindAddress._family );
         if ( listenSocket == INVALID_SOCKET )
             return false;
         const BOOL exclusive = TRUE; // 다른 프로세스가 같은 포트를 가로채지 못하게 한다.
         (void)setsockopt( listenSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<const utf8*>( &exclusive ), sizeof( exclusive ) );
-        sockaddr_in local     = NativeSocketAddress::toNative( bindAddress );
-        int32       length    = sizeof( local );
-        const bool  bListened = bind( listenSocket, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) == 0 &&
+        const DWORD               v6Only           = 0; // IPv6 리슨은 이중 스택이다(Windows 기본값은 켜짐, UDP 와 같다 — `PlatformSocketUtil::openUDPSocket`)
+        const bool                bDualStackFailed = bindAddress.isIpv6() && setsockopt( listenSocket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const utf8*>( &v6Only ), sizeof( v6Only ) ) != 0;
+        const NativeSocketAddress local            = NativeSocketAddress::toNative( bindAddress );
+        sockaddr_storage          bound{};
+        int32                     length    = sizeof( bound );
+        const bool                bListened = bDualStackFailed == false && bind( listenSocket, local.get(), local._length ) == 0 &&
                                ::listen( listenSocket, state._settings->_listenBacklog ) == 0 &&
                                CreateIoCompletionPort( reinterpret_cast<HANDLE>( listenSocket ), state._completionPort, IocpStreamTransportInternal::kSocketKey, 0 ) != nullptr &&
-                               getsockname( listenSocket, reinterpret_cast<sockaddr*>( &local ), &length ) == 0;
+                               getsockname( listenSocket, reinterpret_cast<sockaddr*>( &bound ), &length ) == 0;
         state._pAcceptEx = bListened ? IocpStreamTransportInternal::findExtension<LPFN_ACCEPTEX>( listenSocket, WSAID_ACCEPTEX ) : nullptr;
         if ( state._pAcceptEx == nullptr )
         {
@@ -876,7 +883,8 @@ namespace sw
             return false;
         }
         state._listenSocket  = listenSocket;
-        state._listenPort    = ntohs( local.sin_port );
+        state._listenPort    = NativeSocketAddress::fromNative( bound )._port;
+        state._listenFamily  = bindAddress._family;
         state._arrAcceptSlot = make_unique<IocpAcceptSlot[]>( IocpStreamTransportInternal::kAcceptPostCount );
         for ( uint32 index = 0; index < static_cast<uint32>( IocpStreamTransportInternal::kAcceptPostCount ); ++index )
         {
@@ -895,11 +903,12 @@ namespace sw
         State& state = *_state;
         if ( state._bInitialized == SW_FALSE || state._stop.isStopRequested() )
             return StreamConnectionHandle{};
-        const SOCKET socket = IocpStreamTransportInternal::openStreamSocket();
+        const SOCKET socket = IocpStreamTransportInternal::openStreamSocket( remote._family );
         if ( socket == INVALID_SOCKET )
             return StreamConnectionHandle{};
-        const sockaddr_in any = NativeSocketAddress::toNative( NetAddress{ 0, 0 } );
-        if ( bind( socket, reinterpret_cast<const sockaddr*>( &any ), sizeof( any ) ) != 0 ||
+        // ConnectEx 는 묶인 소켓을 요구한다 — 상대와 같은 주소군의 모든 인터페이스 · 아무 포트.
+        const NativeSocketAddress any = NativeSocketAddress::toNative( remote.isIpv6() ? NetAddress::makeIpv6AnyInterface( 0 ) : NetAddress::makeAnyInterface( 0 ) );
+        if ( bind( socket, any.get(), any._length ) != 0 ||
              CreateIoCompletionPort( reinterpret_cast<HANDLE>( socket ), state._completionPort, IocpStreamTransportInternal::kSocketKey, 0 ) == nullptr )
         {
             closesocket( socket );
@@ -915,9 +924,8 @@ namespace sw
         const StreamConnectionHandle handle      = state.allocateConnection( socket, remote, false, IocpConnectionState::Connecting, pConnection );
         ScopedLock<mutex>            lock{ pConnection->getMutex() };
         IocpOperation&               operation = pConnection->beginConnectOperationLocked();
-        const sockaddr_in            native    = NativeSocketAddress::toNative( remote );
-        const BOOL                   bStarted  = pConnectEx != nullptr &&
-                              pConnectEx( socket, reinterpret_cast<const sockaddr*>( &native ), sizeof( native ), nullptr, 0, nullptr, &operation._overlapped ) == TRUE;
+        const NativeSocketAddress    native    = NativeSocketAddress::toNative( remote );
+        const BOOL                   bStarted  = pConnectEx != nullptr && pConnectEx( socket, native.get(), native._length, nullptr, 0, nullptr, &operation._overlapped ) == TRUE;
         if ( bStarted == FALSE && ( pConnectEx == nullptr || WSAGetLastError() != ERROR_IO_PENDING ) )
         {
             // 바로 실패했다. 닫힘은 I/O 스레드에서 내야 하므로 실패한 완료를 직접 넣는다(여는 쪽의 작업 수를 그 완료가 놓는다).

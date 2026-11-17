@@ -5,7 +5,7 @@
  *          곁의 `<파일>.meta` 에 든다(유니티 `.meta`, Godot 4.4 의 `.uid` 곁 파일과 같은 자리). 도구가 만들고 짝을 지킨다 — 사람은 서술을 만지지 않는다
  *          (`py -3 -m Scripts asset-ids --fix` · 에디터 옮기기 · 복제 · 가져오기 · 내용 바꾸기).
  *          색인을 짓다 만난 결함(겹친 GUID · 짝 없는 `.meta` · `.meta` 없는 원본 · 머리 없는 글)은 모두 문제 목록으로 낸다 — 고르거나 새 GUID 로 메우지 않는다(폴백 없음).
- *          참조를 GUID 로 바꾸는 일과 런타임 색인 읽기는 2 단계다(docs/NEXT.md).
+ *          개발 실행은 이 색인을 런타임 색인(`AssetRegistry`)의 층으로 건다(`AssetManager`), 배포 구성은 팩마다 든 `assetindex.xml` 을 건다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetGUID.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -156,6 +157,8 @@ namespace sw
         [[nodiscard]] optional<AssetGUID> findGUID( string_view assetID ) const;
         /** @brief 색인의 에셋 수입니다. */
         [[nodiscard]] size_t getCount() const { return _mapGUIDToPath.size(); }
+        /** @brief 런타임 색인(`AssetRegistry`)에 넘길 층입니다 — 개발 실행(느슨한 소스 트리)의 유일한 층이다. 줄 순서는 정하지 않는다. */
+        [[nodiscard]] AssetRegistryLayer makeRegistryLayer( string_view sourceName ) const;
 
     private:
         unordered_map<AssetGUID, string> _mapGUIDToPath;

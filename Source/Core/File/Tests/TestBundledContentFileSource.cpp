@@ -182,3 +182,29 @@ SW_TEST_CASE( BundledContentFileSourceTest, BundledRangeGoesThroughAsyncFileIO )
         io.shutdown();
     }
 }
+
+/** @brief [ContentFileSourceTest] 묶음 소스의 구간 읽기가 통째 읽기의 같은 자리와 같다 — 묶음 파일 안 위치가 아니라 파일 기준 구간이다(밉 범위 읽기 — MR-1). */
+SW_TEST_CASE( ContentFileSourceTest, RangeMatchesWholeReadInBundle )
+{
+    FakeBundleReader reader( "ContentFileSourceTest.range.bundle" );
+    SW_REQUIRE_TRUE( reader.write( {
+        { "Packs/first.pack",        "abc"},
+        {"Packs/second.pack", "0123456789"}
+    } ) );
+    const BundledContentFileSource source( reader, "/app/Packs", "Packs" );
+    AsyncFileIO                    io;
+    SW_REQUIRE_TRUE( io.initialize( AsyncFileIOConfig{} ) );
+
+    vector<uint8>   range;
+    AsyncReadHandle rangeRead = source.readRangeAsync( io, "/app/Packs/second.pack", 4, 3, AsyncIOPriority::Normal,
+                                                       SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [&range]( AsyncReadResult& result )
+    { range = std::move( result._bytes ); } ) );
+    rangeRead.wait();
+    SW_EXPECT_TRUE( rangeRead.getStatus() == AsyncIOStatus::Succeeded );
+    SW_EXPECT_TRUE( range == toBytes( "456" ) );
+
+    AsyncReadHandle tooFar = source.readRangeAsync( io, "/app/Packs/second.pack", 9, 2, AsyncIOPriority::Normal, {} );
+    tooFar.wait();
+    SW_EXPECT_TRUE( tooFar.getStatus() == AsyncIOStatus::OutOfRange );
+    io.shutdown();
+}

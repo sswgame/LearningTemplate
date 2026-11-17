@@ -25,6 +25,7 @@ namespace sw
         /**
          * @brief (게임 스레드) 씬 키 @p sceneKey(0 = 주 화면, 미리보기 씬 키)를 그린 렌더러가 지난 프레임에 빠뜨린 배치 수입니다(`RenderThread::findPendingMaterialPSOBatchCount`).
          * @details 지난 프레임에 그 씬을 그리지 않았으면 1 이다(아직 그려진 그림이 없다). 렌더 스레드가 없는 호스트(전용 서버)는 0 이다.
+         *          주 화면(키 0)은 그리지 않고 진행한 프레임(`SimulationOnlyFrameQueue`) 뒤 따라잡기가 남았으면 1 을 더한다.
          */
         [[nodiscard]] static uint32 countPendingRenderJobs( uint32 sceneKey );
         /** @brief (게임 스레드) 씬 @p pManager 를 @p sceneKey 로 찍는 캡처의 남은 일 수입니다 — 씬 쪽과 렌더 쪽의 합입니다(감시 값 `Assets.Pending` 은 주 화면). */

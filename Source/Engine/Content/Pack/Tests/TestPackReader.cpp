@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
@@ -366,4 +367,53 @@ SW_TEST_CASE( PackReaderTest, ChecksumIsOptionalByFlag )
     SW_REQUIRE_TRUE( file.open( image, reader ) );
     vector<uint8> bytes;
     SW_EXPECT_TRUE( reader.readFile( "maps/town.xml", bytes ) );
+}
+
+// ---------------------------------------------------------------------- 구간 읽기(텍스처 밉 범위 — MR-1)
+
+/** @brief [PackReaderTest] 무압축 항목의 구간 읽기는 저장 위치에 더한 구간 그대로이고, 항목 밖 구간은 오류다 */
+SW_TEST_CASE( PackReaderTest, RangeReadOnUncompressedEntryMatchesWholeRead )
+{
+    SW_EXPECT_LOG( "Pack.RangeReadOutOfEntry" );
+    const PackTestFile file;
+    PackReader         reader;
+    SW_REQUIRE_TRUE( file.open( Util::makeValidImage(), reader ) );
+    AsyncFileIO io;
+    SW_REQUIRE_TRUE( io.initialize( AsyncFileIOConfig{} ) );
+
+    vector<uint8>   range;
+    bool            bSucceeded = false;
+    AsyncReadHandle read       = reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "maps/deep/cave.xml" ) ), 1, 4, AsyncIOPriority::Normal,
+                                                        SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&range, &bSucceeded]( bool bSuccess, vector<uint8>& bytes )
+          {
+        bSucceeded = bSuccess;
+        range      = std::move( bytes );
+    } ) );
+    SW_REQUIRE_TRUE( read.isValid() );
+    read.wait();
+    SW_EXPECT_TRUE( bSucceeded );
+    SW_EXPECT_TRUE( string( range.begin(), range.end() ) == "Cave" );
+
+    SW_EXPECT_FALSE( reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "top.txt" ) ), 3, 3, AsyncIOPriority::Normal, {} ).isValid() ); // 5 바이트 항목의 3+3
+    io.shutdown();
+}
+
+/** @brief [PackReaderTest] 압축 항목의 구간 읽기는 오류다 — 구간을 풀 수 없다(쿠킹이 `.dds` 를 무압축으로 싣는다, 블록 압축은 A-12) */
+SW_TEST_CASE( PackReaderTest, RangeReadOnCompressedEntryIsError )
+{
+    SW_EXPECT_LOG( "Pack.RangeReadOnCompressedEntry" );
+    PackImage image                = Util::makeValidImage();
+    image._header._compressionType = static_cast<uint8>( PackCompressionType::Zlib );
+    const PackTestFile file;
+    PackReader         reader;
+    SW_REQUIRE_TRUE( file.open( image, reader ) );
+    AsyncFileIO io;
+    SW_REQUIRE_TRUE( io.initialize( AsyncFileIOConfig{} ) );
+    bool            bCalled = false;
+    AsyncReadHandle read    = reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "top.txt" ) ), 0, 2, AsyncIOPriority::Normal,
+                                                     SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&bCalled]( bool, vector<uint8>& )
+       { bCalled = true; } ) );
+    SW_EXPECT_FALSE( read.isValid() );
+    SW_EXPECT_FALSE( bCalled );
+    io.shutdown();
 }

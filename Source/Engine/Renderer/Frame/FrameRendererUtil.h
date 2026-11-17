@@ -594,6 +594,7 @@ namespace sw
         hashed_string _invViewProj{ "g_InvViewProj" };
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러가 화면 속도를 구한다, motion_blur.hlsl). 처음 · 컷 프레임은 이번 것과 같다.
         hashed_string _prevViewProj{ "g_PrevViewProj" };
+        hashed_string _temporalJitter{ "g_TemporalJitter" }; ///< 이번 프레임 투영 지터(xy, NDC) — 화면 속도가 뺀다
         hashed_string _world{ "g_World" };
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
         hashed_string _keyLightColor{ "g_KeyLightColor" };

@@ -18,6 +18,7 @@ using namespace sw;
 namespace
 {
     constexpr const utf8* kCommanderUnitXML = R"(<RTSCatalog supplyMax="200">
+  <Rules fixedStep="0.05" minimumDamage="0.5" repathInterval="0.5" visionInterval="0.25" interactSlack="0.35" resourceSearchRadius="8" constructionStartRatio="0.1" underAttackCooldown="10" productionQueueMax="5" flowFieldGroupSize="6" bucketSize="4" mineralCurrency="Minerals" gasCurrency="Gas"/>
   <Unit id="minerals" name="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
   <Unit id="command_center" name="command_center" kind="Building" hp="1500" armor="1" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="75" sight="10"/>
   <Unit id="supply_depot" name="supply_depot" kind="Building" hp="500" armor="1" footprint="2" provides="8" producedBy="worker" minerals="100" buildTime="25" sight="6"/>
@@ -54,7 +55,7 @@ namespace
         [[nodiscard]] bool setUp()
         {
             s_thinkCount = 0;
-            if ( _catalog.loadFromXMLText( kCommanderUnitXML, "RTSCommanderAITest" ) == false || _world.initialize( &_catalog, 48, 48, RTSSettings{} ) == false )
+            if ( _catalog.loadFromXMLText( kCommanderUnitXML, "RTSCommanderAITest" ) == false || _world.initialize( &_catalog, 48, 48 ) == false )
                 return false;
             _wallet.add( _world.getSettings()._mineralCurrency, 1000 );
             (void)_world.addPlayer( 0, &_wallet, float3{ 6.0f, 0.0f, 6.0f } );
@@ -322,7 +323,7 @@ SW_TEST_CASE( RTSCommanderAITest, BuildSupplyWaitsForMarginAndDoesNotRepeat )
     SW_REQUIRE_TRUE( rig.spawnMinerals().isValid() );
     const RTSUnitID workerID = rig.spawnWorker();
     const RTSUnitID spareID  = rig.spawnWorker( 14.5f );
-    rig._world.update( 0.1f ); // 보급을 센다: 상한 10, 쓴 2
+    (void)rig._world.update( 0.1f, 1.0f ); // 보급을 센다: 상한 10, 쓴 2
 
     rig._settings._supplyMargin = 3;
     rig.start( "rts.buildSupply" );

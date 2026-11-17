@@ -6,12 +6,12 @@
 
 namespace sw
 {
-    void ScreenshotRequestQueue::put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    void ScreenshotRequestQueue::put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         const ScopedLock<mutex> lock{ _mutex };
         if ( _pendingPath.empty() )
             (void)_requestedSerial.fetch_add( 1, std::memory_order_acq_rel ); // 꺼내지 않은 앞 요청을 덮어쓰면 처리도 한 번이다
-        _pendingPath    = string{ filePath };
+        _pendingPath    = filePath.str();
         _pendingTexture = sourceTexture;
         _pendingFormat  = sourceFormat;
     }
@@ -37,12 +37,12 @@ namespace sw
         _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
     }
 
-    bool ScreenshotRequestQueue::putForNextPacket( string_view filePath )
+    bool ScreenshotRequestQueue::putForNextPacket( const AbsolutePath& filePath )
     {
         const ScopedLock<mutex> lock{ _mutex };
         if ( _pendingPacketPath.empty() == false )
             return false;
-        _pendingPacketPath = string{ filePath };
+        _pendingPacketPath = filePath.str();
         return true;
     }
 

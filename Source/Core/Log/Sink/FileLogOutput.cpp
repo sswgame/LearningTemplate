@@ -92,6 +92,19 @@ namespace sw
     void FileLogOutput::write( const LogRecord& record )
     {
         ScopedLock<mutex> lock{ _mutex };
+        writeLocked( record );
+    }
+
+    void FileLogOutput::writeWithoutWaiting( const LogRecord& record )
+    {
+        if ( _mutex.try_lock() == false )
+            return;
+        writeLocked( record );
+        _mutex.unlock();
+    }
+
+    void FileLogOutput::writeLocked( const LogRecord& record )
+    {
         if ( _bOpened == false )
             return;
 

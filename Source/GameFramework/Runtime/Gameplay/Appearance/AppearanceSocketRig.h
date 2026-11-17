@@ -19,6 +19,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
@@ -67,8 +68,8 @@ namespace sw
         bool isStale() const;
 
     private:
-        unordered_map<hashed_string, shared_ptr<const SocketSet>> _mapSocketSet;    ///< 값이 null 이면 읽지 못한 경로이다
-        AssetReloadWatch<SocketSet>                               _socketSetReload; ///< 마지막 `clear` 때 공유 캐시의 다시 읽은 횟수
+        unordered_map<hashed_string, SharedAssetRef<SocketSet>> _mapSocketSet;    ///< 값이 null 이면 읽지 못한 경로이다
+        AssetReloadWatch<SocketSet>                             _socketSetReload; ///< 마지막 `clear` 때 공유 캐시의 다시 읽은 횟수
     };
 } // namespace sw
 

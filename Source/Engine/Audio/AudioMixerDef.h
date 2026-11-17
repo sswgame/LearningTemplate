@@ -297,6 +297,12 @@ namespace sw
         uint32 _maxRealVoiceCount{ 64 };
         PROPERTY( Tooltip = "A voice quieter than this is inaudible and goes virtual", Meta = "Units=dB" )
         float32 _inaudibleDb{ -60.0f };
+        /** @brief 풀이 차서 들리던 보이스를 뺏을 때 그 보이스를 줄이는 시간(초)입니다. 0 이면 바로 끊는다(클릭 가능). 코드 기본값이 없다 — 데이터가 적는다. */
+        PROPERTY( Required, Min = 0.0, Tooltip = "Seconds a stolen audible voice fades out before its sound stops (0 cuts it at once)", Units = s )
+        float32 _voiceStealFadeSeconds{ 0.0f };
+        /** @brief 뺏겨 줄어드는 보이스가 쓰는 여분 슬롯 수입니다. 한 페이드 동안 이만큼 더 뺏으면 그다음은 바로 끊긴다. 코드 기본값이 없다. */
+        PROPERTY( Required, Tooltip = "Extra slots stolen voices fade out in; steals beyond this within one fade cut at once" )
+        uint32 _maxStealFadeVoiceCount{ 0 };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

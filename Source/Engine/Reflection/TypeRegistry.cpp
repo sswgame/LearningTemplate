@@ -803,6 +803,22 @@ namespace sw
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string aliasHash{ pAliasName };
 
+        // 별칭이 이미 **다른 살아 있는** 타입을 가리키면 덮지 않는다 — 예전에는 조용히 덮어, 그 옛 이름으로 저장된 씬 · 세이브가 다른 타입으로 풀렸다.
+        // 같은 타입으로 다시 거는 것(핫 리로드)과 내려간 타입(묘비)의 이름을 이어받는 것은 그대로 받는다.
+        const auto previousAliasIt = _mapAliasToFqn.find( aliasHash );
+        if ( previousAliasIt != _mapAliasToFqn.end() && previousAliasIt->second != canonicalKey )
+        {
+            const auto previousTypeIt = _mapFqnToClassType.find( previousAliasIt->second );
+            if ( previousTypeIt != _mapFqnToClassType.end() && previousTypeIt->second->isAlive() )
+            {
+                const hashed_string previousFqn = previousAliasIt->second;
+                lock.unlock();
+                SW_LOG_ERROR_ID( "Reflection.TypeAliasConflict", "Type alias '%#' already names the live type '%#' - refused to point it at '%#'; rename one of the aliases",
+                                 pAliasName, previousFqn.c_str(), canonicalKey.c_str() );
+                return;
+            }
+        }
+
         _mapAliasToFqn.insert_or_assign( aliasHash, canonicalKey );
         string wireNameClash;
         assignWireTypeNameLocked( aliasHash, canonicalName, WireTypeKind::Class, wireNameClash );

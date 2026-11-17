@@ -144,9 +144,8 @@ static float3 Bloom::applyDirt( float2 uv, float3 bloom )
  */
 static float3 Bloom::apply( float2 uv, float2 texel, float3 color )
 {
-    // SSAO 가 있으면 조명 결과를 가린다(파이프라인 XML 이 AOColor 를 입력으로 선언한다). 없으면 1.
-    float ambientOcclusion = PassTexture::sampleAmbientOcclusion( uv );
-    return color * ambientOcclusion + Bloom::applyDirt( uv, Bloom::computeBright( uv, texel ) + Bloom::computeLensFlare( uv, texel, false ) );
+    // AO 는 여기서 곱하지 않는다 — 조명 패스가 앰비언트 · 프로브 빛에만 곱했다(deferred_lighting.hlsl).
+    return color + Bloom::applyDirt( uv, Bloom::computeBright( uv, texel ) + Bloom::computeLensFlare( uv, texel, false ) );
 }
 
 /**
@@ -154,9 +153,8 @@ static float3 Bloom::apply( float2 uv, float2 texel, float3 color )
  */
 static float3 Bloom::applyBright( float2 uv, float3 color )
 {
-    float        ambientOcclusion = PassTexture::sampleAmbientOcclusion( uv );
-    const float3 bright           = Bindless::sampleIndex( SW_ENGINE_ROLE( BloomBright ), uv ).rgb;
-    return color * ambientOcclusion + Bloom::applyDirt( uv, bright + Bloom::computeLensFlare( uv, float2( 0.0f, 0.0f ), true ) );
+    const float3 bright = Bindless::sampleIndex( SW_ENGINE_ROLE( BloomBright ), uv ).rgb;
+    return color + Bloom::applyDirt( uv, bright + Bloom::computeLensFlare( uv, float2( 0.0f, 0.0f ), true ) );
 }
 
 #endif // SW_ENGINE_POSTBLOOM_HLSLI

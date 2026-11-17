@@ -160,7 +160,8 @@ namespace sw
          * @details 프레임 밖(에셋 로드, 머티리얼 파라미터)에서 쓰는 것은 `IRHIResourceFactory::updateConstantBuffer` 이고, 기록 경로(패스 CB,
          *          컴퓨트 CB)는 이 함수를 쓴다. DX11 은 이 리스트의 Deferred Context 에 `Map(WRITE_DISCARD)` 해서 런타임이 리스트 단위로 버퍼를
          *          버저닝하고, DX12, Vulkan, GL 은 버퍼의 이번 프레임 슬롯에 쓴다. 그래서 **한 버퍼는 프레임에 한 번만** 쓴다
-         *          (드로우마다 다른 값이면 슬롯을 나눈다. `PassConstantRing` 참고). 크기 상한은 `IRHIResourceFactory::updateConstantBuffer` 와 같다.
+         *          (드로우마다 다른 값이면 슬롯을 나눈다. `PassConstantRing` 참고). 두 번째 쓰기는 네 백엔드가 `IRHICommandContext::updateConstantBuffer` 에서
+         *          진단 오류로 알린다(`RHI.ConstantBufferRewrittenInFrame`). 크기 상한은 `IRHIResourceFactory::updateConstantBuffer` 와 같다.
          */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 

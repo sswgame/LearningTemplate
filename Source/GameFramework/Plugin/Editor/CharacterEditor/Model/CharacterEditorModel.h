@@ -18,6 +18,8 @@
 
 #include "Editor/Common/Workspace/Undo/SaveReloadGuard.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyDataEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BonePoseEditModel.h"
@@ -114,11 +116,15 @@ namespace sw::editor
         void pollExternalChange( float64 nowSeconds );
         /** @brief 고친 것이 있는 채로 소켓 파일이 디스크에서 바뀌었으면 true 입니다. */
         bool hasExternalChange() const { return _bExternalChange; }
-        /** @brief 소켓 · 포즈 모델 가운데 미저장이 있으면 true 입니다. */
-        bool isDirty() const { return _sockets.isDirty() || _pose.isDirty(); }
-        /** @brief 미저장인 소켓 · 포즈 파일을 씁니다. 하나라도 못 쓰면 false 이고 까닭은 상태 줄에 남습니다. */
+        /**
+         * @brief 이 문서가 여는 파일(소켓 · 레퍼런스 포즈 · 몸 데이터 셋) 가운데 미저장이 있으면 true 입니다.
+         * @details 패널의 미저장 표시 · 닫기 확인 · 모두 저장이 이 하나를 본다 — 몸 데이터가 빠져 있어 창을 닫으면 몸 편집이 조용히 사라졌다(감사 G-12).
+         *          외형 선택은 파일이 아니라 사용자 프리셋 저장소에 쓰므로 여기에 들지 않는다(프리셋 저장 단추가 따로 표시한다).
+         */
+        bool isDirty() const { return _sockets.isDirty() || _pose.isDirty() || isBodyDataDirty(); }
+        /** @brief 미저장인 파일(`isDirty` 의 목록)을 씁니다. 하나라도 못 쓰면 false 이고 까닭은 상태 줄에 남습니다. */
         [[nodiscard]] bool saveFiles( float64 nowSeconds );
-        /** @brief `saveFiles` 가 쓸 리소스 id 입니다(미저장인 소켓 · 포즈 파일). */
+        /** @brief `saveFiles` 가 쓸 파일입니다(소켓 · 포즈는 리소스 id, 몸 데이터는 디스크 경로). */
         void collectFilesToSave( vector<string>& outListAssetID ) const;
         /** @brief 두 모델을 마지막으로 읽거나 저장한 상태로 돌립니다. 외형 선택은 파일 문서가 아니라 건드리지 않습니다. */
         void revert();
@@ -252,45 +258,45 @@ namespace sw::editor
         void onThumbnailWritten( const LocalStoreCompletion& completion );
 
     private:
-        SocketEditModel               _sockets;
-        BonePoseEditModel             _pose;
-        AppearanceEditModel           _appearance;
-        BodyDataEditModel             _bodyShapes;   ///< 몸 부품의 채널 매핑(`*.bodyshape.xml`)
-        BodyDataEditModel             _bodyProfiles; ///< 외형 폴더의 `bodyprofiles.xml`(지글 · 주름 · 체액)
-        BodyDataEditModel             _visuals;      ///< 외형 폴더의 `itemvisuals.xml`(구간 별칭 · 묶음 · 염색 여부)
-        SaveReloadGuard<SocketSet>    _reloadGuard;
-        FitCheckSummary               _fit;
-        shared_ptr<const ItemCatalog> _pItems; ///< 공유 캐시의 한 벌(게임이 쥔 아이템 카탈로그와 같은 객체)
-        AppearanceDatabase            _database;
-        UserAppearancePresetStore     _presetStore;
-        UserAppearancePresetStore     _stagedPresetStore;   ///< 쓰는 중인 프리셋 목록 - 쓰기가 끝나면 `_presetStore` 가 된다
-        AppearanceSelection           _stagedSelection;     ///< 쓰는 중인 저장의 선택(`_bStagedSelection` 일 때) - 끝나면 "저장된 상태"
-        string                        _thumbnailPresetName; ///< 썸네일을 쓰는 중인 프리셋
-        string                        _thumbnailSlot;       ///< 그 썸네일 슬롯
-        Subscription                  _presetRequest;       ///< 프리셋 슬롯 읽기 · 쓰기(하나씩)
-        Subscription                  _thumbnailRequest;    ///< 썸네일 슬롯 쓰기
-        CharacterEditorPaths          _paths;
-        string                        _status;
-        hashed_string                 _selectedSocket;
-        hashed_string                 _selectedBone;
-        vector<hashed_string>         _listClipName;     ///< 클립 폴더의 클립 이름들(콤보 목록, 이름순)
-        hashed_string                 _selectedClip;     ///< 콤보에서 고른 클립
-        ResolvedAppearance            _preview;          ///< 입혀 본 결과(규칙 설명). 선택이 바뀔 때만 다시 푼다
-        AppearanceSelectionReport     _previewReport;    ///< `_preview` 와 같이 푼 보고
-        uint32                        _previewRevision;  ///< `_preview` 를 푼 외형 선택의 세대
-        string                        _packRoot;         ///< 경로 칸을 채운 활성 게임 팩 루트 — 바뀌면 다시 읽는다
-        string                        _packDataPath;     ///< 활성 팩의 캐릭터 편집 데이터 파일
-        string                        _packDataMessage;  ///< `Invalid` 의 이유
-        hashed_string                 _previewPresetID;  ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
-        hashed_string                 _previewWipeEvent; ///< 팩 데이터의 미리보기 몸 닦기 이벤트(비면 닦지 않는다)
-        PackDataState                 _packDataState;
-        CharacterGizmoTarget          _gizmoTarget;          ///< 마지막에 고른 쪽(`selectSocket` · `selectBone`)
-        uint8                         _bClipNamesLoaded : 1; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
-        uint8                         _bKindTableReady  : 1;
-        uint8                         _bDatabaseLoaded  : 1;
-        uint8                         _bHasFit          : 1;
-        uint8                         _bExternalChange  : 1;
-        uint8                         _bPreviewValid    : 1;
-        uint8                         _bStagedSelection : 1;
+        SocketEditModel             _sockets;
+        BonePoseEditModel           _pose;
+        AppearanceEditModel         _appearance;
+        BodyDataEditModel           _bodyShapes;   ///< 몸 부품의 채널 매핑(`*.bodyshape.xml`)
+        BodyDataEditModel           _bodyProfiles; ///< 외형 폴더의 `bodyprofiles.xml`(지글 · 주름 · 체액)
+        BodyDataEditModel           _visuals;      ///< 외형 폴더의 `itemvisuals.xml`(구간 별칭 · 묶음 · 염색 여부)
+        SaveReloadGuard<SocketSet>  _reloadGuard;
+        FitCheckSummary             _fit;
+        SharedAssetRef<ItemCatalog> _pItems; ///< 공유 캐시의 한 벌(게임이 쥔 아이템 카탈로그와 같은 객체)
+        AppearanceDatabase          _database;
+        UserAppearancePresetStore   _presetStore;
+        UserAppearancePresetStore   _stagedPresetStore;   ///< 쓰는 중인 프리셋 목록 - 쓰기가 끝나면 `_presetStore` 가 된다
+        AppearanceSelection         _stagedSelection;     ///< 쓰는 중인 저장의 선택(`_bStagedSelection` 일 때) - 끝나면 "저장된 상태"
+        string                      _thumbnailPresetName; ///< 썸네일을 쓰는 중인 프리셋
+        string                      _thumbnailSlot;       ///< 그 썸네일 슬롯
+        Subscription                _presetRequest;       ///< 프리셋 슬롯 읽기 · 쓰기(하나씩)
+        Subscription                _thumbnailRequest;    ///< 썸네일 슬롯 쓰기
+        CharacterEditorPaths        _paths;
+        string                      _status;
+        hashed_string               _selectedSocket;
+        hashed_string               _selectedBone;
+        vector<hashed_string>       _listClipName;     ///< 클립 폴더의 클립 이름들(콤보 목록, 이름순)
+        hashed_string               _selectedClip;     ///< 콤보에서 고른 클립
+        ResolvedAppearance          _preview;          ///< 입혀 본 결과(규칙 설명). 선택이 바뀔 때만 다시 푼다
+        AppearanceSelectionReport   _previewReport;    ///< `_preview` 와 같이 푼 보고
+        uint32                      _previewRevision;  ///< `_preview` 를 푼 외형 선택의 세대
+        string                      _packRoot;         ///< 경로 칸을 채운 활성 게임 팩 루트 — 바뀌면 다시 읽는다
+        string                      _packDataPath;     ///< 활성 팩의 캐릭터 편집 데이터 파일
+        string                      _packDataMessage;  ///< `Invalid` 의 이유
+        hashed_string               _previewPresetID;  ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
+        hashed_string               _previewWipeEvent; ///< 팩 데이터의 미리보기 몸 닦기 이벤트(비면 닦지 않는다)
+        PackDataState               _packDataState;
+        CharacterGizmoTarget        _gizmoTarget;          ///< 마지막에 고른 쪽(`selectSocket` · `selectBone`)
+        uint8                       _bClipNamesLoaded : 1; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
+        uint8                       _bKindTableReady  : 1;
+        uint8                       _bDatabaseLoaded  : 1;
+        uint8                       _bHasFit          : 1;
+        uint8                       _bExternalChange  : 1;
+        uint8                       _bPreviewValid    : 1;
+        uint8                       _bStagedSelection : 1;
     };
 } // namespace sw::editor

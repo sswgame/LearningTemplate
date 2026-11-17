@@ -209,3 +209,22 @@ SW_TEST_CASE( NetSlotTableTest, ReleasePendingCountsHeldClosedSlots )
     table.release( 0 );
     SW_EXPECT_EQUAL( 0, table.countReleasePending() );
 }
+
+/**
+ * @brief [NetSlotTableTest] 주소 맵은 IPv6 주소 전체로 가른다 — 끝 바이트만 다른 두 상대가 한 슬롯에 묶이지 않는다(감사 N-14)
+ */
+SW_TEST_CASE( NetSlotTableTest, Ipv6PeersThatDifferInTheLastByteAreDistinct )
+{
+    NetSlotTable table;
+    table.reset( 2 );
+    constexpr uint8  kArrFirst[NetAddress::kByteCount]  = { 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01 };
+    constexpr uint8  kArrSecond[NetAddress::kByteCount] = { 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02 };
+    const NetAddress first                              = NetAddress::makeIpv6( kArrFirst, 5000 );
+    const NetAddress second                             = NetAddress::makeIpv6( kArrSecond, 5000 );
+    table.bindAddress( 0, first );
+    SW_EXPECT_FALSE( table.findByAddress( second ).has_value() );
+    table.bindAddress( 1, second );
+    SW_EXPECT_TRUE( table.findByAddress( first ) == 0 );
+    SW_EXPECT_TRUE( table.findByAddress( second ) == 1 );
+    SW_EXPECT_FALSE( table.findByAddress( NetAddress::make( 0x20, 0x01, 0x0d, 0xb8, 5000 ) ).has_value() ); // 앞 4 바이트가 같은 IPv4 는 다른 주소다
+}

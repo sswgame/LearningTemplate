@@ -10,6 +10,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -103,8 +104,8 @@ namespace sw
         int32 _startingMoney;
 
         WesternOutlaw                    _outlaw;
-        shared_ptr<const WesternCatalog> _pWesternCatalog;
-        shared_ptr<const WeatherCatalog> _pWeatherCatalog;
+        SharedAssetRef<WesternCatalog>   _pWesternCatalog;
+        SharedAssetRef<WeatherCatalog>   _pWeatherCatalog;
         unique_ptr<WildWestHUDViewModel> _hudViewModel;            ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
         uint8                            _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
         [[maybe_unused]] uint8           _reserved            : 7;

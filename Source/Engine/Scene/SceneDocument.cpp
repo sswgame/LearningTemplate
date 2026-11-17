@@ -36,9 +36,9 @@ namespace sw
             static constexpr uint32      kBinMagic      = FourCCUtil::make( "SCN1" );
             // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
             // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`) · id 범위 · 앵커 파일 id · 레이어 목록 · 인스턴스 덮어쓰기 목록.
-            // 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다). 판 6 에서 조립 칸을 더했다. 셀에는 레이어 목록이 붙는다.
+            // 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다). 판 6 에서 조립 칸을 더했다. 판 7 부터 상태의 컴포넌트 키가 고정 지역 id(`_localID`, `ComponentStableKey` — 감사 A-2)다. 셀에는 레이어 목록이 붙는다.
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 6;
+            static constexpr uint32 kBinVersion = 7;
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
             static constexpr uint32 kMinBytesPerEntity = 7u * sizeof( uint32 ) + 3u * sizeof( uint64 );
             /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */

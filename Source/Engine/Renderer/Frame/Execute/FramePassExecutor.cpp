@@ -521,11 +521,19 @@ namespace sw
 
     void FramePassExecutor::applyViewProjection( FramePassContext& context, FrameViewTarget& view, const float4x4& viewProj )
     {
-        context._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
+        // TAA 가 도는 뷰만 서브픽셀 지터를 래스터 행렬에 싣는다(언리얼 TAA · 유니티 URP/HDRP · Godot 의 Halton 지터). 지터 든 행렬은 이 함수 안에만 있다 —
+        // 컬링 · 지난 뷰-투영(속도 기준)은 받은 @p viewProj(지터 없음)를 쓰고, 화면 속도는 셰이더가 `g_TemporalJitter` 를 빼서 물체 · 카메라 움직임만 남긴다.
+        const TransientAttachmentPool& pool = view._transientPool;
+        // 기록을 버리는 프레임(처음 · 컷 · 건너뛴 프레임 뒤)은 이번 원본만 남으므로 지터하지 않는다 — 한 장짜리 그림이 흔들리기만 한다.
+        const bool     bJitter   = view._bTAAHistoryWritten == SW_TRUE && view._bTAAHistoryReset == SW_FALSE;
+        const float2   ndcJitter = bJitter ? view._temporalJitter.advance( pool.getWidth(), pool.getHeight() ) : float2{};
+        const float4x4 raster    = TemporalJitterSequence::applyToViewProjection( viewProj, ndcJitter );
+        context._passValues.setMatrix( passConstantNames()._viewProj, raster );
         // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
-        // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다.
-        context._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
-        // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
+        // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고, 그 증상은 "빛이 한 프레임 늦게 따라온다"이다. 깊이는 지터 든 행렬로 그렸으므로 역행렬도 그것이다.
+        context._passValues.setMatrix( passConstantNames()._invViewProj, raster.invert() );
+        context._passValues.setFloat4( passConstantNames()._temporalJitter, float4{ ndcJitter._x, ndcJitter._y, 0.0f, 0.0f } );
+        // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다(지터 없는 것 — 절두체가 프레임마다 흔들리지 않는다).
         _state.getCullInputOf( view ).setViewProjection( viewProj );
 
         // 시간 누적 기록을 버릴지는 셋업이 뷰마다 프레임에 한 번 정했다(`beginViewHistory` — 처음 그리는 프레임과 컷). TAA · 모션 블러 · 자동 노출 · 가림 판정이
@@ -810,7 +818,8 @@ namespace sw
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
         // TAA 출력은 셋업이 기록 형식으로 읽어 프레임 밖에서도 쓴다 — 나누지 않는다.
-        vector<uint8> listExcluded( listCandidate.size(), 0 );
+        vector<uint8>                listExcluded( listCandidate.size(), 0 );
+        vector<RenderGraphAliasJoin> listJoin;
         for ( const RenderGraphPassDesc& pass : listPass )
         {
             const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
@@ -833,15 +842,12 @@ namespace sw
                         listExcluded[outputIt->second] = 1; // 원본이 후보가 아니면(깊이 · Load) 출력도 나누지 않는다
                         continue;
                     }
-                    RenderGraphAliasCandidate& source = listCandidate[inputIt->second];
-                    RenderGraphAliasCandidate& target = listCandidate[outputIt->second];
-                    source._firstLevel                = MathUtil::min( source._firstLevel, target._firstLevel );
-                    source._lastLevel                 = MathUtil::max( source._lastLevel, target._lastLevel );
-                    target._firstLevel                = source._firstLevel;
-                    target._lastLevel                 = source._lastLevel;
+                    listJoin.push_back( RenderGraphAliasJoin{ static_cast<uint32>( inputIt->second ), static_cast<uint32>( outputIt->second ) } );
                 }
             }
         }
+        // 사슬(꺼진 효과 둘이 잇따라 원본을 가리킨다)도 한 구간이다 — 짝마다 맞추면 한 단계만 전파된다.
+        RenderGraphAliasPlan::joinLifetimes( listCandidate, listJoin );
         vector<RenderGraphAliasCandidate> listAliasable;
         for ( size_t candidateIndex = 0; candidateIndex < listCandidate.size(); ++candidateIndex )
         {

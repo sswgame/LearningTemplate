@@ -45,12 +45,14 @@ namespace sw
         [[nodiscard]] static bool initialize();
         /**
          * @brief 논블로킹 UDP 소켓을 @p port 에 엽니다(0 = 아무 포트). 실패하면 `kInvalidSocket` 입니다.
-         * @param bLoopbackOnly true 이면 127.0.0.1 에만 묶는다 — 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일마다 허용 창을 띄운다.
+         * @param bLoopbackOnly true 이면 루프백(127.0.0.1 · `::1`)에만 묶는다 — 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일마다 허용 창을 띄운다.
          * @param sharing `ReusePort` 는 리눅스에서만 열린다 — 다른 플랫폼은 `kInvalidSocket` 이다(배타 소켓으로 대신 열지 않는다).
+         * @param family IPv6 소켓은 이중 스택(`IPV6_V6ONLY` 끔)이라 IPv4 상대도 받는다 — 보낼 때는 IPv4 상대를 `NetAddress::toIpv4Mapped` 로 바꿔 넘긴다(`UDPNetTransport`).
+         *               IPv6 를 끈 기계에서는 열리지 않는다(IPv4 로 대신 열지 않는다).
          */
-        static uint64 openUDPSocket( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing );
+        static uint64 openUDPSocket( uint16 port, bool bLoopbackOnly, UDPPortSharing sharing, NetAddressFamily family );
         static void   closeSocket( uint64 socketHandle );
-        /** @brief 실제로 묶인 포트입니다(0 으로 열었을 때). */
+        /** @brief 실제로 묶인 포트입니다(0 으로 열었을 때). 주소군과 상관없다. */
         static uint16              getBoundPort( uint64 socketHandle );
         [[nodiscard]] static bool  sendTo( uint64 socketHandle, const NetAddress& to, const uint8* pData, int32 size );
         static SocketReceiveResult receiveFrom( uint64 socketHandle, NetAddress& outFrom, uint8* pBuffer, int32 bufferSize, int32& outSize );
@@ -74,7 +76,8 @@ namespace sw
         /** @brief 소켓 @p count 개(최대 `kMaxWaitSockets`) 가운데 하나라도 읽을 것이 생기거나 @p timeoutMilli 가 지날 때까지 기다립니다(받는 소켓 + 깨우기 소켓). */
         static bool waitReadable( const uint64* pSocketHandles, int32 count, int32 timeoutMilli );
         /**
-         * @brief "호스트:포트" 를 IPv4 주소로 풉니다. 호스트가 점 넷 숫자면 그대로 읽고, 이름이면 운영체제 해석기(`getaddrinfo`, A 레코드 첫 값)에 묻습니다.
+         * @brief "호스트:포트" 를 주소로 풉니다. 호스트가 숫자 주소(IPv4 · `[IPv6]`)면 그대로 읽고, 이름이면 운영체제 해석기(`getaddrinfo`, A · AAAA 의 첫 값 —
+         *        순서는 OS 의 RFC 6724 정렬)에 묻습니다.
          *        포트가 없으면 @p defaultPort 입니다. 풀지 못하면 false 이며 다른 주소로 대신하지 않습니다.
          * @details 막는 호출입니다 — 이름 해석은 DNS 왕복(수 ms ~ 해석기 시한 몇 초)이라 기동이나 전용 워커에서만 부르고 틱 · 요청 경로에서 부르지 않습니다.
          *          언리얼 `ISocketSubsystem::GetAddressInfo` 의 블로킹 버전에 해당하고, `localhost` 같은 이름도 hosts 파일을 거쳐 이 경로로 해석합니다.

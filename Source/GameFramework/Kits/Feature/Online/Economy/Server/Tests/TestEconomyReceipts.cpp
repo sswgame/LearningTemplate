@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -95,7 +96,9 @@ namespace
             input._nowMs                  = kNowMs;
             input._bAcceptSandbox         = bAcceptSandbox ? SW_TRUE : SW_FALSE;
             EconomyRedeemReply reply;
-            _lastServiceResult = EconomyStoreLogic::redeemReceipt( connection, _currencies, _offers, input, reply );
+            // 서비스와 같은 저장소 입구로 돈다 — 읽은 상태 레코드가 커밋 조건이 된다(저장 함수는 손으로 조건을 걸지 않는다)
+            ServiceStoreEntryTestUtil::run( connection, [&]( IServiceStoreConnection& entry )
+            { _lastServiceResult = EconomyStoreLogic::redeemReceipt( entry, _currencies, _offers, input, reply ); } );
             return reply;
         }
 
@@ -129,7 +132,9 @@ namespace
             notification._storeName     = "fake";
             notification._transactionID = string( transactionID );
             vector<EconomyBalanceChange> listChange;
-            const EconomyServiceResult   result = EconomyStoreLogic::revokeRefund( connection, _currencies, notification, recovery, kNowMs, listChange );
+            EconomyServiceResult         result = EconomyServiceResult::fail( OnlineError::kUnavailable );
+            ServiceStoreEntryTestUtil::run( connection, [&]( IServiceStoreConnection& entry )
+            { result = EconomyStoreLogic::revokeRefund( entry, _currencies, notification, recovery, kNowMs, listChange ); } );
             if ( pOutListChange != nullptr )
                 *pOutListChange = listChange;
             return result;
@@ -334,7 +339,7 @@ namespace
             SW_EXPECT_TRUE( _registry.registerValidator( &_validator ) );
             EconomyServiceConfig settings;
             settings._pCurrencyCatalog       = &_data._currencies;
-            settings._pOfferCatalog          = &_data._offers;
+            settings._pOfferCatalog          = SharedAssetRef<OfferCatalog>::borrow( &_data._offers );
             settings._pReceiptRegistry       = &_registry;
             settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
             settings._refundRecovery         = EconomyRefundRecoveryMode::Debt;
@@ -403,7 +408,7 @@ namespace
             SW_EXPECT_TRUE( _registry.registerValidator( &_validator ) );
             EconomyServiceConfig settings;
             settings._pCurrencyCatalog       = &data._currencies;
-            settings._pOfferCatalog          = &data._offers;
+            settings._pOfferCatalog          = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
             settings._pReceiptRegistry       = &_registry;
             settings._deliveryScanIntervalMs = 1000;
             settings._deliveryAlarmMarginMs  = 100;
@@ -619,7 +624,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRefusesLinkedBindingWithoutThePort )
 
     EconomyServiceConfig settings;
     settings._pCurrencyCatalog = &data._currencies;
-    settings._pOfferCatalog    = &data._offers;
+    settings._pOfferCatalog    = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
     settings._pReceiptRegistry = &registry;
     settings._refundRecovery   = EconomyRefundRecoveryMode::Debt;
     EconomyService refused;
@@ -1049,7 +1054,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
     {
         EconomyServiceConfig settings;
         settings._pCurrencyCatalog = &data._currencies;
-        settings._pOfferCatalog    = &data._offers;
+        settings._pOfferCatalog    = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
         settings._pReceiptRegistry = &registry;
         settings._refundRecovery   = EconomyRefundRecoveryMode::Debt;
         return settings;
@@ -1099,7 +1104,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
     SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
     EconomyServiceConfig settings;
     settings._pCurrencyCatalog    = &data._currencies;
-    settings._pOfferCatalog       = &data._offers;
+    settings._pOfferCatalog       = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
     settings._pReceiptRegistry    = &registry;
     settings._refundCursorRetryMs = 1000;
     settings._refundRecovery      = EconomyRefundRecoveryMode::Debt;
@@ -1155,6 +1160,6 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceNeedsDependencies )
     MemoryServiceStore   store{ &data._database };
     EconomyServiceConfig settings;
     settings._pCurrencyCatalog = &data._currencies;
-    settings._pOfferCatalog    = &data._offers;
+    settings._pOfferCatalog    = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
     SW_EXPECT_FALSE( service.initialize( &store, settings ) ); // 회수 정책은 코드 기본값이 없다 — 설정 `_refundRecovery` 가 고른다
 }

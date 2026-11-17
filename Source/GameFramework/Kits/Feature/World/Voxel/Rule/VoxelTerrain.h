@@ -3,6 +3,7 @@
  * @brief 시드로 결정되는 지형을 생성합니다. 값 노이즈(`Utility/ValueNoise.h`)로 높이를 정하고, 흙, 돌, 모래 해변, 물, 나무를 배치합니다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -13,6 +14,14 @@ namespace sw
 {
     struct VoxelTerrainReport;
     class VoxelWorld;
+
+    /** @brief 돌 속 광석 한 층입니다. 층들의 확률은 앞에서부터 쌓여 한 칸에 광석 하나만 고른다. */
+    struct VoxelOreLayer
+    {
+        hashed_string _block{};
+        float32       _chance{ 0.0f }; ///< 돌 한 칸이 이 광석이 될 확률
+        int32         _maxHeight{ 0 }; ///< 이 높이(y) 아래에만 놓는다
+    };
 
     /** @brief 지형 생성 설정입니다. 블록은 id 로 고르며, 카탈로그에 없으면 그 층을 건너뜁니다. */
     struct SW_KIT_API VoxelTerrainSettings
@@ -33,9 +42,15 @@ namespace sw
         hashed_string _bedrockBlock{ "bedrock" };
         hashed_string _logBlock{ "log" };
         hashed_string _leavesBlock{ "leaves" };
+        /// 꾸밈(눈 · 광석)도 지형처럼 `_seed` 를 따른다 — 게임이 씨앗 없는 해시로 따로 꾸미면 씨앗을 바꿔도 광석 자리가 그대로다(감사 K-8).
+        /// 마인크래프트의 지형 생성 단계(feature placement)가 같은 월드 씨앗을 쓰는 것과 같은 자리.
+        hashed_string         _snowBlock{};     ///< 높은 풀 꼭대기를 덮는 블록. 비면 눈이 없다
+        int32                 _snowHeight{ 0 }; ///< 풀 꼭대기가 이 높이(y) 이상이면 눈으로 덮는다
+        vector<VoxelOreLayer> _listOreLayer{};  ///< 돌 속 광석. 지면 3 블록 아래부터 y = 1 까지
 
         // 월드를 지형으로 채웁니다. 기둥마다 아래에서 위로 기반암, 돌, 흙을 채우고, 맨 위는 물가 2블록 안이면 모래, 아니면 풀로 덮습니다. 물 높이까지는 물로 채웁니다.
         // 풀 위에는 시드 해시로 나무(줄기 4~6블록과 잎 덩어리)를 세운다. 나무는 청크 경계를 넘어도 되지만 월드 밖으로는 잘라 낸다.
+        // 끝으로 높은 풀 꼭대기를 눈으로 덮고 돌 속에 광석을 시드 해시로 놓는다.
         /** @brief 기둥의 지면 높이(맨 위 블록의 y)입니다. 월드를 쓰지 않으므로 미리보기와 스폰 위치에도 씁니다. */
         static int32              computeSurfaceHeight( int32 x, int32 z, const VoxelTerrainSettings& settings );
         static VoxelTerrainReport fillWorld( VoxelWorld& world, const VoxelTerrainSettings& settings );

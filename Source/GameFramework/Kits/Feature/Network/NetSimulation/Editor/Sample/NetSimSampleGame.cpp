@@ -187,6 +187,7 @@ namespace sw
 
                 uint8           getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
                 uint16          getMessageKindMask() const override { return _owner.getMessageKindMask(); }
+                uint32          getWireVersion() const override { return NetSimSampleGameInternal::MessageTable::computeWireVersion(); }
                 NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
                 void            onConnectionOpened( int32 connectionID ) override { _owner.onConnectionOpened( connectionID ); }
                 void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override { _owner.onConnectionClosed( connectionID, reason ); }
@@ -346,6 +347,7 @@ namespace sw
 
                 uint8           getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
                 uint16          getMessageKindMask() const override { return _owner.getMessageKindMask(); }
+                uint32          getWireVersion() const override { return NetSimSampleGameInternal::MessageTable::computeWireVersion(); }
                 NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
 
             private:

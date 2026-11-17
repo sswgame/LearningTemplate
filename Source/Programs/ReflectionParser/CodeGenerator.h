@@ -43,6 +43,9 @@ namespace sw
          */
         string makeEditorMetadataText() const;
 
+        /** @brief 마지막 `makeSourceText` 가 방출 함수 구역마다 낸 바이트입니다(`ReflectionParser.EmitBytes`). 구역 밖(이름공간 줄 등)은 세지 않는다. */
+        const CodeEmitByteReport& getEmitBytes() const { return _emitBytes; }
+
     private:
         // ------------------------------------------------------------------------------
         // 2) emit — Type/Property/Method/Enum 골격
@@ -102,5 +105,7 @@ namespace sw
         const ParserSession&       _session;
         string                     _sourceFilePath;
         string                     _moduleName; ///< `--module` 그대로 - 경로 글자로 모듈을 추측하지 않는다(런타임 등록 · 내림이 이 이름을 쓴다)
+        /// @brief 방출 바이트 계측입니다. 계측은 출력 글을 바꾸지 않아 `const` 방출 함수가 채운다(생성기 하나는 한 스레드가 쓴다).
+        mutable CodeEmitByteReport _emitBytes;
     };
 } // namespace sw

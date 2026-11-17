@@ -46,6 +46,23 @@ namespace sw
                 completion._result = storage.readSlot( request._slot, envelopeBytes );
                 if ( completion._result == LocalStoreResult::Ok )
                     completion._result = LocalSealContext::open( sealContext, envelopeBytes.data(), envelopeBytes.size(), completion._bytes, completion._formatVersion );
+                if ( completion._result == LocalStoreResult::Corrupt )
+                {
+                    // 지금 봉투가 깨졌다(장치 결함 · 밖에서 고친 파일) — 바닥이 남긴 직전 세대로 돌아간다. 그것도 지면 Corrupt 그대로다.
+                    vector<uint8> previousBytes;
+                    vector<uint8> previousBody;
+                    uint32        previousVersion = 0;
+                    const bool    bRecovered      = storage.readPreviousSlot( request._slot, previousBytes ) == LocalStoreResult::Ok &&
+                                            LocalSealContext::open( sealContext, previousBytes.data(), previousBytes.size(), previousBody, previousVersion ) == LocalStoreResult::Ok;
+                    if ( bRecovered )
+                    {
+                        SW_LOG_WARNING_ID( "LocalStore.ReadPreviousGeneration", "Local store slot '%#' is corrupt - read its previous generation instead (the last write is lost)",
+                                           request._slot.c_str() );
+                        completion._result        = LocalStoreResult::Ok;
+                        completion._bytes         = std::move( previousBody );
+                        completion._formatVersion = previousVersion;
+                    }
+                }
                 break;
             }
             case LocalStoreOperation::Write:

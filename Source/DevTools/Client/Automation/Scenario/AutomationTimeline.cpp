@@ -22,7 +22,7 @@ namespace sw
         AutomationTimelineSlice& slice = _arrSlice[static_cast<uint32>( kind )];
         ++slice._frameCount;
         slice._seconds += seconds;
-        const bool bWaiting = kind == AutomationFrameKind::ScheduledWait || kind == AutomationFrameKind::ConditionHold;
+        const bool bWaiting = kind == AutomationFrameKind::ScheduledWait || kind == AutomationFrameKind::ConditionHold || kind == AutomationFrameKind::SimulationOnly;
         if ( bWaiting )
         {
             ++_pendingWaitFrameCount;
@@ -120,6 +120,8 @@ namespace sw
                 return "step";
             case AutomationFrameKind::ScheduledWait:
                 return "scheduledWait";
+            case AutomationFrameKind::SimulationOnly:
+                return "simulationOnly";
         }
         return "";
     }

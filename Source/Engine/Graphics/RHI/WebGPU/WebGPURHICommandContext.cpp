@@ -387,7 +387,7 @@ namespace sw
             _state._compute._arrShaderResource[slot] = index;
     }
 
-    void WebGPURHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void WebGPURHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         // 기록 중 갱신은 상수 링의 새 칸으로 이름을 바꾼다 — 같은 버퍼를 한 프레임에 여러 번 갱신해도 앞서 기록한 그리기는 제 칸을 읽는다(DX11 WRITE_DISCARD 와 같은 뜻).
         WebGPUBufferRecord* const pRecord   = _pDevice != nullptr ? _pDevice->findBuffer( buffer ) : nullptr;

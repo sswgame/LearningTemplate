@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/DeterministicRun.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -162,7 +164,8 @@ namespace sw
         {
             _shownSeconds += deltaSeconds;
             applyProgress( *pScreen, loadProgress );
-            if ( bLoading || _shownSeconds < _settings._minimumSeconds )
+            const bool bSkipMinimum = engine::getSubsystem<DeterministicRun>().getPolicy()._bSkipLoadingScreenMinimum == SW_TRUE;
+            if ( bLoading || ( bSkipMinimum == false && _shownSeconds < _settings._minimumSeconds ) )
             {
                 _spinnerAngle = MathUtil::fmod( _spinnerAngle + kSpinnerRadiansPerSecond * deltaSeconds, MathUtil::kPi * 2.0f );
                 static const hashed_string s_spinnerName( kSpinnerWidgetName );

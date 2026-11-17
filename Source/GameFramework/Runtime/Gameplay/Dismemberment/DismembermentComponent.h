@@ -22,6 +22,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -103,9 +104,9 @@ namespace sw
         PROPERTY( Category = "Dismemberment", DisplayName = "Piece Mass", Min = 0.1, Units = kg )
         float32 _pieceMass;
 
-        shared_ptr<const FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
-        vector<hashed_string>       _listSeveredRegion;
-        vector<GameObjectHandle>    _listPiece;
-        bool                        _bTableLoaded;
+        SharedAssetRef<FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
+        vector<hashed_string>     _listSeveredRegion;
+        vector<GameObjectHandle>  _listPiece;
+        bool                      _bTableLoaded;
     };
 } // namespace sw

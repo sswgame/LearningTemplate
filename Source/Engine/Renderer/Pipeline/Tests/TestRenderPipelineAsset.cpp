@@ -863,3 +863,36 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
     const string        opaqueCompute = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _implementation=\"Compute\" " ) + RenderPipelineTestUtil::kOpaqueState;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaqueCompute ) ) );
 }
+
+/**
+ * @brief [RenderPipelineAssetTest] 디퍼드의 SSAO 는 조명 패스 앞에서 돌고 조명 패스만 AO 를 읽는다(RN-11)
+ * @details AO 를 후처리(블룸)에서 최종 색 전체에 곱하면 직접광 · 자체 발광 · 반투명까지 어두워진다. 언리얼 · 유니티처럼 앰비언트 · 프로브 빛에만 든다(deferred_lighting.hlsl).
+ *          블룸 · Present 의 입력 계약에서 AO 를 뺐으므로 후처리에 AOColor 를 선언한 XML 은 로드가 거절한다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, AmbientOcclusionFeedsLightingOnly )
+{
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
+    const vector<RenderGraphPassDesc>& listPass     = deferred.getGraphPass();
+    size_t                             ssaoIndex    = listPass.size();
+    size_t                             lightIndex   = listPass.size();
+    bool                               bLightReadAO = false;
+    for ( size_t passIndex = 0; passIndex < listPass.size(); ++passIndex )
+    {
+        const RenderGraphPassDesc& pass = listPass[passIndex];
+        if ( pass._type == RenderPassType::SSAO )
+            ssaoIndex = passIndex;
+        const bool bReadsAO = VectorUtil::containsIf( pass._listResolvedInput, []( const RenderGraphPassDesc::ResolvedAttachment& input )
+        { return input._attachment == hashed_string( "AOColor" ); } );
+        if ( pass._type == RenderPassType::Lighting )
+        {
+            lightIndex   = passIndex;
+            bLightReadAO = bReadsAO;
+            continue;
+        }
+        SW_EXPECT_FALSE_MSG( bReadsAO, pass._name.c_str() ); // 조명 밖에서는 AO 를 읽지 않는다
+    }
+    SW_REQUIRE_TRUE( ssaoIndex < listPass.size() && lightIndex < listPass.size() );
+    SW_EXPECT_TRUE( ssaoIndex < lightIndex );
+    SW_EXPECT_TRUE( bLightReadAO );
+}

@@ -50,6 +50,7 @@
 		<item name="_maskMap" type="Texture2D" displayName="Mask (R coat, G pattern, B thickness)" group="Textures" bSrgb="0"/>
 		<item name="_wetMask" type="Texture2D" displayName="Wet Mask (runtime)" group="Textures" bSrgb="0"/>
 		<item name="_residueMask" type="Texture2D" displayName="Residue Mask (runtime)" group="Textures" bSrgb="0"/>
+		<item name="_skinLayerSurfaceMap" type="Texture2D" displayName="Skin Layer Surface (runtime: R roughness, G its weight, B metallic, A its weight)" group="Textures" bSrgb="0"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

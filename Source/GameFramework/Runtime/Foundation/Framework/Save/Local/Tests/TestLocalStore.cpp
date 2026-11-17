@@ -9,6 +9,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/FileLocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalDeviceKeyProvider.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreBackend.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/Tests/LocalStoreContract.h"
@@ -16,6 +17,7 @@
 
 // LocalStoreMemoryTest · LocalStoreFileTest — 로컬 저장: 메모리 저장소와 파일 저장소(전용 스레드 + 파일 바닥)가 같은 계약 아홉(왕복 · 나열 · 압축 · 봉인 셋 · 이름 ·
 // 순서 · 내리기)을 지킨다. 메모리는 쓰기 도중 꺼짐 · 슬롯 이름 규칙, 파일은 슬롯 → 파일 경로와 꺼진 쓰기의 임시 파일 지우기, 공장(file · memory · 모르는 이름 · 기반 이름 덮기)(nogpu).
+// LocalDeviceKeyTest — 장치 키: 0 바이트 · 쓰레기 키 파일은 옆에 남기고 새 키로 기동한다(nogpu).
 
 using namespace sw;
 
@@ -155,4 +157,80 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
         SW_EXPECT_TRUE( LocalStoreBackend::createLocalStore( "UnitGame", settings, context ) ); // 기반 파일 백엔드가 그대로 만든다
     }
     SW_EXPECT_TRUE( LocalStoreBackend::createLocalStore( "UnitGame", settings, context ) ); // 거절된 등록이 풀려도 기반 백엔드는 남는다
+}
+
+namespace
+{
+    /** @brief 키 파일 @p keyBytes 를 두고 장치 키를 얻은 뒤, 풀리지 않던 파일이 옆에 남고 새 키가 다음 기동에도 같은지 봅니다. */
+    void expectUnreadableKeyFileIsReplaced( string_view caseName, const string& keyBytes )
+    {
+        OpenSSLNetSecurityProvider provider;
+        const string               keyPath = FileUtil::joinPath( test::makeScratchPath( caseName ), LocalDeviceKeyProvider::kKeyFileName );
+        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( keyPath ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( keyPath, keyBytes ) );
+
+        uint8 arrKey[ILocalStoreKeyProvider::kKeySize]{};
+        {
+            LocalDeviceKeyProvider keyProvider{ keyPath, &provider };
+            SW_EXPECT_LOG( "LocalDeviceKeyProvider.UnreadableKeyReplaced" );
+            SW_REQUIRE_TRUE( keyProvider.getSealKey( arrKey ) ); // 예전에는 IOError 로 멈춰 사용자가 파일을 지울 때까지 저장 · 읽기가 막혔다
+        }
+        const string setAsidePath = keyPath + LocalDeviceKeyProvider::kUnreadableKeySuffix;
+        string       keptBytes;
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( setAsidePath, keptBytes ) );
+        SW_EXPECT_TRUE( keptBytes == keyBytes ); // 지우지 않는다 — 다른 사용자의 파일이었으면 되돌려 놓을 수 있다
+
+        uint8                  arrReloadedKey[ILocalStoreKeyProvider::kKeySize]{};
+        LocalDeviceKeyProvider restarted{ keyPath, &provider };
+        SW_REQUIRE_TRUE( restarted.getSealKey( arrReloadedKey ) );
+        SW_EXPECT_TRUE( std::memcmp( arrKey, arrReloadedKey, sizeof( arrKey ) ) == 0 );
+    }
+} // namespace
+
+/** @brief [LocalDeviceKeyTest] 0 바이트 키 파일(전원이 나간 쓰기)로 기동해도 옆에 남기고 새 키를 만든다 */
+SW_TEST_CASE( LocalDeviceKeyTest, ZeroByteKeyFileIsKeptAsideAndReplaced )
+{
+    expectUnreadableKeyFileIsReplaced( "device_key_empty", "" );
+}
+
+/** @brief [LocalDeviceKeyTest] 쓰레기 키 파일로 기동해도 옆에 남기고 새 키를 만든다 */
+SW_TEST_CASE( LocalDeviceKeyTest, GarbageKeyFileIsKeptAsideAndReplaced )
+{
+    expectUnreadableKeyFileIsReplaced( "device_key_garbage", "not a key" );
+}
+
+/**
+ * @brief [LocalStoreFileTest] 슬롯을 쓸 때 직전 세대(`.prev`)를 남기고, 지금 파일의 봉투 검사가 지면 그것으로 돌아가 읽고 경고한다. 둘 다 지면 Corrupt 다
+ * @details 예전에는 한 세대만 있어 깨진 세이브(장치 결함 · 밖에서 고친 파일)는 그대로 잃었다.
+ */
+SW_TEST_CASE( LocalStoreFileTest, CorruptSlotFallsBackToThePreviousGeneration )
+{
+    FileLocalFixture fixture;
+    using Contract = test::LocalStoreContract;
+    SW_REQUIRE_TRUE( Contract::write( fixture.getStore(), "save/slot0", Contract::makeText( "first" ) ) == LocalStoreResult::Ok );
+    SW_REQUIRE_TRUE( Contract::write( fixture.getStore(), "save/slot0", Contract::makeText( "second" ) ) == LocalStoreResult::Ok );
+    fixture._store.reset(); // 쓰기를 마친 뒤 파일을 직접 고친다
+
+    const string slotPath     = fixture._directStorage.makeSlotPath( "save/slot0" );
+    const string previousPath = slotPath + FileLocalSlotStorage::kPreviousGenerationSuffix;
+    SW_REQUIRE_TRUE( FileUtil::isRegularFile( previousPath ) );
+    const uint8 arrGarbage[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
+    SW_REQUIRE_TRUE( FileUtil::writeFile( slotPath, arrGarbage, sizeof( arrGarbage ) ) );
+
+    fixture.restart();
+    {
+        SW_EXPECT_LOG( "LocalStore.ReadPreviousGeneration" );
+        const LocalStoreCompletion recovered = Contract::read( fixture.getStore(), "save/slot0" );
+        SW_EXPECT_TRUE( recovered._result == LocalStoreResult::Ok );
+        SW_EXPECT_TRUE( recovered._bytes == Contract::makeText( "first" ) );
+    }
+
+    fixture._store.reset();
+    SW_REQUIRE_TRUE( FileUtil::writeFile( previousPath, arrGarbage, sizeof( arrGarbage ) ) );
+    fixture.restart();
+    SW_EXPECT_TRUE( Contract::read( fixture.getStore(), "save/slot0" )._result == LocalStoreResult::Corrupt );
+
+    fixture._store.reset();
+    SW_REQUIRE_TRUE( fixture._directStorage.eraseSlot( "save/slot0" ) == LocalStoreResult::Ok );
+    SW_EXPECT_FALSE( FileUtil::exists( previousPath ) ); // 지우기는 직전 세대도 지운다
 }

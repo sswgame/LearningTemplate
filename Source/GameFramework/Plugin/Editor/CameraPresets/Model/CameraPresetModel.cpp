@@ -45,8 +45,8 @@ namespace sw::editor
     ToolAssetLoadResult CameraPresetModel::loadAsset( string_view assetPath )
     {
         _selectedIndex = -1;
-        // 미리 보기는 고치지 않으므로 공유 캐시의 한 벌을 읽는다 — 파일을 고치면 제자리 다시 읽기가 이 표에도 닿는다.
-        shared_ptr<const CameraPresetCatalog> pLoaded = SharedAssetCache<CameraPresetCatalog>::acquire( assetPath );
+        // 미리 보기는 고치지 않으므로 공유 캐시의 한 벌을 읽는다 — 파일을 고치면 다시 읽은 판이 이 참조에도 닿는다.
+        SharedAssetRef<CameraPresetCatalog> pLoaded = SharedAssetCache<CameraPresetCatalog>::acquire( assetPath );
         if ( pLoaded == nullptr )
         {
             _status = "The preset file could not be read - see the log";

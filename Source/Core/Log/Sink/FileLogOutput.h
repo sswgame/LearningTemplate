@@ -41,12 +41,17 @@ namespace sw
         void close() override;
         /** @brief 시각이 바뀌었으면 파일을 새로 연 뒤 한 줄을 씁니다. */
         void write( const LogRecord& record ) override;
+        void writeWithoutWaiting( const LogRecord& record ) override;
         void flushWithoutWaiting() override;
 
         /** @brief 로그 파일이 있는 폴더 경로입니다. `open` 전에는 비어 있습니다. */
         const string& getLogFolderPath() const { return _logFolderPath; }
         /** @brief 지금 쓰는 파일의 경로입니다(시간이 바뀌면 다음 파일). 아직 한 줄도 쓰지 않았으면 빈 글입니다. */
         string getCurrentLogFilePath();
+
+    private:
+        /** @brief `write` · `writeWithoutWaiting` 의 본체입니다. */
+        void writeLocked( const LogRecord& record ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         mutex                      _mutex;         ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다

@@ -28,9 +28,14 @@ namespace sw
         ILocalSlotStorage( const ILocalSlotStorage& )            = delete;
         ILocalSlotStorage& operator=( const ILocalSlotStorage& ) = delete;
 
-        virtual LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes )     = 0;
-        virtual LocalStoreResult writeSlot( const string& slot, const vector<uint8>& envelopeBytes ) = 0;
-        virtual LocalStoreResult eraseSlot( const string& slot )                                     = 0;
+        virtual LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) = 0;
+        /**
+         * @brief 슬롯의 직전 세대(바로 앞 쓰기가 덮은 봉투)를 읽습니다. 지금 봉투의 검사가 지면 `LocalStoreRequest::execute` 가 여기로 돌아간다.
+         * @details 직전 세대를 두지 않는 바닥(쓰기가 트랜잭션인 메모리 · SQL)은 NotFound 다. 어느 쪽인지 바닥마다 정하도록 순수 가상이다.
+         */
+        virtual LocalStoreResult readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) = 0;
+        virtual LocalStoreResult writeSlot( const string& slot, const vector<uint8>& envelopeBytes )     = 0;
+        virtual LocalStoreResult eraseSlot( const string& slot )                                         = 0;
         /** @brief @p groupPrefix(빈 글 = 모두)로 시작하는 슬롯을 이름순으로 붙입니다. */
         virtual LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) = 0;
     };

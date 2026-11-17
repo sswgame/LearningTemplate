@@ -1,6 +1,6 @@
 /**
  * @file RenderViewWatches.cpp
- * @brief 추가 뷰 수집의 자동화 감시 값 `RenderView.HiddenCount` 입니다.
+ * @brief 추가 뷰 수집의 자동화 감시 값 `RenderView.HiddenCount` · `RenderView.OverflowCount` 입니다.
  * @details 시나리오만 읽는 감시 값이라 수집 TU 가 아니라 이 파일에 둔다 — 값은 패킷 빌더의 뷰 설정이 든다(`RenderPacketBuilder::getLastHiddenViewCount`).
  */
 #include "pch.h"
@@ -24,8 +24,21 @@ namespace sw
             outValue = static_cast<float64>( pFrameRenderer->getPacketBuilder().getLastHiddenViewCount() );
             return true;
         }
+
+        /** @brief 마지막 수집에서 자리(`kMaxExtraRenderView`)를 얻지 못해 빠진 추가 뷰 수입니다. 렌더러가 없는 실행에는 값이 없다. */
+        [[nodiscard]] bool readOverflowViewCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            const FrameRendererSubsystem* const pFrameRenderer = engine::findSubsystem<FrameRendererSubsystem>();
+            if ( pFrameRenderer == nullptr )
+                return false;
+            outValue = static_cast<float64>( pFrameRenderer->getPacketBuilder().getLastOverflowViewCount() );
+            return true;
+        }
     } // namespace
 
+    SW_AUTOMATION_WATCH( renderViewOverflowCount, "RenderView.OverflowCount", "Extra views that got no view slot last frame (more cameras than kMaxExtraRenderView)",
+                         &readOverflowViewCount );
     SW_AUTOMATION_WATCH( renderViewHiddenCount, "RenderView.HiddenCount", "Extra views the visibility test rested last frame (monitor off screen, behind a wall or too small)",
                          &readHiddenViewCount );
 } // namespace sw

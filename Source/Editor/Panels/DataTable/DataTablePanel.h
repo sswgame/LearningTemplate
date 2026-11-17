@@ -75,6 +75,10 @@ namespace sw::editor
         void drawGameDataTab();
         /** @brief 모델의 두 문서 dirty 비트를 기반 클래스의 문서 dirty 비트에 반영합니다. */
         void syncDocumentDirty() override;
+        /** @brief 열린 게임 데이터 표의 원문입니다(문서 되돌리기 — 감사 E-13). 현지화 표는 연 문서가 아니라 되돌리기에 들지 않는다. */
+        string captureDocumentText() const override;
+        /** @brief 되돌리기가 준 원문으로 게임 데이터 표를 맞춥니다. */
+        void applyDocumentText( string_view text ) override;
 
     private:
         DataTableModel                          _model;
