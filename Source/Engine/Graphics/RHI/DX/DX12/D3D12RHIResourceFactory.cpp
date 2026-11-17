@@ -998,92 +998,96 @@ namespace sw
         _pDevice->requireRegistryMutableNow( "createTexture2D" );
 
         // RTV · DSV 칸 발급기만 잠근다. 오프스크린 레코드는 핸들 테이블 칸에 들어가고, 핸들을 돌려주기 전이라 기록 워커가 그 칸을 아직 모른다.
-        ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
-
-        for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
+        // 칸은 쪽 목록이라 상한이 없다. 쪽을 만들지 못하면(힙 메모리 부족) 뷰 없는 텍스처를 유효 핸들로 내보내지 않고 생성 실패다(R-11 — 예전엔 128 · 64 칸을 넘으면 로그 뒤 뷰 없이 나갔다).
+        bool bViewsCreated = pNative != nullptr;
         {
-            uint32     rtvSlot{ 0 };
-            const bool bReused = _pDevice->_freeOffscreenRTV.tryPop( rtvSlot );
-            if ( bReused == false && _pDevice->_nextOffscreenRTVIndex < D3D12RHIDevice::kMaxOffscreenRTVs )
-                rtvSlot = _pDevice->_nextOffscreenRTVIndex++;
-            else if ( bReused == false )
+            ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
+            for ( uint32 slice = 0; bViewsCreated && desc._bIsRenderTarget && slice < desc._arraySize; ++slice )
             {
-                // 고갈은 로그로 남긴다. 유효한 핸들이 돌아오는데 RTV 가 없으므로, 조용히 넘어가면
-                // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보인다.
-                rtvSlot = D3D12RHIDevice::kMaxOffscreenRTVs;
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenRTVDescriptorsExhausted", "Offscreen RTV descriptors exhausted (max %#) - this texture cannot be used as a render target.",
-                                 static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRTVs ) );
+                uint32                      rtvSlot{ 0 };
+                D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle{};
+                if ( _pDevice->acquireOffscreenView( false, rtvSlot, rtvHandle ) == false )
+                {
+                    bViewsCreated = false;
+                    break;
+                }
+                D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+                rtvDesc.Format = colorFmt;
+                if ( bSliced )
+                {
+                    rtvDesc.ViewDimension                  = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+                    rtvDesc.Texture2DArray.MipSlice        = 0;
+                    rtvDesc.Texture2DArray.FirstArraySlice = slice;
+                    rtvDesc.Texture2DArray.ArraySize       = 1;
+                    rtvDesc.Texture2DArray.PlaneSlice      = 0;
+                }
+                else
+                {
+                    rtvDesc.ViewDimension        = D3D12_RTV_DIMENSION_TEXTURE2D;
+                    rtvDesc.Texture2D.MipSlice   = 0;
+                    rtvDesc.Texture2D.PlaneSlice = 0;
+                }
+                _pDevice->_device->CreateRenderTargetView( pNative, &rtvDesc, rtvHandle );
+                if ( slice == 0 )
+                {
+                    record._rtvIndex  = rtvSlot;
+                    record._rtvHandle = rtvHandle;
+                    record._bHasRTV   = SW_TRUE;
+                }
+                else
+                {
+                    record._listExtraRTVIndex.push_back( rtvSlot );
+                    record._listExtraRTVHandle.push_back( rtvHandle );
+                }
             }
-            if ( rtvSlot >= D3D12RHIDevice::kMaxOffscreenRTVs )
-                break;
-            const uint32                  rtvIndex  = _pDevice->_swapChain.getBufferCount() + rtvSlot;
-            D3D12_CPU_DESCRIPTOR_HANDLE   rtvHandle = _pDevice->getOffscreenRTVHandle( rtvIndex );
-            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-            rtvDesc.Format = colorFmt;
-            if ( bSliced )
+
+            for ( uint32 slice = 0; bViewsCreated && bDepth && slice < desc._arraySize; ++slice )
             {
-                rtvDesc.ViewDimension                  = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-                rtvDesc.Texture2DArray.MipSlice        = 0;
-                rtvDesc.Texture2DArray.FirstArraySlice = slice;
-                rtvDesc.Texture2DArray.ArraySize       = 1;
-                rtvDesc.Texture2DArray.PlaneSlice      = 0;
+                uint32                      dsvSlot{ 0 };
+                D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle{};
+                if ( _pDevice->acquireOffscreenView( true, dsvSlot, dsvHandle ) == false )
+                {
+                    bViewsCreated = false;
+                    break;
+                }
+                D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+                dsvDesc.Format = dsvFmt;
+                dsvDesc.Flags  = D3D12_DSV_FLAG_NONE;
+                if ( bSliced )
+                {
+                    dsvDesc.ViewDimension                  = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+                    dsvDesc.Texture2DArray.MipSlice        = 0;
+                    dsvDesc.Texture2DArray.FirstArraySlice = slice;
+                    dsvDesc.Texture2DArray.ArraySize       = 1;
+                }
+                else
+                {
+                    dsvDesc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
+                    dsvDesc.Texture2D.MipSlice = 0;
+                }
+                _pDevice->_device->CreateDepthStencilView( pNative, &dsvDesc, dsvHandle );
+                if ( slice == 0 )
+                {
+                    record._dsvIndex  = dsvSlot;
+                    record._dsvHandle = dsvHandle;
+                    record._bHasDSV   = SW_TRUE;
+                }
+                else
+                {
+                    record._listExtraDSVIndex.push_back( dsvSlot );
+                    record._listExtraDSVHandle.push_back( dsvHandle );
+                }
             }
-            else
-            {
-                rtvDesc.ViewDimension        = D3D12_RTV_DIMENSION_TEXTURE2D;
-                rtvDesc.Texture2D.MipSlice   = 0;
-                rtvDesc.Texture2D.PlaneSlice = 0;
-            }
-            _pDevice->_device->CreateRenderTargetView( pNative, &rtvDesc, rtvHandle );
-            if ( slice == 0 )
-            {
-                record._rtvIndex  = rtvIndex;
-                record._rtvHandle = rtvHandle;
-                record._bHasRTV   = SW_TRUE;
-            }
-            else
-                record._listExtraRTVIndex.push_back( rtvIndex );
+
+            if ( bViewsCreated == false )
+                _pDevice->releaseOffscreenViews( record );
         }
-
-        for ( uint32 slice = 0; pNative != nullptr && bDepth && _pDevice->_dsvHeap != nullptr && slice < desc._arraySize; ++slice )
+        if ( bViewsCreated == false )
         {
-            uint32     dsvSlot{ 0 };
-            const bool bReused = _pDevice->_freeOffscreenDSV.tryPop( dsvSlot );
-            if ( bReused == false && _pDevice->_nextOffscreenDSVIndex < D3D12RHIDevice::kMaxOffscreenDSVs )
-                dsvSlot = _pDevice->_nextOffscreenDSVIndex++;
-            else if ( bReused == false )
-            {
-                dsvSlot = D3D12RHIDevice::kMaxOffscreenDSVs;
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenDSVDescriptorsExhausted", "Offscreen DSV descriptors exhausted (max %#) - this texture cannot be used as depth.",
-                                 static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDSVs ) );
-            }
-            if ( dsvSlot >= D3D12RHIDevice::kMaxOffscreenDSVs )
-                break;
-            const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = _pDevice->getOffscreenDSVHandle( dsvSlot );
-            D3D12_DEPTH_STENCIL_VIEW_DESC     dsvDesc{};
-            dsvDesc.Format = dsvFmt;
-            dsvDesc.Flags  = D3D12_DSV_FLAG_NONE;
-            if ( bSliced )
-            {
-                dsvDesc.ViewDimension                  = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-                dsvDesc.Texture2DArray.MipSlice        = 0;
-                dsvDesc.Texture2DArray.FirstArraySlice = slice;
-                dsvDesc.Texture2DArray.ArraySize       = 1;
-            }
-            else
-            {
-                dsvDesc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
-                dsvDesc.Texture2D.MipSlice = 0;
-            }
-            _pDevice->_device->CreateDepthStencilView( pNative, &dsvDesc, dsvHandle );
-            if ( slice == 0 )
-            {
-                record._dsvIndex  = dsvSlot;
-                record._dsvHandle = dsvHandle;
-                record._bHasDSV   = SW_TRUE;
-            }
-            else
-                record._listExtraDSVIndex.push_back( dsvSlot );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenViewPageFailed", "Could not create the RTV/DSV views of a %#x%# texture (%# slices) - texture creation fails", desc._width, desc._height,
+                             desc._arraySize );
+            destroyTexture( handle ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
+            return 0;
         }
 
         D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( handle );
@@ -1104,21 +1108,8 @@ namespace sw
             return;
         if ( taken._bOffscreen != SW_FALSE )
         {
-            const D3D12RHIDevice::OffscreenTextureRecord& offscreen        = taken._offscreen;
-            const uint32                                  offscreenRTVBase = _pDevice->_swapChain.getBufferCount();
-            ScopedLock<mutex>                             offscreenLock{ _pDevice->_offscreenViewMutex };
-            if ( offscreen._bHasRTV != SW_FALSE && offscreen._rtvIndex >= offscreenRTVBase )
-                _pDevice->_freeOffscreenRTV.push( offscreen._rtvIndex - offscreenRTVBase );
-            if ( offscreen._bHasDSV != SW_FALSE )
-                _pDevice->_freeOffscreenDSV.push( offscreen._dsvIndex );
-            for ( const uint32 rtvIndex : offscreen._listExtraRTVIndex )
-            {
-                _pDevice->_freeOffscreenRTV.push( rtvIndex - offscreenRTVBase );
-            }
-            for ( const uint32 dsvIndex : offscreen._listExtraDSVIndex )
-            {
-                _pDevice->_freeOffscreenDSV.push( dsvIndex );
-            }
+            ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
+            _pDevice->releaseOffscreenViews( taken._offscreen );
         }
         Microsoft::WRL::ComPtr<ID3D12Resource> owned = std::move( taken._resource );
 

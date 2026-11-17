@@ -42,7 +42,6 @@ namespace sw
         , _computeFenceValue{ 0 }
         , _computeWaitedValue{ 0 }
         , _rtvHeap{ nullptr }
-        , _dsvHeap{ nullptr }
         , _cbvHeap{ nullptr }
         , _offlineViewHeap{ nullptr }
         , _rootSignature{ nullptr }
@@ -170,32 +169,65 @@ namespace sw
         {
             if ( slice == 0 )
                 outView._rtvHandle = record._rtvHandle;
-            else if ( extraIndex < record._listExtraRTVIndex.size() )
-                outView._rtvHandle = getOffscreenRTVHandle( record._listExtraRTVIndex[extraIndex] );
+            else if ( extraIndex < record._listExtraRTVHandle.size() )
+                outView._rtvHandle = record._listExtraRTVHandle[extraIndex];
         }
         if ( record._bHasDSV != SW_FALSE )
         {
             if ( slice == 0 )
                 outView._dsvHandle = record._dsvHandle;
-            else if ( extraIndex < record._listExtraDSVIndex.size() )
-                outView._dsvHandle = getOffscreenDSVHandle( record._listExtraDSVIndex[extraIndex] );
+            else if ( extraIndex < record._listExtraDSVHandle.size() )
+                outView._dsvHandle = record._listExtraDSVHandle[extraIndex];
         }
         outView._bSliceInRange = ( outView._rtvHandle.ptr != 0 || outView._dsvHandle.ptr != 0 ) ? SW_TRUE : SW_FALSE;
         return true;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenRTVHandle( uint32 rtvIndex ) const
+    bool D3D12RHIDevice::acquireOffscreenView( bool bDepth, uint32& outSlot, D3D12_CPU_DESCRIPTOR_HANDLE& outHandle )
     {
-        D3D12_CPU_DESCRIPTOR_HANDLE handle = _rtvHeap->GetCPUDescriptorHandleForHeapStart();
-        handle.ptr += static_cast<SIZE_T>( rtvIndex ) * _rtvDescriptorSize;
-        return handle;
+        IndexFreeList&                                        freeList = bDepth ? _freeOffscreenDSV : _freeOffscreenRTV;
+        uint32&                                               nextSlot = bDepth ? _nextOffscreenDSVIndex : _nextOffscreenRTVIndex;
+        vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>>& listPage = bDepth ? _listOffscreenDSVPage : _listOffscreenRTVPage;
+        const D3D12_DESCRIPTOR_HEAP_TYPE                      heapType = bDepth ? D3D12_DESCRIPTOR_HEAP_TYPE_DSV : D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        if ( _device == nullptr )
+            return false;
+        uint32 slot{ 0 };
+        if ( freeList.tryPop( slot ) == false )
+        {
+            slot = nextSlot;
+            if ( slot / kOffscreenViewPageSize >= listPage.size() )
+            {
+                D3D12_DESCRIPTOR_HEAP_DESC pageDesc{};
+                pageDesc.NumDescriptors = kOffscreenViewPageSize;
+                pageDesc.Type           = heapType;
+                pageDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+                Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> page;
+                if ( isHrSuccess( _device->CreateDescriptorHeap( &pageDesc, IID_PPV_ARGS( page.GetAddressOf() ) ), "CreateDescriptorHeap (offscreen view page)" ) == false )
+                    return false;
+                listPage.push_back( std::move( page ) );
+            }
+            ++nextSlot;
+        }
+        outSlot   = slot;
+        outHandle = listPage[slot / kOffscreenViewPageSize]->GetCPUDescriptorHandleForHeapStart();
+        outHandle.ptr += static_cast<SIZE_T>( slot % kOffscreenViewPageSize ) * _device->GetDescriptorHandleIncrementSize( heapType );
+        return true;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenDSVHandle( uint32 dsvIndex ) const
+    void D3D12RHIDevice::releaseOffscreenViews( const OffscreenTextureRecord& offscreen )
     {
-        D3D12_CPU_DESCRIPTOR_HANDLE handle = _dsvHeap->GetCPUDescriptorHandleForHeapStart();
-        handle.ptr += static_cast<SIZE_T>( dsvIndex ) * _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
-        return handle;
+        if ( offscreen._bHasRTV != SW_FALSE )
+            _freeOffscreenRTV.push( offscreen._rtvIndex );
+        if ( offscreen._bHasDSV != SW_FALSE )
+            _freeOffscreenDSV.push( offscreen._dsvIndex );
+        for ( const uint32 rtvSlot : offscreen._listExtraRTVIndex )
+        {
+            _freeOffscreenRTV.push( rtvSlot );
+        }
+        for ( const uint32 dsvSlot : offscreen._listExtraDSVIndex )
+        {
+            _freeOffscreenDSV.push( dsvSlot );
+        }
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::offlineDescriptorAt( uint32 index ) const
@@ -688,23 +720,15 @@ namespace sw
         _bBindlessRootSignature = SW_FALSE;
         _frameStreamState       = D3D12RecordingState{};
 
-        // 백버퍼와 오프스크린 렌더 타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
-        // 그 뒤가 오프스크린이다. 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
+        // 메인 스왑체인 백버퍼의 RTV 힙이다(디바이스가 소유한다 — resize 가 같은 힙에 다시 만든다). 오프스크린 RTV · DSV 는 쪽 목록(`acquireOffscreenView`)이다.
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRTVs;
+        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount();
         rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         if ( isHrSuccess( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
             return false;
 
         _rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
-
-        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc{};
-        dsvHeapDesc.NumDescriptors = kMaxOffscreenDSVs;
-        dsvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-        dsvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        if ( isHrSuccess( _device->CreateDescriptorHeap( &dsvHeapDesc, IID_PPV_ARGS( _dsvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
-            return false;
 
         D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc{};
         cbvHeapDesc.NumDescriptors = kMaxShaderVisibleDescriptors;
@@ -893,6 +917,8 @@ namespace sw
             _nextOffscreenDSVIndex = 0;
             _freeOffscreenRTV.clear();
             _freeOffscreenDSV.clear();
+            _listOffscreenRTVPage.clear();
+            _listOffscreenDSVPage.clear();
         }
 
         _windowSwapChains.clearFrame();
@@ -914,7 +940,6 @@ namespace sw
             ScopedLock<mutex> lock{ _onlineBlockMutex };
             _freeOnlineBlock.clear();
         }
-        _dsvHeap.Reset();
         _rtvHeap.Reset();
         _commandList.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrCommandAllocator )
