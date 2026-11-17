@@ -23,9 +23,10 @@ namespace sw
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     /**
      * @struct AudioGraphEdit
-     * @brief 모델이 사본을 고친 일 하나입니다. 패널이 되돌리기 이름으로 문서 기반에 넘긴다(`EditorDocumentPanel::notifyDocumentEdited` — 끌기 한 번은 상호작용 구간이 한 단계로 묶는다).
+     * @brief 모델이 사본을 고친 일 하나입니다. 그리기 끝에 모델이 그 이름으로 알린다(`publishEdit` — 끌기 한 번은 상호작용 구간이 한 단계로 묶는다).
      */
     struct AudioGraphEdit
     {
@@ -39,6 +40,8 @@ namespace sw::editor
     class AudioGraphModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
         /** @brief 옮긴 것으로 보는 위치 차이(캔버스 좌표)입니다. 부동소수 반올림을 고침으로 읽지 않는다. */
         static constexpr float32 kMoveEpsilon = 0.5f;
 
@@ -73,10 +76,21 @@ namespace sw::editor
         AudioGraphDef& editGraph() { return _editGraph; }
         /** @brief 속성 그리드가 사본을 고쳤습니다. */
         void markEdited() { recordEdit( "Edit Audio Graph" ); }
-        /** @brief 캔버스가 주석 상자(`editGraph()._listComment`)를 고쳤습니다. */
-        void markCommentsEdited( const utf8* pLabel ) { recordEdit( pLabel ); }
-        /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. 패널이 그리기마다 한 번 부른다. */
-        [[nodiscard]] bool takeEdit( AudioGraphEdit& outEdit );
+        /** @brief 캔버스가 주석 상자에 한 일의 종류입니다 — 되돌리기 이름은 모델이 고른다(감사 E-16). */
+        enum class CommentEdit : uint8
+        {
+            Add,
+            Rename,
+            Move,
+            Delete
+        };
+        /** @brief 캔버스가 주석 상자를 고쳤습니다 — 종류에 맞는 되돌리기 이름으로 쌓는다. */
+        void markCommentsEdited( CommentEdit edit );
+        /**
+         * @brief 이번 그리기에서 고친 일이 있으면 그 이름(모델이 정한다)으로 문서 편집을 알리고 비웁니다. 패널이 그리기 끝에 한 번 부른다.
+         * @details 한 그리기 안의 여러 편집은 마지막 이름 하나로 넘긴다(되돌리기 한 단계). 알림 · 이름은 모델 안에서 끝난다(감사 E-16).
+         */
+        void publishEdit();
 
         // ------------------------------------------------------------------------------
         // 2) 캔버스 편집 — 캔버스가 낸 id 를 받는다
@@ -122,18 +136,24 @@ namespace sw::editor
         const vector<uint32>& getProcessingOrder() const { return _listOrder; }
 
     private:
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 이 모델의 편집 연산만 부른다(감사 E-16) — 무엇을 고쳤는지와 되돌리기 이름은 모델이 정하고, View 는 연산만 부른다.
+         */
+        void recordDocumentEdit( string_view label ) const;
         /** @brief 고친 일을 쌓습니다. 한 그리기 안의 여러 편집은 마지막 이름 하나로 넘긴다(되돌리기 한 단계). */
         void recordEdit( const utf8* pLabel ) { _pendingEdit = AudioGraphEdit{ pLabel }; }
         /** @brief 노드 번호로 든 고름 · 놓을 노드를 풉니다(그래프를 통째로 바꾸거나 노드를 지웠을 때). */
         void clearNodeRefs();
 
     private:
-        AudioGraphDef  _editGraph;         ///< 고치는 중인 그래프 사본(파일에서 읽음)
-        vector<uint32> _listOrder;         ///< 처리 순서 버퍼
-        AudioPlayingID _previewID;         ///< 미리 듣기의 재생 id 다(0 = 없음).
-        AudioGraphEdit _pendingEdit;       ///< 패널이 아직 가져가지 않은 편집
-        int32          _selectedNode;      ///< 고른 노드 번호(-1 = 없음)
-        int32          _pendingPlacedNode; ///< 다음 캔버스 프레임에서 위치를 정할 새 노드 번호(-1 = 없음)
-        int32          _placingNode;       ///< 이번 캔버스 프레임에 위치를 정하는 노드 번호(-1 = 없음). `beginCanvasFrame` 만 바꾼다
+        AudioGraphDef               _editGraph;                ///< 고치는 중인 그래프 사본(파일에서 읽음)
+        vector<uint32>              _listOrder;                ///< 처리 순서 버퍼
+        AudioPlayingID              _previewID;                ///< 미리 듣기의 재생 id 다(0 = 없음).
+        AudioGraphEdit              _pendingEdit;              ///< 패널이 아직 가져가지 않은 편집
+        int32                       _selectedNode;             ///< 고른 노드 번호(-1 = 없음)
+        int32                       _pendingPlacedNode;        ///< 다음 캔버스 프레임에서 위치를 정할 새 노드 번호(-1 = 없음)
+        int32                       _placingNode;              ///< 이번 캔버스 프레임에 위치를 정하는 노드 번호(-1 = 없음). `beginCanvasFrame` 만 바꾼다
+        const DocumentEditRecorder* _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

@@ -28,6 +28,8 @@
 
 namespace sw
 {
+    class ServiceReadSetConnection;
+
     /** @brief 저장소 호출의 결과입니다. */
     enum class ServiceStoreResult : uint8
     {
@@ -134,6 +136,13 @@ namespace sw
 
         /** @brief 레코드 하나를 읽습니다. 없으면 NotFound 를 반환하고, @p outRecord 는 비며 버전은 `kAbsentVersion` 입니다. */
         [[nodiscard]] virtual ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) = 0;
+        /** @brief 트랜잭션을 모두 적용하거나 아무것도 적용하지 않습니다. */
+        [[nodiscard]] virtual ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) = 0;
+
+    protected:
+        // 목록 읽기는 `ServiceRecordReader` 만 부른다 — 결과에 다음 쪽 · 잘림을 싣지 않는 한 쪽 읽기를 서비스 코드가 직접 부르지 못하게 한다(감사 O-18). 구현(메모리 · SQL)은 겹쳐 쓴다.
+        friend struct ServiceRecordReader;
+
         /**
          * @brief @p keyPrefix 로 시작하는 키를 키 순서로 @p outListRecord 뒤에 붙입니다. 키, 바이트, 버전을 담습니다.
          * @param cursorKey 비어 있지 않으면 이 키 다음부터(오름차순) 또는 이전부터(내림차순) 읽는다. 이 키 자체는 뺀다.
@@ -142,8 +151,6 @@ namespace sw
          */
         [[nodiscard]] virtual ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,
                                                               vector<ServiceRecord>& outListRecord ) = 0;
-        /** @brief 트랜잭션을 모두 적용하거나 아무것도 적용하지 않습니다. */
-        [[nodiscard]] virtual ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) = 0;
     };
 } // namespace sw
 
@@ -185,8 +192,13 @@ namespace sw
         IServiceStoreJob( const IServiceStoreJob& )            = delete;
         IServiceStoreJob& operator=( const IServiceStoreJob& ) = delete;
 
-        virtual void run( IServiceStoreConnection& connection ) = 0;
-        virtual void complete()                                 = 0;
+        /**
+         * @brief 저장소 구현이 부르는 입구입니다. 연결을 읽기 집합 연결(`ServiceReadSetConnection`)로 감싸 `run` 에 넘깁니다.
+         * @details 일은 감싸지 않은 연결을 받을 길이 없다 — 판단에 쓴 읽기는 모두 다음 커밋의 버전 조건이 된다(손으로 `requireVersion` 을 빠뜨리는 모양을 막는다, 감사 "다음 할 일" 5 번).
+         *          연결은 커밋마다 읽은 것을 비우므로 재시도는 판단에 쓸 레코드를 시도 안에서 다시 읽는다.
+         */
+        void         execute( IServiceStoreConnection& connection );
+        virtual void complete() = 0;
 
         /** @brief 맡긴 스레드의 로그 문맥입니다. 저장소 구현이 `submit` 에서 잡습니다. */
         void              bindLogContext( const LogContext& context ) { _logContext = context; }
@@ -203,6 +215,10 @@ namespace sw
         bool isCancelled() const { return _bCancelled; }
         /** @brief 서비스의 완료 함수에 넘기는 끝 상태입니다. `complete` 에서 부릅니다. */
         ServiceStoreCompletion getCompletion() const { return ServiceStoreCompletion{ _bCancelled }; }
+
+    private:
+        /** @brief 저장소 스레드에서 정확히 한 번 불립니다(`execute` 만 부른다). */
+        virtual void run( ServiceReadSetConnection& connection ) = 0;
 
     private:
         LogContext _logContext{};

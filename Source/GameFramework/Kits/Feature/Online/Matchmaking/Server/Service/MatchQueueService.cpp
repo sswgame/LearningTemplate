@@ -43,6 +43,7 @@ namespace sw
         , _topicBuffer{}
         , _dependencies{}
         , _nextLookupTag{ 1 }
+        , _nowMs{ 0 }
         , _sequence{ 0 }
         , _lobbySequence{ 0 }
     {
@@ -93,25 +94,119 @@ namespace sw
         return "mm/matches/" + ServiceKeyUtil::makeHex64( serverID );
     }
 
-    void MatchQueueService::storeMatchRecord( uint64 serverID, const string& recordName, const MatchFormed& match, UnixMilliseconds nowMs )
+    void MatchQueueService::storeMatchRecord( PendingPlacement placement )
     {
-        const auto modeIt = _mapMode.find( match._modeID );
+        const auto modeIt = _mapMode.find( placement._match._modeID );
         SW_ASSERT( modeIt != _mapMode.end() ); // 배정은 등록한 모드만 한다(로비 · 백필도 모드 상태를 찾은 뒤에 온다)
-        if ( modeIt == _mapMode.end() )
-            return;
-        const int64   ttlMs = modeIt->second._matchTimeLimitMs;
         vector<uint8> bytes;
-        if ( MixedBuildCodec::encode( MatchFormed::kBusVersion, match, bytes ) == false )
-            return; // encode 가 오류 로그를 남겼다
-        const string listKey = makeMatchListKey( serverID );
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( makeMatchRecordKey( serverID, recordName ), std::move( bytes ), ttlMs ) );
-        _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( listKey, recordName, nowMs.count() + ttlMs ) );
-        _dependencies._pRouter->submit( EphemeralRequest::makeExpire( listKey, ttlMs ) ); // 목록은 마지막 기록과 함께 사라진다. 지난 멤버는 게임 서버가 지운다
+        if ( modeIt == _mapMode.end() || MixedBuildCodec::encode( MatchFormed::kBusVersion, placement._match, bytes ) == false )
+        {
+            failPlacement( placement ); // encode 가 오류 로그를 남겼다
+            return;
+        }
+        const int64 ttlMs = modeIt->second._matchTimeLimitMs;
+        placement._expiresMs += ttlMs;
+        const uint64 requestID = _dependencies._pRouter->submit( EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( bytes ), ttlMs ),
+                                                                 EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onMatchRecordReply>( this ), _replyOwner );
+        if ( requestID == 0 )
+        {
+            failPlacement( placement ); // 맡기지 못했다(라우터가 오류 로그를 남겼다)
+            return;
+        }
+        _mapRecordWrite[requestID] = std::move( placement );
+    }
+
+    void MatchQueueService::onMatchRecordReply( const EphemeralReply& reply )
+    {
+        const auto writeIt = _mapRecordWrite.find( reply._requestID );
+        if ( writeIt == _mapRecordWrite.end() )
+            return;
+        PendingPlacement placement = std::move( writeIt->second );
+        _mapRecordWrite.erase( writeIt );
+        if ( reply._result != EphemeralResult::Ok )
+        {
+            failPlacement( placement );
+            return;
+        }
+        // 목록에 올라야 게임 서버가 기록을 찾는다. 목록 쓰기의 답까지 본 뒤에 Found 를 낸다
+        const uint64 requestID = _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( makeMatchListKey( placement._serverID ), placement._recordName, placement._expiresMs ),
+                                                                 EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onMatchListReply>( this ), _replyOwner );
+        if ( requestID == 0 )
+        {
+            failPlacement( placement );
+            return;
+        }
+        _mapListWrite[requestID] = std::move( placement );
+    }
+
+    void MatchQueueService::onMatchListReply( const EphemeralReply& reply )
+    {
+        const auto writeIt = _mapListWrite.find( reply._requestID );
+        if ( writeIt == _mapListWrite.end() )
+            return;
+        const PendingPlacement placement = std::move( writeIt->second );
+        _mapListWrite.erase( writeIt );
+        if ( reply._result != EphemeralResult::Ok )
+        {
+            failPlacement( placement ); // 남은 기록은 게임 서버가 찾지 못한 채 수명으로 사라진다
+            return;
+        }
+        completePlacement( placement );
+    }
+
+    void MatchQueueService::completePlacement( const PendingPlacement& placement )
+    {
+        const auto modeIt = _mapMode.find( placement._match._modeID );
+        if ( modeIt != _mapMode.end() )
+            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( makeMatchListKey( placement._serverID ), modeIt->second._matchTimeLimitMs ) ); // 목록은 마지막 기록과 함께 사라진다. 지난 멤버는 게임 서버가 지운다
+        if ( _dependencies._pBus != nullptr )                                                                                                            // 빠른 길이다. 잃어도 게임 서버가 기록을 읽는다
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( placement._serverID ), placement._match );       // 실패는 발행이 로그에 남겼다
+        for ( const PendingDelivery& delivery : placement._listDelivery )
+        {
+            deliverPending( delivery );
+        }
+    }
+
+    void MatchQueueService::failPlacement( const PendingPlacement& placement )
+    {
+        SW_LOG_WARNING_ID( "MatchQueueService.MatchRecordWriteFailed", "MatchQueue: match record '%#' for server %# could not be written - %# result(s) end as NoServer", placement._recordName,
+                           placement._serverID, placement._listDelivery.size() );
+        for ( const PendingDelivery& delivery : placement._listDelivery )
+        {
+            PendingDelivery failed       = delivery;
+            failed._assignment._result   = MatchQueueResult::NoServer;
+            failed._assignment._serverID = 0;
+            failed._assignment._port     = 0;
+            failed._assignment._address.clear();
+            deliverPending( failed );
+        }
+        if ( placement._lobbyID != 0 && _dependencies._pPartyLobby != nullptr )
+            _dependencies._pPartyLobby->reopenLobby( placement._lobbyID ); // 다시 시작할 수 있게 한다
+    }
+
+    void MatchQueueService::deliverPending( const PendingDelivery& delivery )
+    {
+        if ( delivery._recipientID != kInvalidAccountID )
+        {
+            _notificationBuffer.push( MatchQueueNotification{ delivery._assignment, delivery._recipientID } );
+            return;
+        }
+        deliverToTicket( delivery._originServerID, delivery._assignment );
     }
 
     bool MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDef>& listMode )
     {
         SW_ASSERT( dependencies._pRouter != nullptr );
+        if ( dependencies._cancelConfirmWaitMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueNoCancelWait", "MatchQueue: the cancel confirmation wait is missing (_cancelConfirmWaitMs in the matchmaking settings)" );
+            return false;
+        }
+        if ( dependencies._seatReservationTTLMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueNoSeatReservation", "MatchQueue: the seat reservation window is missing (_seatReservationSeconds in the online config)" );
+            return false;
+        }
         for ( const MatchModeDef& mode : listMode )
         {
             if ( mode._ratingStat.empty() == false && dependencies._pStatSource == nullptr )
@@ -138,7 +233,7 @@ namespace sw
             ModeState& state       = _mapModeState[mode._modeID];
             state._maker           = std::move( maker );
             state._reader          = make_unique<ServerRegistryReader>();
-            state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs );
+            state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs, dependencies._seatReservationTTLMs );
             if ( dependencies._pBus == nullptr )
                 state._bAuthority = SW_TRUE; // 서버가 한 대이므로 항상 권한을 가진다
         }
@@ -151,6 +246,8 @@ namespace sw
     {
         _replyOwner.reset(); // 기다리던 임대 답이 이 객체를 부르지 않게 지운다
         _mapLeaseRequestToMode.clear();
+        _mapRecordWrite.clear(); // 답이 오지 않으므로 기다리던 배정은 결과 없이 끝난다. 티켓을 낸 서버의 시한이 Timeout 을 알린다
+        _mapListWrite.clear();
         for ( auto& [modeID, state] : _mapModeState )
         {
             if ( state._reader != nullptr )
@@ -214,19 +311,22 @@ namespace sw
                 placeMatches( state, nowMs );
         }
         updateRatingWaits( nowMs );
-        // 이 서버가 낸 티켓의 시한이다. 권한이 넘어가서 티켓을 잃었으면 결과가 오지 않는다
-        vector<uint64> listExpired;
+        _nowMs = nowMs.count();
+        // 이 서버가 낸 티켓의 시한이다. 권한이 넘어가서 티켓을 잃었으면 결과가 오지 않는다. 빠지기의 확인 답이 시한 안에 오지 않으면(권한 서버가 없다) 빠진 것으로 끝낸다
+        vector<pair<uint64, MatchQueueResult>> listExpired;
         for ( const auto& [ticketID, ticket] : _mapLocalTicket )
         {
             if ( nowMs.count() > ticket._deadlineMs )
-                listExpired.push_back( ticketID );
+                listExpired.push_back( make_pair( ticketID, MatchQueueResult::Timeout ) );
+            else if ( ticket._cancelDeadlineMs != 0 && nowMs.count() > ticket._cancelDeadlineMs )
+                listExpired.push_back( make_pair( ticketID, MatchQueueResult::Cancelled ) );
         }
-        for ( const uint64 ticketID : listExpired )
+        for ( const auto& [ticketID, result] : listExpired )
         {
             MatchAssignment assignment;
             assignment._ticketID = ticketID;
             assignment._modeID   = _mapLocalTicket[ticketID]._modeID;
-            assignment._result   = MatchQueueResult::Timeout;
+            assignment._result   = result;
             notifyLocalTicket( ticketID, assignment );
         }
     }
@@ -519,9 +619,6 @@ namespace sw
         joined._listTeam.resize( request._listOpenSlot.size() );
         joined._listTeam[static_cast<size_t>( backfilled._team )]._listMember = backfilled._ticket._listMember;
         joined._listTicket.push_back( backfilled._ticket );
-        storeMatchRecord( request._serverID, ServiceKeyUtil::makeHex64( request._matchID ) + "." + ServiceKeyUtil::makeHex64( backfilled._ticket._ticketID ), joined, nowMs ); // 경기의 첫 명단 기록은 그대로 두고 더한 사람만 따로 남긴다
-        if ( _dependencies._pBus != nullptr )                                                                                                                                  // 게임 서버가 들어올 사람을 먼저 안다. 같은 경기 id 에 더해진다
-            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( request._serverID ), joined );                                         // 실패는 발행이 로그에 남겼다
         MatchAssignment assignment;
         assignment._ticketID = backfilled._ticket._ticketID;
         assignment._matchID  = request._matchID;
@@ -537,25 +634,33 @@ namespace sw
         {
             assignment._listTeammate.push_back( member._accountID ); // 경기 중인 팀원은 게임 서버가 알려 준다
         }
-        deliverToTicket( backfilled._ticket._originServerID, assignment );
+        PendingPlacement placement;
+        placement._match      = std::move( joined );                                                                                             // 게임 서버의 배정 주제로 가면 같은 경기 id 에 더해진다
+        placement._recordName = ServiceKeyUtil::makeHex64( request._matchID ) + "." + ServiceKeyUtil::makeHex64( backfilled._ticket._ticketID ); // 경기의 첫 명단 기록은 그대로 두고 더한 사람만 따로 남긴다
+        placement._serverID   = request._serverID;
+        placement._expiresMs  = nowMs.count();
+        placement._listDelivery.push_back( PendingDelivery{ std::move( assignment ), backfilled._ticket._originServerID, kInvalidAccountID } );
+        storeMatchRecord( std::move( placement ) );
     }
 
-    void MatchQueueService::submitBackfill( const MatchBackfillRequest& request )
+    MatchmakingServiceResult MatchQueueService::submitBackfill( const MatchBackfillRequest& request )
     {
         ModeState* pState = findModeState( request._modeID );
         if ( pState == nullptr )
         {
             SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueBackfillUnknownMode", "MatchQueue: backfill for unknown mode '%#' (match %#) refused", request._modeID, request._matchID );
-            return;
+            return MatchmakingResult::UnknownMode;
+        }
+        if ( MatchMaker::isBackfillShapeValid( pState->_maker.getDefinition(), request ) == false )
+        {
+            SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueBackfillMatchDoes", "MatchQueue: backfill for match %# does not fit mode '%#' - refused", request._matchID, request._modeID );
+            return MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         }
         if ( pState->_bAuthority != SW_FALSE )
-        {
-            if ( pState->_maker.addBackfill( request ) != MatchmakingResult::Ok )
-                SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueBackfillMatchDoes", "MatchQueue: backfill for match %# does not fit mode '%#' - refused", request._matchID, request._modeID );
-            return;
-        }
+            return pState->_maker.addBackfill( request );
         if ( _dependencies._pBus != nullptr )
             (void)MatchQueueBus::kBackfillTopic.publish( *_dependencies._pBus, request._modeID, request ); // 실패는 발행이 로그에 남겼다. 게임 서버가 다시 보낸다
+        return MatchmakingResult::Ok;
     }
 
     void MatchQueueService::fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment )
@@ -594,10 +699,7 @@ namespace sw
         if ( bPlaced == false && failResult == MatchQueueResult::Count )
             return false;
 
-        if ( bPlaced )
-            storeMatchRecord( picked._descriptor._serverID, ServiceKeyUtil::makeHex64( match._matchID ), match, nowMs );                         // 게임 서버가 수락을 판정하는 원본이다
-        if ( bPlaced && _dependencies._pBus != nullptr )                                                                                         // 게임 서버에 접속할 사람을 먼저 알린다
-            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 빠른 길이다. 잃어도 게임 서버가 기록을 읽는다
+        PendingPlacement placement;
         for ( const MatchTicket& ticket : match._listTicket )
         {
             MatchAssignment assignment;
@@ -614,11 +716,22 @@ namespace sw
             }
             if ( ticket._listMember.empty() == false )
                 fillTeam( match, ticket._listMember.front()._accountID, assignment ); // 티켓 하나는 한 팀에 들어간다
-            deliverToTicket( ticket._originServerID, assignment );
+            if ( bPlaced )
+                placement._listDelivery.push_back( PendingDelivery{ std::move( assignment ), ticket._originServerID, kInvalidAccountID } );
+            else
+                deliverToTicket( ticket._originServerID, assignment );
         }
         if ( bPlaced == false )
+        {
             SW_LOG_WARNING_ID( "MatchQueueService.MatchQueueNoServerMatch", "MatchQueue: no '%#' server for match %# in region '%#' — gave up", mode._serverKind, match._matchID, match._region );
-        return bPlaced;
+            return false;
+        }
+        placement._match      = match;
+        placement._recordName = ServiceKeyUtil::makeHex64( match._matchID );
+        placement._serverID   = picked._descriptor._serverID;
+        placement._expiresMs  = nowMs.count();
+        storeMatchRecord( std::move( placement ) ); // 게임 서버가 수락을 판정하는 원본이다. Found 는 기록이 남은 뒤에 간다
+        return true;
     }
 
     void MatchQueueService::placeLobby( const LobbySnapshot& lobby, UnixMilliseconds nowMs )
@@ -647,10 +760,7 @@ namespace sw
             query._bAllowOtherRegion = SW_TRUE; // 로비는 지역을 고르지 않았으므로 다른 지역도 허용한다
             bPlaced                  = pState->_reader->pickServer( query, nowMs, picked );
         }
-        if ( bPlaced )
-            storeMatchRecord( picked._descriptor._serverID, ServiceKeyUtil::makeHex64( match._matchID ), match, nowMs ); // 게임 서버가 수락을 판정하는 원본이다
-        if ( bPlaced && _dependencies._pBus != nullptr )
-            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( picked._descriptor._serverID ), match ); // 빠른 길이다. 잃어도 게임 서버가 기록을 읽는다
+        PendingPlacement placement;
         for ( const LobbyMember& member : lobby._listMember )
         {
             MatchAssignment assignment;
@@ -664,10 +774,23 @@ namespace sw
                 assignment._port     = picked._descriptor.pickPort( member._accountID ); // 포트 샤딩 — 계정마다 정해진 샤드의 포트
             }
             fillTeam( match, member._accountID, assignment );
-            _notificationBuffer.push( MatchQueueNotification{ assignment, member._accountID } );
+            if ( bPlaced )
+                placement._listDelivery.push_back( PendingDelivery{ std::move( assignment ), 0, member._accountID } );
+            else
+                _notificationBuffer.push( MatchQueueNotification{ assignment, member._accountID } );
         }
-        if ( bPlaced == false && _dependencies._pPartyLobby != nullptr )
-            _dependencies._pPartyLobby->reopenLobby( lobby._lobbyID ); // 다시 시작할 수 있게 한다
+        if ( bPlaced == false )
+        {
+            if ( _dependencies._pPartyLobby != nullptr )
+                _dependencies._pPartyLobby->reopenLobby( lobby._lobbyID ); // 다시 시작할 수 있게 한다
+            return;
+        }
+        placement._match      = std::move( match );
+        placement._recordName = ServiceKeyUtil::makeHex64( placement._match._matchID );
+        placement._serverID   = picked._descriptor._serverID;
+        placement._lobbyID    = lobby._lobbyID;
+        placement._expiresMs  = nowMs.count();
+        storeMatchRecord( std::move( placement ) ); // 게임 서버가 수락을 판정하는 원본이다. Found 는 기록이 남은 뒤에 간다
     }
 
     void MatchQueueService::deliverToTicket( uint64 originServerID, const MatchAssignment& assignment )
@@ -684,7 +807,12 @@ namespace sw
     {
         const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt == _mapLocalTicket.end() )
-            return; // 이미 끝났다. 시한 뒤에 온 늦은 결과이거나 이미 빠진 티켓이다
+            return;                                   // 이미 끝났다. 시한 뒤에 온 늦은 결과이거나 이미 빠진 티켓이다
+        if ( ticketIt->second._leaveRequestTag != 0 ) // 빠지기의 답이다 — 경기가 먼저 났으면(Found) 빠지지 못했다
+        {
+            const MatchmakingResult leaveResult = assignment._result == MatchQueueResult::Cancelled ? MatchmakingResult::Ok : MatchmakingResult::NotQueued;
+            _completionBuffer.push( MatchQueueCompletion{ ticketIt->second._leaveRequestTag, ticketID, leaveResult } );
+        }
         for ( const AccountID accountID : ticketIt->second._listAccount )
         {
             _notificationBuffer.push( MatchQueueNotification{ assignment, accountID } );
@@ -697,17 +825,40 @@ namespace sw
         _mapLocalTicket.erase( ticketIt );
     }
 
+    void MatchQueueService::confirmCancel( ModeState& state, uint64 ticketID )
+    {
+        if ( state._maker.removeTicket( ticketID ) == false )
+            return;                // 이미 짝지어졌다 — 낸 서버는 Found 를 받는다(빠지기보다 경기가 먼저다). 없는 표도 같다
+        MatchAssignment cancelled; // 권한 서버가 실제로 뺀 뒤에만 Cancelled 를 낸 서버에 알린다
+        cancelled._ticketID = ticketID;
+        cancelled._modeID   = state._maker.getDefinition()._modeID;
+        cancelled._result   = MatchQueueResult::Cancelled;
+        deliverToTicket( ticketID >> kMatchQueueIDShift, cancelled );
+    }
+
+    void MatchQueueService::requestCancel( uint64 ticketID, uint64 leaveRequestTag )
+    {
+        LocalTicket& ticket = _mapLocalTicket[ticketID];
+        if ( leaveRequestTag != 0 )
+            ticket._leaveRequestTag = leaveRequestTag;
+        if ( ticket._cancelDeadlineMs != 0 )
+            return; // 이미 빼는 중이다 — 같은 답을 기다린다
+        ticket._cancelDeadlineMs = _nowMs + _dependencies._cancelConfirmWaitMs;
+        const string modeID      = ticket._modeID;
+        removeFromQueue( modeID, ticketID ); // 권한이 이 서버면 여기서 바로 답이 온다(notifyLocalTicket)
+    }
+
     void MatchQueueService::removeFromQueue( const string& modeID, uint64 ticketID )
     {
         ModeState* pState = findModeState( modeID );
         if ( pState != nullptr && pState->_bAuthority != SW_FALSE )
         {
-            (void)pState->_maker.removeTicket( ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+            confirmCancel( *pState, ticketID );
             return;
         }
         if ( _dependencies._pBus == nullptr )
             return;
-        (void)MatchQueueBus::kCancelTopic.publish( *_dependencies._pBus, modeID, MatchTicketCancel{ ticketID } ); // 실패는 발행이 로그에 남겼다
+        (void)MatchQueueBus::kCancelTopic.publish( *_dependencies._pBus, modeID, MatchTicketCancel{ ticketID } ); // 실패는 발행이 로그에 남겼다 — 낸 서버의 확인 시한이 끝낸다
     }
 
     void MatchQueueService::handleBusMessage( const ServerBusMessage& message, UnixMilliseconds nowMs )
@@ -728,14 +879,15 @@ namespace sw
             ModeState*        pState        = findModeState( MatchQueueBus::kCancelTopic.findSuffix( message ) );
             const bool        bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchQueueBus::kCancelTopic.read( message, cancel ) == ServerBusReadResult::Read;
             if ( bAcceptCancel )
-                (void)pState->_maker.removeTicket( cancel._ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+                confirmCancel( *pState, cancel._ticketID );
             return;
         }
         if ( MatchQueueBus::kBackfillTopic.matches( message ) )
         {
             MatchBackfillRequest request;
-            if ( MatchQueueBus::kBackfillTopic.read( message, request ) == ServerBusReadResult::Read )
-                submitBackfill( request ); // 권한을 잃은 사이에 왔으면 다시 보내지 않고 게임 서버의 재요청을 기다린다
+            const bool           bAccept = MatchQueueBus::kBackfillTopic.read( message, request ) == ServerBusReadResult::Read && isAuthority( request._modeID );
+            if ( bAccept )
+                (void)submitBackfill( request ); // 거절은 로그에 남겼다. 권한을 잃은 사이에 왔으면 다시 보내지 않고 게임 서버의 재요청을 기다린다
             return;
         }
         if ( message.getTopic() == makeResultTopic( _dependencies._serverID ) )
@@ -779,9 +931,7 @@ namespace sw
         const auto accountIt = _mapAccountToTicket.find( accountID );
         if ( accountIt != _mapAccountToTicket.end() )
         {
-            const uint64 ticketID = accountIt->second;
-            cancelTicket( ticketID );
-            _completionBuffer.push( MatchQueueCompletion{ requestTag, ticketID, MatchmakingResult::Ok } );
+            requestCancel( accountIt->second, requestTag ); // 답은 권한 서버의 확인(Cancelled) 또는 먼저 난 경기(Found)에서 간다
             return;
         }
         if ( _dependencies._pPartyLobby == nullptr )
@@ -821,24 +971,16 @@ namespace sw
 
     void MatchQueueService::cancelTicket( uint64 ticketID )
     {
-        MatchAssignment cancelled;
-        cancelled._ticketID = ticketID;
-        cancelled._result   = MatchQueueResult::Cancelled;
-        const auto ticketIt = _mapLocalTicket.find( ticketID );
-        if ( ticketIt != _mapLocalTicket.end() )
+        if ( _mapLocalTicket.find( ticketID ) != _mapLocalTicket.end() )
         {
-            const string modeID = ticketIt->second._modeID;
-            cancelled._modeID   = modeID;
-            removeFromQueue( modeID, ticketID );
-            notifyLocalTicket( ticketID, cancelled );
+            requestCancel( ticketID, 0 ); // 권한 서버가 뺀 뒤에 멤버에게 Cancelled 가 간다
             return;
         }
-        // 다른 서버가 낸 파티 티켓이다. 모드를 모르므로 모든 모드의 권한에서 빼고, 티켓을 낸 서버(티켓 id 의 위쪽 32비트)에 Cancelled 를 알린다
+        // 다른 서버가 낸 파티 티켓이다. 모드를 모르므로 모든 모드의 권한에서 뺀다 — 실제로 뺀 권한 서버가 티켓을 낸 서버(티켓 id 의 위쪽 32비트)에 Cancelled 를 알린다
         for ( const auto& [modeID, mode] : _mapMode )
         {
             removeFromQueue( modeID, ticketID );
         }
-        deliverToTicket( ticketID >> kMatchQueueIDShift, cancelled );
     }
 
     void MatchQueueService::removeAccount( AccountID accountID )

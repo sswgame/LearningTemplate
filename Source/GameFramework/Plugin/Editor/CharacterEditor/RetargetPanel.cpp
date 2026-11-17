@@ -125,7 +125,7 @@ namespace sw::editor
 
     RetargetPanel::RetargetPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
-        , _profile{}
+        , _model{}
         , _inspection{}
         , _preview{}
         , _listChainText{}
@@ -143,6 +143,7 @@ namespace sw::editor
         , _newPoseBone{}
         , _published{}
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델 연산이 낸다(감사 E-16)
     }
 
     void RetargetPanel::drawDocumentContent()
@@ -152,9 +153,9 @@ namespace sw::editor
         ensureDocumentLoaded();
         drawNewDocumentRow();
         drawDocumentOpenBar( "retarget" );
-        _published._targetPoseCount     = static_cast<uint32>( _profile.getTargetPose().size() );
-        _published._chainCount          = static_cast<uint32>( _profile.getChains().size() );
-        _published._poseTurnDegrees     = RetargetPanelInternal::sumPoseTurnDegrees( _profile.getTargetPose() );
+        _published._targetPoseCount     = static_cast<uint32>( _model.getProfile().getTargetPose().size() );
+        _published._chainCount          = static_cast<uint32>( _model.getProfile().getChains().size() );
+        _published._poseTurnDegrees     = RetargetPanelInternal::sumPoseTurnDegrees( _model.getProfile().getTargetPose() );
         _published._previewSegmentCount = 0; // 미리보기를 접거나 스켈레톤을 지운 프레임에 앞 값이 남지 않게 그릴 때만 채운다
         if ( getLoadedAssetPath().empty() )
         {
@@ -185,15 +186,15 @@ namespace sw::editor
     bool RetargetPanel::saveDocument()
     {
         // 묶이지 않는 프로필은 런타임이 쓸 수 없다 — 저장하지 않는다.
-        const expected<void> inspected = RetargetProfileInspection::inspect( _profile, _inspection );
+        const expected<void> inspected = RetargetProfileInspection::inspect( _model.getProfile(), _inspection );
         _inspectionError               = inspected.has_value() ? string{} : EditorWidgets::makeStatusText( inspected.error() );
         if ( inspected.has_value() == false )
         {
             _status = "Not saved: " + _inspectionError;
             return false;
         }
-        const auto writePath = getDocumentDiskPath();                                       // 읽은 그 자리
-        if ( writePath.has_value() == false || _profile.saveToFile( *writePath ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
+        const auto writePath = getDocumentDiskPath();                                                  // 읽은 그 자리
+        if ( writePath.has_value() == false || _model.getProfile().saveToFile( *writePath ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
         {
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written (see the log)" );
             return false;
@@ -217,20 +218,17 @@ namespace sw::editor
         if ( AssetIO::hasAsset( AssetID{ path } ) == false )
         {
             // 없는 경로는 새 프로필이다 — 빈 문서로 시작하고 저장하면 파일을 만든다(스켈레톤 · 뿌리와 골반이 묶이기 전에는 저장되지 않는다).
-            _profile.clear();
+            _model.replace( RetargetProfile{} );
             syncFromProfile();
             _status = "New profile - set both skeletons and the root and pelvis pairs, then save";
             return ToolAssetLoadResult::Missing;
         }
         // 파일은 런타임과 같은 공유 캐시의 한 벌로 읽고 창은 그 사본을 고친다(저장하면 핫 리로드가 한 벌을 제자리에서 다시 읽는다). 못 읽으면 빈 문서다.
-        const shared_ptr<const RetargetProfile> pLoaded = SharedAssetCache<RetargetProfile>::acquire( path );
+        const shared_ptr<const RetargetProfile> pLoaded = SharedAssetCache<RetargetProfile>::acquire( path ).snapshot();
         const bool                              bLoaded = pLoaded != nullptr;
-        if ( bLoaded )
-            _profile = *pLoaded;
-        else
-            _profile.clear();
+        _model.replace( bLoaded ? *pLoaded : RetargetProfile{} );
         // 문서를 새로 읽으면 스켈레톤 파일도 지금 것을 본다. 못 읽어도 비워진 프로필에 맞춘다 — 앞 문서의 글이 칸에 남아 있으면 고칠 때 섞인다.
-        _preview.reloadSkeletons( _profile );
+        _preview.reloadSkeletons( _model.getProfile() );
         syncFromProfile();
         if ( bLoaded == false )
         {
@@ -250,40 +248,39 @@ namespace sw::editor
             _status = "This undo step could not be read - see the log";
             return;
         }
-        restored.setBaseID( _profile.getBaseID() ); // 되돌리기 글은 펼친 한 벌이다 — 문서의 부모는 그대로 둬야 저장이 차이로 쓴다
-        _profile = std::move( restored );
+        restored.setBaseID( _model.getProfile().getBaseID() ); // 되돌리기 글은 펼친 한 벌이다 — 문서의 부모는 그대로 둬야 저장이 차이로 쓴다
+        _model.replace( std::move( restored ) );
         syncFromProfile();
     }
 
     void RetargetPanel::syncFromProfile()
     {
-        _sourceSkeleton = string_view( _profile.getSourceSkeletonPath() );
-        _targetSkeleton = string_view( _profile.getTargetSkeletonPath() );
-        _arrPairName[0] = _profile.getSourceRoot().c_str();
-        _arrPairName[1] = _profile.getTargetRoot().c_str();
-        _arrPairName[2] = _profile.getSourcePelvis().c_str();
-        _arrPairName[3] = _profile.getTargetPelvis().c_str();
-        _listChainText.assign( _profile.getChains().size(), ChainText{} );
-        for ( size_t chainIndex = 0; chainIndex < _profile.getChains().size(); ++chainIndex )
+        _sourceSkeleton = string_view( _model.getProfile().getSourceSkeletonPath() );
+        _targetSkeleton = string_view( _model.getProfile().getTargetSkeletonPath() );
+        _arrPairName[0] = _model.getProfile().getSourceRoot().c_str();
+        _arrPairName[1] = _model.getProfile().getTargetRoot().c_str();
+        _arrPairName[2] = _model.getProfile().getSourcePelvis().c_str();
+        _arrPairName[3] = _model.getProfile().getTargetPelvis().c_str();
+        _listChainText.assign( _model.getProfile().getChains().size(), ChainText{} );
+        for ( size_t chainIndex = 0; chainIndex < _model.getProfile().getChains().size(); ++chainIndex )
         {
-            const RetargetChain& chain         = _profile.getChains()[chainIndex];
+            const RetargetChain& chain         = _model.getProfile().getChains()[chainIndex];
             _listChainText[chainIndex]._name   = chain._name.c_str();
             _listChainText[chainIndex]._source = RetargetProfileEdit::joinNames( chain._listSourceBone );
             _listChainText[chainIndex]._target = RetargetProfileEdit::joinNames( chain._listTargetBone );
         }
-        if ( _preview.isStale( _profile ) )
-            _preview.reloadSkeletons( _profile );
+        if ( _preview.isStale( _model.getProfile() ) )
+            _preview.reloadSkeletons( _model.getProfile() );
         else
-            _preview.rebuildPoses( _profile );
+            _preview.rebuildPoses( _model.getProfile() );
         // 실패는 점검 칸이 보인다
-        const expected<void> inspected = RetargetProfileInspection::inspect( _profile, _preview.isSourceReady() ? &_preview.getSourceSkeleton() : nullptr, _preview.isTargetReady() ? &_preview.getTargetSkeleton() : nullptr, _inspection );
+        const expected<void> inspected = RetargetProfileInspection::inspect( _model.getProfile(), _preview.isSourceReady() ? &_preview.getSourceSkeleton() : nullptr, _preview.isTargetReady() ? &_preview.getTargetSkeleton() : nullptr, _inspection );
         _inspectionError               = inspected.has_value() ? string{} : EditorWidgets::makeStatusText( inspected.error() );
     }
 
-    void RetargetPanel::markEdited( const utf8* pLabel )
+    void RetargetPanel::refreshAfterEdit()
     {
-        _status.clear(); // "Saved" 같은 앞 결과는 고친 뒤에는 맞지 않다
-        notifyDocumentEdited( pLabel );
+        _status.clear(); // "Saved" 같은 앞 결과는 고친 뒤에는 맞지 않다(알림 · 되돌리기 이름은 연산을 한 모델이 냈다)
         syncFromProfile();
     }
 
@@ -310,8 +307,8 @@ namespace sw::editor
         const bool bTargetDone = EditorWidgets::drawAssetPathField( "Target skeleton", _targetSkeleton.data(), _targetSkeleton.max_size(), "*.skeleton.xml", ".skeleton.xml", "retarget.targetSkeleton" )._bDeactivatedAfterEdit;
         if ( bSourceDone || bTargetDone )
         {
-            _profile.setSkeletonPaths( _sourceSkeleton.c_str(), _targetSkeleton.c_str() );
-            markEdited( "Retarget skeletons" );
+            _model.setSkeletonPaths( _sourceSkeleton.c_str(), _targetSkeleton.c_str() );
+            refreshAfterEdit();
         }
     }
 
@@ -359,7 +356,7 @@ namespace sw::editor
         if ( _preview.isTargetReady() )
         {
             // 리타깃 포즈가 있을 때만 레퍼런스를 따로 긋는다 — 없으면 둘이 같아 선이 겹친다.
-            if ( _profile.getTargetPose().empty() == false )
+            if ( _model.getProfile().getTargetPose().empty() == false )
                 Internal::drawBones( renderer, _preview.getTargetSkeleton(), _preview.getTargetReferencePositions(), SW_THEME_COLOR( "Viewport", "BoneReference" ).toFloat4() );
             Internal::drawBones( renderer, _preview.getTargetSkeleton(), _preview.getTargetPosePositions(), SW_THEME_COLOR( "Viewport", "BonePose" ).toFloat4() );
         }
@@ -383,38 +380,37 @@ namespace sw::editor
         }
         if ( bChanged == false )
             return;
-        _profile.setRootAndPelvis( hashed_string( _arrPairName[0].c_str() ), hashed_string( _arrPairName[1].c_str() ), hashed_string( _arrPairName[2].c_str() ),
-                                   hashed_string( _arrPairName[3].c_str() ), _profile.getTranslationMode() );
-        markEdited( "Retarget root and pelvis" );
+        _model.setRootAndPelvis( hashed_string( _arrPairName[0].c_str() ), hashed_string( _arrPairName[1].c_str() ), hashed_string( _arrPairName[2].c_str() ),
+                                 hashed_string( _arrPairName[3].c_str() ) );
+        refreshAfterEdit();
     }
 
     void RetargetPanel::drawOptionRows()
     {
-        int32 mode = static_cast<int32>( _profile.getTranslationMode() );
+        int32 mode = static_cast<int32>( _model.getProfile().getTranslationMode() );
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "Translation" ) );
         EditorChrome::setNextItemWidthColumns( 27.0f );
         if ( EditorWidgets::combo( SW_WIDGET_ID( "##Translation" ), &mode, RetargetPanelInternal::kArrTranslationMode, static_cast<int32>( SW_COUNT_OF( RetargetPanelInternal::kArrTranslationMode ) ) ) )
         {
-            _profile.setRootAndPelvis( _profile.getSourceRoot(), _profile.getTargetRoot(), _profile.getSourcePelvis(), _profile.getTargetPelvis(),
-                                       static_cast<RetargetTranslationMode>( mode ) );
-            markEdited( "Retarget translation" );
+            _model.setTranslationMode( static_cast<RetargetTranslationMode>( mode ) );
+            refreshAfterEdit();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "HowRootAndPelvisMovementIsCarried" ) );
-        bool bMapSameNames = _profile.isMappingSameNames();
+        bool bMapSameNames = _model.getProfile().isMappingSameNames();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "MapSameNames" ), &bMapSameNames ) )
         {
-            _profile.setMapSameNames( bMapSameNames );
-            markEdited( "Retarget same names" );
+            _model.setMapSameNames( bMapSameNames );
+            refreshAfterEdit();
         }
         ImGui::SameLine();
-        float32 heightRatio = _profile.getHeightRatioOverride();
+        float32 heightRatio = _model.getProfile().getHeightRatioOverride();
         EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdPluginField", "HeightRatio0Pelvis" ) );
         EditorChrome::setNextItemWidthColumns( 16.0f );
         EditorWidgets::dragFloat( SW_WIDGET_ID( "##Heightratio0pelvis" ), &heightRatio, 0.01f, 0.0f, 10.0f, "%.3f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            _profile.setHeightRatioOverride( heightRatio );
-            markEdited( "Retarget height ratio" );
+            _model.setHeightRatioOverride( heightRatio );
+            refreshAfterEdit();
         }
     }
 
@@ -439,7 +435,7 @@ namespace sw::editor
 
     void RetargetPanel::drawChainRows()
     {
-        vector<RetargetChain> listChain   = _profile.getChains(); // 사본을 고쳐 바뀌었을 때 넣는다
+        vector<RetargetChain> listChain   = _model.getProfile().getChains(); // 사본을 고쳐 바뀌었을 때 넣는다
         uint32                removeIndex = constant::invalid_index::kUint32;
         bool                  bChanged    = false;
         for ( uint32 chainIndex = 0; chainIndex < static_cast<uint32>( listChain.size() ) && chainIndex < _listChainText.size(); ++chainIndex )
@@ -511,15 +507,15 @@ namespace sw::editor
         EditorSelfTestMarks::record( "retarget.addChain" );
         if ( bChanged )
         {
-            _profile.setChains( std::move( listChain ) );
-            markEdited( "Retarget chains" );
+            _model.setChains( std::move( listChain ) );
+            refreshAfterEdit();
         }
     }
 
     void RetargetPanel::drawTargetPoseRows()
     {
         using Internal                       = RetargetPanelInternal;
-        vector<RetargetPoseBone> listPose    = _profile.getTargetPose(); // 사본을 고쳐 바뀌었을 때 넣는다
+        vector<RetargetPoseBone> listPose    = _model.getProfile().getTargetPose(); // 사본을 고쳐 바뀌었을 때 넣는다
         uint32                   removeIndex = constant::invalid_index::kUint32;
         bool                     bChanged    = false;
         bool                     bDragged    = false;
@@ -566,17 +562,18 @@ namespace sw::editor
         EditorSelfTestMarks::record( "retarget.targetPose.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginTip", "TurnATargetBoneInItsParent" ) );
         // 끄는 값도 프로필에 넣는다 — 사본만 고치면 다음 프레임이 프로필에서 다시 복사해 끌기가 사라지고 미리보기도 앞 값을 그린다. 되돌리기 단계는 놓을 때 한 번(기준 글은 끌기 전 그대로다).
+        // 끄는 동안의 알림은 상호작용 구간 하나로 묶인다 — 되돌리기 한 단계는 놓을 때다(모델이 알린다)
         if ( bChanged || bDragged )
-            _profile.setTargetPose( std::move( listPose ) );
+            _model.setTargetPose( std::move( listPose ) );
         if ( bChanged )
-            markEdited( "Retarget pose" );
+            refreshAfterEdit();
         else if ( bDragged )
-            _preview.rebuildPoses( _profile );
+            _preview.rebuildPoses( _model.getProfile() );
     }
 
     void RetargetPanel::drawBonePairRows()
     {
-        vector<RetargetBonePair> listPair    = _profile.getBonePairs(); // 사본을 고쳐 바뀌었을 때 넣는다
+        vector<RetargetBonePair> listPair    = _model.getProfile().getBonePairs(); // 사본을 고쳐 바뀌었을 때 넣는다
         uint32                   removeIndex = constant::invalid_index::kUint32;
         for ( uint32 pairIndex = 0; pairIndex < static_cast<uint32>( listPair.size() ); ++pairIndex )
         {
@@ -613,8 +610,8 @@ namespace sw::editor
         EditorSelfTestMarks::record( "retarget.addPair" );
         if ( bChanged )
         {
-            _profile.setBonePairs( std::move( listPair ) );
-            markEdited( "Retarget bone map" );
+            _model.setBonePairs( std::move( listPair ) );
+            refreshAfterEdit();
         }
     }
 

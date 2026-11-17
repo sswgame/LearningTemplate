@@ -5,7 +5,9 @@
  *          주소, 핸드셰이크, 타임아웃은 `NetEndpoint` 가 맡고, 이 클래스는 "연결된 뒤 패킷 한 개의 본문"만 쓴다(Gaffer 의 "Reliability and Congestion Avoidance over UDP").
  *
  *          패킷마다 그 패킷에 실은 신뢰 메시지 ID를 기억해 두었다가, 패킷이 확인되면 메시지도 확인된 것으로 본다.
- *          확인되지 않은 신뢰 메시지는 RTT + 50ms(최소 0.1초)가 지나면 다음 패킷에 다시 싣는다.
+ *          확인되지 않은 신뢰 메시지는 재전송 시한(RFC 6298 — SRTT + max(50ms, 4·RTTVAR), 최소 0.1초)이 지나면 다음 패킷에 다시 싣는다.
+ *          시한으로 다시 실을 때마다 그 메시지의 시한을 두 배로 늘린다(`kMaxResendBackoffShift` 까지, ENet 의 명령마다 왕복 시한 두 배와 같다) —
+ *          회선이 막혔을 때 같은 메시지를 RTT 마다 쏟아 막힘을 키우지 않는다(감사 N-11).
  *          그보다 먼저, 뒤에 보낸 패킷이 `kFastResendGap` 개를 넘게 확인됐는데 확인이 없는 패킷은 잃은 것으로 보고 그 신뢰 메시지를 바로 다시 싣는다.
  *          이것이 빠른 재전송이다. TCP 의 중복 ACK 3개나 NACK 에 해당하며, 순서가 바뀐 패킷은 그 간격 안에서 견딘다.
  *
@@ -45,7 +47,8 @@ namespace sw
     /** @brief 연결 통계입니다. */
     struct NetConnectionStats
     {
-        float32 _rtt{ 0.0f };           ///< 초 단위(평활화한 값).
+        float32 _rtt{ 0.0f };           ///< 초 단위(평활화한 값, RFC 6298 SRTT).
+        float32 _rttVariance{ 0.0f };   ///< 초 단위 RTT 흔들림(평균 절대 편차, RFC 6298 RTTVAR). 재전송 시한이 흔들림만큼 기다린다
         float32 _packetLoss{ 0.0f };    ///< 0~1.
         float32 _sentBandwidth{ 0.0f }; ///< 초당 킬로비트.
         float32 _receivedBandwidth{ 0.0f };
@@ -78,7 +81,10 @@ namespace sw
         static constexpr uint32  kPacketWindow              = 256; ///< 보낸 · 받은 패킷을 기억하는 슬롯 수. 2 의 거듭제곱(`SequenceBuffer`).
         static constexpr int32   kPacketHeaderBits          = 16 + 16 + 32;
         static constexpr int32   kFastResendGap             = 3;    ///< 이만큼 뒤의 패킷이 확인됐는데 확인이 없으면 잃은 것으로 본다.
-        static constexpr float64 kResendMargin              = 0.05; ///< 재전송 간격은 RTT에 이 여유를 더한 값이다(흔들림과 상대의 보내기 간격을 흡수한다).
+        static constexpr float64 kResendMargin              = 0.05; ///< 재전송 시한이 RTT 에 더하는 최소 여유(RFC 6298 의 G — 상대의 보내기 간격을 흡수한다). 흔들림이 크면 4·RTTVAR 가 대신한다.
+        static constexpr float64 kMinResendDelay            = 0.1;  ///< 재전송 시한의 하한(초).
+        static constexpr float64 kRttVarianceMultiplier     = 4.0;  ///< RFC 6298 의 K.
+        static constexpr int32   kMaxResendBackoffShift     = 4;    ///< 시한 재전송마다 시한을 두 배로 — 이 횟수(16 배)에서 멈춘다. 끝내 확인이 없으면 엔드포인트 타임아웃이 끊는다.
         static constexpr int32   kMaxSpareBuffers           = 64;   ///< 다시 쓸 메시지 버퍼를 이만큼까지 둔다(조각 하나 크기라 연결 하나에 64KB 안쪽).
         /**
          * @brief 채널 하나의 받은 큐가 게임이 꺼내기를 기다리며 쌓아 둘 수 있는 바이트(메시지마다 `kIncomingMessageOverheadBytes` 를 더해 센다).
@@ -185,6 +191,7 @@ namespace sw
             vector<uint8>  _buffer{};
             float64        _lastSentTime{ -1.0 };
             uint8          _bResendNow{ SW_FALSE };                     ///< 실린 패킷을 잃었다. 재전송 간격을 기다리지 않는다.
+            uint8          _backoffShift{ 0 };                          ///< 시한으로 다시 실은 횟수(`kMaxResendBackoffShift` 까지) — 시한은 기본 시한 × 2^이 값이다. 빠른 재전송은 늘리지 않는다
             uint8          _bMore{ SW_FALSE };                          ///< 다음 ID가 같은 메시지의 이어지는 조각이다(신뢰 순서만).
             NetChannelType _channel{ NetChannelType::ReliableOrdered }; ///< 신뢰 순서와 신뢰 순서 없음이 ID와 창을 하나로 공유한다.
 

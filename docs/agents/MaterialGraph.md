@@ -4,7 +4,7 @@
 > 독자: 머티리얼 그래프 노드 · 컴파일러 · 생성물을 다루는 사람과 에이전트.
 > 결론: 새 노드는 `MaterialGraphNodes.cpp` 에 `SW_MATERIAL_GRAPH_NODE` 한 줄이다. 그래프는 HLSL 과 `.gen.material` 을 소스 트리에 생성하고, 그 뒤는 손으로 쓴 머티리얼과 같은 길이다. 런타임과 배포에는 그래프 코드가 없다.
 
-구현: `Source/Engine/Graphics/Material/Dev/`(개발 전용), 편집기 `Source/Editor/Panels/MaterialGraph/`.
+구현: `Source/DevTools/Material/`(개발 전용 — 배포 호스트는 DevTools 를 짓지 않는다. REFLECT 에셋 형식은 DevTools 리플렉션 단계가 짓는다), 편집기 `Source/Editor/Panels/MaterialGraph/`. 엔진은 컴파일러를 모른다 — 셰이더 쿠커는 `IShaderSourceGenerator`(`Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h`) 창구만 부르고 컴파일러가 거기에 정적 등록한다.
 
 ## 길
 
@@ -16,7 +16,7 @@ rim_glow.matgraph.xml                         저작 파일(팩에 들지 않는
           └ rim_glow_red.material              _base 로 값만 바꾼다(언리얼 Material Instance)
 ```
 
-- **생성 시점:** 셰이더 쿠킹 시작(`ShaderCookDriver::cookAllShaders`)과 편집기 핫 리로드 임포터. 바이트가 같으면 쓰지 않는다. 생성물은 커밋한다 — 쿠킹 없는 개발 실행도 같은 파일을 읽는다.
+- **생성 시점:** 셰이더 쿠킹 시작(`ShaderCookDriver::cookAllShaders` → `IShaderSourceGenerator::refreshAllRegistered` — 개발 구성에서 생성기가 0 이면 쿠킹 실패)과 편집기 핫 리로드 임포터. 바이트가 같으면 쓰지 않는다. 생성물은 커밋한다 — 쿠킹 없는 개발 실행도 같은 파일을 읽는다.
 - **쿠킹 입력:** 생성된 `.hlsl` 은 셰이더 스탬프가 내용 해시로 추적하고, `.gen.material` 은 요청 수집과 팩이 그대로 읽는다. 컴파일 오류는 쿠킹 실패다.
 - **파일 이름의 해시:** 내용이 바뀌면 경로가 바뀐다. PSO · 리플렉션 캐시의 열쇠가 경로라 무효화 코드 없이 핫 리로드된다.
 - **생성물은 손으로 고치지 않는다.** 그래프를 손으로 고쳤으면 `App --cook-shaders` 나 편집기 저장으로 다시 쓴다. 단위 테스트 `SampleGeneratedAssetsAreCurrent` 가 견본의 낡음을 잡는다.

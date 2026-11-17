@@ -678,9 +678,9 @@ namespace sw
         {
             for ( ;; )
             {
-                sockaddr_in remote{};
-                socklen_t   length = sizeof( remote );
-                const int32 fd     = accept4( _listenFd, reinterpret_cast<sockaddr*>( &remote ), &length, SOCK_NONBLOCK | SOCK_CLOEXEC );
+                sockaddr_storage remote{};
+                socklen_t        length = sizeof( remote );
+                const int32      fd     = accept4( _listenFd, reinterpret_cast<sockaddr*>( &remote ), &length, SOCK_NONBLOCK | SOCK_CLOEXEC );
                 if ( fd < 0 )
                 {
                     if ( errno == EINTR || errno == ECONNABORTED )
@@ -905,15 +905,18 @@ namespace sw
         State& state = *_state;
         if ( state._bInitialized == SW_FALSE || state._listenFd >= 0 )
             return false;
-        const int32 fd = socket( AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP );
+        const int32 fd = socket( NativeSocketAddress::toNativeFamily( bindAddress._family ), SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP );
         if ( fd < 0 )
             return false;
         const int32 reuse = 1; // TIME_WAIT 에 남은 이전 서버의 포트를 바로 다시 연다(SO_REUSEPORT 가 아니므로 다른 프로세스와 포트를 나누지 않는다).
         (void)setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) );
-        sockaddr_in local              = NativeSocketAddress::toNative( bindAddress );
-        socklen_t   length             = sizeof( local );
-        const bool  bListenSetupFailed = bind( fd, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) != 0 || ::listen( fd, state._settings->_listenBacklog ) != 0 ||
-                                        getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0;
+        const int32               v6Only           = 0; // IPv6 리슨은 이중 스택이다(UDP 와 같다 — `PlatformSocketUtil::openUDPSocket`)
+        const bool                bDualStackFailed = bindAddress.isIpv6() && setsockopt( fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6Only, sizeof( v6Only ) ) != 0;
+        const NativeSocketAddress local            = NativeSocketAddress::toNative( bindAddress );
+        sockaddr_storage          bound{};
+        socklen_t                 length             = sizeof( bound );
+        const bool                bListenSetupFailed = bDualStackFailed || bind( fd, local.get(), static_cast<socklen_t>( local._length ) ) != 0 ||
+                                        ::listen( fd, state._settings->_listenBacklog ) != 0 || getsockname( fd, reinterpret_cast<sockaddr*>( &bound ), &length ) != 0;
         if ( bListenSetupFailed )
         {
             SW_LOG_ERROR_ID( "EpollStreamTransport.CouldNotListenStream", "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
@@ -922,7 +925,7 @@ namespace sw
         }
         // 등록하기 전에 적는다. 등록하는 순간 루프 0 이 받기 사건으로 `_listenFd` 를 읽는다(epoll_ctl 이 그 순서를 보장한다).
         state._listenFd   = fd;
-        state._listenPort = ntohs( local.sin_port );
+        state._listenPort = NativeSocketAddress::fromNative( bound )._port;
         if ( state.registerFd( 0, fd, EpollStreamTransportInternal::kListenTag ) == false )
         {
             SW_LOG_ERROR_ID( "EpollStreamTransport.CouldNotListenStream", "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
@@ -944,13 +947,13 @@ namespace sw
         State& state = *_state;
         if ( state._bInitialized == SW_FALSE || state._stop.isStopRequested() )
             return StreamConnectionHandle{};
-        const int32 fd = socket( AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP );
+        const int32 fd = socket( NativeSocketAddress::toNativeFamily( remote._family ), SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP );
         if ( fd < 0 )
             return StreamConnectionHandle{};
         EpollConnection*             pConnection = nullptr;
         const StreamConnectionHandle handle      = state.allocateConnection( fd, remote, false, EpollConnectionState::Connecting, pConnection );
-        const sockaddr_in            native      = NativeSocketAddress::toNative( remote );
-        const int32                  result      = ::connect( fd, reinterpret_cast<const sockaddr*>( &native ), sizeof( native ) );
+        const NativeSocketAddress    native      = NativeSocketAddress::toNative( remote );
+        const int32                  result      = ::connect( fd, native.get(), static_cast<socklen_t>( native._length ) );
         const int32                  error       = errno;
         bool                         bHasSocket  = false;
         {

@@ -8,6 +8,7 @@
 
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 
 namespace sw
 {
@@ -61,7 +62,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( Ledger::getJournalTable(), "", cursor, LedgerAuditInternal::kPageSize, false, listRecord );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Ledger::getJournalTable(), "", cursor, LedgerAuditInternal::kPageSize, false, listRecord )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             for ( const ServiceRecord& record : listRecord )
@@ -92,7 +93,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( Ledger::getBalanceTable(), "", cursor, LedgerAuditInternal::kPageSize, false, listRecord );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Ledger::getBalanceTable(), "", cursor, LedgerAuditInternal::kPageSize, false, listRecord )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             for ( const ServiceRecord& record : listRecord )

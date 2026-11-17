@@ -177,11 +177,12 @@ namespace sw
     bool ParkGameModeComponent::startGame()
     {
         // 배치는 공유 캐시의 한 벌이다. 코스터 레이아웃은 배치가 같은 팩에서 받아 쥔 그 한 벌을 쓴다 — 게임 모드가 코스터 경로를 따로 적지 않는다(기준 하나).
-        shared_ptr<const ParkLayout> pLayout;
+        SharedAssetRef<ParkLayout> pLayout;
         if ( acquireRequired( _parkDataPath, pLayout ) == false )
             return false;
         const ParkLayout& layout = *pLayout;
         _pLayoutCatalog          = layout.getCoasterLayouts();
+        _settings                = layout.getRules(); // 공원 규칙은 배치 데이터의 <Rules> 다(감사 K-4)
         _settings._gatePosition  = layout.getGatePosition();
         _settings._entryFee      = layout.getEntryFee();
         _startingCash            = layout.getStartingCash();
@@ -206,7 +207,8 @@ namespace sw
         }
         _wallet.clear();
         _wallet.add( _settings._currency, _startingCash );
-        _simulation.initialize( _settings, makeRefs() );
+        if ( _simulation.initialize( _settings, makeRefs() ) == false )
+            return false; // 까닭은 시뮬레이션이 남겼다 — 틀린 규칙으로 공원을 열지 않는다
         _listCoaster.clear();
 
         // 처음 공원에는 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나를 둔다.
@@ -308,10 +310,8 @@ namespace sw
         if ( io.isOk() == false )
             return;
         ThemeParkSimulation restoredSimulation;
-        if ( io.isReading() )
-        {
-            restoredSimulation.initialize( _settings, makeRefs() );
-        }
+        if ( io.isReading() && io.check( restoredSimulation.initialize( _settings, makeRefs() ) ) == false )
+            return;
         ThemeParkSimulation& simulation = io.isWriting() ? _simulation : restoredSimulation;
         io.value( simulation );
         uint32 placementCount = static_cast<uint32>( _listPlacement.size() );

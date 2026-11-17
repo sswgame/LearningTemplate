@@ -29,15 +29,6 @@ namespace sw
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "VOXL" );
             static constexpr uint32 kStateVersion = 1;
-
-            static uint32 hashCoord( int32 x, int32 y, int32 z )
-            {
-                uint32 value = static_cast<uint32>( x ) * 73856093u ^ static_cast<uint32>( y ) * 19349663u ^ static_cast<uint32>( z ) * 83492791u;
-                value ^= value >> 13;
-                value *= 0x5bd1e995u;
-                value ^= value >> 15;
-                return value;
-            }
         };
     } // namespace
 } // namespace sw
@@ -57,6 +48,10 @@ namespace sw
         , _snowBlock{}
         , _coalOreBlock{}
         , _ironOreBlock{}
+        , _snowHeight{ 34 }
+        , _coalOreChance{ 0.012f }
+        , _ironOreChance{ 0.006f }
+        , _ironOreMaxHeight{ 12 }
         , _world{}
         , _listChunk{}
         , _autoPlayController{}
@@ -200,48 +195,21 @@ namespace sw
             return false;
         if ( _world.initialize( kChunkCountX, kChunkCountZ, pCatalog ) == false )
             return false;
+        // 광석 · 눈도 지형 생성기가 같은 씨앗으로 놓는다(감사 K-8). 깊을수록 철이다.
         VoxelTerrainSettings settings;
-        settings._seed                                   = static_cast<uint32>( _terrainSeed );
+        settings._seed         = static_cast<uint32>( _terrainSeed );
+        settings._stoneBlock   = _stoneBlock;
+        settings._grassBlock   = _grassBlock;
+        settings._snowBlock    = _snowBlock;
+        settings._snowHeight   = _snowHeight;
+        settings._listOreLayer = {
+            VoxelOreLayer{_coalOreBlock, _coalOreChance, kVoxelChunkHeight},
+            VoxelOreLayer{_ironOreBlock, _ironOreChance, _ironOreMaxHeight}
+        };
         [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainSettings::fillWorld( _world, settings );
-        decorateTerrain();
         SW_LOG_INFO_ID( "VoxelGameMode.TerrainXXHeights", "[Voxel] terrain %# x %# x %# - heights %#..%#, %# trees", _world.getSizeX(), _world.getSizeY(), _world.getSizeZ(), report._minHeight,
                         report._maxHeight, report._treeCount );
         return true;
-    }
-
-    void VoxelGameModeComponent::decorateTerrain()
-    {
-        // 돌 속의 광석(깊을수록 철)과 높은 봉우리의 눈입니다. 지형 생성기는 장르 공통이라서, 이런 꾸밈은 게임이 추가합니다.
-        const VoxelBlockCatalog& catalog = *_world.getCatalog();
-        const VoxelBlockIndex    stone   = catalog.findBlockIndex( _stoneBlock );
-        const VoxelBlockIndex    coal    = catalog.findBlockIndex( _coalOreBlock );
-        const VoxelBlockIndex    iron    = catalog.findBlockIndex( _ironOreBlock );
-        const VoxelBlockIndex    grass   = catalog.findBlockIndex( _grassBlock );
-        const VoxelBlockIndex    snow    = catalog.findBlockIndex( _snowBlock );
-        for ( int32 z = 0; z < _world.getSizeZ(); ++z )
-        {
-            for ( int32 x = 0; x < _world.getSizeX(); ++x )
-            {
-                const optional<int32> foundTop = _world.findTopSolidY( x, z );
-                if ( foundTop.has_value() == false )
-                    continue; // 빈 기둥에는 눈도 광석도 없다
-                const int32 topY           = *foundTop;
-                const bool  bShouldSnowCap = topY >= 34 && _world.getBlock( x, topY, z ) == grass && snow != kVoxelAirBlock;
-                if ( bShouldSnowCap )
-                    (void)_world.setBlock( x, topY, z, snow );
-                for ( int32 y = 1; y < topY - 3; ++y )
-                {
-                    if ( _world.getBlock( x, y, z ) != stone )
-                        continue;
-                    const uint32 roll       = VoxelGameModeComponentInternal::hashCoord( x, y, z ) % 1000u;
-                    const bool   bPlaceIron = roll < 18u && y < 12 && iron != kVoxelAirBlock;
-                    if ( roll < 12u && coal != kVoxelAirBlock )
-                        (void)_world.setBlock( x, y, z, coal );
-                    else if ( bPlaceIron )
-                        (void)_world.setBlock( x, y, z, iron );
-                }
-            }
-        }
     }
 
     // ------------------------------------------------------------------------------

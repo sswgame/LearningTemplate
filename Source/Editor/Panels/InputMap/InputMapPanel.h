@@ -111,9 +111,10 @@ namespace sw::editor
         void drawAddActionSection();
         void drawCaptureModal();
         void drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone );
-
-        /** @brief 문서의 미저장(`InputMapModel::isDirty`)을 패널 dirty 로 옮깁니다. */
-        void syncDocumentDirty() override;
+        /** @brief 편집하는 맵의 저장 글입니다(문서 되돌리기 — 감사 E-13). 묶음이면 빈 글이다(`InputMapModel::captureText`). */
+        string captureDocumentText() const override;
+        /** @brief 되돌리기가 준 글로 맵을 다시 읽습니다. */
+        void applyDocumentText( string_view text ) override;
 
     private:
         InputMapModel                _document; ///< 편집하는 InputMap · 리플레이와 명령

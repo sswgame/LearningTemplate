@@ -204,6 +204,8 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "no server address (onlineServerAddress in gamesettings)" } );
         if ( _settings._onlineGameBuild.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "no game build text (onlineGameBuild in gamesettings)" } );
+        if ( _settings._onlineRequestRetryLimit < 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no request retry limit (onlineRequestRetryLimit in gamesettings)" } );
         NetAddress serverAddress;
         if ( PlatformSocketUtil::resolveAddress( address, OnlineProtocolConstant::kDefaultPort, serverAddress ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the server address did not resolve", address } );
@@ -221,8 +223,10 @@ namespace sw
 
     expected<void> OnlineSession::connectTo( IStreamTransport* pTransport, const OnlineClientSecurity& security, const NetAddress& address )
     {
+        if ( _settings._onlineRequestRetryLimit < 0 )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no request retry limit (onlineRequestRetryLimit in gamesettings)" } );
         _client.shutdown();
-        OnlineServiceClientConfig settings{ security };
+        OnlineServiceClientConfig settings{ security, OnlineRetryPolicy::make( _settings._onlineRequestRetryLimit ) };
         settings._transportSettings._ioThreadCount = 0; // `update` 가 전송을 돌린다
         settings._serverAddress                    = address;
         settings._gameBuild                        = _settings._onlineGameBuild;

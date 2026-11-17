@@ -8,6 +8,8 @@
      HouseLevel: 적은 순서가 단계(0 = 처음 짓는 오두막). services · goods 를 받고 매력도가 desirability 이상이 이어지면 오른다.
      세금(tax)은 세리가 다녀간 집만 사람마다 달마다 낸다. -->
 <CityCatalog roadCost="2">
+	<!-- 규칙(CitySettings) — 모든 칸이 필수다. 순회 서비스가 남는 시간은 이 도시의 도로망 한 바퀴(60 초)다 -->
+	<Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="60" immigrationInterval="1.5" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
   <Good id="grain" name="Grain" price="8"/>
   <Good id="figs" name="Figs" price="10"/>
   <Good id="pottery" name="Pottery" price="20"/>

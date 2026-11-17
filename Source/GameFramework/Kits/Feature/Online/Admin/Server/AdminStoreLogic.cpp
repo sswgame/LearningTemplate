@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -220,10 +221,63 @@ namespace sw
                 return AdminResult::Ok;
             }
 
+            /** @brief @p role 이 거는 제재가 등급의 최대 길이 안이면 true 입니다. 풀기(지난 시각 · 0)는 늘 된다. */
+            static bool isSanctionWithinLimit( const AdminCommand& command, AdminRole role )
+            {
+                const int64 lengthMs = command._request._untilMs - command._nowMs;
+                if ( role >= AdminRole::Super || lengthMs <= 0 )
+                    return true;
+                const int64 maxMs = role == AdminRole::Support ? command._sanctionLimit._supportMaxMs : command._sanctionLimit._operatorMaxMs;
+                return lengthMs <= maxMs; // 상한이 없으면(0) 어떤 기한도 넘는다 — 설정이 빠진 조립은 기한 있는 제재를 걸지 못한다
+            }
+
+            /** @brief 대상 계정 @p accountID 가 있는지 계정 키트의 이름 색인으로 봅니다. 색인이 없으면 확인할 수 없어 Unavailable 이다(오타 계정에 재화가 Ok 로 들어가지 않게). */
+            static AdminServiceResult checkTargetExists( IServiceStoreConnection& connection, const AdminCommand& command, AccountID accountID )
+            {
+                if ( command._pNameIndex == nullptr )
+                    return AdminServiceResult::fail( OnlineError::kUnavailable );
+                AccountIdentity          identity;
+                const ServiceStoreResult found = command._pNameIndex->readIdentity( connection, accountID, identity );
+                if ( found == ServiceStoreResult::NotFound )
+                    return AdminResult::UnknownAccount;
+                return found == ServiceStoreResult::Ok ? AdminServiceResult{ AdminResult::Ok } : AdminServiceResult::fail( OnlineError::kUnavailable );
+            }
+
+            /** @brief 계정 하나를 대상으로 바꾸는 명령이면 그 계정, 일괄 우편이면 받는 계정 모두가 있는지 봅니다. */
+            static AdminServiceResult checkTargets( IServiceStoreConnection& connection, const AdminCommand& command )
+            {
+                switch ( command._method )
+                {
+                    case AdminMethod::AdjustAsset::kID:
+                    case AdminMethod::SetSanction::kID:
+                    case AdminMethod::SendMail::kID:
+                    case AdminMethod::SetRole::kID:
+                    {
+                        return checkTargetExists( connection, command, command._request._accountID );
+                    }
+                    case AdminMethod::BulkMail::kID:
+                    {
+                        for ( const AccountID recipient : command._request._listAccountID )
+                        {
+                            const AdminServiceResult checked = checkTargetExists( connection, command, recipient );
+                            if ( checked != AdminResult::Ok )
+                                return checked;
+                        }
+                        return AdminResult::Ok;
+                    }
+                    default:
+                    {
+                        return AdminResult::Ok;
+                    }
+                }
+            }
+
             static AdminServiceResult stageEffect( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply )
             {
                 const AdminRequest& request = command._request;
-                ServiceAuditEntry   audit;
+                if ( const AdminServiceResult checked = checkTargets( connection, command ); checked != AdminResult::Ok )
+                    return checked;
+                ServiceAuditEntry audit;
                 audit._actor              = ServiceAuditLog::makeOperatorActor( command._adminID );
                 audit._subject            = makeSubject( request._accountID );
                 audit._memo               = request._memo;
@@ -412,6 +466,40 @@ namespace sw
         return s_table;
     }
 
+    namespace
+    {
+        /** @brief 운영자 등급 가드입니다. 등급이 모자라면 NotFound(허락할 근거가 없다)입니다. */
+        class AdminRoleGuard final : public IServiceWriteGuard
+        {
+        public:
+            AdminRoleGuard( AccountID adminID, AdminRole required )
+                : _adminID{ adminID }
+                , _required{ required }
+            {
+            }
+
+            ServiceStoreResult checkAllowed( IServiceStoreConnection& connection ) const override
+            {
+                AdminRole                role    = AdminRole::None;
+                uint64                   version = 0;
+                const ServiceStoreResult read    = AdminStoreLogic::readRole( connection, _adminID, role, version );
+                if ( read != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                const bool bAllowed = _required != AdminRole::Count && role >= _required;
+                return bAllowed ? ServiceStoreResult::Ok : ServiceStoreResult::NotFound;
+            }
+
+        private:
+            AccountID _adminID;
+            AdminRole _required;
+        };
+    } // namespace
+
+    shared_ptr<const IServiceWriteGuard> AdminStoreLogic::makeRoleGuard( AccountID adminID, AdminRole required )
+    {
+        return make_shared<const AdminRoleGuard>( adminID, required );
+    }
+
     ServiceStoreResult AdminStoreLogic::readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion )
     {
         outRole    = AdminRole::None;
@@ -440,6 +528,8 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
         if ( AdminStoreLogicInternal::isWellFormed( command ) == false )
             return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kInvalidRequest ) );
+        if ( command._method == AdminMethod::SetSanction::kID && AdminStoreLogicInternal::isSanctionWithinLimit( command, role ) == false )
+            return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) ); // 등급의 최대 길이를 넘는 제재는 윗 등급의 일이다
         if ( AdminMethod::isForwardedMethod( command._method ) )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok ); // 등급과 형식만 확인했다. 효과와 감사 기록은 서비스가 넘긴 키트(서버 디렉터리, 라이브 운영)가 쓴다
         if ( command._method == AdminMethod::LookupAccount::kID )
@@ -461,8 +551,16 @@ namespace sw
         const string scope = ServiceAuditLog::makeOperatorActor( command._adminID );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
+            // 시도마다 운영자 등급부터 다시 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등된 운영자의 명령이 들어가지 않는다(읽은 대상 상태 · 등급도 같이 조건이 된다).
+            ServiceReadSetConnection readSet( connection );
+            AdminRole                attemptRole    = AdminRole::None;
+            uint64                   attemptVersion = 0;
+            if ( readRole( readSet, command._adminID, attemptRole, attemptVersion ) != ServiceStoreResult::Ok )
+                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
+            if ( attemptRole < required )
+                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
             vector<uint8>            listStoredReply;
-            const ServiceStoreResult found = ServiceIdempotency::findReply( connection, scope, command._keyHigh, command._keyLow, listStoredReply );
+            const ServiceStoreResult found = ServiceIdempotency::findReply( readSet, scope, command._keyHigh, command._keyLow, listStoredReply );
             if ( found == ServiceStoreResult::Ok )
             {
                 // 지난 결과이다. 멱등 기록에는 결과 한 바이트만 있고 세션 끊기 표시는 실리지 않으므로 재시도가 두 번 끊지 않는다.
@@ -475,14 +573,14 @@ namespace sw
 
             AdminReply               attemptReply;
             ServiceTransaction       transaction;
-            const AdminServiceResult staged = AdminStoreLogicInternal::stageEffect( connection, command, transaction, attemptReply );
+            const AdminServiceResult staged = AdminStoreLogicInternal::stageEffect( readSet, command, transaction, attemptReply );
             if ( staged != AdminResult::Ok )
             {
                 outReply = attemptReply;
                 return AdminStoreLogicInternal::finish( outReply, staged );
             }
             ServiceIdempotency::addReply( transaction, scope, command._keyHigh, command._keyLow, vector<uint8>{ static_cast<uint8>( AdminResult::Ok ) } );
-            const ServiceStoreResult committed = connection.commit( transaction );
+            const ServiceStoreResult committed = readSet.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
                 outReply = attemptReply;

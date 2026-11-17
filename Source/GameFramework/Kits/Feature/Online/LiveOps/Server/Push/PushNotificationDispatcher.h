@@ -123,7 +123,7 @@ namespace sw
 
     private:
         /** @brief 기기 등록 · 해지(@p bytes 가 비었다) 일을 맡깁니다. */
-        void submitWrite( AccountID accountID, string&& key, vector<uint8>&& bytes, uint64 requestTag );
+        void submitWrite( AccountID accountID, string&& key, string&& ownerKey, vector<uint8>&& bytes, uint64 requestTag );
         /** @brief 저장소 일의 완료입니다. */
         void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, LiveOpsServiceResult result );

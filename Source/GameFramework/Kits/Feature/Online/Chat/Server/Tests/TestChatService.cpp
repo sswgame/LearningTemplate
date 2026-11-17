@@ -91,6 +91,18 @@ namespace
         void releaseSubscription( uint64 /*id*/ ) override {}
     };
 
+    /** @brief 운영 견본(`Shooter3D.online.json` 의 채팅 `_spam`)과 같은 도배 한도를 채운 설정입니다 — 한도는 필수라 빈 설정은 서지 않는다. */
+    ChatServiceConfig makeChatSettings()
+    {
+        ChatServiceConfig settings;
+        settings._spam._refillIntervalMs  = 1000;
+        settings._spam._repeatWindowMs    = 10000;
+        settings._spam._burstCount        = 5;
+        settings._spam._maxRepeatCount    = 2;
+        settings._spam._maxTrackedAccount = 65536;
+        return settings;
+    }
+
     /** @brief 서버 하나입니다. 영속 데이터와 버스 허브는 빌립니다. */
     struct ChatFixture
     {
@@ -103,7 +115,7 @@ namespace
         ChatService                _service;
         uint64                     _nextTag{ 1 };
 
-        ChatFixture( MemoryServiceDatabase& database, LocalServerBusHub* pHub, uint64 serverID, ChatServiceConfig settings = ChatServiceConfig{} )
+        ChatFixture( MemoryServiceDatabase& database, LocalServerBusHub* pHub, uint64 serverID, ChatServiceConfig settings = makeChatSettings() )
             : _store{ &database }
             , _directory{}
             , _policy{}
@@ -242,7 +254,7 @@ namespace
 
         static ChatServiceConfig makeOpenSettings()
         {
-            ChatServiceConfig settings;
+            ChatServiceConfig settings     = makeChatSettings();
             settings._spam._burstCount     = 1000;
             settings._spam._maxRepeatCount = 1000;
             return settings;
@@ -254,6 +266,7 @@ namespace
 SW_TEST_CASE( ChatServiceTest, InitializeNeedsDependenciesAndFiles )
 {
     SW_EXPECT_LOG( "ChatService.ChatServiceNeedsServiceStore" );
+    SW_EXPECT_LOG( "ChatService.ChatServiceNoSpamLimit" );
     SW_EXPECT_LOG( "ChatService.ChatServiceBannedWordFile" );
     SW_EXPECT_LOG( "File.NotFound" );
     MemoryServiceDatabase database;
@@ -263,11 +276,15 @@ SW_TEST_CASE( ChatServiceTest, InitializeNeedsDependenciesAndFiles )
     SW_EXPECT_FALSE( service.initialize( ChatServiceDependencies{}, ChatServiceConfig{} ) );
 
     ChatServiceDependencies dependencies;
-    dependencies._pStore     = &store;
-    dependencies._pDirectory = &directory;
-    ChatServiceConfig settings;
+    dependencies._pStore            = &store;
+    dependencies._pDirectory        = &directory;
+    ChatServiceConfig settings      = makeChatSettings();
     settings._ignoredCharactersPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Server/chat_ignored_characters.txt" );
     settings._bannedWordsPath       = test::makeScratchPath( "missing_banned.txt" );
+    SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
+
+    settings._bannedWordsPath.clear();
+    settings._spam = ChatSpamConfig{}; // 도배 한도가 비었다 — 코드 기본값으로 열리지 않는다
     SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
 }
 
@@ -407,7 +424,7 @@ SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( bannedPath, "badword\n" ) );
 
     MemoryServiceDatabase database;
-    ChatServiceConfig     settings;
+    ChatServiceConfig     settings   = makeChatSettings();
     settings._spam._burstCount       = 3;
     settings._spam._refillIntervalMs = 1000;
     settings._spam._maxRepeatCount   = 1;
@@ -716,4 +733,42 @@ SW_TEST_CASE( ChatServiceTest, ReportCapturesContext )
     SW_REQUIRE_EQUAL( size_t( 2 ), report._listLine.size() );
     SW_EXPECT_EQUAL( before._text, report._listLine[0]._text );
     SW_EXPECT_EQUAL( target._text, report._listLine[1]._text ); // 마지막 줄이 신고 대상이다
+}
+
+/** @brief [ChatServiceTest] 차단한 사람의 글은 기록(History)으로도 읽히지 않는다 — 실시간 전달만 막고 기록으로 다시 보이던 구멍(감사 O-18). 차단하지 않은 사람은 그대로 본다 */
+SW_TEST_CASE( ChatServiceTest, HistoryHidesBlockedSenders )
+{
+    MemoryServiceDatabase database;
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.send( kAlice, "from alice", kWorld, kNowMs )._result == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.send( kBob, "from bob", kWorld, kNowMs + 1 )._result == ChatResult::Ok );
+    rig.flush();
+    rig._policy._listBlocked.push_back( make_pair( kBob, kAlice ) ); // 밥이 앨리스를 차단했다
+
+    const ChatCompletion bobView = rig.history( kBob );
+    SW_REQUIRE_EQUAL( size_t( 1 ), bobView._listHistory.size() );
+    SW_EXPECT_EQUAL( string( "from bob" ), bobView._listHistory[0]._text );
+    SW_EXPECT_EQUAL( size_t( 2 ), rig.history( kAlice )._listHistory.size() );
+}
+
+/** @brief [ChatServiceTest] 길드 추방처럼 그룹 채널에서 뺀 계정은 다른 서버에 접속해 있어도 그 서버의 멤버에서 빠진다(버스) — 처리한 서버만 고쳐 길드 채팅이 계속 닿던 구멍(감사 O-18) */
+SW_TEST_CASE( ChatServiceTest, GroupRemovalReachesTheMembersServer )
+{
+    MemoryServiceDatabase database;
+    LocalServerBusHub     hub;
+    ChatFixture           rigA( database, &hub, kServerA, ChatTestUtil::makeOpenSettings() );
+    ChatFixture           rigB( database, &hub, kServerB, ChatTestUtil::makeOpenSettings() );
+    rigB._directory._listOnline = vector<AccountID>{ kBob };
+    rigA.poll();
+    rigB.poll();
+    const string guildChannel = ChatChannelID::makeGuild( 7 );
+    SW_REQUIRE_TRUE( rigB._service.addMember( kBob, guildChannel, UnixMilliseconds{ kNowMs } ) == ChatResult::Ok );
+    SW_EXPECT_TRUE( rigB.history( kBob, guildChannel )._result == ChatResult::Ok );
+
+    rigA._service.removeGroupMember( kBob, guildChannel ); // 추방을 처리한 서버는 A 다
+    rigA.poll();
+    rigB.poll();
+    SW_EXPECT_TRUE( rigB.history( kBob, guildChannel )._result == ChatResult::NotMember );
 }

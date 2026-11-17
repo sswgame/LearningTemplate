@@ -52,24 +52,18 @@ namespace sw
     void FramePostProcessMaterials::prepareView( FrameViewTarget& view )
     {
         view._listPostProcessMaterialPass.clear();
-        if ( _pDevice == nullptr || view._settings._listPostProcessMaterial.empty() )
+        if ( _pDevice == nullptr )
             return;
-        const vector<RenderGraphPassDesc>&  listPass       = _pipeline.getGraphPass();
-        const vector<RenderPassAttachment>& listAttachment = _pipeline.getDesc()._listAttachment;
+        if ( view._settings._listPostProcessMaterial.empty() )
+        {
+            view._postProcessChainBeforeTonemap.release( _pDevice );
+            view._postProcessChainAfterTonemap.release( _pDevice );
+            return;
+        }
         for ( const PostProcessMaterialDraw& draw : view._settings._listPostProcessMaterial )
         {
             // 그 자리를 맡는 패스의 출력 형식이 PSO 의 타깃 형식이다(자리마다 패스는 하나 — 검증 3-8). 패스가 없는 파이프라인(포워드)은 그 블렌더블을 그리지 않는다.
-            RHIFormat outputFormat = RHIFormat::Unknown;
-            for ( const RenderGraphPassDesc& pass : listPass )
-            {
-                if ( pass._type != RenderPassType::PostProcessMaterial || pass._blendableLocation != draw._location || pass._listResolvedColorOutput.empty() )
-                    continue;
-                for ( const RenderPassAttachment& attachment : listAttachment )
-                {
-                    if ( string_view( attachment._name ) == pass._listResolvedColorOutput[0]._attachment.view() )
-                        outputFormat = attachment._format;
-                }
-            }
+            const RHIFormat outputFormat = findOutputFormat( draw._location );
             if ( outputFormat == RHIFormat::Unknown )
                 continue;
             ExtensionProgramDesc program;
@@ -86,6 +80,59 @@ namespace sw
             drawPass._location    = draw._location;
             view._listPostProcessMaterialPass.push_back( drawPass );
         }
+        // 같은 자리의 둘째 머티리얼부터 앞 결과를 이어 읽는다(언리얼 블렌더블의 PostProcessInput0) — 출력에 그리며 같은 출력을 읽을 수 없어 뷰의 사본으로 옮겨 읽는다.
+        prepareChain( view, PostProcessBlendableLocation::BeforeTonemap, view._postProcessChainBeforeTonemap );
+        prepareChain( view, PostProcessBlendableLocation::AfterTonemap, view._postProcessChainAfterTonemap );
+    }
+
+    bool FramePostProcessMaterials::isChainedDraw( const vector<FrameViewTarget::PostProcessMaterialPass>& listDraw, size_t drawIndex )
+    {
+        const PostProcessBlendableLocation location = listDraw[drawIndex]._location;
+        if ( location == PostProcessBlendableLocation::ReplacingTonemap || listDraw[drawIndex]._pso == 0 )
+            return false;
+        for ( size_t index = 0; index < drawIndex; ++index )
+        {
+            if ( listDraw[index]._location == location && listDraw[index]._pso != 0 )
+                return true;
+        }
+        return false;
+    }
+
+    void FramePostProcessMaterials::prepareChain( FrameViewTarget& view, PostProcessBlendableLocation location, PostProcessChainTexture& chain )
+    {
+        vector<FrameViewTarget::PostProcessMaterialPass>& listDraw = view._listPostProcessMaterialPass;
+        bool                                              bChained = false;
+        for ( size_t index = 0; index < listDraw.size(); ++index )
+            bChained = bChained || ( listDraw[index]._location == location && isChainedDraw( listDraw, index ) );
+        if ( bChained == false )
+        {
+            chain.release( _pDevice );
+            return;
+        }
+        // 사본은 그 자리 패스의 출력 형식 · 뷰 풀 크기다(블릿은 형식 · 크기가 같아야 한다).
+        const RHIFormat format = findOutputFormat( location );
+        if ( format == RHIFormat::Unknown || chain.ensure( *_pDevice, format, view._transientPool.getWidth(), view._transientPool.getHeight() ) == false )
+            return; // 만들지 못했다(오류를 남겼다) — 그 자리는 모두 원본을 읽는다
+        for ( size_t index = 0; index < listDraw.size(); ++index )
+        {
+            if ( listDraw[index]._location == location && isChainedDraw( listDraw, index ) )
+                listDraw[index]._pChainSource = &chain;
+        }
+    }
+
+    RHIFormat FramePostProcessMaterials::findOutputFormat( PostProcessBlendableLocation location ) const
+    {
+        for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
+        {
+            if ( pass._type != RenderPassType::PostProcessMaterial || pass._blendableLocation != location || pass._listResolvedColorOutput.empty() )
+                continue;
+            for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
+            {
+                if ( string_view( attachment._name ) == pass._listResolvedColorOutput[0]._attachment.view() )
+                    return attachment._format;
+            }
+        }
+        return RHIFormat::Unknown;
     }
 
     void FramePostProcessMaterials::pruneUnused()

@@ -397,10 +397,10 @@ namespace sw
             _mapTicketToCall[ticket] = EconomyReceiptCall{ callID, call._accountID }; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
-        const AccountID        accountID   = call._accountID;
-        const int64            nowMs       = call._nowMs.count();
-        const CurrencyCatalog* pCurrencies = _settings._pCurrencyCatalog; // 저장소 스레드는 서비스 멤버를 만지지 않으므로 값을 잡는다
-        const OfferCatalog*    pOffers     = _settings._pOfferCatalog;
+        const AccountID                      accountID   = call._accountID;
+        const int64                          nowMs       = call._nowMs.count();
+        const CurrencyCatalog*               pCurrencies = _settings._pCurrencyCatalog;         // 저장소 스레드는 서비스 멤버를 만지지 않으므로 값을 잡는다
+        const shared_ptr<const OfferCatalog> pOffers     = _settings._pOfferCatalog.snapshot(); // 저장소 일감이 끝날 때까지 그 판을 쥔다
         switch ( methodIndex )
         {
             case EconomyServiceInternal::kWalletIndex:
@@ -473,14 +473,14 @@ namespace sw
             const EconomyReceiptCall receiptCall = callIt->second;
             _mapTicketToCall.erase( callIt );
             EconomyRedeemInput redeem;
-            redeem._receipt                     = std::move( result );
-            redeem._pExternalLinks              = _settings._pExternalLinks;
-            redeem._accountID                   = receiptCall._accountID;
-            redeem._nowMs                       = _nowMs.count();
-            redeem._bAcceptSandbox              = _settings._bAcceptSandboxReceipts;
-            const CurrencyCatalog*  pCurrencies = _settings._pCurrencyCatalog;
-            const OfferCatalog*     pOffers     = _settings._pOfferCatalog;
-            ReceiptValidationResult receipt     = redeem._receipt; // 지급이 커밋되면 완료가 스토어에 알린다
+            redeem._receipt                                  = std::move( result );
+            redeem._pExternalLinks                           = _settings._pExternalLinks;
+            redeem._accountID                                = receiptCall._accountID;
+            redeem._nowMs                                    = _nowMs.count();
+            redeem._bAcceptSandbox                           = _settings._bAcceptSandboxReceipts;
+            const CurrencyCatalog*               pCurrencies = _settings._pCurrencyCatalog;
+            const shared_ptr<const OfferCatalog> pOffers     = _settings._pOfferCatalog.snapshot(); // 저장소 일감이 끝날 때까지 그 판을 쥔다
+            ReceiptValidationResult              receipt     = redeem._receipt;                     // 지급이 커밋되면 완료가 스토어에 알린다
             _store.submit( [pCurrencies, pOffers, redeem = std::move( redeem )]( IServiceStoreConnection& connection )
             {
                 ServiceStoreCallResult<EconomyServiceResult, EconomyRedeemReply> done;

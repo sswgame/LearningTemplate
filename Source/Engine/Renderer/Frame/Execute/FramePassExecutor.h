@@ -446,6 +446,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 이번 프레임에 그릴 추가 뷰 가운데 출력 종류가 @p outputKind 인 것을 그리고 그린 수를 돌려줍니다. */
         uint32 renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind );
+        /** @brief 모든 뷰를 낸 뒤 프레임 끝 타임스탬프를 자기 리스트에 써서 제출합니다. 시계가 이번 프레임을 재지 않으면 아무것도 하지 않습니다. */
+        void writeFrameEndTimestamp( IRHIDevice* pDevice );
         /** @brief 주 시점의 그래프를 실행합니다. 병렬 기록이 되면 레벨마다 여러 리스트로, 아니면 주 리스트 하나로 직렬 기록해 제출합니다. */
         [[nodiscard]] bool executeMainGraph( IRHIDevice* pDevice );
         /** @brief 추가 뷰 하나를 그래프로 그립니다(직렬, 자기 리스트). 지금 뷰를 그 뷰로 바꿨다가 주 시점으로 되돌립니다. */
@@ -532,6 +534,8 @@ namespace sw
         /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
         GPUNanCheck                 _nanCheck;
         unique_ptr<IRHICommandList> _nanCheckCommandList;
+        /// @brief 프레임 끝 타임스탬프(`GPUFrameClock::writeFrameEnd`)만 기록하는 리스트입니다. 모든 뷰를 낸 뒤에 제출한다. 시계가 재지 않으면 만들지 않는다.
+        unique_ptr<IRHICommandList> _frameEndCommandList;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.
         const RenderGraphPassDesc* _pLastSwapchainWriter;
         /**

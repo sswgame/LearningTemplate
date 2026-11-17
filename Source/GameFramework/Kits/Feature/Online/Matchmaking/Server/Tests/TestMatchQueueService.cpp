@@ -1,11 +1,12 @@
 // MatchQueueServiceTest — 매칭 대기열(메모리 캐시 + 프로세스 안 버스): 줄 서기 · 빠지기, 경기 배정 · 팀 · 샤드 포트, 서버 없음 대기와 포기, 시한, 실력 통계,
-// 서버 둘의 임대 · 버스 티켓 · 결과 · 취소, 권한 넘어감과 잃은 티켓의 시한, 백필, 로비 배정, 파티 티켓과 파티를 찾는 동안의 빠지기.
+// 서버 둘의 임대 · 버스 티켓 · 결과 · 취소, 권한 넘어감과 잃은 티켓의 시한, 백필(게임 서버 입구 포함), 로비 배정, 명단 기록 쓰기 실패, 파티 티켓과 파티를 찾는 동안의 빠지기.
 // 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchBackfillSender.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
@@ -68,10 +69,43 @@ namespace
         void releaseStats( AccountID accountID ) override { --_mapRetained[accountID]; }
     };
 
+    /** @brief 메모리 캐시 앞에서 명단 기록(`mm/match/`) 쓰기를 지게 할 수 있는 캐시입니다. 진 쓰기는 키를 비워 Invalid 답을 받는다. */
+    class RecordFaultEphemeralStore final : public IEphemeralStore
+    {
+    public:
+        uint8 _bFailMatchRecord{ SW_FALSE };
+
+        explicit RecordFaultEphemeralStore( IEphemeralStore* pInner )
+            : _pInner{ pInner }
+        {
+        }
+
+        uint64 submit( const EphemeralRequest& request ) override
+        {
+            const bool bFail = _bFailMatchRecord != SW_FALSE && request._operation == EphemeralOperation::Set && request._key.rfind( "mm/match/", 0 ) == 0;
+            if ( bFail == false )
+                return _pInner->submit( request );
+            EphemeralRequest broken = request;
+            broken._key.clear();
+            return _pInner->submit( broken );
+        }
+
+        int32 pollReplies( vector<EphemeralReply>& outListReply ) override { return _pInner->pollReplies( outListReply ); }
+        void  subscribe( string_view channel ) override { _pInner->subscribe( channel ); }
+        void  unsubscribe( string_view channel ) override { _pInner->unsubscribe( channel ); }
+        int32 pollMessages( vector<EphemeralMessage>& outListMessage ) override { return _pInner->pollMessages( outListMessage ); }
+        int32 getPendingCount() const override { return _pInner->getPendingCount(); }
+        void  shutdown() override { _pInner->shutdown(); }
+
+    private:
+        IEphemeralStore* _pInner;
+    };
+
     /** @brief 서버 하나입니다. 캐시 데이터와 버스 허브는 빌립니다. @p pHub 가 없으면 서버 한 대(항상 권한)입니다. */
     struct QueueServer
     {
         MemoryEphemeralStore       _cache;
+        RecordFaultEphemeralStore  _faultCache;
         EphemeralStoreRouter       _router;
         unique_ptr<LocalServerBus> _transport;
         unique_ptr<ServerBus>      _bus;
@@ -79,13 +113,14 @@ namespace
 
         QueueServer( MemoryEphemeralDatabase& cacheData, LocalServerBusHub* pHub, uint64 serverID )
             : _cache{ &cacheData }
+            , _faultCache{ &_cache }
             , _router{}
             , _transport{}
             , _bus{}
             , _queue{}
             , _serverID{ serverID }
         {
-            _router.initialize( &_cache );
+            _router.initialize( &_faultCache );
             if ( pHub != nullptr )
             {
                 _transport = make_unique<LocalServerBus>( pHub, serverID );
@@ -102,9 +137,11 @@ namespace
         MatchQueueDependencies makeDependencies()
         {
             MatchQueueDependencies dependencies;
-            dependencies._pRouter  = &_router;
-            dependencies._pBus     = _bus.get();
-            dependencies._serverID = _serverID;
+            dependencies._pRouter              = &_router;
+            dependencies._seatReservationTTLMs = 30000;
+            dependencies._cancelConfirmWaitMs  = 3000;
+            dependencies._pBus                 = _bus.get();
+            dependencies._serverID             = _serverID;
             return dependencies;
         }
 
@@ -448,9 +485,45 @@ SW_TEST_CASE( MatchQueueServiceTest, CancelReachesAuthorityOverBus )
     SW_EXPECT_EQUAL( 1, world._serverA._queue.getQueuedTicketCount( "duel" ) );
 
     world._serverB._queue.leaveQueue( kBob, 8 );
+    SW_EXPECT_EQUAL( 1, world._serverB._queue.getLocalTicketCount() ); // 권한 서버의 확인을 기다린다
     world._serverA.poll( kNowMs );
     SW_EXPECT_EQUAL( 0, world._serverA._queue.getQueuedTicketCount( "duel" ) );
+    world._serverB.poll( kNowMs );
     SW_EXPECT_EQUAL( 0, world._serverB._queue.getLocalTicketCount() );
+    SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::Ok );
+}
+
+/** @brief [MatchQueueServiceTest] 빠지기와 경기가 겹치면 경기가 이긴다 — 권한 서버가 이미 짝지었으면 Cancelled 를 내지 않고, 낸 서버는 Found 를 받아 빠지기를 NotQueued 로 끝낸다(감사 O-18: 예전에는 바로 Cancelled 로 끝내 늦게 온 Found 를 버렸다) */
+SW_TEST_CASE( MatchQueueServiceTest, LeaveRacingAFormedMatchYieldsToFound )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
+    world._serverA.poll( kNowMs );
+    SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
+    world._serverA.tick( kNowMs + 1 ); // 경기가 났다 — 밥의 Found 는 아직 버스 위다
+    world._serverB._queue.leaveQueue( kBob, 9 );
+    world._serverA.poll( kNowMs + 1 ); // 이미 짝지어졌으니 빼지 않는다
+    world._serverB.poll( kNowMs + 1 );
+    const vector<MatchQueueNotification> listBob = world._serverB.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listBob.size() );
+    SW_EXPECT_TRUE( listBob[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
+}
+
+/** @brief [MatchQueueServiceTest] 권한 서버의 답이 시한 안에 오지 않으면(권한이 없다) 빠진 것으로 끝낸다 */
+SW_TEST_CASE( MatchQueueServiceTest, LeaveWithoutAuthorityEndsAtTheConfirmDeadline )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
+    // 권한 서버 A 를 돌리지 않는다 — 빼 달라는 버스 메시지에 아무도 답하지 않는다
+    world._serverB._queue.leaveQueue( kBob, 8 );
+    world._serverB.tick( kNowMs + 3000 );
+    SW_EXPECT_EQUAL( 1, world._serverB._queue.getLocalTicketCount() );
+    world._serverB.tick( kNowMs + 3001 );
+    SW_EXPECT_EQUAL( 0, world._serverB._queue.getLocalTicketCount() );
+    SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::Ok );
 }
 
 /** @brief [MatchQueueServiceTest] 권한 서버가 멎으면 임대가 끝나 B 가 이어받는다. A 가 돌아와도 임대를 잃은 줄 알고 매처를 비우며, 사라진 티켓은 낸 서버의 시한이 Timeout 으로 알린다 */
@@ -535,12 +608,12 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillFillsRunningMatchFirst )
 
     MatchBackfillRequest unknownMode = request;
     unknownMode._modeID              = "nope";
-    world._server._queue.submitBackfill( unknownMode );
+    SW_EXPECT_TRUE( world._server._queue.submitBackfill( unknownMode ) == MatchmakingResult::UnknownMode );
     MatchBackfillRequest badShape = request;
     badShape._listOpenSlot        = vector<int32>{ 1 };
-    world._server._queue.submitBackfill( badShape );
+    SW_EXPECT_TRUE( world._server._queue.submitBackfill( badShape ).hasError( OnlineError::kInvalidRequest ) );
 
-    world._server._queue.submitBackfill( request );
+    SW_EXPECT_TRUE( world._server._queue.submitBackfill( request ) == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     world._server.tick( kNowMs + 1 );
     const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
@@ -550,6 +623,114 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillFillsRunningMatchFirst )
     SW_EXPECT_EQUAL( string( "10.0.0.5" ), listFound[0]._assignment._address );
     SW_EXPECT_EQUAL( 1, listFound[0]._assignment._team );
     SW_EXPECT_EQUAL( 0, world._server._queue.getLocalTicketCount() );
+}
+
+/** @brief [MatchQueueServiceTest] 명단 기록 쓰기가 지면 Found 대신 NoServer 다 — 게임 서버가 수락을 판정할 기록이 없는 배정에 Found 를 내면 그 사람은 접속에서 거절된다(감사 O-6). 로비도 같다 */
+SW_TEST_CASE( MatchQueueServiceTest, MatchRecordWriteFailureEndsAsNoServer )
+{
+    SW_EXPECT_LOG( "MatchQueueService.MatchRecordWriteFailed" );
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+    world._server._faultCache._bFailMatchRecord = SW_TRUE;
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 1 );
+    const vector<MatchQueueNotification> listResult = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
+    SW_EXPECT_TRUE( listResult[0]._assignment._result == MatchQueueResult::NoServer );
+    SW_EXPECT_TRUE( listResult[1]._assignment._result == MatchQueueResult::NoServer );
+    SW_EXPECT_EQUAL( uint64( 0 ), listResult[0]._assignment._serverID );
+    SW_EXPECT_EQUAL( 0, world._server._queue.getLocalTicketCount() ); // 티켓이 끝나 다시 줄을 설 수 있다
+
+    agent.update( UnixMilliseconds{ kNowMs + 1 } );
+    world._server.poll( kNowMs + 1 );
+    SW_EXPECT_FALSE( agent.isAccepted( kAlice ) ); // 기록이 없으니 받을 사람도 없다 — Found 를 받지 않았으므로 맞다
+
+    LobbySnapshot lobby;
+    lobby._lobbyID = 9;
+    lobby._modeID  = "duel";
+    lobby._listMember.push_back( LobbyMember{ kAlice, 0, SW_TRUE } );
+    lobby._listMember.push_back( LobbyMember{ kBob, 1, SW_TRUE } );
+    world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2 } );
+    world._server.poll( kNowMs + 2 );
+    const vector<MatchQueueNotification> listLobby = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listLobby.size() );
+    SW_EXPECT_TRUE( listLobby[0]._assignment._result == MatchQueueResult::NoServer );
+    agent.shutdown();
+}
+
+/** @brief [MatchQueueServiceTest] 명단에 없는 계정이 접속을 시도하면 게임 서버가 1 초 주기를 기다리지 않고 다음 틱에 목록을 읽는다 — 버스를 잃은 첫 접속의 재시도가 바로 받아들여진다(감사 O-6) */
+SW_TEST_CASE( MatchQueueServiceTest, RefusedConnectReadsMatchListAtOnce )
+{
+    SoloWorld world; // 버스가 없다 — 배정 버스 메시지를 잃은 것과 같다
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+    agent.update( UnixMilliseconds{ kNowMs } ); // 첫 읽기 — 목록이 아직 없다. 다음 주기는 1 초 뒤이다
+    world._server.poll( kNowMs );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 1 );
+    SW_REQUIRE_EQUAL( size_t( 2 ), world._server.takeNotifications().size() );
+
+    SW_EXPECT_FALSE( agent.isAccepted( kAlice ) ); // 첫 시도는 거절된다
+    agent.update( UnixMilliseconds{ kNowMs + 2 } );
+    world._server.poll( kNowMs + 2 );
+    SW_EXPECT_TRUE( agent.isAccepted( kAlice ) ); // 재시도는 주기(1 초)를 기다리지 않는다
+    agent.shutdown();
+}
+
+/** @brief [MatchQueueServiceTest] 게임 서버의 백필 입구: 서버 id · 주소 · 포트는 서버 설명에서 채우고, 모르는 모드 · 모양이 틀린 요청은 버스로 보내기 전에 거절한다 */
+SW_TEST_CASE( MatchQueueServiceTest, BackfillSenderFillsServerFromDescriptor )
+{
+    SW_EXPECT_LOG( "MatchQueueService.MatchQueueBackfillUnknownMode" );
+    SW_EXPECT_LOG( "MatchQueueService.MatchQueueBackfillMatchDoes" );
+    PairWorld world; // 백필을 내는 B 는 권한이 아니다 — 모양이 틀린 요청이 버스로 나가 권한 서버에서 조용히 버려지던 자리이다
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+
+    ServerDescriptor descriptor;
+    descriptor._serverID  = kGameID;
+    descriptor._kind      = "game";
+    descriptor._region    = "kr";
+    descriptor._address   = "10.0.0.5";
+    descriptor._port      = 7100;
+    descriptor._portCount = 1;
+    MatchServerAgent    agent; // 이 테스트는 자리를 꺼내지 않는다(빈 슬롯을 직접 적는다)
+    MatchBackfillSender sender;
+    agent.initialize( kGameID );
+    sender.initialize( &world._serverB._queue, &agent, descriptor );
+
+    MatchBackfillSlots slots;
+    slots._matchID       = 77;
+    slots._modeID        = "duel";
+    slots._averageRating = 1500;
+    slots._listOpenSlot  = vector<int32>{ 0, 1 };
+
+    MatchBackfillSlots unknownMode = slots;
+    unknownMode._modeID            = "nope";
+    SW_EXPECT_TRUE( sender.submitBackfill( unknownMode, UnixMilliseconds{ kNowMs } ) == MatchmakingResult::UnknownMode );
+    MatchBackfillSlots badShape = slots;
+    badShape._listOpenSlot      = vector<int32>{ 1 };
+    SW_EXPECT_TRUE( sender.submitBackfill( badShape, UnixMilliseconds{ kNowMs } ).hasError( OnlineError::kInvalidRequest ) );
+
+    SW_EXPECT_TRUE( sender.submitBackfill( slots, UnixMilliseconds{ kNowMs } ) == MatchmakingResult::Ok );
+    world.tickBoth( kNowMs );
+    SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
+    world.tickBoth( kNowMs + 1 );
+    const vector<MatchQueueNotification> listFound = world._serverA.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
+    SW_EXPECT_TRUE( listFound[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_EQUAL( uint64( 77 ), listFound[0]._assignment._matchID );
+    SW_EXPECT_EQUAL( kGameID, listFound[0]._assignment._serverID );
+    SW_EXPECT_EQUAL( string( "10.0.0.5" ), listFound[0]._assignment._address );
+    SW_EXPECT_EQUAL( uint16( 7100 ), listFound[0]._assignment._port );
+    SW_EXPECT_EQUAL( 1, listFound[0]._assignment._team );
 }
 
 /** @brief [MatchQueueServiceTest] 로비 배정: 팀은 로비 그대로이고 멤버마다 알린다. 서버가 없거나 모르는 모드면 NoServer 다. 경기 id 는 매처의 것과 겹치지 않는다 */
@@ -574,6 +755,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
     world._server.tick( kNowMs + 2001 );
     world._server.tick( kNowMs + 2001 );
     world._server._queue.placeLobby( lobby, UnixMilliseconds{ kNowMs + 2001 } );
+    world._server.poll( kNowMs + 2001 ); // Found 는 명단 기록이 남은 뒤에 간다
     listResult = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._assignment._result == MatchQueueResult::Found );
@@ -846,4 +1028,47 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     stats._mapStat[kBob] = 1500;
     world._server.tick( kNowMs + 1 );
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() ); // 떠난 사람의 티켓이 생기지 않는다
+}
+
+/** @brief [MatchQueueServiceTest] 나간 사람의 자리: 게임 서버는 계정만 넘기고 경기 · 모드 · 팀은 읽은 명단에서 찾는다. 같은 사람은 한 번만, 명단에 없는 계정은 NotQueued, 채운 사람은 그 경기의 그 팀으로 Found */
+SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID );
+    agent.startReading( &world._server._router );
+    ServerDescriptor descriptor;
+    descriptor._serverID  = kGameID;
+    descriptor._kind      = "game";
+    descriptor._region    = "kr";
+    descriptor._address   = "10.0.0.9";
+    descriptor._port      = 7000;
+    descriptor._portCount = 1;
+    MatchBackfillSender sender;
+    sender.initialize( &world._server._queue, &agent, descriptor );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 1 );
+    const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 2 ), listFound.size() );
+    const MatchAssignment& aliceFound = listFound[0]._recipientID == kAlice ? listFound[0]._assignment : listFound[1]._assignment;
+    agent.update( UnixMilliseconds{ kNowMs + 1 } ); // 명단 기록을 읽는다
+    world._server.poll( kNowMs + 1 );
+    SW_REQUIRE_TRUE( agent.isAccepted( kAlice ) );
+
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kCarol, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::NotQueued ); // 명단에 없다
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kAlice, UnixMilliseconds{ kNowMs + 2 } ) == MatchmakingResult::NotQueued ); // 자리 하나는 한 번만
+
+    SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs + 3 )._result == MatchmakingResult::Ok );
+    world._server.tick( kNowMs + 3 );
+    const vector<MatchQueueNotification> listFilled = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFilled.size() );
+    SW_EXPECT_EQUAL( kCarol, listFilled[0]._recipientID );
+    SW_EXPECT_TRUE( listFilled[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_EQUAL( aliceFound._matchID, listFilled[0]._assignment._matchID );
+    SW_EXPECT_EQUAL( aliceFound._team, listFilled[0]._assignment._team );
+    agent.shutdown();
 }

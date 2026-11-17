@@ -186,6 +186,7 @@ namespace sw
         const JSONValue root = document.makeObject();
         root.set( "_scenario" ).setString( scenario._name );
         root.set( "_botCount" ).setInt( scenario._botCount );
+        root.set( "_pacing" ).setString( scenario._pacing == LoadBotPacing::Open ? "open" : "closed" ); // 지연이 보내려던 시각 기준인지(열린 루프) 보고서만 보고 안다
         root.set( "_elapsedMs" ).setInt( elapsedMs );
         const JSONValue listAction = root.set( "_listAction" );
         listAction.setArray();

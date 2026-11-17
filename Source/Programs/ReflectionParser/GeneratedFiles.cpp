@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/GeneratedFiles.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -21,14 +22,19 @@ namespace sw
         {
             /** @brief 스탬프의 "파싱 전에 본 입력의 쓰기 시각" 줄 머리입니다 — `input <시각>`. */
             static constexpr const utf8* kStampInputTimeKey = "input";
+            /** @brief 스탬프의 명령줄 해시 줄 머리입니다 — `args <해시>`. 없는 스탬프는 옛 판이라 최신이 아니다. */
+            static constexpr const utf8* kStampArgsKey = "args";
             /** @brief 스탬프의 의존 줄 머리입니다 — `dep <시각> <경로>`. */
             static constexpr const utf8* kStampDependencyKey = "dep";
             /** @brief 스탬프의 타입 줄 머리입니다 — `type <FQN>`. */
             static constexpr const utf8* kStampTypeKey = "type";
             /** @brief 스탬프의 고정 배치형 판정 줄 머리입니다 — `schema <FQN> | <정규 문자열 또는 이유>`. */
             static constexpr const utf8* kStampFixedSchemaKey = "schema";
-            /** @brief 스탬프의 경로 칸 줄 머리입니다 — `assetfield <이름>\t<대상>`. */
-            static constexpr const utf8* kStampAssetFieldKey = "assetfield";
+            /**
+             * @brief 스탬프의 경로 칸 줄 머리입니다 — `assetfieldkind <이름>\t<대상>\t<ref|path>`.
+             * @details 칸 종류 열을 더할 때 머리를 바꿨다 — 옛 머리(`assetfield`)의 스탬프는 모르는 줄이라 다시 파싱한다(두 열 줄과 세 열 줄이 섞이지 않는다).
+             */
+            static constexpr const utf8* kStampAssetFieldKey = "assetfieldkind";
             /** @brief ENUM(Flags) 가 있는 입력의 스탬프에만 있는 줄입니다. */
             static constexpr const utf8* kStampBitFlagLine = "flags";
             /** @brief 이번 실행의 시작을 적는 표식 파일 이름입니다(`markRunStart`). */
@@ -62,6 +68,7 @@ namespace sw
             {
                 size_t lineStart = 0;
                 bool   bHasInput = false;
+                bool   bHasArgs  = false;
                 for ( uint32 lineIndex = 0; lineStart <= text.size(); ++lineIndex )
                 {
                     const size_t      lineEnd = text.find( '\n', lineStart );
@@ -80,6 +87,10 @@ namespace sw
                     {
                         bHasInput                 = parseWriteTime( rest, time );
                         outRecord._inputWriteTime = time;
+                    }
+                    else if ( takeKeyedRest( line, kStampArgsKey, rest ) )
+                    {
+                        bHasArgs = StringUtil::parseUint64( StringUtil::trim( rest ), outRecord._argsHash );
                     }
                     else if ( takeKeyedRest( line, kStampDependencyKey, rest ) )
                     {
@@ -110,7 +121,14 @@ namespace sw
                         return false;
                     }
                 }
-                return bHasInput;
+                return bHasInput && bHasArgs;
+            }
+
+            /** @brief @p hash 에 글 하나를 섞습니다. 길이도 섞어 `"ab","c"` 와 `"a","bc"` 가 갈리게 한다. */
+            [[nodiscard]] static uint64 combineText( uint64 hash, string_view text )
+            {
+                hash = HashUtil::combine( hash, static_cast<uint64>( text.size() ) );
+                return HashUtil::combine( hash, HashUtil::computeStringHash64( text, false ) );
             }
 
             /**
@@ -161,7 +179,8 @@ namespace sw
     bool GeneratedFileUtil::writeStamp( const string& stampPath, const GeneratedStamp& stamp )
     {
         StringBuilder<constant::buffer::kMax256> stampTextBuilder;
-        stampTextBuilder.appendFormat( "%#\n%# %#\n", stamp._sourcePath, string( GeneratedFilesInternal::kStampInputTimeKey ), stamp._inputWriteTime );
+        stampTextBuilder.appendFormat( "%#\n%# %#\n%# %#\n", stamp._sourcePath, string( GeneratedFilesInternal::kStampInputTimeKey ), stamp._inputWriteTime,
+                                       string( GeneratedFilesInternal::kStampArgsKey ), stamp._argsHash );
         string stampText{ stampTextBuilder.view() };
         if ( stamp._bHasBitFlagEnum )
         {
@@ -223,8 +242,33 @@ namespace sw
         return GeneratedFilesInternal::getWriteTime( markerPath );
     }
 
+    uint64 IncrementalCheck::makeArgsHash( const ParserOptions& options )
+    {
+        using Internal = GeneratedFilesInternal;
+        uint64 hash    = 0;
+        hash           = Internal::combineText( hash, options._moduleName );
+        hash           = HashUtil::combine( hash, options._bModuleLocal ? 1u : 0u );
+        hash           = Internal::combineText( hash, options._builtinsPath );
+        hash           = Internal::combineText( hash, options._configPath );
+        hash           = Internal::combineText( hash, options._annotationMetaPath );
+        hash           = Internal::combineText( hash, options._emitTemplatesDir );
+        // 목록은 개수부터 섞는다 — 인자가 다른 목록으로 옮겨 가도(`--include X` → `--target-arg X`) 같은 해시가 되지 않게.
+        hash = HashUtil::combine( hash, static_cast<uint64>( options._listIncludePath.size() ) );
+        for ( const string& includePath : options._listIncludePath )
+        {
+            hash = Internal::combineText( hash, includePath );
+        }
+        hash = HashUtil::combine( hash, static_cast<uint64>( options._listTargetArg.size() ) );
+        for ( const string& targetArg : options._listTargetArg )
+        {
+            hash = Internal::combineText( hash, targetArg );
+        }
+        return hash;
+    }
+
     IncrementalCheck::IncrementalCheck( const ParserOptions& options, const ParserConfig& config )
         : _newestToolWriteTime{ 0 }
+        , _argsHash{ makeArgsHash( options ) }
     {
         vector<string> listToolFile;
         listToolFile.push_back( FileUtil::getExecutablePath() );
@@ -268,6 +312,9 @@ namespace sw
         // 시각을 읽지 못하는 스탬프는 최신이 아니다 — 다시 만든다.
         GeneratedStamp record;
         if ( GeneratedFileUtil::readStamp( paths._stampPath, record ) == false || record._sourcePath != inputFile )
+            return false;
+        // 명령줄이 바뀌었으면(`--module` · `-D…` · `--include`) 파일 시각이 그대로여도 산출물이 달라진다.
+        if ( record._argsHash != _argsHash )
             return false;
         // **같아야** 최신이다. 파싱하는 동안 저장한 편집은 스탬프보다 오래된 시각을 가질 수 있다 — 크고 작음이 아니라 같음으로 본다.
         if ( record._inputWriteTime != inputTime )

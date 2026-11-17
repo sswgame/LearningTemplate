@@ -74,6 +74,11 @@ namespace sw
         if ( isHrSuccess( pFactory->CreateSwapChainForHwnd( pQueue, _pHWnd, &scDesc, nullptr, nullptr, swapChain1.GetAddressOf() ), "CreateSwapChainForHwnd" ) == false )
             return false;
 
+        if ( disableDXGIWindowChanges( swapChain1.Get(), _pHWnd ) == false )
+        {
+            SW_LOG_ERROR_ID( "D3D12.WindowAssociationFailed", "IDXGIFactory::MakeWindowAssociation failed - DXGI would take Alt+Enter into exclusive fullscreen where tearing Present fails" );
+            return false;
+        }
         swapChain1.As( &_swapChain );
         acquireNextImage();
         return true;

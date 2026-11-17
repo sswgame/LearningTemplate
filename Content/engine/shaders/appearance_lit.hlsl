@@ -89,8 +89,7 @@ SW_MATERIAL_BEGIN
     uint   _maskMap;
     uint   _wetMask;
     uint   _residueMask;
-    // 원소 크기를 16 의 배수로(pbr_lit.hlsl 과 같은 까닭). 머티리얼 속성이 아니다
-    uint _swPad0;
+    uint   _skinLayerSurfaceMap; ///< 피부 층 굽기의 표면 덮어쓰기(SkinLayerBakeBinding — R 거칠기 값 · G 그 무게 · B 금속 값 · A 그 무게, 프리멀티플라이). 원소가 16 의 배수가 되어 채움 칸이 없다
 }
 SW_MATERIAL_END
 
@@ -307,9 +306,16 @@ static AppearanceSurface AppearanceSurface::make( PixelContext context )
     AppearanceSurface surface;
     surface._albedo = context._color * material._color * AppearanceSurface::sampleBaseTexture( context );
     surface._albedo.rgb *= orm.r;
-    surface._normal            = AppearanceSurface::computeBaseNormal( context );
-    surface._roughness         = saturate( orm.g * material._roughness );
-    surface._metallic          = saturate( orm.b * material._metallic );
+    surface._normal    = AppearanceSurface::computeBaseNormal( context );
+    surface._roughness = saturate( orm.g * material._roughness );
+    surface._metallic  = saturate( orm.b * material._metallic );
+    // 피부 층(화장 · 문신 · 번짐)을 구운 표면 덮어쓰기 — 원래 × (1 − 무게) + 값(layer_bake.hlsl 이 프리멀티플라이로 적는다). 걸리지 않았으면 읽지 않는다(흰색은 "모두 덮어쓰기" 라 기본값이 될 수 없다).
+    SW_BRANCH if ( material._skinLayerSurfaceMap != kInvalidIndex )
+    {
+        const float4 skinSurface = MaterialTexture::sampleIndex( material._skinLayerSurfaceMap, context._uv );
+        surface._roughness       = saturate( surface._roughness * ( 1.0f - skinSurface.g ) + skinSurface.r );
+        surface._metallic        = saturate( surface._metallic * ( 1.0f - skinSurface.a ) + skinSurface.b );
+    }
     surface._specular          = material._specular;
     surface._coatWeight        = saturate( material._coatWeight * mask.r );
     surface._coatRoughness     = material._coatRoughness;

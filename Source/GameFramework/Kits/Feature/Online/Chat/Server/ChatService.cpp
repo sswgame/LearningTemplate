@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -147,7 +148,7 @@ namespace sw
             {
                 ChatHistoryReadResult read;
                 vector<ServiceRecord> listRecord;
-                if ( connection.listRecords( ChatServiceInternal::getHistoryTable(), channelID + "/", cursor, maxCount, true, listRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, ChatServiceInternal::getHistoryTable(), channelID + "/", cursor, maxCount, true, listRecord )._result != ServiceStoreResult::Ok )
                     return read;
                 for ( const ServiceRecord& record : listRecord )
                 {
@@ -176,7 +177,7 @@ namespace sw
                 const string          messageKey = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, request._sequence );
                 const string          cursorKey  = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, static_cast<uint64>( request._sequence ) + 1 );
                 vector<ServiceRecord> listRecord;
-                if ( connection.listRecords( Internal::getHistoryTable(), request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, Internal::getHistoryTable(), request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord )._result != ServiceStoreResult::Ok )
                     return ChatServiceResult::fail( OnlineError::kUnavailable );
                 if ( listRecord.empty() || listRecord.front()._key != messageKey )
                     return ChatResult::NotFound;
@@ -263,6 +264,11 @@ namespace sw
             SW_LOG_ERROR_ID( "ChatService.ChatServiceNeedsServiceStore", "ChatService needs a service store and an account directory" );
             return false;
         }
+        if ( settings._spam.isComplete() == false )
+        {
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceNoSpamLimit", "ChatService needs the spam limits (_spam in the chat kit settings)" );
+            return false;
+        }
         _dependencies = dependencies;
         _store.bindStore( dependencies._pStore );
         _presenceFinds.bind( dependencies._pBus != nullptr ? dependencies._pPresence : nullptr ); // 버스가 없으면 다른 서버로 보낼 길이 없다
@@ -284,6 +290,7 @@ namespace sw
         {
             _busTopicBuffer.push( ChatBusTopicChange{ _serverTopic, SW_TRUE } );                                          // 다른 서버가 보낸 귓속말을 받는다
             _busTopicBuffer.push( ChatBusTopicChange{ string( ServiceSanctionBus::kChangedTopic.getName() ), SW_TRUE } ); // GM 이 제재를 바꿨을 때 받는다. 자기 서버가 낸 것도 포함한다
+            _busTopicBuffer.push( ChatBusTopicChange{ string( ChatBus::kMemberRemovalTopic.getName() ), SW_TRUE } );      // 다른 서버가 그룹 채널에서 뺀 계정을 이 서버의 멤버에서도 뺀다
         }
         return true;
     }
@@ -443,6 +450,17 @@ namespace sw
         const auto memberIt = _mapAccountToMember.find( accountID );
         if ( memberIt != _mapAccountToMember.end() )
             removeLocalMember( accountID, memberIt->second, string( channelID ) );
+    }
+
+    void ChatService::removeGroupMember( AccountID accountID, string_view channelID )
+    {
+        removeMember( accountID, channelID );
+        if ( _dependencies._pBus == nullptr )
+            return;
+        ChatMemberRemoval removal;
+        removal._channelID = string( channelID );
+        removal._accountID = accountID;
+        (void)ChatBus::kMemberRemovalTopic.publish( *_dependencies._pBus, removal ); // 실패는 발행이 로그에 남겼다 — 그 서버의 멤버는 계정이 떠날 때 빠진다
     }
 
     void ChatService::removeAccount( AccountID accountID )
@@ -664,6 +682,13 @@ namespace sw
                 refreshSanction( changed._accountID ); // 못 읽으면 묵힘 시한 안에 다시 읽는다
             return;
         }
+        if ( ChatBus::kMemberRemovalTopic.matches( busMessage ) )
+        {
+            ChatMemberRemoval removal;
+            if ( ChatBus::kMemberRemovalTopic.read( busMessage, removal ) == ServerBusReadResult::Read )
+                removeMember( removal._accountID, removal._channelID ); // 자기 서버가 낸 것도 받는다 — 이미 뺐으면 아무것도 하지 않는다
+            return;
+        }
         ChatMessage               message;
         const bool                bChannelTopic = ChatBus::kChannelTopic.matches( busMessage );
         const ServerBusReadResult result        = bChannelTopic ? ChatBus::kChannelTopic.read( busMessage, message ) : ChatBus::kServerTopic.read( busMessage, message );
@@ -785,12 +810,17 @@ namespace sw
         }
         _store.submit( [channel = string( channelID ), from = string( cursor ), maxCount]( IServiceStoreConnection& connection )
         { return ChatStoreRun::readHistory( connection, channel, from, maxCount ); },
-                       [this, requestTag]( ChatHistoryReadResult& read )
-        { applyHistoryRead( requestTag, read._result, std::move( read._listMessage ), std::move( read._nextCursor ) ); } );
+                       [this, accountID, requestTag]( ChatHistoryReadResult& read )
+        { applyHistoryRead( accountID, requestTag, read._result, std::move( read._listMessage ), std::move( read._nextCursor ) ); } );
     }
 
-    void ChatService::applyHistoryRead( uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor )
+    void ChatService::applyHistoryRead( AccountID readerID, uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor )
     {
+        if ( _dependencies._pPolicy != nullptr )
+        {
+            VectorUtil::removeIf( listMessage, [this, readerID]( const ChatMessage& message )
+            { return message._senderID != readerID && _dependencies._pPolicy->isBlocked( readerID, message._senderID ); } ); // 쪽은 짧아질 수 있다 — 다음 쪽 커서는 읽은 그대로다
+        }
         ChatCompletion completion;
         completion._method      = ChatMethod::History::kID;
         completion._requestTag  = requestTag;

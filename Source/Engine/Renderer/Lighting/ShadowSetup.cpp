@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
@@ -21,9 +22,8 @@ namespace sw
             static constexpr float32 kLocalMinNearPlane = 0.05f;
             /// @brief 스폿 그림자 시야각 반각의 상한(라디안, 80°) — 원뿔이 90°에 가까우면 탄젠트가 끝없이 커진다.
             static constexpr float32 kMaxSpotHalfAngle = 1.3962634f;
-            /// @brief 점광 · 스폿의 노멀 오프셋 · 깊이 바이어스(텍셀 수) — 원근 칸은 텍셀 크기가 거리에 비례하므로 셰이더가 거리를 곱한다.
+            /// @brief 점광 · 스폿의 노멀 오프셋(텍셀 수) — 원근 칸은 텍셀 크기가 거리에 비례하므로 셰이더가 거리를 곱한다. 깊이 바이어스는 `RenderConfig::_shadowLocalDepthBiasTexels`.
             static constexpr float32 kLocalNormalOffsetTexels = 2.0f;
-            static constexpr float32 kLocalDepthBiasTexels    = 1.5f;
             /// @brief 점광 · 스폿 그림자의 세기 — 가려진 점은 그 빛을 받지 않는다(방향광의 그늘 세기와 달리 그 빛 하나의 몫만 지운다).
             static constexpr float32 kLocalShadowStrength = 1.0f;
 
@@ -163,7 +163,7 @@ namespace sw
         return radius / MathUtil::max( clip._w, MathUtil::max( radius * kLocalPriorityMinDepthFraction, MathUtil::kEpsilon ) );
     }
 
-    void FrameShadowData::populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const vector<uint32>& listShadowLightIndex,
+    void FrameShadowData::populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const RenderConfig& renderConfig, const vector<uint32>& listShadowLightIndex,
                                                 vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         using Internal               = ShadowSetupInternal;
@@ -232,7 +232,7 @@ namespace sw
                 info._positionRadius = float4{ ( static_cast<float32>( cell._x ) + 0.5f ) * inverseResolution, ( static_cast<float32>( cell._y ) + 0.5f ) * inverseResolution,
                                                ( static_cast<float32>( cell._x + cell._size ) - 0.5f ) * inverseResolution,
                                                ( static_cast<float32>( cell._y + cell._size ) - 0.5f ) * inverseResolution };
-                info._colorIntensity = float4{ texelAngle * Internal::kLocalNormalOffsetTexels, texelAngle * Internal::kLocalDepthBiasTexels, inverseResolution,
+                info._colorIntensity = float4{ texelAngle * Internal::kLocalNormalOffsetTexels, texelAngle * renderConfig._shadowLocalDepthBiasTexels, inverseResolution,
                                                Internal::kLocalShadowStrength };
                 // PCSS 가 가리개 깊이를 시선 깊이로 되돌리고(가까운 면 · 먼 면) 반그림자를 텍셀로 잰다(원천 반지름 = 빛 원소의 `_extra.x`, `LightShadowSettings`).
                 info._directionType = float4{ nearPlane, radius, texelAngle, MathUtil::max( light._extra._x, 0.0f ) };
@@ -303,21 +303,21 @@ namespace sw
         outFrame._contactShadowLights = float4{ arrLight[0], arrLight[1], arrLight[2], arrLight[3] };
     }
 
-    void FrameShadowData::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution,
+    void FrameShadowData::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution, const RenderConfig& renderConfig,
                                          const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         outFrame.clear();
         populateContactShadows( inoutListLight, outFrame );
         const uint32 cascadeCount = pShadowLight != nullptr ? pShadowLight->getShadowCascadeCount() : 1u;
         outFrame._layout          = ShadowAtlasLayout::make( atlasResolution, cascadeCount, countLocalTiles( inoutListLight, listShadowLightIndex ) );
-        populateLocalShadows( outFrame._layout, pMainViewProj, listShadowLightIndex, inoutListLight, outFrame );
+        populateLocalShadows( outFrame._layout, pMainViewProj, renderConfig, listShadowLightIndex, inoutListLight, outFrame );
 
         if ( pShadowLight != nullptr )
         {
             // 볼륨 맞춤 · 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 측정한다.
             const uint32                      tileResolution = outFrame._layout.getCascadeTileResolution();
             const DirectionalShadowProjection projection =
-                pMainViewProj != nullptr ? pShadowLight->computeShadowProjectionForView( *pMainViewProj, tileResolution, outFrame._layout.getCascadeCount() )
+                pMainViewProj != nullptr ? pShadowLight->computeShadowProjectionForView( *pMainViewProj, tileResolution, renderConfig, outFrame._layout.getCascadeCount() )
                                          : pShadowLight->computeShadowProjection( tileResolution );
             outFrame._mainView = makeViewShadow( projection, outFrame._layout, outFrame._listLocalBound );
         }
@@ -328,12 +328,12 @@ namespace sw
         }
     }
 
-    ViewShadowData FrameShadowData::makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const FrameShadowData& frame )
+    ViewShadowData FrameShadowData::makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const RenderConfig& renderConfig, const FrameShadowData& frame )
     {
         if ( pShadowLight == nullptr )
             return frame._mainView;
         const uint32                      tileResolution = frame._layout.getCascadeTileResolution();
-        const DirectionalShadowProjection projection     = pShadowLight->computeShadowProjectionForView( viewProj, tileResolution, frame._layout.getCascadeCount() );
+        const DirectionalShadowProjection projection     = pShadowLight->computeShadowProjectionForView( viewProj, tileResolution, renderConfig, frame._layout.getCascadeCount() );
         return makeViewShadow( projection, frame._layout, frame._listLocalBound );
     }
 } // namespace sw

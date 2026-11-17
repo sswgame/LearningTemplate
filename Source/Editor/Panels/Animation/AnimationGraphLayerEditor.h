@@ -18,6 +18,8 @@
 
 #include "Editor/Panels/Animation/Model/BoneMaskHierarchy.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 namespace sw
 {
     class Skeleton;
@@ -82,7 +84,7 @@ namespace sw::editor
         int32                                   _selectedLayer;   ///< 고른 레이어 순번이다. -1 이면 없다
         int32                                   _selectedMask;    ///< 고른 본 마스크 순번이다. -1 이면 없다
         fixed_string<constant::buffer::kMax256> _skeletonPath;    ///< 마스크를 맞춰 볼 검증 스켈레톤(`*.skeleton.xml`)이다. 그래프에 저장하지 않는다
-        shared_ptr<const Skeleton>              _pSkeleton;       ///< 검증 스켈레톤(공유 캐시의 한 벌)이다. 읽지 못했으면 nullptr 이다
+        SharedAssetRef<Skeleton>                _pSkeleton;       ///< 검증 스켈레톤(공유 캐시의 한 벌)이다. 읽지 못했으면 nullptr 이다
         vector<BoneMaskBoneRow>                 _listBoneRow;     ///< 고른 마스크를 스켈레톤에 펼친 줄(그리기마다 다시 만든다)
         vector<hashed_string>                   _listMissingBone; ///< 마스크가 가리키지만 스켈레톤에 없는 본
         hashed_string                           _selectedBone;    ///< 계층 보기에서 고른 본이다. 비면 없다

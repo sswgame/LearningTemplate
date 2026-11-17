@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"
@@ -25,8 +26,9 @@ namespace sw::editor
     /** @brief 기즈모 드래그 하나의 시작 전 스냅샷입니다(단일은 `_before`, 그룹은 `_listBefore` — `_listObject` 와 같은 순서). */
     struct EditorViewportGizmoUndo
     {
-        ObjectSnapshot         _before{};
-        vector<ObjectSnapshot> _listBefore{};
+        ObjectSnapshot               _before{};
+        vector<ObjectSnapshot>       _listBefore{};
+        CommandStackInteractionScope _interaction{}; ///< 드래그 동안 연 상호작용 — `endDrag` 가 닫고, 기즈모가 끌기 도중 사라져도 이 핸들이 닫는다
     };
 
     namespace
@@ -200,6 +202,7 @@ namespace sw::editor
                 _object         = object.getHandle();
             }
             _bTracking = SW_TRUE;
+            openStackInteraction();
         }
         else if ( _bTracking == SW_TRUE )
         {
@@ -207,8 +210,21 @@ namespace sw::editor
         }
     }
 
+    void EditorViewportGizmo::openStackInteraction()
+    {
+        if ( _pUndo->_interaction.isOpen() )
+            return;
+        // 기록 범위와 같은 스택이다(`commitDrag`) — 미리보기 선택은 그 창의 스택, 메인 선택은 메인 스택(선택 조회: 스택 없는 호스트는 열지 않는다).
+        CommandStack* const pStack = _pTarget != nullptr && _pTarget->isPreviewScope() ? _pTarget->findPreviewCommandStack() : editor::findSubsystem<CommandStack>();
+        if ( pStack == nullptr )
+            return;
+        _pUndo->_interaction = pStack->openInteraction();
+    }
+
     void EditorViewportGizmo::endDrag()
     {
+        // 상호작용을 먼저 닫는다 — 아래 기록은 열린 상호작용과 무관하지만, 다음 Ctrl+Z 는 이 드래그의 단계를 되돌려야 한다.
+        _pUndo->_interaction.reset();
         if ( _bTracking == SW_TRUE && EditorPlaySession::areSceneEditsAllowed() )
         {
             // 단일 드래그는 스냅샷을 찍은 그 오브젝트에만 커밋한다. 핸들로 다시 찾으며, 지워졌으면 버린다.
@@ -322,7 +338,10 @@ namespace sw::editor
 
         _bHovered = ImGuizmo::IsOver() ? SW_TRUE : SW_FALSE;
         if ( ImGuizmo::IsUsing() )
+        {
             _bTracking = SW_TRUE;
+            openStackInteraction();
+        }
         else if ( _bTracking == SW_TRUE )
             endDrag();
     }

@@ -223,9 +223,16 @@ namespace sw
             _bGameViewFailed = SW_TRUE;
             return;
         }
+        const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
+        if ( absolutePath.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "StartupCapture.PathNotAbsolute", "Screenshot '%#' was not taken: the path is not absolute", path.c_str() );
+            _bGameViewFailed = SW_TRUE;
+            return;
+        }
         _pendingSerial = RenderThread::getCompletedScreenshotSerial();
-        _pendingPath   = std::move( path );
-        RenderThread::requestScreenshot( _pendingPath, target._texture, target._format );
+        _pendingPath   = absolutePath->str(); // 우편함이 돌려줄 경로(구분자 `/`)와 같은 글로 둔다 — 끝난 뒤 그 둘을 견준다
+        RenderThread::requestScreenshot( *absolutePath, target._texture, target._format );
     }
 
     void StartupCaptureSubsystem::finishGameView()

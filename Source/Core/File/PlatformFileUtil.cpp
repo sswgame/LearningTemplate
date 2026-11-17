@@ -14,6 +14,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
 
+    #include <io.h>
     #include <share.h>
     #include <shellapi.h>
 #elif defined( SW_PLATFORM_POSIX )
@@ -314,6 +315,37 @@ namespace sw
         return MoveFileExW( wideSource.c_str(), wideTarget.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) != FALSE;
 #elif defined( SW_PLATFORM_POSIX )
         return std::rename( pSourcePath, pTargetPath ) == 0;
+#else
+    #error "Unsupported platform"
+#endif
+    }
+
+    bool PlatformFileUtil::flushToStorage( FILE* pFile )
+    {
+        if ( pFile == nullptr )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        return _commit( _fileno( pFile ) ) == 0;
+#elif defined( SW_PLATFORM_POSIX )
+        return ::fsync( ::fileno( pFile ) ) == 0;
+#else
+    #error "Unsupported platform"
+#endif
+    }
+
+    bool PlatformFileUtil::flushDirectoryToStorage( const utf8* pDirectoryPath )
+    {
+        if ( pDirectoryPath == nullptr )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        return true;
+#elif defined( SW_PLATFORM_POSIX )
+        const int32 directoryFd = ::open( pDirectoryPath[0] == ' ' ? "." : pDirectoryPath, O_RDONLY | O_DIRECTORY | O_CLOEXEC );
+        if ( directoryFd < 0 )
+            return false;
+        const bool bSynced = ::fsync( directoryFd ) == 0;
+        ::close( directoryFd );
+        return bSynced;
 #else
     #error "Unsupported platform"
 #endif

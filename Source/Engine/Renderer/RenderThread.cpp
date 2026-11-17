@@ -489,6 +489,26 @@ namespace sw
         releaseContextAfterJob();
     }
 
+    bool RenderThread::executeSimulationOnlyBody( RenderFramePacket& packet )
+    {
+        SW_PROFILE_SCOPE( "RT.Frame.SimulationOnly" );
+        if ( ensureContextOnCurrentThread() == false )
+            return false;
+        runQueuedCommands();
+        {
+            // 프레임 자원(업로드 스테이징 · 해제 큐)은 그리는 프레임과 같이 연다 — 업로드가 그 프레임에 실린다.
+            SW_PROFILE_SCOPE( "RT.BeginFrame" );
+            if ( _beginFrameHook.isBound() )
+                _beginFrameHook( *_pDevice );
+            _pDevice->beginFrame();
+        }
+        if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
+            _pFrameRenderer->executePacketWithoutDrawing( _pDevice, packet );
+        // 제출만 하고 Present 하지 않는다(수직 동기도 기다리지 않는다) — Present 간격으로 건너뛰는 프레임과 같은 길이다.
+        _pDevice->endFrame( false, false );
+        return false;
+    }
+
     void RenderThread::releaseContextAfterJob()
     {
         IRHIContextThreadBinding* pContextBinding = _pDevice->findContextThreadBinding();
@@ -562,6 +582,9 @@ namespace sw
     {
         if ( packet._bValid == 0 )
             return false;
+        // 그리지 않고 진행하는 프레임 — 사진 요청을 꺼내지 않고(다음에 그리는 프레임이 받는다) 기록 · Present 없이 상태만 받는다.
+        if ( packet._drawMode == FrameDrawMode::SimulationOnly )
+            return executeSimulationOnlyBody( packet );
 
         // 사진을 찍을 때만(시나리오 실행 · Present 요청) Present 결과를 텍스처로 받아 둔다. 전체 화면 복사가 한 번 더 들어간다. 프레임마다 맞춘다.
         takeScreenshotRequest();
@@ -807,12 +830,12 @@ namespace sw
         return false;
     }
 
-    void RenderThread::requestScreenshot( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    void RenderThread::requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
-            SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotRequestedHost", "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath );
+            SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotRequestedHost", "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath.str() );
             return;
         }
         pMailbox->put( filePath, sourceTexture, sourceFormat );

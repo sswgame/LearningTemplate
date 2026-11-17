@@ -22,7 +22,7 @@ namespace
         {
         }
 
-        bool sweepSphere( const float3& /*from*/, const float3& /*to*/, float32 /*radius*/, float32& outDistance ) const override
+        bool sweepSphere( const float3& /*from*/, const float3& /*to*/, float32 /*radius*/, const vector<hashed_string>& /*listLayer*/, float32& outDistance ) const override
         {
             if ( _hitDistance < 0.0f )
                 return false;

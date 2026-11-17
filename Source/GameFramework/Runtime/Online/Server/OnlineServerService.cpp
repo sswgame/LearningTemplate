@@ -9,6 +9,7 @@
 #include "Engine/Server/ServerServiceRegistry.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 // 전용 서버의 서버 서비스로 온라인 서비스 조립(`OnlineServerRuntime`)을 띄운다. 서버 설정 옆 `<이름>.online.json` 이 있을 때만 띄운다.
@@ -28,15 +29,22 @@ namespace sw
         public:
             /** @brief 설정을 읽어 런타임을 세웁니다. 서버 설정이 없거나 온라인 설정 파일이 없으면 할 일 없이 성공입니다. */
             [[nodiscard]] expected<void> initialize( const ServerServiceContext& context ) override;
-            void                         shutdown() override { _runtime.shutdown(); }
-            void                         update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
-            int32                        getConnectionCount() const override { return _runtime.getConnectionCount(); }
-            int32                        getOpenJobCount() const override { return _runtime.getOpenJobCount(); }
-            void                         beginShutdown( const ServerShutdownNotice& notification ) override { _runtime.beginShutdown( notification ); }
+            void                         shutdown() override
+            {
+                if ( _pKitDirectory != nullptr )
+                    _pKitDirectory->withdraw( &_runtime.getContext()._kits ); // 키트가 내려가기 전에 게임 모듈의 창구에서 거둔다
+                _pKitDirectory = nullptr;
+                _runtime.shutdown();
+            }
+            void  update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
+            int32 getConnectionCount() const override { return _runtime.getConnectionCount(); }
+            int32 getOpenJobCount() const override { return _runtime.getOpenJobCount(); }
+            void  beginShutdown( const ServerShutdownNotice& notification ) override { _runtime.beginShutdown( notification ); }
 
         private:
             SystemMonotonicClock _clock; ///< 런타임이 빌린다(메모리 캐시 만료 · 외부 HTTP 시한). 런타임보다 먼저 선언한다
             OnlineServerRuntime  _runtime;
+            ServerKitDirectory*  _pKitDirectory{ nullptr }; ///< 공개한 호스트 창구(호스트 소유). 공개하지 않았으면 nullptr
         };
     } // namespace
 } // namespace sw
@@ -72,13 +80,13 @@ namespace sw
         // 연이은 포트 샤드면 배정이 계정마다 한 포트를 고른다. 한 포트를 나누면(`_bGamePortReuse`) 커널이 나누므로 알릴 포트는 하나다.
         settings._gamePortCount = static_cast<uint8>( serverConfig._bGamePortReuse ? 1 : serverConfig._gamePortShardCount );
         if ( NetAddress::parse( serverConfig._listenAddress, static_cast<uint16>( serverConfig._servicePort ), settings._listenAddress ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "server config _listenAddress is not an IPv4 address", serverConfig._listenAddress } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "server config _listenAddress is not an IP address", serverConfig._listenAddress } );
         settings._listenAddress._port = static_cast<uint16>( serverConfig._servicePort ); // 포트는 `_servicePort` 가 기준이다
         if ( serverConfig._adminServicePort > 0 )
         {
             const uint16 adminPort = static_cast<uint16>( serverConfig._adminServicePort );
             if ( NetAddress::parse( serverConfig._adminListenAddress, adminPort, settings._adminListenAddress ) == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "server config _adminListenAddress is not an IPv4 address", serverConfig._adminListenAddress } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "server config _adminListenAddress is not an IP address", serverConfig._adminListenAddress } );
             settings._adminListenAddress._port = adminPort;
             // GM 포트는 계정 로그인 뒤 운영 명령을 받는 자리다 — 공용 인터페이스에 열지 않는다(형식으로 막는다, 운영 HTTP 와 같은 규칙. 바깥 GM 은 VPN · 배스천으로 사설망에 들어온다).
             if ( settings._adminListenAddress.isLoopbackOrPrivate() == false )
@@ -93,7 +101,12 @@ namespace sw
         settings._tlsPrivateKeyFile  = serverConfig._tlsPrivateKeyFile;
         if ( ServerSecret::read( serverConfig._tlsPrivateKeySecretEnvironment, settings._tlsPrivateKeyPassphrase ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the TLS private key passphrase environment variable is not set", serverConfig._tlsPrivateKeySecretEnvironment } );
-        return _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds() ); // 예외 — 호스트 최상위(서버 서비스의 뿌리)가 시각을 정한다
+        if ( expected<void> started = _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds() ); started.has_value() == false ) // 예외 — 호스트 최상위(서버 서비스의 뿌리)가 시각을 정한다
+            return started;
+        _pKitDirectory = context._pKitDirectory;
+        if ( _pKitDirectory != nullptr )
+            _pKitDirectory->publish( &_runtime.getContext()._kits ); // 게임 서버 코드가 키트 인터페이스(백필 …)를 찾는다
+        return {};
     }
 
     /** @brief 서버 서비스 중 앞쪽에 둔다. 게임과 키트가 올린 서버 서비스가 온라인 서비스를 볼 수 있게 한다. */

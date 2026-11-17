@@ -123,7 +123,7 @@ job_lint() {
 job_debug_cpu() {
   run_ctest Ninja-Debug nogpu -L nogpu || return 1
   # App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 보고 줄은 판정을 바꾸지 않는다.
-  [ $DRY -eq 1 ] || py -3 -c "import json; d=json.load(open('build/Ninja-Debug/Testing/Reports/UnitTests.json', encoding='utf-8')); print(f\"App --test: {d['runCount']} case run(s), {d['failedCount']} failed\")" || true
+  [ $DRY -eq 1 ] || py -3 -c "import json; d=json.load(open('build/Ninja-Debug/Testing/Reports/UnitTests.json', encoding='utf-8')); print(f\"App --test: {d['runCount']} case run(s), {d['failedCount']} failed, {d.get('skippedCount', 0)} skipped\")" || true
   return 0
 }
 

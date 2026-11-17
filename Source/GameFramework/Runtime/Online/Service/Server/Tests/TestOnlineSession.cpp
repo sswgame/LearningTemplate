@@ -73,6 +73,11 @@ SW_TEST_CASE_F( OnlineSessionTest, ConnectNeedsSettings )
     const expected<void> noBuild   = _session.connect();
     SW_REQUIRE_FALSE( noBuild.has_value() );
     SW_EXPECT_TRUE( noBuild.error().message().find( "onlineGameBuild" ) != string_view::npos );
+
+    _settings._onlineGameBuild   = "1.0.0";
+    const expected<void> noRetry = _session.connect(); // 재시도 상한은 기본값이 없다
+    SW_REQUIRE_FALSE( noRetry.has_value() );
+    SW_EXPECT_TRUE( noRetry.error().message().find( "onlineRequestRetryLimit" ) != string_view::npos );
     SW_EXPECT_TRUE( _session.getState() == OnlineClientState::Disconnected );
 }
 
@@ -80,7 +85,8 @@ SW_TEST_CASE_F( OnlineSessionTest, ConnectNeedsSettings )
 SW_TEST_CASE_F( OnlineSessionTest, ConnectsAndDisconnects )
 {
     // 서버 쪽 테스트 로그인이 같은 영역이므로 세션의 가짜 클라이언트와 해시가 맞다
-    test::OnlineTestFixture      rig;
+    test::OnlineTestFixture rig;
+    _settings._onlineRequestRetryLimit     = 3;
     unique_ptr<IStreamTransport> transport = rig._network.createTransport();
     {
         const auto result = _session.connectTo( transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( rig._server._port ) );

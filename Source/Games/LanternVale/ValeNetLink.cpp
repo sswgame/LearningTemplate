@@ -124,7 +124,8 @@ namespace sw
         }
         if ( _replicator.initialize( &peers, MMOReplicatorConfig{}, _grid ) == false )
             return false;
-        _remoteCalls.initialize( &peers );
+        if ( _remoteCalls.initialize( &peers, RemoteCallServerConfig{ rules._remoteCallBurstCount, rules._remoteCallRefillMilliseconds } ) == false )
+            return false;
         _listSubscription.push_back( router.registerHandler( &_remoteCalls ) );
         _listSubscription.push_back( router.registerHandler( &_replicator ) );
         _listSubscription.push_back( router.registerHandler( this ) );

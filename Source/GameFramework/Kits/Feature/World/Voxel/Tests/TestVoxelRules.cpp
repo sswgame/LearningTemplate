@@ -605,3 +605,45 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
     (void)VoxelTerrainSettings::fillWorld( again._world, settings );
     SW_EXPECT_TRUE( VoxelFixture::save( again._world ) == VoxelFixture::save( rig._world ) );
 }
+
+// ---- 지형 ----
+
+/** @brief [VoxelTerrainTest] 광석 자리는 지형 씨앗을 따른다: 같은 씨앗이면 같은 자리, 다른 씨앗이면 다른 자리다(감사 K-8 — 씨앗 없는 해시로 꾸미면 씨앗을 바꿔도 그대로다) */
+SW_TEST_CASE( VoxelTerrainTest, DecorationsFollowSeed )
+{
+    VoxelFixture          fixture;
+    const VoxelBlockIndex coal             = fixture.addBlock( "coal", true, true );
+    const auto            computeOreDigest = [&]( uint32 seed )
+    {
+        VoxelWorld world;
+        SW_EXPECT_TRUE( world.initialize( 2, 2, &fixture._catalog ) );
+        VoxelTerrainSettings settings;
+        settings._seed            = seed;
+        settings._treeChance      = 0.0f;
+        settings._heightAmplitude = 0; // 평지 — 지면은 씨앗과 무관해 광석 자리만 씨앗을 따르는지 본다
+        settings._listOreLayer    = {
+            VoxelOreLayer{ hashed_string( "coal" ), 0.05f, kVoxelChunkHeight }
+        };
+        (void)VoxelTerrainSettings::fillWorld( world, settings );
+        uint64 digest = 14695981039346656037ull;
+        int32  count  = 0;
+        for ( int32 z = 0; z < world.getSizeZ(); ++z )
+        {
+            for ( int32 x = 0; x < world.getSizeX(); ++x )
+            {
+                for ( int32 y = 0; y < kVoxelChunkHeight; ++y )
+                {
+                    if ( world.getBlock( x, y, z ) != coal )
+                        continue;
+                    ++count;
+                    digest = ( digest ^ static_cast<uint64>( ( x * kVoxelChunkHeight + y ) * 4096 + z ) ) * 1099511628211ull;
+                }
+            }
+        }
+        SW_EXPECT_TRUE( count > 0 );
+        return digest;
+    };
+    const uint64 first = computeOreDigest( 7u );
+    SW_EXPECT_EQUAL( first, computeOreDigest( 7u ) );
+    SW_EXPECT_TRUE( first != computeOreDigest( 8u ) );
+}

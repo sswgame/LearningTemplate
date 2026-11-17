@@ -12,6 +12,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 namespace sw
@@ -20,8 +21,22 @@ namespace sw
     class ILedgerPolicy;
 
     /** @brief 명령 하나의 입력입니다. 값으로 담으며 작업이 들고 저장소 스레드로 갑니다. */
+    /**
+     * @brief 등급마다 걸 수 있는 기한 있는 제재(채팅 금지 · 정지)의 최대 길이입니다. Super 는 영구 정지까지 걸 수 있어 상한이 없습니다.
+     * @details 상한이 없으면 Operator 가 `INT64_MAX` 까지의 정지로 영구 정지(Super 등급)를 대신한다(감사 O-16). 값은 키트 설정(필수)에서 온다.
+     */
+    struct AdminSanctionLimit
+    {
+        int64 _supportMaxMs{ 0 };  ///< Support 가 걸 수 있는 최대 길이(채팅 금지)
+        int64 _operatorMaxMs{ 0 }; ///< Operator 가 걸 수 있는 최대 길이(채팅 금지 · 정지)
+
+        /** @brief 두 상한이 모두 있으면 true 입니다. */
+        [[nodiscard]] bool isSet() const { return _supportMaxMs > 0 && _operatorMaxMs > 0; }
+    };
+
     struct AdminCommand
     {
+        AdminSanctionLimit       _sanctionLimit{};
         AdminRequest             _request{};
         const ILedgerPolicy*     _pPolicy{ nullptr };
         const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 찾기(접속하지 않은 계정 포함)이다. 계정 키트가 없으면 null 이고 이름 찾기는 UnknownAccount 이다
@@ -45,6 +60,8 @@ namespace sw
         static AdminServiceResult execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply );
         /** @brief 등급을 읽습니다. 레코드가 없으면 None 과 버전 0을 반환합니다. */
         [[nodiscard]] static ServiceStoreResult readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion );
+        /** @brief 운영 쓰기를 거는 키트(라이브 운영)가 같은 저장 일 안에서 @p adminID 의 등급이 @p required 이상인지 보게 하는 가드입니다. 읽은 등급은 그 커밋의 조건이 된다. */
+        [[nodiscard]] static shared_ptr<const IServiceWriteGuard> makeRoleGuard( AccountID adminID, AdminRole required );
         /** @brief 서버 설정의 첫 관리자를 넣습니다. 레코드가 없을 때만 넣으며 감사 기록의 actor 는 "system.bootstrap" 입니다. 운영 중에 바뀐 등급은 덮어쓰지 않습니다. */
         static AdminServiceResult seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs );
     };

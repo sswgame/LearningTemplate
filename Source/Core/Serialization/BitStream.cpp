@@ -15,7 +15,9 @@ namespace sw
     {
         struct BitStreamInternal
         {
-            static constexpr int32 kMaxByteCount = 0x7FFFFFFF / 8; ///< 비트 위치가 int32 라 읽을 수 있는 바이트 상한
+            static constexpr int32  kMaxByteCount        = 0x7FFFFFFF / 8; ///< 비트 위치가 int32 라 읽을 수 있는 바이트 상한
+            static constexpr int32  kLastVarUintShift    = 63;             ///< 가변 정수의 10번째 묶음 자리 — 1 비트만 남는다
+            static constexpr uint32 kLastVarUintOverBits = 0x7Eu;          ///< 그 묶음에서 켜지면 64 비트를 넘는 비트들
 
             /** @brief 양자화 간격입니다. 0 이하의 간격으로 나누지 않게 아래를 막습니다. */
             static float32 computeQuantizeStep( float32 resolution ) { return MathUtil::max( 1.0e-6f, resolution ); }
@@ -326,6 +328,12 @@ namespace sw
         for ( int32 shift = 0; shift < 64; shift += 7 )
         {
             const uint32 chunk = readBits( 8 );
+            // 10번째 묶음(shift 63)에는 1 비트만 남는다 — 나머지가 켜져 있으면 64 비트를 넘는 깨진 값이다. 시프트로 조용히 버리지 않는다(`VarIntUtil::decodeVarUint64` 와 같은 규칙).
+            if ( shift == BitStreamInternal::kLastVarUintShift && ( chunk & BitStreamInternal::kLastVarUintOverBits ) != 0 )
+            {
+                _bOverflow = SW_TRUE;
+                return 0;
+            }
             value |= static_cast<uint64>( chunk & 0x7Fu ) << shift;
             if ( ( chunk & 0x80u ) == 0 || hasOverflowed() )
                 return value;

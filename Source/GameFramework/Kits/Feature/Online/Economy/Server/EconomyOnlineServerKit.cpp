@@ -2,6 +2,8 @@
 
 #include "Core/Network/DevOnlineExtension.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
@@ -53,7 +55,7 @@ namespace sw
                     return unexpected( trustFile.error() );
                 const string& currencyPath = kitConfig._currencyCatalog;
                 const string& offerPath    = kitConfig._offerCatalog;
-                _pCurrencyCatalog          = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath );
+                _pCurrencyCatalog          = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath ).snapshot();
                 if ( _pCurrencyCatalog == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "the currency catalog could not be read", currencyPath } );
                 _pOfferCatalog = SharedAssetCache<OfferCatalog>::acquire( offerPath );
@@ -73,7 +75,7 @@ namespace sw
                 }
                 EconomyServiceConfig settings;
                 settings._pCurrencyCatalog       = _pCurrencyCatalog.get();
-                settings._pOfferCatalog          = _pOfferCatalog.get();
+                settings._pOfferCatalog          = _pOfferCatalog;
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
                 settings._pScheduler             = context._pScheduler;                               // 원장 보존 검사를 매일 서버 하나가 돌린다
@@ -165,7 +167,7 @@ namespace sw
 
         private:
             shared_ptr<const CurrencyCatalog>                            _pCurrencyCatalog; ///< 공유 캐시의 한 벌
-            shared_ptr<const OfferCatalog>                               _pOfferCatalog;    ///< 공유 캐시의 한 벌
+            SharedAssetRef<OfferCatalog>                                 _pOfferCatalog;    ///< 공유 캐시의 한 벌
             unique_ptr<IReceiptValidator>                                _pFakeValidator;   ///< `_bFakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
             ReceiptProviderSet                                           _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
             ReceiptValidatorRegistry                                     _receiptRegistry;

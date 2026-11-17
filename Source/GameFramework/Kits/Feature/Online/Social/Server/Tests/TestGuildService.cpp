@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -869,4 +870,101 @@ SW_TEST_CASE( GuildServiceTest, AccountDeletionDissolvesASoloGuild )
     vector<LedgerBalance> listStorage;
     SW_REQUIRE_TRUE( Ledger::listBalances( rig._database, LedgerHolder::makeEscrow( "guild", ServiceKeyUtil::makeHex64( guildID ) ), listStorage ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listStorage.empty() );
+}
+
+namespace
+{
+    /**
+     * @brief 저장소 앞(front)입니다. 일을 맡자마자 연결 @p connection 에서 돌리고, `pollCompletions` 가 완료를 부릅니다.
+     * @details 연결을 바꿔 끼울 수 있어 "읽기와 커밋 사이" 에 다른 서버의 일을 끼울 수 있다(메모리 저장소의 앞은 데이터베이스에 직접 붙는다).
+     */
+    class ConnectionServiceStore final : public IServiceStore
+    {
+    public:
+        explicit ConnectionServiceStore( IServiceStoreConnection& connection )
+            : _connection{ connection }
+        {
+        }
+
+        void submit( unique_ptr<IServiceStoreJob> job ) override
+        {
+            job->execute( _connection );
+            _listDone.push_back( std::move( job ) );
+        }
+        int32 pollCompletions() override
+        {
+            vector<unique_ptr<IServiceStoreJob>> listDone = std::move( _listDone );
+            _listDone.clear();
+            for ( const unique_ptr<IServiceStoreJob>& job : listDone )
+            {
+                job->complete();
+            }
+            return static_cast<int32>( listDone.size() );
+        }
+        int32 getPendingCount() const override { return static_cast<int32>( _listDone.size() ); }
+        void  shutdown() override {}
+
+    private:
+        IServiceStoreConnection&             _connection;
+        vector<unique_ptr<IServiceStoreJob>> _listDone{};
+    };
+
+    /** @brief 첫 커밋 바로 앞에 다른 서버(같은 데이터베이스의 두 번째 길드 서비스)에서 길드장이 임원을 멤버로 내리는 일을 끼워 넣는 연결입니다. */
+    class InterleavingConnection final : public IServiceStoreConnection
+    {
+    public:
+        explicit InterleavingConnection( GuildFixture& otherServer )
+            : _otherServer{ otherServer }
+        {
+        }
+
+        ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override
+        {
+            return _otherServer._database.readRecord( table, key, outRecord );
+        }
+        ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord ) override
+        {
+            return _otherServer._database.listRecords( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord );
+        }
+        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override
+        {
+            if ( _cutCount == 0 )
+            {
+                ++_cutCount;
+                SW_EXPECT_TRUE( _otherServer.setRole( kMaster, kOfficer, GuildRole::Member ) == SocialResult::Ok );
+            }
+            return _otherServer._database.commit( transaction, pOutInfo );
+        }
+
+    private:
+        GuildFixture& _otherServer;
+        int32         _cutCount{ 0 };
+    };
+} // namespace
+
+/** @brief [GuildServiceTest] 역할을 읽은 뒤 커밋 전에 멤버로 내려간 임원의 공지는 들어가지 않는다 — 멤버 역할 읽기가 커밋 조건이라 다시 읽고 NotAllowed 다(감사 "다음 할 일" 5 번) */
+SW_TEST_CASE( GuildServiceTest, DemotionBetweenReadAndCommitRefusesTheAnnouncement )
+{
+    GuildFixture rig; // 다른 서버 — 같은 데이터베이스에 붙은 길드 서비스
+    (void)rig.makeGuild();
+    InterleavingConnection connection( rig );
+    ConnectionServiceStore store( connection );
+    GuildService           service;
+    service.initialize( &store );
+
+    GuildRequest request;
+    request._operation = GuildOperation::SetAnnouncement;
+    request._accountID = kOfficer;
+    request._text      = "officer notice";
+    request._nowMs     = UnixMilliseconds{ kNowMs };
+    service.submit( request, 1 );
+    while ( store.pollCompletions() > 0 )
+    {
+    }
+    vector<GuildCompletion> listCompletion;
+    service.takeCompletions( listCompletion );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listCompletion.size() );
+    SW_EXPECT_TRUE( listCompletion[0]._result == SocialResult::NotAllowed );
+    SW_EXPECT_EQUAL( string(), rig.run( GuildOperation::Get, kMember )._info._announcement );
+    service.shutdown();
 }

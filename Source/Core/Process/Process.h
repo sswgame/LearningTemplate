@@ -68,6 +68,16 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief `Process` 가 아직 도는 자식을 놓을 때(소멸 · 다시 `launch`) 하는 일입니다. 어느 쪽이든 자식을 **거둔 뒤** 놓는다 — 좀비를 남기지 않는다.
+     * @details 언리얼 `FProcState`(Linux)도 도는 자식의 핸들을 닫을 때 끝날 때까지 기다린다. 기다리지 않고 버릴 실행은 `Process::launchDetached`(두 번 fork — init 이 거둔다)다.
+     */
+    enum class ProcessReleaseMode : uint8
+    {
+        WaitForExit, ///< 끝날 때까지 기다린다(경고를 남긴다 — 놓기 전에 `waitForExit` · `terminate` 를 부르는 것이 보통이다)
+        Terminate,   ///< 그룹째 죽이고(`terminate`) 거둔다 — 놓는 것이 곧 취소인 자식(빌드 · 외부 도구)
+    };
+
+    /**
      * @struct ProcessOptions
      * @brief 프로세스 생성 옵션입니다.
      */
@@ -83,11 +93,21 @@ namespace sw
          */
         bool _bNewProcessGroup{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
+         * @brief 자식 트리가 이 프로세스(부모)와 함께 끝나게 합니다 — 부모가 비정상 종료해도 자식이 고아로 남지 않는다(감사 E-15: 에디터가 죽으면 넷 플레이 서버 · 클라이언트가 남았다).
+         * @details Windows 는 자식을 묶는 Job 에 `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` 를 걸어 마지막 핸들이 닫힐 때(이 `Process` 를 놓거나 부모가 죽을 때) 트리째 끝낸다.
+         *          Linux · Android 는 자식이 `PR_SET_PDEATHSIG`(SIGKILL)을 걸고, 이 `Process` 를 놓을 때도 그룹에 SIGKILL 을 보낸다 — 두 구현이 같은 뜻이다
+         *          (그 밖의 POSIX 는 놓을 때만 끝낸다 — 부모 사망 신호가 없다). `launch` 만 받는다 — `launchDetached` 는 켜면 거절한다(분리한 자식은 부모와 묶지 않는다).
+         *          언리얼 `FPlatformProcess::CreateProc` 의 `bLaunchDetached=false` 자식이 에디터 Job 에 묶이는 것과 같은 자리다.
+         */
+        bool _bEndWithParent{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        /**
          * @brief 이 프로세스의 환경에 덮어써서 자식에게 줄 환경 변수들입니다. 비면 환경을 그대로 물려줍니다.
          * @details `launch` 만 받는다 — `launchDetached` 는 비어 있지 않으면 거절한다(조용히 무시하지 않는다). 이름이 비었거나 `=` 를 품으면 launch 가 실패합니다.
          *          부모 프로세스의 환경은 바뀌지 않는다(`ProcessEnvironment::trySet` 은 부모 전체에 새고 다른 스레드가 읽는다).
          */
         vector<ProcessEnvironmentEntry> _listEnvironment{};
+        /** @brief 아직 도는 자식을 놓을 때 할 일입니다(`ProcessReleaseMode`). `launchDetached` 는 쓰지 않는다(놓을 자식이 없다). */
+        ProcessReleaseMode _releaseMode{ ProcessReleaseMode::WaitForExit };
     };
 } // namespace sw
 
@@ -107,9 +127,9 @@ namespace sw
         /** @brief 빈 프로세스 핸들로 만듭니다. */
         Process();
         /**
-         * @brief 프로세스 핸들을 닫고 자원을 정리합니다.
-         * @details 양쪽 모두 실행 중인 자식을 **분리**하고 기다리지 않습니다. POSIX 는 이미 끝난 자식을 여기서 회수하고(좀비를 남기지
-         *          않습니다), 아직 도는 자식은 이 프로세스가 끝난 뒤 init 이 거둡니다. 기다리면 **소멸자가 자식이 끝날 때까지 막힙니다.**
+         * @brief 파이프를 닫고 자식을 **거둔 뒤** 자원을 정리합니다. 아직 돌면 `ProcessOptions::_releaseMode` 대로 기다리거나 죽인 뒤 거둡니다.
+         * @details 예전에는 도는 자식을 분리했다 — POSIX 에서는 그 자식이 나중에 끝나면 이 프로세스(에디터 · 서버)가 끝날 때까지 좀비로 남았다.
+         *          기다리지 않을 실행은 `launchDetached` 를 쓴다. 파이프를 먼저 닫으므로 출력에 막힌 자식은 EPIPE 로 끝난다.
          */
         ~Process();
 
@@ -276,7 +296,9 @@ namespace sw
          *        계약이고(`ModuleCompiler::cancel` · 테스트의 자식 시한), `waitForExit` 은 거둔 뒤 이것을 0 으로 쓴다(보통 정수면 ThreadSanitizer 가
          *        두 스레드의 쓰기를 짚는다).
          */
-        atomic<int32> _processID;
-        bool          _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        atomic<int32>      _processID;
+        ProcessReleaseMode _releaseMode;      ///< 아직 도는 자식을 놓을 때 할 일(`launch` 의 옵션)
+        bool               _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool               _bEndWithParent;   ///< 놓을 때 자식 트리를 끝낸다(`ProcessOptions::_bEndWithParent` — POSIX 의 shutdown 이 본다) NOLINT(sw-bool-flag): 위 칸과 같은 형식으로 둔다(이동 생성이 칸마다 옮긴다)
     };
 } // namespace sw

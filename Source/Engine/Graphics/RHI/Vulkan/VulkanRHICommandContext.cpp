@@ -892,7 +892,7 @@ namespace sw
         vkCmdDraw( cmd, vertexCount, instanceCount, startVertex, startInstance );
     }
 
-    void VulkanRHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void VulkanRHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( _pDevice != nullptr )
             _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );

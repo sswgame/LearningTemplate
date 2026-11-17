@@ -10,10 +10,14 @@
      Cancel 이면 씬 · 후보가 그대로다(편집이 묻지 않고 사라지지 않는다). 옛 코드는 확인 없이 바로 열어 unsaved.cancel 표시가 없고 후보가 0 이 된다.
   ⑤ Discard 를 누르면 후보가 0 이다. 정상 저장은 그 씬의 사본을, 편집기 종료는 자기 세션 폴더를 지운다(EditorAutosaveCommands::onSceneSaved · endSession).
   ⑥ 저장한 적 없는 새 씬(editor scene.new)도 고치면 사본을 쓴다(untitled-<씬 세대> 칸 — 언리얼 Untitled 패키지 · 유니티 씬 백업). 옛 코드는 원본 없는 씬을 건너뛰어 사본 수가 늘지 않는다.
+  ④-2 Play 중에는 복원을 거절한다. ⑦ 문서 패널(입력 맵 편집기)도 dirty 면 사본을 쓰고(autosave.documentsNow), Recovered Work 의 문서 줄 Restore 가 사본 글을
+  되돌릴 수 있는 편집으로 적용한다(감사 E-1). ⑧ dirty 원본에서 복원하며 미저장 확인에 Save 를 골라도 사본이 열린다.
   볼 그림: autosave/recovered.png(후보 한 줄, Restore · Discard 단추). 볼 값: Editor.AutosaveSnapshotCount 1 → 2 → 3, Editor.AutosaveRestoredCount 1.
   실행: App -EnableEditor -scenario=engine/automation/editor/autosave.scenario.xml -unattended
 -->
 <Scenario name="editor.autosave" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/input" as="scratch/autosaveinputmap"/>
+	<Scratch from="engine/automation/editor/lightprobebake" as="scratch/autosavesave"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<DevCommand line="layout.reset"/>
@@ -85,6 +89,24 @@
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<EditorExpectObject name="AutosaveProbe"/>
+	<!-- ④-2 Play 중에는 복원을 거절한다(감사 E-1 — 씬 열기 입구 tryOpenScene 이 거절한다). 후보 · 복원 수가 그대로다 -->
+	<EditorClick mark="toolbar.play"/>
+	<EditorWaitStable/>
+	<EditorClick mark="toolbar.playAnyway"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus recovered_work"/>
+	<EditorWaitStable/>
+	<EditorClick mark="recoveredWork.restore.0" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.PlayState" equals="1"/>
+	<Expect watch="Editor.AutosaveRestoredCount" equals="1"/>
+	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
+	<EditorClick mark="toolbar.stop"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<EditorWaitStable/>
 	<!-- ⑤ 폐기 -->
 	<DevCommand line="panel.focus recovered_work"/>
 	<EditorWaitStable/>
@@ -117,10 +139,90 @@
 	<EditorClick mark="recoveredWork.discard.0" state="Up"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
+	<!-- ⑦ 문서 패널 자동 저장(감사 E-1): 입력 맵 편집기(문서 패널)의 바인딩을 고치고 문서 사본을 쓴다(autosave.documentsNow — 주기 대신, 쓰기는 워커).
+	     후보로 읽은 뒤 복원하면 문서를 다시 읽은 자리에 사본 글이 적용되어 dirty 다(옛 코드는 문서 사본이 없어 Editor.AutosaveDocumentCopyCount 가 0 이다). -->
+	<Variable name="gv_editorWatchPanel" value="input_map"/>
+	<DevCommand line="panel.focus input_map"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
+	<EditorWaitStable/>
+	<!-- 사본은 연 문서 경로가 있는 문서만 둔다 — 실행마다 새 사본 문서를 연다(원본을 건드리지 않는다) -->
+	<DevCommand line="asset.openScratch scratch/autosaveinputmap/default.input.xml"/>
+	<EditorWaitStable/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<EditorClick mark="inputMap.filter"/>
+	<EditorWaitStable/>
+	<EditorText value="Confirm"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inputMap.action.Confirm"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inputMap.binding.0.trigger"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inputMap.trigger.4"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
+	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<DevCommand line="autosave.documentsNow"/>
+	<WaitUntil watch="Editor.AutosaveDocumentCopyCount" atLeast="1" timeoutFrames="300"/>
+	<DevCommand line="autosave.rescan"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.AutosaveDocumentRecoverableCount" equals="1"/>
+	<!-- 사본 뒤에 다시 고친다(발화 규칙 2) — 복원이 사본 글(4)을 적용하는지 본다 -->
+	<EditorClick mark="inputMap.binding.0.trigger"/>
+	<EditorWaitStable/>
+	<EditorClick mark="inputMap.trigger.2"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="2" timeoutFrames="60"/>
+	<DevCommand line="panel.focus recovered_work"/>
+	<EditorWaitStable/>
+	<EditorClick mark="recoveredWork.restoreDocument.0" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="recoveredWork.restoreDocument.0" state="Up"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.focus input_map"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.AutosaveDocumentRestoredCount" equals="1" timeoutFrames="120"/>
+	<Expect watch="Editor.AutosaveDocumentRecoverableCount" equals="0"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
+	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<!-- 복원한 편집은 버린다(사본 문서 파일은 그대로) -->
+	<DevCommand line="panel.reloadDocument input_map"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<!-- 고친 씬을 열어 둔 채 끝내지 않는다 -->
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<!-- ⑧ dirty 원본에서 복원 → 미저장 확인 → Save(감사 E-1): 원본 저장이 먼저 와도 복원할 사본은 남아 사본이 열린다.
+	     옛 코드는 원본 저장(onSceneSaved)이 그 씬의 사본을 지워 곧 열 사본이 없어 씬 읽기가 졌다(Editor.AutosaveRestoredCount 가 늘지 않는다). 원본은 실행마다 새 사본 씬이다. -->
+	<DevCommand line="scene.open scratch/autosavesave/bake_cancel.scene.xml"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitStable/>
+	<!-- 이 씬의 볼륨은 일부러 굽지 않았다 — 열 때 검증 경고를 낸다(lightprobebakecancel 과 같다) -->
+	<ExpectLog id="ObjectValidation.Issue" atLeast="1"/>
+	<EditorClick mark="hierarchy.create"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.SceneDirty" equals="1"/>
+	<DevCommand line="autosave.now"/>
+	<EditorWaitStable/>
+	<DevCommand line="autosave.rescan"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.AutosaveRecoverableCount" equals="1"/>
+	<Store watch="Editor.AutosaveRestoredCount" as="restoredBeforeSave"/>
+	<DevCommand line="panel.focus recovered_work"/>
+	<EditorWaitStable/>
+	<EditorClick mark="recoveredWork.restore.0" state="Down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="recoveredWork.restore.0" state="Up"/>
+	<EditorWaitStable/>
+	<EditorClick mark="unsaved.save"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.AutosaveRestoredCount" differsFrom="restoredBeforeSave"/>
+	<Expect watch="Editor.AutosaveRecoverableCount" equals="0"/>
+	<Expect watch="Editor.SceneDirty" equals="1"/>
+	<ExpectLog id="EditorAutosaveCommands.RestoreAbandoned" count="0"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

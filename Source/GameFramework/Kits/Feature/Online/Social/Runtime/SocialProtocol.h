@@ -226,6 +226,8 @@ namespace sw
         vector<GuildStorageItem> _listStorage{}; ///< 상한은 `GuildLimit::kMaxStorageItem` 와 같다
         PROPERTY()
         SocialResult _result{ SocialResult::Ok };
+        PROPERTY()
+        uint8 _bTruncated{ SW_FALSE }; ///< 창고 품목이 상한보다 많아 뒤를 싣지 못했다 — 화면이 "더 있다" 를 보인다(감사 O-18)
     };
 
     /** @brief 가입 신청 목록(`GuildApplications`)의 응답입니다. */

@@ -84,4 +84,5 @@ namespace sw::editor
         }
         return true;
     }
+
 } // namespace sw::editor

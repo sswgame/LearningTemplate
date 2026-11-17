@@ -162,8 +162,14 @@ namespace sw
     {
     }
 
-    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs )
+    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const SessionStateRefs& refs )
     {
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR_ID( "CitySimulation.CitySimulationNeedsCatalog", "CitySimulation: no city catalog - the rules are read from its <Rules>" );
+            return false;
+        }
+        const CitySettings& settings = pCatalog->getRules();
         if ( width < 1 || height < 1 )
         {
             SW_LOG_ERROR_ID( "CitySimulation.CitySimulationRefusedMapSize", "CitySimulation: refused map size %#x%# (needs >= 1 in both)", width, height );
@@ -494,13 +500,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 시간
     // ------------------------------------------------------------------------------
-    void CitySimulation::update( float32 deltaTime )
+    float32 CitySimulation::update( float32 deltaTime, float32 timeScale )
     {
-        const int32 stepCount = _stepTimer.consume( deltaTime );
+        const int32 stepCount = _stepTimer.consumeScaled( deltaTime, timeScale );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepFixed( _stepTimer.getStep() );
         }
+        return static_cast<float32>( stepCount ) * _stepTimer.getStep();
     }
 
     void CitySimulation::pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent )

@@ -52,6 +52,12 @@ namespace sw
          */
         virtual void flushWithoutWaiting() {}
         /**
+         * @brief 크래시 경로에서 큐에 남은 한 줄을 씁니다. **기다리지 않습니다** — 장치 락을 바로 잡지 못하면 그 줄을 버리고 돌아옵니다.
+         * @details `write` 는 장치 락에서 기다린다 — 그 락을 쥔 채 죽은 스레드가 있으면 크래시 보고가 멈춤이 된다(`AsyncLogSink::flushForCrash`).
+         *          기본은 버리기다(크래시 경로에서 멈추는 것보다 줄을 잃는 쪽이 낫다). 파일 · 콘솔처럼 크래시 전 줄이 필요한 장치는 `try_lock` 으로 구현한다.
+         */
+        virtual void writeWithoutWaiting( const LogRecord& record ) { (void)record; }
+        /**
          * @brief 이 장치가 `LogRecord::_json`(필드별로 나눈 한 줄)을 읽으면 true 입니다. 싱크는 이런 장치가 하나라도 달려 있을 때만 줄마다 JSON 을 만듭니다.
          * @details 기본 장치(콘솔 · 파일)는 쓰지 않습니다. 줄마다 문자열을 하나 더 만드는 비용을 쓰는 곳만 내게 하려는 것입니다.
          */

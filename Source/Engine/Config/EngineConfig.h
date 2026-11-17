@@ -144,6 +144,109 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct TextureStreamingConfig
+     * @brief 텍스처 밉 스트리밍의 정책 값입니다 — 렌더 스레드의 프레임당 제출 수, 위쪽 밉 풀 예산, 올리고 내리는 판단(`TextureStreamingPolicy`)의 값이 한 곳에 있다.
+     * @details 언리얼 `r.Streaming.*`(PoolSize · MaxNumTexturesToStreamPerFrame) · 유니티 `QualitySettings.streamingMipmaps*` 자리다.
+     */
+    REFLECT()
+    struct SW_API TextureStreamingConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 비동기 텍스처 로드 수의 상한입니다(`TextureCache::completePendingLoads` — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게). */
+        PROPERTY( Min = 1 )
+        uint32 _uploadsPerFrame{};
+
+        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한입니다(`TextureCache::updateStreaming` — 텍스처 하나가 밉 사슬 전부라 첫 로드보다 무겁다). */
+        PROPERTY( Min = 1 )
+        uint32 _upgradesPerFrame{};
+
+        /**
+         * @brief 밉 스트리밍이 위쪽 밉으로 올린 텍스처 바이트 합의 상한(MB)입니다(`TextureStreamingPool` · `TextureStreamingPolicy` — 언리얼 `r.Streaming.PoolSize`).
+         * @details 메모리 태그 예산(`MemoryBudget.json` 의 Texture — 모든 텍스처의 경고선)보다 작게 둔다. 그 나머지가 아래쪽 밉 · 렌더 텍스처 · CPU 텍스처 몫이다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _poolMegabytes{};
+
+        /** @brief 화면 크기를 알리지 않은 지 이만큼 지난 텍스처는 필요 없는 것으로 본다 — 예산을 넘으면 가장 먼저 내리고, 다시 보일 때까지 올리지 않는다(`TextureStreamingPolicy`). */
+        PROPERTY( Min = 1 )
+        uint32 _idleFramesBeforeRelease{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct RenderConfig
+     * @brief 렌더러 정책 값입니다(감사 RN-16 — C++ 상수에 흩어졌던 렌더 정책을 이 한 자리로 옮긴다. 언리얼 `r.*` 콘솔 변수의 바탕 층 · 유니티 SRP 에셋 자리).
+     * @details 셰이더가 읽는 값은 쿠킹 define 한 경로로만 간다(`ShaderCompiler::appendEngineDefines` — 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다).
+     *          C++ 가 읽는 값은 부르는 쪽이 이 구조체를 인자로 넘긴다. 셰이더 버퍼 배치를 정하는 상수(라이트 그리드 16x9x24 · 프레임 라이트 상한 1024)는
+     *          binding_slots.hlsli 한 곳이 C++ · HLSL 의 공통 원천이고 groupshared 크기 · 스레드 수를 컴파일 때 검사하므로 여기 두지 않는다.
+     */
+    REFLECT()
+    struct SW_API RenderConfig
+    {
+        REFLECT_BODY();
+
+        /**
+         * @brief 빌더 스레드를 쓰지 않는 백엔드(GL)에서 렌더 스레드가 한 프레임에 머티리얼 PSO 를 만드는 시간 예산(µs)입니다(`FramePSOManager::pollMaterialPSOBuilds`).
+         * @details 줄이 있으면 예산과 상관없이 최소 하나는 만든다. 언리얼 `r.ShaderPipelineCache.BatchTime` 자리다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=us" )
+        uint32 _psoBuildBudgetMicroseconds{};
+
+        /** @brief 방향광 캐스케이드 분할에서 로그 분할의 몫(0 = 균등, 1 = 로그) — GPU Gems 3 실용 분할(언리얼 CascadeDistributionExponent · 유니티 분할 비율 자리). */
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _shadowCascadeSplitLambda{};
+
+        /** @brief 점광 · 스폿 그림자의 깊이 바이어스(텍셀 수) — 원근 칸은 텍셀 크기가 거리에 비례하므로 셰이더가 거리를 곱한다(`FrameShadowData::populateLocalShadows`). */
+        PROPERTY( Min = 0.0 )
+        float32 _shadowLocalDepthBiasTexels{};
+
+        /** @brief TAA 기록 비율 — 화면이 그대로인 곳의 누적 정도(taa.hlsl `SW_TAA_HISTORY_WEIGHT` 쿠킹 define). 1 이면 이번 그림이 들지 않으므로 1 미만이어야 한다. */
+        PROPERTY( Min = 0.0, Max = 0.99 )
+        float32 _taaHistoryWeight{};
+
+        /** @brief 텍스처 밉 스트리밍 설정입니다(프레임당 제출 수 · 풀 예산 · 내리기까지의 유휴 프레임 — `TextureStreamingConfig`). 스트리밍 값은 이 칸 한 곳이다. */
+        PROPERTY()
+        TextureStreamingConfig _textureStreaming{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct RHIConfig
+     * @brief 렌더 장치(`IRHIDevice::initialize`)가 읽는 정책 값입니다. 장치는 `RHISwapChainDesc` 로 받는다.
+     * @details 값은 모두 `Config/Engine/EngineConfig.json` 의 `_rhi` 에 있다 — 빠진 숫자 키는 범위 검사(`Min`)에서 로드 오류다.
+     *          검증 스위치(GBV · syncval)는 Engine 의 장치가 읽어야 해서 DevTools 만 읽는 `Config/Dev` 가 아니라 여기 둔다. 디버그 레이어가 있는 구성(Debug)에서만 뜻이 있다.
+     */
+    REFLECT()
+    struct SW_API RHIConfig
+    {
+        REFLECT_BODY();
+
+        /**
+         * @brief 장치 메모리 할당 수 한도(Vulkan `maxMemoryAllocationCount`)에서 남겨 둘 칸입니다. 살아 있는 할당이 `한도 - 이 값` 에 닿으면 새 할당을 오류로 거절한다(R-4).
+         * @details 남긴 칸은 드라이버 · 레이어 · 오버레이가 같은 장치에서 쓰는 몫이다. 언리얼 Vulkan 의 `r.Vulkan.MaxAllocations` 경고 자리다.
+         */
+        PROPERTY( Min = 1 )
+        uint32 _allocationCountReserve{};
+
+        /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
+        PROPERTY( Min = 1, Units = s )
+        float64 _pipelineCacheSaveIntervalSeconds{};
+
+        /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 구성에서만 듣는다(R-9). */
+        PROPERTY()
+        bool _bGPUBasedValidation{};
+
+        /** @brief Vulkan 동기화 검증(`VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`)을 켭니다. 검증 레이어가 켜진 구성에서만 듣는다(R-9). */
+        PROPERTY()
+        bool _bSynchronizationValidation{};
+    };
+
+    /**
      * @enum RHIDeviceLostPolicy
      * @brief 렌더 장치를 잃었을 때(TDR · 드라이버 재시작 · 개발 명령 `rhi.removeDevice`) 엔진이 할 일입니다. `EngineRenderDriver` 가 프레임마다 `IRHIDevice::isDeviceLost` 를 보고 고른다.
      * @details 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 뒤 종료하고 Godot 4 도 치명 오류로 끝낸다(기본값 `Quit`).
@@ -223,15 +326,21 @@ namespace sw
         PROPERTY()
         RenderStabilityConfig _renderStability{}; ///< 사진 앞 정착 판정(`Render.Stable`)의 문턱
 
+        PROPERTY()
+        RenderConfig _render{}; ///< 렌더러 정책 값(PSO 예산 · …)
+
         /**
          * @brief 창이 배경(포커스 없음)일 때도 패드 입력을 게임에 넣을지입니다(감사 P-10).
          * @details XInput · evdev 는 창과 상관없이 읽혀, 끄지 않으면 다른 창을 쓰는 동안 패드가 게임을 움직인다. SDL `JOYSTICK_ALLOW_BACKGROUND_EVENTS`(기본 끔)와 같은 자리다.
          */
         PROPERTY()
-        bool32 _bBackgroundGamepadInput{};
+        bool _bBackgroundGamepadInput{};
 
         PROPERTY()
         RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)
+
+        PROPERTY()
+        RHIConfig _rhi{}; ///< 렌더 장치 정책 값(할당 수 여유 · 파이프라인 캐시 저장 주기 · 검증 스위치)
 
         /**
          * @brief 셰이더로 보내는 시간(머티리얼 시간 · VAT 시계 · 시간 구동 컴퓨트)을 접는 주기(초)입니다(`TimeRolloverUtil::fold`).

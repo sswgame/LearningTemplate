@@ -81,7 +81,7 @@ namespace sw
         const RTSCatalog* pCatalog = game::findSubsystem<const RTSCatalog>();
         if ( pCatalog == nullptr )
             return false;
-        if ( outWorld.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, RTSSettings{} ) == false )
+        if ( outWorld.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize ) == false )
             return false;
         outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
         (void)outWorld.addPlayer( 0, &state.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 공유 지갑을 쓴다
@@ -148,8 +148,8 @@ namespace sw
             issueOpeningOrders();
         else if ( _tickCount > 2 )
             continuePatrol();
-        _world.update( deltaTime );
-        _bViewsDirty = SW_TRUE; // 유닛이 움직였을 수 있다 — 틱 뒤 플러시가 모습을 옮긴다
+        (void)_world.update( deltaTime, 1.0f ); // 배속 없는 시연 — 진행한 시간은 쓰지 않는다
+        _bViewsDirty = SW_TRUE;                 // 유닛이 움직였을 수 있다 — 틱 뒤 플러시가 모습을 옮긴다
     }
 
     void FrontierSkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )

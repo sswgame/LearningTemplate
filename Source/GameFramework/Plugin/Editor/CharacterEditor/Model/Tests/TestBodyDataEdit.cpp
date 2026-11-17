@@ -12,6 +12,7 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyCustomizationViewModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyDataEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodySurfacePick.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorModel.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -230,4 +231,18 @@ SW_TEST_CASE( BodyDataEditTest, PlaceSkinLayerFromPickedUV )
     model.endContinuousEdit();
     SW_REQUIRE_TRUE( model.undo() ); // 끈 두 배치가 한 단계다
     SW_EXPECT_NEAR( 0.5f, model.getSelection()._listSkinLayer[0]._offset._x, 1e-6f );
+}
+
+/** @brief [CharacterEditorModelTest] 몸 데이터 편집도 문서의 미저장이다 — 패널의 미저장 표시 · 닫기 확인이 보는 `isDirty` 에 빠져 있으면 창을 닫을 때 편집이 사라진다(감사 G-12) */
+SW_TEST_CASE( CharacterEditorModelTest, BodyDataEditsMakeTheDocumentDirty )
+{
+    CharacterEditorModel model;
+    SW_EXPECT_FALSE( model.isDirty() );
+    BodyDataEditModel& shapes = model.getBodyShapesModel();
+    SW_REQUIRE_TRUE( shapes.openText( R"(<BodyShapeSet><Axis name="Waist.Width" min="-1" max="1" default="0"/></BodyShapeSet>)", {} ) );
+    SW_EXPECT_FALSE( model.isDirty() );
+    SW_REQUIRE_TRUE( BodyCustomizationViewModel::addAxis( shapes, hashed_string( "Bust.Lift" ) ) );
+    SW_EXPECT_TRUE( model.isDirty() );
+    SW_REQUIRE_TRUE( shapes.undo() );
+    SW_EXPECT_FALSE( model.isDirty() );
 }

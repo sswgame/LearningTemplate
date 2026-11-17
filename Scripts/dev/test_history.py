@@ -37,6 +37,7 @@ from common.paths import get_project_root  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
+# 건너뜀(환경이 없어 돌지 않았다)은 실패가 아니다 — 흔들림 · 실패 수에서 통과 쪽에 둔다(단위 테스트 보고의 `skipped` 와 같은 뜻).
 PASSED_RESULTS = frozenset({"Passed", "Skipped"})
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS run (
@@ -174,6 +175,12 @@ def run_self_check() -> None:
     [stats] = compute_stats(connection, 3)
     assert stats.failures == 1 and abs(stats.flakiness - 2 / 3) < 1e-9, "흔들림 = 바뀐 횟수 / (실행 - 1)"
     assert stats.get_trend() == 3.0, "최근 절반 p95 / 앞 절반 p95"
+    # 건너뜀(환경이 없다 — 시나리오 `Skipped`, 단위 테스트 `SW_TEST_SKIP`)은 실패로도 흔들림으로도 세지 않는다.
+    list_skip = [{"name": "b", "result": result, "startedAtUnixMs": index, "wallMilliseconds": 10}
+                 for index, result in enumerate(["Passed", "Skipped", "Passed", "Skipped"])]
+    assert ingest(connection, list_skip, "abc") == 4
+    [skip_stats] = [stats for stats in compute_stats(connection, 3) if stats.name == "b"]
+    assert skip_stats.failures == 0 and skip_stats.flakiness == 0.0, "건너뜀은 실패가 아니다"
     assert compute_percentile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.95) == 10.0
     assert make_ctest_exclude([QuarantineEntry("Scenario.a.b", "r", datetime.date(2030, 1, 1))]) == r"^Scenario\.a\.b$"
 

@@ -6,6 +6,53 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief union-find 의 뿌리를 찾으며 경로를 줄입니다. */
+        uint32 findAliasJoinRoot( vector<uint32>& listParent, uint32 index )
+        {
+            while ( listParent[index] != index )
+            {
+                listParent[index] = listParent[listParent[index]];
+                index             = listParent[index];
+            }
+            return index;
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    void RenderGraphAliasPlan::joinLifetimes( vector<RenderGraphAliasCandidate>& listCandidate, const vector<RenderGraphAliasJoin>& listJoin )
+    {
+        const uint32   count = static_cast<uint32>( listCandidate.size() );
+        vector<uint32> listParent( count );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            listParent[index] = index;
+        }
+        for ( const RenderGraphAliasJoin& join : listJoin )
+        {
+            SW_ASSERT( join._source < count && join._target < count );
+            listParent[findAliasJoinRoot( listParent, join._source )] = findAliasJoinRoot( listParent, join._target );
+        }
+        // 뿌리마다 묶음 구간을 모은 뒤 모든 후보에 나눠 준다.
+        vector<uint32> listFirst( count, 0xFFFFFFFFu );
+        vector<uint32> listLast( count, 0u );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const uint32 root = findAliasJoinRoot( listParent, index );
+            listFirst[root]   = std::min( listFirst[root], listCandidate[index]._firstLevel );
+            listLast[root]    = std::max( listLast[root], listCandidate[index]._lastLevel );
+        }
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const uint32 root                = findAliasJoinRoot( listParent, index );
+            listCandidate[index]._firstLevel = listFirst[root];
+            listCandidate[index]._lastLevel  = listLast[root];
+        }
+    }
+
     RenderGraphAliasPlan RenderGraphAliasPlan::build( const vector<RenderGraphAliasCandidate>& listCandidate )
     {
         RenderGraphAliasPlan result;

@@ -62,8 +62,7 @@
       { "_name": "GameMaps_OpenedByName", "_listPattern": [ "game/*/maps/**" ], "_bAutomationOnly": false },
       { "_name": "Scenarios_RunByName", "_listPattern": [ "game/*/automation/**", "engine/automation/**" ], "_bAutomationOnly": true },
       { "_name": "InputUIPipelineDialogue_ReadByName", "_listPattern": [ "game/*/input/**", "game/*/ui/**", "game/*/pipeline/**", "game/*/dialogue/**", "common/input/**", "common/ui/**" ], "_bAutomationOnly": false },
-      { "_name": "CommonSql_ReadByLiteralPath", "_listPattern": [ "common/sql/**" ], "_bAutomationOnly": false },
-      { "_name": "UnitModels_JoinedFromName", "_listPattern": [ "game/nilecity/models/**", "game/starskirmish/models/**" ], "_bAutomationOnly": false }
+      { "_name": "CommonSql_ReadByLiteralPath", "_listPattern": [ "common/sql/**" ], "_bAutomationOnly": false }
     ],
     "_gameSettingsPath": "data/gamesettings.xml",
     "_listRequiredData": [
@@ -92,8 +91,7 @@
       { "_field": "bodyProfile", "_kind": "bodyprofile" },
       { "_field": "_presetID", "_kind": "preset" },
       { "_field": "_preset", "_kind": "preset" },
-      { "_field": "previewPreset", "_kind": "preset" },
-      { "_field": "_listVillagerPreset", "_kind": "preset" }
+      { "_field": "previewPreset", "_kind": "preset" }
     ]
   }
 }

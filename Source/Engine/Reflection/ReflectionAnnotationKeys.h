@@ -359,6 +359,8 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey Reliable{};
         /** @brief flag.Validate — 단독 토큰 `Validate` 또는 `Validate = true`. */
         static constexpr AnnotationKey Validate{};
+        /** @brief count.MaxCallsPerSecond — `MaxCallsPerSecond = 5`. 원격 호출의 연결마다 · 함수마다 초당 상한(`Server` 함수만). */
+        static constexpr AnnotationKey MaxCallsPerSecond{};
         /** @brief flag.CallInEditor — 단독 토큰 `CallInEditor` 또는 `CallInEditor = true`. 같은 필드의 철자: CallInEditor, callInEditor, ExecInEditor. */
         static constexpr AnnotationKey CallInEditor{};
         /** @brief flag.CallInEditor — 단독 토큰 `callInEditor` 또는 `callInEditor = true`. 같은 필드의 철자: CallInEditor, callInEditor, ExecInEditor. */
@@ -388,6 +390,7 @@ namespace sw::reflect::attr
         "NetMulticast",
         "Reliable",
         "Validate",
+        "MaxCallsPerSecond",
         "CallInEditor",
         "callInEditor",
         "ExecInEditor",

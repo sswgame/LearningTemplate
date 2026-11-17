@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
@@ -25,6 +26,9 @@ namespace sw
             /** @brief 목록을 지킵니다. 목록과 같은 까닭으로 소멸자를 부르지 않습니다. */
             mutex                             _mutex;
             unordered_set<RHIRenderResource*> _uniqueSetResource;
+            /// @brief 지금 잠금 밖에서 통보받는 리소스와 통보하는 스레드입니다(`broadcastInternal`). 다른 스레드가 그 리소스를 파괴하면 소멸자가 단언한다(R-17).
+            RHIRenderResource* _pNotifiedResource{ nullptr };
+            std::thread::id    _notifyThread{};
         };
 
         /**
@@ -69,8 +73,16 @@ namespace sw
                     // 앞선 통보를 처리하다 사라졌다. 사본에 남은 주소는 이미 남의 것이거나 없는 것이다.
                     if ( getRegistryInternal()._uniqueSetResource.count( pResource ) == 0 )
                         continue;
+                    getRegistryInternal()._pNotifiedResource = pResource;
+                    getRegistryInternal()._notifyThread      = std::this_thread::get_id();
                 }
+                // 통보는 잠금 밖이다(통보가 다른 리소스를 파괴하면 그 소멸자가 같은 잠금을 잡는다). 그래서 통보 중의 리소스를 **다른 스레드**가 파괴하는 것은 막지 못한다 —
+                // 통보하는 쪽(백엔드 교체 · 장치 종료)이 에셋 로드 · 해제 워커를 먼저 비워야 한다. 어기면 소멸자가 단언으로 알린다(파생 소멸자가 이미 돌아 기다려도 늦다).
                 notify( pResource );
+                {
+                    ScopedLock<mutex> lock{ getRegistryInternal()._mutex };
+                    getRegistryInternal()._pNotifiedResource = nullptr;
+                }
             }
         }
     } // namespace
@@ -83,7 +95,10 @@ namespace sw
 
     RHIRenderResource::~RHIRenderResource()
     {
-        ScopedLock<mutex>                  lock{ getRegistryInternal()._mutex };
+        ScopedLock<mutex> lock{ getRegistryInternal()._mutex };
+        const bool        bDestroyedWhileNotified = getRegistryInternal()._pNotifiedResource == this && getRegistryInternal()._notifyThread != std::this_thread::get_id();
+        SW_LOG_ASSERT( bDestroyedWhileNotified == false,
+                       "A render resource was destroyed on another thread while the device notified it (release · init) - drain asset loading before swapping or shutting down the device" );
         unordered_set<RHIRenderResource*>& registry = getRegistryInternal()._uniqueSetResource;
         registry.erase( this );
         // 마지막 리소스가 사라지면 버킷도 놓는다 — 기동 뒤 자란 표가 종료 누수 보고에 남지 않는다. 엔진 기본 에셋이 사는 동안은 비지 않으므로 실행 중에는 일어나지 않는다.

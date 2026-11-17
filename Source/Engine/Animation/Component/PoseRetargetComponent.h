@@ -14,6 +14,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -92,7 +93,7 @@ namespace sw
 
         PoseRetargetBinding                     _binding;
         Subscription                            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        shared_ptr<const RetargetProfile>       _pProfile;            ///< 쥔 프로필(경로로 받았으면 공유 캐시의 한 벌)
+        SharedAssetRef<RetargetProfile>         _pProfile;            ///< 쥔 프로필(경로로 받았으면 공유 캐시의 한 벌)
         PoseRetargeter                          _retargeter;
         Pose                                    _targetReference;
         TComponentHandle<SkeletalMeshComponent> _source;

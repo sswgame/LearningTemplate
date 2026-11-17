@@ -117,11 +117,14 @@ namespace sw
     }
 
     SpatialHashGrid2D::SpatialHashGrid2D( float32 cellSize )
-        : _cellSize{ cellSize > 1.0f ? cellSize : kDefaultCellSize }
+        : _cellSize{ cellSize > 0.0f && MathUtil::isFinite( cellSize ) ? cellSize : kDefaultCellSize }
         , _mapBucket{}
         , _mapHandleBound{}
         , _listOversizedHandle{}
     {
+        // 1 이하 셀(0.5 m 격자)도 그대로 쓴다 — 예전에는 1 이하를 말없이 기본값(64)으로 바꿔, 작은 셀을 준 쪽(관심 격자)이 64 배 넓은 셀을 받았다.
+        // 양수 · 유한이 아닌 값만 설정 결함이다(셀 좌표가 무한대 · NaN 이 된다).
+        SW_LOW_LEVEL_ASSERT( cellSize > 0.0f && MathUtil::isFinite( cellSize ), "SpatialHashGrid2D cell size must be positive and finite (got %f)", static_cast<float64>( cellSize ) );
     }
 
     bool SpatialHashGrid2D::shouldScanAllHandles( const CellRange& range ) const

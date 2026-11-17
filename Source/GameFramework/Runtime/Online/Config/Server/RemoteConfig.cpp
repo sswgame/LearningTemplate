@@ -10,6 +10,7 @@
 #include "Engine/Observability/MetricRegistry.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -143,7 +144,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord> listRecord;
-            read._result = connection.listRecords( getTable(), string_view{}, cursor, RemoteConfigInternal::kListPageSize, false, listRecord );
+            read._result = ServiceRecordReader::readPage( connection, getTable(), string_view{}, cursor, RemoteConfigInternal::kListPageSize, false, listRecord )._result;
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
             for ( const ServiceRecord& record : listRecord )

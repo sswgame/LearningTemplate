@@ -35,7 +35,8 @@ namespace sw
             : _onRelease{ onRelease }
         {
         }
-        ~SubscriptionList() override = default;
+        /** @brief 닫습니다 — 다른 스레드에서 진행 중인 해제 델리게이트가 끝날 때까지 기다린다(주인이 이 목록을 맨 끝 멤버로 두면 주인의 다른 멤버보다 먼저 닫힌다). */
+        ~SubscriptionList() override { closeSubscriptions(); }
 
         SubscriptionList( const SubscriptionList& )            = delete;
         SubscriptionList& operator=( const SubscriptionList& ) = delete;
@@ -79,7 +80,8 @@ namespace sw
             : _onRelease{ onRelease }
         {
         }
-        ~ItemSubscriptionList() override = default;
+        /** @brief 닫습니다 — 다른 스레드에서 진행 중인 해제 함수가 끝날 때까지 기다린다. */
+        ~ItemSubscriptionList() override { closeSubscriptions(); }
 
         ItemSubscriptionList( const ItemSubscriptionList& )            = delete;
         ItemSubscriptionList& operator=( const ItemSubscriptionList& ) = delete;

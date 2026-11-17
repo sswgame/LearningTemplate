@@ -22,6 +22,7 @@ namespace sw
         , _uniqueActiveDataRequest{}
         , _mapInFlightCallback{}
         , _mapInFlightDataCallback{}
+        , _nextRequestID{ 0 }
         , _mapRequestGeneration{}
         , _mapInFlightIO{}
         , _listDetachedIO{}
@@ -106,10 +107,10 @@ namespace sw
         _listCompleted.clear();
     }
 
-    bool AssetStreamingQueue::requestAsset( string_view assetPath, StreamingPriority priority, const OnStreamingCompleteDelegate& onComplete )
+    StreamingRequest AssetStreamingQueue::requestAsset( string_view assetPath, StreamingPriority priority, const OnStreamingCompleteDelegate& onComplete )
     {
         if ( assetPath.empty() )
-            return false;
+            return StreamingRequest{};
 
         const string pathStr = string( assetPath );
 
@@ -117,47 +118,49 @@ namespace sw
         // (아직 쿠킹하지 않은 셰이더, 늦게 마운트되는 팩 — 한 번 실패한 경로가 영영 실패가 되지 않게).
         // 콜백은 **락 밖에서** 부른다(비동기 완료 `update` 와 같다). 락을 쥔 채 부르면 콜백이 이 큐에 다시 물을 때(`isLoaded` ·
         // `requestAsset`) 같은 뮤텍스에 재진입해 스레드가 스스로 멈춘다.
-        bool bAlreadyLoaded{ false };
+        bool             bAlreadyLoaded{ false };
+        StreamingRequest request{ pathStr, 0 };
         {
             ScopedLock<mutex> lock{ _mutex };
             const auto        itResult = _mapAssetResult.find( pathStr );
             bAlreadyLoaded             = ( itResult != _mapAssetResult.end() && itResult->second );
+            request._requestID         = ++_nextRequestID;
         }
         if ( bAlreadyLoaded )
         {
             if ( onComplete.isBound() )
                 onComplete( pathStr, true );
-            return true;
+            return request;
         }
 
         ScopedLock<mutex> lock{ _mutex };
 
         if ( _uniqueActiveRequest.find( pathStr ) != _uniqueActiveRequest.end() )
         {
-            if ( onComplete.isBound() )
-                _mapInFlightCallback[pathStr].push_back( onComplete );
-            return true;
+            _mapInFlightCallback[pathStr].push_back( RequestCallback{ request._requestID, onComplete } );
+            return request;
         }
 
         _uniqueActiveRequest.insert( pathStr );
         const uint64 generation = ++_mapRequestGeneration[pathStr];
-        if ( onComplete.isBound() )
-            _mapInFlightCallback[pathStr].push_back( onComplete );
+        _mapInFlightCallback[pathStr].push_back( RequestCallback{ request._requestID, onComplete } );
 
         startRequestLocked( pathStr, generation, false, priority );
-        return true;
+        return request;
     }
 
-    bool AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, const OnStreamingDataCompleteDelegate& onComplete )
+    StreamingRequest AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, const OnStreamingDataCompleteDelegate& onComplete )
     {
         if ( assetPath.empty() )
-            return false;
+            return StreamingRequest{};
 
-        const string pathStr = string( assetPath );
-        uint64       generation{ 0 };
-        bool         bIssueRead{ false };
+        const string     pathStr = string( assetPath );
+        uint64           generation{ 0 };
+        bool             bIssueRead{ false };
+        StreamingRequest request{ pathStr, 0 };
         {
             ScopedLock<mutex> lock{ _mutex };
+            request._requestID = ++_nextRequestID;
 
             // **바이트를 읽는 요청에만 편승한다.** 존재 확인 태스크(`requestAsset`)는 파일을 읽지
             // 않으므로, 거기 붙으면 `bSuccess = true` 에 빈 버퍼를 받는다. 그때는 세대를 올려
@@ -167,16 +170,14 @@ namespace sw
             const bool bAlreadyFetchingData = _uniqueActiveDataRequest.find( pathStr ) != _uniqueActiveDataRequest.end();
             if ( bAlreadyFetchingData )
             {
-                if ( onComplete.isBound() )
-                    _mapInFlightDataCallback[pathStr].push_back( onComplete );
-                return true;
+                _mapInFlightDataCallback[pathStr].push_back( RequestDataCallback{ request._requestID, onComplete } );
+                return request;
             }
 
             _uniqueActiveRequest.insert( pathStr );
             _uniqueActiveDataRequest.insert( pathStr );
             generation = ++_mapRequestGeneration[pathStr];
-            if ( onComplete.isBound() )
-                _mapInFlightDataCallback[pathStr].push_back( onComplete );
+            _mapInFlightDataCallback[pathStr].push_back( RequestDataCallback{ request._requestID, onComplete } );
 
             if ( AssetLoadOperation::canLoadOnWorker() )
                 bIssueRead = true;
@@ -201,13 +202,13 @@ namespace sw
             }
             handle.submit();
         }
-        return true;
+        return request;
     }
 
     TaskFuture<bool> AssetStreamingQueue::requestAssetFuture( string_view assetPath, StreamingPriority priority )
     {
-        auto       pPromise   = sw::make_shared<TaskPromise<bool>>();
-        const bool bRequested = requestAsset(
+        auto                   pPromise = sw::make_shared<TaskPromise<bool>>();
+        const StreamingRequest request  = requestAsset(
             assetPath,
             priority,
             SW_DELEGATE_LAMBDA(
@@ -217,7 +218,7 @@ namespace sw
             pPromise->setValue( bSuccess );
         } ) );
 
-        if ( bRequested == false )
+        if ( request.isValid() == false )
             pPromise->setValue( false );
         return pPromise->getFuture();
     }
@@ -325,12 +326,13 @@ namespace sw
         auto itCallbacks = _mapInFlightCallback.find( pathStr );
         if ( itCallbacks != _mapInFlightCallback.end() )
         {
-            for ( const auto& cb : itCallbacks->second )
+            for ( const RequestCallback& pendingRequest : itCallbacks->second )
             {
                 CompletedItem item{};
-                item._path     = pathStr;
-                item._callback = cb;
-                item._bSuccess = bSuccess;
+                item._requestID = pendingRequest._requestID;
+                item._path      = pathStr;
+                item._callback  = pendingRequest._callback;
+                item._bSuccess  = bSuccess;
                 pushCompleted( std::move( item ) );
             }
             _mapInFlightCallback.erase( itCallbacks );
@@ -339,12 +341,13 @@ namespace sw
         auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
         if ( itDataCallbacks != _mapInFlightDataCallback.end() )
         {
-            const vector<OnStreamingDataCompleteDelegate>& listCallback = itDataCallbacks->second;
+            const vector<RequestDataCallback>& listCallback = itDataCallbacks->second;
             for ( size_t index = 0; index < listCallback.size(); ++index )
             {
                 CompletedItem item{};
+                item._requestID    = listCallback[index]._requestID;
                 item._path         = pathStr;
-                item._dataCallback = listCallback[index];
+                item._dataCallback = listCallback[index]._callback;
                 item._bSuccess     = bSuccess;
                 // 마지막 콜백이 바이트를 옮겨 간다 — 64 KB 항목을 콜백마다 복사하지 않는다.
                 if ( index + 1 == listCallback.size() )
@@ -385,75 +388,99 @@ namespace sw
         completeRequestLocked( pathStr, bSuccess, std::move( bytes ) );
     }
 
-    void AssetStreamingQueue::cancelRequest( string_view assetPath )
+    void AssetStreamingQueue::cancelRequest( const StreamingRequest& request )
     {
-        const string    pathStr = string( assetPath );
+        if ( request.isValid() == false )
+            return;
         AsyncReadHandle ioHandle;
         {
             ScopedLock<mutex> lock{ _mutex };
-            _uniqueActiveRequest.erase( pathStr );
-            _uniqueActiveDataRequest.erase( pathStr );
-            const auto itIO = _mapInFlightIO.find( pathStr );
-            if ( itIO != _mapInFlightIO.end() )
-            {
-                ioHandle = itIO->second;
-                _mapInFlightIO.erase( itIO );
-            }
-
-            const auto itCallbacks = _mapInFlightCallback.find( pathStr );
+            // 이 요청자의 콜백만 거둬 실패로 한 번 부른다. 같은 경로의 다른 요청자는 그대로 읽기 결과를 받는다.
+            bool       bRemoved    = false;
+            bool       bOthersLeft = false;
+            const auto itCallbacks = _mapInFlightCallback.find( request._path );
             if ( itCallbacks != _mapInFlightCallback.end() )
             {
-                for ( const auto& cb : itCallbacks->second )
+                vector<RequestCallback>& listPendingRequest = itCallbacks->second;
+                for ( size_t index = 0; index < listPendingRequest.size(); )
                 {
+                    if ( listPendingRequest[index]._requestID != request._requestID )
+                    {
+                        ++index;
+                        continue;
+                    }
                     CompletedItem item{};
-                    item._path     = pathStr;
-                    item._callback = cb;
-                    item._bSuccess = false;
+                    item._requestID = request._requestID;
+                    item._path      = request._path;
+                    item._callback  = listPendingRequest[index]._callback;
+                    item._bSuccess  = false;
                     pushCompleted( std::move( item ) );
+                    listPendingRequest.erase( listPendingRequest.begin() + static_cast<ptrdiff_t>( index ) );
+                    bRemoved = true;
                 }
-                _mapInFlightCallback.erase( itCallbacks );
+                bOthersLeft = listPendingRequest.empty() == false;
             }
-
-            const auto itDataCallbacks = _mapInFlightDataCallback.find( pathStr );
+            const auto itDataCallbacks = _mapInFlightDataCallback.find( request._path );
             if ( itDataCallbacks != _mapInFlightDataCallback.end() )
             {
-                for ( const auto& cb : itDataCallbacks->second )
+                vector<RequestDataCallback>& listPendingRequest = itDataCallbacks->second;
+                for ( size_t index = 0; index < listPendingRequest.size(); )
                 {
+                    if ( listPendingRequest[index]._requestID != request._requestID )
+                    {
+                        ++index;
+                        continue;
+                    }
                     CompletedItem item{};
-                    item._path         = pathStr;
-                    item._dataCallback = cb;
+                    item._requestID    = request._requestID;
+                    item._path         = request._path;
+                    item._dataCallback = listPendingRequest[index]._callback;
                     item._bSuccess     = false;
                     pushCompleted( std::move( item ) );
+                    listPendingRequest.erase( listPendingRequest.begin() + static_cast<ptrdiff_t>( index ) );
+                    bRemoved = true;
                 }
-                _mapInFlightDataCallback.erase( itDataCallbacks );
+                bOthersLeft = bOthersLeft || listPendingRequest.empty() == false;
             }
 
-            // 워커가 이미 끝냈지만 `update` 가 아직 부르지 않은 완료도 실패로 바꾼다. 취소와 완료는 서로 다른 스레드라 어느 쪽이 먼저일지 정할 수
-            // 없다 — 취소가 돌아온 뒤에는 이 경로에 성공 콜백이 오지 않는다는 것만 계약이다. 그 완료가 남긴 성공 기록도 지운다.
+            // 이미 끝나 `update` 를 기다리는 이 요청자의 완료도 실패로 바꾼다 — 취소가 돌아온 뒤 이 요청자에게 성공이 오지 않는다는 것이 계약이다.
             {
                 ScopedLock<mutex> completedLock{ _completedMutex };
-                bool              bRevokedSuccess{ false };
                 for ( CompletedItem& item : _listCompleted )
                 {
-                    if ( item._path != pathStr )
+                    if ( item._requestID != request._requestID )
                         continue;
-                    bRevokedSuccess = bRevokedSuccess || item._bSuccess;
-                    item._bSuccess  = false;
+                    item._bSuccess = false;
                     item._bytes.clear();
                 }
-                if ( bRevokedSuccess )
-                    _mapAssetResult.erase( pathStr );
             }
 
-            ++_mapRequestGeneration[pathStr];
-            if ( ioHandle.isValid() )
-                retainDetachedIOLocked( ioHandle );
+            // 마지막 요청자였으면 읽기 자체를 거둔다.
+            if ( bRemoved && bOthersLeft == false )
+                cancelPathLocked( request._path, ioHandle );
         }
 
         // 아직 OS 에 넘기지 않은 읽기는 큐에서 빠지고, 걸린 읽기는 결과를 버린다(세대가 올라 완료는 무시된다). 잠금 밖이다 — 취소의 완료가 이 스레드에서
         // 바로 올 수 있다.
         if ( ioHandle.isValid() )
             (void)ioHandle.cancel();
+    }
+
+    void AssetStreamingQueue::cancelPathLocked( const string& pathStr, AsyncReadHandle& outIOHandle )
+    {
+        _uniqueActiveRequest.erase( pathStr );
+        _uniqueActiveDataRequest.erase( pathStr );
+        _mapInFlightCallback.erase( pathStr );
+        _mapInFlightDataCallback.erase( pathStr );
+        const auto itIO = _mapInFlightIO.find( pathStr );
+        if ( itIO != _mapInFlightIO.end() )
+        {
+            outIOHandle = itIO->second;
+            _mapInFlightIO.erase( itIO );
+        }
+        ++_mapRequestGeneration[pathStr];
+        if ( outIOHandle.isValid() )
+            retainDetachedIOLocked( outIOHandle );
     }
 
     void AssetStreamingQueue::retainDetachedIOLocked( const AsyncReadHandle& handle )

@@ -105,8 +105,15 @@ namespace sw
         /** @brief 세마포어를 파괴합니다. 스왑체인을 다시 만들 때 이미지 수가 바뀔 수 있어 함께 갱신합니다. */
         void destroySemaphores( VkDevice device );
 
-        /** @brief 프레임버퍼, 이미지 뷰, 스왑체인을 파괴합니다(서피스는 남습니다). */
+        /** @brief 프레임버퍼, 이미지 뷰, 스왑체인을 파괴합니다(서피스는 남습니다). 물려줄 옛 스왑체인(`retireForRecreate`)도 놓는다. */
         void destroy( VkDevice device );
+
+        /**
+         * @brief 다시 만들기 전에 프레임버퍼 · 이미지 뷰를 놓고 스왑체인 핸들은 다음 `create` 의 `oldSwapchain` 으로 물려줍니다(R-8).
+         * @details 명세상 옛 스왑체인을 넘기면 표시 엔진이 자원을 넘겨받아 깜빡임 없이 바꾸고, 넘긴 옛 스왑체인은 생성이 실패해도 은퇴한다 — `create` 가 그 뒤 파괴한다.
+         *          언리얼 `FVulkanSwapChain` 재생성과 같다.
+         */
+        void retireForRecreate( VkDevice device );
 
         /**
          * @brief 이번 프레임에 그릴 이미지를 받아 옵니다. 성공하면 `getImageIndex()` 가 갱신됩니다.
@@ -171,10 +178,13 @@ namespace sw
     private:
         /** @brief 이미지마다 뷰를 만듭니다. `create` 안에서만 부릅니다. */
         [[nodiscard]] bool createImageViews( VkDevice device );
+        /** @brief 프레임버퍼 · 이미지 뷰와 지금 스왑체인을 놓습니다(물려줄 옛 스왑체인은 남긴다). `destroy` · `retireForRecreate` 가 함께 쓴다. */
+        void destroyCurrent( VkDevice device );
 
     private:
         VkSurfaceKHR   _surface;
         VkSwapchainKHR _swapChain;
+        VkSwapchainKHR _retiredSwapChain{ nullptr }; ///< 다음 `create` 가 `oldSwapchain` 으로 넘기고 파괴할 옛 스왑체인(`retireForRecreate`)
 
         vector<VkImage>       _listImage;
         vector<VkImageView>   _listImageView;

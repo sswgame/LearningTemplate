@@ -52,6 +52,7 @@ namespace sw
         [[nodiscard]] bool open() override { return true; }
         void               close() override;
         void               write( const LogRecord& record ) override;
+        void               writeWithoutWaiting( const LogRecord& record ) override;
         void               flushWithoutWaiting() override;
         bool               needsStructuredProperties() const override { return true; }
 

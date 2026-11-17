@@ -307,11 +307,11 @@ namespace sw
             {
                 MemoryServiceStoreInternal::ClosedConnection closed;
                 job->markCancelled(); // 종료 때문에 실행하지 못한 일이다 — 저장소 고장과 가른다
-                job->run( closed );
+                job->execute( closed );
             }
             else
             {
-                job->run( *_pDatabase );
+                job->execute( *_pDatabase );
             }
         }
         ScopedLock<mutex> lock{ _mutex };

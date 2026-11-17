@@ -122,7 +122,6 @@ namespace sw::editor
         void addKeyTrack( SequenceTrackKind kind );
 
     private:
-        string                         _cinematicNote;
         SequenceModel                  _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
         unique_ptr<ClipSequence>       _sequence;
         unique_ptr<sw::SequencePlayer> _previewPlayer;

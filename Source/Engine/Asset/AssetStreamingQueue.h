@@ -31,6 +31,20 @@ namespace sw
     using OnStreamingDataCompleteDelegate = Delegate<void( string_view, bool, const vector<uint8>& )>;
 
     /**
+     * @struct StreamingRequest
+     * @brief 요청자 하나의 스트리밍 요청입니다(`AssetStreamingQueue::requestAsset` · `requestAssetData` 가 돌려준다). 취소는 이것으로 한다(`cancelRequest`).
+     * @details 같은 경로를 여럿이 기다리면 읽기는 하나지만 요청자는 따로다 — 한 요청자의 취소는 그 요청자의 콜백만 거두고, 마지막 요청자가 거둘 때만 읽기를 멈춘다.
+     *          언리얼 `FStreamableHandle` 과 같은 자리다. 받지 못한 요청(빈 경로)은 `isValid() == false` 다.
+     */
+    struct StreamingRequest
+    {
+        string _path{};
+        uint64 _requestID{ 0 };
+
+        bool isValid() const { return _requestID != 0; }
+    };
+
+    /**
      * @class AssetStreamingQueue
      * @brief 에셋을 백그라운드에서 미리 읽는 스트리밍 큐입니다.
      * @details 씬 로드나 런타임 이동 중에 메인 스레드를 멈추지 않고 텍스처, 오디오, 머티리얼 파일을 비동기로 미리 읽는다.
@@ -61,14 +75,20 @@ namespace sw
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Asset;
         void                       update( size_t maxCompletionsPerFrame = 32 );
 
-        bool requestAsset( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingCompleteDelegate& onComplete = {} );
+        /** @brief 에셋이 있는지 백그라운드에서 봅니다. 받지 못했으면(빈 경로) 무효 요청입니다. */
+        StreamingRequest requestAsset( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingCompleteDelegate& onComplete = {} );
 
-        /** @brief 에셋 바이트를 백그라운드에서 읽어 완료 콜백으로 넘깁니다. */
-        bool requestAssetData( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingDataCompleteDelegate& onComplete = {} );
+        /** @brief 에셋 바이트를 백그라운드에서 읽어 완료 콜백으로 넘깁니다. 받지 못했으면(빈 경로) 무효 요청입니다. */
+        StreamingRequest requestAssetData( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal, const OnStreamingDataCompleteDelegate& onComplete = {} );
 
         /** @brief 에셋 프리페치를 비동기로 요청하고 완료 여부를 TaskFuture<bool> 로 반환합니다. */
         TaskFuture<bool> requestAssetFuture( string_view assetPath, StreamingPriority priority = StreamingPriority::Normal );
-        void             cancelRequest( string_view assetPath );
+        /**
+         * @brief 요청자 하나의 요청을 거둡니다 — 그 요청자의 콜백은 실패로 한 번 불리고, 같은 경로를 기다리는 다른 요청자는 그대로 결과를 받습니다.
+         * @details 마지막 요청자가 거두면 걸린 읽기도 멈춘다. 예전에는 경로 단위라 한 쪽의 취소가 같은 경로의 모든 대기자를 실패로 끝냈다.
+         *          이미 끝나 `update` 를 기다리는 그 요청자의 완료도 실패로 바꾼다. 끝난 요청 · 무효 요청이면 아무것도 하지 않는다.
+         */
+        void cancelRequest( const StreamingRequest& request );
 
         /**
          * @brief 끝난 요청의 결과 기록을 통째로 버립니다. 다음 요청은 디스크를 다시 봅니다.
@@ -99,8 +119,22 @@ namespace sw
         static AsyncIOPriority toIOPriority( StreamingPriority priority );
 
     private:
+        /** @brief 진행 중인 경로에 붙은 요청자 하나입니다. 콜백이 없어도 든다 — 남은 요청자가 있는지가 읽기를 멈출지를 정한다. */
+        struct RequestCallback
+        {
+            uint64                      _requestID{ 0 };
+            OnStreamingCompleteDelegate _callback{};
+        };
+        /** @brief 바이트를 받는 요청자 하나입니다(`RequestCallback` 과 같다). */
+        struct RequestDataCallback
+        {
+            uint64                          _requestID{ 0 };
+            OnStreamingDataCompleteDelegate _callback{};
+        };
+
         struct CompletedItem
         {
+            uint64                          _requestID{ 0 };
             string                          _path;
             bool                            _bSuccess; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
             vector<uint8>                   _bytes;
@@ -129,6 +163,8 @@ namespace sw
         void pushCompleted( CompletedItem&& item );
         /** @brief 진행 테이블에서 뺀 읽기 핸들을 `shutdown` 이 기다리도록 보관합니다. 끝난 핸들은 이때 버립니다. `_mutex` 를 쥔 채 부릅니다. */
         void retainDetachedIOLocked( const AsyncReadHandle& handle ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 경로 하나의 요청을 통째로 거둡니다 — 남은 요청자 모두 실패, 걸린 읽기 멈춤, 세대 올림. 멈출 읽기 핸들을 @p outIOHandle 에 줍니다. */
+        void cancelPathLocked( const string& pathStr, AsyncReadHandle& outIOHandle ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         mutable mutex _mutex;
@@ -148,9 +184,10 @@ namespace sw
          *
          *          진행 중인 것이 어느 쪽인지 알아야 "편승해도 되는가"를 가릴 수 있다.
          */
-        unordered_set<string>                                          _uniqueActiveDataRequest;
-        unordered_map<string, vector<OnStreamingCompleteDelegate>>     _mapInFlightCallback;
-        unordered_map<string, vector<OnStreamingDataCompleteDelegate>> _mapInFlightDataCallback;
+        unordered_set<string>                              _uniqueActiveDataRequest;
+        unordered_map<string, vector<RequestCallback>>     _mapInFlightCallback;
+        unordered_map<string, vector<RequestDataCallback>> _mapInFlightDataCallback;
+        uint64 _nextRequestID                              SW_GUARDED_BY( _mutex ){ 0 }; ///< 요청자 번호(0 은 무효 요청)
         /**
          * @brief 경로별 요청 세대입니다. 취소 후 즉시 재요청하면 세대가 올라갑니다.
          * @details 취소해도 이미 큐에 들어간 워커 태스크는 계속 실행된다. 세대가 없으면

@@ -125,6 +125,24 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetBasic )
 }
 
 /**
+ * @brief [DataStructureTest] 범위 밖 비트 쓰기 · 뒤집기는 아무것도 바꾸지 않고, 읽기는 false 다(배포본의 단언은 로그만 남기고 이어진다)
+ * @details 예전에는 단언 뒤 그대로 써, 블록 안의 쓰지 않는 꼬리 비트가 켜지거나(값이 바뀐다) 블록 밖 힙을 썼다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetOutOfRangeAccessChangesNothing )
+{
+    sw::DynamicBitset bits( 3 );
+    {
+        sw::test::ScopedAssertCapture assertCapture;
+        SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
+        (void)bits.set( 5 );
+        (void)bits.flip( 6 );
+        SW_EXPECT_FALSE( bits.test( 5 ) );
+    }
+    SW_EXPECT_EQUAL( uint64( 0 ), bits.to_ullong() ); // 꼬리 비트(5 · 6)가 켜지지 않았다
+    SW_EXPECT_EQUAL( 0u, bits.count() );
+}
+
+/**
  * @brief [DataStructureTest] DynamicBitset 연산
  */
 SW_TEST_CASE( DataStructureTest, DynamicBitsetOperations )

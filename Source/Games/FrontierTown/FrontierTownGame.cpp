@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
@@ -32,8 +33,8 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        shared_ptr<const CityCatalog> _pCityCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
-        shared_ptr<const RTSCatalog>  _pUnitCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<CityCatalog> _pCityCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<RTSCatalog>  _pUnitCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
     };
 } // namespace sw
 

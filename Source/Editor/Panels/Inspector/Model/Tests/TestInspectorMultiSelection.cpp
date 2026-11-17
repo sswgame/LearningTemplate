@@ -108,7 +108,9 @@ SW_TEST_CASE( InspectorMultiSelectionTest, ApplyActiveGroupsTheChangedObjectsInt
     sw::editor::EditorWorkspace& workspace = pContext->getSubsystem<sw::editor::EditorWorkspace>();
     const bool                   bWasDirty = workspace.isSceneDirty();
 
-    sw::CommandStack   stack;
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     {

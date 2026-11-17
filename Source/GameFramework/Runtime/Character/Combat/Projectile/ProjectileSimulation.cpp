@@ -123,14 +123,14 @@ namespace sw
                         --projectile._bounceLeft;
                         projectile._velocity = constrain( float3::reflect( projectile._velocity, hit._normal ) * projectile._restitution, planeNormal );
                         projectile._position = hit._position + hit._normal * kBounceLift;
-                        projectile._lastHit  = constant::invalid_index::kInt32;
+                        projectile.clearHits();
                         pushEvent( outListEvent, projectile, hit, ProjectileEvent::Kind::Bounced );
                         return;
                     }
                     if ( hit._kind == ProjectileHitKind::Target && projectile._pierceLeft > 0 )
                     {
                         --projectile._pierceLeft;
-                        projectile._lastHit = hit._other;
+                        projectile.rememberHit( hit._other );
                         pushEvent( outListEvent, projectile, hit, ProjectileEvent::Kind::Hit );
                         continue;
                     }
@@ -172,13 +172,42 @@ namespace sw
         , _owner{ constant::invalid_index::kInt32 }
         , _team{ constant::invalid_index::kInt32 }
         , _target{ constant::invalid_index::kInt32 }
-        , _lastHit{ constant::invalid_index::kInt32 }
         , _pierceLeft{ 0 }
         , _bounceLeft{ 0 }
+        , _arrHitTarget{}
+        , _hitCursor{ 0 }
         , _bAlive{ SW_TRUE }
         , _bReflected{ SW_FALSE }
         , _reserved{ 0 }
     {
+        clearHits();
+    }
+
+    bool ProjectileState::hasHit( int32 other ) const
+    {
+        if ( other == constant::invalid_index::kInt32 )
+            return false;
+        for ( const int32 target : _arrHitTarget )
+        {
+            if ( target == other )
+                return true;
+        }
+        return false;
+    }
+
+    void ProjectileState::rememberHit( int32 other )
+    {
+        _arrHitTarget[_hitCursor] = other;
+        _hitCursor                = static_cast<uint8>( ( _hitCursor + 1u ) % _arrHitTarget.size() );
+    }
+
+    void ProjectileState::clearHits()
+    {
+        for ( int32& target : _arrHitTarget )
+        {
+            target = constant::invalid_index::kInt32;
+        }
+        _hitCursor = 0;
     }
 
     ProjectileState ProjectileState::launch( const ResolvedShot& shot, const float3& origin, const float3& direction, float32 gravity )
@@ -207,8 +236,8 @@ namespace sw
         _velocity   = _velocity * -speedScale;
         _damage     = _damage * damageScale;
         _team       = team;
-        _lastHit    = constant::invalid_index::kInt32;
         _bReflected = SW_TRUE;
+        clearHits();
     }
 
     ProjectileSimulation::ProjectileSimulation()
@@ -275,8 +304,8 @@ namespace sw
         }
         io.value( _nextID );
         io.check( _nextID != 0 );
-        // 탄마다 이름(4) + 위치 · 속도(24) + 실수 11 개(44) + id · 반응 번호(8) + 정수 6 개(24) + 깃발(1) 바이트
-        io.count( 105, projectileCount );
+        // 탄마다 이름(4) + 위치 · 속도(24) + 실수 11 개(44) + id · 반응 번호(8) + 정수 5 개(20) + 맞힌 대상 8 개(32) + 고리 칸(1) + 깃발(1) 바이트
+        io.count( 134, projectileCount );
         if ( io.isOk() == false )
             return;
         if ( io.isReading() )
@@ -308,7 +337,11 @@ namespace sw
             io.value( projectile._owner );
             io.value( projectile._team );
             io.value( projectile._target );
-            io.value( projectile._lastHit );
+            for ( int32& target : projectile._arrHitTarget )
+            {
+                io.value( target );
+            }
+            io.value( projectile._hitCursor );
             io.value( projectile._pierceLeft );
             io.value( projectile._bounceLeft );
             io.value( flags );
@@ -320,6 +353,7 @@ namespace sw
                                 0.0f <= projectile._radius && 0.0f <= projectile._blastRadius && 0.0f <= projectile._restitution && projectile._restitution <= 1.0f;
             // 쓰는 때(걸음 사이)에는 끝난 탄이 빠져 있다 — 살아 있지 않은 탄은 깨진 바이트다.
             const bool bCounts = 0 < projectile._id && projectile._id < _nextID && 0 <= projectile._pierceLeft && 0 <= projectile._bounceLeft &&
+                                 projectile._hitCursor < projectile._arrHitTarget.size() &&
                                  ( flags & Internal::kFlagAlive ) != 0u && flags <= ( Internal::kFlagAlive | Internal::kFlagReflected );
             if ( io.check( bRange && bCounts ) == false )
                 return;

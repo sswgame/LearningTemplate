@@ -74,7 +74,7 @@ namespace sw
     /** @brief 채팅 설정입니다. */
     struct ChatServiceConfig
     {
-        ChatSpamConfig _spam{};
+        ChatSpamConfig _spam{};                  ///< 필수 — 채팅 키트 설정 `_spam`. 비면 `initialize` 가 거절한다
         string         _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
         string         _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `Config/Server/chat_ignored_characters.txt` 를 쓴다
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
@@ -175,6 +175,11 @@ namespace sw
         // 서버 시스템(길드, 파티, GM)이 부르는 함수이며 완료는 없다
         [[nodiscard]] ChatServiceResult addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs );
         void                            removeMember( AccountID accountID, string_view channelID );
+        /**
+         * @brief 그룹 채널(길드 · 파티)에서 계정을 뺍니다. 이 서버의 멤버에서 빼고, 버스로 다른 채팅 서버에도 알립니다.
+         * @details 길드 추방을 처리한 서버가 그 계정이 접속한 서버가 아니면 예전에는 그 서버에 멤버가 남아 길드 채팅을 계속 받았다(감사 O-18).
+         */
+        void removeGroupMember( AccountID accountID, string_view channelID );
         /** @brief GM 이 제재를 바꿨을 때 부릅니다. 다음 말하기 전에 다시 읽습니다. */
         void refreshSanction( AccountID accountID );
         /** @brief 계정이 이 서버를 떠났을 때 부릅니다. 모든 채널에서 뺍니다. */
@@ -195,7 +200,8 @@ namespace sw
     private:
         /** @brief 저장 일의 완료입니다. */
         void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
-        void applyHistoryRead( uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
+        /** @brief 읽은 기록에서 @p readerID 가 차단한 사람의 글을 빼고 답합니다(실시간 전달과 같은 규칙 — 기록으로 다시 읽히지 않게, 감사 O-18). */
+        void applyHistoryRead( AccountID readerID, uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
         void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, const vector<string>& listIndexKey, ServiceStoreCompletion completion );
         void applyReport( uint64 requestTag, ChatServiceResult result );
 

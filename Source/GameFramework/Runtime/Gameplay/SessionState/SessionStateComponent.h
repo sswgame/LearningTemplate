@@ -7,6 +7,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -48,8 +49,8 @@ namespace sw
         const ReputationCatalog* _pReputationCatalog{ nullptr };
         const ItemCatalog*       _pItemCatalog{ nullptr };
         PROPERTY( Min = 0 )
-        int32                 _inventorySlotCount{ 0 };    ///< 플레이어 가방의 슬롯 수. 0 이면 가방이 없고 `makeRefs` 의 가방 포인터가 nullptr 이다
-        const WeatherCatalog* _pWeatherCatalog{ nullptr }; ///< 없으면 날씨가 없고 `makeRefs` 의 날씨 포인터가 nullptr 이다
+        int32                            _inventorySlotCount{ 0 }; ///< 플레이어 가방의 슬롯 수. 0 이면 가방이 없고 `makeRefs` 의 가방 포인터가 nullptr 이다
+        shared_ptr<const WeatherCatalog> _pWeatherCatalog;         ///< 없으면 날씨가 없고 `makeRefs` 의 날씨 포인터가 nullptr 이다. 받은 때의 판(스냅숏) — 날씨 상태가 그 판의 항목을 가리키므로 판 상태가 쥔다
         PROPERTY()
         uint32 _weatherSeed{ DeterministicRandom32::kDefaultSeed }; ///< 날씨 수열의 씨앗(0 은 거절된다 — 씨앗을 주지 않으면 기본 씨앗)
         PROPERTY( Min = 0 )
@@ -175,19 +176,20 @@ namespace sw
         [[nodiscard]] bool applyPendingState();
 
     private:
-        Wallet                  _wallet;
-        GameFlags               _flags;
-        WorldClock              _clock;
-        QuestLog                _questLog;
-        ReputationState         _reputation;
-        Inventory               _inventory; ///< 플레이어 가방
-        WeatherSystem           _weather;
-        LandRegistry            _land; ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
-        vector<WorldClockEvent> _listClockEvent;
-        vector<uint8>           _pendingStateBytes; ///< 열리기 전에 받은 복원 바이트
-        uint8                   _bInitialized : 1;
-        uint8                   _bFreshGame   : 1;
-        uint8                   _bWeather     : 1; ///< 날씨 카탈로그로 열었는지 여부
+        Wallet                           _wallet;
+        GameFlags                        _flags;
+        WorldClock                       _clock;
+        QuestLog                         _questLog;
+        ReputationState                  _reputation;
+        Inventory                        _inventory;       ///< 플레이어 가방
+        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 날씨가 가리키는 카탈로그의 판(열 때의 스냅숏 — 다시 읽기 정리가 놓아도 날씨의 항목 포인터가 끊기지 않는다)
+        WeatherSystem                    _weather;
+        LandRegistry                     _land; ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
+        vector<WorldClockEvent>          _listClockEvent;
+        vector<uint8>                    _pendingStateBytes; ///< 열리기 전에 받은 복원 바이트
+        uint8                            _bInitialized : 1;
+        uint8                            _bFreshGame   : 1;
+        uint8                            _bWeather     : 1; ///< 날씨 카탈로그로 열었는지 여부
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
         uint8 _bOpenAtBeginPlay : 1;
         uint8 _reserved         : 4;

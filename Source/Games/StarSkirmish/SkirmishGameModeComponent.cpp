@@ -357,7 +357,7 @@ namespace sw
         if ( _lockstep.isActive() )
             (void)_lockstep.advance( deltaTime, _match.getWorld().getSettings()._fixedStep, _match ); // 두 프로세스가 같은 걸음으로 돈다 - 속도 · 일시정지는 쓰지 않는다
         else if ( _bPaused == SW_FALSE )
-            _match.update( deltaTime * _timeScale );
+            _match.update( deltaTime, _timeScale );
         handleEvents();
         _selection.prune( _match.getWorld() );
         if ( areViewsSpawned() )
@@ -466,7 +466,7 @@ namespace sw
         matchSettings._rushAI                = _rushAI;
         matchSettings._macroAI               = _macroAI;
         matchSettings._opponentAI            = _opponentAI;
-        matchSettings._pCommanderTree        = &_pCommanderTree->getTree();
+        matchSettings._pCommanderTree        = _pCommanderTree.snapshot(); // 판은 받은 때의 트리로 끝까지 돈다
         if ( _match.initialize( _pCatalog.get(), humanMask, matchSettings ) == false )
             return false;
         _selection.clear();

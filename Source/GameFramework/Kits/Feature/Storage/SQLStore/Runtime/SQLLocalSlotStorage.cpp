@@ -69,6 +69,13 @@ namespace sw
         return LocalStoreResult::Ok;
     }
 
+    LocalStoreResult SQLLocalSlotStorage::readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
+    {
+        (void)slot;
+        (void)outEnvelopeBytes;
+        return LocalStoreResult::NotFound;
+    }
+
     LocalStoreResult SQLLocalSlotStorage::writeSlot( const string& slot, const vector<uint8>& envelopeBytes )
     {
         const SQLValue  arrParam[3] = { SQLValue::makeText( slot ), SQLValue::makeBlob( envelopeBytes.data(), static_cast<int32>( envelopeBytes.size() ) ),
