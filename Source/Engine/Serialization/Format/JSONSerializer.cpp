@@ -714,7 +714,7 @@ namespace sw
         const bool bStrictFieldError = pOutListOrphan == nullptr && bFieldError;
         if ( bStrictFieldError )
             return FieldReadResult::FieldFailed;
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, rollback.getRestoredValues() ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
     }
 
     FieldReadResult JSONSerializer::readField( const JSONValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& context )

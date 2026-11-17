@@ -97,6 +97,18 @@ namespace sw
     };
 
     /** @brief 직렬화기 TU 들이 함께 쓰는 도우미입니다. */
+    /**
+     * @brief 소프트 읽기가 읽기 전 값으로 되돌린 칸 하나입니다(`PropertyReadRollback` 이 담는다). 범위 검사가 이 칸을 보지 않는다.
+     * @details 값 주소만으로는 구조체 칸과 그 첫 필드(오프셋 0)를 가르지 못해 프로퍼티를 함께 든다.
+     */
+    struct RestoredPropertyValue
+    {
+        const void*         _pValue{ nullptr };
+        const PropertyInfo* _pProperty{ nullptr };
+
+        [[nodiscard]] bool operator==( const RestoredPropertyValue& other ) const { return _pValue == other._pValue && _pProperty == other._pProperty; }
+    };
+
     struct SerializerUtil
     {
         /**
@@ -271,18 +283,26 @@ namespace sw
          *          경계는 인스펙터와 같은 함수로 푼다(`PropertyMetadata::computeAllowedRange`) — 숫자 경계와 필드 경계(`Min = "-_halfSize"`)를 함께 지킨다.
          *          @p instance 는 @p typeInfo 객체의 주소다(필드 경계를 이 객체에서 읽는다).
          */
-        SW_API static void collectRangeErrors( const TypeInfo& typeInfo, ObjectAddress instance, const string& prefix, vector<string>& outListError );
+        SW_API static void collectRangeErrors( const TypeInfo& typeInfo, ObjectAddress instance, const string& prefix, vector<string>& outListError,
+                                               const vector<RestoredPropertyValue>* pListRestored = nullptr );
         /**
          * @brief `collectRangeErrors` 의 칸 하나입니다. @p instance 는 @p prop 을 가진 객체의 주소입니다.
          * @details 파일에 적힌 칸만 보는 읽기(`XMLFields::readProperties`)가 부른다 — 적지 않은 칸은 코드의 초기값이라 데이터 오류가 아니다.
          */
-        SW_API static void collectPropertyRangeErrors( const PropertyInfo& prop, ObjectAddress instance, const string& prefix, vector<string>& outListError );
+        SW_API static void collectPropertyRangeErrors( const PropertyInfo& prop, ObjectAddress instance, const string& prefix, vector<string>& outListError,
+                                                       const vector<RestoredPropertyValue>* pListRestored = nullptr );
         /**
          * @brief 읽기를 끝낸 인스턴스가 `Min` · `Max` 를 지키는지 봅니다. 어기면 칸마다 오류 로그를 남기고 false 입니다.
          * @details 세 포맷(바이너리 · JSON · XML)의 읽기 공통 끝이 부릅니다 — 호출부마다 따로 부르면 부르지 않는 경로의 값이 범위 밖인 채 성공으로 돌아온다(A-19).
          *          위반이 없으면 글을 만들지 않고 첫 위반에서 멈추는 빠른 길로 끝납니다.
          */
         [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
+        /**
+         * @brief 위와 같되 소프트 읽기가 읽기 전 값으로 되돌린 칸(@p listRestored — 어느 깊이든)은 보지 않습니다. 세 형식(JSON · XML · 바이너리)의 소프트 읽기 끝이 모두 이것을 지난다.
+         * @details 되돌린 칸은 파일 값이 아니라 읽기 전 값이고(바탕 층 형식의 새 객체면 0 — 범위 밖), 그 칸의 잘못은 orphan 이 이미 알렸다.
+         *          보면 모르는 키 · 읽지 못한 값 하나가 범위 밖 오류 묶음으로 덧나 알려진다. 목록은 `PropertyReadRollback::getRestoredValues` 가 준다.
+         */
+        [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance, const vector<RestoredPropertyValue>& listRestored );
 
         /** @brief 프로퍼티 목록에서 키(철자 그대로)에 맞는 프로퍼티 메타데이터를 찾습니다. 지금 이름을 모두 본 뒤에 옛 이름(Alias)을 봅니다. */
         static const PropertyInfo* matchProperty( PropertyListView listProp, string_view keyRaw );
@@ -354,12 +374,15 @@ namespace sw
          * @brief 마지막으로 담은 필드를 담은 값으로 되돌립니다. 그 필드의 읽기가 실패한 뒤에 부릅니다. @p instance 는 담을 때와 같은 객체입니다.
          * @return 소유 포인터 목록이거나(되돌릴 수 없다) 담은 바이트를 되읽지 못하면(코덱 결함) 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool restoreValueBeforeRead( MutableObjectAddress instance, const SerializeContext& context ) const;
+        [[nodiscard]] bool restoreValueBeforeRead( MutableObjectAddress instance, const SerializeContext& context );
+        /** @brief 지금까지 되돌린 칸입니다 — 소프트 읽기 끝의 범위 검사(`SerializerUtil::isWithinDeclaredRanges`)가 뺀다. 되돌릴 때마다 여기 담기므로 형식이 따로 적지 않는다. */
+        [[nodiscard]] const vector<RestoredPropertyValue>& getRestoredValues() const { return _listRestored; }
 
     private:
-        vector<uint8>       _bytes;
-        const TypeInfo*     _pOwnerType;
-        const PropertyInfo* _pProperty;
-        uint8               _bOwnedPointerList : 1;
+        vector<RestoredPropertyValue> _listRestored;
+        vector<uint8>                 _bytes;
+        const TypeInfo*               _pOwnerType;
+        const PropertyInfo*           _pProperty;
+        uint8                         _bOwnedPointerList : 1;
     };
 } // namespace sw
