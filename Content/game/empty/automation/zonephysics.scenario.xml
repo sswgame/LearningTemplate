@@ -21,7 +21,7 @@
 	<Expect watch="Physics.Field" target="FloatCrate" key="gravityScale" equals="0"/>
 
 	<DevCommand line="object.place Walker 66 0.05 0"/>
-	<WaitUntil watch="Surface.GroundKind" target="Walker" is="Ice" timeoutFrames="60"/> <!-- 얼음 위에 섰다 -->
+	<WaitUntil watch="Character.MovementMode" target="Walker" is="Walking" timeoutFrames="60"/> <!-- 얼음 위에 내려앉았다(0.05 m 위에 놓아 한두 스텝 떨어진다) -->
 	<Expect watch="Surface.GroundKind" target="Walker" is="Ice"/>
 	<Expect watch="Zone.Sources" target="Walker" is="surface:Ice"/>
 	<Expect watch="Physics.Field" target="Walker" key="friction" near="0.05" tolerance="0.001"/>
