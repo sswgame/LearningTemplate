@@ -18,7 +18,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
 #include "DevTools/Client/Automation/Scenario/AutomationWindowSteps.h"
 
-#include "Engine/Automation/AutomationCaptureUtil.h"
+#include "Engine/Automation/Scenario/AutomationCaptureUtil.h"
 #include "Engine/Automation/Scenario/AutomationRunnerParams.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"

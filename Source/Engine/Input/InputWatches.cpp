@@ -1,7 +1,7 @@
 /**
- * @file AutomationInputWatches.cpp
+ * @file InputWatches.cpp
  * @brief 입력 관리자의 자동화 감시 값입니다 — `Input.OSDeviceInputBlocked` · `Input.VirtualCursorEnabled` · `Input.MouseX` · `Input.MouseY` · `Input.RawMouseEvents`.
- * @details 입력 층(티어 10)은 감시 값 레지스트리(티어 10)를 볼 수 없어 레지스트리를 볼 수 있는 가장 가까운 층인 Automation 이 등록합니다. 읽기는 `InputManager` 의 공개 getter 뿐입니다.
+ * @details 입력 폴더(층 3)는 감시 값 레지스트리(`Automation/Watch`, 층 5)보다 아래라 이 파일만 층 표에 파일 키(층 5)로 올려 주인 곁에서 등록합니다. 읽기는 `InputManager` 의 공개 getter 뿐입니다.
  */
 #include "pch.h"
 

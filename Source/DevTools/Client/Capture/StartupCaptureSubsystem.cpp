@@ -7,7 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Automation/AutomationCaptureUtil.h"
+#include "Engine/Automation/Scenario/AutomationCaptureUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
