@@ -53,12 +53,6 @@ namespace sw::editor
     public:
         /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
         void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
-        /**
-         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
-         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
-         */
-        void recordDocumentEdit( string_view label ) const;
-
         /** @brief 노드가 없는 빈 문서로 되돌립니다. */
         void clear();
         /**
@@ -88,7 +82,7 @@ namespace sw::editor
          * @return 새 노드 번호입니다. 거절하면(잎 아래, 자식이 이미 있는 데코레이터 아래, 루트 중복, 없는 부모, 깊이 상한) 이유를 돌려줍니다.
          */
         [[nodiscard]] expected<int32> addNode( int32 parentID, BehaviorNodeKind type );
-        /** @brief 노드와 그 아래를 모두 지웁니다. 없는 번호면 false 입니다. 루트를 지우면 빈 문서가 됩니다. */
+        /** @brief 노드와 그 아래를 모두 지웁니다. 없는 번호면 false 입니다. 루트를 지우면 빈 문서가 됩니다. 아래 편집 연산은 성공하면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16). */
         [[nodiscard]] bool removeNode( int32 id );
         /** @brief 형제 사이에서 @p delta 칸(음수는 앞으로 = 우선순위 높게) 옮깁니다. 끝에 닿으면 거기서 멈추고, 움직였으면 true 입니다. */
         [[nodiscard]] bool moveChild( int32 id, int32 delta );
@@ -108,6 +102,14 @@ namespace sw::editor
         [[nodiscard]] expected<int32> pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex );
         /** @brief 노드 @p id 와 그 아래를 바로 뒤 형제로 복제합니다(언리얼 BT 의 Duplicate — `writeSubtree` + `pasteSubtree`). 루트이거나 부모가 더 받지 못하면 이유(`Error`)입니다. */
         [[nodiscard]] expected<int32> duplicateSubtree( int32 id );
+        /** @brief 노드 이름을 바꿉니다. 바뀌었으면 "Edit Behavior Node" 로 알리고 true 입니다. */
+        bool setNodeName( int32 id, string_view name );
+        /** @brief 자식 트리가 이 노드를 짚는 열쇠(`_inheritID`)를 바꿉니다. 바뀌었으면 "Edit Behavior Node" 로 알리고 true 입니다. */
+        bool setNodeInheritID( int32 id, string_view inheritID );
+        /** @brief 동작 노드의 작업을 @p task 로 고르고(칸 묶음이 바뀐다) "Edit Behavior Node" 로 알립니다. 없는 번호면 false 입니다. */
+        bool selectNodeTask( int32 id, string_view task );
+        /** @brief 칸 그리드가 노드 @p id 의 칸 인스턴스(`_params` · `_actionParams`)를 고쳤습니다 — "Edit Behavior Node" 로 알립니다(리플렉션 그리드는 인스턴스를 바로 고친다). */
+        void commitNodeParams( int32 id );
         /** @brief 루트가 0 인 깊이입니다. 없는 번호면 0 입니다. */
         uint32 getDepth( int32 id ) const;
 
@@ -119,10 +121,22 @@ namespace sw::editor
         string makeDisplayName( int32 id ) const;
 
     private:
-        [[nodiscard]] bool canHoldChild( const BehaviorTreeEditNode& parent ) const;
-        uint32             getSubtreeHeight( int32 id ) const;
-        void               detachFromParent( BehaviorTreeEditNode& node );
-        void               collectSubtree( int32 id, vector<int32>& outListID ) const;
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 이 모델의 편집 연산만 부른다(감사 E-16) — 무엇을 고쳤는지와 되돌리기 이름은 모델이 정하고, View 는 연산만 부른다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+        /** @brief 편집 연산의 본문입니다 — 알리지 않는다(읽기 · 붙여 넣기의 사본 모델도 쓴다). */
+        [[nodiscard]] expected<int32> insertNode( int32 parentID, BehaviorNodeKind type );
+        [[nodiscard]] bool            eraseNode( int32 id );
+        [[nodiscard]] bool            shiftChild( int32 id, int32 delta );
+        [[nodiscard]] bool            moveUnderParent( int32 id, int32 newParentID );
+        [[nodiscard]] expected<int32> graftText( int32 parentID, string_view xmlText, int32 insertIndex );
+        [[nodiscard]] expected<int32> graftCopy( int32 id );
+        [[nodiscard]] bool            canHoldChild( const BehaviorTreeEditNode& parent ) const;
+        uint32                        getSubtreeHeight( int32 id ) const;
+        void                          detachFromParent( BehaviorTreeEditNode& node );
+        void                          collectSubtree( int32 id, vector<int32>& outListID ) const;
         /** @brief @p source 의 노드 @p sourceID 와 그 아래를 새 번호로 이 모델에 더하고(부모 목록에는 넣지 않는다) 새 번호를 돌려줍니다. 자리 검사는 부르는 쪽이 했다. */
         int32                         graftSubtree( const BehaviorTreeEditModel& source, int32 sourceID, int32 parentID );
         [[nodiscard]] expected<int32> loadNodeFromXML( const XMLNode& node, int32 parentID, uint32 depth );

@@ -103,7 +103,7 @@ namespace sw::editor
         return height;
     }
 
-    expected<int32> BehaviorTreeEditModel::addNode( int32 parentID, BehaviorNodeKind type )
+    expected<int32> BehaviorTreeEditModel::insertNode( int32 parentID, BehaviorNodeKind type )
     {
         if ( parentID < 0 )
         {
@@ -157,7 +157,7 @@ namespace sw::editor
         node._parent = -1;
     }
 
-    bool BehaviorTreeEditModel::removeNode( int32 id )
+    bool BehaviorTreeEditModel::eraseNode( int32 id )
     {
         BehaviorTreeEditNode* pNode = find( id );
         if ( pNode == nullptr )
@@ -179,7 +179,7 @@ namespace sw::editor
         return true;
     }
 
-    bool BehaviorTreeEditModel::moveChild( int32 id, int32 delta )
+    bool BehaviorTreeEditModel::shiftChild( int32 id, int32 delta )
     {
         const BehaviorTreeEditNode* pNode   = find( id );
         BehaviorTreeEditNode*       pParent = pNode != nullptr ? find( pNode->_parent ) : nullptr;
@@ -204,7 +204,7 @@ namespace sw::editor
         return true;
     }
 
-    bool BehaviorTreeEditModel::reparent( int32 id, int32 newParentID )
+    bool BehaviorTreeEditModel::moveUnderParent( int32 id, int32 newParentID )
     {
         BehaviorTreeEditNode*       pNode      = find( id );
         const BehaviorTreeEditNode* pNewParent = find( newParentID );
@@ -326,7 +326,7 @@ namespace sw::editor
         if ( BehaviorTreeXML::readNodeProperties( node, type, "BehaviorTreeEditModel", value ) == false )
             return unexpected( Internal::makeNodeError( node, "The node has a missing, unknown or invalid attribute - see the log" ) );
 
-        const expected<int32> added = addNode( parentID, type );
+        const expected<int32> added = insertNode( parentID, type ); // 읽기는 편집이 아니다 — 알리지 않는다
         if ( added.has_value() == false )
             return unexpected( Internal::makeNodeError( node, "The node cannot be placed here (a leaf or a decorator that already has a child is its parent)" ) );
         const int32 id = *added;
@@ -371,8 +371,9 @@ namespace sw::editor
             if ( const expected<int32> loaded = next.loadNodeFromXML( first, -1, 0 ); loaded.has_value() == false )
                 return unexpected( loaded.error() );
         }
-        next._baseID = DataInheritance::findBasePath( xmlText );
-        *this        = std::move( next );
+        next._baseID        = DataInheritance::findBasePath( xmlText );
+        next._pEditRecorder = _pEditRecorder; // 읽은 트리로 바꿔도 문서 패널의 알림 창구는 그대로다(바꾸면 다음 편집이 창구 없이 멈춘다)
+        *this               = std::move( next );
         return {};
     }
 
@@ -435,7 +436,7 @@ namespace sw::editor
         return newID;
     }
 
-    expected<int32> BehaviorTreeEditModel::pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex )
+    expected<int32> BehaviorTreeEditModel::graftText( int32 parentID, string_view xmlText, int32 insertIndex )
     {
         BehaviorTreeEditModel pasted;
         if ( const expected<void> parsed = pasted.parse( xmlText ); parsed.has_value() == false )
@@ -461,7 +462,7 @@ namespace sw::editor
         return newID;
     }
 
-    expected<int32> BehaviorTreeEditModel::duplicateSubtree( int32 id )
+    expected<int32> BehaviorTreeEditModel::graftCopy( int32 id )
     {
         const BehaviorTreeEditNode* pNode   = find( id );
         const BehaviorTreeEditNode* pParent = pNode != nullptr ? find( pNode->_parent ) : nullptr;
@@ -473,7 +474,7 @@ namespace sw::editor
         {
             ++index;
         }
-        return pasteSubtree( parentID, writeSubtree( id ), index + 1 );
+        return graftText( parentID, writeSubtree( id ), index + 1 );
     }
 
     string BehaviorTreeEditModel::write() const
@@ -489,5 +490,90 @@ namespace sw::editor
     {
         SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
         _pEditRecorder->notifyEdited( label );
+    }
+
+    // 편집 연산 — 성공하면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16). View 는 연산만 부른다.
+    expected<int32> BehaviorTreeEditModel::addNode( int32 parentID, BehaviorNodeKind type )
+    {
+        const expected<int32> added = insertNode( parentID, type );
+        if ( added.has_value() )
+            recordDocumentEdit( "Add Behavior Node" );
+        return added;
+    }
+
+    bool BehaviorTreeEditModel::removeNode( int32 id )
+    {
+        if ( eraseNode( id ) == false )
+            return false;
+        recordDocumentEdit( "Delete Behavior Node" );
+        return true;
+    }
+
+    bool BehaviorTreeEditModel::moveChild( int32 id, int32 delta )
+    {
+        if ( shiftChild( id, delta ) == false )
+            return false;
+        recordDocumentEdit( "Move Behavior Node" );
+        return true;
+    }
+
+    bool BehaviorTreeEditModel::reparent( int32 id, int32 newParentID )
+    {
+        if ( moveUnderParent( id, newParentID ) == false )
+            return false;
+        recordDocumentEdit( "Reparent Behavior Node" );
+        return true;
+    }
+
+    expected<int32> BehaviorTreeEditModel::pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex )
+    {
+        const expected<int32> pasted = graftText( parentID, xmlText, insertIndex );
+        if ( pasted.has_value() )
+            recordDocumentEdit( "Paste Behavior Subtree" );
+        return pasted;
+    }
+
+    expected<int32> BehaviorTreeEditModel::duplicateSubtree( int32 id )
+    {
+        const expected<int32> copy = graftCopy( id );
+        if ( copy.has_value() )
+            recordDocumentEdit( "Duplicate Behavior Subtree" );
+        return copy;
+    }
+
+    bool BehaviorTreeEditModel::setNodeName( int32 id, string_view name )
+    {
+        BehaviorTreeEditNode* const pNode = find( id );
+        if ( pNode == nullptr || pNode->_name == name )
+            return false;
+        pNode->_name = string{ name };
+        recordDocumentEdit( "Edit Behavior Node" );
+        return true;
+    }
+
+    bool BehaviorTreeEditModel::setNodeInheritID( int32 id, string_view inheritID )
+    {
+        BehaviorTreeEditNode* const pNode = find( id );
+        if ( pNode == nullptr || pNode->_inheritID == inheritID )
+            return false;
+        pNode->_inheritID = string{ inheritID };
+        recordDocumentEdit( "Edit Behavior Node" );
+        return true;
+    }
+
+    bool BehaviorTreeEditModel::selectNodeTask( int32 id, string_view task )
+    {
+        BehaviorTreeEditNode* const pNode = find( id );
+        if ( pNode == nullptr )
+            return false;
+        BehaviorTreeXML::selectTask( *pNode, task );
+        recordDocumentEdit( "Edit Behavior Node" );
+        return true;
+    }
+
+    void BehaviorTreeEditModel::commitNodeParams( int32 id )
+    {
+        if ( find( id ) != nullptr )
+            recordDocumentEdit( "Edit Behavior Node" ); // 칸 그리드가 노드의 칸 인스턴스를 고쳤다 — 연속 편집은 상호작용 구간 하나라 한 번의 되돌리기다
     }
 } // namespace sw::editor
