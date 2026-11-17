@@ -27,7 +27,7 @@
 				<_listComponent>
 					<RhythmDemoComponent _componentName="RhythmDemoComponent"
 					                     _bActive="true"
-					                     _catalogPath="game/empty/data/kitdemo/demo.rhythm.xml" />
+					                     _catalogPath="game/empty/data/kitdemo/demo.chart.xml" />
 				</_listComponent>
 			</GameObject>
 		</entity>

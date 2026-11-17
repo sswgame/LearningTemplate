@@ -27,7 +27,7 @@
 				<_listComponent>
 					<FightingDemoComponent _componentName="FightingDemoComponent"
 					                       _bActive="true"
-					                       _catalogPath="game/empty/data/kitdemo/demo.moves.xml" />
+					                       _catalogPath="game/empty/data/kitdemo/demo.fighters.xml" />
 				</_listComponent>
 			</GameObject>
 		</entity>

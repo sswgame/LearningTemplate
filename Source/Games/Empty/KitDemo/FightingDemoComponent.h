@@ -44,17 +44,17 @@ namespace sw
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
-        /** @brief 대전 한 바퀴를 돌리고 결과를 담습니다. 캐릭터를 읽지 못하거나 대전을 열지 못하면 오류를 남기고 false 입니다. */
+        /** @brief 대전 한 바퀴를 돌리고 결과를 담습니다. 캐릭터가 카탈로그에 없거나 대전을 열지 못하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool runMatch();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Move catalog XML (frame data the fighters copy)" )
-        AssetRef<MoveCatalog> _catalogPath;
+        PROPERTY( Category = "Data", DisplayName = "Catalog", Tooltip = "Fighter catalog XML (roster; its moves attribute names the frame data)" )
+        AssetRef<FighterCatalog> _catalogPath;
 
-        SharedAssetRef<MoveCatalog> _pCatalog;
-        int32                       _demoState;    ///< 0 시작 전, 1 한 바퀴를 마침
-        int32                       _matchWinner;  ///< 대전 결과(0, 1, 무승부 2, 끝나지 않으면 -1)
-        int32                       _loserHealth;  ///< 쓰러진 1 번의 체력
-        int32                       _winnerRounds; ///< 0 번의 라운드 승 수
+        SharedAssetRef<FighterCatalog> _pCatalog;
+        int32                          _demoState;    ///< 0 시작 전, 1 한 바퀴를 마침
+        int32                          _matchWinner;  ///< 대전 결과(0, 1, 무승부 2, 끝나지 않으면 -1)
+        int32                          _loserHealth;  ///< 쓰러진 1 번의 체력
+        int32                          _winnerRounds; ///< 0 번의 라운드 승 수
     };
 } // namespace sw

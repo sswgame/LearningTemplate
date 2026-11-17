@@ -20,11 +20,7 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCCUtil::make( "KDFG" );
             static constexpr uint32 kStateVersion = 1;
 
-            // 캐릭터 카탈로그는 에셋 종류의 접미사가 없어(캐시 전용 종류) AssetRef 로 가리킬 수 없다 — 키트 테스트처럼 글로 읽고 프레임 데이터만 파일에서 받는다.
-            // 체력 10 이라 하단(피해 10) 한 방에 쓰러진다. 버튼 이름 1, 2, 3, 4 가 비트 0 .. 3 이다.
-            static constexpr const utf8* kFighterXML  = R"(<FighterCatalog buttons="1,2,3,4">
-  <Fighter id="basic" name="Basic" health="10" sidestep="u" sidestepDown="d,n" jump="u/f"><Move id="low" command="3"/></Fighter>
-</FighterCatalog>)";
+            // 버튼 "3"(비트 2)이 하단이다(카탈로그 buttons="1,2,3,4").
             static constexpr const utf8* kFighterID   = "basic";
             static constexpr uint16      kLowButton   = 1 << 2; ///< 버튼 "3"
             static constexpr int32       kRoundsToWin = 1;      ///< 한 라운드로 대전이 끝난다
@@ -58,15 +54,12 @@ namespace sw
 
     bool FightingDemoComponent::runMatch()
     {
-        FighterCatalog fighters;
-        if ( fighters.loadFromXMLText( FightingDemoComponentInternal::kFighterXML, *_pCatalog, "KitDemo.Fighting" ) == false )
+        const FighterDef* pFighter = _pCatalog->find( hashed_string( FightingDemoComponentInternal::kFighterID ) );
+        if ( pFighter == nullptr )
         {
-            SW_LOG_ERROR_ID( "KitDemo.FightingFightersFailed", "Fighting demo: the fighter roster did not read against the move catalog - the match does not open" );
+            SW_LOG_ERROR_ID( "KitDemo.FightingUnknownFighter", "Fighting demo: fighter '%#' is not in the catalog - the match does not open", FightingDemoComponentInternal::kFighterID );
             return false;
         }
-        const FighterDef* pFighter = fighters.find( hashed_string( FightingDemoComponentInternal::kFighterID ) );
-        if ( pFighter == nullptr )
-            return false;
         FightingSettings settings;
         settings._roundsToWin = FightingDemoComponentInternal::kRoundsToWin;
         FightingMatch match;
