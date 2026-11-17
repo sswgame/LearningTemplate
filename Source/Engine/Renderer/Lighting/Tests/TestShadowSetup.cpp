@@ -203,6 +203,7 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
     listLight.push_back( Internal::makeSpotLight( sw::float3{ 5.0f, 4.0f, 0.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
     listLight.push_back( Internal::makePointLight( sw::float3{ -6.0f, 2.0f, 0.0f }, 5.0f ) );
     const sw::vector<uint32> listShadowIndex{ 1u, 2u, 3u };
+    SW_EXPECT_LOG( "ShadowSetup.LocalShadowAtlasFull" ); // 뒤의 점광이 칸을 못 받는다
 
     SW_EXPECT_EQUAL( sw::FrameShadowData::countLocalTiles( listLight, listShadowIndex ), 13u );
     sw::FrameShadowData frame;
@@ -242,6 +243,7 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsByScreenPriority )
     listLight.push_back( Internal::makeSpotLight( sw::float3{ 2.0f, 4.0f, 12.0f }, 10.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, 0.6f ) );
     listLight.push_back( Internal::makePointLight( sw::float3{ -1.0f, 2.0f, 6.0f }, 6.0f ) );
     const sw::vector<uint32> listShadowIndex{ 0u, 1u, 2u };
+    SW_EXPECT_LOG( "ShadowSetup.LocalShadowAtlasFull" ); // 먼 점광이 칸을 못 받는다
 
     sw::FrameShadowData frame;
     sw::FrameShadowData::populateFrame( nullptr, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
