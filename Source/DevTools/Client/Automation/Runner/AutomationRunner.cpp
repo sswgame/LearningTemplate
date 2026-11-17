@@ -25,7 +25,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationWindowSteps.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
 
-#include "Engine/Automation/AutomationCaptureUtil.h"
+#include "Engine/Automation/Scenario/AutomationCaptureUtil.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"

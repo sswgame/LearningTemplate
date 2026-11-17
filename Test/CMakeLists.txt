@@ -173,6 +173,16 @@ add_test(NAME Scripts.MigratePrefabLinks
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_prefab_links.py")
 set_tests_properties(Scripts.MigratePrefabLinks PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# 엔진 층 표 — 포괄 키가 없는 자동화 뿌리(`Engine/Automation`)에 더한 파일은 configure 오류다(기능의 감시 값은 주인 폴더에서 등록), 가장 긴 키가 이긴다.
+add_test(NAME Scripts.ModuleLayers
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_module_layers.py")
+set_tests_properties(Scripts.ModuleLayers PROPERTIES LABELS nogpu TIMEOUT 60)
+
+# 통합 검토 목록(api-diff) — 새 함수 · 멤버 · 등록 이름 · Config 키를 모으고, 두 갈래가 각자 더한 같은 이름을 겹침으로 낸다.
+add_test(NAME Scripts.ApiDiff
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_api_diff.py")
+set_tests_properties(Scripts.ApiDiff PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")

@@ -39,6 +39,7 @@ Presentation = 2                     # 게임 코드가 UI 없이 아는 표현�
 # 3 — 플랫폼: 창 · 입력
 Window = 3
 Input = 3
+"Input/InputWatches.cpp" = 5           # 입력의 감시 값 — 주인 곁에서 등록하되 감시 값 레지스트리(5)를 읽어 이 파일만 그 층이다
 # 4 — RHI · CPU 쪽 그래픽 데이터
 Graphics = 4
 # 5 — 월드: 컴포넌트 모델 코어 · 씬
@@ -79,9 +80,12 @@ Telemetry = 8                        # 크래시 · 원격 측정은 엔진 전�
 "Animation/Notify/AnimationNotifyListener.h" = 7
 # 10 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
 Renderer = 10
-# 11 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기
+# 11 — 맨 위: 엔진 루프 조립 · 모듈 핫 리로드(씬 · 에셋 · 입력을 다시 묶는다) · 자동화 실행기의 창구
 Module = 11
-Automation = 11
+# `Automation` 뿌리는 포괄 키가 없다 — 기능의 감시 값 · 차단 조건은 주인 폴더에서 등록한다(뿌리 파일이 모든 층을 include 할 수 있어 렌더 감시 값이 쌓여 전용 서버 빌드가 깨졌다).
+# 뿌리에 새 파일을 더하면 표에 없는 파일이라 configure 가 멈춘다. 남는 것은 실행기 창구 헤더 둘뿐이다.
+"Automation/AutomationResult.h" = 11
+"Automation/AutomationRuntime.h" = 11
 "Engine.h" = 11
 "Engine.cpp" = 11
 "EngineSubsystemSet.h" = 11

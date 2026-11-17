@@ -70,32 +70,43 @@ def find_tier(map_tier: dict[str, int], relative: str) -> int | None:
     return best[1] if best is not None else None
 
 
-def generate_module_layers(module: str, output_path: Path) -> None:
-    table = find_layer_table(module)
-    rule_file = table.get_rule_file()
-    try:
-        map_tier: dict[str, int] = tomllib.loads(rule_file.read_text(encoding="utf-8"))["tier"]
-    except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
-        raise GeneratorError(f"{rule_file.name}: 읽지 못했다 ({exception!r}) — [tier] 표가 있어야 한다") from exception
-    source_dir = get_project_root() / "Source"
-    root_dir = source_dir / table._root_folder
-    map_source: dict[int, list[str]] = {}
-    map_header: dict[int, list[str]] = {}
+def assign_tiers(map_tier: dict[str, int], list_relative: Sequence[str], rule_name: str, module: str) -> dict[str, int]:
+    """모듈 폴더 기준 경로마다 층을 정한다. 표에 없는 파일이 하나라도 있으면 멈춘다 — 포괄 키 없는 폴더(`Engine/Automation` 뿌리)에 더한 파일이 configure 오류가 되는 자리다."""
+    map_result: dict[str, int] = {}
     list_unknown: list[str] = []
-    for path in list_files_under(source_dir):   # 같은 프로세스의 다른 층 표 · TargetLayers 와 한 번 훑은 목록을 나눠 쓴다
-        if path.suffix not in SOURCE_SUFFIX | HEADER_SUFFIX or not path.is_relative_to(root_dir):
-            continue
-        relative = path.relative_to(root_dir).as_posix()
+    for relative in list_relative:
         tier = find_tier(map_tier, relative)
         if tier is None:
             list_unknown.append(relative)
-            continue
-        if path.suffix in SOURCE_SUFFIX:
+        else:
+            map_result[relative] = tier
+    if list_unknown:
+        raise GeneratorError(f"층 표에 없는 {module} 파일: {', '.join(list_unknown[:20])} — {rule_name} 의 [tier] 에 층을 정해 넣으세요")
+    return map_result
+
+
+def read_tier_table(rule_file: Path) -> dict[str, int]:
+    try:
+        return tomllib.loads(rule_file.read_text(encoding="utf-8"))["tier"]
+    except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
+        raise GeneratorError(f"{rule_file.name}: 읽지 못했다 ({exception!r}) — [tier] 표가 있어야 한다") from exception
+
+
+def generate_module_layers(module: str, output_path: Path) -> None:
+    table = find_layer_table(module)
+    rule_file = table.get_rule_file()
+    map_tier = read_tier_table(rule_file)
+    source_dir = get_project_root() / "Source"
+    root_dir = source_dir / table._root_folder
+    list_relative = [path.relative_to(root_dir).as_posix() for path in list_files_under(source_dir)   # 같은 프로세스의 다른 층 표 · TargetLayers 와 한 번 훑은 목록을 나눠 쓴다
+                     if path.suffix in SOURCE_SUFFIX | HEADER_SUFFIX and path.is_relative_to(root_dir)]
+    map_source: dict[int, list[str]] = {}
+    map_header: dict[int, list[str]] = {}
+    for relative, tier in assign_tiers(map_tier, list_relative, rule_file.name, module).items():
+        if Path(relative).suffix in SOURCE_SUFFIX:
             map_source.setdefault(tier, []).append(relative)
         else:
             map_header.setdefault(tier, []).append(f"{table._root_folder}/{relative}")
-    if list_unknown:
-        raise GeneratorError(f"층 표에 없는 {module} 파일: {', '.join(list_unknown[:20])} — {rule_file.name} 의 [tier] 에 층을 정해 넣으세요")
     list_stale = [key for key in map_tier if not (root_dir / key).exists()]
     if list_stale:
         raise GeneratorError(f"폴더 · 파일이 없는 층 표 줄: {', '.join(list_stale)} — {rule_file.name} 의 [tier] 에서 지우세요")

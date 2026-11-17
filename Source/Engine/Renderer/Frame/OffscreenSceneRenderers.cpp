@@ -96,6 +96,14 @@ namespace sw
         }
     }
 
+    void OffscreenSceneRenderers::discardViewTargets()
+    {
+        for ( Entry& entry : _listEntry )
+        {
+            entry._renderer->discardViewTargets();
+        }
+    }
+
     void OffscreenSceneRenderers::shutdown()
     {
         for ( Entry& entry : _listEntry )

@@ -303,6 +303,11 @@ namespace sw
                 (void)AutomationScratchWorkspace::discard( folder ); // 못 지우면 경고가 남는다 — 다음 단계의 prepare 는 자기 사본만 새로 만든다
             // 앞 단계가 찾지 못한 번역 키(시네마틱 자막 같은 것)도 비운다 — 판정의 로그 게이트가 그 목록을 세므로, 남기면 뒤 단계가 모두 그 키로 진다.
             engine::getSubsystem<LocalizationManager>().clearMissingKeys();
+            // 뷰 대상(풀 · TAA · 노출 · 깊이 기록 · 지터 순번)은 되돌릴 목록에 두지 않고 통째로 버린다 — 다음 단계의 첫 프레임은 새 프로세스처럼 기록이 없다.
+            // 앞 단계의 기록이 남으면 같은 시나리오가 체인 위치에 따라 다른 그림을 냈다(언리얼 `FSceneViewState` 를 버리는 자리, 설계 D5).
+            // 되돌리기 뒤에 둔다 — 렌더 스레드가 앞 단계의 남은 패킷을 끝내기를 기다리는 동안 위 일이 이미 겹쳐 돌았다.
+            if ( _pRenderDriver != nullptr )
+                _pRenderDriver->discardViewTargets();
             // 단계 사이 초기화가 든 시간이다 - 다음 시나리오가 시작하기까지의 프레임(새 게임 · 첫 씬)은 그 실행의 timeline `start` 가 센다.
             SW_LOG_INFO_ID( "AutomationSession.StageResetTookMs", "[Scenario] stage reset took %#ms", static_cast<uint32>( ( static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - resetStartSeconds ) * 1000.0 ) );
         }
