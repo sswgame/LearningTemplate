@@ -28,7 +28,8 @@
             "_settings": {
                 "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
-                "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
+                "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt",
+                "_spam": { "_refillIntervalMs": 1000, "_repeatWindowMs": 10000, "_burstCount": 5, "_maxRepeatCount": 2, "_maxTrackedAccount": 65536 }
             }
         },
         {

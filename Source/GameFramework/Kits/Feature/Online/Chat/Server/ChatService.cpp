@@ -264,6 +264,11 @@ namespace sw
             SW_LOG_ERROR_ID( "ChatService.ChatServiceNeedsServiceStore", "ChatService needs a service store and an account directory" );
             return false;
         }
+        if ( settings._spam.isComplete() == false )
+        {
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceNoSpamLimit", "ChatService needs the spam limits (_spam in the chat kit settings)" );
+            return false;
+        }
         _dependencies = dependencies;
         _store.bindStore( dependencies._pStore );
         _presenceFinds.bind( dependencies._pBus != nullptr ? dependencies._pPresence : nullptr ); // 버스가 없으면 다른 서버로 보낼 길이 없다

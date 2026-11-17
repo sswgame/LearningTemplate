@@ -196,7 +196,10 @@ namespace
         explicit TradeServerFixture( bool bWithPresence = false, bool bWithRemoteConfig = false )
         {
             _pRig = make_unique<test::OnlineTestFixture>( false );
-            _tradeService.initialize( &_pRig->_server._store, &_policy, nullptr, kServerID, TradeServiceConfig{} );
+            TradeServiceConfig settings;
+            settings._inviteTimeoutMs = 30000; // 키트 설정의 필수 칸 — 견본 값
+            settings._idleTimeoutMs   = 300000;
+            _tradeService.initialize( &_pRig->_server._store, &_policy, nullptr, kServerID, settings );
             _tradeServer.initialize( &_tradeService, &_directory, bWithPresence ? &_presence : nullptr );
             _directory.add( "alice", kAlice );
             _directory.add( "bob", kBob );

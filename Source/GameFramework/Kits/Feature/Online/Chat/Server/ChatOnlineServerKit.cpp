@@ -98,6 +98,7 @@ namespace sw
                     return unexpected( ignoredCharactersPath.error() );
                 _settings._bannedWordsPath       = bannedWordsPath->has_value() ? ( *bannedWordsPath )->str() : string();
                 _settings._ignoredCharactersPath = ignoredCharactersPath->has_value() ? ( *ignoredCharactersPath )->str() : string();
+                _settings._spam                  = kitConfig._spam;
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
                 return registerServerService( context, entry, &_server )
                     .and_then( [&]

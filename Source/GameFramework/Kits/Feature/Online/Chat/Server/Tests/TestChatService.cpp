@@ -91,6 +91,18 @@ namespace
         void releaseSubscription( uint64 /*id*/ ) override {}
     };
 
+    /** @brief 운영 견본(`Shooter3D.online.json` 의 채팅 `_spam`)과 같은 도배 한도를 채운 설정입니다 — 한도는 필수라 빈 설정은 서지 않는다. */
+    ChatServiceConfig makeChatSettings()
+    {
+        ChatServiceConfig settings;
+        settings._spam._refillIntervalMs  = 1000;
+        settings._spam._repeatWindowMs    = 10000;
+        settings._spam._burstCount        = 5;
+        settings._spam._maxRepeatCount    = 2;
+        settings._spam._maxTrackedAccount = 65536;
+        return settings;
+    }
+
     /** @brief 서버 하나입니다. 영속 데이터와 버스 허브는 빌립니다. */
     struct ChatFixture
     {
@@ -103,7 +115,7 @@ namespace
         ChatService                _service;
         uint64                     _nextTag{ 1 };
 
-        ChatFixture( MemoryServiceDatabase& database, LocalServerBusHub* pHub, uint64 serverID, ChatServiceConfig settings = ChatServiceConfig{} )
+        ChatFixture( MemoryServiceDatabase& database, LocalServerBusHub* pHub, uint64 serverID, ChatServiceConfig settings = makeChatSettings() )
             : _store{ &database }
             , _directory{}
             , _policy{}
@@ -242,7 +254,7 @@ namespace
 
         static ChatServiceConfig makeOpenSettings()
         {
-            ChatServiceConfig settings;
+            ChatServiceConfig settings     = makeChatSettings();
             settings._spam._burstCount     = 1000;
             settings._spam._maxRepeatCount = 1000;
             return settings;
@@ -254,6 +266,7 @@ namespace
 SW_TEST_CASE( ChatServiceTest, InitializeNeedsDependenciesAndFiles )
 {
     SW_EXPECT_LOG( "ChatService.ChatServiceNeedsServiceStore" );
+    SW_EXPECT_LOG( "ChatService.ChatServiceNoSpamLimit" );
     SW_EXPECT_LOG( "ChatService.ChatServiceBannedWordFile" );
     SW_EXPECT_LOG( "File.NotFound" );
     MemoryServiceDatabase database;
@@ -263,11 +276,15 @@ SW_TEST_CASE( ChatServiceTest, InitializeNeedsDependenciesAndFiles )
     SW_EXPECT_FALSE( service.initialize( ChatServiceDependencies{}, ChatServiceConfig{} ) );
 
     ChatServiceDependencies dependencies;
-    dependencies._pStore     = &store;
-    dependencies._pDirectory = &directory;
-    ChatServiceConfig settings;
+    dependencies._pStore            = &store;
+    dependencies._pDirectory        = &directory;
+    ChatServiceConfig settings      = makeChatSettings();
     settings._ignoredCharactersPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Server/chat_ignored_characters.txt" );
     settings._bannedWordsPath       = test::makeScratchPath( "missing_banned.txt" );
+    SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
+
+    settings._bannedWordsPath.clear();
+    settings._spam = ChatSpamConfig{}; // 도배 한도가 비었다 — 코드 기본값으로 열리지 않는다
     SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
 }
 
@@ -407,7 +424,7 @@ SW_TEST_CASE( ChatServiceTest, SpamAndFilterApplyToSends )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( bannedPath, "badword\n" ) );
 
     MemoryServiceDatabase database;
-    ChatServiceConfig     settings;
+    ChatServiceConfig     settings   = makeChatSettings();
     settings._spam._burstCount       = 3;
     settings._spam._refillIntervalMs = 1000;
     settings._spam._maxRepeatCount   = 1;

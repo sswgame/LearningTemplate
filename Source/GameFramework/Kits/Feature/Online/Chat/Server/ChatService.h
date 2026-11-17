@@ -74,7 +74,7 @@ namespace sw
     /** @brief 채팅 설정입니다. */
     struct ChatServiceConfig
     {
-        ChatSpamConfig _spam{};
+        ChatSpamConfig _spam{};                  ///< 필수 — 채팅 키트 설정 `_spam`. 비면 `initialize` 가 거절한다
         string         _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
         string         _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `Config/Server/chat_ignored_characters.txt` 를 쓴다
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
