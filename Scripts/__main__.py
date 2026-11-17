@@ -56,6 +56,7 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("naming-census", "dev.naming_census", "Source 의 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)을 낱말로 쪼개 종류별로 센다(--out <폴더>) — 이름 전수 대조용"),
     Subcommand("client-only-types", "generate.client_only_types", "전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(--check 는 낡았는지만 본다)"),
     Subcommand("format", "lint.format:main_format", "C++ include 순서 · 중복 정리 + clang-format(셰이더는 clang-format) — 린트 include-order · format 의 고치는 명령"),
+    Subcommand("tidy", "lint.clang_tidy", "clang-tidy 병렬 실행 · 검사별 집계(본 트리 컴파일 DB 를 읽기만 한다) — 인자 없음: 전체, --changed [기준]: 바뀐 파일만(묶음 검증), --files: 지정 파일"),
     Subcommand("online-local", "net.online_local_run", "온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 띄워 로그인 → 키트 호출까지 돈다. 저장소 · 키트 · 제공자는 --server-config 가 고른다(run · check)"),
     Subcommand("net-pair", "net.net_pair_run", "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(run · check)"),
     Subcommand("new-online-kit", "dev.new_online_kit:main_new_online_kit", "온라인 키트 뼈대(Runtime · Server 모듈, 서술자 · 클라이언트 · 서비스 · 조립 · 테스트)를 만들고 중앙 표(메서드 영역 · 서버 키트 이름)에 한 줄씩 더한다"),
