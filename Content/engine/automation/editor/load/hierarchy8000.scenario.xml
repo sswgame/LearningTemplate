@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b625642fc0a84b5da61466ce2cdbb573"?>
+<!--
+  편집기 부하 시나리오 — 큐브 8000 씬의 계층 · 선택 비용(DesignBacklog "에디터 첫 패널 · Hierarchy 8000 측정 계획"). 씬은 커밋하지 않고 빈 씬에서 명령으로 짓는다.
+  ① 루트 8000: 큐브 하나를 만들고 복제(scene.duplicate 는 사본을 고른다)와 MeshComponent 전체 고르기(select.type)로 늘린다 — 1 → 5 → 25 → 125 → ×2 여섯 번 = 8000.
+  ② 20×20×20 트리: 루트(NavMeshModifierComponent 표지) 아래 마디(TagComponent 표지) 아래 잎(큐브)을 만들고 잎 · 마디 · 루트를 차례로 19 번씩 복제한다(복제는 하위를 함께 옮긴다).
+     표지 컴포넌트는 층마다 select.type 으로 그 층만 고르려는 것이다(편집기에서는 아무 일도 하지 않는다).
+  모양마다 아무것도 안 하는 프레임(계층 정지) · Ctrl+A(전체 선택) 뒤 프레임을 두고, 값은 <Record>(행 다시 짓기 수 · 오브젝트 수 · 선택 수)로 남긴다. 측정 창(<Load>)은 마지막 모양(트리)의 프레임이다.
+  판정은 기능만이다 — 행 수 · 선택 수. 프레임 시간 문턱은 흔들려 넣지 않고 통합이 표를 채운다(계층 avg 0.5 ms · Ctrl+A 16 ms).
+  측정 창이 끝내므로 <Pass/> 가 없다. 하위 폴더라 편집기 체인(Scenario.editor)이 줍지 않고 따로 혼자 도는 항목이다.
+  실행: ctest -L load (항목 Scenario.engine.editor.load.hierarchy8000) · App -EnableEditor -gv_traceSlowTickMs=100 -scenario=engine/automation/editor/load/hierarchy8000.scenario.xml -unattended
+-->
+<Scenario name="editor.load.hierarchy8000" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="Immediately" input="exclusive">
+	<Launch variable="gv_traceSlowTickMs" value="100"/>
+	<Load durationSeconds="15"/>
+	<EditorWaitStable/>
+	<DevCommand line="editor scene.new"/>
+	<EditorWaitStable/>
+	<!-- ① 루트 8000 -->
+	<DevCommand line="editor scene.object.create"/>
+	<DevCommand line="component.add MeshComponent"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<!-- 1 → 5: 고른 하나를 네 번 복제한다 -->
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<!-- 5 → 25: 다섯을 고르고 복제(10), 그 사본 다섯을 세 번 더(25) -->
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<!-- 25 → 125 -->
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="125"/>
+	<!-- 125 → 8000: 전체를 고르고 복제를 여섯 번 -->
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="8000"/>
+	<!-- 계층 정지: 선택을 풀고 프레임을 흘린다 — 구조가 그대로면 행을 다시 짓지 않는다 -->
+	<DevCommand line="panel.focus hierarchy"/>
+	<EditorKey key="Escape"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.HierarchyRowRebuildCount" as="flatRows"/>
+	<Wait frames="120"/>
+	<Record watch="Editor.HierarchyRowRebuildCount"/>
+	<Expect watch="Editor.HierarchyRowRebuildCount" sameAs="flatRows"/>
+	<!-- 전체 선택(Ctrl+A) — 그 프레임의 시간은 느린 프레임 트레이스가 남긴다 -->
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.SelectionCount" equals="8000"/>
+	<Record watch="Editor.SelectionCount"/>
+	<Record watch="Editor.ObjectCount"/>
+	<!-- 루트 8000 을 지운다(새 씬은 저장 묻기를 띄울 수 있어 지우기로 비운다) -->
+	<DevCommand line="select.type MeshComponent"/>
+	<DevCommand line="editor scene.delete"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="0"/>
+	<!-- ② 20×20×20 트리: 루트 → 마디 → 잎 -->
+	<DevCommand line="editor scene.object.create"/>
+	<DevCommand line="component.add NavMeshModifierComponent"/>
+	<DevCommand line="editor scene.object.createChild"/>
+	<DevCommand line="component.add TagComponent"/>
+	<DevCommand line="editor scene.object.createChild"/>
+	<DevCommand line="component.add MeshComponent"/>
+	<EditorWaitStable/>
+	<!-- 잎 20 -->
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<!-- 마디 20(잎 400) -->
+	<DevCommand line="select.type TagComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<!-- 루트 20(잎 8000) -->
+	<DevCommand line="select.type NavMeshModifierComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<DevCommand line="editor scene.duplicate"/>
+	<EditorWaitStable/>
+	<DevCommand line="select.type MeshComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="8000"/>
+	<DevCommand line="select.type TagComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="400"/>
+	<DevCommand line="select.type NavMeshModifierComponent"/>
+	<Expect watch="Editor.SelectionCount" equals="20"/>
+	<DevCommand line="panel.focus hierarchy"/>
+	<EditorKey key="Escape"/>
+	<EditorWaitStable/>
+	<Store watch="Editor.HierarchyRowRebuildCount" as="treeRows"/>
+	<Wait frames="120"/>
+	<Record watch="Editor.HierarchyRowRebuildCount"/>
+	<Expect watch="Editor.HierarchyRowRebuildCount" sameAs="treeRows"/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.SelectionCount" atLeast="20"/>
+	<Record watch="Editor.SelectionCount"/>
+	<Record watch="Editor.ObjectCount"/>
+</Scenario>
