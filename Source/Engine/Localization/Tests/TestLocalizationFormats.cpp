@@ -628,3 +628,136 @@ SW_TEST_CASE( LocalizationKeyIndexTest, ManagerRefusesCollidingKeys )
     SW_EXPECT_FALSE( manager.loadLanguageXML( "en", xml ) );
     SW_EXPECT_NULL( manager.findString( sw::hashed_string( "ui.other" ) ) );
 }
+
+namespace
+{
+    /** @brief 부모 하나와 자식 하나(적은 칸만 덮는다)를 든 표입니다. */
+    constexpr const utf8* kInheritanceTableXML = R"XML(<CultureTable>
+  <numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>
+  <currencies><currency code="EUR" symbol="€" digits="2" /></currencies>
+  <cultures>
+    <culture code="xx" digits="latn" nativeName="Root" decimalSeparator="," groupSeparator="." percentPattern="# %" currencyCode="EUR" currencyPattern="# ¤">
+      <pluralRules one="i = 1 and v = 0 @integer 1" other="@integer 0, 2~16, 100, 1000, 10000, 100000, 1000000, … @decimal 0.0~1.5, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0, …" />
+      <datePatterns short="dd.MM.yy" medium="dd.MM.y" long="d. MMMM y" />
+      <timePatterns short="HH:mm" medium="HH:mm:ss" />
+      <monthNames><item>Jan</item><item>Feb</item><item>Mar</item><item>Apr</item><item>May</item><item>Jun</item><item>Jul</item><item>Aug</item><item>Sep</item><item>Oct</item><item>Nov</item><item>Dec</item></monthNames>
+    </culture>
+    <culture code="xx_yy" parent="xx" decimalSeparator=".">
+      <monthNames><item>M1</item><item>M2</item><item>M3</item><item>M4</item><item>M5</item><item>M6</item><item>M7</item><item>M8</item><item>M9</item><item>M10</item><item>M11</item><item>M12</item></monthNames>
+    </culture>
+  </cultures>
+</CultureTable>)XML";
+} // namespace
+
+/**
+ * @brief [CultureInfoTest] 자식 문화권은 자기가 적은 칸만 덮는다 — 적지 않은 속성 · 패턴 · 복수형 규칙은 부모 것이다
+ * @details 문화권 부모 병합을 리플렉션 상속(`_base`)으로 옮기는 일(docs/DesignBacklog.md 리플렉션 남은 몫 W-R3 (e))이 지켜야 하는 동작이다.
+ */
+SW_TEST_CASE( CultureInfoTest, ChildOverridesOnlyWhatItWrites )
+{
+    sw::CultureTable         table;
+    const sw::expected<void> loaded = table.loadFromXMLText( kInheritanceTableXML, "inherit.cultures.xml" );
+    SW_REQUIRE_TRUE_MSG( loaded.has_value(), loaded.has_value() ? sw::string{} : sw::string( loaded.error().message() ) + " (" + sw::string( loaded.error().detail() ) + ")" );
+    const sw::CultureInfo* pRoot  = table.findCulture( "xx" );
+    const sw::CultureInfo* pChild = table.findCulture( "xx_yy" );
+    SW_REQUIRE_NOT_NULL( pRoot );
+    SW_REQUIRE_NOT_NULL( pChild );
+    SW_EXPECT_EQUAL( sw::string( "." ), pChild->_decimalSeparator );    // 덮었다
+    SW_EXPECT_EQUAL( pRoot->_groupSeparator, pChild->_groupSeparator ); // 물려받았다
+    SW_EXPECT_EQUAL( pRoot->_currencyPattern, pChild->_currencyPattern );
+    SW_EXPECT_EQUAL( pRoot->_numberingSystem, pChild->_numberingSystem );
+    SW_EXPECT_EQUAL( sw::string( "dd.MM.yy" ), sw::string( pChild->findDatePattern( "short" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "HH:mm:ss" ), sw::string( pChild->findTimePattern( "medium" ) ) );
+    SW_REQUIRE_EQUAL( size_t{ 12 }, pChild->_listMonthName.size() );
+    SW_EXPECT_EQUAL( sw::string( "M3" ), pChild->_listMonthName[2] );
+    SW_EXPECT_EQUAL( sw::string( "Mar" ), pRoot->_listMonthName[2] ); // 자식이 부모를 바꾸지 않는다
+    SW_EXPECT_EQUAL( sw::string( "1.234,5" ), pRoot->formatDecimal( 1234.5, 1, 1 ) );
+    SW_EXPECT_EQUAL( sw::string( "1.234.5" ), pChild->formatDecimal( 1234.5, 1, 1 ) );
+    SW_EXPECT_EQUAL( sw::string( "one" ), sw::string( sw::CultureInfo::getPluralKeyword( pChild->selectPlural( sw::PluralOperands::makeInteger( 1 ) ) ) ) );
+}
+
+/**
+ * @brief [CultureInfoTest] 부모가 없는 문화권에 `<pluralRules>` 가 없으면 읽기 오류다 — 부모가 있으면 물려받으므로 없어도 된다
+ */
+SW_TEST_CASE( CultureInfoTest, RootWithoutPluralRulesIsAnError )
+{
+    constexpr const utf8*    kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    sw::CultureTable         rootTable;
+    const sw::expected<void> rootLoaded =
+        rootTable.loadFromXMLText( sw::string( "<CultureTable>" ) + kLatin + R"(<cultures><culture code="xx" digits="latn" /></cultures></CultureTable>)", "root.cultures.xml" );
+    SW_REQUIRE_FALSE( rootLoaded.has_value() );
+    const sw::string error = sw::string( rootLoaded.error().message() ) + " (" + sw::string( rootLoaded.error().detail() ) + ")";
+    SW_EXPECT_TRUE_MSG( error.find( "pluralRules" ) != sw::string::npos, error.c_str() );
+    SW_EXPECT_EQUAL( size_t( 0 ), rootTable.getCultureCount() );
+
+    sw::CultureTable childTable;
+    SW_EXPECT_TRUE( childTable.loadFromXMLText( kInheritanceTableXML, "inherit.cultures.xml" ) ); // xx_yy 는 규칙을 적지 않았다
+}
+
+/**
+ * @brief [CultureInfoTest] 부모 순환(서로를 부모로 가리킴)과 없는 부모는 읽기 오류이고 표는 그대로다
+ */
+SW_TEST_CASE( CultureInfoTest, ParentCycleIsAnError )
+{
+    constexpr const utf8* kLatin = R"(<numberingSystems><numberingSystem id="latn" digits="0123456789" /></numberingSystems>)";
+    for ( const sw::string& cultures : { sw::string( R"(<culture code="aa" parent="bb" /><culture code="bb" parent="aa" />)" ), sw::string( R"(<culture code="aa" parent="zz" />)" ) } )
+    {
+        sw::CultureTable         table;
+        const sw::expected<void> loaded = table.loadFromXMLText( sw::string( "<CultureTable>" ) + kLatin + "<cultures>" + cultures + "</cultures></CultureTable>", "cycle.cultures.xml" );
+        SW_EXPECT_FALSE( loaded );
+        SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
+    }
+}
+
+/**
+ * @brief [CultureInfoTest] 출하 표의 모든 문화권에 대해 숫자 · 통화 · 날짜 · 복수형 서식 결과가 기록과 글자까지 같다
+ * @details 손 파서를 리플렉션 상속으로 바꾸기 **전에** 기록한다(`App --test --test-filter=CultureInfoTest.FormatsMatchTheHandParserForEveryShippedCulture --update-snapshots`) —
+ *          바꾼 뒤에도 같은 스냅숏이어야 한다(docs/DesignBacklog.md 리플렉션 남은 몫 W-R3 (e)).
+ */
+SW_TEST_CASE( CultureInfoTest, FormatsMatchTheHandParserForEveryShippedCulture )
+{
+    const sw::CultureTable table = LocalizationFormatsTestInternal::loadCultures();
+    sw::vector<sw::string> listCode;
+    table.collectCultureCodes( listCode );
+    SW_REQUIRE_TRUE( listCode.empty() == false );
+
+    sw::TextDateTime when;
+    when._year   = 2026;
+    when._month  = 3;
+    when._day    = 7;
+    when._hour   = 14;
+    when._minute = 5;
+    when._second = 9;
+    sw::string text;
+    for ( const sw::string& code : listCode )
+    {
+        const sw::CultureInfo* pCulture = table.findCulture( code );
+        SW_REQUIRE_NOT_NULL( pCulture );
+        text += code + "\n";
+        text += "  integer  " + pCulture->formatInteger( -1234567 ) + "\n";
+        text += "  decimal  " + pCulture->formatDecimal( 1234.5, 1, 2 ) + "\n";
+        text += "  percent  " + pCulture->formatPercent( 0.256 ) + "\n";
+        text += "  currency " + pCulture->formatCurrency( 1234.5, {} ) + " | " + pCulture->formatCurrency( 99.0, "USD" ) + "\n";
+        for ( const utf8* pStyle : { "short", "medium", "long" } )
+        {
+            text += sw::string( "  date." ) + pStyle + " " + pCulture->formatDateTime( when, pCulture->findDatePattern( pStyle ) ) + "\n";
+        }
+        for ( const utf8* pStyle : { "short", "medium" } )
+        {
+            text += sw::string( "  time." ) + pStyle + " " + pCulture->formatDateTime( when, pCulture->findTimePattern( pStyle ) ) + "\n";
+        }
+        text += "  plural  ";
+        for ( const int64 count : { 0, 1, 2, 3, 5, 11, 21, 101 } )
+        {
+            text += sw::string( sw::CultureInfo::getPluralKeyword( pCulture->selectPlural( sw::PluralOperands::makeInteger( count ) ) ) ) + " ";
+        }
+        text += sw::string( sw::CultureInfo::getPluralKeyword( pCulture->selectPlural( sw::PluralOperands::makeDecimal( 1.5, 1 ) ) ) ) + "\n";
+        text += "  ordinal ";
+        for ( const int64 count : { 1, 2, 3, 4, 11, 21, 22, 23 } )
+        {
+            text += sw::string( sw::CultureInfo::getPluralKeyword( pCulture->selectOrdinal( sw::PluralOperands::makeInteger( count ) ) ) ) + " ";
+        }
+        text += "\n  fonts   " + sw::string( pCulture->_listFont.empty() ? "-" : pCulture->_listFont.front() ) + " rtl=" + ( pCulture->_bRightToLeft == SW_TRUE ? "1" : "0" ) + "\n";
+    }
+    SW_EXPECT_SNAPSHOT( "formats", text );
+}
