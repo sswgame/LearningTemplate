@@ -148,6 +148,13 @@ namespace sw
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _poolMegabytes{};
 
+        /**
+         * @brief 위쪽 밉을 범위로 읽는 중이거나 읽어 제출을 기다리는 바이트 합의 상한(MB)입니다(`TextureCache::updateStreaming`, MR-2 — 대기 줄은 바이트를 쥐지 않는다).
+         * @details 유니티 `QualitySettings.streamingMipmapsMaxFileIORequests` 자리를 바이트로 잰다(텍스처마다 크기가 달라 수보다 바이트가 RAM 을 묶는다). 하나가 이보다 크면 혼자일 때만 읽는다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _maxMegabytesInFlight{};
+
         /** @brief 화면 크기를 알리지 않은 지 이만큼 지난 텍스처는 필요 없는 것으로 본다 — 예산을 넘으면 가장 먼저 내리고, 다시 보일 때까지 올리지 않는다(`TextureStreamingPolicy`). */
         PROPERTY( Min = 1 )
         uint32 _idleFramesBeforeRelease{};

@@ -16,6 +16,7 @@
 namespace sw
 {
     struct DDSImageData;
+    struct TextureMipLayout;
 
     /** @brief 텍스처 품질이 읽을 때 버리는 위쪽 밉입니다(`Texture2D::computeMipDrop`). */
     struct Texture2DMipDrop
@@ -99,6 +100,15 @@ namespace sw
          * @return 읽지 못했거나 포맷 · 차원이 맞지 않으면 오류를 남기고 false 를 반환합니다.
          */
         [[nodiscard]] static bool readImage( const AssetID& assetID, DDSImageData& outImage );
+        /** @brief `readImage` 가 실제로 읽는 경로입니다 — 붙은 장치가 고른 형식 변형이 쿠킹돼 있으면 그 경로, 아니면 @p assetID 그대로다(밉 범위 읽기가 같은 파일을 읽게). */
+        [[nodiscard]] static string findReadPath( const AssetID& assetID );
+        /**
+         * @brief 읽은 이미지의 밉마다 파일 구간입니다(`DDSImageData::_dataOffset` 부터 큰 밉 순 — DDS 는 큰 밉부터 이어진다). 픽셀은 쥐지 않는다(MR-2 — 올리기 줄이 범위로 다시 읽는다).
+         * @details 머리를 다시 풀지 않고 업로드와 같은 밉 배치(`computeRHITextureMipLayout`)로 센다 — 업로드가 읽는 구간과 어긋날 수 없다.
+         */
+        [[nodiscard]] static TextureMipLayout makeMipLayout( const DDSImageData& image );
+        /** @brief 위쪽 밉 올리기가 읽기 시작할 밉입니다 — 텍스처 품질(`gv_textureMipDrop`)이 버리는 밉 수다(`beginUploadFromImage` 의 품질 버리기와 같은 식). */
+        [[nodiscard]] static uint32 computeUpgradeFirstMip( const TextureMipLayout& layout );
         /**
          * @brief `readImage` 가 읽은 이미지를 GPU 에 업로드합니다. 디바이스를 쓰는 스레드에서만 부릅니다(DX11 즉시 컨텍스트 · GL 컨텍스트는 스레드에 묶인다).
          * @param residency `StreamingBase` 면 아래쪽 밉만 업로드합니다 — 위쪽 밉은 `upgradeResidency` 가 같은 이미지로 뒤에 업로드합니다(`isFullyResident`).
@@ -120,14 +130,16 @@ namespace sw
         /** @brief 제출했고 아직 `finishUpload` 가 끝내지 않은 업로드가 있으면 true 입니다. */
         bool hasUploadInFlight() const { return _uploadTicket.isValid(); }
         /**
-         * @brief 아래쪽 밉만 있는 텍스처(`StreamingBase`)에 밉 사슬 전부를 새 GPU 텍스처로 올리는 1단계입니다 — 새 텍스처를 만들고 업로드를 제출합니다(렌더 스레드, 기록 전).
+         * @brief 아래쪽 밉만 있는 텍스처(`StreamingBase`)에 밉 @p firstMip 부터 끝까지를 새 GPU 텍스처로 올리는 1단계입니다 — 새 텍스처를 만들고 업로드를 제출합니다(렌더 스레드, 기록 전).
          * @details 첫 업로드와 같은 세 단계다(RHIAsyncUploads U8): 이 함수 → 이후 프레임의 `finishUpgradeResidency`. 그 사이 이 텍스처는 아래쪽 밉 그대로 그려진다. 실패하면 아래쪽 밉 그대로
          *          남는다(오류를 남긴다). 이미 올리는 중이거나 올릴 것이 없으면 `Failed` 다(오류 없음).
+         *          @p mipBytes 는 그 밉들의 파일 구간(`TextureMipLayout::getRange`)을 범위로 읽은 바이트다(MR-2 — 줄은 바이트를 쥐지 않는다). 함수가 끝나면 그대로 돌려준다
+         *          (`Busy` 면 부르는 쪽이 같은 바이트로 다음 프레임에 다시 낸다 — 스테이징이 복사했으므로 `Submitted` 뒤에는 버려도 된다).
          * @param bBlocking 참이면 `Busy` 를 기다려 넘긴다. 거짓이면 `Busy` 를 그대로 돌려줍니다(만든 텍스처는 지웠다).
          */
-        [[nodiscard]] Texture2DUploadStep beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& sourceImage, bool bBlocking );
+        [[nodiscard]] Texture2DUploadStep beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, bool bBlocking );
         /**
-         * @brief `beginUpgradeResidency` 가 낸 업로드가 끝났는지 보고, 끝났으면 새 텍스처를 bindless 에 등록해 바꿔 끼웁니다(렌더 스레드).
+         * @brief `beginUploadMips` 가 낸 업로드가 끝났는지 보고, 끝났으면 새 텍스처를 bindless 에 등록해 바꿔 끼웁니다(렌더 스레드).
          * @details 옛 자원은 @p outRetired 로 내놓는다: 게임 스레드가 이미 만든 패킷이 옛 SRV 번호를 값으로 가지고 있으므로 그 패킷이 끝난 뒤에 해제한다(`TextureCache::releaseRetiredTextures`).
          *          SRV 번호는 그대로 새 텍스처로 다시 묶는다(R-6) — 머티리얼은 다시 받지 않는다.
          * @return `Ready` 면 바꿔 끼웠다. `Failed` 면 아래쪽 밉 그대로이고 새 텍스처는 지웠다(장치 교체로 낸 업로드가 사라진 경우 포함).
@@ -255,13 +267,13 @@ namespace sw
         static const DDSImageData& selectDeviceImage( const IRHIDevice& device, const DDSImageData& image, DDSImageData& outExpanded );
         /**
          * @brief 새 GPU 텍스처를 만들고 위쪽 @p drop 밉을 뺀 사슬의 업로드를 제출합니다(SRV 는 등록하지 않는다). 실패하면 오류를 남기고 만든 것을 지우며 @p outHandle 은 0 입니다.
-         * @details 처음 업로드(`beginUploadFromImage`)와 스트리밍의 바꿔 끼우기(`beginUpgradeResidency`)가 같은 순서를 쓴다 — 둘이 따로 쓰면 한쪽만 실패 정리를 빠뜨린다.
+         * @details 처음 업로드(`beginUploadFromImage`)와 스트리밍의 바꿔 끼우기(`beginUploadMips`)가 같은 순서를 쓴다 — 둘이 따로 쓰면 한쪽만 실패 정리를 빠뜨린다.
          */
         [[nodiscard]] static Texture2DUploadStep createAndSubmitMips( IRHIDevice& device, string_view relativePath, const DDSImageData& image, RHIFormat format,
                                                                       const Texture2DMipDrop& drop, bool bBlocking, RHITextureDesc& outDesc, RHITextureHandle& outHandle,
                                                                       RHITransferTicket& outTicket );
 
-        /** @brief 제출했고 끝나지 않은 위쪽 밉 업로드입니다(`beginUpgradeResidency`). 새 텍스처는 `finishUpgradeResidency` 가 등록해 바꿔 끼운다. */
+        /** @brief 제출했고 끝나지 않은 위쪽 밉 업로드입니다(`beginUploadMips`). 새 텍스처는 `finishUpgradeResidency` 가 등록해 바꿔 끼운다. */
         struct PendingUpgrade
         {
             RHITextureHandle  _handle{ 0 };

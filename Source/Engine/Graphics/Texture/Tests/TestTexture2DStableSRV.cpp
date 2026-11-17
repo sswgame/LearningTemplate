@@ -10,6 +10,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -169,7 +170,16 @@ SW_TEST_CASE( Texture2DStableSRVTest, PromotionKeepsSRV )
     SW_REQUIRE_FALSE( texture.isFullyResident() );
     const RHIDescriptorIndex srv     = texture.getSRV();
     const RHITextureHandle   lowMips = texture.getHandle();
-    SW_REQUIRE_TRUE( texture.beginUpgradeResidency( &device, image, true ) == Texture2DUploadStep::Submitted );
+    // 올리기 줄은 바이트를 쥐지 않고 밉 범위를 다시 읽는다(MR-2) — 여기서는 그 범위를 이미지에서 잘라 넘긴다.
+    const TextureMipLayout layout   = Texture2D::makeMipLayout( image );
+    const uint32           firstMip = Texture2D::computeUpgradeFirstMip( layout );
+    uint64                 offset{ 0 };
+    uint64                 size{ 0 };
+    layout.getRange( firstMip, static_cast<uint32>( layout._listMip.size() ) - firstMip, offset, size );
+    vector<uint8> mipBytes;
+    mipBytes.assign( image._bytes.begin() + static_cast<ptrdiff_t>( offset ), image._bytes.begin() + static_cast<ptrdiff_t>( offset + size ) );
+    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, firstMip, mipBytes, true ) == Texture2DUploadStep::Submitted );
+    SW_EXPECT_EQUAL( static_cast<size_t>( size ), mipBytes.size() ); // 바이트는 부른 쪽에 돌아온다
     Texture2DRetiredResource retired{};
     SW_REQUIRE_TRUE( texture.finishUpgradeResidency( &device, true, retired ) == Texture2DUploadStatus::Ready );
 

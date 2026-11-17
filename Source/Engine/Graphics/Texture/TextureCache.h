@@ -27,6 +27,7 @@ namespace sw
     {
         uint32 _maxUpgradesPerFrame{ 0 }; ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
         uint64 _poolBytes{ 0 };           ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
+        uint64 _maxBytesInFlight{ 0 };    ///< 범위로 읽는 중 · 제출을 기다리는 위쪽 밉 바이트 합의 상한(MR-2 — 하나가 이보다 크면 혼자일 때만 읽는다)
     };
 
     class IRHIDevice;
@@ -120,6 +121,8 @@ namespace sw
          *          새 GPU 텍스처로 바꿔 끼우고 SRV 번호는 그대로 다시 묶는다(R-6 — 머티리얼은 다시 받지 않는다). 옛 텍스처는 게임 스레드가 해제한다(`releaseRetiredTextures`).
          *          그 사이 놓인 텍스처 · 다른 디바이스의 텍스처는 건너뛴다(다시 업로드할 때 밉 전부가 올라간다).
          *          풀 예산(`TextureStreamingBudget::_poolBytes`)을 넘는 승급은 내지 않는다 — 그 텍스처부터 줄에 남아 아래쪽 밉 그대로다(예약은 `TextureStreamingPool`).
+         *          줄은 밉 요청(`TextureMipRequest`)만 든다(MR-2): 꺼낼 때 그 밉 구간을 IO 스레드가 범위로 읽고(`AssetIO::readBinaryAssetRangeAsync`), 다 읽은 것을 다음 호출이
+         *          제출한다. 읽는 중 · 제출 대기 바이트의 합은 `TextureStreamingBudget::_maxBytesInFlight` 아래다. 읽는 사이 마지막 참조가 놓인 텍스처는 올리지 않고 버린다.
          */
         uint32 updateStreaming( IRHIDevice* pDevice, const TextureStreamingBudget& budget );
         /**
@@ -320,6 +323,7 @@ namespace sw
     private:
         friend class TextureCache;               // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다
         unique_ptr<DDSImageData>     _pImage;    ///< 로드 단계가 읽은 그림(파일만). 완료 단계가 올리고 버린다
+        string                       _readPath;  ///< 로드 단계가 실제로 읽은 파일(형식 변형이면 변형 파일) — 위쪽 밉을 범위로 다시 읽는다(MR-2)
         string                       _loadError; ///< 로드 단계의 실패 이유 — 완료 단계가 드러낸다
         weak_ptr<TextureCache::Impl> _pCache;
         atomic<IRHIDevice*>          _pDevice;  ///< 올릴 디바이스 — 마지막으로 요청한 쪽 · 펌프가 자기 것으로 바꾼다(처음 요청한 디바이스는 이미 내려갔을 수 있다)

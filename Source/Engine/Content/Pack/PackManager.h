@@ -123,6 +123,11 @@ namespace sw
          * @return 건 읽기의 핸들. 어느 팩에도 없으면 아무것도 걸지 않고 `isValid() == false` 인 핸들입니다(@p onComplete 는 불리지 않는다).
          */
         AsyncReadHandle readFileAsync( AsyncFileIO& io, string_view relativePath, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
+        /**
+         * @brief 마운트된 팩을 우선순위 순서대로 찾아 그 항목의 구간 [@p offset, @p offset + @p size) 를 비동기로 읽습니다(`PackReader::readRangeAsync` — 무압축 항목만).
+         * @return 어느 팩에도 없거나 구간을 읽을 수 없으면(압축 항목 · 구간 밖) `isValid() == false` 인 핸들입니다(@p onComplete 는 불리지 않는다).
+         */
+        AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view relativePath, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
 
         /**
          * @brief DLC 소유권 검증 콜백을 등록합니다. DLC 팩(AppID > 0)은 이것이 없으면 붙지 않는다(`PackManager.NoDLCValidator`).

@@ -456,6 +456,7 @@ namespace sw
         TextureStreamingBudget streamingBudget;
         streamingBudget._maxUpgradesPerFrame = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
         streamingBudget._poolBytes           = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._maxBytesInFlight    = static_cast<uint64>( streamingConfig._maxMegabytesInFlight ) * constant::memory::kBytesPerMegabyte;
         (void)textures.updateStreaming( pDevice, streamingBudget );
     }
 

@@ -21,7 +21,9 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -111,12 +113,27 @@ namespace sw
             bool                           _bPinned{ false };     ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool                           _bUpgrading{ false };  ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             TextureStreamingReservation    _streamingReservation; ///< 위쪽 밉 승급이 풀(`_streamingPool`)에서 쥔 바이트 — 항목이 사라지면 돌려준다(지우는 자리마다 빼지 않는다)
+            TextureMipLayout               _mipLayout;            ///< 위쪽 밉을 다시 읽을 파일 구간(로드가 끝날 때 적는다 — 픽셀은 쥐지 않는다, MR-2)
+            string                         _mipReadPath;          ///< 그 구간을 읽을 경로(형식 변형이 있으면 변형 파일 — 첫 로드가 읽은 파일과 같다)
         };
-        /** @brief 위쪽 밉을 기다리는 텍스처 하나입니다 — 로드 단계가 읽은 DDS 이미지를 보관한다(다시 읽지 않는다). */
-        struct StreamingUpgrade
+        /** @brief 범위 읽기 하나의 결과입니다 — IO 완료(다른 스레드)가 바이트를 넣고 상태를 올린다. 렌더 스레드는 상태가 `Reading` 이 아닐 때만 바이트를 만진다. */
+        struct StreamingReadResult
         {
-            string                   _key;
-            unique_ptr<DDSImageData> _pImage;
+            enum class State : uint8
+            {
+                Reading,
+                Read,
+                Failed
+            };
+            atomic<uint8> _state{ static_cast<uint8>( State::Reading ) };
+            vector<uint8> _bytes;
+        };
+        /** @brief 읽는 중이거나 읽었고 제출을 기다리는 밉 요청입니다(`updateStreaming`). 바이트는 결과가 쥐고, 제출하거나 버릴 때 놓는다. */
+        struct StreamingRead
+        {
+            TextureMipRequest               _request;
+            uint64                          _byteSize{ 0 }; ///< `_bytesInFlight` 에 센 바이트
+            shared_ptr<StreamingReadResult> _pResult;
         };
         struct RenderTargetSize
         {
@@ -147,21 +164,23 @@ namespace sw
         unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
         shared_mutex                            _mutex;
         /// @brief 항목의 `_bLoading` 이 내려갈 때 깨운다. 태스크 대기가 아니다 — 맵 잠금 아래의 항목 상태를 기다리고, 올리는 쪽(`reload` · `resizeRenderTarget`)은 태스크 없이 디바이스 스레드에서 돈다.
-        std::condition_variable_any                    _cvLoaded;
-        mutex                                          _standInMutex;               ///< 자리 텍스처를 올리는 쪽 하나만(`ensureStandInTextures`)
-        atomic<Texture2D*>                             _pLoadingStandIn{ nullptr }; ///< 예약한 번호가 처음 가리킬 로드 중 텍스처(이 캐시가 참조 하나를 쥔다)
-        atomic<Texture2D*>                             _pMissingStandIn{ nullptr }; ///< 실패한 로드의 번호를 다시 묶을 누락 체커(이 캐시가 참조 하나를 쥔다)
-        atomic<IRHIDevice*>                            _pBoundDevice{ nullptr };    ///< 엔진이 붙인 디바이스(`bindDevice`) — 게임 스레드 요청 · 해제가 쓴다
-        string _formatVariantSuffix                    SW_GUARDED_BY( _mutex );     ///< 붙은 장치가 고른 형식 변형 접미사(`getFormatVariantSuffix` — 비면 임포트한 DDS 그대로)
-        mutex                                          _awaitingMutex;
-        vector<shared_ptr<TextureLoadOperation>>       _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다, `_awaitingMutex`)
-        vector<shared_ptr<TextureLoadOperation>>       _listUploading;      ///< 업로드를 제출했고 끝남 확인을 기다리는 로드(`completePendingLoads` 가 폴링한다, `_awaitingMutex`)
-        mutex                                          _streamingMutex;
-        vector<StreamingUpgrade> _listStreamingUpgrade SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
-        bool _bStreamingParked                         SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
-        TextureStreamingRetireList                     _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
-        vector<string> _listUpgrading                  SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
-        unordered_map<string, float32>                 _mapScreenSize;                           ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
+        std::condition_variable_any                     _cvLoaded;
+        mutex                                           _standInMutex;               ///< 자리 텍스처를 올리는 쪽 하나만(`ensureStandInTextures`)
+        atomic<Texture2D*>                              _pLoadingStandIn{ nullptr }; ///< 예약한 번호가 처음 가리킬 로드 중 텍스처(이 캐시가 참조 하나를 쥔다)
+        atomic<Texture2D*>                              _pMissingStandIn{ nullptr }; ///< 실패한 로드의 번호를 다시 묶을 누락 체커(이 캐시가 참조 하나를 쥔다)
+        atomic<IRHIDevice*>                             _pBoundDevice{ nullptr };    ///< 엔진이 붙인 디바이스(`bindDevice`) — 게임 스레드 요청 · 해제가 쓴다
+        string _formatVariantSuffix                     SW_GUARDED_BY( _mutex );     ///< 붙은 장치가 고른 형식 변형 접미사(`getFormatVariantSuffix` — 비면 임포트한 DDS 그대로)
+        mutex                                           _awaitingMutex;
+        vector<shared_ptr<TextureLoadOperation>>        _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다, `_awaitingMutex`)
+        vector<shared_ptr<TextureLoadOperation>>        _listUploading;      ///< 업로드를 제출했고 끝남 확인을 기다리는 로드(`completePendingLoads` 가 폴링한다, `_awaitingMutex`)
+        mutex                                           _streamingMutex;
+        vector<TextureMipRequest> _listStreamingUpgrade SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉을 기다리는 밉 요청(먼저 들어온 것부터, `updateStreaming` 이 비운다) — 바이트를 쥐지 않는다(MR-2)
+        vector<StreamingRead> _listReading              SW_GUARDED_BY( _streamingMutex );         ///< 범위를 읽는 중이거나 읽어 제출을 기다리는 요청
+        uint64 _bytesInFlight                           SW_GUARDED_BY( _streamingMutex ) = 0;     ///< `_listReading` 이 쥔(쥘) 바이트 합 — `TextureStreamingBudget::_maxBytesInFlight` 아래로 묶는다
+        bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
+        TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
+        vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
+        unordered_map<string, float32>                  _mapScreenSize;                           ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
 
         /** @brief `submitRegionUpdate` 의 결과: 올림 · 다음 프레임에 다시(`Busy` 이면 이번 차례의 나머지도 미룬다) · 버림. */
         enum class RegionFlushResult : uint8
@@ -232,11 +251,25 @@ namespace sw
             return RegionFlushResult::Dropped;
         }
 
-        /** @brief 위쪽 밉을 기다리는 줄에 넣습니다(로드 작업의 완료 단계). */
-        void queueStreamingUpgrade( const string& key, unique_ptr<DDSImageData> pImage )
+        /**
+         * @brief 위쪽 밉을 기다리는 줄에 밉 요청을 넣습니다(로드 작업의 완료 단계). 줄은 바이트를 쥐지 않는다 — 항목에 파일 구간과 읽을 경로만 적고, 올릴 때 범위로 다시 읽는다(MR-2).
+         * @details 언리얼 `FRenderAssetStreamingManager` 의 대기 줄도 "어느 텍스처의 어느 밉" 만 든다(`FTexture2DStreamIn_IO` 가 그때 벌크 데이터를 오프셋으로 읽는다).
+         */
+        void queueMipRequest( const string& key, const DDSImageData& image, string readPath )
         {
+            TextureMipLayout layout   = Texture2D::makeMipLayout( image );
+            const uint32     firstMip = Texture2D::computeUpgradeFirstMip( layout );
+            const uint32     mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
+            {
+                UniqueLock<shared_mutex> lock{ _mutex };
+                const auto               it = _mapEntry.find( key );
+                if ( it == _mapEntry.end() )
+                    return;
+                it->second._mipLayout   = std::move( layout );
+                it->second._mipReadPath = std::move( readPath );
+            }
             ScopedLock<mutex> lock{ _streamingMutex };
-            _listStreamingUpgrade.push_back( StreamingUpgrade{ key, std::move( pImage ) } );
+            _listStreamingUpgrade.push_back( TextureMipRequest{ key, firstMip, mipCount } );
         }
 
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(`TextureCache::release` · 로드 작업 소멸). */
@@ -685,8 +718,81 @@ namespace sw
         if ( maxCount == 0 )
             return upgradedCount;
 
-        // 2) 새로 제출한다 — 프레임당 상한은 제출 수다.
-        vector<Impl::StreamingUpgrade> listUpgrade;
+        SW_PROFILE_SCOPE( "RT.TextureStreaming" );
+        SW_PROFILE_COUNT( "RT.TextureStreaming.poolBytes", _impl->_streamingPool.getUsedBytes() );
+
+        // 2) 다 읽은 밉 구간을 제출한다 — 프레임당 상한은 제출 수다. 읽는 중인 것은 줄에 남는다(MR-2).
+        vector<Impl::StreamingRead> listRead;
+        {
+            ScopedLock<mutex> lock{ _impl->_streamingMutex };
+            SW_PROFILE_COUNT( "RT.TextureStreaming.bytesInFlight", _impl->_bytesInFlight );
+            for ( size_t index = 0; index < _impl->_listReading.size(); )
+            {
+                if ( _impl->_listReading[index]._pResult->_state.load( std::memory_order_acquire ) == static_cast<uint8>( Impl::StreamingReadResult::State::Reading ) )
+                {
+                    ++index;
+                    continue;
+                }
+                listRead.push_back( std::move( _impl->_listReading[index] ) );
+                _impl->_listReading.erase( _impl->_listReading.begin() + static_cast<ptrdiff_t>( index ) );
+            }
+        }
+        // 제출했거나 버린 구간의 바이트를 놓는다 — 읽는 중 · 제출 대기 바이트의 합만 상한에 센다.
+        const auto releaseRead = [this]( Impl::StreamingRead& read )
+        {
+            read._pResult.reset();
+            ScopedLock<mutex> lock{ _impl->_streamingMutex };
+            _impl->_bytesInFlight -= MathUtil::min( _impl->_bytesInFlight, read._byteSize );
+        };
+        uint32 submitCount = 0;
+        for ( size_t index = 0; index < listRead.size(); ++index )
+        {
+            Impl::StreamingRead&    read     = listRead[index];
+            Texture2D*              pTexture = nullptr;
+            const TextureMipLayout* pLayout  = nullptr;
+            bool                    bDropped = false;
+            {
+                ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
+                const auto                     it = _impl->_mapEntry.find( read._request._key );
+                if ( it == _impl->_mapEntry.end() || it->second._texture == nullptr ) // 캐시를 비웠다(종료)
+                    continue;
+                // 올리는 중 표시가 항목을 지킨다. 그사이 마지막 참조가 놓였으면 올리지 않고 버린다 — 아래 마무리가 항목을 지운다.
+                bDropped = it->second._refCount == 0 && it->second._bPinned == false;
+                pTexture = it->second._texture.get();
+                pLayout  = &it->second._mipLayout;
+            }
+            const bool bReadFailed = read._pResult->_state.load( std::memory_order_acquire ) == static_cast<uint8>( Impl::StreamingReadResult::State::Failed );
+            if ( bReadFailed || bDropped )
+            {
+                if ( bReadFailed )
+                    SW_LOG_ERROR_ID( "TextureCache.MipRangeReadFailed", "TextureCache: the top mips of '%#' could not be read - it keeps its lower mips", read._request._key.c_str() );
+                releaseRead( read );
+                completeUpgrade( read._request._key, false, Texture2DRetiredResource{} );
+                continue;
+            }
+            const bool                bFrameFull = submitCount >= maxCount;
+            const Texture2DUploadStep step       = bFrameFull ? Texture2DUploadStep::Busy : pTexture->beginUploadMips( pDevice, *pLayout, read._request._firstMip, read._pResult->_bytes, false );
+            if ( step == Texture2DUploadStep::Submitted )
+            {
+                ++submitCount;
+                releaseRead( read ); // 스테이징이 복사했다
+                ScopedLock<mutex> lock{ _impl->_streamingMutex };
+                _impl->_listUpgrading.push_back( read._request._key );
+                continue;
+            }
+            if ( step == Texture2DUploadStep::Busy )
+            {
+                // 프레임 상한 · 스테이징이 찼다 — 읽은 바이트를 쥔 채 나머지와 함께 줄로 되돌린다(다음 프레임에 다시 낸다, 다시 읽지 않는다).
+                ScopedLock<mutex> lock{ _impl->_streamingMutex };
+                _impl->_listReading.insert( _impl->_listReading.begin(), std::make_move_iterator( listRead.begin() + static_cast<ptrdiff_t>( index ) ), std::make_move_iterator( listRead.end() ) );
+                break;
+            }
+            releaseRead( read ); // 실패했다(오류를 남겼다) — 아래쪽 밉 그대로 둔다
+            completeUpgrade( read._request._key, false, Texture2DRetiredResource{} );
+        }
+
+        // 3) 새로 읽는다 — 프레임당 상한은 시작하는 읽기 수다. 읽는 중 · 제출 대기 바이트의 합을 `_maxBytesInFlight` 아래로 묶는다(하나가 상한보다 크면 혼자일 때만 읽는다).
+        vector<TextureMipRequest> listRequest;
         {
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
             const size_t      takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listStreamingUpgrade.size() );
@@ -700,69 +806,87 @@ namespace sw
             if ( _impl->_mapScreenSize.empty() == false )
             {
                 const unordered_map<string, float32>& mapScreenSize = _impl->_mapScreenSize;
-                const auto                            getSizeOf     = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
+                const auto                            getSizeOf     = [&mapScreenSize]( const TextureMipRequest& request )
                 {
-                    const auto it = mapScreenSize.find( upgrade._key );
+                    const auto it = mapScreenSize.find( request._key );
                     return it != mapScreenSize.end() ? it->second : 0.0f;
                 };
-                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&getSizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
+                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&getSizeOf]( const TextureMipRequest& lhs, const TextureMipRequest& rhs )
                 { return getSizeOf( lhs ) > getSizeOf( rhs ); } );
                 _impl->_mapScreenSize.clear();
             }
-            listUpgrade.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
+            listRequest.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
                                 std::make_move_iterator( _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) ) );
             _impl->_listStreamingUpgrade.erase( _impl->_listStreamingUpgrade.begin(), _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) );
         }
-        SW_PROFILE_SCOPE( "RT.TextureStreaming" );
-        SW_PROFILE_COUNT( "RT.TextureStreaming.poolBytes", _impl->_streamingPool.getUsedBytes() );
-        bool bOverBudget = false;
-        for ( size_t index = 0; index < listUpgrade.size(); ++index )
+        // 줄 앞으로 되돌린다(이 요청부터 끝까지) — 순서를 지킨다.
+        const auto restoreQueueFrom = [this, &listRequest]( size_t index, bool bSuspended )
         {
-            Impl::StreamingUpgrade& upgrade  = listUpgrade[index];
-            Texture2D*              pTexture = nullptr;
+            ScopedLock<mutex> lock{ _impl->_streamingMutex };
+            _impl->_bStreamingParked = bSuspended;
+            _impl->_listStreamingUpgrade.insert( _impl->_listStreamingUpgrade.begin(), std::make_move_iterator( listRequest.begin() + static_cast<ptrdiff_t>( index ) ),
+                                                 std::make_move_iterator( listRequest.end() ) );
+        };
+        for ( size_t index = 0; index < listRequest.size(); ++index )
+        {
+            const TextureMipRequest& request = listRequest[index];
+            string                   readPath;
+            uint64                   rangeOffset{ 0 };
+            uint64                   rangeSize{ 0 };
+            bool                     bOverBudget   = false;
+            bool                     bOverInFlight = false;
             {
                 UniqueLock<shared_mutex> lock{ _impl->_mutex };
-                const auto               it = _impl->_mapEntry.find( upgrade._key );
+                const auto               it = _impl->_mapEntry.find( request._key );
                 // 놓였으면 버린다. 다시 읽는 중(`reload` · 디바이스 교체)이면 그쪽이 밉 전부를 올린다.
                 const bool bUpgradable = it != _impl->_mapEntry.end() && it->second._bLoading == false && it->second._bUpgrading == false && it->second._bPublished &&
-                                         it->second._texture != nullptr && it->second._texture->isFullyResident() == false;
+                                         it->second._texture != nullptr && it->second._texture->isFullyResident() == false && request._mipCount > 0 &&
+                                         request._firstMip + request._mipCount <= it->second._mipLayout._listMip.size();
                 if ( bUpgradable == false )
                     continue;
-                // 풀 예산(`TextureStreamingConfig::_poolMegabytes`) — 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받는다 — 작은 것이 건너뛰어 채우지 않는다).
-                optional<TextureStreamingReservation> reservation = _impl->_streamingPool.tryReserve( upgrade._pImage->_bytes.size(), budget._poolBytes );
-                bOverBudget                                       = reservation.has_value() == false;
-                if ( bOverBudget == false )
+                it->second._mipLayout.getRange( request._firstMip, request._mipCount, rangeOffset, rangeSize );
                 {
-                    it->second._streamingReservation = std::move( reservation.value() );
-                    it->second._bUpgrading           = true;
-                    pTexture                         = it->second._texture.get();
+                    ScopedLock<mutex> streamingLock{ _impl->_streamingMutex };
+                    bOverInFlight = _impl->_bytesInFlight > 0 && _impl->_bytesInFlight + rangeSize > budget._maxBytesInFlight;
+                }
+                if ( bOverInFlight == false )
+                {
+                    // 풀 예산(`TextureStreamingConfig::_poolMegabytes`) — 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받는다 — 작은 것이 건너뛰어 채우지 않는다).
+                    optional<TextureStreamingReservation> reservation = _impl->_streamingPool.tryReserve( rangeSize, budget._poolBytes );
+                    bOverBudget                                       = reservation.has_value() == false;
+                    if ( bOverBudget == false )
+                    {
+                        it->second._streamingReservation = std::move( reservation.value() );
+                        it->second._bUpgrading           = true; // 읽는 동안 항목을 지킨다(놓여도 지우지 않는다) — 다시 읽기는 끝을 기다린다
+                        readPath                         = it->second._mipReadPath;
+                    }
                 }
             }
-            if ( bOverBudget )
+            if ( bOverInFlight || bOverBudget )
             {
-                ScopedLock<mutex> lock{ _impl->_streamingMutex };
-                _impl->_bStreamingParked = true;
-                _impl->_listStreamingUpgrade.insert( _impl->_listStreamingUpgrade.begin(), std::make_move_iterator( listUpgrade.begin() + static_cast<ptrdiff_t>( index ) ),
-                                                     std::make_move_iterator( listUpgrade.end() ) );
+                restoreQueueFrom( index, bOverBudget ); // 읽기 상한은 다음 프레임에 풀린다(쉬지 않는다). 풀 예산은 예산이 날 때까지 쉰다
                 break;
             }
-            // 제출은 잠금 밖에서 — 게임 스레드의 find · acquire 를 붙잡지 않는다. 표시가 항목을 지키고(놓여도 지우지 않는다), 다시 읽기는 끝을 기다린다.
-            // 표시는 끝남 확인(`finishUpgradeResidency`)이 끝낼 때 내린다 — 몇 프레임 뒤다.
-            const Texture2DUploadStep step = pTexture->beginUpgradeResidency( pDevice, *upgrade._pImage, false );
-            if ( step == Texture2DUploadStep::Submitted )
+            // 읽기는 IO 스레드가 한다 — 완료는 결과에 바이트를 넣고 상태만 올린다. 렌더 스레드가 다음 프레임부터 본다.
+            const shared_ptr<Impl::StreamingReadResult> pResult = sw::make_shared<Impl::StreamingReadResult>();
+            const AsyncReadHandle                       handle  = AssetIO::readBinaryAssetRangeAsync( AssetID{ readPath }, rangeOffset, rangeSize, AsyncIOPriority::Normal,
+                                                                                                      SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [pResult]( bool bSuccess, vector<uint8>& bytes )
+                                   {
+                if ( bSuccess )
+                    pResult->_bytes.swap( bytes );
+                const Impl::StreamingReadResult::State state = bSuccess ? Impl::StreamingReadResult::State::Read : Impl::StreamingReadResult::State::Failed;
+                pResult->_state.store( static_cast<uint8>( state ), std::memory_order_release );
+            } ) );
+            if ( handle.isValid() == false )
             {
-                ScopedLock<mutex> lock{ _impl->_streamingMutex };
-                _impl->_listUpgrading.push_back( upgrade._key );
+                SW_LOG_ERROR_ID( "TextureCache.MipRangeReadNotStarted", "TextureCache: the top-mip range of '%#' (%# bytes at %#) could not be read from '%#' - it keeps its lower mips",
+                                 request._key.c_str(), rangeSize, rangeOffset, readPath.c_str() );
+                completeUpgrade( request._key, false, Texture2DRetiredResource{} );
                 continue;
             }
-            completeUpgrade( upgrade._key, false, Texture2DRetiredResource{} );
-            if ( step != Texture2DUploadStep::Busy )
-                continue; // 실패했다(오류를 남겼다) — 아래쪽 밉 그대로 둔다
-            // 스테이징이 찼다 — 이 프레임의 나머지도 같은 이유로 못 내므로 순서를 지켜 줄 앞에 되돌려 놓고 멈춘다(다음 프레임에 다시 낸다).
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
-            _impl->_listStreamingUpgrade.insert( _impl->_listStreamingUpgrade.begin(), std::make_move_iterator( listUpgrade.begin() + static_cast<ptrdiff_t>( index ) ),
-                                                 std::make_move_iterator( listUpgrade.end() ) );
-            break;
+            _impl->_bytesInFlight += rangeSize;
+            _impl->_listReading.push_back( Impl::StreamingRead{ request, rangeSize, pResult } );
         }
         return upgradedCount;
     }
@@ -782,7 +906,7 @@ namespace sw
     bool TextureCache::hasPendingStreamingUpgrades() const
     {
         ScopedLock<mutex> lock{ _impl->_streamingMutex };
-        return _impl->_listStreamingUpgrade.empty() == false || _impl->_listUpgrading.empty() == false;
+        return _impl->_listStreamingUpgrade.empty() == false || _impl->_listReading.empty() == false || _impl->_listUpgrading.empty() == false;
     }
 
     void TextureCache::releaseRetiredTextures( IRHIDevice* pDevice )
@@ -1142,6 +1266,8 @@ namespace sw
             ScopedLock<mutex> streamingLock{ _impl->_streamingMutex };
             _impl->_listStreamingUpgrade.clear(); // 위쪽 밉을 기다리던 텍스처도 함께 사라진다
             _impl->_listUpgrading.clear();        // 위쪽 밉을 올리는 중이던 것도 같다
+            _impl->_listReading.clear();          // 읽는 중인 구간은 IO 완료가 결과에만 쓴다(결과는 공유 포인터라 남아 있다)
+            _impl->_bytesInFlight = 0;
         }
         {
             ScopedLock<mutex> standInLock{ _impl->_standInMutex };
@@ -1159,6 +1285,7 @@ namespace sw
     TextureLoadOperation::TextureLoadOperation( string_view key, IRHIDevice* pDevice, Source source, Texture2D* pTexture, weak_ptr<TextureCache::Impl> pCache )
         : AssetLoadOperation{ TextureCache::kAssetKindName, key, MemoryTag::Texture }
         , _pImage{}
+        , _readPath{}
         , _loadError{}
         , _pCache{ std::move( pCache ) }
         , _pDevice{ pDevice }
@@ -1217,7 +1344,8 @@ namespace sw
             return {};
         // 읽기와 머리 풀기는 한 함수라 `IO` 하나에 적는다(`AssetLoadPhase` 규칙). 올리기는 완료 단계의 따로 된 기록(`TextureUpload`)이다.
         AssetLoadScope loadScope( "Texture", getPath() );
-        _pImage = make_unique<DDSImageData>();
+        _pImage   = make_unique<DDSImageData>();
+        _readPath = Texture2D::findReadPath( AssetID{ getPath() } ); // 위쪽 밉을 범위로 다시 읽을 파일(MR-2)
         if ( Texture2D::readImage( AssetID{ getPath() }, *_pImage ) == false )
         {
             _loadError = "the DDS could not be read or uses a format the engine cannot upload";
@@ -1292,7 +1420,7 @@ namespace sw
         // 위쪽 밉이 남았으면 읽은 이미지를 스트리밍 줄로 넘긴다 — 다시 읽지 않고 렌더 스레드가 프레임 예산 안에서 업로드한다.
         const bool bHasTopMipsLeft = _source == Source::File && _pImage != nullptr && _pTexture->isFullyResident() == false;
         if ( bReady && bHasTopMipsLeft )
-            cache.queueStreamingUpgrade( getPath(), std::move( _pImage ) );
+            cache.queueMipRequest( getPath(), *_pImage, std::move( _readPath ) );
         _pImage.reset();
         // 실패 — 텍스처가 지키던 번호(예약 · 옛 텍스처)를 이 로드 작업이 맡아 누락 체커로 다시 묶는다. 실패한 항목은 지워질 수 있으므로(`finishLoad`) 텍스처에 두지 않는다(R-6).
         IRHIDevice* const pDevice      = _pDevice.load( std::memory_order_acquire );

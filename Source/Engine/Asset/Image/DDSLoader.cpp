@@ -276,6 +276,7 @@ namespace sw
         image._mipCount    = info._mipCount;
         image._layerCount  = info._layerCount;
         image._dxgiFormat  = info._dxgiFormat;
+        image._dataOffset  = info._dataOffset;
         image._bIsBgra     = info._bIsBgra;
         image._bCompressed = info._bCompressed;
 

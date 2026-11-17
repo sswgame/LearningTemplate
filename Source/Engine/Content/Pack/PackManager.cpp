@@ -579,6 +579,20 @@ namespace sw
         return pReader->readFileAsync( io, pathHash, priority, onComplete );
     }
 
+    AsyncReadHandle PackManager::readRangeAsync( AsyncFileIO& io, string_view relativePath, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                                 const AssetReadCompleteDelegate& onComplete ) const
+    {
+        if ( relativePath.empty() )
+            return AsyncReadHandle{};
+
+        uint64                       pathHash{ 0 };
+        string                       pathInPack;
+        const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        if ( pReader == nullptr )
+            return AsyncReadHandle{};
+        return pReader->readRangeAsync( io, pathHash, offset, size, priority, onComplete );
+    }
+
     void PackManager::setDLCEntitlementValidator( DLCEntitlementDelegate validator )
     {
         ScopedLock<mutex> lock{ _vfsMutex };

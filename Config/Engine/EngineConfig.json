@@ -38,6 +38,7 @@
             "_uploadsPerFrame": 8,
             "_upgradesPerFrame": 2,
             "_poolMegabytes": 768,
+            "_maxMegabytesInFlight": 64,
             "_idleFramesBeforeRelease": 300
         }
     },

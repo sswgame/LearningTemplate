@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/DDSLoader.h"
+#include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -180,11 +181,7 @@ namespace sw
     {
         const string_view relativePath = assetID.view();
         AssetLoadScope    loadScope( "Texture", relativePath );
-        // 이 장치가 고른 형식 변형이 쿠킹돼 있으면 그것을 읽는다. 접미사가 비면(BC — 데스크톱) 파일을 묻지도 않아 지금까지와 같은 길이다. 변형이 없는 파일(원본 없는 손 DDS)은 그대로 읽고, 장치가 못 쓰는 형식이면 `createTexture2D` 가 오류로 멈춘다.
-        const string formatSuffix = Texture2DInternal::findFormatVariantSuffix();
-        const string variantPath  = formatSuffix.empty() ? string{} : TextureFormatFamily::makeVariantPath( relativePath, formatSuffix );
-        const bool   bReadVariant = variantPath.empty() == false && AssetIO::hasAsset( AssetID{ variantPath } );
-        if ( DDSLoader::loadFromAsset( bReadVariant ? AssetID{ variantPath } : assetID, outImage ) == false || outImage.isValid() == false )
+        if ( DDSLoader::loadFromAsset( AssetID{ findReadPath( assetID ) }, outImage ) == false || outImage.isValid() == false )
         {
             SW_LOG_ERROR_ID( "Texture.LoadFailed", "Texture2D: failed to load '%#'", relativePath );
             return false;
@@ -203,6 +200,47 @@ namespace sw
         loadScope.setBytes( outImage._bytes.size() );
         loadScope.setSucceeded();
         return true;
+    }
+
+    string Texture2D::findReadPath( const AssetID& assetID )
+    {
+        // 이 장치가 고른 형식 변형이 쿠킹돼 있으면 그것을 읽는다. 접미사가 비면(BC — 데스크톱) 파일을 묻지도 않아 지금까지와 같은 길이다. 변형이 없는 파일(원본 없는 손 DDS)은 그대로 읽고, 장치가 못 쓰는 형식이면 `createTexture2D` 가 오류로 멈춘다.
+        const string_view relativePath = assetID.view();
+        const string      formatSuffix = Texture2DInternal::findFormatVariantSuffix();
+        const string      variantPath  = formatSuffix.empty() ? string{} : TextureFormatFamily::makeVariantPath( relativePath, formatSuffix );
+        const bool        bReadVariant = variantPath.empty() == false && AssetIO::hasAsset( AssetID{ variantPath } );
+        return bReadVariant ? variantPath : string{ relativePath };
+    }
+
+    TextureMipLayout Texture2D::makeMipLayout( const DDSImageData& image )
+    {
+        TextureMipLayout layout;
+        layout._dxgiFormat     = image._dxgiFormat;
+        const RHIFormat format = toRHIFormatFromDXGI( image._dxgiFormat );
+        uint64          offset = image._dataOffset;
+        const uint32    count  = image._mipCount > 0 ? image._mipCount : 1;
+        for ( uint32 mip = 0; mip < count; ++mip )
+        {
+            RHITextureMipSpan span{};
+            if ( computeRHITextureMipLayout( format, image._width, image._height, mip, span ) == false )
+                break; // `readImage` 가 형식을 걸렀다 — 여기서 멈추면 밉 수가 줄어 올리기가 범위를 거절한다
+            TextureMipLayout::MipRange range;
+            range._offset = offset;
+            range._size   = span._sizeBytes;
+            range._width  = span._width;
+            range._height = span._height;
+            offset += span._sizeBytes;
+            layout._listMip.push_back( range );
+        }
+        return layout;
+    }
+
+    uint32 Texture2D::computeUpgradeFirstMip( const TextureMipLayout& layout )
+    {
+        if ( layout._listMip.empty() )
+            return 0;
+        const TextureMipLayout::MipRange& top = layout._listMip.front();
+        return computeMipDrop( toRHIFormatFromDXGI( layout._dxgiFormat ), top._width, top._height, static_cast<uint32>( layout._listMip.size() ), static_cast<int32>( gv_textureMipDrop ) )._mipCount;
     }
 
     bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency )
@@ -343,21 +381,36 @@ namespace sw
         return Texture2DUploadStatus::Ready;
     }
 
-    Texture2DUploadStep Texture2D::beginUpgradeResidency( IRHIDevice* pDevice, const DDSImageData& sourceImage, bool bBlocking )
+    Texture2DUploadStep Texture2D::beginUploadMips( IRHIDevice* pDevice, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& mipBytes, bool bBlocking )
     {
         // 다른 디바이스의 텍스처(백엔드 교체 뒤 아직 다시 업로드하지 않은 것)는 그 디바이스로 다시 만들 때 밉 전부가 올라간다(`initRHI`).
         const bool bUpgradable = pDevice != nullptr && _pDevice == pDevice && _streamedMipCount > 0 && isRHIValid() && _upgrade._ticket.isValid() == false;
-        if ( bUpgradable == false )
+        if ( bUpgradable == false || firstMip >= layout._listMip.size() )
             return Texture2DUploadStep::Failed;
-        DDSImageData        expandedImage;
-        const DDSImageData& image  = selectDeviceImage( *pDevice, sourceImage, expandedImage );
-        const RHIFormat     format = toRHIFormatFromDXGI( image._dxgiFormat );
-        SW_ASSERT( format == _format ); // 같은 파일의 같은 이미지다(`TextureCache` 가 로드 단계의 이미지를 보관했다)
-        const uint32              fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
-        const Texture2DMipDrop    qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        const uint32 mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
+        uint64       rangeOffset{ 0 };
+        uint64       rangeSize{ 0 };
+        layout.getRange( firstMip, mipCount, rangeOffset, rangeSize );
+        if ( mipBytes.size() != rangeSize )
+        {
+            SW_LOG_ERROR_ID( "Texture.MipRangeSizeMismatch", "Texture2D: the mip range of '%#' is %# bytes but %# were read", _path.c_str(), rangeSize, mipBytes.size() );
+            return Texture2DUploadStep::Failed;
+        }
+        // 읽은 구간을 밉 firstMip 이 맨 위인 이미지로 본다 — 바이트는 옮겨 쓰고 끝나면 돌려준다(복사하지 않는다).
+        DDSImageData mipImage;
+        mipImage._width      = layout._listMip[firstMip]._width;
+        mipImage._height     = layout._listMip[firstMip]._height;
+        mipImage._mipCount   = mipCount;
+        mipImage._dxgiFormat = layout._dxgiFormat;
+        mipImage._bytes.swap( mipBytes );
+        DDSImageData              expandedImage;
+        const DDSImageData&       image  = selectDeviceImage( *pDevice, mipImage, expandedImage );
+        const RHIFormat           format = toRHIFormatFromDXGI( image._dxgiFormat );
         PendingUpgrade            upgrade{};
         RHITextureDesc            desc{};
-        const Texture2DUploadStep step = createAndSubmitMips( *pDevice, _path, image, format, qualityDrop, bBlocking, desc, upgrade._handle, upgrade._ticket );
+        const Texture2DUploadStep step = format == _format ? createAndSubmitMips( *pDevice, _path, image, format, Texture2DMipDrop{}, bBlocking, desc, upgrade._handle, upgrade._ticket )
+                                                           : Texture2DUploadStep::Failed; // 같은 파일이다 — 다르면 다른 형식 변형을 읽었다
+        mipImage._bytes.swap( mipBytes );
         if ( step != Texture2DUploadStep::Submitted )
             return step;
         upgrade._width    = desc._width;
