@@ -10,16 +10,14 @@
 <Scenario name="game.empty.skinningmethod" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/skinningmethod.scene.xml"/>
 	<Launch variable="gv_renderScale" value="1"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="40"/>
+	<AdvanceSimulation frames="40"/> <!-- 40 프레임 자세(결정적 애니메이션 시각 — 두 장이 같은 자세를 견준다) -->
 	<Screenshot file="skin_linear.ppm"/>
 	<Wait frames="2"/>
 	<LoadScene path="game/empty/maps/skinningmethod_dq.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="40"/>
+	<AdvanceSimulation frames="40"/> <!-- 40 프레임 자세(결정적 애니메이션 시각 — 두 장이 같은 자세를 견준다) -->
 	<Screenshot file="skin_dualquaternion.ppm"/>
-	<Wait frames="5"/>
 	<ExpectImagesDiffer first="skin_linear.ppm" second="skin_dualquaternion.ppm" region="0.3,0.1,0.7,0.9" minDiffering="0.002"/>
 	<ExpectImagesDiffer first="skin_linear.ppm" second="skin_dualquaternion.ppm" region="0.3,0.1,0.7,0.9" minDiffering="0" maxDiffering="0.2"/>
 	<Pass/>
