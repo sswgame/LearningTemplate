@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
+#include "Engine/Graphics/RHI/GL/OpenGLVertexAttribShadow.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
@@ -504,16 +505,17 @@ namespace sw
         OpenGLRHISwapChain* _pCurrentSwapChain{ &_swapChain };
 
         /** @brief `queryNativeHandles` 의 디바이스 칸에 싣는 복사본입니다. 실제 소유는 _platformContext 가 합니다. */
-        void*  _pHDC;
-        void*  _pHRC;
-        uint32 _width;
-        uint32 _height;
-        uint32 _vao;             ///< 속성이 없는 빈 VAO — 정점 입력이 없는 셰이더의 드로우가 건다(코어 프로파일은 VAO 없이 그리지 못한다)
-        uint32 _meshVao;         ///< 씬 메시 드로우용 VAO
-        uint32 _defaultSampler;  ///< 엔진과 머티리얼 유닛 밖의 모든 텍스처 유닛(최근접, 클램프)
-        uint32 _materialSampler; ///< 머티리얼 텍스처 유닛 t16..t31 (선형, 랩, shaderslot::kMaterialTextureSampler)
-        uint32 _engineSampler;   ///< 엔진 텍스처 유닛(레지스터 번호 그대로 t32..) (선형, 클램프, shaderslot::kEngineTextureSampler)
-        uint32 _defaultTexture;
+        void*                    _pHDC;
+        void*                    _pHRC;
+        uint32                   _width;
+        uint32                   _height;
+        uint32                   _vao;                 ///< 속성이 없는 빈 VAO — 정점 입력이 없는 셰이더의 드로우가 건다(코어 프로파일은 VAO 없이 그리지 못한다)
+        uint32                   _meshVao;             ///< 씬 메시 드로우용 VAO
+        OpenGLVertexAttribShadow _meshVaoAttribShadow; ///< `_meshVao` 에 마지막으로 건 속성 사본(바뀐 속성만 다시 건다 — GL 버퍼를 지울 때 `invalidateBuffer`)
+        uint32                   _defaultSampler;      ///< 엔진과 머티리얼 유닛 밖의 모든 텍스처 유닛(최근접, 클램프)
+        uint32                   _materialSampler;     ///< 머티리얼 텍스처 유닛 t16..t31 (선형, 랩, shaderslot::kMaterialTextureSampler)
+        uint32                   _engineSampler;       ///< 엔진 텍스처 유닛(레지스터 번호 그대로 t32..) (선형, 클램프, shaderslot::kEngineTextureSampler)
+        uint32                   _defaultTexture;
         /// @brief 지금 컨텍스트를 가진 스레드(없으면 기본값)와 가진 시각입니다. 잡기에 실패했을 때 누가 가지고 있었는지 로그에 적습니다(진단 전용).
         atomic<std::thread::id> _contextOwnerThread;
         atomic<uint64>          _contextOwnedStartNanos;
