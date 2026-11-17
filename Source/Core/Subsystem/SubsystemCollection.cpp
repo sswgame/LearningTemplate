@@ -166,6 +166,17 @@ namespace sw
         return false;
     }
 
+    SubsystemCollection::HostedTaskScope::HostedTaskScope()
+        : _pSaved{ t_pInitializeFrame }
+    {
+        t_pInitializeFrame = nullptr;
+    }
+
+    SubsystemCollection::HostedTaskScope::~HostedTaskScope()
+    {
+        t_pInitializeFrame = static_cast<SubsystemInitializeFrame*>( _pSaved );
+    }
+
     void SubsystemCollection::recordInitializeLookup( const ISubsystem& target )
     {
         SubsystemInitializeFrame* const pFrame = t_pInitializeFrame;

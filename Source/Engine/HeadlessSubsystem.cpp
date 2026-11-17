@@ -12,6 +12,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Process/StandardOutput.h"
 #include "Core/String/string_splitter.h"
+#include "Core/Subsystem/SubsystemCollection.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestRunner.h"
 #include "Core/Time/MonotonicClock.h"
@@ -601,6 +602,8 @@ namespace sw
     {
         using Internal                  = HeadlessSubsystemInternal;
         CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+        // 작업(테스트 · 쿠킹 · 도구)의 조회는 이 서브시스템의 의존이 아니다 — 초기화 조회 검사에서 뺀다(`SubsystemCollection::HostedTaskScope`).
+        const SubsystemCollection::HostedTaskScope hostedTask;
         // 헤드리스 작업은 `enterHeadless` 로 들어가며 그것이 작업 직전에 누수 기준선을 잡는다(`HeadlessTaskState`). 작업 하나가 돌았으면 뒤 작업과 이 단계의 나머지는 건너뛴다.
         // 작업 순서가 곧 우선순위다: 도움말 → 단위 테스트 → 백엔드마다 시나리오 실행 → 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
         const bool bTaskRan = Internal::runHelpTask( commandLine, _state ) || Internal::runTestTask( commandLine, _state ) ||

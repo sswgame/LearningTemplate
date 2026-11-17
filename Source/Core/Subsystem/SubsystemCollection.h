@@ -140,6 +140,24 @@ namespace sw
          */
         static void recordInitializeLookup( const ISubsystem& target );
 
+        /**
+         * @class HostedTaskScope
+         * @brief 초기화 안에서 그 서브시스템의 것이 아닌 일(단위 테스트 실행 · 쿠킹 같은 헤드리스 작업)을 도는 동안 초기화 조회 기록을 내려 둡니다. 소멸이 되돌립니다.
+         * @details 그 일의 조회는 초기화하는 서브시스템의 의존이 아니다 — 언리얼 커맨드릿처럼 엔진을 빌려 쓰는 다른 프로그램이다. 기록을 그대로 두면 테스트 본문이
+         *          찾은 서브시스템(UI 등)이 `Headless` 의 빠진 의존으로 잡혀 기동이 졌다. 작업을 엔진 초기화 뒤로 옮기는 것이 상용 구조지만, 작업이 기동 단계 사이(의존 뒤 · 피의존 앞)에 서야 하는 지금은 이 경계로 가른다.
+         */
+        class HostedTaskScope
+        {
+        public:
+            HostedTaskScope();
+            ~HostedTaskScope();
+            HostedTaskScope( const HostedTaskScope& )            = delete;
+            HostedTaskScope& operator=( const HostedTaskScope& ) = delete;
+
+        private:
+            void* _pSaved; ///< 내려 둔 프레임(`SubsystemCollection.cpp` 의 내부 형식 — 헤더에 드러내지 않는다)
+        };
+
     private:
         /** @brief @p dependencyIndex 가 @p index 의 의존(간접 포함)이면 true 입니다. */
         bool isDependencyOf( uint32 index, uint32 dependencyIndex ) const;

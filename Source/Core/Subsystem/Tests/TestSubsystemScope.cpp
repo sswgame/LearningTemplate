@@ -75,7 +75,11 @@ namespace
         int32 _value{ 0 };
     };
 
-    /** @brief 초기화에서 같은 범위의 `ScopeProbeSubsystem` 을 찾는 서브시스템입니다 — 의존 선언(@p listDependency)이 그 조회를 덮는지 본다. 종료가 불리면 @p pShutDown 을 켭니다. */
+    /**
+     * @brief 초기화에서 같은 범위의 `ScopeProbeSubsystem` 을 찾는 서브시스템입니다 — 의존 선언(@p listDependency)이 그 조회를 덮는지 본다. 종료가 불리면 @p pShutDown 을 켭니다.
+     * @tparam TTag 한 범위에 둘을 걸 때 타입을 가른다 — 범위는 타입마다 하나만 등록한다.
+     */
+    template <int32 TTag>
     class ScopeLookupSubsystem final : public ISubsystem
     {
     public:
@@ -126,7 +130,7 @@ SW_TEST_CASE( SubsystemScopeTest, UndeclaredLookupDuringInitializeFailsStartup )
     bool           bShutDown = false;
     SubsystemScope scope;
     (void)scope.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
-    (void)scope.emplaceSubsystem<ScopeLookupSubsystem>( scope, "ZLookup", vector<const utf8*>{}, &bShutDown );
+    (void)scope.emplaceSubsystem<ScopeLookupSubsystem<0>>( scope, "ZLookup", vector<const utf8*>{}, &bShutDown );
     SW_EXPECT_FALSE( scope.getCollection().initializeAll( SubsystemHostMask::All ) );
     const string& error = scope.getCollection().getError();
     SW_EXPECT_TRUE_MSG( StringUtil::contains( error, "'ZLookup' failed to initialize" ), error.c_str() );
@@ -145,8 +149,8 @@ SW_TEST_CASE( SubsystemScopeTest, DeclaredLookupDuringInitializeIsAllowed )
     SubsystemScope scope;
     (void)scope.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
     (void)scope.emplaceSubsystem<ScopeRelaySubsystem>();
-    (void)scope.emplaceSubsystem<ScopeLookupSubsystem>( scope, "Direct", vector<const utf8*>{ "ScopeProbe" }, &bDirectShutDown );
-    (void)scope.emplaceSubsystem<ScopeLookupSubsystem>( scope, "Indirect", vector<const utf8*>{ "ScopeRelay" }, &bIndirectShutDown );
+    (void)scope.emplaceSubsystem<ScopeLookupSubsystem<0>>( scope, "Direct", vector<const utf8*>{ "ScopeProbe" }, &bDirectShutDown );
+    (void)scope.emplaceSubsystem<ScopeLookupSubsystem<1>>( scope, "Indirect", vector<const utf8*>{ "ScopeRelay" }, &bIndirectShutDown );
     SW_EXPECT_TRUE_MSG( scope.getCollection().initializeAll( SubsystemHostMask::All ), scope.getCollection().getError().c_str() );
     SW_EXPECT_FALSE( bDirectShutDown );
     SW_EXPECT_FALSE( bIndirectShutDown );
@@ -154,7 +158,7 @@ SW_TEST_CASE( SubsystemScopeTest, DeclaredLookupDuringInitializeIsAllowed )
     // 상위 범위에 선 서브시스템은 범위 수명이 지킨다 — 자식 목록의 의존 선언과 무관하다.
     bool           bChildShutDown = false;
     SubsystemScope child{ &scope };
-    (void)child.emplaceSubsystem<ScopeLookupSubsystem>( scope, "Child", vector<const utf8*>{}, &bChildShutDown );
+    (void)child.emplaceSubsystem<ScopeLookupSubsystem<0>>( scope, "Child", vector<const utf8*>{}, &bChildShutDown );
     SW_EXPECT_TRUE_MSG( child.getCollection().initializeAll( SubsystemHostMask::All ), child.getCollection().getError().c_str() );
     child.destroyAll();
     SW_EXPECT_TRUE( bChildShutDown );
