@@ -4,6 +4,9 @@
      마지막 직선 길이를 맞춘다(앞으로 지나치면 연결이 접혀 큰 횡 G 가 난다 · CoasterTrackBuilder::makeTrack 가 경고한다).
      각 레이아웃은 테스트 운행(CoasterRideAnalyzer)으로 흥분 · 강도 · 멀미를 받고 그 값이 손님을 끈다. -->
 <CoasterLayoutCatalog>
+  <!-- 열차 물리(CoasterPhysicsParams)와 승차 평가 계수(CoasterRatingWeights) — 모든 칸이 필수다. 단위는 m, s, 적분 간격은 1/240 초 -->
+  <Physics gravity="9.81" rollingResistance="0.012" dragCoefficient="0.0004" liftSpeed="4" stationSpeed="3" boosterSpeed="22" boosterAcceleration="9" brakeSpeed="5" brakeDeceleration="10" fixedStep="0.00416667" stallSpeed="0.3" stallSeconds="3" gForceWarmupSeconds="0.5"/>
+  <Rating maxRating="10" intensityPerPositiveG="0.9" intensityPerNegativeG="1.5" intensityPerLateralG="1.2" intensitySpeedScale="15" nauseaPerLateralG="1.5" nauseaPerInversion="1" nauseaPerAirtime="0.3" nauseaPerIntensity="0.25" excitementSpeedScale="10" excitementPerAirtime="0.6" excitementPerInversion="0.8" excitementPerDrop="0.3" excitementDropHeightScale="15" excitementLengthScale="400" excitementIntensityLimit="8"/>
   <Layout id="looper" name="Thunder Loop" startHeight="1">
     <Piece type="Station" length="12"/>
     <Piece type="LiftHill" length="30" height="25"/>

@@ -98,6 +98,8 @@ namespace sw
         , _pilotCatalog{}
         , _pilotCurve{}
         , _unitCurve{}
+        , _rules{}
+        , _rulesCount{ 0 }
     {
     }
 
@@ -136,6 +138,7 @@ namespace sw
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<SRPGCatalog>;
         static constexpr Element kArrElement[] = {
+            Element::of<&SRPGCatalog::loadRules>( "Rules" ),
             Element::of<&SRPGCatalog::_pilotCurve>( "PilotCurve" ).uncounted(),
             Element::of<&SRPGCatalog::_unitCurve>( "UnitCurve" ).uncounted(),
             Element::of<&SRPGCatalog::loadTerrain>( "Terrain" ),
@@ -144,9 +147,33 @@ namespace sw
             Element::of<&SRPGCatalog::loadPilot>( "Pilot" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        // 규칙은 데이터에만 있다 — 한 번도 `<Rules>` 를 읽지 못한 카탈로그는 로드 실패다(전장이 C++ 기본값으로 열리지 않는다, 감사 K-4).
+        if ( _rulesCount == 0 )
+        {
+            SW_LOG_ERROR_ID( "SRPGCatalog.RulesMissing", "%#: <SRPGCatalog> needs one <Rules .../> line (every rule value is data)", sourceName );
+            return 0;
+        }
 
         // 서로 가리키는 id 는 데이터 표(`engine/settings/datacatalogreferences.xml`)가 정하고 카탈로그 읽기가 이 뒤에 본다 — 쿠커도 같은 표로 본다.
         return result._loadedCount;
+    }
+
+    bool SRPGCatalog::loadRules( const XMLNode& node, string_view sourceName )
+    {
+        SRPGSettings rules;
+        if ( XMLFields::readProperties( node, rules, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "SRPGCatalog.RulesInvalid", "%#: <Rules> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        if ( rules._moraleMin > rules._moraleStart || rules._moraleStart > rules._moraleMax )
+        {
+            SW_LOG_ERROR_ID( "SRPGCatalog.RulesMoraleOutOfOrder", "%#: <Rules> needs moraleMin <= moraleStart <= moraleMax (got %# / %# / %#)", sourceName, rules._moraleMin, rules._moraleStart, rules._moraleMax );
+            return false;
+        }
+        _rules = rules; // 덧씌우는 파일(합치기)은 규칙 전체를 바꾼다 — 칸 일부만 두지 않는다
+        ++_rulesCount;
+        return true;
     }
 
     bool SRPGCatalog::loadTerrain( const XMLNode& node, string_view sourceName )

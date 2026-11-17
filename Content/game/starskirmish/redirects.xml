@@ -1,0 +1,4 @@
+<?asset guid="8eb9116b611de5a4766fa49d279b2c36"?>
+<Redirects>
+	<Redirect from="game/starskirmish/data/unitmodels.xml" to="game/starskirmish/data/units.views.xml" />
+</Redirects>

@@ -38,7 +38,7 @@ namespace sw
         ~EmptyGame() override;
 
     protected:
-        bool onPrepareContent() override;
+        bool onPrepareContent( const ContentPreparationToken& token ) override;
         bool onInitialize() override;
         void onUpdate( float32 deltaTime ) override;
         /** @brief 상태 스냅샷을 만들기 직전에 부릅니다. 벤치는 절차적으로 생성한 오브젝트라서 정리해 스냅샷에 싣지 않습니다. */
@@ -77,13 +77,13 @@ namespace sw
 
     EmptyGame::~EmptyGame() = default;
 
-    bool EmptyGame::onPrepareContent()
+    bool EmptyGame::onPrepareContent( const ContentPreparationToken& token )
     {
         // 모드는 시작 때 한 번 고정한다 — 넷 세션을 열기 전(구성 해시가 와이어 버전에 섞인다) · 첫 씬과 그 리소스를 읽기 전이라 덮어쓴 리소스를 쥔 캐시가 없다.
         // 켠 모드가 없으면 아무것도 하지 않는다. 요청한 모드를 적용하지 못하면 게임을 띄우지 않는다(요청과 다른 구성으로 조용히 돌지 않는다).
         // 키트 명령(mod.status)은 ModSession 으로, 기동 · 세이브는 IContentConfiguration 으로 찾는다.
         _mods = make_unique<ModSession>( game::getSubsystem<AssetManager>() );
-        return _mods->applyForGame( game::getSubsystem<const GameConfig>()._packRoot.get() ) && getGameScope().bind( _mods.get() ) &&
+        return _mods->applyForGame( token, game::getSubsystem<const GameConfig>()._packRoot.get() ) && getGameScope().bind( _mods.get() ) &&
                getGameScope().bind<IContentConfiguration>( _mods.get() );
     }
 

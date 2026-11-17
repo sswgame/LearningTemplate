@@ -101,7 +101,7 @@
 					<SkirmishGameModeComponent _componentName="SkirmishGameModeComponent"
 					                           _bActive="true"
 					                           _unitDataPath="game/starskirmish/data/units.xml"
-					                           _unitModelPath="game/starskirmish/data/unitmodels.xml"
+					                           _unitModelPath="game/starskirmish/data/units.views.xml"
 					                           _commanderTreePath="game/starskirmish/data/commander.bt.xml"
 					                           _unitPrefab="game/starskirmish/prefabs/unit.prefab.xml"
 					                           _cameraRig="1"

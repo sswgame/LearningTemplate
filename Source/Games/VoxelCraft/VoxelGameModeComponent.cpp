@@ -48,10 +48,10 @@ namespace sw
         , _snowBlock{}
         , _coalOreBlock{}
         , _ironOreBlock{}
-        , _snowHeight{ 34 }
-        , _coalOreChance{ 0.012f }
-        , _ironOreChance{ 0.006f }
-        , _ironOreMaxHeight{ 12 }
+        , _snowHeight{ 0 }
+        , _coalOreChance{ 0.0f }
+        , _ironOreChance{ 0.0f }
+        , _ironOreMaxHeight{ 0 }
         , _world{}
         , _listChunk{}
         , _autoPlayController{}

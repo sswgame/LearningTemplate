@@ -2,21 +2,13 @@
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Visual/Component/MeshComponent.h"
-
-#include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 #include "Games/StarSkirmish/SkirmishGameModeComponent.h"
 
@@ -82,50 +74,6 @@ namespace sw
         _pShownLook = nullptr;
         _yaw        = MathUtil::kPi; // 처음엔 카메라(남쪽) 쪽을 본다
         _bPlaced    = SW_FALSE;
-    }
-
-    string SkirmishUnitComponent::makeModelPath( const utf8* pName )
-    {
-        return string( "game/starskirmish/models/" ) + pName + string( MeshAssetFormat::kExtension );
-    }
-
-    vector<string> SkirmishUnitModelCatalog::makeAllModelPaths() const
-    {
-        vector<string> listPath;
-        for ( const SkirmishUnitModel& entry : getAll() )
-        {
-            string path = SkirmishUnitComponent::makeModelPath( entry._model.c_str() );
-            if ( VectorUtil::contains( listPath, path ) == false )
-                listPath.push_back( std::move( path ) );
-        }
-        return listPath;
-    }
-
-    uint32 SkirmishUnitModelCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
-    {
-        using Element                          = XMLCatalogElement<SkirmishUnitModelCatalog>;
-        static constexpr Element kArrElement[] = {
-            Element::of<&SkirmishUnitModelCatalog::loadModel>( "Model" ),
-        };
-        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
-        return result._loadedCount;
-    }
-
-    bool SkirmishUnitModelCatalog::loadModel( const XMLNode& node, string_view sourceName )
-    {
-        // 세 칸은 리플렉션 필수 칸이다 — 빠진 칸 · 빈 이름(XMLFields.RequiredFieldMissing) · 범위 밖 폭(XMLFields.ValueOutOfRange)을 이름과 함께 알린다.
-        SkirmishUnitModelDef def;
-        if ( XMLFields::readProperties( node, def, sourceName ) == false )
-        {
-            SW_LOG_ERROR_ID( "SkirmishUnit.ModelInvalidFieldsSkipped", "%#: model '%#' has invalid fields - skipped", sourceName, def._id.view() );
-            return false;
-        }
-        SkirmishUnitModel entry;
-        entry._id    = def._id;
-        entry._model = string( def._model.c_str() );
-        entry._width = def._width;
-        add( entry );
-        return true;
     }
 
     float32 SkirmishUnitComponent::measureViewLag() const
@@ -210,8 +158,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief StarSkirmish 유닛 모델 표(`SkirmishUnitModelCatalog`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 알아본다). */
-    SW_MODULE_SHARED_ASSET_CACHE( SkirmishUnitModels, SkirmishUnitModelCatalog, , SkirmishUnitModelCatalog::kAssetType.withLoader( AssetTypeLoader::of<SkirmishUnitModelCatalog>( MemoryTag::Game ) ) );
 
     void SkirmishUnitComponent::onRegister( GameObjectManager& manager )
     {

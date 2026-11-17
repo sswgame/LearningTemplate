@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -17,15 +16,6 @@ namespace sw
     {
         struct NileBuildingComponentInternal
         {
-            /**
-             * @brief Kenney City Kit Suburban 모델의 칸당 배율입니다. 가장 넓은 집(`building_type_b`, 폭 1.82)이 한 칸(1 m) 안에 들게 0.5 이고,
-             *        n×n 건물은 n 배다.
-             */
-
-            static constexpr const utf8* kArrHouseModel[] = { "building_type_h", "building_type_a", "building_type_g", "building_type_c",
-                                                              "building_type_e", "building_type_f", "building_type_b", "building_type_d" };
-            static constexpr const utf8* kArrOtherModel[] = { "fence_low", "planter" };
-
             static float32 computeBlockHeight( const CityBuildingDef& def, int32 level, bool bInhabited )
             {
                 switch ( def._kind )
@@ -53,8 +43,6 @@ namespace sw
 {
     NileBuildingComponent::NileBuildingComponent()
         : _buildingIndex{ -1 }
-        , _modelScale{ 0.5f }
-        , _decorationScale{ 3.0f }
         , _shownKey{ -1 }
     {
         setCanEverTick( true );
@@ -74,63 +62,27 @@ namespace sw
         _shownKey      = -1;
     }
 
-    bool NileBuildingComponent::hasModel( const CityBuildingDef& def )
+    bool NileBuildingComponent::hasModel( const RuleViewCatalog& views, const CityBuildingDef& def )
     {
-        return findModel( def, 0, true ) != nullptr;
+        return findView( views, def, 0, true ) != nullptr;
     }
 
-    const utf8* NileBuildingComponent::findModel( const CityBuildingDef& def, int32 level, bool bInhabited )
+    const RuleViewDef* NileBuildingComponent::findView( const RuleViewCatalog& views, const CityBuildingDef& def, int32 level, bool bInhabited )
     {
-        switch ( def._kind )
+        if ( def._kind != CityBuildingKind::House )
+            return views.find( def._id );
+        // 집 단계마다 커지는 집 모델 — 작은 단층에서 넓은 이층까지. 빈 땅은 낮은 울타리다.
+        string key( def._id.view() );
+        if ( bInhabited )
         {
-            case CityBuildingKind::House:
-            {
-                // 집 단계(0..7)마다 커지는 집 모델 — 작은 단층에서 넓은 이층까지. 빈 땅은 낮은 울타리다.
-                if ( bInhabited == false )
-                    return "fence_low";
-                return NileBuildingComponentInternal::kArrHouseModel[MathUtil::clamp( level, 0, 7 )];
-            }
-            case CityBuildingKind::Service:
-            {
-                return def._size == 1 ? "building_type_h" : "building_type_c";
-            }
-            case CityBuildingKind::Producer:
-            {
-                return def._bRequiresTerrain != SW_FALSE ? nullptr : "building_type_g";
-            }
-            case CityBuildingKind::Storage:
-            {
-                return "building_type_d";
-            }
-            case CityBuildingKind::Market:
-            {
-                return "building_type_f";
-            }
-            case CityBuildingKind::Decoration:
-            {
-                // 정원 · 광장은 화분 — 나일 소품(Kenney, 공용 colormap 머티리얼 하나)만 받는다. 나무(`tree_large`)는 원본을 Quaternius 로 바꾸며 지웠다(6c0f091a53).
-                const bool bPlanted = def._id == hashed_string( "garden" ) || def._id == hashed_string( "plaza" );
-                return bPlanted ? "planter" : nullptr;
-            }
+            key += ".";
+            key += to_string( level );
         }
-        return nullptr;
-    }
-
-    void NileBuildingComponent::collectModelPaths( vector<string>& outListPath )
-    {
-        for ( const utf8* pName : NileBuildingComponentInternal::kArrHouseModel )
+        else
         {
-            outListPath.push_back( makeModelPath( pName ) );
+            key += ".empty";
         }
-        for ( const utf8* pName : NileBuildingComponentInternal::kArrOtherModel )
-        {
-            outListPath.push_back( makeModelPath( pName ) );
-        }
-    }
-
-    string NileBuildingComponent::makeModelPath( const utf8* pName )
-    {
-        return string( "game/nilecity/models/" ) + pName + string( MeshAssetFormat::kExtension );
+        return views.find( hashed_string( key ) );
     }
 
     void NileBuildingComponent::onTick( TickContext& context )
@@ -142,7 +94,8 @@ namespace sw
         if ( pMesh == nullptr )
             return;
         const NileGameModeComponent* pGameMode = findGameMode<NileGameModeComponent>();
-        if ( pGameMode == nullptr )
+        const RuleViewCatalog*       pViews    = pGameMode != nullptr ? pGameMode->getBuildingViews() : nullptr;
+        if ( pViews == nullptr )
             return;
         // 같은 그룹의 다른 건물과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).
         const vector<CityBuilding>& listBuilding         = pGameMode->getCity().getBuildings();
@@ -161,11 +114,11 @@ namespace sw
         const CityBuildingDef& def    = *pBuilding->_pDef;
         const float32          size   = static_cast<float32>( def._size );
         const float3           center = float3{ static_cast<float32>( pBuilding->_origin._x ) + size * 0.5f, 0.0f, static_cast<float32>( pBuilding->_origin._y ) + size * 0.5f };
-        const utf8*            pModel = findModel( def, pBuilding->_level, bInhabited );
-        if ( pModel != nullptr )
+        const RuleViewDef*     pView  = findView( *pViews, def, pBuilding->_level, bInhabited );
+        if ( pView != nullptr )
         {
-            const float32 scale = _modelScale * size * ( def._kind == CityBuildingKind::Decoration ? _decorationScale : 1.0f );
-            pMesh->setMeshID( makeModelPath( pModel ) );
+            const float32 scale = size / pView->_width; // n 칸 건물은 한 칸 배율의 n 배
+            pMesh->setMeshID( pView->_mesh.path() );
             pMesh->setLocalScale( float3{ scale } );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pMesh->setLocalPosition( center );

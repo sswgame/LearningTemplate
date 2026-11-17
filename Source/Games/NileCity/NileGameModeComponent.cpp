@@ -97,6 +97,7 @@ namespace sw
 {
     NileGameModeComponent::NileGameModeComponent()
         : _cityDataPath{}
+        , _buildingViewPath{}
         , _autoPlanPath{}
         , _groundPrefab{}
         , _roadPrefab{}
@@ -144,6 +145,7 @@ namespace sw
         , _traderColor{ 1.0f, 0.6f, 0.2f, 1.0f }
         , _cartColor{ 0.45f, 0.3f, 0.15f, 1.0f }
         , _pCatalog{}
+        , _pBuildingViews{}
         , _city{}
         , _wallet{}
         , _clock{}
@@ -151,25 +153,21 @@ namespace sw
         , _listEvent{}
         , _listClockEvent{}
         , _listTool{}
-        , _listRoadObject{}
-        , _listRoadShown{}
-        , _listBuildingSlot{}
+        , _roadViews{}
+        , _buildingViews{}
         , _listWalkerObject{}
-        , _listPendingRoad{}
-        , _listPendingBuilding{}
         , _tintCache{}
         , _listWalkerLook{}
         , _listModelMesh{}
         , _wantedWalkerCount{ 0 }
         , _cursorTile{ -1, -1 }
-        , _timeScale{ 1.0f }
+        , _speed{}
         , _selectedTool{ 0 }
         , _monthCount{ 0 }
         , _evolvedCount{ 0 }
         , _buildCount{ 0 }
         , _demolishCount{ 0 }
         , _bCursorValid{ SW_FALSE }
-        , _bPaused{ SW_FALSE }
         , _bAutoPlanToggle{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -203,10 +201,10 @@ namespace sw
             updateInput( deltaTime, *pInput );
         if ( isAutoPlanOn() )
             (void)_planner.advance( _city, _wallet, _pCatalog->getRoadCost() );
-        if ( _bPaused == SW_FALSE )
+        if ( _speed.isPaused() == false )
         {
             // 시계는 도시가 진행한 시간으로 민다 — 따로 곱하면 프레임 상한에 잘린 도시와 어긋난다(감사 K-6). 배속은 디렉터가 쥔다(시계 배율은 1).
-            _clock.update( _city.update( deltaTime, _timeScale ) );
+            _clock.update( _city.update( deltaTime, _speed.getTimeScale() ) );
             settleMonths();
         }
         pollEvents();
@@ -216,17 +214,14 @@ namespace sw
 
     bool NileGameModeComponent::hasPendingSpawn() const
     {
-        return _listPendingRoad.empty() == false || _listPendingBuilding.empty() == false || _wantedWalkerCount > _listWalkerObject.size();
+        return _roadViews.hasPending() || _buildingViews.hasPending() || _wantedWalkerCount > _listWalkerObject.size();
     }
 
     void NileGameModeComponent::onViewsDespawned()
     {
-        _listRoadObject.clear();
-        _listRoadShown.clear();
-        _listBuildingSlot.clear();
+        _roadViews.clear();
+        _buildingViews.clear();
         _listWalkerObject.clear();
-        _listPendingRoad.clear();
-        _listPendingBuilding.clear();
     }
 
     bool NileGameModeComponent::findCursor( int2& outTile, int32& outSize ) const
@@ -254,8 +249,24 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool NileGameModeComponent::startGame()
     {
-        if ( acquireRequired( _cityDataPath, _pCatalog ) == false )
+        if ( acquireRequired( _cityDataPath, _pCatalog ) == false || acquireRequired( _buildingViewPath, _pBuildingViews ) == false )
             return false;
+        // 집은 단계마다 모델이 바뀐다 — 뷰 표에 빠진 단계가 있으면 그 단계만 조용히 색 상자가 되므로 시작할 때 막는다.
+        for ( const CityBuildingDef& def : _pCatalog->getBuildings() )
+        {
+            if ( def._kind != CityBuildingKind::House )
+                continue;
+            bool bComplete = NileBuildingComponent::findView( *_pBuildingViews, def, 0, false ) != nullptr; // 빈 땅
+            for ( int32 level = 0; level < static_cast<int32>( _pCatalog->getHouseLevels().size() ); ++level )
+            {
+                bComplete = bComplete && NileBuildingComponent::findView( *_pBuildingViews, def, level, true ) != nullptr;
+            }
+            if ( bComplete )
+                continue;
+            SW_LOG_ERROR_ID( "NileGameMode.HouseViewMissing", "[Nile] %# needs '%#.empty' and '%#.<level>' rows for every house level - the city does not open", _buildingViewPath.c_str(),
+                             def._id.c_str(), def._id.c_str() );
+            return false;
+        }
         if ( _clock.initialize( makeClockSettings() ) == false )
             return false; // 범위 밖(달 길이 `_secondsPerMonth` 등)은 시계가 오류를 남겼다
         _wallet.clear();
@@ -472,11 +483,11 @@ namespace sw
         io.value( io.isWriting() ? _planner : restoredPlanner );
         io.value( io.isWriting() ? _wallet : restoredWallet );
         io.value( io.isWriting() ? _clock : restoredClock );
-        float32 timeScale       = _timeScale;
+        float32 timeScale       = _speed.getTimeScale();
         int32   selectedTool    = _selectedTool;
         int32   monthCount      = _monthCount;
         int32   evolvedCount    = _evolvedCount;
-        uint8   bPaused         = static_cast<uint8>( _bPaused );
+        uint8   bPaused         = _speed.isPaused() ? SW_TRUE : SW_FALSE;
         uint8   bAutoPlanToggle = static_cast<uint8>( _bAutoPlanToggle );
         io.value( timeScale );
         io.value( selectedTool );
@@ -485,18 +496,19 @@ namespace sw
         io.value( bPaused );
         io.value( bAutoPlanToggle );
         io.end();
-        io.check( timeScale > 0.0f );
         if ( io.isWriting() || io.isOk() == false )
             return;
+        GameSpeedControl restoredSpeed;
+        if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) ) == false )
+            return; // 범위 밖 배속(깨진 세이브)은 거절한다
         _city            = std::move( restoredCity );
         _planner         = std::move( restoredPlanner );
         _wallet          = std::move( restoredWallet );
         _clock           = std::move( restoredClock );
-        _timeScale       = timeScale;
+        _speed           = restoredSpeed;
         _selectedTool    = _listTool.empty() ? 0 : MathUtil::clamp( selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
         _monthCount      = monthCount;
         _evolvedCount    = evolvedCount;
-        _bPaused         = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
         _bAutoPlanToggle = bAutoPlanToggle != SW_FALSE ? SW_TRUE : SW_FALSE;
         _listEvent.clear();
     }
@@ -517,51 +529,31 @@ namespace sw
         if ( bRespawnViews )
         {
             spawnAll( manager );
+            return;
         }
-        else
-        {
-            for ( const int32 tileIndex : _listPendingRoad )
-            {
-                GameObjectHandle& handle = _listRoadObject[static_cast<size_t>( tileIndex )];
-                destroySpawned( manager, handle );
-                if ( _listRoadShown[static_cast<size_t>( tileIndex )] == SW_TRUE )
-                    spawnRoad( manager, tileIndex );
-            }
-            for ( const int32 buildingIndex : _listPendingBuilding )
-            {
-                destroySpawned( manager, _listBuildingSlot[static_cast<size_t>( buildingIndex )]._object );
-                spawnBuilding( manager, buildingIndex );
-            }
-            spawnWalkers( manager, _wantedWalkerCount );
-        }
-        _listPendingRoad.clear();
-        _listPendingBuilding.clear();
+        flushViews( manager );
+        spawnWalkers( manager, _wantedWalkerCount );
+    }
+
+    void NileGameModeComponent::flushViews( GameObjectManager& manager )
+    {
+        const auto destroy = [&manager]( GameObjectHandle& inoutHandle )
+        { destroySpawned( manager, inoutHandle ); };
+        _roadViews.flush( destroy, [this, &manager]( size_t tileIndex, uint8 )
+        { return spawnRoad( manager, tileIndex ); } );
+        _buildingViews.flush( destroy, [this, &manager]( size_t buildingIndex, const CityBuildingDef* pDef )
+        { return spawnBuilding( manager, buildingIndex, *pDef ); } );
     }
 
     void NileGameModeComponent::spawnAll( GameObjectManager& manager )
     {
         preloadModels();
         spawnTerrain( manager );
-        const GridTopology& topology  = _city.getTopology();
-        const size_t        tileCount = static_cast<size_t>( topology.getCellCount() );
-        _listRoadObject.assign( tileCount, GameObjectHandle{} );
-        _listRoadShown.assign( tileCount, SW_FALSE );
-        for ( int32 tileIndex = 0; tileIndex < static_cast<int32>( tileCount ); ++tileIndex )
-        {
-            const int2 cell = topology.toCell( tileIndex );
-            if ( _city.findTile( cell._x, cell._y )->_bRoad == SW_FALSE )
-                continue;
-            _listRoadShown[static_cast<size_t>( tileIndex )] = SW_TRUE;
-            spawnRoad( manager, tileIndex );
-        }
-        const vector<CityBuilding>& listBuilding = _city.getBuildings();
-        _listBuildingSlot.assign( listBuilding.size(), BuildingSlot{} );
-        for ( size_t buildingIndex = 0; buildingIndex < listBuilding.size(); ++buildingIndex )
-        {
-            const CityBuilding& building                = listBuilding[buildingIndex];
-            _listBuildingSlot[buildingIndex]._pShownDef = building._bAlive != SW_FALSE ? building._pDef : nullptr;
-            spawnBuilding( manager, static_cast<int32>( buildingIndex ) );
-        }
+        // 처음이거나 정리한 뒤다(슬롯은 `onViewsDespawned` 가 비웠다) — 지금 도시를 모두 쌓고 곧바로 맞춘다.
+        _roadViews.clear();
+        _buildingViews.clear();
+        collectViewChanges();
+        flushViews( manager );
         _wantedWalkerCount = _city.getWalkers().size();
         spawnWalkers( manager, _wantedWalkerCount );
     }
@@ -601,34 +593,30 @@ namespace sw
         }
     }
 
-    void NileGameModeComponent::spawnRoad( GameObjectManager& manager, int32 tileIndex )
+    GameObjectHandle NileGameModeComponent::spawnRoad( GameObjectManager& manager, size_t tileIndex )
     {
         // 도로 타일은 보도 조각을 타일 크기만큼 늘려 쓴다(팔레트 머티리얼 그대로).
-        const int2  cell  = _city.getTopology().toCell( tileIndex );
+        const int2  cell  = _city.getTopology().toCell( static_cast<int32>( tileIndex ) );
         GameObject* pRoad = spawnPrefab( manager, _roadPrefab, "NileRoad" );
         (void)NileGameModeComponentInternal::placeMesh( pRoad, float3{ static_cast<float32>( cell._x ) + 0.5f, 0.0f, static_cast<float32>( cell._y ) + 0.5f },
                                                         float3{ _roadTileScale } );
-        _listRoadObject[static_cast<size_t>( tileIndex )] = pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
+        return pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
     }
 
-    void NileGameModeComponent::spawnBuilding( GameObjectManager& manager, int32 buildingIndex )
+    GameObjectHandle NileGameModeComponent::spawnBuilding( GameObjectManager& manager, size_t buildingIndex, const CityBuildingDef& def )
     {
-        BuildingSlot&          slot = _listBuildingSlot[static_cast<size_t>( buildingIndex )];
-        const CityBuildingDef* pDef = slot._pShownDef;
-        if ( pDef == nullptr )
-            return;
         // 모델이 있는 건물은 팔레트 머티리얼, 밭 · 조각상은 색 상자다. 단계 · 사람에 따른 모델 · 높이는 뷰가 맞춘다.
-        const bool  bModel    = NileBuildingComponent::hasModel( *pDef );
+        const bool  bModel    = NileBuildingComponent::hasModel( *_pBuildingViews, def );
         GameObject* pBuilding = spawnPrefab( manager, bModel ? _modelBuildingPrefab : _blockBuildingPrefab, "NileBuilding" );
         if ( pBuilding == nullptr )
-            return;
-        slot._object         = pBuilding->getHandle();
+            return GameObjectHandle{};
         MeshComponent* pMesh = pBuilding->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
-            _tintCache.apply( *pMesh, bModel ? computeModelTint( *pDef ) : computeBlockColor( *pDef ) );
+            _tintCache.apply( *pMesh, bModel ? computeModelTint( def ) : computeBlockColor( def ) );
         NileBuildingComponent* pView = pBuilding->getComponent<NileBuildingComponent>();
         if ( pView != nullptr )
-            pView->assignBuilding( getOwner()->getHandle(), buildingIndex );
+            pView->assignBuilding( getOwner()->getHandle(), static_cast<int32>( buildingIndex ) );
+        return pBuilding->getHandle();
     }
 
     void NileGameModeComponent::spawnWalkers( GameObjectManager& manager, size_t count )
@@ -670,8 +658,7 @@ namespace sw
     {
         if ( _listModelMesh.empty() == false )
             return;
-        vector<string> listModelPath;
-        NileBuildingComponent::collectModelPaths( listModelPath );
+        const vector<string> listModelPath = _pBuildingViews->makeAllMeshPaths();
         // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 미리 쥐는 것이 목적이라 지금 쓰지 않는다(뷰의 `MeshComponent` 가 같은 로드를 받는다).
         // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
         for ( const string& path : listModelPath )
@@ -687,28 +674,16 @@ namespace sw
     {
         // 도로 타일은 깔렸거나 철거된 타일만 처리한다. 건물 타일은 새 건물이거나 허물렸거나 다른 건물로 다시 쓰인 타일만 처리한다. 단계와 사람은 뷰가 맞춘다.
         const GridTopology& topology = _city.getTopology();
-        for ( int32 tileIndex = 0; tileIndex < static_cast<int32>( _listRoadShown.size() ); ++tileIndex )
+        for ( int32 tileIndex = 0; tileIndex < topology.getCellCount(); ++tileIndex )
         {
-            const int2  cell  = topology.toCell( tileIndex );
-            const uint8 bRoad = _city.findTile( cell._x, cell._y )->_bRoad != SW_FALSE ? SW_TRUE : SW_FALSE;
-            uint8&      shown = _listRoadShown[static_cast<size_t>( tileIndex )];
-            if ( shown == bRoad )
-                continue;
-            shown = bRoad;
-            _listPendingRoad.push_back( tileIndex );
+            const int2 cell = topology.toCell( tileIndex );
+            _roadViews.show( static_cast<size_t>( tileIndex ), _city.findTile( cell._x, cell._y )->_bRoad != SW_FALSE ? SW_TRUE : SW_FALSE );
         }
         const vector<CityBuilding>& listBuilding = _city.getBuildings();
-        if ( _listBuildingSlot.size() < listBuilding.size() )
-            _listBuildingSlot.resize( listBuilding.size() );
         for ( size_t buildingIndex = 0; buildingIndex < listBuilding.size(); ++buildingIndex )
         {
-            const CityBuilding&    building = listBuilding[buildingIndex];
-            const CityBuildingDef* pWanted  = building._bAlive != SW_FALSE ? building._pDef : nullptr;
-            BuildingSlot&          slot     = _listBuildingSlot[buildingIndex];
-            if ( slot._pShownDef == pWanted )
-                continue;
-            slot._pShownDef = pWanted;
-            _listPendingBuilding.push_back( static_cast<int32>( buildingIndex ) );
+            const CityBuilding& building = listBuilding[buildingIndex];
+            _buildingViews.show( buildingIndex, building._bAlive != SW_FALSE ? building._pDef : nullptr );
         }
         _wantedWalkerCount = MathUtil::max( _wantedWalkerCount, _city.getWalkers().size() );
     }
@@ -736,17 +711,8 @@ namespace sw
             SW_LOG_INFO_ID( "Nile.ToolSelected", "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _pCatalog->getRoadCost() );
             getSoundQueue().queueEvent( NileGameModeComponentInternal::kEventSelect );
         }
-        if ( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kPause ) ) )
-        {
-            _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO_ID( "NileGameMode.PauseToggled", "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
-        }
-        const bool bFaster = inputMap.wasActionTriggered( hashed_string( CommonInputActions::kFaster ) );
-        if ( bFaster || inputMap.wasActionTriggered( hashed_string( CommonInputActions::kSlower ) ) )
-        {
-            _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
-            SW_LOG_INFO_ID( "NileGameMode.SpeedX", "[Nile] speed x%#", _timeScale );
-        }
+        _speed.applyInput( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kPause ) ), inputMap.wasActionTriggered( hashed_string( CommonInputActions::kFaster ) ),
+                           inputMap.wasActionTriggered( hashed_string( CommonInputActions::kSlower ) ) );
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.ToggleAutoPlan" ) ) )
         {
             _bAutoPlanToggle = _bAutoPlanToggle == SW_TRUE ? SW_FALSE : SW_TRUE;

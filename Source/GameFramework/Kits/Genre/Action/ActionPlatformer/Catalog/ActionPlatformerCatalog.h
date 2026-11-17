@@ -18,6 +18,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 
@@ -210,7 +211,7 @@ namespace sw
      *        <Combo id="sword" moves="slash1,slash2,slash3"/>
      *        <Pattern id="gunner" start="patrol"><State id="patrol" frames="90" next="aim" onNear="aim" near="5" moveX="1"/>
      *        <State id="aim" frames="20" next="shoot"/><State id="shoot" frames="1" next="patrol" fire="true" fireSpeed="9"/></Pattern></ActionPlatformer>`
-     * @details `<Grading>` 과 등급 하나 이상은 반드시 적는다(없으면 읽기 실패다). 스키마를 어긴 원소는 넣지 않고 오류로 남긴다.
+     * @details `<Grading>` 과 등급 하나 이상, 몸의 움직임 규칙 `<Motor runSpeed="7" .../>`(모든 칸 필수, 감사 K-4)는 반드시 적는다(없으면 읽기 실패다). 스키마를 어긴 원소는 넣지 않고 오류로 남긴다.
      */
     class SW_KIT_API ActionPlatformerCatalog : public XMLCatalog<ActionPlatformerCatalog>
     {
@@ -231,6 +232,8 @@ namespace sw
         const ActionPatternDef*   findPattern( const hashed_string& id ) const { return _patternCatalog.find( id ); }
         const ActionGradingRules& getGrading() const { return _grading; }
         const ActionBodyDef&      getBodySettings() const { return _bodySettings; }
+        /** @brief 몸의 움직임 규칙(`<Motor>`)입니다. 로드에 성공한 카탈로그는 반드시 한 줄을 가진다. */
+        const PlatformerSettings& getMotorSettings() const { return _motorSettings; }
         const ActionParryRules&   getParryRules() const { return _parryRules; }
         ActionParryRules&         getParryRules() { return _parryRules; }
 
@@ -241,6 +244,8 @@ namespace sw
         [[nodiscard]] bool           loadStage( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadCombo( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadPattern( const XMLNode& node, string_view sourceName );
+        /** @brief `<Motor>` 한 줄을 읽습니다. 칸이 빠졌거나 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool loadMotor( const XMLNode& node, string_view sourceName );
 
     private:
         GameCatalog<ActionStageDef>   _stageCatalog;
@@ -249,6 +254,8 @@ namespace sw
         ActionGradingRules            _grading;
         ActionBodyDef                 _bodySettings;
         ActionParryRules              _parryRules;
+        PlatformerSettings            _motorSettings;
+        int32                         _motorCount; ///< 읽은 `<Motor>` 줄 수(1 이상이어야 로드가 성공한다)
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<ActionPlatformerCatalog>::acquire` 로 한 벌을 받습니다. */

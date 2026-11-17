@@ -24,7 +24,7 @@
 namespace
 {
     // 시간은 2 의 거듭제곱 분수라 float 오차가 없다.
-    constexpr const utf8* kDuelXML = R"(<Metroidvania currency="geo">
+    constexpr const utf8* kDuelXML = R"(<Metroidvania currency="geo"><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Rules flaskCharges="2" flaskMaxCharges="3" flaskHeal="30" flaskHealPerUpgrade="10" riposteMultiplier="3" riposteTime="1" attackStamina="15" dodgeStamina="20" guardStaminaPerDamage="1" guardChip="0.25" corpseRadius="2"/>
   <Health max="100" poise="30" poiseBreakDuration="1"/>
   <Stamina max="100" regenRate="0" regenDelay="0"/>

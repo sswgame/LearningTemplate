@@ -16,7 +16,7 @@
 
 namespace
 {
-    constexpr const utf8* kLoadoutXML = R"(<Metroidvania currency="soul">
+    constexpr const utf8* kLoadoutXML = R"(<Metroidvania currency="soul"><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Rules charmNotches="3" overcharmDamageScale="2.5"/>
   <Health max="80" poise="30"/>
   <Stamina max="60" regenRate="5" regenDelay="0.5" exhaustThreshold="10"/>
@@ -87,7 +87,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, ParryWindowIsRequired )
 {
     SW_EXPECT_LOG( "MetroidvaniaCatalog.NeedsParryLeastOne" );
     sw::MetroidvaniaCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania><Enemy id="a"/></Metroidvania>)", "noParry" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/><Enemy id="a"/></Metroidvania>)", "noParry" ) );
     SW_EXPECT_TRUE( catalog.findEnemy( sw::hashed_string( "a" ) ) == nullptr );
 }
 
@@ -100,7 +100,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, BrokenElementsAreSkipped )
     SW_EXPECT_LOG( "MetroidvaniaCatalog.BossNeedsFlagSet" );
 
     sw::MetroidvaniaCatalog catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<Metroidvania>
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Parry><Window grade="Perfect"/></Parry>
   <Ability id="typo" name="t" flag="f"><Motor jumpp="1"/></Ability>
   <Ability id="fine" name="f" flag="g"><Motor runSpeed="1"/></Ability>
@@ -123,7 +123,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, PickupNamingAnUnknownGrantFailsTheLoad )
 {
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     sw::MetroidvaniaCatalog catalog;
-    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania>
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Parry><Window grade="Perfect"/></Parry>
   <Ability id="fine" name="f" flag="g"/>
   <Pickup id="badAbility" area="a" ability="ghost"/>
@@ -131,7 +131,7 @@ SW_TEST_CASE( MetroidvaniaCatalogTest, PickupNamingAnUnknownGrantFailsTheLoad )
 </Metroidvania>)",
                                               "broken" ) );
     sw::MetroidvaniaCatalog clean;
-    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<Metroidvania>
+    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Parry><Window grade="Perfect"/></Parry>
   <Ability id="fine" name="f" flag="g"/>
   <Charm id="later" name="c"/>
@@ -148,12 +148,10 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, AbilitiesUnlockTheLockedBase )
 {
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaAbilitySetTest" ) );
-    sw::MetroidvaniaAbilitySet abilities;
-    sw::PlatformerSettings     base;
-    base._extraJumpCount = 3;
-    base._airDashCount   = 3;
-    base._bWallJump      = SW_TRUE;
-    abilities.initialize( &catalog, base );
+    sw::MetroidvaniaAbilitySet    abilities;
+    const sw::PlatformerSettings& base = catalog.getBaseMotor(); // 데이터는 벽 점프 · 공중 대시를 켜 두었지만 능력 집합이 잠근다
+    SW_REQUIRE_TRUE( base._bWallJump && base._airDashCount > 0 );
+    abilities.initialize( catalog );
 
     sw::PlatformerSettings settings;
     abilities.applyToSettings( settings );
@@ -194,7 +192,7 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, InputIsFilteredUntilDashIsOwned )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaAbilitySetTest" ) );
     sw::MetroidvaniaAbilitySet abilities;
-    abilities.initialize( &catalog, sw::PlatformerSettings{} );
+    abilities.initialize( catalog );
 
     sw::PlatformerInput input;
     input._move                  = sw::float2{ 0.5f, 0.0f };
@@ -218,22 +216,22 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, SettingsDoNotDependOnGrantOrder )
 {
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaAbilitySetTest" ) );
-    const sw::PlatformerSettings base{};
+    const sw::PlatformerSettings& base = catalog.getBaseMotor();
 
     sw::GameFlags              flagsA;
     sw::MetroidvaniaAbilitySet curseFirst;
-    curseFirst.initialize( &catalog, base );
+    curseFirst.initialize( catalog );
     SW_REQUIRE_TRUE( curseFirst.grantAbility( kCurse, flagsA ) );
     SW_REQUIRE_TRUE( curseFirst.grantAbility( kJump, flagsA ) );
 
     sw::GameFlags              flagsB;
     sw::MetroidvaniaAbilitySet jumpFirst;
-    jumpFirst.initialize( &catalog, base );
+    jumpFirst.initialize( catalog );
     SW_REQUIRE_TRUE( jumpFirst.grantAbility( kJump, flagsB ) );
     SW_REQUIRE_TRUE( jumpFirst.grantAbility( kCurse, flagsB ) );
 
     sw::MetroidvaniaAbilitySet restored;
-    restored.initialize( &catalog, base );
+    restored.initialize( catalog );
     SW_REQUIRE_TRUE( restored.grantAbility( kDash, flagsB ) ); // 복원은 지금 능력을 비운다
     sw::GameFlags flagsC = flagsA;
     SW_EXPECT_EQUAL( 2, restored.restoreFromFlags( flagsC ) );
@@ -253,28 +251,26 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, SettingsDoNotDependOnGrantOrder )
 
     sw::GameFlags              flagsD;
     sw::MetroidvaniaAbilitySet onlyCurse;
-    onlyCurse.initialize( &catalog, base );
+    onlyCurse.initialize( catalog );
     SW_REQUIRE_TRUE( onlyCurse.grantAbility( kCurse, flagsD ) );
     onlyCurse.applyToSettings( settingsA );
     SW_EXPECT_EQUAL( 0, settingsA._extraJumpCount ); // 음수로 내려가지 않는다
 }
 
 /**
- * @brief [MetroidvaniaAbilitySetTest] 카탈로그 없이는 능력을 얻지 못하고 기본 설정 그대로다. 몸 설정 이름 표는 대시 · 벽 점프까지 안다
+ * @brief [MetroidvaniaAbilitySetTest] 열지 않은(카탈로그 없는) 집합은 능력을 얻지 못한다. 기본 몸 규칙이 없는 카탈로그는 읽기 실패다. 몸 설정 이름 표는 대시 · 벽 점프까지 안다
  */
 SW_TEST_CASE( MetroidvaniaAbilitySetTest, WithoutCatalogNothingChanges )
 {
     sw::MetroidvaniaAbilitySet abilities;
-    sw::PlatformerSettings     base;
-    base._runSpeed = 12.0f;
-    abilities.initialize( nullptr, base );
-    sw::GameFlags flags;
+    sw::GameFlags              flags;
     SW_EXPECT_FALSE( abilities.grantAbility( kDash, flags ) );
     SW_EXPECT_EQUAL( 0, abilities.restoreFromFlags( flags ) );
     SW_EXPECT_FALSE( abilities.canDash() );
-    sw::PlatformerSettings settings;
-    abilities.applyToSettings( settings );
-    SW_EXPECT_NEAR( 12.0f, settings._runSpeed, kLoadoutTolerance );
+
+    SW_EXPECT_LOG( "MetroidvaniaCatalog.BaseMotorMissing" );
+    sw::MetroidvaniaCatalog bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<Metroidvania><Parry><Window grade="Perfect"/></Parry><Enemy id="plain"/></Metroidvania>)", "noBaseMotor" ) );
 
     SW_EXPECT_TRUE( sw::MetroidvaniaAbilitySet::isMotorSettingName( sw::hashed_string( "dash" ) ) );
     SW_EXPECT_TRUE( sw::MetroidvaniaAbilitySet::isMotorSettingName( sw::hashed_string( "wallJump" ) ) );
@@ -291,7 +287,7 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, StateRoundTripAndRejection )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaAbilitySetTest" ) );
     sw::MetroidvaniaAbilitySet original;
-    original.initialize( &catalog, sw::PlatformerSettings{} );
+    original.initialize( catalog );
     sw::GameFlags flags;
     SW_REQUIRE_TRUE( original.grantAbility( kJump, flags ) );
     SW_REQUIRE_TRUE( original.grantAbility( kDash, flags ) );
@@ -303,7 +299,7 @@ SW_TEST_CASE( MetroidvaniaAbilitySetTest, StateRoundTripAndRejection )
     SW_EXPECT_FALSE( noCatalog.readState( forNoCatalog ) );
 
     sw::MetroidvaniaAbilitySet restored;
-    restored.initialize( &catalog, sw::PlatformerSettings{} );
+    restored.initialize( catalog );
     SW_REQUIRE_TRUE( restored.grantAbility( kWall, flags ) );
 
     const auto expectRejected = [&restored]( const sw::vector<sw::hashed_string>& listName )

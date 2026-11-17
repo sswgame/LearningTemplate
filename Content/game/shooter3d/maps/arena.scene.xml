@@ -619,6 +619,7 @@
 							<ShooterEnemyKind _prefab="game/shooter3d/prefabs/skeleton.prefab.xml" _preset="SkeletonMinion" />
 						</_listEnemyKind>
 						<_eliteEnemyKind _prefab="game/shooter3d/prefabs/trilobite.prefab.xml" _preset="Trilobite" />
+						<_enemyGrowth _baseHealth="30" _healthPerWave="10" _minHealthScale="0.1" _baseSpeed="2.2" _speedPerWave="0.3" _maxSpeed="5.5" />
 						<_listSpawnPoint>
 							<item>42</item>
 							<item>43</item>

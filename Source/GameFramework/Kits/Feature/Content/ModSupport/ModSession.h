@@ -55,15 +55,16 @@ namespace sw
         /**
          * @brief @p request 의 모드를 검증하고 마운트합니다. 켤 모드가 없으면 아무것도 하지 않고 true 입니다(모드 없는 실행은 그대로다).
          * @return 어느 하나라도 실패하면 이유를 오류로 남기고, 이 호출이 올린 것을 모두 내린 뒤 false 입니다. 세션마다 한 번만 부른다(두 번째는 오류).
-         * @details 게임 스레드, 틱 밖(게임 시작)에서 부른다 — 캐시의 제자리 다시 읽기가 틱 밖에서만 된다.
+         * @details 게임 스레드, 틱 밖(게임 시작)에서 부른다 — 캐시의 제자리 다시 읽기가 틱 밖에서만 된다. @p token 은 준비 단계의 증표다(`applyForGame` 과 같다).
          */
-        [[nodiscard]] bool apply( const ModSessionRequest& request, const ModSupportSettings& settings );
+        [[nodiscard]] bool apply( const ContentPreparationToken& token, const ModSessionRequest& request, const ModSupportSettings& settings );
 
         /**
          * @brief 게임의 표준 자리로 `apply` 를 부릅니다 — 켤 모드는 `-gv_modList=a,b`, 설치 폴더는 저장소 `Test/Mods` · 패키지 실행 파일 옆 `Mods`, 정책은 게임 팩의 `modsupport` 데이터(@p packRoot 아래).
          * @details 켤 모드가 없으면 정책 데이터도 읽지 않고 true 다 — 모드를 쓰지 않는 실행은 이 키트가 있어도 그대로다. 언리얼 UGC 예제가 프로젝트의 `Mods/` 를 훑는 자리다(기억에 의존).
+         *          @p token 은 게임 인스턴스의 준비 훅(`onPrepareContent`)만 가진다 — 넷 세션 · 첫 씬 · 선언한 데이터를 읽은 뒤에 구성을 바꾸는 호출은 컴파일되지 않는다(감사 K-9).
          */
-        [[nodiscard]] bool applyForGame( string_view packRoot );
+        [[nodiscard]] bool applyForGame( const ContentPreparationToken& token, string_view packRoot );
 
         /** @brief 더한 층을 되돌리고 올린 모드 팩을 내리고, 덮어썼거나 층을 얹었던 리소스를 쥔 캐시를 다시 읽힙니다. 올린 것이 없으면 아무것도 하지 않는다. */
         void release();

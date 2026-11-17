@@ -15,7 +15,7 @@
 
 namespace
 {
-    constexpr const utf8* kMapXML = R"(<Metroidvania>
+    constexpr const utf8* kMapXML = R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/>
   <Parry><Window grade="Perfect"/></Parry>
   <Map region="crossroads" price="30"/>
   <Map region="deep" price="100"/>
@@ -228,7 +228,7 @@ SW_TEST_CASE( MetroidvaniaMapStateTest, RatiosCountRoomsAndPickups )
 
     SW_EXPECT_LOG( "XMLCatalog.NoEntries" );
     sw::MetroidvaniaCatalog empty;
-    SW_EXPECT_FALSE( empty.loadFromXMLText( R"(<Metroidvania><Parry><Window grade="Perfect"/></Parry></Metroidvania>)", "empty" ) ); // 원소가 없어 읽기 실패지만 규칙은 들어온다
+    SW_EXPECT_FALSE( empty.loadFromXMLText( R"(<Metroidvania><BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" extraJumpCount="0" airDashCount="1" wallJump="true"/><Parry><Window grade="Perfect"/></Parry></Metroidvania>)", "empty" ) ); // 원소가 없어 읽기 실패지만 규칙은 들어온다
     sw::AreaGraph            noAreas;
     sw::MetroidvaniaMapState blank;
     blank.initialize( &empty, &noAreas );

@@ -239,6 +239,9 @@
 	<Catalog root="RTSCatalog">
 		<Entry name="Unit" key="id"/>
 	</Catalog>
+	<Catalog root="RuleViewCatalog">
+		<Entry name="View" key="id"/>
+	</Catalog>
 	<Catalog root="ReputationCatalog">
 		<Entry name="Faction" key="id"/>
 	</Catalog>
@@ -255,9 +258,6 @@
 		<Entry name="Shop" key="id">
 			<Field name="Stock" key="item"/>
 		</Entry>
-	</Catalog>
-	<Catalog root="SkirmishUnitModelCatalog">
-		<Entry name="Model" key="id"/>
 	</Catalog>
 	<Catalog root="SpawnTable">
 		<Entry name="Entry" key="id"/>
