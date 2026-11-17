@@ -5,6 +5,8 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
@@ -18,6 +20,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 
 #include <iterator>
+#include <thread>
 
 using namespace sw;
 
@@ -43,6 +46,56 @@ namespace
         test::FakeRHIDevice* _pDevice;
     };
 } // namespace
+
+/**
+ * @brief [RHIRenderResourceTest] 장치가 리소스에 통보하는 동안 다른 스레드가 그 리소스를 파괴하면 단언한다(R-17)
+ * @details 통보는 잠금 밖이라(통보가 다른 리소스를 파괴할 수 있다) 다른 스레드의 파괴를 막지 못한다 — 예전엔 아무도 알리지 않아 해제 후 사용으로 끝났다.
+ *          통보받는 쪽은 `this` 를 다시 읽지 않는다(파괴된 뒤라). 래치는 바깥 원자값이다.
+ */
+SW_TEST_CASE( RHIRenderResourceTest, DestroyWhileNotifiedFromAnotherThreadAsserts )
+{
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
+
+    struct NotifyLatch
+    {
+        atomic<uint32> _stage{ 0 }; ///< 0 통보 전, 1 통보 안, 2 파괴 끝
+    };
+    class LatchedResource final : public RHIRenderResource
+    {
+    public:
+        explicit LatchedResource( NotifyLatch* pLatch )
+            : _pLatch{ pLatch }
+        {
+        }
+        void releaseRHI( IRHIDevice* ) override
+        {
+            NotifyLatch* const pLatch = _pLatch; // 아래 기다림 동안 이 객체가 파괴된다 — 래치 주소만 쥔다
+            pLatch->_stage.store( 1 );
+            while ( pLatch->_stage.load() != 2 )
+                ThreadUtil::yield();
+        }
+        void clearRHI( IRHIDevice* ) override {}
+
+    private:
+        NotifyLatch* _pLatch;
+    };
+
+    NotifyLatch               latch;
+    LatchedResource* const    pResource = new LatchedResource( &latch );
+    test::ScopedAssertCapture assertCapture;
+    std::thread               destroyThread( [&latch, pResource]()
+    {
+        while ( latch._stage.load() != 1 )
+            ThreadUtil::yield();
+        delete pResource;
+        latch._stage.store( 2 );
+    } );
+    test::FakeRHIDevice       device;
+    RHIRenderResource::releaseAllForDevice( &device );
+    destroyThread.join();
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+}
 
 /**
  * @brief [RHIDeviceTest] 백엔드 이름 · 셰이더 타깃 · 정적 능력 조회는 모두 기술자 표 한 줄을 읽고, 표에 없는 값은 "Unknown" 이고 만들 수 없다
