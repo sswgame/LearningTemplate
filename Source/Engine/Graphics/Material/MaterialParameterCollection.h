@@ -122,6 +122,9 @@ namespace sw
      * @brief 쥔 쪽이 있는 묶음의 표입니다. 에셋 매니저가 내장 캐시로 소유합니다(`SW_BUILT_IN_ASSET_CACHE`).
      * @details 예전에는 함수 정적 표라 레지스트리에 보이지 않아 핫 리로드 · 합성 문맥 다시 읽기 · 재초기화 비우기가 닿지 않았다. 이제 다른 경로 캐시와 같은 길을 탄다:
      *          핫 리로드(개발 전용)와 합성 문맥 변경은 쥔 묶음을 제자리에서 파일 값으로 바꾸고, `clear` 는 표만 비운다(쥔 쪽의 묶음은 산다).
+     *          공유 에셋 표(`SharedAssetTable` — 새 판 넣기)와 달리 제자리인 것은 묶음이 에셋이 아니라 **런타임에 바뀌는 값**이기 때문이다 — 게임이 `setValue` 로 늘 고치고,
+     *          다시 읽기도 같은 종류의 쓰기다(언리얼 `UMaterialParameterCollectionInstance` 도 월드마다 하나인 고치는 객체다). 읽고 쓰는 쪽은 게임 스레드뿐이다
+     *          (`setValue` · `replaceValues` · 머티리얼 동기화 `Material::syncParameterCollections`) — 워커 · 렌더 스레드는 세대가 오른 뒤 패킹한 값만 본다.
      */
     class SW_API MaterialParameterCollectionCache final : public AssetCacheBase
     {

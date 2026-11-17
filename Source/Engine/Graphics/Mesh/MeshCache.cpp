@@ -254,6 +254,10 @@ namespace sw
             return false;
         }
 
+        // 메시는 공유 캐시와 달리 제자리에서 바꾼다 — 렌더 프록시 · 물리 셰이프가 같은 객체의 내용 판(`getContentID`)을 보고 다시 짓는다(언리얼 스태틱 메시 리임포트도
+        // 같은 객체의 렌더 데이터를 렌더 상태 다시 만들기 울타리 뒤에서 바꾸고, 그 전에 비동기 컴파일을 끝낸다 — `FinishAllCompilation`).
+        // 그래서 바꾸기 전에 이 메시를 읽을 수 있는 다른 스레드를 모두 멈춘다: 에셋 워커(로드 · 파생 짓기)를 끝내고(A-7 — 워커가 읽는 중에 덮지 않는다), 렌더 스레드를 비운다.
+        engine::getSubsystem<AssetManager>().finishPendingAssetJobs();
         // 렌더 스레드가 받은 패킷이 이 메시를 읽는 동안 정점을 바꾸지 않는다. 옛 버퍼는 `releaseHandle` 과 해제 큐가 GPU 뒤로 미루므로 GPU 는 기다리지 않는다(TextureCache::reload 와 같다).
         IRHIDevice* const pDevice = MeshCacheInternal::getState()._pBoundDevice.load( std::memory_order_acquire );
         if ( pDevice != nullptr )
