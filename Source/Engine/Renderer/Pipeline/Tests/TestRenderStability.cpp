@@ -59,3 +59,22 @@ SW_TEST_CASE( RenderStabilityTest, StableNeedsEveryCondition )
     sample._exposureErrorEv = 0.06f;
     SW_EXPECT_FALSE( RenderStabilityUtil::isStable( sample, 0, threshold ) );
 }
+
+/**
+ * @brief [RenderStabilityTest] 물체 움직임을 보지 않는 정착은 카메라 정지 프레임 · 되읽은 노출 적응 · 에셋 일만 본다 — 늘 움직이는 캐릭터 장면도 선다
+ * @details 변이: 정지 프레임(물체 포함)을 보면 첫 단언이 진다. 에셋 일을 빼면 셋째가 진다.
+ */
+SW_TEST_CASE( RenderStabilityTest, StableIgnoringMotionLooksAtTheCameraOnly )
+{
+    const RenderStabilityThreshold threshold{ 16, 0.05f };
+    RenderStabilitySample          sample{};
+    sample._stillFrameCount       = 0; // 캐릭터가 숨 쉰다
+    sample._exposureErrorEv       = 8.0f;
+    sample._cameraStillFrameCount = 16;
+    sample._exposureAdaptationEv  = 0.01f;
+    SW_EXPECT_TRUE( RenderStabilityUtil::isStableIgnoringMotion( sample, 0, threshold ) );
+    SW_EXPECT_FALSE( RenderStabilityUtil::isStable( sample, 0, threshold ) );
+    SW_EXPECT_FALSE( RenderStabilityUtil::isStableIgnoringMotion( sample, 1, threshold ) );
+    sample._exposureAdaptationEv = 0.5f;
+    SW_EXPECT_FALSE( RenderStabilityUtil::isStableIgnoringMotion( sample, 0, threshold ) );
+}

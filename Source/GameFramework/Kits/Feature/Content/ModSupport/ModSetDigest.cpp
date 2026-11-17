@@ -109,9 +109,11 @@ namespace sw
             const ModDigestEntry* pActive = findEntry( savedEntry._id );
             if ( pActive == nullptr )
             {
-                SW_LOG_ERROR_ID( "ModSetDigest.SaveNeedsMod", "The save was made with mod '%#' %#, which is not enabled - enable it to load this save", savedEntry._id,
-                                 savedEntry._version.toString() );
-                return false;
+                // 빠진 모드는 알리고 불러온다 — 콘텐츠 전용 모드라 그 리소스를 가리키던 것은 게임이 없는 것으로 다룬다(Velmora 확장 지역 → 일어설 자리).
+                // 상용(Bethesda Creation · Paradox · 마인크래프트)도 경고 뒤 불러온다. 같은 id 의 다른 판은 내용이 달라 아래에서 거절한다.
+                SW_LOG_WARNING_ID( "ModSetDigest.SaveModMissing", "The save was made with mod '%#' %#, which is not enabled - loading without it (its content is gone from this save)",
+                                   savedEntry._id, savedEntry._version.toString() );
+                continue;
             }
             if ( pActive->_version != savedEntry._version )
             {

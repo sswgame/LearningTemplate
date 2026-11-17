@@ -1,0 +1,19 @@
+{
+    "backend": "vk",
+    "platform": "windows",
+    "commit": "e87779f0560893b070b2af0af157267955c66bbc-dirty",
+    "recordedUnixMs": 1794927635914,
+    "reason": "failed",
+    "width": 160,
+    "height": 90,
+    "previousDifference": {
+        "differingFraction": 0.011180555555555555,
+        "meanDistance": 0.0005078068264342774,
+        "largestDeepRegionPixels": 0
+    },
+    "limits": {
+        "maxDifferingFraction": 0.01,
+        "maxMeanDistance": 0.005,
+        "maxDeepRegionPixels": 16
+    }
+}

@@ -530,6 +530,7 @@ namespace sw
         // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
         const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( view._bHistoryReset == SW_TRUE, view._bTAAHistoryWritten == SW_TRUE, view._bTAAHistoryReset == SW_TRUE );
         view._stillFrameCount         = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );
+        view._cameraStillFrameCount   = RenderStabilityUtil::advanceStillFrames( view._cameraStillFrameCount, bAccumulationReset, bCameraStill, false );
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).
         PassSelectionResult result{};
         result._bTargetsRebound = bForwardSet ? SW_TRUE : SW_FALSE;

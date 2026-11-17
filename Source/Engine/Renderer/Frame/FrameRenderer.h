@@ -188,7 +188,8 @@ namespace sw
         /** @brief 주 시점의 마지막 정착 값(정지 프레임 · 노출 오차 상한)입니다. 렌더 스레드가 올린다(`RenderStabilitySample::publish` — 감시 값 `Render.Stable`). */
         RenderStabilitySample getMainStabilitySample() const
         {
-            return RenderStabilitySample{ _state._mainView._stillFrameCount, _state._mainView._exposureErrorEv, _state._mainView._exposureAdaptationEv, _state._probeUpdater.getAccumulatedFrames() };
+            return RenderStabilitySample{ _state._mainView._stillFrameCount, _state._mainView._exposureErrorEv, _state._mainView._exposureAdaptationEv, _state._probeUpdater.getAccumulatedFrames(),
+                                          _state._mainView._cameraStillFrameCount };
         }
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 **않게** 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.

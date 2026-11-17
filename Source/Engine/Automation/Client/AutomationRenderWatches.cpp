@@ -65,8 +65,20 @@ namespace sw
             outValue                               = bStable ? 1.0 : 0.0;
             return true;
         }
+
+        /** @brief 감시 값 `Render.StableIgnoringMotion` 입니다. 에셋 일 · 카메라 정지 프레임 · 되읽은 노출 적응 차이가 문턱 안이면 1 입니다 — 물체 움직임은 보지 않는다. */
+        [[nodiscard]] bool readRenderStableIgnoringMotion( const GameObjectManager* pManager, float64& outValue )
+        {
+            const RenderStabilityConfig&   config = engine::getSubsystem<EngineConfig>()._renderStability;
+            const RenderStabilityThreshold threshold{ config._minStillFrames, config._maxExposureErrorEv };
+            outValue = RenderStabilityUtil::isStableIgnoringMotion( RenderStabilitySample::readPublished(), AutomationCaptureUtil::countPendingJobs( pManager ), threshold ) ? 1.0 : 0.0;
+            return true;
+        }
     } // namespace
 
+    SW_AUTOMATION_WATCH( renderStableIgnoringMotion, "Render.StableIgnoringMotion",
+                         "1 when asset jobs are done, the main view's camera kept its TAA history still long enough and read-back auto exposure is adapted - object motion is ignored (always-animated scenes)",
+                         &readRenderStableIgnoringMotion );
     SW_AUTOMATION_WATCH( renderStillFrames, "Render.StillFrames", "Frames in a row the main view kept its TAA history with the camera and objects still (temporal accumulation)",
                          &readStillFrames );
     SW_AUTOMATION_WATCH( renderExposureErrorEv, "Render.ExposureErrorEv", "Upper bound (EV) of how far auto exposure may still be from its target on the main view (0 = fixed exposure)",

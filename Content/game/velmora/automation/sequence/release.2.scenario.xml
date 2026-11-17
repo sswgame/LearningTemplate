@@ -12,6 +12,7 @@
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
 	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="10"/> <!-- 복원(표 밖 자리를 일어설 자리로 옮김까지 한 번에 한다) 뒤 첫 틱이 지역을 다시 정했다 -->
 	<ExpectLog id="Velmora.PlayerOutsideRegions" count="1"/>
+	<ExpectLog id="ModSetDigest.SaveModMissing" count="1"/> <!-- 확장 팩 없이 그 판을 부르면 알리고 이어 간다 -->
 	<Expect watch="Velmora.PlayerX" near="0" tolerance="0.05"/>
 	<Expect watch="Velmora.Region" is="hearth"/>
 	<Expect watch="Velmora.Phase" equals="0"/>

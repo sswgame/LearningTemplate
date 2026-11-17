@@ -28,6 +28,7 @@ namespace sw
             , _presentedFrameCount{ 0 }
             , _exposureAdaptationBits{ 0 }
             , _giAccumulatedFrames{ 0 }
+            , _cameraStillFrameCount{ 0 }
         {
         }
 
@@ -45,6 +46,7 @@ namespace sw
             _exposureErrorBits.store( bits, std::memory_order_relaxed );
             _exposureAdaptationBits.store( adaptationBits, std::memory_order_relaxed );
             _giAccumulatedFrames.store( sample._giAccumulatedFrames, std::memory_order_relaxed );
+            _cameraStillFrameCount.store( sample._cameraStillFrameCount, std::memory_order_relaxed );
         }
 
         RenderStabilitySample load() const
@@ -55,7 +57,8 @@ namespace sw
             Memory::copy( &sample._exposureErrorEv, &bits, sizeof( bits ) );
             const uint32 adaptationBits = _exposureAdaptationBits.load( std::memory_order_relaxed );
             Memory::copy( &sample._exposureAdaptationEv, &adaptationBits, sizeof( adaptationBits ) );
-            sample._giAccumulatedFrames = _giAccumulatedFrames.load( std::memory_order_relaxed );
+            sample._giAccumulatedFrames   = _giAccumulatedFrames.load( std::memory_order_relaxed );
+            sample._cameraStillFrameCount = _cameraStillFrameCount.load( std::memory_order_relaxed );
             return sample;
         }
 
@@ -68,6 +71,7 @@ namespace sw
         atomic<uint64> _presentedFrameCount;    ///< 장치의 프레임 끝에 넘긴 프레임 수(`RenderPresentCounter`)
         atomic<uint32> _exposureAdaptationBits; ///< `float32` 의 비트
         atomic<uint32> _giAccumulatedFrames;
+        atomic<uint32> _cameraStillFrameCount;
 
         SW_SERVICE_SLOT( RenderStabilityStatusHolder, Required );
     };
@@ -95,6 +99,11 @@ namespace sw
     bool RenderStabilityUtil::isStable( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold )
     {
         return pendingJobCount == 0 && sample._stillFrameCount >= threshold._minStillFrames && sample._exposureErrorEv <= threshold._maxExposureErrorEv;
+    }
+
+    bool RenderStabilityUtil::isStableIgnoringMotion( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold )
+    {
+        return pendingJobCount == 0 && sample._cameraStillFrameCount >= threshold._minStillFrames && sample._exposureAdaptationEv <= threshold._maxExposureErrorEv;
     }
 
     void RenderStabilitySample::publish( const RenderStabilitySample& sample )

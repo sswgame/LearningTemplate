@@ -305,8 +305,8 @@ SW_TEST_CASE( ModSetDigestTest, SaveWithRemovedModIsRejected )
     } );
     SW_EXPECT_TRUE( none.checkSaveCompatible( none ) ); // 모드 없는 세이브 · 실행은 그대로다
     SW_EXPECT_TRUE( more.checkSaveCompatible( saved ) );
-    SW_EXPECT_LOG( "ModSetDigest.SaveNeedsMod" );
-    SW_EXPECT_FALSE( none.checkSaveCompatible( saved ) );
+    SW_EXPECT_LOG( "ModSetDigest.SaveModMissing" );
+    SW_EXPECT_TRUE( none.checkSaveCompatible( saved ) ); // 빠진 모드는 경고 뒤 불러온다(상용 대조 — ModSetDigest::checkSaveCompatible)
     SW_EXPECT_LOG( "ModSetDigest.SaveModVersion" );
     SW_EXPECT_FALSE( updated.checkSaveCompatible( saved ) );
 }

@@ -12,6 +12,7 @@
 -->
 <Scenario name="editor.load.hierarchy8000" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="Immediately" input="exclusive">
 	<Launch variable="gv_traceSlowTickMs" value="100"/>
+	<AllowLog id="ProfilerTraceExport.SlowTickUsBudget" reason="이 측정은 100 ms 넘는 프레임을 트레이스로 남기려고 느린 틱 추적을 켠다 — 그 알림은 측정 산출물이라 나와도 된다(시간 문턱은 판정하지 않는다)"/>
 	<Load durationSeconds="15"/>
 	<EditorWaitStable/>
 	<DevCommand line="editor scene.new"/>

@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -113,4 +114,37 @@ namespace sw
         _verticalSpeed = 0.0f;
         _bOnGround     = SW_TRUE;
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct ShooterBodyMovementWatchInternal
+        {
+            /** @brief 감시 값 `Shooter3D.BodySpeed` 입니다 — 대상 오브젝트의 슈터 몸 속도(수평 걸음 + 수직, m/s). 몸이 없으면 값이 없습니다. */
+            [[nodiscard]] static bool readBodySpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject* pTarget = query.findTargetObject();
+                if ( pTarget == nullptr )
+                {
+                    outValue.setText( query.getTargetProblem() );
+                    return false;
+                }
+                const ShooterBodyMovementComponent* pBody = pTarget->getComponent<ShooterBodyMovementComponent>();
+                if ( pBody == nullptr )
+                {
+                    outValue.setText( "'" + string( pTarget->getName().c_str() ) + "' has no shooter body movement" );
+                    return false;
+                }
+                const float3  walk = pBody->getMoveVelocity();
+                const float32 fall = pBody->getState()._verticalSpeed;
+                outValue.setNumber( static_cast<float64>( float3{ walk._x, fall, walk._z }.getLength() ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    // 슈터 몸은 물리 바디 없이 운동학으로 걷는다 — 엔진 `Object.Speed`(강체 · 캐릭터 컨트롤러)가 보지 못한다(shooter3d actions · cctvmonitor).
+    SW_AUTOMATION_QUERY_WATCH( shooterBodySpeed, "Shooter3D.BodySpeed", "Speed of the shooter body on target (walk plus vertical, m/s)", &ShooterBodyMovementWatchInternal::readBodySpeed, true, false );
 } // namespace sw

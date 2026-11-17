@@ -25,7 +25,7 @@
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.12" tolerance="0.03" timeoutFrames="80"/> <!-- 두 발이 칸 위에 자리 잡았다 -->
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.12" tolerance="0.03" timeoutFrames="80"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.pelvis_offset" near="0" tolerance="0.01"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<WaitUntil watch="Render.StableIgnoringMotion" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) — 캐릭터가 늘 움직여 물체 움직임은 보지 않는다 -->
 	<Screenshot file="step_low.ppm"/>
 	<!-- 둘째 칸(0.24 m). -->
 	<Press slot="Key.W"/>
@@ -34,7 +34,7 @@
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.24" tolerance="0.03" timeoutFrames="80"/>
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.24" tolerance="0.03" timeoutFrames="80"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.ground_hits" near="2" tolerance="0.01"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<WaitUntil watch="Render.StableIgnoringMotion" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) — 캐릭터가 늘 움직여 물체 움직임은 보지 않는다 -->
 	<Screenshot file="step_high.ppm"/>
 	<ExpectImage file="step_low.ppm" golden="step_low"/>
 	<ExpectImage file="step_high.ppm" golden="step_high"/>

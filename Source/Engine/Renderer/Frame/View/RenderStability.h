@@ -23,7 +23,8 @@ namespace sw
         /// 되읽은 노출 적응의 지금 EV 와 목표 EV 의 차(절댓값, EV — `FrameAutoExposure` 가 GPU 기록을 몇 프레임 늦게 읽는다). 기록을 버린 뒤에도 장면 밝기가 바뀌면 다시 커진다.
         /// 자동 노출을 쓰지 않거나 아직 읽은 값이 없으면 0
         float32 _exposureAdaptationEv{ 0.0f };
-        uint32  _giAccumulatedFrames{ 0 }; ///< 실시간 프로브 GI 기록이 0 에서 다시 쌓기 시작한 뒤 갱신한 프레임 수(`RealtimeProbeUpdater`). 실시간 볼륨이 없으면 0
+        uint32  _giAccumulatedFrames{ 0 };   ///< 실시간 프로브 GI 기록이 0 에서 다시 쌓기 시작한 뒤 갱신한 프레임 수(`RealtimeProbeUpdater`). 실시간 볼륨이 없으면 0
+        uint32  _cameraStillFrameCount{ 0 }; ///< 카메라만 서 있던 이어진 프레임 수(TAA 기록이 쌓인 프레임 — 물체 움직임은 보지 않는다)
 
         /** @brief 렌더 스레드가 주 시점의 이번 값을 올립니다(엔진 범위 서브시스템이 든다 — `RenderStability.cpp`). */
         static void publish( const RenderStabilitySample& sample );
@@ -72,6 +73,12 @@ namespace sw
         [[nodiscard]] static float32 advanceExposureError( float32 previous, bool bReset, bool bMoved, float32 rangeEv, float32 slowerAdaptRate );
         /** @brief 정지 프레임 · 노출 오차 · 남은 에셋 일(@p pendingJobCount)이 모두 문턱 안이면 true 입니다. */
         [[nodiscard]] static bool isStable( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold );
+        /**
+         * @brief 물체 움직임을 보지 않는 정착입니다 — 에셋 일이 없고, 카메라 정지 프레임이 문턱을 넘고, 되읽은 노출 적응 차이가 문턱 안이면 true 입니다.
+         * @details 캐릭터가 늘 숨 쉬는 장면은 물체 움직임이 끝나지 않아 `isStable` 이 서지 않는다(정지 프레임 · 노출 오차 상한이 늘 처음으로 돌아간다). 고정 프레임 시간의
+         *          결정적 실행에서는 움직이는 장면도 같은 프레임이면 같은 그림이라 카메라 쪽 시간 누적만 쌓이면 된다(언리얼 · 유니티 그래픽 테스트의 정해진 정착 프레임과 같은 자리).
+         */
+        [[nodiscard]] static bool isStableIgnoringMotion( const RenderStabilitySample& sample, uint32 pendingJobCount, const RenderStabilityThreshold& threshold );
     };
 
 } // namespace sw

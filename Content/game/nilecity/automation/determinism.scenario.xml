@@ -23,7 +23,7 @@
 	<Record watch="Scene.TransformHash"/>
 	<!-- 그 뒤 900 프레임(약 20 초) -->
 	<AdvanceSimulation frames="900"/>
-	<Expect watch="Nile.Month" atLeast="1"/>
+	<WaitUntil watch="Nile.Month" atLeast="1" timeoutFrames="120"/> <!-- 첫 달(20 초)이 끝났다 — 위 진행은 19.9 초라 달 경계 바로 앞이다 -->
 	<Expect watch="Nile.Population" atLeast="1"/>
 	<Record watch="Nile.Month"/>
 	<Record watch="Nile.Population"/>

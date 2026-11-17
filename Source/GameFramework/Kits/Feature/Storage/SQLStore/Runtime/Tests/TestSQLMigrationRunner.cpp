@@ -202,6 +202,7 @@ SW_TEST_CASE( SQLMigrationRunnerTest, NewerBreakingDatabaseIsRefused )
  */
 SW_TEST_CASE( SQLMigrationRunnerTest, NewerBackwardDatabaseRuns )
 {
+    SW_EXPECT_LOG( "SQLMigrationRunner.NewerBackwardSchema" ); // 더 새 빌드의 호환 판은 막지 않고 경고만 남긴다
     test::FakeSQLDriver driver;
     driver.addRows( "SELECT version, checksum", { SQLMigrationRunnerTestUtil::makeHistoryRow( 1, "CREATE FIRST {{blob}}" ), SQLMigrationRunnerTestUtil::makeHistoryRow( 2, "CREATE SECOND" ),
                                                   SQLMigrationRunnerTestUtil::makeHistoryRow( 3, "from a newer build" ) } );

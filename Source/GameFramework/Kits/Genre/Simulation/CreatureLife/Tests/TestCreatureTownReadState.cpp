@@ -321,6 +321,7 @@ SW_TEST_CASE( CreatureTownReadStateTest, CatalogWithoutRulesIsRefused )
     SW_EXPECT_LOG( "CreatureLifeCatalog.RulesInvalid" );
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     SW_EXPECT_LOG( "CreatureTown.CreatureTownNeedsCatalog" );
+    SW_EXPECT_LOG( "XMLCatalog.NoEntries" ); // 규칙만 빠진 카탈로그는 항목도 없다 — 읽기가 함께 알린다
     sw::CreatureLifeCatalog bare;
     SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CreatureLifeCatalog><Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal></CreatureLifeCatalog>)", "CreatureTownReadStateTest" ) );
     sw::CreatureLifeCatalog partial;

@@ -48,8 +48,9 @@ namespace sw
         string describeDifference( const ModSetDigest& other ) const;
 
         /**
-         * @brief 세이브에 적힌 구성 @p saved 를 지금 구성으로 읽어도 되면 true 입니다. 세이브의 모드가 지금 꺼졌거나 판이 다르면 이유를 오류로 남기고 false 입니다.
-         * @details 새로 켠 모드는 받는다(세이브에 없던 내용이 더해질 뿐이다). 제거된 모드의 데이터를 가리키는 세이브는 읽지 않는다 — 없는 리소스를 조용히 비우지 않는다.
+         * @brief 세이브에 적힌 구성 @p saved 를 지금 구성으로 읽어도 되면 true 입니다. 같은 모드의 판이 다르면 이유를 오류로 남기고 false 입니다.
+         * @details 새로 켠 모드는 받는다(세이브에 없던 내용이 더해질 뿐이다). 꺼진 모드는 경고(`ModSetDigest.SaveModMissing`)를 남기고 받는다 — 그 내용은 이 판에서 빠지고
+         *          게임이 없는 것으로 다룬다(상용 Bethesda Creation · Paradox · 마인크래프트와 같다). 조용히 비우지 않고 알린다.
          */
         [[nodiscard]] bool checkSaveCompatible( const ModSetDigest& saved ) const;
 

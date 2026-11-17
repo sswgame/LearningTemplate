@@ -332,6 +332,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, RemoveAndAudit )
 /** @brief [ServerDirectoryServiceTest] 운영자 권한: 가드가 거절하거나 없는 변경은 Forbidden 이고 표를 건드리지 않으며 거절 감사 줄(`<동작>.denied`)을 남긴다. 운영자는 통과한다 */
 SW_TEST_CASE( ServerDirectoryServiceTest, OperatorGuardRefusesNonOperators )
 {
+    SW_EXPECT_LOG( "ServiceAuditLog.WriteWithoutGuard" ); // 권한 확인 없는 운영자 쓰기는 감사 기록이 거절하며 오류로 남긴다
     DirectoryServiceFixture rig;
     const UnixMilliseconds  nowMs{ kNowMs };
     const ServiceOperator   stranger{ kStranger, make_shared<const DenyGuard>() };
