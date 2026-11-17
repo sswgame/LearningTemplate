@@ -8,6 +8,9 @@
   py -3 Scripts/dev/scenario_bisect.py empty surfacefootprint                      # Ninja-Debug, dx12, 무인
   py -3 Scripts/dev/scenario_bisect.py editor focusloss --preset Ninja-Release --show
   py -3 Scripts/dev/scenario_bisect.py --self-check
+  py -3 Scripts/dev/scenario_bisect.py shooter3d --rerun-failed --preset Ninja-Release   # 마지막 체인에서 진 단계: 혼자 → 앞을 붙여 → 이분 탐색
+  py -3 Scripts/dev/scenario_bisect.py shooter3d --from-stage enemydeath --backend vk     # 그 단계부터 끝까지만
+  py -3 Scripts/dev/scenario_bisect.py shooter3d --fixed-waits                           # 고정 대기 목록(condition · photo · other)
   py -3 Scripts/dev/scenario_bisect.py --golden-margins [보고 폴더…]                # 흔들리는 골든: 보고의 goldenSamples[] 를 모아 골든별 최대 · 여유
   py -3 Scripts/dev/scenario_bisect.py --golden-coverage                            # 플랫폼 · 백엔드마다 골든 수(체인 백엔드 표와 대조)
 
@@ -132,6 +135,111 @@ def stage_failed_in_reports(list_report: Sequence[dict], stage_name: str) -> boo
     """그 단계의 보고가 통과 · 건너뜀이 아니면 짐. 보고가 없으면(크래시 · 행으로 못 씀) 짐이다 — 통과로 치지 않는다."""
     list_result = [report['result'] for report in list_report if report['name'] == stage_name]
     return not list_result or any(result not in PASSED_RESULTS for result in list_result)
+
+
+# ------------------------------------------------------------------------------
+# 진 단계 다시 돌기(--rerun-failed) · 단계부터 끝까지(--from-stage) · 고정 대기 목록(--fixed-waits) — DesignBacklog 검증 시간 절 V1
+# ------------------------------------------------------------------------------
+
+def find_latest_per_backend_folder(automation_dir: pathlib.Path, stage_names: set[str]) -> pathlib.Path | None:
+    """마지막 체인 실행의 백엔드 보고 폴더 — `-scenario-report` 없는 체인은 `<Saved/Automation>/<시나리오>/per-backend-<pid>/` 에
+    `<백엔드>.log` 와 단계 보고 `<백엔드>[.<번호>].json` 을 남긴다. 이 체인의 단계 이름이 든 보고가 있는 폴더 중 가장 새것. 없으면 None."""
+    candidates = sorted((path for path in automation_dir.glob('*/per-backend-*') if path.is_dir()), key=lambda path: path.stat().st_mtime, reverse=True)
+    for folder in candidates:
+        if any(report.get('name') in stage_names for _, report in read_backend_reports(folder)):
+            return folder
+    return None
+
+
+def read_backend_reports(folder: pathlib.Path) -> list[tuple[str, dict]]:
+    """폴더의 단계 보고를 (백엔드, 보고)로 — 백엔드는 파일 이름의 첫 조각(`vk.3.json` → vk)이다."""
+    import json
+    list_report = []
+    for path in sorted(folder.glob('*.json')):
+        try:
+            document = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+        if isinstance(document, dict) and 'name' in document and 'result' in document:
+            list_report.append((path.name.split('.')[0], document))
+    return list_report
+
+
+def select_failed_stages(expected_by_backend: dict[str, list[str]], list_report: Sequence[tuple[str, dict]]) -> list[tuple[str, str]]:
+    """백엔드마다 돌았어야 할 단계 중 진 것(통과 · 건너뜀이 아니거나 보고가 없는 것 — 크래시 · 행)을 (백엔드, 단계) 체인 순서로 돌려준다."""
+    failed = []
+    for backend, list_stage in expected_by_backend.items():
+        reports = [report for report_backend, report in list_report if report_backend == backend]
+        for stage in list_stage:
+            if stage_failed_in_reports(reports, stage):
+                failed.append((backend, stage))
+    return failed
+
+
+def collect_expected_stages(folder: pathlib.Path, chain_names: list[str], split: bool) -> dict[str, list[str]]:
+    """폴더의 `<백엔드>.log` 마다 그 백엔드가 돌았어야 할 단계 — 나눠 주는 체인은 그 로그가 실제로 실은 순서(`read_backend_chain_order`), 아니면 체인 전부."""
+    expected: dict[str, list[str]] = {}
+    for log in sorted(folder.glob('*.log')):
+        backend = log.name.split('.')[0]
+        if split:
+            expected[backend] = [read_scenario_name(path) for path in read_backend_chain_order(log.read_text(encoding='utf-8', errors='replace'))]
+        else:
+            expected[backend] = list(chain_names)
+    return expected
+
+
+StageRunner = Callable[[list[str], str, str], bool]   # (돌릴 단계 경로들, 판정할 단계 이름, 백엔드) → 졌는가
+
+
+def retry_failed_stages(paths: list[str], failed: Sequence[tuple[str, str]], run: StageRunner) -> int:
+    """진 단계마다: 혼자 돌려 지면 "단독으로 진다", 통과하면 "체인에서만 진다" — 앞 단계를 모두 붙여 다시 돌리고, 지면 이분 탐색으로 넘어간다.
+    Windows(`main`)와 Linux(`linux_scenarios.py rerun`)가 자기 실행기(@p run)로 같은 함수를 부른다. 진 단계가 하나라도 남으면 1."""
+    names = [read_scenario_name(path) for path in paths]
+    still_failing = 0
+    for backend, stage in failed:
+        index = names.index(stage)
+        if run([paths[index]], stage, backend):
+            print(f'{backend} {stage}: 단독으로 진다 — scenario-debug 의 단독 재현으로 본다', flush=True)
+            still_failing += 1
+            continue
+        print(f'{backend} {stage}: 체인에서만 진다 — 앞 {index} 단계를 붙여 다시 돈다', flush=True)
+        if not run(paths[:index + 1], stage, backend):
+            print(f'{backend} {stage}: 앞 단계를 붙여도 통과 — 흔들림(같은 체인을 한 번 더 돌려 확인한다)', flush=True)
+            continue
+        still_failing += 1
+        first_bad = find_first_bad_step(paths[:index], lambda prefix: run(prefix + [paths[index]], stage, backend))
+        print(f'{backend} {stage}: 시작 단계 {paths[first_bad] if first_bad is not None else "재현 안 됨"}', flush=True)
+    return 1 if still_failing else 0
+
+
+WAIT_PHOTO_STEPS = frozenset({'Screenshot', 'ExpectImage', 'ExpectImagesDiffer', 'CaptureEditorUI'})
+STEP_TAG = re.compile(r'<!--.*?-->|<([A-Za-z]\w*)\b([^>]*)>', re.S)
+
+
+def list_fixed_waits(scenario_text: str) -> list[dict]:
+    """시나리오 글의 고정 대기(`<Wait frames="N"/>`)마다 프레임 수 · 다음 단계 종류 · 분류를 낸다.
+    분류: condition(바로 뒤가 `<Expect watch>` — 조건 대기로 바꿀 후보), photo(바로 뒤가 사진 — 진행 시간이라 그리지 않는 대기 후보), other."""
+    steps = [(match.group(1), match.group(2)) for match in STEP_TAG.finditer(scenario_text) if match.group(1) and match.group(1) != 'Scenario']
+    rows = []
+    for index, (tag, attributes) in enumerate(steps):
+        frames = re.search(r'\bframes="(\d+)"', attributes)
+        if tag != 'Wait' or frames is None:
+            continue
+        next_tag, next_attributes = steps[index + 1] if index + 1 < len(steps) else ('-', '')
+        kind = 'condition' if next_tag == 'Expect' and re.search(r'\bwatch=', next_attributes) else ('photo' if next_tag in WAIT_PHOTO_STEPS else 'other')
+        rows.append({'frames': int(frames.group(1)), 'next': next_tag, 'kind': kind})
+    return rows
+
+
+def print_fixed_waits(paths: list[str]) -> int:
+    """체인의 고정 대기 목록과 분류별 프레임 합 — 조건 대기로 바꿀 것(condition)과 그리지 않는 대기 후보(photo)를 가른다."""
+    totals: dict[str, int] = {}
+    for path in paths:
+        for row in list_fixed_waits((REPO / 'Content' / path).read_text(encoding='utf-8')):
+            totals[row['kind']] = totals.get(row['kind'], 0) + row['frames']
+            print(f'{row["kind"]:9s} {row["frames"]:5d}  → {row["next"]:18s} {path}')
+    print('프레임 합:', ', '.join(f'{kind} {frames}' for kind, frames in sorted(totals.items())) or '없음')
+    return 0
 
 
 GOLDEN_AXES = (('differingFraction', 'maxDifferingFraction'), ('meanDistance', 'maxMeanDistance'), ('largestDeepRegionPixels', 'maxDeepRegionPixels'))
@@ -265,6 +373,14 @@ def self_check() -> int:
     assert stage_failed_in_reports([{'name': 'a', 'result': 'Passed'}], 'a') is False
     assert stage_failed_in_reports([{'name': 'a', 'result': 'Failed'}], 'a') is True
     assert stage_failed_in_reports([{'name': 'b', 'result': 'Passed'}], 'a') is True, '보고 없는 단계는 짐'
+    # 진 단계 고르기: 보고 없는 단계(크래시 · 행)도 진 것이고, 백엔드마다 따로 본다.
+    list_report = [('dx12', {'name': 'a', 'result': 'Passed'}), ('dx12', {'name': 'b', 'result': 'Failed'}), ('vk', {'name': 'a', 'result': 'Skipped'})]
+    assert select_failed_stages({'dx12': ['a', 'b', 'c'], 'vk': ['a', 'b']}, list_report) == [('dx12', 'b'), ('dx12', 'c'), ('vk', 'b')]
+    assert select_failed_stages({'dx12': ['a']}, list_report) == []
+    # 대기 분류: 뒤가 Expect watch 면 condition, 사진이면 photo, 그 밖 other. 주석 안의 대기 · 조건 대기(WaitUntil)는 세지 않는다.
+    waits = list_fixed_waits('<Scenario name="x"><!-- <Wait frames="9"/> --><Wait frames="2"/><Expect watch="A" equals="1"/>'
+                             '<Wait frames="600"/><Screenshot name="s"/><WaitUntil watch="B" atLeast="1"/><Wait frames="5"/><Click x="1"/><Wait frames="7"/></Scenario>')
+    assert [(row['frames'], row['next'], row['kind']) for row in waits] == [(2, 'Expect', 'condition'), (600, 'Screenshot', 'photo'), (5, 'Click', 'other'), (7, '-', 'other')], waits
     print('self-check ok')
     return 0
 
@@ -281,6 +397,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument('--golden-margins', nargs='*', metavar='보고 폴더 · 파일',
                         help='체인 대신: 시나리오 보고(goldenSamples[])를 모아 골든마다 실행 사이 최대 차이와 여유를 낸다(기본 build/<preset>/Bin/Saved/Automation)')
     parser.add_argument('--golden-coverage', action='store_true', help='체인 대신: 플랫폼 · 백엔드마다 저장소 골든 수(체인 백엔드 표와 대조, 체인 밖 백엔드의 골든 0 이 드러난다)')
+    parser.add_argument('--rerun-failed', action='store_true',
+                        help='단계 대신: 마지막 체인 실행(Bin/Saved/Automation 의 per-backend 보고)에서 진 단계를 그 백엔드로 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다')
+    parser.add_argument('--from-stage', metavar='단계', help='단계 대신: 그 단계부터 체인 끝까지만 --backend 로 돌고 진 단계를 낸다')
+    parser.add_argument('--fixed-waits', action='store_true', help='단계 대신: 체인의 고정 대기(<Wait frames>)마다 프레임 수 · 다음 단계 · 분류(condition · photo · other)')
     options = parser.parse_args(argv)
     if options.self_check:
         return self_check()
@@ -288,14 +408,55 @@ def main(argv: Sequence[str] | None = None) -> int:
         return print_golden_coverage()
     if options.golden_margins is not None:
         return print_golden_margins(options.golden_margins, options.preset)
-    if not options.chain or not options.stage:
-        parser.error('체인과 단계를 적는다 (예: empty surfacefootprint)')
+    chain_mode = options.rerun_failed or options.from_stage or options.fixed_waits
+    if not options.chain or (not options.stage and not chain_mode):
+        parser.error('체인과 단계를 적는다 (예: empty surfacefootprint) — 또는 체인과 --rerun-failed · --from-stage · --fixed-waits')
 
-    build_preset_or_exit(options.preset)
     build_dir = REPO / 'build' / options.preset
     log_dir = build_dir / 'Testing' / 'Logs'
     command = app_arguments.find_chain_command(build_dir, options.chain)
     paths = app_arguments.read_chain_stages(command)
+    if options.fixed_waits:
+        return print_fixed_waits(paths)
+    build_preset_or_exit(options.preset)
+    dropped = ('unattended',) if options.show else ()
+    base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report', *dropped)
+    run_log = log_dir / 'Culprit.log'
+    run_counter = [0]
+
+    def run_part(stage_paths: list[str], backend: str) -> pathlib.Path:
+        run_counter[0] += 1
+        run_dir = make_run_report_folder(build_dir, run_counter[0])
+        subprocess.run(base + [app_arguments.option('scenario', ','.join(stage_paths)), app_arguments.flag('scenario-keep-going'), app_arguments.option('scenario-backends', backend),
+                               app_arguments.option('scenario-report', run_dir / 'report.json'), app_arguments.option('log-file', run_log)], cwd=build_dir / 'Bin',
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return run_dir
+
+    def run_stage(stage_paths: list[str], target_name: str, backend: str) -> bool:
+        run_dir = run_part(stage_paths, backend)
+        bad = stage_failed_in_reports(read_run_reports(run_dir), target_name)
+        print(f'{backend} {len(stage_paths):3d} 단계 (첫 {stage_paths[0]}) → {target_name} {"짐" if bad else "통과"}  ({run_dir})', flush=True)
+        return bad
+
+    if options.rerun_failed:
+        names = [read_scenario_name(path) for path in paths]
+        automation_dir = build_dir / 'Bin' / 'Saved' / 'Automation'
+        folder = find_latest_per_backend_folder(automation_dir, set(names))
+        if folder is None:
+            parser.error(f'{options.chain} 의 체인 보고가 {automation_dir} 에 없다 — 체인을 먼저 돌린다')
+        split = any('scenario-backend-split' in part for part in command)
+        failed = select_failed_stages(collect_expected_stages(folder, names, split), read_backend_reports(folder))
+        print(f'{options.chain}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
+        return retry_failed_stages(paths, failed, run_stage)
+    if options.from_stage:
+        names = [read_scenario_name(path) for path in paths]
+        start_index, _ = resolve_target(dict(enumerate(names)), options.from_stage)
+        run_dir = run_part(paths[start_index:], options.backend)
+        failed = select_failed_stages({options.backend: names[start_index:]}, [(options.backend, report) for report in read_run_reports(run_dir)])
+        print(f'{options.chain}: {names[start_index]} 부터 {len(paths) - start_index} 단계 · {options.backend} → 진 단계 {len(failed)} 개  ({run_dir})')
+        for _, stage in failed:
+            print('  짐:', stage)
+        return 1 if failed else 0
     if any('scenario-backend-split' in part for part in command):
         # 나눠 주는 체인은 백엔드마다 다른 부분만 돌았다 — 그 백엔드의 체인 로그가 실제 순서의 정본이다(없으면 체인을 먼저 돌린다, 짐작하지 않는다).
         backend_log = log_dir / f'Scenario.{options.chain}.{options.backend}.log'
@@ -304,21 +465,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         paths = read_backend_chain_order(backend_log.read_text(encoding='utf-8', errors='replace'))
     # 단계 이름은 시나리오 파일의 name 속성이 정본이다(로그 문구를 읽지 않는다 — 체인을 먼저 돌려 둘 필요도 없다).
     target_index, target_name = resolve_target({index: read_scenario_name(path) for index, path in enumerate(paths)}, options.stage)
-    dropped = ('unattended',) if options.show else ()
-    base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report', *dropped)
-    run_log = log_dir / 'Culprit.log'
-    run_counter = [0]
-
     def fails(prefix: list[str]) -> bool:
-        listed = ','.join(prefix + [paths[target_index]])
-        run_counter[0] += 1
-        run_dir = make_run_report_folder(build_dir, run_counter[0])
-        subprocess.run(base + [app_arguments.option('scenario', listed), app_arguments.flag('scenario-keep-going'), app_arguments.option('scenario-backends', options.backend),
-                               app_arguments.option('scenario-report', run_dir / 'report.json'), app_arguments.option('log-file', run_log)], cwd=build_dir / 'Bin',
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        bad = stage_failed_in_reports(read_run_reports(run_dir), target_name)
-        print(f'앞 {len(prefix):3d} 단계 (첫 {prefix[0] if prefix else "-"}) → {"짐" if bad else "통과"}  ({run_dir})', flush=True)
-        return bad
+        return run_stage(prefix + [paths[target_index]], target_name, options.backend)
 
     before = paths[:target_index]
     print(f'{options.chain}: {target_name} (단계 {target_index + 1}/{len(paths)}) · {options.preset} {options.backend}', flush=True)

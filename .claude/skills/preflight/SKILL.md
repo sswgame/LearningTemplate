@@ -18,7 +18,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 3. **로그 분류:** `build/<프리셋>/Testing/Logs/*.log` 의 Error · Warning 을 id 별로 모아 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
 4. **push:** Windows 단계가 모두 통과하면(`WINDOWS_OK` 줄의 sha) Linux 를 기다리지 않고 `git push origin <sha>:main`(사용자 결정 2026-11-09). Linux 가 지면 고친 커밋을 다음 검증에서 다시 push 한다. 검증 뒤에 코드를 고쳤으면 그 커밋은 아직 검증되지 않았다.
 
-실패하면 `scenario-debug` 로 고치고 **진 테스트만** 다시 돌린다(사용자 결정 2026-11-12 — 고친 것이 공통 코드여도 통과한 단계를 처음부터 다시 돌리지 않는다). 진 테스트가 통과하면 진 단계의 다음 단계부터 `--from` 으로 잇는다(예: Debug nogpu 에서 졌으면 그 테스트만 Debug 로 다시 돌리고 `--from gpu-release`, Release 체인에서 졌으면 그 체인만 다시 돌리고 `--from linux`). 시나리오 · 테스트 한 곳만 고쳤고 남은 단계가 없으면 그 체인만 통과해도 push 한다.
+실패하면 `scenario-debug` 로 고치고 **진 테스트만** 다시 돌린다 — 체인의 진 단계는 `py -3 Scripts/dev/scenario_bisect.py <체인> --rerun-failed --preset <프리셋>`(Linux 는 `linux_scenarios.py rerun <체인>`)가 마지막 보고에서 골라 혼자 → 앞을 붙여 → 이분 탐색으로 돈다(사용자 결정 2026-11-12 — 고친 것이 공통 코드여도 통과한 단계를 처음부터 다시 돌리지 않는다). 진 테스트가 통과하면 진 단계의 다음 단계부터 `--from` 으로 잇는다(예: Debug nogpu 에서 졌으면 그 테스트만 Debug 로 다시 돌리고 `--from gpu-release`, Release 체인에서 졌으면 그 체인만 다시 돌리고 `--from linux`). 시나리오 · 테스트 한 곳만 고쳤고 남은 단계가 없으면 그 체인만 통과해도 push 한다.
 
 ## 보고
 

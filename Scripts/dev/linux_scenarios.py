@@ -12,6 +12,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   stages [--record] 묶음… 쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode — 게임 단계는 리소스 경로로)
   bisect 단계 [체인]     체인에서만 지는 단계의 앞 단계를 이분 탐색한다(체인 기본값 editor, 먼저 chain 을 돌려 로그가 있어야 한다)
   report [체인]          마지막 체인 로그에서 진 단계와 까닭을 다시 낸다
+  rerun [체인]           마지막 체인 보고에서 진 단계를 혼자 → 앞을 붙여 → 이분 탐색으로 다시 돈다(scenario_bisect --rerun-failed 와 같은 함수)
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
   all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
@@ -382,6 +383,38 @@ def bisect(arguments):
     return 0
 
 
+def retry_failed(arguments):
+    """마지막 체인 실행에서 진 단계를 다시 돈다 — scenario_bisect.retry_failed_stages(Windows 와 같은 함수)에 Xvfb · 드라이버 실행기를 댄다."""
+    pack = arguments[0] if arguments else 'editor'
+    require_current_build()
+    command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack)
+    paths = app_arguments.read_chain_stages(command)
+    names = [scenario_bisect.read_scenario_name(path) for path in paths]
+    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names))
+    if folder is None:
+        print(f'{pack} 의 체인 보고가 없다 - chain {pack} 을 먼저 돌린다')
+        return 1
+    split = any('scenario-backend-split' in part for part in command)
+    failed = scenario_bisect.select_failed_stages(scenario_bisect.collect_expected_stages(folder, names, split), scenario_bisect.read_backend_reports(folder))
+    print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
+    with Xvfb():
+        env = scenario_env(99)
+        base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
+        run_counter = [0]
+
+        def run_stage(stage_paths, target_name, backend):
+            run_counter[0] += 1
+            run_dir = scenario_bisect.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
+            subprocess.run(['timeout', '1200', *base, app_arguments.option('scenario', ','.join(stage_paths)), app_arguments.flag('scenario-keep-going'),
+                            app_arguments.option('scenario-backends', backend), app_arguments.option('scenario-report', run_dir / 'report.json'),
+                            *window_arguments(), app_arguments.option('log-file', 'x_retry.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            bad = scenario_bisect.stage_failed_in_reports(scenario_bisect.read_run_reports(run_dir), target_name)
+            print(backend, len(stage_paths), target_name, '짐' if bad else '통과', flush=True)
+            return bad
+
+        return scenario_bisect.retry_failed_stages(paths, failed, run_stage)
+
+
 def read_ppm_colors(path):
     """P6 사진의 크기와 표본 색 수입니다."""
     data = pathlib.Path(path).read_bytes()
@@ -645,6 +678,8 @@ def main(argv):
         return stages(arguments)
     if command == 'bisect' and arguments:
         return bisect(arguments)
+    if command == 'rerun':
+        return retry_failed(arguments)
     if command == 'report':
         return report(arguments[0] if arguments else 'editor')
     if command == 'goldens':
