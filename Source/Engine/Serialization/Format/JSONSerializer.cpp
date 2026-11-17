@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -603,12 +604,14 @@ namespace sw
         if ( dst.isValid() == false || pInstance == nullptr )
             return;
         dst.setObject();
-        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+        // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`) — XML · 바이너리 쓰기와 같은 차례다.
+        const ReflectPropertyVisitor propertyVisitor{ context.getTypeRegistry(), ReflectVisitOptions{} };
+        (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
         {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
-                return;
-            JSONSerializerInternal::writeProperty( dst, prop, ObjectAddress{ pInstance }, context );
-        }, true /* 상속 PROPERTY 포함 */ );
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, field._property, context ) )
+                JSONSerializerInternal::writeProperty( dst, field._property, ObjectAddress{ pInstance }, context );
+            return ReflectVisitFlow::Continue;
+        } );
     }
 
     FieldReadResult JSONSerializer::readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
