@@ -46,10 +46,10 @@
 
 ## 5. 설계 남은 일
 
-- **렌더링:** TransientLeasePool 을 뷰 풀에, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, 박막 · 털 · 스타킹 · 비단의 디퍼드(G버퍼 칸 부족 — 지금은 포워드 전용), VFX · 프로브 디스패치 전이를 묶음 API 로.
+- **렌더링:** TransientLeasePool 을 뷰 풀에, 같은 자리 후처리 머티리얼이 앞 결과를 이어 읽기, VFX · 프로브 디스패치 전이를 묶음 API 로.
 - **RHI 5-2(측정 뒤에만):** Vulkan 동적 오프셋 · 푸시 디스크립터, WebGPU 바인드 그룹 캐시 은퇴, RHI 스레드, 복사 큐, SM6.6 바인드리스, RT · 메시 셰이더, Vulkan 서브할당(감사 R-4).
-- **5-3 병렬 오브젝트**(완전 ECS 는 기각, 이득이 흔들림 안이면 되돌림): 남은 `getOwner()->getManager()`(전 45 곳, 지금 9 곳 — `git grep`) 를 `context.getManager()`(읽기) · `context.deferPostTick`(쓰기)으로 옮긴 뒤 쓰기 길을 닫고 `onSubTick` 도 같은 컨텍스트로. 같은 단계 서비스 갱신 병렬화(게임 스레드 전용 API 를 서명으로 먼저 가림). 캐릭터 컨트롤러 3D · 2D 입력을 `ComponentDataStore` 페이지로. 근접 기믹 · 감지 · 넷 관심 격자를 `SceneSpatialGrid` 로 옮길지 측정 뒤.
-- **5-4 리플렉션:** W-R3 (a) 고정 배치형 코덱 본문을 필드 서술자 공용 코덱으로(생성 바이트 4 MB 미만은 그 뒤 측정), `InspectorLayoutCache` 키를 `PropertyHandle` 로(핫 리로드 때 비우는지 먼저). W-R6 밀집 타입 색인은 5-3 SoA 와 함께. 경합 같은 모양 둘: 상속 목록은 RCU 로 바꿨지만(babab8149c) `computeDerivedFlags` 가 지은 비트필드를 읽기와 겹쳐 고칠 수 있는지, 핫 리로드가 `TypeInfo` 를 `operator=` 로 제자리 교체하는 동안 다른 스레드가 읽는지 — 같은 판 교체로 막는다.
+- **5-3 병렬 오브젝트**(완전 ECS 는 기각, 이득이 흔들림 안이면 되돌림): 같은 단계 서비스 갱신 병렬화(게임 스레드 전용 API 를 서명으로 먼저 가림)와 캐릭터 일괄 이동 — 설계 · 문턱은 [DesignBacklog](DesignBacklog.md) "병렬 오브젝트 남은 몫" PO-1 ~ PO-3.
+- **5-4 리플렉션:** W-R6 밀집 타입 색인은 5-3 SoA 와 함께. 경합 같은 모양 둘: 상속 목록은 RCU 로 바꿨지만(babab8149c) `computeDerivedFlags` 가 지은 비트필드를 읽기와 겹쳐 고칠 수 있는지, 핫 리로드가 `TypeInfo` 를 `operator=` 로 제자리 교체하는 동안 다른 스레드가 읽는지 — 같은 판 교체로 막는다.
 - **상용 대비:** T3 샤드 시간 균형(외부 CI 러너는 사용자 결정), U1 방아쇠 진동 · Android Vibrator(백엔드가 생길 때).
 
 ### 에셋 정체성(GUID) 2 · 3 단계 — 판단은 [DesignBacklog](DesignBacklog.md) "에셋 정체성" 절
