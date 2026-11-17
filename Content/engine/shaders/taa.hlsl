@@ -44,7 +44,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const bool   bInFront    = bSky == false || prevW > 0.0f;
     const bool   bOnScreen   = bInFront && all( prevUv >= 0.0f ) && all( prevUv <= 1.0f );
 
-    const float3 history = clamp( PassTexture::sampleAlbedo( prevUv ).rgb, neighborMin, neighborMax );
+    const float3 history = clamp( PassTexture::sampleAlbedoPrevious( prevUv ).rgb, neighborMin, neighborMax ); // 히스토리는 지난 프레임의 사각형 배율로 읽는다
     // 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — motion_blur.hlsl).
     const float weight = bOnScreen ? kHistoryWeight : 0.0f;
     return float4( lerp( current, history, weight ), 1.0f );
