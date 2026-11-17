@@ -33,7 +33,10 @@
         "_psoBuildBudgetMicroseconds": 2000,
         "_shadowCascadeSplitLambda": 0.75,
         "_shadowLocalDepthBiasTexels": 1.5,
-        "_taaHistoryWeight": 0.9
+        "_taaHistoryWeight": 0.9,
+        "_textureUploadsPerFrame": 8,
+        "_textureStreamingUpgradesPerFrame": 2,
+        "_textureStreamingPoolMegabytes": 768
     },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",

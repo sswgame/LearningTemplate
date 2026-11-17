@@ -28,6 +28,7 @@
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
+#include "Engine/Graphics/Texture/TextureStreamingPool.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <condition_variable>
@@ -104,10 +105,11 @@ namespace sw
             unique_ptr<Texture2D>          _texture;
             weak_ptr<TextureLoadOperation> _pLoadOperation; ///< 진행 중인 로드(`request`) — 같은 경로의 요청은 이 로드 작업을 받는다
             uint32                         _refCount{ 0 };
-            bool                           _bLoading{ false };   ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                           _bPublished{ false }; ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                           _bPinned{ false };    ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                           _bUpgrading{ false }; ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                           _bLoading{ false };    ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                           _bPublished{ false };  ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                           _bPinned{ false };     ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                           _bUpgrading{ false };  ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            TextureStreamingReservation    _streamingReservation; ///< 위쪽 밉 승급이 풀(`_streamingPool`)에서 쥔 바이트 — 항목이 사라지면 돌려준다(지우는 자리마다 빼지 않는다)
         };
         /** @brief 위쪽 밉을 기다리는 텍스처 하나입니다 — 로드 단계가 읽은 DDS 이미지를 보관한다(다시 읽지 않는다). */
         struct StreamingUpgrade
@@ -131,6 +133,7 @@ namespace sw
             vector<uint8> _rgbaBytes;
             bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
+        TextureStreamingPool                   _streamingPool; ///< 항목의 예약보다 먼저 만들고 뒤에 없앤다(멤버 순서) — 예약이 사라질 때 여기서 뺀다
         unordered_map<string, Entry> _mapEntry SW_GUARDED_BY( _mutex );
         vector<RegionUpdate>                   _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
         vector<RegionUpdate>                   _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
@@ -151,10 +154,11 @@ namespace sw
         vector<shared_ptr<TextureLoadOperation>>       _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다, `_awaitingMutex`)
         vector<shared_ptr<TextureLoadOperation>>       _listUploading;      ///< 업로드를 제출했고 끝남 확인을 기다리는 로드(`completePendingLoads` 가 폴링한다, `_awaitingMutex`)
         mutex                                          _streamingMutex;
-        vector<StreamingUpgrade> _listStreamingUpgrade SW_GUARDED_BY( _streamingMutex ); ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
-        TextureStreamingRetireList                     _retired;                         ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
-        vector<string> _listUpgrading                  SW_GUARDED_BY( _streamingMutex ); ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
-        unordered_map<string, float32>                 _mapScreenSize;                   ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
+        vector<StreamingUpgrade> _listStreamingUpgrade SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
+        bool _bStreamingParked                         SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
+        TextureStreamingRetireList                     _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
+        vector<string> _listUpgrading                  SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
+        unordered_map<string, float32>                 _mapScreenSize;                           ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
 
         /** @brief `submitRegionUpdate` 의 결과: 올림 · 다음 프레임에 다시(`Busy` 이면 이번 차례의 나머지도 미룬다) · 버림. */
         enum class RegionFlushResult : uint8
@@ -548,8 +552,9 @@ namespace sw
         return completedCount;
     }
 
-    uint32 TextureCache::updateStreaming( IRHIDevice* pDevice, uint32 maxCount )
+    uint32 TextureCache::updateStreaming( IRHIDevice* pDevice, const TextureStreamingBudget& budget )
     {
+        const uint32 maxCount = budget._maxUpgradesPerFrame;
         if ( pDevice == nullptr )
             return 0;
         uint32 upgradedCount = 0;
@@ -564,6 +569,8 @@ namespace sw
                 it->second._bUpgrading = false;
                 if ( bUpgraded )
                     _impl->_retired.add( pDevice, retired );
+                else
+                    it->second._streamingReservation = TextureStreamingReservation{}; // 아래쪽 밉 그대로다 — 풀에 돌려준다
                 if ( it->second._refCount == 0 && it->second._bPinned == false )
                 {
                     pErased = std::move( it->second._texture );
@@ -620,6 +627,7 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
             const size_t      takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listStreamingUpgrade.size() );
+            _impl->_bStreamingParked    = false;
             if ( takeCount == 0 )
             {
                 _impl->_mapScreenSize.clear();
@@ -643,6 +651,8 @@ namespace sw
             _impl->_listStreamingUpgrade.erase( _impl->_listStreamingUpgrade.begin(), _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) );
         }
         SW_PROFILE_SCOPE( "RT.TextureStreaming" );
+        SW_PROFILE_COUNT( "RT.TextureStreaming.poolBytes", _impl->_streamingPool.getUsedBytes() );
+        bool bOverBudget = false;
         for ( size_t index = 0; index < listUpgrade.size(); ++index )
         {
             Impl::StreamingUpgrade& upgrade  = listUpgrade[index];
@@ -655,8 +665,23 @@ namespace sw
                                          it->second._texture != nullptr && it->second._texture->isFullyResident() == false;
                 if ( bUpgradable == false )
                     continue;
-                it->second._bUpgrading = true;
-                pTexture               = it->second._texture.get();
+                // 풀 예산(`RenderConfig::_textureStreamingPoolMegabytes`) — 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받는다 — 작은 것이 건너뛰어 채우지 않는다).
+                optional<TextureStreamingReservation> reservation = _impl->_streamingPool.tryReserve( upgrade._pImage->_bytes.size(), budget._poolBytes );
+                bOverBudget                                       = reservation.has_value() == false;
+                if ( bOverBudget == false )
+                {
+                    it->second._streamingReservation = std::move( reservation.value() );
+                    it->second._bUpgrading           = true;
+                    pTexture                         = it->second._texture.get();
+                }
+            }
+            if ( bOverBudget )
+            {
+                ScopedLock<mutex> lock{ _impl->_streamingMutex };
+                _impl->_bStreamingParked = true;
+                _impl->_listStreamingUpgrade.insert( _impl->_listStreamingUpgrade.begin(), std::make_move_iterator( listUpgrade.begin() + static_cast<ptrdiff_t>( index ) ),
+                                                     std::make_move_iterator( listUpgrade.end() ) );
+                break;
             }
             // 제출은 잠금 밖에서 — 게임 스레드의 find · acquire 를 붙잡지 않는다. 표시가 항목을 지키고(놓여도 지우지 않는다), 다시 읽기는 끝을 기다린다.
             // 표시는 끝남 확인(`finishUpgradeResidency`)이 끝낼 때 내린다 — 몇 프레임 뒤다.
@@ -707,8 +732,10 @@ namespace sw
     {
         uint32 count = 0;
         {
+            // 풀 예산에 막혀 쉬는 줄은 진행 중이 아니다 — 세면 예산을 넘는 장면에서 기다리는 쪽(시나리오의 스크린샷)이 끝나지 않는다.
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
-            count += static_cast<uint32>( _impl->_listStreamingUpgrade.size() );
+            if ( _impl->_bStreamingParked == false )
+                count += static_cast<uint32>( _impl->_listStreamingUpgrade.size() );
         }
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         for ( const auto& [key, entry] : _impl->_mapEntry )

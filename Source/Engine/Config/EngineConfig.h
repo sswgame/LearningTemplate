@@ -153,6 +153,21 @@ namespace sw
         /** @brief TAA 기록 비율 — 화면이 그대로인 곳의 누적 정도(taa.hlsl `SW_TAA_HISTORY_WEIGHT` 쿠킹 define). 1 이면 이번 그림이 들지 않으므로 1 미만이어야 한다. */
         PROPERTY( Min = 0.0, Max = 0.99 )
         float32 _taaHistoryWeight{};
+
+        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 비동기 텍스처 로드 수의 상한입니다(`TextureCache::completePendingLoads` — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게). */
+        PROPERTY( Min = 1 )
+        uint32 _textureUploadsPerFrame{};
+
+        /** @brief 렌더 스레드가 한 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한입니다(`TextureCache::updateStreaming` — 텍스처 하나가 밉 사슬 전부라 첫 로드보다 무겁다). */
+        PROPERTY( Min = 1 )
+        uint32 _textureStreamingUpgradesPerFrame{};
+
+        /**
+         * @brief 밉 스트리밍이 위쪽 밉으로 올린 텍스처 바이트 합의 상한(MB)입니다(`TextureStreamingPool` — 언리얼 `r.Streaming.PoolSize`). 넘는 텍스처는 아래쪽 밉 그대로다.
+         * @details 메모리 태그 예산(`MemoryBudget.json` 의 Texture — 모든 텍스처의 경고선)보다 작게 둔다. 그 나머지가 아래쪽 밉 · 렌더 텍스처 · CPU 텍스처 몫이다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _textureStreamingPoolMegabytes{};
     };
 } // namespace sw
 
