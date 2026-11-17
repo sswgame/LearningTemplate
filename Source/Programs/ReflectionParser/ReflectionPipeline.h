@@ -69,8 +69,9 @@ namespace sw
          */
         [[nodiscard]] bool writeReflectedTypesList() const;
         /**
-         * @brief 대상의 경로 칸(`AssetRef<T>` · `DataPath` · `PROPERTY( AssetPath )`)을 `<이름>\t<대상>` 줄로 `AssetReferenceFields.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
+         * @brief 대상의 경로 칸(`AssetRef<T>` · `DataPath` · `PROPERTY( AssetPath )`)을 `<이름>\t<대상>\t<ref|path>` 줄로 `AssetReferenceFields.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
          * @details 끊어진 경로 검사 · 옮기기 도구가 어느 칸이 경로인지 아는 근거다. 손으로 맞추던 이름 표를 대신한다(`Scripts/generate/asset_reference_field_list.py` 가 모은다).
+         *          셋째 열은 저장 꼴이다 — `ref`(`AssetRef<T>`)는 GUID 참조(`guid:<32자>`)로 쓰고, `path`(`DataPath` · `AssetPath` 글)는 경로 글이다. GUID 이전 도구(`migrate-asset-refs`)가 `ref` 칸만 바꾼다.
          */
         [[nodiscard]] bool writeAssetFieldList() const;
         /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */

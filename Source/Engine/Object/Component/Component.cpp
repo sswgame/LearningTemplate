@@ -16,6 +16,7 @@ namespace sw
         : _pOwner{ nullptr }
         , _componentID{ 0 } // 붙을 때 매니저의 번호 공간이 준다(`GameObject::attachCreatedComponent`)
         , _componentName{}
+        , _localID{ 0 } // 0 은 "아직 정하지 않음" — 키는 순번에서 정한 값을 쓰고, 구조를 바꾸기 전에 굳힌다(`ComponentStableKey`)
         , _pTypeInfo{ nullptr }
         , _pPoolEntry{ nullptr }
         , _subTickActiveMask{ 0 }

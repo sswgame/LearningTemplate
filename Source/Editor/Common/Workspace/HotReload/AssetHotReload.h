@@ -30,6 +30,7 @@ namespace sw::editor
     struct EditorAssetImportResult;
 
     class AssetReferenceTracker;
+    struct AssetIdentityRules;
     class EditorAssetImportJob;
     class EditorReferenceIndex;
 
@@ -182,6 +183,12 @@ namespace sw::editor
          *          쓰는 도중의 파일을 읽으면 안 된다. DDS 는 원자적이지 않게 쓰이고, 모델은 옆 폴더를 지우고 다시 쓴다. 동기 임포트에서는 임포트가 끝난 뒤에야 사건이 와서 생기지 않던 일이다.
          */
         void onResourceFileChanged( const FileChangeEvent& changeEvent );
+        /**
+         * @brief 파일 @p assetID(리소스 id — 우리 형식 글, 원본, 원본 곁 `.meta`)의 정체성을 읽어 런타임 GUID 색인(`AssetRegistry`)에 적습니다.
+         * @details 소스 실행의 색인은 기동 때 한 번 훑은 것이다 — 바깥 편집기 · git 이 만들거나 옮긴 에셋을 다음 기동 전에도 GUID 참조가 풀게 한다(옮긴 에셋은 같은 GUID 의 새 자리로 바뀐다).
+         *          지운 파일의 줄은 남는다 — 그 GUID 의 참조는 없는 파일을 읽어 로드 오류다.
+         */
+        void recordIdentity( const string& assetID ) const;
 
     private:
         /** @brief 잡에 올렸거나 기다리는 원본 하나와 그 임포터입니다. */
@@ -243,6 +250,7 @@ namespace sw::editor
         Subscription                      _contentWatch;                   ///< 확장자와 무관한 감시 구독이다. 변경 번호와 바뀐 파일을 모은다
         uint64                            _contentChangeSerial;
         vector<string>                    _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
+        unique_ptr<AssetIdentityRules>    _pIdentityRules;           ///< 정체성 규칙(`Config/Dev/AssetIdentity.json`) — 파일 사건마다 런타임 GUID 색인의 줄을 고친다(`recordIdentity`). 못 읽으면 비었다
         uint64                            _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratchWorkspace::getPrepareCount`
         uint64                            _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratchWorkspace::getPrepareCount`
         int64                             _fenceDeadlineNanoseconds; ///< 울타리를 포기하는 단조 시계 시각

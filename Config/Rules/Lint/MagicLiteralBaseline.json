@@ -542,7 +542,7 @@
     "Source/Engine/Object/Component/CameraComponent.cpp": {"float": 12},
     "Source/Engine/Object/Component/Component.cpp": {"integer": 1},
     "Source/Engine/Object/Component/Component.h": {"integer": 4},
-    "Source/Engine/Object/Component/ComponentStableKey.cpp": {"integer": 2},
+    "Source/Engine/Object/Component/ComponentStableKey.cpp": {"integer": 1},
     "Source/Engine/Object/Component/SceneComponent.cpp": {"integer": 3},
     "Source/Engine/Object/Component/SceneTransformHierarchy.h": {"integer": 1},
     "Source/Engine/Object/Component/SceneTransformStorage.h": {"integer": 1},

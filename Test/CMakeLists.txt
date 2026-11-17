@@ -158,6 +158,21 @@ add_test(NAME Scripts.AssetReferenceFieldList
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_asset_reference_field_list.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
+# 에셋 GUID 2 단계 전수 이전 도구 — AssetRef<T> 칸의 경로 글만 GUID 참조로 바꾸고 경로 글 칸 · 임포트 산출물 · 색인에 없는 경로는 바꾸지 않는다.
+add_test(NAME Scripts.MigrateAssetRefs
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_asset_refs.py")
+set_tests_properties(Scripts.MigrateAssetRefs PROPERTIES LABELS nogpu TIMEOUT 60)
+
+# 감사 A-2 전수 이전 도구 — 씬 · 프리팹 컴포넌트에 C++ ComponentStableKey::resolveLocalIDs 와 같은 지역 id 를 적는다.
+add_test(NAME Scripts.MigrateComponentIds
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_component_ids.py")
+set_tests_properties(Scripts.MigrateComponentIds PROPERTIES LABELS nogpu TIMEOUT 60)
+
+# 감사 A-2 둘째 전수 이전 — 다른 프리팹을 가리키는 옛 순번 키(중첩 노드 인덱스 · Part 경로 · 덮어쓰기 key/after · 노드 attach)를 지역 id 키로 바꾼다.
+add_test(NAME Scripts.MigratePrefabLinks
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_prefab_links.py")
+set_tests_properties(Scripts.MigratePrefabLinks PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")

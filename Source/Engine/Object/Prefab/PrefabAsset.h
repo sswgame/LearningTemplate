@@ -43,6 +43,9 @@ namespace sw
         string _prefab{};
         PROPERTY()
         string _attach{};
+        /** @brief 노드의 고정 지역 id 키(`#<16진>`, `ComponentStableKey::formatKey`)입니다 — 바깥 덮어쓰기의 부품 경로(`<Part path>`)가 이것을 가리킨다(감사 A-2). 비면 옛 노드(목록 인덱스). */
+        PROPERTY()
+        string _localID{};
     };
 
     struct CookJobDesc;
@@ -80,12 +83,15 @@ namespace sw
         /** @brief 부모가 없는 노드(이 프리팹의 루트 오브젝트에 붙는다)의 `_parentIndex` 입니다. */
         static constexpr int32 kRootParent = -1;
 
-        int32 _parentIndex{ kRootParent }; ///< 부모 노드의 목록 인덱스(자기보다 앞). `kRootParent` 면 이 프리팹의 루트 오브젝트
+        int32  _parentIndex{ kRootParent }; ///< 부모 노드의 목록 인덱스(자기보다 앞). `kRootParent` 면 이 프리팹의 루트 오브젝트
+        uint64 _localID{ 0 };               ///< 고정 지역 id(감사 A-2). 부품 키가 이것이다 — 앞 노드를 지우거나 끼워도 바깥 덮어쓰기가 같은 부품을 가리킨다. 0 이면 옛 노드(키는 목록 인덱스)
 
         /** @brief 쿠킹본 형식(펼친 상태)이면 true 입니다. */
         bool isResolved() const { return _resolvedStateXML.empty() == false; }
-        /** @brief 이 노드가 스폰한 부품의 키입니다(`PrefabNestedPart::_partKey`) — 펼친 노드는 `_partPath`, 저작본 노드는 목록 인덱스 @p index 입니다. */
+        /** @brief 이 노드가 스폰한 부품의 키입니다(`PrefabNestedPart::_partKey`) — 펼친 노드는 `_partPath`, 저작본 노드는 지역 id 키(`#<16진>`), 옛 노드(id 없음)는 목록 인덱스 @p index 입니다. */
         string makePartKey( size_t index ) const;
+        /** @brief 옮기는 동안 이 노드를 가리키는 옛 부품 키(목록 인덱스 @p index)입니다. 지역 id 가 없거나 펼친 노드면 빈 글입니다(옛 키가 곧 키다). */
+        string makeLegacyPartKey( size_t index ) const;
     };
 } // namespace sw
 

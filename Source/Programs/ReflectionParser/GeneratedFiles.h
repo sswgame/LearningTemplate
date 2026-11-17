@@ -54,7 +54,7 @@ namespace sw
         string                  _sourcePath;
         vector<string>          _listTypeFqn;
         vector<string>          _listFixedSchema; ///< 고정 배치형 코덱 판정 줄(`FixedCodecGenerator::makeSchemaLine`)
-        vector<string>          _listAssetField;  ///< 경로 칸 줄 `<이름>\t<대상>`(`AssetReferenceFields.list`). 대상을 모르면 `-` 다
+        vector<string>          _listAssetField;  ///< 경로 칸 줄 `<이름>\t<대상>\t<ref|path>`(`AssetReferenceFields.list`). 대상을 모르면 `-`, `AssetRef<T>` 칸이면 `ref` 다
         vector<StampDependency> _listDependency;
         uint64                  _inputWriteTime{ 0 };
         bool                    _bHasBitFlagEnum{ false };

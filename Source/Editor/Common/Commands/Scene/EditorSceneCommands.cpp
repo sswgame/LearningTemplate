@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -329,6 +330,8 @@ namespace sw::editor
         Component*           pComp          = pObj->getMutableManager()->addComponentByName( pObj, typeName );
         if ( pComp == nullptr )
             return nullptr;
+        // 저작으로 더한 컴포넌트는 새 고정 지역 id 를 받는다(이름으로 만드는 길은 직렬화와 같이 주지 않는다 — `GameObject::addComponentTo`).
+        ComponentStableKey::assignFreshLocalID( pComp );
         pComp->onPostLoad();
         commitModify( transaction, pObj, beforeSnapshot, "Add Component" );
         return pComp;

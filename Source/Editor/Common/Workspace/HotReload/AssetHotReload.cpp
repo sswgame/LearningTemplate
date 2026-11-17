@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
@@ -22,12 +23,14 @@
 #include "Editor/Common/Workspace/HotReload/AssetReferenceTracker.h"
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
@@ -191,6 +194,7 @@ namespace sw::editor
         , _contentWatch{}
         , _contentChangeSerial{ 0 }
         , _listChangedPath{}
+        , _pIdentityRules{}
         , _fencePrepareCount{ AutomationScratchWorkspace::getPrepareCount() }
         , _fenceArmedCount{ 0 }
         , _fenceDeadlineNanoseconds{ 0 }
@@ -212,6 +216,10 @@ namespace sw::editor
             SW_LOG_INFO_ID( "AssetHotReload.AssetHotReloadNo", "Asset hot reload: no extensions to watch, not enabling it." );
             return false;
         }
+
+        _pIdentityRules = make_unique<AssetIdentityRules>();
+        if ( _pIdentityRules->load( ProcessRoots::get()._project.str() ) == false )
+            _pIdentityRules.reset(); // 이유는 load 가 남겼다 — 색인은 기동 때 것 그대로다
 
         _pFileWatchDispatcher = make_unique<FileWatchDispatcher>();
         if ( _pFileWatchDispatcher->initialize() == false )
@@ -320,9 +328,26 @@ namespace sw::editor
             _bChangedPathsUnknown = SW_TRUE;
             return;
         }
+        if ( changeEvent._action != FileWatcherAction::Removed && changeEvent._action != FileWatcherAction::RenamedOldName )
+            recordIdentity( assetID );
         // 목록 크기가 `kMaxTrackedChangedPaths` 로 막혀 있어 선형 검색이 O(256) 으로 끝난다(넘으면 위에서 "모름" 으로 돌아간다).
         if ( std::find( _listChangedPath.begin(), _listChangedPath.end(), assetID ) == _listChangedPath.end() )
             _listChangedPath.push_back( assetID );
+    }
+
+    void AssetHotReload::recordIdentity( const string& assetID ) const
+    {
+        if ( _pIdentityRules == nullptr )
+            return;
+        // 원본 곁의 서술이 바뀌면 정체성은 원본의 것이다.
+        const bool   bSidecar = StringUtil::endsWith( assetID, AssetMeta::kExtension );
+        const string targetID = bSidecar ? assetID.substr( 0, assetID.size() - AssetMeta::kExtension.size() ) : assetID;
+        const string absPath  = FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), targetID );
+        if ( FileUtil::isRegularFile( absPath ) == false )
+            return;
+        const optional<AssetGUID> guid = _pIdentityRules->readIdentity( absPath, targetID );
+        if ( guid.has_value() )
+            AssetRegistry::record( *guid, targetID );
     }
 
     bool AssetHotReload::takeChangedPaths( vector<string>& outListPath )

@@ -11,6 +11,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
@@ -18,6 +20,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackPatchTrustSource.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -361,7 +364,92 @@ namespace sw
             SW_LOG_ERROR_ID( "AssetManager.CookedMountFailed", "Cooked content: the startup packs could not be mounted - a cooked build reads only packs, so it cannot start" );
             return SubsystemInitResult::Failed;
         }
+        // GUID 참조는 이 색인으로 풀린다 — 게임 데이터를 읽기 전에 선다. 못 지으면 참조가 모두 풀리지 않으므로 기동을 멈춘다.
+        if ( installAssetRegistry( source ) == false )
+            return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
+    }
+
+    bool AssetManager::rebuildAssetRegistry() const
+    {
+        return installAssetRegistry( _pPackManager->getContentSource() );
+    }
+
+    bool AssetManager::installAssetRegistry( const ContentSource source ) const
+    {
+        vector<AssetRegistryLayer> listLayer;
+        if ( source == ContentSource::Cooked )
+        {
+            for ( const string& domain : _pPackManager->getMountedDomainsByPriority() )
+            {
+                const string indexID = FileUtil::joinPath( domain, AssetPackIndex::kFileName );
+                string       text;
+                if ( _pPackManager->readTextFile( indexID, text ) == false )
+                {
+                    SW_LOG_ERROR_ID( "AssetManager.PackIndexMissing", "Cooked content: the pack of domain '%#' has no readable %# - recook it", domain, AssetPackIndex::kFileName );
+                    return false;
+                }
+                const expected<AssetPackIndex> index = AssetPackIndex::parseText( text, indexID );
+                if ( index.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "AssetManager.PackIndexInvalid", "Cooked content: %# - %# '%#'", indexID, index.error().message(), index.error().detail() );
+                    return false;
+                }
+                AssetRegistryLayer layer{ indexID, {} };
+                layer._listEntry.reserve( index->_listEntry.size() );
+                for ( const AssetPackIndexEntry& entry : index->_listEntry )
+                {
+                    layer._listEntry.push_back( AssetRegistryEntry{ entry._guid, FileUtil::joinPath( domain, entry._path ) } );
+                }
+                listLayer.push_back( std::move( layer ) );
+            }
+        }
+        else
+        {
+            // shortcut: 기동 때 한 번 훑는다 — 에디터가 만들고 옮긴 에셋은 다음 기동까지 색인에 없다. 파일 감시로 갱신하는 일은 NEXT 의 GUID 2 단계에 남았다.
+            const ProcessRoots& roots = ProcessRoots::get();
+            AssetIdentityRules  rules;
+            if ( rules.load( roots._project.str() ) == false )
+                return false;
+            vector<AssetIdentityIssue> listIssue;
+            const AssetDatabase        database = AssetDatabase::scan( roots._content.str(), rules, listIssue );
+            if ( listIssue.empty() == false )
+                SW_LOG_WARNING_ID( "AssetManager.SourceIndexIssues", "Source content: %# asset identity issues (first: %#) - their GUID references will not resolve; run py -3 -m Scripts asset-ids --fix",
+                                   listIssue.size(), listIssue.front().toString() );
+            listLayer.push_back( database.makeRegistryLayer( roots._content.str() ) );
+        }
+        // 패치 · 모드 팩이 실은 자기 색인(줄은 전체 리소스 id) — 도메인 층 뒤에 쌓아 그 팩의 새 에셋과 옮긴 줄이 이긴다. 색인을 싣지 않은 패치 팩(바뀐 파일만)은 건너뛴다.
+        vector<string> listPatchText;
+        vector<string> listPatchSource;
+        if ( _pPackManager->collectPatchPackTexts( AssetPackIndex::kFileName, listPatchText, listPatchSource ) == false )
+        {
+            SW_LOG_ERROR_ID( "AssetManager.PatchIndexUnreadable", "A patch or mod pack has an unreadable %#", AssetPackIndex::kFileName );
+            return false;
+        }
+        for ( size_t patchIndex = 0; patchIndex < listPatchText.size(); ++patchIndex )
+        {
+            const expected<AssetPackIndex> index = AssetPackIndex::parseText( listPatchText[patchIndex], listPatchSource[patchIndex] );
+            if ( index.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "AssetManager.PatchIndexInvalid", "%# of '%#' - %# '%#'", AssetPackIndex::kFileName, listPatchSource[patchIndex], index.error().message(), index.error().detail() );
+                return false;
+            }
+            AssetRegistryLayer layer{ listPatchSource[patchIndex], {} };
+            for ( const AssetPackIndexEntry& entry : index->_listEntry )
+            {
+                layer._listEntry.push_back( AssetRegistryEntry{ entry._guid, entry._path } );
+            }
+            listLayer.push_back( std::move( layer ) );
+        }
+        expected<AssetRegistry> registry = AssetRegistry::merge( listLayer );
+        if ( registry.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "AssetManager.AssetIndexMerge", "Asset index could not be merged - %# '%#'", registry.error().message(), registry.error().detail() );
+            return false;
+        }
+        SW_LOG_INFO_ID( "AssetManager.AssetIndexInstalled", "Asset index: %# assets from %# layers", registry->getCount(), listLayer.size() );
+        (void)AssetRegistry::install( std::move( *registry ) );
+        return true;
     }
 
     span<const utf8* const> AssetManager::getSubsystemDependencies() const

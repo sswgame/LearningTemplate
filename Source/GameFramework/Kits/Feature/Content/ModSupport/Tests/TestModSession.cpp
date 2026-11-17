@@ -7,6 +7,7 @@
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
@@ -278,4 +279,28 @@ SW_TEST_CASE( ModSessionTest, NoModsChangesNothing )
     SW_EXPECT_TRUE( session.apply( TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ), {} ), TestModSessionInternal::makeSettings() ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, session.getDigest()._configHash );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
+}
+
+/**
+ * @brief [ModSessionTest] 모드가 새로 더한 에셋도 GUID 참조로 풀린다 — 모드 팩이 자기 색인(`assetindex.xml`)을 싣고, 세션이 런타임 색인에 합쳤다가 풀면 걷는다
+ */
+SW_TEST_CASE( ModSessionTest, ModAssetsResolveByGUIDWhileApplied )
+{
+    using Internal = TestModSessionInternal;
+    test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
+    const string            root    = test::makeScratchPath( "ModIndexRoot" );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const string            source  = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, "lantern" ), ModPackBuilder::kSourceFolderName );
+    SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000c0de"?><Lamp/>)" ) );
+    const AssetGUID guid = *AssetGUID::tryParse( "0000000000000000000000000000c0de" );
+
+    AssetManager& assets = engine::getSubsystem<AssetManager>();
+    {
+        ModSession session( assets );
+        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_EXPECT_EQUAL( string( "mods/lantern/data/lamp.xml" ), AssetRegistry::resolve( guid ).value_or( string{} ) );
+    }
+    SW_EXPECT_FALSE( AssetRegistry::resolve( guid ).has_value() );
 }

@@ -15,9 +15,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -30,14 +32,19 @@ namespace sw
         CMake,
     };
 
-    /** @brief 참조 하나입니다 — 글의 [_offset, _offset + _length) 가 경로 `_path`(소문자 · `/`)입니다. */
+    /**
+     * @brief 참조 하나입니다 — 글의 [_offset, _offset + _length) 가 경로 `_path`(소문자 · `/`)입니다.
+     * @details GUID 참조(`guid:<32자>`)는 글이 GUID 이고 `_path` 는 런타임 색인(`AssetRegistry::resolve`)이 푼 지금 경로다 — 색인에 없거나 글이 틀리면 `_path` 가 글 그대로라
+     *          있음 판정(`canResolve`)에서 "없는 경로" 로 잡힌다. 옮기기의 고쳐 쓰기는 GUID 참조를 건드리지 않는다.
+     */
     struct AssetReference
     {
-        uint32 _line{ 0 };   ///< 1 부터
-        string _field;       ///< 칸 이름(속성 · 요소 · 키 · CMake 인자)
-        size_t _offset{ 0 }; ///< 글 안 자리
-        size_t _length{ 0 }; ///< 글 안 길이(바꿀 때 쓴다)
-        string _path;        ///< 정규화한 리소스 id
+        uint32              _line{ 0 };   ///< 1 부터
+        string              _field;       ///< 칸 이름(속성 · 요소 · 키 · CMake 인자)
+        size_t              _offset{ 0 }; ///< 글 안 자리
+        size_t              _length{ 0 }; ///< 글 안 길이(바꿀 때 쓴다)
+        string              _path;        ///< 정규화한 리소스 id
+        optional<AssetGUID> _guid;        ///< GUID 참조면 그 GUID(글이 틀렸으면 없음 — `_path` 가 글 그대로다)
     };
 
     /** @brief 옮기기 규칙 하나입니다 — `_oldPath` 와 같거나(접두 규칙이면 `_oldPath/…` · `_oldPath.…` 도) 그 자리를 `_newPath` 로 바꾼다. */

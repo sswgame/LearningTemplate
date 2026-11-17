@@ -289,6 +289,13 @@ namespace sw
             }
             _listMountedPackPath.push_back( listPackPath[orderIndex] );
         }
+        // 모드 팩이 덮은 도메인 색인까지 GUID 참조가 보게 색인을 다시 짓는다 — 못 지으면 모드를 들이지 않는다.
+        if ( _assets.rebuildAssetRegistry() == false )
+        {
+            SW_LOG_ERROR_ID( "ModSession.AssetIndexFailed", "The asset index could not be rebuilt with the mod packs - the mods are not applied" );
+            release();
+            return false;
+        }
         vector<string> listLayerRoot = game::getSubsystem<ResourceComposition>().getLayers();
         // 경로마다 모은 목록을 훑지 않는다(켠 모드들의 덮어쓰기 · 층 수의 제곱). 목록은 처음 나온 순서다.
         unordered_set<string> uniqueOverridePath;
@@ -371,6 +378,9 @@ namespace sw
         }
         const bool bHadMounts = _listMountedPackPath.empty() == false;
         _listMountedPackPath.clear();
+        // 모드 팩이 덮었던 색인 줄을 걷는다 — 다음 세션의 GUID 참조가 내린 팩의 경로로 풀리지 않게.
+        if ( bHadMounts && _assets.rebuildAssetRegistry() == false )
+            SW_LOG_ERROR_ID( "ModSession.AssetIndexNotRestored", "The asset index could not be rebuilt after the mod packs were unmounted - GUID references may resolve to unmounted mod paths" );
         if ( bHadMounts )
         {
             // 덮어썼던 리소스를 쥔 캐시는 기본 내용으로 다시 읽힌다 — 다음 세션이 모드 내용을 보지 않게.
