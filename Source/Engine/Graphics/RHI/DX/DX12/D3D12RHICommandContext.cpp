@@ -295,7 +295,8 @@ namespace sw
                 // 첨부가 없는 텍스처는 COMMON 에서 SRV 로 암묵 승격된다 — 옮길 것이 없다.
                 if ( pRecord->_offscreen._bHasRTV == SW_FALSE && bDepth == false )
                     return false;
-                outState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                // 모든 셰이더 단계의 읽기다(R-9 — 픽셀 단계만이면 컴퓨트 · 정점 셰이더의 SRV 읽기가 틀린 상태다). 컴퓨트 큐 리스트는 아래 상태 거르기가 PIXEL 을 뺀다.
+                outState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
                 return true;
             case RHITextureState::RenderTarget:
                 outState = bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET;

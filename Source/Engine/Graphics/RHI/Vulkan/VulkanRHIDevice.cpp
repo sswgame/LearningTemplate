@@ -3644,8 +3644,10 @@ namespace sw
         barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
         barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        // 셰이더 읽기는 모든 셰이더 단계다(R-9 — 픽셀 단계만 덮으면 컴퓨트 · 정점 셰이더가 쓰기 끝을 기다리지 않는다). 언리얼 `SRVMask`(SRVGraphics | SRVCompute) 와 같다.
+        constexpr VkPipelineStageFlags kShaderReadStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        srcStage                                         = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dstStage                                         = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
         if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
@@ -3659,13 +3661,13 @@ namespace sw
             barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             srcStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            srcStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            srcStage              = kShaderReadStages;
             dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
@@ -3673,7 +3675,7 @@ namespace sw
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
         {
@@ -3681,13 +3683,13 @@ namespace sw
             barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             srcStage              = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            srcStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            srcStage              = kShaderReadStages;
             dstStage              = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         }
         else
