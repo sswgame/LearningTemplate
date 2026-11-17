@@ -495,21 +495,23 @@ namespace sw
         record._pUploadSerials = make_unique<RHITextureUploadSerials>();
 
         WGPUTextureViewDescriptor sampleDesc{};
-        sampleDesc.format          = format;
-        sampleDesc.dimension       = desc._dimension == RHITextureDimension::TextureCube ? WGPUTextureViewDimension_Cube
-                                                                                         : ( desc._dimension == RHITextureDimension::Texture2DArray ? WGPUTextureViewDimension_2DArray : WGPUTextureViewDimension_2D );
-        sampleDesc.baseMipLevel    = 0;
-        sampleDesc.mipLevelCount   = mipLevels;
-        sampleDesc.baseArrayLayer  = 0;
-        sampleDesc.arrayLayerCount = layers;
-        sampleDesc.aspect          = bDepth ? WGPUTextureAspect_DepthOnly : WGPUTextureAspect_All; // 깊이를 샘플할 때는 깊이 측면만(스텐실과 함께 뷰할 수 없다)
-        record._sampleView         = wgpuTextureCreateView( record._texture, &sampleDesc );
-        for ( uint32 layer = 0; layer < layers; ++layer )
+        sampleDesc.format           = format;
+        sampleDesc.dimension        = desc._dimension == RHITextureDimension::TextureCube ? WGPUTextureViewDimension_Cube
+                                                                                          : ( desc._dimension == RHITextureDimension::Texture2DArray ? WGPUTextureViewDimension_2DArray : WGPUTextureViewDimension_2D );
+        sampleDesc.baseMipLevel     = 0;
+        sampleDesc.mipLevelCount    = mipLevels;
+        sampleDesc.baseArrayLayer   = 0;
+        sampleDesc.arrayLayerCount  = layers;
+        sampleDesc.aspect           = bDepth ? WGPUTextureAspect_DepthOnly : WGPUTextureAspect_All; // 깊이를 샘플할 때는 깊이 측면만(스텐실과 함께 뷰할 수 없다)
+        record._sampleView          = wgpuTextureCreateView( record._texture, &sampleDesc );
+        const uint32 attachmentMips = ( desc._bIsRenderTarget != SW_FALSE || bDepth ) ? mipLevels : 1u;
+        for ( uint32 viewIndex = 0; viewIndex < attachmentMips * layers; ++viewIndex )
         {
+            const uint32              layer = viewIndex % layers;
             WGPUTextureViewDescriptor sliceDesc{};
             sliceDesc.format          = format;
             sliceDesc.dimension       = WGPUTextureViewDimension_2D;
-            sliceDesc.baseMipLevel    = 0;
+            sliceDesc.baseMipLevel    = viewIndex / layers;
             sliceDesc.mipLevelCount   = 1;
             sliceDesc.baseArrayLayer  = layer;
             sliceDesc.arrayLayerCount = 1;

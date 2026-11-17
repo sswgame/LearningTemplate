@@ -211,17 +211,18 @@ namespace sw
                 {
                     const WebGPUTextureRecord* pTexture = _pDevice->findTexture( handle );
                     const uint32               slice    = beginInfo._arrColorTargetSlice[attachment];
-                    if ( pTexture == nullptr || slice >= pTexture->_listSliceView.size() )
+                    const uint32               mip      = beginInfo._arrColorTargetMip[attachment];
+                    view                                = pTexture != nullptr ? pTexture->findAttachmentView( slice, mip ) : nullptr;
+                    if ( view == nullptr )
                     {
                         if ( attachment > 0 )
                             break;
                         return RHIRenderPassBeginResult::Failed;
                     }
-                    view = pTexture->_listSliceView[slice];
                     if ( targetWidth == 0 )
-                        targetWidth = pTexture->_desc._width;
+                        targetWidth = MathUtil::max( pTexture->_desc._width >> mip, 1u );
                     if ( targetHeight == 0 )
-                        targetHeight = pTexture->_desc._height;
+                        targetHeight = MathUtil::max( pTexture->_desc._height >> mip, 1u );
                 }
                 WGPURenderPassColorAttachment& color = arrColor[colorCount++];
                 const float4&                  clear = beginInfo._arrClearColor[attachment];
@@ -237,11 +238,12 @@ namespace sw
         bool                                 bDepth = false;
         if ( beginInfo._depthTarget != 0 )
         {
-            const WebGPUTextureRecord* pDepth = _pDevice->findTexture( beginInfo._depthTarget );
-            if ( pDepth == nullptr || beginInfo._depthTargetSlice >= pDepth->_listSliceView.size() )
+            const WebGPUTextureRecord* pDepth    = _pDevice->findTexture( beginInfo._depthTarget );
+            const WGPUTextureView      depthView = pDepth != nullptr ? pDepth->findAttachmentView( beginInfo._depthTargetSlice, beginInfo._depthTargetMip ) : nullptr;
+            if ( depthView == nullptr )
                 return RHIRenderPassBeginResult::Failed;
             bDepth                  = true;
-            depth.view              = pDepth->_listSliceView[beginInfo._depthTargetSlice];
+            depth.view              = depthView;
             depth.depthLoadOp       = WebGPURHIUtil::toLoadOp( beginInfo._depthLoadOp );
             depth.depthStoreOp      = WebGPURHIUtil::toStoreOp( beginInfo._depthStoreOp );
             depth.depthClearValue   = beginInfo._clearDepth;
