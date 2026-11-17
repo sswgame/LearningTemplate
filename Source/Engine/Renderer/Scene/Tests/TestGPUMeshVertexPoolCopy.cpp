@@ -118,7 +118,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
     SW_EXPECT_EQUAL( static_cast<uint64>( mesh->getAttributeStreamOffset() ), attribute._sourceOffset );
     SW_EXPECT_EQUAL( static_cast<uint64>( pool.getAttributeOffset() ) + static_cast<uint64>( placement._baseVertex ) * constant::render::getMeshAttributeStride( RHIMeshVertexFormat::Packed ),
                      attribute._destinationOffset );
-    SW_EXPECT_EQUAL( list._transitionCount, 4u ); // 복사마다 앞 · 뒤 전이 둘씩(원본 · 도착)
+    SW_EXPECT_EQUAL( list._transitionCount, 8u ); // 복사 둘 × (앞 둘 + 뒤 둘) — 복사마다 원본 · 도착을 앞 · 뒤로 전이한다
     pool.release( &device );
     mesh->getRenderData().releaseRHI( &device );
 }

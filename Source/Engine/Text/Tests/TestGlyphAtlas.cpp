@@ -307,6 +307,7 @@ SW_TEST_CASE( GlyphAtlasTest, CatalogRejectsMissingAtlasLayout )
     sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
     sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_EXPECT_TRUE( catalog.validate() );
+    SW_EXPECT_LOG( "FontCatalog.GlyphAtlasLayoutOutOfRange" ); // 아래 세 거절마다 한 줄
     catalog._glyphAtlasPageSize = 0;
     SW_EXPECT_FALSE( catalog.validate() );
     catalog._glyphAtlasPageSize = sw::GlyphAtlasLayout::kMaxPageSize + 1;

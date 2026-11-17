@@ -121,7 +121,8 @@ SW_TEST_CASE( TextureStreamingPolicyTest, WantedMipFromScreenTexels )
     SW_EXPECT_EQUAL( 0u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 2000.0f ) ); // 밉 0 보다 크게 보인다
     SW_EXPECT_EQUAL( 0u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 1024.0f ) );
     SW_EXPECT_EQUAL( 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 512.0f ) ); // 512 너비 밉이면 된다
-    SW_EXPECT_EQUAL( 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 600.0f ) ); // 512 는 모자라다 — 밉 1
+    SW_EXPECT_EQUAL( 0u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 600.0f ) ); // 밉 1(512)은 모자라다 — 밉 0
+    SW_EXPECT_EQUAL( 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 300.0f ) ); // 512 ≥ 300 > 256
     SW_EXPECT_EQUAL( 3u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 100.0f ) ); // 128 ≥ 100 > 64
     SW_EXPECT_EQUAL( kMipCount - 1u, TextureStreamingPolicy::computeWantedFirstMip( kTopWidth, kMipCount, 0.0f ) );
 }

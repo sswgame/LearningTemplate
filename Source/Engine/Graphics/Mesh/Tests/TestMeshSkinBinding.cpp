@@ -75,9 +75,9 @@ SW_TEST_CASE( MeshSkinBindingTest, TruncatedOrBadInverseBindsAreRejected )
     MeshAssetFormat::makeBytes( Util::makeData(), bytes );
 
     MeshAssetData read{};
-    // 정점 · 스킨 · 지문 · 역 바인드 · 인덱스를 모두 합친 길이가 머리의 약속이다 — 한 바이트만 모자라도 진다.
+    // 정점 · 스킨 · 지문 · 역 바인드 · 인덱스(폭은 정점 수가 정한다)를 모두 합친 길이가 머리의 약속이다 — 한 바이트만 모자라도 진다.
     const size_t skinEnd = MeshAssetFormat::kHeaderSize + 3u * MeshAssetFormat::kVertexSize + 3u * MeshAssetFormat::kSkinVertexSize;
-    SW_EXPECT_EQUAL( skinEnd + sizeof( uint64 ) + 2u * MeshAssetFormat::kInverseBindSize + 3u * sizeof( uint32 ), bytes.size() );
+    SW_EXPECT_EQUAL( skinEnd + sizeof( uint64 ) + 2u * MeshAssetFormat::kInverseBindSize + 3u * MeshAssetFormat::getIndexBytes( 3u ), bytes.size() ); // 판 7: 정점이 적으면 인덱스는 uint16
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetDeclaresVertices" );
     SW_EXPECT_FALSE( MeshAssetFormat::readFromBytes( bytes.data(), bytes.size() - 1u, read ) );
     SW_EXPECT_FALSE( MeshAssetFormat::readFromBytes( bytes.data(), skinEnd + sizeof( uint64 ), read ) );
