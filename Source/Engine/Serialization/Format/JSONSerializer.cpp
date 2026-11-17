@@ -445,6 +445,18 @@ namespace sw
                 const expected<string> text = src.dump();
                 return makeFieldResult( text.has_value() && parseTextValueCoerced( value, typeName, *text, context ) );
             }
+            /** @brief 이 목적이 쓰는 칸을 모두 @p dst(객체)에 씁니다. 차례(기반부터)는 걷기 한 곳(`ReflectPropertyVisitor`)이 정한다 — XML · 바이너리 쓰기와 같은 차례다. */
+            static void writeProperties( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+            {
+                const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+                (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
+                {
+                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, field._property, context ) )
+                        writeProperty( dst, field._property, ObjectAddress{ pInstance }, context );
+                    return ReflectVisitFlow::Continue;
+                } );
+            }
+
             static void writeProperty( JSONValue parent, const PropertyInfo& prop, const ObjectAddress instance, const SerializeContext& context )
             {
                 if ( prop._bIsBitField == SW_TRUE )
@@ -604,14 +616,7 @@ namespace sw
         if ( dst.isValid() == false || pInstance == nullptr )
             return;
         dst.setObject();
-        // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`) — XML · 바이너리 쓰기와 같은 차례다.
-        const ReflectPropertyVisitor propertyVisitor{ context.getTypeRegistry(), ReflectVisitOptions{} };
-        (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
-        {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, field._property, context ) )
-                JSONSerializerInternal::writeProperty( dst, field._property, ObjectAddress{ pInstance }, context );
-            return ReflectVisitFlow::Continue;
-        } );
+        JSONSerializerInternal::writeProperties( dst, pInstance, typeInfo, context );
     }
 
     FieldReadResult JSONSerializer::readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
@@ -735,12 +740,7 @@ namespace sw
         JSONDocument doc;
         JSONValue    root = doc.makeObject();
         root.set( kSchemaVersionKey ).setUint( version );
-        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
-        {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
-                return;
-            JSONSerializerInternal::writeProperty( root, prop, ObjectAddress{ pInstance }, context );
-        }, true /* 상속 PROPERTY 포함 */ );
+        JSONSerializerInternal::writeProperties( root, pInstance, typeInfo, context );
         return JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
     }
 
