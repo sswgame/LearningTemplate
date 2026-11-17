@@ -122,6 +122,16 @@
       }
     },
     {
+      "name": "Ninja-Release-Mimalloc",
+      "displayName": "Windows Ninja Release + mimalloc heap (Clang-cl)",
+      "description": "Ninja-Release 와 같고 힙 백엔드만 mimalloc(SW_MEMORY_BACKEND) — 할당 벤치(감사 AC-1)를 crt 구성과 견준다. 빌드 폴더 build/Ninja-Release-Mimalloc. Windows 는 mimalloc 이 검증 레이어의 의존으로 이미 설치 트리에 있어 vcpkg 설치 트리를 함께 쓴다",
+      "inherits": "Ninja-Release",
+      "cacheVariables": {
+        "SW_MEMORY_BACKEND": "mimalloc",
+        "VCPKG_MANIFEST_FEATURES": "mimalloc"
+      }
+    },
+    {
       "name": "Ninja-Shipping",
       "displayName": "Windows Ninja Shipping (Clang-cl)",
       "description": "Windows Shipping build using Ninja + Clang-cl",
@@ -234,6 +244,10 @@
     {
       "name": "Ninja-Release-Static",
       "configurePreset": "Ninja-Release-Static"
+    },
+    {
+      "name": "Ninja-Release-Mimalloc",
+      "configurePreset": "Ninja-Release-Mimalloc"
     },
     {
       "name": "Ninja-Shipping",

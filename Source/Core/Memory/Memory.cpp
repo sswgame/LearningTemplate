@@ -3,8 +3,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/MemoryBackend.h"
 
 #include <cstdio>
 
@@ -146,34 +146,15 @@ namespace sw
         const size_t align = MathUtil::max( alignment, sizeof( void* ) );
 
 #if defined( SW_SHIPPING )
-    #if defined( SW_PLATFORM_WINDOWS )
-        return _aligned_malloc( size, align );
-    #elif defined( SW_PLATFORM_POSIX )
-        void* pRawPtr{ nullptr };
-        if ( posix_memalign( &pRawPtr, align, size ) != 0 )
-            return nullptr;
-        return pRawPtr;
-    #else
-        #error "Unsupported platform"
-    #endif
-#else // SW_SHIPPING
-      // 헤더와 정렬 여유를 더하다 오버플로하면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가 곧바로 범위를 넘는다.
-      // 오버플로할 크기는 어차피 할당될 수 없으므로 여기서 거절한다.
+        return MemoryBackend::allocateAligned( size, align );
+#else  // SW_SHIPPING
+       // 헤더와 정렬 여유를 더하다 오버플로하면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가 곧바로 범위를 넘는다.
+       // 오버플로할 크기는 어차피 할당될 수 없으므로 여기서 거절한다.
         if ( size > SIZE_MAX - sizeof( AllocHeader ) - align )
             return nullptr;
 
         size_t totalSize = size + sizeof( AllocHeader ) + align;
-
-    #if defined( SW_PLATFORM_WINDOWS )
-        void* pRawPtr = _aligned_malloc( totalSize, align );
-    #elif defined( SW_PLATFORM_POSIX )
-        void* pRawPtr{ nullptr };
-        if ( posix_memalign( &pRawPtr, align, totalSize ) != 0 )
-            pRawPtr = nullptr;
-    #else
-        #error "Unsupported platform"
-    #endif
-
+        void*  pRawPtr   = MemoryBackend::allocateAligned( totalSize, align );
         if ( pRawPtr == nullptr )
             return nullptr;
 
@@ -192,27 +173,15 @@ namespace sw
             return;
 
 #if defined( SW_SHIPPING )
-    #if defined( SW_PLATFORM_WINDOWS )
-        _aligned_free( pPtr );
-    #elif defined( SW_PLATFORM_POSIX )
-        ::free( pPtr );
-    #else
-        #error "Unsupported platform"
-    #endif
-#else // SW_SHIPPING
+        MemoryBackend::freeAligned( pPtr );
+#else  // SW_SHIPPING
         void* pRawPtr = MemoryInternal::releaseAllocHeader( pPtr );
         if ( pRawPtr == nullptr )
         {
             MemoryInternal::reportForeignFree( pPtr );
             return;
         }
-    #if defined( SW_PLATFORM_WINDOWS )
-        _aligned_free( pRawPtr );
-    #elif defined( SW_PLATFORM_POSIX )
-        ::free( pRawPtr );
-    #else
-        #error "Unsupported platform"
-    #endif
+        MemoryBackend::freeAligned( pRawPtr );
 #endif // SW_SHIPPING
     }
 
@@ -222,7 +191,7 @@ namespace sw
     void* Memory::allocate( size_t size )
     {
 #if defined( SW_SHIPPING )
-        return ::malloc( size );
+        return MemoryBackend::allocate( size );
 #else
         return allocate( size, getCurrentMemoryTag() );
 #endif
@@ -231,14 +200,14 @@ namespace sw
     void* Memory::allocate( size_t size, [[maybe_unused]] MemoryTag tag )
     {
 #if defined( SW_SHIPPING )
-        return ::malloc( size );
+        return MemoryBackend::allocate( size );
 #else  // SW_SHIPPING
        // allocateAligned 와 같은 이유로 오버플로할 크기를 먼저 거절한다.
         if ( size > SIZE_MAX - sizeof( AllocHeader ) )
             return nullptr;
 
         size_t totalSize = size + sizeof( AllocHeader );
-        void*  pRawPtr   = ::malloc( totalSize );
+        void*  pRawPtr   = MemoryBackend::allocate( totalSize );
         if ( pRawPtr == nullptr )
             return nullptr;
 
@@ -255,11 +224,11 @@ namespace sw
             return;
 
 #if defined( SW_SHIPPING )
-        ::free( pPtr );
+        MemoryBackend::free( pPtr );
 #else  // SW_SHIPPING
         void* pRawPtr = MemoryInternal::releaseAllocHeader( pPtr );
         if ( pRawPtr != nullptr )
-            ::free( pRawPtr );
+            MemoryBackend::free( pRawPtr );
         else
             MemoryInternal::reportForeignFree( pPtr );
 #endif // SW_SHIPPING

@@ -116,6 +116,15 @@
         },
         "sheenbidi"
       ]
+    },
+    "mimalloc": {
+      "description": "mimalloc heap backend (SW_MEMORY_BACKEND=mimalloc); not built for the web",
+      "dependencies": [
+        {
+          "name": "mimalloc",
+          "platform": "!emscripten"
+        }
+      ]
     }
   }
 }

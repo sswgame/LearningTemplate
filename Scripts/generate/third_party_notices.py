@@ -9,7 +9,7 @@
 내용이 같으면 파일을 다시 쓰지 않습니다(빌드가 다시 돌지 않게).
 
 사용법: py -3 Scripts/generate/third_party_notices.py --manifest vcpkg.json --installed build/vcpkg_installed
-        --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt [--vendored-root ThirdParty]
+        --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt [--vendored-root ThirdParty] [--features mimalloc,complex-text]
 """
 from __future__ import annotations
 
@@ -49,6 +49,7 @@ MAP_TRIPLET_WORD_TEST = {
     "osx": lambda triplet: "osx" in triplet,
     "uwp": lambda triplet: "uwp" in triplet,
     "android": lambda triplet: "android" in triplet,
+    "emscripten": lambda triplet: "emscripten" in triplet,
     "x64": lambda triplet: triplet.startswith("x64"),
     "x86": lambda triplet: triplet.startswith("x86"),
     "arm64": lambda triplet: triplet.startswith("arm64"),
@@ -98,12 +99,21 @@ def _evaluate_platform(expression: str, triplet: str) -> bool:
     return _parse_or() if list_token else True
 
 
-def _read_manifest_ports(manifest_path: str, triplet: str) -> set[str]:
-    """매니페스트의 직접 의존 중 이 트리플릿에 해당하는 포트 이름입니다."""
+def _read_manifest_ports(manifest_path: str, triplet: str, list_feature: Sequence[str] = ()) -> set[str]:
+    """매니페스트의 직접 의존과 켠 선택 기능(@p list_feature — `VCPKG_MANIFEST_FEATURES`)의 의존 가운데 이 트리플릿에 해당하는 포트 이름입니다.
+
+    켠 기능의 포트도 배포물에 들어간다(mimalloc 힙 백엔드 · 복합 문자) — 직접 의존만 보면 고지에서 빠진다. 매니페스트에 없는 기능 이름은 오류다.
+    """
     with open(manifest_path, "r", encoding="utf-8") as handle:
         manifest = json.load(handle)
+    map_feature = manifest.get("features", {})   # features 는 vcpkg 형식의 선택 칸(선택 기능이 없는 매니페스트에는 없다)
+    list_dependency = list(manifest["dependencies"])
+    for feature in list_feature:
+        if feature not in map_feature:
+            raise KeyError(f"vcpkg manifest has no feature '{feature}': {manifest_path}")
+        list_dependency += map_feature[feature]["dependencies"]
     set_port: set[str] = set()
-    for dependency in manifest["dependencies"]:
+    for dependency in list_dependency:
         if isinstance(dependency, str):
             set_port.add(dependency)
         elif _evaluate_platform(dependency.get("platform") or "", triplet):   # platform 은 vcpkg 형식의 선택 칸(없으면 모든 플랫폼)
@@ -188,6 +198,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--triplet", required=True, help="대상 트리플릿(VCPKG_TARGET_TRIPLET)")
     parser.add_argument("--out", required=True, help="쓸 고지 파일 경로")
     parser.add_argument("--vendored-root", default=None, help="저장소에 둔 서드파티 코드 폴더(하위 폴더의 LICENSE.md 를 붙인다)")
+    parser.add_argument("--features", default="", help="켠 매니페스트 기능(VCPKG_MANIFEST_FEATURES, 쉼표로 가름) — 그 기능의 포트도 넣는다")
     args = parser.parse_args(argv)
 
     status_path = Path(args.installed) / "vcpkg" / "status"
@@ -195,7 +206,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"[ThirdPartyNotices] no vcpkg status file: {status_path}", file=sys.stderr)
         return ExitCode.VIOLATION
     map_depends = _read_status_depends(status_path, args.triplet)
-    list_port = _collect_ports(_read_manifest_ports(args.manifest, args.triplet), map_depends)
+    list_feature = [feature for feature in args.features.split(",") if feature]
+    list_port = _collect_ports(_read_manifest_ports(args.manifest, args.triplet, list_feature), map_depends)
     list_vendored = _collect_vendored_licenses(args.vendored_root)
     text = _make_notice_text(list_port, Path(args.installed) / args.triplet / "share", list_vendored)
 
