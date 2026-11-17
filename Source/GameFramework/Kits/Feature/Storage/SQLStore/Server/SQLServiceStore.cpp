@@ -229,7 +229,7 @@ namespace sw
                 {
                     ScopedLogContext          scope( _job->getLogContext() );
                     SQLServiceStoreConnection adapter{ connection };
-                    _job->run( adapter );
+                    _job->execute( adapter );
                 }
 
                 void cancel() override { _job->markCancelled(); }

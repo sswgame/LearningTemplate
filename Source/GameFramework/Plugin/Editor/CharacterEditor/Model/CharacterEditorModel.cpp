@@ -262,6 +262,8 @@ namespace sw::editor
             else
                 SW_LOG_INFO_ID( "CharacterEditorModel.ReferencePoseFileSaved", "Reference pose file saved to %#", writePath->c_str() );
         }
+        if ( isBodyDataDirty() && saveBodyData() == false )
+            bSaved = false; // 까닭은 saveBodyData 가 상태 줄에 남겼다
         if ( bSaved )
             _status.clear();
         return bSaved;
@@ -273,6 +275,11 @@ namespace sw::editor
             outListAssetID.push_back( string( _paths._socketPath.c_str() ) );
         if ( _pose.isDirty() )
             outListAssetID.push_back( string( _paths._refPosePath.c_str() ) );
+        for ( const BodyDataEditModel* pModel : { &_bodyShapes, &_bodyProfiles, &_visuals } )
+        {
+            if ( pModel->isDirty() && pModel->getDiskPath().empty() == false )
+                outListAssetID.push_back( pModel->getDiskPath() );
+        }
     }
 
     void CharacterEditorModel::revert()

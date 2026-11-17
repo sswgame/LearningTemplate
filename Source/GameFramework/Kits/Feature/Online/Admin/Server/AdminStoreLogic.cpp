@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -465,6 +466,40 @@ namespace sw
         return s_table;
     }
 
+    namespace
+    {
+        /** @brief 운영자 등급 가드입니다. 등급이 모자라면 NotFound(허락할 근거가 없다)입니다. */
+        class AdminRoleGuard final : public IServiceWriteGuard
+        {
+        public:
+            AdminRoleGuard( AccountID adminID, AdminRole required )
+                : _adminID{ adminID }
+                , _required{ required }
+            {
+            }
+
+            ServiceStoreResult checkAllowed( IServiceStoreConnection& connection ) const override
+            {
+                AdminRole                role    = AdminRole::None;
+                uint64                   version = 0;
+                const ServiceStoreResult read    = AdminStoreLogic::readRole( connection, _adminID, role, version );
+                if ( read != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                const bool bAllowed = _required != AdminRole::Count && role >= _required;
+                return bAllowed ? ServiceStoreResult::Ok : ServiceStoreResult::NotFound;
+            }
+
+        private:
+            AccountID _adminID;
+            AdminRole _required;
+        };
+    } // namespace
+
+    shared_ptr<const IServiceWriteGuard> AdminStoreLogic::makeRoleGuard( AccountID adminID, AdminRole required )
+    {
+        return make_shared<const AdminRoleGuard>( adminID, required );
+    }
+
     ServiceStoreResult AdminStoreLogic::readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion )
     {
         outRole    = AdminRole::None;
@@ -516,8 +551,16 @@ namespace sw
         const string scope = ServiceAuditLog::makeOperatorActor( command._adminID );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
+            // 시도마다 운영자 등급부터 다시 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등된 운영자의 명령이 들어가지 않는다(읽은 대상 상태 · 등급도 같이 조건이 된다).
+            ServiceReadSetConnection readSet( connection );
+            AdminRole                attemptRole    = AdminRole::None;
+            uint64                   attemptVersion = 0;
+            if ( readRole( readSet, command._adminID, attemptRole, attemptVersion ) != ServiceStoreResult::Ok )
+                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kUnavailable ) );
+            if ( attemptRole < required )
+                return AdminStoreLogicInternal::finish( outReply, AdminServiceResult::fail( OnlineError::kForbidden ) );
             vector<uint8>            listStoredReply;
-            const ServiceStoreResult found = ServiceIdempotency::findReply( connection, scope, command._keyHigh, command._keyLow, listStoredReply );
+            const ServiceStoreResult found = ServiceIdempotency::findReply( readSet, scope, command._keyHigh, command._keyLow, listStoredReply );
             if ( found == ServiceStoreResult::Ok )
             {
                 // 지난 결과이다. 멱등 기록에는 결과 한 바이트만 있고 세션 끊기 표시는 실리지 않으므로 재시도가 두 번 끊지 않는다.
@@ -530,14 +573,14 @@ namespace sw
 
             AdminReply               attemptReply;
             ServiceTransaction       transaction;
-            const AdminServiceResult staged = AdminStoreLogicInternal::stageEffect( connection, command, transaction, attemptReply );
+            const AdminServiceResult staged = AdminStoreLogicInternal::stageEffect( readSet, command, transaction, attemptReply );
             if ( staged != AdminResult::Ok )
             {
                 outReply = attemptReply;
                 return AdminStoreLogicInternal::finish( outReply, staged );
             }
             ServiceIdempotency::addReply( transaction, scope, command._keyHigh, command._keyLow, vector<uint8>{ static_cast<uint8>( AdminResult::Ok ) } );
-            const ServiceStoreResult committed = connection.commit( transaction );
+            const ServiceStoreResult committed = readSet.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
                 outReply = attemptReply;

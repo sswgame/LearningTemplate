@@ -135,13 +135,13 @@ namespace
         string                             _putJSON{};
         string                             _removedEventID{};
 
-        void putEventJSON( string_view definitionJSON, AccountID /*actorID*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void putEventJSON( string_view definitionJSON, const ServiceOperator& /*actor*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
             _putJSON = string( definitionJSON );
             _listTag.push_back( requestTag );
         }
 
-        void removeEvent( string_view eventID, AccountID /*actorID*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void removeEvent( string_view eventID, const ServiceOperator& /*actor*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
             _removedEventID = string( eventID );
             _listTag.push_back( requestTag );

@@ -122,62 +122,118 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 3) 설정과 시뮬레이션
     // ------------------------------------------------------------------------------
-    /** @brief 공원 규칙의 상수입니다. 시간 단위는 게임 초입니다. */
-    struct ThemeParkSettings
+    /**
+     * @brief 공원 규칙의 상수입니다. 시간 단위는 게임 초입니다.
+     * @details 규칙 자산이다 — 공원 배치(`ParkLayout`)의 `<Rules …/>` 한 줄이 모든 칸을 적는다(`Required`). 정문 · 입장료만 배치 루트가 정한다.
+     *          범위는 필드의 `PROPERTY( Min )` 이고 `ThemeParkSimulation::initialize` 가 벗어난 값을 거절한다(`ConfigRangeUtil`) — 나누는 칸(입장료 0 도착 · 평가 폭 · 걷는 속도 ·
+     *          걸음)이 0 이면 도착률 · 걷는 시간이 무한대 · NaN 이 되어 공원이 조용히 멈췄다(감사 K-4). 하한 · 상한 짝(손님 돈 · 강도 · 멀미 참기)은 읽기가 교차로 본다.
+     */
+    REFLECT()
+    struct SW_KIT_API ThemeParkSettings
     {
-        float3  _gatePosition{};                 ///< 손님이 들어오고 나가는 정문
+        REFLECT_BODY();
+        float3 _gatePosition{}; ///< 손님이 들어오고 나가는 정문
+        PROPERTY( Required, Min = 0.0 )
         float32 _guestArrivalPerMinute{ 12.0f }; ///< 평가 500, 입장료 0 일 때의 손님 도착률
-        float32 _walkSpeed{ 2.5f };              ///< 걷는 속도(m/s)이다. 걷는 시간은 거리 / 속도이다
-        float32 _wanderRadius{ 6.0f };           ///< 탈 것이 없을 때 놀이기구 입구 둘레를 돌아다니는 반지름(m)
-        float32 _queuePatience{ 90.0f };         ///< 줄에서 이 시간(s)을 넘게 기다리면 줄에서 나온다
+        PROPERTY( Required, Min = 0.01 )
+        float32 _walkSpeed{ 2.5f }; ///< 걷는 속도(m/s)이다. 걷는 시간은 거리 / 속도이다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _wanderRadius{ 6.0f }; ///< 탈 것이 없을 때 놀이기구 입구 둘레를 돌아다니는 반지름(m)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _queuePatience{ 90.0f }; ///< 줄에서 이 시간(s)을 넘게 기다리면 줄에서 나온다
+        PROPERTY( Required, Min = 0.0 )
         float32 _energyDrainPerSecond{ 1.0f / 480.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _nauseaRecoveryPerSecond{ 1.0f / 120.0f };
-        float32 _queueSpacing{ 0.6f };                ///< 줄에 선 손님의 간격(m)이다(그리기 위치)
-        float32 _leaveEnergy{ 0.1f };                 ///< 기력이 이보다 낮으면 떠난다
-        float32 _leaveHappiness{ 0.15f };             ///< 행복이 이보다 낮으면 떠난다
-        float32 _nauseaPerRating{ 0.06f };            ///< 멀미 평가 1 이 손님 멀미에 더하는 양
+        PROPERTY( Required, Min = 0.0 )
+        float32 _queueSpacing{ 0.6f }; ///< 줄에 선 손님의 간격(m)이다(그리기 위치)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _leaveEnergy{ 0.1f }; ///< 기력이 이보다 낮으면 떠난다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _leaveHappiness{ 0.15f }; ///< 행복이 이보다 낮으면 떠난다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _nauseaPerRating{ 0.06f }; ///< 멀미 평가 1 이 손님 멀미에 더하는 양
+        PROPERTY( Required, Min = 0.0 )
         float32 _queueUnhappinessPerSecond{ 0.002f }; ///< 줄에서 초당 줄어드는 행복
-        int32   _maxGuests{ 150 };
-        int32   _entryFee{ 0 };
-        uint32  _randomSeed{ 12345u };
+        PROPERTY( Required, Min = 0 )
+        int32 _maxGuests{ 150 };
+        int32 _entryFee{ 0 };
+        PROPERTY( Required, Min = 0 )
+        uint32 _randomSeed{ 12345u };
         // ---- 새로 오는 손님의 성향(고르게 뽑는 범위). 가족 공원과 스릴 공원을 데이터로 나눈다 ----
-        int32   _guestCashMin{ 20 };
-        int32   _guestCashMax{ 80 };
+        PROPERTY( Required, Min = 0 )
+        int32 _guestCashMin{ 20 };
+        PROPERTY( Required, Min = 0 )
+        int32 _guestCashMax{ 80 };
+        PROPERTY( Required, Min = 0.0 )
         float32 _guestMinIntensityMax{ 3.0f }; ///< "이보다 약하면 시시하다" 의 상한이다(0 ~ 이 값)
+        PROPERTY( Required, Min = 0.0 )
         float32 _guestMaxIntensityMin{ 3.0f }; ///< "이보다 세면 안 탄다" 의 범위이다
+        PROPERTY( Required, Min = 0.0 )
         float32 _guestMaxIntensityMax{ 9.0f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _guestNauseaToleranceMin{ 0.3f };
+        PROPERTY( Required, Min = 0.0 )
         float32 _guestNauseaToleranceMax{ 0.9f };
         // ---- 손님 도착 · 놀이기구 만족 · 공원 평가 공식의 계수(공원의 성격은 코드가 아니라 이 칸이다) ----
-        float32       _arrivalBaseFactor{ 0.4f };         ///< 평가 0 일 때의 도착률 배율이다(평가가 `_arrivalRatingScale` 오를 때마다 1 씩 는다)
-        float32       _arrivalRatingScale{ 1000.0f };     ///< 도착률 배율이 1 오르는 평가 폭
-        float32       _noRideArrivalFactor{ 0.2f };       ///< 놀이기구가 없는 공원의 도착률 배율(거의 오지 않는다)
-        float32       _noArrivalEntryFee{ 100.0f };       ///< 이 입장료에서 도착률이 0 이 된다(사이는 직선)
-        float32       _rideFunBase{ 0.04f };              ///< 한 번 탈 때 오르는 행복의 바탕
-        float32       _rideFunPerExcitement{ 0.025f };    ///< 흥분 평가 1 이 더하는 행복
-        float32       _greatRideExcitement{ 6.0f };       ///< 이 흥분 평가 이상이면 "멋진 놀이기구" 라 생각한다
-        float32       _tameRideFunScale{ 0.5f };          ///< 시시한 놀이기구에서 얻는 행복의 배율
-        float32       _sickFunPenalty{ 0.1f };            ///< 탄 뒤 멀미가 참을 선을 넘으면 깎이는 행복
-        float32       _rideEnergyCost{ 0.04f };           ///< 한 번 탈 때 드는 기력
-        float32       _queueGiveUpUnhappiness{ 0.1f };    ///< 줄을 포기할 때 깎이는 행복
-        float32       _nothingToRideUnhappiness{ 0.05f }; ///< 탈 것을 못 찾을 때 깎이는 행복
-        float32       _leaveNausea{ 0.95f };              ///< 멀미가 이보다 크면 떠난다
-        float32       _fairPriceValueScale{ 2.0f };       ///< 표값이 가치 × 이 배율 + `_fairPriceSlack` 을 넘으면 비싸서 타지 않는다
-        float32       _fairPriceSlack{ 0.5f };
-        float32       _rideChoiceJitter{ 1.5f };          ///< 놀이기구 고르기 점수에 더하는 무작위 폭(0 ~ 이 값)
-        float32       _tameRideChoicePenalty{ 2.0f };     ///< 시시하지만 탈 수는 있는 놀이기구의 점수 감점
-        float32       _repeatRideChoicePenalty{ 1.5f };   ///< 방금 탄 놀이기구의 점수 감점(같은 것만 타지 않게)
-        float32       _minWalkSeconds{ 0.5f };            ///< 아무리 가까워도 걷는 데 드는 시간(s)
-        float32       _ratingPerOpenRide{ 25.0f };        ///< 열린 놀이기구 하나가 평가에 더하는 점수
-        uint32        _ratedOpenRideCount{ 8u };          ///< 평가에 세는 열린 놀이기구 수의 상한
-        float32       _emptyParkRating{ 400.0f };         ///< 손님이 없을 때의 평가 바탕
-        float32       _ratingBase{ 200.0f };              ///< 손님이 있을 때의 평가 바탕
-        float32       _ratingPerHappiness{ 600.0f };      ///< 평균 행복 1 이 더하는 평가
-        float32       _ratingPerNausea{ 300.0f };         ///< 평균 멀미 1 이 깎는 평가
-        float32       _ratingPerQueueComplaint{ 100.0f }; ///< 줄이 길다고 생각하는 손님 비율 1 이 깎는 평가
-        float32       _fixedStep{ 0.25f };                ///< 시뮬레이션 간격(s)이다. 프레임 수와 상관없이 같은 결과가 나온다
-        float32       _maxFrameTime{ 5.0f };              ///< 한 프레임에 받는 시간의 상한이다(빨리 감기 포함)
-        hashed_string _currency{ "Cash" };                ///< 빌린 지갑에서 쓰는 공원 돈의 통화
+        PROPERTY( Required, Min = 0.0 )
+        float32 _arrivalBaseFactor{ 0.4f }; ///< 평가 0 일 때의 도착률 배율이다(평가가 `_arrivalRatingScale` 오를 때마다 1 씩 는다)
+        PROPERTY( Required, Min = 1.0 )
+        float32 _arrivalRatingScale{ 1000.0f }; ///< 도착률 배율이 1 오르는 평가 폭
+        PROPERTY( Required, Min = 0.0 )
+        float32 _noRideArrivalFactor{ 0.2f }; ///< 놀이기구가 없는 공원의 도착률 배율(거의 오지 않는다)
+        PROPERTY( Required, Min = 1.0 )
+        float32 _noArrivalEntryFee{ 100.0f }; ///< 이 입장료에서 도착률이 0 이 된다(사이는 직선)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rideFunBase{ 0.04f }; ///< 한 번 탈 때 오르는 행복의 바탕
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rideFunPerExcitement{ 0.025f }; ///< 흥분 평가 1 이 더하는 행복
+        PROPERTY( Required, Min = 0.0 )
+        float32 _greatRideExcitement{ 6.0f }; ///< 이 흥분 평가 이상이면 "멋진 놀이기구" 라 생각한다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _tameRideFunScale{ 0.5f }; ///< 시시한 놀이기구에서 얻는 행복의 배율
+        PROPERTY( Required, Min = 0.0 )
+        float32 _sickFunPenalty{ 0.1f }; ///< 탄 뒤 멀미가 참을 선을 넘으면 깎이는 행복
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rideEnergyCost{ 0.04f }; ///< 한 번 탈 때 드는 기력
+        PROPERTY( Required, Min = 0.0 )
+        float32 _queueGiveUpUnhappiness{ 0.1f }; ///< 줄을 포기할 때 깎이는 행복
+        PROPERTY( Required, Min = 0.0 )
+        float32 _nothingToRideUnhappiness{ 0.05f }; ///< 탈 것을 못 찾을 때 깎이는 행복
+        PROPERTY( Required, Min = 0.0 )
+        float32 _leaveNausea{ 0.95f }; ///< 멀미가 이보다 크면 떠난다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _fairPriceValueScale{ 2.0f }; ///< 표값이 가치 × 이 배율 + `_fairPriceSlack` 을 넘으면 비싸서 타지 않는다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _fairPriceSlack{ 0.5f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rideChoiceJitter{ 1.5f }; ///< 놀이기구 고르기 점수에 더하는 무작위 폭(0 ~ 이 값)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _tameRideChoicePenalty{ 2.0f }; ///< 시시하지만 탈 수는 있는 놀이기구의 점수 감점
+        PROPERTY( Required, Min = 0.0 )
+        float32 _repeatRideChoicePenalty{ 1.5f }; ///< 방금 탄 놀이기구의 점수 감점(같은 것만 타지 않게)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _minWalkSeconds{ 0.5f }; ///< 아무리 가까워도 걷는 데 드는 시간(s)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _ratingPerOpenRide{ 25.0f }; ///< 열린 놀이기구 하나가 평가에 더하는 점수
+        PROPERTY( Required, Min = 0 )
+        uint32 _ratedOpenRideCount{ 8u }; ///< 평가에 세는 열린 놀이기구 수의 상한
+        PROPERTY( Required, Min = 0.0 )
+        float32 _emptyParkRating{ 400.0f }; ///< 손님이 없을 때의 평가 바탕
+        PROPERTY( Required, Min = 0.0 )
+        float32 _ratingBase{ 200.0f }; ///< 손님이 있을 때의 평가 바탕
+        PROPERTY( Required, Min = 0.0 )
+        float32 _ratingPerHappiness{ 600.0f }; ///< 평균 행복 1 이 더하는 평가
+        PROPERTY( Required, Min = 0.0 )
+        float32 _ratingPerNausea{ 300.0f }; ///< 평균 멀미 1 이 깎는 평가
+        PROPERTY( Required, Min = 0.0 )
+        float32 _ratingPerQueueComplaint{ 100.0f }; ///< 줄이 길다고 생각하는 손님 비율 1 이 깎는 평가
+        PROPERTY( Required, Min = 0.001 )
+        float32 _fixedStep{ 0.25f }; ///< 시뮬레이션 간격(s)이다. 프레임 수와 상관없이 같은 결과가 나온다
+        PROPERTY( Required, Min = 0.001 )
+        float32 _maxFrameTime{ 5.0f }; ///< 한 프레임에 받는 시간의 상한이다(빨리 감기 포함)
+        PROPERTY( Required )
+        hashed_string _currency{}; ///< 빌린 지갑에서 쓰는 공원 돈의 통화
     };
 } // namespace sw
 
@@ -205,8 +261,9 @@ namespace sw
         /**
          * @brief 설정으로 빈 공원을 엽니다. 공원 돈은 빌린 지갑(@p refs 의 지갑이며 통화는 `ThemeParkSettings::_currency`)이고, 시작 자금은 게임이 넣습니다.
          * @details 건설은 `trySpend`, 입장료와 탈것 요금은 `add`, 운영비는 `charge`(빚이 될 수 있다)로 처리한다. 지갑이 없으면 건설은 모두 거절하고 수입은 버린다.
+         * @return 설정이 범위 밖이거나 하한이 상한보다 크면 false 이고 공원을 열지 않는다(오류 로그).
          */
-        void initialize( const ThemeParkSettings& settings, const SessionStateRefs& refs );
+        [[nodiscard]] bool initialize( const ThemeParkSettings& settings, const SessionStateRefs& refs );
         /** @brief 시간을 진행합니다. 큰 시간은 0.25초씩 나눠 처리합니다. */
         void update( float32 deltaTime );
 

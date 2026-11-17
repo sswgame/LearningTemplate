@@ -15,7 +15,9 @@
 namespace sw
 {
     ParkLayout::ParkLayout()
-        : _listPlacement{}
+        : _rules{}
+        , _rulesCount{ 0 }
+        , _listPlacement{}
         , _gatePosition{}
         , _entryFee{ 0 }
         , _startingCash{ 0 }
@@ -66,15 +68,34 @@ namespace sw
 
             bool loadFlatRide( const XMLNode& node, string_view sourceName ) { return _layout.loadFlatRide( node, sourceName ); }
             bool loadCoaster( const XMLNode& node, string_view sourceName ) { return _layout.loadCoaster( node, _layouts, sourceName ); }
+            bool loadRules( const XMLNode& node, string_view sourceName ) { return _layout.loadRules( node, sourceName ); }
         };
         using Element                          = XMLCatalogElement<ParkElementReader>;
         static constexpr Element kArrElement[] = {
             Element::of<&ParkElementReader::loadFlatRide>( "FlatRide" ).uncounted(),
             Element::of<&ParkElementReader::loadCoaster>( "Coaster" ).uncounted(),
+            Element::of<&ParkElementReader::loadRules>( "Rules" ).uncounted(),
         };
+        _rulesCount = 0;
         ParkElementReader reader{ *this, layouts };
         const bool        bElements = XMLCatalogReadResult::readInTableOrder( reader, root, sourceName, kArrElement ).isClean();
-        return bRoot && bElements && _listPlacement.empty() == false;
+        // 공원 규칙은 데이터에만 있다 — 규칙 줄이 없는 배치는 공원을 열지 않는다(C++ 기본값으로 열리지 않는다, 감사 K-4).
+        if ( _rulesCount == 0 )
+            SW_LOG_ERROR_ID( "ParkLayout.RulesMissing", "%#: <ParkLayout> needs one <Rules .../> line (every park rule value is data)", sourceName );
+        return bRoot && bElements && _rulesCount > 0 && _listPlacement.empty() == false;
+    }
+
+    bool ParkLayout::loadRules( const XMLNode& node, string_view sourceName )
+    {
+        ThemeParkSettings rules;
+        if ( XMLFields::readProperties( node, rules, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "ParkLayout.RulesInvalid", "%#: <Rules> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        _rules = rules;
+        ++_rulesCount;
+        return true;
     }
 
     bool ParkLayout::loadFlatRide( const XMLNode& node, string_view sourceName )

@@ -372,6 +372,14 @@ namespace sw
         outDef._stackingPolicy                = params._stacking;
         outDef._stackExpirationPolicy         = params._stackExpiration;
 
+        // 주기를 적었으면 0 보다 커야 한다 — 0 은 "주기 없음" 과 구별되지 않아 적은 사람의 뜻(도트 · 리젠)이 조용히 사라지거나 매 프레임 돈다(감사 G-8).
+        // 주기는 지속 이펙트에만 뜻이 있다(GAS `Period` 도 Instant 에는 쓰이지 않는다).
+        const bool bPeriodWritten = node.findAttribute( "period" ) != nullptr;
+        if ( bPeriodWritten && ( params._period <= 0.0f || outDef._durationPolicy == EffectDurationPolicy::Instant ) )
+        {
+            SW_LOG_ERROR_ID( "AbilityCatalog.EffectPeriodInvalid", "%#: effect '%#' has period %# - a period must be positive and the effect must not be Instant", sourceName, pID, params._period );
+            return false;
+        }
         const bool bDurationWithoutLength = outDef._durationPolicy == EffectDurationPolicy::HasDuration && outDef._duration._baseValue <= 0.0f;
         if ( bDurationWithoutLength )
             SW_LOG_WARNING_ID( "AbilityCatalog.EffectHasDurationButSeconds", "%#: effect '%#' is HasDuration but 'seconds' is not positive - it expires on the next update", sourceName, pID );
@@ -453,6 +461,16 @@ namespace sw
         config._bRetriggerInstancedAbility = params._bRetrigger ? SW_TRUE : SW_FALSE;
         config._bActivateOnGranted         = params._bActivateOnGranted ? SW_TRUE : SW_FALSE;
         bool bValid                        = true;
+
+        // 쿨다운은 이펙트의 부여 태그로 "쿨다운 중" 을 본다(`Ability::isOnCooldown`) — 태그가 없거나 즉시 이펙트면 늘 거짓이라 조용히 연타가 된다(감사 G-8).
+        // 언리얼 GAS 도 쿨다운 이펙트의 GrantedTags 로 본다(`UGameplayAbility::GetCooldownTags`). 쿠커도 이 읽기를 돌아 같은 데이터를 거절한다.
+        const AbilityEffectDef* const pCooldown = config._pCooldownEffect.get();
+        if ( pCooldown != nullptr && ( pCooldown->_grantedTags.getTagCount() == 0 || pCooldown->_durationPolicy == EffectDurationPolicy::Instant ) )
+        {
+            SW_LOG_ERROR_ID( "AbilityCatalog.CooldownEffectGrantsNoTag", "%#: ability '%#' has cooldown effect '%#' that grants no tag or is Instant - the ability would never be on cooldown", sourceName,
+                             pID, pCooldown->_id.c_str() );
+            bValid = false;
+        }
 
         AbilityCatalogInternal::readTagChildren( node, "AbilityTag", config._abilityTags );
         AbilityCatalogInternal::readTagChildren( node, "CancelTag", config._cancelAbilitiesWithTags );

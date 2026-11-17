@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -95,7 +96,9 @@ namespace
             input._nowMs                  = kNowMs;
             input._bAcceptSandbox         = bAcceptSandbox ? SW_TRUE : SW_FALSE;
             EconomyRedeemReply reply;
-            _lastServiceResult = EconomyStoreLogic::redeemReceipt( connection, _currencies, _offers, input, reply );
+            // 서비스와 같은 저장소 입구로 돈다 — 읽은 상태 레코드가 커밋 조건이 된다(저장 함수는 손으로 조건을 걸지 않는다)
+            ServiceStoreEntryTestUtil::run( connection, [&]( IServiceStoreConnection& entry )
+            { _lastServiceResult = EconomyStoreLogic::redeemReceipt( entry, _currencies, _offers, input, reply ); } );
             return reply;
         }
 
@@ -129,7 +132,9 @@ namespace
             notification._storeName     = "fake";
             notification._transactionID = string( transactionID );
             vector<EconomyBalanceChange> listChange;
-            const EconomyServiceResult   result = EconomyStoreLogic::revokeRefund( connection, _currencies, notification, recovery, kNowMs, listChange );
+            EconomyServiceResult         result = EconomyServiceResult::fail( OnlineError::kUnavailable );
+            ServiceStoreEntryTestUtil::run( connection, [&]( IServiceStoreConnection& entry )
+            { result = EconomyStoreLogic::revokeRefund( entry, _currencies, notification, recovery, kNowMs, listChange ); } );
             if ( pOutListChange != nullptr )
                 *pOutListChange = listChange;
             return result;

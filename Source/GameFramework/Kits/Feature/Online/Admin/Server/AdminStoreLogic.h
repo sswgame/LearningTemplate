@@ -12,6 +12,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 namespace sw
@@ -59,6 +60,8 @@ namespace sw
         static AdminServiceResult execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply );
         /** @brief 등급을 읽습니다. 레코드가 없으면 None 과 버전 0을 반환합니다. */
         [[nodiscard]] static ServiceStoreResult readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion );
+        /** @brief 운영 쓰기를 거는 키트(라이브 운영)가 같은 저장 일 안에서 @p adminID 의 등급이 @p required 이상인지 보게 하는 가드입니다. 읽은 등급은 그 커밋의 조건이 된다. */
+        [[nodiscard]] static shared_ptr<const IServiceWriteGuard> makeRoleGuard( AccountID adminID, AdminRole required );
         /** @brief 서버 설정의 첫 관리자를 넣습니다. 레코드가 없을 때만 넣으며 감사 기록의 actor 는 "system.bootstrap" 입니다. 운영 중에 바뀐 등급은 덮어쓰지 않습니다. */
         static AdminServiceResult seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs );
     };

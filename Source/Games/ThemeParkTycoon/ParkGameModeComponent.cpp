@@ -182,6 +182,7 @@ namespace sw
             return false;
         const ParkLayout& layout = *pLayout;
         _pLayoutCatalog          = layout.getCoasterLayouts();
+        _settings                = layout.getRules(); // 공원 규칙은 배치 데이터의 <Rules> 다(감사 K-4)
         _settings._gatePosition  = layout.getGatePosition();
         _settings._entryFee      = layout.getEntryFee();
         _startingCash            = layout.getStartingCash();
@@ -206,7 +207,8 @@ namespace sw
         }
         _wallet.clear();
         _wallet.add( _settings._currency, _startingCash );
-        _simulation.initialize( _settings, makeRefs() );
+        if ( _simulation.initialize( _settings, makeRefs() ) == false )
+            return false; // 까닭은 시뮬레이션이 남겼다 — 틀린 규칙으로 공원을 열지 않는다
         _listCoaster.clear();
 
         // 처음 공원에는 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나를 둔다.

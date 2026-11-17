@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -339,8 +340,10 @@ namespace sw
             {
                 for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
-                    _serviceResult                  = GuildResult{};
-                    const ServiceStoreResult result = runOnce( connection );
+                    _serviceResult = GuildResult{};
+                    // 판단에 쓴 레코드(내 멤버 역할 · 길드 · 대상의 길드)를 모두 커밋 조건으로 — 강등 · 추방된 임원의 초대 · 공지 · 가입 정책이 읽기와 커밋 사이에 통과하지 않는다.
+                    ServiceReadSetConnection readSet( connection );
+                    const ServiceStoreResult result = runOnce( readSet );
                     if ( result == ServiceStoreResult::Ok )
                     {
                         collectMembers( connection );
@@ -505,7 +508,6 @@ namespace sw
                 // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
                 transaction.put( Internal::getApplicationExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, selfKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
                 transaction.put( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( selfKey ), vector<uint8>{} );
-                transaction.requireVersion( Internal::getGuildTable(), guildKey, guildRecord._version ); // 그사이 비공개로 바뀌면 다시 읽는다
                 return connection.commit( transaction );
             }
 
@@ -1059,7 +1061,6 @@ namespace sw
                 transfer._actorID    = _request._accountID;
                 transfer._actorKind  = LedgerActorKind::Player;
 
-                transaction.requireVersion( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
                 if ( bDeposit ) // 길드 레코드 버전을 올려 해산의 "창고가 비었다" 확인과 겹치지 않게 한다. 맡기기끼리도 줄을 세워 몫의 자산 종류 상한을 지킨다
                     transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), Internal::encodeGuild( info ), guildRecord._version );
                 LedgerTransferResult transferResult;
@@ -1151,7 +1152,6 @@ namespace sw
                     return ServiceStoreResult::Unavailable;
                 const bool         bExists = grantRead == ServiceStoreResult::Ok;
                 ServiceTransaction transaction;
-                transaction.requireVersion( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
                 ServiceIdempotency::addReply( transaction, scope, key._high, key._low, vector<uint8>{ static_cast<uint8>( SocialResult::Ok ) } );
                 if ( bGrant == false )
                 {
@@ -1175,7 +1175,6 @@ namespace sw
                     if ( listGrantRecord.size() >= static_cast<size_t>( GuildLimit::kMaxStorageGrant ) )
                         return fail( SocialResult::StorageLimit ); // 쓰지 않는 허용을 거둔 뒤에 준다
                 }
-                transaction.requireVersion( Internal::getMemberTable(), targetMemberKey, targetMemberRecord._version ); // 그사이 내보내지면 다시 읽는다
                 transaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( _request._amount ), bExists ? grantRecord._version : ServiceRecord::kAbsentVersion );
                 return commitGrant( connection, transaction, scope );
             }
