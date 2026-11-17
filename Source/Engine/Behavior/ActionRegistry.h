@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Behavior/GameplayContext.h"
+#include "Engine/Behavior/RegisteredParams.h"
 #include "Engine/Reflection/InstancedStruct.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -75,6 +76,8 @@ namespace sw
         static uint32 getRemovalGeneration();
         /** @brief @p pEntry 가 지금 등록되어 있는지입니다(잠금 · 훑기 — 세대가 바뀐 뒤 처음 부를 때만). 내린 이미지의 줄을 가리키는 호출을 부르지 않게 한다. */
         static bool isRegistered( const ActionEntry* pEntry );
+        /** @brief 위 둘을 칸 값 보관자(`RegisteredParams`)에 넘기는 표입니다. */
+        static const RegistryEntryOps& getEntryOps();
         /** @brief 등록된 이름을 등록 순서대로 뒤에 붙입니다(편집기의 고르기 목록). */
         static void collectNames( vector<string>& outListName );
         /** @brief 등록된 모든 이름을 ", " 로 이은 글입니다(모르는 이름 오류에 보인다). */
@@ -159,13 +162,12 @@ namespace sw
         bool               isValid() const { return _pEntry != nullptr; }
         const ActionEntry* getEntry() const { return _pEntry; }
         /** @brief 해석한 칸 구조체입니다(등록 줄의 칸 형식 — `getEntry()->_pParamsOps`). 읽은 뒤 참조를 검사하는 쪽(지역 프로필)이 쓴다. 빈 호출이면 nullptr 입니다. */
-        const void* getParams() const { return _pParams.get(); }
+        const void* getParams() const { return _params.get(); }
         const utf8* getName() const { return _pEntry != nullptr ? _pEntry->_pName : ""; }
 
     private:
-        const ActionEntry*     _pEntry;
-        shared_ptr<const void> _pParams;
-        uint32                 _registryGeneration; ///< 읽을 때의 `ActionRegistry::getRemovalGeneration` — 다르면 부르기 전에 줄이 살아 있는지 본다(감사 S-14)
+        const ActionEntry* _pEntry;
+        RegisteredParams   _params; ///< 칸 값과 읽을 때의 등록표 세대 — 줄이 빠졌으면 부르지도 놓지도 않는다(감사 S-14)
     };
 } // namespace sw
 

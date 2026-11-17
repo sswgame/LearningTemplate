@@ -5,6 +5,9 @@
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/RegisteredParams.h"
+
+#include <cstddef>
 
 using namespace sw;
 
@@ -273,4 +276,84 @@ SW_TEST_CASE( ConditionExprTest, CallsToAnUnregisteredEntryFailClosed )
     SW_EXPECT_TRUE( engineCall.invoke( context ) == ActionResult::Succeeded );
     SW_EXPECT_EQUAL( 1, values._actionCount );
     SW_EXPECT_TRUE( engineExpr.evaluate( context._world ) );
+}
+
+namespace
+{
+    /** @brief 제어 블록을 주어진 버퍼에 두는 할당기입니다 — 일부러 남기는(놓지 않는) 공유 포인터가 힙 누수로 남지 않게 한다. */
+    template <typename T>
+    struct BufferAllocator
+    {
+        using value_type = T;
+
+        uint8* _pBuffer;
+        size_t _size;
+
+        BufferAllocator( uint8* pBuffer, size_t size )
+            : _pBuffer{ pBuffer }
+            , _size{ size }
+        {
+        }
+        template <typename U>
+        BufferAllocator( const BufferAllocator<U>& other ) // NOLINT(google-explicit-constructor): 할당기 되묶기 규칙이다
+            : _pBuffer{ other._pBuffer }
+            , _size{ other._size }
+        {
+        }
+        T* allocate( size_t count )
+        {
+            SW_ASSERT( count * sizeof( T ) <= _size );
+            return reinterpret_cast<T*>( _pBuffer );
+        }
+        void deallocate( T* /*pItem*/, size_t /*count*/ ) {}
+        template <typename U>
+        bool operator==( const BufferAllocator<U>& other ) const
+        {
+            return _pBuffer == other._pBuffer;
+        }
+        template <typename U>
+        bool operator!=( const BufferAllocator<U>& other ) const
+        {
+            return _pBuffer != other._pBuffer;
+        }
+    };
+
+    /** @brief 놓일 때 수를 셉니다(값의 해제 코드가 불렸다). */
+    struct CountingDeleter
+    {
+        int32* _pCount;
+        void   operator()( const void* /*pValue*/ ) const { ++*_pCount; }
+    };
+} // namespace
+
+/**
+ * @brief [ConditionExprTest] 등록 줄이 빠진 뒤 놓이는 칸 값은 해제 코드를 부르지 않는다 — 그 코드는 내린 이미지에 있다(감사 S-14). 줄이 살아 있으면 평소처럼 놓는다.
+ */
+SW_TEST_CASE( ConditionExprTest, ParamsOfAnUnregisteredEntryAreNotReleased )
+{
+    static const ActionEntry          s_heldAction{ "test.heldParams", &InstancedStructOps::of<VocabularyNoParams>(), &ActionThunk<VocabularyNoParams, &XTestUtil::runCount>::call };
+    constexpr size_t                  kBlockSize = 256;
+    alignas( std::max_align_t ) uint8 arrAliveBlock[kBlockSize];
+    alignas( std::max_align_t ) uint8 arrStaleBlock[kBlockSize];
+    int32                             value       = 0;
+    int32                             deleteCount = 0;
+    {
+        unique_ptr<ActionRegistrar>  pRegistrar = make_unique<ActionRegistrar>( &s_heldAction );
+        const uint32                 generation = ActionRegistry::getRemovalGeneration();
+        const shared_ptr<const void> pAlive( &value, CountingDeleter{ &deleteCount }, BufferAllocator<uint8>( arrAliveBlock, kBlockSize ) );
+        const shared_ptr<const void> pStale( &value, CountingDeleter{ &deleteCount }, BufferAllocator<uint8>( arrStaleBlock, kBlockSize ) );
+        RegisteredParams             alive{ pAlive, &s_heldAction, ActionRegistry::getEntryOps(), generation };
+        RegisteredParams             stale{ pStale, &s_heldAction, ActionRegistry::getEntryOps(), generation };
+        RegisteredParams             aliveCopy = alive;
+        SW_EXPECT_TRUE( alive.get() == &value );
+        SW_EXPECT_EQUAL( 3, static_cast<int32>( pAlive.use_count() ) ); // 원본 · 보관자 · 사본
+        alive     = RegisteredParams{};
+        aliveCopy = RegisteredParams{};
+        SW_EXPECT_EQUAL( 1, static_cast<int32>( pAlive.use_count() ) ); // 줄이 살아 있으면 놓는다
+
+        pRegistrar.reset(); // 모듈을 내렸다
+        SW_EXPECT_FALSE( stale.isEntryRegistered() );
+        SW_EXPECT_EQUAL( 2, static_cast<int32>( pStale.use_count() ) );
+    } // 원본 둘(살아 있는 줄의 것)은 놓이고, 빠진 줄의 보관자는 놓지 않는다
+    SW_EXPECT_EQUAL( 1, deleteCount ); // pAlive 하나만 해제됐다 — pStale 은 보관자가 일부러 남겼다
 }

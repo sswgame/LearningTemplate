@@ -72,6 +72,14 @@ namespace sw
         return registrations.contains( pEntry );
     }
 
+    const RegistryEntryOps& ActionRegistry::getEntryOps()
+    {
+        static const RegistryEntryOps s_entryOps{ &ActionRegistry::getRemovalGeneration,
+                                                  []( const void* pEntry )
+        { return ActionRegistry::isRegistered( static_cast<const ActionEntry*>( pEntry ) ); } };
+        return s_entryOps;
+    }
+
     const ActionEntry* ActionRegistry::find( string_view name )
     {
         RegistrationList<const ActionEntry>& registrations = ActionRegistryInternal::getRegistrations();
@@ -118,8 +126,7 @@ namespace sw
 {
     GameActionCall::GameActionCall()
         : _pEntry{ nullptr }
-        , _pParams{}
-        , _registryGeneration{ 0 }
+        , _params{}
     {
     }
 
@@ -170,9 +177,8 @@ namespace sw
         InstancedStruct    params;
         if ( expected<void> read = tryReadProperties( text, pEntry, params ); read.has_value() == false )
             return read;
-        outCall._pEntry             = pEntry;
-        outCall._pParams            = params.share();
-        outCall._registryGeneration = generation;
+        outCall._pEntry = pEntry;
+        outCall._params = RegisteredParams{ params.share(), pEntry, ActionRegistry::getEntryOps(), generation };
         return {};
     }
 
@@ -188,9 +194,8 @@ namespace sw
     GameActionCall GameActionCall::make( const ActionEntry& entry, const InstancedStruct& params )
     {
         GameActionCall call;
-        call._pEntry             = &entry;
-        call._pParams            = InstancedStruct( params ).share(); // 편집 값과 나눠 들지 않게 복사한다
-        call._registryGeneration = ActionRegistry::getRemovalGeneration();
+        call._pEntry = &entry;
+        call._params = RegisteredParams{ InstancedStruct( params ).share(), &entry, ActionRegistry::getEntryOps(), ActionRegistry::getRemovalGeneration() }; // 편집 값과 나눠 들지 않게 복사한다
         return call;
     }
 
@@ -199,13 +204,12 @@ namespace sw
         if ( _pEntry == nullptr )
             return ActionResult::Failed;
         // 읽은 뒤 줄이 빠졌으면(핫 리로드) 줄이 아직 있는지 본다 — 없으면 내린 이미지를 가리킨다. 이름도 그 이미지에 있어 적지 않는다.
-        const bool bStale = _registryGeneration != ActionRegistry::getRemovalGeneration() && ActionRegistry::isRegistered( _pEntry ) == false;
-        if ( bStale )
+        if ( _params.isEntryRegistered() == false )
         {
             SW_LOG_ERROR_ID( "GameAction.Stale", "An action call compiled before its module was unloaded was invoked - compile it again after a hot reload" );
             return ActionResult::Failed;
         }
-        const ActionResult result = _pEntry->_function( context, _pParams.get() );
+        const ActionResult result = _pEntry->_function( context, _params.get() );
         if ( ActionTrace::isEnabled() )
             ActionTrace::record( *_pEntry, context, result );
         return result;

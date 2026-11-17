@@ -104,7 +104,7 @@ namespace sw
             instruction._pEntry    = &entry;
             instruction._pArgs     = args.getInstance();
             instruction._callIndex = static_cast<uint32>( _pExpr->_listArgs.size() ); // 호출마다 인자 하나를 쥐므로 쥔 수가 곧 글 순서다
-            _pExpr->_listArgs.push_back( args.share() );
+            _pExpr->_listArgs.push_back( RegisteredParams{ args.share(), &entry, ConditionRegistry::getEntryOps(), _pExpr->_registryGeneration } );
             _pExpr->_listInstruction.push_back( instruction );
         }
 
@@ -480,6 +480,14 @@ namespace sw
         RegistrationList<const ConditionEntry>& registrations = ConditionExprInternal::getRegistrations();
         ScopedLock<mutex>                       lock{ registrations.getOwnerMutex() };
         return registrations.contains( pEntry );
+    }
+
+    const RegistryEntryOps& ConditionRegistry::getEntryOps()
+    {
+        static const RegistryEntryOps s_entryOps{ &ConditionRegistry::getRemovalGeneration,
+                                                  []( const void* pEntry )
+        { return ConditionRegistry::isRegistered( static_cast<const ConditionEntry*>( pEntry ) ); } };
+        return s_entryOps;
     }
 
     const ConditionEntry* ConditionRegistry::find( string_view name )

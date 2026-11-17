@@ -25,6 +25,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Behavior/GameplayContext.h"
+#include "Engine/Behavior/RegisteredParams.h"
 #include "Engine/Reflection/InstancedStruct.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -106,6 +107,8 @@ namespace sw
         static uint32 getRemovalGeneration();
         /** @brief @p pEntry 가 지금 등록되어 있는지입니다(잠금 · 훑기 — 세대가 바뀐 뒤에만 부른다). */
         static bool isRegistered( const ConditionEntry* pEntry );
+        /** @brief 위 둘을 칸 값 보관자(`RegisteredParams`)에 넘기는 표입니다. */
+        static const RegistryEntryOps& getEntryOps();
         /** @brief 등록된 이름을 등록 순서대로 뒤에 붙입니다(편집기 목록 · 오류 문장). */
         static void collectNames( vector<string>& outListName );
     };
@@ -211,10 +214,10 @@ namespace sw
         bool areCallsRegistered() const;
 
     private:
-        vector<ConditionInstruction>   _listInstruction;
-        vector<shared_ptr<const void>> _listArgs;           ///< 호출 명령의 인자를 쥔다
-        string                         _text;               ///< 읽은 글(오류 문장 · 추적 · 같은 질문 비교)
-        uint32                         _registryGeneration; ///< 컴파일할 때의 `ConditionRegistry::getRemovalGeneration`
+        vector<ConditionInstruction> _listInstruction;
+        vector<RegisteredParams>     _listArgs;           ///< 호출 명령의 인자를 쥔다 — 줄이 빠졌으면 놓을 때 해제 코드를 부르지 않는다(감사 S-14)
+        string                       _text;               ///< 읽은 글(오류 문장 · 추적 · 같은 질문 비교)
+        uint32                       _registryGeneration; ///< 컴파일할 때의 `ConditionRegistry::getRemovalGeneration`
     };
 } // namespace sw
 
