@@ -79,13 +79,13 @@ namespace sw
         // 연이은 포트 샤드면 배정이 계정마다 한 포트를 고른다. 한 포트를 나누면(`_bGamePortReuse`) 커널이 나누므로 알릴 포트는 하나다.
         settings._gamePortCount = static_cast<uint8>( serverConfig._bGamePortReuse ? 1 : serverConfig._gamePortShardCount );
         if ( NetAddress::parse( serverConfig._listenAddress, static_cast<uint16>( serverConfig._servicePort ), settings._listenAddress ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "server config _listenAddress is not an IPv4 address", serverConfig._listenAddress } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "server config _listenAddress is not an IP address", serverConfig._listenAddress } );
         settings._listenAddress._port = static_cast<uint16>( serverConfig._servicePort ); // 포트는 `_servicePort` 가 기준이다
         if ( serverConfig._adminServicePort > 0 )
         {
             const uint16 adminPort = static_cast<uint16>( serverConfig._adminServicePort );
             if ( NetAddress::parse( serverConfig._adminListenAddress, adminPort, settings._adminListenAddress ) == false )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "server config _adminListenAddress is not an IPv4 address", serverConfig._adminListenAddress } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "server config _adminListenAddress is not an IP address", serverConfig._adminListenAddress } );
             settings._adminListenAddress._port = adminPort;
             // GM 포트는 계정 로그인 뒤 운영 명령을 받는 자리다 — 공용 인터페이스에 열지 않는다(형식으로 막는다, 운영 HTTP 와 같은 규칙. 바깥 GM 은 VPN · 배스천으로 사설망에 들어온다).
             if ( settings._adminListenAddress.isLoopbackOrPrivate() == false )

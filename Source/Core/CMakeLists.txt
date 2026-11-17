@@ -187,7 +187,12 @@ endforeach()
 # 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다). 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이
 # libm 대신 부르는 줄 밖 함수라 같은 표시를 건다. 파쇄 다각형 삼각 분할(`Spatial/PolygonTriangulation`)도 파괴 사건 해시가 구성마다 같아야 해 같은 표시를 건다.
 # 광선 ↔ 도형 판정 · 방향 판정(`Math/Ray` · `Math/OrientationUtil`)은 결정적 시뮬레이션 키트(MechArena)가 부르는 줄 밖 실수 함수라 같은 표시를 건다.
-foreach(deterministic_source IN ITEMS Math/VectorMath.cpp Math/DeterministicMathUtil.cpp Math/Ray.cpp Math/OrientationUtil.cpp Spatial/PolygonTriangulation.cpp)
+# Math 폴더는 통째로 건다(감사 C-14) — 손으로 적은 목록은 결정성 물리가 부르는 `MatrixMath`(쿼터니언 곱 · 회전) · `ValueNoise` 를 빠뜨렸다.
+# 새 Math 파일도 저절로 든다(Engine Physics 폴더와 같은 틀, 유니티 Burst `FloatMode.Deterministic` 이 수학 묶음 전체에 거는 것과 같은 자리).
+# 축약만 끈다: `MatrixMath` 의 slerp · 오일러 변환은 여전히 libm 이다 — 같은 플랫폼 안에서는 CRT 가 같아 구성 간 비트가 같고(결정 D7-8),
+# 롤백 시뮬레이션은 삼각함수를 `DeterministicMathUtil` 로 부른다. 표시 비용(FMA 합치기 없음 · 유니티 묶음에서 빠짐)은 재지 않았다.
+sw_glob_source_tree(list_deterministic_math_source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/Math/*.cpp")
+foreach(deterministic_source IN LISTS list_deterministic_math_source ITEMS Spatial/PolygonTriangulation.cpp)
 	sw_get_core_tier("${deterministic_source}" deterministic_tier)
 	if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/${deterministic_source}" IN_LIST core_tier_source_${deterministic_tier})
 		message(FATAL_ERROR "[Core] ${deterministic_source} 가 티어 ${deterministic_tier} 부분 소스에 없다 — 결정성 표시(sw_mark_deterministic_sources)가 걸릴 타깃을 다시 정한다")

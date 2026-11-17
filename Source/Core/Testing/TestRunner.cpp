@@ -71,6 +71,7 @@ namespace sw::test
                 vector<ExpectedLog>         _listExpectedLog;
                 vector<string>              _listFailure;
                 vector<string>              _listUpdatedSnapshot;
+                string                      _skipReason; ///< `SW_TEST_SKIP` 의 까닭과 자리(`파일(줄)`) — 비면 건너뛰지 않았다
                 string                      _scratchFolder;
                 string                      _childArgument;               ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
                 uint32                      _declaredErrorLineCount{ 0 }; ///< 실행 전체에서 선언과 맞은 Error 줄 수(`kDeclaredErrorLinesPrefix` 줄로 알린다)
@@ -344,6 +345,20 @@ namespace sw::test
         TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
         ScopedLock<mutex>              lock{ state._mutex };
         ++state._assertionCount;
+    }
+
+    void skipCase( string_view reason, const utf8* pFile, int32 line )
+    {
+        if ( reason.empty() )
+        {
+            reportFailure( pFile, line, "SW_TEST_SKIP needs a reason - a skip without one cannot be told apart in the report" );
+            return;
+        }
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "%# (%#(%#))", string( reason ), string( pFile ), line );
+        TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
+        ScopedLock<mutex>              lock{ state._mutex };
+        state._skipReason = string( textBuilder.view() );
     }
 
     void expectLog( const utf8* pLogID, const utf8* pFile, int32 line )
@@ -752,9 +767,10 @@ namespace sw::test
         thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )
             watchThread = thread( ThreadTestAccess::getKey(), &Internal::watchCaseDeadline );
-        const uint32   repeatCount = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
-        uint32         failedCount = 0;
-        uint32         ranCount    = 0;
+        const uint32   repeatCount  = ( bChildRun || bIsolatedRun ) ? 1u : MathUtil::max( options._repeatCount, 1u );
+        uint32         failedCount  = 0;
+        uint32         skippedCount = 0;
+        uint32         ranCount     = 0;
         string         caseReport;
         vector<string> listUpdatedSnapshot;
         const int64    runStart = MonotonicClock::nowNanoseconds();
@@ -777,6 +793,7 @@ namespace sw::test
                     state._listExpectedLog.clear();
                     state._listFailure.clear();
                     state._listUpdatedSnapshot.clear();
+                    state._skipReason.clear();
                     state._assertionCount   = 0;
                     state._bUpdateSnapshots = options._bUpdateSnapshots;
                     state._scratchFolder    = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), to_string( roundIndex ) );
@@ -808,10 +825,13 @@ namespace sw::test
                 const int64 caseMilliseconds = ( MonotonicClock::nowNanoseconds() - caseStart ) / constant::time::kNanosecondsPerMillisecond;
 
                 vector<string> listLateFailure;
+                string         skipReason;
                 {
                     ScopedLock<mutex> lock{ state._mutex };
                     state._bActive = SW_FALSE;
-                    if ( state._assertionCount == 0 )
+                    skipReason     = state._skipReason;
+                    // 건너뛴 케이스는 돌지 않은 것이다 — 단언 0 건 · 나오지 않은 기대 로그를 묻지 않는다(건너뜀이 곧 판정이다).
+                    if ( skipReason.empty() && state._assertionCount == 0 )
                     {
                         StringBuilder<constant::buffer::kMax256> textBuilder2;
                         textBuilder2.appendFormat( "%#(%#): error: the case made no assertion - a case that checks nothing is not a pass", string( pCase->_pFile ), pCase->_line );
@@ -819,7 +839,7 @@ namespace sw::test
                     }
                     for ( const TestRunnerInternal::ExpectedLog& expected : state._listExpectedLog )
                     {
-                        if ( expected._seenCount == 0 )
+                        if ( expected._seenCount == 0 && skipReason.empty() )
                         {
                             StringBuilder<constant::buffer::kMax256> textBuilder;
                             textBuilder.appendFormat( "%#(%#): error: expected log [id:%#] never appeared", string( expected._pFile ), expected._line, expected._id );
@@ -839,22 +859,30 @@ namespace sw::test
                     listUpdatedSnapshot.insert( listUpdatedSnapshot.end(), state._listUpdatedSnapshot.begin(), state._listUpdatedSnapshot.end() );
                     state._pCase = nullptr;
                 }
-                const bool bPassed = listFailure.empty();
+                // 건너뛰기 전에 진 단언이 있으면 실패다 — 건너뜀이 실패를 가리지 않는다.
+                const bool bSkipped = skipReason.empty() == false && listFailure.empty();
+                const bool bPassed  = listFailure.empty() && bSkipped == false;
                 for ( const string& failure : listFailure )
                 {
                     if ( pOutListFailure != nullptr )
                         pOutListFailure->push_back( string( pCase->_pName ) + ": " + failure );
                 }
                 ++ranCount;
-                if ( bPassed == false )
+                if ( bSkipped )
+                    ++skippedCount;
+                else if ( bPassed == false )
                     ++failedCount;
-                formatstring( arrBuffer, constant::buffer::kMax1024, "%# %# (%# ms)", bPassed ? "[       OK ]" : "[  FAILED  ]", pCase->_pName, caseMilliseconds );
+                if ( bSkipped )
+                    formatstring( arrBuffer, constant::buffer::kMax1024, "[  SKIPPED ] %# (%# ms) - %#", pCase->_pName, caseMilliseconds, skipReason.c_str() );
+                else
+                    formatstring( arrBuffer, constant::buffer::kMax1024, "%# %# (%# ms)", bPassed ? "[       OK ]" : "[  FAILED  ]", pCase->_pName, caseMilliseconds );
                 Internal::writeLine( arrBuffer );
 
                 caseReport += caseReport.empty() ? "\n" : ",\n";
                 caseReport += string( "    {\"name\": \"" ) + Internal::escapeJSON( pCase->_pName ) + "\", \"file\": \"" + Internal::escapeJSON( pCase->_pFile ) +
                               "\", \"line\": " + to_string( pCase->_line ) + ", \"round\": " + to_string( roundIndex ) + ", \"isolated\": " + ( bIsolate ? "true" : "false" ) +
-                              ", \"passed\": " + ( bPassed ? "true" : "false" ) + ", \"milliseconds\": " + to_string( caseMilliseconds ) + ", \"failures\": [";
+                              ", \"passed\": " + ( bPassed ? "true" : "false" ) + ", \"skipped\": " + ( bSkipped ? "true" : "false" ) + ", \"skipReason\": \"" +
+                              Internal::escapeJSON( bSkipped ? skipReason : string{} ) + "\", \"milliseconds\": " + to_string( caseMilliseconds ) + ", \"failures\": [";
                 for ( size_t failureIndex = 0; failureIndex < listFailure.size(); ++failureIndex )
                 {
                     caseReport += ( failureIndex == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listFailure[failureIndex] ) + "\"";
@@ -868,7 +896,8 @@ namespace sw::test
             options._pCrashHandler->setContextValue( "TestCase", "" );
 
         const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::time::kNanosecondsPerMillisecond;
-        formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );
+        formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, %# skipped, seed %#", ranCount, runMilliseconds,
+                      ranCount - failedCount - skippedCount, failedCount, skippedCount, baseSeed );
         Internal::writeLine( arrBuffer );
         {
             TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
@@ -893,7 +922,7 @@ namespace sw::test
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( "%#\",\n  \"disabled\": [", options._shardCount );
             string report = "{\n  \"schemaVersion\": " + to_string( kReportSchemaVersion ) + ",\n  \"seed\": " + to_string( baseSeed ) + ",\n  \"filter\": \"" + Internal::escapeJSON( options._filter ) + "\",\n  \"selectedCount\": " +
-                            to_string( listCase.size() ) + ",\n  \"runCount\": " + to_string( ranCount ) + ",\n  \"failedCount\": " + to_string( failedCount ) +
+                            to_string( listCase.size() ) + ",\n  \"runCount\": " + to_string( ranCount ) + ",\n  \"failedCount\": " + to_string( failedCount ) + ",\n  \"skippedCount\": " + to_string( skippedCount ) +
                             ",\n  \"milliseconds\": " + to_string( runMilliseconds ) + ",\n  \"shard\": \"" + to_string( options._shardIndex ) + "/" +
                             string( textBuilder.view() );
             for ( size_t index = 0; index < listDisabled.size(); ++index )

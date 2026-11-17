@@ -6,9 +6,10 @@
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/SecureRandom.h"
-#include "Core/Network/Connection/NetSlotTable.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/LittleEndianUtil.h"
+
+#include <cstring>
 
 namespace sw
 {
@@ -46,10 +47,15 @@ namespace sw
     uint64 NetChallenge::makeTokenForWindow( const NetAddress& address, uint64 clientSalt, int64 window ) const
     {
         // 키 있는 PRF(SipHash-2-4) 로 (주소, 클라이언트 솔트, 윈도우) 를 묶는다. 키를 모르면 다른 주소의 값을 만들 수 없다.
-        uint8 arrInput[24];
-        LittleEndianUtil::writeUint64( arrInput, NetSlotTable::makeAddressKey( address ) );
-        LittleEndianUtil::writeUint64( arrInput + 8, clientSalt );
-        LittleEndianUtil::writeUint64( arrInput + 16, static_cast<uint64>( window ) );
+        // 주소는 주소군 · 16 바이트 · 포트 전체를 넣는다 — 줄인 키는 IPv6 상대끼리 같은 값을 내 남의 주소로 챌린지를 통과시킨다.
+        uint8 arrInput[NetAddress::kByteCount + 4 + 16]{};
+        std::memcpy( arrInput, address._arrByte, NetAddress::kByteCount );
+        arrInput[NetAddress::kByteCount]     = static_cast<uint8>( address._family );
+        arrInput[NetAddress::kByteCount + 1] = 0;
+        arrInput[NetAddress::kByteCount + 2] = static_cast<uint8>( address._port & 0xFFu );
+        arrInput[NetAddress::kByteCount + 3] = static_cast<uint8>( address._port >> 8 );
+        LittleEndianUtil::writeUint64( arrInput + NetAddress::kByteCount + 4, clientSalt );
+        LittleEndianUtil::writeUint64( arrInput + NetAddress::kByteCount + 12, static_cast<uint64>( window ) );
         return SecureUtil::sipHash24( _key, arrInput, sizeof( arrInput ) ) | 1u; // 0은 "아직 챌린지를 받지 못했다"는 뜻이라 쓰지 않는다.
     }
 
