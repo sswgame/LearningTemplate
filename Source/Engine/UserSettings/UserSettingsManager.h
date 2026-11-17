@@ -350,8 +350,10 @@ namespace sw
         UserSettingSetResult setPendingAt( uint32 settingIndex, const string& normalized, UserSettingValueResult normalizeResult );
         void                 refreshScalabilityGroup( const ScalabilityGroupDef& group, bool bCommitted );
         void                 applyScalabilityPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, bool bCommitted );
-        [[nodiscard]] bool   findEffectiveSlot( uint32 settingIndex, InputSlot& outSlot ) const;
-        hashed_string        findBindingContext( uint32 settingIndex ) const;
+        /** @brief 파일에 없던(@p listInFile 이 0) 묶인 설정의 확정 값을 프리셋 @p presetName 의 값으로 둡니다(옛 파일 — `loadUserJSON`). 프리셋이 아니면(custom) 그대로다. */
+        void               fillMissingFromPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, const vector<uint8>& listInFile );
+        [[nodiscard]] bool findEffectiveSlot( uint32 settingIndex, InputSlot& outSlot ) const;
+        hashed_string      findBindingContext( uint32 settingIndex ) const;
         /** @brief 두 키 바인딩 설정이 한 번의 누름에 함께 발화할 수 있으면(같은 문맥이거나 함께 켜진 레이어) true 입니다. 재배치 겹침이 이것으로 본다. */
         [[nodiscard]] bool isSameBindingContext( uint32 settingIndexA, uint32 settingIndexB ) const;
         void               broadcast( const hashed_string& settingID, UserSettingEventKind kind );

@@ -2711,6 +2711,11 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
+		<entry key="settings.graphics.renderQuality" source="Render Quality" context="Options menu label" maxLength="32">
+			<origins>
+				<item>engine/settings/engine.settings.xml</item>
+			</origins>
+		</entry>
 		<entry key="settings.graphics.renderScale" source="Render Scale" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>

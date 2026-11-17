@@ -20,6 +20,8 @@ FILE_SEARCH_PATHS = "search_paths.json"
 FILE_SEARCH_PATHS_DEFAULTS = "search_paths.defaults.json"
 
 FILE_RUNTIME_ENGINE_CONFIG = "Config/Engine/EngineConfig.json"
+# 렌더 품질 단계 표 — 단계 이름마다 `EngineConfig._render` 의 덮어쓰기(바탕 → 플랫폼 → 단계 순으로 합친다, `RenderQualityOverride`). 정적 구성은 configure 가 굽는다.
+FILE_RUNTIME_RENDER_QUALITY = "Config/Engine/RenderQuality.json"
 # 에디터가 쓰는 상태(도킹 · 레이아웃 · 캔버스 · 테마 · gv 프리셋) — 사람이 쓰는 설정(Config/)과 폴더를 나눈다. git 무시(/Saved/).
 DIR_SAVED_EDITOR = "Saved/Editor"
 # 게임 프리셋 폴더 — 게임마다 `<게임>.json` 하나(팩 루트 — 시작 씬은 팩의 gamesettings). Dev 는 실행할 때 고른 게임(`-game=`), Shipping 은 구운 게임의 것을 쓴다.

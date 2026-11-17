@@ -1,0 +1,29 @@
+{
+    "low": {
+        "_shadowLocalMinTileResolution": 64,
+        "_shadowLocalCullSlotLimit": 4,
+        "_maxExtraViewCount": 4,
+        "_textureStreaming": {
+            "_poolMegabytes": 256,
+            "_maxMegabytesInFlight": 32
+        }
+    },
+    "medium": {
+        "_shadowLocalCullSlotLimit": 8,
+        "_maxExtraViewCount": 6,
+        "_textureStreaming": {
+            "_poolMegabytes": 512
+        }
+    },
+    "high": {},
+    "ultra": {
+        "_shadowLocalMinTileResolution": 256,
+        "_shadowLocalCullSlotLimit": 32,
+        "_maxExtraViewCount": 16,
+        "_textureStreaming": {
+            "_uploadsPerFrame": 16,
+            "_upgradesPerFrame": 4,
+            "_poolMegabytes": 896
+        }
+    }
+}

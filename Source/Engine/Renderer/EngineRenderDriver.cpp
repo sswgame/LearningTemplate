@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -91,6 +92,9 @@ namespace sw
         _pSceneManager  = locateSubsystem<SceneManager>( &_startupScope );
         _pUISystem      = locateSubsystem<UISystem>( &_startupScope );
         _pFontService   = locateSubsystem<FontService>( &_startupScope );
+        // 렌더 스레드가 앞 패킷을 그리며 엔진 설정(`_render`)을 읽는다 — 설정을 제자리에서 덮는 길(품질 옵션 · 파일 다시 읽기)은 받은 패킷을 끝낸 뒤에 덮는다.
+        if ( ConfigManager* const pConfigManager = engine::findSubsystem<ConfigManager>() )
+            pConfigManager->setWriteFence( SW_DELEGATE_METHOD( ConfigWriteFenceDelegate, &EngineRenderDriver::flushSubmittedPackets, this ) );
         // 장치 분실 정책은 짐작하지 않는다 — 값이 없으면 기동을 오류로 끝낸다(폴백 없음).
         _deviceLostPolicy = engine::getSubsystem<EngineConfig>()._deviceLostPolicy;
         if ( _deviceLostPolicy == RHIDeviceLostPolicy::None )
@@ -109,6 +113,8 @@ namespace sw
 
     void EngineRenderDriver::onShutdownBegin()
     {
+        if ( ConfigManager* const pConfigManager = engine::findSubsystem<ConfigManager>() )
+            pConfigManager->setWriteFence( {} ); // 렌더 스레드보다 먼저 뗀다 — 뗀 뒤의 덮기는 기다릴 렌더 스레드가 없다
         _mainWindowLifecycleSubscription.reset();
         _mainWindowResizeSubscription.reset(); // 창(MainWindow 단계가 파괴)과 RHI 보다 먼저 놓는다
     }

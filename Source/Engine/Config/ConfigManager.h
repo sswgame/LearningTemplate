@@ -29,6 +29,8 @@ namespace sw
 {
     class XMLNode;
 
+    struct GlobalVariableInfo;
+
     struct ResourceContext;
 } // namespace sw
 
@@ -36,6 +38,8 @@ namespace sw
 {
     /** @brief 설정 하나를 파일에서 다시 읽었다는 알림입니다. 인자는 설정 타입의 이름(`T::StaticType()->_fullyQualifiedName`)입니다. */
     using ConfigReloadedDelegate = MulticastDelegate<void( const hashed_string& configTypeName )>;
+    /** @brief 이미 읽은 설정 객체를 제자리에서 덮기 직전에 부르는 울타리입니다 — 그 값을 읽는 다른 스레드(렌더 스레드)가 받은 일을 끝낼 때까지 기다린다. */
+    using ConfigWriteFenceDelegate = Delegate<void()>;
 
     /** @brief 설정 파일 하나를 읽은 결과입니다. 없는 파일을 기본값으로 대신하지 않습니다. 필수 설정이면 오류이고, 없어도 되는 설정만 부르는 쪽이 없음으로 다룹니다. */
     enum class ConfigReadResult : uint8
@@ -49,6 +53,7 @@ namespace sw
      * @brief 호스트 설정 하나를 어디서 읽는지입니다. `disk`(파일 경로)와 `baked`(configure 때 베이크한 JSON) 두 값뿐입니다.
      * @details 출처를 호출 서명에 둔다. "디스크에 없으면 베이크한 JSON" 같은 연결은 만들 수 없다 — 부르는 쪽(빌드 구성)이 하나를 고른다.
      *          덮어쓰기 층(`PlatformConfigOverride`)은 같은 출처 종류 안에서만 붙는다 — 디스크 바탕에는 디스크 덮어쓰기 파일(없어도 된다), 구운 바탕에는 구운 덮어쓰기 글(없으면 nullptr).
+     *          품질 단계 층(`RenderQualityOverride`, `withRenderQuality`)은 그 위에 선다 — 순서는 바탕 → 플랫폼 → 품질 단계다(언리얼 스케일러빌리티 그룹이 플랫폼 ini 뒤에 서는 것과 같다).
      */
     class ConfigSource
     {
@@ -61,11 +66,27 @@ namespace sw
         /** @param pOverrideJSON 바탕 위에 덮을 구운 글입니다(nullptr 이면 덮어쓰기 층이 없다). */
         [[nodiscard]] static ConfigSource baked( const utf8* pJSON, const utf8* pOverrideJSON = nullptr ) { return ConfigSource( string(), string(), pJSON, pOverrideJSON ); }
 
+        /**
+         * @brief 품질 단계 층을 더한 사본입니다. @p tiers 는 디스크 출처면 단계 표 파일 경로, 구운 출처면 구운 단계 표 글입니다. @p tierName 이 비면 층이 없다(바탕 그대로).
+         * @details 단계 이름이 있으면 표는 필수다 — 표가 없거나 그 단계가 없으면 로드 오류다(고른 단계가 조용히 무시되지 않게).
+         */
+        [[nodiscard]] ConfigSource withRenderQuality( string tiers, string tierName ) const
+        {
+            ConfigSource source  = *this;
+            source._qualityTiers = std::move( tiers );
+            source._qualityTier  = std::move( tierName );
+            return source;
+        }
+
         [[nodiscard]] bool          isBaked() const { return _pBakedJSON != nullptr; }
         [[nodiscard]] const string& getPath() const { return _path; }
         [[nodiscard]] const string& getOverridePath() const { return _overridePath; }
         [[nodiscard]] const utf8*   getBakedJSON() const { return _pBakedJSON; }
         [[nodiscard]] const utf8*   getBakedOverrideJSON() const { return _pBakedOverrideJSON; }
+        /** @brief 품질 단계 표 — 디스크 출처면 파일 경로, 구운 출처면 글입니다(`withRenderQuality`). */
+        [[nodiscard]] const string& getQualityTiers() const { return _qualityTiers; }
+        /** @brief 고른 품질 단계 이름입니다. 비면 품질 단계 층이 없다. */
+        [[nodiscard]] const string& getQualityTier() const { return _qualityTier; }
 
     private:
         ConfigSource( string path, string overridePath, const utf8* pBakedJSON, const utf8* pBakedOverrideJSON )
@@ -81,6 +102,8 @@ namespace sw
         string      _overridePath;
         const utf8* _pBakedJSON;
         const utf8* _pBakedOverrideJSON;
+        string      _qualityTiers;
+        string      _qualityTier;
     };
 } // namespace sw
 
@@ -120,35 +143,52 @@ namespace sw
          *          파일만 읽는다. 배포 구성은 생성된 JSON 을 읽으며, 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 실패로 드러낸다.
          */
         SubsystemInitResult initializeSubsystem() override;
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 품질 단계 변수(`gv_renderQuality`)에 건 훅을 뗍니다. */
+        void        shutdownSubsystem() override;
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 설정 하나를 파일에서 읽어 등록합니다. 테이블에 이미 같은 타입이 있으면 덮어씁니다.
          * @param overridePath 바탕 위에 덮을 선택 파일입니다(`PlatformConfigOverride::apply` 규칙). 비었거나 파일이 없으면 바탕만 읽는다. 둘 중 어느 파일이 바뀌어도 다시 읽는다.
+         * @param qualityPath 그 위에 덮을 품질 단계 표 파일입니다(`RenderQualityOverride`). @p qualityTier 가 비면 층이 없고, 있으면 표는 필수다. 표가 바뀌어도 다시 읽는다.
+         * @param qualityTier 고른 품질 단계 이름입니다.
          * @return 없으면 `Missing`(로그 없음, 부르는 쪽이 기본값을 쓴다), 틀렸으면 `Invalid`(키 이름과 함께 오류를 남겼다)
          * @note 없는 파일은 정상 상태라 `readOptionalTextFile` 한 번으로 읽는다(있는지 묻고 읽지 않는다 - R7).
          */
         template <typename T>
-        [[nodiscard]] ConfigReadResult loadConfigFile( const string& filePath, const string& overridePath = string() )
+        [[nodiscard]] ConfigReadResult loadConfigFile( const string& filePath, const string& overridePath = string(), const string& qualityPath = string(),
+                                                       const string& qualityTier = string() )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
             const string           resolvedPath         = resolveConfigPath( filePath );
             const string           resolvedOverridePath = overridePath.empty() ? string() : resolveConfigPath( overridePath );
+            const string           resolvedQualityPath  = qualityTier.empty() ? string() : resolveConfigPath( qualityPath );
             string                 jsonStr;
             string                 label;
-            const OptionalFileRead read = readLayeredFile( resolvedPath, resolvedOverridePath, jsonStr, label );
+            const OptionalFileRead read = readLayeredFile( resolvedPath, resolvedOverridePath, resolvedQualityPath, qualityTier, jsonStr, label );
             if ( read == OptionalFileRead::Missing )
                 return ConfigReadResult::Missing;
             if ( read == OptionalFileRead::Failed )
                 return ConfigReadResult::Invalid; // 이유는 읽기 · 합치기가 오류로 남겼다
             if ( loadConfigFromJSON<T>( jsonStr, label.c_str() ) == false )
                 return ConfigReadResult::Invalid;
-            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, resolvedOverridePath, T::StaticType()->_name,
+            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, resolvedOverridePath, resolvedQualityPath, qualityTier, T::StaticType()->_name,
                                                           SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
             return ConfigReadResult::Loaded;
         }
+
+        /**
+         * @brief 호스트 엔진 설정을 @p source 에서 읽고 그 출처를 기억합니다(`applyRenderQuality` 가 같은 출처에 단계만 바꿔 다시 읽는다). 결과는 `loadHostConfig` 와 같습니다.
+         */
+        EngineConfig* loadEngineConfig( const ConfigSource& source );
+        /**
+         * @brief 품질 단계를 @p tierName 으로 바꿔 엔진 설정을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다(언리얼 `ScalabilityQuality` 즉시 적용 자리).
+         * @details 사용자 옵션 `graphics.renderQuality` 가 `gv_renderQuality` 를 바꾸면 이것이 불린다(기동 때 저장값 적용 포함). 같은 단계면 아무것도 하지 않는다.
+         *          읽지 못하면(없는 단계 · 모르는 키 — 오류를 남겼다) 이전 값과 이전 단계를 그대로 둔다. 디스크 출처면 파일 다시 읽기도 새 단계로 합친다.
+         * @return 반영했거나 이미 그 단계면 true, `loadEngineConfig` 전이거나 읽지 못했으면 false 입니다.
+         */
+        [[nodiscard]] bool applyRenderQuality( const string& tierName );
 
         /** @brief `loadConfigFile` 이 `Loaded` 이면 true 입니다. */
         template <typename T>
@@ -158,12 +198,19 @@ namespace sw
         }
 
         /**
-         * @brief 파일에서 읽은 설정 중 경로(바탕 또는 덮어쓰기 파일)가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
+         * @brief 파일에서 읽은 설정 중 경로(바탕 · 덮어쓰기 · 품질 단계 표 파일)가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
          * @details 설정 객체는 바꾸지 않고 값만 덮어쓴다. 기동 때 받아 둔 포인터(`Engine::_pEngineConfig`)가 그대로 유효하다. JSON 이
          *          깨졌으면 경고를 남기고 이전 값을 그대로 둔다. 경로는 `FileUtil::isSameDiskPath` 로 비교한다.
          * @return 다시 읽었으면 `Reloaded`, 파일에서 읽은 설정이 아닌 경로면 `NotTracked`, 깨진 파일이면(오류를 남겼다) `Failed`
          */
         [[nodiscard]] ReloadResult reloadConfigFile( string_view changedPath );
+        /**
+         * @brief 이미 읽은 설정을 제자리에서 덮기 직전에 부를 울타리를 겁니다(빈 델리게이트면 뗀다). 렌더 구동기가 "받은 패킷을 모두 끝낸다"(`RenderThread::pollPackets`)를 건다.
+         * @details 렌더 스레드는 앞 패킷을 그리는 동안 `EngineConfig::_render` 를 직접 읽는다(텍스처 업로드 상한 · 그림자 칸 하한 · 컬링 슬롯 · PSO 예산). 게임 스레드가 그 사이에 덮으면
+         *          찢어진 값을 읽는다 — 덮기를 이 울타리 뒤(렌더 스레드가 앞 패킷을 끝냈고 다음 패킷은 아직 게임 스레드에 있다)로 미룬다. 언리얼이 렌더 스레드가 읽는 값을
+         *          `FlushRenderingCommands` 뒤에만 바꾸는 것과 같다. 첫 읽기 · 읽지 못한 다시 읽기는 덮지 않으므로 기다리지 않는다. 덮기는 게임 스레드에서만 한다.
+         */
+        void setWriteFence( ConfigWriteFenceDelegate fence ) { _writeFence = std::move( fence ); }
         /** @brief 설정을 다시 읽을 때마다 호출되는 델리게이트입니다. */
         ConfigReloadedDelegate& onConfigReloaded() { return _onConfigReloaded; }
         /** @brief 다시 읽을 수 있는(파일에서 읽은) 설정 수입니다. */
@@ -201,6 +248,7 @@ namespace sw
             auto         iter = _mapConfig.find( key );
             if ( iter != _mapConfig.end() )
             {
+                waitWriteFence();
                 *static_cast<T*>( iter->second.get() ) = std::move( *newConfig );
             }
             else if ( unique_ptr<IConfig>* pHostSlot = findHostSlot( *T::StaticType() ); pHostSlot != nullptr )
@@ -225,9 +273,12 @@ namespace sw
         [[nodiscard]] ConfigReadResult loadOptionalConfig( const ConfigSource& source )
         {
             if ( source.isBaked() == false )
-                return loadConfigFile<T>( source.getPath(), source.getOverridePath() );
+                return loadConfigFile<T>( source.getPath(), source.getOverridePath(), source.getQualityTiers(), source.getQualityTier() );
             string jsonStr = source.getBakedJSON();
             if ( source.getBakedOverrideJSON() != nullptr && applyOverride( string( jsonStr ), source.getBakedOverrideJSON(), "baked_config override", jsonStr ) == false )
+                return ConfigReadResult::Invalid;
+            if ( source.getQualityTier().empty() == false &&
+                 applyQualityTier( string( jsonStr ), source.getQualityTiers(), source.getQualityTier(), "baked_config render quality", jsonStr ) == false )
                 return ConfigReadResult::Invalid;
             return loadConfigFromJSON<T>( jsonStr, "baked_config" ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
         }
@@ -363,17 +414,23 @@ namespace sw
 
             string        _resolvedPath;
             string        _resolvedOverridePath; ///< 덮어쓰기 파일(비면 층이 없다). 지금 없어도 생기면 다시 읽기가 합친다
+            string        _resolvedQualityPath;  ///< 품질 단계 표 파일(비면 층이 없다)
+            string        _qualityTier;          ///< 고른 품질 단계 이름(비면 층이 없다)
             hashed_string _typeName;             ///< 리플렉션 타입 이름(`EngineConfig`)
             ReloadFunc    _pReload{ nullptr };   ///< 배포 빌드는 늘 nullptr(`SW_DEV_ONLY_FUNCTION`)
         };
 
         /**
-         * @brief 바탕 파일을 읽고 덮어쓰기 파일(@p resolvedOverridePath — 비었거나 없으면 건너뛴다)을 덮은 글을 @p outJSON 에 씁니다. @p outLabel 은 오류 표시용 출처입니다.
-         * @return 바탕이 없으면 `Missing`(로그 없음), 어느 쪽이든 읽지 못했거나 합치지 못했으면 `Failed`(오류를 남겼다)입니다.
+         * @brief 바탕 파일을 읽고 덮어쓰기 파일(@p resolvedOverridePath — 비었거나 없으면 건너뛴다), 그 위에 품질 단계(@p qualityTier — 비면 건너뛴다)를 덮은 글을 @p outJSON 에 씁니다.
+         *        @p outLabel 은 오류 표시용 출처입니다.
+         * @return 바탕이 없으면 `Missing`(로그 없음), 어느 쪽이든 읽지 못했거나 합치지 못했거나 단계를 골랐는데 표가 없으면 `Failed`(오류를 남겼다)입니다.
          */
-        [[nodiscard]] static OptionalFileRead readLayeredFile( const string& resolvedPath, const string& resolvedOverridePath, string& outJSON, string& outLabel );
+        [[nodiscard]] static OptionalFileRead readLayeredFile( const string& resolvedPath, const string& resolvedOverridePath, const string& resolvedQualityPath,
+                                                               const string& qualityTier, string& outJSON, string& outLabel );
         /** @brief `PlatformConfigOverride::apply` 를 부릅니다(헤더가 그 형식을 모르게 둔다). */
         [[nodiscard]] static bool applyOverride( const string& baseJSON, const utf8* pOverrideJSON, const utf8* pOverrideLabel, string& outJSON );
+        /** @brief `RenderQualityOverride::apply` 를 부릅니다(헤더가 그 형식을 모르게 둔다). */
+        [[nodiscard]] static bool applyQualityTier( const string& baseJSON, const string& tiersJSON, const string& qualityTier, const utf8* pLabel, string& outJSON );
 
         /** @brief T 를 @p source 의 바탕(+ 덮어쓰기) 파일에서 새로 읽어 테이블의 객체에 값으로 덮어씁니다. */
         template <typename T>
@@ -384,7 +441,7 @@ namespace sw
                 return false;
             string jsonStr;
             string label;
-            if ( readLayeredFile( source._resolvedPath, source._resolvedOverridePath, jsonStr, label ) != OptionalFileRead::Read )
+            if ( readLayeredFile( source._resolvedPath, source._resolvedOverridePath, source._resolvedQualityPath, source._qualityTier, jsonStr, label ) != OptionalFileRead::Read )
             {
                 SW_LOG_WARNING_ID( "ConfigManager.ConfigReloadCouldNot", "Config reload: could not read %#", source._resolvedPath.c_str() );
                 return false;
@@ -395,6 +452,7 @@ namespace sw
                 SW_LOG_WARNING_ID( "Config.ReloadInvalid", "Config reload: %# is not valid - keeping the previous values", label.c_str() );
                 return false;
             }
+            manager.waitWriteFence();
             *pExisting = std::move( *reloaded );
             SW_LOG_INFO_ID( "ConfigManager.ConfigReloaded", "Config reloaded from %#", label.c_str() );
             manager._onConfigReloaded.broadcast( T::StaticType()->_fullyQualifiedName );
@@ -429,15 +487,26 @@ namespace sw
          * @details 첫 읽기가 끝나면 자리의 객체가 표(`_mapConfig`)로 옮겨가 자리는 비지만, 객체의 주소는 그대로다.
          */
         unique_ptr<IConfig>* findHostSlot( const TypeInfo& type );
+        /** @brief 걸린 울타리(`setWriteFence`)를 부릅니다 — 이미 읽은 설정 객체를 덮기 직전에만. */
+        void waitWriteFence() const
+        {
+            if ( _writeFence.isBound() )
+                _writeFence();
+        }
+        /** @brief `gv_renderQuality` 의 변경 훅 — `applyRenderQuality` 를 부릅니다. */
+        void onRenderQualityChanged( GlobalVariableInfo* pInfo );
 
     private:
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
-        unique_ptr<IConfig>                        _pEngineSlot;       ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
-        unique_ptr<IConfig>                        _pGameSlot;         ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
-        EngineConfig*                              _pHostEngineConfig; ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
-        GameConfig*                                _pHostGameConfig;   ///< `_pGameSlot` 의 객체 주소
-        unordered_map<uint32, ReloadSource>        _mapSource;         ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unique_ptr<IConfig>                        _pEngineSlot;                       ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
+        unique_ptr<IConfig>                        _pGameSlot;                         ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
+        EngineConfig*                              _pHostEngineConfig;                 ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
+        GameConfig*                                _pHostGameConfig;                   ///< `_pGameSlot` 의 객체 주소
+        unordered_map<uint32, ReloadSource>        _mapSource;                         ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unique_ptr<ConfigSource>                   _pEngineSource;                     ///< 엔진 설정을 읽은 출처(`loadEngineConfig`) — 품질 단계만 바꿔 다시 읽는다
+        GlobalVariableInfo*                        _pRenderQualityVariable{ nullptr }; ///< 훅을 건 `gv_renderQuality`(기동 범위에서만 건다)
         ConfigReloadedDelegate                     _onConfigReloaded;
+        ConfigWriteFenceDelegate                   _writeFence; ///< 덮기 전 울타리(`setWriteFence`) — 없으면(테스트 · 렌더 없는 호스트) 바로 덮는다
     };
 
 } // namespace sw

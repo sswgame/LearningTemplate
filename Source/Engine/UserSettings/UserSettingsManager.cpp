@@ -295,6 +295,7 @@ namespace sw
             state._bRollback = false;
         }
         _carriedFile = UserSettingsFileContent{ {}, content._listForeignOwner };
+        vector<uint8> listInFile( _listState.size(), 0 ); // 파일에 적혀 있던 설정 — 번들에 새로 묶인 설정을 가린다
         for ( const UserSettingsFileEntry& entry : content._listEntry )
         {
             const optional<uint32> settingFound = findIndex( hashed_string( entry._key ) );
@@ -316,9 +317,15 @@ namespace sw
             if ( result == UserSettingValueResult::Clamped )
                 SW_LOG_WARNING_ID( "UserSettings.ValueOutOfRange", "User settings '%#': '%#' = '%#' is out of range - using '%#'", sourceName, entry._key, entry._value, normalized );
             _listState[settingIndex]._committedValue = normalized;
+            listInFile[settingIndex]                 = 1;
         }
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
         {
+            // 판이 오른 뒤 번들에 새로 묶인 설정(`graphics.renderQuality`)은 옛 파일에 없다. 파일의 번들 값이 프리셋이면 그때 묶인 설정이 모두 그 프리셋이었으므로
+            // 빠진 설정도 그 프리셋 값을 따른다 — 기본값으로 두면 번들이 Custom 으로 떨어진다. 새 파일에서는 생기지 않는다(프리셋과 다른 값은 기본값이 아니라 적힌다).
+            const optional<uint32> groupFound = findIndex( group._settingID );
+            if ( groupFound.has_value() && listInFile[*groupFound] != 0 )
+                fillMissingFromPreset( group, hashed_string( _listState[*groupFound]._committedValue ), listInFile );
             refreshScalabilityGroup( group, true );
         }
 
@@ -1043,6 +1050,25 @@ namespace sw
             _listState[groupIndex]._committedValue = matchedPreset;
         else
             (void)setPendingAt( groupIndex, matchedPreset, UserSettingValueResult::Accepted );
+    }
+
+    void UserSettingsManager::fillMissingFromPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, const vector<uint8>& listInFile )
+    {
+        for ( const ScalabilityPresetDef& preset : group._listPreset )
+        {
+            if ( preset._name != presetName )
+                continue;
+            for ( const ScalabilityPresetValue& value : preset._listValue )
+            {
+                const optional<uint32> memberFound = findIndex( value._settingID );
+                string                 normalized;
+                if ( memberFound.has_value() == false || listInFile[*memberFound] != 0 ||
+                     UserSettingsSchema::normalizeValue( _schema.getSettings()[*memberFound], value._value, normalized ) == UserSettingValueResult::Rejected )
+                    continue;
+                _listState[*memberFound]._committedValue = normalized;
+            }
+            return;
+        }
     }
 
     void UserSettingsManager::applyScalabilityPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, bool bCommitted )
