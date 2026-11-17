@@ -82,6 +82,7 @@ namespace sw
                 , _groupChannels{}
                 , _policy{}
                 , _settings{}
+                , _afterDeleteAccount{}
             {
             }
 
@@ -104,7 +105,9 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, ChatService::makeTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } );
+                { return addTTLRule( context, entry, ChatService::makeTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } )
+                    .and_then( [&]
+                { return addTTLRule( context, entry, ChatService::makeSenderTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context ) override
@@ -126,10 +129,10 @@ namespace sw
                 return {};
             }
 
-            /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 채팅 기록 · 접속 상태 조회. */
-            /** @brief 채팅은 계정 키 표가 없다 — 기록(`chat_history`)은 채널 키이고 TTL 쓸기가 기간 뒤에 지운다(Discord 도 탈퇴 사용자의 메시지를 지우지 않고 남긴다). */
-            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
+            /** @brief 탈퇴한 계정이 보낸 기록과 그 계정의 귓속말 채널을 지운다(`ChatService::eraseAccount`, 보낸 사람 색인으로 찾는다). */
+            const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
 
+            /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 채팅 기록 · 접속 상태 조회. */
             int32 getOpenJobCount() const override { return _service.getPendingCount(); }
 
             void stop() override
@@ -153,11 +156,12 @@ namespace sw
             }
 
         private:
-            ChatService                 _service;
-            ChatServer                  _server;
-            ChatGroupChannels           _groupChannels;
-            unique_ptr<ChatBlockPolicy> _policy;
-            ChatServiceConfig           _settings;
+            ChatService                                            _service;
+            ChatServer                                             _server;
+            ChatGroupChannels                                      _groupChannels;
+            unique_ptr<ChatBlockPolicy>                            _policy;
+            ChatServiceConfig                                      _settings;
+            AfterDeleteAccountFunction<&ChatService::eraseAccount> _afterDeleteAccount;
         };
     } // namespace
 } // namespace sw

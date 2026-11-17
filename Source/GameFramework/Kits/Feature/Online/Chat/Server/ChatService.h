@@ -16,6 +16,8 @@
  *            지우기는 TTL 규칙(`makeTTLRule`, 기간은 `ChatKitConfig::_historyTTL`)이 한다. 기록을 쓰는 트랜잭션에 TTL 색인 `chat_history_expiry` 의
  *            줄 `<날짜 끝 16진>/<채널 id>/`(채널 · 날짜마다 한 번)을 함께 넣고, 매일 쓸기가 기간이 지난 날짜의 채널만 범위 읽기로 지운다.
  *            새 글이 없는 채널(귓속말 쌍, 해산된 길드)도 색인 줄이 남아 있어 함께 지워진다(개인정보 보존 기간).
+ *            같은 트랜잭션에 보낸 사람 색인 `chat_history_sender`(`<보낸 계정>/<보낸 시각>/<기록 키>`)과 그 TTL 색인 줄도 넣는다 — 탈퇴 정리(`eraseAccount`)가
+ *            계정이 보낸 기록을 찾는다. 이 색인도 기록과 같은 기간에 TTL 규칙(`makeSenderTTLRule`)이 지운다.
  *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(`ChatLimit::kReportContextCount`)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.
  *            기록은 틱마다 쓰이므로 막 받은 메시지는 아직 없을 수 있다(NotFound). GM 키트가 목록을 읽고 처리한다. 계정마다 도배를 제한한다.
  *          - `shutdown` 은 맡긴 저장 작업을 회수하고(최대 5초) 접속 상태 찾기를 취소한다. 호스트(접속 상태, 저장소)보다 먼저 종료해도 늦게 종료해도 된다.
@@ -162,6 +164,13 @@ namespace sw
 
         /** @brief 기록 테이블의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
         static ServiceTTLRule makeTTLRule( int64 expireAfterMs );
+        /** @brief 보낸 사람 색인(`chat_history_sender`)의 TTL 규칙입니다(TTL 색인 규칙, 기록과 같은 기간). 키트 조립이 함께 올립니다. */
+        static ServiceTTLRule makeSenderTTLRule( int64 expireAfterMs );
+        /**
+         * @brief 탈퇴한 계정이 보낸 기록을 지웁니다(`IAfterDeleteAccount`). 보낸 사람 색인으로 찾고, 그 계정이 낀 귓속말 채널은 상대 기록까지 채널째 지운다.
+         * @details 신고 레코드(`ServiceReportStore`)에 옮겨 적은 문맥은 운영 증거라 신고 보존 기간까지 남는다. 저장소 스레드에서 부릅니다. 멱등이다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
 
         // 클라이언트 요청이다. 결과는 같은 요청 태그로 takeCompletions 에서 받는다
         void joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag );

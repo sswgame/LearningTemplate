@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
@@ -14,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -39,7 +41,45 @@ namespace sw
                 return s_table;
             }
 
+            /** @brief 보낸 사람 색인 `<보낸 계정 16진>/<보낸 시각 16진>/<기록 키>`(값 없음)입니다. 탈퇴 정리가 계정의 기록을 찾는다. 접두어 아래가 시각 순서다. */
+            static const hashed_string& getSenderTable()
+            {
+                static const hashed_string s_table{ "chat_history_sender" };
+                return s_table;
+            }
+
+            /** @brief 보낸 사람 색인의 TTL 색인 `<날짜 끝 16진>/<보낸 계정 16진>/`(보낸 사람 · 날짜마다 한 줄)입니다. */
+            static const hashed_string& getSenderIndexTable()
+            {
+                static const hashed_string s_table{ "chat_history_sender_expiry" };
+                return s_table;
+            }
+
             static int64 getDayEndMs( int64 sentMs ) { return ( MathUtil::max<int64>( 0, sentMs ) / kIndexDayMs + 1 ) * kIndexDayMs; }
+
+            static string makeSenderPrefix( AccountID senderID ) { return ServiceKeyUtil::makeHex64( senderID ) + "/"; }
+
+            static string makeSenderKey( AccountID senderID, int64 sentMs, string_view historyKey )
+            {
+                string key = makeSenderPrefix( senderID );
+                ServiceKeyUtil::appendHex64( key, static_cast<uint64>( MathUtil::max<int64>( 0, sentMs ) ) );
+                key.push_back( '/' );
+                key += historyKey;
+                return key;
+            }
+
+            static string makeSenderIndexKey( AccountID senderID, int64 sentMs ) { return ServiceTTLRule::makeTTLIndexKey( getDayEndMs( sentMs ), makeSenderPrefix( senderID ) ); }
+
+            /** @brief 보낸 사람 색인 키에서 보낸 시각을 읽습니다(TTL 쓸기 · 탈퇴 정리). */
+            [[nodiscard]] static bool readSenderTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                const size_t width  = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                uint64       sentMs = 0;
+                if ( record._key.size() < width * 2 + 2 || ServiceKeyUtil::parseHex64( string_view( record._key ).substr( width + 1, width ), sentMs ) == false )
+                    return false;
+                outTimeMs = static_cast<int64>( sentMs );
+                return true;
+            }
 
             /** @brief 채널 · 날짜의 TTL 색인 키입니다. 시각은 날짜의 끝이라 그 줄이 기간을 넘기면 그 날짜의 기록이 모두 기간을 넘겼다. */
             static string makeGroupIndexKey( string_view channelID, int64 sentMs )
@@ -119,11 +159,15 @@ namespace sw
                 return read;
             }
 
-            /** @brief 쌓인 기록과 아직 이 서버가 넣지 않은 TTL 색인 줄을 한 트랜잭션으로 씁니다. 색인 줄은 조건 없이 덮어쓴다(서버 여럿이 같은 줄을 넣어도 된다). */
+            /**
+             * @brief 쌓인 기록과 아직 이 서버가 넣지 않은 TTL 색인 줄을 한 트랜잭션으로 씁니다. 색인 줄은 조건 없이 덮어쓴다(서버 여럿이 같은 줄을 넣어도 된다).
+             * @details 기록마다 보낸 사람 색인 줄과, 묶음 안의 보낸 사람 · 날짜마다 그 TTL 색인 줄을 함께 넣는다 — 탈퇴 정리가 계정의 기록을 찾는다(쓰기 수는 `update` 가 묶음을 자를 때 잰다).
+             */
             static ChatHistoryWriteResult writeHistory( IServiceStoreConnection& connection, const vector<ChatMessage>& listMessage, const vector<string>& listIndexKey )
             {
                 ChatHistoryWriteResult write;
                 ServiceTransaction     transaction;
+                vector<string>         listSenderIndexKey;
                 for ( const ChatMessage& message : listMessage )
                 {
                     vector<uint8> bytes;
@@ -132,7 +176,18 @@ namespace sw
                         ++write._rejectedCount; // 쓰기가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
                         continue;
                     }
-                    transaction.put( ChatServiceInternal::getHistoryTable(), ChatServiceInternal::makeHistoryKey( message ), std::move( bytes ) );
+                    const string historyKey = ChatServiceInternal::makeHistoryKey( message );
+                    transaction.put( ChatServiceInternal::getHistoryTable(), historyKey, std::move( bytes ) );
+                    if ( message._senderID == kInvalidAccountID )
+                        continue; // 시스템 메시지다
+                    transaction.put( ChatServiceInternal::getSenderTable(), ChatServiceInternal::makeSenderKey( message._senderID, message._sentMs, historyKey ), vector<uint8>{} );
+                    const string senderIndexKey = ChatServiceInternal::makeSenderIndexKey( message._senderID, message._sentMs );
+                    if ( VectorUtil::contains( listSenderIndexKey, senderIndexKey ) == false )
+                        listSenderIndexKey.push_back( senderIndexKey );
+                }
+                for ( const string& senderIndexKey : listSenderIndexKey )
+                {
+                    transaction.put( ChatServiceInternal::getSenderIndexTable(), senderIndexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
                 }
                 for ( const string& indexKey : listIndexKey )
                 {
@@ -726,17 +781,25 @@ namespace sw
             _uniqueIndexedGroupKeys.clear(); // 지난 날짜의 줄은 이미 넣었다. 늦게 온 지난 날짜 기록은 줄을 다시 넣어도 된다(덮어쓴다)
             _indexedDayEndMs = dayEndMs;
         }
-        // 기록 하나는 쓰기 하나, 이 서버가 아직 넣지 않은 채널 · 날짜는 색인 줄 하나가 더 든다. 합이 트랜잭션 상한을 넘지 않게 자른다.
+        // 기록 하나는 쓰기 둘(기록 · 보낸 사람 색인), 이 서버가 아직 넣지 않은 채널 · 날짜는 색인 줄 하나, 묶음 안의 보낸 사람 · 날짜마다 그 TTL 색인 줄 하나가 더 든다.
+        // 합이 트랜잭션 상한을 넘지 않게 자른다.
         vector<string> listIndexKey;
+        vector<string> listSenderIndexKey;
         size_t         takeCount = 0;
         while ( takeCount < _listHistoryQueue.size() && takeCount < static_cast<size_t>( _settings._historyFlushMax ) )
         {
-            const string indexKey  = ChatServiceInternal::makeGroupIndexKey( _listHistoryQueue[takeCount]._channelID, _listHistoryQueue[takeCount]._sentMs );
-            const bool   bNewGroup = _uniqueIndexedGroupKeys.count( indexKey ) == 0 && VectorUtil::contains( listIndexKey, indexKey ) == false;
-            if ( takeCount + 1 + listIndexKey.size() + ( bNewGroup ? 1 : 0 ) > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+            const ChatMessage& message    = _listHistoryQueue[takeCount];
+            const string       indexKey   = ChatServiceInternal::makeGroupIndexKey( message._channelID, message._sentMs );
+            const bool         bNewGroup  = _uniqueIndexedGroupKeys.count( indexKey ) == 0 && VectorUtil::contains( listIndexKey, indexKey ) == false;
+            const string       senderKey  = message._senderID == kInvalidAccountID ? string() : ChatServiceInternal::makeSenderIndexKey( message._senderID, message._sentMs );
+            const bool         bNewSender = senderKey.empty() == false && VectorUtil::contains( listSenderIndexKey, senderKey ) == false;
+            const size_t       writeCount = ( takeCount + 1 ) * 2 + listIndexKey.size() + listSenderIndexKey.size() + ( bNewGroup ? 1 : 0 ) + ( bNewSender ? 1 : 0 );
+            if ( writeCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
                 break;
             if ( bNewGroup )
                 listIndexKey.push_back( indexKey );
+            if ( bNewSender )
+                listSenderIndexKey.push_back( senderKey );
             ++takeCount;
         }
         vector<ChatMessage> listMessage( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
@@ -759,6 +822,66 @@ namespace sw
         rule._pBackfillSource = make_shared<ChatHistoryBackfillSource>();
         rule._backfillVersion = 1;
         return rule;
+    }
+
+    ServiceTTLRule ChatService::makeSenderTTLRule( int64 expireAfterMs )
+    {
+        // 백필은 없다 — 색인보다 먼저 쓴 기록은 보낸 사람 줄이 없고, 기록 TTL(같은 기간)이 지운다
+        ServiceTTLRule rule;
+        rule._table         = ChatServiceInternal::getSenderTable();
+        rule._ttlIndexTable = ChatServiceInternal::getSenderIndexTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &ChatServiceInternal::readSenderTimeMs;
+        return rule;
+    }
+
+    ServiceStoreResult ChatService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs )
+    {
+        (void)nowMs;
+        using Internal         = ChatServiceInternal;
+        const string    prefix = Internal::makeSenderPrefix( accountID );
+        const size_t    width  = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+        constexpr int32 kPage  = 20; ///< 줄 하나에 지우기 셋(색인 · 기록 · TTL 색인 줄)까지라 트랜잭션 상한 안이다
+        static_assert( kPage * 3 <= ServiceTransaction::kMaxWriteCount, "a page of sender rows must fit one transaction" );
+        vector<string> listWhisperChannel;
+        while ( true )
+        {
+            vector<ServiceRecord>    listSender;
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getSenderTable(), prefix, "", kPage, false, listSender )._result;
+            if ( listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( listSender.empty() )
+                break;
+            ServiceTransaction transaction;
+            vector<string>     listSenderIndexKey; // 같은 날짜의 줄이 쪽 안에 여럿이어도 TTL 색인 줄은 한 번만 지운다(같은 키를 두 번 쓰는 트랜잭션은 거절된다)
+            for ( const ServiceRecord& record : listSender )
+            {
+                transaction.erase( Internal::getSenderTable(), record._key, record._version );
+                int64 sentMs = 0;
+                if ( record._key.size() <= prefix.size() + width + 1 || Internal::readSenderTimeMs( record, sentMs ) == false )
+                    continue; // 깨진 색인 줄이다 — 지우기만 한다
+                const string historyKey = record._key.substr( prefix.size() + width + 1 );
+                transaction.erase( Internal::getHistoryTable(), historyKey );
+                const string senderIndexKey = Internal::makeSenderIndexKey( accountID, sentMs );
+                if ( VectorUtil::contains( listSenderIndexKey, senderIndexKey ) == false )
+                {
+                    transaction.erase( Internal::getSenderIndexTable(), senderIndexKey );
+                    listSenderIndexKey.push_back( senderIndexKey );
+                }
+                const string channelID = historyKey.substr( 0, historyKey.rfind( '/' ) );
+                if ( StringUtil::startsWith( channelID, Internal::kWhisperPrefix ) && VectorUtil::contains( listWhisperChannel, channelID ) == false )
+                    listWhisperChannel.push_back( channelID );
+            }
+            if ( const ServiceStoreResult committed = connection.commit( transaction ); committed != ServiceStoreResult::Ok )
+                return committed;
+        }
+        // 귓속말 채널은 id 에 두 계정이 있다 — 상대가 보낸 기록까지 채널째 지운다. 그 채널의 TTL 색인 줄은 대상이 비어 TTL 쓸기가 지운다
+        for ( const string& channelID : listWhisperChannel )
+        {
+            if ( const ServiceStoreResult erased = ServiceStoreUtil::erasePrefix( connection, Internal::getHistoryTable(), channelID + "/" ); erased != ServiceStoreResult::Ok )
+                return erased;
+        }
+        return ServiceStoreResult::Ok;
     }
 
     void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, const vector<string>& listIndexKey, ServiceStoreCompletion completion )
