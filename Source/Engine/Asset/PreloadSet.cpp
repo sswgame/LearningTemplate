@@ -10,6 +10,7 @@ namespace sw
 {
     PreloadSet::PreloadSet( vector<string> listAssetPath, StreamingPriority priority, uint32 maxInFlight )
         : _listAssetPath{ std::move( listAssetPath ) }
+        , _listRequest{}
         , _state{ make_shared<State>() }
         , _nextIndex{ 0 }
         , _maxInFlight{ maxInFlight }
@@ -61,7 +62,10 @@ namespace sw
                 onAssetRead( *shared, donePath, bSuccess, bytes.size() );
             };
             ++state._inFlightCount;
-            if ( queue.requestAssetData( path, _priority, SW_DELEGATE_LAMBDA( OnStreamingDataCompleteDelegate, onDone ) ) == false )
+            StreamingRequest request   = queue.requestAssetData( path, _priority, SW_DELEGATE_LAMBDA( OnStreamingDataCompleteDelegate, onDone ) );
+            const bool       bAccepted = request.isValid();
+            _listRequest.push_back( std::move( request ) );
+            if ( bAccepted == false )
             {
                 // 큐가 받지 않았다(빈 경로) — 실패로 센다. 콜백은 오지 않는다.
                 --state._inFlightCount;
@@ -78,11 +82,10 @@ namespace sw
         state._bCancelled = SW_TRUE;
         if ( state._pPins != nullptr )
             state._pPins->clear();
-        // 걸어 둔 요청(이미 넘긴 경로 중 끝나지 않은 것)을 큐에서 거둔다 — 경로를 모두 돌며 끝나지 않은 것만 취소한다.
-        for ( size_t index = 0; index < _nextIndex; ++index )
+        // 이 세트가 낸 요청만 거둔다 — 같은 경로를 기다리는 다른 쪽(다른 세트 · 로더)의 요청은 그대로 받는다. 끝난 요청의 취소는 아무것도 하지 않는다.
+        for ( const StreamingRequest& request : _listRequest )
         {
-            if ( queue.isStreaming( _listAssetPath[index] ) )
-                queue.cancelRequest( _listAssetPath[index] );
+            queue.cancelRequest( request );
         }
     }
 
