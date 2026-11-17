@@ -310,8 +310,8 @@ namespace sw
          */
         [[nodiscard]] bool remove( const T* pItem )
         {
-            const size_t index = findIndex( pItem );
-            if ( index == kNotFound )
+            const optional<size_t> foundIndex = findIndex( pItem );
+            if ( foundIndex.has_value() == false )
             {
                 const bool bDroppedShadow = dropShadow( pItem );
                 if ( bDroppedShadow )
@@ -321,7 +321,8 @@ namespace sw
                 }
                 return bDroppedShadow;
             }
-            const string name = _listName[index];
+            const size_t index = *foundIndex;
+            const string name  = _listName[index];
             _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( index ) );
             _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
             _listOrder.erase( _listOrder.begin() + static_cast<ptrdiff_t>( index ) );
@@ -364,7 +365,7 @@ namespace sw
         }
 
         /** @brief 그 객체가 올라 있는지 봅니다. */
-        bool contains( const T* pItem ) const { return findIndex( pItem ) != kNotFound; }
+        bool contains( const T* pItem ) const { return findIndex( pItem ).has_value(); }
 
     private:
         /**
@@ -510,16 +511,14 @@ namespace sw
         mutex& getOwnerMutex() const { return _ownerMutex; }
 
     private:
-        static constexpr size_t kNotFound = static_cast<size_t>( -1 );
-
-        size_t findIndex( const T* pItem ) const
+        [[nodiscard]] optional<size_t> findIndex( const T* pItem ) const
         {
             for ( size_t index = 0; index < _listItem.size(); ++index )
             {
                 if ( _listItem[index] == pItem )
                     return index;
             }
-            return kNotFound;
+            return nullopt;
         }
 
         /** @brief 같은 이름의 올라 있는 항목을 @p pItem 으로 바꿉니다(제자리). 바뀐 옛 항목은 그림자로 보관합니다(`RegistrationReloadScope`). */
@@ -653,7 +652,7 @@ namespace sw
         /** @brief 값을 올립니다. 이름이 비었거나 같은 이름이 이미 있으면 올리지 않고 false 입니다(먼저 것을 둡니다). */
         [[nodiscard]] bool add( const hashed_string& name, T value )
         {
-            if ( name.empty() || findIndex( name ) != kNotFound )
+            if ( name.empty() || findIndex( name ).has_value() )
                 return false;
             pushEntry( name, std::move( value ), 0 );
             return true;
@@ -676,12 +675,11 @@ namespace sw
                 reportRegistrationRejected( RegistrationResult::EmptyName, pWhat, string_view{} );
                 return;
             }
-            const size_t index = findIndex( name );
-            if ( index != kNotFound )
+            if ( const optional<size_t> index = findIndex( name ) )
             {
-                _listName[index]    = name;
-                _listValue[index]   = std::move( value );
-                _listOwnerID[index] = 0; // 주인 없는 값이 덮었다 — 앞 주인의 구독은 이제 아무것도 거두지 않는다
+                _listName[*index]    = name;
+                _listValue[*index]   = std::move( value );
+                _listOwnerID[*index] = 0; // 주인 없는 값이 덮었다 — 앞 주인의 구독은 이제 아무것도 거두지 않는다
                 ++_revision;
                 return;
             }
@@ -701,13 +699,14 @@ namespace sw
                 reportRegistrationRejected( RegistrationResult::EmptyName, pWhat, string_view{} );
                 return {};
             }
-            const uint64 ownerID = _ownerIDAllocator.allocate();
-            const size_t index   = findIndex( name );
-            if ( index == kNotFound )
+            const uint64           ownerID    = _ownerIDAllocator.allocate();
+            const optional<size_t> foundIndex = findIndex( name );
+            if ( foundIndex.has_value() == false )
             {
                 pushEntry( name, std::move( value ), ownerID );
                 return issueSubscription( ownerID );
             }
+            const size_t index = *foundIndex;
             _listShadowName.push_back( _listName[index] );
             _listShadowValue.push_back( std::move( _listValue[index] ) );
             _listShadowOwnerID.push_back( _listOwnerID[index] );
@@ -720,15 +719,15 @@ namespace sw
         /** @brief 이름의 값입니다. 없으면 nullptr 입니다. */
         T* find( const hashed_string& name )
         {
-            const size_t index = findIndex( name );
-            return index == kNotFound ? nullptr : &_listValue[index];
+            const optional<size_t> index = findIndex( name );
+            return index.has_value() ? &_listValue[*index] : nullptr;
         }
 
         /** @brief 이름의 값입니다. 없으면 nullptr 입니다. */
         const T* find( const hashed_string& name ) const
         {
-            const size_t index = findIndex( name );
-            return index == kNotFound ? nullptr : &_listValue[index];
+            const optional<size_t> index = findIndex( name );
+            return index.has_value() ? &_listValue[*index] : nullptr;
         }
 
         /** @brief @p predicate( const T& ) 가 true 인 값을 모두 제거합니다(남은 것의 순서는 그대로). 뺀 수입니다. */
@@ -749,10 +748,10 @@ namespace sw
         /** @brief 이름의 값을 뺍니다(남은 것의 순서는 그대로). 뺐으면 true 입니다. 없는 이름이면 false 입니다. */
         [[nodiscard]] bool remove( const hashed_string& name )
         {
-            const size_t index = findIndex( name );
-            if ( index == kNotFound )
+            const optional<size_t> index = findIndex( name );
+            if ( index.has_value() == false )
                 return false;
-            eraseEntry( index );
+            eraseEntry( *index );
             return true;
         }
 
@@ -787,15 +786,15 @@ namespace sw
             {
                 if ( _listOwnerID[index] != ownerID )
                     continue;
-                const size_t shadowIndex = findLastShadow( _listName[index] );
-                if ( shadowIndex == kNotFound )
+                const optional<size_t> shadowIndex = findLastShadow( _listName[index] );
+                if ( shadowIndex.has_value() == false )
                 {
                     eraseEntry( index );
                     return;
                 }
-                _listValue[index]   = std::move( _listShadowValue[shadowIndex] );
-                _listOwnerID[index] = _listShadowOwnerID[shadowIndex];
-                eraseShadow( shadowIndex );
+                _listValue[index]   = std::move( _listShadowValue[*shadowIndex] );
+                _listOwnerID[index] = _listShadowOwnerID[*shadowIndex];
+                eraseShadow( *shadowIndex );
                 ++_revision;
                 return;
             }
@@ -809,28 +808,26 @@ namespace sw
         }
 
     private:
-        static constexpr size_t kNotFound = static_cast<size_t>( -1 );
-
-        size_t findIndex( const hashed_string& name ) const
+        [[nodiscard]] optional<size_t> findIndex( const hashed_string& name ) const
         {
             if ( name.empty() )
-                return kNotFound;
+                return nullopt;
             for ( size_t index = 0; index < _listName.size(); ++index )
             {
                 if ( _listName[index] == name )
                     return index;
             }
-            return kNotFound;
+            return nullopt;
         }
 
-        size_t findLastShadow( const hashed_string& name ) const
+        [[nodiscard]] optional<size_t> findLastShadow( const hashed_string& name ) const
         {
             for ( size_t index = _listShadowName.size(); index > 0; --index )
             {
                 if ( _listShadowName[index - 1] == name )
                     return index - 1;
             }
-            return kNotFound;
+            return nullopt;
         }
 
         void pushEntry( const hashed_string& name, T&& value, uint64 ownerID )
