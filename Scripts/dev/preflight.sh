@@ -44,6 +44,9 @@ esac
 
 windows_failed() {
   echo "WINDOWS_FAILED ($1) - Linux 를 돌리지 않는다 sha=$SHA"
+  # 겹쳐 돌던 갈래(배포 빌드 · 쿠킹 등)를 끝까지 기다린다 — 두고 나가면 다음 실행과 같은 빌드 폴더를 다퉈 구성이
+  # "failed recompaction: Permission denied" 로 진다(2026-11-17). 갈래 안(서브셸)에서 부르면 남의 pid 라 wait 가 바로 돌아온다.
+  for PID in "${LANE_PIDS[@]}"; do wait "$PID" 2>/dev/null; done
   exit 1
 }
 
