@@ -28,7 +28,7 @@ namespace
 
 namespace sw
 {
-    /** 캐시 등록 줄과 같은 모양이다 — 정의 한 벌이 이름 · 로더 · 다시 읽기 방식을 든다(종류 등록과 모듈 서브시스템 등록은 테스트 이미지에서 하지 않는다). */
+    /** 캐시 등록 줄과 같은 모양이다 — 정의 한 벌이 이름 · 로더를 든다(종류 등록과 모듈 서브시스템 등록은 테스트 이미지에서 하지 않는다). */
     template <>
     struct SharedAssetCacheTraits<SharedAssetCacheTestAsset>
     {
