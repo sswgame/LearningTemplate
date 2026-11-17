@@ -422,36 +422,56 @@ namespace sw
     MailboxServiceResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, const ILedgerPolicy* pPolicy,
                                                       MailboxClaimReply& outReply )
     {
-        outReply = MailboxClaimReply{};
-        vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountID ), "",
-                                                                  MailboxProtocol::kMaxListCount, true, listRecord );
-        if ( listed != ServiceStoreResult::Ok )
-            return MailboxServiceResult::fail( OnlineError::kUnavailable );
-        MailboxServiceResult firstFailure = MailboxResult::Ok;
-        for ( const ServiceRecord& record : listRecord )
+        outReply                           = MailboxClaimReply{};
+        MailboxServiceResult  firstFailure = MailboxResult::Ok;
+        const string          prefix       = MailboxStoreLogicInternal::makeAccountPrefix( accountID );
+        string                cursorKey;
+        int32                 scannedCount = 0;
+        vector<ServiceRecord> listRecord;
+        for ( ;; )
         {
-            if ( outReply._claimedCount >= kMaxClaimAllCount )
+            listRecord.clear();
+            const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), prefix, cursorKey, MailboxProtocol::kMaxListCount, true, listRecord );
+            if ( listed != ServiceStoreResult::Ok )
+                return outReply._claimedCount > 0 ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable ); // 이미 받은 것은 커밋됐다
+            for ( const ServiceRecord& record : listRecord )
+            {
+                if ( outReply._claimedCount >= kMaxClaimAllCount || scannedCount >= kMaxClaimAllScanCount )
+                {
+                    outReply._bMoreRemaining = SW_TRUE;
+                    break;
+                }
+                ++scannedCount;
+                claimOne( connection, record, accountID, nowMs, claimedRetentionMs, pPolicy, outReply, firstFailure );
+            }
+            const bool bLastPage = static_cast<int32>( listRecord.size() ) < MailboxProtocol::kMaxListCount;
+            if ( outReply._bMoreRemaining == SW_TRUE || bLastPage )
                 break;
-            ServiceMailRecord mail;
-            const bool        bClaimable = ServiceMail::decodeRecord( record._bytes, mail ) && mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false &&
-                                    MailboxStoreLogicInternal::isExpired( mail._message, nowMs ) == false;
-            if ( bClaimable == false )
-                continue;
-            MailboxClaimInput input;
-            input._mailKey                           = record._key;
-            input._accountID                         = accountID;
-            input._nowMs                             = nowMs;
-            input._pPolicy                           = pPolicy;
-            input._claimedRetentionMs                = claimedRetentionMs;
-            const MailboxServiceResult result        = claim( connection, input, outReply );
-            const bool                 bFirstFailure = result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && firstFailure == MailboxResult::Ok;
-            if ( bFirstFailure )
-                firstFailure = result; // 하나가 상한에 걸려도 나머지는 받는다. 첫 실패를 알린다
+            cursorKey = listRecord.back()._key; // 이 키 다음(더 오래된 것)부터
         }
         const MailboxServiceResult serviceResult = outReply._claimedCount > 0 ? MailboxServiceResult{ MailboxResult::Ok } : firstFailure;
         outReply._result                         = serviceResult._result;
         return serviceResult;
+    }
+
+    void MailboxStoreLogic::claimOne( IServiceStoreConnection& connection, const ServiceRecord& record, uint64 accountID, int64 nowMs, int64 claimedRetentionMs,
+                                      const ILedgerPolicy* pPolicy, MailboxClaimReply& inoutReply, MailboxServiceResult& inoutFirstFailure )
+    {
+        ServiceMailRecord mail;
+        const bool        bClaimable = ServiceMail::decodeRecord( record._bytes, mail ) && mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false &&
+                                MailboxStoreLogicInternal::isExpired( mail._message, nowMs ) == false;
+        if ( bClaimable == false )
+            return;
+        MailboxClaimInput input;
+        input._mailKey                           = record._key;
+        input._accountID                         = accountID;
+        input._nowMs                             = nowMs;
+        input._pPolicy                           = pPolicy;
+        input._claimedRetentionMs                = claimedRetentionMs;
+        const MailboxServiceResult result        = claim( connection, input, inoutReply );
+        const bool                 bFirstFailure = result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && inoutFirstFailure == MailboxResult::Ok;
+        if ( bFirstFailure )
+            inoutFirstFailure = result; // 하나가 상한에 걸려도 나머지는 받는다. 첫 실패를 알린다
     }
 
     MailboxServiceResult MailboxStoreLogic::deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
