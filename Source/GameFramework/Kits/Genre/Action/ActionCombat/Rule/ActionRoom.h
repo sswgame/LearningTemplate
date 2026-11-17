@@ -187,6 +187,8 @@ namespace sw
         bool isCleared() const { return _bCleared != SW_FALSE; }
         /** @brief 플레이어 무적 여부를 반환합니다. */
         bool isPlayerInvulnerable() const { return _invulnerable.isActive(); }
+        /** @brief 공격 쿨다운이 끝나 다음 공격 입력이 먹으면 true 를 반환합니다. */
+        bool isAttackReady() const { return _attackCooldown.isActive() == false; }
         /** @brief 대시 쿨다운 게이지(0~1)를 반환합니다. */
         float32 getDashFill() const;
         /** @brief 보스 룸의 HP 게이지(0~1)입니다. 적 HP 합을 최대 HP 합으로 나눈 값이고, 보스가 하나면 그 보스의 비율입니다. 보스 룸이 아니면 0 입니다. */

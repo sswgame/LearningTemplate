@@ -10,7 +10,7 @@
 	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
 	<DevCommand line="game.load velmora/release"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
-	<AdvanceSimulation frames="3"/> <!-- 디렉터가 표 밖 자리를 일어설 지역으로 옮기는 틱(프레임 경계) — 불러오기 전에도 x 0 이라 볼 감시 값이 없다 -->
+	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="10"/> <!-- 복원(표 밖 자리를 일어설 자리로 옮김까지 한 번에 한다) 뒤 첫 틱이 지역을 다시 정했다 -->
 	<ExpectLog id="Velmora.PlayerOutsideRegions" count="1"/>
 	<Expect watch="Velmora.PlayerX" near="0" tolerance="0.05"/>
 	<Expect watch="Velmora.Region" is="hearth"/>

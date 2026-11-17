@@ -23,15 +23,15 @@
 	<Expect watch="Velmora.Phase" equals="1"/>
 	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
 	<Action name="Velmora.Attack"/>
-	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
+	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="180"/>
 	<Action name="Velmora.Attack"/>
-	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
+	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
 	<Action name="Velmora.Attack"/>
-	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
+	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
 	<Action name="Velmora.Attack"/>
-	<AdvanceSimulation frames="24"/> <!-- 공격 사이 0.4 초(공격 간격 — 시간이 내용) -->
+	<WaitUntil watch="Velmora.AttackReady" equals="1" timeoutSeconds="1"/> <!-- 공격 쿨다운이 끝났다 -->
 	<Action name="Velmora.Attack"/>
 	<WaitUntil watch="Quest.Status" target="ember_oath" is="Completed" timeoutFrames="60"/>
 	<Expect watch="Session.Money" equals="50"/>

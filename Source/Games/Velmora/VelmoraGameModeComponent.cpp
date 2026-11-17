@@ -60,6 +60,8 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( velmoraHealth, "Velmora.Health", "Velmora player health in quarter hearts", VelmoraGameModeComponent, &VelmoraGameModeComponent::getHealthQuarters );
     SW_AUTOMATION_GETTER_WATCH( velmoraHearts, "Velmora.Hearts", "Velmora player heart containers", VelmoraGameModeComponent, &VelmoraGameModeComponent::getHeartCount );
     SW_AUTOMATION_GETTER_WATCH( velmoraAlive, "Velmora.Alive", "Living enemies in the Velmora region fight", VelmoraGameModeComponent, &VelmoraGameModeComponent::getAliveEnemyCount );
+    SW_AUTOMATION_GETTER_WATCH( velmoraAttackReady, "Velmora.AttackReady", "1 once the Velmora player's attack cooldown has run out (the next attack press lands)", VelmoraGameModeComponent,
+                                &VelmoraGameModeComponent::isAttackReady );
     SW_AUTOMATION_GETTER_WATCH( velmoraFalls, "Velmora.Falls", "Times the Velmora player fell this game", VelmoraGameModeComponent, &VelmoraGameModeComponent::getFallCount );
     SW_AUTOMATION_QUERY_WATCH( velmoraRegion, "Velmora.Region", "Region id the Velmora player stands in", &VelmoraGameModeComponentInternal::readCurrentRegion, false, false );
     SW_AUTOMATION_QUERY_WATCH( velmoraRespawn, "Velmora.Respawn", "Region id the Velmora player rises in after a fall", &VelmoraGameModeComponentInternal::readRespawnRegion, false, false );
