@@ -23,6 +23,7 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
@@ -119,6 +120,7 @@ namespace sw
         , _autoPlayPrefab{}
         , _listEnemyKind{}
         , _eliteEnemyKind{}
+        , _enemyGrowth{}
         , _player{}
         , _listSpawnPoint{}
         , _arenaHalfSize{ 20.0f }
@@ -390,6 +392,12 @@ namespace sw
             SW_LOG_ERROR_ID( "ShooterGameMode.EnemyPresetsNotSet", "[Shooter] enemy kinds are not set (or no appearance database) - no enemies will come" );
             return;
         }
+        const string growthError = ConfigRangeUtil::describeRangeErrors( _enemyGrowth );
+        if ( growthError.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "ShooterGameMode.EnemyGrowthRefused", "[Shooter] enemy growth rules are missing or out of range - no enemies will come: %#", growthError.c_str() );
+            return;
+        }
         bool bPresetsKnown = pAppearance->getPresets().findPreset( hashed_string( _eliteEnemyKind._preset ) ) != nullptr;
         if ( bPresetsKnown == false )
             SW_LOG_ERROR_ID( "ShooterGameMode.ElitePresetNotAppearance", "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyKind._preset.c_str() );
@@ -427,10 +435,11 @@ namespace sw
 
     void ShooterGameModeComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )
     {
-        // 웨이브(감독 순환 + 1)마다 체력과 속도가 오른다. 감독이 정하는 것은 언제 몇 기를 낼지이고, 적 한 기의 세기는 게임 규칙이다.
-        const float32 wave   = static_cast<float32>( getWave() );
-        const float32 health = ( 30.0f + 10.0f * wave ) * MathUtil::max( 0.1f, healthScale );
-        const float32 speed  = MathUtil::min( 5.5f, 2.2f + 0.3f * wave );
+        // 웨이브(감독 순환 + 1)마다 체력과 속도가 오른다. 감독이 정하는 것은 언제 몇 기를 낼지이고, 적 한 기의 세기는 규칙 데이터(`_enemyGrowth`)다.
+        const ShooterEnemyWaveRules& growth = _enemyGrowth;
+        const float32                wave   = static_cast<float32>( getWave() );
+        const float32                health = ( growth._baseHealth + growth._healthPerWave * wave ) * MathUtil::max( growth._minHealthScale, healthScale );
+        const float32                speed  = MathUtil::min( growth._maxSpeed, growth._baseSpeed + growth._speedPerWave * wave );
         for ( int32 enemyIndex = 0; enemyIndex < count; ++enemyIndex )
         {
             EnemyRequest request;

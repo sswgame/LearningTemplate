@@ -1016,7 +1016,7 @@
     "Source/Games/Shooter3D/ShooterAutoAimControllerComponent.cpp": {"float": 2},
     "Source/Games/Shooter3D/ShooterAvatarComponent.cpp": {"float": 2},
     "Source/Games/Shooter3D/ShooterEnemyComponent.cpp": {"float": 3},
-    "Source/Games/Shooter3D/ShooterGameModeComponent.cpp": {"minus-one": 2, "float": 10, "integer": 2},
+    "Source/Games/Shooter3D/ShooterGameModeComponent.cpp": {"minus-one": 2, "float": 4, "integer": 2},
     "Source/Games/Shooter3D/ShooterNetPawnComponent.cpp": {"minus-one": 3},
     "Source/Games/Shooter3D/ShooterNetSimGame.cpp": {"float": 2},
     "Source/Games/Shooter3D/ShooterPlayerComponent.cpp": {"minus-one": 1, "float": 11, "hex": 1},
