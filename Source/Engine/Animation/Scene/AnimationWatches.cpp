@@ -71,6 +71,15 @@ namespace sw
                 return true;
             }
 
+            /** @brief 씬에 등록된 스켈레탈 메시 수입니다. 부하 시나리오가 잴 캐릭터가 다 섰는지 본다. */
+            [[nodiscard]] static bool readSkeletalMeshes( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pManager->getSubsystem<AnimationSystem>().getSkeletalMeshCount() );
+                return true;
+            }
+
             [[nodiscard]] static bool readEvaluatedBones( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )
@@ -116,6 +125,8 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( animationBoneX, "Animation.BoneX", "World X of the bone named key on the target object's skeletal mesh (m)", &AnimationWatchesInternal::readBoneX, true, true );
     SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the skeletalMeshes that built their own pose evaluated last frame (bone LOD skips the rest)",
                          &AnimationWatchesInternal::readEvaluatedBones );
-    SW_AUTOMATION_SCENE_WATCH( animationBlendSpaceActiveSamples, "Animation.BlendSpaceActiveSamples", "Blend space samples the scene's animators sample now (a 2D triangulation uses at most three each)",
+    SW_AUTOMATION_WATCH( animationSkeletalMeshes, "Animation.SkeletalMeshes", "Skeletal meshes registered with the scene's animation system", &AnimationWatchesInternal::readSkeletalMeshes );
+    SW_AUTOMATION_SCENE_WATCH( animationBlendSpaceActiveSamples, "Animation.BlendSpaceActiveSamples",
+                               "Blend space samples the playing states of the scene's animators sample now (a 2D triangulation uses at most three each)",
                                &AnimationWatchesInternal::readBlendSpaceActiveSamples );
 } // namespace sw

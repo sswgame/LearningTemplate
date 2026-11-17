@@ -6,7 +6,7 @@
   실행: ctest -R Scenario.starskirmish (SW_ACTIVE_GAME=StarSkirmish) · App -scenario=game/starskirmish/automation/control.scenario.xml -unattended
 -->
 <Scenario name="game.starskirmish.control" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_skirmishAutoPlay" value="0"/>
+	<Launch variable="gv_skirmishAutoPlay" value="0"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
 	<Expect watch="Skirmish.SelectedCount" equals="0"/>
 	<!-- 본진(10, 10)을 덮는 사각형 — 리그 초점 (14, 14) · 직교 높이 30 에서 화면 왼쪽 가운데 아래. 끌기는 누른 채 프레임이 지나야 한다. -->

@@ -9,4 +9,9 @@
 	<Launch variable="gv_stressTestCharacters" value="200"/>
 	<Launch variable="gv_stressTestCharacterColumns" value="20"/>
 	<Load durationSeconds="15"/>
+	<!-- 측정 경로를 탔는지 스스로 본다 — 기사 200 명이 다 서고(스켈레탈 메시 200) 포즈를 만든다. -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Animation.SkeletalMeshes" atLeast="200" timeoutFrames="300"/>
+	<Expect watch="Animation.SkeletalMeshes" atLeast="200"/>
+	<Expect watch="Animation.PoseEvaluatedSkeletalMeshes" atLeast="1"/>
 </Scenario>

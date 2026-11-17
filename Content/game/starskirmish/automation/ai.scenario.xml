@@ -9,7 +9,7 @@
   실행: ctest -R Scenario.starskirmish (SW_ACTIVE_GAME=StarSkirmish) · App -scenario=game/starskirmish/automation/ai.scenario.xml -unattended
 -->
 <Scenario name="game.starskirmish.ai" fixedDelta="0.0166667" timeoutFrames="3900" startAfter="ScenePlaying" input="exclusive">
-	<Variable name="gv_skirmishAutoPlay" value="0"/>
+	<Launch variable="gv_skirmishAutoPlay" value="0"/>
 	<WaitUntil watch="Skirmish.AITask" key="1" is="GatherIdle" timeoutSeconds="2"/>
 	<!-- 20 초 안에 첫 일꾼을 만들고, 그 뒤 40 초 안에 보급 건물을 건설한다. -->
 	<WaitUntil watch="Skirmish.AITask" key="1" is="TrainWorkers" timeoutSeconds="20"/>

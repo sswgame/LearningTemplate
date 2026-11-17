@@ -10,4 +10,9 @@
 	<Launch variable="gv_stressTestCharacterColumns" value="20"/>
 	<Launch variable="gv_stressTestCharacterPrefab" value="common/prefabs/quaternius/townsfolk_merged.prefab.xml"/>
 	<Load durationSeconds="15"/>
+	<!-- 측정 경로를 탔는지 스스로 본다 — 200 명이 다 서고, 모두 부품을 몸 메시 하나로 합쳤다(합치지 않은 캐릭터는 다른 비용이다). -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Appearance.MergedCharacters" atLeast="200" timeoutFrames="600"/>
+	<Expect watch="Animation.SkeletalMeshes" atLeast="200"/>
+	<Expect watch="Appearance.MergedCharacters" atLeast="200"/>
 </Scenario>

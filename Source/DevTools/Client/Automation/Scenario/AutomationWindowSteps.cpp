@@ -165,7 +165,11 @@ namespace sw
 
             /**
              * @brief OS 입력 큐에 상대 마우스 이동을 넣습니다(`SendInput` + `MOUSEEVENTF_MOVE`). 실제 마우스처럼 원시 입력(WM_INPUT)과 커서 이동이 함께 난다.
-             * @details `SendInput` 은 전경 창의 입력 큐로만 간다 — 이 창이 전경이 아니거나, 더 높은 무결성 창 · 잠긴 화면(UIPI)이 넣기를 막으면 볼 수 없는 것이라 건너뜀(13)이다.
+             * @details `SendInput` 은 전경 창의 입력 큐로만 간다 — 이 창이 전경이 아니면 볼 수 없는 것이라 건너뜀(13)이다. 넣은 수가 모자라면(다른 스레드가 입력을 막음) 역시 건너뜀이다.
+             *          근거(Windows SDK 10.0.26100 `um/WinUser.h`): `UINT SendInput( UINT cInputs, LPINPUT pInputs, int cbSize )` 는 넣은 수를 돌려주고, `MOUSEEVENTF_MOVE`(0x0001)는
+             *          상대 이동(`dx` · `dy` 미키)이다. `MOUSEEVENTF_MOVE_NOCOALESCE`(0x2000)로 이동을 한 메시지로 합치지 않는다 — 보고 수가 넣은 수를 따른다.
+             *          UIPI(더 높은 무결성 창이 전경)에 막히면 SendInput 문서대로 돌려주는 값 · GetLastError 어느 쪽도 그것을 알리지 않는다 — 그때는 원시 보고가 오지 않아
+             *          시나리오의 `<WaitUntil watch="Input.RawMouseEvents">` 가 시한으로 진다(건너뜀으로 바꿀 근거가 없다).
              */
             static bool runSendInput( AutomationStepContext& runner, const AutomationStep& step )
             {
@@ -182,13 +186,13 @@ namespace sw
                     input.type       = INPUT_MOUSE;
                     input.mi.dx      = static_cast<LONG>( params._dx );
                     input.mi.dy      = static_cast<LONG>( params._dy );
-                    input.mi.dwFlags = MOUSEEVENTF_MOVE;
+                    input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_MOVE_NOCOALESCE;
                 }
                 const UINT sentCount = SendInput( static_cast<UINT>( listInput.size() ), listInput.data(), sizeof( INPUT ) );
                 if ( sentCount != listInput.size() )
                 {
                     StringBuilder<constant::buffer::kMax256> reason;
-                    reason.appendFormat( "%#: SendInput inserted %# of %# events (error %#) - the input is blocked here (UIPI or a locked desktop)", step.describe().c_str(),
+                    reason.appendFormat( "%#: SendInput inserted %# of %# events (error %#) - another thread blocked the input", step.describe().c_str(),
                                          static_cast<uint32>( sentCount ), static_cast<uint32>( listInput.size() ), static_cast<uint32>( GetLastError() ) );
                     runner.endScenario( AutomationStepEnd::Skip, reason.view() );
                 }
