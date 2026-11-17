@@ -88,6 +88,18 @@ SW_TEST_CASE( SerializerUtilTest, ValueTextRoundTripsAndBadTextKeepsTheValue )
     SW_EXPECT_EQUAL( string( "Orc Chief" ), name );
 }
 
+/** @brief [SerializerUtilTest] 큰따옴표로 감싼 글 값(JSON 글 `"BC1"`)도 쓰고 읽으면 같은 값이다 — 읽기가 따옴표 한 쌍을 벗기니 쓰기가 한 쌍을 더 씌운다 */
+SW_TEST_CASE( SerializerUtilTest, QuotedStringValueRoundTrips )
+{
+    const string quoted = "\"BC1\"";
+    const string text   = SerializerUtil::formatValueText( ValueAddress{ &quoted }, hashed_string( "string" ), getContext() );
+    string       parsed;
+    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &parsed }, hashed_string( "string" ), text, getContext() ) );
+    SW_EXPECT_EQUAL( quoted, parsed );
+    const string plain = "Orc Chief";
+    SW_EXPECT_EQUAL( plain, SerializerUtil::formatValueText( ValueAddress{ &plain }, hashed_string( "string" ), getContext() ) );
+}
+
 /** @brief [SerializerUtilTest] 경계 값: 좁은 정수 칸은 범위 끝까지 받고, 넘거나 음수인 글은 감지 않고 거절한다 */
 SW_TEST_CASE( SerializerUtilTest, OutOfRangeIntegerTextIsRejectedNotWrapped )
 {

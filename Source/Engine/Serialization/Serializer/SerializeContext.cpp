@@ -193,7 +193,16 @@ namespace sw
                 return true;
             }
 
-            static string writeStringText( const void* pPtr ) { return string( static_cast<const string*>( pPtr )->c_str() ); }
+            /**
+             * @brief 글 칸을 씁니다. 읽기가 양끝 큰따옴표 한 쌍을 벗기므로, 값 자체가 큰따옴표로 감싸여 있으면(JSON 글 값 `"BC1"` 등) 한 쌍을 더 씌워 왕복이 고정점이 되게 한다.
+             */
+            static string writeStringText( const void* pPtr )
+            {
+                const string& text = *static_cast<const string*>( pPtr );
+                if ( stripQuotes( text ).size() != text.size() )
+                    return "\"" + text + "\"";
+                return string( text.c_str() );
+            }
 
             [[nodiscard]] static bool readStringText( void* pPtr, string_view strView )
             {
