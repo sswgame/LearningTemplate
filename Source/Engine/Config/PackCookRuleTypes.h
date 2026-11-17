@@ -9,11 +9,43 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    /**
+     * @struct PackRuleScope
+     * @brief 합친 쿠킹 규칙 하나가 닿는 팩입니다(`PackCookRules::mergeGameRules` 만 채운다 — 설정 파일의 칸이 아니다).
+     * @details 모든 게임을 한 번에 굽는 쿠킹도 팩마다 "엔진 규칙 + 그 게임 규칙만" 으로 판정하게 하는 형식이다. 게임 규칙은 그 게임 팩에만(`_packRoot`),
+     *          게임이 같은 이름으로 덮은 엔진 규칙은 그 게임 팩을 뺀 곳에만(`_listExcludedPackRoot`) 닿는다 — 덮기가 다른 팩에 새지 않는다.
+     */
+    struct PackRuleScope
+    {
+        string         _packRoot{};             ///< 비면 모든 팩, 아니면 이 팩(`game/nilecity`) 아래 파일에만
+        vector<string> _listExcludedPackRoot{}; ///< 이 팩들 아래 파일에는 닿지 않는다(그 게임이 같은 이름으로 덮었다)
+
+        /** @brief 리소스 id @p assetID 의 파일에 이 규칙이 닿으면 true 입니다. */
+        bool isApplicableTo( string_view assetID ) const
+        {
+            if ( _packRoot.empty() == false && isUnder( assetID, _packRoot ) == false )
+                return false;
+            for ( const string& excluded : _listExcludedPackRoot )
+            {
+                if ( isUnder( assetID, excluded ) )
+                    return false;
+            }
+            return true;
+        }
+
+        /** @brief @p assetID 가 팩 루트 @p packRoot 아래이면 true 입니다(대소문자 무시 — 리소스 id 는 소문자로 정규화돼 있다). */
+        static bool isUnder( string_view assetID, string_view packRoot )
+        {
+            return assetID.size() > packRoot.size() && assetID[packRoot.size()] == '/' && StringUtil::equals( assetID.substr( 0, packRoot.size() ), packRoot, true );
+        }
+    };
+
     /**
      * @struct PackAlwaysCookRule
      * @brief 참조가 없어도 담는 파일의 이름 붙은 묶음입니다(언리얼 Primary Asset Rules 의 `AlwaysCook` · Directories to Always Cook).
@@ -33,6 +65,8 @@ namespace sw
 
         PROPERTY( Required )
         bool _bAutomationOnly{ SW_FALSE }; ///< 참이면 자동화 실행기가 있는 구성(개발 구성 클라이언트)만 담는다 — 시나리오는 실행기가 없으면 읽히지 않는다
+
+        PackRuleScope _scope{}; ///< 합친 뒤 이 규칙이 닿는 팩(설정 파일의 칸이 아니다 — `mergeGameRules` 가 채운다)
     };
 
     /**
@@ -50,6 +84,8 @@ namespace sw
 
         PROPERTY( Required )
         string _kind; ///< 가리키는 카탈로그의 이름 공간(`visual`)
+
+        PackRuleScope _scope{}; ///< 합친 뒤 이 칸이 닿는 팩(설정 파일의 칸이 아니다 — `mergeGameRules` 가 채운다)
     };
 
     /**

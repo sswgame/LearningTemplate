@@ -157,10 +157,9 @@ namespace sw
 
         /**
          * @brief 게임 하나의 쿠킹 규칙(`GameConfig::_cookRules`)을 이 규칙 뒤에 합칩니다 — 언리얼 `DefaultGame.ini` 의 쿠킹 설정이 엔진 기본을 덮는 모양이다.
-         * @details 합치기 규칙은 여기 하나다.
-         *          - 항상 담기: 게임 규칙의 패턴은 그 게임 팩 루트(@p gamePackRoot, `game/nilecity`) 기준이라 앞에 루트를 붙인다 — 다른 게임 팩의 파일에 맞지 않는다.
-         *            엔진 규칙과 이름이 같으면 게임 규칙이 그 자리를 덮고, 아니면 뒤에 붙는다.
-         *          - id 칸: 같은 칸 이름이면 게임 쪽이 덮고, 아니면 뒤에 붙는다.
+         * @details 합치기 규칙은 여기 하나다. 합친 규칙은 팩 단위다(`PackRuleScope`) — 모든 게임을 한 번에 구워도 팩마다 "엔진 규칙 + 그 게임 규칙만" 으로 판정한다.
+         *          - 항상 담기: 게임 규칙의 패턴은 그 게임 팩 루트(@p gamePackRoot, `game/nilecity`) 기준이라 앞에 루트를 붙이고, 그 게임 팩에만 닿는다.
+         *          - 엔진 규칙과 이름(항상 담기) · 칸 이름(id 칸)이 같으면 게임 쪽이 이긴다 — 엔진 규칙은 그 게임 팩에서만 물러나고 다른 팩에는 그대로 닿는다.
          */
         void mergeGameRules( string_view gamePackRoot, const GameCookRules& gameRules );
     };
