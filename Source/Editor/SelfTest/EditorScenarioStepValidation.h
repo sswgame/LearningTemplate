@@ -59,6 +59,8 @@ namespace sw::editor
         string _mods{}; ///< 수정자(`ctrl+shift`) — `parseModifiers`
         PROPERTY()
         EditorPressState _state{ EditorPressState::Tap };
+        PROPERTY( Min = 1, Max = 2 )
+        int32 _count{ 1 }; ///< 누름 수 — 2 면 더블클릭(Playwright clickCount). 더블클릭은 이것으로 적는다(클릭 두 단계를 잇달아 두면 벽시계 간격에 달린다)
     };
 
     /** @brief `EditorDrag` 의 인자입니다. 끝은 `toMark` 또는 이동량(`dx` · `dy`) 하나로 적습니다. */

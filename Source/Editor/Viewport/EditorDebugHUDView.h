@@ -58,6 +58,6 @@ namespace sw::editor
         float32             _refreshTimer;
         uint32              _drawnSectionCount;
         uint32              _skippedProfilerSectionCount;
-        uint64              _followedObjectID; ///< 지난 `followSelection` 이 본 첫 선택(0 = 없음)
+        uint64              _followedSelectionRevision; ///< 지난 `followSelection` 이 본 선택 차례(`EditorSelection::getRevision`) — 오브젝트 id 를 견주면 4 Hz 사이에 비웠다 같은 것을 다시 고른 것을 놓친다
     };
 } // namespace sw::editor

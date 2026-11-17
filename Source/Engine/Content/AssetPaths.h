@@ -168,6 +168,8 @@ namespace sw
         [[nodiscard]] bool unmountDiskDomain( string_view domainName );
         /** @brief @p assetID 가 `mountDiskDomain` 으로 붙인 도메인 아래면 true 입니다. 그 id 는 팩을 보지 않고 디스크에서만 읽습니다. */
         bool isMountedDiskDomainID( string_view assetID ) const;
+        /** @brief `mountDiskDomain` 으로 붙인 도메인 이름(소문자, `/` 없음)을 @p outListDomain 에 담습니다(먼저 비운다). 붙인 순서입니다. */
+        void collectMountedDiskDomains( vector<string>& outListDomain ) const;
 
         /** @brief `Content/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. 참조는 이 객체가 사는 동안 유효합니다. */
         const string& getRootFolderPath() const;

@@ -28,9 +28,7 @@
 	<DevCommand line="content.open game/empty/prefabs"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
-	<EditorWaitStable/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
+	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml" count="2"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
 	<EditorWaitStable/>
@@ -66,9 +64,7 @@
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="60"/>
 	<!-- ⑤ 다시 열면 깨끗하고 X 가 묻지 않는다 -->
 	<EditorWaitStable/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
-	<EditorWaitStable/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
+	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml" count="2"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
 	<EditorWaitStable/>

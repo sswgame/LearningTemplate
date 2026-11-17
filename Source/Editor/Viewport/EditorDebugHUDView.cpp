@@ -52,7 +52,7 @@ namespace sw::editor
         , _refreshTimer{ 0.0f }
         , _drawnSectionCount{ 0 }
         , _skippedProfilerSectionCount{ 0 }
-        , _followedObjectID{ 0 }
+        , _followedSelectionRevision{ UINT64_MAX }
     {
     }
 
@@ -80,13 +80,13 @@ namespace sw::editor
 
     void EditorDebugHUDView::followSelection()
     {
-        const GameObject* const pSelected = editor::getMainSceneSelection().getPrimaryObject();
-        const uint64            objectID  = pSelected != nullptr ? pSelected->getObjectID() : 0;
-        if ( objectID == _followedObjectID )
+        const EditorSelection& selection = editor::getMainSceneSelection();
+        if ( selection.getRevision() == _followedSelectionRevision )
             return;
-        _followedObjectID = objectID;
+        _followedSelectionRevision        = selection.getRevision();
+        const GameObject* const pSelected = selection.getPrimaryObject();
         if ( pSelected != nullptr )
-            editor::getSubsystem<DebugHUDRegistry>().setTarget( GameObjectHandle::make( objectID ) );
+            editor::getSubsystem<DebugHUDRegistry>().setTarget( GameObjectHandle::make( pSelected->getObjectID() ) );
     }
 
     void EditorDebugHUDView::refresh()

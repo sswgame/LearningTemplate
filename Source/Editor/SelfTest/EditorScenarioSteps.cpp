@@ -326,6 +326,14 @@ namespace sw::editor
                 // 누른 뒤 위젯이 사라졌으면(닫힌 팝업) 그 자리에서 놓는다 — 그래도 놓아야 버튼이 눌린 채로 남지 않는다.
                 if ( EditorSelfTestInput::releaseMark( mark, anchor, button ) == false )
                     SW_LOG_INFO_ID( "EditorScenarioSteps.EditorWidgetGoneWhen", "[Scenario] editor widget '%#' was gone when the click released", mark.c_str() );
+                if ( params._count == 2 )
+                {
+                    // 더블클릭의 둘째 누름 — 첫 클릭과 같은 점에서 다음 프레임에 잇는다(ImGui 더블클릭 시간 · 거리 안).
+                    EditorSelfTestInput::waitNextFrame();
+                    (void)EditorSelfTestInput::pressMark( mark, anchor, button, coverName );
+                    EditorSelfTestInput::waitNextFrame();
+                    (void)EditorSelfTestInput::releaseMark( mark, anchor, button );
+                }
                 for ( const int32 modifier : listModifier )
                 {
                     EditorSelfTestInput::setKey( modifier, false );
@@ -380,7 +388,7 @@ namespace sw::editor
                 }
                 EditorSelfTestInput::waitNextFrame();
                 string coverName;
-                (void)EditorSelfTestInput::pressMark( mark, params._anchor, button, coverName ); // 위에서 닿는다고 판정했다 — 누르는 점은 `start` 다
+                (void)EditorSelfTestInput::pressMark( mark, params._anchor, button, coverName, true ); // 위에서 닿는다고 판정했다 — 누르는 점은 `start` 다. 끌기는 앞 클릭과 잇지 않는다
                 EditorSelfTestInput::waitNextFrame();
                 (void)EditorSelfTestInput::moveByOffset( middle );
                 EditorSelfTestInput::waitNextFrame();

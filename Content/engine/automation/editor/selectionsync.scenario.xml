@@ -55,9 +55,7 @@
 	<EditorKey key="Ctrl+A"/>
 	<EditorText value="testprop"/>
 	<EditorWaitStable/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
-	<EditorWaitStable/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
+	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml" count="2"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
 	<EditorWaitStable/>
 	<EditorClick mark="prefabwindow.child.TestProp"/>

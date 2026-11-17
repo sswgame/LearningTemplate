@@ -65,7 +65,7 @@ namespace
  * @brief [EditorAssetIndexTest] 합성 트리(1 만 · 10 만 파일, 참조 평균 4)의 전체 스캔과 파일 하나 바뀜의 ns 를 로그로 남깁니다. 시간 문턱은 두지 않는다 — 판정은 통합 담당의 반복 측정이다.
  * @details 전체 스캔은 작업 관리자 없이(호출 스레드 하나) 잰다 — 에디터는 워커로 나누므로 기동 시간의 상한이다. 파일 하나 바뀜은 UI 스레드가 하는 일 그대로다.
  */
-SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench" )
+SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다" )
 {
     using Internal                              = EditorAssetIndexCostTestInternal;
     static constexpr uint32 kArrFileCount[]     = { 10000, 100000 };

@@ -123,8 +123,8 @@ namespace sw::editor
 
         /** @brief 참조를 훑는 텍스트 에셋이면 true 입니다. 확장자로 정한다(자동화 시나리오 · 리다이렉트 표는 참조자가 아니다). */
         static bool isTextAsset( string_view path );
-        /** @brief 텍스트 하나에서 참조를 뽑아 @p outListLink 에 더합니다(비우지 않는다). 대상이 있는지는 보지 않는다. */
-        static void extractLinks( string_view text, vector<EditorAssetLink>& outListLink );
+        /** @brief 텍스트 하나에서 참조를 뽑아 @p outListLink 에 더합니다(비우지 않는다). 대상이 있는지는 보지 않는다. @p listMountedDomain 은 고정 도메인 표 밖의 붙인 디스크 도메인 이름이다. */
+        static void extractLinks( string_view text, vector<EditorAssetLink>& outListLink, const vector<string>& listMountedDomain = {} );
 
     private:
         /** @brief 파일 @p assetID 의 줄과 그 줄이 만든 역방향 표 · GUID 줄을 뺍니다. */
@@ -133,7 +133,8 @@ namespace sw::editor
          * @brief 파일 @p displayPath(디스크 표기)의 줄을 넣습니다(있던 줄은 먼저 뺀다). @p pText 는 텍스트 에셋의 글, @p pMetaText 는 원본 곁 `.meta` 의 글이고, 없으면 nullptr 입니다.
          * @details 정체성은 텍스트 에셋이면 머리, 그 밖이면 곁의 `.meta` 에서 읽는다(`.meta` 는 목록의 파일이 아니다 — `EditorContentScan::isListedFile`).
          */
-        static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, const string* pText, const string* pMetaText );
+        static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, const string* pText, const string* pMetaText,
+                                 const vector<string>& listMountedDomain = {} );
         /** @brief 파일 @p displayPath 를 디스크에서 읽어 줄을 고칩니다. 크기 · 시각이 같으면(@p bForce 가 아니면) 열지 않는다. 없으면 줄을 뺀다. */
         static void refreshFromDisk( EditorAssetIndexData& inoutData, string_view resourceRoot, string_view displayPath, bool bForce );
 

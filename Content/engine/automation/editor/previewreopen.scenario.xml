@@ -180,9 +180,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="content.open game/empty/prefabs"/>
 	<EditorWaitStable/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
-	<EditorWaitStable/>
-	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
+	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml" count="2"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
 	<EditorWaitStable/>

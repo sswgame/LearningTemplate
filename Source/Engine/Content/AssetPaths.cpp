@@ -829,6 +829,16 @@ namespace sw
                AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ).str(), root, key );
     }
 
+    void AssetPaths::collectMountedDiskDomains( vector<string>& outListDomain ) const
+    {
+        outListDomain.clear();
+        ScopedLock<mutex> lock{ _pState->_diskDomainMutex };
+        for ( const auto& mounted : _pState->_listDiskDomain )
+        {
+            outListDomain.push_back( mounted._domain );
+        }
+    }
+
     const string& AssetPaths::getRootFolderPath() const
     {
         return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다

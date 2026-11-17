@@ -9,8 +9,10 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -59,6 +61,20 @@ namespace sw::editor
             {
                 return std::any_of( std::begin( kArrDomainPrefix ), std::end( kArrDomainPrefix ), [&]( const utf8* pPrefix )
                 { return startsWithLower( text, offset, pPrefix ); } );
+            }
+
+            /**
+             * @brief @p offset 에서 시작하는 경로 글자가 붙인 디스크 도메인(@p listMountedDomain — `AssetPaths::mountDiskDomain`) 아래면 true 입니다.
+             * @details 붙인 도메인(테스트 픽스처 · 도구 작업의 디스크 폴더)은 고정 표에 없다 — 빠지면 그 안의 참조(`_base`)를 세지 못해 다시 읽기 연쇄가 빈다
+             *          (AssetReloadCascadeTest). 목록은 에디터 스레드가 담아 넘긴다(작업 스레드는 에디터 서비스를 찾지 않는다).
+             */
+            static bool startsWithMountedDomain( string_view text, size_t offset, const vector<string>& listMountedDomain )
+            {
+                return std::any_of( listMountedDomain.begin(), listMountedDomain.end(), [&]( const string& domain )
+                {
+                    const size_t slashAt = offset + domain.size();
+                    return slashAt < text.size() && text[slashAt] == '/' && startsWithLower( text, offset, domain.c_str() );
+                } );
             }
 
             /**
@@ -187,7 +203,7 @@ namespace sw::editor
         { return StringUtil::endsWith( lowerPath, pExtension ); } );
     }
 
-    void EditorAssetIndex::extractLinks( string_view text, vector<EditorAssetLink>& outListLink )
+    void EditorAssetIndex::extractLinks( string_view text, vector<EditorAssetLink>& outListLink, const vector<string>& listMountedDomain )
     {
         using Internal                   = EditorAssetIndexInternal;
         const string_view guidPrefix     = AssetRegistry::kReferencePrefix;
@@ -215,7 +231,7 @@ namespace sw::editor
                     continue;
                 }
             }
-            if ( bAtBoundary == false || Internal::startsWithDomain( text, offset ) == false )
+            if ( bAtBoundary == false || ( Internal::startsWithDomain( text, offset ) == false && Internal::startsWithMountedDomain( text, offset, listMountedDomain ) == false ) )
             {
                 ++offset;
                 continue;
@@ -257,7 +273,8 @@ namespace sw::editor
         inoutData._mapPathToGUID.erase( itGUID );
     }
 
-    void EditorAssetIndex::insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, const string* pText, const string* pMetaText )
+    void EditorAssetIndex::insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, const string* pText, const string* pMetaText,
+                                        const vector<string>& listMountedDomain )
     {
         const string assetID = EditorAssetIndexInternal::makeKey( displayPath );
         removeEntry( inoutData, assetID );
@@ -269,7 +286,7 @@ namespace sw::editor
         if ( pText != nullptr )
         {
             guid = AssetGUIDHeader::read( *pText )._guid;
-            extractLinks( *pText, entry._listLink );
+            extractLinks( *pText, entry._listLink, listMountedDomain );
             for ( const EditorAssetLink& link : entry._listLink )
             {
                 vector<string>& listReferrer = inoutData._mapReferrer[link._target];
@@ -425,7 +442,10 @@ namespace sw::editor
     {
         const string displayPath = FileUtil::normalizeSeparators( assetID );
         const string copy{ text };
-        insertEntry( _data, displayPath, fileStamp, isTextAsset( displayPath ) ? &copy : nullptr, nullptr );
+        // 붙인 디스크 도메인(테스트 · 도구)의 글도 넣으므로 그 도메인 이름을 참조 앞머리로 함께 본다 — 이 함수는 에디터 스레드에서만 부른다.
+        vector<string> listMountedDomain;
+        editor::getSubsystem<AssetPaths>().collectMountedDiskDomains( listMountedDomain );
+        insertEntry( _data, displayPath, fileStamp, isTextAsset( displayPath ) ? &copy : nullptr, nullptr, listMountedDomain );
     }
 
     const EditorAssetEntry* EditorAssetIndex::find( string_view assetID ) const

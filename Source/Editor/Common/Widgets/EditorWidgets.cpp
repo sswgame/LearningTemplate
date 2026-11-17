@@ -299,12 +299,16 @@ namespace sw::editor
 
         // 비단락(|=)으로 세 축을 모두 그린다.
         bChanged |= EditorWidgetsInternal::drawAxis( "X", values._x, SW_THEME_COLOR( "Viewport", "AxisX" ), buttonSize, resetValue, speed );
+        // 마지막 항목을 X 값 칸으로 남긴다 — 열 마감(`Columns( 1 )`) 뒤의 마지막 항목은 값 칸이 아니라, 행 뒤에 표지를 남기는 쪽(인스펙터 그리드 `inspector.property.*`)이
+        // 그 자리를 끌어 값이 바뀌지 않았다(editor.inspectorundoscale). 아래 `slotItem` 과 같은 방법.
+        const ImGuiLastItemData firstValueItem = ImGui::GetCurrentContext()->LastItemData;
         bChanged |= EditorWidgetsInternal::drawAxis( "Y", values._y, SW_THEME_COLOR( "Viewport", "AxisY" ), buttonSize, resetValue, speed );
         bChanged |= EditorWidgetsInternal::drawAxis( "Z", values._z, SW_THEME_COLOR( "Viewport", "AxisZ" ), buttonSize, resetValue, speed );
 
         ImGui::PopStyleVar();
         ImGui::Columns( 1 );
         ImGui::PopID();
+        ImGui::GetCurrentContext()->LastItemData = firstValueItem;
         return bChanged;
     }
 

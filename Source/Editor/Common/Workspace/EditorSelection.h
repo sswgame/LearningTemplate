@@ -117,6 +117,8 @@ namespace sw::editor
         void              clearAll();
         void              pruneInvalid();
         Delegate<void()>& onSelectionChanged() { return _onSelectionChanged; }
+        /** @brief 선택이 바뀔 때마다 오르는 차례입니다 — 드물게 보는 쪽(HUD 4 Hz)이 그 사이의 바뀜(비웠다 같은 것을 다시 고름)을 놓치지 않는다. */
+        uint64 getRevision() const { return _revision; }
 
         // ------------------------------------------------------------------------------
         // 범위. 메인 선택(묶지 않음) 또는 미리보기 창의 씬과 스택
@@ -151,6 +153,7 @@ namespace sw::editor
         vector<string>                  _listSelectedAsset;    ///< 고른 순서(주 선택은 맨 앞)
         unordered_set<string>           _uniqueSelectedAsset;  ///< `_listSelectedAsset` 와 같은 원소의 색인(오브젝트 선택과 같은 모양)
         Delegate<void()>                _onSelectionChanged;
+        uint64                          _revision{ 0 };            ///< `notifyChanged` 마다 오른다(`getRevision`)
         Scene*                          _pPreviewScene{ nullptr }; ///< 묶인 미리보기 씬(빌림). nullptr 이면 메인 선택이다
         CommandStack*                   _pPreviewStack{ nullptr }; ///< 묶인 창의 Undo 스택(빌림)
     };

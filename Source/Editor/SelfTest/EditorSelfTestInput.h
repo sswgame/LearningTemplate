@@ -87,7 +87,7 @@ namespace sw::editor
      */
     struct EditorSelfTestInput
     {
-        static void setMouseButton( int32 button, bool bDown );
+        static void setMouseButton( int32 button, bool bDown, bool bFreshClick = false );
         static void typeText( string_view utf8Text );
         /** @brief 세로 휠을 @p notches 눈금 돌립니다(양수면 위로). 커서 아래 창이 받는다. */
         static void scrollMouseWheel( float32 notches );
@@ -119,7 +119,7 @@ namespace sw::editor
          * @brief 레이블을 누르는 입구입니다 — `hoverMark` 와 같은 판정이 `Reachable` 일 때만 그 점으로 옮기고 @p button 을 누르는 이벤트를 넣습니다. 아니면 아무것도 넣지 않고 판정을 돌려줍니다.
          * @details 붙잡기는 건드리지 않는다 — 누른 채 둘 단계는 붙잡은 채로, 한 번 누르고 놓을 단계는 먼저 `releaseMouseHold` 하고 부른다. 수정자 키는 이 앞에 넣는다.
          */
-        [[nodiscard]] static EditorMarkHit pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName );
+        [[nodiscard]] static EditorMarkHit pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName, bool bFreshClick = false );
         /**
          * @brief 마지막으로 닿는다고 판정한 점(`hoverMark` · `pressMark` 가 `Reachable` 을 돌려준 점)에서 @p offset 픽셀만큼 떨어진 곳으로 포인터를 옮기는 이벤트를 넣습니다.
          *        끌기의 시작 · 중간 · 끝 점이 이 입구로만 움직인다 — 언리얼 Automation Driver 의 `MoveByOffset` 과 같은 자리다.

@@ -81,10 +81,13 @@ namespace sw::editor
     expected<void> EditorScenarioStepValidation::validateClick( const AutomationStep& step )
     {
         using Internal = EditorScenarioStepValidationInternal;
-        EditorClickParams params;
-        return step.readProperties( params ).and_then( [&]()
-        { return Internal::checkAnchor( params._anchor ); } )
-            .and_then( [&]()
+        EditorClickParams    params;
+        const expected<void> read = step.readProperties( params );
+        if ( read.has_value() == false )
+            return read;
+        if ( params._count == 2 && params._state != EditorPressState::Tap )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "count=\"2\" (double click) needs a whole click - drop state" } );
+        return Internal::checkAnchor( params._anchor ).and_then( [&]()
         { return Internal::checkModifiers( params._mods ); } );
     }
 

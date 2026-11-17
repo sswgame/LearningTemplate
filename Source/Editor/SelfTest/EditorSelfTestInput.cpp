@@ -35,6 +35,7 @@ namespace sw::editor
                 int32     _code{ 0 }; ///< 버튼 번호 · ImGuiKey, 마우스 위치면 뷰포트 id(0 = 알리지 않음)
                 EventKind _kind{ EventKind::MousePos };
                 uint8     _bDown{ SW_FALSE };
+                uint8     _bFreshClick{ SW_FALSE }; ///< 누름이 앞 클릭과 잇지 않는다 — 지난 클릭 시각을 지운다(끌기의 누름)
             };
 
             struct NamedMark
@@ -433,12 +434,13 @@ namespace sw::editor
         EditorSelfTestInputInternal::push( std::move( event ) );
     }
 
-    void EditorSelfTestInput::setMouseButton( int32 button, bool bDown )
+    void EditorSelfTestInput::setMouseButton( int32 button, bool bDown, bool bFreshClick )
     {
         EditorSelfTestInputInternal::PendingEvent event;
-        event._kind  = EditorSelfTestInputInternal::EventKind::MouseButton;
-        event._code  = button;
-        event._bDown = bDown ? SW_TRUE : SW_FALSE;
+        event._kind        = EditorSelfTestInputInternal::EventKind::MouseButton;
+        event._code        = button;
+        event._bDown       = bDown ? SW_TRUE : SW_FALSE;
+        event._bFreshClick = bFreshClick ? SW_TRUE : SW_FALSE;
         EditorSelfTestInputInternal::push( std::move( event ) );
     }
 
@@ -538,7 +540,7 @@ namespace sw::editor
         return hit;
     }
 
-    EditorMarkHit EditorSelfTestInput::pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName )
+    EditorMarkHit EditorSelfTestInput::pressMark( string_view key, const float2& anchor, int32 button, string& outCoverName, bool bFreshClick )
     {
         using Internal = EditorSelfTestInputInternal;
         EditorSelfTestMark mark;
@@ -550,7 +552,7 @@ namespace sw::editor
             return hit;
         pState->rememberHover( Internal::computeHoverPoint( mark, anchor ), mark._viewportID );
         moveMouse( pState->_hoverPoint, pState->_hoverViewportID );
-        setMouseButton( button, true );
+        setMouseButton( button, true, bFreshClick );
         return hit;
     }
 
@@ -705,6 +707,10 @@ namespace sw::editor
                 }
                 case EditorSelfTestInputInternal::EventKind::MouseButton:
                 {
+                    // 끌기의 누름은 앞 클릭과 잇지 않는다 — 같은 자리를 더블클릭 시간 안에 다시 누르면 ImGui 가 더블클릭으로 보아 끌기 칸이 글 입력으로 바뀌어
+                    // 단계 사이 벽시계 간격이 결과를 바꿨다(editor.inspectorundoscale). 더블클릭은 `EditorClick count="2"` 로 적는다(Playwright clickCount).
+                    if ( event._bDown != SW_FALSE && event._bFreshClick != SW_FALSE && event._code >= 0 && event._code < ImGuiMouseButton_COUNT )
+                        io.MouseClickedTime[event._code] = -FLT_MAX;
                     io.AddMouseButtonEvent( event._code, event._bDown != SW_FALSE );
                     break;
                 }
