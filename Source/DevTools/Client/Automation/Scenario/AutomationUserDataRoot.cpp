@@ -12,9 +12,6 @@
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
 
-#include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
-
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -30,7 +27,7 @@ namespace sw
      * @details 기본은 거짓 — 자동화가 사람의 세이브 · 장치 키 · 에디터 상태를 바꾸거나 다른 실행과 한 폴더를 다투지 않게 한다(`AutomationUserDataRoot`). 일부러 실제 세이브로 재현할 때만 켠다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_automationAllowOutsideUserData, false,
-                             "자동화 실행이 자동화 폴더(Saved/Automation/UserData) 밖의 사용자 데이터 폴더와 사람의 상태 폴더를 쓰게 둡니다 (사람의 실제 세이브로 재현할 때만)" );
+                             "자동화 실행이 자동화 폴더(Saved/Automation) 밖의 사용자 데이터 폴더와 사람의 상태 폴더를 쓰게 둡니다 (사람의 실제 세이브로 재현할 때만)" );
 
     namespace
     {
@@ -100,7 +97,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( userDataIsolated, "UserData.Isolated", "1 while the user data root (SW_USER_DATA_ROOT) is under Saved/Automation/UserData - saves cannot touch the person's folder",
+    SW_AUTOMATION_WATCH( userDataIsolated, "UserData.Isolated", "1 while the user data root (SW_USER_DATA_ROOT) is under Saved/Automation - saves cannot touch the person's folder",
                          &AutomationUserDataRootInternal::readIsolated );
     SW_AUTOMATION_QUERY_WATCH( userDataRoot, "UserData.Root", "The user data folder of the active game in this run (differs per run - for diagnosis, not <Record>)",
                                &AutomationUserDataRootInternal::readRoot, false, false );
@@ -110,7 +107,12 @@ namespace sw
 
     string AutomationUserDataRoot::getBaseFolder()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Automation/UserData" );
+        return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Automation" );
+    }
+
+    string AutomationUserDataRoot::makeRunUserDataRoot( string_view runRoot )
+    {
+        return FileUtil::joinPath( runRoot, kRunSubfolder );
     }
 
     expected<void> AutomationUserDataRoot::checkUnderBase( string_view root, string_view baseFolder )
@@ -122,7 +124,7 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "the user data root has a '..' segment", root } );
         // 대소문자는 OS 규칙이다 — 리눅스에서 `userdata` 는 `UserData` 가 아니다(예전 소문자 비교는 그 바깥 폴더를 안으로 봤다).
         if ( FileUtil::isPathUnderRoot( baseFolder, root ) == false )
-            return unexpected( Error{ ErrorKind::Unsupported, "an automated run keeps user data under Saved/Automation/UserData (pass -gv_automationAllowOutsideUserData=true to use another folder on purpose)", root } );
+            return unexpected( Error{ ErrorKind::Unsupported, "an automated run keeps user data under Saved/Automation (pass -gv_automationAllowOutsideUserData=true to use another folder on purpose)", root } );
         return {};
     }
 
@@ -175,17 +177,13 @@ namespace sw
         }
         if ( bAllowOutside )
             return string{}; // 사람이 고른 OS 사용자 폴더 그대로
-        // 프로세스마다 새 폴더 — 같은 pid 의 옛 실행이 남긴 세이브를 읽지 않게 비우고, 끝난 프로세스의 폴더를 거둔다(사본 폴더와 같은 거두기).
-        root = FileUtil::joinPath( getBaseFolder(), AutomationScratch::makeInstanceID( kRunFolderName ) );
-        AutomationScratchWorkspace::resetInstanceFolder( root );
+        // 실행 뿌리는 실행마다 새 폴더다 — 옛 실행의 세이브가 없어 비울 것도, 거둘 형제도 없다(거두기는 `SavedRetention`).
+        root = makeRunUserDataRoot( ProcessRoots::get()._run.str() );
+        if ( expected<void> under = checkUnderBase( root, getBaseFolder() ); under.has_value() == false )
+            return unexpected( under.error() ); // 부모가 실행 뿌리를 자동화 폴더 밖에 줬다
         if ( ProcessEnvironment::trySet( kUserDataRootVariable, root ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not set the user data root variable", root } );
         return root;
-    }
-
-    string AutomationUserDataRoot::makeChildRoot( string_view parentRoot, string_view backend )
-    {
-        return FileUtil::joinPath( parentRoot, backend );
     }
 
     bool AutomationUserDataRoot::isOutsideAllowed()

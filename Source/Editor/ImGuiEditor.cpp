@@ -519,7 +519,6 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializeEditorData()
     {
-        EditorPaths::prepareAutomationStateDirectory(); // 상태 파일을 읽는 어떤 일보다 먼저
         // 사용자 환경설정은 사용자 파일이다 — 처음 실행이면 없고, 깨졌으면 옆으로 치우고 새로 쓴다(`EditorPreferencesStore::loadAll`). 닫을 때까지 저장이 이 파일에 간다.
         if ( EditorPreferencesStore::open() == EditorUserFileResult::Missing )
             SW_LOG_INFO_ID( "ImGuiEditor.EditorPreferencesFirstRun", "Editor preferences: first run - nothing changed from the defaults yet" );

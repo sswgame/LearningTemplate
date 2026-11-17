@@ -29,8 +29,6 @@ namespace sw
      *          같은 파일을 덮어썼다 — 읽기(`parse`)가 단계 값 안의 `Saved/Automation/` 직접 표기를 오류로 만든다.
      */
     inline constexpr const utf8* kAutomationOutputToken = "{out}";
-    /** @brief `kAutomationOutputFolder` 아래에서 에디터 상태 폴더들을 모으는 폴더 이름 — 사용자의 `Saved/Editor` 대신 시나리오마다 비운 폴더를 쓴다. */
-    inline constexpr const utf8* kAutomationEditorStateFolder = "EditorState";
     /** @brief 골든 그림 폴더 이름 — 시나리오 파일 옆 `<시나리오 폴더>/golden/` 이다. 판정(`AutomationEvaluator`)이 읽고 쓰는 자리와 쓰기 문(`AutomationScratch`)이 여는 자리가 이 하나를 본다. */
     inline constexpr const utf8* kAutomationGoldenFolder = "golden";
 

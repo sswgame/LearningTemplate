@@ -18,6 +18,13 @@ namespace sw
     inline constexpr const utf8* kAndroidAppFolderVariable = "SW_ANDROID_APP_FOLDER";
 
     /**
+     * @brief 부모(백엔드별 부모 `AutomationPerBackend` · 두 번 기동 짝)가 자식의 실행 뿌리(`ProcessRoots::_run`)를 넘기는 환경 변수입니다.
+     * @details 명령줄 인자(`-run-root=`)가 아니라 환경이다 — 이 표는 명령줄 해석 전에 처음 불리고(로그 파일 자리), Core 에는 언리얼 `FCommandLine` 같은 전역 명령줄이 없다.
+     *          사용자 데이터 뿌리(`SW_USER_DATA_ROOT`) · Android 앱 폴더와 같은 길이다. 자식이 띄운 손자도 물려받는다(같은 실행이다).
+     */
+    inline constexpr const utf8* kRunRootVariable = "SW_RUN_ROOT";
+
+    /**
      * @struct ProcessRoots
      * @brief 프로세스의 루트 폴더들입니다. `get()` 이 처음 부를 때 실행 파일 위치로 정한다.
      */
@@ -29,6 +36,13 @@ namespace sw
         AbsolutePath _packs;       ///< 구운 팩 폴더(`<바이너리>/Packs`)
         AbsolutePath _saved;       ///< 실행 산출물 · 개발 캐시(`<바이너리>/Saved` - 로그 · 스크린샷 · 셰이더 캐시 · 자동화)
         AbsolutePath _derivedData; ///< 빌드 구성(Debug · Release)이 함께 쓰는 파생물(`<프로젝트>/Saved` - DDC · 쿠킹 기록 · 개발 인증서)
+        /**
+         * @brief 실행 뿌리 — 이 프로세스가 쓰고 버리는 상태(사용자 데이터 · 에디터 상태 · 시나리오 사본 `scratch` 도메인 · 죽이기 전 덤프)가 모두 이 아래다.
+         * @details 부모가 `kRunRootVariable` 로 주면 그 폴더(`Saved/Automation/Runs/<실행 id>/<백엔드>`), 혼자 뜬 실행은 `<_saved>/Automation/Runs/<pid>-<시작 ns>` 를 스스로 정한다.
+         *          폴더는 쓰는 쪽이 처음 쓸 때 만든다. 지우는 것은 주인(`SavedRetention` 의 `Automation` 규칙)뿐이다 — 자식은 제 뿌리 밖을 지우지 않는다.
+         *          예전에는 상태마다 pid 꼬리(`run_p<pid>` · `editor_p<pid>` · `scratch/<이름>_p<pid>`)로 이름을 짓고 자식마다 죽은 형제의 폴더를 거뒀다. Gauntlet 이 역할마다 주는 산출물 폴더와 같은 자리다.
+         */
+        AbsolutePath _run;
 
         /** @brief 루트들입니다. 처음 부를 때 정하고 그 뒤로 바뀌지 않는다. 정하지 못하면 멈춥니다. */
         [[nodiscard]] static const ProcessRoots& get();

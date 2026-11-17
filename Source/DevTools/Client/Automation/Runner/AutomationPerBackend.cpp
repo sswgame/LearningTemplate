@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
@@ -77,8 +78,9 @@ namespace sw
                 string          _backend{};
                 string          _logPath{};
                 string          _reportPath{};
+                string          _runRoot{}; ///< 자식의 실행 뿌리(`<부모 실행 뿌리>/<백엔드>`) — 죽이기 전 덤프도 여기 쓴다
                 ProcessCommand  _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
-                ProcessOptions  _options{}; ///< 자식의 환경(사용자 데이터 뿌리)
+                ProcessOptions  _options{}; ///< 자식의 환경(실행 뿌리 · 사용자 데이터 뿌리)
                 Process         _process{};
                 thread          _flushThread{};
                 Deadline        _killDeadline  = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
@@ -425,13 +427,15 @@ namespace sw
 
             const optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
             pChild->_command                        = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
-            // 자식마다 제 사용자 데이터 뿌리 — 한 폴더를 함께 쓰면 한 자식이 다른 자식의 쓰는 중인 임시 파일을 잔재로 지웠다(와일드웨스트 세이브).
+            // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`) — 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다
+            // (예전에는 한 자식이 다른 자식의 쓰는 중인 세이브 임시 파일을 잔재로 지웠다 — 와일드웨스트). 그 폴더의 주인은 이 부모다 — 띄우기 전에 비운다.
+            const string childRunRoot = FileUtil::joinPath( ProcessRoots::get()._run.str(), backend );
+            (void)FileUtil::removeDirectory( childRunRoot ); // 못 지우면 FileUtil 이 경고를 남긴다
+            pChild->_runRoot = childRunRoot;
+            pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kRunRootVariable, childRunRoot } );
+            // 이 부모가 건 사용자 데이터 뿌리는 환경으로 물려 가므로 자식마다 덮는다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다.
             if ( options._userDataRoot.empty() == false )
-            {
-                const string childRoot = AutomationUserDataRoot::makeChildRoot( options._userDataRoot, backend );
-                (void)FileUtil::removeDirectory( childRoot ); // 앞 실행이 남긴 세이브로 시작하지 않게 — 못 지우면 FileUtil 이 경고를 남긴다
-                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, childRoot } );
-            }
+                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, AutomationUserDataRoot::makeRunUserDataRoot( childRunRoot ) } );
             pChild->_bPending = true;
             listChild.push_back( std::move( pChild ) );
         }

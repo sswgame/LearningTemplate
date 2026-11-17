@@ -8,16 +8,10 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 
-#include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
-
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
-
-#include "ModuleAPI/Service/IModuleStateStore.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -33,34 +27,20 @@ namespace sw::editor
     {
         struct EditorPathsInternal
         {
+            /** @brief 실행 뿌리 아래 에디터 상태 폴더 이름입니다(`<실행 뿌리>/editor`). */
+            static constexpr string_view kRunStateFolder = "editor";
+
             /**
-             * @brief 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 상태 폴더입니다. 자동화 실행이 아니거나 `-gv_editorStateDir` 를 주었으면 빈 문자열입니다.
+             * @brief 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 상태 폴더(`<실행 뿌리>/editor`)입니다. 자동화 실행이 아니거나 `-gv_editorStateDir` 를 주었으면 빈 문자열입니다.
              * @details 시나리오가 닫은 패널 · 바꾼 설정이 사용자의 Saved/Editor 에 남아 다음 실행(사람 · 다른 시나리오)이 그 상태로 시작했다.
-             *          이름에 프로세스 꼬리를 붙여 동시에 도는 App 끼리 겹치지 않는다.
+             *          실행 뿌리(`ProcessRoots::_run`)가 실행마다 새 폴더라 비우지 않고, 동시에 도는 App 끼리 겹치지 않는다(예전 `editor_p<pid>` 와 형제 거두기를 대신한다).
+             *          리로드 · 백엔드 교체로 다시 선 인스턴스는 같은 폴더를 이어 쓴다(자동 저장 세션 폴더 · 레이아웃).
              */
             static string getAutomationStateDirectory()
             {
                 if ( gv_editorStateDir.get().empty() == false || editor::getSubsystem<CommandLineManager>().isAutomatedRun() == false )
                     return {};
-                return FileUtil::joinPath( FileUtil::joinPath( makeAutomationOutputFolderPath(), kAutomationEditorStateFolder ), AutomationScratch::makeInstanceID( "editor" ) );
-            }
-
-            /** @brief 이 프로세스가 상태 폴더를 이미 비웠다는 표시의 맡김 칸 키입니다. 값은 비어 있다 — 있느냐만 본다. */
-            static constexpr string_view kPreparedStoreKey = "editor.automationStateDirPrepared";
-
-            /**
-             * @brief 이 프로세스에서 처음 부르면 true 입니다(표시를 맡김 칸에 다시 맡겨 다음 인스턴스가 본다).
-             * @details 맡김 칸이 없는 호스트(테스트 · 도구)는 인스턴스를 다시 세우지 않으므로 늘 처음이다.
-             */
-            static bool takeFirstPreparation()
-            {
-                IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
-                if ( pStore == nullptr )
-                    return true;
-                vector<uint8> bytes;
-                const bool    bPrepared = pStore->take( kPreparedStoreKey, bytes );
-                pStore->store( kPreparedStoreKey, vector<uint8>{} );
-                return bPrepared == false;
+                return FileUtil::joinPath( ProcessRoots::get()._run.str(), kRunStateFolder );
             }
         };
     } // namespace
@@ -77,19 +57,6 @@ namespace sw::editor
     string EditorPaths::getSceneDialogFolderPath()
     {
         return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kMapsFolder ) );
-    }
-
-    void EditorPaths::prepareAutomationStateDirectory()
-    {
-        const string stateDir = EditorPathsInternal::getAutomationStateDirectory();
-        if ( stateDir.empty() )
-            return;
-        // 리로드 · 백엔드 교체로 다시 선 인스턴스는 앞선 인스턴스의 상태를 잇는다 — 비우면 자동 저장 세션 폴더(사본 · 잠금)와 레이아웃이 리로드마다 사라졌다.
-        if ( EditorPathsInternal::takeFirstPreparation() == false )
-            return;
-        // 같은 프로세스 번호를 썼던 지난 실행이 남긴 상태를 읽지 않게 비우고 시작하며, 끝난 실행의 상태 폴더는 거둔다.
-        AutomationScratchWorkspace::resetInstanceFolder( stateDir );
-        SW_LOG_INFO_ID( "EditorPaths.ScenarioRunEditorState", "Scenario run: editor state goes to %# (Saved/Editor is neither read nor written)", stateDir.c_str() );
     }
 
     string EditorPaths::getEditorStateDirectory()
