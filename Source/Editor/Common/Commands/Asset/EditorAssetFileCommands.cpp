@@ -13,7 +13,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -168,7 +168,7 @@ namespace sw::editor
              * @brief 참조 파일마다 옮긴 뒤 쓸 글을 만듭니다. 경로 칸 밖에서 옮기는 에셋을 적은 곳(고칠 수 없는 참조)은 @p inoutPlan 의 목록에 남긴다.
              * @return 읽지 못한 참조 파일이 있으면 false 입니다(`_failure` 에 이유).
              */
-            [[nodiscard]] static bool prepareRewrites( const AssetReferenceFields& params, const EditorReferenceIndex& index, EditorAssetMovePlan& inoutPlan,
+            [[nodiscard]] static bool prepareRewrites( const AssetReferenceFields& params, const EditorAssetIndex& index, EditorAssetMovePlan& inoutPlan,
                                                        vector<PreparedRewrite>& outListRewrite )
             {
                 vector<AssetReferenceRewriteRule> listRule;
@@ -184,7 +184,10 @@ namespace sw::editor
                     vector<EditorAssetReference> listReference;
                     index.findReferrers( oldID, listReference );
                     for ( const EditorAssetReference& reference : listReference )
-                        appendUnique( listReferrerID, reference._referrerPath );
+                    {
+                        if ( reference._bByGUID == false ) // GUID 로 적은 참조는 옮겨도 그대로 맞다 — 고칠 글이 없다
+                            appendUnique( listReferrerID, reference._referrerPath );
+                    }
                 }
                 for ( const string& referrerID : listReferrerID )
                 {
@@ -526,7 +529,7 @@ namespace sw::editor
         return FileUtil::copyFile( sourceAbs, outAssetAbs ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
     }
 
-    bool EditorAssetFileCommands::planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan )
+    bool EditorAssetFileCommands::planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan )
     {
         outPlan = EditorAssetMovePlan{};
         if ( listMove.empty() )
@@ -663,7 +666,7 @@ namespace sw::editor
         return nullopt;
     }
 
-    bool EditorAssetFileCommands::applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan )
+    bool EditorAssetFileCommands::applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorAssetIndex& inoutIndex, EditorAssetMovePlan& outPlan )
     {
         // 계획을 다시 세운다 — 미리보기와 적용 사이(확인 대화상자)에 파일이 바뀌었을 수 있다. 쓸 글은 모두 미리 만들고 나서 디스크를 바꾼다.
         if ( planAssetMoves( listMove, inoutIndex, outPlan ) == false )
@@ -760,23 +763,18 @@ namespace sw::editor
             EditorContext* pContext = editor::findSubsystem<EditorContext>();
             if ( pContext != nullptr )
                 pContext->getSubsystem<EditorNotificationManager>().push( "Move failed", outPlan._failure, listStuck.empty() ? NotificationKind::Warning : NotificationKind::Error );
-            const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-            for ( size_t index = 0; index < outPlan._listOldID.size(); ++index )
-            {
-                inoutIndex.refreshFile( resourceRoot, outPlan._listOldID[index] );
-                inoutIndex.refreshFile( resourceRoot, outPlan._listNewID[index] );
-            }
+            vector<string> listChanged = outPlan._listOldID;
+            listChanged.insert( listChanged.end(), outPlan._listNewID.begin(), outPlan._listNewID.end() );
+            inoutIndex.applyChanges( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listChanged );
             return false;
         }
 
-        const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-        for ( size_t index = 0; index < outPlan._listOldID.size(); ++index )
-        {
-            inoutIndex.refreshFile( resourceRoot, outPlan._listOldID[index] );
-            inoutIndex.refreshFile( resourceRoot, outPlan._listNewID[index] );
-        }
+        // 옮긴 파일(옛 id 빠짐 · 새 id 생김)과 글을 고친 참조자만 다시 읽는다 — 다른 파일은 그대로다(색인이 대상의 있음을 물을 때 본다).
+        vector<string> listChanged = outPlan._listOldID;
+        listChanged.insert( listChanged.end(), outPlan._listNewID.begin(), outPlan._listNewID.end() );
         for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
-            inoutIndex.refreshFile( resourceRoot, rewrite._referrerID );
+            listChanged.push_back( rewrite._referrerID );
+        inoutIndex.applyChanges( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listChanged );
         // 실행 중 GUID 색인도 새 자리를 안다 — 살아 있는 참조(`AssetRef<T>`)를 새 경로로 다시 넣을 때 GUID 를 잃지 않는다(`.meta` 는 색인의 줄이 아니라 false 다).
         for ( size_t index = 0; index < outPlan._listOldID.size(); ++index )
             (void)AssetRegistry::move( outPlan._listOldID[index], outPlan._listNewID[index] );
@@ -824,7 +822,7 @@ namespace sw::editor
         return listMove;
     }
 
-    bool EditorAssetFileCommands::moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount )
+    bool EditorAssetFileCommands::moveAsset( string_view sourceAbs, string_view destinationAbs, EditorAssetIndex& inoutIndex, uint32& outFixedFileCount )
     {
         outFixedFileCount = 0;
         EditorAssetMovePlan plan;

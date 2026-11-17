@@ -1,5 +1,5 @@
 <?asset guid="31a5604f07d9d8c777379536da55eb18"?>
-<Scene formatVersion="2" name="spritelibrary_base">
+<Scene formatVersion="3" name="spritelibrary_base">
 	<!-- 시나리오 automation/spritelibrary 의 무대 — 같은 클립을 라이브러리 base 로 그린다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

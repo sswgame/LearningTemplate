@@ -1,5 +1,5 @@
 <?asset guid="1398b8b51d5579e4e7be1c2909714447"?>
-<Prefab formatVersion="0" name="ArenaCasterAI">
+<Prefab formatVersion="1" name="ArenaCasterAI">
 	<GameObject _schemaVersion="0" _name="ArenaCasterAI" _bActive="true">
 		<_listComponent>
 			<ArenaEnemyAIComponent _componentName="ArenaEnemyAIComponent"

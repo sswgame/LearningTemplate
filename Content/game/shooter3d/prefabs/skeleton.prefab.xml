@@ -2,7 +2,7 @@
 <!-- Shooter3D 해골 적(KayKit 해골 미니언) — 생물 적(quadshell)과 같은 규칙 · AI · 이동에 사람형 리그 · 그래프 · 알림 · 물리 에셋을 얹고 절단을 더한다.
      몸 영역 표(skeleton_warrior.fit.xml)는 KayKit 해골 리그 41 뼈의 표라 미니언 몸에도 맞는다. 쓰러뜨린 맞음이 머리 · 팔 뼈에 들면 그 영역이 떨어진다
      (ShooterEnemyComponent 가 쓰러짐을 정하고 HealthSourceComponent::deliverFatalHit 으로 래그돌 · 절단에 치명 신호를 다시 보낸다). -->
-<Prefab formatVersion="0" _base="game/shooter3d/prefabs/quadshell.prefab.xml" name="Skeleton">
+<Prefab formatVersion="1" _base="game/shooter3d/prefabs/quadshell.prefab.xml" name="Skeleton">
 	<PrefabOverrides>
 		<Override key="SkeletalAnimatorComponent#0">
 			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_minion/skeleton_minion.animset.xml" _initialState="Spawn_Ground_Skeletons" />

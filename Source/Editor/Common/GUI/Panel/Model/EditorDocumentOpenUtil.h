@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 namespace sw::editor

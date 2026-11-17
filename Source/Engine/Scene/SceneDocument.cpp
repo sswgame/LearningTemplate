@@ -13,6 +13,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/Serialization/GameObjectFormatUpgrade.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -260,6 +261,8 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
+    // 판 3: 형제 순서 칸 `_siblingIndex` → `_siblingOrder`(분수 색인 키, 설계 E-6)
+    SW_ASSET_FORMAT_UPGRADE( sceneSiblingOrder, "Scene", 2, 3, &GameObjectFormatUpgrade::renameSiblingIndex );
     SW_DATA_INHERITANCE_SCHEMA( Scene, &SceneDocumentInternal::makeInheritanceSchema );
 
     bool SceneDocument::loadXML( const AssetID& assetID )

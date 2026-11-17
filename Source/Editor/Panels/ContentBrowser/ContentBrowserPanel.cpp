@@ -222,7 +222,7 @@ namespace sw::editor
             static bool hasTextAssetTarget( const EditorCommandTarget& target )
             {
                 const string path = findTargetPath( target );
-                return path.empty() == false && EditorReferenceIndex::isTextAsset( path );
+                return path.empty() == false && EditorAssetIndex::isTextAsset( path );
             }
 
             static void showInExplorer( const EditorCommandTarget& target ) { ContentBrowserModel::showInFileExplorer( findTargetPath( target ) ); }
@@ -738,8 +738,8 @@ namespace sw::editor
         if ( EditorWidgets::beginCenteredModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName ) == false )
             return;
 
-        const string&               pendingDeleteAbs = _model.getPendingDeletePath();
-        const EditorReferenceIndex& referenceIndex   = ContentBrowserModel::getReferenceIndex();
+        const string&           pendingDeleteAbs = _model.getPendingDeletePath();
+        const EditorAssetIndex& referenceIndex   = ContentBrowserModel::getReferenceIndex();
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveToRecycleBin", TextArgumentList().addText( "file", FileUtil::getFileNamePart( pendingDeleteAbs ) ) ).c_str() );
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )

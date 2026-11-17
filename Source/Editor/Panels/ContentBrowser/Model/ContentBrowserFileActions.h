@@ -14,7 +14,7 @@ namespace sw::editor
 {
     struct EditorNewAssetTemplate;
 
-    class EditorReferenceIndex;
+    class EditorAssetIndex;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -80,9 +80,9 @@ namespace sw::editor
          * @brief 에셋(폴더면 그 안 전부)을 @p folderAbs 로 옮기고 참조를 고칩니다 — 트랜잭션이다(`EditorAssetFileCommands::applyAssetMoves`). 폴더는 다 옮긴 뒤 빈 원본을 지운다.
          * @return 이미 그 폴더에 있거나, 자기 안으로 옮기거나, 고칠 수 없는 참조가 있거나, 쓰기가 졌으면(되돌린다) false 입니다.
          */
-        [[nodiscard]] static bool moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorReferenceIndex& inoutIndex, string& outDestinationAbs );
+        [[nodiscard]] static bool moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs );
         /** @brief `moveAssetToFolder` 가 할 일을 디스크를 건드리지 않고 계획합니다(확인 대화상자의 미리보기). 옮길 수 없으면 false 이고 `_failure` 에 이유입니다. */
-        [[nodiscard]] static bool planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan );
+        [[nodiscard]] static bool planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan );
 
         // ------------------------------------------------------------------------------
         // 2) 이름 바꾸기. beginRename 으로 시작하고 commitRename 이나 cancelRename 으로 끝낸다
@@ -101,7 +101,7 @@ namespace sw::editor
          * @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 성공하든 실패하든 이름 바꾸기 상태는 끝납니다.
          * @return 옮겼으면 true 이고 @p outDestinationAbs 에 새 경로가 들어갑니다.
          */
-        bool commitRename( string_view newName, EditorReferenceIndex& inoutIndex, string& outDestinationAbs );
+        bool commitRename( string_view newName, EditorAssetIndex& inoutIndex, string& outDestinationAbs );
         /**
          * @brief 이름 바꾸기의 대상 경로를 만듭니다. @p newName 에 확장자가 없으면 원래 확장자를 붙입니다.
          * @return 이름이 비었거나 대상이 원래 경로와 같으면 false 입니다.

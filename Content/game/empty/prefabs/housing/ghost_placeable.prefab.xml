@@ -1,5 +1,5 @@
 <?asset guid="5abdee560d861983684ba251ab22caf6"?>
-<Prefab formatVersion="0" name="HousingGhostPlaceable">
+<Prefab formatVersion="1" name="HousingGhostPlaceable">
 	<GameObject _schemaVersion="0" _name="HousingGhostPlaceable" _bActive="true">
 		<_listComponent>
 			<SceneComponent _localPosition="0,0,0"

@@ -914,7 +914,7 @@ namespace sw
         for ( const Entry& entry : _listEntry )
         {
             GameObject* pObject = entry._pObject;
-            // 상태 읽기는 형제 순서(`_siblingIndex` PROPERTY)를 세터 없이 쓴다(리플렉션 쓰기라 형식으로 막지 못한다). 구조 세대를 여기서 올린다.
+            // 상태 읽기는 형제 순서(`_siblingOrder` PROPERTY)를 세터 없이 쓴다(리플렉션 쓰기라 형식으로 막지 못한다). 구조 세대를 여기서 올린다.
             if ( pObject->getMutableManager() != nullptr )
                 pObject->getMutableManager()->notifyStructureChanged();
             const bool bSkipRename = pObject->getMutableManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName;

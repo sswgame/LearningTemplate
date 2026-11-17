@@ -9,6 +9,7 @@
   play.keepChanges(재생 중에만 켜진다 — 재생 되돌리기는 playedit 시나리오가 본다). 그 밖에 켜지는 대상이 없는 명령은 실패다(Editor.UndoCoverageNoTarget) —
   명령마다 선택 전체 · 하나씩 · 컴포넌트마다를 대상으로 시도하고, 붙여넣기는 먼저 복사해 둔다. 부모 풀기 대상이 되게 메시 오브젝트에 자식 하나를 만들고, 컴포넌트 위아래 옮기기가 켜지게 그 자식에 컴포넌트 둘을 단다.
   실패 줄의 명령 id 로 그 명령을 고친다. 어느 오브젝트가 달라졌는지는 -gv_automationHashDump=1 로 오브젝트별 해시 로그를 본다.
+  그 뒤 인스펙터 프로퍼티 전수(editor.undoCoverageProperties — 프로퍼티 단위 기록이 결합된 상태까지 되돌리는지)를 본다.
   둘째 단계는 문서 패널 전수(감사 E-16)다: 글 되돌리기를 가진 문서 패널마다 사본 문서를 열고 panel.expectUndoRoundTrip 이 문서 글을 되돌리기와 같은 길로
   다시 적용 → 다시 직렬화해 같은 글인지 본다(다르면 Ctrl+Z 가 문서를 다른 상태로 돌린다). 문서는 저장 왕복 시나리오(saveroundtrip*)와 같은 원본의 실행마다 새 사본이다.
   문서 글이 아니라 창 안 기록(카탈로그 · 어빌리티 카탈로그)이나 모델 명령(UI 미리보기)으로 되돌리는 패널은 글 왕복이 없어 이 단계가 아니다.
@@ -53,6 +54,15 @@
 	<ExpectLog id="Editor.UndoCoverageMismatch" count="0"/>
 	<ExpectLog id="Editor.UndoCoverageNoTarget" count="0"/>
 	<ExpectLog id="Editor.UndoCoverageSkipped" count="2"/>
+	<Expect watch="Editor.SceneHash" sameAs="start"/>
+	<!-- 인스펙터 프로퍼티 전수(설계 E-7) — 고른 오브젝트 · 컴포넌트의 프로퍼티마다 인스펙터 편집 모델로 한 번 고치고 되돌려 씬 해시를 맞댄다.
+	     값 글 하나로 되돌리는 기록이 한 쓰기가 고친 다른 상태(onPropertyChanged)를 놓치면 PropertyMismatch 로 그 프로퍼티 이름이 나온다 -->
+	<DevCommand line="editor.undoCoverageProperties"/>
+	<EditorWaitStable/>
+	<ExpectLog id="Editor.UndoCoveragePropertyResult" count="1"/>
+	<ExpectLog id="Editor.UndoCoveragePropertyUnrecorded" count="0"/>
+	<ExpectLog id="Editor.UndoCoveragePropertySteps" count="0"/>
+	<ExpectLog id="Editor.UndoCoveragePropertyMismatch" count="0"/>
 	<Expect watch="Editor.SceneHash" sameAs="start"/>
 	<!-- 문서 패널 전수 — 패널마다 사본을 열고 되돌리기 왕복을 본다 -->
 	<DevCommand line="panel.focus material"/>

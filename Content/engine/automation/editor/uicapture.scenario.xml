@@ -81,6 +81,12 @@
 	<CaptureEditorUI file="ui_dialogue_graph.png" maxMagentaFraction="0"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close dialogue_graph"/>
+	<!-- 인스펙터 Import Settings(M3) — 텍스처 원본을 고르면 칸마다 해석한 값과 출처(폴더 규칙 이름 · 예외 칸의 Revert)가 강조색 없이, 규칙 칸은 흐린 이름으로 보이는지 눈으로 본다 -->
+	<EditorWaitStable/>
+	<DevCommand line="asset.select editor/textures_raw/splash.png"/>
+	<DevCommand line="panel.focus inspector"/>
+	<EditorWaitStable/>
+	<CaptureEditorUI file="ui_import_settings.png" maxMagentaFraction="0"/>
 	<!-- 에디터 문구가 키 이름(EditorConsole.FilterHint 등)으로 보이지 않는다 — 에디터 지역화 프로젝트가 탑재됐다 -->
 	<EditorWaitStable/>
 	<ExpectLog id="Localization.MissingKey" count="0"/>

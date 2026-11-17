@@ -10,14 +10,21 @@
 
 namespace sw::editor
 {
+    bool EditorContentScan::isListedFile( string_view assetID )
+    {
+        // 원본 곁의 정체성 서술(`<파일>.meta`)은 에셋이 아니다 — 브라우저 · 빠른 열기 · 에셋 색인 · 임포트 훑기가 모두 이 규칙을 지난다(유니티도 .meta 를 보이지 않는다).
+        return AutomationScratch::isOtherProcessInstance( assetID ) == false && StringUtil::endsWith( assetID, AssetMeta::kExtension, true ) == false;
+    }
+
     bool EditorContentScan::collectFiles( string_view contentRoot, string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive,
                                           const StopToken& stopToken )
     {
         const bool bListed = FileUtil::collectFiles( folder, extension, outListFilePath, bRecursive, stopToken );
-        AutomationScratch::removeOtherProcessInstances( contentRoot, outListFilePath );
-        // 원본 곁의 정체성 서술(`<파일>.meta`)은 에셋이 아니다 — 브라우저 · 빠른 열기 · 참조 색인 · 임포트 훑기가 모두 이 입구를 지나므로 여기서 한 번 뺀다(유니티도 .meta 를 보이지 않는다).
-        outListFilePath.erase( std::remove_if( outListFilePath.begin(), outListFilePath.end(), []( const string& path )
-        { return StringUtil::endsWith( path, AssetMeta::kExtension, true ); } ),
+        outListFilePath.erase( std::remove_if( outListFilePath.begin(), outListFilePath.end(), [contentRoot]( const string& path )
+        {
+            string relativePath;
+            return FileUtil::makeRelativePath( contentRoot, path, relativePath ) && isListedFile( FileUtil::normalizeSeparators( relativePath ) ) == false;
+        } ),
                                outListFilePath.end() );
         return bListed;
     }

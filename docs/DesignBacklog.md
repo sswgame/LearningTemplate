@@ -1315,6 +1315,8 @@ REFLECT() struct SW_API AssetImportOverride { REFLECT_BODY();
 | M2 임포터 · 규칙 이전 | M | `Editor/Common/Asset/Model/ModelImportConfig.*` · `Texture/TextureImporter.*`, `Config/Editor/*ImportConfig.json`, 해당 `.meta` | `ModelImportConfigTest.MetaOverrideWinsOverRule` · `.UnknownOverrideKeyIsAnError` · `.SingleFilePatternIsRejected` | M1 |
 | M3 인스펙터 절 | M | Inspector Model · View | `editor/uicapture` 단계, 예외 고치기 → Ctrl+Z 시나리오 | M2 · P1 |
 
+**M3 에서 정한 것(2026-11-17).** 인스펙터는 오브젝트를 고르지 않았고 고른 에셋이 서술을 가진 원본(`models_raw/` · `textures_raw/`)이면 Import Settings 를 보인다(`InspectorContent::ImportSettings`, 모델 `InspectorImportSettings`). 줄은 규칙 구조체의 리플렉션 칸(규칙 파일 키 이름)마다 해석한 값이고, 예외 칸은 서술의 JSON 값 글 그대로 진한 이름 + Revert 단추, 규칙 칸은 흐린 이름이다(강조색 없음 — app-screens). 고친 값은 임포터와 같은 `resolveRule` 로 먼저 해석해 통과할 때만 서술에 쓴다(폴백 없음). 서술 쓰기는 작업 공간 스택의 데이터 단계(서술 글 전 · 후)이고 씬 dirty 는 아니며, 쓰기 · 되돌리기 모두 `AssetHotReload::applySavedAsset` 으로 그 원본을 다시 임포트한다. 언리얼은 `UAssetImportData` 를 Details 에 보이고 Reimport 를 따로 누르게 하나, 유니티처럼 고치면 바로 적용한다(차이 한 칸이라 비용이 작다). 확인: `editor/importsettings`(고치기 → 되돌리기 → 바이트 같음, Revert) · `editor/uicapture` 의 `ui_import_settings.png`.
+
 ### 형제 순서: 분수 색인 키(설계 2026-11-17, 감사 E-6 · 41)
 
 **문제.** `EditorSiblingOrder.cpp:40-52` `renumber` 가 형제 번호를 0 부터 다시 매기며 바뀐 형제마다 전체 XML 스냅샷 → `commitModify` 한다. 루트 8000 에서 한 줄을 옮기면 직렬화 16000 회, 씬 파일 8000 줄이 바뀐다. 번호는 `GameObject::_siblingIndex`(`uint16`, 65535 에서 막힘)이고 에디터 계층 창만 읽는다("틱 · 렌더 순서에는 쓰지 않는다", `GameObject.h:188`).
@@ -1370,11 +1372,19 @@ void applyPropertyText( UndoStepContext& context, const PropertyEditTarget& targ
 - 스냅샷으로 남는 것: 구조 편집(생성 · 삭제 · 컴포넌트 추가 · 삭제). 한 쓰기가 다른 칸을 고치는 타입(`onPropertyChanged`)이 되돌리기에서 어긋나는지는 추측하지 않고 `editor/undocoverage` 의 전수 단계(프로퍼티마다 편집 → 되돌리기 → 상태 글 해시가 편집 전과 같다)가 가린다 — 지는 프로퍼티만 거래에 오브젝트 스냅샷을 함께 싣는다.
 - 기각 — 감사의 임시안(`IsItemDeactivated` 에서 pending 지우기만): 누수는 막지만 선택 전체 직렬화가 남는다.
 
+**P1 에서 정한 것(2026-11-17).**
+- 확장 영역(`IInspectorComponent` — 트랜스폼 · 카메라 …, 컴포넌트에 바로 써 모델을 지나지 않는다): 그룹 위젯이 활성화될 때 **그 컴포넌트 하나의 프로퍼티 전부**의 값 글을 찍고, 풀릴 때 바뀐 프로퍼티만 같은 단계로 남긴다. 유니티 `Undo.RecordObject`(대상 하나를 찍고 차이를 `PropertyModification` 으로) · 언리얼 `Modify` + 트랜잭션 차이와 같다. 기각 — 오브젝트 스냅샷 유지(단위가 둘로 갈린다), 확장마다 모델 쓰기 길로 옮기기(회전 도 표시처럼 프로퍼티와 1:1 이 아닌 입력이 있다 — Godot 도 커스텀 에디터는 `emit_changed` 로 프로퍼티 단위만 받는다).
+- 구간 표(`PropertyEditSpanSet`)는 그리드 모델이 하나씩 든다 — 인스펙터 창이 둘이어도 서로의 구간을 닫지 않는다. 고아 구간은 "다음 `gather`" 가 아니라 그리드의 프레임 끝(`EditorPropertyGrid::endFrame`)이 닫는다: 한 그리드가 한 프레임에 카드마다 모으므로 모으기로는 다른 카드의 활성 위젯과 가릴 수 없다.
+- 구간 하나 = 데이터 단계 한 쌍이고 대상 목록을 인자로 든다(8000 선택이 명령 8000 개가 아니다). 단계 인자에 씬 키를 더했다(미리보기 창 — `ObjectSnapshot` 과 같은 규칙), 스택은 `EditorTransaction::recordObjectCommand` 가 오브젝트의 씬으로 고른다.
+- P2 · P3: 구간 키는 위젯이 아니라 **행**(깊이 0 프로퍼티의 행 키)이다 — 쓰기가 그 행의 구간을 열거나 잇고, 그리드가 행을 그리는 사이 활성 위젯이 그려졌으면(ImGui `EndGroup` 과 같은 `ActiveIdIsAlive` 판정) 잇고, 활성이 아닌 프레임의 마감(놓은 프레임의 쓰기까지 담아 그 프레임에 오른다)이 닫는다. 그리기 확장은 되돌리기를 모르고 쓰기 명령만 부른다(추적 호출 9 곳을 지웠다). 위젯 하나 기준이던 P1 은 벡터 축 셋(`drawVec3Control`)처럼 위젯 여럿인 행에서 X · Y 축을 끌면 프레임마다 한 단계가 되었다(그 전 스냅샷 길은 아예 기록하지 않았다). 언리얼 프로퍼티 체인 편집 구간(`NotifyPreChange` ~ `NotifyPostChange`)과 같은 선. 되돌리기에서 빼는 타입(`atomic<bool>` — 다른 스레드가 쓴다)은 모델이 가린다.
+- P3 규모: 단계 인자는 (씬 키, 프로퍼티 경로 하나, 대상 목록 — 오브젝트 id · 컴포넌트 지역 id 16 바이트, 값 글 표 + 대상마다 번호)다. 다중 선택은 대개 값이 하나라 8000 선택의 거래가 약 0.3 MB 다(대상마다 글 키 · 경로를 들면 1.3 MB 로 판정을 넘었다). 확인은 `editor/inspectorundoscale`(8000 선택: 누르기만 → 기록 0, 끌기 → 기록 1 · 1 MB 이하, Ctrl+Z 한 번에 씬 해시)와 `editor/undocoverage` 의 프로퍼티 전수(`editor.undoCoverageProperties` — 숫자 · 체크 · 벡터 칸을 인스펙터 모델로 고치고 되돌려 해시를 맞댄다). 전수가 `PropertyMismatch` 로 이름을 내는 프로퍼티만 거래에 오브젝트 스냅샷을 함께 싣는다 — 지금은 그런 칸을 모른다(통합 검증에서 나오면 그때 단다).
+- 컨테이너 편집(원소 더하기 · 지우기 · 맵 항목)도 같은 구간을 탄다 — 예전 스냅샷은 주 선택만 찍어 다중 선택의 나머지가 되돌아가지 않았다. 메서드 호출(`invokeMethod`)만 오브젝트 스냅샷으로 남는다(무엇을 바꿀지 모른다).
+
 **판정.** 8000 선택에서 칸을 누르고 나오기 → 기록 0 · 프레임 증가 1 ms 미만. 숫자 칸 끌기 → 구간 열기 프레임 16 ms 미만, 거래 1 MB 미만.
 
 | 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
 |---|---|---|---|---|
-| P1 단계 · 편집 구간 | M | `PropertyEditStep.h/.cpp`(새), `PropertyGridModel.cpp`, `InspectorEditRecorder.*`(축소) | `InspectorEditRecorderTest.DeactivateWithoutEditDropsPending` · `.EditRecordsOnePropertyPerTarget` · `.UndoRestoresValueThroughModelPath` · `.OrphanedSpanClosesOnNextGather` | 없음 |
+| P1 단계 · 편집 구간 | M | `PropertyEditStep.h/.cpp`(새), `PropertyGridModel.cpp`, `InspectorEditRecorder.*`(축소) | `InspectorEditRecorderTest.DeactivateWithoutEditDropsPending` · `.EditRecordsOnePropertyPerTarget` · `.UndoRestoresValueThroughModelPath` · `.OrphanedSpanClosesAtFrameEnd` | 없음 |
 | P2 View 정리 | S | `InspectorPropertyUndo.cpp`, `IInspectorProperty` 구현들의 호출 순서 주석 | 기존 `editor/inspector*` 시나리오 | P1 |
 | P3 전수 · 규모 | M | `EditorUndoCoverage.cpp`(프로퍼티 전수), 8000 선택 시나리오 단계 | `editor/undocoverage` 프로퍼티 단계, 아래 측정 절의 값 | P1 |
 

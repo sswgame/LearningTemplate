@@ -81,6 +81,11 @@ namespace sw::editor
          * @details 프리팹 줄은 활성 씬의 명령이라 내지 않는다. 컴포넌트 카드 메뉴는 메인 카드와 같은 컴포넌트 메뉴다.
          */
         void drawPreviewSelection();
+        /**
+         * @brief 고른 임포트 원본의 Import Settings 절을 그립니다 — 칸마다 해석한 값과 출처(폴더 규칙 · 예외), 예외는 되돌리기 단추. 값을 고치면 서술에 차이를 쓴다.
+         * @details 표식 `inspector.import.<키>`(값 입력란) · `inspector.import.revert.<키>`. 글은 규칙 파일 JSON 값 꼴로 친다(`false` · `"raw"`).
+         */
+        void drawImportSettings();
 
     private:
         /** @brief 리플렉션 프로퍼티, 메서드, 이벤트를 그립니다. 검색 입력란을 포함하며, 컴포넌트와 오브젝트마다 대상을 바꿔 호출합니다. */
@@ -93,5 +98,7 @@ namespace sw::editor
         uint64                                  _nameEditObjectID;   ///< `_nameEditBuffer` 가 가리키는 오브젝트다. 선택이 바뀌면 버린다
         fixed_string<constant::buffer::kMax64>  _addComponentSearch; ///< Add Component 팝업의 검색어
         fixed_string<constant::buffer::kMax64>  _presetNameBuffer;   ///< Presets 메뉴의 새 프리셋 이름 칸 글
+        fixed_string<constant::buffer::kMax256> _importEditBuffer;   ///< Import Settings 에서 치는 중인 값 글(치는 칸은 하나다)
+        string                                  _importEditKey;      ///< `_importEditBuffer` 가 가리키는 칸. 치는 중이 아니면 비어 있다
     };
 } // namespace sw::editor

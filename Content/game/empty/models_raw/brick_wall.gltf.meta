@@ -1,1 +1,5 @@
-<AssetMeta _guid="e9001b099586313b879c1712ed5f1b9f" _source="brick_wall.gltf" />
+<AssetMeta _guid="e9001b099586313b879c1712ed5f1b9f" _source="brick_wall.gltf">
+	<_listImportOverride>
+		<AssetImportOverride _key="fracture" _value='{"pattern": "Uniform", "pieces": 200, "seed": 7, "levels": [6, 30], "interiorColor": "0.55, 0.5, 0.45, 1.0"}' />
+	</_listImportOverride>
+</AssetMeta>

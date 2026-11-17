@@ -1,5 +1,5 @@
 <?asset guid="3d7425fdb0b66ae39a1eb101668c0b40"?>
-<Prefab formatVersion="0" name="Sailboat">
+<Prefab formatVersion="1" name="Sailboat">
 	<!-- 돛배 — 선체 강체(6 m · 600 kg) + 폰툰 여섯(BuoyancyComponent — 폰툰마다 파도 높이를 받아 피칭 · 롤링) + BoatComponent(키 · 돛 · 방향별 물 저항)
 	     + 폰 · 조타(BoatHelmComponent) + 조타륜 운전석(선미). 선원은 갑판(선체 윗면, 로컬 y 0.35)을 걷는다 — 움직이는 발판과 같은 길(디딘 바디의 속도를 싣는다).
 	     돛 효율: 겉보기 바람이 선수와 이루는 각 0(순풍) 1 · π/2(옆바람) 0.8 · 3π/4 0.3 · π(역풍) 0. 노 젓는 배는 이 프리팹의 변형(rowboat.prefab.xml)이다. -->

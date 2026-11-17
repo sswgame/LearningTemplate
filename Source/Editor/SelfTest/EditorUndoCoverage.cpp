@@ -3,21 +3,31 @@
  * @brief 되돌리기 전수 검사(`editor.undoCoverage`)입니다 — 거래를 받는 명령을 모두 실행하고 되돌린 뒤 씬 해시가 처음과 같은지 봅니다.
  * @details 씬 명령은 형식으로 거래를 받는다(`EditorSceneCommandActionFn`). 형식이 막지 못하는 틈 — 거래 안에서 기록 없이 바꾸는 것, 기록이 덜 되돌리는 것 — 을
  *          이 검사가 잡는다(언리얼 에디터의 트랜잭션 테스트 · 유니티 Undo 테스트처럼 실행 → 되돌리기 → 상태 비교). 시나리오 `editor/undocoverage` 가 부른다.
+ *          둘째 검사(`editor.undoCoverageProperties`)는 인스펙터 프로퍼티 전수다 — 프로퍼티 단위 기록(`PropertyEditStep.h`)은 값 글 하나만 되돌리므로, 한 쓰기가
+ *          다른 칸을 고치는 타입(`onPropertyChanged`)이 되돌리기에서 어긋나는지 추측하지 않고 프로퍼티마다 편집 → 되돌리기 → 씬 해시로 가린다(설계 E-7).
  */
 #include "pch.h"
 
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw::editor
 {
@@ -233,9 +243,207 @@ namespace sw::editor
                 SW_LOG_INFO_ID( "Editor.UndoCoverageResult", "%#", outReply.c_str() );
                 return failed == 0 && checked > 0;
             }
+
+            // ------------------------------------------------------------------------------
+            // 프로퍼티 전수
+            // ------------------------------------------------------------------------------
+            /**
+             * @brief 행 @p row 를 인스펙터와 같은 쓰기 명령으로 한 번 고칩니다 — 숫자 · 벡터는 @p delta 만큼, 체크는 뒤집는다.
+             * @return 일반으로 고칠 값을 지을 수 없는 행(글 · 열거형 · 컨테이너 · 확장 타입)이면 false 입니다.
+             */
+            static bool editRow( PropertyGridModel& model, const PropertyValueRow& row, float64 delta )
+            {
+                const bool bCheckbox = row._kind == PropertyRowKind::BitField || ( row._kind == PropertyRowKind::Builtin && row._widget == InspectorValueWidget::Checkbox );
+                if ( bCheckbox )
+                {
+                    const bool* pValue = row._value.getPtr<bool>();
+                    if ( pValue == nullptr )
+                        return false;
+                    model.setRowValue( row._rowID, TaskValue{ *pValue == false } );
+                    return true;
+                }
+                if ( row._kind != PropertyRowKind::Builtin )
+                    return false;
+                if ( row._widget == InspectorValueWidget::Number )
+                {
+                    MutableObjectAddress instance{ nullptr };
+                    const PropertyInfo*  pProp = nullptr;
+                    if ( model.findRowValue( row._rowID, instance, pProp ) == false )
+                        return false;
+                    const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( pProp->_typeName.c_str() );
+                    float64                      value    = 0.0;
+                    if ( pBuiltin == nullptr || ReflectedValueUtil::readNumber( static_cast<ReflectBuiltinIndex>( pBuiltin->_index ), pProp->getValuePtr<void>( instance.get() ), value ) == false )
+                        return false;
+                    model.setRowNumber( row._rowID, value + delta );
+                    return true;
+                }
+                if ( row._widget == InspectorValueWidget::Vector3 )
+                {
+                    const float3* pValue = row._value.getPtr<float3>();
+                    if ( pValue == nullptr )
+                        return false;
+                    model.setRowValue( row._rowID, TaskValue{ *pValue + float3{ static_cast<float32>( delta ) } } );
+                    return true;
+                }
+                return false;
+            }
+
+            /** @brief 프로퍼티 전수의 셈입니다. */
+            struct PropertyCoverageCount
+            {
+                uint32 _checked{ 0 };   ///< 고쳐서 되돌려 본 프로퍼티
+                uint32 _unchanged{ 0 }; ///< 고칠 수 없거나(일반 값이 없다) 써도 바뀌지 않은(범위 끝 · 막힌) 프로퍼티
+                uint32 _failed{ 0 };
+            };
+
+            /**
+             * @brief 행 @p row 하나: 고치고 마감(`endFrame` — 인스펙터 프레임 끝과 같다) → 되돌리기 → 해시를 맞댑니다.
+             * @details 실패 셋은 명령 전수와 같다: 씬을 바꾸고 기록이 없음(`PropertyUnrecorded`), 한 쓰기가 두 단계 이상(`PropertySteps`), 되돌려도 해시가 다름(`PropertyMismatch` —
+             *          그 프로퍼티는 값 글 하나로 되돌릴 수 없는 결합이 있다: 거래에 오브젝트 스냅샷을 함께 싣는다).
+             */
+            static void checkPropertyRow( PropertyGridModel& model, const PropertyValueRow& row, CommandStack& stack, PropertyCoverageCount& inoutCount )
+            {
+                uint64 before = 0;
+                if ( computeEditedSceneHash( before ) == false )
+                {
+                    ++inoutCount._failed;
+                    return;
+                }
+                const size_t indexBefore = stack.getCurrentIndex();
+                uint64       after       = before;
+                // 범위 끝이라 +1 이 잘려 그대로면 -1 로 한 번 더 고친다(체크는 뒤집기 하나).
+                for ( const float64 delta : { 1.0, -1.0 } )
+                {
+                    if ( editRow( model, row, delta ) == false )
+                        break;
+                    model.endFrame();
+                    if ( computeEditedSceneHash( after ) == false )
+                    {
+                        ++inoutCount._failed;
+                        return;
+                    }
+                    if ( after != before || stack.getCurrentIndex() != indexBefore || row._widget == InspectorValueWidget::Checkbox || row._kind == PropertyRowKind::BitField )
+                        break;
+                }
+                const size_t indexAfter = stack.getCurrentIndex();
+                if ( after == before && indexAfter == indexBefore )
+                {
+                    ++inoutCount._unchanged;
+                    return;
+                }
+                ++inoutCount._checked;
+                if ( after != before && indexAfter == indexBefore )
+                {
+                    ++inoutCount._failed;
+                    SW_LOG_ERROR_ID( "Editor.UndoCoveragePropertyUnrecorded", "Undo coverage: editing '%#' changed the scene without an undo step", row._markName.c_str() );
+                    return;
+                }
+                if ( indexAfter > indexBefore + 1 )
+                {
+                    ++inoutCount._failed;
+                    SW_LOG_ERROR_ID( "Editor.UndoCoveragePropertySteps", "Undo coverage: one edit of '%#' pushed %# undo steps", row._markName.c_str(), static_cast<uint64>( indexAfter - indexBefore ) );
+                }
+                while ( stack.getCurrentIndex() > indexBefore && stack.undo() )
+                {
+                }
+                uint64 restored = 0;
+                if ( computeEditedSceneHash( restored ) == false || restored != before )
+                {
+                    ++inoutCount._failed;
+                    SW_LOG_ERROR_ID( "Editor.UndoCoveragePropertyMismatch",
+                                     "Undo coverage: undoing an edit of '%#' did not bring the scene back - the property write changes other state (record an object snapshot with it)",
+                                     row._markName.c_str() );
+                }
+            }
+
+            /** @brief `editor.undoCoverageProperties` — 고른 오브젝트와 그 컴포넌트의 깊이 0 프로퍼티마다 `checkPropertyRow`. 실패가 하나라도 있거나 본 것이 없으면 false 입니다. */
+            static bool runProperties( [[maybe_unused]] const vector<string>& listArgument, string& outReply )
+            {
+                if ( editor::getActiveObjectManager() == nullptr )
+                {
+                    outReply = "no edited scene";
+                    return false;
+                }
+                CommandStack&       stack = editor::getSubsystem<CommandStack>(); // 필수 - 에디터 서브시스템이다
+                vector<GameObject*> listSelected;
+                editor::getMainSceneSelection().getSelectedObjects( listSelected );
+                vector<EditorPropertyGridTarget> listTarget;
+                for ( const GameObject* pObject : listSelected )
+                {
+                    if ( pObject == nullptr )
+                        continue;
+                    listTarget.push_back( EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, pObject->getObjectID(), 0 ) );
+                    for ( const Component* pComponent : pObject->getComponents() )
+                    {
+                        if ( pComponent != nullptr )
+                            listTarget.push_back( EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, pObject->getObjectID(), pComponent->getComponentID() ) );
+                    }
+                }
+
+                PropertyGridModel        model; // 인스펙터와 같은 편집 모델 — 쓰기 · 편집 구간 · 마감이 같은 길이다
+                PropertyGridViewState    state;
+                PropertyGridGatherParams params{};
+                params._window._bSkipOffscreen = SW_FALSE;
+                PropertyCoverageCount count;
+                for ( const EditorPropertyGridTarget& target : listTarget )
+                {
+                    if ( model.beginTarget( target ) == false )
+                        continue; // 앞 프로퍼티의 되돌리기가 그 컴포넌트를 없앴다면 여기서 빠진다(해시 비교가 이미 알렸다)
+                    model.gather( params, state );
+                    for ( uint32 index = 0; index < state._rowCount; ++index )
+                    {
+                        const PropertyValueRow& row = state._listRow[index];
+                        if ( row._depth != 0 || row._bReadOnly != SW_FALSE || row._bDisabled != SW_FALSE )
+                            continue;
+                        checkPropertyRow( model, row, stack, count );
+                    }
+                    model.endTarget();
+                }
+
+                StringBuilder<constant::buffer::kMax128> replyBuilder;
+                replyBuilder.appendFormat( "property undo coverage: checked %# unchanged %# failed %#", count._checked, count._unchanged, count._failed );
+                outReply = string( replyBuilder.view() );
+                SW_LOG_INFO_ID( "Editor.UndoCoveragePropertyResult", "%#", outReply.c_str() );
+                return count._failed == 0 && count._checked > 0;
+            }
+
+            /**
+             * @brief `editor.undoScaleScene <수>` — 활성 씬 루트에 씬 컴포넌트 오브젝트를 그 수만큼 만들고 모두 고릅니다(기록 없음). 규모 판정(8000 선택의 칸 누르기 · 끌기)의 무대다.
+             * @details 명령이 아니라 매니저에 바로 만든다 — 되돌리기 스택이 비어 있어야 뒤의 판정(기록 수 · 거래 바이트)이 그 편집 하나만 본다.
+             */
+            static bool runScaleScene( const vector<string>& listArgument, string& outReply )
+            {
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                uint64             count    = 0;
+                if ( pManager == nullptr || listArgument.size() != 1 || StringUtil::parseUint64( listArgument[0], count ) == false || count == 0 )
+                {
+                    outReply = "usage: editor.undoScaleScene <count> (needs an edited scene)";
+                    return false;
+                }
+                const hashed_string name( "UndoScale" );
+                vector<GameObject*> listObject;
+                listObject.reserve( static_cast<size_t>( count ) );
+                for ( uint64 index = 0; index < count; ++index )
+                {
+                    GameObject* pObject = pManager->createGameObject( name );
+                    if ( pObject != nullptr && pObject->addComponent<SceneComponent>() != nullptr )
+                        listObject.push_back( pObject );
+                }
+                const uint32                             selected = EditorSceneCommands::selectObjects( listObject );
+                StringBuilder<constant::buffer::kMax128> replyBuilder;
+                replyBuilder.appendFormat( "undo scale scene: created %# selected %#", static_cast<uint64>( listObject.size() ), selected );
+                outReply = string( replyBuilder.view() );
+                return listObject.size() == count;
+            }
         };
     } // namespace
 
     SW_DEV_COMMAND( UndoCoverage, "editor.undoCoverage", "editor.undoCoverage [skipCommandID...]",
                     "Run every scene command (transaction-taking), undo it and check the scene hash is back (scenario editor/undocoverage)", &EditorUndoCoverageInternal::run );
+    SW_DEV_COMMAND( UndoCoverageProperties, "editor.undoCoverageProperties", "editor.undoCoverageProperties",
+                    "Edit every inspector property of the selection once through the property grid model, undo it and check the scene hash is back (scenario editor/undocoverage)",
+                    &EditorUndoCoverageInternal::runProperties );
+    SW_DEV_COMMAND( UndoScaleScene, "editor.undoScaleScene", "editor.undoScaleScene <count>",
+                    "Create <count> scene-component objects at the scene root without an undo step and select them all (scenario editor/inspectorundoscale)",
+                    &EditorUndoCoverageInternal::runScaleScene );
 } // namespace sw::editor

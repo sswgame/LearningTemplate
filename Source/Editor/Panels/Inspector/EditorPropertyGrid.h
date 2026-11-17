@@ -53,7 +53,13 @@ namespace sw::editor
         /** @brief 이번 프레임의 펼치기(1) · 접기(-1) 요청을 반환합니다. 0 이면 요청이 없습니다. 컴포넌트 카드처럼 그리드 밖 머리에도 적용할 때 씁니다. */
         OpenAllRequest getOpenAllRequest() const { return _openAllRequest; }
         /** @brief 프레임 끝에 부릅니다. 펼치기 · 접기 요청을 지웁니다. */
-        void endFrame() { _openAllRequest = OpenAllRequest::None; }
+        void endFrame()
+        {
+            _openAllRequest = OpenAllRequest::None;
+            _model.endFrame(); // 닫힌 편집 구간을 되돌리기에 남긴다(그리기를 모두 마친 뒤 — 다중 선택의 값 입히기가 끝났다)
+        }
+        /** @brief 이 그리드의 편집 모델입니다 — 확장 영역의 편집 구간을 여는 View(`InspectorPropertyUndo::trackComponentRegion`)가 쓴다. */
+        PropertyGridModel& editModel() { return _model; }
         /** @brief 현재 검색어를 반환합니다. 비어 있으면 빈 문자열입니다. 환경설정 창이 섹션을 거를 때 씁니다. */
         const utf8* getFilterText() const { return _propertyFilter.c_str(); }
         /**

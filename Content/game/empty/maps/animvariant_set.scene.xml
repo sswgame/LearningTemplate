@@ -1,5 +1,5 @@
 <?asset guid="6352d889290a5d1eaf82bd9931b4230b"?>
-<Scene formatVersion="2" name="animvariant_set">
+<Scene formatVersion="3" name="animvariant_set">
 	<!-- 시나리오 automation/animvariant 의 무대 — 그래프는 그대로이고 셋만 교체표로 바꾼다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

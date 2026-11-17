@@ -1,5 +1,5 @@
 <?asset guid="f0f2cdbef439d49e0a85663621b0ccde"?>
-<Scene formatVersion="2" name="Vehicles">
+<Scene formatVersion="3" name="Vehicles">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

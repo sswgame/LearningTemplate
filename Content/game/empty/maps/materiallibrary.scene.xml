@@ -1,5 +1,5 @@
 <?asset guid="9442c50600cfec06d6e7bfa2c4d9c63e"?>
-<Scene formatVersion="2" name="MaterialLibrary">
+<Scene formatVersion="3" name="MaterialLibrary">
 	<!-- 시나리오 automation/materiallibrary 의 첫 무대 — 외형 라이브러리 불투명 프리셋을 9 열로 세운다(왼쪽 위부터 아래 목록 차례). 털 둘은 껍질 8 장씩이다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

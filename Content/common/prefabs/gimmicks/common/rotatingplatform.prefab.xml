@@ -1,5 +1,5 @@
 <?asset guid="5b7c19dc8ccd8cdc1b1b149f13186b4b"?>
-<Prefab formatVersion="0" name="RotatingPlatform">
+<Prefab formatVersion="1" name="RotatingPlatform">
 	<GameObject _schemaVersion="0" _name="RotatingPlatform" _bActive="true">
 		<_listComponent>
 			<SceneComponent _componentName="SceneComponent"

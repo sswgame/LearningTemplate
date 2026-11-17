@@ -12,6 +12,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Animation/Codec/AnimationCodec.h"
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -148,21 +149,19 @@ namespace sw::editor
             ModelImportRule                          rule;
             StringBuilder<constant::buffer::kMax256> sourceBuilder;
             sourceBuilder.appendFormat( "ModelImportConfig rule %#", ruleIndex );
-            const string source{ sourceBuilder.view() };
-            bool         bRead = JSONFields::readProperties( ruleValue, rule, source, { "lods" } );
-            rule._bFracture    = ruleValue.has( "fracture" ) ? SW_TRUE : SW_FALSE;
-            bRead              = bRead && ( ruleValue.has( "lods" ) == false || parseLODKeys( ruleValue.get( "lods" ), rule ) );
-            if ( bRead && AnimationCodecRegistry::findCodecByName( rule._animationCodec ) == nullptr )
-            {
-                SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleUnknownAnimation", "ModelImportConfig rule '%#': unknown animationCodec '%#' (raw | acl).", rule._name.c_str(), rule._animationCodec.c_str() );
-                bRead = false;
-            }
-            if ( bRead == false )
+            if ( readRuleKeys( ruleValue, rule, sourceBuilder.view() ) == false )
             {
                 _listRule.clear();
                 return false;
             }
             _listRule.push_back( rule );
+        }
+
+        // 한 파일 예외는 그 에셋의 서술에 든다 — 규칙 파일에 두면 옮기거나 이름을 바꿀 때 조용히 빗나간다.
+        if ( AssetImportRuleUtil::rejectSingleFilePatterns( _listRule, "ModelImportConfig" ) == false )
+        {
+            _listRule.clear();
+            return false;
         }
 
         // 조건 없는 규칙은 나머지를 받는 규칙이라 맨 끝에 하나만 둔다. 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 오류로 멈춘다.
@@ -175,6 +174,25 @@ namespace sw::editor
             return false;
         }
         return true;
+    }
+
+    bool ModelImportConfig::readRuleKeys( const JSONValue& ruleValue, ModelImportRule& inoutRule, string_view source )
+    {
+        bool bRead = JSONFields::readProperties( ruleValue, inoutRule, source, { "lods" } );
+        if ( ruleValue.has( "fracture" ) )
+            inoutRule._bFracture = SW_TRUE;
+        if ( bRead && ruleValue.has( "lods" ) )
+        {
+            inoutRule._listLOD.clear(); // 서술의 `lods` 는 규칙의 단계를 통째로 바꾼다(단계 사이 순서 검사가 한 목록 안에서만 뜻이 있다)
+            bRead = parseLODKeys( ruleValue.get( "lods" ), inoutRule );
+        }
+        if ( bRead && AnimationCodecRegistry::findCodecByName( inoutRule._animationCodec ) == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleUnknownAnimation", "ModelImportConfig rule '%#': unknown animationCodec '%#' (raw | acl).", inoutRule._name.c_str(),
+                             inoutRule._animationCodec.c_str() );
+            bRead = false;
+        }
+        return bRead;
     }
 
     bool ModelImportConfig::parseLODKeys( const JSONValue& lodsValue, ModelImportRule& inoutRule )
@@ -232,6 +250,23 @@ namespace sw::editor
     ModelImportRuleMatch ModelImportConfig::findMatchingRule( string_view relativePath ) const
     {
         return AssetImportRuleUtil::select( _listRule, relativePath, "ModelImportConfig" );
+    }
+
+    ModelImportRuleMatch ModelImportConfig::resolveRule( string_view relativePath, const vector<AssetImportOverride>& listOverride ) const
+    {
+        ModelImportRuleMatch match = findMatchingRule( relativePath );
+        if ( match.hasError() || listOverride.empty() )
+            return match;
+        const string label = "ModelImportConfig override of '" + string( relativePath ) + "'";
+        JSONDocument doc;
+        if ( const expected<void> built = AssetImportRuleUtil::makeOverrideObject( listOverride, { "name", "filter" }, doc ); built.has_value() == false )
+        {
+            match._error = AssetImportRuleUtil::describeOverrideError( label, built.error() );
+            return match;
+        }
+        if ( readRuleKeys( doc.getRoot(), match._rule, label ) == false )
+            match._error = label + ": an import override in the .meta is not a model rule setting or its value cannot be read (see the error above).";
+        return match;
     }
 
     string ModelImportConfig::makeDefaultConfigPath()

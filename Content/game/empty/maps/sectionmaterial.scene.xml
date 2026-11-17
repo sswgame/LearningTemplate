@@ -1,5 +1,5 @@
 <?asset guid="7ddba1580e2303a862a76d1eec626a2b"?>
-<Scene formatVersion="2" name="SectionMaterial">
+<Scene formatVersion="3" name="SectionMaterial">
 	<!-- 시나리오 automation/sectionmaterial 의 무대 — 같은 레인저 옷(SectionShowcase)을 왼쪽은 부품 그대로, 오른쪽은 몸 메시에 합쳐(_bMergeParts) 입는다.
 	     sectionmaterial_gilded 는 프리셋만 SectionShowcaseGilded 로 바꿔 규칙이 팔의 옷 구간(mi_ranger) 하나만 바꾼다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">

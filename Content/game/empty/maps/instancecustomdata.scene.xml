@@ -1,5 +1,5 @@
 <?asset guid="f15911a5714b9cf04a3582e6bb96bfaa"?>
-<Scene formatVersion="2" name="InstanceCustomData">
+<Scene formatVersion="3" name="InstanceCustomData">
 	<!-- 시나리오 automation/instancecustomdata 의 무대 — 같은 머티리얼의 상자 둘이 인스턴스 값으로 색을 받는다. instancecustomdata_changed 는 오른쪽 상자의 값만 다르다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

@@ -4,7 +4,7 @@
 
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"

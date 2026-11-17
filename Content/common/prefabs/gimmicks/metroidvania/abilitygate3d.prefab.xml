@@ -1,5 +1,5 @@
 <?asset guid="1ff9de310e857c77af197f8d8261aebf"?>
-<Prefab formatVersion="0" name="AbilityGate3D">
+<Prefab formatVersion="1" name="AbilityGate3D">
 	<GameObject _schemaVersion="0" _name="AbilityGate3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _componentName="RigidBodyComponent"

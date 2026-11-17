@@ -1,5 +1,5 @@
 <?asset guid="77fe53a733e2f56c9c1e7490190b2d86"?>
-<Prefab formatVersion="0" name="PushBlock">
+<Prefab formatVersion="1" name="PushBlock">
 	<GameObject _schemaVersion="0" _name="PushBlock" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"

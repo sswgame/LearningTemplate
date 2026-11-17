@@ -1,5 +1,5 @@
 <?asset guid="4c3b91824a952311891884091c3931ef"?>
-<Scene formatVersion="2" name="ScreenRectView">
+<Scene formatVersion="3" name="ScreenRectView">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

@@ -1,5 +1,5 @@
 <?asset guid="135dc25b4e75b2a064bb954710d01736"?>
-<Scene formatVersion="2" name="animgraphlod">
+<Scene formatVersion="3" name="animgraphlod">
 	<!-- 시나리오 automation/animgraphlod 의 무대 — animvariant_linked 와 같고, 그래프만 상체 레이어에 LOD 규칙을 더한 차이다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

@@ -1,5 +1,5 @@
 <?asset guid="138e28c1deb15750a463c2883947a967"?>
-<Scene formatVersion="2" name="animvariant_base">
+<Scene formatVersion="3" name="animvariant_base">
 	<!-- 시나리오 automation/animvariant 의 무대 — 바탕 그래프 · 원래 셋 · 비어 있는 슬롯. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

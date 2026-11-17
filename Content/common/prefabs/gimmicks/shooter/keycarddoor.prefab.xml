@@ -1,5 +1,5 @@
 <?asset guid="16b40c4f74bcde3663e946e35c761d8a"?>
-<Prefab formatVersion="0" _base="common/prefabs/gimmicks/adventure/lockeddoor.prefab.xml" name="KeycardDoor">
+<Prefab formatVersion="1" _base="common/prefabs/gimmicks/adventure/lockeddoor.prefab.xml" name="KeycardDoor">
 	<PrefabOverrides>
 		<Override key="InteractableComponent#0">
 			<InteractableComponent _interactionID="SwipeKeycard" />

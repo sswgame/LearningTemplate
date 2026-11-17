@@ -1,5 +1,5 @@
 <?asset guid="29c331e32bb5778df30f5ba8786a1d09"?>
-<Prefab formatVersion="0" name="SkeletonRogueCape">
+<Prefab formatVersion="1" name="SkeletonRogueCape">
 	<GameObject _schemaVersion="0" _name="SkeletonRogueCape" _bActive="true">
 		<_listComponent>
 			<MeshComponent _componentName="MeshComponent"

@@ -26,11 +26,12 @@ namespace sw::editor
 
     void AssetReferenceTracker::update( uint64 contentChangeSerial, AssetHotReload& changeSource )
     {
-        EditorReferenceIndexData data{};
-        const EditorTaskPoll     poll = _job.take( data );
+        EditorAssetIndexData data{};
+        const EditorTaskPoll poll = _job.take( data );
         if ( poll == EditorTaskPoll::Ready )
         {
-            SW_LOG_INFO_ID( "AssetReferenceTracker.ReferenceIndexReady", "Reference index ready: %# text asset(s), %# reference(s) in %# ms", data._scannedFileCount, data._listReference.size(), data._scanMilliseconds );
+            SW_LOG_INFO_ID( "AssetReferenceTracker.ReferenceIndexReady", "Asset index ready: %# file(s), %# text asset(s), %# referenced target(s) in %# ms", data._mapEntry.size(), data._scannedFileCount,
+                            data._mapReferrer.size(), data._scanMilliseconds );
             _index.assign( std::move( data ) );
             _bScanInFlight = SW_FALSE;
         }
@@ -43,8 +44,9 @@ namespace sw::editor
         if ( _index.isReady() && _bScanInFlight == SW_FALSE )
         {
             vector<string> listChangedPath;
-            if ( changeSource.takeChangedPaths( listChangedPath ) && tryRefreshChangedFiles( listChangedPath ) )
+            if ( changeSource.takeChangedPaths( listChangedPath ) )
             {
+                _index.applyChanges( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listChangedPath );
                 _scanSerial = contentChangeSerial;
                 return;
             }
@@ -52,32 +54,16 @@ namespace sw::editor
         requestScan( contentChangeSerial, changeSource );
     }
 
-    bool AssetReferenceTracker::tryRefreshChangedFiles( const vector<string>& listChangedPath )
-    {
-        const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-        for ( const string& assetID : listChangedPath )
-        {
-            const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, assetID ) );
-            if ( bExists != _index.containsFile( assetID ) )
-                return false; // 생기거나 사라진 파일 — 다른 파일의 참조 판정이 바뀐다
-        }
-        for ( const string& assetID : listChangedPath )
-        {
-            _index.refreshFile( resourceRoot, assetID );
-        }
-        return true;
-    }
-
     void AssetReferenceTracker::refreshFile( string_view assetID )
     {
         if ( _index.isReady() )
-            _index.refreshFile( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetID );
+            _index.applyChanges( editor::getSubsystem<AssetPaths>().getRootFolderPath(), { string( assetID ) } );
     }
 
     void AssetReferenceTracker::restartPendingScan( uint64 contentChangeSerial, AssetHotReload& changeSource )
     {
         // 대기 여부를 따로 읽지 않고 꺼내 본다 — 막 끝난 낡은 결과는 여기서 버려지고, 아직 도는 스캔은 새 요청이 그 세대를 버린다.
-        EditorReferenceIndexData staleData{};
+        EditorAssetIndexData staleData{};
         if ( _job.take( staleData ) != EditorTaskPoll::Idle )
             requestScan( contentChangeSerial, changeSource );
     }
