@@ -7,6 +7,7 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 
+#include "Programs/ReflectionParser/CodeEmit.h"
 #include "Programs/ReflectionParser/GeneratedFiles.h"
 #include "Programs/ReflectionParser/ParsedReflection.h"
 
@@ -73,6 +74,8 @@ namespace sw
          * @details 끊어진 경로 검사 · 옮기기 도구가 어느 칸이 경로인지 아는 근거다. 손으로 맞추던 이름 표를 대신한다(`Scripts/generate/asset_reference_field_list.py` 가 모은다).
          */
         [[nodiscard]] bool writeAssetFieldList() const;
+        /** @brief 이번 실행이 만든 `.gen.cpp` 바이트를 방출 함수 구역마다 로그 `ReflectionParser.EmitBytes` 한 줄로 남깁니다(만든 것이 없으면 남기지 않는다). */
+        void logEmitBytes() const;
         /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */
         [[nodiscard]] bool writeFixedSchemaList() const;
 
@@ -82,5 +85,7 @@ namespace sw
         IncrementalCheck     _incrementalCheck;
         uint64               _runStartTime;    ///< 이번 실행의 시작(출력 폴더 표식 파일의 시각) — 그 뒤에 바뀐 의존은 0 으로 적는다
         vector<string>       _listIncludePath; ///< 출력 디렉터리가 맨 앞이다(생성 헤더를 include 하는 원본이 있다)
+        /// @brief 방출 함수 구역마다 낸 바이트의 합입니다. 헤더마다 워커가 더한다(`parseEachInParallel`).
+        mutable std::array<atomic<uint64>, static_cast<size_t>( CodeEmitSection::Count )> _arrEmitBytes;
     };
 } // namespace sw

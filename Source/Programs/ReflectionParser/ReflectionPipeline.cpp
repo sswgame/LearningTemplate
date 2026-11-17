@@ -25,6 +25,9 @@ namespace sw
     {
         struct ReflectionPipelineInternal
         {
+            /** @brief 방출 바이트 로그의 백분율 눈금입니다. */
+            static constexpr uint64 kPercentScale = 100;
+
             /**
              * @brief 칸 이름 @p name 의 XML 속성 이름입니다 — `XMLFields::getAttributeName` 과 같은 규칙이다(직접 적은 이름은 그대로, `_` 를 떼고, 불리언 `_bX` 는 `x`).
              * @details 파서는 엔진을 링크하지 않아 같은 규칙을 여기 둔다. 규칙을 바꾸면 둘을 함께 고친다(칸이 두 이름으로 생성 목록에 드는지 파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefParams.h` 가 본다).
@@ -314,7 +317,12 @@ namespace sw
         , _incrementalCheck{ options, session._config }
         , _runStartTime{ 0 }
         , _listIncludePath{}
+        , _arrEmitBytes{}
     {
+        for ( atomic<uint64>& bytes : _arrEmitBytes )
+        {
+            bytes.store( 0, std::memory_order_relaxed );
+        }
         // 출력 디렉터리를 include 경로 맨 앞에 한 번만 넣는다(원본이 다른 생성 헤더를 include 할 수 있다).
         _listIncludePath.reserve( options._listIncludePath.size() + 1 );
         _listIncludePath.push_back( options._outputDir );
@@ -377,6 +385,7 @@ namespace sw
         SW_LOG_INFO_ID( "ReflectionPipeline.ParsingInputUpDate", "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size(),
                         _pOptions->_listInputFile.size(), upToDate, noReflect );
         errorCount += parsePending( listPending );
+        logEmitBytes();
 
         if ( writeFlagOpsUmbrella() == false )
             ++errorCount;
@@ -610,7 +619,12 @@ namespace sw
             if ( enumInfo._bIsBitFlag == SW_TRUE )
                 stamp._bHasBitFlagEnum = true;
         }
-        const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, generator.makeSourceText() ) &&
+        const string sourceText = generator.makeSourceText();
+        for ( size_t section = 0; section < _arrEmitBytes.size(); ++section )
+        {
+            _arrEmitBytes[section].fetch_add( generator.getEmitBytes()._arrBytes[section], std::memory_order_relaxed );
+        }
+        const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, sourceText ) &&
                               GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
                               GeneratedFileUtil::writeIfChanged( paths._editorMetadataPath, generator.makeEditorMetadataText() ) &&
                               GeneratedFileUtil::writeStamp( paths._stampPath, stamp );
@@ -755,6 +769,28 @@ namespace sw
             text += "\n";
         }
         return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileAssetReferenceFieldsList ), text );
+    }
+
+    void ReflectionPipeline::logEmitBytes() const
+    {
+        uint64 total = 0;
+        for ( const atomic<uint64>& bytes : _arrEmitBytes )
+        {
+            total += bytes.load( std::memory_order_relaxed );
+        }
+        if ( total == 0 )
+            return;
+        // 한 줄에 구역마다 `이름=바이트(백분율)` — 표로 바꿀 후보는 합계의 25 % 를 넘는 구역이다(docs/DesignBacklog.md W-R3 (a)). 이번 실행이 다시 만든 헤더만 센다.
+        string text;
+        for ( size_t section = 0; section < _arrEmitBytes.size(); ++section )
+        {
+            const uint64                             bytes = _arrEmitBytes[section].load( std::memory_order_relaxed );
+            StringBuilder<constant::buffer::kMax128> item;
+            item.appendFormat( " %#=%#(%#", CodeEmitByteReport::toString( static_cast<CodeEmitSection>( section ) ), bytes, bytes * ReflectionPipelineInternal::kPercentScale / total );
+            item.append( "%)" );
+            text += item.view();
+        }
+        SW_LOG_INFO_ID( "ReflectionParser.EmitBytes", "Generated .gen.cpp bytes by emitter (headers generated in this run, total %#):%#", total, text );
     }
 
     bool ReflectionPipeline::writeFlagOpsUmbrella() const
