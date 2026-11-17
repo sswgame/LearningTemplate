@@ -509,11 +509,10 @@ namespace sw
         createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
 
+        // 셰이더는 SM5(vs_5_0 · cs_5_0 — ShaderStageInfo 표)로 쿠킹하므로 기능 수준 11_0 만 받는다. 10_0 으로 내려가면 셰이더 생성이 모두 실패하는데도
+        // 초기화는 진행했다(R-14). 언리얼 D3D11RHI 도 11_0 미만을 받지 않는다.
         D3D_FEATURE_LEVEL           featureLevel;
-        constexpr D3D_FEATURE_LEVEL arrFeatureLevel[2] = {
-            D3D_FEATURE_LEVEL_11_0,
-            D3D_FEATURE_LEVEL_10_0,
-        };
+        constexpr D3D_FEATURE_LEVEL arrFeatureLevel[] = { D3D_FEATURE_LEVEL_11_0 };
 
         Microsoft::WRL::ComPtr<IDXGISwapChain>      createdSwapChain;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> createdContext;
@@ -552,7 +551,13 @@ namespace sw
 
         if ( FAILED( hr ) )
         {
-            SW_LOG_ERROR_ID( "D3D11.FailedCreateDirect3DDevice", "Failed to create Direct3D 11 Device and SwapChain! HRESULT: %#", hr );
+            // Debug 구성은 디버그 레이어(Windows "그래픽 도구" 선택 기능)가 없으면 이 값으로 실패한다 — 까닭을 말하고 멈춘다(레이어 없이 몰래 진행하지 않는다).
+            if ( hr == DXGI_ERROR_SDK_COMPONENT_MISSING )
+            {
+                SW_LOG_ERROR_ID( "D3D11.DebugLayerMissing", "Direct3D 11 debug layer is not installed (DXGI_ERROR_SDK_COMPONENT_MISSING) - install the Windows 'Graphics Tools' optional feature for Debug builds" );
+                return false;
+            }
+            SW_LOG_ERROR_ID( "D3D11.FailedCreateDirect3DDevice", "Failed to create Direct3D 11 Device and SwapChain at feature level 11_0! HRESULT: %#", hr );
             return false;
         }
         // 즉시 컨텍스트는 렌더 스레드와 전송 · 폴링 스레드가 함께 쓴다. 런타임 보호를 켜지 못하면 초기화를 실패시킨다(폴백 없음).
