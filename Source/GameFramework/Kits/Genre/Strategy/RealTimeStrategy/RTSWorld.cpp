@@ -212,9 +212,15 @@ namespace sw
     {
     }
 
-    bool RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height, const RTSSettings& settings )
+    bool RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height )
     {
-        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR_ID( "RTSWorld.RTSWorldNeedsCatalog", "RTSWorld: no unit catalog - the rules are read from its <Rules>" );
+            return false;
+        }
+        const RTSSettings& settings   = pCatalog->getRules();
+        const string       rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
             SW_LOG_ERROR_ID( "RTSWorld.RTSWorldRefusedSettings", "RTSWorld: refused settings - %#", rangeError.c_str() );

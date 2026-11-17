@@ -88,8 +88,15 @@ namespace sw
             return false;
         if ( initResult == SessionStateInitResult::Fresh )
         {
+            // 광물 통화는 RTS 규칙 자산(유닛 카탈로그의 <Rules>)의 것이다 — C++ 기본값을 짐작하지 않는다(감사 K-4)
+            const RTSCatalog* pUnits = game::findSubsystem<const RTSCatalog>();
+            if ( pUnits == nullptr )
+            {
+                SW_LOG_ERROR_ID( "FrontierCity.UnitCatalogMissing", "[Frontier] the unit catalog is not loaded - the starting minerals have no currency" );
+                return false;
+            }
             pState->getWallet().add( CitySettings{}._currency, _startingDeben );
-            pState->getWallet().add( RTSSettings{}._mineralCurrency, _startingMinerals );
+            pState->getWallet().add( pUnits->getRules()._mineralCurrency, _startingMinerals );
         }
         if ( initializeCity( _city, *pState ) == false )
         {

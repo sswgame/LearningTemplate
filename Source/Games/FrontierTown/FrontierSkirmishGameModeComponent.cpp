@@ -81,7 +81,7 @@ namespace sw
         const RTSCatalog* pCatalog = game::findSubsystem<const RTSCatalog>();
         if ( pCatalog == nullptr )
             return false;
-        if ( outWorld.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize, RTSSettings{} ) == false )
+        if ( outWorld.initialize( pCatalog, FrontierTownData::kLandSize, FrontierTownData::kLandSize ) == false )
             return false;
         outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
         (void)outWorld.addPlayer( 0, &state.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 공유 지갑을 쓴다
