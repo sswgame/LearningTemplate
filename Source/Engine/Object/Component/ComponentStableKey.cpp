@@ -162,6 +162,11 @@ namespace sw
         pComp->_localID = id;
     }
 
+    uint64 ComponentStableKey::makeRandomLocalID()
+    {
+        return ComponentStableKeyInternal::makeRandomID();
+    }
+
     void ComponentStableKey::restoreLocalID( Component* pComp, uint64 localID )
     {
         if ( pComp != nullptr )

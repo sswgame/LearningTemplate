@@ -250,3 +250,45 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, CookedFlattenedNodeSpawnsFromTemplate )
     SW_EXPECT_TRUE( cookedState.find( "_localPosition=\"4,5,6\"" ) != string::npos );
     SW_EXPECT_EQUAL( Util::saveState( pSourceWheel ), cookedState );
 }
+
+/**
+ * @brief [PrefabSpawnTemplateTest] 바깥 프리팹이 중첩 부품에 덮어쓴 것(`<Part path>`)은 노드의 고정 지역 id(`localID`)를 따른다 — 원본에서 앞 노드를 지워도 같은 부품에 얹힌다(감사 A-2)
+ * @details 옮기는 동안: 옛 인덱스 경로(`1`)도 그 자리의 노드에 맞는다. 예전 부품 키는 목록 인덱스라 앞 노드를 지우면 덮어쓰기가 버려지거나 다른 부품에 얹혔다.
+ */
+SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideFollowsNodeWhenAnEarlierNodeIsRemoved )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    wheelID    = test::ScopedScratchDomain::makeID( "wheel.prefab.xml" ).str();
+    const string                    cartID     = test::ScopedScratchDomain::makeID( "cart.prefab.xml" ).str();
+    const string                    depotID    = test::ScopedScratchDomain::makeID( "depot.prefab.xml" ).str();
+    const string                    wheelA     = "<PrefabInstance name=\"WheelA\" prefab=\"" + wheelID + "\" localID=\"#000000000000000a\" />";
+    const string                    wheelB     = "<PrefabInstance name=\"WheelB\" prefab=\"" + wheelID + "\" localID=\"#000000000000000b\" />";
+    const auto                      writeDepot = [&]( const string& partPath )
+    {
+        const string overrides = "<PrefabOverrides><Part path=\"" + partPath + "\"><PrefabOverrides><Override key=\"Root#0\"><SceneComponent _localPosition=\"7,7,7\" /></Override></PrefabOverrides></Part></PrefabOverrides>";
+        return FileUtil::writeTextFile( domain.makeDiskPath( "depot.prefab.xml" ), Util::makePrefab( "Depot", "0,0,0", "<PrefabInstance name=\"Cart\" prefab=\"" + cartID + "\">" + overrides + "</PrefabInstance>" ) );
+    };
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "wheel.prefab.xml" ), Util::makePrefab( "Wheel", "4,5,6" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelA + wheelB ) ) );
+
+    // 옮기는 동안: 옛 인덱스 경로 `1` 이 그 자리의 노드(WheelB)에 맞는다.
+    SW_REQUIRE_TRUE( writeDepot( "1" ) );
+    {
+        PrefabCache       cache;
+        GameObjectManager manager;
+        SW_REQUIRE_NOT_NULL( cache.spawn( &manager, depotID ) );
+        const GameObject* pWheelB = manager.findGameObjectByName( hashed_string( "WheelB" ) );
+        SW_REQUIRE_NOT_NULL( pWheelB );
+        SW_EXPECT_TRUE( Util::saveState( pWheelB ).find( "_localPosition=\"7,7,7\"" ) != string::npos );
+    }
+
+    // id 경로로 적고, 원본에서 앞 노드(WheelA)를 지운다 — 덮어쓰기는 WheelB 를 따라간다.
+    SW_REQUIRE_TRUE( writeDepot( "#000000000000000b" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelB ) ) );
+    PrefabCache       cache;
+    GameObjectManager manager;
+    SW_REQUIRE_NOT_NULL( cache.spawn( &manager, depotID ) );
+    const GameObject* pWheelB = manager.findGameObjectByName( hashed_string( "WheelB" ) );
+    SW_REQUIRE_NOT_NULL( pWheelB );
+    SW_EXPECT_TRUE( Util::saveState( pWheelB ).find( "_localPosition=\"7,7,7\"" ) != string::npos );
+}

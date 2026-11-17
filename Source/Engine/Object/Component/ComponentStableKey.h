@@ -54,6 +54,8 @@ namespace sw
         static void freezeLocalIDs( GameObject& owner );
         /** @brief 복사한 컴포넌트(@p pComp)에 오브젝트 안에서 겹치지 않는 새 id 를 줍니다 — 같은 오브젝트에 상태를 베껴 붙이면 원본의 id 가 따라온다. */
         static void assignFreshLocalID( Component* pComp );
+        /** @brief 운영체제 난수 64 비트 지역 id(0 이 아님)입니다 — 겹침 검사는 부르는 쪽이 한다(중첩 프리팹 노드의 id 도 이것으로 만든다). */
+        static uint64 makeRandomLocalID();
         /** @brief 값을 베껴 덮어쓴 컴포넌트(@p pComp — 에디터 값 붙여 넣기)의 지역 id 를 덮기 전 값 @p localID 로 되돌립니다. 베낀 글에 원본의 id 가 들어 있다. */
         static void restoreLocalID( Component* pComp, uint64 localID );
 
