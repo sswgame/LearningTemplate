@@ -8,6 +8,7 @@
  *            `PackConfig::_cookRules`)과, 스테이징 폴더(`<쿠킹 폴더>/<도메인>`)의 쿠킹 산출물. 씬 · 프리팹 쿠킹본은 그 원본이 담길 때만 담고, 셰이더 바이너리 같은 나머지 산출물은 다 담는다.
  *            고르기는 굽는 모든 도메인을 한 번에 본다 — `common` 은 굽는 게임들이 쓰는 것의 합이다(`-game=` 이면 그 게임이 쓰는 것만). 예전에는 폴더째 담아
  *            `common.pack` 이 게임이 쓰지 않는 캐릭터 · 소품까지 들었다(359MB, 빈 게임 팩은 6MB).
+ *            저작 원본 중 쿠킹본이 대신하는 것(번역 원문 · 번역 테이블 XML → `.locres`)은 `PackConfig` 의 제외 규칙(`Exclude_Localization_Authoring_Tables`)이 뺀다 — 언리얼도 `.locres` 만 출하한다.
  *            스테이징은 도메인 기준 **같은 상대 경로**로 들어간다. 소스 트리에 남은 쿠킹본(`AssetCookPath::isCookedOutput`)은 낡은 잔재라 넣지 않고 이름을 알린다.
  *          - 증분: 팩 하나가 쿠킹 작업 하나다(`CookStore::cookFile`). 입력은 읽은 파일마다의 내용 해시와 두 폴더의 목록이고, 설정(`PackConfig` 전체 · 셰이더 폴더 ·
  *            빌드 타깃)과 **그 도메인에서 고른 파일 목록**은 작업 키의 설정 해시다 — 다른 팩의 참조가 바뀌어 고른 것이 달라지면 다시 굽고, 같으면 다시 쓰지 않는다.
@@ -48,12 +49,6 @@ namespace sw
         string                _buildTarget;                                          ///< 빌드 타깃(`Game` · `Client` · `Server`) — 그 타깃이 빼는 종류를 팩에 넣지 않는다
         PackAutomationContent _automationContent{ PackAutomationContent::Excluded }; ///< 자동화 콘텐츠(시나리오)를 담는가 — 쿠킹하는 구성에 자동화 실행기가 있으면 `Included`
         string                _gamePackFolder;                                       ///< 비우면 `Content/game/` 의 모든 팩, 아니면 그 폴더(`empty`) 하나만 베이크한다
-        /**
-         * @brief 담지 않을 소스 파일의 절대 경로(`FileUtil::normalizePath`)입니다. 비어 있을 수 있다.
-         * @details 이 층(Resource)이 읽을 수 없는 규칙으로 위 층이 정한다 — 출시 문화권(`stagedCultures`) 밖의 번역 테이블(`LocalizationProject::collectUnstagedTranslationTables`).
-         *          목록은 쿠킹 설정 해시에 들어가 바뀌면 팩을 다시 베이크한다.
-         */
-        vector<string> _listExcludedSourceFile;
         /**
          * @brief 셰이더 쿠킹 요청이 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, 정규화) → 출처 묶음입니다 — 위 층(렌더러의 요청 수집, `ShaderCookRequest::_listOrigin`)이 채운다.
          *        셰이더가 없는 구성(전용 서버)은 비어 있다.

@@ -45,7 +45,6 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Localization/LocalizationCooker.h"
-#include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
 #include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
@@ -192,13 +191,6 @@ namespace sw
                 const bool bShippingPack  = commandLine.isArgumentProvided( CommandLineArgument::PACK_FOR_SHIPPING );
                 const bool bHasAutomation = engine::findSubsystem<IAutomationRuntime>() != nullptr;
                 params._automationContent = bHasAutomation && bShippingPack == false ? PackAutomationContent::Included : PackAutomationContent::Excluded;
-                // 출시 문화권(`stagedCultures`) 밖의 번역 테이블은 팩에 넣지 않는다 — 규칙은 로컬라이제이션 층이 갖고 쿠커는 목록만 받는다.
-                if ( const expected<void> staged = LocalizationProject::collectUnstagedTranslationTables( params._resourceRoot, params._listExcludedSourceFile ); staged.has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "Headless.PackCookLocalizationProject", "Pack cook: a localization project could not be read for culture staging - %# (%#)", staged.error().message(),
-                                     staged.error().detail() );
-                    return false;
-                }
                 if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )
                 {
                     // 팩 폴더 이름은 게임 이름과 다를 수 있어(ThemeParkTycoon → themepark) 게임 설정의 팩 루트(`game/<폴더>`)에서 읽는다.

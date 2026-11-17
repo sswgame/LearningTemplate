@@ -2,12 +2,17 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/PackCooker.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Localization/LocalizationBinaryTable.h"
+#include "Engine/Localization/LocalizationDocuments.h"
 
 using namespace sw;
 
@@ -212,4 +217,26 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
     SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "game/empty" ) );
     SW_EXPECT_EQUAL( string( "game_empty.2.pack" ), PackCooker::makePackFileName( "game/empty", "", 2 ) );
     SW_EXPECT_EQUAL( string( "game_empty.music.0.pack" ), PackCooker::makePackFileName( "game/empty", "music", 0 ) );
+}
+
+/**
+ * @brief [PackCookerTest] 저장소의 실제 팩 규칙(`Config/Engine/PackConfig.json`)은 저작 번역 XML(원문 `*.strings.xml` · 번역 `*.translation.xml`)을 팩 색인에 넣지 않는다 — 어느 빌드 타깃이든
+ * @details 쿠킹본 구성은 프로젝트 파일과 `.locres` 만 읽는다(`LocalizationManager::readCookedProject`). 고르기와 팩 쓰기가 모두 이 판정(`shouldIncludeFile`)을 지난다(감사 A-16).
+ */
+SW_TEST_CASE( PackCookerTest, RealPackRulesExcludeLocalizationAuthoringTables )
+{
+    PackConfig config;
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    const string stringTable      = string( "localization/engine" ) + SourceStringTable::kExtension;
+    const string translationTable = string( "localization/ko" ) + TranslationTable::kExtension;
+    const string project          = string( "localization/engine" ) + LocalizationProject::kExtension;
+    const string cookedTable      = string( "localization/engine.ko" ) + LocalizationBinaryTable::kExtension;
+    for ( const utf8* pBuildTarget : { "Game", "Client", "Server" } )
+    {
+        const string label = string( "build target " ) + pBuildTarget;
+        SW_EXPECT_FALSE_MSG( includes( config, stringTable, pBuildTarget ), label );
+        SW_EXPECT_FALSE_MSG( includes( config, translationTable, pBuildTarget ), label );
+        SW_EXPECT_TRUE_MSG( includes( config, project, pBuildTarget ), label );
+        SW_EXPECT_TRUE_MSG( PackCooker::shouldIncludeStagedFile( cookedTable, kShaderFolder, pBuildTarget ), label );
+    }
 }

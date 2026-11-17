@@ -212,7 +212,7 @@ namespace sw
      * @details `<LocalizationProject name="engine" sourceCulture="en"><cultures><item>ko</item><item>ja</item></cultures><stringTables><item>engine.strings.xml</item></stringTables>
      *            <codeRoots><item>Source/Engine</item></codeRoots><assetRoots><item>engine/settings</item></assetRoots></LocalizationProject>` 형태이며, 테이블 이름은 프로젝트 파일 옆의 상대 경로, `codeRoots` 는 저장소 상대 경로,
      *          `assetRoots` 는 리소스 경로다. 수집기는 첫 테이블(`stringTables[0]`)에 쓴다. 번역 테이블은 문화권마다 `<culture>.translation.xml`,
-     *          번역 메모리는 `tm/<culture>.tm.xml`, 교환 파일은 `po/<culture>.po` 이다. 파일을 훑지 않고 이름으로 읽으므로 팩 안에서도 같다.
+     *          번역 메모리는 `tm/<culture>.tm.xml`, 교환 파일은 `po/<culture>.po` 이다. 배포 팩에는 프로젝트 파일과 쿠킹본(`.locres`)만 든다 — 원문 · 번역 테이블 XML 은 팩 제외 규칙(`PackConfig.json` 의 `Exclude_Localization_Authoring_Tables`)이 뺀다.
      *          `stagedCultures` 는 출시하는 문화권이다(언리얼 패키징 설정의 Cultures to Stage). `cultures` 의 부분 집합이어야 하고, `--check-text` 는 이 문화권의
      *          빠지거나 낡은 번역을 실패로 본다. 목록 밖 문화권은 번역 중으로 보고 개수만 보고한다.
      *          자산 뿌리(`assetRoots`)는 리소스 경로 칸이라 리플렉션 칸으로 선언한다 — 참조 검사 · 옮기기가 칸 이름을 생성 목록에서 안다(읽기는 아래 손 읽기가 한다. 목록 모양은 리플렉션 컨테이너와 같다).
@@ -259,11 +259,5 @@ namespace sw
          * @details 쿠킹 스테이징은 리소스 루트 기준 같은 상대 경로라(`PackCooker`) 리소스 id 그대로 팩에서 찾는다.
          */
         string makeCookedTablePath( string_view projectPath, string_view culture ) const;
-        /**
-         * @brief @p folder 아래 프로젝트마다 그 폴더의 번역 테이블 중 출시 문화권 밖의 것을 @p outListAbsPath 에 더합니다(`FileUtil::normalizePath` 한 절대 경로).
-         * @details 팩 쿠킹이 담지 않는다(언리얼 Cultures to Stage — `PackCookParams::_listExcludedSourceFile`).
-         * @return 프로젝트를 읽지 못하면 false 이고 이유는 @p outError 입니다 — 어느 테이블이 출시 문화권인지 모른 채 팩을 베이크하지 않는다.
-         */
-        [[nodiscard]] static expected<void> collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath );
     };
 } // namespace sw
