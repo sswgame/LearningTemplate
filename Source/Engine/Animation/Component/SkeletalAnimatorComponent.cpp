@@ -189,9 +189,13 @@ namespace sw
 
     uint32 SkeletalAnimatorComponent::countActiveBlendSpaceSamples() const
     {
-        uint32 active = 0;
-        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _listBlendSpace )
-            active += state->countActiveSamples();
+        // 재생 중인 슬롯(현재 · 페이드로 들어오는 다음)의 블렌드 스페이스만 센다 — 그래프의 다른 블렌드 스페이스 상태도 가중치를 늘 다시 구하지만 샘플하지 않는다.
+        const AnimationPlayer&         player   = _graphPlayer.getPlayer();
+        const SkeletalBlendSpaceState* pCurrent = findBlendSpaceState( player.getCurrentPlayable() );
+        const SkeletalBlendSpaceState* pNext    = player.isCrossfading() ? findBlendSpaceState( player.getNextPlayable() ) : nullptr;
+        uint32                         active   = pCurrent != nullptr ? pCurrent->countActiveSamples() : 0u;
+        if ( pNext != nullptr && pNext != pCurrent )
+            active += pNext->countActiveSamples();
         return active;
     }
 

@@ -98,6 +98,27 @@ namespace sw
             return countSelected( gameMode, true, outValue );
         }
 
+        /** @brief 감시 값 `Skirmish.UnitCount` 입니다. 두 진영의 유닛 · 건물 수의 합입니다(AI 가 일꾼 · 군대를 늘리는지 본다). */
+        [[nodiscard]] bool readUnitCount( const SkirmishGameModeComponent& gameMode, float64& outValue )
+        {
+            uint32 count = 0;
+            gameMode.getWorld().forEachUnit( [&count]( const RTSUnit& unit )
+            {
+                (void)unit;
+                ++count;
+            } );
+            outValue = static_cast<float64>( count );
+            return true;
+        }
+
+        /** @brief 감시 값 `Skirmish.AIPlayerCount` 입니다. 컴퓨터가 맡은 플레이어(0 · 1) 수입니다 — 자동 플레이로 열렸으면 2 다. */
+        [[nodiscard]] bool readAIPlayerCount( const SkirmishGameModeComponent& gameMode, float64& outValue )
+        {
+            const SkirmishMatch& match = gameMode.getMatch();
+            outValue                   = static_cast<float64>( ( match.findAI( 0 ) != nullptr ? 1 : 0 ) + ( match.findAI( 1 ) != nullptr ? 1 : 0 ) );
+            return true;
+        }
+
         /** @brief 감시 값 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
         [[nodiscard]] bool readAITask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
@@ -199,6 +220,9 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", SkirmishGameModeComponent, &readSelectedCount );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishUnitCount, "Skirmish.UnitCount", "Units and buildings of both players", SkirmishGameModeComponent, &readUnitCount );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishAIPlayerCount, "Skirmish.AIPlayerCount", "Players (0 and 1) the AI commander plays - 2 when the match opened in autoplay", SkirmishGameModeComponent,
+                                   &readAIPlayerCount );
     SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", SkirmishGameModeComponent, &readSelectedMovingCount );
     SW_DEV_COMMAND( SkirmishOrder, "skirmish.order", "skirmish.order <x> <z>", "Attack-move every army unit of this screen's player to the map point (through the lockstep input in a network match)",
                     &SkirmishGameModeComponentDevInternal::runOrder );
@@ -274,6 +298,7 @@ namespace sw
         , _bDragging{ SW_FALSE }
         , _bDragPointValid{ SW_FALSE }
         , _bAttackMovePending{ SW_FALSE }
+        , _bAutoPlayChangeReported{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -348,6 +373,12 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
 
+        // 자동 플레이는 판을 열 때 한 번 읽는다(누가 사람인지 판에 박힌다) — 판이 열린 뒤 바뀌면 조용히 무시하지 않고 알린다(시나리오는 <Launch> 로 켠다).
+        if ( _bAutoPlayChangeReported == SW_FALSE && isAutoPlayOn() == ( _bHuman == SW_TRUE ) )
+        {
+            SW_LOG_ERROR_ID( "SkirmishGameMode.AutoPlayChangedAfterStart", "[Skirmish] autoplay changed after the match opened - it is read once when the match opens (set gv_skirmishAutoPlay at launch)" );
+            _bAutoPlayChangeReported = SW_TRUE;
+        }
         const InputManager* pInput = game::findSubsystem<InputManager>();
         if ( pInput != nullptr )
             updateInput( *pInput );

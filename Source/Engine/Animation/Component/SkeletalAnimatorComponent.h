@@ -261,7 +261,7 @@ namespace sw
         const AnimationParameterSet& getParameters() const { return _parameters; }
         /** @brief 그래프 플레이어(현재 상태, 재생)를 반환합니다. */
         const AnimationGraphPlayer& getGraphPlayer() const { return _graphPlayer; }
-        /** @brief 주 그래프의 블렌드 스페이스 상태들이 지금 샘플하는 표본 수의 합입니다(감시 값 `Animation.BlendSpaceActiveSamples`). */
+        /** @brief 주 그래프에서 지금 재생 중인 슬롯(현재 · 페이드 중인 다음)의 블렌드 스페이스가 샘플하는 표본 수의 합입니다(감시 값 `Animation.BlendSpaceActiveSamples`). 재생하지 않는 상태는 세지 않습니다. */
         uint32 countActiveBlendSpaceSamples() const;
         /** @brief 현재 상태 이름을 반환합니다. */
         const hashed_string& getCurrentStateName() const { return _graphPlayer.getCurrentStateName(); }

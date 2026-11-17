@@ -255,10 +255,11 @@ namespace sw
         float3                               _dragStart;
         float3                               _dragPoint;
         GameSpeedControl                     _speed; ///< 배속 · 일시정지(락스텝 대전에서는 쓰지 않는다)
-        uint8                                _bHuman             : 1;
-        uint8                                _bDragging          : 1;
-        uint8                                _bDragPointValid    : 1;
-        uint8                                _bAttackMovePending : 1;
-        uint8                                _reserved           : 4;
+        uint8                                _bHuman                  : 1;
+        uint8                                _bDragging               : 1;
+        uint8                                _bDragPointValid         : 1;
+        uint8                                _bAttackMovePending      : 1;
+        uint8                                _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
+        uint8                                _reserved                : 3;
     };
 } // namespace sw

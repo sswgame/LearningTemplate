@@ -1,12 +1,13 @@
 /**
  * @file AppearanceWatches.cpp
- * @brief 외형의 자동화 감시 값(`Appearance.Preset` · `Appearance.MergedSections` · `Appearance.SlotItem` · `Appearance.SurfaceChannel`)입니다.
+ * @brief 외형의 자동화 감시 값(`Appearance.Preset` · `Appearance.MergedSections` · `Appearance.MergedCharacters` · `Appearance.SlotItem` · `Appearance.SurfaceChannel`)입니다.
  * @details 시나리오만 읽는 감시 값이라 컴포넌트 파일이 아니라 이 파일에 둔다(`VehicleWatches` · `PawnWatches` 와 같은 자리). 컴포넌트의 공개 읽기만 쓴다.
  */
 #include "pch.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
@@ -48,6 +49,21 @@ namespace sw
                 if ( pAppearance == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pAppearance->getMergedSectionCount() ) );
+                return true;
+            }
+
+            /** @brief 씬에서 부품을 몸 메시 하나로 합친 외형 수입니다. 합친 캐릭터를 재는 부하 시나리오가 합치기 경로를 탔는지 본다. */
+            [[nodiscard]] static bool readMergedCharacters( SceneIterationKey key, const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                uint32 merged = 0;
+                pManager->forEachComponentOfType<CharacterAppearanceComponent>( key, [&merged]( const CharacterAppearanceComponent* pAppearance )
+                {
+                    if ( pAppearance->getMergedSectionCount() > 0 )
+                        ++merged;
+                } );
+                outValue = static_cast<float64>( merged );
                 return true;
             }
 
@@ -99,6 +115,8 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( appearanceMergedSections, "Appearance.MergedSections",
                                "Sections of the merged body mesh (the body's own plus one per merged part); 0 when the parts are not merged",
                                &AppearanceWatchesInternal::readMergedSections, true, false );
+    SW_AUTOMATION_SCENE_WATCH( appearanceMergedCharacters, "Appearance.MergedCharacters", "Appearances in the scene whose parts are merged into the body mesh",
+                               &AppearanceWatchesInternal::readMergedCharacters );
     SW_AUTOMATION_QUERY_WATCH( appearanceSlotItem, "Appearance.SlotItem", "Item the assembled appearance wears in the slot named by key ('(empty)' when the slot is empty)",
                                &AppearanceWatchesInternal::readSlotItem, true, true );
     SW_AUTOMATION_QUERY_WATCH( appearanceSurfaceChannel, "Appearance.SurfaceChannel", "Largest value of the body surface channel named key (Wet, Dirt, Blood...) over all regions",
