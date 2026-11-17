@@ -62,6 +62,20 @@ namespace sw
         queueInput( event );
     }
 
+    bool CallbackInputWindow::tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const
+    {
+        outListMonitor.clear();
+        return false;
+    }
+
+    bool CallbackInputWindow::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
+    {
+        (void)mode;
+        (void)width;
+        (void)height;
+        return false;
+    }
+
     bool CallbackInputWindow::tryGetFrameExtents( WindowFrameExtents& outExtents ) const
     {
         outExtents = WindowFrameExtents{};

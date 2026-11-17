@@ -4,34 +4,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/Tests/FakeWindow.h"
+
+// 수명 상태는 `IWindow` 의 몫이라 플랫폼 없는 창(`FakeWindow`)으로 그것만 본다.
 
 using namespace sw;
-
-namespace
-{
-    /** @brief 플랫폼이 없는 창입니다. 수명 상태는 `IWindow` 의 몫이라 그것만 봅니다. */
-    class FakeWindow final : public IWindow
-    {
-    public:
-        bool initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
-        void destroy() override {}
-        bool processMessages() override { return true; }
-        void waitForMessages( uint32 /*timeoutMilliseconds*/ ) override {}
-        bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override
-        {
-            outExtents = WindowFrameExtents{};
-            return true;
-        }
-        bool              canPlaceWindow() const override { return false; }
-        bool              setFramePosition( int32 /*x*/, int32 /*y*/ ) override { return false; }
-        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::Win32; }
-
-    protected:
-        void* getNativeHandle() const override { return nullptr; }
-        void  applyTextInputWanted( bool /*bWanted*/ ) override {}
-        void  applyTextInputArea( const WindowTextInputArea& /*area*/ ) override {}
-    };
-} // namespace
 
 /** @brief [WindowLifecycleTest] 표면을 잃거나 앱이 멈추면 돌 수 없고, 둘 다 돌아와야 다시 돕니다. */
 SW_TEST_CASE( WindowLifecycleTest, PausesUntilBothSurfaceAndAppReturn )

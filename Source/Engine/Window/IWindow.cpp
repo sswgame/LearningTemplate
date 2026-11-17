@@ -95,12 +95,6 @@ namespace sw
         notifyLifecycleEvent( WindowLifecycleEvent::SurfaceLost );
     }
 
-    bool IWindow::tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const
-    {
-        outListMonitor.clear();
-        return false;
-    }
-
     void IWindow::waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds )
     {
         (void)frameStartNanoseconds;

@@ -12,6 +12,7 @@
 
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/PlatformInputEvent.h"
+#include "Engine/Window/WindowMonitor.h"
 #include "Engine/Window/WindowTextInput.h"
 
 namespace sw
@@ -34,6 +35,51 @@ namespace sw
         [[nodiscard]] bool setFramePosition( int32 x, int32 y ) override;
         float4             getSafeAreaInsets() const override { return _safeInsets; }
         float32            getContentScale() const override { return _contentScale; }
+        /** @brief 표면은 화면 · 캔버스를 채운다 — 숨은 상태는 앱 멈춤(`isRenderPaused`)이 말한다. */
+        bool isVisible() const override { return true; }
+        /** @brief 모니터를 물을 곳이 없다(브라우저 · Android 는 표면 하나다). */
+        [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
+        /** @brief 청하지 않는다 — 브라우저 · 액티비티의 초점은 사용자 입력과 OS 가 정한다. */
+        [[nodiscard]] bool requestInputFocus() override { return false; }
+        /** @brief 커서 모양 · 숨기기를 하지 않는다(Android 는 커서가 없고, 웹 캔버스 커서는 아직 잇지 않았다). */
+        [[nodiscard]] bool supportsCursorShape() const override { return false; }
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override
+        {
+            (void)shape;
+            return false;
+        }
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override
+        {
+            (void)bVisible;
+            return false;
+        }
+        /** @brief 창이 잇지 않는다 — 웹 · Android 클립보드는 `PlatformClipboard`(WebClipboard · AndroidClipboard)가 창 없이 연다. */
+        [[nodiscard]] bool supportsClipboard() const override { return false; }
+        [[nodiscard]] bool readClipboardText( string& outText ) override
+        {
+            outText.clear();
+            return false;
+        }
+        [[nodiscard]] bool writeClipboardText( string_view text ) override
+        {
+            (void)text;
+            return false;
+        }
+        /** @brief 바꾸지 못한다 — 표면 크기는 페이지(CSS) · 기기가 정한다. */
+        bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
+        /** @brief 최소화는 앱 멈춤(탭 숨김 · onPause)이고 앱이 청하지 못한다. */
+        [[nodiscard]] bool canMinimize() const override { return false; }
+        bool               setMinimized( bool bMinimized ) override
+        {
+            (void)bMinimized;
+            return false;
+        }
+        /** @brief 포커스 변화를 플랫폼 콜백과 같은 길(`applyPlatformFocus` → 포커스 입력)로 낸다 — 자동화가 웹 · Android 의 포커스 경로를 본다. */
+        [[nodiscard]] bool sendFocusEvent( bool bFocused ) override
+        {
+            applyPlatformFocus( bFocused );
+            return true;
+        }
 
     protected:
         /** @brief 콜백이 받은 입력 하나를 모읍니다(창 스레드 — 브라우저 메인 · ALooper 스레드). */

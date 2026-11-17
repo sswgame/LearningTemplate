@@ -5,6 +5,7 @@
 
 #include "Engine/Window/FramePacer.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/Tests/FakeWindow.h"
 
 using namespace sw;
 
@@ -26,7 +27,7 @@ namespace
     }
 
     /** @brief 페이서가 무엇을 기다리라고 했는지 적는 창입니다. 잠들지 않는다 — 기다리는 방법은 창의 몫이다(브라우저는 메인 스레드를 재울 수 없다). */
-    class PacingRecordWindow final : public IWindow
+    class PacingRecordWindow final : public FakeWindow
     {
     public:
         uint32 _frameWaitCount{ 0 };
@@ -34,9 +35,11 @@ namespace
         int64  _frameStartNanoseconds{ 0 };
         int64  _deadlineNanoseconds{ 0 };
 
-        bool initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
-        void destroy() override {}
-        bool processMessages() override { return true; }
+        PacingRecordWindow()
+            : FakeWindow{ NativeSurfaceKind::WebCanvas }
+        {
+        }
+
         void waitForMessages( uint32 /*timeoutMilliseconds*/ ) override { ++_messageWaitCount; }
         void waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds ) override
         {
@@ -44,19 +47,6 @@ namespace
             _frameStartNanoseconds = frameStartNanoseconds;
             _deadlineNanoseconds   = deadlineNanoseconds;
         }
-        bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override
-        {
-            outExtents = WindowFrameExtents{};
-            return true;
-        }
-        bool              canPlaceWindow() const override { return false; }
-        bool              setFramePosition( int32 /*x*/, int32 /*y*/ ) override { return false; }
-        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
-
-    protected:
-        void* getNativeHandle() const override { return nullptr; }
-        void  applyTextInputWanted( bool /*bWanted*/ ) override {}
-        void  applyTextInputArea( const WindowTextInputArea& /*area*/ ) override {}
     };
 } // namespace
 

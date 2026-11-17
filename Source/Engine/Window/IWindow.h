@@ -239,13 +239,13 @@ namespace sw
          *        X11 은 `Xft.dpi` 리소스를 씁니다. 모르면 1 입니다.
          * @details 게임 UI 는 기본으로 곱하지 않는다(해상도 규칙이 이미 창 크기를 따른다. `UIScaleSettings::_bApplyContentScale` 참고).
          */
-        virtual float32 getContentScale() const { return 1.0f; }
+        virtual float32 getContentScale() const = 0;
         /**
          * @brief 그리면 가려지는 가장자리(왼쪽, 위, 오른쪽, 아래, 물리 픽셀)입니다 — 노치 · 둥근 모서리 · 시스템 바. 데스크톱 창은 0 이다.
          * @details UI 의 안전 영역(`UIScaleSettings::makeViewport` → `SafeZonePanel`)이 읽는다. 회전하면 변이 바뀌므로 플랫폼 창이 크기 · 회전 통보 때 다시 읽는다.
          *          언리얼 `FDisplayMetrics::TitleSafePaddingSize` · 유니티 `Screen.safeArea` 자리다(기억).
          */
-        virtual float4 getSafeAreaInsets() const { return float4{}; }
+        virtual float4 getSafeAreaInsets() const = 0;
 
         /** @brief 배율 1 에 해당하는 DPI 입니다(Windows 와 X11 의 기준). */
         static constexpr float32 kReferenceDPI = 96.0f;
@@ -255,7 +255,7 @@ namespace sw
          * @details Win32 는 `EnumDisplayMonitors`, X11 은 RandR(없으면 X screen 하나 - `X11Monitors.h`), Wayland 는 `wl_output` 이다.
          * @return 창이 없어 물을 곳이 없으면 false 입니다. true 인데 목록이 비면 그 창 시스템에 지금 출력이 없는 것이다(모니터 없는 Wayland 컴포지터는 정상이다). 받는 쪽은 값을 지어내지 않는다.
          */
-        [[nodiscard]] virtual bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const;
+        [[nodiscard]] virtual bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const = 0;
         /** @brief 모니터 값이 바뀔 때마다(모니터 연결 · 해상도 · 작업 영역 · 배율) 올라가는 수입니다. 값을 들고 있는 쪽은 이것이 달라질 때 `tryGetMonitors` 를 다시 부릅니다. */
         [[nodiscard]] uint32 getMonitorGeneration() const { return _monitorGeneration; }
 
@@ -264,50 +264,37 @@ namespace sw
         // 포인터 묶기는 X11 서버 호출을 입력 관리자가 직접 하므로(`tryGetX11Surface`) X11 창은 하지 않고(기본: 지원 안 함) Wayland 만 컴포지터 확장으로 한다.
         // 새 확장이 더해져도 입력 관리자는 질의 하나만 읽는다.
         // "지원 안 함"이 정상인 곳(해당 없는 창)과 청했는데 안 되는 곳(오류)은 호출 쪽이 가른다 — 여기서는 대신하지 않고 false 로 알린다.
+        // 아래 능력 질의 · 요청은 모두 순수 가상이다 — 기본 구현(조용히 아무것도 안 함)이 있으면 새 플랫폼 창이 빠뜨려도 컴파일된다(웹 · Android 의 글 입력이 그랬다, 감사 P-4).
+        // 하지 않는 창은 재정의해 false 로 답하고 그 까닭을 적는다.
 
-        /** @brief 창이 커서 모양을 스스로 바꾸는지(`setCursorShape` 가 되는지)입니다. */
         /**
          * @brief 이 창에 입력 초점을 요청합니다. 키 · 마우스를 전제하는 시나리오가 시작할 때 부릅니다(앞 단계의 다른 창 · 자식 프로세스 창이 초점을 가져갔을 수 있다).
-         * @details 창 관리자가 초점을 돌려주지 않는 곳(X11 의 창 관리자 없는 화면)만 뜻이 있어 기본은 아무 일도 하지 않습니다 — Windows 는 다른 창이 닫히면 OS 가 돌려주고, 쓰고 있는 사람의 전경을 뺏지 않습니다.
+         * @details 창 관리자가 초점을 돌려주지 않는 곳(X11 의 창 관리자 없는 화면)만 뜻이 있다 — Windows 는 다른 창이 닫히면 OS 가 돌려주고, 쓰고 있는 사람의 전경을 뺏지 않습니다.
+         * @return 초점을 청했으면 true, 이 창 시스템에서 앱이 청하지 않거나(OS 가 맡는다) 지금 청할 수 없으면 false 입니다.
          */
-        virtual void               requestInputFocus() {}
-        [[nodiscard]] virtual bool supportsCursorShape() const { return false; }
+        [[nodiscard]] virtual bool requestInputFocus() = 0;
+        /** @brief 창이 커서 모양을 스스로 바꾸는지(`setCursorShape` 가 되는지)입니다. */
+        [[nodiscard]] virtual bool supportsCursorShape() const = 0;
         /** @brief 커서 모양을 바꿉니다. `supportsCursorShape` 가 아니면 아무것도 하지 않고 false 입니다. */
-        [[nodiscard]] virtual bool setCursorShape( CursorShape shape )
-        {
-            (void)shape;
-            return false;
-        }
+        [[nodiscard]] virtual bool setCursorShape( CursorShape shape ) = 0;
         /** @brief 창이 포인터를 스스로 묶는지(`setPointerLock` 의 Locked 가 되는지)입니다. 컴포지터 확장이 없으면 false 입니다. */
-        [[nodiscard]] virtual bool supportsPointerLock() const { return false; }
+        [[nodiscard]] virtual bool supportsPointerLock() const = 0;
         /**
          * @brief 포인터를 묶거나 풉니다. 같은 방식을 다시 부르면 아무것도 하지 않는다.
          * @return 요청대로 되었으면(`Released` 는 항상) true, 못 했으면 false 입니다.
          */
-        [[nodiscard]] virtual bool setPointerLock( WindowPointerLock lock ) { return lock == WindowPointerLock::Released; }
+        [[nodiscard]] virtual bool setPointerLock( WindowPointerLock lock ) = 0;
         /**
          * @brief 창이 운영체제 글 클립보드를 스스로 잇는지입니다(X11 은 CLIPBOARD 선택의 주인, Wayland 는 `wl_data_device` 선택 — 데이터 장치가 있어야 한다).
-         *        아니면 `PlatformClipboard::isAvailable` 이 false 라서 UI 가 엔진 안 클립보드를 쓴다.
+         *        아니면 `PlatformClipboard::isAvailable` 이 false 라서 UI 가 엔진 안 클립보드를 쓴다(Windows · 웹 · Android 는 `PlatformClipboard` 가 창 없이 OS 를 연다).
          */
-        [[nodiscard]] virtual bool supportsClipboard() const { return false; }
+        [[nodiscard]] virtual bool supportsClipboard() const = 0;
         /** @brief 클립보드의 글을 @p outText 에 담습니다. 글이 없거나 시간 안에 답이 없거나 `supportsClipboard` 가 아니면 false 입니다. */
-        [[nodiscard]] virtual bool readClipboardText( string& outText )
-        {
-            (void)outText;
-            return false;
-        }
+        [[nodiscard]] virtual bool readClipboardText( string& outText ) = 0;
         /** @brief 클립보드에 글을 씁니다. 못 쓰면(선택 주인이 못 되거나 컴포지터가 일련번호를 거절) false 입니다. */
-        [[nodiscard]] virtual bool writeClipboardText( string_view text )
-        {
-            (void)text;
-            return false;
-        }
+        [[nodiscard]] virtual bool writeClipboardText( string_view text ) = 0;
         /** @brief 커서를 숨기거나 보입니다. 창이 스스로 하지 않으면 false 입니다. */
-        [[nodiscard]] virtual bool setCursorVisible( bool bVisible )
-        {
-            (void)bVisible;
-            return false;
-        }
+        [[nodiscard]] virtual bool setCursorVisible( bool bVisible ) = 0;
 
         // ---- 입력기(IME). 모양은 `WindowTextInput.h` 머리말. 글은 `NativeWindowEvent::kMessageTextInput` 으로 외부 처리기에 온다 ----
         /**
@@ -327,37 +314,23 @@ namespace sw
          *          **창 스레드(메인 스레드)에서만 부른다.** `BorderlessFullscreen` 이면 @p width 와 @p height 는 무시하고 모니터 크기를 쓴다.
          * @return 지원하지 않는 플랫폼이면 false 입니다.
          */
-        virtual bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
-        {
-            (void)mode;
-            (void)width;
-            (void)height;
-            return false;
-        }
+        virtual bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) = 0;
         /** @brief 이 데스크톱에서 창을 최소화할 수 있으면 true 입니다. 창 관리자가 없는 X 서버(Xvfb)는 요청해도 아무 일도 없어 false 입니다. */
-        [[nodiscard]] virtual bool canMinimize() const { return false; }
+        [[nodiscard]] virtual bool canMinimize() const = 0;
 
         /**
          * @brief 창을 최소화하거나 되돌립니다. 최소화 상태(`isMinimized`)는 플랫폼의 통보가 바꾼다.
          * @details 자동화 시나리오(`MinimizeWindow` · `RestoreWindow`)가 최소화 중의 프레임 · 스왑체인 경로를 볼 때 쓴다. **창 스레드(메인 스레드)에서만 부른다.**
          * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 되돌리기 요청이 프로토콜에 없다).
          */
-        virtual bool setMinimized( bool bMinimized )
-        {
-            (void)bMinimized;
-            return false;
-        }
+        virtual bool setMinimized( bool bMinimized ) = 0;
         /**
          * @brief 자기 창에 포커스를 잃거나(@p bFocused false) 얻는 OS 이벤트를 보내 실제 이벤트 경로를 타게 합니다. OS 포커스는 그대로입니다. **창 스레드(메인 스레드)에서만 부른다.**
          * @details 자동화 시나리오(`PostWindowMessage` 의 `KillFocus` · `SetFocus`)가 부른다. Win32 는 이 호출 안에서 처리기가 돌고(`SendMessageW`), X11 은 다음 `processMessages` 가 받는다.
          *          언리얼 `FGenericWindow` · Godot `DisplayServer` 처럼 창 시스템 일은 창의 가상 함수에 두어 자동화 층이 플랫폼을 모른다.
          * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 클라이언트가 자기 키보드 enter · leave 를 보낼 길이 없다).
          */
-        [[nodiscard]] virtual bool sendFocusEvent( bool bFocused )
-        {
-            (void)bFocused;
-            return false;
-        }
+        [[nodiscard]] virtual bool sendFocusEvent( bool bFocused ) = 0;
         /** @brief 마지막 `setDisplayMode` 가 고른 창 방식입니다. */
         WindowDisplayMode getDisplayMode() const { return _displayMode; }
         /**
@@ -422,7 +395,7 @@ namespace sw
          *          즉 방금 보이라고 한 창도 여기서는 **false** 입니다. 최소화나 다른 워크스페이스도 같습니다.
          *          "다시 만든 뒤 복원할까" 같은 판단에는 쓰지 마십시오(그래서 `recreate` 는 의도를 봅니다).
          */
-        virtual bool isVisible() const { return true; }
+        virtual bool isVisible() const = 0;
 
         /**
          * @brief **보이기로 정해져 있는지** 반환합니다. 마지막 `showWindow()` 의 인자입니다.

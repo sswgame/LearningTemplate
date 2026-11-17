@@ -22,6 +22,8 @@ namespace
         bool              initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
         void              destroy() override {}
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::WebCanvas; }
+        bool              supportsPointerLock() const override { return false; }
+        bool              setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
         void              simulateFocus( bool bFocused ) { applyPlatformFocus( bFocused ); }
         void              simulateKey( PlatformInputKind kind )
         {
@@ -118,4 +120,28 @@ SW_TEST_CASE( CallbackInputWindowTest, TextInputRequestReachesPlatform )
     SW_EXPECT_EQUAL( 1u, window._wantedChangeCount );
     window.requestTextInput( WindowTextInputClient::Editor, false );
     SW_EXPECT_EQUAL( 2u, window._wantedChangeCount );
+}
+
+/**
+ * @brief [CallbackInputWindowTest] 자동화의 포커스 이벤트(`sendFocusEvent`)가 웹 · Android 에서도 플랫폼 콜백과 같은 길(포커스 입력)로 간다.
+ *        예전에는 `IWindow` 의 기본 구현이 조용히 false 를 돌려 콜백 창의 포커스 경로를 자동화가 볼 수 없었다.
+ */
+SW_TEST_CASE( CallbackInputWindowTest, SendFocusEventTakesTheInputPath )
+{
+    FakeCallbackWindow        window;
+    vector<PlatformInputKind> listKind;
+    const Subscription        subscription = window.bindCustomMessageHandler( SW_DELEGATE_LAMBDA( WindowMessageHandlerDelegate, [&listKind]( const NativeWindowEvent& event )
+           {
+        if ( event._message == NativeWindowEvent::kMessagePlatformInput && event._lParam != 0 )
+            listKind.push_back( reinterpret_cast<const PlatformInputEvent*>( event._lParam )->_kind );
+        return true;
+    } ) );
+
+    SW_EXPECT_TRUE( window.sendFocusEvent( true ) );
+    SW_EXPECT_TRUE( window.sendFocusEvent( false ) );
+    SW_EXPECT_TRUE( window.processMessages() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listKind.size() );
+    SW_EXPECT_TRUE( listKind[0] == PlatformInputKind::FocusGained );
+    SW_EXPECT_TRUE( listKind[1] == PlatformInputKind::FocusLost );
+    SW_EXPECT_FALSE( window.hasFocus() );
 }

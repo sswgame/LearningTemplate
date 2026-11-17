@@ -72,6 +72,36 @@ namespace sw
         float32 getContentScale() const override;
         /** @brief `EnumDisplayMonitors` · `GetMonitorInfoW` · `GetDpiForMonitor` · `EnumDisplaySettingsW` 로 읽습니다. */
         [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
+        /** @brief 데스크톱 창은 가려지는 가장자리가 없다. */
+        float4 getSafeAreaInsets() const override { return float4{}; }
+        /** @brief 청하지 않는다 — Windows 는 다른 창이 닫히면 OS 가 초점을 돌려주고, 쓰고 있는 사람의 전경을 뺏지 않는다. */
+        [[nodiscard]] bool requestInputFocus() override { return false; }
+        /** @brief 창이 하지 않는다 — 커서 모양 · 숨기기 · 포인터 묶기는 Win32 입력 관리자가 OS(`SetCursor` · `ShowCursor` · `ClipCursor`)를 직접 부른다. */
+        [[nodiscard]] bool supportsCursorShape() const override { return false; }
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override
+        {
+            (void)shape;
+            return false;
+        }
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override
+        {
+            (void)bVisible;
+            return false;
+        }
+        [[nodiscard]] bool supportsPointerLock() const override { return false; }
+        [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
+        /** @brief 창이 잇지 않는다 — Windows 클립보드는 `PlatformClipboard`(Win32Clipboard.cpp)가 창 없이 연다. */
+        [[nodiscard]] bool supportsClipboard() const override { return false; }
+        [[nodiscard]] bool readClipboardText( string& outText ) override
+        {
+            outText.clear();
+            return false;
+        }
+        [[nodiscard]] bool writeClipboardText( string_view text ) override
+        {
+            (void)text;
+            return false;
+        }
 
     protected:
         /** @brief 네이티브 창 핸들(HWND)을 반환합니다. 바깥은 `IWindow::tryGetWin32Handle` 로만 읽는다(기반의 보호 구역을 다시 열지 않는다). */

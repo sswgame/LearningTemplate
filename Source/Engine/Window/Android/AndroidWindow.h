@@ -55,6 +55,9 @@ namespace sw
          */
         void              waitForMessages( uint32 timeoutMilliseconds ) override;
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::AndroidWindow; }
+        /** @brief 묶지 않는다 — 손가락 입력에는 묶을 포인터가 없다(마우스 캡처 `View.requestPointerCapture` 는 아직 잇지 않았다). 풀기는 늘 된다. */
+        [[nodiscard]] bool supportsPointerLock() const override { return false; }
+        [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
 
     protected:
         void* getNativeHandle() const override;
