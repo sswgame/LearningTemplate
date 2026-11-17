@@ -9,7 +9,7 @@
 -->
 <Scenario name="game.shooter3d.cctvmonitor" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Shooter3D.PlayerControllerKind" equals="0" timeoutFrames="30"/>
 	<Press slot="Key.D"/>
 	<WaitUntil watch="Object.X" target="Player" atLeast="5.5" timeoutFrames="300"/>
 	<Release slot="Key.D"/>
@@ -25,10 +25,10 @@
 	<Press slot="Key.A"/>
 	<WaitUntil watch="Object.X" target="Player" atMost="0.2" timeoutFrames="300"/>
 	<Release slot="Key.A"/>
-	<!-- 멈춘 뒤 몸 · 카메라가 자리 잡을 시간 -->
-	<Wait frames="20"/>
+	<!-- 멈춘 뒤 몸 · 카메라 · 렌더가 자리 잡을 때까지 -->
+	<WaitUntil watch="Object.Speed" target="Player" atMost="0.01" timeoutSeconds="2"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="cctvmonitor.ppm"/>
-	<Wait frames="5"/>
 	<ExpectImage file="cctvmonitor.ppm" golden="cctvmonitor"/>
 	<Pass/>
 </Scenario>

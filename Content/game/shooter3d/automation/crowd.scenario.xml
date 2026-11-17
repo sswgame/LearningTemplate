@@ -12,18 +12,16 @@
 -->
 <Scenario name="game.shooter3d.crowd" fixedDelta="0.0166667" timeoutFrames="11400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="1"/>
-	<!-- 적이 몰려올 시간(시뮬레이션) -->
-	<Wait frames="300"/>
+	<!-- 적이 몰려올 때까지 — 아래 조건 대기가 본다 -->
 	<!-- 60 초 안에 둘 이상 나누지 못하면 진다. -->
 	<WaitUntil watch="Animation.CrowdSharedMeshes" atLeast="2" timeoutSeconds="60"/>
 	<!-- 쫓는 상태(혼자 평가하는 유닛이 없고 일하는 유닛이 둘 이상)가 선 뒤에 사진을 찍는다. -->
 	<WaitUntil watch="Animation.CrowdSoloMeshes" equals="0" timeoutSeconds="60"/>
 	<WaitUntil watch="Animation.ActiveSkeletalMeshes" atLeast="2" timeoutSeconds="60"/>
 	<Screenshot file="chase.ppm"/>
-	<!-- 싸우는 모습 -->
-	<Wait frames="240"/>
+	<!-- 싸우는 모습 — 결정적 시뮬레이션에서 몰려온 뒤 4 초의 장면이 사진 내용이다 -->
+	<AdvanceSimulation frames="240"/>
 	<Screenshot file="fight.ppm"/>
-	<Wait frames="5"/>
 	<!-- 소켓 부품 풀: 첫 적은 쉬는 부품이 없어 새로 스폰하고, 사라진 적의 부품은 풀이 받는다 -->
 	<Expect watch="SocketPartPool.TakeMisses" atLeast="1"/>
 	<WaitUntil watch="SocketPartPool.Stored" atLeast="1" timeoutSeconds="60"/>
