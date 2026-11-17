@@ -56,8 +56,14 @@ namespace sw
         [[nodiscard]] static bool resolve( string_view assetID, string& outAssetID );
         /**
          * @brief @p assetID 의 지금 id 입니다 — 옛 id 면 새 id, 아니면 그대로입니다.
-         * @details 에셋 캐시의 키가 쓰는 한 곳이다(공유 표 · 메시 · 프리팹). 요청 글을 그대로 키로 쓰면 옛 id 와 지금 id 가 같은 파일을 두 칸에 두 벌 올린다(A-20).
+         * @details 에셋 캐시의 키는 이것을 지난다(공유 표 · `toCacheKey`). 요청 글을 그대로 키로 쓰면 옛 id 와 지금 id 가 같은 파일을 두 칸에 두 벌 올린다(A-20).
          */
         [[nodiscard]] static string toCurrentID( string_view assetID );
+        /**
+         * @brief 경로로 찾는 에셋 캐시(메시 · 프리팹 · 머티리얼 · 텍스처)의 키를 만드는 한 곳입니다 — 맵 키 꼴(`FileUtil::normalizePath`)로 접은 뒤 지금 id 로 풉니다.
+         * @details 캐시마다 접기와 풀기를 따로 적으면 한쪽(머티리얼 · 텍스처)이 풀기를 빠뜨려 옛 id 와 지금 id 가 두 벌 올랐다(A-20). 유니티도 경로가 아니라 GUID 로 에셋을 찾는다
+         *          (GUID 2 단계에서 이 키가 GUID 로 바뀐다).
+         */
+        [[nodiscard]] static string toCacheKey( string_view path );
     };
 } // namespace sw

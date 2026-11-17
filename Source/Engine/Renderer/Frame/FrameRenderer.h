@@ -323,6 +323,12 @@ namespace sw
         uint32 getLastRenderedExtraViewCount() const { return _passExecutor.getLastRenderedExtraViewCount(); }
         /** @brief 가지고 있는 추가 뷰 수입니다. 쉬는 뷰도 포함합니다. */
         uint32 getExtraViewCount() const { return static_cast<uint32>( _state._listExtraView.size() ); }
+        /**
+         * @brief 뷰 대상(주 시점 · 추가 뷰)을 모두 버리고 주 시점을 새로 만듭니다 — 다음 프레임은 새 프로세스의 첫 프레임처럼 풀 · 시간 누적 기록(TAA · 노출 · 깊이 · 지터 순번)이 없다.
+         * @details 자동화 단계 시작이 부른다(`IEngineRenderDriver::discardViewTargets`, 렌더 스레드). 프레임을 넘는 뷰 상태는 `FrameViewTarget` 멤버로만 두므로 새 멤버를 더해도 여기를 고치지 않는다
+         *          (언리얼 `FSceneViewState` 를 버리는 자리). 디바이스 해제는 그 자원을 쓴 프레임의 GPU 완료 뒤로 미뤄진다(백엔드 해제 큐).
+         */
+        void discardViewTargets();
 
     private:
         /** @brief 컴퓨트 디스패치 상수 버퍼 한 항목입니다. 생성(`ensurePassResources`)과 해제(`releasePassResources`)가 같은 테이블을 돕니다. */

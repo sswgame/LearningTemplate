@@ -55,6 +55,7 @@ namespace sw
         void                        waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
         void                        submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) override;
         [[nodiscard]] bool          applyPendingBackendChange() override;
+        void                        discardViewTargets() override;
         void                        setScenarioCaptureEnabled( bool bEnabled ) override;
         void                        setPresentInterval( uint32 interval ) override;
         [[nodiscard]] uint32        countPendingCaptureJobs( const GameObjectManager* pManager ) const override;

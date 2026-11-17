@@ -9,7 +9,7 @@
 ## 0. 다음 순서
 
 1. **다음 묶음 — 갈래 r-plat · r-econ · r-edrem · r-hang · r-tidy(옛 백업을 최신 main 위로 옮겨 커밋만 함, 빌드 안 됨):** 둘씩 합쳐 빌드 · 검증 · push 한다. r-edrem 은 새 테스트 파일이 글롭에 잡히는지, r-hang 은 Required 슬롯이 는 `CharacterMeshCacheConfig` 의 바인딩 검사, r-tidy 는 `--from cpu` 에서 tidy 를 건너뛰는 것을 본다.
-   - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(5 절 · 감사 A-20).
+   - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(5 절).
 2. **감사 열린 항목(7 절):** P1 9 · P2 7 건. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
@@ -79,7 +79,7 @@
 - **2 단계 — 참조를 GUID 로:**
   - Content 전수 이전: `migrate-asset-refs --fix` 로 `AssetRef<T>` 칸을 `guid:<32자>` 로(지금 0). 그 뒤 `AssetRefBase::assign` 의 옛 경로 글 읽기를 걷는다. `_base` · `DataPath` 칸과 임포트 산출물 참조는 산출물 줄 뒤.
   - 세이브(`SW_SAVE_FORMAT_UPGRADE`)와 서버 기록(`Content/common/sql/*/migrations.xml`)의 경로를 GUID 로 — 배포된 팩 색인 + 마지막 리다이렉트 표로 한 번 풀어 쓴다.
-  - 설정의 경로 칸(`enginedefaultassets.xml`), 게임 설정 · 카탈로그 `_base` 의 파일 부분. 머티리얼 · 텍스처 캐시 키는 감사 A-20.
+  - 설정의 경로 칸(`enginedefaultassets.xml`), 게임 설정 · 카탈로그 `_base` 의 파일 부분. 경로 캐시 키는 `AssetRedirect::toCacheKey` 한 곳을 GUID 로.
   - 임포트 산출물 줄: 원본 GUID → 산출물 경로를 임포트 기록에서 팩 색인에. 내용 주소 공유 파일(`textures_raw/_shared/`)은 저장소 경로 해시 GUID 로 `.meta` 를 함께.
   - 옮기기용 리다이렉트(`AssetRedirect` · `redirects.xml` · `move-asset` 줄 더하기)를 걷고 GUID→GUID 표만 남긴다(읽는 쪽을 먼저 옮긴 뒤 — `deprecation-and-migration`).
   - localization 표(`strings` · `translation` · `tm`) 쓰기가 머리를 옮겨 쓰게 하고 `*/localization/*` 건너뛰기를 걷는다. 시나리오 사본(`scratch/`)이 원본 GUID 로 겹치는 것 — 사본 도메인을 색인에서 빼거나 새 GUID.
@@ -92,11 +92,10 @@
 
 ## 7. 감사 열린 항목
 
-상용 대비 감사(2026-11-12, 기준 main `e480b07498` — 줄 번호의 기준. 원문 · 닫힌 항목은 `git show e480b07498:docs/CommercialGapAudit.md`). 순서: 결함 · 계약 줄([5] · [14] · [16] · [35])을 먼저, 성능 줄은 측정이 문턱을 넘은 것만. 줄 앞은 감사 ID 와 옛 "다음 할 일" 번호 `[n]`(코드 주석 · DesignBacklog 제목이 가리킨다 — 다시 매기지 않는다). 온라인 줄은 `security-and-hardening`, 외부 API 주장은 기억 기준이라 context7 로 대조한다.
+상용 대비 감사(2026-11-12, 기준 main `e480b07498` — 줄 번호의 기준. 원문 · 닫힌 항목은 `git show e480b07498:docs/CommercialGapAudit.md`). 순서: 결함 · 계약 줄([5] · [14] · [35])을 먼저, 성능 줄은 측정이 문턱을 넘은 것만. 줄 앞은 감사 ID 와 옛 "다음 할 일" 번호 `[n]`(코드 주석 · DesignBacklog 제목이 가리킨다 — 다시 매기지 않는다). 온라인 줄은 `security-and-hardening`, 외부 API 주장은 기억 기준이라 context7 로 대조한다.
 
 - **[5] 읽은 것을 커밋 조건으로** — Admin · Mailbox · Guild 저장 로직이 판단에 쓴 읽기를 커밋 조건으로 거는지 점검(`ServiceReadSetConnection`, 경제 키트는 영수증 레코드 하나 — O-1). 상용: 엔진엔 계정 서버가 없다(EOS · UGS 관리형). 확인: `AdminStoreLogicTest` · `MailboxStoreLogicTest` · `GuildServiceTest` 의 "읽은 뒤 커밋 전에" 케이스.
 - **P-4 [14] Android IME 조합** — Android 가 미확정 글을 못 받는다(웹 조합 · 소프트 키보드는 섰다). 상용: 유니티 `TouchScreenKeyboard`, Godot `virtual_keyboard_show`. 제안 GameTextInput. 확인: `WindowTextInputTest` Android 조합 케이스, `web-check` 의 `compositionend` 화면.
-- **A-20 [16] 머티리얼 · 텍스처 캐시 키가 요청 글 그대로** — `MaterialCache` · `TextureCache` 가 `AssetRedirect::toCurrentID` 를 지나지 않아 옛 id · 지금 id 가 두 벌 오른다. 상용: 유니티는 GUID 가 키. 확인: `SharedAssetCacheTest.RedirectedAndCanonicalIdsShareOneEntry` 꼴 케이스, GUID 2 단계에서 키를 GUID 로.
 - **C-9 [20] 컨테이너 복잡도** — `unordered_map.h:645` `reserve` 가 밀집 배열을 예약하지 않고 `map.h:308` 범위 `insert` 가 O(n²). 상용: `TMap::Reserve` · `TSortedMap`. 확인: `ContainerBenchTest` 10 만 키(꺼 둔 벤치) — 문턱을 넘은 것만(AC-2).
 - **O-12 [30] 부하 봇이 원장 경로를 치지 않는다** — `LoadBotScenario.cpp` 에 구매 · 영수증 · 우편 · 거래 · 길드 창고 · 점수가 없고 `Shooter3D.online.json` `_bLightPasswordHash: true`. 상용: k6 · Gatling 도착률 실행기. 확인: `Shooter3D.external.json`(PostgreSQL) Conflict 재시도율 · `kBusy` 비율, 끝에 `LedgerAuditReport` 균형.
 - **R-4 [31] 자원마다 전용 할당** — `MaterialRenderProxy.cpp:48` 인스턴스마다 상수 버퍼 · 커밋 자원 · `vkAllocateMemory`. 상용: 언리얼 `FD3D12FastConstantAllocator`, 유니티 SRP Batcher, Godot VMA. 제안 `RHIBufferSlice` + D3D12MA / VMA. 확인: 머티리얼 인스턴스 5000 의 버퍼 바이트 · Vulkan 할당 수.
