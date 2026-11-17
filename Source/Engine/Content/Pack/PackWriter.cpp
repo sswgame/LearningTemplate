@@ -10,6 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Content/ContentHash.h"
@@ -113,6 +114,7 @@ namespace sw
         , _pendingBytes{ 0 }
         , _listDiskEntry{}
         , _listBlock{}
+        , _listBlockDigest{}
         , _stringPoolBytes{}
         , _mapPreviousSlot{}
         , _payloadEnd{ 0 }
@@ -354,6 +356,14 @@ namespace sw
                     return written;
                 compressedEnd += static_cast<uint32>( size );
                 _listBlock.push_back( PackBlockEntryOnDisk{ compressedEnd, slot._crc32 } );
+                if ( _desc._pDigestProvider != nullptr )
+                {
+                    // 블록 요약은 저장 바이트에 건다 — 읽는 쪽이 풀기 전에 견준다(바뀐 바이트가 코덱에 닿지 않는다). 블록은 256 KiB 이하라 32 비트 크기에 든다.
+                    PackDigest blockDigest;
+                    if ( _desc._pDigestProvider->computeSHA256( pStored, static_cast<int32>( size ), blockDigest._arrByte ) == false )
+                        return unexpected( Error{ ErrorKind::ExternalFailure, "pack block digest could not be computed", entry._relativePath } );
+                    _listBlockDigest.push_back( blockDigest );
+                }
             }
             if ( bKeepSlot == false && storedSize > 0 )
                 _payloadEnd = _file.getSize();
@@ -408,31 +418,50 @@ namespace sw
 
         // 색인 구역은 FAT · 블록 표 · 스트링 풀 · 헤더 순으로 빈틈 없이 잇는다 — `_indexOffset` 부터 파일 끝까지 한 구간이다(색인 서명의 자리).
         PackHeader header{};
-        header._magic            = kPackMagic;
-        header._formatVersion    = kPackFormatVersion;
-        header._dlcAppID         = _desc._dlcAppID;
-        header._compressionType  = static_cast<uint8>( _desc._compression );
-        header._encryptionType   = static_cast<uint8>( PackEncryptionType::None );
-        header._sectorAlignment  = kPackSectorAlignment;
-        header._flags            = static_cast<uint16>( PackFlag::HasCRC32 ) | static_cast<uint16>( PackFlag::HasStringPool );
-        header._fileCount        = static_cast<uint32>( _listDiskEntry.size() );
-        header._indexOffset      = _file.getSize();
-        header._indexSize        = static_cast<uint64>( _listDiskEntry.size() ) * sizeof( PackFileEntryOnDisk );
-        header._blockTableOffset = header._indexOffset + header._indexSize;
-        header._blockCount       = static_cast<uint32>( _listBlock.size() );
-        header._blockSize        = _desc._blockSize;
-        header._stringPoolOffset = header._blockTableOffset + static_cast<uint64>( _listBlock.size() ) * sizeof( PackBlockEntryOnDisk );
-        header._stringPoolSize   = _stringPoolBytes.size();
-        header._totalDataSize    = payloadEnd;
-        const auto writeTail     = [this]( const void* pData, size_t size )
-        { return size == 0 ? expected<void>{} : writeBytes( _file.getSize(), static_cast<const uint8*>( pData ), size ); };
-        const bool bTailWritten = writeTail( _listDiskEntry.data(), static_cast<size_t>( header._indexSize ) ).has_value() &&
-                                  writeTail( _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) ).has_value() &&
-                                  writeTail( _stringPoolBytes.data(), _stringPoolBytes.size() ).has_value() && writeTail( &header, sizeof( PackHeader ) ).has_value();
-        if ( bTailWritten == false )
+        header._magic              = kPackMagic;
+        header._formatVersion      = kPackFormatVersion;
+        header._dlcAppID           = _desc._dlcAppID;
+        header._compressionType    = static_cast<uint8>( _desc._compression );
+        header._encryptionType     = static_cast<uint8>( PackEncryptionType::None );
+        header._sectorAlignment    = kPackSectorAlignment;
+        const bool bBlockHash      = _desc._pDigestProvider != nullptr;
+        header._flags              = static_cast<uint16>( static_cast<uint16>( PackFlag::HasCRC32 ) | static_cast<uint16>( PackFlag::HasStringPool ) |
+                                                          ( bBlockHash ? static_cast<uint16>( PackFlag::HasBlockHash ) : uint16{ 0 } ) );
+        header._fileCount          = static_cast<uint32>( _listDiskEntry.size() );
+        header._indexOffset        = _file.getSize();
+        header._indexSize          = static_cast<uint64>( _listDiskEntry.size() ) * sizeof( PackFileEntryOnDisk );
+        header._blockTableOffset   = header._indexOffset + header._indexSize;
+        header._blockCount         = static_cast<uint32>( _listBlock.size() );
+        header._blockSize          = _desc._blockSize;
+        const uint64 blockTableEnd = header._blockTableOffset + static_cast<uint64>( _listBlock.size() ) * sizeof( PackBlockEntryOnDisk );
+        header._blockHashOffset    = bBlockHash ? blockTableEnd : 0;
+        header._stringPoolOffset   = blockTableEnd + static_cast<uint64>( _listBlockDigest.size() ) * sizeof( PackDigest );
+        header._stringPoolSize     = _stringPoolBytes.size();
+        header._totalDataSize      = payloadEnd;
+        // 색인 구역을 한 벡터로 이어 한 번에 쓴다 — 서명 채널은 이 바이트의 SHA-256 이 색인 요약이다(다시 읽지 않는다).
+        vector<uint8> listIndexByte;
+        const auto    appendIndex = [&listIndexByte]( const void* pData, size_t size )
+        {
+            const uint8* pByte = static_cast<const uint8*>( pData );
+            listIndexByte.insert( listIndexByte.end(), pByte, pByte + size );
+        };
+        appendIndex( _listDiskEntry.data(), static_cast<size_t>( header._indexSize ) );
+        appendIndex( _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) );
+        appendIndex( _listBlockDigest.data(), _listBlockDigest.size() * sizeof( PackDigest ) );
+        appendIndex( _stringPoolBytes.data(), _stringPoolBytes.size() );
+        appendIndex( &header, sizeof( PackHeader ) );
+        if ( writeBytes( _file.getSize(), listIndexByte.data(), listIndexByte.size() ).has_value() == false )
             return fail( Error{ ErrorKind::ExternalFailure, "pack index could not be written (disk full?)", _packPath } );
 
         PackWriteResult result;
+        if ( bBlockHash )
+        {
+            PackDigest indexDigest;
+            if ( listIndexByte.size() > static_cast<size_t>( MathUtil::kMaxInt32 ) ||
+                 _desc._pDigestProvider->computeSHA256( listIndexByte.data(), static_cast<int32>( listIndexByte.size() ), indexDigest._arrByte ) == false )
+                return fail( Error{ ErrorKind::ExternalFailure, "pack index digest could not be computed", _packPath } );
+            result._indexDigest = indexDigest;
+        }
         result._fileSize    = _file.getSize();
         result._indexOffset = header._indexOffset;
         const Stopwatch      commitWatch;

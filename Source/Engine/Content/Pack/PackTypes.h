@@ -7,9 +7,10 @@
  *          함께 고치고 `kPackFormatVersion` 을 올립니다(옛 팩은 리더가 거절하고 쿠커가 다시 씁니다).
  *
  *          파일 배치(형식 3, 쓰는 쪽이 정하고 리더는 헤더의 오프셋만 믿는다): 페이로드(오프셋 0 부터, 항목마다 섹터 정렬) · 섹터 정렬 FAT(32B × 항목) ·
- *          블록 표(8B × 블록) · 항목 경로 목록(스트링 풀, NUL 종료 경로를 잇는다) · 헤더(96B, **파일 끝**). FAT 은 경로 해시 오름차순이고 리더는 아니면 거절한다.
+ *          블록 표(8B × 블록) · (블록 해시 표, 32B × 블록 — `HasBlockHash` 일 때) · 항목 경로 목록(스트링 풀, NUL 종료 경로를 잇는다) · 헤더(96B, **파일 끝**). FAT 은 경로 해시 오름차순이고 리더는 아니면 거절한다.
  *          헤더를 끝에 두는 것은 언리얼 pak(`FPakInfo` 가 파일 끝)과 같은 자리다 — 스트림 쓰기(`PackStreamWriter`)가 앞에서부터 한 번 쓰면서 파일 내용 해시를
- *          함께 세려면 마지막에 정해지는 칸(오프셋 · 수)이 앞에 있으면 안 된다. 색인 구역(FAT · 블록 표 · 스트링 풀 · 헤더)은 `_indexOffset` 부터 파일 끝까지 한 구간이다.
+ *          함께 세려면 마지막에 정해지는 칸(오프셋 · 수)이 앞에 있으면 안 된다. 색인 구역(FAT · 블록 표 · 블록 해시 표 · 스트링 풀 · 헤더)은 `_indexOffset` 부터 파일 끝까지 빈틈 없는 한 구간이고(리더가 확인한다)
+ *          패치 서명은 이 구간의 SHA-256 에 건다(PK-5).
  *          모든 항목은 `_blockSize`(압축 전) 블록으로 잘려 블록마다 압축되고 CRC32 는 블록 표에 있다 — 범위 읽기(`PackReader::readRange`)가 걸친 블록만 읽는다.
  *          경로 해시는 구분자를 '/' 로 맞춘 팩 안 경로(도메인 제외 — `engine.pack` 의 항목은 `pipeline/forwardpipeline.xml`)의 대소문자 무시
  *          FNV-1a 64(`HashUtil::computeStringHash64` 기본값)입니다. `PackLayoutMode` 는 페이로드 자리 규칙일 뿐이다(구역 순서는 같다).
@@ -37,6 +38,7 @@ namespace sw
         HasStringPool = SW_BIT( 0 ), ///< 항목 경로 목록(스트링 풀)을 담았는지. 폴더 나열이 이 목록을 읽으므로 쿠커는 늘 담고, 리더는 없는 팩을 거절한다
         HasCRC32      = SW_BIT( 1 ), ///< 블록별 CRC32(블록 표의 `_crc32`)를 읽을 때 검사하는지
         Encrypted     = SW_BIT( 2 ), ///< FAT 와 페이로드를 암호화했는지
+        HasBlockHash  = SW_BIT( 3 ), ///< 블록 해시 표(블록마다 저장 바이트의 SHA-256)를 담았는지 — 서명 채널(패치 팩)의 팩. 신뢰를 받아 연 리더가 읽을 때 블록마다 견준다
     };
 
     /**
@@ -96,6 +98,27 @@ namespace sw
     inline constexpr uint32 kPackMinBlockSize = 64 * constant::memory::kBytesPerKilobyte;
     inline constexpr uint32 kPackMaxBlockSize = kPackMinBlockSize * 4;
 
+    /** @brief 색인 · 블록 요약(SHA-256)의 바이트 수입니다. */
+    inline constexpr uint32 kPackDigestSize = 32;
+
+    /** @struct PackDigest @brief SHA-256 요약 하나입니다(블록 해시 표의 줄 · 색인 구역의 요약). 공개 값이라 비교는 일반 비교다. */
+    struct PackDigest
+    {
+        uint8 _arrByte[kPackDigestSize]{};
+
+        bool operator==( const PackDigest& other ) const
+        {
+            for ( uint32 index = 0; index < kPackDigestSize; ++index )
+            {
+                if ( _arrByte[index] != other._arrByte[index] )
+                    return false;
+            }
+            return true;
+        }
+        bool operator!=( const PackDigest& other ) const { return ( *this == other ) == false; }
+    };
+    static_assert( sizeof( PackDigest ) == kPackDigestSize, "PackDigest must be exactly the digest bytes" );
+
     /** @brief DirectStorage 및 NVMe DMA 친화적 섹터 정렬 경계입니다. */
     inline constexpr uint16 kPackSectorAlignment = 4096;
 
@@ -120,7 +143,7 @@ namespace sw
         uint64 _stringPoolSize{ 0 };   ///< 스트링 풀 바이트 크기 (offset 46)
         uint64 _totalDataSize{ 0 };    ///< 정렬 패딩을 포함한 페이로드 구역 크기(오프셋 0 부터) (offset 54)
         uint64 _blockTableOffset{ 0 }; ///< 블록 표(`PackBlockEntryOnDisk` × `_blockCount`) 시작 오프셋 (offset 62)
-        uint64 _blockHashOffset{ 0 };  ///< 블록 해시 표(SHA-256 × `_blockCount`) — 색인 서명(PK-5)의 자리라 지금은 늘 0 (offset 70)
+        uint64 _blockHashOffset{ 0 };  ///< 블록 해시 표(`PackDigest` × `_blockCount`) 시작 — `PackFlag::HasBlockHash` 일 때만, 아니면 0 (offset 70)
         uint32 _blockCount{ 0 };       ///< 블록 표의 줄 수 — 항목마다 `ceil( _uncompressedSize / _blockSize )` 의 합 (offset 78)
         uint32 _blockSize{ 0 };        ///< 압축 전 블록 크기(`kPackMinBlockSize` ~ `kPackMaxBlockSize` 의 2 의 거듭제곱) (offset 82)
         uint8  _reserved[10]{};        ///< 예약 패딩(총 96바이트) (offset 86)

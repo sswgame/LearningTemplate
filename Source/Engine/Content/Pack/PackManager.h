@@ -64,9 +64,10 @@ namespace sw
          * @brief 패치 팩(팩 단위 차분 배포)을 마운트합니다. 팩이 담은 바뀐 파일이 아래 팩을 덮고, @p listRemovedPath 의 경로는 아래 팩에 있어도 없는 것으로 봅니다.
          * @details 지움 목록은 패치 목록 파일(`PackPatchManifest::_listRemovedPath`)에서 온다. 지운 경로는 전체 가상 경로이며 도메인 팩의 도메인을 뗀 항목도 가린다.
          *          낱개 파일(`setContentSource`)은 가리지 않는다 — 패치는 배포 구성(팩만 읽음)의 일이다.
+         * @param pTrust 서명 채널이면 서명을 확인한 목록의 색인 요약(`PackPatchManifest::verify`). 있으면 리더가 색인 · 블록 요약을 견준다(`PackReader::open`)
          * @return 마운트에 성공하면 true 입니다(`mountPack` 과 같은 실패 규칙).
          */
-        [[nodiscard]] bool mountPatchPack( string_view packFilePath, int32 priority, const vector<string>& listRemovedPath );
+        [[nodiscard]] bool mountPatchPack( string_view packFilePath, int32 priority, const vector<string>& listRemovedPath, const PackIndexTrust* pTrust = nullptr );
 
         /**
          * @brief 마운트된 .pack 파일을 언마운트하고 닫습니다.
@@ -160,17 +161,17 @@ namespace sw
 
     private:
         /**
-         * @brief 사슬 순서 @p listOrder 의 패치마다 팩 파일을 읽어 서명을 확인합니다(신뢰 설정이 있을 때만 부른다). 하나라도 실패하면 이유를 남기고 false 입니다.
-         * @details 팩 바이트는 확인한 그 읽기로만 쓰이지 않고 마운트가 다시 연다 — 확인과 마운트 사이에 파일이 바뀌는 틈(TOCTOU)은 패치 폴더가 앱 설치 폴더라는 가정이 막는다.
+         * @brief 사슬 순서 @p listOrder 의 패치 목록마다 서명을 확인하고 마운트할 신뢰(@p outListTrust, 순서대로)를 줍니다. 신뢰 설정이 없으면 빈 목록으로 true 입니다.
+         * @details 팩 바이트는 읽지 않는다 — 리더가 여는 핸들로 색인 요약을 견주고 읽을 때 블록마다 견준다(확인한 핸들이 곧 읽는 핸들이라 틈이 없다).
          */
-        [[nodiscard]] bool verifyPatchSignatures( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, const vector<size_t>& listOrder ) const;
+        [[nodiscard]] bool verifyPatchSignatures( const vector<PackPatchManifest>& listManifest, const vector<size_t>& listOrder, vector<PackIndexTrust>& outListTrust ) const;
         /**
          * @brief 폴더의 빌드 기록에서 설치된 빌드를 읽고 @p listManifest 의 패치를 그 빌드부터 이어지는 순서로 높은 우선순위에 마운트합니다.
          * @param listMountedPath 마운트한 패치 팩 경로를 뒤에 덧붙입니다(실패했을 때 호출자가 내린다).
          */
         [[nodiscard]] bool mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath );
         /** @brief 팩을 열어 지움 목록 해시(@p listRemovedPathHash, 정렬됨)와 함께 마운트합니다. `mountPack` 과 `mountPatchPack` 의 본문입니다. */
-        [[nodiscard]] bool mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, bool bPatch );
+        [[nodiscard]] bool mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, bool bPatch, const PackIndexTrust* pTrust );
         /**
          * @brief 경로를 가진 팩의 리더를 잠금 안에서 찾아 사본을 돌려줍니다. 읽기는 부르는 쪽이 잠금 밖에서 합니다 — 한 팩의 읽기가 다른 팩
          *        · 다른 스레드의 읽기를 줄 세우지 않는다.

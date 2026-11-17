@@ -1487,6 +1487,27 @@ namespace sw
         return {};
     }
 
+    expected<void> AtomicFileWriter::appendZeros( uint64 size )
+    {
+        if ( _pFile == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
+        if ( size == 0 )
+            return {};
+        // 표시하지 못하는 볼륨이면 건너뛴 구간을 OS 가 0 으로 채운다 — 내용은 같고 디스크만 쓴다.
+        (void)PlatformFileUtil::markSparse( _pFile );
+        // 건너뛴 끝의 마지막 바이트를 써야 파일이 그 길이가 된다(끝 너머 seek 만으로는 늘지 않는다).
+        const uint8 zero     = 0;
+        const bool  bWritten = PlatformFileUtil::seekTo( _pFile, static_cast<int64>( _size + size - 1 ), SEEK_SET ) && std::fwrite( &zero, 1, 1, _pFile ) == 1;
+        if ( bWritten == false )
+        {
+            const string tempPath = _tempPath;
+            discard();
+            return unexpected( Error{ ErrorKind::ExternalFailure, "seek or write failed (disk full?)", tempPath } );
+        }
+        _size += size;
+        return {};
+    }
+
     expected<void> AtomicFileWriter::writeAt( uint64 offset, const uint8* pData, size_t size )
     {
         if ( _pFile == nullptr )

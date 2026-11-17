@@ -14,6 +14,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/Pack/PackCompressionUtil.h"
@@ -58,6 +59,8 @@ namespace sw
         , _listFolderEntry{}
         , _mountDomain{}
         , _stringPoolBytes{}
+        , _listBlockDigest{}
+        , _pDigestProvider{ nullptr }
     {
     }
 
@@ -76,6 +79,8 @@ namespace sw
         , _listFolderEntry{}
         , _mountDomain{}
         , _stringPoolBytes{}
+        , _listBlockDigest{}
+        , _pDigestProvider{ nullptr }
     {
         // 새 객체의 잠금도 잡는다 — 아직 아무도 보지 않지만, 그래야 넘겨받는 칸이 `_fileMutex` 아래라는 선언과 맞는다.
         ScopedLockPair<mutex> lock{ _fileMutex, other._fileMutex };
@@ -103,10 +108,12 @@ namespace sw
         _listFolderEntry = std::move( other._listFolderEntry );
         _mountDomain     = std::move( other._mountDomain );
         _stringPoolBytes = std::move( other._stringPoolBytes );
+        _listBlockDigest = std::move( other._listBlockDigest );
+        _pDigestProvider = other._pDigestProvider;
         other._file.close();
     }
 
-    bool PackReader::open( string_view packFilePath )
+    bool PackReader::open( string_view packFilePath, const PackIndexTrust* pTrust )
     {
         // 잠금은 잎이다 — 오류 · 안내 로그는 잠금을 놓은 뒤에 쓴다(실패 경로는 먼저 닫고 놓는다).
         UniqueLock<mutex> lock{ _fileMutex };
@@ -168,7 +175,7 @@ namespace sw
         }
 
         // 2. FAT 인덱스와 스트링 풀을 읽는다
-        if ( loadIndexTable() == false )
+        if ( loadIndexTable( pTrust ) == false )
         {
             closeLocked();
             lock.unlock();
@@ -216,6 +223,8 @@ namespace sw
         _listFolderEntry.clear();
         _mountDomain.clear();
         _stringPoolBytes.clear();
+        _listBlockDigest.clear();
+        _pDigestProvider = nullptr;
     }
 
     bool PackReader::isOpen() const
@@ -345,6 +354,9 @@ namespace sw
         outPlan._compression      = static_cast<PackCompressionType>( _header._compressionType );
         outPlan._bVerifyCRC       = ( _header._flags & static_cast<uint16>( PackFlag::HasCRC32 ) ) != 0;
         outPlan._listBlock.assign( _listBlock.begin() + tableBegin, _listBlock.begin() + tableBegin + ( endBlock - firstBlock ) );
+        outPlan._pDigestProvider = _pDigestProvider;
+        if ( _pDigestProvider != nullptr ) // 신뢰를 받아 열었으면 블록 해시 표가 있다(`loadIndexTable`)
+            outPlan._listBlockDigest.assign( _listBlockDigest.begin() + tableBegin, _listBlockDigest.begin() + tableBegin + ( endBlock - firstBlock ) );
         outFile = _file;
         return ReadPlanResult::Ready;
     }
@@ -400,6 +412,19 @@ namespace sw
             uint8*                      pRaw       = outBytes.data() + ordinal * plan._blockSize;
             const size_t                rawSize    = getRawSize( ordinal );
             storedBegin                            = block._compressedEnd;
+            // 서명 채널이면 풀기 전에 저장 바이트의 요약을 견준다 — 바뀐 바이트가 코덱에 닿지 않는다.
+            if ( plan._pDigestProvider != nullptr )
+            {
+                PackDigest actualDigest;
+                const bool bHashed = plan._pDigestProvider->computeSHA256( pStored, static_cast<int32>( storedSize ), actualDigest._arrByte );
+                if ( bHashed == false || actualDigest != plan._listBlockDigest[ordinal] )
+                {
+                    SW_LOG_ERROR_ID( "PackReader.BlockDigestMismatch", "Block %# of a signed pack does not match its digest - the pack was changed after signing: %#",
+                                     static_cast<uint64>( plan._firstBlockIndex + ordinal ), packPath );
+                    outBytes.clear();
+                    return false;
+                }
+            }
             size_t decoded{ rawSize };
             if ( pCodec == nullptr )
                 Memory::copy( pRaw, pStored, rawSize );
@@ -542,7 +567,7 @@ namespace sw
         return _mountDomain;
     }
 
-    bool PackReader::loadIndexTable()
+    bool PackReader::loadIndexTable( const PackIndexTrust* pTrust )
     {
         // 항목이 없는 팩도 풀(마운트 도메인)은 읽는다.
         if ( _file.isValid() == false )
@@ -560,13 +585,56 @@ namespace sw
             SW_LOG_ERROR_ID( "PackReader.PackNoEntryPath", "Pack has no entry path list (string pool) - cook it again with App --cook-packs: %#", _packFilePath );
             return false;
         }
-        _stringPoolBytes.resize( _header._stringPoolSize );
-        if ( _file.readAt( _header._stringPoolOffset, _stringPoolBytes.data(), _stringPoolBytes.size() ) == false )
+
+        // 색인 구역(FAT · 블록 표 · 블록 해시 표 · 스트링 풀 · 헤더)은 `_indexOffset` 부터 파일 끝까지 빈틈 없는 한 구간이다(`validateHeaderGeometry`).
+        // 한 번 읽어 요약을 견주고 그 바이트에서 색인을 꺼낸다 — 검증한 바이트가 곧 쓰는 바이트다(확인과 사용 사이의 틈이 없다).
+        vector<uint8> listIndexByte;
+        listIndexByte.resize( static_cast<size_t>( fileSize - _header._indexOffset ) );
+        if ( _file.readAt( _header._indexOffset, listIndexByte.data(), listIndexByte.size() ) == false )
         {
-            SW_LOG_ERROR_ID( "PackReader.FailedReadStringPool", "Failed to read string pool from pack: %#", _packFilePath );
+            SW_LOG_ERROR_ID( "PackReader.FailedReadFATIndex", "Failed to read FAT index table from pack: %#", _packFilePath );
             return false;
         }
-        const string_view pool{ reinterpret_cast<const utf8*>( _stringPoolBytes.data() ), _stringPoolBytes.size() };
+        const bool bHasBlockHash = ( _header._flags & static_cast<uint16>( PackFlag::HasBlockHash ) ) != 0;
+        if ( pTrust != nullptr )
+        {
+            PackDigest actualDigest;
+            const bool bHashed = listIndexByte.size() <= static_cast<size_t>( MathUtil::kMaxInt32 ) &&
+                                 pTrust->_pProvider->computeSHA256( listIndexByte.data(), static_cast<int32>( listIndexByte.size() ), actualDigest._arrByte );
+            if ( bHashed == false || actualDigest != pTrust->_indexDigest )
+            {
+                SW_LOG_ERROR_ID( "PackReader.IndexDigestMismatch", "Pack index does not match its signed digest - the pack was changed after signing: %#", _packFilePath );
+                return false;
+            }
+            // 헤더는 요약보다 먼저 따로 읽었다 — 요약한 바이트의 헤더와 같아야 그 헤더를 믿는다.
+            if ( Memory::compare( listIndexByte.data() + listIndexByte.size() - sizeof( PackHeader ), &_header, sizeof( PackHeader ) ) != 0 )
+            {
+                SW_LOG_ERROR_ID( "PackReader.IndexChangedWhileOpening", "Pack header changed while the pack was opened: %#", _packFilePath );
+                return false;
+            }
+            // 서명 채널의 팩은 블록마다 요약을 든다 — 없으면 색인만 믿고 페이로드는 CRC(손상 검사)로만 보게 된다.
+            if ( bHasBlockHash == false )
+            {
+                SW_LOG_ERROR_ID( "PackReader.TrustedPackWithoutBlockHashes", "Signed pack has no block hash table - make the patch again with a signer: %#", _packFilePath );
+                return false;
+            }
+            _pDigestProvider = pTrust->_pProvider;
+        }
+        const auto copyIndexPart = [this, &listIndexByte]( uint64 offset, void* pDest, size_t size )
+        {
+            if ( size > 0 )
+                Memory::copy( pDest, listIndexByte.data() + ( offset - _header._indexOffset ), size );
+        };
+        vector<PackFileEntryOnDisk> listDiskEntry( _header._fileCount );
+        _listBlock.resize( _header._blockCount );
+        _listBlockDigest.resize( bHasBlockHash ? _header._blockCount : 0 );
+        _stringPoolBytes.resize( static_cast<size_t>( _header._stringPoolSize ) );
+        copyIndexPart( _header._indexOffset, listDiskEntry.data(), listDiskEntry.size() * sizeof( PackFileEntryOnDisk ) );
+        copyIndexPart( _header._blockTableOffset, _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) );
+        copyIndexPart( _header._blockHashOffset, _listBlockDigest.data(), _listBlockDigest.size() * sizeof( PackDigest ) );
+        copyIndexPart( _header._stringPoolOffset, _stringPoolBytes.data(), _stringPoolBytes.size() );
+
+        const string_view pool{ _stringPoolBytes.data(), _stringPoolBytes.size() };
         const size_t      domainEnd = pool.find( '\0' );
         if ( domainEnd == string_view::npos )
         {
@@ -574,17 +642,6 @@ namespace sw
             return false;
         }
         _mountDomain.assign( pool.substr( 0, domainEnd ) );
-
-        // FAT(32B × 항목)과 블록 표(8B × 블록)를 읽는다. 크기는 `validateHeaderGeometry` 가 파일 안인 것을 확인했다.
-        vector<PackFileEntryOnDisk> listDiskEntry( _header._fileCount );
-        _listBlock.resize( _header._blockCount );
-        const bool bRead = ( listDiskEntry.empty() || _file.readAt( _header._indexOffset, listDiskEntry.data(), listDiskEntry.size() * sizeof( PackFileEntryOnDisk ) ) ) &&
-                           ( _listBlock.empty() || _file.readAt( _header._blockTableOffset, _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) ) );
-        if ( bRead == false )
-        {
-            SW_LOG_ERROR_ID( "PackReader.FailedReadFATIndex", "Failed to read FAT index table from pack: %#", _packFilePath );
-            return false;
-        }
 
         uint32 expectedFirstBlock = 0;
         for ( size_t entryIndex = 0; entryIndex < listDiskEntry.size(); ++entryIndex )
@@ -670,6 +727,18 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "PackReader.PackStringPoolLies", "Pack string pool lies outside the file %# (offset %#, size %#, file %#)",
                              _packFilePath, static_cast<uint64>( _header._stringPoolOffset ), static_cast<uint64>( _header._stringPoolSize ), fileSize );
+            return false;
+        }
+        // 색인 구역은 FAT · 블록 표 · (블록 해시 표) · 스트링 풀 · 헤더가 빈틈 없이 잇는다 — 서명이 거는 구간이 정확히 이 구조들이고, 한 번에 읽는 크기가 색인에 묶인다.
+        const bool   bHasBlockHash  = ( _header._flags & static_cast<uint16>( PackFlag::HasBlockHash ) ) != 0;
+        const uint64 blockTableEnd  = _header._indexOffset + derivedIndexSize + blockTableSize;
+        const uint64 blockHashSize  = bHasBlockHash ? static_cast<uint64>( _header._blockCount ) * sizeof( PackDigest ) : 0;
+        const bool   bBlockHashFits = bHasBlockHash ? _header._blockHashOffset == blockTableEnd : _header._blockHashOffset == 0;
+        const bool   bContiguous    = _header._blockTableOffset == _header._indexOffset + derivedIndexSize && bBlockHashFits &&
+                                 _header._stringPoolOffset == blockTableEnd + blockHashSize && _header._stringPoolOffset + _header._stringPoolSize == headerOffset;
+        if ( bContiguous == false )
+        {
+            SW_LOG_ERROR_ID( "PackReader.IndexNotContiguous", "Pack index sections do not follow each other up to the header: %#", _packFilePath );
             return false;
         }
         return true;

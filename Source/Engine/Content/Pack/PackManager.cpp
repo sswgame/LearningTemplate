@@ -340,10 +340,10 @@ namespace sw
 
     bool PackManager::mountPack( string_view packFilePath, int32 priority )
     {
-        return mountReader( packFilePath, priority, vector<uint64>{}, false );
+        return mountReader( packFilePath, priority, vector<uint64>{}, false, nullptr );
     }
 
-    bool PackManager::mountPatchPack( string_view packFilePath, int32 priority, const vector<string>& listRemovedPath )
+    bool PackManager::mountPatchPack( string_view packFilePath, int32 priority, const vector<string>& listRemovedPath, const PackIndexTrust* pTrust )
     {
         vector<uint64> listRemovedPathHash;
         listRemovedPathHash.reserve( listRemovedPath.size() );
@@ -352,10 +352,10 @@ namespace sw
             listRemovedPathHash.push_back( HashUtil::computeStringHash64( removedPath ) );
         }
         VectorUtil::sort( listRemovedPathHash );
-        return mountReader( packFilePath, priority, std::move( listRemovedPathHash ), true );
+        return mountReader( packFilePath, priority, std::move( listRemovedPathHash ), true, pTrust );
     }
 
-    bool PackManager::mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, const bool bPatch )
+    bool PackManager::mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, const bool bPatch, const PackIndexTrust* pTrust )
     {
         if ( packFilePath.empty() )
             return false;
@@ -363,7 +363,7 @@ namespace sw
         const string normalizedPath = FileUtil::normalizeSeparators( packFilePath );
 
         shared_ptr<PackReader> pReader = sw::make_shared<PackReader>();
-        if ( pReader->open( normalizedPath ) == false )
+        if ( pReader->open( normalizedPath, pTrust ) == false )
         {
             SW_LOG_ERROR_ID( "PackManager.FailedOpenMountPack", "Failed to open and mount pack: %#", packFilePath );
             return false;
@@ -684,21 +684,17 @@ namespace sw
         return true;
     }
 
-    bool PackManager::verifyPatchSignatures( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, const vector<size_t>& listOrder ) const
+    bool PackManager::verifyPatchSignatures( const vector<PackPatchManifest>& listManifest, const vector<size_t>& listOrder, vector<PackIndexTrust>& outListTrust ) const
     {
+        outListTrust.clear();
         if ( _patchTrust._pProvider == nullptr )
             return true; // 신뢰 설정이 없는 채널은 서명을 보지 않는다
-        for ( const size_t manifestIndex : listOrder )
+        // 목록의 서명만 본다 — 팩 바이트는 읽지 않는다. 색인 요약은 마운트가 여는 핸들로 견주고 페이로드는 읽을 때 블록마다 견준다(확인한 핸들이 곧 읽는 핸들).
+        outListTrust.resize( listOrder.size() );
+        for ( size_t orderIndex = 0; orderIndex < listOrder.size(); ++orderIndex )
         {
-            const PackPatchManifest& manifest = listManifest[manifestIndex];
-            const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
-            vector<uint8>            packBytes;
-            if ( ContentFileSource::getCurrent().readFile( packPath, packBytes ) == false )
-            {
-                SW_LOG_ERROR_ID( "PackManager.PackPatchPackCould", "Pack patch %# -> %# pack %# could not be read to check its signature", manifest._fromBuild, manifest._toBuild, packPath );
-                return false;
-            }
-            if ( PackPatchManifest::verify( *_patchTrust._pProvider, _patchTrust._publicKey, packBytes, manifest, packPath ) == false )
+            const PackPatchManifest& manifest = listManifest[listOrder[orderIndex]];
+            if ( PackPatchManifest::verify( *_patchTrust._pProvider, _patchTrust._publicKey, manifest, manifest._packFileName, outListTrust[orderIndex] ) == false )
                 return false;
         }
         return true;
@@ -727,7 +723,8 @@ namespace sw
         if ( PackPatchManifest::orderChainToLatest( record._build, listManifest, listOrder, latestBuild ) == false )
             return false;
         // 서명은 패치 팩을 하나라도 올리기 전에 모두 확인한다 — 중간에 틀리면 절반만 얹힌 상태를 거치지 않는다.
-        if ( verifyPatchSignatures( packsDirectory, listManifest, listOrder ) == false )
+        vector<PackIndexTrust> listTrust;
+        if ( verifyPatchSignatures( listManifest, listOrder, listTrust ) == false )
             return false;
 
         int32 priority = 0;
@@ -739,9 +736,9 @@ namespace sw
             }
         }
         priority = ( priority / PackManagerInternal::kPriorityStep + 1 ) * PackManagerInternal::kPriorityStep; // 기본 팩 어느 것보다 높다
-        for ( const size_t manifestIndex : listOrder )
+        for ( size_t orderIndex = 0; orderIndex < listOrder.size(); ++orderIndex )
         {
-            const PackPatchManifest& manifest = listManifest[manifestIndex];
+            const PackPatchManifest& manifest = listManifest[listOrder[orderIndex]];
             const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
             if ( ContentFileSource::getCurrent().isFile( packPath ) == false )
             {
@@ -749,7 +746,8 @@ namespace sw
                 return false;
             }
             priority += PackManagerInternal::kPriorityStep; // 뒤 패치가 앞 패치를 덮는다
-            if ( mountPatchPack( packPath, priority, manifest._listRemovedPath ) == false )
+            const PackIndexTrust* pTrust = listTrust.empty() ? nullptr : &listTrust[orderIndex];
+            if ( mountPatchPack( packPath, priority, manifest._listRemovedPath, pTrust ) == false )
                 return false;
             listMountedPath.push_back( packPath );
         }

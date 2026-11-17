@@ -2,6 +2,7 @@
 // APNs 는 HTTP/2 전용이라 가짜 서버가 없어 요청 만들기와 응답 분류를 정적 함수로 본다. 결과에 따른 재시도 · 기기 지우기는 PushDispatcherTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Testing/TestFramework.h"
@@ -14,7 +15,6 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
-#include "GameFramework/Runtime/Online/Security/Tests/FakeNetSecurityProvider.h"
 
 using namespace sw;
 

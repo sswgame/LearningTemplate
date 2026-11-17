@@ -13,6 +13,19 @@
 
 namespace sw
 {
+    class INetSecurityProvider;
+
+    /**
+     * @struct PackIndexTrust
+     * @brief 서명 채널의 팩을 열 때 믿을 색인 요약입니다 — 서명을 확인한 패치 목록의 `indexSHA256` 과 SHA-256 제공자(`PackManager` 가 채운다).
+     * @details 리더는 여는 핸들로 읽은 색인 구역의 요약이 이것과 같을 때만 열고, 읽을 때마다 블록 요약을 견준다. 제공자는 리더보다 오래 산다(프로세스 범위 서브시스템).
+     */
+    struct PackIndexTrust
+    {
+        INetSecurityProvider* _pProvider{ nullptr };
+        PackDigest            _indexDigest{};
+    };
+
     /**
      * @class PackReader
      * @brief .pack(SWPK) 바이너리 아카이브 하나를 열고 64비트 경로 해시로 항목을 읽는 VFS 리더입니다.
@@ -37,9 +50,10 @@ namespace sw
         /**
          * @brief .pack 파일을 열고 헤더와 FAT · 블록 표 · 스트링 풀을 메모리에 로드합니다.
          * @param packFilePath .pack 파일의 실제 경로
+         * @param pTrust 서명 채널이면 믿을 색인 요약. 있으면 색인 구역의 SHA-256 이 같고 블록 해시 표가 있을 때만 열고, 읽을 때 블록 요약을 견준다
          * @return 유효한 SWPK 아카이브이고 인덱스를 읽었으면 true 입니다. FAT 이 경로 해시 오름차순이 아니면(같은 해시 둘 포함) 거절합니다.
          */
-        [[nodiscard]] bool open( string_view packFilePath );
+        [[nodiscard]] bool open( string_view packFilePath, const PackIndexTrust* pTrust = nullptr );
 
         /**
          * @brief 열려 있는 팩 파일을 닫고 인덱스 메모리를 해제합니다. 진행 중인 읽기는 제 파일 핸들 사본으로 끝까지 읽습니다.
@@ -139,8 +153,10 @@ namespace sw
             uint32                       _sliceOffset{ 0 }; ///< 푼 블록들 안에서 돌려줄 범위의 시작
             uint32                       _sliceSize{ 0 };   ///< 돌려줄 크기
             PackCompressionType          _compression{ PackCompressionType::None };
-            bool                         _bVerifyCRC{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            vector<PackBlockEntryOnDisk> _listBlock;           ///< 걸친 블록 줄
+            bool                         _bVerifyCRC{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            vector<PackBlockEntryOnDisk> _listBlock;                  ///< 걸친 블록 줄
+            vector<PackDigest>           _listBlockDigest;            ///< 걸친 블록의 요약 — 신뢰를 받아 연 팩만(아니면 비어 있다)
+            INetSecurityProvider*        _pDigestProvider{ nullptr }; ///< 블록 요약을 셀 제공자 — 신뢰를 받아 연 팩만
 
             /** @brief 디스크에서 읽을 바이트 수입니다. */
             uint32 getStoredSize() const { return _listBlock.empty() ? 0 : _listBlock.back()._compressedEnd - _storedBegin; }
@@ -183,7 +199,7 @@ namespace sw
         bool validateHeaderGeometry( uint64 fileSize ) const SW_REQUIRES_LOCK( _fileMutex );
         /** @brief FAT 항목 하나가 페이로드 구역 안을 가리키는지, 크기가 다룰 만한지, 블록 줄이 앞 항목에 이어지고 그 누적 끝이 항목 크기와 맞는지 봅니다. */
         bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 payloadEnd, uint32 expectedFirstBlock ) const SW_REQUIRES_LOCK( _fileMutex );
-        [[nodiscard]] bool loadIndexTable() SW_REQUIRES_LOCK( _fileMutex );
+        [[nodiscard]] bool loadIndexTable( const PackIndexTrust* pTrust ) SW_REQUIRES_LOCK( _fileMutex );
         /**
          * @brief 항목을 폴더별로 세운 `_listFolderEntry` 를 짓습니다(`loadIndexTable` 이 항목을 다 읽은 뒤 한 번 부릅니다).
          * @details 폴더 나열(`collectFolderEntries`)이 팩 전체를 잠금 안에서 훑지 않고 그 폴더의 항목만 읽게 합니다.
@@ -207,6 +223,8 @@ namespace sw
         vector<FolderEntry> _listFolderEntry    SW_GUARDED_BY( _fileMutex ); ///< (폴더 해시, 항목 번호) 오름차순. `populateFolderIndex` 가 짓고 읽기만 한다
         string _mountDomain                     SW_GUARDED_BY( _fileMutex ); ///< 스트링 풀 맨 앞의 마운트 도메인
         vector<utf8> _stringPoolBytes           SW_GUARDED_BY( _fileMutex );
+        vector<PackDigest> _listBlockDigest     SW_GUARDED_BY( _fileMutex ); ///< 블록 해시 표(`PackFlag::HasBlockHash` 일 때)
+        INetSecurityProvider* _pDigestProvider  SW_GUARDED_BY( _fileMutex ); ///< 신뢰를 받아 열었으면 블록 요약을 셀 제공자, 아니면 nullptr
     };
 
 } // namespace sw

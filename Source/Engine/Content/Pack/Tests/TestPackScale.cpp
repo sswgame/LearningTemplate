@@ -86,7 +86,7 @@ namespace sw
              * @brief 항목 @p entryCount 개를 경로 해시 순으로 @p packPath 에 스트림으로 씁니다. 항목 i 의 바이트는 `makeEntryBytes( i, listSize[i] )` 다.
              * @details 스트림 쓰기는 경로 해시 오름차순만 받는다 — 번호를 해시로 세운 뒤 그 순서로 바이트를 만든다(팩 전체를 들지 않는다).
              */
-            [[nodiscard]] static bool writeEntries( const string& packPath, string_view mountDomain, const vector<size_t>& listSize, vector<uint64>& outListHash )
+            [[nodiscard]] static optional<PackWriteResult> writeEntries( const string& packPath, const PackWriterDesc& desc, const vector<size_t>& listSize, vector<uint64>& outListHash )
             {
                 const uint32   entryCount = static_cast<uint32>( listSize.size() );
                 vector<uint32> listOrder( entryCount );
@@ -99,13 +99,16 @@ namespace sw
                 VectorUtil::sort( listOrder, [&outListHash]( uint32 left, uint32 right )
                 { return outListHash[left] < outListHash[right]; } );
                 PackStreamWriter writer;
-                expected<void>   step = writer.open( packPath, PackTestUtil::makeDesc( mountDomain ) );
+                expected<void>   step = writer.open( packPath, desc );
                 for ( size_t order = 0; order < listOrder.size() && step.has_value(); ++order )
                 {
                     const uint32 index = listOrder[order];
                     step               = writer.append( makeEntryPath( index ), makeEntryBytes( index, listSize[index] ) );
                 }
-                return step.has_value() && writer.close().has_value();
+                if ( step.has_value() == false )
+                    return nullopt;
+                expected<PackWriteResult> closed = writer.close();
+                return closed.has_value() ? optional<PackWriteResult>{ std::move( *closed ) } : nullopt;
             }
 
             /** @brief `index300k` 를 @p packPath 에 쓰고 항목의 경로 해시를 @p outListHash 에 담습니다. */
@@ -117,7 +120,7 @@ namespace sw
                 {
                     size = 256 + nextRandom( state ) % 769;
                 }
-                return writeEntries( packPath, "game/scale", listSize, outListHash );
+                return writeEntries( packPath, PackTestUtil::makeDesc( "game/scale" ), listSize, outListHash ).has_value();
             }
 
             /** @brief 활성 메모리 프로파일러의 살아 있는 바이트입니다. 프로파일러가 없으면(배포본) 0 입니다. */
@@ -189,32 +192,36 @@ SW_TEST_CASE( PackScaleTest, Index300k, ._tags = "bench", ._disabledReason = "be
 }
 
 /**
- * @brief [PackScaleTest] 1 GiB 패치 팩의 서명 확인 비용입니다 — 고치기 전은 팩 전체 읽기 + SHA-256 이다.
- * @details 값: `Pack.Scale.patchVerifyMs`(문턱 10 ms 이하 — 색인 크기에만 비례). 암호 제공자(GameFramework OpenSSL)가 공개돼 있지 않으면 읽기 시간만 남긴다.
- *          고치기 전의 확인은 2 GiB 이상을 거절한다(`PackPatchManifest::sign` · `verify` 의 32 비트 크기) — 이 팩은 그 아래다.
+ * @brief [PackScaleTest] 1 GiB 패치 팩의 서명 확인 비용입니다 — 색인 서명(PK-5) 뒤에는 여는 핸들로 색인 구역만 요약한다(고치기 전은 팩 전체 읽기 + SHA-256).
+ * @details 값: `Pack.Scale.patchVerifyMs`(문턱 10 ms 이하 — 색인 크기에만 비례). 암호 제공자(GameFramework OpenSSL)가 공개돼 있지 않으면 요약 없이 연 시간만 남긴다.
  */
 SW_TEST_CASE( PackScaleTest, Patch1g, ._tags = "bench", ._disabledReason = "bench - Release 에서 --test-run-disabled 로 돌린다", ._timeoutSeconds = 900 )
 {
-    using Internal        = PackScaleInternal;
-    const string packPath = test::makeScratchPath( "patch1g.pack" );
-    {
-        vector<uint64> listHash;
-        SW_REQUIRE_TRUE( Internal::writeEntries( packPath, "", vector<size_t>( Internal::kPatchEntryCount, Internal::kPatchEntryBytes ), listHash ) );
-    }
-
+    using Internal                        = PackScaleInternal;
+    const string                packPath  = test::makeScratchPath( "patch1g.pack" );
     INetSecurityProvider* const pProvider = engine::findSubsystem<INetSecurityProvider>();
-    const Stopwatch             watch;
-    vector<uint8>               packBytes;
-    SW_REQUIRE_TRUE( FileUtil::readFile( packPath, packBytes ) );
-    uint8 digest[32]{};
-    bool  bHashed = false;
+    PackWriterDesc              desc      = PackTestUtil::makeDesc( "" );
+    desc._pDigestProvider                 = pProvider;
+    vector<uint64>                  listHash;
+    const optional<PackWriteResult> written = Internal::writeEntries( packPath, desc, vector<size_t>( Internal::kPatchEntryCount, Internal::kPatchEntryBytes ), listHash );
+    SW_REQUIRE_TRUE( written.has_value() );
+
+    const Stopwatch watch;
+    PackReader      reader;
     if ( pProvider != nullptr )
-        bHashed = pProvider->computeSHA256( packBytes.data(), static_cast<int32>( packBytes.size() ), digest );
+    {
+        const PackIndexTrust trust{ pProvider, *written->_indexDigest };
+        SW_REQUIRE_TRUE( reader.open( packPath, &trust ) );
+    }
+    else
+    {
+        SW_REQUIRE_TRUE( reader.open( packPath ) );
+    }
     const int64 verifyNanos = watch.getElapsedNanoseconds();
 
-    SW_EXPECT_TRUE( packBytes.size() > static_cast<size_t>( Internal::kPatchEntryCount ) * Internal::kPatchEntryBytes );
-    SW_LOG_INFO_ID( "Pack.Scale.patchVerifyMs", "Pack.Scale.patchVerifyMs %# (%# B read%#)", verifyNanos / 1000000, packBytes.size(),
-                    bHashed ? " + SHA-256" : ", no security provider - read only" );
-    packBytes = vector<uint8>{};
+    SW_EXPECT_TRUE( written->_fileSize > static_cast<uint64>( Internal::kPatchEntryCount ) * Internal::kPatchEntryBytes );
+    SW_LOG_INFO_ID( "Pack.Scale.patchVerifyMs", "Pack.Scale.patchVerifyMs %# (%# B pack, index %# B%#)", verifyNanos / 1000000, written->_fileSize, written->_fileSize - written->_indexOffset,
+                    pProvider != nullptr ? " + SHA-256" : ", no security provider - opened without a digest" );
+    reader.close();
     SW_EXPECT_TRUE( FileUtil::removeFile( packPath ) );
 }

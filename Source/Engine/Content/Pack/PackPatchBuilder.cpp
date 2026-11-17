@@ -155,7 +155,7 @@ namespace sw
              *        쓰지 못하면 오류를 남기고 false 입니다.
              */
             [[nodiscard]] static bool writeChangedFiles( const PackPatchBuildParams& params, const vector<string>& listPackPath, const vector<Source>& listSource, const PackDelta& delta,
-                                                         const string& packPath )
+                                                         const string& packPath, PackWriteResult& outResult )
             {
                 unordered_map<string, size_t> mapFullPathToSource;
                 for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
@@ -174,8 +174,11 @@ namespace sw
                 vector<string> listChangedPath = delta._listChangedPath;
                 VectorUtil::sort( listChangedPath, []( const string& left, const string& right )
                 { return PackStreamWriter::makePathHash( left ) < PackStreamWriter::makePathHash( right ); } );
+                // 서명하는 패치는 블록 해시 표를 쓰고 색인 요약을 센다 — 서명이 이 요약에 걸린다(팩을 다시 읽지 않는다).
+                PackWriterDesc writerDesc   = params._writerDesc;
+                writerDesc._pDigestProvider = params._signer._pProvider;
                 PackStreamWriter writer;
-                expected<void>   step = writer.open( packPath, params._writerDesc );
+                expected<void>   step = writer.open( packPath, writerDesc );
                 for ( size_t index = 0; index < listChangedPath.size() && step.has_value(); ++index )
                 {
                     const string& changedPath = listChangedPath[index];
@@ -200,6 +203,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot", "Patch pack could not be written to '%#': %# '%#'", packPath, closed.error().message(), closed.error().detail() );
                     return false;
                 }
+                outResult = *closed;
                 return true;
             }
         };
@@ -300,25 +304,25 @@ namespace sw
         }
 
         PackPatchManifest manifest;
-        manifest._fromBuild       = previous._build;
-        manifest._toBuild         = params._newBuild;
-        manifest._packFileName    = makePatchPackFileName( params._newBuild );
-        manifest._listRemovedPath = delta._listRemovedPath;
-        const string packPath     = FileUtil::joinPath( params._outputDirectory, manifest._packFileName );
-        const string manifestPath = FileUtil::joinPath( params._outputDirectory, makeManifestFileName( params._newBuild ) );
-        const string recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackBuildRecord::kExtension ) );
-        if ( Internal::writeChangedFiles( params, listPackPath, listSource, delta, packPath ) == false )
+        manifest._fromBuild          = previous._build;
+        manifest._toBuild            = params._newBuild;
+        manifest._packFileName       = makePatchPackFileName( params._newBuild );
+        manifest._listRemovedPath    = delta._listRemovedPath;
+        const string    packPath     = FileUtil::joinPath( params._outputDirectory, manifest._packFileName );
+        const string    manifestPath = FileUtil::joinPath( params._outputDirectory, makeManifestFileName( params._newBuild ) );
+        const string    recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackBuildRecord::kExtension ) );
+        PackWriteResult writeResult;
+        if ( Internal::writeChangedFiles( params, listPackPath, listSource, delta, packPath, writeResult ) == false )
             return false;
-        // 서명은 디스크에 쓴 팩의 바이트에 건다 — 배포되는 바이트의 해시다(메모리의 사본과 갈릴 길이 없다).
+        // 서명은 쓰기가 센 색인 요약에 건다 — 색인은 블록 요약을 담아 페이로드까지 묶는다. 팩을 다시 읽지 않는다.
         if ( params._signer._pProvider != nullptr )
         {
-            vector<uint8> packBytes;
-            if ( FileUtil::readFile( packPath, packBytes ) == false )
+            if ( writeResult._indexDigest.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot2", "Patch pack '%#' could not be read back for signing", packPath );
+                SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackNoIndexDigest", "Patch pack '%#' has no index digest to sign", packPath );
                 return false;
             }
-            if ( PackPatchManifest::sign( *params._signer._pProvider, params._signer._privateKeyPem, packBytes, manifest ) == false )
+            if ( PackPatchManifest::sign( *params._signer._pProvider, params._signer._privateKeyPem, *writeResult._indexDigest, manifest ) == false )
                 return false;
         }
         const bool bWritten = FileUtil::writeTextFile( manifestPath, PackPatchManifest::makeText( manifest ) ) &&

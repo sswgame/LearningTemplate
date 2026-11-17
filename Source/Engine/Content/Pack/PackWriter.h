@@ -31,19 +31,21 @@
 namespace sw
 {
     class ICompressionCodec;
+    class INetSecurityProvider;
 
     /** @struct PackWriterDesc @brief 팩 하나의 쓰기 설정입니다. `_blockSize` · `_writeWindowBytes` 는 기본값이 없어 비워 두면 `open` 이 오류입니다. */
     struct PackWriterDesc
     {
-        PackCompressionType _compression{ PackCompressionType::None };
-        int32               _compressionLevel{ 0 };                ///< 코덱의 레벨(0 = 코덱 기본값)
-        uint32              _dlcAppID{ 0 };                        ///< 0: 본편 · 공용, >0: DLC AppID
-        PackLayoutMode      _layoutMode{ PackLayoutMode::Sorted }; ///< 페이로드 배치(파일 머리말의 "슬롯 배치")
-        string              _previousPackPath{};                   ///< `Slot` 에서 앞 빌드의 팩 경로. 없는 파일이면 앞 빌드가 없는 첫 배치이고, 열 수 없으면 경고를 남기고 슬롯 없이 배치한다
-        uint32              _maxHolePercent{ 25 };                 ///< `Slot` 에서 앞 빌드 팩의 페이로드 영역 빈 자리가 이 비율(%)을 넘으면 앞 빌드를 버리고 촘촘히 놓는다
-        string              _mountDomain{};                        ///< 항목 경로 앞에 붙는 리소스 도메인(`engine` · `game/empty` · `dlc/winter`). 비우면 항목이 전체 경로다(패치 팩)
-        uint32              _blockSize{ 0 };                       ///< 필수. 압축 전 블록 크기 — `kPackMinBlockSize` ~ `kPackMaxBlockSize` 의 2 의 거듭제곱(PackConfig `_blockSize`)
-        uint64              _writeWindowBytes{ 0 };                ///< 필수. 이만큼의 원본을 모아 병렬로 압축한다(PackConfig `_writeWindowBytes`)
+        PackCompressionType   _compression{ PackCompressionType::None };
+        int32                 _compressionLevel{ 0 };                ///< 코덱의 레벨(0 = 코덱 기본값)
+        uint32                _dlcAppID{ 0 };                        ///< 0: 본편 · 공용, >0: DLC AppID
+        PackLayoutMode        _layoutMode{ PackLayoutMode::Sorted }; ///< 페이로드 배치(파일 머리말의 "슬롯 배치")
+        string                _previousPackPath{};                   ///< `Slot` 에서 앞 빌드의 팩 경로. 없는 파일이면 앞 빌드가 없는 첫 배치이고, 열 수 없으면 경고를 남기고 슬롯 없이 배치한다
+        uint32                _maxHolePercent{ 25 };                 ///< `Slot` 에서 앞 빌드 팩의 페이로드 영역 빈 자리가 이 비율(%)을 넘으면 앞 빌드를 버리고 촘촘히 놓는다
+        string                _mountDomain{};                        ///< 항목 경로 앞에 붙는 리소스 도메인(`engine` · `game/empty` · `dlc/winter`). 비우면 항목이 전체 경로다(패치 팩)
+        uint32                _blockSize{ 0 };                       ///< 필수. 압축 전 블록 크기 — `kPackMinBlockSize` ~ `kPackMaxBlockSize` 의 2 의 거듭제곱(PackConfig `_blockSize`)
+        uint64                _writeWindowBytes{ 0 };                ///< 필수. 이만큼의 원본을 모아 병렬로 압축한다(PackConfig `_writeWindowBytes`)
+        INetSecurityProvider* _pDigestProvider{ nullptr };           ///< 서명 채널(패치 팩)이면 SHA-256 제공자 — 블록 해시 표를 쓰고(`PackFlag::HasBlockHash`) 색인 요약을 결과에 담는다
     };
 } // namespace sw
 
@@ -77,10 +79,11 @@ namespace sw
     /** @struct PackWriteResult @brief `PackStreamWriter::close` 의 결과입니다. */
     struct PackWriteResult
     {
-        uint64         _contentHash{ 0 }; ///< 쓴 파일의 `ContentHash::computeBytes` 와 같은 값(다시 읽지 않고 쓰는 동안 셌다)
-        uint64         _fileSize{ 0 };    ///< 쓴 파일 크기
-        uint64         _indexOffset{ 0 }; ///< 색인 구역(FAT · 블록 표 · 스트링 풀 · 헤더)의 시작 — 파일 끝까지다. 색인 서명(PK-5)이 이 구간을 해시한다
-        PackWriteStats _stats;
+        uint64               _contentHash{ 0 }; ///< 쓴 파일의 `ContentHash::computeBytes` 와 같은 값(다시 읽지 않고 쓰는 동안 셌다)
+        uint64               _fileSize{ 0 };    ///< 쓴 파일 크기
+        uint64               _indexOffset{ 0 }; ///< 색인 구역(FAT · 블록 표 · 블록 해시 표 · 스트링 풀 · 헤더)의 시작 — 파일 끝까지다
+        optional<PackDigest> _indexDigest;      ///< 색인 구역의 SHA-256 — `_pDigestProvider` 를 준 쓰기만. 패치 목록이 이것에 서명한다(`PackPatchManifest::sign`)
+        PackWriteStats       _stats;
     };
 } // namespace sw
 
@@ -167,6 +170,7 @@ namespace sw
         uint64                              _pendingBytes;
         vector<PackFileEntryOnDisk>         _listDiskEntry;
         vector<PackBlockEntryOnDisk>        _listBlock;
+        vector<PackDigest>                  _listBlockDigest; ///< `_pDigestProvider` 가 있을 때만 — 블록마다 저장 바이트의 SHA-256
         vector<uint8>                       _stringPoolBytes;
         unordered_map<uint64, PreviousSlot> _mapPreviousSlot; ///< 비어 있으면 모든 쓰기가 덧붙이기다
         uint64                              _payloadEnd;      ///< 페이로드 구역의 끝(다음 덧붙이기 자리 앞)

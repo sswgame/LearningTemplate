@@ -14,8 +14,10 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
 
+    #include <io.h>
     #include <share.h>
     #include <shellapi.h>
+    #include <winioctl.h>
 #elif defined( SW_PLATFORM_POSIX )
     #include <cerrno>
     #include <ctime>
@@ -381,6 +383,25 @@ namespace sw
         return _fseeki64( pFile, offset, origin ) == 0;
 #elif defined( SW_PLATFORM_POSIX )
         return fseeko( pFile, static_cast<off_t>( offset ), origin ) == 0;
+#else
+    #error "Unsupported platform"
+#endif
+    }
+
+    bool PlatformFileUtil::markSparse( FILE* pFile )
+    {
+        if ( pFile == nullptr )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        // NTFS 는 성긴 파일로 표시해야 끝 너머로 건너뛴 구간을 디스크에 쓰지 않는다(표시하지 않으면 건너뛴 구간을 0 으로 채운다).
+        const HANDLE handle = reinterpret_cast<HANDLE>( _get_osfhandle( _fileno( pFile ) ) );
+        if ( handle == INVALID_HANDLE_VALUE )
+            return false;
+        DWORD returnedBytes = 0;
+        return DeviceIoControl( handle, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returnedBytes, nullptr ) != FALSE;
+#elif defined( SW_PLATFORM_POSIX )
+        (void)pFile; // 끝 너머로 건너뛴 구간은 파일 시스템이 저절로 구멍으로 둔다
+        return true;
 #else
     #error "Unsupported platform"
 #endif

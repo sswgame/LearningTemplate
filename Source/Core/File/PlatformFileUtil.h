@@ -123,6 +123,12 @@ namespace sw
          */
         static bool seekTo( FILE* pFile, int64 offset, int32 origin );
 
+        /**
+         * @brief 열린 쓰기 파일을 성긴 파일(끝 너머로 건너뛴 구간을 디스크에 쓰지 않는다)로 표시합니다. POSIX 는 따로 할 일이 없어 true 입니다.
+         * @return 표시하지 못하면 false 입니다(FAT 계열 볼륨 등) — 그때도 건너뛴 구간은 0 으로 읽히고 디스크만 쓴다.
+         */
+        static bool markSparse( FILE* pFile );
+
         /** @brief 현재 오프셋을 반환합니다. 실패하면 kInvalidOffset 입니다. */
         static int64 tellPosition( FILE* pFile );
 
