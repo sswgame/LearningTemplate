@@ -2,44 +2,23 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
-#include "Editor/Panels/Inspector/Model/InspectorEditRecorder.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
-    namespace
+    void InspectorPropertyUndo::trackRowEdit( PropertyGridModel& model )
     {
-        struct InspectorPropertyUndoInternal
-        {
-            /**
-             * @brief 방금 그린 위젯의 활성화~해제 사이를 한 번의 되돌리기로 묶습니다(기록은 `InspectorEditRecorder`).
-             * @param pLabel 되돌리기 항목에 붙일 이름(널이면 "Property")
-             */
-            static void trackActiveItemEdit( const utf8* pLabel )
-            {
-                const uint32 widgetID = static_cast<uint32>( ImGui::GetItemID() );
-                if ( ImGui::IsItemActivated() )
-                    InspectorEditRecorder::beginEdit( widgetID, pLabel );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    InspectorEditRecorder::finishEdit( widgetID );
-            }
-        };
-    } // namespace
-
-    void InspectorPropertyUndo::trackRowEdit( const PropertyValueRow& row )
-    {
-        InspectorPropertyUndoInternal::trackActiveItemEdit( row._label.c_str() );
+        // 해제는 편집 여부와 무관하게 받는다(`IsItemDeactivated`) — 구간이 없으면 할 일이 없고, 있으면 전 · 후가 같을 때 마감이 버린다.
+        model.trackWidget( static_cast<uint32>( ImGui::GetItemID() ), ImGui::IsItemActive(), ImGui::IsItemDeactivated() );
     }
 
-    void InspectorPropertyUndo::trackLastItem( const utf8* pPropertyLabel )
+    void InspectorPropertyUndo::trackComponentRegion( PropertyGridModel& model, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const utf8* pLabel )
     {
-        InspectorPropertyUndoInternal::trackActiveItemEdit( pPropertyLabel );
-    }
-
-    void InspectorPropertyUndo::commitFinishedEdits()
-    {
-        InspectorEditRecorder::commitFinishedEdits();
+        const uint32 widgetID = static_cast<uint32>( ImGui::GetItemID() );
+        if ( ImGui::IsItemActivated() )
+            model.openComponentRegionSpan( widgetID, scope, objectID, componentID, pLabel != nullptr ? string_view{ pLabel } : string_view{} );
+        model.trackWidget( widgetID, ImGui::IsItemActive(), ImGui::IsItemDeactivated() );
     }
 } // namespace sw::editor

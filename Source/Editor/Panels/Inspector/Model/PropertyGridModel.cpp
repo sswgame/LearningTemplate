@@ -181,6 +181,8 @@ namespace sw::editor
         , _pType{ nullptr }
         , _onEdited{}
         , _isMixed{}
+        , _collectEditTargets{}
+        , _editSpans{}
         , _pFavorites{ nullptr }
         , _layoutCache{}
         , _scratchDisplay{}
@@ -226,19 +228,21 @@ namespace sw::editor
             _pType      = pType;
             _targetSalt = HashUtil::combine( HashUtil::combine( static_cast<uint64>( target._scope ), target._objectID ), target._componentID );
         }
-        _onEdited = target._onEdited;
-        _isMixed  = target._isMixed;
+        _onEdited           = target._onEdited;
+        _isMixed            = target._isMixed;
+        _collectEditTargets = target._collectEditTargets;
         return true;
     }
 
     void PropertyGridModel::endTarget()
     {
-        _pComponent = nullptr;
-        _pObject    = nullptr;
-        _pInstance  = nullptr;
-        _pType      = nullptr;
-        _onEdited   = {};
-        _isMixed    = {};
+        _pComponent         = nullptr;
+        _pObject            = nullptr;
+        _pInstance          = nullptr;
+        _pType              = nullptr;
+        _onEdited           = {};
+        _isMixed            = {};
+        _collectEditTargets = {};
         _listBinding.clear();
         _listElementProp.clear();
     }
@@ -862,6 +866,7 @@ namespace sw::editor
             return;
         const PropertyInfo& prop = *pBinding->_pProp;
         void* const         pObj = pBinding->_instance.get();
+        ensureEditSpan( *pBinding, {} );
         if ( prop._bIsBitField == SW_TRUE )
         {
             const bool* pValue = value.getStoredSize() == sizeof( bool ) ? value.getPtr<bool>() : nullptr;
@@ -892,6 +897,7 @@ namespace sw::editor
         // 위젯은 `UIMin` · `UIMax` 안에서 움직이고, 값은 항상 `Min` · `Max` 로 제한한다(`InspectorNumericRange` — 직접 입력이 범위 밖일 수 있다).
         const InspectorNumericRange range   = InspectorPropertyLayout::getNumericRange( prop, ObjectAddress{ pBinding->_instance } );
         const float64               clamped = InspectorPropertyLayout::clampToAllowedRange( range, storedValue );
+        ensureEditSpan( *pBinding, {} );
         if ( ReflectedValueUtil::writeNumber( static_cast<ReflectBuiltinIndex>( pBuiltin->_index ), pMember, clamped ) == false )
             return;
         notifyRowEdited( rowID );
@@ -902,26 +908,16 @@ namespace sw::editor
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr )
             return;
-        // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진
+        // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린다. `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진
         // 프로퍼티마다 기본값을 채우므로 다른 프로퍼티까지 바뀐다. 그래서 텍스트 하나로 프로퍼티 하나만 쓴다.
-        const PropertyInfo&        prop     = *pBinding->_pProp;
-        const MutableObjectAddress instance = pBinding->_instance;
-        const string               value{ text };
-        auto                       apply = [this, &prop, instance, &value, rowID]()
-        {
-            if ( SerializerUtil::applyPropertyText( prop, instance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
-                notifyRowEdited( rowID );
-            else
-                SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
-        };
-        // 다중 편집 대상(`_isMixed` 가 걸렸다)은 `_onEdited` 가 값을 나머지에도 입힌다. 주 선택만 찍으면 되돌리기가 나머지를 돌리지 못하므로 선택 전부를 찍는다.
-        if ( _isMixed.isBound() )
-        {
-            InspectorEditRecorder::recordImmediateEdit( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
-            apply();
-        }
+        // 다중 편집 대상은 `_onEdited` 가 값을 나머지에도 입힌다 — 구간이 편집이 닿는 컴포넌트 전부를 찍으므로 되돌리기가 나머지도 돌린다.
+        const PropertyInfo& prop = *pBinding->_pProp;
+        const string        value{ text };
+        ensureEditSpan( *pBinding, pUndoLabel != nullptr ? string_view{ pUndoLabel } : string_view{} );
+        if ( SerializerUtil::applyPropertyText( prop, pBinding->_instance, value, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
+            notifyRowEdited( rowID );
         else
-            PropertyGridModelInternal::applyEdit( _pObject, pUndoLabel, apply );
+            SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
     }
 
     bool PropertyGridModel::setAssetPath( uint32 rowID, string_view path )
@@ -974,9 +970,9 @@ namespace sw::editor
         void*               pMemory   = prop.getValuePtr<void>( pBinding->_instance.get() );
         if ( pEnumInfo == nullptr || pMemory == nullptr )
             return;
-        // 콤보에서 고른 값은 고르는 순간 바뀐다 — 콤보 단추의 활성화 · 해제로는 잡히지 않으므로 쓰기 직전에 편집 전을 찍어 남긴다.
+        // 콤보에서 고른 값은 고르는 순간 바뀐다 — 고른 항목은 팝업 창의 다른 위젯이라 한 번 쓰기 구간이 된다(다음 마감에 오른다).
         // enum 의 실제 크기로 쓴다. int32 로 쓰면 uint8 enum 뒤의 필드를 덮어쓴다(`CameraComponent::_role` 을 고르면 `_bOrthographic` 이 꺼졌다).
-        InspectorEditRecorder::recordImmediateEdit( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
+        ensureEditSpan( *pBinding, {} );
         pEnumInfo->writeValueToMemory( pMemory, value );
         notifyRowEdited( rowID );
     }
@@ -991,8 +987,8 @@ namespace sw::editor
         void* const         pContainer = prop.getRawPtr( pBinding->_instance.get() );
         if ( pContainer == nullptr )
             return;
-        PropertyGridModelInternal::applyEdit( _pObject, undoLabel, [&edit, &prop, pContainer]()
-        { edit( prop, pContainer ); } );
+        ensureEditSpan( *pBinding, undoLabel );
+        edit( prop, pContainer );
         notifyRowEdited( rowID );
     }
 
@@ -1052,8 +1048,8 @@ namespace sw::editor
             } ) );
             if ( bExists == false )
             {
-                PropertyGridModelInternal::applyEdit( _pObject, "Add Map Entry", [&mapWrapper, pContainer, pKey, pValue]()
-                { mapWrapper.insertKeyValue( pContainer, pKey, pValue ); } );
+                ensureEditSpan( *pBinding, "Add Map Entry" );
+                mapWrapper.insertKeyValue( pContainer, pKey, pValue );
                 notifyRowEdited( rowID );
             }
         }
@@ -1094,6 +1090,40 @@ namespace sw::editor
             (void)pSeq->appendElement( pContainer, pSeq->getSize( pContainer ), SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
             { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, text, context ); } ) );
         } );
+    }
+
+    void PropertyGridModel::ensureEditSpan( const RowBinding& binding, string_view label )
+    {
+        if ( _pObject == nullptr || EditorPlaySession::areSceneEditsAllowed() == false )
+            return;
+        // 구간 단위는 깊이 0 프로퍼티다 — 중첩 필드 · 원소 편집도 다중 선택은 그 프로퍼티를 통째로 입힌다(`notifyRowEdited`).
+        const RowBinding* pRoot = findValueBinding( binding._rootRowID );
+        if ( pRoot == nullptr )
+            return;
+        const PropertyInfo& rootProp = *pRoot->_pProp;
+        if ( _editSpans.continueHeld( string_view{ rootProp._name.c_str() } ) )
+            return;
+        const string undoLabel = label.empty() ? InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( rootProp ).c_str() ) : string{ label };
+        _editSpans.open( PropertyEditSpan::captureProperty( *_pObject, _pComponent, rootProp, _collectEditTargets, undoLabel ) );
+    }
+
+    void PropertyGridModel::openComponentRegionSpan( uint32 widgetID, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, string_view label )
+    {
+        if ( _editSpans.isHeld( widgetID ) || EditorPlaySession::areSceneEditsAllowed() == false )
+            return;
+        GameObject* pObject    = findSceneObject( scope, objectID );
+        Component*  pComponent = pObject != nullptr ? pObject->findComponentByID( componentID ) : nullptr;
+        if ( pComponent == nullptr )
+            return;
+        const string undoLabel = InspectorPropertyLayout::makeUndoLabel( string{ label }.c_str() );
+        _editSpans.openForWidget( widgetID, PropertyEditSpan::captureComponent( *pComponent, undoLabel ) );
+    }
+
+    void PropertyGridModel::endFrame()
+    {
+        vector<PropertyEditSpan> listClosed;
+        _editSpans.collectClosed( listClosed );
+        PropertyEditSpan::commit( listClosed );
     }
 
     void PropertyGridModel::invokeMethod( const FunctionInfo& method, const TaskArgs& args )

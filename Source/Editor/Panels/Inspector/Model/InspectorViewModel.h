@@ -160,6 +160,8 @@ namespace sw::editor
         void setCurrentMultiComponent( uint32 index ) { _currentMultiComponent = index; }
         /** @brief 고친 프로퍼티를 나머지 오브젝트의 같은 컴포넌트에 입힙니다. */
         void copyEditToOthers( const PropertyInfo& prop );
+        /** @brief 이번에 그리는 공통 컴포넌트의 오브젝트마다의 컴포넌트(주 선택 먼저)를 @p outListComponent 에 더합니다 — 편집 구간이 되돌리기 대상으로 찍는다. */
+        void collectMultiEditTargets( vector<Component*>& outListComponent );
         /** @brief 그 프로퍼티 값이 오브젝트마다 다르면 true 입니다. */
         bool                    isMultiEditMixed( const PropertyInfo& prop );
         static constexpr uint32 kNoMultiComponent = 0xFFFFFFFFu;

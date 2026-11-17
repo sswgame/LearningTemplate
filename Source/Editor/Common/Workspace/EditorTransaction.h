@@ -65,6 +65,12 @@ namespace sw::editor
         /** @brief 오브젝트 하나의 형제 순서 키 바꿈(@p beforeKey → @p afterKey)을 Undo/Redo 에 기록합니다. 같으면 기록하지 않습니다. 길은 `recordModify` 와 같다(미리보기 씬이면 그 창의 스택). */
         void recordSiblingOrder( GameObject* pObj, uint32 beforeKey, uint32 afterKey, string_view label );
 
+        /**
+         * @brief 오브젝트 @p owner 를 고친 데이터 명령 @p command 를 그 오브젝트가 사는 씬의 스택에 올립니다(미리보기 씬이면 그 창의 스택 — 메인 씬은 dirty 가 아니다).
+         * @details 스냅샷이 아닌 단위로 기록하는 편집(형제 순서 키 · 인스펙터 프로퍼티 값 글 — `PropertyEditStep`)이 쓰는 길이다. 스택은 `recordModify` 와 같은 규칙으로 고른다.
+         */
+        void recordObjectCommand( const GameObject& owner, CommandStack::Command command );
+
         /** @brief 게임오브젝트 생성을 Undo/Redo에 등록합니다. */
         void recordCreation( GameObject* pObj, string_view label = "Create GameObject" );
 

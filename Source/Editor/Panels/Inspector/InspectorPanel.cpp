@@ -79,8 +79,7 @@ namespace sw::editor
         _propertyGrid.setFavorites( &_viewModel.editFavorites() );
         EditorWidgets::pushInspectorStyle();
         drawSelectionSection();
-        _propertyGrid.endFrame(); // 모두 펼치기 · 접기 요청은 이번 프레임의 머리에만 적용한다
-        InspectorPropertyUndo::commitFinishedEdits();
+        _propertyGrid.endFrame(); // 모두 펼치기 · 접기 요청은 이번 프레임의 머리에만 적용하고, 닫힌 편집 구간을 되돌리기에 남긴다
 
         // Undo 와 Redo 단축키는 여기서 처리하지 않는다. edit.undo 와 edit.redo 커맨드가 유일한 처리자다.
         // ImGui 의 IsKeyPressed 는 소비되지 않으므로 여기서도 받으면 전역 처리기(EditorCommandGUI)와 함께
@@ -206,6 +205,7 @@ namespace sw::editor
                 EditorPropertyGridTarget target = EditorPropertyGridTarget::makeSceneTarget( EditorPropertyGridScope::MainScene, _state._objectID, card._componentID );
                 target._onEdited                = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &InspectorViewModel::copyEditToOthers, &_viewModel );
                 target._isMixed                 = SW_DELEGATE_METHOD( Delegate<bool( const PropertyInfo& )>, &InspectorViewModel::isMultiEditMixed, &_viewModel );
+                target._collectEditTargets      = SW_DELEGATE_METHOD( Delegate<void( vector<Component*>& )>, &InspectorViewModel::collectMultiEditTargets, &_viewModel );
                 _propertyGrid.drawProperties( target, nullptr, {} );
                 _viewModel.setCurrentMultiComponent( InspectorViewModel::kNoMultiComponent );
             }
@@ -514,11 +514,11 @@ namespace sw::editor
             for ( IInspectorComponent* pInspector : listInspector )
             {
                 // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
-                // 영역이 위젯마다 `trackRowEdit` 를 호출하지 않아도 된다.
+                // 영역이 위젯마다 `trackRowEdit` 를 호출하지 않아도 된다. 확장은 컴포넌트에 바로 쓰므로 활성화될 때 그 컴포넌트의 값 글을 찍는다.
                 ImGui::BeginGroup();
                 pInspector->drawSection( pComp );
                 ImGui::EndGroup();
-                InspectorPropertyUndo::trackLastItem( card._typeDisplayName.c_str() );
+                InspectorPropertyUndo::trackComponentRegion( _propertyGrid.editModel(), EditorPropertyGridScope::MainScene, _state._objectID, card._componentID, card._typeDisplayName.c_str() );
                 pInspector->collectDrawnProperties( listDrawnName );
             }
         }

@@ -1370,11 +1370,17 @@ void applyPropertyText( UndoStepContext& context, const PropertyEditTarget& targ
 - 스냅샷으로 남는 것: 구조 편집(생성 · 삭제 · 컴포넌트 추가 · 삭제). 한 쓰기가 다른 칸을 고치는 타입(`onPropertyChanged`)이 되돌리기에서 어긋나는지는 추측하지 않고 `editor/undocoverage` 의 전수 단계(프로퍼티마다 편집 → 되돌리기 → 상태 글 해시가 편집 전과 같다)가 가린다 — 지는 프로퍼티만 거래에 오브젝트 스냅샷을 함께 싣는다.
 - 기각 — 감사의 임시안(`IsItemDeactivated` 에서 pending 지우기만): 누수는 막지만 선택 전체 직렬화가 남는다.
 
+**P1 에서 정한 것(2026-11-17).**
+- 확장 영역(`IInspectorComponent` — 트랜스폼 · 카메라 …, 컴포넌트에 바로 써 모델을 지나지 않는다): 그룹 위젯이 활성화될 때 **그 컴포넌트 하나의 프로퍼티 전부**의 값 글을 찍고, 풀릴 때 바뀐 프로퍼티만 같은 단계로 남긴다. 유니티 `Undo.RecordObject`(대상 하나를 찍고 차이를 `PropertyModification` 으로) · 언리얼 `Modify` + 트랜잭션 차이와 같다. 기각 — 오브젝트 스냅샷 유지(단위가 둘로 갈린다), 확장마다 모델 쓰기 길로 옮기기(회전 도 표시처럼 프로퍼티와 1:1 이 아닌 입력이 있다 — Godot 도 커스텀 에디터는 `emit_changed` 로 프로퍼티 단위만 받는다).
+- 구간 표(`PropertyEditSpanSet`)는 그리드 모델이 하나씩 든다 — 인스펙터 창이 둘이어도 서로의 구간을 닫지 않는다. 고아 구간은 "다음 `gather`" 가 아니라 그리드의 프레임 끝(`EditorPropertyGrid::endFrame`)이 닫는다: 한 그리드가 한 프레임에 카드마다 모으므로 모으기로는 다른 카드의 활성 위젯과 가릴 수 없다.
+- 구간 하나 = 데이터 단계 한 쌍이고 대상 목록을 인자로 든다(8000 선택이 명령 8000 개가 아니다). 단계 인자에 씬 키를 더했다(미리보기 창 — `ObjectSnapshot` 과 같은 규칙), 스택은 `EditorTransaction::recordObjectCommand` 가 오브젝트의 씬으로 고른다.
+- 컨테이너 편집(원소 더하기 · 지우기 · 맵 항목)도 같은 구간을 탄다 — 예전 스냅샷은 주 선택만 찍어 다중 선택의 나머지가 되돌아가지 않았다. 메서드 호출(`invokeMethod`)만 오브젝트 스냅샷으로 남는다(무엇을 바꿀지 모른다).
+
 **판정.** 8000 선택에서 칸을 누르고 나오기 → 기록 0 · 프레임 증가 1 ms 미만. 숫자 칸 끌기 → 구간 열기 프레임 16 ms 미만, 거래 1 MB 미만.
 
 | 일 | 크기 | 바꿀 파일 | 남길 테스트 | 의존 |
 |---|---|---|---|---|
-| P1 단계 · 편집 구간 | M | `PropertyEditStep.h/.cpp`(새), `PropertyGridModel.cpp`, `InspectorEditRecorder.*`(축소) | `InspectorEditRecorderTest.DeactivateWithoutEditDropsPending` · `.EditRecordsOnePropertyPerTarget` · `.UndoRestoresValueThroughModelPath` · `.OrphanedSpanClosesOnNextGather` | 없음 |
+| P1 단계 · 편집 구간 | M | `PropertyEditStep.h/.cpp`(새), `PropertyGridModel.cpp`, `InspectorEditRecorder.*`(축소) | `InspectorEditRecorderTest.DeactivateWithoutEditDropsPending` · `.EditRecordsOnePropertyPerTarget` · `.UndoRestoresValueThroughModelPath` · `.OrphanedSpanClosesAtFrameEnd` | 없음 |
 | P2 View 정리 | S | `InspectorPropertyUndo.cpp`, `IInspectorProperty` 구현들의 호출 순서 주석 | 기존 `editor/inspector*` 시나리오 | P1 |
 | P3 전수 · 규모 | M | `EditorUndoCoverage.cpp`(프로퍼티 전수), 8000 선택 시나리오 단계 | `editor/undocoverage` 프로퍼티 단계, 아래 측정 절의 값 | P1 |
 

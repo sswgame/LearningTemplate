@@ -212,8 +212,6 @@ namespace sw::editor
             _model.endTarget();
         }
         _bFavoritesOnly = SW_FALSE;
-        // 편집 알림(다중 선택의 나머지에 값 적용)이 끝난 뒤에 되돌리기를 남긴다.
-        InspectorPropertyUndo::commitFinishedEdits();
     }
 
     void EditorPropertyGrid::drawFavoriteProperties( const EditorPropertyGridTarget& target )

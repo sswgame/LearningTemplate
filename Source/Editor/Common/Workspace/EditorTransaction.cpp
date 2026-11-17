@@ -275,29 +275,33 @@ namespace sw::editor
         if ( pObj == nullptr || beforeKey == afterKey )
             return;
 
-        SceneManager*          pSceneManager = editor::findSubsystem<SceneManager>();
-        const EditorSelection* pPreviewScope = EditorTransactionInternal::findPreviewScopeOf( *pObj );
-        if ( pPreviewScope != nullptr )
-        {
-            // 창의 스택에 남긴다 — 메인 씬은 dirty 가 아니다(`recordObjectLifetime` 과 같다).
-            CommandStack* pPreviewStack = pPreviewScope->findPreviewCommandStack();
-            if ( pSceneManager == nullptr || pPreviewStack == nullptr )
-            {
-                SW_LOG_ERROR_ID( "EditorTransaction.NoSceneManagerSiblingOrder", "No SceneManager - the sibling order edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
-                return;
-            }
-            pPreviewStack->push( ObjectSnapshot::makeSiblingOrder( *pSceneManager, *pObj, beforeKey, afterKey, label ) );
-            return;
-        }
-
-        // 선택 조회(②): `recordModify` 와 같다.
-        CommandStack* pStack = EditorTransactionInternal::getCommandStack();
-        if ( pStack == nullptr || pSceneManager == nullptr )
+        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
+        if ( pSceneManager == nullptr ) // 종료 뒤 · 테스트 · 도구뿐이다 — 기록은 못 남겨도 dirty 는 표시한다(`recordModify` 와 같다)
         {
             EditorTransaction::markActiveSceneDirty();
             return;
         }
-        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshot::makeSiblingOrder( *pSceneManager, *pObj, beforeKey, afterKey, label ) );
+        recordObjectCommand( *pObj, ObjectSnapshot::makeSiblingOrder( *pSceneManager, *pObj, beforeKey, afterKey, label ) );
+    }
+
+    void EditorTransaction::recordObjectCommand( const GameObject& owner, CommandStack::Command command )
+    {
+        const EditorSelection* pPreviewScope = EditorTransactionInternal::findPreviewScopeOf( owner );
+        if ( pPreviewScope != nullptr )
+        {
+            // 창의 스택에 남긴다 — 메인 씬은 dirty 가 아니다(`recordObjectLifetime` 과 같다).
+            CommandStack* pPreviewStack = pPreviewScope->findPreviewCommandStack();
+            if ( pPreviewStack == nullptr )
+            {
+                SW_LOG_ERROR_ID( "EditorTransaction.NoPreviewStack", "No command stack for the preview scene of '%#' - the edit is not recorded", owner.getName().c_str() );
+                return;
+            }
+            pPreviewStack->push( std::move( command ) );
+            return;
+        }
+
+        // 선택 조회(②): `recordModify` 와 같다. 스택이 없으면 dirty 만 표시한다.
+        EditorTransactionInternal::pushCommand( EditorTransactionInternal::getCommandStack(), std::move( command ) );
     }
 
     void EditorTransaction::recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit )
