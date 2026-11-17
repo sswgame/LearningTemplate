@@ -168,6 +168,8 @@ namespace sw
         RenderViewRect _rect{};
         /// @brief 지난 프레임의 사각형 / 풀 배율입니다 — TAA 히스토리처럼 지난 프레임 첨부를 읽는 셰이더가 쓴다.
         float2 _previousRectScale{ 1.0f, 1.0f };
+        /// @brief 지난 프레임에 실제로 그린 사각형(픽셀)입니다 — 깊이 히스토리를 읽는 쪽이 그대로 쓴다(`scaleToPreviousRect`).
+        RenderViewRect _previousRect{};
 
         /**
          * @brief 이번 프레임 시간 누적 기록을 시작합니다 — 기록을 버릴지(`_bHistoryReset`)를 정하고 그렸다고 표시합니다.
@@ -193,6 +195,7 @@ namespace sw
          */
         void updateViewRect( float32 rectScale )
         {
+            _previousRect         = _rect;
             _previousRectScale    = computeRectScale();
             const float32 scale   = rectScale < kMinRectScale ? kMinRectScale : ( rectScale > 1.0f ? 1.0f : rectScale );
             const uint32  poolW   = _transientPool.getWidth();
@@ -216,16 +219,14 @@ namespace sw
          * @details 나눗수 첨부(반해상도)는 비율로 올림한다 — 사각형 가장자리 픽셀이 빠지지 않게.
          */
         /**
-         * @brief 지난 프레임 첨부 한 축(@p attachmentExtent — 깊이 히스토리)에서 지난 사각형이 덮은 픽셀 수입니다. 지난 배율이 1 이면 그대로입니다.
+         * @brief 지난 프레임 첨부 한 축(@p attachmentExtent — 깊이 히스토리)에서 지난 프레임이 실제로 그린 사각형 픽셀 수입니다(`_previousRect` 그대로 — 배율로 다시 셈하지 않아 1 픽셀도 어긋나지 않는다).
          * @details 깊이 히스토리를 읽는 쪽(가림 타일 · 컬링의 가림 판정 · GPU 입자 깊이 충돌)은 화면 UV 에 이 크기를 곱해 텍셀을 고른다 — 사각형 밖 옛 깊이를 읽지 않는다.
+         *          지난 사각형이 없으면(처음 그리는 프레임) 첨부 전체이고, 첨부보다 크지 않다.
          */
         uint32 scaleToPreviousRect( uint32 attachmentExtent, bool bHorizontal ) const
         {
-            const float32 scale = bHorizontal ? _previousRectScale._x : _previousRectScale._y;
-            if ( scale >= 1.0f )
-                return attachmentExtent;
-            const uint32 scaled = static_cast<uint32>( static_cast<float32>( attachmentExtent ) * scale + 0.5f );
-            return scaled < 1u ? 1u : ( scaled > attachmentExtent ? attachmentExtent : scaled );
+            const uint32 previous = bHorizontal ? _previousRect._width : _previousRect._height;
+            return previous == 0 || previous > attachmentExtent ? attachmentExtent : previous;
         }
         uint32 scaleToRect( uint32 attachmentExtent, bool bViewSized, bool bHorizontal ) const
         {

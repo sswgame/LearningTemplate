@@ -78,3 +78,17 @@ SW_TEST_CASE( FrameViewResourcesTest, DepthHistoryReadsPreviousRect )
     SW_EXPECT_EQUAL( view.scaleToPreviousRect( 720, false ), 360u );
     SW_EXPECT_EQUAL( view.scaleToPreviousRect( 1, true ), 1u ); // 0 이 되지 않는다
 }
+
+/** @brief [FrameViewResourcesTest] 깊이 히스토리 크기는 지난 프레임에 실제로 그린 사각형 픽셀 그대로다 — 배율로 다시 셈한 값과 반올림이 갈리는 홀수 크기에서도 같다. */
+SW_TEST_CASE( FrameViewResourcesTest, PreviousRectIsRecordedNotRecomputed )
+{
+    FrameViewTarget view;
+    view._transientPool.setSize( 999, 555 );
+    view.updateViewRect( 0.37f );
+    const RenderViewRect drawn = view._rect;
+    view.updateViewRect( 0.9f );
+    SW_EXPECT_EQUAL( view._previousRect._width, drawn._width );
+    SW_EXPECT_EQUAL( view._previousRect._height, drawn._height );
+    SW_EXPECT_EQUAL( view.scaleToPreviousRect( 999, true ), drawn._width );
+    SW_EXPECT_EQUAL( view.scaleToPreviousRect( 555, false ), drawn._height );
+}
