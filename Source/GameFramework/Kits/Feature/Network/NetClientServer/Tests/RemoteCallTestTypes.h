@@ -26,6 +26,8 @@ namespace sw
         int32 _localApplyCount{ 0 };
         PROPERTY()
         int32 _shownHealth{ 0 };
+        PROPERTY()
+        int32 _lastMarkerID{ 0 };
 
         /** @brief 검증을 지난 공격 — 대상과 힘을 적습니다. */
         FUNCTION( Server, Reliable, Validate )
@@ -42,6 +44,10 @@ namespace sw
         /** @brief 비신뢰 이동 — 잃어도 되는 호출입니다. */
         FUNCTION( Server )
         void moveStep( float32 distance ) { _movedDistance += distance; }
+
+        /** @brief 함수별 상한이 있는 표시 놓기 — 연결마다 초당 2 번입니다(`MaxCallsPerSecond`). */
+        FUNCTION( Server, MaxCallsPerSecond = 2 )
+        void placeMarker( int32 markerID ) { _lastMarkerID = markerID; }
 
         /** @brief 원격 역할이 없는 함수 — 서버가 원격으로 받지 않습니다. */
         FUNCTION()
@@ -78,5 +84,18 @@ namespace sw
         /** @brief 벡터 인자는 원격 인자가 될 수 없습니다. */
         FUNCTION( Server, Reliable )
         void place( float3 position ) { _position = position; }
+    };
+
+    /** @brief `Client` 함수에 함수별 상한을 적은 대상 — 서버가 지킬 수 없으므로 등록이 거절해야 합니다. */
+    REFLECT()
+    struct RemoteCallTestClientRate
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _shownValue{ 0 };
+
+        FUNCTION( Client, MaxCallsPerSecond = 3 )
+        void receiveValue( int32 value ) { _shownValue = value; }
     };
 } // namespace sw

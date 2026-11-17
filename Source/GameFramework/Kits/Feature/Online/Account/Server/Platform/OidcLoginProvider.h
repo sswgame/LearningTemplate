@@ -33,9 +33,11 @@ namespace sw
         OidcLoginProvider( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
-        uint64      submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) override;
-        int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
-        void        update( UnixMilliseconds nowMs ) override;
+        /** @brief `_bRequireNonce` 면 티켓 `토큰|nonce` 의 nonce 를 꺼냅니다(서버가 낸 nonce 를 한 번 쓴다). */
+        bool   findServerNonce( const vector<uint8>& ticketBytes, string& outNonce ) const override;
+        uint64 submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) override;
+        int32  pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
+        void   update( UnixMilliseconds nowMs ) override;
 
         const JWKSKeyCache& getKeyCache() const { return _keyCache; }
         int32               getJWKSFetchCount() const { return _jwksFetchCount; }

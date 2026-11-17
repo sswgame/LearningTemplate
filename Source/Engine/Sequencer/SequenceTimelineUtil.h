@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -89,11 +90,11 @@ namespace sw
     /** @brief 구간 처리기가 있는 항목(애니메이션 · 소리 · 자막) 하나의 재생 상태입니다. 들어간 뒤 나갈 때까지 산다. */
     struct SW_API SequenceSpanState
     {
-        shared_ptr<const AnimationClip> _clip;      ///< 애니메이션: 들어갈 때 잡은 클립(머무는 동안 다시 찾지 않는다)
-        uint64                          _playingID; ///< 소리: 낸 소리의 재생 id(엔진이 없으면 0)
-        uint32                          _itemIndex; ///< 시퀀스의 항목 번호
-        uint8                           _bInside  : 1;
-        [[maybe_unused]] uint8          _reserved : 7;
+        SharedAssetRef<AnimationClip> _clip;      ///< 애니메이션: 들어갈 때 잡은 클립(머무는 동안 다시 찾지 않는다)
+        uint64                        _playingID; ///< 소리: 낸 소리의 재생 id(엔진이 없으면 0)
+        uint32                        _itemIndex; ///< 시퀀스의 항목 번호
+        uint8                         _bInside  : 1;
+        [[maybe_unused]] uint8        _reserved : 7;
 
         explicit SequenceSpanState( uint32 itemIndex );
     };

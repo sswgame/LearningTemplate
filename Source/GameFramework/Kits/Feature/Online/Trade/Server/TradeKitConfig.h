@@ -27,5 +27,11 @@ namespace sw
         /** @brief 닫힌 거래 레코드의 TTL 입니다. TTL 쓸기가 닫은 뒤 이 기간이 지난 거래를 지웁니다(분쟁 조회 기간). */
         PROPERTY( Required )
         ServiceTTLConfig _closedSessionTTL{};
+        /** @brief 신청이 답을 기다리는 시간(ms)입니다. 지나면 거래가 닫힌다. */
+        PROPERTY( Required, Min = 1000, Max = 600000 )
+        int64 _inviteTimeoutMs{ 0 };
+        /** @brief 수락한 거래가 움직임 없이 열려 있을 수 있는 시간(ms)입니다. 지나면 거래가 닫힌다. */
+        PROPERTY( Required, Min = 1000, Max = 3600000 )
+        int64 _idleTimeoutMs{ 0 };
     };
 } // namespace sw

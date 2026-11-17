@@ -1,6 +1,7 @@
 // RegistrationList — 중복 · nullptr 거절과 빼기의 순서, 저장소 유지 · 보관 저장소로 돌아가기, 이름 사본 · 이름 중복, (순서, 이름) 정렬, 리로드 대체 · 취소, 전역 열거.
 #include "pch.h"
 
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -184,6 +185,7 @@ SW_TEST_CASE( RegistrationListTest, OrdersByOrderThenNameAndRequiresNames )
     SW_EXPECT_NULL( list.findByName( "A" ) );
 }
 
+#if SW_WITH_DYNAMIC_MODULES // 리로드 대체는 모듈 이미지를 갈아 끼우는 구성에만 있다(정적 모듈 구성 — 배포 · 웹 · Android 개발 — 에는 `RegistrationReloadScope` 가 없다)
 /**
  * @brief [RegistrationListTest] 리로드 중인 이미지의 등록은 같은 이름을 대체하고, 옛 이미지가 내려가며 빼도 새 등록이 남는다
  * @details 새 이미지의 정적 등록자는 옛 이미지가 아직 도는 동안 돈다. 거절하면 옛 이미지가 내려간 뒤 그 이름(개발 명령 · 탐침 · 시나리오 단계)이 사라진다.
@@ -242,6 +244,7 @@ SW_TEST_CASE( RegistrationListTest, CancelledReplacementRestoresTheOldRegistrati
     SW_REQUIRE_EQUAL( 1u, list.getCount() );
     SW_EXPECT_EQUAL( &secondNew, list.findByName( "probe" ) );
 }
+#endif // SW_WITH_DYNAMIC_MODULES
 
 /**
  * @brief [RegistrationListTest] 목록은 살아 있는 동안만 전역 열거(`RegistrationListBase::collect`)에 이름 · 항목 수와 함께 나오고, 사라지면 빠진다

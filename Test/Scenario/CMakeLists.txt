@@ -20,7 +20,10 @@ if(NOT TARGET App)
 	return()   # 전용 서버 타깃은 App 을 짓지 않는다
 endif()
 
-list(LENGTH SW_RHI_BACKEND_NAMES scenario_backend_count) # `-scenario-backends=all` 이 띄우는 자식 수
+if(NOT DEFINED SW_RHI_SCENARIO_BACKENDS_${SW_PLATFORM_NAME})
+	message(FATAL_ERROR "[Scenario] Config/Engine/CookContract.json platform_rhi_backends has no scenario_backends for '${SW_PLATFORM_NAME}'")
+endif()
+list(LENGTH SW_RHI_SCENARIO_BACKENDS_${SW_PLATFORM_NAME} scenario_backend_count) # `-scenario-backends=all` 이 이 플랫폼에서 띄우는 자식 수(쿠킹 표 scenario_backends)
 
 set(scenario_root "${CMAKE_SOURCE_DIR}/Content")
 sw_add_source_tree_root("${scenario_root}/engine/automation") # 시나리오 폴더만 뿌리로 훑는다(`Content/` 전체는 에셋 — cmake/Modules/Build/SourceTree.cmake)

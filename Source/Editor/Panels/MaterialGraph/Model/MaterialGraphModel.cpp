@@ -10,14 +10,15 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "DevTools/Material/MaterialGraphGeneratedPaths.h"
+#include "DevTools/Material/MaterialGraphNodeRegistry.h"
+
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphNodeRegistry.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 

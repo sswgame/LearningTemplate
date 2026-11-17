@@ -14,13 +14,11 @@
 	<Expect watch="Audio.ClipCacheBytes" atLeast="1"/><!-- 재생 중인 환경음 클립은 캐시가 들고 센다(예산 퇴출은 재생 중인 것을 빼지 않는다) -->
 	<Expect watch="Audio.ReverbIntensity" key="Cave" equals="0"/>
 	<Expect watch="Audio.EmitterDistance" target="ArenaAmbience" atLeast="10"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place ArenaReverbZone 0 2 -16"/>
 	<DevCommand line="object.place ArenaAmbience 0 2 -16"/>
 	<WaitUntil watch="Audio.ReverbIntensity" key="Cave" atLeast="0.99" timeoutFrames="10"/>
 	<WaitUntil watch="Audio.EmitterDistance" target="ArenaAmbience" atMost="0.01" timeoutFrames="10"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place ArenaReverbZone -15 2 15"/>
 	<DevCommand line="object.place ArenaAmbience 15 2 15"/>

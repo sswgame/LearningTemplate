@@ -126,3 +126,39 @@ SW_TEST_CASE( ObjectStateSerializerTest, HandleToMissingComponentSurvivesBinaryS
     SW_EXPECT_NOT_NULL( pTarget );
     SW_EXPECT_TRUE( pTarget == pObject->getComponent<HandleTargetTestComponent>() );
 }
+
+/**
+ * @brief [ObjectStateSerializerTest] 파일에 적힌 핸들은 대상의 고정 지역 id(`_localID`)를 따른다 — 같은 이름의 형제를 앞에 끼워도 같은 컴포넌트를 찾는다(감사 A-2)
+ * @details 예전 키 `이름#n` 은 순번이라, 앞에 같은 타입을 끼우면 쌓인 세이브 · 씬의 핸들이 경고 없이 끼운 컴포넌트로 갔다.
+ */
+SW_TEST_CASE( ObjectStateSerializerTest, SavedHandleSurvivesSiblingInsertion )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = createHolderObject( manager );
+    SW_REQUIRE_NOT_NULL( pObject );
+    ObjectSaveOptions fileOptions{ SerializePurpose::Authoring };
+    fileOptions._bOmitExternalParent = SW_TRUE;
+    const string saved               = ObjectStateSerializer::saveToXMLString( pObject, fileOptions );
+
+    // 같은 타입의 컴포넌트를 맨 앞에 끼운다(디자이너가 나중에 더했다 — 지역 id 는 아직 없다).
+    const string typeName = HandleTargetTestComponent::StaticType()->_name.c_str();
+    const size_t first    = saved.find( "<" + typeName );
+    SW_REQUIRE_TRUE( first != string::npos );
+    string inserted = saved;
+    inserted.insert( first, "<" + typeName + "/>" );
+
+    GameObject* pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
+    SW_REQUIRE_NOT_NULL( pLoaded );
+    SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, inserted, ObjectLoadContext{ SerializePurpose::Authoring } ) );
+    vector<HandleTargetTestComponent*> listTarget;
+    for ( Component* pComp : pLoaded->getComponents() )
+    {
+        if ( pComp != nullptr && pComp->getTypeInfo() == HandleTargetTestComponent::StaticType() )
+            listTarget.push_back( static_cast<HandleTargetTestComponent*>( pComp ) );
+    }
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listTarget.size() );
+    const HandleHolderTestComponent* pHolder = pLoaded->getComponent<HandleHolderTestComponent>();
+    SW_REQUIRE_NOT_NULL( pHolder );
+    SW_EXPECT_TRUE( manager.resolveComponent( pHolder->_target ) == listTarget[1] ); // 끼운 것이 아니라 원래 대상
+    SW_EXPECT_TRUE( ComponentStableKey::getLocalID( listTarget[0] ) != ComponentStableKey::getLocalID( listTarget[1] ) );
+}

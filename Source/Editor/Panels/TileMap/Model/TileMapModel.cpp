@@ -381,7 +381,7 @@ namespace sw::editor
         if ( path == _map._tileSetPath )
             return false;
         // 런타임과 같은 공유 캐시의 한 벌로 읽어 본다(쥐지 않는다).
-        if ( path.empty() == false && SharedAssetCache<TileSetAsset>::acquire( path ) == nullptr )
+        if ( path.empty() == false && SharedAssetCache<TileSetAsset>::acquire( path ).snapshot() == nullptr )
         {
             _status = SW_LOCKEYFORMAT( "EditorTileMap", "TileSetReadFailed", TextArgumentList().addText( "path", path ) );
             return false;
@@ -513,7 +513,7 @@ namespace sw::editor
         if ( _map._tileSetPath.empty() )
             return;
         // 팔레트는 런타임과 같은 공유 캐시의 한 벌을 사본으로 받는다.
-        const shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath );
+        const shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath ).snapshot();
         if ( pTileSet != nullptr )
             _tileSet = *pTileSet;
         else

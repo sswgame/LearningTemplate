@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Network/Message/NetRequest.h"
 
@@ -57,18 +58,53 @@ namespace sw
      * @brief 운영 표(라이브 이벤트 · 점검 · 공지)의 레코드 하나를 쓰거나 지우고 감사 줄을 같은 트랜잭션에 넣는 일입니다.
      * @details 라이브 운영과 서버 디렉터리가 같은 작업 클래스(읽고 → 버전 조건으로 쓰기/지우기 → 감사 줄)를 따로 적었다. 저장소 스레드에서 `commit` 하나로 돈다.
      */
+    /**
+     * @class IServiceWriteGuard
+     * @brief 운영 쓰기를 허락할지 같은 저장 일 안에서 봅니다(운영자 등급 등). 읽은 레코드는 저장소 입구의 읽기 집합이 커밋 조건으로 건다.
+     * @details 등급 확인과 쓰기가 다른 저장 일이면 그 사이에 강등돼도 쓰기가 들어간다(감사 "다음 할 일" 5 번) — 확인을 쓰는 일 안으로 옮기는 자리다.
+     */
+    class IServiceWriteGuard
+    {
+    public:
+        IServiceWriteGuard()          = default;
+        virtual ~IServiceWriteGuard() = default;
+
+        IServiceWriteGuard( const IServiceWriteGuard& )            = delete;
+        IServiceWriteGuard& operator=( const IServiceWriteGuard& ) = delete;
+
+        /** @brief 허락하면 Ok, 권한이 없으면 NotFound(허락할 근거가 없다), 읽지 못하면 Unavailable 입니다. */
+        [[nodiscard]] virtual ServiceStoreResult checkAllowed( IServiceStoreConnection& connection ) const = 0;
+    };
+
+    /** @brief 운영 쓰기를 거는 사람과 그 허락 확인입니다. 가드는 필수다 — 없으면 쓰기를 거절한다. */
+    struct ServiceOperator
+    {
+        uint64                               _actorID{ 0 };
+        shared_ptr<const IServiceWriteGuard> _pGuard{};
+    };
+
+    /** @brief 운영 쓰기 하나의 결과입니다. */
+    enum class ServiceAuditedWriteResult : uint8
+    {
+        Ok = 0,
+        NotFound,   ///< 지울 레코드가 없다
+        Forbidden,  ///< 가드가 허락하지 않았다(그사이 강등 등) — 가드가 없는 쓰기도 여기다
+        Unavailable ///< 닿지 못했거나 그사이 바뀌었다(다시 하면 된다)
+    };
+
     struct SW_GF_API ServiceAuditedWrite
     {
-        ServiceAuditEntry _auditEntry{};
-        vector<uint8>     _bytes{}; ///< 비어 있으면 지우기이다
-        string            _key{};
-        hashed_string     _table{};
-        NetIdempotencyKey _auditUnique{ NetIdempotencyKey::makeRandom() };
+        shared_ptr<const IServiceWriteGuard> _pGuard{}; ///< 필수. 같은 일 안에서 허락을 본다(`ServiceOperator::_pGuard`)
+        ServiceAuditEntry                    _auditEntry{};
+        vector<uint8>                        _bytes{}; ///< 비어 있으면 지우기이다
+        string                               _key{};
+        hashed_string                        _table{};
+        NetIdempotencyKey                    _auditUnique{ NetIdempotencyKey::makeRandom() };
 
         /**
-         * @brief 읽은 버전을 조건으로 쓰거나 지우고 감사 줄을 넣어 커밋합니다.
-         * @return Ok · NotFound(지울 레코드가 없다) · Unavailable(닿지 못했거나 그사이 바뀌었다 — Conflict 도 "다시 하라" 는 뜻이라 여기로 모은다)
+         * @brief 가드로 허락을 본 뒤 읽은 버전을 조건으로 쓰거나 지우고 감사 줄을 넣어 커밋합니다. 가드가 읽은 레코드(등급)도 같은 커밋의 조건이다.
+         * @return Ok · NotFound · Forbidden · Unavailable(닿지 못했거나 그사이 바뀌었다 — Conflict 도 "다시 하라" 는 뜻이라 여기로 모은다)
          */
-        [[nodiscard]] ServiceStoreResult commit( IServiceStoreConnection& connection ) const;
+        [[nodiscard]] ServiceAuditedWriteResult commit( IServiceStoreConnection& connection ) const;
     };
 } // namespace sw

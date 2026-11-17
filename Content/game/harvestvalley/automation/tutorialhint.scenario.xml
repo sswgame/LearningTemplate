@@ -9,12 +9,11 @@
 	<WaitUntil watch="Farm.FarmerControllerKind" equals="0" timeoutFrames="60"/>
 	<Expect watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="0"/>
 	<!-- D 를 1 초 — 걷는 빠르기 4 m/s 라 4 m 오른쪽, 힌트 자리(X 10) 반지름 2 안이다 -->
-	<Wait frames="1"/>
 	<Press slot="Key.D"/>
 	<WaitUntil watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="1" timeoutFrames="90"/>
 	<Release slot="Key.D"/>
 	<!-- 같은 자리에 머물러도 다시 띄우지 않는다 -->
-	<Wait frames="30"/>
+	<AdvanceSimulation frames="30"/> <!-- 반 초 동안 다시 띄우지 않는지 본다(시간이 내용) -->
 	<Expect watch="Object.Property" target="FirstFieldHint" key="TutorialHintComponent._fireCount" equals="1"/>
 	<Pass/>
 </Scenario>

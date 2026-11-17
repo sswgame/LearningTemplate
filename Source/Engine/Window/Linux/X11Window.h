@@ -68,9 +68,9 @@ namespace sw
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::X11; }
 
         /** @brief X11 창을 화면에 띄우거나 숨깁니다. */
-        /** @brief 창이 보이면 입력 초점을 요청합니다(`IWindow::requestInputFocus` · 창이 뜰 때). */
-        void requestInputFocus() override;
-        void applyWindowVisibility( bool bShow ) override;
+        /** @brief 창이 보이면 입력 초점을 요청합니다(`IWindow::requestInputFocus` · 창이 뜰 때). 보이지 않으면 청하지 않고 false 입니다(BadMatch 로 프로세스가 끝난다). */
+        [[nodiscard]] bool requestInputFocus() override;
+        void               applyWindowVisibility( bool bShow ) override;
         /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
         bool isVisible() const override;
         /**
@@ -84,6 +84,11 @@ namespace sw
         float32 getContentScale() const override;
         /** @brief RandR 의 모니터와 `_NET_WORKAREA` 를 읽습니다(`X11Monitors`). 창이 없으면 false 입니다. */
         [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
+        /** @brief 데스크톱 창은 가려지는 가장자리가 없다. */
+        float4 getSafeAreaInsets() const override { return float4{}; }
+        /** @brief 창이 묶지 않는다 — X11 포인터 묶기(`XGrabPointer`)는 입력 관리자가 `tryGetX11Surface` 로 직접 한다. 풀기는 할 일이 없어 늘 된다. */
+        [[nodiscard]] bool supportsPointerLock() const override { return false; }
+        [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
 
         /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
         bool               setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;

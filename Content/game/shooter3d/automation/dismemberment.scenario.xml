@@ -16,13 +16,11 @@
 	<Wait frames="10"/>
 	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
 	<Store watch="Dismemberment.MeshLODCount" target="SkeletonMinion" as="bodyLODs"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="combat.hit SkeletonMinion upperarm.l 1"/>
 	<Wait frames="2"/>
 	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
 	<Expect watch="Object.Exists" target="SkeletonMinion_Arm_L" equals="0"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="combat.hit SkeletonMinion upperarm.l 100000"/>
 	<WaitUntil watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="1" timeoutFrames="5"/>

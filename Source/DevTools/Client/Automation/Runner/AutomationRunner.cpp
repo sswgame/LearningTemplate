@@ -29,11 +29,13 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -72,6 +74,7 @@ namespace sw
         , _waitFrameCount{ 0 }
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
+        , _advanceSimulationFrameCount{ 0 }
         , _bFinishWaiting{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
         , _reserved{ 0 }
@@ -86,19 +89,19 @@ namespace sw
     {
     }
 
-    void AutomationStepTimeline::requestScreenshot( string path )
+    void AutomationStepTimeline::requestScreenshot( const AbsolutePath& path )
     {
-        _listPendingScreenshot.push_back( std::move( path ) );
+        _listPendingScreenshot.push_back( path );
         ++_screenshotRequestedCount;
     }
 
-    bool AutomationStepTimeline::takePendingScreenshotPath( string& outPath )
+    optional<AbsolutePath> AutomationStepTimeline::takePendingScreenshotPath()
     {
         if ( _listPendingScreenshot.empty() )
-            return false;
-        outPath = _listPendingScreenshot.front();
+            return nullopt;
+        optional<AbsolutePath> path = _listPendingScreenshot.front();
         _listPendingScreenshot.erase( _listPendingScreenshot.begin() );
-        return true;
+        return path;
     }
 } // namespace sw
 
@@ -185,9 +188,10 @@ namespace sw
     void AutomationRunner::forwardPendingScreenshot()
     {
         ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-        string                        path;
-        if ( pMailbox != nullptr && pMailbox->isPacketSlotFree() && _run.takePendingScreenshotPath( path ) )
-            (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
+        if ( pMailbox == nullptr || pMailbox->isPacketSlotFree() == false )
+            return;
+        if ( const optional<AbsolutePath> path = _run.takePendingScreenshotPath(); path.has_value() )
+            (void)pMailbox->putForNextPacket( *path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
     }
 
     void AutomationRunner::acquireWriteFilter()
@@ -436,7 +440,7 @@ namespace sw
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             if ( MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
-                pWindowHost->getWindow()->requestInputFocus();
+                (void)pWindowHost->getWindow()->requestInputFocus(); // 청하지 않는 창 시스템(Windows · Wayland · 웹)은 OS 가 초점을 맡는다
             SW_LOG_INFO_ID( "Automation.StartedAfterFrame", "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
             updateCrashContext( "started" );
             startLoadWindow();
@@ -446,6 +450,11 @@ namespace sw
             return; // 이 프레임은 단계를 돌리지 않는다(`onFrameEnd` 도 `_run._bClockHeld` 를 본다)
         }
         _evaluator.setFrameIndex( _run._frameIndex );
+        if ( _run._holdFrameCount == 0 )
+        {
+            if ( const uint32 advanceFrames = _scenario.findAdvanceSimulationFramesStartingAt( _run._frameIndex ); advanceFrames > 0 )
+                advanceSimulation( advanceFrames );
+        }
         // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
         const vector<AutomationStep>& listStep = _scenario.getSteps();
         for ( size_t stepIndex = _run._nextStepIndex; stepIndex < listStep.size() && listStep[stepIndex]._frameIndex == _run._frameIndex; ++stepIndex )
@@ -607,8 +616,12 @@ namespace sw
         AutomationFrameKind kind = AutomationFrameKind::Start;
         if ( _bStarted == SW_TRUE )
         {
-            const bool bStepRan = _run._nextStepIndex != stepIndexBefore;
-            if ( _run._bClockHeld == SW_TRUE )
+            const bool                            bStepRan        = _run._nextStepIndex != stepIndexBefore;
+            const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
+            // 그리지 않고 진행한 프레임은 따로 센다 — 고정 대기를 얼마나 줄였는지 보고(`timeline` 의 simulationOnly)에 남는다.
+            if ( pSimulationOnly != nullptr && pSimulationOnly->wasLastFrameSimulationOnly() )
+                kind = AutomationFrameKind::SimulationOnly;
+            else if ( _run._bClockHeld == SW_TRUE )
                 kind = AutomationFrameKind::BackgroundHold;
             else if ( _run._holdFrameCount > 0 )
                 kind = AutomationFrameKind::ConditionHold;
@@ -620,6 +633,19 @@ namespace sw
         if ( kind == AutomationFrameKind::StepRan )
             _wallProfile.recordStepFrame( _run._currentStepKind, nowSeconds - _run._lastFrameEndSeconds );
         _run._lastFrameEndSeconds = nowSeconds;
+    }
+
+    void AutomationRunner::advanceSimulation( uint32 frameCount )
+    {
+        // 그리지 않고 고정 걸음만 진행한다 — 결과(게임 상태)는 그리며 진행한 것과 같아야 한다(`game.empty.advancesimulation` 이 두 길의 변환 해시를 견준다).
+        const float32                   fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
+        SimulationOnlyFrameQueue* const pQueue          = engine::findSubsystem<SimulationOnlyFrameQueue>(); // 클라이언트 호스트 전용 서비스(HostOnly)다 — 없으면 이 단계를 받을 수 없다
+        if ( pQueue == nullptr || pQueue->request( frameCount, fixedFrameDelta ) == false )
+        {
+            finish( AutomationResult::Failed, "<AdvanceSimulation> could not hand its frames to the simulation-only frame queue" );
+            return;
+        }
+        _run._advanceSimulationFrameCount += frameCount;
     }
 
     void AutomationRunner::reportOngoingWait()

@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 
@@ -67,7 +68,7 @@ namespace sw
         {
         }
 
-        void run( IServiceStoreConnection& connection ) override
+        void run( ServiceReadSetConnection& connection ) override
         {
             if constexpr ( std::is_void_v<RunResult> )
                 _run( connection );

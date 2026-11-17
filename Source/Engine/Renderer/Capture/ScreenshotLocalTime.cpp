@@ -56,12 +56,13 @@ namespace sw
                 path = ScreenshotLocalTime::makeDefaultPathNow();
             else if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                 return true;
-            if ( path.empty() )
+            const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
+            if ( absolutePath.has_value() == false )
             {
                 outReply = "screenshot: could not reserve a file name (see the log)";
                 return true;
             }
-            RenderThread::requestScreenshot( path );
+            RenderThread::requestScreenshot( *absolutePath );
             outReply = "screenshot requested: " + path;
             return true;
         }

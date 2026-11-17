@@ -378,3 +378,59 @@ SW_TEST_CASE( DialogueGraphTest, RejectsGraphWithoutExactlyOneStart )
     SW_EXPECT_TRUE( asset.loadFromXMLText( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
     SW_REQUIRE_NOT_NULL( asset.findStartNode() );
 }
+
+/**
+ * @brief [DialogueGraphTest] 끊긴 링크는 읽기 오류다 — 없는 노드 · 그 노드에 없는 핀(선택지 수 밖 · Start 의 입력 · End 의 출력) · 한 출력 핀의 두 링크(감사 S-12).
+ *        전에는 읽히고 러너가 조용히 기본 출력으로 떨어지거나 대화를 끝냈다. Yarn Spinner 는 끊긴 링크를 컴파일 오류로 낸다.
+ */
+SW_TEST_CASE( DialogueGraphTest, RejectsDanglingLink )
+{
+    SW_EXPECT_LOG( "Dialogue.LinkDangling" );
+    const DialogueGraphAsset valid = makeChoiceGraph();
+    DialogueGraphAsset       asset;
+    SW_REQUIRE_TRUE( asset.loadFromXMLText( valid.toXML() ) );
+
+    const int32 arrBadLink[][2] = {
+        {      DialogueGraphAsset::encodePin( 4,  DialogueGraphAsset::kPinOffsetOut ), DialogueGraphAsset::encodePin( 9,  DialogueGraphAsset::kPinOffsetIn )}, // 없는 노드로
+        {DialogueGraphAsset::encodeChoicePin( 2,                                  2 ), DialogueGraphAsset::encodePin( 3,  DialogueGraphAsset::kPinOffsetIn )}, // 선택지는 둘뿐
+        {      DialogueGraphAsset::encodePin( 4, DialogueGraphAsset::kPinOffsetTrue ), DialogueGraphAsset::encodePin( 3,  DialogueGraphAsset::kPinOffsetIn )}, // 대사에는 참 핀이 없다
+        {      DialogueGraphAsset::encodePin( 4,  DialogueGraphAsset::kPinOffsetOut ), DialogueGraphAsset::encodePin( 1,  DialogueGraphAsset::kPinOffsetIn )}, // Start 에는 입력이 없다
+        {      DialogueGraphAsset::encodePin( 4,  DialogueGraphAsset::kPinOffsetOut ), DialogueGraphAsset::encodePin( 3, DialogueGraphAsset::kPinOffsetOut )}, // 입력 핀이 아니다
+        {DialogueGraphAsset::encodeChoicePin( 2,                                  0 ), DialogueGraphAsset::encodePin( 4,  DialogueGraphAsset::kPinOffsetIn )}, // 선택지 0 에 두 번째 링크
+    };
+    for ( const auto& badLink : arrBadLink )
+    {
+        DialogueGraphAsset broken = valid;
+        broken._listLink.push_back( DialogueAssetLink{ 99, badLink[0], badLink[1] } );
+        SW_EXPECT_FALSE( asset.loadFromXMLText( broken.toXML() ) );
+        SW_EXPECT_TRUE( asset._listNode.empty() );
+    }
+}
+
+/**
+ * @brief [DialogueGraphTest] 기다림(대사 · 선택 · 끝) 없는 고리는 읽기 오류다 — Branch 와 Action 만 도는 고리는 러너가 한 프레임 안에서 끝없이 돈다(감사 S-12).
+ *        대사가 끼인 고리(되묻기)는 정상 그래프다.
+ */
+SW_TEST_CASE( DialogueGraphTest, RejectsInfiniteLoop )
+{
+    SW_EXPECT_LOG( "Dialogue.InfiniteLoop" );
+    const auto makeLoop = []( DialogueAssetNodeKind middleType )
+    {
+        DialogueGraphAsset          asset;
+        const DialogueAssetNodeKind arrType[] = { DialogueAssetNodeKind::Start, DialogueAssetNodeKind::Branch, middleType };
+        for ( int32 index = 0; index < 3; ++index )
+        {
+            DialogueAssetNode node{};
+            node._id   = index + 1;
+            node._type = arrType[index];
+            asset._listNode.push_back( node );
+        }
+        asset._listLink.push_back( DialogueAssetLink{ 1, DialogueGraphAsset::encodePin( 1, DialogueGraphAsset::kPinOffsetOut ), DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetIn ) } );
+        asset._listLink.push_back( DialogueAssetLink{ 2, DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetTrue ), DialogueGraphAsset::encodePin( 3, DialogueGraphAsset::kPinOffsetIn ) } );
+        asset._listLink.push_back( DialogueAssetLink{ 3, DialogueGraphAsset::encodePin( 3, DialogueGraphAsset::kPinOffsetOut ), DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetIn ) } );
+        return asset;
+    };
+    DialogueGraphAsset asset;
+    SW_EXPECT_FALSE( asset.loadFromXMLText( makeLoop( DialogueAssetNodeKind::Action ).toXML() ) );
+    SW_EXPECT_TRUE( asset.loadFromXMLText( makeLoop( DialogueAssetNodeKind::Dialogue ).toXML() ) );
+}

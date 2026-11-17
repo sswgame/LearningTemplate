@@ -6,43 +6,40 @@
 -->
 <Scenario name="game.meadowvillage.slice" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_meadowAutoPlay" value="0"/>
-	<Wait frames="1"/>
+	<WaitUntil watch="Clock.Hour" atLeast="5.8" timeoutFrames="10"/> <!-- 시계가 첫 틱을 돌았다 -->
 	<Expect watch="Clock.Day" equals="0"/>
 	<Expect watch="Clock.Hour" near="6" tolerance="0.2"/>
 	<Expect watch="Session.Money" equals="20"/>
-	<Wait frames="1"/>
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="1" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<Expect watch="Clock.Day" equals="1"/>
-	<Wait frames="1"/>
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="2" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="3" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="4" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="5" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="6" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="7" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="8" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<Expect watch="Clock.Day" equals="8"/>
 	<WaitUntil watch="Quest.Status" target="meadow_request" is="Completed" timeoutFrames="30"/>
 	<ExpectVisited watch="Quest.Status" target="meadow_request" sequence="NotStarted, Active, Completed"/>
 	<Record watch="Session.Money"/>
 	<Record watch="Clock.Day"/>
 	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->
-	<Wait frames="1"/>
 	<DevCommand line="game.save meadowvillage/slice"/>
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
-	<Wait seconds="1"/>
+	<AdvanceSimulation frames="60"/> <!-- 저장 · 복원 사이 세계를 더 돌린다(시간이 내용) -->
 	<DevCommand line="game.load meadowvillage/slice"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="10"/>
 	<RecordStateHash key="restored"/>
-	<Wait seconds="1"/>
+	<AdvanceSimulation frames="60"/> <!-- 저장 · 복원 사이 세계를 더 돌린다(시간이 내용) -->
 	<DevCommand line="game.load meadowvillage/slice"/>
 	<WaitUntil watch="Save.Loaded" atLeast="2" timeoutWallSeconds="10"/>
 	<ExpectStateHash key="restored"/>

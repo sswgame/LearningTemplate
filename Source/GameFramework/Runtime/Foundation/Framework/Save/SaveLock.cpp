@@ -10,7 +10,10 @@ namespace sw
     {
     }
 
-    SaveLock::~SaveLock() = default; // 남은 구독은 기반 소멸자가 무효화한다(해제를 부르지 않으니 이 객체의 목록을 보지 않는다)
+    SaveLock::~SaveLock()
+    {
+        closeSubscriptions(); // 남은 구독을 무효화한다(해제를 부르지 않으니 이 객체의 목록을 보지 않는다)
+    }
 
     Subscription SaveLock::block( const hashed_string& reason )
     {

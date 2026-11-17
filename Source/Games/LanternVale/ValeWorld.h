@@ -93,6 +93,10 @@ namespace sw
         float32 _maxMoveStep{ 12.0f };
         PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may walk - the server refills this much walk budget per second and moves spend it" )
         float32 _moveSpeed{ 0.0f };
+        PROPERTY( Required, Min = 1, Tooltip = "Remote calls one connection may send at once before the server starts refusing them (RemoteCallServerConfig)" )
+        int32 _remoteCallBurstCount{ 0 };
+        PROPERTY( Required, Min = 1, Units = ms, Tooltip = "Time for one more remote call to be allowed - the steady limit is 1000 / this per second" )
+        int32 _remoteCallRefillMilliseconds{ 0 };
         PROPERTY( Min = 1.0, Units = m, Tooltip = "The vale spans -extent..extent on X and Z" )
         float32 _worldHalfExtent{ 64.0f };
         PROPERTY( Min = 2, Max = 8 )

@@ -79,14 +79,15 @@ namespace sw
          */
         [[nodiscard]] static bool isPlatformSupported();
 
-    protected:
         /**
-         * @brief 스플래시 이미지(textures/splash.dds)를 로드합니다.
+         * @brief 스플래시 이미지(textures/splash.dds)를 로드합니다. `initialize` 앞에 부른다(`SplashWindow::initialize`) — 부르지 않으면 이미지 없는 스플래시다.
          * @details 성공하면 픽셀은 **항상 BGRA 32bpp** 입니다. 플랫폼 구현이 채널 순서를 다시 묻지
          *          않아도 되도록 여기서 맞춰 줍니다(`normalizeSplashToBgra`).
+         *          플랫폼 `initialize` 가 에셋을 읽지 않으므로 창 테스트가 에셋 없이 창만 본다(Win32SplashWindowTest).
          */
         [[nodiscard]] bool loadSplashImage();
 
+    protected:
         /**
          * @brief 로드한 스플래시 픽셀을 **BGRA 순서로 맞춥니다.** 이미 BGRA 면 아무것도 하지 않습니다.
          * @details Win32 의 `BI_RGB` 32bpp DIB 와 X11 의 리틀 엔디언 TrueColor 비주얼이 **같은 순서**

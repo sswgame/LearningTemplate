@@ -4,6 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -131,7 +132,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( getCampaignTable(), "", cursor, ServiceMailCampaignInternal::kPageSize, false, listRecord );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getCampaignTable(), "", cursor, ServiceMailCampaignInternal::kPageSize, false, listRecord )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             for ( const ServiceRecord& record : listRecord )

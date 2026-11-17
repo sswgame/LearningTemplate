@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Foundation/Constants.h"
+
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
@@ -27,6 +29,7 @@ namespace sw
             AdminOnlineServerKit()
                 : _service{}
                 , _listSeed{}
+                , _sanctionLimit{}
             {
             }
 
@@ -40,7 +43,9 @@ namespace sw
                     if ( seed._role == AdminRole::None || seed._role == AdminRole::Count )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "_listSeedAdmin needs a role of Viewer, Support, Operator or Super" } );
                 }
-                _listSeed = std::move( kitConfig._listSeedAdmin );
+                _listSeed                     = std::move( kitConfig._listSeedAdmin );
+                _sanctionLimit._supportMaxMs  = static_cast<int64>( kitConfig._supportMaxSanctionDays ) * ( constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond );
+                _sanctionLimit._operatorMaxMs = static_cast<int64>( kitConfig._operatorMaxSanctionDays ) * ( constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond );
                 if ( expected<void> result = registerServerService( context, entry, &_service ); result.has_value() == false )
                     return result;
                 return {};
@@ -59,6 +64,7 @@ namespace sw
                 settings._pDirectoryControl    = kits.find<IServerDirectoryControl>();
                 settings._pNameIndex           = kits.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
                 settings._pLiveEventControl    = kits.find<ILiveEventControl>();
+                settings._sanctionLimit        = _sanctionLimit;
                 if ( _service.initialize( context._pStore, settings ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the admin service needs a store" } );
                 for ( const AdminSeedEntry& seed : _listSeed )
@@ -91,6 +97,7 @@ namespace sw
         private:
             AdminService                                               _service;
             vector<AdminSeedEntry>                                     _listSeed;
+            AdminSanctionLimit                                         _sanctionLimit; ///< 키트 설정의 등급별 제재 최대 길이
             AfterDeleteAccountFunction<&AdminStoreLogic::eraseAccount> _afterDeleteAccount;
         };
     } // namespace

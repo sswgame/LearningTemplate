@@ -11,11 +11,9 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
 	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="1"/>
 	<DevCommand line="cheat.attribute Health 40"/>
 	<Wait frames="2"/>
 	<Expect watch="Ability.Attribute" target="Walker" key="Health" equals="40"/>
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 42 0.05 0"/>
 	<Wait frames="70"/>
 	<Expect watch="Zone.Sources" target="Walker" is="volume:Spring"/>
@@ -23,7 +21,6 @@
 	<Expect watch="Ability.HasTag" target="Walker" key="State.Hasted" equals="1"/>
 	<Expect watch="Ability.Attribute" target="Walker" key="Health" atLeast="50"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 48 0.05 0"/>
 	<Wait frames="10"/>
 	<Expect watch="Ability.HasTag" target="Walker" key="State.Regenerating" equals="0"/>
@@ -31,7 +28,6 @@
 	<Expect watch="Zone.Sources" target="Walker" is="volume:SkillCircle"/>
 	<Expect watch="Ability.HasTag" target="Walker" key="State.Empowered" equals="1"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Victim 54 0.05 0"/>
 	<DevCommand line="object.place SwampKey 54 1 1"/>
 	<Wait frames="10"/>

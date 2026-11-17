@@ -22,6 +22,8 @@ namespace sw
         {
             /** @brief 군중 밖 질의 객체의 노드 수입니다(목적지 붙이기와 위치 맞추기는 짧습니다). */
             static constexpr int32 kQueryNodeCount = 512;
+            /** @brief 건너는 중이지만 어느 링크인지 모르는 표시입니다(한 갱신 안에서 모퉁이를 찾고 바로 올랐다). 모든 비트가 1 인 참조는 타일 번호가 상한(2^28 - 1)이라 Detour 가 내지 않는다(`RecastNavMesh::initialize` 가 타일 수를 그 아래로 묶는다). */
+            static constexpr NavPolyRef kUnknownLinkPoly = static_cast<NavPolyRef>( ~uint64{ 0 } );
             /** @brief 회피 품질 넷의 적응 샘플(분할 수, 고리 수, 깊이)입니다. Detour 예제의 Low, Medium, Good, High 값입니다. */
             static constexpr uint8 kArrAdaptiveDivision[4] = { 5, 5, 7, 7 };
             static constexpr uint8 kArrAdaptiveRing[4]     = { 2, 2, 2, 3 };
@@ -246,7 +248,7 @@ namespace sw
             LinkTraversal&      traversal   = _listLink[agentIndex];
             const bool          bLastIsLink = pAgent->ncorners > 0 && ( pAgent->cornerFlags[pAgent->ncorners - 1] & DT_STRAIGHTPATH_OFFMESH_CONNECTION ) != 0;
             traversal._previousPosition     = float3( pAgent->npos );
-            traversal._pendingPoly          = bLastIsLink ? static_cast<uint32>( pAgent->cornerPolys[pAgent->ncorners - 1] ) : 0u;
+            traversal._pendingPoly          = bLastIsLink ? RecastQueryUtil::toNavPolyRef( pAgent->cornerPolys[pAgent->ncorners - 1] ) : NavigationConstant::kInvalidPolyRef;
         }
         _pCrowd->update( deltaTime, nullptr );
         for ( uint32 agentIndex = 0; agentIndex < _maxAgentCount; ++agentIndex )
@@ -257,11 +259,11 @@ namespace sw
             LinkTraversal&      traversal = _listLink[agentIndex];
             if ( pAgent->state != DT_CROWDAGENT_STATE_OFFMESH )
             {
-                traversal._linkPoly = 0;
+                traversal._linkPoly = NavigationConstant::kInvalidPolyRef;
                 traversal._linkID   = 0;
                 continue;
             }
-            if ( traversal._linkPoly == 0 )
+            if ( traversal._linkPoly == NavigationConstant::kInvalidPolyRef )
                 beginLinkTraversal( traversal );
             traversal._velocity = ( float3( pAgent->npos ) - traversal._previousPosition ) * ( 1.0f / deltaTime );
         }
@@ -269,11 +271,12 @@ namespace sw
 
     void DetourNavCrowd::beginLinkTraversal( LinkTraversal& inoutTraversal ) const
     {
-        const dtOffMeshConnection* pLink = inoutTraversal._pendingPoly != 0 ? _pNavMesh->getOffMeshConnectionByRef( inoutTraversal._pendingPoly ) : nullptr;
+        const bool                 bPending = inoutTraversal._pendingPoly != NavigationConstant::kInvalidPolyRef;
+        const dtOffMeshConnection* pLink    = bPending ? _pNavMesh->getOffMeshConnectionByRef( RecastQueryUtil::toDetourPolyRef( inoutTraversal._pendingPoly ) ) : nullptr;
         if ( pLink == nullptr )
         {
             // 한 갱신 안에서 모퉁이를 찾고 바로 올랐다 — 링크는 모르지만 건너는 중이라는 것은 알린다.
-            inoutTraversal._linkPoly = constant::invalid_index::kUint32;
+            inoutTraversal._linkPoly = DetourNavCrowdInternal::kUnknownLinkPoly;
             inoutTraversal._linkID   = 0;
             inoutTraversal._start    = inoutTraversal._previousPosition;
             inoutTraversal._end      = inoutTraversal._previousPosition;

@@ -106,7 +106,7 @@ SW_TEST_CASE( AudioDataVariantTest, PresetErrors )
 /** @brief [AudioDataVariantTest] 믹서 변형은 버스 · 센드를 이름으로 합치고 검사는 합친 결과에 걸린다 */
 SW_TEST_CASE( AudioDataVariantTest, MixerVariantMergesBusesByName )
 {
-    AudioParentSource source{ R"(<AudioMixerDef _maxVoiceCount="32"><_listBus>
+    AudioParentSource source{ R"(<AudioMixerDef _maxVoiceCount="32" _voiceStealFadeSeconds="0.01" _maxStealFadeVoiceCount="4"><_listBus>
         <AudioBusDef _name="master" />
         <AudioBusDef _name="reverb" _parent="master" />
         <AudioBusDef _name="sfx" _parent="master" _volumeDb="-3"><_listSend><AudioSendDef _bus="reverb" _levelDb="-14" /></_listSend></AudioBusDef>

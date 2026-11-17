@@ -198,13 +198,18 @@ namespace sw
     {
         /** @brief 에디터 메타데이터(`ReflectionEditorMetadata.h`)입니다. 타입을 등록할 때 붙고, 없으면 nullptr 입니다. 읽기는 `getEditor` 로. */
         const FunctionEditorMetadata* _pEditor;
-        FunctionNetRole               _netRole;
-        uint8                         _bReliable    : 1;
-        uint8                         _bValidate    : 1;
-        uint8                         _bConstructor : 1; ///< REFLECT 타입의 생성자 호출기다. objPtr 에 placement new 한다
-        uint8                         _bStatic      : 1; ///< C++ static 멤버 함수
-        uint8                         _bConst       : 1; ///< const 멤버 함수
-        [[maybe_unused]] uint8        _reserved     : 3;
+        /**
+         * @brief `MaxCallsPerSecond = N` — 원격 호출 서버가 연결마다 이 함수에 거는 초당 상한(`RemoteCallServer`). 0 은 적지 않았다는 뜻이다.
+         * @details 적지 않은 함수는 연결 상한(`RemoteCallServerConfig`)만 받는다 — 함수 상한의 기본값이 아니라 "함수 상한 없음" 이라는 계약이다.
+         */
+        uint32                 _maxCallsPerSecond;
+        FunctionNetRole        _netRole;
+        uint8                  _bReliable    : 1;
+        uint8                  _bValidate    : 1;
+        uint8                  _bConstructor : 1; ///< REFLECT 타입의 생성자 호출기다. objPtr 에 placement new 한다
+        uint8                  _bStatic      : 1; ///< C++ static 멤버 함수
+        uint8                  _bConst       : 1; ///< const 멤버 함수
+        [[maybe_unused]] uint8 _reserved     : 3;
 
         /** @brief 플래그를 끈 기본값으로 만듭니다. */
         FunctionMetadata() noexcept;

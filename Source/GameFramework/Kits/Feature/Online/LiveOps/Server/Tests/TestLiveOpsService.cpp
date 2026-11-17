@@ -19,6 +19,18 @@ namespace
     constexpr AccountID kGM      = 7;
     constexpr AccountID kPlayer  = 11;
 
+    /** @brief 늘 허락하는 가드입니다(등급 확인은 Admin 키트의 테스트가 본다). */
+    class AllowGuard final : public IServiceWriteGuard
+    {
+    public:
+        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
+    };
+
+    ServiceOperator makeGM()
+    {
+        return ServiceOperator{ kGM, make_shared<const AllowGuard>() };
+    }
+
     struct LiveOpsFixture
     {
         MemoryServiceDatabase _database;
@@ -55,7 +67,7 @@ namespace
 
         LiveOpsServiceResult put( const LiveEventDef& definition, int64 nowMs = kStartMs )
         {
-            _service.putEvent( definition, kGM, "memo", UnixMilliseconds{ nowMs }, 5 );
+            _service.putEvent( definition, makeGM(), "memo", UnixMilliseconds{ nowMs }, 5 );
             poll();
             return takeResult();
         }
@@ -142,12 +154,12 @@ SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
     SW_EXPECT_TRUE( rig.put( bad ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
 
-    rig._service.removeEvent( "none", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
+    rig._service.removeEvent( "none", makeGM(), "m", UnixMilliseconds{ kStartMs }, 6 );
     rig.poll();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::NotFound );
-    rig._service.removeEvent( "Bad Id", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
+    rig._service.removeEvent( "Bad Id", makeGM(), "m", UnixMilliseconds{ kStartMs }, 6 );
     SW_EXPECT_TRUE( rig.takeResult().hasError( OnlineError::kInvalidRequest ) );
-    rig._service.removeEvent( "spring.sale", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
+    rig._service.removeEvent( "spring.sale", makeGM(), "m", UnixMilliseconds{ kStartMs }, 6 );
     rig.poll();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Ok );
     rig.tick( kStartMs );
@@ -291,11 +303,11 @@ SW_TEST_CASE( LiveOpsServiceTest, JSONRoundTrip )
     rig._service.collectEventJSON( listJSON );
     SW_REQUIRE_EQUAL( size_t( 1 ), listJSON.size() );
 
-    rig._service.putEventJSON( listJSON[0], kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
+    rig._service.putEventJSON( listJSON[0], makeGM(), "m", UnixMilliseconds{ kStartMs }, 6 );
     rig.poll();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Ok );
 
-    rig._service.putEventJSON( "{ not json", kGM, "m", UnixMilliseconds{ kStartMs }, 7 );
+    rig._service.putEventJSON( "{ not json", makeGM(), "m", UnixMilliseconds{ kStartMs }, 7 );
     SW_EXPECT_TRUE( rig.takeResult().hasError( OnlineError::kInvalidRequest ) );
 }
 

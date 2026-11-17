@@ -2,6 +2,7 @@
 
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/ContentFileSource.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -11,6 +12,28 @@ namespace
     struct ContentFileSourceTestUtil
     {
         static vector<uint8> toBytes( string_view text ) { return vector<uint8>( text.begin(), text.end() ); }
+
+        /** @brief @p source 의 @p path 를 통째로 읽은 것과 구간 [@p offset, @p offset + @p size) 를 읽은 것이 같은 바이트인지 봅니다. */
+        static void expectRangeMatchesWholeRead( AsyncFileIO& io, const IContentFileSource& source, string_view path, uint64 offset, uint64 size )
+        {
+            vector<uint8>   whole;
+            AsyncReadHandle wholeRead = source.readFileAsync( io, path, AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [&whole]( AsyncReadResult& result )
+            { whole = std::move( result._bytes ); } ) );
+            wholeRead.wait();
+            SW_REQUIRE_TRUE( wholeRead.getStatus() == AsyncIOStatus::Succeeded );
+
+            vector<uint8>   range;
+            AsyncReadHandle rangeRead = source.readRangeAsync( io, path, offset, size, AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [&range]( AsyncReadResult& result )
+            { range = std::move( result._bytes ); } ) );
+            rangeRead.wait();
+            SW_REQUIRE_TRUE( rangeRead.getStatus() == AsyncIOStatus::Succeeded );
+            SW_REQUIRE_EQUAL( size_t( size ), range.size() );
+            SW_EXPECT_TRUE( vector<uint8>( whole.begin() + static_cast<ptrdiff_t>( offset ), whole.begin() + static_cast<ptrdiff_t>( offset + size ) ) == range );
+
+            AsyncReadHandle tooFar = source.readRangeAsync( io, path, whole.size() - 1, 2, AsyncIOPriority::Normal, {} );
+            tooFar.wait();
+            SW_EXPECT_TRUE( tooFar.getStatus() == AsyncIOStatus::OutOfRange ); // 끝을 넘으면 짧게 읽지 않는다
+        }
 
         static MemoryContentFileSource makeSource()
         {
@@ -97,4 +120,22 @@ SW_TEST_CASE( ContentFileSourceTest, BindReplacesTheCurrentSource )
     SW_EXPECT_TRUE( ContentFileSource::getCurrent().isFile( "/packs/a.pack" ) );
     (void)ContentFileSource::bindCurrent( pPrevious );
     SW_EXPECT_TRUE( &ContentFileSource::getCurrent() == &platformSource );
+}
+
+/** @brief [ContentFileSourceTest] 메모리 · 디스크 소스의 구간 읽기가 통째 읽기의 같은 자리와 바이트까지 같고, 끝을 넘으면 `OutOfRange` 다(밉 범위 읽기 — MR-1). */
+SW_TEST_CASE( ContentFileSourceTest, RangeMatchesWholeRead )
+{
+    AsyncFileIO io;
+    SW_REQUIRE_TRUE( io.initialize( AsyncFileIOConfig{} ) );
+
+    const MemoryContentFileSource memory = Util::makeSource();
+    Util::expectRangeMatchesWholeRead( io, memory, "/packs/a.pack", 3, 5 );
+
+    const string        diskPath = test::makeScratchPath( "ContentFileSourceTest.range.bin" );
+    const vector<uint8> bytes    = Util::toBytes( "header|mip0mip0mip0|mip1|m2" );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( diskPath, bytes.data(), bytes.size() ) );
+    const DiskContentFileSource disk;
+    Util::expectRangeMatchesWholeRead( io, disk, diskPath, 7, 12 );
+
+    io.shutdown();
 }

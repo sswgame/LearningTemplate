@@ -12,6 +12,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Presentation/IUILayerVisibility.h"
@@ -236,12 +237,12 @@ namespace sw
         bool                 _bPhotoModeCut;            ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
         UILayerMask          _photoAppliedHiddenLayers; ///< 포토 모드가 켤 때 UI 에 건 숨김 요청의 레이어(`enterPhotoMode`). 끌 때 같은 집합으로 푼다 — 켜 있는 동안 속성을 바꿔도 요청 수가 어긋나지 않는다
 
-        shared_ptr<const CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
-        CameraDirector                        _director;
-        vector<uint8>                         _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
-        const ICameraCollisionProbe*          _pExternalProbe;
-        hashed_string                         _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
-        float32                               _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
-        bool                                  _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
+        SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
+        CameraDirector                      _director;
+        vector<uint8>                       _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
+        const ICameraCollisionProbe*        _pExternalProbe;
+        hashed_string                       _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
+        float32                             _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
+        bool                                _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };
 } // namespace sw

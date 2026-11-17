@@ -68,6 +68,18 @@ namespace sw
         /** @brief 진행 중인 작업(네트워크 I/O, 시한)을 처리합니다. 서비스 `tick` 이 부릅니다. */
         virtual void update( UnixMilliseconds nowMs ) { (void)nowMs; }
 
+        /**
+         * @brief 티켓이 서버가 낸 nonce(`IssueLoginNonce`)를 실어야 하는 제공자면 그 nonce 를 꺼내고 true 입니다. 기본은 false(nonce 를 쓰지 않는 제공자)입니다.
+         * @details true 면 로그인 서비스가 확인을 맡기기 전에 휘발 저장소에서 그 nonce 를 한 번 지운다 — 없으면(쓴 적 있거나 서버가 낸 적 없다) 거절한다.
+         *          제공자는 토큰의 `nonce` 주장이 꺼낸 값과 같은지 본다. 둘이 함께 토큰 재사용을 막는다(감사 O-13).
+         */
+        virtual bool findServerNonce( const vector<uint8>& ticketBytes, string& outNonce ) const
+        {
+            (void)ticketBytes;
+            (void)outNonce;
+            return false;
+        }
+
         /** @brief 탈퇴한 계정의 연동 비밀을 철회하는 제공자면 true 입니다. 기본은 false 이며 true 인 제공자만 `submitRevocation` 을 구현합니다. */
         virtual bool supportsRevocation() const { return false; }
         /** @brief 연동 비밀(`PlatformLoginVerification::_linkSecret`)의 철회를 맡깁니다. 0이 아닌 철회 id 를 반환하며 `pollRevocations` 의 결과와 짝이 됩니다. */

@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Config/ConfigManager.h"
@@ -101,7 +102,7 @@ namespace sw
 
     void SkeletonMirrorBoneMap::setTable( shared_ptr<const SkeletonMirrorTable> table )
     {
-        _table          = std::move( table );
+        _table          = SharedAssetRef<SkeletonMirrorTable>{ std::move( table ) };
         _pBuiltSkeleton = nullptr;
         _listMirroredBone.clear();
     }

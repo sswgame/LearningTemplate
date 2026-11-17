@@ -63,7 +63,7 @@ namespace sw
             SW_LOG_INFO_ID( "UserSettingsHost.VSync", "VSync %#", request._bVSync ? "on" : "off" );
         }
 
-        // 창 크기가 바뀌면 이 호출 안(Win32)이나 다음 메시지 처리(X11)에서 Engine::onMainWindowResize 가 스왑체인을 맞춘다.
+        // 창 크기가 바뀌면 창이 대기 크기를 적고, 다음 프레임 시작의 `IWindow::applyPendingResize` 에서 Engine::onMainWindowResize 가 스왑체인을 맞춘다.
         if ( _pWindow != nullptr )
         {
             const bool bSameMode = _pWindow->getDisplayMode() == request._mode;

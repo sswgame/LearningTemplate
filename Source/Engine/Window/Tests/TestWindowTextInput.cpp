@@ -7,6 +7,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/Tests/FakeWindow.h"
 #include "Engine/Window/WindowTextInput.h"
 
 // WindowTextInputTest - 플랫폼 공통 입력기의 조합 → 확정 흐름(nogpu). 실제 입력기는 무인 환경(Xvfb)에 없어 가짜 창이 입력기의 몫을 스크립트로 낸다.
@@ -17,30 +18,18 @@ using namespace sw;
 namespace
 {
     /** @brief 입력기 프로토콜을 흉내 내는 창입니다. 켜고 끄기 · 자리를 세고, 조합 · 확정을 실제 창과 같은 함수로 낸다. */
-    class FakeInputMethodWindow final : public IWindow
+    class FakeInputMethodWindow final : public FakeWindow
     {
     public:
         uint32 _wantedChangeCount;
         uint32 _areaChangeCount;
 
         FakeInputMethodWindow()
-            : _wantedChangeCount{ 0 }
+            : FakeWindow{ NativeSurfaceKind::Wayland }
+            , _wantedChangeCount{ 0 }
             , _areaChangeCount{ 0 }
         {
         }
-
-        bool initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
-        void destroy() override {}
-        bool processMessages() override { return true; }
-        void waitForMessages( uint32 /*timeoutMilliseconds*/ ) override {}
-        bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override
-        {
-            outExtents = WindowFrameExtents{};
-            return true;
-        }
-        bool              canPlaceWindow() const override { return false; }
-        bool              setFramePosition( int32 /*x*/, int32 /*y*/ ) override { return false; }
-        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::Wayland; }
 
         /** @brief X11 XIM 의 PreeditDraw 처럼 일부를 고쳐 알립니다. */
         void imeEdit( uint32 first, uint32 deleteCount, string_view inserted )
@@ -56,9 +45,8 @@ namespace
         }
 
     protected:
-        void* getNativeHandle() const override { return nullptr; }
-        void  applyTextInputWanted( bool /*bWanted*/ ) override { ++_wantedChangeCount; }
-        void  applyTextInputArea( const WindowTextInputArea& /*area*/ ) override { ++_areaChangeCount; }
+        void applyTextInputWanted( bool /*bWanted*/ ) override { ++_wantedChangeCount; }
+        void applyTextInputArea( const WindowTextInputArea& /*area*/ ) override { ++_areaChangeCount; }
 
     private:
         WindowTextComposition _composition;

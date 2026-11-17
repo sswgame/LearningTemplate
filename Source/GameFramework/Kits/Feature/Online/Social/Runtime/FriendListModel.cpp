@@ -74,6 +74,12 @@ namespace sw
             return;
         }
         applyLinks( reply._reply );
+        // 응답이 오는 사이 클라이언트를 뗐으면(`initialize( nullptr )`) 접속 상태를 물을 곳이 없다 — 예전에는 빈 포인터로 불러 죽었다.
+        if ( _pClient == nullptr )
+        {
+            fail( OnlineError::kUnavailable );
+            return;
+        }
         // 접속 상태는 서버가 관계를 읽은 뒤에야 답할 수 있어 관계 목록 다음에 묻는다.
         (void)_pClient->call<SocialMethod::FriendPresence>( OnlineReplyDelegate<SocialMethod::FriendPresence>::create<&FriendListModel::onPresenceReply>( this ) );
     }

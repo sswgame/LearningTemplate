@@ -156,6 +156,13 @@ namespace sw
                         // 섹션이 있으면 켜진다 — `enabled` 를 따로 적지 않는다.
                         bValid                        = XMLFields::readProperties( child, inoutDef._collision, sourceName ) && bValid;
                         inoutDef._collision._bEnabled = SW_TRUE;
+                        // 레이어를 코드가 짐작하지 않는다 — 없으면 암이 조용히 아무것에도 안 걸리거나 엉뚱한 것에 걸린다(감사 G-11).
+                        if ( inoutDef._collision._listLayer.empty() )
+                        {
+                            SW_LOG_ERROR_ID( "CameraPreset.CollisionNeedsLayers", "%#: preset '%#' <Collision> needs layers (the physics layers that block the arm)", sourceName,
+                                             inoutDef._id.c_str() );
+                            bValid = false;
+                        }
                     }
                     else if ( StringUtil::equals( pName, "Noise" ) )
                     {

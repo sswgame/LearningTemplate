@@ -99,19 +99,13 @@ namespace sw
         , _arrContactLog{}
         , _contactLogCount{ 0 }
         , _stepCount{ 0 }
-        , _debrisBodyCount{ 0 }
+        , _debrisBudget{}
         , _fixedStepOverride{ 0.0f }
         , _bConfigured{ SW_FALSE }
         , _bFrameHookListStale{ SW_TRUE }
         , _bHookBatchEnabled{ SW_TRUE }
         , _bFrameEventsPending{ SW_FALSE }
     {
-    }
-
-    void ScenePhysics::changeDebrisBodyCount( int32 delta )
-    {
-        const int64 count = static_cast<int64>( _debrisBodyCount ) + delta;
-        _debrisBodyCount  = count > 0 ? static_cast<uint32>( count ) : 0u;
     }
 
     ScenePhysics::~ScenePhysics()
@@ -688,6 +682,9 @@ namespace sw
         }
 
         args._alpha = _stepTimer.getAlpha();
+        // 파편 예산은 씬 전체에서 한 번 고른다 — 프레임 끝 훅에서 주인마다 자기 몫만 지운다(먼저 틱한 오브젝트가 값을 치르지 않는다, 감사 S-11).
+        if ( const PhysicsSettings* pSettings = findSettings(); pSettings != nullptr )
+            _debrisBudget.planRemovals( pSettings->_maxDebrisBodyCount );
         refreshFrameHookLists();
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
         {

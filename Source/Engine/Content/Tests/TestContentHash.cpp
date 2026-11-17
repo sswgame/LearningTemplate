@@ -2,33 +2,21 @@
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Hash/HashUtil.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/ContentHash.h"
 
 /**
  * @file TestContentHash.cpp
- * @brief 쿠킹 판정이 쓰는 내용 해시(`ContentHash::computeBytes`)의 값을 굳히는 테스트입니다.
- * @details 해시는 CR 을 뺀 바이트의 FNV-1a 64 입니다. 구현은 CR 을 뺀 사본을 만들지 않고 한 번에 훑는데, 값이 바뀌면 모든 쿠킹 기록(`.cookrec`)이 낡아 한 번에 다시 굽게 되므로
- *          값이 옛 구현(사본을 `computeStringHash64( ..., bIgnoreCase = false )` 로 섞음)과 같다는 것을 고정 값과 옛 구현 사본으로 단언한다.
+ * @brief 쿠킹 판정이 쓰는 내용 해시(`ContentHash::computeBytes`)의 값과 영속 해시 캐시(`ContentHashCache::load` · `save`)를 굳히는 테스트입니다.
+ * @details 해시는 원시 바이트의 FNV-1a 64 입니다. 값이 바뀌면 모든 쿠킹 기록(`.cookrec`)이 낡아 한 번에 다시 굽게 되므로 고정 값으로 단언한다.
+ *          캐시 테스트는 서비스의 캐시가 아니라 따로 지은 캐시 둘(앞 프로세스 · 뒤 프로세스 자리)로 한다.
  */
 namespace sw
 {
     namespace
     {
-        /** @brief 옛 구현입니다 — CR 을 뺀 사본을 만들어 문자열 해시로 섞습니다. 새 구현과 값이 같아야 합니다. */
-        uint64 computeReferenceHash( const vector<uint8>& bytes )
-        {
-            vector<uint8> listNormalized;
-            for ( const uint8 byte : bytes )
-            {
-                if ( byte != static_cast<uint8>( '\r' ) )
-                    listNormalized.push_back( byte );
-            }
-            return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( listNormalized.data() ), listNormalized.size(), false );
-        }
-
         vector<uint8> makeBytes( const utf8* pText )
         {
             vector<uint8> bytes;
@@ -38,39 +26,116 @@ namespace sw
             }
             return bytes;
         }
+
+        /** @brief @p path 에 @p pText 를 쓰고 쓰기 시각을 한 시간 전으로 돌립니다(바깥 도구가 오래전에 쓴 파일 — 시간 창 밖이라 캐시된다). */
+        void writeHourOldFile( const string& path, const utf8* pText )
+        {
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, pText ) );
+            const int64 hourAgo = FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond;
+            SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, hourAgo ) );
+        }
+
+        AbsolutePath makeCachePath()
+        {
+            return AbsolutePath::tryMake( test::makeScratchPath( "ContentHashCache.bin" ) ).value();
+        }
     } // namespace
 } // namespace sw
 
 using namespace sw;
 
-/** @brief [ContentHashTest] 알려진 입력의 해시 값이 변하지 않았는가(CR 은 해시에서 빠진다). */
+/** @brief [ContentHashTest] 알려진 입력의 해시 값이 변하지 않았는가(원시 바이트 — CR 도 섞인다). */
 SW_TEST_CASE( ContentHashTest, KnownInputsKeepTheirHash )
 {
     SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "" ) ), static_cast<uint64>( 0xcbf29ce484222325ull ) );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "abc" ) ), static_cast<uint64>( 0xe71fa2190541574bull ) );
-    // CRLF 와 LF 는 같은 해시이고, 값은 CR 을 뺀 "line one\nline two\n\nend" 의 FNV-1a 64 다.
-    SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "line one\r\nline two\r\n\r\nend" ) ), static_cast<uint64>( 0xd0db6e813abda55cull ) );
+    SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "line one\r\nline two\r\n\r\nend" ) ), static_cast<uint64>( 0xa3c494099a916911ull ) );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "line one\nline two\n\nend" ) ), static_cast<uint64>( 0xd0db6e813abda55cull ) );
-    // CR 만 있으면 빈 입력과 같다.
-    SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "\r\r\r" ) ), static_cast<uint64>( 0xcbf29ce484222325ull ) );
-    SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "\xED\x95\x9C\xEA\xB8\x80 content\r\n" ) ), static_cast<uint64>( 0x3fe7bde973df645aull ) );
+    SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "\r\r\r" ) ), static_cast<uint64>( 0xf33f44187abe6c26ull ) );
+    SW_EXPECT_EQUAL( ContentHash::computeBytes( makeBytes( "\xED\x95\x9C\xEA\xB8\x80 content\r\n" ) ), static_cast<uint64>( 0x761b05afe4890423ull ) );
 }
 
-/** @brief [ContentHashTest] 큰 바이트열(CR 이 섞인 난수)에서 옛 구현과 같은 값을 내는가 — 포인터 · 벡터 두 진입점 모두. */
-SW_TEST_CASE( ContentHashTest, MatchesTheCopyingReferenceOnLargeBuffers )
+/** @brief [ContentHashTest] 0x0D 의 자리만 다른 두 바이너리는 다른 해시다 — 예전에는 CR 을 건너뛰어 같은 해시였다(바뀐 입력을 쿠킹이 놓쳤다). */
+SW_TEST_CASE( ContentHashTest, BinaryWithMovedCRHashesDifferently )
 {
-    uint64        state = 0x9E3779B97F4A7C15ull;
-    vector<uint8> bytes( 3 * constant::memory::kBytesPerMegabyte + 5 );
-    for ( size_t index = 0; index < bytes.size(); ++index )
+    const vector<uint8> first{ 0x01, 0x0D, 0x02, 0x03 };
+    const vector<uint8> second{ 0x01, 0x02, 0x0D, 0x03 };
+    SW_EXPECT_NOT_EQUAL( ContentHash::computeBytes( first ), ContentHash::computeBytes( second ) );
+    SW_EXPECT_EQUAL( ContentHash::computeBytes( first ), ContentHash::computeBytes( first.data(), first.size() ) );
+}
+
+/** @brief [ContentHashCacheTest] 앞 프로세스가 저장한 캐시를 실은 뒤 프로세스는 도장이 같은 파일을 한 바이트도 읽지 않는다. */
+SW_TEST_CASE( ContentHashCacheTest, SecondProcessReadsNoBytes )
+{
+    const string       path      = test::makeScratchPath( "aged.txt" );
+    const AbsolutePath cachePath = makeCachePath();
+    writeHourOldFile( path, "aged content" );
+    const uint64 expected = ContentHash::computeBytes( makeBytes( "aged content" ) );
     {
-        state ^= state << 13;
-        state ^= state >> 7;
-        state ^= state << 17;
-        bytes[index] = ( index % 7 == 0 ) ? static_cast<uint8>( '\r' ) : static_cast<uint8>( state );
+        ContentHashCache first;
+        SW_REQUIRE_TRUE( first.load( cachePath ).has_value() ); // 파일이 아직 없다 — 빈 캐시로 성공
+        SW_EXPECT_EQUAL( first.computeFile( path ), expected );
+        SW_EXPECT_NOT_EQUAL( first.getHashedByteCount(), uint64( 0 ) );
+        SW_REQUIRE_TRUE( first.save().has_value() );
     }
-    const uint64 reference = computeReferenceHash( bytes );
-    SW_EXPECT_EQUAL( ContentHash::computeBytes( bytes ), reference );
-    SW_EXPECT_EQUAL( ContentHash::computeBytes( bytes.data(), bytes.size() ), reference );
+    ContentHashCache second;
+    SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
+    SW_EXPECT_EQUAL( second.computeFile( path ), expected );
+    SW_EXPECT_EQUAL( second.getHashedByteCount(), uint64( 0 ) );
+}
+
+/**
+ * @brief [ContentHashCacheTest] 저장 시각의 시간 창 안에 고쳐진 도장은 싣지 않는다 — 저장 뒤 같은 틱에 같은 크기로 다시 쓴 파일을 뒤 프로세스가 다시 해시한다.
+ * @details 앞 캐시는 자기 쓰기로 알린 항목을 시간 창 없이 캐시한다. 그 항목이 저장되면 같은 도장의 다른 내용을 뒤 프로세스가 옛 해시로 믿는다.
+ */
+SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
+{
+    const string       path      = test::makeScratchPath( "fresh.txt" );
+    const AbsolutePath cachePath = makeCachePath();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "aaaa" ) );
+    int64 writeTicks = 0;
+    SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( path, writeTicks ) );
+    {
+        ContentHashCache first;
+        SW_REQUIRE_TRUE( first.load( cachePath ).has_value() );
+        first.recordOwnWrite( path );
+        SW_EXPECT_EQUAL( first.computeFile( path ), ContentHash::computeBytes( makeBytes( "aaaa" ) ) );
+        SW_REQUIRE_TRUE( first.save().has_value() );
+    }
+    // 바깥 도구가 같은 틱에 같은 크기로 다시 썼다 — 도장이 같다.
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "bbbb" ) );
+    SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, writeTicks ) );
+    ContentHashCache second;
+    SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
+    SW_EXPECT_EQUAL( second.computeFile( path ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
+    SW_EXPECT_EQUAL( second.getHashedByteCount(), uint64( 4 ) );
+}
+
+/** @brief [ContentHashCacheTest] 다른 판의 캐시 파일은 빈 캐시로 읽는다 — 항목을 믿지 않고 다시 해시한다(오류가 아니다). */
+SW_TEST_CASE( ContentHashCacheTest, CacheFromAnotherVersionIsDropped )
+{
+    const string       path      = test::makeScratchPath( "versioned.txt" );
+    const AbsolutePath cachePath = makeCachePath();
+    writeHourOldFile( path, "versioned" );
+    {
+        ContentHashCache first;
+        SW_REQUIRE_TRUE( first.load( cachePath ).has_value() );
+        SW_EXPECT_NOT_EQUAL( first.computeFile( path ), uint64( 0 ) );
+        SW_REQUIRE_TRUE( first.save().has_value() );
+    }
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( FileUtil::readFile( cachePath.str(), bytes ) );
+    SW_REQUIRE_TRUE( bytes.size() >= 8 );
+    const uint32 otherVersion = ContentHashCache::kCacheFormatVersion + 1; // 머리: 표지(4 B) 뒤의 판(4 B, 리틀 엔디언)
+    for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
+    {
+        bytes[4 + byteIndex] = static_cast<uint8>( otherVersion >> ( 8 * byteIndex ) );
+    }
+    SW_REQUIRE_TRUE( FileUtil::writeFile( cachePath.str(), bytes.data(), bytes.size() ) );
+    ContentHashCache second;
+    SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
+    SW_EXPECT_EQUAL( second.computeFile( path ), ContentHash::computeBytes( makeBytes( "versioned" ) ) );
+    SW_EXPECT_EQUAL( second.getHashedByteCount(), uint64( 9 ) );
 }
 
 /**

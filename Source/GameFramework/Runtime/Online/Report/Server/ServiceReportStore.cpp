@@ -4,6 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 
@@ -127,7 +128,7 @@ namespace sw
         outNextCursor.clear();
         const string_view        prefix = bOpen ? ServiceReportInternal::kOpenPrefix : ServiceReportInternal::kClosedPrefix;
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult result = connection.listRecords( getTable(), prefix, cursor, maxCount, true, listRecord );
+        const ServiceStoreResult result = ServiceRecordReader::readPage( connection, getTable(), prefix, cursor, maxCount, true, listRecord )._result;
         if ( result != ServiceStoreResult::Ok )
             return result;
         for ( const ServiceRecord& record : listRecord )

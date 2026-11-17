@@ -169,12 +169,9 @@ namespace sw
             _pState->_liveReloadManager->triggerReload( pModuleName );
     }
 
-    void ModuleReloadDriver::pollShellActions( float32 deltaTime, bool bEnableEditor )
+    void ModuleReloadDriver::pollReloadActions( const DebugKeyActions& debugKeys, bool bEnableEditor )
     {
-        DebugKeyActions& debugKeys = engine::getSubsystem<DebugKeyActions>();
-        debugKeys.update( engine::getSubsystem<InputManager>(), deltaTime );
-
-        // 모듈을 다시 로드하는 장치는 호스트에 있다. 디버그 키 맵에는 "이 액션이 눌렸나"만 묻는다.
+        // 디버그 키는 개발 계층(`HostDevLayer::pollShellActions`)이 이번 프레임 것으로 갱신했다. 모듈을 다시 로드하는 장치는 호스트에 있다. 디버그 키 맵에는 "이 액션이 눌렸나"만 묻는다.
         if ( debugKeys.wasActionTriggered( hashed_string( InputMapDefaults::kReloadGameAction ) ) )
         {
             requestReload( config::kTargetGameModule );

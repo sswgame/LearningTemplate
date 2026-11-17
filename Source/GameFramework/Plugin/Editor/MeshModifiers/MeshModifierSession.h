@@ -53,11 +53,18 @@ namespace sw::editor
         void shutdownSubsystem() override;
 
         /**
-         * @brief 대상을 바꿉니다. 메시 컴포넌트의 `.mesh` 를 읽고, 사이드카가 있으면 스택을 읽습니다. 실패하면 false 이고 대상은 비웁니다.
-         * @details 내장 도형("Cube" 등)은 `.mesh` 가 아니라 대상이 될 수 없다.
+         * @brief 대상을 바꿉니다. 메시 컴포넌트의 `.mesh` 를 읽고, 사이드카가 있으면 스택을 읽습니다.
+         * @details 저장하지 않은 스택이 있으면 `AlreadyExists` 로 거절하고 지금 대상 · 스택 · 기록을 그대로 둔다 — 보호가 패널 버튼에만 있으면 다른 호출 길(자동화 · 단축키)이
+         *          편집을 조용히 지운다(감사 G-12, 언리얼 에셋 에디터가 닫기 전에 저장을 묻는 자리를 세션이 쥔다). 읽지 못하면 다른 오류이고 대상은 비운다.
+         *          내장 도형("Cube" 등)은 `.mesh` 가 아니라 대상이 될 수 없다.
          */
-        [[nodiscard]] bool setTarget( GameObject* pObject );
-        void               clearTarget();
+        [[nodiscard]] expected<void> setTarget( GameObject* pObject );
+        /**
+         * @brief 이미 읽은 메시 데이터 @p sourceData 로 대상을 바꿉니다(`setTarget` 의 읽은 뒤 몫). 절차 메시로 세션을 시험할 때도 쓴다.
+         * @details 저장하지 않은 스택이 있으면 `setTarget` 과 같이 거절한다. @p meshPath 곁의 사이드카가 있으면 스택을 읽는다.
+         */
+        [[nodiscard]] expected<void> setTargetData( GameObjectHandle target, string_view meshPath, MeshAssetData sourceData );
+        void                         clearTarget();
         /** @brief 새 에디터 프로세스처럼 비웁니다 — 대상 · 저장하지 않은 스택 · 되돌리기 이력. 시나리오 체인의 다음 단계 앞(`SW_AUTOMATION_STAGE_RESET`)에서 부른다. */
         void resetToFreshEditor();
         /** @brief 대상 오브젝트입니다. 지워졌으면 nullptr 입니다. */

@@ -669,3 +669,58 @@ SW_TEST_CASE( NetConnectionTest, SequencedKindIdleForHalfTheSequenceSpaceStillDe
     SW_EXPECT_TRUE( listReceived[0] == poseOld );
     SW_EXPECT_TRUE( listReceived[1] == poseNew );
 }
+
+/**
+ * @brief [NetConnectionTest] 확인이 끝내 오지 않는 신뢰 메시지는 시한마다 시한을 두 배로 늘려 다시 싣는다 — 막힌 회선에 같은 메시지를 RTT 마다 쏟지 않는다(감사 N-11, RFC 6298 · ENet)
+ */
+SW_TEST_CASE( NetConnectionTest, TimedOutResendsBackOffExponentially )
+{
+    NetConnection       sender;
+    const vector<uint8> message = NetTestUtil::makeMessage( 7, 8 );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    // 3 초 동안 0.02 초마다 보내고 아무것도 확인되지 않는다. 시한 0.1 초를 두 배씩 — 0.1 · 0.3 · 0.7 · 1.5 · 3.1 초에 다시 싣는다(넷). 늘리지 않으면 스물아홉 번이다.
+    for ( int32 step = 0; step <= 150; ++step )
+    {
+        BitWriter packet;
+        sender.writePacket( 0.02 * step, packet, 300 );
+    }
+    SW_EXPECT_TRUE( sender.getStats()._resentMessageCount >= 3 );
+    SW_EXPECT_TRUE( sender.getStats()._resentMessageCount <= 5 );
+}
+
+/**
+ * @brief [NetConnectionTest] 재전송 시한은 RTT 의 흔들림만큼 기다린다 — 왕복이 0.2 · 0.6 초로 흔들리면 평균 RTT + 50 ms 에 다시 싣지 않는다(감사 N-11, RFC 6298 SRTT + 4·RTTVAR)
+ */
+SW_TEST_CASE( NetConnectionTest, ResendDelayWaitsOutRttJitter )
+{
+    NetConnection sender;
+    NetConnection receiver;
+    const auto    sendTo = []( NetConnection& from, NetConnection& to, float64 sendTime, float64 receiveTime, bool bDeliver )
+    {
+        BitWriter packet;
+        from.writePacket( sendTime, packet, 300 );
+        if ( bDeliver == false )
+            return;
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        (void)to.readPacket( receiveTime, reader ); // 결과는 아래 단언이 본다
+    };
+    float64 time = 0.0;
+    for ( int32 round = 0; round < 40; ++round )
+    {
+        time += 1.0;
+        const float64 oneWay = round % 2 == 0 ? 0.1 : 0.3; // 왕복 0.2 · 0.6 초
+        sendTo( sender, receiver, time, time + oneWay, true );
+        sendTo( receiver, sender, time + oneWay, time + oneWay * 2.0, true );
+    }
+    SW_REQUIRE_TRUE( sender.getStats()._rttVariance > 0.1f );
+
+    time += 2.0;
+    const vector<uint8> message = NetTestUtil::makeMessage( 99, 8 );
+    SW_REQUIRE_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    sendTo( sender, receiver, time, time, false ); // 잃었다
+    const uint64 resentBefore = sender.getStats()._resentMessageCount;
+    sendTo( sender, receiver, time + 0.7, time + 0.7, false ); // 평균 RTT(0.4) + 50 ms 는 지났지만 흔들림 안이다
+    SW_EXPECT_EQUAL( resentBefore, sender.getStats()._resentMessageCount );
+    sendTo( sender, receiver, time + 2.0, time + 2.0, false ); // 시한(약 1.2 초)이 지났다
+    SW_EXPECT_EQUAL( resentBefore + 1, sender.getStats()._resentMessageCount );
+}

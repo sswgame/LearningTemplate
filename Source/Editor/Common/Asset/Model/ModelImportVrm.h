@@ -45,7 +45,7 @@ namespace sw::editor
         static void warnMissingAvatarBones( const ModelImportResult& result, string_view sourcePath );
 
         /** @brief 아바타 정보가 있으면 `<옆 폴더>/<stem>.avatar.xml` 에 쓰고, 무시한 키를 경고로 알립니다. */
-        [[nodiscard]] static bool writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem );
+        [[nodiscard]] static bool writeVrmAvatar( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem );
 
         /**
          * @brief 구간 프리팹 `<옆 폴더>/<stem>.prefab.xml` 을 씁니다 — 주 메시 컴포넌트(스킨드는 스켈레탈 메시, 아니면 메시 — 첫 구간)와 구간마다 `MeshSectionComponent`,

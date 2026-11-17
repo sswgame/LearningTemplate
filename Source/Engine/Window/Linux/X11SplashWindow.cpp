@@ -15,9 +15,7 @@ namespace sw
 {
     X11SplashWindow::X11SplashWindow()
         : ISplashWindow{}
-        , _pX11Display{ nullptr }
-        , _x11Window{ 0 }
-        , _x11Pixmap{ 0 }
+        , _splashThread{}
     {
     }
 
@@ -40,14 +38,27 @@ namespace sw
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
-        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시이며, 로드가 이유를 알린다
-        createScaledImage();
+        createScaledImage(); // 이미지는 부른 쪽이 먼저 읽어 두었다(`SplashWindow::initialize`) — 없으면 빈 스플래시다
 
+        // 스플래시 스레드와 주 창이 각자의 연결을 동시에 쓴다 — 첫 Xlib 호출 전에 스레드 초기화를 한다(스플래시가 기동에서 가장 먼저 X 를 연다).
+        (void)XInitThreads();
+        const string                  title = StringUtil::isNullOrEmpty( pTitle ) ? string( "SW Engine" ) : string( pTitle );
+        LinuxSplashThread::PaintState initialState;
+        initialState._status   = _status;
+        initialState._progress = _progress;
+        const bool bOpened     = _splashThread.start( [this, title]( LinuxSplashThread& splashThread )
+        { runEventLoop( splashThread, title ); }, initialState );
+        _bOpen                 = bOpened ? SW_TRUE : SW_FALSE;
+        return bOpened;
+    }
+
+    void X11SplashWindow::runEventLoop( LinuxSplashThread& splashThread, const string& title )
+    {
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )
         {
-            _bOpen = SW_FALSE;
-            return false;
+            splashThread.markFailed();
+            return;
         }
 
         const int32 screen = DefaultScreen( pDisplay );
@@ -83,8 +94,7 @@ namespace sw
             0, CopyFromParent, InputOutput, CopyFromParent,
             CWBackPixel, &attrs );
 
-        const utf8* pWinTitle = StringUtil::isNullOrEmpty( pTitle ) ? "SW Engine" : pTitle;
-        XStoreName( pDisplay, win, pWinTitle );
+        XStoreName( pDisplay, win, title.c_str() );
 
         const Atom windowTypeAtom = XInternAtom( pDisplay, "_NET_WM_WINDOW_TYPE", 0 );
         const Atom splashTypeAtom = XInternAtom( pDisplay, "_NET_WM_WINDOW_TYPE_SPLASH", 0 );
@@ -119,47 +129,50 @@ namespace sw
         // **`XFlush` 가 아니라 `XSync` 다.** 매핑은 요청일 뿐이라, 서버가 처리하기 전에 그리면 그
         // 그리기는 버려진다. 한 번 왕복해 두면 이후의 그리기가 확실히 창에 닿는다.
         XSync( pDisplay, 0 ); // discard=0. Xlib 의 `False` 매크로는 이 저장소가 해제한다.
+        splashThread.markReady();
 
-        _pX11Display = pDisplay;
-        _x11Window   = static_cast<uint64>( win );
-        _bOpen       = SW_TRUE;
+        // 이벤트는 비우기만 한다 — 노출 · 가림은 배경 픽스맵으로 서버가 다시 칠한다(`drawStatus`). 그리기는 기동 스레드가 상태를 적을 때다.
+        uint64 pixmap = 0;
+        for ( ;; )
+        {
+            while ( XPending( pDisplay ) > 0 )
+            {
+                XEvent event{};
+                XNextEvent( pDisplay, &event );
+            }
+            XFlush( pDisplay );
+            LinuxSplashThread::PaintState state;
+            const uint8                   wakeMask = splashThread.waitForEvents( ConnectionNumber( pDisplay ), state );
+            if ( ( wakeMask & ( static_cast<uint8>( LinuxSplashWakeReason::Quit ) | static_cast<uint8>( LinuxSplashWakeReason::ConnectionLost ) ) ) != 0 )
+                break;
+            if ( ( wakeMask & static_cast<uint8>( LinuxSplashWakeReason::Redraw ) ) != 0 )
+                drawStatus( pDisplay, static_cast<uint64>( win ), pixmap, state );
+        }
 
-        updateStatus( _status.c_str() );
-        return true;
+        if ( pixmap != 0 )
+            XFreePixmap( pDisplay, static_cast<Pixmap>( pixmap ) );
+        XUnmapWindow( pDisplay, win );
+        XDestroyWindow( pDisplay, win );
+        XCloseDisplay( pDisplay );
     }
 
-    void X11SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
+    void X11SplashWindow::drawStatus( void* pX11Display, uint64 x11Window, uint64& inoutX11Pixmap, const LinuxSplashThread::PaintState& state ) const
     {
-        if ( _bOpen == SW_FALSE )
-            return;
-
-        if ( StringUtil::isNullOrEmpty( pStatus ) == false )
-            _status = pStatus;
-        if ( progress >= 0.0f )
-            _progress = ( progress > 1.0f ) ? 1.0f : progress;
-
-        Display* pDisplay = static_cast<Display*>( _pX11Display );
-        Window   win      = static_cast<Window>( _x11Window );
-        if ( pDisplay == nullptr || win == 0 )
-            return;
-
-        const int32 screen = DefaultScreen( pDisplay );
-        GC          gc     = DefaultGC( pDisplay, screen );
+        Display*    pDisplay = static_cast<Display*>( pX11Display );
+        const auto  win      = static_cast<Window>( x11Window );
+        const int32 screen   = DefaultScreen( pDisplay );
+        GC          gc       = DefaultGC( pDisplay, screen );
 
         // **창에 직접 그리지 않고 픽스맵에 그려 그것을 창 배경으로 설정한다.**
         //
-        // 스플래시에는 이벤트 루프가 없다. `updateStatus` 가 불릴 때만 그린다. 그런데 X11 은
-        // 창이 노출될 때마다(`Expose`) **배경색으로 지우고** 우리에게 다시 그리라고 알린다. 그 알림을
-        // 받아 줄 루프가 없으니 창에 직접 그리면 그리는 족족 지워지고 `background_pixel` 만 남는다("뒷배경만 보인다").
-        // 호출은 모두 정상이라(이미지도 읽히고 `XPutImage` 도 불린다) 로그로는 보이지 않는다.
-        //
-        // 배경 픽스맵으로 설정해 두면 **다시 그리는 일을 서버가 한다.** 이벤트 루프 없이도 노출, 가림,
-        // 이동을 견딘다. Win32 가 `WM_PAINT` 로 하는 일을 여기서는 서버에게 맡기는 셈이다.
-        Pixmap pixmap = static_cast<Pixmap>( _x11Pixmap );
+        // X11 은 창이 노출될 때마다(`Expose`) **배경색으로 지우고** 다시 그리라고 알린다. 창에 직접 그리면 그 알림마다 다시 그려야 하는데,
+        // 배경 픽스맵으로 설정해 두면 **다시 그리는 일을 서버가 한다.** 노출, 가림, 이동을 스레드가 그리지 않고 견딘다.
+        // Win32 가 `WM_PAINT` 로 하는 일을 여기서는 서버에게 맡기는 셈이다.
+        Pixmap pixmap = static_cast<Pixmap>( inoutX11Pixmap );
         if ( pixmap == 0 )
         {
-            pixmap     = XCreatePixmap( pDisplay, win, _width, _height, static_cast<uint32>( DefaultDepth( pDisplay, screen ) ) );
-            _x11Pixmap = static_cast<uint64>( pixmap );
+            pixmap         = XCreatePixmap( pDisplay, win, _width, _height, static_cast<uint32>( DefaultDepth( pDisplay, screen ) ) );
+            inoutX11Pixmap = static_cast<uint64>( pixmap );
         }
         if ( pixmap == 0 )
             return;
@@ -168,13 +181,13 @@ namespace sw
         XFillRectangle( pDisplay, pixmap, gc, 0, 0, _width, _height );
 
         // 창 크기로 줄여 둔 것을 찍는다. `XPutImage` 는 늘리거나 줄이지 못하므로 원본을 그대로
-        // 넘기면 창보다 큰 이미지는 좌상단만 보인다(1376×768 원본, 480×280 창).
+        // 넘기면 창보다 큰 이미지는 좌상단만 보인다(1376×768 원본, 480×280 창). 픽셀은 시작 전에 정해져 바뀌지 않는다.
         if ( _listScaledPixel.empty() == false )
         {
             XImage* pImage = XCreateImage(
                 pDisplay, DefaultVisual( pDisplay, screen ),
                 static_cast<uint32>( DefaultDepth( pDisplay, screen ) ), ZPixmap, 0,
-                reinterpret_cast<utf8*>( _listScaledPixel.data() ),
+                const_cast<utf8*>( reinterpret_cast<const utf8*>( _listScaledPixel.data() ) ),
                 _width, _height, 32, 0 );
             if ( pImage != nullptr )
             {
@@ -185,10 +198,10 @@ namespace sw
         }
 
         XSetForeground( pDisplay, gc, kSplashTextColor );
-        XDrawString( pDisplay, pixmap, gc, 32, static_cast<int32>( _height ) - 50, _status.c_str(), static_cast<int32>( _status.length() ) );
+        XDrawString( pDisplay, pixmap, gc, 32, static_cast<int32>( _height ) - 50, state._status.c_str(), static_cast<int32>( state._status.length() ) );
 
         const int32   totalBarWidth   = static_cast<int32>( _width ) - 64;
-        const float32 clampedProgress = ( _progress < 0.0f ) ? 0.0f : ( ( _progress > 1.0f ) ? 1.0f : _progress );
+        const float32 clampedProgress = ( state._progress < 0.0f ) ? 0.0f : ( ( state._progress > 1.0f ) ? 1.0f : state._progress );
         const int32   fillWidth       = static_cast<int32>( static_cast<float32>( totalBarWidth ) * clampedProgress );
 
         XSetForeground( pDisplay, gc, kSplashBarTrackColor );
@@ -205,6 +218,22 @@ namespace sw
         XFlush( pDisplay );
     }
 
+    void X11SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
+    {
+        if ( _bOpen == SW_FALSE )
+            return;
+
+        if ( StringUtil::isNullOrEmpty( pStatus ) == false )
+            _status = pStatus;
+        if ( progress >= 0.0f )
+            _progress = ( progress > 1.0f ) ? 1.0f : progress;
+
+        LinuxSplashThread::PaintState state;
+        state._status   = _status;
+        state._progress = _progress;
+        _splashThread.requestRedraw( state ); // 그리기는 스플래시 스레드가 한다
+    }
+
     void X11SplashWindow::setProgress( float32 progress )
     {
         updateStatus( nullptr, progress );
@@ -212,25 +241,7 @@ namespace sw
 
     void X11SplashWindow::dismiss()
     {
-        if ( _bOpen == SW_FALSE )
-            return;
-
-        Display* pDisplay = static_cast<Display*>( _pX11Display );
-        Window   win      = static_cast<Window>( _x11Window );
-        if ( pDisplay != nullptr && win != 0 )
-        {
-            if ( _x11Pixmap != 0 )
-            {
-                XFreePixmap( pDisplay, static_cast<Pixmap>( _x11Pixmap ) );
-                _x11Pixmap = 0;
-            }
-            XUnmapWindow( pDisplay, win );
-            XDestroyWindow( pDisplay, win );
-            XCloseDisplay( pDisplay );
-            _pX11Display = nullptr;
-            _x11Window   = 0;
-        }
-
+        _splashThread.stop(); // 스레드가 픽스맵 · 창 · 연결을 놓고 끝난다
         _bOpen = SW_FALSE;
     }
 } // namespace sw

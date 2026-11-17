@@ -34,6 +34,12 @@ namespace sw
         [[nodiscard]] virtual bool readTextFile( string_view path, string& outText ) const = 0;
         /** @brief 파일 전체를 @p io 로 비동기로 읽습니다. 열기가 부른 스레드를 막지 않는 길이 있으면 그 길로 간다. */
         virtual AsyncReadHandle readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const = 0;
+        /**
+         * @brief 파일의 구간 [@p offset, @p offset + @p size) 를 @p io 로 비동기로 읽습니다(텍스처 밉 범위 — `TextureMipLayout`). 구간이 파일 끝을 넘으면 `OutOfRange` 로 끝난다.
+         * @details 순수 가상이라 구현을 빠뜨린 소스는 컴파일되지 않는다 — 전체 읽기로 조용히 대신하지 않는다(언리얼 `IAsyncReadFileHandle::ReadRequest` 의 오프셋 · 크기 자리).
+         */
+        virtual AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                                const AsyncReadCompleteDelegate& onComplete ) const = 0;
     };
 } // namespace sw
 
@@ -50,6 +56,8 @@ namespace sw
         bool            readFile( string_view path, vector<uint8>& outBytes ) const override;
         bool            readTextFile( string_view path, string& outText ) const override;
         AsyncReadHandle readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const override;
+        AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                        const AsyncReadCompleteDelegate& onComplete ) const override;
     };
 } // namespace sw
 
@@ -74,6 +82,8 @@ namespace sw
         bool            readFile( string_view path, vector<uint8>& outBytes ) const override;
         bool            readTextFile( string_view path, string& outText ) const override;
         AsyncReadHandle readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const override;
+        AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                        const AsyncReadCompleteDelegate& onComplete ) const override;
 
     private:
         unordered_map<string, shared_ptr<const vector<uint8>>> _mapFile;

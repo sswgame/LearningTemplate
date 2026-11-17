@@ -125,7 +125,7 @@ namespace sw
         if ( _pairedAnimationPath.empty() )
             return;
         _defReload.markSeen();
-        shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( _pairedAnimationPath );
+        shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( _pairedAnimationPath ).snapshot();
         if ( def == nullptr )
         {
             // 읽기 오류는 로더가 줄마다 남겼다. 지난 에셋으로 이어 가지 않는다.

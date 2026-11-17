@@ -4,6 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -164,7 +165,7 @@ namespace sw
     {
         outNextCursor.clear();
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult result = connection.listRecords( getTable(), subjectPrefix, cursor, maxCount, true, listRecord );
+        const ServiceStoreResult result = ServiceRecordReader::readPage( connection, getTable(), subjectPrefix, cursor, maxCount, true, listRecord )._result;
         if ( result != ServiceStoreResult::Ok )
             return result;
         for ( const ServiceRecord& record : listRecord )
@@ -181,20 +182,30 @@ namespace sw
 
 namespace sw
 {
-    ServiceStoreResult ServiceAuditedWrite::commit( IServiceStoreConnection& connection ) const
+    ServiceAuditedWriteResult ServiceAuditedWrite::commit( IServiceStoreConnection& connection ) const
     {
+        if ( _pGuard == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ServiceAuditLog.WriteWithoutGuard", "Operator write to '%#/%#' has no guard - refused", _table.c_str(), _key.c_str() );
+            return ServiceAuditedWriteResult::Forbidden;
+        }
+        const ServiceStoreResult allowed = _pGuard->checkAllowed( connection );
+        if ( allowed == ServiceStoreResult::NotFound )
+            return ServiceAuditedWriteResult::Forbidden;
+        if ( allowed != ServiceStoreResult::Ok )
+            return ServiceAuditedWriteResult::Unavailable;
         ServiceRecord            current;
         const ServiceStoreResult readResult = connection.readRecord( _table, _key, current );
         if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
-            return ServiceStoreResult::Unavailable;
+            return ServiceAuditedWriteResult::Unavailable;
         if ( _bytes.empty() && readResult == ServiceStoreResult::NotFound )
-            return ServiceStoreResult::NotFound;
+            return ServiceAuditedWriteResult::NotFound;
         ServiceTransaction transaction;
         if ( _bytes.empty() )
             transaction.erase( _table, _key, current._version );
         else
             transaction.put( _table, _key, _bytes, current._version );
         ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
-        return connection.commit( transaction ) == ServiceStoreResult::Ok ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+        return connection.commit( transaction ) == ServiceStoreResult::Ok ? ServiceAuditedWriteResult::Ok : ServiceAuditedWriteResult::Unavailable;
     }
 } // namespace sw

@@ -6,6 +6,7 @@
 #include "Core/Math/AABB.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -600,6 +601,11 @@ namespace sw
         return storage;
     }
 
+    void GameObject::giveFreshLocalID( Component* pComp )
+    {
+        ComponentStableKey::assignFreshLocalID( pComp );
+    }
+
     void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick )
     {
         // id 는 매니저의 번호 공간(`ObjectIDAllocator` — 엔진의 씬들이 나눠 쓴다)이 준다. 상태를 되돌리는 로드 중이면 원래 ID 를 복원하고 공간을 그 뒤로 민다.
@@ -759,6 +765,7 @@ namespace sw
         const bool bInvalidMoveRequest = pComp == nullptr || pComp->getOwner() != this || direction == 0 || isComponentMutationFrozen();
         if ( bInvalidMoveRequest )
             return false;
+        ComponentStableKey::freezeLocalIDs( *this ); // 순서가 바뀌면 옛 키 순번이 바뀐다 — 지역 id 를 먼저 굳힌다
         const optional<size_t> found = VectorUtil::findIndex( _listComponent, pComp );
         if ( found.has_value() == false )
             return false;
@@ -780,14 +787,21 @@ namespace sw
         // 파괴 뒤에는 물을 수 없으니 지금 본다.
         const bool bTickJobs = pComp->hasTickJobs();
 
+        // 삭제 대기 오브젝트의 컴포넌트는 오브젝트의 지연 파괴가 함께 거둔다(표시는 오브젝트를 선점할 때 이미 했다 — `tryMarkPendingDestroy`). 여기서 바로 해체하면
+        // 삭제 대기 오브젝트는 틱 레지스트리에 자기를 다시 알리지 않으므로(`markTickOrderDirty`) 틱 파도가 사라진 컴포넌트를 가리킨 채 지연 파괴까지 남았다.
+        // 지연 파괴의 컴포넌트 처리도 이리로 오지만, 바로 뒤의 오브젝트 해체가 같은 컴포넌트를 거두므로 할 일이 없다.
+        if ( isPendingDestroy() )
+            return true;
         if ( isComponentMutationFrozen() )
         {
             _pOwnerManager->destroyComponent( pComp );
             return true;
         }
 
+        // 빠지면 뒤 형제의 옛 키 순번이 당겨진다 — id 가 아직 없는 형제의 지역 id 를 먼저 굳힌다(감사 A-2). 틱 중(위)에는 표시만 하므로 목록이 그대로다.
+        ComponentStableKey::freezeLocalIDs( *this );
         // **순서를 지키며 뺀다**(swap-remove 금지). 목록 순서에는 의미가 있다. primary 는 "살아 있는 첫 SceneComponent", `getComponent<T>` 는
-        // 첫 일치, 안정 키(`ComponentStableKey`)는 같은 타입 안의 순번이다. 살아 있는 동안은 primary 캐시가 가려 주지만 저장했다 다시 읽으면
+        // 첫 일치, 옛 안정 키(`ComponentStableKey` 의 `이름#n`)는 같은 이름 안의 순번이다. 살아 있는 동안은 primary 캐시가 가려 주지만 저장했다 다시 읽으면
         // 바뀐 순서가 그대로 굳는다. 목록은 대개 네 개 이하다.
         if ( VectorUtil::removeFirst( _listComponent, pComp ) == 0 )
         {

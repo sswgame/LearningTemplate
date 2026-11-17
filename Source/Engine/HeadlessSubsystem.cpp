@@ -30,6 +30,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackPatchBuilder.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -477,6 +478,12 @@ namespace sw
                 AnimationCrowdSettings crowdSettings{};
                 const bool             bCrowdSettingsLoaded = crowdSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
                 const CookStore        cookStore            = CookStore::makeLocal();
+                // 앞 쿠킹이 남긴 내용 해시를 싣는다 — 도장이 같은 입력은 읽지 않는다. 캐시라 못 읽어도 빈 채로 계속한다(다음 저장이 새로 쓴다).
+                ContentHashCache&    hashCache = engine::getSubsystem<ContentHashCache>();
+                const expected<void> hashLoad  = hashCache.load( ContentHashCache::makeLocalCachePath() );
+                if ( hashLoad.has_value() == false )
+                    SW_LOG_WARNING_ID( "Headless.ContentHashCacheDropped", "Content hash cache dropped - every input is hashed again: %# (%#)", hashLoad.error().message(), hashLoad.error().detail() );
+                [[maybe_unused]] const uint64 hashedBytesBefore = hashCache.getHashedByteCount(); // 로그로만 쓴다(Shipping 은 빠진다)
                 // 입력 맵 묶음은 게임 시작의 검사와 같은 길로 먼저 본다 — 겹친 묶음은 배포본이 뜨지 않으므로 구울 까닭이 없다. 쿠킹 세션 밖이다(출력의 입력이 아니다).
                 if ( InputMapBundle::checkPack( engine::getSubsystem<GameConfig>()._packRoot.get() ) == false )
                 {
@@ -502,6 +509,11 @@ namespace sw
                 // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
                 if ( bSucceeded && ( bCookPacks || bCookAll ) )
                     bSucceeded = cookPackStage( commandLine, bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ) );
+                // 변경 없는 두 번째 쿠킹은 0 이어야 한다(도장만 본다 — `Pack.Scale` 측정의 입력 읽기 값).
+                SW_LOG_INFO_ID( "Headless.CookHashedBytes", "Cook hashed %# input bytes", hashCache.getHashedByteCount() - hashedBytesBefore );
+                const expected<void> hashSave = hashCache.save();
+                if ( hashSave.has_value() == false )
+                    SW_LOG_WARNING_ID( "Headless.ContentHashCacheNotSaved", "Content hash cache not saved - the next cook hashes every input again: %# (%#)", hashSave.error().message(), hashSave.error().detail() );
                 inoutState._bFailed = bSucceeded == false;
                 return true;
             }
@@ -515,7 +527,7 @@ namespace sw
                 inoutState.enterHeadless();
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessImportLipSync", "Starting Headless (ImportLipSync)..." );
                 // 분석 표는 런타임 얼굴과 같은 공유 캐시의 한 벌이다.
-                const shared_ptr<const LipSyncSettings> pLipSyncSettings   = SharedAssetCache<LipSyncSettings>::acquire( engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() );
+                const shared_ptr<const LipSyncSettings> pLipSyncSettings   = SharedAssetCache<LipSyncSettings>::acquire( engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() ).snapshot();
                 uint32                                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32                 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
                 if ( pLipSyncSettings != nullptr )

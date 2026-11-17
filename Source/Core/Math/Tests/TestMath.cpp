@@ -13,6 +13,18 @@
 
 using namespace sw;
 
+/** @brief [MathTest] wrapAngle 은 범위 안은 그대로, 큰 값은 [−π, π] 로, 유한하지 않은 값은 NaN 으로 곧바로 돌려준다(예전에는 무한대 · 1e10 에서 반복이 끝나지 않았다) */
+SW_TEST_CASE( MathTest, WrapAngleEndsForHugeAndNonFiniteValues )
+{
+    SW_EXPECT_EQUAL( 1.0f, MathUtil::wrapAngle( 1.0f ) );
+    SW_EXPECT_EQUAL( MathUtil::kPi, MathUtil::wrapAngle( MathUtil::kPi ) );
+    SW_EXPECT_NEAR( -MathUtil::kPi + 0.5f, MathUtil::wrapAngle( MathUtil::kPi + 0.5f ), 1e-5 );
+    const float32 huge = MathUtil::wrapAngle( 1e10f );
+    SW_EXPECT_TRUE( huge >= -MathUtil::kPi && huge <= MathUtil::kPi );
+    SW_EXPECT_TRUE( MathUtil::isNan( MathUtil::wrapAngle( std::numeric_limits<float32>::infinity() ) ) );
+    SW_EXPECT_TRUE( MathUtil::isNan( MathUtil::wrapAngle( std::numeric_limits<float32>::quiet_NaN() ) ) );
+}
+
 /** @brief [MathTest] normalizeOr 는 길이가 문턱 이하이거나 유한하지 않으면 대신값을, 아니면 단위 벡터를 낸다 */
 SW_TEST_CASE( MathTest, NormalizeOrFallsBackForShortOrNonFiniteVectors )
 {

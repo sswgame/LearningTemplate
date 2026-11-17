@@ -97,6 +97,9 @@ def make_cmake_text(spec: CookContractSpec) -> str:
                      f"set({prefix}_GRAPHICS_LIBS {backend.graphics_libs})",
                      f"set({prefix}_SHIPPING_DEFINE {backend.shipping_define})",
                      f"set({prefix}_COMMAND_LINE_NAME {backend.command_line_name})"]
+    # 검증 체인(`-scenario-backends=all`)이 플랫폼마다 띄우는 백엔드 — 체인의 ctest 슬롯 수는 이 길이다(표 전체로 세면 WebGPU 몫 슬롯을 비워 둔다).
+    for platform, list_name in spec.map_scenario_backends_by_platform.items():
+        list_line.append(f"set(SW_RHI_SCENARIO_BACKENDS_{platform} {' '.join(list_name)})")
     return "\n".join(list_line) + "\n"
 
 

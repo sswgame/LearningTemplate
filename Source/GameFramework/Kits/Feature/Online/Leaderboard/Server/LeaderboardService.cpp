@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -250,7 +251,7 @@ namespace sw
                 while ( true )
                 {
                     vector<ServiceRecord> listRecord;
-                    if ( connection.listRecords( getScoreTable(), prefix, cursor, kRebuildBatch, false, listRecord ) != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, getScoreTable(), prefix, cursor, kRebuildBatch, false, listRecord )._result != ServiceStoreResult::Ok )
                         return false;
                     for ( const ServiceRecord& record : listRecord )
                     {
@@ -479,7 +480,7 @@ namespace sw
                 LeaderboardRead<vector<LeaderboardStat>> read;
                 vector<ServiceRecord>                    listRecord;
                 const string                             prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                if ( connection.listRecords( LeaderboardServiceInternal::getStatTable(), prefix, "", LeaderboardLimit::kMaxStatCount, false, listRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, LeaderboardServiceInternal::getStatTable(), prefix, "", LeaderboardLimit::kMaxStatCount, false, listRecord )._result != ServiceStoreResult::Ok )
                     return read;
                 for ( const ServiceRecord& record : listRecord )
                 {
@@ -523,7 +524,7 @@ namespace sw
                 LeaderboardRead<vector<AchievementState>> read;
                 vector<ServiceRecord>                     listRecord;
                 const string                              prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                if ( connection.listRecords( LeaderboardServiceInternal::getAchievementTable(), prefix, "", LeaderboardLimit::kMaxAchievementCount, false, listRecord ) !=
+                if ( ServiceRecordReader::readPage( connection, LeaderboardServiceInternal::getAchievementTable(), prefix, "", LeaderboardLimit::kMaxAchievementCount, false, listRecord )._result !=
                      ServiceStoreResult::Ok )
                     return read;
                 for ( const ServiceRecord& record : listRecord )
@@ -545,9 +546,9 @@ namespace sw
                 vector<ServiceRecord>                        listStatRecord;
                 vector<ServiceRecord>                        listAchievementRecord;
                 const string                                 prefix  = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                const bool                                   bReadOk = connection.listRecords( Internal::getStatTable(), prefix, "", LeaderboardLimit::kMaxStatCount, false, listStatRecord ) ==
+                const bool                                   bReadOk = ServiceRecordReader::readPage( connection, Internal::getStatTable(), prefix, "", LeaderboardLimit::kMaxStatCount, false, listStatRecord )._result ==
                                          ServiceStoreResult::Ok &&
-                                     connection.listRecords( Internal::getAchievementTable(), prefix, "", LeaderboardLimit::kMaxAchievementCount, false, listAchievementRecord ) ==
+                                     ServiceRecordReader::readPage( connection, Internal::getAchievementTable(), prefix, "", LeaderboardLimit::kMaxAchievementCount, false, listAchievementRecord )._result ==
                                          ServiceStoreResult::Ok;
                 if ( bReadOk == false )
                     return read;

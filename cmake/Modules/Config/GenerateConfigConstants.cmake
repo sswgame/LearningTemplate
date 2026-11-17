@@ -39,8 +39,9 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
 		"SW_ACTIVE_GAME='${SW_ACTIVE_GAME}' has no game preset ${SW_FILE_RUNTIME_GAME_CONFIG}\n"
 		"  Add it next to the other presets in ${SW_DIR_RUNTIME_GAME_PRESET}/ (_packRoot)")
 endif()
-# 게임 이름은 Shipping 만 굽는다. Dev 는 실행할 때 고르고(`-game=`, `GameSelection`) 기본은 `Bin/Modules/ActiveGame.txt` 라 ConfigConstants.h 가 활성 게임과 무관하다.
-if(SW_SHIPPING_BUILD)
+# 게임 이름은 정적 모듈 구성(Shipping · 웹 · Android 개발 — 게임 하나를 링크한다)만 굽는다. 동적 Dev 는 실행할 때 고르고(`-game=`, `GameSelection`)
+# 기본은 `Bin/Modules/ActiveGame.txt` 라 ConfigConstants.h 가 활성 게임과 무관하다.
+if(SW_STATIC_MODULES)
 	set(SW_SHIPPING_GAME_NAME "${SW_ACTIVE_GAME}")
 else()
 	set(SW_SHIPPING_GAME_NAME "")

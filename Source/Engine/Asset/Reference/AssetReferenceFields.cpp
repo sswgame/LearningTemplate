@@ -11,6 +11,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
@@ -282,15 +283,24 @@ namespace sw
             { return AssetReferenceFieldsInternal::isOneOf( character, AssetReferenceFieldsInternal::kTemplateCharacters ); } );
             if ( token.empty() || bTemplate )
                 continue;
-            string normalized = FileUtil::normalizePath( token ).str();
-            if ( AssetReferenceFieldsInternal::startsWithDomain( normalized, _listDomain ) == false )
-                continue;
             AssetReference reference;
+            if ( AssetRegistry::isReferenceText( token ) )
+            {
+                // GUID 참조 — 지금 경로는 런타임 색인이 안다. 풀리지 않으면 글 그대로 두어 있음 판정이 잡는다(고르거나 버리지 않는다).
+                reference._guid                 = AssetRegistry::parseReferenceText( token );
+                const optional<string> resolved = reference._guid.has_value() ? AssetRegistry::resolve( *reference._guid ) : optional<string>{};
+                reference._path                 = resolved.has_value() ? FileUtil::normalizePath( *resolved ).str() : string( token );
+            }
+            else
+            {
+                reference._path = FileUtil::normalizePath( token ).str();
+                if ( AssetReferenceFieldsInternal::startsWithDomain( reference._path, _listDomain ) == false )
+                    continue;
+            }
             reference._line   = AssetReferenceFieldsInternal::getLineOf( listLineStart, tokenStart );
             reference._field  = string( field );
             reference._offset = tokenStart;
             reference._length = token.size();
-            reference._path   = std::move( normalized );
             outListReference.push_back( std::move( reference ) );
         }
     }
@@ -585,6 +595,9 @@ namespace sw
         uint32 rewriteCount{ 0 };
         for ( auto itReference = listReference.rbegin(); itReference != listReference.rend(); ++itReference )
         {
+            // GUID 참조는 옮겨도 그대로다 — 글이 경로가 아니다.
+            if ( AssetRegistry::isReferenceText( string_view{ inoutText }.substr( itReference->_offset, itReference->_length ) ) )
+                continue;
             const string& path = itReference->_path;
             for ( const AssetReferenceRewriteRule& rule : listRule )
             {

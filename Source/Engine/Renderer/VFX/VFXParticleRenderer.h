@@ -74,6 +74,8 @@ namespace sw
 
         /** @brief 마지막 `prepareFrame` 이 올린 입자 수입니다(테스트와 진단용). */
         uint32 getUploadedParticleCount() const { return _uploadedParticleCount; }
+        /** @brief GPU 방출기가 이번 프레임 디스패치 뒤에도 남긴 단계 수의 최댓값입니다(`VFXGPUSimulation::getPendingStepCount` — 따라잡는 중). */
+        uint64 getPendingGPUStepCount() const { return _gpuSimulation.getPendingStepCount(); }
 
     private:
         /** @brief 경로로 빌린 입자 텍스처 하나입니다(텍스처는 `TextureCache` 가 소유하고, 핸들이 참조를 쥐었다가 놓을 때 돌려줍니다). */

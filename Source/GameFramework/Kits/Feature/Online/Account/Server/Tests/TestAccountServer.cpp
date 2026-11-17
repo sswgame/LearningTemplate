@@ -80,6 +80,14 @@ namespace
         }
     };
 
+    /** @brief 테스트의 로그인 설정입니다. 해시 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
+    LoginServiceConfig makeAccountServerLoginSettings()
+    {
+        LoginServiceConfig settings;
+        settings._maxConcurrentPasswordHashes = 4;
+        return settings;
+    }
+
     /**
      * @brief 로그인 서비스 + 바인딩 + 루프백 서버 + 클라이언트들입니다.
      * @details 서버를 먼저 내린다(저장소 → 호스트 → 남은 완료) — 완료와 `onAccountLeft` 가 서비스를 부르므로 서비스의 `shutdown` 은 그 뒤다(`LoginService.h` 의 종료 순서).
@@ -92,7 +100,7 @@ namespace
         vector<unique_ptr<AccountClient>>   _listAccount{};
         unique_ptr<test::OnlineTestFixture> _pRig{};
 
-        explicit AccountServerFixture( const LoginServiceConfig& settings = LoginServiceConfig{} )
+        explicit AccountServerFixture( const LoginServiceConfig& settings = makeAccountServerLoginSettings() )
         {
             _pRig = make_unique<test::OnlineTestFixture>( false );
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
@@ -506,8 +514,8 @@ SW_TEST_CASE( AccountServerTest, RevokeNotificationFromAnotherServer )
 /** @brief [AccountServerTest] 시도 제한은 공통 오류 kRateLimited 와 기다릴 시간으로 간다 */
 SW_TEST_CASE( AccountServerTest, RateLimitReachesTheClient )
 {
-    LoginServiceConfig settings;
-    settings._attemptBurst = 1;
+    LoginServiceConfig settings = makeAccountServerLoginSettings();
+    settings._attemptBurst      = 1;
     AccountServerFixture rig( settings );
     const int32          client = rig.addClient();
     (void)rig.registerAccount( client, "alice_01" );

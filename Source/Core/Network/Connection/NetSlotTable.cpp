@@ -140,7 +140,7 @@ namespace sw
 
     optional<int32> NetSlotTable::findByAddress( const NetAddress& address ) const
     {
-        const auto iter = _mapSlotByAddress.find( makeAddressKey( address ) );
+        const auto iter = _mapSlotByAddress.find( address );
         if ( iter == _mapSlotByAddress.end() )
             return nullopt;
         return iter->second;
@@ -149,12 +149,12 @@ namespace sw
     void NetSlotTable::bindAddress( int32 slotIndex, const NetAddress& address )
     {
         _listSlot[static_cast<size_t>( slotIndex )]._address = address;
-        _mapSlotByAddress[makeAddressKey( address )]         = slotIndex;
+        _mapSlotByAddress[address]                           = slotIndex;
     }
 
     void NetSlotTable::unbindAddress( int32 slotIndex )
     {
-        const auto iter = _mapSlotByAddress.find( makeAddressKey( _listSlot[static_cast<size_t>( slotIndex )]._address ) );
+        const auto iter = _mapSlotByAddress.find( _listSlot[static_cast<size_t>( slotIndex )]._address );
         if ( iter != _mapSlotByAddress.end() && iter->second == slotIndex )
             _mapSlotByAddress.erase( iter );
     }

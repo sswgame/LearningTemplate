@@ -18,7 +18,9 @@
 
     #include <shellapi.h>
 #elif defined( SW_PLATFORM_POSIX )
+    #include <cerrno>
     #include <csignal>
+    #include <sys/wait.h>
     #include <unistd.h>
 #else
     #error "Unsupported platform"
@@ -482,6 +484,52 @@ SW_TEST_CASE( ProcessTest, EnvironmentOverrideReachesOnlyTheChild )
     SW_EXPECT_FALSE( sw::Process::launchDetached( command, options ) );
 }
 
+#if defined( SW_PLATFORM_POSIX )
+namespace
+{
+    /** @brief @p childPid 가 이미 거둬졌으면(이 프로세스의 자식이 아니면 — ECHILD) true 입니다. 좀비 · 아직 도는 자식이면 false 입니다. */
+    bool isChildReaped( pid_t childPid )
+    {
+        int32 status = 0;
+        return waitpid( childPid, &status, WNOHANG ) < 0 && errno == ECHILD;
+    }
+} // namespace
+
+/**
+ * @brief [ProcessTest] 도는 자식을 놓으면(소멸) 끝날 때까지 기다려 거둔다 — 좀비가 남지 않는다
+ * @details 예전에는 도는 자식을 분리해, 그 자식이 나중에 끝나면 이 프로세스가 끝날 때까지 좀비로 남았다(`waitpid` 가 ECHILD 가 아니라 그 pid 를 준다).
+ */
+SW_TEST_CASE( ProcessTest, ReleasingARunningChildWaitsAndReapsIt )
+{
+    pid_t childPid = 0;
+    {
+        sw::Process process;
+        SW_REQUIRE_TRUE( process.launch( sw::ProcessCommand::fromSearchPath( "sleep", { "0.3" } ) ) );
+        childPid = static_cast<pid_t>( process.getProcessID() );
+        SW_REQUIRE_TRUE( childPid > 0 );
+        SW_EXPECT_LOG( "Process.WaitingOnRelease" ); // 기다림은 놓기 전에 거두지 않은 호출자에게 알린다
+    }
+    SW_EXPECT_TRUE( isChildReaped( childPid ) );
+}
+
+/** @brief [ProcessTest] `ProcessReleaseMode::Terminate` 로 띄운 자식은 놓을 때 죽이고 거둔다 — 기다리지 않고 좀비도 남지 않는다 */
+SW_TEST_CASE( ProcessTest, ReleasingWithTerminateKillsAndReapsTheChild )
+{
+    sw::ProcessOptions options;
+    options._releaseMode  = sw::ProcessReleaseMode::Terminate;
+    pid_t       childPid  = 0;
+    const int64 startNano = sw::MonotonicClock::nowNanoseconds();
+    {
+        sw::Process process;
+        SW_REQUIRE_TRUE( process.launch( sw::ProcessCommand::fromSearchPath( "sleep", { "30" } ), options ) );
+        childPid = static_cast<pid_t>( process.getProcessID() );
+        SW_REQUIRE_TRUE( childPid > 0 );
+    }
+    SW_EXPECT_TRUE( isChildReaped( childPid ) );
+    SW_EXPECT_TRUE( sw::MonotonicClock::nowNanoseconds() - startNano < 10 * sw::constant::time::kNanosecondsPerSecond ); // 30 초를 기다리지 않았다
+}
+#endif
+
 /**
  * @brief 부모와 함께 끝낼 자식(`ProcessOptions::_bEndWithParent`)은 `Process` 를 놓으면 트리째 끝난다 — 부모가 죽을 때도 같은 장치(Windows Job · Linux 부모 사망 신호)가 끝낸다(감사 E-15)
  * @details 예전에는 Job 에 KILL_ON_JOB_CLOSE 가 없어 에디터가 죽으면 넷 플레이 서버 · 클라이언트가 고아로 남았다. 분리 실행은 이 옵션을 거절한다.
@@ -497,7 +545,7 @@ SW_TEST_CASE( ProcessTest, EndWithParentChildEndsWhenReleased )
 #endif
     sw::ProcessOptions options;
     options._bEndWithParent = true;
-    sw::int32 childID{ 0 };
+    int32 childID{ 0 };
     {
         sw::Process proc;
         SW_REQUIRE_TRUE( proc.launch( cmd, options ) );

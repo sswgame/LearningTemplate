@@ -21,6 +21,13 @@ namespace sw
 {
     struct DDSImageData;
 
+    /** @brief 한 프레임의 텍스처 밉 스트리밍 예산입니다(`TextureCache::updateStreaming`). 값은 `RenderConfig`(Config/Engine/EngineConfig.json `_render`)가 정본이다. */
+    struct TextureStreamingBudget
+    {
+        uint32 _maxUpgradesPerFrame{ 0 }; ///< 이 프레임에 새로 제출하는 위쪽 밉 업로드 수의 상한(0 이면 끝남 확인만)
+        uint64 _poolBytes{ 0 };           ///< 위쪽 밉으로 올린 텍스처 바이트 합의 상한(`TextureStreamingPool`)
+    };
+
     class IRHIDevice;
     class Texture2D;
     class TextureLoadOperation;
@@ -52,10 +59,6 @@ namespace sw
         static constexpr uint32 kDefaultRenderTargetSize = 256;
         /// @brief CPU 텍스처 경로의 접두사입니다(`createCPUTexture`).
         static constexpr const utf8* kCPUTexturePrefix = "cpu/";
-        /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
-        static constexpr uint32 kMaxUploadsPerFrame = 8;
-        /** @brief 렌더 스레드가 한 프레임에 업로드하는 위쪽 밉 수의 상한입니다(`updateStreaming`). 텍스처 하나가 밉 사슬 전부라 처음 로드보다 무겁다. */
-        static constexpr uint32 kMaxStreamingUpgradesPerFrame = 2;
         /** @brief 기억하는 최근 굽기 수입니다(`wasLayerBakedAfter`). 프레임마다 묻는 쪽이 놓치지 않을 만큼 크다. */
         static constexpr uint32 kBakeHistoryCount = 256;
         /** @brief 빈 캐시로 만듭니다. */
@@ -112,8 +115,9 @@ namespace sw
          * @details 텍스처 밉 스트리밍(계획 PreloadAndLOD P6)이다 — 첫 화면은 작은 밉으로 빨리 나오고 위쪽 밉은 한 프레임에 @p maxCount 개씩 들어온다(먼저 읽힌 것부터).
          *          새 GPU 텍스처 · SRV 로 바꿔 끼우고 리로드 세대를 올려 머티리얼이 새 번호를 받게 한다. 옛 자원은 게임 스레드가 해제한다(`releaseRetiredTextures`).
          *          그 사이 놓인 텍스처 · 다른 디바이스의 텍스처는 건너뛴다(다시 업로드할 때 밉 전부가 올라간다).
+         *          풀 예산(`TextureStreamingBudget::_poolBytes`)을 넘는 승급은 내지 않는다 — 그 텍스처부터 줄에 남아 아래쪽 밉 그대로다(예약은 `TextureStreamingPool`).
          */
-        uint32 updateStreaming( IRHIDevice* pDevice, uint32 maxCount );
+        uint32 updateStreaming( IRHIDevice* pDevice, const TextureStreamingBudget& budget );
         /**
          * @brief 이번 프레임 화면에서 텍스처 @p relativePath 가 차지하는 크기를 알립니다(게임 스레드). 값은 가장 큰 뷰의 화면 크기(화면 높이에 대한 비율)이고 클수록 위쪽 밉을 먼저 올린다.
          * @details 텍스처 밉 요청 우선순위다(계획 PreloadAndLOD P10 — 언리얼 텍스처 스트리머의 wanted mip · 보이는 것부터). 같은 프레임에 여러 번 부르면 큰 값을 쓴다.

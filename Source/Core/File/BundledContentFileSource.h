@@ -55,6 +55,8 @@ namespace sw
         bool            readFile( string_view path, vector<uint8>& outBytes ) const override;
         bool            readTextFile( string_view path, string& outText ) const override;
         AsyncReadHandle readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const override;
+        AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                        const AsyncReadCompleteDelegate& onComplete ) const override;
 
     private:
         const IBundledFileReader& _reader;

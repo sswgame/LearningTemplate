@@ -34,6 +34,9 @@ namespace sw
         int32       pollRevocations( vector<PlatformLoginRevocation>& outListRevocation ) override;
 
         int32 getSubmittedCount() const { return _submittedCount; }
+        /** @brief 켜면 티켓이 `subject:<주체>|<서버 nonce>` 이어야 합니다(OIDC 제공자와 같은 nonce 계약). */
+        void requireServerNonce() { _bRequireServerNonce = SW_TRUE; }
+        bool findServerNonce( const vector<uint8>& ticketBytes, string& outNonce ) const override;
         /** @brief 연동 비밀 철회를 켭니다. 확인 결과에 `setLinkSecret` 의 글이 실립니다. */
         void enableRevocation() { _bRevocationEnabled = SW_TRUE; }
         void setLinkSecret( string_view linkSecret ) { _linkSecret = string( linkSecret ); }
@@ -66,5 +69,6 @@ namespace sw
         int32                             _submittedCount;
         uint8                             _bRevocationEnabled;
         uint8                             _bRevocationUnavailable;
+        uint8                             _bRequireServerNonce;
     };
 } // namespace sw

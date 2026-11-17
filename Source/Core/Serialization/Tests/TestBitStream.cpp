@@ -96,6 +96,23 @@ SW_TEST_CASE( BitStreamTest, BitReaderRejectsNonFiniteFloatsAndTruncatedVarUint3
     float32     shortValue{ 0.0f };
     SW_EXPECT_FALSE( shortReader.readFiniteFloat( shortValue ) );
 
+    // 10번째 묶음에 64 비트를 넘는 비트가 켜진 가변 정수 — 예전에는 시프트로 버려 UINT64_MAX 로 받았다.
+    BitWriter tooWideWriter;
+    BitWriter maxValueWriter;
+    for ( int32 chunkIndex = 0; chunkIndex < 9; ++chunkIndex )
+    {
+        tooWideWriter.writeBits( 0xFFu, 8 );
+        maxValueWriter.writeBits( 0xFFu, 8 );
+    }
+    tooWideWriter.writeBits( 0x7Fu, 8 );
+    maxValueWriter.writeBits( 0x01u, 8 );
+    BitReader tooWide( tooWideWriter.getBytes().data(), tooWideWriter.getByteCount() );
+    SW_EXPECT_EQUAL( uint64( 0 ), tooWide.readVarUint() );
+    SW_EXPECT_TRUE( tooWide.hasOverflowed() );
+    BitReader maxValue( maxValueWriter.getBytes().data(), maxValueWriter.getByteCount() );
+    SW_EXPECT_EQUAL( std::numeric_limits<uint64>::max(), maxValue.readVarUint() );
+    SW_EXPECT_FALSE( maxValue.hasOverflowed() );
+
     BitWriter varWriter;
     varWriter.writeVarUint( 0xFFFFFFFFull );
     varWriter.writeVarUint( 0x100000005ull ); // 잘라 읽으면 5 가 된다

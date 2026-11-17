@@ -59,9 +59,13 @@ namespace sw
 
     bool HostLaunch::loadModuleLibraries( uint8 targetMask, unique_ptr<GameModuleManager> moduleManager )
     {
-        // 모듈 매니페스트 · 핫 리로드 구동기는 개발 구성만이다 — 배포는 모듈을 정적으로 링크해 아무것도 하지 않는다.
+        // 모듈 매니페스트 · 핫 리로드 구동기는 동적 모듈 구성만이다 — 정적 구성(배포 · 웹 · Android 개발)은 모듈을 정적으로 링크해 아무것도 하지 않는다.
+#if SW_WITH_DYNAMIC_MODULES
         if ( _pDevLayer != nullptr && _pDevLayer->initializeModuleReload( targetMask, _host, *_pModuleLoader, _moduleCatalog, _moduleResolution ) == false )
             return false;
+#else
+        (void)targetMask;
+#endif
         _moduleManager = std::move( moduleManager );
         return _moduleManager->loadModuleLibraries( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }

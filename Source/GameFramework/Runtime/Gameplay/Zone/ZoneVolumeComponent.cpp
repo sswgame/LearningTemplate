@@ -110,7 +110,7 @@ namespace sw
         StringBuilder<constant::buffer::kMax256> sourceNameBuilder;
         sourceNameBuilder.appendFormat( "zone volume '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
         const string                        sourceName{ sourceNameBuilder.view() };
-        const shared_ptr<const ZoneProfile> pProfile = _zoneProfile.acquire();
+        const shared_ptr<const ZoneProfile> pProfile = _zoneProfile.acquire().snapshot();
         if ( pProfile == nullptr )
         {
             SW_LOG_ERROR_ID( "Zone.ProfileMissing", "%#: zone profile '%#' could not be read", sourceName, _zoneProfile.empty() ? "(none)" : _zoneProfile.path().c_str() );

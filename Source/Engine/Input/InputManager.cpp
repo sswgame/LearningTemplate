@@ -123,7 +123,7 @@ namespace sw
     {
         if ( initialize() == false )
             return SubsystemInitResult::Failed;
-        setBackgroundGamepadInput( engine::getSubsystem<EngineConfig>()._bBackgroundGamepadInput != 0 );
+        setBackgroundGamepadInput( engine::getSubsystem<EngineConfig>()._bBackgroundGamepadInput );
         return SubsystemInitResult::Succeeded;
     }
 

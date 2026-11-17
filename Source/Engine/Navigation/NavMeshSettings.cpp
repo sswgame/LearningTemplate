@@ -81,9 +81,10 @@ namespace sw
             SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsDeclareAreas", "Navigation settings declare %# areas - at most %# are supported", _listArea.size(), NavigationConstant::kMaxAreaCount );
             bValid = false;
         }
-        if ( _maxConcurrentTileBakeCount == 0 || _obstacleMoveThreshold < 0.0f )
+        if ( _maxConcurrentTileBakeCount == 0 || _obstacleMoveThreshold < 0.0f || _maxPathRequestsPerUpdate == 0 )
         {
-            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsNeedLeast2", "Navigation settings need at least one concurrent tile build and a non-negative obstacle move threshold" );
+            SW_LOG_ERROR_ID( "NavMeshSettings.NavigationSettingsNeedLeast2",
+                             "Navigation settings need at least one concurrent tile build, a non-negative obstacle move threshold and at least one path request per update" );
             bValid = false;
         }
         for ( size_t areaIndex = 0; areaIndex < _listArea.size(); ++areaIndex )

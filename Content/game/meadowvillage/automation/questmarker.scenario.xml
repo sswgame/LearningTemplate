@@ -9,25 +9,23 @@
 -->
 <Scenario name="game.meadowvillage.questmarker" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_meadowAutoPlay" value="0"/>
-	<Wait frames="10"/>
+	<WaitUntil watch="Object.Exists" target="OrchardSite" equals="1" timeoutFrames="30"/> <!-- 과수원 자리가 섰다 -->
 	<Expect watch="Quest.Status" target="meadow_request" is="NotStarted"/>
-	<Expect watch="Object.Exists" target="OrchardSite" equals="1"/>
 	<Expect watch="UI.MarkerVisible" target="OrchardSite" equals="0"/>
-	<Wait frames="1"/>
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="1" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="2" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="3" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="4" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="5" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="6" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="7" timeoutFrames="10"/> <!-- 감은 날이 넘어갔다 -->
 	<AdvanceGameTime hours="24"/>
 	<WaitUntil watch="Quest.Status" target="meadow_request" is="Completed" timeoutFrames="30"/>
 	<WaitUntil watch="UI.MarkerVisible" target="OrchardSite" equals="0" timeoutFrames="30"/>

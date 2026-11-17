@@ -13,6 +13,7 @@
 namespace sw
 {
     class GameObjectManager;
+    struct RenderConfig;
 
     /**
      * @brief 방향광 그림자 캐스케이드 하나입니다 — 기준 볼륨의 NDC xy 를 이 캐스케이드의 NDC 로 옮기는 배율 · 이동과, 이 캐스케이드가 맡는 카메라 깊이의 끝입니다.
@@ -157,9 +158,10 @@ namespace sw
          *          원근 카메라는 절두체를 카메라 깊이로 `min( maxCascadeCount, _shadowCascadeCount )` 개로 나눠(로그 · 균등을 섞은 분할) 캐스케이드마다
          *          따로 맞춘다. 직교 카메라는 깊이가 텍셀 크기를 바꾸지 않으므로 늘 하나다.
          * @param shadowMapResolution 캐스케이드 타일 한 변의 텍셀 수
+         * @param renderConfig        렌더 정책(캐스케이드 분할의 로그 몫 `_shadowCascadeSplitLambda` — Config/Engine/EngineConfig.json). 형식을 따로 받아 숫자 인자와 자리가 섞이지 않는다
          * @param maxCascadeCount     아틀라스가 내준 캐스케이드 칸 수(1 이면 캐스케이드 없음)
          */
-        DirectionalShadowProjection computeShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution, uint32 maxCascadeCount = 1 ) const;
+        DirectionalShadowProjection computeShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution, const RenderConfig& renderConfig, uint32 maxCascadeCount = 1 ) const;
 
         /** @brief 볼륨을 카메라에 맞출 때 카메라에서 측정한 그림자 거리입니다. 0 이면 고정 볼륨입니다. */
         float32 getShadowViewDistance() const { return _shadowViewDistance; }

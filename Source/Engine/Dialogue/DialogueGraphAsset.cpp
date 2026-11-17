@@ -29,6 +29,87 @@ namespace sw
         }
 
         static_assert( isInfoTableOrdered(), "kArrDialogueNodeInfo must be ordered by DialogueAssetNodeKind" );
+
+        struct DialogueGraphAssetInternal
+        {
+            /** @brief 노드 @p node 가 오프셋 @p pinOffset 의 출력 핀을 가지는지입니다(종류 표의 출력 형태와 선택지 수가 정한다). */
+            static bool hasOutputPin( const DialogueAssetNode& node, int32 pinOffset )
+            {
+                const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
+                if ( pInfo == nullptr || pInfo->_output == DialogueNodeOutput::None )
+                    return false;
+                if ( pinOffset == DialogueGraphAsset::kPinOffsetOut )
+                    return true;
+                if ( pInfo->_output == DialogueNodeOutput::Branch )
+                    return pinOffset == DialogueGraphAsset::kPinOffsetTrue || pinOffset == DialogueGraphAsset::kPinOffsetFalse;
+                const int32 choiceIndex = pinOffset - DialogueGraphAsset::kPinOffsetChoiceBase;
+                return pInfo->_output == DialogueNodeOutput::Choice && choiceIndex >= 0 && choiceIndex < static_cast<int32>( node._listChoice.size() );
+            }
+
+            /** @brief 입력을 기다리지 않고 지나가는 노드(시작 · 동작 · 분기)인지입니다. 이런 노드끼리 도는 고리는 러너가 한 프레임 안에서 끝없이 돈다. */
+            static bool isImmediateNode( const DialogueAssetNode& node )
+            {
+                const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
+                return pInfo != nullptr && ( pInfo->_flow == DialogueNodeFlow::PassThrough || pInfo->_flow == DialogueNodeFlow::Condition );
+            }
+
+            /**
+             * @brief 기다림 없는 노드만으로 된 고리가 있으면 그 고리의 한 노드 id 를 돌려줍니다. 없으면 0 입니다.
+             * @details 깊이 우선 탐색의 세 색(안 봄 · 경로 위 · 끝남)이다. 경로 위 노드로 돌아오는 간선이 고리다.
+             */
+            static int32 findInfiniteLoop( const DialogueGraphAsset& asset )
+            {
+                enum class Mark : uint8
+                {
+                    Unvisited,
+                    OnPath,
+                    Done,
+                };
+                struct Frame
+                {
+                    size_t _nodeIndex;
+                    size_t _nextLinkIndex;
+                };
+                const size_t  nodeCount = asset._listNode.size();
+                vector<Mark>  listMark( nodeCount, Mark::Unvisited );
+                vector<Frame> listStack;
+                for ( size_t rootIndex = 0; rootIndex < nodeCount; ++rootIndex )
+                {
+                    if ( listMark[rootIndex] != Mark::Unvisited || isImmediateNode( asset._listNode[rootIndex] ) == false )
+                        continue;
+                    listMark[rootIndex] = Mark::OnPath;
+                    listStack.push_back( { rootIndex, 0 } );
+                    while ( listStack.empty() == false )
+                    {
+                        Frame&      top     = listStack.back();
+                        const int32 fromID  = asset._listNode[top._nodeIndex]._id;
+                        bool        bPushed = false;
+                        while ( top._nextLinkIndex < asset._listLink.size() && bPushed == false )
+                        {
+                            const DialogueAssetLink& link = asset._listLink[top._nextLinkIndex++];
+                            if ( DialogueGraphAsset::decodePinNodeID( link._fromPin ) != fromID )
+                                continue;
+                            const DialogueAssetNode* pTo = asset.findNode( DialogueGraphAsset::decodePinNodeID( link._toPin ) );
+                            if ( pTo == nullptr || isImmediateNode( *pTo ) == false )
+                                continue;
+                            const size_t toIndex = static_cast<size_t>( pTo - asset._listNode.data() );
+                            if ( listMark[toIndex] == Mark::OnPath )
+                                return pTo->_id;
+                            if ( listMark[toIndex] == Mark::Done )
+                                continue;
+                            listMark[toIndex] = Mark::OnPath;
+                            listStack.push_back( { toIndex, 0 } );
+                            bPushed = true;
+                        }
+                        if ( bPushed )
+                            continue;
+                        listMark[listStack.back()._nodeIndex] = Mark::Done;
+                        listStack.pop_back();
+                    }
+                }
+                return 0;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -152,6 +233,35 @@ namespace sw
         if ( _listNode.empty() == false && startCount != 1 )
         {
             SW_LOG_ERROR_ID( "Dialogue.StartNodeCount", "Dialogue graph '%#': needs exactly one Start node (has %#)", sourceLabel, startCount );
+            bValid = false;
+        }
+        // 링크 끝점은 있는 노드의 있는 핀이어야 한다 — 끊긴 링크는 러너가 조용히 기본 출력으로 떨어지거나 대화를 끝냈다(감사 S-12, Yarn Spinner 는 컴파일 오류).
+        // 한 출력 핀에는 링크 하나다 — 둘이면 `findLinkedNodeID` 가 파일 순서의 첫 링크만 따른다.
+        for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
+        {
+            const DialogueAssetLink& link       = _listLink[linkIndex];
+            const DialogueAssetNode* pFrom      = findNode( decodePinNodeID( link._fromPin ) );
+            const DialogueAssetNode* pTo        = findNode( decodePinNodeID( link._toPin ) );
+            const DialogueNodeInfo*  pToInfo    = pTo != nullptr ? findNodeInfo( pTo->_type ) : nullptr;
+            const bool               bFromPin   = pFrom != nullptr && DialogueGraphAssetInternal::hasOutputPin( *pFrom, decodePinOffset( link._fromPin ) );
+            const bool               bToPin     = pToInfo != nullptr && pToInfo->_bHasInputPin && decodePinOffset( link._toPin ) == kPinOffsetIn;
+            bool                     bSharedPin = false;
+            for ( size_t previousIndex = 0; previousIndex < linkIndex; ++previousIndex )
+            {
+                bSharedPin = bSharedPin || _listLink[previousIndex]._fromPin == link._fromPin;
+            }
+            if ( bFromPin && bToPin && bSharedPin == false )
+                continue;
+            SW_LOG_ERROR_ID( "Dialogue.LinkDangling", "Dialogue graph '%#': link %# (%# -> %#) needs an existing output pin used once and an existing node's input pin", sourceLabel, link._id,
+                             link._fromPin, link._toPin );
+            bValid = false;
+        }
+        // 기다림(대사 · 선택 · 끝) 없는 고리는 러너가 한 프레임 안에서 끝없이 돈다.
+        const int32 cycleNodeID = DialogueGraphAssetInternal::findInfiniteLoop( *this );
+        if ( cycleNodeID != 0 )
+        {
+            SW_LOG_ERROR_ID( "Dialogue.InfiniteLoop", "Dialogue graph '%#': node %# is on a loop of Start, Action and Branch nodes only - add a Dialogue or Choice node to the loop", sourceLabel,
+                             cycleNodeID );
             bValid = false;
         }
         // 화자는 id 로만 가리킨다 — 목록에 없는 id 는 이름으로 찾아 메우지 않고 읽기 오류다.

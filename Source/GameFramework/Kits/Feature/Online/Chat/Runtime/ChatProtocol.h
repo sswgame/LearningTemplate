@@ -48,14 +48,30 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 그룹 채널(길드 · 파티)에서 계정 하나를 뺐다는 서버 버스 본문입니다. 그 계정이 다른 서버에 접속해 있어도 그 서버의 채널 멤버에서 빠진다(감사 O-18). */
+    REFLECT()
+    struct SW_KIT_API ChatMemberRemoval
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전
+        PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
+        string _channelID{};
+        PROPERTY()
+        uint64 _accountID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct ChatBus
      * @brief 서버 간 버스 주제입니다(`[0-9a-z_.]`). 채널 주제는 그 채널에 이 서버의 멤버가 있는 동안만 구독합니다.
      */
     struct ChatBus
     {
-        static constexpr ServerBusTopicFamily<ChatMessage> kChannelTopic{ "chat.channel." }; ///< 뒤에 채널 id 를 붙인다. 채널 말하기이다
-        static constexpr ServerBusTopicFamily<ChatMessage> kServerTopic{ "chat.server." };   ///< 뒤에 서버 16진 문자열을 붙인다. 그 서버에 접속한 계정에게 가는 귓속말이다
+        static constexpr ServerBusTopicFamily<ChatMessage> kChannelTopic{ "chat.channel." };             ///< 뒤에 채널 id 를 붙인다. 채널 말하기이다
+        static constexpr ServerBusTopicFamily<ChatMessage> kServerTopic{ "chat.server." };               ///< 뒤에 서버 16진 문자열을 붙인다. 그 서버에 접속한 계정에게 가는 귓속말이다
+        static constexpr ServerBusTopic<ChatMemberRemoval> kMemberRemovalTopic{ "chat.member_removal" }; ///< 그룹 채널에서 계정을 뺐다 — 모든 채팅 서버가 받아 자기 멤버에서 뺀다
     };
 } // namespace sw
 

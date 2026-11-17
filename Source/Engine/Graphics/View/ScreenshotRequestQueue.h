@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
@@ -52,8 +53,11 @@ namespace sw
         const utf8*                getSubsystemName() const override { return kSubsystemName; }
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
-        /** @brief 요청을 넣습니다. 아직 꺼내지 않은 앞 요청은 이 요청으로 바뀝니다. */
-        void put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
+        /**
+         * @brief 요청을 넣습니다. 아직 꺼내지 않은 앞 요청은 이 요청으로 바뀝니다.
+         * @details 경로는 `AbsolutePath` 라 빈 값일 수 없다 — 빈 칸이 "요청 없음" 이라, 빈 경로를 받으면 받은 수만 올라 `hasUnfinishedRequest` 가 영영 참이었다.
+         */
+        void put( const AbsolutePath& filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat );
         /** @brief 넣어 둔 요청을 꺼냅니다(꺼낸 칸은 빈다). 요청이 없으면 false 입니다. */
         [[nodiscard]] bool take( ScreenshotRequest& outRequest );
         /** @brief 요청 하나를 처리했음을 알립니다(성공과 실패 모두). @p bWritten 이 true 면 @p writtenPath 가 마지막 경로가 되고, 아니면 마지막 경로가 비워집니다. */
@@ -72,7 +76,7 @@ namespace sw
          * @brief 다음에 짓는 렌더 패킷이 그린 이미지(그 게임 프레임)를 @p filePath 에 쓰도록 맡깁니다. 앞 요청이 아직 패킷에 실리지 않았으면 false 입니다(다음 프레임에 다시 맡긴다).
          * @details `put` 은 렌더 스레드가 다음에 처리하는 프레임을 찍어 어느 게임 프레임인지 정해지지 않는다 — 이 칸은 그 프레임을 정해야 하는 쪽(자동화 `<Screenshot>` · 사진 모드)이 쓴다.
          */
-        [[nodiscard]] bool putForNextPacket( string_view filePath );
+        [[nodiscard]] bool putForNextPacket( const AbsolutePath& filePath );
         /** @brief 패킷을 지을 때(엔진 게임 스레드) 맡긴 경로를 꺼내 @p outPath 에 담습니다. 맡긴 것이 없으면 false 이고 @p outPath 는 그대로입니다. */
         bool takeForPacket( string& outPath );
         /** @brief 맡긴 패킷 사진이 없으면(다음 것을 받을 수 있으면) true 입니다. */

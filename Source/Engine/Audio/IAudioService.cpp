@@ -323,8 +323,9 @@ namespace sw
             return;
         // 장치를 먼저 닫는다. 닫힌 뒤에는 장치 스레드가 render 를 호출하지 않으므로 엔진을 해제해도 된다.
         [[maybe_unused]] const AudioEngineStats stats = _pEngine->getStats();
-        SW_LOG_INFO_ID( "AudioService.PlayedEventsDroppedCooldown", "Played %# events (%# dropped by cooldown / limits), peak %# mixed voices, %# s rendered.", stats._playedEventCount, stats._droppedEventCount,
-                        stats._peakRealVoiceCount, stats._renderedFrameCount / audio::kSampleRate );
+        SW_LOG_INFO_ID( "AudioService.PlayedEventsDroppedCooldown", "Played %# events (%# dropped by cooldown / limits), peak %# mixed voices, %# voices stolen / %# dropped by a full pool, %# s rendered.",
+                        stats._playedEventCount, stats._droppedEventCount, stats._peakRealVoiceCount, stats._stolenVoiceCount, stats._droppedVoiceCount,
+                        stats._renderedFrameCount / audio::kSampleRate );
         if ( _bOutputOpen )
             stopOutput();
         _bOutputOpen = SW_FALSE;

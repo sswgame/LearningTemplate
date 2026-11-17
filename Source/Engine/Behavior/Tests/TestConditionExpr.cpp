@@ -5,6 +5,9 @@
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/RegisteredParams.h"
+
+#include <cstddef>
 
 using namespace sw;
 
@@ -233,4 +236,124 @@ SW_TEST_CASE( ConditionExprTest, ActionTraceRecordsCalls )
     SW_EXPECT_EQUAL( uint64( ActionTrace::kCapacity + 3 ), listEntry.back()._sequence );
     SW_EXPECT_EQUAL( uint64( 4 ), listEntry.front()._sequence );
     ActionTrace::clear();
+}
+
+/**
+ * @brief [ConditionExprTest] 컴파일한 뒤 등록 줄이 빠지면(모듈을 내렸다) 그 줄을 부르는 동작 · 식은 부르지 않고 실패한다 — 원시 포인터로 내린 이미지의 함수를 부를 수 있었다(감사 S-14).
+ *        빠지지 않은 줄을 부르는 것은 다른 줄이 빠져도 그대로 돈다(세대가 바뀌면 줄이 남았는지만 본다).
+ */
+SW_TEST_CASE( ConditionExprTest, CallsToAnUnregisteredEntryFailClosed )
+{
+    SW_EXPECT_LOG( "GameAction.Stale" );
+    SW_EXPECT_LOG( "ConditionExpr.Stale" );
+    TestValues    values;
+    ActionContext context;
+    context._world.set<TestValuesSlot>( &values );
+
+    // 모듈 하나가 올린 줄을 흉내 낸다 — 등록자가 사라지면 줄이 빠진다.
+    static const ActionEntry       s_moduleAction{ "test.moduleCount", &InstancedStructOps::of<VocabularyNoParams>(), &ActionThunk<VocabularyNoParams, &XTestUtil::runCount>::call };
+    static const ConditionEntry    s_moduleCondition{ "testModuleFixed", &InstancedStructOps::of<VocabularyNoParams>(), &ConditionThunk<VocabularyNoParams, &XTestUtil::readFixed>::call };
+    unique_ptr<ActionRegistrar>    pActionRegistrar    = make_unique<ActionRegistrar>( &s_moduleAction );
+    unique_ptr<ConditionRegistrar> pConditionRegistrar = make_unique<ConditionRegistrar>( &s_moduleCondition );
+
+    GameActionCall moduleCall;
+    GameActionCall engineCall;
+    ConditionExpr  moduleExpr;
+    ConditionExpr  engineExpr;
+    SW_REQUIRE_TRUE( GameActionCall::compileText( "test.moduleCount", "test", moduleCall ) );
+    SW_REQUIRE_TRUE( GameActionCall::compileText( "test.count", "test", engineCall ) );
+    SW_REQUIRE_TRUE( ConditionExpr::compile( "testModuleFixed == 7", "test", moduleExpr ) );
+    SW_REQUIRE_TRUE( ConditionExpr::compile( "testFixed == 7", "test", engineExpr ) );
+    SW_EXPECT_TRUE( moduleCall.invoke( context ) == ActionResult::Succeeded );
+    SW_EXPECT_TRUE( moduleExpr.evaluate( context._world ) );
+
+    pActionRegistrar.reset();
+    pConditionRegistrar.reset();
+    values._actionCount = 0;
+    SW_EXPECT_TRUE( moduleCall.invoke( context ) == ActionResult::Failed );
+    SW_EXPECT_EQUAL( 0, values._actionCount );
+    SW_EXPECT_FALSE( moduleExpr.evaluate( context._world ) );
+    SW_EXPECT_TRUE( engineCall.invoke( context ) == ActionResult::Succeeded );
+    SW_EXPECT_EQUAL( 1, values._actionCount );
+    SW_EXPECT_TRUE( engineExpr.evaluate( context._world ) );
+}
+
+namespace
+{
+    /** @brief 제어 블록을 주어진 버퍼에 두는 할당기입니다 — 일부러 남기는(놓지 않는) 공유 포인터가 힙 누수로 남지 않게 한다. */
+    template <typename T>
+    struct BufferAllocator
+    {
+        using value_type = T;
+
+        uint8* _pBuffer;
+        size_t _size;
+
+        BufferAllocator( uint8* pBuffer, size_t size )
+            : _pBuffer{ pBuffer }
+            , _size{ size }
+        {
+        }
+        template <typename U>
+        BufferAllocator( const BufferAllocator<U>& other ) // NOLINT(google-explicit-constructor): 할당기 되묶기 규칙이다
+            : _pBuffer{ other._pBuffer }
+            , _size{ other._size }
+        {
+        }
+        T* allocate( size_t count )
+        {
+            SW_ASSERT( count * sizeof( T ) <= _size );
+            return reinterpret_cast<T*>( _pBuffer );
+        }
+        void deallocate( T* /*pItem*/, size_t /*count*/ ) {}
+        template <typename U>
+        bool operator==( const BufferAllocator<U>& other ) const
+        {
+            return _pBuffer == other._pBuffer;
+        }
+        template <typename U>
+        bool operator!=( const BufferAllocator<U>& other ) const
+        {
+            return _pBuffer != other._pBuffer;
+        }
+    };
+
+    /** @brief 놓일 때 수를 셉니다(값의 해제 코드가 불렸다). */
+    struct CountingDeleter
+    {
+        int32* _pCount;
+        void   operator()( const void* /*pValue*/ ) const { ++*_pCount; }
+    };
+} // namespace
+
+/**
+ * @brief [ConditionExprTest] 등록 줄이 빠진 뒤 놓이는 칸 값은 해제 코드를 부르지 않는다 — 그 코드는 내린 이미지에 있다(감사 S-14). 줄이 살아 있으면 평소처럼 놓는다.
+ */
+SW_TEST_CASE( ConditionExprTest, ParamsOfAnUnregisteredEntryAreNotReleased )
+{
+    static const ActionEntry          s_heldAction{ "test.heldParams", &InstancedStructOps::of<VocabularyNoParams>(), &ActionThunk<VocabularyNoParams, &XTestUtil::runCount>::call };
+    constexpr size_t                  kBlockSize = 256;
+    alignas( std::max_align_t ) uint8 arrAliveBlock[kBlockSize];
+    alignas( std::max_align_t ) uint8 arrStaleBlock[kBlockSize];
+    int32                             value       = 0;
+    int32                             deleteCount = 0;
+    {
+        unique_ptr<ActionRegistrar>  pRegistrar = make_unique<ActionRegistrar>( &s_heldAction );
+        const uint32                 generation = ActionRegistry::getRemovalGeneration();
+        const shared_ptr<const void> pAlive( &value, CountingDeleter{ &deleteCount }, BufferAllocator<uint8>( arrAliveBlock, kBlockSize ) );
+        const shared_ptr<const void> pStale( &value, CountingDeleter{ &deleteCount }, BufferAllocator<uint8>( arrStaleBlock, kBlockSize ) );
+        RegisteredParams             alive{ pAlive, &s_heldAction, ActionRegistry::getEntryOps(), generation };
+        RegisteredParams             stale{ pStale, &s_heldAction, ActionRegistry::getEntryOps(), generation };
+        RegisteredParams             aliveCopy = alive;
+        SW_EXPECT_TRUE( alive.get() == &value );
+        SW_EXPECT_EQUAL( 3, static_cast<int32>( pAlive.use_count() ) ); // 원본 · 보관자 · 사본
+        alive     = RegisteredParams{};
+        aliveCopy = RegisteredParams{};
+        SW_EXPECT_EQUAL( 1, static_cast<int32>( pAlive.use_count() ) ); // 줄이 살아 있으면 놓는다
+
+        pRegistrar.reset(); // 모듈을 내렸다
+        SW_EXPECT_FALSE( stale.isEntryRegistered() );
+        SW_EXPECT_EQUAL( 2, static_cast<int32>( pStale.use_count() ) );
+    } // 원본 둘(살아 있는 줄의 것)은 놓이고, 빠진 줄의 보관자는 놓지 않는다
+    SW_EXPECT_EQUAL( 1, deleteCount ); // pAlive 하나만 해제됐다 — pStale 은 보관자가 일부러 남겼다
 }

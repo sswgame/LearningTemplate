@@ -8,7 +8,6 @@
 <Scenario name="game.empty.shippingframe" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Wait frames="30"/>
 	<Screenshot file="shippingframe.ppm"/>
-	<Wait frames="1"/>
 	<ExpectImage file="shippingframe.ppm" golden="shippingframe"/>
 	<Pass/>
 </Scenario>

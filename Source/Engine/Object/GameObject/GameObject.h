@@ -241,7 +241,10 @@ namespace sw
          * @return 만든 컴포넌트입니다. 구조 변경이 막혀 있으면(틱 중) 지연 큐에 넣고 nullptr 를 반환합니다.
          */
         template <typename T, typename... Args>
-        T* addComponent( Args&&... args );
+        T* addComponent( Args&&... args )
+        {
+            return addComponentWithLocalID<T>( true, std::forward<Args>( args )... );
+        }
 
         /**
          * @brief @p pOwner 에 T 를 기본 생성해 붙입니다(`addComponent<T>()`). @p pOwner 가 nullptr 이면 nullptr 를 반환합니다.
@@ -252,7 +255,8 @@ namespace sw
         {
             if ( pOwner == nullptr )
                 return nullptr;
-            return pOwner->addComponent<T>();
+            // 이름으로 만드는 길(직렬화 · 에디터)은 지역 id 를 주지 않는다 — 읽을 상태가 id 를 적고, 없으면(옛 파일) 옛 키에서 정한다(`ComponentStableKey`).
+            return pOwner->addComponentWithLocalID<T>( false );
         }
         /** @brief 리플렉션 표의 생성 칸(`TypeInfo::_addComponent`, 불투명 형식)이 가리키는 연결 함수입니다. 코드젠만 씁니다. */
         template <typename T>
@@ -414,6 +418,14 @@ namespace sw
          */
         void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick );
         /**
+         * @brief `addComponent` 의 본체입니다. @p bFreshLocalID 면 붙인 뒤 오브젝트 안에서 겹치지 않는 새 지역 id 를 준다(게임 코드가 붙인 컴포넌트 — 세이브가 그 id 로 가리킨다).
+         * @details 이름으로 만드는 길(`addComponentTo` — 직렬화 · 에디터)은 주지 않는다 — 곧 읽을 상태의 id 가 맞고, 로드 중에 형제 id 를 굳히면 뒤 형제의 적힌 id 와 겹칠 수 있다.
+         */
+        template <typename T, typename... Args>
+        T* addComponentWithLocalID( bool bFreshLocalID, Args&&... args );
+        /** @brief 막 붙인 @p pComp 에 새 지역 id 를 줍니다(`ComponentStableKey::assignFreshLocalID`). */
+        static void giveFreshLocalID( Component* pComp );
+        /**
          * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다. 매니저가 있으면 `GameObjectManager::destroyComponentInstance` 가 모두 처리합니다.
          * @details 해제 콜백은 여기서 부르지 않는다. 매니저가 `onUnregister` 를 정확히 한 번 부른다.
          */
@@ -500,7 +512,7 @@ namespace sw
     };
 
     template <typename T, typename... Args>
-    T* GameObject::addComponent( Args&&... args )
+    T* GameObject::addComponentWithLocalID( bool bFreshLocalID, Args&&... args )
     {
         static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
         // 멤버가 없는 파생 타입도 예외가 아니다. REFLECT_BODY 가 없는 파생 타입은 부모의 TypeInfo 를 물려받는다.
@@ -517,10 +529,10 @@ namespace sw
         if ( isComponentMutationFrozen() )
         {
             // 틱 중이다. 인자를 값으로 복사해 두었다가 틱 뒤에 자기 자신에게 다시 호출한다. 그 사이에 파괴되었으면 아무 일도 하지 않는다.
-            deferOnSelfStructural( Delegate<void( GameObject& )>( [packedArgs = std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... )]( GameObject& self ) mutable
+            deferOnSelfStructural( Delegate<void( GameObject& )>( [bFreshLocalID, packedArgs = std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... )]( GameObject& self ) mutable
             {
-                std::apply( [&self]( auto&&... forwarded )
-                { self.addComponent<T>( std::forward<decltype( forwarded )>( forwarded )... ); },
+                std::apply( [&self, bFreshLocalID]( auto&&... forwarded )
+                { self.addComponentWithLocalID<T>( bFreshLocalID, std::forward<decltype( forwarded )>( forwarded )... ); },
                             std::move( packedArgs ) );
             } ) );
             return nullptr;
@@ -538,6 +550,8 @@ namespace sw
 
         T* pComp = sw_placement_new( storage._pMemory ) T( std::forward<Args>( args )... );
         attachCreatedComponent( pComp, pTypeInfo, storage._pPoolEntry, HasOnTickOverride_v<T> );
+        if ( bFreshLocalID )
+            giveFreshLocalID( pComp );
         return pComp;
     }
 } // namespace sw

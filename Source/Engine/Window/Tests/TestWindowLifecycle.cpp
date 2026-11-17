@@ -4,32 +4,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/Tests/FakeWindow.h"
+
+// 수명 상태는 `IWindow` 의 몫이라 플랫폼 없는 창(`FakeWindow`)으로 그것만 본다.
 
 using namespace sw;
-
-namespace
-{
-    /** @brief 플랫폼이 없는 창입니다. 수명 상태는 `IWindow` 의 몫이라 그것만 봅니다. */
-    class FakeWindow final : public IWindow
-    {
-    public:
-        bool initializeWindow( const utf8* /*pTitle*/, uint32 /*width*/, uint32 /*height*/ ) override { return true; }
-        void destroy() override {}
-        bool processMessages() override { return true; }
-        void waitForMessages( uint32 /*timeoutMilliseconds*/ ) override {}
-        bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override
-        {
-            outExtents = WindowFrameExtents{};
-            return true;
-        }
-        bool              canPlaceWindow() const override { return false; }
-        bool              setFramePosition( int32 /*x*/, int32 /*y*/ ) override { return false; }
-        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::Win32; }
-
-    protected:
-        void* getNativeHandle() const override { return nullptr; }
-    };
-} // namespace
 
 /** @brief [WindowLifecycleTest] 표면을 잃거나 앱이 멈추면 돌 수 없고, 둘 다 돌아와야 다시 돕니다. */
 SW_TEST_CASE( WindowLifecycleTest, PausesUntilBothSurfaceAndAppReturn )
@@ -96,4 +75,62 @@ SW_TEST_CASE( WindowLifecycleTest, ListenersRunBeforeRendererCallback )
     SW_REQUIRE_EQUAL( size_t{ 2 }, listOrder.size() );
     SW_EXPECT_EQUAL( 1, listOrder[0] );
     SW_EXPECT_EQUAL( 0, listOrder[1] );
+}
+
+/**
+ * @brief [WindowLifecycleTest] 메시지마다 오는 크기 통보는 콜백을 바로 부르지 않고, 프레임 시작의 `applyPendingResize` 가 마지막 크기로 한 번 부른다 —
+ *        끌기 한 번에 스왑체인 `waitIdle` + `resize` 가 메시지 수만큼 돌던 결함(감사 P-2). 같은 크기 · 다시 만드는 중의 통보는 적용할 것이 없다.
+ */
+SW_TEST_CASE( WindowLifecycleTest, ResizeIsAppliedOncePerFrameWithTheLastSize )
+{
+    FakeWindow         window;
+    vector<uint32>     listWidth;
+    uint32             lastHeight = 0;
+    const Subscription resize     = window.bindResizeCallback( SW_DELEGATE_LAMBDA( WindowResizeDelegate, [&listWidth, &lastHeight]( uint32 width, uint32 height )
+        {
+        listWidth.push_back( width );
+        lastHeight = height;
+    } ) );
+
+    window.simulateResize( 800, 600 );
+    window.simulateResize( 900, 650 );
+    window.simulateResize( 1000, 700 );
+    SW_EXPECT_TRUE( listWidth.empty() ); // 메시지 처리 안에서는 부르지 않는다
+    SW_EXPECT_TRUE( window.hasPendingResize() );
+    SW_EXPECT_EQUAL( 1000u, window.getWidth() );
+
+    window.applyPendingResize();
+    window.applyPendingResize(); // 대기가 없으면 다시 부르지 않는다
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listWidth.size() );
+    SW_EXPECT_EQUAL( 1000u, listWidth[0] );
+    SW_EXPECT_EQUAL( 700u, lastHeight );
+    SW_EXPECT_FALSE( window.hasPendingResize() );
+
+    window.simulateResize( 1000, 700 ); // 같은 크기
+    SW_EXPECT_FALSE( window.hasPendingResize() );
+}
+
+/**
+ * @brief [WindowLifecycleTest] 모달 루프 타이머는 틱 콜백을 부르고, 콜백 안에서 다시 온 타이머(중첩 메시지 펌프)는 건너뛴다 — 끌기 동안 프레임이 멈추던 결함(감사 P-2)의
+ *        틱 자리와 그 재진입 가드. 콜백이 도는 동안만 `isInModalLoopTick` 이다(그 안에서는 창을 다시 만들지 않는다).
+ */
+SW_TEST_CASE( WindowLifecycleTest, ModalLoopTickDoesNotReenter )
+{
+    FakeWindow         window;
+    uint32             tickCount     = 0;
+    bool               bInTickInside = false;
+    const Subscription tick          = window.bindModalLoopTickCallback( SW_DELEGATE_LAMBDA( WindowModalLoopTickDelegate, [&window, &tickCount, &bInTickInside]()
+             {
+        ++tickCount;
+        bInTickInside = window.isInModalLoopTick();
+        window.simulateModalLoopTimer(); // 프레임 안의 메시지 펌프가 타이머를 다시 꺼낸 경우
+    } ) );
+
+    SW_EXPECT_FALSE( window.isInModalLoopTick() );
+    window.simulateModalLoopTimer();
+    SW_EXPECT_EQUAL( 1u, tickCount );
+    SW_EXPECT_TRUE( bInTickInside );
+    SW_EXPECT_FALSE( window.isInModalLoopTick() );
+    window.simulateModalLoopTimer();
+    SW_EXPECT_EQUAL( 2u, tickCount );
 }

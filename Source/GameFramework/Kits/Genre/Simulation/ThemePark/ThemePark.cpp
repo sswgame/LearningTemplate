@@ -11,6 +11,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 #include <algorithm>
@@ -105,8 +106,16 @@ namespace sw
     {
     }
 
-    void ThemeParkSimulation::initialize( const ThemeParkSettings& settings, const SessionStateRefs& refs )
+    bool ThemeParkSimulation::initialize( const ThemeParkSettings& settings, const SessionStateRefs& refs )
     {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        const bool   bPairsOk   = settings._guestCashMin <= settings._guestCashMax && settings._guestMaxIntensityMin <= settings._guestMaxIntensityMax &&
+                              settings._guestNauseaToleranceMin <= settings._guestNauseaToleranceMax;
+        if ( rangeError.empty() == false || bPairsOk == false )
+        {
+            SW_LOG_ERROR_ID( "ThemePark.RefusedSettings", "ThemeParkSimulation: refused settings - %# %#", rangeError.c_str(), bPairsOk ? "" : "(a minimum is above its maximum: guest cash, intensity or nausea tolerance)" );
+            return false;
+        }
         _settings = settings;
         _pWallet  = refs._pWallet;
         _listRide.clear();
@@ -119,6 +128,7 @@ namespace sw
         _totalVisitorCount = 0;
         _random.setSeed( settings._randomSeed != 0 ? settings._randomSeed : 12345u );
         updateParkRating();
+        return true;
     }
 
     void ThemeParkSimulation::update( float32 deltaTime )

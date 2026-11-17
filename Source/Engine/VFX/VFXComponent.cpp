@@ -431,7 +431,7 @@ namespace sw
         if ( _effectPath.empty() )
             return;
         // 효과는 공유 캐시의 한 벌이다 — 같은 효과를 쓰는 컴포넌트가 파일을 다시 읽지 않는다. 핫 리로드는 떼어 낸 새 객체를 이 자리에서 받는다(`onPropertyChanged`).
-        _pEffect = _effectPath.acquire();
+        _pEffect = _effectPath.acquire().snapshot(); // 효과는 별칭 포인터를 지어 둔다 — 받은 판을 쥐고 다시 읽기 횟수로 다시 받는다
         if ( _pEffect == nullptr )
             return; // 효과 데이터가 무엇이 틀렸는지 오류를 남겼다 — 방출기 없이 아무것도 그리지 않는다
         const VFXEffectDef& effect = *_pEffect;

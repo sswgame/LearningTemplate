@@ -128,6 +128,7 @@ namespace sw
         vector<GuildStorageItem> _listStorage{};     ///< ListStorage 는 창고 전체, Deposit · Withdraw 는 옮긴 자산의 창고 잔액 하나이다
         vector<GuildApplication> _listApplication{}; ///< ListApplications 의 결과이다
         uint64                   _requestTag{ 0 };
+        uint8                    _bStorageTruncated{ SW_FALSE }; ///< ListStorage 가 상한(`kMaxStorageItem`)에서 잘렸다
         SocialServiceResult      _result{ SocialResult::Ok };
     };
 } // namespace sw
@@ -140,7 +141,8 @@ namespace sw
         GuildInfo                _info{};
         vector<GuildStorageItem> _listStorage{};
         vector<GuildApplication> _listApplication{};
-        vector<AccountID>        _listNotifyMember{}; ///< GuildChanged 를 받을 멤버이다
+        vector<AccountID>        _listNotifyMember{};            ///< GuildChanged 를 받을 멤버이다
+        uint8                    _bStorageTruncated{ SW_FALSE }; ///< 창고 품목이 상한에서 잘렸다
         AccountID                _invitedID{ kInvalidAccountID };
         AccountID                _joinedID{ kInvalidAccountID };
         AccountID                _leftID{ kInvalidAccountID };

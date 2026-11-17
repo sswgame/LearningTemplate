@@ -7,6 +7,7 @@
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
@@ -252,7 +253,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
         vector<string> listExpected = listLayerBase;
         listExpected.push_back( "mods/tide/layer" );
         SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listExpected );
-        const shared_ptr<const QuestCatalog> pQuests = SharedAssetCache<QuestCatalog>::acquire( basePath );
+        const shared_ptr<const QuestCatalog> pQuests = SharedAssetCache<QuestCatalog>::acquire( basePath ).snapshot();
         SW_REQUIRE_TRUE( pQuests != nullptr );
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "base_quest" ) ) != nullptr ); // 원본 항목은 그대로
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "tide_quest" ) ) != nullptr ); // 층이 더한 항목
@@ -278,4 +279,57 @@ SW_TEST_CASE( ModSessionTest, NoModsChangesNothing )
     SW_EXPECT_TRUE( session.apply( TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ), {} ), TestModSessionInternal::makeSettings() ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, session.getDigest()._configHash );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
+}
+
+/**
+ * @brief [ModSessionTest] 모드가 새로 더한 에셋도 GUID 참조로 풀린다 — 모드 팩이 자기 색인(`assetindex.xml`)을 싣고, 세션이 런타임 색인에 합쳤다가 풀면 걷는다
+ */
+SW_TEST_CASE( ModSessionTest, ModAssetsResolveByGUIDWhileApplied )
+{
+    using Internal = TestModSessionInternal;
+    test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
+    const string            root    = test::makeScratchPath( "ModIndexRoot" );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const string            source  = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, "lantern" ), ModPackBuilder::kSourceFolderName );
+    SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000c0de"?><Lamp/>)" ) );
+    const AssetGUID guid = *AssetGUID::tryParse( "0000000000000000000000000000c0de" );
+
+    AssetManager& assets = engine::getSubsystem<AssetManager>();
+    {
+        ModSession session( assets );
+        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_EXPECT_EQUAL( string( "mods/lantern/data/lamp.xml" ), AssetRegistry::resolve( guid ).value_or( string{} ) );
+    }
+    SW_EXPECT_FALSE( AssetRegistry::resolve( guid ).has_value() );
+}
+
+/**
+ * @brief [ModSessionTest] 모드 팩 색인이 이미 풀리는 GUID(기본 에셋)를 자기 파일로 돌리면 적용을 거절한다 — 덮어쓰기는 밝힌 `<Override>` 로만 한다
+ */
+SW_TEST_CASE( ModSessionTest, ModIndexCannotRedirectAKnownGUID )
+{
+    using Internal = TestModSessionInternal;
+    SW_EXPECT_LOG( "ModSession.IndexRedirectsAsset" );
+    test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
+    const string            root    = test::makeScratchPath( "ModIndexRedirectRoot" );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const string            source  = FileUtil::joinPath( FileUtil::joinPath( request._installFolder, "lantern" ), ModPackBuilder::kSourceFolderName );
+    SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( source, "mods/lantern/data/lamp.xml" ), R"(<?asset guid="0000000000000000000000000000beef"?><Lamp/>)" ) );
+    const AssetGUID guid = *AssetGUID::tryParse( "0000000000000000000000000000beef" );
+
+    AssetManager& assets = engine::getSubsystem<AssetManager>();
+    // 같은 GUID 가 이미 기본 에셋으로 풀리게 둔다 — 프로세스 표에 한 줄을 더해 걸고, 끝에 원래 표로 되돌린다.
+    const AssetRegistry previous = AssetRegistry::install( AssetRegistry{} );
+    AssetRegistry       withBase = previous;
+    withBase.put( guid, "data/welcome.xml" );
+    (void)AssetRegistry::install( withBase );
+    {
+        ModSession session( assets );
+        SW_EXPECT_FALSE( session.apply( request, Internal::makeSettings() ) );
+    }
+    (void)AssetRegistry::install( previous );
 }

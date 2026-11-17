@@ -14,8 +14,7 @@ namespace sw
 {
     // 로그 접두어는 옮기기 전과 같게 둔다(로그를 읽는 스크립트와 사람이 같은 이름으로 찾는다).
     GPUPassTimeline::GPUPassTimeline()
-        : _frame{}
-        , _listPassScope{}
+        : _listPassScope{}
         , _listFramePassScope{}
         , _exporter{}
         , _listPassSite{}
@@ -91,27 +90,17 @@ namespace sw
         return scope._profilerSlot;
     }
 
-    void GPUPassTimeline::readAndReport( [[maybe_unused]] IRHIDevice* pDevice, [[maybe_unused]] const vector<RenderGraphPassDesc>& listPass,
-                                         [[maybe_unused]] const vector<RenderGraphPassDesc>& listFramePass )
+    void GPUPassTimeline::reportAndExport( [[maybe_unused]] IRHIDevice* pDevice, [[maybe_unused]] const RHITimestampFrame& frame,
+                                           [[maybe_unused]] const vector<RenderGraphPassDesc>& listPass, [[maybe_unused]] const vector<RenderGraphPassDesc>& listFramePass )
     {
 #if SW_PROFILE_COMPILED
-        // 타임스탬프 능력이 없는 디바이스(테스트 목)는 측정할 것이 없다.
-        IRHITimestampProvider* pTimestamps = pDevice != nullptr ? pDevice->findTimestampProvider() : nullptr;
-        if ( pTimestamps == nullptr )
+        // 계측 스위치는 `GPUFrameClock::readBack` 이 맞춘다. 자동 배율만 켠 프레임(프로파일러 꺼짐)은 패스 슬롯이 없어 보고하지 않는다.
+        if ( isRecording() == false )
             return;
-
-        // **여기가 계측 스위치다.** 프로파일러가 꺼져 있으면 백엔드는 쿼리 자원조차 만들지 않는다.
-        // Shipping 에서는 이 블록이 통째로 사라지므로 스위치가 켜질 일도 없다.
-        pTimestamps->setTimestampEnabled( isRecording() );
-        if ( pTimestamps->getTimestampSlotCount() == 0 )
-            return;
-        if ( pTimestamps->readTimestamps( _frame ) == false )
-            return;
-
-        reportFrame( _frame, listPass, listFramePass );
+        reportFrame( frame, listPass, listFramePass );
 
         // 같은 값을 Tracy GPU 타임라인으로도 내보낸다. 쿼리를 따로 만들지 않는다.
-        exportToExternalTimeline( pDevice );
+        exportToExternalTimeline( pDevice, frame );
 #endif
     }
 
@@ -173,7 +162,7 @@ namespace sw
         }
     }
 
-    void GPUPassTimeline::exportToExternalTimeline( [[maybe_unused]] IRHIDevice* pDevice )
+    void GPUPassTimeline::exportToExternalTimeline( [[maybe_unused]] IRHIDevice* pDevice, [[maybe_unused]] const RHITimestampFrame& frame )
     {
 #if SW_PROFILER_BACKEND_COMPILED
         IProfilerBackend*      pBackend    = ProfilerBackend::getActiveBackend();
@@ -223,7 +212,7 @@ namespace sw
         {
             _listFramePassSite.push_back( scope._pZoneSite );
         }
-        std::ignore = _exporter.exportFrame( *pBackend, _frame, *s_pFrameSite, *s_pComputeSite, _listPassSite, _listFramePassSite );
+        std::ignore = _exporter.exportFrame( *pBackend, frame, *s_pFrameSite, *s_pComputeSite, _listPassSite, _listFramePassSite );
 #endif
     }
 

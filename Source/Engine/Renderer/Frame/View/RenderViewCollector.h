@@ -19,10 +19,18 @@ namespace sw
     class CameraComponent;
     class GameObjectManager;
 
+    /** @brief `RenderViewCollector::collectExtraViews` 의 진단 값입니다(감시 값 `RenderView.HiddenCount` · `RenderView.OverflowCount`). */
+    struct RenderViewCollectResult
+    {
+        uint32 _hiddenCount{ 0 };   ///< 보임 판정으로 쉰(화면 밖 · 가려짐 · 너무 작음) 추가 뷰 수
+        uint32 _overflowCount{ 0 }; ///< 자리(`kMaxExtraRenderView`)를 얻지 못해 이번 프레임 목록에서 빠진 추가 뷰 수
+    };
+
     /**
      * @struct RenderViewCollector
      * @brief 패킷 경로(Engine)와 씬 직접 경로(`FrameRenderer::execute( scene )`)가 **같은 규칙**으로 뷰를 고르게 하는 한 자리입니다.
-     * @details 추가 뷰는 레지스트리의 켜진 카메라 중 출력이 화면 사각형이나 렌더 텍스처인 것입니다(주 시점 카메라와 에디터 카메라 제외, `kMaxExtraRenderView` 까지).
+     * @details 추가 뷰는 레지스트리의 켜진 카메라 중 출력이 화면 사각형이나 렌더 텍스처인 것입니다(주 시점 카메라와 에디터 카메라 제외).
+     *          자리는 `kMaxExtraRenderView` 개이고, 넘치면 스케줄러가 보이는 뷰 · 늦은 뷰 먼저 자리를 준다(`RenderViewScheduler::schedule`) — 빠진 수는 `_overflowCount`.
      *          보이는가는 카메라 출력의 `_visibilityObject`(모니터)가 사람이 보는 화면(주 시점과 화면 사각형 뷰) 어디엔가 `_minScreenSize` 이상으로 보이는가입니다
      *          (화면 크기는 애니메이션 LOD 와 같은 `LODView::computeScreenSize`). 주 시점에서의 가려짐은 렌더러가 되읽은 가림 타일 사본(`OcclusionTileSnapshot`,
      *          `gv_occlusionCulling` 이 켜졌을 때만 있다)으로 봅니다 — 언리얼 `WasRecentlyRendered` 처럼 "지난 프레임에 그려졌나" 이다. 사본이 없으면 가려짐을 보지 않습니다.
@@ -48,11 +56,11 @@ namespace sw
          * @param autoScale    자동 렌더 배율. 화면 사각형 뷰의 내부 해상도에 곱한다(주 시점과 같은 규칙). 렌더 텍스처 뷰는 자기 크기가 데이터라 곱하지 않는다.
          * @param now          스케줄러 시각(초).
          * @param pMainOcclusion 주 시점의 가림 타일 사본(`FrameRenderer::getOcclusionSnapshot`). nullptr 이면 가려짐을 보지 않는다. 호출하는 동안 살려 둔다.
-         * @return 보임 판정으로 쉰(화면 밖 · 가려짐 · 너무 작음) 추가 뷰 수입니다 — 부른 쪽(`RenderPacketViewSetup`)이 진단 값으로 든다(감시 값 `RenderView.HiddenCount`).
+         * @return 쉰 뷰 수와 자리를 얻지 못한 뷰 수입니다 — 부른 쪽(`RenderPacketViewSetup`)이 진단 값으로 든다(감시 값 `RenderView.HiddenCount` · `RenderView.OverflowCount`).
          */
-        static uint32 collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj, const float3& mainPosition,
-                                         uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget, RenderViewScheduler& scheduler,
-                                         const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView );
+        static RenderViewCollectResult collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj, const float3& mainPosition,
+                                                          uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget, RenderViewScheduler& scheduler,
+                                                          const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView );
         /**
          * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산과 갱신 주기와 무관하게 매 프레임 그립니다.
          * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 위치를 씁니다. 호스트 뷰는 빠지면 패널이 멈춰 보입니다.

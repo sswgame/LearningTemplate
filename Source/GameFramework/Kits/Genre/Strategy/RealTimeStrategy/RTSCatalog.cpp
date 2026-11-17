@@ -14,7 +14,9 @@
 namespace sw
 {
     RTSCatalog::RTSCatalog()
-        : _supplyMax{ RTSCatalogRootDef{}._supplyMax }
+        : _rules{}
+        , _supplyMax{ RTSCatalogRootDef{}._supplyMax }
+        , _rulesCount{ 0 }
     {
     }
 
@@ -36,11 +38,31 @@ namespace sw
             _supplyMax = rootDef._supplyMax;
         using Element                          = XMLCatalogElement<RTSCatalog>;
         static constexpr Element kArrElement[] = {
+            Element::of<&RTSCatalog::loadRules>( "Rules" ),
             Element::of<&RTSCatalog::loadUnit>( "Unit" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        // 규칙은 데이터에만 있다 — 한 번도 `<Rules>` 를 읽지 못한 카탈로그는 로드 실패다(월드가 C++ 기본값으로 열리지 않는다, 감사 K-4).
+        if ( _rulesCount == 0 )
+        {
+            SW_LOG_ERROR_ID( "RTSCatalog.RulesMissing", "%#: <RTSCatalog> needs one <Rules .../> line (every rule value is data)", sourceName );
+            return 0;
+        }
         // 생산자 · 선행 유닛은 참조 표(`engine/settings/datacatalogreferences.xml`)가 보고 없으면 로드를 멈춘다(예전에는 오류만 남기고 로드가 성공했다).
         return result._loadedCount;
+    }
+
+    bool RTSCatalog::loadRules( const XMLNode& node, string_view sourceName )
+    {
+        RTSSettings rules;
+        if ( XMLFields::readProperties( node, rules, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "RTSCatalog.RulesInvalid", "%#: <Rules> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        _rules = rules; // 덧씌우는 파일(합치기)은 규칙 전체를 바꾼다 — 칸 일부만 두지 않는다
+        ++_rulesCount;
+        return true;
     }
 
     bool RTSCatalog::loadUnit( const XMLNode& node, string_view sourceName )

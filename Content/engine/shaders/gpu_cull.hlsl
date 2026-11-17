@@ -303,6 +303,18 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     if ( headBatch >= g_BatchCount )
         return;
 
+    // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 (instanceId - 배치 인스턴스 시작)이 곧 배치 안 자리다 —
+    // 제자리 매핑을 가시 구간에 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
+    // 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instance_sort.hlsl 이 CPU 정렬 순서로 되돌린다.
+    // 판정(절두체 · 가림) **앞에서** 쓴다 — 개수가 배치 전체라 정점 셰이더가 모든 칸을 읽는다. 판정 뒤에 쓰면 밖으로 나간 인스턴스의 칸이 비어(초기 내용 없음) 쓰레기 번호를 그린다(RN-1).
+    // 언리얼 FInstanceCullingContext · 유니티 BRG 처럼 그리는 개수만큼의 목록은 컬링 결과와 무관하게 모두 채운다.
+    const BatchData headInfo = g_BatchInfo[headBatch];
+    if ( headInfo._sortMode == 1u )
+    {
+        g_VisibleInstanceIDs[headInfo._visibleBase + ( instanceId - headInfo._instanceBase )] = instanceId;
+        return;
+    }
+
     // 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instance_animation 도
     // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
     if ( isVisible( instance._boundsCenter, instance._boundsRadius ) == false )
@@ -310,19 +322,9 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     // 구 다음 상자(배치 메시의 경계) — 둘 다 보수적이라 둘 중 하나라도 밖이면 밖이다. 가림도 상자로 판정한다(가늘고 긴 캐릭터는 구가 몇 배 넓다).
     float3     boxCenter = instance._boundsCenter;
     float3     boxExtent = instance._boundsRadius.xxx;
-    const bool bHasBox   = computeWorldBox( instance, g_BatchInfo[headBatch], boxCenter, boxExtent );
+    const bool bHasBox   = computeWorldBox( instance, headInfo, boxCenter, boxExtent );
     if ( bHasBox && isBoxVisible( boxCenter, boxExtent ) == false )
         return;
-
-    // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 (instanceId - 배치 인스턴스 시작)이 곧 배치 안 자리다 —
-    // 제자리 매핑을 가시 구간에 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
-    // 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instance_sort.hlsl 이 CPU 정렬 순서로 되돌린다.
-    const BatchData headInfo = g_BatchInfo[headBatch];
-    if ( headInfo._sortMode == 1u )
-    {
-        g_VisibleInstanceIDs[headInfo._visibleBase + ( instanceId - headInfo._instanceBase )] = instanceId;
-        return;
-    }
 
     // 지난 프레임 장면 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다).
     if ( bHasBox ? isOccluded( boxCenter, boxExtent ) : isOccluded( instance._boundsCenter, instance._boundsRadius.xxx ) )

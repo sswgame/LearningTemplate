@@ -12,6 +12,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
@@ -495,6 +496,12 @@ namespace sw
         swapChainDesc._readbackRingBytes    = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
         swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte : 0u;
         swapChainDesc._stagingSoloMaxBytes  = gv_rhiStagingSingleMaxMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte : 0u;
+        // 정책 값은 EngineConfig 의 `_rhi` 하나다. 0 은 그대로 넘긴다 — 쓰는 백엔드가 오류로 거절한다(기본값으로 바꿔 주지 않는다).
+        const RHIConfig& rhiConfig                      = engine::getSubsystem<EngineConfig>()._rhi;
+        swapChainDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
+        swapChainDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
+        swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
+        swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
         {
             string softwareEnv;
             bool   bSoftwareEnv = false;

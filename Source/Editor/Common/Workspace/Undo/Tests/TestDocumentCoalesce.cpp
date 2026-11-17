@@ -21,7 +21,7 @@ namespace
         sw::string                   _text{};
         sw::editor::DocumentEditSpan _span{};
         sw::editor::UndoStepOwner    _owner{};
-        sw::uint32                   _captureCount{ 0 }; ///< 알림이 문서 전체 글을 만든 횟수(`notifyEdited` 의 capture)
+        uint32                       _captureCount{ 0 }; ///< 알림이 문서 전체 글을 만든 횟수(`notifyEdited` 의 capture)
 
         void       restore( sw::string_view text ) { _text = sw::string{ text }; }
         sw::string capture() const { return _text; }
@@ -160,7 +160,7 @@ SW_TEST_CASE( DocumentCoalesceTest, HeldSpanCapturesOnlyAtStart )
         text += frame;
         document.editInFrame( text, true, stack );
     }
-    SW_EXPECT_EQUAL( document._captureCount, sw::uint32{ 1 } ); // 첫 프레임이 구간을 열 때만
+    SW_EXPECT_EQUAL( document._captureCount, uint32{ 1 } ); // 첫 프레임이 구간을 열 때만
     SW_EXPECT_TRUE( document._span.isHolding() );
 
     document.releaseInFrame( stack );

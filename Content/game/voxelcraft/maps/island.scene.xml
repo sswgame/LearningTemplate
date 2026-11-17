@@ -160,6 +160,10 @@
 					                        _snowBlock="snow"
 					                        _coalOreBlock="coal_ore"
 					                        _ironOreBlock="iron_ore"
+					                        _snowHeight="34"
+					                        _coalOreChance="0.012"
+					                        _ironOreChance="0.006"
+					                        _ironOreMaxHeight="12"
 					                        _bAutoPlay="false" />
 				</_listComponent>
 			</GameObject>

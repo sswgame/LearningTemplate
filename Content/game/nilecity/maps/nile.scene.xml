@@ -94,7 +94,6 @@
 					                       _walkerPrefab="game/nilecity/prefabs/walker.prefab.xml"
 					                       _cameraRig="1"
 					                       _startingMoney="1500"
-					                       _serviceDuration="60"
 					                       _bAutoPlay="false" />
 				</_listComponent>
 			</GameObject>

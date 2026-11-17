@@ -114,3 +114,30 @@ SW_TEST_CASE( JSONDocumentTest, DumpSurvivesInvalidUTF8 )
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, kept ) );
     SW_EXPECT_EQUAL( sw::string( "{\"keep\":1}" ), kept ); // 있던 파일을 덮지 않는다
 }
+
+/**
+ * @brief [JSONDocumentTest] 같은 객체의 중복 키와 256 단계를 넘는 중첩은 읽기 실패다
+ * @details 예전에는 중복 키를 받아 나중 값으로 덮었고(손으로 고친 데이터의 두 번째 칸이 조용히 이긴다), 중첩 깊이에 한도가 없었다.
+ */
+SW_TEST_CASE( JSONDocumentTest, StrictReadRejectsDuplicateKeysAndDeepNesting )
+{
+    sw::JSONDocument document;
+    SW_EXPECT_TRUE( document.tryParse( R"({"a":1,"b":{"a":2}})" ) ); // 다른 객체의 같은 이름은 중복이 아니다
+    SW_EXPECT_FALSE( document.tryParse( R"({"a":1,"a":2})" ) );
+    SW_EXPECT_FALSE( document.tryParse( R"([{"x":{"k":1,"k":1}}])" ) );
+
+    sw::string deep;
+    for ( int32 level = 0; level < 300; ++level )
+    {
+        deep += '[';
+    }
+    for ( int32 level = 0; level < 300; ++level )
+    {
+        deep += ']';
+    }
+    SW_EXPECT_FALSE( document.tryParse( deep ) );
+    {
+        SW_EXPECT_LOG( "JSON.ParseError" );
+        SW_EXPECT_FALSE( document.parse( R"({"a":1,"a":2})", "dup.json" ) );
+    }
+}

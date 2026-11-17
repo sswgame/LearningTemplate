@@ -125,3 +125,16 @@ SW_TEST_CASE( PositionWelderTest, SameInputGivesSameOutput )
         SW_EXPECT_TRUE( isSamePoint( welderA.getPoint( pointIndex ), listPosition[index] ) );
     }
 }
+
+/** @brief [PositionWelderTest] NaN · 무한대 · 아주 먼 점은 셀 좌표를 넘치게 하지 않고 따로 남으며, 뒤의 보통 점은 그대로 합쳐진다 */
+SW_TEST_CASE( PositionWelderTest, NonFiniteAndFarPointsStayApartWithoutOverflow )
+{
+    sw::PositionWelder welder;
+    const float32      kNaN      = std::numeric_limits<float32>::quiet_NaN();
+    const float32      kInfinity = std::numeric_limits<float32>::infinity();
+    SW_EXPECT_EQUAL( 0u, welder.weld( sw::float3( kNaN, 0.0f, 0.0f ) ) );
+    SW_EXPECT_EQUAL( 1u, welder.weld( sw::float3( kInfinity, 0.0f, 0.0f ) ) );
+    SW_EXPECT_EQUAL( 2u, welder.weld( sw::float3( -kInfinity, 3.0e38f, 0.0f ) ) );
+    SW_EXPECT_EQUAL( 3u, welder.weld( sw::float3( 1.0f, 2.0f, 3.0f ) ) );
+    SW_EXPECT_EQUAL( 3u, welder.weld( sw::float3( 1.0f, 2.0f, 3.0f ) ) );
+}

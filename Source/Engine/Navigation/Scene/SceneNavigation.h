@@ -198,16 +198,14 @@ namespace sw
 
         /**
          * @brief 비동기 경로 요청 — 에이전트 종류의 거름(넘길 때의 영역 비용)으로 @p start 에서 @p end 까지를 줄에 세웁니다. 아무 스레드(병렬 틱)에서 부릅니다.
-         * @details 다음 갱신이 워커에 넘기고 그다음 갱신(⓪)이 수확한다. 요청자는 핸들을 들고 `takePathResult` 로 받거나 `cancelPathRequest` 로 버린다 — 요청자가 사라지면
-         *          버린다(언리얼 `AbortAsyncFindPathRequest`). 씬을 비우면 모든 요청이 사라진다(옛 핸들은 `Unknown`). 아직 베이크하지 않은 종류면 결과는 `Failed` 경로다.
+         * @details 다음 갱신이 워커에 넘기고 그다음 갱신(⓪)이 수확한다. 요청자는 이동 전용 표를 쥐고 `takePathResult` 로 받는다 — 표가 사라지거나 `cancel` 하면
+         *          버린다(언리얼 `AbortAsyncFindPathRequest`). 한 갱신은 설정의 `_maxPathRequestsPerUpdate` 까지 넘긴다. 씬을 비우면 모든 요청이 사라진다(남은 표는 `Unknown`). 아직 베이크하지 않은 종류면 결과는 `Failed` 경로다.
          */
-        [[nodiscard]] PathRequestHandle requestPath( const hashed_string& agentType, const float3& start, const float3& end );
+        [[nodiscard]] NavPathTicket requestPath( const hashed_string& agentType, const float3& start, const float3& end );
         /** @brief 비동기 경로 요청 — 거름을 줍니다(이 요청의 사본으로 든다). */
-        [[nodiscard]] PathRequestHandle requestPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter );
-        /** @brief 요청을 버립니다(아무 스레드). 워커가 구하는 중이면 그 결과는 수확에서 버린다. */
-        void cancelPathRequest( const PathRequestHandle& handle );
-        /** @brief 결과가 있으면 @p outPath 로 옮기고 핸들을 끝냅니다(`Ready`). 아직이면 `Pending`, 끝난 · 버린 핸들이면 `Unknown` 입니다(아무 스레드). */
-        [[nodiscard]] PathRequestState takePathResult( const PathRequestHandle& handle, NavPath& outPath );
+        [[nodiscard]] NavPathTicket requestPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter );
+        /** @brief 결과가 있으면 @p outPath 로 옮기고 표를 비웁니다(`Ready`). 아직이면 `Pending`, 빈 표 · 비운 씬의 표면 `Unknown` 입니다(아무 스레드). 버리려면 표의 `cancel`. */
+        [[nodiscard]] PathRequestState takePathResult( NavPathTicket& inoutTicket, NavPath& outPath );
         /** @brief 줄에 선 · 구하는 중인 경로 요청 수입니다(게임 스레드 — 진단 · 감시 값). */
         uint32 getPendingPathRequestCount() const { return _pathQueue.getPendingCount(); }
         /** @brief 수확한 경로 요청 수(누적, 진단)입니다. */
@@ -296,6 +294,8 @@ namespace sw
         [[nodiscard]] NavMeshWriteAccess completeNavMeshReads();
         /** @brief ④ — 에이전트 요청 · 자리를 군중에 넣습니다(게임 스레드). */
         void syncAgentsIntoCrowds();
+        /** @brief ④ — 경로 요청을 설정의 상한(`_maxPathRequestsPerUpdate`)까지 워커에 넘깁니다(게임 스레드). */
+        void launchPathRequests();
         /** @brief ⑤ — 에이전트가 있는 군중마다 진행을 워커 일로 넘깁니다(워커가 없으면 이 자리에서 진행한다). */
         void launchCrowdUpdates( float32 deltaTime );
         /** @brief 넘긴 군중 진행이 끝날 때까지 기다립니다(군중을 만지는 모든 게임 스레드 일의 앞 — 수확 · 놓기 · 거름 바꾸기). */

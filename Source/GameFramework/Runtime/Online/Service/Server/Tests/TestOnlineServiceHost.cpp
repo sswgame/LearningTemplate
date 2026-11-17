@@ -228,7 +228,7 @@ namespace
         FakeClientService            _serviceB;
         OnlineServiceClient          _client;
 
-        ClientSide( LoopbackStreamNetwork& network, uint16 port )
+        ClientSide( LoopbackStreamNetwork& network, uint16 port, OnlineRetryPolicy retryPolicy = OnlineRetryPolicy::none() )
             : _transport{ network.createTransport() }
             , _serviceA{ kProtocolA }
             , _serviceB{ kProtocolB }
@@ -236,7 +236,7 @@ namespace
         {
             SW_EXPECT_TRUE( _client.registerClientService( &_serviceA ) );
             SW_EXPECT_TRUE( _client.registerClientService( &_serviceB ) );
-            OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextLoopback() };
+            OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextLoopback(), retryPolicy };
             settings._transportSettings._ioThreadCount = 0;
             settings._serverAddress                    = NetAddress::makeLoopback( port );
             settings._gameBuild                        = "test-1";
@@ -285,6 +285,7 @@ namespace
             settings._listenAddress                    = NetAddress::makeLoopback( 0 );
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 — 도배 제한 테스트만 낮춘다
             settings._requestBurstPerAccount           = 1000;
+            settings._maxPendingCallsPerService        = 100000;
             return settings;
         }
 
@@ -469,7 +470,7 @@ namespace
             for ( int32 index = 0; index < 2; ++index )
             {
                 if ( _arrHandle[index] == handle )
-                    SW_EXPECT_TRUE( _arrClient[index].initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint() } ) );
+                    SW_EXPECT_TRUE( _arrClient[index].initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint(), OnlineRetryPolicy::none() } ) );
             }
         }
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override
@@ -1076,4 +1077,45 @@ SW_TEST_CASE( OnlineServiceHostTest, TraceIDReachesTheServiceLogContextWithTheAc
     SW_EXPECT_TRUE( rig._serviceA._lastLogContext._traceID == caller._traceID );
     SW_EXPECT_EQUAL( rig._serviceA._lastLogContext._principalID, uint64( 21 ) );
     SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
+}
+
+/** @brief [OnlineServiceHostTest] 서비스마다 기다리는 호출 상한(저장소 대기 상한, 감사 O-3)이 없으면 기동하지 않는다 — 상한 없는 대기열로 조용히 돌지 않는다 */
+SW_TEST_CASE( OnlineServiceHostTest, InitializeRefusesMissingPendingCallLimit )
+{
+    LoopbackStreamNetwork        network{ 13u };
+    unique_ptr<IStreamTransport> transport = network.createTransport();
+    OnlineServiceHostConfig      settings  = HostFixture::makeSettings();
+    settings._maxPendingCallsPerService    = 0;
+    OnlineServiceHost host;
+    SW_EXPECT_FALSE( host.initialize( transport.get(), settings ).has_value() );
+}
+
+/** @brief [OnlineServiceHostTest] 클라이언트 재시도: 적용하지 않은 거절(kBusy · kRateLimited)은 지터 백오프로 상한까지 다시 보내고, kUnavailable 은 멱등 키가 있을 때만, 끝난 오류는 다시 보내지 않는다 */
+SW_TEST_CASE( OnlineServiceHostTest, ClientRetriesBusyWithBackoffUpToTheLimit )
+{
+    HostFixture rig;
+    ClientSide  client( rig._network, rig.getPort(), OnlineRetryPolicy::make( 2 ) );
+    rig._listClient.push_back( &client );
+    rig.step( 10 );
+    (void)rig.call( client, Internal::kRangeA + Internal::kLogin, 12 );
+
+    rig._serviceB._failErrorCode = OnlineError::kBusy;
+    int32 before                 = rig._serviceB._handledCount;
+    SW_EXPECT_EQUAL( OnlineError::kBusy, rig.call( client, Internal::kRangeB + Internal::kFail, 0 )._errorCode ); // 마지막 답으로 한 번 끝난다
+    SW_EXPECT_EQUAL( before + 3, rig._serviceB._handledCount );                                                   // 처음 + 다시 두 번
+
+    rig._serviceB._failErrorCode = OnlineError::kUnavailable;
+    before                       = rig._serviceB._handledCount;
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.call( client, Internal::kRangeB + Internal::kFail, 0 )._errorCode );
+    SW_EXPECT_EQUAL( before + 1, rig._serviceB._handledCount ); // 멱등 키가 없으면 적용됐는지 모르므로 다시 보내지 않는다
+    NetRequestOptions keyed;
+    keyed._idempotencyKey = NetIdempotencyKey::makeRandom();
+    before                = rig._serviceB._handledCount;
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.call( client, Internal::kRangeB + Internal::kFail, 0, keyed )._errorCode );
+    SW_EXPECT_EQUAL( before + 3, rig._serviceB._handledCount );
+
+    rig._serviceB._failErrorCode = OnlineError::kForbidden;
+    before                       = rig._serviceB._handledCount;
+    SW_EXPECT_EQUAL( OnlineError::kForbidden, rig.call( client, Internal::kRangeB + Internal::kFail, 0 )._errorCode );
+    SW_EXPECT_EQUAL( before + 1, rig._serviceB._handledCount );
 }

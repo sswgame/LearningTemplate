@@ -357,9 +357,8 @@ namespace sw
             _pStdOutRead = nullptr;
         }
 
-        // Windows 와 마찬가지로 **분리**한다. 아직 도는 자식을 기다리지 않는다. 이미 끝나 있으면 여기서 거둬 좀비를
-        // 남기지 않고, 아직 돌고 있으면 이 프로세스가 끝난 뒤 init 이 거둔다.
-        // (`pclose` 처럼 기다리면 소멸자가 자식이 끝날 때까지 막힌다.)
+        // 자식을 **거둔 뒤** 놓는다(언리얼 FProcState 와 같다). 예전에는 도는 자식을 분리해, 그 자식이 나중에 끝나면 이 프로세스가 끝날 때까지
+        // 좀비로 남았다(에디터 · 서버는 오래 산다). 기다리지 않을 실행은 `launchDetached`(두 번 fork — init 이 거둔다)다. 파이프는 위에서 닫았다.
         const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid > 0 && _bEndWithParent )
         {
@@ -371,7 +370,19 @@ namespace sw
         else if ( childPid > 0 )
         {
             int32 status = 0;
-            waitpid( childPid, &status, WNOHANG );
+            if ( waitpid( childPid, &status, WNOHANG ) == 0 )
+            {
+                if ( _releaseMode == ProcessReleaseMode::Terminate )
+                    (void)terminate();
+                else
+                    SW_LOG_WARNING_ID( "Process.WaitingOnRelease", "Releasing a running child (pid %#) - waiting for it to exit; call terminate() first or launch with ProcessReleaseMode::Terminate",
+                                       static_cast<int32>( childPid ) );
+                pid_t reaped = 0;
+                do
+                {
+                    reaped = waitpid( childPid, &status, 0 );
+                } while ( reaped < 0 && errno == EINTR );
+            }
         }
         _bEndWithParent = false;
 
@@ -383,6 +394,7 @@ namespace sw
     bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
     {
         shutdown();
+        _releaseMode = options._releaseMode;
 
         // 자식에게 넘길 문자열은 **fork 전에** 만들어 둔다. 자식 블록(`runLaunchedChild`)에서는 할당을 하지 않는다.
         PosixExecImage image;

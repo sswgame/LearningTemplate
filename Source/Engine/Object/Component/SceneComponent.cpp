@@ -195,6 +195,7 @@ namespace sw
 
     void SceneComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
     {
+        Component::foldStateHash( inoutBuilder ); // 상태 칸(리플렉션) 뒤에 칸이 아닌 트랜스폼 페이지 값을 더한다
         inoutBuilder.addFloat3( getWorldPosition() );
         inoutBuilder.addFloat3( getLocalRotation() );
         inoutBuilder.addFloat3( getLocalScale() );

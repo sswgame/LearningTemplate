@@ -233,11 +233,13 @@ namespace sw
             _listVertex.clear();
             _listIndex.clear();
             refreshBoundingRadius();
+            _uvDensity = 0.0f;
             return false;
         }
         _listVertex = std::move( listVertex );
         _listIndex  = std::move( listIndex );
         refreshBoundingRadius();
+        _uvDensity = computeUVDensity( _listVertex, _listIndex );
         return true;
     }
 
@@ -667,6 +669,31 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _deformProgramMutex };
         return _deformProgram;
+    }
+
+    float32 Mesh::computeUVDensity( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex )
+    {
+        float64 areaSum   = 0.0;
+        float64 uvAreaSum = 0.0;
+        for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
+        {
+            const RHIVertex& v0 = listVertex[listIndex[index]];
+            const RHIVertex& v1 = listVertex[listIndex[index + 1]];
+            const RHIVertex& v2 = listVertex[listIndex[index + 2]];
+            const float3     p0{ v0._arrPosition[0], v0._arrPosition[1], v0._arrPosition[2] };
+            const float3     edge1 = float3{ v1._arrPosition[0], v1._arrPosition[1], v1._arrPosition[2] } - p0;
+            const float3     edge2 = float3{ v2._arrPosition[0], v2._arrPosition[1], v2._arrPosition[2] } - p0;
+            areaSum += 0.5 * static_cast<float64>( edge1.cross( edge2 ).getLength() );
+            const float32 du1 = v1._arrUV[0] - v0._arrUV[0];
+            const float32 dv1 = v1._arrUV[1] - v0._arrUV[1];
+            const float32 du2 = v2._arrUV[0] - v0._arrUV[0];
+            const float32 dv2 = v2._arrUV[1] - v0._arrUV[1];
+            uvAreaSum += 0.5 * MathUtil::abs( static_cast<float64>( du1 ) * dv2 - static_cast<float64>( dv1 ) * du2 );
+        }
+        // 면적 가중 — 작은 삼각형 하나가 평균을 흔들지 않는다. UV 를 펼치지 않은 메시(모든 UV 가 한 점)는 텍스처를 읽지 않으므로 0 이다.
+        if ( uvAreaSum <= 0.0 )
+            return 0.0f;
+        return static_cast<float32>( MathUtil::sqrt( areaSum / uvAreaSum ) );
     }
 
     void Mesh::refreshBoundingRadius()

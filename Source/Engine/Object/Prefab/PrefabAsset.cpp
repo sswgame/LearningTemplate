@@ -49,13 +49,29 @@ namespace sw
             static constexpr const utf8* kNestedAttach      = "attach";
             static constexpr const utf8* kNestedOverrides   = "overrides";
             static constexpr const utf8* kNestedList        = "_listPrefabInstance";
-            static constexpr const utf8* kVariantOverrides  = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
-            static constexpr uint32      kBinMagic          = FourCCUtil::make( "PFB2" );
+            static constexpr const utf8* kNestedLocalID     = "localID";
+
+            /** @brief 노드의 지역 id 키 글 @p text 를 @p outNode 에 읽습니다. 빈 글은 옛 노드(id 없음)다. 꼴이 틀리면 오류로 false 입니다(다른 노드로 대신하지 않는다). */
+            [[nodiscard]] static bool readNodeLocalID( const string& text, PrefabInstanceNode& outNode, string_view sourceName )
+            {
+                if ( text.empty() )
+                    return true;
+                const optional<uint64> localID = ComponentStableKey::parseKey( text );
+                if ( localID.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "PrefabAsset.NestedLocalIDInvalid", "Nested prefab instance '%#' in '%#' has localID '%#' that is not '#' and 16 lowercase hex digits", outNode._name, sourceName, text );
+                    return false;
+                }
+                outNode._localID = *localID;
+                return true;
+            }
+            static constexpr const utf8* kVariantOverrides = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
+            static constexpr uint32      kBinMagic         = FourCCUtil::make( "PFB2" );
             /**
-             * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다).
+             * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다), 4 부터 상태 · 노드의 컴포넌트 키가 고정 지역 id(`_localID` — 감사 A-2)다.
              *        다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다).
              */
-            static constexpr uint32 kBinVersion = 3;
+            static constexpr uint32 kBinVersion = 4;
 
             static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outListPath )
             {
@@ -208,10 +224,12 @@ namespace sw
                     if ( XMLFields::readProperties( element, params, sourceName ) == false )
                         return false;
                     PrefabInstanceNode node{};
-                    node._name              = std::move( params._name );
-                    node._prefabPath        = std::move( params._prefab );
-                    node._attachKey         = std::move( params._attach );
-                    node._parentIndex       = parentIndex;
+                    node._name        = std::move( params._name );
+                    node._prefabPath  = std::move( params._prefab );
+                    node._attachKey   = std::move( params._attach );
+                    node._parentIndex = parentIndex;
+                    if ( readNodeLocalID( params._localID, node, sourceName ) == false )
+                        return false;
                     const XMLNode overrides = element.findChild( PrefabOverrides::kRootName );
                     if ( overrides.isValid() )
                         node._overrideXML = overrides.toString();
@@ -231,7 +249,8 @@ namespace sw
                     if ( node._parentIndex != parentIndex )
                         continue;
                     XMLNode element = parent.appendChild( kNestedInstance );
-                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey } );
+                    XMLFields::writeProperties( element, PrefabInstanceParams{ node._name, node._prefabPath, node._attachKey,
+                                                                               node._localID != 0 ? ComponentStableKey::formatKey( node._localID ) : string{} } );
                     if ( node._overrideXML.empty() == false )
                     {
                         XMLDocument overrideDoc;
@@ -266,6 +285,8 @@ namespace sw
                     node._attachKey   = element.get( kNestedAttach ).asString();
                     node._overrideXML = element.get( kNestedOverrides ).asString();
                     node._parentIndex = parentIndex;
+                    if ( readNodeLocalID( element.get( kNestedLocalID ).asString(), node, sourceName ) == false )
+                        return false;
                     if ( element.has( kRemovedNestedGUID ) )
                     {
                         SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabGUIDRemovedJSON", "Nested prefab instance '%#' in '%#' still has '%#' - prefabs are referenced by path only; the prefab is not loaded",
@@ -302,6 +323,8 @@ namespace sw
                         element.set( kNestedAttach ).setString( node._attachKey );
                     if ( node._overrideXML.empty() == false )
                         element.set( kNestedOverrides ).setString( node._overrideXML );
+                    if ( node._localID != 0 )
+                        element.set( kNestedLocalID ).setString( ComponentStableKey::formatKey( node._localID ) );
                     writeNodesToJSON( element, listNode, static_cast<int32>( index ) );
                 }
             }
@@ -455,6 +478,9 @@ namespace sw
                         node._attachKey = ComponentStableKey::makeKey( pAttachedTo );
                     node._name       = pPart->getName().c_str();
                     node._prefabPath = pRecord->_prefabPath;
+                    // 노드의 고정 지역 id — 이 부품을 스폰한 노드의 id 키를 잇고, 옛 노드(인덱스 키) · 노드 없이 들인 부품은 새 id 를 받는다. 옛 인덱스 경로는 그 자리에서 이 id 로 맞춘다(`PrefabCache`).
+                    const optional<uint64> spawnedID = ComponentStableKey::parseKey( pRecord->_partKey );
+                    node._localID                    = spawnedID.has_value() ? *spawnedID : ComponentStableKey::makeRandomLocalID();
 
                     const shared_ptr<const PrefabAsset> pSource = pPrefabs->loadPrefab( node._prefabPath );
                     string                              baseState;
@@ -531,7 +557,14 @@ namespace sw
 
     string PrefabInstanceNode::makePartKey( size_t index ) const
     {
-        return isResolved() ? _partPath : to_string( static_cast<uint64>( index ) );
+        if ( isResolved() )
+            return _partPath;
+        return _localID != 0 ? ComponentStableKey::formatKey( _localID ) : to_string( static_cast<uint64>( index ) );
+    }
+
+    string PrefabInstanceNode::makeLegacyPartKey( size_t index ) const
+    {
+        return isResolved() || _localID == 0 ? string{} : to_string( static_cast<uint64>( index ) );
     }
 
     PrefabAsset::PrefabAsset()
@@ -868,7 +901,7 @@ namespace sw
         vector<PrefabInstanceNode> listNode( nodeCount );
         for ( PrefabInstanceNode& node : listNode )
         {
-            arch >> node._name >> node._prefabPath >> node._attachKey >> node._overrideXML >> node._resolvedStateXML >> node._partPath >> node._parentIndex;
+            arch >> node._name >> node._prefabPath >> node._attachKey >> node._overrideXML >> node._resolvedStateXML >> node._partPath >> node._parentIndex >> node._localID;
         }
         if ( arch.isError() )
         {
@@ -1068,7 +1101,7 @@ namespace sw
         arch << static_cast<uint32>( _listNestedInstance.size() );
         for ( const PrefabInstanceNode& node : _listNestedInstance )
         {
-            arch << node._name << node._prefabPath << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex;
+            arch << node._name << node._prefabPath << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex << node._localID;
         }
 
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || arch.saveToFile( absPath.str() ) == false )

@@ -7,7 +7,11 @@
 #include "binding.hlsli"
 #include "fullscreen.hlsli"
 
-static const float kHistoryWeight = 0.9f; // 기록 비율 — 화면이 그대로인 곳의 누적 정도
+// 기록 비율 — 화면이 그대로인 곳의 누적 정도. 값은 Config/Engine/EngineConfig.json `_render._taaHistoryWeight` 가 정본이고 엔진이 모든 컴파일에 define 으로 넣는다(ShaderCompiler::appendEngineDefines).
+#ifndef SW_TAA_HISTORY_WEIGHT
+    #error "SW_TAA_HISTORY_WEIGHT is not defined - the engine injects it from EngineConfig _render._taaHistoryWeight"
+#endif
+static const float kHistoryWeight = SW_TAA_HISTORY_WEIGHT;
 static const float kSkyDepth      = 1.0f; // 깊이 클리어 값 — 아무것도 그리지 않은 픽셀(속도 출력이 없다)
 
 float4 PSMain( PSInput input ) : SV_TARGET

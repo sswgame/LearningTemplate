@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -204,10 +205,10 @@ namespace sw
         uint8  _bSliceMeshApplied; ///< 슬라이스 메시를 설정한 상태인지 나타낸다. Simple 로 돌아갈 때 사각형을 다시 설정한다. 저장하지 않는다
         PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer; higher draws on top", Min = -32767.0,
                   Max = 32767.0 )
-        int32                             _orderInLayer;
-        shared_ptr<const SpriteClipAsset> _clip;              ///< 읽은 클립(공유하는 것)이다. 저장하지 않는다
-        string                            _loadedClipPath;    ///< `_clip` 이 어느 경로의 것인지 나타낸다. 실패한 경로도 기록해 같은 실패를 되풀이해 읽지 않는다
-        shared_ptr<const SpriteLibrary>   _library;           ///< 읽은 라이브러리(공유하는 것)다. 저장하지 않는다
-        string                            _loadedLibraryPath; ///< `_library` 가 어느 경로의 것인지 나타낸다. 실패한 경로도 기록한다
+        int32                           _orderInLayer;
+        SharedAssetRef<SpriteClipAsset> _clip;              ///< 읽은 클립(공유하는 것)이다. 저장하지 않는다
+        string                          _loadedClipPath;    ///< `_clip` 이 어느 경로의 것인지 나타낸다. 실패한 경로도 기록해 같은 실패를 되풀이해 읽지 않는다
+        SharedAssetRef<SpriteLibrary>   _library;           ///< 읽은 라이브러리(공유하는 것)다. 저장하지 않는다
+        string                          _loadedLibraryPath; ///< `_library` 가 어느 경로의 것인지 나타낸다. 실패한 경로도 기록한다
     };
 } // namespace sw

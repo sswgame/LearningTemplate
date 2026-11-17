@@ -18,6 +18,9 @@ namespace sw
     {
         struct Win32WindowInternal
         {
+            /** @brief 창 끌기 · 크기 조절 모달 루프 동안 프레임을 돌리는 타이머의 id 입니다(`WM_ENTERSIZEMOVE` 에 걸고 `WM_EXITSIZEMOVE` 에 끈다). */
+            static constexpr UINT_PTR kModalLoopTimerID = 1;
+
             using PfnGetDpiForMonitor = HRESULT( WINAPI* )( HMONITOR, int32, UINT*, UINT* );
 
             /** @brief Shcore.dll 의 `GetDpiForMonitor` 입니다. Engine 은 Shcore 를 링크하지 않는다(imgui_impl_win32 도 올려 쓴다). 프로세스 끝까지 둔다. */
@@ -85,7 +88,6 @@ namespace sw
 {
     Win32Window::Win32Window()
         : _hWnd{ nullptr }
-        , _bResizing{ SW_FALSE }
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
@@ -391,28 +393,9 @@ namespace sw
         if ( bIgnoreResize )
             return;
 
-        _width  = clientWidth;
-        _height = clientHeight;
-        // DPI 변경 등으로 ShowWindow/SetForegroundWindow 를 처리하는 중에 OS 가 GetSystemMetricsForDpi
-        // 등을 거쳐 SendMessageW 로 같은 스레드에 WM_SIZE 를 재진입시킬 수 있다. 재진입 가드
-        // 없이 onResize(스왑체인 리사이즈)를 중첩 호출하면 아직 다시 만드는 중인 렌더 타깃을
-        // 다시 정리 · 생성하게 되어 DataRaceDetector 가 레이스로 감지해 크래시한다.
-        const bool bCanNotifyResize = _bRecreating == SW_FALSE && _bResizing == SW_FALSE && _onResize.isBound();
-        if ( bCanNotifyResize == false )
-            return;
-        // 재진입한 WM_SIZE 는 위에서 크기만 적고 콜백을 건너뛴다. 그래서 콜백이 돌아온 뒤 크기가 바뀌었으면 **마지막 크기로 한 번
-        // 더** 부른다. 바깥 호출이 넘긴 옛 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로 남는다(DPI 변경의
-        // SetWindowPos 가 바로 그 재진입이다). 끝없이 돌지 않게 횟수를 제한한다.
-        _bResizing           = SW_TRUE;
-        uint32 resizedWidth  = 0;
-        uint32 resizedHeight = 0;
-        for ( int32 round = 0; round < 4 && ( _width != resizedWidth || _height != resizedHeight ); ++round )
-        {
-            resizedWidth  = _width;
-            resizedHeight = _height;
-            _onResize.get()( resizedWidth, resizedHeight );
-        }
-        _bResizing = SW_FALSE;
+        // 크기만 적는다 — 스왑체인은 프레임 시작에 마지막 크기로 한 번 바꾼다(`applyPendingResize`). 그래서 DPI 변경의 SetWindowPos 처럼
+        // 같은 스레드에 재진입한 WM_SIZE 도, 끌기 동안 쏟아지는 WM_SIZE 도 스왑체인을 메시지마다 다시 만들지 않는다(감사 P-2).
+        notifyResized( clientWidth, clientHeight );
     }
 
     bool Win32Window::fillMinimumTrackSize( LPARAM lParam ) const
@@ -469,6 +452,28 @@ namespace sw
                 case WM_SIZE:
                 {
                     pThis->onSizeMessage( wParam, lParam );
+                    return 0;
+                }
+
+                case WM_ENTERSIZEMOVE:
+                {
+                    // 끌기 · 크기 조절 동안 DefWindowProc 의 모달 루프가 메인 루프를 막는다 — 그 루프가 꺼내 주는 WM_TIMER 로 프레임을 돌린다(Godot 과 같은 자리).
+                    // 간격은 OS 하한이다. 실제 프레임 간격은 메인 루프와 같은 페이서가 정한다.
+                    (void)SetTimer( hWnd, Win32WindowInternal::kModalLoopTimerID, USER_TIMER_MINIMUM, nullptr );
+                    return 0;
+                }
+
+                case WM_EXITSIZEMOVE:
+                {
+                    (void)KillTimer( hWnd, Win32WindowInternal::kModalLoopTimerID );
+                    return 0;
+                }
+
+                case WM_TIMER:
+                {
+                    if ( wParam != Win32WindowInternal::kModalLoopTimerID )
+                        break;
+                    pThis->tickModalLoop();
                     return 0;
                 }
 

@@ -9,6 +9,7 @@
  *          결정성: 이 TU 는 `sw_mark_deterministic_sources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 쓰는 쪽이 값(가속의 크기)으로 넘긴다 — 물리 설정을 읽지 않는다.
  */
 #pragma once
+#include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -28,7 +29,7 @@ namespace sw
 
     /**
      * @brief 날아가는 탄 하나입니다. 운동 값까지 들고 있어 정의를 다시 찾지 않고 상태만으로 다시 돕니다(세이브 · 롤백 · 리플레이).
-     * @details `_owner` · `_team` · `_target` · `_payload` 는 쓰는 쪽의 번호다(조종사 · 차 · 편 · 슬롯). 시뮬레이션은 `_target` 을 유도 대상으로 넘기고 나머지는 사건에 실어 돌려준다.
+     * @details `_owner` · `_team` · `_target` · `_payload` · `_arrHitTarget` 은 쓰는 쪽의 번호다(조종사 · 차 · 편 · 슬롯). 시뮬레이션은 `_target` 을 유도 대상으로 넘기고 나머지는 사건에 실어 돌려준다.
      */
     struct SW_GF_API ProjectileState
     {
@@ -52,12 +53,15 @@ namespace sw
         int32         _owner;
         int32         _team;
         int32         _target;     ///< 유도 대상(−1 = 없음)
-        int32         _lastHit;    ///< 마지막으로 꿰뚫은 대상. 쓰는 쪽의 `sweep` 은 이 대상을 건너뛴다(같은 대상을 걸음마다 다시 맞히지 않는다)
         int32         _pierceLeft; ///< 남은 관통 수
         int32         _bounceLeft; ///< 남은 튕김 수
-        uint8         _bAlive     : 1;
-        uint8         _bReflected : 1; ///< 되받아친 탄이다
-        uint8         _reserved   : 6;
+        /// 꿰뚫은 대상(고리, 비면 −1). 쓰는 쪽의 `sweep` 은 `hasHit` 인 대상을 건너뛴다 — "방금 하나" 만 기억하면 겹친 두 대상을 번갈아 다시 맞힌다(G-10).
+        /// 언리얼 GAS 타깃 데이터의 "이미 맞힌 액터" 목록과 같은 자리. shortcut: 고리라 8 개보다 많이 꿰뚫으면 가장 먼저 맞힌 것을 잊는다 — 그보다 큰 관통 수를 쓰게 되면 늘린다.
+        array<int32, 8> _arrHitTarget;
+        uint8           _hitCursor; ///< 다음에 쓸 `_arrHitTarget` 칸
+        uint8           _bAlive     : 1;
+        uint8           _bReflected : 1; ///< 되받아친 탄이다
+        uint8           _reserved   : 6;
 
         ProjectileState();
 
@@ -68,6 +72,12 @@ namespace sw
         [[nodiscard]] static ProjectileState launch( const ResolvedShot& shot, const float3& origin, const float3& direction, float32 gravity );
 
         float32 getSpeed() const { return _velocity.getLength(); }
+        /** @brief @p other 를 이미 꿰뚫었습니다(튕기거나 되받아치면 잊는다). */
+        bool hasHit( int32 other ) const;
+        /** @brief @p other 를 꿰뚫은 대상으로 기억합니다. */
+        void rememberHit( int32 other );
+        /** @brief 꿰뚫은 대상을 모두 잊습니다(방향이 바뀐 탄은 같은 대상을 다시 맞힐 수 있다). */
+        void clearHits();
         /** @brief 탄을 되받아칩니다(패리 · 반사막). 속도는 반대로 @p speedScale 배, 피해는 @p damageScale 배가 되고 편이 @p team 이 됩니다. */
         void deflect( int32 team, float32 speedScale, float32 damageScale );
     };
@@ -116,7 +126,7 @@ namespace sw
         virtual ~IProjectileWorld() = default;
         /** @brief @p projectile 의 유도 대상(`_target`)의 겨눌 점입니다. 대상이 없거나 맞힐 수 없으면 false 입니다(그 걸음은 곧게 간다). */
         virtual bool findTargetPoint( const ProjectileState& projectile, float3& outPoint ) const = 0;
-        /** @brief @p from → @p to 선분에서 가장 먼저 닿는 것입니다. `_lastHit` 과 쏜 쪽은 쓰는 쪽의 규칙대로 건너뜁니다. 닿은 것이 없으면 false 입니다. */
+        /** @brief @p from → @p to 선분에서 가장 먼저 닿는 것입니다. `hasHit` 인 대상과 쏜 쪽은 쓰는 쪽의 규칙대로 건너뜁니다. 닿은 것이 없으면 false 입니다. */
         virtual bool sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const = 0;
     };
 } // namespace sw
@@ -127,11 +137,37 @@ namespace sw
      * @class ProjectileSimulation
      * @brief 탄 목록과 걸음입니다. 걸음 순서는 수명 → 유도 → 저항 → 중력 → 평면 제약 → 사거리로 자른 선분 → 맞음(관통 · 튕김) → 사거리 끝입니다.
      * @details 관통하면 같은 걸음의 남은 선분을 다시 `sweep` 해 한 걸음에 지나는 대상을 모두 가까운 순서로 맞힌다(사건도 그 순서다). 튕기면 방향이 바뀌므로 그 걸음은 거기서 끝나고
-     *          남은 길은 다음 걸음에 간다. 다시 묻는 선분은 맞은 자리에서 시작하고 `_lastHit` 이 방금 꿰뚫은 대상을 건너뛰게 한다.
+     *          남은 길은 다음 걸음에 간다. 다시 묻는 선분은 맞은 자리에서 시작하고 `hasHit` 이 이미 꿰뚫은 대상을 모두 건너뛰게 한다(겹친 대상도 하나씩 한 번).
      */
     class SW_GF_API ProjectileSimulation
     {
     public:
+        /**
+         * @brief 상태 바이트(`serializeState`)에서 탄 한 줄의 칸 자리입니다. 줄 끝(깃발 다음)에서 잰 거리이고, 정의 이름은 길이(4) 뒤 글자라 줄 앞에 놓인다.
+         * @details 깨진 바이트를 만드는 테스트가 손으로 세지 않고 이 값을 쓴다 — 칸을 더하면 여기 한 곳만 고친다(손으로 센 세 테스트가 G-10 뒤 함께 낡았다).
+         */
+        struct StateOffsetFromEnd
+        {
+            static constexpr size_t kFlags       = 1;
+            static constexpr size_t kBounceLeft  = 5;
+            static constexpr size_t kPierceLeft  = 9;
+            static constexpr size_t kHitCursor   = 10;
+            static constexpr size_t kHitTargets  = 42;
+            static constexpr size_t kTarget      = 46;
+            static constexpr size_t kTeam        = 50;
+            static constexpr size_t kOwner       = 54;
+            static constexpr size_t kPayload     = 58;
+            static constexpr size_t kID          = 62;
+            static constexpr size_t kRestitution = 66;
+            static constexpr size_t kRadius      = 74;
+            static constexpr size_t kRange       = 90;
+            static constexpr size_t kLifetime    = 94;
+            static constexpr size_t kDamage      = 106;
+            static constexpr size_t kVelocity    = 118;
+            static constexpr size_t kPosition    = 130;
+            static constexpr size_t kNameLength  = 134; ///< 이름 글자를 뺀 한 줄의 바이트 수이기도 하다
+        };
+
         ProjectileSimulation();
 
         /** @brief 탄이 머무는 평면의 법선입니다(2D · 지면 위). 0 벡터면 제약이 없습니다. 상태가 아니라 설정이라 저장하지 않습니다. */

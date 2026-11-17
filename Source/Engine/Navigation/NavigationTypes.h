@@ -1,7 +1,7 @@
 /**
  * @file NavigationTypes.h
  * @brief 내비메시의 공통 정의입니다. 폴리곤 참조, 영역, 질의 필터, 경로, 레이캐스트 결과, 군중 에이전트 값을 담습니다.
- * @details 백엔드(`Navigation/Recast/`)의 타입은 이 파일 밖으로 나오지 않는다. 폴리곤 참조는 64 비트 불투명 값이고(백엔드가 더 좁게 써도 된다),
+ * @details 백엔드(`Navigation/Recast/`)의 타입은 이 파일 밖으로 나오지 않는다. 폴리곤 참조는 64 비트 불투명 형식이고(백엔드도 64 비트로 짓는다 — 좁히면 컴파일이 멈춘다),
  *          영역 번호는 설정 테이블(`NavMeshSettings::_listArea`)의 순서다.
  */
 #pragma once
@@ -15,8 +15,15 @@
 
 namespace sw
 {
-    /** @brief 내비메시 폴리곤 하나의 불투명 참조입니다. 0 은 없음입니다. 타일을 다시 구우면 옛 참조는 무효가 됩니다. */
-    using NavPolyRef = uint64;
+    /**
+     * @brief 내비메시 폴리곤 하나의 불투명 참조입니다. `Invalid`(0) 는 없음입니다. 타일을 다시 구우면 옛 참조는 무효가 됩니다.
+     * @details 정수가 아니라 형식이다 — 정수면 32 비트 칸에 말없이 잘려 담겼다(군중의 링크 폴리곤, 감사 S-6). 백엔드 경계(`RecastQueryUtil`)에서만 바꾼다.
+     *          언리얼 `NavNodeRef`(uint64) · Recast `dtPolyRef`(`DT_POLYREF64`) 와 같은 폭이다.
+     */
+    enum class NavPolyRef : uint64
+    {
+        Invalid = 0,
+    };
 
     /** @brief 군중 안의 에이전트 번호입니다. 음수는 없음입니다. */
     using NavCrowdAgentID = int32;
@@ -24,7 +31,7 @@ namespace sw
     struct NavigationConstant
     {
         /** @brief 없는 폴리곤입니다. */
-        static constexpr NavPolyRef kInvalidPolyRef = 0;
+        static constexpr NavPolyRef kInvalidPolyRef = NavPolyRef::Invalid;
         /** @brief 없는 군중 에이전트입니다. */
         static constexpr NavCrowdAgentID kInvalidAgentID = constant::invalid_index::kInt32;
         /** @brief 영역 테이블의 최대 항목 수입니다(영역 하나가 폴리곤 표시 비트 하나이며 16 비트입니다). */

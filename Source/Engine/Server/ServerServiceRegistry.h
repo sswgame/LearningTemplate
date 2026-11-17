@@ -18,6 +18,8 @@
 #include "Core/Registry/ServiceFactoryList.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Server/ServerKitDirectory.h"
+
 namespace sw
 {
     struct ServerConfig;
@@ -36,6 +38,7 @@ namespace sw
         const ServerConfig*    _pServerConfig{ nullptr };   ///< 읽은 서버 설정(`Config/Server/<게임>.json`)
         MetricRegistry*        _pMetricRegistry{ nullptr }; ///< `/metrics` 로 나가는 지표 레지스트리
         ServiceHealthRegistry* _pHealthRegistry{ nullptr }; ///< `/healthz`, `/readyz` 가 읽는 상태 레지스트리
+        ServerKitDirectory*    _pKitDirectory{ nullptr };   ///< 서버 서비스가 세운 키트 범위를 게임 모듈에 공개하는 호스트 창구(호스트 소유 — 리로드에 매달리지 않는다)
     };
 } // namespace sw
 
