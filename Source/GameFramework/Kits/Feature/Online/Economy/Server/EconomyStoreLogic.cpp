@@ -219,10 +219,7 @@ namespace sw
                             return EconomyResult::AlreadyRedeemed; // 분개는 보존 정리로 지워졌지만 이 거래는 이미 지급했다
                         transaction.put( receiptTable, request._journalKey, redeemed, ServiceRecord::kAbsentVersion );
                     }
-                    else if ( bDelivery )
-                    {
-                        transaction.requireVersion( receiptTable, request._journalKey, mark._version ); // 그사이 환불된 거래의 확인은 보내지 않는다
-                    }
+                    // 다시 보내기의 확인(분개가 남은 지급)은 상태 레코드를 쓰지 않는다 — 그사이 환불됐으면 저장소 입구의 읽기 집합이 읽은 상태 버전으로 커밋을 지게 한다.
                     if ( bReplayed && bDelivery == false )
                         return EconomyResult::Ok; // 분개가 남은 다시 보내기 — 쓸 것이 없다
                     if ( bDelivery )

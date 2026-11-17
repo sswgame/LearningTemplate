@@ -618,7 +618,6 @@ namespace sw
                 account._lockedUntilMs = 0;
                 transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), accountRaw._version );
             }
-            transaction.requireVersion( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( account._accountID ), profile._version );
 
             LoginSessionToken        token;
             int64                    expiresAtMs       = 0;
@@ -677,7 +676,6 @@ namespace sw
                 const LoginServiceResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
                     return sanction;
-                transaction.requireVersion( Internal::getGuestTable(), digestHex, guestRaw._version );
             }
 
             LoginSessionToken        token;
@@ -742,7 +740,6 @@ namespace sw
                 const LoginServiceResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
                     return sanction;
-                transaction.requireVersion( Internal::getExternalTable(), externalKey, externalRaw._version );
             }
 
             LoginSessionToken        token;
@@ -1093,7 +1090,6 @@ namespace sw
             transaction.erase( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ) );
             if ( Internal::stageSecretToRevokeQueue( _connection, transaction, identity._accountID, provider ) != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );
-            transaction.requireVersion( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), profile._version );
             ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.unlink.platform", nowMs );
             audit._before           = string( provider );
             ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, pLink->_version );
