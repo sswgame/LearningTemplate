@@ -22,7 +22,8 @@ namespace
         static sw::editor::PropertyEditSpan makeSpan( const utf8* pPath )
         {
             sw::editor::PropertyEditSpan span;
-            span._listTarget.push_back( sw::editor::PropertyEditTarget{ 1, sw::string{}, sw::string{ pPath } } );
+            span._listTarget.push_back( sw::editor::PropertyEditTarget{ 1, 0 } );
+            span._listPath.push_back( sw::string{ pPath } );
             span._listBefore.push_back( sw::string{ "0" } );
             span._label = "Edit Test";
             return span;
@@ -42,9 +43,8 @@ namespace
 SW_TEST_CASE( InspectorEditRecorderTest, DeactivateWithoutEditDropsPending )
 {
     sw::editor::PropertyEditSpanSet spans;
-    spans.trackWidget( 7, true, false ); // 누른 프레임
+    spans.touch( 7 ); // 누른 프레임 — 쓰기가 없으니 구간도 없다
     SW_EXPECT_FALSE( spans.isHeld( 7 ) );
-    spans.trackWidget( 7, false, true ); // 쓰기 없이 풀린 프레임
     sw::vector<sw::editor::PropertyEditSpan> listClosed;
     spans.collectClosed( listClosed );
     SW_EXPECT_TRUE( listClosed.empty() );
@@ -77,30 +77,33 @@ SW_TEST_CASE( InspectorEditRecorderTest, EditRecordsOnePropertyPerTarget )
     sw::editor::PropertyEditSpan span = sw::editor::PropertyEditSpan::captureProperty( *pPrimary->getOwner(), pPrimary, *pProp, collect, "Edit Position" );
     SW_REQUIRE_EQUAL( span._listTarget.size(), size_t{ 3 } );
     SW_REQUIRE_EQUAL( span._listBefore.size(), size_t{ 3 } );
+    SW_REQUIRE_EQUAL( span._listPath.size(), size_t{ 3 } );
     for ( size_t index = 0; index < listComponent.size(); ++index )
     {
         const sw::editor::PropertyEditTarget& target = span._listTarget[index];
         SW_EXPECT_EQUAL( target._objectID, listComponent[index]->getOwner()->getObjectID() );
-        SW_EXPECT_FALSE( target._componentKey.empty() );
-        SW_EXPECT_TRUE( target._propertyPath == "_localPosition" );
+        SW_EXPECT_NOT_EQUAL( target._componentLocalID, uint64{ 0 } );
+        SW_EXPECT_TRUE( span._listPath[index] == "_localPosition" );
         SW_EXPECT_FALSE( span._listBefore[index].empty() );
     }
 
-    // 끌기: 첫 쓰기가 연 구간을 다음 프레임들의 쓰기가 잇는다.
+    // 끌기: 첫 쓰기가 연 행(키 5)의 구간을 행이 활성인 프레임들이 잇고, 활성이 아닌(놓은) 프레임의 마감이 닫는다.
     sw::editor::PropertyEditSpanSet spans;
-    spans.trackWidget( 5, true, false );
-    SW_EXPECT_FALSE( spans.continueHeld( "_localPosition" ) );
-    spans.open( std::move( span ) );
+    SW_EXPECT_FALSE( spans.isHeld( 5 ) );
+    spans.open( 5, std::move( span ) ); // 첫 쓰기
+    spans.touch( 5 );                   // 그 행을 그리는 동안 위젯이 활성이었다
     SW_EXPECT_TRUE( spans.isHeld( 5 ) );
     sw::vector<sw::editor::PropertyEditSpan> listClosed;
     spans.collectClosed( listClosed );
     SW_EXPECT_TRUE( listClosed.empty() );
-    spans.trackWidget( 5, true, false );
-    SW_EXPECT_TRUE( spans.continueHeld( "_localPosition" ) );
+    SW_EXPECT_TRUE( spans.isHeld( 5 ) ); // 끄는 프레임의 쓰기는 같은 구간을 잇는다
+    spans.touch( 5 );
     spans.collectClosed( listClosed );
     SW_EXPECT_TRUE( listClosed.empty() );
-    spans.trackWidget( 5, false, true );
+    spans.touch( 5 ); // 멈춰 쥐고 있는 프레임 — 쓰기는 없지만 행이 활성이다
     spans.collectClosed( listClosed );
+    SW_EXPECT_TRUE( listClosed.empty() );
+    spans.collectClosed( listClosed ); // 놓은 프레임
     SW_REQUIRE_EQUAL( listClosed.size(), size_t{ 1 } );
     SW_EXPECT_EQUAL( listClosed[0]._listTarget.size(), size_t{ 3 } );
     SW_EXPECT_FALSE( spans.isHeld( 5 ) );
@@ -117,32 +120,32 @@ SW_TEST_CASE( InspectorEditRecorderTest, UndoRestoresValueThroughModelPath )
     SW_REQUIRE_NOT_NULL( pObject );
     sw::SceneComponent* pScene = pObject->addComponent<sw::SceneComponent>();
     SW_REQUIRE_NOT_NULL( pScene );
-    const sw::PropertyInfo* pProp = Internal::findPositionProperty( *pScene );
-    SW_REQUIRE_NOT_NULL( pProp );
+    SW_REQUIRE_NOT_NULL( Internal::findPositionProperty( *pScene ) );
+    static constexpr sw::string_view kPath = "_localPosition";
 
-    const sw::editor::PropertyEditTarget target = sw::editor::PropertyEditTarget::make( *pObject, pScene, *pProp );
+    const sw::editor::PropertyEditTarget target = sw::editor::PropertyEditTarget::make( *pObject, pScene );
     sw::string                           beforeText;
-    SW_REQUIRE_TRUE( target.readValueText( *pObject, beforeText ) );
+    SW_REQUIRE_TRUE( target.readValueText( *pObject, kPath, beforeText ) );
 
     pScene->setLocalPosition( sw::float3{ 1.0f, 2.0f, 3.0f } );
     SW_EXPECT_NEAR( 2.0f, pScene->getWorldPosition()._y, 1.0e-5f ); // 월드 캐시를 채운다
     sw::string afterText;
-    SW_REQUIRE_TRUE( target.readValueText( *pObject, afterText ) );
+    SW_REQUIRE_TRUE( target.readValueText( *pObject, kPath, afterText ) );
     SW_EXPECT_FALSE( afterText == beforeText );
 
-    SW_REQUIRE_TRUE( target.applyTo( *pObject, beforeText ) );
+    SW_REQUIRE_TRUE( target.applyTo( *pObject, kPath, beforeText ) );
     SW_EXPECT_NEAR( 0.0f, pScene->getWorldPosition()._y, 1.0e-5f );
-    SW_REQUIRE_TRUE( target.applyTo( *pObject, afterText ) );
+    SW_REQUIRE_TRUE( target.applyTo( *pObject, kPath, afterText ) );
     SW_EXPECT_NEAR( 2.0f, pScene->getWorldPosition()._y, 1.0e-5f );
 
-    // 없는 컴포넌트 키는 건너뛴다(그 사이 지운 컴포넌트).
+    // 없는 컴포넌트 지역 id 는 건너뛴다(그 사이 지운 컴포넌트).
     sw::editor::PropertyEditTarget gone = target;
-    gone._componentKey                  = "#00000000deadbeef";
-    SW_EXPECT_FALSE( gone.applyTo( *pObject, beforeText ) );
+    gone._componentLocalID              = 0xdeadbeefull;
+    SW_EXPECT_FALSE( gone.applyTo( *pObject, kPath, beforeText ) );
 }
 
 /**
- * @brief [InspectorEditRecorderTest] 해제를 받지 못한 구간(위젯이 사라졌다)은 그 위젯을 그리지 않은 프레임의 마감이 닫는다 — 한 번 쓰기는 바로 다음 마감에 닫힌다
+ * @brief [InspectorEditRecorderTest] 해제를 받지 못한 구간(위젯이 사라졌다)은 활성이 아닌 프레임의 마감이 닫는다 — 한 번 쓰기(팝업 · 콤보)는 그 프레임에 닫힌다
  * @details 설계는 "다음 gather" 였으나 한 그리드가 한 프레임에 대상 여럿을 모으므로(카드마다) 모으기로는 다른 카드의 활성 위젯과 가릴 수 없다 — 그리드의 프레임 끝(`endFrame`)이 닫는다.
  */
 SW_TEST_CASE( InspectorEditRecorderTest, OrphanedSpanClosesAtFrameEnd )
@@ -151,8 +154,8 @@ SW_TEST_CASE( InspectorEditRecorderTest, OrphanedSpanClosesAtFrameEnd )
     sw::editor::PropertyEditSpanSet          spans;
     sw::vector<sw::editor::PropertyEditSpan> listClosed;
 
-    spans.trackWidget( 9, true, false );
-    spans.open( Internal::makeSpan( "_value" ) );
+    spans.open( 9, Internal::makeSpan( "_value" ) );
+    spans.touch( 9 );
     spans.collectClosed( listClosed );
     SW_EXPECT_TRUE( listClosed.empty() );
     // 다음 프레임: 위젯이 그려지지 않았다(선택이 바뀌었거나 머리를 접었다).
@@ -160,10 +163,12 @@ SW_TEST_CASE( InspectorEditRecorderTest, OrphanedSpanClosesAtFrameEnd )
     SW_EXPECT_EQUAL( listClosed.size(), size_t{ 1 } );
     SW_EXPECT_FALSE( spans.isHeld( 9 ) );
 
-    // 활성 위젯 없이 쓴 편집(팝업 · 콤보 · 붙여 넣기)은 한 번 쓰기다.
-    spans.trackWidget( 3, false, false );
-    spans.open( Internal::makeSpan( "_value" ) );
+    // 활성 위젯 없이 쓴 편집(팝업 · 콤보 · 붙여 넣기)은 그 프레임의 마감이 닫는다. 다른 행에 쓰면 열린 구간은 바로 닫힌다 — 묶인 구간은 하나다.
+    spans.open( 3, Internal::makeSpan( "_value" ) );
+    spans.open( 4, Internal::makeSpan( "_other" ) );
     SW_EXPECT_FALSE( spans.isHeld( 3 ) );
+    SW_EXPECT_TRUE( spans.isHeld( 4 ) );
     spans.collectClosed( listClosed );
-    SW_EXPECT_EQUAL( listClosed.size(), size_t{ 1 } );
+    SW_EXPECT_EQUAL( listClosed.size(), size_t{ 2 } );
+    SW_EXPECT_FALSE( spans.isHeld( 4 ) );
 }

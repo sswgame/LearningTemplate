@@ -21,7 +21,6 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
@@ -113,7 +112,6 @@ namespace sw::editor
                 bool       bValue   = *pValue;
                 const bool bChanged = ImGui::Checkbox( _pLabel, &bValue );
                 showTooltipIfHovered( row );
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ bValue } );
                 return true;
@@ -195,7 +193,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ClearAssetReference" ) );
 
                 ImGui::PopID();
-                // 이 묶음의 "마지막 항목" 은 입력란이다(BeginMenu 가 메뉴 머리로 되돌리는 것과 같다). 지우기 단추로 두면 뒤의 값 표시(`inspector.property.*`) · 툴팁 · 되돌리기 추적(`trackRowEdit`)이 모두 단추를 봐, 친 글자가 되돌리기에 남지 않았다.
+                // 이 묶음의 "마지막 항목" 은 입력란이다(BeginMenu 가 메뉴 머리로 되돌리는 것과 같다). 지우기 단추로 두면 뒤의 값 표시(`inspector.property.*`) · 툴팁 이 모두 단추를 봤다.
                 ImGui::GetCurrentContext()->LastItemData = inputItem;
                 return action;
             }
@@ -497,7 +495,6 @@ namespace sw::editor
                 else
                     bChanged = EditorWidgets::dragScalar( kValueWidgetID, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, pFormat );
                 showTooltipIfHovered( row );
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged )
                     model.setRowNumber( row._rowID, kIsInteger ? static_cast<float64>( widgetValue ) : static_cast<float64>( widgetValue ) / scale );
                 return true;
@@ -528,8 +525,7 @@ namespace sw::editor
                 T          edited   = *pValue;
                 const bool bChanged = drawValueWidget( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
-                // 위젯 → 추적 → 쓰기 차례(`InspectorPropertyUndo`). atomic<bool> 을 되돌리기에서 빼는 일은 모델이 한다(`PropertyGridModel::ensureEditSpan`).
-                InspectorPropertyUndo::trackRowEdit( model );
+                // atomic<bool> 을 되돌리기에서 빼는 일은 모델이 한다(`PropertyGridModel::ensureEditSpan`).
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
@@ -554,7 +550,6 @@ namespace sw::editor
                 T          edited   = *pValue;
                 const bool bChanged = drawValueWidget( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
@@ -680,7 +675,6 @@ namespace sw::editor
                 else
                     bChanged = EditorWidgets::drawTextField( _pLabel, edited );
                 showTooltipIfHovered( row );
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged && bApplied == false )
                     model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
@@ -716,7 +710,6 @@ namespace sw::editor
                     bChanged = drawNameInput( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
                 // 되돌리기는 프로퍼티 값 글(이름 글)로 남는다 — 인턴된 문자열은 해제되지 않으므로 되돌린 이름도 언제나 다시 인턴된다.
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged && bApplied == false )
                     model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
@@ -787,7 +780,6 @@ namespace sw::editor
                 else
                     bChanged = EditorWidgets::drawVec3Control( _pLabel, edited, 0.0f, 100.0f, 0.1f );
                 showTooltipIfHovered( row );
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
@@ -810,7 +802,6 @@ namespace sw::editor
                 float2     edited   = *pValue;
                 const bool bChanged = EditorWidgets::dragFloat2( kValueWidgetID, &edited._x, 0.1f );
                 showTooltipIfHovered( row );
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
@@ -833,7 +824,6 @@ namespace sw::editor
                 float4     edited   = *pValue;
                 const bool bChanged = row._bColor != SW_FALSE ? EditorWidgets::colorEdit4( kValueWidgetID, &edited._x, getColorFlags( row ) ) : EditorWidgets::dragFloat4( kValueWidgetID, &edited._x, 0.01f );
                 showTooltipIfHovered( row );
-                InspectorPropertyUndo::trackRowEdit( model );
                 if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;

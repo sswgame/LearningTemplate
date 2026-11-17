@@ -2,6 +2,9 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorEditRecorder.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
+
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
@@ -18,74 +21,37 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     // 구간 표
     // ------------------------------------------------------------------------------
-    void PropertyEditSpanSet::trackWidget( uint32 widgetID, bool bActive, bool bDeactivated )
+    void PropertyEditSpanSet::open( uint64 key, PropertyEditSpan&& span )
     {
-        const bool bArmed  = bActive || bDeactivated;
-        _armedWidgetID     = bArmed ? widgetID : 0;
-        _bArmedDeactivated = bDeactivated ? SW_TRUE : SW_FALSE;
-        if ( bArmed && isHeld( widgetID ) )
-        {
+        closeHeld();
+        _held         = std::move( span );
+        _heldKey      = key;
+        _bHasHeld     = SW_TRUE;
+        _bHeldTouched = SW_FALSE;
+    }
+
+    void PropertyEditSpanSet::touch( uint64 key )
+    {
+        if ( isHeld( key ) )
             _bHeldTouched = SW_TRUE;
-            if ( bDeactivated )
-                _bHeldClosing = SW_TRUE;
-        }
-    }
-
-    bool PropertyEditSpanSet::continueHeld( string_view propertyPath )
-    {
-        if ( _armedWidgetID == 0 || isHeld( _armedWidgetID ) == false || _held._listTarget.empty() || string_view{ _held._listTarget[0]._propertyPath } != propertyPath )
-            return false;
-        _armedWidgetID = 0;
-        return true;
-    }
-
-    void PropertyEditSpanSet::open( PropertyEditSpan&& span )
-    {
-        if ( _armedWidgetID == 0 )
-        {
-            span._widgetID = 0;
-            _listClosed.push_back( std::move( span ) );
-            return;
-        }
-        closeHeld();
-        span._widgetID = _armedWidgetID;
-        _held          = std::move( span );
-        _bHasHeld      = SW_TRUE;
-        _bHeldTouched  = SW_TRUE;
-        _bHeldClosing  = _bArmedDeactivated;
-        _armedWidgetID = 0;
-    }
-
-    void PropertyEditSpanSet::openForWidget( uint32 widgetID, PropertyEditSpan&& span )
-    {
-        if ( widgetID == 0 || isHeld( widgetID ) )
-            return;
-        closeHeld();
-        span._widgetID = widgetID;
-        _held          = std::move( span );
-        _bHasHeld      = SW_TRUE;
-        _bHeldTouched  = SW_TRUE;
-        _bHeldClosing  = SW_FALSE;
     }
 
     void PropertyEditSpanSet::collectClosed( vector<PropertyEditSpan>& outListClosed )
     {
-        // 풀린 위젯, 그리고 이번 프레임에 그리지 않은 위젯(선택이 바뀌었거나 머리를 접었다 — 해제를 받을 수 없다)의 구간을 닫는다.
-        if ( _bHasHeld != SW_FALSE && ( _bHeldClosing != SW_FALSE || _bHeldTouched == SW_FALSE ) )
+        // 이번 프레임에 위젯이 활성이 아니었다 — 풀렸거나(놓은 프레임의 쓰기까지 담았다), 사라졌거나(해제를 받을 수 없다), 한 번 쓰기였다.
+        if ( _bHasHeld != SW_FALSE && _bHeldTouched == SW_FALSE )
             closeHeld();
-        _bHeldTouched  = SW_FALSE;
-        _armedWidgetID = 0;
-        outListClosed  = std::move( _listClosed );
+        _bHeldTouched = SW_FALSE;
+        outListClosed = std::move( _listClosed );
         _listClosed.clear();
     }
 
     void PropertyEditSpanSet::clear()
     {
-        _held          = PropertyEditSpan{};
-        _bHasHeld      = SW_FALSE;
-        _bHeldTouched  = SW_FALSE;
-        _bHeldClosing  = SW_FALSE;
-        _armedWidgetID = 0;
+        _held         = PropertyEditSpan{};
+        _heldKey      = 0;
+        _bHasHeld     = SW_FALSE;
+        _bHeldTouched = SW_FALSE;
         _listClosed.clear();
     }
 
@@ -94,9 +60,9 @@ namespace sw::editor
         if ( _bHasHeld == SW_FALSE )
             return;
         _listClosed.push_back( std::move( _held ) );
-        _held         = PropertyEditSpan{};
-        _bHasHeld     = SW_FALSE;
-        _bHeldClosing = SW_FALSE;
+        _held     = PropertyEditSpan{};
+        _heldKey  = 0;
+        _bHasHeld = SW_FALSE;
     }
 
     // ------------------------------------------------------------------------------
@@ -110,8 +76,53 @@ namespace sw::editor
             static void appendTarget( PropertyEditSpan& span, const GameObject& owner, const Component* pComponent, const PropertyInfo& prop )
             {
                 const void* pInstance = pComponent != nullptr ? static_cast<const void*>( pComponent ) : static_cast<const void*>( &owner );
-                span._listTarget.push_back( PropertyEditTarget::make( owner, pComponent, prop ) );
+                span._listTarget.push_back( PropertyEditTarget::make( owner, pComponent ) );
+                span._listPath.push_back( string{ prop._name.c_str() } );
                 span._listBefore.push_back( SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+            }
+
+            /** @brief 단계 하나의 값 글 표 — 같은 글은 한 벌만 든다(다중 선택은 대개 값이 하나다). */
+            struct TextTable
+            {
+                vector<string>                _listText;
+                vector<uint32>                _listIndex;
+                unordered_map<string, uint32> _mapIndex;
+
+                void add( const string& text )
+                {
+                    const auto [iter, bInserted] = _mapIndex.try_emplace( text, static_cast<uint32>( _listText.size() ) );
+                    if ( bInserted )
+                        _listText.push_back( text );
+                    _listIndex.push_back( iter->second );
+                }
+            };
+
+            /** @brief 구간 @p span 의 바뀐 대상 가운데 경로가 @p path 인 것을 한 명령으로 거래 @p transaction 에 남깁니다. */
+            static void recordPath( EditorTransaction& transaction, const PropertyEditSpan& span, const vector<size_t>& listChanged, const vector<string>& listAfter,
+                                    const string& path )
+            {
+                vector<PropertyEditTarget> listTarget;
+                TextTable                  before;
+                TextTable                  after;
+                GameObject*                pRecordOwner = nullptr;
+                for ( size_t changed = 0; changed < listChanged.size(); ++changed )
+                {
+                    const size_t index = listChanged[changed];
+                    if ( span._listPath[index] != path )
+                        continue;
+                    listTarget.push_back( span._listTarget[index] );
+                    before.add( span._listBefore[index] );
+                    after.add( listAfter[changed] );
+                    if ( pRecordOwner == nullptr )
+                        pRecordOwner = PropertyEditTarget::findObject( span._sceneKey, span._listTarget[index]._objectID );
+                }
+                if ( pRecordOwner == nullptr )
+                    return;
+                CommandStack::Command command{};
+                command._label = span._label;
+                command._undo  = SW_UNDO_STEP( PropertyEditTarget::applyPropertyText, span._sceneKey, path, listTarget, before._listText, before._listIndex );
+                command._redo  = SW_UNDO_STEP( PropertyEditTarget::applyPropertyText, span._sceneKey, path, listTarget, after._listText, after._listIndex );
+                transaction.recordObjectCommand( *pRecordOwner, std::move( command ) );
             }
         };
     } // namespace
@@ -131,6 +142,7 @@ namespace sw::editor
             return span;
         }
         span._listTarget.reserve( listComponent.size() );
+        span._listPath.reserve( listComponent.size() );
         span._listBefore.reserve( listComponent.size() );
         for ( const Component* pEdited : listComponent )
         {
@@ -165,34 +177,27 @@ namespace sw::editor
             inoutListSpan.clear();
             return;
         }
-        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다 — 이번 마감의 명령들은 되돌리기 한 단계다
         for ( const PropertyEditSpan& span : inoutListSpan )
         {
-            vector<PropertyEditTarget> listTarget;
-            vector<string>             listBefore;
-            vector<string>             listAfter;
-            GameObject*                pRecordOwner = nullptr;
-            string                     afterText;
+            vector<size_t> listChanged;
+            vector<string> listAfter;
+            vector<string> listPath; // 바뀐 대상의 경로(겹치지 않게) — 확장 영역만 여럿이다
+            string         afterText;
             for ( size_t index = 0; index < span._listTarget.size(); ++index )
             {
                 // 그 사이 사라진 대상(지웠거나 미리보기 창을 닫았다)은 빠진다 — 되돌릴 곳이 없다.
                 GameObject* pObject = PropertyEditTarget::findObject( span._sceneKey, span._listTarget[index]._objectID );
-                if ( pObject == nullptr || span._listTarget[index].readValueText( *pObject, afterText ) == false || afterText == span._listBefore[index] )
+                if ( pObject == nullptr || span._listTarget[index].readValueText( *pObject, span._listPath[index], afterText ) == false || afterText == span._listBefore[index] )
                     continue;
-                listTarget.push_back( span._listTarget[index] );
-                listBefore.push_back( span._listBefore[index] );
+                listChanged.push_back( index );
                 listAfter.push_back( std::move( afterText ) );
                 afterText = string{};
-                if ( pRecordOwner == nullptr )
-                    pRecordOwner = pObject;
+                if ( VectorUtil::contains( listPath, span._listPath[index] ) == false )
+                    listPath.push_back( span._listPath[index] );
             }
-            if ( pRecordOwner == nullptr )
-                continue;
-            CommandStack::Command command{};
-            command._label = span._label;
-            command._undo  = SW_UNDO_STEP( PropertyEditTarget::applyPropertyText, span._sceneKey, listTarget, listBefore );
-            command._redo  = SW_UNDO_STEP( PropertyEditTarget::applyPropertyText, span._sceneKey, listTarget, listAfter );
-            transaction.recordObjectCommand( *pRecordOwner, std::move( command ) );
+            for ( const string& path : listPath )
+                InspectorEditRecorderInternal::recordPath( transaction, span, listChanged, listAfter, path );
         }
         inoutListSpan.clear();
     }

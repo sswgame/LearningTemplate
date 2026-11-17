@@ -51,7 +51,6 @@ namespace sw::editor
                         pPickedText = pSceneText;
                 }
                 ImGui::EndCombo();
-                // 고른 줄은 팝업 창의 다른 위젯이라 위젯 추적 없이 쓴다 — 한 번 쓰기 구간(다음 마감에 한 단계)이다.
                 if ( pPickedText != nullptr )
                     model.setPropertyText( row._rowID, *pPickedText, "Pick Scene Object" );
                 return true;

@@ -1104,22 +1104,39 @@ namespace sw::editor
         const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( rootProp._typeName.c_str() );
         if ( pBuiltin != nullptr && static_cast<ReflectBuiltinIndex>( pBuiltin->_index ) == ReflectBuiltinIndex::katomic_bool )
             return; // 다른 스레드가 쓰는 값이라 되돌리기에 넣지 않는다(되돌리면 런타임이 쓴 값을 덮는다)
-        if ( _editSpans.continueHeld( string_view{ rootProp._name.c_str() } ) )
-            return;
+        if ( _editSpans.isHeld( pRoot->_key ) )
+            return; // 끄는 중 — 연 때 찍은 값이 이 구간의 "편집 전" 이다
         const string undoLabel = label.empty() ? InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( rootProp ).c_str() ) : string{ label };
-        _editSpans.open( PropertyEditSpan::captureProperty( *_pObject, _pComponent, rootProp, _collectEditTargets, undoLabel ) );
+        _editSpans.open( pRoot->_key, PropertyEditSpan::captureProperty( *_pObject, _pComponent, rootProp, _collectEditTargets, undoLabel ) );
     }
 
-    void PropertyGridModel::openComponentRegionSpan( uint32 widgetID, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, string_view label )
+    void PropertyGridModel::touchRow( uint32 rowID )
     {
-        if ( _editSpans.isHeld( widgetID ) || EditorPlaySession::areSceneEditsAllowed() == false )
+        const RowBinding* pBinding = findBinding( rowID );
+        const RowBinding* pRoot    = pBinding != nullptr ? findBinding( pBinding->_rootRowID ) : nullptr;
+        if ( pRoot != nullptr )
+            _editSpans.touch( pRoot->_key );
+    }
+
+    void PropertyGridModel::trackComponentRegion( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, bool bActive, string_view label )
+    {
+        if ( bActive == false || EditorPlaySession::areSceneEditsAllowed() == false )
             return;
+        // 행 키(`_key`)와 겹치지 않게 영역 씨앗을 섞는다.
+        static constexpr uint64 kRegionSeed = 0x5245474E494F4E00ull;
+        const uint64            key         = HashUtil::combine( HashUtil::combine( HashUtil::combine( kRegionSeed, static_cast<uint64>( scope ) ), objectID ), componentID );
+        if ( _editSpans.isHeld( key ) )
+        {
+            _editSpans.touch( key );
+            return;
+        }
         GameObject* pObject    = findSceneObject( scope, objectID );
         Component*  pComponent = pObject != nullptr ? pObject->findComponentByID( componentID ) : nullptr;
         if ( pComponent == nullptr )
             return;
         const string undoLabel = InspectorPropertyLayout::makeUndoLabel( string{ label }.c_str() );
-        _editSpans.openForWidget( widgetID, PropertyEditSpan::captureComponent( *pComponent, undoLabel ) );
+        _editSpans.open( key, PropertyEditSpan::captureComponent( *pComponent, undoLabel ) );
+        _editSpans.touch( key );
     }
 
     void PropertyGridModel::endFrame()

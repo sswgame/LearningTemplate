@@ -34,8 +34,7 @@ namespace sw::editor
          * @param model 그리는 그리드의 편집 모델입니다(명령 한 길). 편집은 행 번호(`row._rowID`)로 명령을 부릅니다 — 위젯이 고친 내장 값은 `setRowValue` · `setRowNumber`,
          *              팝업 편집기 · 선택기 · 끌기를 놓을 때 한 번은 `setPropertyText`(통지 · 되돌리기를 모델이 맡는다, 언리얼 IPropertyHandle 에 해당).
          *              씬 · 모델 헤더는 보지 않습니다 — 씬을 읽어야 하는 값은 Model 폴더의 값 모음(`SceneObjectReferencePickerState` · 모델의 `collectComponentChoices`)이 만든다.
-         * @note 끄는 위젯은 그린 바로 뒤 `InspectorPropertyUndo::trackRowEdit` 로 상태를 넘기고 그 뒤에 쓰기 명령을 부릅니다 — 모델이 쓰기 직전에 그 위젯의 편집 구간을 잇거나 연다.
-         *       팝업 · 선택기처럼 한 번에 쓰는 편집은 추적 없이 명령만 부른다(한 번 쓰기 구간).
+         * @note 되돌리기는 구현이 하지 않는다 — 쓰기 명령이 그 행의 편집 구간을 열고, 그리드가 행을 그리는 동안 활성 위젯이 있었는지로 구간을 잇는다(`InspectorPropertyUndo::trackRow`).
          */
         virtual bool draw( const PropertyValueRow& row, PropertyGridModel& model ) = 0;
     };

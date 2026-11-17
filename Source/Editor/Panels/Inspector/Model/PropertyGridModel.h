@@ -163,7 +163,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /**
          * @brief 내장 값 행 @p rowID 에 위젯이 고친 사본 @p value 를 씁니다(`Builtin` 은 그 C++ 타입, `BitField` 는 bool). 끄는 동안 프레임마다 불린다.
-         * @details 첫 쓰기가 편집 구간을 열고 끄는 동안의 쓰기는 그 구간을 잇는다 — View 는 위젯 상태를 이 명령보다 먼저 넘긴다(`InspectorPropertyUndo::trackRowEdit`).
+         * @details 첫 쓰기가 그 행의 편집 구간을 열고 끄는 동안의 쓰기는 그 구간을 잇는다 — 위젯이 풀린 프레임의 마감이 한 단계로 올린다(`PropertyEditSpanSet`).
          */
         void setRowValue( uint32 rowID, const TaskValue& value );
         /** @brief 숫자 행 @p rowID 에 저장 단위 값 @p storedValue 를 허용 범위(`Min` · `Max`)로 자른 뒤 씁니다. 되돌리기는 `setRowValue` 와 같다. */
@@ -225,13 +225,13 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 편집 구간 — View 가 위젯 상태를 넘기고 프레임 끝에 마감한다(`PropertyEditSpanSet`)
         // ------------------------------------------------------------------------------
-        /** @brief 방금 그린 위젯 @p widgetID 의 상태입니다. 행 위젯은 쓰기 명령보다 먼저 부른다 — 활성이면 그 위젯의 구간이 이어지고, 풀렸으면 마감에 닫힌다. */
-        void trackWidget( uint32 widgetID, bool bActive, bool bDeactivated ) { _editSpans.trackWidget( widgetID, bActive, bDeactivated ); }
+        /** @brief View: 행 @p rowID 를 그리는 동안 활성 위젯을 그렸습니다(끄는 중 · 치는 중) — 그 행(깊이 0 조상)의 구간이 이어진다. */
+        void touchRow( uint32 rowID );
         /**
-         * @brief 확장 영역(컴포넌트에 바로 쓰는 `IInspectorComponent`)의 위젯 @p widgetID 가 활성화됐습니다 — @p scope 씬의 오브젝트 @p objectID 의 컴포넌트 @p componentID
-         *        프로퍼티 전부를 찍어 구간을 엽니다. 이미 그 위젯의 구간이 있거나 플레이 중이거나 대상이 없으면 아무것도 하지 않는다.
+         * @brief View: 확장 영역(컴포넌트에 바로 쓰는 `IInspectorComponent`) — @p scope 씬 오브젝트 @p objectID 의 컴포넌트 @p componentID 영역의 위젯이 활성이면(@p bActive)
+         *        구간을 잇고, 처음 활성인 프레임에는 그 컴포넌트 프로퍼티 전부를 찍어 엽니다(@p label 은 되돌리기 이름의 머리). 플레이 중이거나 대상이 없으면 아무것도 하지 않는다.
          */
-        void openComponentRegionSpan( uint32 widgetID, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, string_view label );
+        void trackComponentRegion( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, bool bActive, string_view label );
         /** @brief 프레임 끝: 닫힌 구간(풀린 위젯 · 한 번 쓰기 · 그려지지 않은 위젯)을 되돌리기에 남깁니다. 그리드를 쓰는 패널이 그리기를 마친 뒤 한 번 부른다. */
         void endFrame();
 

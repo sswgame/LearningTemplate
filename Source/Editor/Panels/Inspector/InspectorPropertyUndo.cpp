@@ -5,20 +5,25 @@
 #include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
-    void InspectorPropertyUndo::trackRowEdit( PropertyGridModel& model )
+    bool InspectorPropertyUndo::isActiveItemDrawn()
     {
-        // 해제는 편집 여부와 무관하게 받는다(`IsItemDeactivated`) — 구간이 없으면 할 일이 없고, 있으면 전 · 후가 같을 때 마감이 버린다.
-        model.trackWidget( static_cast<uint32>( ImGui::GetItemID() ), ImGui::IsItemActive(), ImGui::IsItemDeactivated() );
+        // `ActiveIdIsAlive` 는 프레임마다 0 에서 시작해 활성 위젯이 그려질 때(`ItemAdd` → `KeepAliveID`) 그 id 가 된다.
+        const ImGuiContext& context = *ImGui::GetCurrentContext();
+        return context.ActiveId != 0 && context.ActiveIdIsAlive == context.ActiveId;
+    }
+
+    void InspectorPropertyUndo::trackRow( PropertyGridModel& model, uint32 rowID, bool bActiveDrawnBefore )
+    {
+        if ( bActiveDrawnBefore == false && isActiveItemDrawn() )
+            model.touchRow( rowID );
     }
 
     void InspectorPropertyUndo::trackComponentRegion( PropertyGridModel& model, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const utf8* pLabel )
     {
-        const uint32 widgetID = static_cast<uint32>( ImGui::GetItemID() );
-        if ( ImGui::IsItemActivated() )
-            model.openComponentRegionSpan( widgetID, scope, objectID, componentID, pLabel != nullptr ? string_view{ pLabel } : string_view{} );
-        model.trackWidget( widgetID, ImGui::IsItemActive(), ImGui::IsItemDeactivated() );
+        model.trackComponentRegion( scope, objectID, componentID, ImGui::IsItemActive(), pLabel != nullptr ? string_view{ pLabel } : string_view{} );
     }
 } // namespace sw::editor
