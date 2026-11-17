@@ -80,18 +80,22 @@ namespace sw
 {
     /**
      * @struct AppearanceBakedMeshCache
-     * @brief 같은 차림(키 — 해석의 메시 해시 · 부품 · 원본 내용 토큰의 키 · 데이터 판)의 베이크한 메시를 나눠 줍니다. 약한 참조라 그 메시를 그리는 유닛이 없으면 사라집니다.
+     * @brief 같은 차림(키 — 해석의 메시 해시 · 부품 · 원본 내용 토큰의 키 · 데이터 판)의 베이크한 메시를 나눠 줍니다. 수명은 씬이 아니라 캐시의 예산이다
+     *        (`CharacterMeshCacheConfig::_budgetMegabytes` — 넘으면 그리는 쪽이 없는 것을 가장 오래 안 쓴 것부터 뺀다).
      * @details 같은 차림의 NPC 가 한 번 베이크한 메시를 같이 그린다 — 베이크하는 비용이 한 번이고, 스킨 원본이 같은 객체라 군중 포즈 묶음도 나눌 수 있다(언리얼 Mutable 의 결과 캐시).
+     *          씬을 바꿔도 같은 차림을 다시 짓지 않는다 — 언리얼 DDC · 유니티 에셋 캐시처럼 파생 결과는 쓰는 쪽이 아니라 캐시가 쥔다(여기는 메모리 안이고 예산으로 묶는다).
+     *          항목은 원본 메시도 쥔다 — 원본이 내려가 다시 읽히면 내용 토큰(키)이 달라져 다시 지었다.
      *          표는 GameFramework 의 모듈 서브시스템이 갖는다(`AppearanceBakedMeshTable` — 게임 서비스가 없는 실행에는 없어 매번 굽는다). 게임 스레드에서 부른다.
      */
     struct SW_GF_API AppearanceBakedMeshCache
     {
-        /** @brief 키의 메시들이 모두 살아 있으면 @p outListMesh 에 채우고 true 입니다(원본을 그리는 부품은 nullptr). */
+        /** @brief 키의 항목이 있고 원본이 구울 때 그대로면 @p outListMesh 에 채우고 true 입니다(원본을 그리는 부품은 nullptr). 원본이 다시 읽혔으면 항목을 치우고 false 입니다. */
         [[nodiscard]] static bool tryGet( uint64 key, vector<shared_ptr<Mesh>>& outListMesh );
         /**
-         * @brief 키의 베이크한 메시들을 남깁니다. 사라진 항목은 이때 치웁니다.
-         * @param listSourceContent 키에 섞은 원본 내용 토큰들 — 항목이 들고 있어, 원본이 지워져도 그 토큰 주소가 다른 원본의 키로 다시 쓰여 낡은 베이크를 내주지 않는다.
+         * @brief 키의 베이크한 메시들을 남깁니다. 예산을 넘으면 이때 뺀다.
+         * @param listSource 키에 섞은 원본 메시들(@p listSourceContent 와 같은 순서 · 개수) — 항목이 쥐어 다음 씬도 같은 원본 객체를 받는다
+         * @param listSourceContent 키에 섞은 원본 내용 토큰들 — 원본이 다시 읽혀 토큰이 바뀌면 그 항목은 낡았다(`tryGet` 이 치운다)
          */
-        static void store( uint64 key, const vector<shared_ptr<Mesh>>& listMesh, const vector<IdentityToken>& listSourceContent );
+        static void store( uint64 key, const vector<shared_ptr<Mesh>>& listMesh, const vector<shared_ptr<Mesh>>& listSource, const vector<IdentityToken>& listSourceContent );
     };
 } // namespace sw
