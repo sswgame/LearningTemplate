@@ -146,8 +146,8 @@ namespace sw
     {
         if ( pComp == nullptr || pComp->getOwner() == nullptr )
             return;
-        GameObject& owner = *pComp->getOwner();
-        freezeLocalIDs( owner ); // 다른 형제의 id 를 먼저 굳힌다 — 이 컴포넌트의 id 가 바뀌어도 그들의 옛 키 해시가 흔들리지 않게
+        // 형제를 굳히지 않는다 — 로드 중(모르는 타입 보관 `MissingComponent`)에도 불리고, 끝에 붙은 컴포넌트는 앞 형제의 옛 키 순번을 바꾸지 않는다.
+        const GameObject&     owner = *pComp->getOwner();
         unordered_set<uint64> setTaken;
         for ( const Component* pOther : owner.getComponents() )
         {
