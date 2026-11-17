@@ -4,7 +4,8 @@
  * @details 언리얼 `TFieldIterator<FProperty>` · `FPropertyValueIterator`(구조체 · 컨테이너 재귀), 유니티 `SerializedProperty.Next( enterChildren )` ·
  *          Unity.Properties `PropertyVisitor` 자리다. 칸마다 가상 호출이 들지 않게 방문자는 템플릿 인자로 받아 인라인한다(`ReflectedValueVisitor` 와 같은 모양) —
  *          가상 `IPropertyVisitor` 는 기각했다(docs/DesignBacklog.md 리플렉션 남은 몫 W-R4).
- *          - 방문 순서는 `TypeInfo::getPropertiesWithBase` 그대로다(기반부터, 파생이 같은 이름을 제자리에서 덮는다).
+ *          - 방문 순서는 `TypeInfo::getPropertiesWithBase` 그대로다(기반부터, 파생이 같은 이름을 제자리에서 덮는다). `_bWithBase` 를 끄면 최상위 타입이 선언한 칸만이다.
+ *          - 객체 주소가 nullptr 이면 스키마만 걷는다 — 칸은 알리고 `_pValue` 는 nullptr, 내려가지 않는다(문서 · 인스펙터 배치 · 기본값 풀이처럼 인스턴스 없이 칸을 보는 소비자).
  *          - 비트필드는 값 주소가 없다 — `_pValue` 가 nullptr 이고 방문자는 `_property.getValue<bool>( _pObject )` 로 읽는다(같은 바이트의 다른 비트를 덮지 않는다).
  *          - 내려가기(`_bIntoValues`)는 반사 구조체 값과, 원소가 반사 구조체인 시퀀스다. 맵 · 중첩 컨테이너 · 잎 원소는 칸으로만 알린다(그 안을 볼 소비자가 생기면 더한다).
  */
@@ -75,11 +76,13 @@ namespace sw
     {
         PropertyRoleMask       _roleMask{};      ///< 이 역할의 칸만 알린다(최상위만 거른다 — 고른 칸 안의 구조체 칸은 모두 그 칸의 몫이다)
         uint8                  _bIntoValues : 1; ///< 반사 구조체 값 · 구조체 원소 시퀀스로 내려간다
-        [[maybe_unused]] uint8 _reserved    : 7;
+        uint8                  _bWithBase   : 1; ///< 최상위 타입의 기반 칸부터 돈다. 끄면 그 타입이 선언한 칸만이다(타입 단계마다 따로 도는 소비자 — `ComponentDefaults`)
+        [[maybe_unused]] uint8 _reserved    : 6;
 
         ReflectVisitOptions() noexcept
             : _roleMask{}
             , _bIntoValues{ SW_FALSE }
+            , _bWithBase{ SW_TRUE }
             , _reserved{ 0 }
         {
         }
@@ -130,13 +133,14 @@ namespace sw
         template <typename TObject, typename TVisitor>
         ReflectVisitFlow visitObject( const TypeInfo& type, TObject* pInstance, TVisitor& visitor, const uint32 depth ) const
         {
-            if ( pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth )
+            if ( depth > constant::reflection::kMaxParentChainDepth )
                 return ReflectVisitFlow::Continue;
-            for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
+            const PropertyListView listProperty = depth == 0 && _options._bWithBase == SW_FALSE ? PropertyListView{ type._listProperty } : type.getPropertiesWithBase();
+            for ( const PropertyInfo& prop : listProperty )
             {
                 if ( depth == 0 && _options._roleMask.matches( *prop._metadata ) == false )
                     continue;
-                TObject* const                     pValue = prop.getRawPtr( pInstance );
+                TObject* const                     pValue = pInstance != nullptr ? prop.getRawPtr( pInstance ) : nullptr;
                 const ReflectVisitFieldOf<TObject> field{ type, prop, pInstance, pValue, depth };
                 const ReflectVisitFlow             flow = visitor( field );
                 if ( flow == ReflectVisitFlow::Stop )

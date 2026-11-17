@@ -7,6 +7,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
@@ -233,11 +234,16 @@ namespace sw
     void ComponentDefaults::resolveNodeToPatches( const TypeInfo& typeInfo, const XMLNode& compNode, vector<DefaultPatch>& inoutListPatch )
     {
         const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
-        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+        // 단계(타입 하나)의 노드는 그 타입이 선언한 칸만 푼다 — 기반 칸은 기반 단계의 노드가 먼저 푼다(`apply` 가 루트 → 파생 순으로 얹는다).
+        ReflectVisitOptions options;
+        options._bWithBase = SW_FALSE;
+        const ReflectPropertyVisitor propertyVisitor{ registry, options };
+        (void)propertyVisitor.visitProperties( typeInfo, static_cast<const void*>( nullptr ), [&]( const ReflectVisitConstField& field )
         {
-            const utf8* pPropName = prop._name.c_str();
+            const PropertyInfo& prop      = field._property;
+            const utf8*         pPropName = prop._name.c_str();
             if ( pPropName == nullptr )
-                return;
+                return ReflectVisitFlow::Continue;
             const utf8* pAttrVal = compNode.findAttribute( pPropName );
             if ( pAttrVal == nullptr )
             {
@@ -252,7 +258,7 @@ namespace sw
                 }
             }
             if ( pAttrVal == nullptr )
-                return;
+                return ReflectVisitFlow::Continue;
 
             DefaultPatch patch;
             patch._pProperty = &prop;
@@ -269,6 +275,7 @@ namespace sw
                     patch._arrByte.clear();
             }
             inoutListPatch.push_back( std::move( patch ) );
+            return ReflectVisitFlow::Continue;
         } );
     }
 
