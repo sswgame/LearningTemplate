@@ -145,12 +145,18 @@ namespace sw
             {
                 string text;
                 if ( FileUtil::readTextFile( absPath, text ) && FileUtil::writeTextFile( absPath, AssetGUIDHeader::write( text, guid ) ) )
+                {
+                    AssetRegistry::record( guid, assetID ); // 실행 중 색인도 안다 — 이 에셋을 가리키는 참조가 다음 기동 전에도 GUID 로 쓰인다
                     return true;
+                }
                 break;
             }
             case AssetIdentityKind::Source:
                 if ( FileUtil::writeTextFile( AssetMeta::makePath( absPath ), AssetMeta::makeText( assetID, guid ) ) )
+                {
+                    AssetRegistry::record( guid, assetID );
                     return true;
+                }
                 break;
         }
         SW_LOG_ERROR_ID( "AssetIdentity.AssignFailed", "Could not give '%#' its asset GUID - run py -3 -m Scripts asset-ids --fix", assetID );

@@ -107,3 +107,27 @@ SW_TEST_CASE( AssetRegistryTest, InstalledTableResolvesBothWays )
     SW_EXPECT_FALSE( AssetRegistry::resolve( guid ).has_value() );
     (void)AssetRegistry::install( std::move( previous ) );
 }
+
+/**
+ * @brief [AssetRegistryTest] 개발 실행 중 옮기기 · 새 정체성이 프로세스 표를 고친다 — 옮긴 에셋은 새 경로로 풀리고 옛 경로에는 GUID 가 없다
+ */
+SW_TEST_CASE( AssetRegistryTest, MoveAndRecordUpdateTheInstalledTable )
+{
+    const AssetGUID            moved   = AssetRegistryTestUtil::makeGUID( "000000000000000000000000000000d1" );
+    const AssetGUID            created = AssetRegistryTestUtil::makeGUID( "000000000000000000000000000000d2" );
+    vector<AssetRegistryLayer> listLayer;
+    listLayer.push_back( AssetRegistryTestUtil::makeLayer( "one", {
+                                                                      { moved, "common/data/old.xml" }
+    } ) );
+    AssetRegistry previous = AssetRegistry::install( std::move( *AssetRegistry::merge( listLayer ) ) );
+
+    SW_EXPECT_TRUE( AssetRegistry::move( "common/data/old.xml", "common/data/sub/new.xml" ) );
+    SW_EXPECT_EQUAL( string( "common/data/sub/new.xml" ), AssetRegistry::resolve( moved ).value_or( string{} ) );
+    SW_EXPECT_FALSE( AssetRegistry::resolveGUID( "common/data/old.xml" ).has_value() );
+    SW_EXPECT_FALSE( AssetRegistry::move( "common/data/unknown.xml", "common/data/x.xml" ) );
+
+    AssetRegistry::record( created, "common/data/created.xml" );
+    SW_EXPECT_TRUE( AssetRegistry::resolveGUID( "common/data/created.xml" ) == created );
+
+    (void)AssetRegistry::install( std::move( previous ) );
+}

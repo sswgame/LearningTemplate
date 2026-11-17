@@ -62,6 +62,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief @p registry 를 프로세스 표로 걸고 있던 표를 돌려줍니다 — 테스트가 잠시 바꾼 표를 되돌린다. 비우려면 빈 색인(`AssetRegistry{}`)을 건다. */
         static AssetRegistry install( AssetRegistry registry );
+        /**
+         * @brief 프로세스 표에 한 줄을 적습니다 — 개발 실행에서 에셋이 새 정체성을 받았을 때(에디터 새로 만들기 · 복제 · 가져오기, `AssetIdentityRules::assignNewIdentity`).
+         * @details 같은 GUID 의 옛 줄 · 같은 자리의 다른 GUID 는 `merge` 와 같은 규칙으로 비운다. 엔진 없이 도는 도구(표가 없다)에서는 할 일이 없다.
+         */
+        static void record( const AssetGUID& guid, string_view assetID );
+        /** @brief 프로세스 표에서 @p oldAssetID 의 에셋을 @p newAssetID 로 옮깁니다(에디터 옮기기 · 이름 바꾸기 — GUID 는 그대로다). 그 경로가 색인에 없으면 false 입니다. */
+        static bool move( string_view oldAssetID, string_view newAssetID );
         /** @brief 프로세스 표에서 @p guid 의 리소스 id 입니다. 표가 없거나 줄이 없으면 없음입니다. */
         [[nodiscard]] static optional<string> resolve( const AssetGUID& guid );
         /** @brief 프로세스 표에서 리소스 id @p assetID 의 GUID 입니다. 표가 없거나 줄이 없으면 없음입니다. */
@@ -76,6 +83,9 @@ namespace sw
         [[nodiscard]] static bool isReferenceText( string_view text );
         /** @brief GUID 참조 글 @p text 의 GUID 입니다. 머리가 없거나 뒤가 글 표기가 아니면 없음입니다(고쳐 읽지 않는다). */
         [[nodiscard]] static optional<AssetGUID> parseReferenceText( string_view text );
+
+        /** @brief 한 줄을 적습니다 — 같은 GUID 의 옛 자리와 같은 자리의 다른 GUID 를 비운다(`merge` · `record` · `move` 가 함께 쓴다). */
+        void put( const AssetGUID& guid, string_view assetID );
 
     private:
         unordered_map<AssetGUID, string> _mapGUIDToPath;

@@ -72,6 +72,20 @@ namespace sw
             ScopedSharedLock<shared_mutex> lock{ _mutex };
             return _registry.findGUID( assetID );
         }
+        void put( const AssetGUID& guid, string_view assetID )
+        {
+            ScopedLock<shared_mutex> lock{ _mutex };
+            _registry.put( guid, assetID );
+        }
+        bool move( string_view oldAssetID, string_view newAssetID )
+        {
+            ScopedLock<shared_mutex>  lock{ _mutex };
+            const optional<AssetGUID> guid = _registry.findGUID( oldAssetID );
+            if ( guid.has_value() == false )
+                return false;
+            _registry.put( *guid, newAssetID );
+            return true;
+        }
 
     private:
         mutable shared_mutex    _mutex;
@@ -90,21 +104,26 @@ namespace sw
                 return unexpected( Error{ checked.error().kind(), checked.error().message(), layer._sourceName + ": " + string( checked.error().detail() ) } );
             for ( const AssetRegistryEntry& entry : layer._listEntry )
             {
-                const string lowerID = AssetRegistryInternal::toLowerID( entry._assetID );
-                // 이 GUID 의 옛 자리(앞 층)를 비운다 — 옮긴 에셋의 옛 경로로 찾으면 없어야 한다.
-                const auto oldPath = registry._mapGUIDToPath.find( entry._guid );
-                if ( oldPath != registry._mapGUIDToPath.end() )
-                    registry._mapPathToGUID.erase( AssetRegistryInternal::toLowerID( oldPath->second ) );
-                // 이 자리를 쓰던 다른 GUID(앞 층)는 풀리지 않게 한다 — 그 파일은 이제 이 에셋이다.
-                const auto previousOwner = registry._mapPathToGUID.find( lowerID );
-                if ( previousOwner != registry._mapPathToGUID.end() && previousOwner->second != entry._guid )
-                    registry._mapGUIDToPath.erase( previousOwner->second );
-                registry._mapGUIDToPath[entry._guid] = entry._assetID;
-                registry._mapPathToGUID.erase( lowerID );
-                registry._mapPathToGUID.emplace( lowerID, entry._guid );
+                registry.put( entry._guid, entry._assetID );
             }
         }
         return registry;
+    }
+
+    void AssetRegistry::put( const AssetGUID& guid, string_view assetID )
+    {
+        const string lowerID = AssetRegistryInternal::toLowerID( assetID );
+        // 이 GUID 의 옛 자리를 비운다 — 옮긴 에셋의 옛 경로로 찾으면 없어야 한다.
+        const auto oldPath = _mapGUIDToPath.find( guid );
+        if ( oldPath != _mapGUIDToPath.end() )
+            _mapPathToGUID.erase( AssetRegistryInternal::toLowerID( oldPath->second ) );
+        // 이 자리를 쓰던 다른 GUID 는 풀리지 않게 한다 — 그 파일은 이제 이 에셋이다.
+        const auto previousOwner = _mapPathToGUID.find( lowerID );
+        if ( previousOwner != _mapPathToGUID.end() && previousOwner->second != guid )
+            _mapGUIDToPath.erase( previousOwner->second );
+        _mapGUIDToPath[guid] = string( assetID );
+        _mapPathToGUID.erase( lowerID );
+        _mapPathToGUID.emplace( lowerID, guid );
     }
 
     optional<string> AssetRegistry::findPath( const AssetGUID& guid ) const
@@ -126,6 +145,19 @@ namespace sw
     AssetRegistry AssetRegistry::install( AssetRegistry registry )
     {
         return engine::getSubsystem<AssetRegistryTable>().replace( std::move( registry ) );
+    }
+
+    void AssetRegistry::record( const AssetGUID& guid, string_view assetID )
+    {
+        AssetRegistryTable* const pTable = engine::findSubsystem<AssetRegistryTable>();
+        if ( pTable != nullptr )
+            pTable->put( guid, assetID );
+    }
+
+    bool AssetRegistry::move( string_view oldAssetID, string_view newAssetID )
+    {
+        AssetRegistryTable* const pTable = engine::findSubsystem<AssetRegistryTable>();
+        return pTable != nullptr && pTable->move( oldAssetID, newAssetID );
     }
 
     optional<string> AssetRegistry::resolve( const AssetGUID& guid )
