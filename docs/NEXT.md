@@ -8,13 +8,12 @@
 
 ## 0. 다음 순서
 
-1. **통합 묶음 5 검증:** main 1b9293f5ed 에 작업자 갈래 약 30 개를 합친 `integ5`(끝 a9e93f39a2)는 병합이 끝났고 메인 작업 폴더에서 묶음 끝 검증(`preflight`) 중이다. 통과하면 main 에 합쳐 push 한다. 새 갈래를 합칠 때는 `git cherry <통합 갈래> <갈래>` 로 이미 들어간 커밋을 거른다.
+1. **다음 묶음 — 갈래 r-plat · r-econ · r-edrem · r-hang · r-tidy(옛 백업을 최신 main 위로 옮겨 커밋만 함, 빌드 안 됨):** 둘씩 합쳐 빌드 · 검증 · push 한다. r-edrem 은 새 테스트 파일이 글롭에 잡히는지, r-hang 은 Required 슬롯이 는 `CharacterMeshCacheConfig` 의 바인딩 검사, r-tidy 는 `--from cpu` 에서 tidy 를 건너뛰는 것을 본다.
    - 작업자 몫: `GameObjectManager.inl` 머리말의 "포함을 잊으면 링크에서 멈춘다" 를 맞춘다 — clang 은 `-Werror=undefined-func-template`(`sw_require_template_definitions`)로 컴파일에서 멈추고 MSVC 만 링크에서 멈춘다. 그 뒤 에셋 GUID 2 · 3 단계(5 절 · 감사 A-20).
 2. **감사 열린 항목(7 절):** P1 9 · P2 7 건. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고친다. 작업자에게는 NEXT 를 고치지 말게 하고 통합 커밋이 줄을 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
 
-- **통합 묶음 5(integ5):** 병합이 겹친 자리 — O-3 해시 줄(w-net `LoginHashNeverRunsOnAStoreWorker`)과 main 의 `PasswordHashBudget`, A-12 · R-6 의 팩 · 텍스처 스트리밍(w-pk34 · w-rhi 대 92caa26b99). 단위: `DeactivateWithoutEditDropsPending`(E-7), `OverrideFollowsComponentWhenAnEarlierSiblingIsRemoved` · `SavedHandleSurvivesSiblingInsertion`(A-2), `MoveCharactersMatchesMoveCharacter`(S-8), `CancelLeavesOtherRequesters`(A-19), `TimeTest.SimulationTimeRebaseKeepsQuarterSecondSteps` · `RTSWorldTest.SpeedScaleKeepsStepRatio`(K-5 · K-6), `PrefabOverridesTest.OmitDefaultValuesKeepsComponentLocalID`. 형식 판이 오른 것: `.mesh` 판 7(R-15 — 다시 쿠킹), 팩 형식 3(A-10), 서브리소스 전이의 Vulkan · DX11 · GL · WebGPU(R-10, lightculling · shadow_* · postprocess_* dx12 · vk). 렌더 배율 GPU 프레임 시계(RN-8, w-rs). 키트 시연 씬 · 시나리오 17 개(K-14, w-kitdemo)와 키트 규칙 자산(K-4 · K-7 · K-9 · K-10, w-kits), 에디터 형제 순서 · 에셋 색인(E-6 · E-8). `MemoryBenchTest` · `ContainerBenchTest` 는 꺼 둔 벤치라 숫자만(C-6 · C-9).
 - **5-4 리플렉션(감사 A-24 남은 몫):** 묶음 TU(`ReflectionBundle.N.cpp` — 헤더 충돌 · Windows 매크로 오염), `build_time_report.py` 생성 비중(전 30.7 %, 목표 8 % 미만), `kMethods` · `kEvents` 상수 초기화, `.gen.cpp` 합계(전 7.86 MB), `_bDerivedFlagsBuilt` 단언, 단위 `PhysicsHookRegistryTest.*` · `ReflectionTypeRegistryTest.PropertyHandleGoesStaleWhenItsDeclaringTypeChanges` · `ReflectionTypeInfoTest.MethodTableBuildsMethodList` · `ReflectionPropertyRoleTest.DerivedFlagsAreBuiltByRegistrationNotByFirstQuery` · `ReflectionTypeInfoTest.PropertyDescTableSharesDefaultMetadata`, `ReflectionPipeline.LeafNameCollision`.
 - **RHI 5-2**(Vulkan 기록 경로 락 제거 · 텍스처 전이 묶음 ABI v54 · 컴퓨트 큐 타임스탬프 ABI v55): RHI 단위(`RHITrackedStateTest`), lightculling · shadow_* · postprocess_* 시나리오 dx12 · vk, `D3D12.ComputeTimestampClock` 어긋남, Vulkan 비동기 컴퓨트 `GPU.<패스>` · Tracy 겹침.
 - **실장치 · 백엔드 동작:** Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯, DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), Vulkan placed 텍스처(`RT.Frame.transientPlacements`, 검증 레이어 경고 없이 — lavapipe · Android 포함).
