@@ -101,6 +101,7 @@ namespace sw
         , _mapPendingAccount{}
         , _listLoadScratch{}
         , _listStateScratch{}
+        , _mapPublished{}
         , _listSubscription{}
         , _stats{}
         , _pPeers{ nullptr }
@@ -124,6 +125,7 @@ namespace sw
         }
         if ( _replicator.initialize( &peers, MMOReplicatorConfig{}, _grid ) == false )
             return false;
+        _mapPublished.clear(); // 복제기를 새로 세웠다 — 모두 다시 올린다
         if ( _remoteCalls.initialize( &peers, RemoteCallServerConfig{ rules._remoteCallBurstCount, rules._remoteCallRefillMilliseconds } ) == false )
             return false;
         _listSubscription.push_back( router.registerHandler( &_remoteCalls ) );
@@ -324,7 +326,7 @@ namespace sw
         const ValeAvatar* pAvatar = _world.findAvatar( iter->second->_avatarID );
         if ( pAvatar != nullptr )
             _profiles.requestSave( pAvatar->_accountID, pAvatar->_profile );
-        _replicator.removeEntity( iter->second->_avatarID );
+        removePublishedEntity( iter->second->_avatarID );
         _world.removeAvatar( iter->second->_avatarID );
         _mapAgent.erase( iter );
     }
@@ -351,41 +353,48 @@ namespace sw
 
     void ValeServerLink::publishEntities()
     {
-        // 상태 바이트 — 갈래(varuint) · 값(varint: 아바타는 레벨, 짐승은 체력, 버섯은 1). 위치는 엔티티 칸이 싣는다.
-        const auto writeState = [this]( uint32 typeID, int32 value )
+        // 매 틱 모두를 다시 싣지 않는다 — 위치 · 상태 값이 지난번 올린 것과 다른 엔티티만 올린다(가만히 있는 아바타 · 짐승 · 버섯은 건너뛴다).
+        _world.forEachAvatar( [this]( const ValeAvatar& avatar )
         {
-            BitWriter writer( std::move( _listStateScratch ) );
-            writer.writeVarUint( typeID );
-            writer.writeVarInt( value );
-            _listStateScratch = writer.releaseBytes();
-        };
-        _world.forEachAvatar( [this, &writeState]( const ValeAvatar& avatar )
-        {
-            writeState( kAvatarTypeID, avatar._profile._level );
-            MMOEntity entity;
-            entity._listState  = _listStateScratch;
-            entity._position   = avatar._profile._position;
-            entity._entityID   = avatar._avatarID;
-            entity._typeID     = kAvatarTypeID;
-            entity._importance = 2.0f; // 다른 플레이어는 짐승보다 먼저 보인다
-            _replicator.setEntity( entity );
+            publishEntity( avatar._avatarID, ValePublishedEntity{ avatar._profile._position, avatar._profile._level, kAvatarTypeID }, 2.0f ); // 다른 플레이어는 짐승보다 먼저 보인다
         } );
         for ( const ValePlacementState& spawn : _world.getPlacements() )
         {
             if ( spawn._bPresent == SW_FALSE )
             {
-                _replicator.removeEntity( spawn._placementID );
+                removePublishedEntity( spawn._placementID );
                 continue;
             }
             const uint32 typeID = spawn._def._kind == ValePlacementKind::Creature ? kCreatureTypeID : kHerbTypeID;
-            writeState( typeID, spawn._health );
-            MMOEntity entity;
-            entity._listState = _listStateScratch;
-            entity._position  = spawn._def._position;
-            entity._entityID  = spawn._placementID;
-            entity._typeID    = typeID;
-            _replicator.setEntity( entity );
+            publishEntity( spawn._placementID, ValePublishedEntity{ spawn._def._position, spawn._health, typeID }, 1.0f );
         }
+    }
+
+    void ValeServerLink::publishEntity( uint32 entityID, const ValePublishedEntity& value, float32 importance )
+    {
+        const auto iter = _mapPublished.find( entityID );
+        if ( iter != _mapPublished.end() && iter->second == value )
+            return;
+        // 상태 바이트 — 갈래(varuint) · 값(varint: 아바타는 레벨, 짐승은 체력, 버섯은 1). 위치는 엔티티 칸이 싣는다.
+        BitWriter writer( std::move( _listStateScratch ) );
+        writer.writeVarUint( value._typeID );
+        writer.writeVarInt( value._stateValue );
+        _listStateScratch = writer.releaseBytes();
+        MMOEntity entity;
+        entity._listState  = _listStateScratch;
+        entity._position   = value._position;
+        entity._entityID   = entityID;
+        entity._typeID     = value._typeID;
+        entity._importance = importance;
+        _replicator.setEntity( entity );
+        _mapPublished[entityID] = value;
+        ++_stats._publishCount;
+    }
+
+    void ValeServerLink::removePublishedEntity( uint32 entityID )
+    {
+        if ( _mapPublished.erase( entityID ) != 0 )
+            _replicator.removeEntity( entityID );
     }
 
     // ------------------------------------------------------------------------------
