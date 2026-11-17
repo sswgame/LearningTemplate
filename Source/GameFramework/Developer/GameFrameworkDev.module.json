@@ -1,0 +1,19 @@
+{
+    "_name": "GameFrameworkDev",
+    "_version": "1.0.0",
+    "_kind": "GameFramework",
+    "_description": "GameFramework 개발 전용 공유 모듈 — GF 창구(IGameSettingsOverride · ISnapshotFaultHook)에 개발 구성만의 구현을 정적 등록한다(언리얼 DeveloperTool 모듈 자리). 배포는 짓지 않는다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

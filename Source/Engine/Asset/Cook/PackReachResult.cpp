@@ -475,10 +475,19 @@ namespace sw
                 uint32 addRedirectTableRoots()
                 {
                     uint32 rootCount = 0;
-                    for ( const string& assetID : _files._setPackable )
+                    // 디스크에 있는 도메인 표를 본다 — 담을 수 있는 집합만 보면 제외 규칙(`PackConfig.json`)이 뺀 표가 조용히 빠지고, 런타임은 "표가 없는 도메인" 을
+                    // 정상으로 봐 옛 경로가 찾지 못한 에셋이 된다(설계 2026-11-17 X1). 그 표는 쿠킹 오류다.
+                    for ( const string& assetID : _files._setExisting )
                     {
                         if ( AssetRedirect::isTable( assetID ) == false || AssetRedirect::makeTableID( assetID ) != assetID )
                             continue;
+                        if ( _files._setPackable.contains( assetID ) == false )
+                        {
+                            SW_LOG_ERROR_ID( "PackCooker.RedirectTableExcluded", "Pack cook: the redirect table '%#' is excluded by the pack rules - old paths would not resolve at runtime (keep it in the pack)",
+                                             assetID );
+                            _bFailed = true;
+                            continue;
+                        }
                         _setIncluded.insert( assetID );
                         ++rootCount;
                     }

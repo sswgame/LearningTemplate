@@ -1,14 +1,18 @@
 #include "pch.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
+#include "Engine/Asset/Cook/PackCooker.h"
 #include "Engine/Asset/Cook/PackReachResult.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 using namespace sw;
 
@@ -533,4 +537,33 @@ SW_TEST_CASE( PackReachabilityTest, GameCookRulesDoNotLeakIntoOtherGames )
     SW_REQUIRE_TRUE( PackReachResult::collect( params, rules, files, source, result ) );
     SW_EXPECT_TRUE( result._setIncluded.contains( string( "game/x/models/unit.mesh" ) ) );
     SW_EXPECT_FALSE( result._setIncluded.contains( string( "game/y/models/unit.mesh" ) ) );
+}
+
+/**
+ * @brief [PackReachabilityTest] 디스크에 있는 도메인 리다이렉트 표를 제외 규칙이 빼면 쿠킹 오류다 — 조용히 빠지면 런타임이 "표 없는 도메인" 으로 보고 옛 경로를 찾지 못한다
+ */
+SW_TEST_CASE( PackReachabilityTest, ExcludedRedirectTableIsACookError )
+{
+    AssetReferenceFields params;
+    SW_REQUIRE_TRUE( Util::loadRepositoryProperties( params ) );
+    PackReachFiles     files;
+    Util::MemorySource source;
+    Util::addGame( files, source, "" );
+    Util::addText( files, source, "game/x/maps/a.scene.xml", "<Scene/>" );
+    files._setExisting.insert( "common/redirects.xml" ); // 디스크에는 있는데 담을 수 있는 집합에 없다(제외 규칙이 뺐다)
+
+    SW_EXPECT_LOG( "PackCooker.RedirectTableExcluded" );
+    PackReachResult result;
+    SW_EXPECT_FALSE( PackReachResult::collect( params, Util::makeRules(), files, source, result ) );
+}
+
+/** @brief [PackReachabilityTest] 저장소의 실제 팩 규칙(`Config/Engine/PackConfig.json`)은 도메인 리다이렉트 표를 빼지 않는다 — 어느 빌드 타깃이든 */
+SW_TEST_CASE( PackReachabilityTest, RealPackRulesKeepRedirectTables )
+{
+    PackConfig config;
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    for ( const utf8* pBuildTarget : { "Game", "Client", "Server" } )
+    {
+        SW_EXPECT_TRUE_MSG( PackCooker::shouldIncludeFile( AssetRedirect::kFileName, config, "dx12", pBuildTarget ), string( "build target " ) + pBuildTarget );
+    }
 }
