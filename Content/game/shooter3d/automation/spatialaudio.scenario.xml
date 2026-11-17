@@ -7,7 +7,6 @@
   실행: App -scenario=game/shooter3d/automation/spatialaudio.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.spatialaudio" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<AllowLog id="Audio.DeviceLost" reason="장치 없는 러너에서도 오프라인으로 돈다"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<WaitUntil watch="Audio.InstanceCount" atLeast="2" timeoutWallSeconds="10"/>
 	<Expect watch="Audio.ClipCacheBytes" atLeast="1"/><!-- 재생 중인 환경음 클립은 캐시가 들고 센다(예산 퇴출은 재생 중인 것을 빼지 않는다) -->

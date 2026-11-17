@@ -12,6 +12,10 @@ Scripts/lint/feature_references.py
 - 개발 명령: `SW_DEV_COMMAND`. 참조 = 시나리오 `line="…"` 의 낱말, 등록 줄 밖 코드 · 스크립트 글자의 첫 낱말.
 - 등록 없는 명령 함수: 명령 모양(`static bool f( const vector<string>&, string& )`)의 함수가 그 파일에서 정의 말고 한 번도 불리지 않으면 위반이다 —
   `*DevCommands.cpp` 를 기능 파일로 합칠 때(165e16647c) `SW_DEV_COMMAND` 줄만 빠져 치트 명령 아홉이 함수만 남았는데, 익명 구조체의 static 멤버는 컴파일러가 경고하지 않는다.
+- 낡은 기대 로그 id(방향이 거꾸로 — 참조가 정의를 요구한다): `SW_EXPECT_LOG( "X" )` · 시나리오 `<ExpectLog id="X">` · `<AllowLog id="X">` 의 X 가 정의에 없으면 위반이다 —
+  id 를 바꾸거나 지우면 기대가 조용히 무의미해진다(`docs/DesignBacklog.md` D4-5). 정의 = `Tests/` 밖 C++ 의 id 모양(`영역.사건`) 글자 리터럴 전부(주석 · `SW_EXPECT_LOG` 인자 제외),
+  `Tests/` 안에서는 `SW_*_ID( "X"` 의 첫 인자. 로그 매크로만 보지 않는 까닭: id 는 `addErrorWithID` · `report` · `parseBoolToken` · `#define SW_LOG_ID_…` 같은 도우미를 거쳐
+  매크로에 닿아(`"" id` 이어 붙이기) 매크로 자리에는 이름만 남는다. 실행 중에 이어 붙인 id 는 리터럴이 없으니 예외 표(`_logIDs`)에 까닭과 함께 둔다.
 
 예외는 데이터 한 곳(`Config/Rules/Lint/FeatureReferenceExceptions.json`)에 까닭과 함께 둔다. 까닭이 비었거나, 이제 참조가 생겼거나, 정의가 사라진 예외도 위반이다 — 표가 낡지 않게.
 
@@ -52,6 +56,11 @@ COMMAND_LINE_PATTERN = re.compile(r'\bline="([^"]+)"')
 WORD_PATTERN = re.compile(r'[A-Za-z_]\w*')
 LITERAL_PATTERN = re.compile(r'"([A-Za-z][\w.]*)(?:[ "])')
 REFLECT_LOOK_BACK_LINES = 6
+CPP_TOKEN_PATTERN = re.compile(r'//[^\n]*|/\*.*?\*/|R"(\w*)\((?:.*?)\)\1"|\'(?:[^\'\\\n]|\\.)+\'|"((?:[^"\\\n]|\\.)*)"', re.S)   # 주석 · 원시 글자 · 문자를 먼저 먹어 그 안의 따옴표에 어긋나지 않는다
+LOG_ID_SHAPE = re.compile(r'[A-Za-z]\w*(?:\.\w+)+')
+LOG_ID_CALL_PATTERN = re.compile(r'\bSW_\w+_ID\(\s*"([^"]*)"')
+EXPECT_LOG_PATTERN = re.compile(r'\bSW_EXPECT_LOG\(\s*"([^"]*)"\s*\)')
+SCENARIO_LOG_PATTERN = re.compile(r'<(?:ExpectLog|AllowLog)\b[^>]*?\bid="([^"]*)"')
 
 
 @dataclass
@@ -72,6 +81,7 @@ class Exceptions:
     dict_component: dict[str, str]
     dict_watch: dict[str, str]
     dict_command: dict[str, str]
+    dict_log_id: dict[str, str]        # 기대 로그 id → 까닭(정의 리터럴이 없는 것 — 실행 중에 이어 붙인 id)
 
 
 def classify_path(relative: str) -> str | None:
@@ -104,6 +114,11 @@ def extract_facts(bucket: str, path: str, text: str) -> dict[str, list[str]]:
             facts["command"] = [match.group(1) for match in COMMAND_PATTERN.finditer(text)]
         facts["componentReference"] = ADD_COMPONENT_PATTERN.findall(text) + BASE_PATTERN.findall(text)
         facts["lostRunner"] = [match.group(1) for match in COMMAND_RUNNER_PATTERN.finditer(text) if len(re.findall(rf"\b{match.group(1)}\b", text)) < 2]
+        facts["logID"] = sorted({match.group(2) for match in CPP_TOKEN_PATTERN.finditer(EXPECT_LOG_PATTERN.sub("", text))
+                                 if match.group(2) is not None and LOG_ID_SHAPE.fullmatch(match.group(2))})
+    if bucket == "dict_test_code":
+        facts["logID"] = LOG_ID_CALL_PATTERN.findall(text)   # 테스트가 스스로 내는 로그만 — 테스트 글자 표는 정의가 아니다
+        facts["logReference"] = EXPECT_LOG_PATTERN.findall(text)
     if bucket in ("dict_header", "dict_test_code", "dict_script"):
         facts["literal"] = sorted(set(LITERAL_PATTERN.findall(strip_registrations(text))))
     if bucket == "dict_content":
@@ -111,24 +126,26 @@ def extract_facts(bucket: str, path: str, text: str) -> dict[str, list[str]]:
         if path.endswith(".scenario.xml"):
             facts["scenarioWatch"] = WATCH_USE_PATTERN.findall(text)
             facts["commandWord"] = [word for line in COMMAND_LINE_PATTERN.findall(text) for word in line.split()]
+            facts["logReference"] = SCENARIO_LOG_PATTERN.findall(text)
     return facts
 
 
-def check_exceptions_table(kind: str, dict_defined: dict[str, str], set_reference: set[str], dict_exception: dict[str, str]) -> list[str]:
-    """표의 줄이 살아 있는지 — 까닭이 있고, 정의가 있고, 아직 참조가 없어야 한다."""
+def check_exceptions_table(kind: str, dict_defined: dict[str, str], set_reference: set[str], dict_exception: dict[str, str],
+                           gone: str = "정의가 없다", satisfied: str = "이제 참조가 있다") -> list[str]:
+    """표의 줄이 살아 있는지 — 까닭이 있고, 판정할 이름(`dict_defined`)이 있고, 아직 짝(`set_reference`)이 없어야 한다."""
     list_problem: list[str] = []
     for name, reason in dict_exception.items():
         if not reason.strip():
             list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 의 까닭이 비었다")
         elif name not in dict_defined:
-            list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 의 정의가 없다 — 줄을 지운다")
+            list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 의 {gone} — 줄을 지운다")
         elif name in set_reference:
-            list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 는 이제 참조가 있다 — 줄을 지운다")
+            list_problem.append(f"{CONFIG_PATH}: {kind} '{name}' 는 {satisfied} — 줄을 지운다")
     return list_problem
 
 
-DEFINE_KEYS = ("component", "watch", "command")
-COLLECT_KEYS = ("componentReference", "literal", "scenarioWatch", "commandWord")
+DEFINE_KEYS = ("component", "watch", "command", "logReference")   # 짝이 있어야 하는 이름(경로와 함께) — 로그 id 는 참조 쪽이 정의를 요구한다
+COLLECT_KEYS = ("componentReference", "literal", "scenarioWatch", "commandWord", "logID")
 
 
 def fold_tokens(path: str, facts: dict[str, list[str]]) -> list[str]:
@@ -187,6 +204,12 @@ def evaluate_summary(list_token: Iterable[str], exceptions: Exceptions) -> list[
         if name not in set_command_reference and name not in exceptions.dict_command:
             list_problem.append(f"{path}: 개발 명령 {name} 를 자동화가 부르지 않는다 — 시나리오로 잇거나 {CONFIG_PATH} 에 까닭을 적는다")
     list_problem += check_exceptions_table("개발 명령", dict_command, set_command_reference, exceptions.dict_command)
+    dict_log_reference = define("logReference")
+    set_log_id = collect("logID")
+    for name, path in sorted(dict_log_reference.items()):
+        if name not in set_log_id and name not in exceptions.dict_log_id:
+            list_problem.append(f"{path}: 기대 로그 id {name} 를 내는 코드가 없다(바꿨거나 지웠다) — 지금 id 로 고치거나 기대를 지우거나 {CONFIG_PATH} 에 까닭을 적는다")
+    list_problem += check_exceptions_table("기대 로그 id", dict_log_reference, set_log_id, exceptions.dict_log_id, gone="참조가 없다", satisfied="이제 정의 리터럴이 있다")
     for path, _, name in sorted(list_lost):
         list_problem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
     return list_problem
@@ -200,7 +223,7 @@ def find_problems(sources: Sources, exceptions: Exceptions) -> list[str]:
 
 def read_exceptions(project_root: Path) -> Exceptions:
     data = json.loads((project_root / CONFIG_PATH).read_text(encoding="utf-8"))
-    return Exceptions(data["_folders"], data["_components"], data["_watches"], data["_devCommands"])
+    return Exceptions(data["_folders"], data["_components"], data["_watches"], data["_devCommands"], data["_logIDs"])
 
 
 def read_summary(project_root: Path) -> list[str]:
@@ -235,7 +258,7 @@ def run_self_check() -> None:
     sources.dict_content["Content/x.scene.xml"] = "<UsedComponent/>\n"
     sources.dict_content["Content/x.scenario.xml"] = '<Expect watch="A.Read" equals="1"/>\n<DevCommand line="netplay.command clients cmd.used 3"/>\n<DevCommand line="cmd.kept"/>\n'
 
-    empty = Exceptions({}, {}, {}, {})
+    empty = Exceptions({}, {}, {}, {}, {})
     list_problem = find_problems(sources, empty)
     assert len(list_problem) == 4, list_problem
     assert any("runLost" in line for line in list_problem)
@@ -244,15 +267,15 @@ def run_self_check() -> None:
     assert any("cmd.alone" in line for line in list_problem)
 
     # 예외: 까닭과 함께면 받고, 낡은 줄은 위반이다.
-    assert [line for line in find_problems(sources, Exceptions({"Source/A": "x"}, {}, {"A.Unread": "x"}, {"cmd.alone": "x"})) if "runLost" not in line] == []
-    list_stale = find_problems(sources, Exceptions({}, {"LonelyComponent": "", "UsedComponent": "x", "GoneComponent": "x"}, {"A.Unread": "x"}, {"cmd.alone": "x"}))
+    assert [line for line in find_problems(sources, Exceptions({"Source/A": "x"}, {}, {"A.Unread": "x"}, {"cmd.alone": "x"}, {})) if "runLost" not in line] == []
+    list_stale = find_problems(sources, Exceptions({}, {"LonelyComponent": "", "UsedComponent": "x", "GoneComponent": "x"}, {"A.Unread": "x"}, {"cmd.alone": "x"}, {}))
     assert sum("까닭이 비었다" in line for line in list_stale) == 1, list_stale
     assert sum("이제 참조가 있다" in line for line in list_stale) == 1, list_stale
     assert sum("정의가 없다" in line for line in list_stale) == 1, list_stale
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="컴포넌트 · 감시 값 · 개발 명령의 참조 0 검사(머리말)")
+    parser = argparse.ArgumentParser(description="컴포넌트 · 감시 값 · 개발 명령의 참조 0, 낡은 기대 로그 id 검사(머리말)")
     parser.add_argument("--self-check", action="store_true", help="규칙 자체를 시험한다")
     args = parser.parse_args(argv)
     if args.self_check:
