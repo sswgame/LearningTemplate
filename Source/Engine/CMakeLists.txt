@@ -10,11 +10,11 @@
 
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 종류 · 소스 목록
-# Dev: SHARED / Shipping: STATIC
+# 동적 모듈 구성(데스크톱 Dev): SHARED / 정적 모듈 구성(SW_STATIC_MODULES — Shipping · 웹 · Android 개발): STATIC
 # RHI MODULE 엔트리(백엔드 폴더의 Module/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Modules/Build/RHIBackends.cmake 가 백엔드 폴더로 안다).
 # Dev 는 RHI_* MODULE 이, Shipping 은 아래 5) 가 고른 백엔드 하나를 같은 함수로 가져다 짓는다.
 # ------------------------------------------------------------------------------
-if(SW_SHIPPING_BUILD)
+if(SW_STATIC_MODULES)
 	set(core_lib_type STATIC)
 else()
 	set(core_lib_type SHARED)
@@ -234,10 +234,10 @@ endif()
 # 전용 서버 배포본은 RHI 백엔드를 하나도 링크하지 않는다(기동 표의 RHI 단계가 서버에서 돌지 않는다) — 백엔드 소스는 모두 "이 구성이 짓지 않는다".
 # Dev 서버는 RHI_* 모듈을 매니페스트(`_listTarget: ["Client"]`)가 끈다.
 # ------------------------------------------------------------------------------
-if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
+if(SW_STATIC_MODULES AND SW_TARGET_TYPE STREQUAL "Server")
 	message(STATUS "[Engine] Dedicated server: no RHI backend linked")
 	sw_declare_excluded_sources(${list_rhi_backend_source})
-elseif(SW_SHIPPING_BUILD)
+elseif(SW_STATIC_MODULES) # 정적 모듈 구성(배포 · 웹 · Android 개발) — 백엔드 하나(SW_SHIPPING_RHI_BACKEND)를 Engine 에 링크한다
 	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolve_shipping_rhi_backend).
 	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(실행하면 등록표가 "백엔드 없음 · 있는 것" 을 알린다).
 	sw_resolve_shipping_rhi_backend("${SW_SHIPPING_RHI_BACKEND}" shipping_backend)
@@ -397,7 +397,7 @@ endforeach()
 # ------------------------------------------------------------------------------
 foreach(backend_name IN LISTS SW_RHI_BACKEND_NAMES)
 	set(backend_module_dir "Graphics/RHI/${SW_RHI_BACKEND_${backend_name}_SOURCE_FOLDER}/Module")
-	if(SW_SHIPPING_BUILD)
+	if(SW_STATIC_MODULES)
 		sw_declare_excluded_directory("${CMAKE_CURRENT_SOURCE_DIR}/${backend_module_dir}")
 	else()
 		add_subdirectory(${backend_module_dir})

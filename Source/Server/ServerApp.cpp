@@ -6,6 +6,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
@@ -201,9 +202,11 @@ namespace sw
         if ( _launch.loadModuleLibraries( static_cast<uint8>( ModuleTarget::Server ), make_unique<GameModuleManager>() ) == false )
             return false;
         // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저). 배포는 빈 구독이다.
+#if SW_WITH_DYNAMIC_MODULES
         if ( _launch.getDevLayer() != nullptr )
             _reloadStopsServices = _launch.getDevLayer()->addOnBeforeReloadBatch(
                 SW_DELEGATE_METHOD( BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
+#endif
         return true;
     }
 
@@ -591,8 +594,10 @@ namespace sw
         _launch.getEngine().beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
         _launch.getModuleManager()->beginFrame();
         _launch.getModuleManager()->updateGameFrame( deltaSeconds, 1, deltaSeconds ); // 한 틱은 고정 스텝 하나다
+#if SW_WITH_DYNAMIC_MODULES
         if ( _launch.getDevLayer() != nullptr )
             _launch.getDevLayer()->updateModuleReload();
+#endif
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.

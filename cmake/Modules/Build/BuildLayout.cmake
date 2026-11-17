@@ -26,6 +26,16 @@ else()
 	set(SW_CONFIGURATION_NAME "Dev")
 endif()
 
+# 정적 모듈 구성(`SW_STATIC_MODULES`, cmake/Modules/Config/BuildOptions.cmake)의 앞선 조건 — 어긋나면 구성에서 멈춘다(빌드 중간이나 실행에서 나지 않게).
+#   - 웹 · Android 는 모듈을 동적으로 올리지 못한다(Emscripten 은 dlopen 이 없는 정적 wasm, Android 앱은 NativeActivity 가 여는 .so 하나).
+#   - Windows 의 정적 개발 구성은 아직 없다 — DevTools 내보내기 매크로(`DevToolsAPI.h`)가 Windows 에서 dllexport/dllimport 뿐이다.
+if(SW_PLATFORM_NAME MATCHES "^(Web|Android)$" AND NOT SW_STATIC_MODULES)
+	message(FATAL_ERROR "[BuildConfig] ${SW_PLATFORM_NAME} cannot load modules dynamically - configure with SW_STATIC_MODULES=ON (presets ${SW_PLATFORM_NAME}-Release or ${SW_PLATFORM_NAME}-Shipping)")
+endif()
+if(WIN32 AND SW_STATIC_MODULES AND NOT SW_SHIPPING_BUILD)
+	message(FATAL_ERROR "[BuildConfig] a static-module development build is not set up for Windows (DevToolsAPI.h exports only as a DLL) - use Ninja-Debug/Ninja-Release or Ninja-Shipping")
+endif()
+
 # ------------------------------------------------------------------------------
 # 출력 경로 — 산출물은 구성과 무관하게 `Bin/` · `Lib/` 에 놓인다(LiveReload · 테스트의 작업 폴더가 이 경로를 안다).
 # ------------------------------------------------------------------------------
@@ -92,6 +102,14 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	# 창 · 입력의 리눅스 데스크톱 구현(X11 · Wayland · evdev)도 짓지 않는다 — 리눅스 서버는 `Window/Headless` · `Input/Headless` 가 같은 함수를 정의한다.
 	# Windows 서버는 Win32 구현을 그대로 짓는다(user32 는 모든 Windows Server 에 있다). 클라이언트는 거꾸로 `Headless` 를 짓지 않는다(Source/Engine/CMakeLists.txt).
 	list(APPEND SW_EXCLUDED_ENGINE_FOLDERS "Window/Linux" "Input/Linux")
+endif()
+
+# 정적 모듈 구성 — C++ 는 `SW_WITH_DYNAMIC_MODULES`(Core/Foundation/DynamicModules.h) · `build::kStaticModules`(BuildInfo.h)로 읽는다.
+if(SW_STATIC_MODULES)
+	target_compile_definitions(sw_global_options INTERFACE SW_STATIC_MODULES)
+	if(NOT SW_SHIPPING_BUILD)
+		message(STATUS "[BuildConfig] Dev with static modules: Engine/ModuleManager/GameFramework/kits/active game/DevTools STATIC, one RHI backend linked into Engine, no editor and no live reload (SW_STATIC_MODULES=ON)")
+	endif()
 endif()
 
 if(SW_SHIPPING_BUILD)

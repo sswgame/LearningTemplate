@@ -185,6 +185,30 @@
         "ANDROID_PLATFORM": "android-29",
         "SW_SHIPPING_RHI_BACKEND": "Vulkan"
       }
+    },
+    {
+      "name": "Web-Release",
+      "displayName": "Web Release - development, static modules (Emscripten, WebGPU)",
+      "description": "웹 개발 구성(감사 P-9) — 배포가 아니라 DevTools(자동화 실행기 · 콘솔)와 단위 테스트를 담고, 모듈은 Web-Shipping 처럼 한 wasm 에 정적으로 링크한다(SW_STATIC_MODULES — 핫 리로드 · 에디터 없음). 팩은 시나리오를 담아 `-scenario` 로 돈다. vcpkg 설치 트리는 Web-Shipping 과 나눠 쓴다",
+      "inherits": "Web-Shipping",
+      "cacheVariables": {
+        "SW_SHIPPING_BUILD": "OFF",
+        "SW_STATIC_MODULES": "ON",
+        "SW_ENABLE_TRACY": "OFF",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_Web-Shipping"
+      }
+    },
+    {
+      "name": "Android-Release",
+      "displayName": "Android Release - development, static modules (NDK, Vulkan, arm64)",
+      "description": "Android 개발 구성(감사 P-9) — 배포가 아니라 DevTools(자동화 실행기 · 콘솔)와 단위 테스트를 담고, 모듈은 Android-Shipping 처럼 libApp.so 하나에 정적으로 링크한다(SW_STATIC_MODULES — 핫 리로드 · 에디터 없음). 명령줄은 인텐트 추가값 args(`-scenario`). vcpkg 설치 트리는 Android-Shipping 과 나눠 쓴다",
+      "inherits": "Android-Shipping",
+      "cacheVariables": {
+        "SW_SHIPPING_BUILD": "OFF",
+        "SW_STATIC_MODULES": "ON",
+        "SW_ENABLE_TRACY": "OFF",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_Android-Shipping"
+      }
     }
   ],
   "buildPresets": [

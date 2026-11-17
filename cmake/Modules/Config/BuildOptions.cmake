@@ -27,17 +27,27 @@ option(SW_BUILD_GAME "GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 
 # 아래 옵션들의 기본값이 이 값에 따라 갈리므로 가장 먼저 선언한다.
 option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)" OFF)
 
+# 모듈(Engine · ModuleManager · RHI 백엔드 하나 · GameFramework · 키트 · 활성 게임 · DevTools)을 한 실행 파일에 정적으로 링크한다(언리얼 `IS_MONOLITHIC`).
+# 배포는 늘 켜고(아래), 개발 구성 중에는 모듈을 동적으로 올리지 못하는 플랫폼(웹 · Android — 프리셋 Web-Release · Android-Release)이 켠다.
+# 켜면 동적 로딩을 전제한 것(핫 리로드 `DevTools/ModuleReload` · 에디터 모듈 · RHI 백엔드 DLL · 모듈 매니페스트 해석)을 짓지 않고, 그 코드는 `SW_WITH_DYNAMIC_MODULES`
+# (Core/Foundation/DynamicModules.h)로 컴파일에서 빠진다. 배포인지(진단 · 개발 도구 · 테스트 · 자동화 실행기)는 `SW_SHIPPING_BUILD` 가 따로 정한다 — 정적 개발 구성은
+# DevTools(자동화 실행기 · 콘솔)와 테스트를 담는다(감사 P-9, 언리얼 Development + Gauntlet).
+option(SW_STATIC_MODULES "모듈을 한 실행 파일에 정적 링크 — 배포는 늘 켠다, 웹 · Android 개발 구성(Web-Release · Android-Release)도 켠다. 핫 리로드 · 에디터 없음" OFF)
+if(SW_SHIPPING_BUILD AND NOT SW_STATIC_MODULES)
+	set(SW_STATIC_MODULES ON) # 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다(SW_TARGET_TYPE 과 같은 방식)
+endif()
+
 # 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 상수
 # (`sw::build::kWithClientCode` · `kWithServerCode` — `SW_TARGET_NAME`, `cmake/Modules/Build/BuildLayout.cmake`)가 이 값을 따른다.
 # Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 테스트 · 리슨 서버). App 과 Server 를 짓는다.
 # Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
 # Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.
-# 비우면 Shipping 은 Client, 그 밖은 Game 이다. 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다 — 아래 모든 곳이 해석된 값을 본다.
-set(SW_TARGET_TYPE "" CACHE STRING "빌드 타깃 종류: Game | Client | Server (비우면 Shipping=Client, 그 밖=Game)")
+# 비우면 정적 모듈 구성(Shipping · 웹 · Android 개발)은 Client, 그 밖은 Game 이다. 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다 — 아래 모든 곳이 해석된 값을 본다.
+set(SW_TARGET_TYPE "" CACHE STRING "빌드 타깃 종류: Game | Client | Server (비우면 정적 모듈 구성=Client, 그 밖=Game)")
 set_property(CACHE SW_TARGET_TYPE PROPERTY STRINGS "" Game Client Server)
 
 if(SW_TARGET_TYPE STREQUAL "")
-	if(SW_SHIPPING_BUILD)
+	if(SW_STATIC_MODULES)
 		set(SW_TARGET_TYPE Client)
 	else()
 		set(SW_TARGET_TYPE Game)
@@ -132,7 +142,8 @@ endif()
 # Tracy 프로파일러 클라이언트(엔진 프로파일러의 두 번째 출력, Source/Engine/Profiling). Shipping 은 언제나 뺀다.
 # Windows 는 TracyClient.dll 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 DLL 도, 수집 스레드도 없다.
 # 리눅스(vcpkg 정적 라이브러리)는 지연 로드가 없어 링크하면 기동부터 수집 스레드 · 리슨 소켓이 선다 — 그래서 기본 꺼짐이다.
-if(CMAKE_HOST_WIN32 AND NOT SW_SHIPPING_BUILD) # project() 앞이라 WIN32 는 아직 없다
+# 정적 모듈 구성(웹 · Android 개발)은 Tracy 를 잇지 않는다 — DevTools 의 Tracy 링크 방식이 Windows · 리눅스만 정해져 있다.
+if(CMAKE_HOST_WIN32 AND NOT SW_STATIC_MODULES) # project() 앞이라 WIN32 는 아직 없다
 	set(tracy_default ON)
 else()
 	set(tracy_default OFF)

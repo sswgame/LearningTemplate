@@ -163,7 +163,7 @@ foreach(tier IN LISTS list_core_tier)
 	sw_write_core_tier_stubs(${part_name} ${tier})
 	target_link_libraries(${part_name} PUBLIC sw_public_source_includes)
 	target_link_libraries(${part_name} PUBLIC sw_third_party_includes)
-	if(NOT SW_SHIPPING_BUILD)
+	if(NOT SW_STATIC_MODULES) # Engine 이 공유 라이브러리일 때만 내보낸다
 		target_compile_definitions(${part_name} PRIVATE SW_EXPORTS)
 	endif()
 	if(WIN32)

@@ -8,7 +8,8 @@
 #   ENGINE : SHARED 면 SW_EXPORTS(PRIVATE) · SW_IMPORTS(INTERFACE)        — Engine.dll
 #   GF     : SHARED 면 SW_GF_EXPORTS(PRIVATE) · SW_GF_IMPORTS(INTERFACE)  — GameFramework.dll (키트는 SW_KIT_EXPORTS · SW_KIT_SERVER_EXPORTS · SW_KIT_IMPORTS, `sw_add_module_library`)
 #   MODULE : MODULE 이면 SW_MODULE_EXPORTS(PRIVATE)                       — C-ABI 진입점을 내보내는 플러그인(RHI · 게임 · 에디터)
-#   DEVTOOLS : SHARED 면 SW_DEVTOOLS_EXPORTS(PRIVATE) · SW_DEVTOOLS_IMPORTS(INTERFACE) — DevTools.dll(개발 빌드만)
+#   DEVTOOLS : SW_DEVTOOLS_EXPORTS(PRIVATE) · SW_DEVTOOLS_IMPORTS(INTERFACE) — DevTools.dll(동적 Dev), 정적 모듈 구성(웹 · Android 개발)에서도 같다:
+#              DevToolsAPI.h 는 둘 중 하나가 있어야 include 를 받는다(DevTools 를 링크하지 않는 타깃을 막는 표지). 그 구성은 POSIX 라 매크로는 기본 visibility 다.
 #   MODULEMANAGER : SHARED 면 SW_MODULEMANAGER_EXPORTS(PRIVATE) · SW_MODULEMANAGER_IMPORTS(INTERFACE) — ModuleManager.dll(개발 빌드, 배포는 정적)
 # ------------------------------------------------------------------------------
 function(sw_configure_dll_exports TARGET_NAME LIB_TYPE KIND)
@@ -20,7 +21,7 @@ function(sw_configure_dll_exports TARGET_NAME LIB_TYPE KIND)
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_EXPORTS INTERFACE SW_IMPORTS)
 	elseif(KIND STREQUAL "GF" AND LIB_TYPE STREQUAL "SHARED")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_GF_EXPORTS SW_GAMESERVICE_EXPORTS INTERFACE SW_GF_IMPORTS SW_GAMESERVICE_IMPORTS)
-	elseif(KIND STREQUAL "DEVTOOLS" AND LIB_TYPE STREQUAL "SHARED")
+	elseif(KIND STREQUAL "DEVTOOLS")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_DEVTOOLS_EXPORTS INTERFACE SW_DEVTOOLS_IMPORTS)
 	elseif(KIND STREQUAL "MODULEMANAGER" AND LIB_TYPE STREQUAL "SHARED")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULEMANAGER_EXPORTS INTERFACE SW_MODULEMANAGER_IMPORTS)
