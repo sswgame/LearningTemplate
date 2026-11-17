@@ -82,6 +82,16 @@ namespace
         (void)bSet;
         return mesh;
     }
+
+    /** @brief 정점 @p vertexCount 개(삼각형 하나만 그린다)짜리 Packed 메시입니다 — 풀 용량을 채우는 데 쓴다. */
+    shared_ptr<Mesh> makeWideMesh( uint32 vertexCount )
+    {
+        const shared_ptr<Mesh> mesh = Mesh::create();
+        const bool             bSet = mesh->setGeometry( vector<RHIVertex>( vertexCount ), vector<uint32>{ 0, 1, 2 } );
+        SW_ASSERT( bSet );
+        (void)bSet;
+        return mesh;
+    }
 } // namespace
 
 /**
@@ -139,4 +149,49 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, MeshWithoutProxyUploadsCPUVertices )
     SW_EXPECT_EQUAL( 0u, pool.getPendingCopyCount() );
     SW_EXPECT_EQUAL( 1u, factory._structuredUpdateCount );
     pool.release( &device );
+}
+
+/**
+ * @brief [GPUMeshVertexPoolCopyTest] 들어온 메시 일부만 자리를 받고 풀이 차 다시 꾸리면, 자리만 받은 메시는 옛 풀이 아니라 자기 프록시에서 채운다
+ * @details 플레이 아웃 뒤 지형 청크가 한꺼번에 들어와 엉뚱한 기하를 그리던 결함(editor.flowterrain afterplay)이다 — 자리만 받고 채우지 않은 메시를
+ *          다시 꾸리기가 "옛 풀에 있는 메시" 로 보고 옛 풀의 빈 구간(남이 쓰던 내용)을 복사했다.
+ *          변이: placeAddedMeshes 의 실패 길에서 자리를 지우지 않으면 옛 풀을 원본으로 한 복사가 넷(A 둘 + B 둘)이 되어 진다.
+ */
+SW_TEST_CASE( GPUMeshVertexPoolCopyTest, PartlyPlacedMeshesRefillFromTheirProxyOnRepack )
+{
+    FakeBufferFactory   factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory     = &factory;
+    constexpr uint32       kWide = 30000u; // 첫 용량은 최소 용량(64 Ki 정점) — 둘은 들고 셋째는 못 든다
+    const shared_ptr<Mesh> meshA = makeWideMesh( kWide );
+    const shared_ptr<Mesh> meshB = makeWideMesh( kWide );
+    const shared_ptr<Mesh> meshC = makeWideMesh( kWide );
+    for ( const shared_ptr<Mesh>& mesh : { meshA, meshB, meshC } )
+    {
+        SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
+    }
+    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() } ) );
+    test::FakeRHICommandList firstList{ 0 };
+    pool.recordPendingCopies( firstList, device );
+    const RHIBufferHandle oldPool = pool.getVertexBuffer();
+
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get(), meshB.get(), meshC.get() } ) );
+    SW_REQUIRE_TRUE( pool.getVertexBuffer() != oldPool ); // 다시 꾸렸다
+    test::FakeRHICommandList list{ 0 };
+    pool.recordPendingCopies( list, device );
+    uint32 fromOldPool = 0;
+    uint32 fromProxyB  = 0;
+    for ( const test::FakeRHICommandList::BufferCopy& copy : list._listBufferCopy )
+    {
+        fromOldPool += copy._source == oldPool ? 1u : 0u;
+        fromProxyB += copy._source == meshB->getRenderData().getVertexBuffer() ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( 2u, fromOldPool ); // A 의 위치 · 속성 구간만 옛 풀에서 옮긴다
+    SW_EXPECT_EQUAL( 2u, fromProxyB );  // B 는 자리만 받았던 메시 — 자기 프록시에서 채운다
+    pool.release( &device );
+    for ( const shared_ptr<Mesh>& mesh : { meshA, meshB, meshC } )
+    {
+        mesh->getRenderData().releaseRHI( &device );
+    }
 }

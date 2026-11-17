@@ -225,7 +225,17 @@ namespace sw
             const uint32 base      = _allocator.allocate( entry._count );
             const uint32 indexBase = base != SpanAllocator::kInvalidOffset ? _indexAllocator.allocate( entry._indexCount ) : SpanAllocator::kInvalidOffset;
             if ( indexBase == SpanAllocator::kInvalidOffset )
-                return false; // 이미 받은 구간들은 repack 이 처음부터 다시 나눈다.
+            {
+                // 이미 받은 구간들은 repack 이 처음부터 다시 나눈다. 이번에 자리만 받고 아직 채우지 않은 메시는 옛 풀에 내용이 없다 — 자리를 지워
+                // repack 이 옛 풀(남이 쓰던 빈 구간)에서 복사하지 않고 원본에서 채우게 한다.
+                for ( const Mesh* pAdded : _listScratchAdded )
+                {
+                    Entry& added     = _mapEntry.find( pAdded )->second;
+                    added._base      = kInvalidBase;
+                    added._indexBase = kInvalidBase;
+                }
+                return false;
+            }
             entry._base      = base;
             entry._indexBase = indexBase;
             _liveVertexCount += entry._count;
