@@ -1,12 +1,13 @@
 #include "pch.h"
 
+#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphGeneratedPaths.h"
+
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
 
 namespace sw::editor
 {

@@ -107,3 +107,61 @@ SW_TEST_CASE( PrimitiveRegistryTest, BulkBatchRemovalMatchesOneByOneRemoval )
     SW_EXPECT_TRUE( TestPrimitiveRegistryInternal::isConsistent( bulkRegistry, listBulkBatch ) );
     SW_EXPECT_EQUAL( slotCount + TestPrimitiveRegistryInternal::getEntryCountOf( 0 ), bulkRegistry.getSlotCount() );
 }
+
+namespace
+{
+    /**
+     * @brief 대기 함수가 받는 컴포넌트 자리에 세우는 기록입니다. 함수는 컴포넌트 멤버를 읽지 않고 이 기록으로만 쓴다(주소만 빌린다).
+     */
+    struct WaiterProbe
+    {
+        PrimitiveRegistry* _pRegistry{ nullptr };
+        uint32             _callCount{ 0 };
+    };
+
+    Component* asComponent( WaiterProbe& probe )
+    {
+        return reinterpret_cast<Component*>( &probe );
+    }
+
+    /** @brief 자기를 빼고 다 받았다고 답합니다(함수 안에서 자기 컴포넌트를 내리는 경우). */
+    bool removeSelfAndFinish( Component& component, float32 /*deltaSeconds*/ )
+    {
+        WaiterProbe& probe = reinterpret_cast<WaiterProbe&>( component );
+        ++probe._callCount;
+        probe._pRegistry->removeAssetWaiter( &component );
+        return false;
+    }
+
+    /** @brief 부른 수만 세고 계속 기다립니다. */
+    bool countAndKeepWaiting( Component& component, float32 /*deltaSeconds*/ )
+    {
+        ++reinterpret_cast<WaiterProbe&>( component )._callCount;
+        return true;
+    }
+} // namespace
+
+/**
+ * @brief [PrimitiveRegistryTest] 대기 함수가 도는 중에 자기를 빼도 다른 대기자는 불리고 남는다
+ * @details 예전에는 빼기가 자리를 당겨(끝 대기자를 그 자리로) 도는 쪽이 그 자리를 "다 받음" 으로 한 번 더 빼, 끝 대기자를 부르지도 않고 잃었다 — 메시가 영영 붙지 않는다.
+ */
+SW_TEST_CASE( PrimitiveRegistryTest, WaiterRemovedDuringWalkDoesNotDropAnother )
+{
+    PrimitiveRegistry registry;
+    WaiterProbe       first{ &registry };
+    WaiterProbe       middle{ &registry };
+    WaiterProbe       last{ &registry };
+    registry.addAssetWaiter( asComponent( first ), &removeSelfAndFinish );
+    registry.addAssetWaiter( asComponent( middle ), &countAndKeepWaiting );
+    registry.addAssetWaiter( asComponent( last ), &countAndKeepWaiting );
+
+    registry.updateAssetWaiters( 0.0f );
+    SW_EXPECT_EQUAL( 1u, first._callCount );
+    SW_EXPECT_EQUAL( 1u, middle._callCount );
+    SW_EXPECT_EQUAL( 1u, last._callCount ); // 끝 대기자도 이 프레임에 불렸다
+    SW_EXPECT_EQUAL( size_t( 2 ), registry.countAssetWaiters() );
+
+    registry.removeAssetWaiter( asComponent( middle ) );
+    registry.removeAssetWaiter( asComponent( last ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.countAssetWaiters() );
+}

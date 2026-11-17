@@ -125,7 +125,7 @@ namespace sw
         AsyncReadHandle readFileAsync( AsyncFileIO& io, string_view relativePath, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
 
         /**
-         * @brief DLC 소유권 검증 콜백을 등록합니다.
+         * @brief DLC 소유권 검증 콜백을 등록합니다. DLC 팩(AppID > 0)은 이것이 없으면 붙지 않는다(`PackManager.NoDLCValidator`).
          */
         void setDLCEntitlementValidator( DLCEntitlementDelegate validator );
 

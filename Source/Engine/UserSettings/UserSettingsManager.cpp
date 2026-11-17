@@ -363,9 +363,9 @@ namespace sw
         const bool bWritten = [&]()
         {
             if ( engine::areEngineServicesBound() == false )
-                return FileUtil::writeTextFile( filePath, *text );
+                return FileUtil::writeTextFileDurable( filePath, *text );
             SW_PROFILE_SCOPE( "GT.Settings.save" );
-            return FileUtil::writeTextFile( filePath, *text );
+            return FileUtil::writeTextFileDurable( filePath, *text );
         }();
         if ( bWritten == false )
         {

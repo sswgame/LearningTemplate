@@ -68,6 +68,16 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief `Process` 가 아직 도는 자식을 놓을 때(소멸 · 다시 `launch`) 하는 일입니다. 어느 쪽이든 자식을 **거둔 뒤** 놓는다 — 좀비를 남기지 않는다.
+     * @details 언리얼 `FProcState`(Linux)도 도는 자식의 핸들을 닫을 때 끝날 때까지 기다린다. 기다리지 않고 버릴 실행은 `Process::launchDetached`(두 번 fork — init 이 거둔다)다.
+     */
+    enum class ProcessReleaseMode : uint8
+    {
+        WaitForExit, ///< 끝날 때까지 기다린다(경고를 남긴다 — 놓기 전에 `waitForExit` · `terminate` 를 부르는 것이 보통이다)
+        Terminate,   ///< 그룹째 죽이고(`terminate`) 거둔다 — 놓는 것이 곧 취소인 자식(빌드 · 외부 도구)
+    };
+
+    /**
      * @struct ProcessOptions
      * @brief 프로세스 생성 옵션입니다.
      */
@@ -88,6 +98,8 @@ namespace sw
          *          부모 프로세스의 환경은 바뀌지 않는다(`ProcessEnvironment::trySet` 은 부모 전체에 새고 다른 스레드가 읽는다).
          */
         vector<ProcessEnvironmentEntry> _listEnvironment{};
+        /** @brief 아직 도는 자식을 놓을 때 할 일입니다(`ProcessReleaseMode`). `launchDetached` 는 쓰지 않는다(놓을 자식이 없다). */
+        ProcessReleaseMode _releaseMode{ ProcessReleaseMode::WaitForExit };
     };
 } // namespace sw
 
@@ -107,9 +119,9 @@ namespace sw
         /** @brief 빈 프로세스 핸들로 만듭니다. */
         Process();
         /**
-         * @brief 프로세스 핸들을 닫고 자원을 정리합니다.
-         * @details 양쪽 모두 실행 중인 자식을 **분리**하고 기다리지 않습니다. POSIX 는 이미 끝난 자식을 여기서 회수하고(좀비를 남기지
-         *          않습니다), 아직 도는 자식은 이 프로세스가 끝난 뒤 init 이 거둡니다. 기다리면 **소멸자가 자식이 끝날 때까지 막힙니다.**
+         * @brief 파이프를 닫고 자식을 **거둔 뒤** 자원을 정리합니다. 아직 돌면 `ProcessOptions::_releaseMode` 대로 기다리거나 죽인 뒤 거둡니다.
+         * @details 예전에는 도는 자식을 분리했다 — POSIX 에서는 그 자식이 나중에 끝나면 이 프로세스(에디터 · 서버)가 끝날 때까지 좀비로 남았다.
+         *          기다리지 않을 실행은 `launchDetached` 를 쓴다. 파이프를 먼저 닫으므로 출력에 막힌 자식은 EPIPE 로 끝난다.
          */
         ~Process();
 
@@ -276,7 +288,8 @@ namespace sw
          *        계약이고(`ModuleCompiler::cancel` · 테스트의 자식 시한), `waitForExit` 은 거둔 뒤 이것을 0 으로 쓴다(보통 정수면 ThreadSanitizer 가
          *        두 스레드의 쓰기를 짚는다).
          */
-        atomic<int32> _processID;
-        bool          _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        atomic<int32>      _processID;
+        ProcessReleaseMode _releaseMode;      ///< 아직 도는 자식을 놓을 때 할 일(`launch` 의 옵션)
+        bool               _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

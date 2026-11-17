@@ -10,8 +10,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphNodeRegistry.h"
+#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
 namespace sw
 {
@@ -44,7 +44,7 @@ namespace sw
     };
 
     /** @brief 컴파일 결과입니다. `_listIssue` 가 비어야 `_hlsl` 을 쓸 수 있습니다. */
-    struct SW_API MaterialGraphCompileResult
+    struct SW_DEVTOOLS_API MaterialGraphCompileResult
     {
         string                     _hlsl;
         vector<MaterialGraphField> _listField;

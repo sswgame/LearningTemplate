@@ -27,6 +27,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -38,7 +40,7 @@ namespace sw
 
     /** @brief 받는 노드의 입력 핀 하나에 이어진 출력 핀입니다. */
     REFLECT()
-    struct SW_API MaterialGraphLink
+    struct SW_DEVTOOLS_API MaterialGraphLink
     {
         REFLECT_BODY();
 
@@ -55,7 +57,7 @@ namespace sw
 {
     /** @brief 노드의 값 하나입니다. 이름이 설정 칸이면 그 값이고, 입력 핀이면 잇지 않았을 때의 상수입니다(언리얼 노드의 인라인 상수). */
     REFLECT()
-    struct SW_API MaterialGraphValue
+    struct SW_DEVTOOLS_API MaterialGraphValue
     {
         REFLECT_BODY();
 
@@ -70,7 +72,7 @@ namespace sw
 {
     /** @brief 그래프의 노드 하나입니다. */
     REFLECT()
-    struct SW_API MaterialGraphNodeDef
+    struct SW_DEVTOOLS_API MaterialGraphNodeDef
     {
         REFLECT_BODY();
 
@@ -101,7 +103,7 @@ namespace sw
      * @details 출력 노드(`Output`)가 있으면 머티리얼이 되고, `GraphOutput` 이 있으면 다른 그래프가 펼쳐 넣는 하위 그래프입니다(언리얼 Material Function).
      */
     REFLECT()
-    struct SW_API MaterialGraphDef
+    struct SW_DEVTOOLS_API MaterialGraphDef
     {
         REFLECT_BODY();
         /** @brief 그래프 파일의 접미사입니다. */

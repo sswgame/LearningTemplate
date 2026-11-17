@@ -12,6 +12,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -143,7 +144,7 @@ namespace sw
          *          Present 캡처는 켠 프레임에 아직 비어 있을 수 있어서, 캡처를 켜고 한 프레임을 더 그린 뒤 `endFrame` 다음에 읽습니다.
          *          요청은 렌더 스레드 하나가 받습니다(엔진 범위의 우편함 서비스 `ScreenshotRequestQueue` — 우편함이 없는 호스트에서는 오류로 알리고 버립니다). 앞 요청이 아직 남아 있으면 덮어씁니다.
          */
-        static void requestScreenshot( string_view filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
+        static void requestScreenshot( const AbsolutePath& filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
         /** @brief `requestScreenshot` 요청을 처리한 수입니다(성공과 실패 모두 셉니다). 값이 바뀌면 `getLastScreenshotPath` 가 그 결과를 가리킵니다. */
         static uint32 getCompletedScreenshotSerial();
         /** @brief 마지막으로 처리한 `requestScreenshot` 이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */

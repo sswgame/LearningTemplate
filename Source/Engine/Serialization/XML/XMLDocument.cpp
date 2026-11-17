@@ -197,6 +197,38 @@ namespace sw
                 return pugi::xml_attribute{ static_cast<pugi::xml_attribute_struct*>( pPtr ) };
             }
 
+            /**
+             * @brief 한 요소에 같은 이름의 속성이 둘 이상인 첫 요소를 찾습니다. 없으면 빈 노드입니다. @p outName 이 겹친 이름입니다.
+             * @details XML 1.0 은 중복 속성을 잘 짜이지 않은 글로 보지만 pugixml 은 받고, 이름으로 찾으면 첫 값만 읽혀 손으로 고친 둘째 값이 조용히 버려진다.
+             *          속성은 요소마다 몇 개뿐이라 둘씩 비교한다. 재귀 대신 스택으로 돈다(깊은 중첩에서 C 스택을 쓰지 않는다).
+             */
+            static pugi::xml_node findDuplicateAttribute( const pugi::xml_node& root, string& outName )
+            {
+                vector<pugi::xml_node> listPending{ root };
+                while ( listPending.empty() == false )
+                {
+                    const pugi::xml_node node = listPending.back();
+                    listPending.pop_back();
+                    for ( pugi::xml_attribute attribute = node.first_attribute(); attribute; attribute = attribute.next_attribute() )
+                    {
+                        for ( pugi::xml_attribute later = attribute.next_attribute(); later; later = later.next_attribute() )
+                        {
+                            if ( StringUtil::equals( attribute.name(), later.name() ) )
+                            {
+                                outName = attribute.name();
+                                return node;
+                            }
+                        }
+                    }
+                    for ( pugi::xml_node child = node.first_child(); child; child = child.next_sibling() )
+                    {
+                        if ( child.type() == pugi::node_element )
+                            listPending.push_back( child );
+                    }
+                }
+                return pugi::xml_node{};
+            }
+
             // 이름은 철자 그대로 찾는다(XMLNode 머리말) — pugixml 의 child · attribute 가 그 비교다.
             static pugi::xml_node findChild( pugi::xml_node parent, const utf8* pName )
             {
@@ -605,6 +637,21 @@ namespace sw
         if ( _impl->doc.first_child().empty() )
         {
             _lastError = string( source ) + ": no element";
+            return false;
+        }
+
+        string               duplicateName;
+        const pugi::xml_node duplicateNode = XMLDocumentInternal::findDuplicateAttribute( _impl->doc, duplicateName );
+        if ( duplicateNode )
+        {
+            uint32 line   = 0;
+            uint32 column = 0;
+            StringUtil::getLineAndColumn( xmlText, static_cast<size_t>( duplicateNode.offset_debug() > 0 ? duplicateNode.offset_debug() : 0 ), line, column );
+            StringBuilder<constant::buffer::kMax1024> message;
+            message.appendFormat( "%#:%#:%#: <%#> repeats the attribute '%#'", source, line, column, duplicateNode.name(), duplicateName );
+            _lastError = message.c_str();
+            SW_LOG_ERROR_ID( "Xml.ParseError", "XML parse error at %#", _lastError );
+            _impl->doc.reset();
             return false;
         }
         return true;

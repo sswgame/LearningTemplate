@@ -5,6 +5,9 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphNodeRegistry.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -18,8 +21,6 @@
 #include "Editor/Panels/Material/Model/MaterialModel.h"
 #include "Editor/Panels/Material/Model/MaterialPreviewInputs.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphNodeRegistry.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>

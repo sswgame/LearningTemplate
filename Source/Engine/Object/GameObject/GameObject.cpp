@@ -780,6 +780,11 @@ namespace sw
         // 파괴 뒤에는 물을 수 없으니 지금 본다.
         const bool bTickJobs = pComp->hasTickJobs();
 
+        // 삭제 대기 오브젝트의 컴포넌트는 오브젝트의 지연 파괴가 함께 거둔다(표시는 오브젝트를 선점할 때 이미 했다 — `tryMarkPendingDestroy`). 여기서 바로 해체하면
+        // 삭제 대기 오브젝트는 틱 레지스트리에 자기를 다시 알리지 않으므로(`markTickOrderDirty`) 틱 파도가 사라진 컴포넌트를 가리킨 채 지연 파괴까지 남았다.
+        // 지연 파괴의 컴포넌트 처리도 이리로 오지만, 바로 뒤의 오브젝트 해체가 같은 컴포넌트를 거두므로 할 일이 없다.
+        if ( isPendingDestroy() )
+            return true;
         if ( isComponentMutationFrozen() )
         {
             _pOwnerManager->destroyComponent( pComp );

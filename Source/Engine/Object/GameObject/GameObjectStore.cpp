@@ -29,6 +29,8 @@ namespace sw
         {
             /** @brief 이 스레드가 들어가 있는 `forEachGameObject` 의 깊이입니다(`IterationScope`). Engine 의 이 TU 하나에만 있습니다. */
             inline static thread_local uint32 s_iterationDepth = 0;
+            /** @brief `clear` 가 다시 거두는 횟수의 상한입니다. 해체가 만든 오브젝트의 해체가 또 만드는 사슬은 이보다 짧다(넘으면 콘텐츠 결함으로 알린다). */
+            static constexpr uint32 kMaxClearRounds = 16;
         };
     } // namespace
 } // namespace sw
@@ -593,38 +595,52 @@ namespace sw
     {
         // 지연 파괴가 도는 목록을 여기서 비우면 그 루프가 풀린 메모리를 읽는다.
         SW_ASSERT( _bProcessingDestruction == false );
-        vector<GameObject*> listToDestroy;
+        // 해체 콜백(onDestroy · onEndPlay)이 새 오브젝트를 만들 수 있다(죽을 때 남기는 파편 · 드롭). 한 번만 거두면 그것들이 대기 목록에 남은 채 아래에서
+        // 풀이 비워져, 대기 목록 · 이름 색인이 풀린 메모리를 가리켰다. 거둘 것이 없어질 때까지 다시 거둔다(고정점). 언리얼은 월드 정리 중 생성을 막는다 —
+        // 여기서는 막지 않고 함께 거둔다(생성 경로마다 실패를 받게 하지 않는다).
+        uint32 round = 0;
+        for ( ;; )
         {
-            UniqueLock<shared_mutex> lock{ _mutex };
-
-            listToDestroy.reserve( _listGameObject.size() + _listPendingAdd.size() );
-            listToDestroy.insert( listToDestroy.end(), _listGameObject.begin(), _listGameObject.end() );
-            listToDestroy.insert( listToDestroy.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
-
-            _listPendingDestroyObject.clear();
-            _listPendingDestroyComponent.clear();
-            _listProcessingDestroyObject.clear();
-            _listProcessingDestroyComponent.clear();
+            vector<GameObject*> listToDestroy;
             {
-                ScopedLock<mutex> lockBeginPlay{ _beginPlayMutex };
-                _listPendingBeginPlay.clear();
+                UniqueLock<shared_mutex> lock{ _mutex };
+
+                listToDestroy.reserve( _listGameObject.size() + _listPendingAdd.size() );
+                listToDestroy.insert( listToDestroy.end(), _listGameObject.begin(), _listGameObject.end() );
+                listToDestroy.insert( listToDestroy.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
+
+                _listPendingDestroyObject.clear();
+                _listPendingDestroyComponent.clear();
+                _listProcessingDestroyObject.clear();
+                _listProcessingDestroyComponent.clear();
+                {
+                    ScopedLock<mutex> lockBeginPlay{ _beginPlayMutex };
+                    _listPendingBeginPlay.clear();
+                }
+
+                _listGameObject.clear();
+                _listPendingAdd.clear();
+                _mapNameToObject.clear();
+                _mapNameSuffix.clear();
+                _mapBaseNameToObject.clear();
+                _mapIDToObject.clear();
+                _overflowObjectCount.store( 0, std::memory_order_release );
+                _objectSlotTable.clear();
             }
+            if ( listToDestroy.empty() )
+                break;
+            notifyStructureChanged(); // 아래에서 해체한다 — 포인터를 캐시한 쪽이 세대로 알아챈다
 
-            _listGameObject.clear();
-            _listPendingAdd.clear();
-            _mapNameToObject.clear();
-            _mapNameSuffix.clear();
-            _mapBaseNameToObject.clear();
-            _mapIDToObject.clear();
-            _overflowObjectCount.store( 0, std::memory_order_release );
-            _objectSlotTable.clear();
-        }
-        notifyStructureChanged(); // 아래에서 해체한다 — 포인터를 캐시한 쪽이 세대로 알아챈다
-
-        for ( GameObject* pObj : listToDestroy )
-        {
-            if ( pObj != nullptr )
-                _poolGameObject.destroy( pObj );
+            for ( GameObject* pObj : listToDestroy )
+            {
+                if ( pObj != nullptr )
+                    _poolGameObject.destroy( pObj );
+            }
+            ++round;
+            // 해체가 해체를 끝없이 낳으면(만든 오브젝트의 해체가 또 만든다) 멈출 수 없다 — 그 콘텐츠 결함을 알리고 남은 것은 아래 풀 비우기에 맡긴다.
+            SW_LOG_ASSERT( round < GameObjectStoreInternal::kMaxClearRounds, "GameObjectStore::clear: teardown callbacks kept creating objects for %# rounds", round );
+            if ( round >= GameObjectStoreInternal::kMaxClearRounds )
+                break;
         }
 
         {

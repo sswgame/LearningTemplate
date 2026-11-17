@@ -96,7 +96,7 @@ namespace sw
 
         /**
          * @brief 별칭(이름을 바꾸기 전의 이름)을 이미 등록된 canonical TypeInfo 에 연결합니다(직렬화와 컴포넌트 키 호환).
-         * @details REFLECT(Alias=…) 와 ReflectBuiltins 별칭 코드젠이 부른다.
+         * @details REFLECT(Alias=…) 와 ReflectBuiltins 별칭 코드젠이 부른다. 별칭이 이미 다른 살아 있는 타입을 가리키면 덮지 않고 오류다(`Reflection.TypeAliasConflict`).
          */
         void registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName );
         /** @brief 별칭(이름을 바꾸기 전의 이름)을 이미 등록된 canonical EnumInfo 에 연결합니다. */
@@ -207,15 +207,24 @@ namespace sw
                 return {};
 
             const hashed_string&    baseFqn = pBaseType->_fullyQualifiedName;
-            vector<const TypeInfo*> listResult;
-
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
-            for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
+            vector<const TypeInfo*> listCandidate;
             {
-                (void)fqn;
-                const bool bDerivedAliveType = pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType && pTypeInfo->isDerivedFrom( baseFqn );
-                if ( bDerivedAliveType )
-                    listResult.push_back( pTypeInfo.get() );
+                // 잠금 안에서는 포인터만 모은다. `isDerivedFrom` 은 부모를 찾느라 같은 `_mutex` 를 다시 잡는다(`getParentType` → `findType`) —
+                // 공유 잠금을 겹쳐 잡으면 그 사이 기다리는 쓰기 잠금과 맞물려 멈춘다. 타입 객체는 지우지 않으므로(묘비) 잠금 밖에서도 주소가 맞다.
+                ScopedSharedLock<shared_mutex> lock{ _mutex };
+                listCandidate.reserve( _mapFqnToClassType.size() );
+                for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
+                {
+                    (void)fqn;
+                    if ( pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType )
+                        listCandidate.push_back( pTypeInfo.get() );
+                }
+            }
+            vector<const TypeInfo*> listResult;
+            for ( const TypeInfo* pCandidate : listCandidate )
+            {
+                if ( pCandidate->isDerivedFrom( baseFqn ) )
+                    listResult.push_back( pCandidate );
             }
             return listResult;
         }

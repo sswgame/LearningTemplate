@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraphNodeRegistry.h"
+#include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"

@@ -11,13 +11,15 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 namespace sw
 {
     class AssetPaths;
     struct MaterialGraphCompileResult;
 
     /** @brief 그래프 하나의 생성물 자리입니다(리소스 id). */
-    struct SW_API MaterialGraphGeneratedPaths
+    struct SW_DEVTOOLS_API MaterialGraphGeneratedPaths
     {
         string _shadersFolder; ///< 셰이더가 드는 폴더(`game/x/shaders/matgraph`)
         string _stem;          ///< 파일 이름 줄기 — `materials/` 아래 경로를 `_` 로 이은 것(바이너리 이름이 폴더를 보지 않아 겹치지 않게)

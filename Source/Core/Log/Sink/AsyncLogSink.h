@@ -98,6 +98,8 @@ namespace sw
         void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID );
         /** @brief 레코드를 비동기 I/O 큐에 넣고 작업 스레드를 깨웁니다. 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 씁니다. */
         void submitRecord( LogRecord&& record );
+        /** @brief 작업 스레드가 잠들었거나 잠들려 하면 깨웁니다(큐에 넣은 뒤 · 큐가 차 자리를 기다릴 때). */
+        void wakeWorker();
         /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 자기 락을 가집니다. */
         void dispatchToOutputs( const LogRecord& record );
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraphCompileResult.h"
+#include "DevTools/Material/MaterialGraphCompileResult.h"
 
 #include "Core/Container/DependencyGraph.h"
 #include "Core/File/FileUtil.h"

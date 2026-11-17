@@ -220,19 +220,14 @@ namespace sw
 
         /**
          * @brief 각(라디안)을 [−π, π] 로 감습니다. 범위 안의 값(경계 π · −π 포함)은 그대로입니다 — 언리얼 `FMath::UnwindRadians` 와 같은 형태.
-         * @details 2π 를 빼고 더하는 반복이라 큰 값(수천 바퀴)에는 쓰지 않습니다. 각 차이 · 한 프레임 회전처럼 한두 바퀴 안의 값에 씁니다.
+         * @details 범위 밖은 IEEE 나머지(`remainderf`) 한 번이다. 2π 를 빼고 더하는 반복은 무한대 · 큰 값(1e10 — 2π 를 빼도 같은 값)에서 끝나지 않았다.
+         *          유한하지 않은 값(무한대 · NaN)은 NaN 이 된다 — 부르는 쪽의 유한 검사가 잡는다.
          */
-        [[nodiscard]] static SW_INLINE float32 wrapAngle( float32 radians ) noexcept
+        [[nodiscard]] static SW_INLINE float32 wrapAngle( const float32 radians ) noexcept
         {
-            while ( radians > kPi )
-            {
-                radians -= kTwoPi;
-            }
-            while ( radians < -kPi )
-            {
-                radians += kTwoPi;
-            }
-            return radians;
+            if ( radians >= -kPi && radians <= kPi )
+                return radians;
+            return ::remainderf( radians, kTwoPi );
         }
 
         /** @brief 각(라디안) @p from 에서 @p to 로 짧은 쪽을 따라 @p weight 만큼 보간합니다. 결과는 감지 않습니다(언리얼 `FMath::LerpAngle` 과 같은 뜻). */

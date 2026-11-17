@@ -387,11 +387,16 @@ namespace sw
             return false;
         }
 
-        // DLC 소유권을 확인한다
+        // DLC 소유권을 확인한다. 확인할 수단(소유권 검사기)이 없으면 붙이지 않는다 — 예전에는 검사기가 없으면 통과해, 유료 DLC 팩이 누구에게나 붙었다.
         const uint32 dlcAppID = pReader->getDLCAppID();
         if ( dlcAppID > 0 )
         {
-            if ( _dlcValidator.isBound() && _dlcValidator( dlcAppID ) == false )
+            if ( _dlcValidator.isBound() == false )
+            {
+                SW_LOG_ERROR_ID( "PackManager.NoDLCValidator", "DLC pack %# (DLC AppID %#) needs an entitlement validator (setDLCEntitlementValidator) - not mounted", packFilePath, dlcAppID );
+                return false;
+            }
+            if ( _dlcValidator( dlcAppID ) == false )
             {
                 SW_LOG_WARNING_ID( "PackManager.AccessDeniedDLCPack", "Access denied for DLC pack %# (DLC AppID %# not owned)", packFilePath, dlcAppID );
                 return false;

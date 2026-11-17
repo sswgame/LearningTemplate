@@ -31,7 +31,8 @@ namespace sw
     {
         if ( _listKey.empty() )
             return nullopt;
-        if ( time <= _listKey.front()._time )
+        // `!( time > 첫 키 )` 로 묻는다 — NaN 시간은 어느 비교에도 지므로 `<=` · `>=` 둘을 빠져나가 아래 구간 찾기가 키 하나짜리 커브에서 범위 밖을 읽었다.
+        if ( ( time > _listKey.front()._time ) == false )
             return _listKey.front()._value;
         if ( time >= _listKey.back()._time )
             return _listKey.back()._value;

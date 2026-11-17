@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
+#include "DevTools/Material/MaterialGraphGeneratedPaths.h"
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -9,11 +9,13 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphCompileResult.h"
+
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCompileResult.h"
+#include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 
 namespace sw
 {
@@ -98,6 +100,20 @@ namespace sw
                 }
             }
         };
+
+        /** @brief 머티리얼 그래프 컴파일러를 쿠킹 전 셰이더 소스 생성기로 겁니다 — 셰이더 쿠커(`ShaderCookDriver`)는 이 창구만 부르고 컴파일러를 모른다. */
+        class MaterialGraphSourceGenerator final : public IShaderSourceGenerator
+        {
+        public:
+            const utf8* getName() const override { return "MaterialGraph"; }
+            bool        refreshAll( const AssetPaths& assetPaths, string_view contentRoot, uint32& outWrittenCount ) const override
+            {
+                return MaterialGraphGeneratedPaths::refreshAll( assetPaths, contentRoot, &outWrittenCount );
+            }
+        };
+
+        const MaterialGraphSourceGenerator         s_materialGraphSourceGenerator;
+        const IShaderSourceGenerator::Registration s_materialGraphSourceGeneratorRegistration{ s_materialGraphSourceGenerator };
     } // namespace
 
     bool MaterialGraphGeneratedPaths::makeGeneratedPaths( string_view graphID, MaterialGraphGeneratedPaths& outPaths )

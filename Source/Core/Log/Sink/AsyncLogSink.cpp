@@ -256,12 +256,13 @@ namespace sw
         _mutex.unlock();
 
         // 큐는 여러 스레드가 함께 꺼내도 되는 큐다. 작업 스레드가 동시에 꺼내도 한 줄은 한 번만 쓰인다.
+        // 장치 락에서 기다리지 않는다(`writeWithoutWaiting`) — 장치 락을 쥔 채 죽은 스레드가 있으면 `write` 는 크래시를 멈춤으로 바꾼다.
         LogRecord record;
         while ( _queue.dequeue( record ) )
         {
             for ( uint32 index = 0; index < deviceCount; ++index )
             {
-                arrDevice[index]->write( record );
+                arrDevice[index]->writeWithoutWaiting( record );
             }
         }
         for ( uint32 index = 0; index < deviceCount; ++index )
@@ -441,13 +442,30 @@ namespace sw
             return;
         }
 
-        if ( _queue.enqueue( std::move( record ) ) == false )
+        // 큐가 찼으면 작업 스레드가 자리를 낼 때까지 기다린다(spdlog 의 block 정책). 이 스레드에서 바로 쓰면 큐에 먼저 들어간 줄보다 앞서 나가
+        // 순서가 뒤집힌다 — 크래시 직전 줄을 읽는 사람이 원인과 결과를 거꾸로 본다. 작업 스레드는 큐에 넣지 않으므로(장치 안의 로그는 stderr) 서로 기다리지 않는다.
+        // enqueue 가 실패하면 record 는 옮겨지지 않는다.
+        while ( _queue.enqueue( std::move( record ) ) == false )
         {
-            // enqueue 가 실패했으면 record 는 옮겨지지 않았다. 그대로 동기로 쓴다.
-            dispatchToOutputs( record );
-            return;
+            if ( _bIsRunning.load( std::memory_order_acquire ) == false )
+            {
+                flushQueue(); // 작업 스레드가 끝났다 — 먼저 들어간 줄부터 이 스레드가 쓴다
+                dispatchToOutputs( record );
+                return;
+            }
+            wakeWorker();
+            ThreadUtil::yield();
         }
+        wakeWorker();
 
+        // 위의 "실행 중" 확인과 넣기 사이에 종료가 시작됐으면, 작업 스레드는 이미 큐를 마지막으로 비우고 끝났을 수 있다 — 그러면 이 줄은
+        // 큐에 영영 남는다. 여기서 직접 비운다(장치가 이미 닫혔으면 장치가 조용히 버린다).
+        if ( _bIsRunning.load( std::memory_order_acquire ) == false )
+            flushQueue();
+    }
+
+    void AsyncLogSink::wakeWorker()
+    {
         // 작업 스레드가 잠들려 하거나 잠들어 있을 때만 깨운다(줄마다 조건 변수의 내부 잠금을 잡지 않는다). 넣기 → 펜스 → 확인이 작업 스레드의
         // 알리기 → 펜스 → 큐 확인과 짝을 이룬다. `_cvMutex` 를 한 번 잡았다 놓아, 작업 스레드가 큐 확인과 잠들기 사이에 있으면 잠든 뒤에 깨우게 한다.
         std::atomic_thread_fence( std::memory_order_seq_cst );
@@ -458,11 +476,6 @@ namespace sw
             }
             _cv.notify_one();
         }
-
-        // 위의 "실행 중" 확인과 넣기 사이에 종료가 시작됐으면, 작업 스레드는 이미 큐를 마지막으로 비우고 끝났을 수 있다 — 그러면 이 줄은
-        // 큐에 영영 남는다. 여기서 직접 비운다(장치가 이미 닫혔으면 장치가 조용히 버린다).
-        if ( _bIsRunning.load( std::memory_order_acquire ) == false )
-            flushQueue();
     }
 
     void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )

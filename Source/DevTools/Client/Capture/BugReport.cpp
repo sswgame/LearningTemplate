@@ -463,7 +463,13 @@ namespace sw
         }
 
         if ( inputs._bRequestScreenshot )
-            RenderThread::requestScreenshot( FileUtil::joinPath( directory, kScreenshotFileName ) );
+        {
+            const optional<AbsolutePath> screenshotPath = AbsolutePath::tryMake( FileUtil::joinPath( directory, kScreenshotFileName ) );
+            if ( screenshotPath.has_value() )
+                RenderThread::requestScreenshot( *screenshotPath );
+            else
+                SW_LOG_WARNING_ID( "BugReport.ScreenshotPathNotAbsolute", "bugreport: the report folder '%#' is not absolute - no screenshot", directory );
+        }
         if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( inputs._logFilePath, FileUtil::joinPath( directory, kLogFileName ) ) == false )
             SW_LOG_WARNING_ID( "BugReport.BugreportLogFileCould", "bugreport: the log file could not be copied" );
 #if !defined( SW_SHIPPING )

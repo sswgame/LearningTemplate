@@ -33,10 +33,10 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Renderer/Cook/ShaderCookRequestCollector.h"
@@ -431,12 +431,13 @@ namespace sw
 
         SW_LOG_INFO_ID( "ShaderCooker.StartingBatchShaderCook", "Starting batch shader cook across all domains in '%#'...", rootDir.c_str() );
 
-        // 머티리얼 그래프의 생성물을 먼저 맞춘다 — 그 뒤로는 손으로 쓴 셰이더 · 머티리얼과 같은 입력이다(스탬프가 내용 해시로 추적한다). 배포 구성에는 그래프 컴파일러가 없다.
+        // 생성된 셰이더 소스(머티리얼 그래프)를 먼저 맞춘다 — 그 뒤로는 손으로 쓴 셰이더 · 머티리얼과 같은 입력이다(스탬프가 내용 해시로 추적한다).
+        // 쿠커는 생성기를 모른다 — 개발 코드가 창구(`IShaderSourceGenerator`)에 정적 등록한다. 배포 구성에는 생성기가 없다.
         if constexpr ( build::kShipping == false )
         {
-            if ( MaterialGraphGeneratedPaths::refreshAll( engine::getSubsystem<AssetPaths>(), rootDir, nullptr ) == false )
+            uint32 generatedCount = 0;
+            if ( IShaderSourceGenerator::refreshAllRegistered( engine::getSubsystem<AssetPaths>(), rootDir, generatedCount ) == false )
             {
-                SW_LOG_ERROR_ID( "ShaderCooker.MaterialGraphsNotCompiled", "Material graphs could not be compiled - their generated shaders would be stale" );
                 ShaderCookSummary nothingCooked{};
                 nothingCooked._failedCount = 1; // 낡은 생성물을 쿠킹하지 않는다. 실패로 센다
                 return nothingCooked;
