@@ -109,6 +109,7 @@ namespace sw
         , _dependencyCount{ dependencyCount }
         , _dependencyState{ dependencyCount == 0 ? FixedDependencyState::Valid : FixedDependencyState::Unknown }
         , _schemaHash{ 0 }
+        , _pReplicated{ nullptr }
     {
     }
 
@@ -123,6 +124,7 @@ namespace sw
         , _dependencyCount{ 0 }
         , _dependencyState{ FixedDependencyState::Missing }
         , _schemaHash{ 0 }
+        , _pReplicated{ nullptr }
     {
     }
 } // namespace sw
@@ -845,16 +847,23 @@ namespace sw
         const FixedCodec* pCodec = type._pFixedCodec;
         if ( pCodec == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "type has no generated fixed layout codec", type._name.c_str() } );
-        if ( pCodec->isEligible() == false )
-            return unexpected( Error{ ErrorKind::Unsupported, "type is not fixed layout eligible", pCodec->_pIneligibleReason } );
-        if ( pCodec->_dependencyState.load( std::memory_order_acquire ) == FixedDependencyState::Valid )
-            return pCodec;
+        if ( expected<void> valid = validateCodec( *pCodec ); valid.has_value() == false )
+            return unexpected( valid.error() );
+        return pCodec;
+    }
+
+    expected<void> FixedLayout::validateCodec( const FixedCodec& codec )
+    {
+        if ( codec.isEligible() == false )
+            return unexpected( Error{ ErrorKind::Unsupported, "type is not fixed layout eligible", codec._pIneligibleReason } );
+        if ( codec._dependencyState.load( std::memory_order_acquire ) == FixedDependencyState::Valid )
+            return {};
 
         vector<const FixedCodec*> listVisited;
-        if ( expected<void> dependencies = FixedLayoutInternal::areDependenciesValid( *pCodec, listVisited ); dependencies.has_value() == false )
+        if ( expected<void> dependencies = FixedLayoutInternal::areDependenciesValid( codec, listVisited ); dependencies.has_value() == false )
             return unexpected( dependencies.error() );
-        pCodec->_dependencyState.store( FixedDependencyState::Valid, std::memory_order_release );
-        return pCodec;
+        codec._dependencyState.store( FixedDependencyState::Valid, std::memory_order_release );
+        return {};
     }
 
     uint64 FixedLayout::computeSchemaHash( const uint32 version, const string_view canonical, const std::initializer_list<uint64> listNestedHash )
@@ -937,12 +946,23 @@ namespace sw
         return FixedFieldCodec::writeObject( codec, writer, pObject );
     }
 
-    FixedReadResult FixedLayout::readBodyWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
+    FixedReadResult FixedLayout::readPropertiesWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
     {
         const FixedReadResult result = FixedFieldCodec::readObject( codec, reader, pObject );
         // 모자란 스트림은 0 을 읽으므로 그 전에 범위 · 열거자 검사가 먼저 걸릴 수 있습니다. 원인은 잘림입니다.
         if ( reader.hasOverflowed() )
             return FixedReadResult::Truncated;
+        return result;
+    }
+
+    bool FixedLayout::equalsFieldWithCodec( const FixedCodec& codec, const uint32 fieldIndex, const void* pA, const void* pB )
+    {
+        return FixedFieldCodec::equalsChildren( codec, fieldIndex, 1, pA, pB );
+    }
+
+    FixedReadResult FixedLayout::readBodyWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject )
+    {
+        const FixedReadResult result = readPropertiesWithCodec( codec, reader, pObject );
         if ( result != FixedReadResult::Ok )
             return result;
 

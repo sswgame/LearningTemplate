@@ -145,3 +145,34 @@ namespace sw
         vector<FixedLayoutSampleStat> _listStat;
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 복제 스키마 샘플입니다(`ReplicatedLayoutTest`). `Replicated` 칸(범위 정수 · 양자화 실수 · bool · 범위 벡터)과 복제하지 않는 칸이 섞였다.
+     * @details 길이 없는 vector 칸이 있어 타입 전체 코덱은 적격이 아니다 — 복제 스키마는 그래도 생긴다(그 칸은 `Replicated` 가 아니다).
+     */
+    REFLECT()
+    struct ReplicatedLayoutSample
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Replicated, Min = 0, Max = 100 )
+        int32 _health = 100;
+
+        PROPERTY()
+        string _debugName = "local"; ///< 복제하지 않는다
+
+        PROPERTY( Replicated, Min = -100, Max = 100, Step = 0.01 )
+        float32 _speed = 0.0f;
+
+        PROPERTY( Replicated )
+        bool _bAlive = true;
+
+        PROPERTY( Replicated, Min = -1000, Max = 1000 )
+        float3 _position{ 0.0f, 0.0f, 0.0f };
+
+        PROPERTY()
+        vector<int32> _listCache; ///< 길이가 없어 전체 코덱은 적격이 아니다
+    };
+} // namespace sw

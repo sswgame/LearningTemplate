@@ -30,6 +30,7 @@ namespace sw
 {
     class DynamicBitset;
     class NetMessageChannel;
+    struct ReplicatedLayout;
 
     /** @brief 읽기 결과입니다. `Ok` 가 아니면 대상 객체는 바뀌지 않았습니다. 결과를 버리면 컴파일이 멈춥니다. */
     enum class [[nodiscard]] FixedReadResult : uint8
@@ -91,6 +92,11 @@ namespace sw
         mutable atomic<FixedDependencyState> _dependencyState;
         /** @brief 스키마 해시입니다. 0 이면 아직 셈하지 않았습니다(같은 표에서 늘 같은 값이라 경쟁해 셈해도 같다). */
         mutable atomic<uint64> _schemaHash;
+        /**
+         * @brief 이 타입의 `PROPERTY( Replicated )` 칸만 든 코덱(복제 스키마)입니다. `Replicated` 칸이 없으면 nullptr 입니다. 타입 전체가 적격이 아니어도 있을 수 있다.
+         * @details 생성 코드가 등록 때 한 번 건다(`s_fixedCodec._pReplicated = &s_replicatedCodec`). 읽는 길은 `ReplicatedLayout` 하나다.
+         */
+        const FixedCodec* _pReplicated;
 
         /** @brief 적격 타입의 코덱입니다. 필드가 없으면 @p pField 는 nullptr 입니다. */
         FixedCodec( const FixedFieldDesc* pField, uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, uint32 dependencyCount,
@@ -347,6 +353,8 @@ namespace sw
         }
 
         [[nodiscard]] static expected<const FixedCodec*> findCodec( const TypeInfo& type );
+        /** @brief 코덱이 적격이고 의존 코덱이 모두 적격인지 확인합니다(첫 확인 뒤로는 원자 읽기 한 번). `findCodec` 과 복제 스키마(`ReplicatedLayout`)가 씁니다. */
+        [[nodiscard]] static expected<void> validateCodec( const FixedCodec& codec );
 
         // ------------------------------------------------------------------------------
         // 2) 스키마 해시
@@ -378,6 +386,7 @@ namespace sw
         // 스키마 해시 머리 없이 필드만 쓰고 읽는다. 같은 스키마임을 핸드셰이크가 확인한 채널(`NetMessageChannel`) 안에서만 뜻이 있으므로 그 클래스만 부른다 —
         // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(Source/Engine/Serialization/Fixed/README.md 3.10).
         friend class NetMessageChannel;
+        friend struct ReplicatedLayout;
         template <typename T>
         [[nodiscard]] static bool writeBody( const T& object, BitWriter& writer )
         {
@@ -395,5 +404,9 @@ namespace sw
         }
         [[nodiscard]] static bool            writeBodyWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
         [[nodiscard]] static FixedReadResult readBodyWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
+        /** @brief 필드만 읽고 남은 비트는 보지 않습니다 — 복제 상태 뒤에 다른 값이 이어지는 메시지(`ReplicatedLayout::readFull`)가 씁니다. */
+        [[nodiscard]] static FixedReadResult readPropertiesWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
+        /** @brief 최상위 필드 @p fieldIndex 하나를 비교합니다(바뀐 칸 비트). */
+        [[nodiscard]] static bool equalsFieldWithCodec( const FixedCodec& codec, uint32 fieldIndex, const void* pA, const void* pB );
     };
 } // namespace sw
