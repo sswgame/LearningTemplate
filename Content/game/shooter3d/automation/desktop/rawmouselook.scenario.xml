@@ -5,7 +5,7 @@
   SendInput 으로 상대 마우스 이동을 OS 입력 큐에 넣어(실제 마우스와 같은 길 — 창 메시지가 아니다) 원시 보고가 왔는지(Input.RawMouseEvents)와
   게임 카메라가 돌았는지(Scene.CameraYaw)를 본다. 원시 보고가 오지 않는 환경(원격 제어 · 터치)에서는 등록이 성공해도 커서 위치 차이가 시선이다(MouseDevice::getMovementDelta,
   단위 MouseDeviceTest.RawSourceNeedsAReportBeforeIgnoringPositionDelta) — 이 시나리오는 보고가 오는 길을 본다.
-  SendInput 은 전경 창에만 가고 OS 입력을 쓰므로 input="mixed" · requireForeground — 도는 동안 키보드 · 마우스를 만지지 말 것. 전경을 못 얻거나 UIPI · 잠긴 화면이 막으면 13(건너뜀),
+  SendInput 은 전경 창에만 가고 OS 입력을 쓰므로 input="mixed" · requireForeground — 도는 동안 키보드 · 마우스를 만지지 말 것. 전경을 못 얻으면 13(건너뜀) — UIPI 에 막히면 SendInput 이 알리지 않아 WaitUntil 이 시한으로 진다,
   Windows 밖에서도 13. 데스크톱 전역 상태를 쓰므로 desktop/ 에 둔다(CTest 가 하나씩 혼자 돌린다).
   실행: App -scenario=game/shooter3d/automation/desktop/rawmouselook.scenario.xml -unattended (ctest -R Scenario.shooter3d.desktop.rawmouselook)
 -->
