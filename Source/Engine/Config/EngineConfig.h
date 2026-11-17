@@ -124,6 +124,37 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct RHIConfig
+     * @brief 렌더 장치(`IRHIDevice::initialize`)가 읽는 정책 값입니다. 장치는 `RHISwapChainDesc` 로 받는다.
+     * @details 값은 모두 `Config/Engine/EngineConfig.json` 의 `_rhi` 에 있다 — 빠진 숫자 키는 범위 검사(`Min`)에서 로드 오류다.
+     *          검증 스위치(GBV · syncval)는 Engine 의 장치가 읽어야 해서 DevTools 만 읽는 `Config/Dev` 가 아니라 여기 둔다. 디버그 레이어가 있는 구성(Debug)에서만 뜻이 있다.
+     */
+    REFLECT()
+    struct SW_API RHIConfig
+    {
+        REFLECT_BODY();
+
+        /**
+         * @brief 장치 메모리 할당 수 한도(Vulkan `maxMemoryAllocationCount`)에서 남겨 둘 칸입니다. 살아 있는 할당이 `한도 - 이 값` 에 닿으면 새 할당을 오류로 거절한다(R-4).
+         * @details 남긴 칸은 드라이버 · 레이어 · 오버레이가 같은 장치에서 쓰는 몫이다. 언리얼 Vulkan 의 `r.Vulkan.MaxAllocations` 경고 자리다.
+         */
+        PROPERTY( Min = 1 )
+        uint32 _allocationCountReserve{};
+
+        /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
+        PROPERTY( Min = 1, Units = s )
+        float64 _pipelineCacheSaveIntervalSeconds{};
+
+        /** @brief GPU 기반 검증(D3D12 `SetEnableGPUBasedValidation` · Vulkan `VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT`)을 켭니다. 디버그 레이어가 켜진 구성에서만 듣는다(R-9). */
+        PROPERTY()
+        bool _bGPUBasedValidation{};
+
+        /** @brief Vulkan 동기화 검증(`VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`)을 켭니다. 검증 레이어가 켜진 구성에서만 듣는다(R-9). */
+        PROPERTY()
+        bool _bSynchronizationValidation{};
+    };
+
+    /**
      * @enum RHIDeviceLostPolicy
      * @brief 렌더 장치를 잃었을 때(TDR · 드라이버 재시작 · 개발 명령 `rhi.removeDevice`) 엔진이 할 일입니다. `EngineRenderDriver` 가 프레임마다 `IRHIDevice::isDeviceLost` 를 보고 고른다.
      * @details 언리얼은 `GetDeviceRemovedReason` → DRED 덤프 → 크래시 리포트 뒤 종료하고 Godot 4 도 치명 오류로 끝낸다(기본값 `Quit`).
@@ -209,6 +240,9 @@ namespace sw
 
         PROPERTY()
         RHIDeviceLostPolicy _deviceLostPolicy{ RHIDeviceLostPolicy::None }; ///< 렌더 장치를 잃었을 때 할 일(`None` 이면 기동이 오류로 멈춘다)
+
+        PROPERTY()
+        RHIConfig _rhi{}; ///< 렌더 장치 정책 값(할당 수 여유 · 파이프라인 캐시 저장 주기 · 검증 스위치)
 
         /**
          * @brief 셰이더로 보내는 시간(머티리얼 시간 · VAT 시계 · 시간 구동 컴퓨트)을 접는 주기(초)입니다(`TimeRolloverUtil::fold`).

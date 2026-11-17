@@ -293,6 +293,14 @@ namespace sw
         /// @brief 링보다 큰 전송 한 장을 링 밖의 일회성 버퍼로 받는 상한(바이트)입니다(`gv_rhiStagingSingleMaxMegabytes`). 링을 쓰는 백엔드(GL · Vulkan)가 업로드 · 되읽기 링에 같이 쓰고,
         ///        0 이면 링보다 큰 한 장은 `Rejected` 입니다. 리플렉션하지 않는다.
         uint64 _stagingSoloMaxBytes{ 0 };
+        /// @brief 장치 메모리 할당 수 한도에서 남겨 둘 칸입니다(`EngineConfig::_rhi._allocationCountReserve`). 할당을 세는 백엔드(Vulkan)는 0 이면 초기화를 거절한다. 리플렉션하지 않는다.
+        uint32 _allocationCountReserve{ 0 };
+        /// @brief 파이프라인 캐시 저장 주기(초)입니다(`EngineConfig::_rhi._pipelineCacheSaveIntervalSeconds`). 캐시를 디스크에 두는 백엔드(Vulkan)는 0 이하면 초기화를 거절한다. 리플렉션하지 않는다.
+        float64 _pipelineCacheSaveIntervalSeconds{ 0.0 };
+        /// @brief GPU 기반 검증을 켭니다(`EngineConfig::_rhi._bGPUBasedValidation`, 디버그 레이어가 켜진 구성만). 리플렉션하지 않는다.
+        bool _bGPUBasedValidation{ false };
+        /// @brief Vulkan 동기화 검증을 켭니다(`EngineConfig::_rhi._bSynchronizationValidation`, 검증 레이어가 켜진 구성만). 리플렉션하지 않는다.
+        bool _bSynchronizationValidation{ false };
 
         /**
          * @brief Win32 표면의 `HWND` 를 @p outHandle 에 `void*` 로 담고 true 입니다. 창이 없으면(핸들이 nullptr, 오프스크린) @p outHandle 이 nullptr 이고 true 입니다.

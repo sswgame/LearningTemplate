@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
@@ -371,10 +372,10 @@ namespace sw
          */
         struct VulkanHeapMemory
         {
-            VkDevice       _device{ nullptr }; // 헤더는 vulkan.h 를 보지 않는다(VulkanRHIHandle.h) — VK_NULL_HANDLE 대신 nullptr
-            VkDeviceMemory _memory{ nullptr };
-            uint64         _sizeBytes{ 0 };
-            uint32         _memoryTypeIndex{ 0 };
+            VulkanRHIDevice* _pOwner{ nullptr }; ///< 메모리를 놓을 장치(`freeDeviceMemory` — 할당 계수가 함께 준다)
+            VkDeviceMemory   _memory{ nullptr }; // 헤더는 vulkan.h 를 보지 않는다(VulkanRHIHandle.h) — VK_NULL_HANDLE 대신 nullptr
+            uint64           _sizeBytes{ 0 };
+            uint32           _memoryTypeIndex{ 0 };
 
             VulkanHeapMemory()                                     = default;
             VulkanHeapMemory( const VulkanHeapMemory& )            = delete;
@@ -660,6 +661,13 @@ namespace sw
          * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
          */
         [[nodiscard]] bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
+        /**
+         * @brief 장치 메모리를 할당합니다. 모든 `vkAllocateMemory` 가 여기를 지난다 — 할당 수가 `한도 - 남길 칸` 에 닿았으면 오류를 남기고 false 입니다(`VulkanMemoryAccount`, R-4).
+         * @details 여러 스레드가 부른다(계수는 원자값이다).
+         */
+        [[nodiscard]] bool allocateDeviceMemory( const VkMemoryAllocateInfo& allocInfo, VkDeviceMemory& outMemory );
+        /** @brief 장치 메모리를 놓습니다. 모든 `vkFreeMemory` 가 여기를 지난다. 빈 핸들은 아무것도 하지 않는다. */
+        void freeDeviceMemory( VkDeviceMemory memory );
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
@@ -1030,6 +1038,11 @@ namespace sw
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
+
+        /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
+        VulkanMemoryAccount _memoryAccount;
+        /// @brief 할당 수 한도에서 남길 칸입니다(`RHISwapChainDesc::_allocationCountReserve`).
+        uint32 _allocationCountReserve{ 0 };
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매긴다.
         RHITransferSerials _transferSerials;

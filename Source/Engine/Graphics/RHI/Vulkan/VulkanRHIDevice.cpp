@@ -181,8 +181,8 @@ namespace sw
 
     VulkanRHIDevice::VulkanHeapMemory::~VulkanHeapMemory()
     {
-        if ( _device != VK_NULL_HANDLE && _memory != VK_NULL_HANDLE )
-            vkFreeMemory( _device, _memory, nullptr );
+        if ( _pOwner != nullptr )
+            _pOwner->freeDeviceMemory( _memory );
     }
 
     IRHIResourceFactory* VulkanRHIDevice::getResourceFactory()
@@ -213,6 +213,14 @@ namespace sw
         _surfaceKind    = desc._surfaceKind;
         _width          = desc._width;
         _height         = desc._height;
+
+        // 할당 수 여유는 EngineConfig 의 `_rhi` 값이다. 없으면(0) 짐작하지 않고 멈춘다.
+        if ( desc._allocationCountReserve == 0 )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.AllocationCountReserveMissing", "EngineConfig _rhi._allocationCountReserve must be > 0 - the Vulkan backend does not start" );
+            return false;
+        }
+        _allocationCountReserve = desc._allocationCountReserve;
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
         _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );
@@ -273,6 +281,11 @@ namespace sw
 
             if ( verifyRequiredColorAttachmentFormats() == false )
                 return false;
+            {
+                VkPhysicalDeviceProperties limitProperties{};
+                vkGetPhysicalDeviceProperties( _physicalDevice, &limitProperties );
+                _memoryAccount.setLimit( limitProperties.limits.maxMemoryAllocationCount, _allocationCountReserve );
+            }
 
             if ( createLogicalDevice() == false )
                 return false;
@@ -402,7 +415,7 @@ namespace sw
                 if ( record._buffer != VK_NULL_HANDLE )
                     vkDestroyBuffer( _device, record._buffer, nullptr );
                 if ( record._memory != VK_NULL_HANDLE )
-                    vkFreeMemory( _device, record._memory, nullptr );
+                    freeDeviceMemory( record._memory );
             } );
             _gpuBuffers.clear();
             _constantBufferMirror.clear();
@@ -413,7 +426,7 @@ namespace sw
                 if ( slot._buffer != VK_NULL_HANDLE )
                     vkDestroyBuffer( _device, slot._buffer, nullptr );
                 if ( slot._memory != VK_NULL_HANDLE )
-                    vkFreeMemory( _device, slot._memory, nullptr );
+                    freeDeviceMemory( slot._memory );
                 slot = StructuredUploadSlot{};
             }
             _recordingState._geometry = RHIGeometryBindings{};
@@ -435,7 +448,7 @@ namespace sw
                 if ( record._image != VK_NULL_HANDLE )
                     vkDestroyImage( _device, record._image, nullptr );
                 if ( record._memory != VK_NULL_HANDLE )
-                    vkFreeMemory( _device, record._memory, nullptr );
+                    freeDeviceMemory( record._memory );
             } );
             // 힙 핸들 표를 텍스처 표보다 먼저 비운다 — 이미지는 위에서 모두 지웠고, 남은 참조(레코드 · 해제 대리자)가 놓일 때 장치가 아직 살아 있다.
             _mapTransientHeap.clear();
@@ -487,7 +500,7 @@ namespace sw
             }
             if ( _dummyUBOMemory )
             {
-                vkFreeMemory( _device, _dummyUBOMemory, nullptr );
+                freeDeviceMemory( _dummyUBOMemory );
                 _dummyUBOMemory = nullptr;
             }
             if ( _bindlessDummyView )
@@ -502,7 +515,7 @@ namespace sw
             }
             if ( _bindlessDummyMemory )
             {
-                vkFreeMemory( _device, _bindlessDummyMemory, nullptr );
+                freeDeviceMemory( _bindlessDummyMemory );
                 _bindlessDummyMemory = nullptr;
             }
 
@@ -614,6 +627,32 @@ namespace sw
         return false;
     }
 
+    bool VulkanRHIDevice::allocateDeviceMemory( const VkMemoryAllocateInfo& allocInfo, VkDeviceMemory& outMemory )
+    {
+        outMemory = VK_NULL_HANDLE;
+        if ( _memoryAccount.tryAcquire() == false )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.AllocationCountLimit", "Vulkan device memory allocations reached %# (maxMemoryAllocationCount minus EngineConfig _rhi._allocationCountReserve) - this allocation (%# bytes) fails",
+                             _memoryAccount.getUsableCount(), static_cast<uint64>( allocInfo.allocationSize ) );
+            return false;
+        }
+        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &outMemory ) != VK_SUCCESS )
+        {
+            _memoryAccount.release();
+            outMemory = VK_NULL_HANDLE;
+            return false;
+        }
+        return true;
+    }
+
+    void VulkanRHIDevice::freeDeviceMemory( VkDeviceMemory memory )
+    {
+        if ( memory == VK_NULL_HANDLE || _device == VK_NULL_HANDLE )
+            return;
+        vkFreeMemory( _device, memory, nullptr );
+        _memoryAccount.release();
+    }
+
     VulkanRHIDevice::VulkanBufferRecord* VulkanRHIDevice::resolveAllocatedBuffer( RHIBufferHandle handle )
     {
         return _gpuBuffers.get( handle );
@@ -706,7 +745,7 @@ namespace sw
         allocInfo.memoryTypeIndex = memoryTypeIndex;
 
         VkDeviceMemory memory = VK_NULL_HANDLE;
-        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &memory ) != VK_SUCCESS )
+        if ( allocateDeviceMemory( allocInfo, memory ) == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
             SW_LOG_ERROR_ID( "Vulkan.FailedAllocateMemoryVkBuffer", "Failed to allocate memory for VkBuffer." );
@@ -728,7 +767,7 @@ namespace sw
         if ( bReady == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
-            vkFreeMemory( _device, memory, nullptr );
+            freeDeviceMemory( memory );
             return 0;
         }
 
@@ -1450,7 +1489,7 @@ namespace sw
         allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize  = requirements.size;
         allocInfo.memoryTypeIndex = memoryTypeIndex;
-        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &_breadcrumbMemory ) != VK_SUCCESS )
+        if ( allocateDeviceMemory( allocInfo, _breadcrumbMemory ) == false )
             return false;
         if ( isVkSuccess( vkBindBufferMemory( _device, _breadcrumbBuffer, _breadcrumbMemory, 0 ), "vkBindBufferMemory (breadcrumbs)" ) == false )
             return false;
@@ -1476,7 +1515,7 @@ namespace sw
         if ( _breadcrumbBuffer != VK_NULL_HANDLE )
             vkDestroyBuffer( _device, _breadcrumbBuffer, nullptr );
         if ( _breadcrumbMemory != VK_NULL_HANDLE )
-            vkFreeMemory( _device, _breadcrumbMemory, nullptr );
+            freeDeviceMemory( _breadcrumbMemory );
         _breadcrumbBuffer = VK_NULL_HANDLE;
         _breadcrumbMemory = VK_NULL_HANDLE;
     }
@@ -2874,7 +2913,7 @@ namespace sw
             allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
             allocInfo.allocationSize  = requirements.size;
             allocInfo.memoryTypeIndex = memoryTypeIndex;
-            bMemoryReady              = vkAllocateMemory( _device, &allocInfo, nullptr, &outMemory ) == VK_SUCCESS &&
+            bMemoryReady              = allocateDeviceMemory( allocInfo, outMemory ) &&
                            vkBindBufferMemory( _device, outBuffer, outMemory, 0 ) == VK_SUCCESS &&
                            vkMapMemory( _device, outMemory, 0, VK_WHOLE_SIZE, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr;
         }
@@ -2898,7 +2937,7 @@ namespace sw
         if ( rBuffer != VK_NULL_HANDLE )
             vkDestroyBuffer( _device, rBuffer, nullptr );
         if ( rMemory != VK_NULL_HANDLE )
-            vkFreeMemory( _device, rMemory, nullptr );
+            freeDeviceMemory( rMemory );
         rBuffer = VK_NULL_HANDLE;
         rMemory = VK_NULL_HANDLE;
         pMapped = nullptr;
@@ -3268,7 +3307,7 @@ namespace sw
             allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
             allocMem.allocationSize  = memoryRequirements.size;
             allocMem.memoryTypeIndex = memoryTypeIndex;
-            if ( vkAllocateMemory( _device, &allocMem, nullptr, &_dummyUBOMemory ) != VK_SUCCESS )
+            if ( allocateDeviceMemory( allocMem, _dummyUBOMemory ) == false )
                 return false;
             if ( isVkSuccess( vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 ), "vkBindBufferMemory (dummy UBO)" ) == false )
                 return false;
@@ -3319,7 +3358,7 @@ namespace sw
         allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocMem.allocationSize  = memoryRequirements.size;
         allocMem.memoryTypeIndex = memoryTypeIndex;
-        if ( vkAllocateMemory( _device, &allocMem, nullptr, &_bindlessDummyMemory ) != VK_SUCCESS )
+        if ( allocateDeviceMemory( allocMem, _bindlessDummyMemory ) == false )
             return false;
         if ( isVkSuccess( vkBindImageMemory( _device, _bindlessDummyImage, _bindlessDummyMemory, 0 ), "vkBindImageMemory (bindless dummy image)" ) == false )
             return false;

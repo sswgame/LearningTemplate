@@ -31,5 +31,11 @@
     },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",
+    "_rhi": {
+        "_allocationCountReserve": 256,
+        "_pipelineCacheSaveIntervalSeconds": 300.0,
+        "_bGPUBasedValidation": false,
+        "_bSynchronizationValidation": false
+    },
     "_shaderTimeRolloverSeconds": 3600.0
 }
