@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="b440c4aa457f4ee4a6c684b36d341994"?>
+<!--
+  장르 키트 시연 — 식당 하루 영업(maps/kit_restaurantsim). 도착(Arrival)을 적지 않아 저절로 오는 손님은 없고, 디렉터가 손님 둘을 들인다.
+  라멘 하나뿐인 메뉴(가격 40), 팁 비율 0 이라 매출은 손님 수 x 40 이다. 레시피는 demo.recipes.xml 의 ramen(면 하나, 3 분).
+-->
+<RestaurantCatalog open="11" close="21" window="10">
+	<Dish id="ramen" name="Ramen" recipe="ramen" category="Noodle" price="40"/>
+	<Customer id="student" patience="30" budget="1.2" tipRate="0" eat="5"/>
+</RestaurantCatalog>
