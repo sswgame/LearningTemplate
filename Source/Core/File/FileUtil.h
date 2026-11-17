@@ -68,6 +68,15 @@ namespace sw
         Failed,  ///< 있는데 읽지 못했다(로그를 남겼다)
     };
 
+    /** @brief `FileUtil::tryWriteFile` 의 결과입니다(로그는 부르는 쪽이 정한다). */
+    enum class FileWriteResult : uint8
+    {
+        Written,       ///< 바꿔 끼웠다
+        Refused,       ///< 쓰기 게이트(`isWriteAllowed` — 거절은 그쪽이 오류를 남긴다)나 읽기 전용 대상이 막았다
+        WriteFailed,   ///< 임시 파일을 열거나 다 쓰지 못했다(디스크 가득 · 권한)
+        ReplaceFailed, ///< 임시 파일은 썼는데 대상과 바꿔 끼우지 못했다(다른 프로세스 · 스레드가 쥐고 있거나 막 바꿨다)
+    };
+
     /** @brief 디렉터리 순회 콜백입니다. false 를 돌려주면 순회를 멈춥니다. */
     using DirectoryEntryVisitFn = bool ( * )( void* pContext, const DirectoryEntry& entry );
 } // namespace sw
@@ -342,6 +351,11 @@ namespace sw
          * @details 실패하면(디스크 가득 · 잠김 · 도중 종료) false 이고 원본은 그대로 남습니다. 반쯤 쓴 파일이 남지 않습니다.
          */
         [[nodiscard]] static bool writeFile( string_view fileName, const uint8* pData, uint64 size );
+        /**
+         * @brief `writeFile` 과 같은 원자적 쓰기인데 실패를 로그 없이 결과로 돌려줍니다(쓰기 게이트의 거절만 그쪽이 남긴다).
+         * @details 같은 자리를 여러 쓰는 쪽이 다투는 것이 정상인 캐시(DDC — 같은 내용의 항목)가 쓴다. 교체에 진 것은 오류가 아니라 그 자리를 다시 볼 일이다.
+         */
+        [[nodiscard]] static FileWriteResult tryWriteFile( string_view fileName, const uint8* pData, uint64 size );
         /**
          * @brief `writeFile` 과 같고, 바꿔 끼우기 전에 내용을 · 뒤에 폴더 항목을 저장 장치까지 내립니다(`FileSyncMode::Durable`).
          * @details 다시 만들 수 없는 사용자 데이터(세이브 슬롯 · 장치 키 · 사용자 설정)만 이것으로 쓴다 — 파일마다 fsync 비용(수 ms)이 든다.

@@ -312,8 +312,13 @@ namespace sw
         entry.insert( entry.end(), keyDescription.begin(), keyDescription.end() );
         entry.insert( entry.end(), bytes.begin(), bytes.end() );
         // 쓰기는 임시 파일 + 원자 교체다(반쯤 쓴 항목을 읽는 쪽이 보지 않는다). 교체에 졌으면(다른 프로세스 · 스레드가 같은 자리를 막 바꿨다) 그 자리가 같은 항목인지 본다.
-        if ( FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, entry.data(), entry.size() ) )
+        // 로그 없는 쓰기(`tryWriteFile`)를 쓴다 — 교체에 진 것은 경쟁의 정상 결과라 오류 로그를 남기면 그 실행의 테스트가 "예상하지 않은 Error" 로 진다.
+        const FileWriteResult result =
+            FileUtil::ensureParentDirectoryExists( path ) ? FileUtil::tryWriteFile( path, entry.data(), entry.size() ) : FileWriteResult::WriteFailed;
+        if ( result == FileWriteResult::Written || ( result == FileWriteResult::ReplaceFailed && isSameEntry() ) )
             return true;
-        return isSameEntry();
+        SW_LOG_WARNING_ID( "DDC.EntryNotWritten", "DDC entry '%#' could not be written (%#) - the next run cooks or imports it again", path,
+                           result == FileWriteResult::Refused ? "refused" : ( result == FileWriteResult::ReplaceFailed ? "replace lost to a different entry" : "write failed" ) );
+        return false;
     }
 } // namespace sw

@@ -191,12 +191,41 @@ namespace sw
                 string makeRecordPath() const { return makeCache().makePath( 0, _key ) + ShaderCookStamp::kIncludeRecordSuffix; }
             };
 
+            /** @brief 셰이더 DDC 폴더가 DDC 항목 배치로 옮겨졌다는 표지 파일 이름입니다(폴더 맨 위). 있으면 옛 `<키>.bin` 을 찾지 않는다. */
+            static constexpr const utf8* kLayoutMarkerName = "layout.swddc1";
+
+            /**
+             * @brief 옛 배치(`<키>.bin` · `<키>.bin.deps` — 폴더 맨 위)의 파일을 지우고 표지를 남깁니다. 옛 배치는 다시 쓰이지 않는다(새 자리는 `<키 앞 두 글자>/<키>`).
+             * @details 프로세스 상태 없이 표지 파일 하나로 한 번만 돈다 — 백엔드 넷이 함께 떠도 지우기는 조용한 시도(`tryRemoveFile`)라 겹쳐도 된다.
+             */
+            static void removeLegacyCacheFiles( const string& cacheDir )
+            {
+                const string marker = FileUtil::joinPath( cacheDir, kLayoutMarkerName );
+                if ( FileUtil::exists( marker ) )
+                    return;
+                vector<string> listLegacy;
+                (void)FileUtil::forEachDirectoryEntry( cacheDir, false, [&listLegacy]( const DirectoryEntry& entry )
+                {
+                    if ( entry._bDirectory == false && ( StringUtil::endsWith( entry._path, ".bin" ) || StringUtil::endsWith( entry._path, ".bin.deps" ) ) )
+                        listLegacy.push_back( string( entry._path ) );
+                    return true;
+                } ); // 폴더가 없으면 지울 것이 없다
+                for ( const string& path : listLegacy )
+                {
+                    (void)FileUtil::tryRemoveFile( path ); // 다른 프로세스가 먼저 지웠을 수 있다
+                }
+                const string_view markerText{ "SWDDC 1\n" };
+                if ( FileUtil::ensureParentDirectoryExists( marker ) )
+                    (void)FileUtil::tryWriteFile( marker, reinterpret_cast<const uint8*>( markerText.data() ), markerText.size() ); // 못 쓰면 다음 실행이 다시 훑는다
+            }
+
             static ShaderCacheSlot computeCacheSlot( const ShaderCompileDesc& desc, const ShaderCompileInput& input )
             {
                 ShaderCacheSlot slot;
                 slot._directory = getShaderCacheDirectory();
                 if ( slot._directory.empty() )
                     return slot;
+                removeLegacyCacheFiles( slot._directory );
 
                 // 못 읽으면 내용 없이(해시 0) 적는다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
                 vector<uint8> sourceBytes;

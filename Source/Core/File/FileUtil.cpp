@@ -86,16 +86,35 @@ namespace sw
              */
             [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size, FileSyncMode durability )
             {
+                const FileWriteResult result = writeAtomicallyQuiet( fileName, pData, size, durability );
+                switch ( result )
+                {
+                    case FileWriteResult::Written:
+                        return true;
+                    case FileWriteResult::Refused:
+                        if ( FileUtil::isReadOnlyFile( fileName ) )
+                            SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName );
+                        return false; // 게이트 거절은 `isWriteAllowed` 가 이미 남겼다
+                    case FileWriteResult::WriteFailed:
+                        SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to write %# bytes to %# — the original file was left untouched", size, fileName );
+                        return false;
+                    case FileWriteResult::ReplaceFailed:
+                        SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", fileName );
+                        return false;
+                }
+                return false;
+            }
+
+            /** @brief `writeAtomically` 의 본체입니다 — 실패를 로그 없이 결과로 돌려준다(게이트 거절은 `isWriteAllowed` 가 남긴다). 설명은 `writeAtomically`. */
+            [[nodiscard]] static FileWriteResult writeAtomicallyQuiet( string_view fileName, const void* pData, size_t size, FileSyncMode durability )
+            {
                 const string filePath = FileUtil::normalizeSeparators( fileName );
                 if ( FileUtil::isWriteAllowed( filePath ) == false )
-                    return false;
+                    return FileWriteResult::Refused;
                 // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
                 if ( FileUtil::isReadOnlyFile( filePath ) )
-                {
-                    SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", filePath.c_str() );
-                    return false;
-                }
+                    return FileWriteResult::Refused;
                 const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
                 // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
                 StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
@@ -108,10 +127,7 @@ namespace sw
 
                 FILE* pFile = PlatformFileUtil::openFile( tempPath.c_str(), "wb" );
                 if ( pFile == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to open temporary file for writing: %#", tempPath.c_str() );
-                    return false;
-                }
+                    return FileWriteResult::WriteFailed;
 
                 const size_t written          = ( size > 0 ) ? std::fwrite( pData, 1, size, pFile ) : 0;
                 const bool   bFlushed         = std::fflush( pFile ) == 0 && ( durability == FileSyncMode::Fast || PlatformFileUtil::flushToStorage( pFile ) );
@@ -119,9 +135,8 @@ namespace sw
                 const bool   bWriteIncomplete = written != size || bFlushed == false || bClosed == false;
                 if ( bWriteIncomplete )
                 {
-                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to write %# bytes to %# (wrote %#) — the original file was left untouched", size, filePath.c_str(), written );
                     discardTempFile( tempPath );
-                    return false;
+                    return FileWriteResult::WriteFailed;
                 }
 
                 // 다른 프로세스(파일 감시 · 백신 · 에디터)가 대상을 잠깐 쥐고 있으면 Windows 의 바꿔치기가 실패한다. 잠깐 기다렸다 다시 한다.
@@ -134,13 +149,12 @@ namespace sw
                             SW_LOG_WARNING_ID( "File.DirectoryFlushFailed", "Replaced %# but could not flush its folder entry to storage", filePath.c_str() );
                         FileUtil::recordFileCreated();
                         PlatformFileUtil::recordFileWritten( filePath );
-                        return true;
+                        return FileWriteResult::Written;
                     }
                     ThreadUtil::sleepForMilliseconds( 20 );
                 }
-                SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
                 discardTempFile( tempPath );
-                return false;
+                return FileWriteResult::ReplaceFailed;
             }
 
             /** @brief `writeFile` · `writeFileDurable` 의 본체입니다 — 크기를 확인하고 원자적으로 씁니다. */
@@ -864,6 +878,13 @@ namespace sw
     bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )
     {
         return FileUtilInternal::writeBytes( fileName, pData, size, FileSyncMode::Fast );
+    }
+
+    FileWriteResult FileUtil::tryWriteFile( string_view fileName, const uint8* pData, const uint64 size )
+    {
+        if ( size == 0 || pData == nullptr || size > static_cast<uint64>( std::numeric_limits<size_t>::max() ) )
+            return FileWriteResult::WriteFailed;
+        return FileUtilInternal::writeAtomicallyQuiet( fileName, pData, static_cast<size_t>( size ), FileSyncMode::Fast );
     }
 
     bool FileUtil::writeFileDurable( string_view fileName, const uint8* pData, const uint64 size )
