@@ -38,11 +38,6 @@ namespace sw
 
 namespace sw
 {
-    CookRecord CookRecord::make( const CookJob& job, const vector<uint8>& outputBytes )
-    {
-        return make( job, ContentHash::computeBytes( outputBytes ) );
-    }
-
     CookRecord CookRecord::make( const CookJob& job, uint64 outputHash )
     {
         CookRecord record;
@@ -173,19 +168,13 @@ namespace sw
         return FileUtil::joinPath( FileUtil::joinPath( _rootPath, hex.substr( 0, 2 ) ), hex );
     }
 
-    bool DerivedDataCache::find( uint64 key, vector<uint8>& outBytes ) const
+    bool DerivedDataCache::find( uint64 key, string_view outputPath ) const
     {
         const string path = makePath( key );
-        return FileUtil::exists( path ) && FileUtil::readFile( path, outBytes );
+        return FileUtil::exists( path ) && FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::copyFile( path, outputPath );
     }
 
-    bool DerivedDataCache::store( uint64 key, const vector<uint8>& bytes ) const
-    {
-        const string path = makePath( key );
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, bytes.data(), bytes.size() );
-    }
-
-    bool DerivedDataCache::storeFile( uint64 key, string_view sourcePath ) const
+    bool DerivedDataCache::store( uint64 key, string_view sourcePath ) const
     {
         const string path = makePath( key );
         return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::copyFile( sourcePath, path );

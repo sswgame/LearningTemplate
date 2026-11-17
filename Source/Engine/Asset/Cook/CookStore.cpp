@@ -48,31 +48,18 @@ namespace sw
         const bool bOutputCurrent = FileUtil::isRegularFile( outputPath ) && hashOutputFile( outputPath ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
-        vector<uint8> bytes;
-        if ( _derivedDataCache.find( record._key, bytes ) == false )
+        // DDC 의 출력을 파일로 복사하고 복사한 파일의 해시를 기록과 견준다 — 출력을 메모리로 들지 않는다.
+        if ( _derivedDataCache.find( record._key, outputPath ) == false )
         {
-            SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );
+            SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry (or it could not be copied) - cooked again", outputID );
             return false;
         }
-        if ( hashOutput( bytes ) != record._outputHash )
+        if ( hashOutputFile( outputPath ) != record._outputHash )
         {
             SW_LOG_WARNING_ID( "CookStore.CookDDCEntryDoes", "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
-            return false;
-        }
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, bytes.data(), bytes.size() ) == false )
-        {
-            SW_LOG_WARNING_ID( "CookStore.CookCouldNotWrite", "Cook: could not write '%#' from the DDC - cooked again", outputPath );
-            return false;
+            return false; // 다시 굽는 쿠커가 출력을 덮어쓴다
         }
         return true;
-    }
-
-    uint64 CookStore::hashOutput( const vector<uint8>& bytes ) const
-    {
-        const Stopwatch watch;
-        const uint64    hash = ContentHash::computeBytes( bytes );
-        _outputHashNanos += watch.getElapsedNanoseconds();
-        return hash;
     }
 
     uint64 CookStore::hashOutputFile( string_view outputPath ) const
@@ -104,7 +91,7 @@ namespace sw
         if ( finished.has_value() )
             return *finished;
         const CookRecord record = CookRecord::make( job, step._outputHash );
-        if ( _derivedDataCache.storeFile( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        if ( _derivedDataCache.store( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore2", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;
@@ -117,15 +104,15 @@ namespace sw
         const optional<CookResult> finished = checkFinishedJob( job, step, outputID );
         if ( finished.has_value() )
             return *finished;
-        vector<uint8> bytes;
-        if ( FileUtil::readFile( outputPath, bytes ) == false )
+        // 출력 해시는 파일을 조각으로 읽어 센다(내용 해시 캐시가 그 값을 남긴다). DDC 에는 파일을 복사한다 — 출력을 한 벡터로 들지 않는다.
+        const uint64 outputHash = hashOutputFile( outputPath );
+        if ( outputHash == 0 )
         {
             SW_LOG_ERROR_ID( "CookStore.CookReportedWrittenBut", "Cook: '%#' was reported written but cannot be read back", outputPath );
             return CookResult::Failed;
         }
-        // 출력 파일은 쿠커가 쓰므로 다시 읽는 것은 DDC 저장에 어차피 필요하다. 해시는 그 바이트를 한 번만 훑는다(`hashOutput` 이 시간도 잰다).
-        const CookRecord record = CookRecord::make( job, hashOutput( bytes ) );
-        if ( _derivedDataCache.store( record._key, bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        const CookRecord record = CookRecord::make( job, outputHash );
+        if ( _derivedDataCache.store( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;

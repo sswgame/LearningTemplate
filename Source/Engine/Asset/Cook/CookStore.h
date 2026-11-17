@@ -133,8 +133,6 @@ namespace sw
         int64 getOutputHashNanos() const { return _outputHashNanos; }
 
     private:
-        /** @brief 출력 바이트의 내용 해시를 구하고 든 시간을 `_outputHashNanos` 에 더합니다. */
-        uint64 hashOutput( const vector<uint8>& bytes ) const;
         /** @brief 출력 파일의 내용 해시를 `ContentHash::computeFile`(도장이 그대로면 읽지 않는다)로 구하고 든 시간을 `_outputHashNanos` 에 더합니다. */
         uint64 hashOutputFile( string_view outputPath ) const;
 
@@ -156,6 +154,6 @@ namespace sw
         DerivedDataCache              _derivedDataCache;
         mutable CookStats             _stats;           ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
         mutable unordered_set<string> _setRequestedID;  ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)
-        mutable int64                 _outputHashNanos; ///< `hashOutput` 에 쓴 시간(ns) — `_tally` 처럼 `cookFile` 을 부르는 스레드에서만 바뀐다
+        mutable int64                 _outputHashNanos; ///< `hashOutputFile` 에 쓴 시간(ns) — `_tally` 처럼 `cookFile` 을 부르는 스레드에서만 바뀐다
     };
 } // namespace sw

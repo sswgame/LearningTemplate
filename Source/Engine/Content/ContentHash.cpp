@@ -44,14 +44,13 @@ namespace sw
             /** @brief 영속 항목 하나가 파일에서 차지하는 최소 바이트입니다(빈 경로 길이 4 + 크기 · 시각 · 해시 24). */
             static constexpr size_t kMinCacheEntryBytes = 28;
 
-            /** @brief 파일을 읽어 해시를 구하고 읽은 바이트를 @p inoutByteCount 에 더합니다(캐시 밖 본체). */
+            /** @brief 파일을 조각으로 읽어 해시를 구하고 읽은 바이트를 @p inoutByteCount 에 더합니다(캐시 밖 본체). 못 읽으면 0 입니다. */
             static uint64 readFileHash( string_view absPath, atomic<uint64>& inoutByteCount )
             {
-                vector<uint8> bytes;
-                if ( FileUtil::readFile( absPath, bytes ) == false )
-                    return 0;
-                inoutByteCount.fetch_add( bytes.size() );
-                return ContentHash::computeBytes( bytes );
+                uint64                 byteCount = 0;
+                const expected<uint64> hash      = ContentHash::computeFileStream( absPath, &byteCount );
+                inoutByteCount.fetch_add( byteCount );
+                return hash.has_value() ? *hash : 0;
             }
         };
     } // namespace
@@ -67,6 +66,24 @@ namespace sw
     uint64 ContentHash::appendBytes( uint64 state, const uint8* pData, size_t size )
     {
         return HashUtil::appendBytes64( state, pData, size );
+    }
+
+    expected<uint64> ContentHash::computeFileStream( string_view absPath, uint64* pOutByteCount )
+    {
+        uint64 fileSize = 0;
+        if ( FileUtil::tryGetFileSize( absPath, fileSize ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "file cannot be sized for its content hash", absPath } );
+        uint64        state = kInitialState;
+        vector<uint8> chunk;
+        for ( uint64 offset = 0; offset < fileSize; offset += kStreamChunkBytes )
+        {
+            if ( FileUtil::readFile( absPath, chunk, offset, kStreamChunkBytes ) == false || chunk.empty() )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "file cannot be read for its content hash", absPath } );
+            state = appendBytes( state, chunk.data(), chunk.size() );
+            if ( pOutByteCount != nullptr )
+                *pOutByteCount += chunk.size();
+        }
+        return state;
     }
 
     uint64 ContentHash::computeFile( string_view absPath )

@@ -42,6 +42,13 @@ namespace sw
         static constexpr uint64 kInitialState = HashUtil::kFNVOffset64;
         /** @brief 상태 @p state 에 @p size 바이트를 더한 내용 해시 상태입니다. */
         static uint64 appendBytes( uint64 state, const uint8* pData, size_t size );
+        /**
+         * @brief 파일을 조각(`kStreamChunkBytes`)으로 읽어 내용 해시를 셉니다 — 캐시를 보지 않고, 파일을 한 벡터로 들지 않는다(큰 팩 · 모드 팩).
+         * @return 열거나 읽지 못하면 오류입니다. 빈 파일은 `kInitialState` 다.
+         */
+        [[nodiscard]] static expected<uint64> computeFileStream( string_view absPath, uint64* pOutByteCount = nullptr );
+        /** @brief `computeFileStream` 이 한 번에 읽는 바이트입니다. */
+        static constexpr uint64 kStreamChunkBytes = 4 * constant::memory::kBytesPerMegabyte;
         /** @brief 바이트의 내용 해시입니다. */
         static uint64 computeBytes( const vector<uint8>& bytes ) { return computeBytes( bytes.data(), bytes.size() ); }
         /**
