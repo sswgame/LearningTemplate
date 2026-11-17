@@ -20,15 +20,15 @@
 	<Intent pawn="KartFlat" move="0,1" frames="60"/>
 	<Intent pawn="KartHill" move="0,-1" frames="60"/>
 	<Intent pawn="LeanKart" move="0,1" frames="90"/>
-	<Wait frames="40"/>
+	<AdvanceSimulation frames="40"/> <!-- 가속 중 40 프레임(시간이 내용) -->
 	<!-- ③ 가속 중(18 m/s²) — 탑승자는 뒤로 -->
 	<Expect watch="Vehicle.RideAcceleration" target="LeanKart" atLeast="8"/>
 	<Expect watch="Vehicle.RiderLean" target="LeanKart" atMost="-0.15"/>
-	<Wait frames="20"/>
+	<AdvanceSimulation frames="20"/>
 	<Expect watch="Vehicle.ForwardSpeed" target="KartFlat" atLeast="16.8"/>
 	<Expect watch="Vehicle.ForwardSpeed" target="KartHill" atLeast="13"/>
 	<Expect watch="Vehicle.ForwardSpeed" target="KartHill" atMost="16.4"/>
-	<Wait frames="31"/>
+	<AdvanceSimulation frames="31"/>
 	<!-- ③ 급정거(브레이크 40 m/s²) — 탑승자는 앞으로 -->
 	<Intent pawn="LeanKart" move="0,-1" frames="40"/>
 	<!-- 기울기는 좌석 가속도(매끈하게 따라간다) × 0.025 라 기울기 0.25 인 순간의 가속도는 늘 −10 이다 — 가속도가 −20 아래로 간 뒤 기울기가 앞으로 큰지 본다 -->
@@ -37,7 +37,6 @@
 	<!-- 탑승자를 태우고 눈 비탈을 내려가는 썰매 -->
 	<Screenshot file="inertia_sled.ppm" waitForStability="false"/>
 	<ExpectImage file="inertia_sled.ppm" golden="inertia_sled"/>
-	<Wait frames="1"/>
 	<!-- ② 내리막 가속 — 빙판 썰매가 6 m/s 에 닿을 때 눈 썰매는 더 느리다 -->
 	<WaitUntil watch="Vehicle.ForwardSpeed" target="SledIce" atLeast="6" timeoutFrames="600"/>
 	<Expect watch="Vehicle.ForwardSpeed" target="SledSnow" atLeast="4"/>
@@ -52,7 +51,7 @@
 	<Expect watch="Object.Y" target="SledIce" near="0" tolerance="0.05"/>
 	<!-- ④ 열린 레일 끝(50.6 m)에서 선다 -->
 	<WaitUntil watch="Vehicle.RailDistance" target="Minecart" atLeast="50.5" timeoutFrames="600"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Vehicle.ForwardSpeed" target="Minecart" near="0" tolerance="0.01" timeoutFrames="10"/> <!-- 레일 끝에서 섰다 -->
 	<Expect watch="Vehicle.ForwardSpeed" target="Minecart" near="0" tolerance="0.01"/>
 	<Expect watch="Object.Y" target="Minecart" near="0.3" tolerance="0.05"/>
 	<Pass/>
