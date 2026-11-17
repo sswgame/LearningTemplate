@@ -59,6 +59,15 @@
       ],
       "_listExcludePattern": [],
       "_bRecursive": true
+    },
+    {
+      "_name": "Exclude_Localization_Authoring_Tables",
+      "_listExcludeDirectory": [],
+      "_listExcludePattern": [
+        "*.strings.xml",
+        "*.translation.xml"
+      ],
+      "_bRecursive": false
     }
   ],
   "_cookRules": {

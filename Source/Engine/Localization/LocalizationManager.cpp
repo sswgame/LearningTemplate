@@ -1156,7 +1156,9 @@ namespace sw
         // 다시 읽다 실패하면 기존 내용을 유지한다. 저장 도중의 반쯤 쓴 파일이 화면의 텍스트를 모두 지우면 안 된다.
         MountedProject reloaded;
         reloaded._scope = scope;
-        if ( readProject( AssetID{ projectPath }, reloaded ) == false )
+        // 마운트와 같은 쪽을 읽는다 — 쿠킹본 구성의 팩에는 원문 · 번역 XML 이 없다(`.locres` 만).
+        const bool bSource = AssetIO::usesSource();
+        if ( ( bSource ? readProject( AssetID{ projectPath }, reloaded ) : readCookedProject( AssetID{ projectPath }, reloaded ) ) == false )
         {
             SW_LOG_ERROR_ID( "Localization.ReloadFailed", "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
             return ReloadResult::Failed;
@@ -1179,6 +1181,8 @@ namespace sw
             rebuildLookupChainLocked();
             language = _currentLanguage;
         }
+        if ( bSource == false )
+            syncCookedTables();
         SW_LOG_INFO_ID( "LocalizationManager.ReloadedLocalizationProjectChanged", "Reloaded localization project '%#' (changed: %#).", projectPath.c_str(), changedPath );
         notifyLanguageChanged( language, language );
         return ReloadResult::Reloaded;

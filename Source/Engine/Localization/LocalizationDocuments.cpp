@@ -483,32 +483,6 @@ namespace sw
         return makeSiblingPath( projectPath, _name + "." + CultureTable::normalizeCode( culture ) + LocalizationBinaryTable::kExtension );
     }
 
-    expected<void> LocalizationProject::collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath )
-    {
-        vector<string> listXML;
-        (void)FileUtil::collectFiles( folder, ".xml", listXML, true ); // 폴더가 없으면 프로젝트도 없다
-        const size_t tableSuffixLength = string_view( TranslationTable::kExtension ).size();
-        for ( const string& projectPath : listXML )
-        {
-            if ( StringUtil::endsWith( projectPath, kExtension, true ) == false )
-                continue;
-            LocalizationProject project;
-            if ( expected<void> read = project.loadFromFile( projectPath ); read.has_value() == false )
-                return unexpected( std::move( read ).error() );
-            const string projectFolder = FileUtil::getDirectoryPart( projectPath );
-            for ( const string& tablePath : listXML )
-            {
-                const bool bTableOfProject = StringUtil::endsWith( tablePath, TranslationTable::kExtension, true ) && FileUtil::getDirectoryPart( tablePath ) == projectFolder;
-                if ( bTableOfProject == false )
-                    continue;
-                const string fileName = FileUtil::getFileNamePart( tablePath );
-                if ( project.isStagedCulture( string_view( fileName ).substr( 0, fileName.size() - tableSuffixLength ) ) == false )
-                    outListAbsPath.push_back( FileUtil::normalizePath( tablePath ).str() );
-            }
-        }
-        return {};
-    }
-
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )
     {
         return makeSiblingPath( projectPath, CultureTable::normalizeCode( culture ) + TranslationTable::kExtension );

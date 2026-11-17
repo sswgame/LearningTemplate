@@ -444,25 +444,3 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
     copy.copyStateFrom( copy );
     SW_EXPECT_EQUAL( sw::string( "qps_ploc" ), copy.getCurrentLanguage() );
 }
-
-/**
- * @brief [LocalizationManagerTest] 출시 문화권(`stagedCultures`) 밖의 번역 테이블만 팩 제외 목록에 든다(언리얼 Cultures to Stage)
- * @details 팩 쿠커(`PackCookParams::_listExcludedSourceFile`)가 이 목록을 받는다. 프로젝트를 읽지 못하면 실패다 — 어느 테이블이 출시 문화권인지 모른 채 베이크하지 않는다.
- */
-SW_TEST_CASE( LocalizationManagerTest, UnstagedTranslationTablesAreListedForPackExclusion )
-{
-    const sw::string folder = sw::test::makeScratchPath( "loc_staging" );
-    (void)LocalizationTestUtil::writeProject( folder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ])" ); // 쓰기 실패는 도우미가 케이스 실패로 적는다
-    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.quit": { "text": "종료" })" );
-    LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.quit": { "text": "終了" })" );
-
-    sw::vector<sw::string> listExcluded;
-    SW_REQUIRE_TRUE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded ).has_value() );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listExcluded.size() );
-    SW_EXPECT_TRUE( sw::StringUtil::endsWith( listExcluded[0], "ja.translation.xml", true ) );
-
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "test.locproject.xml" ), "<LocalizationProject name=\"broken\"" ) );
-    listExcluded.clear();
-    SW_EXPECT_LOG( "Xml.ParseError" );
-    SW_EXPECT_FALSE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded ).has_value() );
-}
