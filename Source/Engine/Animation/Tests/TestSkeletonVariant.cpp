@@ -324,7 +324,7 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
     SW_REQUIRE_TRUE( writeScaled( "chain_loop.skeleton.xml", idLoop ) );
 
     const Skeleton                   base  = Util::makeBase();
-    const shared_ptr<const Skeleton> pLeaf = SharedAssetCache<Skeleton>::acquire( test::ScopedScratchDomain::makeID( "chain_leaf.skeleton.xml" ).view() );
+    const shared_ptr<const Skeleton> pLeaf = SharedAssetCache<Skeleton>::acquire( test::ScopedScratchDomain::makeID( "chain_leaf.skeleton.xml" ).view() ).snapshot();
     SW_REQUIRE_TRUE( pLeaf != nullptr );
     const Skeleton& leaf = *pLeaf;
     SW_EXPECT_EQUAL( base.getBoneCount(), leaf.getBoneCount() );
@@ -335,7 +335,7 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
     SW_EXPECT_NEAR( expected._y, leaf.getBone( 1 )._referencePose._translation._y, 0.0001f );
 
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
-    SW_EXPECT_TRUE( SharedAssetCache<Skeleton>::acquire( idLoop ) == nullptr );
+    SW_EXPECT_TRUE( SharedAssetCache<Skeleton>::acquire( idLoop ).snapshot() == nullptr );
 }
 
 /**

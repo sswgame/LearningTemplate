@@ -59,7 +59,7 @@ namespace sw::editor
         _listBodyRow.clear();
         _selectedBody = -1;
         // 미리 보기 표는 래그돌과 같은 공유 캐시의 한 벌을 읽는다(사본을 읽지 않는다).
-        const shared_ptr<const PhysicsAsset> pAsset = SharedAssetCache<PhysicsAsset>::acquire( assetPath );
+        const shared_ptr<const PhysicsAsset> pAsset = SharedAssetCache<PhysicsAsset>::acquire( assetPath ).snapshot();
         if ( pAsset == nullptr )
         {
             _status = "The physics asset could not be read - see the log";

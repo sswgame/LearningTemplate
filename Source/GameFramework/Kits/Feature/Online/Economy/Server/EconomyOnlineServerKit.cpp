@@ -55,7 +55,7 @@ namespace sw
                     return unexpected( trustFile.error() );
                 const string& currencyPath = kitConfig._currencyCatalog;
                 const string& offerPath    = kitConfig._offerCatalog;
-                _pCurrencyCatalog          = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath );
+                _pCurrencyCatalog          = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath ).snapshot();
                 if ( _pCurrencyCatalog == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "the currency catalog could not be read", currencyPath } );
                 _pOfferCatalog = SharedAssetCache<OfferCatalog>::acquire( offerPath );
@@ -75,7 +75,7 @@ namespace sw
                 }
                 EconomyServiceConfig settings;
                 settings._pCurrencyCatalog       = _pCurrencyCatalog.get();
-                settings._pOfferCatalog          = _pOfferCatalog.get();
+                settings._pOfferCatalog          = _pOfferCatalog;
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
                 settings._pScheduler             = context._pScheduler;                               // 원장 보존 검사를 매일 서버 하나가 돌린다

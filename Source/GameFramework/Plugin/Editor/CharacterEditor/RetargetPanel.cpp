@@ -223,7 +223,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         }
         // 파일은 런타임과 같은 공유 캐시의 한 벌로 읽고 창은 그 사본을 고친다(저장하면 핫 리로드가 한 벌을 제자리에서 다시 읽는다). 못 읽으면 빈 문서다.
-        const shared_ptr<const RetargetProfile> pLoaded = SharedAssetCache<RetargetProfile>::acquire( path );
+        const shared_ptr<const RetargetProfile> pLoaded = SharedAssetCache<RetargetProfile>::acquire( path ).snapshot();
         const bool                              bLoaded = pLoaded != nullptr;
         if ( bLoaded )
             _profile = *pLoaded;

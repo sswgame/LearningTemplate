@@ -452,6 +452,7 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.Asset.reloadDependents" );
             (void)engine::getSubsystem<AssetManager>().reloadComposedDependents();
+            (void)engine::getSubsystem<AssetManager>().collectRetiredAssetVersions(); // 다시 읽기 정리가 남긴 옛 판을 프레임 경계에서 놓는다
         }
         BLOCK( "스트리밍 / 씬 트랜지션 / 이벤트" )
         {

@@ -34,7 +34,7 @@ namespace sw
             return false;
         }
         // 코스터 레이아웃은 공유 캐시의 한 벌이다 — 배치를 쓰는 쪽과 같은 객체를 읽고 배치가 쥔다.
-        shared_ptr<const CoasterLayoutCatalog> pLayouts = SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterPath );
+        SharedAssetRef<CoasterLayoutCatalog> pLayouts = SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterPath );
         if ( pLayouts == nullptr )
             return false;
         if ( GameDataXML::loadFromAsset( *this, &ParkLayout::loadRoot, *pLayouts, assetID, "ParkLayout" ) == false )

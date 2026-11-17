@@ -90,7 +90,7 @@ namespace sw
     bool EmptyGame::onInitialize()
     {
         // 장르 키트 시연의 필수 데이터 — 액션 룸은 몬스터 정의를 게임 서비스로 찾는다(코드 폴백 없음). 못 읽으면 게임을 띄우지 않는다.
-        if ( loadRequiredCatalog( _pMonsterCatalog ) == false )
+        if ( loadRequiredCatalogSnapshot( _pMonsterCatalog ) == false )
             return false;
         // 지역 효과 시연의 필수 데이터 — 지역 프로필의 할 일이 이 카탈로그의 이펙트를 건다(읽을 때 참조를 본다). 못 읽으면 게임을 띄우지 않는다.
         if ( bindScopedService( &_abilityClasses ) == false || loadRequiredCatalog( _pAbilityCatalog ) == false )

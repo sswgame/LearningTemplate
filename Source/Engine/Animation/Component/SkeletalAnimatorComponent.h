@@ -23,6 +23,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/PoseInertializer.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
@@ -130,6 +131,7 @@ namespace sw
         AnimationPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
         void                            finishAnimationFrame( SkeletalMeshComponent& skeletalMesh ) override;
         void                            onAnimationMeshDetached( SkeletalMeshComponent& skeletalMesh ) override;
+        void                            prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context ) override;
         bool                            describeSharedPose( AnimationSharedPoseRequest& outRequest ) const override;
         shared_ptr<const AnimationClip> findSharedPoseClip( const AnimationClip* pClip ) const override;
         void                            collectDebugState( AnimationDebugState& inoutState ) const override;
@@ -284,7 +286,7 @@ namespace sw
          * @brief 시퀀서 덮어쓰기 슬롯입니다. 시퀀서가 클립과 시간을 정해 그래프 결과 위에 @p weight 만큼 섞습니다. 시간은 시퀀서가 진행시킵니다.
          * @param clip nullptr 이거나 weight 가 0 이면 덮어쓰기가 꺼집니다.
          */
-        void setSequencerOverride( shared_ptr<const AnimationClip> clip, float32 time, float32 weight );
+        void setSequencerOverride( const SharedAssetRef<AnimationClip>& clip, float32 time, float32 weight );
         /**
          * @brief 클립 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다.
          * @details 시퀀서 애니메이션 구간도 이 규칙으로 클립을 푼다 — 가져온 클립 파일은 내용 해시 이름이라 손으로 적는 시퀀스는 셋의 클립 이름을 쓴다.
@@ -449,6 +451,11 @@ namespace sw
         void requestClipLoad( const hashed_string& clipName );
         /** @brief 요청한 클립이 다 읽혔으면 표에 넣고 그래프를 지은 뒤 미뤄 둔 재생을 합니다. 아직 읽는 중이면 false 입니다. */
         [[nodiscard]] bool finishClipLoadsIfComplete();
+        /**
+         * @brief 클립이 다시 읽혔으면 클립을 빌린 것(레이어 · 그래프 플레이어 · 블렌드 스페이스의 날 포인터, 트랙 → 본 표)을 새 판으로 다시 짓습니다(게임 스레드, 단계 앞).
+         * @details 셋을 같은 경로로 다시 거는 길(`setAnimationSetPath`)이라 상태와 위상을 잇는다. 옛 판은 다시 읽은 뒤 한 프레임 넘게 살아 있어(`SharedAssetTable::followRefs`) 그 사이 날 포인터가 끊기지 않는다.
+         */
+        void refreshReloadedClips();
         /** @brief 시작 상태를 재생합니다(핫 리로드로 되살아났으면 그 상태 · 시각에서 잇는다). */
         void startInitialState();
         /** @brief 클립을 기다리는 동안 미룬 재생(코드의 `play`, 없으면 시작 상태)을 합니다. */
@@ -574,6 +581,7 @@ namespace sw
         hashed_string                                                 _deferredPlayState; ///< 클립을 기다리는 동안 미룬 `play` 의 상태
         float32                                                       _deferredPlayBlend; ///< 미룬 `play` 의 섞기 시간
         unordered_map<const AnimationClip*, vector<optional<uint32>>> _mapTrackToBone;
+        AssetReloadWatch<AnimationClip>                               _clipReload; ///< 클립을 빌린 것을 지은 때의 클립 캐시 다시 읽기 횟수(`refreshReloadedClips`)
         const Skeleton*                                               _pTrackMapSkeleton;
         vector<LayerState>                                            _listLayer;
         vector<LayerState>                                            _listGraphLayer;  ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다

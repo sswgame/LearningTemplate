@@ -57,9 +57,11 @@ namespace sw
     }
 
     template <typename AssetType>
-    shared_ptr<const AssetType> SharedAssetCache<AssetType>::acquire( string_view path )
+    SharedAssetRef<AssetType> SharedAssetCache<AssetType>::acquire( string_view path )
     {
-        return requestWith( path, AssetLoadStart::OnCallingThread ).wait();
+        shared_ptr<const AssetType>                     pAsset   = requestWith( path, AssetLoadStart::OnCallingThread ).wait();
+        const WeakInternVersion<const AssetType>* const pVersion = pAsset != nullptr ? getTable().findVersion( pAsset ) : nullptr;
+        return SharedAssetRef<AssetType>{ std::move( pAsset ), pVersion };
     }
 
     template <typename AssetType>
@@ -96,7 +98,10 @@ namespace sw
     template <typename AssetType>
     bool SharedAssetCache<AssetType>::reloadIn( SharedAssetTable<AssetType>& table, string_view path )
     {
-        return table.reloadShared( path, &SharedAssetCacheType<AssetType>::load );
+        if ( table.reloadShared( path, &SharedAssetCacheType<AssetType>::load ) == false )
+            return false;
+        (void)table.followRefs(); // 사슬 정리 한 입구 — 다시 읽은 직후(게임 스레드, 틱 밖) 참조를 최신 판으로 옮긴다
+        return true;
     }
 
     template <typename AssetType>
@@ -150,6 +155,12 @@ namespace sw
     bool SharedAssetCache<AssetType>::reloadComposed( string_view relativePath )
     {
         return isCached( relativePath ) && reloadIn( *_pTable, relativePath );
+    }
+
+    template <typename AssetType>
+    size_t SharedAssetCache<AssetType>::collectRetiredVersions()
+    {
+        return _pTable->collectRetired();
     }
 
     template <typename AssetType>

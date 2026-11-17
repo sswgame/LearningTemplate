@@ -532,8 +532,8 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
     const string                    id = test::ScopedScratchDomain::makeID( "sparks.vfx.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sparks.vfx.xml" ), Util::makeEffectXML( Util::kValidAttributes ) ) );
 
-    const shared_ptr<const VFXEffectDef> pHeld  = SharedAssetCache<VFXEffectDef>::acquire( id );
-    const shared_ptr<const VFXEffectDef> pAgain = SharedAssetCache<VFXEffectDef>::acquire( id );
+    const shared_ptr<const VFXEffectDef> pHeld  = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
+    const shared_ptr<const VFXEffectDef> pAgain = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pHeld->_listEmitter.size() ) );
@@ -547,7 +547,7 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
     SW_REQUIRE_TRUE( SharedAssetCache<VFXEffectDef>::reloadShared( id ) );
     SW_EXPECT_EQUAL( 64u, pHeld->_listEmitter[0]._maxParticles ); // 쥔 쪽은 옛 객체 그대로(Detach)
 
-    const shared_ptr<const VFXEffectDef> pFresh = SharedAssetCache<VFXEffectDef>::acquire( id );
+    const shared_ptr<const VFXEffectDef> pFresh = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
     SW_EXPECT_EQUAL( 128u, pFresh->_listEmitter[0]._maxParticles );

@@ -102,6 +102,13 @@ namespace sw
         /** @brief 이 표가 나눠 준 @p pAsset 의 판입니다(`SharedAssetRef` 가 따라갈 사슬의 머리). 이 표에서 오지 않았으면 nullptr 입니다. */
         const WeakInternVersion<const AssetType>* findVersion( const shared_ptr<const AssetType>& pAsset ) const { return _table.findVersion( pAsset ); }
 
+        /** @brief 따라가는 참조를 모두 최신 판으로 옮깁니다(사슬 정리 — 다시 읽은 직후 · 게임 스레드, 틱 밖). 옮긴 수를 돌려줍니다. */
+        uint32 followRefs() { return _table.followRefs(); }
+        /** @brief 프레임 경계(게임 스레드, 틱 밖)에서 정리가 남긴 옛 판을 놓습니다. 다시 읽은 뒤 두 번째 경계에서 놓인다. */
+        size_t collectRetired() { return _table.collectRetired(); }
+        /** @brief 살아 있는 판 수입니다(옛 판 포함). */
+        size_t countVersions() const { return _table.countVersions(); }
+
         /** @brief 그 경로를 지금 쥔 에셋입니다. 없으면 nullptr 입니다. */
         shared_ptr<const AssetType> findLive( string_view path ) const { return _table.findLive( makeKey( path ) ); }
 

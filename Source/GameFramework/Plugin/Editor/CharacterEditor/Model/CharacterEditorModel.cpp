@@ -630,7 +630,7 @@ namespace sw::editor
         if ( _paths._animationSet.empty() )
             return;
         // 런타임과 같은 공유 캐시의 한 벌을 읽는다(사본을 읽지 않는다).
-        const shared_ptr<const AnimationSet> pAnimationSet = SharedAssetCache<AnimationSet>::acquire( string_view( _paths._animationSet.c_str() ) );
+        const shared_ptr<const AnimationSet> pAnimationSet = SharedAssetCache<AnimationSet>::acquire( string_view( _paths._animationSet.c_str() ) ).snapshot();
         if ( pAnimationSet == nullptr )
             return;                                                          // 셋이 까닭을 남겼다
         for ( const AnimationSetEntry& entry : pAnimationSet->getEntries() ) // 표는 이름순이다

@@ -391,10 +391,10 @@ namespace sw
         const string_view sourceClipPath = sourceClipID.view();
         const string_view profilePath    = profileID.view();
         // 프로필 · 스켈레톤 · 클립은 공유 캐시의 한 벌을 읽는다(같은 프로필로 클립 여럿을 구울 때 다시 읽지 않는다).
-        const shared_ptr<const RetargetProfile> pProfile        = SharedAssetCache<RetargetProfile>::acquire( profilePath );
-        const shared_ptr<const Skeleton>        pSourceSkeleton = pProfile != nullptr ? SharedAssetCache<Skeleton>::acquire( pProfile->getSourceSkeletonPath() ) : nullptr;
-        const shared_ptr<const Skeleton>        pTargetSkeleton = pProfile != nullptr ? SharedAssetCache<Skeleton>::acquire( pProfile->getTargetSkeletonPath() ) : nullptr;
-        const shared_ptr<const AnimationClip>   pSourceClip     = SharedAssetCache<AnimationClip>::acquire( sourceClipPath );
+        const shared_ptr<const RetargetProfile> pProfile        = SharedAssetCache<RetargetProfile>::acquire( profilePath ).snapshot();
+        const shared_ptr<const Skeleton>        pSourceSkeleton = pProfile != nullptr ? SharedAssetCache<Skeleton>::acquire( pProfile->getSourceSkeletonPath() ).snapshot() : nullptr;
+        const shared_ptr<const Skeleton>        pTargetSkeleton = pProfile != nullptr ? SharedAssetCache<Skeleton>::acquire( pProfile->getTargetSkeletonPath() ).snapshot() : nullptr;
+        const shared_ptr<const AnimationClip>   pSourceClip     = SharedAssetCache<AnimationClip>::acquire( sourceClipPath ).snapshot();
         if ( pProfile == nullptr || pSourceSkeleton == nullptr || pTargetSkeleton == nullptr || pSourceClip == nullptr )
         {
             SW_LOG_ERROR_ID( "PoseRetargeter.RetargetBakeCouldNot", "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );

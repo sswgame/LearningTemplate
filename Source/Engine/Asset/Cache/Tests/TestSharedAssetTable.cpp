@@ -79,7 +79,7 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadLeavesSnapshotAndRefFollows )
     SW_EXPECT_EQUAL( 1, held->_generation ); // 스냅숏은 옛 객체 그대로
     SW_EXPECT_EQUAL( 2, ref->_generation );  // 따라가는 참조는 새 판
     SW_EXPECT_TRUE( table.findLive( "game/x/b.clip" ).get() == ref.get() );
-    SW_EXPECT_TRUE( ref.getShared().get() == ref.get() );
+    SW_EXPECT_TRUE( ref.snapshot().get() == ref.get() );
     SW_EXPECT_EQUAL( reloadsBefore + 1, table.getReloadCount() );
 
     // 스냅숏을 놓아도 참조가 옛 판을 쥐어 새 판이 산다. 한 번 더 다시 읽으면 사슬 끝을 본다.
@@ -92,24 +92,57 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadLeavesSnapshotAndRefFollows )
 }
 
 /**
- * @brief [SharedAssetTableTest] 참조가 사슬 끝으로 옮기면 옛 판을 놓고, 모두 놓으면 표에서 사라진다
+ * @brief [SharedAssetTableTest] 여러 번 다시 읽어도 사슬 정리(`followRefs`)가 참조를 최신 판으로 옮기고, 프레임 경계 두 번(`collectRetired`) 뒤 살아 있는 판은 하나로 줄어든다
  */
-SW_TEST_CASE( SharedAssetTableTest, RefFollowLatestReleasesOldVersions )
+SW_TEST_CASE( SharedAssetTableTest, ReloadsCollapseToOneVersion )
 {
     resetFakeLoader();
     sw::SharedAssetTable<FakeAsset> table;
     sw::shared_ptr<const FakeAsset> first;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/d.clip", &loadFake, first ) );
-    sw::SharedAssetRef<FakeAsset>       ref{ first, table.findVersion( first ) };
+    const sw::SharedAssetRef<FakeAsset> ref{ first, table.findVersion( first ) };
+    const sw::SharedAssetRef<FakeAsset> copy      = ref; // 복사도 목록에 오른다
     const sw::weak_ptr<const FakeAsset> weakFirst = first;
     first.reset();
-    SW_REQUIRE_TRUE( table.reloadShared( "game/x/d.clip", &loadFake ) );
-    SW_EXPECT_FALSE( weakFirst.expired() ); // 참조가 머리를 쥔다
-    ref.followLatest();
+    for ( int32 i = 0; i < 5; ++i )
+    {
+        SW_REQUIRE_TRUE( table.reloadShared( "game/x/d.clip", &loadFake ) );
+        SW_EXPECT_EQUAL( uint32( 2 ), table.followRefs() ); // 다시 읽은 직후 — 참조 둘을 옮긴다
+        SW_EXPECT_EQUAL( 2 + i, ref->_generation );
+    }
+    SW_EXPECT_FALSE( weakFirst.expired() ); // 옮기며 놓은 옛 판은 프레임 경계 두 번까지 남는다
+    SW_EXPECT_TRUE( table.countVersions() > size_t( 1 ) );
+    (void)table.collectRetired();
+    (void)table.collectRetired();
     SW_EXPECT_TRUE( weakFirst.expired() );
-    SW_EXPECT_EQUAL( 2, ref->_generation );
+    SW_EXPECT_EQUAL( size_t( 1 ), table.countVersions() );
+    SW_EXPECT_EQUAL( 6, ref->_generation );
+    SW_EXPECT_EQUAL( 6, copy->_generation );
+    SW_EXPECT_EQUAL( uint32( 0 ), table.followRefs() ); // 이미 최신이다
+}
+
+/**
+ * @brief [SharedAssetTableTest] 참조를 모두 놓으면 표에서 사라지고, 빌린 참조(`borrow`)는 따라가지 않는다
+ */
+SW_TEST_CASE( SharedAssetTableTest, RefReleaseAndBorrow )
+{
+    resetFakeLoader();
+    sw::SharedAssetTable<FakeAsset> table;
+    sw::shared_ptr<const FakeAsset> first;
+    SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/e.clip", &loadFake, first ) );
+    sw::SharedAssetRef<FakeAsset> ref{ first, table.findVersion( first ) };
+    first.reset();
+    SW_REQUIRE_TRUE( table.reloadShared( "game/x/e.clip", &loadFake ) );
     ref.reset();
+    (void)table.collectRetired();
+    (void)table.collectRetired();
     SW_EXPECT_EQUAL( size_t( 0 ), table.countLive() );
+    SW_EXPECT_EQUAL( size_t( 0 ), table.countVersions() );
+
+    const FakeAsset                     local{ 42 };
+    const sw::SharedAssetRef<FakeAsset> borrowed = sw::SharedAssetRef<FakeAsset>::borrow( &local );
+    SW_EXPECT_TRUE( borrowed.get() == &local );
+    SW_EXPECT_TRUE( borrowed.snapshot() == nullptr ); // 소유하지 않는다
 }
 
 /**
@@ -141,7 +174,9 @@ SW_TEST_CASE( SharedAssetTableTest, ReloadWhileWorkerReads )
     } };
     for ( int32 i = 0; i < 64; ++i )
     {
+        // 다시 읽기와 사슬 정리는 참조를 쓴다(원자) — 워커가 그 참조를 읽는 중이어도 된다. 옛 판은 프레임 경계 전에는 놓지 않는다.
         SW_REQUIRE_TRUE( table.reloadShared( "game/x/c.clip", &loadFake ) );
+        (void)table.followRefs();
     }
     bStop.store( true, std::memory_order_release );
     reader.join();

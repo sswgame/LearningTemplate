@@ -334,7 +334,7 @@ namespace
             SW_EXPECT_TRUE( _registry.registerValidator( &_validator ) );
             EconomyServiceConfig settings;
             settings._pCurrencyCatalog       = &_data._currencies;
-            settings._pOfferCatalog          = &_data._offers;
+            settings._pOfferCatalog          = SharedAssetRef<OfferCatalog>::borrow( &_data._offers );
             settings._pReceiptRegistry       = &_registry;
             settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
             settings._refundRecovery         = EconomyRefundRecoveryMode::Debt;
@@ -403,7 +403,7 @@ namespace
             SW_EXPECT_TRUE( _registry.registerValidator( &_validator ) );
             EconomyServiceConfig settings;
             settings._pCurrencyCatalog       = &data._currencies;
-            settings._pOfferCatalog          = &data._offers;
+            settings._pOfferCatalog          = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
             settings._pReceiptRegistry       = &_registry;
             settings._deliveryScanIntervalMs = 1000;
             settings._deliveryAlarmMarginMs  = 100;
@@ -619,7 +619,7 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRefusesLinkedBindingWithoutThePort )
 
     EconomyServiceConfig settings;
     settings._pCurrencyCatalog = &data._currencies;
-    settings._pOfferCatalog    = &data._offers;
+    settings._pOfferCatalog    = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
     settings._pReceiptRegistry = &registry;
     settings._refundRecovery   = EconomyRefundRecoveryMode::Debt;
     EconomyService refused;
@@ -1049,7 +1049,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
     {
         EconomyServiceConfig settings;
         settings._pCurrencyCatalog = &data._currencies;
-        settings._pOfferCatalog    = &data._offers;
+        settings._pOfferCatalog    = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
         settings._pReceiptRegistry = &registry;
         settings._refundRecovery   = EconomyRefundRecoveryMode::Debt;
         return settings;
@@ -1099,7 +1099,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
     SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
     EconomyServiceConfig settings;
     settings._pCurrencyCatalog    = &data._currencies;
-    settings._pOfferCatalog       = &data._offers;
+    settings._pOfferCatalog       = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
     settings._pReceiptRegistry    = &registry;
     settings._refundCursorRetryMs = 1000;
     settings._refundRecovery      = EconomyRefundRecoveryMode::Debt;
@@ -1155,6 +1155,6 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceNeedsDependencies )
     MemoryServiceStore   store{ &data._database };
     EconomyServiceConfig settings;
     settings._pCurrencyCatalog = &data._currencies;
-    settings._pOfferCatalog    = &data._offers;
+    settings._pOfferCatalog    = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
     SW_EXPECT_FALSE( service.initialize( &store, settings ) ); // 회수 정책은 코드 기본값이 없다 — 설정 `_refundRecovery` 가 고른다
 }

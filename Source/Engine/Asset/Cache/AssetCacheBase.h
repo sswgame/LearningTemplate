@@ -126,6 +126,11 @@ namespace sw
             return false;
         }
 
+        /**
+         * @brief 프레임 경계(게임 스레드, 틱 밖)에서 다시 읽기 정리가 남긴 옛 판을 놓습니다(`SharedAssetTable::collectRetired`). 놓은 수를 돌려줍니다. 기본은 판을 남기지 않는 캐시다.
+         */
+        virtual size_t collectRetiredVersions() { return 0; }
+
         /** @brief 계측 칸을 올린 캐시인지 반환합니다. false 면 `[CacheStats]` 가 `n/a` 로 찍습니다. */
         bool isCounted() const { return _pUncountedReason == nullptr; }
         /** @brief 세지 않는 사유입니다(`isCounted` 면 nullptr). */

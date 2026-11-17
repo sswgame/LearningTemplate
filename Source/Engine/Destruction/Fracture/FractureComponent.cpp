@@ -81,7 +81,7 @@ namespace sw
         if ( path.empty() )
             return nullptr;
         _fractureReload.markSeen();
-        shared_ptr<const FractureAsset> asset = SharedAssetCache<FractureAsset>::acquire( path );
+        shared_ptr<const FractureAsset> asset = SharedAssetCache<FractureAsset>::acquire( path ).snapshot();
         if ( asset == nullptr )
             SW_LOG_ERROR_ID( "FractureComponent.FractureAssetCouldNot", "'%#': fracture asset '%#' could not be read - the object stays intact", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", path.c_str() );
         return asset;

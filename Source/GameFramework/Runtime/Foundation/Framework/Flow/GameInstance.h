@@ -239,14 +239,15 @@ namespace sw
         }
         /**
          * @brief 카탈로그(종류 `TCatalog::kDataKind`)를 공유 캐시에서 받아 @p outCatalog 에 쥐고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다.
-         * @details 사본을 읽지 않는다 — 같은 파일을 쥔 컴포넌트 · 에디터와 한 벌을 나눈다. 이 판은 받은 때의 스냅숏이다 — 다시 읽힌 판을 따라가려면 `SharedAssetRef` 판을 쓴다.
+         * @details 사본을 읽지 않는다 — 같은 파일을 쥔 컴포넌트 · 에디터와 한 벌을 나눈다. 받은 때의 판(스냅숏)을 쥔다 — 번호를 지어 두어 일부러 옛 판을 쥐는 종류(떼어 내는 카탈로그)만 쓴다.
+         *          다시 읽힌 판을 따라가야 하면 `loadRequiredCatalog`(`SharedAssetRef`)를 쓴다.
          */
         template <class TCatalog>
-        [[nodiscard]] bool loadRequiredCatalog( shared_ptr<const TCatalog>& outCatalog )
+        [[nodiscard]] bool loadRequiredCatalogSnapshot( shared_ptr<const TCatalog>& outCatalog )
         {
             if ( loadRequiredData( TCatalog::kDataKind, [&outCatalog]( const string& path )
             {
-                outCatalog = SharedAssetCache<TCatalog>::acquire( path );
+                outCatalog = SharedAssetCache<TCatalog>::acquire( path ).snapshot();
                 return outCatalog != nullptr;
             } ) == false )
                 return false;
@@ -259,12 +260,16 @@ namespace sw
         template <class TCatalog>
         [[nodiscard]] bool loadRequiredCatalog( SharedAssetRef<TCatalog>& outCatalog )
         {
-            shared_ptr<const TCatalog> pLoaded;
-            const bool                 bLoaded = loadRequiredCatalog( pLoaded );
-            outCatalog                         = std::move( pLoaded );
-            if ( bLoaded )
-                followScopedService( outCatalog );
-            return bLoaded;
+            if ( loadRequiredData( TCatalog::kDataKind, [&outCatalog]( const string& path )
+            {
+                outCatalog = SharedAssetCache<TCatalog>::acquire( path );
+                return outCatalog != nullptr;
+            } ) == false )
+                return false;
+            if ( bindScopedService( outCatalog.get() ) == false ) // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
+                return false;
+            followScopedService( outCatalog );
+            return true;
         }
         /** @brief 게임 범위에 건 @p ref 의 칸을 다시 읽힌 판으로 따라 바꾸게 합니다(`update` 앞머리 — 틱 밖). @p ref 는 인스턴스보다 오래 살아야 한다. */
         template <class TCatalog>

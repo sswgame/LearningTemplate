@@ -174,8 +174,8 @@ SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
     const sw::string                    id = sw::test::ScopedScratchDomain::makeID( "ground.tileset.xml" ).str();
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "ground.tileset.xml" ), kTileSetXML ) );
 
-    const sw::shared_ptr<const sw::TileSetAsset> pHeld  = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
-    const sw::shared_ptr<const sw::TileSetAsset> pAgain = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
+    const sw::shared_ptr<const sw::TileSetAsset> pHeld  = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
+    const sw::shared_ptr<const sw::TileSetAsset> pAgain = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
     SW_EXPECT_NEAR( 1.0f, pHeld->getTileSize(), 0.0001f );
@@ -188,7 +188,7 @@ SW_TEST_CASE( TileSetTest, SharedCacheGivesOneObjectAndReloadDetaches )
     SW_REQUIRE_TRUE( sw::SharedAssetCache<sw::TileSetAsset>::reloadShared( id ) );
     SW_EXPECT_NEAR( 1.0f, pHeld->getTileSize(), 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
 
-    const sw::shared_ptr<const sw::TileSetAsset> pFresh = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id );
+    const sw::shared_ptr<const sw::TileSetAsset> pFresh = sw::SharedAssetCache<sw::TileSetAsset>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
     SW_EXPECT_NEAR( 2.0f, pFresh->getTileSize(), 0.0001f );

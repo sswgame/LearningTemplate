@@ -9,37 +9,153 @@
  *          [판 사슬] 다시 읽기는 쥔 값을 바꾸지 않고 새 값을 새 판으로 넣는다(`replaceLive`). 옛 판은 새 판을 가리키고(`WeakInternVersion::_pNext`) 그 새 판을 소유한다 —
  *          옛 판을 쥔 따라가는 참조(`SharedAssetRef`)는 읽을 때 사슬 끝의 새 판을 본다. 언리얼이 다시 읽은 에셋의 참조를 새 객체로 바꾸는 일(핫 리로드 참조 교체)을
  *          참조 쪽 쓰기 없이 하는 모양이다. 옛 판은 쥔 쪽이 있는 동안 살아 있으므로 거기서 꺼낸 날 포인터도 끊기지 않는다.
+ *
+ *          [사슬 정리] 따라가는 참조는 표의 따라가기 목록(`WeakInternFollowerList`)에 오른다. 다시 읽은 직후(게임 스레드, 틱 밖) `followRefs` 한 입구가 목록의
+ *          참조를 모두 최신 판으로 옮겨 사슬이 다시 읽기 횟수만큼 자라지 않게 한다. 옮기며 놓은 옛 판은 프레임 경계 두 번(`collectRetired`)을 지나야 놓는다 —
+ *          그 사이 다른 스레드가 옛 판을 읽던 중이어도, 날 포인터를 빌린 쪽이 한 틱 안에 다시 짓기 전이어도 끊기지 않는다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
 {
+    template <typename ValueType>
+    struct WeakInternFollowerList;
+
     /**
      * @struct WeakInternVersion
      * @brief 표가 나눠 준 값 한 판입니다. 다시 읽기가 새 판을 넣으면 `_pNext` 가 새 판을 가리킵니다(한 번만 적는다).
      * @details `_pNextValue` 는 새 판을 살려 두는 소유이고 `_pNext` 를 적기 **전에** 한 번 적는다 — 읽는 쪽은 `_pNext` 만 원자로 읽는다.
+     *          `_pSelf` · `_pFollowers` 는 판을 지을 때(`makeLive`) 한 번 적고 바꾸지 않는다.
      */
     template <typename ValueType>
     struct WeakInternVersion
     {
-        ValueType*                       _pValue{ nullptr }; ///< 이 판의 값(칸 주인이 소유한다)
-        shared_ptr<ValueType>            _pNextValue;        ///< 다음 판의 나눠 준 포인터(다음 판을 살려 둔다). `_pNext` 를 적기 전에 한 번만 적는다
-        atomic<const WeakInternVersion*> _pNext{ nullptr };  ///< 다음 판. 없으면 이 판이 최신이다
+        ValueType*                                    _pValue{ nullptr }; ///< 이 판의 값(칸 주인이 소유한다)
+        weak_ptr<ValueType>                           _pSelf;             ///< 이 판의 나눠 준 포인터(스냅숏 · 참조 옮기기가 소유를 얻는다)
+        shared_ptr<WeakInternFollowerList<ValueType>> _pFollowers;        ///< 이 판을 낸 표의 따라가기 목록(표보다 오래 살 수 있다)
+        shared_ptr<ValueType>                         _pNextValue;        ///< 다음 판의 나눠 준 포인터(다음 판을 살려 둔다). `_pNext` 를 적기 전에 한 번만 적는다
+        atomic<const WeakInternVersion*>              _pNext{ nullptr };  ///< 다음 판. 없으면 이 판이 최신이다
 
-        /** @brief 사슬 끝(최신 판)의 값입니다. 쓰기 없이 원자 읽기만 합니다. */
-        ValueType* resolveLatest() const
+        /** @brief 사슬 끝(최신 판)입니다. 쓰기 없이 원자 읽기만 합니다. */
+        const WeakInternVersion* resolveLatestVersion() const
         {
             const WeakInternVersion* pVersion = this;
             for ( const WeakInternVersion* pNext = pVersion->_pNext.load( std::memory_order_acquire ); pNext != nullptr; pNext = pVersion->_pNext.load( std::memory_order_acquire ) )
             {
                 pVersion = pNext;
             }
-            return pVersion->_pValue;
+            return pVersion;
+        }
+        /** @brief 사슬 끝(최신 판)의 값입니다. */
+        ValueType* resolveLatest() const { return resolveLatestVersion()->_pValue; }
+    };
+
+    /**
+     * @struct WeakInternFollower
+     * @brief 따라가는 참조(`SharedAssetRef`) 하나의 마디입니다. 표의 따라가기 목록에 올라 있는 동안 `_pHeld` 는 원자 함수(`std::atomic_load` · `std::atomic_exchange`)로만 다룬다.
+     */
+    template <typename ValueType>
+    struct WeakInternFollower
+    {
+        atomic<const WeakInternVersion<ValueType>*> _pVersion{ nullptr }; ///< 쥔 판(머리). 정리가 최신 판으로 옮긴다
+        shared_ptr<ValueType>                       _pHeld;               ///< 쥔 판의 소유
+        WeakInternFollower*                         _pPrev{ nullptr };    ///< 목록의 앞(목록의 잠금 안에서만)
+        WeakInternFollower*                         _pNext{ nullptr };    ///< 목록의 뒤(목록의 잠금 안에서만)
+    };
+
+    /**
+     * @struct WeakInternFollowerList
+     * @brief 한 표가 나눠 준 값을 따라가는 참조들의 목록입니다. 정리(`followAll`)는 게임 스레드, 틱 밖에서만 부른다.
+     */
+    template <typename ValueType>
+    struct WeakInternFollowerList
+    {
+        mutable mutex                                     _mutex;
+        WeakInternFollower<ValueType>* _pHead             SW_GUARDED_BY( _mutex ){ nullptr };
+        vector<shared_ptr<ValueType>> _listRetired        SW_GUARDED_BY( _mutex ); ///< 이번 프레임의 정리가 놓은 옛 판
+        vector<shared_ptr<ValueType>> _listRetiredEarlier SW_GUARDED_BY( _mutex ); ///< 지난 프레임의 정리가 놓은 옛 판(다음 프레임 경계에 놓는다)
+        atomic<bool>                                      _bHasRetired{ false };   ///< 남긴 옛 판이 있다(프레임 경계가 잠그지 않고 건너뛴다)
+
+        void add( WeakInternFollower<ValueType>& follower )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            follower._pPrev = nullptr;
+            follower._pNext = _pHead;
+            if ( _pHead != nullptr )
+                _pHead->_pPrev = &follower;
+            _pHead = &follower;
+        }
+
+        void remove( WeakInternFollower<ValueType>& follower )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( follower._pPrev != nullptr )
+                follower._pPrev->_pNext = follower._pNext;
+            else
+                _pHead = follower._pNext;
+            if ( follower._pNext != nullptr )
+                follower._pNext->_pPrev = follower._pPrev;
+            follower._pPrev = nullptr;
+            follower._pNext = nullptr;
+        }
+
+        /**
+         * @brief 목록의 참조를 모두 최신 판으로 옮기고 옮긴 수를 돌려줍니다(다시 읽은 직후 — 게임 스레드, 틱 밖). 놓은 옛 판은 `collectRetired` 두 번 뒤에 놓는다.
+         * @details 참조의 판은 원자로 바꾸므로 그 참조를 다른 스레드가 읽던 중이어도 된다.
+         */
+        uint32 followAll()
+        {
+            uint32            movedCount = 0;
+            ScopedLock<mutex> lock{ _mutex };
+            for ( WeakInternFollower<ValueType>* pFollower = _pHead; pFollower != nullptr; pFollower = pFollower->_pNext )
+            {
+                const WeakInternVersion<ValueType>* const pHead   = pFollower->_pVersion.load( std::memory_order_acquire );
+                const WeakInternVersion<ValueType>* const pLatest = pHead != nullptr ? pHead->resolveLatestVersion() : nullptr;
+                if ( pLatest == pHead )
+                    continue;
+                // 최신 판은 앞 판의 `_pNextValue` 가 살려 두므로 잠글 수 있다.
+                shared_ptr<ValueType> pOld = std::atomic_exchange( &pFollower->_pHeld, pLatest->_pSelf.lock() );
+                pFollower->_pVersion.store( pLatest, std::memory_order_release );
+                _listRetired.push_back( std::move( pOld ) );
+                ++movedCount;
+            }
+            if ( movedCount > 0 )
+                _bHasRetired.store( true, std::memory_order_release );
+            return movedCount;
+        }
+
+        /**
+         * @brief 프레임 경계(게임 스레드, 틱 밖)에서 부릅니다. 지지난 정리의 옛 판을 놓고 지난 정리의 옛 판은 한 프레임 더 남깁니다. 놓은 수를 돌려줍니다.
+         * @details 옛 판을 날 포인터로 빌린 쪽(애니메이터의 플레이어 등)은 그 사이의 틱에서 새 판으로 다시 짓는다.
+         */
+        size_t collectRetired()
+        {
+            if ( _bHasRetired.load( std::memory_order_acquire ) == false )
+                return 0;
+            vector<shared_ptr<ValueType>> listRelease; // 잠금보다 오래 산다 — 놓는 옛 판의 칸 주인이 표를 잠근다
+            ScopedLock<mutex>             lock{ _mutex };
+            listRelease.swap( _listRetiredEarlier );
+            _listRetiredEarlier.swap( _listRetired );
+            if ( _listRetiredEarlier.empty() )
+                _bHasRetired.store( false, std::memory_order_release );
+            return listRelease.size();
+        }
+
+        /** @brief 남긴 옛 판을 모두 놓습니다(표를 비우거나 지울 때). 옛 판이 이 목록을 쥐어(`_pFollowers`) 서로 붙든 고리를 끊는다. */
+        void releaseRetired()
+        {
+            vector<shared_ptr<ValueType>> listRelease; // 잠금보다 오래 산다 — 놓는 옛 판의 칸 주인이 표를 잠근다
+            vector<shared_ptr<ValueType>> listReleaseEarlier;
+            ScopedLock<mutex>             lock{ _mutex };
+            listRelease.swap( _listRetired );
+            listReleaseEarlier.swap( _listRetiredEarlier );
+            _bHasRetired.store( false, std::memory_order_release );
         }
     };
 
@@ -62,8 +178,11 @@ namespace sw
     public:
         WeakInternTable()
             : _pState{ sw::make_shared<State>() }
+            , _pFollowers{ sw::make_shared<WeakInternFollowerList<ValueType>>() }
         {
         }
+
+        ~WeakInternTable() { _pFollowers->releaseRetired(); }
 
         WeakInternTable( const WeakInternTable& )            = delete;
         WeakInternTable& operator=( const WeakInternTable& ) = delete;
@@ -131,6 +250,21 @@ namespace sw
         }
 
         /**
+         * @brief 따라가는 참조를 모두 최신 판으로 옮깁니다(사슬 정리 — 다시 읽은 직후 · 게임 스레드, 틱 밖). 옮긴 수를 돌려줍니다.
+         * @details 옮기며 놓은 옛 판은 다음 정리까지 남는다(다른 스레드의 읽기를 위한 한 번의 유예).
+         */
+        uint32 followRefs() { return _pFollowers->followAll(); }
+        /** @brief 프레임 경계에서 정리가 남긴 옛 판을 놓습니다(`WeakInternFollowerList::collectRetired`). */
+        size_t collectRetired() { return _pFollowers->collectRetired(); }
+
+        /** @brief 살아 있는 판 수입니다(옛 판 포함 — 사슬 정리를 테스트가 본다). */
+        size_t countVersions() const
+        {
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            return _pState->_mapVersion.size();
+        }
+
+        /**
          * @brief 그 키의 값을 나눠 받습니다. 처음이면 @p create 로 짓습니다(잠금 밖). 지을 수 없으면(nullptr) nullptr 이고 표에 남기지 않습니다.
          * @details 워커에서 불러도 됩니다(잠급니다).
          */
@@ -176,6 +310,7 @@ namespace sw
         /** @brief 표를 비우고 버킷까지 돌려줍니다(종료 누수 검사에 표의 몫이 남지 않게). 쥔 쪽의 값은 그대로 살고, 다음 요청은 새로 짓습니다. */
         void clear()
         {
+            _pFollowers->releaseRetired(); // 표의 잠금 밖 — 놓는 옛 판의 칸 주인이 표를 잠근다
             ScopedLock<mutex> lock{ _pState->_mutex };
             _pState->_mapValue = unordered_map<KeyType, weak_ptr<ValueType>, KeyHash>{};
         }
@@ -187,7 +322,10 @@ namespace sw
             ValueType* const            pValue = value.get();
             const shared_ptr<LiveOwner> pOwner = sw::make_shared<LiveOwner>( _pState, key, std::move( value ) );
             _pState->_mapVersion[pValue]       = pOwner.get();
-            return shared_ptr<ValueType>{ pOwner, pValue };
+            shared_ptr<ValueType> live{ pOwner, pValue };
+            pOwner->_pSelf      = live;
+            pOwner->_pFollowers = _pFollowers;
+            return live;
         }
 
     private:
@@ -231,6 +369,7 @@ namespace sw
             } // 잠금을 푼 뒤에 `_value` 가 사라진다(멤버 소멸은 본문 뒤)
         };
 
-        shared_ptr<State> _pState;
+        shared_ptr<State>                             _pState;
+        shared_ptr<WeakInternFollowerList<ValueType>> _pFollowers; ///< 따라가는 참조 목록(판이 함께 쥐어 표보다 오래 살 수 있다)
     };
 } // namespace sw

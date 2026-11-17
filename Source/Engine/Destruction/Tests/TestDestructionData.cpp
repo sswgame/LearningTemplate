@@ -359,8 +359,8 @@ SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadDetaches
     const string                    id = test::ScopedScratchDomain::makeID( "concrete.destruction.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "concrete.destruction.xml" ), R"(<DestructionProfile density="3"/>)" ) );
 
-    const shared_ptr<const DestructionProfile> pHeld  = SharedAssetCache<DestructionProfile>::acquire( id );
-    const shared_ptr<const DestructionProfile> pAgain = SharedAssetCache<DestructionProfile>::acquire( id );
+    const shared_ptr<const DestructionProfile> pHeld  = SharedAssetCache<DestructionProfile>::acquire( id ).snapshot();
+    const shared_ptr<const DestructionProfile> pAgain = SharedAssetCache<DestructionProfile>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
     SW_EXPECT_NEAR( 3.0f, pHeld->_density, 0.0001f );
@@ -373,7 +373,7 @@ SW_TEST_CASE( DestructionProfileTest, SharedCacheGivesOneObjectAndReloadDetaches
     watch.markSeen();
     SW_EXPECT_EQUAL( reloadsBefore + 1, watch.getSeenCount() );
     SW_EXPECT_NEAR( 3.0f, pHeld->_density, 0.0001f ); // 쥔 객체는 바뀌지 않는다(A-7)
-    const shared_ptr<const DestructionProfile> pFresh = SharedAssetCache<DestructionProfile>::acquire( id );
+    const shared_ptr<const DestructionProfile> pFresh = SharedAssetCache<DestructionProfile>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
     SW_EXPECT_NEAR( 5.0f, pFresh->_density, 0.0001f );

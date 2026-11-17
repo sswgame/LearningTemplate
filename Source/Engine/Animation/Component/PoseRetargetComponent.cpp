@@ -103,7 +103,7 @@ namespace sw
 
     void PoseRetargetComponent::setProfile( shared_ptr<const RetargetProfile> pProfile )
     {
-        _pProfile             = std::move( pProfile );
+        _pProfile             = SharedAssetRef<RetargetProfile>{ std::move( pProfile ) };
         _bProfileReady        = _pProfile != nullptr ? SW_TRUE : SW_FALSE;
         _pBoundSourceSkeleton = nullptr;
     }

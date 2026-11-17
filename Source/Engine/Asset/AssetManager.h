@@ -101,6 +101,11 @@ namespace sw
          */
         uint32 reloadComposedDependents();
         /**
+         * @brief 공유 캐시의 다시 읽기 정리가 남긴 옛 판을 놓습니다(사슬 정리의 프레임 경계 — `SharedAssetTable::collectRetired`). 놓은 수를 돌려줍니다.
+         * @details 엔진 루프가 프레임마다 틱 밖(게임 스레드)에서 부른다. 다시 읽은 뒤 두 번째 경계에서 놓여, 날 포인터를 빌린 쪽이 그 사이의 틱에서 다시 짓는다.
+         */
+        size_t collectRetiredAssetVersions();
+        /**
          * @brief 내용이 바뀐 리소스 @p listAssetID(팩을 붙이거나 뗐다 — 모드)를 쥔 캐시마다 다시 읽습니다. 다시 읽은 수를 돌려줍니다.
          * @details 쥔 캐시가 제자리 다시 읽기를 못 하면(`AssetCacheBase::reloadComposed` 가 false — GPU 수명 캐시) 그 id 를 @p outListStale 뒤에 덧붙인다 —
          *          그 캐시는 옛 내용을 계속 내준다. 부르는 쪽이 오류로 멈출지 정한다(모드는 적용을 거절한다). 게임 스레드, 틱 밖에서 부른다(`reloadComposedDependents` 와 같다).

@@ -84,8 +84,8 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
         AssetCacheBase* const         pCache = engine::getSubsystem<AssetManager>().findAssetCache( Util::Cache::kAssetKindName );
         SW_REQUIRE_TRUE( pCache != nullptr );
 
-        const shared_ptr<const SharedAssetCacheTestAsset> held  = Util::Cache::acquire( id );
-        const shared_ptr<const SharedAssetCacheTestAsset> again = Util::Cache::acquire( id );
+        const shared_ptr<const SharedAssetCacheTestAsset> held  = Util::Cache::acquire( id ).snapshot();
+        const shared_ptr<const SharedAssetCacheTestAsset> again = Util::Cache::acquire( id ).snapshot();
         const SharedAssetRef<SharedAssetCacheTestAsset>   ref   = Util::Cache::acquire( id ); // 멤버로 쥐는 쪽의 모양
         SW_REQUIRE_TRUE( held != nullptr );
         SW_EXPECT_TRUE( held.get() == again.get() );
@@ -103,7 +103,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
         SW_EXPECT_EQUAL( string( "second" ), ref->_text ); // 참조로 쥔 쪽은 다시 받지 않아도 새 내용을 본다
 
         // 쓰는 쪽은 횟수가 바뀐 것을 보고 다시 받는다 — 새 내용이다.
-        const shared_ptr<const SharedAssetCacheTestAsset> fresh = Util::Cache::acquire( id );
+        const shared_ptr<const SharedAssetCacheTestAsset> fresh = Util::Cache::acquire( id ).snapshot();
         SW_REQUIRE_TRUE( fresh != nullptr );
         SW_EXPECT_TRUE( fresh.get() != held.get() );
         SW_EXPECT_EQUAL( string( "second" ), fresh->_text );
@@ -121,7 +121,7 @@ SW_TEST_CASE( SharedAssetCacheTest, ReloadWatchReportsEachReloadOnce )
     const string                    id = test::ScopedScratchDomain::makeID( "watched.txt" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "watched.txt" ), "first" ) );
     const Util::ScopedModuleCache                     scope;
-    const shared_ptr<const SharedAssetCacheTestAsset> held = Util::Cache::acquire( id );
+    const shared_ptr<const SharedAssetCacheTestAsset> held = Util::Cache::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( held != nullptr );
 
     AssetReloadWatch<SharedAssetCacheTestAsset> watch;

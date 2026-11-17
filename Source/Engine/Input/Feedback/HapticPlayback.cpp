@@ -25,7 +25,7 @@ namespace sw
             SW_LOG_ERROR_ID( "HapticPlayback.NoEffect", "A haptic effect was played without an effect (it failed to load) - nothing plays" );
             return false;
         }
-        _pEffect           = std::move( pEffect );
+        _pEffect           = SharedAssetRef<HapticEffectDef>{ std::move( pEffect ) };
         _time              = 0.0f;
         _scale             = MathUtil::clamp( scale, 0.0f, 1.0f );
         const float2 value = _pEffect->evaluate( 0.0f ) * _scale;

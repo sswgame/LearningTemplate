@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 
 namespace sw
@@ -116,7 +117,7 @@ namespace sw
             if ( bAI )
             {
                 SW_ASSERT( _settings._pCommanderTree != nullptr && "the game mode must read the commander behavior tree before starting a match with a computer opponent" );
-                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), *_settings._pCommanderTree );
+                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), _settings._pCommanderTree->getTree() );
             }
         }
         SW_LOG_INFO_ID( "SkirmishMatch.MatchStart", "[Skirmish] match start - %#", _humanMask == ( kHumanPlayer0 | kHumanPlayer1 ) ? "blue (host) vs red (client)" : _humanMask != 0 ? "you (blue, south-west) vs computer (red)"
