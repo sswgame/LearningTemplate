@@ -15,7 +15,9 @@
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 
@@ -164,6 +166,7 @@ namespace sw::editor
             string_view getRawFolderName() const override { return HeightfieldImporterInternal::kRawFolder; }
             string_view getStampHeader() const override { return HeightfieldImporterInternal::kImportStampHeader; }
             string_view getImportedLabel() const override { return "지형 에셋"; }
+            uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "HeightfieldImport" ); }
             bool        isSourceFile( string_view path ) const override
             {
                 return HeightfieldImporter::isSourceHeightfield( path ) || HeightfieldImporter::isSourceLayerWeights( path );
@@ -289,10 +292,16 @@ namespace sw::editor
         if ( isRawHeightfieldPath( relativePath ) == false )
             return false;
         // 바뀐 파일이 영향을 주는 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 적는 길은 명령줄 임포트와 같은 한 곳이다. 구멍 마스크 · 곁 스플랫도 원본 해시에 들어간다.
-        const HeightfieldRawImporter importer;
+        const HeightfieldRawImporter     importer;
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "HeightfieldImporter.DerivedDataConfigUnreadable", "Heightfield import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return true;
+        }
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않고 직렬로 돈다(워커는 에디터 서비스 범위를 읽지 않는다).
-        const AssetImportSummary summary =
-            AssetImportStampUtil::importSources( assetPaths.getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ), nullptr );
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( assetPaths.getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ),
+                                                                                nullptr, *derivedDataCache );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldImportFailed", "Heightfield import failed: %#", problem.c_str() );
@@ -391,7 +400,10 @@ namespace sw::editor
 
     AssetImportSummary HeightfieldImporter::importAllHeightfields( string_view resourceRoot, AssetImportMode mode )
     {
-        const HeightfieldRawImporter importer;
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        const HeightfieldRawImporter     importer;
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>(), *derivedDataCache ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
     }
 } // namespace sw::editor

@@ -22,10 +22,12 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
@@ -423,6 +425,7 @@ namespace sw::editor
             string_view getRawFolderName() const override { return TextureImporterInternal::kRawTextureFolder; }
             string_view getStampHeader() const override { return TextureImporterInternal::kImportStampHeader; }
             string_view getImportedLabel() const override { return "DDS"; }
+            uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "TextureImport" ); }
             bool        isSourceFile( string_view path ) const override { return TextureImporterInternal::isSourceImage( path ); }
             string      makeImportedPath( string_view sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
             uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
@@ -591,9 +594,12 @@ namespace sw::editor
 
     AssetImportSummary TextureImporter::cookTextureVariants( string_view resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode )
     {
-        TaskManager* const              pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 굽는다(`importAllTextures` 와 같다)
-        const TextureVariantRawImporter importer{ config, pTaskManager, family };
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
+        TaskManager* const               pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 굽는다(`importAllTextures` 와 같다)
+        const TextureVariantRawImporter  importer{ config, pTaskManager, family };
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
     }
 
     bool TextureImporter::importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult, TaskManager* pTaskManager )
@@ -699,8 +705,14 @@ namespace sw::editor
         if ( config.loadFromFile( makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
             return true;
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
-        const TextureRawImporter importer{ config, nullptr };
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr );
+        const TextureRawImporter         importer{ config, nullptr };
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "TextureImporter.DerivedDataConfigUnreadable", "Texture import skipped: %# (%#)", derivedDataCache.error().message(), derivedDataCache.error().detail() );
+            return true;
+        }
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr, *derivedDataCache );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR_ID( "TextureImporter.TextureImportFailed", "Texture import failed: %#", problem.c_str() );
@@ -713,9 +725,12 @@ namespace sw::editor
     AssetImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
     {
         // 작업 시스템은 여기(호출 스레드)서 한 번 찾아 값으로 넘긴다 — 임포트는 워커에서 도는데 워커는 에디터 서비스 범위를 읽지 않는다(`findEditorScope`).
-        TaskManager* const       pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
-        const TextureRawImporter importer{ config, pTaskManager };
-        AssetImportSummary       summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
+        TaskManager* const               pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        const TextureRawImporter         importer{ config, pTaskManager };
+        const expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+            return AssetImportSummary::makeFailed( "DDC config: " + string( derivedDataCache.error().message() ) + " (" + string( derivedDataCache.error().detail() ) + ")" );
+        AssetImportSummary summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager, *derivedDataCache );
         // 공유 원본이 쓰는 규칙은 패턴에 맞는 파일이 없어도(모델 옆 자리로 골랐다) 살아 있다.
         const vector<string> listSourcePath = AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer );
         // 원본마다 공유 규칙 이름을 한 번만 구한다 — 규칙마다 원본 전체를 훑으면 규칙 수 × 원본 수다.

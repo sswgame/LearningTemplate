@@ -20,11 +20,14 @@ namespace
         string    _root{ test::makeScratchPath( "Cook" ) }; ///< 작업 폴더 기준 상대 경로 — 디스크 읽기는 이것도 절대 경로로 기록해야 한다
         string    _inputPath{ FileUtil::joinPath( _root, "Source/a.txt" ) };
         string    _cookedDir{ FileUtil::joinPath( _root, "Cooked" ) };
-        CookStore _store{ FileUtil::joinPath( _root, "Record" ), FileUtil::joinPath( _root, "DDC" ) };
+        CookStore _store{ makeNextRun() };
         int32     _bakeCount{ 0 };
 
         /** @brief 같은 기록 · DDC 폴더의 새 저장소입니다(다음 쿠킹 실행). */
-        CookStore makeNextRun() const { return CookStore{ FileUtil::joinPath( _root, "Record" ), FileUtil::joinPath( _root, "DDC" ) }; }
+        CookStore makeNextRun() const
+        {
+            return CookStore{ FileUtil::joinPath( _root, "Record" ), DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ FileUtil::joinPath( _root, "DDC" ), DerivedDataAccess::ReadWrite } } } };
+        }
 
         string makeOutputPath( string_view outputID ) const { return FileUtil::joinPath( _cookedDir, outputID ); }
 

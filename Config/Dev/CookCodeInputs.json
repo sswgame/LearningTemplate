@@ -5,5 +5,8 @@
     "NavMesh": [ "Source/Engine/Navigation", "Source/Engine/Scene" ],
     "VertexAnimation": [ "Source/Engine/Animation/Scene", "Source/Engine/Graphics/Mesh" ],
     "Pack": [ "Source/Engine/Asset/Cook", "Source/Engine/Asset/Reference", "Source/Engine/Content/Pack", "Source/Engine/Serialization/Inherit", "Source/Engine/Behavior/ConditionExpr.cpp" ],
-    "ShaderCompiler": [ "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp", "Source/Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.cpp" ]
+    "ShaderCompiler": [ "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp", "Source/Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.cpp" ],
+    "TextureImport": [ "Source/Editor/Common/Asset/Texture/TextureImporter.cpp", "Source/Editor/Common/Asset/Texture/TextureImportConfig.cpp", "Source/Editor/Common/Asset/Texture/TextureBlockEncoder.cpp", "Source/Editor/Common/Asset/Texture/RawImageData.cpp" ],
+    "ModelImport": [ "Source/Editor/Common/Asset/Model", "Source/Editor/Common/Asset/ImportedAssetStore.cpp" ],
+    "HeightfieldImport": [ "Source/Editor/Common/Asset/Texture/HeightfieldImporter.cpp", "Source/Editor/Common/Asset/Texture/RawImageData.cpp", "Source/Engine/Environment/Terrain/LayerWeightsAsset.cpp" ]
 }

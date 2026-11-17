@@ -479,7 +479,14 @@ namespace sw
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessCook", "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
                 AnimationCrowdSettings crowdSettings{};
                 const bool             bCrowdSettingsLoaded = crowdSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
-                const CookStore        cookStore            = CookStore::makeLocal();
+                expected<CookStore>    localStore           = CookStore::makeLocal();
+                if ( localStore.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "Headless.CookStoreUnavailable", "Cooking stopped: %# (%#)", localStore.error().message(), localStore.error().detail() );
+                    inoutState._bFailed = SW_TRUE;
+                    return true;
+                }
+                const CookStore& cookStore = *localStore;
                 // 앞 쿠킹이 남긴 내용 해시를 싣는다 — 도장이 같은 입력은 읽지 않는다. 캐시라 못 읽어도 빈 채로 계속한다(다음 저장이 새로 쓴다).
                 ContentHashCache&    hashCache = engine::getSubsystem<ContentHashCache>();
                 const expected<void> hashLoad  = hashCache.load( ContentHashCache::makeLocalCachePath() );

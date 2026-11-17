@@ -14,9 +14,9 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
@@ -175,63 +175,99 @@ namespace sw
                 return FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCompileCache" ) );
             }
 
-            static string computeCachePath( const ShaderCompileDesc& desc, const ShaderCompileInput& input )
+            /**
+             * @struct ShaderCacheSlot
+             * @brief 셰이더 하나의 DDC 자리 — 폴더(층 하나), 키 서술, 키입니다. 항목은 쿠킹 · 임포트 DDC 와 같은 형식이다(`DerivedDataCache` — 머리의 서술 · 본문 해시가
+             *        맞을 때만 히트, 어긋나면 미스 + 경고). 예전 `<키>.bin` 은 바이트만 담아 64 비트 키 충돌 · 깨진 파일을 바이트코드 해시(의존 기록)로만 걸렀다.
+             */
+            struct ShaderCacheSlot
             {
-                const string cacheDir = getShaderCacheDirectory();
-                if ( cacheDir.empty() )
-                    return "";
+                string _directory;   ///< 비면 디스크 캐시를 쓰지 않는다
+                string _description; ///< 키 서술(사람이 읽는 글 — 항목 머리에 그대로 적힌다)
+                uint64 _key{ 0 };
 
-                // 못 읽으면 내용 없이 해시한다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
+                DerivedDataCache makeCache() const { return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ _directory, DerivedDataAccess::ReadWrite } } }; }
+                /** @brief 의존 기록(연 헤더와 내용 해시) 파일 — 항목 옆이다. */
+                string makeRecordPath() const { return makeCache().makePath( 0, _key ) + ShaderCookStamp::kIncludeRecordSuffix; }
+            };
+
+            /** @brief 셰이더 DDC 폴더가 DDC 항목 배치로 옮겨졌다는 표지 파일 이름입니다(폴더 맨 위). 있으면 옛 `<키>.bin` 을 찾지 않는다. */
+            static constexpr const utf8* kLayoutMarkerName = "layout.swddc1";
+
+            /**
+             * @brief 옛 배치(`<키>.bin` · `<키>.bin.deps` — 폴더 맨 위)의 파일을 지우고 표지를 남깁니다. 옛 배치는 다시 쓰이지 않는다(새 자리는 `<키 앞 두 글자>/<키>`).
+             * @details 프로세스 상태 없이 표지 파일 하나로 한 번만 돈다 — 백엔드 넷이 함께 떠도 지우기는 조용한 시도(`tryRemoveFile`)라 겹쳐도 된다.
+             */
+            static void removeLegacyCacheFiles( const string& cacheDir )
+            {
+                const string marker = FileUtil::joinPath( cacheDir, kLayoutMarkerName );
+                if ( FileUtil::exists( marker ) )
+                    return;
+                vector<string> listLegacy;
+                (void)FileUtil::forEachDirectoryEntry( cacheDir, false, [&listLegacy]( const DirectoryEntry& entry )
+                {
+                    if ( entry._bDirectory == false && ( StringUtil::endsWith( entry._path, ".bin" ) || StringUtil::endsWith( entry._path, ".bin.deps" ) ) )
+                        listLegacy.push_back( string( entry._path ) );
+                    return true;
+                } ); // 폴더가 없으면 지울 것이 없다
+                for ( const string& path : listLegacy )
+                {
+                    (void)FileUtil::tryRemoveFile( path ); // 다른 프로세스가 먼저 지웠을 수 있다
+                }
+                const string_view markerText{ "SWDDC 1\n" };
+                if ( FileUtil::ensureParentDirectoryExists( marker ) )
+                    (void)FileUtil::tryWriteFile( marker, reinterpret_cast<const uint8*>( markerText.data() ), markerText.size() ); // 못 쓰면 다음 실행이 다시 훑는다
+            }
+
+            static ShaderCacheSlot computeCacheSlot( const ShaderCompileDesc& desc, const ShaderCompileInput& input )
+            {
+                ShaderCacheSlot slot;
+                slot._directory = getShaderCacheDirectory();
+                if ( slot._directory.empty() )
+                    return slot;
+                removeLegacyCacheFiles( slot._directory );
+
+                // 못 읽으면 내용 없이(해시 0) 적는다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
                 vector<uint8> sourceBytes;
-                (void)FileUtil::readFile( input._source.str(), sourceBytes ); // 못 읽으면 내용 없이 해시한다(위 설명)
+                (void)FileUtil::readFile( input._source.str(), sourceBytes ); // 못 읽으면 내용 없이 적는다(위 설명)
 
-                uint64 hash = HashUtil::computeStringHash64( desc._source.str(), false );
-                hash        = HashUtil::computeStringHash64( desc._entryPoint, false, hash );
-                hash        = HashUtil::computeStringHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
-                hash        = HashUtil::computeStringHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
+                string& text = slot._description;
+                text.append( "source=" ).append( desc._source.str() ).append( "\nentry=" ).append( desc._entryPoint );
+                text.append( "\nstage=" ).append( to_string( static_cast<uint32>( desc._stage ) ) ).append( "\nformat=" ).append( to_string( static_cast<uint32>( desc._targetFormat ) ) );
                 for ( const auto& def : desc._listDefine )
                 {
-                    hash = HashUtil::computeStringHash64( def._name, false, hash );
-                    hash = HashUtil::computeStringHash64( def._value, false, hash );
+                    text.append( "\ndefine=" ).append( def._name ).append( "=" ).append( def._value );
                 }
-                if ( sourceBytes.empty() == false )
-                {
-                    const string_view sourceStr( reinterpret_cast<const utf8*>( sourceBytes.data() ), sourceBytes.size() );
-                    hash = HashUtil::computeStringHash64( sourceStr, false, hash );
-                }
-                // 주 소스 바이트만 해시하면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
+                text.append( "\nsourceHash=" ).append( to_string( sourceBytes.empty() ? uint64( 0 ) : ContentHash::computeBytes( sourceBytes ) ) );
+                // 주 소스 바이트만 키에 넣으면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
                 // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그것을 "새로 컴파일한 것" 으로 알고 라이브 캐시에
                 // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는 컴파일하고 나서야 알아서
-                // (키는 컴파일 전에 필요하다), 컴파일할 때 연 헤더와 그 내용 해시를 캐시 파일 옆의 의존 기록에 적고 맞출 때 그 기록이 지금 헤더와 같은지 본다
+                // (키는 컴파일 전에 필요하다), 컴파일할 때 연 헤더와 그 내용 해시를 항목 옆의 의존 기록에 적고 맞출 때 그 기록이 지금 헤더와 같은지 본다
                 // (`ShaderCookStamp::readIncludeRecord`). 전역 헤더 해시를 키에 섞으면 헤더 하나에 모든 셰이더의 캐시가 무효가 된다.
-                // 도구 지문은 키에 섞는다 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다.
-                hash = HashUtil::computeStringHash64( to_string( ShaderCookStamp::getToolchainFingerprint() ), false, hash );
-                // 디버그 코드젠 여부도 키다. 같은 소스라도 바이트코드가 다르다.
-                // string_view 로 넘긴다. 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
-                // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).
-                hash = HashUtil::computeStringHash64( string_view{ desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" }, false, hash );
-
-                fixed_string<constant::buffer::kMax64> buf;
-                formatstring( buf.data(), buf.capacity(), "%#.bin", Fmt( static_cast<uint64>( hash ), Format( 16, Format::Padding::Zero ).hex() ) );
-                return FileUtil::joinPath( cacheDir, buf.c_str() );
+                // 도구 지문은 키에 넣는다 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다. 디버그 코드젠 여부도 키다(같은 소스라도 바이트코드가 다르다).
+                text.append( "\ntoolchain=" ).append( to_string( ShaderCookStamp::getToolchainFingerprint() ) );
+                text.append( "\ncodegen=" ).append( desc._bDebugCodegen != SW_FALSE ? "dbg" : "opt" ).append( "\n" );
+                slot._key = HashUtil::computeStringHash64( string_view{ text }, false );
+                return slot;
             }
 
             /**
-             * @brief 디스크 캐시가 켜져 있고 자리가 있으면 바이트코드와 의존 기록(연 헤더와 내용 해시)을 씁니다. 못 쓰면 경고만 남깁니다(다음 컴파일이 다시 만든다).
-             * @details 둘은 따로 원자적으로 쓴다(`FileUtil::writeFile` — 임시 파일 바꿔치기). 기록이 바이트코드의 내용 해시를 실어 짝이 맞지 않으면 읽는 쪽이 버리므로
-             *          옛 기록을 먼저 지우지 않는다 — 지우기는 같은 셰이더를 함께 컴파일하는 프로세스(ctest 의 백엔드 넷)끼리 경쟁해 경고를 냈다.
+             * @brief 디스크 캐시가 켜져 있고 자리가 있으면 바이트코드 항목과 의존 기록(연 헤더와 내용 해시)을 씁니다. 못 쓰면 경고만 남깁니다(다음 컴파일이 다시 만든다).
+             * @details 둘은 따로 원자적으로 쓴다(임시 파일 바꿔치기). 같은 항목이 이미 있으면 DDC 가 다시 쓰지 않는다 — 같은 셰이더를 함께 컴파일하는 프로세스(ctest 의 백엔드 넷)가
+             *          한 파일을 다투지 않는다. 기록이 바이트코드의 내용 해시를 실어 짝이 맞지 않으면 읽는 쪽이 버리므로 옛 기록을 먼저 지우지 않는다.
              */
-            static void saveToCacheIfEnabled( const string& cachePath, const ShaderCompileResult& result )
+            static void saveToCacheIfEnabled( const ShaderCacheSlot& slot, const ShaderCompileResult& result )
             {
-                const bool bDiskCacheWritable = cachePath.empty() == false && result._bytecode.empty() == false;
+                const bool bDiskCacheWritable = slot._directory.empty() == false && result._bytecode.empty() == false;
                 if ( bDiskCacheWritable == false )
                     return;
-                const string recordPath = cachePath + ShaderCookStamp::kIncludeRecordSuffix;
-                if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, result._bytecode.data(), result._bytecode.size() ) == false )
+                const DerivedDataCache cache = slot.makeCache();
+                if ( cache.store( slot._key, slot._description, result._bytecode ) == false )
                 {
-                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader cache '%#'", cachePath );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader cache '%#'", cache.makePath( 0, slot._key ) );
                     return;
                 }
+                const string recordPath = slot.makeRecordPath();
                 if ( ShaderCookStamp::writeIncludeRecord( recordPath, result._listIncludedFile, ContentHash::computeBytes( result._bytecode ) ) == false )
                     SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader2", "Could not write the shader cache record '%#'", recordPath );
             }
@@ -819,17 +855,18 @@ namespace sw
             return result;
         }
 
-        result._sourceFile     = input->_source.str();
-        const string cachePath = Internal::computeCachePath( desc, *input );
-        if ( cachePath.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
+        result._sourceFile                        = input->_source.str();
+        const Internal::ShaderCacheSlot cacheSlot = Internal::computeCacheSlot( desc, *input );
+        if ( cacheSlot._directory.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
         {
             // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
             // 바이트코드가 기록의 짝인지 내용 해시로 본다 — 다른 프로세스가 둘 중 하나만 바꾼 순간을 읽으면 맞지 않아 다시 컴파일한다.
             vector<string> listIncludedFile;
             vector<uint8>  cachedBytes;
             uint64         recordedBytecodeHash = 0;
-            const bool     bRecordCurrent       = ShaderCookStamp::readIncludeRecord( cachePath + ShaderCookStamp::kIncludeRecordSuffix, listIncludedFile, recordedBytecodeHash );
-            const bool     bBytesRead           = bRecordCurrent && FileUtil::readFile( cachePath, cachedBytes ); // 기록은 바이트코드를 쓴 뒤에 쓴다 — 기록이 있으면 바이트코드가 있다
+            const bool     bRecordCurrent       = ShaderCookStamp::readIncludeRecord( cacheSlot.makeRecordPath(), listIncludedFile, recordedBytecodeHash );
+            // 기록은 항목을 쓴 뒤에 쓴다 — 기록이 있으면 항목이 있다. 항목은 머리의 서술 · 본문 해시가 맞을 때만 읽힌다(키 충돌 · 깨진 파일은 미스 + 경고).
+            const bool bBytesRead = bRecordCurrent && cacheSlot.makeCache().find( cacheSlot._key, cacheSlot._description, cachedBytes );
             if ( bBytesRead && cachedBytes.empty() == false && ContentHash::computeBytes( cachedBytes ) == recordedBytecodeHash )
             {
                 result._bytecode         = std::move( cachedBytes );
@@ -859,7 +896,7 @@ namespace sw
         if ( bFxcTarget )
         {
             if ( Internal::compileDxbc( desc, resolver->getIncludeResolver(), *input, profile, result ) )
-                Internal::saveToCacheIfEnabled( cachePath, result );
+                Internal::saveToCacheIfEnabled( cacheSlot, result );
             reportCompiled( result );
             return result;
         }
@@ -882,7 +919,7 @@ namespace sw
         const Internal::DxcResult serviceResult = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
         if ( serviceResult == Internal::DxcResult::Compiled )
         {
-            Internal::saveToCacheIfEnabled( cachePath, result );
+            Internal::saveToCacheIfEnabled( cacheSlot, result );
             reportCompiled( result );
             return result;
         }

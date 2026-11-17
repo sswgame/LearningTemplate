@@ -12,10 +12,13 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   stages [--record] 묶음… 쉼표로 이은 단계 묶음을 부분 체인으로 돌린다(예: focusloss,graphaddnode — 게임 단계는 리소스 경로로)
   bisect 단계 [체인]     체인에서만 지는 단계의 앞 단계를 이분 탐색한다(체인 기본값 editor, 먼저 chain 을 돌려 로그가 있어야 한다)
   report [체인]          마지막 체인 로그에서 진 단계와 까닭을 다시 낸다
+  rerun [체인]           마지막 체인 보고에서 진 단계를 혼자 → 앞을 붙여 → 이분 탐색으로 다시 돈다(scenario_bisect --rerun-failed 와 같은 함수)
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
   all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
-  sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. 끝 줄 SANITIZE_OK=<종류>
+  sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. address 는 끝에 퍼저를 타깃마다 30 초. 끝 줄 SANITIZE_OK=<종류>
+  fuzz [이름…] [--minutes N]  퍼저(프리셋 Linux-Fuzz, Test/Fuzz)를 짓고 타깃마다 N 분(기본 0.5) 돌린다. 이름이 없으면 Test/Fuzz/Seeds 의 모든 타깃. 끝 줄 FUZZ_OK
+  --self-check           퍼저 로그 판정의 자체 검사(빌드 없이)
 """
 import concurrent.futures
 import contextlib
@@ -66,7 +69,7 @@ def run_in_wsl(argv):
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
     command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip()
-    if command and command[0] in ('build', 'all', 'sanitize'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
+    if command and command[0] in ('build', 'all', 'sanitize', 'fuzz'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
         run_git_or_raise(['update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
     env[HEAD_ENV] = head
@@ -380,6 +383,38 @@ def bisect(arguments):
     return 0
 
 
+def retry_failed(arguments):
+    """마지막 체인 실행에서 진 단계를 다시 돈다 — scenario_bisect.retry_failed_stages(Windows 와 같은 함수)에 Xvfb · 드라이버 실행기를 댄다."""
+    pack = arguments[0] if arguments else 'editor'
+    require_current_build()
+    command = app_arguments.find_chain_command(pathlib.Path(RELEASE), pack)
+    paths = app_arguments.read_chain_stages(command)
+    names = [scenario_bisect.read_scenario_name(path) for path in paths]
+    folder = scenario_bisect.find_latest_per_backend_folder(pathlib.Path(f'{RELEASE}/Bin/Saved/Automation'), set(names))
+    if folder is None:
+        print(f'{pack} 의 체인 보고가 없다 - chain {pack} 을 먼저 돌린다')
+        return 1
+    split = any('scenario-backend-split' in part for part in command)
+    failed = scenario_bisect.select_failed_stages(scenario_bisect.collect_expected_stages(folder, names, split), scenario_bisect.read_backend_reports(folder))
+    print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
+    with Xvfb():
+        env = scenario_env(99)
+        base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
+        run_counter = [0]
+
+        def run_stage(stage_paths, target_name, backend):
+            run_counter[0] += 1
+            run_dir = scenario_bisect.make_run_report_folder(pathlib.Path(RELEASE), run_counter[0])
+            subprocess.run(['timeout', '1200', *base, app_arguments.option('scenario', ','.join(stage_paths)), app_arguments.flag('scenario-keep-going'),
+                            app_arguments.option('scenario-backends', backend), app_arguments.option('scenario-report', run_dir / 'report.json'),
+                            *window_arguments(), app_arguments.option('log-file', 'x_retry.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            bad = scenario_bisect.stage_failed_in_reports(scenario_bisect.read_run_reports(run_dir), target_name)
+            print(backend, len(stage_paths), target_name, '짐' if bad else '통과', flush=True)
+            return bad
+
+        return scenario_bisect.retry_failed_stages(paths, failed, run_stage)
+
+
 def read_ppm_colors(path):
     """P6 사진의 크기와 표본 색 수입니다."""
     data = pathlib.Path(path).read_bytes()
@@ -461,24 +496,9 @@ def sanitize(arguments):
         print(f'sanitize 는 address 또는 thread 다: {kind}')
         return 2
     sync_clone()
-    cache = pathlib.Path(f'{CLONE}/build/Linux-Debug/CMakeCache.txt').read_text(errors='replace')
-
-    def cached(key):
-        return re.search(rf'^{key}:[^=]*=(.*)$', cache, re.M).group(1)
-
     preset = 'Linux-Debug-ASan' if kind == 'address' else 'Linux-Debug-TSan'
     build_dir = f'{CLONE}/build/{preset}'
-    # 컴파일러 · 툴체인은 Linux-Debug 캐시의 절대 경로를 쓴다(서버 구성과 같은 이유). TSan 은 계측한 포트 트리플릿을 따로 깐다.
-    installed = cached('VCPKG_INSTALLED_DIR') if kind == 'address' else f'{CLONE}/build/{preset}/vcpkg_installed'
-    triplet = '' if kind == 'address' else '-DVCPKG_TARGET_TRIPLET=x64-linux-tsan '
-    configure = (f'cmake --preset {preset} -S {CLONE} -B {build_dir} {triplet}'
-                 f'-DCMAKE_C_COMPILER="{cached("CMAKE_C_COMPILER")}" -DCMAKE_CXX_COMPILER="{cached("CMAKE_CXX_COMPILER")}" '
-                 f'-DCMAKE_TOOLCHAIN_FILE="{cached("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{installed}"')
-    if shell(f'cd {CLONE} && {configure} > {build_dir}.configure.log 2>&1').returncode != 0:
-        print(f'구성 실패 - {build_dir}.configure.log')
-        return 1
-    if shell(f'ninja -C {build_dir} -k 0 App > {build_dir}.build.log 2>&1').returncode != 0:
-        print(f'빌드 실패 - {build_dir}.build.log')
+    if configure_and_build(preset, ['App'], tsan=kind == 'thread') != 0:
         return 1
     # 누수는 처음에는 끈다 — 기준선을 만든 뒤 켠다(감사 P-8 "detect_leaks=0 으로 시작"). 첫 오류에서 멈춰 보고를 읽게 한다.
     options = ('ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1' if kind == 'address'
@@ -488,8 +508,98 @@ def sanitize(arguments):
     if rc != 0:
         print(f'SANITIZE_FAILED={kind} - /tmp/lt.sanitize.log')
         return rc
+    # 퍼저는 ASan 묶음 끝에 타깃마다 30 초(DesignBacklog 퍼징 절) — 클론은 위에서 이미 옮겼다.
+    if kind == 'address' and run_fuzz([], FUZZ_SMOKE_SECONDS, sync=False) != 0:
+        print('SANITIZE_FAILED=fuzz')
+        return 1
     print(f'SANITIZE_OK={kind}')
     return 0
+
+
+def configure_and_build(preset, targets, tsan=False):
+    """Debug 계열 프리셋을 Linux-Debug 캐시의 컴파일러 · 툴체인 절대 경로로 구성하고 targets 를 짓는다(sanitize · fuzz 가 함께 쓴다). 실패면 1."""
+    cache = pathlib.Path(f'{CLONE}/build/Linux-Debug/CMakeCache.txt').read_text(errors='replace')
+
+    def cached(key):
+        return re.search(rf'^{key}:[^=]*=(.*)$', cache, re.M).group(1)
+
+    build_dir = f'{CLONE}/build/{preset}'
+    # 컴파일러 · 툴체인은 Linux-Debug 캐시의 절대 경로를 쓴다(서버 구성과 같은 이유). TSan 은 계측한 포트 트리플릿을 따로 깐다.
+    installed = f'{build_dir}/vcpkg_installed' if tsan else cached('VCPKG_INSTALLED_DIR')
+    triplet = '-DVCPKG_TARGET_TRIPLET=x64-linux-tsan ' if tsan else ''
+    configure = (f'cmake --preset {preset} -S {CLONE} -B {build_dir} {triplet}'
+                 f'-DCMAKE_C_COMPILER="{cached("CMAKE_C_COMPILER")}" -DCMAKE_CXX_COMPILER="{cached("CMAKE_CXX_COMPILER")}" '
+                 f'-DCMAKE_TOOLCHAIN_FILE="{cached("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{installed}"')
+    if shell(f'cd {CLONE} && {configure} > {build_dir}.configure.log 2>&1').returncode != 0:
+        print(f'구성 실패 - {build_dir}.configure.log')
+        return 1
+    if shell(f'ninja -C {build_dir} -k 0 {" ".join(targets)} > {build_dir}.build.log 2>&1').returncode != 0:
+        print(f'빌드 실패 - {build_dir}.build.log')
+        return 1
+    return 0
+
+
+FUZZ_SMOKE_SECONDS = 30  # sanitize 끝의 타깃별 시간 — 셋이면 1.5 분(DesignBacklog 퍼징 절의 "sanitize 단계 합 5 분")
+FUZZ_FAILURE = re.compile(r'ERROR: (AddressSanitizer|LeakSanitizer|libFuzzer)|runtime error:|deadly signal')
+FUZZ_MODULES = re.compile(r'Loaded (\d+) modules')
+
+
+def evaluate_fuzz_log(text):
+    """퍼저 로그 하나의 판정입니다. 크래시 · 새니타이저 보고면 그 줄, 커버리지가 실행 파일에만 닿으면(Loaded 모듈 < 2 — 심볼 숨김 결함) 그 까닭, 아니면 None."""
+    failure = FUZZ_FAILURE.search(text)
+    if failure:
+        return failure.group(0)
+    loaded = FUZZ_MODULES.search(text)
+    if not loaded or int(loaded.group(1)) < 2:
+        return 'coverage reaches only the executable (Loaded modules < 2) - is --exclude-libs hiding the libFuzzer callbacks?'
+    return None
+
+
+def run_fuzz(names, seconds, sync=True):
+    """Linux-Fuzz 를 짓고 타깃마다 seconds 초 돌린다. 자라는 말뭉치는 빌드 폴더의 Saved/Fuzz/<이름>(커밋하지 않는다), 씨앗은 Test/Fuzz/Seeds/<이름>."""
+    if sync:
+        sync_clone()
+    seeds_root = pathlib.Path(f'{CLONE}/Test/Fuzz/Seeds')
+    names = names or sorted(path.name for path in seeds_root.iterdir() if path.is_dir())
+    if configure_and_build('Linux-Fuzz', [f'Fuzz_{name}' for name in names]) != 0:
+        return 1
+    build_dir = f'{CLONE}/build/Linux-Fuzz'
+    failed = []
+    for name in names:
+        corpus = f'{build_dir}/Saved/Fuzz/{name}'
+        log = f'/tmp/lt.fuzz.{name}.log'
+        os.makedirs(corpus, exist_ok=True)
+        # 자라는 말뭉치를 앞에 둔다 — libFuzzer 는 첫 폴더에 새 입력을 쓴다(씨앗 폴더를 더럽히지 않는다).
+        shell(f'cd {build_dir}/Bin && ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 ./Fuzz_{name} -max_total_time={seconds} {corpus} {seeds_root / name} > {log} 2>&1')
+        reason = evaluate_fuzz_log(pathlib.Path(log).read_text(errors='replace'))
+        print(f'fuzz {name}: {"ok" if reason is None else reason} - {log}')
+        if reason is not None:
+            failed.append(name)
+    if failed:
+        print('FUZZ_FAILED=' + ','.join(failed))
+        return 1
+    print('FUZZ_OK')
+    return 0
+
+
+def fuzz(arguments):
+    """fuzz [이름…] [--minutes N] — 밤새 도는 러너가 없을 때 손으로 오래 돌리는 입구다(러너는 사용자 결정)."""
+    minutes = 0.5
+    if '--minutes' in arguments:
+        index = arguments.index('--minutes')
+        minutes = float(arguments[index + 1])
+        arguments = arguments[:index] + arguments[index + 2:]
+    return run_fuzz(arguments, max(1, int(minutes * 60)))
+
+
+def self_check():
+    """판정 함수의 자체 검사(빌드 없이) — 크래시 줄, 모듈 수 부족, 정상."""
+    assert evaluate_fuzz_log('INFO: Loaded 3 modules\n==1==ERROR: AddressSanitizer: heap-buffer-overflow') == 'ERROR: AddressSanitizer'
+    assert evaluate_fuzz_log('INFO: Loaded 1 modules   (10 inline 8-bit counters)').startswith('coverage reaches only')
+    assert evaluate_fuzz_log('INFO: Loaded 4 modules   (99 inline 8-bit counters)\nDone 2000 runs') is None
+    print('SELF_CHECK_OK')
+    return 0
+
 
 
 def find_run_processes():
@@ -544,6 +654,8 @@ def setup_dzn():
 
 
 def main(argv):
+    if argv[:1] == ['--self-check']:
+        return self_check()
     if is_windows_host():
         return run_in_wsl(argv)
     global GPU
@@ -566,6 +678,8 @@ def main(argv):
         return stages(arguments)
     if command == 'bisect' and arguments:
         return bisect(arguments)
+    if command == 'rerun':
+        return retry_failed(arguments)
     if command == 'report':
         return report(arguments[0] if arguments else 'editor')
     if command == 'goldens':
@@ -576,6 +690,8 @@ def main(argv):
         return verify_all(arguments)
     if command == 'sanitize':
         return sanitize(arguments)
+    if command == 'fuzz':
+        return fuzz(arguments)
     print(__doc__)
     return 2
 

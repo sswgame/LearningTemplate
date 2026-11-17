@@ -74,10 +74,10 @@ namespace sw
     class SW_API CookStore
     {
     public:
-        CookStore( string recordRootPath, string ddcRootPath );
+        CookStore( string recordRootPath, DerivedDataCache derivedDataCache );
 
-        /** @brief 로컬 저장소입니다. 기록은 `<프로젝트>/Saved/CookRecord`, DDC 는 `<프로젝트>/Saved/DDC` 입니다. */
-        static CookStore makeLocal();
+        /** @brief 로컬 저장소입니다. 기록은 `<프로젝트>/Saved/CookRecord`, DDC 는 `Config/Dev/DerivedData.json` 의 층 목록입니다. 설정을 못 읽으면 오류입니다. */
+        [[nodiscard]] static expected<CookStore> makeLocal();
 
         /**
          * @brief 출력 파일 하나를 만듭니다.

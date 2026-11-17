@@ -8,7 +8,9 @@
 테스트(`Tests/` 폴더)는 쿠커 출력에 닿지 않으므로 뺍니다. 줄 끝은 LF 로 맞춰 어느 체크아웃 · OS 에서나 같은 값입니다.
 파일마다의 내용 지문은 빌드 트리의 캐시(`--cache`)에서 (mtime, 크기)가 같으면 다시 읽지 않습니다(`file_digest_cache.py` — 쿠커끼리 겹치는 파일도 한 번).
 
-임포터는 일부러 넣지 않습니다 — 텍스처 BC7 은 장당 수 분이라 소스를 고칠 때마다 모두 다시 임포트할 수 없습니다(`kImporterVersion`).
+임포터(`TextureImport` · `ModelImport` · `HeightfieldImport`)의 지문은 DDC 키에만 들어갑니다 — 어긋남 판정(`import.stamp`)은 그대로 사람이 올리는
+`kImporterVersion` 입니다. 텍스처 BC7 은 장당 수 분이라 소스를 고칠 때마다 모두 다시 임포트할 수 없고, DDC 는 어긋난 원본을 임포트하기 전에만 찾으므로
+지문이 바뀌어도 임포트가 늘지 않습니다(다른 코드가 쓴 항목을 받지 않을 뿐입니다).
 
 사용법: py -3 Scripts/generate/cook_code_fingerprint.py --root <repo> --inputs <json> --vcpkg-status <status> --out <path/CookCodeFingerprint.gen.h> --cache <빌드 트리 안 json>
 """

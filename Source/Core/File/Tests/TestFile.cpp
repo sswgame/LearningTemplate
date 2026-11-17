@@ -747,3 +747,27 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
         SW_EXPECT_TRUE( sw::ProcessEnvironment::tryUnset( "XDG_DATA_HOME" ) );
 }
 #endif
+
+/**
+ * @brief [FileTest] 로그 없는 원자적 쓰기(`tryWriteFile`)는 쓴 것 · 읽기 전용 대상 거절을 결과로 돌려준다
+ * @details DDC 처럼 같은 자리를 다투는 것이 정상인 캐시가 쓴다 — 교체에 진 것을 오류 로그 없이 받아 그 자리를 다시 본다.
+ */
+SW_TEST_CASE( FileTest, TryWriteFileReportsTheResult )
+{
+    using namespace sw;
+    const string        path = FileUtil::joinPath( test::makeScratchPath( "TryWrite" ), "entry.bin" );
+    const vector<uint8> bytes{ 1, 2, 3 };
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
+    SW_EXPECT_TRUE( FileUtil::tryWriteFile( path, bytes.data(), bytes.size() ) == FileWriteResult::Written );
+    vector<uint8> read;
+    SW_REQUIRE_TRUE( FileUtil::readFile( path, read ) );
+    SW_EXPECT_TRUE( read == bytes );
+
+    SW_REQUIRE_TRUE( FileUtil::setWritable( path, false ) );
+    const vector<uint8> changed{ 9 };
+    SW_EXPECT_TRUE( FileUtil::tryWriteFile( path, changed.data(), changed.size() ) == FileWriteResult::Refused );
+    SW_REQUIRE_TRUE( FileUtil::readFile( path, read ) );
+    SW_EXPECT_TRUE( read == bytes );
+    SW_REQUIRE_TRUE( FileUtil::setWritable( path, true ) );
+    SW_EXPECT_TRUE( FileUtil::tryWriteFile( path, nullptr, 0 ) == FileWriteResult::WriteFailed );
+}

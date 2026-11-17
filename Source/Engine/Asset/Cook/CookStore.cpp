@@ -14,16 +14,19 @@
 
 namespace sw
 {
-    CookStore::CookStore( string recordRootPath, string ddcRootPath )
+    CookStore::CookStore( string recordRootPath, DerivedDataCache derivedDataCache )
         : _recordRootPath{ std::move( recordRootPath ) }
-        , _derivedDataCache{ std::move( ddcRootPath ) }
+        , _derivedDataCache{ std::move( derivedDataCache ) }
         , _outputHashNanos{ 0 }
     {
     }
 
-    CookStore CookStore::makeLocal()
+    expected<CookStore> CookStore::makeLocal()
     {
-        return CookStore{ FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "CookRecord" ), DerivedDataCache::makeLocalRootPath() };
+        expected<DerivedDataCache> derivedDataCache = DerivedDataCache::loadFromConfig();
+        if ( derivedDataCache.has_value() == false )
+            return unexpected( derivedDataCache.error() );
+        return CookStore{ FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "CookRecord" ), std::move( *derivedDataCache ) };
     }
 
     string CookStore::makeRecordPath( string_view outputID ) const
@@ -48,9 +51,9 @@ namespace sw
         const bool bOutputCurrent = FileUtil::isRegularFile( outputPath ) && hashOutputFile( outputPath ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
-        // DDC 의 출력을 출력 옆 임시 파일로 복사하고, 그 해시가 기록과 같을 때만 출력과 바꿔 끼운다 — 다르면 출력 자리를 건드리지 않는다(메모리로 들지도 않는다).
+        // DDC 의 출력을 출력 옆 임시 파일로 흘려 쓰고(DDC 가 본문 해시를 본다), 그 해시가 기록과 같을 때만 출력과 바꿔 끼운다 — 다르면 출력 자리를 건드리지 않는다(메모리로 들지도 않는다).
         const string tempPath = FileUtil::makeWriteTempPath( outputPath );
-        if ( _derivedDataCache.find( record._key, tempPath ) == false )
+        if ( _derivedDataCache.find( record._key, CookJob::makeKeyDescription( desc, record._listInput ), tempPath ) == false )
         {
             (void)FileUtil::tryRemoveFile( tempPath );
             SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry (or it could not be copied) - cooked again", outputID );
@@ -99,7 +102,7 @@ namespace sw
         if ( finished.has_value() )
             return *finished;
         const CookRecord record = CookRecord::make( job, step._outputHash );
-        if ( _derivedDataCache.store( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore2", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;
@@ -120,7 +123,7 @@ namespace sw
             return CookResult::Failed;
         }
         const CookRecord record = CookRecord::make( job, outputHash );
-        if ( _derivedDataCache.store( record._key, outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;

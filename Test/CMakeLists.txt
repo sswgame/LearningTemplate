@@ -319,3 +319,8 @@ if(SW_CPU_HEAVY_TEST AND TARGET EditorModule)
 endif()
 
 add_subdirectory(Scenario)
+
+# 퍼저(Linux-Fuzz 프리셋만) — 신뢰 경계 파서의 스모크 `Fuzz.<이름>.Smoke`(라벨 fuzz). 임포트 산출물을 읽지 않아 위의 고정 단계를 요구하지 않는다(다른 폴더라 걸리지 않는다).
+if(SW_ENABLE_FUZZING)
+	add_subdirectory(Fuzz)
+endif()

@@ -58,6 +58,15 @@
       }
     },
     {
+      "name": "Linux-Fuzz",
+      "displayName": "Linux Ninja Debug + ASan + libFuzzer (Clang)",
+      "description": "퍼저 실행 파일(`Fuzz_<이름>`, cmake/Modules/Build/FuzzTargets.cmake)과 `Fuzz.<이름>.Smoke`(라벨 fuzz) — 엔진에 커버리지 계측(fuzzer-no-link)을 건다",
+      "inherits": "Linux-Debug-ASan",
+      "cacheVariables": {
+        "SW_ENABLE_FUZZING": "ON"
+      }
+    },
+    {
       "name": "Linux-Debug-TSan",
       "displayName": "Linux Ninja Debug + ThreadSanitizer (Clang)",
       "description": "데이터 경쟁 그물 — vcpkg 는 x64-linux-tsan 트리플릿(원자로 스스로 동기화하는 포트 계측). `py -3 Scripts/dev/linux_scenarios.py sanitize thread`",
@@ -280,6 +289,10 @@
     {
       "name": "Linux-Debug-TSan",
       "configurePreset": "Linux-Debug-TSan"
+    },
+    {
+      "name": "Linux-Fuzz",
+      "configurePreset": "Linux-Fuzz"
     }
   ],
   "testPresets": [

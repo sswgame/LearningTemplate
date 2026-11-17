@@ -251,6 +251,12 @@ namespace sw
 
     uint64 CookJob::computeKey( const CookJobDesc& desc, const vector<CookInput>& listInput )
     {
+        const string canonical = makeKeyDescription( desc, listInput );
+        return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
+    }
+
+    string CookJob::makeKeyDescription( const CookJobDesc& desc, const vector<CookInput>& listInput )
+    {
         vector<const CookInput*> listSorted;
         listSorted.reserve( listInput.size() );
         for ( const CookInput& input : listInput )
@@ -276,6 +282,6 @@ namespace sw
             canonical.append( CookInput::getKindName( pInput->_kind ) ).append( "\t" ).append( pInput->_source ).append( "\t" );
             canonical.append( pInput->_extension ).append( "\t" ).append( sw::to_string( pInput->_contentHash ) ).append( "\n" );
         }
-        return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
+        return canonical;
     }
 } // namespace sw

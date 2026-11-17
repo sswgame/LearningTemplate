@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
@@ -17,7 +18,10 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
+#include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
+
+#include "Engine/Asset/Cook/CookRecord.h"
 
 namespace sw::editor
 {
@@ -164,6 +168,155 @@ namespace sw::editor
                 bool       _bImported{ false }; ///< 이번에 임포트했다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
+            /** @brief DDC 키 서술입니다(`DerivedDataCache` 가 항목 머리에 적어 키 충돌을 미스로 만든다). 원본 해시가 원본 바이트 · 규칙 · 임포터 판 · 대상 형식을 이미 섞는다. */
+            static string makeCacheKeyDescription( const IRawAssetImporter& importer, const SourceFile& file, uint64 sourceHash, uint64 codeFingerprint )
+            {
+                string text( "import=" );
+                text.append( importer.getStampHeader() ).append( "\ncode=" ).append( formatHash( codeFingerprint ) ).append( "\nsource=" ).append( formatHash( sourceHash ) );
+                if ( importer.isImportedPathEmbedded() )
+                    text.append( "\npath=" ).append( file._assetPath );
+                text.push_back( '\n' );
+                return text;
+            }
+
+            /** @brief 결과 파일 이름의 기준 폴더(끝에 `/`)입니다. 경로가 박히는 종류는 리소스 루트, 아니면 결과 파일의 폴더입니다(`isImportedPathEmbedded`). */
+            static string makeCacheNameBase( const IRawAssetImporter& importer, const SourceFile& file )
+            {
+                string base = importer.isImportedPathEmbedded() ? file._sourcePath.substr( 0, file._sourcePath.size() - file._assetPath.size() )
+                                                                : FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( file._importedPath ) );
+                if ( base.empty() == false && base.back() != '/' )
+                    base.push_back( '/' );
+                return base;
+            }
+
+            /** @brief 저장소 공유 파일(`<x>/models/_shared/…`)인지 봅니다 — 다른 원본도 쓰는 파일이라 지우지 않고 `writeIfAbsent` 로만 쓴다. */
+            static bool isSharedStorePath( string_view path )
+            {
+                string marker( "/" );
+                marker.append( ImportedAssetStore::kModelFolderName ).append( "/" ).append( ImportedAssetStore::kStoreFolderName ).append( "/" );
+                return FileUtil::normalizeSeparators( path ).find( marker ) != string::npos;
+            }
+
+            /**
+             * @brief 원본 하나의 결과 파일을 (이름, 바이트) 덩어리로 묶습니다. 이름 순서이고 한 파일은 `<이름>\n<바이트 수 hex16>\n<바이트>` 입니다.
+             * @return 결과가 없거나 못 읽었거나 기준 폴더 밖 파일이 있으면 false 입니다(그 원본은 DDC 에 넣지 않는다).
+             */
+            [[nodiscard]] static bool packImportedFiles( const IRawAssetImporter& importer, const SourceFile& file, vector<uint8>& outPayload )
+            {
+                vector<string> listPath;
+                importer.collectImportedFiles( file._importedPath, listPath );
+                if ( listPath.empty() )
+                    return false;
+                const string base = makeCacheNameBase( importer, file );
+                for ( string& path : listPath )
+                {
+                    path = FileUtil::normalizeSeparators( path );
+                    if ( path.size() <= base.size() || StringUtil::startsWith( path, base ) == false )
+                        return false;
+                }
+                VectorUtil::sort( listPath );
+                outPayload.clear();
+                for ( const string& path : listPath )
+                {
+                    vector<uint8> bytes;
+                    if ( FileUtil::readFile( path, bytes ) == false )
+                        return false;
+                    string head( string_view( path ).substr( base.size() ) );
+                    head.push_back( '\n' );
+                    HexUtil::appendUint64( head, bytes.size() );
+                    head.push_back( '\n' );
+                    outPayload.insert( outPayload.end(), head.begin(), head.end() );
+                    outPayload.insert( outPayload.end(), bytes.begin(), bytes.end() );
+                }
+                return true;
+            }
+
+            /**
+             * @brief `packImportedFiles` 의 덩어리를 결과 자리에 씁니다. 지금 결과 파일(공유 파일 빼고)은 먼저 지운다 — 옛 임포트가 남긴 클립이 섞이지 않게.
+             * @details 이름은 신뢰 경계다(공유 층은 다른 머신이 쓴 바이트) — 빈 이름 · 절대 경로 · `..` 구간이 든 이름은 덩어리 전체를 거절한다.
+             */
+            [[nodiscard]] static bool unpackImportedFiles( const IRawAssetImporter& importer, const SourceFile& file, const vector<uint8>& payload )
+            {
+                struct Entry
+                {
+                    string _name;
+                    size_t _offset{ 0 };
+                    size_t _size{ 0 };
+                };
+                vector<Entry>     listEntry;
+                const string_view text{ reinterpret_cast<const char*>( payload.data() ), payload.size() };
+                for ( size_t cursor = 0; cursor < text.size(); )
+                {
+                    const size_t nameEnd = text.find( '\n', cursor );
+                    const size_t sizeEnd = nameEnd == string_view::npos ? string_view::npos : text.find( '\n', nameEnd + 1 );
+                    uint64       size    = 0;
+                    if ( sizeEnd == string_view::npos || sizeEnd - nameEnd - 1 != HexDigitUtil::kMaxDigitCount ||
+                         HexDigitUtil::tryParseFixed( text.substr( nameEnd + 1, HexDigitUtil::kMaxDigitCount ), size ) == false || size > text.size() - sizeEnd - 1 )
+                        return false;
+                    Entry entry;
+                    entry._name            = string( text.substr( cursor, nameEnd - cursor ) );
+                    entry._offset          = sizeEnd + 1;
+                    entry._size            = static_cast<size_t>( size );
+                    const bool bUnsafeName = entry._name.empty() || entry._name.front() == '/' || entry._name.find( ':' ) != string::npos || entry._name.find( '\\' ) != string::npos ||
+                                             entry._name == ".." || StringUtil::startsWith( entry._name, "../" ) || entry._name.find( "/../" ) != string::npos;
+                    if ( bUnsafeName )
+                        return false;
+                    cursor = entry._offset + entry._size;
+                    listEntry.push_back( std::move( entry ) );
+                }
+                if ( listEntry.empty() )
+                    return false;
+
+                vector<string> listOld;
+                importer.collectImportedFiles( file._importedPath, listOld );
+                for ( const string& oldPath : listOld )
+                {
+                    if ( isSharedStorePath( oldPath ) == false && FileUtil::removeFile( oldPath ) == false )
+                        return false;
+                }
+                const string base = makeCacheNameBase( importer, file );
+                for ( const Entry& entry : listEntry )
+                {
+                    const string path   = base + entry._name;
+                    const uint8* pBytes = payload.data() + entry._offset;
+                    const bool   bWritten =
+                        isSharedStorePath( path ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )
+                                                    : FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, pBytes, entry._size );
+                    if ( bWritten == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief DDC 에서 원본 하나의 결과를 찾아 씁니다. 미스 · 못 쓴 것은 false 라 부르는 쪽이 임포트한다. */
+            [[nodiscard]] static bool serveFromCache( const IRawAssetImporter& importer, const DerivedDataCache& derivedDataCache, const SourceFile& file, const string& keyDescription )
+            {
+                vector<uint8> payload;
+                const uint64  key = HashUtil::computeStringHash64( keyDescription.c_str(), keyDescription.size(), false );
+                if ( derivedDataCache.find( key, keyDescription, payload ) == false )
+                    return false;
+                if ( unpackImportedFiles( importer, file, payload ) == false )
+                {
+                    SW_LOG_WARNING_ID( "AssetImportStamp.CacheEntryNotRestored", "Import: the DDC entry of '%#' could not be written back - imported again", file._assetPath );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 방금 임포트한 원본 하나의 결과를 DDC 에 넣습니다. 못 넣어도 임포트는 성공이다(다음 임포트가 다시 넣는다). */
+            static void storeInCache( const IRawAssetImporter& importer, const DerivedDataCache& derivedDataCache, const SourceFile& file, const string& keyDescription )
+            {
+                vector<uint8> payload;
+                if ( packImportedFiles( importer, file, payload ) == false )
+                {
+                    SW_LOG_INFO_ID( "AssetImportStamp.CacheEntrySkipped", "Import: '%#' is not stored in the DDC - its results could not be read or lie outside its folder", file._assetPath );
+                    return;
+                }
+                const uint64 key = HashUtil::computeStringHash64( keyDescription.c_str(), keyDescription.size(), false );
+                if ( derivedDataCache.store( key, keyDescription, payload ) == false )
+                    SW_LOG_WARNING_ID( "AssetImportStamp.CacheStoreFailed", "Import: could not store '%#' in the DDC", file._assetPath );
+            }
+
             /**
              * @brief 원본 폴더 하나의 파일들을 임포트하는 일입니다. 병렬 구간에서 입력은 읽기만 하고 파일마다 자기 결과 칸(`_pListFileResult[파일 번호]`)에만 씁니다.
              * @details 병렬 단위는 **사슬**(같은 결과 자리에 쓰는 파일의 묶음, `makeChains`)이라 두 스레드가 한 결과 경로를 쓰거나 지우지 않습니다.
@@ -179,7 +332,8 @@ namespace sw::editor
                 FileResult*                    _pListFileResult{ nullptr }; ///< 파일 수만큼
                 atomic<uint32>                 _nextSlot{ 0 };              ///< `_pListRunChain` 에서 다음에 가져갈 칸
                 AssetImportMode                _mode{ AssetImportMode::ImportStale };
-                TaskManager*                   _pTaskManager{ nullptr }; ///< 사슬을 나눠 돌 작업 시스템(빌림). nullptr 이면 직렬
+                TaskManager*                   _pTaskManager{ nullptr };      ///< 사슬을 나눠 돌 작업 시스템(빌림). nullptr 이면 직렬
+                const DerivedDataCache*        _pDerivedDataCache{ nullptr }; ///< 임포트 전에 찾고 임포트 뒤에 넣는 DDC(빌림). nullptr 이면 쓰지 않는다(CheckOnly)
 
                 /** @brief 원본 하나를 대조하고, 어긋났고 ImportStale 이면 임포트합니다. 결과는 @p outResult 에만 씁니다. */
                 void importFile( const SourceFile& file, FileResult& outResult ) const
@@ -210,10 +364,28 @@ namespace sw::editor
                         return;
                     }
 
-                    if ( _pImporter->importSource( file._sourcePath, file._importedPath, file._assetPath ) == false )
+                    string cacheKeyDescription;
+                    bool   bServedFromCache = false;
+                    if ( _pDerivedDataCache != nullptr && current._sourceHash != 0 )
                     {
-                        outResult._problem = file._assetPath + ": 임포트하지 못했습니다";
-                        return;
+                        const uint64 codeFingerprint = _pImporter->findCodeFingerprint();
+                        if ( codeFingerprint == 0 )
+                        {
+                            outResult._problem = file._assetPath + ": 임포터 코드 지문이 없습니다 - Config/Dev/CookCodeInputs.json 에 임포터를 적습니다";
+                            return;
+                        }
+                        cacheKeyDescription = makeCacheKeyDescription( *_pImporter, file, current._sourceHash, codeFingerprint );
+                        bServedFromCache    = serveFromCache( *_pImporter, *_pDerivedDataCache, file, cacheKeyDescription );
+                    }
+                    if ( bServedFromCache == false )
+                    {
+                        if ( _pImporter->importSource( file._sourcePath, file._importedPath, file._assetPath ) == false )
+                        {
+                            outResult._problem = file._assetPath + ": 임포트하지 못했습니다";
+                            return;
+                        }
+                        if ( cacheKeyDescription.empty() == false )
+                            storeInCache( *_pImporter, *_pDerivedDataCache, file, cacheKeyDescription );
                     }
 
                     current._importedHash = _pImporter->computeImportedHash( file._importedPath );
@@ -329,7 +501,7 @@ namespace sw::editor
              *          파일마다 결과가 자기 칸에 담기고 요약 · 스탬프 표는 파일 순서대로만 만들어지므로, 문제 목록의 순서와 스탬프의 내용은 직렬로 돌 때와 같습니다.
              */
             static void importRawFolder( const string& rootDir, const string& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
-                                         const unordered_set<string>* pScope, TaskManager* pTaskManager, AssetImportSummary& inoutSummary )
+                                         const unordered_set<string>* pScope, TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache, AssetImportSummary& inoutSummary )
             {
                 const string            stampPath = FileUtil::joinPath( rawFolder, importer.getStampFileName() );
                 map<string, StampEntry> mapStamped;
@@ -376,13 +548,14 @@ namespace sw::editor
 
                 vector<FileResult> listFileResult( listFile.size() );
                 ImportJob          job;
-                job._pImporter       = &importer;
-                job._pMapStamped     = &mapStamped;
-                job._pListFile       = &listFile;
-                job._pListChain      = &listChain;
-                job._pListFileResult = listFileResult.data();
-                job._mode            = mode;
-                job._pTaskManager    = pTaskManager;
+                job._pImporter         = &importer;
+                job._pMapStamped       = &mapStamped;
+                job._pListFile         = &listFile;
+                job._pListChain        = &listChain;
+                job._pListFileResult   = listFileResult.data();
+                job._mode              = mode;
+                job._pTaskManager      = pTaskManager;
+                job._pDerivedDataCache = mode == AssetImportMode::ImportStale ? pDerivedDataCache : nullptr;
                 job.importChains( listParallelChain, true );
                 job.importChains( listSerialChain, false );
 
@@ -486,7 +659,7 @@ namespace sw::editor
 
             /** @brief 리소스 루트 아래 모든 원본 폴더를 대조합니다. @p pScope 가 있으면 그 원본(리소스 경로 열쇠)만 대조하고 임포트합니다. */
             static AssetImportSummary importFolders( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const unordered_set<string>* pScope,
-                                                     TaskManager* pTaskManager )
+                                                     TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache )
             {
                 AssetImportSummary summary;
                 const string       rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
@@ -512,7 +685,7 @@ namespace sw::editor
                     const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.size() <= rootDir.size() + 1 || uniqueScopeFolder.contains( makeScopeKey( string_view( normalizedFolder ).substr( rootDir.size() + 1 ) ) ) == false );
                     if ( bOutOfScope )
                         continue;
-                    importRawFolder( rootDir, normalizedFolder, importer, mode, pScope, pTaskManager, summary );
+                    importRawFolder( rootDir, normalizedFolder, importer, mode, pScope, pTaskManager, pDerivedDataCache, summary );
                 }
                 return summary;
             }
@@ -527,9 +700,16 @@ namespace sw::editor
         return AssetImportStampUtil::computeFileHash( importedPath );
     }
 
-    AssetImportSummary AssetImportStampUtil::importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager )
+    void IRawAssetImporter::collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const
     {
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager );
+        if ( FileUtil::isRegularFile( importedPath ) )
+            outListPath.push_back( string( importedPath ) );
+    }
+
+    AssetImportSummary AssetImportStampUtil::importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
+                                                        const DerivedDataCache& derivedDataCache )
+    {
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager, &derivedDataCache );
     }
 
     vector<string> AssetImportStampUtil::collectSourceAssetPaths( string_view resourceRoot, const IRawAssetImporter& importer )
@@ -558,14 +738,14 @@ namespace sw::editor
     }
 
     AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
-                                                            TaskManager* pTaskManager )
+                                                            TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache )
     {
         unordered_set<string> uniqueScope;
         for ( const string& assetPath : listAssetPath )
         {
             uniqueScope.insert( AssetImportStampInternal::makeScopeKey( assetPath ) );
         }
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager );
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager, &derivedDataCache );
     }
 
     string AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )

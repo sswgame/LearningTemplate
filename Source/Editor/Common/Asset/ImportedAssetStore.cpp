@@ -126,6 +126,22 @@ namespace sw::editor
         return hash;
     }
 
+    void ImportedAssetStore::collectReferencedFiles( string_view importedPath, string_view text, vector<string>& outListPath )
+    {
+        vector<string> listReference;
+        collectReferences( text, listReference );
+        VectorUtil::sort( listReference );
+        const string normalized = FileUtil::normalizeSeparators( importedPath );
+        const string marker     = ImportedAssetStoreInternal::makeMarker();
+        for ( const string& reference : listReference )
+        {
+            const string domain  = reference.substr( 0, reference.find( marker ) );
+            const size_t rootEnd = normalized.find( "/" + domain + "/" + string( kModelFolderName ) + "/" );
+            if ( rootEnd != string::npos )
+                outListPath.push_back( normalized.substr( 0, rootEnd + 1 ) + reference );
+        }
+    }
+
     uint32 ImportedAssetStore::removeUnreferenced( string_view resourceRoot, vector<string>& inoutListProblem )
     {
         const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );

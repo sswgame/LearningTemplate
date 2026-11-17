@@ -92,8 +92,10 @@ function(sw_add_load_scenario load_path)
 		message(FATAL_ERROR "${load_path}: a load scenario needs <Load durationSeconds=\"N\"/> (whole seconds) on one line")
 	endif()
 	math(EXPR load_timeout "${CMAKE_MATCH_1} + 300")
-	string(REGEX REPLACE "^(engine|game/[^/]+)/automation/load/(.+)\\.scenario\\.xml$" "\\1.load.\\2" load_name "${load_path}")
+	# `<팩>/automation/[editor/]load/<이름>` → `<팩>.[editor.]load.<이름>`(편집기 부하는 `engine/automation/editor/load/` — ARGN 에 -EnableEditor)
+	string(REGEX REPLACE "^(engine|game/[^/]+)/automation/(.+)\\.scenario\\.xml$" "\\1/\\2" load_name "${load_path}")
 	string(REPLACE "game/" "" load_name "${load_name}")
+	string(REPLACE "/" "." load_name "${load_name}")
 	sw_read_scenario_launch("${load_path}" list_load_launch)
 	set(load_test_name Scenario.${load_name})
 	add_test(NAME ${load_test_name}
@@ -106,6 +108,14 @@ sw_glob_source_tree(list_engine_load_scenario RELATIVE "${scenario_root}" "${sce
 foreach(load_path IN LISTS list_engine_load_scenario)
 	sw_add_load_scenario("${load_path}")
 endforeach()
+
+# 편집기 부하(첫 패널 · Hierarchy 8000 — DesignBacklog 측정 계획). 편집기 체인(`Scenario.editor`)은 바로 아래만 줍고 이 하위 폴더는 혼자 돈다.
+if(TARGET EditorModule)
+	sw_glob_source_tree(list_editor_load_scenario RELATIVE "${scenario_root}" "${scenario_root}/engine/automation/editor/load/*.scenario.xml")
+	foreach(load_path IN LISTS list_editor_load_scenario)
+		sw_add_load_scenario("${load_path}" -EnableEditor)
+	endforeach()
+endif()
 
 # 이 구성이 짓는 게임 — 활성 게임은 그 게임 모듈 타깃(`SW_ACTIVE_GAME_TARGET`)이 있을 때, 함께 짓는 게임은 `SW_GAME_PACKS`(`sw_select_game_packs`)다.
 get_property(active_game_target GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET)

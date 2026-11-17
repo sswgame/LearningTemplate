@@ -15,7 +15,8 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 2. `all`: HEAD 로 Release 빌드 → (Release 단위 ‖ 서버 Debug 빌드 → 기동 → 단위 — 시간을 판정하지 않는 CPU 일끼리 겹친다) → 모든 체인(Release · Vulkan, 4 개씩 동시 — 체인은 혼자 돈다). 끝 줄 `LINUX_OK=<sha>`. 앞이 지면 긴 체인을 돌리지 않는다. 체인 · 골든의 정본은 Release 하나이고 Debug 클라이언트는 짓지 않는다 — Debug 단언은 Windows 의 Debug 체인(시나리오마다 백엔드 하나)과 `sanitize`(Debug)가 본다.
 3. 영향 범위만: `build` → `chain <이름…>`(또는 `stages`). `chain` · `stages` · `bisect` 는 Release 를 지은 커밋(`build/Linux-Release/built-commit.txt`)이 클론 HEAD · 부른 작업 폴더의 HEAD 와 다르면 돌리지 않고 멈춘다 — 커밋한 뒤에는 `build` 를 다시 돌린다(증분).
 4. 새니타이저(감사 P-8): 묶음마다 `sanitize`(ASan + UBSan, `Linux-Debug-ASan`) 한 번 — `preflight.sh` 가 `all` 뒤에 차례로 돌린다(체인과 CPU 를 다투지 않게, 지면 `SANITIZE_FAILED`, `--record` 실행은 기록 골든을 지우지 않게 건너뛴다). `sanitize thread`(TSan — `x64-linux-tsan` 트리플릿을 따로 깐다)는 손으로 돌린다: 묶음이 스레드 · 잠금 · 원자 값 · 작업 큐 · 스레드 사이에 넘기는 수명(렌더 · 오디오 · 네트 스레드, `TaskManager`, `mutex`)을 고쳤으면 push 전에 한 번. 끝 줄 `SANITIZE_OK=<종류>`. 누수는 기준선을 만들기 전까지 끈다(`detect_leaks=0`).
-5. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(메인 작업 폴더로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `build`(HEAD 가 옮겨졌다) → `--record` 없이 다시 `chain`.
+5. 퍼징: `sanitize`(address) 끝에 퍼저 타깃(`Test/Fuzz`, 프리셋 `Linux-Fuzz`)을 타깃마다 30 초 돌린다 — 크래시 · 새니타이저 보고, 또는 시작 줄 `Loaded N modules` 가 2 미만(커버리지가 실행 파일에만 닿는 심볼 숨김 결함)이면 `SANITIZE_FAILED=fuzz`. 오래 돌릴 때는 `fuzz [이름…] --minutes N`(끝 줄 `FUZZ_OK`). 찾은 크래시 입력은 `Tests/Snapshots/` 에 넣고 단위 테스트 케이스로 남긴다.
+6. 골든을 새로 뜰 때: `chain --record <이름…>` → `goldens`(메인 작업 폴더로 복사, 한 색 사진 경고) → 표본을 눈으로 본다 → 커밋 → `build`(HEAD 가 옮겨졌다) → `--record` 없이 다시 `chain`.
 
 ## 지킬 것
 
