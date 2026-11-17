@@ -112,7 +112,7 @@ namespace sw
         /** @brief 끝 줄에 붙이는 한 줄입니다 — 진 판정은 `<종류> - <까닭>`, 건너뜀은 까닭, 통과는 빈 글. 줄바꿈은 공백으로 바꾼다(끝 줄이 한 줄이게). */
         string describe() const
         {
-            string text = isFailure() ? string( getEnumName( _kind ) ) + " - " + _reason : _reason;
+            string text = isFailure() ? string( string( getEnumName( _kind ) ) + " - " + _reason ) : _reason;
             for ( utf8& character : text )
             {
                 if ( character == '\n' || character == '\r' )
