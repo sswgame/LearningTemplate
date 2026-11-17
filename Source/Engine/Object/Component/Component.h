@@ -456,11 +456,13 @@ namespace sw
          */
         virtual void onModuleUnloading( string_view moduleName ) { (void)moduleName; }
         /**
-         * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 아무것도 넣지 않습니다(렌더 · 연출 컴포넌트).
+         * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
-         *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 파생 타입은 부모 것을 먼저 부른다.
+         *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 칸을 손으로 나열하지 않으므로 새 상태 칸이 빠질 수 없다
+         *          (`StateHashTest.EveryStateFieldChangesTheHash`). 재정의는 리플렉션 밖 상태(물리 바디의 속도처럼 칸이 아닌 값)를 **더할** 때만 두고, 부모 것을 먼저 부른다.
+         *          접을 수 없는 형식의 상태 칸(맵 · 핸들)은 선언 결함이라 이유와 함께 멈춘다 — 빼고 접으면 그 칸이 어긋나도 해시가 같다.
          */
-        virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const { (void)inoutBuilder; }
+        virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const;
         /**
          * @brief 리플렉션 값을 직렬화기로 **직접** 쓴 뒤 부릅니다. 프로퍼티마다 `onPropertyChanged` 를 부르고, 그다음 `onPostLoad` 를 부릅니다(언리얼의
          *        `PostEditChangeProperty`, 유니티의 `OnValidate` 에 해당).
