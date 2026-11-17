@@ -45,7 +45,7 @@ namespace sw
 
     /**
      * @brief 입력 하나의 스탬프(`<.gen.cpp>.stamp`) 한 장 - 마지막으로 성공한 생성이 그 입력에 대해 안 사실입니다.
-     * @details 줄 꼴: 첫 줄 원본 경로, `input <시각>`, `flags`(ENUM(Flags) 가 있으면), `type <FQN>`(타입 · 열거형마다), `schema <FQN> | <정규 문자열 또는 이유>`(타입마다), `assetfield <이름>\t<대상>`(경로 칸마다), `dep <시각> <경로>`.
+     * @details 줄 꼴: 첫 줄 원본 경로, `input <시각>`, `args <해시>`(산출물을 정하는 명령줄 — 필수, `IncrementalCheck::makeArgsHash`), `flags`(ENUM(Flags) 가 있으면), `type <FQN>`(타입 · 열거형마다), `schema <FQN> | <정규 문자열 또는 이유>`(타입마다), `assetfield <이름>\t<대상>`(경로 칸마다), `dep <시각> <경로>`.
      *          FlagOps 우산 · `ReflectedTypes.list` · `FixedSchemas.gen.txt` 는 이 사실만 읽는다 - 예전에는 생성 글에서 표식 글자(`IsBitFlagEnum` · `// FixedSchema:`)를 찾았다.
      *          스탬프가 없으면 산출물은 자리 표시자다(CMake 가 자리 표시자를 심을 때 스탬프를 지운다).
      */
@@ -57,6 +57,7 @@ namespace sw
         vector<string>          _listAssetField;  ///< 경로 칸 줄 `<이름>\t<대상>`(`AssetReferenceFields.list`). 대상을 모르면 `-` 다
         vector<StampDependency> _listDependency;
         uint64                  _inputWriteTime{ 0 };
+        uint64                  _argsHash{ 0 }; ///< 산출물을 정한 명령줄의 해시. 다르면 최신이 아니다(UBT 가 UHT 매니페스트 변경으로 무효화하는 자리)
         bool                    _bHasBitFlagEnum{ false };
     };
 } // namespace sw
@@ -82,7 +83,7 @@ namespace sw
          */
         [[nodiscard]] static bool writeStamp( const string& stampPath, const GeneratedStamp& stamp );
 
-        /** @brief 스탬프를 읽습니다. 없거나 시각이 없는 꼴이면 false 입니다(그 입력은 아직 생성되지 않았다). */
+        /** @brief 스탬프를 읽습니다. 없거나 시각 · 명령줄 해시가 없는 꼴(옛 판)이면 false 입니다(그 입력은 아직 생성되지 않았다 — 다시 만든다). */
         [[nodiscard]] static bool readStamp( const string& stampPath, GeneratedStamp& outStamp );
 
         /**
@@ -103,18 +104,26 @@ namespace sw
      * @class IncrementalCheck
      * @brief "이 입력의 산출물은 최신인가" 를 답합니다. 도구 쪽 시각은 시작할 때 한 번만 측정합니다.
      * @details **도구도 입력입니다.** 산출물의 모양은 입력 헤더만이 아니라 파서 실행 파일 · builtins · 철자 표 · 템플릿 ·
-     *          설정 파일이 함께 정합니다. 그중 가장 새것보다 스탬프가 오래됐으면 다시 만듭니다.
+     *          설정 파일이 함께 정합니다. 그중 가장 새것보다 스탬프가 오래됐으면 다시 만듭니다. **명령줄도 입력입니다** — `--module` · `--target-arg`(`-D…`) ·
+     *          `--include` 를 바꾸면 파일 시각은 그대로라 시각만 보면 옛 산출물이 남는다. 그래서 스탬프의 명령줄 해시가 이번 실행의 것과 같아야 최신이다.
      */
     class IncrementalCheck
     {
     public:
         IncrementalCheck( const ParserOptions& options, const ParserConfig& config );
 
-        /** @brief 스탬프가 있고(없으면 자리 표시자) 입력 · 도구보다 새로우며, 스탬프의 원본 경로가 지금 입력과 같으면 true */
+        /** @brief 스탬프가 있고(없으면 자리 표시자) 입력 · 도구보다 새로우며, 스탬프의 원본 경로 · 명령줄 해시가 이번 실행과 같으면 true */
         bool isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const;
+
+        /** @brief 이번 실행의 명령줄 해시입니다. 스탬프를 쓰는 쪽이 `GeneratedStamp::_argsHash` 에 적는다. */
+        uint64 getArgsHash() const { return _argsHash; }
+
+        /** @brief 산출물을 정하는 명령줄(입력 목록 · 출력 폴더 · `--dump` · `--depfile` 을 뺀 모두)의 해시입니다. 순서도 본다(`--include` 순서는 찾는 순서다). */
+        static uint64 makeArgsHash( const ParserOptions& options );
 
     private:
         uint64 _newestToolWriteTime;
+        uint64 _argsHash;
         /** @brief 의존 파일의 쓰기 시각 캐시 — 같은 헤더를 입력마다 다시 측정하지 않는다(한 실행 안에서만, 한 스레드에서만 쓴다). */
         mutable unordered_map<string, uint64> _mapDependencyWriteTime;
     };
