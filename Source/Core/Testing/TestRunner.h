@@ -48,8 +48,12 @@ namespace sw::test
     class SW_API TestRunner
     {
     public:
-        /** @brief JSON 보고 형식의 판입니다. 칸을 바꾸면 올린다(읽는 도구가 판으로 가른다). 2: 판 번호 · 케이스의 파일 · 줄 · 격리 칸을 더했다. */
-        static constexpr uint32 kReportSchemaVersion = 2;
+        /**
+         * @brief JSON 보고 형식의 판입니다. 칸을 바꾸면 올린다(읽는 도구가 판으로 가른다).
+         *        3: 건너뜀(`SW_TEST_SKIP`) — 위 `skippedCount`, 케이스의 `skipped` · `skipReason`. 건너뛴 케이스는 `passed` 가 거짓이다(통과로 세지 않는다).
+         *        2: 판 번호 · 케이스의 파일 · 줄 · 격리 칸을 더했다.
+         */
+        static constexpr uint32 kReportSchemaVersion = 3;
 
         /** @brief @p name(`스위트.케이스`)이 거르개에 맞는지입니다. */
         [[nodiscard]] static bool matchesFilter( string_view filter, string_view name );

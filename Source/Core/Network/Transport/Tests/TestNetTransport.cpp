@@ -140,13 +140,15 @@ SW_TEST_CASE( NetTransportTest, LoopbackDeliversInSendOrderOnNextUpdate )
 
 /**
  * @brief [NetTransportTest] IPv6 루프백(`::1`)으로 실제 UDP 데이터그램이 오가고, 받은 주소는 IPv6 그대로다(감사 N-14)
- * @details IPv6 를 끈 기계에서는 소켓이 열리지 않아 진다 — IPv4 로 대신 열지 않는다(`PlatformSocketUtil::openUDPSocket`).
+ * @details IPv6 를 끈 기계에서는 소켓이 열리지 않아 건너뜀으로 보고한다(`SW_TEST_SKIP`) — IPv4 로 대신 열지 않는다(`PlatformSocketUtil::openUDPSocket`).
  */
 SW_TEST_CASE( NetTransportTest, UDPTransportSendsDatagramsOverIpv6Loopback )
 {
     UDPNetTransport server;
     UDPNetTransport client;
-    SW_REQUIRE_TRUE( server.open( 0, true, UDPPortSharing::Exclusive, NetAddressFamily::Ipv6 ) );
+    // IPv6 를 끈 기계(WSL · 컨테이너)는 `::1` 소켓을 열지 못한다 — 통과도 실패도 아닌 건너뜀으로 보고한다(요약 줄 · 보고에 까닭이 남는다).
+    if ( server.open( 0, true, UDPPortSharing::Exclusive, NetAddressFamily::Ipv6 ) == false )
+        SW_TEST_SKIP( "this machine cannot open an IPv6 loopback (::1) UDP socket - IPv6 is off (WSL, containers)" );
     SW_REQUIRE_TRUE( client.open( 0, true, UDPPortSharing::Exclusive, NetAddressFamily::Ipv6 ) );
     const NetAddress serverAddress = server.getLocalAddress();
     SW_EXPECT_TRUE( serverAddress.isIpv6() && serverAddress.isLoopback() && serverAddress._port != 0 );
