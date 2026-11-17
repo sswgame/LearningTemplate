@@ -10,6 +10,7 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackWriter.h"
 
 namespace sw
@@ -112,7 +113,10 @@ namespace sw
             const string& filePath = listOrdered[index].second;
             if ( filePath.empty() )
             {
-                step = writer.append( AssetPackIndex::kFileName, PackEntryStorage::Blocks, std::move( indexBytes ) );
+                const expected<PackEntryStorage> storage = PackEntryStorageRule::select( AssetPackIndex::kFileName, settings._listStoredExtension );
+                if ( storage.has_value() == false )
+                    return false;
+                step = writer.append( AssetPackIndex::kFileName, *storage, std::move( indexBytes ) );
                 continue;
             }
             string        relativePath;
@@ -122,7 +126,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", filePath );
                 return false;
             }
-            step = writer.append( FileUtil::normalizeSeparators( relativePath ), PackEntryStorage::Blocks, std::move( bytes ) );
+            const string                     entryPath = FileUtil::normalizeSeparators( relativePath );
+            const expected<PackEntryStorage> storage   = PackEntryStorageRule::select( entryPath, settings._listStoredExtension ); // 쿠커와 같은 규칙
+            if ( storage.has_value() == false )
+                return false; // 규칙이 이유를 남겼다
+            step = writer.append( entryPath, *storage, std::move( bytes ) );
         }
         const expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
         if ( closed.has_value() == false )

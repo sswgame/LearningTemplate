@@ -491,10 +491,10 @@ namespace sw
                         bytes = std::move( item._listGeneratedByte );
                     if ( bRead == false )
                         return false; // 읽기가 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
-                    const PackEntryStorage storage = config._compression.getEntryStorage( item._relativePath );
-                    if ( checkTextureEntryStorage( item._relativePath, storage ) == false )
-                        return false; // 소멸하는 쓰기가 임시 파일을 지운다
-                    step = writer.append( item._relativePath, storage, std::move( bytes ) );
+                    const expected<PackEntryStorage> storage = config._compression.selectEntryStorage( item._relativePath );
+                    if ( storage.has_value() == false )
+                        return false; // 규칙이 이유를 남겼다. 소멸하는 쓰기가 임시 파일을 지운다
+                    step = writer.append( item._relativePath, *storage, std::move( bytes ) );
                 }
                 expected<PackWriteResult> closed = step.has_value() ? writer.close() : expected<PackWriteResult>( unexpected( step.error() ) );
                 if ( closed.has_value() == false )
@@ -673,16 +673,6 @@ namespace sw
 
 namespace sw
 {
-    bool PackCooker::checkTextureEntryStorage( string_view relativePath, PackEntryStorage storage )
-    {
-        constexpr string_view kRangeReadExtension = ".dds"; // 밉 구간을 범위로 읽는 형식(`TextureMipLayout`)
-        if ( storage == PackEntryStorage::Stored || StringUtil::endsWith( relativePath, kRangeReadExtension, true ) == false )
-            return true;
-        SW_LOG_ERROR_ID( "PackCooker.CompressedTextureEntry", "Pack cook: '%#' would be block-compressed - mip streaming reads texture ranges; add '.dds' to _listStoredExtension in PackConfig.json",
-                         relativePath );
-        return false;
-    }
-
     string PackCooker::makePackFileName( string_view domain )
     {
         string name = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( domain ).str() );

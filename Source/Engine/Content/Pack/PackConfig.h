@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringUtil.h"
@@ -18,6 +19,24 @@
 #include "Engine/Config/PackCookRuleTypes.h"
 #include "Engine/Content/Pack/PackTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /**
+     * @struct PackEntryStorageRule
+     * @brief 팩 항목의 저장 방식(`PackEntryStorage`)을 고르는 한 곳입니다 — 쿠커(`PackCooker`) · 모드 팩 빌더(`ModPackBuilder`)가 함께 부른다(패치 빌더는 새 빌드 팩이 고른 방식을 옮긴다).
+     * @details 확장자가 @p listStoredExtension 에 있으면 `Stored`, 아니면 `Blocks`. 범위로 읽는 텍스처(`.dds` — 밉 스트리밍이 밉 구간만 읽는다, MR-3)가 `Blocks` 로 고르면 오류다:
+     *          BC · ASTC 는 이미 압축이라 블록 압축의 이득이 작고 범위를 읽을 때마다 푸는 비용만 남는다(언리얼 IoStore 도 텍스처 벌크 데이터를 압축하지 않는 설정이 기본이다).
+     *          빌더마다 규칙을 따로 쓰면 한 쪽만 어기는 모양이 생긴다 — 그래서 이 함수 하나다.
+     */
+    struct SW_API PackEntryStorageRule
+    {
+        static constexpr string_view kRangeReadExtension = ".dds"; ///< 밉 구간을 범위로 읽는 형식(`TextureMipLayout`)
+
+        /** @brief 팩 안 경로 @p relativePath 의 저장 방식입니다. `.dds` 가 `Stored` 목록에 없으면 오류(`PackEntryStorageRule.CompressedTextureEntry`)를 남기고 실패입니다. */
+        [[nodiscard]] static expected<PackEntryStorage> select( string_view relativePath, const vector<string>& listStoredExtension );
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -45,16 +64,8 @@ namespace sw
         PROPERTY( Required )
         vector<string> _listStoredExtension; ///< 압축하지 않고 담는 확장자(`.dds` — 이미 압축된 형식, 대소문자 무시). 범위 읽기가 풀기 없이 바이트를 읽는다(`PackEntryStorage::Stored`)
 
-        /** @brief 팩 안 경로 @p relativePath 의 저장 방식입니다 — 확장자가 `_listStoredExtension` 에 있으면 `Stored`, 아니면 `Blocks`. */
-        PackEntryStorage getEntryStorage( string_view relativePath ) const
-        {
-            for ( const string& extension : _listStoredExtension )
-            {
-                if ( StringUtil::endsWith( relativePath, extension, true ) )
-                    return PackEntryStorage::Stored;
-            }
-            return PackEntryStorage::Blocks;
-        }
+        /** @brief 팩 안 경로 @p relativePath 의 저장 방식입니다(`PackEntryStorageRule::select` — 쿠커 · 모드 팩 빌더가 같은 규칙). */
+        [[nodiscard]] expected<PackEntryStorage> selectEntryStorage( string_view relativePath ) const { return PackEntryStorageRule::select( relativePath, _listStoredExtension ); }
     };
 } // namespace sw
 
