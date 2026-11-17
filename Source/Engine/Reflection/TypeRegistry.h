@@ -165,12 +165,12 @@ namespace sw
          * @brief 살아 있는 **모든** 타입의 파생 캐시(이름 맵 · 상속 병합 목록 · 부모 포인터 · 조상 표 · 판정)를 다시 짓습니다.
          * @details 등록 · 별칭 · 해제는 바뀐 타입과 그 자손만 스스로 다시 짓는다(배치 안이면 배치 끝이 한 번에) — 이 함수는 전체를 다시 지을 때
          *          (테스트, 진단)만 쓴다. 조회는 지어 둔 것을 읽기만 한다.
-         * @note 부모 링크 · 조상 표는 독점 잠금 안에서(`relinkAffectedLocked`), 상속 목록 · 판정은 잠금을 푼 뒤 짓는다 — 판정이 레지스트리를 다시 잠그는데
+         * @note 부모 링크 · 조상 표 · 상속 목록은 독점 잠금 안에서(`relinkAffectedLocked`), 판정은 잠금을 푼 뒤 짓는다 — 판정이 레지스트리를 다시 잠그는데
          *       `shared_mutex` 는 재귀 잠금이 안 된다. 레지스트리 잠금을 쥔 채 부르면 그 자리에서 멈춘다.
          */
         void populateLookupCaches() const;
 
-        /** @brief 지금까지 상속 캐시(`TypeInfo::clearInheritedProperties`)를 비운 타입 수의 누계입니다(계측 — `engine::registerModuleTypes` 가 모듈마다 차이를 남긴다). */
+        /** @brief 지금까지 상속 캐시를 다시 지은 타입 수의 누계입니다(`relinkAffectedLocked`, 계측 — `engine::registerModuleTypes` 가 모듈마다 차이를 남긴다). */
         uint64 getInheritedCacheInvalidations() const { return _inheritedCacheInvalidations.load( std::memory_order_relaxed ); }
 
         /** @brief 등록된 모든 고유 TypeInfo를 순회합니다. */
@@ -347,11 +347,11 @@ namespace sw
          */
         void collectAffectedLocked( const unordered_set<const TypeInfo*>& uniqueRoot, vector<TypeInfo*>& outListType ) const SW_REQUIRES_LOCK( _mutex );
         /**
-         * @brief @p listType 의 부모 포인터 · 조상 표를 **독점 잠금 안에서** 새 값으로 바꾸고 상속 캐시를 비웁니다. 다시 짓기 전까지 상속 목록을 묻는 쪽은 멈춘다(옛 포인터를 읽지 않는다).
-         * @details 부모 링크 · 조상 표를 쓰는 쪽은 이 함수 하나다(레지스트리 타입). 읽기(캐스트 · 사슬 걷기)는 잠금 없이 원자값만 보고, 링크가 비는 틈이 없다.
+         * @brief @p listType 의 부모 포인터 · 조상 표 · 상속 목록을 **독점 잠금 안에서** 새 값으로 바꿉니다(상속 목록은 새 판을 지어 원자 교체 — `TypeInheritedPropertySlot`).
+         * @details 이것들을 쓰는 쪽은 이 함수 하나다(레지스트리 타입). 읽기(캐스트 · 사슬 걷기 · 상속 목록)는 잠금 없이 원자값만 보고, 비는 틈이 없다.
          */
         void relinkAffectedLocked( const vector<TypeInfo*>& listType ) const SW_REQUIRES_LOCK( _mutex );
-        /** @brief @p listType 의 상속 목록 · 판정을 다시 짓습니다(**잠금 밖** — 판정이 레지스트리를 다시 잠근다). 부모 링크 · 조상 표는 `relinkAffectedLocked` 가 이미 바꿨다. */
+        /** @brief @p listType 의 판정을 다시 구하고 사슬 순환 · 필드 해시 충돌을 알립니다(**잠금 밖** — 판정과 로그 리스너가 레지스트리를 다시 잠근다). 링크 · 표 · 상속 목록은 `relinkAffectedLocked` 가 이미 바꿨다. */
         void rebuildAffected( const vector<TypeInfo*>& listType ) const SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 타입 · enum 이름 하나를 해시 표(`_wireTypeNameIndex`)에 넣습니다(잠금 안). 같은 해시에 다른 이름이 있으면 넣지 않고 처음 충돌을 @p inoutClash 에 적습니다.

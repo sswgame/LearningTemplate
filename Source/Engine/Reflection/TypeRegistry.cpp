@@ -459,20 +459,23 @@ namespace sw
             pType->clearAncestorDisplay();
             (void)pType->computeAncestorDisplay();
         }
-        // 상속 목록은 해제하는 모듈의 프로퍼티를 가리킬 수 있어 지금 버린다(잠금 밖 `rebuildAffected` 가 다시 짓는다).
+        // 상속 목록도 **이 잠금 안에서** 새 판으로 바꿔 끼운다(`TypeInheritedPropertySlot`) — 해제하는 모듈의 프로퍼티를 가리키던 옛 판은 모듈이 살아 있는 지금 물러난다.
+        // 예전에는 여기서 비우고 잠금 밖에서 같은 벡터를 다시 채워, 그 틈에 다른 스레드의 조회가 "짓지 않았다" 로 멈추거나 반쯤 찬 목록을 읽었다(모듈 로드가
+        // 단일 스레드라는 가정에 기댔다). 짓기는 레지스트리를 다시 잠그지 않는다 — 사슬 걷기는 위에서 바꾼 링크만 읽는다.
         for ( TypeInfo* pType : listType )
         {
-            pType->clearInheritedProperties();
+            pType->rebuildDerivedCaches();
         }
         _inheritedCacheInvalidations.fetch_add( listType.size(), std::memory_order_relaxed );
     }
 
     void TypeRegistry::rebuildAffected( const vector<TypeInfo*>& listType ) const
     {
-        // 부모 링크와 조상 표는 잠금 안에서 이미 바꿨다(`relinkAffectedLocked`). 여기는 그 사슬로 상속 목록과 판정을 짓는다.
-        for ( TypeInfo* pType : listType )
+        // 부모 링크 · 조상 표 · 상속 목록은 잠금 안에서 이미 바꿨다(`relinkAffectedLocked`). 여기는 잠금 밖에서만 할 수 있는 것 — 로그와 판정이다.
+        for ( const TypeInfo* pType : listType )
         {
-            pType->rebuildDerivedCaches();
+            if ( pType->_parentFQN.empty() == false && pType->getTypeChain().isLoop() )
+                SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", pType->_fullyQualifiedName.c_str() );
         }
         // 판정(세이브 옵트인, 검증 함수 유무, POD)은 모든 상속 목록을 지은 뒤 구한다 — 검증 판정이 칸 타입의 목록을 재귀로 읽는다. 조회는 읽기만 한다.
         for ( TypeInfo* pType : listType )
@@ -668,7 +671,7 @@ namespace sw
             }
             relinkAffectedLocked( listType );
         }
-        // 상속 목록 · 판정은 **잠금 밖에서** 짓는다. 판정이 레지스트리를 다시 잠그는데(`isType`), shared_mutex 는 재귀가 아니라 잠금 안에서 부르면 그 자리에서 멈춘다.
+        // 판정은 **잠금 밖에서** 구한다(상속 목록은 위 잠금 안에서 바꿨다). 판정이 레지스트리를 다시 잠그는데(`isType`), shared_mutex 는 재귀가 아니라 잠금 안에서 부르면 그 자리에서 멈춘다.
         rebuildAffected( listType );
     }
 

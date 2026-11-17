@@ -1824,3 +1824,37 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedTypesQueryDoesNotNestTheRegistr
     SW_EXPECT_EQUAL( size_t( 0 ), visitedCount ); // 파생이 없는 타입 — 답은 비어 있고, 멈추지 않고 여기까지 왔다
     SW_EXPECT_EQUAL( 0u, brokenCount );           // 다시 잇는 동안에도 사슬이 끊기지 않았다
 }
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 상속 목록 조회는 자손을 다시 잇는 쓰기와 함께 돌아도 멈추지 않고 늘 같은 목록을 본다
+ * @details 예전에는 다시 잇기가 독점 잠금 안에서 상속 목록을 비우고(`clearInheritedProperties`) 잠금 밖에서 같은 벡터를 다시 채워, 그 틈의 조회가
+ *          "짓지 않았다" 로 멈추거나 반쯤 찬 목록을 읽었다. 지금은 잠금 안에서 새 판을 지어 원자 교체하고 옛 판은 레지스트리 수명 동안 산다(`TypeInheritedPropertySlot`).
+ *          쓰기는 `DummyBase` 에 별칭을 걸어 `DummyActor`(자손, 프로퍼티 셋)를 매번 다시 잇게 하고, 읽기는 그 사이 목록 크기와 이름 조회가 늘 맞는지 본다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, InheritedPropertiesStayReadableWhileDescendantsRelink, ._tags = "slow", ._timeoutSeconds = 60.0f )
+{
+    sw::TypeRegistry&         registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::TypeInfo* const pDerived = registry.findType<sw::DummyActor>();
+    SW_REQUIRE_NOT_NULL( pDerived );
+    const size_t propertyCount = pDerived->getPropertiesWithBase().size();
+    SW_REQUIRE_EQUAL( size_t( 3 ), propertyCount );
+    sw::atomic<bool> bStop{ false };
+    sw::thread       writer( sw::ThreadTestAccess::getKey(), [&registry, &bStop]()
+          {
+        while ( bStop.load() == false )
+        {
+            registry.registerTypeAlias( "sw::InheritedRelinkStressBaseAlias", "sw::DummyBase" ); // 자손(DummyActor)의 상속 목록을 다시 짓게 한다
+            sw::ThreadUtil::sleepForMilliseconds( 1 );                                           // 읽기 쪽 기아를 막는다(DerivedTypesQueryDoesNotNestTheRegistryLock 과 같은 이유)
+        }
+    } );
+    uint32           brokenCount = 0;
+    for ( uint32 round = 0; round < 20000; ++round )
+    {
+        const bool bListIntact = pDerived->getPropertiesWithBase().size() == propertyCount;
+        const bool bFound      = pDerived->findPropertyInHierarchy( sw::hashed_string( "_hp" ) ) != nullptr;
+        brokenCount += bListIntact && bFound ? 0u : 1u;
+    }
+    bStop.store( true );
+    writer.join();
+    SW_EXPECT_EQUAL( 0u, brokenCount ); // 다시 짓는 동안에도 목록이 비거나 반쯤 차지 않았다
+}
