@@ -25,6 +25,8 @@ namespace sw
             {
                 switch ( method )
                 {
+                    case AccountMethod::IssueLoginNonce::kID:
+                        return AccountClientOperation::IssueLoginNonce;
                     case AccountMethod::Register::kID:
                         return AccountClientOperation::Register;
                     case AccountMethod::Login::kID:
@@ -159,6 +161,11 @@ namespace sw
         return call<AccountMethod::CancelDeletion>( OnlineReplyDelegate<AccountMethod::CancelDeletion>::create<&AccountClient::onGrantReply>( this ) );
     }
 
+    uint64 AccountClient::issueLoginNonce()
+    {
+        return call<AccountMethod::IssueLoginNonce>( OnlineReplyDelegate<AccountMethod::IssueLoginNonce>::create<&AccountClient::onNonceReply>( this ) );
+    }
+
     int32 AccountClient::pollReplies( vector<AccountClientReply>& outListReply )
     {
         const int32 count = static_cast<int32>( _listReply.size() );
@@ -285,6 +292,17 @@ namespace sw
         {
             reply._result = result._reply._result;
             reply._ticket = result._reply._ticket;
+        }
+        _listReply.push_back( std::move( reply ) );
+    }
+
+    void AccountClient::onNonceReply( const OnlineResult<AccountNonceReply>& result )
+    {
+        AccountClientReply reply = makeReply( result._requestID, result._method, result._errorCode, result._errorDetail );
+        if ( result._errorCode == OnlineError::kOk )
+        {
+            reply._result     = result._reply._result;
+            reply._loginNonce = result._reply._nonce;
         }
         _listReply.push_back( std::move( reply ) );
     }

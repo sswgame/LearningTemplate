@@ -124,7 +124,7 @@ namespace sw
                     _arrAppliedCount[player] += match.getWorld().applyCommand( player, command ) > 0 ? 1 : 0;
                 }
             }
-            match.update( step );
+            match.update( step, 1.0f );
             if ( tick % kChecksumInterval == 0 )
                 _session.reportChecksum( tick, match.computeChecksum() );
             ++advancedCount;

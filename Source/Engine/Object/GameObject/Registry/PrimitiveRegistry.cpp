@@ -131,7 +131,11 @@ namespace sw
         {
             if ( _listAssetWaiter[waiterIndex]._pComponent != pComponent )
                 continue;
-            VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
+            // 도는 중(`updateAssetWaiters`)에는 자리를 당기지 않고 비워 둔다 — 당기면 도는 쪽의 번호가 다른 대기자를 가리켜, 그 대기자를 부르지 않고 빼 버린다.
+            if ( _bWalkingAssetWaiters != SW_FALSE )
+                _listAssetWaiter[waiterIndex] = AssetWaiter{};
+            else
+                VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
             return;
         }
     }
@@ -153,19 +157,28 @@ namespace sw
     {
         // 번호로 돈다 — 함수가 다시 걸면(addAssetWaiter) 같은 자리를 고치거나 뒤에 붙인다. 함수 안에서 프리미티브를 지우는 일(remove)은 없다:
         // 컴포넌트 제거는 틱 밖의 파괴 단계에서만 일어난다. 그래서 함수를 부르는 동안 잠금을 쥐지 않는다(함수가 다시 걸 때 같은 잠금을 잡는다).
+        // 도는 동안 빼기(`removeAssetWaiter` — 함수 안에서 자기나 다른 컴포넌트를 내릴 때)는 자리를 비우기만 한다. 빈 자리는 여기서 거둔다.
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _bWalkingAssetWaiters = SW_TRUE;
+        }
         size_t waiterIndex = 0;
         while ( waiterIndex < _listAssetWaiter.size() )
         {
             const AssetWaiter waiter      = _listAssetWaiter[waiterIndex];
-            const bool        bStillWaits = waiter._pFunction( *waiter._pComponent, deltaSeconds );
-            if ( bStillWaits )
+            const bool        bStillWaits = waiter._pComponent != nullptr && waiter._pFunction( *waiter._pComponent, deltaSeconds );
+            ScopedLock<mutex> lock{ _mutex };
+            // 함수가 이 자리를 비웠으면(자기를 뺐다) 남기지 않는다. 다시 걸었으면(같은 컴포넌트, 다른 함수) 그 자리는 그대로 산다.
+            const bool bKeep = bStillWaits && _listAssetWaiter[waiterIndex]._pComponent != nullptr;
+            if ( bKeep )
             {
                 ++waiterIndex;
                 continue;
             }
-            ScopedLock<mutex> lock{ _mutex };
             VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
         }
+        ScopedLock<mutex> lock{ _mutex };
+        _bWalkingAssetWaiters = SW_FALSE;
     }
 
     void PrimitiveRegistry::markDirty( ScenePrimitive* pComp )

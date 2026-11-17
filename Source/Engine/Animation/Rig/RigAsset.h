@@ -99,7 +99,7 @@ namespace sw
         RigAsset( const RigAsset& )            = delete;
         RigAsset& operator=( const RigAsset& ) = delete;
         RigAsset( RigAsset&& ) noexcept;
-        /** @brief 캐시가 제자리에서 다시 읽을 때 씁니다. 쓰는 쪽은 내용 번호가 바뀐 것을 보고 다시 바인딩합니다. */
+        /** @brief 이동 대입입니다. 공유 캐시는 쥔 객체를 바꾸지 않는다 — 쓰는 쪽은 다시 받은 객체의 내용 번호로 다시 바인딩합니다. */
         RigAsset& operator=( RigAsset&& ) noexcept;
 
         /** @brief XML 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */

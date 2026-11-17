@@ -43,6 +43,8 @@ namespace sw
     class AutomationPerBackend;         // 자식 프로세스 출력 파이프의 막히는 읽기
     class SavedRetentionSubsystem;      // 오래된 저장 파일 지우기 — 디스크 훑기가 기동을 막지 않게, 멈춤 요청을 받는다
     class FileDialog;                   // OS 파일 대화 상자가 닫힐 때까지 막는다
+    class Win32SplashWindow;            // 스플래시 창의 메시지 루프(GetMessageW 가 막는다) — 기동 스레드가 몇 초씩 막혀도 창이 답한다(언리얼 FWindowsSplash)
+    class LinuxSplashThread;            // X11 · Wayland 스플래시의 이벤트 루프(poll 이 막는다) — 컴포지터 핑에 늘 답한다(언리얼 FLinuxSplash)
     class AlsaAudioBackend;             // ALSA 쓰기가 장치 버퍼가 빌 때까지 막는다
     class WebAudioBackend;              // 믹서 스레드(웹 오디오 워클릿에 고정 간격으로 넣는다)
     class Box2DWorkerPool;              // Box2D 솔버가 공유 풀에서 교착한다(파일 머리말)
@@ -88,6 +90,8 @@ namespace sw
         friend class AutomationPerBackend;
         friend class SavedRetentionSubsystem;
         friend class FileDialog;
+        friend class Win32SplashWindow;
+        friend class LinuxSplashThread;
         friend class AlsaAudioBackend;
         friend class WebAudioBackend;
         friend class Box2DWorkerPool;

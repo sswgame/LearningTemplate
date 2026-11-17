@@ -27,6 +27,8 @@ namespace sw
         MemoryLocalDatabase();
 
         LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
+        /** @brief 직전 세대를 두지 않는다 — 메모리 쓰기는 잠금 안의 바꿔 넣기라 반쪽이 없다. 늘 NotFound 다. */
+        LocalStoreResult readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
         LocalStoreResult writeSlot( const string& slot, const vector<uint8>& envelopeBytes ) override;
         LocalStoreResult eraseSlot( const string& slot ) override;
         LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;

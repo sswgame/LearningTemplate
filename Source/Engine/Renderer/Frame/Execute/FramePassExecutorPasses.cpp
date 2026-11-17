@@ -881,10 +881,22 @@ namespace sw
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         setIdentityWorld( context );
+        const RHITextureHandle targetTexture = findTransient( target );
         for ( const FrameViewTarget::PostProcessMaterialPass& draw : listDraw )
         {
             if ( draw._location != location || draw._pso == 0 || draw._buffer == 0 || draw._srv == kInvalidDescriptorIndex )
                 continue;
+            // 둘째부터는 앞 결과를 읽는다 — 출력을 뷰의 사본으로 옮기고 원본 역할을 그 사본으로 바꾼다(그리는 동안 같은 텍스처를 읽을 수 없다).
+            const bool bChained = draw._pChainSource != nullptr && draw._pChainSource->getTexture() != 0 && targetTexture != 0;
+            if ( bChained )
+            {
+                context._pCmd->endRenderPass();
+                context._pCmd->blitTexture( targetTexture, draw._pChainSource->getTexture() );
+                context._pCmd->prepareTextureForShaderRead( draw._pChainSource->getTexture() );
+                context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pChainSource->getTexture(), draw._pChainSource->getSRV() );
+                if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+                    return;
+            }
             // 무게는 그리기마다의 패스 상수다(post_process_material_main.hlsli 의 g_PostProcessMaterial.x). 머티리얼은 원소 하나짜리 버퍼의 0 번이다.
             context._passValues.setFloat4( passConstantNames()._postProcessMaterial, float4{ draw._weight, 0.0f, 0.0f, 0.0f } );
             context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, draw._buffer, draw._srv );

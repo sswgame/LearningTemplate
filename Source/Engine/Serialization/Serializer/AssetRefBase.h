@@ -4,7 +4,12 @@
  * @details 직렬화는 이 형식 하나만 안다. `AssetRef<T>` 는 칸을 더하지 않으므로 어떤 `T` 든 처리기 "AssetRef" 하나가 읽고 쓴다(파서가 `TComponentHandle<T>` 를 `ComponentHandle`
  *          하나로 모으는 것과 같은 길이다). 대상 종류를 프로퍼티 메타가 아니라 값이 품는 까닭은 글 처리기가 값 주소만 받기 때문이다 — `vector<AssetRef<T>>` 의 원소, 중첩 구조체,
  *          덮어쓰기 패치, 인스펙터가 모두 같은 검사를 지난다.
- *          파일 형식은 경로 글 그대로다(언리얼 `TSoftObjectPtr<T>` 의 저장 형식과 같다 — 기억에 의존). 층이 직렬화라 캐시를 모른다. 캐시로 가는 길은 `Engine/Asset/AssetRef.h` 가 잇는다.
+ *          **저장 꼴은 정체성이다** — `guid:<32자>`(`AssetRegistry::makeReferenceText`). 경로는 옮기면 바뀌어 리다이렉트 줄이 영구히 쌓이므로, 파일에는 GUID 를 적고 읽을 때
+ *          런타임 색인(`AssetRegistry`)으로 지금 경로를 푼다(유니티 직렬화 참조의 guid, Godot 4 `uid://` 와 같다. 언리얼 `FSoftObjectPath` 의 경로 + 리다이렉터를 버린 자리다).
+ *          값은 경로와 GUID 를 함께 든다 — 경로를 받는 쓰는 쪽(`path` · `string_view`)은 그대로이고, 쓰기는 GUID 가 있으면 GUID 를 적는다.
+ *          옮기는 동안(경로 칸 → GUID 칸 이전, docs/NEXT.md "에셋 정체성(GUID) 2 · 3 단계"): 읽기는 옛 경로 글도 받아 색인으로 GUID 를 찾아 둔다 — 다시 저장하면 GUID 로 바뀐다.
+ *          저장소 전체는 `py -3 -m Scripts migrate-asset-refs --fix` 가 한 번에 바꿔 쓰고, 그 뒤 경로 글 읽기를 걷는다(확장 → 이전 → 수축).
+ *          GUID 가 없는 값(내장 이름 `Cube`, 색인에 없는 경로)은 글 그대로 쓴다. 층이 직렬화라 캐시를 모른다. 캐시로 가는 길은 `Engine/Asset/AssetRef.h` 가 잇는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -12,6 +17,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 
@@ -46,6 +52,10 @@ namespace sw
         operator string_view() const noexcept { return _path; } // NOLINT(google-explicit-constructor)
         /** @brief 대상 종류입니다. */
         [[nodiscard]] const AssetTypeDef& getTargetType() const { return *_pTargetType; }
+        /** @brief 대상의 정체성입니다. 빈 참조 · 내장 이름 · 색인에 없는 경로면 없음입니다. */
+        [[nodiscard]] const optional<AssetGUID>& getGUID() const { return _guid; }
+        /** @brief 저장 글입니다 — GUID 가 있으면 `guid:<32자>`, 없으면(내장 이름 · 색인에 없는 경로 · 빈 참조) 경로 글 그대로. */
+        [[nodiscard]] string toText() const;
 
         [[nodiscard]] bool operator==( string_view other ) const { return string_view( _path ) == other; }
         [[nodiscard]] bool operator!=( string_view other ) const { return string_view( _path ) != other; }
@@ -53,15 +63,18 @@ namespace sw
         [[nodiscard]] bool operator!=( const AssetRefBase& other ) const { return _path != other._path; }
 
         /**
-         * @brief 경로를 넣습니다. 앞뒤 공백을 뺀 경로의 접미사가 대상 종류의 것이 아니면 오류를 남기고 false 이며 값은 그대로입니다. 빈 글은 칸을 비웁니다.
-         * @details 쓰는 쪽의 `.empty()` 분기가 그대로 동작하도록 빈 글은 오류가 아니다. 필수 칸은 `PROPERTY( Required )` 가 본다.
+         * @brief 참조 글을 넣습니다 — GUID 참조(`guid:<32자>`)는 런타임 색인(`AssetRegistry::resolve`)으로 경로를 풀고, 경로 글은 색인에서 GUID 를 찾아 둔다(없으면 GUID 없이 경로만).
+         * @details 앞뒤 공백은 뺀다. 빈 글은 칸을 비운다 — 쓰는 쪽의 `.empty()` 분기가 그대로 동작하도록 오류가 아니다(필수 칸은 `PROPERTY( Required )` 가 본다).
+         *          GUID 글이 틀렸거나(`AssetRef.InvalidGUID`) 색인에 없거나(`AssetRef.UnknownGUID` — 지운 에셋 · 색인을 아직 걸지 않았다) 풀린 경로가 대상 종류의 것이
+         *          아니면(`AssetRef.WrongType`) 오류를 남기고 false 이며 값은 그대로다(다른 에셋으로 대신하지 않는다).
          */
-        [[nodiscard]] bool assign( string_view path );
+        [[nodiscard]] bool assign( string_view text );
         /** @brief 참조를 비웁니다. */
         void clear()
         {
             _path.clear();
-            _key = hashed_string{};
+            _key  = hashed_string{};
+            _guid = nullopt;
         }
 
         /**
@@ -79,6 +92,7 @@ namespace sw
         explicit AssetRefBase( const AssetTypeDef& targetType )
             : _path{}
             , _key{}
+            , _guid{}
             , _pTargetType{ &targetType }
         {
         }
@@ -86,6 +100,7 @@ namespace sw
     private:
         string              _path;
         hashed_string       _key;         ///< `_path` 의 intern 열쇠(`key`). `_path` 를 바꾸는 곳(`assign` · `clear`)이 함께 바꾼다
+        optional<AssetGUID> _guid;        ///< 대상의 정체성(저장 꼴). `_path` 를 바꾸는 곳이 함께 바꾼다
         const AssetTypeDef* _pTargetType; ///< `T::kAssetType` 의 주소다. 이 값을 가진 코드의 이미지에 있으므로 값보다 오래 산다
     };
 } // namespace sw

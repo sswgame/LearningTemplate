@@ -13,7 +13,6 @@
 	<Expect watch="Housing.LandBound" target="HousingPlot" equals="0"/>
 	<DevCommand line="housing.fill HousingPlot floor 0"/>
 	<ExpectLog id="DevCommand.Reply" contains="filled 576 - Ok placements 576" count="1"/>
-	<Wait frames="1"/>
 	<DevCommand line="housing.fill HousingPlot table 0"/>
 	<ExpectLog id="DevCommand.Reply" contains="filled 288 - Ok placements 864" count="1"/>
 	<Wait frames="1"/>

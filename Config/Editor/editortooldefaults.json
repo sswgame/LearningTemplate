@@ -3,6 +3,9 @@
     "_inputReplayFile": "engine/replay/demo_01.swreplay",
     "_editorInputMap": "editor/input/editor.input.xml",
     "_clearColor": "0.12,0.15,0.18,1.0",
+    "_undoMaxCommandCount": 128,
+    "_undoBufferMegabytes": 32,
+    "_documentAutosaveSeconds": 60,
     "_listBaseFont": [
         "segoeui.ttf",
         "NotoSans-Regular.ttf",

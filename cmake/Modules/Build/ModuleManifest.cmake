@@ -250,7 +250,7 @@ endfunction()
 function(sw_select_game_packs)
 	set(packs "")
 
-	if(NOT SW_SHIPPING_BUILD AND SW_GAMES)
+	if(NOT SW_STATIC_MODULES AND SW_GAMES) # 정적 구성은 활성 게임 하나만 링크한다
 		set(games_directory "${CMAKE_SOURCE_DIR}/Source/Games")
 		file(GLOB list_candidate RELATIVE "${games_directory}" "${games_directory}/*")
 		set(available "")
@@ -575,7 +575,7 @@ function(sw_resolve_module_manifests)
 	sw_sort_modules_by_dependency(order)
 	set_property(GLOBAL PROPERTY SW_MODULE_LOAD_ORDER ${order})
 
-	if(NOT SW_SHIPPING_BUILD)
+	if(NOT SW_STATIC_MODULES) # 실행이 매니페스트를 읽어 모듈을 올리는 구성만(정적 구성은 링크가 정했다)
 		sw_write_runtime_module_catalog("${order}" "${unused_kits}")
 	endif()
 

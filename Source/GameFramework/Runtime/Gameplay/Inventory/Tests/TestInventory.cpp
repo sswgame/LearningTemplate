@@ -333,3 +333,15 @@ SW_TEST_CASE( ShopTest, SellsChosenSlotAndReportsBuyBack )
     SW_EXPECT_TRUE( listEvent[0]._kind == sw::ShopEvent::Kind::Sold );
     SW_EXPECT_TRUE( listEvent[1]._kind == sw::ShopEvent::Kind::BoughtBack );
 }
+
+/** @brief [ShopTest] 손님에게 사는 값이 파는 값보다 큰 가게(sellMultiplier > buyMultiplier)는 거절된다 — 사고 되팔기만으로 돈이 무한히 는다(감사 G-8) */
+SW_TEST_CASE( ShopTest, SellAboveBuyIsRejected )
+{
+    SW_EXPECT_LOG( "Shop.SellAboveBuy" );
+    SW_EXPECT_LOG( "Shop.ShopInvalidFieldsSkipped" );
+    sw::ShopCatalog shops;
+    (void)shops.loadFromXMLText( R"(<ShopCatalog><Shop id="fair" buyMultiplier="1" sellMultiplier="0.5" buybackLimit="0"/><Shop id="leak" buyMultiplier="1" sellMultiplier="1.5" buybackLimit="0"/></ShopCatalog>)",
+                                 "ShopTest" );
+    SW_EXPECT_TRUE( shops.find( sw::hashed_string{ "fair" } ) != nullptr );
+    SW_EXPECT_TRUE( shops.find( sw::hashed_string{ "leak" } ) == nullptr );
+}

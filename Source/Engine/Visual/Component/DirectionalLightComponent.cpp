@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -45,8 +46,6 @@ namespace sw
             static constexpr float32 kShadowFitQuantumDivisions{ 8.0f };
             /// @brief 맞춘 볼륨의 먼 쪽 깊이에 더하는 여유(m) — 띠 경계에 걸친 면이 원평면에 잘리지 않게.
             static constexpr float32 kShadowFitDepthMargin{ 1.0f };
-            /// @brief 캐스케이드 분할에서 로그 분할의 몫(나머지는 균등) — GPU Gems 3 의 실용 분할(언리얼 CascadeDistributionExponent · 유니티 분할 비율의 자리).
-            static constexpr float32 kShadowCascadeSplitLambda{ 0.75f };
             /// @brief 절두체 모서리 열둘. 꼭짓점 번호의 비트 0 = x, 1 = y, 2 = 먼 면.
             static constexpr uint32 kArrFrustumEdge[12][2] = {
                 {0, 1},
@@ -144,13 +143,13 @@ namespace sw
             }
 
             /** @brief 캐스케이드 경계 @p splitIndex 의 깊이 비율(0 = 가까운 면, 1 = 그림자 거리)입니다 — 로그 분할과 균등 분할을 섞는다. */
-            static float32 computeSplitFraction( uint32 splitIndex, uint32 cascadeCount, float32 nearDepth, float32 farDepth )
+            static float32 computeSplitFraction( uint32 splitIndex, uint32 cascadeCount, float32 nearDepth, float32 farDepth, float32 splitLambda )
             {
                 const float32 fraction    = static_cast<float32>( splitIndex ) / static_cast<float32>( cascadeCount );
                 const float32 safeNear    = MathUtil::max( nearDepth, MathUtil::kEpsilon );
                 const float32 logDepth    = safeNear * MathUtil::pow( farDepth / safeNear, fraction );
                 const float32 linearDepth = nearDepth + ( farDepth - nearDepth ) * fraction;
-                const float32 depth       = kShadowCascadeSplitLambda * logDepth + ( 1.0f - kShadowCascadeSplitLambda ) * linearDepth;
+                const float32 depth       = splitLambda * logDepth + ( 1.0f - splitLambda ) * linearDepth;
                 return MathUtil::clamp( ( depth - nearDepth ) / MathUtil::max( farDepth - nearDepth, MathUtil::kEpsilon ), 0.0f, 1.0f );
             }
 
@@ -435,7 +434,8 @@ namespace sw
         return projection;
     }
 
-    DirectionalShadowProjection DirectionalLightComponent::computeShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution, uint32 maxCascadeCount ) const
+    DirectionalShadowProjection DirectionalLightComponent::computeShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution, const RenderConfig& renderConfig,
+                                                                                           uint32 maxCascadeCount ) const
     {
         using Internal = DirectionalLightComponentInternal;
         if ( _shadowViewDistance <= 0.0f )
@@ -463,7 +463,7 @@ namespace sw
         float32                     startFraction = 0.0f;
         for ( uint32 cascadeIndex = 0; cascadeIndex < cascadeCount; ++cascadeIndex )
         {
-            const float32 endFraction = ( cascadeIndex + 1 == cascadeCount ) ? 1.0f : Internal::computeSplitFraction( cascadeIndex + 1, cascadeCount, nearDepth, maxDepth );
+            const float32 endFraction = ( cascadeIndex + 1 == cascadeCount ) ? 1.0f : Internal::computeSplitFraction( cascadeIndex + 1, cascadeCount, nearDepth, maxDepth, renderConfig._shadowCascadeSplitLambda );
             float3        arrSlice[8];
             for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
             {

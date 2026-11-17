@@ -92,6 +92,23 @@ namespace sw
                 return true;
             }
 
+            [[nodiscard]] static bool readControlPitch( const VoxelPlayerComponent& player, float64& outValue )
+            {
+                const GameObject*    pOwner = player.getOwner();
+                const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                if ( pPawn == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPawn->getIntent()._controlPitch );
+                return true;
+            }
+
+            /** @brief 몸이 땅에 놓였고 땅을 딛고 있으면 1 입니다(첫 놓기 뒤 떨어져 자리를 잡았다). */
+            [[nodiscard]] static bool readOnGround( const VoxelPlayerComponent& player, float64& outValue )
+            {
+                outValue = player.getBody().isOnGround() ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 플레이어 폰을 누가 조종하는지 반환합니다. 0은 플레이어 조종자, 1은 자동 플레이 AI, −1은 아무도 조종하지 않는 경우입니다. */
             [[nodiscard]] static bool readControllerKind( const VoxelPlayerComponent& player, float64& outValue )
             {
@@ -117,6 +134,8 @@ namespace sw
     SW_AUTOMATION_COMPONENT_WATCH( voxelWalkedDistance, "VoxelCraft.WalkedDistance", "Horizontal distance of the player body from where it was first placed", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readWalkedDistance );
     SW_AUTOMATION_COMPONENT_WATCH( voxelHotbarSlot, "VoxelCraft.HotbarSlot", "Selected hotbar slot (0-based)", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readHotbarSlot );
     SW_AUTOMATION_GETTER_WATCH( voxelBrokenCount, "VoxelCraft.BrokenCount", "Blocks the player has broken", VoxelPlayerComponent, &VoxelPlayerComponent::getBrokenCount );
+    SW_AUTOMATION_COMPONENT_WATCH( voxelControlPitch, "VoxelCraft.ControlPitch", "Control pitch of the player pawn (radians, up is +)", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readControlPitch );
+    SW_AUTOMATION_COMPONENT_WATCH( voxelOnGround, "VoxelCraft.OnGround", "1 while the player body stands on ground (it has landed after being placed)", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readOnGround );
     SW_AUTOMATION_COMPONENT_WATCH( voxelControlYaw, "VoxelCraft.ControlYaw", "Control yaw of the player pawn (radians)", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readControlYaw );
     SW_AUTOMATION_COMPONENT_WATCH( voxelControllerKind, "VoxelCraft.ControllerKind", "Who possesses the player pawn: 0 player controller, 1 auto play AI, -1 nobody", VoxelPlayerComponent, &VoxelPlayerComponentInternal::readControllerKind );
 } // namespace sw

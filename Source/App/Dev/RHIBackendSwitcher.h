@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -68,11 +69,15 @@ namespace sw
         bool isSwapPending() const;
         /** @brief 이 프로세스에서 교체에 실패한 횟수입니다(실패하면 이전 백엔드로 복구한다). */
         uint32 getFailedSwapCount() const { return _failedSwapCount; }
+#if SW_WITH_DYNAMIC_MODULES
         /**
          * @brief 백엔드 교체를 요청합니다 — 메뉴 · 콘솔과 같은 길(`gv_rhiBackend` 의 `setValueAsInt` → 변경 콜백)이며, 적용은 이 프레임 끝의 `applyIfPending` 입니다.
+         * @details 동적 모듈 구성에만 있다 — 정적 모듈 구성(`SW_STATIC_MODULES`)은 백엔드 하나를 Engine 에 링크해 교체할 곳이 없다. 그 구성에는 시나리오 단계 `SwapBackend` 도
+         *          등록되지 않아, 그 단계를 쓴 시나리오는 불러올 때 "unknown step" 오류로 멈춘다(조용히 지지 않는다).
          * @return 요청했으면(이미 그 백엔드이면 요청 없이도) true 입니다. 변수를 찾지 못하면 false 입니다.
          */
         [[nodiscard]] bool requestSwap( RHIBackend backend );
+#endif
         /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
         [[nodiscard]] bool removeDeviceForTest();
         // --- 개발 명령 `rhi.removeDevice <ms>` — 구현은 `RHIBackendSwitcher.cpp`(배포 구성은 짓지 않는다) ---------------------------------------
@@ -91,7 +96,7 @@ namespace sw
         void onBeginFrameOnRenderThread( IRHIDevice& device );
 
     private:
-        /** @brief gv_rhiBackend 변경 이벤트 훅입니다. */
+        /** @brief gv_rhiBackend 변경 이벤트 훅입니다. 동적 모듈 구성은 교체를 예약하고, 정적 모듈 구성은 오류를 남기고 값을 지금 백엔드로 되돌린다(콘솔 · 메뉴가 조용히 무시되지 않게). */
         void onBackendVariableChanged( const GlobalVariableInfo* pInfo );
         /** @brief 모듈을 내리고 디바이스를 다시 만든 뒤 모듈을 세웁니다. 실패하면 false. */
         [[nodiscard]] bool applyPendingChange();

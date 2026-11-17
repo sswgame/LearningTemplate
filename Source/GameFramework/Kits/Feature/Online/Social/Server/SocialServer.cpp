@@ -314,6 +314,7 @@ namespace sw
     {
         reply._listStorage = std::move( completion._listStorage );
         reply._result      = completion._result._result;
+        reply._bTruncated  = completion._bStorageTruncated;
     }
 
     void SocialServer::fillReply( GuildApplicationsReply& reply, GuildCompletion& completion )

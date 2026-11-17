@@ -16,7 +16,6 @@
 	<Mount rider="SledRider" vehicle="SledSnow"/>
 	<Mount rider="Rider" vehicle="LeanKart"/>
 	<Expect watch="Pawn.Seat" target="Rider" is="LeanKart"/>
-	<Wait frames="1"/>
 	<!-- ① 같은 페달 — 의도는 월드 방향이다(KartHill 은 −Z 를 본다) -->
 	<Intent pawn="KartFlat" move="0,1" frames="60"/>
 	<Intent pawn="KartHill" move="0,-1" frames="60"/>

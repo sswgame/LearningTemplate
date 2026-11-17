@@ -72,7 +72,7 @@ endfunction()
 # 부르는 쪽이 먼저 한다 — 함수는 부른 쪽을 return 시킬 수 없다.
 #
 #   KIND        rhi | kit | game | gameframework | editor | editorextension   동적 모듈 레지스트리 종류(`sw_register_dynamic_module`)
-#   DEV_TYPE    SHARED | MODULE                              개발 빌드의 라이브러리 종류. 배포(SW_SHIPPING_BUILD)는 늘 STATIC 이다
+#   DEV_TYPE    SHARED | MODULE                              동적 모듈 구성의 라이브러리 종류. 정적 모듈 구성(SW_STATIC_MODULES — 배포 · 웹 · Android 개발)은 늘 STATIC 이다
 #   EXPORTS     GF | MODULE | MODULE_SHARED | EDITOR          내보내기 매크로(`sw_configure_dll_exports`)
 #   LOG_TAG     로그 태그(SW_LOG_TAG)
 #   FOLDER      IDE 폴더
@@ -93,7 +93,7 @@ function(sw_add_module_library TARGET_NAME)
 	if(NOT ARG_DEV_TYPE MATCHES "^(SHARED|MODULE)$")
 		message(FATAL_ERROR "sw_add_module_library(${TARGET_NAME}): DEV_TYPE 는 SHARED | MODULE 이다 (받은 값: ${ARG_DEV_TYPE})")
 	endif()
-	if(SW_SHIPPING_BUILD)
+	if(SW_STATIC_MODULES)
 		set(lib_type STATIC)
 	else()
 		set(lib_type ${ARG_DEV_TYPE})
@@ -425,7 +425,7 @@ function(sw_add_editor_extension TARGET_NAME)
 		endif()
 		list(APPEND list_panel_view_source "${view_path}")
 	endforeach()
-	if(SW_SHIPPING_BUILD)
+	if(SW_STATIC_MODULES) # 에디터가 없는 구성(배포 · 웹 · Android 개발)
 		sw_declare_excluded_sources(${list_extension_source})
 		return()
 	endif()

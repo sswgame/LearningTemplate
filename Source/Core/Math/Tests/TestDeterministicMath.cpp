@@ -5,6 +5,8 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Math/ValueNoise.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <limits>
@@ -95,4 +97,31 @@ SW_TEST_CASE( DeterministicMathTest, Atan2MatchesRecordedBits )
     {
         SW_EXPECT_EQUAL( sample._bits, BitUtil::floatToBits( DeterministicMathUtil::atan2( sample._y, sample._x ) ) );
     }
+}
+
+/**
+ * @brief [DeterministicMathTest] 쿼터니언 곱은 기록한 비트를 낸다 — Math 폴더가 결정성 표시(축약 끔)에서 빠지면 Release 의 FMA 합치기가 끝 비트를 바꾼다(감사 C-14)
+ * @details 기록값은 같은 식을 numpy float32 로 연산마다 반올림해 계산했다. 입력은 첫 곱을 FMA 로 합치면 네 성분 모두 비트가 달라지는 값이다.
+ */
+SW_TEST_CASE( DeterministicMathTest, QuaternionProductMatchesRecordedBits )
+{
+    const quaternion lhs{ -0.0734f, -0.4116f, 0.2329f, 0.9918f };
+    const quaternion rhs{ -0.5976f, 0.5143f, 0.0438f, 0.2413f };
+    const quaternion product = lhs * rhs;
+    SW_EXPECT_EQUAL( 0xbf3f8b52u, BitUtil::floatToBits( product._x ) );
+    SW_EXPECT_EQUAL( 0x3e8cb242u, BitUtil::floatToBits( product._y ) );
+    SW_EXPECT_EQUAL( 0xbe3c8008u, BitUtil::floatToBits( product._z ) );
+    SW_EXPECT_EQUAL( 0x3ecb3c08u, BitUtil::floatToBits( product._w ) );
+}
+
+/**
+ * @brief [DeterministicMathTest] 값 노이즈(한 옥타브 · 프랙탈)는 기록한 비트를 낸다 — 지형 · 절차 생성이 서버와 클라이언트에서 같은 값을 내야 한다(감사 C-14)
+ * @details 기록값은 numpy float32 로 따라 계산했다. 첫 표본은 보간을 FMA 로 합치면 끝 비트가 하나 달라지는 자리다.
+ */
+SW_TEST_CASE( DeterministicMathTest, ValueNoiseMatchesRecordedBits )
+{
+    SW_EXPECT_EQUAL( 0x3ec5ad92u, BitUtil::floatToBits( ValueNoise::sampleValue( 0.37f, -1.73f, 42u ) ) );
+    SW_EXPECT_EQUAL( 0x3ed34c1fu, BitUtil::floatToBits( ValueNoise::sampleFractal( 0.37f, -1.73f, 42u, 4 ) ) );
+    SW_EXPECT_EQUAL( 0x3f0bab0fu, BitUtil::floatToBits( ValueNoise::sampleFractal( 12.625f, 3.1f, 7u, 5 ) ) );
+    SW_EXPECT_EQUAL( 0x3edd02b0u, BitUtil::floatToBits( ValueNoise::sampleFractal( -5.55f, 8.125f, 123456u, 3 ) ) );
 }

@@ -288,3 +288,15 @@ SW_TEST_CASE( SlotHandleTableTest, ExternalSyncFollowsTheSameRules )
     SW_EXPECT_EQUAL( 4, *table.get( fresh ) );
     SW_EXPECT_EQUAL( 1u, sw::SlotHandle::nextGeneration( 0x7FFF'FFFFu, 0x7FFF'FFFFu ) ); // 한 바퀴 돌면 0 을 건너뛴다
 }
+
+/**
+ * @brief [SlotHandleTest] 한 바퀴 도는 세대를 알아본다 — 핸들 표는 그 칸을 빈 칸 목록에 돌려놓지 않는다(돌린 칸을 다시 쓰면 한 바퀴 전 핸들이 새 값을 가리킨다)
+ * @details 표 안에서 2^31 번 넣고 빼는 것은 단위 테스트로 너무 길어, 표가 쓰는 판정만 경계에서 본다.
+ */
+SW_TEST_CASE( SlotHandleTest, LastGenerationIsRecognizedAtTheMaskBoundary )
+{
+    SW_EXPECT_TRUE( sw::SlotHandle::isLastGeneration( 0x7FFF'FFFFu, 0x7FFF'FFFFu ) );
+    SW_EXPECT_FALSE( sw::SlotHandle::isLastGeneration( 0x7FFF'FFFEu, 0x7FFF'FFFFu ) );
+    SW_EXPECT_FALSE( sw::SlotHandle::isLastGeneration( 1u, 0x7FFF'FFFFu ) );
+    SW_EXPECT_TRUE( sw::SlotHandle::isLastGeneration( 0xFFFF'FFFFu ) );
+}

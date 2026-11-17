@@ -96,7 +96,7 @@ namespace sw
         // 타일셋을 다시 읽었으면(핫 리로드 — 떼어 낸 새 객체) 칠한 맵은 그대로 두고 새 타일셋으로 번호 · 배치를 다시 짓는다.
         if ( _pTileSet != nullptr && _tileSetReload.takeChanged() )
         {
-            shared_ptr<const TileSetAsset> pReloaded = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath );
+            shared_ptr<const TileSetAsset> pReloaded = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath ).snapshot();
             if ( pReloaded != nullptr && pReloaded != _pTileSet )
             {
                 const TileMapXMLData map = _map;
@@ -158,7 +158,7 @@ namespace sw
         }
         // 타일셋은 공유 캐시의 한 벌이다 — 같은 타일셋을 쓰는 맵이 파일을 다시 읽지 않는다.
         _tileSetReload.markSeen();
-        shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( map._tileSetPath );
+        shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( map._tileSetPath ).snapshot();
         if ( pTileSet == nullptr )
             return false;
         setTileMapData( map, std::move( pTileSet ) );

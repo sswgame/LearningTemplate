@@ -134,6 +134,8 @@ namespace sw
         int32 _claimedCount{ 0 };
         PROPERTY()
         MailboxResult _result{ MailboxResult::Ok };
+        PROPERTY()
+        uint8 _bMoreRemaining{ SW_FALSE }; ///< 모두 받기가 한 번의 상한(받는 수 · 훑는 수)에서 멈췄다 — 받을 우편이 더 있을 수 있어 다시 부른다
     };
 
     /** @brief 결과만 있는 응답입니다(읽음 · 지우기). */

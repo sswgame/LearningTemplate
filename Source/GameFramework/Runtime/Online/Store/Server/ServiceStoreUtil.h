@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 namespace sw
@@ -51,7 +52,7 @@ namespace sw
             while ( true )
             {
                 vector<ServiceRecord>    listRecord;
-                const ServiceStoreResult listed = connection.listRecords( table, prefix, "", kPageSize, false, listRecord );
+                const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, table, prefix, "", kPageSize, false, listRecord )._result;
                 if ( listed != ServiceStoreResult::Ok || listRecord.empty() )
                     return listed;
                 ServiceTransaction transaction;

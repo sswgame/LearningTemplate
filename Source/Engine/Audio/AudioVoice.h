@@ -56,6 +56,8 @@ namespace sw
 
         /** @brief 블록의 목표 볼륨(선형)과 방향을 정합니다. 채널별 목표 게인은 @p layout 으로 구합니다(다음 `mix` 의 버스 채널 수와 같아야 합니다). */
         void setTarget( float32 volume, const AudioPanDirection& direction, AudioChannelLayout layout );
+        /** @brief 이번 블록의 목표 게인을 모두 0 으로 둡니다. 다음 `mix` 가 지금 게인에서 0 으로 블록 동안 줄인다(가상이 되기 직전 — 클릭 없음). 페이드 상태는 건드리지 않는다. */
+        void silenceTarget();
         /** @brief 보이스 로우패스 컷오프(Hz)입니다. 가림, 공기 흡수, 파라미터가 정합니다. `audio::kFilterOpenHz` 이상이면 거르지 않습니다. */
         void setLowPass( float32 cutoffHz );
         /** @brief 지금 로우패스 컷오프입니다. */

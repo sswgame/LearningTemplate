@@ -11,6 +11,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
@@ -35,7 +36,7 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        shared_ptr<const VoxelBlockCatalog> _pBlockCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        SharedAssetRef<VoxelBlockCatalog> _pBlockCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
     };
 } // namespace sw
 

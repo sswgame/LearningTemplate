@@ -54,8 +54,10 @@ SW_TEST_CASE( EditorSelectionTest, SelectManyNotifiesOnce )
 {
     using Internal = EditorSelectionBatchTestInternal;
 
-    sw::Scene                   scene( "SelectionBatchProbe" );
-    sw::CommandStack            stack;
+    sw::Scene        scene( "SelectionBatchProbe" );
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::editor::EditorSelection selection;
     selection.bindPreviewScope( scene, stack );
 
@@ -89,8 +91,10 @@ SW_TEST_CASE( EditorSelectionTest, RemoveAndToggleKeepIndexInSync )
 {
     using Internal = EditorSelectionBatchTestInternal;
 
-    sw::Scene                   scene( "SelectionToggleProbe" );
-    sw::CommandStack            stack;
+    sw::Scene        scene( "SelectionToggleProbe" );
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::editor::EditorSelection selection;
     selection.bindPreviewScope( scene, stack );
 
@@ -133,8 +137,10 @@ SW_TEST_CASE( EditorSelectionTest, RemoveAndToggleKeepIndexInSync )
  */
 SW_TEST_CASE( EditorSelectionTest, SelectAssetsKeepsIndexInSync )
 {
-    sw::Scene                   scene( "SelectionAssetProbe" );
-    sw::CommandStack            stack;
+    sw::Scene        scene( "SelectionAssetProbe" );
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::editor::EditorSelection selection;
     selection.bindPreviewScope( scene, stack );
 
@@ -178,8 +184,10 @@ SW_TEST_CASE( EditorSelectionTest, SelectAssetsKeepsIndexInSync )
  */
 SW_TEST_CASE( EditorSelectionTest, RemapAssetsByMap )
 {
-    sw::Scene                   scene( "SelectionRemapProbe" );
-    sw::CommandStack            stack;
+    sw::Scene        scene( "SelectionRemapProbe" );
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::editor::EditorSelection selection;
     selection.bindPreviewScope( scene, stack );
 
@@ -212,8 +220,10 @@ SW_TEST_CASE( EditorSelectionTest, RemapAssetsByMap )
  */
 SW_TEST_CASE( EditorSelectionTest, AssetMoveRemapsPreviewSelection )
 {
-    sw::Scene                   scene( "SelectionMoveProbe" );
-    sw::CommandStack            stack;
+    sw::Scene        scene( "SelectionMoveProbe" );
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::editor::EditorSelection selection;
     selection.bindPreviewScope( scene, stack );
     selection.selectAssets( { "scratch/p04/old.material", "scratch/p04/keep.material" }, sw::editor::SelectionMode::Replace );

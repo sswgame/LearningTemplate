@@ -524,7 +524,7 @@ SW_TEST_CASE( VFXEffectDefTest, PoolTooSmallWarnsButLoads )
 
 /**
  * @brief [VFXEffectDefTest] 같은 경로는 공유 캐시의 같은 객체이고, 다시 읽으면 쥔 쪽은 옛 효과를 지키며 다시 받은 쪽은 새 효과를 받는지 검증
- * @details 시뮬레이션이 방출기 정의를 효과의 별칭 포인터로 쥐므로 다시 읽기는 떼어 낸다(`Detach`) — 쥔 객체가 제자리에서 바뀌면 렌더 스레드가 읽는 정의가 흔들린다.
+ * @details 시뮬레이션이 방출기 정의를 효과의 별칭 포인터로 쥐므로 다시 읽기는 떼어 낸다(공유 캐시는 늘 떼어 낸다) — 쥔 객체가 제자리에서 바뀌면 렌더 스레드가 읽는 정의가 흔들린다.
  */
 SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
 {
@@ -532,8 +532,8 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
     const string                    id = test::ScopedScratchDomain::makeID( "sparks.vfx.xml" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sparks.vfx.xml" ), Util::makeEffectXML( Util::kValidAttributes ) ) );
 
-    const shared_ptr<const VFXEffectDef> pHeld  = SharedAssetCache<VFXEffectDef>::acquire( id );
-    const shared_ptr<const VFXEffectDef> pAgain = SharedAssetCache<VFXEffectDef>::acquire( id );
+    const shared_ptr<const VFXEffectDef> pHeld  = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
+    const shared_ptr<const VFXEffectDef> pAgain = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pHeld->_listEmitter.size() ) );
@@ -547,7 +547,7 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
     SW_REQUIRE_TRUE( SharedAssetCache<VFXEffectDef>::reloadShared( id ) );
     SW_EXPECT_EQUAL( 64u, pHeld->_listEmitter[0]._maxParticles ); // 쥔 쪽은 옛 객체 그대로(Detach)
 
-    const shared_ptr<const VFXEffectDef> pFresh = SharedAssetCache<VFXEffectDef>::acquire( id );
+    const shared_ptr<const VFXEffectDef> pFresh = SharedAssetCache<VFXEffectDef>::acquire( id ).snapshot();
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
     SW_EXPECT_EQUAL( 128u, pFresh->_listEmitter[0]._maxParticles );

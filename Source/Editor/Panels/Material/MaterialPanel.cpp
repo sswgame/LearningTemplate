@@ -292,6 +292,7 @@ namespace sw::editor
         : EditorPreviewPanel{ EditorAssetType{ Material::kAssetType }, false }
         , _model{}
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
     }
 
     void MaterialPanel::drawDocumentContent()
@@ -327,13 +328,12 @@ namespace sw::editor
         drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide }, false ); // 기즈모가 없다
         EditorSelfTestMarks::record( "material.previewScene" );
 
-        fixed_string<constant::buffer::kMax128>& name = _model.editName();
+        fixed_string<constant::buffer::kMax128>& name = _model.editNameBuffer();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
         EditorWidgets::inputText( SW_WIDGET_ID( "##name" ), name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             _model.commitName();
-            notifyDocumentEdited( "Edit Material Name" );
             applyLivePreview();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
@@ -342,7 +342,6 @@ namespace sw::editor
         if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Shader" ), shaderPath, ".hlsl" ) )
         {
             _model.setShaderPath( shaderPath );
-            notifyDocumentEdited( "Edit Material Shader" );
         }
         ImGui::EndGroup();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ShaderTip" ) );
@@ -361,7 +360,7 @@ namespace sw::editor
         EditorWidgets::drawSearchField( "##materialPropFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), 0.0f, false, "material.propertyFilter" );
 
         const EditorListFilter          filter{ _propertyFilter.c_str() };
-        Material&                       material = _model.editMaterial();
+        const Material&                 material = _model.getMaterial();
         const vector<MaterialProperty>& listProp = material.getProperties();
         uint32                          shownCount{ 0 };
         for ( uint32 propIndex = 0; propIndex < static_cast<uint32>( listProp.size() ); ++propIndex )
@@ -369,32 +368,29 @@ namespace sw::editor
             const MaterialProperty& src = listProp[propIndex];
             if ( src._bHidden == SW_TRUE || filter.matchesAny( { src._name, src._displayName } ) == false )
                 continue;
-            MaterialProperty* pProp = material.findProperty( hashed_string( src._name.c_str() ) );
-            if ( pProp == nullptr )
-                continue;
+            // 위젯은 프로퍼티 사본을 고친다 — 사본에 쓰는 것은 모델 연산이다(되돌리기 이름 · 알림도 모델이 정한다, 감사 E-16)
+            MaterialProperty        edited = src;
+            MaterialProperty* const pProp  = &edited;
             ++shownCount;
             ImGui::PushID( static_cast<int32>( propIndex ) );
-            bool                                    bChanged = MaterialPanelInternal::drawTypedProperty( *pProp );
+            bool                                    bChanged = MaterialPanelInternal::drawTypedProperty( edited );
             fixed_string<constant::buffer::kMax128> propertyMark;
             formatstring( propertyMark.data(), propertyMark.capacity(), "material.property.%s", pProp->_name.c_str() );
             EditorSelfTestMarks::record( propertyMark.c_str() );
             // 기본값과 다른 행만 되돌리기 단추를 둔다 — 인스펙터와 같은 공용 단추라 모양 · 툴팁이 같다.
             if ( MaterialPanelInternal::isModified( *pProp ) )
             {
-                if ( EditorCompactControls::drawResetButton( "##reset", SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) ) )
+                if ( EditorCompactControls::drawResetButton( "##reset", SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) ) && _model.resetProperty( hashed_string( pProp->_name.c_str() ) ) )
                 {
-                    pProp->_assetPath.clear(); // 텍스처 칸은 경로가 값보다 앞선다 — 비워야 기본값 글이 보인다
-                    bChanged = material.resetParameterToDefault( hashed_string( pProp->_name.c_str() ) ) || bChanged;
+                    applyLivePreview();
+                    bChanged = false; // 되돌린 값이 사본의 값이다 — 위젯이 고친 사본을 다시 쓰지 않는다
                 }
                 fixed_string<constant::buffer::kMax128> resetMark;
                 formatstring( resetMark.data(), resetMark.capacity(), "material.reset.%s", pProp->_name.c_str() );
                 EditorSelfTestMarks::record( resetMark.c_str() );
             }
-            if ( bChanged )
-            {
-                notifyDocumentEdited( "Edit Material Property" ); // 슬라이더 끌기 한 번은 상호작용 구간 하나 = 되돌리기 한 단계(감사 P0-1)
+            if ( bChanged && _model.setProperty( edited ) )
                 applyLivePreview();
-            }
             ImGui::PopID();
         }
         if ( shownCount == 0 && filter.isActive() )

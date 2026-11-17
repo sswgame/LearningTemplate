@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -17,9 +18,8 @@
 
 namespace sw
 {
-    SW_GLOBAL_VARIABLE( bool, gv_autoRenderScale, false, "자동 렌더 배율 — 프레임 시간이 예산을 깨면 주 시점 렌더 배율을 한 단계씩 내리고 여유가 오래 가면 올린다 (gv_renderScale 에 곱해진다)" );
-    SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleBudgetMs, 16.7f, "자동 렌더 배율의 프레임 시간 예산(ms) — 0 초과" );
-    SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleMin, 0.5f, "자동 렌더 배율이 내려가는 아래 한계 — 0 초과 1 이하" );
+    SW_GLOBAL_VARIABLE( bool, gv_autoRenderScale, false,
+                        "자동 렌더 배율 — GPU 프레임 시간이 예산을 깨면 주 시점 렌더 배율을 한 단계씩 내리고 여유가 오래 가면 올린다 (gv_renderScale 에 곱해진다, 값은 Config/Engine/RenderScale.json)" );
 } // namespace sw
 
 namespace sw
@@ -28,6 +28,7 @@ namespace sw
         : _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _lastHiddenViewCount{ 0 }
+        , _lastOverflowViewCount{ 0 }
         , _postProcessMaterials{}
         , _renderScaleAdjuster{ nullptr }
         , _bAutoRenderScaleActive{ SW_FALSE }
@@ -59,7 +60,7 @@ namespace sw
         _postProcessMaterials.endFrame();
     }
 
-    float32 RenderPacketViewSetup::updateAutoRenderScale( float32 deltaTime )
+    float32 RenderPacketViewSetup::updateAutoRenderScale( const FrameRenderer* pFrameRenderer )
     {
         if ( gv_autoRenderScale == false )
         {
@@ -72,10 +73,15 @@ namespace sw
         }
         if ( _bAutoRenderScaleActive == false )
         {
-            // 켤 때마다 변수에서 설정을 새로 읽는다. 틀린 값은 기본값으로 대신하지 않고 오류로 알린 뒤 조정을 하지 않는다(배율 1).
+            // 켤 때마다 설정 파일을 새로 읽는다. 없거나 틀린 값은 기본값으로 대신하지 않고 오류로 알린 뒤 끈다(배율 1).
             RenderScaleAdjusterConfig config;
-            config._budgetMs = gv_autoRenderScaleBudgetMs;
-            config._minScale = gv_autoRenderScaleMin;
+            if ( ConfigManager::readConfigFileInto( RenderScaleAdjusterConfig::kConfigFile, config ) != ConfigReadResult::Loaded )
+            {
+                SW_LOG_ERROR_ID( "RenderPacketBuilder.AutoRenderScaleConfigMissing", "gv_autoRenderScale is on but %# is missing or unreadable (the log above names the key)",
+                                 RenderScaleAdjusterConfig::kConfigFile );
+                gv_autoRenderScale = false;
+                return 1.0f;
+            }
             if ( _renderScaleAdjuster == nullptr )
                 _renderScaleAdjuster = make_unique<RenderScaleAdjuster>();
             const string reason = RenderScaleAdjuster::validate( config );
@@ -89,15 +95,26 @@ namespace sw
                 return 1.0f; // validate 가 통과했으니 오지 않는 길
             _bAutoRenderScaleActive = SW_TRUE;
         }
+        // 입력은 GPU 프레임 시간이다(벽시계는 vsync 에 묶여 여유가 서지 않는다). 시계가 없는 렌더러(테스트)는 표본이 없어 배율이 그대로다.
+        if ( pFrameRenderer == nullptr )
+            return _renderScaleAdjuster->getScale();
+        const GPUFrameClock& clock = pFrameRenderer->getGPUFrameClock();
+        if ( _renderScaleAdjuster->acceptClockState( clock.getState() ) == false )
+        {
+            SW_LOG_ERROR_ID( "RenderPacketBuilder.AutoRenderScaleNoGPUTimestamps", "gv_autoRenderScale is on but the device has no GPU timestamps - auto render scale is turned off" );
+            _bAutoRenderScaleActive = SW_FALSE;
+            gv_autoRenderScale      = false;
+            return 1.0f;
+        }
         const float32 before = _renderScaleAdjuster->getScale();
-        const float32 scale  = _renderScaleAdjuster->update( deltaTime * 1000.0f );
+        const float32 scale  = _renderScaleAdjuster->update( clock.getLatest() );
         if ( scale != before )
             SW_LOG_INFO_ID( "RenderPacketBuilder.AutoRenderScale", "Auto render scale %# -> %#", before, scale );
         return scale;
     }
 
     RenderPacketMainView RenderPacketViewSetup::setupMainView( RenderFramePacket& packet, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
-                                                               Scene& activeScene, float32 deltaTime, const FrameRenderer* pFrameRenderer )
+                                                               Scene& activeScene, const FrameRenderer* pFrameRenderer )
     {
         const bool           bSceneMain = views.isSceneViewMain();
         RenderPacketMainView mainView;
@@ -114,7 +131,8 @@ namespace sw
         const uint32 outputWidth  = packet._viewportWidth;
         const uint32 outputHeight = packet._viewportHeight;
         // 화면에 나가는 뷰(주 시점 · 화면 사각형)가 같은 값을 쓴다. 주 시점이 없는 프레임에도 화면 사각형 뷰는 실리므로 카메라와 상관없이 프레임마다 한 번 갱신한다.
-        const float32 autoRenderScale = updateAutoRenderScale( deltaTime );
+        const float32 autoRenderScale = updateAutoRenderScale( pFrameRenderer );
+        packet._bWantsGPUFrameTime    = _bAutoRenderScaleActive;
         if ( pCam != nullptr )
         {
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
@@ -152,9 +170,11 @@ namespace sw
         {
             // 주 시점 가림 타일 사본 — 렌더러가 몇 프레임 늦게 되읽은 것이다(가림 컬링이 꺼졌으면 nullptr).
             const shared_ptr<const OcclusionTileSnapshot> pOcclusion = pFrameRenderer != nullptr ? pFrameRenderer->getOcclusionSnapshot() : nullptr;
-            _lastHiddenViewCount                                     = RenderViewCollector::collectExtraViews( *activeScene.getObjectManager(), mainView._pCamera, packet._viewProj, packet._cameraPos, mainView._outputWidth, mainView._outputHeight,
+            const RenderViewCollectResult                 result     = RenderViewCollector::collectExtraViews( *activeScene.getObjectManager(), mainView._pCamera, packet._viewProj, packet._cameraPos, mainView._outputWidth, mainView._outputHeight,
                                                                                                                mainView._autoRenderScale, _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, pOcclusion.get(),
                                                                                                                packet._listView );
+            _lastHiddenViewCount                                     = result._hiddenCount;
+            _lastOverflowViewCount                                   = result._overflowCount;
         }
         // 씬 뷰 — 주 출력이면 게임 화면의 일부(화면 사각형 뷰)를 빼고, 게임 뷰와 함께면 자기 RT 에 그리는 추가 뷰로 싣는다.
         if ( views.isSceneViewMain() )

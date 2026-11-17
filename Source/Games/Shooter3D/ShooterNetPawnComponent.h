@@ -198,6 +198,7 @@ namespace sw
         uint32                                            _sentClaimCount;      ///< 클라이언트 — 보낸 주장 수
         uint32                                            _confirmedClaimCount; ///< 서버 — 인정한 주장 수
         uint32                                            _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
+        uint64                                            _controllerAccountID; ///< 서버 — 조종 연결의 주체(접속 티켓의 계정, 0 이면 없다). 끊기면 매칭 백필에 그 자리를 맡긴다
         int32                                             _controllerID;        ///< 서버 — 이 몸을 조종하는 연결(-1 이면 없다)
         Role                                              _role;
         uint8                                             _bPendingTriggerLook : 1; ///< 클라이언트 — `_pendingTriggerYaw` · `_pendingTriggerPitch` 가 채워졌다

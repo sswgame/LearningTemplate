@@ -23,14 +23,12 @@
 	<ExpectLog id="DevCommand.Reply" contains="vlog: replayed" atLeast="1"/>
 	<DevCommand line="visuallog.clear"/>
 	<ExpectLog id="DevCommand.Reply" contains="vlog: cleared" atLeast="1"/>
-	<Wait frames="1"/>
 	<!-- 타임스케일 -->
 	<DevCommand line="timescale 0"/>
 	<ExpectLog id="DevCommand.Reply" contains="time scale = 0" atLeast="1"/>
 	<Wait frames="2"/>
 	<DevCommand line="timescale 1"/>
 	<ExpectLog id="DevCommand.Reply" contains="time scale = 1" atLeast="1"/>
-	<Wait frames="1"/>
 	<!-- 애니메이션 되감기 -->
 	<DevCommand line="anim.rewind.seconds 2"/>
 	<ExpectLog id="DevCommand.Reply" contains="rewind window =" atLeast="1"/>

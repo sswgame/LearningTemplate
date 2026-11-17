@@ -174,8 +174,8 @@ namespace sw::editor
     expected<void> RetargetProfileInspection::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection )
     {
         // 스켈레톤은 런타임과 같은 공유 캐시의 한 벌을 읽는다(빈 경로는 읽지 않는다 — nullptr).
-        const shared_ptr<const Skeleton> pSourceSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getSourceSkeletonPath() );
-        const shared_ptr<const Skeleton> pTargetSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getTargetSkeletonPath() );
+        const shared_ptr<const Skeleton> pSourceSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getSourceSkeletonPath() ).snapshot();
+        const shared_ptr<const Skeleton> pTargetSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getTargetSkeletonPath() ).snapshot();
         return inspect( profile, pSourceSkeleton.get(), pTargetSkeleton.get(), outInspection );
     }
 

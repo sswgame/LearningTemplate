@@ -17,6 +17,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -756,6 +757,12 @@ namespace sw
             indexDefine._value = string( "g_" ) + pName + "Index";
             inoutList.push_back( std::move( indexDefine ) );
         }
+        // 렌더 정책(셰이더가 읽는 몫) — 설정 파일이 정본이고 셰이더는 기본값을 두지 않는다(없으면 #error). 도구 지문에 섞여 값이 바뀌면 셰이더 캐시가 함께 낡는다.
+        const RenderConfig& renderConfig = engine::getSubsystem<EngineConfig>()._render;
+        ShaderMacroDefine   taaDefine;
+        taaDefine._name  = "SW_TAA_HISTORY_WEIGHT";
+        taaDefine._value = to_string( renderConfig._taaHistoryWeight );
+        inoutList.push_back( std::move( taaDefine ) );
     }
 
     void* ShaderCompiler::findDXCCreateInstance()

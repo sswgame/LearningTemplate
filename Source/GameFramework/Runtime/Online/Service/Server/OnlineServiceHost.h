@@ -162,6 +162,12 @@ namespace sw
         int64                 _requestRefillMsPerRemote{ 500 };
         int64                 _helloTimeoutMs{ 5000 };        ///< 연결이 Hello 를 끝내야 하는 기한. 넘으면 닫는다(열기만 하고 슬롯을 잡는 연결을 막는다)
         int32                 _maxConnectionsPerRemote{ 64 }; ///< 주소(IP)마다 동시 연결 상한. 넘는 연결은 바로 닫는다. 한 주소에서 많이 붙이는 부하 봇은 올린다
+        /**
+         * @brief 서비스 하나가 응답을 기다리게 둘 호출 상한입니다. 넘는 요청은 저장소에 맡기지 않고 `kBusy` 로 끝납니다(`OnlineProtocolService`). 필수 — 1 미만이면 `initialize` 가 거절한다.
+         * @details 저장소 대기열(SQL 워커 큐)은 상한이 없어 로그인 폭주가 원장 · 우편 · 거래를 뒤에 세웠다(감사 O-3). 서비스마다 상한을 두면 대기열 길이가 서비스 수 × 상한으로 묶인다.
+         *          상용: gRPC 의 `max_concurrent_streams` · Envoy 의 `max_pending_requests`(넘으면 바로 거절).
+         */
+        int32 _maxPendingCallsPerService{ 0 };
     };
 } // namespace sw
 
@@ -245,6 +251,8 @@ namespace sw
         IServiceStore*   getServiceStore() const { return _settings._pServiceStore; }
         IEphemeralStore* getEphemeralStore() const { return _settings._pEphemeralStore; }
         uint16           getListenPort() const;
+        /** @brief 서비스 하나가 응답을 기다리게 둘 호출 상한입니다(`OnlineServiceHostConfig::_maxPendingCallsPerService`). */
+        int32 getMaxPendingCallsPerService() const { return _settings._maxPendingCallsPerService; }
         /** @brief GM 리슨의 포트입니다. GM 리슨이 없으면 0 입니다. */
         uint16 getAdminListenPort() const;
         int32  getConnectionCount() const { return static_cast<int32>( _mapConnection.size() ); }

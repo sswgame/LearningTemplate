@@ -78,7 +78,12 @@ namespace sw
         /** @brief 개발 계층입니다. 배포는 nullptr 입니다(`build::kShipping`). */
         IHostDevLayer* getDevLayer() const { return _pDevLayer.get(); }
         /** @brief 개발 계층의 핫 리로드 매니저입니다. 배포는 nullptr 이다 — 모듈 관리자가 정적 링크로 받는다. */
+#if SW_WITH_DYNAMIC_MODULES
         ILiveReloadManager* getLiveReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getLiveReloadManager() : nullptr; }
+#else
+        /** @brief 정적 구성에는 핫 리로드 매니저가 없다 — 모듈 관리자는 정적 링크 표로 선다. */
+        ILiveReloadManager* getLiveReloadManager() const { return nullptr; }
+#endif
         /** @brief 모듈 관리자입니다. 호스트 로더가 돌기 전과 `stopHostServices` 뒤에는 nullptr 입니다. */
         GameModuleManager* getModuleManager() const { return _moduleManager.get(); }
 

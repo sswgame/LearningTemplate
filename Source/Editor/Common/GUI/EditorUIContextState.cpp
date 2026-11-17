@@ -151,6 +151,22 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 문서 패널의 되돌리기가 문서를 그대로 돌리는지 봅니다(`IEditorDocumentPanel::checkUndoRoundTrip`, 되돌리기 전수 시나리오의 문서 패널 단계). 아니면 실패입니다. */
+            static bool runPanelExpectUndoRoundTrip( const vector<string>& listArgument, string& outReply )
+            {
+                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                if ( pDocument == nullptr )
+                    return false;
+                const expected<void> roundTrip = pDocument->checkUndoRoundTrip();
+                if ( roundTrip.has_value() == false )
+                {
+                    outReply = listArgument[0] + ": " + string{ roundTrip.error().message() } + " (" + string{ roundTrip.error().detail() } + ")";
+                    return false;
+                }
+                outReply = "undo restores the document of " + listArgument[0];
+                return true;
+            }
+
             /**
              * @brief 문서 패널이 저장할 파일(`IEditorDocumentPanel::collectFilesToSave`)의 글을 붙잡고 모두 읽기 전용으로 둡니다 — 버전 관리가 잠그지 않은 파일(git LFS lockable)을 흉내 낸다.
              * @details 패널이 내놓는 목록을 그대로 잠그므로 여러 파일을 쓰는 패널 · 연 경로가 없는 상태 문서도 같은 명령이다. 목록이 비면 확인할 것이 없어 실패다.
@@ -265,6 +281,9 @@ namespace sw::editor
                     "Fail unless saving the document of a document panel is refused (its files are locked)", &EditorUIDevCommandsInternal::runPanelExpectSaveRefused );
     SW_DEV_COMMAND( PanelUnlockSaveFiles, "panel.unlockSaveFiles", "panel.unlockSaveFiles",
                     "Make the files panel.lockSaveFiles locked writable again and fail if any of them changed while locked", &EditorUIDevCommandsInternal::runPanelUnlockSaveFiles );
+    SW_DEV_COMMAND( PanelExpectUndoRoundTrip, "panel.expectUndoRoundTrip", "panel.expectUndoRoundTrip <panelID>",
+                    "Fail unless applying the document text of a document panel the way undo does and capturing it again gives the same text (undo coverage)",
+                    &EditorUIDevCommandsInternal::runPanelExpectUndoRoundTrip );
     SW_DEV_COMMAND( PanelReloadDocument, "panel.reloadDocument", "panel.reloadDocument <panelID>", "Read the document of a document panel again from disk, dropping unsaved edits (save round trips)",
                     &EditorUIDevCommandsInternal::runPanelReloadDocument );
     SW_DEV_COMMAND( PanelResetOptional, "panel.resetOptional", "panel.resetOptional",

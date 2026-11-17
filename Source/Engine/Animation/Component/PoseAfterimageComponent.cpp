@@ -187,7 +187,7 @@ namespace sw
             return;
         if ( pGhostMesh->getSkinSourceMesh() != pSource->getSkinSourceMesh() )
         {
-            pGhostMesh->setSkeleton( pSource->getSharedSkeleton() );
+            pGhostMesh->setSkeleton( pSource->getSharedSkeleton().snapshot() );
             pGhostMesh->setSkinSourceMesh( pSource->getSkinSourceMesh() );
         }
         // 포즈는 고정이다 — 사본에는 애니메이터가 없어 다음 프레임에도 이 포즈다.

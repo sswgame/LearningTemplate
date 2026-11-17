@@ -72,7 +72,7 @@ namespace sw
     shared_ptr<const SurfaceKindTable> SurfaceKindTable::findDefault()
     {
         const string&                      path   = engine::getSubsystem<EngineDefaultAssets>()._surfaceKinds.get();
-        shared_ptr<const SurfaceKindTable> pTable = SharedAssetCache<SurfaceKindTable>::acquire( path );
+        shared_ptr<const SurfaceKindTable> pTable = SharedAssetCache<SurfaceKindTable>::acquire( path ).snapshot();
         if ( pTable == nullptr )
             SW_LOG_ERROR_ID( "Surface.DefaultKindsCould", "Default surface kinds '%#' could not be loaded", path.c_str() );
         return pTable;

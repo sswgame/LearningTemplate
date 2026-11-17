@@ -2,7 +2,9 @@
 
 #include "Engine/Content/ContentHash.h"
 
+#include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
 
@@ -37,12 +39,18 @@ namespace sw
                 return nowFileTimeMs - writeTimeMs > kRacyWindowMs;
             }
 
-            /** @brief 파일을 읽어 해시를 구합니다(캐시 밖 본체). */
-            static uint64 readFileHash( string_view absPath )
+            /** @brief 영속 캐시 파일의 머리 표지입니다. */
+            static constexpr uint32 kCacheMagic = 0x43485753u; // "SWHC"
+            /** @brief 영속 항목 하나가 파일에서 차지하는 최소 바이트입니다(빈 경로 길이 4 + 크기 · 시각 · 해시 24). */
+            static constexpr size_t kMinCacheEntryBytes = 28;
+
+            /** @brief 파일을 읽어 해시를 구하고 읽은 바이트를 @p inoutByteCount 에 더합니다(캐시 밖 본체). */
+            static uint64 readFileHash( string_view absPath, atomic<uint64>& inoutByteCount )
             {
                 vector<uint8> bytes;
                 if ( FileUtil::readFile( absPath, bytes ) == false )
                     return 0;
+                inoutByteCount.fetch_add( bytes.size() );
                 return ContentHash::computeBytes( bytes );
             }
         };
@@ -53,16 +61,7 @@ namespace sw
 {
     uint64 ContentHash::computeBytes( const uint8* pData, size_t size )
     {
-        // CR 을 건너뛰며 바로 섞는다 — CR 을 뺀 사본을 만들지 않는다(출력 해시는 팩 하나가 수십 MB 이고 항목마다 부른다).
-        // 값은 사본을 `computeStringHash64( ..., bIgnoreCase = false )` 로 섞던 것과 같다: 같은 시작값에 CR 아닌 바이트를 차례로 `fnvStep64` 한다.
-        uint64 hash = HashUtil::kFNVOffset64;
-        for ( size_t index = 0; index < size; ++index )
-        {
-            const uint8 byte = pData[index];
-            if ( byte != static_cast<uint8>( '\r' ) )
-                hash = HashUtil::fnvStep64( hash, byte );
-        }
-        return hash;
+        return HashUtil::appendBytes64( HashUtil::kFNVOffset64, pData, size );
     }
 
     uint64 ContentHash::computeFile( string_view absPath )
@@ -92,6 +91,8 @@ namespace sw
         : _mutex{}
         , _mapEntry{}
         , _writeSerial{ 0 }
+        , _cachePath{}
+        , _hashedByteCount{ 0 }
         , _writeObserver{ *this }
         , _bObserving{ SW_FALSE }
     {
@@ -146,7 +147,7 @@ namespace sw
             }
         }
 
-        const uint64 hash = ContentHashInternal::readFileHash( absPath );
+        const uint64 hash = ContentHashInternal::readFileHash( absPath, _hashedByteCount );
         if ( bStamped == false || hash == 0 || ( bOwnWrite == false && ContentHashInternal::isCompleted( stamp ) == false ) )
             return hash;
         ScopedLock<mutex> lock{ _mutex };
@@ -169,6 +170,87 @@ namespace sw
             _mapEntry[key] = Entry{ stamp, 0, _writeSerial }; // 해시는 다음 조회가 읽어 채운다(쓰는 길에서 해시하지 않는다 — 수십 MB 팩도 이 길로 쓴다)
         else
             _mapEntry.erase( key ); // 지웠거나 폴더다
+    }
+
+    AbsolutePath ContentHashCache::makeLocalCachePath()
+    {
+        return AbsolutePath::tryMake( FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "ContentHashCache.bin" ) ).value();
+    }
+
+    expected<void> ContentHashCache::load( const AbsolutePath& cachePath )
+    {
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _cachePath = cachePath.str();
+        }
+        vector<uint8> bytes;
+        if ( FileUtil::isRegularFile( cachePath.str() ) == false )
+            return {};
+        if ( FileUtil::readFile( cachePath.str(), bytes ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be read", cachePath.str() } );
+        ByteReader   reader{ bytes.data(), bytes.size() };
+        const uint32 magic   = reader.readUint32();
+        const uint32 version = reader.readUint32();
+        if ( reader.hasOverflowed() || magic != ContentHashInternal::kCacheMagic )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "content hash cache is not a cache file", cachePath.str() } );
+        if ( version != kCacheFormatVersion )
+            return {}; // 다른 판 — 빈 캐시로 시작하고 다음 save 가 이 판으로 덮는다
+        struct LoadedEntry
+        {
+            string _key;
+            Entry  _entry;
+        };
+        vector<LoadedEntry> listLoaded;
+        const auto          readEntry = [&reader]( LoadedEntry& outLoaded )
+        {
+            const bool bKey                    = reader.readString( outLoaded._key );
+            outLoaded._entry._stamp._sizeBytes = reader.readUint64();
+            outLoaded._entry._stamp._writeTime = reader.readUint64();
+            outLoaded._entry._hash             = reader.readUint64();
+            return bKey && outLoaded._entry._hash != 0;
+        };
+        const bool bRead = reader.readCountedList( listLoaded, ContentHashInternal::kMinCacheEntryBytes, readEntry );
+        if ( bRead == false || reader.isFullyRead() == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "content hash cache is truncated or malformed", cachePath.str() } );
+        ScopedLock<mutex> lock{ _mutex };
+        for ( LoadedEntry& loaded : listLoaded )
+        {
+            _mapEntry.emplace( std::move( loaded._key ), loaded._entry ); // 이 프로세스가 이미 구한 항목이 이긴다
+        }
+        return {};
+    }
+
+    expected<void> ContentHashCache::save() const
+    {
+        vector<uint8> bytes;
+        string        cachePath;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _cachePath.empty() )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "content hash cache has no path - call load first" } );
+            cachePath = _cachePath;
+            ByteWriter writer{ bytes };
+            writer.writeUint32( ContentHashInternal::kCacheMagic );
+            writer.writeUint32( kCacheFormatVersion );
+            const size_t countOffset = writer.getByteCount();
+            writer.writeUint32( 0 );
+            uint32 count = 0;
+            for ( const auto& [key, entry] : _mapEntry )
+            {
+                // 해시가 아직 없는 자기 쓰기 표와, 저장 시각의 시간 창 안에 고쳐진 도장은 싣지 않는다 — 다음 프로세스는 도장만 믿는다.
+                if ( entry._hash == 0 || ContentHashInternal::isCompleted( entry._stamp ) == false )
+                    continue;
+                writer.writeString( key );
+                writer.writeUint64( entry._stamp._sizeBytes );
+                writer.writeUint64( entry._stamp._writeTime );
+                writer.writeUint64( entry._hash );
+                ++count;
+            }
+            writer.writePodAt( countOffset, count );
+        }
+        if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, bytes.data(), bytes.size() ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be written", cachePath } );
+        return {};
     }
 
     void ContentHashCache::clear()

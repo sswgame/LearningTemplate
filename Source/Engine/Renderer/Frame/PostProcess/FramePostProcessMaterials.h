@@ -14,10 +14,10 @@
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 
 namespace sw
 {
-    struct FrameViewTarget;
     struct MaterialRenderData;
 
     class FramePSOManager;
@@ -41,6 +41,11 @@ namespace sw
          * @details 파이프라인에 그 자리의 PostProcessMaterial 패스가 없는 블렌더블은 싣지 않는다(그릴 패스가 없다). PSO 를 만들지 못한 머티리얼은 PSO 0 으로 실려 그 그리기만 빠진다(이유는 PSO 관리자가 남겼다).
          */
         void prepareView( FrameViewTarget& view );
+        /**
+         * @brief @p listDraw 의 @p drawIndex 번 그리기가 같은 자리 앞 머티리얼의 결과를 이어 읽는지입니다(앞에 PSO 가 있는 같은 자리 그리기가 있다).
+         * @details 톤맵 대체 자리는 잇지 않는다 — HDR 원본을 읽어 LDR 출력을 내므로 앞 결과(LDR)가 그 입력이 될 수 없다(언리얼도 대체 톤맵퍼는 하나다).
+         */
+        [[nodiscard]] static bool isChainedDraw( const vector<FrameViewTarget::PostProcessMaterialPass>& listDraw, size_t drawIndex );
         /** @brief 이번 프레임에 어느 뷰도 쓰지 않은 원소 버퍼를 놓습니다(프레임 끝). */
         void pruneUnused();
         /** @brief 원소 버퍼를 모두 놓습니다(디바이스가 바뀌거나 내려갈 때). 디바이스가 없으면 핸들만 잊는다. */
@@ -55,6 +60,10 @@ namespace sw
             uint64                               _lastUsedFrame{ 0 };
         };
 
+        /** @brief 그 자리 패스의 출력 형식입니다. 그 자리 패스가 없으면 Unknown 입니다. */
+        RHIFormat findOutputFormat( PostProcessBlendableLocation location ) const;
+        /** @brief @p location 에 이어 읽는 그리기가 있으면 사본 @p chain 을 갖추고 그 그리기들에 겁니다. 없으면 사본을 놓는다. */
+        void prepareChain( FrameViewTarget& view, PostProcessBlendableLocation location, PostProcessChainTexture& chain );
         /** @brief @p data 를 @p materialPath 의 원소 버퍼에 올립니다. 못 만들면 nullptr 입니다(오류를 남긴다). */
         const RHIStructuredBuffer* ensureElementBuffer( const hashed_string& materialPath, const shared_ptr<const MaterialRenderData>& data );
 

@@ -117,7 +117,7 @@ namespace sw
             return;
         }
         // 새 테이블을 받기 전에 격자를 옛 테이블과 함께 쥔 채 둔다 — 받지 못하면 옛 상태 그대로다.
-        shared_ptr<const ElementRuleCatalog> pTable = SharedAssetCache<ElementRuleCatalog>::acquire( _tablePath );
+        shared_ptr<const ElementRuleCatalog> pTable = SharedAssetCache<ElementRuleCatalog>::acquire( _tablePath ).snapshot();
         if ( pTable == nullptr )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementRuleTableCould", "Element rule table %# could not be read", _tablePath.c_str() );

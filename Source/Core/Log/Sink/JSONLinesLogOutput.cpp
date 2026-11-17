@@ -53,6 +53,14 @@ namespace sw
             std::fflush( stdout );
     }
 
+    void JSONLinesLogOutput::writeWithoutWaiting( const LogRecord& record )
+    {
+        if ( record._json.empty() || _mutex.try_lock() == false )
+            return;
+        std::fputs( record._json.c_str(), stdout );
+        _mutex.unlock();
+    }
+
     void JSONLinesLogOutput::flushWithoutWaiting()
     {
         if ( _mutex.try_lock() == false )

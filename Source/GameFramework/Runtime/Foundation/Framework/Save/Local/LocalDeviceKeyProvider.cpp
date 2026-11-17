@@ -101,40 +101,54 @@ namespace sw
     bool LocalDeviceKeyProvider::getSealKey( uint8 ( &outKey )[kKeySize] )
     {
         optional<Error> failure;
+        string          setAsidePath;
         {
             ScopedLock<mutex> lock{ _mutex };
-            expected<void>    loaded = _bLoaded == SW_TRUE ? expected<void>{} : loadOrCreateKeyLocked();
+            expected<void>    loaded = _bLoaded == SW_TRUE ? expected<void>{} : loadOrCreateKeyLocked( setAsidePath );
             if ( loaded.has_value() )
-            {
                 std::memcpy( outKey, _arrKey, sizeof( _arrKey ) );
-                return true;
-            }
-            failure = std::move( loaded ).error();
+            else
+                failure = std::move( loaded ).error();
         }
         // 로그는 잠금을 놓은 뒤 남긴다(잠금은 잎 잠금, 결정 5-3).
+        if ( setAsidePath.empty() == false )
+            SW_LOG_WARNING_ID( "LocalDeviceKeyProvider.UnreadableKeyReplaced", "The local store key file could not be opened on this device/user - kept it as '%#' and made a new key (slots sealed with the old key read as WrongKey)",
+                               setAsidePath.c_str() );
+        if ( failure.has_value() == false )
+            return true;
         SW_LOG_ERROR_ID( "LocalDeviceKeyProvider.KeyUnavailable", "%# (%#)", failure->message(), failure->detail() );
         return false;
     }
 
-    expected<void> LocalDeviceKeyProvider::loadOrCreateKeyLocked()
+    expected<void> LocalDeviceKeyProvider::loadOrCreateKeyLocked( string& outSetAsidePath )
     {
         using Internal = LocalDeviceKeyProviderInternal;
         if ( FileUtil::isRegularFile( _keyFilePath ) )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( _keyFilePath, bytes ) == false || Internal::unprotectKey( bytes, _arrKey, kKeySize ) == false )
+            if ( FileUtil::readFile( _keyFilePath, bytes ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file could not be read", _keyFilePath } ); // 잠김 · 권한 — 다음 요청이 다시 읽는다
+            if ( Internal::unprotectKey( bytes, _arrKey, kKeySize ) )
             {
-                // 다른 PC · 다른 사용자에서 온 키 파일이다 — 새로 만들지 않는다(그러면 이 키로 봉인한 슬롯을 영영 못 푼다). 슬롯은 WrongKey 가 아니라 IOError 다.
-                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file cannot be opened on this device/user", _keyFilePath } );
+                _bLoaded = SW_TRUE;
+                return {};
             }
-            _bLoaded = SW_TRUE;
-            return {};
+            // 읽었는데 풀리지 않는다 — 0 바이트 · 쓰레기(전원이 나간 쓰기) · 다른 PC · 다른 사용자의 파일이다. 오류로 멈추면 그 사용자는 파일을 지울 때까지
+            // 저장도 읽기도 못 한다. 지우지 않고 옆에 남긴 뒤 새 키를 만든다 — 다른 사용자의 파일이었으면 되돌려 놓아 옛 슬롯을 다시 푼다(유니티 PlayerPrefs 가 깨진 파일을 비우는 자리보다 보수적).
+            // 앞서 남긴 것도 지우지 않는다(번호를 붙인 새 이름). 새 키는 아래 쓰기가 원래 이름에 바꿔 끼운다.
+            outSetAsidePath       = FileUtil::reserveUniquePath( _keyFilePath + kUnreadableKeySuffix, "", false );
+            const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( outSetAsidePath, bytes.data(), bytes.size() ) );
+            if ( bKeptAside == false )
+            {
+                outSetAsidePath.clear();
+                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file is unreadable and could not be set aside", _keyFilePath } );
+            }
         }
         if ( _pSecurityProvider == nullptr || _pSecurityProvider->fillRandomBytes( _arrKey, kKeySize ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "Could not generate a local store key (no security provider or no random bytes)" } );
         vector<uint8> bytes;
         const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( _keyFilePath ) &&
-                              FileUtil::writeFile( _keyFilePath, bytes.data(), bytes.size() );
+                              FileUtil::writeFileDurable( _keyFilePath, bytes.data(), bytes.size() );
         if ( bWritten == false )
         {
             return unexpected( Error{ ErrorKind::ExternalFailure, "Could not write the local store key file", _keyFilePath } );

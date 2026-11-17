@@ -46,8 +46,8 @@ namespace sw
         /** @brief 빈 자리만큼 다음 경로를 요청합니다. 큐의 `update` 와 같은 스레드에서 프레임마다 부릅니다. */
         void update( AssetStreamingQueue& queue );
         /**
-         * @brief 걸어 둔 요청을 거두고 붙든 에셋을 놓습니다(전환이 취소됐을 때). 끝난 것은 그대로 셉니다.
-         *        같은 경로를 다른 쪽도 기다리면 그 요청도 거둬진다(큐가 경로 단위로 취소한다).
+         * @brief 이 세트가 걸어 둔 요청을 거두고 붙든 에셋을 놓습니다(전환이 취소됐을 때). 끝난 것은 그대로 셉니다.
+         *        같은 경로를 다른 쪽도 기다리면 그 요청은 그대로 받는다(큐가 요청자 단위로 취소한다).
          */
         void cancel( AssetStreamingQueue& queue );
 
@@ -79,10 +79,11 @@ namespace sw
         /** @brief 요청 하나가 끝났을 때(큐의 콜백) 센다. 성공했고 고정이 켜져 있으면 붙든다. */
         static void onAssetRead( State& state, string_view path, bool bSuccess, uint64 byteCount );
 
-        vector<string>    _listAssetPath;
-        shared_ptr<State> _state;
-        size_t            _nextIndex;
-        uint32            _maxInFlight;
-        StreamingPriority _priority;
+        vector<string>           _listAssetPath;
+        vector<StreamingRequest> _listRequest; ///< 낸 요청(취소가 이 세트의 요청만 거둔다)
+        shared_ptr<State>        _state;
+        size_t                   _nextIndex;
+        uint32                   _maxInFlight;
+        StreamingPriority        _priority;
     };
 } // namespace sw

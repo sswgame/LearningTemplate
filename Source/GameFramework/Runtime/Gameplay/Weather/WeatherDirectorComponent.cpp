@@ -37,7 +37,7 @@ namespace sw
             return;
         }
         SessionStateSettings settings{};
-        settings._pWeatherCatalog     = _pCatalog.get();
+        settings._pWeatherCatalog     = _pCatalog.snapshot();
         settings._weatherSeed         = _seed;
         SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, settings );
         if ( pState != nullptr )

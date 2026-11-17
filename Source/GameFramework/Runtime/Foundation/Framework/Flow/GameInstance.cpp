@@ -129,6 +129,7 @@ namespace sw
         , _pAutosave{}
         , _pDevPart{}
         , _loadedAudioEvents{}
+        , _listFollowedService{}
         , _listSlotRequest{}
         , _saveSlotCounts{}
         , _pendingSlotRestore{}
@@ -475,7 +476,11 @@ namespace sw
 
     void GameInstance::update( float32 deltaTime )
     {
-        // 프레임 순서: 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
+        // 프레임 순서: 다시 읽힌 카탈로그 칸 → 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
+        for ( const Delegate<void()>& follow : _listFollowedService )
+        {
+            follow();
+        }
         getSubsystem<GameSceneFlow>().update();
         getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.

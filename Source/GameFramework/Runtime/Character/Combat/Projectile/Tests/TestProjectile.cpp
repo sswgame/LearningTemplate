@@ -57,7 +57,7 @@ namespace
             bool          bHit    = false;
             for ( size_t index = 0; index < _listTarget.size(); ++index )
             {
-                if ( static_cast<int32>( index ) == projectile._lastHit || length <= 0.0f )
+                if ( projectile.hasHit( static_cast<int32>( index ) ) || length <= 0.0f )
                     continue;
                 // 선분에서 대상에 가장 가까운 점까지의 거리로 본다(시험용 단순 판정).
                 const float3  direction = segment / length;
@@ -284,6 +284,31 @@ SW_TEST_CASE( ProjectileTest, FastPierceHitsEveryTargetInOneStep )
     SW_EXPECT_EQUAL( 0, listEvent[2]._projectile._pierceLeft );
     SW_EXPECT_NEAR( 6.0f, listEvent[2]._projectile._travelled, kProjectileTolerance );
     SW_EXPECT_TRUE( simulation.getProjectiles().empty() );
+}
+
+/** @brief [ProjectileTest] 겹친 두 대상을 지나는 관통탄은 둘을 한 번씩만 맞힌다 — "방금 맞힌 하나" 만 기억하면 맞은 자리가 두 대상 안이라 번갈아 다시 맞혀 관통 수를 다 쓴다(G-10) */
+SW_TEST_CASE( ProjectileTest, PierceHitsOverlappingTargetsOnceEach )
+{
+    LineWorld world;
+    world._listTarget = {
+        float3{5.0f, 0.0f, 0.0f},
+        float3{5.3f, 0.0f, 0.0f}  // 맞음 반지름 0.5 — 두 대상의 맞는 구간이 겹친다
+    };
+    ProjectileSimulation simulation;
+    ProjectileState      bullet = Util::makeBullet( 600.0f ); // 한 걸음(1/60 초)에 10 m
+    bullet._pierceLeft          = 3;
+    (void)simulation.spawn( bullet );
+
+    vector<ProjectileEvent> listEvent;
+    for ( int32 step = 0; step < 4; ++step )
+    {
+        Util::stepCollect( simulation, 1.0f / 60.0f, world, listEvent );
+    }
+    SW_REQUIRE_EQUAL( 2, Util::countKind( listEvent, ProjectileEvent::Kind::Hit ) );
+    SW_EXPECT_EQUAL( 0, listEvent[0]._hit._other );
+    SW_EXPECT_EQUAL( 1, listEvent[1]._hit._other );
+    SW_REQUIRE_EQUAL( size_t( 1 ), simulation.getProjectiles().size() );
+    SW_EXPECT_EQUAL( 1, simulation.getProjectiles()[0]._pierceLeft );
 }
 
 /** @brief [ProjectileTest] 튕김 수가 남으면 표면에서 반사되어 돌아오고, 다 쓰면 다음 표면에서 끝난다. 튕기지 않는 탄은 첫 표면에서 끝난다 */

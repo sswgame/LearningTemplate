@@ -4,6 +4,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Tests/AssetRefTestTypes.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -27,6 +28,14 @@ namespace
             }
             SW_ASSERT( false && "_reference is declared on AssetRefSample" );
             return AssetRefSample::StaticType()->_listProperty.front();
+        }
+
+        /** @brief GUID 하나를 경로 하나로 푸는 색인을 프로세스 표에 겁니다. 돌려준 표(기동이 건 것)를 테스트 끝에 다시 건다. */
+        static AssetRegistry installOne( const AssetGUID& guid, const utf8* pPath )
+        {
+            vector<AssetRegistryLayer> listLayer;
+            listLayer.push_back( AssetRegistryLayer{ "test", { AssetRegistryEntry{ guid, pPath } } } );
+            return AssetRegistry::install( std::move( *AssetRegistry::merge( listLayer ) ) );
         }
     };
 } // namespace
@@ -160,4 +169,77 @@ SW_TEST_CASE( AssetRefTest, ParserMarksTheFieldAsAPath )
     SW_EXPECT_TRUE( prop._typeName == hashed_string( AssetRefBase::kTypeName ) );
     SW_EXPECT_TRUE( prop._metadata->_bAssetPath != SW_FALSE );
     SW_EXPECT_EQUAL( prop._metadata->_assetType, string( "AssetRefSampleTarget" ) );
+}
+
+/** @brief [AssetRefTest] 저장 꼴은 `guid:<32자>` 다 — 읽기가 색인으로 경로를 풀고, 쓰기는 GUID 를 적는다(옮겨도 참조가 그대로다) */
+SW_TEST_CASE( AssetRefTest, GUIDReferenceResolvesThroughTheIndexAndWritesTheGUID )
+{
+    const AssetGUID     guid     = *AssetGUID::tryParse( "0000000000000000000000000000a5e1" );
+    AssetRegistry       previous = XTestUtil::installOne( guid, "common/data/moved/g.reftarget.xml" );
+    const hashed_string typeName( AssetRefBase::kTypeName );
+
+    AssetRef<AssetRefSampleTarget> reference;
+    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000a5e1", XTestUtil::getContext() ) );
+    SW_EXPECT_TRUE( reference == "common/data/moved/g.reftarget.xml" );
+    SW_EXPECT_TRUE( reference.getGUID() == guid );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000a5e1" ), SerializerUtil::formatValueText( ValueAddress{ &reference }, typeName, XTestUtil::getContext() ) );
+
+    (void)AssetRegistry::install( std::move( previous ) );
+}
+
+/** @brief [AssetRefTest] 색인에 없는 GUID · 틀린 GUID 글은 로드 오류이고 값을 바꾸지 않는다 — 다른 에셋으로 대신하지 않는다 */
+SW_TEST_CASE( AssetRefTest, UnknownOrMalformedGUIDIsALoadError )
+{
+    const AssetGUID                guid     = *AssetGUID::tryParse( "0000000000000000000000000000a5e2" );
+    AssetRegistry                  previous = XTestUtil::installOne( guid, "common/data/k.reftarget.xml" );
+    const hashed_string            typeName( AssetRefBase::kTypeName );
+    AssetRef<AssetRefSampleTarget> reference;
+    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000a5e2", XTestUtil::getContext() ) );
+
+    SW_EXPECT_LOG( "AssetRef.UnknownGUID" );
+    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000dead", XTestUtil::getContext() ) );
+    SW_EXPECT_LOG( "AssetRef.InvalidGUID" );
+    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000A5E2", XTestUtil::getContext() ) );
+    SW_EXPECT_TRUE( reference == "common/data/k.reftarget.xml" );
+    SW_EXPECT_TRUE( reference.getGUID() == guid );
+
+    (void)AssetRegistry::install( std::move( previous ) );
+}
+
+/** @brief [AssetRefTest] GUID 가 가리키는 에셋도 대상 종류가 아니면 로드 오류다 */
+SW_TEST_CASE( AssetRefTest, GUIDOfAnotherKindIsALoadError )
+{
+    const AssetGUID                guid     = *AssetGUID::tryParse( "0000000000000000000000000000a5e3" );
+    AssetRegistry                  previous = XTestUtil::installOne( guid, "common/materials/m.material" );
+    AssetRef<AssetRefSampleTarget> reference;
+    SW_EXPECT_LOG( "AssetRef.WrongType" );
+    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, hashed_string( AssetRefBase::kTypeName ), "guid:0000000000000000000000000000a5e3", XTestUtil::getContext() ) );
+    SW_EXPECT_TRUE( reference.empty() );
+    (void)AssetRegistry::install( std::move( previous ) );
+}
+
+/**
+ * @brief [AssetRefTest] 옮기는 동안: 옛 경로 글도 읽고 색인에서 GUID 를 찾아 둔다 — 다시 쓰면 GUID 로 적힌다. 내장 이름 · 색인에 없는 경로는 글 그대로 쓴다
+ */
+SW_TEST_CASE( AssetRefTest, PathTextFindsItsGUIDSoTheNextSaveWritesTheGUID )
+{
+    const AssetGUID     guid     = *AssetGUID::tryParse( "0000000000000000000000000000a5e4" );
+    AssetRegistry       previous = XTestUtil::installOne( guid, "common/data/p.reftarget.xml" );
+    const hashed_string typeName( AssetRefBase::kTypeName );
+
+    AssetRef<AssetRefSampleTarget> reference;
+    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "common/data/p.reftarget.xml", XTestUtil::getContext() ) );
+    SW_EXPECT_TRUE( reference.getGUID() == guid );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000a5e4" ), reference.toText() );
+
+    reference = "common/data/unindexed.reftarget.xml";
+    SW_EXPECT_FALSE( reference.getGUID().has_value() );
+    SW_EXPECT_EQUAL( string( "common/data/unindexed.reftarget.xml" ), reference.toText() );
+
+    AssetRef<AssetRefSampleBuiltinTarget> shape;
+    shape = "Box";
+    SW_EXPECT_FALSE( shape.getGUID().has_value() );
+    SW_EXPECT_EQUAL( string( "Box" ), shape.toText() );
+
+    (void)AssetRegistry::install( std::move( previous ) );
 }

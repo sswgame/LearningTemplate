@@ -20,6 +20,7 @@
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Rig/RigSpringChain.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 
 namespace sw
 {
@@ -74,9 +75,9 @@ namespace sw
          */
         [[nodiscard]] bool initialize( shared_ptr<const RigAsset> asset, const Skeleton& skeleton, const IRigSocketResolver* pOwnSockets, string_view label );
         /** @brief 비웁니다. */
-        void                              shutdown();
-        bool                              isInitialized() const { return _asset != nullptr; }
-        const shared_ptr<const RigAsset>& getAsset() const { return _asset; }
+        void                            shutdown();
+        bool                            isInitialized() const { return _asset != nullptr; }
+        const SharedAssetRef<RigAsset>& getAsset() const { return _asset; }
 
         // --- 대상 ---
         uint32              getTargetCount() const { return static_cast<uint32>( _listTargetDef.size() ); }
@@ -203,7 +204,7 @@ namespace sw
         float32 computeNodeWeightWithCurve( uint32 nodeIndex, float32 curveFactor ) const;
 
     private:
-        shared_ptr<const RigAsset>  _asset;
+        SharedAssetRef<RigAsset>    _asset;
         vector<RigTargetDef>        _listTargetDef;
         vector<RigTargetValue>      _listTargetValue;
         vector<TargetAnchor>        _listTargetAnchor; ///< 대상마다 붙는 곳(바깥 · 모델 원점 · 자기 유닛 본)이다.

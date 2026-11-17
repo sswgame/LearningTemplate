@@ -20,6 +20,7 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -244,28 +245,28 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Gas Color" )
         float4 _gasColor;
 
-        shared_ptr<const RTSCatalog>               _pCatalog;
-        shared_ptr<const SkirmishUnitModelCatalog> _pUnitModelCatalog;
-        shared_ptr<const BehaviorTreeAsset>        _pCommanderTree;
-        CommanderDebugSource                       _commanderDebugSource;
-        SkirmishMatch                              _match;
-        SkirmishLockstepLink                       _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
-        RTSSelection                               _selection;
-        vector<RTSEvent>                           _listEvent;
-        vector<UnitSlot>                           _listUnitSlot;
-        vector<int32>                              _listPendingUnit; ///< 모습을 맞출 유닛 슬롯(틱이 끝난 뒤 처리).
-        MaterialTintCache                          _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>>       _listUnitLook;    ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
-        AssetReadySet                              _unitModels;      ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
-        float3                                     _dragStart;
-        float3                                     _dragPoint;
-        float32                                    _timeScale;
-        uint32                                     _frameStamp;
-        uint8                                      _bHuman             : 1;
-        uint8                                      _bDragging          : 1;
-        uint8                                      _bDragPointValid    : 1;
-        uint8                                      _bAttackMovePending : 1;
-        uint8                                      _bPaused            : 1;
-        uint8                                      _reserved           : 3;
+        SharedAssetRef<RTSCatalog>               _pCatalog;
+        SharedAssetRef<SkirmishUnitModelCatalog> _pUnitModelCatalog;
+        SharedAssetRef<BehaviorTreeAsset>        _pCommanderTree;
+        CommanderDebugSource                     _commanderDebugSource;
+        SkirmishMatch                            _match;
+        SkirmishLockstepLink                     _lockstep; ///< 2 인 대전(넷 세션이 열렸을 때)의 락스텝. 판 상태가 아니라 세이브에 싣지 않는다
+        RTSSelection                             _selection;
+        vector<RTSEvent>                         _listEvent;
+        vector<UnitSlot>                         _listUnitSlot;
+        vector<int32>                            _listPendingUnit; ///< 모습을 맞출 유닛 슬롯(틱이 끝난 뒤 처리).
+        MaterialTintCache                        _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다).
+        vector<shared_ptr<MaterialInstance>>     _listUnitLook;    ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
+        AssetReadySet                            _unitModels;      ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
+        float3                                   _dragStart;
+        float3                                   _dragPoint;
+        float32                                  _timeScale;
+        uint32                                   _frameStamp;
+        uint8                                    _bHuman             : 1;
+        uint8                                    _bDragging          : 1;
+        uint8                                    _bDragPointValid    : 1;
+        uint8                                    _bAttackMovePending : 1;
+        uint8                                    _bPaused            : 1;
+        uint8                                    _reserved           : 3;
     };
 } // namespace sw

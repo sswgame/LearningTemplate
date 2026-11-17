@@ -124,7 +124,7 @@ namespace sw
             }
             if ( module._modulePath.isSet() )
             {
-                shared_ptr<const ZoneModuleDef> pAsset = SharedAssetCache<ZoneModuleDef>::acquire( module._modulePath.get() );
+                shared_ptr<const ZoneModuleDef> pAsset = SharedAssetCache<ZoneModuleDef>::acquire( module._modulePath.get() ).snapshot();
                 if ( pAsset == nullptr )
                 {
                     SW_LOG_ERROR_ID( "Zone.ModuleAssetMissing", "%#: module '%#' names '%#', which could not be read", path, module._name.c_str(), module._modulePath.c_str() );
@@ -244,7 +244,7 @@ namespace sw
             const DataPath& assetPath = over._modulePath.isSet() ? over._modulePath : base._modulePath;
             if ( over._modulePath.isSet() || ( bFound == false && assetPath.isSet() ) )
             {
-                shared_ptr<const ZoneModuleDef> pAsset = SharedAssetCache<ZoneModuleDef>::acquire( assetPath.get() );
+                shared_ptr<const ZoneModuleDef> pAsset = SharedAssetCache<ZoneModuleDef>::acquire( assetPath.get() ).snapshot();
                 if ( pAsset == nullptr )
                 {
                     SW_LOG_ERROR_ID( "Zone.ModuleAssetMissing", "%#: module '%#' names '%#', which could not be read", sourceName, over._name.c_str(), assetPath.c_str() );

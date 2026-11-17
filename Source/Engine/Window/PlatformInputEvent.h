@@ -3,6 +3,8 @@
  * @brief 콜백으로 입력을 받는 플랫폼 창(웹 · Android)이 입력 관리자에 넘기는 입력 하나입니다(`NativeWindowEvent::kMessagePlatformInput` 의 `_lParam`).
  * @details 창 층과 입력 층은 같은 층(3)이라 서로의 형식을 모른다 — Wayland 창의 `WaylandInputEvent` 와 같은 모양으로 창이 기록을 채우고 입력 관리자의 플랫폼 파일
  *          (`Input/Web` · `Input/Android`)이 엔진 키 · 버튼 · 손가락으로 옮긴다. 좌표는 창 클라이언트 물리 픽셀이다.
+ *          글(조합 · 확정)은 여기 실리지 않는다 — 데스크톱 창과 같은 글 메시지(`NativeWindowEvent::kMessageTextInput`, `CallbackInputWindow::queueTextInput`)로 온다.
+ *          고정 크기 칸에 실으면 긴 확정 글이 잘린다(감사 P-4).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -21,7 +23,6 @@ namespace sw
         TouchDown, ///< 손가락 `_pointerIndex` 가 닿았다
         TouchMove,
         TouchUp,
-        Text,                ///< 확정 글자(`_arrText`, UTF-8 — 웹 `keypress` · Android `AKEY_EVENT` 의 유니코드)
         PointerRelative,     ///< 포인터가 잠긴 동안의 이동량(`_relativeX` · `_relativeY`, 물리 픽셀) — 위치는 서 있다(웹 Pointer Lock 의 movementX/Y)
         GamepadKeyDown,      ///< 패드 칸 `_pointerIndex` 의 버튼 `_keyCode`(Android `AKEYCODE_BUTTON_*` · D패드 키)가 눌렸다
         GamepadKeyUp,        ///< 그 버튼을 뗐다
@@ -48,6 +49,6 @@ namespace sw
         float32           _wheel{ 0.0f };     ///< 바퀴 칸 수, 패드 축 종류에서는 축 값
         float32           _relativeX{ 0.0f }; ///< `PointerRelative` 의 가로 이동량(물리 픽셀)
         float32           _relativeY{ 0.0f }; ///< 세로 이동량(아래가 +)
-        utf8              _arrText[32]{};     ///< 웹 키는 DOM code("KeyA" · "ArrowLeft"), `Text` 는 글자
+        utf8              _arrText[32]{};     ///< 웹 키의 DOM code("KeyA" · "ArrowLeft")
     };
 } // namespace sw

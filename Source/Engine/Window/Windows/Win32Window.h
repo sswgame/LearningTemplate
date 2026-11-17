@@ -56,7 +56,7 @@ namespace sw
         /** @brief 창이 지금 보이는지 반환합니다. */
         bool isVisible() const override;
 
-        /** @brief 창 스타일(WS_OVERLAPPEDWINDOW, WS_POPUP)과 위치, 크기를 바꿉니다. 크기 통보는 이 호출 안의 WM_SIZE 로 옵니다. */
+        /** @brief 창 스타일(WS_OVERLAPPEDWINDOW, WS_POPUP)과 위치, 크기를 바꿉니다. 크기는 이 호출 안의 WM_SIZE 가 적고 다음 프레임 시작에 적용된다. */
         bool               setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
         [[nodiscard]] bool canMinimize() const override { return true; }
         bool               setMinimized( bool bMinimized ) override;
@@ -72,6 +72,36 @@ namespace sw
         float32 getContentScale() const override;
         /** @brief `EnumDisplayMonitors` · `GetMonitorInfoW` · `GetDpiForMonitor` · `EnumDisplaySettingsW` 로 읽습니다. */
         [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
+        /** @brief 데스크톱 창은 가려지는 가장자리가 없다. */
+        float4 getSafeAreaInsets() const override { return float4{}; }
+        /** @brief 청하지 않는다 — Windows 는 다른 창이 닫히면 OS 가 초점을 돌려주고, 쓰고 있는 사람의 전경을 뺏지 않는다. */
+        [[nodiscard]] bool requestInputFocus() override { return false; }
+        /** @brief 창이 하지 않는다 — 커서 모양 · 숨기기 · 포인터 묶기는 Win32 입력 관리자가 OS(`SetCursor` · `ShowCursor` · `ClipCursor`)를 직접 부른다. */
+        [[nodiscard]] bool supportsCursorShape() const override { return false; }
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override
+        {
+            (void)shape;
+            return false;
+        }
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override
+        {
+            (void)bVisible;
+            return false;
+        }
+        [[nodiscard]] bool supportsPointerLock() const override { return false; }
+        [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override { return lock == WindowPointerLock::Released; }
+        /** @brief 창이 잇지 않는다 — Windows 클립보드는 `PlatformClipboard`(Win32Clipboard.cpp)가 창 없이 연다. */
+        [[nodiscard]] bool supportsClipboard() const override { return false; }
+        [[nodiscard]] bool readClipboardText( string& outText ) override
+        {
+            outText.clear();
+            return false;
+        }
+        [[nodiscard]] bool writeClipboardText( string_view text ) override
+        {
+            (void)text;
+            return false;
+        }
 
     protected:
         /** @brief 네이티브 창 핸들(HWND)을 반환합니다. 바깥은 `IWindow::tryGetWin32Handle` 로만 읽는다(기반의 보호 구역을 다시 열지 않는다). */
@@ -90,7 +120,7 @@ namespace sw
 
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
-        /** @brief `WM_SIZE` 를 처리합니다. 최소화(0x0)는 창 크기로 기억하지 않고, 재진입한 메시지는 크기만 적고 콜백을 건너뜁니다. */
+        /** @brief `WM_SIZE` 를 처리합니다. 최소화(0x0)는 창 크기로 기억하지 않고, 그 밖은 크기만 적습니다(`notifyResized` — 콜백은 프레임 시작). */
         void onSizeMessage( WPARAM wParam, LPARAM lParam );
         /**
          * @brief `WM_SIZE` · `WM_ACTIVATEAPP` 로 최소화 · 포커스 상태를 적습니다.
@@ -102,8 +132,7 @@ namespace sw
 
     private:
         HWND                    _hWnd;
-        [[maybe_unused]] uint8  _bResizing     : 1;
-        [[maybe_unused]] uint8  _reservedWin32 : 6;
+        [[maybe_unused]] uint8  _reservedWin32;
         [[maybe_unused]] uint16 _padding;
     };
 } // namespace sw

@@ -132,6 +132,7 @@ namespace sw::editor
         , _nameBuffer{}
         , _nameBrush{ -1 }
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
     }
 
     ToolAssetLoadResult TileSetPanel::loadDocument()
@@ -198,19 +199,19 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256> atlas;
         atlas = string_view( content._atlasPath );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Atlas" ) );
-        if ( EditorWidgets::drawAssetPathField( "##TileSetAtlas", atlas, "atlas", nullptr, "tileSet.atlasPath" )._bDeactivatedAfterEdit && _model.setAtlasPath( atlas.c_str() ) )
-            notifyDocumentEdited( "Edit Tile Set Atlas" );
+        if ( EditorWidgets::drawAssetPathField( "##TileSetAtlas", atlas, "atlas", nullptr, "tileSet.atlasPath" )._bDeactivatedAfterEdit )
+            (void)_model.setAtlasPath( atlas.c_str() ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         int32 grid[2] = { content._columnCount, content._rowCount };
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Grid" ), SW_LOCKEY( "EditorTileSet", "GridTip" ) );
         EditorWidgets::inputInt2( SW_WIDGET_ID( "##TileSetGrid" ), grid );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setAtlasGrid( grid[0], grid[1] ) )
-            notifyDocumentEdited( "Edit Tile Set Grid" );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.setAtlasGrid( grid[0], grid[1] ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         float32 tileSize = content._tileSize;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "TileSize" ), SW_LOCKEY( "EditorTileSet", "TileSizeTip" ) );
         EditorWidgets::inputFloat( SW_WIDGET_ID( "##TileSetTileSize" ), &tileSize, 0.0f, 0.0f, "%.3f" );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setTileSize( tileSize ) )
-            notifyDocumentEdited( "Edit Tile Set Tile Size" );
-        drawIssues( nullopt, nullopt ); // 타일셋 전체의 문제
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.setTileSize( tileSize ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
+        drawIssues( nullopt, nullopt );           // 타일셋 전체의 문제
     }
 
     void TileSetPanel::drawBrushList()
@@ -219,21 +220,19 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EditorTileSet", "Brushes" ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddTile" ) ) )
         {
-            _model.addBrush( false );
-            notifyDocumentEdited( "Add Tile Brush" );
+            _model.addBrush( false ); // 모델이 "Add Tile Brush" 로 알린다(감사 E-16)
         }
         EditorSelfTestMarks::record( "tileSet.addTile" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorTileSet", "AddRuleTile" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddRuleTile" ) ) )
         {
-            _model.addBrush( true );
-            notifyDocumentEdited( "Add Rule Tile Brush" );
+            _model.addBrush( true ); // 모델이 "Add Rule Tile Brush" 로 알린다
         }
         EditorSelfTestMarks::record( "tileSet.addRuleTile" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
         ImGui::BeginDisabled( _model.findSelectedBrush() == nullptr );
-        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##brush" ) ) && _model.removeSelectedBrush() )
-            notifyDocumentEdited( "Remove Tile Brush" );
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##brush" ) ) )
+            (void)_model.removeSelectedBrush(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "tileSet.removeBrush" );
 
@@ -282,28 +281,26 @@ namespace sw::editor
         EditorWidgets::drawTextField( "##TileSetBrushName", _nameBuffer, -1.0f );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            if ( _model.renameSelectedBrush( _nameBuffer ) )
-                notifyDocumentEdited( "Rename Tile Brush" );
-            else
-                _nameBuffer = brush._name.c_str(); // 거절한 이름은 칸에서도 되돌린다(까닭은 상태 줄)
+            if ( _model.renameSelectedBrush( _nameBuffer ) == false ) // 바꿨으면 모델이 "Rename Tile Brush" 로 알린다(감사 E-16)
+                _nameBuffer = brush._name.c_str();                    // 거절한 이름은 칸에서도 되돌린다(까닭은 상태 줄)
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileSet", "BrushNameTip" ) );
         bool bSolid = brush._bSolid == SW_TRUE;
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Solid" ), SW_LOCKEY( "EditorTileSet", "SolidTip" ) );
-        if ( ImGui::Checkbox( "##TileSetSolid", &bSolid ) && _model.setSelectedSolid( bSolid ) )
-            notifyDocumentEdited( "Edit Tile Brush" );
+        if ( ImGui::Checkbox( "##TileSetSolid", &bSolid ) )
+            (void)_model.setSelectedSolid( bSolid ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         EditorSelfTestMarks::record( "tileSet.solid" );
         int32 navCost = static_cast<int32>( brush._navCost );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "NavCost" ), SW_LOCKEY( "EditorTileSet", "NavCostTip" ) );
         EditorWidgets::inputInt( SW_WIDGET_ID( "##TileSetNavCost" ), &navCost );
-        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setSelectedNavCost( navCost ) )
-            notifyDocumentEdited( "Edit Tile Brush" );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            (void)_model.setSelectedNavCost( navCost ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         if ( brush.isRuleTile() )
         {
             bool bOutsideSame = brush._bOutsideIsSame == SW_TRUE;
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "OutsideSame" ), SW_LOCKEY( "EditorTileSet", "OutsideSameTip" ) );
-            if ( ImGui::Checkbox( "##TileSetOutside", &bOutsideSame ) && _model.setSelectedOutsideSame( bOutsideSame ) )
-                notifyDocumentEdited( "Edit Tile Brush" );
+            if ( ImGui::Checkbox( "##TileSetOutside", &bOutsideSame ) )
+                (void)_model.setSelectedOutsideSame( bOutsideSame ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         }
     }
 
@@ -331,21 +328,21 @@ namespace sw::editor
                 ImGui::PopID();
                 drawIssues( _model.getSelectedBrush(), ruleIndex );
             }
-            if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddRule" ) ) && _model.addRule() )
-                notifyDocumentEdited( "Add Tile Rule" );
+            if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "AddRule" ) ) )
+                (void)_model.addRule(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             EditorSelfTestMarks::record( "tileSet.addRule" );
             const bool bRuleSelected = _model.getSelectedRule().has_value();
             ImGui::BeginDisabled( bRuleSelected == false );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
-            if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##rule" ) ) && _model.removeSelectedRule() )
-                notifyDocumentEdited( "Remove Tile Rule" );
+            if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##rule" ) ) )
+                (void)_model.removeSelectedRule(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             EditorSelfTestMarks::record( "tileSet.removeRule" );
             EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
-            if ( ImGui::ArrowButton( "##ruleUp", ImGuiDir_Up ) && _model.moveSelectedRule( -1 ) )
-                notifyDocumentEdited( "Reorder Tile Rules" );
+            if ( ImGui::ArrowButton( "##ruleUp", ImGuiDir_Up ) )
+                (void)_model.moveSelectedRule( -1 ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
-            if ( ImGui::ArrowButton( "##ruleDown", ImGuiDir_Down ) && _model.moveSelectedRule( 1 ) )
-                notifyDocumentEdited( "Reorder Tile Rules" );
+            if ( ImGui::ArrowButton( "##ruleDown", ImGuiDir_Down ) )
+                (void)_model.moveSelectedRule( 1 ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileSet", "RuleOrderTip" ) );
         }
@@ -377,8 +374,8 @@ namespace sw::editor
                 continue;
             }
             ImGui::PushID( 2000 + neighbor );
-            if ( ImGui::Button( Internal::getNeighborLabel( rule._arrNeighbor[neighbor] ), ImVec2{ buttonSide, buttonSide } ) && _model.cycleNeighbor( neighbor ) )
-                notifyDocumentEdited( "Edit Tile Rule Pattern" );
+            if ( ImGui::Button( Internal::getNeighborLabel( rule._arrNeighbor[neighbor] ), ImVec2{ buttonSide, buttonSide } ) )
+                (void)_model.cycleNeighbor( neighbor ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             Internal::recordIndexedMark( "tileSet.neighbor", neighbor );
             ImGui::PopID();
         }
@@ -397,8 +394,8 @@ namespace sw::editor
             drawCellImage( visual._listFrameCell[frameIndex], side );
         }
         ImGui::BeginDisabled( visual._listFrameCell.size() <= 1 );
-        if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "RemoveLastFrame" ) ) && _model.removeLastFrame() )
-            notifyDocumentEdited( "Remove Tile Frame" );
+        if ( ImGui::Button( SW_LOCKEY( "EditorTileSet", "RemoveLastFrame" ) ) )
+            (void)_model.removeLastFrame(); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "tileSet.removeLastFrame" );
         if ( visual._listFrameCell.size() > 1 )
@@ -406,8 +403,8 @@ namespace sw::editor
             float32 fps = visual._framesPerSecond;
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorTileSet", "Fps" ) );
             EditorWidgets::inputFloat( SW_WIDGET_ID( "##TileSetFps" ), &fps, 0.0f, 0.0f, "%.2f" );
-            if ( ImGui::IsItemDeactivatedAfterEdit() && _model.setFramesPerSecond( fps ) )
-                notifyDocumentEdited( "Edit Tile Frames" );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                (void)_model.setFramesPerSecond( fps ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
         }
     }
 
@@ -474,8 +471,8 @@ namespace sw::editor
                 const int32  row     = static_cast<int32>( ( mouse.y - imageMin.y ) / cellSide );
                 const bool   bInGrid = 0 <= column && column < content._columnCount && 0 <= row && row < content._rowCount;
                 const bool   bAppend = EditorInputGUI::readPointer().hasModifier( ModifierKey::Shift );
-                if ( bInGrid && _model.pickCell( row * content._columnCount + column, bAppend ) )
-                    notifyDocumentEdited( bAppend ? "Add Tile Frame" : "Pick Tile Cell" );
+                if ( bInGrid )
+                    (void)_model.pickCell( row * content._columnCount + column, bAppend ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             }
         }
         ImGui::EndChild();

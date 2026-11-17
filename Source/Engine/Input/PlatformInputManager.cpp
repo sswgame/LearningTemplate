@@ -1,7 +1,7 @@
 /**
  * @file PlatformInputManager.cpp
  * @brief 콜백 입력 창(웹 · Android)의 입력 플랫폼 훅입니다. 창이 실은 `PlatformInputEvent` 를 엔진 원시 이벤트로 옮깁니다.
- * @details 키 번호만 플랫폼마다 다르다(웹 — DOM `KeyboardEvent.code`, Android — `AKEYCODE_*`). 커서 모양은 두 플랫폼 모두 없다.
+ * @details 키 번호만 플랫폼마다 다르다(웹 — DOM `KeyboardEvent.code`, Android — `AKEYCODE_*`). 커서 모양 · 숨김은 창이 한다(웹 캔버스 CSS cursor, Android 는 커서가 없다).
  *          포인터 잠금은 창이 묶는다(`IWindow::setPointerLock` — 웹은 Pointer Lock API, Android 는 묶지 않는다). 잠긴 동안의 이동은 `PointerRelative` 다.
  *          패드: 웹은 Gamepad API 를 프레임마다 읽고(standard 배치만 — `PlatformGamepadLayout`), Android 는 창이 패드 입력 장치의 키 · 축 이벤트와 연결 · 끊김을
  *          패드 칸 번호로 실어 보낸다. 둘 다 가상 입력 · 재생과 같은 원시 이벤트 길(`makeGamepad*`)로 들어온다.
@@ -22,6 +22,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/PlatformInputEvent.h"
+#include "Engine/Window/WindowTextInput.h"
 
 #if defined( SW_PLATFORM_WEB ) || defined( SW_PLATFORM_ANDROID )
     #if defined( SW_PLATFORM_ANDROID )
@@ -126,83 +127,11 @@ namespace sw
         struct PlatformInputManagerInternal
         {
     #if defined( SW_PLATFORM_WEB )
-            /** @brief DOM code 와 엔진 키 이름이 다른 것만 적는다 — 나머지(KeyA → A, Digit1, F1, Enter, Numpad0 …)는 이름 규칙으로 맞는다. */
-            struct CodeMapping
-            {
-                const utf8* _pDomCode;
-                const utf8* _pKeyName;
-            };
-            static constexpr CodeMapping kArrCodeMapping[] = {
-                {   "ArrowLeft",         "Left"},
-                {  "ArrowRight",        "Right"},
-                {     "ArrowUp",           "Up"},
-                {   "ArrowDown",         "Down"},
-                {   "ShiftLeft",    "LeftShift"},
-                {  "ShiftRight",   "RightShift"},
-                { "ControlLeft",  "LeftControl"},
-                {"ControlRight", "RightControl"},
-                {     "AltLeft",      "LeftAlt"},
-                {    "AltRight",     "RightAlt"},
-                {    "MetaLeft",    "LeftSuper"},
-                {   "MetaRight",   "RightSuper"},
-                { "ContextMenu",         "Menu"},
-                { "BracketLeft",  "LeftBracket"},
-                {"BracketRight", "RightBracket"},
-                {       "Quote",   "Apostrophe"},
-                {   "Backquote",        "Grave"},
-            };
-
-            static Key mapKey( const PlatformInputEvent& input )
-            {
-                const string_view code( input._arrText );
-                for ( const CodeMapping& mapping : kArrCodeMapping )
-                {
-                    if ( code == mapping._pDomCode )
-                        return KeyCodeUtil::fromName( mapping._pKeyName );
-                }
-                constexpr string_view kLetterPrefix = "Key"; // "KeyA" → "A"
-                if ( code.size() == kLetterPrefix.size() + 1 && code.substr( 0, kLetterPrefix.size() ) == kLetterPrefix )
-                    return KeyCodeUtil::fromName( code.substr( kLetterPrefix.size() ) );
-                return KeyCodeUtil::fromName( code );
-            }
+            // 키 표는 모든 플랫폼에서 짓는다(InputKeyTable — 데스크톱 단위 테스트 PlatformInputTest 가 본다). 여기는 플랫폼 입력에서 code 를 꺼내 넘기기만 한다.
+            static Key mapKey( const PlatformInputEvent& input ) { return InputKeyTable::mapWebKeyCode( string_view( input._arrText ) ); }
     #elif defined( SW_PLATFORM_ANDROID )
-            static Key mapKey( const PlatformInputEvent& input ) { return InputKeyTable::mapAndroidKeyCode( input._keyCode ); }
-
-            /**
-             * @brief 패드 장치의 키 번호를 엔진 버튼으로 옮깁니다. 엔진 버튼이 없는 키(L2 · R2 디지털 — 방아쇠는 축이 준다, 모드 키)는 Count 입니다.
-             * @details https://developer.android.com/develop/ui/views/touch-and-input/game-controllers/controller-input — 얼굴 버튼 BUTTON_A/B/X/Y, 어깨 L1/R1, 스틱 누름 THUMBL/R, START · SELECT,
-             *          D패드는 패드에 따라 DPAD 키 또는 HAT 축으로 온다(둘 다 받는다).
-             */
-            static GamepadButton mapGamepadKey( int32 code )
-            {
-                struct CodeButton
-                {
-                    int32         _code;
-                    GamepadButton _button;
-                };
-                static constexpr CodeButton kArrCode[] = {
-                    {     AKEYCODE_BUTTON_A,             GamepadButton::A},
-                    {     AKEYCODE_BUTTON_B,             GamepadButton::B},
-                    {     AKEYCODE_BUTTON_X,             GamepadButton::X},
-                    {     AKEYCODE_BUTTON_Y,             GamepadButton::Y},
-                    {    AKEYCODE_BUTTON_L1,  GamepadButton::LeftShoulder},
-                    {    AKEYCODE_BUTTON_R1, GamepadButton::RightShoulder},
-                    {AKEYCODE_BUTTON_THUMBL,     GamepadButton::LeftThumb},
-                    {AKEYCODE_BUTTON_THUMBR,    GamepadButton::RightThumb},
-                    { AKEYCODE_BUTTON_START,         GamepadButton::Start},
-                    {AKEYCODE_BUTTON_SELECT,          GamepadButton::Back},
-                    {      AKEYCODE_DPAD_UP,        GamepadButton::DPadUp},
-                    {    AKEYCODE_DPAD_DOWN,      GamepadButton::DPadDown},
-                    {    AKEYCODE_DPAD_LEFT,      GamepadButton::DPadLeft},
-                    {   AKEYCODE_DPAD_RIGHT,     GamepadButton::DPadRight},
-                };
-                for ( const CodeButton& entry : kArrCode )
-                {
-                    if ( entry._code == code )
-                        return entry._button;
-                }
-                return GamepadButton::Count;
-            }
+            static Key           mapKey( const PlatformInputEvent& input ) { return InputKeyTable::mapAndroidKeyCode( input._keyCode ); }
+            static GamepadButton mapGamepadKey( int32 code ) { return InputKeyTable::mapAndroidGamepadKeyCode( code ); }
 
             /** @brief 해트 축 하나(@p value)를 D패드 두 버튼(@p negative · @p positive)의 원시 이벤트로 냅니다 — 해트 값 하나가 두 버튼의 상태를 다 정한다. */
             static void postHatAxis( InputManager& manager, float32 value, GamepadButton negative, GamepadButton positive, uint8 padIndex )
@@ -278,6 +207,11 @@ namespace sw
     void InputManager::processNativeEvent( const NativeWindowEvent& event )
     {
         using Internal = PlatformInputManagerInternal;
+        if ( event._message == NativeWindowEvent::kMessageTextInput && event._lParam != 0 )
+        {
+            postWindowTextInput( *reinterpret_cast<const WindowTextInputEvent*>( event._lParam ) ); // 데스크톱 창과 같은 글 길(InputManagerX11 짝)
+            return;
+        }
         if ( event._message != NativeWindowEvent::kMessagePlatformInput || event._lParam == 0 )
             return;
         const PlatformInputEvent& input = *reinterpret_cast<const PlatformInputEvent*>( event._lParam );
@@ -331,11 +265,6 @@ namespace sw
                 postRawEvent( RawInputEvent::makeTouch( type, input._pointerIndex, input._x, input._y ) );
                 break;
             }
-            case PlatformInputKind::Text:
-            {
-                postRawEvent( RawInputEvent::makeTextInput( string_view( input._arrText ) ) );
-                break;
-            }
             case PlatformInputKind::PointerRelative:
             {
                 // 포인터가 잠긴 동안의 이동이다(위치는 서 있다) — Wayland 상대 포인터 · Win32 WM_INPUT 과 같이 위치 없이 이동량만 넘긴다.
@@ -380,12 +309,27 @@ namespace sw
         registerGamepadSlots<PlatformGamepadDevice>();
     }
 
-    void InputManager::setCursorVisiblePlatform( [[maybe_unused]] bool bVisible )
+    void InputManager::setCursorVisiblePlatform( bool bVisible )
     {
+        // 창이 스스로 숨긴다(웹 캔버스 CSS cursor). 커서가 없는 창(Android 손가락)은 할 일이 없다. 커서가 있는데 못 숨기면 한 번 오류로 알린다.
+        MainWindowSubsystem* const pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow* const             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        constexpr uint32           kCursorVisibleBit = 1u << 1;
+        if ( pWindow == nullptr || pWindow->supportsCursorShape() == false )
+            return;
+        if ( pWindow->setCursorVisible( bVisible ) == false && ( _unsupportedReportedMask.fetch_or( kCursorVisibleBit ) & kCursorVisibleBit ) == 0 )
+            SW_LOG_ERROR_ID( "PlatformInput.WindowCannotHideCursor", "This window cannot hide or show the cursor - the cursor stays as it is" );
     }
 
     void InputManager::applyCursorShapePlatform()
     {
+        MainWindowSubsystem* const pWindowHost     = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow* const             pWindow         = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        constexpr uint32           kCursorShapeBit = 1u << 2;
+        if ( pWindow == nullptr || pWindow->supportsCursorShape() == false )
+            return; // 커서가 없는 창(Android 손가락)
+        if ( pWindow->setCursorShape( _cursorShape ) == false && ( _unsupportedReportedMask.fetch_or( kCursorShapeBit ) & kCursorShapeBit ) == 0 )
+            SW_LOG_ERROR_ID( "PlatformInput.WindowCannotChangeCursor", "This window cannot change the cursor shape - the cursor keeps its current shape" );
     }
 
     void InputManager::applyMouseLockMode()

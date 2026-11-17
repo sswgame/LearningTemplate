@@ -24,7 +24,6 @@
 	<Record watch="Farm.CropCount"/>
 	<Record watch="Scene.TransformHash"/>
 	<!-- 끄면 플레이어 조종자가 되찾는다. -->
-	<Wait frames="1"/>
 	<Variable name="gv_farmAutoPlay" value="0"/>
 	<WaitUntil watch="Pawn.Controller" target="Farmer" is="PlayerController" timeoutFrames="60"/>
 	<Pass/>

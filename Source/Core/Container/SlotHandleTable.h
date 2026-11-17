@@ -155,7 +155,7 @@ namespace sw
         uint32 size() const
         {
             ScopedLock<mutex> lock{ _mutex };
-            return _slotCount - static_cast<uint32>( _freeSlot.size() );
+            return _slotCount - static_cast<uint32>( _freeSlot.size() ) - _retiredCount;
         }
 
         /** @brief 테이블이 비어 있는지 반환합니다. */
@@ -223,10 +223,16 @@ namespace sw
         /** @brief 슬롯을 비우고 세대를 올린 뒤 프리 리스트에 넣습니다(뮤텍스를 잡은 상태에서 부릅니다). */
         void freeSlot( uint32 index, Slot& slot ) SW_REQUIRES_LOCK( _mutex )
         {
-            slot._value = T{};
+            slot._value             = T{};
+            const uint32 generation = slot.generation( std::memory_order_relaxed );
             // 점유 해제와 세대 증가를 한 번의 store 로 발행한다. 둘로 나누면 그 사이에 락 없이 읽는 쪽이
             // "점유 중 + 옛 세대" 를 보고 비워지는 중인 값의 주소를 받아 간다.
-            slot._state.store( SlotHandle::nextGeneration( slot.generation( std::memory_order_relaxed ), Slot::kGenerationMask ), std::memory_order_release );
+            slot._state.store( SlotHandle::nextGeneration( generation, Slot::kGenerationMask ), std::memory_order_release );
+            if ( SlotHandle::isLastGeneration( generation, Slot::kGenerationMask ) )
+            {
+                ++_retiredCount; // 세대가 한 바퀴 돌았다 — 다시 쓰면 한 바퀴 전 핸들이 새 값을 가리킨다. 칸 하나를 버린다
+                return;
+            }
             _freeSlot.push( index ); // 세대를 올린 바로 이 자리가 반납이다 — 이중 반납은 `findOccupiedSlot` 의 세대 검사가 막는다
         }
 
@@ -235,6 +241,7 @@ namespace sw
         IndexFreeList _freeSlot SW_GUARDED_BY( _mutex );
         mutable mutex           _mutex;
         uint32 _slotCount       SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
+        uint32 _retiredCount    SW_GUARDED_BY( _mutex ){ 0 }; ///< 세대가 한 바퀴 돌아 은퇴시킨 슬롯 수(`SlotHandle::isLastGeneration`)
     };
 
     /**
@@ -311,7 +318,7 @@ namespace sw
         }
 
         /** @brief 지금 점유된 칸 수를 반환합니다. */
-        uint32 size() const { return static_cast<uint32>( _listSlot.size() - _freeSlot.size() ); }
+        uint32 size() const { return static_cast<uint32>( _listSlot.size() - _freeSlot.size() ) - _retiredCount; }
 
         /** @brief 표가 비어 있는지 반환합니다. */
         bool empty() const { return size() == 0; }
@@ -352,13 +359,20 @@ namespace sw
         /** @brief 칸을 비우고 세대를 올린 뒤 빈 칸 스택에 넣습니다. */
         void freeSlot( uint32 index, Slot& slot )
         {
-            slot._value = T{};
-            slot._state = SlotHandle::nextGeneration( slot.generation(), Slot::kGenerationMask );
+            slot._value             = T{};
+            const uint32 generation = slot.generation();
+            slot._state             = SlotHandle::nextGeneration( generation, Slot::kGenerationMask );
+            if ( SlotHandle::isLastGeneration( generation, Slot::kGenerationMask ) )
+            {
+                ++_retiredCount; // 기본 정의의 `freeSlot` 과 같다 — 한 바퀴 돈 칸은 다시 쓰지 않는다
+                return;
+            }
             _freeSlot.push( index );
         }
 
     private:
-        vector<Slot>  _listSlot; ///< 칸(번호 = 핸들의 index)
-        IndexFreeList _freeSlot; ///< 놓은 칸 번호(마지막에 놓은 것부터 다시 쓴다)
+        vector<Slot>  _listSlot;          ///< 칸(번호 = 핸들의 index)
+        IndexFreeList _freeSlot;          ///< 놓은 칸 번호(마지막에 놓은 것부터 다시 쓴다)
+        uint32        _retiredCount{ 0 }; ///< 세대가 한 바퀴 돌아 은퇴시킨 칸 수
     };
 } // namespace sw

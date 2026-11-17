@@ -139,6 +139,8 @@ namespace sw
 
         int32 getCount() const { return static_cast<int32>( _mapCall.size() ); }
         bool  isEmpty() const { return _mapCall.empty(); }
+        /** @brief 기다리는 호출이 상한 @p maxPendingCount 를 넘었으면 true 입니다. 방금 연 호출도 셉니다. */
+        [[nodiscard]] bool isOverLimit( int32 maxPendingCount ) const { return getCount() > maxPendingCount; }
 
     private:
         struct Call
@@ -407,6 +409,11 @@ namespace sw
             if ( _bReady == SW_FALSE )
             {
                 (void)fail( call, OnlineError::kUnavailable );
+                return;
+            }
+            if ( _calls.isOverLimit( host.getMaxPendingCallsPerService() ) )
+            {
+                (void)fail( call, OnlineError::kBusy ); // 저장소 대기열의 상한이다(감사 O-3) — 저장소에 맡기지 않고 클라이언트가 같은 키로 다시 한다
                 return;
             }
             const uint16 checkError = checkRequest( host, context );

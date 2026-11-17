@@ -77,6 +77,8 @@ namespace sw::editor
         const PackagingProgress& getProgress() const { return _progress; }
         PackagingState           getState() const { return _progress._state; }
         const vector<string>&    getLines() const { return _listLine; }
+        /** @brief 이번 실행에서 패키징이 끝나기 전에(잡이 결과를 내기 전에) 받은 줄 수입니다 — 출력이 도는 동안 오는지 상태 시점과 무관하게 본다(감사 E-15, 감시 값 `Editor.PackagingLiveLineCount`). */
+        uint32 getLiveLineCount() const { return _liveLineCount; }
 
     private:
         /** @brief `Config/Game/` 의 게임 설정 파일 이름을 모으고 활성 팩의 게임을 고릅니다. */
@@ -88,6 +90,7 @@ namespace sw::editor
         unique_ptr<EditorExternalToolJob> _pJob;
         vector<string>                    _listGame;
         vector<string>                    _listLine;
+        uint32                            _liveLineCount{ 0 }; ///< 끝나기 전에 받은 줄 수(`getLiveLineCount`) — 시작할 때 비운다
         string                            _outputFolder;
         PackagingProgress                 _progress;
         uint32                            _gameIndex;

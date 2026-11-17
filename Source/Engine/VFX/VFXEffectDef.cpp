@@ -102,7 +102,7 @@ namespace sw
      * 시뮬레이션이 방출기 정의를 별칭 포인터로 쥐므로 다시 읽기는 떼어 낸다(`Detach`).
      */
     SW_SHARED_ASSET_CACHE( VFXEffectDef, VFXEffectDef,
-                           VFXEffectDef::kAssetType.withPathRule( AssetPathRule{ {}, {}, VFXEffectDef::kExtension } ).withLoader( AssetTypeLoader::of<VFXEffectDef>( MemoryTag::Asset, SharedAssetReloadMode::Detach ) ) );
+                           VFXEffectDef::kAssetType.withPathRule( AssetPathRule{ {}, {}, VFXEffectDef::kExtension } ).withLoader( AssetTypeLoader::of<VFXEffectDef>( MemoryTag::Asset ) ) );
 } // namespace sw
 
 namespace sw

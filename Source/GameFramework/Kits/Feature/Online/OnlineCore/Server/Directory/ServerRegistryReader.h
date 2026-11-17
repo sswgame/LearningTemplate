@@ -4,6 +4,8 @@
  *        기록이 없는(죽은) 멤버는 색인에서 지웁니다.
  * @details - 서비스 스레드 하나에서 쓴다(라우터와 같은 스레드). 스냅숏은 읽기가 끝날 때까지 옛것이다. 고르기는 옛 스냅숏에 이 프로세스가 고른 인원(`pickServer` 가 더한다)을 더해 한다
  *            (다음 읽기까지 같은 서버에 몰리지 않게).
+ *          - 좌석 예약은 서버 사이에 나눈다: 고르면 휘발 저장소의 예약 셈(`ServerRecord::makeSeatKey`, 창 TTL)에 더하고, 읽기는 기록의 부하에 그 셈을 더한다 —
+ *            배정하는 서버가 여럿이면 각자 자기 몫만 보고 같은 서버를 넘치게 채우던 구멍(감사 O-18). 게임 서버가 확정(`ServerRegistration::confirmSeats`)하면 빠지고, 확정이 없으면 창이 끝나 사라진다.
  *          - 라우터보다 먼저 종료할 수 있다. `shutdown` 이 기다리던 캐시 요청을 취소한다.
  */
 #pragma once
@@ -38,8 +40,8 @@ namespace sw
         ServerRegistryReader( const ServerRegistryReader& )            = delete;
         ServerRegistryReader& operator=( const ServerRegistryReader& ) = delete;
 
-        /** @brief @p pRouter 는 빌려 쓴다. 첫 읽기는 다음 `tick` 에. */
-        void initialize( EphemeralStoreRouter* pRouter, string_view kind, int64 refreshPeriodMs );
+        /** @brief @p pRouter 는 빌려 쓴다. 첫 읽기는 다음 `tick` 에. @p seatReservationTTLMs 는 좌석 예약 창이다(서버 설정 `_seatReservationSeconds`, 필수 — 1 이상). */
+        void initialize( EphemeralStoreRouter* pRouter, string_view kind, int64 refreshPeriodMs, int64 seatReservationTTLMs );
         /** @brief 기다리던 캐시 요청을 취소하고 스냅숏을 비웁니다. 두 번 불러도 됩니다. */
         void shutdown();
 
@@ -60,17 +62,21 @@ namespace sw
         void startRefresh( UnixMilliseconds nowMs );
         void onIndexReply( const EphemeralReply& reply );
         void onRecordReply( const EphemeralReply& reply );
+        void onSeatReply( const EphemeralReply& reply );
         void finishRefresh();
 
     private:
         vector<ServerStatus>          _listSnapshot;
         vector<ServerStatus>          _listBuilding;
-        unordered_map<uint64, uint64> _mapRequestToServer; ///< 기록 읽기 요청 id → 서버 id
+        unordered_map<uint64, uint64> _mapRequestToServer;  ///< 기록 읽기 요청 id → 서버 id
+        unordered_map<uint64, uint64> _mapRequestToSeat;    ///< 예약 셈 읽기 요청 id → 서버 id
+        unordered_map<uint64, int32>  _mapServerToReserved; ///< 이번 읽기에서 본 서버마다의 예약 좌석 수
         string                        _kind;
         EphemeralStoreRouter*         _pRouter;
         Subscription                  _replyOwner;     ///< 라우터 답의 주인 몫(`openReplyOwner`). 놓으면 기다리던 답이 지워진다
         uint64                        _indexRequestID; ///< 기다리는 색인 읽기(0 = 없음)
         int64                         _refreshPeriodMs;
+        int64                         _seatReservationTTLMs;
         UnixMilliseconds              _lastRefreshStartMs;
         uint64                        _refreshCount;
         int32                         _outstandingCount;

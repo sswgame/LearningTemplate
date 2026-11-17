@@ -51,7 +51,9 @@ SW_TEST_CASE( DataLayersViewModelTest, InitiallyActiveIsOneUndoStep )
     withProbe._listDataLayer.push_back( probe );
     pScene->setSceneSettings( withProbe );
 
-    sw::CommandStack   stack;
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     {

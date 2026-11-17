@@ -22,6 +22,7 @@
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -202,7 +203,7 @@ namespace sw
         struct SkeletalMeshBinding
         {
             hashed_string                           _name{};
-            shared_ptr<const SocketSet>             _sockets{};
+            SharedAssetRef<SocketSet>               _sockets{};
             TComponentHandle<SkeletalMeshComponent> _skeletalMesh{};
             GameObjectHandle                        _rigidObject{}; ///< 강체 유닛(`bindRigidUnit`)이면 그 오브젝트다. 이때 `_skeletalMesh` 은 비어 있다
             TComponentHandle<SceneComponent>        _rigidFrame{};  ///< 컴포넌트가 기준인 강체 유닛(`bindRigidComponentUnit`)이면 그 컴포넌트다
@@ -262,8 +263,8 @@ namespace sw
         Subscription                                    _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         Subscription                                    _boneRequirement;     ///< 리그가 묶은 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`SkeletalMeshComponent::requireBones`)
         RigInstance                                     _instance;
-        shared_ptr<const RigAsset>                      _asset;
-        shared_ptr<const SocketSet>                     _ownSockets;
+        SharedAssetRef<RigAsset>                        _asset;
+        SharedAssetRef<SocketSet>                       _ownSockets;
         vector<ExternalTarget>                          _listExternal;
         vector<SkeletalMeshBinding>                     _listUnitBinding;
         vector<ObjectBinding>                           _listObjectBinding;

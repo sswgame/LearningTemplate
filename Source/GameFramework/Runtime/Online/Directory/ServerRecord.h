@@ -91,7 +91,13 @@ namespace sw
         static constexpr int32 kMaxAddressSize = 128;
         static constexpr uint8 kFormatVersion  = 2; ///< 2: 설명에 게임 포트 수(`ServerDescriptor::_portCount`)
 
-        static string             makeRecordKey( uint64 serverID );
+        static string makeRecordKey( uint64 serverID );
+        /**
+         * @brief 서버 하나의 좌석 예약 셈(`sd/seat/<id>`, 정수, 고정 창 TTL)의 키입니다. 배정하는 서버들이 나눠 쓴다(감사 O-18).
+         * @details 배정이 더하고(`ServerRegistryReader::pickServer`) 게임 서버가 받은 사람을 부하로 알리면서 뺀다(`ServerRegistration::confirmSeats`). 확정되지 않은 예약은 창이 끝나면 사라진다 —
+         *          Agones `GameServerAllocation` 이 Ready 서버를 Allocated 로 잡아 두고, 게임 서버가 받지 않으면 풀리는 것과 같은 자리다.
+         */
+        static string             makeSeatKey( uint64 serverID );
         static string             makeIndexKey( string_view kind );
         static string             makeMember( uint64 serverID );
         [[nodiscard]] static bool parseMember( string_view member, uint64& outServerID );

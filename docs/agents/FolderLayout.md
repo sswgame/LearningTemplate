@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | `Core` | 엔진 · 게임을 모르는 기반(형식 · 컨테이너 · 글자 · 수학 · 스레드 · 파일 · 로그 · 네트워크 전송) | 씬 · 에셋 · 리플렉션 · 게임 낱말 |
 | `Engine` | 런타임 제품 기능(배포 게임이 쓰는 것)과 그 확장점 | 에디터만 부르는 함수, 개발 도구 구현(확장점만 둔다) |
-| `DevTools` | 엔진 확장점에 스스로 붙는 개발 도구(배포 구성은 짓지 않는다 — 언리얼 Developer 모듈). 클라이언트 전용은 `DevTools/Client` | 게임 · GF · ModuleManager 내부를 아는 것(DevTools 는 그것을 못 본다 — `TargetLayers.toml`) |
+| `DevTools` | 엔진 확장점에 스스로 붙는 개발 도구(배포 구성은 짓지 않는다 — 언리얼 Developer 모듈). 클라이언트 전용은 `DevTools/Client`. 머티리얼 그래프 컴파일러(`DevTools/Material` — DevTools 리플렉션 단계, 셰이더 쿠커에는 `IShaderSourceGenerator` 로 붙는다)도 여기다 | 게임 · GF · ModuleManager 내부를 아는 것(DevTools 는 그것을 못 본다 — `TargetLayers.toml`) |
 | `ModuleManager` | 모듈 로드 · 매니페스트 · 호스트 공용 기동 열. 개발 전용 핫 리로드는 `Dev/LiveReload`(정적 라이브러리 내부라 DevTools 로 못 간다) | 엔진 기능 |
 | `ModuleAPI` | 모듈 C-ABI 계약 | |
 | `App` · `Server` | 그 실행 파일에만 있는 호스트 배선(창 · OS 서비스 · 에디터 모듈 호스트 · 운영 채널) | 엔진 기능, 개발 도구 구현(호스트에는 "붙이는 줄"만) |
@@ -90,7 +90,7 @@
 | --- | --- |
 | `Util` · `Utility` · `Helpers` · `Misc` 폴더 금지 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다. `Common` 도 새로 만들지 않는다(`Editor/Common` 만). 린트 `folder-layout`, 예외 표 `Config/Rules/Lint/FolderLayout.json` | 잡동사니 폴더는 하는 일로 찾을 수 없다 |
 | `<기능>/Component` 에는 `*Component` 만 | 씬 서비스 · 질의 · 검사는 `<기능>/Scene` 이나 `<기능>/` |
-| 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(DevTools 가 볼 수 없는 게임 · App · ModuleManager · GF 내부 · 리플렉션 에셋) — 표 밖 `Dev/` 는 configure 가 멈춘다(배포가 빼는 폴더도 이 표, `SW_DEV_ONLY_SOURCE_PATTERNS`) | DevTools 는 Engine 을 보지만 GF · 게임 · ModuleManager · App 은 못 본다. 엔진 내부를 봐야 하면 엔진이 확장점(등록 목록 · 인터페이스 · 프레임 훅)을 내고 DevTools 가 붙는다 |
+| 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(DevTools 가 볼 수 없는 게임 · App · ModuleManager · GF 내부) — 표 밖 `Dev/` 는 configure 가 멈춘다(배포가 빼는 폴더도 이 표, `SW_DEV_ONLY_SOURCE_PATTERNS`) | DevTools 는 Engine 을 보지만 GF · 게임 · ModuleManager · App 은 못 본다. 엔진 내부를 봐야 하면 엔진이 확장점(등록 목록 · 인터페이스 · 프레임 훅)을 내고 DevTools 가 붙는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |
 | 약어는 파일 · 폴더 · 식별자 모두 대문자(`FourCCUtil` · `HPACKDecoder`) — 린트 `acronyms` | [NamingCpp](NamingCpp.md) Acronyms |
 

@@ -141,6 +141,7 @@ namespace sw::test
             settings._pServerBusTransport              = &_bus;
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 이다
             settings._requestBurstPerAccount           = 1000;
+            settings._maxPendingCallsPerService        = 100000;
             {
                 const auto result = _host.initialize( _transport.get(), settings );
                 SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
@@ -231,7 +232,7 @@ namespace sw::test
             (void)bAccepted;
             const optional<int32> clientIndex = findClient( handle );
             if ( clientIndex.has_value() )
-                SW_EXPECT_TRUE( getClient( *clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint() } ) );
+                SW_EXPECT_TRUE( getClient( *clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{ OnlineClientSecurity::sharedEndpoint(), OnlineRetryPolicy::none() } ) );
         }
 
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override

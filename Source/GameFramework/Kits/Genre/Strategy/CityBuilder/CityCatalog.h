@@ -154,6 +154,43 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 도시 규칙의 수치입니다. 시간 단위는 게임 초입니다.
+     * @details 규칙 자산이다 — 도시 카탈로그의 `<Rules …/>` 한 줄이 모든 칸을 적는다(`Required`, 없으면 카탈로그 로드가 실패한다). 도시는 카탈로그에서만 받으므로
+     *          게임이 C++ 기본값(`CitySettings{}`)으로 도시를 열 길이 없다(감사 K-4, Lyra `ExperienceDefinition` 자리).
+     *          범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 읽기가 그 줄을 넣지 않는 오류로 거절한다. 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API CitySettings
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.0 )
+        float32 _walkerSpeed{}; ///< 셀 / 초
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _workerRatio{}; ///< 인구 중 일하는 사람의 비율
+        PROPERTY( Required, Min = 0.0 )
+        float32 _serviceDuration{}; ///< 서비스를 받은 뒤 그 효과가 남아 있는 시간(초)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _immigrationInterval{}; ///< 빈 집 하나에 한 사람이 들어오는 간격
+        PROPERTY( Required, Min = 0.0 )
+        float32 _evolveDelay{}; ///< 조건이 이만큼 이어져야 집 단계가 오르내린다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _wagePerWorkerPerMonth{};
+        PROPERTY( Required, Min = 0.001 )
+        float32 _fixedStep{};
+        PROPERTY( Required, Min = 0 )
+        int32 _serviceReach{}; ///< 일꾼이 지나는 셀에서 이 거리 안의 집에 서비스를 준다
+        PROPERTY( Required, Min = 0 )
+        int32 _goodsPerFourPeople{}; ///< 한 달에 네 사람이 먹는 물자 수
+        PROPERTY( Required )
+        uint32 _randomSeed{}; ///< 범람과 일꾼의 갈림길 선택에 쓰는 난수 시드
+        PROPERTY( Required )
+        hashed_string _currency{}; ///< 빌린 지갑에서 쓰는 통화
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief `<CityCatalog>` 루트 속성의 스키마입니다. */
     REFLECT()
     struct CityCatalogRootDef
@@ -194,18 +231,24 @@ namespace sw
         const vector<CityGoodDef>&       getGoods() const { return _goodCatalog.getAll(); }
         const vector<CityHouseLevelDef>& getHouseLevels() const { return _listHouseLevel; }
         int32                            getRoadCost() const { return _roadCost; }
+        /** @brief 규칙(`<Rules>`)입니다. 로드에 성공한 카탈로그는 반드시 한 줄을 가진다. */
+        const CitySettings& getRules() const { return _rules; }
 
     private:
         static constexpr const utf8* kXMLRootName = "CityCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadBuilding( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadHouseLevel( const XMLNode& node, string_view sourceName );
+        /** @brief `<Rules>` 한 줄을 읽습니다. 칸이 빠졌거나 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool loadRules( const XMLNode& node, string_view sourceName );
 
     private:
         GameCatalog<CityBuildingDef> _buildingCatalog;
         GameCatalog<CityGoodDef>     _goodCatalog;
         vector<CityHouseLevelDef>    _listHouseLevel;
         int32                        _roadCost;
+        CitySettings                 _rules;
+        int32                        _rulesCount; ///< 읽은 `<Rules>` 줄 수(0 이면 로드 실패)
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CityCatalog>::acquire` 로 한 벌을 받습니다. */

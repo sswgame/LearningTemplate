@@ -2,7 +2,9 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -23,6 +25,56 @@ namespace sw
                 string nativePath{ executable };
                 StringUtil::replaceChar( nativePath, '/', '\\' );
                 return StringUtil::utf8ToUTF16( nativePath.c_str() );
+            }
+
+            /** @brief @p path 가 절대 경로(드라이브 문자 + 구분자 · 두 구분자로 시작하는 UNC)이면 true 입니다. */
+            static bool isAbsoluteWindowsPath( const wstring& path )
+            {
+                const auto isSeparator = []( wchar_t character )
+                { return character == L'\\' || character == L'/'; };
+                const bool bDrive        = path.size() >= 3 && path[1] == L':' && isSeparator( path[2] );
+                const bool bNetworkShare = path.size() >= 2 && isSeparator( path[0] ) && isSeparator( path[1] );
+                return bDrive || bNetworkShare;
+            }
+
+            /**
+             * @brief 명령의 실행 파일을 `CreateProcessW` 의 응용 프로그램 이름(전체 경로)으로 정합니다. 이름 명령은 PATH 의 **절대 경로 폴더만** 뒤집니다. 못 찾으면 빈 글입니다.
+             * @details 응용 프로그램 이름 없이 명령줄만 주면 `CreateProcessW` 는 실행 파일 폴더 → **작업 폴더** → 시스템 폴더 → PATH 순으로 찾는다 — 프로젝트 폴더에 놓인
+             *          `git.exe` 가 PATH 의 git 보다 먼저 돈다(바이너리 심기). Go `os/exec.LookPath`(1.19 부터 작업 폴더 결과를 거절)와 같이 PATH 만 본다.
+             *          확장자가 없으면 `.exe` 를 붙인다(`CreateProcessW` 와 같은 규칙).
+             */
+            static wstring resolveApplicationName( const ProcessCommand& command )
+            {
+                if ( command._bSearchPath == false )
+                    return toApplicationName( command._executable );
+                const wstring fileName = StringUtil::utf8ToUTF16( command._executable.c_str() );
+                if ( fileName.empty() || fileName.find_first_of( L"\\/" ) != wstring::npos )
+                    return {};
+                wstring candidate = fileName;
+                if ( fileName.find( L'.' ) == wstring::npos )
+                    candidate += L".exe";
+                string pathValue;
+                if ( ProcessEnvironment::tryReadNonEmpty( "PATH", pathValue ) == false )
+                    return {};
+                const wstring widePath = StringUtil::utf8ToUTF16( pathValue.c_str() );
+                size_t        start    = 0;
+                while ( start <= widePath.size() )
+                {
+                    const size_t end       = MathUtil::min( widePath.find( L';', start ), widePath.size() );
+                    wstring      directory = widePath.substr( start, end - start );
+                    start                  = end + 1;
+                    if ( directory.size() >= 2 && directory.front() == L'"' && directory.back() == L'"' )
+                        directory = directory.substr( 1, directory.size() - 2 );
+                    if ( isAbsoluteWindowsPath( directory ) == false )
+                        continue; // 빈 칸 · `.` · 상대 경로는 작업 폴더 기준이다 — 뒤지지 않는다
+                    if ( directory.back() != L'\\' && directory.back() != L'/' )
+                        directory.push_back( L'\\' );
+                    wstring     fullPath   = directory + candidate;
+                    const DWORD attributes = GetFileAttributesW( fullPath.c_str() );
+                    if ( attributes != INVALID_FILE_ATTRIBUTES && ( attributes & FILE_ATTRIBUTE_DIRECTORY ) == 0 )
+                        return fullPath;
+                }
+                return {};
             }
 
             /** @brief 자식의 표준 출력 · 입력에 쓰는 파이프 끝 넷입니다. 쓰는 끝 · 읽는 끝 중 자식에게 줄 끝은 `closeChildEnds` 로 부모가 닫습니다. */
@@ -220,6 +272,17 @@ namespace sw
             _pStdOutRead = nullptr;
         }
 
+        // POSIX 와 같은 계약 — 도는 자식은 `_releaseMode` 대로 죽이거나 끝날 때까지 기다린 뒤 놓는다(Windows 는 좀비가 없지만 두 플랫폼이 같은 일을 한다).
+        if ( _pNativeHandle != nullptr && WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT )
+        {
+            if ( _releaseMode == ProcessReleaseMode::Terminate || _bEndWithParent ) // 부모와 함께 끝낼 자식은 기다리지 않고 트리째 끝낸다 — POSIX 와 같은 순서
+                (void)terminate();
+            else
+                SW_LOG_WARNING_ID( "Process.WaitingOnRelease", "Releasing a running child (pid %#) - waiting for it to exit; call terminate() first or launch with ProcessReleaseMode::Terminate",
+                                   _processID.load() );
+            (void)WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), INFINITE );
+        }
+
         if ( _pNativeThread != nullptr )
         {
             CloseHandle( static_cast<HANDLE>( _pNativeThread ) );
@@ -232,7 +295,7 @@ namespace sw
             _pNativeHandle = nullptr;
         }
 
-        // 핸들만 닫는다(KILL_ON_JOB_CLOSE 를 걸지 않았다) — 객체를 놓아도 자식은 산다, `terminate` 를 부르지 않은 자식을 죽이지 않는 것이 계약이다.
+        // 자식은 위에서 끝났다. Job 핸들을 닫으면 부모와 함께 끝낼 자식(`_bEndWithParent`, KILL_ON_JOB_CLOSE)은 트리째 끝나고, 그 밖의 Job 은 핸들만 닫는다(떼어 띄운 손자는 살린다).
         if ( _pNativeJob != nullptr )
         {
             CloseHandle( static_cast<HANDLE>( _pNativeJob ) );
@@ -241,6 +304,7 @@ namespace sw
 
         _bufferedOutput.clear();
         _processID.store( 0 );
+        _bEndWithParent = false;
     }
 
     bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
@@ -295,19 +359,11 @@ namespace sw
                                     ( options._bNewProcessGroup ? CREATE_NEW_PROCESS_GROUP : 0 ) | ( listEnvironmentBlock.empty() ? 0 : CREATE_UNICODE_ENVIRONMENT );
 
         PROCESS_INFORMATION pi{};
-        // 경로 명령은 실행 파일을 따로 넘겨 검색을 끈다(명령줄만 주면 작업 폴더 · PATH 까지 뒤진다). 이름 명령만 검색한다.
-        const wstring wsApplication = command._bSearchPath ? wstring{} : WindowsProcessInternal::toApplicationName( command._executable );
-        const BOOL    bCreated      = CreateProcessW(
-            command._bSearchPath ? nullptr : wsApplication.c_str(),
-            wsCmdLine.data(),
-            nullptr,
-            nullptr,
-            TRUE,
-            creationFlags,
-            listEnvironmentBlock.empty() ? nullptr : listEnvironmentBlock.data(), // nullptr 이면 이 프로세스의 환경을 그대로 물려준다
-            options._workingDirectory.empty() ? nullptr : wsBuildDir.c_str(),
-            &startupInfo.StartupInfo,
-            &pi );
+        // 실행 파일은 늘 전체 경로로 넘긴다 — 명령줄만 주면 작업 폴더까지 뒤진다(`resolveApplicationName`). 못 찾았으면 띄우지 않은 것으로 간다.
+        const wstring wsApplication = WindowsProcessInternal::resolveApplicationName( command );
+        const BOOL    bCreated      = wsApplication.empty() ? FALSE : CreateProcessW( wsApplication.c_str(), wsCmdLine.data(), nullptr, nullptr, TRUE, creationFlags,
+                                                                              listEnvironmentBlock.empty() ? nullptr : listEnvironmentBlock.data(), // nullptr 이면 이 프로세스의 환경을 그대로 물려준다
+                                                                              options._workingDirectory.empty() ? nullptr : wsBuildDir.c_str(), &startupInfo.StartupInfo, &pi );
 
         pipes.closeChildEnds();
 
@@ -320,7 +376,11 @@ namespace sw
 
         // 자식 트리를 Job 하나로 묶는다(`terminate` — POSIX 의 프로세스 그룹과 같은 뜻). 묶지 못하면 손자를 멈출 수 없으니 띄우지 않은 것으로 돌린다.
         HANDLE hJob = CreateJobObjectW( nullptr, nullptr );
-        if ( hJob == nullptr || AssignProcessToJobObject( hJob, pi.hProcess ) == FALSE )
+        // 부모와 함께 끝낼 자식은 Job 의 마지막 핸들이 닫힐 때 트리째 끝낸다 — 이 프로세스가 죽으면 OS 가 핸들을 닫는다(감사 E-15). 걸지 못하면 띄우지 않는다(고아를 남기지 않는다).
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limit{};
+        limit.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        const bool bLimitSet                   = options._bEndWithParent == false || ( hJob != nullptr && SetInformationJobObject( hJob, JobObjectExtendedLimitInformation, &limit, sizeof( limit ) ) != FALSE );
+        if ( hJob == nullptr || bLimitSet == false || AssignProcessToJobObject( hJob, pi.hProcess ) == FALSE )
         {
             const DWORD error = GetLastError();
             TerminateProcess( pi.hProcess, 1 );
@@ -340,6 +400,8 @@ namespace sw
         _pStdOutRead      = pipes._hOutRead;
         _pStdInWrite      = pipes._hInWrite;
         _bNewProcessGroup = options._bNewProcessGroup;
+        _releaseMode      = options._releaseMode;
+        _bEndWithParent   = options._bEndWithParent;
         _processID.store( static_cast<int32>( pi.dwProcessId ) );
 
         return true;
@@ -347,6 +409,11 @@ namespace sw
 
     bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
+        if ( options._bEndWithParent )
+        {
+            SW_LOG_ERROR_ID( "Process.DetachedEndWithParent", "A detached process cannot end with its parent - launch it attached" );
+            return false;
+        }
         if ( command._executable.empty() )
         {
             SW_LOG_ERROR_ID( "Process.NoExecutable", "Detached process launch needs an executable" );
@@ -366,9 +433,8 @@ namespace sw
 
         // 핸들을 하나도 물려주지 않는다(bInheritHandles = FALSE) — 띄운 프로그램이 이 프로세스의 파이프 · 파일을 붙들지 않는다.
         PROCESS_INFORMATION pi{};
-        const wstring       wsApplication = command._bSearchPath ? wstring{} : WindowsProcessInternal::toApplicationName( command._executable );
-        const BOOL          bCreated      = CreateProcessW( command._bSearchPath ? nullptr : wsApplication.c_str(), wsCmdLine.data(), nullptr, nullptr, FALSE, options._bCreateWindow ? 0 : CREATE_NO_WINDOW,
-                                              nullptr, options._workingDirectory.empty() ? nullptr : wsDirectory.c_str(), &startupInfo, &pi );
+        const wstring       wsApplication = WindowsProcessInternal::resolveApplicationName( command );
+        const BOOL          bCreated      = wsApplication.empty() ? FALSE : CreateProcessW( wsApplication.c_str(), wsCmdLine.data(), nullptr, nullptr, FALSE, options._bCreateWindow ? 0 : CREATE_NO_WINDOW, nullptr, options._workingDirectory.empty() ? nullptr : wsDirectory.c_str(), &startupInfo, &pi );
         if ( bCreated == FALSE )
         {
             SW_LOG_ERROR_ID( "Process.LaunchDetachedFailed", "Failed to launch detached command: %#", cmdStr.c_str() );

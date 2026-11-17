@@ -15,6 +15,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -44,6 +45,7 @@ namespace sw
         IServerDirectoryControl* _pDirectoryControl{ nullptr };    ///< 점검과 공지 명령을 넘긴다. 서버 디렉터리 키트가 없으면 null 이고 그 명령은 Unavailable 이다
         IBalanceChangedListener* _pBalanceNotification{ nullptr }; ///< 지급과 회수로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이고 알리지 않는다
         ILiveEventControl*       _pLiveEventControl{ nullptr };    ///< 라이브 이벤트 명령을 넘긴다. 라이브 운영 키트가 없으면 null 이고 그 명령은 Unavailable 이다
+        AdminSanctionLimit       _sanctionLimit{};                 ///< 필수 — 등급마다 기한 있는 제재의 최대 길이(키트 설정). 없으면 `initialize` 가 거절한다
     };
 } // namespace sw
 

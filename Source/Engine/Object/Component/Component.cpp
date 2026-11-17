@@ -5,17 +5,142 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/Reflection.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct ComponentInternal
+        {
+            /** @brief 상태 해시가 바이트 그대로 접는 내장 정수입니다(크기는 등록된 `TypeInfo::_size`). */
+            static constexpr const utf8* kArrIntegerTypeName[] = { "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64" };
+
+            /** @brief 잎 값 하나를 접습니다. 형식이 표 밖이면 false 입니다(부르는 쪽이 멈춘다). float32 는 `StateHashBuilder` 가 -0 · NaN 을 맞춘다. */
+            static bool foldLeaf( StateHashBuilder& inoutBuilder, const TypeRegistry& registry, const hashed_string& typeName, const void* pValue )
+            {
+                const string_view name = typeName.c_str();
+                if ( name == "bool" )
+                {
+                    inoutBuilder.addUint8( *static_cast<const bool*>( pValue ) ? 1 : 0 );
+                    return true;
+                }
+                if ( name == "float32" )
+                {
+                    inoutBuilder.addFloat( *static_cast<const float32*>( pValue ) );
+                    return true;
+                }
+                if ( name == "float64" )
+                {
+                    const float64 raw   = *static_cast<const float64*>( pValue );
+                    const float64 value = raw == 0.0 ? 0.0 : raw; // -0 과 +0 은 같은 값이다(float32 와 같은 규칙)
+                    inoutBuilder.addBytes( &value, sizeof( value ) );
+                    return true;
+                }
+                const bool bFloatVector = name == "float2" || name == "float3" || name == "float4" || name == "quaternion";
+                if ( bFloatVector )
+                {
+                    const TypeInfo* pVector = registry.findType( typeName );
+                    const size_t    count   = pVector != nullptr ? pVector->_size / sizeof( float32 ) : 0;
+                    const float32*  pFloat  = static_cast<const float32*>( pValue );
+                    for ( size_t index = 0; index < count; ++index )
+                    {
+                        inoutBuilder.addFloat( pFloat[index] );
+                    }
+                    return count != 0;
+                }
+                if ( name == "string" )
+                {
+                    const string& text = *static_cast<const string*>( pValue );
+                    inoutBuilder.addUint32( static_cast<uint32>( text.size() ) ); // 길이를 앞에 둬 이웃 칸과 경계가 섞이지 않는다
+                    inoutBuilder.addString( text );
+                    return true;
+                }
+                for ( const utf8* pIntegerName : kArrIntegerTypeName )
+                {
+                    if ( name != pIntegerName )
+                        continue;
+                    const TypeInfo* pInteger = registry.findType( typeName );
+                    if ( pInteger == nullptr )
+                        return false;
+                    inoutBuilder.addBytes( pValue, pInteger->_size );
+                    return true;
+                }
+                const EnumInfo* pEnum = registry.findEnum( typeName );
+                if ( pEnum != nullptr )
+                {
+                    const int64 value = pEnum->readValueFromMemory( pValue );
+                    inoutBuilder.addBytes( &value, sizeof( value ) );
+                    return true;
+                }
+                return false;
+            }
+
+            [[noreturn]] static void stopForUnsupportedField( const TypeInfo& owner, const PropertyInfo& prop )
+            {
+                SW_FATAL( "state field '%#::%#' (%#) cannot be folded into the state hash - use a number, vector, string, enum, reflected struct or a sequence of those, "
+                          "or keep the value out of RuntimeState and fold it in a foldStateHash override",
+                          owner._fullyQualifiedName.c_str(), prop._name.c_str(), prop._typeName.c_str() );
+            }
+
+            /** @brief 상태 칸 하나를 접습니다. 구조체 값 · 구조체 원소는 걷기가 안쪽 칸으로 내려가 접으므로 여기서는 원소 수만 접는다. */
+            static ReflectVisitFlow foldField( StateHashBuilder& inoutBuilder, const ReflectPropertyVisitor& propertyVisitor, const ReflectVisitConstField& field )
+            {
+                const PropertyInfo& prop = field._property;
+                if ( prop._bIsBitField == SW_TRUE )
+                {
+                    inoutBuilder.addUint8( prop.getValue<bool>( field._pObject ) ? 1 : 0 );
+                    return ReflectVisitFlow::Continue;
+                }
+                if ( prop._bIsContainer == SW_TRUE )
+                {
+                    const bool                       bNested   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
+                    const ISequenceContainerWrapper* pSequence = prop._containerWrapper != nullptr && bNested == false ? prop._containerWrapper->asSequence() : nullptr;
+                    if ( pSequence == nullptr )
+                        stopForUnsupportedField( field._owner, prop );
+                    const size_t elementCount = pSequence->getSize( field._pValue );
+                    inoutBuilder.addUint32( static_cast<uint32>( elementCount ) );
+                    if ( propertyVisitor.findStructType( prop._elementTypeName ) != nullptr )
+                        return ReflectVisitFlow::Continue;
+                    for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                    {
+                        if ( foldLeaf( inoutBuilder, propertyVisitor.getRegistry(), prop._elementTypeName, pSequence->getElementConst( field._pValue, elementIndex ) ) == false )
+                            stopForUnsupportedField( field._owner, prop );
+                    }
+                    return ReflectVisitFlow::Continue;
+                }
+                if ( propertyVisitor.findStructType( prop._typeName ) != nullptr )
+                    return ReflectVisitFlow::Continue;
+                if ( foldLeaf( inoutBuilder, propertyVisitor.getRegistry(), prop._typeName, field._pValue ) == false )
+                    stopForUnsupportedField( field._owner, prop );
+                return ReflectVisitFlow::Continue;
+            }
+        };
+    } // namespace
+
+    void Component::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        const TypeInfo* pType = findCachedTypeInfo();
+        if ( pType == nullptr )
+            return;
+        ReflectVisitOptions options;
+        options._roleMask    = PropertyRoleMask::makeRuntimeState();
+        options._bIntoValues = SW_TRUE; // 구조체 칸 · 구조체 원소는 안쪽 칸으로 접는다
+        const ReflectPropertyVisitor propertyVisitor{ engine::getSubsystem<TypeRegistry>(), options };
+        (void)propertyVisitor.visitProperties( *pType, static_cast<const void*>( this ), [&inoutBuilder, &propertyVisitor]( const ReflectVisitConstField& field )
+        { return ComponentInternal::foldField( inoutBuilder, propertyVisitor, field ); } );
+    }
+
     Component::Component()
         : _pOwner{ nullptr }
         , _componentID{ 0 } // 붙을 때 매니저의 번호 공간이 준다(`GameObject::attachCreatedComponent`)
         , _componentName{}
+        , _localID{ 0 } // 0 은 "아직 정하지 않음" — 키는 순번에서 정한 값을 쓰고, 구조를 바꾸기 전에 굳힌다(`ComponentStableKey`)
         , _pTypeInfo{ nullptr }
         , _pPoolEntry{ nullptr }
         , _subTickActiveMask{ 0 }

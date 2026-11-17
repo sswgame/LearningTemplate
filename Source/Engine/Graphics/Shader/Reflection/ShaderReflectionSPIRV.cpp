@@ -131,7 +131,7 @@ namespace sw
 
                         auto mOffIt     = memberOffsetMap.find( memberIdx );
                         varInfo._offset = baseOffset + ( ( mOffIt != memberOffsetMap.end() ) ? mOffIt->second : 0 );
-                        varInfo._type   = resolveSPIRVTypeName( memberTypeID, _mapType, varInfo._size );
+                        varInfo._type   = resolveSPIRVTypeName( memberTypeID, _mapType, varInfo._size, 0 );
 
                         outBuffer._listVariable.push_back( varInfo );
                         outBuffer._totalSize = MathUtil::max( outBuffer._totalSize, varInfo._offset + varInfo._size );
@@ -297,10 +297,13 @@ namespace sw
                 }
             };
 
-            static string resolveSPIRVTypeName( uint32 typeID, const unordered_map<uint32, SPIRVType>& mapType, uint32& outSize )
+            /** @brief 타입 사슬(벡터 → 성분, 배열 → 원소)을 따라가는 깊이의 상한입니다. 고리를 이룬 깨진 모듈에서 재귀가 스택을 넘기지 않게 한다. */
+            static constexpr uint32 kMaxTypeDepth = 16;
+
+            static string resolveSPIRVTypeName( uint32 typeID, const unordered_map<uint32, SPIRVType>& mapType, uint32& outSize, uint32 depth )
             {
                 auto it = mapType.find( typeID );
-                if ( it == mapType.end() )
+                if ( it == mapType.end() || depth > kMaxTypeDepth )
                 {
                     outSize = 4;
                     return "Float";
@@ -332,26 +335,30 @@ namespace sw
                     case SPIRVType::Kind::Vector:
                     {
                         uint32 subSize = 4;
-                        string subName = resolveSPIRVTypeName( spirvType._subTypeID, mapType, subSize );
+                        string subName = resolveSPIRVTypeName( spirvType._subTypeID, mapType, subSize, depth + 1 );
                         outSize        = subSize * spirvType._count;
                         return subName + to_string( spirvType._count );
                     }
                     case SPIRVType::Kind::Matrix:
                     {
                         uint32 columnSize = 16;
-                        resolveSPIRVTypeName( spirvType._subTypeID, mapType, columnSize );
+                        resolveSPIRVTypeName( spirvType._subTypeID, mapType, columnSize, depth + 1 );
                         outSize = columnSize * spirvType._count;
-                        if ( spirvType._count == 4 )
+                        // DXC 는 HLSL `floatRxC` 를 C 성분 벡터 R 개(열)로 낸다 — 열 수가 HLSL 행, 열 벡터의 성분 수가 HLSL 열이다(DX 리플렉터의 `Float{행}x{열}` 과 같은 이름).
+                        // 예전에는 열 수를 두 번 써 정사각이 아닌 행렬(float4x3)을 `Float4x4` · `Float3x3` 로 불러 머티리얼 패커가 크기를 잘못 알았다.
+                        const auto   columnIt         = mapType.find( spirvType._subTypeID );
+                        const uint32 columnComponents = ( columnIt != mapType.end() && columnIt->second._kind == SPIRVType::Kind::Vector ) ? columnIt->second._count : 1u;
+                        if ( spirvType._count == 4 && columnComponents == 4 )
                             return "Float4x4";
                         StringBuilder<constant::buffer::kMax256> resultBuilder;
-                        resultBuilder.appendFormat( "Float%#x%#", spirvType._count, spirvType._count );
+                        resultBuilder.appendFormat( "Float%#x%#", spirvType._count, columnComponents );
                         return string( resultBuilder.view() );
                     }
                     case SPIRVType::Kind::Array:
                     {
                         // 배열 크기 = (원소 수 - 1) * stride + 원소 크기(마지막 원소 뒤 패딩 없음. DX 리플렉션과 같은 규칙).
                         uint32       elemSize = 4;
-                        const string elemName = resolveSPIRVTypeName( spirvType._subTypeID, mapType, elemSize );
+                        const string elemName = resolveSPIRVTypeName( spirvType._subTypeID, mapType, elemSize, depth + 1 );
                         const uint32 stride   = spirvType._arrayStride > 0 ? spirvType._arrayStride : elemSize;
                         outSize               = spirvType._count > 0 ? ( spirvType._count - 1 ) * stride + elemSize : elemSize;
                         return elemName;

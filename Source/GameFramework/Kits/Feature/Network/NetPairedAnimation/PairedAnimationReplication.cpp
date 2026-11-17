@@ -355,7 +355,7 @@ namespace sw
             ++_stats._rejectedCount;
             return PairedAnimationStartResult::ParticipantMissing;
         }
-        const shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( state._assetPath );
+        const shared_ptr<const PairedAnimationDef> def = SharedAssetCache<PairedAnimationDef>::acquire( state._assetPath ).snapshot();
         if ( def == nullptr )
         {
             SW_LOG_ERROR_ID( "PairedAnimationReplication.ReplicatedPairedAnimationSession3", "Replicated paired animation session %# rejected: asset '%#' could not be loaded", state._snapshot._sessionID, state._assetPath.c_str() );

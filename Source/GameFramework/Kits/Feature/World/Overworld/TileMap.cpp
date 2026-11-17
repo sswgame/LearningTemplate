@@ -33,7 +33,7 @@ namespace sw
             return true;
         }
         // 타일셋은 그리는 쪽(`TileMapRendererComponent`)과 같은 공유 캐시의 한 벌이다. 충돌 칸만 만들고 쥐지 않는다.
-        const shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( xmlData._tileSetPath );
+        const shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( xmlData._tileSetPath ).snapshot();
         if ( pTileSet == nullptr )
             return false;
         return assign( xmlData, *pTileSet );

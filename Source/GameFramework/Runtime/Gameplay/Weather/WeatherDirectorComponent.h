@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -46,6 +47,6 @@ namespace sw
         PROPERTY( Category = "Weather", DisplayName = "Seed", Min = 1, Tooltip = "Seed of the weather sequence" )
         uint32 _seed;
 
-        shared_ptr<const WeatherCatalog> _pCatalog; ///< 판 상태가 빌려 쓴다 — 이 컴포넌트가 쥐고 있어야 한다
+        SharedAssetRef<WeatherCatalog> _pCatalog; ///< 판 상태가 빌려 쓴다 — 이 컴포넌트가 쥐고 있어야 한다
     };
 } // namespace sw

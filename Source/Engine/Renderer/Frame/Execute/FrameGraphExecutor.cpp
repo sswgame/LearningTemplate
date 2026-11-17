@@ -721,7 +721,7 @@ namespace sw
         // 전환 상태 버퍼가 있는 뷰만 크로스페이드한다(없으면 진행량 0 — 단계를 바로 바꾸고 버퍼를 읽지 않는다). 컷 · 처음 그리는 프레임은 상태를 비워 단계를 바로 맞춘다.
         const bool             bHasLODState = _state._gpuScene.hasLODState( cullViewIndex );
         const FrameViewTarget& lodTarget    = ( pExtraView != nullptr ) ? *pExtraView : _state._mainView;
-        const bool             bViewCut     = lodTarget._bHasHistory == SW_FALSE || lodTarget._settings._bCut == SW_TRUE;
+        const bool             bViewCut     = lodTarget._bHistoryReset == SW_TRUE; // 처음 그림 · 컷 · 건너뛴 프레임 — `FrameViewTarget::beginViewHistory` 가 컬링 전에 정했다
         const bool             bResetState  = _state._gpuScene.takeLODStateReset( cullViewIndex ) || bViewCut;
         cullParams._arrLODControl[1]        = bResetState ? 1u : 0u;
         cullParams._arrLODControl[2]        = bHasLODState ? _lodFadeStep : 0u;

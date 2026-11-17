@@ -21,7 +21,6 @@
 	<Expect watch="Boat.PitchPeak" target="Upwind" atMost="0.1"/>
 	<Expect watch="Boat.ForwardSpeed" target="Rowboat" near="0" tolerance="0.3"/>
 
-	<Wait frames="1"/>
 
 	<!-- 조타륜 좌석 -->
 	<Possess controller="Captain" pawn="Helmsman"/>
@@ -29,7 +28,6 @@
 	<Mount rider="Helmsman" vehicle="Rowboat"/>
 	<WaitUntil watch="Pawn.Seat" target="Helmsman" is="Rowboat" timeoutFrames="30"/>
 	<Expect watch="Pawn.Controller" target="Rowboat" is="Captain"/>
-	<Wait frames="1"/>
 
 	<!-- 직진 -->
 	<Intent pawn="Rowboat" move="0,1" frames="720"/>
@@ -39,7 +37,6 @@
 	<Expect watch="Boat.ForwardSpeed" target="Rowboat" atMost="6"/>
 	<Expect watch="Object.X" target="Rowboat" near="0" tolerance="1"/>
 	<Expect watch="Object.DistanceTo" target="Sailor" key="Rowboat" near="1.06" tolerance="0.3"/>
-	<Wait frames="1"/>
 
 	<!-- 선회(오른쪽 = +x 쪽) -->
 	<Intent pawn="Rowboat" move="0.7,0.7" frames="360"/>
@@ -48,7 +45,6 @@
 	<Expect watch="Boat.TurnRadius" target="Rowboat" atMost="45"/> <!-- 실측 37 m(2026-11-08, Debug dx12) -->
 	<Expect watch="Object.X" target="Rowboat" atLeast="2"/>
 	<Expect watch="Object.DistanceTo" target="Sailor" key="Rowboat" near="1.06" tolerance="0.3"/>
-	<Wait frames="1"/>
 
 	<!-- 순풍 · 역풍: 의도의 조종 요를 선수 쪽으로 두어 둘 다 "앞으로" 돛을 편다 -->
 	<Intent pawn="Downwind" move="0,1" yaw="1.5708" frames="900"/>

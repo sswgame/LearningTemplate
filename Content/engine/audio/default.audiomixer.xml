@@ -8,7 +8,7 @@
 	스냅샷: Underwater(물속) · PauseMenu(일시정지 메뉴) · Cave · Hall(리버브 존이 세기로 건다).
 	감쇠 프리셋은 소리(이벤트 · 클립)가 이름으로 고른다. 가림(0..1)은 최대에서 -12 dB · 900 Hz 로우패스다.
 -->
-<AudioMixerDef _maxVoiceCount="256" _maxRealVoiceCount="64" _inaudibleDb="-60">
+<AudioMixerDef _maxVoiceCount="256" _maxRealVoiceCount="64" _inaudibleDb="-60" _voiceStealFadeSeconds="0.01" _maxStealFadeVoiceCount="16">
 	<_listBus>
 		<AudioBusDef _name="master">
 			<_listEffect>

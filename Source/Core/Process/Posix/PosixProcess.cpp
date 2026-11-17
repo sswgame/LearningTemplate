@@ -14,6 +14,9 @@
     #include <cstring>
     #include <fcntl.h>
     #include <sys/syscall.h>
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #include <sys/prctl.h>
+    #endif
     #include <unistd.h>
 
 namespace sw
@@ -303,8 +306,15 @@ namespace sw
          *          여기서 로그를 찍거나 할당을 하면 그대로 멈춘다.
          */
         [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 errorFd, int32 descriptorMax, const utf8* pWorkingDirectory,
-                                            const PosixExecImage& image )
+                                            const PosixExecImage& image, pid_t endWithParentPid )
         {
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+            // 부모와 함께 끝낼 자식이다(감사 E-15) — 부모가 죽으면 커널이 SIGKILL 을 보낸다. fork 와 이 줄 사이에 부모가 이미 죽었으면 신호가 오지 않으니 스스로 끝낸다.
+            if ( endWithParentPid > 0 && ( prctl( PR_SET_PDEATHSIG, SIGKILL ) != 0 || getppid() != endWithParentPid ) )
+                _exit( 1 );
+    #else
+            (void)endWithParentPid; // 부모 사망 신호가 없다 — 놓을 때만 끝낸다(`shutdown`)
+    #endif
             close( arrPipeFd[0] );
             // 표준 에러를 표준 출력에 합친다. `ProcessOutputDelegate` 가 약속한 대로다(빌드 로그는 두 스트림이 원래 순서대로
             // 섞여야 읽을 수 있다).
@@ -347,15 +357,34 @@ namespace sw
             _pStdOutRead = nullptr;
         }
 
-        // Windows 와 마찬가지로 **분리**한다. 아직 도는 자식을 기다리지 않는다. 이미 끝나 있으면 여기서 거둬 좀비를
-        // 남기지 않고, 아직 돌고 있으면 이 프로세스가 끝난 뒤 init 이 거둔다.
-        // (`pclose` 처럼 기다리면 소멸자가 자식이 끝날 때까지 막힌다.)
+        // 자식을 **거둔 뒤** 놓는다(언리얼 FProcState 와 같다). 예전에는 도는 자식을 분리해, 그 자식이 나중에 끝나면 이 프로세스가 끝날 때까지
+        // 좀비로 남았다(에디터 · 서버는 오래 산다). 기다리지 않을 실행은 `launchDetached`(두 번 fork — init 이 거둔다)다. 파이프는 위에서 닫았다.
         const pid_t childPid = static_cast<pid_t>( _processID.load() );
-        if ( childPid > 0 )
+        if ( childPid > 0 && _bEndWithParent )
+        {
+            // 부모와 함께 끝낼 자식은 놓을 때 그룹째 끝낸다 — Windows 의 KILL_ON_JOB_CLOSE 와 같은 뜻(감사 E-15)
+            kill( -childPid, SIGKILL );
+            int32 status = 0;
+            waitpid( childPid, &status, 0 );
+        }
+        else if ( childPid > 0 )
         {
             int32 status = 0;
-            waitpid( childPid, &status, WNOHANG );
+            if ( waitpid( childPid, &status, WNOHANG ) == 0 )
+            {
+                if ( _releaseMode == ProcessReleaseMode::Terminate )
+                    (void)terminate();
+                else
+                    SW_LOG_WARNING_ID( "Process.WaitingOnRelease", "Releasing a running child (pid %#) - waiting for it to exit; call terminate() first or launch with ProcessReleaseMode::Terminate",
+                                       static_cast<int32>( childPid ) );
+                pid_t reaped = 0;
+                do
+                {
+                    reaped = waitpid( childPid, &status, 0 );
+                } while ( reaped < 0 && errno == EINTR );
+            }
         }
+        _bEndWithParent = false;
 
         _bufferedOutput.clear();
         _pNativeHandle = nullptr;
@@ -365,6 +394,7 @@ namespace sw
     bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
     {
         shutdown();
+        _releaseMode = options._releaseMode;
 
         // 자식에게 넘길 문자열은 **fork 전에** 만들어 둔다. 자식 블록(`runLaunchedChild`)에서는 할당을 하지 않는다.
         PosixExecImage image;
@@ -388,7 +418,8 @@ namespace sw
             return false;
         }
 
-        const int32 descriptorMax = getDescriptorLimit();
+        const int32 descriptorMax    = getDescriptorLimit();
+        const pid_t endWithParentPid = options._bEndWithParent ? getpid() : 0; // 자식이 fork 뒤에 부모가 바뀌었는지 견준다
 
         const pid_t childPid = fork();
         if ( childPid < 0 )
@@ -403,7 +434,7 @@ namespace sw
         if ( childPid == 0 )
         {
             close( arrErrorFd[0] );
-            runLaunchedChild( arrPipeFd, arrInputFd, arrErrorFd[1], descriptorMax, pWorkingDirectory, image );
+            runLaunchedChild( arrPipeFd, arrInputFd, arrErrorFd[1], descriptorMax, pWorkingDirectory, image, endWithParentPid );
         }
 
         // ---- 부모 ----
@@ -441,14 +472,20 @@ namespace sw
             return false;
         }
 
-        _pStdOutRead   = pStream;
-        _pNativeHandle = reinterpret_cast<void*>( static_cast<uintptr_t>( childPid ) );
+        _pStdOutRead    = pStream;
+        _bEndWithParent = options._bEndWithParent;
+        _pNativeHandle  = reinterpret_cast<void*>( static_cast<uintptr_t>( childPid ) );
         _processID.store( static_cast<int32>( childPid ) );
         return true;
     }
 
     bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
+        if ( options._bEndWithParent )
+        {
+            SW_LOG_ERROR_ID( "Process.DetachedEndWithParent", "A detached process cannot end with its parent - launch it attached" );
+            return false;
+        }
         if ( options._listEnvironment.empty() == false )
         {
             SW_LOG_ERROR_ID( "Process.DetachedEnvironment", "Detached process launch does not take environment overrides - use Process::launch" );

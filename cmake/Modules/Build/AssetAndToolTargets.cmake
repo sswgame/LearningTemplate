@@ -38,10 +38,14 @@ endif()
 # 쿠킹 로그는 고정 자리(`<빌드>/Testing/Logs/Cook.log`)에 남긴다 — 빌드 출력에 섞이면 첫 굽기만 틀린 일(팩에 빠진 셰이더 바이너리)을 나중에 볼 수 없었다.
 # `Scripts/dev/shipping_check.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `COOK_LOG_NAME`).
 set(cook_args --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${pack_output_dir}" "-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Cook.log")
-# Shipping 은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 쓰지 않는 게임 팩에 쿠킹 시간을 들이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
-# Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
+# 정적 모듈 구성(Shipping · 웹 · Android 개발)은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 링크한 게임이 하나라 다른 팩은 쓰이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
+# 동적 Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
+if(SW_STATIC_MODULES)
+	list(APPEND cook_args "--game=${SW_ACTIVE_GAME}")
+endif()
+# 배포 팩은 시나리오를 담지 않는다. 정적 개발 구성(웹 · Android)은 담는다 — 그 빌드의 자동화 실행기가 `-scenario` 로 돌린다(감사 P-9).
 if(SW_SHIPPING_BUILD)
-	list(APPEND cook_args "--game=${SW_ACTIVE_GAME}" --pack-for-shipping) # 시나리오를 담지 않는다 — 교차 빌드는 실행기가 있는 호스트 개발 App 이 굽는다
+	list(APPEND cook_args --pack-for-shipping)
 endif()
 
 if(CMAKE_CROSSCOMPILING)

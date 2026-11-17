@@ -62,3 +62,15 @@ SW_TEST_CASE( XMLDocumentTest, FloatListRules )
         SW_EXPECT_EQUAL( arrOriginal[index], arrValue[index] );
     }
 }
+
+/**
+ * @brief [XMLDocumentTest] 한 요소의 중복 속성은 읽기 실패다 — 예전에는 pugixml 이 받아 이름으로 찾을 때 첫 값만 읽히고 둘째 값이 조용히 버려졌다
+ */
+SW_TEST_CASE( XMLDocumentTest, DuplicateAttributeIsAParseError )
+{
+    sw::XMLDocument document;
+    SW_EXPECT_TRUE( document.parse( R"(<Root a="1"><Child a="2" b="3"/></Root>)" ) ); // 다른 요소의 같은 이름은 중복이 아니다
+    SW_EXPECT_LOG( "Xml.ParseError" );
+    SW_EXPECT_FALSE( document.parse( R"(<Root><Child a="1" a="2"/></Root>)", "dup.xml" ) );
+    SW_EXPECT_TRUE( document.getLastError().find( "repeats the attribute 'a'" ) != sw::string::npos );
+}

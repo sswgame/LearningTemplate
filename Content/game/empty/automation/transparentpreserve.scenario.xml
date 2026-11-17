@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="426cb550750e4fa3a97f6878fe32f8b7"?>
+<!--
+  압축을 포기한 투명 배치(Preserve, RN-1) — 같은 유리 상자 600 개가 투명 배치 하나(GPU 정렬 한계 512 초과)로 묶이고, 그중 300 개는 카메라 뒤(절두체 밖)다.
+  컬링이 밖의 인스턴스 칸을 비워 두면 그 칸의 쓰레기 번호로 엉뚱한 상자를 그린다. 앞 300 개만 바르게 보여야 한다.
+  실행: ctest -R Scenario.game.empty.transparentpreserve
+-->
+<Scenario name="game.empty.transparentpreserve" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/transparentpreserve.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_environmentAnimate" value="0"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="transparentpreserve.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="transparentpreserve.ppm" golden="transparentpreserve"/>
+	<Pass/>
+</Scenario>

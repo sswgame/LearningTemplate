@@ -22,6 +22,7 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -40,11 +41,20 @@ namespace sw::editor
                     inoutListMissing.push_back( bone );
             }
 
-            /** @brief 프리팹 `_listComponent` 에 컴포넌트 원소 하나(`_componentName` · `_bActive` 까지)를 더합니다. */
+            /**
+             * @brief 프리팹 `_listComponent` 에 컴포넌트 원소 하나(`_componentName` · 고정 지역 id `_localID` · `_bActive` 까지)를 더합니다.
+             * @details 지역 id 는 목록 순번 + 1 이다 — 다시 임포트해도 같은 바이트이고, 부착 키(`ComponentStableKey::formatKey`)가 이 값을 가리킨다.
+             */
             static XMLNode appendComponent( const XMLNode& listComponent, const utf8* pTypeName )
             {
+                uint64 localID = 1;
+                for ( XMLNode child = listComponent.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    ++localID;
+                }
                 const XMLNode component = listComponent.appendChild( pTypeName );
                 component.appendAttribute( "_componentName", pTypeName );
+                component.appendAttribute( "_localID", string_view{ to_string( localID ) } );
                 component.appendAttribute( "_bActive", "true" );
                 return component;
             }
@@ -240,7 +250,7 @@ namespace sw::editor
 
         // 주 컴포넌트(스킨드는 스켈레탈 메시, 아니면 메시)가 첫 구간을 그리고, 나머지 구간은 같은 메시 객체를 빌려 그린다(MeshSectionComponent). 구간 컴포넌트는 주 컴포넌트에 붙어 따라 움직인다.
         const utf8*               pMainType = bSkinned ? "SkeletalMeshComponent" : "MeshComponent";
-        const string              mainRef   = string( pMainType ) + "#0";
+        const string              mainRef   = ComponentStableKey::formatKey( 1 ); // 주 컴포넌트는 목록의 첫 원소다(`appendComponent` 의 지역 id)
         const ModelImportSection& first     = result._listSection.front();
         const XMLNode             mainMesh  = Internal::appendComponent( listComponent, pMainType );
         mainMesh.appendAttribute( "_meshID", string_view{ meshID } );

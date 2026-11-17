@@ -2,6 +2,7 @@
     "_name": "chat_and_match",
     "_seed": 1,
     "_region": "kr",
+    "_pacing": "closed",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "directory_status" },

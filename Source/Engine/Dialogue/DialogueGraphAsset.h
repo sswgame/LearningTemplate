@@ -175,7 +175,7 @@ namespace sw
      * @class DialogueGraphAsset
      * @brief 대화 그래프 XML 입니다. 노드 text 는 로컬라이즈 키로 해석합니다.
      * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLDocument` — 모르는 속성 · 자식 · 읽지 못한 값 · 모르는 노드 종류 · 빠진 필수 칸은 오류).
-     *          키는 PROPERTY 이름(`_listNode`, `_listLink`)이 기준이다. 읽은 뒤 id 가 1 이상이고 겹치지 않는지, 링크의 핀이 있는지만 따로 본다.
+     *          키는 PROPERTY 이름(`_listNode`, `_listLink`)이 기준이다. 읽은 뒤 id · 링크 끝점과 핀 · 기다림 없는 고리를 따로 본다(`validateFile`).
      */
     REFLECT()
     class SW_API DialogueGraphAsset
@@ -281,7 +281,7 @@ namespace sw
     private:
         /** @brief 읽은 본문(@p xml)을 이 그래프에 채우고 의미를 봅니다. 틀리면 그래프를 비우고 false 입니다. */
         [[nodiscard]] bool readText( string_view xml, string_view sourceLabel, const ResourceContext& context );
-        /** @brief 노드 · 링크 · 화자 id 가 1 이상이고 겹치지 않는지, 링크의 두 핀이 있는지, 노드의 화자가 목록에 있는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
+        /** @brief 노드 · 링크 · 화자 id 가 1 이상이고 겹치지 않는지, 링크 끝이 있는 노드의 있는 핀인지(출력 핀마다 링크 하나), 기다림 없는 고리가 없는지, 노드의 화자가 목록에 있는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
     };
 } // namespace sw

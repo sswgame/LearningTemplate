@@ -8,6 +8,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 namespace sw
 {
     class IInputFeedbackDevice;
@@ -36,9 +38,9 @@ namespace sw
         bool isPlaying() const { return _pEffect != nullptr; }
 
     private:
-        shared_ptr<const HapticEffectDef> _pEffect;
-        float32                           _time;
-        float32                           _scale;
-        float2                            _sentValue; ///< 마지막으로 출력에 낸 값(같으면 다시 내지 않는다)
+        SharedAssetRef<HapticEffectDef> _pEffect;
+        float32                         _time;
+        float32                         _scale;
+        float2                          _sentValue; ///< 마지막으로 출력에 낸 값(같으면 다시 내지 않는다)
     };
 } // namespace sw

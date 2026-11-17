@@ -260,11 +260,12 @@ namespace sw::editor
 
     bool EditorPreviewViewport::requestImageFile( string_view path )
     {
-        const uint64 renderTarget = getRenderTarget();
-        const bool   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
-        if ( path.empty() || bNotDrawn )
+        const uint64                 renderTarget = getRenderTarget();
+        const bool                   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
+        const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
+        if ( absolutePath.has_value() == false || bNotDrawn )
             return false;
-        RenderThread::requestScreenshot( path, renderTarget, RHIFormat::R8G8B8A8_UNORM );
+        RenderThread::requestScreenshot( *absolutePath, renderTarget, RHIFormat::R8G8B8A8_UNORM );
         return true;
     }
 
