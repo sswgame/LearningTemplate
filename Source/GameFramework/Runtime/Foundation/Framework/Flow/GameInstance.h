@@ -19,6 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGame.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
@@ -164,9 +165,13 @@ namespace sw
         /**
          * @brief 콘텐츠 구성(켠 모드 등)을 정하는 파생 훅입니다. 네트워크 세션을 열기 전 · 첫 씬과 리소스를 읽기 전에 한 번 부릅니다. 실패하면 게임을 띄우지 않는다.
          * @details 구성을 정했으면 게임 범위에 `IContentConfiguration` 으로 건다 — 기동이 그 해시를 넷 와이어 버전에 섞고(구성이 다른 상대는 핸드셰이크에서 갈린다)
-         *          세이브 봉투 머리에 적는다(`GameStateSnapshot`). 걸지 않으면 구성 없음이다.
+         *          세이브 봉투 머리에 적는다(`GameStateSnapshot`). 걸지 않으면 구성 없음이다. 구성을 바꾸는 입구는 @p token 을 받는다 — 이 훅 밖에서는 부를 수 없다.
          */
-        [[nodiscard]] virtual bool onPrepareContent() { return true; }
+        [[nodiscard]] virtual bool onPrepareContent( const ContentPreparationToken& token )
+        {
+            (void)token;
+            return true;
+        }
         /** @brief 팩 설정을 읽은 뒤 부르는 파생 초기화 훅입니다. */
         virtual bool onInitialize() { return true; }
         /** @brief 파생 종료 훅입니다. */

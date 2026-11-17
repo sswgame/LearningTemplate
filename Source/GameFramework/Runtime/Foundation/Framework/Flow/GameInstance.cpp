@@ -268,7 +268,7 @@ namespace sw
         // 서버 · 클라이언트로 띄웠는데 열지 못하면(틀린 인자 · 포트 사용 중) 혼자 하는 게임으로 서지 않는다.
         // 티켓 게임 포트가 쓸 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — 세션을 열기 전에 넣는다.
         // 콘텐츠 구성(켠 모드)은 세션을 열기 전에 정한다 — 그 해시가 와이어 버전에 섞여 구성이 다른 상대가 핸드셰이크에서 갈린다.
-        if ( onPrepareContent() == false )
+        if ( onPrepareContent( ContentPreparationToken{} ) == false )
         {
             SW_LOG_ERROR_ID( "GameInstance.ContentNotPrepared", "Game instance cannot start - the content configuration (mods) could not be prepared (see the error above)" );
             return false;

@@ -215,7 +215,7 @@ namespace sw
         return true;
     }
 
-    bool ModSession::applyForGame( string_view packRoot )
+    bool ModSession::applyForGame( const ContentPreparationToken& token, string_view packRoot )
     {
         ModSessionRequest request;
         request._listEnabledID = ModSessionInternal::splitList( gv_modList.get() );
@@ -232,11 +232,12 @@ namespace sw
             return false;
         request._installFolder = getInstallFolder();
         request._buildFolder   = FileUtil::joinPath( ProcessRoots::get()._saved.str(), ModSessionInternal::kInstallFolderName );
-        return apply( request, settings );
+        return apply( token, request, settings );
     }
 
-    bool ModSession::apply( const ModSessionRequest& request, const ModSupportSettings& settings )
+    bool ModSession::apply( const ContentPreparationToken& token, const ModSessionRequest& request, const ModSupportSettings& settings )
     {
+        (void)token; // 증표는 부를 수 있는 자리만 정한다
         if ( _bApplied != 0 )
         {
             SW_LOG_ERROR_ID( "ModSession.AppliedTwice", "The mod set is fixed when the session starts - apply is called once per session" );

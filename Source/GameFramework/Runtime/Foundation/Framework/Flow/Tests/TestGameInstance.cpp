@@ -43,7 +43,11 @@ namespace
         {
         }
 
-        uint32                    getInitializeCount() const { return _initializeCount; }
+        uint32 getInitializeCount() const { return _initializeCount; }
+        /** @brief 준비 훅이 불린 차례(1 부터, 0 은 안 불림)와 그때 선언한 데이터(gamesettings 의 서비스)가 이미 걸려 있었는지입니다. */
+        uint32                    getPrepareOrder() const { return _prepareOrder; }
+        uint32                    getInitializeOrder() const { return _initializeOrder; }
+        bool                      wasContentConfigVisibleAtInitialize() const { return _pContentAtInitialize == &_contentConfig; }
         uint32                    getShutdownCount() const { return _shutdownCount; }
         const sw::SubsystemScope& getOwnScope() { return getGameScope(); }
 
@@ -54,9 +58,17 @@ namespace
                 return false;
             return _packConfig._data.loadFromXMLText( "<GameSettings><startMap>game/empty/maps/editortest.scene.xml</startMap><defaultLanguage>ko_kr</defaultLanguage></GameSettings>", "LifecycleTestGame" );
         }
+        bool onPrepareContent( const sw::ContentPreparationToken& token ) override
+        {
+            (void)token; // 구성을 바꾸는 입구(`ModSession::applyForGame`)는 이 증표 없이는 부를 수 없다
+            _prepareOrder = ++_hookCounter;
+            return getGameScope().bind<sw::IContentConfiguration>( &_contentConfig );
+        }
         bool onInitialize() override
         {
             ++_initializeCount;
+            _initializeOrder      = ++_hookCounter;
+            _pContentAtInitialize = sw::game::findSubsystem<sw::IContentConfiguration>();
             switch ( _step )
             {
                 case LifecycleTestStep::Succeed:
@@ -73,11 +85,25 @@ namespace
         void onShutdown() override { ++_shutdownCount; }
 
     private:
-        LifecycleTestService _service;
-        LifecycleTestService _otherService;
-        uint32               _initializeCount;
-        uint32               _shutdownCount;
-        LifecycleTestStep    _step;
+        /** @brief 구성 하나(해시 0x5eed)입니다. 준비 훅이 게임 범위에 건다. */
+        struct TestContentConfiguration final : public sw::IContentConfiguration
+        {
+            uint64     getContentConfigHash() const override { return kTestContentHash; }
+            sw::string makeContentConfigText() const override { return sw::string( "test" ); }
+            bool       checkSaveCompatible( sw::string_view savedText ) const override { return savedText == "test"; }
+        };
+        static constexpr uint64 kTestContentHash = 0x5eedu;
+
+        TestContentConfiguration         _contentConfig{};
+        uint32                           _hookCounter{ 0 };
+        uint32                           _prepareOrder{ 0 };
+        uint32                           _initializeOrder{ 0 };
+        const sw::IContentConfiguration* _pContentAtInitialize{ nullptr }; ///< 파생 초기화에서 찾은 구성 창구
+        LifecycleTestService             _service;
+        LifecycleTestService             _otherService;
+        uint32                           _initializeCount;
+        uint32                           _shutdownCount;
+        LifecycleTestStep                _step;
     };
 
     /** @brief 지금 게임 범위와 넷 세션의 보안 제공자입니다 — 인스턴스가 서고 진 뒤에 같아야 하는 프로세스 상태다. */
@@ -201,4 +227,19 @@ SW_TEST_CASE( GameInstanceTest, InstanceChainsOntoTheCurrentScopeAndRestoresIt )
     SW_EXPECT_FALSE( next.initialize( nullptr ) );
     SW_EXPECT_TRUE( game::findGameScope() == &testScope );
     SW_EXPECT_TRUE( game::findSubsystem<LifecycleTestService>() == &outerService );
+}
+
+/**
+ * @brief [GameInstanceTest] 콘텐츠 구성(모드 · 확장 팩)은 준비 훅에서만 정해지고, 그 훅은 파생 초기화(선언한 데이터 · 카탈로그 · 첫 씬)보다 먼저 한 번 불린다 —
+ *        준비 훅이 건 구성 창구가 파생 초기화에서 보인다(감사 K-9: 확장 팩을 onInitialize 에서 올려 와이어 해시 0 · 세이브 머리에 구성이 없던 길)
+ */
+SW_TEST_CASE( GameInstanceTest, ContentIsPreparedBeforeDeclaredData )
+{
+    MemoryLocalDatabase database;
+    LifecycleTestGame   game{ database, LifecycleTestStep::Succeed };
+    SW_REQUIRE_TRUE( game.initialize( nullptr ) );
+    SW_EXPECT_EQUAL( 1u, game.getPrepareOrder() );
+    SW_EXPECT_EQUAL( 2u, game.getInitializeOrder() );
+    SW_EXPECT_TRUE( game.wasContentConfigVisibleAtInitialize() );
+    game.shutdown();
 }

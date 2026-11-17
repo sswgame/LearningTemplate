@@ -11,6 +11,28 @@
 
 namespace sw
 {
+    class GameInstance;
+    struct ContentPreparationTestAccess;
+
+    /**
+     * @class ContentPreparationToken
+     * @brief 콘텐츠 구성을 정하는 준비 단계(`GameInstance::onPrepareContent`)에 있다는 증표입니다. 게임 인스턴스만 만든다 — 구성을 바꾸는 입구(`ModSession::applyForGame`)가 이것을 받아
+     *        준비 훅 밖(예: `onInitialize`)에서 부르는 코드는 컴파일되지 않는다(감사 K-9 — 넷 세션 · 첫 씬 · 선언한 데이터를 읽은 뒤에 구성이 바뀌던 길).
+     * @details 복사 · 이동이 막혀 훅이 끝난 뒤로 들고 나가지 못한다. `ContentPreparationTestAccess` 는 키트 테스트만 정의한다(엔진 · 게임 코드에는 정의가 없다).
+     */
+    class ContentPreparationToken
+    {
+        friend class GameInstance;
+        friend struct ContentPreparationTestAccess;
+
+    public:
+        ContentPreparationToken( const ContentPreparationToken& )            = delete;
+        ContentPreparationToken& operator=( const ContentPreparationToken& ) = delete;
+
+    private:
+        ContentPreparationToken() = default;
+    };
+
     /** @class IContentConfiguration @brief 콘텐츠 구성 하나입니다. 게임 스레드에서 읽습니다. */
     class IContentConfiguration
     {

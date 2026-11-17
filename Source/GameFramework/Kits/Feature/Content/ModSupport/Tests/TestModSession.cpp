@@ -22,6 +22,15 @@
 // 모드 세션 — 엔진 팩 VFS 에 올리고 · 덮어쓰기가 낱개 파일 위에 서고 · 세션이 끝나면 내려간다. 바깥 폴더의 잘못된 모드는 하나도 올리지 않고 거절한다.
 // 기본 리소스는 케이스 도메인(`testproject/…`, 붙인 디스크 도메인 — 낱개 파일을 먼저 읽는 자리)이다.
 
+namespace sw
+{
+    /** @brief 준비 단계 증표를 테스트가 직접 만듭니다 — 게임 인스턴스 없이 세션 하나를 올려 본다(엔진 · 게임 코드에는 정의가 없다). */
+    struct ContentPreparationTestAccess
+    {
+        static ContentPreparationToken makeToken() { return ContentPreparationToken{}; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -93,14 +102,14 @@ SW_TEST_CASE( ModSessionTest, SourceModOverridesAndReleases )
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( ContentPreparationTestAccess::makeToken(), request, Internal::makeSettings() ) );
         SW_EXPECT_EQUAL( string( "modded" ), Internal::read( Internal::kBasePath ) ); // 패치 팩이 붙인 디스크 도메인의 낱개 파일 위에 선다
         SW_EXPECT_EQUAL( string( "lamp" ), Internal::read( "mods/lantern/data/lamp.txt" ) );
         SW_REQUIRE_EQUAL( size_t{ 1 }, session.getDigest()._listEntry.size() );
         SW_EXPECT_TRUE( session.getDigest()._configHash != 0 );
 
         SW_EXPECT_LOG( "ModSession.AppliedTwice" ); // 구성은 세션 시작 때 한 번 고정한다
-        SW_EXPECT_FALSE( session.apply( request, Internal::makeSettings() ) );
+        SW_EXPECT_FALSE( session.apply( ContentPreparationTestAccess::makeToken(), request, Internal::makeSettings() ) );
     }
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
     SW_EXPECT_EQUAL( string( "base" ), Internal::read( Internal::kBasePath ) );
@@ -123,7 +132,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
     uint64 sourceHash = 0;
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( ContentPreparationTestAccess::makeToken(), request, Internal::makeSettings() ) );
         sourceHash = session.getDigest()._configHash;
     }
     SW_REQUIRE_TRUE( ModPackBuilder::buildFromFolder( source, FileUtil::joinPath( modDir, ModPackBuilder::kPackFileName ), Internal::makeSettings() ) );
@@ -132,7 +141,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
     ModAllowList allowList;
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( ContentPreparationTestAccess::makeToken(), request, Internal::makeSettings() ) );
         SW_EXPECT_EQUAL( sourceHash, session.getDigest()._configHash );
         SW_EXPECT_EQUAL( string( "modded" ), Internal::read( Internal::kBasePath ) );
         allowList._listEntry = session.getDigest()._listEntry; // 운영자가 이 내용을 허락한다
@@ -144,7 +153,7 @@ SW_TEST_CASE( ModSessionTest, PackedModMatchesItsSourceHash )
     serverRequest._pAllowList       = &allowList;
     ModSession server( assets );
     SW_EXPECT_LOG( "ModAllowList.Mismatch" );
-    SW_EXPECT_FALSE( server.apply( serverRequest, Internal::makeSettings() ) );
+    SW_EXPECT_FALSE( server.apply( ContentPreparationTestAccess::makeToken(), serverRequest, Internal::makeSettings() ) );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
     SW_EXPECT_EQUAL( string( "base" ), Internal::read( Internal::kBasePath ) );
 }
@@ -160,7 +169,7 @@ SW_TEST_CASE( ModSessionTest, RejectsUntrustedFolders )
     const auto    tryApply = [&assets, &root]( vector<string> listID )
     {
         ModSession session( assets );
-        const bool bApplied = session.apply( TestModSessionInternal::makeRequest( root, std::move( listID ) ), TestModSessionInternal::makeSettings() );
+        const bool bApplied = session.apply( ContentPreparationTestAccess::makeToken(), TestModSessionInternal::makeRequest( root, std::move( listID ) ), TestModSessionInternal::makeSettings() );
         return bApplied || assets.getPackManager().hasPatchPacks(); // 실패한 적용은 아무것도 남기지 않는다
     };
     const string installFolder = Internal::makeRequest( root, {} )._installFolder;
@@ -249,7 +258,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( ContentPreparationTestAccess::makeToken(), request, Internal::makeSettings() ) );
         vector<string> listExpected = listLayerBase;
         listExpected.push_back( "mods/tide/layer" );
         SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listExpected );
@@ -266,7 +275,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
     ModSession sneaky( assets );
     SW_EXPECT_LOG( "ModSession.UndeclaredLayer" );
-    SW_EXPECT_FALSE( sneaky.apply( request, Internal::makeSettings() ) );
+    SW_EXPECT_FALSE( sneaky.apply( ContentPreparationTestAccess::makeToken(), request, Internal::makeSettings() ) );
     SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listLayerBase );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
@@ -276,7 +285,7 @@ SW_TEST_CASE( ModSessionTest, NoModsChangesNothing )
 {
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     ModSession    session( assets );
-    SW_EXPECT_TRUE( session.apply( TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ), {} ), TestModSessionInternal::makeSettings() ) );
+    SW_EXPECT_TRUE( session.apply( ContentPreparationTestAccess::makeToken(), TestModSessionInternal::makeRequest( test::makeScratchPath( "ModRoot" ), {} ), TestModSessionInternal::makeSettings() ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, session.getDigest()._configHash );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
@@ -299,7 +308,7 @@ SW_TEST_CASE( ModSessionTest, ModAssetsResolveByGUIDWhileApplied )
     AssetManager& assets = engine::getSubsystem<AssetManager>();
     {
         ModSession session( assets );
-        SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
+        SW_REQUIRE_TRUE( session.apply( ContentPreparationTestAccess::makeToken(), request, Internal::makeSettings() ) );
         SW_EXPECT_EQUAL( string( "mods/lantern/data/lamp.xml" ), AssetRegistry::resolve( guid ).value_or( string{} ) );
     }
     SW_EXPECT_FALSE( AssetRegistry::resolve( guid ).has_value() );
