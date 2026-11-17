@@ -1,8 +1,9 @@
-// LiveReloadLogicTest — 핫 리로드의 파일 없이 도는 규칙: 모듈 의존 그래프(의존하는 쪽 모으기 · 순서 · 순환), 섀도 복사본 이름 읽기(nogpu).
+// LiveReloadLogicTest — 핫 리로드의 파일 없이 도는 규칙: 모듈 의존 그래프(의존하는 쪽 모으기 · 순서 · 순환), 섀도 복사본 자리 · 치우기(nogpu).
 // App 이 ModuleManager 를 통째로 링크해 이 등록이 남는다(`Source/App/CMakeLists.txt` 의 `sw_link_whole_archive`) — Server 는 이 스위트를 돌리지 않는다.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -112,24 +113,21 @@ SW_TEST_CASE( LiveReloadLogicTest, CycleFailsSort )
     SW_EXPECT_TRUE( listOrdered.empty() );
 }
 
-/** @brief [LiveReloadLogicTest] 섀도 복사본 이름: 만든 이름을 경로째로 읽고 프로세스를 꺼낸다. 옛 형식은 0 이고, 형식이 틀리면 복사본이 아니다 */
+/** @brief [LiveReloadLogicTest] 섀도 복사본 자리: 이름에 프로세스 꼬리가 없고, 폴더는 실행 뿌리 아래다. 남은 복사본(파일 · Windows 의 복사본 폴더)을 치운다 */
 SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
 {
-    int32        processID = -1;
-    const string name      = ShadowCopyName::make( "SWGame", 4120, 3, 13435508261ull );
-    SW_EXPECT_EQUAL( string( "SWGame_temp_p4120_3_13435508261" ), name );
-    SW_EXPECT_TRUE( ShadowCopyName::parse( name, processID ) );
-    SW_EXPECT_EQUAL( 4120, processID );
-    SW_EXPECT_TRUE( ShadowCopyName::parse( "Bin/Modules/" + name + ".dll", processID ) );
-    SW_EXPECT_EQUAL( 4120, processID );
+    SW_EXPECT_EQUAL( string( "SWGame_3_13435508261" ), ShadowCopyName::make( "SWGame", 3, 13435508261ull ) );
+    SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ShadowCopyName::getDirectory() ) );
 
-    SW_EXPECT_TRUE( ShadowCopyName::parse( "SWGame_temp_3_13435508261", processID ) ); // 프로세스 번호를 넣기 전 형식
-    SW_EXPECT_EQUAL( 0, processID );
-
-    for ( const utf8* pNot : { "SWGame.dll", "SWGame_temp_", "SWGame_temp_x1", "SWGame_temp_p", "SWGame_temp_p12", "SWGame_temp_p_3", "SWGame_temp_pAB_3", "SWGame_temp_p0_3" } )
-    {
-        SW_EXPECT_FALSE( ShadowCopyName::parse( pNot, processID ) );
-    }
+    const string directory = test::makeScratchPath( "ShadowCopies" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( directory, "SWGame_1_7" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_1_7/SWGame.g1.dll" ), "copy" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( directory, "SWGame_2_7.so" ), "copy" ) );
+    SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory ) );
+    vector<string> listLeft;
+    SW_EXPECT_TRUE( FileUtil::collectFiles( directory, "", listLeft, true ) );
+    SW_EXPECT_TRUE( listLeft.empty() );
+    SW_EXPECT_EQUAL( 0u, ShadowCopyName::removeCopies( FileUtil::joinPath( directory, "Missing" ) ) );
 }
 
 namespace

@@ -6,7 +6,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
-#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
@@ -22,7 +21,7 @@ namespace sw
         {
             static void tryDeleteFile( string_view path )
             {
-                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 ShadowCopyName::removeStaleCopies 가 지운다.
+                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 종료의 ShadowCopyName::removeCopies, 그다음은 실행 뿌리째 주인 정리가 거둔다.
                 (void)FileUtil::tryRemoveFile( path );
             }
 
@@ -164,8 +163,8 @@ namespace sw
     bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath )
     {
         ++inoutSerials._reloadCount;
-        const string tempName = ShadowCopyName::make( params._moduleName, Process::getCurrentProcessID(), inoutSerials._reloadCount, params._sourceMtime );
-        const string execDir  = FileUtil::getDirectoryPart( params._originalModulePath );
+        const string tempName  = ShadowCopyName::make( params._moduleName, inoutSerials._reloadCount, params._sourceMtime );
+        const string shadowDir = ShadowCopyName::getDirectory();
 
         // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
         vector<uint8> bytes;
@@ -197,13 +196,13 @@ namespace sw
         }
 
 #if defined( SW_PLATFORM_WINDOWS )
-        // 로더는 import 를 파일 이름으로 맞춘다 — 복사본 파일 이름이 곧 세대 이름이다. 다른 프로세스의 같은 세대 이름과 겹치지 않게 복사본마다 제 폴더에 둔다.
-        const string shadowDirectory = FileUtil::joinPath( execDir, tempName );
+        // 로더는 import 를 파일 이름으로 맞춘다 — 복사본 파일 이름이 곧 세대 이름이다. 같은 모듈의 앞 세대와 겹치지 않게 복사본마다 제 폴더에 둔다.
+        const string shadowDirectory = FileUtil::joinPath( shadowDir, tempName );
         const string shadowPath      = FileUtil::joinPath( shadowDirectory, inoutLibraryName._current );
         const bool   bWritten        = FileUtil::ensureDirectoryExists( shadowDirectory ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
 #else
-        const string shadowPath = FileUtil::joinPath( execDir, ModuleLibraryUtil::formatSharedLibraryName( tempName ) );
-        const bool   bWritten   = FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
+        const string shadowPath = FileUtil::joinPath( shadowDir, ModuleLibraryUtil::formatSharedLibraryName( tempName ) );
+        const bool   bWritten   = FileUtil::ensureDirectoryExists( shadowDir ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
 #endif
         if ( bWritten == false )
         {
@@ -225,12 +224,12 @@ namespace sw
         ModuleShadowCopyInternal::tryDeleteFile( shadowPath );
         ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath ) );
 #if defined( SW_PLATFORM_WINDOWS )
-        // Windows 복사본은 제 폴더(`<모듈>_temp_p<pid>_…/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다.
+        // Windows 복사본은 제 폴더(`<모듈>_<번호>_<시각>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
         string_view directoryPath;
         FileUtil::getDirectoryPart( shadowPath, directoryPath );
-        int32 ownerProcessID{ 0 };
-        if ( ShadowCopyName::parse( directoryPath, ownerProcessID ) )
-            (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( directoryPath ) ); // 아직 매핑된 것은 다음 정리가 지운다
+        vector<string> listLeftFile;
+        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory(), directoryPath ) && FileUtil::collectFiles( directoryPath, "", listLeftFile, false ) && listLeftFile.empty() )
+            (void)FileUtil::removeDirectory( directoryPath );
 #endif
     }
 } // namespace sw

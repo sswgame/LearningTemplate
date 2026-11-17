@@ -67,8 +67,8 @@ namespace sw
     /**
      * @struct ModuleShadowCopy
      * @brief 섀도 복사본 파일을 만들고 지웁니다.
-     * @details 원본을 한 번 읽어 엔진 ABI 스탬프와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 원본 옆에 씁니다.
-     *          Windows 는 복사본마다 제 폴더(`<모듈>_temp_p<pid>_…/<세대 이름>.dll`)를 쓰고, 리눅스는 파일 하나(`<모듈>_temp_p<pid>_….so`)입니다.
+     * @details 원본을 한 번 읽어 엔진 ABI 스탬프와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 이 프로세스의 섀도 폴더(`ShadowCopyName::getDirectory`)에 씁니다.
+     *          Windows 는 복사본마다 제 폴더(`<모듈>_<번호>_<시각>/<세대 이름>.dll`)를 쓰고, 리눅스는 파일 하나(`<모듈>_<번호>_<시각>.so`)입니다.
      *          복사본 이름의 일련번호와 세대 번호는 프로세스 하나에 하나씩 오릅니다.
      */
     struct ModuleShadowCopy
@@ -96,7 +96,7 @@ namespace sw
 
         /**
          * @brief 섀도 복사본과 그 디버그 심볼을 지웁니다(Windows 는 비었으면 복사본 폴더까지). 경로가 비면 아무것도 하지 않습니다.
-         * @details 아직 매핑된 복사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 `ShadowCopyName::removeStaleCopies` 가 지운다.
+         * @details 아직 매핑된 복사본은 지금 지울 수 없다. 남은 것은 종료의 `ShadowCopyName::removeCopies`, 그래도 남으면 실행 뿌리째 주인 정리가 거둔다.
          */
         static void removeArtifacts( string_view shadowPath );
     };

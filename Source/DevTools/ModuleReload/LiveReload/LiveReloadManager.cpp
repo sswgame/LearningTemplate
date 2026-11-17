@@ -111,8 +111,8 @@ namespace sw
         , _bBuildStampPending{ SW_FALSE }
         , _reserved{ 0 }
     {
-        // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
-        (void)ShadowCopyName::removeStaleCopies( ModuleLibraryUtil::getModuleDirectory() );
+        // 지운 수일 뿐이다. 실행 뿌리를 물려받은 앞 프로세스가 같은 pid 로 남긴 사본이 있으면 여기서 지운다.
+        (void)ShadowCopyName::removeCopies( ShadowCopyName::getDirectory() );
     }
 
     LiveReloadManager::~LiveReloadManager()
@@ -133,8 +133,8 @@ namespace sw
         _onBeforeCommitBatch.removeAll();
         _reloadHolds.removeAll();
 
-        // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
-        (void)ShadowCopyName::removeStaleCopies( ModuleLibraryUtil::getModuleDirectory() );
+        // 지운 수일 뿐이다. 아직 매핑된 사본은 남고, 실행 뿌리째 주인 정리(`SavedRetention`)가 거둔다.
+        (void)ShadowCopyName::removeCopies( ShadowCopyName::getDirectory() );
 
         if ( _fileWatcher != nullptr )
         {
