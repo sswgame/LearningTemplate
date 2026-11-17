@@ -96,7 +96,7 @@ namespace sw
      * @class ArenaProjectileQuery
      * @brief 아레나의 탄이 묻는 세계입니다. 맞는 것은 이번 스냅샷의 적대 유닛(선분에서 유닛 반지름 + 탄 반지름 안, 선분 앞쪽이 먼저)이고, 판 밖은 표면입니다(튕기는 탄은 판 가장자리에서 튕긴다).
      * @details 편은 쏜 쪽이 플레이어 편인지로 가른다(플레이어 편 탄은 플레이어가 아닌 유닛을, 적 탄은 플레이어를 맞힌다). 쓰러진 유닛은 지나간다. 유도 대상은 두지 않는다.
-     *          `_other` · `_lastHit` 는 이번 스냅샷의 유닛 번호다. shortcut: 관통 탄이 다음 프레임에 같은 유닛을 거르는 데 쓰는 번호는 유닛이 빠지면 밀린다 — 관통 탄을 쓰게 되면 유닛 핸들로 바꾼다.
+     *          `_other` · `_arrHitTarget` 은 이번 스냅샷의 유닛 번호다. shortcut: 관통 탄이 다음 프레임에 같은 유닛을 거르는 데 쓰는 번호는 유닛이 빠지면 밀린다 — 관통 탄을 쓰게 되면 유닛 핸들로 바꾼다.
      */
     class ArenaProjectileQuery : public IProjectileWorld
     {
@@ -124,7 +124,7 @@ namespace sw
             {
                 const ArenaUnitView& view      = pView[viewIndex];
                 const bool           bSameTeam = ( view._kind == ArenaUnitKind::Player ) == bFromPlayer;
-                if ( bSameTeam || view._bAlive == SW_FALSE || static_cast<int32>( viewIndex ) == projectile._lastHit )
+                if ( bSameTeam || view._bAlive == SW_FALSE || projectile.hasHit( static_cast<int32>( viewIndex ) ) )
                     continue;
                 const float32 ratio = lengthSquared > 0.0f ? MathUtil::clamp( ( view._position - from ).dot( segment ) / lengthSquared, 0.0f, 1.0f ) : 0.0f;
                 const float3  point = from + segment * ratio;
