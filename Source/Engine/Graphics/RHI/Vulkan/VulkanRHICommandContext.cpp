@@ -754,10 +754,12 @@ namespace sw
         namespace bindless = shaderslot::bindless;
 
         // 텍스처 배열 세트(set 1)는 커맨드버퍼가 사는 동안 안 바뀐다. 두 바인드 포인트에 한 번씩 건다.
-        if ( _pState->_bTextureSetBound == SW_FALSE && _pDevice->_textureSet != VK_NULL_HANDLE )
+        // 이번 링 슬롯의 세트다(R-6 — 산 번호 다시 쓰기는 슬롯의 차례에만 그 세트에 쓴다).
+        const VkDescriptorSet textureSet = _pDevice->getTextureSet( _pDevice->getFrameSlot() );
+        if ( _pState->_bTextureSetBound == SW_FALSE && textureSet != VK_NULL_HANDLE )
         {
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &_pDevice->_textureSet, 0, nullptr );
-            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &_pDevice->_textureSet, 0, nullptr );
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &textureSet, 0, nullptr );
+            vkCmdBindDescriptorSets( cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _pDevice->_pipelineLayout, bindless::kVkTextureSet, 1, &textureSet, 0, nullptr );
             _pState->_bTextureSetBound = SW_TRUE;
         }
 

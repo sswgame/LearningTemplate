@@ -10,6 +10,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
@@ -263,7 +264,7 @@ namespace sw
         {
             RHICapabilities caps        = RHIAvailability::query( RHIBackend::Vulkan );
             caps._bMultiDrawIndirect    = _bMultiDrawIndirect;
-            caps._bNativeBindless       = _textureSet != nullptr ? 1u : 0u;
+            caps._bNativeBindless       = hasTextureSet() ? 1u : 0u;
             caps._bWireframeFill        = _bFillModeNonSolid;
             caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
             caps._bGeometryStage        = _bGeometryShader != 0 ? SW_TRUE : SW_FALSE;
@@ -285,7 +286,7 @@ namespace sw
         uint32 depthAspectMask() const;
 
         /** @brief 텍스처 배열 세트(set 1, g_SwBindlessTex2D[])가 준비됐는지 여부입니다. */
-        bool supportsNativeBindlessSampling() const override { return _textureSet != nullptr; }
+        bool supportsNativeBindlessSampling() const override { return hasTextureSet(); }
 
         /** @brief VS 가 슬롯 세트의 t4(g_SwInstances)로 GPUScene 인스턴스 버퍼를 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }
@@ -704,6 +705,16 @@ namespace sw
         bool createDescriptorResources();
         /** @brief 텍스처 배열(set 1 binding 0)의 원소 하나를 갱신합니다. */
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
+        /** @brief 링 슬롯 @p slot 의 텍스처 세트 원소 @p index 하나에 씁니다(산 번호 다시 쓰기 — 링이 그 슬롯에 들어온 직후에만, `flushBindlessRingSlot`). */
+        void writeBindlessTextureSlotAt( uint32 slot, RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
+        /** @brief 텍스처 @p texture 를 샘플할 뷰와 그 시점 레이아웃을 줍니다(깊이는 DEPTH 단일 aspect 뷰와 DEPTH_STENCIL_READ_ONLY). 없으면 false 입니다. */
+        [[nodiscard]] bool findBindlessSampleView( RHITextureHandle texture, VkImageView& outView, uint32& outLayout );
+        /** @brief 링이 @p slot 에 들어온 직후(펜스 뒤, 기록 전) 그 슬롯 세트에 예약된 다시 쓰기를 씁니다(R-6). */
+        void flushBindlessRingSlot( uint32 slot );
+        /** @brief 이번 기록 슬롯의 텍스처 세트입니다. */
+        VkDescriptorSet getTextureSet( uint32 slot ) const { return _arrTextureSet[slot % constant::render::kMaxFrameCountInFlight]; }
+        /** @brief 텍스처 세트가 있는지(네이티브 bindless) 입니다. */
+        bool hasTextureSet() const { return _arrTextureSet[0] != nullptr; }
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다(GENERAL 레이아웃). */
         void writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view );
         /**
@@ -1041,10 +1052,12 @@ namespace sw
         /// @brief 텍스처 번호(set 1 binding 0 배열 원소) → 그 번호를 가진 텍스처(`_bindlessMutex` 아래). 등록마다 새 번호이고(다른 쪽의 해제가 내 번호를 놓지 않는다),
         ///        텍스처별 번호 목록은 등록표가 든다(`releaseTexture`). 비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
         RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
+        RHIDescriptorRingMirror                                          _bindlessRingMirror; ///< 산 텍스처 번호 다시 쓰기를 링 슬롯마다 그 차례에 쓰도록 예약한다(`_bindlessMutex` 아래 — R-6)
 
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler
-        VkDescriptorSet       _textureSet;       ///< set 1. 커맨드 버퍼마다 한 번 바인딩한다.
+        /// @brief set 1(텍스처 배열)을 프레임 링 슬롯마다 한 벌 둔다(감사 R-6). 커맨드 버퍼마다 이번 슬롯의 것을 한 번 바인딩한다(`getTextureSet`).
+        VkDescriptorSet _arrTextureSet[constant::render::kMaxFrameCountInFlight];
         /// @brief 디바이스 프레임 스트림의 링 슬롯별 풀 묶음입니다. beginFrame 이 그 슬롯의 펜스를 기다린 뒤 통째로 리셋합니다.
         VulkanDescriptorPoolSet _arrFrameDescriptorPoolSet[constant::render::kMaxFrameCountInFlight];
         /// @brief 리스트 쌍(VulkanCommandListEntry)이 빌려 쓰는 풀 묶음들의 소유자입니다. 쌍과 수명이 같으며(재사용 풀에 남고 shutdown 에서 파괴됩니다).

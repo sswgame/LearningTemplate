@@ -1200,7 +1200,7 @@ namespace sw
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
-        const bool bCannotRegisterTexture = texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE || _pDevice->_defaultSampler == VK_NULL_HANDLE;
+        const bool bCannotRegisterTexture = texture == 0 || _pDevice->hasTextureSet() == false || _pDevice->_defaultSampler == VK_NULL_HANDLE;
         if ( bCannotRegisterTexture )
             return kInvalidDescriptorIndex;
 
@@ -1301,10 +1301,21 @@ namespace sw
 
     bool VulkanRHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
     {
-        (void)index;
-        (void)texture;
-        SW_LOG_ERROR_ONCE_ID( "RHI.RebindNotImplemented", "Vulkan: rebindBindlessTexture needs the per-slot descriptor set ring - not implemented yet" );
-        return false;
+        _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
+        VulkanRHIDevice::VulkanTextureRecord* const pResolved = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        VkImageView                                 view{ VK_NULL_HANDLE };
+        uint32                                      layout{ 0 };
+        const bool                                  bCannotRebind = pResolved == nullptr || _pDevice->hasTextureSet() == false ||
+                                   _pDevice->_transferSerials.isTextureReadyToRegister( pResolved->_uploadSerials, texture ) == false ||
+                                   _pDevice->findBindlessSampleView( texture, view, layout ) == false;
+        if ( bCannotRebind )
+            return false;
+        // 등록표 값만 바꾸고 세트 쓰기는 링 슬롯마다 그 차례에 한다(`flushBindlessRingSlot`) — 진행 중 커맨드가 쓰는 원소를 덮지 않는다. 늦어도 다음 프레임부터 새 텍스처다.
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        if ( _pDevice->_textureRegistry.rebind( index, texture ) == false )
+            return false;
+        _pDevice->_bindlessRingMirror.recordRewrite( index );
+        return true;
     }
 
     void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
@@ -1358,7 +1369,7 @@ namespace sw
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
     {
         _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
-        if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE )
+        if ( texture == 0 || _pDevice->hasTextureSet() == false )
             return kInvalidDescriptorIndex;
         VulkanRHIDevice::VulkanTextureRecord* pResolved                 = _pDevice->resolveTexture( texture );
         const bool                            bTextureNotStorageCapable = pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE;

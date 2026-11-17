@@ -147,7 +147,7 @@ namespace sw
         , _textureRegistry{ kBindlessTextureCount }
         , _slotSetLayout{ nullptr }
         , _textureSetLayout{ nullptr }
-        , _textureSet{ nullptr }
+        , _arrTextureSet{}
         , _arrFrameDescriptorPoolSet{}
         , _listCmdListDescriptorPoolSet{}
         , _bindlessDummyImage{ nullptr }
@@ -482,7 +482,14 @@ namespace sw
             _renderPassCache.destroyAll( _device, _renderPass );
             _textureRegistry.clear();
 
-            _textureSet = VK_NULL_HANDLE; // 디스크립터 풀이 소유한다
+            for ( VkDescriptorSet& textureSet : _arrTextureSet )
+            {
+                textureSet = VK_NULL_HANDLE; // 디스크립터 풀이 소유한다
+            }
+            {
+                UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
+                _bindlessRingMirror.clear();
+            }
             if ( _textureSetLayout )
             {
                 vkDestroyDescriptorSetLayout( _device, _textureSetLayout, nullptr );
@@ -1227,7 +1234,7 @@ namespace sw
         // 텍스처 세트(set 1)의 두 배열이 쓰는 기능 · 한도다(createDescriptorResources). 데스크톱 드라이버는 모두 넘고, 모바일은 장치마다 다르다(docs/PlatformTargets.md).
         const bool bFeatures = features12.runtimeDescriptorArray == VK_TRUE && features12.descriptorBindingPartiallyBound == VK_TRUE &&
                                features12.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE && features12.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE &&
-                               features12.shaderSampledImageArrayNonUniformIndexing == VK_TRUE;
+                               features12.shaderSampledImageArrayNonUniformIndexing == VK_TRUE && features12.descriptorBindingUpdateUnusedWhilePending == VK_TRUE;
         const bool bLimits = indexing.maxPerStageDescriptorUpdateAfterBindSampledImages >= kBindlessTextureCount &&
                              indexing.maxDescriptorSetUpdateAfterBindSampledImages >= kBindlessTextureCount &&
                              indexing.maxPerStageDescriptorUpdateAfterBindStorageImages >= kBindlessStorageImageCount &&
@@ -2369,6 +2376,7 @@ namespace sw
         retireFinishedTransfers();
         // 이 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다.
         fillConstantBufferSlot();
+        flushBindlessRingSlot( getFrameSlot() % constant::render::kMaxFrameCountInFlight ); // 산 텍스처 번호 다시 쓰기(R-6) — 이 슬롯 세트는 이제 GPU 가 쓰지 않는다
         // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다. 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.
         // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
         resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[getFrameSlot()] );
@@ -3315,9 +3323,11 @@ namespace sw
             arrBinding[3].descriptorCount    = kBindlessStorageImageCount;
             arrBinding[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
 
-            VkDescriptorBindingFlags arrFlags[kBindingCount] = {
-                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT, 0, 0,
-                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
+            // UPDATE_UNUSED_WHILE_PENDING: 새 번호 등록은 슬롯 세트 셋에 바로 쓴다 — 진행 중 커맨드가 쓰는 세트지만 그 원소는 쓰지 않는다(펜스 뒤에야 다시 나간 번호).
+            // PARTIALLY_BOUND 와 함께면 "동적으로 쓰지 않는 원소" 만 바꿀 수 있다(Vulkan 1.2 VkDescriptorBindingFlagBits). 산 번호 다시 쓰기는 링 슬롯의 차례에만 쓴다(R-6).
+            constexpr VkDescriptorBindingFlags kArrayFlags =
+                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+            VkDescriptorBindingFlags                    arrFlags[kBindingCount] = { kArrayFlags, 0, 0, kArrayFlags };
             VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
             bindingFlagsInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
             bindingFlagsInfo.bindingCount  = kBindingCount;
@@ -3358,14 +3368,14 @@ namespace sw
         // 5) 풀: 텍스처 세트용 하나(update-after-bind), 슬롯 세트용은 프레임 링마다 하나(beginFrame 이 통째로 리셋).
         {
             VkDescriptorPoolSize arrPoolSize[] = {
-                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,           kBindlessTextureCount},
-                {               VK_DESCRIPTOR_TYPE_SAMPLER, shaderslot::kStaticSamplerCount},
-                {         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,      kBindlessStorageImageCount},
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,           kBindlessTextureCount * constant::render::kMaxFrameCountInFlight},
+                {               VK_DESCRIPTOR_TYPE_SAMPLER, shaderslot::kStaticSamplerCount * constant::render::kMaxFrameCountInFlight},
+                {         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,      kBindlessStorageImageCount * constant::render::kMaxFrameCountInFlight},
             };
             VkDescriptorPoolCreateInfo poolInfo{};
             poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
             poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-            poolInfo.maxSets       = 1;
+            poolInfo.maxSets       = constant::render::kMaxFrameCountInFlight; // 텍스처 세트를 링 슬롯마다 한 벌(R-6)
             poolInfo.poolSizeCount = static_cast<uint32>( sizeof( arrPoolSize ) / sizeof( arrPoolSize[0] ) );
             poolInfo.pPoolSizes    = arrPoolSize;
             if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
@@ -3417,7 +3427,7 @@ namespace sw
 
     bool VulkanRHIDevice::ensureTextureSet()
     {
-        if ( _textureSet != VK_NULL_HANDLE )
+        if ( hasTextureSet() )
             return true;
         const bool bDescriptorObjectsMissing = _device == VK_NULL_HANDLE || _descriptorPool == VK_NULL_HANDLE || _defaultSampler == VK_NULL_HANDLE || _textureSetLayout == VK_NULL_HANDLE;
         if ( bDescriptorObjectsMissing )
@@ -3467,14 +3477,23 @@ namespace sw
         if ( vkCreateImageView( _device, &viewInfo, nullptr, &_bindlessDummyView ) != VK_SUCCESS )
             return false;
 
+        VkDescriptorSetLayout arrLayout[constant::render::kMaxFrameCountInFlight]{};
+        for ( VkDescriptorSetLayout& layout : arrLayout )
+        {
+            layout = _textureSetLayout;
+        }
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool     = _descriptorPool;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts        = &_textureSetLayout;
-        if ( vkAllocateDescriptorSets( _device, &allocInfo, &_textureSet ) != VK_SUCCESS )
+        allocInfo.descriptorSetCount = constant::render::kMaxFrameCountInFlight;
+        allocInfo.pSetLayouts        = arrLayout;
+        if ( vkAllocateDescriptorSets( _device, &allocInfo, _arrTextureSet ) != VK_SUCCESS )
         {
-            SW_LOG_ERROR_ID( "Vulkan.FailedAllocateTextureArray", "Failed to allocate the texture array set." );
+            for ( VkDescriptorSet& textureSet : _arrTextureSet )
+            {
+                textureSet = VK_NULL_HANDLE;
+            }
+            SW_LOG_ERROR_ID( "Vulkan.FailedAllocateTextureArray", "Failed to allocate the texture array sets." );
             return false;
         }
 
@@ -3485,22 +3504,35 @@ namespace sw
             info.imageView   = _bindlessDummyView;
             info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
-        VkWriteDescriptorSet write{};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet          = _textureSet;
-        write.dstBinding      = shaderslot::bindless::kVkTextureBinding;
-        write.dstArrayElement = 0;
-        write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write.descriptorCount = kBindlessTextureCount;
-        write.pImageInfo      = listImage.data();
-        vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+        for ( const VkDescriptorSet textureSet : _arrTextureSet )
+        {
+            VkWriteDescriptorSet write{};
+            write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet          = textureSet;
+            write.dstBinding      = shaderslot::bindless::kVkTextureBinding;
+            write.dstArrayElement = 0;
+            write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write.descriptorCount = kBindlessTextureCount;
+            write.pImageInfo      = listImage.data();
+            vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+        }
         SW_LOG_INFO_ID( "Vulkan.BindlessTextureArrayReady", "Bindless texture array ready (%# slots).", kBindlessTextureCount );
         return true;
     }
 
     void VulkanRHIDevice::writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout )
     {
-        const bool bInvalidTextureSlotWrite = _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessTextureCount;
+        // 새 번호(등록) · 펜스 뒤 더미 되돌리기는 모든 링 슬롯 세트에 바로 쓴다 — 진행 중 커맨드가 그 원소를 쓰지 않는다(UPDATE_UNUSED_WHILE_PENDING).
+        for ( uint32 slot = 0; slot < constant::render::kMaxFrameCountInFlight; ++slot )
+        {
+            writeBindlessTextureSlotAt( slot, index, view, imageLayout );
+        }
+    }
+
+    void VulkanRHIDevice::writeBindlessTextureSlotAt( uint32 slot, RHIDescriptorIndex index, VkImageView view, uint32 imageLayout )
+    {
+        const VkDescriptorSet textureSet               = getTextureSet( slot );
+        const bool            bInvalidTextureSlotWrite = textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessTextureCount;
         if ( bInvalidTextureSlotWrite )
             return;
 
@@ -3513,7 +3545,7 @@ namespace sw
 
         VkWriteDescriptorSet write{};
         write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet          = _textureSet;
+        write.dstSet          = textureSet;
         write.dstBinding      = shaderslot::bindless::kVkTextureBinding;
         write.dstArrayElement = index;
         write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -3524,7 +3556,7 @@ namespace sw
 
     void VulkanRHIDevice::writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view )
     {
-        const bool bInvalidStorageImageSlotWrite = _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessStorageImageCount;
+        const bool bInvalidStorageImageSlotWrite = hasTextureSet() == false || view == VK_NULL_HANDLE || index >= kBindlessStorageImageCount;
         if ( bInvalidStorageImageSlotWrite )
             return;
 
@@ -3532,15 +3564,46 @@ namespace sw
         imageInfo.imageView   = view;
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // 스토리지 이미지는 GENERAL. prepareTextureForUnorderedAccess 가 맞춘다
 
-        VkWriteDescriptorSet write{};
-        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet          = _textureSet;
-        write.dstBinding      = shaderslot::bindless::kVkRwTextureBinding;
-        write.dstArrayElement = index;
-        write.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        write.descriptorCount = 1;
-        write.pImageInfo      = &imageInfo;
-        vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+        // 새 번호만 온다 — 모든 링 슬롯 세트에 바로 쓴다(UPDATE_UNUSED_WHILE_PENDING).
+        for ( const VkDescriptorSet textureSet : _arrTextureSet )
+        {
+            VkWriteDescriptorSet write{};
+            write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet          = textureSet;
+            write.dstBinding      = shaderslot::bindless::kVkRwTextureBinding;
+            write.dstArrayElement = index;
+            write.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            write.descriptorCount = 1;
+            write.pImageInfo      = &imageInfo;
+            vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+        }
+    }
+
+    bool VulkanRHIDevice::findBindlessSampleView( RHITextureHandle texture, VkImageView& outView, uint32& outLayout )
+    {
+        VulkanTextureRecord* const pResolved = texture != 0 ? resolveTexture( texture ) : nullptr;
+        if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_dimension != RHITextureDimension::Texture2D )
+            return false;
+        const bool bDepth = pResolved->_bDepthStencil != SW_FALSE;
+        outView           = bDepth ? pResolved->_sampleView : pResolved->_imageView;
+        outLayout         = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        return outView != VK_NULL_HANDLE;
+    }
+
+    void VulkanRHIDevice::flushBindlessRingSlot( uint32 slot )
+    {
+        UniqueLock<shared_mutex> registryLock{ _bindlessMutex };
+        _bindlessRingMirror.flushSlot( slot, [this, slot]( RHIDescriptorIndex index )
+        {
+            // 그 사이 놓인 번호는 건너뛴다 — 번호는 펜스 뒤에야 다시 나가고 더미 되돌리기가 모든 세트에 쓴다.
+            VkImageView view{ VK_NULL_HANDLE };
+            uint32      layout{ 0 };
+            if ( _textureRegistry.isLive( index ) && findBindlessSampleView( _textureRegistry.get( index ), view, layout ) )
+            {
+                writeBindlessTextureSlotAt( slot, index, view, layout );
+                SW_PROFILE_COUNT( "RT.Bindless.mirrorWrites", 1 );
+            }
+        } );
     }
 
     VkDescriptorPool VulkanRHIDevice::createSlotPool()
