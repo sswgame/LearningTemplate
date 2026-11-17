@@ -785,12 +785,17 @@ namespace sw
         }
         _store.submit( [channel = string( channelID ), from = string( cursor ), maxCount]( IServiceStoreConnection& connection )
         { return ChatStoreRun::readHistory( connection, channel, from, maxCount ); },
-                       [this, requestTag]( ChatHistoryReadResult& read )
-        { applyHistoryRead( requestTag, read._result, std::move( read._listMessage ), std::move( read._nextCursor ) ); } );
+                       [this, accountID, requestTag]( ChatHistoryReadResult& read )
+        { applyHistoryRead( accountID, requestTag, read._result, std::move( read._listMessage ), std::move( read._nextCursor ) ); } );
     }
 
-    void ChatService::applyHistoryRead( uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor )
+    void ChatService::applyHistoryRead( AccountID readerID, uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor )
     {
+        if ( _dependencies._pPolicy != nullptr )
+        {
+            VectorUtil::removeIf( listMessage, [this, readerID]( const ChatMessage& message )
+            { return message._senderID != readerID && _dependencies._pPolicy->isBlocked( readerID, message._senderID ); } ); // 쪽은 짧아질 수 있다 — 다음 쪽 커서는 읽은 그대로다
+        }
         ChatCompletion completion;
         completion._method      = ChatMethod::History::kID;
         completion._requestTag  = requestTag;

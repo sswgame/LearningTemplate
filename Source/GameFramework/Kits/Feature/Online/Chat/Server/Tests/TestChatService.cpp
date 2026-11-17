@@ -717,3 +717,21 @@ SW_TEST_CASE( ChatServiceTest, ReportCapturesContext )
     SW_EXPECT_EQUAL( before._text, report._listLine[0]._text );
     SW_EXPECT_EQUAL( target._text, report._listLine[1]._text ); // 마지막 줄이 신고 대상이다
 }
+
+/** @brief [ChatServiceTest] 차단한 사람의 글은 기록(History)으로도 읽히지 않는다 — 실시간 전달만 막고 기록으로 다시 보이던 구멍(감사 O-18). 차단하지 않은 사람은 그대로 본다 */
+SW_TEST_CASE( ChatServiceTest, HistoryHidesBlockedSenders )
+{
+    MemoryServiceDatabase database;
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok );
+    SW_EXPECT_TRUE( rig.join( kBob ) == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.send( kAlice, "from alice", kWorld, kNowMs )._result == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.send( kBob, "from bob", kWorld, kNowMs + 1 )._result == ChatResult::Ok );
+    rig.flush();
+    rig._policy._listBlocked.push_back( make_pair( kBob, kAlice ) ); // 밥이 앨리스를 차단했다
+
+    const ChatCompletion bobView = rig.history( kBob );
+    SW_REQUIRE_EQUAL( size_t( 1 ), bobView._listHistory.size() );
+    SW_EXPECT_EQUAL( string( "from bob" ), bobView._listHistory[0]._text );
+    SW_EXPECT_EQUAL( size_t( 2 ), rig.history( kAlice )._listHistory.size() );
+}

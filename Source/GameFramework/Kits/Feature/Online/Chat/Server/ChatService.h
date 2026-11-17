@@ -195,7 +195,8 @@ namespace sw
     private:
         /** @brief 저장 일의 완료입니다. */
         void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
-        void applyHistoryRead( uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
+        /** @brief 읽은 기록에서 @p readerID 가 차단한 사람의 글을 빼고 답합니다(실시간 전달과 같은 규칙 — 기록으로 다시 읽히지 않게, 감사 O-18). */
+        void applyHistoryRead( AccountID readerID, uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
         void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, const vector<string>& listIndexKey, ServiceStoreCompletion completion );
         void applyReport( uint64 requestTag, ChatServiceResult result );
 
