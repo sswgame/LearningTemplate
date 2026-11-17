@@ -21,6 +21,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw
 {
@@ -62,7 +63,8 @@ namespace sw
             }
 
             /** @brief 테이블의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 항목에 닿습니다. */
-            static string makeKey( string_view path ) { return FileUtil::normalizePath( path ).str(); }
+            /** @brief 캐시 키 — 맞춘 경로의 지금 id 다(옛 id 와 지금 id 가 한 칸, `AssetRedirect::toCurrentID`). */
+            static string makeKey( string_view path ) { return AssetRedirect::toCurrentID( FileUtil::normalizePath( path ).str() ); }
 
             /** @brief 그 경로를 지금 보관 중인 메시입니다. 없으면 nullptr 입니다. */
             static shared_ptr<Mesh> findLive( string_view path ) { return getState()._sharedTable.findLive( makeKey( path ) ); }

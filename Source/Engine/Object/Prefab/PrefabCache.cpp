@@ -28,6 +28,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -185,7 +186,8 @@ namespace sw
 
     string PrefabCache::makeCacheKey( string_view assetRelativePath )
     {
-        string key = FileUtil::normalizePath( assetRelativePath ).str();
+        // 옮긴 프리팹의 옛 id 와 지금 id 는 한 칸이다(`AssetRedirect::toCurrentID` — 두 벌 올리지 않고, 순환 검사도 같은 키로 본다).
+        string key = AssetRedirect::toCurrentID( FileUtil::normalizePath( assetRelativePath ).str() );
 
         // 확장자 길이를 손으로 쓰지 않는다 — 숫자와 문자열이 떨어져 있으면 어긋난다.
         for ( const string_view extension : { ".bin", ".xml", ".json" } )

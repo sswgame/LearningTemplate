@@ -54,5 +54,10 @@ namespace sw
 
         /** @brief @p assetID 가 옛 id 면 @p outAssetID 에 새 id 를 쓰고 true 입니다. 아니면 false 입니다(표가 비면 잠금 없이 끝난다). */
         [[nodiscard]] static bool resolve( string_view assetID, string& outAssetID );
+        /**
+         * @brief @p assetID 의 지금 id 입니다 — 옛 id 면 새 id, 아니면 그대로입니다.
+         * @details 에셋 캐시의 키가 쓰는 한 곳이다(공유 표 · 메시 · 프리팹). 요청 글을 그대로 키로 쓰면 옛 id 와 지금 id 가 같은 파일을 두 칸에 두 벌 올린다(A-20).
+         */
+        [[nodiscard]] static string toCurrentID( string_view assetID );
     };
 } // namespace sw

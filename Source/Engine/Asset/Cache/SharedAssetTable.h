@@ -1,6 +1,6 @@
 /**
  * @file SharedAssetTable.h
- * @brief 경로 → 약한 참조 에셋 표 하나입니다. 경로로 나눠 주는 캐시(스켈레톤 · 클립 · 물리 에셋 · 캐릭터 데이터 표)가 같은 구현을 씁니다.
+ * @brief 리소스 id → 약한 참조 에셋 표 하나입니다(키는 리다이렉트를 푼 지금 id). 경로로 나눠 주는 캐시(스켈레톤 · 클립 · 물리 에셋 · 캐릭터 데이터 표)가 같은 구현을 씁니다.
  * @details 같은 경로는 같은 객체를 받고, 마지막 사용자가 놓으면 사라집니다(표는 `WeakInternTable`). 읽기(파일 IO)는 잠금 밖에서 하고, 같은 경로의
  *          동시 요청은 진행 중 표가 같은 로드 작업(`SharedAssetLoadOperation`)으로 묶습니다. 다시 읽기(`reloadShared`)는 새 객체를 새 판으로 넣고 옛 판이 그것을 가리키게 하며
  *          다시 읽은 횟수(`getReloadCount`)를 올립니다. 표는 `const` 값만 들어 나눠 준 객체를 제자리에서 바꿀 길이 없습니다 — 워커가 쥔 `shared_ptr<const T>` 를 읽는 동안
@@ -19,6 +19,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw
 {
@@ -140,8 +141,12 @@ namespace sw
         void clear() { _table.clear(); }
 
     private:
-        /** @brief 표의 키입니다 — 핫 리로드가 같은 칸을 찾도록 구분자를 맞춥니다. */
-        static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
+        /**
+         * @brief 표의 키입니다 — 핫 리로드가 같은 칸을 찾도록 구분자를 맞추고, 옮긴 에셋의 옛 id 는 지금 id 로 풉니다(`AssetRedirect`).
+         * @details 요청 글을 그대로 키로 쓰면 옛 id 와 지금 id 가 같은 파일을 두 칸에 두 벌 올렸다(A-20) — 리소스 입구가 읽을 때 푸는 것과 같은 표로 키를 정한다.
+         *          언리얼도 리다이렉터를 따라간 뒤의 패키지 이름으로 로드된 객체를 찾는다.
+         */
+        static string makeKey( string_view path ) { return AssetRedirect::toCurrentID( FileUtil::normalizeSeparators( path ) ); }
         /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 공유 캐시의 키는 리소스 id 만 담는다. */
         static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
 
