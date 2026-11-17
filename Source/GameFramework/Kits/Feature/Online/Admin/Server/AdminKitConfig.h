@@ -31,5 +31,11 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         vector<AdminSeedEntry> _listSeedAdmin{};
+        /** @brief Support 가 걸 수 있는 채팅 금지의 최대 일수입니다(감사 O-16). */
+        PROPERTY( Required, Min = 1, Max = 3650 )
+        int32 _supportMaxSanctionDays{ 0 };
+        /** @brief Operator 가 걸 수 있는 채팅 금지 · 정지의 최대 일수입니다. 영구 정지와 그보다 긴 제재는 Super 의 일이다. */
+        PROPERTY( Required, Min = 1, Max = 3650 )
+        int32 _operatorMaxSanctionDays{ 0 };
     };
 } // namespace sw

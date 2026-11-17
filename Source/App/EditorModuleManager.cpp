@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
@@ -19,7 +20,7 @@
 
 #include "sw/config/ConfigConstants.h"
 
-#if !defined( SW_SHIPPING )
+#if SW_WITH_DYNAMIC_MODULES
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleLibraryUtil.h"
     #include "Core/Path/AbsolutePath.h"
@@ -89,12 +90,12 @@ namespace sw
         if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver ) == false )
             return false;
 
-        // 에디터 모듈을 리로드 그래프에 올리는 일은 개발 구성에만 있다(`EditorModuleManager.cpp` 의 개발 전용 구역 — 배포는 짓지 않는다).
-        if constexpr ( build::kShipping )
+        // 에디터 모듈을 리로드 그래프에 올리는 일은 동적 모듈 구성에만 있다(`EditorModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 — 정적 구성은 짓지 않는다).
+        if constexpr ( build::kStaticModules )
         {
             // 에디터를 켜 달라는 실행을 에디터 없이 조용히 시작하지 않는다.
             if ( bEnableEditor )
-                SW_LOG_ERROR_ID( "EditorModuleManager.EnableEditorNeedsEditorModule", "-EnableEditor needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+                SW_LOG_ERROR_ID( "EditorModuleManager.EnableEditorNeedsEditorModule", "-EnableEditor needs the editor module, which a build with statically linked modules (Shipping, Web-Release, Android-Release) does not have - run it from a desktop Dev build." );
             return bEnableEditor == false;
         }
         else
@@ -416,10 +417,10 @@ namespace sw
         return bCreated;
     }
 
-#if !defined( SW_SHIPPING )
+#if SW_WITH_DYNAMIC_MODULES
     // ----------------------------------------------------------------------------------------------------------------------
-    // 개발 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload), 인스턴스 없는 헤드리스 작업(동적 모듈 올리고 내리기).
-    // 배포는 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kShipping` 으로 가른다.
+    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload), 인스턴스 없는 헤드리스 작업(동적 모듈 올리고 내리기).
+    // 정적 구성(배포 · 웹 · Android 개발)은 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kStaticModules` 로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
     bool EditorModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )
     {
@@ -551,5 +552,5 @@ namespace sw
             return pfnCheck( &service ) == 0;
         } );
     }
-#endif // !SW_SHIPPING
+#endif // SW_WITH_DYNAMIC_MODULES
 } // namespace sw

@@ -1,7 +1,10 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyHandle.h"
@@ -1745,4 +1748,66 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ClassAndEnumWithTheSameNameAreAClash )
     SW_EXPECT_LOG( "Reflection.TypeNameHashClash" );
     registry.registerEnum( enumInfo );
     SW_EXPECT_TRUE( registry.findWireTypeNameByHash( sw::hashed_string::computeHash( "KindClashTwin" ) ) == sw::hashed_string( "KindClashTwin" ) ); // 먼저 든 클래스를 지킨다
+}
+
+namespace
+{
+    /** @brief 이름 @p pFqn 의 빈 클래스를 시험 모듈 @p pModuleName 으로 올립니다. */
+    void registerEmptyTestClass( const utf8* pShortName, const utf8* pFqn, const utf8* pModuleName )
+    {
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( pShortName );
+        info._fullyQualifiedName = sw::hashed_string( pFqn );
+        info._size               = 1;
+        info._moduleName         = sw::hashed_string( pModuleName );
+        sw::engine::getSubsystem<sw::TypeRegistry>().registerClass( info );
+    }
+} // namespace
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 별칭이 이미 다른 살아 있는 타입을 가리키면 덮지 않고 오류다 — 같은 타입으로 다시 거는 것(핫 리로드)은 받는다
+ * @details 예전에는 조용히 덮어, 그 옛 이름으로 저장된 씬 · 세이브가 다른 타입으로 풀렸다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeAliasDoesNotOverwriteALiveTarget )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestAliasConflict" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    registerEmptyTestClass( "AliasTargetFirst", "sw::AliasTargetFirst", "TestAliasConflict" );
+    registerEmptyTestClass( "AliasTargetSecond", "sw::AliasTargetSecond", "TestAliasConflict" );
+
+    registry.registerTypeAlias( "sw::AliasConflictOldName", "sw::AliasTargetFirst" );
+    registry.registerTypeAlias( "sw::AliasConflictOldName", "sw::AliasTargetFirst" ); // 같은 타입으로 다시 — 오류가 아니다
+    {
+        SW_EXPECT_LOG( "Reflection.TypeAliasConflict" );
+        registry.registerTypeAlias( "sw::AliasConflictOldName", "sw::AliasTargetSecond" );
+    }
+    const sw::TypeInfo* const pResolved = registry.findType( sw::hashed_string( "sw::AliasConflictOldName" ) );
+    SW_REQUIRE_NOT_NULL( pResolved );
+    SW_EXPECT_TRUE( pResolved->_fullyQualifiedName == sw::hashed_string( "sw::AliasTargetFirst" ) );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] getDerivedTypes 는 쓰기 잠금을 기다리는 다른 스레드가 있어도 멈추지 않는다
+ * @details 예전에는 공유 잠금을 쥔 채 `isDerivedFrom` → `getParentType` → `findType` 이 같은 잠금을 다시 잡아, 그 사이 기다리는 쓰기 잠금(등록이 세대를 올린다)과
+ *          맞물려 멈출 수 있었다. 옳은 구현은 잠금 안에서 포인터만 모은다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedTypesQueryDoesNotNestTheRegistryLock, ._tags = "slow", ._timeoutSeconds = 60.0f )
+{
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    sw::atomic<bool>  bStop{ false };
+    sw::thread        writer( sw::ThreadTestAccess::getKey(), [&registry, &bStop]()
+           {
+        while ( bStop.load() == false )
+        {
+            registry.registerTypeAlias( "sw::DerivedTypesStressAlias", "sw::SampleTestActor" ); // 쓰기 잠금 + 세대 올림(부모 찾기를 다시 하게 한다)
+        }
+    } );
+    size_t            visitedCount = 0;
+    for ( uint32 round = 0; round < 2000; ++round )
+    {
+        visitedCount += registry.getDerivedTypes<sw::SampleTestActor>().size();
+    }
+    bStop.store( true );
+    writer.join();
+    SW_EXPECT_EQUAL( size_t( 0 ), visitedCount ); // 파생이 없는 타입 — 답은 비어 있고, 멈추지 않고 여기까지 왔다
 }

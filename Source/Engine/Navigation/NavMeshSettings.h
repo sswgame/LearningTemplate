@@ -116,6 +116,9 @@ namespace sw
         uint32 _maxConcurrentTileBakeCount{ 4 };
         PROPERTY( Min = 0.0, Tooltip = "An obstacle has to move this far before the mesh around it rebakes", Units = m )
         float32 _obstacleMoveThreshold{ 0.25f };
+        /** @brief 한 갱신이 워커에 넘기는 비동기 경로 요청의 상한입니다. 남은 요청은 다음 갱신이 요청 순서대로 잇는다(감사 S-9 — 유니티 `pathfindingIterationsPerFrame`). 코드 기본값이 없다. */
+        PROPERTY( Required, Min = 1, Tooltip = "Async path requests handed to workers per navigation update; the rest wait for the next update in request order" )
+        uint32 _maxPathRequestsPerUpdate{ 0 };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 이름, 겹친 이름, 범위 밖) 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

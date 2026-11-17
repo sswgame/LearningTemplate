@@ -100,8 +100,9 @@ namespace sw
                     case RenderPassType::Lighting:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
-                        info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData, Role::SceneDepth }, { Role::ShadowMap, Role::ContactShadow } );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
+                        // AO 는 조명의 입력이다 — 앰비언트 · 프로브 빛에만 곱한다(deferred_lighting.hlsl). 후처리(Bloom · Present)는 AO 를 받지 않는다(최종 색 전체에 곱하면 자체 발광 · 반투명까지 어두워진다).
+                        info._inputContract = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData, Role::SceneDepth }, { Role::ShadowMap, Role::ContactShadow, Role::AmbientOcclusion } );
+                        info._flags         = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Transparent:
@@ -132,7 +133,7 @@ namespace sw
                         // BloomBright(반해상도 밝은 부분)를 선언하면 그것을 업샘플해 더하고, 없으면 원본에서 밝은 부분을 직접 구한다.
                         // 꺼지면 출력이 원본을 가리킨다(AO 적용도 함께 빠진다). 그때 BloomBright · AO 를 읽는 패스가 없으면 그 패스들도 돌지 않는다(applyViewPassSelection).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
-                        info._inputContract  = makeContract( { Role::SourceColor }, { Role::AmbientOcclusion, Role::BloomBright } );
+                        info._inputContract  = makeContract( { Role::SourceColor }, { Role::BloomBright } );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
@@ -175,9 +176,9 @@ namespace sw
                     case RenderPassType::Present:
                     {
                         // 화면에 낼 색(SourceColor)은 필수 입력이다 — 옛 코드는 선언이 없으면 "가장 나중 컬러" 를 이름 후보로 짐작했다(resolvePresentSource).
-                        // 후처리 체인(post_chain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
+                        // 후처리 체인(post_chain.hlsl)을 겸하면 깊이를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
-                        info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::AmbientOcclusion } );
+                        info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth } );
                         info._flags          = Flag::kHasInputContract | Flag::kOutputPass | Flag::kGPUMessageTarget; // PresentOutput::write 의 SW_GPU_PRINT(고른 픽셀의 화면 색 — 어느 Present 셰이더든)
                         break;
                     }

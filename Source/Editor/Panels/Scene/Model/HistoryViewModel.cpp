@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
 
 namespace sw::editor
 {
@@ -43,31 +44,24 @@ namespace sw::editor
         outState._bCanRedo     = pStack->canRedo();
     }
 
+    // 움직임은 Ctrl+Z 와 같은 입구다(`EditorUndoEntry`) — 편집 잠금(플레이 · 베이크)과 열린 편집(끌기 · 거래)을 같은 판정으로 거절한다(감사 E-2).
     void HistoryViewModel::undo()
     {
-        CommandStack* pStack = HistoryViewModelInternal::findStack();
-        if ( pStack != nullptr )
-            pStack->undo();
+        (void)EditorUndoEntry::undo();
     }
 
     void HistoryViewModel::redo()
     {
-        CommandStack* pStack = HistoryViewModelInternal::findStack();
-        if ( pStack != nullptr )
-            pStack->redo();
+        (void)EditorUndoEntry::redo();
     }
 
     void HistoryViewModel::clear()
     {
-        CommandStack* pStack = HistoryViewModelInternal::findStack();
-        if ( pStack != nullptr )
-            pStack->clear();
+        (void)EditorUndoEntry::clear();
     }
 
     void HistoryViewModel::jumpTo( size_t stepIndex )
     {
-        CommandStack* pStack = HistoryViewModelInternal::findStack();
-        if ( pStack != nullptr )
-            pStack->jumpTo( stepIndex );
+        (void)EditorUndoEntry::jumpTo( stepIndex );
     }
 } // namespace sw::editor

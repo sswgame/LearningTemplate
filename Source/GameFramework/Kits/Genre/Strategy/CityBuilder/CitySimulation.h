@@ -31,35 +31,6 @@ namespace sw
     class Archive;
     class Wallet;
 
-    /**
-     * @brief 도시 규칙의 수치입니다. 시간 단위는 게임 초입니다.
-     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `CitySimulation::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
-     */
-    REFLECT()
-    struct SW_KIT_API CitySettings
-    {
-        REFLECT_BODY();
-        PROPERTY( Min = 0.0 )
-        float32 _walkerSpeed{ 2.5f }; ///< 셀 / 초
-        PROPERTY( Min = 0.0, Max = 1.0 )
-        float32 _workerRatio{ 0.4f }; ///< 인구 중 일하는 사람의 비율
-        PROPERTY( Min = 0.0 )
-        float32 _serviceDuration{ 30.0f }; ///< 서비스를 받은 뒤 그 효과가 남아 있는 시간(초)
-        PROPERTY( Min = 0.0 )
-        float32 _immigrationInterval{ 1.5f }; ///< 빈 집 하나에 한 사람이 들어오는 간격
-        PROPERTY( Min = 0.0 )
-        float32 _evolveDelay{ 3.0f }; ///< 조건이 이만큼 이어져야 집 단계가 오르내린다
-        PROPERTY( Min = 0.0 )
-        float32 _wagePerWorkerPerMonth{ 0.5f };
-        PROPERTY( Min = 0.001 )
-        float32 _fixedStep{ 0.25f };
-        PROPERTY( Min = 0 )
-        int32 _serviceReach{ 2 }; ///< 일꾼이 지나는 셀에서 이 거리 안의 집에 서비스를 준다
-        PROPERTY( Min = 0 )
-        int32         _goodsPerFourPeople{ 1 }; ///< 한 달에 네 사람이 먹는 물자 수
-        uint32        _randomSeed{ 3100u };     ///< 범람과 일꾼의 갈림길 선택에 쓰는 난수 시드
-        hashed_string _currency{ "Deben" };     ///< 빌린 지갑에서 쓰는 통화
-    };
 } // namespace sw
 
 namespace sw
@@ -191,9 +162,9 @@ namespace sw
         /**
          * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p refs 의 지갑, 통화는 `CitySettings::_currency`)에서 나가고 들어옵니다.
          * @details 지갑이 없으면 알리고, 건설과 도로 놓기는 모두 돈 부족으로 거절된다. 달 결산에서 돈이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
-         * @return 크기가 1 이상이고 설정이 `PROPERTY( Min · Max )` 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
+         * @return 규칙은 카탈로그의 `<Rules>`(`CityCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4). 카탈로그가 있고 크기가 1 이상이고 규칙이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs );
+        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, const SessionStateRefs& refs );
         void               setTerrain( int32 x, int32 y, CityTerrain terrain );
         void               fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
         /**
@@ -217,8 +188,11 @@ namespace sw
         /** @brief 그 셀의 건물이나 도로를 허뭅니다. 허물었으면 true 를 반환합니다. */
         bool demolish( int32 x, int32 y );
 
-        /** @brief 시간을 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다. */
-        void update( float32 deltaTime );
+        /**
+         * @brief 실제 프레임 시간 @p deltaTime 을 배속 @p timeScale 로 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다.
+         * @return 이번에 진행한 도시 시간(걸음 수 × 걸음)입니다. 도시와 같이 도는 시계는 이 값으로 돌려 어긋나지 않게 한다(감사 K-6).
+         */
+        float32 update( float32 deltaTime, float32 timeScale );
         /** @brief 쌓인 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
         [[nodiscard]] bool claimEvents( ConsumerLease& outLease ) { return _eventBuffer.claim( outLease ); }
         void               pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent );

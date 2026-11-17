@@ -23,8 +23,9 @@ namespace
         class CountingHandler : public INetMessageHandler
         {
         public:
-            CountingHandler( uint8 rangeBase, uint8 acceptedKind )
-                : _rangeBase{ rangeBase }
+            CountingHandler( uint8 rangeBase, uint8 acceptedKind, uint32 wireVersion = kNoMessageTable )
+                : _wireVersion{ wireVersion }
+                , _rangeBase{ rangeBase }
                 , _acceptedKind{ acceptedKind }
                 , _handledCount{ 0 }
                 , _lastConnectionID{ -1 }
@@ -33,6 +34,7 @@ namespace
 
             uint8           getMessageRangeBase() const override { return _rangeBase; }
             uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( _acceptedKind - _rangeBase ) ); }
+            uint32          getWireVersion() const override { return _wireVersion; }
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
             {
                 (void)body.readVarUint(); // 값은 쓰지 않는다 — 넘침은 바로 아래에서 본다
@@ -47,11 +49,55 @@ namespace
             int32 getLastConnectionID() const { return _lastConnectionID; }
 
         private:
-            uint8 _rangeBase;
-            uint8 _acceptedKind;
-            int32 _handledCount;
-            int32 _lastConnectionID;
+            uint32 _wireVersion;
+            uint8  _rangeBase;
+            uint8  _acceptedKind;
+            int32  _handledCount;
+            int32  _lastConnectionID;
         };
+        /** @brief 판 맞춤 한 번의 결과입니다. */
+        struct RouterVersionRunResult
+        {
+            int32              _serverHandledCount{ 0 };
+            NetConnectionState _clientState{ NetConnectionState::Disconnected };
+        };
+
+        /** @brief 서버 · 클라이언트에 같은 영역의 처리기를 판 @p serverVersion · @p clientVersion 으로 달고 양쪽 라우터를 돌립니다. */
+        static void connectWithTableVersions( uint32 serverVersion, uint32 clientVersion, RouterVersionRunResult& outResult )
+        {
+            test::LoopbackCluster pair( 78u );
+            NetTestUtil::addServerAndClient( pair, NetEndpointConfig{} );
+            SW_REQUIRE_TRUE( pair.getServer().listen() );
+            SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+            pair.run( 0.3 );
+            SW_REQUIRE_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
+
+            constexpr uint8        kRange = NetMessageRange::kFramework;
+            CountingHandler        serverHandler{ kRange, static_cast<uint8>( kRange + 1 ), serverVersion };
+            CountingHandler        clientHandler{ kRange, static_cast<uint8>( kRange + 2 ), clientVersion };
+            NetMessageRouter       serverRouter;
+            NetMessageRouter       clientRouter;
+            const sw::Subscription serverSubscription = serverRouter.registerHandler( &serverHandler );
+            const sw::Subscription clientSubscription = clientRouter.registerHandler( &clientHandler );
+            for ( int32 round = 0; round < 10; ++round )
+            {
+                pair.run( 0.05 );
+                (void)serverRouter.poll( pair.getServer() );
+                (void)clientRouter.poll( pair.getClient( 0 ) );
+            }
+            // 판 맞춤이 끝난 뒤 클라이언트가 그 영역 메시지를 보낸다 — 판이 같으면 서버 처리기가 받는다.
+            NetMessageWriter messageWriter;
+            messageWriter.begin( static_cast<uint8>( kRange + 1 ) ).writeVarUint( 5 );
+            (void)messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ); // 끊겼으면 보내지 못한다 — 아래 상태가 본다
+            for ( int32 round = 0; round < 6; ++round )
+            {
+                pair.run( 0.05 );
+                (void)serverRouter.poll( pair.getServer() );
+                (void)clientRouter.poll( pair.getClient( 0 ) );
+            }
+            outResult._serverHandledCount = serverHandler.getHandledCount();
+            outResult._clientState        = pair.getClient( 0 ).getConnectionState( 0 );
+        }
     };
 } // namespace
 
@@ -133,7 +179,7 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDispatchesByRangeAndKeepsUnhand
  */
 SW_TEST_CASE( NetMessageRouterTest, MessageRouterRefusesAHandlerThatOverlapsAClaimedKind )
 {
-    NetMessageRouterTestInternal::CountingHandler first( NetMessageRange::kGame, 0x81 );
+    NetMessageRouterTestInternal::CountingHandler first{ NetMessageRange::kGame, 0x81 };
     NetMessageRouterTestInternal::CountingHandler overlapping( NetMessageRange::kGame, 0x81 );
     NetMessageRouterTestInternal::CountingHandler disjoint( NetMessageRange::kGame, 0x82 );
     NetMessageRouter                              router;
@@ -211,6 +257,7 @@ SW_TEST_CASE( NetMessageRouterTest, RouterTellsHandlersAboutConnectionsBeforeThe
     {
     public:
         uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
+        uint32          getWireVersion() const override { return kNoMessageTable; }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
         {
             (void)context;
@@ -319,4 +366,40 @@ SW_TEST_CASE( NetMessageRouterTest, SendToPeersAndRelayReachEveryOtherPeer )
     {
         SW_EXPECT_TRUE( client.receiveMessage( connectionID, channel, buffer ) );
     }
+}
+
+/**
+ * @brief [NetMessageRouterTest] 같은 영역의 메시지 표 판이 다른 두 빌드는 처리기를 단 뒤 라우터가 연결을 끊는다 — 게임이 판을 손으로 섞지 않아도 빠지지 않는다. 판이 같으면 붙어 있고 메시지가 간다
+ */
+SW_TEST_CASE( NetMessageRouterTest, DifferentMessageTableVersionsDisconnect )
+{
+    NetMessageRouterTestInternal::RouterVersionRunResult same;
+    NetMessageRouterTestInternal::connectWithTableVersions( 101u, 101u, same );
+    SW_EXPECT_TRUE( same._clientState == NetConnectionState::Connected );
+    SW_EXPECT_EQUAL( 1, same._serverHandledCount );
+
+    SW_EXPECT_LOG( "Net.MessageTableVersionMismatch" );
+    NetMessageRouterTestInternal::RouterVersionRunResult different;
+    NetMessageRouterTestInternal::connectWithTableVersions( 101u, 202u, different );
+    SW_EXPECT_TRUE( different._clientState != NetConnectionState::Connected );
+    SW_EXPECT_EQUAL( 0, different._serverHandledCount );
+}
+
+/**
+ * @brief [NetMessageRouterTest] 한 영역은 표 하나다 — 판이 다른 처리기 둘을 한 영역에 달 수 없고, 라우터의 판 알림 종류는 처리기가 맡지 못한다
+ */
+SW_TEST_CASE( NetMessageRouterTest, OneRangeHasOneTableVersionAndTheRouterKindIsReserved )
+{
+    NetMessageRouter                              router;
+    NetMessageRouterTestInternal::CountingHandler first{ NetMessageRange::kGame, 0x81, 7u };
+    NetMessageRouterTestInternal::CountingHandler sameTable{ NetMessageRange::kGame, 0x82, 7u };
+    NetMessageRouterTestInternal::CountingHandler otherTable{ NetMessageRange::kGame, 0x83, 8u };
+    NetMessageRouterTestInternal::CountingHandler routerKind{ NetMessageRange::kEngine, NetMessageRange::kRouterWireVersionKind, 9u };
+    const sw::Subscription                        firstSubscription = router.registerHandler( &first );
+    const sw::Subscription                        sameSubscription  = router.registerHandler( &sameTable );
+    SW_EXPECT_TRUE( firstSubscription.isActive() && sameSubscription.isActive() );
+    SW_EXPECT_LOG( "Net.RouterTableVersionConflict" );
+    SW_EXPECT_FALSE( router.registerHandler( &otherTable ).isActive() );
+    SW_EXPECT_LOG( "Net.RouterKindReserved" );
+    SW_EXPECT_FALSE( router.registerHandler( &routerKind ).isActive() );
 }

@@ -317,7 +317,7 @@ endfunction()
 # CONTENT_OWNER: 콘텐츠 모듈 검사(`sw_add_content_module_check`)에서 이 타입들의 주인 — 비우면 모든 호스트가 가진 것(엔진 · 실행 파일), 게임은 `game:<폴더>`.
 # ------------------------------------------------------------------------------
 function(sw_add_reflection_step TARGET_NAME)
-	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS;INCLUDES" ${ARGN})
+	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS;INCLUDES;DEFINES" ${ARGN})
 
 	sw_skip_without_reflection_parser(${TARGET_NAME} skip)
 	if(skip)
@@ -345,6 +345,10 @@ function(sw_add_reflection_step TARGET_NAME)
 	set(emit_templates_dir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
 	file(GLOB emit_tpls "${emit_templates_dir}/*${SW_EXT_REFLECTION_TEMPLATE}")
 	sw_make_reflection_parser_args(parser_args ${TARGET_NAME})
+	# 그 모듈의 컴파일이 정의하는 매크로(내보내기 매크로 등) — 헤더가 그것을 요구하면(DevToolsAPI.h) 파서도 같은 매크로로 읽는다.
+	foreach(def IN LISTS ARG_DEFINES)
+		list(APPEND parser_args "--target-arg" "-D${def}")
+	endforeach()
 
 	# 파서가 런타임에 읽는 설정. 바뀌면 clang 인자/SDK 경로가 달라지므로 재생성해야 함.
 	set(parser_configs "")

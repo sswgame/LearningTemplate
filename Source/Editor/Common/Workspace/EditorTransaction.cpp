@@ -340,18 +340,19 @@ namespace sw::editor
 
         // 바뀐 가운데만 쥔다 — 문서 전체 글 두 벌을 단계마다 들지 않는다. 단계는 스택 순서로만 실행되므로 되돌릴 때의 지금 글은 이 편집 뒤의 글이다.
         const EditorTransactionInternal::StringChangeSpan span = EditorTransactionInternal::makeChangeSpan( beforeText, afterText );
+        const uint64                                      held = static_cast<uint64>( span._removed.size() + span._added.size() ); // 두 단계가 구간을 한 벌씩 쥔다
         CommandStack::Command                             cmd;
         cmd._label = string{ label };
         cmd._undo  = UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
          {
             restore( span.reconstructBefore( capture() ) );
         } ),
-                                              owner );
+                                              owner, held );
         cmd._redo  = UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
          {
             restore( span.reconstructAfter( capture() ) );
         } ),
-                                              owner );
+                                              owner, held );
         stack.push( std::move( cmd ) );
     }
 } // namespace sw::editor

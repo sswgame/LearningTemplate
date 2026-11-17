@@ -3,7 +3,7 @@
  * @brief Input Map Editor 의 모델 — 편집하는 InputMap · 리플레이, 경로, 고른 액션, 키 다시 잡기, 충돌, 실시간 그래프 표본, 녹화 · 재생 명령. ImGui 를 모릅니다.
  * @details 패널(`InputMapPanel`)은 그리기와 입력칸만 들고, 상태와 명령은 이것이 든다 — 인스펙터 · 프로파일러 `Model/` 과 같은 선이다(언리얼 Enhanced Input 편집기가
  *          `UInputMappingContext` 에셋을 편집 대상으로 두고 화면이 그것을 고치는 것과 같다). 바인딩 한 칸 고치기(트리거 · 시간 · Negate)는 엔진 `InputMap` 의 API 가 곧 명령이라
- *          `editInputMap` 으로 넘기고, 문서 dirty 는 패널(`IEditorPanel`)이 든다 — 명령은 바꿨으면 true 를 반환한다.
+ *          `editInputMap` 으로 넘기고, 문서 dirty 는 패널(`IEditorPanel`)이 든다 — 명령은 바꿨으면 편집 알림 창구(`DocumentEditRecorder`)로 알리고 true 를 반환한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -24,6 +24,7 @@ namespace sw
 
 namespace sw::editor
 {
+    class DocumentEditRecorder;
     class EditorListFilter;
 
     struct ViewportInputOverlay;
@@ -62,7 +63,8 @@ namespace sw::editor
     {
     public:
         /** @brief 처음 여는 맵은 디버그 키 맵(enginedefaultassets.xml), 리플레이 파일은 editortooldefaults.json 의 `_inputReplayFile` 입니다. 읽기는 첫 `tick` 전에 합니다. */
-        InputMapModel();
+        /** @param recorder 편집 알림 창구입니다(문서 패널이 쥔다). 맵을 고친 뒤 이리 알려 문서 되돌리기 한 단계가 된다(감사 E-13). */
+        explicit InputMapModel( const DocumentEditRecorder& recorder );
 
         /**
          * @brief 패널이 열려 있는 프레임마다 부릅니다. InputMap 을 @p input 에 붙여 갱신하고, 그래프 표본을 담고, 녹화 중이면 입력 프레임을 기록하고, 끝난 재생을 뗍니다.
@@ -93,8 +95,14 @@ namespace sw::editor
         bool isBundlePath() const;
         /** @brief 액션을 정한 파일의 리소스 경로입니다. 파일에서 읽지 않은 액션이면 빈 글입니다. */
         string describeActionSource( const hashed_string& action ) const;
-        /** @brief 파일과 달라진 편집이 있으면 true 입니다. 패널은 프레임마다 이 값을 따른다(`syncDocumentDirty`). */
-        bool isDirty() const { return _bDirty == SW_TRUE; }
+
+        /**
+         * @brief 편집하는 맵을 저장과 같은 글로 씁니다(문서 되돌리기의 글). 묶음(게임 설정 파일)이면 빈 글입니다.
+         * @details shortcut: 묶음은 파일마다 몫(어느 파일이 액션을 정했는지)을 들어 글 하나로 돌릴 수 없어 되돌리기가 없다 — 묶음을 고치는 일이 잦아지면 파일마다 글(`InputMap::writeSourceText`)을 이어 쓴다.
+         */
+        string captureText() const;
+        /** @brief 되돌리기가 준 글로 맵을 다시 읽습니다. 미저장 판정은 문서 패널이 글로 한다. 묶음이거나 읽지 못하면 false 입니다(읽지 못하면 파일에서 다시 읽는다). */
+        bool applyText( string_view text );
 
         EditableAssetPath& editInputMapPath() { return _inputMapPath; }
         EditableAssetPath& editReplayFilePath() { return _replayFilePath; }
@@ -206,7 +214,7 @@ namespace sw::editor
         void sampleInput( InputManager& input );
         /** @brief 묶음의 파일마다 고친 몫을 원래 자리에 씁니다. */
         [[nodiscard]] bool saveBundle() const;
-        /** @brief 저장하지 않은 표시를 @p bChanged 면 켜고 그대로 돌려줍니다. */
+        /** @brief @p bChanged 면 편집을 알리고(`DocumentEditRecorder` — 미저장 · 되돌리기는 문서 패널이 든다) 그대로 돌려줍니다. */
         bool recordEdit( bool bChanged );
         /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`canSaveTriggerProperties`). */
         bool canEditTriggerProperties( const hashed_string& action, uint32 bindIndex ) const;
@@ -222,20 +230,20 @@ namespace sw::editor
         bool recordCapturedBinding( const hashed_string& action, uint32 bindIndex );
 
     private:
-        InputMap                 _inputMap;
-        InputReplay              _replay;
-        vector<InputMapConflict> _listConflict;   ///< 이번 프레임의 바인딩 충돌이다. Mappings 탭이 다시 모은다
-        EditableAssetPath        _inputMapPath;   ///< 편집하는 InputMap 리소스. 처음 값은 enginedefaultassets 의 디버그 키 맵, 칸에서 고친 글은 확정해야 읽기 · 쓰기에 쓰인다
-        EditableAssetPath        _replayFilePath; ///< Save · Load 가 쓰는 .swreplay 리소스. 처음 값은 editortooldefaults 의 `_inputReplayFile`
-        string                   _selectedAction;
-        InputMapPlotSamples      _plot;
-        uint32                   _recordedBeginFrameCount; ///< 마지막으로 녹화한 입력 프레임(`InputManager::getBeginFrameCount`)이다. 같은 프레임을 두 번 기록하지 않는다
-        uint32                   _capturingBindIndex;      ///< 키 잡기 중인 바인딩 번호. `_bCapturingKey` 이고 새 바인딩이 아닐 때만 의미가 있다
-        Key                      _pendingCaptureModifier;  ///< 키 잡기 중 혼자 눌린 수식 키. 없으면 `Key::Unknown`
-        uint8                    _bCapturingKey      : 1;
-        uint8                    _bCaptureNewBinding : 1; ///< 키 잡기가 있는 바인딩을 바꾸지 않고 새 바인딩을 더한다
-        uint8                    _bPlotPaused        : 1;
-        uint8                    _bDirty             : 1;
-        [[maybe_unused]] uint8   _reserved           : 4;
+        const DocumentEditRecorder* _pRecorder; ///< 편집 알림 창구(문서 패널이 쥔다)
+        InputMap                    _inputMap;
+        InputReplay                 _replay;
+        vector<InputMapConflict>    _listConflict;   ///< 이번 프레임의 바인딩 충돌이다. Mappings 탭이 다시 모은다
+        EditableAssetPath           _inputMapPath;   ///< 편집하는 InputMap 리소스. 처음 값은 enginedefaultassets 의 디버그 키 맵, 칸에서 고친 글은 확정해야 읽기 · 쓰기에 쓰인다
+        EditableAssetPath           _replayFilePath; ///< Save · Load 가 쓰는 .swreplay 리소스. 처음 값은 editortooldefaults 의 `_inputReplayFile`
+        string                      _selectedAction;
+        InputMapPlotSamples         _plot;
+        uint32                      _recordedBeginFrameCount; ///< 마지막으로 녹화한 입력 프레임(`InputManager::getBeginFrameCount`)이다. 같은 프레임을 두 번 기록하지 않는다
+        uint32                      _capturingBindIndex;      ///< 키 잡기 중인 바인딩 번호. `_bCapturingKey` 이고 새 바인딩이 아닐 때만 의미가 있다
+        Key                         _pendingCaptureModifier;  ///< 키 잡기 중 혼자 눌린 수식 키. 없으면 `Key::Unknown`
+        uint8                       _bCapturingKey      : 1;
+        uint8                       _bCaptureNewBinding : 1; ///< 키 잡기가 있는 바인딩을 바꾸지 않고 새 바인딩을 더한다
+        uint8                       _bPlotPaused        : 1;
+        [[maybe_unused]] uint8      _reserved           : 5;
     };
 } // namespace sw::editor

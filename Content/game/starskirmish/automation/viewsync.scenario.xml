@@ -8,34 +8,33 @@
 -->
 <Scenario name="game.starskirmish.viewsync" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_skirmishAutoPlay" value="1"/>
-	<Wait frames="61"/>
+	<AdvanceSimulation frames="61"/> <!-- 자동 플레이가 도는 동안 정해진 간격으로 표본을 뜬다(시간이 내용) -->
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="23"/>
+	<AdvanceSimulation frames="23"/>
 	<Expect watch="Skirmish.ViewLagMax" atMost="0.0001"/>
-	<Wait frames="1"/>
 	<Pass/>
 </Scenario>

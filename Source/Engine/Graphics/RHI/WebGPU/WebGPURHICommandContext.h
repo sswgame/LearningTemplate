@@ -81,7 +81,7 @@ namespace sw
         void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;

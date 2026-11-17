@@ -179,7 +179,7 @@ namespace sw
         if ( outEndpoint._host.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "cache endpoint needs host:port" } );
         if ( PlatformSocketUtil::resolveAddress( address, kDefaultRESPPort, outEndpoint._address ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the cache endpoint is not a host:port that resolves to IPv4", address } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the cache endpoint is not a host:port that resolves to an IP address", address } );
         if ( query == string_view::npos )
             return {};
         string_view rest = endpoint.substr( query + 1 );

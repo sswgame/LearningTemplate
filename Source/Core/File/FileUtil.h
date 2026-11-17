@@ -49,6 +49,17 @@ namespace sw
         bool        _bDirectory{ false }; ///< 디렉터리면 true(링크는 가리키는 쪽 기준) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
+    /**
+     * @brief 원자적 쓰기가 내용을 저장 장치까지 내릴지입니다(`FileUtil::writeFile` 은 `Fast`, `writeFileDurable` 은 `Durable`).
+     * @details 다시 만들 수 있는 산출물(쿠킹 · 캐시 · 에셋)은 `Fast` 다 — 파일마다 fsync 하면 쿠킹이 느려진다. 다시 만들 수 없는 사용자 데이터(세이브 · 장치 키 ·
+     *          사용자 설정)는 `Durable` 이다. 언리얼 `FILEWRITE_*` 에는 없고, .NET `FileOptions.WriteThrough` · SQLite `synchronous=FULL` 과 같은 자리다.
+     */
+    enum class FileSyncMode : uint8
+    {
+        Fast,    ///< 이름 바꾸기까지만 — 전원이 나가면 내용이 비거나 쓰레기일 수 있다(프로세스가 죽는 것은 안전하다)
+        Durable, ///< 닫기 전 fsync · 바꾼 뒤 폴더 fsync — 전원이 나가도 옛 것이거나 새 것이다
+    };
+
     /** @brief `FileUtil::readOptionalTextFile` 의 결과입니다. */
     enum class OptionalFileRead : uint8
     {
@@ -339,6 +350,11 @@ namespace sw
          */
         [[nodiscard]] static bool writeFile( string_view fileName, const uint8* pData, uint64 size );
         /**
+         * @brief `writeFile` 과 같고, 바꿔 끼우기 전에 내용을 · 뒤에 폴더 항목을 저장 장치까지 내립니다(`FileSyncMode::Durable`).
+         * @details 다시 만들 수 없는 사용자 데이터(세이브 슬롯 · 장치 키 · 사용자 설정)만 이것으로 쓴다 — 파일마다 fsync 비용(수 ms)이 든다.
+         */
+        [[nodiscard]] static bool writeFileDurable( string_view fileName, const uint8* pData, uint64 size );
+        /**
          * @brief 파일의 [offset, offset + maxReadCount) 를 outBytes 에 담습니다.
          * @details 측정한 크기만큼 읽지 못하면(읽기 오류 · 읽는 도중 파일이 줄어듦) false 입니다. 인자는 64비트라 4 GB 이상의 파일도 다룹니다.
          */
@@ -357,6 +373,8 @@ namespace sw
         [[nodiscard]] static bool readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
         /** @brief UTF-8 텍스트를 파일로 씁니다. `writeFile` 과 같이 원자적이고, 쓰기 · 닫기 결과를 확인합니다. */
         [[nodiscard]] static bool writeTextFile( string_view fileName, string_view text );
+        /** @brief `writeTextFile` 의 `FileSyncMode::Durable` 판입니다(`writeFileDurable` 의 설명). */
+        [[nodiscard]] static bool writeTextFileDurable( string_view fileName, string_view text );
         /**
          * @brief 크래시 보고 파일(@p pPath)을 통째로 씁니다. **할당 · 로그 · stdio · 쓰기 문이 없습니다** - 힙이 깨진 크래시 지점(시그널 처리기 포함)에서도 부를 수 있다.
          * @details 원자적이지 않다(임시 파일이 없다). 크래시 경로 밖에서는 `writeFile` 을 쓴다.

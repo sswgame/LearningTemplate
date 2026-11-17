@@ -114,10 +114,22 @@ namespace sw
     {
         if ( ConsoleLogOutputInternal::hasFlag( ConsoleLogOutputInternal::kFlagMuted ) )
             return;
+        ScopedLock<mutex> lock{ _mutex };
+        writeLocked( record );
+    }
+
+    void ConsoleLogOutput::writeWithoutWaiting( const LogRecord& record )
+    {
+        if ( ConsoleLogOutputInternal::hasFlag( ConsoleLogOutputInternal::kFlagMuted ) || _mutex.try_lock() == false )
+            return;
+        writeLocked( record );
+        _mutex.unlock();
+    }
+
+    void ConsoleLogOutput::writeLocked( const LogRecord& record )
+    {
         const LogLevel level    = record._level;
         const utf8*    pMessage = record._formatted.c_str();
-
-        ScopedLock<mutex> lock{ _mutex };
 
 #if defined( SW_PLATFORM_WINDOWS )
         if ( _bHasConsole && _pCachedConsoleHandle != nullptr )

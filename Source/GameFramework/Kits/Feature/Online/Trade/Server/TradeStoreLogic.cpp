@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -382,7 +383,7 @@ namespace sw
         string prefix  = ServiceKeyUtil::makeHex64( _serverID );
         prefix.push_back( '/' );
         vector<ServiceRecord> listOwned;
-        if ( _connection.listRecords( getOwnerTable(), prefix, "", Internal::kMaxRecoverCount, false, listOwned ) != ServiceStoreResult::Ok )
+        if ( ServiceRecordReader::readPage( _connection, getOwnerTable(), prefix, "", Internal::kMaxRecoverCount, false, listOwned )._result != ServiceStoreResult::Ok )
             return TradeServiceResult::fail( OnlineError::kUnavailable );
         for ( const ServiceRecord& owned : listOwned )
         {

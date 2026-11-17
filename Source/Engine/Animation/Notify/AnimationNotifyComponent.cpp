@@ -93,7 +93,7 @@ namespace sw
     void AnimationNotifyComponent::setNotifyTable( shared_ptr<const AnimationNotifyTable> table )
     {
         closeAllStates();
-        _table = std::move( table );
+        _table = SharedAssetRef<AnimationNotifyTable>{ std::move( table ) };
         requireFootBones();
     }
 

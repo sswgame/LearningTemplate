@@ -36,6 +36,8 @@ namespace sw
         [[nodiscard]] expected<void> initialize( string_view databasePath );
 
         LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
+        /** @brief 직전 세대를 두지 않는다 — 쓰기가 SQL 트랜잭션이라 반쪽이 없다(SQLite 저널이 지킨다). 늘 NotFound 다. */
+        LocalStoreResult readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
         LocalStoreResult writeSlot( const string& slot, const vector<uint8>& envelopeBytes ) override;
         LocalStoreResult eraseSlot( const string& slot ) override;
         LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;

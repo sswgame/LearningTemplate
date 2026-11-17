@@ -234,7 +234,7 @@ namespace sw
         if ( layer._arrBuiltCell[front] == layer._cellSize )
             return;
         // 앞 버퍼를 지금 셀로 다시 짓는다(게임 스레드 — 셀은 커지기만 해서 드물다). 뒤 버퍼는 다음 일이 새 셀로 다시 짓는다.
-        layer._arrGrid[front]      = SpatialHashGrid2D{ layer._cellSize };
+        layer._arrGrid[front]      = layer.makeGrid();
         layer._arrBuiltCell[front] = layer._cellSize;
         layer._arrBuiltCell[back]  = 0.0f;
         for ( const uint32 entryIndex : layer._listEntryIndex )
@@ -331,7 +331,7 @@ namespace sw
         {
             Layer& layer = _pJobLayer[layerIndex];
             if ( layer._bRebuildBack == SW_TRUE )
-                layer._arrGrid[back] = SpatialHashGrid2D{ layer._cellSize };
+                layer._arrGrid[back] = layer.makeGrid();
         }
         for ( const Change& change : _listChange )
         {

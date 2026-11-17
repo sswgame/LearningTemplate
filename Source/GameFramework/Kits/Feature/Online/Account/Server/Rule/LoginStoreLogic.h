@@ -25,6 +25,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 
 namespace sw
@@ -148,7 +149,7 @@ namespace sw
         void runAfterDeleteAccount( int64 nowMs, int32 maxCount, const vector<const IAfterDeleteAccount*>& listAfterDeleteAccount );
 
     private:
-        IServiceStoreConnection&    _connection;
+        ServiceReadSetConnection    _connection; ///< 읽은 레코드(프로필 · 게스트 · 외부 연결)를 다음 커밋의 조건으로 붙인다 — 손으로 `requireVersion` 을 걸지 않는다
         ILoginCrypto&               _crypto;
         const LoginServiceConfig&   _settings;
         const LoginTicketAuthority& _ticketAuthority;

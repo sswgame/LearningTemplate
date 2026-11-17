@@ -101,7 +101,7 @@ namespace sw
          * @brief 항목의 원본 [@p offset, @p offset + @p size) 만 읽습니다. 걸친 블록만 디스크에서 읽어 풀고 CRC 를 맞춥니다.
          * @return 항목이 없거나, 범위가 항목 밖이거나(오류 로그), 읽기 · 풀기 · CRC 가 실패하면 false 입니다. 결과는 같은 범위를 통째 읽기에서 자른 것과 같다.
          */
-        [[nodiscard]] bool readRange( uint64 pathHash, uint64 offset, uint32 size, vector<uint8>& outBytes ) const;
+        [[nodiscard]] bool readRange( uint64 pathHash, uint64 offset, uint64 size, vector<uint8>& outBytes ) const;
 
         /**
          * @brief 항목 하나를 @p io 로 비동기로 읽습니다. 압축 해제 · CRC 는 IO 완료를 받은 쪽(엔진은 태스크 워커)에서 하고 @p onComplete 를 부릅니다.
@@ -111,8 +111,11 @@ namespace sw
          */
         AsyncReadHandle readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
 
-        /** @brief `readRange` 의 비동기 꼴입니다. 항목이 없거나 범위가 항목 밖이면 아무것도 걸지 않고 유효하지 않은 핸들입니다(@p onComplete 는 불리지 않는다). */
-        AsyncReadHandle readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint32 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
+        /**
+         * @brief `readRange` 의 비동기 꼴입니다 — 텍스처 밉 범위(`TextureMipLayout`). 걸친 블록만 읽어 IO 완료를 받은 쪽에서 풀고 CRC 를 맞춘다(압축 항목도 된다).
+         * @details 항목이 없거나 범위가 항목 밖이면(오류 로그) 아무것도 걸지 않고 유효하지 않은 핸들입니다 — 그때 @p onComplete 는 불리지 않는다(`readFileAsync` 와 같은 약속).
+         */
+        AsyncReadHandle readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
 
         /** @brief 팩 헤더의 사본입니다(잠금 아래에서 복사한다 — 참조는 `close` 와 겹친다). */
         PackHeader getHeader() const;

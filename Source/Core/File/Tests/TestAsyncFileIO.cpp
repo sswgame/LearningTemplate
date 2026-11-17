@@ -1,6 +1,6 @@
 /**
  * @file TestAsyncFileIO.cpp
- * @brief 비동기 파일 읽기 — 전체 · 구간 읽기, 없는 파일 · 끝을 넘는 구간, 우선순위 순서, 취소, 내린 뒤 요청, future, 태스크 워커 완료, 요청별 대기 · 여러 스레드 대기.
+ * @brief 비동기 파일 읽기 — 전체 · 구간 읽기, 없는 파일 · 끝을 넘는 구간, 우선순위 순서, 취소, 내린 뒤 요청, 백엔드가 죽은 뒤 요청, future, 태스크 워커 완료, 요청별 대기 · 여러 스레드 대기.
  * @details 같은 테스트를 이 플랫폼의 기본 백엔드(Windows IOCP · 리눅스 io_uring — 없으면 스레드 풀)와 스레드 풀 백엔드로 각각 돌린다.
  *          순서 테스트는 "동시 진행 1 개" 로 백엔드를 막아 두고(첫 요청의 완료 콜백이 IO 스레드에서 기다린다) 그동안 쌓인 요청이 어떤 순서로
  *          나오는지 본다 — 시간에 기대지 않는다.
@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/AsyncFileIO.h"
+#include "Core/File/AsyncFileIOBackend.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
@@ -356,6 +357,32 @@ SW_TEST_CASE( AsyncFileIOTest, ShutdownCancelsBacklogAndRejectsLateRequests )
         sw::AsyncReadHandle late = io.readFile( path, sw::AsyncIOPriority::Normal );
         SW_EXPECT_TRUE( late.getStatus() == sw::AsyncIOStatus::ShutDown );
     }
+}
+
+/**
+ * @brief [AsyncFileIOTest] 백엔드의 IO 스레드가 죽으면(완료 포트 · io_uring 실패) 밀린 요청과 뒤에 오는 요청이 `ReadFailed` 로 바로 끝난다
+ * @details 가짜 백엔드 자리 — 큐만 만들고 IO 스레드 없이, 백엔드가 실패 때 부르는 `stopForBackendFailure` 를 부른다. 예전에는 IO 스레드만 나가고 큐는 요청을
+ *          계속 받아, 아무도 꺼내지 않는 요청이 영영 끝나지 않았다(`waitIdle` 이 멈춤).
+ */
+SW_TEST_CASE( AsyncFileIOTest, BackendFailureFailsBacklogAndLateRequestsAtOnce )
+{
+    sw::AsyncFileIOQueue                       queue{ sw::AsyncFileIOConfig{} };
+    const sw::shared_ptr<sw::AsyncReadRequest> backlog = sw::make_shared<sw::AsyncReadRequest>();
+    backlog->_path                                     = "never-read.bin";
+    SW_REQUIRE_TRUE( queue.push( backlog ) == sw::AsyncIOStatus::Pending );
+
+    queue.stopForBackendFailure();
+    const sw::AsyncReadHandle backlogHandle{ backlog };
+    SW_EXPECT_TRUE( backlogHandle.isDone() );
+    SW_EXPECT_TRUE_MSG( backlogHandle.getStatus() == sw::AsyncIOStatus::ReadFailed, sw::AsyncFileIO::getStatusName( backlogHandle.getStatus() ) );
+
+    const sw::shared_ptr<sw::AsyncReadRequest> late = sw::make_shared<sw::AsyncReadRequest>();
+    late->_path                                     = "never-read.bin";
+    SW_EXPECT_TRUE( queue.push( late ) == sw::AsyncIOStatus::ReadFailed );
+    SW_EXPECT_EQUAL( 0u, queue.getOutstandingCount() );
+
+    queue.requestStop(); // 뒤이은 내리기는 먼저 멈춘 까닭을 덮지 않는다
+    SW_EXPECT_TRUE( queue.push( late ) == sw::AsyncIOStatus::ReadFailed );
 }
 
 /**

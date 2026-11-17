@@ -4,6 +4,7 @@
  *        `NameRegistry` 는 이름 → 값을 소유하는 테이블(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 제거)입니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
@@ -217,6 +218,7 @@ namespace sw
             , _order{ order }
             , _nameCase{ nameCase }
             , _generation{ 0 }
+            , _removalGeneration{ 0 }
             , _bRequireName{ bRequireName }
             , _ownerMutex{}
             , _subscriptions{ onRelease }
@@ -291,7 +293,10 @@ namespace sw
             {
                 const bool bDroppedShadow = dropShadow( pItem );
                 if ( bDroppedShadow )
+                {
                     releaseEmptyStorage();
+                    _removalGeneration.fetch_add( 1, std::memory_order_acq_rel );
+                }
                 return bDroppedShadow;
             }
             const string name = _listName[index];
@@ -302,6 +307,7 @@ namespace sw
             returnToKeptStorage();
             releaseEmptyStorage();
             ++_generation;
+            _removalGeneration.fetch_add( 1, std::memory_order_acq_rel );
             return true;
         }
 
@@ -332,6 +338,7 @@ namespace sw
             _listShadowName  = vector<string>{};
             _listShadowOrder = vector<int32>{};
             ++_generation;
+            _removalGeneration.fetch_add( 1, std::memory_order_acq_rel );
         }
 
         /** @brief 그 객체가 올라 있는지 봅니다. */
@@ -469,6 +476,12 @@ namespace sw
          */
         uint32 getGeneration() const { return _generation; }
         /**
+         * @brief 항목이 빠질 때마다(빼기 · 그림자 버리기 · 비우기) 오르는 번호입니다. 잠금 없이 읽는다.
+         * @details 항목 포인터를 들고 있는 쪽(컴파일한 동작 · 조건식)이 앞에 본 번호와 다르면 그 항목이 아직 있는지(`contains`, 잠금 아래) 본다 — 올리기는 든 포인터를
+         *          무효로 만들지 않아 세지 않는다. 배포 빌드는 정적 등록만 하고 빼지 않아 늘 0 이다.
+         */
+        uint32 getRemovalGeneration() const { return _removalGeneration.load( std::memory_order_acquire ); }
+        /**
          * @brief 여러 스레드가 만지는 주인이 목록을 고치고 읽을 때 잡는 잠금입니다. 목록은 이 잠금을 스스로 잡지 않는다(잎 잠금 규칙은 주인이 정한다).
          * @details 함수 정적 목록(`SW_DEFINE_REGISTRATION_LIST`)의 주인은 잠금을 둘 다른 칸이 없다 — 따로 함수 정적 잠금을 두지 않게 목록이 같이 든다.
          */
@@ -560,20 +573,21 @@ namespace sw
         }
 
     private:
-        vector<T*>        _listItem;         ///< 항목(순서대로). 훑기가 이것만 읽는다
-        vector<string>    _listName;         ///< 항목마다 올릴 때 복사한 이름(같은 인덱스)
-        vector<int32>     _listOrder;        ///< 항목마다 정렬 값(같은 인덱스)
-        vector<T*>        _listKeptItem;     ///< 키우기 전 저장소(`keepStorageBeforeGrowth`). 보관 중이 아니면 비고 용량도 없다
-        vector<string>    _listKeptName;     ///< 키우기 전 저장소의 이름
-        vector<int32>     _listKeptOrder;    ///< 키우기 전 저장소의 정렬 값
-        vector<T*>        _listShadowItem;   ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
-        vector<string>    _listShadowName;   ///< 그림자 항목의 이름
-        vector<int32>     _listShadowOrder;  ///< 그림자 항목의 정렬 값
-        RegistrationOrder _order;            ///< 늘어놓는 순서
-        NameCase          _nameCase;         ///< 이름 비교가 대소문자를 보는지
-        uint32            _generation;       ///< `getGeneration`
-        uint8             _bRequireName : 1; ///< 이름 없는 등록을 거절하는지
-        mutable mutex     _ownerMutex;       ///< `getOwnerMutex`
+        vector<T*>        _listItem;          ///< 항목(순서대로). 훑기가 이것만 읽는다
+        vector<string>    _listName;          ///< 항목마다 올릴 때 복사한 이름(같은 인덱스)
+        vector<int32>     _listOrder;         ///< 항목마다 정렬 값(같은 인덱스)
+        vector<T*>        _listKeptItem;      ///< 키우기 전 저장소(`keepStorageBeforeGrowth`). 보관 중이 아니면 비고 용량도 없다
+        vector<string>    _listKeptName;      ///< 키우기 전 저장소의 이름
+        vector<int32>     _listKeptOrder;     ///< 키우기 전 저장소의 정렬 값
+        vector<T*>        _listShadowItem;    ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
+        vector<string>    _listShadowName;    ///< 그림자 항목의 이름
+        vector<int32>     _listShadowOrder;   ///< 그림자 항목의 정렬 값
+        RegistrationOrder _order;             ///< 늘어놓는 순서
+        NameCase          _nameCase;          ///< 이름 비교가 대소문자를 보는지
+        uint32            _generation;        ///< `getGeneration`
+        atomic<uint32>    _removalGeneration; ///< `getRemovalGeneration`
+        uint8             _bRequireName : 1;  ///< 이름 없는 등록을 거절하는지
+        mutable mutex     _ownerMutex;        ///< `getOwnerMutex`
         /** @brief `addSubscribed` 가 낸 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<T> _subscriptions;
     };
@@ -606,6 +620,13 @@ namespace sw
             , _revision{ 0 }
         {
         }
+        /** @brief 출처를 닫습니다(남은 주인 구독을 무효화한다). */
+        ~NameRegistry() override { closeSubscriptions(); }
+        // 소멸자를 둔 뒤에도 복사 · 이동은 예전 그대로다(복사는 구독을 데려가지 않고 이동은 데려간다 — `SubscriptionSource`).
+        NameRegistry( const NameRegistry& )            = default;
+        NameRegistry& operator=( const NameRegistry& ) = default;
+        NameRegistry( NameRegistry&& )                 = default;
+        NameRegistry& operator=( NameRegistry&& )      = default;
 
         /** @brief 값을 올립니다. 이름이 비었거나 같은 이름이 이미 있으면 올리지 않고 false 입니다(먼저 것을 둡니다). */
         [[nodiscard]] bool add( const hashed_string& name, T value )

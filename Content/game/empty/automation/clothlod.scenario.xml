@@ -16,25 +16,21 @@
 	<Expect watch="Cloth.LODGrade" equals="0"/>
 	<Expect watch="Cloth.LODSuspended" equals="0"/>
 	<Expect watch="Cloth.IterationCount" equals="6"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place GameCamera 0 1 -35"/>
 	<WaitUntil watch="Cloth.LODGrade" equals="1" timeoutFrames="60"/>
 	<WaitUntil watch="Cloth.IterationCount" equals="4" timeoutFrames="10"/>
 	<Expect watch="Cloth.LODSuspended" equals="0"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place GameCamera 0 1 -90"/>
 	<WaitUntil watch="Cloth.LODGrade" equals="2" timeoutFrames="60"/>
 	<WaitUntil watch="Cloth.IterationCount" equals="2" timeoutFrames="10"/>
 	<Expect watch="Cloth.LODSuspended" equals="0"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place GameCamera 0 1 -200"/>
 	<WaitUntil watch="Cloth.LODGrade" equals="3" timeoutFrames="60"/>
 	<WaitUntil watch="Cloth.LODSuspended" equals="1" timeoutFrames="10"/>
 	<Expect watch="Cloth.IterationCount" equals="0"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="object.place GameCamera 0 1 -3.4"/>
 	<WaitUntil watch="Cloth.LODGrade" equals="0" timeoutFrames="60"/>

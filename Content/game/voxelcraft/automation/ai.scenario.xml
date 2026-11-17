@@ -18,7 +18,6 @@
 	<Expect watch="VoxelCraft.BrokenCount" atLeast="1"/>
 	<Record watch="VoxelCraft.BrokenCount"/>
 	<!-- 끄면 플레이어 조종자가 되찾고 자동 플레이 조종자 오브젝트는 사라진다. -->
-	<Wait frames="1"/>
 	<Variable name="gv_voxelAutoPlay" value="0"/>
 	<WaitUntil watch="Pawn.Controller" target="Player" is="PlayerController" timeoutFrames="30"/>
 	<WaitUntil watch="Object.Exists" target="VoxelAutoPlay" equals="0" timeoutFrames="30"/>

@@ -164,7 +164,7 @@ namespace sw
         pZone->_kind                                      = kind;
         const SurfaceKindDef*                    pKind    = table.findKind( kind );
         const string                             path     = pKind != nullptr ? pKind->_zoneProfile.get() : string{};
-        shared_ptr<const ZoneProfile>            pProfile = path.empty() ? nullptr : SharedAssetCache<ZoneProfile>::acquire( path );
+        shared_ptr<const ZoneProfile>            pProfile = path.empty() ? nullptr : SharedAssetCache<ZoneProfile>::acquire( path ).snapshot();
         const GameObject* const                  pOwner   = getOwner();
         StringBuilder<constant::buffer::kMax256> sourceNameBuilder;
         sourceNameBuilder.appendFormat( "%# (surface %# on '%#')", path, kind.c_str(), pOwner != nullptr ? pOwner->getName().c_str() : "?" );

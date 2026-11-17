@@ -89,6 +89,11 @@ namespace sw
         PROPERTY()
         string _onlineGameBuild; ///< Hello 와 로그인에 싣는 게임 빌드 글(점으로 나눈 정수열). 온라인 서버를 적었으면 필수다
 
+        static constexpr int32 kUnsetRetryLimit = -1; ///< `_onlineRequestRetryLimit` 를 적지 않았다
+
+        PROPERTY( Max = 10 )
+        int32 _onlineRequestRetryLimit{ kUnsetRetryLimit }; ///< 서버가 다시 하라고 답한 요청(kBusy · kRateLimited · 멱등 키 있는 kUnavailable)을 다시 보내는 최대 횟수(`OnlineRetryPolicy`). 온라인 서버를 적었으면 필수다 — 비면(-1) 연결하지 않는다
+
         // 텔레메트리 · 크래시 보고를 받을 곳(`TelemetryUploadLink`). 운영자가 정하는 값이라 저장소의 팩은 적지 않는다 — 적지 않으면 동의해도 기계 밖으로 나가지 않는다.
         // 언리얼 `DefaultEngine.ini` 의 `[Analytics]` · `[CrashReportClient] DataRouterUrl` 자리다(기억에 의존).
         PROPERTY()

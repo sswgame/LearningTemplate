@@ -7,9 +7,9 @@
  *          그 모듈이 인스턴스화해 모듈 서브시스템이 소유하며 모듈 수명으로 오르내립니다(`SW_MODULE_SHARED_ASSET_CACHE`) — 예전 `GameDataCache<T>` 의 자리다. 멤버 정의는 이 헤더에 두지 않고
  *          `SharedAssetCacheDefinition.h` 에 두며, 에셋 종류의 .cpp 하나가 그것을 포함해 명시적으로 인스턴스화합니다. 쓰는 쪽 헤더는
  *          `SW_DECLARE_SHARED_ASSET_CACHE( <그 이미지의 _EXTERN_TEMPLATE 매크로>, 에셋 );` 만 둡니다 — 한 종류의 표는 한 이미지에만 있습니다.
- *          옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 쥔 쪽의 `shared_ptr` 가 맡습니다(세대 수로 옛 표를 들고 있지 않는다). 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
+ *          다시 읽기는 쥔 객체를 바꾸지 않고 새 판을 넣는다(A-7). 스냅숏은 쥔 쪽의 `shared_ptr` 가, 다시 읽힌 판을 따라가기는 `SharedAssetRef` 가 맡습니다(세대 수로 옛 표를 들고 있지 않는다). 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
  *
- *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그 · 다시 읽기 방식)은 그 종류의 정의(`AssetTypeDef` — 이름과 `AssetTypeLoader`) 한 벌에만 적습니다.
+ *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그)은 그 종류의 정의(`AssetTypeDef` — 이름과 `AssetTypeLoader`) 한 벌에만 적습니다.
  *          인스턴스화 · 캐시 등록 · 종류 등록은 `SW_SHARED_ASSET_CACHE( id, 에셋, 정의 )`(Engine) 또는 `SW_MODULE_SHARED_ASSET_CACHE( id, 에셋, 내보내기, 정의 )`(모듈) 한 줄이고,
  *          그 줄이 `SW_ASSET_TYPE` 를 대신합니다 — 캐시의 종류 이름이 곧 정의의 이름이라 둘이 갈라질 수 없습니다. 로더가 빠지면 인스턴스화가 컴파일 오류로 멈춥니다.
  *
@@ -36,6 +36,7 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 
 namespace sw
@@ -69,6 +70,8 @@ namespace sw
     {
         /** @brief 종류 이름 @p pKindName 의 캐시입니다. 없으면(모듈이 서기 전 · 내려간 뒤의 접근) 오류를 남기고 멈춥니다. */
         [[nodiscard]] static AssetCacheBase& getCache( const utf8* pKindName );
+        /** @brief 종류 이름 @p pKindName 의 캐시입니다. 없으면(매니저 · 모듈이 서기 전, 테스트가 캐시 없이 지은 객체) 알리지 않고 nullptr 입니다. */
+        [[nodiscard]] static AssetCacheBase* findCache( const utf8* pKindName );
         /** @brief 모듈 캐시 @p cache 를 레지스트리에 올립니다(@p pReload 는 핫 리로드 함수 — 배포는 nullptr). 매니저가 없거나 이름이 겹치면 오류를 남기고 빈 구독입니다. */
         [[nodiscard]] static Subscription registerModuleCache( AssetCacheBase& cache, AssetCacheReloadFunction pReload );
     };
@@ -103,11 +106,14 @@ namespace sw
          * @details 실패는 기억하지 않으므로 파일이 생기면 다음 요청이 읽습니다(오류는 읽는 함수가 남깁니다).
          */
         static SharedAssetHandle<AssetType> request( string_view path );
-        /** @brief 경로의 에셋을 나눠 받습니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서 읽는다). 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다. */
-        static shared_ptr<const AssetType> acquire( string_view path );
         /**
-         * @brief 사용 중이면 다시 읽고 다시 읽은 횟수를 올립니다(틱 밖, 게임 스레드). 읽지 못하면 옛 내용 그대로이고 false 입니다.
-         * @details 제자리로 바꾸는지 표에서 떼어 내는지는 종류의 `kReloadMode` 가 정합니다.
+         * @brief 경로의 에셋을 다시 읽힌 판을 따라가는 참조로 나눠 받습니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서 읽는다). 읽을 수 없으면 빈 참조입니다. 워커에서 불러도 됩니다.
+         * @details `shared_ptr<const T>` 로 저절로 바뀌지 않는다 — 받은 때의 판을 그대로 쥘 쪽(번호를 지어 둔 쪽 · 워커 일감 · 지역 값)은 `.snapshot()` 을 부른다.
+         */
+        static SharedAssetRef<AssetType> acquire( string_view path );
+        /**
+         * @brief 사용 중이면 새로 읽어 새 판으로 넣고 다시 읽은 횟수를 올립니다(틱 밖, 게임 스레드). 읽지 못하면 그대로이고 false 입니다.
+         * @details `shared_ptr` 로 쥔 쪽은 옛 객체를 그대로 읽고, `SharedAssetRef` 로 쥔 쪽은 새 판을 본다. 지어 둔 것은 `AssetReloadWatch` 로 횟수를 보고 다시 짓는다.
          */
         [[nodiscard]] static bool reloadShared( string_view path );
 
@@ -116,8 +122,12 @@ namespace sw
         bool isCached( string_view relativePath ) const override;
         /** @brief 사용 중이면 다시 읽습니다(`reloadShared`). */
         void reload( const AssetID& assetID );
-        /** @brief 쥔 경로면 종류의 다시 읽기 방식대로 다시 읽습니다(합성 문맥이 바뀌었다 — `AssetCacheBase::reloadComposed`). */
+        /** @brief 쥔 경로면 다시 읽습니다(합성 문맥이 바뀌었다 — `AssetCacheBase::reloadComposed`). */
         bool reloadComposed( string_view relativePath ) override;
+        /** @brief 다시 읽기 정리가 남긴 옛 판을 프레임 경계에서 놓습니다(`SharedAssetTable::collectRetired`). */
+        size_t collectRetiredVersions() override;
+        /** @brief 이 캐시가 나눠 준 @p pAsset 의 판입니다(`SharedAssetRef` 가 받을 때 한 번 찾는다). 이 캐시에서 오지 않았거나 비었으면 nullptr 입니다. 워커에서 불러도 됩니다. */
+        [[nodiscard]] static const WeakInternVersion<const AssetType>* findVersion( const shared_ptr<const AssetType>& pAsset );
         /** @brief 지금 누가 쥔 에셋 수입니다. */
         size_t getCachedCount() const override;
         /** @brief 표를 비웁니다. 쥔 쪽의 에셋은 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
@@ -132,7 +142,7 @@ namespace sw
 
         /** @brief 레지스트리에 오른 이 종류 캐시의 표입니다(정적 창구 · 로드 작업이 쓴다). 없으면 멈춘다. */
         static SharedAssetTable<AssetType>& getTable();
-        /** @brief @p table 의 @p path 를 종류의 `kReloadMode` 대로 다시 읽습니다(`reloadShared` · `reload` 의 본문). */
+        /** @brief @p table 의 @p path 를 다시 읽어 떼어 냅니다(`reloadShared` · `reload` 의 본문). */
         [[nodiscard]] static bool reloadIn( SharedAssetTable<AssetType>& table, string_view path );
         /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
         static SharedAssetHandle<AssetType> requestWith( string_view path, AssetLoadStart start );

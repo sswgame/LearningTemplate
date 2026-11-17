@@ -264,16 +264,17 @@ namespace sw
         , _inFlightCount{ 0 }
         , _outstandingCount{ 0 }
         , _bStopping{ false }
+        , _stopStatus{ AsyncIOStatus::ShutDown }
         , _deliveryStage{ settings._pTaskManager != nullptr ? settings._pTaskManager->createStage( "AsyncIOComplete" ) : TaskStageHandle{} }
     {
     }
 
-    bool AsyncFileIOQueue::push( const shared_ptr<AsyncReadRequest>& pRequest )
+    AsyncIOStatus AsyncFileIOQueue::push( const shared_ptr<AsyncReadRequest>& pRequest )
     {
         {
             ScopedLock<mutex> lock{ _mutex };
             if ( _bStopping )
-                return false;
+                return _stopStatus;
             pRequest->_pQueue = this;
             pRequest->_state.store( static_cast<uint8>( AsyncReadState::Queued ), std::memory_order_release );
             _arrQueue[AsyncFileIOInternal::toQueueIndex( pRequest->_priority )].push_back( pRequest );
@@ -282,7 +283,7 @@ namespace sw
         _queueCv.notify_one(); // 요청 하나에 꺼낼 스레드 하나
         if ( _wakeDelegate->isBound() )
             _wakeDelegate.get()();
-        return true;
+        return AsyncIOStatus::Pending;
     }
 
     void AsyncFileIOQueue::completeDetached( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIOStatus status )
@@ -501,9 +502,21 @@ namespace sw
 
     void AsyncFileIOQueue::requestStop()
     {
+        stop( AsyncIOStatus::ShutDown, AsyncIOStatus::Canceled );
+    }
+
+    void AsyncFileIOQueue::stopForBackendFailure()
+    {
+        stop( AsyncIOStatus::ReadFailed, AsyncIOStatus::ReadFailed );
+    }
+
+    void AsyncFileIOQueue::stop( const AsyncIOStatus stopStatus, const AsyncIOStatus queuedStatus )
+    {
         vector<shared_ptr<AsyncReadRequest>> listCanceled;
         {
             ScopedLock<mutex> lock{ _mutex };
+            if ( _bStopping == false )
+                _stopStatus = stopStatus; // 먼저 멈춘 까닭을 지킨다(내리는 중에 백엔드가 죽어도 늦은 요청은 ShutDown)
             _bStopping = true;
             for ( deque<shared_ptr<AsyncReadRequest>>& queue : _arrQueue )
             {
@@ -518,7 +531,7 @@ namespace sw
         _queueCv.notify_all(); // 멈춘다 — 기다리는 IO 스레드가 모두 나간다
         for ( const shared_ptr<AsyncReadRequest>& pRequest : listCanceled )
         {
-            pRequest->_result._status = AsyncIOStatus::Canceled;
+            pRequest->_result._status = queuedStatus;
             deliver( pRequest, false );
         }
         if ( _wakeDelegate->isBound() )
@@ -798,8 +811,9 @@ namespace sw
             AsyncFileIOQueue::completeDetached( pRequest, AsyncIOStatus::ShutDown );
             return AsyncReadHandle( pRequest );
         }
-        if ( _queue->push( pRequest ) == false )
-            AsyncFileIOQueue::completeDetached( pRequest, AsyncIOStatus::ShutDown );
+        const AsyncIOStatus pushStatus = _queue->push( pRequest );
+        if ( pushStatus != AsyncIOStatus::Pending )
+            AsyncFileIOQueue::completeDetached( pRequest, pushStatus );
         return AsyncReadHandle( pRequest );
     }
 

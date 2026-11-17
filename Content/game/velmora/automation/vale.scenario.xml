@@ -17,29 +17,24 @@
 	<Expect watch="Velmora.Health" equals="12"/>
 	<Expect watch="Session.Money" equals="0"/>
 	<!-- 동쪽 고사리숲으로 — 진입이 퀘스트 첫 단계(Enter fernwood)를 센다 -->
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="1" seconds="2"/>
 	<Wait seconds="2.1"/>
 	<Expect watch="Velmora.Region" is="fernwood"/>
 	<Expect watch="Velmora.PlayerX" near="12" tolerance="0.2"/>
 	<!-- 봉화(20,4)에서 불을 켠다 -->
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="1" seconds="1.3333"/>
 	<Wait seconds="1.45"/>
 	<ActionAxis name="Move" y="1" seconds="0.6667"/>
 	<Wait seconds="0.8"/>
 	<Expect watch="Velmora.PlayerX" near="20" tolerance="0.2"/>
 	<Expect watch="Velmora.PlayerZ" near="4" tolerance="0.2"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="Velmora.Use"/>
 	<Wait frames="2"/>
 	<ExpectLog id="Velmora.BeaconLit" count="1"/>
 	<!-- 야영지(20,-4)에서 쉰다 — 일어설 지역이 고사리숲이 되고 자동 저장 체크포인트가 된다 -->
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" y="-1" seconds="1.3333"/>
 	<Wait seconds="1.45"/>
 	<Expect watch="Velmora.PlayerZ" near="-4" tolerance="0.2"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="Velmora.Use"/>
 	<Wait frames="2"/>
 	<ExpectLog id="Velmora.Rested" count="1"/>
@@ -54,7 +49,6 @@
 	<Expect watch="Velmora.Phase" equals="1"/>
 	<Expect watch="Velmora.Alive" equals="1"/>
 	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="Velmora.Attack"/>
 	<Wait seconds="0.4"/>
 	<Action name="Velmora.Attack"/>
@@ -62,7 +56,6 @@
 	<ExpectLog id="Velmora.HallCleared" count="1"/>
 	<WaitUntil watch="Velmora.Phase" equals="3" timeoutFrames="120"/>
 	<Expect watch="Velmora.Alive" equals="1"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="Velmora.Attack"/>
 	<Wait seconds="0.4"/>
 	<Action name="Velmora.Attack"/>

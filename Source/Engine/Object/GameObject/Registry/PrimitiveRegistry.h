@@ -203,10 +203,11 @@ namespace sw
         vector<ScenePrimitive*> _listPrimitive;
         /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). */
         vector<uint32>                                  _listPrimitiveTransformSlot;
-        vector<PrimitiveInstanceEntry>                  _listInstanceEntry;      ///< 배치 순서대로 이어 붙은 항목들
-        vector<ScenePrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex ); ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
-        vector<AssetWaiter>                             _listAssetWaiter;        ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
-        unordered_set<ScenePrimitive*>                  _setLODPrimitive;        ///< LOD 단계가 여럿인 메시의 프리미티브(`addLODPrimitive`). 밀집 배열 집합이라 걸기 · 떼기가 O(1) 이고 씬 로드가 O(N^2) 가 되지 않습니다. 게임 스레드만 씁니다
+        vector<PrimitiveInstanceEntry>                  _listInstanceEntry;                  ///< 배치 순서대로 이어 붙은 항목들
+        vector<ScenePrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex );             ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
+        vector<AssetWaiter>                             _listAssetWaiter;                    ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
+        uint8 _bWalkingAssetWaiters                     SW_GUARDED_BY( _mutex ){ SW_FALSE }; ///< `updateAssetWaiters` 가 도는 중 — 빼기는 자리를 비우기만 한다
+        unordered_set<ScenePrimitive*>                  _setLODPrimitive;                    ///< LOD 단계가 여럿인 메시의 프리미티브(`addLODPrimitive`). 밀집 배열 집합이라 걸기 · 떼기가 O(1) 이고 씬 로드가 O(N^2) 가 되지 않습니다. 게임 스레드만 씁니다
         /**
          * @brief 슬롯마다 "바뀌었다" 비트입니다. **워드 하나가 슬롯 64 개**입니다. 원자값이라 워커 여럿이 동시에 표시해도 됩니다.
          * @details `consumeDirty` 는 워드마다 exchange 한 번(8000 슬롯이면 125 번)이고 켜진 비트만 골라 순회한다. 슬롯마다 원자 바이트로 두면

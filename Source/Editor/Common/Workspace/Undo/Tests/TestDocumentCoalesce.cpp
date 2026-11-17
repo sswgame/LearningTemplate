@@ -21,6 +21,7 @@ namespace
         sw::string                   _text{};
         sw::editor::DocumentEditSpan _span{};
         sw::editor::UndoStepOwner    _owner{};
+        uint32                       _captureCount{ 0 }; ///< 알림이 문서 전체 글을 만든 횟수(`notifyEdited` 의 capture)
 
         void       restore( sw::string_view text ) { _text = sw::string{ text }; }
         sw::string capture() const { return _text; }
@@ -30,7 +31,11 @@ namespace
         {
             sw::editor::EditorTransaction transaction;
             _text                                             = sw::string{ text };
-            const sw::optional<sw::editor::DocumentEdit> edit = _span.notifyEdited( "Drag", _text, bInteracting );
+            const sw::optional<sw::editor::DocumentEdit> edit = _span.notifyEdited( "Drag", bInteracting, [this]()
+            {
+                ++_captureCount;
+                return _text;
+            } );
             if ( edit.has_value() )
                 record( transaction, *edit, targetStack );
         }
@@ -59,7 +64,9 @@ namespace
 /** @brief [DocumentCoalesceTest] 거래 구간 안의 끌기 세 프레임과 해제는 한 단계이고, 되돌리면 처음 글 · 다시 하면 끝 글이다 */
 SW_TEST_CASE( DocumentCoalesceTest, TransactionScopedEditsCoalesce )
 {
-    sw::CommandStack   stack;
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );
@@ -86,7 +93,9 @@ SW_TEST_CASE( DocumentCoalesceTest, TransactionScopedEditsCoalesce )
 /** @brief [DocumentCoalesceTest] 구간 밖의 편집은 편집마다 한 단계이고, 처음 글로 돌아온 구간은 단계를 남기지 않는다 */
 SW_TEST_CASE( DocumentCoalesceTest, SpanReturningToStartRecordsNothing )
 {
-    sw::CommandStack   stack;
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &stack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );
@@ -108,12 +117,16 @@ SW_TEST_CASE( DocumentCoalesceTest, SpanReturningToStartRecordsNothing )
 /** @brief [DocumentCoalesceTest] 기록은 문서 패널이 답한 스택(미리보기 창의 스택)에 가고 작업 공간 스택에는 가지 않는다 — 그 창의 Ctrl+Z 가 되돌린다 */
 SW_TEST_CASE( DocumentCoalesceTest, RecordGoesToTheDocumentStack )
 {
-    sw::CommandStack   workspaceStack;
+    sw::CommandStack workspaceStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     sw::SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &workspaceStack ) );
     const sw::editor::ScopedEditorScope scopedEditor( scope );
 
-    sw::CommandStack             previewStack;
+    sw::CommandStack previewStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
     DocumentCoalesceTestDocument document;
     document._text = "before";
     document._span.resetBaseline( document._text );
@@ -125,4 +138,33 @@ SW_TEST_CASE( DocumentCoalesceTest, RecordGoesToTheDocumentStack )
 
     previewStack.undo();
     SW_EXPECT_TRUE( document._text == "before" );
+}
+
+/** @brief [DocumentCoalesceTest] 끄는 동안의 알림은 문서 전체를 직렬화하지 않는다 — 구간의 시작 한 번(그리고 끝의 `finish` 한 번)뿐이다(감사 E-9: 타일맵 512² 칠하기가 프레임마다 MB 단위였다) */
+SW_TEST_CASE( DocumentCoalesceTest, HeldSpanCapturesOnlyAtStart )
+{
+    sw::CommandStack stack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
+    sw::SubsystemScope scope;
+    SW_REQUIRE_TRUE( scope.bind( &stack ) );
+    const sw::editor::ScopedEditorScope scopedEditor( scope );
+
+    DocumentCoalesceTestDocument document;
+    document._text = "tile=0";
+    document._span.resetBaseline( document._text );
+
+    for ( char frame = '1'; frame <= '9'; ++frame )
+    {
+        sw::string text{ "tile=" };
+        text += frame;
+        document.editInFrame( text, true, stack );
+    }
+    SW_EXPECT_EQUAL( document._captureCount, uint32{ 1 } ); // 첫 프레임이 구간을 열 때만
+    SW_EXPECT_TRUE( document._span.isHolding() );
+
+    document.releaseInFrame( stack );
+    SW_EXPECT_EQUAL( stack.getCommandCount(), size_t{ 1 } );
+    stack.undo();
+    SW_EXPECT_TRUE( document._text == "tile=0" );
 }

@@ -6,6 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
+#include "Engine/Content/AssetRegistry.h"
 
 using namespace sw;
 
@@ -126,4 +127,33 @@ SW_TEST_CASE( AssetReferenceFieldsTest, RewritesOnlyPathProperties )
 
     SW_EXPECT_EQUAL( params.rewrite( text, AssetReferenceSyntax::XML, params.makeRewriteRules( "game/x/models_raw/rock.glb", "game/x/models_raw/stone.glb", false ) ), 1u );
     SW_EXPECT_TRUE( text.find( "_meshID=\"game/x/models/stone.mesh\"" ) != string::npos );
+}
+
+/**
+ * @brief [AssetReferenceFieldsTest] GUID 참조(`guid:<32자>`)는 런타임 색인으로 지금 경로를 풀어 참조가 되고(쿠킹 따라가기 · 참조 색인 · 검사가 본다),
+ *        색인에 없는 GUID 는 글 그대로 참조라 "없는 경로" 로 잡힌다. 옮기기의 고쳐 쓰기는 GUID 참조를 건드리지 않는다(경로가 바뀌어도 GUID 는 그대로다)
+ */
+SW_TEST_CASE( AssetReferenceFieldsTest, GUIDReferencesResolveThroughTheIndexAndAreNotRewritten )
+{
+    AssetReferenceFields params;
+    SW_REQUIRE_TRUE( loadRepositoryProperties( params ) );
+    const AssetGUID            guid = *AssetGUID::tryParse( "0000000000000000000000000000f1e1" );
+    vector<AssetRegistryLayer> listLayer;
+    listLayer.push_back( AssetRegistryLayer{ "test", { AssetRegistryEntry{ guid, "game/x/A.material" } } } );
+    AssetRegistry previous = AssetRegistry::install( std::move( *AssetRegistry::merge( listLayer ) ) );
+
+    string               text     = "<M _materialPath=\"guid:0000000000000000000000000000f1e1\" _meshID=\"guid:0000000000000000000000000000dead\"/>\n";
+    const vector<string> listPath = extractPaths( params, text, AssetReferenceSyntax::XML );
+    SW_REQUIRE_EQUAL( listPath.size(), static_cast<size_t>( 2 ) );
+    SW_EXPECT_EQUAL( listPath[0], string( "game/x/a.material" ) );
+    SW_EXPECT_EQUAL( listPath[1], string( "guid:0000000000000000000000000000dead" ) );
+    AssetIDSet assets;
+    assets.addFile( "game/x/a.material" );
+    SW_EXPECT_TRUE( params.canResolve( listPath[0], assets ) );
+    SW_EXPECT_FALSE( params.canResolve( listPath[1], assets ) );
+
+    SW_EXPECT_EQUAL( params.rewrite( text, AssetReferenceSyntax::XML, params.makeRewriteRules( "game/x/a.material", "game/y/b.material", false ) ), 0u );
+    SW_EXPECT_TRUE( text.find( "guid:0000000000000000000000000000f1e1" ) != string::npos );
+
+    (void)AssetRegistry::install( std::move( previous ) );
 }

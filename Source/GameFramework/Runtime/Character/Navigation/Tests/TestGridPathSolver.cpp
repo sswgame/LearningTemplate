@@ -35,9 +35,9 @@ SW_TEST_CASE( GridPathSolverTest, QueuedPathsMatchSynchronousPaths )
     sw::GridPathSolver                       solver{ grid };
     sw::PathRequestQueue<sw::GridPathSolver> queue{ solver };
 
-    sw::vector<sw::float3>            listFrom;
-    sw::vector<sw::float3>            listTarget;
-    sw::vector<sw::PathRequestHandle> listHandle;
+    sw::vector<sw::float3>                                       listFrom;
+    sw::vector<sw::float3>                                       listTarget;
+    sw::vector<sw::PathRequestQueue<sw::GridPathSolver>::Ticket> listHandle;
     for ( int32 index = 0; index < 40; ++index )
     {
         const sw::float3 from{ 0.5f + static_cast<float32>( index % 5 ), 0.0f, 0.5f + static_cast<float32>( index % 11 ) };
@@ -49,7 +49,7 @@ SW_TEST_CASE( GridPathSolverTest, QueuedPathsMatchSynchronousPaths )
         listTarget.push_back( target );
         listHandle.push_back( queue.request( std::move( job ) ) );
     }
-    queue.launch( "Test", nullptr );
+    queue.launch( "Test", nullptr, sw::PathRequestQueue<sw::GridPathSolver>::kNoLaunchLimit );
     (void)queue.complete();
 
     sw::GridPathfinder pathfinder;
@@ -79,10 +79,10 @@ SW_TEST_CASE( GridPathSolverTest, BlockedStartReportsNoPath )
     sw::GridPathSolver                       solver{ grid };
     sw::PathRequestQueue<sw::GridPathSolver> queue{ solver };
     sw::GridPathJob                          request;
-    request._from                      = sw::float3{ 6.5f, 0.0f, 6.5f }; // 벽 칸
-    request._target                    = sw::float3{ 0.5f, 0.0f, 0.5f };
-    const sw::PathRequestHandle handle = queue.request( std::move( request ) );
-    queue.launch( "Test", nullptr );
+    request._from                                           = sw::float3{ 6.5f, 0.0f, 6.5f }; // 벽 칸
+    request._target                                         = sw::float3{ 0.5f, 0.0f, 0.5f };
+    sw::PathRequestQueue<sw::GridPathSolver>::Ticket handle = queue.request( std::move( request ) );
+    queue.launch( "Test", nullptr, sw::PathRequestQueue<sw::GridPathSolver>::kNoLaunchLimit );
     (void)queue.complete();
     sw::GridPathJob job;
     SW_REQUIRE_TRUE( queue.takeResult( handle, job ) == sw::PathRequestState::Ready );

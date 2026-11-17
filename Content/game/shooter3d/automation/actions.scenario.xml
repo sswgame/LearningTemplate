@@ -12,7 +12,6 @@
 	<Expect watch="Object.Z" target="Player" near="-16" tolerance="0.05"/>
 	<Expect watch="Pawn.Controller" target="Player" is="PlayerController"/>
 	<!-- 점프 — 0.1 초 안에 떠오르고, 0.1 초 뒤 앞으로 0.5 초 달린다(공중에서도 움직인다). -->
-	<Wait frames="1"/>
 	<Action name="Jump"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<Wait seconds="0.1"/>

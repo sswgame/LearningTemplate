@@ -9,6 +9,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
@@ -79,8 +80,8 @@ namespace sw
                 return true;
             }
 
-            /** @brief 표면이 없거나 앱이 멈춘 동안 메시지를 보는 주기입니다(잠들어도 수명 이벤트를 곧 받는다). */
-            static constexpr int64 kPausedTickNanoseconds = 10 * 1000 * 1000;
+            /** @brief 표면이 없거나 앱이 멈춘 동안 창 메시지를 기다리는 최대 시간입니다. 메시지(수명 이벤트)가 오면 곧 깬다(`IWindow::waitForMessages`). */
+            static constexpr uint32 kPausedWaitMilliseconds = 10;
 
             /** @brief 감시 값 `Window.RenderPausedTicks` — 표면을 잃거나 앱이 멈춰 프레임을 돌지 않은 메인 루프 틱의 누적입니다. 주 창이 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readWindowRenderPausedTicks( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -127,6 +128,7 @@ namespace sw
         , _configReloadedSubscription{}
         , _windowMessageSubscription{}
         , _appLifecycleSubscription{}
+        , _modalLoopTickSubscription{}
         , _pFramePacer{ nullptr }
         , _initializeStartMicro{ 0 }
         , _mainLoopStartMicro{ 0 }
@@ -460,6 +462,7 @@ namespace sw
         // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
         _windowMessageSubscription = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
         _appLifecycleSubscription  = _pWindow->addLifecycleListener( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &App::onAppLifecycle, this ) );
+        _modalLoopTickSubscription = _pWindow->bindModalLoopTickCallback( SW_DELEGATE_METHOD( WindowModalLoopTickDelegate, &App::onWindowModalLoopTick, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
         // 에디터 뷰 카메라는 에디터 모드에서만 연결한다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다"는 뜻이므로 루프에서 모드를
@@ -588,6 +591,8 @@ namespace sw
 
         // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
         _userSettingsHost.update( frameTime._deltaTime );
+        // 메시지 처리 · 화면 설정이 모은 크기 변경을 여기서 마지막 크기로 한 번 적용한다(스왑체인 resize — 감사 P-2). 멈춘 틱은 이 함수에 오지 않아 표면이 없는 동안은 미룬 채 둔다.
+        _pWindow->applyPendingResize();
 
         _launch.getEngine().beginFrame( frameTime._deltaTime, frameTime._unscaledDeltaTime ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
         // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
@@ -614,18 +619,24 @@ namespace sw
         // 조회 자체를 tick 안으로 넘긴다.
         //
         // 모듈 교체는 **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
+#if SW_WITH_DYNAMIC_MODULES
         if ( _launch.getDevLayer() != nullptr )
             _launch.getDevLayer()->updateModuleReload();
+#endif
 
         const ModuleFrameState& frameState = getModuleManager()->getFrameState();
         _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
         getModuleManager()->endEditorFrame();
 
         // 프레임 경계의 장치 교체 · 다시 만들기 — 개발 구성은 교체기(메뉴 · 콘솔 교체 + 실패 집계)를 거치고, 배포는 장치 분실 재생성(`RHIDeviceLostPolicy::Recreate`)만 예약한다.
-        if constexpr ( build::kShipping == false )
-            _pBackendSwitcher->applyIfPending();
-        else if ( const RHI* pRHI = _launch.getEngine().getRHI(); pRHI != nullptr && pRHI->hasPendingBackendChange() )
-            (void)getModuleManager()->applyPendingBackendChange( _launch.getEngine() ); // 실패하면 렌더 드라이버가 종료(DeviceLost)를 이미 요청했다
+        // 창 모달 루프 안의 프레임은 건너뛴다 — 교체가 창을 다시 만들면 아직 그 창에서 도는 모달 루프의 HWND 가 사라진다. 예약은 남아 루프가 끝난 뒤 첫 프레임이 한다.
+        if ( _pWindow->isInModalLoopTick() == false )
+        {
+            if constexpr ( build::kShipping == false )
+                _pBackendSwitcher->applyIfPending();
+            else if ( const RHI* pRHI = _launch.getEngine().getRHI(); pRHI != nullptr && pRHI->hasPendingBackendChange() )
+                (void)getModuleManager()->applyPendingBackendChange( _launch.getEngine() ); // 실패하면 렌더 드라이버가 종료(DeviceLost)를 이미 요청했다
+        }
 
         _launch.getEngine().endFrame();
         onStartupFrameEnded();
@@ -665,7 +676,8 @@ namespace sw
         if ( _pWindow->isRenderPaused() )
         {
             _bRenderPaused = SW_TRUE;
-            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + AppInternal::kPausedTickNanoseconds );
+            // 잠들지 않고 창 메시지를 기다린다 — 웹은 메인 스레드를 재우면 바쁜 대기이고(브라우저가 숨은 탭의 프레임 콜백을 이미 멈춘다), Android 는 ALooper 에서 명령을 기다린다(감사 P-5).
+            _pWindow->waitForMessages( AppInternal::kPausedWaitMilliseconds );
             return true;
         }
         // 멈춘 동안 흐른 실제 시간을 한 프레임의 델타로 받지 않는다.
@@ -675,6 +687,14 @@ namespace sw
             _fixedTimestep.start();
         }
         return runFrame( *_pFramePacer );
+    }
+
+    void App::onWindowModalLoopTick()
+    {
+        // 메인 루프의 `processMessages` 안이다(창 프로시저 → 모달 루프 → WM_TIMER). 루프 밖(기동 · 종료)의 메시지 처리나 멈춘 표면이면 프레임을 돌지 않는다.
+        if ( _pFramePacer == nullptr || _pWindow->isRenderPaused() )
+            return;
+        (void)runFrame( *_pFramePacer ); // 끝내기 요청은 창 닫기를 청하고, 모달 루프가 끝난 뒤 메인 루프의 `processMessages` 가 본다
     }
 
     int32 App::finishMainLoop()

@@ -2,6 +2,7 @@
     "_name": "chat_send_p99",
     "_seed": 7,
     "_region": "kr",
+    "_pacing": "open",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "chat_join", "_channel": "world.p99" },

@@ -109,10 +109,11 @@ namespace sw
                 const BOOL  bDequeued = GetQueuedCompletionStatus( _hPort, &transferredBytes, &completionKey, &pOverlapped, INFINITE );
                 if ( pOverlapped == nullptr )
                 {
-                    // 깨우기 패킷이거나 포트 자체의 실패다. 실패면 이 스레드가 할 수 있는 일이 없다 — 걸린 요청은 돌아오지 않는다.
+                    // 깨우기 패킷이거나 포트 자체의 실패다. 실패면 이 스레드가 할 수 있는 일이 없다 — 큐를 실패로 멈춰 밀린 요청 · 새 요청이 바로 끝나게 한다.
                     if ( bDequeued == FALSE )
                     {
                         SW_LOG_ERROR_ID( "AsyncFileIO.GetQueuedCompletionStatusFailedError", "GetQueuedCompletionStatus failed (error %#)", static_cast<uint32>( GetLastError() ) );
+                        _pQueue->stopForBackendFailure();
                         return;
                     }
                     continue;

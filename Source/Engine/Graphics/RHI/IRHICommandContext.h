@@ -74,6 +74,12 @@ namespace sw
         void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) final;
         void uavBarrier( RHIBufferHandle buffer ) final;
 
+        // ------------------------------------------------------------------------------
+        // 기록 경로의 상수 버퍼 쓰기 — 한 프레임에 한 버퍼는 한 번(`IRHIDevice::getConstantBufferWriteLog`)
+        // ------------------------------------------------------------------------------
+        /** @brief 이번 프레임에 이미 쓴 버퍼를 다시 쓰면 진단 오류를 남깁니다(DX12 · Vulkan · GL 은 앞 드로우도 마지막 값을 읽는다 — R-12). 쓰기는 그대로 낸다. */
+        void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) final;
+
     protected:
         /** @brief 이 문맥을 만든 디바이스입니다. 드로우 진단(`IRHIDevice::getDrawDiagnostics`)을 거기서 받는다 — 진단 횟수는 디바이스 멤버다. */
         virtual IRHIDevice& getContextDevice() const = 0;
@@ -101,6 +107,8 @@ namespace sw
         virtual void transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count );
         virtual void copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) = 0;
         virtual void uavBarrierNative( RHIBufferHandle buffer )                                                       = 0;
+        /** @brief 버퍼의 이번 프레임 슬롯(DX11 은 이 리스트의 판)에 씁니다. 두 번째 쓰기 진단은 기반이 이미 했다. */
+        virtual void updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 
     private:
         /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 백버퍼가 없던 패스면 조용히, 아니면 알리고 false 입니다. */

@@ -18,9 +18,10 @@ namespace sw
             /** @brief 비신뢰 · 순서만 메시지의 흐름 번호입니다 — (패킷 번호 << 8 | 패킷 안 자리). 자리는 `kMessageCountMax`(255) 아래다. */
             static uint64 makeWirePosition( uint16 sequence, int32 position ) { return ( static_cast<uint64>( sequence ) << 8 ) | static_cast<uint64>( position & 0xFF ); }
             static_assert( static_cast<int32>( NetChannelType::Count ) <= ( 1 << kChannelBits ), "every channel must fit in the channel field" );
-            static constexpr float64 kRttSmoothing  = 0.1;
-            static constexpr float64 kLossSmoothing = 0.1;
-            static constexpr float64 kStatsInterval = 0.25;
+            static constexpr float64 kRttSmoothing         = 0.1;
+            static constexpr float64 kRttVarianceSmoothing = 0.25; ///< RFC 6298 의 β
+            static constexpr float64 kLossSmoothing        = 0.1;
+            static constexpr float64 kStatsInterval        = 0.25;
 
             /** @brief 통계 값 하나(`float32`)를 표본 쪽으로 @p factor 만큼 옮깁니다. 계산은 `float64`(시각과 같은 정밀도)로 합니다. */
             static float32 smoothTowards( float32 current, float64 sample, float64 factor )
@@ -384,12 +385,14 @@ namespace sw
 
     float64 NetConnection::computeResendDelay() const
     {
-        return MathUtil::max( 0.1, static_cast<float64>( _stats._rtt ) + kResendMargin );
+        const float64 jitterMargin = MathUtil::max( kResendMargin, kRttVarianceMultiplier * static_cast<float64>( _stats._rttVariance ) );
+        return MathUtil::max( kMinResendDelay, static_cast<float64>( _stats._rtt ) + jitterMargin );
     }
 
     bool NetConnection::isReliableDue( const OutgoingReliable& message, float64 time, float64 resendDelay ) const
     {
-        return message._lastSentTime < 0.0 || message._bResendNow != SW_FALSE || time - message._lastSentTime >= resendDelay;
+        const float64 messageDelay = resendDelay * static_cast<float64>( 1u << message._backoffShift );
+        return message._lastSentTime < 0.0 || message._bResendNow != SW_FALSE || time - message._lastSentTime >= messageDelay;
     }
 
     bool NetConnection::hasDataToSend( float64 time ) const
@@ -472,7 +475,12 @@ namespace sw
             if ( body.tryWriteMessage( pMessage->_channel, messageID, pMessage->_buffer, pMessage->_bMore != SW_FALSE ) == false )
                 break;
             if ( pMessage->_lastSentTime >= 0.0 )
+            {
                 ++_stats._resentMessageCount;
+                // 시한이 지나 다시 싣는 것이면 다음 시한을 두 배로 — 잃은 것을 안 빠른 재전송(`_bResendNow`)은 막힘의 표지가 아니라 늘리지 않는다.
+                if ( pMessage->_bResendNow == SW_FALSE && pMessage->_backoffShift < kMaxResendBackoffShift )
+                    ++pMessage->_backoffShift;
+            }
             else if ( pMessage->_channel == NetChannelType::ReliableUnordered )
                 recordFlow( pMessage->_channel, messageID, pMessage->_buffer.data(), pMessage->_buffer.size(), false ); // 재전송은 같은 메시지라 처음만 찍는다
             pMessage->_lastSentTime                    = body._time;
@@ -777,9 +785,19 @@ namespace sw
             // RTT 표본은 확인을 요청한 패킷이 가장 새 확인으로 돌아왔을 때만 잡는다. ack 비트로 늦게 확인된 패킷이나 답 패킷은 상대가 기다렸다가 보냈을 수 있기 때문이다.
             if ( bitIndex < 0 && pSent->_bAckRequested )
             {
+                // RFC 6298 — 첫 표본은 RTTVAR = R / 2, 다음부터는 옛 SRTT 와의 차이로 RTTVAR 를 먼저 옮기고 SRTT 를 옮긴다.
                 const float64 sample = time - pSent->_time;
-                _stats._rtt          = _stats._rtt <= 0.0f ? static_cast<float32>( sample )
-                                                           : NetConnectionInternal::smoothTowards( _stats._rtt, sample, NetConnectionInternal::kRttSmoothing );
+                if ( _stats._rtt <= 0.0f )
+                {
+                    _stats._rtt         = static_cast<float32>( sample );
+                    _stats._rttVariance = static_cast<float32>( sample * 0.5 );
+                }
+                else
+                {
+                    const float64 sampleError = MathUtil::abs( static_cast<float64>( _stats._rtt ) - sample );
+                    _stats._rttVariance       = NetConnectionInternal::smoothTowards( _stats._rttVariance, sampleError, NetConnectionInternal::kRttVarianceSmoothing );
+                    _stats._rtt               = NetConnectionInternal::smoothTowards( _stats._rtt, sample, NetConnectionInternal::kRttSmoothing );
+                }
             }
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
             {

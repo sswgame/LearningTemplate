@@ -38,6 +38,13 @@ namespace sw
         return _owner.finishClipLoadsIfComplete();
     }
 
+    void SkeletalAnimatorBinding::prepareAnimationFrame( SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
+    {
+        (void)skeletalMesh;
+        (void)context;
+        _owner.refreshReloadedClips();
+    }
+
     void SkeletalAnimatorBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& skeletalMesh, const AnimationFrameContext& context )
     {
         if ( phase == AnimationPhase::Time )
@@ -78,7 +85,7 @@ namespace sw
         for ( const auto& [name, clip] : _owner._mapClip )
         {
             if ( clip.get() == pClip )
-                return clip;
+                return clip.snapshot();
         }
         return nullptr;
     }
@@ -256,6 +263,7 @@ namespace sw
         , _deferredPlayState{}
         , _deferredPlayBlend{ -1.0f }
         , _mapTrackToBone{}
+        , _clipReload{}
         , _pTrackMapSkeleton{ nullptr }
         , _listLayer{}
         , _listGraphLayer{}
@@ -315,9 +323,17 @@ namespace sw
             _bindingRegistration.reset();
     }
 
+    void SkeletalAnimatorComponent::refreshReloadedClips()
+    {
+        if ( hasBegunPlay() == false || _bClipsPending == SW_TRUE || _clipReload.takeChanged() == false )
+            return;
+        setAnimationSetPath( string( _animationSetPath.path() ) ); // 같은 셋을 다시 건다 — 표가 공유 캐시의 새 판을 받고 빌린 포인터를 모두 다시 짓는다
+    }
+
     void SkeletalAnimatorComponent::onBeginPlay()
     {
         Component::onBeginPlay();
+        _clipReload.markSeen(); // 받기 전에 적는다 — 받는 도중의 다시 읽기를 놓치지 않는다
         _graphPlayer.setDefaultBlendSeconds( _blendSeconds );
         bindToUnit();
         // 스폰이 디스크를 기다리지 않게 클립은 워커가 읽는다. 다 읽힐 때까지 유닛은 그리지 않고(캐릭터는 애니메이션이 준비된 뒤 나타난다),
@@ -471,7 +487,7 @@ namespace sw
         {
             shared_ptr<const AnimationClip> clip = load._load.get();
             if ( clip != nullptr )
-                _mapClip.emplace( load._clipName, std::move( clip ) );
+                _mapClip.emplace( load._clipName, SharedAssetRef<AnimationClip>{ std::move( clip ) } );
         }
         _listClipLoad.clear();
         _bClipsPending = SW_FALSE;
@@ -843,7 +859,7 @@ namespace sw
         const string clipPath = makeClipPath( clipName );
         if ( clipPath.empty() )
             return false;
-        shared_ptr<const AnimationClip> clip = SharedAssetCache<AnimationClip>::acquire( clipPath );
+        SharedAssetRef<AnimationClip> clip = SharedAssetCache<AnimationClip>::acquire( clipPath );
         if ( clip == nullptr )
             return false;
         _mapClip.emplace( clipName, std::move( clip ) );
@@ -972,9 +988,10 @@ namespace sw
         return false;
     }
 
-    void SkeletalAnimatorComponent::setSequencerOverride( shared_ptr<const AnimationClip> clip, float32 time, float32 weight )
+    void SkeletalAnimatorComponent::setSequencerOverride( const SharedAssetRef<AnimationClip>& clip, float32 time, float32 weight )
     {
-        _sequencerClip   = std::move( clip );
+        if ( clip != _sequencerClip )
+            _sequencerClip = clip; // 프레임마다 같은 클립이 온다 — 같으면 따라가기 목록을 다시 잡지 않는다
         _sequencerTime   = time;
         _sequencerWeight = ( _sequencerClip != nullptr ) ? MathUtil::clamp( weight, 0.0f, 1.0f ) : 0.0f;
         if ( _pSkeletalMesh != nullptr )

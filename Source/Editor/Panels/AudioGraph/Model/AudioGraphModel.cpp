@@ -8,6 +8,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -62,13 +63,13 @@ namespace sw::editor
         return _editGraph.saveToAsset( diskPath );
     }
 
-    bool AudioGraphModel::takeEdit( AudioGraphEdit& outEdit )
+    void AudioGraphModel::publishEdit()
     {
         if ( _pendingEdit._pLabel == nullptr )
-            return false;
-        outEdit      = _pendingEdit;
-        _pendingEdit = AudioGraphEdit{};
-        return true;
+            return;
+        const utf8* const pLabel = _pendingEdit._pLabel;
+        _pendingEdit             = AudioGraphEdit{};
+        recordDocumentEdit( pLabel );
     }
 
     bool AudioGraphModel::isPreviewAudioReady()
@@ -222,5 +223,17 @@ namespace sw::editor
         if ( pNode == nullptr || pNode->_name.isEqual( previousName, NameCase::CaseSensitive ) )
             return;
         AudioGraphEditUtil::replaceNodeReferences( _editGraph, previousName, pNode->_name );
+    }
+
+    void AudioGraphModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
+    }
+
+    void AudioGraphModel::markCommentsEdited( CommentEdit edit )
+    {
+        static constexpr const utf8* kArrLabel[] = { "Add Audio Graph Comment", "Rename Audio Graph Comment", "Move Audio Graph Comment", "Delete Audio Graph Comment" };
+        recordEdit( kArrLabel[static_cast<uint32>( edit )] );
     }
 } // namespace sw::editor

@@ -9,7 +9,6 @@
 <Scenario name="game.velmora.carry.1" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
 	<Expect watch="Mods.ActiveCount" equals="0"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="1" seconds="3.3333"/>
 	<Wait seconds="3.45"/>
 	<ActionAxis name="Move" y="1" seconds="0.6667"/>
@@ -17,14 +16,12 @@
 	<Action name="Velmora.Use"/>
 	<Wait frames="2"/>
 	<ExpectLog id="Velmora.BeaconLit" count="1"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" y="-1" seconds="0.6667"/>
 	<Wait seconds="0.8"/>
 	<ActionAxis name="Move" x="1" seconds="1.75"/>
 	<Wait seconds="1.9"/>
 	<Expect watch="Velmora.Phase" equals="1"/>
 	<Expect watch="Velmora.PlayerX" near="30.5" tolerance="0.2"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Action name="Velmora.Attack"/>
 	<Wait seconds="0.4"/>
 	<Action name="Velmora.Attack"/>

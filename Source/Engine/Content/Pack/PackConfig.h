@@ -15,6 +15,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/IConfig.h"
+#include "Engine/Config/PackCookRuleTypes.h"
 #include "Engine/Content/Pack/PackTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -105,27 +106,6 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct PackAlwaysCookRule
-     * @brief 참조가 없어도 담는 파일의 이름 붙은 묶음입니다(언리얼 Primary Asset Rules 의 `AlwaysCook` · Directories to Always Cook).
-     * @details 코드가 이름으로 읽는 것(엔진 기본 에셋 · 설정, 시나리오, 종류 경로 규칙으로 찾는 데이터)처럼 참조 칸으로 닿지 않는 파일만 적는다. 이 묶음의 파일은 뿌리라 그 참조도 따라간다.
-     *          패턴은 리소스 id(`engine/…` · `game/<팩>/…`)에 `StringUtil::matchesPathPattern` 으로 맞춘다.
-     */
-    REFLECT()
-    struct SW_API PackAlwaysCookRule
-    {
-        REFLECT_BODY();
-
-        PROPERTY( Required )
-        string _name; ///< 묶음 이름 — 왜 참조로 닿지 않는지를 이름으로 적는다(로그 · 문서용)
-
-        PROPERTY( Required )
-        vector<string> _listPattern; ///< 리소스 id 패턴(`game/*/maps/**`)
-
-        PROPERTY( Required )
-        bool _bAutomationOnly{ SW_FALSE }; ///< 참이면 자동화 실행기가 있는 구성(개발 구성 클라이언트)만 담는다 — 시나리오는 실행기가 없으면 읽히지 않는다
-    };
-
-    /**
      * @struct PackRequiredDataPath
      * @brief 게임 설정 `<RequiredData kind pack>` 의 종류 하나가 팩 안에서 차지하는 자리(`data/items.xml` · 폴더 `data/appearance`)입니다.
      * @details 런타임은 종류 등록 줄의 경로 규칙으로 자리를 만든다(`GamePackDataUtil::tryMakeKindPath`). 팩 쿠킹은 게임 · 키트 모듈을 올리기 전에 돌아 그 등록을 보지 못하므로
@@ -167,23 +147,6 @@ namespace sw
     };
 
     /**
-     * @struct PackEntryIDField
-     * @brief 카탈로그 항목을 id 로 가리키는 칸 하나입니다(속성 · 요소 글 · `<item>` 목록, 쉼표로 여럿). 경로가 아니라 이름이라 참조 칸 표로는 보이지 않는다.
-     * @details 표에 없는 칸으로만 불리는 항목의 에셋은 빠진다. 없는 id 는 담을 것이 없어 넘어간다(이름을 찾는 일은 런타임 검증의 몫이다).
-     */
-    REFLECT()
-    struct SW_API PackEntryIDField
-    {
-        REFLECT_BODY();
-
-        PROPERTY( Required )
-        string _field; ///< 칸 이름(`visual`)
-
-        PROPERTY( Required )
-        string _kind; ///< 가리키는 카탈로그의 이름 공간(`visual`)
-    };
-
-    /**
      * @struct PackCookRules
      * @brief 무엇을 담을지의 뿌리 규칙입니다 — 쓰는 것만 담는다(`PackReachResult`).
      * @details 담는 것은 뿌리(항상 담기 묶음 · 게임 설정의 필수 데이터)에서 참조 칸(`AssetReferenceFields`)과 곁 파일(`SW_ASSET_COMPANION`)을 따라 닿는 파일이다.
@@ -211,6 +174,14 @@ namespace sw
 
         PROPERTY( Required )
         vector<PackEntryIDField> _listEntryIDField; ///< 카탈로그 항목을 id 로 가리키는 칸
+
+        /**
+         * @brief 게임 하나의 쿠킹 규칙(`GameConfig::_cookRules`)을 이 규칙 뒤에 합칩니다 — 언리얼 `DefaultGame.ini` 의 쿠킹 설정이 엔진 기본을 덮는 모양이다.
+         * @details 합치기 규칙은 여기 하나다. 합친 규칙은 팩 단위다(`PackRuleScope`) — 모든 게임을 한 번에 구워도 팩마다 "엔진 규칙 + 그 게임 규칙만" 으로 판정한다.
+         *          - 항상 담기: 게임 규칙의 패턴은 그 게임 팩 루트(@p gamePackRoot, `game/nilecity`) 기준이라 앞에 루트를 붙이고, 그 게임 팩에만 닿는다.
+         *          - 엔진 규칙과 이름(항상 담기) · 칸 이름(id 칸)이 같으면 게임 쪽이 이긴다 — 엔진 규칙은 그 게임 팩에서만 물러나고 다른 팩에는 그대로 닿는다.
+         */
+        void mergeGameRules( string_view gamePackRoot, const GameCookRules& gameRules );
     };
 } // namespace sw
 

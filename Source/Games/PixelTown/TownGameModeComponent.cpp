@@ -29,6 +29,7 @@ namespace sw
 
     SW_AUTOMATION_GETTER_WATCH( townHeroTileX, "Town.HeroTileX", "Tile column of the hero", TownGameModeComponent, &TownGameModeComponent::getHeroTileX );
     SW_AUTOMATION_GETTER_WATCH( townHeroTileY, "Town.HeroTileY", "Tile row of the hero (rows grow down)", TownGameModeComponent, &TownGameModeComponent::getHeroTileY );
+    SW_AUTOMATION_GETTER_WATCH( townHeroWalking, "Town.HeroWalking", "1 while the hero walks between tiles (0 once it stands on a tile)", TownGameModeComponent, &TownGameModeComponent::isHeroWalking );
     SW_AUTOMATION_GETTER_WATCH( townHeroFacing, "Town.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", TownGameModeComponent, &TownGameModeComponent::getHeroFacing );
     SW_AUTOMATION_GETTER_WATCH( townTalking, "Town.Talking", "1 while a talk with a villager is open", TownGameModeComponent, &TownGameModeComponent::isTalking );
     SW_AUTOMATION_GETTER_WATCH( townShownLines, "Town.ShownLines", "Dialogue lines shown this session", TownGameModeComponent, &TownGameModeComponent::getShownLineCount );

@@ -40,7 +40,8 @@ namespace sw
         UnlinkPlatform,
         ListLinks,
         RequestDeletion,
-        CancelDeletion
+        CancelDeletion,
+        IssueLoginNonce
     };
 
     /** @brief 끝난 요청 하나입니다. 전송 오류나 공통 범주이면 `_errorCode`(`OnlineError`)가 0이 아니며 `_result` 도 그 범주입니다(`LoginServiceResult`). */
@@ -49,6 +50,7 @@ namespace sw
         LoginGrant             _grant{}; ///< 공통 범주면 그 자세한 몸만 담긴다(`kRateLimited` 의 `_retryAfterMs`, `kUpdateRequired` 의 `_storeURL`)
         NetGameTicket          _ticket{};
         AccountLinkSummary     _linkSummary{};
+        string                 _loginNonce{}; ///< IssueLoginNonce — 제공자에 넘겨 ID 토큰에 싣고, 티켓 `토큰|nonce` 로 한 번 쓴다
         uint64                 _requestID{ 0 };
         uint16                 _errorCode{ 0 };
         LoginServiceResult     _result{ LoginResult::Ok };
@@ -95,6 +97,8 @@ namespace sw
         uint64 listLinks();
         uint64 requestDeletion();
         uint64 cancelDeletion();
+        /** @brief 외부 로그인(OIDC)에 쓸 서버 발급 nonce 를 받습니다. 답의 `_loginNonce` 를 제공자 인증 요청에 싣고, 받은 ID 토큰과 함께 `토큰|nonce` 티켓으로 `platformLogin` 합니다. */
+        uint64 issueLoginNonce();
 
         int32 pollReplies( vector<AccountClientReply>& outListReply );
         int32 pollEvents( vector<AccountClientEvent>& outListEvent );
@@ -119,6 +123,7 @@ namespace sw
         void   onGrantReply( const OnlineResult<AccountGrantReply>& result );
         void   onTicketReply( const OnlineResult<AccountTicketReply>& result );
         void   onLinkReply( const OnlineResult<AccountLinkReply>& result );
+        void   onNonceReply( const OnlineResult<AccountNonceReply>& result );
         /** @brief 응답의 공통 부분(번호, 종류, 결과, 공통 오류의 자세한 몸)을 채웁니다. */
         static AccountClientReply makeReply( uint64 requestID, uint16 method, uint16 errorCode, const vector<uint8>& errorDetail );
         /** @brief 재접속 응답 뒤입니다. 죽은 토큰을 버리고 세션 요청 보류를 풉니다(실패면 모은 요청을 그 이유로 끝낸다). */

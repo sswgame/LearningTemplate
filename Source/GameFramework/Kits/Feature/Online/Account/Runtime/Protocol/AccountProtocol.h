@@ -38,6 +38,7 @@ namespace sw
         ListLinks,
         RequestDeletion,
         CancelDeletion,
+        IssueLoginNonce,
         Count,
     };
 
@@ -184,6 +185,23 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 외부 로그인 nonce 발급(`IssueLoginNonce`)의 응답입니다. 클라이언트는 이 nonce 로 제공자(OIDC)의 ID 토큰을 받아 `토큰|nonce` 티켓으로 `PlatformLogin` 합니다.
+     * @details nonce 는 서버가 휘발 저장소에 수명과 함께 두고 로그인에서 한 번 지운다 — 같은 토큰을 다시 쓰거나 서버가 내지 않은 nonce 를 쓰면 거절된다(감사 O-13, OIDC Core 15.5.2).
+     */
+    REFLECT()
+    struct AccountNonceReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LoginConstant::kLoginNonceTextSize )
+        string _nonce{};
+        PROPERTY()
+        LoginResult _result{ LoginResult::Ok };
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과인지입니다(`AccountProtocol::isRetryable`). */
+        [[nodiscard]] bool isRetryable() const;
+    };
+
     /** @brief 로그인 수단 목록(`ListLinks`)과 연동 해제의 응답입니다. */
     REFLECT()
     struct AccountLinkReply
@@ -262,7 +280,8 @@ namespace sw
         using ListLinks       = Method<MethodName::ListLinks, OnlineNoBody, AccountLinkReply>;
         using RequestDeletion = Method<MethodName::RequestDeletion, OnlineNoBody, AccountGrantReply>;
         using CancelDeletion  = Method<MethodName::CancelDeletion, OnlineNoBody, AccountGrantReply>;
-        using Revoked         = Push<PushName::Revoked, AccountRevokedPush>; ///< 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
+        using IssueLoginNonce = Method<MethodName::IssueLoginNonce, OnlineNoBody, AccountNonceReply, OnlineMethodFlag::Anonymous>; ///< 외부 로그인 전에 받는 한 번 쓰는 nonce
+        using Revoked         = Push<PushName::Revoked, AccountRevokedPush>;                                                       ///< 이유와 사유 코드를 보내며, 보낸 뒤 서버가 연결을 닫는다
     };
 } // namespace sw
 
@@ -274,7 +293,7 @@ namespace sw
      */
     struct SW_KIT_API AccountProtocol
     {
-        using Table        = OnlineProtocolTable<AccountMethod, OnlineMethodList<AccountMethod::Register, AccountMethod::Login, AccountMethod::GuestLogin, AccountMethod::PlatformLogin, AccountMethod::Resume, AccountMethod::Logout, AccountMethod::LinkCredential, AccountMethod::LinkPlatform, AccountMethod::IssueGameTicket, AccountMethod::UnlinkPlatform, AccountMethod::ListLinks, AccountMethod::RequestDeletion, AccountMethod::CancelDeletion>, OnlinePushList<AccountMethod::Revoked>, OnlineErrorBodyList<AccountUpdateDetail>>;
+        using Table        = OnlineProtocolTable<AccountMethod, OnlineMethodList<AccountMethod::Register, AccountMethod::Login, AccountMethod::GuestLogin, AccountMethod::PlatformLogin, AccountMethod::Resume, AccountMethod::Logout, AccountMethod::LinkCredential, AccountMethod::LinkPlatform, AccountMethod::IssueGameTicket, AccountMethod::UnlinkPlatform, AccountMethod::ListLinks, AccountMethod::RequestDeletion, AccountMethod::CancelDeletion, AccountMethod::IssueLoginNonce>, OnlinePushList<AccountMethod::Revoked>, OnlineErrorBodyList<AccountUpdateDetail>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = LoginResult;
 
@@ -297,6 +316,10 @@ namespace sw
         return AccountProtocol::isRetryable( _result );
     }
     inline bool AccountLinkReply::isRetryable() const
+    {
+        return AccountProtocol::isRetryable( _result );
+    }
+    inline bool AccountNonceReply::isRetryable() const
     {
         return AccountProtocol::isRetryable( _result );
     }

@@ -103,17 +103,17 @@ SW_TEST_CASE( ResourceEntranceTest, ReadingByIDRecordsTheComposition )
 
     Util::write( domain, "a.retarget.xml", string( R"(<RetargetProfile><root source="root" target="root" /><pelvis source="pelvis" target="hips" /><chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains>)" ) + Util::kWhen + "</RetargetProfile>" );
     const AssetID retargetID = ScopedScratchDomain::makeID( "a.retarget.xml" );
-    SW_REQUIRE_TRUE( SharedAssetCache<RetargetProfile>::acquire( retargetID.str() ) != nullptr );
+    SW_REQUIRE_TRUE( SharedAssetCache<RetargetProfile>::acquire( retargetID.str() ).snapshot() != nullptr );
     SW_EXPECT_TRUE( Util::isRecorded( retargetID ) );
 
     Util::write( domain, "a.rig.xml", string( R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes><item type="Position" name="Follow" bone="weapon" target="Grip" /></nodes>)" ) + Util::kWhen + "</RigAsset>" );
     const AssetID rigID = ScopedScratchDomain::makeID( "a.rig.xml" );
-    SW_REQUIRE_TRUE( SharedAssetCache<RigAsset>::acquire( rigID.str() ) != nullptr );
+    SW_REQUIRE_TRUE( SharedAssetCache<RigAsset>::acquire( rigID.str() ).snapshot() != nullptr );
     SW_EXPECT_TRUE( Util::isRecorded( rigID ) );
 
     Util::write( domain, "a.physics.xml", string( "<PhysicsAsset>" ) + Util::kWhen + "</PhysicsAsset>" );
     const AssetID physicsID = ScopedScratchDomain::makeID( "a.physics.xml" );
-    SW_REQUIRE_TRUE( SharedAssetCache<PhysicsAsset>::acquire( physicsID.str() ) != nullptr );
+    SW_REQUIRE_TRUE( SharedAssetCache<PhysicsAsset>::acquire( physicsID.str() ).snapshot() != nullptr );
     SW_EXPECT_TRUE( Util::isRecorded( physicsID ) );
 
     Util::write( domain, "a.material", Util::makeMaterial( "A", Util::kWhen ) );
@@ -200,7 +200,7 @@ SW_TEST_CASE( ResourceEntranceTest, LayerOverHandFormatUsesItsRule )
     SW_REQUIRE_TRUE( material->loadFromAsset( ScopedScratchDomain::makeID( "b.material" ) ) );
     SW_EXPECT_EQUAL( string( "FromLayer" ), material->getName() );
 
-    const shared_ptr<const RetargetProfile> profile = SharedAssetCache<RetargetProfile>::acquire( ScopedScratchDomain::makeID( "b.retarget.xml" ).view() );
+    const shared_ptr<const RetargetProfile> profile = SharedAssetCache<RetargetProfile>::acquire( ScopedScratchDomain::makeID( "b.retarget.xml" ).view() ).snapshot();
     SW_REQUIRE_TRUE( profile != nullptr );
     SW_EXPECT_TRUE( profile->toXML().find( "hips_layer" ) != string::npos );
     SW_EXPECT_TRUE( Util::isRecorded( ScopedScratchDomain::makeID( "b.retarget.xml" ) ) );

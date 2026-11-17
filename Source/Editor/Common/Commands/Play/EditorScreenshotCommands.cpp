@@ -28,10 +28,11 @@ namespace sw::editor
 
             static void request( string_view path, RHITextureHandle sourceTexture )
             {
-                if ( path.empty() )
-                    return; // 이름을 잡지 못했다 — 이유는 `reserveUniquePath` 가 남겼다
+                const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
+                if ( absolutePath.has_value() == false )
+                    return; // 이름을 잡지 못했다(빈 값) — 이유는 `reserveUniquePath` 가 남겼다
                 getState()._waitSerial = RenderThread::getCompletedScreenshotSerial();
-                RenderThread::requestScreenshot( path, sourceTexture, RHIFormat::R8G8B8A8_UNORM );
+                RenderThread::requestScreenshot( *absolutePath, sourceTexture, RHIFormat::R8G8B8A8_UNORM );
             }
         };
     } // namespace

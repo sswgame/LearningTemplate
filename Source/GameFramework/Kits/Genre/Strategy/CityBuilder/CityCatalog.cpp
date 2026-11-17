@@ -20,6 +20,8 @@ namespace sw
         , _goodCatalog{}
         , _listHouseLevel{}
         , _roadCost{ CityCatalogRootDef{}._roadCost }
+        , _rules{}
+        , _rulesCount{ 0 }
     {
     }
 
@@ -34,6 +36,19 @@ namespace sw
         return level >= 0 && level < static_cast<int32>( _listHouseLevel.size() ) ? &_listHouseLevel[static_cast<size_t>( level )] : nullptr;
     }
 
+    bool CityCatalog::loadRules( const XMLNode& node, string_view sourceName )
+    {
+        CitySettings rules;
+        if ( XMLFields::readProperties( node, rules, sourceName ) == false )
+        {
+            SW_LOG_ERROR_ID( "CityCatalog.RulesInvalid", "%#: <Rules> has missing or out-of-range values", sourceName );
+            return false;
+        }
+        _rules = rules; // 덧씌우는 파일(합치기)은 규칙 전체를 바꾼다
+        ++_rulesCount;
+        return true;
+    }
+
     uint32 CityCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
@@ -46,9 +61,16 @@ namespace sw
             Element::of<&CityCatalog::_goodCatalog>( "Good" ).uncounted(),
             Element::of<&CityCatalog::loadBuilding>( "Building" ),
             Element::of<&CityCatalog::loadHouseLevel>( "HouseLevel" ).uncounted(),
+            Element::of<&CityCatalog::loadRules>( "Rules" ).uncounted(),
         };
         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
+        // 규칙은 데이터에만 있다 — 한 번도 `<Rules>` 를 읽지 못한 카탈로그는 로드 실패다(도시가 C++ 기본값으로 열리지 않는다, 감사 K-4).
+        if ( _rulesCount == 0 )
+        {
+            SW_LOG_ERROR_ID( "CityCatalog.RulesMissing", "%#: <CityCatalog> needs one <Rules .../> line (every rule value is data)", sourceName );
+            return 0;
+        }
         // 집 단계가 없으면 집이 자랄 곳이 없다 — 기본 단계를 지어내지 않고 로드 실패로 본다.
         if ( _listHouseLevel.empty() )
         {

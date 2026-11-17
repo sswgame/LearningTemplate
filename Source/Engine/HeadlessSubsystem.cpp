@@ -529,7 +529,7 @@ namespace sw
                 inoutState.enterHeadless();
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessImportLipSync", "Starting Headless (ImportLipSync)..." );
                 // 분석 표는 런타임 얼굴과 같은 공유 캐시의 한 벌이다.
-                const shared_ptr<const LipSyncSettings> pLipSyncSettings   = SharedAssetCache<LipSyncSettings>::acquire( engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() );
+                const shared_ptr<const LipSyncSettings> pLipSyncSettings   = SharedAssetCache<LipSyncSettings>::acquire( engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() ).snapshot();
                 uint32                                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32                 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
                 if ( pLipSyncSettings != nullptr )

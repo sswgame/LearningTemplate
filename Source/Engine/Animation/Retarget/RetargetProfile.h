@@ -234,7 +234,7 @@ namespace sw
     };
 
     /**
-     * @brief 리타깃 프로필을 경로마다 한 벌 나눠 줍니다("RetargetProfile", 인스턴스화는 `RetargetProfile.cpp`). 제자리에서 다시 읽습니다.
+     * @brief 리타깃 프로필을 경로마다 한 벌 나눠 줍니다("RetargetProfile", 인스턴스화는 `RetargetProfile.cpp`). 다시 읽으면 새 판을 넣습니다(멤버로 쥐는 쪽은 `SharedAssetRef` 로 새 판을 본다).
      * @details 같은 프로필을 쓰는 캐릭터가 파일을 다시 읽지 않는다. 쥔 쪽(`PoseRetargetComponent`)은 핫 리로드 알림(`onPropertyChanged`)에서 리타기터를 다시 묶는다.
      *          에디터 리타깃 창은 이 한 벌을 사본으로 받아 고친다(언리얼 IK Retargeter 에셋 한 벌, 기억에 의존).
      */

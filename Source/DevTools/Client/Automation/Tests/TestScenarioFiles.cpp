@@ -34,16 +34,32 @@ SW_TEST_CASE( ScenarioFilesTest, ScreenshotFileTakenTwiceIsRejected )
     SW_EXPECT_TRUE( rejected.error().detail().find( "a.ppm" ) != string_view::npos );
 }
 
-// 입력은 그 프레임의 틱 전에 든다 - 같은 프레임에서 `<Expect>` 아래에 적힌 입력은 단언보다 먼저 돌므로 읽을 때 거절하고, 사이에 한 프레임을 두면 받는다.
-SW_TEST_CASE( ScenarioFilesTest, InputBelowEvaluationInSameFrameIsRejected )
+// 입력은 그 프레임의 틱 전에 든다 - 같은 프레임에서 `<Expect>` 아래에 적힌 입력은 단언보다 먼저 돌므로, 읽기가 그 입력을 다음 프레임으로 넘긴다(적은 순서가 곧 도는 순서다).
+// 예전에는 사이에 `<Wait frames="1"/>` 를 쓰라고 거절했다 - 프레임 경계를 쓰는 사람이 세지 않는다.
+SW_TEST_CASE( ScenarioFilesTest, InputBelowEvaluationMovesToTheNextFrame )
 {
     AutomationScenario scenario;
     SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.phase\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Press slot=\"Key.D\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
-    const expected<void> rejected = AutomationStepValidation::validateStepPhaseOrder( scenario );
-    SW_REQUIRE_FALSE( rejected.has_value() );
-    SW_EXPECT_TRUE( rejected.error().detail().find( "<Press>" ) != string_view::npos );
-    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.phase\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Wait frames=\"1\"/><Press slot=\"Key.D\"/><Pass/></Scenario>",
-                                     "test.scenario.xml" )
-                         .has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, scenario.getSteps().size() );
+    SW_EXPECT_EQUAL( scenario.getSteps()[0]._frameIndex + 1u, scenario.getSteps()[1]._frameIndex );
     SW_EXPECT_TRUE( AutomationStepValidation::validateStepPhaseOrder( scenario ).has_value() );
+}
+
+// `<AdvanceSimulation frames>` 는 고정 프레임 시간을 적은 시나리오에서만 받는다 - 벽시계로 도는 시나리오에서 N 프레임은 길이가 없다. 받으면 뒤 단계가 N 프레임 뒤에 돈다.
+SW_TEST_CASE( ScenarioFilesTest, AdvanceSimulationNeedsAFixedFrameTime )
+{
+    AutomationScenario scenario;
+    SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"test.advance\"><AdvanceSimulation frames=\"3\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"test.advance\" fixedDelta=\"0.0166667\"><AdvanceSimulation frames=\"0\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"test.advance\" fixedDelta=\"0.0166667\"><AdvanceSimulation seconds=\"1\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    SW_REQUIRE_TRUE(
+        scenario.parse( "<Scenario name=\"test.advance\" fixedDelta=\"0.0166667\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><AdvanceSimulation frames=\"3\"/><Pass/></Scenario>", "test.scenario.xml" )
+            .has_value() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, scenario.getSteps().size() );
+    SW_EXPECT_EQUAL( scenario.getSteps()[0]._frameIndex + 3u, scenario.getSteps()[1]._frameIndex );
+    // 진행 구간은 단계가 도는 프레임을 빼고 그 사이다 - 판정 · 사진 프레임은 늘 보통 프레임이다.
+    SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 0 ) );
+    SW_EXPECT_TRUE( scenario.isAdvanceSimulationFrame( 1 ) );
+    SW_EXPECT_TRUE( scenario.isAdvanceSimulationFrame( 2 ) );
+    SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 3 ) );
 }

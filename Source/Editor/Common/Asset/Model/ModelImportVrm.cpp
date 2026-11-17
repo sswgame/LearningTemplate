@@ -12,6 +12,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
@@ -22,6 +23,7 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -40,11 +42,20 @@ namespace sw::editor
                     inoutListMissing.push_back( bone );
             }
 
-            /** @brief 프리팹 `_listComponent` 에 컴포넌트 원소 하나(`_componentName` · `_bActive` 까지)를 더합니다. */
+            /**
+             * @brief 프리팹 `_listComponent` 에 컴포넌트 원소 하나(`_componentName` · 고정 지역 id `_localID` · `_bActive` 까지)를 더합니다.
+             * @details 지역 id 는 목록 순번 + 1 이다 — 다시 임포트해도 같은 바이트이고, 부착 키(`ComponentStableKey::formatKey`)가 이 값을 가리킨다.
+             */
             static XMLNode appendComponent( const XMLNode& listComponent, const utf8* pTypeName )
             {
+                uint64 localID = 1;
+                for ( XMLNode child = listComponent.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    ++localID;
+                }
                 const XMLNode component = listComponent.appendChild( pTypeName );
                 component.appendAttribute( "_componentName", pTypeName );
+                component.appendAttribute( "_localID", string_view{ to_string( localID ) } );
                 component.appendAttribute( "_bActive", "true" );
                 return component;
             }
@@ -152,7 +163,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarNamesNodes", "VRM '%#': avatar names nodes that are not skin joints (%# bones): %#", sourcePath, listMissing.size(), Internal::joinNames( listMissing ).c_str() );
     }
 
-    bool ModelImportVrm::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeVrmAvatar( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._avatar.isEmpty() )
@@ -160,7 +171,7 @@ namespace sw::editor
         if ( result._listIgnoredAvatarKey.empty() == false )
             SW_LOG_WARNING_ID( "ModelImporter.VRMAvatarValuesNot", "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
         const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarDef::kExtension ) );
-        if ( FileUtil::ensureDirectoryExists( sideFolder ) == false || FileUtil::writeTextFile( avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
+        if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, avatarPath, VrmAvatarDef::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAvatar", "Failed to write avatar %#", avatarPath.c_str() );
             return false;
@@ -173,7 +184,7 @@ namespace sw::editor
         if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
         {
             const string facialPath = FileUtil::joinPath( sideFolder, string( stem ) + string( FacialRig::kExtension ) );
-            if ( FileUtil::writeTextFile( facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFacialRig", "Failed to write facial rig %#", facialPath.c_str() );
                 return false;
@@ -184,7 +195,7 @@ namespace sw::editor
         if ( bHasSpringRig )
         {
             const string rigPath = FileUtil::joinPath( sideFolder, string( stem ) + string( RigAsset::kExtension ) );
-            if ( FileUtil::writeTextFile( rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeTextWithIdentity( assetPaths, rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSpringRig", "Failed to write spring rig %#", rigPath.c_str() );
                 return false;
@@ -240,7 +251,7 @@ namespace sw::editor
 
         // 주 컴포넌트(스킨드는 스켈레탈 메시, 아니면 메시)가 첫 구간을 그리고, 나머지 구간은 같은 메시 객체를 빌려 그린다(MeshSectionComponent). 구간 컴포넌트는 주 컴포넌트에 붙어 따라 움직인다.
         const utf8*               pMainType = bSkinned ? "SkeletalMeshComponent" : "MeshComponent";
-        const string              mainRef   = string( pMainType ) + "#0";
+        const string              mainRef   = ComponentStableKey::formatKey( 1 ); // 주 컴포넌트는 목록의 첫 원소다(`appendComponent` 의 지역 id)
         const ModelImportSection& first     = result._listSection.front();
         const XMLNode             mainMesh  = Internal::appendComponent( listComponent, pMainType );
         mainMesh.appendAttribute( "_meshID", string_view{ meshID } );
@@ -267,7 +278,7 @@ namespace sw::editor
             return false;
         }
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        const bool   bWritten   = prefabDocument.saveToFile( prefabPath );
+        const bool   bWritten   = ImportedAssetStore::writeTextWithIdentity( assetPaths, prefabPath, prefabDocument.saveToString() );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write section prefab %#", prefabPath.c_str() );

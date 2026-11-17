@@ -14,6 +14,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
@@ -85,11 +86,11 @@ namespace sw
         PROPERTY( Category = "Stage", DisplayName = "Pickup Radius", Min = 0.1, Units = m )
         float32 _pickupRadius;
 
-        shared_ptr<const ActionPlatformerCatalog> _pCatalog;
-        PlatformTileMap                           _map;
-        ActionTerrainGrid                         _terrain;
-        ActionPlatformerBody                      _body;
-        ActionStageRun                            _run;
-        uint8                                     _bJumpHeldLastFrame : 1;
+        SharedAssetRef<ActionPlatformerCatalog> _pCatalog;
+        PlatformTileMap                         _map;
+        ActionTerrainGrid                       _terrain;
+        ActionPlatformerBody                    _body;
+        ActionStageRun                          _run;
+        uint8                                   _bJumpHeldLastFrame : 1;
     };
 } // namespace sw

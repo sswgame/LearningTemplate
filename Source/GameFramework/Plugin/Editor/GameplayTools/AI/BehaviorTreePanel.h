@@ -77,12 +77,12 @@ namespace sw::editor
          */
         void handleEditCommands();
         /** @brief 붙이거나 복제한 하위 트리 @p newID 를 고르고 구조 편집으로 남깁니다. 실패면 이유를 상태 줄에 둡니다. */
-        void               attachPastedSubtree( const expected<int32>& newID, const utf8* pLabel );
+        void               attachPastedSubtree( const expected<int32>& newID );
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
 
         // 편집
         void    addNodeFromSelection( BehaviorNodeKind type );
-        void    markStructureChanged( const utf8* pLabel );
+        void    markStructureChanged();
         void    layoutTree();
         float32 layoutNode( int32 id, uint32 depth, float32& inoutNextRow );
         /** @brief 선택한 오브젝트의 활성 노드를 내놓는 실행기입니다. 컴포넌트에 안 붙은 실행기(`IBehaviorTreeDebugSource`)는 연 파일과 같은 트리일 때만 잡고 @p outName 에 이름을 채웁니다. */

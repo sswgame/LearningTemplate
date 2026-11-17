@@ -105,6 +105,17 @@ namespace sw
          */
         static bool replaceFile( const utf8* pSourcePath, const utf8* pTargetPath );
 
+        /**
+         * @brief 열린 파일의 내용을 저장 장치까지 내립니다(OS 쓰기 캐시를 지나). `fflush` 뒤 · `fclose` 전에 부릅니다.
+         * @details Windows 는 `_commit`(`FlushFileBuffers`), POSIX 는 `fsync` 입니다. 이것 없이 이름을 바꾸면 전원이 나갈 때 이름만 디스크에 남고
+         *          내용은 0 바이트 · 쓰레기가 될 수 있습니다(ext4 delalloc · NTFS 지연 쓰기).
+         */
+        [[nodiscard]] static bool flushToStorage( FILE* pFile );
+        /**
+         * @brief 폴더 항목(이름 바꾸기 결과)을 저장 장치까지 내립니다. POSIX 는 폴더를 열어 `fsync`, Windows 는 할 일이 없어 true 입니다(NTFS 는 메타데이터를 저널에 쓴다).
+         */
+        [[nodiscard]] static bool flushDirectoryToStorage( const utf8* pDirectoryPath );
+
         /** @brief 이 플랫폼에 OS 휴지통(`moveToRecycleBin`)이 있는지입니다. 없으면 호출하는 쪽이 지울지 남길지 정합니다. */
         static bool hasRecycleBin();
 

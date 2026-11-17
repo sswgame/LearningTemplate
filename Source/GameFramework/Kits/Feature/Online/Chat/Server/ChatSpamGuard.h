@@ -8,6 +8,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatTextNormalizer.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
@@ -15,14 +17,31 @@
 
 namespace sw
 {
-    /** @brief 도배 방지 설정입니다. */
+    /**
+     * @brief 도배 방지 설정입니다(채팅 키트 설정 `_spam`, 모든 칸 필수). 코드 기본값은 0 이라 채우지 않으면 `ChatService::initialize` 가 거절한다(감사 O-18 — 정책 값을 C++ 상수로 두지 않는다).
+     */
+    REFLECT()
     struct ChatSpamConfig
     {
-        int64 _refillIntervalMs{ 1000 };
-        int64 _repeatWindowMs{ 10000 };
-        int32 _burstCount{ 5 };
-        int32 _maxRepeatCount{ 2 }; ///< 창 안에서 같은 글을 이 횟수까지 허용한다. 그다음 글은 거절한다
-        int32 _maxTrackedAccount{ 65536 };
+        REFLECT_BODY();
+        /** @brief 토큰 하나가 다시 차는 간격(ms)입니다. */
+        PROPERTY( Required, Min = 1, Max = 3600000 )
+        int64 _refillIntervalMs{ 0 };
+        /** @brief 같은 글 반복을 세는 창(ms)입니다. */
+        PROPERTY( Required, Min = 1, Max = 3600000 )
+        int64 _repeatWindowMs{ 0 };
+        /** @brief 한꺼번에 보낼 수 있는 글 수(버킷 크기)입니다. */
+        PROPERTY( Required, Min = 1, Max = 1000 )
+        int32 _burstCount{ 0 };
+        /** @brief 창 안에서 같은 글을 이 횟수까지 허용한다. 그다음 글은 거절한다. */
+        PROPERTY( Required, Min = 1, Max = 1000 )
+        int32 _maxRepeatCount{ 0 };
+        /** @brief 버킷을 들고 있을 계정 수의 상한입니다(신고 버킷도 같은 상한을 쓴다). */
+        PROPERTY( Required, Min = 1, Max = 16777216 )
+        int32 _maxTrackedAccount{ 0 };
+
+        /** @brief 모든 칸이 채워졌는가(코드로 만든 설정이 빈 채로 서비스를 세우지 않게). */
+        bool isComplete() const { return _refillIntervalMs > 0 && _repeatWindowMs > 0 && _burstCount > 0 && _maxRepeatCount > 0 && _maxTrackedAccount > 0; }
     };
 
     /** @brief 도배 판정 결과입니다. */

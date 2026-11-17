@@ -14,6 +14,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Gameplay/Progression/AchievementTracker.h"
@@ -72,7 +74,7 @@ namespace sw
 
     private:
         const GameSettings&           _settings;
-        shared_ptr<const StatCatalog> _pCatalog;
+        SharedAssetRef<StatCatalog>   _pCatalog;
         unique_ptr<IPlatformServices> _pPlatform;
         PlayerStats                   _stats;
         AchievementTracker            _achievements; ///< `_stats` 를 듣는다 - 뒤에 선언해 먼저 사라진다

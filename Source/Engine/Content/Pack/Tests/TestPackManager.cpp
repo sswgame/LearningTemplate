@@ -164,3 +164,35 @@ SW_TEST_CASE( PackManagerTest, PatchPackAloneAnswersItsFullPaths )
     SW_EXPECT_FALSE( packs.hasPatchPacks() );
     SW_EXPECT_FALSE( packs.hasFile( "mods/lantern/data/lantern.xml" ) );
 }
+
+/**
+ * @brief [PackManagerTest] DLC 팩(AppID > 0)은 소유권 검사기가 없으면 붙지 않고, 검사기가 소유를 답할 때만 붙는다
+ * @details 예전에는 검사기가 없으면 확인을 건너뛰어 유료 DLC 팩이 누구에게나 붙었다.
+ */
+SW_TEST_CASE( PackManagerTest, DLCPackNeedsAnEntitlementValidator )
+{
+    const string root = test::makeScratchPath( "Packs" );
+    const string dlc  = FileUtil::joinPath( root, "paid.pack" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    PackWriterDesc desc = PackTestUtil::makeDesc( "dlc/paid" );
+    desc._dlcAppID      = 4242;
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( dlc, desc, {
+                                                             { "maps/gold.txt", vector<uint8>{ 'g', 'o', 'l', 'd' } }
+    } ) );
+
+    PackManager packs;
+    {
+        SW_EXPECT_LOG( "PackManager.NoDLCValidator" );
+        SW_EXPECT_FALSE( packs.mountPack( dlc, 1 ) );
+    }
+    packs.setDLCEntitlementValidator( SW_DELEGATE_LAMBDA( DLCEntitlementDelegate, []( uint32 appID )
+    { return appID != 4242; } ) );
+    {
+        SW_EXPECT_LOG( "PackManager.AccessDeniedDLCPack" );
+        SW_EXPECT_FALSE( packs.mountPack( dlc, 1 ) );
+    }
+    packs.setDLCEntitlementValidator( SW_DELEGATE_LAMBDA( DLCEntitlementDelegate, []( uint32 appID )
+    { return appID == 4242; } ) );
+    SW_EXPECT_TRUE( packs.mountPack( dlc, 1 ) );
+    SW_EXPECT_EQUAL( string( "gold" ), TestPackManagerInternal::read( packs, "dlc/paid/maps/gold.txt" ) );
+}

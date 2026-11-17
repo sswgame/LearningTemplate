@@ -8,6 +8,13 @@
 
 namespace sw
 {
+    string ServerRecord::makeSeatKey( uint64 serverID )
+    {
+        string key{ "sd/seat/" };
+        ServiceKeyUtil::appendHex64( key, serverID );
+        return key;
+    }
+
     string ServerRecord::makeRecordKey( uint64 serverID )
     {
         string key{ "sd/srv/" };

@@ -176,6 +176,7 @@ namespace sw
         , _questLog{}
         , _reputation{}
         , _inventory{}
+        , _pWeatherCatalog{}
         , _weather{}
         , _land{}
         , _listClockEvent{}
@@ -209,7 +210,8 @@ namespace sw
         _reputation.initialize( settings._pReputationCatalog );
         if ( _inventory.initialize( settings._pItemCatalog, settings._inventorySlotCount ) == false )
             return SessionStateInitResult::Refused;
-        _weather.initialize( settings._pWeatherCatalog, settings._weatherSeed, _clock.getSeasonName() );
+        _pWeatherCatalog = settings._pWeatherCatalog;
+        _weather.initialize( _pWeatherCatalog.get(), settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
         _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, settings._landOrigin );
         _listClockEvent.clear();

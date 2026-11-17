@@ -7,7 +7,8 @@
  *          - 문구는 현지화 키다. `aps.alert` 의 `title-loc-key` · `loc-key` · `loc-args` 에 싣고 기기가 자기 언어로 푼다 — 서버는 언어를 모르고 `send` 의 @p locale 을 쓰지 않는다.
  *            문구가 없으면 조용한 알림(`apns-push-type: background`, `content-available`, 우선순위 5)이다. `deep_link` 와 인자는 사용자 키로 싣는다(앱이 화면을 연다).
  *          - 기기 토큰은 16진 글자만 받는다(경로에 들어가므로). 아니면 요청을 보내지 않고 `InvalidToken` 이다.
- *          - 상태 대응: 200 Delivered, 410 InvalidToken(앱이 지워졌다), 429 RateLimited(`Retry-After` 가 있으면 그 초), 5xx Transient(애플 문서: 15 분 뒤에 다시), 전송 실패 Transient, 403 Rejected(제공자 토큰을 버려 다음 배달이 새로 서명),
+ *          - 상태 대응: 200 Delivered, 410 InvalidToken(앱이 지워졌다), 429 RateLimited(`Retry-After` 가 있으면 그 초), 5xx Transient(애플 문서: 15 분 뒤에 다시), 전송 실패 Transient, 403 Rejected(제공자 토큰을 버려 다음 배달이 새로 서명하되, 지난 서명에서 `_tokenRefreshMinMs` 가 지나기 전에는
+ *            서명하지 않고 남은 시간만큼 `RateLimited` — 403 마다 곧바로 다시 서명하면 APNs 가 갱신이 잦다며 429 로 막는다),
  *            그 밖의 4xx Rejected(400 `BadDeviceToken` 은 개발 · 운영 환경이 어긋난 토큰일 수 있어 기기를 지우지 않는다).
  *          - 토픽 발송은 없다(APNs 에 토픽 구독이 없다) — `supportsTopics` 는 false 다.
  *          제품 이름(`apns`)은 이 설정의 `kind` 값과 `Provider/Apns/` 안에만 쓴다.
@@ -39,6 +40,7 @@ namespace sw
         string _topic{};         ///< 번들 id(`apns-topic`)
         string _baseURL{ kDefaultBaseURL };
         int64  _requestTimeoutMs{ 10000 };
+        int64  _tokenRefreshMinMs{ 0 }; ///< 필수 — 403 뒤 다시 서명하기까지의 최소 간격(제공자 파일 `tokenRefreshMinSeconds`). 0 이면 생성자가 멈춘다
     };
 } // namespace sw
 
@@ -74,10 +76,13 @@ namespace sw
         static int64 computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader );
 
     private:
-        /** @brief 제공자 토큰이 없거나 낡았으면 새로 서명합니다. 서명하지 못하면 false 입니다. */
-        [[nodiscard]] bool ensureProviderToken( UnixMilliseconds nowMs );
-        void               finishSend( uint64 deliveryID, const HTTPClientResponse& response );
-        void               complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
+        /**
+         * @brief 제공자 토큰이 없거나 낡았으면 새로 서명합니다. 쓸 토큰이 있으면 0, 서명하지 못하면(키가 틀림) 음수입니다.
+         *        403 으로 버린 뒤 최소 간격이 지나지 않았으면 서명하지 않고 남은 밀리초(양수)를 돌려준다.
+         */
+        [[nodiscard]] int64 ensureProviderToken( UnixMilliseconds nowMs );
+        void                finishSend( uint64 deliveryID, const HTTPClientResponse& response );
+        void                complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
     private:
         APNSPushSettings              _settings;

@@ -113,7 +113,8 @@ namespace sw
         /** @brief 끝난 세션의 끝, 새 세션의 상태, 들어온 연결의 상태 순서로 보냅니다(게임 스레드). */
         void update();
 
-        uint8 getMessageRangeBase() const override { return NetPairedAnimationMessage::Table::kRangeBase; }
+        uint8  getMessageRangeBase() const override { return NetPairedAnimationMessage::Table::kRangeBase; }
+        uint32 getWireVersion() const override { return NetPairedAnimationMessage::Table::computeWireVersion(); } // 보내기만 한다 — 보내는 표의 판을 낸다
         /** @brief 받는 종류가 없습니다(연결 사건만 받습니다). */
         uint16          getMessageKindMask() const override { return 0; }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;

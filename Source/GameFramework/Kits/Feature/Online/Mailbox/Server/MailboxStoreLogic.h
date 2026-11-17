@@ -71,17 +71,25 @@ namespace sw
     /** @brief 우편함 저장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_KIT_SERVER_API MailboxStoreLogic
     {
-        static constexpr int32 kMaxClaimAllCount = 16;
+        static constexpr int32 kMaxClaimAllCount     = 16;  ///< 모두 받기 한 번에 받는 우편 수(우편마다 커밋이라 저장소 일을 묶는다)
+        static constexpr int32 kMaxClaimAllScanCount = 500; ///< 모두 받기 한 번에 훑는 우편 레코드 수(최근 것부터 쪽마다 `MailboxProtocol::kMaxListCount`)
 
         /** @brief 개인 우편을 최근 것부터 @p outReply 에 채우고, 활성이고 받지 않은 캠페인은 첫 페이지의 맨 앞에 채웁니다. 만료된 것은 뺍니다. */
         static MailboxServiceResult listMail( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
                                               const MailboxListRequest& request, MailboxListReply& outReply );
         static MailboxServiceResult markRead( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
         static MailboxServiceResult claim( IServiceStoreConnection& connection, const MailboxClaimInput& input, MailboxClaimReply& outReply );
-        /** @brief 첨부가 있고 받지 않은 우편을 `kMaxClaimAllCount` 개까지 우편마다 따로 커밋합니다. 하나가 상한에 걸려도 나머지는 받습니다. */
+        /**
+         * @brief 첨부가 있고 받지 않은 우편을 `kMaxClaimAllCount` 개까지 우편마다 따로 커밋합니다. 하나가 상한에 걸려도 나머지는 받습니다.
+         * @details 최근 것부터 쪽으로 넘기며 `kMaxClaimAllScanCount` 개까지 훑는다 — 첫 쪽(최근 50 통)이 받은 우편 · 첨부 없는 우편이면 그 뒤의 첨부를 못 받던 구멍(감사 O-18).
+         *          상한에서 멈추면 `_bMoreRemaining` 을 켠다.
+         */
         static MailboxServiceResult claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, const ILedgerPolicy* pPolicy,
                                               MailboxClaimReply& outReply );
         static MailboxServiceResult deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
+        /** @brief 모두 받기의 우편 하나입니다. 받을 수 있으면 받고 @p inoutFirstFailure 에 첫 실패를 남깁니다. */
+        static void claimOne( IServiceStoreConnection& connection, const ServiceRecord& record, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, const ILedgerPolicy* pPolicy,
+                              MailboxClaimReply& inoutReply, MailboxServiceResult& inoutFirstFailure );
         /** @brief 만료 인덱스를 시각 순서로 @p maxCount 개까지 처리합니다. 돌려줄 보낸 계정이 탈퇴로 지워졌으면 첨부를 소각합니다. */
         static void sweepExpired( IServiceStoreConnection& connection, int64 nowMs, int32 maxCount, MailboxSweepStats& outStats );
         /**

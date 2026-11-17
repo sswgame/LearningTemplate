@@ -19,7 +19,9 @@
     #else
         #define SW_MODULEMANAGER_API
     #endif
-    #if defined( SW_DEVTOOLS_EXPORTS )
+    #if defined( SW_STATIC_MODULES )
+        #define SW_HOST_DEV_API // DevTools 가 정적 라이브러리다(정적 모듈 구성) — 정의 표지(SW_DEVTOOLS_*)가 있어도 내보내지 않는다
+    #elif defined( SW_DEVTOOLS_EXPORTS )
         #define SW_HOST_DEV_API __declspec( dllexport )
     #elif defined( SW_DEVTOOLS_IMPORTS )
         #define SW_HOST_DEV_API __declspec( dllimport )

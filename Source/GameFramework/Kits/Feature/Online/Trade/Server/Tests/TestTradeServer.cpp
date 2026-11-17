@@ -196,7 +196,10 @@ namespace
         explicit TradeServerFixture( bool bWithPresence = false, bool bWithRemoteConfig = false )
         {
             _pRig = make_unique<test::OnlineTestFixture>( false );
-            _tradeService.initialize( &_pRig->_server._store, &_policy, nullptr, kServerID, TradeServiceConfig{} );
+            TradeServiceConfig settings;
+            settings._inviteTimeoutMs = 30000; // 키트 설정의 필수 칸 — 견본 값
+            settings._idleTimeoutMs   = 300000;
+            _tradeService.initialize( &_pRig->_server._store, &_policy, nullptr, kServerID, settings );
             _tradeServer.initialize( &_tradeService, &_directory, bWithPresence ? &_presence : nullptr );
             _directory.add( "alice", kAlice );
             _directory.add( "bob", kBob );
@@ -238,6 +241,7 @@ namespace
             settings._pRemoteConfig                    = &_remoteConfig;
             settings._requestBurstPerRemote            = 1000;
             settings._requestBurstPerAccount           = 1000;
+            settings._maxPendingCallsPerService        = 100000;
             {
                 const auto result = server._host.initialize( server._transport.get(), settings );
                 SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );

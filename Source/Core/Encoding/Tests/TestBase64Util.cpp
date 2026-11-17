@@ -35,3 +35,15 @@ SW_TEST_CASE( Base64UtilTest, DecodeRejectsCharactersOutsideTheAlphabet )
     vector<uint8> listDecoded;
     SW_EXPECT_FALSE( Base64Util::decode( "TW!u", listDecoded ) );
 }
+
+/** @brief [Base64UtilTest] 채움(`=`)은 두 글자까지, 채운 길이는 4 의 배수다 — 한 바이트 열에 글은 하나다 */
+SW_TEST_CASE( Base64UtilTest, DecodeRejectsExtraOrMisplacedPadding )
+{
+    vector<uint8> listDecoded;
+    SW_REQUIRE_TRUE( Base64Util::decode( "QQ==", listDecoded ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), listDecoded.size() );
+    SW_EXPECT_FALSE( Base64Util::decode( "QQ======", listDecoded ) ); // 예전에는 `QQ==` 와 같은 바이트로 풀렸다
+    SW_EXPECT_FALSE( Base64Util::decode( "QQ=", listDecoded ) );
+    SW_EXPECT_FALSE( Base64Util::decodeURL( "QQ===", listDecoded ) );
+    SW_EXPECT_TRUE( Base64Util::decodeURL( "QQ", listDecoded ) ); // 채우지 않은 글은 그대로 받는다
+}

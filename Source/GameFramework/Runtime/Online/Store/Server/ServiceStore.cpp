@@ -3,9 +3,16 @@
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 
 namespace sw
 {
+    void IServiceStoreJob::execute( IServiceStoreConnection& connection )
+    {
+        ServiceReadSetConnection readSet( connection );
+        run( readSet );
+    }
+
     ServiceTransaction::ServiceTransaction()
         : _listWrite{}
     {

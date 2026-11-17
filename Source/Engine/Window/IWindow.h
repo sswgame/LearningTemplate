@@ -36,6 +36,7 @@ namespace sw
     SW_DECLARE_DELEGATE( void, WindowLifecycleDelegate, WindowLifecycleEvent event );
     SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
     SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
+    SW_DECLARE_DELEGATE( void, WindowModalLoopTickDelegate, void );
     SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
     SW_DECLARE_DELEGATE( bool, WindowAccessibilityQueryDelegate, uintptr_t wParam, intptr_t lParam, intptr_t& outResult );
 
@@ -151,6 +152,13 @@ namespace sw
         virtual void waitForMessages( uint32 timeoutMilliseconds ) = 0;
 
         /**
+         * @brief 다음 프레임을 @p deadlineNanoseconds(`MonotonicClock` 시각)까지 미룹니다. `FramePacer::endFrame` 이 전속 · 배경 프레임마다 부른다 — 기다릴 것이 없으면 마감이 @p frameStartNanoseconds 와 같다.
+         * @details 기본은 이 스레드를 마감까지 재운다. 메인 스레드를 막으면 안 되는 창(브라우저 — Emscripten 의 메인 스레드 잠은 바쁜 대기다)은 재정의해
+         *          다음 프레임 콜백을 그 간격 뒤로 미룬다(감사 P-5, 유니티 WebGL `emscripten_set_main_loop_timing` 자리). 창 메시지에는 깨지 않는다 — 배경 상한이 마우스 이동에 풀리지 않는다.
+         */
+        virtual void waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds );
+
+        /**
          * @brief 창이 최소화되어 있는지입니다. `processMessages` 가 창 이벤트(Win32 `WM_SIZE`, X11 `UnmapNotify` · `MapNotify`)로 갱신합니다.
          * @details Wayland 는 클라이언트에 최소화를 알리지 않는다(xdg-shell 판 1) — 그 창에서는 늘 false 다.
          */
@@ -232,13 +240,13 @@ namespace sw
          *        X11 은 `Xft.dpi` 리소스를 씁니다. 모르면 1 입니다.
          * @details 게임 UI 는 기본으로 곱하지 않는다(해상도 규칙이 이미 창 크기를 따른다. `UIScaleSettings::_bApplyContentScale` 참고).
          */
-        virtual float32 getContentScale() const { return 1.0f; }
+        virtual float32 getContentScale() const = 0;
         /**
          * @brief 그리면 가려지는 가장자리(왼쪽, 위, 오른쪽, 아래, 물리 픽셀)입니다 — 노치 · 둥근 모서리 · 시스템 바. 데스크톱 창은 0 이다.
          * @details UI 의 안전 영역(`UIScaleSettings::makeViewport` → `SafeZonePanel`)이 읽는다. 회전하면 변이 바뀌므로 플랫폼 창이 크기 · 회전 통보 때 다시 읽는다.
          *          언리얼 `FDisplayMetrics::TitleSafePaddingSize` · 유니티 `Screen.safeArea` 자리다(기억).
          */
-        virtual float4 getSafeAreaInsets() const { return float4{}; }
+        virtual float4 getSafeAreaInsets() const = 0;
 
         /** @brief 배율 1 에 해당하는 DPI 입니다(Windows 와 X11 의 기준). */
         static constexpr float32 kReferenceDPI = 96.0f;
@@ -248,7 +256,7 @@ namespace sw
          * @details Win32 는 `EnumDisplayMonitors`, X11 은 RandR(없으면 X screen 하나 - `X11Monitors.h`), Wayland 는 `wl_output` 이다.
          * @return 창이 없어 물을 곳이 없으면 false 입니다. true 인데 목록이 비면 그 창 시스템에 지금 출력이 없는 것이다(모니터 없는 Wayland 컴포지터는 정상이다). 받는 쪽은 값을 지어내지 않는다.
          */
-        [[nodiscard]] virtual bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const;
+        [[nodiscard]] virtual bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const = 0;
         /** @brief 모니터 값이 바뀔 때마다(모니터 연결 · 해상도 · 작업 영역 · 배율) 올라가는 수입니다. 값을 들고 있는 쪽은 이것이 달라질 때 `tryGetMonitors` 를 다시 부릅니다. */
         [[nodiscard]] uint32 getMonitorGeneration() const { return _monitorGeneration; }
 
@@ -257,50 +265,37 @@ namespace sw
         // 포인터 묶기는 X11 서버 호출을 입력 관리자가 직접 하므로(`tryGetX11Surface`) X11 창은 하지 않고(기본: 지원 안 함) Wayland 만 컴포지터 확장으로 한다.
         // 새 확장이 더해져도 입력 관리자는 질의 하나만 읽는다.
         // "지원 안 함"이 정상인 곳(해당 없는 창)과 청했는데 안 되는 곳(오류)은 호출 쪽이 가른다 — 여기서는 대신하지 않고 false 로 알린다.
+        // 아래 능력 질의 · 요청은 모두 순수 가상이다 — 기본 구현(조용히 아무것도 안 함)이 있으면 새 플랫폼 창이 빠뜨려도 컴파일된다(웹 · Android 의 글 입력이 그랬다, 감사 P-4).
+        // 하지 않는 창은 재정의해 false 로 답하고 그 까닭을 적는다.
 
-        /** @brief 창이 커서 모양을 스스로 바꾸는지(`setCursorShape` 가 되는지)입니다. */
         /**
          * @brief 이 창에 입력 초점을 요청합니다. 키 · 마우스를 전제하는 시나리오가 시작할 때 부릅니다(앞 단계의 다른 창 · 자식 프로세스 창이 초점을 가져갔을 수 있다).
-         * @details 창 관리자가 초점을 돌려주지 않는 곳(X11 의 창 관리자 없는 화면)만 뜻이 있어 기본은 아무 일도 하지 않습니다 — Windows 는 다른 창이 닫히면 OS 가 돌려주고, 쓰고 있는 사람의 전경을 뺏지 않습니다.
+         * @details 창 관리자가 초점을 돌려주지 않는 곳(X11 의 창 관리자 없는 화면)만 뜻이 있다 — Windows 는 다른 창이 닫히면 OS 가 돌려주고, 쓰고 있는 사람의 전경을 뺏지 않습니다.
+         * @return 초점을 청했으면 true, 이 창 시스템에서 앱이 청하지 않거나(OS 가 맡는다) 지금 청할 수 없으면 false 입니다.
          */
-        virtual void               requestInputFocus() {}
-        [[nodiscard]] virtual bool supportsCursorShape() const { return false; }
+        [[nodiscard]] virtual bool requestInputFocus() = 0;
+        /** @brief 창이 커서 모양을 스스로 바꾸는지(`setCursorShape` 가 되는지)입니다. */
+        [[nodiscard]] virtual bool supportsCursorShape() const = 0;
         /** @brief 커서 모양을 바꿉니다. `supportsCursorShape` 가 아니면 아무것도 하지 않고 false 입니다. */
-        [[nodiscard]] virtual bool setCursorShape( CursorShape shape )
-        {
-            (void)shape;
-            return false;
-        }
+        [[nodiscard]] virtual bool setCursorShape( CursorShape shape ) = 0;
         /** @brief 창이 포인터를 스스로 묶는지(`setPointerLock` 의 Locked 가 되는지)입니다. 컴포지터 확장이 없으면 false 입니다. */
-        [[nodiscard]] virtual bool supportsPointerLock() const { return false; }
+        [[nodiscard]] virtual bool supportsPointerLock() const = 0;
         /**
          * @brief 포인터를 묶거나 풉니다. 같은 방식을 다시 부르면 아무것도 하지 않는다.
          * @return 요청대로 되었으면(`Released` 는 항상) true, 못 했으면 false 입니다.
          */
-        [[nodiscard]] virtual bool setPointerLock( WindowPointerLock lock ) { return lock == WindowPointerLock::Released; }
+        [[nodiscard]] virtual bool setPointerLock( WindowPointerLock lock ) = 0;
         /**
          * @brief 창이 운영체제 글 클립보드를 스스로 잇는지입니다(X11 은 CLIPBOARD 선택의 주인, Wayland 는 `wl_data_device` 선택 — 데이터 장치가 있어야 한다).
-         *        아니면 `PlatformClipboard::isAvailable` 이 false 라서 UI 가 엔진 안 클립보드를 쓴다.
+         *        아니면 `PlatformClipboard::isAvailable` 이 false 라서 UI 가 엔진 안 클립보드를 쓴다(Windows · 웹 · Android 는 `PlatformClipboard` 가 창 없이 OS 를 연다).
          */
-        [[nodiscard]] virtual bool supportsClipboard() const { return false; }
+        [[nodiscard]] virtual bool supportsClipboard() const = 0;
         /** @brief 클립보드의 글을 @p outText 에 담습니다. 글이 없거나 시간 안에 답이 없거나 `supportsClipboard` 가 아니면 false 입니다. */
-        [[nodiscard]] virtual bool readClipboardText( string& outText )
-        {
-            (void)outText;
-            return false;
-        }
+        [[nodiscard]] virtual bool readClipboardText( string& outText ) = 0;
         /** @brief 클립보드에 글을 씁니다. 못 쓰면(선택 주인이 못 되거나 컴포지터가 일련번호를 거절) false 입니다. */
-        [[nodiscard]] virtual bool writeClipboardText( string_view text )
-        {
-            (void)text;
-            return false;
-        }
+        [[nodiscard]] virtual bool writeClipboardText( string_view text ) = 0;
         /** @brief 커서를 숨기거나 보입니다. 창이 스스로 하지 않으면 false 입니다. */
-        [[nodiscard]] virtual bool setCursorVisible( bool bVisible )
-        {
-            (void)bVisible;
-            return false;
-        }
+        [[nodiscard]] virtual bool setCursorVisible( bool bVisible ) = 0;
 
         // ---- 입력기(IME). 모양은 `WindowTextInput.h` 머리말. 글은 `NativeWindowEvent::kMessageTextInput` 으로 외부 처리기에 온다 ----
         /**
@@ -315,42 +310,28 @@ namespace sw
 
         /**
          * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.
-         * @details 크기가 바뀌면 플랫폼의 크기 통보가 `bindResizeCallback` 의 콜백을 부른다. 스왑체인은 이 경로(Engine::onMainWindowResize 가 렌더 스레드를
-         *          기다린 뒤 resize)로만 바뀐다. Win32 는 이 호출 안에서 같은 스레드로 통보하고, X11 은 다음 `processMessages` 에서 통보한다.
+         * @details 크기가 바뀌면 플랫폼의 크기 통보가 대기 크기를 적고, 다음 프레임 시작의 `applyPendingResize` 가 `bindResizeCallback` 의 콜백을 부른다.
+         *          스왑체인은 이 경로(Engine::onMainWindowResize 가 렌더 스레드를 기다린 뒤 resize)로만 바뀐다.
          *          **창 스레드(메인 스레드)에서만 부른다.** `BorderlessFullscreen` 이면 @p width 와 @p height 는 무시하고 모니터 크기를 쓴다.
          * @return 지원하지 않는 플랫폼이면 false 입니다.
          */
-        virtual bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
-        {
-            (void)mode;
-            (void)width;
-            (void)height;
-            return false;
-        }
+        virtual bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) = 0;
         /** @brief 이 데스크톱에서 창을 최소화할 수 있으면 true 입니다. 창 관리자가 없는 X 서버(Xvfb)는 요청해도 아무 일도 없어 false 입니다. */
-        [[nodiscard]] virtual bool canMinimize() const { return false; }
+        [[nodiscard]] virtual bool canMinimize() const = 0;
 
         /**
          * @brief 창을 최소화하거나 되돌립니다. 최소화 상태(`isMinimized`)는 플랫폼의 통보가 바꾼다.
          * @details 자동화 시나리오(`MinimizeWindow` · `RestoreWindow`)가 최소화 중의 프레임 · 스왑체인 경로를 볼 때 쓴다. **창 스레드(메인 스레드)에서만 부른다.**
          * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 되돌리기 요청이 프로토콜에 없다).
          */
-        virtual bool setMinimized( bool bMinimized )
-        {
-            (void)bMinimized;
-            return false;
-        }
+        virtual bool setMinimized( bool bMinimized ) = 0;
         /**
          * @brief 자기 창에 포커스를 잃거나(@p bFocused false) 얻는 OS 이벤트를 보내 실제 이벤트 경로를 타게 합니다. OS 포커스는 그대로입니다. **창 스레드(메인 스레드)에서만 부른다.**
          * @details 자동화 시나리오(`PostWindowMessage` 의 `KillFocus` · `SetFocus`)가 부른다. Win32 는 이 호출 안에서 처리기가 돌고(`SendMessageW`), X11 은 다음 `processMessages` 가 받는다.
          *          언리얼 `FGenericWindow` · Godot `DisplayServer` 처럼 창 시스템 일은 창의 가상 함수에 두어 자동화 층이 플랫폼을 모른다.
          * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 클라이언트가 자기 키보드 enter · leave 를 보낼 길이 없다).
          */
-        [[nodiscard]] virtual bool sendFocusEvent( bool bFocused )
-        {
-            (void)bFocused;
-            return false;
-        }
+        [[nodiscard]] virtual bool sendFocusEvent( bool bFocused ) = 0;
         /** @brief 마지막 `setDisplayMode` 가 고른 창 방식입니다. */
         WindowDisplayMode getDisplayMode() const { return _displayMode; }
         /**
@@ -415,7 +396,7 @@ namespace sw
          *          즉 방금 보이라고 한 창도 여기서는 **false** 입니다. 최소화나 다른 워크스페이스도 같습니다.
          *          "다시 만든 뒤 복원할까" 같은 판단에는 쓰지 마십시오(그래서 `recreate` 는 의도를 봅니다).
          */
-        virtual bool isVisible() const { return true; }
+        virtual bool isVisible() const = 0;
 
         /**
          * @brief **보이기로 정해져 있는지** 반환합니다. 마지막 `showWindow()` 의 인자입니다.
@@ -436,8 +417,24 @@ namespace sw
          */
         [[nodiscard]] Subscription bindAccessibilityQueryHandler( WindowAccessibilityQueryDelegate handler ) { return _accessibilityQuery.bind( std::move( handler ) ); }
 
-        /** @brief 창 크기가 바뀔 때 부를 콜백을 겁니다. */
+        /** @brief 창 크기가 바뀔 때 부를 콜백을 겁니다. 플랫폼 통보 안에서가 아니라 `applyPendingResize`(프레임 시작)에서 마지막 크기로 한 번 불린다. */
         [[nodiscard]] Subscription bindResizeCallback( WindowResizeDelegate callback ) { return _onResize.bind( std::move( callback ) ); }
+        /**
+         * @brief 지난 적용 뒤 크기가 바뀌었으면 크기 콜백을 마지막 크기로 한 번 부릅니다. 메인 루프가 프레임 시작에 부른다(모달 루프 틱도 같다).
+         * @details 창 메시지마다 스왑체인을 바꾸면 끌기 한 번에 `waitIdle` + `resize` 가 메시지 수만큼 돌았다(감사 P-2). 언리얼 `FSlateApplication` 도
+         *          크기 통보를 모아 프레임에서 뷰포트를 바꾼다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         */
+        void applyPendingResize();
+        /** @brief 적용을 기다리는 크기 변경이 있는지입니다(`applyPendingResize`). */
+        [[nodiscard]] bool hasPendingResize() const { return _bResizePending == SW_TRUE; }
+        /**
+         * @brief 플랫폼 모달 루프(Win32 창 끌기 · 크기 조절) 동안 메인 루프 대신 프레임을 돌릴 콜백을 겁니다.
+         * @details 그 루프 안에서는 메인 루프의 `processMessages` 가 돌아오지 않아 게임 · 리슨 호스트 · 오디오가 멈췄다(감사 P-2). Godot 은 `WM_ENTERSIZEMOVE` 에
+         *          타이머를 걸어 `WM_TIMER` 에서 `Main::iteration()` 을 부른다 — 같은 모양이다. 재진입은 `tickModalLoop` 가 막는다.
+         */
+        [[nodiscard]] Subscription bindModalLoopTickCallback( WindowModalLoopTickDelegate callback ) { return _onModalLoopTick.bind( std::move( callback ) ); }
+        /** @brief 모달 루프 틱 콜백이 도는 중인지입니다. 그 안에서는 창을 다시 만들면 안 된다(그 창의 모달 루프가 아직 돈다). */
+        [[nodiscard]] bool isInModalLoopTick() const { return _bInModalLoopTick == SW_TRUE; }
         /** @brief 렌더러의 수명 이벤트 처리기를 겁니다(`notifyLifecycleEvent`). 표면을 놓고 다시 짓는 쪽이라 구독자(`addLifecycleListener`) 뒤에 마지막으로 불린다. */
         [[nodiscard]] Subscription bindLifecycleCallback( WindowLifecycleDelegate callback ) { return _onLifecycle.bind( std::move( callback ) ); }
         /**
@@ -496,10 +493,14 @@ namespace sw
         }
         /** @brief `_arrTitle` 을 플랫폼 창의 제목 줄에 겁니다. 창이 아직 없으면 아무것도 하지 않습니다(만들 때 `_arrTitle` 로 겁니다). */
         virtual void applyTitle() {}
-        /** @brief 입력기를 켜거나 끕니다. 값이 바뀔 때만 불린다. 창을 만들 때는 플랫폼의 `initializeWindow` 가 `isTextInputWanted` 로 맞춘다. */
-        virtual void applyTextInputWanted( bool bWanted ) { (void)bWanted; }
-        /** @brief 입력기에 글 커서의 자리를 알립니다. */
-        virtual void applyTextInputArea( const WindowTextInputArea& area ) { (void)area; }
+        /**
+         * @brief 입력기를 켜거나 끕니다(모바일 · 웹은 화면 키보드). 값이 바뀔 때만 불린다. 창을 만들 때는 플랫폼의 `initializeWindow` 가 `isTextInputWanted` 로 맞춘다.
+         * @details 순수 가상이다 — 기본 구현(아무것도 안 함)이 있으면 새 플랫폼 창이 글 입력 길을 빠뜨려도 컴파일된다(웹 · Android 가 그랬다, 감사 P-4).
+         *          못 하는 플랫폼은 재정의해 그 까닭을 적는다(SDL `SDL_StartTextInput` 도 백엔드마다 구현한다).
+         */
+        virtual void applyTextInputWanted( bool bWanted ) = 0;
+        /** @brief 입력기에 글 커서의 자리를 알립니다. 순수 가상인 까닭은 `applyTextInputWanted` 와 같다 — 자리를 받는 API 가 없는 플랫폼은 재정의해 그렇다고 적는다. */
+        virtual void applyTextInputArea( const WindowTextInputArea& area ) = 0;
         /** @brief 조합 · 확정 글을 외부 처리기(`bindCustomMessageHandler`)에 넘깁니다. 플랫폼 창만 부른다. */
         void dispatchTextInput( WindowTextInputKind kind, string_view text );
 
@@ -509,6 +510,13 @@ namespace sw
          */
         [[nodiscard]] bool storeTitle( const utf8* pTitle );
 
+        /**
+         * @brief 플랫폼 메시지 처리가 새 클라이언트 크기를 받으면 부릅니다. 크기를 적고 적용 대기만 켠다 — 콜백은 `applyPendingResize` 가 부른다.
+         * @details 0 크기(최소화)는 플랫폼이 거른다. 다시 만드는 중(`_bRecreating`)이면 크기만 적는다. 같은 크기면 아무것도 하지 않는다.
+         */
+        void notifyResized( uint32 width, uint32 height );
+        /** @brief 플랫폼 모달 루프 안의 타이머가 부릅니다. 모달 루프 틱 콜백(프레임 하나 — 대기 크기 적용도 그 안이다)을 부른다. 콜백 안에서 다시 오면(중첩 메시지 펌프) 건너뛴다. */
+        void tickModalLoop();
         /** @brief 플랫폼 메시지 처리가 최소화 이벤트를 받으면 부릅니다(`isMinimized`). */
         void setMinimizedState( bool bMinimized ) { _bMinimized = bMinimized ? SW_TRUE : SW_FALSE; }
         /** @brief 플랫폼 메시지 처리가 포커스 이벤트를 받으면 부릅니다(`hasFocus`). */
@@ -524,7 +532,6 @@ namespace sw
         utf8                                            _arrTitle[kTitleCapacity];
         DelegateSlot<WindowMessageHandlerDelegate>      _customHandler;
         DelegateSlot<WindowAccessibilityQueryDelegate>  _accessibilityQuery;
-        DelegateSlot<WindowResizeDelegate>              _onResize;
         DelegateSlot<WindowLifecycleDelegate>           _onLifecycle;
         MulticastDelegate<void( WindowLifecycleEvent )> _lifecycleListeners; ///< `addLifecycleListener` — 렌더러 처리기보다 먼저 불린다
         DelegateSlot<WindowCloseQueryDelegate>          _closeQuery;
@@ -558,5 +565,11 @@ namespace sw
         uint32 _simulatedInterruptionTicks; /**< 흉내 낸 멈춤의 남은 틱입니다(`simulateAppInterruption`). 0 이면 흉내 내지 않습니다. */
 
     private:
+        // 크기 콜백 칸은 기반만 만진다 — 플랫폼이 메시지 처리 안에서 바로 부르는 길(감사 P-2)을 형식으로 막는다. 플랫폼은 `notifyResized` 만 부른다.
+        DelegateSlot<WindowResizeDelegate>        _onResize;
+        DelegateSlot<WindowModalLoopTickDelegate> _onModalLoopTick;
+        uint8                                     _bResizePending   : 1; /**< 적용을 기다리는 크기 변경(`applyPendingResize`). */
+        uint8                                     _bInModalLoopTick : 1; /**< 모달 루프 틱 콜백이 도는 중(`tickModalLoop` 의 재진입 가드). */
+        [[maybe_unused]] uint8                    _reservedResize   : 6;
     };
 } // namespace sw

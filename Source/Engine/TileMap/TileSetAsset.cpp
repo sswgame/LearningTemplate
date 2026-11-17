@@ -487,5 +487,5 @@ namespace sw
 namespace sw
 {
     /** 공유 캐시로 찾는 종류다(접미사 `.tileset.xml` — 에디터의 타일셋 편집 창이 이 종류로 문서를 받는다). 칸마다 지은 브러시 번호를 지키려 다시 읽기는 떼어 낸다(`Detach`). */
-    SW_SHARED_ASSET_CACHE( TileSetAsset, TileSetAsset, TileSetAsset::kAssetType.withLoader( AssetTypeLoader::of<TileSetAsset>( MemoryTag::Asset, SharedAssetReloadMode::Detach ) ) );
+    SW_SHARED_ASSET_CACHE( TileSetAsset, TileSetAsset, TileSetAsset::kAssetType.withLoader( AssetTypeLoader::of<TileSetAsset>( MemoryTag::Asset ) ) );
 } // namespace sw

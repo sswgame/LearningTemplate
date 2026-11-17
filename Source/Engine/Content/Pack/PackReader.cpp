@@ -484,7 +484,7 @@ namespace sw
         return readPlanned( pathHash, 0, kToEntryEnd, outBytes );
     }
 
-    bool PackReader::readRange( uint64 pathHash, uint64 offset, uint32 size, vector<uint8>& outBytes ) const
+    bool PackReader::readRange( uint64 pathHash, uint64 offset, uint64 size, vector<uint8>& outBytes ) const
     {
         return readPlanned( pathHash, offset, size, outBytes );
     }
@@ -510,7 +510,7 @@ namespace sw
         return readPlannedAsync( io, pathHash, 0, kToEntryEnd, priority, onComplete );
     }
 
-    AsyncReadHandle PackReader::readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint32 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const
+    AsyncReadHandle PackReader::readRangeAsync( AsyncFileIO& io, uint64 pathHash, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const
     {
         return readPlannedAsync( io, pathHash, offset, size, priority, onComplete );
     }

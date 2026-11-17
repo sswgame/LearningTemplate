@@ -15,7 +15,6 @@
 	<WaitUntil watch="Appearance.SlotItem" target="Dyed" key="Head" is="helmet_knight_dyeable" timeoutFrames="5"/>
 	<Wait frames="30"/>
 	<Screenshot file="itemvariant.ppm"/>
-	<Wait frames="1"/>
 	<ExpectImage file="itemvariant.ppm" golden="itemvariant"/>
 	<ExpectImage file="itemvariant.ppm" golden="itemvariant_plain" region="0.22,0.15,0.38,0.45"/>
 	<ExpectImage file="itemvariant.ppm" golden="itemvariant_gilded" region="0.42,0.15,0.58,0.45"/>

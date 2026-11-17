@@ -18,7 +18,6 @@
 	<Expect watch="Zone.Param" target="QuietDune" key="sink.interval" is="1"/>
 	<Expect watch="Zone.Param" target="QuietDune" key="sink.on" is="Stay"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Victim 10.5 0.05 0"/>
 	<Wait frames="40"/>
 	<Expect watch="Zone.Sources" target="Victim" is="volume:Dune"/>
@@ -26,7 +25,6 @@
 	<Expect watch="Ability.HasTag" target="Victim" key="State.Dragged" equals="0"/>
 	<Expect watch="Ability.StackCount" target="Victim" key="GE_Sink" atLeast="1"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Victim 9.2 0.05 0"/>
 	<Wait frames="5"/>
 	<Expect watch="Ability.HasTag" target="Victim" key="State.Dragged" equals="1"/>
@@ -35,17 +33,14 @@
 	<WaitUntil watch="Ability.Attribute" target="Victim" key="Health" equals="0" timeoutSeconds="4"/>
 	<Expect watch="Ability.HasTag" target="Victim" key="State.Engulfed" equals="1"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Villager 9 0.05 -0.5"/>
 	<Wait frames="10"/>
 	<Expect watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="1"/>
 	<Expect watch="AI.Blackboard" target="Villager" key="InHazard" equals="1"/>
-	<Wait frames="1"/>
 	<DevCommand line="object.place Villager 10.8 0.05 -0.5"/>
 	<Wait frames="5"/>
 	<Expect watch="Ability.HasTag" target="Villager" key="State.Dragged" equals="0"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Villager 17.5 0.05 0"/>
 	<Wait frames="130"/>
 	<Expect watch="Zone.Sources" target="Villager" is="volume:QuietDune"/>

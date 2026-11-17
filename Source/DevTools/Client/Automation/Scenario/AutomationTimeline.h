@@ -23,6 +23,7 @@ namespace sw
         ConditionHold,  ///< `<WaitUntil>` · `<Screenshot>` 같은 조건 대기가 시계를 붙잡은 프레임(조건이 참이 될 때까지)
         StepRan,        ///< 단계가 하나 이상 돈 프레임
         ScheduledWait,  ///< 돌 단계 없이 `<Wait frames>` 만 흘린 프레임 — 고정 프레임 대기다
+        SimulationOnly, ///< 그리지 않고 진행한 프레임(`SimulationOnlyFrameQueue` — `<AdvanceSimulation>`). 대기와 같이 단계 앞 대기에 쌓인다
     };
 
     /** @brief 프레임 종류 하나의 합계입니다. */
@@ -68,12 +69,12 @@ namespace sw
     class SW_DEVTOOLS_API AutomationTimeline
     {
     public:
-        static constexpr uint32 kFrameKindCount  = 5;
+        static constexpr uint32 kFrameKindCount  = 6;
         static constexpr uint32 kSlowestWaitKeep = 5;
 
         AutomationTimeline();
 
-        /** @brief 프레임 하나가 @p kind 로 @p seconds 걸렸음을 더합니다. 대기 프레임(`ScheduledWait` · `ConditionHold`)은 아직 닫지 않은 대기에도 쌓인다. */
+        /** @brief 프레임 하나가 @p kind 로 @p seconds 걸렸음을 더합니다. 대기 프레임(`ScheduledWait` · `ConditionHold` · `SimulationOnly`)은 아직 닫지 않은 대기에도 쌓인다. */
         void recordFrame( AutomationFrameKind kind, float64 seconds );
         /**
          * @brief 단계 하나가 돌기 시작했음을 알려 지금까지 쌓인 대기를 닫습니다. 쌓인 것이 없으면 아무것도 하지 않고, 있으면 가장 긴 몇 개 안에 들 때만 남깁니다.

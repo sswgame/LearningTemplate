@@ -101,3 +101,17 @@ SW_TEST_CASE( FloatCurveTest, JSONRoundTrip )
     SW_EXPECT_TRUE( parsed._listKey[1]._interpolation == CurveInterpolation::Linear );
     SW_EXPECT_FALSE( parsed._listKey[1]._bAutoTangent );
 }
+
+/** @brief [FloatCurveTest] NaN 시간은 첫 키 값이다 — 키 하나짜리 커브도 범위 밖을 읽지 않는다 */
+SW_TEST_CASE( FloatCurveTest, NaNTimeHoldsTheFirstKey )
+{
+    const float32 kNaN = std::numeric_limits<float32>::quiet_NaN();
+    FloatCurve    single;
+    single.addKey( 1.0f, 7.0f, CurveInterpolation::Linear );
+    const optional<float32> singleValue = single.evaluate( kNaN );
+    SW_REQUIRE_TRUE( singleValue.has_value() );
+    SW_EXPECT_EQUAL( 7.0f, *singleValue );
+    const optional<float32> pairValue = TestFloatCurveInternal::makeTwoKeys( CurveInterpolation::Linear ).evaluate( kNaN );
+    SW_REQUIRE_TRUE( pairValue.has_value() );
+    SW_EXPECT_EQUAL( 0.0f, *pairValue );
+}

@@ -3,6 +3,7 @@
  * @brief 계정 키트(서버)의 공통 타입입니다. 설정, 자격, 발급 결과, 이벤트와 암호 인터페이스(`ILoginCrypto`)를 정의합니다. 와이어 타입(결과, 토큰, 티켓)은 공유 모듈 `GF_Account` 의 `AccountTypes.h` 에 있습니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -40,8 +41,48 @@ namespace sw
         int32                 _revocationBatchSize{ 16 };                                                                       ///< 한 번에 읽어 철회를 맡기는 대기열 항목 수이다
         int32                 _maxFailedCount{ 5 };                                                                             ///< 이만큼 틀리면 계정을 잠근다
         int32                 _attemptBurst{ 10 };                                                                              ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
+        int64                 _sharedAttemptWindowMs{ 0 };                                                                      ///< 서버 사이에 나누는 주소 단위 시도 창(휘발 저장소 INCR + TTL)의 길이이다. 0 이면 나누지 않는다(캐시 없는 단위 테스트)
+        int64                 _loginNonceLifetimeMs{ 0 };                                                                       ///< 서버가 낸 외부 로그인 nonce 의 수명이다. 0 이면 nonce 를 내지 못한다(Unavailable)
+        int32                 _sharedAttemptLimit{ 0 };                                                                         ///< 창 하나에 주소마다 받는 시도 수(서버 전체)이다. 키트 설정(필수)에서 채운다
+        int32                 _maxConcurrentPasswordHashes{ 0 };                                                                ///< 저장소 워커에서 동시에 도는 비밀번호 해시 상한이다(`PasswordHashBudget`). 1 이상이어야 하며 조립은 키트 설정(필수)에서 채운다
         LoginDuplicatePolicy  _duplicatePolicy{ LoginDuplicatePolicy::KickExisting };
         uint8                 _bKeepGuestDeviceAfterLink{ SW_TRUE }; ///< 연동한 뒤에도 같은 장치가 게스트 비밀로 들어올 수 있게 한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class PasswordHashBudget
+     * @brief 동시에 도는 비밀번호 해시 수의 상한입니다. 저장소 워커 여럿이 함께 씁니다(스레드 안전).
+     * @details 해시(Argon2id, 기본 19 MiB × 2 회)는 저장소 워커에서 돈다. 상한이 없으면 로그인 폭주가 워커를 모두 잡아 원장 · 우편 · 거래가 뒤에 선다(감사 O-3).
+     *          자리가 없으면 해시도 저장소 읽기도 하지 않고 `kBusy` 로 끝낸다 — 계정이 있든 없든 같은 답이라 계정 열거에 쓰이지 않는다.
+     *          OWASP Password Storage 의 "KDF 동시 실행 제한", 세마포어의 시도 획득(`try_acquire`)과 같다.
+     */
+    class PasswordHashBudget
+    {
+    public:
+        /** @brief 상한을 정합니다. 해시를 맡기기 전(서비스 `initialize`)에 부릅니다. */
+        void  setMaxCount( int32 maxCount ) { _maxCount = maxCount; }
+        int32 getMaxCount() const { return _maxCount; }
+
+        /** @brief 자리가 있으면 하나 잡고 true 입니다. 잡았으면 끝에 `release` 를 부릅니다. */
+        [[nodiscard]] bool tryAcquire()
+        {
+            int32 current = _count.load( std::memory_order_relaxed );
+            while ( current < _maxCount )
+            {
+                if ( _count.compare_exchange_weak( current, current + 1, std::memory_order_acquire, std::memory_order_relaxed ) )
+                    return true;
+            }
+            return false;
+        }
+
+        void release() { (void)_count.fetch_sub( 1, std::memory_order_release ); }
+
+    private:
+        atomic<int32> _count{ 0 };
+        int32         _maxCount{ 0 };
     };
 } // namespace sw
 

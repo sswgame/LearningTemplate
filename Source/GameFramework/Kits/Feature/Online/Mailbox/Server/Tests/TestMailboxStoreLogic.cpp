@@ -8,6 +8,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -33,7 +34,7 @@ namespace
         int64 _cap;
     };
 
-    string sendReward( MemoryServiceDatabase& database, string_view idempotencyKey, string_view assetID, int64 amount, int64 expiresMs = 0 )
+    string sendReward( MemoryServiceDatabase& database, string_view idempotencyKey, string_view assetID, int64 amount, int64 expiresMs = 0, int64 createdMs = kNowMs )
     {
         ServiceMailMessage message;
         if ( amount > 0 )
@@ -42,7 +43,7 @@ namespace
         message._idempotencyKey     = string( idempotencyKey );
         message._fundingHolder      = LedgerHolder::makeMint();
         message._recipientAccountID = kRecipient;
-        message._createdMs          = kNowMs;
+        message._createdMs          = createdMs;
         message._expiresMs          = expiresMs;
         ServiceTransaction transaction;
         string             mailKey;
@@ -262,4 +263,95 @@ SW_TEST_CASE( MailboxStoreLogicTest, ExpiryBurnsWhenTheSenderIsDeleted )
     vector<LedgerBalance> listEscrow;
     SW_REQUIRE_TRUE( Ledger::listBalances( database, ServiceMail::makeEscrowHolder( playerMail ), listEscrow ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listEscrow.empty() );
+}
+
+/** @brief [MailboxStoreLogicTest] 모두 받기는 최근 한 쪽(50 통) 뒤의 첨부 우편도 받는다 — 최근 우편이 모두 첨부 없는 알림이어도 오래된 보상을 놓치지 않는다(감사 O-18) */
+SW_TEST_CASE( MailboxStoreLogicTest, ClaimAllReachesPastTheFirstPage )
+{
+    MemoryServiceDatabase database;
+    const FixedCapPolicy  policy{ 0 };
+    for ( int32 index = 0; index < 3; ++index )
+    {
+        (void)sendReward( database, "old.reward." + to_string( index ), "gold", 10, 0, kNowMs - 100000 + index );
+    }
+    for ( int32 index = 0; index < 60; ++index )
+    {
+        (void)sendReward( database, "notice." + to_string( index ), "gold", 0, 0, kNowMs + index ); // 첨부 없는 최근 알림
+    }
+    MailboxClaimReply reply;
+    SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( database, kRecipient, kNowMs + 1000, kClaimedMs, &policy, reply ) == MailboxResult::Ok );
+    SW_EXPECT_EQUAL( 3, reply._claimedCount );
+    SW_EXPECT_FALSE( reply._bMoreRemaining );
+    SW_EXPECT_EQUAL( readBalance( database, kRecipient, "gold" ), int64( 30 ) );
+}
+
+namespace
+{
+    constexpr uint64 kCampaignID = 0x51;
+
+    ServiceMailCampaign makeCampaign( int64 endMs )
+    {
+        ServiceMailCampaign campaign;
+        campaign._campaignID = kCampaignID;
+        campaign._titleKey   = "mail.campaign";
+        campaign._startMs    = kNowMs;
+        campaign._endMs      = endMs;
+        campaign._listAttachment.push_back( ServiceMailAttachment{ "gold", 10 } );
+        return campaign;
+    }
+
+    /**
+     * @brief 첫 커밋 바로 앞에 운영자가 캠페인을 끝내는 일을 한 번 끼워 넣는 연결입니다.
+     * @details 메모리 저장소는 호출마다 직렬이라 "읽기와 커밋 사이" 의 변경이 저절로 나지 않는다. 이 연결이 그 틈을 만든다.
+     */
+    class CampaignEndingConnection final : public IServiceStoreConnection
+    {
+    public:
+        explicit CampaignEndingConnection( MemoryServiceDatabase& database )
+            : _database{ database }
+        {
+        }
+
+        ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override { return _database.readRecord( table, key, outRecord ); }
+        ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord ) override
+        {
+            return _database.listRecords( table, keyPrefix, cursorKey, maxCount, bDescending, outListRecord );
+        }
+        ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override
+        {
+            if ( _cutCount == 0 )
+            {
+                ++_cutCount;
+                ServiceTransaction ending;
+                ending.put( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( kCampaignID ), ServiceMailCampaign::encode( makeCampaign( kNowMs + 500 ) ) );
+                SW_EXPECT_TRUE( _database.commit( ending ) == ServiceStoreResult::Ok );
+            }
+            return _database.commit( transaction, pOutInfo );
+        }
+
+    private:
+        MemoryServiceDatabase& _database;
+        int32                  _cutCount{ 0 };
+    };
+} // namespace
+
+/** @brief [MailboxStoreLogicTest] 캠페인을 읽은 뒤 커밋 전에 운영자가 끝낸 캠페인은 지급하지 않는다 — 캠페인 읽기가 커밋 조건이라 다시 읽고 Expired 다(감사 "다음 할 일" 5 번) */
+SW_TEST_CASE( MailboxStoreLogicTest, CampaignEndedBetweenReadAndCommitIsNotPaid )
+{
+    MemoryServiceDatabase database;
+    ServiceTransaction    create;
+    SW_REQUIRE_TRUE( ServiceMailCampaign::stageCreate( makeCampaign( kNowMs + 100000 ), create ) );
+    SW_REQUIRE_TRUE( database.commit( create ) == ServiceStoreResult::Ok );
+
+    CampaignEndingConnection connection( database );
+    MailboxClaimInput        input;
+    input._mailKey            = string( MailboxProtocol::kCampaignPrefix ) + ServiceKeyUtil::makeHex64( kCampaignID );
+    input._accountID          = kRecipient;
+    input._nowMs              = kNowMs + 1000; // 끼운 일이 끝 시각을 kNowMs + 500 으로 당긴다
+    input._claimedRetentionMs = kClaimedMs;
+    MailboxClaimReply reply;
+    SW_EXPECT_TRUE( MailboxStoreLogic::claim( connection, input, reply ) == MailboxResult::Expired );
+    LedgerBalance balance;
+    SW_EXPECT_TRUE( Ledger::readBalance( database, LedgerHolder::makeAccount( kRecipient ), "gold", balance ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( int64( 0 ), balance._amount );
 }

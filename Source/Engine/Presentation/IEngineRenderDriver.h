@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Presentation/FrameDrawMode.h"
 #include "Engine/Presentation/ViewCameraProvider.h"
 
 namespace sw
@@ -48,7 +49,7 @@ namespace sw
         virtual void waitRenderThreadIdle( RHIWaitIdleReason reason ) = 0;
 
         /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. */
-        virtual void submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider ) = 0;
+        virtual void submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) = 0;
 
         /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 요청이 없으면 true, 교체에 실패하면(되돌렸어도) false 입니다. */
         [[nodiscard]] virtual bool applyPendingBackendChange() = 0;

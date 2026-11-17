@@ -4,10 +4,13 @@
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
@@ -62,23 +65,41 @@ namespace
         uint32 _counter{ 0 };
     };
 
-    /** @brief 서버 하나입니다. 영속 데이터는 빌립니다 — 데이터를 같이 쓰면 "서버 둘" 입니다. */
+    /** @brief 테스트의 로그인 설정입니다. 해시 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
+    LoginServiceConfig makeLoginServiceSettings()
+    {
+        LoginServiceConfig settings;
+        settings._maxConcurrentPasswordHashes = 4;
+        return settings;
+    }
+
+    /** @brief 서버 하나입니다. 영속 데이터는 빌립니다 — 데이터를 같이 쓰면 "서버 둘" 입니다. 휘발 저장소도 @p pSharedCache 로 나눌 수 있습니다. */
     struct LoginFixture
     {
+        ManualClock               _clock;
+        MemoryEphemeralDatabase   _ownCacheData;
+        MemoryEphemeralStore      _cache;
+        EphemeralStoreRouter      _router;
         MemoryServiceStore        _store;
         FakeServiceCrypto         _crypto;
         FakePlatformLoginProvider _provider;
         LoginService              _service;
         uint64                    _nextTag{ 1 };
 
-        explicit LoginFixture( MemoryServiceDatabase& database, const LoginServiceConfig& settings = LoginServiceConfig{} )
-            : _store{ &database }
+        explicit LoginFixture( MemoryServiceDatabase& database, const LoginServiceConfig& settings = makeLoginServiceSettings(), MemoryEphemeralDatabase* pSharedCache = nullptr )
+            : _clock{ MonotonicMilliseconds{ 1000 } }
+            , _ownCacheData{ _clock }
+            , _cache{ pSharedCache != nullptr ? pSharedCache : &_ownCacheData }
+            , _router{}
+            , _store{ &database }
             , _crypto{}
             , _provider{ "fake" }
             , _service{}
         {
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
+            _router.initialize( &_cache );
             _service.initialize( &_store, &_crypto, settings, arrMasterKey );
+            _service.attachCache( &_router );
             SW_EXPECT_TRUE( _service.registerPlatformProvider( &_provider ) );
         }
 
@@ -88,12 +109,14 @@ namespace
             _store.shutdown();
             (void)_store.pollCompletions();
             _service.shutdown();
+            _router.shutdown();
         }
 
         void poll()
         {
             for ( int32 round = 0; round < 4; ++round )
             {
+                (void)_router.poll();
                 _service.update( UnixMilliseconds{ kNowMs } );
                 while ( _store.pollCompletions() > 0 )
                 {
@@ -158,8 +181,8 @@ namespace
 SW_TEST_CASE( LoginServiceTest, AttemptsAreLimitedPerClientIncludingRegister )
 {
     MemoryServiceDatabase database;
-    LoginServiceConfig    settings;
-    settings._attemptBurst = 2;
+    LoginServiceConfig    settings = makeLoginServiceSettings();
+    settings._attemptBurst         = 2;
     LoginFixture rig( database, settings );
 
     SW_EXPECT_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
@@ -181,8 +204,8 @@ SW_TEST_CASE( LoginServiceTest, AttemptsAreLimitedPerClientIncludingRegister )
 SW_TEST_CASE( LoginServiceTest, SeedAccountsAreNotLimited )
 {
     MemoryServiceDatabase database;
-    LoginServiceConfig    settings;
-    settings._attemptBurst = 1;
+    LoginServiceConfig    settings = makeLoginServiceSettings();
+    settings._attemptBurst         = 1;
     LoginFixture rig( database, settings );
     for ( int32 index = 0; index < 5; ++index )
     {
@@ -454,4 +477,59 @@ SW_TEST_CASE( LoginServiceTest, StoreFailureAndProviderRegistration )
     SW_EXPECT_FALSE( rig._service.registerPlatformProvider( &sameName ) );
     FakePlatformLoginProvider badName( "Bad Name" );
     SW_EXPECT_FALSE( rig._service.registerPlatformProvider( &badName ) );
+}
+
+/** @brief [LoginServiceTest] 해시 상한: 자리가 다 차면 더 들이지 않고, 하나가 나가면 다시 들인다 — 저장소 워커를 해시가 모두 잡지 못한다(감사 O-3) */
+SW_TEST_CASE( LoginServiceTest, PasswordHashBudgetRefusesBeyondLimit )
+{
+    PasswordHashBudget budget;
+    budget.setMaxCount( 2 );
+    SW_EXPECT_TRUE( budget.tryAcquire() );
+    SW_EXPECT_TRUE( budget.tryAcquire() );
+    SW_EXPECT_FALSE( budget.tryAcquire() );
+    budget.release();
+    SW_EXPECT_TRUE( budget.tryAcquire() );
+    budget.release();
+    budget.release();
+
+    PasswordHashBudget unset; // 설정이 빠지면 들이지 않는다(폴백 없음)
+    SW_EXPECT_FALSE( unset.tryAcquire() );
+}
+
+/** @brief [LoginServiceTest] 주소 단위 시도 창은 휘발 저장소에서 서버 사이에 나눈다 — 서버마다의 버킷이 넉넉해도 두 서버 합이 상한을 넘으면 kRateLimited 다(감사 O-14). 다른 주소는 따로다 */
+SW_TEST_CASE( LoginServiceTest, SharedAttemptWindowSpansServers )
+{
+    MemoryServiceDatabase database;
+    LoginServiceConfig    settings  = makeLoginServiceSettings();
+    settings._attemptBurst          = 100; // 서버마다의 버킷은 걸리지 않는다
+    settings._sharedAttemptLimit    = 2;
+    settings._sharedAttemptWindowMs = 60000;
+    LoginFixture serverA( database, settings );
+    LoginFixture serverB( database, settings, &serverA._ownCacheData );
+
+    SW_EXPECT_TRUE( serverA.registerAccount( "alice" ) == LoginResult::Ok ); // 가입도 센다
+    SW_EXPECT_TRUE( serverB.login( "alice" )._result == LoginResult::Ok );   // 다른 서버의 둘째 시도
+    const LoginCompletion limited = serverA.login( "alice" );
+    SW_EXPECT_TRUE( limited._result.hasError( OnlineError::kRateLimited ) );
+    SW_EXPECT_TRUE( limited._grant._retryAfterMs > 0 );
+    SW_EXPECT_TRUE( serverB.registerAccount( "bob", kClientKey + 1 ) == LoginResult::Ok );
+}
+
+/** @brief [LoginServiceTest] 외부 로그인 nonce 는 서버가 내고 한 번만 쓴다 — 같은 티켓을 다시 쓰거나, 서버가 내지 않은 nonce · nonce 없는 티켓은 제공자에 닿기 전에 거절한다(감사 O-13) */
+SW_TEST_CASE( LoginServiceTest, PlatformNonceIsServerIssuedAndUsedOnce )
+{
+    MemoryServiceDatabase database;
+    LoginFixture          rig( database );
+    rig._provider.requireServerNonce();
+    rig._service.issueLoginNonce( kClientKey, UnixMilliseconds{ kNowMs }, 50 );
+    const LoginCompletion issued = rig.take( 50 );
+    SW_REQUIRE_TRUE( issued._result == LoginResult::Ok );
+    SW_EXPECT_EQUAL( size_t( LoginConstant::kLoginNonceTextSize ), issued._loginNonce.size() );
+
+    const string ticket = "subject:sub1:Hero|" + issued._loginNonce;
+    SW_EXPECT_TRUE( rig.platformLogin( ticket )._result == LoginResult::Ok );
+    SW_EXPECT_TRUE( rig.platformLogin( ticket )._result == LoginResult::ProviderRejected ); // 다시 쓴 토큰
+    SW_EXPECT_TRUE( rig.platformLogin( "subject:sub1:Hero|" + string( static_cast<size_t>( LoginConstant::kLoginNonceTextSize ), 'a' ) )._result == LoginResult::ProviderRejected );
+    SW_EXPECT_TRUE( rig.platformLogin( "subject:sub1:Hero" )._result == LoginResult::ProviderRejected );
+    SW_EXPECT_EQUAL( 1, rig._provider.getSubmittedCount() ); // 거절은 제공자에 닿지 않았다
 }

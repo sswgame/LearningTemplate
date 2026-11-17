@@ -7,6 +7,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatRig.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 
 #include <cstring>
@@ -486,10 +487,10 @@ SW_TEST_CASE( ActionCombatRigTest, ReadRejectsBrokenProjectiles )
     sw::Archive written;
     source.writeState( written );
 
-    // 탄 하나는 맨 끝 105 바이트다(`ProjectileSimulation::writeState`): 빈 정의 이름(4) 위치(12) 속도(12) 피해 · 나이 · 거리 · 수명 · 사거리 · 중력 · 저항 · 유도 · 반지름 · 폭발 · 반발(44)
-    // id(4) 반응 번호(4) 쏜 쪽 · 편 · 대상 · 마지막 맞음 · 관통 · 튕김(24) 깃발(1). 끝에서 잰 자리를 쓴다.
-    const size_t size = static_cast<size_t>( written.getSize() );
-    SW_REQUIRE_TRUE( size > 105 );
+    // 탄 하나는 맨 끝 줄이다(빈 정의 이름). 칸 자리는 끝에서 잰 `StateOffsetFromEnd` 를 쓴다.
+    using ProjectileAt = sw::ProjectileSimulation::StateOffsetFromEnd;
+    const size_t size  = static_cast<size_t>( written.getSize() );
+    SW_REQUIRE_TRUE( size > ProjectileAt::kNameLength );
 
     sw::ActionCombatRig target;
     SW_REQUIRE_TRUE( target.initialize( &catalog, &moves, kSword ) );
@@ -508,14 +509,14 @@ SW_TEST_CASE( ActionCombatRigTest, ReadRejectsBrokenProjectiles )
     const float32 nan      = std::numeric_limits<float32>::quiet_NaN();
     const float32 infinity = std::numeric_limits<float32>::infinity();
     const float32 depth    = 1.0f; // 화면 평면 밖
-    expectRejected( 33, &idAtNext, sizeof( idAtNext ) );
-    expectRejected( 21, &badTeam, sizeof( badTeam ) );
-    expectRejected( 1, &badFlags, sizeof( badFlags ) );
-    expectRejected( 101, &nan, sizeof( nan ) );          // 위치 X
-    expectRejected( 93, &depth, sizeof( depth ) );       // 위치 Z
-    expectRejected( 89, &infinity, sizeof( infinity ) ); // 속도 X
-    expectRejected( 77, &nan, sizeof( nan ) );           // 피해
-    expectRejected( 65, &nan, sizeof( nan ) );           // 수명
+    expectRejected( ProjectileAt::kID, &idAtNext, sizeof( idAtNext ) );
+    expectRejected( ProjectileAt::kTeam, &badTeam, sizeof( badTeam ) );
+    expectRejected( ProjectileAt::kFlags, &badFlags, sizeof( badFlags ) );
+    expectRejected( ProjectileAt::kPosition, &nan, sizeof( nan ) );           // 위치 X
+    expectRejected( ProjectileAt::kPosition - 8, &depth, sizeof( depth ) );   // 위치 Z
+    expectRejected( ProjectileAt::kVelocity, &infinity, sizeof( infinity ) ); // 속도 X
+    expectRejected( ProjectileAt::kDamage, &nan, sizeof( nan ) );             // 피해
+    expectRejected( ProjectileAt::kLifetime, &nan, sizeof( nan ) );           // 수명
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target.readState( truncated ) );

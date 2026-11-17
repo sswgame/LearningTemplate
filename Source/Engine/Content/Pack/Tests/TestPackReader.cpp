@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
@@ -578,4 +579,33 @@ SW_TEST_CASE( PackReaderTest, UnknownEntryStorageIsRefused )
     image._listEntry[0].setPlacement( image._listEntry[0].getDataOffset(), static_cast<PackEntryStorage>( kPackEntryStorageCount ) );
     SW_EXPECT_FALSE( file.open( image, reader ) );
     SW_EXPECT_FALSE( reader.isOpen() );
+}
+
+// ---------------------------------------------------------------------- 구간 읽기(텍스처 밉 범위 — MR-1)
+
+/** @brief [PackReaderTest] 비동기 구간 읽기는 통째 읽기의 같은 구간이고, 항목 밖 구간은 오류다 */
+SW_TEST_CASE( PackReaderTest, RangeReadOnUncompressedEntryMatchesWholeRead )
+{
+    SW_EXPECT_LOG( "PackReader.RangeOutsideEntry" );
+    const PackTestFile file;
+    PackReader         reader;
+    SW_REQUIRE_TRUE( file.open( Util::makeValidImage(), reader ) );
+    AsyncFileIO io;
+    SW_REQUIRE_TRUE( io.initialize( AsyncFileIOConfig{} ) );
+
+    vector<uint8>   range;
+    bool            bSucceeded = false;
+    AsyncReadHandle read       = reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "maps/deep/cave.xml" ) ), 1, 4, AsyncIOPriority::Normal,
+                                                        SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&range, &bSucceeded]( bool bSuccess, vector<uint8>& bytes )
+          {
+        bSucceeded = bSuccess;
+        range      = std::move( bytes );
+    } ) );
+    SW_REQUIRE_TRUE( read.isValid() );
+    read.wait();
+    SW_EXPECT_TRUE( bSucceeded );
+    SW_EXPECT_TRUE( string( range.begin(), range.end() ) == "Cave" );
+
+    SW_EXPECT_FALSE( reader.readRangeAsync( io, HashUtil::computeStringHash64( string_view( "top.txt" ) ), 3, 3, AsyncIOPriority::Normal, {} ).isValid() ); // 5 바이트 항목의 3+3
+    io.shutdown();
 }

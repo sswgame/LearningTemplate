@@ -18,7 +18,8 @@ namespace sw
     {
         struct OnlineServiceClientInternal
         {
-            static constexpr int64 kFirstBackoffMs = 250;
+            static constexpr int64 kFirstBackoffMs    = 250;
+            static constexpr int64 kFirstRetryDelayMs = 100; ///< 요청 재시도의 첫 대기 상한(첫 재시도는 [0, 100] ms)이다
         };
     } // namespace
 } // namespace sw
@@ -26,9 +27,10 @@ namespace sw
 namespace sw
 {
     OnlineServiceClient::OnlineServiceClient()
-        : _settings{ OnlineClientSecurity::sharedEndpoint() }
+        : _settings{ OnlineClientSecurity::sharedEndpoint(), OnlineRetryPolicy::none() }
         , _listService{}
         , _listQueuedCall{}
+        , _listRetryCall{}
         , _listDrainingCall{}
         , _mapPendingCall{}
         , _ownedEndpoint{}
@@ -97,6 +99,8 @@ namespace sw
     {
         VectorUtil::removeIf( _listQueuedCall, [methodRange]( const QueuedCall& call )
         { return OnlineMethodRange::getRangeBase( call._method ) == methodRange; } );
+        VectorUtil::removeIf( _listRetryCall, [methodRange]( const QueuedCall& call )
+        { return OnlineMethodRange::getRangeBase( call._method ) == methodRange; } );
         for ( vector<QueuedCall>* pDraining : _listDrainingCall ) // 꺼내 도는 목록은 지우지 않고 표시만 — 도는 쪽의 인덱스를 지킨다
         {
             for ( QueuedCall& call : *pDraining )
@@ -107,7 +111,7 @@ namespace sw
         }
         for ( auto pendingIt = _mapPendingCall.begin(); pendingIt != _mapPendingCall.end(); )
         {
-            if ( OnlineMethodRange::getRangeBase( pendingIt->second._method ) == methodRange )
+            if ( OnlineMethodRange::getRangeBase( pendingIt->second._call._method ) == methodRange )
                 pendingIt = _mapPendingCall.erase( pendingIt ); // 요청 클라이언트의 항목은 남는다 — 응답이 오면 onNetResponse 가 찾지 못해 버린다
             else
                 ++pendingIt;
@@ -190,6 +194,7 @@ namespace sw
             if ( _state == OnlineClientState::Disconnected && nowMs >= _nextConnectMs )
                 beginConnect();
         }
+        updateRetries();
         // 모은 요청의 시한 — 맡긴 때부터 센다(연결을 기다리다 시한을 넘기면 DeadlineExceeded).
         for ( size_t index = 0; index < _listQueuedCall.size(); )
         {
@@ -379,8 +384,12 @@ namespace sw
         const uint64 netRequestID     = _pRequestClient->sendRequest( _connection, call._method, call._bodyBytes.data(), static_cast<int32>( call._bodyBytes.size() ),
                                                                       options, Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onNetResponse>( this ) );
         _pSendingCall                 = nullptr;
-        if ( netRequestID != 0 )
-            _mapPendingCall[netRequestID] = PendingCall{ call._onResponse, call._requestID, call._method };
+        if ( netRequestID == 0 )
+            return;
+        PendingCall& pending = _mapPendingCall[netRequestID];
+        pending._call        = call;
+        if ( _settings._retryPolicy._maxRetryCount <= 0 )
+            pending._call._bodyBytes.clear(); // 다시 보내지 않으므로 몸을 쥐지 않는다
     }
 
     void OnlineServiceClient::flushQueuedCalls()
@@ -403,6 +412,11 @@ namespace sw
 
     void OnlineServiceClient::failQueuedCalls( NetRequestStatus status, uint16 errorCode )
     {
+        for ( QueuedCall& retryCall : _listRetryCall ) // 백오프를 기다리던 요청도 같은 까닭으로 끝난다
+        {
+            _listQueuedCall.push_back( std::move( retryCall ) );
+        }
+        _listRetryCall.clear();
         vector<QueuedCall> listCall = std::move( _listQueuedCall );
         _listQueuedCall.clear();
         _listDrainingCall.push_back( &listCall ); // 콜백이 키트를 파괴하면 cancelRequests 가 남은 항목을 표시한다
@@ -482,13 +496,53 @@ namespace sw
         const auto pendingIt = _mapPendingCall.find( response._requestID );
         if ( pendingIt != _mapPendingCall.end() )
         {
-            const PendingCall pending = pendingIt->second;
+            PendingCall pending = std::move( pendingIt->second );
             _mapPendingCall.erase( pendingIt );
-            deliver( pending._onResponse, pending._requestID, response );
+            if ( scheduleRetry( pending._call, response ) )
+                return;
+            deliver( pending._call._onResponse, pending._call._requestID, response );
             return;
         }
         if ( _pSendingCall != nullptr ) // 보내지도 못했다(끊김 · 과부하) — sendRequest 안에서 불렸다
             deliver( _pSendingCall->_onResponse, _pSendingCall->_requestID, response );
+    }
+
+    bool OnlineServiceClient::scheduleRetry( QueuedCall& inoutCall, const NetResponse& response )
+    {
+        if ( response._status != NetRequestStatus::ApplicationError || response._bodySize < 2 || inoutCall._retryCount >= _settings._retryPolicy._maxRetryCount )
+            return false;
+        const uint16 errorCode   = LittleEndianUtil::readUint16( response._pBody );
+        const bool   bNotApplied = errorCode == OnlineError::kBusy || errorCode == OnlineError::kRateLimited;
+        const bool   bKeyed      = errorCode == OnlineError::kUnavailable && inoutCall._options._idempotencyKey.isValid(); // 적용됐는지 모르므로 멱등 키가 있어야 같은 결과를 받는다
+        if ( bNotApplied == false && bKeyed == false )
+            return false;
+        if ( inoutCall._retryCount == 0 )
+            inoutCall._retryBackoff = ExponentialBackoff::createWithRandomSeed( OnlineServiceClientInternal::kFirstRetryDelayMs ); // 클라이언트마다 지터 수열이 다르다
+        const MonotonicMilliseconds retryAtMs = _nowMs + inoutCall._retryBackoff.takeDelayMs( _settings._maxBackoffMs );
+        if ( retryAtMs >= inoutCall._deadlineMs )
+            return false; // 시한 안에 다시 할 수 없다 — 받은 답으로 끝낸다
+        ++inoutCall._retryCount;
+        inoutCall._retryAtMs = retryAtMs;
+        _listRetryCall.push_back( std::move( inoutCall ) );
+        return true;
+    }
+
+    void OnlineServiceClient::updateRetries()
+    {
+        bool bMoved = false;
+        for ( size_t index = 0; index < _listRetryCall.size(); )
+        {
+            if ( _listRetryCall[index]._retryAtMs > _nowMs )
+            {
+                ++index;
+                continue;
+            }
+            _listQueuedCall.push_back( std::move( _listRetryCall[index] ) ); // 연결 · 세션 보류를 다른 요청과 같이 따른다
+            _listRetryCall.erase( _listRetryCall.begin() + static_cast<ptrdiff_t>( index ) );
+            bMoved = true;
+        }
+        if ( bMoved && _state == OnlineClientState::Ready )
+            flushQueuedCalls();
     }
 
     void OnlineServiceClient::deliver( const OnlineResponseDelegate& onResponse, uint64 requestID, const NetResponse& response )

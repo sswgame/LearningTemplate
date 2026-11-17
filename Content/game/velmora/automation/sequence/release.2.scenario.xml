@@ -17,7 +17,6 @@
 	<Expect watch="Velmora.Phase" equals="0"/>
 	<Expect watch="Quest.Status" target="ember_oath" is="Active"/>
 	<!-- 다시 걸을 수 있다 — 동쪽으로 1 초 -->
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="1" seconds="1"/>
 	<Wait seconds="1.1"/>
 	<Expect watch="Velmora.PlayerX" near="6" tolerance="0.2"/>

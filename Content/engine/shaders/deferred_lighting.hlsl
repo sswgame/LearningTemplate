@@ -75,7 +75,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 유전체 F0 를 반사율 칸으로(언리얼 Specular — 0.5 → 0.04). 금속은 기본 색 그대로.
     const float dielectric   = 0.08f * specular;
     brdf._pbr._specularColor = lerp( float3( dielectric, dielectric, dielectric ), albedo, saturate( metallic ) );
-    brdf._occlusion          = occlusion;
+    // 머티리얼 가림 × 화면 공간 가림(SSAO · GTAO) — 둘 다 앰비언트 · 프로브 빛에만 든다(SurfaceBRDF::_occlusion). SSAO 가 없으면 1 이다.
+    brdf._occlusion = occlusion * PassTexture::sampleAmbientOcclusion( input._uv );
     applyShadingModel( brdf, shadingModel, PassTexture::sampleGbufferCustomData( input._uv ), albedo );
 
     // 그림자는 월드 위치를 **라이트 클립 공간으로 투영해** 읽는다(화면 UV 로 샘플하면 그늘이 물체를 따라오지 않고 화면에 붙는다).

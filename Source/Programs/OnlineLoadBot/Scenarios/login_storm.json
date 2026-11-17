@@ -2,6 +2,7 @@
     "_name": "login_storm",
     "_seed": 2,
     "_region": "kr",
+    "_pacing": "closed",
     "_listStep": [
         { "_action": "login", "_mode": "password" },
         { "_action": "directory_status" },

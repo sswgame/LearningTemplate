@@ -30,6 +30,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -776,6 +777,9 @@ namespace sw::editor
         }
         for ( const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite : listRewrite )
             inoutIndex.refreshFile( resourceRoot, rewrite._referrerID );
+        // 실행 중 GUID 색인도 새 자리를 안다 — 살아 있는 참조(`AssetRef<T>`)를 새 경로로 다시 넣을 때 GUID 를 잃지 않는다(`.meta` 는 색인의 줄이 아니라 false 다).
+        for ( size_t index = 0; index < outPlan._listOldID.size(); ++index )
+            (void)AssetRegistry::move( outPlan._listOldID[index], outPlan._listNewID[index] );
         outPlan._fixedFileCount           = static_cast<uint32>( referrerRewriteCount );
         EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
         if ( pWorkspace != nullptr )

@@ -40,12 +40,19 @@ namespace sw
          * @details 스텝의 10 만분의 1 은 봐 줍니다 — 1/60 초 프레임을 1/180 초 스텝 셋으로 나눌 때 float 반올림으로 한 스텝이 다음 프레임으로 밀려
          *          2 · 4 스텝이 번갈아 나오지 않게 합니다.
          */
-        constexpr int32 consume( float32 deltaTime )
+        constexpr int32 consume( float32 deltaTime ) { return consumeScaled( deltaTime, 1.0f ); }
+
+        /**
+         * @brief 배속 @p timeScale 을 걸음 수로 냅니다. 한 프레임 상한(`_maxFrameTime`)은 실제 프레임 시간에 걸고 배속은 그 뒤에 곱한다.
+         * @details 배속을 곱한 델타를 `consume` 에 넘기면 상한이 곱한 값을 잘라 8 배속이 30 fps 에서 7.5 배가 된다(감사 K-6). 유니티 `Time.maximumDeltaTime` 도
+         *          배율을 곱하기 전의 실제 시간에 건다. 0 이하 · NaN 배속은 쌓지 않는다(일시정지).
+         */
+        constexpr int32 consumeScaled( float32 deltaTime, float32 timeScale )
         {
-            const bool bPositive = deltaTime > 0.0f; // NaN 은 비교가 모두 거짓이라 여기서 걸러진다
+            const bool bPositive = deltaTime > 0.0f && timeScale > 0.0f; // NaN 은 비교가 모두 거짓이라 여기서 걸러진다
             if ( bPositive == false )
                 return 0;
-            _accumulator += deltaTime < _maxFrameTime ? deltaTime : _maxFrameTime;
+            _accumulator += ( deltaTime < _maxFrameTime ? deltaTime : _maxFrameTime ) * timeScale;
             const float32 tolerance = _step * 1.0e-5f;
             int32         stepCount = 0;
             while ( _accumulator + tolerance >= _step )

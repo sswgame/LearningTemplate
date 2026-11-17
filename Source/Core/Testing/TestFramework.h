@@ -5,6 +5,9 @@
  *          위에서 한다 — 엔진 서비스(`engine::getSubsystem`)를 그대로 쓴다(언리얼 Automation Spec). 실행기는 `Core/Testing/TestRunner.h`.
  *          옛 틀의 문제를 형식으로 막는다:
  *          - 단언이 하나도 없는 케이스는 실패다(0 건 통과 금지).
+ *          - 환경이 없어 돌 수 없는 케이스는 `SW_TEST_SKIP( "까닭" )` 으로 건너뜀을 명시한다 — 통과로 세지 않고 건너뜀 수 · 까닭이 요약 줄과 보고에 따로 남는다
+ *            (GoogleTest `GTEST_SKIP` · Catch2 `SKIP`). 건너뛴 케이스는 단언 0 건 규칙을 받지 않는다(건너뜀이 곧 판정이다). 까닭이 비면 실패이고,
+ *            건너뛰기 전에 진 단언이 있으면 그 케이스는 실패다(건너뜀이 실패를 가리지 않는다).
  *          - 케이스 동안 남은 Warning · Error 로그는 실패다. 일부러 내는 로그는 그 로그의 id 로 `SW_EXPECT_LOG` 에 적는다(부분 문자열로 가리지 않는다).
  *          - 실행 순서는 매번 섞인다(씨앗을 찍는다 — `--test-seed` 로 같은 순서를 다시 돈다). 앞 케이스에 기대는 케이스는 드러난다.
  *          - 쓰기는 `makeScratchPath` 의 케이스별 폴더에만 한다(프로세스 · 케이스 · 회차마다 다르다).
@@ -126,6 +129,11 @@ namespace sw::test
     SW_API void reportFailure( const utf8* pFile, int32 line, string_view message );
     /** @brief 단언 하나를 셉니다(통과든 실패든). 단언이 없는 케이스는 실패다. */
     SW_API void countAssertion();
+    /**
+     * @brief 지금 케이스를 건너뜀으로 적습니다(`SW_TEST_SKIP` 이 부르고 본문에서 돌아간다). @p reason 이 비면 실패로 적는다 — 까닭 없는 건너뜀은 보고에서 가릴 수 없다.
+     * @details 격리 케이스(`._bIsolated`)는 자식의 종료 코드로만 판정되므로 자식 안의 건너뜀은 부모에서 통과로 보인다 — 환경을 묻는 케이스는 격리하지 않는다.
+     */
+    SW_API void skipCase( string_view reason, const utf8* pFile, int32 line );
     /** @brief 이 케이스가 일부러 내는 로그 id 를 적습니다. 그 id 의 Warning · Error 는 실패로 세지 않고, 끝까지 한 번도 안 나오면 실패입니다. */
     SW_API void expectLog( const utf8* pLogID, const utf8* pFile, int32 line );
     /**
@@ -278,11 +286,6 @@ namespace sw::test
     SW_API bool checkNear( float64 expected, float64 actual, float64 tolerance, const utf8* pExpression, const utf8* pFile, int32 line );
     /** @brief `SW_EXPECT_TRUE` · `SW_EXPECT_FALSE` · `SW_REQUIRE_TRUE` 의 본체입니다. */
     SW_API bool checkCondition( bool bPassed, const utf8* pExpression, const utf8* pFile, int32 line );
-    /**
-     * @brief `SW_TEST_SKIP` 의 본체입니다 — 건너뛴 이유를 로그(`Test.CaseSkipped`)로 남기고 확인 하나로 센다(확인 없는 케이스의 실패로 보지 않는다).
-     * @details 이 기계 · 볼륨이 케이스의 전제를 갖추지 못했을 때만 쓴다(성긴 파일을 못 만드는 볼륨). 전제가 코드의 결함이면 건너뛰지 말고 실패시킨다.
-     */
-    SW_API void reportSkip( string_view reason, const utf8* pFile, int32 line );
 } // namespace sw::test
 
 #if !defined( SW_SHIPPING )
@@ -376,6 +379,14 @@ namespace sw::test
 /** @brief 이 케이스가 일부러 내는 로그(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID` 의 id)를 적습니다. 케이스 끝까지 한 번은 나와야 합니다. */
 #define SW_EXPECT_LOG( logID ) ::sw::test::expectLog( ( logID ), __FILE__, __LINE__ )
 
+/** @brief 환경이 없어 이 케이스를 돌 수 없습니다 — 건너뜀으로 적고 본문에서 돌아갑니다(통과로 세지 않는다). 케이스 본문에서만 쓴다. */
+#define SW_TEST_SKIP( reason )                                  \
+    do                                                          \
+    {                                                           \
+        ::sw::test::skipCase( ( reason ), __FILE__, __LINE__ ); \
+        return;                                                 \
+    } while ( false )
+
 /** @brief 두 값이 달라야 합니다(`==` 가 거짓, 실패 글에 그 값을 쓴다). */
 #define SW_EXPECT_NOT_EQUAL( unexpected, actual ) (void)::sw::test::checkNotEqual( ( unexpected ), ( actual ), #unexpected " != " #actual, __FILE__, __LINE__ )
 /** @brief 포인터가 nullptr 이어야 합니다. */
@@ -388,13 +399,6 @@ namespace sw::test
 #define SW_EXPECT_FALSE_MSG( condition, message ) \
     (void)::sw::test::checkConditionWithMessage( !static_cast<bool>( condition ), "!(" #condition ")", ( message ), __FILE__, __LINE__ )
 
-/** @brief 이유를 남기고 이 케이스를 여기서 끝냅니다(케이스 함수 본문에서만 — `reportSkip`). */
-#define SW_TEST_SKIP( reason )                                    \
-    do                                                            \
-    {                                                             \
-        ::sw::test::reportSkip( ( reason ), __FILE__, __LINE__ ); \
-        return;                                                   \
-    } while ( false )
 /** @brief 조건이 참이어야 하고, 아니면 이 케이스를 바로 끝냅니다(케이스 함수 본문에서만). */
 #define SW_REQUIRE_TRUE( condition )                                                                                 \
     do                                                                                                               \

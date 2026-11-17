@@ -56,9 +56,9 @@ namespace sw
                 commandLine.getArgument( kCheckArgument, bCheck );
                 if ( bImport == false && bCheck == false )
                     return TaskResult::NotRequested;
-                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)도 없다
+                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 동적 모듈 구역)도 없다
                 {
-                    SW_LOG_ERROR_ID( "App.AssetImportingNeedsEditor", "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+                    SW_LOG_ERROR_ID( "App.AssetImportingNeedsEditor", "Asset importing needs the editor module, which a build with statically linked modules does not have - run it from a desktop Dev build." );
                     return TaskResult::Failed;
                 }
                 else
@@ -87,9 +87,9 @@ namespace sw
                 if ( bNoLocalizationTask )
                     return TaskResult::NotRequested;
 
-                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)도 없다
+                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 동적 모듈 구역)도 없다
                 {
-                    SW_LOG_ERROR_ID( "App.LocalizationToolsNeedEditor", "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
+                    SW_LOG_ERROR_ID( "App.LocalizationToolsNeedEditor", "Localization tools need the editor module, which a build with statically linked modules does not have - run them from a desktop Dev build." );
                     return TaskResult::Failed;
                 }
                 else
@@ -118,9 +118,9 @@ namespace sw
                 commandLine.getArgument( CommandLineArgument::CHECK_ASSET_REFS, bCheck );
                 if ( bCheck == false )
                     return TaskResult::NotRequested;
-                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)도 없다
+                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 동적 모듈 구역)도 없다
                 {
-                    SW_LOG_ERROR_ID( "App.AssetReferenceCheckNeedsEditor", "The asset reference check needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+                    SW_LOG_ERROR_ID( "App.AssetReferenceCheckNeedsEditor", "The asset reference check needs the editor module, which a build with statically linked modules does not have - run it from a desktop Dev build." );
                     return TaskResult::Failed;
                 }
                 else

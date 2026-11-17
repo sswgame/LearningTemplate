@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -19,6 +20,17 @@ namespace sw
         struct ShadowSetupTestInternal
         {
             static constexpr uint32 kAtlasResolution = 2048;
+
+            /** @brief 렌더 정책(Config/Engine/EngineConfig.json `_render` 와 같은 값) — 그림자 함수는 서비스를 찾지 않고 이 값을 인자로 받는다. */
+            static RenderConfig makeRenderConfig()
+            {
+                RenderConfig config;
+                config._psoBuildBudgetMicroseconds = 2000;
+                config._shadowCascadeSplitLambda   = 0.75f;
+                config._shadowLocalDepthBiasTexels = 1.5f;
+                config._taaHistoryWeight           = 0.9f;
+                return config;
+            }
 
             /** @brief 행벡터 규약으로 점을 행렬에 곱하고 w 로 나눕니다(셰이더의 `mul( float4( p, 1 ), m )`). */
             static float3 projectToNdc( const float3& worldPos, const float4x4& matrix )
@@ -188,7 +200,7 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
 
     SW_EXPECT_EQUAL( sw::FrameShadowData::countLocalTiles( listLight, listShadowIndex ), 13u );
     sw::FrameShadowData frame;
-    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_EXPECT_EQUAL( frame._layout.getCascadeCount(), 1u );
     SW_EXPECT_EQUAL( frame._layout.getLocalCapacity(), 12u );
 
@@ -226,7 +238,7 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsByScreenPriority )
     const sw::vector<uint32> listShadowIndex{ 0u, 1u, 2u };
 
     sw::FrameShadowData frame;
-    sw::FrameShadowData::populateFrame( nullptr, &viewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_REQUIRE_EQUAL( frame._layout.getLocalCapacity(), 12u );
     SW_EXPECT_NEAR( listLight[0]._params._x, 0.0f, 1e-6f ); // 먼 점광은 칸이 모자라 그림자 없음
     SW_EXPECT_NEAR( listLight[1]._params._x, 1.0f, 1e-6f );
@@ -254,7 +266,7 @@ SW_TEST_CASE( ShadowSetupTest, PointFacesProjectIntoTheirOwnCells )
     sw::vector<sw::GPULight> listLight{ Internal::makePointLight( lightPosition, 10.0f ) };
     const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( sw::shaderslot::kPointShadowFaceCount ) );
 
     const sw::float3 arrOffset[] = {
@@ -302,7 +314,7 @@ SW_TEST_CASE( ShadowSetupTest, SpotCellCoversTheOuterCone )
     sw::vector<sw::GPULight> listLight{ Internal::makeSpotLight( lightPosition, 12.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, kOuterHalf ) };
     const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 1 ) );
     const sw::float4x4  shading = Internal::makeMatrixFromElement( frame._listTileElement[0] );
     const sw::GPULight& info    = frame._listTileElement[1];
@@ -336,7 +348,7 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveCameraSplitsIntoNestedCascades )
     const sw::float3                      eye{ 0.0f, 8.0f, 0.0f };
     const sw::float3                      target{ 0.0f, 6.0f, 40.0f };
     const sw::float4x4                    viewProj   = Internal::makePerspectiveViewProj( eye, target );
-    const sw::DirectionalShadowProjection projection = pLight->computeShadowProjectionForView( viewProj, Internal::kAtlasResolution / 2u, 4 );
+    const sw::DirectionalShadowProjection projection = pLight->computeShadowProjectionForView( viewProj, Internal::kAtlasResolution / 2u, Internal::makeRenderConfig(), 4 );
     SW_REQUIRE_EQUAL( projection._cascadeCount, 4u );
     float32 previousSplit = 0.0f;
     float32 previousTexel = 0.0f;
@@ -400,16 +412,16 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveFadeEndsAtLastCascadeAndReachesShader 
     const sw::vector<uint32> listShadowIndex;
     sw::FrameShadowData      frame;
 
-    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_EXPECT_TRUE( frame._mainView._cascadeLayout._w >= sw::DirectionalShadowCascade::kUnboundedDepth );
 
     pLight->setShadowFadeFraction( 0.25f );
-    const sw::DirectionalShadowProjection projection = pLight->computeShadowProjectionForView( viewProj, Internal::kAtlasResolution / 2u, 2 );
+    const sw::DirectionalShadowProjection projection = pLight->computeShadowProjectionForView( viewProj, Internal::kAtlasResolution / 2u, Internal::makeRenderConfig(), 2 );
     SW_REQUIRE_EQUAL( projection._cascadeCount, 2u );
     const float32 shadowEnd = projection._arrCascade[1]._splitDepth;
     SW_EXPECT_NEAR( shadowEnd, 120.0f, 0.5f );
     SW_EXPECT_NEAR( projection._fadeStartDepth, shadowEnd - ( shadowEnd - 0.1f ) * 0.25f, 0.05f );
-    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_EXPECT_NEAR( frame._mainView._cascadeLayout._w, projection._fadeStartDepth, 1e-3f );
 }
 
@@ -426,7 +438,7 @@ SW_TEST_CASE( ShadowSetupTest, SingleCascadeIsTheBaseVolume )
     SW_REQUIRE_NOT_NULL( pLight );
 
     const sw::DirectionalShadowProjection projection = pLight->computeShadowProjectionForView( Internal::makeOrthoRigViewProj( sw::float3{ 20.0f, 0.0f, 20.0f }, 110.0f, 0.785f ),
-                                                                                               Internal::kAtlasResolution, 4 );
+                                                                                               Internal::kAtlasResolution, Internal::makeRenderConfig(), 4 );
     SW_REQUIRE_EQUAL( projection._cascadeCount, 1u );
     const sw::float4 value = projection.computeCascadeShaderValue( 0 );
     SW_EXPECT_EQUAL( value._x, 1.0f );
@@ -456,11 +468,11 @@ SW_TEST_CASE( ShadowSetupTest, FittedVolumeSizeIgnoresCameraRotation )
     SW_REQUIRE_NOT_NULL( pLight );
 
     const float32 referenceTexel =
-        pLight->computeShadowProjectionForView( Internal::makeOrthoRigViewProj( sw::float3{ 20.0f, 0.0f, -35.0f }, 25.0f, 0.785f ), Internal::kAtlasResolution )._texelWorldSize;
+        pLight->computeShadowProjectionForView( Internal::makeOrthoRigViewProj( sw::float3{ 20.0f, 0.0f, -35.0f }, 25.0f, 0.785f ), Internal::kAtlasResolution, Internal::makeRenderConfig() )._texelWorldSize;
     for ( const float32 yaw : { 1.1f, 2.356f, 3.0f, 3.927f, 5.498f } )
     {
         const float32 texel =
-            pLight->computeShadowProjectionForView( Internal::makeOrthoRigViewProj( sw::float3{ 20.0f, 0.0f, -35.0f }, 25.0f, yaw ), Internal::kAtlasResolution )._texelWorldSize;
+            pLight->computeShadowProjectionForView( Internal::makeOrthoRigViewProj( sw::float3{ 20.0f, 0.0f, -35.0f }, 25.0f, yaw ), Internal::kAtlasResolution, Internal::makeRenderConfig() )._texelWorldSize;
         SW_EXPECT_NEAR( texel, referenceTexel, 1e-5f );
     }
 
@@ -468,11 +480,11 @@ SW_TEST_CASE( ShadowSetupTest, FittedVolumeSizeIgnoresCameraRotation )
     pLight->setShadowCascadeCount( 3 );
     const sw::float3                      eye{ 3.0f, 6.0f, -4.0f };
     const sw::DirectionalShadowProjection reference = pLight->computeShadowProjectionForView( Internal::makePerspectiveViewProj( eye, eye + sw::float3{ 0.0f, -0.3f, 1.0f } ),
-                                                                                              Internal::kAtlasResolution / 2u, 3 );
+                                                                                              Internal::kAtlasResolution / 2u, Internal::makeRenderConfig(), 3 );
     for ( const float32 yaw : { 0.7f, 1.9f, 3.3f } )
     {
         const sw::float3                      forward{ sw::MathUtil::sin( yaw ), -0.3f, sw::MathUtil::cos( yaw ) };
-        const sw::DirectionalShadowProjection turned = pLight->computeShadowProjectionForView( Internal::makePerspectiveViewProj( eye, eye + forward ), Internal::kAtlasResolution / 2u, 3 );
+        const sw::DirectionalShadowProjection turned = pLight->computeShadowProjectionForView( Internal::makePerspectiveViewProj( eye, eye + forward ), Internal::kAtlasResolution / 2u, Internal::makeRenderConfig(), 3 );
         SW_REQUIRE_EQUAL( turned._cascadeCount, reference._cascadeCount );
         for ( uint32 cascadeIndex = 0; cascadeIndex < turned._cascadeCount; ++cascadeIndex )
         {
@@ -501,9 +513,9 @@ SW_TEST_CASE( ShadowSetupTest, ExtraViewShadowFollowsItsOwnCamera )
     sw::vector<sw::GPULight> listLight;
     const sw::vector<uint32> listShadowIndex;
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_REQUIRE_TRUE( frame._mainView._bValid == SW_TRUE );
-    const sw::ViewShadowData extra = sw::FrameShadowData::makeViewShadowFor( pLight, extraViewProj, frame );
+    const sw::ViewShadowData extra = sw::FrameShadowData::makeViewShadowFor( pLight, extraViewProj, Internal::makeRenderConfig(), frame );
     SW_REQUIRE_TRUE( extra._bValid == SW_TRUE );
 
     const sw::float3 extraNdc = Internal::projectToNdc( extraFocus, extra._lightViewProj );
@@ -513,7 +525,7 @@ SW_TEST_CASE( ShadowSetupTest, ExtraViewShadowFollowsItsOwnCamera )
     SW_EXPECT_FALSE_MSG( sw::MathUtil::abs( mainNdc._x ) <= 1.0f && sw::MathUtil::abs( mainNdc._y ) <= 1.0f, "주 시점 볼륨이 이미 추가 뷰의 초점을 덮는다 — 테스트 배치가 무의미하다" );
 
     // 그림자 빛이 없으면 추가 뷰는 주 시점의 것을 그대로 쓴다.
-    const sw::ViewShadowData fallback = sw::FrameShadowData::makeViewShadowFor( nullptr, extraViewProj, frame );
+    const sw::ViewShadowData fallback = sw::FrameShadowData::makeViewShadowFor( nullptr, extraViewProj, Internal::makeRenderConfig(), frame );
     SW_EXPECT_NEAR( fallback._lightViewProj._11, frame._mainView._lightViewProj._11, 1e-6f );
     SW_EXPECT_NEAR( fallback._lightViewProj._42, frame._mainView._lightViewProj._42, 1e-6f );
 }
@@ -534,7 +546,7 @@ SW_TEST_CASE( ShadowSetupTest, ShadowCullBoxCoversLocalLights )
     sw::vector<sw::GPULight> listLight{ Internal::makePointLight( farPoint, 6.0f ) };
     const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, Internal::makeRenderConfig(), listShadowIndex, listLight, frame );
     SW_REQUIRE_TRUE( frame._mainView._bValid == SW_TRUE );
 
     const sw::float3 shadingNdc = Internal::projectToNdc( farPoint, frame._mainView._lightViewProj );

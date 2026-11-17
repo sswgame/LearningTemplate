@@ -62,6 +62,9 @@ namespace sw
         , _inbound{}
         , _malformedCount{ 0 }
         , _unclaimedNotificationCount{ 0 }
+        , _mapPeerWireVersion{}
+        , _listRefusedConnection{}
+        , _bWireVersionsChanged{ SW_FALSE }
     {
     }
 
@@ -76,10 +79,25 @@ namespace sw
         const uint8  rangeBase    = pHandler->getMessageRangeBase();
         const uint16 kindMask     = pHandler->getMessageKindMask();
         const uint16 notifiedMask = pHandler->getNotifiedKindMask();
+        // 한 영역은 표 하나다 — 영역을 나눠 맡는 처리기(락스텝 · 롤백)는 같은 표의 판을 낸다. 다르면 상대와 견줄 판이 둘이 된다.
+        const uint32 wireVersion     = pHandler->getWireVersion();
+        const uint32 existingVersion = findWireVersion( rangeBase );
+        if ( wireVersion != INetMessageHandler::kNoMessageTable && existingVersion != INetMessageHandler::kNoMessageTable && wireVersion != existingVersion )
+        {
+            SW_LOG_ERROR_ID( "Net.RouterTableVersionConflict", "NetMessageRouter: range 0x%02x already uses message table version %# - a handler with version %# is refused (one range is one table)",
+                             static_cast<int32>( rangeBase ), existingVersion, wireVersion );
+            return Subscription{};
+        }
         for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
         {
-            const int32 kind     = static_cast<int32>( rangeBase ) + offset;
-            const bool  bClaimed = ( ( kindMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrKindHandler[kind] != nullptr;
+            const int32 kind        = static_cast<int32>( rangeBase ) + offset;
+            const bool  bRouterKind = kind == NetMessageRange::kRouterWireVersionKind && ( ( ( kindMask | notifiedMask ) >> offset ) & 1u ) != 0;
+            if ( bRouterKind )
+            {
+                SW_LOG_ERROR_ID( "Net.RouterKindReserved", "NetMessageRouter: message kind 0x%02x belongs to the router (table version notice) - the new handler is refused", kind );
+                return Subscription{};
+            }
+            const bool bClaimed = ( ( kindMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrKindHandler[kind] != nullptr;
             if ( bClaimed )
             {
                 SW_LOG_ERROR_ID( "Net.RouterKindClaimed", "NetMessageRouter: message kind 0x%02x is already claimed - the new handler is refused (give it its own range or a disjoint kind mask)", kind );
@@ -94,6 +112,7 @@ namespace sw
         }
         _listHandler.push_back( pHandler );
         rebuildKindTable();
+        _bWireVersionsChanged = SW_TRUE;
         return _subscriptions.issue( pHandler );
     }
 
@@ -101,6 +120,92 @@ namespace sw
     {
         VectorUtil::removeFirst( _listHandler, pHandler ); // 주소로만 찾는다 — 역참조하지 않는다
         rebuildKindTable();
+    }
+
+    uint32 NetMessageRouter::findWireVersion( uint8 rangeBase ) const
+    {
+        for ( const INetMessageHandler* pHandler : _listHandler )
+        {
+            const uint32 wireVersion = pHandler->getWireVersion();
+            if ( pHandler->getMessageRangeBase() == rangeBase && wireVersion != INetMessageHandler::kNoMessageTable )
+                return wireVersion;
+        }
+        return INetMessageHandler::kNoMessageTable;
+    }
+
+    void NetMessageRouter::sendWireVersions( INetPeers& peers, int32 connectionID )
+    {
+        vector<PeerWireVersion> listOwn;
+        for ( const INetMessageHandler* pHandler : _listHandler )
+        {
+            const uint32 wireVersion = pHandler->getWireVersion();
+            const uint8  rangeBase   = pHandler->getMessageRangeBase();
+            const bool   bListed     = VectorUtil::containsIf( listOwn, [rangeBase]( const PeerWireVersion& entry )
+                  { return entry._rangeBase == rangeBase; } );
+            if ( wireVersion != INetMessageHandler::kNoMessageTable && bListed == false )
+                listOwn.push_back( PeerWireVersion{ wireVersion, rangeBase } );
+        }
+        if ( listOwn.empty() )
+            return;
+        NetMessageWriter messageWriter;
+        BitWriter&       writer = messageWriter.begin( NetMessageRange::kRouterWireVersionKind );
+        writer.writeVarUint( listOwn.size() );
+        for ( const PeerWireVersion& entry : listOwn )
+        {
+            writer.writeBits( entry._rangeBase, 8 );
+            writer.writeUint32( entry._wireVersion );
+        }
+        if ( connectionID == constant::invalid_index::kInt32 )
+            (void)messageWriter.sendToPeers( peers, NetChannelType::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 연결이 열릴 때 다시 보낸다
+        else
+            (void)messageWriter.send( peers, connectionID, NetChannelType::ReliableOrdered ); // 닫히는 중이면 보낼 곳이 없다
+    }
+
+    void NetMessageRouter::receiveWireVersions( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size )
+    {
+        // 영역은 모두 해서 kKindCount / kSize 개다 — 그보다 많은 알림은 깨진 것이다(상대가 보낸 수를 믿고 할당하지 않는다).
+        constexpr uint64        kMaxRangeCount = static_cast<uint64>( kKindCount / NetMessageRange::kSize );
+        BitReader               body( pData + 1, size - 1 );
+        const uint64            count = body.readVarUint();
+        vector<PeerWireVersion> listPeer;
+        for ( uint64 index = 0; body.hasOverflowed() == false && index < count && count <= kMaxRangeCount; ++index )
+        {
+            PeerWireVersion entry;
+            entry._rangeBase   = static_cast<uint8>( body.readBits( 8 ) );
+            entry._wireVersion = body.readUint32();
+            listPeer.push_back( entry );
+        }
+        if ( body.hasOverflowed() || count > kMaxRangeCount )
+        {
+            ++_malformedCount;
+            SW_LOG_WARNING_ID( "Net.RouterTableVersionMalformed", "NetMessageRouter: connection %# sent a broken message table version notice - disconnecting it", connectionID );
+            peers.disconnect( connectionID );
+            _listRefusedConnection.push_back( connectionID );
+            return;
+        }
+        _mapPeerWireVersion[connectionID] = std::move( listPeer );
+        (void)disconnectOnWireVersionMismatch( peers, connectionID );
+    }
+
+    bool NetMessageRouter::disconnectOnWireVersionMismatch( INetPeers& peers, int32 connectionID )
+    {
+        const auto iter = _mapPeerWireVersion.find( connectionID );
+        if ( iter == _mapPeerWireVersion.end() )
+            return false;
+        for ( const PeerWireVersion& peer : iter->second )
+        {
+            const uint32 ownVersion = findWireVersion( peer._rangeBase );
+            if ( ownVersion == INetMessageHandler::kNoMessageTable || ownVersion == peer._wireVersion )
+                continue;
+            SW_LOG_ERROR_ID( "Net.MessageTableVersionMismatch",
+                             "NetMessageRouter: connection %# uses message table version %# for range 0x%02x but this build uses %# - disconnecting it (the two builds disagree on that kit's messages)",
+                             connectionID, peer._wireVersion, static_cast<int32>( peer._rangeBase ), ownVersion );
+            peers.disconnect( connectionID );
+            _listRefusedConnection.push_back( connectionID );
+            _mapPeerWireVersion.erase( iter );
+            return true;
+        }
+        return false;
     }
 
     void NetMessageRouter::rebuildKindTable()
@@ -177,9 +282,34 @@ namespace sw
     int32 NetMessageRouter::poll( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled, vector<NetEndpointEvent>* pOutListEvent )
     {
         peers.pollInbound( _inbound );
+        _listRefusedConnection.clear();
         for ( const NetEndpointEvent& event : _inbound._listEvent )
         {
             dispatchEvent( event );
+            if ( event._kind == NetEndpointEvent::Kind::Connected )
+            {
+                _mapPeerWireVersion.erase( event._connectionID ); // 같은 연결 ID 를 다음 연결이 다시 쓴다
+                sendWireVersions( peers, event._connectionID );
+            }
+            else
+            {
+                _mapPeerWireVersion.erase( event._connectionID );
+            }
+        }
+        // 등록이 바뀌었으면 알리고, 이미 들고 있는 상대 판과 견준다 — 이 쪽이 늦게 등록한 영역도 메시지를 넘기기 전에 걸러진다.
+        if ( _bWireVersionsChanged != SW_FALSE )
+        {
+            _bWireVersionsChanged = SW_FALSE;
+            sendWireVersions( peers, constant::invalid_index::kInt32 );
+            vector<int32> listConnection;
+            for ( const auto& entry : _mapPeerWireVersion )
+            {
+                listConnection.push_back( entry.first );
+            }
+            for ( const int32 connectionID : listConnection )
+            {
+                (void)disconnectOnWireVersionMismatch( peers, connectionID );
+            }
         }
         if ( pOutListEvent != nullptr )
             pOutListEvent->insert( pOutListEvent->end(), _inbound._listEvent.begin(), _inbound._listEvent.end() );
@@ -191,6 +321,13 @@ namespace sw
         {
             const uint8* pData = _inbound._bytes.data() + message._offset;
             _kindStats.add( pData, message._size );
+            if ( VectorUtil::contains( _listRefusedConnection, message._connectionID ) )
+                continue; // 판이 달라 끊은 연결이다 — 다른 표로 읽지 않는다
+            if ( message._size > 0 && pData[0] == NetMessageRange::kRouterWireVersionKind )
+            {
+                receiveWireVersions( peers, message._connectionID, pData, message._size );
+                continue;
+            }
             if ( dispatch( NetMessageContext{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
                      NetHandleResult::NotMine ||
                  pOutUnhandled == nullptr )

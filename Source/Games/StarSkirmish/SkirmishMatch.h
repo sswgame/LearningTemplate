@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -22,6 +23,8 @@
 
 namespace sw
 {
+    class BehaviorTreeAsset;
+
     /** @brief 한 플레이어의 지금 형편입니다(로그 · 화면 글). */
     struct SkirmishPlayerSummary
     {
@@ -79,8 +82,9 @@ namespace sw
         SkirmishAIStyle _rushAI{};
         SkirmishAIStyle _macroAI{};
         SkirmishAIStyle _opponentAI{};
-        // 컴퓨터 상대의 행동 트리 — 데이터(`commander.bt.xml`)에서 읽은 것을 디렉터가 가리킨다. 판이 도는 동안 살아 있어야 하고, AI 는 시작할 때 복사해 쥔다. 컴퓨터 상대가 있으면 필수다.
-        const BehaviorTree* _pCommanderTree{ nullptr };
+        // 컴퓨터 상대의 행동 트리 — 데이터(`commander.bt.xml`)의 받은 때 판(스냅숏)을 쥔다. AI 는 시작할 때 트리를 복사해 쥐고 노드 번호로 돌므로
+        // 판 중간에 다시 읽힌 판으로 바뀌면 안 된다. 날 포인터로 들면 다시 읽기 정리 뒤에 끊긴다. 컴퓨터 상대가 있으면 필수다.
+        shared_ptr<const BehaviorTreeAsset> _pCommanderTree;
     };
 } // namespace sw
 
@@ -109,8 +113,8 @@ namespace sw
          * @return 월드(`RTSWorld::initialize`)가 거절하면 false 입니다. 그러면 판을 시작하지 않는다.
          */
         [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, uint8 humanMask, const SkirmishMatchSettings& matchSettings );
-        /** @brief 월드 · AI 를 돌리고 알림을 AI 에 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
-        void update( float32 deltaTime );
+        /** @brief 월드를 배속 @p timeScale 로 돌리고 AI 는 월드가 진행한 시간만큼 돌려 알림을 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
+        void update( float32 deltaTime, float32 timeScale );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
         void pollEvents( vector<RTSEvent>& outListEvent );
 

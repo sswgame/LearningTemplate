@@ -520,12 +520,12 @@ namespace sw::editor
         {
             pSession->apply( generation, ordinal, propertyName, oldText );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, static_cast<uint64>( propertyName.size() + oldText.size() ) ),
                           UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
         {
             pSession->apply( generation, ordinal, propertyName, newText );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, static_cast<uint64>( propertyName.size() + newText.size() ) ),
                           "Edit UI Widget", *_pDocumentStack );
     }
 
@@ -577,12 +577,12 @@ namespace sw::editor
         {
             pSession->detach( generation, parentOrdinal, index, shared_ptr<RemovedWidget>{} );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, 0u ),
                           UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
         {
             pSession->insert( generation, typeName, parentOrdinal, index );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, static_cast<uint64>( typeName.size() ) ),
                           "Add UI Widget", *_pDocumentStack );
         return true;
     }
@@ -611,16 +611,17 @@ namespace sw::editor
         afterStructureEdit( screen, parentOrdinal );
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
+        // shortcut: 지운 위젯 트리(pHolder)의 바이트는 세지 않는다(0) — 위젯 하나를 지우는 편집이라 작다. 큰 트리를 지우는 편집이 생기면 트리 크기를 센다.
         transaction.push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->reattach( generation, parentOrdinal, index, pHolder );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, 0u ),
                           UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->detach( generation, parentOrdinal, index, pHolder );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, 0u ),
                           "Delete UI Widget", *_pDocumentStack );
         return true;
     }
@@ -637,12 +638,12 @@ namespace sw::editor
         {
             pSession->move( generation, parentOrdinal, toIndex, fromIndex );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, 0u ),
                           UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
         {
             pSession->move( generation, parentOrdinal, fromIndex, toIndex );
         } ),
-                                                   *_pUndoOwner ),
+                                                   *_pUndoOwner, 0u ),
                           "Reorder UI Widget", *_pDocumentStack );
     }
 
