@@ -262,11 +262,10 @@ namespace sw
          * @brief 위쪽 밉을 기다리는 줄에 밉 요청을 넣습니다(로드 작업의 완료 단계). 줄은 바이트를 쥐지 않는다 — 항목에 파일 구간과 읽을 경로만 적고, 올릴 때 범위로 다시 읽는다(MR-2).
          * @details 언리얼 `FRenderAssetStreamingManager` 의 대기 줄도 "어느 텍스처의 어느 밉" 만 든다(`FTexture2DStreamIn_IO` 가 그때 벌크 데이터를 오프셋으로 읽는다).
          */
-        void queueMipRequest( const string& key, const DDSImageData& image, string readPath )
+        void queueMipRequest( const string& key, TextureMipLayout layout, string readPath )
         {
-            TextureMipLayout layout   = Texture2D::makeMipLayout( image );
-            const uint32     firstMip = Texture2D::computeUpgradeFirstMip( layout );
-            const uint32     mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
+            const uint32 firstMip = Texture2D::computeUpgradeFirstMip( layout );
+            const uint32 mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
             {
                 UniqueLock<shared_mutex> lock{ _mutex };
                 const auto               it = _mapEntry.find( key );
@@ -1440,6 +1439,9 @@ namespace sw
         : AssetLoadOperation{ TextureCache::kAssetKindName, key, MemoryTag::Texture }
         , _pImage{}
         , _readPath{}
+        , _mipLayout{}
+        , _tailBytes{}
+        , _tailFirstMip{ 0 }
         , _loadError{}
         , _pCache{ std::move( pCache ) }
         , _pDevice{ pDevice }
@@ -1498,8 +1500,21 @@ namespace sw
             return {};
         // 읽기와 머리 풀기는 한 함수라 `IO` 하나에 적는다(`AssetLoadPhase` 규칙). 올리기는 완료 단계의 따로 된 기록(`TextureUpload`)이다.
         AssetLoadScope loadScope( "Texture", getPath() );
-        _pImage   = make_unique<DDSImageData>();
         _readPath = Texture2D::findReadPath( AssetID{ getPath() } ); // 위쪽 밉을 범위로 다시 읽을 파일(MR-2)
+        // 스트리밍 로드는 머리와 꼬리 밉 구간만 읽는다(MR-3) — 위쪽 밉은 올리기 줄이 뒤에 범위로 읽는다. 동기 로드(도구 · 미리보기)와 밉 전부는 통째로 읽는다.
+        if ( _residency == TextureResidency::StreamingBase )
+        {
+            const expected<uint64> bytesRead = readHeadAndTail();
+            if ( bytesRead.has_value() == false )
+            {
+                _loadError = string{ bytesRead.error().message() } + " - " + string{ bytesRead.error().detail() };
+                return {};
+            }
+            loadScope.setBytes( bytesRead.value() );
+            loadScope.setSucceeded();
+            return {};
+        }
+        _pImage = make_unique<DDSImageData>();
         if ( Texture2D::readImage( AssetID{ getPath() }, *_pImage ) == false )
         {
             _loadError = "the DDS could not be read or uses a format the engine cannot upload";
@@ -1512,6 +1527,45 @@ namespace sw
         }
         // 실패도 완료 단계로 넘긴다 — 진행 중 표시는 완료 단계 하나가 내린다(헤더).
         return {};
+    }
+
+    expected<uint64> TextureLoadOperation::readHeadAndTail()
+    {
+        // 워커에서 기다린다 — 전체 읽기(`readImage`)도 이 자리에서 동기로 읽는다. 완료 콜백까지 끝난 뒤 `wait` 가 돌아온다.
+        const auto readRange = [this]( uint64 offset, uint64 size, vector<uint8>& outBytes ) -> bool
+        {
+            bool                  bSucceeded = false;
+            const AsyncReadHandle handle     = AssetIO::readBinaryAssetRangeAsync( AssetID{ _readPath }, offset, size, AsyncIOPriority::Normal,
+                                                                                   SW_DELEGATE_LAMBDA( AssetReadCompleteDelegate, [&bSucceeded, &outBytes]( bool bSuccess, vector<uint8>& bytes )
+                {
+                bSucceeded = bSuccess;
+                if ( bSuccess )
+                    outBytes.swap( bytes );
+            } ) );
+            if ( handle.isValid() == false )
+                return false;
+            handle.wait();
+            return bSucceeded && outBytes.size() == size;
+        };
+        const optional<uint64> fileSize = AssetIO::findAssetSize( AssetID{ _readPath } );
+        if ( fileSize.has_value() == false )
+            return unexpected( Error{ ErrorKind::NotFound, "the DDS could not be found", _readPath } );
+        vector<uint8> header;
+        if ( readRange( 0, MathUtil::min( uint64( TextureMipLayout::kMaxHeaderBytes ), *fileSize ), header ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the DDS header could not be read", _readPath } );
+        expected<TextureMipLayout> layout = TextureMipLayout::parse( header.data(), header.size(), *fileSize );
+        if ( layout.has_value() == false )
+            return unexpected( layout.error() );
+        if ( Texture2D::toRHIFormatFromDXGI( layout->_dxgiFormat ) == RHIFormat::Unknown )
+            return unexpected( Error{ ErrorKind::Unsupported, "the DDS uses a format the engine cannot upload", _readPath } );
+        _tailFirstMip = Texture2D::computeResidentFirstMip( *layout );
+        uint64 tailOffset{ 0 };
+        uint64 tailSize{ 0 };
+        layout->getRange( _tailFirstMip, static_cast<uint32>( layout->_listMip.size() ) - _tailFirstMip, tailOffset, tailSize );
+        if ( readRange( tailOffset, tailSize, _tailBytes ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the DDS tail mips could not be read", _readPath } );
+        _mipLayout = std::move( *layout );
+        return header.size() + _tailBytes.size();
     }
 
     void TextureLoadOperation::onAwaitingCompletion()
@@ -1572,10 +1626,13 @@ namespace sw
         if ( bReady == false && _loadError.empty() )
             _loadError = "the GPU upload failed";
         // 위쪽 밉이 남았으면 읽은 이미지를 스트리밍 줄로 넘긴다 — 다시 읽지 않고 렌더 스레드가 프레임 예산 안에서 업로드한다.
-        const bool bHasTopMipsLeft = _source == Source::File && _pImage != nullptr && _pTexture->isFullyResident() == false;
+        const bool bHasLayout      = _pImage != nullptr || _mipLayout._listMip.empty() == false;
+        const bool bHasTopMipsLeft = _source == Source::File && bHasLayout && _pTexture->isFullyResident() == false;
         if ( bReady && bHasTopMipsLeft )
-            cache.queueMipRequest( getPath(), *_pImage, std::move( _readPath ) );
+            cache.queueMipRequest( getPath(), _pImage != nullptr ? Texture2D::makeMipLayout( *_pImage ) : std::move( _mipLayout ), std::move( _readPath ) );
         _pImage.reset();
+        _tailBytes = vector<uint8>{};
+        _mipLayout = TextureMipLayout{};
         // 실패 — 텍스처가 지키던 번호(예약 · 옛 텍스처)를 이 로드 작업이 맡아 누락 체커로 다시 묶는다. 실패한 항목은 지워질 수 있으므로(`finishLoad`) 텍스처에 두지 않는다(R-6).
         IRHIDevice* const pDevice      = _pDevice.load( std::memory_order_acquire );
         const bool        bTakeKeptSRV = bReady == false && _pTexture != nullptr && pDevice != nullptr && _pTexture->getKeptSRV() != kInvalidDescriptorIndex;
@@ -1634,10 +1691,13 @@ namespace sw
                 // 제출 CPU 시간(장치 자원 만들기 · 스테이징 복사 · 전송 제출). GPU 전송 완료까지는 아니다(이후 프레임의 폴링). `Busy`(스테이징이 참)는 실패 수로 보인다.
                 AssetLoadScope uploadScope( "TextureUpload", getPath() );
                 uploadScope.beginPhase( AssetLoadPhase::Upload );
-                const Texture2DUploadStep step = _source == Source::File ? _pTexture->beginUploadFromImage( pDevice, getPath(), *_pImage, _residency, bBlocking )
-                                                                         : _pTexture->beginUploadFromCPUBytes( pDevice, bBlocking );
+                const bool                bTail = _source == Source::File && _pImage == nullptr; // 머리 + 꼬리로 읽은 스트리밍 로드(MR-3)
+                const size_t              bytes = bTail ? _tailBytes.size() : ( _pImage != nullptr ? _pImage->_bytes.size() : 0u );
+                const Texture2DUploadStep step  = bTail                   ? _pTexture->beginUploadTail( pDevice, getPath(), _mipLayout, _tailFirstMip, _tailBytes, bBlocking )
+                                                : _source == Source::File ? _pTexture->beginUploadFromImage( pDevice, getPath(), *_pImage, _residency, bBlocking )
+                                                                          : _pTexture->beginUploadFromCPUBytes( pDevice, bBlocking );
                 if ( step == Texture2DUploadStep::Submitted && _source == Source::File )
-                    uploadScope.setBytes( _pImage->_bytes.size() );
+                    uploadScope.setBytes( bytes );
                 if ( step == Texture2DUploadStep::Submitted )
                     uploadScope.setSucceeded();
                 if ( step == Texture2DUploadStep::Busy )

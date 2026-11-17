@@ -15,6 +15,7 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
+#include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
@@ -333,7 +334,9 @@ namespace sw
 
     private:
         [[nodiscard]] expected<void> runLoad() override;
-        bool                         hasCompletion() const override { return true; }
+        /** @brief 스트리밍 로드의 읽기입니다(워커) — 머리로 밉 구간을 구하고 꼬리 밉(스트리밍 기반이 올리는 밉부터 끝까지)만 읽는다(MR-3). 읽은 바이트 수를 돌려줍니다. */
+        [[nodiscard]] expected<uint64> readHeadAndTail();
+        bool                           hasCompletion() const override { return true; }
         /** @brief 완료 1단계 — 텍스처를 만들고 업로드를 제출합니다(`Texture2D::beginUploadFromImage`). 블로킹이면 이어서 끝까지 기다립니다. */
         [[nodiscard]] expected<AssetCompletionStep> beginCompletion( bool bBlocking ) override;
         /** @brief 완료 2단계 — 업로드가 끝났는지 보고 bindless 에 등록해 항목을 공개합니다(`Texture2D::finishUpload`). */
@@ -346,10 +349,13 @@ namespace sw
         [[nodiscard]] expected<AssetCompletionStep> concludeCompletion( TextureCache::Impl& cache, bool bReady );
 
     private:
-        friend class TextureCache;               // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다
-        unique_ptr<DDSImageData>     _pImage;    ///< 로드 단계가 읽은 그림(파일만). 완료 단계가 올리고 버린다
-        string                       _readPath;  ///< 로드 단계가 실제로 읽은 파일(형식 변형이면 변형 파일) — 위쪽 밉을 범위로 다시 읽는다(MR-2)
-        string                       _loadError; ///< 로드 단계의 실패 이유 — 완료 단계가 드러낸다
+        friend class TextureCache;                  // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다
+        unique_ptr<DDSImageData>     _pImage;       ///< 로드 단계가 읽은 그림(파일만). 완료 단계가 올리고 버린다
+        string                       _readPath;     ///< 로드 단계가 실제로 읽은 파일(형식 변형이면 변형 파일) — 위쪽 밉을 범위로 다시 읽는다(MR-2)
+        TextureMipLayout             _mipLayout;    ///< 머리로 구한 밉 구간(스트리밍 로드만 — MR-3)
+        vector<uint8>                _tailBytes;    ///< 머리 + 꼬리로 읽은 꼬리 밉 바이트(스트리밍 로드만 — `_pImage` 대신). 완료 단계가 올리고 버린다
+        uint32                       _tailFirstMip; ///< 꼬리의 가장 큰 밉
+        string                       _loadError;    ///< 로드 단계의 실패 이유 — 완료 단계가 드러낸다
         weak_ptr<TextureCache::Impl> _pCache;
         atomic<IRHIDevice*>          _pDevice;  ///< 올릴 디바이스 — 마지막으로 요청한 쪽 · 펌프가 자기 것으로 바꾼다(처음 요청한 디바이스는 이미 내려갔을 수 있다)
         Texture2D*                   _pTexture; ///< 항목의 텍스처 객체(항목이 소유한다)

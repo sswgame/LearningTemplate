@@ -91,7 +91,11 @@ namespace sw
          * @details 낱개 파일은 `IContentFileSource::readRangeAsync`, 팩은 저장(Stored) 항목이면 그 구간, 블록 압축 항목이면 걸친 블록만 풀어 자른 구간이다(`PackReader::readRangeAsync`).
          * @return 어디에도 없거나 구간을 읽을 수 없으면 `isValid() == false` 이고 @p onComplete 는 불리지 않습니다.
          */
-        static AsyncReadHandle readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
+        /**
+         * @brief 리소스의 바이트 길이입니다(없으면 nullopt). 찾는 순서는 읽기와 같다 — 낱개 파일은 파일 길이, 팩은 항목의 원본 크기다(MR-3 — 범위 읽기의 머리 풀이).
+         */
+        [[nodiscard]] static optional<uint64> findAssetSize( const AssetID& id );
+        static AsyncReadHandle                readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
 
         /**
          * @brief 리소스가 있는지 검사합니다(VFS 팩 또는 낱개 파일). 찾는 규칙은 읽기와 같습니다 — OS 경로는 오류 로그를 남기고 false 입니다.

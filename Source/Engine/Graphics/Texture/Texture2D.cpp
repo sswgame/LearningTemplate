@@ -243,6 +243,64 @@ namespace sw
         return computeMipDrop( toRHIFormatFromDXGI( layout._dxgiFormat ), top._width, top._height, static_cast<uint32>( layout._listMip.size() ), static_cast<int32>( gv_textureMipDrop ) )._mipCount;
     }
 
+    uint32 Texture2D::computeResidentFirstMip( const TextureMipLayout& layout )
+    {
+        if ( layout._listMip.empty() )
+            return 0;
+        const TextureMipLayout::MipRange& top   = layout._listMip.front();
+        const uint32                      count = static_cast<uint32>( layout._listMip.size() );
+        return computeMipDrop( toRHIFormatFromDXGI( layout._dxgiFormat ), top._width, top._height, count, static_cast<int32>( count ) )._mipCount;
+    }
+
+    Texture2DUploadStep Texture2D::beginUploadTail( IRHIDevice* pDevice, string_view relativePath, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& tailBytes,
+                                                    bool bBlocking )
+    {
+        if ( pDevice == nullptr || relativePath.empty() || firstMip >= layout._listMip.size() )
+            return Texture2DUploadStep::Failed;
+        const uint32 mipCount = static_cast<uint32>( layout._listMip.size() ) - firstMip;
+        uint64       rangeOffset{ 0 };
+        uint64       rangeSize{ 0 };
+        layout.getRange( firstMip, mipCount, rangeOffset, rangeSize );
+        if ( tailBytes.size() != rangeSize )
+        {
+            SW_LOG_ERROR_ID( "Texture.MipRangeSizeMismatch", "Texture2D: the mip range of '%#' is %# bytes but %# were read", relativePath, rangeSize, tailBytes.size() );
+            return Texture2DUploadStep::Failed;
+        }
+        if ( getHandle() != 0 )
+            releaseRHIKeepingSRV( pDevice ); // 다시 올려도 지키던 번호(예약 · 크기 변경)는 그대로 — 새 텍스처가 그 번호를 다시 묶는다
+        // 읽은 꼬리를 밉 firstMip 이 맨 위인 이미지로 본다 — 바이트는 옮겨 쓰고 끝나면 돌려준다(복사하지 않는다).
+        DDSImageData tailImage;
+        tailImage._width      = layout._listMip[firstMip]._width;
+        tailImage._height     = layout._listMip[firstMip]._height;
+        tailImage._mipCount   = mipCount;
+        tailImage._dxgiFormat = layout._dxgiFormat;
+        tailImage._bytes.swap( tailBytes );
+        DDSImageData              expandedImage;
+        const DDSImageData&       image  = selectDeviceImage( *pDevice, tailImage, expandedImage );
+        const RHIFormat           format = toRHIFormatFromDXGI( image._dxgiFormat );
+        RHITextureDesc            desc{};
+        RHITextureHandle          handle = 0;
+        RHITransferTicket         ticket{};
+        const Texture2DUploadStep step = format != RHIFormat::Unknown ? createAndSubmitMips( *pDevice, relativePath, image, format, Texture2DMipDrop{}, bBlocking, desc, handle, ticket )
+                                                                      : Texture2DUploadStep::Failed;
+        tailImage._bytes.swap( tailBytes );
+        if ( step != Texture2DUploadStep::Submitted )
+            return step;
+        // `_pDevice` 는 제출한 뒤에만 적는다(`beginUploadFromImage` 와 같은 이유). SRV 는 `finishUpload` 가 완료를 본 뒤에 등록한다.
+        const uint32 qualityFirstMip = computeUpgradeFirstMip( layout );
+        _handle.store( handle, std::memory_order_release );
+        _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
+        _uploadTicket     = ticket;
+        _pDevice          = pDevice;
+        _path             = string{ relativePath };
+        _width            = desc._width;
+        _height           = desc._height;
+        _mipCount         = desc._mipLevels;
+        _streamedMipCount = firstMip > qualityFirstMip ? firstMip - qualityFirstMip : 0u;
+        _format           = format;
+        return Texture2DUploadStep::Submitted;
+    }
+
     bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency )
     {
         // 블로킹 헬퍼: 제출 → 대기 → 끝내기. 비동기 로드는 같은 두 단계를 프레임에 나눠 한다(`TextureLoadOperation`).

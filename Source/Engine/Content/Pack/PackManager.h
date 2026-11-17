@@ -129,6 +129,8 @@ namespace sw
          * @return 어느 팩에도 없거나 구간을 읽을 수 없으면(압축 항목 · 구간 밖) `isValid() == false` 인 핸들입니다(@p onComplete 는 불리지 않는다).
          */
         AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view relativePath, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete ) const;
+        /** @brief 마운트된 팩을 우선순위 순서대로 찾아 그 항목의 원본 크기를 줍니다(없으면 nullopt — `PackReader::findFileSize`). */
+        [[nodiscard]] optional<uint64> findFileSize( string_view relativePath ) const;
 
         /**
          * @brief DLC 소유권 검증 콜백을 등록합니다. DLC 팩(AppID > 0)은 이것이 없으면 붙지 않는다(`PackManager.NoDLCValidator`).

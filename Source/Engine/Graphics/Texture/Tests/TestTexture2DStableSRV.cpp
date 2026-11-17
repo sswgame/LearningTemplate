@@ -299,3 +299,46 @@ SW_TEST_CASE( Texture2DStableSRVTest, DemotionKeepsSRV )
     SW_EXPECT_EQUAL( target, texture.getStreamedMipCount() );
     texture.releaseRHI( &device );
 }
+
+/**
+ * @brief [Texture2DStableSRVTest] 첫 로드를 꼬리 밉 구간만으로 올리고(MR-3), 위쪽 밉 구간을 받아 같은 SRV 번호로 다 올린다 — 머리 + 꼬리만 읽어도 결과가 전체 읽기와 같다
+ * @details 변이: `beginUploadTail` 이 위쪽 밉 수를 0 으로 두면 올리기 줄이 이 텍스처를 고르지 않아(`isFullyResident`) 첫 단언 묶음이 진다.
+ */
+SW_TEST_CASE( Texture2DStableSRVTest, FirstLoadReadsTailOnly )
+{
+    FakeBindlessFactory factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory        = &factory;
+    const DDSImageData     image    = makeStreamedImage();
+    const TextureMipLayout layout   = Texture2D::makeMipLayout( image );
+    const uint32           tailMip  = Texture2D::computeResidentFirstMip( layout );
+    const uint32           mipCount = static_cast<uint32>( layout._listMip.size() );
+    SW_REQUIRE_EQUAL( 1u, tailMip ); // 128 → 64 — 64 가 `kMinMipDropExtent` 라 밉 하나를 버린다
+    const auto copyMipRange = [&image, &layout]( uint32 firstMip, uint32 count )
+    {
+        uint64 offset{ 0 };
+        uint64 size{ 0 };
+        layout.getRange( firstMip, count, offset, size );
+        vector<uint8> bytes;
+        bytes.assign( image._bytes.begin() + static_cast<ptrdiff_t>( offset ), image._bytes.begin() + static_cast<ptrdiff_t>( offset + size ) );
+        return bytes;
+    };
+
+    vector<uint8> tailBytes = copyMipRange( tailMip, mipCount - tailMip );
+    Texture2D     texture;
+    SW_REQUIRE_TRUE( texture.beginUploadTail( &device, "textures/tail.dds", layout, tailMip, tailBytes, true ) == Texture2DUploadStep::Submitted );
+    SW_REQUIRE_TRUE( texture.finishUpload( &device, true ) == Texture2DUploadStatus::Ready );
+    SW_EXPECT_EQUAL( mipCount - tailMip, texture.getMipCount() );
+    SW_EXPECT_EQUAL( tailMip, texture.getStreamedMipCount() );
+    SW_EXPECT_FALSE( texture.isFullyResident() );
+    const RHIDescriptorIndex srv = texture.getSRV();
+
+    vector<uint8> topBytes = copyMipRange( 0, mipCount );
+    SW_REQUIRE_TRUE( texture.beginUploadMips( &device, layout, 0, topBytes, true ) == Texture2DUploadStep::Submitted );
+    Texture2DRetiredResource retired{};
+    SW_REQUIRE_TRUE( texture.finishUpgradeResidency( &device, true, retired ) == Texture2DUploadStatus::Ready );
+    SW_EXPECT_EQUAL( srv, texture.getSRV() );
+    SW_EXPECT_TRUE( texture.isFullyResident() );
+    SW_EXPECT_EQUAL( mipCount, texture.getMipCount() );
+    texture.releaseRHI( &device );
+}

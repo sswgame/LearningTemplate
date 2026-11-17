@@ -109,6 +109,14 @@ namespace sw
         [[nodiscard]] static TextureMipLayout makeMipLayout( const DDSImageData& image );
         /** @brief 위쪽 밉 올리기가 읽기 시작할 밉입니다 — 텍스처 품질(`gv_textureMipDrop`)이 버리는 밉 수다(`beginUploadFromImage` 의 품질 버리기와 같은 식). */
         [[nodiscard]] static uint32 computeUpgradeFirstMip( const TextureMipLayout& layout );
+        /** @brief 스트리밍 기반(`StreamingBase`)이 처음 올리는 가장 큰 밉입니다 — 버릴 수 있는 만큼 버린 밉(`beginUploadFromImage` 의 같은 식). 첫 로드는 이 밉부터 끝까지(꼬리)만 읽는다(MR-3). */
+        [[nodiscard]] static uint32 computeResidentFirstMip( const TextureMipLayout& layout );
+        /**
+         * @brief 첫 로드를 꼬리 밉(@p firstMip 부터 끝까지)만으로 올리는 1단계입니다(MR-3 — 비동기 스트리밍 로드는 머리와 꼬리 구간만 읽는다). `beginUploadFromImage` 의 꼬리 판이다.
+         * @details @p tailBytes 는 그 구간의 파일 바이트(`TextureMipLayout::getRange`)다. 끝나면 그대로 돌려준다(`Busy` 면 같은 바이트로 다시 낸다). 위쪽 밉 수는 `firstMip - 품질이 버리는 밉` 이다.
+         */
+        [[nodiscard]] Texture2DUploadStep beginUploadTail( IRHIDevice* pDevice, string_view relativePath, const TextureMipLayout& layout, uint32 firstMip, vector<uint8>& tailBytes,
+                                                           bool bBlocking );
         /**
          * @brief `readImage` 가 읽은 이미지를 GPU 에 업로드합니다. 디바이스를 쓰는 스레드에서만 부릅니다(DX11 즉시 컨텍스트 · GL 컨텍스트는 스레드에 묶인다).
          * @param residency `StreamingBase` 면 아래쪽 밉만 업로드합니다 — 위쪽 밉은 `upgradeResidency` 가 같은 이미지로 뒤에 업로드합니다(`isFullyResident`).

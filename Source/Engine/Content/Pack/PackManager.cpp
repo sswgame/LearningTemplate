@@ -579,6 +579,16 @@ namespace sw
         return pReader->readFileAsync( io, pathHash, priority, onComplete );
     }
 
+    optional<uint64> PackManager::findFileSize( string_view relativePath ) const
+    {
+        if ( relativePath.empty() )
+            return nullopt;
+        uint64                       pathHash{ 0 };
+        string                       pathInPack;
+        const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        return pReader != nullptr ? pReader->findFileSize( pathHash ) : nullopt;
+    }
+
     AsyncReadHandle PackManager::readRangeAsync( AsyncFileIO& io, string_view relativePath, uint64 offset, uint64 size, AsyncIOPriority priority,
                                                  const AssetReadCompleteDelegate& onComplete ) const
     {

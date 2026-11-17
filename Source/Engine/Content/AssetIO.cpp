@@ -245,6 +245,27 @@ namespace sw
         return handle;
     }
 
+    optional<uint64> AssetIO::findAssetSize( const AssetID& id )
+    {
+        optional<uint64> size;
+        (void)readResourceCommon(
+            id.view(), nullptr,
+            [&size]( string_view absPath )
+        {
+            const AsyncFileHandle file = ContentFileSource::getCurrent().open( absPath );
+            if ( file.isValid() == false )
+                return false;
+            size = file.getSize();
+            return true;
+        },
+            [&size]( const PackManager& packManager, string_view key, string& )
+        {
+            size = packManager.findFileSize( key );
+            return size.has_value();
+        } );
+        return size;
+    }
+
     AsyncReadHandle AssetIO::readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete )
     {
         const string_view relativePath = id.view();
