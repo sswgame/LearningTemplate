@@ -618,7 +618,7 @@ namespace sw
         commandListForRecord()->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
-    void D3D12RHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void D3D12RHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( _pDevice != nullptr )
             _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );

@@ -791,7 +791,7 @@ namespace sw
         drawArrays( vertexCount, instanceCount, startVertex );
     }
 
-    void OpenGLRHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void OpenGLRHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( _pDevice != nullptr )
             _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );

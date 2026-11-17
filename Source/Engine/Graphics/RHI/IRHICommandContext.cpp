@@ -21,6 +21,13 @@ namespace sw
         _bRenderPassNoBackBuffer              = result == RHIRenderPassBeginResult::NoBackBuffer;
     }
 
+    void IRHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    {
+        if ( buffer != 0 && getContextDevice().getConstantBufferWriteLog().recordWrite( buffer ) == false )
+            getContextDevice().getDrawDiagnostics().reportConstantBufferRewrite( buffer );
+        updateConstantBufferNative( buffer, pData, size );
+    }
+
     void IRHICommandContext::endRenderPass()
     {
         if ( _bRenderPassOpen == false )
