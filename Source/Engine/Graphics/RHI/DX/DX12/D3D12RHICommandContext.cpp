@@ -119,12 +119,12 @@ namespace sw
         const D3D12RHIDevice::BindlessReadSlot* const pSlot = _pDevice->findBindlessReadSlot( index, bUAV );
         if ( pSlot == nullptr )
             return 0;
-        D3D12_GPU_VIRTUAL_ADDRESS address = pSlot->_gpuAddress.load( std::memory_order_relaxed );
+        D3D12_GPU_VIRTUAL_ADDRESS address = pSlot->getGPUAddress();
         if ( bConstantBuffer && address != 0 )
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 정렬 크기만큼 떨어진 자리에 쓴다(링이 아니면 크기가 0 이다).
             // updateConstantBuffer 가 이번 프레임 슬롯에 썼으므로 같은 슬롯 주소를 건다.
-            const uint32 alignedSize = pSlot->_cbAlignedSize.load( std::memory_order_relaxed );
+            const uint32 alignedSize = pSlot->getCBAlignedSize();
             address += static_cast<D3D12_GPU_VIRTUAL_ADDRESS>( _pDevice->_frameRing.currentIndex() ) * alignedSize;
         }
         return address;
@@ -135,7 +135,7 @@ namespace sw
         const D3D12RHIDevice::BindlessReadSlot* const pSlot = _pDevice->findBindlessReadSlot( index, bUAV );
         if ( pSlot == nullptr )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
-        return D3D12_CPU_DESCRIPTOR_HANDLE{ static_cast<SIZE_T>( pSlot->_offlineView.load( std::memory_order_relaxed ) ) };
+        return D3D12_CPU_DESCRIPTOR_HANDLE{ static_cast<SIZE_T>( pSlot->getOfflineView() ) };
     }
 
     bool D3D12RHICommandContext::allocateOnlineDescriptors( uint32 count, uint32& outBase )

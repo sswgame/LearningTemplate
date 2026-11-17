@@ -15,6 +15,7 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHIBindlessReadSlot.h"
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
@@ -457,28 +458,9 @@ namespace sw
             RHIBindlessOwner getBindlessOwner() const { return RHIBindlessOwner{ _buffer, _texture }; }
         };
 
-        /** @brief bindless 번호 한 칸이 어느 등록표에 살아 있는가입니다(`BindlessReadSlot::_registry`). SRV · UAV 표가 번호 공간 하나를 나눈다. */
-        enum class BindlessReadRegistry : uint8
-        {
-            Empty,
-            ShaderResource,
-            UnorderedAccess
-        };
-
-        /**
-         * @brief 기록 경로가 bindless 번호로 읽는 값입니다(`D3D12RHICommandContext::resolveBufferAddress` · `resolveOfflineView`). 번호마다 한 칸이고 표 크기가 고정이다.
-         * @details 바인딩마다 `_bindlessMutex` 읽기 락과 등록표 · 상수 버퍼 크기 해시 맵을 거치던 것을 걷어 낸 자리다. 쓰기(등록 · 해제)는 여전히 배타 락 아래에서 하고,
-         *          읽기는 락 없이 `_registry` 를 acquire 로 본 뒤 값을 읽는다. 해제는 `_registry` 만 비운다 — 주소 · 뷰는 번호가 펜스 뒤 다시 나갈 때까지 그대로라,
-         *          해제와 겹친 읽기가 옛 값을 받아도 그 자원과 디스크립터는 GPU 펜스까지 살아 있다(`releaseTrackedResourceDeferred` · `deferFreeBindlessIndex`).
-         *          표가 늘지 않으므로 게임 스레드의 등록이 기록과 겹쳐도 읽는 쪽 참조가 매달리지 않는다(언리얼 `FD3D12BindlessDescriptorAllocator` 도 고정 힙 번호를 락 없이 쓴다 — 기억에 의존한 비교).
-         */
-        struct BindlessReadSlot
-        {
-            atomic<uint64> _gpuAddress{ 0 };    ///< 버퍼의 GPU 주소(텍스처는 0)
-            atomic<uint64> _offlineView{ 0 };   ///< 오프라인 힙 뷰(`D3D12_CPU_DESCRIPTOR_HANDLE::ptr`)
-            atomic<uint32> _cbAlignedSize{ 0 }; ///< 링 상수 버퍼면 프레임 슬롯 크기, 아니면 0
-            atomic<uint8>  _registry{ static_cast<uint8>( BindlessReadRegistry::Empty ) };
-        };
+        /// @brief bindless 번호 한 칸의 등록표 · 기록 경로가 락 없이 읽는 값입니다(공용 형식 — `RHIBindlessReadSlot`).
+        using BindlessReadRegistry = RHIBindlessReadRegistry;
+        using BindlessReadSlot     = RHIBindlessReadSlot;
 
         // 구조 버퍼 갱신(updateStructuredBufferRegions) 전용 프레임 링 슬롯. 매 호출마다 업로드 힙과 커맨드 리스트를
         // 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에

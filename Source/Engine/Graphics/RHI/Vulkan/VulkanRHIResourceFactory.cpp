@@ -119,6 +119,7 @@ namespace sw
             }
             return;
         }
+        SW_PROFILE_COUNT( "RT.Bind.constantBufferWrites", 1 ); // 미러 락 경합의 분모(설계 L-1)
         _pDevice->_constantBufferMirror.write( buffer, _pDevice->getFrameSlot() % constant::render::kMaxFrameCountInFlight, pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );

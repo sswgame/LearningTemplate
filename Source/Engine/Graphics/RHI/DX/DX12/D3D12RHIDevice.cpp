@@ -2149,14 +2149,10 @@ namespace sw
     {
         if ( index >= kBindlessDescriptorCapacity )
             SW_FATAL( "D3D12: bindless index %# is outside the read table (%#)", index, kBindlessDescriptorCapacity );
-        BindlessReadSlot& slot = _arrBindlessReadSlot.get()[index];
-        // 텍스처는 GPU 주소가 없다(GetGPUVirtualAddress 는 버퍼만 뜻이 있다). 상수 버퍼 크기는 등록이 같은 배타 락 안에서 읽는다.
+        // 텍스처는 GPU 주소가 없다(GetGPUVirtualAddress 는 버퍼만 뜻이 있다). 상수 버퍼 크기는 등록이 같은 배타 락 안에서 읽는다. 값을 다 쓴 뒤 공개한다(`RHIBindlessReadSlot::publish`).
         const auto sizeIt = record._buffer != 0 ? _mapCbAlignedSize.find( record._buffer ) : _mapCbAlignedSize.end();
-        slot._gpuAddress.store( record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() : 0, std::memory_order_relaxed );
-        slot._offlineView.store( record._offlineCPUHandle.ptr, std::memory_order_relaxed );
-        slot._cbAlignedSize.store( sizeIt != _mapCbAlignedSize.end() ? sizeIt->second : 0u, std::memory_order_relaxed );
-        // 값을 다 쓴 뒤에 공개한다 — 읽는 쪽은 `_registry` 를 acquire 로 본 뒤에만 값을 읽는다.
-        slot._registry.store( static_cast<uint8>( registry ), std::memory_order_release );
+        _arrBindlessReadSlot.get()[index].publish( registry, record._buffer != 0 && record._resource != nullptr ? record._resource->GetGPUVirtualAddress() : 0, record._offlineCPUHandle.ptr,
+                                                   sizeIt != _mapCbAlignedSize.end() ? sizeIt->second : 0u, record._texture != 0 );
     }
 
     const D3D12RHIDevice::BindlessReadSlot* D3D12RHIDevice::findBindlessReadSlot( RHIDescriptorIndex index, bool bUAV ) const
@@ -2164,28 +2160,21 @@ namespace sw
         if ( index >= kBindlessDescriptorCapacity )
             return nullptr;
         // 락이 없다 — 표는 크기가 고정이고 `_registry` 를 acquire 로 본 뒤에만 값을 읽는다(`D3D12RHIDevice::BindlessReadSlot`).
-        const BindlessReadSlot&    slot     = _arrBindlessReadSlot.get()[index];
-        const BindlessReadRegistry expected = bUAV ? BindlessReadRegistry::UnorderedAccess : BindlessReadRegistry::ShaderResource;
-        if ( slot._registry.load( std::memory_order_acquire ) != static_cast<uint8>( expected ) )
-            return nullptr;
-        return &slot;
+        const BindlessReadSlot& slot = _arrBindlessReadSlot.get()[index];
+        return slot.isIn( bUAV ? BindlessReadRegistry::UnorderedAccess : BindlessReadRegistry::ShaderResource ) ? &slot : nullptr;
     }
 
     void D3D12RHIDevice::retireBindlessReadSlot( RHIDescriptorIndex index )
     {
         if ( index >= kBindlessDescriptorCapacity )
             return;
-        _arrBindlessReadSlot.get()[index]._registry.store( static_cast<uint8>( BindlessReadRegistry::Empty ), std::memory_order_release );
+        _arrBindlessReadSlot.get()[index].retire();
     }
 
     bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
-        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
-        // 힙 하나를 나눠 쓰므로 종류까지 본다 — 텍스처 자리에 버퍼 뷰가 있으면 Texture2D 로 읽는 셰이더가 잘못된 디스크립터를 읽는다.
-        const BindlessResourceRecord* const pRecord = _srvRegistry.find( index );
-        if ( pRecord == nullptr || pRecord->_resource == nullptr )
-            return false;
-        return ( space == RHIBindlessIndexSpace::Texture ) ? pRecord->_texture != 0 : pRecord->_buffer != 0;
+        // 락이 없다(L-1) — 드로우마다 묻는 진단이 `_bindlessMutex` 읽기 락을 잡던 자리다. 기록 경로와 같은 고정 표를 본다(종류까지 — `RHIBindlessReadSlot::isLive`).
+        return index < kBindlessDescriptorCapacity && _arrBindlessReadSlot.get()[index].isLive( space );
     }
 
     bool D3D12RHIDevice::initializeTransfers( const RHISwapChainDesc& desc )

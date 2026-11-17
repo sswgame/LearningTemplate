@@ -11,6 +11,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Graphics/RHI/Backend/RHIBindlessReadSlot.h"
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
@@ -232,6 +233,25 @@ SW_TEST_CASE( RHIBindlessRegistryTest, DestroyOfPreviousOwnerKeepsReboundIndex )
     { ++releasedCount; } );
     SW_EXPECT_EQUAL( 1u, releasedCount );
     SW_EXPECT_FALSE( registry.isLive( index ) );
+}
+
+/**
+ * @brief [BindlessReadSlotTest] 놓은 번호는 살아 있지 않고, 종류(텍스처 · 버퍼)가 다르면 살아 있지 않다 — 진단이 락 없이 이 칸만 본다(L-1)
+ */
+SW_TEST_CASE( BindlessReadSlotTest, RetiredIndexIsNotLive )
+{
+    RHIBindlessReadSlot slot;
+    SW_EXPECT_FALSE( slot.isLive( RHIBindlessIndexSpace::Texture ) );
+    slot.publish( RHIBindlessReadRegistry::ShaderResource, 0, 0x1000u, 0, true );
+    SW_EXPECT_TRUE( slot.isLive( RHIBindlessIndexSpace::Texture ) );
+    SW_EXPECT_FALSE( slot.isLive( RHIBindlessIndexSpace::Buffer ) );
+    slot.retire();
+    SW_EXPECT_FALSE( slot.isLive( RHIBindlessIndexSpace::Texture ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0x1000u ), slot.getOfflineView() ); // 값은 남는다 — 펜스까지 산 디스크립터다
+
+    slot.publish( RHIBindlessReadRegistry::UnorderedAccess, 0x2000u, 0, 0, false );
+    SW_EXPECT_FALSE( slot.isLive( RHIBindlessIndexSpace::Buffer ) ); // UAV 표의 번호는 SRV 생존이 아니다
+    SW_EXPECT_TRUE( slot.isIn( RHIBindlessReadRegistry::UnorderedAccess ) );
 }
 
 /**
