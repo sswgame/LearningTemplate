@@ -596,6 +596,20 @@ namespace sw
         return _listMountedPack.size();
     }
 
+    vector<string> PackManager::getMountedDomainsByPriority() const
+    {
+        ScopedLock<mutex> lock{ _vfsMutex };
+        vector<string>    listDomain;
+        // 목록은 우선순위 내림차순이다(`mountReader`) — 뒤에서부터 훑어 낮은 우선순위가 먼저다.
+        for ( auto it = _listMountedPack.rbegin(); it != _listMountedPack.rend(); ++it )
+        {
+            if ( it->_domainName.empty() || VectorUtil::contains( listDomain, it->_domainName ) )
+                continue;
+            listDomain.push_back( it->_domainName );
+        }
+        return listDomain;
+    }
+
     bool PackManager::hasPatchFile( string_view relativePath ) const
     {
         if ( relativePath.empty() || _patchPackCount.load( std::memory_order_acquire ) == 0 )

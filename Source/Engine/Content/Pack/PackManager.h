@@ -139,6 +139,12 @@ namespace sw
 
         /** @brief 현재 마운트된 팩 개수를 반환합니다. */
         size_t getMountedPackCount() const;
+        /**
+         * @brief 마운트된 도메인 팩의 도메인(`engine` · `game/empty` · `dlc/winter`)을 낮은 우선순위부터 겹침 없이 돌려줍니다. 패치 팩(도메인 없음)은 빠진다.
+         * @details 런타임 에셋 색인(`AssetRegistry`)이 도메인마다 `<도메인>/assetindex.xml` 을 이 순서로 읽어 합친다 — 뒤(높은 우선순위)의 줄이 이긴다.
+         *          그 파일을 패치 팩이 덮었으면 읽기(`readTextFile`)가 패치의 것을 준다.
+         */
+        vector<string> getMountedDomainsByPriority() const;
 
         /**
          * @brief 디렉터리 안의 .pack 파일을 훑어 표준 우선순위로 마운트하고, 패치 목록(`*.packpatch.xml`)이 있으면 그 패치를 사슬 순서로 적용합니다.

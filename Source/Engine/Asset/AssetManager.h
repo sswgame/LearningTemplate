@@ -2,7 +2,7 @@
  * @file AssetManager.h
  * @brief 팩 에셋(스키마, Material, Texture, Prefab, Mesh)을 한곳에서 관리하는 파사드입니다. `Engine` 가 `EngineServiceCollection` 으로 소유합니다.
  * @note
- *   포함: PackManager, 에셋 캐시 레지스트리. 에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다).
+ *   포함: PackManager, 에셋 캐시 레지스트리, 런타임 GUID 색인을 거는 일(`AssetRegistry` — 마운트한 팩의 `assetindex.xml` · 소스 트리의 저작 색인).
  *   기능 캐시(Material, Texture, Prefab, Mesh, Skeleton, Fracture 등)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
  *   매니저는 생성자에서 등록 테이블을 훑어 캐시를 모두 만들어 소유합니다(코드로 만드는 값 테이블 `WeakInternCache` 파생도 같다). 타입으로 찾을 때는 `getAssetCache<T>()` 를 씁니다.
  *   제외(수명이 다름):
@@ -198,6 +198,13 @@ namespace sw
         void releaseAssetCache( AssetCacheBase* pCache );
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         AssetCacheBase& getBuiltInAssetCache( string_view assetKindName ) const;
+        /**
+         * @brief 마운트한 콘텐츠의 GUID ↔ 리소스 id 색인을 지어 프로세스 표에 겁니다(`AssetRegistry::install`). 참조(`AssetRef<T>` 의 `guid:`)가 이것으로 풀린다.
+         * @details 쿠킹한 팩(@p source 가 `Cooked`)은 마운트한 도메인마다 `<도메인>/assetindex.xml` 을 낮은 우선순위부터 합친다(뒤 마운트 패치 · DLC 가 이긴다). 도메인 팩에 색인이 없거나
+         *          틀렸거나 한 팩 안에서 겹치면 오류다 — 쿠킹은 늘 색인을 담는다(`PackCooker`). 소스 트리는 저작 색인(`AssetDatabase::scan`)이 층 하나다 — 결함(겹친 GUID ·
+         *          짝 잃은 `.meta`)은 경고로 남기고 결함 파일은 색인에 들지 않는다(그 GUID 참조는 읽을 때 오류다). 규칙 파일을 못 읽으면 false 입니다.
+         */
+        [[nodiscard]] bool installAssetRegistry( ContentSource source ) const;
 
     private:
         mutable mutex                      _loadStageMutex;

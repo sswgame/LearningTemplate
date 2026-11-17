@@ -362,4 +362,15 @@ namespace sw
             return nullopt;
         return found->second;
     }
+
+    AssetRegistryLayer AssetDatabase::makeRegistryLayer( string_view sourceName ) const
+    {
+        AssetRegistryLayer layer{ string( sourceName ), {} };
+        layer._listEntry.reserve( _mapGUIDToPath.size() );
+        for ( const auto& [guid, assetID] : _mapGUIDToPath )
+        {
+            layer._listEntry.push_back( AssetRegistryEntry{ guid, assetID } );
+        }
+        return layer;
+    }
 } // namespace sw
