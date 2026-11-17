@@ -139,6 +139,7 @@ namespace
             MatchQueueDependencies dependencies;
             dependencies._pRouter              = &_router;
             dependencies._seatReservationTTLMs = 30000;
+            dependencies._cancelConfirmWaitMs  = 3000;
             dependencies._pBus                 = _bus.get();
             dependencies._serverID             = _serverID;
             return dependencies;
@@ -484,9 +485,45 @@ SW_TEST_CASE( MatchQueueServiceTest, CancelReachesAuthorityOverBus )
     SW_EXPECT_EQUAL( 1, world._serverA._queue.getQueuedTicketCount( "duel" ) );
 
     world._serverB._queue.leaveQueue( kBob, 8 );
+    SW_EXPECT_EQUAL( 1, world._serverB._queue.getLocalTicketCount() ); // 권한 서버의 확인을 기다린다
     world._serverA.poll( kNowMs );
     SW_EXPECT_EQUAL( 0, world._serverA._queue.getQueuedTicketCount( "duel" ) );
+    world._serverB.poll( kNowMs );
     SW_EXPECT_EQUAL( 0, world._serverB._queue.getLocalTicketCount() );
+    SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::Ok );
+}
+
+/** @brief [MatchQueueServiceTest] 빠지기와 경기가 겹치면 경기가 이긴다 — 권한 서버가 이미 짝지었으면 Cancelled 를 내지 않고, 낸 서버는 Found 를 받아 빠지기를 NotQueued 로 끝낸다(감사 O-18: 예전에는 바로 Cancelled 로 끝내 늦게 온 Found 를 버렸다) */
+SW_TEST_CASE( MatchQueueServiceTest, LeaveRacingAFormedMatchYieldsToFound )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
+    world._serverA.poll( kNowMs );
+    SW_EXPECT_TRUE( world._serverA.join( kAlice )._result == MatchmakingResult::Ok );
+    world._serverA.tick( kNowMs + 1 ); // 경기가 났다 — 밥의 Found 는 아직 버스 위다
+    world._serverB._queue.leaveQueue( kBob, 9 );
+    world._serverA.poll( kNowMs + 1 ); // 이미 짝지어졌으니 빼지 않는다
+    world._serverB.poll( kNowMs + 1 );
+    const vector<MatchQueueNotification> listBob = world._serverB.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listBob.size() );
+    SW_EXPECT_TRUE( listBob[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::NotQueued );
+}
+
+/** @brief [MatchQueueServiceTest] 권한 서버의 답이 시한 안에 오지 않으면(권한이 없다) 빠진 것으로 끝낸다 */
+SW_TEST_CASE( MatchQueueServiceTest, LeaveWithoutAuthorityEndsAtTheConfirmDeadline )
+{
+    PairWorld world;
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
+    // 권한 서버 A 를 돌리지 않는다 — 빼 달라는 버스 메시지에 아무도 답하지 않는다
+    world._serverB._queue.leaveQueue( kBob, 8 );
+    world._serverB.tick( kNowMs + 3000 );
+    SW_EXPECT_EQUAL( 1, world._serverB._queue.getLocalTicketCount() );
+    world._serverB.tick( kNowMs + 3001 );
+    SW_EXPECT_EQUAL( 0, world._serverB._queue.getLocalTicketCount() );
+    SW_EXPECT_TRUE( world._serverB.takeCompletion()._result == MatchmakingResult::Ok );
 }
 
 /** @brief [MatchQueueServiceTest] 권한 서버가 멎으면 임대가 끝나 B 가 이어받는다. A 가 돌아와도 임대를 잃은 줄 알고 매처를 비우며, 사라진 티켓은 낸 서버의 시한이 Timeout 으로 알린다 */

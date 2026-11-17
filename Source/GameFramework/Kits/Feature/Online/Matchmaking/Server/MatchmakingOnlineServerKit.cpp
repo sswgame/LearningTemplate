@@ -39,6 +39,7 @@ namespace sw
                 , _backfill{}
                 , _maxPartySize{ 0 }
                 , _reconnectGraceMs{ 0 }
+                , _cancelConfirmWaitMs{ 0 }
                 , _bGameServer{ SW_FALSE }
             {
             }
@@ -51,6 +52,7 @@ namespace sw
                 const string& catalogPath = kitConfig._catalog;
                 _maxPartySize             = kitConfig._maxPartySize;
                 _reconnectGraceMs         = kitConfig._reconnectGraceMs;
+                _cancelConfirmWaitMs      = kitConfig._cancelConfirmWaitMs;
                 _bGameServer              = kitConfig._bGameServer ? SW_TRUE : SW_FALSE;
                 if ( catalogPath.empty() == false )
                 {
@@ -84,6 +86,7 @@ namespace sw
                 dependencies._pBus                 = context._pBus;
                 dependencies._pPartyLobby          = &_partyLobby;
                 dependencies._serverID             = context._serverID;
+                dependencies._cancelConfirmWaitMs  = _cancelConfirmWaitMs;
                 dependencies._seatReservationTTLMs = static_cast<int64>( context._pConfig->_seatReservationSeconds ) * constant::time::kMillisecondsPerSecond;
                 dependencies._pStatSource          = context._kits.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
                 if ( _queue.initialize( dependencies, _listMode ) == false )
@@ -138,6 +141,7 @@ namespace sw
             MatchBackfillSender                _backfill; ///< `gameServer` 일 때만 건다 — 경기 중 빈 슬롯을 맡기는 입구
             int32                              _maxPartySize;
             int32                              _reconnectGraceMs;
+            int32                              _cancelConfirmWaitMs;
             uint8                              _bGameServer : 1;
         };
     } // namespace

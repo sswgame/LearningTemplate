@@ -65,6 +65,8 @@
             "_name": "matchmaking",
             "_settings": {
                 "_catalog": "game/shooter3d/data/shooter3d.matchmodes.xml",
+                "_reconnectGraceMs": 60000,
+                "_cancelConfirmWaitMs": 3000,
                 "_bGameServer": true
             }
         }

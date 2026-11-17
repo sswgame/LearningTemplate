@@ -43,6 +43,7 @@ namespace sw
         , _topicBuffer{}
         , _dependencies{}
         , _nextLookupTag{ 1 }
+        , _nowMs{ 0 }
         , _sequence{ 0 }
         , _lobbySequence{ 0 }
     {
@@ -196,6 +197,11 @@ namespace sw
     bool MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDef>& listMode )
     {
         SW_ASSERT( dependencies._pRouter != nullptr );
+        if ( dependencies._cancelConfirmWaitMs <= 0 )
+        {
+            SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueNoCancelWait", "MatchQueue: the cancel confirmation wait is missing (_cancelConfirmWaitMs in the matchmaking settings)" );
+            return false;
+        }
         if ( dependencies._seatReservationTTLMs <= 0 )
         {
             SW_LOG_ERROR_ID( "MatchQueueService.MatchQueueNoSeatReservation", "MatchQueue: the seat reservation window is missing (_seatReservationSeconds in the online config)" );
@@ -305,19 +311,22 @@ namespace sw
                 placeMatches( state, nowMs );
         }
         updateRatingWaits( nowMs );
-        // 이 서버가 낸 티켓의 시한이다. 권한이 넘어가서 티켓을 잃었으면 결과가 오지 않는다
-        vector<uint64> listExpired;
+        _nowMs = nowMs.count();
+        // 이 서버가 낸 티켓의 시한이다. 권한이 넘어가서 티켓을 잃었으면 결과가 오지 않는다. 빠지기의 확인 답이 시한 안에 오지 않으면(권한 서버가 없다) 빠진 것으로 끝낸다
+        vector<pair<uint64, MatchQueueResult>> listExpired;
         for ( const auto& [ticketID, ticket] : _mapLocalTicket )
         {
             if ( nowMs.count() > ticket._deadlineMs )
-                listExpired.push_back( ticketID );
+                listExpired.push_back( make_pair( ticketID, MatchQueueResult::Timeout ) );
+            else if ( ticket._cancelDeadlineMs != 0 && nowMs.count() > ticket._cancelDeadlineMs )
+                listExpired.push_back( make_pair( ticketID, MatchQueueResult::Cancelled ) );
         }
-        for ( const uint64 ticketID : listExpired )
+        for ( const auto& [ticketID, result] : listExpired )
         {
             MatchAssignment assignment;
             assignment._ticketID = ticketID;
             assignment._modeID   = _mapLocalTicket[ticketID]._modeID;
-            assignment._result   = MatchQueueResult::Timeout;
+            assignment._result   = result;
             notifyLocalTicket( ticketID, assignment );
         }
     }
@@ -798,7 +807,12 @@ namespace sw
     {
         const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt == _mapLocalTicket.end() )
-            return; // 이미 끝났다. 시한 뒤에 온 늦은 결과이거나 이미 빠진 티켓이다
+            return;                                   // 이미 끝났다. 시한 뒤에 온 늦은 결과이거나 이미 빠진 티켓이다
+        if ( ticketIt->second._leaveRequestTag != 0 ) // 빠지기의 답이다 — 경기가 먼저 났으면(Found) 빠지지 못했다
+        {
+            const MatchmakingResult leaveResult = assignment._result == MatchQueueResult::Cancelled ? MatchmakingResult::Ok : MatchmakingResult::NotQueued;
+            _completionBuffer.push( MatchQueueCompletion{ ticketIt->second._leaveRequestTag, ticketID, leaveResult } );
+        }
         for ( const AccountID accountID : ticketIt->second._listAccount )
         {
             _notificationBuffer.push( MatchQueueNotification{ assignment, accountID } );
@@ -811,17 +825,40 @@ namespace sw
         _mapLocalTicket.erase( ticketIt );
     }
 
+    void MatchQueueService::confirmCancel( ModeState& state, uint64 ticketID )
+    {
+        if ( state._maker.removeTicket( ticketID ) == false )
+            return;                // 이미 짝지어졌다 — 낸 서버는 Found 를 받는다(빠지기보다 경기가 먼저다). 없는 표도 같다
+        MatchAssignment cancelled; // 권한 서버가 실제로 뺀 뒤에만 Cancelled 를 낸 서버에 알린다
+        cancelled._ticketID = ticketID;
+        cancelled._modeID   = state._maker.getDefinition()._modeID;
+        cancelled._result   = MatchQueueResult::Cancelled;
+        deliverToTicket( ticketID >> kMatchQueueIDShift, cancelled );
+    }
+
+    void MatchQueueService::requestCancel( uint64 ticketID, uint64 leaveRequestTag )
+    {
+        LocalTicket& ticket = _mapLocalTicket[ticketID];
+        if ( leaveRequestTag != 0 )
+            ticket._leaveRequestTag = leaveRequestTag;
+        if ( ticket._cancelDeadlineMs != 0 )
+            return; // 이미 빼는 중이다 — 같은 답을 기다린다
+        ticket._cancelDeadlineMs = _nowMs + _dependencies._cancelConfirmWaitMs;
+        const string modeID      = ticket._modeID;
+        removeFromQueue( modeID, ticketID ); // 권한이 이 서버면 여기서 바로 답이 온다(notifyLocalTicket)
+    }
+
     void MatchQueueService::removeFromQueue( const string& modeID, uint64 ticketID )
     {
         ModeState* pState = findModeState( modeID );
         if ( pState != nullptr && pState->_bAuthority != SW_FALSE )
         {
-            (void)pState->_maker.removeTicket( ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+            confirmCancel( *pState, ticketID );
             return;
         }
         if ( _dependencies._pBus == nullptr )
             return;
-        (void)MatchQueueBus::kCancelTopic.publish( *_dependencies._pBus, modeID, MatchTicketCancel{ ticketID } ); // 실패는 발행이 로그에 남겼다
+        (void)MatchQueueBus::kCancelTopic.publish( *_dependencies._pBus, modeID, MatchTicketCancel{ ticketID } ); // 실패는 발행이 로그에 남겼다 — 낸 서버의 확인 시한이 끝낸다
     }
 
     void MatchQueueService::handleBusMessage( const ServerBusMessage& message, UnixMilliseconds nowMs )
@@ -842,7 +879,7 @@ namespace sw
             ModeState*        pState        = findModeState( MatchQueueBus::kCancelTopic.findSuffix( message ) );
             const bool        bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchQueueBus::kCancelTopic.read( message, cancel ) == ServerBusReadResult::Read;
             if ( bAcceptCancel )
-                (void)pState->_maker.removeTicket( cancel._ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+                confirmCancel( *pState, cancel._ticketID );
             return;
         }
         if ( MatchQueueBus::kBackfillTopic.matches( message ) )
@@ -894,9 +931,7 @@ namespace sw
         const auto accountIt = _mapAccountToTicket.find( accountID );
         if ( accountIt != _mapAccountToTicket.end() )
         {
-            const uint64 ticketID = accountIt->second;
-            cancelTicket( ticketID );
-            _completionBuffer.push( MatchQueueCompletion{ requestTag, ticketID, MatchmakingResult::Ok } );
+            requestCancel( accountIt->second, requestTag ); // 답은 권한 서버의 확인(Cancelled) 또는 먼저 난 경기(Found)에서 간다
             return;
         }
         if ( _dependencies._pPartyLobby == nullptr )
@@ -936,24 +971,16 @@ namespace sw
 
     void MatchQueueService::cancelTicket( uint64 ticketID )
     {
-        MatchAssignment cancelled;
-        cancelled._ticketID = ticketID;
-        cancelled._result   = MatchQueueResult::Cancelled;
-        const auto ticketIt = _mapLocalTicket.find( ticketID );
-        if ( ticketIt != _mapLocalTicket.end() )
+        if ( _mapLocalTicket.find( ticketID ) != _mapLocalTicket.end() )
         {
-            const string modeID = ticketIt->second._modeID;
-            cancelled._modeID   = modeID;
-            removeFromQueue( modeID, ticketID );
-            notifyLocalTicket( ticketID, cancelled );
+            requestCancel( ticketID, 0 ); // 권한 서버가 뺀 뒤에 멤버에게 Cancelled 가 간다
             return;
         }
-        // 다른 서버가 낸 파티 티켓이다. 모드를 모르므로 모든 모드의 권한에서 빼고, 티켓을 낸 서버(티켓 id 의 위쪽 32비트)에 Cancelled 를 알린다
+        // 다른 서버가 낸 파티 티켓이다. 모드를 모르므로 모든 모드의 권한에서 뺀다 — 실제로 뺀 권한 서버가 티켓을 낸 서버(티켓 id 의 위쪽 32비트)에 Cancelled 를 알린다
         for ( const auto& [modeID, mode] : _mapMode )
         {
             removeFromQueue( modeID, ticketID );
         }
-        deliverToTicket( ticketID >> kMatchQueueIDShift, cancelled );
     }
 
     void MatchQueueService::removeAccount( AccountID accountID )

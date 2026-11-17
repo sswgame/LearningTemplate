@@ -55,6 +55,7 @@ namespace sw
         IAccountStatSource*   _pStatSource{ nullptr }; ///< 실력 모드(`_ratingStat` 이 있는 모드)가 있으면 필수이다. 클라이언트는 실력을 보내지 않는다
         uint64                _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
         int64                 _registryRefreshPeriodMs{ 2000 };
+        int64                 _cancelConfirmWaitMs{ 0 };  ///< 필수 — 빠지기가 권한 서버의 확인 답을 기다리는 시간(키트 설정 `_cancelConfirmWaitMs`). 넘으면 권한이 없는 것으로 보고 끝낸다
         int64                 _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`). 0 이면 `initialize` 가 거절한다
     };
 } // namespace sw
@@ -189,7 +190,14 @@ namespace sw
             uint64            _ticketID{ 0 };
             uint64            _partyID{ 0 };
             int64             _deadlineMs{ 0 };
+            int64             _cancelDeadlineMs{ 0 }; ///< 빠지기를 보낸 뒤 권한 서버의 답을 기다리는 시한(0 이면 빠지는 중이 아니다)
+            uint64            _leaveRequestTag{ 0 };  ///< 이 티켓을 뺀 `leaveQueue` 요청이다. 끝날 때(Cancelled · Found · Timeout) 답한다
         };
+
+        /** @brief 이 서버가 낸 티켓을 빼 달라고 권한 서버에 맡깁니다. 확인 답(Cancelled)이 와야 끝나며, 그 전에 Found 가 오면 경기가 이긴다(감사 O-18). */
+        void requestCancel( uint64 ticketID, uint64 leaveRequestTag );
+        /** @brief 권한 서버가 티켓을 매처에서 실제로 뺐으면 낸 서버에 Cancelled 를 알립니다. 이미 짝지어졌으면 아무것도 하지 않습니다(Found 가 간다). */
+        void confirmCancel( ModeState& state, uint64 ticketID );
 
         struct PendingJoin
         {
@@ -291,6 +299,7 @@ namespace sw
         MatchQueueDependencies                  _dependencies;
         Subscription                            _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                                  _nextLookupTag;
+        int64                                   _nowMs; ///< 마지막 `update` 의 시각이다(빠지기의 확인 시한을 센다)
         uint32                                  _sequence;
         uint32                                  _lobbySequence;
     };
