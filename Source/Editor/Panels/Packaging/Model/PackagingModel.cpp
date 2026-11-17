@@ -90,7 +90,15 @@ namespace sw::editor
 
     bool PackagingModel::isErrorLine( string_view line )
     {
-        return StringUtil::contains( line, "FAILED", true ) || StringUtil::contains( line, "error", true );
+        // 낱말 "error" 가 든 줄이 아니라 도구가 오류로 찍은 줄만이다(감사 E-15) — "0 errors" · "error_log.cpp" 를 빨갛게 칠하지 않는다.
+        // 진입점의 실패 줄(`[package] failed`), ninja 의 `FAILED:`, 컴파일러 · 링커 · 파이썬의 `error:` · `: error ` · `error C1234` · `error LNK1234` · `Error:` 꼴이다.
+        PackagingProgress progress{};
+        if ( PackagingProgress::parseLine( line, progress ) && progress._state == PackagingState::Failed )
+            return true;
+        const string_view trimmed = StringUtil::trim( line );
+        if ( StringUtil::startsWith( trimmed, "FAILED:" ) || StringUtil::startsWith( trimmed, "error:" ) || StringUtil::startsWith( trimmed, "Error:" ) )
+            return true;
+        return StringUtil::contains( line, ": error ", false ) || StringUtil::contains( line, ": error:", false ) || StringUtil::contains( line, ": fatal error", false );
     }
 
     void PackagingModel::refreshGames()
@@ -151,7 +159,18 @@ namespace sw::editor
     {
         EditorExternalToolResult result{};
         if ( _pJob->take( result ) != EditorTaskPoll::Ready )
+        {
+            // 도는 동안의 줄을 바로 보인다(감사 E-15) — 단계 줄(`[package] step k/n`)이 오면 진행도도 따라간다. 끝난 결과가 모든 줄과 판정으로 바꾼다.
+            if ( _progress._state != PackagingState::Running )
+                return;
+            const size_t lineCountBefore = _listLine.size();
+            _pJob->takeLines( _listLine );
+            for ( size_t lineIndex = lineCountBefore; lineIndex < _listLine.size(); ++lineIndex )
+                (void)PackagingProgress::parseLine( _listLine[lineIndex], _progress ); // 진입점이 찍지 않은 줄(빌드 · 쿠커 출력)은 지나친다
+            if ( _progress._state != PackagingState::Running )
+                _progress._state = PackagingState::Running; // 판정(성공 · 실패)은 종료 코드와 함께 끝난 결과가 한다
             return;
+        }
         _listLine             = std::move( result._listLine );
         _progress             = PackagingProgress::parseOutput( _listLine, result._exitCode );
         const bool bSucceeded = _progress._state == PackagingState::Succeeded;

@@ -232,7 +232,7 @@ namespace sw
             _pNativeHandle = nullptr;
         }
 
-        // 핸들만 닫는다(KILL_ON_JOB_CLOSE 를 걸지 않았다) — 객체를 놓아도 자식은 산다, `terminate` 를 부르지 않은 자식을 죽이지 않는 것이 계약이다.
+        // 핸들만 닫는다 — 보통 자식은 산다(`terminate` 를 부르지 않은 자식을 죽이지 않는 것이 계약이다). 부모와 함께 끝낼 자식(`_bEndWithParent`)은 Job 에 KILL_ON_JOB_CLOSE 를 걸어 여기서 트리째 끝난다.
         if ( _pNativeJob != nullptr )
         {
             CloseHandle( static_cast<HANDLE>( _pNativeJob ) );
@@ -241,6 +241,7 @@ namespace sw
 
         _bufferedOutput.clear();
         _processID.store( 0 );
+        _bEndWithParent = false;
     }
 
     bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
@@ -320,7 +321,11 @@ namespace sw
 
         // 자식 트리를 Job 하나로 묶는다(`terminate` — POSIX 의 프로세스 그룹과 같은 뜻). 묶지 못하면 손자를 멈출 수 없으니 띄우지 않은 것으로 돌린다.
         HANDLE hJob = CreateJobObjectW( nullptr, nullptr );
-        if ( hJob == nullptr || AssignProcessToJobObject( hJob, pi.hProcess ) == FALSE )
+        // 부모와 함께 끝낼 자식은 Job 의 마지막 핸들이 닫힐 때 트리째 끝낸다 — 이 프로세스가 죽으면 OS 가 핸들을 닫는다(감사 E-15). 걸지 못하면 띄우지 않는다(고아를 남기지 않는다).
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limit{};
+        limit.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        const bool bLimitSet                   = options._bEndWithParent == false || ( hJob != nullptr && SetInformationJobObject( hJob, JobObjectExtendedLimitInformation, &limit, sizeof( limit ) ) != FALSE );
+        if ( hJob == nullptr || bLimitSet == false || AssignProcessToJobObject( hJob, pi.hProcess ) == FALSE )
         {
             const DWORD error = GetLastError();
             TerminateProcess( pi.hProcess, 1 );
@@ -340,6 +345,7 @@ namespace sw
         _pStdOutRead      = pipes._hOutRead;
         _pStdInWrite      = pipes._hInWrite;
         _bNewProcessGroup = options._bNewProcessGroup;
+        _bEndWithParent   = options._bEndWithParent;
         _processID.store( static_cast<int32>( pi.dwProcessId ) );
 
         return true;
@@ -347,6 +353,11 @@ namespace sw
 
     bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
+        if ( options._bEndWithParent )
+        {
+            SW_LOG_ERROR_ID( "Process.DetachedEndWithParent", "A detached process cannot end with its parent - launch it attached" );
+            return false;
+        }
         if ( command._executable.empty() )
         {
             SW_LOG_ERROR_ID( "Process.NoExecutable", "Detached process launch needs an executable" );

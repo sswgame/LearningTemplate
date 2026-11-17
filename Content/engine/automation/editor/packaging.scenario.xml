@@ -27,6 +27,9 @@
 	<Wait frames="3"/>
 	<EditorClick mark="packaging.package" state="Up"/>
 	<WaitUntil watch="Editor.PackagingState" equals="1" timeoutWallSeconds="10"/>
+	<!-- 도는 동안 출력이 보인다(감사 E-15) — 예전에는 끝나야 줄이 왔다(Running 동안 줄 수 0) -->
+	<WaitUntil watch="Editor.PackagingLineCount" atLeast="1" timeoutWallSeconds="60"/>
+	<Expect watch="Editor.PackagingState" equals="1"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.PackagingState" equals="2" timeoutWallSeconds="300"/>
 	<EditorWaitStable/>
