@@ -55,6 +55,7 @@ namespace sw
         , _services{ SceneEngineServices::makeFromBoundEngine() }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
+        , _inFlightPath{}
         , _queuedPromise{}
         , _bLoadInFlight{ false }
         , _loadHandle{}
@@ -254,6 +255,11 @@ namespace sw
             if ( _queuedPath.empty() == false )
                 _queuedPromise.setValue( nullptr );
 
+            // 도는 로드가 다른 경로면 그 결과는 어차피 버린다(`updateTransitions` 의 대기열 처리) — 끝까지 짓지 않게 멈춘다. 멈춘 로드는 빈 결과를 내고
+            // 그 뒤 대기열을 띄운다. 언리얼 `FlushAsyncLoading` 이 아니라 `CancelAsyncLoading` 자리다.
+            if ( FileUtil::isSameDiskPath( _inFlightPath, path ) == false )
+                _asyncLoad->_stop.requestStop();
+
             _queuedPath    = path;
             _queuedPromise = TaskPromise<Scene*>{};
             SW_LOG_TRACE_ID( "SceneManager.AsyncLoadFlightQueued", "Async load in flight — queued '%#'", path );
@@ -286,13 +292,15 @@ namespace sw
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _asyncLoad->_promise             = std::move( promise );
         _asyncLoad->_typeTableGeneration = _services._pTypeRegistry->getGeneration();
+        _asyncLoad->_stop                = StopSource{}; // 앞 로드가 밀려나며 올린 중단을 물려받지 않는다
+        _inFlightPath                    = path;
         SW_LOG_TRACE_ID( "SceneManager.DispatchLoad", "dispatchLoad: %#", path );
 
         shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
         _loadHandle                    = _services._pTaskManager->emplaceTask(
             "SceneLoadAsync",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
-            MakeTaskArgs( slot, string( path ) ) );
+            MakeTaskArgs( slot, string( path ), _asyncLoad->_stop.getToken() ) );
 
         _services._pTaskManager->addToStage( _loadStage, _loadHandle, "SceneLoadAsync" ); // 제출 전에 넣는다
         _loadHandle.submit();
@@ -355,6 +363,7 @@ namespace sw
     {
         shared_ptr<AsyncLoadSlot> slot    = args.get<shared_ptr<AsyncLoadSlot>>( 0 );
         const string              pathStr = args.get<string>( 1 );
+        const StopToken           stop    = args.get<StopToken>( 2 ); // 잡은 원천(`slot->_stop`)을 읽지 않는다 — 게임 스레드가 로드마다 바꾼다
         if ( slot == nullptr || slot->_bAccepting.load( std::memory_order_acquire ) == false )
             return;
 
@@ -374,16 +383,19 @@ namespace sw
             return; // 종료가 시작됐다 — 인스턴스화(긴 일)를 하지 않고 돌아간다
 
         sw::unique_ptr<Scene> newScene;
-        if ( ok )
+        if ( ok && stop.isStopRequested() == false ) // 밀려난 로드는 파싱 뒤 인스턴스화(긴 일)를 하지 않는다
         {
             ScopedTimer instantiateTimer{ "Scene.load.instantiate" };
             newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name, slot->_services );
             newScene->setSourcePath( pathStr );
             newScene->holdRegistration(); // 훅은 씬을 받는 게임 스레드가 부른다(`applyScene`)
-            const bool bInstantiated = newScene->instantiate( doc, slot->_stop.getToken() );
-            if ( bInstantiated == false && slot->_stop.isStopRequested() == false ) // 종료 신호로 멈춘 것은 실패가 아니다
+            const bool bInstantiated = newScene->instantiate( doc, stop );
+            if ( bInstantiated == false && stop.isStopRequested() == false ) // 종료 · 밀려남으로 멈춘 것은 실패가 아니다
                 SW_LOG_WARNING_ID( "SceneManager.CouldNotInstantiated", "[SceneLoad] '%#' could not be instantiated", pathStr );
         }
+        const bool bSuperseded = stop.isStopRequested();
+        if ( bSuperseded )
+            newScene.reset(); // 중간에 멈춘 부분 씬은 여기서 소멸하며 정리된다 — 게임 스레드는 빈 결과를 받고 대기열을 띄운다
 
         SW_LOG_INFO_ID( "SceneManager.Entities", "[SceneLoad] '%#' %# entities", pathStr, static_cast<uint32>( doc._listSceneObjectNode.size() ) );
 
@@ -398,6 +410,8 @@ namespace sw
         slot->_bReady.store( true, std::memory_order_release );
         if ( bSuccess )
             SW_LOG_TRACE_ID( "SceneManager.AsyncLoadTaskCompleted", "Async load task completed for '%#'", pathStr );
+        else if ( bSuperseded )
+            SW_LOG_TRACE_ID( "SceneManager.AsyncLoadTaskSuperseded", "Async load task for '%#' stopped - a different scene was requested", pathStr );
         else
             SW_LOG_ERROR_ID( "SceneManager.AsyncLoadTaskFailed", "Async load task failed for '%#'", pathStr );
     }

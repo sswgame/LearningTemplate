@@ -280,10 +280,12 @@ namespace sw
             unique_ptr<Scene> _scene SW_GUARDED_BY( _mutex ); ///< 워커가 지은 씬 — 워커가 넣고 게임 스레드가 꺼낸다
             atomic<bool>             _bReady{ SW_FALSE };
             atomic<bool>             _bAccepting{ true };
-            StopSource               _stop; ///< `requestAsyncLoadStop` 가 올린다 — `Scene::instantiate` 가 엔티티마다 읽는다
-            TaskPromise<Scene*>      _promise{};
-            uint32                   _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
-            SceneEngineServices      _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
+            /// 지금 로드의 중단 원천(`dispatchLoad` 가 로드마다 새로 만들고 토큰을 잡 인자로 넘긴다 — 게임 스레드만 만진다). `requestAsyncLoadStop`(종료)과
+            /// 다른 경로의 요청이 대기열에 들 때(밀려난 로드) 올린다. `Scene::instantiate` 가 엔티티마다 읽는다
+            StopSource          _stop;
+            TaskPromise<Scene*> _promise{};
+            uint32              _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
+            SceneEngineServices _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
         };
         /** @brief 활성 씬을 @p absPath 에 쓰고, @p sourceID 가 있으면 씬의 소스로 삼습니다. 저장이 막혔거나 활성 씬이 없으면 false 입니다. */
         [[nodiscard]] bool writeActiveScene( const AbsolutePath& absPath, const string& sourceID );
@@ -343,6 +345,7 @@ namespace sw
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;
+        string                    _inFlightPath; ///< 지금 도는 로드의 경로(`dispatchLoad`). 대기열 요청이 다른 경로면 그 로드를 멈춘다
         /** @brief 대기열에 든 요청의 약속. 대기열은 한 자리이므로 이것도 하나다. */
         TaskPromise<Scene*> _queuedPromise;
         atomic<bool>        _bLoadInFlight;
