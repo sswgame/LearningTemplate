@@ -45,7 +45,7 @@ namespace sw
                 continue;
             pUnit->setSkeleton( skeleton );
             pUnit->setMesh( _arrSkinnedMesh[slot] );
-            pUnit->setAnimateWhenOffscreen( true );
+            pUnit->setVisibilityBasedTickOption( VisibilityBasedAnimationTickOption::AlwaysTickPoseAndRefreshBones );
             const bool bInterior = slot == 1 && interiorMaterialPath.empty() == false;
             if ( bInterior )
                 pUnit->setMaterialPath( interiorMaterialPath.view() );

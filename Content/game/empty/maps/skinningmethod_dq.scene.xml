@@ -23,7 +23,7 @@
 					                       _updateRateDivisor="1"
 					                       _skinningMethod="DualQuaternion"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"

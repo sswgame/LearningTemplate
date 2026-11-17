@@ -18,7 +18,7 @@
 			                       _skeletonPath="common/models/props/arrow/arrow.skeleton.xml"
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<RigidBodyComponent _componentName="RigidBodyComponent"
 			                    _bActive="true"
 			                    _localPosition="0,0,0"

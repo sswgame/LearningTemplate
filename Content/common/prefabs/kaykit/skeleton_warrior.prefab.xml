@@ -19,7 +19,7 @@
 			                       _skeletonPath=""
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/skeleton.animgraph.xml"

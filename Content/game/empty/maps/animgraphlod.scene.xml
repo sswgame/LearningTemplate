@@ -59,7 +59,7 @@
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="game/empty/data/anim/animgraphlod.animgraph.xml"

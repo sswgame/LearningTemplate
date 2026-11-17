@@ -95,6 +95,7 @@ namespace sw
         closeAllStates();
         _table = std::move( table );
         requireFootBones();
+        requireBonesForHitDetection();
     }
 
     void AnimationNotifyComponent::requireFootBones()
@@ -111,6 +112,21 @@ namespace sw
         _boneRequirement = pUnit->requireBones( std::move( listBone ) );
     }
 
+    void AnimationNotifyComponent::requireBonesForHitDetection() const
+    {
+        const SkeletalMeshComponent* pUnit = getOwner() != nullptr ? getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pUnit == nullptr || _table == nullptr )
+            return;
+        for ( const AnimationNotifyEntry& entry : _table->getEntries() )
+        {
+            if ( entry._pHandler != nullptr && entry._pHandler->usesBonesForHitDetection() )
+            {
+                (void)pUnit->requireBonesWhenNotRendered( entry._handlerName.c_str() );
+                return; // 한 번 알리면 된다 — 고칠 곳은 유닛의 값 하나다
+            }
+        }
+    }
+
     void AnimationNotifyComponent::loadNotifyTable()
     {
         // 경로가 비면 코드가 넣은 표(`setNotifyTable`)를 그대로 둔다.
@@ -122,6 +138,7 @@ namespace sw
         if ( _table == nullptr )
             SW_LOG_ERROR_ID( "AnimationNotify.NotifyTableCouldNot", "'%#': notify table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str() );
         requireFootBones();
+        requireBonesForHitDetection();
     }
 
     void AnimationNotifyComponent::bindToAnimator()

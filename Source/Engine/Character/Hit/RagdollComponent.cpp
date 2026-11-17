@@ -200,7 +200,11 @@ namespace sw
         unbindFromUnit();
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
+        {
             _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
+            // 키네마틱 바디가 히트 존이다(맞은 영역 · 머리 맞힘) — 화면 밖에서 낡은 포즈를 따르면 맞음 판정이 틀린다.
+            (void)_pUnit->requireBonesWhenNotRendered( "RagdollComponent" );
+        }
         else
             SW_LOG_WARNING_ID( "Ragdoll.RagdollNoSkeletalMeshComponentObject", "'%#': ragdoll has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
         requirePhysicsBones();

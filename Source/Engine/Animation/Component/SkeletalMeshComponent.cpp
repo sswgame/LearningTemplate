@@ -119,6 +119,7 @@ namespace sw
         : _skeletonPath{}
         , _updateRateDivisor{ 1 }
         , _skinningMethod{ SkinningMethod::Linear }
+        , _visibilityBasedTickOption{ VisibilityBasedAnimationTickOption::AlwaysTickPose }
         , _skeleton{ SkeletalMeshComponentInternal::getImplicitSkeleton() }
         , _skinSourceMesh{}
         , _skinSourceContentID{}
@@ -158,7 +159,6 @@ namespace sw
         , _crowdMode{ AnimationCrowdMode::Own }
         , _drawnSkinSlot{ AnimationSkinSlot::kNone }
         , _bFollowParentPose{ SW_FALSE }
-        , _bAnimateWhenOffscreen{ SW_FALSE }
         , _bVisibleHint{ SW_TRUE }
         , _bPoseDirty{ SW_TRUE }
         , _bInterpolateFrame{ SW_FALSE }
@@ -425,6 +425,17 @@ namespace sw
         _listBoneRequirement.push_back( BoneRequirement{ id, std::move( listBone ) } );
         _bBoneLODDirty = SW_TRUE;
         return _boneRequirementSubscriptions.issue( id );
+    }
+
+    bool SkeletalMeshComponent::requireBonesWhenNotRendered( string_view userName ) const
+    {
+        if ( hasBonesWhenNotRendered() )
+            return true;
+        // 화면 밖에서 본을 갱신하지 않으면 판정이 마지막으로 보이던 포즈의 소켓 · 본으로 맞힌다(루트만 따라가고 팔다리는 얼어 있다). 조용히 올리지 않는다 — 비용이 드는 선택은 데이터에 보이게 둔다.
+        SW_LOG_ERROR_ID( "SkeletalMeshComponent.HitDetectionNeedsBonesWhenNotRendered",
+                         "'%#': '%#' reads bones for hit detection but the skeletal mesh's _visibilityBasedTickOption is AlwaysTickPose - set it to AlwaysTickPoseAndRefreshBones",
+                         getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", userName );
+        return false;
     }
 
     void SkeletalMeshComponent::releaseBoneRequirement( uint64 id )
@@ -753,7 +764,7 @@ namespace sw
                 setShareCrowdPose( false );
             return;
         }
-        const bool bVisible = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
+        const bool bVisible = _bVisibleHint == SW_TRUE || hasBonesWhenNotRendered();
         if ( _leader.isValid() && joinLeaderCrowdBucket( crowd, bVisible ) )
             return;
         AnimationSharedPoseRequest      request{};
@@ -783,7 +794,9 @@ namespace sw
         {
             // 아주 멀면 VAT — 따르는 유닛이 없고 재생 속도가 1 일 때(셰이더는 VAT 시계를 그대로 흘린다).
             // VAT 는 선형으로 굽는다(`MeshVertexAnimationBaker`) — 듀얼 쿼터니언 유닛은 묶음으로 남는다.
-            const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f && _skinningMethod == SkinningMethod::Linear;
+            // 본을 판정에 쓰는 유닛(`AlwaysTickPoseAndRefreshBones`)은 VAT 로 가지 않는다 — VAT 는 본을 갱신하지 않아 히트 존 · 소켓이 굳는다(묶음은 모델 공간을 준다).
+            const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && hasBonesWhenNotRendered() == false &&
+                                             request._playRate == 1.0f && _skinningMethod == SkinningMethod::Linear;
             if ( bUseVertexAnimation )
             {
                 shared_ptr<Mesh> vertexMesh =
@@ -866,7 +879,7 @@ namespace sw
         // 주기는 PROPERTY(하한)와 LOD 판정 중 큰 쪽이고, 위상을 더해 같은 주기의 유닛이 한 프레임에 몰리지 않게 한다.
         _effectiveDivisor           = MathUtil::max( _updateRateDivisor, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
         const bool bOnRate          = AnimationLODState::isOnUpdateFrame( frameIndex, _updatePhase, _effectiveDivisor );
-        const bool bOnScreen        = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
+        const bool bOnScreen        = _bVisibleHint == SW_TRUE || hasBonesWhenNotRendered();
         const bool bPoseDirty       = _bPoseDirty == SW_TRUE;
         _frameContext._deltaSeconds = deltaSeconds;
         _frameContext._frameIndex   = frameIndex;
