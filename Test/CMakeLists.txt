@@ -183,6 +183,11 @@ add_test(NAME Scripts.ApiDiff
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_api_diff.py")
 set_tests_properties(Scripts.ApiDiff PROPERTIES LABELS nogpu TIMEOUT 60)
 
+# 진 단계 다시 돌기(scenario_bisect --rerun-failed)가 고르는 백엔드 보고 폴더 — 여러 체인에 든 단계를 실은 다른 체인의 나중 실행을 고르지 않는다.
+add_test(NAME Scripts.ScenarioBisect
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_scenario_bisect.py")
+set_tests_properties(Scripts.ScenarioBisect PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")

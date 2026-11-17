@@ -160,10 +160,12 @@ def stage_failed_in_reports(list_report: Sequence[dict], stage_name: str) -> boo
 
 def find_latest_per_backend_folder(automation_dir: pathlib.Path, stage_names: set[str]) -> pathlib.Path | None:
     """마지막 체인 실행의 백엔드 보고 폴더 — `-scenario-report` 없는 체인은 `<Saved/Automation>/<시나리오>/per-backend-<pid>/` 에
-    `<백엔드>.log` 와 단계 보고 `<백엔드>[.<번호>].json` 을 남긴다. 이 체인의 단계 이름이 든 보고가 있는 폴더 중 가장 새것. 없으면 None."""
+    `<백엔드>.log` 와 단계 보고 `<백엔드>[.<번호>].json` 을 남긴다. 보고가 모두 이 체인의 단계인 폴더 중 가장 새것. 없으면 None.
+    하나만 맞는 것으로 고르면 여러 체인에 든 단계(kitmodulereload)를 실은 다른 체인의 나중 실행을 집었다(editor 체인이 empty 의 폴더를 읽어 "진 단계 0 개")."""
     candidates = sorted((path for path in automation_dir.glob('*/per-backend-*') if path.is_dir()), key=lambda path: path.stat().st_mtime, reverse=True)
     for folder in candidates:
-        if any(report.get('name') in stage_names for _, report in read_backend_reports(folder)):
+        names = [report.get('name') for _, report in read_backend_reports(folder)]
+        if names and all(name in stage_names for name in names):
             return folder
     return None
 
