@@ -6,7 +6,7 @@
   감시 값: KitDemo.MonsterCollector.State(0 시작 전, 1 마침) · .WonExp · .Captured · .CaptureShakes.
   실행: ctest -R Scenario.empty
 -->
-<Scenario name="game.empty.kit.monstercollector" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.empty.kit_monstercollector" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/kit_monstercollector.scene.xml"/>
 	<WaitUntil watch="KitDemo.MonsterCollector.State" equals="1" timeoutFrames="120"/>
 	<Expect watch="KitDemo.MonsterCollector.WonExp" equals="500"/>

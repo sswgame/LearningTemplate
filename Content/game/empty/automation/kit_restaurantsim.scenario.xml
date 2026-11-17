@@ -6,7 +6,7 @@
   감시 값: KitDemo.RestaurantSim.State(0 시작 전, 1 마침) · .Served · .Revenue · .Profit.
   실행: ctest -R Scenario.empty
 -->
-<Scenario name="game.empty.kit.restaurantsim" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.empty.kit_restaurantsim" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/kit_restaurantsim.scene.xml"/>
 	<WaitUntil watch="KitDemo.RestaurantSim.State" equals="1" timeoutFrames="120"/>
 	<Expect watch="KitDemo.RestaurantSim.Served" equals="2"/>
