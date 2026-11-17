@@ -102,6 +102,10 @@ namespace sw
         static void unregisterCondition( const ConditionEntry* pEntry );
         /** @brief 이름(대소문자 구분)의 등록 줄입니다. 없으면 nullptr 입니다. */
         static const ConditionEntry* find( string_view name );
+        /** @brief 등록 줄이 빠질 때마다 오르는 세대입니다(`ActionRegistry::getRemovalGeneration` 과 같은 규칙 — 배포 빌드는 늘 0). */
+        static uint32 getRemovalGeneration();
+        /** @brief @p pEntry 가 지금 등록되어 있는지입니다(잠금 · 훑기 — 세대가 바뀐 뒤에만 부른다). */
+        static bool isRegistered( const ConditionEntry* pEntry );
         /** @brief 등록된 이름을 등록 순서대로 뒤에 붙입니다(편집기 목록 · 오류 문장). */
         static void collectNames( vector<string>& outListName );
     };
@@ -145,11 +149,12 @@ namespace sw
     /** @brief 명령 하나입니다. 호출이면 함수와 인자, 호출 자리 번호, 수이면 값을 씁니다. */
     struct ConditionInstruction
     {
-        float64           _number{ 0.0 };
-        ConditionFunction _function{ nullptr };
-        const void*       _pArgs{ nullptr };
-        uint32            _callIndex{ 0 }; ///< 식 안 호출의 글 순서(0 부터). 평가가 씨앗에 섞는다(`GameplayContext::mixCallSeed`)
-        ConditionOpCode   _opCode{ ConditionOpCode::PushNumber };
+        float64               _number{ 0.0 };
+        ConditionFunction     _function{ nullptr };
+        const ConditionEntry* _pEntry{ nullptr }; ///< 호출의 등록 줄 — 세대가 바뀌면 살아 있는지 본다(가리키기만 한다)
+        const void*           _pArgs{ nullptr };
+        uint32                _callIndex{ 0 }; ///< 식 안 호출의 글 순서(0 부터). 평가가 씨앗에 섞는다(`GameplayContext::mixCallSeed`)
+        ConditionOpCode       _opCode{ ConditionOpCode::PushNumber };
     };
 
     /**
@@ -175,7 +180,7 @@ namespace sw
         /** @brief 로그를 남기지 않는 `compile` 입니다. 틀리면 그 까닭입니다. 편집기가 칸을 고칠 때마다 부릅니다. */
         [[nodiscard]] static expected<void> tryCompile( string_view text, ConditionExpr& outExpr, const utf8* pBareCondition = kBareFlag );
 
-        /** @brief 평가합니다. 빈 식은 참입니다. */
+        /** @brief 평가합니다. 빈 식은 참입니다. 컴파일한 뒤 부르는 조건의 등록 줄이 빠졌으면(모듈을 내렸고 다시 컴파일하지 않았다) 부르지 않고 오류(`ConditionExpr.Stale`)와 거짓입니다. */
         bool evaluate( const GameplayContext& context ) const;
         /** @brief 평가해 수를 돌려줍니다. 빈 식은 1 입니다. */
         float64 evaluateNumber( const GameplayContext& context ) const;
@@ -202,9 +207,14 @@ namespace sw
     private:
         friend struct ConditionExprInternal;
 
+        /** @brief 컴파일한 뒤 등록 줄이 빠졌으면 이 식이 부르는 줄이 모두 살아 있는지 봅니다. 하나라도 없으면 false 입니다(감사 S-14). */
+        bool areCallsRegistered() const;
+
+    private:
         vector<ConditionInstruction>   _listInstruction;
-        vector<shared_ptr<const void>> _listArgs; ///< 호출 명령의 인자를 쥔다
-        string                         _text;     ///< 읽은 글(오류 문장 · 추적 · 같은 질문 비교)
+        vector<shared_ptr<const void>> _listArgs;           ///< 호출 명령의 인자를 쥔다
+        string                         _text;               ///< 읽은 글(오류 문장 · 추적 · 같은 질문 비교)
+        uint32                         _registryGeneration; ///< 컴파일할 때의 `ConditionRegistry::getRemovalGeneration`
     };
 } // namespace sw
 

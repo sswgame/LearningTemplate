@@ -101,6 +101,7 @@ namespace sw
             ConditionInstruction instruction;
             instruction._opCode    = ConditionOpCode::Call;
             instruction._function  = entry._function;
+            instruction._pEntry    = &entry;
             instruction._pArgs     = args.getInstance();
             instruction._callIndex = static_cast<uint32>( _pExpr->_listArgs.size() ); // 호출마다 인자 하나를 쥐므로 쥔 수가 곧 글 순서다
             _pExpr->_listArgs.push_back( args.share() );
@@ -469,6 +470,18 @@ namespace sw
         (void)registrations.remove( pEntry ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
+    uint32 ConditionRegistry::getRemovalGeneration()
+    {
+        return ConditionExprInternal::getRegistrations().getRemovalGeneration(); // 잠금 없이 읽는다 — 빠질 때만 오른다
+    }
+
+    bool ConditionRegistry::isRegistered( const ConditionEntry* pEntry )
+    {
+        RegistrationList<const ConditionEntry>& registrations = ConditionExprInternal::getRegistrations();
+        ScopedLock<mutex>                       lock{ registrations.getOwnerMutex() };
+        return registrations.contains( pEntry );
+    }
+
     const ConditionEntry* ConditionRegistry::find( string_view name )
     {
         RegistrationList<const ConditionEntry>& registrations = ConditionExprInternal::getRegistrations();
@@ -504,13 +517,27 @@ namespace sw
         : _listInstruction{}
         , _listArgs{}
         , _text{}
+        , _registryGeneration{ 0 }
     {
+    }
+
+    bool ConditionExpr::areCallsRegistered() const
+    {
+        if ( _registryGeneration == ConditionRegistry::getRemovalGeneration() )
+            return true;
+        for ( const ConditionInstruction& instruction : _listInstruction )
+        {
+            if ( instruction._opCode == ConditionOpCode::Call && ConditionRegistry::isRegistered( instruction._pEntry ) == false )
+                return false;
+        }
+        return true;
     }
 
     expected<void> ConditionExpr::tryCompile( string_view text, ConditionExpr& outExpr, const utf8* pBareCondition )
     {
         outExpr = ConditionExpr{};
-        ConditionExpr         built;
+        ConditionExpr built;
+        built._registryGeneration = ConditionRegistry::getRemovalGeneration(); // 찾기 전에 읽는다 — 사이에 빠지면 다음 평가가 본다
         ConditionExprInternal parser;
         parser._text           = text;
         parser._pBareCondition = pBareCondition;
@@ -543,6 +570,11 @@ namespace sw
         using Internal = ConditionExprInternal;
         if ( _listInstruction.empty() )
             return 1.0;
+        if ( areCallsRegistered() == false )
+        {
+            SW_LOG_ERROR_ID( "ConditionExpr.Stale", "Condition '%#' was compiled before a module it calls was unloaded - compile it again after a hot reload", _text.c_str() );
+            return 0.0;
+        }
         float64 arrStack[kMaxStack];
         int32   top = 0;
         for ( const ConditionInstruction& instruction : _listInstruction )

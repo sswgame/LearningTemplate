@@ -234,3 +234,43 @@ SW_TEST_CASE( ConditionExprTest, ActionTraceRecordsCalls )
     SW_EXPECT_EQUAL( uint64( 4 ), listEntry.front()._sequence );
     ActionTrace::clear();
 }
+
+/**
+ * @brief [ConditionExprTest] 컴파일한 뒤 등록 줄이 빠지면(모듈을 내렸다) 그 줄을 부르는 동작 · 식은 부르지 않고 실패한다 — 원시 포인터로 내린 이미지의 함수를 부를 수 있었다(감사 S-14).
+ *        빠지지 않은 줄을 부르는 것은 다른 줄이 빠져도 그대로 돈다(세대가 바뀌면 줄이 남았는지만 본다).
+ */
+SW_TEST_CASE( ConditionExprTest, CallsToAnUnregisteredEntryFailClosed )
+{
+    SW_EXPECT_LOG( "GameAction.Stale" );
+    SW_EXPECT_LOG( "ConditionExpr.Stale" );
+    TestValues    values;
+    ActionContext context;
+    context._world.set<TestValuesSlot>( &values );
+
+    // 모듈 하나가 올린 줄을 흉내 낸다 — 등록자가 사라지면 줄이 빠진다.
+    static const ActionEntry       s_moduleAction{ "test.moduleCount", &InstancedStructOps::of<VocabularyNoParams>(), &ActionThunk<VocabularyNoParams, &XTestUtil::runCount>::call };
+    static const ConditionEntry    s_moduleCondition{ "testModuleFixed", &InstancedStructOps::of<VocabularyNoParams>(), &ConditionThunk<VocabularyNoParams, &XTestUtil::readFixed>::call };
+    unique_ptr<ActionRegistrar>    pActionRegistrar    = make_unique<ActionRegistrar>( &s_moduleAction );
+    unique_ptr<ConditionRegistrar> pConditionRegistrar = make_unique<ConditionRegistrar>( &s_moduleCondition );
+
+    GameActionCall moduleCall;
+    GameActionCall engineCall;
+    ConditionExpr  moduleExpr;
+    ConditionExpr  engineExpr;
+    SW_REQUIRE_TRUE( GameActionCall::compileText( "test.moduleCount", "test", moduleCall ) );
+    SW_REQUIRE_TRUE( GameActionCall::compileText( "test.count", "test", engineCall ) );
+    SW_REQUIRE_TRUE( ConditionExpr::compile( "testModuleFixed == 7", "test", moduleExpr ) );
+    SW_REQUIRE_TRUE( ConditionExpr::compile( "testFixed == 7", "test", engineExpr ) );
+    SW_EXPECT_TRUE( moduleCall.invoke( context ) == ActionResult::Succeeded );
+    SW_EXPECT_TRUE( moduleExpr.evaluate( context._world ) );
+
+    pActionRegistrar.reset();
+    pConditionRegistrar.reset();
+    values._actionCount = 0;
+    SW_EXPECT_TRUE( moduleCall.invoke( context ) == ActionResult::Failed );
+    SW_EXPECT_EQUAL( 0, values._actionCount );
+    SW_EXPECT_FALSE( moduleExpr.evaluate( context._world ) );
+    SW_EXPECT_TRUE( engineCall.invoke( context ) == ActionResult::Succeeded );
+    SW_EXPECT_EQUAL( 1, values._actionCount );
+    SW_EXPECT_TRUE( engineExpr.evaluate( context._world ) );
+}
