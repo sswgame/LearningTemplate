@@ -792,7 +792,8 @@ namespace sw
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
         // TAA 출력은 셋업이 기록 형식으로 읽어 프레임 밖에서도 쓴다 — 나누지 않는다.
-        vector<uint8> listExcluded( listCandidate.size(), 0 );
+        vector<uint8>                listExcluded( listCandidate.size(), 0 );
+        vector<RenderGraphAliasJoin> listJoin;
         for ( const RenderGraphPassDesc& pass : listPass )
         {
             const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
@@ -815,15 +816,12 @@ namespace sw
                         listExcluded[outputIt->second] = 1; // 원본이 후보가 아니면(깊이 · Load) 출력도 나누지 않는다
                         continue;
                     }
-                    RenderGraphAliasCandidate& source = listCandidate[inputIt->second];
-                    RenderGraphAliasCandidate& target = listCandidate[outputIt->second];
-                    source._firstLevel                = MathUtil::min( source._firstLevel, target._firstLevel );
-                    source._lastLevel                 = MathUtil::max( source._lastLevel, target._lastLevel );
-                    target._firstLevel                = source._firstLevel;
-                    target._lastLevel                 = source._lastLevel;
+                    listJoin.push_back( RenderGraphAliasJoin{ static_cast<uint32>( inputIt->second ), static_cast<uint32>( outputIt->second ) } );
                 }
             }
         }
+        // 사슬(꺼진 효과 둘이 잇따라 원본을 가리킨다)도 한 구간이다 — 짝마다 맞추면 한 단계만 전파된다.
+        RenderGraphAliasPlan::joinLifetimes( listCandidate, listJoin );
         vector<RenderGraphAliasCandidate> listAliasable;
         for ( size_t candidateIndex = 0; candidateIndex < listCandidate.size(); ++candidateIndex )
         {
