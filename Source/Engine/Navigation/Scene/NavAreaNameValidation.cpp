@@ -40,8 +40,7 @@ namespace sw
 {
     void NavAreaNameValidation::validate( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
     {
-        uint8 areaIndex = 0;
-        if ( name.empty() == false && NavAreaNameValidationInternal::getSettings().findAreaIndex( name, areaIndex ) == false )
+        if ( name.empty() == false && NavAreaNameValidationInternal::getSettings().findAreaIndex( name ).has_value() == false )
             context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the navigation areas (navmeshsettings.xml) - it bakes as plain ground" );
     }
 } // namespace sw

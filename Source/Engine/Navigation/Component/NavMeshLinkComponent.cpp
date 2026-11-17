@@ -133,17 +133,17 @@ namespace sw
         outLink = NavOffMeshLink{};
         if ( computeWorldEndpoints( outLink._start, outLink._end ) == false )
             return false;
-        outLink._radius         = _width;
-        outLink._userID         = computeLinkID( outLink._start, outLink._end, _linkType );
-        outLink._bBidirectional = _bBidirectional ? SW_TRUE : SW_FALSE;
-        outLink._area           = fallbackArea;
-        if ( _areaName.empty() == false && settings.findAreaIndex( _areaName, outLink._area ) == false )
+        outLink._radius            = _width;
+        outLink._userID            = computeLinkID( outLink._start, outLink._end, _linkType );
+        outLink._bBidirectional    = _bBidirectional ? SW_TRUE : SW_FALSE;
+        const optional<uint8> area = _areaName.empty() ? optional<uint8>{} : settings.findAreaIndex( _areaName );
+        if ( _areaName.empty() == false && area.has_value() == false )
         {
             const GameObject* pOwner = getOwner();
             SW_LOG_ERROR_ID( "SceneNavigation.NavMeshLinkNamesUnknown", "NavMesh link on '%#' names unknown area '%#' - baked as the object's area", pOwner != nullptr ? pOwner->getName().c_str() : "",
                              _areaName.c_str() );
-            outLink._area = fallbackArea;
         }
+        outLink._area = area.value_or( fallbackArea );
         return true;
     }
 

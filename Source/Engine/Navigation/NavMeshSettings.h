@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
@@ -129,8 +130,8 @@ namespace sw
 
         /** @brief 이름의 에이전트 종류입니다. 이름이 비면 기본 종류입니다. 없으면 nullptr 입니다. */
         const NavAgentTypeDef* findAgentType( const hashed_string& name ) const;
-        /** @brief 이름의 영역 번호입니다. 없으면 false 입니다. */
-        [[nodiscard]] bool findAreaIndex( const hashed_string& name, uint8& outIndex ) const;
+        /** @brief 이름의 영역 번호입니다. */
+        [[nodiscard]] optional<uint8> findAreaIndex( const hashed_string& name ) const;
         /** @brief 테이블의 영역 비용으로 채운 기본 필터를 반환합니다. */
         NavQueryFilter makeDefaultFilter() const;
         /** @brief 에이전트 종류 하나를 베이크하는 값의 해시입니다(쿠킹본이 낡았는지 본다). */

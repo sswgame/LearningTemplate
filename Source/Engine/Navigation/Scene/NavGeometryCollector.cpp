@@ -60,13 +60,12 @@ namespace sw
                             return result;
                         if ( bAreaSet == false && pModifier->getAreaName().empty() == false )
                         {
-                            bAreaSet = true;
-                            if ( settings.findAreaIndex( pModifier->getAreaName(), result._area ) == false )
-                            {
+                            bAreaSet                   = true;
+                            const optional<uint8> area = settings.findAreaIndex( pModifier->getAreaName() );
+                            if ( area.has_value() == false )
                                 SW_LOG_ERROR_ID( "SceneNavigation.NavMeshModifierNamesUnknown", "NavMesh modifier on '%#' names unknown area '%#' - baked as plain ground", pCurrent->getName().c_str(),
                                                  pModifier->getAreaName().c_str() );
-                                result._area = 0;
-                            }
+                            result._area = area.value_or( uint8{ 0 } );
                         }
                     }
                     if ( pSurface != nullptr )
