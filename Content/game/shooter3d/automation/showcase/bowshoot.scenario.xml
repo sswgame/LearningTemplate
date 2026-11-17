@@ -14,10 +14,10 @@
 	<WaitUntil watch="PairedAnimation.SessionState" target="Archer" equals="1" timeoutFrames="60"/>
 	<!-- 놓는 시각(0.6 초) 앞 — 시위를 당긴 자세. 연출 시각이 사진 내용이다. -->
 	<AdvanceSimulation frames="24"/>
-	<Screenshot file="draw.ppm"/>
+	<Screenshot file="draw.ppm" stability="assets"/>
 	<!-- 놓은 뒤 — 투사체가 스폰됐다. -->
 	<WaitUntil watch="Object.Exists" target="ArrowProjectile" equals="1" timeoutSeconds="1"/>
-	<Screenshot file="release.ppm"/>
+	<Screenshot file="release.ppm" stability="assets"/>
 	<!-- 앵커 클립(1.07 초)이 끝나면 세션이 끝나고 시스템이 거둔다 — 감시 값은 세션이 없을 때의 Idle(0)이다. -->
 	<WaitUntil watch="PairedAnimation.SessionState" target="Archer" equals="0" timeoutSeconds="0.5"/>
 	<ExpectImage file="draw.ppm" golden="draw"/>

@@ -10,21 +10,21 @@
 	<DevCommand line="camera.preset orbit"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<Wait frames="60"/>
-	<Screenshot file="standing.ppm"/>
+	<Screenshot file="standing.ppm" stability="assets"/>
 	<Wait frames="10"/>
 	<Press slot="Key.W"/>
 	<Press slot="Key.LeftShift"/>
 	<Wait frames="15"/>
-	<Screenshot file="start.ppm"/>
+	<Screenshot file="start.ppm" stability="assets"/>
 	<Wait frames="65"/>
-	<Screenshot file="running.ppm"/>
+	<Screenshot file="running.ppm" stability="assets"/>
 	<Wait frames="5"/>
 	<Release slot="Key.W"/>
 	<Release slot="Key.LeftShift"/>
 	<Wait frames="7"/>
-	<Screenshot file="stopped.ppm"/>
+	<Screenshot file="stopped.ppm" stability="assets"/>
 	<Wait frames="78"/>
-	<Screenshot file="settled.ppm"/>
+	<Screenshot file="settled.ppm" stability="assets"/>
 	<Wait frames="5"/>
 	<ExpectImage file="standing.ppm" golden="standing"/>
 	<ExpectImage file="start.ppm" golden="start"/>

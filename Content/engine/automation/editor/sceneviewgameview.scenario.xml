@@ -37,12 +37,12 @@
 	<!-- 게임 카메라는 씬 뷰 비행을 따르지 않는다 -->
 	<Expect watch="Editor.GameViewCameraX" sameAs="gameCameraX"/>
 	<Expect watch="Editor.GameViewCameraY" sameAs="gameCameraY"/>
-	<Screenshot file="sceneview.ppm"/>
+	<Screenshot file="sceneview.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus game_view"/>
 	<WaitUntil watch="Editor.GameViewRequested" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneViewRequested" equals="0"/>
-	<Screenshot file="gameview.ppm"/>
+	<Screenshot file="gameview.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="gameview.ppm" golden="gameview"/>
 	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->

@@ -90,7 +90,7 @@
 	<AdvanceSimulation frames="15"/>
 	<DevCommand line="object.place Walker 1.2 0.05 2.4"/>
 	<AdvanceSimulation frames="15"/>
-	<Screenshot file="surface_footprints.ppm"/>
+	<Screenshot file="surface_footprints.ppm" stability="assets"/>
 	<Expect watch="Surface.FootprintPlaced" atLeast="40"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atLeast="0.05"/>
 	<Expect watch="Surface.DeformDeepestNear" key="0 0 3.2" atMost="0.0705"/>

@@ -9,11 +9,9 @@
 <Scenario name="game.empty.light2dcookie" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest2d.scene.xml"/>
 	<Launch variable="gv_renderPipeline" value="engine/pipeline/forward2dpipeline.xml"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="cookie_left.ppm"/>
 	<DevCommand line="teleport CookieLight 4.5 0 0"/>
 	<DevCommand line="teleport PlainLight -4.5 0 0"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="cookie_right.ppm"/>
 	<ExpectImage file="cookie_left.ppm" golden="cookie_left" region="0.05,0.1,0.45,0.9"/>
 	<ExpectImage file="cookie_left.ppm" golden="cookie_left_2" region="0.55,0.1,0.95,0.9"/>

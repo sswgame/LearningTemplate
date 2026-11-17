@@ -12,11 +12,11 @@
 	<Launch variable="gv_renderScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<AdvanceSimulation frames="40"/> <!-- 40 프레임 자세(결정적 애니메이션 시각 — 두 장이 같은 자세를 견준다) -->
-	<Screenshot file="skin_linear.ppm"/>
+	<Screenshot file="skin_linear.ppm" stability="assets"/>
 	<LoadScene path="game/empty/maps/skinningmethod_dq.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<AdvanceSimulation frames="40"/> <!-- 40 프레임 자세(결정적 애니메이션 시각 — 두 장이 같은 자세를 견준다) -->
-	<Screenshot file="skin_dualquaternion.ppm"/>
+	<Screenshot file="skin_dualquaternion.ppm" stability="assets"/>
 	<ExpectImagesDiffer first="skin_linear.ppm" second="skin_dualquaternion.ppm" region="0.3,0.1,0.7,0.9" minDiffering="0.002"/>
 	<ExpectImagesDiffer first="skin_linear.ppm" second="skin_dualquaternion.ppm" region="0.3,0.1,0.7,0.9" minDiffering="0" maxDiffering="0.2"/>
 	<Pass/>

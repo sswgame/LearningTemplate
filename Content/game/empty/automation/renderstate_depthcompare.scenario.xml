@@ -12,13 +12,11 @@
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="renderstate_depthcompare_off.ppm"/>
 	<LoadScene path="game/empty/maps/renderstate_depthcompare.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="renderstate_depthcompare_on.ppm"/>
 	<ExpectImagesDiffer first="renderstate_depthcompare_off.ppm" second="renderstate_depthcompare_on.ppm" region="0.55,0,0.8,1" minDiffering="0.02"/>
 	<ExpectImage file="renderstate_depthcompare_on.ppm" golden="depthcompare"/>

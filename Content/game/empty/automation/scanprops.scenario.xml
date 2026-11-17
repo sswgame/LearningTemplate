@@ -11,7 +11,6 @@
 	<Launch variable="gv_stressTestScanProps" value="1"/>
 	<Launch variable="gv_stressTestAnimate" value="0"/>
 	<Launch variable="gv_stressTestTransparent" value="0"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="empty/scanprops.ppm"/>
 	<ExpectImage file="empty/scanprops.ppm" golden="scanprops"/>
 	<Pass/>

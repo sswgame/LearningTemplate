@@ -44,7 +44,7 @@
 	<Expect watch="Terrain.WrittenEditCount" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Screenshot file="flowterrain_before.ppm"/>
+	<Screenshot file="flowterrain_before.ppm" stability="assets"/>
 	<!-- 높이를 올린다 — 붓질 하나가 되돌리기 하나 -->
 	<EditorWaitStable/>
 	<DevCommand line="terrain.brush raise 15 120"/>
@@ -55,7 +55,7 @@
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Store watch="Editor.UndoState" as="editedUndo"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Screenshot file="flowterrain_edited.ppm"/>
+	<Screenshot file="flowterrain_edited.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="flowterrain_edited.ppm" golden="flowterrain_edited"/>
 	<!-- ① 플레이 인 → 플레이 아웃 -->
@@ -75,7 +75,7 @@
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Screenshot file="flowterrain_afterplay.ppm"/>
+	<Screenshot file="flowterrain_afterplay.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="flowterrain_afterplay.ppm" golden="flowterrain_afterplay"/>
 	<!-- ② 백엔드 교체 -->
@@ -97,7 +97,7 @@
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Screenshot file="flowterrain_swapped.ppm"/>
+	<Screenshot file="flowterrain_swapped.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="flowterrain_swapped.ppm" golden="flowterrain_swapped"/>
 	<!-- 경계를 넘은 붓질을 되돌린다 -->
@@ -107,7 +107,7 @@
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="120"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Screenshot file="flowterrain_undone.ppm"/>
+	<Screenshot file="flowterrain_undone.ppm" stability="assets"/>
 	<EditorWaitStable/>
 	<ExpectImage file="flowterrain_undone.ppm" golden="flowterrain_undone"/>
 	<EditorWaitStable/>

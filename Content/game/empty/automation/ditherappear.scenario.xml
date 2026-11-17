@@ -10,20 +10,18 @@
 -->
 <Scenario name="game.empty.ditherappear" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="dither_full.ppm"/>
 
 	<!-- 프레임 60 에 옮기면 프레임 61 부터 오른다. 프레임 N 에 요청한 사진은 프레임 N+1 의 그림이라 등장 비율은 (N + 1 - 60) / 240 이다. -->
 	<AdvanceSimulation frames="20"/> <!-- 순간이동 앞 간격 -->
 	<DevCommand line="teleport DitherCube 0 1 0"/>
-	<Screenshot file="dither_0.ppm" waitForStability="false"/>
+	<Screenshot file="dither_0.ppm" stability="none"/>
 	<Wait frames="59"/>
-	<Screenshot file="dither_25.ppm" waitForStability="false"/>
+	<Screenshot file="dither_25.ppm" stability="none"/>
 	<Wait frames="60"/>
-	<Screenshot file="dither_50.ppm" waitForStability="false"/>
+	<Screenshot file="dither_50.ppm" stability="none"/>
 	<Wait frames="60"/>
-	<Screenshot file="dither_75.ppm" waitForStability="false"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<Screenshot file="dither_75.ppm" stability="none"/>
 	<Screenshot file="dither_end.ppm"/>
 
 	<ExpectImage file="dither_end.ppm" golden="dither_end" region="0.35,0.2,0.65,0.7"/>

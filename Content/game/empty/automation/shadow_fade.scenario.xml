@@ -14,13 +14,11 @@
 	<Launch variable="gv_shadowMapResolution" value="2048"/>
 	<Launch variable="gv_shadowFilter" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="shadow_cut.ppm"/>
 	<LoadScene path="game/empty/maps/shadowtest_fade.scene.xml" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="shadow_fade.ppm"/>
 	<ExpectImagesDiffer first="shadow_cut.ppm" second="shadow_fade.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.005"/>
 	<ExpectImage file="shadow_cut.ppm" golden="shadow_cut"/>

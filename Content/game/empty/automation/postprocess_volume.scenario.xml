@@ -11,18 +11,16 @@
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
+	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Screenshot file="ppvolume_off.ppm"/>
+	<Screenshot file="ppvolume_off.ppm" stability="assets"/>
 
 	<DevCommand line="scene.layer Volume on"/>
 	<AdvanceSimulation frames="1"/> <!-- 제자리 변화 뒤 그리지 않는 한 프레임 — 다음 그림이 TAA · 노출 기록을 버리고 새로 쌓는다 -->
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="ppvolume_inside.ppm"/>
 
 	<!-- 상자(반 크기 1 m)에서 블렌드 반경(2 m)보다 멀리 — 무한 볼륨만 남는다 -->
 	<DevCommand line="teleport GameCamera 0 1.6 -10"/>
-	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="ppvolume_outside.ppm"/>
 
 	<ExpectImagesDiffer first="ppvolume_off.ppm" second="ppvolume_inside.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.3"/>
