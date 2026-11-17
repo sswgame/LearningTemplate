@@ -31,6 +31,8 @@ namespace sw
         , _lastOverflowViewCount{ 0 }
         , _postProcessMaterials{}
         , _renderScaleAdjuster{ nullptr }
+        , _lastAutoRenderScale{ 1.0f }
+        , _forcedAutoRenderScale{ 0.0f }
         , _bAutoRenderScaleActive{ SW_FALSE }
         , _bMissingCameraReported{ SW_FALSE }
     {
@@ -61,6 +63,18 @@ namespace sw
     }
 
     float32 RenderPacketViewSetup::updateAutoRenderScale( const FrameRenderer* pFrameRenderer )
+    {
+        // 고정 값은 GPU 시간과 무관하게 단계를 만든다(언리얼 r.DynamicRes.TestScreenPercentage 자리 — 개발 도구가 건다). 조정기는 건드리지 않는다.
+        if ( _forcedAutoRenderScale > 0.0f )
+        {
+            _lastAutoRenderScale = MathUtil::min( 1.0f, _forcedAutoRenderScale );
+            return _lastAutoRenderScale;
+        }
+        _lastAutoRenderScale = computeAutoRenderScale( pFrameRenderer );
+        return _lastAutoRenderScale;
+    }
+
+    float32 RenderPacketViewSetup::computeAutoRenderScale( const FrameRenderer* pFrameRenderer )
     {
         if ( gv_autoRenderScale == false )
         {

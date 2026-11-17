@@ -11,6 +11,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 접은 값이 0 이 나왔을 때 대신 쓰는 값입니다 — 0 은 "등록 없음" 의 뜻으로 남겨 둔다. */
+        constexpr uint64 kNonEmptySchemaHash = 1;
+
         /** @brief 32 비트 값 하나를 FNV-1a 에 바이트 단위로 섞습니다(`NetWireVersion::combine` 과 같은 순서). */
         uint32 foldNetChannelWord( uint32 hash, uint32 value )
         {
@@ -31,7 +34,7 @@ namespace sw
     {
     }
 
-    bool NetMessageChannel::addMessage( uint8 kind, uint64 schemaHash )
+    bool NetMessageChannel::addEntry( const EntryRole role, uint8 kind, uint64 schemaHash )
     {
         if ( _bSealed == SW_TRUE )
         {
@@ -40,14 +43,36 @@ namespace sw
         }
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._kind == kind )
+            if ( entry._kind == kind && entry._role == role )
             {
-                SW_LOG_ERROR_ID( "NetMessageChannel.MessageKindXRegistered2", "message kind 0x%02x is registered twice", kind );
+                if ( role == EntryRole::Message )
+                    SW_LOG_ERROR_ID( "NetMessageChannel.MessageKindXRegistered2", "message kind 0x%02x is registered twice", kind );
+                else
+                    SW_LOG_ERROR_ID( "NetMessageChannel.ReplicatedTypeRegisteredTwice", "replicated type 0x%02x is registered twice", kind );
                 return false;
             }
         }
-        _listEntry.push_back( Entry{ schemaHash, kind } );
+        _listEntry.push_back( Entry{ schemaHash, kind, role } );
         return true;
+    }
+
+    uint64 NetMessageChannel::computeSchemaHash() const
+    {
+        if ( _listEntry.empty() )
+            return 0;
+        // 등록 순서가 아니라 (역할, 번호) 순이다 — 두 빌드가 같은 것을 다른 순서로 등록해도 같은 값이다.
+        vector<Entry> listSorted = _listEntry;
+        VectorUtil::sort( listSorted, []( const Entry& left, const Entry& right )
+        { return left._role != right._role ? left._role < right._role : left._kind < right._kind; } );
+        uint64 hash = HashUtil::kFNVOffset64;
+        for ( const Entry& entry : listSorted )
+        {
+            const uint8 arrHead[] = { static_cast<uint8>( entry._role ), entry._kind };
+            hash                  = HashUtil::appendBytes64( hash, arrHead, sizeof( arrHead ) );
+            // 모든 대상 플랫폼(x64 · ARM64 · wasm)이 리틀 엔디언이라 바이트 그대로 접는다.
+            hash = HashUtil::appendBytes64( hash, &entry._schemaHash, sizeof( entry._schemaHash ) );
+        }
+        return hash != 0 ? hash : kNonEmptySchemaHash; // 0 은 "등록 없음" 이다
     }
 
     bool NetMessageChannel::seal( const NetEndpointConfig& baseSettings, NetEndpointConfig& outSettings )
@@ -59,10 +84,13 @@ namespace sw
         }
         // 등록 순서가 아니라 종류 순이다 — 두 빌드가 같은 메시지를 다른 순서로 등록해도 같은 버전이 된다.
         VectorUtil::sort( _listEntry, []( const Entry& left, const Entry& right )
-        { return left._kind < right._kind; } );
+        { return left._role != right._role ? left._role < right._role : left._kind < right._kind; } );
         uint32 version = foldNetChannelWord( HashUtil::kFNVOffset32, baseSettings._wireVersion );
         for ( const Entry& entry : _listEntry )
         {
+            // 복제 타입만 역할을 더 섞는다 — 메시지만 든 채널의 버전은 예전과 같다.
+            if ( entry._role == EntryRole::Replicated )
+                version = foldNetChannelWord( version, static_cast<uint32>( entry._role ) );
             version = foldNetChannelWord( version, entry._kind );
             version = foldNetChannelWord( version, static_cast<uint32>( entry._schemaHash ) );
             version = foldNetChannelWord( version, static_cast<uint32>( entry._schemaHash >> 32 ) );
@@ -73,7 +101,7 @@ namespace sw
         return true;
     }
 
-    bool NetMessageChannel::isRegisteredForUse( uint8 kind, uint64 schemaHash ) const
+    bool NetMessageChannel::isRegisteredForUse( const EntryRole role, uint8 kind, uint64 schemaHash ) const
     {
         if ( _bSealed == SW_FALSE )
         {
@@ -82,7 +110,7 @@ namespace sw
         }
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._kind == kind && entry._schemaHash == schemaHash )
+            if ( entry._role == role && entry._kind == kind && entry._schemaHash == schemaHash )
                 return true;
         }
         SW_LOG_ERROR_ID( "NetMessageChannel.MessageKindXNot", "message kind 0x%02x is not registered with this type on the channel", kind );

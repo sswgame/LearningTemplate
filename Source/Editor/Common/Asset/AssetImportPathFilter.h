@@ -13,6 +13,13 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+namespace sw
+{
+    class JSONDocument;
+
+    struct AssetImportOverride;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -51,6 +58,13 @@ namespace sw::editor
 
         /** @brief 네 목록이 모두 비어 무엇에나 맞는지 봅니다. */
         bool isCatchAll() const;
+
+        /**
+         * @brief 와일드카드(`*` · `?`)가 없는 포함 패턴입니다. 없으면 빈 글입니다.
+         * @details 그런 패턴은 파일 하나를 가리킨다 — 한 파일 예외는 규칙이 아니라 그 에셋의 서술(`AssetMeta::_listImportOverride`)에 든다.
+         *          규칙에 두면 파일을 옮기거나 이름을 바꿀 때 패턴이 조용히 빗나가 기본 규칙으로 임포트된다. 규칙 로더가 로드 오류로 거절한다.
+         */
+        string_view findSingleFilePattern() const;
     };
 } // namespace sw::editor
 
@@ -157,7 +171,47 @@ namespace sw::editor
             return listDead;
         }
 
+        /**
+         * @brief 한 파일 포함 패턴(`AssetImportPathFilter::findSingleFilePattern`)이 있는 첫 규칙을 오류로 남기고 false 입니다. 모두 괜찮으면 true 입니다.
+         * @param configName 오류 문장에 쓰는 설정 이름("ModelImportConfig")
+         */
+        template <typename Rule>
+        [[nodiscard]] static bool rejectSingleFilePatterns( const vector<Rule>& listRule, string_view configName )
+        {
+            for ( size_t ruleIndex = 0; ruleIndex < listRule.size(); ++ruleIndex )
+            {
+                const string_view pattern = listRule[ruleIndex]._filter.findSingleFilePattern();
+                if ( pattern.empty() == false )
+                {
+                    reportSingleFilePattern( configName, describe( listRule[ruleIndex]._name, ruleIndex ), pattern );
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /**
+         * @brief 원본 @p sourcePath(디스크 경로) 곁 `.meta` 의 임포트 예외를 읽습니다. 서술이 없으면 예외 없음이고 true 입니다(테스트 · 아직 GUID 없는 원본).
+         * @return 서술이 있는데 읽지 못하면 오류를 남기고 false 입니다 — 예외를 버리고 규칙만으로 임포트하지 않는다(폴백 없음).
+         */
+        [[nodiscard]] static bool readMetaOverrides( string_view sourcePath, vector<AssetImportOverride>& outListOverride );
+
+        /**
+         * @brief 서술의 예외 @p listOverride 를 규칙 파일과 같은 꼴의 JSON 객체(`{"키": 값, …}`)로 @p outDoc 에 짓습니다 — 규칙과 같은 파서로 마지막 층을 읽게 한다.
+         * @details 값은 규칙 파일 JSON 값의 글이다(`false` · `"raw"` · `{"pieces": 24}`). 이름이 식별자가 아니거나 겹치거나 @p listForbiddenKey(규칙을 고르는 칸 —
+         *          `name` · `filter`)이면, 값이 JSON 값 하나가 아니면 오류입니다(대상은 칸 이름).
+         */
+        [[nodiscard]] static expected<void> makeOverrideObject( const vector<AssetImportOverride>& listOverride, std::initializer_list<string_view> listForbiddenKey, JSONDocument& outDoc );
+
+        /** @brief `makeOverrideObject` 의 오류를 규칙 선택 결과(`AssetImportRuleMatch::_error`)의 한 문장으로 씁니다. */
+        static string describeOverrideError( string_view label, const Error& error )
+        {
+            return string( label ) + ": " + string( error.message() ) + " - '" + string( error.detail() ) + "'.";
+        }
+
     private:
+        static void reportSingleFilePattern( string_view configName, const string& ruleName, string_view pattern );
+
         /** @brief 오류 문장에 쓰는 규칙 이름입니다. 이름이 없으면 목록 번호입니다. */
         static string describe( const string& name, size_t ruleIndex ) { return name.empty() ? "#" + to_string( static_cast<uint32>( ruleIndex ) ) : "'" + name + "'"; }
     };

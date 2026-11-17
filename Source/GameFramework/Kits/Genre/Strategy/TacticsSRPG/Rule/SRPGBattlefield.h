@@ -40,13 +40,6 @@ namespace sw
     /** @brief 팀의 개수입니다. */
     static constexpr int32 kSRPGTeamCount = 3;
 
-    /** @brief 차례 방식입니다. */
-    enum class SRPGTurnMode : uint8
-    {
-        Phases = 0, ///< 아군, 적, 제3세력 페이즈 순서로 진행하고, 팀의 모든 유닛이 행동하면 다음 페이즈로 넘긴다(G 제네레이션, 파이어 엠블렘)
-        Individual  ///< 유닛마다 반응과 운동성 순서로 진행한다(`TurnOrder` 라운드제)
-    };
-
     /** @brief 무기를 지금 쓸 수 있는지에 대한 결과입니다. */
     enum class SRPGWeaponStatus : uint8
     {
@@ -59,37 +52,6 @@ namespace sw
         CannotAct,    ///< 그 유닛의 차례가 아니거나 이미 공격했다
         OutOfRange,
         InvalidTarget
-    };
-
-    /** @brief 규칙의 수치입니다. 확률은 %, 보정은 %p 입니다. */
-    struct SRPGSettings
-    {
-        int32        _baseHit{ 70 };
-        int32        _baseCrit{ 5 };
-        int32        _critPercent{ 150 }; ///< 크리티컬 피해 배율(%)
-        int32        _minimumDamage{ 10 };
-        int32        _sizeHitStep{ 5 }; ///< 크기가 한 단계 차이 날 때마다 주는 명중 보정
-        int32        _moraleStart{ 100 };
-        int32        _moraleMin{ 50 };
-        int32        _moraleMax{ 150 };
-        int32        _moraleOnHit{ 2 };              ///< 맞혔을 때
-        int32        _moraleOnKill{ 5 };             ///< 격파했을 때(맞혔을 때의 증가에 더해진다)
-        int32        _moraleOnEvade{ 3 };            ///< 피했을 때
-        int32        _moraleOnDamaged{ 1 };          ///< 맞았을 때
-        int32        _supportDefenseReduction{ 50 }; ///< 지원 방어로 대신 맞을 때 줄어드는 피해 비율(%)
-        int32        _syncDamagePercent{ 50 };       ///< 동기 공격이 주는 피해 비율(%)
-        int32        _dodgePerCell{ 5 };             ///< 이동 회피에서 움직인 셀마다 쌓이는 회피(%p)
-        int32        _dodgeMax{ 30 };
-        int32        _xpHit{ 10 };      ///< 맞혔을 때 얻는 경험치
-        int32        _xpKill{ 30 };     ///< 격파했을 때 얻는 경험치(맞혔을 때의 경험치에 더해진다)
-        int32        _xpLevelStep{ 2 }; ///< 상대와 레벨이 한 단계 차이 날 때마다 더하거나 빼는 경험치
-        SRPGTurnMode _turnMode{ SRPGTurnMode::Phases };
-        uint8        _bZoneOfControl{ SW_FALSE };   ///< 적과 이웃한 셀에 들어가면 거기서 멈춘다
-        uint8        _bSupportAttack{ SW_TRUE };    ///< 공격자와 이웃한 아군이 함께 친다
-        uint8        _bSupportDefense{ SW_TRUE };   ///< 방어자와 이웃한 아군이 대신 맞는다
-        uint8        _bSyncAttack{ SW_FALSE };      ///< 메탈슬러그 택틱스 방식이다. 같은 적을 사거리에 둔 아군이 함께 쏜다
-        uint8        _bMoveDodge{ SW_FALSE };       ///< 메탈슬러그 택틱스 방식이다. 움직인 셀 수만큼 회피가 쌓이고, 자기 차례가 오면 0 이 된다
-        uint8        _bMapFriendlyFire{ SW_FALSE }; ///< MAP 병기가 아군도 친다
     };
 } // namespace sw
 
@@ -164,7 +126,8 @@ namespace sw
 
         SRPGBattlefield();
 
-        void               initialize( const SRPGCatalog* pCatalog, int32 width, int32 height, const hashed_string& defaultTerrain, const SRPGSettings& settings, uint32 seed );
+        /** @brief 크기 · 기본 지형 · 시드로 전장을 엽니다. 규칙 수치는 @p catalog 의 `<Rules>` 에서만 받는다(감사 K-4). */
+        void               initialize( const SRPGCatalog& catalog, int32 width, int32 height, const hashed_string& defaultTerrain, uint32 seed );
         [[nodiscard]] bool setTerrain( const int2& cell, const hashed_string& terrainID );
         /** @brief 사각형(양 끝 포함)을 한 지형으로 칠하고, 칠한 셀 수를 반환합니다. */
         int32 fillTerrain( const int2& fromCell, const int2& toCell, const hashed_string& terrainID );

@@ -38,6 +38,7 @@
 #include "Engine/Renderer/Frame/View/FrameViewResources.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
+#include "Engine/Renderer/Frame/View/RenderStability.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
@@ -184,6 +185,11 @@ namespace sw
         uint32 getLastPendingPSOBatchCount() const { return _lastPendingPSOBatchCount; }
         /** @brief 마지막 프레임의 볼륨 안개 상태(켜졌거나 왜 꺼졌는지)입니다. 렌더 스레드가 주 렌더러의 값을 올린다(`FrameFog::publishMainVolumeState`). */
         FogVolumeState getFogVolumeState() const { return _fog.getVolumeState(); }
+        /** @brief 주 시점의 마지막 정착 값(정지 프레임 · 노출 오차 상한)입니다. 렌더 스레드가 올린다(`RenderStabilitySample::publish` — 감시 값 `Render.Stable`). */
+        RenderStabilitySample getMainStabilitySample() const
+        {
+            return RenderStabilitySample{ _state._mainView._stillFrameCount, _state._mainView._exposureErrorEv, _state._mainView._exposureAdaptationEv, _state._probeUpdater.getAccumulatedFrames() };
+        }
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 **않게** 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽고 폴백한다(AO 는 1). 같은 프레임 안에서 "이 입력이 실제로 이미지를 바꾸는가" 를 비교할 수 있다.
@@ -274,6 +280,14 @@ namespace sw
          *          `RenderViewCollector` 가 모니터의 "지난 프레임에 그려졌나" 판정에 쓴다(`OcclusionTileSnapshot::isSphereOccluded`).
          */
         shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _passExecutor.getOcclusionSnapshot(); }
+        /** @brief 주 시점의 마지막 프레임 사각형 너비 · 높이와 풀 너비(px)입니다. 어느 스레드에서 불러도 됩니다(감시 값 `Render.ViewRect*`). */
+        uint32 getPublishedViewRectWidth() const { return _publishedViewRectWidth.load(); }
+        uint32 getPublishedViewRectHeight() const { return _publishedViewRectHeight.load(); }
+        uint32 getPublishedViewPoolWidth() const { return _publishedViewPoolWidth.load(); }
+        /** @brief 주 시점 풀을 다시 만든 누적 횟수입니다(자동 렌더 배율 단계는 늘리지 않아야 한다 — 감시 값 `Render.ViewTransientRebuildCount`). */
+        uint32 getPublishedViewTransientRebuildCount() const { return _publishedViewTransientRebuildCount.load(); }
+        /** @brief 마지막 프레임에 주 시점의 가림 타일을 지었으면 1 입니다(감시 값 `Render.OcclusionTilesBuilt`). */
+        uint32 getPublishedOcclusionTilesBuilt() const { return _publishedOcclusionTilesBuilt.load(); }
         /** @brief GPU 프레임 시계입니다. 게임 스레드는 `getState` · `getLatest` 만 읽습니다(원자값, 락 없음). 원하는지는 패킷이 렌더 스레드로 나릅니다. */
         const GPUFrameClock& getGPUFrameClock() const { return _state._gpuFrameClock; }
 
@@ -490,6 +504,12 @@ namespace sw
         atomic<uint8> _viewMode;
         /** @brief 에디터 씬 뷰의 보기 모드(`RenderViewMode`)입니다. UI 스레드가 쓰고, 게임 스레드가 패킷을 만들 때 읽습니다. */
         atomic<uint8> _sceneViewMode;
+        /// @brief 주 시점의 마지막 프레임 사각형 · 풀 너비(px), 풀을 다시 만든 누적 횟수, 가림 타일을 지었는지입니다 — 렌더 스레드가 올리고 감시 값(`RenderScaleWatches.cpp`)이 읽는다.
+        atomic<uint32> _publishedViewRectWidth;
+        atomic<uint32> _publishedViewRectHeight;
+        atomic<uint32> _publishedViewPoolWidth;
+        atomic<uint32> _publishedViewTransientRebuildCount;
+        atomic<uint8>  _publishedOcclusionTilesBuilt;
 
         SW_SERVICE_SLOT( FrameRenderer, Optional );
     };

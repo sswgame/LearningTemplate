@@ -1,5 +1,5 @@
 <?asset guid="077055645b8bda22a6110c2c667a30ae"?>
-<Scene formatVersion="2" name="PairedAnimationNet">
+<Scene formatVersion="3" name="PairedAnimationNet">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -83,7 +83,7 @@
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
@@ -127,7 +127,7 @@
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"

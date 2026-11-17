@@ -12,6 +12,7 @@
 #include "DevTools/Client/Console/DevConsoleOverlay.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 #include "DevTools/Client/Diagnostics/CrashInjectionSubsystem.h"
+#include "DevTools/Client/Render/AutoRenderScaleForce.h"
 #include "DevTools/Client/Render/MeshLODForce.h"
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
@@ -54,7 +55,8 @@ namespace sw
 
             void onAfterSceneTick( InputMap* pShellMap ) override
             {
-                MeshLODForce::apply(); // `-gv_meshLodForce` — 다음 프레임의 LOD 선택부터 든다
+                MeshLODForce::apply();         // `-gv_meshLodForce` — 다음 프레임의 LOD 선택부터 든다
+                AutoRenderScaleForce::apply(); // `-gv_autoRenderScaleForce` — 이번 프레임 패킷의 자동 렌더 배율부터 든다
                 if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
                     pDebugHUD->update( pShellMap );
             }

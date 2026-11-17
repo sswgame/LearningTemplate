@@ -1,5 +1,5 @@
 <?asset guid="b8ad9e5a7b9f3e0046a12bf228c4fda4"?>
-<Prefab formatVersion="0" name="FarmSoil">
+<Prefab formatVersion="1" name="FarmSoil">
 	<GameObject _schemaVersion="0" _name="FarmSoil" _bActive="true">
 		<_listComponent>
 			<MeshComponent _componentName="MeshComponent"

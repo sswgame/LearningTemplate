@@ -608,7 +608,9 @@ namespace sw::editor
         // 이름은 슬롯의 것이라 키에서 뺀다 — 값이 같으면 이름이 달라도 한 파일이다.
         root.setAttribute( "name", "" );
         const string nameless = document.saveToString();
-        outShared._key        = ImportedAssetStore::makeKey( nameless.data(), nameless.size(), string_view{} );
+        // 설정 글에 임포터 판을 섞는다 — 판이 바뀌면 결과 바이트(예: 판 9 의 GUID 머리)가 바뀌므로 옛 판의 같은 키 파일과 부딪히지 않는다(언리얼 DDC 키의 판 GUID 자리).
+        const string settings = "importer=" + to_string( static_cast<uint64>( ModelImportUtil::kImporterVersion ) );
+        outShared._key        = ImportedAssetStore::makeKey( nameless.data(), nameless.size(), settings );
         root.setAttribute( "name", string_view{ outShared._key } );
         outShared._text = document.saveToString();
         return true;
@@ -636,12 +638,13 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
             return false;
         }
-        const string sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
-        if ( ImportedAssetStore::writeIfAbsent( sharedPath, shared._text.data(), shared._text.size() ) == false )
+        const string           sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
+        const optional<string> sharedText = ImportedAssetStore::makeTextWithIdentity( assetPaths, sharedPath, shared._text );
+        if ( sharedText.has_value() == false || ImportedAssetStore::writeIfAbsent( sharedPath, sharedText->data(), sharedText->size() ) == false )
             return false;
         // 손 데이터(씬 · 프리팹)가 부르는 슬롯 주소는 그대로 둔다 — 값은 공유 파일 한 벌이고 슬롯 파일은 그것을 가리키는 한 줄이다(언리얼 Redirector · 덮어쓰기 없는 Material Instance).
         const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
-        return FileUtil::ensureParentDirectoryExists( slotPath ) && FileUtil::writeTextFile( slotPath, makeSlotMaterialText( fileStem, assetPaths.toAssetID( sharedPath ) ) );
+        return ImportedAssetStore::writeTextWithIdentity( assetPaths, slotPath, makeSlotMaterialText( fileStem, assetPaths.toAssetID( sharedPath ) ) );
     }
 
     string ModelImportMaterial::findSharedMaterial( string_view sideFolder, string_view fileStem )

@@ -83,7 +83,7 @@ SW_TEST_CASE( CharacterMeshLODTest, LevelsKeepSectionsAndOnlyTheirVertices )
                                                "test" ) );
     SW_REQUIRE_TRUE( CharacterLODSettings::buildLODs( *mesh, settings, {} ) );
     SW_REQUIRE_EQUAL( 3u, mesh->getLODCount() );
-    SW_EXPECT_EQUAL( mesh->getLODVertices().size(), mesh->getLODSkinVertices().size() );
+    SW_EXPECT_EQUAL( mesh->getCPUView().getLODVertices().size(), mesh->getLODSkinVertices().size() );
 
     uint32 previousIndexCount = lod0IndexCount;
     for ( const MeshLOD& lod : mesh->getLODs() )
@@ -106,7 +106,7 @@ SW_TEST_CASE( CharacterMeshLODTest, LevelsKeepSectionsAndOnlyTheirVertices )
                 const uint32 vertex = mesh->getLODIndices()[index - lod0IndexCount];
                 SW_REQUIRE_TRUE( vertex >= lod._firstVertex && vertex < lod._firstVertex + lod._vertexCount );
                 const uint32 local = vertex - lod0VertexCount;
-                SW_EXPECT_EQUAL( section == 0u, mesh->getLODVertices()[local]._arrPosition[0] < static_cast<float>( Internal::kGrid + 1u ) );
+                SW_EXPECT_EQUAL( section == 0u, mesh->getCPUView().getLODVertices()[local]._arrPosition[0] < static_cast<float>( Internal::kGrid + 1u ) );
                 SW_EXPECT_EQUAL( static_cast<uint16>( section ), mesh->getLODSkinVertices()[local]._arrJoint[0] );
             }
         }
@@ -173,7 +173,7 @@ SW_TEST_CASE( CharacterMeshLODTest, RigidSkinSourceIsSharedAndKeepsSectionsAndLe
     SW_EXPECT_EQUAL( 1u, rigid->getMorphTargetCount() );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( rigid->getSections().size() ) );
     SW_REQUIRE_EQUAL( mesh->getLODCount(), rigid->getLODCount() );
-    SW_EXPECT_EQUAL( rigid->getLODVertices().size(), rigid->getLODSkinVertices().size() );
+    SW_EXPECT_EQUAL( rigid->getCPUView().getLODVertices().size(), rigid->getLODSkinVertices().size() );
     const MeshLOD& expected = mesh->getLODs()[0];
     const MeshLOD& actual   = rigid->getLODs()[0];
     SW_EXPECT_EQUAL( expected._indexCount, actual._indexCount );

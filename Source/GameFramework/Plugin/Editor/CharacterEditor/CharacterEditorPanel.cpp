@@ -98,7 +98,7 @@ namespace sw::editor
                 for ( const GameObject* pObject : listObject )
                 {
                     const Mesh* pMesh = findPickMesh( *pObject );
-                    count += pMesh != nullptr ? static_cast<uint32>( pMesh->getVertices().size() ) : 0u;
+                    count += pMesh != nullptr ? static_cast<uint32>( pMesh->getCPUView().getVertices().size() ) : 0u;
                 }
                 return count;
             }
@@ -116,10 +116,10 @@ namespace sw::editor
                     const Mesh*                  pMesh  = findPickMesh( object );
                     const SkeletalMeshComponent* pUnit  = object.getComponent<SkeletalMeshComponent>();
                     const SceneComponent*        pScene = object.getPrimarySceneComponent();
-                    if ( pMesh == nullptr || pScene == nullptr || pMesh->getVertices().empty() )
+                    if ( pMesh == nullptr || pScene == nullptr || pMesh->getCPUView().getVertices().empty() )
                         continue;
                     BodyPickSurface& surface = outListSurface.emplace_back();
-                    BodyPickSurface::build( pMesh->getVertices(), pMesh->getSkinVertices(), pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
+                    BodyPickSurface::build( pMesh->getCPUView().getVertices(), pMesh->getSkinVertices(), pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
                     surface._listIndex   = pMesh->getIndices();
                     surface._listSection = pMesh->getSections();
                     surface._bSkin       = index == 0 ? SW_TRUE : SW_FALSE;

@@ -21,6 +21,7 @@
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
+#include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -247,7 +248,7 @@ namespace sw
      *        <Parry><Window grade="Perfect" early="0.06" late="0.02"/></Parry><Ability id="dash" name="Dash" flag="ability.dash"><Motor dash="1" airDashCount="1"/></Ability>
      *        <Charm id="strength" name="Strength" cost="3"><Stats damage="0.5"/></Charm><Map region="crossroads" price="30"/><Site id="bench1" area="dirtmouth" rest="true"/>
      *        <Pickup id="mask1" area="hall"/><Enemy id="husk" currency="5" loot="husk"/><Enemy id="hornet" boss="true" flag="boss.hornet" currency="300"/></Metroidvania>`
-     * @details 규칙(루트 · Rules · Health · Stamina · Parry)에 오류가 있거나 패리 창이 없으면 읽기 실패다. 스키마를 어긴 원소는 넣지 않고 오류로 남긴다.
+     * @details 규칙(루트 · Rules · Health · Stamina · Parry · BaseMotor)에 오류가 있거나 패리 창 · 기본 몸 규칙(`<BaseMotor runSpeed="7" .../>`, 모든 칸 필수)이 없으면 읽기 실패다. 스키마를 어긴 원소는 넣지 않고 오류로 남긴다.
      */
     class SW_KIT_API MetroidvaniaCatalog : public XMLCatalog<MetroidvaniaCatalog>
     {
@@ -277,6 +278,8 @@ namespace sw
         const vector<MetroidvaniaPickupDef>&    getPickups() const { return _pickupCatalog.getAll(); }
         const MetroidvaniaRules&                getRules() const { return _rules; }
         MetroidvaniaRules&                      getRules() { return _rules; }
+        /** @brief 능력을 얻기 전 몸의 움직임 규칙(`<BaseMotor>`)입니다. 로드에 성공한 카탈로그는 반드시 가진다(감사 K-4 — 기본 생성한 설정으로 몸을 열지 않는다). */
+        const PlatformerSettings& getBaseMotor() const { return _baseMotor; }
 
     private:
         static constexpr const utf8* kXMLRootName = "Metroidvania"; ///< 루트 원소(`XMLCatalog`)
@@ -295,6 +298,7 @@ namespace sw
         GameCatalog<MetroidvaniaPickupDef>    _pickupCatalog;
         GameCatalog<MetroidvaniaEnemyDef>     _enemyCatalog;
         MetroidvaniaRules                     _rules;
+        PlatformerSettings                    _baseMotor;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MetroidvaniaCatalog>::acquire` 로 한 벌을 받습니다. */

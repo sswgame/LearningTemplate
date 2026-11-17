@@ -385,7 +385,8 @@ SW_TEST_CASE( InputMapModelTest, EditNotifiesAndUndoTextRoundTrips )
 {
     InputMapModelTestRecorder recorder;
     InputMapModel             document{ recorder._recorder };
-    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "engine/input/default.input.xml" ) );
+    (void)document.editInputMapPath().commit( "engine/input/default.input.xml" ); // 기본 맵이 이미 그 경로면 false(바뀐 것이 없다) — 확정 경로를 본다
+    SW_REQUIRE_EQUAL( string( "engine/input/default.input.xml" ), document.editInputMapPath().get() );
     SW_REQUIRE_TRUE( document.reload() );
     const string before = document.captureText();
     SW_REQUIRE_TRUE( before.empty() == false );

@@ -16,6 +16,9 @@
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 
+#include "Engine/Content/AssetGUID.h"
+#include "Engine/Content/AssetPaths.h"
+
 namespace sw::editor
 {
     namespace
@@ -35,6 +38,23 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax32> text;
         text.appendFormat( "%#", Fmt( hash, Format( 16, Format::Padding::Zero ).hex() ) );
         return string( text.c_str(), text.size() );
+    }
+
+    optional<string> ImportedAssetStore::makeTextWithIdentity( const AssetPaths& assetPaths, string_view diskPath, string_view text )
+    {
+        const string assetID = assetPaths.toAssetID( diskPath );
+        if ( assetID.empty() )
+        {
+            SW_LOG_ERROR_ID( "ImportedAssetStore.OutsideContent", "Imported file '%#' is outside the content roots - it has no resource id to derive its asset GUID from", diskPath );
+            return nullopt;
+        }
+        return AssetGUIDHeader::write( text, AssetGUID::fromName( assetID ) );
+    }
+
+    bool ImportedAssetStore::writeTextWithIdentity( const AssetPaths& assetPaths, string_view diskPath, string_view text )
+    {
+        const optional<string> withIdentity = makeTextWithIdentity( assetPaths, diskPath, text );
+        return withIdentity.has_value() && FileUtil::ensureParentDirectoryExists( diskPath ) && FileUtil::writeTextFile( diskPath, *withIdentity );
     }
 
     string ImportedAssetStore::findDomainFolder( string_view sourcePath )

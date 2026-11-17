@@ -78,3 +78,28 @@ SW_TEST_CASE( ReflectVisitTest, StopEndsTheWalk )
     } ) );
     SW_EXPECT_EQUAL( nestedCount, 0u );
 }
+
+/**
+ * @brief [ReflectVisitTest] 객체 주소가 nullptr 이면 스키마만 걷고(값 주소 없음, 내려가지 않음), `_bWithBase` 를 끄면 최상위 타입이 선언한 칸만 온다
+ */
+SW_TEST_CASE( ReflectVisitTest, SchemaWalkAndDeclaredPropertiesOnly )
+{
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::TypeInfo*     pType    = registry.findType( sw::hashed_string( "sw::ValidatedChildActor" ) );
+    SW_REQUIRE_TRUE( pType != nullptr );
+
+    sw::ReflectVisitOptions options;
+    options._bIntoValues = SW_TRUE;
+    options._bWithBase   = SW_FALSE;
+    sw::vector<sw::string>           listVisited;
+    bool                             bAnyValue = false;
+    const sw::ReflectPropertyVisitor visitor{ registry, options };
+    SW_EXPECT_TRUE( visitor.visitProperties( *pType, static_cast<const void*>( nullptr ), [&]( const sw::ReflectVisitConstField& field )
+    {
+        listVisited.push_back( field._property._name.c_str() );
+        bAnyValue = bAnyValue || field._pValue != nullptr;
+        return sw::ReflectVisitFlow::Continue;
+    } ) );
+    SW_EXPECT_TRUE( listVisited == sw::vector<sw::string>{ "_extra" } );
+    SW_EXPECT_FALSE( bAnyValue );
+}

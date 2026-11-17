@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="3716f6b6a71140a0b6efb0188ad051c1"?>
+<!--
+  에디터 시나리오 — 인스펙터 프로퍼티 단위 기록의 규모(설계 E-7 판정): 씬 컴포넌트 오브젝트 8000 개를 만들어 모두 고르고(editor.undoScaleScene, 기록 없음)
+  다중 선택 인스펙터의 SceneComponent._localScale 칸을 ① 누르기만 하고 나오면 기록이 없고 ② 끌면 기록 하나에 거래가 1 MB 미만이며 ③ Ctrl+Z 한 번에 씬 해시가 돌아온다.
+  예전에는 칸이 활성화되면 선택 전체를 직렬화했다(숫자 한 칸이 XML 16000 개). 기록 단위는 (오브젝트 id, 컴포넌트 지역 id, 프로퍼티, 값 글)이고 값 글은 한 벌만 든다.
+  프레임 시간(누르기 1 ms · 구간 열기 16 ms)은 흔들리므로 판정하지 않는다 — 측정 시나리오(E1, editor/load/hierarchy8000)의 값으로 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/inspectorundoscale.scenario.xml -unattended
+-->
+<Scenario name="editor.inspectorundoscale" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitStable/>
+	<WaitUntil watch="Editor.UndoCount" equals="0" timeoutFrames="600"/>
+	<DevCommand line="editor.undoScaleScene 8000"/>
+	<WaitUntil watch="Editor.SelectionCount" atLeast="8000" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.UndoCount" equals="0"/>
+	<Store watch="Editor.SceneHash" as="start"/>
+	<!-- ① 누르기만 하고 나오기 — 쓰기가 없으면 구간도 기록도 없다 -->
+	<EditorClick mark="inspector.property.SceneComponent._localScale"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.UndoCount" equals="0"/>
+	<!-- ② 끌기 — 끄는 동안의 쓰기는 한 구간, 놓으면 한 단계(8000 대상 · 값 글 한 벌) -->
+	<EditorDrag mark="inspector.property.SceneComponent._localScale" dx="40"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<Expect watch="Editor.LastUndoBytes" atMost="1048576"/>
+	<Expect watch="Editor.SceneHash" differsFrom="start"/>
+	<!-- ③ 되돌리기 한 번에 8000 개 모두 -->
+	<EditorKey key="Ctrl+Z"/>
+	<EditorWaitStable/>
+	<Expect watch="Editor.UndoIndex" equals="0"/>
+	<Expect watch="Editor.SceneHash" sameAs="start"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

@@ -39,11 +39,14 @@ namespace sw
         PROPERTY( Min = 1 )
         int32 _attemptBurst{ 10 };
         /**
-         * @brief 저장소 워커에서 동시에 도는 비밀번호 해시(Argon2id) 상한입니다. 넘는 가입 · 로그인은 저장소를 읽지 않고 `kBusy` 로 끝납니다(감사 O-3).
-         * @details 서버 설정의 저장소 워커 수(`_storeWorkerCount`)보다 작게 두어 원장 · 우편 · 거래가 쓸 워커를 남깁니다. 해시 하나의 메모리(기본 19 MiB)도 이 수만큼만 잡힙니다.
+         * @brief 동시에 도는 비밀번호 해시 수입니다(작업 풀 위의 해시 줄 `PasswordHashQueue`). 메모리 상한은 이 수 × 19 MiB × 2 다(다시 해시). 감사 O-3.
+         * @details 값은 코어 수 · 메모리로 정한다(Keycloak Argon2 의 `cpu-cores` 와 같은 자리). 부하 측정(`login_storm`) 뒤에 맞춘다.
          */
         PROPERTY( Required, Min = 1, Max = 64 )
         int32 _maxConcurrentPasswordHashes{ 0 };
+        /** @brief 자리를 기다리는 비밀번호 해시 수입니다. 넘는 가입 · 로그인 · 연동은 저장소를 읽기 전에 `kBusy`(다시 시도)로 끝난다. "기다릴 시간 × 해시 처리율" 로 정한다. */
+        PROPERTY( Required, Min = 1 )
+        int32 _maxQueuedPasswordHashes{ 0 };
         /** @brief 서버 전체(휘발 저장소)에서 창 하나에 주소마다 받는 로그인 · 가입 시도 수입니다. 서버마다의 버킷(`_attemptBurst`)은 서버 여럿이면 곱해지므로 이 셈이 한도다(감사 O-14). */
         PROPERTY( Required, Min = 1, Max = 100000000 )
         int32 _sharedAttemptLimit{ 0 };

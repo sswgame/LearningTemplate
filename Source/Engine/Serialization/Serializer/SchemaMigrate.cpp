@@ -8,6 +8,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -259,11 +260,14 @@ namespace sw
         if ( SchemaMigrateInternal::constructWithDefaultCtor( pBase, typeInfo ) )
             return pBase;
 
-        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+        // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`). 값 주소는 걷기가 준다(비트필드는 nullptr — 만들 것이 없다).
+        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+        (void)propertyVisitor.visitProperties( typeInfo, pBase, [&]( const ReflectVisitField& field )
         {
-            void* pPropPtr = prop.getRawPtr( pBase );
+            const PropertyInfo& prop     = field._property;
+            void* const         pPropPtr = field._pValue;
             if ( pPropPtr == nullptr )
-                return;
+                return ReflectVisitFlow::Continue;
             NestedContainerInfo shape = prop.getContainerShape();
             if ( shape._wrapper != nullptr )
             {
@@ -283,7 +287,8 @@ namespace sw
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::constructWithDefaultCtor( pPropPtr, *pNested );
             }
-        }, true /* 상속 PROPERTY 포함 */ );
+            return ReflectVisitFlow::Continue;
+        } );
         return pBase;
     }
 
@@ -293,11 +298,13 @@ namespace sw
             return;
         if ( SchemaMigrateInternal::destroyIfDefaultConstructed( pInstance, typeInfo ) )
             return;
-        typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+        const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+        (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitField& field )
         {
-            void* pPropPtr = prop.getRawPtr( pInstance );
+            const PropertyInfo& prop     = field._property;
+            void* const         pPropPtr = field._pValue;
             if ( pPropPtr == nullptr )
-                return;
+                return ReflectVisitFlow::Continue;
             NestedContainerInfo shape = prop.getContainerShape();
             if ( shape._wrapper != nullptr )
             {
@@ -317,7 +324,8 @@ namespace sw
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::destroyIfDefaultConstructed( pPropPtr, *pNested );
             }
-        }, true /* 상속 PROPERTY 포함 */ );
+            return ReflectVisitFlow::Continue;
+        } );
     }
 
     bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )

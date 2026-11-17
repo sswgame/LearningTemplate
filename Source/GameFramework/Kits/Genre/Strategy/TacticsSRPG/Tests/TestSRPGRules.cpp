@@ -21,6 +21,7 @@
 namespace
 {
     constexpr const utf8* kSRPGXML = R"(<SRPGCatalog>
+  <Rules baseHit="70" baseCrit="5" critPercent="150" minimumDamage="10" sizeHitStep="5" moraleStart="100" moraleMin="50" moraleMax="150" moraleOnHit="2" moraleOnKill="5" moraleOnEvade="3" moraleOnDamaged="1" supportDefenseReduction="50" syncDamagePercent="50" dodgePerCell="5" dodgeMax="30" xpHit="10" xpKill="30" xpLevelStep="2" turnMode="Phases" zoneOfControl="false" supportAttack="true" supportDefense="true" syncAttack="false" moveDodge="false" mapFriendlyFire="false"/>
   <PilotCurve base="100" exponent="0" maxLevel="30"/>
   <UnitCurve base="10" exponent="0" maxLevel="10"/>
   <Terrain id="plain" name="Plain"/>
@@ -63,12 +64,20 @@ namespace
         SRPGRulesTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kSRPGXML, "SRPGTest" ) );
-            _settings._bSupportAttack  = SW_FALSE;
-            _settings._bSupportDefense = SW_FALSE;
+            _settings                  = _catalog.getRules(); // 칸 하나씩 바꿔 보는 테스트는 열기 전에 카탈로그 규칙으로 되돌려 쓴다
+            _settings._bSupportAttack  = false;
+            _settings._bSupportDefense = false;
             SW_REQUIRE_TRUE( _field.claimEvents( _lease ) );
         }
 
-        void open( int32 width = 8, int32 height = 8 ) { _field.initialize( &_catalog, width, height, "plain", _settings, 7 ); }
+        void open( int32 width = 8, int32 height = 8 ) { openField( _field, width, height, "plain", _settings, 7 ); }
+
+        /** @brief 바꾼 규칙을 카탈로그에 얹고 전장을 엽니다. 전장은 열 때 규칙을 복사하므로 앞서 연 전장은 그대로다. */
+        void openField( sw::SRPGBattlefield& outField, int32 width, int32 height, const sw::hashed_string& defaultTerrain, const sw::SRPGSettings& settings, uint32 seed )
+        {
+            _catalog.setRules( settings );
+            outField.initialize( _catalog, width, height, defaultTerrain, seed );
+        }
 
         sw::expected<int32> place( const sw::hashed_string& unitID, sw::SRPGTeam team, const sw::int2& cell ) { return _field.addUnit( unitID, "rookie", team, cell ); }
 
@@ -330,7 +339,7 @@ SW_TEST_CASE_F( SRPGRulesTest, XPMoraleAndDamageBounds )
     stingy._xpHit           = 1;
     stingy._xpLevelStep     = 100;
     sw::SRPGBattlefield poor;
-    poor.initialize( &_catalog, 8, 8, "plain", stingy, 7 );
+    openField( poor, 8, 8, "plain", stingy, 7 );
     const int32 elder = poor.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 }, 9 ).value();
     const int32 kid   = poor.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 }, 1 ).value();
     poor.beginBattle();
@@ -382,7 +391,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CounterAttack )
  */
 SW_TEST_CASE_F( SRPGRulesTest, SupportDefense )
 {
-    _settings._bSupportDefense = SW_TRUE;
+    _settings._bSupportDefense = true;
     open();
     const int32 first   = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     const int32 second  = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 2 } ).value();
@@ -415,7 +424,7 @@ SW_TEST_CASE_F( SRPGRulesTest, SupportDefense )
  */
 SW_TEST_CASE_F( SRPGRulesTest, SupportAttack )
 {
-    _settings._bSupportAttack = SW_TRUE;
+    _settings._bSupportAttack = true;
     open();
     const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     const int32 helper   = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 1 } ).value();
@@ -446,7 +455,7 @@ SW_TEST_CASE_F( SRPGRulesTest, SupportAttack )
  */
 SW_TEST_CASE_F( SRPGRulesTest, SyncAttack )
 {
-    _settings._bSyncAttack = SW_TRUE;
+    _settings._bSyncAttack = true;
     open();
     const int32 attacker = place( "striker", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     const int32 partner  = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 2 } ).value();
@@ -471,7 +480,7 @@ SW_TEST_CASE_F( SRPGRulesTest, SyncAttack )
     SW_EXPECT_EQUAL( 1, unit( partner )._listAmmo[0] );
 
     sw::SRPGBattlefield second;
-    second.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( second, 8, 8, "plain", _settings, 7 );
     const int32 killer = second.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     (void)second.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 2 } );
     const int32 victim = second.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
@@ -543,9 +552,9 @@ SW_TEST_CASE_F( SRPGRulesTest, MapAttack )
     SW_EXPECT_EQUAL( 3000, unit( gm )._hp ); // 반격이 없다
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, sw::SRPGCombat::executeMapAttack( _field, gm, 3, sw::int2{ 7, 2 }, result ) );
 
-    _settings._bMapFriendlyFire = SW_TRUE;
+    _settings._bMapFriendlyFire = true;
     sw::SRPGBattlefield friendly;
-    friendly.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( friendly, 8, 8, "plain", _settings, 7 );
     const int32 shooter = friendly.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 2 } ).value();
     const int32 buddy   = friendly.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 3 } ).value();
     friendly.beginBattle();
@@ -561,7 +570,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CombatIsDeterministic )
 {
     open();
     sw::SRPGBattlefield twin;
-    twin.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( twin, 8, 8, "plain", _settings, 7 );
     sw::vector<int32> listAttacker;
     for ( int32 column = 0; column < 6; ++column )
     {
@@ -618,7 +627,7 @@ SW_TEST_CASE_F( SRPGRulesTest, PlacingAndTerrain )
     SW_EXPECT_TRUE( place( "gm", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } ).has_value() ); // 격파된 유닛의 셀은 비었다
 
     sw::SRPGBattlefield noGround;
-    noGround.initialize( &_catalog, 2, 2, "nothing", _settings, 7 );
+    openField( noGround, 2, 2, "nothing", _settings, 7 );
     SW_EXPECT_FALSE( noGround.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).has_value() );
     SW_EXPECT_TRUE( noGround.findTerrainAt( sw::int2{ 0, 0 } ) == nullptr );
     SW_EXPECT_EQUAL( 0, noGround.computeAptitude( *_field.findUnit( first ), sw::int2{ 0, 0 } ) );
@@ -655,7 +664,7 @@ SW_TEST_CASE_F( SRPGRulesTest, MovementRange )
     SW_EXPECT_EQUAL( 1, countEvents( sw::SRPGEvent::Kind::Moved ) );
 
     sw::SRPGBattlefield blocked;
-    blocked.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( blocked, 8, 8, "plain", _settings, 7 );
     const int32 walker = blocked.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     (void)blocked.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 1, 0 } );
     (void)blocked.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 0, 1 } );
@@ -678,7 +687,7 @@ SW_TEST_CASE_F( SRPGRulesTest, MovementRange )
  */
 SW_TEST_CASE_F( SRPGRulesTest, ZoneOfControl )
 {
-    _settings._bZoneOfControl = SW_TRUE;
+    _settings._bZoneOfControl = true;
     open();
     const int32 mover = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     const int32 foe   = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 1 } ).value();
@@ -706,7 +715,7 @@ SW_TEST_CASE_F( SRPGRulesTest, ZoneOfControl )
  */
 SW_TEST_CASE_F( SRPGRulesTest, MoveDodge )
 {
-    _settings._bMoveDodge = SW_TRUE;
+    _settings._bMoveDodge = true;
     _settings._dodgeMax   = 12;
     open();
     const int32 first  = place( "gm", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
@@ -800,7 +809,7 @@ SW_TEST_CASE_F( SRPGRulesTest, PhaseFlow )
     SW_EXPECT_EQUAL( 2, _field.getTurn() );
 
     sw::SRPGBattlefield onlyEnemy;
-    onlyEnemy.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( onlyEnemy, 8, 8, "plain", _settings, 7 );
     (void)onlyEnemy.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } );
     onlyEnemy.beginBattle();
     SW_EXPECT_EQUAL( sw::SRPGTeam::Enemy, onlyEnemy.getPhaseTeam() ); // 아군이 없으면 적부터
@@ -891,7 +900,7 @@ SW_TEST_CASE_F( SRPGRulesTest, StateRoundTrip )
     sw::Archive written;
     _field.writeState( written );
     sw::SRPGBattlefield restored;
-    restored.initialize( &_catalog, 8, 8, "plain", _settings, 99 );
+    openField( restored, 8, 8, "plain", _settings, 99 );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 
@@ -907,7 +916,7 @@ SW_TEST_CASE_F( SRPGRulesTest, StateRoundTrip )
     }
 
     sw::SRPGBattlefield smaller;
-    smaller.initialize( &_catalog, 4, 4, "plain", _settings, 1 );
+    openField( smaller, 4, 4, "plain", _settings, 1 );
     sw::Archive readingAgain( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( smaller.readState( readingAgain ) );
 }
@@ -1433,7 +1442,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderPlansTargets )
     _field.setCommander( killable, false );
 
     sw::SRPGBattlefield risky;
-    risky.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( risky, 8, 8, "plain", _settings, 7 );
     const int32 hunter = risky.addUnit( "striker", "rookie", sw::SRPGTeam::Player, sw::int2{ 3, 3 } ).value();
     (void)risky.addUnit( "weak", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 4, 3 } ); // 반격한다
     const int32 harmless = risky.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 2, 3 } ).value();
@@ -1465,7 +1474,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
     SW_EXPECT_FALSE( _field.canAct( unitIndex ) ); // 행동이 끝났다
 
     sw::SRPGBattlefield distant;
-    distant.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( distant, 8, 8, "plain", _settings, 7 );
     const int32 walker = distant.addUnit( "runner", "rookie", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     (void)distant.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 7, 0 } );
     distant.beginBattle();
@@ -1479,7 +1488,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
     SW_EXPECT_TRUE( plan._moveCell == ( sw::int2{ 0, 0 } ) );
 
     sw::SRPGBattlefield alone;
-    alone.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( alone, 8, 8, "plain", _settings, 7 );
     const int32 lonely = alone.addUnit( "runner", "rookie", sw::SRPGTeam::Player, sw::int2{ 4, 4 } ).value();
     alone.beginBattle();
     SW_REQUIRE_TRUE( ai.makePlan( alone, lonely, plan ) );
@@ -1530,7 +1539,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderRunsPhase )
 
     _settings._turnMode = sw::SRPGTurnMode::Individual;
     sw::SRPGBattlefield individual;
-    individual.initialize( &_catalog, 8, 8, "plain", _settings, 7 );
+    openField( individual, 8, 8, "plain", _settings, 7 );
     const int32 solo = individual.addUnit( "runner", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 0, 0 } ).value();
     (void)individual.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 7, 7 } );
     individual.beginBattle();
@@ -1581,6 +1590,7 @@ SW_TEST_CASE( SRPGCatalogTest, ReportsBrokenElements )
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "Xml.UnknownElement" );
     constexpr const utf8* kBrokenXML = R"(<SRPGCatalog>
+  <Rules baseHit="70" baseCrit="5" critPercent="150" minimumDamage="10" sizeHitStep="5" moraleStart="100" moraleMin="50" moraleMax="150" moraleOnHit="2" moraleOnKill="5" moraleOnEvade="3" moraleOnDamaged="1" supportDefenseReduction="50" syncDamagePercent="50" dodgePerCell="5" dodgeMax="30" xpHit="10" xpKill="30" xpLevelStep="2" turnMode="Phases" zoneOfControl="false" supportAttack="true" supportDefense="true" syncAttack="false" moveDodge="false" mapFriendlyFire="false"/>
   <Terrain id="short" name="Short" cost="1 1 1"/>
   <Terrain id="long" name="Long" cost="1 1 1 1 1"/>
   <Terrain id="fine" name="Fine" cost="1 - 2 0"/>
@@ -1608,4 +1618,19 @@ SW_TEST_CASE( SRPGCatalogTest, ReportsBrokenElements )
     SW_EXPECT_TRUE( catalog.findUnit( "badaptitude" ) == nullptr );
     SW_EXPECT_TRUE( catalog.findUnit( "baddevelop" ) == nullptr );
     SW_EXPECT_TRUE( catalog.findUnit( "dangling" ) != nullptr );
+}
+
+/** @brief [SRPGCatalogTest] 규칙(`<Rules>`) 없는 카탈로그 · 칸이 빠진 규칙 · 기력 순서가 틀린 규칙은 로드가 실패한다 — 전장이 C++ 기본값으로 열리지 않는다(감사 K-4) */
+SW_TEST_CASE( SRPGCatalogTest, CatalogWithoutRulesIsRefused )
+{
+    SW_EXPECT_LOG( "SRPGCatalog.RulesMissing" );
+    SW_EXPECT_LOG( "SRPGCatalog.RulesInvalid" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    SW_EXPECT_LOG( "SRPGCatalog.RulesMoraleOutOfOrder" );
+    sw::SRPGCatalog bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<SRPGCatalog><Terrain id="plain" name="Plain"/></SRPGCatalog>)", "SRPGTest" ) );
+    sw::SRPGCatalog partial;
+    SW_EXPECT_FALSE( partial.loadFromXMLText( R"(<SRPGCatalog><Rules baseHit="70"/><Terrain id="plain" name="Plain"/></SRPGCatalog>)", "SRPGTest" ) );
+    sw::SRPGCatalog invalidOrder;
+    SW_EXPECT_FALSE( invalidOrder.loadFromXMLText( R"(<SRPGCatalog><Rules baseHit="70" baseCrit="5" critPercent="150" minimumDamage="10" sizeHitStep="5" moraleStart="100" moraleMin="120" moraleMax="150" moraleOnHit="2" moraleOnKill="5" moraleOnEvade="3" moraleOnDamaged="1" supportDefenseReduction="50" syncDamagePercent="50" dodgePerCell="5" dodgeMax="30" xpHit="10" xpKill="30" xpLevelStep="2" turnMode="Phases" zoneOfControl="false" supportAttack="true" supportDefense="true" syncAttack="false" moveDodge="false" mapFriendlyFire="false"/><Terrain id="plain" name="Plain"/></SRPGCatalog>)", "SRPGTest" ) );
 }

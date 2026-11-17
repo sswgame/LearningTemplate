@@ -11,10 +11,9 @@
 	<AllowLog id="Audio.DeviceLost" reason="장치 없는 러너에서도 오프라인으로 돈다"/>
 	<DevCommand line="camera.preset orbit"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
-	<Wait frames="5"/>
 	<WaitUntil watch="Audio.InstanceCount" atLeast="2" timeoutWallSeconds="10"/>
-	<!-- 궤도 감쇠(0.2 초)가 자리 잡을 시간 -->
-	<Wait frames="60"/>
+	<!-- 궤도 감쇠(0.2 초)가 자리 잡을 때까지 — 환경음과의 거리가 끝자리에 닿는다 -->
+	<WaitUntil watch="Audio.EmitterDistance" target="PowerBoxHum" near="29.7" tolerance="0.6" timeoutSeconds="3"/>
 	<Expect watch="Object.DistanceTo" target="ViewCamera" key="Player" atLeast="5"/>
 	<!-- 그리는 카메라는 PlayerCamera 이고 카메라 매니저가 뷰 타깃 ViewCamera(디렉터) 자리에 둔다 -->
 	<Expect watch="Camera.FrameObject" is="PlayerCamera"/>

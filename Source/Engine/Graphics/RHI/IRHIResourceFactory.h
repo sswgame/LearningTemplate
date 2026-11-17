@@ -91,6 +91,13 @@ namespace sw
 
         /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::getMeshVertexAttributes`)이 정합니다. */
         [[nodiscard]] virtual RHIBufferHandle createVertexBuffer( const void* pData, uint32 sizeBytes ) = 0;
+        /**
+         * @brief 내용 없이 GPU 쪽에만 있는 정점 버퍼를 만듭니다 — GPU 복사(`IRHICommandList::copyBufferRegion`)의 도착이 되는 버퍼다(감사 R-15 — 정점 풀이 CPU 정점 대신 GPU 원본에서 채운다).
+         * @details `createVertexBuffer` 의 버퍼는 DX12 업로드 힙이라 복사 도착이 될 수 없다. 이 버퍼는 CPU 가 쓰지 않는다(`updateGeometryBufferRegions` 를 받지 않는다) — 내용은 복사로만 들어온다.
+         *          백엔드: DX12 default 힙(상태 추적, COMMON 으로 시작) · Vulkan 전송 도착 · 원본 용도(호스트 보임 메모리 — 엔진의 모든 Vulkan 버퍼와 같다) · DX11 DEFAULT ·
+         *          GL 빈 `glBufferData` · WebGPU CopyDst · CopySrc. 처음 내용은 0 이다(DX12 · Vulkan 은 정해지지 않아 복사 전에는 읽지 않는다).
+         */
+        [[nodiscard]] virtual RHIBufferHandle createGPUVertexBuffer( uint32 sizeBytes ) = 0;
 
         /**
          * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 **여러 조각**을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
@@ -309,6 +316,26 @@ namespace sw
          *          DX12 만 번호를 남겨 늦은 해제가 다시 발급된 번호를 놓았다). 텍스처 주인이 아닌 쪽은 번호를 해제하지 않고 파괴에 맡긴다.
          */
         virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
+        /**
+         * @brief 산 텍스처 번호 @p index 가 @p texture 를 가리키게 합니다. 번호는 그대로다(감사 R-6 — 밉 올리기 · 내리기 · 크기 변경 · 핫 리로드가 머티리얼을 다시 묶지 않는다).
+         * @details 조건은 등록과 같다(첫 업로드가 끝난 Texture2D, 병렬 기록 밖). 번호와 주인별 번호 목록의 자리만 옮기고 옛 텍스처는 부르는 쪽이 부순다(그 파괴는 이 번호를 놓지 않는다).
+         *          에뮬레이션(DX11 · GL · WebGPU)은 기록 때 번호를 자원으로 풀므로 등록표 값만 바꾼다. 네이티브 bindless(DX12 · Vulkan)는 진행 중 프레임이 읽는
+         *          디스크립터를 덮지 않도록 링 슬롯마다의 사본에 그 슬롯의 차례에 쓴다(`RHIDescriptorRingMirror`) — 늦어도 다음 프레임부터 보인다.
+         *          언리얼 `RHIUpdateTextureReference` · Godot `texture_replace` 자리다.
+         * @return 산 번호가 아니거나 텍스처가 조건에 맞지 않으면 false 이고 아무것도 바꾸지 않는다.
+         */
+        [[nodiscard]] virtual bool rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) = 0;
+        /**
+         * @brief 텍스처 번호 하나만 예약합니다. **어느 스레드에서든** 부른다(병렬 기록 중에도 — 번호 발급기만 짧은 잠금으로 건드리고 기록 경로가 읽는 칸은 바꾸지 않는다).
+         * @details 예약한 번호는 아직 산 칸이 아니다 — `activateReservedBindlessTexture` 가 렌더 스레드에서 디스크립터를 쓰고 살린다(`IRHIDevice::reserveBindlessTexture` 가 둘을 잇는다).
+         *          텍스처 캐시가 로드를 시작할 때 번호를 정해 두어, 로드가 끝나도 번호가 바뀌지 않게 한다(감사 R-6 — 언리얼 `FD3D12BindlessDescriptorManager` 도 할당은 스레드 안전이고 갱신은 뒤에 한다).
+         * @return 표가 차면 kInvalidDescriptorIndex 입니다.
+         */
+        [[nodiscard]] virtual RHIDescriptorIndex reserveBindlessTextureIndex() = 0;
+        /**
+         * @brief 예약한 번호 @p index 에 @p texture 를 등록해 산 칸으로 만듭니다(렌더 스레드, 병렬 기록 밖 — 등록과 같은 조건). 실패하면 false 이고 번호는 예약된 채 남는다.
+         */
+        [[nodiscard]] virtual bool activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture ) = 0;
         /**
          * @brief 살아 있는 텍스처의 첫 업로드가 끝나 등록 · 샘플해도 되는지 묻습니다(전송한 적이 없으면 true, 없는 핸들이면 false). 오류를 남기지 않습니다.
          * @details 받은 핸들의 내력을 모르는 쪽(에디터 UI 가 패널에서 받는 텍스처)이 등록 전에 묻는다 — 끝날 때까지 그 텍스처를 그리지 않고 다음 프레임에 다시 묻는다.

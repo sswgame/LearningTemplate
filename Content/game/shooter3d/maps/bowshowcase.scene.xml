@@ -1,5 +1,5 @@
 <?asset guid="8f64b77192724d8ae7a907e7fcbe831b"?>
-<Scene formatVersion="2" name="BowShowcase">
+<Scene formatVersion="3" name="BowShowcase">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -83,7 +83,7 @@
 					                       _skeletonPath=""
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"

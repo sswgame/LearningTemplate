@@ -350,10 +350,10 @@ namespace sw
             // 단계 n(1 부터)은 마스크 n - 1 이다 — 메시 LOD n 이 단계 n 이다(예전 `min( n, 단계 수 - 1 )` 은 마지막 본 단계에 닿지 못했다).
             const optional<uint32> meshLODIndex  = pClient->findMeshLODIndex();
             const uint32           boneMaskCount = pClient->getBoneLODMaskCount();
-            if ( boneMaskCount > 0 && meshLODIndex.has_value() )
+            if ( state._bVisible == SW_TRUE && boneMaskCount > 0 && meshLODIndex.has_value() )
                 state._boneLODLevel = static_cast<uint8>( MathUtil::min( *meshLODIndex, boneMaskCount ) );
-            // 예산은 포즈를 만드는 것만 센다 — 화면 밖에서 포즈를 건너뛰는 것은 이미 0 이다.
-            if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
+            // 예산은 보이는 것만 센다 — 화면 밖은 포즈를 만들지 않거나(0), 판정 캐릭터(`AlwaysTickPoseAndRefreshBones`)라 예산에 밀리면 안 된다.
+            if ( state._bVisible == SW_TRUE )
                 _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );
         }
 
@@ -368,7 +368,7 @@ namespace sw
             AnimationLODState& state = _listScratchLODState[clientIndex];
             if ( gv_animationForceVertexAnimation != 0 )
                 state._bVertexAnimation = SW_TRUE;
-            if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
+            if ( state._bVisible == SW_TRUE )
                 state.applyBudgetDivisor( _listScratchBudgetItem[budgetIndex++]._updateRateDivisor );
             // 고정한 등급은 페이드 없이 바로 그 등급의 끝 상태다 — 시간을 멈춘(gv_timeScale=0) 검증이 같은 시각의 두 장을 견줄 수 있게.
             if ( gv_animationLODGrade >= 0 )

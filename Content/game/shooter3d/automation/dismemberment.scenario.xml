@@ -13,12 +13,11 @@
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<WaitUntil watch="Object.Exists" target="SkeletonMinion" equals="1" timeoutSeconds="30"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="10"/>
 	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
 	<Store watch="Dismemberment.MeshLODCount" target="SkeletonMinion" as="bodyLODs"/>
 
 	<DevCommand line="combat.hit SkeletonMinion upperarm.l 1"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 약한 피해로는 두 프레임 안에 잘리지 않는지 본다(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
 	<Expect watch="Object.Exists" target="SkeletonMinion_Arm_L" equals="0"/>
 

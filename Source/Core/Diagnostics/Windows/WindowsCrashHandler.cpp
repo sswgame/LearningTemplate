@@ -207,14 +207,17 @@ namespace sw
                 //
                 // 힙이 이미 깨져서 죽은 경우라면 아래 심볼 변환에서 다시 죽을 수 있다. 그래서 할당이 없는 덤프 · 컨텍스트를 먼저
                 // 확보한다. 심볼 변환이 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
-                // **이 두 줄을 아래로 옮기지 말 것.**
+                // **덤프를 아래로 옮기지 말 것.**
                 CrashHandler& handler          = *crash._pHandler;
                 const bool    bMiniDumpWritten = writeMiniDump( handler, crash._pExceptionInfo, crash._faultThreadID );
                 handler.recordProgress();
-                handler.writeContextFile( crash._pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
+                // 접근 위반의 자세한 이유는 덤프 **뒤에**, 이 스레드(시한이 지키는 쪽)에서 만든다 — 로더 락 · 힙을 건드려 막힐 수 있다(describeAccessViolation 설명).
+                const utf8* const pReason = describeFault( crash, hFaultThread );
+                handler.recordProgress();
+                handler.writeContextFile( pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
 
                 // 본문은 세 플랫폼이 함께 쓴다(CrashHandler.cpp).
-                handler.writeReport( crash._pReason, crash._pFaultAddress, crash._pPlatformContext, bMiniDumpWritten, hFaultThread );
+                handler.writeReport( pReason, crash._pFaultAddress, crash._pPlatformContext, bMiniDumpWritten, hFaultThread );
             }
 
             /** @brief 보고 스레드입니다. 신호가 오면 그 크래시를 쓰고 끝났다고 알립니다. */
@@ -344,9 +347,13 @@ namespace sw
             /**
              * @brief 접근 위반이면 이유 글에 **무엇을 어떻게 접근하려 했는지**(읽기 · 쓰기 · 실행과 대상 주소)와 폴트가 난 코드가 든 모듈(이름 + 오프셋)을 덧붙입니다.
              * @details 보고의 "at address" 는 폴트가 난 **명령어**의 주소라서, 그 명령어가 건드리려던 데이터 주소와 모듈 없이는 "어느 포인터가 죽었나" · "해제된 이미지의 코드인가" 를
-             *          알 수 없다. 크래시 순간이라 힙을 쓰지 않고 정적 버퍼에 쓴다.
+             *          알 수 없다. 결과는 정적 버퍼에 쓴다.
+             *          **폴트 스레드의 필터에서 부르지 않는다.** 모듈 이름 찾기(`GetModuleHandleExW` · `GetModuleFileNameW`)는 로더의 잠금을, 스레드 이름(`GetThreadDescription`)은
+             *          프로세스 힙을 쓴다. 그 잠금을 쥔 채 죽은 스레드(DllMain 안 · 힙 안의 폴트)의 필터에서 부르면 보고 시한이 걸리기 전이라 프로세스가 영영 선다.
+             *          보고 스레드가 덤프를 쓴 뒤 부른다 — 막히면 폴트 스레드의 시한이 끝낸다(덤프는 이미 남았다).
+             * @param hThread 폴트 스레드의 핸들(이름을 읽는다, nullptr 이면 이름 없이). @param threadID 폴트 스레드의 번호.
              */
-            static const utf8* describeAccessViolation( const EXCEPTION_RECORD& record, const utf8* pBaseReason )
+            static const utf8* describeAccessViolation( const EXCEPTION_RECORD& record, const utf8* pBaseReason, HANDLE hThread, DWORD threadID )
             {
                 static utf8 s_arrReason[512];
                 const utf8* pAccess  = "access";
@@ -378,14 +385,26 @@ namespace sw
                 // 폴트가 난 스레드의 이름(`SetThreadDescription` 으로 붙인 것 — 렌더 스레드 · 워커 · 게임 스레드를 가른다). 없으면 번호만 적는다.
                 utf8  arrThreadName[96]{};
                 PWSTR pWideName = nullptr;
-                if ( SUCCEEDED( GetThreadDescription( GetCurrentThread(), &pWideName ) ) && pWideName != nullptr )
+                if ( hThread != nullptr && SUCCEEDED( GetThreadDescription( hThread, &pWideName ) ) && pWideName != nullptr )
                 {
                     (void)WideCharToMultiByte( CP_UTF8, 0, pWideName, -1, arrThreadName, static_cast<int32>( sizeof( arrThreadName ) - 1 ), nullptr, nullptr );
                     LocalFree( pWideName );
                 }
                 formatstring( s_arrReason, sizeof( s_arrReason ), "%# - %# of 0x%#, in %#+0x%#, thread %# '%#'", pBaseReason, pAccess, Fmt( static_cast<uint64>( dataAddr ), Format().hex() ), pName,
-                              Fmt( static_cast<uint64>( offset ), Format().hex() ), static_cast<uint64>( GetCurrentThreadId() ), arrThreadName );
+                              Fmt( static_cast<uint64>( offset ), Format().hex() ), static_cast<uint64>( threadID ), arrThreadName );
                 return s_arrReason;
+            }
+
+            /** @brief 보고에 적을 이유입니다 — 접근 위반 · 페이지 오류면 `describeAccessViolation` 으로 자세히, 그 밖은 필터가 정한 이름 그대로입니다. */
+            static const utf8* describeFault( const PendingCrash& crash, HANDLE hFaultThread )
+            {
+                const EXCEPTION_RECORD* const pRecord      = ( crash._pExceptionInfo != nullptr ) ? crash._pExceptionInfo->ExceptionRecord : nullptr;
+                const bool                    bAccessFault = pRecord != nullptr && ( pRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION || pRecord->ExceptionCode == EXCEPTION_IN_PAGE_ERROR );
+                if ( bAccessFault == false )
+                    return crash._pReason;
+                // 보고 스레드를 못 띄워 폴트 스레드가 직접 쓰는 길이면 핸들이 없다 — 그때는 지금 스레드가 폴트 스레드다.
+                const HANDLE hThread = ( hFaultThread == nullptr && GetCurrentThreadId() == crash._faultThreadID ) ? GetCurrentThread() : hFaultThread;
+                return describeAccessViolation( *pRecord, crash._pReason, hThread, crash._faultThreadID );
             }
 
             /** @brief 처리되지 않은 SEH 예외 필터입니다. 가장 안쪽 처리기가 보고하고, 이전 필터가 있으면 넘깁니다. */
@@ -397,8 +416,7 @@ namespace sw
                 {
                     pReason       = exceptionCodeName( pInfo->ExceptionRecord->ExceptionCode );
                     pFaultAddress = pInfo->ExceptionRecord->ExceptionAddress;
-                    if ( pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION || pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_IN_PAGE_ERROR )
-                        pReason = describeAccessViolation( *pInfo->ExceptionRecord, pReason );
+                    // 접근 위반의 자세한 이유는 여기서 만들지 않는다 — 보고 스레드가 덤프 뒤에 만든다(describeAccessViolation 설명).
                 }
                 CrashHandler* const pHandler = CrashHandlerProcessHook::findInstalled();
                 if ( pHandler != nullptr )

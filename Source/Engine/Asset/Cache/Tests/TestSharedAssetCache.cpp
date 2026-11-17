@@ -136,3 +136,14 @@ SW_TEST_CASE( SharedAssetCacheTest, ReloadWatchReportsEachReloadOnce )
     SW_EXPECT_FALSE( watch.takeChanged() );
     SW_EXPECT_FALSE( watch.isStale() );
 }
+
+/** @brief [SharedAssetRefTest] 빌린 참조의 스냅숏은 빌린 값을 가리킨다(소유하지 않는다) — 비어 있으면 스냅숏을 쥐는 워커 일감이 null 을 읽었다 */
+SW_TEST_CASE( SharedAssetRefTest, BorrowedSnapshotPointsAtTheBorrowedValue )
+{
+    const int32                       value = 7;
+    const sw::SharedAssetRef<int32>   ref   = sw::SharedAssetRef<int32>::borrow( &value );
+    const sw::shared_ptr<const int32> held  = ref.snapshot();
+    SW_REQUIRE_TRUE( held != nullptr );
+    SW_EXPECT_EQUAL( &value, held.get() );
+    SW_EXPECT_EQUAL( 0L, held.use_count() ); // 소유권 없는 별칭이다
+}

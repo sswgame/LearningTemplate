@@ -218,7 +218,7 @@ namespace sw
         else
         {
             collectAffectedLocked( unordered_set<const TypeInfo*>{ pRegistered }, listAffected );
-            clearAffectedLocked( listAffected );
+            relinkAffectedLocked( listAffected );
         }
 
         // 로그는 잠금 밖에서 남긴다. 리스너가 레지스트리를 다시 물어도 멈추지 않게 하려는 것이다.
@@ -397,7 +397,7 @@ namespace sw
             if ( _batchDepth == 0 )
             {
                 collectAffectedLocked( _uniqueBatchRoot, listAffected );
-                clearAffectedLocked( listAffected );
+                relinkAffectedLocked( listAffected );
                 _uniqueBatchRoot.clear();
             }
         }
@@ -443,32 +443,39 @@ namespace sw
         }
     }
 
-    void TypeRegistry::clearAffectedLocked( const vector<TypeInfo*>& listType )
+    void TypeRegistry::relinkAffectedLocked( const vector<TypeInfo*>& listType ) const
     {
+        // 부모 링크와 조상 표는 **이 독점 잠금 안에서** 새 값으로 바로 바꾼다 — 비웠다가 잠금 밖에서 다시 찾던 틈에 읽기가 끊긴 사슬을 보거나,
+        // 읽기가 표를 함께 지어 낡은 사슬로 덮을 수 있었다. 쓰는 쪽이 잠금으로 하나뿐이고 읽기(캐스트)는 원자값만 본다.
+        // 언리얼(`UStruct::ReinitializeBaseChainArray` 는 링크 때 쓰기 쪽이 짓고 `IsChildOf` 는 읽기만) · Godot(`ClassDB` 쓰기 잠금 안에서 상속 기록)과 같은 자리다.
         for ( TypeInfo* pType : listType )
         {
-            pType->clearParentType();
+            const TypeInfo* pParent = pType->_parentFQN.empty() ? nullptr : findTypeLocked( pType->_parentFQN, false );
+            pType->linkParentType( pParent );
+        }
+        // 표는 부모 링크가 **모두** 바뀐 뒤에 짓는다. 표는 사슬 끝까지 따라가고, 사슬 걷기(`getParentType`)는 레지스트리 타입에서 잠그지 않는다.
+        for ( const TypeInfo* pType : listType )
+        {
             pType->clearAncestorDisplay();
-            pType->clearInheritedProperties();
+            (void)pType->computeAncestorDisplay();
+        }
+        // 상속 목록도 **이 잠금 안에서** 새 판으로 바꿔 끼운다(`TypeInheritedPropertySlot`) — 해제하는 모듈의 프로퍼티를 가리키던 옛 판은 모듈이 살아 있는 지금 물러난다.
+        // 예전에는 여기서 비우고 잠금 밖에서 같은 벡터를 다시 채워, 그 틈에 다른 스레드의 조회가 "짓지 않았다" 로 멈추거나 반쯤 찬 목록을 읽었다(모듈 로드가
+        // 단일 스레드라는 가정에 기댔다). 짓기는 레지스트리를 다시 잠그지 않는다 — 사슬 걷기는 위에서 바꾼 링크만 읽는다.
+        for ( TypeInfo* pType : listType )
+        {
+            pType->rebuildDerivedCaches();
         }
         _inheritedCacheInvalidations.fetch_add( listType.size(), std::memory_order_relaxed );
     }
 
     void TypeRegistry::rebuildAffected( const vector<TypeInfo*>& listType ) const
     {
-        // 부모 포인터부터 모두 찾는다. 아래 셋이 부모를 따라가고, 캐스트의 핫패스는 이것만 본다.
-        for ( TypeInfo* pType : listType )
-        {
-            pType->resolveParentType();
-        }
-        for ( TypeInfo* pType : listType )
-        {
-            pType->rebuildDerivedCaches();
-        }
-        // 조상 표는 부모 포인터가 **모두** 찾아진 뒤에 만든다. 표는 사슬 끝까지 따라가므로 한 바퀴 뒤여야 한다.
+        // 부모 링크 · 조상 표 · 상속 목록은 잠금 안에서 이미 바꿨다(`relinkAffectedLocked`). 여기는 잠금 밖에서만 할 수 있는 것 — 로그와 판정이다.
         for ( const TypeInfo* pType : listType )
         {
-            (void)pType->computeAncestorDisplay();
+            if ( pType->_parentFQN.empty() == false && pType->getTypeChain().isLoop() )
+                SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", pType->_fullyQualifiedName.c_str() );
         }
         // 판정(세이브 옵트인, 검증 함수 유무, POD)은 모든 상속 목록을 지은 뒤 구한다 — 검증 판정이 칸 타입의 목록을 재귀로 읽는다. 조회는 읽기만 한다.
         for ( TypeInfo* pType : listType )
@@ -654,7 +661,7 @@ namespace sw
         SW_PROFILE_SCOPE( "Reflection.populateLookupCaches" );
         vector<TypeInfo*> listType;
         {
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
+            UniqueLock<shared_mutex> lock{ _mutex };
             listType.reserve( _mapFqnToClassType.size() );
             for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
             {
@@ -662,8 +669,9 @@ namespace sw
                 if ( pInfo->isAlive() )
                     listType.push_back( pInfo.get() );
             }
+            relinkAffectedLocked( listType );
         }
-        // **잠금 밖에서** 짓는다. 부모를 찾으려고 레지스트리를 다시 잠그는데, shared_mutex 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춘다.
+        // 판정은 **잠금 밖에서** 구한다(상속 목록은 위 잠금 안에서 바꿨다). 판정이 레지스트리를 다시 잠그는데(`isType`), shared_mutex 는 재귀가 아니라 잠금 안에서 부르면 그 자리에서 멈춘다.
         rebuildAffected( listType );
     }
 
@@ -765,9 +773,9 @@ namespace sw
         {
             assignWireTypeNameLocked( retiredName, hashed_string{}, WireTypeKind::Retired, wireNameClash );
         }
-        // 자손의 부모 포인터는 **해제된 부모**를 가리킨다. 비워서 이름으로 다시 찾게 한다(해제된 타입은 `findType` 이 nullptr 라 사슬은 거기서 끝난다).
+        // 자손의 부모 포인터는 **해제된 부모**를 가리킨다. 이름으로 다시 찾아 바꾼다(해제된 타입은 찾지 못해 사슬은 거기서 끝난다).
         // 상속 목록은 내려가는 모듈의 프로퍼티를 가리킨다 — 모듈이 아직 살아 있는 지금 버린다(`clearContent` 와 같은 이유).
-        clearAffectedLocked( listAffected );
+        relinkAffectedLocked( listAffected );
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
         lock.unlock();
         rebuildAffected( listAffected );
@@ -842,7 +850,7 @@ namespace sw
         else
         {
             collectAffectedLocked( unordered_set<const TypeInfo*>{ &stored }, listAffected );
-            clearAffectedLocked( listAffected );
+            relinkAffectedLocked( listAffected );
         }
         lock.unlock();
         rebuildAffected( listAffected );

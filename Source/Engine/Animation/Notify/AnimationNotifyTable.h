@@ -202,6 +202,11 @@ namespace sw
         virtual vector_reference<const AnimationNotifyParamDef> getParams() const = 0;
         /** @brief 구간 알림(시작, 틱, 끝)을 받는지 반환합니다. */
         virtual bool supportsState() const { return false; }
+        /**
+         * @brief 소켓 · 본 위치로 게임 판정(맞음)을 하는지 반환합니다. 참이면 이 처리기를 쓰는 표를 단 유닛은 화면 밖에서도 본을 갱신해야 한다
+         *        (`SkeletalMeshComponent::requireBonesWhenNotRendered`, 아니면 로드 오류). 소리 · 발자국 · 카메라 흔들림처럼 보이는 효과만 내는 처리기는 거짓이다.
+         */
+        virtual bool usesBonesForHitDetection() const { return false; }
         /** @brief 길이 없는 알림이 울렸습니다. */
         virtual void onNotify( AnimationNotifyContext& context ) const { (void)context; }
         /** @brief 구간이 열렸습니다. */

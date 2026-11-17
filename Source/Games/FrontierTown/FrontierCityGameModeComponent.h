@@ -15,6 +15,8 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw
@@ -57,7 +59,10 @@ namespace sw
         [[nodiscard]] static bool initializeCity( CitySimulation& outCity, SessionStateComponent& state );
         /** @brief 첫 틱의 배치 — 기념 건물과 도로입니다. 놓지 못하면 이유를 남긴다(데이터 오류). */
         void layOutTown();
-        void spawnTiles( GameObjectManager& manager );
+        /** @brief 지금 도시(건물 · 도로)를 동기화에 쌓습니다 — 바뀐 슬롯만 맞출 목록에 들어간다. */
+        void             collectTileViews();
+        GameObjectHandle spawnBuildingView( GameObjectManager& manager, size_t buildingIndex, const CityBuildingDef& def );
+        GameObjectHandle spawnRoadView( GameObjectManager& manager, size_t tileIndex );
 
     private:
         PROPERTY( Category = "Prefabs", Tooltip = "One tile view (a cube)" )
@@ -80,18 +85,20 @@ namespace sw
         int32 _roadToX;
         PROPERTY( Category = "Layout", DisplayName = "Road End Y", Min = 0 )
         int32 _roadToY;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held", Min = 1.0 )
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
         float32 _fastTimeScale;
         PROPERTY( Category = "Look", DisplayName = "Building Color" )
         float4 _buildingColor;
         PROPERTY( Category = "Look", DisplayName = "Road Color" )
         float4 _roadColor;
 
-        CitySimulation           _city;
-        MaterialTintCache        _tintCache;
-        vector<GameObjectHandle> _listTileView;
-        uint8                    _bLaidOut    : 1;
-        uint8                    _bViewsDirty : 1;
-        uint8                    _reserved    : 6;
+        CitySimulation                             _city;
+        MaterialTintCache                          _tintCache;
+        SimulationViewSync<const CityBuildingDef*> _buildingViews; ///< 건물 번호 → 지금 건물 정의(허물렸으면 nullptr)
+        SimulationViewSync<uint8>                  _roadViews;     ///< 타일 번호(y × 너비 + x) → 도로(1)
+        GameSpeedControl                           _speed;         ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
+        uint8                                      _bLaidOut    : 1;
+        uint8                                      _bViewsDirty : 1;
+        uint8                                      _reserved    : 6;
     };
 } // namespace sw

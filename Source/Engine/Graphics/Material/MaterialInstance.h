@@ -141,8 +141,11 @@ namespace sw
             string        _acquiredPath; ///< 마지막으로 맞춘 경로. 읽지 못했어도 적어 두어 매 프레임 다시 시도하지 않는다.
             TextureHandle _load{};       ///< 요청한 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 이유를 한 번 남기고 놓는다.
 
-            /** @brief 준비된 텍스처입니다. 읽는 중이거나 요청이 없으면 nullptr 입니다(그동안 부모의 텍스처가 보인다). 다시 올려도 객체는 그대로라 SRV 를 그때마다 읽는다. */
-            Texture2D* findReadyTexture() const { return _load.isReady() ? _load.getOperation()->getTexture() : nullptr; }
+            /**
+             * @brief 덮어쓴 텍스처의 bindless 번호입니다 — 읽는 중이면 로드 중 텍스처를, 끝나면 진짜 텍스처를 가리키는 같은 번호다(R-6, `TextureLoadOperation::getStableSRV`).
+             *        요청이 없거나 번호가 없으면 kInvalidDescriptorIndex 이고 부모의 텍스처가 보인다.
+             */
+            RHIDescriptorIndex getStableSRV() const { return _load.isValid() ? _load.getOperation()->getStableSRV() : kInvalidDescriptorIndex; }
         };
 
         /** @brief 값 덮어쓰기의 모양입니다. 스칼라 · 벡터는 이진으로 들고 글은 저장 · 조회 때만 만든다. */
@@ -228,8 +231,6 @@ namespace sw
         uint32                _renderDataOverrideRevision; ///< `_renderData` 를 만들 때의 `_overrideRevision`
         /** @brief 텍스처 덮어쓰기를 빌린 디바이스입니다. 반환할 때 씁니다(디바이스가 죽으면 clearRHI 가 비웁니다). */
         IRHIDevice* _pTextureDevice;
-        /** @brief 덮어쓴 텍스처를 패킹할 때의 `TextureCache::getReloadGeneration()` 입니다. 다르면 다시 올라온 텍스처의 새 SRV 를 다시 패킹합니다. */
-        uint32 _textureReloadGeneration;
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

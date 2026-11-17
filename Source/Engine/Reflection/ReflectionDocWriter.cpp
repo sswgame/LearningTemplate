@@ -8,6 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -151,13 +152,19 @@ namespace sw
         if ( type._listProperty.empty() == false )
         {
             out += "\n| 프로퍼티 | 타입 | 기본값 | 범위 | 플래그 | 설명 |\n|---|---|---|---|---|---|\n";
-            for ( const PropertyInfo& prop : type._listProperty )
+            // 타입마다 절이 따로라 선언한 칸만 적는다(기반 칸은 기반 타입의 절) — 걷기 한 곳(`ReflectPropertyVisitor`)의 선언 칸 걷기다.
+            ReflectVisitOptions options;
+            options._bWithBase = SW_FALSE;
+            const ReflectPropertyVisitor propertyVisitor{ options };
+            (void)propertyVisitor.visitProperties( type, static_cast<const void*>( nullptr ), [&out]( const ReflectVisitConstField& field )
             {
-                const string& tooltip = prop._metadata->getEditor()._tooltip;
+                const PropertyInfo& prop    = field._property;
+                const string&       tooltip = prop._metadata->getEditor()._tooltip;
                 out += "| `" + string( prop._name.c_str() ) + "` | `" + ReflectionDocWriterInternal::escapeCell( prop._typeName.view() ) + "` | " +
                        ReflectionDocWriterInternal::escapeCell( prop._metadata->_defaultValue ) + " | " + ReflectionDocWriterInternal::makeRange( *prop._metadata ) +
                        " | " + ReflectionDocWriterInternal::makePropertyFlags( prop ) + " | " + ReflectionDocWriterInternal::escapeCell( tooltip ) + " |\n";
-            }
+                return ReflectVisitFlow::Continue;
+            } );
         }
 
         bool bFunctionHeader = false;

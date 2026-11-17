@@ -137,7 +137,7 @@ def select_staged_entries(bin_dir: Path, target: str) -> list[Path]:
 
 
 def select_staged_packs(project_root: Path, pack_dir: Path, game: str) -> list[Path]:
-    """패키지에 담는 팩입니다 — 공용 팩과 그 게임의 팩만(`list_pack_name_of_game`).
+    """패키지에 담는 팩입니다 — 공용 팩과 그 게임의 팩(나눈 형제 팩 포함)만(`list_pack_name_of_game`).
 
     Bin/Packs 는 Dev · Shipping 빌드가 모든 게임의 팩을 굽고 지난 쿠킹의 팩도 남는 폴더라 통째로 베끼지 않는다.
     이름은 게임 프리셋에서 고르고, 그 팩이 없으면 실패다(빠진 팩을 둔 패키지는 기동하지 못한다).
@@ -149,7 +149,12 @@ def select_staged_packs(project_root: Path, pack_dir: Path, game: str) -> list[P
     list_missing = [name for name in list_name if (pack_dir / name).is_file() is False]
     if list_missing:
         raise PackageError(f"{pack_dir} has no {', '.join(list_missing)} for game {game} - cook first")
-    return [pack_dir / name for name in list_name]
+    # 나눈 도메인은 형제 팩(`<도메인>.<번호>.pack` · `<도메인>.<청크>.<번호>.pack` — `PackCooker::makePackFileName`)을 함께 싣는다. 쿠커가 쓰지 않은 형제는 지운다.
+    list_pack: list[Path] = []
+    for name in list_name:
+        list_pack.append(pack_dir / name)
+        list_pack.extend(sorted(path for path in pack_dir.glob(f"{Path(name).stem}.*.pack") if path.is_file()))
+    return list_pack
 
 
 def select_staged_mods(project_root: Path, list_mod_id: list[str]) -> list[tuple[str, list[Path]]]:

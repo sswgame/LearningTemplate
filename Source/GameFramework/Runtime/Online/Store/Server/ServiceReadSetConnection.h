@@ -8,8 +8,8 @@
  *            읽은 버전으로 바꾼다(읽고 덮어쓰는 갱신이 남의 커밋을 지우지 않게). 어긋나면 저장소가 `Conflict` 를 돌려주고 부르는 쪽이 다시 읽는다.
  *          - 커밋 뒤에는(결과와 상관없이) 읽은 것을 비운다. 그래서 한 시도(읽기 → 커밋 한 번)마다 새 포장을 두거나, 다시 시도할 때 판단에 쓴 레코드를 다시 읽는다.
  *          - `listRecords` 는 기억하지 않는다. shortcut: 범위 읽기의 "그사이 생긴 레코드"(팬텀)는 막지 못한다 — 목록으로 판단하는 저장 함수가 생기면 범위 판(색인 레코드 버전)을 둔다.
- *          Nakama 저장소 객체 버전 · EF Core 동시성 토큰과 같은 자리이고, 언리얼 · 유니티는 서버 저장소를 두지 않는다. 기억한 조건을 붙여 상한(`ServiceTransaction::kMaxWriteCount`)을
- *          넘으면 저장소가 `Invalid` 를 돌려준다 — 조건을 빼고 쓰지 않는다.
+ *          Nakama 저장소 객체 버전 · EF Core 동시성 토큰과 같은 자리이고, 언리얼 · 유니티는 서버 저장소를 두지 않는다. 덧붙인 조건은 쓰기 상한(`kMaxWriteCount`)에 들지 않고
+ *          조건 상한(`ServiceTransaction::kMaxConditionCount`)에 든다 — 넘으면 저장소가 `Invalid` 를 돌려준다(조건을 빼고 쓰지 않는다).
  */
 #pragma once
 #include "Core/Container/string.h"

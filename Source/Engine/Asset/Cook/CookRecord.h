@@ -29,8 +29,6 @@ namespace sw
         uint64            _outputHash{ 0 };
         vector<CookInput> _listInput;
 
-        /** @brief 끝난 작업 @p job 과 출력 바이트로 기록을 만듭니다. */
-        static CookRecord make( const CookJob& job, const vector<uint8>& outputBytes );
         /** @brief 출력 해시를 이미 구했을 때의 기록 만들기입니다(`CookStore` 가 시간을 재며 한 번만 해시한다 — 바이트를 다시 훑지 않는다). */
         static CookRecord make( const CookJob& job, uint64 outputHash );
 
@@ -85,7 +83,7 @@ namespace sw
      *          항목은 머리(형식 · 키 서술 길이 · 본문 해시) + 키 서술 + 본문이다. 서술이 글자 그대로 같고 본문 해시가 맞을 때만 히트다 — 64 비트 키 충돌과
      *          다른 머신이 쓴 깨진 바이트(공유 층은 신뢰 경계)가 조용히 틀린 산출물 대신 미스 + 경고가 된다.
      *          폴더가 아닌 백엔드(HTTP · 버킷)는 호스팅이 정해질 때 가상 인터페이스로 낸다 — 지금은 층이 모두 폴더다.
-     *          쓰기는 임시 파일 + 원자 교체(`FileUtil::writeFile`)이고, 같은 서술 · 같은 본문의 항목이 이미 있으면 그대로 둔다 — 같은 내용의 원본 둘(병렬 임포트) ·
+     *          쓰기는 임시 파일 + 원자 교체(`AtomicFileWriter` — 본문을 조각으로 흘린다)이고, 같은 서술 · 같은 본문의 항목이 이미 있으면 그대로 둔다 — 같은 내용의 원본 둘(병렬 임포트) ·
      *          같은 셰이더를 함께 컴파일하는 프로세스가 한 파일을 다투지 않고, 교체를 진 쪽도 이긴 쪽의 같은 항목을 보면 성공이다.
      *          셰이더 디스크 캐시(`Saved/ShaderCompileCache`)도 이 항목 형식을 쓴다(층 하나).
      */
@@ -108,21 +106,25 @@ namespace sw
          */
         [[nodiscard]] static expected<DerivedDataCache> loadFromConfig();
 
-        /** @brief 키의 출력을 앞 층부터 찾습니다. 머리의 서술이 @p keyDescription 과 같고 본문 해시가 맞을 때만 true 이고, 뒤 층 히트는 앞의 쓰기 가능 층에 채웁니다. */
+        /**
+         * @brief 키의 출력을 앞 층부터 찾아 @p outBytes 에 담습니다. 머리의 서술이 @p keyDescription 과 같고 본문 해시가 맞을 때만 true 이고, 뒤 층 히트는 앞의 쓰기 가능 층에 채웁니다.
+         * @details 이미 메모리에 드는 작은 출력(셰이더 바이트코드 · 임포트 결과 묶음)의 자리다. 큰 출력(쿠킹 팩)은 파일 꼴을 쓴다 — 통째로 들지 않는다.
+         */
         [[nodiscard]] bool find( uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const;
+        /**
+         * @brief `find` 의 파일 꼴입니다 — 본문을 조각으로 흘려 @p outputPath 에 원자적으로 씁니다(부모 폴더를 만든다). 본문 해시가 맞을 때만 바꿔 끼우고 true 입니다.
+         * @details 출력을 메모리로 들지 않는다(쿠킹 출력 · 큰 팩). 어긋난 항목은 @p outputPath 를 건드리지 않는다.
+         */
+        [[nodiscard]] bool find( uint64 key, string_view keyDescription, string_view outputPath ) const;
         /** @brief 키의 출력을 쓰기 가능 층 모두에 씁니다. 읽기 전용 층은 건드리지 않습니다. 쓰기 가능 층 하나라도 못 쓰면 false 입니다. */
         [[nodiscard]] bool store( uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
+        /** @brief `store` 의 파일 꼴입니다 — 파일 @p sourcePath 를 조각으로 읽어 항목으로 씁니다(메모리로 들지 않는다). */
+        [[nodiscard]] bool store( uint64 key, string_view keyDescription, string_view sourcePath ) const;
         /** @brief 항목 파일 @p path 를 검증합니다. Valid 면 @p outBytes 에 본문을 담습니다. 로그를 남기지 않습니다. */
         [[nodiscard]] static DerivedDataEntryState checkEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes );
         /** @brief 층 @p layerIndex 의 키 파일 경로입니다. */
         string                          makePath( size_t layerIndex, uint64 key ) const;
         const vector<DerivedDataLayer>& getLayers() const { return _listLayer; }
-
-    private:
-        /** @brief 층 하나의 항목을 읽어 검증합니다. 없으면 조용히, 머리 · 서술 · 본문 해시가 어긋나면 경고하고 false 입니다. */
-        [[nodiscard]] bool readEntry( size_t layerIndex, uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const;
-        /** @brief 층 하나에 항목을 씁니다. 같은 서술 · 같은 본문이 이미 있으면 쓰지 않고 true, 교체에 졌어도 그 자리가 같은 항목이면 true 입니다. */
-        [[nodiscard]] bool writeEntry( size_t layerIndex, uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
 
     private:
         vector<DerivedDataLayer> _listLayer;

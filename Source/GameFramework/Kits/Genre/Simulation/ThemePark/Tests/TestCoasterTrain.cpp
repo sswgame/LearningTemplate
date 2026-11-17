@@ -15,13 +15,57 @@ namespace
 {
     struct CoasterTrainTestUtil
     {
+        /** @brief `coasters.xml` 의 `<Rating>` 과 같은 평가 계수입니다(규칙 자산에는 C++ 기본값이 없다). */
+        static CoasterRatingWeights makeDefaultWeights()
+        {
+            CoasterRatingWeights weights;
+            weights._maxRating                 = 10.0f;
+            weights._intensityPerPositiveG     = 0.9f;
+            weights._intensityPerNegativeG     = 1.5f;
+            weights._intensityPerLateralG      = 1.2f;
+            weights._intensitySpeedScale       = 15.0f;
+            weights._nauseaPerLateralG         = 1.5f;
+            weights._nauseaPerInversion        = 1.0f;
+            weights._nauseaPerAirtime          = 0.3f;
+            weights._nauseaPerIntensity        = 0.25f;
+            weights._excitementSpeedScale      = 10.0f;
+            weights._excitementPerAirtime      = 0.6f;
+            weights._excitementPerInversion    = 0.8f;
+            weights._excitementPerDrop         = 0.3f;
+            weights._excitementDropHeightScale = 15.0f;
+            weights._excitementLengthScale     = 400.0f;
+            weights._excitementIntensityLimit  = 8.0f;
+            return weights;
+        }
+
+        /** @brief `coasters.xml` 의 `<Physics>` 와 같은 열차 물리 상수입니다(규칙 자산에는 C++ 기본값이 없다). */
+        static CoasterPhysicsParams makeDefaultParams()
+        {
+            CoasterPhysicsParams params;
+            params._gravity             = 9.81f;
+            params._rollingResistance   = 0.012f;
+            params._dragCoefficient     = 0.0004f;
+            params._liftSpeed           = 4.0f;
+            params._stationSpeed        = 3.0f;
+            params._boosterSpeed        = 22.0f;
+            params._boosterAcceleration = 9.0f;
+            params._brakeSpeed          = 5.0f;
+            params._brakeDeceleration   = 10.0f;
+            params._fixedStep           = 1.0f / 240.0f;
+            params._stallSpeed          = 0.3f;
+            params._stallSeconds        = 3.0f;
+            params._gForceWarmupSeconds = 0.5f;
+            params._ratingWeights       = makeDefaultWeights();
+            return params;
+        }
+
         /** @brief 저항이 없고 중력이 10 인 매개변수입니다. 손으로 계산한 값과 견줍니다. */
         static CoasterPhysicsParams makeFrictionlessParams()
         {
-            CoasterPhysicsParams params;
-            params._gravity           = 10.0f;
-            params._rollingResistance = 0.0f;
-            params._dragCoefficient   = 0.0f;
+            CoasterPhysicsParams params = makeDefaultParams();
+            params._gravity             = 10.0f;
+            params._rollingResistance   = 0.0f;
+            params._dragCoefficient     = 0.0f;
             return params;
         }
 
@@ -325,7 +369,7 @@ SW_TEST_CASE( CoasterTrainTest, GForceComesFromVelocityChangeAndGravity )
  */
 SW_TEST_CASE( CoasterTrainTest, AnalyzeReportsStallOnUndrivenTrack )
 {
-    const CoasterPhysicsParams params = CoasterPhysicsParams{};
+    const CoasterPhysicsParams params = Util::makeDefaultParams();
     const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 50.0f ) }, false );
     const CoasterRideStats     stats  = CoasterRideStats::analyze( track, params );
     SW_EXPECT_TRUE( stats._bStalled == SW_TRUE );
@@ -339,7 +383,7 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeReportsStallOnUndrivenTrack )
  */
 SW_TEST_CASE( CoasterTrainTest, AnalyzeCompletesDrivenOpenTrackWithinTime )
 {
-    const CoasterPhysicsParams params = CoasterPhysicsParams{};
+    const CoasterPhysicsParams params = Util::makeDefaultParams();
     const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 30.0f ) }, false );
     const CoasterRideStats     stats  = CoasterRideStats::analyze( track, params );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
@@ -367,7 +411,7 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeMeasuresClosedCircuit )
                                                   Util::makeTurnRight( 15.0f, MathUtil::kPi ), Util::makePiece( CoasterPieceType::Straight, 70.0f ), Util::makeTurnRight( 15.0f, MathUtil::kPi ) },
                                                 true );
     SW_REQUIRE_TRUE( track.isClosed() );
-    const CoasterRideStats stats = CoasterRideStats::analyze( track, CoasterPhysicsParams{} );
+    const CoasterRideStats stats = CoasterRideStats::analyze( track, Util::makeDefaultParams() );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
     SW_EXPECT_TRUE( stats._bStalled == SW_FALSE );
     SW_EXPECT_EQUAL( 1u, stats._dropCount );
@@ -392,7 +436,7 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeCountsLoopAsOneInversion )
     loop._radius = 6.0f;
     const CoasterTrack track =
         Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 5.0f ), Util::makePiece( CoasterPieceType::LiftHill, 30.0f, 25.0f ), Util::makePiece( CoasterPieceType::Drop, 30.0f, 25.0f ), loop, Util::makePiece( CoasterPieceType::Straight, 20.0f ) }, false );
-    const CoasterRideStats stats = CoasterRideStats::analyze( track, CoasterPhysicsParams{} );
+    const CoasterRideStats stats = CoasterRideStats::analyze( track, Util::makeDefaultParams() );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
     SW_EXPECT_EQUAL( 1u, stats._inversionCount );
 }
@@ -413,26 +457,26 @@ SW_TEST_CASE( CoasterTrainTest, RatingsFollowTheFormula )
     stats._maxDropHeight  = 30.0f;
     stats._length         = 400.0f;
     stats._bCompleted     = SW_TRUE;
-    CoasterRideStats::computeRatings( stats, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( stats, Util::makeDefaultWeights() );
     SW_EXPECT_NEAR( 6.5f, stats._intensity, 1.0e-4f );  // 2 x 0.9 + 1 x 1.5 + 1 x 1.2 + 30 / 15
     SW_EXPECT_NEAR( 5.425f, stats._nausea, 1.0e-4f );   // 1.5 + 2 + 0.3 + 6.5 x 0.25
     SW_EXPECT_NEAR( 8.8f, stats._excitement, 1.0e-4f ); // 3 + 0.6 + 1.6 + 0.6 + 2 + 1
 
     CoasterRideStats notCompleted = stats;
     notCompleted._bCompleted      = SW_FALSE;
-    CoasterRideStats::computeRatings( notCompleted, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( notCompleted, Util::makeDefaultWeights() );
     SW_EXPECT_EQUAL( 0.0f, notCompleted._excitement );
 
     CoasterRideStats tooIntense = stats;
     tooIntense._maxVerticalG    = 6.0f; // 강도 9.2 - 흥분에서 1.2 를 깎는다
-    CoasterRideStats::computeRatings( tooIntense, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( tooIntense, Util::makeDefaultWeights() );
     SW_EXPECT_NEAR( 9.2f, tooIntense._intensity, 1.0e-4f );
     SW_EXPECT_NEAR( 7.6f, tooIntense._excitement, 1.0e-4f );
 
     CoasterRideStats extreme = stats;
     extreme._maxVerticalG    = 50.0f;
     extreme._maxLateralG     = 50.0f;
-    CoasterRideStats::computeRatings( extreme, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( extreme, Util::makeDefaultWeights() );
     SW_EXPECT_EQUAL( 10.0f, extreme._intensity );
     SW_EXPECT_EQUAL( 10.0f, extreme._nausea );
     SW_EXPECT_EQUAL( 0.0f, extreme._excitement ); // 강도가 지나치면 아래로 잘린다
@@ -448,7 +492,7 @@ SW_TEST_CASE( CoasterTrainTest, RatingsFollowTheWeights )
     stats._maxSpeed    = 30.0f;
     stats._bCompleted  = SW_TRUE;
 
-    CoasterRatingWeights weights;
+    CoasterRatingWeights weights  = Util::makeDefaultWeights();
     weights._intensityPerLateralG = 2.0f;  // 기본 1.2
     weights._intensitySpeedScale  = 10.0f; // 기본 15
     CoasterRideStats::computeRatings( stats, weights );
@@ -457,4 +501,25 @@ SW_TEST_CASE( CoasterTrainTest, RatingsFollowTheWeights )
     weights._maxRating = 4.0f;
     CoasterRideStats::computeRatings( stats, weights );
     SW_EXPECT_EQUAL( 4.0f, stats._intensity );
+}
+
+/** @brief [CoasterTrainTest] 열차 물리(`<Physics>`) · 평가 계수(`<Rating>`) 없는 레이아웃 카탈로그와 칸이 빠진 줄은 로드가 실패하고, 기본 생성한 상수는 열차가 거절한다(감사 K-4) */
+SW_TEST_CASE( CoasterTrainTest, CatalogWithoutPhysicsIsRefused )
+{
+    SW_EXPECT_LOG( "CoasterLayoutCatalog.PhysicsMissing" );
+    SW_EXPECT_LOG( "CoasterLayoutCatalog.PhysicsInvalid" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    SW_EXPECT_LOG( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds" );
+    CoasterLayoutCatalog bare;
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CoasterLayoutCatalog><Rating maxRating="10" intensityPerPositiveG="0.9" intensityPerNegativeG="1.5" intensityPerLateralG="1.2" intensitySpeedScale="15" nauseaPerLateralG="1.5" nauseaPerInversion="1" nauseaPerAirtime="0.3" nauseaPerIntensity="0.25" excitementSpeedScale="10" excitementPerAirtime="0.6" excitementPerInversion="0.8" excitementPerDrop="0.3" excitementDropHeightScale="15" excitementLengthScale="400" excitementIntensityLimit="8"/></CoasterLayoutCatalog>)", "CoasterTrainTest" ) );
+    CoasterLayoutCatalog partial;
+    SW_EXPECT_FALSE( partial.loadFromXMLText( R"(<CoasterLayoutCatalog><Physics gravity="9.81"/><Rating maxRating="10" intensityPerPositiveG="0.9" intensityPerNegativeG="1.5" intensityPerLateralG="1.2" intensitySpeedScale="15" nauseaPerLateralG="1.5" nauseaPerInversion="1" nauseaPerAirtime="0.3" nauseaPerIntensity="0.25" excitementSpeedScale="10" excitementPerAirtime="0.6" excitementPerInversion="0.8" excitementPerDrop="0.3" excitementDropHeightScale="15" excitementLengthScale="400" excitementIntensityLimit="8"/></CoasterLayoutCatalog>)", "CoasterTrainTest" ) );
+    CoasterLayoutCatalog full;
+    SW_REQUIRE_TRUE( full.loadFromXMLText( R"(<CoasterLayoutCatalog><Physics gravity="9.81" rollingResistance="0.012" dragCoefficient="0.0004" liftSpeed="4" stationSpeed="3" boosterSpeed="22" boosterAcceleration="9" brakeSpeed="5" brakeDeceleration="10" fixedStep="0.00416667" stallSpeed="0.3" stallSeconds="3" gForceWarmupSeconds="0.5"/><Rating maxRating="10" intensityPerPositiveG="0.9" intensityPerNegativeG="1.5" intensityPerLateralG="1.2" intensitySpeedScale="15" nauseaPerLateralG="1.5" nauseaPerInversion="1" nauseaPerAirtime="0.3" nauseaPerIntensity="0.25" excitementSpeedScale="10" excitementPerAirtime="0.6" excitementPerInversion="0.8" excitementPerDrop="0.3" excitementDropHeightScale="15" excitementLengthScale="400" excitementIntensityLimit="8"/></CoasterLayoutCatalog>)", "CoasterTrainTest" ) );
+    SW_EXPECT_NEAR( 9.81f, full.getPhysics()._gravity, 1.0e-5f );
+    SW_EXPECT_NEAR( 8.0f, full.getPhysics()._ratingWeights._excitementIntensityLimit, 1.0e-5f );
+
+    const CoasterTrack track = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 20.0f ) }, false );
+    CoasterTrain       train;
+    SW_EXPECT_FALSE( train.initialize( &track, CoasterPhysicsParams{}, 0.0f ) );
 }

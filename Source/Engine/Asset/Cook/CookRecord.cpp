@@ -34,17 +34,140 @@ namespace sw
             {
                 return text.size() == HexDigitUtil::kMaxDigitCount && HexDigitUtil::tryParseFixed( text, outValue );
             }
+
+            /** @brief DDC 항목 머리 크기입니다: "SWDDC 1 <서술 길이 hex16> <본문 해시 hex16>\n" — 고정 폭이라 서술 앞까지 글자 수가 정해져 있다. */
+            static constexpr size_t kEntryHeaderSize = DerivedDataCache::kEntryHeader.size() + 1 + HexDigitUtil::kMaxDigitCount + 1 + HexDigitUtil::kMaxDigitCount + 1;
+
+            /** @brief 항목의 본문 앞부분(머리 + 키 서술)입니다. */
+            static string makeEntryHead( string_view keyDescription, uint64 payloadHash )
+            {
+                string head( DerivedDataCache::kEntryHeader );
+                head.append( " " ).append( toHex( keyDescription.size() ) ).append( " " ).append( toHex( payloadHash ) );
+                head.push_back( '\n' );
+                head.append( keyDescription );
+                return head;
+            }
+
+            /**
+             * @brief 항목 @p path 를 검증하며 본문을 조각(`ContentHash::kStreamChunkBytes`)으로 @p sink( pData, size ) 에 넘깁니다 — 항목을 한 벡터로 들지 않는다(큰 쿠킹 출력).
+             * @details 본문 해시는 다 흘린 뒤에야 안다 — Valid 가 아니면 부르는 쪽이 받은 조각을 버린다(파일 출력은 `AtomicFileWriter` 를 커밋하지 않는다).
+             *          @p sink 가 false 면 Unreadable 로 멈춘다. @p outPayloadHash 는 머리에 적힌 본문 해시다. 로그를 남기지 않는다.
+             */
+            template <typename SinkFn>
+            [[nodiscard]] static DerivedDataEntryState scanEntry( string_view path, string_view keyDescription, SinkFn&& sink, uint64& outPayloadHash )
+            {
+                outPayloadHash = 0;
+                if ( FileUtil::isRegularFile( path ) == false )
+                    return DerivedDataEntryState::Missing;
+                const size_t  headSize = kEntryHeaderSize + keyDescription.size();
+                vector<uint8> chunk;
+                if ( FileUtil::readFile( path, chunk, 0, headSize ) == false )
+                    return DerivedDataEntryState::Unreadable;
+                const string_view text{ reinterpret_cast<const char*>( chunk.data() ), chunk.size() };
+                const string_view header          = DerivedDataCache::kEntryHeader;
+                uint64            descriptionSize = 0;
+                const bool        bHeaderValid    = text.size() >= kEntryHeaderSize && text.substr( 0, header.size() ) == header && text[kEntryHeaderSize - 1] == '\n' &&
+                                          parseHex( text.substr( header.size() + 1, HexDigitUtil::kMaxDigitCount ), descriptionSize ) &&
+                                          parseHex( text.substr( kEntryHeaderSize - 1 - HexDigitUtil::kMaxDigitCount, HexDigitUtil::kMaxDigitCount ), outPayloadHash );
+                if ( bHeaderValid == false )
+                    return DerivedDataEntryState::InvalidFormat;
+                if ( descriptionSize != keyDescription.size() )
+                    return DerivedDataEntryState::KeyCollision;
+                if ( text.size() < headSize )
+                    return DerivedDataEntryState::InvalidFormat; // 서술 중간에서 잘린 파일
+                if ( text.substr( kEntryHeaderSize ) != keyDescription )
+                    return DerivedDataEntryState::KeyCollision;
+                uint64 state = ContentHash::kInitialState;
+                for ( uint64 offset = headSize;; )
+                {
+                    if ( FileUtil::readFile( path, chunk, offset, ContentHash::kStreamChunkBytes ) == false )
+                        return DerivedDataEntryState::Unreadable;
+                    state = ContentHash::appendBytes( state, chunk.data(), chunk.size() );
+                    if ( chunk.empty() == false && sink( chunk.data(), chunk.size() ) == false )
+                        return DerivedDataEntryState::Unreadable;
+                    offset += chunk.size();
+                    if ( chunk.size() < ContentHash::kStreamChunkBytes )
+                        break;
+                }
+                return state == outPayloadHash ? DerivedDataEntryState::Valid : DerivedDataEntryState::PayloadCorrupt;
+            }
+
+            /** @brief 찾기에서 본 항목 상태를 알립니다 — 없으면 조용히, 그 밖의 미스는 이유를 남깁니다. Valid 면 true 입니다. */
+            [[nodiscard]] static bool reportEntry( const string& path, DerivedDataEntryState state )
+            {
+                switch ( state )
+                {
+                    case DerivedDataEntryState::Valid:
+                        return true;
+                    case DerivedDataEntryState::Missing:
+                        return false;
+                    case DerivedDataEntryState::Unreadable:
+                        SW_LOG_WARNING_ID( "DDC.EntryUnreadable", "DDC entry '%#' cannot be read - treated as a miss", path );
+                        return false;
+                    case DerivedDataEntryState::InvalidFormat:
+                        // 옛 형식 항목(형식을 올린 뒤 한 번)이 대부분이라 정보 로그다 — 다시 구우면 새 형식으로 덮인다.
+                        SW_LOG_INFO_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path, DerivedDataCache::kEntryHeader );
+                        return false;
+                    case DerivedDataEntryState::KeyCollision:
+                        SW_LOG_WARNING_ID( "DDC.KeyCollision", "DDC entry '%#' was written for another job with the same key - treated as a miss", path );
+                        return false;
+                    case DerivedDataEntryState::PayloadCorrupt:
+                        SW_LOG_WARNING_ID( "DDC.PayloadCorrupt", "DDC entry '%#' does not match its payload hash - treated as a miss", path );
+                        return false;
+                }
+                return false;
+            }
+
+            /** @brief 파일 @p sourcePath 를 조각으로 @p writer 끝에 붙입니다(한 벡터로 들지 않는다). */
+            [[nodiscard]] static bool appendFile( AtomicFileWriter& writer, string_view sourcePath )
+            {
+                vector<uint8> chunk;
+                for ( uint64 offset = 0;; )
+                {
+                    if ( FileUtil::readFile( sourcePath, chunk, offset, ContentHash::kStreamChunkBytes ) == false || writer.append( chunk.data(), chunk.size() ).has_value() == false )
+                        return false;
+                    offset += chunk.size();
+                    if ( chunk.size() < ContentHash::kStreamChunkBytes )
+                        return true;
+                }
+            }
+
+            /**
+             * @brief 항목 파일 @p path 를 씁니다 — 머리 + 서술 뒤에 @p appendPayload( writer ) 가 본문을 붙인다. 같은 서술 · 같은 본문이 이미 있으면 쓰지 않고 true 입니다.
+             * @details 쓰기는 임시 파일 + 원자 교체(`AtomicFileWriter`)다(반쯤 쓴 항목을 읽는 쪽이 보지 않는다). 교체에 졌으면(다른 프로세스 · 스레드가 같은 자리를 막 바꿨다) 그 자리가 같은 항목인지 본다.
+             *          로그 없는 커밋(`tryCommit`)을 쓴다 — 교체에 진 것은 경쟁의 정상 결과라 오류 로그를 남기면 그 실행의 테스트가 "예상하지 않은 Error" 로 진다.
+             *          같은 항목인지는 본문까지 본다 — 결정적이지 않은 생산자의 새 바이트는 덮어써야 기록과 맞는다.
+             */
+            template <typename AppendPayloadFn>
+            [[nodiscard]] static bool writeEntry( const string& path, string_view keyDescription, uint64 payloadHash, AppendPayloadFn&& appendPayload )
+            {
+                const auto isSameEntry = [&]()
+                {
+                    uint64 existingHash = 0;
+                    return scanEntry( path, keyDescription, []( const uint8*, size_t )
+                    { return true; }, existingHash ) == DerivedDataEntryState::Valid &&
+                           existingHash == payloadHash;
+                };
+                if ( isSameEntry() )
+                    return true;
+                const string     head = makeEntryHead( keyDescription, payloadHash );
+                AtomicFileWriter writer;
+                FileWriteResult  result = FileWriteResult::WriteFailed;
+                if ( FileUtil::ensureParentDirectoryExists( path ) && writer.open( path ).has_value() &&
+                     writer.append( reinterpret_cast<const uint8*>( head.data() ), head.size() ).has_value() && appendPayload( writer ) )
+                    result = writer.tryCommit();
+                if ( result == FileWriteResult::Written || ( result == FileWriteResult::ReplaceFailed && isSameEntry() ) )
+                    return true;
+                SW_LOG_WARNING_ID( "DDC.EntryNotWritten", "DDC entry '%#' could not be written (%#) - the next run cooks or imports it again", path,
+                                   result == FileWriteResult::ReplaceFailed ? "replace lost to a different entry" : "refused or write failed" );
+                return false;
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    CookRecord CookRecord::make( const CookJob& job, const vector<uint8>& outputBytes )
-    {
-        return make( job, ContentHash::computeBytes( outputBytes ) );
-    }
-
     CookRecord CookRecord::make( const CookJob& job, uint64 outputHash )
     {
         CookRecord record;
@@ -214,12 +337,17 @@ namespace sw
     {
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
-            if ( readEntry( layerIndex, key, keyDescription, outBytes ) == false )
+            const string path = makePath( layerIndex, key );
+            if ( CookRecordInternal::reportEntry( path, checkEntry( path, keyDescription, outBytes ) ) == false )
                 continue;
             // 뒤 층 히트는 앞의 쓰기 가능 층에 채운다 — 다음 찾기는 가까운 층에서 끝난다. 채우기 실패는 히트를 무르지 않는다(다음에 다시 채운다).
+            const uint64 payloadHash = ContentHash::computeBytes( outBytes );
             for ( size_t fillIndex = 0; fillIndex < layerIndex; ++fillIndex )
             {
-                if ( _listLayer[fillIndex]._access == DerivedDataAccess::ReadWrite && writeEntry( fillIndex, key, keyDescription, outBytes ) == false )
+                const bool bFilled = _listLayer[fillIndex]._access == DerivedDataAccess::ReadOnly ||
+                                     CookRecordInternal::writeEntry( makePath( fillIndex, key ), keyDescription, payloadHash, [&]( AtomicFileWriter& writer )
+                { return writer.append( outBytes.data(), outBytes.size() ).has_value(); } );
+                if ( bFilled == false )
                     SW_LOG_WARNING_ID( "DDC.FillFailed", "DDC: could not fill '%#' from a later layer", makePath( fillIndex, key ) );
             }
             return true;
@@ -228,13 +356,72 @@ namespace sw
         return false;
     }
 
+    bool DerivedDataCache::find( uint64 key, string_view keyDescription, string_view outputPath ) const
+    {
+        for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        {
+            const string path = makePath( layerIndex, key );
+            if ( FileUtil::isRegularFile( path ) == false )
+                continue;
+            // 출력은 임시 파일에 흘려 쓰고 본문 해시가 맞을 때만 바꿔 끼운다 — 어긋난 항목이 출력 자리를 건드리지 않는다.
+            AtomicFileWriter writer;
+            if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || writer.open( outputPath ).has_value() == false )
+            {
+                SW_LOG_WARNING_ID( "DDC.OutputNotWritable", "DDC: cannot write '%#' from the cache - treated as a miss", outputPath );
+                return false;
+            }
+            uint64                      payloadHash = 0;
+            const DerivedDataEntryState state       = CookRecordInternal::scanEntry(
+                path, keyDescription, [&]( const uint8* pData, size_t size )
+            { return writer.append( pData, size ).has_value(); }, payloadHash );
+            if ( CookRecordInternal::reportEntry( path, state ) == false )
+                continue; // writer 가 소멸하며 임시 파일을 지운다
+            if ( writer.commit().has_value() == false )
+                return false;
+            for ( size_t fillIndex = 0; fillIndex < layerIndex; ++fillIndex )
+            {
+                const bool bFilled = _listLayer[fillIndex]._access == DerivedDataAccess::ReadOnly ||
+                                     CookRecordInternal::writeEntry( makePath( fillIndex, key ), keyDescription, payloadHash, [&]( AtomicFileWriter& fillWriter )
+                { return CookRecordInternal::appendFile( fillWriter, outputPath ); } );
+                if ( bFilled == false )
+                    SW_LOG_WARNING_ID( "DDC.FillFailed", "DDC: could not fill '%#' from a later layer", makePath( fillIndex, key ) );
+            }
+            return true;
+        }
+        return false;
+    }
+
     bool DerivedDataCache::store( uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const
     {
+        const uint64 payloadHash = ContentHash::computeBytes( bytes );
+        bool         bAllWritten = true;
+        for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        {
+            if ( _listLayer[layerIndex]._access == DerivedDataAccess::ReadOnly )
+                continue;
+            bAllWritten = CookRecordInternal::writeEntry( makePath( layerIndex, key ), keyDescription, payloadHash, [&]( AtomicFileWriter& writer )
+            { return writer.append( bytes.data(), bytes.size() ).has_value(); } ) &&
+                          bAllWritten;
+        }
+        return bAllWritten;
+    }
+
+    bool DerivedDataCache::store( uint64 key, string_view keyDescription, string_view sourcePath ) const
+    {
+        const expected<uint64> payloadHash = ContentHash::computeFileStream( sourcePath );
+        if ( payloadHash.has_value() == false )
+        {
+            SW_LOG_WARNING_ID( "DDC.SourceUnreadable", "DDC: cannot read '%#' to store it - the next run cooks it again", sourcePath );
+            return false;
+        }
         bool bAllWritten = true;
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
-            if ( _listLayer[layerIndex]._access == DerivedDataAccess::ReadWrite )
-                bAllWritten = writeEntry( layerIndex, key, keyDescription, bytes ) && bAllWritten;
+            if ( _listLayer[layerIndex]._access == DerivedDataAccess::ReadOnly )
+                continue;
+            bAllWritten = CookRecordInternal::writeEntry( makePath( layerIndex, key ), keyDescription, *payloadHash, [&]( AtomicFileWriter& writer )
+            { return CookRecordInternal::appendFile( writer, sourcePath ); } ) &&
+                          bAllWritten;
         }
         return bAllWritten;
     }
@@ -242,83 +429,17 @@ namespace sw
     DerivedDataEntryState DerivedDataCache::checkEntry( string_view path, string_view keyDescription, vector<uint8>& outBytes )
     {
         outBytes.clear();
-        if ( FileUtil::isRegularFile( path ) == false )
-            return DerivedDataEntryState::Missing;
-        vector<uint8> entry;
-        if ( FileUtil::readFile( path, entry ) == false )
-            return DerivedDataEntryState::Unreadable;
-        // 머리: "SWDDC 1 <서술 길이 hex16> <본문 해시 hex16>\n" — 고정 폭이라 본문 앞까지 글자 수가 정해져 있다.
-        const size_t      headerSize = kEntryHeader.size() + 1 + HexDigitUtil::kMaxDigitCount + 1 + HexDigitUtil::kMaxDigitCount + 1;
-        const string_view text{ reinterpret_cast<const char*>( entry.data() ), entry.size() };
-        uint64            descriptionSize = 0;
-        uint64            payloadHash     = 0;
-        const bool        bHeaderValid    = text.size() >= headerSize && text.substr( 0, kEntryHeader.size() ) == kEntryHeader && text[headerSize - 1] == '\n' &&
-                                  CookRecordInternal::parseHex( text.substr( kEntryHeader.size() + 1, HexDigitUtil::kMaxDigitCount ), descriptionSize ) &&
-                                  CookRecordInternal::parseHex( text.substr( headerSize - 1 - HexDigitUtil::kMaxDigitCount, HexDigitUtil::kMaxDigitCount ), payloadHash ) &&
-                                  descriptionSize <= text.size() - headerSize;
-        if ( bHeaderValid == false )
-            return DerivedDataEntryState::InvalidFormat;
-        if ( text.substr( headerSize, static_cast<size_t>( descriptionSize ) ) != keyDescription )
-            return DerivedDataEntryState::KeyCollision;
-        const size_t payloadStart = headerSize + static_cast<size_t>( descriptionSize );
-        if ( ContentHash::computeBytes( entry.data() + payloadStart, entry.size() - payloadStart ) != payloadHash )
-            return DerivedDataEntryState::PayloadCorrupt;
-        outBytes.assign( entry.begin() + static_cast<ptrdiff_t>( payloadStart ), entry.end() );
-        return DerivedDataEntryState::Valid;
-    }
-
-    bool DerivedDataCache::readEntry( size_t layerIndex, uint64 key, string_view keyDescription, vector<uint8>& outBytes ) const
-    {
-        const string path = makePath( layerIndex, key );
-        switch ( checkEntry( path, keyDescription, outBytes ) )
+        uint64                      payloadHash = 0;
+        const DerivedDataEntryState state       = CookRecordInternal::scanEntry(
+            path, keyDescription,
+            [&]( const uint8* pData, size_t size )
         {
-            case DerivedDataEntryState::Valid:
-                return true;
-            case DerivedDataEntryState::Missing:
-                return false;
-            case DerivedDataEntryState::Unreadable:
-                SW_LOG_WARNING_ID( "DDC.EntryUnreadable", "DDC entry '%#' cannot be read - treated as a miss", path );
-                return false;
-            case DerivedDataEntryState::InvalidFormat:
-                // 옛 형식 항목(형식을 올린 뒤 한 번)이 대부분이라 정보 로그다 — 다시 구우면 새 형식으로 덮인다.
-                SW_LOG_INFO_ID( "DDC.EntryInvalid", "DDC entry '%#' is not a '%#' entry - treated as a miss", path, kEntryHeader );
-                return false;
-            case DerivedDataEntryState::KeyCollision:
-                SW_LOG_WARNING_ID( "DDC.KeyCollision", "DDC entry '%#' was written for another job with the same key - treated as a miss", path );
-                return false;
-            case DerivedDataEntryState::PayloadCorrupt:
-                SW_LOG_WARNING_ID( "DDC.PayloadCorrupt", "DDC entry '%#' does not match its payload hash - treated as a miss", path );
-                return false;
-        }
-        return false;
-    }
-
-    bool DerivedDataCache::writeEntry( size_t layerIndex, uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const
-    {
-        const string  path        = makePath( layerIndex, key );
-        const uint64  payloadHash = ContentHash::computeBytes( bytes );
-        vector<uint8> existing;
-        // 같은 서술 · 같은 본문이 이미 있으면 그대로 둔다 — 같은 내용을 쓰는 둘이 한 파일의 교체를 다투지 않는다. 본문까지 보는 까닭: 결정적이지 않은 생산자의 새 바이트는 덮어써야 기록과 맞는다.
-        const auto isSameEntry = [&]()
-        { return checkEntry( path, keyDescription, existing ) == DerivedDataEntryState::Valid && ContentHash::computeBytes( existing ) == payloadHash; };
-        if ( isSameEntry() )
+            outBytes.insert( outBytes.end(), pData, pData + size );
             return true;
-        string header( kEntryHeader );
-        header.append( " " ).append( CookRecordInternal::toHex( keyDescription.size() ) ).append( " " ).append( CookRecordInternal::toHex( payloadHash ) );
-        header.push_back( '\n' );
-        vector<uint8> entry;
-        entry.reserve( header.size() + keyDescription.size() + bytes.size() );
-        entry.insert( entry.end(), header.begin(), header.end() );
-        entry.insert( entry.end(), keyDescription.begin(), keyDescription.end() );
-        entry.insert( entry.end(), bytes.begin(), bytes.end() );
-        // 쓰기는 임시 파일 + 원자 교체다(반쯤 쓴 항목을 읽는 쪽이 보지 않는다). 교체에 졌으면(다른 프로세스 · 스레드가 같은 자리를 막 바꿨다) 그 자리가 같은 항목인지 본다.
-        // 로그 없는 쓰기(`tryWriteFile`)를 쓴다 — 교체에 진 것은 경쟁의 정상 결과라 오류 로그를 남기면 그 실행의 테스트가 "예상하지 않은 Error" 로 진다.
-        const FileWriteResult result =
-            FileUtil::ensureParentDirectoryExists( path ) ? FileUtil::tryWriteFile( path, entry.data(), entry.size() ) : FileWriteResult::WriteFailed;
-        if ( result == FileWriteResult::Written || ( result == FileWriteResult::ReplaceFailed && isSameEntry() ) )
-            return true;
-        SW_LOG_WARNING_ID( "DDC.EntryNotWritten", "DDC entry '%#' could not be written (%#) - the next run cooks or imports it again", path,
-                           result == FileWriteResult::Refused ? "refused" : ( result == FileWriteResult::ReplaceFailed ? "replace lost to a different entry" : "write failed" ) );
-        return false;
+        },
+            payloadHash );
+        if ( state != DerivedDataEntryState::Valid )
+            outBytes.clear();
+        return state;
     }
 } // namespace sw

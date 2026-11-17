@@ -124,6 +124,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 사진 앞 "렌더가 자리를 잡았다"(`Render.Stable`)의 문턱입니다 — 시간 누적 렌더와 노출 적응이 수렴했다고 볼 값(`RenderStability.h`).
+     * @details 자동화 시나리오가 스크린샷 앞에서 고정 프레임 대기 대신 이 판정을 기다린다(언리얼 자동화 스크린샷의 warm-up · 유니티 Graphics Test Framework 의 `WaitFrames` 자리를 조건으로).
+     */
+    REFLECT()
+    struct SW_API RenderStabilityConfig
+    {
+        REFLECT_BODY();
+
+        /** @brief TAA 기록이 쌓인 정지 프레임(카메라 · 물체가 서 있던 이어진 프레임)이 이만큼 이어져야 한다. 기록 섞는 비율의 역수 몇 배다. */
+        PROPERTY( Min = 1 )
+        uint32 _minStillFrames{};
+        /** @brief 노출 적응의 남은 오차 상한(EV)이 이 아래여야 한다. */
+        PROPERTY( Min = 0.0 )
+        float32 _maxExposureErrorEv{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct TextureStreamingConfig
      * @brief 텍스처 밉 스트리밍의 정책 값입니다 — 렌더 스레드의 프레임당 제출 수, 위쪽 밉 풀 예산, 올리고 내리는 판단(`TextureStreamingPolicy`)의 값이 한 곳에 있다.
      * @details 언리얼 `r.Streaming.*`(PoolSize · MaxNumTexturesToStreamPerFrame) · 유니티 `QualitySettings.streamingMipmaps*` 자리다.
@@ -148,9 +168,27 @@ namespace sw
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _poolMegabytes{};
 
+        /**
+         * @brief 위쪽 밉을 범위로 읽는 중이거나 읽어 제출을 기다리는 바이트 합의 상한(MB)입니다(`TextureCache::updateStreaming`, MR-2 — 대기 줄은 바이트를 쥐지 않는다).
+         * @details 유니티 `QualitySettings.streamingMipmapsMaxFileIORequests` 자리를 바이트로 잰다(텍스처마다 크기가 달라 수보다 바이트가 RAM 을 묶는다). 하나가 이보다 크면 혼자일 때만 읽는다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _maxMegabytesInFlight{};
+
         /** @brief 화면 크기를 알리지 않은 지 이만큼 지난 텍스처는 필요 없는 것으로 본다 — 예산을 넘으면 가장 먼저 내리고, 다시 보일 때까지 올리지 않는다(`TextureStreamingPolicy`). */
         PROPERTY( Min = 1 )
         uint32 _idleFramesBeforeRelease{};
+
+        /**
+         * @brief 텍스처 하나의 밉을 바꾼 뒤 다시 바꾸기까지의 최소 프레임 수입니다(`TextureStreamingPolicy` — 경계에서 올렸다 내렸다를 되풀이하지 않게, R6-6).
+         * @details 언리얼 텍스처 스트리머가 밉을 바꾼 텍스처를 잠시 다시 고르지 않는 자리다. 바이트는 이 동안에도 예산에 센다.
+         */
+        PROPERTY( Min = 1 )
+        uint32 _minFramesBetweenChanges{};
+
+        /** @brief 올리기는 예산에서 이 비율(%)만큼 여유를 남긴 선까지만 한다 — 내리기는 예산을 넘을 때라 그 사이가 흔들림을 막는 띠다(`TextureStreamingPolicy`, R6-6). */
+        PROPERTY( Min = 0, Max = 50, Meta = "Units=%" )
+        uint32 _promoteBudgetMarginPercent{};
     };
 } // namespace sw
 
@@ -212,6 +250,17 @@ namespace sw
          */
         PROPERTY( Min = 1 )
         uint32 _allocationCountReserve{};
+
+        /**
+         * @brief 다른 스레드 · 프레임 밖 버퍼 업로드가 쓰는 스테이징 블록 하나의 크기(MB)입니다(Vulkan 업로드 커맨드버퍼 — 블록을 나눠 쓰고 프레임 펜스 뒤에 돌려받는다).
+         * @details 한 업로드가 블록보다 크면 그 업로드만 전용 스테이징을 쓴다. DX12 의 구조 버퍼 스테이징 슬롯 자리다.
+         */
+        PROPERTY( Min = 1, Meta = "Units=MB" )
+        uint32 _uploadStagingMegabytes{};
+
+        /** @brief 업로드 스테이징 블록이 이만큼 프레임 동안 쓰이지 않으면 놓습니다(블록 하나는 늘 남긴다). 업로드가 몰린 뒤의 상주 메모리를 돌려준다. */
+        PROPERTY( Min = 1 )
+        uint32 _uploadStagingIdleFrames{};
 
         /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
         PROPERTY( Min = 1, Units = s )
@@ -302,6 +351,9 @@ namespace sw
 
         PROPERTY()
         AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
+
+        PROPERTY()
+        RenderStabilityConfig _renderStability{}; ///< 사진 앞 정착 판정(`Render.Stable`)의 문턱
 
         PROPERTY()
         RenderConfig _render{}; ///< 렌더러 정책 값(PSO 예산 · …)

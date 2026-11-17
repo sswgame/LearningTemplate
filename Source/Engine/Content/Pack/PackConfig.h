@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringUtil.h"
@@ -22,8 +23,26 @@
 namespace sw
 {
     /**
+     * @struct PackEntryStorageRule
+     * @brief 팩 항목의 저장 방식(`PackEntryStorage`)을 고르는 한 곳입니다 — 쿠커(`PackCooker`) · 모드 팩 빌더(`ModPackBuilder`)가 함께 부른다(패치 빌더는 새 빌드 팩이 고른 방식을 옮긴다).
+     * @details 확장자가 @p listStoredExtension 에 있으면 `Stored`, 아니면 `Blocks`. 범위로 읽는 텍스처(`.dds` — 밉 스트리밍이 밉 구간만 읽는다, MR-3)가 `Blocks` 로 고르면 오류다:
+     *          BC · ASTC 는 이미 압축이라 블록 압축의 이득이 작고 범위를 읽을 때마다 푸는 비용만 남는다(언리얼 IoStore 도 텍스처 벌크 데이터를 압축하지 않는 설정이 기본이다).
+     *          빌더마다 규칙을 따로 쓰면 한 쪽만 어기는 모양이 생긴다 — 그래서 이 함수 하나다.
+     */
+    struct SW_API PackEntryStorageRule
+    {
+        static constexpr string_view kRangeReadExtension = ".dds"; ///< 밉 구간을 범위로 읽는 형식(`TextureMipLayout`)
+
+        /** @brief 팩 안 경로 @p relativePath 의 저장 방식입니다. `.dds` 가 `Stored` 목록에 없으면 오류(`PackEntryStorageRule.CompressedTextureEntry`)를 남기고 실패입니다. */
+        [[nodiscard]] static expected<PackEntryStorage> select( string_view relativePath, const vector<string>& listStoredExtension );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct PackCompressionConfig
-     * @brief 팩 압축 코덱과 레벨입니다. 코덱은 팩 단위입니다(리더가 헤더의 코덱 하나로 모든 항목을 푼다).
+     * @brief 팩 압축 코덱 · 레벨 · 블록 크기 · 쓰기 창입니다. 코덱은 팩 단위입니다(리더가 헤더의 코덱 하나로 모든 블록을 푼다).
      */
     REFLECT()
     struct SW_API PackCompressionConfig
@@ -35,6 +54,18 @@ namespace sw
 
         PROPERTY( Required, Min = 0 )
         int32 _level{ 0 }; ///< 코덱 레벨(0 = 코덱 기본값)
+
+        PROPERTY( Required, Min = 65536, Max = 262144 )
+        uint32 _blockSize{ 0 }; ///< 압축 전 블록 크기(2 의 거듭제곱, `kPackMinBlockSize` ~ `kPackMaxBlockSize`). 범위 읽기의 단위이자 CRC 단위다 — 언리얼 IoStore 의 64 KiB 압축 블록 자리
+
+        PROPERTY( Required, Min = 1 )
+        uint64 _writeWindowBytes{ 0 }; ///< 쓰기가 이만큼의 원본을 모아 병렬로 압축한다. 쓰기의 최고 메모리가 이 값의 몇 배다(콘텐츠 크기와 무관)
+
+        PROPERTY( Required )
+        vector<string> _listStoredExtension; ///< 압축하지 않고 담는 확장자(`.dds` — 이미 압축된 형식, 대소문자 무시). 범위 읽기가 풀기 없이 바이트를 읽는다(`PackEntryStorage::Stored`)
+
+        /** @brief 팩 안 경로 @p relativePath 의 저장 방식입니다(`PackEntryStorageRule::select` — 쿠커 · 모드 팩 빌더가 같은 규칙). */
+        [[nodiscard]] expected<PackEntryStorage> selectEntryStorage( string_view relativePath ) const { return PackEntryStorageRule::select( relativePath, _listStoredExtension ); }
     };
 } // namespace sw
 
@@ -42,7 +73,7 @@ namespace sw
 {
     /**
      * @struct PackLayoutConfig
-     * @brief 팩 페이로드 배치(`PackWriter` 의 `PackLayoutMode`)와 슬롯 배치의 빈 자리 한도입니다.
+     * @brief 팩 페이로드 배치(`PackStreamWriter` 의 `PackLayoutMode`)와 슬롯 배치의 빈 자리 한도입니다.
      * @details `Slot` 은 같은 폴더에 앞 빌드의 팩이 있으면 그 팩을 앞 빌드로 읽어 안 바뀐 항목의 자리를 지킨다(쿠커가 덮어쓸 팩 경로를 앞 빌드로 준다).
      */
     REFLECT()
@@ -60,6 +91,46 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct PackChunkRule
+     * @brief 이름 붙은 청크 하나입니다 — 패턴에 맞는 항목은 도메인의 기본 팩이 아니라 이 청크의 팩(`<도메인>.<청크>.<번호>.pack`)에 담는다(언리얼 IoStore 의 청크 · 컨테이너 자리).
+     * @details 패턴은 도메인 기준 경로에 `StringUtil::matchesPathPattern` 으로 맞추고 규칙 순서대로 처음 맞는 것이 이긴다. 이름은 파일 이름에 들어가 글자 · 숫자 · `_` · `-` 만 쓴다.
+     */
+    REFLECT()
+    struct SW_API PackChunkRule
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name; ///< 청크 이름(`streaming_audio`) — 파일 이름의 한 마디
+
+        PROPERTY( Required )
+        vector<string> _listPattern; ///< 도메인 기준 경로 패턴(`audio/music/**`)
+    };
+
+    /**
+     * @struct PackSplitConfig
+     * @brief 도메인 팩을 여러 파일로 나누는 규칙입니다(`PackCooker::splitIntoParts`).
+     * @details 청크마다 항목을 경로 해시 순으로 놓고 원본 바이트 합이 `_maxPackBytes` 를 넘기 전에 다음 번호의 팩으로 넘긴다 — 같은 입력이면 같은 나눔이다.
+     *          항목 하나가 한도보다 크면 그 항목만 든 팩이 된다. 같은 도메인의 형제 팩은 항목이 겹치지 않는다(겹치면 마운트가 거절한다 — `PackManager`).
+     */
+    REFLECT()
+    struct SW_API PackSplitConfig
+    {
+        REFLECT_BODY();
+
+        /**
+         * @brief 팩 파일 하나의 크기 한도입니다. 나누기는 항목마다 섹터로 올린 크기와 색인 줄로 어림해 몫을 고르고(`PackCooker::estimateEntryPackBytes`), 쓰기 끝에 실제 크기가 넘으면 오류다.
+         * @details 형식의 한계가 아니다 — 페이로드 오프셋은 56 비트(`PackFileEntryOnDisk::kMaxDataOffset`)이고 32 비트 칸은 항목 하나의 크기(1 GiB 한도)뿐이다.
+         *          설정 값 4 GiB − 1 은 FAT32 볼륨(SD 카드 · 외장 저장소)의 파일 크기 상한이다.
+         */
+        PROPERTY( Required, Min = 65536 )
+        uint64 _maxPackBytes{ 0 };
+
+        PROPERTY( Required )
+        vector<PackChunkRule> _listChunkRule; ///< 이름 붙은 청크(빈 목록이면 모두 기본 청크)
+    };
+
     /**
      * @struct PackExcludeRule
      * @brief 이름 붙은 제외 규칙 하나입니다(폴더 · 패턴).
@@ -191,6 +262,9 @@ namespace sw
 
         PROPERTY( Required )
         PackLayoutConfig _layout; ///< 페이로드 배치(항목 추가 · 삭제에 뒤 항목이 밀리지 않게 하는 슬롯 배치)
+
+        PROPERTY( Required )
+        PackSplitConfig _split; ///< 도메인 팩 나누기(청크 · 크기 한도)
 
         PROPERTY( Required )
         bool _bExcludeRawShaderSource{ false }; ///< 셰이더 원본(`.hlsl` · `.hlsli`)을 팩에서 뺀다 — 배포물은 쿠킹한 바이너리만 읽는다

@@ -1,5 +1,5 @@
 <?asset guid="80245ff09577a4cfdfe6b3351871f4c7"?>
-<Prefab formatVersion="0" name="KnightMerged">
+<Prefab formatVersion="1" name="KnightMerged">
 	<GameObject _schemaVersion="0" _name="KnightMerged" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
@@ -18,7 +18,7 @@
 			                       _skeletonPath=""
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"

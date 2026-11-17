@@ -330,12 +330,13 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11RenderTargetView>   _rtv;
             Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   _dsv;
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> _srv;
-            /// @brief 면(배열 원소, 큐브 면)마다의 RTV 와 DSV 입니다. 면이 하나면 비어 있고 `_rtv` 와 `_dsv` 를 씁니다(`_rtv` 와 `_dsv` 는 항상 면 0 입니다).
+            /// @brief (밉, 면) 마다의 RTV 와 DSV 입니다(칸 `mip * _arraySize + slice` — 다운샘플 체인이 밉 하나에 그린다, R-10). 하나뿐이면 비어 있고 `_rtv` 와 `_dsv` 를 씁니다(둘은 항상 (0, 0) 입니다).
             vector<Microsoft::WRL::ComPtr<ID3D11RenderTargetView>> _listSliceRTV;
             vector<Microsoft::WRL::ComPtr<ID3D11DepthStencilView>> _listSliceDSV;
             uint32                                                 _width;
             uint32                                                 _height;
             uint32                                                 _arraySize; ///< 면 수
+            uint32                                                 _mipLevels; ///< 밉 수
             RHITextureDimension                                    _dimension;
             /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
             RHITextureUploadSerials _uploadSerials;
@@ -348,23 +349,26 @@ namespace sw
                 , _width{ 0 }
                 , _height{ 0 }
                 , _arraySize{ 1 }
+                , _mipLevels{ 1 }
                 , _dimension{ RHITextureDimension::Texture2D }
                 , _bDepth{ SW_FALSE }
                 , _reserved{ 0 } {}
 
-            /** @brief 면 `slice` 의 RTV 입니다. 없으면 nullptr 입니다. */
-            ID3D11RenderTargetView* findSliceRTV( uint32 slice ) const
+            /** @brief (밉 `mip`, 면 `slice`) 의 RTV 입니다. 없으면 nullptr 입니다. */
+            ID3D11RenderTargetView* findSliceRTV( uint32 slice, uint32 mip ) const
             {
                 if ( _listSliceRTV.empty() )
-                    return slice == 0 ? _rtv.Get() : nullptr;
-                return slice < _listSliceRTV.size() ? _listSliceRTV[slice].Get() : nullptr;
+                    return ( slice == 0 && mip == 0 ) ? _rtv.Get() : nullptr;
+                const size_t viewIndex = static_cast<size_t>( mip ) * _arraySize + slice;
+                return ( slice < _arraySize && viewIndex < _listSliceRTV.size() ) ? _listSliceRTV[viewIndex].Get() : nullptr;
             }
-            /** @brief 면 `slice` 의 DSV 입니다. 없으면 nullptr 입니다. */
-            ID3D11DepthStencilView* findSliceDSV( uint32 slice ) const
+            /** @brief (밉 `mip`, 면 `slice`) 의 DSV 입니다. 없으면 nullptr 입니다. */
+            ID3D11DepthStencilView* findSliceDSV( uint32 slice, uint32 mip ) const
             {
                 if ( _listSliceDSV.empty() )
-                    return slice == 0 ? _dsv.Get() : nullptr;
-                return slice < _listSliceDSV.size() ? _listSliceDSV[slice].Get() : nullptr;
+                    return ( slice == 0 && mip == 0 ) ? _dsv.Get() : nullptr;
+                const size_t viewIndex = static_cast<size_t>( mip ) * _arraySize + slice;
+                return ( slice < _arraySize && viewIndex < _listSliceDSV.size() ) ? _listSliceDSV[viewIndex].Get() : nullptr;
             }
         };
 

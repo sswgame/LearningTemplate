@@ -29,6 +29,10 @@
         "_reopenMaxDelayMs": 30000,
         "_clipCacheMegabytes": 192
     },
+    "_renderStability": {
+        "_minStillFrames": 16,
+        "_maxExposureErrorEv": 0.05
+    },
     "_render": {
         "_psoBuildBudgetMicroseconds": 2000,
         "_shadowCascadeSplitLambda": 0.75,
@@ -38,13 +42,18 @@
             "_uploadsPerFrame": 8,
             "_upgradesPerFrame": 2,
             "_poolMegabytes": 768,
-            "_idleFramesBeforeRelease": 300
+            "_maxMegabytesInFlight": 64,
+            "_idleFramesBeforeRelease": 300,
+            "_minFramesBetweenChanges": 30,
+            "_promoteBudgetMarginPercent": 10
         }
     },
     "_bBackgroundGamepadInput": false,
     "_deviceLostPolicy": "Quit",
     "_rhi": {
         "_allocationCountReserve": 256,
+        "_uploadStagingMegabytes": 32,
+        "_uploadStagingIdleFrames": 300,
         "_pipelineCacheSaveIntervalSeconds": 300.0,
         "_bGPUBasedValidation": false,
         "_bSynchronizationValidation": false

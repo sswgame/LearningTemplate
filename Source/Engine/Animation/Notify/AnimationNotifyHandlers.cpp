@@ -177,6 +177,7 @@ namespace sw
             public:
                 vector_reference<const AnimationNotifyParamDef> getParams() const override { return vector_reference<const AnimationNotifyParamDef>{ kArrParam }; }
                 bool                                            supportsState() const override { return true; }
+                bool                                            usesBonesForHitDetection() const override { return true; }
                 void                                            onNotify( AnimationNotifyContext& context ) const override
                 {
                     // 길이 없는 판정이면 현재 칼날 하나만 측정한다(지난 칼날이 없다).

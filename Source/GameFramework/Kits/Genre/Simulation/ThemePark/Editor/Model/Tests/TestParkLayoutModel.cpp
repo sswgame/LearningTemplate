@@ -16,6 +16,8 @@ namespace
     {
         /** @brief 실제 데이터(`coasters.xml` 의 family)와 같은 회로입니다 — 끝이 스테이션 뒤에 와서 닫는 곡선이 접히지 않는다(접히면 빌더가 경고한다). */
         static constexpr const utf8* kCoasters = R"(<CoasterLayoutCatalog>
+  <Physics gravity="9.81" rollingResistance="0.012" dragCoefficient="0.0004" liftSpeed="4" stationSpeed="3" boosterSpeed="22" boosterAcceleration="9" brakeSpeed="5" brakeDeceleration="10" fixedStep="0.00416667" stallSpeed="0.3" stallSeconds="3" gForceWarmupSeconds="0.5"/>
+  <Rating maxRating="10" intensityPerPositiveG="0.9" intensityPerNegativeG="1.5" intensityPerLateralG="1.2" intensitySpeedScale="15" nauseaPerLateralG="1.5" nauseaPerInversion="1" nauseaPerAirtime="0.3" nauseaPerIntensity="0.25" excitementSpeedScale="10" excitementPerAirtime="0.6" excitementPerInversion="0.8" excitementPerDrop="0.3" excitementDropHeightScale="15" excitementLengthScale="400" excitementIntensityLimit="8"/>
   <Layout id="family" name="Little Dipper" startHeight="1">
     <Piece type="Station" length="10"/>
     <Piece type="LiftHill" length="16" height="8"/>

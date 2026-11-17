@@ -9,9 +9,8 @@
 <Scenario name="game.empty.modsupport" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
 	<Launch variable="gv_modList" value="demo_lantern"/>
-	<Wait frames="5"/>
+	<WaitUntil watch="Mods.ActiveCount" equals="1" timeoutWallSeconds="10"/> <!-- 모드가 적용됐다 -->
 	<ExpectLog id="ModSession.Applied" contains="Mods applied: 1 [demo_lantern@1.0.0#" atLeast="1"/>
-	<WaitUntil watch="Mods.ActiveCount" equals="1" timeoutWallSeconds="10"/>
 	<DevCommand line="mod.status"/>
 	<ExpectLog id="DevCommand.Reply" contains="mods: 1 active [demo_lantern@1.0.0#" atLeast="1"/>
 	<DevCommand line="mod.read game/empty/data/mods/welcome.xml"/>
@@ -19,9 +18,8 @@
 	<DevCommand line="mod.read mods/demo_lantern/data/lantern.xml"/>
 	<ExpectLog id="DevCommand.Reply" contains="color=&quot;amber&quot;" atLeast="1"/>
 	<!-- 넷 세션 와이어 버전 · 세이브 머리가 이 구성 해시를 싣는다(혼자 하는 실행이라 세션은 열리지 않는다 — 단위 테스트 GameStateSnapshotTest.HeaderCarriesTheContentConfiguration) -->
-	<!-- 배포 형태로 묶기: Saved/ModPacks/demo_lantern/(mod.xml + content.pack) — 배포 패키지(Scripts/package/pack.py --mods demo_lantern)가 여기서 베낀다 -->
+	<!-- 배포 형태로 묶기: Saved/ModPacks/demo_lantern/(mod.xml + content.pack) — 배포 패키지(Scripts/package/pack.py 의 mods 인자에 demo_lantern)가 여기서 베낀다 -->
 	<DevCommand line="mod.pack demo_lantern"/>
 	<ExpectLog id="ModSession.Exported" contains="Mod 'demo_lantern' packed for shipping" count="1"/>
-	<Wait frames="1"/>
 	<Pass/>
 </Scenario>

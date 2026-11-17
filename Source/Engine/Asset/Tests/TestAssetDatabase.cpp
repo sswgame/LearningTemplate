@@ -154,3 +154,38 @@ SW_TEST_CASE( AssetDatabaseTest, MetaTextRoundTripsAndRejectsOtherShapes )
     AssetMeta unknownField;
     SW_EXPECT_FALSE( unknownField.parseXML( "<AssetMeta _guid=\"0123456789abcdef0011223344556677\" _source=\"hit.ogg\" _extra=\"1\"/>", "extra.meta" ).has_value() );
 }
+
+SW_TEST_CASE( AssetMetaTest, ImportOverrideRoundTrips )
+{
+    // 예외 없는 서술은 칸을 쓰지 않는다 — 이미 있는 2580 장의 `.meta` 글이 바뀌지 않는다.
+    const AssetGUID guid = AssetGUID::create();
+    SW_EXPECT_TRUE( AssetMeta::makeText( "a/hit.ogg", guid ).find( "_listImportOverride" ) == string::npos );
+
+    vector<AssetImportOverride> listOverride( 2 );
+    listOverride[0]._key   = "animationCodec";
+    listOverride[0]._value = "raw";
+    listOverride[1]._key   = "generateMips";
+    listOverride[1]._value = "false";
+    AssetMeta                 meta;
+    const optional<AssetGUID> read = meta.parseXML( AssetMeta::makeText( "a/horse.glb", guid, listOverride ), "horse.glb.meta" );
+    SW_REQUIRE_TRUE( read.has_value() );
+    SW_EXPECT_TRUE( *read == guid );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, meta._listImportOverride.size() );
+    SW_EXPECT_EQUAL( string( "animationCodec" ), meta._listImportOverride[0]._key );
+    SW_EXPECT_EQUAL( string( "raw" ), meta._listImportOverride[0]._value );
+    SW_EXPECT_EQUAL( string( "generateMips" ), meta._listImportOverride[1]._key );
+    SW_EXPECT_EQUAL( string( "false" ), meta._listImportOverride[1]._value );
+}
+
+SW_TEST_CASE( AssetMetaTest, UnknownAttributeIsStillAnError )
+{
+    // 예외 칸이 생겨도 엄격한 읽기는 그대로다 — 겉 · 예외 원소의 모르는 속성이 모두 오류다.
+    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    AssetMeta outer;
+    SW_EXPECT_FALSE( outer.parseXML( "<AssetMeta _guid=\"0123456789abcdef0011223344556677\" _source=\"horse.glb\" _codec=\"raw\"/>", "outer.meta" ).has_value() );
+    AssetMeta inner;
+    SW_EXPECT_FALSE( inner.parseXML( "<AssetMeta _guid=\"0123456789abcdef0011223344556677\" _source=\"horse.glb\"><_listImportOverride>"
+                                     "<AssetImportOverride _key=\"animationCodec\" _value=\"raw\" _note=\"x\"/></_listImportOverride></AssetMeta>",
+                                     "inner.meta" )
+                         .has_value() );
+}

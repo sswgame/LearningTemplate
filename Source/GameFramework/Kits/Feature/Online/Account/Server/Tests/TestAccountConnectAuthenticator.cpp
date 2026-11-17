@@ -31,11 +31,6 @@ namespace
             }
             return true;
         }
-        bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut, int32 outSize ) override
-        {
-            (void)params;
-            return fill( reinterpret_cast<const uint8*>( password.data() ), static_cast<int32>( password.size() ), pSalt, saltSize, pOut, outSize );
-        }
         bool computeKeyedHash( const uint8* pKey, int32 keySize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) override
         {
             return fill( pKey, keySize, pInfo, infoSize, pOut, outSize );

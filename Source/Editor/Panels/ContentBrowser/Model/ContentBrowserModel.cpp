@@ -481,7 +481,7 @@ namespace sw::editor
         _pendingMoves.discardRename();
     }
 
-    EditorReferenceIndex* ContentBrowserModel::findCurrentReferenceIndex()
+    EditorAssetIndex* ContentBrowserModel::findCurrentReferenceIndex()
     {
         return ContentBrowserModelInternal::getHotReload().findCurrentReferenceIndex();
     }
@@ -500,7 +500,7 @@ namespace sw::editor
 
     bool ContentBrowserModel::commitRename( string_view newName )
     {
-        EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
+        EditorAssetIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
         {
             _pendingMoves.addRename( newName );
@@ -522,7 +522,7 @@ namespace sw::editor
 
     bool ContentBrowserModel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )
     {
-        EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
+        EditorAssetIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
         {
             _pendingMoves.addMove( sourceAbs, folderAbs );
@@ -550,7 +550,7 @@ namespace sw::editor
             return false;
         if ( _bMoveRequestPlanned == SW_TRUE )
             return true;
-        const EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
+        const EditorAssetIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
             return false;                                                                                                             // 역색인이 마지막 변경을 따라오면 계획한다 — 낡은 색인으로 세운 계획은 고칠 참조를 빠뜨린다
         (void)ContentBrowserFileActions::planMoveToFolder( _moveRequestSourceAbs, _moveRequestFolderAbs, *pIndex, _moveRequestPlan ); // 옮길 수 없으면 `_failure` 를 창이 보인다
@@ -622,7 +622,7 @@ namespace sw::editor
         _referenceSearch.query( getReferenceIndex(), absolutePath, bDependencies );
     }
 
-    const EditorReferenceIndex& ContentBrowserModel::getReferenceIndex()
+    const EditorAssetIndex& ContentBrowserModel::getReferenceIndex()
     {
         return ContentBrowserModelInternal::getHotReload().getReferenceIndex();
     }

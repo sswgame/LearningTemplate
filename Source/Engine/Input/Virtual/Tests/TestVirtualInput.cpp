@@ -118,6 +118,26 @@ SW_TEST_CASE( VirtualInputScriptTest, DelayMovesOnlyLaterEvents )
     SW_EXPECT_TRUE( script.isFinished( 17 ) );
 }
 
+/** @brief [VirtualInputScriptTest] 밀기: 누르기가 이미 나간 탭의 떼기는 제 프레임에 난다 — 조건 대기가 시계를 멈춰도 키가 눌린 채로 남지 않는다 */
+SW_TEST_CASE( VirtualInputScriptTest, DelayKeepsReleaseOfEmittedTap )
+{
+    VirtualInputScript script;
+    const InputSlot    keyW{ InputDeviceKind::Keyboard, 0, static_cast<uint16>( Key::W ) };
+    SW_REQUIRE_TRUE( script.addTap( 1, keyW, 2 ) );
+    SW_REQUIRE_TRUE( script.addTap( 5, keyW, 2 ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), emit( script, 1 ).size() ); // 첫 탭의 누르기가 나갔다
+
+    script.delayEventsFrom( 2, 1 ); // 프레임 2 · 3 에서 시계를 멈춘다
+    script.delayEventsFrom( 3, 1 );
+    SW_EXPECT_TRUE( emit( script, 2 ).empty() );
+    const vector<RawInputEvent> listRelease = emit( script, 3 );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRelease.size() ); // 떼기는 밀리지 않았다
+    SW_EXPECT_TRUE( listRelease[0]._type == RawInputEventType::KeyUp );
+    SW_EXPECT_TRUE( emit( script, 5 ).empty() ); // 아직 나가지 않은 둘째 탭은 둘 다 밀렸다
+    SW_REQUIRE_EQUAL( size_t( 1 ), emit( script, 7 ).size() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), emit( script, 9 ).size() );
+}
+
 /** @brief [InputReplayTest] 녹화 중에만 프레임이 쌓이고, 재생은 프레임 번호로 그 이벤트를 낸다. 길이를 더하고 끝을 안다 */
 SW_TEST_CASE( InputReplayTest, RecordsAndEmits )
 {

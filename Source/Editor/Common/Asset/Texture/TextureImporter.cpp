@@ -21,6 +21,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/ImageFileWriter.h"
@@ -430,7 +431,7 @@ namespace sw::editor
             uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
                 return TextureImporter::computeSourceHash( sourcePath, rule );
             }
@@ -442,16 +443,22 @@ namespace sw::editor
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return false;
                 return TextureImporter::importTexture( sourcePath, importedPath, rule, nullptr, _pTaskManager );
             }
 
         protected:
-            /** @brief 리소스 루트 기준 경로에 맞는 규칙을 @p outRule 에 담습니다. 규칙이 겹치면 오류를 남기고 false 입니다. 맞는 규칙이 없으면 기본 규칙이고 true 입니다. */
-            [[nodiscard]] bool findRule( string_view assetPath, TextureImportRule& outRule ) const
+            /**
+             * @brief 리소스 루트 기준 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
+             * @return 규칙이 겹치거나 서술 · 예외를 읽지 못하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] bool findRule( string_view sourcePath, string_view assetPath, TextureImportRule& outRule ) const
             {
-                TextureImportRuleMatch match = _config.findMatchingRule( assetPath );
+                vector<AssetImportOverride> listOverride;
+                if ( AssetImportRuleUtil::readMetaOverrides( sourcePath, listOverride ) == false )
+                    return false;
+                TextureImportRuleMatch match = _config.resolveRule( assetPath, listOverride );
                 if ( match.hasError() )
                 {
                     SW_LOG_ERROR_ID( "TextureImporter.ImportRuleRejected", "%#", match._error.c_str() );
@@ -500,7 +507,7 @@ namespace sw::editor
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return false;
                 return TextureImporter::cookTextureVariant( sourcePath, importedPath, rule, _family, _pTaskManager );
             }

@@ -175,6 +175,8 @@ namespace sw
         size_t getCurrentIndex() const { return _index; }
         /** @brief 특정 인덱스의 명령 정보를 반환합니다. */
         const Command& getCommand( size_t index ) const { return _listCommand[index]; }
+        /** @brief @p cmd(와 그 안쪽)가 쥔 바이트입니다(이름 · 단계). 한도(`UndoBufferLimit`)가 세는 값과 같다 — 시나리오가 거래 하나의 크기를 본다(`Editor.LastUndoBytes`). */
+        static uint64 measureHeldBytes( const Command& cmd );
         /** @brief 특정 인덱스 위치로 연속 undo/redo를 실행하여 점프합니다. 편집이 열려 있으면(`isEditOpen`) 거절합니다. */
         void jumpTo( size_t targetIndex );
 
@@ -217,8 +219,6 @@ namespace sw
         static bool isPersistable( const Command& cmd );
         /** @brief @p cmd(와 그 안쪽)에 주인이 @p ownerID 인 코드 단계가 있는지 확인합니다. */
         static bool isOwnedBy( const Command& cmd, uint64 ownerID );
-        /** @brief @p cmd(와 그 안쪽)가 쥔 바이트입니다(이름 · 단계). */
-        static uint64 measureHeldBytes( const Command& cmd );
         /** @brief 한도(`UndoBufferLimit`)를 넘으면 가장 오래된 명령부터 버리고 위치를 맞춥니다. 가장 새 명령 하나는 남긴다. */
         void evictOverLimit();
         /** @brief 실행할 것이 있는 명령인지 확인합니다(undo 와 redo 가 둘 다 있거나 트랜잭션 묶음). */

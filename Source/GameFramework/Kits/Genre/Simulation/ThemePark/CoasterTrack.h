@@ -227,8 +227,92 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 승차 평가(강도 · 멀미 · 흥분, 0..`_maxRating`)를 측정값에서 내는 계수입니다(타이쿤의 평가 공식). 공원마다 데이터로 바꾼다.
+     * @details 강도 = 누르는 G × `_intensityPerPositiveG` + 띄우는 G × … + 최고 속도 / `_intensitySpeedScale`. 흥분은 강도가 `_excitementIntensityLimit`
+     *          를 넘은 만큼 깎인다("너무 무서우면 안 탄다"). 규칙 자산이다 — 코스터 카탈로그의 `<Rating …/>` 한 줄이 모든 칸을 적는다(`Required`, 감사 K-4).
+     */
+    REFLECT()
+    struct SW_KIT_API CoasterRatingWeights
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.0 )
+        float32 _maxRating{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _intensityPerPositiveG{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _intensityPerNegativeG{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _intensityPerLateralG{};
+        PROPERTY( Required, Min = 0.001 )
+        float32 _intensitySpeedScale{}; ///< 최고 속도(m/s)를 이 값으로 나눠 강도에 더한다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _nauseaPerLateralG{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _nauseaPerInversion{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _nauseaPerAirtime{}; ///< 에어타임 1 초가 더하는 멀미
+        PROPERTY( Required, Min = 0.0 )
+        float32 _nauseaPerIntensity{};
+        PROPERTY( Required, Min = 0.001 )
+        float32 _excitementSpeedScale{}; ///< 최고 속도(m/s)를 이 값으로 나눠 흥분에 더한다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _excitementPerAirtime{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _excitementPerInversion{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _excitementPerDrop{};
+        PROPERTY( Required, Min = 0.001 )
+        float32 _excitementDropHeightScale{}; ///< 가장 큰 낙하 높이(m)를 이 값으로 나눠 흥분에 더한다
+        PROPERTY( Required, Min = 0.001 )
+        float32 _excitementLengthScale{}; ///< 코스 길이(m)를 이 값으로 나눠 흥분에 더한다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _excitementIntensityLimit{}; ///< 강도가 이보다 크면 넘은 만큼 흥분을 깎는다
+    };
+
+    /**
+     * @brief 열차 물리의 상수입니다. 단위는 m, s, m/s, m/s^2 입니다.
+     * @details 규칙 자산이다 — 코스터 카탈로그의 `<Physics …/>` 한 줄이 모든 칸을 적고(`Required`) `<Rating …/>` 이 `_ratingWeights` 를 채운다. 없으면 카탈로그 로드가 실패한다.
+     *          C++ 초기값이 없으므로 기본 생성한 값은 중력 0 · 적분 간격 0 이라 `CoasterTrain::initialize` 가 거절한다(감사 K-4 — 게임이 기본값으로 열차를 열 길이 없다).
+     */
+    REFLECT()
+    struct SW_KIT_API CoasterPhysicsParams
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.001 )
+        float32 _gravity{}; ///< G 의 분모라 0 보다 커야 한다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rollingResistance{}; ///< 구름 저항 계수 μ 이다. 감속은 μg 이다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _dragCoefficient{}; ///< 공기 저항이다. 감속은 k·v^2 이다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _liftSpeed{}; ///< 체인이 끄는 속도이다. 열차가 그보다 느리면 이 속도로 끈다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _stationSpeed{}; ///< 스테이션이 맞추는 속도(출발과 도착)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _boosterSpeed{}; ///< 부스터가 올려 주는 속도 상한
+        PROPERTY( Required, Min = 0.0 )
+        float32 _boosterAcceleration{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _brakeSpeed{}; ///< 브레이크가 내리는 속도
+        PROPERTY( Required, Min = 0.0 )
+        float32 _brakeDeceleration{};
+        PROPERTY( Required, Min = 0.0005, Max = 0.0333334 )
+        float32 _fixedStep{}; ///< 적분 간격이다(1/2000..1/30 초). `step` 은 프레임 시간을 이 간격으로 나눠 돈다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _stallSpeed{}; ///< 승차 평가에서 이 속도보다 느리면 "거의 멈춤" 으로 본다(m/s)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _stallSeconds{}; ///< 승차 평가에서 체인, 스테이션, 부스터 밖에서 이 시간 동안 거의 멈춰 있으면 멈춤으로 본다(s)
+        PROPERTY( Required, Min = 0.0 )
+        float32              _gForceWarmupSeconds{}; ///< 승차 평가에서 출발 직후 이 시간 동안은 G 를 측정하지 않는다(첫 차분이 없기 때문이다, s)
+        CoasterRatingWeights _ratingWeights{};       ///< `CoasterRideStats::analyze` 가 평가를 낼 때 쓴다(`<Rating>` 줄에서 읽는다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class CoasterLayoutCatalog
-     * @brief `<CoasterLayoutCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
+     * @brief `<CoasterLayoutCatalog><Physics gravity="9.81" .../><Rating maxRating="10" .../><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
      * @details 조각 하나라도 틀리면(모르는 종류 · 범위 밖 값) 그 레이아웃 전체를 넣지 않는 오류다 — 조각을 빼고 이으면 다른 트랙이 된다.
      */
     class SW_KIT_API CoasterLayoutCatalog : public GameCatalog<CoasterLayoutDef, XMLCatalog<CoasterLayoutCatalog>>
@@ -243,11 +327,23 @@ namespace sw
 
         CoasterLayoutCatalog();
 
+        /** @brief 열차 물리 상수와 평가 계수(`<Physics>` · `<Rating>`)입니다. 로드에 성공한 카탈로그는 반드시 두 줄을 가진다. */
+        const CoasterPhysicsParams& getPhysics() const { return _physics; }
+
     private:
         static constexpr const utf8* kXMLRootName = "CoasterLayoutCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief `<Layout>` 과 그 `<Piece>` 를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadLayout( const XMLNode& node, string_view sourceName );
+        /** @brief `<Physics>` 한 줄을 읽습니다. 칸이 빠졌거나 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool loadPhysics( const XMLNode& node, string_view sourceName );
+        /** @brief `<Rating>` 한 줄을 읽습니다. 칸이 빠졌거나 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool loadRating( const XMLNode& node, string_view sourceName );
+
+    private:
+        CoasterPhysicsParams _physics;
+        int32                _physicsCount; ///< 읽은 `<Physics>` 줄 수(1 이상이어야 로드가 성공한다)
+        int32                _ratingCount;  ///< 읽은 `<Rating>` 줄 수(1 이상이어야 로드가 성공한다)
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CoasterLayoutCatalog>::acquire` 로 한 벌을 받습니다. */

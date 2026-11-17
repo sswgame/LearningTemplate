@@ -1,5 +1,5 @@
 <?asset guid="cf67cf926f671dfcd1472ca4fb611298"?>
-<Prefab formatVersion="0" name="TestKnight">
+<Prefab formatVersion="1" name="TestKnight">
 	<GameObject _schemaVersion="0" _name="TestKnight" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
@@ -18,7 +18,7 @@
 			                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"

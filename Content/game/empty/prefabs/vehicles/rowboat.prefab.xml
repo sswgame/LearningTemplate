@@ -1,5 +1,5 @@
 <?asset guid="f637b3e64fda9f78df809910d04ba2aa"?>
-<Prefab formatVersion="0" _base="game/empty/prefabs/vehicles/sailboat.prefab.xml" name="Rowboat">
+<Prefab formatVersion="1" _base="game/empty/prefabs/vehicles/sailboat.prefab.xml" name="Rowboat">
 	<!-- 노 젓는 배 — 돛배의 변형. 돛을 내리고(넓이 0, 돛대 · 돛을 감춘다) 노 구동력 1500 N 을 단다. 바뀌는 칸만 적는다(프리셋 · 변형 · 배치 덮어쓰기 길). -->
 	<PrefabOverrides>
 		<Override key="MeshComponent#1">

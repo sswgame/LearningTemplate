@@ -2,12 +2,15 @@
 // 외부 로그인과 연동, 디렉터리(접속한 계정만 · 이름 바뀜), 게임 티켓. 저장 규칙은 LoginStoreLogicTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
@@ -32,10 +35,6 @@ namespace
                 pOut[index] = static_cast<uint8>( ++_counter );
             }
             return true;
-        }
-        bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& /*params*/, uint8* pOut, int32 outSize ) override
-        {
-            return fill( reinterpret_cast<const uint8*>( password.data() ), static_cast<int32>( password.size() ), pSalt, saltSize, pOut, outSize );
         }
         bool computeKeyedHash( const uint8* pKey, int32 keySize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) override
         {
@@ -65,13 +64,52 @@ namespace
         uint32 _counter{ 0 };
     };
 
-    /** @brief 테스트의 로그인 설정입니다. 해시 상한은 키트 설정의 필수 칸이라 기본값이 없다. */
+    /**
+     * @brief 결정적인 가짜 비밀번호 해시입니다. 부른 수와 "작업 풀 워커가 아닌 스레드에서 불렸다" 를 셉니다(스레드 안전 — 워커가 부른다).
+     * @details 메모리 저장소는 맡긴 스레드(테스트 스레드)에서 일을 돌리므로, 해시가 저장소 일 안에서 돌면 워커가 아닌 스레드에서 불린다(감사 O-3 이전 모양).
+     */
+    class FakeWorkerHasher final : public IPasswordHasher
+    {
+    public:
+        atomic<int32> _callCount{ 0 };
+        atomic<int32> _offWorkerCount{ 0 };
+
+        bool computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut, int32 outSize ) override
+        {
+            (void)params;
+            const TaskManager* pTaskManager = game::findSubsystem<TaskManager>();
+            if ( pTaskManager == nullptr || pTaskManager->isWorkerThread() == false )
+                _offWorkerCount.fetch_add( 1, std::memory_order_relaxed );
+            _callCount.fetch_add( 1, std::memory_order_relaxed );
+            uint64 hash = HashUtil::kFNVOffset64;
+            for ( const utf8 character : password )
+            {
+                hash = HashUtil::fnvStep64( hash, static_cast<uint8>( character ) );
+            }
+            for ( int32 index = 0; index < saltSize; ++index )
+            {
+                hash = HashUtil::fnvStep64( hash, pSalt[index] );
+            }
+            for ( int32 index = 0; index < outSize; ++index )
+            {
+                hash        = HashUtil::fnvStep64( hash, static_cast<uint8>( index ) );
+                pOut[index] = static_cast<uint8>( hash >> 24 );
+            }
+            return true;
+        }
+    };
+
+    /** @brief 테스트의 로그인 설정입니다. 해시 줄 상한 · nonce 수명은 키트 설정의 필수 칸이라 기본값이 없다. */
     LoginServiceConfig makeLoginServiceSettings()
     {
         LoginServiceConfig settings;
-        settings._maxConcurrentPasswordHashes = 4;
+        settings._maxConcurrentPasswordHashes = 2;
+        settings._maxQueuedPasswordHashes     = 64;
+        settings._loginNonceLifetimeMs        = 60000; // 키트 설정의 필수 칸(`_loginNonceLifetimeSeconds`) — 0 이면 nonce 를 내지 못한다
         return settings;
     }
+
+    constexpr int64 kHashWaitMs = 10000; ///< 테스트가 해시 하나를 기다리는 상한(실패해도 멈추지 않게)
 
     /** @brief 서버 하나입니다. 영속 데이터는 빌립니다 — 데이터를 같이 쓰면 "서버 둘" 입니다. 휘발 저장소도 @p pSharedCache 로 나눌 수 있습니다. */
     struct LoginFixture
@@ -82,6 +120,7 @@ namespace
         EphemeralStoreRouter      _router;
         MemoryServiceStore        _store;
         FakeServiceCrypto         _crypto;
+        FakeWorkerHasher          _hasher;
         FakePlatformLoginProvider _provider;
         LoginService              _service;
         uint64                    _nextTag{ 1 };
@@ -93,12 +132,13 @@ namespace
             , _router{}
             , _store{ &database }
             , _crypto{}
+            , _hasher{}
             , _provider{ "fake" }
             , _service{}
         {
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
             _router.initialize( &_cache );
-            _service.initialize( &_store, &_crypto, settings, arrMasterKey );
+            SW_EXPECT_TRUE( _service.initialize( &_store, &_crypto, &_hasher, game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
             _service.attachCache( &_router );
             SW_EXPECT_TRUE( _service.registerPlatformProvider( &_provider ) );
         }
@@ -116,7 +156,8 @@ namespace
         {
             for ( int32 round = 0; round < 4; ++round )
             {
-                (void)_router.poll();
+                (void)_router.poll();                                // 시도 창 답이 해시 줄에 맡긴다
+                (void)_service.waitForPasswordHashes( kHashWaitMs ); // 해시는 작업 풀에서 돈다 — 끝난 것을 다음 update 가 잇는다
                 _service.update( UnixMilliseconds{ kNowMs } );
                 while ( _store.pollCompletions() > 0 )
                 {
@@ -479,21 +520,50 @@ SW_TEST_CASE( LoginServiceTest, StoreFailureAndProviderRegistration )
     SW_EXPECT_FALSE( rig._service.registerPlatformProvider( &badName ) );
 }
 
-/** @brief [LoginServiceTest] 해시 상한: 자리가 다 차면 더 들이지 않고, 하나가 나가면 다시 들인다 — 저장소 워커를 해시가 모두 잡지 못한다(감사 O-3) */
-SW_TEST_CASE( LoginServiceTest, PasswordHashBudgetRefusesBeyondLimit )
+/** @brief [LoginServiceTest] 비밀번호 해시는 저장소 일이 아니라 작업 풀 워커에서만 돈다 — 가입 · 로그인 · 틀린 비밀번호 · 없는 이름 모두(감사 O-3) */
+SW_TEST_CASE( LoginServiceTest, LoginHashNeverRunsOnAStoreWorker )
 {
-    PasswordHashBudget budget;
-    budget.setMaxCount( 2 );
-    SW_EXPECT_TRUE( budget.tryAcquire() );
-    SW_EXPECT_TRUE( budget.tryAcquire() );
-    SW_EXPECT_FALSE( budget.tryAcquire() );
-    budget.release();
-    SW_EXPECT_TRUE( budget.tryAcquire() );
-    budget.release();
-    budget.release();
+    SW_REQUIRE_NOT_NULL( game::findSubsystem<TaskManager>() );
+    MemoryServiceDatabase database;
+    LoginFixture          rig( database );
+    SW_EXPECT_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( rig.login( "alice" )._result == LoginResult::Ok );
+    SW_EXPECT_TRUE( rig.login( "alice", AccountClientInfo{}, kClientKey + 1, "wrong password" )._result == LoginResult::WrongCredentials );
+    SW_EXPECT_TRUE( rig.login( "nobody_here", AccountClientInfo{}, kClientKey + 2 )._result == LoginResult::WrongCredentials );
+    SW_EXPECT_EQUAL( 4, rig._hasher._callCount.load() );
+    SW_EXPECT_EQUAL( 0, rig._hasher._offWorkerCount.load() );
+}
 
-    PasswordHashBudget unset; // 설정이 빠지면 들이지 않는다(폴백 없음)
-    SW_EXPECT_FALSE( unset.tryAcquire() );
+/** @brief [LoginServiceTest] 해시 줄 자리(돌기 1 + 기다리기 1)가 차면 다음 로그인은 저장소를 읽기 전에 kBusy 로 끝난다. 받은 요청은 끝까지 간다 */
+SW_TEST_CASE( LoginServiceTest, LoginIsBusyWhenTheHashQueueIsFull )
+{
+    MemoryServiceDatabase database;
+    LoginServiceConfig    settings        = makeLoginServiceSettings();
+    settings._maxConcurrentPasswordHashes = 1;
+    settings._maxQueuedPasswordHashes     = 1;
+    LoginFixture rig( database, settings );
+    SW_REQUIRE_TRUE( rig.registerAccount( "alice" ) == LoginResult::Ok );
+
+    // 셋을 한꺼번에 — 앞 둘이 자리를 잡고, 셋째는 바로 kBusy 다(거두기 전).
+    for ( uint64 tag = 101; tag <= 103; ++tag )
+    {
+        rig._service.login( LoginCredential{ "alice", "password123" }, AccountClientInfo{}, kClientKey + tag, UnixMilliseconds{ kNowMs }, tag );
+    }
+    vector<LoginCompletion> listImmediate;
+    rig._service.takeCompletions( listImmediate );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listImmediate.size() );
+    SW_EXPECT_EQUAL( uint64( 103 ), listImmediate[0]._requestTag );
+    SW_EXPECT_TRUE( listImmediate[0]._result.hasError( OnlineError::kBusy ) );
+
+    rig.poll();
+    vector<LoginCompletion> listDone;
+    rig._service.takeCompletions( listDone );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listDone.size() );
+    for ( const LoginCompletion& done : listDone )
+    {
+        SW_EXPECT_TRUE( done._result == LoginResult::Ok );
+    }
+    SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
 }
 
 /** @brief [LoginServiceTest] 주소 단위 시도 창은 휘발 저장소에서 서버 사이에 나눈다 — 서버마다의 버킷이 넉넉해도 두 서버 합이 상한을 넘으면 kRateLimited 다(감사 O-14). 다른 주소는 따로다 */

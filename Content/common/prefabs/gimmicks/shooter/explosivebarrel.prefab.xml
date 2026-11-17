@@ -1,5 +1,5 @@
 <?asset guid="802bc35d5a111d00dd9f57b486818b99"?>
-<Prefab formatVersion="0" name="ExplosiveBarrel">
+<Prefab formatVersion="1" name="ExplosiveBarrel">
 	<GameObject _schemaVersion="0" _name="ExplosiveBarrel" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"

@@ -211,17 +211,18 @@ namespace sw
                 {
                     const WebGPUTextureRecord* pTexture = _pDevice->findTexture( handle );
                     const uint32               slice    = beginInfo._arrColorTargetSlice[attachment];
-                    if ( pTexture == nullptr || slice >= pTexture->_listSliceView.size() )
+                    const uint32               mip      = beginInfo._arrColorTargetMip[attachment];
+                    view                                = pTexture != nullptr ? pTexture->findAttachmentView( slice, mip ) : nullptr;
+                    if ( view == nullptr )
                     {
                         if ( attachment > 0 )
                             break;
                         return RHIRenderPassBeginResult::Failed;
                     }
-                    view = pTexture->_listSliceView[slice];
                     if ( targetWidth == 0 )
-                        targetWidth = pTexture->_desc._width;
+                        targetWidth = MathUtil::max( pTexture->_desc._width >> mip, 1u );
                     if ( targetHeight == 0 )
-                        targetHeight = pTexture->_desc._height;
+                        targetHeight = MathUtil::max( pTexture->_desc._height >> mip, 1u );
                 }
                 WGPURenderPassColorAttachment& color = arrColor[colorCount++];
                 const float4&                  clear = beginInfo._arrClearColor[attachment];
@@ -237,11 +238,12 @@ namespace sw
         bool                                 bDepth = false;
         if ( beginInfo._depthTarget != 0 )
         {
-            const WebGPUTextureRecord* pDepth = _pDevice->findTexture( beginInfo._depthTarget );
-            if ( pDepth == nullptr || beginInfo._depthTargetSlice >= pDepth->_listSliceView.size() )
+            const WebGPUTextureRecord* pDepth    = _pDevice->findTexture( beginInfo._depthTarget );
+            const WGPUTextureView      depthView = pDepth != nullptr ? pDepth->findAttachmentView( beginInfo._depthTargetSlice, beginInfo._depthTargetMip ) : nullptr;
+            if ( depthView == nullptr )
                 return RHIRenderPassBeginResult::Failed;
             bDepth                  = true;
-            depth.view              = pDepth->_listSliceView[beginInfo._depthTargetSlice];
+            depth.view              = depthView;
             depth.depthLoadOp       = WebGPURHIUtil::toLoadOp( beginInfo._depthLoadOp );
             depth.depthStoreOp      = WebGPURHIUtil::toStoreOp( beginInfo._depthStoreOp );
             depth.depthClearValue   = beginInfo._clearDepth;
@@ -731,6 +733,24 @@ namespace sw
             pTarget->_bReadbackQueued = SW_TRUE;
             _pDevice->_listQueuedReadbackBuffer.push_back( readback );
         }
+    }
+
+    void WebGPURHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        endComputePass();
+        const WGPUCommandEncoder  encoder = getEncoder();
+        const WebGPUBufferRecord* pSource = _pDevice->findBuffer( source );
+        const WebGPUBufferRecord* pTarget = _pDevice->findBuffer( destination );
+        if ( encoder == nullptr || pSource == nullptr || pTarget == nullptr )
+            return;
+        // 명세: 오프셋 · 크기는 4 의 배수다. 정점 흐름(12 B 위치 · 4 의 배수 속성)은 늘 맞는다 — 어긋나면 기록하지 않고 알린다(검증 오류로 장치를 잃지 않게).
+        constexpr uint64 kCopyAlignment = 4;
+        if ( sourceOffset % kCopyAlignment != 0 || destinationOffset % kCopyAlignment != 0 || sizeBytes % kCopyAlignment != 0 )
+        {
+            SW_LOG_ERROR_ONCE_ID( "WebGPURHICommandContext.CopyBufferRegionUnaligned", "copyBufferRegion: offsets and size must be multiples of 4 (src %#, dst %#, size %#)", sourceOffset, destinationOffset, sizeBytes );
+            return;
+        }
+        wgpuCommandEncoderCopyBufferToBuffer( encoder, pSource->_buffer, sourceOffset, pTarget->_buffer, destinationOffset, sizeBytes );
     }
 
     void WebGPURHICommandContext::beginEventMarker( const utf8* pName )

@@ -15,27 +15,26 @@
 	<DevCommand line="camera.preset orbit"/>
 	<!-- 평지: 리그가 묶여 두 발 광선이 바닥(0)에 닿는다. -->
 	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.ground_hits" near="2" tolerance="0.01" timeoutFrames="300"/>
-	<Wait frames="30"/>
-	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0" tolerance="0.02"/>
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0" tolerance="0.02" timeoutFrames="60"/> <!-- 발이 바닥에 자리 잡았다 -->
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0" tolerance="0.02"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.pelvis_offset" near="0" tolerance="0.01"/>
 	<!-- 첫 칸(0.12 m): 두 발이 칸 위로 올라가고 골반은 그대로다. -->
 	<Press slot="Key.W"/>
-	<Wait frames="27"/>
+	<AdvanceSimulation frames="27"/> <!-- 누른 채인 걸음 거리가 시험 내용이다(첫 칸에 올라선다) -->
 	<Release slot="Key.W"/>
-	<Wait frames="40"/>
-	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.12" tolerance="0.03"/>
-	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.12" tolerance="0.03"/>
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.12" tolerance="0.03" timeoutFrames="80"/> <!-- 두 발이 칸 위에 자리 잡았다 -->
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.12" tolerance="0.03" timeoutFrames="80"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.pelvis_offset" near="0" tolerance="0.01"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="step_low.ppm"/>
 	<!-- 둘째 칸(0.24 m). -->
 	<Press slot="Key.W"/>
-	<Wait frames="24"/>
+	<AdvanceSimulation frames="24"/>
 	<Release slot="Key.W"/>
-	<Wait frames="40"/>
-	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.24" tolerance="0.03"/>
-	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.24" tolerance="0.03"/>
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_0" near="0.24" tolerance="0.03" timeoutFrames="80"/>
+	<WaitUntil watch="Rig.Output" target="PlayerBody" key="Feet.foot_offset_1" near="0.24" tolerance="0.03" timeoutFrames="80"/>
 	<Expect watch="Rig.Output" target="PlayerBody" key="Feet.ground_hits" near="2" tolerance="0.01"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="step_high.ppm"/>
 	<ExpectImage file="step_low.ppm" golden="step_low"/>
 	<ExpectImage file="step_high.ppm" golden="step_high"/>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d626bf7091c34a0db34bbb46eb0949e8"?>
+<!--
+  장르 키트 시연 — 리듬 한 곡(maps/kit_rhythm). 레인 둘, 120 BPM(박당 0.5 초). 0 번 노트는 레인 0 의 롱노트(박 4 ~ 8, 2 ~ 4 초), 1 번 노트는 레인 1 의 보통 노트(박 6, 3 초). 판정은 셋이다.
+-->
+<Chart title="Demo" artist="KitDemo" level="1" lanes="2">
+	<Bpm beat="0" bpm="120"/>
+	<Note lane="0" beat="4" endBeat="8"/>
+	<Note lane="1" beat="6"/>
+</Chart>

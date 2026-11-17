@@ -8,10 +8,9 @@
 -->
 <Scenario name="game.empty.zonesea" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="object.place Walker 28 -0.5 0"/>
-	<Wait frames="60"/>
+	<WaitUntil watch="Character.MovementMode" target="Walker" is="Swimming" timeoutFrames="120"/> <!-- 바다에 들어 헤엄친다 -->
 	<Expect watch="Zone.Sources" target="Walker" is="surface:Sea"/>
 	<Expect watch="Character.MovementMode" target="Walker" is="Swimming"/>
 	<Expect watch="Physics.Field" target="Walker" key="fluidDensity" near="1.03" tolerance="0.01"/>
@@ -22,7 +21,7 @@
 	<DevCommand line="object.place FloatCrate 29 0.5 -1.5"/>
 	<DevCommand line="object.place StoneBlock 29 0.5 1.5"/>
 	<DevCommand line="object.place Raft 30 0.5 0"/>
-	<Wait frames="240"/>
+	<AdvanceSimulation frames="240"/> <!-- 4 초 뜨고 가라앉는다(시간이 내용) -->
 	<Expect watch="Object.Y" target="FloatCrate" atLeast="-0.6"/>
 	<Expect watch="Object.Y" target="StoneBlock" atMost="-2"/>
 	<Expect watch="Object.Y" target="Raft" atLeast="-0.4"/>

@@ -1,5 +1,5 @@
 <?asset guid="c048b0fd611c93d2f4700e0d0851f8eb"?>
-<Prefab formatVersion="0" name="ArenaCaster">
+<Prefab formatVersion="1" name="ArenaCaster">
 	<GameObject _schemaVersion="0" _name="ArenaCaster" _bActive="true">
 		<_listComponent>
 			<MeshComponent _componentName="MeshComponent"

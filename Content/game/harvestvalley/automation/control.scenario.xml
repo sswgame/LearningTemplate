@@ -13,7 +13,7 @@
 	<Press slot="Key.D"/>
 	<AdvanceSimulation frames="30"/> <!-- 누른 채인 반 초가 시험 내용이다 -->
 	<Release slot="Key.D"/>
-	<WaitUntil watch="Object.Speed" target="Farmer" atMost="0.01" timeoutSeconds="2"/> <!-- 선 뒤에 잰다 -->
+	<WaitUntil watch="Farm.FarmerWalking" equals="0" timeoutSeconds="2"/> <!-- 선 뒤에 잰다(농부는 물리 없이 옮겨 Object.Speed 가 없다) -->
 	<Expect watch="Farm.FarmerX" near="8" tolerance="0.2"/>
 	<!-- 2 한 번 = 물뿌리개(도구 1). -->
 	<Tap slot="Key.Digit2" hold="1"/>

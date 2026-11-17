@@ -20,10 +20,11 @@ namespace sw
     struct TextureStreamingCandidate
     {
         uint32 _mipCount{ 0 };
-        uint32 _residentFirstMip{ 0 }; ///< 지금 GPU 에 있는 가장 큰 밉
-        uint32 _wantedFirstMip{ 0 };   ///< 화면 크기에서 구한, 필요한 가장 큰 밉
-        uint32 _idleFrames{ 0 };       ///< 화면 크기를 알리지 않은 프레임 수
-        uint64 _topMipBytes{ 0 };      ///< 밉 0 하나의 바이트(아래 밉은 넷에 하나씩 줄어든다)
+        uint32 _residentFirstMip{ 0 };  ///< 지금 GPU 에 있는 가장 큰 밉
+        uint32 _wantedFirstMip{ 0 };    ///< 화면 크기에서 구한, 필요한 가장 큰 밉
+        uint32 _idleFrames{ 0 };        ///< 화면 크기를 알리지 않은 프레임 수
+        uint32 _framesSinceChange{ 0 }; ///< 밉을 마지막으로 바꾼 뒤 지난 프레임 수 — `TextureStreamingConfig::_minFramesBetweenChanges` 보다 적으면 이번에 고르지 않는다
+        uint64 _topMipBytes{ 0 };       ///< 밉 0 하나의 바이트(아래 밉은 넷에 하나씩 줄어든다)
 
         /** @brief 가장 큰 밉이 @p firstMip 일 때 GPU 에 있는 바이트입니다(@p firstMip 부터 끝 밉까지). */
         [[nodiscard]] uint64 computeResidentBytes( uint32 firstMip ) const;
@@ -42,7 +43,9 @@ namespace sw
      * @details 규칙:
      *          - 유휴 프레임이 `TextureStreamingConfig::_idleFramesBeforeRelease` 이상이면 필요한 밉은 가장 작은 밉이다(보이지 않는다).
      *          - 예산을 넘으면(엄격히 큼) 화면에서 작은 것(필요한 밉 번호가 큰 것) → 오래 안 보인 것 순으로 내린다. 하나는 필요한 밉까지, 이미 필요한 만큼이면 한 밉씩 — 예산 아래가 되면 멈춘다.
-     *          - 예산 아래면 화면에서 큰 것부터 필요한 밉까지 올린다. 올려서 예산을 넘는 것은 올리지 않는다 — 내린 직후 같은 텍스처를 다시 올려 경계에서 흔들리지 않는다.
+     *          - 예산 아래면 화면에서 큰 것부터 필요한 밉까지 올린다. 올려서 예산에서 여유(`_promoteBudgetMarginPercent`)를 뺀 선을 넘는 것은 올리지 않는다 — 내린 직후 같은 텍스처를 다시 올려
+     *            경계에서 흔들리지 않는다(내리기 선과 올리기 선 사이가 띠다).
+     *          - 밉을 바꾼 지 `_minFramesBetweenChanges` 프레임이 안 된 텍스처는 올리지도 내리지도 않는다(바이트는 센다).
      *          바이트는 밉마다 넷에 하나씩 준다고 본다(블록 압축의 끝 밉 올림은 무시한다 — 순서 판단에는 충분하다).
      */
     class SW_API TextureStreamingPolicy
@@ -51,5 +54,10 @@ namespace sw
         /** @brief @p listCandidate 를 보고 바꿀 것을 @p outListDecision 에 채웁니다(지우고 채운다). @p residentBytes 는 지금 풀에 든 바이트 합입니다. */
         static void decide( vector_reference<const TextureStreamingCandidate> listCandidate, uint64 residentBytes, uint64 budgetBytes, const TextureStreamingConfig& config,
                             vector<TextureStreamingDecision>& outListDecision );
+        /**
+         * @brief 화면이 텍스처 가로에 요구하는 텍셀 수 @p requiredTexels 로 필요한 가장 큰 밉을 구합니다 — 너비가 그보다 작아지지 않는 가장 작은 밉이다(R6-6).
+         * @details 밉 0 너비 @p topWidth, 밉 수 @p mipCount. 요구가 0 이하이면 가장 작은 밉이다. 언리얼 `FStreamingRenderAsset::GetWantedMipsFromSize` 자리(화면 텍셀 크기 → 밉 수).
+         */
+        [[nodiscard]] static uint32 computeWantedFirstMip( uint32 topWidth, uint32 mipCount, float32 requiredTexels );
     };
 } // namespace sw

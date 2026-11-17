@@ -161,6 +161,19 @@ if(SW_ENABLE_COMPLEX_TEXT AND NOT "complex-text" IN_LIST VCPKG_MANIFEST_FEATURES
 	message(FATAL_ERROR "SW_ENABLE_COMPLEX_TEXT=ON needs the vcpkg manifest feature: configure with -DVCPKG_MANIFEST_FEATURES=complex-text")
 endif()
 
+# 힙 백엔드 — `Memory` 아래의 `MemoryBackend`(Source/Core/Memory/MemoryBackend.h) 구현을 고른다. 고른 구현 파일 하나만 링크된다(가상 호출 없음).
+# crt — C 런타임 힙. mimalloc — mimalloc(MIT, vcpkg 선택 기능 `mimalloc`). 웹(Emscripten)은 crt 만 된다(Source/Core/CMakeLists.txt 가 막는다).
+# 기본값은 할당 벤치(감사 AC-1)를 두 백엔드로 잰 뒤에 정한다 — 그 전까지 crt. mimalloc 을 고른 구성은 프리셋 `Ninja-Release-Mimalloc`.
+set(SW_MEMORY_BACKEND "crt" CACHE STRING "힙 백엔드: crt | mimalloc")
+set_property(CACHE SW_MEMORY_BACKEND PROPERTY STRINGS crt mimalloc)
+if(NOT SW_MEMORY_BACKEND MATCHES "^(crt|mimalloc)$")
+	message(FATAL_ERROR "SW_MEMORY_BACKEND='${SW_MEMORY_BACKEND}' is not a heap backend — use crt or mimalloc")
+endif()
+# 패키지는 vcpkg.json 의 선택 기능 `mimalloc` 에 있다 — 복합 문자와 같은 이유로 기능 없이 고르면 이유를 말하고 먼저 선다.
+if(SW_MEMORY_BACKEND STREQUAL "mimalloc" AND NOT "mimalloc" IN_LIST VCPKG_MANIFEST_FEATURES)
+	message(FATAL_ERROR "SW_MEMORY_BACKEND=mimalloc needs the vcpkg manifest feature: configure with -DVCPKG_MANIFEST_FEATURES=mimalloc")
+endif()
+
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
 set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다")
 file(GLOB game_preset_files RELATIVE "${CMAKE_SOURCE_DIR}/Config/Game" "${CMAKE_SOURCE_DIR}/Config/Game/*.json")

@@ -130,8 +130,7 @@ namespace sw
         , _listEvent{}
         , _listRemovedField{}
         , _metadata{}
-        , _listPropertyWithBase{}
-        , _mapNameToPropertyWithBase{}
+        , _inheritedProperties{}
         , _mapNameToProperty{}
         , _mapNameToMethod{}
         , _parentLink{}
@@ -142,7 +141,6 @@ namespace sw
         , _bStatic{ SW_FALSE }
         , _bPrimitive{ SW_FALSE }
         , _bIsCacheBuilt{ SW_FALSE }
-        , _bListPropertyWithBaseBuilt{ SW_FALSE }
         , _bIsPODFastPath{ SW_FALSE }
         , _bHasSaveGameProperty{ SW_FALSE }
         , _bHasValidator{ SW_FALSE }
@@ -166,73 +164,72 @@ namespace sw
 
     void TypeInfo::clearInheritedProperties()
     {
-        _listPropertyWithBase.clear();
-        _mapNameToPropertyWithBase.clear();
-        _bListPropertyWithBaseBuilt = SW_FALSE;
-        _bDerivedFlagsBuilt         = SW_FALSE;
+        _inheritedProperties.withdraw();
+        _bDerivedFlagsBuilt = SW_FALSE;
     }
 
     void TypeInfo::rebuildDerivedCaches()
     {
-        // 자기 이름 맵 — 자기 선언만 본다.
-        _mapNameToProperty.clear();
-        _mapNameToMethod.clear();
-        _mapNameToProperty.reserve( _listProperty.size() * 2 );
-        _mapNameToMethod.reserve( _listMethod.size() );
-        for ( const PropertyInfo& propertyInfo : _listProperty )
+        // 자기 이름 맵 — 자기 선언만 본다. 자기 내용이 바뀐 때(대입 · 첫 등록)만 짓는다: 자손을 다시 잇는 일은 자기 선언을 바꾸지 않으니
+        // 잠금 없이 읽는 맵을 제자리에서 비우고 채우지 않는다.
+        if ( _bIsCacheBuilt == SW_FALSE )
         {
-            _mapNameToProperty[propertyInfo._name] = &propertyInfo;
-            for ( const hashed_string& alias : propertyInfo._listAlias )
+            _mapNameToProperty.clear();
+            _mapNameToMethod.clear();
+            _mapNameToProperty.reserve( _listProperty.size() * 2 );
+            _mapNameToMethod.reserve( _listMethod.size() );
+            for ( const PropertyInfo& propertyInfo : _listProperty )
             {
-                if ( alias.empty() == false )
-                    _mapNameToProperty[alias] = &propertyInfo;
+                _mapNameToProperty[propertyInfo._name] = &propertyInfo;
+                for ( const hashed_string& alias : propertyInfo._listAlias )
+                {
+                    if ( alias.empty() == false )
+                        _mapNameToProperty[alias] = &propertyInfo;
+                }
             }
+            for ( const FunctionInfo& method : _listMethod )
+            {
+                _mapNameToMethod[method._hashName] = &method;
+            }
+            _bIsCacheBuilt = SW_TRUE;
         }
-        for ( const FunctionInfo& method : _listMethod )
-        {
-            _mapNameToMethod[method._hashName] = &method;
-        }
-        _bIsCacheBuilt = SW_TRUE;
 
-        clearInheritedProperties();
+        // 부모가 없으면 `getPropertiesWithBase` 는 자기 목록을 본다 — 판을 짓지 않는다.
         if ( _parentFQN.empty() )
-        {
-            _bListPropertyWithBaseBuilt = SW_TRUE; // 부모가 없으면 `getPropertiesWithBase` 는 자기 목록을 본다
             return;
-        }
 
-        // 사슬을 모아 기반부터 단계마다 **자기 선언 목록**을 접는다. 같은 타입이 사슬에 두 번 나오면 순환이다 — 자기 것만 둔다.
-        const TypeChain chain = getTypeChain();
-        const bool      bLoop = chain.isLoop();
-        if ( bLoop )
-            SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", _fullyQualifiedName.c_str() );
-        const uint32 depth = bLoop ? 1 : chain.size();
+        // 새 판을 다 지은 뒤 한 번에 바꿔 끼운다(`TypeInheritedPropertySlot`). 사슬을 모아 기반부터 단계마다 **자기 선언 목록**을 접는다.
+        // 같은 타입이 사슬에 두 번 나오면 순환이다 — 자기 것만 둔다(로그는 잠금 밖 `TypeRegistry::rebuildAffected`).
+        auto            pSnapshot = make_unique<TypeInheritedPropertySlot::Snapshot>();
+        const TypeChain chain     = getTypeChain();
+        const uint32    depth     = chain.isLoop() ? 1 : chain.size();
 
+        vector<const PropertyInfo*>&         listProperty = pSnapshot->_listProperty;
         unordered_map<hashed_string, uint32> mapNameToIndex;
         for ( uint32 level = depth; level > 0; --level )
         {
             for ( const PropertyInfo& prop : chain[level - 1]->_listProperty )
             {
-                const auto [iter, bInserted] = mapNameToIndex.emplace( prop._name, static_cast<uint32>( _listPropertyWithBase.size() ) );
+                const auto [iter, bInserted] = mapNameToIndex.emplace( prop._name, static_cast<uint32>( listProperty.size() ) );
                 if ( bInserted )
-                    _listPropertyWithBase.push_back( &prop );
+                    listProperty.push_back( &prop );
                 else
-                    _listPropertyWithBase[iter->second] = &prop; // 파생이 같은 이름을 제자리에서 덮는다
+                    listProperty[iter->second] = &prop; // 파생이 같은 이름을 제자리에서 덮는다
             }
         }
 
         // 이름과 별칭에서 항목으로 가는 맵을 목록과 함께 만든다. 뒤의 항목(파생)이 앞(기반)을 덮는다.
-        _mapNameToPropertyWithBase.reserve( _listPropertyWithBase.size() * 2 );
-        for ( const PropertyInfo* pProp : _listPropertyWithBase )
+        pSnapshot->_mapNameToProperty.reserve( listProperty.size() * 2 );
+        for ( const PropertyInfo* pProp : listProperty )
         {
-            _mapNameToPropertyWithBase[pProp->_name] = pProp;
+            pSnapshot->_mapNameToProperty[pProp->_name] = pProp;
             for ( const hashed_string& alias : pProp->_listAlias )
             {
                 if ( alias.empty() == false )
-                    _mapNameToPropertyWithBase[alias] = pProp;
+                    pSnapshot->_mapNameToProperty[alias] = pProp;
             }
         }
-        _bListPropertyWithBaseBuilt = SW_TRUE;
+        _inheritedProperties.publish( std::move( pSnapshot ) );
     }
 
     void TypeInfo::invalidateDerivedCaches()
@@ -372,16 +369,25 @@ namespace sw
     {
         if ( _parentFQN.empty() )
             return PropertyListView{ _listProperty.data(), _listProperty.size() };
-        if ( _bListPropertyWithBaseBuilt == SW_FALSE )
+        const TypeInheritedPropertySlot::Snapshot& snapshot = loadInheritedProperties();
+        return PropertyListView{ snapshot._listProperty.data(), snapshot._listProperty.size() };
+    }
+
+    const TypeInheritedPropertySlot::Snapshot& TypeInfo::loadInheritedProperties() const
+    {
+        const TypeInheritedPropertySlot::Snapshot* const pSnapshot = _inheritedProperties.load();
+        if ( pSnapshot == nullptr )
             SW_FATAL( "TypeInfo %# has a parent but its inherited property list was not built - only TypeRegistry-owned types (rebuildDerivedCaches) can list inherited properties",
                       _fullyQualifiedName.c_str() );
-        return PropertyListView{ _listPropertyWithBase.data(), _listPropertyWithBase.size() };
+        return *pSnapshot;
     }
 
     const TypeInfo* TypeInfo::getParentType() const
     {
-        const TypeInfo* pParent = _parentLink._pType.load( std::memory_order_relaxed );
-        if ( pParent != nullptr || _parentFQN.empty() )
+        const TypeInfo* pParent = _parentLink._pType.load( std::memory_order_acquire );
+        // 레지스트리에 든 타입은 쓰기 쪽이 독점 잠금 안에서 링크를 바꿔 둔다(`TypeRegistry::relinkAffectedLocked`) — 비어 있으면 부모가 미등록이다.
+        // 잠그지 않는다: 쓰기가 잠금을 쥔 채 사슬을 걷고(조상 표), 읽기가 세대마다 잠그면 별칭을 쉬지 않고 거는 쓰기와 잠금을 다툰다.
+        if ( pParent != nullptr || _parentFQN.empty() || isRegistryOwned() )
             return pParent;
 
         // 찾지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
@@ -398,12 +404,6 @@ namespace sw
         else
             _parentMissGeneration.store( generation, std::memory_order_release );
         return pParent;
-    }
-
-    void TypeInfo::resolveParentType() const
-    {
-        clearParentType();
-        (void)getParentType();
     }
 
     bool TypeInfo::isDerivedFrom( const hashed_string& targetFqn ) const
@@ -435,13 +435,13 @@ namespace sw
 
     bool TypeInfo::isDerivedFromSlow( const TypeInfo* pTarget ) const
     {
-        // 헤더의 인라인 버전이 nullptr, 자기 자신, 양쪽 모두 테이블이 있는 경우를 걸렀다. 아직 만들지 않은 쪽은 여기서
-        // 만든다(배치 밖에서 등록된 타입, 레지스트리 밖 사본, 해제 뒤 첫 조회). 만들 수 없는 쪽은 아래 순회가 답한다.
+        // 헤더의 인라인 버전이 nullptr, 자기 자신, 양쪽 모두 테이블이 있는 경우를 걸렀다. 레지스트리 밖 사본은 아직 만들지 않은 표를 여기서 만든다.
+        // 레지스트리에 든 타입의 표는 쓰기 쪽만 짓는다 — 읽기가 함께 지으면 등록이 비운 표를 낡은 사슬로 다시 적을 수 있다. 표가 없으면 아래 순회가 답한다.
         uint8 selfDepth = _castHeader._ancestorDepth.load( std::memory_order_acquire );
-        if ( selfDepth == constant::reflection::kAncestorDepthUnknown && computeAncestorDisplay() )
+        if ( selfDepth == constant::reflection::kAncestorDepthUnknown && isRegistryOwned() == false && computeAncestorDisplay() )
             selfDepth = _castHeader._ancestorDepth.load( std::memory_order_acquire );
         uint8 targetDepth = pTarget->_castHeader._ancestorDepth.load( std::memory_order_acquire );
-        if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->computeAncestorDisplay() )
+        if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->isRegistryOwned() == false && pTarget->computeAncestorDisplay() )
             targetDepth = pTarget->_castHeader._ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
         {
@@ -467,13 +467,13 @@ namespace sw
         clearInheritedProperties();
         _mapNameToProperty.clear();
         _mapNameToMethod.clear();
-        _metadata                   = {};
-        _destroyInstance            = nullptr;
-        _addComponent               = nullptr;
-        _bIsCacheBuilt              = SW_FALSE;
-        _bListPropertyWithBaseBuilt = SW_TRUE; // 묘비는 빈 목록이 답이다 — 든 포인터로 물어도 멈추지 않는다
-        _pValidate                  = nullptr;
-        _pFixedCodec                = nullptr;
+        _metadata        = {};
+        _destroyInstance = nullptr;
+        _addComponent    = nullptr;
+        _bIsCacheBuilt   = SW_FALSE;
+        _inheritedProperties.publish( make_unique<TypeInheritedPropertySlot::Snapshot>() ); // 묘비는 빈 목록이 답이다 — 든 포인터로 물어도 멈추지 않는다
+        _pValidate   = nullptr;
+        _pFixedCodec = nullptr;
     }
 
     bool TypeInfo::computeAncestorDisplay() const
@@ -564,7 +564,9 @@ namespace sw
         // 부모가 없으면 자기 목록만 본다.
         if ( _parentFQN.empty() )
             return findProperty( propNameOrAlias );
-        const PropertyListView listWithBase = getPropertiesWithBase();
+        // 목록과 맵을 **같은 판**에서 읽는다 — 그 사이 다른 판이 발행돼도 섞이지 않는다.
+        const TypeInheritedPropertySlot::Snapshot& snapshot = loadInheritedProperties();
+        const PropertyListView                     listWithBase{ snapshot._listProperty.data(), snapshot._listProperty.size() };
 
         // 작으면 선형으로 찾는다. 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 결과를 낸다.
         if ( listWithBase.size() <= constant::reflection::kLinearSearchThreshold )
@@ -578,7 +580,7 @@ namespace sw
             return nullptr;
         }
 
-        const auto it = _mapNameToPropertyWithBase.find( propNameOrAlias );
-        return it != _mapNameToPropertyWithBase.end() ? it->second : nullptr;
+        const auto it = snapshot._mapNameToProperty.find( propNameOrAlias );
+        return it != snapshot._mapNameToProperty.end() ? it->second : nullptr;
     }
 } // namespace sw

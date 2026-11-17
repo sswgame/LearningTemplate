@@ -382,7 +382,14 @@ namespace sw
     RHIBufferHandle WebGPURHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
         // 메시 풀은 정점을 저장 버퍼로도 읽는다(모프 · 스킨 컴퓨트) — Storage 를 함께 준다.
-        return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, pData, "SW Vertex Buffer" );
+        // CopySrc: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion).
+        return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc, pData, "SW Vertex Buffer" );
+    }
+
+    RHIBufferHandle WebGPURHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    {
+        // 내용 없이 만든 버퍼는 0 으로 시작한다(명세). 복사의 도착 · 원본(다시 꾸릴 때 옛 풀이 원본이다).
+        return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc, nullptr, "SW GPU Vertex Buffer" );
     }
 
     void WebGPURHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
@@ -495,21 +502,23 @@ namespace sw
         record._pUploadSerials = make_unique<RHITextureUploadSerials>();
 
         WGPUTextureViewDescriptor sampleDesc{};
-        sampleDesc.format          = format;
-        sampleDesc.dimension       = desc._dimension == RHITextureDimension::TextureCube ? WGPUTextureViewDimension_Cube
-                                                                                         : ( desc._dimension == RHITextureDimension::Texture2DArray ? WGPUTextureViewDimension_2DArray : WGPUTextureViewDimension_2D );
-        sampleDesc.baseMipLevel    = 0;
-        sampleDesc.mipLevelCount   = mipLevels;
-        sampleDesc.baseArrayLayer  = 0;
-        sampleDesc.arrayLayerCount = layers;
-        sampleDesc.aspect          = bDepth ? WGPUTextureAspect_DepthOnly : WGPUTextureAspect_All; // 깊이를 샘플할 때는 깊이 측면만(스텐실과 함께 뷰할 수 없다)
-        record._sampleView         = wgpuTextureCreateView( record._texture, &sampleDesc );
-        for ( uint32 layer = 0; layer < layers; ++layer )
+        sampleDesc.format           = format;
+        sampleDesc.dimension        = desc._dimension == RHITextureDimension::TextureCube ? WGPUTextureViewDimension_Cube
+                                                                                          : ( desc._dimension == RHITextureDimension::Texture2DArray ? WGPUTextureViewDimension_2DArray : WGPUTextureViewDimension_2D );
+        sampleDesc.baseMipLevel     = 0;
+        sampleDesc.mipLevelCount    = mipLevels;
+        sampleDesc.baseArrayLayer   = 0;
+        sampleDesc.arrayLayerCount  = layers;
+        sampleDesc.aspect           = bDepth ? WGPUTextureAspect_DepthOnly : WGPUTextureAspect_All; // 깊이를 샘플할 때는 깊이 측면만(스텐실과 함께 뷰할 수 없다)
+        record._sampleView          = wgpuTextureCreateView( record._texture, &sampleDesc );
+        const uint32 attachmentMips = ( desc._bIsRenderTarget != SW_FALSE || bDepth ) ? mipLevels : 1u;
+        for ( uint32 viewIndex = 0; viewIndex < attachmentMips * layers; ++viewIndex )
         {
+            const uint32              layer = viewIndex % layers;
             WGPUTextureViewDescriptor sliceDesc{};
             sliceDesc.format          = format;
             sliceDesc.dimension       = WGPUTextureViewDimension_2D;
-            sliceDesc.baseMipLevel    = 0;
+            sliceDesc.baseMipLevel    = viewIndex / layers;
             sliceDesc.mipLevelCount   = 1;
             sliceDesc.baseArrayLayer  = layer;
             sliceDesc.arrayLayerCount = 1;
@@ -811,6 +820,33 @@ namespace sw
         _pDevice->processCompletions();
         const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
         return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( *pRecord->_pUploadSerials );
+    }
+
+    bool WebGPURHIResourceFactory::rebindBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "WebGPU.rebindBindlessTexture" );
+        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
+        if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
+            return false;
+        // 바인드 그룹은 기록 때 번호를 뷰로 풀어 그 뷰로 캐시한다(`WebGPUBindGroupCache` — 번호 키가 아니다). 등록표 값만 바꾸면 다음 그룹이 새 뷰를 쓴다.
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureTable.rebind( index, WebGPUBindlessEntry{ texture, SW_TRUE } );
+    }
+
+    RHIDescriptorIndex WebGPURHIResourceFactory::reserveBindlessTextureIndex()
+    {
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureTable.reserveIndex();
+    }
+
+    bool WebGPURHIResourceFactory::activateReservedBindlessTexture( RHIDescriptorIndex index, RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "WebGPU.activateReservedBindlessTexture" );
+        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
+        if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
+            return false;
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        return _pDevice->_textureTable.assign( index, WebGPUBindlessEntry{ texture, SW_TRUE }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
     void WebGPURHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )

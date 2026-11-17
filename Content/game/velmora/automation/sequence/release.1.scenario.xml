@@ -9,9 +9,8 @@
 	<Launch variable="gv_modList" value="velmora_tidecaves"/>
 	<WaitUntil watch="Mods.ActiveCount" equals="1" timeoutWallSeconds="10"/>
 	<WaitUntil watch="Velmora.Region" is="hearth" timeoutFrames="120"/>
-	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="-1" seconds="2"/>
-	<Wait seconds="2.1"/>
+	<WaitUntil watch="Velmora.PlayerX" near="-12" tolerance="0.05" timeoutSeconds="3"/> <!-- 누른 이동이 끝나 그 자리에 섰다 -->
 	<Expect watch="Velmora.Region" is="tidecaves"/>
 	<Expect watch="Velmora.PlayerX" near="-12" tolerance="0.2"/>
 	<DevCommand line="game.save velmora/release"/>

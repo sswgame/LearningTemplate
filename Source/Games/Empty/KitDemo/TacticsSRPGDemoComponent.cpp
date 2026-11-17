@@ -92,7 +92,7 @@ namespace sw
                              _listPlayerUnit.size(), _listPlayerCell.size(), _listEnemyUnit.size(), _listEnemyCell.size() );
             return false;
         }
-        outField.initialize( _pCatalog.get(), _width, _height, _defaultTerrain, SRPGSettings{}, _seed );
+        outField.initialize( *_pCatalog, _width, _height, _defaultTerrain, _seed ); // 규칙은 카탈로그의 `<Rules>` 다
         for ( size_t index = 0; index < _listPlayerUnit.size() + _listEnemyUnit.size(); ++index )
         {
             const bool            bPlayer   = index < _listPlayerUnit.size();
@@ -305,7 +305,15 @@ namespace sw
         // 전장은 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
         SRPGBattlefield restoredField;
         if ( io.isReading() )
-            restoredField.initialize( _pCatalog.get(), _width, _height, _defaultTerrain, SRPGSettings{}, _seed );
+        {
+            if ( _pCatalog == nullptr )
+            {
+                SW_LOG_ERROR_ID( "KitDemo.TacticsStateNeedsCatalog", "Tactics demo: state read before the SRPG catalog is loaded - refused" );
+                io.fail();
+                return;
+            }
+            restoredField.initialize( *_pCatalog, _width, _height, _defaultTerrain, _seed );
+        }
         io.value( io.isWriting() ? _field : restoredField );
         int2              cursor       = _cursor;
         int32             selectedUnit = _selectedUnit;

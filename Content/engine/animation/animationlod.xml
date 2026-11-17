@@ -1,5 +1,5 @@
 <?asset guid="5e0a2958a12f1d285a48d34fd0971d7d"?>
-<AnimationLODSettings _offscreenUpdateRateDivisor="0"
+<AnimationLODSettings _offscreenUpdateRateDivisor="1"
                       _budgetMilliseconds="2.0"
                       _meshCostMicroseconds="20.0"
                       _maxUpdateRateDivisor="16"

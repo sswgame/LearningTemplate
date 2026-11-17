@@ -87,6 +87,7 @@
         "AMotionEvent_getPointerId": "바깥 이름(Android NDK)",
         "ActiveId": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "ActiveIdHasBeenEditedThisFrame": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
+        "ActiveIdIsAlive": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "AddDllDirectory": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "ConfigDpiScaleFonts": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",
         "ConfigDpiScaleViewports": "바깥 이름(서드파티 · OS · SDK 헤더의 철자 — ImGui · Win32 · UIA · Box2D · D3D/DXC · Emscripten)",

@@ -9,11 +9,10 @@
 -->
 <Scenario name="game.empty.zonephysics" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="object.place Walker 60 1.5 0"/>
 	<DevCommand line="object.place FloatCrate 60.5 3 1"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/> <!-- 무중력에서 1 초 떨어지지 않는다(일어나지 않음 — 시간이 내용) -->
 	<Expect watch="Zone.Sources" target="Walker" is="volume:ZeroG"/>
 	<Expect watch="Physics.Field" target="Walker" key="gravityScale" equals="0"/>
 	<Expect watch="Character.MovementMode" target="Walker" is="Floating"/>
@@ -22,14 +21,14 @@
 	<Expect watch="Physics.Field" target="FloatCrate" key="gravityScale" equals="0"/>
 
 	<DevCommand line="object.place Walker 66 0.05 0"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Surface.GroundKind" target="Walker" is="Ice" timeoutFrames="60"/> <!-- 얼음 위에 섰다 -->
 	<Expect watch="Surface.GroundKind" target="Walker" is="Ice"/>
 	<Expect watch="Zone.Sources" target="Walker" is="surface:Ice"/>
 	<Expect watch="Physics.Field" target="Walker" key="friction" near="0.05" tolerance="0.001"/>
 	<Expect watch="Character.MovementMode" target="Walker" is="Walking"/>
 
 	<DevCommand line="object.place Walker 71.6 0.05 0"/>
-	<Wait frames="70"/>
+	<WaitUntil watch="Ability.Attribute" target="Walker" key="Health" atMost="96" timeoutFrames="120"/> <!-- 가시에 찔렸다 -->
 	<Expect watch="Zone.Sources" target="Walker" is="surface:Thorns"/>
 	<Expect watch="Ability.Attribute" target="Walker" key="Health" atMost="96"/>
 

@@ -1,5 +1,5 @@
 <?asset guid="6187b6628a0c77f66ec7c2e24502e5dd"?>
-<Scene formatVersion="2" name="StarSkirmish">
+<Scene formatVersion="3" name="StarSkirmish">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -101,7 +101,7 @@
 					<SkirmishGameModeComponent _componentName="SkirmishGameModeComponent"
 					                           _bActive="true"
 					                           _unitDataPath="game/starskirmish/data/units.xml"
-					                           _unitModelPath="game/starskirmish/data/unitmodels.xml"
+					                           _unitModelPath="game/starskirmish/data/units.views.xml"
 					                           _commanderTreePath="game/starskirmish/data/commander.bt.xml"
 					                           _unitPrefab="game/starskirmish/prefabs/unit.prefab.xml"
 					                           _cameraRig="1"

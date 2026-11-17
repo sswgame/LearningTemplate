@@ -7,7 +7,6 @@
 -->
 <Scenario name="game.empty.vfxvariant" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/vfxvariant.scene.xml"/>
-	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Wait frames="60"/>
 	<Screenshot file="vfxvariant_off.ppm" waitForStability="false"/>
@@ -17,7 +16,6 @@
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Wait frames="60"/>
 	<Screenshot file="vfxvariant_on.ppm" waitForStability="false"/>
-	<Wait frames="2"/>
 	<ExpectImagesDiffer first="vfxvariant_off.ppm" second="vfxvariant_on.ppm" region="0.2,0,0.8,0.8" minDiffering="0.005"/>
 	<Pass/>
 </Scenario>

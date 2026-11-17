@@ -19,15 +19,15 @@
 	<WaitUntil watch="KitDemo.Tactics.Selected" equals="0" timeoutFrames="10"/>
 	<!-- 커서를 오른쪽으로 두 칸 → 이동 -->
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/> <!-- 축 누름 3 프레임이 끝나고 놓인다(다음 누름이 새 입력이 된다) -->
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/>
 	<Expect watch="KitDemo.Tactics.CursorX" equals="2"/>
 	<Action name="KitDemo.Confirm"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/> <!-- 확정이 이동을 끝낸 뒤 커서를 움직인다(프레임 경계) -->
 	<!-- 한 칸 더 → 첫 경비병을 친다. 아군이 모두 행동해 적 페이즈(이동 0 이라 서 있다)를 지나 2 턴이 된다 -->
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/>
 	<Expect watch="KitDemo.Tactics.CursorX" equals="3"/>
 	<Action name="KitDemo.Confirm"/>
 	<WaitUntil watch="KitDemo.Tactics.EnemiesAlive" equals="1" timeoutFrames="10"/>
@@ -36,18 +36,18 @@
 	<Expect watch="KitDemo.Tactics.PlayersAlive" equals="1"/>
 	<!-- 2 턴: 커서를 기사(2,1)로 돌려 고르고, 두 칸 가서 둘째 경비병을 친다 -->
 	<ActionAxis name="Move" x="-1" seconds="0.05"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/>
 	<Action name="KitDemo.Confirm"/>
 	<WaitUntil watch="KitDemo.Tactics.Selected" equals="0" timeoutFrames="10"/>
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/>
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/>
 	<Expect watch="KitDemo.Tactics.CursorX" equals="4"/>
 	<Action name="KitDemo.Confirm"/>
-	<Wait frames="2"/>
+	<AdvanceSimulation frames="2"/>
 	<ActionAxis name="Move" x="1" seconds="0.05"/>
-	<Wait frames="4"/>
+	<AdvanceSimulation frames="4"/>
 	<Action name="KitDemo.Confirm"/>
 	<WaitUntil watch="KitDemo.Tactics.Result" equals="1" timeoutFrames="30"/>
 	<Expect watch="KitDemo.Tactics.EnemiesAlive" equals="0"/>

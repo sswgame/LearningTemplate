@@ -115,7 +115,8 @@ namespace sw
 
         ActionPlatformerBody();
 
-        void initialize( const PlatformerSettings& motorSettings, const ActionBodyDef& settings );
+        /** @brief 움직임 규칙(`<Motor>`)과 몸 설정(`<Body>`)을 @p catalog 에서만 받습니다(감사 K-4 — 기본 생성한 설정으로 몸을 열 길이 없다). */
+        void initialize( const ActionPlatformerCatalog& catalog );
         void setPosition( const float2& position );
         void update( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime );
 

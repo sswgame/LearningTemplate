@@ -1,5 +1,5 @@
 <?asset guid="8b3a7663c2f22f3bdc8720214ceb8625"?>
-<Scene formatVersion="2" name="animvariant_graph">
+<Scene formatVersion="3" name="animvariant_graph">
 	<!-- 시나리오 automation/animvariant 의 무대 — 셋은 그대로이고 그래프만 차이 파일로 바꾼다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -59,7 +59,7 @@
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="game/empty/data/anim/animvariant_child.animgraph.xml"

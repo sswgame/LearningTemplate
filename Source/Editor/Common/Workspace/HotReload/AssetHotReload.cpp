@@ -274,7 +274,7 @@ namespace sw::editor
         _pReferenceTracker->update( _contentChangeSerial, *this );
     }
 
-    const EditorReferenceIndex& AssetHotReload::getReferenceIndex() const
+    const EditorAssetIndex& AssetHotReload::getReferenceIndex() const
     {
         return _pReferenceTracker->getIndex();
     }
@@ -284,7 +284,7 @@ namespace sw::editor
         return _pReferenceTracker->isCurrent( _contentChangeSerial );
     }
 
-    EditorReferenceIndex* AssetHotReload::findCurrentReferenceIndex()
+    EditorAssetIndex* AssetHotReload::findCurrentReferenceIndex()
     {
         return _pReferenceTracker->findCurrentIndex( _contentChangeSerial );
     }
@@ -507,14 +507,10 @@ namespace sw::editor
     {
         const string assetID = FileUtil::normalizePath( relativePath ).str();
         // 펼쳐 넣는 종류면 바뀐 파일의 참조를 먼저 맞춘다 — 부모를 바꿨으면 새 사슬로 순환을 본다(감시가 올린 번호의 증분 갱신은 다음 `update` 라 늦다).
-        // 바뀐 파일의 나가는 참조는 순환 검사에만 쓰인다(따라가는 것은 들어오는 참조) — `_base` 를 적지 않은 파일(체크아웃 한 번에 수천 개)은 표를 다시 정렬하지 않는다.
-        // 색인에 없는 새 파일도 여기서 넣지 않는다 — 있으면 추적기가 "생긴 파일" 을 몰라 다른 파일의 참조 판정을 다시 보지 않는다.
-        string changedText;
-        if ( shouldInlineReferences( assetID ) && _pReferenceTracker->getIndex().containsFile( assetID ) &&
-             FileUtil::readOptionalTextFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetID ), changedText ) == OptionalFileRead::Read &&
-             changedText.find( DataInheritance::kBaseAttribute ) != string::npos )
+        // 그 파일의 줄만 고치므로(`EditorAssetIndex::applyChanges`) 체크아웃 한 번에 수천 개여도 표 전체를 정렬하지 않는다. 새 파일도 넣어도 된다 — 대상의 있음은 물을 때 본다.
+        if ( shouldInlineReferences( assetID ) )
             _pReferenceTracker->refreshFile( assetID );
-        const EditorReferenceIndex& index = _pReferenceTracker->getIndex();
+        const EditorAssetIndex& index = _pReferenceTracker->getIndex();
         if ( index.isReady() == false )
         {
             SW_LOG_INFO_ID( "AssetHotReload.CascadeIndexNotReady", "Reference index is still scanning - assets that inline %# are not reloaded for this change", assetID.c_str() );

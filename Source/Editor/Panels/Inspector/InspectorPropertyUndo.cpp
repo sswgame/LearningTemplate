@@ -2,44 +2,28 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
-#include "Editor/Panels/Inspector/Model/InspectorEditRecorder.h"
-#include "Editor/Panels/Inspector/Model/PropertyGridViewState.h"
+#include "Editor/Panels/Inspector/Model/PropertyGridModel.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
-    namespace
+    bool InspectorPropertyUndo::isActiveItemDrawn()
     {
-        struct InspectorPropertyUndoInternal
-        {
-            /**
-             * @brief 방금 그린 위젯의 활성화~해제 사이를 한 번의 되돌리기로 묶습니다(기록은 `InspectorEditRecorder`).
-             * @param pLabel 되돌리기 항목에 붙일 이름(널이면 "Property")
-             */
-            static void trackActiveItemEdit( const utf8* pLabel )
-            {
-                const uint32 widgetID = static_cast<uint32>( ImGui::GetItemID() );
-                if ( ImGui::IsItemActivated() )
-                    InspectorEditRecorder::beginEdit( widgetID, pLabel );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    InspectorEditRecorder::finishEdit( widgetID );
-            }
-        };
-    } // namespace
-
-    void InspectorPropertyUndo::trackRowEdit( const PropertyValueRow& row )
-    {
-        InspectorPropertyUndoInternal::trackActiveItemEdit( row._label.c_str() );
+        // `ActiveIdIsAlive` 는 프레임마다 0 에서 시작해 활성 위젯이 그려질 때(`ItemAdd` → `KeepAliveID`) 그 id 가 된다.
+        const ImGuiContext& context = *ImGui::GetCurrentContext();
+        return context.ActiveId != 0 && context.ActiveIdIsAlive == context.ActiveId;
     }
 
-    void InspectorPropertyUndo::trackLastItem( const utf8* pPropertyLabel )
+    void InspectorPropertyUndo::trackRow( PropertyGridModel& model, uint32 rowID, bool bActiveDrawnBefore )
     {
-        InspectorPropertyUndoInternal::trackActiveItemEdit( pPropertyLabel );
+        if ( bActiveDrawnBefore == false && isActiveItemDrawn() )
+            model.touchRow( rowID );
     }
 
-    void InspectorPropertyUndo::commitFinishedEdits()
+    void InspectorPropertyUndo::trackComponentRegion( PropertyGridModel& model, EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, const utf8* pLabel )
     {
-        InspectorEditRecorder::commitFinishedEdits();
+        model.trackComponentRegion( scope, objectID, componentID, ImGui::IsItemActive(), pLabel != nullptr ? string_view{ pLabel } : string_view{} );
     }
 } // namespace sw::editor

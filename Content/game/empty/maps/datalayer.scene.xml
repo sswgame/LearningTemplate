@@ -1,5 +1,5 @@
 <?asset guid="07a9d870c0f31113303f4bc560e417fb"?>
-<Scene formatVersion="2" name="DataLayerShowcase">
+<Scene formatVersion="3" name="DataLayerShowcase">
 	<!-- 시나리오 automation/datalayer 의 무대 — 내부 씬을 앵커로 두 번 넣고(오른쪽은 Box 의 머티리얼을 덮어쓴다), Snow 는 Winter 레이어에 있어 처음에는 오르지 않는다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

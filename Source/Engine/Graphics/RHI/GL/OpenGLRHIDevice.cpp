@@ -170,16 +170,17 @@ namespace sw
         return _computeRootConstantUbo != 0;
     }
 
-    void OpenGLRHIDevice::attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice )
+    void OpenGLRHIDevice::attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice, uint32 mip )
     {
+        // 레벨이 곧 밉이다 — 다운샘플 체인이 밉 하나에 그린다(R-10).
         if ( record._target == GL_TEXTURE_2D )
-            glFramebufferTexture2D( GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, record._texture, 0 );
+            glFramebufferTexture2D( GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, record._texture, static_cast<GLint>( mip ) );
         else
-            glFramebufferTextureLayer( GL_FRAMEBUFFER, attachment, record._texture, 0, static_cast<GLint>( slice ) ); // 큐브는 층 = 면
+            glFramebufferTextureLayer( GL_FRAMEBUFFER, attachment, record._texture, static_cast<GLint>( mip ), static_cast<GLint>( slice ) ); // 큐브는 층 = 면
     }
 
-    uint32 OpenGLRHIDevice::ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, uint32 colorCount, RHITextureHandle depth,
-                                                   uint32 depthSlice )
+    uint32 OpenGLRHIDevice::ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, const uint8* pColorMip, uint32 colorCount, RHITextureHandle depth,
+                                                   uint32 depthSlice, uint32 depthMip )
     {
         CompositeFboKey key{};
         key._colorCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
@@ -187,9 +188,11 @@ namespace sw
         {
             key._arrColor[colorIndex]      = pColor[colorIndex];
             key._arrColorSlice[colorIndex] = pColorSlice != nullptr ? pColorSlice[colorIndex] : uint16{ 0 };
+            key._arrColorMip[colorIndex]   = pColorMip != nullptr ? pColorMip[colorIndex] : uint8{ 0 };
         }
         key._depth      = depth;
         key._depthSlice = static_cast<uint16>( depthSlice );
+        key._depthMip   = static_cast<uint8>( depthMip );
 
         auto existing = _mapCompositeFbo.find( key );
         if ( existing != _mapCompositeFbo.end() )
@@ -197,16 +200,19 @@ namespace sw
 
         const OpenGLTextureRecord* arrColorRecord[kMaxColorAttachments]{};
         uint16                     arrColorSlice[kMaxColorAttachments]{};
+        uint8                      arrColorMip[kMaxColorAttachments]{};
         uint32                     attachedColors{ 0 };
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             if ( key._arrColor[colorIndex] == 0 )
                 continue;
             const OpenGLTextureRecord* pRecord                 = resolveTexture( key._arrColor[colorIndex] );
-            const bool                 bInvalidColorAttachment = pRecord == nullptr || pRecord->_bDepthStencil != SW_FALSE || key._arrColorSlice[colorIndex] >= pRecord->_arraySize;
+            const bool                 bInvalidColorAttachment = pRecord == nullptr || pRecord->_bDepthStencil != SW_FALSE || key._arrColorSlice[colorIndex] >= pRecord->_arraySize ||
+                                                 key._arrColorMip[colorIndex] >= pRecord->_mipLevels;
             if ( bInvalidColorAttachment )
                 return 0;
             arrColorSlice[attachedColors]    = key._arrColorSlice[colorIndex];
+            arrColorMip[attachedColors]      = key._arrColorMip[colorIndex];
             arrColorRecord[attachedColors++] = pRecord;
         }
 
@@ -214,7 +220,7 @@ namespace sw
         if ( depth != 0 )
         {
             pDepthRecord                       = resolveTexture( depth );
-            const bool bInvalidDepthAttachment = pDepthRecord == nullptr || pDepthRecord->_bDepthStencil == SW_FALSE || depthSlice >= pDepthRecord->_arraySize;
+            const bool bInvalidDepthAttachment = pDepthRecord == nullptr || pDepthRecord->_bDepthStencil == SW_FALSE || depthSlice >= pDepthRecord->_arraySize || depthMip >= pDepthRecord->_mipLevels;
             if ( bInvalidDepthAttachment )
                 return 0;
         }
@@ -227,7 +233,7 @@ namespace sw
         GLenum arrDrawBuffer[kMaxColorAttachments]{};
         for ( uint32 colorIndex = 0; colorIndex < attachedColors; ++colorIndex )
         {
-            attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0 + colorIndex, *arrColorRecord[colorIndex], arrColorSlice[colorIndex] );
+            attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0 + colorIndex, *arrColorRecord[colorIndex], arrColorSlice[colorIndex], arrColorMip[colorIndex] );
             arrDrawBuffer[colorIndex] = GL_COLOR_ATTACHMENT0 + colorIndex;
         }
         if ( attachedColors == 0 )
@@ -241,7 +247,7 @@ namespace sw
         if ( pDepthRecord != nullptr )
         {
             const GLenum depthAttachment = ( pDepthRecord->_format == RHIFormat::D24_UNORM_S8_UINT ) ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT;
-            attachTextureToFramebuffer( depthAttachment, *pDepthRecord, depthSlice );
+            attachTextureToFramebuffer( depthAttachment, *pDepthRecord, depthSlice, depthMip );
         }
 
         const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );

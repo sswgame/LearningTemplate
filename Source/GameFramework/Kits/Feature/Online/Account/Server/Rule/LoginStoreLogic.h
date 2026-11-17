@@ -18,6 +18,10 @@
  *          레코드의 첫 바이트는 형식 버전(1)이며 다른 버전은 읽지 않는다. 비밀번호, 장치 비밀, 외부 주체는 다이제스트만 저장한다.
  *          같은 계정의 동시 로그인은 `login_account_session` 의 조건부 쓰기로 한쪽만 이기고, 진 쪽은 다시 읽어 이긴 세션을 밀어낸다. 마지막 로그인이 이기는 것이다.
  *          연동은 이름과 외부 주체 레코드를 "없어야 함" 조건으로 넣는다. 이미 다른 계정의 것이면 `AlreadyLinked` 이며, 계정을 자동으로 합치지 않는 것은 사용자가 정한 정책이다.
+ *
+ *          느린 비밀번호 해시는 여기서 돌지 않는다(감사 O-3) — 이 객체는 `IPasswordHasher` 를 받지 않는다. 비밀번호 로그인은 세 단계다: 읽기(`readLoginChallenge`, 저장소) →
+ *          해시(`PasswordHashQueue`, 작업 풀) → 커밋(`commitLogin`, 저장소). 가입 · 연동은 해시(새 솔트) → 커밋 두 단계이고 해시를 마친 값(`PasswordHashRecord`)을 받는다.
+ *          읽기와 커밋 사이가 벌어져도 낙관적 버전 조건이 정합성을 지킨다 — 커밋이 다시 읽은 솔트 · 매개변수가 해시한 것과 같으면 계산한 해시를 그대로 쓰고, 다르면 해시 단계로 돌아간다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -48,6 +52,47 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 해시를 마친 새 비밀번호입니다(가입 · 연동 · 매개변수가 바뀐 계정의 다시 해시). 해시 줄이 새 솔트로 계산한다. */
+    struct PasswordHashRecord
+    {
+        NetPasswordHashParams _params{};
+        uint8                 _arrSalt[LoginConstant::kSaltSize]{};
+        uint8                 _arrHash[LoginConstant::kPasswordHashSize]{};
+    };
+
+    /**
+     * @brief 비밀번호 로그인의 읽기 단계가 낸 문제입니다 — 무엇을 해시할지(솔트 · 매개변수)와 커밋 조건입니다.
+     * @details 없는 이름도 같은 길을 지난다: 설정 매개변수와 빈 솔트로 가짜 문제를 만들어 해시를 한 번 치르고 커밋 단계가 `WrongCredentials` 를 낸다(응답 시간으로 계정 유무가
+     *          드러나지 않게). 저장된 해시는 담지 않는다 — 커밋이 다시 읽어 견준다.
+     */
+    struct PasswordHashChallenge
+    {
+        string                _nameKey{};
+        NetPasswordHashParams _params{};
+        uint8                 _arrSalt[LoginConstant::kSaltSize]{};
+        uint8                 _bKnownAccount : 1;
+        uint8                 _bRehash       : 1; ///< 계정의 매개변수가 설정과 다르다 — 해시 단계가 새 솔트 · 설정 매개변수로 한 번 더 계산한다
+
+        PasswordHashChallenge()
+            : _bKnownAccount{ SW_FALSE }
+            , _bRehash{ SW_FALSE }
+        {
+        }
+    };
+
+    /** @brief 비밀번호 로그인의 해시 단계가 낸 답입니다. */
+    struct PasswordHashResult
+    {
+        uint8              _arrHash[LoginConstant::kPasswordHashSize]{}; ///< 문제의 솔트 · 매개변수로 계산한 해시
+        PasswordHashRecord _rehash{};                                    ///< `_bRehash` 문제일 때만 — 새 솔트 · 설정 매개변수로 계산한 해시
+        uint8              _bHasRehash : 1;
+
+        PasswordHashResult()
+            : _bHasRehash{ SW_FALSE }
+        {
+        }
+    };
+
     /** @brief (계정, 세션) 한 쌍과 이유입니다. */
     struct LoginSessionRef
     {
@@ -79,11 +124,26 @@ namespace sw
     class LoginStoreLogic
     {
     public:
+        /** @brief 커밋이 "그사이 비밀번호 · 매개변수가 바뀌었다"(`outbHashStale`)고 할 때 읽기 단계부터 다시 하는 상한입니다. 넘으면 `kUnavailable` 이다. */
+        static constexpr int32 kMaxHashRestartCount = 4;
+
         LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& ticketAuthority,
                          LoginStoreResult& outResult );
 
-        LoginServiceResult registerAccount( const LoginCredential& credential, uint64* pOutAccountID );
-        LoginServiceResult login( const LoginCredential& credential, int64 nowMs, LoginGrant& outGrant );
+        /** @brief 가입합니다. @p prepared 는 해시 줄이 새 솔트 · 설정 매개변수로 계산한 비밀번호입니다. 비밀번호 형식은 해시를 맡기기 전에 `validateNewCredential` 이 봤다 — 비밀번호는 저장소 일로 오지 않는다. */
+        LoginServiceResult registerAccount( const LoginCredential& credential, const PasswordHashRecord& prepared, uint64* pOutAccountID );
+        /** @brief 새 비밀번호를 받는 요청(가입 · 연동)의 이름 · 비밀번호 형식을 봅니다. 해시를 맡기기 전에 서비스 스레드가 부른다(형식 밖 입력에 해시를 치르지 않는다). */
+        static LoginServiceResult validateNewCredential( const LoginCredential& credential );
+        /**
+         * @brief 비밀번호 로그인의 읽기 단계입니다. Ok 면 @p outChallenge 를 해시하고 `commitLogin` 으로 넘긴다(없는 이름도 Ok 다). 다른 값(잠금 · 저장소 문제)이면 그것이 답이다.
+         * @details 매개변수가 바뀐 계정이면 `_bRehash` 를 켠다. 잠금은 커밋 단계도 다시 본다.
+         */
+        LoginServiceResult readLoginChallenge( string_view loginName, int64 nowMs, PasswordHashChallenge& outChallenge, LoginGrant& outGrant );
+        /**
+         * @brief 비밀번호 로그인의 커밋 단계입니다. 다시 읽은 계정의 솔트 · 매개변수가 문제와 같으면 @p hashResult 의 해시로 확인하고 세션을 엽니다(Conflict 면 다시 읽는다).
+         * @param outbHashStale 그사이 비밀번호 · 매개변수가 바뀌어 계산한 해시를 쓸 수 없으면 true — 부른 쪽이 읽기 단계부터 다시 한다(`kStoreRetryLimit` 안에서).
+         */
+        LoginServiceResult commitLogin( const PasswordHashChallenge& challenge, const PasswordHashResult& hashResult, int64 nowMs, LoginGrant& outGrant, bool& outbHashStale );
         /** @brief 장치 비밀로 들어옵니다. 그 장치의 게스트 계정이 없으면 만들고 `_bCreated` 를 켭니다. 비밀은 저장하지 않고 다이제스트만 저장합니다. */
         LoginServiceResult guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], int64 nowMs, LoginGrant& outGrant );
         /** @brief 제공자가 확인한 주체로 들어옵니다. 연결된 계정이 없으면 만들고 `_bCreated` 를 켜며, 표시 이름은 @p displayNameHint 에서 가져옵니다. */
@@ -97,7 +157,8 @@ namespace sw
         LoginServiceResult issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, NetGameTicket& outTicket );
 
         /** @brief 세션의 계정에 이름과 비밀번호를 붙여 게스트를 정식 계정으로 바꿉니다. 이 계정에 이미 이름이 있거나 그 이름이 다른 계정의 것이면 `AlreadyLinked` 입니다. */
-        LoginServiceResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity );
+        LoginServiceResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, const PasswordHashRecord& prepared, int64 nowMs,
+                                           AccountIdentity& outIdentity );
         /** @brief 세션의 계정에 외부 계정을 붙입니다. 그 주체가 다른 계정의 것이거나 이 계정에 그 제공자가 이미 있으면 `AlreadyLinked` 입니다. */
         LoginServiceResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
                                          AccountIdentity& outIdentity );
@@ -133,8 +194,6 @@ namespace sw
 
     private:
         LoginServiceResult recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs );
-        /** @brief 없는 계정에도 해시를 한 번 돌립니다. 응답 시간으로 계정 유무가 드러나지 않게 하려는 것입니다. */
-        void burnPasswordHash( string_view password );
         /** @brief 로그인을 막는 제재(정지, 영구 정지)가 있으면 `AccountSuspended` 와 종료 시각, 사유를 @p outGrant 에 채웁니다. 읽지 못하면 `StoreUnavailable` 입니다. */
         LoginServiceResult evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant );
         /** @brief 이전 세션을 정책대로 거절하거나 묘비로 바꾸고, 새 세션과 계정에서 세션으로 가는 연결을 @p inoutTransaction 에 붙입니다. */

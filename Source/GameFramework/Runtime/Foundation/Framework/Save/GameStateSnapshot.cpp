@@ -118,7 +118,7 @@ namespace sw
             }
             /**
              * @brief 개발 구성의 결함 주입이 교체 단계를 지게 하라는지 봅니다(`ISnapshotFaultHook` — 배포는 창구가 없어 늘 false).
-             * @details 깨진 복원 뒤 세이브 막기 · 씬 다시 열기를 시나리오가 밟는 길이다. 런타임은 창구만 묻고 테스트 변수는 개발 소스(`Save/Dev/`)가 든다.
+             * @details 깨진 복원 뒤 세이브 막기 · 씬 다시 열기를 시나리오가 밟는 길이다. 런타임은 창구만 묻고 테스트 변수는 개발 전용 모듈(`GameFramework/Developer` — GameFrameworkDev)이 든다.
              */
             static bool shouldBreakReplace()
             {

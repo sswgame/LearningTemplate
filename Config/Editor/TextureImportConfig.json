@@ -97,14 +97,8 @@
     {
       "name": "Palette_Textures",
       "inherits": "Base_Default",
-      "filter": { "includePatterns": ["*colormap*", "*/voxelcraft/textures_raw/blocks.*"] },
+      "filter": { "includePatterns": ["*colormap*"] },
       "generateMips": false
-    },
-    {
-      "name": "Character_Atlases",
-      "inherits": "Base_Default",
-      "filter": { "includePatterns": ["*/shooter3d/textures_raw/kaykit_dungeon.*"] },
-      "format": "BC1"
     },
     {
       "name": "Terrain_Detail",

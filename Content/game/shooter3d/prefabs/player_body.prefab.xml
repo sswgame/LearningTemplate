@@ -1,5 +1,5 @@
 <?asset guid="89b8fb80a5077f29627a753bb8c9b4ac"?>
-<Prefab formatVersion="0" name="PlayerBody">
+<Prefab formatVersion="1" name="PlayerBody">
 	<GameObject _schemaVersion="0" _name="PlayerBody" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
@@ -18,7 +18,7 @@
 			                       _skeletonPath=""
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/ubc_shooter.animgraph.xml"

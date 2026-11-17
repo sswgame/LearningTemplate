@@ -40,6 +40,8 @@ namespace sw
          *        이 플래그로 건너뛰지 않습니다(각 백엔드의 bindStructuredBuffer 가 스스로 판단합니다).
          * @param pMaterialTexSRV 머티리얼 텍스처 SRV 배열(shaderslot::kMaterialTextureCount 개, 서수 순).
          *        bNativeBindless 가 false 일 때만 쓰이며 t16..t31 에 바인딩됩니다. 없으면 nullptr.
+         * @param bEngineCbUpToDate 엔진 CB 버퍼의 바이트가 이미 이 레이아웃 · 값과 같으면 true — 올리지 않는다.
+         * @param bResourcesUpToDate 위에 더해 PSO 도 같아 슬롯 상태가 그대로면 true — 리소스를 다시 걸지 않는다.
          * @param pIndexCheck 있으면 넘기는 bindless 인덱스(엔진 CB 의 `g_<Name>Index`, 머티리얼 텍스처, 구조 버퍼와 텍스처 슬롯)가 살아 있는
          *        슬롯인지 검사합니다(`BindlessIndexValidator`, Debug 와 Dev 전용). Shipping 에서는 무시됩니다.
          */
@@ -50,8 +52,9 @@ namespace sw
                                   const RHIConstantBuffer&      engineCb,
                                   RHIDescriptorIndex            materialCb,
                                   bool                          bNativeBindless,
-                                  const RHIDescriptorIndex*     pMaterialTexSRV   = nullptr,
-                                  bool                          bEngineCbUpToDate = false,
-                                  const BindlessIndexCheckSite* pIndexCheck       = nullptr );
+                                  const RHIDescriptorIndex*     pMaterialTexSRV    = nullptr,
+                                  bool                          bEngineCbUpToDate  = false,
+                                  bool                          bResourcesUpToDate = false,
+                                  const BindlessIndexCheckSite* pIndexCheck        = nullptr );
     };
 } // namespace sw

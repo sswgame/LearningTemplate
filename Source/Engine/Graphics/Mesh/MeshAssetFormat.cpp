@@ -152,23 +152,28 @@ namespace sw
                 }
             }
 
-            /** @brief 인덱스(uint32)를 씁니다. */
-            static void appendIndices( vector<uint8>& outBytes, const vector<uint32>& listIndex )
+            /** @brief 인덱스를 정점 @p vertexCount 개에 맞는 폭(`MeshAssetFormat::getIndexBytes`)으로 씁니다. */
+            static void appendIndices( vector<uint8>& outBytes, const vector<uint32>& listIndex, uint32 vertexCount )
             {
+                const bool bShort = MeshAssetFormat::getIndexBytes( vertexCount ) == sizeof( uint16 );
                 for ( const uint32 index : listIndex )
                 {
-                    LittleEndianUtil::appendUint32( outBytes, index );
+                    if ( bShort )
+                        LittleEndianUtil::appendUint16( outBytes, static_cast<uint16>( index ) );
+                    else
+                        LittleEndianUtil::appendUint32( outBytes, index );
                 }
             }
 
-            /** @brief 인덱스 @p indexCount 개를 읽습니다. 삼각형이 아니거나 번호가 @p vertexCount 를 넘으면 false 입니다. */
+            /** @brief 인덱스 @p indexCount 개를 정점 @p vertexCount 개의 폭으로 읽습니다. 삼각형이 아니거나 번호가 @p vertexCount 를 넘으면 false 입니다. */
             [[nodiscard]] static bool readIndices( ByteReader& reader, uint32 indexCount, uint32 vertexCount, vector<uint32>& outListIndex )
             {
                 if ( indexCount == 0 || indexCount % 3 != 0 )
                     return false;
-                return reader.readList( outListIndex, indexCount, sizeof( uint32 ), [&]( uint32& index ) -> bool
+                const uint32 indexBytes = MeshAssetFormat::getIndexBytes( vertexCount );
+                return reader.readList( outListIndex, indexCount, indexBytes, [&]( uint32& index ) -> bool
                 {
-                    index = reader.readUint32();
+                    index = indexBytes == sizeof( uint16 ) ? static_cast<uint32>( reader.readUint16() ) : reader.readUint32();
                     return index < vertexCount;
                 } );
             }
@@ -186,7 +191,7 @@ namespace sw
                     LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( level._listVertex.size() ) );
                     LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( level._listIndex.size() ) );
                     appendVertices( outBytes, level._listVertex, level._listIndex, uvBounds );
-                    appendIndices( outBytes, level._listIndex );
+                    appendIndices( outBytes, level._listIndex, static_cast<uint32>( level._listVertex.size() ) );
                 }
                 finishChunk( outBytes, lengthOffset );
             }
@@ -584,7 +589,7 @@ namespace sw
         const uint32 skinBoneCount = bSkin ? data._skinBinding.getBoneCount() : 0u;
         const size_t skinByteCount = bSkin ? data._listSkinVertex.size() * kSkinVertexSize + sizeof( uint64 ) + skinBoneCount * kInverseBindSize : 0u;
         outBytes.clear();
-        outBytes.reserve( kHeaderSize + data._listVertex.size() * kVertexSize + skinByteCount + data._listIndex.size() * sizeof( uint32 ) );
+        outBytes.reserve( kHeaderSize + data._listVertex.size() * kVertexSize + skinByteCount + data._listIndex.size() * getIndexBytes( static_cast<uint32>( data._listVertex.size() ) ) );
         for ( const uint8 magic : MeshAssetFormatInternal::kArrMagic )
         {
             outBytes.push_back( magic );
@@ -615,7 +620,7 @@ namespace sw
             }
             MeshAssetFormatInternal::appendSkinBinding( outBytes, data._skinBinding );
         }
-        MeshAssetFormatInternal::appendIndices( outBytes, data._listIndex );
+        MeshAssetFormatInternal::appendIndices( outBytes, data._listIndex, static_cast<uint32>( data._listVertex.size() ) );
         // 선택 덩어리 — 모프 타깃(있을 때). 길이는 내용을 다 쓴 뒤 채운다.
         if ( data._listMorphTarget.empty() == false )
         {
@@ -681,14 +686,14 @@ namespace sw
         const uint32  skinBoneCount  = reader.readUint32();
         if ( version != kVersion || vertexSize != kVertexSize )
         {
-            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetVersionVertex", "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
+            SW_LOG_ERROR_ID( "MeshAssetFormat.MeshAssetVersionVertex", "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
             return false;
         }
 
         const bool bWholeTriangles = vertexCount > 0 && indexCount > 0 && indexCount % 3 == 0;
         // 정점 수 × 크기를 64 비트로 셈한다 — 깨진 머리의 큰 정점 수가 32 비트로 넘쳐 작은 파일과 "맞아" 보이지 않게 한다.
         const uint64 skinSize     = skinBoneCount > 0 ? static_cast<uint64>( vertexCount ) * kSkinVertexSize + sizeof( uint64 ) + static_cast<uint64>( skinBoneCount ) * kInverseBindSize : 0u;
-        const uint64 indexSize    = static_cast<uint64>( indexCount ) * sizeof( uint32 );
+        const uint64 indexSize    = static_cast<uint64>( indexCount ) * getIndexBytes( vertexCount );
         const uint64 expectedSize = static_cast<uint64>( kHeaderSize ) + static_cast<uint64>( vertexCount ) * kVertexSize + skinSize + indexSize;
         // 정점 · 스킨 · 인덱스 뒤의 남은 바이트는 선택 덩어리다(아래에서 하나씩 읽는다). 모자라면 깨진 파일이다.
         if ( bWholeTriangles == false || expectedSize > static_cast<uint64>( size ) )

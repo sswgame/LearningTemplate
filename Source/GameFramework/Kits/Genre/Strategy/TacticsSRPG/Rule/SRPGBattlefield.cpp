@@ -63,14 +63,13 @@ namespace sw
     {
     }
 
-    void SRPGBattlefield::initialize( const SRPGCatalog* pCatalog, int32 width, int32 height, const hashed_string& defaultTerrain, const SRPGSettings& settings,
-                                      uint32 seed )
+    void SRPGBattlefield::initialize( const SRPGCatalog& catalog, int32 width, int32 height, const hashed_string& defaultTerrain, uint32 seed )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _topology = GridTopology{ width, height }; // 음수는 0 셀로 처리한다
-        _settings = settings;
+        _settings = catalog.getRules();
         _random.setSeed( seed );
-        const SRPGTerrainDef* pTerrain = pCatalog != nullptr ? pCatalog->findTerrain( defaultTerrain ) : nullptr;
+        const SRPGTerrainDef* pTerrain = catalog.findTerrain( defaultTerrain );
         if ( pTerrain == nullptr )
             SW_LOG_WARNING_ID( "SRPGBattlefield.UnknownDefaultTerrainCells", "unknown default terrain '%#' - cells are impassable until painted", defaultTerrain.c_str() );
         _listTerrain.assign( static_cast<size_t>( _topology.getCellCount() ), pTerrain );
@@ -368,7 +367,7 @@ namespace sw
         }
         const SRPGUnit& unit  = *pUnit;
         const int2      start = unit._cell;
-        const bool      bZoc  = _settings._bZoneOfControl == SW_TRUE;
+        const bool      bZoc  = _settings._bZoneOfControl;
         outReach.compute(
             _topology._width, _topology._height, start, unit._pDef->_move,
             [&]( const int2& fromCell, const int2& toCell )
@@ -405,7 +404,7 @@ namespace sw
         const int32 steps = static_cast<int32>( listPath.size() ) - 1;
         unit._cell        = cell;
         unit._bMoved      = SW_TRUE;
-        if ( _settings._bMoveDodge == SW_TRUE )
+        if ( _settings._bMoveDodge )
             unit._dodge = MathUtil::min( _settings._dodgeMax, steps * _settings._dodgePerCell );
         pushEvent( SRPGEvent{ unitIndex, nullopt, steps, SRPGEvent::Kind::Moved, unit._team } );
         return true;

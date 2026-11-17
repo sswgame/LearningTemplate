@@ -6,7 +6,6 @@
 -->
 <Scenario name="game.empty.textureformats" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="600" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
-	<Wait frames="2"/>
 	<Expect watch="RHI.SupportsBC7" equals="1"/>
 	<Expect watch="Texture.FormatVariantActive" equals="0"/>
 	<Pass/>

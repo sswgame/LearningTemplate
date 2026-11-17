@@ -46,6 +46,10 @@ namespace sw::editor
 {
     void EditorSubsystemSet::install( SubsystemScope& scope, EditorContext& context )
     {
+        // 도구 기본값은 컨텍스트가 install 전에 이 범위에 건다 — 아직 활성 범위가 아니라 `getEditorToolDefaults` 로는 찾지 못한다.
+        EditorToolDefaults* const pToolDefaults = findInLocator<EditorToolDefaults>( scope );
+        SW_ASSERT( pToolDefaults != nullptr );
+        const EditorToolDefaults& toolDefaults = *pToolDefaults;
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
         scope.emplaceSubsystem<EditorStateStore>(); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
@@ -57,8 +61,8 @@ namespace sw::editor
         scope.emplaceSubsystem<EditorNotificationManager>();
         scope.emplaceSubsystem<EditorCommandRegistry>();
         // 메인 되돌리기 기록과 복사 버퍼 — 인스턴스가 내려갈 때 호스트의 맡김 칸에 맡기고 새 인스턴스가 되찾는다(리로드 · 백엔드 교체).
-        EditorUndoHistory& undoHistory = scope.emplaceSubsystem<EditorUndoHistory>( EditorUndoHistory::readConfiguredLimit() ); // 도구 기본값은 컨텍스트가 install 전에 건다
-        const bool         bStackBound = scope.bind( &undoHistory.getStack() );                                                 // `findSubsystem<CommandStack>()` 이 찾는다
+        EditorUndoHistory& undoHistory = scope.emplaceSubsystem<EditorUndoHistory>( EditorUndoHistory::readConfiguredLimit( toolDefaults ) );
+        const bool         bStackBound = scope.bind( &undoHistory.getStack() ); // `findSubsystem<CommandStack>()` 이 찾는다
         SW_ASSERT( bStackBound );
         (void)bStackBound;
         scope.emplaceSubsystem<ObjectCopyBuffer>();

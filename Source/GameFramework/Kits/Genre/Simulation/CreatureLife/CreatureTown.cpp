@@ -83,8 +83,13 @@ namespace sw
     {
     }
 
-    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings )
+    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height )
     {
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR_ID( "CreatureTown.CreatureTownNeedsCatalog", "CreatureTown: no creature catalog - the rules are read from its <Rules>" );
+            return false;
+        }
         if ( width < 1 || height < 1 )
         {
             SW_LOG_ERROR_ID( "CreatureTown.CreatureTownRefusedTownSize", "CreatureTown: refused town size %#x%# (needs >= 1 in both)", width, height );
@@ -94,7 +99,7 @@ namespace sw
         _pReputation = refs._pReputation;
         _pQuestLog   = refs._pQuestLog;
         _pClock      = refs._pClock;
-        _settings    = settings;
+        _settings    = pCatalog->getRules();
         _topology    = GridTopology{ width, height };
         _listObject.assign( static_cast<size_t>( _topology.getCellCount() ), hashed_string{} );
         _listHabitat.clear();

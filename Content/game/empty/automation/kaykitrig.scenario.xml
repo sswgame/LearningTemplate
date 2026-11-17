@@ -7,13 +7,11 @@
 -->
 <Scenario name="game.empty.kaykitrig" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_stressTestRig" value="1"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/> <!-- 60 프레임 장면(결정적 애니메이션 시각이 사진 내용) -->
 	<Screenshot file="empty/kaykit_rig_view0.ppm"/>
-	<Wait frames="10"/>
 	<Variable name="gv_stressTestRigView" value="2"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/> <!-- 시점을 바꾼 뒤 60 프레임 장면 -->
 	<Screenshot file="empty/kaykit_rig_view2.ppm"/>
-	<Wait frames="10"/>
 	<!-- 그림을 골든과 견준다 — 사진만 남기면 화면이 틀려도 통과다(시점이 경사면에 막힌 view2 가 그렇게 지나갔다). -->
 	<ExpectImage file="empty/kaykit_rig_view0.ppm" golden="kaykit_rig_view0"/>
 	<ExpectImage file="empty/kaykit_rig_view2.ppm" golden="kaykit_rig_view2"/>

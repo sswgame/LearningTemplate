@@ -1,8 +1,8 @@
 /**
  * @file SceneDocument.h
  * @brief 씬 문서 모델과 XML/바이너리 직렬화입니다(씬 이름, 월드 설정, 엔티티 노드 목록, 프리팹 · 임베디드 상태, 쿠킹본의 스트리밍 셀).
- * @details 씬 형식 판(`SceneDocument::kAssetType._formatVersion`)이 맞지 않는 XML 은 읽지 않습니다 — 옛 판 리더를 두지 않고, 판을 올릴 때 저장소의 씬을
- *          한 번에 다시 씁니다.
+ * @details 씬 형식 판(`SceneDocument::kAssetType._formatVersion`)보다 옛 XML 은 등록된 판 올림 단계(`SW_ASSET_FORMAT_UPGRADE`)로 올려 읽고, 사슬이 끊기거나 새 판이면
+ *          읽지 않습니다. 판을 올릴 때 저장소의 씬도 한 번에 다시 쓴다(판 3 — 형제 순서 칸 이름, 설계 E-6).
  *
  *          조립 칸(씬 인스턴스 `scene` · 씬 상속 `_base` · 데이터 레이어 `layers` · `<SceneSettings>` 의 `_listDataLayer`)은 없어도 되는 칸이라 판을 올리지 않았다 — 이미 있는 씬은 그대로 읽힌다.
  *          씬 인스턴스는 읽을 때 평평한 엔티티 목록으로 펼치고(`expandSceneInstances`) 쿠킹본도 펼친 것을 담는다. 그래서 런타임의 짓는 길은 하나이고, 저장만 앵커 + 덮어쓴 것으로 되돌린다.
@@ -74,7 +74,7 @@ namespace sw
          * @details 판 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판 2: 씬 루트에 월드 설정(`<SceneSettings>`, 스트리밍 여부 · 격자)이
          *          반드시 있다. 판이 2 가 아닌 씬 파일은 읽지 않는다 — 이관기를 두지 않고 저장소의 씬을 다시 썼다.
          */
-        static constexpr AssetTypeDef kAssetType{ "Scene", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), ".scene.bin", 2, {} };
+        static constexpr AssetTypeDef kAssetType{ "Scene", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), ".scene.bin", 3, {} };
 
         /** @brief 씬 문서 안의 엔티티 하나입니다(프리팹 참조 또는 임베디드 GameObject 상태). */
         struct SceneObjectNode

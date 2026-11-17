@@ -1,5 +1,5 @@
 <?asset guid="220be5265daa3e638ed196886b119e5e"?>
-<Prefab formatVersion="0" name="Ladder3D">
+<Prefab formatVersion="1" name="Ladder3D">
 	<GameObject _schemaVersion="0" _name="Ladder3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _componentName="RigidBodyComponent"

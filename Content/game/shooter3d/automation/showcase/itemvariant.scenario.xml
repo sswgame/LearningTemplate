@@ -13,7 +13,7 @@
 	<WaitUntil watch="Appearance.SlotItem" target="Plain" key="Head" is="helmet_knight" timeoutFrames="5"/>
 	<WaitUntil watch="Appearance.SlotItem" target="Gilded" key="Head" is="helmet_knight_gilded" timeoutFrames="5"/>
 	<WaitUntil watch="Appearance.SlotItem" target="Dyed" key="Head" is="helmet_knight_dyeable" timeoutFrames="5"/>
-	<Wait frames="30"/>
+	<WaitUntil watch="Render.Stable" equals="1" timeoutWallSeconds="30"/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<Screenshot file="itemvariant.ppm"/>
 	<ExpectImage file="itemvariant.ppm" golden="itemvariant"/>
 	<ExpectImage file="itemvariant.ppm" golden="itemvariant_plain" region="0.22,0.15,0.38,0.45"/>

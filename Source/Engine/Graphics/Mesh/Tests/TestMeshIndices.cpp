@@ -47,8 +47,8 @@ SW_TEST_CASE( MeshIndicesTest, SetGeometryKeepsSharedVerticesAndRejectsBadIndice
     SW_EXPECT_EQUAL( 4u, mesh->getVertexCount() );
     SW_EXPECT_EQUAL( 6u, mesh->getIndexCount() );
     // 두 삼각형이 나눠 쓰는 정점(0 · 2)도 탄젠트가 +X 다(UV u 가 x 를 따른다).
-    SW_EXPECT_NEAR( 1.0f, mesh->getVertices()[0]._arrTangent[0], 1e-5f );
-    SW_EXPECT_NEAR( 1.0f, mesh->getVertices()[2]._arrTangent[0], 1e-5f );
+    SW_EXPECT_NEAR( 1.0f, mesh->getCPUView().getVertices()[0]._arrTangent[0], 1e-5f );
+    SW_EXPECT_NEAR( 1.0f, mesh->getCPUView().getVertices()[2]._arrTangent[0], 1e-5f );
 
     SW_EXPECT_LOG( "Mesh.MeshIndicesOutOfRange" );
     SW_EXPECT_FALSE( mesh->setGeometry( makeQuadVertices(), sw::vector<uint32>{ 0, 1, 4 } ) );
@@ -109,10 +109,28 @@ SW_TEST_CASE( MeshIndicesTest, AssetRoundTripKeepsIndicesAndSections )
     SW_EXPECT_EQUAL( 3u, read._listSection[1]._indexCount );
 
     // 마지막 인덱스(파일의 인덱스 끝 = 덩어리 앞)를 정점 밖 번호로 바꾸면 읽기가 진다.
-    const size_t lastIndexOffset = sw::MeshAssetFormat::kHeaderSize + 4u * sw::MeshAssetFormat::kVertexSize + 5u * sizeof( uint32 );
+    const size_t lastIndexOffset = sw::MeshAssetFormat::kHeaderSize + 4u * sw::MeshAssetFormat::kVertexSize + 5u * sw::MeshAssetFormat::getIndexBytes( 4u );
     bytes[lastIndexOffset]       = 9;
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetIndexOutOfRange" );
     SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+}
+
+/**
+ * @brief [MeshIndicesTest] 인덱스 폭은 정점 수가 정한다 — 65536 개 이하면 2 바이트, 넘으면 4 바이트이고, 작은 메시의 `.mesh` 는 인덱스를 2 바이트로 싣는다(R-15)
+ * @details 예전엔 모든 메시가 uint32 인덱스였다(작은 메시도 인덱스 바이트가 두 배). 경계(65536 · 65537)를 함께 본다.
+ */
+SW_TEST_CASE( MeshIndicesTest, IndexWidthFollowsVertexCount )
+{
+    SW_EXPECT_EQUAL( 2u, sw::MeshAssetFormat::getIndexBytes( 4u ) );
+    SW_EXPECT_EQUAL( 2u, sw::MeshAssetFormat::getIndexBytes( 65536u ) );
+    SW_EXPECT_EQUAL( 4u, sw::MeshAssetFormat::getIndexBytes( 65537u ) );
+
+    sw::MeshAssetData data{};
+    data._listVertex = makeQuadVertices();
+    data._listIndex  = makeQuadIndices();
+    sw::vector<uint8> bytes;
+    sw::MeshAssetFormat::makeBytes( data, bytes );
+    SW_EXPECT_EQUAL( static_cast<size_t>( sw::MeshAssetFormat::kHeaderSize + 4u * sw::MeshAssetFormat::kVertexSize + 6u * sizeof( uint16 ) ), bytes.size() );
 }
 
 /**
@@ -138,6 +156,24 @@ SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
     SW_REQUIRE_EQUAL( 6u, welded->getIndexCount() );
     for ( uint32 corner = 0; corner < 6; ++corner )
     {
-        SW_EXPECT_TRUE( sw::Memory::compare( &welded->getVertices()[welded->getIndices()[corner]], &listExpected[corner], sizeof( sw::RHIVertex ) ) == 0 );
+        SW_EXPECT_TRUE( sw::Memory::compare( &welded->getCPUView().getVertices()[welded->getIndices()[corner]], &listExpected[corner], sizeof( sw::RHIVertex ) ) == 0 );
     }
+}
+
+/**
+ * @brief [MeshIndicesTest] CPU 정점은 접근 토큰(`MeshCPUView`)으로만 읽고, 지금 모든 메시는 `Keep` 이라 토큰이 정점 · 낮은 단계 정점을 준다(R-15)
+ * @details 변이: `getCPUView` 가 `Keep` 메시에도 빈 토큰을 주면 정점 수 단언이 진다.
+ */
+SW_TEST_CASE( MeshIndicesTest, CPUViewReadsKeptVertices )
+{
+    const sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    sw::vector<sw::RHIVertex>      listVertex( 3 );
+    listVertex[1]._arrPosition[0] = 1.0f;
+    listVertex[2]._arrPosition[1] = 1.0f;
+    SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), sw::vector<sw::uint32>{ 0, 1, 2 } ) );
+    SW_EXPECT_TRUE( mesh->getCPUAccess() == sw::MeshCPUAccess::Keep );
+    const sw::MeshCPUView view = mesh->getCPUView();
+    SW_EXPECT_TRUE( view.isAvailable() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), view.getVertices().size() );
+    SW_EXPECT_TRUE( view.getLODVertices().empty() );
 }

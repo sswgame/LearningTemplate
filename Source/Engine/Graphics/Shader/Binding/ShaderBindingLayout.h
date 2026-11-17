@@ -115,6 +115,8 @@ namespace sw
         uint32 getEngineCbSize() const { return _engineCbSize; }
         /** @brief 엔진 CB 를 채울 멤버 목록입니다. 드로우마다 이름을 다시 해시하지 않기 위한 것입니다. */
         const vector<ShaderEngineCbMember>& getEngineCbMembers() const { return _listEngineCbMember; }
+        /** @brief 엔진 CB 배치(멤버 키 · 오프셋 · 크기)의 해시입니다. 같으면 같은 값에서 같은 바이트가 나온다 — 한 패스에서 PSO 가 바뀌어도 슬롯을 다시 쓸지 가른다. */
+        uint64 getEngineCbLayoutHash() const { return _engineCbLayoutHash; }
         /** @brief 텍스처와 구조 버퍼 슬롯 바인딩 목록입니다. */
         const vector<ShaderResourceBindOp>& getResourceBindOps() const { return _listResourceBindOp; }
 
@@ -128,6 +130,7 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapNameToSlot;
 
         uint32                       _engineCbSize{ 0 };
+        uint64                       _engineCbLayoutHash{ 0 };
         vector<ShaderEngineCbMember> _listEngineCbMember;
         vector<ShaderResourceBindOp> _listResourceBindOp;
     };

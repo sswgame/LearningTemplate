@@ -13,6 +13,7 @@
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -63,7 +64,7 @@ namespace sw
      *          - **메시**: `_meshID` 의 `.mesh` 가 스킨을 가지면 컴포넌트마다 메시 객체를 따로 둡니다. GPU 스키닝 결과(모프 풀 구간)가 메시마다
      *            하나라서, 포즈가 다른 캐릭터가 같은 메시 객체를 나누면 한 포즈로 그려집니다. 정점 데이터는 그 복사본입니다.
      *          - **LOD**: `AnimationSystem` 이 프레임마다 뷰(카메라 절두체)로 판정해 넣습니다(`applyAnimationLOD`). 화면 밖이거나 숨겼으면(`setVisible( false )`) 포즈를 건너뛰고
-     *            (`_bAnimateWhenOffscreen` 이 아닐 때. 숨긴 리더가 보이는 따르는 유닛을 몰면 리더에 켠다), 화면 크기 단계와 예산이 정한 주기마다 포즈를 만듭니다(시간과 알림은 매 프레임 처리합니다). 건너뛴 프레임은
+     *            (`_visibilityBasedTickOption` 이 `AlwaysTickPoseAndRefreshBones` 가 아닐 때. 숨긴 리더가 보이는 따르는 유닛을 몰면 리더에 고른다), 화면 크기 단계와 예산이 정한 주기마다 포즈를 만듭니다(시간과 알림은 매 프레임 처리합니다). 건너뛴 프레임은
      *            직전 두 포즈 사이를 보간합니다(한 주기만큼 늦으며, 언리얼의 URO 보간과 같습니다). 본 LOD(`<스켈레톤>.bonelod.xml`)는 작은 화면에서 끝 본을
      *            평가하지 않습니다. `_updateRateDivisor`(PROPERTY)는 하한이고 LOD 가 더 늘릴 수 있습니다. 같은 주기의 유닛은 위상(핸들 해시)이 달라 같은
      *            프레임에 몰리지 않습니다. 쉬는 유닛(재생 없음, 포즈 깨끗함)은 비용이 없습니다.
@@ -166,8 +167,11 @@ namespace sw
         /** @brief 화면에 보이는지 알려 주는 훅입니다(가시성 판정 쪽이 부르며, 기본은 보임입니다). */
         void setVisibleHint( bool bVisible ) { _bVisibleHint = bVisible ? SW_TRUE : SW_FALSE; }
         bool isVisibleHint() const { return _bVisibleHint == SW_TRUE; }
-        /** @brief 화면 밖에서도 포즈를 만들지 정합니다. */
-        void setAnimateWhenOffscreen( bool bAnimate ) { _bAnimateWhenOffscreen = bAnimate ? SW_TRUE : SW_FALSE; }
+        /** @brief 화면에 보이지 않을 때 무엇을 계속 도는지 정합니다(`VisibilityBasedAnimationTickOption`). 시간 · 알림 · 루트 모션은 어느 값이든 돈다. */
+        void                               setVisibilityBasedTickOption( VisibilityBasedAnimationTickOption option ) { _visibilityBasedTickOption = option; }
+        VisibilityBasedAnimationTickOption getVisibilityBasedTickOption() const { return _visibilityBasedTickOption; }
+        /** @brief 화면 밖에서도 본을 갱신하는지입니다(`AlwaysTickPoseAndRefreshBones`). */
+        bool hasBonesWhenNotRendered() const { return _visibilityBasedTickOption == VisibilityBasedAnimationTickOption::AlwaysTickPoseAndRefreshBones; }
         /** @brief 포즈를 실제로 만든 횟수입니다(진단과 테스트용). 보간만 한 프레임은 세지 않습니다. */
         /** @brief 이번 프레임에 포즈를 만들면 true 입니다(`beginAnimationFrame` 뒤에 의미가 있습니다). */
         bool isPoseNeededThisFrame() const { return _frameContext._bPoseNeeded == SW_TRUE; }
@@ -199,6 +203,12 @@ namespace sw
          *          스켈레톤에 없는 이름은 건너뛴다(사용처가 자기 오류를 낸다). 마스크는 다음 평가 앞에 다시 짓는다.
          */
         [[nodiscard]] Subscription requireBones( vector<hashed_string> listBone );
+        /**
+         * @brief 소켓 · 본을 읽어 판정하는 사용처(래그돌 히트 존 · `HitWindow` 칼날 알림)가 묶을 때 부릅니다. 이 유닛이 화면 밖에서 본을 갱신하지 않으면
+         *        (`AlwaysTickPose`) 데이터 오류를 남기고 false 입니다 — 화면 밖 판정이 마지막으로 보이던 포즈의 소켓으로 맞히지 않게.
+         * @param userName 오류에 쓸 사용처 이름(컴포넌트 · 처리기)입니다.
+         */
+        bool requireBonesWhenNotRendered( string_view userName ) const;
         /** @brief 미러 표를 런타임에 정합니다(테스트용이며, 보통은 스켈레톤 옆 `<이름>.mirrortable.xml` 을 본 LOD 와 같은 규칙으로 읽습니다). nullptr 이면 표 없음입니다. */
         void setMirrorTable( shared_ptr<const SkeletonMirrorTable> table ) { _mirrorBoneMap.setTable( std::move( table ) ); }
         /**
@@ -338,8 +348,11 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Update Rate Divisor", Tooltip = "Build the pose every N frames (animation LOD)", Min = 1.0, Max = 16.0 )
         uint32 _updateRateDivisor;
         PROPERTY( Category = "Animation", DisplayName = "Skinning Method", Tooltip = "Linear blends bone matrices; Dual Quaternion keeps volume at twisted joints" )
-        SkinningMethod           _skinningMethod;
-        SharedAssetRef<Skeleton> _skeleton;
+        SkinningMethod _skinningMethod;
+        PROPERTY( Category = "Animation", DisplayName = "Visibility Based Tick Option",
+                  Tooltip = "What keeps running while not visible: time, notifies and root motion always; AlwaysTickPoseAndRefreshBones also refreshes bones (required by hit zones and socket hit windows)" )
+        VisibilityBasedAnimationTickOption _visibilityBasedTickOption;
+        SharedAssetRef<Skeleton>           _skeleton;
         /// @brief 스킨드 메시의 공유 원본입니다. 동일성 확인과 핫 리로드 대조에 씁니다. 이 컴포넌트의 메시는 그 복사본입니다.
         shared_ptr<Mesh>                                _skinSourceMesh;
         IdentityToken                                   _skinSourceContentID; ///< 스킨 원본 메시의 내용 토큰(들고 있어 지운 원본의 주소가 새 메시와 같아 보이지 않는다)
@@ -381,13 +394,11 @@ namespace sw
         AnimationSkinSlot                               _skinSlot;      ///< 이 유닛의 스킨 결과 칸(`getSkinSlot`)
         uint32                                          _drawnSkinSlot; ///< 지난번 알린 그리는 칸 — 바뀌면 인스턴스를 다시 싣게 한다(`refreshDrawnSkinSlot`)
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )
-        uint8 _bFollowParentPose : 1;
-        PROPERTY( Category = "Animation", DisplayName = "Animate When Offscreen", Tooltip = "Keep building the pose while not visible" )
-        uint8 _bAnimateWhenOffscreen : 1;
-        uint8 _bVisibleHint          : 1;
-        uint8 _bPoseDirty            : 1;
-        uint8 _bInterpolateFrame     : 1; ///< 이번 프레임은 평가 없이 보간만 한다
-        uint8 _bInterpolationReady   : 1; ///< 보간할 두 포즈가 있다
+        uint8 _bFollowParentPose   : 1;
+        uint8 _bVisibleHint        : 1;
+        uint8 _bPoseDirty          : 1;
+        uint8 _bInterpolateFrame   : 1; ///< 이번 프레임은 평가 없이 보간만 한다
+        uint8 _bInterpolationReady : 1; ///< 보간할 두 포즈가 있다
         PROPERTY( Category = "Animation", DisplayName = "Share Crowd Pose",
                   Tooltip = "Share one evaluated pose and skinned vertex range with skeletalMeshes in the same state (crowds); far skeletalMeshes switch to vertex animation" )
         uint8                  _bShareCrowdPose  : 1;
@@ -395,6 +406,6 @@ namespace sw
         uint8                  _bRuntimeSkeleton : 1; ///< 스켈레톤을 코드가 정했다(`setSkeleton`) — 빈 경로로 다시 풀 때 지키지 않는다
         uint8                  _bBoneLODDirty    : 1; ///< 핵심 본이 바뀌어 마스크를 다시 짓는다
         uint8                  _bBoneLODAuto     : 1; ///< 마스크를 메시 LOD 에서 자동으로 만들었다(손 파일이 아니다)
-        [[maybe_unused]] uint8 _reserved         : 5;
+        [[maybe_unused]] uint8 _reserved         : 6;
     };
 } // namespace sw

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="2639d4b48c3d4d25ae4e56a73e252aa3"?>
+<!--
+  장르 키트 시연 — 배틀로얄 판 하나(maps/kit_battleroyale). 체력 100 · 기절 체력 50, 자기장은 맵 전체를 덮고 오래 기다려 원 밖 피해가 없다.
+-->
+<BattleRoyaleCatalog mapSize="100">
+	<Player health="100" downedHealth="50" bleedout="10" reviveTime="2" reviveHealthRatio="0.5" revivers="2" slots="4"/>
+	<Zone startRadius="1000"><Phase wait="1000" shrink="1" ratio="1" damage="0"/></Zone>
+</BattleRoyaleCatalog>

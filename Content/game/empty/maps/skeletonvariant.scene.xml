@@ -1,5 +1,5 @@
 <?asset guid="984a82dc313cc4647a6518b5df3523de"?>
-<Scene formatVersion="2" name="SkeletonVariant">
+<Scene formatVersion="3" name="SkeletonVariant">
 	<!-- 시나리오 automation/skeletonvariant 의 무대 — 같은 메시 · 같은 클립을 세 스켈레톤에 재생한다. 왼쪽: 부모 그대로. 가운데: 다리 비율을 키운 변형(골반 이동은 높이 비, 뼈 길이는 변형 값). 오른쪽: 머리를 줄이고 뼈를 뒤에 더한 변형. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
@@ -73,7 +73,7 @@
 					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
@@ -109,7 +109,7 @@
 					                       _skeletonPath="common/rigs/knight_longlegs.skeleton.xml"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
@@ -145,7 +145,7 @@
 					                       _skeletonPath="common/rigs/knight_smallhead_tail.skeleton.xml"
 					                       _updateRateDivisor="1"
 					                       _bFollowParentPose="false"
-					                       _bAnimateWhenOffscreen="false" />
+					                       _visibilityBasedTickOption="AlwaysTickPose" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"

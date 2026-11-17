@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="eac9fde6ab3d48da96484a047b0fa5ed"?>
+<!--
+  장르 키트 시연 — 협동 수집 공포 원정 하나(maps/kit_coopscavenger). 할당량 20 · 마감 1 일 · 시작 크레딧 60. 첫 위성 rust 에 볼트(가치 10) 셋, 방 셋 · 잠긴 문 없음.
+  마감 날 회사 매입률 1 이라 30 을 받고, 넘긴 10 의 1/5 이 보너스이다.
+-->
+<ScavengerCatalog terminalShop="terminal" currency="Credits" crewHealth="100">
+	<Quota start="20" days="1" increase="50" steepness="16" randomness="0" overtime="5" credits="60"/>
+	<BuyRate daysLeft="2" rate="0.5"/>
+	<BuyRate daysLeft="0" rate="1"/>
+	<Day secondsPerDay="240" arrival="6" dusk="18" depart="24"/>
+	<Carry slots="2" speedPerWeight="0.01" minSpeed="0.4" bodyWeight="60"/>
+	<Penalty deathFine="0.2" recoveredFine="0.05" allDeadLoss="0.5" allDeadKeep="0"/>
+	<Facility rooms="3" roomsMax="3" lockedChance="0" loopChance="0" fireExits="1"/>
+	<Scrap id="bolt" min="10" max="10" weight="5"/>
+	<Moon id="rust" name="Rust" cost="0" scrap="3" scrapMax="3"/>
+	<Moon id="company" name="Company" company="true"/>
+</ScavengerCatalog>

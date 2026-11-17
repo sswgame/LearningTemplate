@@ -44,6 +44,7 @@ namespace sw
             uint32             _idleFrames{ 0 };              ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
             hashed_string      _aliasOwner{};                 ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
             uint8              _bPlaced{ 0 };                 ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
+            uint8              _bViewSized{ 0 };              ///< 풀 크기(나눗수)를 따르는 첨부다 — 뷰 사각형 안에 그린다. 그림자 맵처럼 크기를 따로 준 첨부(`allocateSized`)는 0
         };
 
         /**

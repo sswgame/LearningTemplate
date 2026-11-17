@@ -7,20 +7,19 @@
 -->
 <Scenario name="game.shooter3d.actions" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="0"/>
-	<Wait frames="10"/>
-	<Expect watch="Object.Y" target="Player" near="1.69" tolerance="0.05"/>
+	<WaitUntil watch="Object.Y" target="Player" near="1.69" tolerance="0.05" timeoutFrames="30"/> <!-- 땅에 섰다 -->
 	<Expect watch="Object.Z" target="Player" near="-16" tolerance="0.05"/>
 	<Expect watch="Pawn.Controller" target="Player" is="PlayerController"/>
 	<!-- 점프 — 0.1 초 안에 떠오르고, 0.1 초 뒤 앞으로 0.5 초 달린다(공중에서도 움직인다). -->
 	<Action name="Jump"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
-	<Wait seconds="0.1"/>
+	<AdvanceSimulation frames="6"/> <!-- 뜬 뒤 0.1 초에 달리기 시작 — 시간이 내용 -->
 	<ActionAxis name="Move" y="1" seconds="0.5"/>
 	<WaitUntil watch="Object.Z" target="Player" atLeast="-14.5" timeoutSeconds="0.4"/>
 	<!-- 내려앉을 때까지 기다린다(1 초 안). -->
 	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
 	<!-- 패드 A 로 다시 점프 — 같은 액션의 다른 바인딩. -->
-	<Wait frames="10"/>
+	<WaitUntil watch="Object.Speed" target="Player" atMost="0.01" timeoutFrames="60"/> <!-- 내려앉아 섰다 -->
 	<Action name="Jump" device="Gamepad"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<!-- 무기: 숫자 바인딩 액션으로 산탄총 → 권총. -->

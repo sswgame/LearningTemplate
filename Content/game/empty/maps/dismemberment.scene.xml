@@ -1,5 +1,5 @@
 <?asset guid="d9c0a74a5927680c5048ad84c27854d6"?>
-<Scene formatVersion="2" name="Dismemberment">
+<Scene formatVersion="3" name="Dismemberment">
 	<!-- 절단 시나리오(automation/dismemberment)의 무대 — 해골 전사(몸 영역 표 skeleton_warrior.fit.xml 이 있는 유일한 리그)에 래그돌과 절단을 붙여 바닥 위에 세운다.
 	     게임 안의 같은 길은 Shooter3D 해골 적(prefabs/skeleton.prefab.xml · automation/dismemberment)이 본다. 여기는 치명 표시를 단 맞음(combat.fatalhit)과 자를 수 없는 영역을 본다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
@@ -38,7 +38,7 @@
 		<entity id="4" name="Skeleton">
 			<GameObject _schemaVersion="0" _name="Skeleton" _bActive="true">
 				<_listComponent>
-					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" />
+					<SkeletalMeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/skeleton.animgraph.xml" _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml" _initialState="Idle_Combat" _bPlayOnBegin="true" />
 					<CharacterAppearanceComponent _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
 					<RagdollComponent _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml" _bRagdollOnFatalHit="true" _bAutoGetUp="false" />

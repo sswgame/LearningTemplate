@@ -59,6 +59,7 @@ namespace sw
                 desc._sizeScale   = sizeScale;
                 desc._bAdditive   = def._blendMode == VFXBlendMode::Additive ? SW_TRUE : SW_FALSE;
                 desc._bRibbon     = bRibbon ? SW_TRUE : SW_FALSE;
+                desc._sortMode    = def._sortMode;
                 if ( bGPU )
                 {
                     if ( pRequest != nullptr )

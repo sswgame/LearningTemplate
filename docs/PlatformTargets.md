@@ -4,7 +4,9 @@
 > 독자: 플랫폼 백엔드(WebGPU · Android Vulkan) · Emscripten · NDK 빌드를 잇는 세션(에이전트와 사람).
 > 결론: Android 는 Vulkan 1.2 + 디스크립터 인덱싱이 필수다(없으면 장치를 고르지 않는다). 웹은 WebGPU 하나이고 bindless 가 없어 DX11 과 같은 고정 슬롯 모델로 그린다. 대상이 못 주는 것은 능력 깃발(`RHICapabilities`) · 형식 대체 · 쿠킹 변형으로 가르고, 필수인데 없는 것은 오류로 멈춘다.
 
-사용자 결정: Android 지원, iOS 제외, 웹은 최신 브라우저의 WebGPU 만(WebGL2 없음), 콘솔은 대기(갈래를 만들지도 막지도 않는다). "(기억)" 표시 값은 붙이기 전에 그 판의 명세로 다시 확인한다(context7).
+사용자 결정: Android 지원, iOS 제외, 웹은 최신 브라우저의 WebGPU 만(WebGL2 없음), 콘솔은 대기(갈래를 만들지도 막지도 않는다).
+
+**원칙(사용자 결정 2026-11-17): 웹 제약은 웹 깃발로만, 다른 플랫폼 기본을 낮추지 않는다.** 웹(WebGPU · wasm32)이 못 하는 것은 능력 깃발(`RHICapabilities`) · 플랫폼 사슬 설정 값 · 쿠킹 변형(`CookContract.json` 백엔드 줄) 가운데 하나로 웹만 가르고, `SW_PLATFORM_WEB` 컴파일 갈래는 최후 수단이다. 공용 상수 · 공용 셰이더 · 공용 예산을 웹 한도에 맞춰 낮추지 않는다(언리얼이 HTML5 제약을 플랫폼 설정 · RHI 기능 수준으로만 가른 것과 같다). "(기억)" 표시 값은 붙이기 전에 그 판의 명세로 다시 확인한다(context7).
 
 ## 요구 판
 
@@ -20,7 +22,7 @@
 | 바인딩 모델 | DX12 · Vulkan 은 네이티브 bindless(텍스처 4096 · RW 텍스처 1024 칸 update-after-bind 배열), DX11 · GL 은 고정 슬롯 에뮬(엔진 텍스처 12 + 머티리얼 16) | 1.2 코어지만 기능 비트는 선택이다(`runtimeDescriptorArray` · `descriptorBindingPartiallyBound` · `…SampledImageUpdateAfterBind` · `…StorageImageUpdateAfterBind` · 비균일 인덱싱). 한도(`maxPerStageDescriptorUpdateAfterBind…`)도 장치마다다 | bindless 없음(`binding_array` 는 제안 단계, 기억) | Android: 필수. 장치 고르기가 기능 · 한도를 대조해 못 미치는 장치는 건너뛴다(`VulkanRHIDevice::isBindlessCapable`). 웹: DX11 과 같은 고정 슬롯 모델(`SW_BINDLESS` 없음, 머티리얼은 서수) — 셰이더 갈래 `WEBGPU` |
 | 바인딩 수 | 패스마다 다르다(쓰는 것만 셰이더에 남는다) | 위 한도 | 기본 한도: 그룹 4, 단계마다 텍스처 16 · 샘플러 16 · 저장 버퍼 8(명세 https://www.w3.org/TR/webgpu/#limits), 상수 버퍼 12(기억) | WebGPU 는 장치를 만들 때 어댑터 한도를 그대로 요구한다(`requiredLimits`). 단계 텍스처는 계약 16(`CookContract.json` stage_texture_unit_limit = `shaderslot::wgpu::kStageTextureBudget`) — 쿠킹이 넘는 WGSL 을 멈추고, 장치 생성이 어댑터 `maxSampledTexturesPerShaderStage` 가 그보다 작으면 멈춘다. 그 밖의 한도는 PSO 의 바인딩 표(쿠킹 때 SPIR-V 리플렉션)가 넘으면 PSO 를 만들지 않고 오류다 |
 | 루트 상수 | 16 dword(`SW_ROOT_DWORD_COUNT`) — DX12 루트 상수, Vulkan 푸시 상수 | 푸시 상수 최소 128 B — 64 B 로 맞다 | 푸시 상수 없음(immediates 는 실험, 기억) | WebGPU 는 DX11 · GL 처럼 상수 버퍼 `b2`(`SW_SLOT_ROOT_CB_EMUL`) 에뮬. 셰이더 갈래 `SW_ROOT_CONSTANTS_BEGIN` 의 `WEBGPU` |
-| 아토믹 | 32 비트 `InterlockedAdd`(버퍼 · groupshared)만 — 컬링 · 라이트 그리드 · NaN 검사 · GPU assert | 필수 | `atomic<u32>`(저장 버퍼 · workgroup) | 그대로. 64 비트 · 실수 · 텍스처 아토믹은 쓰지 않는다 — 새로 쓰면 이 표에 줄을 더한다 |
+| 아토믹 | 32 비트 `InterlockedAdd`(버퍼 · groupshared)만 — 컬링 · 라이트 그리드 · NaN 검사 · GPU assert | 필수 | `atomic<u32>`(저장 버퍼 · workgroup) | 그대로. 지금은 64 비트 · 실수 · 텍스처 아토믹을 쓰지 않는다 — 새로 쓸 때 웹 때문에 막지 않고 능력 깃발로 웹(과 못 주는 장치)만 다른 길로 보낸 뒤 이 표에 줄을 더한다 |
 | 웨이브 연산 | `gpu_cull.hlsl` 의 `WaveReadLaneFirst` · `WaveActiveCountBits` · `WavePrefixCountBits` | 서브그룹 기본 연산은 1.1 코어, ballot 은 선택 | `subgroups` 기능은 선택(기억) | WebGPU 대상은 `SW_NO_WAVE_OPS` 로 쿠킹한다 — DX11 과 같은 스레드마다 원자 연산 길(`gpu_cull.hlsl`). 결과는 같고 경합만 늘어난다 |
 | `R16G16_SNORM` 첨부 · 블렌드 | G버퍼 법선(`RenderPassTypeInfo` 의 고정 포맷) | 첨부는 선택 형식이다 — 장치 생성이 조회한다(`verifyRequiredColorAttachmentFormats`). 블렌드도 선택(못 섞는 첨부는 덮어쓴다) | 코어에 `rg16snorm` 없음 — `texture-formats-tier1` 기능(기억) | Vulkan: 못 쓰면 장치를 고르지 않는다. WebGPU: 기능이 있으면 `rg16snorm`, 없으면 백엔드가 `rg16float` 으로 만든다 — 셰이더는 `.rg` 를 [-1, 1] 실수로 읽어 둘이 같다(`WebGPURHIUtil::toTextureFormat`) |
 | `R32G32B32_FLOAT` 텍스처 | DDS(dxgi 6)로 들어올 수 있다. 정점 형식은 별개 | 샘플 형식은 선택(모바일에서 흔히 없다) | 텍스처 형식이 없다 | `Texture2D` 가 장치가 못 쓰면 RGBA32F 로 펴서 올린다(`Texture2D::expandToFourChannels`) — 알파 1 |

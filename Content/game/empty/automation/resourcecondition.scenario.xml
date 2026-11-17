@@ -9,7 +9,6 @@
 -->
 <Scenario name="game.empty.resourcecondition" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/automation/resourcecondition/resourcecondition.scene.xml"/>
-	<Wait frames="2"/>
 	<!-- 무인 실행의 설정은 스키마 기본값(high)이다 — 두 조건 모두 거짓 -->
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="3" timeoutFrames="120"/>
 	<DevCommand line="settings.apply graphics.quality=low"/>

@@ -163,7 +163,7 @@ namespace sw
 {
     /**
      * @struct MeshLOD
-     * @brief 그릴 흐름 안에서 LOD 단계 하나의 범위입니다. 정점 흐름은 LOD 0(`Mesh::getVertices`) 뒤에 낮은 단계 정점(`Mesh::getLODVertices`)이,
+     * @brief 그릴 흐름 안에서 LOD 단계 하나의 범위입니다. 정점 흐름은 LOD 0(`MeshCPUView::getVertices`) 뒤에 낮은 단계 정점(`MeshCPUView::getLODVertices`)이,
      *        인덱스 흐름은 LOD 0(`Mesh::getIndices`) 뒤에 낮은 단계 인덱스(`Mesh::getLODIndices` — 값은 정점 흐름 번호)가 이어진 것입니다.
      */
     struct MeshLOD
@@ -187,6 +187,50 @@ namespace sw
     {
         hashed_string          _name;
         vector<MeshMorphDelta> _listDelta;
+    };
+} // namespace sw
+
+namespace sw
+{
+    class Mesh;
+
+    /**
+     * @enum MeshCPUAccess
+     * @brief 메시의 CPU 정점을 GPU 업로드 뒤에도 쥐는가입니다(감사 R-15 — 언리얼 `bAllowCPUAccess` 자리).
+     * @details 지금은 모든 메시가 `Keep` 이다. `ReleaseAfterUpload` 를 켜는 일(업로드 뒤 놓기 · 장치 교체 때 `.mesh` 다시 읽기)은 정점 풀 · 모프 · GI 복셀화가
+     *          GPU 원본을 쓰게 된 뒤다(DesignBacklog R-15 후속). CPU 정점을 읽는 길은 `MeshCPUView` 하나라, 놓기를 켤 때 고칠 자리가 그것을 부르는 곳으로 모인다.
+     */
+    enum class MeshCPUAccess : uint8
+    {
+        Keep,              ///< 물리 · 레이캐스트 · 파괴 · 에디터 · 절차 메시 — CPU 정점을 쥔다
+        ReleaseAfterUpload ///< 그리기만 하는 파일 메시 — 업로드 뒤 CPU 정점을 놓는다(아직 켜지 않았다)
+    };
+
+    /**
+     * @class MeshCPUView
+     * @brief 메시의 CPU 정점을 읽는 접근 토큰입니다 — `Mesh::getCPUView` 만 만든다. CPU 정점(LOD 0 · 낮은 단계)을 읽는 길은 이것 하나다(R-15).
+     * @details `Keep` 이 아닌 메시에서 받은 토큰은 빈 배열을 돌려준다(`getCPUView` 가 오류를 남겼다) — 놓인 정점을 조용히 읽는 길이 없다.
+     *          토큰은 메시를 소유하지 않는다 — 그 자리에서 쓰고 들고 다니지 않는다(돌려준 배열의 수명은 메시와 같다).
+     */
+    class SW_API MeshCPUView final
+    {
+    public:
+        /** @brief CPU 고유 정점(LOD 0)입니다. GPU 업로드 뒤에도 원본이 남아 있다(`MeshCPUAccess::Keep`). */
+        const vector<RHIVertex>& getVertices() const;
+        /** @brief LOD 1 이상의 CPU 정점을 단계 순서로 이은 것입니다. GPU 업로드가 LOD 0 뒤에 붙인다. */
+        const vector<RHIVertex>& getLODVertices() const;
+        /** @brief CPU 정점을 읽을 수 있으면(메시가 `Keep`) true 입니다. */
+        bool isAvailable() const { return _pMesh != nullptr; }
+
+    private:
+        friend class Mesh;
+        explicit MeshCPUView( const Mesh* pMesh )
+            : _pMesh{ pMesh }
+        {
+        }
+
+    private:
+        const Mesh* _pMesh; ///< `Keep` 이 아니면 nullptr
     };
 } // namespace sw
 
@@ -282,8 +326,12 @@ namespace sw
          * @details 정점 번호가 바뀌므로, 삼각형 목록 순서로 스킨 · 모프를 만든 생산자는 `setVertices` 를 쓴다.
          */
         void setTriangleListWelded( vector<RHIVertex>&& listTriangleVertex );
-        /** @brief CPU 고유 정점 배열입니다. GPU 업로드 뒤에도 원본은 여기 남습니다. */
-        const vector<RHIVertex>& getVertices() const { return _listVertex; }
+        /**
+         * @brief CPU 정점을 읽는 접근 토큰입니다(`MeshCPUView` — CPU 정점의 유일한 입구, R-15). `Keep` 이 아니면 오류를 남기고 빈 토큰을 돌려준다.
+         */
+        [[nodiscard]] MeshCPUView getCPUView() const;
+        /** @brief CPU 정점을 업로드 뒤에도 쥐는가입니다(지금은 늘 `Keep`). */
+        MeshCPUAccess getCPUAccess() const { return _cpuAccess; }
         /** @brief 삼각형마다 정점 번호 셋입니다(LOD 0). */
         const vector<uint32>& getIndices() const { return _listIndex; }
         /** @brief LOD 0 의 인덱스 수입니다(삼각형 수 × 3). */
@@ -293,7 +341,7 @@ namespace sw
          * @brief 이 메시의 정점을 GPU 가 변형해도 되는지 표시합니다(기본은 꺼짐).
          * @details 유니티의 `Mesh.vertexBufferTarget |= Raw` 옵트인에 해당한다. 켠 메시만 모프 풀에
          *          들어간다. 모두 넣으면 풀이 쓸데없이 커지고, 예산을 넘긴 메시는 어차피 레스트로 그려진다.
-         * @note **GPU 쪽 변형은 CPU 사본(`getVertices`)에 반영되지 않는다.** 유니티 문서도 같은 주의를 준다.
+         * @note **GPU 쪽 변형은 CPU 사본(`MeshCPUView::getVertices`)에 반영되지 않는다.** 유니티 문서도 같은 주의를 준다.
          *       CPU 는 레스트 포즈만 안다(피킹과 바운드는 그 값을 본다).
          */
         void setGPUMorphEnabled( bool bEnabled ) { _bGPUMorph = bEnabled ? SW_TRUE : SW_FALSE; }
@@ -370,15 +418,13 @@ namespace sw
          *          모프 타깃이 있는 메시도 받지만 낮은 단계 정점은 모프 차이가 없다(먼 캐릭터의 표정은 보이지 않는다 — 언리얼도 낮은 LOD 의 모프 타깃을 덜어 낸다). 스킨드 메시는 받는다 — 단계마다 스킨 정점(`MeshLODLevel::_listSkinVertex`)이 정점과 같은 길이로 오고 뼈 번호가 `getSkinBoneCount` 안이어야 하며,
          *          스킨 없는 메시의 단계는 스킨이 없어야 한다(그래서 **스킨을 먼저 설정**한다 — `setSkin` 은 LOD 를 뗀다). GPU 스키닝은 LOD 0 뒤의 낮은 단계 정점도 변형한다.
          *          어기면 오류를 남기고 LOD 를 비운 채 false 입니다. 빈 목록은 LOD 를 뗀다.
-         *          CPU 정점(`getVertices`)은 LOD 0 그대로다 — 물리 · 내비 · 피킹은 LOD 를 보지 않는다. 내용 번호가 바뀐다(정점 풀이 다시 올린다).
+         *          CPU 정점(`MeshCPUView::getVertices`)은 LOD 0 그대로다 — 물리 · 내비 · 피킹은 LOD 를 보지 않는다. 내용 번호가 바뀐다(정점 풀이 다시 올린다).
          */
         [[nodiscard]] bool setLODs( vector<MeshLODLevel> listLevel );
         /** @brief LOD 1 이상의 범위입니다(그릴 흐름 기준). 비면 LOD 0 하나입니다. */
         const vector<MeshLOD>& getLODs() const { return _listLOD; }
         /** @brief LOD 단계 수입니다(LOD 0 포함, 1 이상). */
         uint32 getLODCount() const { return 1u + static_cast<uint32>( _listLOD.size() ); }
-        /** @brief LOD 1 이상의 정점을 단계 순서로 이은 것입니다. GPU 업로드가 LOD 0 뒤에 붙입니다. */
-        const vector<RHIVertex>& getLODVertices() const { return _listLODVertex; }
         /** @brief LOD 1 이상의 인덱스를 단계 순서로 이은 것입니다. 값은 정점 흐름(LOD 0 뒤에 낮은 단계 정점) 번호입니다. */
         const vector<uint32>& getLODIndices() const { return _listLODIndex; }
         /** @brief LOD 1 이상 정점의 본 영향을 `getLODVertices` 와 같은 순서로 이은 것입니다. 스킨드 메시만 가지며 아니면 비어 있습니다. GPU 스키닝이 LOD 0 의 스킨 뒤에 붙입니다. */
@@ -454,7 +500,9 @@ namespace sw
         void clearLODs();
 
     private:
+        friend class MeshCPUView; // CPU 정점은 토큰으로만 읽는다
         vector<RHIVertex> _listVertex;
+        MeshCPUAccess     _cpuAccess{ MeshCPUAccess::Keep }; ///< 지금은 모든 메시가 `Keep` 이다 — 만드는 쪽이 정하는 칸(기본값 없이)은 놓기를 켤 때 `create` · `MeshCache::request` 에 든다
         /// @brief getIndices 를 참고하세요. 수는 3 의 배수이고 번호는 `_listVertex` 안입니다.
         vector<uint32> _listIndex;
         /// @brief setSkin 을 참고하세요. 비어 있거나 `_listVertex` 와 길이가 같습니다.

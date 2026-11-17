@@ -30,6 +30,25 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 화면에 보이지 않는(뷰 밖 · 숨김) 유닛이 무엇을 계속 도는지입니다. 이름은 언리얼 `EVisibilityBasedAnimTickOption` 의 같은 값을 따른다.
+     * @details 두 값 모두 시간 단계(상태 머신 · 알림 · 루트 모션 · 커브)는 매 프레임 돈다 — 화면 밖 적이 다가오는 거리 · 시간과 알림은 화면 안과 같다.
+     *          다른 것은 본(포즈 · 모델 공간)뿐이다. 소켓 · 본을 읽어 판정하는 컴포넌트(래그돌 히트 존 · `HitWindow` 칼날 알림)는
+     *          `AlwaysTickPoseAndRefreshBones` 를 요구하고, 아니면 로드 오류다(`SkeletalMeshComponent::requireBonesWhenNotRendered`).
+     *          언리얼의 `OnlyTickMontagesWhenNotRendered` · `OnlyTickPoseWhenRendered`(시간도 멈춤)와 유니티 `CullCompletely` 는 두지 않는다 —
+     *          멈춘 시간은 루트 모션 · 알림을 화면 밖에서 틀리게 하고, 시간 단계는 포즈보다 훨씬 싸다.
+     *          유니티 `Animator.cullingMode` 로는 `AlwaysAnimate` · `CullUpdateTransforms` 와 같다.
+     */
+    ENUM()
+    enum class VisibilityBasedAnimationTickOption : uint8
+    {
+        AlwaysTickPose = 0,            ///< 화면 밖에서는 시간만 돌고 본은 갱신하지 않는다(소켓 · 본은 마지막으로 보이던 포즈). 기본
+        AlwaysTickPoseAndRefreshBones, ///< 화면 밖에서도 본을 갱신한다 — 주기는 `AnimationLODSettings::_offscreenUpdateRateDivisor`, 가장 가까운 등급 · 모든 본
+    };
+} // namespace sw
+
+namespace sw
+{
     struct AnimationLODSettings;
     struct AnimationBudgetItem;
 
@@ -60,7 +79,12 @@ namespace sw
                                        uint32 maxUpdateRateDivisor );
         /** @brief 주기 · 위상으로 이번 프레임에 포즈를 만드는지입니다. 같은 주기의 유닛들이 같은 프레임에 몰리지 않게 위상을 더합니다. */
         static bool isOnUpdateFrame( uint64 frameIndex, uint32 phase, uint32 divisor ) { return divisor <= 1 || ( ( frameIndex + phase ) % divisor ) == 0; }
-        /** @brief 화면 크기와 표로 상태 하나를 만듭니다(가시성 · 주기 단계 · 보간 · 본 LOD · VAT). 예산은 따로입니다. */
+        /**
+         * @brief 화면 크기와 표로 상태 하나를 만듭니다(가시성 · 주기 단계 · 보간 · 본 LOD · VAT). 예산은 따로입니다.
+         * @details 안 보이면 주기는 `_offscreenUpdateRateDivisor`, 등급 · 본 LOD 는 0(가장 가깝다)이다 — 화면 밖에서 본을 갱신하는 판정 캐릭터
+         *          (`AlwaysTickPoseAndRefreshBones`)의 소켓이 가까이 보이던 때와 같고, 등급이 접는 블렌드 스페이스 가지가 루트 모션 · 알림을 바꾸지 않는다.
+         *          본을 갱신하지 않는 유닛(`AlwaysTickPose`)은 이 주기로 포즈를 만들지 않으므로 비용이 없다.
+         */
         static AnimationLODState makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD );
         /**
          * @brief 예산이 고른 주기를 받습니다. 표의 주기보다 늘었으면 보간을 켜고, 두 배로 늘린 횟수만큼 등급을 올립니다(예산에 밀린 유닛도 먼 유닛처럼 노드를 끈다).
@@ -117,7 +141,8 @@ namespace sw
     /**
      * @struct AnimationLODSettings
      * @brief LOD 표(데이터)입니다(`engine/animation/animationlod.xml`). 단계는 `_minScreenSize` 가 줄어드는 순이고 마지막 단계는 0 이어야 합니다(`validate`).
-     * @details `_offscreenUpdateRateDivisor` 가 0 이면 화면 밖 유닛은 포즈를 만들지 않습니다(시간 · 알림은 흐릅니다). `_budgetMilliseconds` 가 0 이면 예산을 보지 않습니다.
+     * @details 화면 밖 유닛은 시간 · 알림 · 루트 모션만 흐르고 포즈를 만들지 않는다. 화면 밖에서도 본을 갱신하는 유닛(`VisibilityBasedAnimationTickOption::AlwaysTickPoseAndRefreshBones`,
+     *          판정 캐릭터)만 `_offscreenUpdateRateDivisor` 주기로 만들고 예산에 들지 않는다(판정이 예산에 밀리지 않게). `_budgetMilliseconds` 가 0 이면 예산을 보지 않습니다.
      *          예산 배분의 입력은 결정적 비용 모형(유닛 수 × `_meshCostMicroseconds`)이다 — 벽시계 측정값으로 배분하면 같은 입력이 기계 · 부하마다 다른 갱신 주기
      *          (그래서 다른 포즈 프레임)가 된다. 예산을 켜면 단가가 필수다(`validate`).
      *          `_vertexAnimationScreenSize` 보다 작은 군중 유닛은 정점 애니메이션(VAT)으로 그립니다(0 이면 쓰지 않음).
@@ -130,8 +155,8 @@ namespace sw
 
         PROPERTY( Tooltip = "Update-rate levels from the largest on-screen size to 0 (at least one; the last must start at 0)" )
         vector<AnimationLODRateLevel> _listRateLevel;
-        PROPERTY( Min = 0, Tooltip = "Update divisor for skeletalMeshes that are not visible (0: no pose at all)" )
-        uint32 _offscreenUpdateRateDivisor{ 0 };
+        PROPERTY( Min = 1, Tooltip = "Update divisor for skeletalMeshes that are not visible but refresh bones (AlwaysTickPoseAndRefreshBones); the rest build no pose offscreen" )
+        uint32 _offscreenUpdateRateDivisor{ 1 };
         PROPERTY( Min = 1, Tooltip = "Upper bound the budget allocator may raise a divisor to" )
         uint32 _maxUpdateRateDivisor{ 16 };
         PROPERTY( Min = 0.0, Units = ms, Tooltip = "Animation budget per frame (0: unlimited)" )

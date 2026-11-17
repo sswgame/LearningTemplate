@@ -24,7 +24,7 @@ namespace
         static constexpr uint32 kVertexCount       = 4;
         static constexpr uint32 kIndexCount        = 6;
         /** @brief 스킨 없는 메시에서 첫 덩어리가 시작하는 자리입니다. */
-        static constexpr size_t kFirstChunkOffset = MeshAssetFormat::kHeaderSize + kVertexCount * MeshAssetFormat::kVertexSize + kIndexCount * sizeof( uint32 );
+        static constexpr size_t kFirstChunkOffset = MeshAssetFormat::kHeaderSize + kVertexCount * MeshAssetFormat::kVertexSize + kIndexCount * MeshAssetFormat::getIndexBytes( kVertexCount );
         /** @brief 덩어리 내용의 첫 칸(개수) 자리입니다(이름 4 · 길이 4 뒤). */
         static constexpr size_t kFirstChunkCountOffset = kFirstChunkOffset + 8;
 

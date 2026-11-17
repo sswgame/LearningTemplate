@@ -305,7 +305,7 @@ namespace sw
         io.value( _nextID );
         io.check( _nextID != 0 );
         // 탄마다 이름(4) + 위치 · 속도(24) + 실수 11 개(44) + id · 반응 번호(8) + 정수 5 개(20) + 맞힌 대상 8 개(32) + 고리 칸(1) + 깃발(1) 바이트
-        io.count( 134, projectileCount );
+        io.count( static_cast<uint32>( StateOffsetFromEnd::kNameLength ), projectileCount );
         if ( io.isOk() == false )
             return;
         if ( io.isReading() )

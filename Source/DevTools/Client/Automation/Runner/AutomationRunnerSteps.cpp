@@ -47,8 +47,8 @@ namespace sw
         {
             // 시한 상수(기다리는 프레임 · 초)는 `AutomationTimeLimits` 한 곳에 있다.
             /**
-             * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
-             *        그 스냅샷이 렌더 큐를 지나야 화면에 나온다 — 씬 빌드 한 프레임 + 큐에 쌓이는 패킷 수(링 칸 수 − 1, `RenderThread::submit` 은 한 칸을 비워 둔다).
+             * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처는 같은 SRV 번호에 다시 묶이지만(R-6) 그 뒤 만든
+             *        스냅샷이 렌더 큐를 지나야 화면에 나온다 — 씬 빌드 한 프레임 + 큐에 쌓이는 패킷 수(링 칸 수 − 1, `RenderThread::submit` 은 한 칸을 비워 둔다).
              */
             static constexpr uint32 kAssetStabilityTrailFrames = 1u + ( constant::render::kRenderFrameQueueDepth - 1u );
 
@@ -399,7 +399,7 @@ namespace sw
             const int32 x = static_cast<int32>( MathUtil::round( args._x * static_cast<float32>( pWindow->getWidth() - 1 ) ) );
             const int32 y = static_cast<int32>( MathUtil::round( args._y * static_cast<float32>( pWindow->getHeight() - 1 ) ) );
             runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTouch( RawInputEventType::TouchDown, 0, x, y ) );
-            runner._inputScript.addEvent( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, x, y ) );
+            runner._inputScript.addSpanEnd( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, x, y ), step._frameIndex );
             return {};
         }
 

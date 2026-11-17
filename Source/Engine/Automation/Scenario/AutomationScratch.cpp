@@ -81,9 +81,17 @@ namespace sw
         const string_view domain = kScratchDomain;
         if ( StringUtil::startsWith( assetID, domain ) == false || assetID.size() <= domain.size() || assetID[domain.size()] != '/' )
             return false;
-        const string_view     rest    = assetID.substr( domain.size() + 1 );
-        const string_view     folder  = rest.substr( 0, rest.find( '/' ) );
-        const optional<int32> ownerID = findInstanceProcessID( folder );
+        // 사본은 scratch/ 바로 아래만이 아니다 — 가져오기 사본은 scratch/import/<이름>_p<pid> 이다. 폴더 토막마다 본다(마지막 토막은 파일 이름이라 뺀다).
+        string_view rest = assetID.substr( domain.size() + 1 );
+        for ( size_t slash = rest.find( '/' ); slash != string_view::npos; slash = rest.find( '/' ) )
+        {
+            const optional<int32> ownerID = findInstanceProcessID( rest.substr( 0, slash ) );
+            if ( ownerID.has_value() )
+                return *ownerID != static_cast<int32>( Process::getCurrentProcessID() );
+            rest = rest.substr( slash + 1 );
+        }
+        // 폴더 하나뿐인 id(`scratch/<이름>_p<pid>` — 폴더 자체)도 같은 규칙이다
+        const optional<int32> ownerID = findInstanceProcessID( rest );
         return ownerID.has_value() && *ownerID != static_cast<int32>( Process::getCurrentProcessID() );
     }
 

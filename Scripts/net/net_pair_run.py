@@ -91,6 +91,7 @@ def write_configs(out_dir: Path, game_port: int, service_port: int, account: str
             {"_name": "account", "_settings": {
                 "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
                 "_maxConcurrentPasswordHashes": 2,
+                "_maxQueuedPasswordHashes": 64,
                 "_sharedAttemptLimit": 1000,
                 "_sharedAttemptWindowSeconds": 60,
                 "_loginNonceLifetimeSeconds": 300,

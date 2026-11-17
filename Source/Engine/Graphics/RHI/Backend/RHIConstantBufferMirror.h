@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -36,7 +37,12 @@ namespace sw
         template <typename WriteSlotFunction>
         void write( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size, WriteSlotFunction&& writeSlot )
         {
-            ScopedLock<mutex> lock{ _mutex };
+            UniqueLock<mutex> lock{ _mutex, std::defer_lock };
+            {
+                // 장치 전역 락을 기다린 시간이다 — 병렬 기록에서 이 대기가 레벨 시간의 2 % 를 넘으면 값을 버퍼 레코드로 옮긴다(설계 L-2 의 문턱).
+                SW_PROFILE_SCOPE( "RT.Bind.mirrorLockWait" );
+                lock.lock();
+            }
             writeSlot( buffer, slot, pData, size );
             rememberWrite( buffer, slot, pData, size );
         }

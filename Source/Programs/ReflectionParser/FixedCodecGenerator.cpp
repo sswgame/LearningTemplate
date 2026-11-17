@@ -26,6 +26,8 @@ namespace sw
         , _listRootNode{}
         , _listEnum{}
         , _listDependency{}
+        , _replicatedCanonical{}
+        , _replicated{}
         , _unresolvedName{}
         , _unresolvedMember{}
         , _unresolvedLine{ 0 }
@@ -68,6 +70,8 @@ namespace sw
 
             if ( state._bError == SW_TRUE )
                 bValid = false;
+            if ( planReplicated( type, plan ) == false )
+                bValid = false;
             listResolvedFqn.insert( listResolvedFqn.end(), state._listResolvedFqn.begin(), state._listResolvedFqn.end() );
             plan._unresolvedName   = state._unresolvedName;
             plan._unresolvedMember = state._unresolvedMember;
@@ -105,6 +109,51 @@ namespace sw
         return bValid;
     }
 
+    bool FixedCodecGenerator::planReplicated( const ParsedTypeInfo& type, TypePlan& outPlan ) const
+    {
+        // `Replicated` 칸만 남긴 사본을 같은 값 방출기로 돈다 — 칸 표는 하나의 인코딩 규칙이고, 범위 이름은 사본 안(앞선 Replicated 칸)에서만 풀린다.
+        ParsedTypeInfo replicatedType = type;
+        replicatedType._listProperty.clear();
+        for ( const ParsedPropertyInfo& prop : type._listProperty )
+        {
+            if ( prop._bReplicated == SW_FALSE )
+                continue;
+            if ( prop._bTransient == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORReplicatedTransient", "ERROR: %#(%#): replicated schema of '%#::%#': a Replicated field cannot be Transient",
+                                 _sourceFilePath, prop._line, type._fullyQualifiedName, prop._memberName );
+                return false;
+            }
+            replicatedType._listProperty.push_back( prop );
+        }
+        if ( replicatedType._listProperty.empty() )
+            return true;
+
+        FixedCodecEmitState state( _header, _sourceFilePath, replicatedType );
+        string              canonical = "R=" + type._fullyQualifiedName + "|";
+        state._listInlineFqn.push_back( type._fullyQualifiedName );
+        FixedCodecValueEmitter::emitProperties( state, replicatedType, canonical, state._listRootNode );
+        if ( state._bError == SW_TRUE )
+            return false;
+        if ( state._reason.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORReplicatedUnencodable", "ERROR: %#: replicated schema of '%#': Replicated field is not in the fixed layout encoding table - %#",
+                             _sourceFilePath, type._fullyQualifiedName, state._reason );
+            return false;
+        }
+        if ( state._unresolvedName.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORReplicatedRange", "ERROR: %#(%#): replicated schema of '%#::%#': range name '%#' must be a Replicated field declared before it",
+                             _sourceFilePath, state._unresolvedLine, type._fullyQualifiedName, state._unresolvedMember, state._unresolvedName );
+            return false;
+        }
+        outPlan._replicatedCanonical        = canonical;
+        outPlan._replicated._listRootNode   = std::move( state._listRootNode );
+        outPlan._replicated._listEnum       = std::move( state._listEnum );
+        outPlan._replicated._listDependency = std::move( state._listDependency );
+        return true;
+    }
+
     void FixedCodecGenerator::flattenNodes( const vector<FixedCodecNode>& listNode, vector<string>& outListEntry )
     {
         const size_t first = outListEntry.size();
@@ -125,23 +174,18 @@ namespace sw
         }
     }
 
-    void FixedCodecGenerator::emitRegistration( CodeEmit& emit, const size_t typeIndex ) const
+    pair<string, string> FixedCodecGenerator::emitTables( CodeEmit& emit, const vector<FixedCodecNode>& listRootNode, const vector<const ParsedFixedEnum*>& listEnum,
+                                                          const vector<pair<string, string>>& listDependency, const string& tablePrefix, vector<string>& listEmittedEnum )
     {
-        const TypePlan& plan = _listPlan[typeIndex];
-        if ( plan._bEligible == SW_FALSE )
-        {
-            emit.linef( "// FixedLayout: not eligible - %#", plan._reason );
-            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %# );", CodeEmit::quoted( plan._reason ) );
-            emit.line( "info._pFixedCodec = &s_fixedCodec;" );
-            return;
-        }
-        const ParsedTypeInfo& type = _header._listType[typeIndex];
-
         // 플래그가 아닌 열거형의 등록 값(`Count` · 겹친 값 제외)입니다. 읽은 값이 이 안에 없으면 OutOfRange 입니다.
-        for ( const ParsedFixedEnum* pEnum : plan._listEnum )
+        for ( const ParsedFixedEnum* pEnum : listEnum )
         {
+            const string tableName = FixedCodecEmitState::makeEnumValueTableName( *pEnum );
+            if ( std::find( listEmittedEnum.begin(), listEmittedEnum.end(), tableName ) != listEmittedEnum.end() )
+                continue;
+            listEmittedEnum.push_back( tableName );
             const string enumType = "::" + pEnum->_fullyQualifiedName;
-            emit.linef( "static constexpr int64 %#[] =", FixedCodecEmitState::makeEnumValueTableName( *pEnum ) );
+            emit.linef( "static constexpr int64 %#[] =", tableName );
             emit.line( "{" ).push();
             vector<int64> listSeen;
             for ( const ParsedEnumeratorInfo& enumerator : pEnum->_listEnumerator )
@@ -157,43 +201,69 @@ namespace sw
 
         // 서술자 표입니다. 최상위 필드가 앞 칸들이고, 묶음의 자식은 그 뒤에 이어진 칸이다(`FixedFieldDesc`).
         vector<string> listEntry;
-        flattenNodes( plan._listRootNode, listEntry );
+        flattenNodes( listRootNode, listEntry );
         string fieldArgs = "nullptr, 0u";
         if ( listEntry.empty() == false )
         {
-            emit.line( "static constexpr ::sw::FixedFieldDesc s_arrFixedField[] =" );
+            emit.linef( "static constexpr ::sw::FixedFieldDesc %#Field[] =", tablePrefix );
             emit.line( "{" ).push();
             for ( const string& entry : listEntry )
             {
                 emit.linef( "%#,", entry );
             }
             emit.pop().line( "};" );
-            fieldArgs = "s_arrFixedField, " + FixedCodecEmitState::formatInteger( static_cast<int64>( plan._listRootNode.size() ) ) + "u";
+            fieldArgs = tablePrefix + "Field, " + FixedCodecEmitState::formatInteger( static_cast<int64>( listRootNode.size() ) ) + "u";
         }
 
         string dependencyArgs = "nullptr, 0u";
-        if ( plan._listDependency.empty() == false )
+        if ( listDependency.empty() == false )
         {
-            emit.line( "static const ::sw::FixedCodec::Dependency s_arrFixedDependency[] =" );
+            emit.linef( "static const ::sw::FixedCodec::Dependency %#Dependency[] =", tablePrefix );
             emit.line( "{" ).push();
-            for ( const pair<string, string>& dependency : plan._listDependency )
+            for ( const pair<string, string>& dependency : listDependency )
             {
                 emit.linef( "{ %#, %# },", CodeEmit::quoted( dependency.first ), CodeEmit::quoted( dependency.second ) );
             }
             emit.pop().line( "};" );
-            dependencyArgs = "s_arrFixedDependency, " + FixedCodecEmitState::formatInteger( static_cast<int64>( plan._listDependency.size() ) ) + "u";
+            dependencyArgs = tablePrefix + "Dependency, " + FixedCodecEmitState::formatInteger( static_cast<int64>( listDependency.size() ) ) + "u";
+        }
+        return { fieldArgs, dependencyArgs };
+    }
+
+    void FixedCodecGenerator::emitRegistration( CodeEmit& emit, const size_t typeIndex ) const
+    {
+        const TypePlan& plan = _listPlan[typeIndex];
+        vector<string>  listEmittedEnum;
+        if ( plan._bEligible == SW_FALSE )
+        {
+            emit.linef( "// FixedLayout: not eligible - %#", plan._reason );
+            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %# );", CodeEmit::quoted( plan._reason ) );
+        }
+        else
+        {
+            const ParsedTypeInfo&      type      = _header._listType[typeIndex];
+            const pair<string, string> tableArgs = emitTables( emit, plan._listRootNode, plan._listEnum, plan._listDependency, "s_arrFixed", listEmittedEnum );
+
+            string baseCast = "nullptr";
+            if ( plan._bHasBase == SW_TRUE )
+            {
+                StringBuilder<constant::buffer::kMax1024> text;
+                text.appendFormat( "[]( const void* pObject ) -> const void* { return static_cast<const ::%#*>( static_cast<const ::%#*>( pObject ) ); }", type._parentFQN,
+                                   type._fullyQualifiedName );
+                baseCast = string( text.view() );
+            }
+            // 검증 함수는 위에서 건 `info._pValidate` 와 같은 것이다(`REFLECT( Validate = fn )` 이 없으면 nullptr).
+            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %#, %#, %#, info._pValidate );", tableArgs.first, CodeEmit::quoted( plan._canonical ), tableArgs.second, baseCast );
         }
 
-        string baseCast = "nullptr";
-        if ( plan._bHasBase == SW_TRUE )
+        // 복제 스키마 — `Replicated` 칸만 든 두 번째 표다. 기반 · 검증은 없다(기반의 복제 칸은 `ReplicatedLayout` 이 거절한다, 검증은 타입 전체의 것이다).
+        if ( plan._replicatedCanonical.empty() == false )
         {
-            StringBuilder<constant::buffer::kMax1024> text;
-            text.appendFormat( "[]( const void* pObject ) -> const void* { return static_cast<const ::%#*>( static_cast<const ::%#*>( pObject ) ); }", type._parentFQN,
-                               type._fullyQualifiedName );
-            baseCast = string( text.view() );
+            const pair<string, string> tableArgs =
+                emitTables( emit, plan._replicated._listRootNode, plan._replicated._listEnum, plan._replicated._listDependency, "s_arrReplicated", listEmittedEnum );
+            emit.linef( "static ::sw::FixedCodec s_replicatedCodec( %#, %#, %#, nullptr, nullptr );", tableArgs.first, CodeEmit::quoted( plan._replicatedCanonical ), tableArgs.second );
+            emit.line( "s_fixedCodec._pReplicated = &s_replicatedCodec;" );
         }
-        // 검증 함수는 위에서 건 `info._pValidate` 와 같은 것이다(`REFLECT( Validate = fn )` 이 없으면 nullptr).
-        emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %#, %#, %#, info._pValidate );", fieldArgs, CodeEmit::quoted( plan._canonical ), dependencyArgs, baseCast );
         emit.line( "info._pFixedCodec = &s_fixedCodec;" );
     }
 

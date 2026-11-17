@@ -22,6 +22,7 @@ namespace sw
         uint32                 _mipCount;
         uint32                 _layerCount; ///< 배열 원소 × 큐브 면(평면 텍스처는 1) — 바이트는 층마다 밉 사슬 하나씩이다
         uint32                 _dxgiFormat;
+        uint32                 _dataOffset; ///< 파일 처음에서 픽셀이 시작하는 자리(매직 + 머리 + DX10 머리) — 밉 범위를 파일 구간으로 바꿀 때 쓴다(`Texture2D::makeMipLayout`)
         uint8                  _bCompressed : 1;
         uint8                  _bIsBgra     : 1;
         [[maybe_unused]] uint8 _reserved    : 6;
@@ -34,6 +35,7 @@ namespace sw
             , _mipCount{ 1 }
             , _layerCount{ 1 }
             , _dxgiFormat{ 0 }
+            , _dataOffset{ 0 }
             , _bCompressed{ SW_FALSE }
             , _bIsBgra{ SW_FALSE }
             , _reserved{ 0 }

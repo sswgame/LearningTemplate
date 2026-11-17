@@ -128,6 +128,7 @@ namespace sw
         _totalVisitorCount = 0;
         _random.setSeed( settings._randomSeed != 0 ? settings._randomSeed : 12345u );
         updateParkRating();
+        return true;
     }
 
     void ThemeParkSimulation::update( float32 deltaTime )

@@ -348,6 +348,7 @@ namespace sw
                 case RenderPassType::LightGrid:
                 case RenderPassType::VFXSimulation:
                 case RenderPassType::VFXMeshInstance:
+                case RenderPassType::VFXParticleSort:
                 case RenderPassType::DepthHistory:
                 case RenderPassType::AutoExposure:
                 case RenderPassType::UpscaleEasu:
@@ -439,10 +440,11 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNotReady", "Pass '%#' compute implementation has no PSO or no RW output - it does not run", passDesc._name );
             return;
         }
+        // 크기는 뷰 사각형이 덮는 텍셀이다(자동 렌더 배율 — 풀은 그대로). 원본 텍셀도 사각형 기준이라 셰이더의 픽셀 → UV · 클램프가 사각형 안에 머문다.
         RootConstants constants{};
         constants._outputIndex = static_cast<uint32>( output._uav );
-        constants._width       = output._width;
-        constants._height      = output._height;
+        constants._width       = _pActiveView->scaleToRect( output._width, output._bViewSized != 0, true );
+        constants._height      = _pActiveView->scaleToRect( output._height, output._bViewSized != 0, false );
         // 입력은 역할로 고른다(로드가 계약을 검사했다). 원본 · 깊이는 SRV 로 읽는다 — 깊이 형식은 RW 로 묶을 수 없다.
         frame_vector<RHITextureHandle> listInputTexture{ FrameAllocator<RHITextureHandle>{ _frameArena } };
         for ( const RenderGraphPassDesc::ResolvedAttachment& resolved : passDesc._listResolvedInput )
@@ -454,8 +456,8 @@ namespace sw
             if ( role == RenderPassInputRole::SourceColor )
             {
                 constants._sourceIndex       = static_cast<uint32>( source._srv );
-                constants._arrSourceTexel[0] = 1.0f / static_cast<float32>( MathUtil::max( source._width, 1u ) );
-                constants._arrSourceTexel[1] = 1.0f / static_cast<float32>( MathUtil::max( source._height, 1u ) );
+                constants._arrSourceTexel[0] = 1.0f / static_cast<float32>( MathUtil::max( _pActiveView->scaleToRect( source._width, source._bViewSized != 0, true ), 1u ) );
+                constants._arrSourceTexel[1] = 1.0f / static_cast<float32>( MathUtil::max( _pActiveView->scaleToRect( source._height, source._bViewSized != 0, false ), 1u ) );
             }
             else if ( role == RenderPassInputRole::SceneDepth )
             {
@@ -491,7 +493,7 @@ namespace sw
         context._pCmd->prepareTextureForUnorderedAccess( output._texture );
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( output._width, kGroupSize ), FrameRendererUtil::divideRoundUp( output._height, kGroupSize ), 1 );
+        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, kGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, kGroupSize ), 1 );
         context._pCmd->prepareTextureForShaderRead( output._texture );
         (void)markAttachmentCleared( target );
     }
@@ -520,8 +522,8 @@ namespace sw
         const bool    bNative = _pDevice->supportsNativeBindlessSampling();
         RootConstants constants{};
         constants._outputIndex = bNative ? static_cast<uint32>( output._uav ) : 0u;
-        constants._width       = output._width;
-        constants._height      = output._height;
+        constants._width       = _pActiveView->scaleToRect( output._width, output._bViewSized != 0, true ); // 사각형 밖은 디스패치하지 않는다
+        constants._height      = _pActiveView->scaleToRect( output._height, output._bViewSized != 0, false );
         context._pCmd->prepareTextureForUnorderedAccess( output._texture );
         context._pCmd->bindComputeUAV( output._uav, shaderslot::kComputeTextureUAV0 );
         frame_vector<RHITextureHandle> listInputTexture{ FrameAllocator<RHITextureHandle>{ _frameArena } };
@@ -540,7 +542,7 @@ namespace sw
         }
         context._pCmd->setComputePipelineState( pso );
         context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( output._width, passDesc._threadGroupSize ), FrameRendererUtil::divideRoundUp( output._height, passDesc._threadGroupSize ), 1 );
+        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( constants._width, passDesc._threadGroupSize ), FrameRendererUtil::divideRoundUp( constants._height, passDesc._threadGroupSize ), 1 );
         // 뒤 패스가 샘플한다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         context._pCmd->prepareTextureForShaderRead( output._texture );
         for ( const RHITextureHandle texture : listInputTexture )
@@ -1277,7 +1279,7 @@ namespace sw
             context._world = element._world;
             context._pCmd->setPipelineState( pass._pso ); // 정점 슬롯을 비운다 — 메시 스트림은 그 뒤에 건다
             RHIMeshVertexStreams::bind( *context._pCmd, mesh.getRenderData().getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
-            context._pCmd->setIndexBuffer( mesh.getRenderData().getIndexBuffer(), sizeof( uint32 ), 0 );
+            context._pCmd->setIndexBuffer( mesh.getRenderData().getIndexBuffer(), mesh.getRenderData().getIndexStride(), 0 );
             commitBindlessTextureBindings( context );
             if ( bindForDraw( context, pass._pso, kInvalidDescriptorIndex ) )
                 context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );

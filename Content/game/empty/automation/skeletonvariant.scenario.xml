@@ -8,9 +8,8 @@
 -->
 <Scenario name="game.empty.skeletonvariant" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/skeletonvariant.scene.xml"/>
-	<Wait frames="60"/>
+	<AdvanceSimulation frames="60"/> <!-- 60 프레임 장면(결정적 애니메이션 시각이 사진 내용) -->
 	<Screenshot file="skeletonvariant.ppm"/>
-	<Wait frames="5"/>
 	<ExpectImage file="skeletonvariant.ppm" golden="skeletonvariant"/>
 	<Pass/>
 </Scenario>

@@ -312,15 +312,18 @@ namespace sw
             uint32           _colorCount{ 0 };
             uint16           _arrColorSlice[kMaxColorAttachments]{}; ///< 첨부마다 붙인 면
             uint16           _depthSlice{ 0 };
+            uint8            _arrColorMip[kMaxColorAttachments]{}; ///< 첨부마다 붙인 밉(R-10)
+            uint8            _depthMip{ 0 };
             /** @brief 키가 같으면 true 를 반환합니다. */
             bool operator==( const CompositeFboKey& other ) const
             {
-                const bool bFboKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthSlice != other._depthSlice;
+                const bool bFboKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthSlice != other._depthSlice || _depthMip != other._depthMip;
                 if ( bFboKeyMismatch )
                     return false;
                 for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
                 {
-                    if ( _arrColor[colorIndex] != other._arrColor[colorIndex] || _arrColorSlice[colorIndex] != other._arrColorSlice[colorIndex] )
+                    if ( _arrColor[colorIndex] != other._arrColor[colorIndex] || _arrColorSlice[colorIndex] != other._arrColorSlice[colorIndex] ||
+                         _arrColorMip[colorIndex] != other._arrColorMip[colorIndex] )
                         return false;
                 }
                 return true;
@@ -479,7 +482,8 @@ namespace sw
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
         [[nodiscard]] bool ensureComputeRootConstantUbo();
         /** @brief MRT 합성 FBO 를 확보합니다. */
-        uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice );
+        uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, const uint8* pColorMip, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice,
+                                      uint32 depthMip );
         /** @brief 불투명 핸들로 GLuint 이름을 찾습니다. */
         uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
         /**
@@ -488,7 +492,7 @@ namespace sw
          */
         RHIBufferHandle storeGlBuffer( uint32 glName, uint32 sizeBytes );
         /** @brief 텍스처(의 면 `slice`)를 지금 바인딩된 FBO 의 `attachment` 에 붙입니다. 면이 여럿인 텍스처는 층(layer)으로 붙입니다. */
-        static void attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice );
+        static void attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice, uint32 mip );
         /** @brief 불투명 텍스처 핸들로 OpenGLTextureRecord 를 찾습니다. */
         OpenGLTextureRecord*       resolveTexture( RHITextureHandle handle );
         const OpenGLTextureRecord* resolveTexture( RHITextureHandle handle ) const;

@@ -1,5 +1,5 @@
 <?asset guid="7055500ef1d8696c3deeea1e084e42a9"?>
-<Prefab formatVersion="0" name="TownsfolkMerged">
+<Prefab formatVersion="1" name="TownsfolkMerged">
 	<GameObject _schemaVersion="0" _name="TownsfolkMerged" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
@@ -18,7 +18,7 @@
 			                       _skeletonPath=""
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false" />
+			                       _visibilityBasedTickOption="AlwaysTickPose" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/ubc_townsfolk.animgraph.xml"

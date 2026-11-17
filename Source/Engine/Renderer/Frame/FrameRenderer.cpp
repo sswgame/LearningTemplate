@@ -103,6 +103,11 @@ namespace sw
         , _bLightGridPSOMissingLogged{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
+        , _publishedViewRectWidth{ 0 }
+        , _publishedViewRectHeight{ 0 }
+        , _publishedViewPoolWidth{ 0 }
+        , _publishedViewTransientRebuildCount{ 0 }
+        , _publishedOcclusionTilesBuilt{ 0 }
     {
     }
 
@@ -454,8 +459,13 @@ namespace sw
         // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
         // 결정적 실행도 풀 예산은 지킨다(예산은 장면 내용으로만 정해져 결정적이다) — 풀리는 것은 프레임당 제출 수뿐이다.
         TextureStreamingBudget streamingBudget;
-        streamingBudget._maxUpgradesPerFrame = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
-        streamingBudget._poolBytes           = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._maxUpgradesPerFrame        = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
+        streamingBudget._poolBytes                  = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._maxBytesInFlight           = static_cast<uint64>( streamingConfig._maxMegabytesInFlight ) * constant::memory::kBytesPerMegabyte;
+        streamingBudget._viewHeightPixels           = _state._outputHeight;
+        streamingBudget._idleFramesBeforeRelease    = streamingConfig._idleFramesBeforeRelease;
+        streamingBudget._minFramesBetweenChanges    = streamingConfig._minFramesBetweenChanges;
+        streamingBudget._promoteBudgetMarginPercent = streamingConfig._promoteBudgetMarginPercent;
         (void)textures.updateStreaming( pDevice, streamingBudget );
     }
 
@@ -609,14 +619,17 @@ namespace sw
         _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         _psoManager.ensureParticlePSO();
-        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _passExecutor.getFrameGraphExecutor().makeVFXSimulationInput() );
+        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), vector_reference<const uint32>( _state._gpuScene.getParticleOrder() ),
+                                               _state._gpuScene.getVFXMeshEmitters(), vector_reference<const VFXGPUParticleSortJob>( _state._gpuScene.getGPUParticleSortJobs() ),
+                                               _state._gpuScene.getGPUParticleOrderCount(), _passExecutor.getFrameGraphExecutor().makeVFXSimulationInput() );
 
         if ( _passExecutor.prepareCommandList( pDevice, pCallerName ) == false )
             return false;
 
         const bool bOk             = _passExecutor.submitGraph( pDevice );
         _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
-        _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
+        _publishedOcclusionTilesBuilt.store( _state._mainView._bOcclusionTilesThisFrame == SW_TRUE ? 1u : 0u );
+        _lastPendingPSOBatchCount = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         // 시계가 스위치를 맞추고 끝난 프레임을 읽는다(자동 렌더 배율 표본). 읽은 프레임 한 벌을 프로파일러도 받는다.
         if ( _host._pProfiler != nullptr )
@@ -650,7 +663,7 @@ namespace sw
         {
             _state._skyHdriPath = hdriPath;
             _state._skyHdriLoad = hdriPath.empty() || engine::areEngineServicesBound() == false ? TextureHandle{}
-                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async );
+                                                                                                : engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( hdriPath.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
         }
         if ( bHasSky == false )
         {
@@ -958,7 +971,13 @@ namespace sw
         {
             publishRenderTargets();
             reportRenderTargetMemory();
+            _publishedViewTransientRebuildCount.store( _publishedViewTransientRebuildCount.load() + 1u );
         }
+        // 자동 렌더 배율은 풀이 아니라 사각형만 줄인다(정수 업스케일은 풀 전체가 화면 픽셀과 짝이라 늘 1).
+        _state._mainView.updateViewRect( settings._upscaleZoom > 0 ? 1.0f : settings._rectScale );
+        _publishedViewRectWidth.store( _state._mainView._rect._width );
+        _publishedViewRectHeight.store( _state._mainView._rect._height );
+        _publishedViewPoolWidth.store( _state._mainView._transientPool.getWidth() );
         // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
@@ -1218,7 +1237,7 @@ namespace sw
             textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
             // 기다리지 않고 요청한다 — 0 채우기 전송은 진행 중인 프레임 뒤에 실행되므로(전송 계약 3) 이 스레드의 펌프가 끝낸다(`CanvasTextureLeases::prepareTargets` 와 같다).
             // 옛 경로의 핸들은 덮어쓰며 놓인다(캐시에 돌려준다).
-            view._outputLoad     = textures.request( request._renderTexture.view(), AssetLoadStart::Async );
+            view._outputLoad     = textures.request( request._renderTexture.view(), AssetLoadStart::Async, TextureStreamingGroup::NeverStream );
             view._pOutputTexture = nullptr;
             view._outputPath     = request._renderTexture;
         }
@@ -1268,6 +1287,7 @@ namespace sw
         const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
         (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration );
+        view.updateViewRect( zoom > 0 ? 1.0f : view._settings._rectScale );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         view.beginViewHistory();
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.

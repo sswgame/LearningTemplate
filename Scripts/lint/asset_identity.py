@@ -10,7 +10,7 @@ Scripts/lint/asset_identity.py
   py -3 -m Scripts asset-ids --self-check # 머리 읽기 · 쓰기 규칙(C++ AssetGUIDTest 와 같은 사례)과 규칙 파일 대조
 
 - 우리 형식 글(`listHeaderSuffix` — XML)은 맨 앞 처리 지시 `<?asset guid="…"?>`(XML 선언 바로 뒤)에, 원본(png · ogg · glb …)은 곁의 `<파일>.meta`
-  (`<AssetMeta _guid="…" _source="<파일 이름>" />`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
+  (`<AssetMeta _guid="…" _source="<파일 이름>" />`, 그 에셋만의 임포트 예외는 자식 `<_listImportOverride>` 의 `<AssetImportOverride _key _value/>`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
 - `--fix` 는 조용히 새 GUID 를 만들지 않는다: 머리를 잃은 글은 HEAD 의 같은 경로에 있던 GUID 를 되살리고, 짝 잃은 `.meta` 는 원본을 내용(HEAD 의 블롭 해시)
   · 이름으로 찾아 다시 붙인다. 붙일 곳이 하나로 정해지지 않으면 오류다. 새 GUID 는 정체성이 처음 생기는 파일(새 글 · 새 원본)과 복사본에만 준다.
 - 커밋 훅(린트 규칙 `asset-ids` — `check_asset_identity` 가 `check_staged_asset_identity` 를 부른다): 바뀐 파일과 그 짝의 머리 없음 · 짝 없음, 새 GUID 와 인덱스의 겹침(`git grep`), 그리고 HEAD 에 있던
@@ -178,20 +178,34 @@ def write_header(text: str, guid: str) -> str:
     return text[:insert_at] + header + new_line + text[insert_at:]
 
 
-def make_meta_text(source_id: str, guid: str) -> str:
-    """C++ `AssetMeta::makeText`(리플렉션 직렬화)와 같은 글."""
-    return f"<AssetMeta _guid={quoteattr(guid)} _source={quoteattr(source_id.rsplit('/', 1)[-1])} />"
+Overrides = tuple[tuple[str, str], ...]   # 임포트 예외 (칸 이름, 값 글) — C++ `AssetImportOverride`
 
 
-def parse_meta(text: str) -> tuple[str, str] | None:
-    """(GUID, 원본) — 다른 꼴(모르는 속성 · 자식 · 틀린 GUID)이면 None(C++ 은 엄격한 리플렉션 읽기)."""
+def make_meta_text(source_id: str, guid: str, overrides: Overrides = ()) -> str:
+    """C++ `AssetMeta::makeText`(리플렉션 직렬화)와 같은 글. 예외가 없으면 칸을 쓰지 않는다(`SkipIfEmpty`)."""
+    head = f"<AssetMeta _guid={quoteattr(guid)} _source={quoteattr(source_id.rsplit('/', 1)[-1])}"
+    if not overrides:
+        return head + " />"
+    items = "".join(f"\t\t<AssetImportOverride _key={quoteattr(key)} _value={quoteattr(value)} />\n" for key, value in overrides)
+    return f"{head}>\n\t<_listImportOverride>\n{items}\t</_listImportOverride>\n</AssetMeta>"
+
+
+def parse_meta(text: str) -> tuple[str, str, Overrides] | None:
+    """(GUID, 원본, 임포트 예외) — 다른 꼴(모르는 속성 · 자식 · 틀린 GUID)이면 None(C++ 은 엄격한 리플렉션 읽기)."""
     try:
         root = ElementTree.fromstring(text)
     except ElementTree.ParseError:
         return None
-    if root.tag != "AssetMeta" or set(root.attrib) != {"_guid", "_source"} or len(root) or not is_guid(root.attrib["_guid"]):
+    if root.tag != "AssetMeta" or set(root.attrib) != {"_guid", "_source"} or not is_guid(root.attrib["_guid"]):
         return None
-    return root.attrib["_guid"], root.attrib["_source"]
+    if len(root) == 0:
+        return root.attrib["_guid"], root.attrib["_source"], ()
+    block = root[0]
+    if len(root) != 1 or block.tag != "_listImportOverride" or block.attrib:
+        return None
+    if any(item.tag != "AssetImportOverride" or set(item.attrib) != {"_key", "_value"} or len(item) for item in block):
+        return None
+    return root.attrib["_guid"], root.attrib["_source"], tuple((item.attrib["_key"], item.attrib["_value"]) for item in block)
 
 
 def read_identity(asset_id: str, text: str | None, rules: Rules) -> str | None:
@@ -447,7 +461,8 @@ def fix_worktree(project_root: Path) -> int:
             _write(content_root / asset_id, text)
             map_text[asset_id] = text
         else:
-            _write(content_root / (asset_id + META_EXTENSION), make_meta_text(asset_id, guid))
+            copied = parse_meta(map_text.get(asset_id + META_EXTENSION) or "")   # 복사본은 베낀 임포트 예외를 지킨다(C++ `assignNewIdentity` 와 같다)
+            _write(content_root / (asset_id + META_EXTENSION), make_meta_text(asset_id, guid, copied[2] if copied else ()))
         set_used.add(guid)
 
     # ① 겹친 GUID — HEAD 에서 그 GUID 를 들던 경로가 원본이고 나머지가 복사본이다. 원본을 가를 수 없으면(둘 다 새 파일) 정렬 순서로 먼저인 쪽이 남는다.
@@ -495,7 +510,7 @@ def fix_worktree(project_root: Path) -> int:
             list_unattached.append(orphan)
             continue
         target = list_match[0]
-        _write(content_root / (target + META_EXTENSION), make_meta_text(target, meta[0]))
+        _write(content_root / (target + META_EXTENSION), make_meta_text(target, meta[0], meta[2]))
         (content_root / orphan).unlink()
         list_lonely.remove(target)
         counts["meta-reattached"] += 1
@@ -544,7 +559,11 @@ def run_self_check(project_root: Path | None = None) -> None:
     assert read_header(f'<?asset guid="{sample}"?>\n<!-- <?asset guid?> -->\n<Root/>') == (FOUND, sample)
     assert read_header('<?xml version="1.0"\n<Root/>')[0] == INVALID
     assert not is_guid(sample.upper()) and not is_guid("0" * GUID_LENGTH) and not is_guid(sample[:-1])
-    assert parse_meta(make_meta_text("a/b/hit.ogg", sample)) == (sample, "hit.ogg")
+    assert parse_meta(make_meta_text("a/b/hit.ogg", sample)) == (sample, "hit.ogg", ())
+    overrides = (("animationCodec", "raw"), ("generateMips", "false"))
+    assert parse_meta(make_meta_text("a/horse.glb", sample, overrides)) == (sample, "horse.glb", overrides)
+    assert parse_meta(make_meta_text("a/horse.glb", sample, overrides).replace('_value="raw"', '_value="raw" _note="x"')) is None
+    assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg"><Other /></AssetMeta>') is None
     assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg" _extra="1" />') is None
 
     rules = load_rules(project_root)

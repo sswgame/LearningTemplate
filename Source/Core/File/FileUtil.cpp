@@ -87,43 +87,20 @@ namespace sw
             [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size, FileSyncMode durability )
             {
                 const FileWriteResult result = writeAtomicallyQuiet( fileName, pData, size, durability );
-                switch ( result )
-                {
-                    case FileWriteResult::Written:
-                        return true;
-                    case FileWriteResult::Refused:
-                        if ( FileUtil::isReadOnlyFile( fileName ) )
-                            SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName );
-                        return false; // 게이트 거절은 `isWriteAllowed` 가 이미 남겼다
-                    case FileWriteResult::WriteFailed:
-                        SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to write %# bytes to %# — the original file was left untouched", size, fileName );
-                        return false;
-                    case FileWriteResult::ReplaceFailed:
-                        SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", fileName );
-                        return false;
-                }
-                return false;
+                if ( result == FileWriteResult::WriteFailed )
+                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to write %# bytes to %# — the original file was left untouched", size, fileName );
+                else
+                    logWriteResult( result, fileName );
+                return result == FileWriteResult::Written;
             }
 
             /** @brief `writeAtomically` 의 본체입니다 — 실패를 로그 없이 결과로 돌려준다(게이트 거절은 `isWriteAllowed` 가 남긴다). 설명은 `writeAtomically`. */
             [[nodiscard]] static FileWriteResult writeAtomicallyQuiet( string_view fileName, const void* pData, size_t size, FileSyncMode durability )
             {
-                const string filePath = FileUtil::normalizeSeparators( fileName );
-                if ( FileUtil::isWriteAllowed( filePath ) == false )
+                string filePath;
+                string tempPath;
+                if ( prepareAtomicWrite( fileName, filePath, tempPath ) == false )
                     return FileWriteResult::Refused;
-                // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
-                // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
-                if ( FileUtil::isReadOnlyFile( filePath ) )
-                    return FileWriteResult::Refused;
-                const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
-                // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
-                StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
-                tempPathBuilder.append( filePath.c_str() )
-                    .append( ".tmp" )
-                    .append( processID )
-                    .append( '_' )
-                    .append( s_writeCounters._tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
-                const string tempPath{ tempPathBuilder.c_str() };
 
                 FILE* pFile = PlatformFileUtil::openFile( tempPath.c_str(), "wb" );
                 if ( pFile == nullptr )
@@ -138,7 +115,49 @@ namespace sw
                     discardTempFile( tempPath );
                     return FileWriteResult::WriteFailed;
                 }
+                return replaceAtomicallyQuiet( tempPath, filePath, durability );
+            }
 
+            /** @brief 거절 · 교체 실패를 오류로 남깁니다(로그 있는 입구 `writeAtomically` · `AtomicFileWriter` · `FileUtil::replaceFile` 이 함께 쓴다). 쓰기 실패는 부르는 쪽이 크기와 함께 남긴다. */
+            static void logWriteResult( FileWriteResult result, string_view fileName )
+            {
+                // 읽기 전용이 아닌 거절은 쓰기 게이트(`isWriteAllowed`)가 이미 남겼다
+                if ( result == FileWriteResult::Refused && FileUtil::isReadOnlyFile( fileName ) )
+                    SW_LOG_ERROR_ID( "File.WriteReadOnly", "Refused to replace the read-only file %# - make it writable (check it out) first", fileName );
+                else if ( result == FileWriteResult::ReplaceFailed )
+                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", fileName );
+            }
+
+            /**
+             * @brief 원자적 쓰기의 앞 절반입니다 — 쓰기 게이트 · 읽기 전용을 보고 같은 폴더의 임시 경로를 정합니다(로그 없음 — `beginAtomicWrite` 가 남긴다).
+             * @return 쓸 수 없는 대상이면 false 입니다(게이트 거절은 `isWriteAllowed` 가 남긴다).
+             */
+            [[nodiscard]] static bool prepareAtomicWrite( string_view fileName, string& outFilePath, string& outTempPath )
+            {
+                const string filePath = FileUtil::normalizeSeparators( fileName );
+                if ( FileUtil::isWriteAllowed( filePath ) == false )
+                    return false;
+                // 읽기 전용 대상은 어느 플랫폼에서도 바꿔 끼우지 않는다 — POSIX `rename` 은 대상 권한을 보지 않아 버전 관리 잠금(git LFS lockable)이 조용히 뚫리고,
+                // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
+                if ( FileUtil::isReadOnlyFile( filePath ) )
+                    return false;
+                outTempPath = FileUtil::makeWriteTempPath( filePath );
+                outFilePath = filePath;
+                return true;
+            }
+
+            /** @brief `prepareAtomicWrite` 에 거절 로그를 더한 것입니다(`AtomicFileWriter` · `FileUtil::replaceFile` 이 쓴다). */
+            [[nodiscard]] static bool beginAtomicWrite( string_view fileName, string& outFilePath, string& outTempPath )
+            {
+                if ( prepareAtomicWrite( fileName, outFilePath, outTempPath ) )
+                    return true;
+                logWriteResult( FileWriteResult::Refused, fileName );
+                return false;
+            }
+
+            /** @brief 원자적 쓰기의 뒤 절반입니다 — 다 쓰고 닫은 임시 파일을 대상과 바꿔 끼웁니다. 못 바꾸면 임시 파일을 지우고 `ReplaceFailed` 입니다(로그 없음). */
+            [[nodiscard]] static FileWriteResult replaceAtomicallyQuiet( const string& tempPath, const string& filePath, FileSyncMode durability )
+            {
                 // 다른 프로세스(파일 감시 · 백신 · 에디터)가 대상을 잠깐 쥐고 있으면 Windows 의 바꿔치기가 실패한다. 잠깐 기다렸다 다시 한다.
                 constexpr uint32 kReplaceAttemptCount = 10;
                 for ( uint32 attemptIndex = 0; attemptIndex < kReplaceAttemptCount; ++attemptIndex )
@@ -1359,6 +1378,33 @@ namespace sw
         return true;
     }
 
+    string FileUtil::makeWriteTempPath( string_view targetPath )
+    {
+        const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
+        // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
+        StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
+        tempPathBuilder.append( FileUtil::normalizeSeparators( targetPath ).c_str() )
+            .append( ".tmp" )
+            .append( processID )
+            .append( '_' )
+            .append( FileUtilInternal::s_writeCounters._tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
+        return string{ tempPathBuilder.c_str() };
+    }
+
+    bool FileUtil::replaceFile( string_view tempPath, string_view targetPath )
+    {
+        string filePath;
+        string unusedTempPath;
+        if ( FileUtilInternal::beginAtomicWrite( targetPath, filePath, unusedTempPath ) == false )
+        {
+            (void)tryRemoveFile( tempPath );
+            return false;
+        }
+        const FileWriteResult result = FileUtilInternal::replaceAtomicallyQuiet( FileUtil::normalizeSeparators( tempPath ), filePath, FileSyncMode::Fast );
+        FileUtilInternal::logWriteResult( result, filePath );
+        return result == FileWriteResult::Written;
+    }
+
     bool FileUtil::isAbandonedWriteTemp( string_view path )
     {
         // 이름 규칙은 writeAtomically 가 짓는다: <원본>.tmp<pid>_<번호>
@@ -1463,5 +1509,139 @@ namespace sw
         walk._visit      = visit;
         walk._pContext   = pContext;
         return FileUtilInternal::walkSorted( walk );
+    }
+} // namespace sw
+
+namespace sw
+{
+    AtomicFileWriter::AtomicFileWriter()
+        : _pFile{ nullptr }
+        , _filePath{}
+        , _tempPath{}
+        , _size{ 0 }
+    {
+    }
+
+    AtomicFileWriter::~AtomicFileWriter()
+    {
+        discard();
+    }
+
+    expected<void> AtomicFileWriter::open( string_view filePath )
+    {
+        if ( _pFile != nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is already open", _filePath } );
+        if ( FileUtilInternal::beginAtomicWrite( filePath, _filePath, _tempPath ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "target cannot be written", filePath } );
+        _pFile = PlatformFileUtil::openFile( _tempPath.c_str(), "wb" );
+        if ( _pFile == nullptr )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "temporary file cannot be opened", _tempPath } );
+        _size = 0;
+        return {};
+    }
+
+    expected<void> AtomicFileWriter::append( const uint8* pData, size_t size )
+    {
+        if ( _pFile == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
+        if ( size > 0 && std::fwrite( pData, 1, size, _pFile ) != size )
+        {
+            const string tempPath = _tempPath;
+            discard();
+            return unexpected( Error{ ErrorKind::ExternalFailure, "write failed (disk full?)", tempPath } );
+        }
+        _size += size;
+        return {};
+    }
+
+    bool AtomicFileWriter::markSparse()
+    {
+        return _pFile != nullptr && PlatformFileUtil::markSparse( _pFile );
+    }
+
+    expected<void> AtomicFileWriter::appendZeros( uint64 size )
+    {
+        if ( _pFile == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
+        if ( size == 0 )
+            return {};
+        // 표시하지 못하는 볼륨이면 건너뛴 구간을 OS 가 0 으로 채운다 — 내용은 같고 디스크만 쓴다.
+        (void)PlatformFileUtil::markSparse( _pFile );
+        // 건너뛴 끝의 마지막 바이트를 써야 파일이 그 길이가 된다(끝 너머 seek 만으로는 늘지 않는다).
+        const uint8 zero     = 0;
+        const bool  bWritten = PlatformFileUtil::seekTo( _pFile, static_cast<int64>( _size + size - 1 ), SEEK_SET ) && std::fwrite( &zero, 1, 1, _pFile ) == 1;
+        if ( bWritten == false )
+        {
+            const string tempPath = _tempPath;
+            discard();
+            return unexpected( Error{ ErrorKind::ExternalFailure, "seek or write failed (disk full?)", tempPath } );
+        }
+        _size += size;
+        return {};
+    }
+
+    expected<void> AtomicFileWriter::writeAt( uint64 offset, const uint8* pData, size_t size )
+    {
+        if ( _pFile == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
+        if ( offset > _size || size > _size - offset )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "writeAt goes past the written end", _tempPath } );
+        const bool bWritten = PlatformFileUtil::seekTo( _pFile, static_cast<int64>( offset ), SEEK_SET ) && ( size == 0 || std::fwrite( pData, 1, size, _pFile ) == size ) &&
+                              PlatformFileUtil::seekTo( _pFile, static_cast<int64>( _size ), SEEK_SET );
+        if ( bWritten == false )
+        {
+            const string tempPath = _tempPath;
+            discard();
+            return unexpected( Error{ ErrorKind::ExternalFailure, "seek or write failed", tempPath } );
+        }
+        return {};
+    }
+
+    expected<void> AtomicFileWriter::commit()
+    {
+        if ( _pFile == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "atomic file writer is not open" } );
+        const string          filePath = _filePath;
+        const FileWriteResult result   = tryCommit();
+        if ( result == FileWriteResult::WriteFailed )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "flush or close failed - the original file was left untouched", filePath } );
+        if ( result == FileWriteResult::ReplaceFailed )
+        {
+            FileUtilInternal::logWriteResult( result, filePath );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "replacing the target failed - the original file was left untouched", filePath } );
+        }
+        return {};
+    }
+
+    FileWriteResult AtomicFileWriter::tryCommit()
+    {
+        if ( _pFile == nullptr )
+            return FileWriteResult::WriteFailed;
+        // 4 KB 보다 작은 쓰기는 stdio 버퍼에 머물다 fclose 에서야 디스크로 가므로, 가득 찬 디스크는 flush · close 만 알려 준다(`writeAtomically` 와 같다).
+        const bool bFlushed   = std::fflush( _pFile ) == 0;
+        const bool bClosed    = std::fclose( _pFile ) == 0;
+        _pFile                = nullptr;
+        const string tempPath = std::move( _tempPath );
+        const string filePath = std::move( _filePath );
+        _tempPath.clear();
+        _filePath.clear();
+        if ( bFlushed == false || bClosed == false )
+        {
+            FileUtilInternal::discardTempFile( tempPath );
+            return FileWriteResult::WriteFailed;
+        }
+        return FileUtilInternal::replaceAtomicallyQuiet( tempPath, filePath, FileSyncMode::Fast );
+    }
+
+    void AtomicFileWriter::discard()
+    {
+        if ( _pFile == nullptr )
+            return;
+        (void)std::fclose( _pFile ); // 버리는 파일이다 — 닫기 실패는 지우기가 드러낸다
+        _pFile = nullptr;
+        FileUtilInternal::discardTempFile( _tempPath );
+        _tempPath.clear();
+        _filePath.clear();
+        _size = 0;
     }
 } // namespace sw

@@ -109,7 +109,7 @@ namespace sw::editor
             static MeshAssetData makeAssetData( const Mesh& mesh )
             {
                 MeshAssetData data;
-                data._listVertex      = mesh.getVertices();
+                data._listVertex      = mesh.getCPUView().getVertices();
                 data._listIndex       = mesh.getIndices();
                 data._listSkinVertex  = mesh.getSkinVertices();
                 data._listMorphTarget = mesh.getMorphTargets();

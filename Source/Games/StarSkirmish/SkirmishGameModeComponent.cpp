@@ -264,19 +264,16 @@ namespace sw
         , _lockstep{}
         , _selection{}
         , _listEvent{}
-        , _listUnitSlot{}
-        , _listPendingUnit{}
+        , _unitViews{}
         , _tintCache{}
         , _listUnitLook{}
         , _dragStart{}
         , _dragPoint{}
-        , _timeScale{ 1.0f }
-        , _frameStamp{ 0 }
+        , _speed{}
         , _bHuman{ SW_TRUE }
         , _bDragging{ SW_FALSE }
         , _bDragPointValid{ SW_FALSE }
         , _bAttackMovePending{ SW_FALSE }
-        , _bPaused{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -314,7 +311,7 @@ namespace sw
         // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
         if ( _unitModels.getCount() == 0 )
         {
-            for ( const string& path : _pUnitModelCatalog->makeAllModelPaths() )
+            for ( const string& path : _pUnitModelCatalog->makeAllMeshPaths() )
             {
                 _unitModels.add( MeshCache::request( path ) );
             }
@@ -356,8 +353,8 @@ namespace sw
             updateInput( *pInput );
         if ( _lockstep.isActive() )
             (void)_lockstep.advance( deltaTime, _match.getWorld().getSettings()._fixedStep, _match ); // 두 프로세스가 같은 걸음으로 돈다 - 속도 · 일시정지는 쓰지 않는다
-        else if ( _bPaused == SW_FALSE )
-            _match.update( deltaTime, _timeScale );
+        else if ( _speed.isPaused() == false )
+            _match.update( deltaTime, _speed.getTimeScale() );
         handleEvents();
         _selection.prune( _match.getWorld() );
         if ( areViewsSpawned() )
@@ -366,8 +363,7 @@ namespace sw
 
     void SkirmishGameModeComponent::onViewsDespawned()
     {
-        _listUnitSlot.clear();
-        _listPendingUnit.clear();
+        _unitViews.clear();
         _bDragging = SW_FALSE;
     }
 
@@ -400,16 +396,17 @@ namespace sw
             return;
         io.value( _match );
         io.valueAtomic( _selection );
-        float32 timeScale = _timeScale;
-        uint8   bPaused   = static_cast<uint8>( _bPaused );
+        float32 timeScale = _speed.getTimeScale();
+        uint8   bPaused   = _speed.isPaused() ? SW_TRUE : SW_FALSE;
         io.value( timeScale );
         io.value( bPaused );
         io.end();
-        io.check( timeScale > 0.0f );
         if ( io.isReading() && io.isOk() )
         {
-            _timeScale = timeScale;
-            _bPaused   = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
+            GameSpeedControl restoredSpeed;
+            if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) ) == false )
+                return; // 범위 밖 배속(깨진 세이브)은 거절한다
+            _speed = restoredSpeed;
             _listEvent.clear();
         }
     }
@@ -485,17 +482,13 @@ namespace sw
         {
             // 처음이거나 정리한 뒤다. 절벽과 지금 보이는 유닛을 모두 스폰한다.
             spawnCliffs( manager );
-            _listPendingUnit.clear();
+            _unitViews.clear();
             collectUnitChanges();
         }
-        for ( const int32 slotIndex : _listPendingUnit )
-        {
-            UnitSlot& slot = _listUnitSlot[static_cast<size_t>( slotIndex )];
-            destroySpawned( manager, slot._object );
-            if ( slot._shownID.isValid() )
-                spawnUnit( manager, slotIndex );
-        }
-        _listPendingUnit.clear();
+        _unitViews.flush( [&manager]( GameObjectHandle& inoutHandle )
+        { destroySpawned( manager, inoutHandle ); },
+                          [this, &manager]( size_t, RTSUnitID unitID )
+        { return spawnUnit( manager, unitID ); } );
     }
 
     void SkirmishGameModeComponent::spawnCliffs( GameObjectManager& manager )
@@ -520,30 +513,29 @@ namespace sw
         }
     }
 
-    void SkirmishGameModeComponent::spawnUnit( GameObjectManager& manager, int32 slotIndex )
+    GameObjectHandle SkirmishGameModeComponent::spawnUnit( GameObjectManager& manager, RTSUnitID unitID )
     {
-        UnitSlot&      slot  = _listUnitSlot[static_cast<size_t>( slotIndex )];
-        const RTSUnit* pUnit = _match.getWorld().findUnit( slot._shownID );
+        const RTSUnit* pUnit = _match.getWorld().findUnit( unitID );
         if ( pUnit == nullptr )
-            return;
-        const SkirmishUnitModel* pModel = _pUnitModelCatalog->find( pUnit->_pDef->_id );
+            return GameObjectHandle{};
+        const RuleViewDef* pModel = _pUnitModelCatalog->find( pUnit->_pDef->_id );
         if ( pModel == nullptr )
-            return;
+            return GameObjectHandle{};
         GameObject* pObject = spawnPrefab( manager, _unitPrefab, "SkirmishUnit" );
         if ( pObject == nullptr )
-            return;
-        slot._object         = pObject->getHandle();
+            return GameObjectHandle{};
         MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
         {
             // 모델은 유닛 종류마다 정해져 바뀌지 않는다. 그래서 여기(게임 스레드)에서 지정한다. 색, 위치, 크기, 방향은 뷰가 맞춘다.
             if ( _listUnitLook.empty() )
                 prepareUnitLooks( pMesh->getMaterial() );
-            pMesh->setMeshID( SkirmishUnitComponent::makeModelPath( pModel->_model.c_str() ) );
+            pMesh->setMeshID( pModel->_mesh.path() );
         }
         SkirmishUnitComponent* pView = pObject->getComponent<SkirmishUnitComponent>();
         if ( pView != nullptr )
-            pView->assignUnit( getOwner()->getHandle(), slot._shownID, pModel->_width );
+            pView->assignUnit( getOwner()->getHandle(), unitID, pModel->_width );
+        return pObject->getHandle();
     }
 
     void SkirmishGameModeComponent::prepareUnitLooks( Material* pMaterial )
@@ -565,11 +557,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     void SkirmishGameModeComponent::collectUnitChanges()
     {
-        // 보일 유닛은 사람 쪽 화면이 안 보이는 적을 그리지 않게 정한다(자원은 항상 보인다). 슬롯의 유닛이 바뀌었거나 이번에 못 본 슬롯(죽음, 안개)만 쌓는다.
-        ++_frameStamp;
+        // 보일 유닛은 사람 쪽 화면이 안 보이는 적을 그리지 않게 정한다(자원은 항상 보인다). 슬롯의 유닛이 바뀌었거나 이번에 못 본 슬롯(죽음, 안개)만 쌓인다.
         const RTSWorld& world       = _match.getWorld();
         const bool      bHuman      = _bHuman == SW_TRUE;
         const int32     localPlayer = getLocalPlayer();
+        _unitViews.beginCollect();
         world.forEachUnit( [this, &world, bHuman, localPlayer]( const RTSUnit& unit )
         {
             const bool bHiddenFromHuman = bHuman && unit._owner != localPlayer && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( localPlayer, unit._id ) == false;
@@ -577,24 +569,9 @@ namespace sw
                 return;
             if ( _pUnitModelCatalog->find( unit._pDef->_id ) == nullptr )
                 return; // 모든 유닛에 모델 줄이 있음은 hasValidNames 가 시작할 때 본다
-            const size_t slotIndex = static_cast<size_t>( unit._id.index() );
-            if ( _listUnitSlot.size() <= slotIndex )
-                _listUnitSlot.resize( slotIndex + 1 );
-            UnitSlot& slot = _listUnitSlot[slotIndex];
-            slot._stamp    = _frameStamp;
-            if ( slot._shownID == unit._id )
-                return;
-            slot._shownID = unit._id;
-            _listPendingUnit.push_back( static_cast<int32>( slotIndex ) );
+            _unitViews.show( static_cast<size_t>( unit._id.index() ), unit._id );
         } );
-        for ( size_t slotIndex = 0; slotIndex < _listUnitSlot.size(); ++slotIndex )
-        {
-            UnitSlot& slot = _listUnitSlot[slotIndex];
-            if ( slot._stamp == _frameStamp || slot._shownID.isValid() == false )
-                continue;
-            slot._shownID = RTSUnitID{};
-            _listPendingUnit.push_back( static_cast<int32>( slotIndex ) );
-        }
+        _unitViews.endCollect();
     }
 
     void SkirmishGameModeComponent::updateInput( const InputManager& input )
@@ -606,16 +583,8 @@ namespace sw
         const bool          bTiming = bFaster || inputMap.wasActionTriggered( _slowerAction ) || inputMap.wasActionTriggered( _pauseAction );
         if ( bTiming && _lockstep.isActive() )
             SW_LOG_INFO_ID( "SkirmishGameMode.TimingInNetMatch", "[Skirmish] speed and pause are off in a network match - both players run the same steps" );
-        else if ( bFaster || inputMap.wasActionTriggered( _slowerAction ) )
-        {
-            _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
-            SW_LOG_INFO_ID( "SkirmishGameMode.SpeedX", "[Skirmish] speed x%#", _timeScale );
-        }
-        if ( _lockstep.isActive() == false && inputMap.wasActionTriggered( _pauseAction ) )
-        {
-            _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO_ID( "SkirmishGameMode.PauseToggled", "[Skirmish] %#", _bPaused == SW_TRUE ? "paused" : "running" );
-        }
+        else
+            _speed.applyInput( inputMap.wasActionTriggered( _pauseAction ), bFaster, inputMap.wasActionTriggered( _slowerAction ) );
         if ( inputMap.wasActionTriggered( _statusAction ) )
             _match.logStatus();
         if ( _bHuman == SW_TRUE && _match.isOver() == false )
@@ -797,7 +766,7 @@ namespace sw
             SW_LOG_ERROR_ID( "SkirmishGameMode.UnitNoRow", "%#: unit '%#' of %# has no row in %#", kOwner, def._id.c_str(), _unitDataPath.c_str(), _unitModelPath.c_str() );
             bValid = false;
         }
-        for ( const SkirmishUnitModel& model : _pUnitModelCatalog->getAll() )
+        for ( const RuleViewDef& model : _pUnitModelCatalog->getAll() )
         {
             if ( _pCatalog->find( model._id ) != nullptr )
                 continue;

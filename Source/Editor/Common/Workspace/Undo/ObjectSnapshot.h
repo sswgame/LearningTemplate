@@ -43,6 +43,12 @@ namespace sw
          * @param pObj 방금 만든 · 곧 지울 오브젝트. 지금 상태 · 이름 · 프리팹 경로를 여기서 찍습니다.
          */
         static CommandStack::Command makeLifetime( SceneManager& sceneManager, const GameObject* pObj, ObjectLifetimeEdit edit, string_view label );
+
+        /**
+         * @brief 오브젝트 @p obj 의 형제 순서 키를 @p beforeKey ↔ @p afterKey 로 오가는 명령을 만듭니다. 스냅샷 없이 키 하나를 적은 데이터 단계 한 쌍이다(설계 E-6 —
+         *        8000 형제에서 한 줄 옮기기가 전체 XML 16000 개였다).
+         */
+        static CommandStack::Command makeSiblingOrder( SceneManager& sceneManager, const GameObject& obj, uint32 beforeKey, uint32 afterKey, string_view label );
     };
 } // namespace sw
 

@@ -205,9 +205,83 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 차례 방식입니다. */
+    ENUM()
+    enum class SRPGTurnMode : uint8
+    {
+        Phases = 0, ///< 아군, 적, 제3세력 페이즈 순서로 진행하고, 팀의 모든 유닛이 행동하면 다음 페이즈로 넘긴다(G 제네레이션, 파이어 엠블렘)
+        Individual  ///< 유닛마다 반응과 운동성 순서로 진행한다(`TurnOrder` 라운드제)
+    };
+
+    /**
+     * @brief 규칙의 수치입니다. 확률은 %, 보정은 %p 입니다.
+     * @details 규칙 자산이다 — SRPG 카탈로그의 `<Rules …/>` 한 줄이 모든 칸을 적는다(`Required`, 없으면 카탈로그 로드가 실패한다). 전장은 카탈로그에서만 받으므로
+     *          게임이 C++ 기본값으로 전장을 열 길이 없다(감사 K-4, Lyra `ExperienceDefinition` · 유니티 `ScriptableObject` 와 같은 자리).
+     */
+    REFLECT()
+    struct SW_KIT_API SRPGSettings
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0, Max = 100 )
+        int32 _baseHit{};
+        PROPERTY( Required, Min = 0, Max = 100 )
+        int32 _baseCrit{};
+        PROPERTY( Required, Min = 100 )
+        int32 _critPercent{}; ///< 크리티컬 피해 배율(%)
+        PROPERTY( Required, Min = 0 )
+        int32 _minimumDamage{};
+        PROPERTY( Required, Min = 0 )
+        int32 _sizeHitStep{}; ///< 크기가 한 단계 차이 날 때마다 주는 명중 보정
+        PROPERTY( Required, Min = 0 )
+        int32 _moraleStart{};
+        PROPERTY( Required, Min = 0 )
+        int32 _moraleMin{};
+        PROPERTY( Required, Min = 0 )
+        int32 _moraleMax{};
+        PROPERTY( Required, Min = 0 )
+        int32 _moraleOnHit{}; ///< 맞혔을 때
+        PROPERTY( Required, Min = 0 )
+        int32 _moraleOnKill{}; ///< 격파했을 때(맞혔을 때의 증가에 더해진다)
+        PROPERTY( Required, Min = 0 )
+        int32 _moraleOnEvade{}; ///< 피했을 때
+        PROPERTY( Required, Min = 0 )
+        int32 _moraleOnDamaged{}; ///< 맞았을 때
+        PROPERTY( Required, Min = 0, Max = 100 )
+        int32 _supportDefenseReduction{}; ///< 지원 방어로 대신 맞을 때 줄어드는 피해 비율(%)
+        PROPERTY( Required, Min = 0 )
+        int32 _syncDamagePercent{}; ///< 동기 공격이 주는 피해 비율(%)
+        PROPERTY( Required, Min = 0 )
+        int32 _dodgePerCell{}; ///< 이동 회피에서 움직인 셀마다 쌓이는 회피(%p)
+        PROPERTY( Required, Min = 0, Max = 100 )
+        int32 _dodgeMax{};
+        PROPERTY( Required, Min = 0 )
+        int32 _xpHit{}; ///< 맞혔을 때 얻는 경험치
+        PROPERTY( Required, Min = 0 )
+        int32 _xpKill{}; ///< 격파했을 때 얻는 경험치(맞혔을 때의 경험치에 더해진다)
+        PROPERTY( Required, Min = 0 )
+        int32 _xpLevelStep{}; ///< 상대와 레벨이 한 단계 차이 날 때마다 더하거나 빼는 경험치
+        PROPERTY( Required )
+        SRPGTurnMode _turnMode{};
+        PROPERTY( Required )
+        bool _bZoneOfControl{}; ///< 적과 이웃한 셀에 들어가면 거기서 멈춘다
+        PROPERTY( Required )
+        bool _bSupportAttack{}; ///< 공격자와 이웃한 아군이 함께 친다
+        PROPERTY( Required )
+        bool _bSupportDefense{}; ///< 방어자와 이웃한 아군이 대신 맞는다
+        PROPERTY( Required )
+        bool _bSyncAttack{}; ///< 메탈슬러그 택틱스 방식이다. 같은 적을 사거리에 둔 아군이 함께 쏜다
+        PROPERTY( Required )
+        bool _bMoveDodge{}; ///< 메탈슬러그 택틱스 방식이다. 움직인 셀 수만큼 회피가 쌓이고, 자기 차례가 오면 0 이 된다
+        PROPERTY( Required )
+        bool _bMapFriendlyFire{}; ///< MAP 병기가 아군도 친다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class SRPGCatalog
-     * @brief `<SRPGCatalog><PilotCurve base="100" maxLevel="30"/><UnitCurve .../><Terrain .../><Weapon .../><Unit .../><Pilot .../></SRPGCatalog>` 를 읽습니다.
+     * @brief `<SRPGCatalog><Rules baseHit="70" .../><PilotCurve base="100" maxLevel="30"/><UnitCurve .../><Terrain .../><Weapon .../><Unit .../><Pilot .../></SRPGCatalog>` 를 읽습니다.
      * @details 속성 형식은 다음과 같다. 지형은 `cost="1 1 - 2"`(지상 공중 우주 수중 순서, `-` 는 들어갈 수 없음), 기체는 `aptitude="A B - C"`(S 120, A 100, B 90, C 80, D 60, `-` 는 0),
      *          `weapons="vulcan,rifle"`, `developsTo="gundam:5 gmcustom:3"`, 무기는 `map="Self" pattern="1,0 2,0 3,0"`, 파일럿은 `shooting="20" growShooting="2"` 이다.
      *          경험치 곡선은 기반 클래스 `ExperienceCurve` 의 속성을 그대로 쓴다.
@@ -233,6 +307,10 @@ namespace sw
         const vector<SRPGUnitDef>& getUnits() const { return _unitCatalog.getAll(); }
         const ExperienceCurve&     getPilotCurve() const { return _pilotCurve; }
         const ExperienceCurve&     getUnitCurve() const { return _unitCurve; }
+        /** @brief 규칙(`<Rules>`)입니다. 로드에 성공한 카탈로그는 반드시 한 줄을 가진다. */
+        const SRPGSettings& getRules() const { return _rules; }
+        /** @brief 규칙을 바꿉니다. 테스트 · 도구가 읽은 규칙의 칸 하나를 바꿔 볼 때 쓴다(기본값은 없다 — `getRules` 로 받은 것을 고친다). */
+        void setRules( const SRPGSettings& rules ) { _rules = rules; }
 
         /** @brief "S" "A" "B" "C" "D" "-" 또는 0 이상의 숫자를 적성 %로 바꿉니다. 모르는 글자 · 음수이면 false 이고 @p outAptitude 를 바꾸지 않습니다. */
         [[nodiscard]] static bool parseAptitude( string_view token, int32& outAptitude );
@@ -244,6 +322,8 @@ namespace sw
         [[nodiscard]] bool           loadWeapon( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadUnit( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadPilot( const XMLNode& node, string_view sourceName );
+        /** @brief `<Rules>` 한 줄을 읽습니다. 칸이 빠졌거나 범위 밖이거나 기력 순서(하한 <= 시작 <= 상한)가 틀리면 false 입니다. */
+        [[nodiscard]] bool loadRules( const XMLNode& node, string_view sourceName );
 
     private:
         GameCatalog<SRPGTerrainDef> _terrainCatalog;
@@ -252,6 +332,8 @@ namespace sw
         GameCatalog<SRPGPilotDef>   _pilotCatalog;
         ExperienceCurve             _pilotCurve;
         ExperienceCurve             _unitCurve;
+        SRPGSettings                _rules;
+        int32                       _rulesCount; ///< 읽은 `<Rules>` 줄 수(1 이상이어야 로드가 성공한다)
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<SRPGCatalog>::acquire` 로 한 벌을 받습니다. */

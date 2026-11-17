@@ -128,7 +128,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 ## 도구가 묻는 것
 
 - 이 칸이 어디서 왔나: `DataInheritance::flatten` 의 `DataInheritanceProvenance`(`findOrigin( "_listPass[Present]._cullMode" )`), 프리팹은 `PrefabCache::findFieldOrigin`.
-- 이 부모의 자식 목록: `DataInheritance::collectChildren`(파일을 훑는다). 에디터는 `EditorReferenceIndex::findReferrers` 도 같은 답을 준다.
+- 이 부모의 자식 목록: `DataInheritance::collectChildren`(파일을 훑는다). 에디터는 `EditorAssetIndex::findReferrers` 도 같은 답을 준다.
 
 ## 애니메이션 · 스프라이트 형식의 열쇠
 
@@ -184,7 +184,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 프리팹은 `<GameObject>` 대신 씬 인스턴스와 같은 `<PrefabOverrides>` 를 적는다.
 
 ```xml
-<Prefab formatVersion="0" _base="game/abilityarena/prefabs/caster.prefab.xml" name="ArenaGrunt">
+<Prefab formatVersion="1" _base="game/abilityarena/prefabs/caster.prefab.xml" name="ArenaGrunt">
 	<PrefabOverrides>
 		<Override key="ArenaUnitComponent#0">
 			<ArenaUnitComponent _kind="Grunt" />
@@ -200,7 +200,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 씬은 프리팹과 같은 모델을 쓰고, 런타임은 펼친 엔티티 목록 하나만 본다. 구현: `SceneDocument::expandSceneInstances` · `Scene::instantiateNodes` · `SceneDataLayerSubsystem`.
 
 ```xml
-<Scene formatVersion="2" name="Town">
+<Scene formatVersion="3" name="Town">
 	<SceneSettings …>
 		<_listDataLayer><SceneDataLayerDef _name="Winter" _bInitiallyActive="false" /></_listDataLayer>
 	</SceneSettings>

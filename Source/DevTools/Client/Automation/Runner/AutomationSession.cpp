@@ -295,6 +295,7 @@ namespace sw
             DeterministicRunPolicy policy     = engine::getSubsystem<DeterministicRun>().getPolicy();
             policy._bWaitForAnimationClips    = SW_TRUE;
             policy._bFinishAssetJobsEachFrame = SW_TRUE;
+            policy._bSkipLoadingScreenMinimum = SW_TRUE;                                 // 로딩 화면 최소 0.5 초는 사람에게 보이는 몫이다 — 시나리오 시작 시간의 15 % 였다(2026-11-17 측정)
             policy._fixedFrameDelta           = _pRunner->getScenario().getFixedDelta(); // 시나리오 프레임 시간 — App 이 벽시계 대신 흘린다
             engine::getSubsystem<DeterministicRun>().setPolicy( policy );
             // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.

@@ -10,6 +10,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
@@ -156,6 +157,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Vulkan 버퍼의 메모리 자리입니다(`VulkanRHIDevice::createVulkanBuffer`). 기본값이 없다 — 만드는 쪽이 CPU 가 쓰는지로 고른다. */
+    enum class VulkanBufferMemory : uint8
+    {
+        HostVisible, ///< HOST_VISIBLE | HOST_COHERENT — CPU 가 매핑해 쓴다(상수 링 · 읽기 버퍼)
+        DeviceLocal  ///< DEVICE_LOCAL — GPU 가 그리며 읽는다(정점 · 인덱스 · 구조 버퍼). 내용은 스테이징 복사로 들어온다
+    };
+} // namespace sw
+
+namespace sw
+{
     class VulkanRHICommandList;
 
     /**
@@ -263,7 +274,7 @@ namespace sw
         {
             RHICapabilities caps        = RHIAvailability::query( RHIBackend::Vulkan );
             caps._bMultiDrawIndirect    = _bMultiDrawIndirect;
-            caps._bNativeBindless       = _textureSet != nullptr ? 1u : 0u;
+            caps._bNativeBindless       = hasTextureSet() ? 1u : 0u;
             caps._bWireframeFill        = _bFillModeNonSolid;
             caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
             caps._bGeometryStage        = _bGeometryShader != 0 ? SW_TRUE : SW_FALSE;
@@ -285,7 +296,7 @@ namespace sw
         uint32 depthAspectMask() const;
 
         /** @brief 텍스처 배열 세트(set 1, g_SwBindlessTex2D[])가 준비됐는지 여부입니다. */
-        bool supportsNativeBindlessSampling() const override { return _textureSet != nullptr; }
+        bool supportsNativeBindlessSampling() const override { return hasTextureSet(); }
 
         /** @brief VS 가 슬롯 세트의 t4(g_SwInstances)로 GPUScene 인스턴스 버퍼를 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }
@@ -361,7 +372,7 @@ namespace sw
         {
             VkBuffer       _buffer{ nullptr };
             VkDeviceMemory _memory{ nullptr };
-            uint32         _sizeBytes{ 0 };
+            uint64         _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
             uint32         _usage{ 0 };      ///< VkBufferUsageFlags
             uint32         _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
             RHIBufferState _state = RHIBufferState::Common;
@@ -398,13 +409,13 @@ namespace sw
             VkRenderPass                 _renderPass{ nullptr };
             uint32                       _format{ 0 };    ///< VkFormat
             uint32                       _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
-            /// @brief VkImageLayout(UNDEFINED=0)입니다. 병렬 기록 워커가 락 없이 비교 교환으로 바꾼다(`transitionTextureLayout` — DX12 `TextureRecord::_state` 와 같은 형식).
-            RHITrackedState<uint32> _layout;
-            uint32                  _width{ 0 };
-            uint32                  _height{ 0 };
-            uint32                  _mipLevels{ 1 };
-            uint32                  _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
-            RHITextureDimension     _dimension{ RHITextureDimension::Texture2D };
+            /// @brief VkImageLayout(UNDEFINED=0)입니다. 서브리소스(밉 × 면) 단위다(R-10 — DX12 `TextureRecord::_state` 와 같은 형식). 병렬 기록 워커가 함께 바꾼다.
+            RHITrackedSubresourceState<uint32> _layout;
+            uint32                             _width{ 0 };
+            uint32                             _height{ 0 };
+            uint32                             _mipLevels{ 1 };
+            uint32                             _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
+            RHITextureDimension                _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
             RHITextureUploadSerials _uploadSerials;
             /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
@@ -412,23 +423,26 @@ namespace sw
             uint8          _bRenderTarget : 1;
             uint8          _bDepthStencil : 1;
             uint8          _reserved      : 6;
-            /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
+            /// @brief 면이 여럿이거나 밉이 여럿일 때 (밉, 면) 마다의 2D 뷰(렌더 패스 첨부용 — 밉 하나 · 면 하나)와 단일 RT 프레임버퍼입니다. 칸은 `mip * _arrayLayers + slice` 다.
+            ///        이때 `_imageView` 는 셰이더가 보는 전체 뷰입니다(첨부는 밉 하나여야 한다 — R-10).
             vector<VkImageView>   _listSliceView;
             vector<VkFramebuffer> _listSliceFramebuffer;
 
-            /** @brief 면 `slice` 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr 입니다. */
-            VkImageView findAttachmentView( uint32 slice ) const
+            /** @brief (밉 `mip`, 면 `slice`) 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr 입니다. */
+            VkImageView findAttachmentView( uint32 slice, uint32 mip ) const
             {
                 if ( _listSliceView.empty() )
-                    return slice == 0 ? _imageView : nullptr;
-                return slice < _listSliceView.size() ? _listSliceView[slice] : nullptr;
+                    return ( slice == 0 && mip == 0 ) ? _imageView : nullptr;
+                const size_t viewIndex = static_cast<size_t>( mip ) * _arrayLayers + slice;
+                return ( slice < _arrayLayers && viewIndex < _listSliceView.size() ) ? _listSliceView[viewIndex] : nullptr;
             }
-            /** @brief 면 `slice` 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr 입니다. */
-            VkFramebuffer findSliceFramebuffer( uint32 slice ) const
+            /** @brief (밉 `mip`, 면 `slice`) 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr 입니다. */
+            VkFramebuffer findSliceFramebuffer( uint32 slice, uint32 mip ) const
             {
                 if ( _listSliceFramebuffer.empty() )
-                    return slice == 0 ? _framebuffer : nullptr;
-                return slice < _listSliceFramebuffer.size() ? _listSliceFramebuffer[slice] : nullptr;
+                    return ( slice == 0 && mip == 0 ) ? _framebuffer : nullptr;
+                const size_t viewIndex = static_cast<size_t>( mip ) * _arrayLayers + slice;
+                return ( slice < _arrayLayers && viewIndex < _listSliceFramebuffer.size() ) ? _listSliceFramebuffer[viewIndex] : nullptr;
             }
         };
 
@@ -444,13 +458,14 @@ namespace sw
             VulkanTextureRecord* _pRecord{ nullptr };
             uint32               _targetLayout{ 0 }; ///< VkImageLayout
             uint32               _aspect{ 0 };       ///< VkImageAspectFlags
+            RHISubresourceRange  _range{};           ///< 옮길 밉 · 면(기본 전체 — R-10)
         };
         /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
         struct VulkanPendingLayout
         {
-            VkCommandBuffer _cmd{ nullptr };
-            VkImage         _image{ nullptr };
-            uint32          _oldLayout{ 0 };
+            VkCommandBuffer                    _cmd{ nullptr };
+            VkImage                            _image{ nullptr };
+            RHITrackedSubresourceState<uint32> _oldLayout; ///< 처음 바꾸기 전의 서브리소스 레이아웃 전체
         };
 
         /**
@@ -700,6 +715,16 @@ namespace sw
         bool createDescriptorResources();
         /** @brief 텍스처 배열(set 1 binding 0)의 원소 하나를 갱신합니다. */
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
+        /** @brief 링 슬롯 @p slot 의 텍스처 세트 원소 @p index 하나에 씁니다(산 번호 다시 쓰기 — 링이 그 슬롯에 들어온 직후에만, `flushBindlessRingSlot`). */
+        void writeBindlessTextureSlotAt( uint32 slot, RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
+        /** @brief 텍스처 @p texture 를 샘플할 뷰와 그 시점 레이아웃을 줍니다(깊이는 DEPTH 단일 aspect 뷰와 DEPTH_STENCIL_READ_ONLY). 없으면 false 입니다. */
+        [[nodiscard]] bool findBindlessSampleView( RHITextureHandle texture, VkImageView& outView, uint32& outLayout );
+        /** @brief 링이 @p slot 에 들어온 직후(펜스 뒤, 기록 전) 그 슬롯 세트에 예약된 다시 쓰기를 씁니다(R-6). */
+        void flushBindlessRingSlot( uint32 slot );
+        /** @brief 이번 기록 슬롯의 텍스처 세트입니다. */
+        VkDescriptorSet getTextureSet( uint32 slot ) const { return _arrTextureSet[slot % constant::render::kMaxFrameCountInFlight]; }
+        /** @brief 텍스처 세트가 있는지(네이티브 bindless) 입니다. */
+        bool hasTextureSet() const { return _arrTextureSet[0] != nullptr; }
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다(GENERAL 레이아웃). */
         void writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view );
         /**
@@ -753,7 +778,13 @@ namespace sw
         static void fillImageLayoutBarrier( VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32, VkImageMemoryBarrier& barrier, VkPipelineStageFlags& srcStage,
                                             VkPipelineStageFlags& dstStage );
         /** @brief 프레임 밖 기록이면 @p cmd 가 처음 바꾼 @p image 의 옛 레이아웃을 버린 프레임 기록에 적습니다(다음 `beginFrame` 이 되돌린다). 프레임 안이면 아무것도 하지 않는다. */
-        void rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, uint32 layoutBefore );
+        void rememberDroppedFrameLayout( VkCommandBuffer cmd, VkImage image, const RHITrackedSubresourceState<uint32>& layoutBefore );
+        /**
+         * @brief 전송 리스트 @p cmd 에 텍스처를 추적 레이아웃에서 @p detourLayout 으로(@p bLeave) 또는 그 반대로 옮기는 배리어를 기록합니다. 추적 값은 바꾸지 않는다.
+         * @details 레이아웃이 서브리소스마다 갈라졌으면 서브리소스마다 낸다(R-10). 같은 레이아웃이어도 접근 순서를 위해 배리어를 낸다.
+         */
+        void recordLayoutDetour( VkCommandBuffer cmd, const VulkanTextureRecord& record, uint32 aspect, uint32 detourLayout, bool bLeave, uint32 srcAccess, uint32 dstAccess,
+                                 VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage );
 
         /**
          * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인, 배리어, 기록이 한 덩어리입니다.**
@@ -765,7 +796,7 @@ namespace sw
          *          세 동작은 `RHITrackedState::transitionTo` 의 비교 교환 하나다 — 이긴 워커만 배리어를 쏜다(락 없음).
          * @note 이미 그 레이아웃이면 아무것도 하지 않습니다.
          */
-        void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
+        void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect, const RHISubresourceRange& range = RHISubresourceRange{} );
         /**
          * @brief 여러 텍스처를 `vkCmdPipelineBarrier` 한 번으로 옮깁니다(`transitionTextureLayout` 의 묶음 — 단일도 이 길이다).
          * @details 원소마다 레코드 레이아웃을 비교 교환으로 옮기고, 이긴 것의 이미지 배리어만 모은다. 단계 마스크는 호출 하나에 하나라(명세 vkCmdPipelineBarrier — srcStageMask ·
@@ -793,8 +824,57 @@ namespace sw
         [[nodiscard]] bool ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key, VulkanRHIRenderPassCache::CompositeRecord& outRecord );
         /** @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 빼서 GPU 펜스 뒤에 파괴합니다. */
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
-        /** @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다. */
-        RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize );
+        /**
+         * @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다.
+         * @param placement 메모리 자리 — CPU 가 매핑해 쓰는 버퍼(상수 링 · 읽기 · 스테이징)만 `HostVisible`, GPU 가 그리며 읽는 정적 자원은 `DeviceLocal` 이다(호스트 메모리에서 그리면
+         *        디스크리트 GPU 가 PCIe 로 읽는다). `DeviceLocal` 은 초기 데이터를 받지 않는다 — 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
+         */
+        RHIBufferHandle createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory placement );
+        /// @brief 업로드 스테이징 블록입니다 — 호스트 보임 버퍼 하나를 매핑해 두고 앞에서부터 나눠 쓴다(전용이면 그 업로드 하나 몫).
+        struct UploadStagingBlock
+        {
+            RHIBufferHandle _buffer{ 0 };
+            uint8*          _pMapped{ nullptr };
+            uint64          _capacity{ 0 };
+            uint64          _offset{ 0 };
+            uint64          _retiredSerial{ 0 }; ///< 자유 목록에 돌아온 때의 프레임 기록 시리얼(놓을 때를 잰다)
+            uint8           _bDedicated{ SW_FALSE };
+        };
+        /// @brief 닫은 업로드 커맨드버퍼 하나와 그 복사가 읽는 블록들입니다 — 제출한 뒤 GPU 가 끝나면 함께 돌려받는다.
+        struct UploadBatch
+        {
+            VkCommandBuffer            _buffer{ VK_NULL_HANDLE };
+            vector<UploadStagingBlock> _listBlock;
+        };
+        /** @brief 버퍼 복사 하나(원본 → 도착 구간)와 앞뒤 배리어(앞 읽기 → 전송 쓰기 → 정점 입력 · 셰이더 · 간접 인자 · 전송 읽기)를 @p cmd 에 기록합니다. */
+        void recordBufferUploadCopy( VkCommandBuffer cmd, VkBuffer source, uint64 sourceOffset, RHIBufferHandle destination, uint64 destinationOffset, uint64 sizeBytes );
+        /**
+         * @brief @p pData 를 업로드 스테이징에 쓰고 도착 구간으로의 복사를 업로드 커맨드버퍼에 기록합니다 — 아무 스레드나 부른다(`_uploadMutex`).
+         * @details 다음 그래픽스 제출(프레임 세그먼트 · 프레임 끝 · 즉시 제출 · 장치 대기)이 이 버퍼를 맨 앞에 둔다. 블록보다 크면 그 업로드만 전용 스테이징을 쓴다.
+         */
+        [[nodiscard]] bool recordUploadCopy( const void* pData, uint64 sizeBytes, RHIBufferHandle destination, uint64 destinationOffset );
+        /**
+         * @brief 열린 업로드 커맨드버퍼를 닫아 그 스테이징 블록과 함께 넘깁니다(없으면 `_buffer` 가 VK_NULL_HANDLE).
+         * @details 그래픽스 큐에 내는 쪽이 제출 직전에 부르고 `_buffer` 를 제출 배열 맨 앞에 둔다. 낸 뒤에는 반드시 `deferUploadBatchRetire`(프레임 펜스 뒤)나
+         *          `retireUploadBatch`(큐를 기다린 뒤) 중 하나로 돌려준다.
+         */
+        [[nodiscard]] UploadBatch takeUploadBatch();
+        /** @brief 이번 기록 시리얼(이 제출을 덮는 프레임 펜스)이 끝난 뒤 @p batch 를 돌려받게 겁니다. */
+        void deferUploadBatchRetire( UploadBatch&& batch );
+        /** @brief 다 쓴 업로드 커맨드버퍼와 블록을 지금 돌려받습니다(`_uploadMutex` 를 잡는다) — GPU 가 끝났다고 아는 쪽만 부른다. */
+        void retireUploadBatch( const UploadBatch& batch );
+        /** @brief 스테이징 블록 하나를 만들어 매핑합니다(@p bDedicated 면 그 크기 그대로). 실패하면 빈 블록입니다. */
+        UploadStagingBlock createStagingBlock( uint64 capacity, bool bDedicated );
+        /** @brief GPU 가 다 쓴 스테이징 블록을 지금 놓습니다(버퍼 표에서 빼고 버퍼 · 메모리를 바로 지운다 — 해제 큐를 다시 거치지 않는다). */
+        void destroyStagingBlock( const UploadStagingBlock& block );
+        /** @brief `_uploadStagingIdleFrames` 프레임 넘게 쓰지 않은 자유 블록을 놓습니다(하나는 남긴다). 렌더 스레드의 프레임 시작이 부른다. */
+        void trimIdleStagingBlocks();
+        /** @brief 업로드 커맨드버퍼 · 풀 · 모든 스테이징 블록을 놓습니다 — 종료가 해제 큐를 비운 뒤, 버퍼 표를 비우기 전에 부른다. */
+        void shutdownUploads();
+        /** @brief 렌더 스레드가 있고 이 스레드가 그것이 아니면 true 입니다 — 그 업로드는 프레임 세그먼트가 아니라 업로드 커맨드버퍼로 간다. */
+        bool isOtherThanRenderThread() const;
+        /** @brief 이 스레드가 지금 프레임 스트림을 기록하는 렌더 스레드면 true 입니다(렌더 스레드가 없으면 부르는 스레드가 그 자리) — 그때만 구조 버퍼 갱신을 프레임 스트림에 바로 기록한다(앞뒤 그리기와 기록 순서 그대로). */
+        bool isRecordingFrameOnThisThread() const;
         /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
         void restoreDroppedFrameLayouts();
 
@@ -875,6 +955,16 @@ namespace sw
          */
         VkCommandPool _oneShotCommandPool;
         mutex         _oneShotMutex;
+        /// @brief 다른 스레드 · 프레임 밖 업로드를 담는 업로드 커맨드버퍼(`recordUploadCopy`)와 그 스테이징 — 모두 `_uploadMutex` 아래다.
+        ///        렌더 스레드가 그래픽스 큐에 낼 때 이 버퍼를 같은 제출 배열 맨 앞에 둔다(`takeUploadBatch`) — 같은 제출의 어느 세그먼트보다 먼저 실행된다.
+        mutex                      _uploadMutex;
+        VkCommandPool              _uploadCommandPool{ VK_NULL_HANDLE };
+        VkCommandBuffer            _openUploadBuffer{ VK_NULL_HANDLE };
+        UploadStagingBlock         _openStagingBlock;
+        vector<UploadStagingBlock> _listUsedStagingBlock;         ///< 열린 업로드 버퍼가 다 쓴 블록 · 전용 블록(제출과 함께 펜스 뒤 해제에 건다)
+        vector<UploadStagingBlock> _listFreeStagingBlock;         ///< 펜스가 지나 돌려받은 블록
+        uint64                     _uploadStagingBytes{ 0 };      ///< 블록 크기(`RHISwapChainDesc::_uploadStagingBytes`)
+        uint32                     _uploadStagingIdleFrames{ 0 }; ///< 자유 블록을 놓기까지의 프레임 수(`RHISwapChainDesc::_uploadStagingIdleFrames`)
         /**
          * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit`, `vkQueueWaitIdle`, `vkQueuePresentKHR`, `vkDeviceWaitIdle`)을 보호합니다.
          * @details VkQueue 는 외부 동기화 대상이다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있다.
@@ -965,6 +1055,8 @@ namespace sw
         uint16                  _bFragmentStores                     : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
         uint16                  _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHISwapChainDesc::_bGPUBasedValidation`, R-9)
         uint16                  _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHISwapChainDesc::_bSynchronizationValidation`, R-9)
+        /// @brief 새 번호를 세 링 세트에 바로 쓰는가(장치 생성 때 고정 — `descriptorBindingUpdateUnusedWhilePending` 이 있으면). 없으면 지금 슬롯 세트만 쓰고 나머지는 그 슬롯의 차례에 쓴다(R-6).
+        uint16 _bWriteAllRingSetsNow : 1;
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief GPU 브레드크럼을 남기는 확장입니다(`VulkanBreadcrumbMode`). 장치를 만들 때 정하고, 함수나 표지 버퍼를 얻지 못하면 None 으로 내린다.
@@ -1031,10 +1123,13 @@ namespace sw
         /// @brief 텍스처 번호(set 1 binding 0 배열 원소) → 그 번호를 가진 텍스처(`_bindlessMutex` 아래). 등록마다 새 번호이고(다른 쪽의 해제가 내 번호를 놓지 않는다),
         ///        텍스처별 번호 목록은 등록표가 든다(`releaseTexture`). 비운 번호는 펜스 뒤에 원소를 더미로 되돌리고 다시 낸다(`RHIBindlessReuse::AfterFence`).
         RHIBindlessRegistry<RHITextureHandle, RHIBindlessTextureOwnerOf> _textureRegistry;
+        RHIDescriptorRingMirror                                          _bindlessRingMirror; ///< 산 텍스처 번호 다시 쓰기를 링 슬롯마다 그 차례에 쓰도록 예약한다(`_bindlessMutex` 아래 — R-6)
+        RHIDescriptorRingMirror                                          _storageRingMirror;  ///< RW 텍스처 원소를 링 슬롯마다 그 차례에 쓰도록 예약한다(`_bWriteAllRingSetsNow` 가 거짓인 장치만)
 
         VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
         VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler
-        VkDescriptorSet       _textureSet;       ///< set 1. 커맨드 버퍼마다 한 번 바인딩한다.
+        /// @brief set 1(텍스처 배열)을 프레임 링 슬롯마다 한 벌 둔다(감사 R-6). 커맨드 버퍼마다 이번 슬롯의 것을 한 번 바인딩한다(`getTextureSet`).
+        VkDescriptorSet _arrTextureSet[constant::render::kMaxFrameCountInFlight];
         /// @brief 디바이스 프레임 스트림의 링 슬롯별 풀 묶음입니다. beginFrame 이 그 슬롯의 펜스를 기다린 뒤 통째로 리셋합니다.
         VulkanDescriptorPoolSet _arrFrameDescriptorPoolSet[constant::render::kMaxFrameCountInFlight];
         /// @brief 리스트 쌍(VulkanCommandListEntry)이 빌려 쓰는 풀 묶음들의 소유자입니다. 쌍과 수명이 같으며(재사용 풀에 남고 shutdown 에서 파괴됩니다).

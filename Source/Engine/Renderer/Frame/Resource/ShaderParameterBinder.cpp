@@ -267,6 +267,7 @@ namespace sw
                                               bool                          bNativeBindless,
                                               const RHIDescriptorIndex*     pMaterialTexSRV,
                                               bool                          bEngineCbUpToDate,
+                                              bool                          bResourcesUpToDate,
                                               const BindlessIndexCheckSite* pIndexCheck )
     {
         using Internal = ShaderParameterBinderInternal;
@@ -285,7 +286,7 @@ namespace sw
         // 3) 등록 내용이 그대로면 이미 걸린 것과 같은 자원을 다시 거는 셈이라 건너뛴다(같은 패스 안의 두 번째
         //    드로우부터가 대부분 그렇다). 백엔드도 값이 같으면 더럽힘 표시를 안 하지만, 여기서 끊으면
         //    레지스트리 조회 자체가 사라진다. PSO 가 바뀌면 백엔드가 슬롯 상태를 비우므로 그때는 다시 건다.
-        if ( bEngineCbUpToDate )
+        if ( bResourcesUpToDate )
             return;
         Internal::bindRegisteredResources( cmd, layout, registry, bNativeBindless, pIndexCheck, bCheckIndex );
     }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c1eebaa22bb841eb95ee9c60e152992a"?>
+<!--
+  장르 키트 시연 — 라운드 시리즈 한 바퀴(maps/kit_partyarena). 순위 점수 3 · 2 · 1, 먼저 5 점에 닿으면 우승, 라운드 둘이 차례로 돈다.
+-->
+<PartySeries winScore="5" placementPoints="3,2,1">
+	<Round id="trampoline" time="60" scoreLimit="5"/>
+	<Round id="ringout" time="60"/>
+</PartySeries>

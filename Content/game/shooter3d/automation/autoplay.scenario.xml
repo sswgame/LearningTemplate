@@ -15,7 +15,7 @@
 	<WaitUntil watch="Shooter3D.ShotCount" atLeast="3" timeoutSeconds="10"/>
 	<WaitUntil watch="Shooter3D.EnemyHitCount" atLeast="1" timeoutSeconds="10"/>
 	<Screenshot file="cctv.ppm"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="1"/> <!-- 사진 프레임과 자동 플레이 끄기를 다른 프레임에 둔다(프레임 경계) -->
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<WaitUntil watch="Shooter3D.PlayerControllerKind" equals="0" timeoutFrames="10"/>
 	<!-- 돌려받은 플레이어 조종자에게 키가 먹는다 — 자동 플레이는 권총을 고르지 않으니 3 번 키(Weapon3)로 권총이 되면 사람의 입력이다 -->

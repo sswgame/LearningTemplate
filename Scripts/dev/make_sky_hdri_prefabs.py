@@ -85,7 +85,7 @@ def _project(image: np.ndarray) -> np.ndarray:
 def _write_prefab(name: str, coefficients: np.ndarray) -> None:
     items = "\n".join(f"\t\t\t\t\t<item>{value:.6f}</item>" for value in coefficients.flatten())
     text = f"""<!-- Scripts/dev/make_sky_hdri_prefabs.py 가 지었다 — 손으로 고치지 않는다. 그림은 텍스처, 간접 조명은 원본을 투영한 SH9 계수다. -->
-<Prefab formatVersion="0" name="Sky_{name}">
+<Prefab formatVersion="1" name="Sky_{name}">
 	<GameObject _schemaVersion="0" _name="Sky_{name}" _bActive="true">
 		<_listComponent>
 			<SkyComponent _intensity="1" _mode="Hdri" _hdriTexture="engine/textures/sky/{name}.dds" _hdriRotation="0">

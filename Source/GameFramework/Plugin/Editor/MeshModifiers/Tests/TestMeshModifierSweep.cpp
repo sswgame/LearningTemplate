@@ -224,3 +224,24 @@ SW_TEST_CASE( MeshModifierSessionTest, SetTargetRefusesWhenUnsaved )
     SW_EXPECT_FALSE( session.setTarget( nullptr ).has_value() ); // 대상 고르기도 같은 거절이다
     SW_EXPECT_EQUAL( 1, session.getStack().getModifierCount() );
 }
+
+/** @brief [MeshModifierSessionTest] 미저장 판정은 비교 결과를 들고 있어도 스택이 바뀌는 길(편집 · 되돌리기 · 다시 하기 · 저장 상태로 돌리기)마다 새로 본다(감사 E-9 — 그리기마다 직렬화하지 않는다) */
+SW_TEST_CASE( MeshModifierSessionTest, UnsavedFlagFollowsEveryStackChange )
+{
+    MeshModifierSession session;
+    SW_REQUIRE_TRUE( session.setTargetData( GameObjectHandle{}, "test/procedural_c.mesh", makeTriangleData() ).has_value() );
+    SW_EXPECT_FALSE( session.isStackUnsaved() );
+    SW_EXPECT_FALSE( session.isStackUnsaved() ); // 들고 있는 결과
+    session.applyEdit( [&session]()
+    { SW_EXPECT_TRUE( session.getStack().addModifier( "twist" ).has_value() ); } );
+    SW_EXPECT_TRUE( session.isStackUnsaved() );
+    SW_REQUIRE_TRUE( session.undo() );
+    SW_EXPECT_FALSE( session.isStackUnsaved() );
+    SW_REQUIRE_TRUE( session.redo() );
+    SW_EXPECT_TRUE( session.isStackUnsaved() );
+    session.revertStackToSaved();
+    SW_EXPECT_FALSE( session.isStackUnsaved() );
+    SW_EXPECT_EQUAL( 0, session.getStack().getModifierCount() );
+    session.clearTarget();
+    SW_EXPECT_FALSE( session.isStackUnsaved() );
+}

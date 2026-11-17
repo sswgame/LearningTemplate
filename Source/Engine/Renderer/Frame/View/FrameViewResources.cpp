@@ -16,6 +16,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Frame/View/RenderStability.h"
 #include "Engine/Renderer/Graph/RenderGraphMemoryPlan.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -432,8 +433,10 @@ namespace sw
         using Internal           = FrameViewResourcesInternal;
         const bool bObjectMotion = sceneState._bObjectMotion == SW_TRUE;
         // 모션 블러의 속도는 카메라(지난 뷰-투영과의 차이)와 물체(화면 속도)다. 컷이거나 둘 다 서 있으면 모든 픽셀이 원본이다(motion_blur.hlsl).
-        const bool                          bCameraStill   = Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
-        const bool                          bMotionStill   = view._bHistoryReset == SW_TRUE || ( bCameraStill && bObjectMotion == false );
+        const bool bCameraStill = Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
+        const bool bMotionStill = view._bHistoryReset == SW_TRUE || ( bCameraStill && bObjectMotion == false );
+        // 사진 앞 정착(`Render.Stable`) — TAA 기록이 쌓인 정지 프레임 수. 기록을 버리는 판정은 `beginViewHistory` 가 이미 했다.
+        view._stillFrameCount                              = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, view._bTAAHistoryReset == SW_TRUE, bCameraStill, bObjectMotion );
         const vector<RenderGraphPassDesc>&  listPass       = _pipeline.getGraphPass();
         const vector<RenderPassAttachment>& listAttachment = _pipeline.getDesc()._listAttachment;
         TransientAttachmentPool&            pool           = view._transientPool;
