@@ -987,7 +987,7 @@ SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
     pBlocking->_bOpen.store( true );
     logger.shutdown();
     SW_EXPECT_TRUE( bReturnedWhileHeld );
-    SW_EXPECT_EQUAL( 1u, pBlocking->_skippedCount.load() );
+    SW_EXPECT_TRUE( pBlocking->_skippedCount.load() >= 1u ); // 남은 줄(다른 스레드의 줄이 섞일 수 있다)을 기다리지 않고 버렸다
 }
 
 /**
