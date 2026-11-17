@@ -89,25 +89,25 @@ namespace
         string                                   _clearedScope{};
         uint64                                   _removedAnnouncementID{ 0 };
 
-        void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID /*actorID*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void setMaintenance( const ServerDirectoryMaintenanceChange& change, const ServiceOperator& /*actor*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
             _maintenance = change;
             _listTag.push_back( requestTag );
         }
 
-        void clearMaintenance( string_view scope, AccountID /*actorID*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void clearMaintenance( string_view scope, const ServiceOperator& /*actor*/, string_view /*memo*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
             _clearedScope = string( scope );
             _listTag.push_back( requestTag );
         }
 
-        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, const ServiceOperator& /*actor*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
             _announcement = change;
             _listTag.push_back( requestTag );
         }
 
-        void removeAnnouncement( uint64 announcementID, AccountID /*actorID*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
+        void removeAnnouncement( uint64 announcementID, const ServiceOperator& /*actor*/, UnixMilliseconds /*nowMs*/, uint64 requestTag ) override
         {
             _removedAnnouncementID = announcementID;
             _listTag.push_back( requestTag );
@@ -419,6 +419,11 @@ SW_TEST_CASE( AdminServiceTest, DirectoryCommandsForwardAndFinishOnCompletion )
     rig._directoryControl.finishLast( ServerDirectoryControlResult::Unavailable );
     rig.tick();
     SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kUnavailable ) );
+
+    rig.send( kOperator, AdminMethod::ClearMaintenance::kID, maintenance );
+    rig._directoryControl.finishLast( ServerDirectoryControlResult::Forbidden ); // 쓰는 일 안의 등급 가드가 거절했다(그사이 강등)
+    rig.tick();
+    SW_EXPECT_TRUE( rig.take()._serviceResult.hasError( OnlineError::kForbidden ) );
 }
 
 /** @brief [AdminServiceTest] 라이브 이벤트 명령: 목록은 바로 답하되 너무 큰 정의는 뺀다. 바꾸기는 넘기고 완료에서 답한다 */

@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -21,6 +22,27 @@ namespace
     constexpr AccountID kPlayer   = 22;
     constexpr AccountID kTester   = 23;
     constexpr uint64    kServerID = 5;
+    constexpr AccountID kGM       = 7;
+    constexpr AccountID kStranger = 8;
+
+    /** @brief 늘 허락하는 가드입니다(등급 읽기는 Admin 키트의 테스트가 본다). */
+    class AllowGuard final : public IServiceWriteGuard
+    {
+    public:
+        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::Ok; }
+    };
+
+    /** @brief 운영자가 아닌 계정의 가드입니다(허락할 근거가 없다). */
+    class DenyGuard final : public IServiceWriteGuard
+    {
+    public:
+        ServiceStoreResult checkAllowed( IServiceStoreConnection& /*connection*/ ) const override { return ServiceStoreResult::NotFound; }
+    };
+
+    ServiceOperator makeGM()
+    {
+        return ServiceOperator{ kGM, make_shared<const AllowGuard>() };
+    }
 
     ServerDescriptor makeDescriptor( uint64 serverID = kServerID )
     {
@@ -163,13 +185,13 @@ namespace
 
         ServerDirectoryServiceResult setMaintenance( const MaintenanceWindow& window )
         {
-            _service.setMaintenance( window, 7, "memo", UnixMilliseconds{ kNowMs }, 1 );
+            _service.setMaintenance( window, makeGM(), "memo", UnixMilliseconds{ kNowMs }, 1 );
             return finishOne();
         }
 
         ServerDirectoryServiceResult postAnnouncement( const ServiceAnnouncement& announcement )
         {
-            _service.postAnnouncement( announcement, 7, UnixMilliseconds{ kNowMs }, 1 );
+            _service.postAnnouncement( announcement, makeGM(), UnixMilliseconds{ kNowMs }, 1 );
             return finishOne();
         }
 
@@ -243,7 +265,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBlocksAssignment )
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "chat", kPlayer, nowMs ) );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "game", kPlayer, UnixMilliseconds{ kNowMs + 1000 } ) );
 
-    rig._service.clearMaintenance( "game", 7, "memo", nowMs, 2 );
+    rig._service.clearMaintenance( "game", makeGM(), "memo", nowMs, 2 );
     SW_REQUIRE_TRUE( rig.finishOne() == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
@@ -276,7 +298,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
     MaintenanceWindow tooMany = makeWindow();
     tooMany._listAllowedAccount.assign( static_cast<size_t>( ServerDirectoryLimit::kMaxAllowedAccountCount ) + 1, kPlayer );
     SW_EXPECT_TRUE( rig.setMaintenance( tooMany ).hasError( OnlineError::kInvalidRequest ) );
-    rig._service.clearMaintenance( "Bad.Scope", 7, "memo", UnixMilliseconds{ kNowMs }, 1 );
+    rig._service.clearMaintenance( "Bad.Scope", makeGM(), "memo", UnixMilliseconds{ kNowMs }, 1 );
     SW_EXPECT_TRUE( rig.finishOne().hasError( OnlineError::kInvalidRequest ) );
 
     SW_EXPECT_TRUE( rig.postAnnouncement( makeAnnouncement( 0 ) ).hasError( OnlineError::kInvalidRequest ) );
@@ -292,19 +314,81 @@ SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
 SW_TEST_CASE( ServerDirectoryServiceTest, RemoveAndAudit )
 {
     DirectoryServiceFixture rig;
-    rig._service.removeAnnouncement( 9, 7, UnixMilliseconds{ kNowMs }, 1 );
+    rig._service.removeAnnouncement( 9, makeGM(), UnixMilliseconds{ kNowMs }, 1 );
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::NotFound );
-    rig._service.clearMaintenance( "game", 7, "memo", UnixMilliseconds{ kNowMs }, 2 );
+    rig._service.clearMaintenance( "game", makeGM(), "memo", UnixMilliseconds{ kNowMs }, 2 );
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::NotFound );
 
     SW_REQUIRE_TRUE( rig.postAnnouncement( makeAnnouncement( 9 ) ) == ServerDirectoryResult::Ok );
-    rig._service.removeAnnouncement( 9, 7, UnixMilliseconds{ kNowMs }, 3 );
+    rig._service.removeAnnouncement( 9, makeGM(), UnixMilliseconds{ kNowMs }, 3 );
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::Ok );
 
     vector<ServiceAuditEntry> listEntry;
     string                    nextCursor;
     SW_REQUIRE_TRUE( ServiceAuditLog::listEntries( rig._database, "sd/", "", 10, listEntry, nextCursor ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( size_t( 2 ), listEntry.size() ); // 찾지 못한 지우기는 기록하지 않는다
+}
+
+/** @brief [ServerDirectoryServiceTest] 운영자 권한: 가드가 거절하거나 없는 변경은 Forbidden 이고 표를 건드리지 않으며 거절 감사 줄(`<동작>.denied`)을 남긴다. 운영자는 통과한다 */
+SW_TEST_CASE( ServerDirectoryServiceTest, OperatorGuardRefusesNonOperators )
+{
+    DirectoryServiceFixture rig;
+    const UnixMilliseconds  nowMs{ kNowMs };
+    const ServiceOperator   stranger{ kStranger, make_shared<const DenyGuard>() };
+    const ServiceOperator   withoutGuard{ kStranger, nullptr };
+
+    rig._service.setMaintenance( makeWindow(), stranger, "memo", nowMs, 1 );
+    SW_EXPECT_TRUE( rig.finishOne().hasError( OnlineError::kForbidden ) );
+    rig._service.postAnnouncement( makeAnnouncement( 4 ), withoutGuard, nowMs, 2 );
+    SW_EXPECT_TRUE( rig.finishOne().hasError( OnlineError::kForbidden ) );
+
+    IServerDirectoryControl& control = rig._service;
+    control.clearMaintenance( "game", stranger, "memo", nowMs, 3 );
+    control.removeAnnouncement( 4, stranger, nowMs, 4 );
+    rig.poll();
+    vector<ServerDirectoryControlCompletion> listCompletion;
+    control.takeControlCompletions( listCompletion );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listCompletion.size() );
+    for ( const ServerDirectoryControlCompletion& completion : listCompletion )
+    {
+        SW_EXPECT_TRUE( completion._result == ServerDirectoryControlResult::Forbidden );
+    }
+
+    ServiceRecord record;
+    SW_EXPECT_TRUE( rig._database.readRecord( hashed_string( "sd_maintenance" ), "game", record ) == ServiceStoreResult::NotFound );
+    SW_EXPECT_TRUE( rig._database.readRecord( hashed_string( "sd_notice" ), ServiceKeyUtil::makeHex64( 4 ), record ) == ServiceStoreResult::NotFound );
+
+    vector<ServiceAuditEntry> listEntry;
+    string                    nextCursor;
+    SW_REQUIRE_TRUE( ServiceAuditLog::listEntries( rig._database, "sd/", "", 10, listEntry, nextCursor ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 4 ), listEntry.size() );
+    const auto countAction = [&listEntry]( string_view action )
+    {
+        int32 count = 0;
+        for ( const ServiceAuditEntry& entry : listEntry )
+        {
+            if ( entry._action == action )
+                ++count;
+        }
+        return count;
+    };
+    SW_EXPECT_EQUAL( 1, countAction( "sd.maintenance.set.denied" ) );
+    SW_EXPECT_EQUAL( 1, countAction( "sd.notice.post.denied" ) );
+    SW_EXPECT_EQUAL( 1, countAction( "sd.maintenance.clear.denied" ) );
+    SW_EXPECT_EQUAL( 1, countAction( "sd.notice.remove.denied" ) );
+    for ( const ServiceAuditEntry& entry : listEntry )
+    {
+        SW_EXPECT_EQUAL( ServiceAuditLog::makeOperatorActor( kStranger ), entry._actor );
+    }
+
+    // 운영자는 통과하고 효과 줄이 남는다
+    SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
+    rig.tick( kNowMs );
+    SW_EXPECT_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
+    listEntry.clear();
+    SW_REQUIRE_TRUE( ServiceAuditLog::listEntries( rig._database, "sd/", "", 10, listEntry, nextCursor ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 5 ), listEntry.size() );
+    SW_EXPECT_EQUAL( 1, countAction( "sd.maintenance.set" ) );
 }
 
 /** @brief [ServerDirectoryServiceTest] 저장소 실패: 쓰기 실패는 Unavailable 이고 다시 읽지 않는다. 읽기 실패는 있던 값을 둔다 */
@@ -443,20 +527,20 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ControlInterfaceMapsResults )
     maintenance._scope      = "game";
     maintenance._messageKey = "maint.key";
     maintenance._startMs    = kNowMs - 1;
-    control.setMaintenance( maintenance, 7, "memo", nowMs, 11 );
+    control.setMaintenance( maintenance, makeGM(), "memo", nowMs, 11 );
     ServerDirectoryMaintenanceChange badScope;
     badScope._scope = "Bad.Scope";
-    control.setMaintenance( badScope, 7, "memo", nowMs, 12 );
-    control.removeAnnouncement( 77, 7, nowMs, 13 );
+    control.setMaintenance( badScope, makeGM(), "memo", nowMs, 12 );
+    control.removeAnnouncement( 77, makeGM(), nowMs, 13 );
     ServerDirectoryAnnouncementChange announcement;
     announcement._text           = "literal";
     announcement._announcementID = 3;
     announcement._startMs        = kNowMs - 1;
     announcement._priority       = 2;
     announcement._bLiteralText   = SW_TRUE;
-    control.postAnnouncement( announcement, 7, nowMs, 14 );
+    control.postAnnouncement( announcement, makeGM(), nowMs, 14 );
     rig._database.armFault( ServiceStoreFault::RejectCommit );
-    control.clearMaintenance( "game", 7, "memo", nowMs, 15 );
+    control.clearMaintenance( "game", makeGM(), "memo", nowMs, 15 );
     rig.poll();
 
     vector<ServerDirectoryControlCompletion> listCompletion;
