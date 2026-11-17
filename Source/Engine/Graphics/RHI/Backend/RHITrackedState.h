@@ -13,6 +13,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
+
 namespace sw
 {
     /**
@@ -59,24 +61,6 @@ namespace sw
 
     private:
         atomic<uint32> _value;
-    };
-
-    /**
-     * @struct RHISubresourceRange
-     * @brief 텍스처의 밉 · 면(배열 칸) 구간입니다. 개수 `kAll` 은 "처음부터 끝까지" 다(기본값 — 자원 전체).
-     * @details 언리얼 `FRHITransitionInfo` 의 MipIndex · ArraySlice(전부는 `AllSubresources`), Godot RD 의 슬라이스 범위와 같은 자리다.
-     */
-    struct RHISubresourceRange
-    {
-        static constexpr uint16 kAll = 0xFFFFu;
-
-        uint16 _firstMip{ 0 };
-        uint16 _mipCount{ kAll };
-        uint16 _firstSlice{ 0 };
-        uint16 _sliceCount{ kAll };
-
-        /** @brief 밉 하나 · 면 하나입니다. */
-        static constexpr RHISubresourceRange makeSingle( uint16 mip, uint16 slice ) { return RHISubresourceRange{ mip, 1u, slice, 1u }; }
     };
 
     /**
@@ -171,6 +155,25 @@ namespace sw
             }
             collapseIfUniform();
             return emitCount;
+        }
+
+        /**
+         * @brief 지금 상태를 @p visit( subresourceIndex, state ) 로 훑습니다. 모두 같으면 `kWholeResource` 로 한 번, 갈라졌으면 서브리소스마다 한 번입니다.
+         * @details 기록 경로 밖에서 잠시 다른 상태로 옮겼다가 되돌리는 일(전송 리스트의 복사)이 쓴다 — 추적 값은 바꾸지 않는다.
+         */
+        template <typename FnVisit>
+        void forEachState( FnVisit&& visit ) const
+        {
+            ScopedLock<SpinLock> lock{ _lock };
+            if ( _listState.empty() )
+            {
+                visit( kWholeResource, _whole );
+                return;
+            }
+            for ( uint32 subresource = 0; subresource < _listState.size(); ++subresource )
+            {
+                visit( subresource, _listState[subresource] );
+            }
         }
 
         /** @brief 서브리소스 하나의 상태입니다(진단 · 테스트). */
