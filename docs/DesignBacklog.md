@@ -1501,3 +1501,4 @@ ST-1 · ST-5 는 파일이 겹치지 않아 함께 맡길 수 있다. ST-2 · ST
 - 반복 실패 차단은 뒤 단계의 다른 실패를 가린다 — 돌지 않은 단계를 표에 남기고 `--from-stage` 로 잇는다.
 - scratch 마운트: 리소스 뿌리에 id 를 직접 붙여 디스크 경로를 만드는 에디터 코드가 있으면 사본을 찾지 못한다 — ST-5 의 첫 일은 그 자리를 `AssetPaths` 로 모으는 것이다.
 - 같은 모양이 남은 곳: `EngineConfig` 의 다른 개발 전용 칸. 모듈 섀도 복사본은 실행 뿌리 아래 `ModuleShadow/<pid>` 로 옮겼다(`ShadowCopyName` — 이름으로 거두는 코드 없음).
+- 시나리오 산출물 `{out}`(`Saved/Automation/<시나리오>/<pid>`)과 체인 보고 `…/per-backend-<pid>` 는 실행 뿌리로 옮기지 않는다: 사람과 도구(`scenario_bisect.py` · `linux_scenarios.py` · `test_history.py ingest`)가 시나리오 이름으로 찾는 자리이고, 보존이 시나리오마다 최근 3 개(`SavedRetention` 의 `Automation` 규칙 `_bPerChild`)라 실행 전체 최근 3 개인 `Runs` 보다 오래 남는다(실행 뿌리를 쓰는 단독 실행마다 `Runs` 에 폴더가 생겨 체인 산출물이 금방 밀린다). pid 꼬리는 자리 잡기(`reserveUniquePath` — 겹치면 번호를 붙인다)일 뿐 형제 거두기가 없어 ST-5 가 없앤 결함 모양이 아니다. 언리얼도 자동화 보고는 `Saved/Automation/Reports` 에 실행과 따로 둔다.
