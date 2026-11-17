@@ -194,6 +194,14 @@ namespace sw
         }
     }
 
+    void AudioVoice::silenceTarget()
+    {
+        for ( float32& gain : _arrTargetGain )
+        {
+            gain = 0.0f;
+        }
+    }
+
     void AudioVoice::setFade( float32 targetGain, uint32 durationFrames, uint32 delayFrames, bool bStopAtEnd )
     {
         _fadeTarget      = MathUtil::max( 0.0f, targetGain );

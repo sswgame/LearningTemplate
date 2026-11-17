@@ -84,11 +84,17 @@ def write_configs(out_dir: Path, game_port: int, service_port: int, account: str
            for name in ("_auditRetention", "_ledgerRetention", "_closedReportTTL", "_mailSentTTL", "_scheduleRunTTL")},
         "_ttlSweepMinuteOfDay": 300,
         "_ttlBackfillRolloutHours": 0,
+        "_maxPendingCallsPerService": 1024,
+        "_listTrustedProxy": [],
+        "_seatReservationSeconds": 30,
         "_listKit": [
             {"_name": "account", "_settings": {
                 "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
                 "_maxConcurrentPasswordHashes": 2,
                 "_maxQueuedPasswordHashes": 64,
+                "_sharedAttemptLimit": 1000,
+                "_sharedAttemptWindowSeconds": 60,
+                "_loginNonceLifetimeSeconds": 300,
                 "_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT,
                 "_bLightPasswordHash": True,
                 "_listSeedTestAccount": [{"_loginName": account, "_password": password}],

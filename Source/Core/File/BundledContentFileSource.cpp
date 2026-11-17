@@ -98,4 +98,10 @@ namespace sw
     {
         return io.readRange( open( path ), 0, AsyncFileIO::kWholeFile, priority, onComplete );
     }
+
+    AsyncReadHandle BundledContentFileSource::readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
+                                                              const AsyncReadCompleteDelegate& onComplete ) const
+    {
+        return io.readRange( open( path ), offset, size, priority, onComplete ); // 묶음 안 무압축 항목의 구간(압축 항목은 `open` 이 거절한다)
+    }
 } // namespace sw

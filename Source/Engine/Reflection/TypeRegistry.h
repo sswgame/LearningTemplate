@@ -96,7 +96,7 @@ namespace sw
 
         /**
          * @brief 별칭(이름을 바꾸기 전의 이름)을 이미 등록된 canonical TypeInfo 에 연결합니다(직렬화와 컴포넌트 키 호환).
-         * @details REFLECT(Alias=…) 와 ReflectBuiltins 별칭 코드젠이 부른다.
+         * @details REFLECT(Alias=…) 와 ReflectBuiltins 별칭 코드젠이 부른다. 별칭이 이미 다른 살아 있는 타입을 가리키면 덮지 않고 오류다(`Reflection.TypeAliasConflict`).
          */
         void registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName );
         /** @brief 별칭(이름을 바꾸기 전의 이름)을 이미 등록된 canonical EnumInfo 에 연결합니다. */
@@ -165,8 +165,8 @@ namespace sw
          * @brief 살아 있는 **모든** 타입의 파생 캐시(이름 맵 · 상속 병합 목록 · 부모 포인터 · 조상 표 · 판정)를 다시 짓습니다.
          * @details 등록 · 별칭 · 해제는 바뀐 타입과 그 자손만 스스로 다시 짓는다(배치 안이면 배치 끝이 한 번에) — 이 함수는 전체를 다시 지을 때
          *          (테스트, 진단)만 쓴다. 조회는 지어 둔 것을 읽기만 한다.
-         * @note 레지스트리 잠금을 **잡지 않은 채** 짓는다. 부모를 찾으려고 레지스트리를 다시 잠그는데 `shared_mutex` 는 재귀 잠금이 안 되므로,
-         *       잠금 안에서 부르면 그 자리에서 멈춘다.
+         * @note 부모 링크 · 조상 표는 독점 잠금 안에서(`relinkAffectedLocked`), 상속 목록 · 판정은 잠금을 푼 뒤 짓는다 — 판정이 레지스트리를 다시 잠그는데
+         *       `shared_mutex` 는 재귀 잠금이 안 된다. 레지스트리 잠금을 쥔 채 부르면 그 자리에서 멈춘다.
          */
         void populateLookupCaches() const;
 
@@ -207,15 +207,24 @@ namespace sw
                 return {};
 
             const hashed_string&    baseFqn = pBaseType->_fullyQualifiedName;
-            vector<const TypeInfo*> listResult;
-
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
-            for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
+            vector<const TypeInfo*> listCandidate;
             {
-                (void)fqn;
-                const bool bDerivedAliveType = pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType && pTypeInfo->isDerivedFrom( baseFqn );
-                if ( bDerivedAliveType )
-                    listResult.push_back( pTypeInfo.get() );
+                // 잠금 안에서는 포인터만 모은다. `isDerivedFrom` 은 부모를 찾느라 같은 `_mutex` 를 다시 잡는다(`getParentType` → `findType`) —
+                // 공유 잠금을 겹쳐 잡으면 그 사이 기다리는 쓰기 잠금과 맞물려 멈춘다. 타입 객체는 지우지 않으므로(묘비) 잠금 밖에서도 주소가 맞다.
+                ScopedSharedLock<shared_mutex> lock{ _mutex };
+                listCandidate.reserve( _mapFqnToClassType.size() );
+                for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
+                {
+                    (void)fqn;
+                    if ( pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType )
+                        listCandidate.push_back( pTypeInfo.get() );
+                }
+            }
+            vector<const TypeInfo*> listResult;
+            for ( const TypeInfo* pCandidate : listCandidate )
+            {
+                if ( pCandidate->isDerivedFrom( baseFqn ) )
+                    listResult.push_back( pCandidate );
             }
             return listResult;
         }
@@ -337,9 +346,12 @@ namespace sw
          *          다시 지어졌다(밖에서 든 `const PropertyInfo*` 가 매달리고 등록이 O(타입²)). 언리얼도 클래스를 다시 올릴 때 그 자식 클래스만 다시 잇는다.
          */
         void collectAffectedLocked( const unordered_set<const TypeInfo*>& uniqueRoot, vector<TypeInfo*>& outListType ) const SW_REQUIRES_LOCK( _mutex );
-        /** @brief @p listType 의 부모 포인터 · 조상 표 · 상속 캐시를 비웁니다(잠금 안). 다시 짓기 전까지 그 목록을 묻는 쪽은 멈춘다(옛 포인터를 읽지 않는다). */
-        void clearAffectedLocked( const vector<TypeInfo*>& listType ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief @p listType 의 파생 캐시를 다시 짓습니다(**잠금 밖**, 단일 스레드 — 부모를 찾으려고 레지스트리를 다시 잠근다). */
+        /**
+         * @brief @p listType 의 부모 포인터 · 조상 표를 **독점 잠금 안에서** 새 값으로 바꾸고 상속 캐시를 비웁니다. 다시 짓기 전까지 상속 목록을 묻는 쪽은 멈춘다(옛 포인터를 읽지 않는다).
+         * @details 부모 링크 · 조상 표를 쓰는 쪽은 이 함수 하나다(레지스트리 타입). 읽기(캐스트 · 사슬 걷기)는 잠금 없이 원자값만 보고, 링크가 비는 틈이 없다.
+         */
+        void relinkAffectedLocked( const vector<TypeInfo*>& listType ) const SW_REQUIRES_LOCK( _mutex );
+        /** @brief @p listType 의 상속 목록 · 판정을 다시 짓습니다(**잠금 밖** — 판정이 레지스트리를 다시 잠근다). 부모 링크 · 조상 표는 `relinkAffectedLocked` 가 이미 바꿨다. */
         void rebuildAffected( const vector<TypeInfo*>& listType ) const SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 타입 · enum 이름 하나를 해시 표(`_wireTypeNameIndex`)에 넣습니다(잠금 안). 같은 해시에 다른 이름이 있으면 넣지 않고 처음 충돌을 @p inoutClash 에 적습니다.
@@ -400,7 +412,7 @@ namespace sw
         /** @brief 모든 타입 공급자가 등록을 끝냈는지 나타냅니다(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
         atomic<bool> _bAllModuleTypesRegistered;
         /** @brief 상속 캐시를 비운 타입 수의 누계입니다(`getInheritedCacheInvalidations`). 잠금 안에서 더하고 아무 데서나 읽는다. */
-        atomic<uint64> _inheritedCacheInvalidations{ 0 };
+        mutable atomic<uint64> _inheritedCacheInvalidations{ 0 }; ///< 계측이다 — 전체 다시 짓기(`populateLookupCaches`, const)도 센다
         /** @brief `registerPendingTypes` 의 깊이입니다. 0 이 아니면 `registerClass` · 별칭은 바뀐 타입만 모으고(`_uniqueBatchRoot`), 배치 끝이 자손을 한 번에 찾아 다시 짓는다. */
         uint32 _batchDepth SW_GUARDED_BY( _mutex ){ 0 };
         /** @brief 이 배치에서 다시 등록됐거나 별칭이 붙은 타입입니다. */

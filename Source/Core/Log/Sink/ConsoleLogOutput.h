@@ -31,6 +31,7 @@ namespace sw
         void close() override;
         /** @brief 수준별 색으로 한 줄을 씁니다. Error 는 바로 flush 합니다(`setFlushEveryLine` 이면 모든 줄). */
         void write( const LogRecord& record ) override;
+        void writeWithoutWaiting( const LogRecord& record ) override;
 
         /**
          * @brief 줄마다 표준 출력을 비울지 정합니다(기본 꺼짐 — Error 만 비운다). 전용 서버가 켭니다: 자식 프로세스로 띄운 테스트 · journald ·
@@ -41,6 +42,10 @@ namespace sw
          * @brief 켜면 이 장치가 줄을 쓰지 않습니다(기본 꺼짐). 표준 출력을 다른 장치(`JSONLinesLogOutput`)가 쓸 때 같은 줄이 두 모양으로 섞이지 않게 합니다. 프로세스 전역입니다.
          */
         static void setMuted( bool bMuted );
+
+    private:
+        /** @brief `write` · `writeWithoutWaiting` 의 본체입니다. */
+        void writeLocked( const LogRecord& record ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         mutex                                            _mutex;                  ///< 이 장치 전용. 파일 출력과 락을 공유하지 않는다

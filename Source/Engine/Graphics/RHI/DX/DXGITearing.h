@@ -41,5 +41,20 @@ namespace sw
 
         return bAllowTearing != FALSE;
     }
+
+    /**
+     * @brief @p pSwapChain 을 만든 팩터리에 "@p hWnd 의 창 메시지를 보지 말라" 고 알립니다(`DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER`). 실패하면 false 입니다.
+     * @details 이 연결이 없으면 DXGI 가 Alt+Enter 를 가로채 배타 전체 화면으로 바꾸고, 그 상태의 티어링 Present 는 `DXGI_ERROR_INVALID_CALL` 이다(R-1).
+     *          전체 화면은 엔진의 테두리 없는 창 하나다. 문서대로 스왑체인의 `GetParent` 로 팩터리를 찾는다(다른 팩터리에 걸면 효과가 없다).
+     *          세션 0 은 `DXGI_ERROR_NOT_CURRENTLY_AVAILABLE` 인데 그때는 DXGI 가 창 메시지를 보지 않으므로 성공으로 친다. 언리얼 D3D12RHI 뷰포트와 같은 플래그다.
+     */
+    [[nodiscard]] inline bool disableDXGIWindowChanges( IDXGISwapChain* pSwapChain, HWND hWnd )
+    {
+        Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
+        if ( pSwapChain == nullptr || FAILED( pSwapChain->GetParent( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
+            return false;
+        const HRESULT hr = factory->MakeWindowAssociation( hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER );
+        return SUCCEEDED( hr ) || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE;
+    }
 } // namespace sw
 #endif

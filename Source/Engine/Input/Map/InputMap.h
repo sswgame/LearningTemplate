@@ -121,6 +121,13 @@ namespace sw
          * @details 플레이어의 키 리매핑은 여기에 저장하지 않는다. UserSettings 의 `keyBinding` 설정(사용자 파일)에 저장한다.
          */
         [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;
+        /** @brief `saveToAsset` 이 쓰는 글을 @p outText 에 만듭니다(에디터 InputMap 패널의 문서 되돌리기 글). 형식이 담지 못하는 바인딩이 있으면 false 입니다. */
+        [[nodiscard]] bool saveToXMLText( string& outText ) const;
+        /**
+         * @brief `saveToXMLText` 의 글(맵 파일 하나 — `loadFromAsset` 과 같은 형식)을 읽습니다. 읽은 파일은 @p sourceAssetPath 하나다(묶음이 아니다).
+         * @details 에디터 InputMap 패널의 되돌리기가 쓴다. 실패하면 맵은 일부만 읽힌 채라 부른 쪽이 다시 읽는다(`loadFromAsset` 과 같다).
+         */
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceAssetPath );
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
         void update( float32 deltaSeconds );
 
@@ -514,6 +521,10 @@ namespace sw
          * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다. @p bCheckConflicts 가 거짓이면 겹침 · 가상 커서 검사를 부른 쪽이 다 읽은 뒤에 한다(`loadBundle`).
          */
         [[nodiscard]] bool loadDefinition( const AssetID& assetID, bool bAppend, bool bCheckConflicts );
+        /** @brief `loadDefinition` · `loadFromXMLText` 의 본문입니다 — 읽은 문서 @p doc 의 `<InputMap>` 을 받습니다(@p absPath 는 오류에 적는 이름). */
+        [[nodiscard]] bool loadDefinitionDocument( const XMLDocument& doc, string_view relativePath, string_view absPath, bool bAppend, bool bCheckConflicts );
+        /** @brief `saveToAsset` · `saveToXMLText` 의 본문입니다 — 맵 전체를 `<InputMap>` 문서로 채운다. 형식이 담지 못하는 바인딩이 있으면 false 입니다. */
+        [[nodiscard]] bool fillMapDocument( XMLDocument& outDoc ) const;
         /** @brief `loadDefinition` 의 맵 전체 값 단계입니다. 시간 문턱 · 가상 커서 · 기본 레이어를 읽고, 더하지 않을 때만 맵을 비우고 적용합니다. 깨졌거나 거절되면 false 입니다. */
         [[nodiscard]] bool readMapSettings( const XMLNode& root, string_view absPath, bool bAppend );
         /** @brief `loadDefinition` 의 레이어 단계입니다. `<layers>` 블록의 레이어를 등록하고 기본 레이어를 보장합니다. 깨진 값은 @p inoutbValid 를 내립니다. */

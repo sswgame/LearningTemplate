@@ -112,7 +112,7 @@ namespace sw
                 if ( bCollisionProbe )
                 {
                     float32 hitDistance = distance;
-                    bHit                = pProbe->sweepSphere( pivot, pivot + backward * distance, collision._radius, hitDistance );
+                    bHit                = pProbe->sweepSphere( pivot, pivot + backward * distance, collision._radius, collision._listLayer, hitDistance );
                     if ( bHit )
                         allowed = MathUtil::clamp( hitDistance, MathUtil::min( collision._minDistance, distance ), distance );
                 }

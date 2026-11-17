@@ -399,7 +399,7 @@ namespace sw
             const int32 x = static_cast<int32>( MathUtil::round( args._x * static_cast<float32>( pWindow->getWidth() - 1 ) ) );
             const int32 y = static_cast<int32>( MathUtil::round( args._y * static_cast<float32>( pWindow->getHeight() - 1 ) ) );
             runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTouch( RawInputEventType::TouchDown, 0, x, y ) );
-            runner._inputScript.addEvent( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, x, y ) );
+            runner._inputScript.addSpanEnd( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, x, y ), step._frameIndex );
             return {};
         }
 
@@ -511,7 +511,13 @@ namespace sw
             if ( directory.empty() == false )
                 (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
             (void)FileUtil::tryRemoveFile( path );                  // 지난 실행의 이미지를 읽지 않게 지운다
-            runner._run.requestScreenshot( path );
+            const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
+            if ( absolutePath.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "Automation.ScreenshotPathNotAbsolute", "Screenshot '%#' was not taken: the output path is not absolute", path );
+                return true;
+            }
+            runner._run.requestScreenshot( *absolutePath );
             return true;
         }
 

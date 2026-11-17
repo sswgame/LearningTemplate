@@ -17,7 +17,6 @@
 	<WaitUntil watch="Nav.PathLength" target="HumanStart" key="NavGoal" atLeast="13.3" timeoutSeconds="10"/>
 	<WaitUntil watch="Nav.PathLength" target="SpiritStart" key="NavGoal" atMost="12.6" timeoutSeconds="10"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 22 -0.95 0"/>
 	<Wait frames="70"/>
 	<Expect watch="Zone.Sources" target="Walker" is="surface:Lava"/>
@@ -26,7 +25,6 @@
 	<Expect watch="Character.MovementMode" target="Walker" is="Swimming"/>
 	<Expect watch="Physics.Field" target="Walker" key="fluidDensity" near="3" tolerance="0.01"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 0 0.05 -6"/>
 	<DevCommand line="object.place Spirit 22 -0.95 1.5"/>
 	<Wait frames="130"/>
@@ -34,7 +32,6 @@
 	<Expect watch="Ability.Attribute" target="Spirit" key="Health" equals="100"/>
 	<Expect watch="Ability.HasTag" target="Spirit" key="State.Burning" equals="0"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Crate 22 0.5 -1.5"/>
 	<WaitUntil watch="Object.Exists" target="Crate" equals="0" timeoutSeconds="3"/>
 	<Expect watch="Object.Exists" target="ZoneAsh" equals="1"/>

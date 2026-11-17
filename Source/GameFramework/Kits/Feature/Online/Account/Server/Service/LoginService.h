@@ -18,6 +18,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -31,6 +32,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/PasswordHashQueue.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
@@ -45,6 +47,7 @@ namespace sw
     struct LoginRevocationEntry;
     struct LoginStoreResult;
 
+    class EphemeralStoreRouter;
     class IServiceStore;
     class LoginSecretVault;
     class RemoteConfig;
@@ -67,7 +70,8 @@ namespace sw
         UnlinkPlatform,
         ListLinks,
         RequestDeletion,
-        CancelDeletion
+        CancelDeletion,
+        IssueLoginNonce ///< 저장 일이 아니다 — 휘발 저장소에 nonce 를 쓴다
     };
 
     /** @brief 끝난 요청 하나입니다. 바인딩이 요청 태그로 응답 대상을 찾습니다. */
@@ -77,6 +81,7 @@ namespace sw
         NetGameTicket      _ticket{};      ///< IssueGameTicket
         AccountIdentity    _identity{};    ///< Validate, Register(계정 id), Link* 의 결과이다
         AccountLinkSummary _linkSummary{}; ///< ListLinks
+        string             _loginNonce{};  ///< IssueLoginNonce
         uint64             _requestTag{ 0 };
         LoginServiceResult _result{ LoginResult::Ok };
         LoginOperation     _operation{ LoginOperation::Login };
@@ -123,6 +128,14 @@ namespace sw
         void update( UnixMilliseconds nowMs );
         /** @brief 도는 비밀번호 해시가 끝나거나 @p timeoutMs 가 지날 때까지 잡니다(작업 풀 일을 돕지 않는다). 완료는 다음 `update` 가 잇는다. 테스트가 쓴다. */
         bool waitForPasswordHashes( int64 timeoutMs ) { return _hashQueue.waitForRunning( timeoutMs ); }
+        /**
+         * @brief 서버 사이에 나누는 휘발 저장소를 받습니다(빌려 쓴다, 서비스보다 오래 산다). 키트 조립이 `start` 에서 부릅니다.
+         * @details 쓰는 곳: 주소 단위 시도 창(`login/attempt/<주소 해시>`, INCR + TTL — 서버 여럿 · 워커 여럿이 한 셈을 나눈다, 감사 O-14)과
+         *          외부 로그인 nonce(`login/nonce/<nonce>`, 없을 때만 쓰고 로그인에서 지운다 — 한 번만 쓴다, 감사 O-13).
+         */
+        void attachCache( EphemeralStoreRouter* pRouter );
+        /** @brief 외부 로그인에 쓸 nonce 를 냅니다. 결과는 `IssueLoginNonce` 완료의 `_loginNonce` 입니다. 주소마다의 시도 버킷을 함께 씁니다(nonce 로 캐시를 채우지 못하게). */
+        void issueLoginNonce( uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
 
         // 요청 함수들이다. 결과는 같은 @p requestTag 로 `takeCompletions` 에서 받는다. 시도 제한이나 빌드 버전에 걸리면 작업을 맡기지 않고 바로 완료를 쌓는다.
         // 비밀번호를 해시하는 요청(가입 · 로그인 · 이름 연동)은 해시 줄에 자리가 없으면 읽기 전에 `kBusy`(다시 시도)로 끝난다 — 계정이 있든 없든 같은 답이다.
@@ -172,8 +185,8 @@ namespace sw
         [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override;
         bool               isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
 
-        /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기와 해시 줄의 자리도 포함합니다. */
-        int32                       getPendingCount() const { return _store.getOpenCount() + _verifications.getOpenCount() + _hashQueue.getOpenCount(); }
+        /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기 · 캐시 요청 · 해시 줄의 자리도 포함합니다. */
+        int32                       getPendingCount() const { return _store.getOpenCount() + _verifications.getOpenCount() + _cacheRequests.getOpenCount() + _hashQueue.getOpenCount(); }
         const LoginTicketAuthority& getTicketAuthority() const { return _ticketAuthority; }
         const LoginServiceConfig&   getSettings() const { return _settings; }
         int32                       getOnlineCount() const { return static_cast<int32>( _mapAccountToSession.size() ); }
@@ -204,6 +217,16 @@ namespace sw
         };
 
         [[nodiscard]] bool consumeAttempt( uint64 clientKey, UnixMilliseconds nowMs, int64& outRetryAfterMs );
+        /**
+         * @brief 주소 @p clientKey 의 서버 전체 시도 창을 하나 세고, 상한 안이면 @p onAllowed 를 부릅니다. 넘으면 `kRateLimited` 완료를 쌓습니다.
+         * @details 캐시가 없거나 닿지 못하면 이 서버의 버킷(`consumeAttempt`, 이미 지났다)만으로 막고 계속한다 — 캐시 장애가 로그인 전체를 멈추지 않게 한다.
+         */
+        template <typename TContinue>
+        void checkSharedAttempt( uint64 clientKey, LoginOperation operation, uint64 requestTag, const LoginGrant& grant, TContinue&& onAllowed );
+        void onCacheReply( const EphemeralReply& reply );
+        /** @brief 제공자를 찾아 확인을 맡깁니다. 서버 nonce 를 쓰는 제공자면 그 앞에서 nonce 를 소비합니다(`beginVerification`). */
+        void startVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token, const LoginGrant& buildGrant,
+                                UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 철회할 제공자가 있으면 주기마다 철회 대기열을 읽고, 끝난 철회의 항목을 지웁니다. `update` 가 부릅니다. */
         void updateRevocations( UnixMilliseconds nowMs );
         void pushImmediate( LoginOperation operation, uint64 requestTag, LoginServiceResult result, const LoginGrant& grant );
@@ -257,6 +280,9 @@ namespace sw
         size_t                                                             _refreshCursor;
         ServicePeriodicJob                                                 _revocationScanJob;      ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
         ServiceStoreTracker                                                _store;                  ///< 저장소에 맡긴 일의 앞이다
+        PendingRequestTable<uint64, EphemeralReply>                        _cacheRequests;          ///< 휘발 저장소 답을 기다리는 일(시도 창 · nonce)이다
+        Subscription                                                       _cacheReplyOwner;        ///< 라우터 답의 주인 몫(`attachCache` 가 열고 `shutdown` 이 놓는다)
+        EphemeralStoreRouter*                                              _pRouter{ nullptr };     ///< 서버 사이에 나누는 휘발 저장소이다(빌려 쓴다, `attachCache`)
         vector<const IAfterDeleteAccount*>                                 _listAfterDeleteAccount; ///< 탈퇴 뒤 키트 정리 훅(`setAfterDeleteAccount`)
         PasswordHashQueue                                                  _hashQueue;              ///< 비밀번호 해시 줄(작업 풀 위, 상한 있음). 아래 요청 표보다 먼저 선다 — 요청이 든 티켓이 먼저 사라진다
         unordered_map<uint64, unique_ptr<LoginPasswordCall>>               _mapPasswordCall;        ///< 진행 중인 비밀번호 요청(단계 사이에 입력 · 티켓 · 문제를 든다)

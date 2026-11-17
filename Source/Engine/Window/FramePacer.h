@@ -85,7 +85,7 @@ namespace sw
         void markFrameStart();
         /** @brief 프레임 입력(에디터 UI 갱신 뒤)이 모이면 부릅니다. 조용한 프레임 수를 세고 `gv_framePacing` 과 함께 상태를 정합니다. */
         void beginFrame( const FramePacingInputs& inputs );
-        /** @brief 프레임 끝에 부릅니다. 배경이면 상한 주기까지 자고, 최소화 · 에디터 유휴면 @p window 의 메시지를 기다립니다. 다른 상태는 바로 돌아옵니다. */
+        /** @brief 프레임 끝에 부릅니다. 최소화 · 에디터 유휴면 @p window 의 메시지를 기다리고, 그 밖은 @p window 가 다음 프레임을 미룬다(`IWindow::waitForNextFrame` — 배경이면 상한 주기, 전속이면 미루지 않는다). */
         void endFrame( IWindow& window ) const;
 
         /** @brief 이번 프레임의 상태입니다(`beginFrame` 이 정했다). */

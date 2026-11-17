@@ -10,6 +10,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -40,12 +41,18 @@ namespace sw
             static constexpr const utf8* kPath          = "path";
             static constexpr const utf8* kBaseName      = "PrefabBase";
 
-            /** @brief 컴포넌트 원소 하나와 그 키(`이름#n`)입니다. */
+            static constexpr const utf8* kLocalID = "_localID";
+
+            /** @brief 컴포넌트 원소 하나와 그 키입니다 — 지역 id 키(`#<16진>`, `ComponentStableKey`)와, 옮기는 동안 옛 덮어쓰기 글을 맞춰 볼 옛 키(`이름#n`). */
             struct KeyedComponent
             {
                 XMLNode _node;
                 string  _key;
+                string  _legacyKey;
                 bool    _bUsed{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+                /** @brief 덮어쓰기 글의 키 @p key 가 이 컴포넌트를 가리키면 true 입니다(지역 id 키, 또는 옮기는 동안 옛 키). */
+                bool isKey( string_view key ) const { return key.empty() == false && ( _key == key || _legacyKey == key ); }
             };
 
             /** @brief 원소 노드인지 봅니다(글 · 주석 노드는 이름이 비어 있다). */
@@ -79,14 +86,15 @@ namespace sw
             }
 
             /**
-             * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 이름(`_componentName`),
-             *        없거나 비었으면 원소 이름(타입), 그 뒤에 같은 이름 가운데 몇 번째인지.
+             * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 적힌 지역 id(`_localID`), 없으면 옛 키
+             *        (이름 `_componentName`, 없거나 비었으면 원소 이름(타입), 그 뒤에 같은 이름 가운데 몇 번째인지)에서 정한 id(`ComponentStableKey::resolveLocalIDs`).
              */
             static void collectComponents( const XMLNode& listNode, vector<KeyedComponent>& outListComponent )
             {
                 outListComponent.clear();
                 if ( listNode.isValid() == false )
                     return;
+                vector<ComponentLocalIDSlot> listSlot;
                 unordered_map<string, int32> mapCount;
                 for ( XMLNode child = listNode.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
@@ -98,8 +106,18 @@ namespace sw
                     int32&                                   occurrence = mapCount[baseName];
                     StringBuilder<constant::buffer::kMax256> textBuilder;
                     textBuilder.appendFormat( "%##%#", baseName, occurrence );
-                    outListComponent.push_back( KeyedComponent{ child, string( textBuilder.view() ), false } );
+                    uint64      storedID = 0;
+                    const utf8* pStored  = child.findAttribute( kLocalID );
+                    if ( StringUtil::isNullOrEmpty( pStored ) == false && StringUtil::parseUint64( pStored, storedID ) == false )
+                        storedID = 0; // 읽지 못한 id 는 적히지 않은 것과 같다 — 상태 읽기도 그 칸을 거절한다
+                    listSlot.push_back( ComponentLocalIDSlot{ baseName, storedID, 0 } );
+                    outListComponent.push_back( KeyedComponent{ child, string{}, string( textBuilder.view() ), false } );
                     ++occurrence;
+                }
+                ComponentStableKey::resolveLocalIDs( listSlot );
+                for ( size_t index = 0; index < listSlot.size(); ++index )
+                {
+                    outListComponent[index]._key = ComponentStableKey::formatKey( listSlot[index]._resolved );
                 }
             }
 
@@ -107,7 +125,7 @@ namespace sw
             static KeyedComponent* findComponent( vector<KeyedComponent>& listComponent, string_view key, const utf8* pTypeName )
             {
                 return VectorUtil::findIf( listComponent, [&]( KeyedComponent& component )
-                { return component._key == key && StringUtil::equals( component._node.getName(), pTypeName, false ); } );
+                { return component.isKey( key ) && StringUtil::equals( component._node.getName(), pTypeName, false ); } );
             }
 
             /** @brief 오브젝트 루트에서 덮어쓴 것으로 적지 않는 칸입니다 — 이름은 엔티티가, 판은 직렬화기가, 컴포넌트는 따로 비교한다. */
@@ -125,6 +143,9 @@ namespace sw
                 for ( XMLAttribute attribute = instance.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     if ( bRoot && isRootOnlyField( attribute.getName() ) )
+                        continue;
+                    // 지역 id 는 컴포넌트의 정체(키)다 — 값의 다름이 아니다. 옛 프리팹(id 없음)과 굳힌 인스턴스(id 있음)는 같은 규칙으로 같은 id 다.
+                    if ( bRoot == false && StringUtil::equals( attribute.getName(), kLocalID, false ) )
                         continue;
                     const utf8* pBaseValue = base.findAttribute( attribute.getName() );
                     if ( pBaseValue == nullptr || StringUtil::equals( pBaseValue, attribute.getValue() ) == false )
@@ -227,12 +248,13 @@ namespace sw
                     appendAddedAfter( outList, nullptr );
                     for ( KeyedComponent& component : listBase )
                     {
-                        const bool bRemoved = VectorUtil::contains( listRemovedKey, component._key );
+                        const bool bRemoved = VectorUtil::containsIf( listRemovedKey, [&component]( const string& removedKey )
+                        { return component.isKey( removedKey ); } );
                         if ( bRemoved )
                             component._bUsed = true;
                         else
                             appendBaseComponent( outList, component );
-                        appendAddedAfter( outList, &component._key );
+                        appendAddedAfter( outList, &component );
                     }
                     warnDroppedEntries( listBase, listRemovedKey );
                     appendAddedWithLostAnchor( outList, listBase );
@@ -254,13 +276,13 @@ namespace sw
                 }
 
                 /** @brief `after` 가 @p pAnchorKey 인 더한 컴포넌트를 문서 순서대로 씁니다. @p pAnchorKey 가 nullptr 이면 `after` 가 없는 것(맨 앞)입니다. */
-                void appendAddedAfter( XMLNode outList, const string* pAnchorKey ) const
+                void appendAddedAfter( XMLNode outList, const KeyedComponent* pAnchor ) const
                 {
                     for ( XMLNode entry = _overrideRoot.findChild( kAdd ); entry.isValid(); entry = entry.findNextSibling( kAdd ) )
                     {
                         const utf8* pAfter    = entry.findAttribute( kAfter );
                         const bool  bNoAnchor = StringUtil::isNullOrEmpty( pAfter );
-                        const bool  bMatches  = pAnchorKey == nullptr ? bNoAnchor : ( bNoAnchor == false && *pAnchorKey == pAfter );
+                        const bool  bMatches  = pAnchor == nullptr ? bNoAnchor : ( bNoAnchor == false && pAnchor->isKey( pAfter ) );
                         if ( bMatches == false )
                             continue;
                         const XMLNode added = findFirstElement( entry );
@@ -280,7 +302,7 @@ namespace sw
                         bool bFound = false;
                         for ( const KeyedComponent& component : listBase )
                         {
-                            bFound = bFound || component._key == pAfter;
+                            bFound = bFound || component.isKey( pAfter );
                         }
                         const XMLNode added = findFirstElement( entry );
                         if ( bFound || added.isValid() == false )
@@ -297,7 +319,7 @@ namespace sw
                     {
                         const utf8*   pKey                    = entry.findAttribute( kKey );
                         const XMLNode partial                 = findFirstElement( entry );
-                        const bool    bMatchingComponentEntry = pKey != nullptr && component._key == pKey && partial.isValid() && StringUtil::equals( partial.getName(), component._node.getName(), false );
+                        const bool    bMatchingComponentEntry = pKey != nullptr && component.isKey( pKey ) && partial.isValid() && StringUtil::equals( partial.getName(), component._node.getName(), false );
                         if ( bMatchingComponentEntry )
                             return partial;
                     }
@@ -313,7 +335,7 @@ namespace sw
                         bool        bMatched = false;
                         for ( const KeyedComponent& component : listBase )
                         {
-                            bMatched = bMatched || ( pKey != nullptr && component._key == pKey && component._bUsed );
+                            bMatched = bMatched || ( pKey != nullptr && component.isKey( pKey ) && component._bUsed );
                         }
                         if ( bMatched == false )
                             SW_LOG_WARNING_ID( "Prefab.OverrideComponentDropped", "Prefab override for component '%#' of '%#' is dropped - the prefab no longer has that component", pKey != nullptr ? pKey : "",
@@ -324,7 +346,7 @@ namespace sw
                         bool bMatched = false;
                         for ( const KeyedComponent& component : listBase )
                         {
-                            bMatched = bMatched || component._key == removedKey;
+                            bMatched = bMatched || component.isKey( removedKey );
                         }
                         if ( bMatched == false )
                             SW_LOG_TRACE_ID( "PrefabOverrides.RemovedPrefabComponentAlready", "Removed prefab component '%#' is already gone from the prefab", removedKey );
@@ -509,7 +531,7 @@ namespace sw
         const auto hasKey = [&listBase]( const utf8* pKey )
         {
             return pKey != nullptr && VectorUtil::containsIf( listBase, [pKey]( const PrefabOverridesInternal::KeyedComponent& component )
-            { return component._key == pKey; } );
+            { return component.isKey( pKey ); } );
         };
         const XMLNode overrideRoot = overrideDoc.getRoot( kRootName );
         bool          bAllFound    = true;
@@ -618,7 +640,11 @@ namespace sw
                 continue;
             }
             PrefabOverridesInternal::collectDifferences( component, defaultElement, false, listAttribute, listChild );
-            const XMLNode   element   = outList.appendChild( component.getName() );
+            const XMLNode element = outList.appendChild( component.getName() );
+            // 지역 id 는 기본값과 견줄 칸이 아니라 컴포넌트의 정체다 — 덮어쓰기 비교(collectDifferences)는 빼지만 저장 글에는 늘 남긴다.
+            // 빼면 다시 읽은 컴포넌트의 id 가 0 이라 부착 키(#16진)를 찾지 못해 기본값 빼기 대조가 늘 졌다(PrefabAsset.DefaultOmitMismatch).
+            if ( const utf8* pLocalID = component.findAttribute( PrefabOverridesInternal::kLocalID ); pLocalID != nullptr )
+                element.appendAttribute( PrefabOverridesInternal::kLocalID, pLocalID );
             const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
             if ( pTypeInfo != nullptr )
             {

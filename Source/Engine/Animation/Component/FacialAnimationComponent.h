@@ -19,6 +19,7 @@
 #include "Engine/Animation/Facial/WrinkleMap.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -174,15 +175,15 @@ namespace sw
         PROPERTY( Category = "Facial", DisplayName = "Facial Rig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
         AssetRef<FacialRig> _facialRigPath;
 
-        FacialAnimationBinding            _binding;
-        Subscription                      _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        shared_ptr<const FacialRig>       _pRig;                ///< 쥔 얼굴 리그(경로로 받았으면 공유 캐시의 한 벌). 없으면 nullptr
-        shared_ptr<const LipSyncSettings> _pLipSync;            ///< 쥔 립싱크 표(공유 캐시의 한 벌). 받지 못했으면 nullptr — 진폭 립싱크를 하지 않는다
-        VisemeTrack                       _speechTrack;
-        vector<float32>                   _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
-        vector<float32>                   _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
-        vector<float32>                   _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
-        const IFacialLiveSource*          _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
+        FacialAnimationBinding          _binding;
+        Subscription                    _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        SharedAssetRef<FacialRig>       _pRig;                ///< 쥔 얼굴 리그(경로로 받았으면 공유 캐시의 한 벌). 없으면 nullptr
+        SharedAssetRef<LipSyncSettings> _pLipSync;            ///< 쥔 립싱크 표(공유 캐시의 한 벌). 받지 못했으면 nullptr — 진폭 립싱크를 하지 않는다
+        VisemeTrack                     _speechTrack;
+        vector<float32>                 _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
+        vector<float32>                 _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
+        vector<float32>                 _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
+        const IFacialLiveSource*        _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
 
         /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
         void                                          detachLiveSource( const IFacialLiveSource* pSource );

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
@@ -26,7 +27,10 @@ namespace sw
 
             /** @brief 종류마다 쓸 수 있는 키입니다 — 다른 종류의 키는 철자 오류와 같이 거절한다. */
             static constexpr const utf8* kKeysFCM[]  = { "kind", "serviceAccountEnvironment", "tokenUrl", "sendUrl" };
-            static constexpr const utf8* kKeysAPNS[] = { "kind", "keyEnvironment", "keyId", "teamId", "topic", "sendUrl" };
+            static constexpr const utf8* kKeysAPNS[] = { "kind", "keyEnvironment", "keyId", "teamId", "topic", "sendUrl", "tokenRefreshMinSeconds" };
+            /** @brief 재서명 최소 간격의 허용 범위(초)입니다. APNs 는 20 분보다 자주 갱신하면 429 로, 60 분을 넘긴 토큰은 403 으로 거절한다. */
+            static constexpr int64 kTokenRefreshFloorSeconds   = 20 * constant::time::kSecondsPerMinute;
+            static constexpr int64 kTokenRefreshCeilingSeconds = 60 * constant::time::kSecondsPerMinute;
 
             static string readText( const JSONValue& object, const utf8* pKey )
             {
@@ -68,9 +72,10 @@ namespace sw
                 const bool       bSecretRead = bNamed && ServerSecret::read( config._keyEnvironment, settings._privateKeyPem ) && settings._privateKeyPem.empty() == false;
                 if ( bSecretRead == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the APNs authentication key environment variable is not set", config._keyEnvironment } );
-                settings._keyID  = config._keyID;
-                settings._teamID = config._teamID;
-                settings._topic  = config._topic;
+                settings._keyID             = config._keyID;
+                settings._teamID            = config._teamID;
+                settings._topic             = config._topic;
+                settings._tokenRefreshMinMs = config._tokenRefreshMinSeconds * constant::time::kMillisecondsPerSecond;
                 if ( config._sendBaseURL.empty() == false )
                     settings._baseURL = config._sendBaseURL;
                 vector<uint8>        probeSignature;
@@ -128,12 +133,16 @@ namespace sw
                 return unexpected( Error{ ErrorKind::InvalidArgument, "push provider 'fcm' needs serviceAccountEnvironment" } );
             return {};
         }
-        outConfig._keyEnvironment   = Internal::readText( entry, "keyEnvironment" );
-        outConfig._keyID            = Internal::readText( entry, "keyId" );
-        outConfig._teamID           = Internal::readText( entry, "teamId" );
-        outConfig._topic            = Internal::readText( entry, "topic" );
-        const bool bKeyMissing      = outConfig._keyEnvironment.empty() || outConfig._keyID.empty();
-        const bool bIdentityMissing = outConfig._teamID.empty() || outConfig._topic.empty();
+        outConfig._keyEnvironment               = Internal::readText( entry, "keyEnvironment" );
+        outConfig._keyID                        = Internal::readText( entry, "keyId" );
+        outConfig._teamID                       = Internal::readText( entry, "teamId" );
+        outConfig._topic                        = Internal::readText( entry, "topic" );
+        const optional<int64> refreshMinSeconds = entry.get( "tokenRefreshMinSeconds" ).read<int64>();
+        if ( refreshMinSeconds.has_value() == false || *refreshMinSeconds < Internal::kTokenRefreshFloorSeconds || *refreshMinSeconds > Internal::kTokenRefreshCeilingSeconds )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "push provider 'apns' needs tokenRefreshMinSeconds in [1200, 3600] (APNs refuses refreshes more often than every 20 minutes)" } );
+        outConfig._tokenRefreshMinSeconds = *refreshMinSeconds;
+        const bool bKeyMissing            = outConfig._keyEnvironment.empty() || outConfig._keyID.empty();
+        const bool bIdentityMissing       = outConfig._teamID.empty() || outConfig._topic.empty();
         if ( bKeyMissing || bIdentityMissing )
             return unexpected( Error{ ErrorKind::InvalidArgument, "push provider 'apns' needs keyEnvironment, keyId, teamId and topic" } );
         return {};

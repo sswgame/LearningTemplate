@@ -64,6 +64,13 @@ namespace sw
         _bDirty        = SW_TRUE;
     }
 
+    void ServerRegistration::confirmSeats( int32 seatCount, int64 reservationTTLMs )
+    {
+        if ( _pRouter == nullptr || seatCount <= 0 )
+            return;
+        _pRouter->submit( EphemeralRequest::makeIncrement( ServerRecord::makeSeatKey( _status._descriptor._serverID ), -static_cast<int64>( seatCount ), reservationTTLMs ) );
+    }
+
     void ServerRegistration::setLoad( int32 load )
     {
         if ( _status._load == load )

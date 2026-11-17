@@ -86,7 +86,10 @@ namespace sw
         bool operator[]( const uint32 bitPosition ) const
         {
             if ( bitPosition >= _bitCount )
+            {
                 reportOutOfRange( bitPosition, _bitCount );
+                return false; // 단언은 배포본에서 로그만 남기고 이어진다 — 블록 밖을 읽지 않는다
+            }
             return ( _listBlock[getBlockIndex( bitPosition )] & bitMask( bitPosition ) ) != 0;
         }
 
@@ -103,7 +106,10 @@ namespace sw
         DynamicBitset& set( const uint32 bitPosition, const bool value = true )
         {
             if ( bitPosition >= _bitCount )
+            {
                 reportOutOfRange( bitPosition, _bitCount );
+                return *this; // 단언은 배포본에서 로그만 남기고 이어진다 — 힙의 남의 메모리 · 쓰지 않는 꼬리 비트를 건드리지 않는다
+            }
             BlockType&      block = _listBlock[getBlockIndex( bitPosition )];
             const BlockType mask  = bitMask( bitPosition );
             block                 = value ? ( block | mask ) : ( block & ~mask );
@@ -128,7 +134,10 @@ namespace sw
         DynamicBitset& flip( const uint32 bitPosition )
         {
             if ( bitPosition >= _bitCount )
+            {
                 reportOutOfRange( bitPosition, _bitCount );
+                return *this;
+            }
             _listBlock[getBlockIndex( bitPosition )] ^= bitMask( bitPosition );
             return *this;
         }

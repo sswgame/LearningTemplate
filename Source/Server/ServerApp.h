@@ -32,6 +32,8 @@
 #include "Engine/Server/ServerObservability.h"
 #include "Engine/Server/ServerServiceRegistry.h"
 
+#include "ModuleAPI/Service/IServerKitLocator.h"
+
 #include "ModuleManager/Host/HostLaunch.h"
 #include "ModuleManager/Host/ServerDebugControl.h"
 
@@ -42,6 +44,24 @@ namespace sw
     struct ServerConfig;
 
     class ServerServiceManager;
+
+    /**
+     * @class ServerKitLocator
+     * @brief 호스트가 소유한 키트 창구(`ServerKitDirectory`, Engine)를 게임 모듈이 보는 형식(`IServerKitLocator`, ModuleAPI)으로 비춥니다 — 엔진은 ModuleAPI 를 보지 않는다.
+     */
+    class ServerKitLocator final : public IServerKitLocator
+    {
+    public:
+        explicit ServerKitLocator( const ServerKitDirectory& directory )
+            : _directory{ directory }
+        {
+        }
+
+        const ISubsystemLocator* findKitScope() const override { return _directory.findKitScope(); }
+
+    private:
+        const ServerKitDirectory& _directory;
+    };
 
     /**
      * @class ServerApp
@@ -124,7 +144,9 @@ namespace sw
         unique_ptr<ServerServiceManager> _serverServices;       ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
         Subscription                     _reloadStopsServices;  ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
         string                           _serverConfigPath;     ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
-        ServerServiceContext             _serverServiceContext; ///< 서버 서비스가 `initialize` 로 받는 서버 문맥(게임 쪽에는 `_pServerConfig` 만 호스트 범위에 건다)
+        ServerServiceContext             _serverServiceContext; ///< 서버 서비스가 `initialize` 로 받는 서버 문맥(게임 쪽에는 `_pServerConfig` 와 키트 창구만 호스트 범위에 건다)
+        ServerKitDirectory               _kitDirectory;         ///< 서버 키트 창구. 온라인 조립이 공개 · 거둔다(`ServerServiceContext::_pKitDirectory`)
+        ServerKitLocator                 _kitLocator;           ///< `_kitDirectory` 를 `IServerKitLocator` 로 호스트 범위에 걸고 게임 모듈 범위가 찾는다
         const ServerConfig*              _pServerConfig;        // ConfigManager 가 소유한다
         int64                            _drainDeadlineMs;      ///< 드레인 기한(단조 밀리초)
         uint64                           _tickCount;

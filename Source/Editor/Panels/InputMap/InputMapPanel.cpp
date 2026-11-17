@@ -126,7 +126,7 @@ namespace sw::editor
 
     InputMapPanel::InputMapPanel()
         : EditorDocumentPanel( EditorAssetType{ EditorAssetTypeIDs::kData }, true ) // 닫힌 채 시작하고(기반이 닫힌 채 만든다 — 열린 채면 떠 있는 창이 화면 가운데를 덮는다), 열면 포커스가 없어도 처음 문서를 읽는다
-        , _document{}
+        , _document{ getDocumentEditRecorder() }
         , _newActionName{ "" }
         , _newLayerName{ "" }
         , _arrActionFilter{}
@@ -1109,12 +1109,14 @@ namespace sw::editor
         return _document.reload() ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
     }
 
-    void InputMapPanel::syncDocumentDirty()
+    string InputMapPanel::captureDocumentText() const
     {
-        if ( _document.isDirty() )
-            markDocumentDirty();
-        else
-            clearDocumentDirty();
+        return _document.captureText();
+    }
+
+    void InputMapPanel::applyDocumentText( string_view text )
+    {
+        (void)_document.applyText( text ); // 읽지 못하면 모델이 파일에서 다시 읽고 이유를 남겼다
     }
 
     bool InputMapPanel::saveDocument()

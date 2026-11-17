@@ -129,6 +129,11 @@ namespace sw
             uint8                       _bRebuildBack{ SW_FALSE }; ///< 넘긴 일이 뒤 버퍼를 새 셀로 다시 짓는다
 
             bool needsGrid() const { return _userCount >= _pDesc->_minUserCount && _cellSize > 0.0f; }
+            /**
+             * @brief 지금 셀 크기로 빈 그리드를 만듭니다. 1 이하(작은 항목)는 그리드 기본 셀로 짓는다 — 그리드가 예전에 말없이 하던 바꾸기를 여기로 드러냈다.
+             * @details 작은 셀은 질의마다 훑는 셀이 늘어 바꾸기 전에 장면 질의 비용을 재야 한다. `_arrBuiltCell` 은 받은 값 그대로라 다시 짓는 판정은 같다.
+             */
+            SpatialHashGrid2D makeGrid() const { return SpatialHashGrid2D{ _cellSize > 1.0f ? _cellSize : SpatialHashGrid2D::kDefaultCellSize }; }
         };
         /** @brief 뒤 버퍼에 고쳐 넣을 것 하나입니다. */
         struct Change

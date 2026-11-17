@@ -99,6 +99,7 @@ namespace sw::editor
         , _bSelectPending{ SW_FALSE }
         , _bGridEdited{ SW_FALSE }
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() );        // 문서 편집 알림은 모델이 낸다(감사 E-16)
         _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
         _nodeGraph.setAutoLayout( true );                                    // 노드 자리는 트리 배치(layoutTree)가 정한다 — 정렬 메뉴를 감춘다(언리얼 BT 에디터도 자동 배치)
     }
@@ -253,13 +254,13 @@ namespace sw::editor
                 if ( bHasSelection )
                 {
                     if ( bMoveUp && _model.moveChild( _selectedID, -1 ) )
-                        markStructureChanged( "Move Behavior Node" );
+                        markStructureChanged();
                     if ( bMoveDown && _model.moveChild( _selectedID, 1 ) )
-                        markStructureChanged( "Move Behavior Node" );
+                        markStructureChanged();
                     if ( bDelete && _model.removeNode( _selectedID ) )
                     {
                         _selectedID = -1;
-                        markStructureChanged( "Delete Behavior Node" );
+                        markStructureChanged();
                     }
                 }
                 ImGui::SameLine();
@@ -418,7 +419,7 @@ namespace sw::editor
             const int32 parentID = BehaviorTreePanelInternal::decodeNode( fromPin );
             const int32 childID  = BehaviorTreePanelInternal::decodeNode( toPin );
             if ( _model.reparent( childID, parentID ) )
-                markStructureChanged( "Reparent Behavior Node" );
+                markStructureChanged();
             else
                 _statusText = "That link is not allowed (the root cannot move; a leaf or a full decorator cannot take a child; no loops)";
         }
@@ -447,12 +448,12 @@ namespace sw::editor
             if ( _model.removeNode( nodeID ) )
             {
                 _selectedID = -1;
-                markStructureChanged( "Delete Behavior Node" );
+                markStructureChanged();
             }
         }
     }
 
-    void BehaviorTreePanel::attachPastedSubtree( const expected<int32>& newID, const utf8* pLabel )
+    void BehaviorTreePanel::attachPastedSubtree( const expected<int32>& newID )
     {
         if ( newID.has_value() == false )
         {
@@ -461,7 +462,7 @@ namespace sw::editor
         }
         _selectedID     = *newID;
         _bSelectPending = SW_TRUE;
-        markStructureChanged( pLabel );
+        markStructureChanged();
     }
 
     void BehaviorTreePanel::handleEditCommands()
@@ -494,7 +495,7 @@ namespace sw::editor
             duplicateID = targetID;
         if ( duplicateID >= 0 )
         {
-            attachPastedSubtree( _model.duplicateSubtree( duplicateID ), "Duplicate Behavior Subtree" );
+            attachPastedSubtree( _model.duplicateSubtree( duplicateID ) );
             return;
         }
         if ( command == EditorGraphEditCommand::Paste )
@@ -508,7 +509,7 @@ namespace sw::editor
                 _statusText = "Select the parent node first";
                 return;
             }
-            attachPastedSubtree( _model.pasteSubtree( parentID, text, -1 ), "Paste Behavior Subtree" );
+            attachPastedSubtree( _model.pasteSubtree( parentID, text, -1 ) );
             return;
         }
         if ( ( command != EditorGraphEditCommand::Copy && command != EditorGraphEditCommand::Cut ) || _model.find( targetID ) == nullptr )
@@ -538,14 +539,14 @@ namespace sw::editor
         }
         _selectedID     = *id;
         _bSelectPending = SW_TRUE;
-        markStructureChanged( "Add Behavior Node" );
+        markStructureChanged();
     }
 
-    void BehaviorTreePanel::markStructureChanged( const utf8* pLabel )
+    void BehaviorTreePanel::markStructureChanged()
     {
+        // 알림 · 되돌리기 이름은 연산을 한 모델이 냈다(감사 E-16) — 창은 배치와 상태 줄만 맞춘다
         _bLayoutPending = SW_TRUE;
         _statusText.clear();
-        notifyDocumentEdited( pLabel );
     }
 
     float32 BehaviorTreePanel::layoutNode( int32 id, uint32 depth, float32& inoutNextRow )
@@ -649,11 +650,16 @@ namespace sw::editor
     {
         using Internal = BehaviorTreePanelInternal;
         ImGui::TextColored( Internal::getTypeColor( node._type ), "%s", BehaviorTreeNames::toString( node._type ) );
-        bool bEdited = false;
+        // 칸은 사본을 고치고 바뀌면 모델 연산이 쓴다 — 되돌리기 이름 · 알림은 모델이 정한다(감사 E-16)
+        bool   bEdited = false;
+        string name    = node._name;
         ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Name" ) );
-        bEdited = EditorWidgets::drawTextField( "##behaviorTree.name", node._name, -1.0f ) || bEdited;
+        if ( EditorWidgets::drawTextField( "##behaviorTree.name", name, -1.0f ) )
+            bEdited = _model.setNodeName( node._id, name ) || bEdited;
+        string inheritID = node._inheritID;
         ImGui::TextUnformatted( "Id" );
-        bEdited = EditorWidgets::drawTextField( "##behaviorTree.id", node._inheritID, -1.0f ) || bEdited; // 자식 트리가 이 노드를 짚는 열쇠
+        if ( EditorWidgets::drawTextField( "##behaviorTree.id", inheritID, -1.0f ) ) // 자식 트리가 이 노드를 짚는 열쇠
+            bEdited = _model.setNodeInheritID( node._id, inheritID ) || bEdited;
 
         // 칸은 스키마와 등록에서 온다 — 칸이나 동작을 더해도 이 패널을 고치지 않는다.
         _bGridEdited                      = SW_FALSE;
@@ -668,10 +674,7 @@ namespace sw::editor
                 for ( const string& name : _listTaskName )
                 {
                     if ( ImGui::Selectable( name.c_str(), name == pTask->_task ) )
-                    {
-                        BehaviorTreeXML::selectTask( node, name );
-                        bEdited = true;
-                    }
+                        bEdited = _model.selectNodeTask( node._id, name ) || bEdited;
                 }
                 ImGui::EndCombo();
             }
@@ -692,12 +695,10 @@ namespace sw::editor
             target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &BehaviorTreePanel::onGridEdited, this );
             _grid.drawProperties( target, nullptr, {} );
         }
-        bEdited = bEdited || _bGridEdited != SW_FALSE;
-        if ( bEdited )
-        {
+        if ( _bGridEdited != SW_FALSE )
+            _model.commitNodeParams( node._id ); // 연속 편집은 상호작용 구간 하나라 한 번의 되돌리기다
+        if ( bEdited || _bGridEdited != SW_FALSE )
             _statusText.clear();
-            notifyDocumentEdited( "Edit Behavior Node" ); // 연속 편집은 상호작용 구간 하나라 한 번의 되돌리기다
-        }
     }
 
     void BehaviorTreePanel::onGridEdited( const PropertyInfo& /*prop*/ )

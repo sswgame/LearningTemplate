@@ -43,6 +43,13 @@ namespace sw
             return next != 0 ? next : 1u;
         }
 
+        /**
+         * @brief @p generation 이 @p mask 안의 마지막 세대라 다음 세대가 처음(1)으로 돌아가면 true 입니다.
+         * @details 돌아간 칸을 다시 쓰면 한 바퀴 전의 옛 핸들이 새 값을 가리킨다(ABA). 핸들 표는 이런 칸을 빈 칸 목록에 돌려놓지 않고 은퇴시킨다 —
+         *          빈 칸은 마지막에 놓은 것부터 다시 쓰므로(LIFO) 한 칸에 재사용이 몰려 31 비트 세대도 빠른 반복이면 몇십 분 만에 돈다.
+         */
+        static constexpr bool isLastGeneration( uint32 generation, uint32 mask = kAllGenerationBits ) noexcept { return ( ( generation + 1u ) & mask ) == 0; }
+
         /** @brief packed uint64 에서 핸들을 복원합니다. */
         static constexpr SlotHandle fromPacked( uint64 packed ) noexcept { return make( static_cast<uint32>( packed ), static_cast<uint32>( packed >> 32 ) ); }
 

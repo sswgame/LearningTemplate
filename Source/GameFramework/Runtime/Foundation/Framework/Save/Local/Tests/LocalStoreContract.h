@@ -180,7 +180,8 @@ namespace sw::test
             const vector<uint8> body = makeText( "gold=100" );
             SW_EXPECT_TRUE( std::search( envelopeBytes.begin(), envelopeBytes.end(), body.begin(), body.end() ) != envelopeBytes.end() ); // 내용은 보인다
             SW_EXPECT_TRUE( read( fixture.getStore(), "profile" )._bytes == body );
-            envelopeBytes[LocalSealContext::kHeaderSize + 5] ^= 0x01; // "gold=1" → "gold=0"
+            envelopeBytes[LocalSealContext::kHeaderSize + 5] ^= 0x01;                               // "gold=1" → "gold=0"
+            SW_REQUIRE_TRUE( fixture.getStorage().eraseSlot( "profile" ) == LocalStoreResult::Ok ); // 직전 세대(파일 바닥의 `.prev`)를 남기지 않고 바꾼다 — 남으면 그것으로 돌아가 읽는다
             SW_REQUIRE_TRUE( fixture.getStorage().writeSlot( "profile", envelopeBytes ) == LocalStoreResult::Ok );
             SW_EXPECT_TRUE( read( fixture.getStore(), "profile" )._result == LocalStoreResult::Corrupt );
         }
@@ -202,7 +203,8 @@ namespace sw::test
             fixture.getKey()._fillByte = 0x11; // 다른 장치의 키
             SW_EXPECT_TRUE( read( fixture.getStore(), "account/link" )._result == LocalStoreResult::WrongKey );
             fixture.getKey()._fillByte = 0x5A;
-            envelopeBytes.back() ^= 0x80; // 태그
+            envelopeBytes.back() ^= 0x80;                                                                // 태그
+            SW_REQUIRE_TRUE( fixture.getStorage().eraseSlot( "account/link" ) == LocalStoreResult::Ok ); // 직전 세대를 남기지 않는다(위와 같다)
             SW_REQUIRE_TRUE( fixture.getStorage().writeSlot( "account/link", envelopeBytes ) == LocalStoreResult::Ok );
             SW_EXPECT_TRUE( read( fixture.getStore(), "account/link" )._result == LocalStoreResult::Corrupt );
         }
@@ -214,6 +216,7 @@ namespace sw::test
             vector<uint8> envelopeBytes;
             SW_REQUIRE_TRUE( fixture.getStorage().readSlot( "plain", envelopeBytes ) == LocalStoreResult::Ok );
             envelopeBytes[LocalSealContext::kHeaderSize] ^= 0x20;
+            SW_REQUIRE_TRUE( fixture.getStorage().eraseSlot( "plain" ) == LocalStoreResult::Ok ); // 직전 세대를 남기지 않는다(위와 같다)
             SW_REQUIRE_TRUE( fixture.getStorage().writeSlot( "plain", envelopeBytes ) == LocalStoreResult::Ok );
             SW_EXPECT_TRUE( read( fixture.getStore(), "plain" )._result == LocalStoreResult::Corrupt );
             envelopeBytes.resize( envelopeBytes.size() / 2 ); // 반쪽 파일

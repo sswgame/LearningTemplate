@@ -301,7 +301,7 @@ namespace
             StringBuilder<constant::buffer::kMax256> textBuilder;
             textBuilder.appendFormat( R"({"providers":[
                 {"kind":"fcm","serviceAccountEnvironment":"%#","tokenUrl":"%#/token","sendUrl":"%#"},
-                {"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}
+                {"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","tokenRefreshMinSeconds":1200,"sendUrl":"https://localhost:%#"}
             ]})",
                                       kFCMEnv, fcmURL, fcmURL, kAPNSEnv, kTopic, _apns.getPort() );
             const string text{ textBuilder.view() };
@@ -415,6 +415,40 @@ SW_TEST_CASE_F( PushEndToEndTest, APNSGoneRemovesTheDevice )
     SW_EXPECT_EQUAL( size_t( 1 ), _apns._listRequest.size() );
 }
 
+/**
+ * @brief [PushEndToEndTest] APNs 403 뒤에는 최소 간격(`tokenRefreshMinSeconds`)이 지나기 전에 다시 서명하지 않는다 — 다음 배달은 보내지 않고 기다림(RateLimited)으로 남는다.
+ *        예전에는 403 마다 곧바로 다시 서명해 APNs 가 잦은 갱신을 429 로 막았다(감사 O-18)
+ */
+SW_TEST_CASE_F( PushEndToEndTest, APNSForbiddenWaitsBeforeSigningAgain )
+{
+    {
+        const expected<void> assembled = assemble();
+        SW_REQUIRE_TRUE_MSG( assembled.has_value(), assembled.has_value() ? string_view{} : assembled.error().message() );
+    }
+    SW_EXPECT_LOG( "ApnsPushProvider.APNsRejectedProviderToken" ); // 403 거절과 그 배달의 버림이 이 테스트가 보려는 동작이다
+    SW_EXPECT_LOG( "PushNotificationDispatcher.PushDispatcherProviderRejectedNotification" );
+    addDevice( "apns", kAPNSToken );
+    _apns._status = 403;
+    notifyAndWait();
+    SW_EXPECT_EQUAL( uint64( 1 ), _dispatcher.getStats()._droppedCount );
+    SW_REQUIRE_EQUAL( size_t( 1 ), _apns._listRequest.size() );
+
+    _apns._status = 200;
+    PushNotificationMessage message;
+    message._titleKey = "title.key";
+    SW_EXPECT_TRUE( _dispatcher.notifyAccount( kAccount, message, getNow() ) );
+    SW_EXPECT_TRUE( test::pollUntil( [this]()
+    { poll(); }, [this]()
+    { return _dispatcher.getPendingJobCount() == 0 && _dispatcher.getInFlightCount() == 1; } ) );
+    for ( int32 index = 0; index < 8; ++index ) // 제공자 답(RateLimited)이 발송기에 닿을 틈
+    {
+        poll();
+    }
+    SW_EXPECT_EQUAL( size_t( 1 ), _apns._listRequest.size() ); // 다시 서명하지 않아 보내지도 않았다
+    SW_EXPECT_EQUAL( 1, _dispatcher.getInFlightCount() );      // 버리지 않고 간격 뒤에 다시 보낸다
+    SW_EXPECT_EQUAL( uint64( 0 ), _dispatcher.getStats()._deliveredCount );
+}
+
 /** @brief [PushEndToEndTest] 비밀 환경 변수가 없으면 가짜로 대신 뜨지 않고 묶음 전체가 실패한다 */
 SW_TEST_CASE_F( PushEndToEndTest, BadSettingsStopAssembly )
 {
@@ -437,7 +471,7 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     SW_REQUIRE_TRUE( game::getSubsystem<INetSecurityProvider>().createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, apnsKey, publicKey ) );
     const test::ScopedEnvironmentVariable    apnsEnv{ kAPNSEnv, apnsKey };
     StringBuilder<constant::buffer::kMax256> textBuilder2;
-    textBuilder2.appendFormat( R"({"providers":[{"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}]})", kAPNSEnv, kTopic, apns.getPort() );
+    textBuilder2.appendFormat( R"({"providers":[{"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","tokenRefreshMinSeconds":1200,"sendUrl":"https://localhost:%#"}]})", kAPNSEnv, kTopic, apns.getPort() );
     const string providersFile = test::writeScratchText( "kit-push.json", string( textBuilder2.view() ) );
 
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";

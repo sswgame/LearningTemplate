@@ -17,6 +17,7 @@ namespace
         int32                    _actionCount{ 0 };
         int32                    _chainedCount{ 0 };
         float32                  _alphaAtAction{ -1.0f };
+        int32                    _chainedAcceptedCount{ 0 };
 
         void onAction()
         {
@@ -29,7 +30,7 @@ namespace
         void onActionStartingAnother()
         {
             ++_actionCount;
-            _pManager->beginTransition( Delegate<void()>::create<&TransitionProbe::onChainedAction>( this ), 1.0f, 1.0f );
+            _chainedAcceptedCount += _pManager->beginTransition( Delegate<void()>::create<&TransitionProbe::onChainedAction>( this ), 1.0f, 1.0f ).has_value() ? 1 : 0;
         }
     };
 } // namespace
@@ -87,7 +88,7 @@ SW_TEST_CASE( ScreenTransitionTest, ActionRunsOnceAtBlack )
     probe._pManager = &manager;
     SW_EXPECT_FALSE( manager.isBusy() );
 
-    manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f );
+    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f ).has_value() );
     SW_EXPECT_TRUE( manager.isBusy() );
     SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::FadeOut );
     manager.update( 0.5f );
@@ -113,9 +114,10 @@ SW_TEST_CASE( ScreenTransitionTest, ActionMayStartAnotherTransition )
     ScreenTransitionManager manager;
     TransitionProbe         probe;
     probe._pManager = &manager;
-    manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onActionStartingAnother>( &probe ), 1.0f, 1.0f );
+    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onActionStartingAnother>( &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 1.0f );
     SW_EXPECT_EQUAL( 1, probe._actionCount );
+    SW_EXPECT_EQUAL( 1, probe._chainedAcceptedCount );
     SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::FadeOut );
     SW_EXPECT_NEAR( 1.0f, manager.fade().getOverlayAlpha(), kTolerance ); // 번쩍이지 않는다
 
@@ -130,11 +132,31 @@ SW_TEST_CASE( ScreenTransitionTest, ResetDropsPendingAction )
     ScreenTransitionManager manager;
     TransitionProbe         probe;
     probe._pManager = &manager;
-    manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f );
+    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 0.5f );
     manager.reset();
     SW_EXPECT_FALSE( manager.isBusy() );
     manager.update( 5.0f );
     SW_EXPECT_EQUAL( 0, probe._actionCount );
     SW_EXPECT_NEAR( 0.0f, manager.fade().getOverlayAlpha(), kTolerance );
+}
+
+/** @brief [ScreenTransitionTest] 어두워지는 중에 건 새 전환은 거절되고 앞 액션은 까만 화면에서 그대로 불린다 — 받으면 앞 액션을 덮어 잃는다(G-13) */
+SW_TEST_CASE( ScreenTransitionTest, SecondTransitionDuringFadeOutDoesNotDropFirstAction )
+{
+    ScreenTransitionManager manager;
+    TransitionProbe         probe;
+    probe._pManager = &manager;
+    SW_REQUIRE_TRUE( manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onAction>( &probe ), 1.0f, 1.0f ).has_value() );
+    manager.update( 0.5f );
+
+    const expected<void> second = manager.beginTransition( Delegate<void()>::create<&TransitionProbe::onChainedAction>( &probe ), 1.0f, 1.0f );
+    SW_REQUIRE_FALSE( second.has_value() );
+    SW_EXPECT_TRUE( second.error().kind() == ErrorKind::AlreadyExists );
+
+    manager.update( 0.5f );
+    SW_EXPECT_EQUAL( 1, probe._actionCount );
+    SW_EXPECT_EQUAL( 0, probe._chainedCount );
+    manager.update( 1.01f );
+    SW_EXPECT_FALSE( manager.isBusy() );
 }

@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -181,7 +182,8 @@ namespace sw
 
     void ShaderBindingLayout::computeBindPlan()
     {
-        _engineCbSize = 0;
+        _engineCbSize       = 0;
+        _engineCbLayoutHash = 0;
         _listEngineCbMember.clear();
         _listResourceBindOp.clear();
 
@@ -209,9 +211,13 @@ namespace sw
                     if ( member._size == sizeof( uint32 ) && member._name.find( "Index" ) != string::npos )
                         planned._autoIndexKey = hashed_string( canonicalResourceView( static_cast<string_view>( member._name ), true ) );
 
+                    _engineCbLayoutHash = HashUtil::combine( _engineCbLayoutHash, static_cast<uint64>( planned._valueKey.getHash() ) );
+                    _engineCbLayoutHash = HashUtil::combine( _engineCbLayoutHash, static_cast<uint64>( planned._autoIndexKey.getHash() ) );
+                    _engineCbLayoutHash = HashUtil::combine( _engineCbLayoutHash, ( static_cast<uint64>( planned._offset ) << 32 ) | planned._size );
                     _listEngineCbMember.push_back( planned );
                 }
-                _engineCbSize = MathUtil::max( _engineCbSize, slotEnd );
+                _engineCbSize       = MathUtil::max( _engineCbSize, slotEnd );
+                _engineCbLayoutHash = HashUtil::combine( _engineCbLayoutHash, _engineCbSize );
                 continue;
             }
 

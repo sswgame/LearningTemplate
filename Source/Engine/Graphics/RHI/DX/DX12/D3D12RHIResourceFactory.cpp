@@ -90,11 +90,6 @@ namespace sw
         _pDevice->_constantBufferMirror.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
-
-        // 힙의 CBV 는 여기서 갱신하지 않는다. 주의: 드로우마다 **레지스트리 전체를 훑어** CreateConstantBufferView 를
-        // 다시 부르면 등록 수 N(수백) · 드로우 D 에 O(N·D) 라 드로우 경로의 지배적 비용이 된다.
-        // CBV 주소는 **프레임 링 슬롯**에만 의존하므로 프레임당 한 번이면 충분하다.
-        // D3D12RHIDevice::refreshConstantBufferViews 가 beginFrame 에서 한 번에 한다.
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
@@ -411,19 +406,8 @@ namespace sw
         {
             ID3D12GraphicsCommandList* pList = job._list.Get();
 
-            // 추적 상태에서 출발해 같은 상태로 돌아간다(getTrackedTextureState).
-            const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
-
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = pTexture;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-            {
-                barrier.Transition.StateBefore = stateBefore;
-                barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-                pList->ResourceBarrier( 1, &barrier );
-            }
+            // 추적 상태에서 출발해 같은 상태로 돌아간다(서브리소스마다 — recordTextureStateDetour).
+            _pDevice->recordTextureStateDetour( pList, texture, pTexture, D3D12_RESOURCE_STATE_COPY_DEST, true );
 
             for ( uint32 mip = 0; mip < mipCount; ++mip )
             {
@@ -439,12 +423,7 @@ namespace sw
                 pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
             }
 
-            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-            {
-                barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-                barrier.Transition.StateAfter  = stateBefore;
-                pList->ResourceBarrier( 1, &barrier );
-            }
+            _pDevice->recordTextureStateDetour( pList, texture, pTexture, D3D12_RESOURCE_STATE_COPY_DEST, false );
             // 기록이 끝났다. 즉시 큐에 내고 전송 펜스를 올린다(기다리지 않는다). 시리얼은 큐 제출과 같은 락 안에서 매겨진다.
         },
             [this]( D3D12RHIDevice::D3D12TransferJob& job )
@@ -494,17 +473,7 @@ namespace sw
             ID3D12GraphicsCommandList* pList = job._list.Get();
 
             // 추적 상태에서 출발해 같은 상태로 돌아간다(전체 업로드와 같다).
-            const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
-            D3D12_RESOURCE_BARRIER      barrier{};
-            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = pTexture;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-            {
-                barrier.Transition.StateBefore = stateBefore;
-                barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-                pList->ResourceBarrier( 1, &barrier );
-            }
+            _pDevice->recordTextureStateDetour( pList, texture, pTexture, D3D12_RESOURCE_STATE_COPY_DEST, true );
 
             D3D12_TEXTURE_COPY_LOCATION dst{};
             dst.pResource        = pTexture;
@@ -522,12 +491,7 @@ namespace sw
             src.PlacedFootprint.Footprint.RowPitch = rowPitch;
             pList->CopyTextureRegion( &dst, desc._x, desc._y, 0, &src, nullptr );
 
-            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-            {
-                barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-                barrier.Transition.StateAfter  = stateBefore;
-                pList->ResourceBarrier( 1, &barrier );
-            }
+            _pDevice->recordTextureStateDetour( pList, texture, pTexture, D3D12_RESOURCE_STATE_COPY_DEST, false );
         },
             [this]( D3D12RHIDevice::D3D12TransferJob& job )
         { return _pDevice->submitTransferJob( std::move( job ), "submitTextureRegionUpload" ); },
@@ -609,7 +573,7 @@ namespace sw
     {
         // 오프스크린 레코드는 요청 포맷을 그대로 들고 있다(깊이는 리소스가 typeless 라 GetDesc 로는 못 되돌린다).
         D3D12RHIDevice::OffscreenTargetView view{};
-        if ( _pDevice->findOffscreenTargetView( texture, 0, view ) )
+        if ( _pDevice->findOffscreenTargetView( texture, 0, 0, view ) )
         {
             if ( view._bHasDSV != SW_FALSE )
                 return RHIFormat::D24_UNORM_S8_UINT;
@@ -677,18 +641,7 @@ namespace sw
         {
             ID3D12GraphicsCommandList* pList = job._list.Get();
 
-            const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
-
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = pTexture;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
-            {
-                barrier.Transition.StateBefore = stateBefore;
-                barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
-                pList->ResourceBarrier( 1, &barrier );
-            }
+            _pDevice->recordTextureStateDetour( pList, texture, pTexture, D3D12_RESOURCE_STATE_COPY_SOURCE, true );
 
             D3D12_TEXTURE_COPY_LOCATION src{};
             src.pResource        = pTexture;
@@ -700,12 +653,7 @@ namespace sw
             dst.PlacedFootprint = footprint;
             pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
 
-            if ( stateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE )
-            {
-                barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-                barrier.Transition.StateAfter  = stateBefore;
-                pList->ResourceBarrier( 1, &barrier );
-            }
+            _pDevice->recordTextureStateDetour( pList, texture, pTexture, D3D12_RESOURCE_STATE_COPY_SOURCE, false );
         }, [this]( D3D12RHIDevice::D3D12TransferJob& job )
         { return _pDevice->submitTransferJob( std::move( job ), "submitTextureReadback" ); }, [&]( uint64 serial )
         {
@@ -1003,92 +951,102 @@ namespace sw
         _pDevice->requireRegistryMutableNow( "createTexture2D" );
 
         // RTV · DSV 칸 발급기만 잠근다. 오프스크린 레코드는 핸들 테이블 칸에 들어가고, 핸들을 돌려주기 전이라 기록 워커가 그 칸을 아직 모른다.
-        ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
-
-        for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
+        // 칸은 쪽 목록이라 상한이 없다. 쪽을 만들지 못하면(힙 메모리 부족) 뷰 없는 텍스처를 유효 핸들로 내보내지 않고 생성 실패다(R-11 — 예전엔 128 · 64 칸을 넘으면 로그 뒤 뷰 없이 나갔다).
+        const uint32 mipLevels = desc._mipLevels > 0 ? desc._mipLevels : 1u;
+        record._mipLevels      = mipLevels;
+        bool bViewsCreated     = pNative != nullptr;
         {
-            uint32     rtvSlot{ 0 };
-            const bool bReused = _pDevice->_freeOffscreenRTV.tryPop( rtvSlot );
-            if ( bReused == false && _pDevice->_nextOffscreenRTVIndex < D3D12RHIDevice::kMaxOffscreenRTVs )
-                rtvSlot = _pDevice->_nextOffscreenRTVIndex++;
-            else if ( bReused == false )
+            ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
+            for ( uint32 viewIndex = 0; bViewsCreated && desc._bIsRenderTarget && viewIndex < mipLevels * desc._arraySize; ++viewIndex )
             {
-                // 고갈은 로그로 남긴다. 유효한 핸들이 돌아오는데 RTV 가 없으므로, 조용히 넘어가면
-                // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보인다.
-                rtvSlot = D3D12RHIDevice::kMaxOffscreenRTVs;
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenRTVDescriptorsExhausted", "Offscreen RTV descriptors exhausted (max %#) - this texture cannot be used as a render target.",
-                                 static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRTVs ) );
+                const uint32                mip   = viewIndex / desc._arraySize;
+                const uint32                slice = viewIndex % desc._arraySize;
+                uint32                      rtvSlot{ 0 };
+                D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle{};
+                if ( _pDevice->acquireOffscreenView( false, rtvSlot, rtvHandle ) == false )
+                {
+                    bViewsCreated = false;
+                    break;
+                }
+                D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+                rtvDesc.Format = colorFmt;
+                if ( bSliced )
+                {
+                    rtvDesc.ViewDimension                  = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+                    rtvDesc.Texture2DArray.MipSlice        = mip;
+                    rtvDesc.Texture2DArray.FirstArraySlice = slice;
+                    rtvDesc.Texture2DArray.ArraySize       = 1;
+                    rtvDesc.Texture2DArray.PlaneSlice      = 0;
+                }
+                else
+                {
+                    rtvDesc.ViewDimension        = D3D12_RTV_DIMENSION_TEXTURE2D;
+                    rtvDesc.Texture2D.MipSlice   = mip;
+                    rtvDesc.Texture2D.PlaneSlice = 0;
+                }
+                _pDevice->_device->CreateRenderTargetView( pNative, &rtvDesc, rtvHandle );
+                if ( viewIndex == 0 )
+                {
+                    record._rtvIndex  = rtvSlot;
+                    record._rtvHandle = rtvHandle;
+                    record._bHasRTV   = SW_TRUE;
+                }
+                else
+                {
+                    record._listExtraRTVIndex.push_back( rtvSlot );
+                    record._listExtraRTVHandle.push_back( rtvHandle );
+                }
             }
-            if ( rtvSlot >= D3D12RHIDevice::kMaxOffscreenRTVs )
-                break;
-            const uint32                  rtvIndex  = _pDevice->_swapChain.getBufferCount() + rtvSlot;
-            D3D12_CPU_DESCRIPTOR_HANDLE   rtvHandle = _pDevice->getOffscreenRTVHandle( rtvIndex );
-            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-            rtvDesc.Format = colorFmt;
-            if ( bSliced )
+
+            for ( uint32 viewIndex = 0; bViewsCreated && bDepth && viewIndex < mipLevels * desc._arraySize; ++viewIndex )
             {
-                rtvDesc.ViewDimension                  = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-                rtvDesc.Texture2DArray.MipSlice        = 0;
-                rtvDesc.Texture2DArray.FirstArraySlice = slice;
-                rtvDesc.Texture2DArray.ArraySize       = 1;
-                rtvDesc.Texture2DArray.PlaneSlice      = 0;
+                const uint32                mip   = viewIndex / desc._arraySize;
+                const uint32                slice = viewIndex % desc._arraySize;
+                uint32                      dsvSlot{ 0 };
+                D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle{};
+                if ( _pDevice->acquireOffscreenView( true, dsvSlot, dsvHandle ) == false )
+                {
+                    bViewsCreated = false;
+                    break;
+                }
+                D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+                dsvDesc.Format = dsvFmt;
+                dsvDesc.Flags  = D3D12_DSV_FLAG_NONE;
+                if ( bSliced )
+                {
+                    dsvDesc.ViewDimension                  = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+                    dsvDesc.Texture2DArray.MipSlice        = mip;
+                    dsvDesc.Texture2DArray.FirstArraySlice = slice;
+                    dsvDesc.Texture2DArray.ArraySize       = 1;
+                }
+                else
+                {
+                    dsvDesc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
+                    dsvDesc.Texture2D.MipSlice = mip;
+                }
+                _pDevice->_device->CreateDepthStencilView( pNative, &dsvDesc, dsvHandle );
+                if ( viewIndex == 0 )
+                {
+                    record._dsvIndex  = dsvSlot;
+                    record._dsvHandle = dsvHandle;
+                    record._bHasDSV   = SW_TRUE;
+                }
+                else
+                {
+                    record._listExtraDSVIndex.push_back( dsvSlot );
+                    record._listExtraDSVHandle.push_back( dsvHandle );
+                }
             }
-            else
-            {
-                rtvDesc.ViewDimension        = D3D12_RTV_DIMENSION_TEXTURE2D;
-                rtvDesc.Texture2D.MipSlice   = 0;
-                rtvDesc.Texture2D.PlaneSlice = 0;
-            }
-            _pDevice->_device->CreateRenderTargetView( pNative, &rtvDesc, rtvHandle );
-            if ( slice == 0 )
-            {
-                record._rtvIndex  = rtvIndex;
-                record._rtvHandle = rtvHandle;
-                record._bHasRTV   = SW_TRUE;
-            }
-            else
-                record._listExtraRTVIndex.push_back( rtvIndex );
+
+            if ( bViewsCreated == false )
+                _pDevice->releaseOffscreenViews( record );
         }
-
-        for ( uint32 slice = 0; pNative != nullptr && bDepth && _pDevice->_dsvHeap != nullptr && slice < desc._arraySize; ++slice )
+        if ( bViewsCreated == false )
         {
-            uint32     dsvSlot{ 0 };
-            const bool bReused = _pDevice->_freeOffscreenDSV.tryPop( dsvSlot );
-            if ( bReused == false && _pDevice->_nextOffscreenDSVIndex < D3D12RHIDevice::kMaxOffscreenDSVs )
-                dsvSlot = _pDevice->_nextOffscreenDSVIndex++;
-            else if ( bReused == false )
-            {
-                dsvSlot = D3D12RHIDevice::kMaxOffscreenDSVs;
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenDSVDescriptorsExhausted", "Offscreen DSV descriptors exhausted (max %#) - this texture cannot be used as depth.",
-                                 static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDSVs ) );
-            }
-            if ( dsvSlot >= D3D12RHIDevice::kMaxOffscreenDSVs )
-                break;
-            const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = _pDevice->getOffscreenDSVHandle( dsvSlot );
-            D3D12_DEPTH_STENCIL_VIEW_DESC     dsvDesc{};
-            dsvDesc.Format = dsvFmt;
-            dsvDesc.Flags  = D3D12_DSV_FLAG_NONE;
-            if ( bSliced )
-            {
-                dsvDesc.ViewDimension                  = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-                dsvDesc.Texture2DArray.MipSlice        = 0;
-                dsvDesc.Texture2DArray.FirstArraySlice = slice;
-                dsvDesc.Texture2DArray.ArraySize       = 1;
-            }
-            else
-            {
-                dsvDesc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
-                dsvDesc.Texture2D.MipSlice = 0;
-            }
-            _pDevice->_device->CreateDepthStencilView( pNative, &dsvDesc, dsvHandle );
-            if ( slice == 0 )
-            {
-                record._dsvIndex  = dsvSlot;
-                record._dsvHandle = dsvHandle;
-                record._bHasDSV   = SW_TRUE;
-            }
-            else
-                record._listExtraDSVIndex.push_back( dsvSlot );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenViewPageFailed", "Could not create the RTV/DSV views of a %#x%# texture (%# slices) - texture creation fails", desc._width, desc._height,
+                             desc._arraySize );
+            destroyTexture( handle ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
+            return 0;
         }
 
         D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( handle );
@@ -1096,6 +1054,7 @@ namespace sw
             SW_FATAL( "D3D12: texture handle %# vanished while it was being created", handle );
         pTextureRecord->_offscreen  = std::move( record );
         pTextureRecord->_bOffscreen = SW_TRUE;
+        pTextureRecord->_state.initialize( static_cast<uint16>( mipLevels ), static_cast<uint16>( desc._arraySize ), D3D12_RESOURCE_STATE_COMMON );
         return handle;
     }
 
@@ -1109,21 +1068,8 @@ namespace sw
             return;
         if ( taken._bOffscreen != SW_FALSE )
         {
-            const D3D12RHIDevice::OffscreenTextureRecord& offscreen        = taken._offscreen;
-            const uint32                                  offscreenRTVBase = _pDevice->_swapChain.getBufferCount();
-            ScopedLock<mutex>                             offscreenLock{ _pDevice->_offscreenViewMutex };
-            if ( offscreen._bHasRTV != SW_FALSE && offscreen._rtvIndex >= offscreenRTVBase )
-                _pDevice->_freeOffscreenRTV.push( offscreen._rtvIndex - offscreenRTVBase );
-            if ( offscreen._bHasDSV != SW_FALSE )
-                _pDevice->_freeOffscreenDSV.push( offscreen._dsvIndex );
-            for ( const uint32 rtvIndex : offscreen._listExtraRTVIndex )
-            {
-                _pDevice->_freeOffscreenRTV.push( rtvIndex - offscreenRTVBase );
-            }
-            for ( const uint32 dsvIndex : offscreen._listExtraDSVIndex )
-            {
-                _pDevice->_freeOffscreenDSV.push( dsvIndex );
-            }
+            ScopedLock<mutex> offscreenLock{ _pDevice->_offscreenViewMutex };
+            _pDevice->releaseOffscreenViews( taken._offscreen );
         }
         Microsoft::WRL::ComPtr<ID3D12Resource> owned = std::move( taken._resource );
 
@@ -1276,35 +1222,19 @@ namespace sw
             return index;
         }
 
-        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
-        cbvDesc.BufferLocation = pResource->GetGPUVirtualAddress();
-
+        // 상수 버퍼는 루트 CBV 로만 건다(resolveBufferAddress 가 이번 링 슬롯 주소를 낸다). 힙에는 뷰를 만들지 않는다 — 셰이더는 힙에서 CBV 를 읽지 않고
+        // (b# 는 루트 서술자, 힙 테이블은 t# · u# 범위다), 예전엔 등록 때 두 개를 만들고 프레임마다 링 슬롯으로 다시 썼다(R-7). 번호는 바인딩 열쇠로만 쓴다.
         // 상수버퍼 맵 조회는 위에서 쥔 배타 락(`lock`) 안이다. 그 맵은 같은 `_bindlessMutex` 가 지킨다.
-        const auto sizeIt = _pDevice->_mapCbAlignedSize.find( buffer );
-        if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
+        if ( _pDevice->_mapCbAlignedSize.contains( buffer ) == false )
         {
-            cbvDesc.BufferLocation += static_cast<UINT64>( _pDevice->_frameRing.currentIndex() ) * sizeIt->second;
-            cbvDesc.SizeInBytes = sizeIt->second;
-        }
-        else
-        {
-            // 링이 아닌 버퍼: CBV 크기는 256 바이트로 정렬돼야 하고 리소스 폭을 넘으면 안 된다.
-            const UINT width = static_cast<UINT>( pResource->GetDesc().Width );
-            // 256 은 CBV 크기 정렬(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)이다. 텍스처 행 정렬
-            // (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)도 256 이지만 이름만 같은 별개 값이라 그 상수를 쓰지 않는다.
-            const UINT aligned  = MathUtil::align( width, 256u );
-            cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
-            if ( cbvDesc.SizeInBytes == 0 )
+            // 링이 아닌 버퍼: 루트 CBV 가 읽는 256 바이트보다 좁으면 상수 버퍼가 될 수 없다.
+            // 집은 인덱스를 돌려준다. 그냥 반환하면 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다(잠금은 쥐고 있다).
+            if ( pResource->GetDesc().Width < D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT )
             {
-                // 집은 인덱스를 돌려준다. 그냥 반환하면 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다.
-                // 아직 뷰를 만들지 않았으므로 펜스를 기다릴 것 없이 바로 프리리스트로 간다(잠금은 쥐고 있다).
                 _pDevice->_bindlessIndexAllocator.free( index );
                 return kInvalidDescriptorIndex;
             }
         }
-
-        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._cpu );
-        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._offline );
 
         writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
         return index;

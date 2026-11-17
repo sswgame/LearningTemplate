@@ -262,3 +262,49 @@ SW_TEST_CASE( PrefabOverridesTest, BrokenPartOverridesAreRefused )
     SW_EXPECT_FALSE( PrefabOverrides::collectPartOverrides( R"(<PrefabOverrides><Part path="Leg"/></PrefabOverrides>)", listPart ) );
     SW_EXPECT_TRUE( listPart.empty() );
 }
+
+// ---------------------------------------------------------------------- 고정 지역 id(감사 A-2)
+
+/**
+ * @brief [PrefabOverridesTest] 덮어쓰기는 컴포넌트의 고정 지역 id(`_localID`)를 따른다 — 프리팹에서 앞 형제를 지워도 같은 컴포넌트에 얹힌다
+ * @details 예전 키 `이름#n` 은 순번이라, 앞의 `Body` 를 지우면 `Body#1` 이 없어져 덮어쓰기가 버려지거나 다른 컴포넌트에 얹혔다(유니티 fileID · 언리얼 SCS 변수 GUID 자리).
+ */
+SW_TEST_CASE( PrefabOverridesTest, OverrideFollowsComponentWhenAnEarlierSiblingIsRemoved )
+{
+    const string base      = R"(<GameObject _schemaVersion="0" _name="Base">
+        <_listComponent>
+            <MeshComponent _componentName="Body" _localID="11" _mesh="body.mesh"/>
+            <MeshComponent _componentName="Body" _localID="22" _mesh="second.mesh"/>
+        </_listComponent>
+    </GameObject>)";
+    const string instance  = R"(<GameObject _schemaVersion="0" _name="Base">
+        <_listComponent>
+            <MeshComponent _componentName="Body" _localID="11" _mesh="body.mesh"/>
+            <MeshComponent _componentName="Body" _localID="22" _mesh="changed.mesh"/>
+        </_listComponent>
+    </GameObject>)";
+    const string overrides = Util::makeOverrides( instance, base );
+    SW_REQUIRE_TRUE( overrides.find( "changed.mesh" ) != string::npos );
+
+    // 프리팹에서 앞의 Body 를 지웠다 — 덮어쓰기는 id 22 를 따라간다.
+    const string editedBase = R"(<GameObject _schemaVersion="0" _name="Base">
+        <_listComponent>
+            <MeshComponent _componentName="Body" _localID="22" _mesh="second.mesh"/>
+        </_listComponent>
+    </GameObject>)";
+    string       state;
+    SW_REQUIRE_TRUE( PrefabOverrides::makeInstanceState( editedBase, overrides, "Inst", state ) );
+    XMLDocument doc;
+    SW_REQUIRE_TRUE( doc.parse( state ) );
+    SW_REQUIRE_EQUAL( 1u, Util::countComponents( doc ) );
+    SW_EXPECT_TRUE( string_view( Util::findComponent( doc, 0 ).findAttribute( "_mesh" ) ) == "changed.mesh" );
+}
+
+/** @brief [PrefabOverridesTest] 기본값을 뺀 글도 컴포넌트의 지역 id(`_localID` — 정체)를 남긴다 — 빼면 다시 읽은 부착 키(#16진)가 컴포넌트를 찾지 못했다 */
+SW_TEST_CASE( PrefabOverridesTest, OmitDefaultValuesKeepsComponentLocalID )
+{
+    const string state = R"(<GameObject _schemaVersion="0" _name="Lamp"><_listComponent><SceneComponent _componentName="SceneComponent" _localID="9027683366464785044"/></_listComponent></GameObject>)";
+    string       trimmed;
+    SW_REQUIRE_TRUE( PrefabOverrides::omitDefaultValues( state, trimmed ) );
+    SW_EXPECT_TRUE( trimmed.find( "_localID=\"9027683366464785044\"" ) != string::npos );
+}

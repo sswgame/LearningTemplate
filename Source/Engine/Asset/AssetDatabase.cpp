@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
@@ -145,12 +146,18 @@ namespace sw
             {
                 string text;
                 if ( FileUtil::readTextFile( absPath, text ) && FileUtil::writeTextFile( absPath, AssetGUIDHeader::write( text, guid ) ) )
+                {
+                    AssetRegistry::record( guid, assetID ); // 실행 중 색인도 안다 — 이 에셋을 가리키는 참조가 다음 기동 전에도 GUID 로 쓰인다
                     return true;
+                }
                 break;
             }
             case AssetIdentityKind::Source:
                 if ( FileUtil::writeTextFile( AssetMeta::makePath( absPath ), AssetMeta::makeText( assetID, guid ) ) )
+                {
+                    AssetRegistry::record( guid, assetID );
                     return true;
+                }
                 break;
         }
         SW_LOG_ERROR_ID( "AssetIdentity.AssignFailed", "Could not give '%#' its asset GUID - run py -3 -m Scripts asset-ids --fix", assetID );
@@ -310,7 +317,12 @@ namespace sw
             const string normalized = FileUtil::normalizeSeparators( abs );
             if ( normalized.size() <= root.size() + 1 )
                 continue;
-            listID.push_back( normalized.substr( root.size() + 1 ) );
+            const string assetID = normalized.substr( root.size() + 1 );
+            // 작업 도메인(시나리오 · 테스트 사본 — 실행이 쓰고 지운다)은 기동 색인에 넣지 않는다: 원본을 머리째 복사해 GUID 가 겹친다. 정체성 규칙(`classify`)은
+            // 그 안도 보통 에셋으로 본다 — 사본 안의 가져오기 · 내용 바꾸기가 GUID 를 주고 읽어야 한다(editor.assetidentity).
+            if ( FileUtil::startsWithPathComponent( assetID, AssetPaths::kScratchDomain ) )
+                continue;
+            listID.push_back( assetID );
             setID.insert( AssetDatabaseInternal::toLowerID( listID.back() ) );
         }
         vector<AssetIdentityFile> listFile;
@@ -361,5 +373,16 @@ namespace sw
         if ( found == _mapPathToGUID.end() )
             return nullopt;
         return found->second;
+    }
+
+    AssetRegistryLayer AssetDatabase::makeRegistryLayer( string_view sourceName ) const
+    {
+        AssetRegistryLayer layer{ string( sourceName ), {} };
+        layer._listEntry.reserve( _mapGUIDToPath.size() );
+        for ( const auto& [guid, assetID] : _mapGUIDToPath )
+        {
+            layer._listEntry.push_back( AssetRegistryEntry{ guid, assetID } );
+        }
+        return layer;
     }
 } // namespace sw

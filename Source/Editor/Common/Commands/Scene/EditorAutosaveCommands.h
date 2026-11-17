@@ -18,6 +18,8 @@
 
 namespace sw::editor
 {
+    struct EditorDocumentAutosaveEntry;
+
     /** @brief 복구 후보 하나(씬 하나의 가장 새 사본)입니다. */
     struct EditorAutosaveEntry
     {
@@ -95,6 +97,24 @@ namespace sw::editor
         static uint32 getWrittenSnapshotCount();
         /** @brief 이번 세션에 복원을 끝낸 수입니다(감시 값 `Editor.AutosaveRestoredCount`). */
         static uint32 getRestoredCount();
+        /** @brief 이 세션의 사본 폴더입니다. 세션을 아직 열지 않았거나 열지 못했으면(또는 에디터 상태가 없는 호스트면) 빈 글입니다 — 문서 사본(`EditorDocumentAutosaveEntry`)도 이 안에 쓴다. */
+        static string getSessionFolder();
+        /** @brief 문서 패널의 복구 후보입니다(감사 E-1). 씬 후보와 같이 지난 세션이 비정상 종료했을 때(또는 `autosave.rescan`)만 찬다. */
+        static const vector<EditorDocumentAutosaveEntry>& getRecoverableDocuments();
+        /**
+         * @brief 문서 후보 @p index 를 복원합니다 — 문서를 워크스페이스 포커스로 열게 하고, 그 문서 패널이 읽으면(`takePendingDocumentRestore`) 사본 글을 되돌리기와 같은 길로 적용해 dirty 로 둔다.
+         * @details 거절 이유가 있거나 사본 글을 읽지 못하면 false 입니다. 다른 문서를 고치고 있었으면 미저장 확인은 문서 열기 길이 한다.
+         */
+        static bool restoreDocument( uint32 index );
+        /** @brief 문서 후보 @p index 의 사본을 지웁니다. */
+        static void discardDocument( uint32 index );
+        /**
+         * @brief 문서 패널이 @p documentPath 를 읽은 직후 부릅니다 — 그 문서의 복원 청이 있으면 사본 글을 @p outText 에 꺼내고 true 입니다(청과 사본은 지운다).
+         * @details 에디터 상태가 없는 호스트(문서 패널 테스트)면 false 다.
+         */
+        [[nodiscard]] static bool takePendingDocumentRestore( string_view documentPath, string& outText );
+        /** @brief 이번 세션에 문서 복원을 끝낸 수입니다(감시 값 `Editor.AutosaveDocumentRestoredCount`). */
+        static uint32 getRestoredDocumentCount();
         /** @brief 씬 리소스 id 를 사본 폴더 이름(`[a-z0-9_.-]`)으로 바꿉니다. 같은 id 는 같은 이름입니다. */
         static string makeSlotName( string_view sourceID );
     };

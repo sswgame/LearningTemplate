@@ -5,6 +5,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/DataTable/Model/DataTableModel.h"
 
 using namespace sw;
@@ -67,8 +68,9 @@ namespace
 
 SW_TEST_CASE( DataTableModelTest, OpeningLoadsTheFile )
 {
-    const DataTableTestFiles files;
-    DataTableModel           model;
+    const DataTableTestFiles   files;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
     SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath );
@@ -80,8 +82,9 @@ SW_TEST_CASE( DataTableModelTest, OpeningLoadsTheFile )
 // 연 파일은 경로로 연 그 파일이다 — 목록이 늘거나 줄거나 순서가 바뀌어도 저장은 그 파일에 쓴다(옛 번호를 들면 다른 파일을 덮어썼다).
 SW_TEST_CASE( DataTableModelTest, ReloadedListKeepsTheOpenFile )
 {
-    const DataTableTestFiles files;
-    DataTableModel           model;
+    const DataTableTestFiles   files;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     model.setGameDataFiles( { files._first, files._second } );
     SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
     model.replaceGameDataRawText( "<Second b=\"9\"/>" );
@@ -97,8 +100,9 @@ SW_TEST_CASE( DataTableModelTest, ReloadedListKeepsTheOpenFile )
 // 다시 열기(문서 패널의 다시 읽기 · "저장 안 함")는 디스크의 글로 간다. 저장은 dirty 와 무관하게 연 파일을 쓴다(저장 왕복).
 SW_TEST_CASE( DataTableModelTest, SaveWritesAndReopenRestores )
 {
-    const DataTableTestFiles files;
-    DataTableModel           model;
+    const DataTableTestFiles   files;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     const uint32 loadCount = model.getGameDataLoadCount();
 
@@ -121,8 +125,9 @@ SW_TEST_CASE( DataTableModelTest, SaveWritesAndReopenRestores )
 
 SW_TEST_CASE( DataTableModelTest, TableEditUpdatesTheRawText )
 {
-    const DataTableTestFiles files;
-    DataTableModel           model;
+    const DataTableTestFiles   files;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     SW_REQUIRE_TRUE( model.editGameDataDocument().setCell( 0, "a", "3" ) );
     model.commitGameDataTableEdit();
@@ -135,9 +140,10 @@ SW_TEST_CASE( DataTableModelTest, UnreadableFileIsNotOpened )
 {
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "DataTablePanel.CouldNotReadGame" );
-    const DataTableTestFiles files;
-    const string             missingPath = test::makeScratchPath( "SwDataTableMissing.xml" );
-    DataTableModel           model;
+    const DataTableTestFiles   files;
+    const string               missingPath = test::makeScratchPath( "SwDataTableMissing.xml" );
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     SW_EXPECT_FALSE( model.openGameDataFile( missingPath ) );
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
@@ -151,7 +157,8 @@ SW_TEST_CASE( DataTableModelTest, UnreadableFileIsNotOpened )
 
 SW_TEST_CASE( DataTableModelTest, KeysAreUniqueAndNeedATable )
 {
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_EXPECT_FALSE( model.addKey( "hello" ) ); // 표가 없다
     SW_EXPECT_FALSE( model.isLocalizationDirty() );
 
@@ -170,7 +177,8 @@ SW_TEST_CASE( DataTableModelTest, KeysAreUniqueAndNeedATable )
 
 SW_TEST_CASE( DataTableModelTest, DeletedKeyIsRememberedForTheSave )
 {
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     model.editSheet()._listTablePath.push_back( "strings.csv" );
     SW_REQUIRE_TRUE( model.addKey( "a" ) );
     SW_REQUIRE_TRUE( model.addKey( "b" ) );
@@ -185,7 +193,8 @@ SW_TEST_CASE( DataTableModelTest, DeletedKeyIsRememberedForTheSave )
 
 SW_TEST_CASE( DataTableModelTest, FilterLooksAtKeySourceAndTranslations )
 {
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     model.editSheet()._listTablePath.push_back( "strings.csv" );
     model.editSheet()._listCulture.push_back( "ko" );
     SW_REQUIRE_TRUE( model.addKey( "menu.start" ) );
@@ -213,8 +222,9 @@ SW_TEST_CASE( DataTableModelTest, FilterLooksAtKeySourceAndTranslations )
 SW_TEST_CASE( DataTableModelTest, BrokenXMLIsNotSaved )
 {
     SW_EXPECT_LOG( "DataTablePanel.GameDataNotValidXML" );
-    const DataTableTestFiles files;
-    DataTableModel           model;
+    const DataTableTestFiles   files;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     model.replaceGameDataRawText( "<First a=" );
     SW_EXPECT_FALSE( model.getGameDataDocument().isParsed() );
@@ -229,8 +239,9 @@ SW_TEST_CASE( DataTableModelTest, BrokenXMLIsNotSaved )
 // 글 상자는 모델의 글을 바로 고치고(길이 상한 없음) 알린다.
 SW_TEST_CASE( DataTableModelTest, RawEditInPlaceUpdatesTheDocument )
 {
-    const DataTableTestFiles files;
-    DataTableModel           model;
+    const DataTableTestFiles   files;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     model.editGameDataRawText() = "<First a=\"8\"/>";
     model.commitGameDataRawEdit();
@@ -243,8 +254,9 @@ SW_TEST_CASE( DataTableModelTest, RawEditInPlaceUpdatesTheDocument )
 // 결함: 칸을 고쳐도 상태가 읽은 때 그대로라, 고친 번역이 저장한 뒤에도 "낡음" 색으로 남았다.
 SW_TEST_CASE( DataTableModelTest, EditingUpdatesTheTranslationState )
 {
-    DataTableModel      model;
-    LocalizationRecord& record = SheetUtil::addRecord( model, "a", "옛 글", TranslationState::Stale );
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
+    LocalizationRecord&        record = SheetUtil::addRecord( model, "a", "옛 글", TranslationState::Stale );
 
     record._listTranslation[0] = "새 글";
     model.markTranslationEdited( record, 0 );
@@ -267,7 +279,8 @@ SW_TEST_CASE( DataTableModelTest, EditingUpdatesTheTranslationState )
 
 SW_TEST_CASE( DataTableModelTest, ConfirmOnlyTouchesStaleAndReview )
 {
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     (void)SheetUtil::addRecord( model, "stale", "글", TranslationState::Stale );
     (void)SheetUtil::addRecord( model, "missing", "", TranslationState::Missing );
     LocalizationSheet& sheet        = model.editSheet();
@@ -293,7 +306,8 @@ SW_TEST_CASE( DataTableModelTest, ConfirmedTranslationIsSavedAsCurrent )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "t.strings.xml" ), "<SourceStringTable culture=\"en\"><entries><entry key=\"a\" source=\"Old\" /></entries></SourceStringTable>" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.xml" ), string( "<TranslationTable culture=\"ko\"><entries><entry key=\"a\" text=\"글\" sourceHash=\"" ) + oldHash + "\" /></entries></TranslationTable>" ) );
 
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     SW_REQUIRE_TRUE( EditorDataTableCommands::loadLocalizationProject( projectPath, model.editSheet() ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, model.getSheet()._listRecord.size() );
     SW_REQUIRE_TRUE( model.getSheet()._listRecord[0]._listState[0] == TranslationState::Stale );
@@ -314,7 +328,8 @@ SW_TEST_CASE( DataTableModelTest, ConfirmedTranslationIsSavedAsCurrent )
 // 할 일만 보기: 없음 · 낡음 · 검토가 남은 행만 지난다. 검색과 함께 걸린다.
 SW_TEST_CASE( DataTableModelTest, NeedsWorkFilterSkipsFinishedRows )
 {
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     (void)SheetUtil::addRecord( model, "menu.done", "끝", TranslationState::Current );
     (void)SheetUtil::addRecord( model, "menu.stale", "낡음", TranslationState::Stale );
     (void)SheetUtil::addRecord( model, "other.missing", "", TranslationState::Missing );
@@ -342,7 +357,8 @@ SW_TEST_CASE( DataTableModelTest, TranslationLengthCountsCharactersNotBytes )
 // 결함: 읽기가 도는 사이 다른 프로젝트를 고르면 앞 프로젝트의 표를 받아, 콤보와 표 · 저장 대상이 어긋났다.
 SW_TEST_CASE( DataTableModelTest, SheetOfAnotherProjectIsDiscarded )
 {
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     model.setLocalizationProjects( { "a.locproject", "b.locproject" } );
     model.selectProject( 1 );
     SW_EXPECT_EQUAL( 1, model.getSelectedProjectIndex() );
@@ -365,7 +381,8 @@ SW_TEST_CASE( DataTableModelTest, SheetOfAnotherProjectIsDiscarded )
 // 결함: 읽는 동안 앞 표에 키를 더할 수 있었고, 그러면 dirty 라 읽은 결과를 버리기만 해 표가 영영 읽히지 않았다.
 SW_TEST_CASE( DataTableModelTest, ReloadEmptiesTheSheetUntilItIsRead )
 {
-    DataTableModel model;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+    DataTableModel             model{ recorder };
     model.editSheet()._listTablePath.push_back( "strings.xml" );
     SW_REQUIRE_TRUE( model.addKey( "a" ) );
     model.reloadLocalization();
@@ -373,4 +390,26 @@ SW_TEST_CASE( DataTableModelTest, ReloadEmptiesTheSheetUntilItIsRead )
     SW_EXPECT_TRUE( model.getSheet()._listRecord.empty() );
     SW_EXPECT_FALSE( model.addKey( "b" ) );
     SW_EXPECT_FALSE( model.isLocalizationDirty() );
+}
+
+// 게임 데이터 표 편집은 문서 패널의 창구로 알리고(되돌리기 한 단계), 되돌리기가 준 글을 적용하면 저장한 글과 같을 때 dirty 가 풀린다(감사 E-13).
+SW_TEST_CASE( DataTableModelTest, GameDataEditNotifiesAndUndoTextRoundTrips )
+{
+    const DataTableTestFiles   files;
+    uint32                     notifyCount{ 0 };
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&notifyCount]( string_view )
+    { ++notifyCount; } ) };
+    DataTableModel             model{ recorder };
+    SW_EXPECT_TRUE( model.captureGameDataText().empty() ); // 열린 표가 없으면 되돌릴 글이 없다
+    SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
+    const string before = model.captureGameDataText();
+
+    model.replaceGameDataRawText( "<First a=\"7\"/>" );
+    SW_EXPECT_EQUAL( notifyCount, 1u );
+    SW_EXPECT_TRUE( model.isGameDataDirty() );
+
+    model.applyGameDataText( before );
+    SW_EXPECT_TRUE( model.captureGameDataText() == before );
+    SW_EXPECT_FALSE( model.isGameDataDirty() );
+    SW_EXPECT_TRUE( *model.getGameDataDocument().findCellValue( 0, "a" ) == "1" );
 }

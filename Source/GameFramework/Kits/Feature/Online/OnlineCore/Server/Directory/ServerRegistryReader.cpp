@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
@@ -13,10 +14,13 @@ namespace sw
         : _listSnapshot{}
         , _listBuilding{}
         , _mapRequestToServer{}
+        , _mapRequestToSeat{}
+        , _mapServerToReserved{}
         , _kind{}
         , _pRouter{ nullptr }
         , _indexRequestID{ 0 }
         , _refreshPeriodMs{ 2000 }
+        , _seatReservationTTLMs{ 0 }
         , _lastRefreshStartMs{ 0 }
         , _refreshCount{ 0 }
         , _outstandingCount{ 0 }
@@ -29,13 +33,15 @@ namespace sw
         shutdown();
     }
 
-    void ServerRegistryReader::initialize( EphemeralStoreRouter* pRouter, string_view kind, int64 refreshPeriodMs )
+    void ServerRegistryReader::initialize( EphemeralStoreRouter* pRouter, string_view kind, int64 refreshPeriodMs, int64 seatReservationTTLMs )
     {
-        _pRouter           = pRouter;
-        _replyOwner        = pRouter != nullptr ? pRouter->openReplyOwner() : Subscription{};
-        _kind              = string( kind );
-        _refreshPeriodMs   = refreshPeriodMs;
-        _bRefreshRequested = SW_TRUE;
+        SW_ASSERT( seatReservationTTLMs > 0 ); // 서버 설정의 필수 칸이다 — 0 이면 예약이 바로 사라져 서버 사이에서 넘친다
+        _seatReservationTTLMs = seatReservationTTLMs;
+        _pRouter              = pRouter;
+        _replyOwner           = pRouter != nullptr ? pRouter->openReplyOwner() : Subscription{};
+        _kind                 = string( kind );
+        _refreshPeriodMs      = refreshPeriodMs;
+        _bRefreshRequested    = SW_TRUE;
     }
 
     void ServerRegistryReader::shutdown()
@@ -47,6 +53,8 @@ namespace sw
         _listSnapshot.clear();
         _listBuilding.clear();
         _mapRequestToServer.clear();
+        _mapRequestToSeat.clear();
+        _mapServerToReserved.clear();
     }
 
     void ServerRegistryReader::update( UnixMilliseconds nowMs )
@@ -69,6 +77,8 @@ namespace sw
         _lastRefreshStartMs = nowMs;
         _listBuilding.clear();
         _mapRequestToServer.clear();
+        _mapRequestToSeat.clear();
+        _mapServerToReserved.clear();
         _outstandingCount = 1;
         _indexRequestID   = _pRouter->submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( _kind ), 0, kMaxServerCount ),
                                               EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onIndexReply>( this ), _replyOwner );
@@ -90,10 +100,13 @@ namespace sw
             uint64 serverID = 0;
             if ( ServerRecord::parseMember( member._member, serverID ) == false )
                 continue;
-            const uint64 requestID         = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( serverID ) ),
-                                                               EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onRecordReply>( this ), _replyOwner );
-            _mapRequestToServer[requestID] = serverID;
-            ++_outstandingCount;
+            const uint64 requestID           = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( serverID ) ),
+                                                                 EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onRecordReply>( this ), _replyOwner );
+            _mapRequestToServer[requestID]   = serverID;
+            const uint64 seatRequestID       = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeSeatKey( serverID ) ),
+                                                                 EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onSeatReply>( this ), _replyOwner );
+            _mapRequestToSeat[seatRequestID] = serverID;
+            _outstandingCount += 2;
         }
         if ( _outstandingCount == 0 )
             finishRefresh();
@@ -122,11 +135,36 @@ namespace sw
             finishRefresh();
     }
 
+    void ServerRegistryReader::onSeatReply( const EphemeralReply& reply )
+    {
+        --_outstandingCount;
+        const auto seatIt = _mapRequestToSeat.find( reply._requestID );
+        if ( seatIt != _mapRequestToSeat.end() )
+        {
+            int64      reserved = 0;
+            const bool bRead    = reply._result == EphemeralResult::Ok &&
+                               StringUtil::parseInt64( string_view( reinterpret_cast<const utf8*>( reply._value.data() ), reply._value.size() ), reserved );
+            if ( bRead && reserved > 0 ) // 확정이 창을 넘겨 음수가 될 수 있다 — 0 으로 본다
+                _mapServerToReserved[seatIt->second] = static_cast<int32>( reserved );
+            _mapRequestToSeat.erase( seatIt );
+        }
+        if ( _outstandingCount == 0 )
+            finishRefresh();
+    }
+
     void ServerRegistryReader::finishRefresh()
     {
+        for ( ServerStatus& status : _listBuilding )
+        {
+            const auto reservedIt = _mapServerToReserved.find( status._descriptor._serverID );
+            if ( reservedIt != _mapServerToReserved.end() )
+                status._load += reservedIt->second; // 다른 배정 서버가 잡아 둔 좌석이다
+        }
         _listSnapshot.swap( _listBuilding ); // 색인을 읽었으면 빈 목록도 맞다(서버가 모두 죽었다)
         _listBuilding.clear();
         _mapRequestToServer.clear();
+        _mapRequestToSeat.clear();
+        _mapServerToReserved.clear();
         ++_refreshCount;
     }
 
@@ -137,6 +175,8 @@ namespace sw
             return false;
         ServerStatus& picked = _listSnapshot[static_cast<size_t>( index )];
         picked._load += query._seatCount;
+        if ( _pRouter != nullptr && query._seatCount > 0 ) // 다른 배정 서버가 다음 읽기에서 본다
+            _pRouter->submit( EphemeralRequest::makeIncrement( ServerRecord::makeSeatKey( picked._descriptor._serverID ), query._seatCount, _seatReservationTTLMs ) );
         outStatus = picked;
         return true;
     }

@@ -9,7 +9,6 @@
 <Scenario name="game.lanternvale.netpair.first" fixedDelta="0.0166667" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Expect watch="LanternVale.RulesValid" equals="1"/>
 	<Expect watch="LanternVale.NetRole" equals="0"/>
-	<Wait frames="1"/>
 	<DevCommand line="net.ticketconnect 127.0.0.1:17880 vale_netpair vale_netpair_pw_1 lanternvale 127.0.0.1:17877"/>
 	<WaitUntil watch="LanternVale.AvatarID" atLeast="1" timeoutSeconds="30"/>
 	<Expect watch="LanternVale.NetRole" equals="2"/>
@@ -21,18 +20,15 @@
 	<Expect watch="LanternVale.VisibleEntities" atLeast="4"/>
 	<!-- 첫 짐승(100000) — 세 번째에 쓰러진다 -->
 	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="vale.attack 100000"/>
 	<WaitUntil watch="LanternVale.ResultCount" equals="1" timeoutSeconds="10"/>
 	<Expect watch="LanternVale.LastResult" equals="0"/>
 	<WaitUntil watch="LanternVale.FirstCreatureHealth" equals="20" timeoutSeconds="10"/>
 	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="vale.attack 100000"/>
 	<WaitUntil watch="LanternVale.ResultCount" equals="2" timeoutSeconds="10"/>
 	<Expect watch="LanternVale.LastResult" equals="0"/>
 	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="vale.attack 100000"/>
 	<WaitUntil watch="LanternVale.ResultCount" equals="3" timeoutSeconds="10"/>
 	<Expect watch="LanternVale.LastResult" equals="0"/>
@@ -42,17 +38,14 @@
 	<Expect watch="LanternVale.Level" equals="1"/>
 	<!-- 둘째 짐승(100001) — 경험 120 으로 레벨 2(단계표 100) -->
 	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="vale.attack 100001"/>
 	<WaitUntil watch="LanternVale.ResultCount" equals="4" timeoutSeconds="10"/>
 	<Expect watch="LanternVale.LastResult" equals="0"/>
 	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="vale.attack 100001"/>
 	<WaitUntil watch="LanternVale.ResultCount" equals="5" timeoutSeconds="10"/>
 	<Expect watch="LanternVale.LastResult" equals="0"/>
 	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="vale.attack 100001"/>
 	<WaitUntil watch="LanternVale.ResultCount" equals="6" timeoutSeconds="10"/>
 	<Expect watch="LanternVale.LastResult" equals="0"/>
@@ -68,7 +61,6 @@
 	<Expect watch="LanternVale.Experience" equals="135"/>
 	<!-- 서버 권위 거절: 멀리 있는 짐승(100003)은 사거리 밖 -->
 	<WaitUntil watch="LanternVale.AttackReady" equals="1" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="vale.attack 100003"/>
 	<WaitUntil watch="LanternVale.ResultCount" equals="8" timeoutSeconds="10"/>
 	<Expect watch="LanternVale.LastResult" equals="2"/>

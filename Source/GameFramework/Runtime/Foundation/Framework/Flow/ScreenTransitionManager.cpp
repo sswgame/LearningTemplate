@@ -88,13 +88,16 @@ namespace sw
     {
     }
 
-    void ScreenTransitionManager::beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration, float32 fadeInDuration )
+    expected<void> ScreenTransitionManager::beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration, float32 fadeInDuration )
     {
+        if ( _phase == Phase::FadeOut )
+            return unexpected( Error{ ErrorKind::AlreadyExists, "a screen transition is fading out and its action has not run yet" } );
         _pendingAction         = std::move( onExecute );
         _pendingFadeInDuration = fadeInDuration;
         _phase                 = Phase::FadeOut;
         _fade.beginFadeOut( fadeOutDuration );
         SW_LOG_INFO_ID( "ScreenTransition.BeginScreenTransitionFadeOutDuration", "Begin ScreenTransition (FadeOut duration=%#s)", fadeOutDuration );
+        return {};
     }
 
     void ScreenTransitionManager::update( float32 deltaTime )

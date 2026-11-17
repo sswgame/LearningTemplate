@@ -16,7 +16,6 @@
 	<Store watch="Input.MouseX" as="before"/>
 	<Store watch="Input.MouseY" as="beforeY"/>
 	<!-- 왼쪽 스틱 X(축 0)를 30 프레임 끝까지 민다 -->
-	<Wait frames="1"/>
 	<GamepadAxis axis="0" value="1"/>
 	<Wait frames="30"/>
 	<GamepadAxis axis="0" value="0"/>

@@ -2,6 +2,7 @@
     "_name": "friend_presence_fanout",
     "_seed": 11,
     "_region": "kr",
+    "_pacing": "open",
     "_listStep": [
         { "_action": "login", "_mode": "guest" },
         { "_action": "repeat", "_count": 200, "_listStep": [

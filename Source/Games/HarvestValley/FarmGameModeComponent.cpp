@@ -8,7 +8,6 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -41,8 +40,10 @@ namespace sw
     {
         struct FarmGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCCUtil::make( "FARM" );
-            static constexpr uint32 kStateVersion = 4; ///< 4: 비 · 날씨 난수를 판 상태 날씨로 옮겼다(이 칸에서 빠졌다)
+            /** @brief 이 길이보다 짧은 이동 의도는 걷지 않는다(스틱 떨림) — 걸음 판정과 이동이 같은 문턱을 쓴다. */
+            static constexpr float32 kMinMoveLength = 1.0e-4f;
+            static constexpr uint32  kStateTag      = FourCCUtil::make( "FARM" );
+            static constexpr uint32  kStateVersion  = 4; ///< 4: 비 · 날씨 난수를 판 상태 날씨로 옮겼다(이 칸에서 빠졌다)
 
             /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */
             static constexpr const utf8* kWetnessValue     = "wetness";
@@ -98,6 +99,7 @@ namespace sw
 
     SW_AUTOMATION_COMPONENT_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", FarmGameModeComponent, &readFarmerX );
     SW_AUTOMATION_GETTER_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmGameModeComponent, &FarmGameModeComponent::getTool );
+    SW_AUTOMATION_GETTER_WATCH( farmFarmerWalking, "Farm.FarmerWalking", "1 while the farmer walked last tick (0 once the move input ends)", FarmGameModeComponent, &FarmGameModeComponent::isFarmerWalking );
     SW_AUTOMATION_COMPONENT_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", FarmGameModeComponent, &readTilledCount );
     SW_AUTOMATION_COMPONENT_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", FarmGameModeComponent, &readCropCount );
     SW_AUTOMATION_GETTER_WATCH( farmRaining, "Farm.Raining", "1 while the shared session weather is rain (its wetness is half or more)", FarmGameModeComponent, &FarmGameModeComponent::isRaining );
@@ -165,6 +167,7 @@ namespace sw
         , _toolUseCount{ 0 }
         , _bRaining{ SW_FALSE }
         , _bPossessionDirty{ SW_FALSE }
+        , _bFarmerWalking{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -207,11 +210,6 @@ namespace sw
         }
         updateCameraFocus();
         logStatus( false );
-    }
-
-    void FarmGameModeComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
-    {
-        GameModeComponent::foldStateHash( inoutBuilder ); // 날씨 난수는 판 상태(`SessionStateComponent` 의 날씨)가 쥐고 싣는다
     }
 
     void FarmGameModeComponent::serializeState( StateIO& io )
@@ -368,7 +366,7 @@ namespace sw
         settings._clock._daysPerSeason    = _daysPerSeason;
         settings._pItemCatalog            = &_itemCatalog;
         settings._inventorySlotCount      = kBagSlotCount;
-        settings._pWeatherCatalog         = _pWeatherCatalog.get(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
+        settings._pWeatherCatalog         = _pWeatherCatalog.snapshot(); // 비는 판 상태 날씨다(계절 가중치 · 하루 길이 — 카탈로그 데이터)
         SessionStateInitResult initResult = SessionStateInitResult::Refused;
         SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, settings, initResult );
         if ( pState == nullptr )
@@ -542,6 +540,7 @@ namespace sw
         using Internal              = FarmGameModeComponentInternal;
         const ControlIntent& intent = pawn.getIntent();
         const float3         move   = intent.computeWorldMove();
+        _bFarmerWalking             = float3{ move._x, 0.0f, move._z }.getLength() >= FarmGameModeComponentInternal::kMinMoveLength ? SW_TRUE : SW_FALSE;
         movePlayer( float3{ move._x, 0.0f, move._z }, deltaTime );
 
         // 버튼은 도구를 먼저 바꾸고 쓴다(같은 틱에 둘 다 누를 수 있다).
@@ -587,7 +586,7 @@ namespace sw
     {
         // 길이는 걷는 속도의 비율이다(스틱을 반만 기울이면 반 속도). 1 을 넘으면(대각선 키) 1 로 자른다.
         const float32 length = direction.getLength();
-        if ( length < 1.0e-4f )
+        if ( length < FarmGameModeComponentInternal::kMinMoveLength )
             return;
         const float3 step  = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
         _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -5.0f, static_cast<float32>( kFieldWidth ) + 4.0f );

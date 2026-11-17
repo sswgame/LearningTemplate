@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
@@ -135,7 +137,7 @@ namespace sw
             }
 
         private:
-            shared_ptr<const LeaderboardCatalog>                                            _pCatalog;          ///< 설정 `_catalog` 의 공유 캐시 한 벌(없으면 nullptr)
+            SharedAssetRef<LeaderboardCatalog>                                              _pCatalog;          ///< 설정 `_catalog` 의 공유 캐시 한 벌(없으면 nullptr)
             vector<string>                                                                  _listInlineBoardID; ///< 설정 `_listBoardID`
             LeaderboardService                                                              _service;
             LeaderboardServer                                                               _server;

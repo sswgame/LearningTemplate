@@ -109,6 +109,48 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 규칙의 수치입니다. 시간 단위는 게임 초입니다.
+     * @details 규칙 자산이다 — 유닛 카탈로그의 `<Rules …/>` 한 줄이 모든 칸을 적는다(`Required`, 없으면 카탈로그 로드가 실패한다). 월드는 카탈로그에서만 받으므로
+     *          게임이 C++ 기본값(`RTSSettings{}`)으로 판을 열 길이 없다(감사 K-4, Lyra `ExperienceDefinition` · 유니티 `ScriptableObject` 와 같은 자리).
+     *          범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 읽기가 그 줄을 넣지 않는 오류로 거절한다. 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API RTSSettings
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.001, Max = 1.0 )
+        float32 _fixedStep{}; ///< 시뮬레이션 한 걸음의 길이(20 Hz, 스타크래프트의 게임 틱과 비슷하다)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _minimumDamage{}; ///< 방어가 높아도 최소한 이만큼은 피해가 들어간다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _repathInterval{}; ///< 움직이는 목표를 쫓을 때 경로를 다시 구하는 간격
+        PROPERTY( Required, Min = 0.0 )
+        float32 _visionInterval{}; ///< 안개를 다시 칠하는 간격
+        PROPERTY( Required, Min = 0.0 )
+        float32 _interactSlack{}; ///< 채취, 건설, 반납에서 닿았다고 보는 가장자리 거리
+        PROPERTY( Required, Min = 0.0 )
+        float32 _resourceSearchRadius{}; ///< 광물이 바닥났을 때 대신할 광물을 찾는 반경
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _constructionStartRatio{}; ///< 건설을 시작한 건물이 처음 가지는 체력 비율
+        PROPERTY( Required, Min = 0.0 )
+        float32 _underAttackCooldown{}; ///< "공격받고 있다" 알림의 간격(플레이어마다 적용)
+        PROPERTY( Required, Min = 1 )
+        int32 _productionQueueMax{};
+        PROPERTY( Required, Min = 1 )
+        int32 _flowFieldGroupSize{}; ///< 이 수 이상을 한 곳으로 보내면 A* 대신 흐름장 하나를 쓴다
+        PROPERTY( Required, Min = 1 )
+        int32 _bucketSize{}; ///< 이웃 탐색 버킷의 한 변 길이(셀 수)
+        PROPERTY( Required )
+        hashed_string _mineralCurrency{}; ///< 플레이어 지갑에서 광물로 쓰는 통화
+        PROPERTY( Required )
+        hashed_string _gasCurrency{}; ///< 플레이어 지갑에서 가스로 쓰는 통화
+    };
+
+} // namespace sw
+
+namespace sw
+{
     /** @brief `<RTSCatalog>` 루트 속성의 스키마입니다. */
     REFLECT()
     struct RTSCatalogRootDef
@@ -124,7 +166,7 @@ namespace sw
 {
     /**
      * @class RTSCatalog
-     * @brief `<RTSCatalog supplyMax="200"><Unit id="worker" kind="Unit" hp="45" .../></RTSCatalog>` 를 읽습니다. 키는 `Content/game/starskirmish/data/units.xml` 입니다.
+     * @brief `<RTSCatalog supplyMax="200"><Rules fixedStep="0.05" .../><Unit id="worker" kind="Unit" hp="45" .../></RTSCatalog>` 를 읽습니다. `<Rules>` 는 꼭 한 줄이다. 키는 `Content/game/starskirmish/data/units.xml` 입니다.
      */
     class SW_KIT_API RTSCatalog : public GameCatalog<RTSUnitDef, XMLCatalog<RTSCatalog>>
     {
@@ -141,15 +183,21 @@ namespace sw
         /** @brief @p producerID 가 만드는(짓는) 정의를 읽은 순서대로 모읍니다. */
         void  findProducts( const hashed_string& producerID, vector<const RTSUnitDef*>& outListDef ) const;
         int32 getSupplyMax() const { return _supplyMax; }
+        /** @brief 규칙(`<Rules>`)입니다. 로드에 성공한 카탈로그는 반드시 한 줄을 가진다. */
+        const RTSSettings& getRules() const { return _rules; }
 
     private:
         static constexpr const utf8* kXMLRootName = "RTSCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         /** @brief `<Unit>` 하나를 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadUnit( const XMLNode& node, string_view sourceName );
+        /** @brief `<Rules>` 한 줄을 읽습니다. 칸이 빠졌거나 범위 밖이거나 두 번째 줄이면 false 입니다. */
+        [[nodiscard]] bool loadRules( const XMLNode& node, string_view sourceName );
 
     private:
-        int32 _supplyMax;
+        RTSSettings _rules;
+        int32       _supplyMax;
+        int32       _rulesCount; ///< 이번 로드에서 읽은 `<Rules>` 줄 수(1 이어야 한다)
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<RTSCatalog>::acquire` 로 한 벌을 받습니다. */

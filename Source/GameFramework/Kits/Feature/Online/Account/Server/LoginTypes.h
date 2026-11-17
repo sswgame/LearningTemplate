@@ -40,6 +40,9 @@ namespace sw
         int32                 _revocationBatchSize{ 16 };                                                                       ///< 한 번에 읽어 철회를 맡기는 대기열 항목 수이다
         int32                 _maxFailedCount{ 5 };                                                                             ///< 이만큼 틀리면 계정을 잠근다
         int32                 _attemptBurst{ 10 };                                                                              ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
+        int64                 _sharedAttemptWindowMs{ 0 };                                                                      ///< 서버 사이에 나누는 주소 단위 시도 창(휘발 저장소 INCR + TTL)의 길이이다. 0 이면 나누지 않는다(캐시 없는 단위 테스트)
+        int64                 _loginNonceLifetimeMs{ 0 };                                                                       ///< 서버가 낸 외부 로그인 nonce 의 수명이다. 0 이면 nonce 를 내지 못한다(Unavailable)
+        int32                 _sharedAttemptLimit{ 0 };                                                                         ///< 창 하나에 주소마다 받는 시도 수(서버 전체)이다. 키트 설정(필수)에서 채운다
         int32                 _maxConcurrentPasswordHashes{ 0 };                                                                ///< 동시에 도는 비밀번호 해시 상한이다(`PasswordHashQueue`, 작업 풀 위). 1 이상이어야 하며 키트 설정(필수)에서 채운다
         int32                 _maxQueuedPasswordHashes{ 0 };                                                                    ///< 자리를 기다리는 비밀번호 해시 상한이다. 넘으면 읽기 전에 `kBusy` 다. 1 이상이어야 하며 키트 설정(필수)에서 채운다
         LoginDuplicatePolicy  _duplicatePolicy{ LoginDuplicatePolicy::KickExisting };

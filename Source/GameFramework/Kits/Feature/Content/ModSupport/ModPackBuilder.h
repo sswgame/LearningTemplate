@@ -5,12 +5,16 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSupportSettings.h"
 
 namespace sw
 {
+    struct AssetPackIndex;
+
     /**
      * @struct ModPackBuilder
      * @brief 소스 폴더를 모드 팩 하나로 씁니다.
@@ -27,5 +31,12 @@ namespace sw
          * @return 폴더를 못 읽거나, 상대 경로가 정규형(소문자 · `/`)이 아니거나, 파일 수 · 파일 크기가 @p settings 의 한계를 넘거나, 쓰기가 실패하면 이유를 오류로 남기고 false 입니다.
          */
         [[nodiscard]] static bool buildFromFolder( string_view contentFolder, string_view packPath, const ModSupportSettings& settings );
+
+    private:
+        /**
+         * @brief 모드 파일 하나(@p relativePath, 바이트 @p bytes)의 정체성을 팩 색인 @p inoutIndex 에 더합니다 — 우리 형식 글은 머리 `<?asset guid?>`, 원본은 곁의 `.meta`.
+         * @details 팩 루트의 `assetindex.xml` 로 실려 런타임 색인이 도메인 색인 뒤 층으로 합친다 — 모드가 새로 더한 에셋도 GUID 참조로 풀린다. 정체성이 없는 파일은 건너뛴다.
+         */
+        static void addIdentity( const string& relativePath, const vector<uint8>& bytes, AssetPackIndex& inoutIndex );
     };
 } // namespace sw

@@ -12,7 +12,6 @@
 	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Expect watch="Zone.Sources" target="Walker" is="None"/>
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 0 0.05 0"/>
 	<Wait frames="70"/>
 	<Expect watch="Zone.Sources" target="Walker" is="volume:Swamp"/>
@@ -21,12 +20,10 @@
 	<Expect watch="Surface.MoveScale" target="Walker" atMost="0.5"/>
 	<Expect watch="Zone.SinkVisual" target="Walker" near="0.2" tolerance="0.01"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Villager 1 0.05 1"/>
 	<Wait frames="10"/>
 	<Expect watch="AI.Blackboard" target="Villager" key="InHazard" equals="1"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 0 0.05 -6"/>
 	<Wait frames="20"/>
 	<Expect watch="Zone.Sources" target="Walker" is="None"/>
@@ -34,7 +31,6 @@
 	<Expect watch="Ability.StackCount" target="Walker" key="GE_Sink" equals="0"/>
 	<Expect watch="Zone.SinkVisual" target="Walker" equals="0"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place SwampKey 0 1 0"/>
 	<WaitUntil watch="Object.X" target="SwampKey" near="-2" tolerance="0.3" timeoutSeconds="3"/>
 	<Expect watch="Object.Z" target="SwampKey" near="-7" tolerance="0.3"/>

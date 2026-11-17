@@ -88,3 +88,18 @@ SW_TEST_CASE( OnlineServerCallTableTest, CompletionCostByPending, ._tags = "benc
                         elapsedNanoseconds / ( static_cast<int64>( pendingCount ) * kRepeatCount ) );
     }
 }
+
+/** @brief [OnlineServerCallTableTest] 상한 검사는 방금 연 호출도 센다 — 상한 N 이면 N 개까지 받고 N+1 번째가 넘친다(넘친 요청은 `kBusy`, 감사 O-3) */
+SW_TEST_CASE( OnlineServerCallTableTest, OverLimitCountsTheCallJustOpened )
+{
+    OnlineServiceHost     host;
+    OnlineServerCallTable table;
+    (void)table.open( host, NetRequestToken{}, 0 );
+    (void)table.open( host, NetRequestToken{}, 0 );
+    SW_EXPECT_FALSE( table.isOverLimit( 2 ) );
+    const uint64 third = table.open( host, NetRequestToken{}, 0 );
+    SW_EXPECT_TRUE( table.isOverLimit( 2 ) );
+    SW_EXPECT_TRUE( table.fail( third, OnlineError::kBusy ) );
+    SW_EXPECT_FALSE( table.isOverLimit( 2 ) );
+    table.clear();
+}

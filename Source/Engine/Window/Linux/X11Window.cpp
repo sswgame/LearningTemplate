@@ -286,14 +286,16 @@ namespace sw
         _listClipboardIncr.clear();
     }
 
-    void X11Window::requestInputFocus()
+    bool X11Window::requestInputFocus()
     {
         // Win32Window 의 SetForegroundWindow · SetFocus 자리다. 보통은 창 관리자가 주지만, 주지 않는 곳(WSLg · Xvfb)에서는 키 · 마우스가 영영 오지 않는다.
         // 보이지 않는 창에 걸면 BadMatch 로 프로세스가 끝나므로 지금 보이는지 먼저 본다.
         Display*          pDisplay = static_cast<Display*>( _pX11Display );
         XWindowAttributes attributes{};
-        if ( XGetWindowAttributes( pDisplay, _x11Window, &attributes ) != 0 && attributes.map_state == IsViewable )
-            XSetInputFocus( pDisplay, _x11Window, RevertToParent, CurrentTime );
+        if ( XGetWindowAttributes( pDisplay, _x11Window, &attributes ) == 0 || attributes.map_state != IsViewable )
+            return false;
+        XSetInputFocus( pDisplay, _x11Window, RevertToParent, CurrentTime );
+        return true;
     }
 
     void X11Window::applyWindowVisibility( bool bShow )
@@ -593,7 +595,7 @@ namespace sw
                 // 우리가 숨긴 창(무인 실행의 showWindow( false ))은 최소화가 아니다 - Win32 의 SW_HIDE 와 같다. 보이라고 한 창이 내려갔을 때만 창 관리자의 아이콘화다.
                 setMinimizedState( event.type == UnmapNotify && isVisibleRequested() );
                 if ( event.type == MapNotify )
-                    requestInputFocus();
+                    (void)requestInputFocus(); // 매핑 직후라 보인다 — 못 청한 경우는 창 관리자가 아직 보이지 않게 둔 것이다
             }
             else if ( bFocusEvent && bGrabFocus == false )
             {
@@ -644,15 +646,8 @@ namespace sw
                 if ( event.xconfigure.window != static_cast<Window>( _x11Window ) )
                     continue;
 
-                uint32 newW = static_cast<uint32>( event.xconfigure.width );
-                uint32 newH = static_cast<uint32>( event.xconfigure.height );
-                if ( newW != _width || newH != _height )
-                {
-                    _width  = newW;
-                    _height = newH;
-                    if ( _onResize.isBound() )
-                        _onResize.get()( _width, _height );
-                }
+                // 끌기 한 번에 `ConfigureNotify` 가 여럿 온다 — 크기만 적고 스왑체인은 프레임 시작에 한 번 바꾼다(`applyPendingResize`).
+                notifyResized( static_cast<uint32>( event.xconfigure.width ), static_cast<uint32>( event.xconfigure.height ) );
             }
         }
 

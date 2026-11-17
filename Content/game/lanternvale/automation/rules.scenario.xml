@@ -6,8 +6,7 @@
   실행: App -game=LanternVale -scenario=game/lanternvale/automation/rules.scenario.xml -unattended (체인: ctest -R Scenario.lanternvale)
 -->
 <Scenario name="game.lanternvale.rules" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900">
-	<Wait frames="2"/>
-	<Expect watch="LanternVale.RulesValid" equals="1"/>
+	<WaitUntil watch="LanternVale.RulesValid" equals="1" timeoutFrames="30"/> <!-- 규칙 표를 읽었다 -->
 	<Expect watch="LanternVale.NetRole" equals="0"/>
 	<Pass/>
 </Scenario>

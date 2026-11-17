@@ -196,6 +196,12 @@ namespace sw
             address._port       = port;
             return address;
         }
+        /** @brief 호스트 바이트 순서의 IPv4 값(`getIpv4` 와 같은 꼴 — 첫 옥텟이 최상위 바이트)으로 주소를 만듭니다. */
+        static constexpr NetAddress makeIpv4( uint32 hostOrderIpv4, uint16 port )
+        {
+            return make( static_cast<uint8>( hostOrderIpv4 >> 24 ), static_cast<uint8>( hostOrderIpv4 >> 16 ), static_cast<uint8>( hostOrderIpv4 >> 8 ),
+                         static_cast<uint8>( hostOrderIpv4 ), port );
+        }
         /** @brief IPv6 주소를 만듭니다. @p arrByte 는 네트워크 바이트 순서입니다. */
         static constexpr NetAddress makeIpv6( const uint8 ( &arrByte )[kByteCount], uint16 port )
         {

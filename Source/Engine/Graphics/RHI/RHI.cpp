@@ -153,6 +153,8 @@ namespace sw
         , _depthLoadOp{ RHIRenderPassLoadOp::Clear }
         , _arrColorTargetSlice{}
         , _depthTargetSlice{ 0 }
+        , _arrColorTargetMip{}
+        , _depthTargetMip{ 0 }
         , _clearStencil{ 0 }
         , _bBindColor{ SW_TRUE }
         , _reservedFlags{ 0 }

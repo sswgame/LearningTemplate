@@ -1262,7 +1262,7 @@ namespace sw
         if ( bSameData && bFits )
             return;
         // 채널 표는 공유 캐시의 한 벌이다 — 캐릭터마다 다시 읽지 않는다(표면 상태는 만들 때 표를 복사해 든다).
-        const shared_ptr<const SurfaceChannelTable> pChannels = SharedAssetCache<SurfaceChannelTable>::acquire( _surfaceChannelsPath );
+        const shared_ptr<const SurfaceChannelTable> pChannels = SharedAssetCache<SurfaceChannelTable>::acquire( _surfaceChannelsPath ).snapshot();
         if ( pChannels == nullptr )
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceSurfaceChannelsCould", "Appearance '%#' surface channels '%#' could not be read - the surface state stays off", _presetID.c_str(), _surfaceChannelsPath.c_str() );

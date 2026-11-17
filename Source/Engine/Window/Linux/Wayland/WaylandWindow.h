@@ -69,6 +69,23 @@ namespace sw
         float32 getContentScale() const override;
         /** @brief 바인드한 `wl_output` 들입니다. 자리는 컴포지터 공간이고 배율은 출력의 `scale` 이다(소수 배율은 표면마다 와서 창의 `getContentScale` 이 읽는다). 해상도는 컴포지터가 알린 모드뿐이다. */
         [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
+        /** @brief 데스크톱 창은 가려지는 가장자리가 없다. */
+        float4 getSafeAreaInsets() const override { return float4{}; }
+        /** @brief 청하지 못한다 — Wayland 에서 클라이언트가 초점을 가져가는 길은 다른 클라이언트가 준 활성 토큰(xdg-activation)뿐이다. */
+        [[nodiscard]] bool requestInputFocus() override { return false; }
+        /** @brief 못 한다 — 최소화 상태가 프로토콜에 오지 않아(xdg-shell 판 1) 되돌리기를 확인할 수 없다. */
+        [[nodiscard]] bool canMinimize() const override { return false; }
+        bool               setMinimized( bool bMinimized ) override
+        {
+            (void)bMinimized;
+            return false;
+        }
+        /** @brief 못 한다 — 클라이언트가 자기 키보드 enter · leave 를 보낼 길이 없다(컴포지터가 낸다). */
+        [[nodiscard]] bool sendFocusEvent( bool bFocused ) override
+        {
+            (void)bFocused;
+            return false;
+        }
         /** @brief 컴포지터가 `wp_fractional_scale_manager_v1` 을 내놓았으면 true 입니다(없으면 `getContentScale` 은 정수 배율이다). */
         [[nodiscard]] bool supportsFractionalScale() const;
         /** @brief 컴포지터에 `zwp_pointer_constraints_v1` 과 `zwp_relative_pointer_manager_v1` 이 둘 다 있고 포인터 장치가 있으면 true 입니다. */

@@ -15,6 +15,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -60,7 +61,7 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 짝 줄입니다. */
         const vector<SkeletonMirrorPair>& getPairs() const { return _listPair; }
-        /** @brief 내용 토큰입니다. 읽을 때마다 새 토큰이라(공유 캐시의 다시 읽기는 제자리) 짝 번호 표를 만든 쪽이 들고 비교해 다시 읽힌 것을 알아챕니다. */
+        /** @brief 내용 토큰입니다. 읽을 때마다 새 토큰이라(공유 캐시는 다시 읽으면 새 객체를 준다) 짝 번호 표를 만든 쪽이 들고 비교해 다시 읽힌 것을 알아챕니다. */
         const IdentityToken& getRevision() const { return _revision; }
 
         /**
@@ -104,9 +105,9 @@ namespace sw
         const vector<uint32>* find( const Skeleton& skeleton, string_view sourceLabel );
 
     private:
-        shared_ptr<const SkeletonMirrorTable> _table;
-        vector<uint32>                        _listMirroredBone;
-        IdentityToken                         _builtRevision;  ///< 짝 번호 표를 만든 표 내용 토큰이다
-        const Skeleton*                       _pBuiltSkeleton; ///< 짝 번호 표를 만든 스켈레톤이다(동일성만 확인한다)
+        SharedAssetRef<SkeletonMirrorTable> _table;
+        vector<uint32>                      _listMirroredBone;
+        IdentityToken                       _builtRevision;  ///< 짝 번호 표를 만든 표 내용 토큰이다
+        const Skeleton*                     _pBuiltSkeleton; ///< 짝 번호 표를 만든 스켈레톤이다(동일성만 확인한다)
     };
 } // namespace sw

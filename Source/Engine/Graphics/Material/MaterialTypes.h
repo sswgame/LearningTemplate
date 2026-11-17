@@ -101,7 +101,7 @@ namespace sw
 namespace sw
 {
     /// @brief 머티리얼 프로퍼티입니다(타입, 기본값, 패킹 오프셋).
-    struct MaterialProperty
+    struct SW_API MaterialProperty
     {
         string               _name;
         MaterialPropertyType _type;

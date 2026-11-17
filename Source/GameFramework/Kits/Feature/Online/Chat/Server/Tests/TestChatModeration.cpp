@@ -27,10 +27,11 @@ namespace
     ChatSpamGuard makeGuard( int32 burstCount )
     {
         ChatSpamConfig config;
-        config._burstCount       = burstCount;
-        config._refillIntervalMs = 1000;
-        config._repeatWindowMs   = 10000;
-        config._maxRepeatCount   = 2;
+        config._burstCount        = burstCount;
+        config._refillIntervalMs  = 1000;
+        config._repeatWindowMs    = 10000;
+        config._maxRepeatCount    = 2;
+        config._maxTrackedAccount = 1024;
         ChatSpamGuard guard;
         guard.initialize( config, getNormalizer() );
         return guard;

@@ -12,7 +12,7 @@
 
 namespace sw::editor
 {
-    /** @brief 씬마다 가장 새 사본 한 줄 — 씬 · 언제 · 남은 세대 · 복원할 수 없는 이유, 그리고 Restore · Discard 입니다. */
+    /** @brief 씬마다 가장 새 사본 한 줄 — 씬 · 언제 · 남은 세대 · 복원할 수 없는 이유, 그리고 Restore · Discard 입니다. 그 아래 문서 패널의 사본 줄이 같은 모양으로 온다. */
     class RecoveredScenePanel : public IEditorPanel
     {
     public:
@@ -24,8 +24,14 @@ namespace sw::editor
 
         /** @brief 창 제목입니다. */
         const utf8* getPanelTitle() const override { return "Recovered Work"; }
-        /** @brief 후보 표를 그립니다. */
+        /** @brief 후보 표를 그립니다 — 씬 줄, 그 아래 문서 줄(감사 E-1). */
         void drawContent() override;
+
+    private:
+        /** @brief 씬 후보 표입니다. */
+        void drawSceneRows();
+        /** @brief 문서 패널 후보 표입니다 — 문서 · 언제 · 복원할 수 없는 이유, 그리고 Restore · Discard. 단추 표시는 `recoveredWork.restoreDocument.<줄>` · `recoveredWork.discardDocument.<줄>` 이다. */
+        void drawDocumentRows();
 
     private:
         RecoveredSceneViewState _viewState; ///< 프레임마다 다시 채운다

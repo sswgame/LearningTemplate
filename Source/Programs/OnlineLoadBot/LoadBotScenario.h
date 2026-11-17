@@ -10,6 +10,8 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
+#include "Programs/OnlineLoadBot/LoadBotSchedule.h"
+
 namespace sw
 {
     class JSONValue;
@@ -71,10 +73,11 @@ namespace sw
          * @brief 부하 값 셋은 JSON 이 아니라 부하 선언(Automation `<Load clients rampUpSeconds durationSeconds>`) 한 곳에서 온다(봇 `--load`).
          * @details 예전에는 JSON 칸과 명령줄(`--bots` · `--ramp-up-seconds` · `--duration-seconds`)이 같은 값을 덮어써 칸 하나가 여러 뜻이었다.
          */
-        int64  _rampUpMs{ 0 };
-        int64  _durationMs{ 0 }; ///< 늘린 뒤 이만큼 지나면 다 돌지 못한 봇이 있어도 끝낸다
-        int32  _botCount{ 0 };
-        uint32 _seed{ 1 };
+        int64         _rampUpMs{ 0 };
+        int64         _durationMs{ 0 }; ///< 늘린 뒤 이만큼 지나면 다 돌지 못한 봇이 있어도 끝낸다
+        int32         _botCount{ 0 };
+        uint32        _seed{ 1 };
+        LoadBotPacing _pacing{ LoadBotPacing::Closed }; ///< `_pacing` 칸(필수) — 열린 루프면 지연을 보내려던 시각부터 잰다(`LoadBotSchedule`)
 
         /** @brief 파일을 읽습니다. 실패하면 그 이유(대상은 경로 · 칸 이름)입니다. */
         [[nodiscard]] static expected<LoadBotScenario> loadFromFile( string_view path );

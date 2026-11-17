@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -210,7 +211,7 @@ namespace sw
         outListNotification.clear();
         const int32              batchCount = maxCount < ServiceTransaction::kMaxWriteCount ? maxCount : ServiceTransaction::kMaxWriteCount;
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listed = connection.listRecords( getNotificationTable(), string_view{}, string_view{}, batchCount, false, listRecord );
+        const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, getNotificationTable(), string_view{}, string_view{}, batchCount, false, listRecord )._result;
         if ( listed != ServiceStoreResult::Ok || listRecord.empty() )
             return listed;
         ServiceTransaction              transaction;

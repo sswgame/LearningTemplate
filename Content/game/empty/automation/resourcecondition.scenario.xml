@@ -14,13 +14,10 @@
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="3" timeoutFrames="120"/>
 	<DevCommand line="settings.apply graphics.quality=low"/>
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="5" timeoutFrames="120"/>
-	<Wait frames="1"/>
 	<DevCommand line="scene.layer Night on"/>
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="9" timeoutFrames="120"/>
-	<Wait frames="1"/>
 	<DevCommand line="scene.layer Night off"/>
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="5" timeoutFrames="120"/>
-	<Wait frames="1"/>
 	<DevCommand line="settings.apply graphics.quality=high"/>
 	<WaitUntil watch="Interaction.HeldMaxDistance" target="Probe" equals="3" timeoutFrames="120"/>
 	<Pass/>

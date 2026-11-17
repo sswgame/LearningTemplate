@@ -30,6 +30,8 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
@@ -62,7 +64,7 @@ namespace sw
     struct EconomyServiceConfig
     {
         const CurrencyCatalog*       _pCurrencyCatalog{ nullptr };
-        const OfferCatalog*          _pOfferCatalog{ nullptr };
+        SharedAssetRef<OfferCatalog> _pOfferCatalog;                                                                                            ///< 키트가 받은 참조(다시 읽힌 판을 따라간다). 저장소 일감은 그때의 판을 스냅숏으로 잡는다
         ReceiptValidatorRegistry*    _pReceiptRegistry{ nullptr };                                                                              ///< 없으면 RedeemReceipt 는 ReceiptInvalid 로 끝난다
         MetricRegistry*              _pMetricRegistry{ nullptr };                                                                               ///< 없으면 지표를 세지 않는다
         int64                        _withdrawalWindowMs{ 7 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond };        ///< 청약철회 기한이다(전자상거래법의 7일)

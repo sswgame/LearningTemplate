@@ -42,11 +42,20 @@ namespace sw
          * @brief 동시에 도는 비밀번호 해시 수입니다(작업 풀 위의 해시 줄 `PasswordHashQueue`). 메모리 상한은 이 수 × 19 MiB × 2 다(다시 해시). 감사 O-3.
          * @details 값은 코어 수 · 메모리로 정한다(Keycloak Argon2 의 `cpu-cores` 와 같은 자리). 부하 측정(`login_storm`) 뒤에 맞춘다.
          */
-        PROPERTY( Required, Min = 1 )
+        PROPERTY( Required, Min = 1, Max = 64 )
         int32 _maxConcurrentPasswordHashes{ 0 };
         /** @brief 자리를 기다리는 비밀번호 해시 수입니다. 넘는 가입 · 로그인 · 연동은 저장소를 읽기 전에 `kBusy`(다시 시도)로 끝난다. "기다릴 시간 × 해시 처리율" 로 정한다. */
         PROPERTY( Required, Min = 1 )
         int32 _maxQueuedPasswordHashes{ 0 };
+        /** @brief 서버 전체(휘발 저장소)에서 창 하나에 주소마다 받는 로그인 · 가입 시도 수입니다. 서버마다의 버킷(`_attemptBurst`)은 서버 여럿이면 곱해지므로 이 셈이 한도다(감사 O-14). */
+        PROPERTY( Required, Min = 1, Max = 100000000 )
+        int32 _sharedAttemptLimit{ 0 };
+        /** @brief 위 시도 창의 길이(초)입니다. */
+        PROPERTY( Required, Min = 1, Max = 86400 )
+        int32 _sharedAttemptWindowSeconds{ 0 };
+        /** @brief 서버가 낸 외부 로그인 nonce 의 수명(초)입니다. 이 안에 제공자 로그인을 마쳐야 합니다(감사 O-13). */
+        PROPERTY( Required, Min = 1, Max = 3600 )
+        int32 _loginNonceLifetimeSeconds{ 0 };
         /** @brief 가벼운 Argon2id 를 씁니다(테스트 · 부하 봇 — DevOnline 단위만, 실제 비용을 재려면 끕니다). */
         PROPERTY()
         bool _bLightPasswordHash{ false };

@@ -234,7 +234,7 @@ namespace sw
                 {
                     const MechPilot& candidate = _world._listPilot[static_cast<size_t>( other )];
                     float32          distance  = 0.0f;
-                    if ( other == projectile._lastHit || _world.isEnemyTarget( ownerTeam, other ) == false )
+                    if ( projectile.hasHit( other ) || _world.isEnemyTarget( ownerTeam, other ) == false )
                         continue;
                     if ( Ray::intersectSphere( ray, _world.computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
                     {

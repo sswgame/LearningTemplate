@@ -225,7 +225,7 @@ namespace sw
     {
         if ( _profileReload.takeChanged() == false )
             return;
-        shared_ptr<const AIDirectorProfile> pReloaded = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile );
+        shared_ptr<const AIDirectorProfile> pReloaded = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile ).snapshot();
         if ( pReloaded == nullptr || pReloaded == _pProfile )
             return; // 다른 프로필이 다시 읽혔거나 읽지 못했다(읽기가 오류를 남겼다) — 쥔 프로필로 계속 돈다
         // 판을 이어 간다 — 국면 · 풀 번호 · 시계 · 예산을 새 프로필로 옮긴다. 구조가 바뀌었으면 옛 프로필로 이 판을 끝까지 돌고 다음 시작에서 새 것을 쓴다.
@@ -403,7 +403,7 @@ namespace sw
         if ( bPresetsKnown == false )
             return;
         _profileReload.markSeen();
-        if ( acquireRequired( _pacingProfile, _pProfile ) == false )
+        if ( acquireRequiredSnapshot( _pacingProfile, _pProfile ) == false )
             return;
         if ( acquireRequired( _spawnTable, _pTable ) == false )
             return;

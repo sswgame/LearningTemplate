@@ -15,11 +15,13 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -43,6 +45,41 @@ namespace sw
             static constexpr const utf8* kSourceTreeInstallFolder = "Test/Mods"; ///< 저장소에서의 설치 폴더 — 시연 모드는 시나리오 · 테스트 자료다
             static constexpr const utf8* kExportFolderName        = "ModPacks";  ///< Saved 아래 배포용 묶은 모드 폴더(`mod.pack`)
             static constexpr size_t      kReplyLineLimit          = 200;         ///< `mod.read` 답의 글자 수 상한
+
+            /**
+             * @brief 모드 팩 색인(`assetindex.xml`)이 모드 자기 에셋만 담는지 봅니다 — 경로는 `mods/<id>/` 아래 팩에 든 파일이고, GUID 는 이미 풀리는 것(기본 · 다른 모드)이 아니어야 한다.
+             * @details 색인은 GUID → 경로를 바꾸므로, 검사 없이 받으면 모드가 밝히지 않은 덮어쓰기(`<Override>` 밖)로 기본 에셋을 자기 파일로 돌릴 수 있다.
+             */
+            static bool isModIndexOwnContent( const PackReader& reader, string_view packPath, string_view contentPrefix, const unordered_set<string>& uniqueEntryPath )
+            {
+                vector<uint8> bytes;
+                if ( reader.readFile( AssetPackIndex::kFileName, bytes ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ModSession.IndexUnreadable", "Mod pack '%#': '%#' could not be read", packPath, AssetPackIndex::kFileName );
+                    return false;
+                }
+                const expected<AssetPackIndex> index = AssetPackIndex::parseText( string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ), packPath );
+                if ( index.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "ModSession.IndexMalformed", "Mod pack '%#': '%#' is malformed - %#", packPath, AssetPackIndex::kFileName, index.error().message() );
+                    return false;
+                }
+                for ( const AssetPackIndexEntry& entry : index->_listEntry )
+                {
+                    if ( StringUtil::startsWith( entry._path, contentPrefix ) == false || uniqueEntryPath.contains( entry._path ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "ModSession.IndexOutsideMod", "Mod pack '%#': index maps a GUID to '%#', which is not a file of this pack under '%#'", packPath, entry._path, contentPrefix );
+                        return false;
+                    }
+                    if ( AssetRegistry::resolve( entry._guid ).has_value() )
+                    {
+                        SW_LOG_ERROR_ID( "ModSession.IndexRedirectsAsset", "Mod pack '%#': index maps '%#' to an already known GUID - a mod replaces an existing asset only by a declared <Override>",
+                                         packPath, entry._path );
+                        return false;
+                    }
+                }
+                return true;
+            }
 
             /** @brief 쉼표 목록을 id 로 가릅니다(앞뒤 공백을 떼고 빈 칸은 버린다). 형식 검사는 `loadManifests` 가 한다. */
             static vector<string> splitList( string_view text )
@@ -289,6 +326,13 @@ namespace sw
             }
             _listMountedPackPath.push_back( listPackPath[orderIndex] );
         }
+        // 모드 팩이 덮은 도메인 색인까지 GUID 참조가 보게 색인을 다시 짓는다 — 못 지으면 모드를 들이지 않는다.
+        if ( _assets.rebuildAssetRegistry() == false )
+        {
+            SW_LOG_ERROR_ID( "ModSession.AssetIndexFailed", "The asset index could not be rebuilt with the mod packs - the mods are not applied" );
+            release();
+            return false;
+        }
         vector<string> listLayerRoot = game::getSubsystem<ResourceComposition>().getLayers();
         // 경로마다 모은 목록을 훑지 않는다(켠 모드들의 덮어쓰기 · 층 수의 제곱). 목록은 처음 나온 순서다.
         unordered_set<string> uniqueOverridePath;
@@ -371,6 +415,9 @@ namespace sw
         }
         const bool bHadMounts = _listMountedPackPath.empty() == false;
         _listMountedPackPath.clear();
+        // 모드 팩이 덮었던 색인 줄을 걷는다 — 다음 세션의 GUID 참조가 내린 팩의 경로로 풀리지 않게.
+        if ( bHadMounts && _assets.rebuildAssetRegistry() == false )
+            SW_LOG_ERROR_ID( "ModSession.AssetIndexNotRestored", "The asset index could not be rebuilt after the mod packs were unmounted - GUID references may resolve to unmounted mod paths" );
         if ( bHadMounts )
         {
             // 덮어썼던 리소스를 쥔 캐시는 기본 내용으로 다시 읽힌다 — 다음 세션이 모드 내용을 보지 않게.
@@ -545,6 +592,12 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "ModSession.BadEntryPath", "Mod pack '%#': '%#' is not a resource id in normal form (lowercase, '/', no '..')", packPath, entryPath );
                 return false;
+            }
+            if ( entryPath == AssetPackIndex::kFileName )
+            {
+                if ( ModSessionInternal::isModIndexOwnContent( reader, packPath, contentPrefix, uniqueEntryPath ) == false )
+                    return false;
+                continue;
             }
             const bool bOwnContent = StringUtil::startsWith( entryPath, contentPrefix );
             if ( bOwnContent == false && uniqueOverride.contains( entryPath ) == false )

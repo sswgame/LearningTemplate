@@ -23,6 +23,7 @@
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
@@ -216,6 +217,8 @@ namespace sw
         /** @brief present 모드를 새 VSync 값으로 바꾸도록 스왑체인을 다음 `beginFrame` 에서 다시 만들게 표시합니다. */
         void               applyVSyncInternal() override;
         [[nodiscard]] bool createRenderPass();
+        /** @brief 다시 만든 스왑체인의 형식이 렌더 패스를 만든 형식과 다르면 스왑체인 렌더 패스(CLEAR · LOAD)와 창 스왑체인의 프레임버퍼를 다시 짓습니다(R-8). GPU 가 쉰 뒤 부른다. */
+        [[nodiscard]] bool rebuildRenderPassIfFormatChanged();
         /** @brief 프레임을 엽니다(펜스 대기, 스왑체인 이미지 획득, 커맨드 버퍼 기록 시작). */
         void beginFrameInternal() override;
 
@@ -371,10 +374,10 @@ namespace sw
          */
         struct VulkanHeapMemory
         {
-            VkDevice       _device{ nullptr }; // 헤더는 vulkan.h 를 보지 않는다(VulkanRHIHandle.h) — VK_NULL_HANDLE 대신 nullptr
-            VkDeviceMemory _memory{ nullptr };
-            uint64         _sizeBytes{ 0 };
-            uint32         _memoryTypeIndex{ 0 };
+            VulkanRHIDevice* _pOwner{ nullptr }; ///< 메모리를 놓을 장치(`freeDeviceMemory` — 할당 계수가 함께 준다)
+            VkDeviceMemory   _memory{ nullptr }; // 헤더는 vulkan.h 를 보지 않는다(VulkanRHIHandle.h) — VK_NULL_HANDLE 대신 nullptr
+            uint64           _sizeBytes{ 0 };
+            uint32           _memoryTypeIndex{ 0 };
 
             VulkanHeapMemory()                                     = default;
             VulkanHeapMemory( const VulkanHeapMemory& )            = delete;
@@ -653,13 +656,24 @@ namespace sw
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         [[nodiscard]] bool initializePipelineCache();
-        /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다. */
+        /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다(종료). */
         void savePipelineCache();
+        /** @brief 파이프라인 캐시를 디스크에 씁니다. 디스크의 바이트와 같으면 쓰지 않는다. 캐시는 그대로 둔다(주기 저장 · 종료 저장이 함께 쓴다). */
+        void writePipelineCacheFile();
+        /** @brief 주기(`RHISwapChainDesc::_pipelineCacheSaveIntervalSeconds`)가 지났고 캐시가 자랐으면 디스크에 씁니다(R-13). 프레임 시작이 부른다. */
+        void savePipelineCacheIfDue();
 
         /**
          * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
          */
         [[nodiscard]] bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
+        /**
+         * @brief 장치 메모리를 할당합니다. 모든 `vkAllocateMemory` 가 여기를 지난다 — 할당 수가 `한도 - 남길 칸` 에 닿았으면 오류를 남기고 false 입니다(`VulkanMemoryAccount`, R-4).
+         * @details 여러 스레드가 부른다(계수는 원자값이다).
+         */
+        [[nodiscard]] bool allocateDeviceMemory( const VkMemoryAllocateInfo& allocInfo, VkDeviceMemory& outMemory );
+        /** @brief 장치 메모리를 놓습니다. 모든 `vkFreeMemory` 가 여기를 지난다. 빈 핸들은 아무것도 하지 않는다. */
+        void freeDeviceMemory( VkDeviceMemory memory );
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
@@ -848,11 +862,12 @@ namespace sw
         /// @brief 창 하나의 서피스, 스왑체인, 백버퍼입니다. 이미지, 뷰, 프레임버퍼, 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
 
-        VkRenderPass _renderPass;           ///< 스왑체인 렌더 패스(loadOp=CLEAR)
-        VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더 패스의 loadOp=LOAD 변형이다. 한 프레임에 백버퍼를
-                                            ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 올릴 때) 앞의 내용을 보존한다.
-        VkRenderPass  _offscreenRenderPass; ///< 게임 뷰와 RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
-        VkCommandPool _commandPool;         ///< 프레임 버퍼와 프레임 세그먼트용 풀이다. 렌더 스레드만 쓴다.
+        VkRenderPass _renderPass;                  ///< 스왑체인 렌더 패스(loadOp=CLEAR)
+        VkRenderPass _renderPassLoad;              ///< 같은 스왑체인 렌더 패스의 loadOp=LOAD 변형이다. 한 프레임에 백버퍼를
+                                                   ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 올릴 때) 앞의 내용을 보존한다.
+        uint32        _renderPassImageFormat{ 0 }; ///< `_renderPass` 를 만든 스왑체인 이미지 형식(VkFormat) — 재생성 때 바뀌면 다시 짓는다
+        VkRenderPass  _offscreenRenderPass;        ///< 게임 뷰와 RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
+        VkCommandPool _commandPool;                ///< 프레임 버퍼와 프레임 세그먼트용 풀이다. 렌더 스레드만 쓴다.
         /**
          * @brief 프레임 밖에서 제출하고 기다리는 일회성 제출(구조 버퍼 갱신, GPU 시계 읽기) 전용 풀입니다. `_oneShotMutex` 가 보호합니다. 텍스처 전송은 `_transferCommandPool` 을 쓴다.
          * @details 커맨드 풀은 외부 동기화 대상이다. 게임 스레드나 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
@@ -932,22 +947,24 @@ namespace sw
         uint32                  _height;
         uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
         uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
-        uint16                  _bFrameStarted           : 1;
-        uint16                  _bEnableValidationLayers : 1;
-        uint16                  _bMultiDrawIndirect      : 1;
-        uint16                  _bDrawIndirectCount      : 1;
-        uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
-        uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
-        uint16                  _bDepthClamp             : 1; ///< 깊이 클립을 끌 수 있는가(렌더 상태의 `_bEnableDepthClip`)
-        uint16                  _bGeometryShader         : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
-        uint16                  _bTessellationShader     : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
-        uint16                  _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
-        uint16                  _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
-        [[maybe_unused]] uint16 _reservedSwapChainBit    : 1;
-        uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
-        uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
-        uint16                  _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
-        uint16                  _bFragmentStores         : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
+        uint16                  _bFrameStarted                       : 1;
+        uint16                  _bEnableValidationLayers             : 1;
+        uint16                  _bMultiDrawIndirect                  : 1;
+        uint16                  _bDrawIndirectCount                  : 1;
+        uint16                  _bSamplerAnisotropy                  : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
+        uint16                  _bFillModeNonSolid                   : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16                  _bDepthClamp                         : 1; ///< 깊이 클립을 끌 수 있는가(렌더 상태의 `_bEnableDepthClip`)
+        uint16                  _bGeometryShader                     : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
+        uint16                  _bTessellationShader                 : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
+        uint16                  _bSwapChainDirty                     : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
+        uint16                  _bDepthHasStencil                    : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
+        [[maybe_unused]] uint16 _reservedSwapChainBit                : 1;
+        uint16                  _bMemoryBudget                       : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
+        uint16                  _bSurfaceLost                        : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
+        uint16                  _bDeviceFault                        : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
+        uint16                  _bFragmentStores                     : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
+        uint16                  _bGPUAssistedValidationRequested     : 1; ///< 검증 레이어의 GPU 보조 검증을 켠다(`RHISwapChainDesc::_bGPUBasedValidation`, R-9)
+        uint16                  _bSynchronizationValidationRequested : 1; ///< 검증 레이어의 동기화 검증을 켠다(`RHISwapChainDesc::_bSynchronizationValidation`, R-9)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief GPU 브레드크럼을 남기는 확장입니다(`VulkanBreadcrumbMode`). 장치를 만들 때 정하고, 함수나 표지 버퍼를 얻지 못하면 None 으로 내린다.
@@ -1030,6 +1047,14 @@ namespace sw
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
+        int64                                     _pipelineCacheSaveIntervalNanoseconds{ 0 }; ///< 주기 저장 간격(`RHISwapChainDesc::_pipelineCacheSaveIntervalSeconds`)
+        int64                                     _pipelineCacheLastSaveNanoseconds{ 0 };     ///< 지난 저장(또는 읽기) 시각
+        uint64                                    _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
+
+        /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
+        VulkanMemoryAccount _memoryAccount;
+        /// @brief 할당 수 한도에서 남길 칸입니다(`RHISwapChainDesc::_allocationCountReserve`).
+        uint32 _allocationCountReserve{ 0 };
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매긴다.
         RHITransferSerials _transferSerials;

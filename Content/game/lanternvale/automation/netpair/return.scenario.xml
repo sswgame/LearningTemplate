@@ -6,7 +6,6 @@
 -->
 <Scenario name="game.lanternvale.netpair.return" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Expect watch="LanternVale.NetRole" equals="0"/>
-	<Wait frames="1"/>
 	<DevCommand line="net.ticketconnect 127.0.0.1:17880 vale_netpair vale_netpair_pw_1 lanternvale 127.0.0.1:17877"/>
 	<WaitUntil watch="LanternVale.AvatarID" atLeast="1" timeoutSeconds="30"/>
 	<Expect watch="LanternVale.Level" equals="2"/>

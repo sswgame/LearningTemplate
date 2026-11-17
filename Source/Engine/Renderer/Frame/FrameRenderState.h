@@ -23,6 +23,7 @@
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/PostProcess/FramePostProcessTextureSet.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
+#include "Engine/Renderer/Frame/Timeline/GPUFrameClock.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -175,6 +176,11 @@ namespace sw
          *          차이로 구해야 한다. 그런 추측(클리어, 포맷 비용 등)은 쉽게 틀린다.
          */
         GPUPassTimeline _gpuPassTimeline{};
+        /**
+         * @brief 프레임 하나의 GPU 시간(Shipping 포함)이고 타임스탬프 계측 스위치의 주인입니다. 자동 렌더 배율이 게임 스레드에서 읽습니다(`getLatest`).
+         * @details 읽은 프레임 한 벌을 `_gpuPassTimeline` 도 받는다(쿼리는 한 벌). 타임스탬프 슬롯은 디바이스에 하나라 주 렌더러만 읽는다.
+         */
+        GPUFrameClock _gpuFrameClock{};
         /**
          * @brief 셰이더 메시지 링(`-gv_gpuMessages`)입니다. 컴퓨트 프리패스(`FramePrepass` — 컬링 · 모프 · 마커)와 그래프의 그래픽스 패스(`FramePassExecutor::bindForDraw`)가 함께 u4 로 쓴다.
          * @details 프리패스가 프레임 앞에서 선택을 올리고(`updateControl`) 앞 프레임들의 기록을 로그로 내며(`poll`), 프리패스 끝에서 되읽기를 요청한다 — 그래픽스 패스의 기록은 다음 프레임의 사본에 실린다(누적 카운터라 잃지 않는다).

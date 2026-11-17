@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Engine/Window/CallbackInputWindow.h"
+#include "Engine/Window/CursorShape.h"
 
 #if defined( SW_PLATFORM_WEB )
     #include <emscripten/html5.h>
@@ -32,14 +33,32 @@ namespace sw
          * @details 브라우저는 Esc 로 언제든 잠금을 푼다 — 풀리면 `pointerlockchange` 가 알리고, 입력 관리자는 다음 클릭에서 다시 청한다(데스크톱 창과 같은 규칙).
          */
         [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override;
+        /**
+         * @brief 메인 스레드를 재우지 않고 다음 프레임 콜백을 마감 간격 뒤로 미룹니다(`emscripten_set_main_loop_timing` — 간격이 있으면 setTimeout, 없으면 requestAnimationFrame).
+         * @details Emscripten 의 메인 스레드 잠은 바쁜 대기라 배경 상한이 브라우저 메인 스레드를 막았다(감사 P-5). setTimeout 간격은 프레임 시작부터 잰다(Emscripten 이 지난 시간을 뺀다).
+         *          https://emscripten.org/docs/api_reference/emscripten.h.html#c.emscripten_set_main_loop_timing
+         */
+        void waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds ) override;
+        /** @brief 캔버스 CSS `cursor` 로 모양을 바꾼다(`CursorShapeUtil::toCSSName`). */
+        [[nodiscard]] bool supportsCursorShape() const override { return true; }
+        /** @brief 모양을 적고 캔버스에 겁니다. 숨긴 동안은 적기만 하고 보일 때 건다. */
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override;
+        /** @brief 캔버스 CSS `cursor: none` 으로 숨기거나 적어 둔 모양으로 되돌립니다. */
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override;
 
     protected:
         void* getNativeHandle() const override { return const_cast<utf8*>( kCanvasSelector ); }
         void  applyTitle() override;
+        /** @brief 숨은 글 칸(WebTextInput.js)에 포커스를 주거나 뺍니다 — 입력기 · 화면 키보드가 그 칸에 붙는다. */
+        void applyTextInputWanted( bool bWanted ) override;
+        /** @brief 숨은 글 칸을 글 커서 자리(CSS 픽셀)로 옮깁니다 — 입력기 후보 창이 그 옆에 뜬다. */
+        void applyTextInputArea( const WindowTextInputArea& area ) override;
 
     private:
         /** @brief 캔버스의 CSS 크기 · 화면 배율 · 안전 여백을 다시 읽어 캔버스 물리 크기를 맞춥니다(창 크기 · 회전 · 배율 변경). */
         void syncCanvasSize();
+        /** @brief 지금 모양 · 숨김을 캔버스 style.cursor 에 겁니다. */
+        void applyCursor() const;
         /** @brief DOM 콜백을 겁니다(마우스 · 바퀴 · 키 · 손가락 · 크기 · 보임 · 포커스). */
         void bindCallbacks();
         /** @brief DOM 콜백을 풉니다. */
@@ -54,12 +73,17 @@ namespace sw
         static EM_BOOL onVisibility( int eventType, const EmscriptenVisibilityChangeEvent* pEvent, void* pUserData );
         static EM_BOOL onFocus( int eventType, const EmscriptenFocusEvent* pEvent, void* pUserData );
         static EM_BOOL onPointerLockChange( int eventType, const EmscriptenPointerlockChangeEvent* pEvent, void* pUserData );
+        /** @brief 숨은 글 칸이 낸 조합(@p kind 0) · 확정(1) 글입니다(WebTextInput.js 가 부른다). */
+        static void onTextInput( void* pUserData, int kind, const char* pText );
 
     private:
         float32                _devicePixelRatio;
+        int32                  _mainLoopIntervalMilliseconds; ///< 지금 건 프레임 콜백 간격(0 이면 requestAnimationFrame — `emscripten_set_main_loop_arg` 의 fps 0 과 같다)
+        CursorShape            _cursorShape;                  ///< 마지막 `setCursorShape`
         uint8                  _bCallbacksBound : 1;
         uint8                  _bPointerLocked  : 1; ///< 브라우저가 캔버스에 포인터를 잠갔다(`pointerlockchange` 가 정한다 — 요청이 아니라 결과)
-        [[maybe_unused]] uint8 _reserved        : 6;
+        uint8                  _bCursorHidden   : 1; ///< 마지막 `setCursorVisible( false )`
+        [[maybe_unused]] uint8 _reserved        : 5;
     };
 } // namespace sw
 

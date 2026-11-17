@@ -158,6 +158,21 @@ add_test(NAME Scripts.AssetReferenceFieldList
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_asset_reference_field_list.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
+# 에셋 GUID 2 단계 전수 이전 도구 — AssetRef<T> 칸의 경로 글만 GUID 참조로 바꾸고 경로 글 칸 · 임포트 산출물 · 색인에 없는 경로는 바꾸지 않는다.
+add_test(NAME Scripts.MigrateAssetRefs
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_asset_refs.py")
+set_tests_properties(Scripts.MigrateAssetRefs PROPERTIES LABELS nogpu TIMEOUT 60)
+
+# 감사 A-2 전수 이전 도구 — 씬 · 프리팹 컴포넌트에 C++ ComponentStableKey::resolveLocalIDs 와 같은 지역 id 를 적는다.
+add_test(NAME Scripts.MigrateComponentIds
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_component_ids.py")
+set_tests_properties(Scripts.MigrateComponentIds PROPERTIES LABELS nogpu TIMEOUT 60)
+
+# 감사 A-2 둘째 전수 이전 — 다른 프리팹을 가리키는 옛 순번 키(중첩 노드 인덱스 · Part 경로 · 덮어쓰기 key/after · 노드 attach)를 지역 id 키로 바꾼다.
+add_test(NAME Scripts.MigratePrefabLinks
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/tests/test_migrate_prefab_links.py")
+set_tests_properties(Scripts.MigratePrefabLinks PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 빌드 지문 생성기(ABI 스탬프 · 쿠커 코드 지문)의 파일 지문 캐시 — 캐시가 있든 없든 같은 지문, 바뀐 파일만 다시 읽기, 지운 파일 줄 정리.
 add_test(NAME Scripts.FileDigestCache
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/tests/test_file_digest_cache.py")
@@ -213,6 +228,7 @@ if(TARGET OnlineLoadBot)
 			list(APPEND list_online_kit_test_folder "${kit_relative}/")
 		endif()
 	endforeach()
+	list(APPEND list_online_kit_test_folder "Source/Programs/OnlineLoadBot/") # 봇 자체의 테스트(보내기 방식 · 시나리오 읽기)
 	if(list_online_kit_test_folder)
 		list(JOIN list_online_kit_test_folder "," online_kit_test_source)
 		add_test(NAME UnitTests.OnlineKits
@@ -269,8 +285,8 @@ if(TARGET ReflectionParser)
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
 		set_tests_properties(ReflectionParser.${parser_fixture_name} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
-	# 도구 입력 — 같은 입력 두 번이면 같은 바이트 · 시각 그대로, 설정 · 템플릿 · 철자 표가 깨지면 0 이 아닌 종료(`ReflectionParser/RunParserToolInputs.cmake`).
-	foreach(parser_tool_mode IN ITEMS determinism broken-config broken-templates broken-spelling)
+	# 도구 입력 — 같은 입력 두 번이면 같은 바이트 · 시각 그대로, 명령줄만 바꾸면 다시 파싱, 설정 · 템플릿 · 철자 표가 깨지면 0 이 아닌 종료(`ReflectionParser/RunParserToolInputs.cmake`).
+	foreach(parser_tool_mode IN ITEMS determinism args-changed broken-config broken-templates broken-spelling)
 		add_test(NAME ReflectionParser.ToolInputs.${parser_tool_mode}
 			COMMAND ${CMAKE_COMMAND}
 				"-DMODE=${parser_tool_mode}"

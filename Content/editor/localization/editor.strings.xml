@@ -5713,7 +5713,17 @@
 				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorAutosave.DiscardDocumentTooltip" source="Delete the copy of this document">
+			<origins>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorAutosave.DiscardTooltip" source="Delete every copy of this scene">
+			<origins>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAutosave.DocumentsHeading" source="Documents">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>
@@ -5726,6 +5736,12 @@
 		</entry>
 		<entry key="EditorAutosave.RecoveryIntro"
 		       source="The last editor session did not close normally. Restore opens the newest copy of a scene with unsaved changes; the original file changes only when you save.">
+			<origins>
+				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAutosave.RestoreDocumentTooltip"
+		       source="Open the document with this copy as unsaved changes. Save to keep it">
 			<origins>
 				<item>Source/Editor/Panels/Autosave/RecoveredScenePanel.cpp</item>
 			</origins>

@@ -10,11 +10,9 @@
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<Expect watch="Online.SessionClientCount" atLeast="4"/>
 	<Expect watch="Online.SessionState" equals="0"/>
-	<Wait frames="1"/>
 	<DevCommand line="online.local.start Config/Server/Online/Shooter3D.json"/>
 	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
 	<Expect watch="Online.SessionState" equals="3"/>
-	<Wait frames="1"/>
 	<DevCommand line="shooter.online.login"/>
 	<WaitUntil watch="Shooter3D.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
 	<DevCommand line="shooter.online.sendmail 5"/>
@@ -23,10 +21,8 @@
 	<WaitUntil watch="Shooter3D.OnlineMailCount" equals="1" timeoutSeconds="10"/>
 	<DevCommand line="shooter.online.claimall"/>
 	<WaitUntil watch="Shooter3D.OnlineGold" equals="5" timeoutSeconds="10"/>
-	<Wait frames="1"/>
 	<DevCommand line="online.disconnect"/>
 	<Expect watch="Online.SessionState" equals="0"/>
-	<Wait frames="1"/>
 	<DevCommand line="online.status"/>
 	<Pass/>
 </Scenario>

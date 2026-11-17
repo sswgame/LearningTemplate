@@ -8,6 +8,9 @@
     "_scheduleRunTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
     "_ttlSweepMinuteOfDay": 300,
     "_ttlBackfillRolloutHours": 24,
+    "_maxPendingCallsPerService": 1024,
+    "_listTrustedProxy": [],
+    "_seatReservationSeconds": 30,
     "_publicAddress": "127.0.0.1",
     "_listKit": [
         {
@@ -16,6 +19,9 @@
                 "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_maxConcurrentPasswordHashes": 2,
                 "_maxQueuedPasswordHashes": 64,
+                "_sharedAttemptLimit": 60,
+                "_sharedAttemptWindowSeconds": 60,
+                "_loginNonceLifetimeSeconds": 300,
                 "_bLightPasswordHash": true,
                 "_listSeedTestAccount": [
                     {
@@ -30,7 +36,8 @@
             "_settings": {
                 "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
                 "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
-                "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
+                "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt",
+                "_spam": { "_refillIntervalMs": 1000, "_repeatWindowMs": 10000, "_burstCount": 5, "_maxRepeatCount": 2, "_maxTrackedAccount": 65536 }
             }
         },
         {
@@ -60,6 +67,8 @@
             "_name": "matchmaking",
             "_settings": {
                 "_catalog": "game/shooter3d/data/shooter3d.matchmodes.xml",
+                "_reconnectGraceMs": 60000,
+                "_cancelConfirmWaitMs": 3000,
                 "_bGameServer": true
             }
         }

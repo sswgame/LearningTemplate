@@ -9,10 +9,12 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
@@ -115,6 +117,8 @@ namespace sw
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
         , _bFragmentStores{ SW_FALSE }
+        , _bGPUAssistedValidationRequested{ SW_FALSE }
+        , _bSynchronizationValidationRequested{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _breadcrumbMode{ VulkanBreadcrumbMode::None }
         , _pCmdSetCheckpoint{ nullptr }
@@ -180,8 +184,8 @@ namespace sw
 
     VulkanRHIDevice::VulkanHeapMemory::~VulkanHeapMemory()
     {
-        if ( _device != VK_NULL_HANDLE && _memory != VK_NULL_HANDLE )
-            vkFreeMemory( _device, _memory, nullptr );
+        if ( _pOwner != nullptr )
+            _pOwner->freeDeviceMemory( _memory );
     }
 
     IRHIResourceFactory* VulkanRHIDevice::getResourceFactory()
@@ -212,6 +216,26 @@ namespace sw
         _surfaceKind    = desc._surfaceKind;
         _width          = desc._width;
         _height         = desc._height;
+
+        // 할당 수 여유는 EngineConfig 의 `_rhi` 값이다. 없으면(0) 짐작하지 않고 멈춘다.
+        if ( desc._allocationCountReserve == 0 )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.AllocationCountReserveMissing", "EngineConfig _rhi._allocationCountReserve must be > 0 - the Vulkan backend does not start" );
+            return false;
+        }
+        _allocationCountReserve = desc._allocationCountReserve;
+        if ( desc._pipelineCacheSaveIntervalSeconds <= 0.0 )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the Vulkan backend does not start" );
+            return false;
+        }
+        _pipelineCacheSaveIntervalNanoseconds = MonotonicClock::secondsToNanoseconds( desc._pipelineCacheSaveIntervalSeconds );
+
+        // 검증 스위치(EngineConfig _rhi)는 검증 레이어가 있는 구성에서만 듣는다. 없는 구성에서 켜 두었으면 듣지 않는다고 알린다.
+        _bGPUAssistedValidationRequested     = desc._bGPUBasedValidation ? SW_TRUE : SW_FALSE;
+        _bSynchronizationValidationRequested = desc._bSynchronizationValidation ? SW_TRUE : SW_FALSE;
+        if ( _bEnableValidationLayers == SW_FALSE && ( desc._bGPUBasedValidation || desc._bSynchronizationValidation ) )
+            SW_LOG_WARNING_ID( "Vulkan.ValidationSwitchWithoutLayer", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but this build has no Vulkan validation layer - ignored" );
 
         // 백버퍼 포맷 · 개수는 백엔드 간 계약값이다. 스왑체인 재생성 때도 같은 요청을 써야 하므로 보관한다.
         _swapChain.setRequested( desc._format, desc._bufferCount, desc._bVSync );
@@ -272,6 +296,11 @@ namespace sw
 
             if ( verifyRequiredColorAttachmentFormats() == false )
                 return false;
+            {
+                VkPhysicalDeviceProperties limitProperties{};
+                vkGetPhysicalDeviceProperties( _physicalDevice, &limitProperties );
+                _memoryAccount.setLimit( limitProperties.limits.maxMemoryAllocationCount, _allocationCountReserve );
+            }
 
             if ( createLogicalDevice() == false )
                 return false;
@@ -401,7 +430,7 @@ namespace sw
                 if ( record._buffer != VK_NULL_HANDLE )
                     vkDestroyBuffer( _device, record._buffer, nullptr );
                 if ( record._memory != VK_NULL_HANDLE )
-                    vkFreeMemory( _device, record._memory, nullptr );
+                    freeDeviceMemory( record._memory );
             } );
             _gpuBuffers.clear();
             _constantBufferMirror.clear();
@@ -412,7 +441,7 @@ namespace sw
                 if ( slot._buffer != VK_NULL_HANDLE )
                     vkDestroyBuffer( _device, slot._buffer, nullptr );
                 if ( slot._memory != VK_NULL_HANDLE )
-                    vkFreeMemory( _device, slot._memory, nullptr );
+                    freeDeviceMemory( slot._memory );
                 slot = StructuredUploadSlot{};
             }
             _recordingState._geometry = RHIGeometryBindings{};
@@ -434,7 +463,7 @@ namespace sw
                 if ( record._image != VK_NULL_HANDLE )
                     vkDestroyImage( _device, record._image, nullptr );
                 if ( record._memory != VK_NULL_HANDLE )
-                    vkFreeMemory( _device, record._memory, nullptr );
+                    freeDeviceMemory( record._memory );
             } );
             // 힙 핸들 표를 텍스처 표보다 먼저 비운다 — 이미지는 위에서 모두 지웠고, 남은 참조(레코드 · 해제 대리자)가 놓일 때 장치가 아직 살아 있다.
             _mapTransientHeap.clear();
@@ -486,7 +515,7 @@ namespace sw
             }
             if ( _dummyUBOMemory )
             {
-                vkFreeMemory( _device, _dummyUBOMemory, nullptr );
+                freeDeviceMemory( _dummyUBOMemory );
                 _dummyUBOMemory = nullptr;
             }
             if ( _bindlessDummyView )
@@ -501,7 +530,7 @@ namespace sw
             }
             if ( _bindlessDummyMemory )
             {
-                vkFreeMemory( _device, _bindlessDummyMemory, nullptr );
+                freeDeviceMemory( _bindlessDummyMemory );
                 _bindlessDummyMemory = nullptr;
             }
 
@@ -613,6 +642,32 @@ namespace sw
         return false;
     }
 
+    bool VulkanRHIDevice::allocateDeviceMemory( const VkMemoryAllocateInfo& allocInfo, VkDeviceMemory& outMemory )
+    {
+        outMemory = VK_NULL_HANDLE;
+        if ( _memoryAccount.tryAcquire() == false )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.AllocationCountLimit", "Vulkan device memory allocations reached %# (maxMemoryAllocationCount minus EngineConfig _rhi._allocationCountReserve) - this allocation (%# bytes) fails",
+                             _memoryAccount.getUsableCount(), static_cast<uint64>( allocInfo.allocationSize ) );
+            return false;
+        }
+        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &outMemory ) != VK_SUCCESS )
+        {
+            _memoryAccount.release();
+            outMemory = VK_NULL_HANDLE;
+            return false;
+        }
+        return true;
+    }
+
+    void VulkanRHIDevice::freeDeviceMemory( VkDeviceMemory memory )
+    {
+        if ( memory == VK_NULL_HANDLE || _device == VK_NULL_HANDLE )
+            return;
+        vkFreeMemory( _device, memory, nullptr );
+        _memoryAccount.release();
+    }
+
     VulkanRHIDevice::VulkanBufferRecord* VulkanRHIDevice::resolveAllocatedBuffer( RHIBufferHandle handle )
     {
         return _gpuBuffers.get( handle );
@@ -705,7 +760,7 @@ namespace sw
         allocInfo.memoryTypeIndex = memoryTypeIndex;
 
         VkDeviceMemory memory = VK_NULL_HANDLE;
-        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &memory ) != VK_SUCCESS )
+        if ( allocateDeviceMemory( allocInfo, memory ) == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
             SW_LOG_ERROR_ID( "Vulkan.FailedAllocateMemoryVkBuffer", "Failed to allocate memory for VkBuffer." );
@@ -727,7 +782,7 @@ namespace sw
         if ( bReady == false )
         {
             vkDestroyBuffer( _device, buffer, nullptr );
-            vkFreeMemory( _device, memory, nullptr );
+            freeDeviceMemory( memory );
             return 0;
         }
 
@@ -748,12 +803,15 @@ namespace sw
     namespace
     {
         /**
-         * @brief 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache.bin`)입니다.
+         * @brief @p physicalDevice 의 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache_<vendor>_<device>_<driver>.bin`)입니다.
          * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
+         *          장치 · 드라이버마다 파일이 따로다(`VulkanPipelineCacheFile`, R-13).
          */
-        string getVulkanPipelineCachePath()
+        string getVulkanPipelineCachePath( VkPhysicalDevice physicalDevice )
         {
-            return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCache/vk_pipeline_cache.bin" );
+            VkPhysicalDeviceProperties properties{};
+            vkGetPhysicalDeviceProperties( physicalDevice, &properties );
+            return FileUtil::joinPath( ProcessRoots::get()._saved.str(), VulkanPipelineCacheFile::makeRelativePath( properties.vendorID, properties.deviceID, properties.driverVersion ) );
         }
 
         struct VulkanRHIDeviceInternal
@@ -851,8 +909,32 @@ namespace sw
 
         VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
         loadSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-        _renderPassLoad = createRenderPassFromSpec( loadSpec );
+        _renderPassLoad        = createRenderPassFromSpec( loadSpec );
+        _renderPassImageFormat = _swapChain.getImageFormat();
         return _renderPassLoad != VK_NULL_HANDLE;
+    }
+
+    bool VulkanRHIDevice::rebuildRenderPassIfFormatChanged()
+    {
+        if ( _swapChain.getImageFormat() == _renderPassImageFormat )
+            return true;
+        // 다시 만든 스왑체인의 형식이 바뀌었다(표면이 다른 형식만 준다 — 모니터 이동 · HDR 전환). 옛 형식의 렌더 패스로 프레임버퍼를 만들면 첨부 형식이 어긋난다(R-8).
+        // GPU 는 재생성 앞에서 쉬었다. 창 스왑체인의 프레임버퍼도 같은 렌더 패스를 쓰므로 함께 다시 짓는다.
+        SW_LOG_INFO_ID( "Vulkan.SwapChainRenderPassFormatChanged", "The swap chain format changed (VkFormat %# -> %#) - rebuilding the swap chain render passes", _renderPassImageFormat,
+                        _swapChain.getImageFormat() );
+        if ( _renderPassLoad != VK_NULL_HANDLE )
+            vkDestroyRenderPass( _device, _renderPassLoad, nullptr );
+        if ( _renderPass != VK_NULL_HANDLE )
+            vkDestroyRenderPass( _device, _renderPass, nullptr );
+        _renderPass     = VK_NULL_HANDLE;
+        _renderPassLoad = VK_NULL_HANDLE;
+        if ( createRenderPass() == false )
+            return false;
+        for ( const unique_ptr<VulkanRHISwapChain>& pWindow : _windowSwapChains.getOwnedList() )
+        {
+            (void)rebuildWindowSwapChain( *pWindow, pWindow->getExtentWidth(), pWindow->getExtentHeight() ); // 실패 알림은 안에서 남긴다. 다음 획득이 다시 본다
+        }
+        return true;
     }
 
     bool VulkanRHIDevice::supportsValidationLayer()
@@ -974,6 +1056,33 @@ namespace sw
         {
             SW_LOG_WARNING_ID( "Vulkan.VulkanValidationLayerFound", "Vulkan validation layer found but VK_EXT_debug_utils is not available - running without validation" );
             _bEnableValidationLayers = SW_FALSE;
+        }
+
+        // 검증 기능(동기화 · GPU 보조)은 검증 레이어가 주는 VK_EXT_validation_features 로 켠다 — VkValidationFeaturesEXT 를 인스턴스 생성의 pNext 에 단다
+        // (https://docs.vulkan.org/refpages/latest/refpages/source/VkValidationFeaturesEXT.html). 켜 달라고 했는데 레이어가 그 확장을 주지 않으면 짐작하지 않고 멈춘다.
+        VkValidationFeatureEnableEXT arrValidationFeature[2]{};
+        uint32                       validationFeatureCount{ 0 };
+        VkValidationFeaturesEXT      validationFeatures{};
+        const bool                   bValidationFeaturesRequested = _bEnableValidationLayers == SW_TRUE && ( _bGPUAssistedValidationRequested == SW_TRUE || _bSynchronizationValidationRequested == SW_TRUE );
+        if ( bValidationFeaturesRequested )
+        {
+            vector<VkExtensionProperties> listLayerExt;
+            const bool                    bLayerExtRead = enumerateVk( listLayerExt, "vkEnumerateInstanceExtensionProperties (validation layer)", []( uint32* pCount, VkExtensionProperties* pData )
+                               { return vkEnumerateInstanceExtensionProperties( "VK_LAYER_KHRONOS_validation", pCount, pData ); } );
+            if ( bLayerExtRead == false || VulkanRHIUtil::hasExtension( listLayerExt, VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME ) == false )
+            {
+                SW_LOG_ERROR_ID( "Vulkan.ValidationFeaturesMissing", "EngineConfig _rhi asks for GPU-assisted or synchronization validation, but the validation layer does not offer VK_EXT_validation_features" );
+                return false;
+            }
+            listExtension.push_back( VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME );
+            if ( _bGPUAssistedValidationRequested == SW_TRUE )
+                arrValidationFeature[validationFeatureCount++] = VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
+            if ( _bSynchronizationValidationRequested == SW_TRUE )
+                arrValidationFeature[validationFeatureCount++] = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+            validationFeatures.sType                         = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+            validationFeatures.enabledValidationFeatureCount = validationFeatureCount;
+            validationFeatures.pEnabledValidationFeatures    = arrValidationFeature;
+            createInfo.pNext                                 = &validationFeatures;
         }
 
         createInfo.enabledExtensionCount   = static_cast<uint32>( listExtension.size() );
@@ -1446,7 +1555,7 @@ namespace sw
         allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize  = requirements.size;
         allocInfo.memoryTypeIndex = memoryTypeIndex;
-        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &_breadcrumbMemory ) != VK_SUCCESS )
+        if ( allocateDeviceMemory( allocInfo, _breadcrumbMemory ) == false )
             return false;
         if ( isVkSuccess( vkBindBufferMemory( _device, _breadcrumbBuffer, _breadcrumbMemory, 0 ), "vkBindBufferMemory (breadcrumbs)" ) == false )
             return false;
@@ -1472,7 +1581,7 @@ namespace sw
         if ( _breadcrumbBuffer != VK_NULL_HANDLE )
             vkDestroyBuffer( _device, _breadcrumbBuffer, nullptr );
         if ( _breadcrumbMemory != VK_NULL_HANDLE )
-            vkFreeMemory( _device, _breadcrumbMemory, nullptr );
+            freeDeviceMemory( _breadcrumbMemory );
         _breadcrumbBuffer = VK_NULL_HANDLE;
         _breadcrumbMemory = VK_NULL_HANDLE;
     }
@@ -1630,7 +1739,7 @@ namespace sw
     bool VulkanRHIDevice::rebuildWindowSwapChain( VulkanRHISwapChain& swapChain, uint32 width, uint32 height )
     {
         swapChain.destroySemaphores( _device );
-        swapChain.destroy( _device );
+        swapChain.retireForRecreate( _device ); // 같은 서피스 — 옛 스왑체인을 oldSwapchain 으로 물려준다
         if ( swapChain.create( _physicalDevice, _device, width, height ) == false )
             return false; // 서피스 크기 0(최소화)은 오류가 아니다 — 다음 획득이 다시 시도한다
         const bool bBuilt = swapChain.createFramebuffers( _device, _renderPass ) && swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight );
@@ -1727,7 +1836,8 @@ namespace sw
         // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 다시 만든다.
         destroyFrameFences();
         _swapChain.destroySemaphores( _device );
-        _swapChain.destroy( _device );
+        // 옛 스왑체인은 새 생성의 oldSwapchain 으로 물려준다(같은 서피스 — 표시 엔진이 자원을 넘겨받는다, R-8).
+        _swapChain.retireForRecreate( _device );
 
         // 실패하면 부르는 쪽이 다음 프레임에 다시 시도한다(최소화 · 복원 중에는 서피스 크기가 잠시 0 이라 실패한다). 알림은 연달아
         // 실패하는 동안 한 번이다.
@@ -1739,6 +1849,8 @@ namespace sw
                 return false;
             pFailedStep = "swapchain";
         }
+        else if ( rebuildRenderPassIfFormatChanged() == false )
+            pFailedStep = "swapchain render pass";
         else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
             pFailedStep = "swapchain framebuffers";
         else if ( _swapChain.createSemaphores( _device, constant::render::kMaxFrameCountInFlight ) == false )
@@ -1797,11 +1909,11 @@ namespace sw
 
     bool VulkanRHIDevice::initializePipelineCache()
     {
-        if ( _device == VK_NULL_HANDLE )
+        if ( _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE )
             return false;
 
         vector<uint8> listCacheData;
-        const string  cachePath = getVulkanPipelineCachePath();
+        const string  cachePath = getVulkanPipelineCachePath( _physicalDevice );
         // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
         if ( FileUtil::exists( cachePath ) )
             (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
@@ -1827,6 +1939,8 @@ namespace sw
         {
             SW_LOG_INFO_ID( "Vulkan.LoadedPipelineCacheBytes", "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
         }
+        _pipelineCacheLastSaveNanoseconds = MonotonicClock::nowNanoseconds();
+        _pipelineCacheLastSavedBytes      = static_cast<uint64>( listCacheData.size() );
         return _pipelineCache != VK_NULL_HANDLE;
     }
 
@@ -1834,7 +1948,30 @@ namespace sw
     {
         if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
             return;
+        writePipelineCacheFile();
+        vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
+        _pipelineCache = VK_NULL_HANDLE;
+    }
 
+    void VulkanRHIDevice::savePipelineCacheIfDue()
+    {
+        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
+            return;
+        const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
+        if ( nowNanoseconds - _pipelineCacheLastSaveNanoseconds < _pipelineCacheSaveIntervalNanoseconds )
+            return;
+        // 크기만 묻는다(버퍼 없이) — 새 파이프라인이 없으면 디스크를 건드리지 않는다. 캐시는 내부 동기화라 워커의 파이프라인 생성과 겹쳐도 된다(외부 동기화 깃발을 쓰지 않는다).
+        size_t cacheBytes{ 0 };
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &cacheBytes, nullptr ), "vkGetPipelineCacheData (size)" ) == false )
+            return;
+        if ( VulkanPipelineCacheFile::isPeriodicSaveDue( nowNanoseconds, _pipelineCacheLastSaveNanoseconds, _pipelineCacheSaveIntervalNanoseconds, static_cast<uint64>( cacheBytes ),
+                                                         _pipelineCacheLastSavedBytes ) )
+            writePipelineCacheFile();
+        _pipelineCacheLastSaveNanoseconds = nowNanoseconds;
+    }
+
+    void VulkanRHIDevice::writePipelineCacheFile()
+    {
         size_t dataSize{ 0 };
         // 캐시를 읽지 못하면 오류로 남기고 저장만 건너뛴다(다음 실행이 파이프라인을 새로 만들 뿐이다).
         if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) && dataSize > 0 )
@@ -1842,7 +1979,7 @@ namespace sw
             vector<uint8> listCacheData( dataSize );
             if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
             {
-                const string cachePath = getVulkanPipelineCachePath();
+                const string cachePath = getVulkanPipelineCachePath( _physicalDevice );
                 // 새 파이프라인이 없던 실행은 같은 바이트다 — 다시 쓰지 않는다. 드라이버가 같은 내용에 다른 바이트를 내면 지금처럼 쓴다.
                 vector<uint8> listSavedData;
                 const bool    bUnchanged = FileUtil::exists( cachePath ) && FileUtil::readFile( cachePath, listSavedData ) && listSavedData.size() == dataSize &&
@@ -1854,11 +1991,9 @@ namespace sw
                     SW_LOG_INFO_ID( "Vulkan.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING_ID( "Vulkan.CouldNotSavePipeline", "Could not save the pipeline cache - the next run builds pipelines from scratch" );
+                _pipelineCacheLastSavedBytes = static_cast<uint64>( dataSize );
             }
         }
-
-        vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
-        _pipelineCache = VK_NULL_HANDLE;
     }
 
     void VulkanRHIDevice::reportQueueResult( int32 result, const utf8* pWhere )
@@ -2189,6 +2324,7 @@ namespace sw
         const bool bCannotStartFrame = _width == 0 || _height == 0 || isDeviceLost();
         if ( bCannotStartFrame )
             return;
+        savePipelineCacheIfDue(); // 실행 중에 죽어도 주기 앞까지의 컴파일이 남는다(R-13)
 
         // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 **영영** 건너뛴다
         // (창이 검은 채로 멈춤).
@@ -2870,7 +3006,7 @@ namespace sw
             allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
             allocInfo.allocationSize  = requirements.size;
             allocInfo.memoryTypeIndex = memoryTypeIndex;
-            bMemoryReady              = vkAllocateMemory( _device, &allocInfo, nullptr, &outMemory ) == VK_SUCCESS &&
+            bMemoryReady              = allocateDeviceMemory( allocInfo, outMemory ) &&
                            vkBindBufferMemory( _device, outBuffer, outMemory, 0 ) == VK_SUCCESS &&
                            vkMapMemory( _device, outMemory, 0, VK_WHOLE_SIZE, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr;
         }
@@ -2894,7 +3030,7 @@ namespace sw
         if ( rBuffer != VK_NULL_HANDLE )
             vkDestroyBuffer( _device, rBuffer, nullptr );
         if ( rMemory != VK_NULL_HANDLE )
-            vkFreeMemory( _device, rMemory, nullptr );
+            freeDeviceMemory( rMemory );
         rBuffer = VK_NULL_HANDLE;
         rMemory = VK_NULL_HANDLE;
         pMapped = nullptr;
@@ -3264,7 +3400,7 @@ namespace sw
             allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
             allocMem.allocationSize  = memoryRequirements.size;
             allocMem.memoryTypeIndex = memoryTypeIndex;
-            if ( vkAllocateMemory( _device, &allocMem, nullptr, &_dummyUBOMemory ) != VK_SUCCESS )
+            if ( allocateDeviceMemory( allocMem, _dummyUBOMemory ) == false )
                 return false;
             if ( isVkSuccess( vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 ), "vkBindBufferMemory (dummy UBO)" ) == false )
                 return false;
@@ -3315,7 +3451,7 @@ namespace sw
         allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocMem.allocationSize  = memoryRequirements.size;
         allocMem.memoryTypeIndex = memoryTypeIndex;
-        if ( vkAllocateMemory( _device, &allocMem, nullptr, &_bindlessDummyMemory ) != VK_SUCCESS )
+        if ( allocateDeviceMemory( allocMem, _bindlessDummyMemory ) == false )
             return false;
         if ( isVkSuccess( vkBindImageMemory( _device, _bindlessDummyImage, _bindlessDummyMemory, 0 ), "vkBindImageMemory (bindless dummy image)" ) == false )
             return false;
@@ -3644,8 +3780,10 @@ namespace sw
         barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
         barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
-        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        // 셰이더 읽기는 모든 셰이더 단계다(R-9 — 픽셀 단계만 덮으면 컴퓨트 · 정점 셰이더가 쓰기 끝을 기다리지 않는다). 언리얼 `SRVMask`(SRVGraphics | SRVCompute) 와 같다.
+        constexpr VkPipelineStageFlags kShaderReadStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        srcStage                                         = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dstStage                                         = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
         if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
@@ -3659,13 +3797,13 @@ namespace sw
             barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             srcStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            srcStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            srcStage              = kShaderReadStages;
             dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
@@ -3673,7 +3811,7 @@ namespace sw
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
         {
@@ -3681,13 +3819,13 @@ namespace sw
             barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             srcStage              = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = kShaderReadStages;
         }
         else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
         {
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            srcStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            srcStage              = kShaderReadStages;
             dstStage              = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         }
         else

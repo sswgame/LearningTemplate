@@ -1,7 +1,10 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/ThreadTestAccess.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/PropertyHandle.h"
@@ -1745,4 +1748,79 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ClassAndEnumWithTheSameNameAreAClash )
     SW_EXPECT_LOG( "Reflection.TypeNameHashClash" );
     registry.registerEnum( enumInfo );
     SW_EXPECT_TRUE( registry.findWireTypeNameByHash( sw::hashed_string::computeHash( "KindClashTwin" ) ) == sw::hashed_string( "KindClashTwin" ) ); // 먼저 든 클래스를 지킨다
+}
+
+namespace
+{
+    /** @brief 이름 @p pFqn 의 빈 클래스를 시험 모듈 @p pModuleName 으로 올립니다. */
+    void registerEmptyTestClass( const utf8* pShortName, const utf8* pFqn, const utf8* pModuleName )
+    {
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( pShortName );
+        info._fullyQualifiedName = sw::hashed_string( pFqn );
+        info._size               = 1;
+        info._moduleName         = sw::hashed_string( pModuleName );
+        sw::engine::getSubsystem<sw::TypeRegistry>().registerClass( info );
+    }
+} // namespace
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 별칭이 이미 다른 살아 있는 타입을 가리키면 덮지 않고 오류다 — 같은 타입으로 다시 거는 것(핫 리로드)은 받는다
+ * @details 예전에는 조용히 덮어, 그 옛 이름으로 저장된 씬 · 세이브가 다른 타입으로 풀렸다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, TypeAliasDoesNotOverwriteALiveTarget )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestAliasConflict" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    registerEmptyTestClass( "AliasTargetFirst", "sw::AliasTargetFirst", "TestAliasConflict" );
+    registerEmptyTestClass( "AliasTargetSecond", "sw::AliasTargetSecond", "TestAliasConflict" );
+
+    registry.registerTypeAlias( "sw::AliasConflictOldName", "sw::AliasTargetFirst" );
+    registry.registerTypeAlias( "sw::AliasConflictOldName", "sw::AliasTargetFirst" ); // 같은 타입으로 다시 — 오류가 아니다
+    {
+        SW_EXPECT_LOG( "Reflection.TypeAliasConflict" );
+        registry.registerTypeAlias( "sw::AliasConflictOldName", "sw::AliasTargetSecond" );
+    }
+    const sw::TypeInfo* const pResolved = registry.findType( sw::hashed_string( "sw::AliasConflictOldName" ) );
+    SW_REQUIRE_NOT_NULL( pResolved );
+    SW_EXPECT_TRUE( pResolved->_fullyQualifiedName == sw::hashed_string( "sw::AliasTargetFirst" ) );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] getDerivedTypes · 캐스트는 별칭을 쉬지 않고 거는 쓰기와 함께 돌아도 멈추지 않고 답이 흔들리지 않는다
+ * @details 예전에는 사슬 걷기(`getParentType`)가 세대가 오를 때마다 부모가 미등록인 타입마다 `findType` 을 잠가, 쉬지 않는 쓰기 잠금과 다투다 Release 에서
+ *          시한에 걸렸다. 또 등록이 부모 링크 · 조상 표를 비운 뒤 잠금 밖에서 다시 지어, 그 틈에 읽기가 끊긴 사슬을 보거나 표를 함께 지었다.
+ *          지금은 쓰기가 독점 잠금 안에서 링크 · 표를 새 값으로 바로 바꾸고(`relinkAffectedLocked`) 읽기는 잠그지 않는다.
+ *          쓰기는 `DummyBase` 에 별칭을 걸어 `DummyActor`(자손)를 매번 다시 잇게 하고, 읽기는 그 사이 파생 검사가 늘 참인지 본다.
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedTypesQueryDoesNotNestTheRegistryLock, ._tags = "slow", ._timeoutSeconds = 60.0f )
+{
+    sw::TypeRegistry&         registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+    const sw::TypeInfo* const pBase    = registry.findType<sw::DummyBase>();
+    const sw::TypeInfo* const pDerived = registry.findType<sw::DummyActor>();
+    SW_REQUIRE_NOT_NULL( pBase );
+    SW_REQUIRE_NOT_NULL( pDerived );
+    sw::atomic<bool> bStop{ false };
+    sw::thread       writer( sw::ThreadTestAccess::getKey(), [&registry, &bStop]()
+          {
+        while ( bStop.load() == false )
+        {
+            registry.registerTypeAlias( "sw::DerivedTypesStressAlias", "sw::SampleTestActor" ); // 쓰기 잠금 + 세대 올림
+            registry.registerTypeAlias( "sw::DerivedTypesStressBaseAlias", "sw::DummyBase" );   // 자손(DummyActor)의 링크 · 표를 다시 짓게 한다
+            // 쉬지 않고 쓰기 잠금을 다시 잡으면 SRW 잠금(푼 스레드가 곧바로 다시 잡는다)의 읽기 쪽이 굶어 시한을 넘긴다 — 이 테스트가 보는 것은 교착 · 사슬 끊김이지
+            // 기아가 아니다(실제 별칭 등록은 모듈 로드 때뿐이다). yield 로는 양보되지 않아(2026-11-17 측정: 쓰기 4800 회/초, 읽기 35 바퀴에서 멈춤) 잠깐 잔다.
+            sw::ThreadUtil::sleepForMilliseconds( 1 );
+        }
+    } );
+    size_t           visitedCount = 0;
+    uint32           brokenCount  = 0;
+    for ( uint32 round = 0; round < 2000; ++round )
+    {
+        visitedCount += registry.getDerivedTypes<sw::SampleTestActor>().size();
+        brokenCount += pDerived->isDerivedFrom( pBase ) && pDerived->getTypeChain().size() >= 2 ? 0u : 1u;
+    }
+    bStop.store( true );
+    writer.join();
+    SW_EXPECT_EQUAL( size_t( 0 ), visitedCount ); // 파생이 없는 타입 — 답은 비어 있고, 멈추지 않고 여기까지 왔다
+    SW_EXPECT_EQUAL( 0u, brokenCount );           // 다시 잇는 동안에도 사슬이 끊기지 않았다
 }

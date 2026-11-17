@@ -31,6 +31,12 @@ namespace sw
             _fileWatcher.reset();
             return false;
         }
+        if ( _fileWatcher == nullptr )
+        {
+            // 설계상 없는 것이다(웹 — 브라우저 파일 시스템에는 바깥 편집이 없다) — 경고가 아니라 정보 한 줄이다.
+            SW_LOG_INFO_ID( "FileWatchDispatcher.NoNativeWatcher", "FileWatchDispatcher: this platform has no OS file watcher (the browser file system sends no change events) - content hot reload is off" );
+            return false;
+        }
         if ( _fileWatcher->startWatching( rootPath, true ) == false )
         {
             SW_LOG_ERROR_ID( "FileWatchDispatcher.FileWatchDispatcherFailedStartWatching", "FileWatchDispatcher: failed to start watching %#", rootPath );

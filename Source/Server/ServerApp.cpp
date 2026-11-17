@@ -6,6 +6,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
@@ -100,6 +101,8 @@ namespace sw
         , _reloadStopsServices{}
         , _serverConfigPath{}
         , _serverServiceContext{}
+        , _kitDirectory{}
+        , _kitLocator{ _kitDirectory }
         , _pServerConfig{ nullptr }
         , _drainDeadlineMs{ 0 }
         , _tickCount{ 0 }
@@ -201,9 +204,11 @@ namespace sw
         if ( _launch.loadModuleLibraries( static_cast<uint8>( ModuleTarget::Server ), make_unique<GameModuleManager>() ) == false )
             return false;
         // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저). 배포는 빈 구독이다.
+#if SW_WITH_DYNAMIC_MODULES
         if ( _launch.getDevLayer() != nullptr )
             _reloadStopsServices = _launch.getDevLayer()->addOnBeforeReloadBatch(
                 SW_DELEGATE_METHOD( BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
+#endif
         return true;
     }
 
@@ -311,9 +316,11 @@ namespace sw
                 _serverServiceContext._pServerConfig    = _pServerConfig;
                 _serverServiceContext._pMetricRegistry  = _observability.getMetricRegistry();
                 _serverServiceContext._pHealthRegistry  = _observability.getHealthRegistry();
+                _serverServiceContext._pKitDirectory    = &_kitDirectory;
                 // 게임 쪽(네트워크 세션)에는 공유 형식인 설정과 지표 레지스트리만 건다 — 서버 서비스 문맥은 `Engine/Server/` 형식이라 클라이언트와 함께 짓는 코드가 알면 안 된다.
                 engine::getSubsystem<GameNetSession>().bindMetricRegistry( _observability.getMetricRegistry() ); // 게임 포트 지표(감사 N-7) — 게임이 포트를 열 때 샤드마다 올린다
-                return _launch.getHostScope().bind( _pServerConfig );                                            // `engine::findSubsystem<const ServerConfig>()` 로 찾는다
+                // 키트 창구는 게임 모듈 범위에도 걸린다(`GameModuleManager::fillModuleServiceScope`) — 게임 서버 코드가 백필 같은 키트 인터페이스를 찾는다
+                return _launch.getHostScope().bind( _pServerConfig ) && _launch.getHostScope().bind<IServerKitLocator>( &_kitLocator ); // `engine::findSubsystem<const ServerConfig>()` 로 찾는다
             }
             case HostServiceID::Game:
             {
@@ -371,6 +378,7 @@ namespace sw
             case HostServiceID::ServiceContext:
             {
                 _launch.getHostScope().unbind<const ServerConfig>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+                _launch.getHostScope().unbind<IServerKitLocator>();
                 // 세션은 엔진 종료에 닫힌다(관측보다 늦다) — 지운 레지스트리에 쓰지 않게 여기서 푼다.
                 engine::getSubsystem<GameNetSession>().bindMetricRegistry( nullptr );
                 return;
@@ -591,8 +599,10 @@ namespace sw
         _launch.getEngine().beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
         _launch.getModuleManager()->beginFrame();
         _launch.getModuleManager()->updateGameFrame( deltaSeconds, 1, deltaSeconds ); // 한 틱은 고정 스텝 하나다
+#if SW_WITH_DYNAMIC_MODULES
         if ( _launch.getDevLayer() != nullptr )
             _launch.getDevLayer()->updateModuleReload();
+#endif
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.

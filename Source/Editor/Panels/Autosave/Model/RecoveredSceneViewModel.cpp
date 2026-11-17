@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 
 namespace sw::editor
@@ -23,6 +24,25 @@ namespace sw::editor
             row._refusal   = entry._refusal;
             outState._listRow.push_back( std::move( row ) );
         }
+        outState._listDocumentRow.clear();
+        for ( const EditorDocumentAutosaveEntry& entry : EditorAutosaveCommands::getRecoverableDocuments() )
+        {
+            RecoveredDocumentRow row{};
+            row._documentPath = entry._documentPath;
+            row._savedAge     = formatSavedAge( entry._savedTicks, nowTicks );
+            row._refusal      = entry._refusal;
+            outState._listDocumentRow.push_back( std::move( row ) );
+        }
+    }
+
+    void RecoveredSceneViewModel::restoreDocument( const uint32 rowIndex )
+    {
+        (void)EditorAutosaveCommands::restoreDocument( rowIndex ); // 거절 이유는 restoreDocument 가 알린다
+    }
+
+    void RecoveredSceneViewModel::discardDocument( const uint32 rowIndex )
+    {
+        EditorAutosaveCommands::discardDocument( rowIndex );
     }
 
     void RecoveredSceneViewModel::restore( const uint32 rowIndex )

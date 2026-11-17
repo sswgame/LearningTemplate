@@ -1,5 +1,5 @@
 {
-  "_comment": "에셋 정체성(GUID) 규칙 — C++ AssetIdentityRules(Engine/Asset/AssetDatabase.h)와 py -3 -m Scripts asset-ids(Scripts/lint/asset_identity.py)가 함께 읽는다. 경로는 Content/ 뒤의 리소스 id 이고 패턴의 * 는 / 도 넘는다. listHeaderSuffix: 정체성을 파일 머리 <?asset guid?> 에 드는 우리 형식(XML 글). 그 밖의 파일(원본 — png · ogg · glb …)은 곁의 <파일>.meta 가 든다. listSkipPattern: 정체성이 없는 파일 — 골든은 시험 기록 도구가 통째로 다시 쓰는 증거(가리키는 참조가 없다), credits.md 는 출처 문서, .clang-format 은 도구 설정, localization 표는 글 수집(App --gather-text)이 바이트를 통째로 쓰고 --check-text 가 바이트로 대조한다 — 그 쓰기가 머리를 옮겨 쓰게 될 때(docs/NEXT.md 2 단계) 이 줄을 걷는다. listDerivedFolder: 임포트 산출물 폴더(커밋하지 않는 캐시 — 정체성은 원본의 것이다). 그 안에서 .meta 가 없는 파일은 산출물로 보고 건너뛰고, 손으로 커밋한 파일(.meta 가 있는 것)만 정체성을 갖는다. Config/Dev/AssetReferenceFields.json 의 listImportedFolder 폴더와 같아야 한다(asset-ids --self-check 가 본다).",
+  "_comment": "에셋 정체성(GUID) 규칙 — C++ AssetIdentityRules(Engine/Asset/AssetDatabase.h)와 py -3 -m Scripts asset-ids(Scripts/lint/asset_identity.py)가 함께 읽는다. 경로는 Content/ 뒤의 리소스 id 이고 패턴의 * 는 / 도 넘는다. listHeaderSuffix: 정체성을 파일 머리 <?asset guid?> 에 드는 우리 형식(XML 글). 그 밖의 파일(원본 — png · ogg · glb …)은 곁의 <파일>.meta 가 든다. listSkipPattern: 정체성이 없는 파일 — 골든은 시험 기록 도구가 통째로 다시 쓰는 증거(가리키는 참조가 없다), credits.md 는 출처 문서, .clang-format 은 도구 설정, localization 표는 글 수집(App --gather-text)이 바이트를 통째로 쓰고 --check-text 가 바이트로 대조한다 — 그 쓰기가 머리를 옮겨 쓰게 될 때(docs/NEXT.md 2 단계) 이 줄을 걷는다. *.stamp 는 임포터 장부(import.stamp · import.astc.stamp — 커밋하지 않는 캐시). scratch/(테스트 · 시나리오 작업 폴더)는 여기서 빼지 않는다 — 사본 안의 가져오기가 GUID 를 받아야 한다. 기동 색인(AssetDatabase::scan)이 작업 도메인을 건너뛴다. listDerivedFolder: 임포트 산출물 폴더(커밋하지 않는 캐시 — 정체성은 원본의 것이다). 그 안에서 .meta 가 없는 파일은 산출물로 보고 건너뛰고, 손으로 커밋한 파일(.meta 가 있는 것)만 정체성을 갖는다. Config/Dev/AssetReferenceFields.json 의 listImportedFolder 폴더와 같아야 한다(asset-ids --self-check 가 본다).",
   "listHeaderSuffix": [
     ".xml",
     ".material"
@@ -8,7 +8,8 @@
     "*/golden/*",
     "*.md",
     ".clang-format",
-    "*/localization/*"
+    "*/localization/*",
+    "*.stamp"
   ],
   "listDerivedFolder": [
     "models",

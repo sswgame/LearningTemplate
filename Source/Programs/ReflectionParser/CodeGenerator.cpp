@@ -353,6 +353,7 @@ namespace sw
         , _session{ session }
         , _sourceFilePath{ sourceFilePath }
         , _moduleName{ moduleName }
+        , _emitBytes{}
     {
     }
 
@@ -363,6 +364,7 @@ namespace sw
 
     string CodeGenerator::makeSourceText() const
     {
+        _emitBytes = CodeEmitByteReport{};
         CodeEmitBuffer buffer;
         if ( _header._listType.empty() && _header._listEnum.empty() )
         {
@@ -408,6 +410,7 @@ namespace sw
 
     void CodeGenerator::emitPropertyValueCheck( CodeEmitBuffer& outBuffer ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::FileHeader };
         // 프로퍼티마다 긴 static_assert 를 내지 않고 검사 템플릿 하나를 둔다. 같은 단위에 생성 파일이 여럿 들어와도(묶음 TU) 한 번만 정의한다.
         const ParserConfig& config = _session._config;
         if ( config._listValueForbiddenBaseType.empty() )
@@ -458,6 +461,7 @@ namespace sw
 
     void CodeGenerator::emitFileHeader( CodeEmitBuffer& outBuffer ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::FileHeader };
         appendTemplate( outBuffer, EmitTemplate::FileHeader, {
                                                                  {templatekey::kSourcePath,                   _sourceFilePath},
                                                                  {    templatekey::kBanner, sw::config::kTextReflectionBanner}
@@ -466,6 +470,7 @@ namespace sw
 
     void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TypeTraits };
         appendTemplate( outBuffer, EmitTemplate::ReflectTypeTraits, {
                                                                         { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
@@ -473,6 +478,7 @@ namespace sw
 
     void CodeGenerator::emitTypeInfoAccessors( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TypeTraits };
         appendTemplate( outBuffer, EmitTemplate::TypeInfoAccessors, {
                                                                         { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
@@ -480,6 +486,7 @@ namespace sw
 
     void CodeGenerator::emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyMetadata };
         AnnotationFields::emitRuntimeMetadata( emit, prop, "m." );
 
         // 범위는 경계마다 값과 "있음" 표시가 함께 가는 Manual 필드다. 적힌 쪽만 낸다 — 표시가 하나면 `Min` 만 적어도
@@ -544,6 +551,7 @@ namespace sw
 
     void CodeGenerator::emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::NestedContainerTree };
         if ( prop._containerTree == nullptr || prop._containerTree->_bIsContainer == SW_FALSE )
             return;
 
@@ -603,6 +611,7 @@ namespace sw
 
     void CodeGenerator::emitPropertyStatics( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyStatics };
         // PROPERTY() 에 값으로 담으면 안 되는 기반 타입은 파일 머리의 검사 템플릿(`emitPropertyValueCheck`)이 막는다.
         if ( _session._config._listValueForbiddenBaseType.empty() == false )
             emit.linef( "static_assert( ::sw::generated::checkPropertyValue<%#>() );", makePropertyDeclType( typeInfo, prop ) );
@@ -622,6 +631,7 @@ namespace sw
 
     void CodeGenerator::emitPropertyDesc( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyDesc };
         // 칸 차례는 `PropertyDesc`(엔진 `PropertyInfo.h`)와 같다.
         const string& fqn        = typeInfo._fullyQualifiedName;
         const auto    textOrNull = []( const string& text )
@@ -705,6 +715,7 @@ namespace sw
                                            const ParsedFunctionInfo& method, const string& returnType,
                                            const string& callArgs ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::MethodInvoker };
         // 표 칸에 들어가는 상태 없는 람다다 — 함수 포인터(`FunctionDesc::InvokeFunction`)로 바뀐다.
         emit.line( "[]( void* objPtr, const ::sw::TaskArgs& args ) -> ::sw::TaskValue" );
         emit.line( "{" );
@@ -760,6 +771,7 @@ namespace sw
 
     void CodeGenerator::emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::MethodList };
         // 메서드는 상수 초기화되는 서술자 표 하나다(프로퍼티의 `kProperties` 와 같은 모양). 인자 표를 먼저 쓴다.
         vector<string> listParamTable;
         for ( size_t methodIndex = 0; methodIndex < typeInfo._listMethod.size(); ++methodIndex )
@@ -827,7 +839,8 @@ namespace sw
 
     void CodeGenerator::emitEventList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const
     {
-        vector<string> listParamTable;
+        const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::EventList };
+        vector<string>          listParamTable;
         for ( size_t eventIndex = 0; eventIndex < typeInfo._listEvent.size(); ++eventIndex )
         {
             StringBuilder<constant::buffer::kMax64> tableName;
@@ -870,7 +883,8 @@ namespace sw
 
     void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, const size_t typeIndex ) const
     {
-        const string registrarName = sanitizeIdentifier( typeInfo._fullyQualifiedName );
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TypeRegistrar };
+        const string            registrarName = sanitizeIdentifier( typeInfo._fullyQualifiedName );
 
         CodeEmitBuffer flagsBuf;
         {
@@ -933,7 +947,10 @@ namespace sw
         if ( typeInfo._listMethod.empty() == false )
             emitMethodList( emit, typeInfo );
 
-        _fixedCodec.emitRegistration( emit, typeIndex );
+        {
+            const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::FixedCodec };
+            _fixedCodec.emitRegistration( emit, typeIndex );
+        }
 
         appendTemplate( outBuffer, EmitTemplate::TypeRegistrarEnd,
                         {
@@ -947,6 +964,7 @@ namespace sw
 
     void CodeGenerator::emitTickBatchRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TickBatch };
         // 등록 줄 모양은 틱 런타임(5-3)이 정한 `SW_REGISTER_TICK_TYPE( 타입, 모드 )` 하나다 — 손 등록과 같은 줄. 메타데이터가 없으면 Batch.
         if ( typeInfo.requiresTickRegistration() == false )
             return;
@@ -972,6 +990,7 @@ namespace sw
 
     void CodeGenerator::emitPhysicsHookRegistration( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::PhysicsHook };
         // 등록 줄 모양은 받는 쪽(`PhysicsHookRegistry.h`)이 정한 `SW_REGISTER_PHYSICS_HOOKS( 타입 )` 하나다. 재정의 여부는 그 줄이 컴파일에서 정한다.
         if ( typeInfo.requiresPhysicsHookRegistration() == false )
             return;
@@ -990,7 +1009,8 @@ namespace sw
 
     void CodeGenerator::emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const
     {
-        const string registrarName = sanitizeIdentifier( enumInfo._fullyQualifiedName );
+        const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::EnumRegistrar };
+        const string            registrarName = sanitizeIdentifier( enumInfo._fullyQualifiedName );
 
         const ParsedEnumeratorInfo* invalidEn = findEnumerator( enumInfo, enumInfo._invalidEnumerator );
         const ParsedEnumeratorInfo* countEn   = findEnumerator( enumInfo, enumInfo._countEnumerator );

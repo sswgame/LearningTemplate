@@ -90,7 +90,7 @@ namespace sw
 
             static bool isKnownRootKey( string_view key )
             {
-                return key == "_name" || key == "_seed" || key == "_region" || key == "_listStep";
+                return key == "_name" || key == "_seed" || key == "_region" || key == "_pacing" || key == "_listStep";
             }
 
             /** @brief 첫 칸 값이 그 동작이 받는 값인지 봅니다. 허용 목록이 없거나 값이 비면(기본) 참입니다. */
@@ -229,6 +229,14 @@ namespace sw
             return unexpected( Error{ ErrorKind::InvalidArgument, "_seed must be an integer" } );
         if ( root.has( "_region" ) )
             scenario._region = root.get( "_region" ).asString();
+        // 보내기 방식은 숨은 기본값 없이 시나리오가 정한다 — 같은 수치가 닫힌 루프인지 열린 루프인지 보고서만 보고 알 수 없었다(감사 O-12)
+        const string pacing = root.get( "_pacing" ).asString();
+        if ( pacing == "closed" )
+            scenario._pacing = LoadBotPacing::Closed;
+        else if ( pacing == "open" )
+            scenario._pacing = LoadBotPacing::Open;
+        else
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_pacing must be \"closed\" or \"open\"", pacing } );
         const expected<void> steps = LoadBotScenarioInternal::readStepList( root.get( "_listStep" ), scenario._listStep, 0 );
         if ( steps.has_value() == false )
             return unexpected( steps.error() );

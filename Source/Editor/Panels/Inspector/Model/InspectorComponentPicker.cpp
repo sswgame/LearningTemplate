@@ -34,7 +34,7 @@ namespace sw::editor
         const GameObject* pOwner = component.getOwner();
         string            label  = pOwner != nullptr ? string( pOwner->getName().c_str() ) : string();
         label += " / ";
-        label += ComponentStableKey::makeKey( &component );
+        label += ComponentStableKey::makeLegacyKey( &component ); // 표시 글이다 — 사람이 읽는 "타입#순번"(유니티 "이름 (타입)"). 정체는 핸들이 맡고, 고정 지역 id 키(`#16진`)는 읽을 수 없다
         return label;
     }
 

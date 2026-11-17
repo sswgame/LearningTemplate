@@ -66,6 +66,9 @@ namespace sw
                 loginSettings._attemptBurst                = kitConfig._attemptBurst;
                 loginSettings._maxConcurrentPasswordHashes = kitConfig._maxConcurrentPasswordHashes;
                 loginSettings._maxQueuedPasswordHashes     = kitConfig._maxQueuedPasswordHashes;
+                loginSettings._sharedAttemptLimit          = kitConfig._sharedAttemptLimit;
+                loginSettings._sharedAttemptWindowMs       = static_cast<int64>( kitConfig._sharedAttemptWindowSeconds ) * constant::time::kMillisecondsPerSecond;
+                loginSettings._loginNonceLifetimeMs        = static_cast<int64>( kitConfig._loginNonceLifetimeSeconds ) * constant::time::kMillisecondsPerSecond;
                 // 개발 설정은 DevOnline 단위가 있을 때만 받는다 — 그 단위가 없는 구성(배포)은 기동 오류다.
                 const bool bDevOption = kitConfig._bLightPasswordHash || kitConfig._listSeedTestAccount.empty() == false;
                 if ( bDevOption )
@@ -107,6 +110,9 @@ namespace sw
             {
                 // 바인딩이 첫 틱에 호스트의 캐시 · 버스를 잇는다(접속 상태 · account.revoke). 탈퇴 정리에는 모든 키트의 훅을 넘긴다 — 모든 키트의 initialize 뒤다.
                 _loginService.setAfterDeleteAccount( context._listAfterDeleteAccount );
+                if ( context._pRouter == nullptr )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the account kit needs a cache (shared login attempt window and login nonces)" } );
+                _loginService.attachCache( context._pRouter );
                 return {};
             }
 

@@ -1,8 +1,8 @@
 /**
  * @file AssetTypeRegistry.h
  * @brief 에셋 종류 하나의 정의(`AssetTypeDef`)와 그 등록표입니다. 종류를 더하는 일은 등록 줄(`SW_ASSET_TYPE`) 하나입니다.
- * @details 한 종류의 사실(접미사 · 쿠킹 역할 · 판 · 경로 규칙 · 로더 · 다시 읽기 방식 · 메모리 태그)을 여러 표에 따로 적으면 한쪽만 늘어난다 — 예전에는 `AssetKind` 열거 · 판 상수 표 ·
- *          쿠킹 표의 `cook_suffixes`(JSON) · 데이터 종류 표(`AssetDataKind`) · 캐시 특성 표(이름 · 로더 · 다시 읽기 방식)가 같은 종류를 따로 적었다(캐시 이름 `Rig` 과 종류 이름 `RigAsset` 처럼 갈라졌다). 지금은 파생하는 쪽(쿠킹 경로 `AssetCookPath`,
+ * @details 한 종류의 사실(접미사 · 쿠킹 역할 · 판 · 경로 규칙 · 로더 · 메모리 태그)을 여러 표에 따로 적으면 한쪽만 늘어난다 — 예전에는 `AssetKind` 열거 · 판 상수 표 ·
+ *          쿠킹 표의 `cook_suffixes`(JSON) · 데이터 종류 표(`AssetDataKind`) · 캐시 특성 표(이름 · 로더)가 같은 종류를 따로 적었다(캐시 이름 `Rig` 과 종류 이름 `RigAsset` 처럼 갈라졌다). 지금은 파생하는 쪽(쿠킹 경로 `AssetCookPath`,
  *          판 검사, 팩 쿠커의 잔재 판정, 카탈로그 편집기, 공유 캐시)이 모두 이 표를 읽는다. 언리얼 `UAssetManager` 의 Primary Asset Type 설정 · 유니티 `ScriptableObject` 타입 목록에 해당한다(기억에 의존).
  *          - **경로 규칙은 접미사 표와 다르다**: 접미사는 쿠킹 역할을 정하고, 경로 규칙(`AssetPathRule`)은 접미사로 가를 수 없는 데이터 파일(`/data/items.xml`)을 찾는다. 경로 규칙이 있는 종류만 카탈로그 편집기에 나온다.
  *          - **로더는 등록 줄의 사본에만 있다**: 헤더의 `kAssetType` 은 쿠킹이 쓰는 사실만 적고, .cpp 의 등록 줄이 `withLoader` · `withPathRule` 로 더한 사본을 표에 올린다(로더 함수는 기능의 .cpp 에 있다).
@@ -10,7 +10,7 @@
  *          - **접미사 우선순위는 이 표가 정렬로 가진다**: 가장 긴 접미사가 먼저, 길이가 같으면 등록 순이다(`.scene.xml` 이 `.scene` 보다 먼저). 표의 적은 순서에 기대지 않는다.
  *          - 종류의 열쇠는 이름(`_name`)이다. 정의는 헤더의 `static constexpr` 라 DLL 마다 사본이 있을 수 있어 주소로 비교하지 않는다.
  *          - 등록 줄은 정의를 가진 기능의 .cpp 에 둔다. 공유 캐시가 있는 종류는 캐시 등록 줄(`SW_SHARED_ASSET_CACHE` · `SW_MODULE_SHARED_ASSET_CACHE`)이 같은 정의로 이 등록을 대신한다 —
- *            캐시의 종류 이름 · 로더 · 다시 읽기 방식이 이 정의 한 벌에서 나온다. 모듈이 등록한 종류는 등록자가 사라질 때 표에서 빠진다.
+ *            캐시의 종류 이름 · 로더가 이 정의 한 벌에서 나온다. 모듈이 등록한 종류는 등록자가 사라질 때 표에서 빠진다.
  *          - 이름 · 접미사가 겹치는 등록은 표가 받지 않고 문제로 남긴다(`collectProblems` — `AssetTypeRegistryTest` 가 본다).
  *          - **에셋 파일 형식은 XML 이나 바이너리다**. JSON 접미사는 쿠킹 입력(`CookSource` — 쿠킹이 바이너리로 바꾼다)만 받고,
  *            그대로 읽는 접미사(`Plain` · `Cooked`)로는 올리지 못한다(`isSuffixFormatAllowed`). JSON 은 도구 · 설정 데이터의 형식이다.
@@ -49,13 +49,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 파일이 바뀐 에셋을 쥔 쪽에 어떻게 보이는가입니다. */
-    enum class SharedAssetReloadMode : uint8
-    {
-        InPlace, ///< 쥔 객체를 제자리에서 바꾼다(`SharedAssetTable::reloadShared`). 모두가 다음 읽기부터 새 내용을 본다
-        Detach,  ///< 표에서 떼어 낸다(`SharedAssetTable::detachShared`). 쥔 쪽은 옛 객체를 끝까지 쥐고, 다시 `acquire` 하면 새 객체를 받는다
-    };
-
     /**
      * @struct AssetPathRule
      * @brief 데이터 파일 종류가 어느 경로의 파일인지 적은 선언입니다(접두 · 포함 · 접미, 대소문자 무시). 빈 칸은 보지 않습니다.
@@ -83,23 +76,22 @@ namespace sw
         using LoadIntoFunction  = bool ( * )( const AssetID& assetID, void* pOutAsset );
         using CheckLoadFunction = bool ( * )( const AssetID& assetID );
 
-        LoadIntoFunction      _pLoadInto{ nullptr };                         ///< 만들어 둔 에셋에 읽습니다(공유 캐시). 읽지 못하면 오류를 남기고 false 입니다
-        CheckLoadFunction     _pCheckLoad{ nullptr };                        ///< 새 에셋에 읽어 보고 버립니다. 모르는 키 · 열거자 · 참조는 로더가 알리고 false 입니다
-        MemoryTag             _memoryTag{ MemoryTag::Asset };                ///< 읽는 동안 거는 할당 태그
-        SharedAssetReloadMode _reloadMode{ SharedAssetReloadMode::InPlace }; ///< 공유 캐시의 다시 읽기 방식
+        LoadIntoFunction  _pLoadInto{ nullptr };          ///< 만들어 둔 에셋에 읽습니다(공유 캐시). 읽지 못하면 오류를 남기고 false 입니다
+        CheckLoadFunction _pCheckLoad{ nullptr };         ///< 새 에셋에 읽어 보고 버립니다. 모르는 키 · 열거자 · 참조는 로더가 알리고 false 입니다
+        MemoryTag         _memoryTag{ MemoryTag::Asset }; ///< 읽는 동안 거는 할당 태그
 
         /** @brief `bool TAsset::loadFromAsset( const AssetID& )` 로 읽는 종류입니다. */
         template <typename TAsset>
-        [[nodiscard]] static constexpr AssetTypeLoader of( MemoryTag memoryTag = MemoryTag::Asset, SharedAssetReloadMode reloadMode = SharedAssetReloadMode::InPlace )
+        [[nodiscard]] static constexpr AssetTypeLoader of( MemoryTag memoryTag = MemoryTag::Asset )
         {
-            return with<TAsset, &loadFromAssetOf<TAsset>>( memoryTag, reloadMode );
+            return with<TAsset, &loadFromAssetOf<TAsset>>( memoryTag );
         }
 
         /** @brief 문맥이 더 필요해 함수 @p pfnLoad 로 읽는 종류입니다. */
         template <typename TAsset, bool ( *pfnLoad )( const AssetID&, TAsset& )>
-        [[nodiscard]] static constexpr AssetTypeLoader with( MemoryTag memoryTag = MemoryTag::Asset, SharedAssetReloadMode reloadMode = SharedAssetReloadMode::InPlace )
+        [[nodiscard]] static constexpr AssetTypeLoader with( MemoryTag memoryTag = MemoryTag::Asset )
         {
-            return AssetTypeLoader{ &loadInto<TAsset, pfnLoad>, &checkLoad<TAsset, pfnLoad>, memoryTag, reloadMode };
+            return AssetTypeLoader{ &loadInto<TAsset, pfnLoad>, &checkLoad<TAsset, pfnLoad>, memoryTag };
         }
 
     private:

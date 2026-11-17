@@ -1,9 +1,15 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/AtomicSlot.h"
 #include "Core/Delegate/LockedMulticastDelegate.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
+#include "Core/Time/MonotonicClock.h"
 
 static int32 s_TestValue{ 0 };
 namespace
@@ -29,6 +35,11 @@ namespace
     class CountingSubscriptionSource final : public sw::SubscriptionSource
     {
     public:
+        CountingSubscriptionSource() = default;
+        ~CountingSubscriptionSource() override { closeSubscriptions(); }
+        CountingSubscriptionSource( const CountingSubscriptionSource& )            = delete;
+        CountingSubscriptionSource& operator=( const CountingSubscriptionSource& ) = delete;
+
         sw::Subscription issue() { return issueSubscription( _nextID.fetch_add( 1 ) + 1 ); }
         void             detach( uint64 id ) { detachSubscription( id ); }
         uint32           getReleasedCount() const { return _releasedCount.load(); }
@@ -44,6 +55,66 @@ namespace
         sw::atomic<uint64> _nextID{ 0 };
         sw::atomic<uint32> _releasedCount{ 0 };
     };
+
+    class ProbeSubscriptionSource;
+
+    /** @brief 출처 밖에서 해제를 지켜보는 상태입니다 — 출처가 사라진 뒤에도 테스트가 읽는다. */
+    struct ReleaseProbe
+    {
+        sw::atomic<uint32>                       _releasedCount{ 0 };
+        sw::atomic<bool>                         _bEntered{ false };           ///< 해제가 `releaseSubscription` 에 들어왔다
+        sw::atomic<bool>                         _bReleaseHeld{ false };       ///< 서 있으면 해제가 안에서 기다린다(진행 중인 해제를 붙잡아 둔다)
+        sw::unique_ptr<ProbeSubscriptionSource>* _pSourceToDestroy{ nullptr }; ///< 주면 해제 안에서 이 출처를 지운다(자기 해제 안에서 닫기)
+    };
+
+    /** @brief 해제가 파생 멤버를 만지고, 붙잡기(`ReleaseProbe::_bReleaseHeld`)가 서 있으면 해제 안에서 기다리는 출처입니다. 파생 소멸자 첫 줄에서 닫는다. */
+    class ProbeSubscriptionSource final : public sw::SubscriptionSource
+    {
+    public:
+        explicit ProbeSubscriptionSource( ReleaseProbe& probe )
+            : _probe{ probe }
+        {
+        }
+        ~ProbeSubscriptionSource() override { closeSubscriptions(); }
+        ProbeSubscriptionSource( const ProbeSubscriptionSource& )            = delete;
+        ProbeSubscriptionSource& operator=( const ProbeSubscriptionSource& ) = delete;
+
+        sw::Subscription issue() { return issueSubscription( ++_nextID ); }
+
+    private:
+        void releaseSubscription( uint64 id ) override
+        {
+            (void)id;
+            ReleaseProbe& probe = _probe;
+            _releasedHere.fetch_add( 1 ); // 파생 멤버 — 출처가 소멸한 뒤라면 ASan 이 해제 뒤 사용으로 잡는다
+            probe._bEntered.store( true );
+            while ( probe._bReleaseHeld.load() )
+            {
+                sw::ThreadUtil::yield();
+            }
+            probe._releasedCount.fetch_add( 1 );
+            if ( probe._pSourceToDestroy != nullptr )
+                probe._pSourceToDestroy->reset(); // 이 객체를 지운다 — 아래로 멤버를 만지지 않는다
+        }
+
+    private:
+        ReleaseProbe&      _probe;
+        uint64             _nextID{ 0 };
+        sw::atomic<uint32> _releasedHere{ 0 };
+    };
+
+    /** @brief 닫기를 빠뜨린 파생입니다(자식 역할 `OpenSourceChild` 만 쓴다 — 기반 소멸자가 멈춰야 한다). */
+    class OpenSubscriptionSource final : public sw::SubscriptionSource
+    {
+    public:
+        sw::Subscription issue() { return issueSubscription( 1 ); }
+
+    private:
+        void releaseSubscription( uint64 id ) override { (void)id; }
+    };
+
+    /** @brief 닫기를 빠뜨린 출처의 자식 시한(초) — Debug 의 자식 App 기동(몇 초)을 덮는다. */
+    constexpr float32 kOpenSourceChildTimeoutSeconds = 120.0f;
 } // namespace
 
 struct DummyListener
@@ -584,4 +655,181 @@ SW_TEST_CASE( DelegateTest, AtomicSlotLateReleaseKeepsTheNewerValue )
     SW_EXPECT_TRUE( slot.get() == &s_second );
     newBinding.reset();
     SW_EXPECT_TRUE( slot.get() == nullptr );
+}
+
+// ------------------------------------------------------------------------------
+// 2) 구독의 제어 블록 — 출처보다 오래 사는 잠금과 해제 중 대기(감사 C-20)
+// ------------------------------------------------------------------------------
+/**
+ * @brief [DelegateTest] 한 스레드가 구독을 풀고 다른 스레드가 같은 출처를 지우기를 1 만 번 겹쳐도 해제된 메모리를 만지지 않는다
+ * @details 구독이 잡는 잠금이 출처 안에 있으면 그 사이 출처가 사라져 해제된 메모리의 잠금을 잡고, 잠금 밖 `releaseSubscription` 이 소멸된 파생을 부른다.
+ *          판정은 ASan(`linux-verify` 의 sanitize) — 보통 구성에서는 깨진 힙이 늦게 드러날 수 있다.
+ */
+SW_TEST_CASE( DelegateTest, SourceDestroyedOnAnotherThreadWhileSubscriptionsReset )
+{
+    constexpr uint32                        kRoundCount = 10000;
+    ReleaseProbe                            probe;
+    sw::unique_ptr<ProbeSubscriptionSource> pSource;
+    sw::Subscription                        subscription;
+    sw::atomic<uint32>                      startedRound{ 0 };  // 본 스레드가 출처와 구독을 준비한 회차
+    sw::atomic<uint32>                      finishedCount{ 0 }; // 두 일꾼이 끝낸 일의 수(회차마다 둘)
+    const auto                              runWorker = [&]( const bool bResetsSource )
+    {
+        for ( uint32 round = 1; round <= kRoundCount; ++round )
+        {
+            while ( startedRound.load() != round )
+            {
+                sw::ThreadUtil::yield();
+            }
+            if ( bResetsSource )
+                pSource.reset();
+            else
+                subscription.reset();
+            finishedCount.fetch_add( 1 );
+        }
+    };
+    std::thread resetWorker{ runWorker, false };
+    std::thread destroyWorker{ runWorker, true };
+    for ( uint32 round = 1; round <= kRoundCount; ++round )
+    {
+        pSource      = sw::make_unique<ProbeSubscriptionSource>( probe );
+        subscription = pSource->issue();
+        startedRound.store( round );
+        while ( finishedCount.load() != round * 2 )
+        {
+            sw::ThreadUtil::yield();
+        }
+    }
+    resetWorker.join();
+    destroyWorker.join();
+    SW_EXPECT_TRUE( pSource == nullptr );
+    SW_EXPECT_FALSE( subscription.isActive() );
+    SW_EXPECT_TRUE( probe._releasedCount.load() <= kRoundCount ); // 출처가 먼저 닫힌 회차는 해제를 부르지 않는다
+}
+
+/**
+ * @brief [DelegateTest] 출처를 닫는 소멸은 다른 스레드에서 진행 중인 해제가 끝날 때까지 돌아오지 않는다
+ * @details 해제를 안에서 붙잡아 두고 다른 스레드가 출처를 지운다. 닫기가 기다리지 않으면 소멸이 먼저 끝나고, 해제는 소멸된 파생 안에서 이어진다.
+ *          "아직 끝나지 않았다" 는 짧은 시한으로만 볼 수 있다 — 기계가 느리면 결함을 놓칠 수는 있어도 옳은 구현이 지지는 않는다.
+ */
+SW_TEST_CASE( DelegateTest, SourceCloseWaitsForReleaseInProgress )
+{
+    constexpr float64                       kCloseFinishedEarlySeconds = 0.2;
+    ReleaseProbe                            probe;
+    sw::unique_ptr<ProbeSubscriptionSource> pSource      = sw::make_unique<ProbeSubscriptionSource>( probe );
+    sw::Subscription                        subscription = pSource->issue();
+    probe._bReleaseHeld.store( true );
+
+    std::thread resetWorker{ [&subscription]()
+    { subscription.reset(); } };
+    SW_REQUIRE_TRUE( sw::test::waitUntil( [&probe]()
+    { return probe._bEntered.load(); } ) );
+
+    sw::atomic<bool> bCloseStarted{ false };
+    sw::atomic<bool> bCloseFinished{ false };
+    std::thread      destroyWorker{ [&]()
+    {
+        bCloseStarted.store( true );
+        pSource.reset();
+        bCloseFinished.store( true );
+    } };
+    SW_EXPECT_TRUE( sw::test::waitUntil( [&bCloseStarted]()
+    { return bCloseStarted.load(); } ) );
+    const bool bClosedWhileReleasing = sw::test::waitUntil( [&bCloseFinished]()
+    { return bCloseFinished.load(); }, kCloseFinishedEarlySeconds );
+    SW_EXPECT_FALSE( bClosedWhileReleasing );
+
+    probe._bReleaseHeld.store( false );
+    resetWorker.join();
+    destroyWorker.join();
+    SW_EXPECT_TRUE( bCloseFinished.load() );
+    SW_EXPECT_EQUAL( 1u, probe._releasedCount.load() );
+}
+
+/**
+ * @brief [DelegateTest] 자기 해제 안에서 그 출처를 닫는 스레드는 기다리지 않는다(자기를 기다리면 영영 멈춘다)
+ */
+SW_TEST_CASE( DelegateTest, SourceClosedInsideItsOwnReleaseDoesNotWait )
+{
+    ReleaseProbe                            probe;
+    sw::unique_ptr<ProbeSubscriptionSource> pSource = sw::make_unique<ProbeSubscriptionSource>( probe );
+    probe._pSourceToDestroy                         = &pSource;
+    sw::Subscription subscription                   = pSource->issue();
+    subscription.reset();
+    SW_EXPECT_TRUE( pSource == nullptr );
+    SW_EXPECT_EQUAL( 1u, probe._releasedCount.load() );
+    SW_EXPECT_FALSE( subscription.isActive() );
+}
+
+/**
+ * @brief [DelegateTest] 자식 역할: 닫기(`closeSubscriptions`)를 빠뜨린 출처를 지운다 — 기반 소멸자가 멈춰야 한다.
+ */
+SW_TEST_CHILD_ROLE( DelegateTest, OpenSourceChild )
+{
+    sw::Subscription subscription;
+    {
+        OpenSubscriptionSource source;
+        subscription = source.issue();
+    }
+    SW_EXPECT_FALSE( subscription.isActive() ); // 여기까지 오면 멈추지 않은 것이다 — 부모가 표지 글이 없어 진다
+}
+
+/**
+ * @brief [DelegateTest] 파생 소멸자에서 닫지 않은 출처는 기반 소멸자가 멈춘다(빠뜨린 파생은 그 형식을 지우는 첫 테스트에서 드러난다)
+ */
+SW_TEST_CASE( DelegateTest, SourceLeftOpenAtDestructionIsFatal, ._tags = "slow", ._timeoutSeconds = 180.0f )
+{
+    const sw::test::ChildRunResult child = sw::test::runChildRole( "DelegateTest.OpenSourceChild", {}, kOpenSourceChildTimeoutSeconds );
+    SW_EXPECT_TRUE_MSG( child._exitCode.has_value() && *child._exitCode != 0, child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SubscriptionSource destroyed without closeSubscriptions" ), child.getOutputTail() );
+}
+
+/**
+ * @brief [DelegateTest] 구독 비용(ns/짝 · 출처 만들고 지우기)을 로그로 남깁니다. 시간 문턱은 두지 않는다
+ * @details 재는 법: Release `App --test --test-filter=DelegateTest.SubscribeCost` 5 번, 제어 블록 커밋과 그 앞에서 로그 `DelegateTest.SubscribeCost` 의 중앙값.
+ *          판정(docs/DesignBacklog.md 구독 제어 블록 절): ns/짝 증가가 30 ns 를 넘으면 출처가 스레드 정책을 고르게 한다.
+ */
+SW_TEST_CASE( DelegateTest, SubscribeCost, ._tags = "bench" )
+{
+    constexpr uint32 kListenerCounts[] = { 1, 8, 64 };
+    constexpr uint32 kPairsPerCount    = 64 * 1024;
+    constexpr uint32 kSourceCount      = 10000;
+
+    sw::MulticastDelegate<void( int32 )> multiDel;
+    sw::vector<sw::Subscription>         listSubscription;
+    for ( const uint32 listenerCount : kListenerCounts )
+    {
+        listSubscription.reserve( listenerCount );
+        const uint32        roundCount = kPairsPerCount / listenerCount;
+        const sw::Stopwatch stopwatch;
+        for ( uint32 round = 0; round < roundCount; ++round )
+        {
+            for ( uint32 listener = 0; listener < listenerCount; ++listener )
+            {
+                listSubscription.push_back( multiDel.add( sw::Delegate<void( int32 )>::create( []( int32 ) {} ) ) );
+            }
+            for ( sw::Subscription& subscription : listSubscription )
+            {
+                subscription.reset();
+            }
+            listSubscription.clear();
+        }
+        SW_LOG_INFO_ID( "DelegateTest.SubscribeCost", "add + reset with %# listeners: %# ns per pair", listenerCount,
+                        stopwatch.getElapsedNanoseconds() / static_cast<int64>( roundCount * listenerCount ) );
+    }
+    SW_EXPECT_FALSE( multiDel.isBound() );
+
+    const sw::Stopwatch                                       sourceStopwatch;
+    sw::vector<sw::unique_ptr<sw::MulticastDelegate<void()>>> listSource;
+    listSource.reserve( kSourceCount );
+    for ( uint32 sourceIndex = 0; sourceIndex < kSourceCount; ++sourceIndex )
+    {
+        listSource.push_back( sw::make_unique<sw::MulticastDelegate<void()>>() );
+        listSubscription.push_back( listSource.back()->add( sw::Delegate<void()>::create( []() {} ) ) );
+    }
+    listSource.clear(); // 출처가 먼저 사라진다 — 구독은 무효가 된다
+    SW_EXPECT_FALSE( listSubscription.front().isActive() );
+    listSubscription.clear();
+    SW_LOG_INFO_ID( "DelegateTest.SubscribeCost", "%# sources with one subscription created and destroyed: %# ns per source", kSourceCount,
+                    sourceStopwatch.getElapsedNanoseconds() / static_cast<int64>( kSourceCount ) );
 }

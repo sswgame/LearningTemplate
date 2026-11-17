@@ -304,16 +304,33 @@ SW_TEST_CASE( PushDispatcherTest, TopicClaimsExpireAfterWindow )
 /** @brief [PushNotificationDispatcherTest] 계정 삭제 → 라이브 운영 키트에 그 계정의 레코드 0: 기기 목록(푸시 토큰)이 지워지고 다른 계정의 기기는 남는다(감사 P0-7) */
 SW_TEST_CASE( PushNotificationDispatcherTest, AccountDeletionErasesDevices )
 {
-    MemoryServiceDatabase database;
-    ServiceTransaction    seed;
-    seed.put( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeDeviceKey( 7, "fake", "token-a" ), vector<uint8>{ 1 } );
-    seed.put( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeDeviceKey( 7, "fake", "token-b" ), vector<uint8>{ 1 } );
-    seed.put( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeDeviceKey( 8, "fake", "token-c" ), vector<uint8>{ 1 } );
-    SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
-    SW_REQUIRE_TRUE( PushNotificationDispatcher::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok );
+    // 기기는 등록 길로 넣는다 — 지우기가 레코드를 풀어 역색인 키를 찾으므로, 손으로 쓴 바이트는 깨진 레코드다
+    DispatcherFixture rig;
+    rig.addDevice( "token-a", kNowMs, 7 );
+    rig.addDevice( "token-b", kNowMs, 7 );
+    rig.addDevice( "token-c", kNowMs, 8 );
+    SW_REQUIRE_TRUE( PushNotificationDispatcher::eraseAccount( rig._database, 7, 0 ) == ServiceStoreResult::Ok );
     vector<ServiceRecord> listRecord;
-    SW_REQUIRE_TRUE( database.listRecords( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeAccountPrefix( 7 ), "", 10, false, listRecord ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( rig._database.listRecords( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeAccountPrefix( 7 ), "", 10, false, listRecord ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( listRecord.empty() );
-    SW_REQUIRE_TRUE( database.listRecords( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeAccountPrefix( 8 ), "", 10, false, listRecord ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( rig._database.listRecords( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeAccountPrefix( 8 ), "", 10, false, listRecord ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( size_t{ 1 }, listRecord.size() );
+}
+
+/** @brief [PushDispatcherTest] 같은 토큰을 다른 계정이 등록하면 앞 계정에서 빠진다 — 기기를 넘겨받은 사람에게 앞 계정의 알림이 가지 않는다(감사 O-15). 해지하면 역색인도 지운다 */
+SW_TEST_CASE( PushDispatcherTest, SameTokenMovesToTheNewAccount )
+{
+    DispatcherFixture rig;
+    rig.addDevice( "shared" );
+    rig.addDevice( "shared", kNowMs, kAccount + 1 );
+    rig.notify(); // kAccount 앞 알림
+    SW_EXPECT_TRUE( rig._provider.getSent().empty() );
+    vector<ServiceRecord> listRecord;
+    SW_REQUIRE_TRUE( rig._database.listRecords( hashed_string( "liveops_device" ), PushNotificationDispatcher::makeAccountPrefix( kAccount + 1 ), "", 10, false, listRecord ) ==
+                     ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listRecord.size() );
+
+    rig._dispatcher.unregisterDevice( kAccount + 1, "fake", "shared", 0 );
+    rig.poll();
+    SW_EXPECT_EQUAL( 0, rig._database.countRecords( hashed_string( "liveops_device_owner" ) ) );
 }

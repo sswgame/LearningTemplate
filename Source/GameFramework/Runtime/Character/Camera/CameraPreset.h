@@ -270,6 +270,8 @@ namespace sw
         float32 _minDistance{ 0.3f };
         PROPERTY( Min = 0.0, Tooltip = "Time constant of easing back out once the way is clear", Units = s )
         float32 _recoverTime{ 0.3f };
+        PROPERTY( Name = "layers", Tooltip = "Physics layers that block the arm (required, like the SpringArm probe channel)" )
+        vector<hashed_string> _listLayer{}; ///< 막는 물리 레이어. `<Collision>` 이 있으면 반드시 적는다(비면 프리셋을 넣지 않는 오류, 감사 G-11)
         PROPERTY( Tooltip = "Sweep the arm against the scene" )
         bool _bEnabled{ SW_FALSE };
     };

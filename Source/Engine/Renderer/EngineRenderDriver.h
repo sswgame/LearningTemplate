@@ -53,7 +53,7 @@ namespace sw
         [[nodiscard]] RenderThread* findRenderThread() const override { return _pRenderThread; }
         void                        flushSubmittedPackets() override;
         void                        waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
-        void                        submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider ) override;
+        void                        submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, FrameDrawMode drawMode ) override;
         [[nodiscard]] bool          applyPendingBackendChange() override;
         void                        setScenarioCaptureEnabled( bool bEnabled ) override;
         void                        setPresentInterval( uint32 interval ) override;

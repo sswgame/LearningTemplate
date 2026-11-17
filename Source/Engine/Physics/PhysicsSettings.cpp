@@ -62,10 +62,11 @@ namespace sw
             bValid = false;
         }
         // 3D 씬 용량은 데이터가 정한다 — 코드 기본값으로 채우지 않는다(감사 S-2).
-        if ( _maxBodyCount == 0 || _maxBodyPairCount == 0 || _maxContactCount == 0 || _tempAllocatorBytes == 0 )
+        if ( _maxBodyCount == 0 || _maxBodyPairCount == 0 || _maxContactCount == 0 || _tempAllocatorBytes == 0 || _maxDebrisBodyCount == 0 )
         {
-            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsNeedCapacity", "Physics settings need positive _maxBodyCount (%#), _maxBodyPairCount (%#), _maxContactCount (%#) and _tempAllocatorBytes (%#)",
-                             _maxBodyCount, _maxBodyPairCount, _maxContactCount, _tempAllocatorBytes );
+            SW_LOG_ERROR_ID( "PhysicsSettings.PhysicsSettingsNeedCapacity",
+                             "Physics settings need positive _maxBodyCount (%#), _maxBodyPairCount (%#), _maxContactCount (%#), _tempAllocatorBytes (%#) and _maxDebrisBodyCount (%#)",
+                             _maxBodyCount, _maxBodyPairCount, _maxContactCount, _tempAllocatorBytes, _maxDebrisBodyCount );
             bValid = false;
         }
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )

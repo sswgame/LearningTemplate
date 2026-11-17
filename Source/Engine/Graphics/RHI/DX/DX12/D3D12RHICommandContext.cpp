@@ -254,33 +254,40 @@ namespace sw
         return static_cast<D3D12_RESOURCE_STATES>( ( state & ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE );
     }
 
-    bool D3D12RHICommandContext::makeTextureBarrier( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState, D3D12_RESOURCE_BARRIER& outBarrier )
+    uint32 D3D12RHICommandContext::appendTextureBarriers( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState, const RHISubresourceRange& range )
     {
         const D3D12_RESOURCE_STATES          newState = toQueueState( requestedState );
         D3D12RHIDevice::TextureRecord* const pRecord  = _pDevice->findTextureRecord( texture );
         if ( pRecord == nullptr || pRecord->_resource == nullptr || pRecord->_bOffscreen == SW_FALSE )
-            return false;
+            return 0;
         // 상태 확인과 상태 바꾸기가 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 레벨의 패스 콜백을 여러 스레드에서 돌리는데,
         // 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
-        // 비교 교환에서 이긴 쪽 하나만 배리어를 낸다(락 없음 — `RHITrackedState`).
-        D3D12_RESOURCE_STATES stateBefore{};
-        if ( pRecord->_state.transitionTo( newState, stateBefore ) == false )
-            return false;
-
-        outBarrier                        = D3D12_RESOURCE_BARRIER{};
-        outBarrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        outBarrier.Transition.pResource   = pRecord->_resource.Get();
-        outBarrier.Transition.StateBefore = stateBefore;
-        outBarrier.Transition.StateAfter  = newState;
-        outBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        return true;
+        // 추적 상태가 한 번에 정해 이긴 쪽 하나만 배리어를 낸다(`RHITrackedSubresourceState`). 일부 밉 · 면만 옮기면 서브리소스마다 낸다(R-10).
+        ID3D12Resource* const pResource = pRecord->_resource.Get();
+        return pRecord->_state.transitionTo( range, newState, [this, pResource, newState]( uint32 subresource, D3D12_RESOURCE_STATES stateBefore )
+        {
+            D3D12_RESOURCE_BARRIER& barrier = _listBarrierScratch.emplace_back();
+            barrier                         = D3D12_RESOURCE_BARRIER{};
+            barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource    = pResource;
+            barrier.Transition.StateBefore  = stateBefore;
+            barrier.Transition.StateAfter   = newState;
+            barrier.Transition.Subresource  = subresource; // kWholeResource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
+        } );
     }
 
-    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState )
+    void D3D12RHICommandContext::flushBarrierScratch()
     {
-        D3D12_RESOURCE_BARRIER barrier{};
-        if ( makeTextureBarrier( texture, requestedState, barrier ) )
-            commandListForRecord()->ResourceBarrier( 1, &barrier );
+        if ( _listBarrierScratch.empty() )
+            return;
+        commandListForRecord()->ResourceBarrier( static_cast<UINT>( _listBarrierScratch.size() ), _listBarrierScratch.data() );
+        _listBarrierScratch.clear();
+    }
+
+    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState, const RHISubresourceRange& range )
+    {
+        (void)appendTextureBarriers( texture, requestedState, range );
+        flushBarrierScratch();
     }
 
     bool D3D12RHICommandContext::findTextureTransitionState( const RHITextureTransition& transition, D3D12_RESOURCE_STATES& outState ) const
@@ -295,7 +302,8 @@ namespace sw
                 // 첨부가 없는 텍스처는 COMMON 에서 SRV 로 암묵 승격된다 — 옮길 것이 없다.
                 if ( pRecord->_offscreen._bHasRTV == SW_FALSE && bDepth == false )
                     return false;
-                outState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                // 모든 셰이더 단계의 읽기다(R-9 — 픽셀 단계만이면 컴퓨트 · 정점 셰이더의 SRV 읽기가 틀린 상태다). 컴퓨트 큐 리스트는 아래 상태 거르기가 PIXEL 을 뺀다.
+                outState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
                 return true;
             case RHITextureState::RenderTarget:
                 outState = bDepth ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -314,10 +322,7 @@ namespace sw
             return;
         // 배열 하나로 낸다 — ResourceBarrier 는 배열을 원소마다 부른 것처럼 차례대로 처리하고, 묶어 내는 것이 문서의 권장이다
         // (https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier "Transitions should be batched together").
-        constexpr uint32       kBarrierChunk = 32;
-        D3D12_RESOURCE_BARRIER arrBarrier[kBarrierChunk]{};
-        uint32                 barrierCount = 0;
-        bool                   bReported    = false;
+        bool bReported = false;
         for ( uint32 index = 0; index < count; ++index )
         {
             const RHITextureTransition& transition = pTransition[index];
@@ -329,21 +334,15 @@ namespace sw
                 continue;
             }
             D3D12_RESOURCE_STATES state{};
-            if ( findTextureTransitionState( transition, state ) == false || makeTextureBarrier( transition._texture, state, arrBarrier[barrierCount] ) == false )
+            if ( findTextureTransitionState( transition, state ) == false || appendTextureBarriers( transition._texture, state, transition._range ) == 0 )
                 continue;
             if ( bReported == false )
             {
                 _pDevice->reportBarrierDuringRecording( "transitionTextures" );
                 bReported = true;
             }
-            if ( ++barrierCount == kBarrierChunk )
-            {
-                commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
-                barrierCount = 0;
-            }
         }
-        if ( barrierCount > 0 )
-            commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
+        flushBarrierScratch();
     }
 
     // 길이 유지(긴 함수 정리 기준): 같은 포맷 복사와 셰이더 블릿의 상태 전이 순서가 곧 의미라 나누지 않는다.
@@ -383,7 +382,7 @@ namespace sw
             return;
 
         D3D12RHIDevice::OffscreenTargetView srcView{};
-        if ( _pDevice->findOffscreenTargetView( src, 0, srcView ) == false || srcView._bHasDSV != SW_FALSE )
+        if ( _pDevice->findOffscreenTargetView( src, 0, 0, srcView ) == false || srcView._bHasDSV != SW_FALSE )
             return;
 
         _pDevice->reportBarrierDuringRecording( "blitTexture(src)" );
@@ -407,9 +406,8 @@ namespace sw
             if ( pDstResource == nullptr )
                 return;
             D3D12RHIDevice::OffscreenTargetView dstView{};
-            if ( _pDevice->findOffscreenTargetView( dst, 0, dstView ) == false || dstView._bHasDSV != SW_FALSE )
+            if ( _pDevice->findOffscreenTargetView( dst, 0, 0, dstView ) == false || dstView._bHasDSV != SW_FALSE )
                 return;
-            dstStateBefore = dstView._state;
         }
 
         // CopyResource 는 포맷과 크기가 완전히 같아야 한다. 검증 없이 발행하면 포맷이나 해상도가 다른 조합
@@ -434,34 +432,21 @@ namespace sw
             }
         }
 
-        if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-            transitionBlitDst( dst, pDstResource, dstStateBefore, D3D12_RESOURCE_STATE_COPY_DEST );
+        // 스왑체인 백버퍼(`dst == 0`)의 상태는 스왑체인 객체만 바꾼다. 오프스크린은 추적 상태가 서브리소스마다 옮긴다(R-10 — 예전엔 한 값을 읽고 덮어썼다).
+        if ( dst == 0 )
+        {
+            if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+                _pDevice->_swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_COPY_DEST );
+        }
+        else
+            transitionTexture( dst, D3D12_RESOURCE_STATE_COPY_DEST );
 
         commandListForRecord()->CopyResource( pDstResource, pSrcResource );
 
-        transitionBlitDst( dst, pDstResource, D3D12_RESOURCE_STATE_COPY_DEST, dstStateAfter );
-    }
-
-    void D3D12RHICommandContext::transitionBlitDst( RHITextureHandle dst, ID3D12Resource* pDstResource, D3D12_RESOURCE_STATES stateBefore,
-                                                    D3D12_RESOURCE_STATES stateAfter )
-    {
         if ( dst == 0 )
-        {
-            _pDevice->_swapChain.transitionTo( commandListForRecord(), stateAfter );
-            return;
-        }
-
-        D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource   = pDstResource;
-        barrier.Transition.StateBefore = stateBefore;
-        barrier.Transition.StateAfter  = stateAfter;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        commandListForRecord()->ResourceBarrier( 1, &barrier );
-
-        D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( dst );
-        if ( pRecord != nullptr && pRecord->_bOffscreen != SW_FALSE )
-            pRecord->_state.store( stateAfter );
+            _pDevice->_swapChain.transitionTo( commandListForRecord(), dstStateAfter );
+        else
+            transitionTexture( dst, dstStateAfter );
     }
 
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
@@ -617,7 +602,7 @@ namespace sw
         commandListForRecord()->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
-    void D3D12RHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void D3D12RHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( _pDevice != nullptr )
             _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );
@@ -926,8 +911,9 @@ namespace sw
             else
             {
                 const uint32                        slice = beginInfo._arrColorTargetSlice[attachmentIndex];
+                const uint32                        mip   = beginInfo._arrColorTargetMip[attachmentIndex];
                 D3D12RHIDevice::OffscreenTargetView view{};
-                const bool                          bViewMissing = _pDevice->findOffscreenTargetView( colorHandle, slice, view ) == false || view._bHasRTV == SW_FALSE;
+                const bool                          bViewMissing = _pDevice->findOffscreenTargetView( colorHandle, slice, mip, view ) == false || view._bHasRTV == SW_FALSE;
                 if ( bViewMissing )
                 {
                     if ( attachmentIndex > 0 )
@@ -935,7 +921,8 @@ namespace sw
                     return RHIRenderPassBeginResult::Failed;
                 }
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(color)" );
-                transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
+                // 그리는 밉만 옮긴다(면은 전체 — 예전과 같다). 같은 텍스처의 다른 밉을 읽는 다운샘플 체인이 그 밉의 상태를 지킨다(R-10).
+                transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET, RHISubresourceRange{ static_cast<uint16>( mip ), 1u, 0u, RHISubresourceRange::kAll } );
                 if ( view._bSliceInRange == SW_FALSE )
                 {
                     if ( attachmentIndex > 0 )
@@ -964,12 +951,12 @@ namespace sw
         if ( bHasDepth )
         {
             D3D12RHIDevice::OffscreenTargetView depthView{};
-            const bool                          bDepthFound          = _pDevice->findOffscreenTargetView( beginInfo._depthTarget, beginInfo._depthTargetSlice, depthView );
+            const bool                          bDepthFound          = _pDevice->findOffscreenTargetView( beginInfo._depthTarget, beginInfo._depthTargetSlice, beginInfo._depthTargetMip, depthView );
             const bool                          bDepthTargetWritable = bDepthFound && depthView._bHasDSV != SW_FALSE && depthView._bSliceInRange != SW_FALSE;
             if ( bDepthTargetWritable )
             {
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(depth)" );
-                transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+                transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE, RHISubresourceRange{ beginInfo._depthTargetMip, 1u, 0u, RHISubresourceRange::kAll } );
                 _pState->_activeDepthTarget         = beginInfo._depthTarget;
                 bDepthBound                         = true;
                 depthDesc.cpuDescriptor             = depthView._dsvHandle;

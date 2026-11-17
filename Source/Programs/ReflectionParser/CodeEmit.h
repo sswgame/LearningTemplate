@@ -10,6 +10,79 @@ namespace sw
     using CodeEmitBuffer = StringBuilder<constant::buffer::kMax8192>;
 
     // ------------------------------------------------------------------------------
+    // 0) 방출 바이트 계측 — `.gen.cpp` 를 어느 방출 함수가 얼마나 내는가(`ReflectionParser.EmitBytes`)
+    // ------------------------------------------------------------------------------
+    /** @brief 바이트를 세는 방출 함수 구역입니다. 표로 바꿀 다음 후보를 숫자로 고르는 데 쓴다(docs/DesignBacklog.md 리플렉션 남은 몫 W-R3 (a)). */
+    enum class CodeEmitSection : uint8
+    {
+        FileHeader,          ///< 머리 · 값 검사 템플릿 · include
+        TypeRegistrar,       ///< 타입 등록 함수의 골격과 타입 메타데이터(아래 구역을 뺀 몫)
+        PropertyStatics,     ///< 프로퍼티 별칭 · 값 검사
+        NestedContainerTree, ///< 중첩 컨테이너 모양 표
+        PropertyDesc,        ///< 프로퍼티 서술자 한 줄(메타데이터 채우기를 뺀 몫)
+        PropertyMetadata,    ///< 프로퍼티 메타데이터 채우기 함수 본문
+        EventList,
+        MethodList,    ///< 메서드 표(호출 함수를 뺀 몫)
+        MethodInvoker, ///< 메서드 호출 람다 — 형식이 있어야 해 표로 바꿀 수 없다
+        FixedCodec,    ///< 고정 배치형 서술자 표 · 코덱
+        TickBatch,
+        PhysicsHook,
+        EnumRegistrar,
+        TypeTraits, ///< `ReflectTypeTraits` 특수화와 타입 API 접근 함수
+        Count,
+    };
+
+    /** @brief 구역마다 낸 바이트(안쪽 구역을 뺀 몫)입니다. 방출 하나(헤더 하나)가 한 스레드에서 채운다. */
+    struct CodeEmitByteReport
+    {
+        array<uint64, static_cast<size_t>( CodeEmitSection::Count )> _arrBytes{};
+        vector<uint64>                                               _listOpenChildBytes; ///< 열린 구역마다 그 안쪽 구역이 낸 바이트입니다(스택)
+
+        static const utf8* toString( const CodeEmitSection section ) noexcept
+        {
+            constexpr const utf8* kArrName[] = { "FileHeader", "TypeRegistrar", "PropertyStatics", "NestedContainerTree", "PropertyDesc", "PropertyMetadata", "EventList",
+                                                 "MethodList", "MethodInvoker", "FixedCodec", "TickBatch", "PhysicsHook", "EnumRegistrar", "TypeTraits" };
+            static_assert( std::size( kArrName ) == static_cast<size_t>( CodeEmitSection::Count ), "CodeEmitSection names are out of date" );
+            return kArrName[static_cast<size_t>( section )];
+        }
+    };
+
+    /**
+     * @class CodeEmitByteScope
+     * @brief 방출 함수 하나를 감싸 그 동안 @p buffer 가 늘어난 바이트를 구역에 더합니다. 안쪽 구역의 몫은 빼므로 구역 합이 전체와 같다.
+     * @details 안쪽 구역이 다른 버퍼(메타데이터 채우기 `fillBuffer`)에 쓰고 바깥이 그 글을 붙여도, 안쪽 몫을 바깥에서 빼니 두 번 세지 않는다.
+     */
+    class CodeEmitByteScope
+    {
+    public:
+        CodeEmitByteScope( CodeEmitByteReport& report, const CodeEmitBuffer& buffer, const CodeEmitSection section )
+            : _report{ report }
+            , _buffer{ buffer }
+            , _startSize{ buffer.view().size() }
+            , _section{ section }
+        {
+            _report._listOpenChildBytes.push_back( 0 );
+        }
+        ~CodeEmitByteScope()
+        {
+            const uint64 total = _buffer.view().size() - _startSize;
+            const uint64 child = _report._listOpenChildBytes.back();
+            _report._listOpenChildBytes.pop_back();
+            _report._arrBytes[static_cast<size_t>( _section )] += total > child ? total - child : 0;
+            if ( _report._listOpenChildBytes.empty() == false )
+                _report._listOpenChildBytes.back() += total;
+        }
+        CodeEmitByteScope( const CodeEmitByteScope& )            = delete;
+        CodeEmitByteScope& operator=( const CodeEmitByteScope& ) = delete;
+
+    private:
+        CodeEmitByteReport&   _report;
+        const CodeEmitBuffer& _buffer;
+        size_t                _startSize;
+        CodeEmitSection       _section;
+    };
+
+    // ------------------------------------------------------------------------------
     // 1) emit — 들여쓰기·한 줄 서식 (.gen.cpp)
     // ------------------------------------------------------------------------------
     /**

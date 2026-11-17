@@ -47,3 +47,46 @@ SW_TEST_CASE( RHIFormatInfoTest, EveryRowKeepsTheColumnsConsistent )
         }
     }
 }
+
+/** @brief [RHIFormatInfoTest] 선호 형식이 없는 표면은 표면이 준 형식을 그대로 고르고 보고합니다. 고를 것이 없으면 실패입니다(R-8 — 예전엔 RGBA8 이라고 보고했다). */
+SW_TEST_CASE( RHIFormatInfoTest, SwapChainPickReportsTheAdoptedFormat )
+{
+    const RHIFormat           arrHDROnly[] = { RHIFormat::R16G16B16A16_FLOAT };
+    const optional<RHIFormat> hdr          = pickRHISwapChainFormat( RHIFormat::R8G8B8A8_UNORM, span<const RHIFormat>{ arrHDROnly } );
+    SW_REQUIRE_TRUE( hdr.has_value() );
+    SW_EXPECT_TRUE( *hdr == RHIFormat::R16G16B16A16_FLOAT );
+
+    const RHIFormat           arrBoth[] = { RHIFormat::R8G8B8A8_UNORM, RHIFormat::B8G8R8A8_UNORM };
+    const optional<RHIFormat> bgra      = pickRHISwapChainFormat( RHIFormat::R16G16B16A16_FLOAT, span<const RHIFormat>{ arrBoth } );
+    SW_REQUIRE_TRUE( bgra.has_value() );
+    SW_EXPECT_TRUE( *bgra == RHIFormat::B8G8R8A8_UNORM );
+
+    const RHIFormat arrDepthOnly[] = { RHIFormat::D24_UNORM_S8_UINT };
+    SW_EXPECT_FALSE( pickRHISwapChainFormat( RHIFormat::R8G8B8A8_UNORM, span<const RHIFormat>{ arrDepthOnly } ).has_value() );
+    SW_EXPECT_FALSE( pickRHISwapChainFormat( RHIFormat::R8G8B8A8_UNORM, span<const RHIFormat>{} ).has_value() );
+}
+
+namespace
+{
+    /** @brief 역매핑을 보는 작은 백엔드 표입니다. */
+    struct NativeFormatRow
+    {
+        RHIFormat _format;
+        uint32    _native;
+    };
+    constexpr NativeFormatRow kArrNativeRow[] = {
+        {RHIFormat::R8G8B8A8_UNORM, 37u},
+        {RHIFormat::B8G8R8A8_UNORM, 44u},
+        {       RHIFormat::Unknown,  0u},
+    };
+} // namespace
+
+/** @brief [RHIFormatInfoTest] 백엔드 표의 역매핑은 정방향 표 하나로 찾고, 없는 값과 Unknown 행은 찾지 못합니다. */
+SW_TEST_CASE( RHIFormatInfoTest, NativeReverseLookupUsesTheForwardTable )
+{
+    const optional<RHIFormat> bgra = findRHIFormatOfNative( kArrNativeRow, &NativeFormatRow::_native, 44u );
+    SW_REQUIRE_TRUE( bgra.has_value() );
+    SW_EXPECT_TRUE( *bgra == RHIFormat::B8G8R8A8_UNORM );
+    SW_EXPECT_FALSE( findRHIFormatOfNative( kArrNativeRow, &NativeFormatRow::_native, 99u ).has_value() );
+    SW_EXPECT_FALSE( findRHIFormatOfNative( kArrNativeRow, &NativeFormatRow::_native, 0u ).has_value() );
+}

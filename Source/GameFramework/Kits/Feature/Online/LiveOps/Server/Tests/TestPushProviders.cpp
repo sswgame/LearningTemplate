@@ -151,11 +151,13 @@ SW_TEST_CASE( FCMPushProviderTest, SendsTheV1RequestWithAnAccessToken )
     SW_EXPECT_EQUAL( string( "first" ), PushTestUtil::readText( document, "message.data.arg0" ) );
 }
 
-/** @brief [FCMPushProviderTest] 응답 표(FCM 오류 코드 문서): 404 · UNREGISTERED 는 기기를 지우고, 429 · 5xx · 전송 실패는 다시 보내며, 그 밖의 4xx 는 다시 보내지 않는다 */
+/** @brief [FCMPushProviderTest] 응답 표(FCM 오류 코드 문서): `errorCode` UNREGISTERED 만 기기를 지우고(404 만으로는 아니다), 429 · 5xx · 전송 실패는 다시 보내며, 그 밖의 4xx 는 다시 보내지 않는다 */
 SW_TEST_CASE( FCMPushProviderTest, StatusTable )
 {
     SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 200, false, "" ) == PushDeliveryStatus::Delivered );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 404, false, "" ) == PushDeliveryStatus::InvalidToken );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 404, false, "" ) == PushDeliveryStatus::Rejected ); // 404 만으로는 지우지 않는다(끝점 · 프로젝트 설정 오류일 수 있다)
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 404, false, R"({"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}})" ) == PushDeliveryStatus::InvalidToken );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 400, false, R"({"error":{"message":"token UNREGISTERED?","status":"INVALID_ARGUMENT"}})" ) == PushDeliveryStatus::Rejected ); // 글 속 낱말이 아니라 오류 코드를 본다
     SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 400, false, R"({"error":{"details":[{"errorCode":"UNREGISTERED"}]}})" ) == PushDeliveryStatus::InvalidToken );
     SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 400, false, R"({"error":{"status":"INVALID_ARGUMENT"}})" ) == PushDeliveryStatus::Rejected );
     SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 429, false, "" ) == PushDeliveryStatus::RateLimited );
@@ -298,10 +300,11 @@ SW_TEST_CASE( APNSPushProviderTest, LocalFailuresNeverReachTheNetwork )
     test::FakeNetSecurityProvider security;
     security._bSignOk = SW_FALSE;
     APNSPushSettings settings;
-    settings._privateKeyPem = "pem";
-    settings._keyID         = "key";
-    settings._teamID        = "team";
-    settings._topic         = "com.x.game";
+    settings._privateKeyPem     = "pem";
+    settings._keyID             = "key";
+    settings._teamID            = "team";
+    settings._topic             = "com.x.game";
+    settings._tokenRefreshMinMs = 1200000;
     APNSPushProvider provider( std::move( settings ), &security, nullptr ); // 닿으면 null 역참조로 드러난다
     SW_EXPECT_FALSE( provider.supportsTopics() );
 
@@ -331,18 +334,23 @@ SW_TEST_CASE( PushProviderSetTest, ReadEntry )
     }
     {
         PushProviderConfig config;
-        SW_EXPECT_TRUE( read( R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b"})", config ) );
+        SW_EXPECT_TRUE( read( R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":1200})", config ) );
         SW_EXPECT_EQUAL( string( "b" ), config._topic );
+        SW_EXPECT_EQUAL( int64( 1200 ), config._tokenRefreshMinSeconds );
     }
+    SW_EXPECT_LOG( "JSON.WrongType" ); // 문자열 "1200" 줄 — 형식이 틀린 칸의 거절 로그가 이 구간이 보려는 동작이다
     for ( const utf8* pText : {
               R"({"kind":"fcm"})",
-              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t"})",
-              R"({"kind":"apns","keyId":"i","teamId":"t","topic":"b"})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","tokenRefreshMinSeconds":1200})",
+              R"({"kind":"apns","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":1200})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b"})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":60})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":"1200"})",
               R"({"kind":"other"})",
               R"({"serviceAccountEnvironment":"K"})",
               R"({"kind":"fcm","serviceAccountEnvironment":"K","typo":"x"})",
               R"({"kind":"fcm","serviceAccountEnvironment":"K","topic":"b"})",
-              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenUrl":"x"})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":1200,"tokenUrl":"x"})",
           } )
     {
         PushProviderConfig config;

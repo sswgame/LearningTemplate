@@ -7,6 +7,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
+#include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/GUI/Panel/Model/EditorDocumentOpenUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -19,11 +21,14 @@
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -32,6 +37,7 @@ namespace sw::editor
 {
     void EditorDocumentPanel::updateFocusedDocument()
     {
+        applyPendingAutosaveRestore();
         if ( _bConfirmSwitch == SW_TRUE )
         {
             drawUnsavedDocumentPopup();
@@ -174,12 +180,15 @@ namespace sw::editor
         , _lastSavedDocumentText{}
         , _assetsMovedSubscription{}
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
+        , _pEditRecorder{ make_unique<DocumentEditRecorder>( DocumentEditRecorder::RecordDelegate::create<&EditorDocumentPanel::notifyDocumentEdited>( this ) ) }
         , _pEditSpan{ make_unique<DocumentEditSpan>() }
         , _pUndoOwner{ make_unique<UndoStepOwner>() }
-        , _pDocumentStack{ make_unique<CommandStack>() }
+        , _pDocumentStack{ make_unique<CommandStack>( EditorUndoHistory::readConfiguredLimit( getEditorToolDefaults() ) ) }
+        , _pStackInteraction{ make_unique<CommandStackInteractionScope>() }
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
+        , _lastCopyTextHash{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
@@ -224,6 +233,9 @@ namespace sw::editor
 
     void EditorDocumentPanel::onDocumentSaved()
     {
+        // 저장한 원본이 사본보다 새것이다 — 남기면 다음 기동이 이미 저장한 일을 복구하라고 묻는다(씬 자동 저장의 `onSceneSaved` 와 같다)
+        EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
+        _lastCopyTextHash       = 0;
         EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 컨텍스트 없는 패널 테스트는 감시도 없다
         if ( _loadedAssetPath.empty() == false && pContext != nullptr )
             pContext->getSubsystem<AssetHotReload>().applySavedAsset( _loadedAssetPath );
@@ -286,6 +298,43 @@ namespace sw::editor
         clearDocumentDirty();
         resetDocumentHistory();
         syncDocumentUndoBaseline();
+        // 디스크의 글로 (다시) 읽었다 — 앞 편집의 사본은 낡았다(저장 안 함 · 다시 읽기). 복구 청이 이 문서면 사본 글을 되돌리기와 같은 길로 적용해 dirty 로 둔다(감사 E-1).
+        EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
+        _lastCopyTextHash = 0;
+        string restoredText;
+        if ( _loadedAssetPath.empty() == false && EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText ) )
+            restoreDocumentFromUndo( restoredText );
+    }
+
+    void EditorDocumentPanel::applyPendingAutosaveRestore()
+    {
+        // 복원할 문서가 이미 열려 있으면 읽기가 다시 오지 않는다 — 그 자리에서 사본 글을 되돌릴 수 있는 편집 한 단계로 적용한다(감사 E-1). 열려 있지 않은 문서는 읽은 직후(`markDocumentLoaded`)에 적용한다.
+        string restoredText;
+        if ( isDocumentLoaded() == false || _bLoadFailed == SW_TRUE || _loadedAssetPath.empty() ||
+             EditorAutosaveCommands::takePendingDocumentRestore( _loadedAssetPath, restoredText ) == false )
+            return;
+        const string before = captureDocumentText();
+        applyDocumentText( restoredText );
+        _pEditSpan->resetBaseline( restoredText );
+        syncStackInteraction();
+        if ( before != restoredText )
+            recordDocumentEdit( DocumentEdit{ before, restoredText, "Restore Autosave Copy" } );
+    }
+
+    DocumentAutosaveResult EditorDocumentPanel::takeAutosaveCopy( string& outDocumentPath, string& outText )
+    {
+        if ( isDocumentDirty() == false || _bLoadFailed == SW_TRUE || _loadedAssetPath.empty() )
+            return DocumentAutosaveResult::Nothing;
+        if ( _pEditSpan->isHolding() || isWidgetInteractionActive() )
+            return DocumentAutosaveResult::Deferred; // 끄는 중간 상태를 사본으로 두지 않는다 — 다음 프레임에 다시 묻는다
+        string       text     = captureDocumentText();
+        const uint64 textHash = text.empty() ? 0u : ContentHash::computeBytes( reinterpret_cast<const uint8*>( text.data() ), text.size() );
+        if ( textHash == 0 || textHash == _lastCopyTextHash )
+            return DocumentAutosaveResult::Nothing; // 문서 글이 없는 패널이거나 지난 사본과 같다
+        _lastCopyTextHash = textHash;
+        outDocumentPath   = _loadedAssetPath;
+        outText           = std::move( text );
+        return DocumentAutosaveResult::Ready;
     }
 
     void EditorDocumentPanel::markDocumentLoadFailed( string_view reason )
@@ -332,24 +381,51 @@ namespace sw::editor
         if ( _pEditSpan->isHolding() == false || isWidgetInteractionActive() )
             return;
         const optional<DocumentEdit> edit = _pEditSpan->finish( captureDocumentText() );
+        syncStackInteraction(); // 기록 전에 닫는다 — 기록은 열린 상호작용과 무관하지만 다음 Ctrl+Z 는 이 단계를 되돌려야 한다
         if ( edit.has_value() )
             recordDocumentEdit( *edit );
+    }
+
+    void EditorDocumentPanel::syncStackInteraction()
+    {
+        const bool bHolding = _pEditSpan->isHolding();
+        if ( bHolding == _pStackInteraction->isOpen() )
+            return;
+        if ( bHolding )
+            *_pStackInteraction = _pDocumentStack->openInteraction();
+        else
+            _pStackInteraction->reset();
     }
 
     void EditorDocumentPanel::syncDocumentUndoBaseline()
     {
         _lastSavedDocumentText = captureDocumentText();
         _pEditSpan->resetBaseline( _lastSavedDocumentText ); // 문서를 다시 읽었거나 저장했다 — 쥔 구간의 기준선이 없다
+        syncStackInteraction();
     }
 
     void EditorDocumentPanel::restoreDocumentFromUndo( string_view text )
     {
         applyDocumentText( text );
         _pEditSpan->resetBaseline( string{ text } );
+        syncStackInteraction();
         if ( EditorSessionPolicy::shouldClearDocumentDirtyOnRestore( text == _lastSavedDocumentText ) )
             clearDocumentDirty();
         else
             markDocumentDirty();
+    }
+
+    expected<void> EditorDocumentPanel::checkUndoRoundTrip()
+    {
+        if ( isDocumentLoaded() == false || isDocumentLoadFailed() )
+            return unexpected( Error{ ErrorKind::NotFound, "no document is loaded in the panel", getPanelTitle() } );
+        const string before = captureDocumentText();
+        if ( before.empty() )
+            return unexpected( Error{ ErrorKind::Unsupported, "the panel has no document text undo (captureDocumentText is empty)", getPanelTitle() } );
+        restoreDocumentFromUndo( before ); // 되돌리기 단계가 부르는 그 길이다
+        if ( captureDocumentText() != before )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "applying the document text and capturing it again gives other text - undo would not restore the document", _loadedAssetPath } );
+        return {};
     }
 
     void EditorDocumentPanel::notifyDocumentEdited( string_view label )
@@ -358,7 +434,10 @@ namespace sw::editor
         // (`flushDocumentInteraction`). 예전에는 합치기 키로 합쳤는데 기록이 거래 구간 안이라 병합에 닿지 않아 끌기 한 번이 프레임마다 한 단계였고, 한도(128)를 넘겨
         // 씬 편집 기록까지 밀어냈다. 언리얼이 누를 때 FScopedTransaction 을 열고 뗄 때 닫는 것과 같은 모양이다.
         // 바뀐 것이 없으면 아무것도 하지 않는다 — 매 프레임 알리는 패널이 활성 위젯(글 칸) 동안 dirty 로 표시하면 제목이 바뀌어 그 칸이 포커스를 잃는다.
-        const optional<DocumentEdit> edit = _pEditSpan->notifyEdited( label, captureDocumentText(), isWidgetInteractionActive() );
+        // 직렬화는 구간이 필요할 때만 한다(시작 · 끝 두 번 — 감사 E-9). 끄는 동안의 알림은 표시만 한다.
+        const optional<DocumentEdit> edit = _pEditSpan->notifyEdited( label, isWidgetInteractionActive(), [this]()
+        { return captureDocumentText(); } );
+        syncStackInteraction();
         if ( edit.has_value() )
             recordDocumentEdit( *edit );
         else if ( _pEditSpan->isHolding() )

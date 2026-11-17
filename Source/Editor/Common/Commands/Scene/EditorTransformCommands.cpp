@@ -16,6 +16,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -100,8 +101,12 @@ namespace sw::editor
                 GameObject* const    pOwner         = pComp->getOwner();
                 const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
                 const hashed_string  targetName     = pComp->getComponentName();
-                const bool           bSuccess       = XMLSerializer::deserialize( pComp, *pComp->getTypeInfo(), string{ xml } );
+                if ( pOwner != nullptr )
+                    ComponentStableKey::freezeLocalIDs( *pOwner ); // 대상의 지역 id 를 굳혀 둔다 — 베낀 글에는 원본의 id 가 있다
+                const uint64 targetLocalID = pComp->getStoredLocalID();
+                const bool   bSuccess      = XMLSerializer::deserialize( pComp, *pComp->getTypeInfo(), string{ xml } );
                 pComp->setComponentName( targetName );
+                ComponentStableKey::restoreLocalID( pComp, targetLocalID );
                 if ( bSuccess == false )
                     return false;
                 // 직렬화기는 값만 쓰므로, 컴포넌트가 그 값으로 다시 맞추도록 알린다. 알리지 않으면 붙여 넣은 위치가 월드 행렬에 반영되지 않아
@@ -147,7 +152,8 @@ namespace sw::editor
         {
             const hashed_string newName  = pNewComp->getComponentName();
             const bool          bSuccess = xml.empty() == false && XMLSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xml } );
-            pNewComp->setComponentName( newName ); // 새 컴포넌트는 자기 이름(타입 이름)을 쓴다. 원본의 이름을 옮기면 키가 겹친다
+            pNewComp->setComponentName( newName );              // 새 컴포넌트는 자기 이름(타입 이름)을 쓴다. 원본의 이름을 옮기면 키가 겹친다
+            ComponentStableKey::assignFreshLocalID( pNewComp ); // 베낀 글의 지역 id 는 원본의 것이다 — 같은 오브젝트에 두 번 들면 키가 겹친다
             // 읽지 못했어도 기본값이 그 상태다. 어느 쪽이든 컴포넌트가 값을 리소스로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
             pNewComp->notifyStateWritten();
 

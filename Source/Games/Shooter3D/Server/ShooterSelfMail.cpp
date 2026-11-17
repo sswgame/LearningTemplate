@@ -18,6 +18,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 #include "Games/Shooter3D/ShooterOnlineFlow.h"
@@ -35,7 +36,7 @@ namespace sw
         public:
             ShooterSelfMailJob( ShooterOnlineFlow& flow, ServiceMailMessage message );
 
-            void run( IServiceStoreConnection& connection ) override
+            void run( ServiceReadSetConnection& connection ) override
             {
                 ServiceTransaction transaction;
                 string             mailKey;

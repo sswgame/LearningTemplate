@@ -35,6 +35,11 @@ namespace sw
             SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsStore", "AdminService needs a store" );
             return false;
         }
+        if ( settings._sanctionLimit.isSet() == false )
+        {
+            SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsSanctionLimit", "AdminService needs the per-role sanction limits (_supportMaxSanctionDays, _operatorMaxSanctionDays)" );
+            return false;
+        }
         _store.bindStore( pStore );
         _settings = settings;
         initializeCalls( settings._pMetricRegistry, "admin" );
@@ -73,14 +78,15 @@ namespace sw
         _mapCallToExtra[callID] = extra;
 
         AdminCommand command;
-        command._request    = request;
-        command._pPolicy    = _settings._pPolicy;
-        command._pNameIndex = _settings._pNameIndex;
-        command._adminID    = adminID;
-        command._keyHigh    = idempotencyKey._high;
-        command._keyLow     = idempotencyKey._low;
-        command._nowMs      = nowMs.count();
-        command._method     = method;
+        command._request       = request;
+        command._pPolicy       = _settings._pPolicy;
+        command._pNameIndex    = _settings._pNameIndex;
+        command._sanctionLimit = _settings._sanctionLimit;
+        command._adminID       = adminID;
+        command._keyHigh       = idempotencyKey._high;
+        command._keyLow        = idempotencyKey._low;
+        command._nowMs         = nowMs.count();
+        command._method        = method;
 
         AdminServiceResult refused{ AdminResult::Ok };
         if ( _store.hasStore() == false )
@@ -249,10 +255,12 @@ namespace sw
             }
             return false;
         }
+        // 등급 확인을 쓰는 저장 일 안에서 다시 한다 — 앞 일(AdminStoreLogic::execute)의 확인과 쓰기 사이에 강등되면 쓰기 커밋이 진다.
+        const ServiceOperator actor{ pending._adminID, AdminStoreLogic::makeRoleGuard( pending._adminID, AdminProtocol::getRequiredRole( pending._method, request._sanctionKind ) ) };
         if ( pending._method == AdminMethod::PutLiveEvent::kID )
-            pControl->putEventJSON( request._eventJSON, pending._adminID, request._memo, pending._nowMs, callID );
+            pControl->putEventJSON( request._eventJSON, actor, request._memo, pending._nowMs, callID );
         else
-            pControl->removeEvent( request._eventID, pending._adminID, request._memo, pending._nowMs, callID );
+            pControl->removeEvent( request._eventID, actor, request._memo, pending._nowMs, callID );
         return true;
     }
 
@@ -276,6 +284,8 @@ namespace sw
                     result = AdminResult::Ok;
                 else if ( completion._result == LiveEventControlResult::Invalid )
                     result = AdminServiceResult::fail( OnlineError::kInvalidRequest );
+                else if ( completion._result == LiveEventControlResult::Forbidden )
+                    result = AdminServiceResult::fail( OnlineError::kForbidden );
                 else if ( completion._result == LiveEventControlResult::NotFound )
                     result = AdminResult::NotFound;
                 finishForwardedCall( completion._requestTag, result );
