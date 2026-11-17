@@ -28,6 +28,14 @@ SW_TEST_CASE( EditorTestOutputParserTest, UnitTestArgumentsMatchTheRunner )
     SW_EXPECT_FALSE( test::TestRunner::matchesFilter( "A.b,C.d", "C.e" ) );
 }
 
+// 패널은 종료 코드 옆에 실행기의 끝 줄을 낸다 — 마지막 끝 줄을 고르고, 없으면 빈 글이다.
+SW_TEST_CASE( EditorTestOutputParserTest, FindsTheLastResultLine )
+{
+    SW_EXPECT_TRUE( EditorTestOutputParser::findResultLine( { "[ RUN      ] A.b", "TEST_RESULT=FAILED run=1 failed=1 skipped=0", "trailing log" } ) == "TEST_RESULT=FAILED run=1 failed=1 skipped=0" );
+    SW_EXPECT_TRUE( EditorTestOutputParser::findResultLine( { "SCENARIO_RESULT=PASSED stages=2 failed=0 notRun=0" } ) == "SCENARIO_RESULT=PASSED stages=2 failed=0 notRun=0" );
+    SW_EXPECT_TRUE( EditorTestOutputParser::findResultLine( { "[ RUN      ] A.b" } ).empty() );
+}
+
 SW_TEST_CASE( EditorTestOutputParserTest, CollectsResultStates )
 {
     const vector<string>         listLine{ "[==========] 3 of 3 registered case(s), seed 1", "[ RUN      ] A.pass", "[       OK ] A.pass (1.5 ms)", "[ RUN      ] A.fail",

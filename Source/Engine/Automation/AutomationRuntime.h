@@ -25,6 +25,8 @@ namespace sw
         string           _scenarioName;                                     ///< 돌고 있는 시나리오 이름
         string           _stepKind;                                         ///< 마지막으로 시작한 단계 이름(아직 없으면 빈 글)
         string           _firstFailure;                                     ///< 적힌 첫 실패 줄(없으면 빈 글)
+        string           _resultLine;                                       ///< 끝난 판정 한 줄(`AutomationRunResult::describe` — `<종류> - <까닭>`, 도는 중 · 통과면 빈 글)
+        string           _previousStageResultLine;                          ///< 바로 앞 단계의 판정 한 줄(통과 · 첫 단계면 빈 글)
         string           _previousStageName;                                ///< 체인에서 바로 앞에 끝난 단계 이름(첫 단계면 빈 글)
         uint32           _stepNumber{ 0 };                                  ///< 그 단계가 파일에서 몇 번째인지(0 부터)
         uint32           _frame{ 0 };                                       ///< 시나리오 프레임

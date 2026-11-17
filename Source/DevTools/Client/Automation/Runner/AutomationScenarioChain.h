@@ -46,10 +46,10 @@ namespace sw
         bool isChain() const { return _listPath.size() > 1; }
 
         /**
-         * @brief 지금 단계가 @p result 로 끝났음을 알립니다.
+         * @brief 지금 단계(@p scenarioName)가 판정 @p runResult 로 끝났음을 알립니다. 진 단계는 체인 끝 표(`describeFailedStages`)에 남는다.
          * @return 다음 단계로 넘어갔으면 true(통과했거나 `keepGoing` 이 실패를 넘겼고 단계가 남았다). 아니면 false 이고 체인이 끝난다.
          */
-        [[nodiscard]] bool onStageEnded( AutomationResult result );
+        [[nodiscard]] bool onStageEnded( const AutomationRunResult& runResult, string_view scenarioName );
         /** @brief 체인의 최종 결과입니다. 끝나기 전에는 `Running`, 전부 통과했으면 `Passed`, 아니면 처음으로 통과하지 못한 단계의 결과입니다. */
         AutomationResult getFinalResult() const { return _finalResult; }
         /** @brief 통과하지 못해 멈춰서 돌리지 않은 단계 수입니다. */
@@ -59,13 +59,17 @@ namespace sw
         /** @brief `keepGoing` 이 건너뛰고 이어 간 단계(건너뜀으로 끝난 것) 수입니다. */
         size_t getSkippedResultCount() const { return _skippedResultCount; }
         /**
-         * @brief 단계 하나의 끝을 한 줄로 적습니다(`chain stage 2/3 FAIL (shooter3d.reload) — 1 later stage(s) skipped`). `[Scenario]` 로그 줄 뒤에 붙습니다.
+         * @brief 단계 하나의 끝을 한 줄로 적습니다(`chain stage 2/3 Failed (shooter3d.reload): Assertion - <까닭> - 1 later stage(s) skipped`). `[Scenario]` 로그 줄 뒤에 붙습니다.
+         * @details 앞머리(`chain stage i/n <결과> (<이름>)`)는 그대로다 — `linux_scenarios.py` 의 정규식이 읽는다. 진 단계 · 건너뛴 단계는 `: ` 뒤에 판정 값 한 줄(`AutomationRunResult::describe`)이 붙는다.
          * @param stageIndex 방금 끝난 단계 번호
          */
-        string describeStageEnd( size_t stageIndex, AutomationResult result, string_view scenarioName ) const;
+        string describeStageEnd( size_t stageIndex, const AutomationRunResult& runResult, string_view scenarioName ) const;
+        /** @brief 체인 끝 표 — 진 단계마다 `<번호>/<수> <이름>: <종류> - <까닭>` 한 줄(체인 순서)입니다. 진 단계가 없으면 빈 목록입니다. */
+        const vector<string>& describeFailedStages() const { return _listFailedStageLine; }
 
     private:
         vector<string>   _listPath;
+        vector<string>   _listFailedStageLine; ///< 진 단계의 끝 표 줄(`describeFailedStages`)
         size_t           _stageIndex;
         size_t           _skippedStageCount;
         size_t           _failedStageCount;

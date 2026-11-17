@@ -2,6 +2,7 @@
 # 묶음 끝 전체 검증: Windows(린트, Debug · Release · 서버 · 배포 빌드, 단위 · ctest)가 모두 통과한 뒤에만 Linux 를 돌린다.
 # 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.*.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
 # --show 는 게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때). --dry-run 은 돌릴 명령만 차례대로 찍는다(스크립트를 고친 뒤 확인).
+# --self-check 는 판정 요약(print_results)의 자체 검사만 하고 끝난다(빌드 · 테스트 없이). 끝 줄 SELF_CHECK_OK.
 # --from build|cpu|gpu-release|linux 는 앞 단계를 건너뛴다(linux 는 Windows 가 이미 통과했고 그 뒤 고친 것이 Linux 쪽 스크립트 · 환경뿐일 때). 앞 단계가 통과한 뒤
 # 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 #
@@ -17,6 +18,7 @@ SHA=$(sw_git rev-parse HEAD)
 FROM=build
 DRY=0
 NO_LINUX=0
+SELF_CHECK=0
 RECORD=()
 # ctest 슬롯 수는 설정 값이다(Config/Dev/Verify.json — 없으면 멈춘다).
 CTEST_JOBS=$(py -3 -c "import json,sys; print(json.load(open('Config/Dev/Verify.json', encoding='utf-8'))['_ctestJobs'])") || { echo "Config/Dev/Verify.json 의 _ctestJobs 를 읽지 못했다"; exit 2; }
@@ -29,11 +31,39 @@ while true; do
     --dry-run) DRY=1; shift ;;
     --no-linux) NO_LINUX=1; shift ;;
     --record) RECORD=(--record); shift ;;
+    --self-check) SELF_CHECK=1; shift ;;
     "") break ;;
     # 인자 순서와 무관하게 모두 여기서 읽는다 — 예전에는 모르는 인자에서 멈춰 `--no-linux --from gpu-release` 의 --from 을 버리고 처음부터 돌았다.
-    *) echo "모르는 인자: $1 (--from · --show · --dry-run · --no-linux · --record)"; exit 2 ;;
+    *) echo "모르는 인자: $1 (--from · --show · --dry-run · --no-linux · --record · --self-check)"; exit 2 ;;
   esac
 done
+
+# 판정 요약 — 실행기가 판정 값 하나에서 찍은 끝 줄만 모은다(DesignBacklog D6): 단위 실행의 TEST_RESULT=, 시나리오 부모의 SCENARIO_RESULT=,
+# 진 단계를 (단계 · 종류 · 까닭)으로 접어 백엔드를 붙인 per-backend failure: 줄. 통과 · 건너뜀 끝 줄은 뺀다. 로그 문구를 해석하지 않는다. 인자는 읽을 파일들이다.
+print_results() {
+  grep -h -o -E "(TEST_RESULT=|SCENARIO_RESULT=|per-backend failure: ).*" "$@" 2>/dev/null |
+    tr -d '\r' | grep -v -E "^(TEST_RESULT=PASSED|SCENARIO_RESULT=(PASSED|SKIPPED)) " | sort -u | head -40
+}
+
+# 자체 검사: 통과 줄은 빠지고, 진 끝 줄과 접은 줄은 남는다.
+self_check() {
+  local DIR
+  DIR=$(mktemp -d) || return 1
+  printf '%s\n' "[2026-11-18 10:00:00] [Info] [Scenario] per-backend failure: game.vfxsort: GoldenMismatch dx11,dx12,vk,gl - differs" \
+    "[2026-11-18 10:00:01] [Info] [Scenario] SCENARIO_RESULT=FAILED stages=8 failed=4 notRun=0" > "$DIR/Scenario.empty.log"
+  printf '%s\r\n' "TEST_RESULT=PASSED run=10 failed=0 skipped=1" "SCENARIO_RESULT=PASSED stages=2 failed=0 notRun=0" > "$DIR/verify.ctest.all.log"
+  local OUT
+  OUT=$(print_results "$DIR"/*.log)
+  rm -rf "$DIR"
+  [ "$(printf '%s\n' "$OUT" | wc -l)" -eq 2 ] || { echo "self-check: 두 줄이어야 한다: $OUT"; return 1; }
+  printf '%s\n' "$OUT" | grep -q "^SCENARIO_RESULT=FAILED stages=8 failed=4 notRun=0$" || { echo "self-check: 진 끝 줄이 없다: $OUT"; return 1; }
+  printf '%s\n' "$OUT" | grep -q "^per-backend failure: game.vfxsort: GoldenMismatch dx11,dx12,vk,gl - differs$" || { echo "self-check: 접은 줄이 없다: $OUT"; return 1; }
+  echo "SELF_CHECK_OK"
+}
+if [ $SELF_CHECK -eq 1 ]; then
+  self_check
+  exit $?
+fi
 case "$FROM" in
   build) STAGE=1 ;;
   cpu) STAGE=2 ;;
@@ -88,10 +118,13 @@ run_ctest() {
   local EXCLUDE=()
   [ -z "$QUARANTINE_EXCLUDE" ] || EXCLUDE=(-E "$QUARANTINE_EXCLUDE")
   echo "== $P ctest $NAME $(date +%T)"
+  [ $DRY -eq 1 ] || { mkdir -p build/$P/Testing/Logs && touch build/$P/Testing/Logs/verify.ctest.$NAME.log.start; }   # 이번 실행이 쓴 로그를 가르는 시각 표지(print_results)
   (cd build/$P && run Testing/Logs/verify.ctest.$NAME.log ctest -j$CTEST_JOBS --output-on-failure "${EXCLUDE[@]}" "$@")
   local RC=$?
   echo "$P ctest $NAME exit=$RC"
   [ $DRY -eq 1 ] || grep -E "tests passed|tests failed|\*\*\*Failed|Timeout|Not Run" build/$P/Testing/Logs/verify.ctest.$NAME.log | head -30
+  # 진 실행의 판정 요약(끝 줄 · 백엔드로 접은 진 단계) — 단계 끝마다 찍는다. 이번 실행이 쓴 로그만 본다(앞 실행이 남긴 로그를 섞지 않게 ctest 로그보다 새 것).
+  [ $DRY -eq 1 ] || [ $RC -eq 0 ] || print_results build/$P/Testing/Logs/verify.ctest.$NAME.log $(find build/$P/Testing/Logs -maxdepth 1 -name "Scenario.*.log" -newer build/$P/Testing/Logs/verify.ctest.$NAME.log.start 2>/dev/null)
   run "" py -3 Scripts/dev/test_history.py ingest build/$P/Bin/Saved/Automation --commit "$SHA" || { echo "$P test history ingest 실패"; return 1; }
   return $RC
 }
@@ -146,7 +179,7 @@ job_server_tools() {
   run build/Ninja-Debug-Server/Testing/Logs/verify.unit.log build/Ninja-Debug-Server/Bin/Server.exe --test -unattended
   local RC=$?
   echo "server unit exit=$RC"
-  [ $DRY -eq 1 ] || grep -E "case run" build/Ninja-Debug-Server/Testing/Logs/verify.unit.log
+  [ $DRY -eq 1 ] || grep -E "case run|TEST_RESULT=" build/Ninja-Debug-Server/Testing/Logs/verify.unit.log
   [ $RC -eq 0 ] || return 1
 
   # 도구 테스트: 실행 인자 GUI(VS Code 확장 Tools/launch-args — 확장이라 JS 다)가 Source 의 매크로 · 인자 표를 읽는다. 엔진 쪽 이름 · 형식이 바뀌면 깨지는데

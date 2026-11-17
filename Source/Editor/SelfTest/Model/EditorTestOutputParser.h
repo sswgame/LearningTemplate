@@ -50,6 +50,11 @@ namespace sw::editor
          * @details 단위 테스트 실행은 끝에 선언된 Error 줄 수(`test::kDeclaredErrorLinesPrefix`)를 알린다 — 그 수를 뺀다. 그 줄이 없는 실행(시나리오 · 도구)은 모두 센다.
          */
         static uint32 countUndeclaredErrorLines( const vector<string>& listLine );
+        /**
+         * @brief 출력의 끝 줄(`TEST_RESULT=…` · `SCENARIO_RESULT=…`)입니다 — 마지막 것. 없으면(크래시 · 옛 실행 파일) 빈 글입니다.
+         * @details 실행기가 판정 값 하나에서 찍는 줄이라 종료 코드보다 말이 많다(돈 수 · 진 수 · 인자 오류 · 로드 오류).
+         */
+        static string_view findResultLine( const vector<string>& listLine );
         /** @brief 단위 테스트를 자식 프로세스로 돌릴 인자입니다. @p filter 는 `TestRunner::matchesFilter` 의 쉼표 거르개입니다. */
         static vector<string> makeUnitTestArguments( string_view filter );
         /** @brief 시나리오 한 편을 자식 프로세스로 돌릴 인자입니다. @p backendFlag 는 "dx12" 꼴이고 비어도 됩니다. 에디터 시나리오면 에디터를 켭니다. */

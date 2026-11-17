@@ -24,6 +24,7 @@ namespace sw
 
     AutomationScenarioChain::AutomationScenarioChain()
         : _listPath{}
+        , _listFailedStageLine{}
         , _stageIndex{ 0 }
         , _skippedStageCount{ 0 }
         , _failedStageCount{ 0 }
@@ -69,10 +70,13 @@ namespace sw
         return _stageIndex < _listPath.size() && _bFinished == false ? _listPath[_stageIndex] : AutomationScenarioChainInternal::s_emptyPath;
     }
 
-    bool AutomationScenarioChain::onStageEnded( AutomationResult result )
+    bool AutomationScenarioChain::onStageEnded( const AutomationRunResult& runResult, string_view scenarioName )
     {
         if ( isActive() == false )
             return false;
+        const AutomationResult result = runResult.getResult();
+        if ( runResult.isFailure() )
+            _listFailedStageLine.push_back( to_string( _stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + string( scenarioName ) + ": " + runResult.describe() );
         const bool bHasNext = _stageIndex + 1 < _listPath.size();
         if ( _bKeepGoing && result == AutomationResult::Skipped )
         {
@@ -104,10 +108,14 @@ namespace sw
         return false;
     }
 
-    string AutomationScenarioChain::describeStageEnd( size_t stageIndex, AutomationResult result, string_view scenarioName ) const
+    string AutomationScenarioChain::describeStageEnd( size_t stageIndex, const AutomationRunResult& runResult, string_view scenarioName ) const
     {
-        string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getEnumName( result ) + " (" +
+        const AutomationResult result = runResult.getResult();
+        string                 text   = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getEnumName( result ) + " (" +
                       string( scenarioName ) + ")";
+        // 진 단계 · 건너뛴 단계는 판정 값 한 줄이 까닭이다 — 끝 단계 이름이 까닭으로 남는 길이 없다.
+        if ( const string line = runResult.describe(); line.empty() == false )
+            text += ": " + line;
         if ( result != AutomationResult::Passed && _skippedStageCount > 0 )
         {
             StringBuilder<constant::buffer::kMax256> textPart;

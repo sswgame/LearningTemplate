@@ -181,6 +181,17 @@ namespace sw::editor
         return static_cast<int64>( count ) > declared ? count - static_cast<uint32>( declared ) : 0;
     }
 
+    string_view EditorTestOutputParser::findResultLine( const vector<string>& listLine )
+    {
+        for ( auto it = listLine.rbegin(); it != listLine.rend(); ++it )
+        {
+            const string_view line = StringUtil::trim( *it );
+            if ( StringUtil::startsWith( line, "TEST_RESULT=" ) || StringUtil::startsWith( line, "SCENARIO_RESULT=" ) )
+                return line;
+        }
+        return {};
+    }
+
     vector<string> EditorTestOutputParser::makeUnitTestArguments( string_view filter )
     {
         return { "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::TEST ) ),

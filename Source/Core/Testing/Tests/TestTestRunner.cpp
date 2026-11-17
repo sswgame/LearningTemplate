@@ -136,3 +136,61 @@ SW_TEST_CASE( TestRunnerTest, SkippedCaseIsReportedApartFromPassAndFail, ._tags 
     SW_EXPECT_TRUE( noReason._exitCode.has_value() && *noReason._exitCode != 0 );
     SW_EXPECT_TRUE( noReason._output.find( "SW_TEST_SKIP needs a reason" ) != string::npos );
 }
+
+/**
+ * @brief [TestRunnerTest] 거르개는 쉼표로 가른다 — 콜론 · 세미콜론 · 공백이 든 거르개는 인자 오류다(맞는 케이스 없음과 다른 길)
+ * @details GoogleTest 의 콜론 문법을 쓴 거르개가 아무 케이스에도 맞지 않아 `NO TESTS` 로만 졌다(DesignBacklog 실패 8).
+ */
+SW_TEST_CASE( TestRunnerTest, FilterGrammarRejectsOtherSeparators )
+{
+    for ( const utf8* pBad : { "A.*:B.*", "A.*;B.*", "A.* B.*", "A.*, B.*", "[slow tag]", "[]" } )
+    {
+        const string error = TestRunner::findFilterError( pBad );
+        SW_EXPECT_TRUE_MSG( error.find( "separate patterns with a comma" ) != string::npos, string( pBad ) );
+    }
+    for ( const utf8* pGood : { "*", "A.*,B.c", "A.*,-A.b", "[slow]", "*,-[slow]", "Suite.Name/alpha", "A.?b", "TestRunnerTest.*," } )
+        SW_EXPECT_TRUE_MSG( TestRunner::findFilterError( pGood ).empty(), string( pGood ) );
+}
+
+/** @brief [TestRunnerTest] 등록된 케이스에 맞지 않는 더하기 패턴은 이름으로 나온다(빼기 패턴은 보지 않는다) — `A.*,Typo.*` 가 A 만 돌고 통과하지 않는다 */
+SW_TEST_CASE( TestRunnerTest, UnmatchedPatternIsReported )
+{
+    const vector<string> listUnmatched = TestRunner::findUnmatchedPatterns( "TestRunnerTest.*,NoSuchSuiteAnywhere.*,-AlsoNoSuchSuite.*" );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listUnmatched.size() ) );
+    SW_EXPECT_EQUAL( string( "NoSuchSuiteAnywhere.*" ), listUnmatched[0] );
+    SW_EXPECT_TRUE( TestRunner::findUnmatchedPatterns( "TestRunnerTest.FilterGrammarRejectsOtherSeparators" ).empty() );
+    SW_EXPECT_TRUE( TestRunner::findUnmatchedPatterns( "[slow]" ).empty() ); // 태그 패턴도 태그를 단 케이스에 맞으면 된다
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( TestRunner::findUnmatchedPatterns( "[no-such-tag-anywhere]" ).size() ) );
+}
+
+/** @brief 자식 역할 — 선언하지 않은 Warning 하나를 남긴다(실패 종류 `UndeclaredLog`, 붙일 글이 나와야 한다). */
+SW_TEST_CHILD_ROLE( TestRunnerTest, UndeclaredWarningChild )
+{
+    SW_EXPECT_TRUE( true );
+    SW_LOG_WARNING_ID( "Test.UndeclaredOnPurpose", "a warning the child does not declare" );
+}
+
+/**
+ * @brief [TestRunnerTest] 진 실행의 끝 줄은 `TEST_RESULT=FAILED` 이고, 선언하지 않은 로그 실패는 붙일 `SW_EXPECT_LOG` 글과 보고의 실패 종류를 낸다
+ * @details 끝 줄은 표준 출력의 마지막 줄이다 — 출력을 잘라 본 쪽도 결과를 읽는다(`WINDOWS_OK=` 와 같은 꼴).
+ */
+SW_TEST_CASE( TestRunnerTest, FailedRunEndsWithTheResultLineAndTheFailureKind, ._tags = "slow", ._timeoutSeconds = 180.0f )
+{
+    const sw::test::ChildRunResult child = sw::test::runChildRole( "TestRunnerTest.UndeclaredWarningChild", {}, 120.0f );
+    SW_REQUIRE_TRUE_MSG( child._exitCode.has_value(), child.getOutputTail() );
+    SW_EXPECT_TRUE( *child._exitCode != 0 );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( child._output, "add SW_EXPECT_LOG( \"Test.UndeclaredOnPurpose\" )" ), child.getOutputTail() );
+    // 진 실행은 쓰기 폴더에 보고를 남긴다(`[  REPORT  ] <경로>`) — 케이스의 실패 종류가 든다(보고 판 4).
+    const size_t reportAt = child._output.find( "[  REPORT  ] " );
+    SW_REQUIRE_TRUE_MSG( reportAt != string::npos, child.getOutputTail() );
+    const size_t reportEnd  = child._output.find_first_of( "\r\n", reportAt );
+    const string reportPath = child._output.substr( reportAt + 13, reportEnd == string::npos ? string::npos : reportEnd - reportAt - 13 );
+    string       report;
+    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( reportPath, report ), reportPath );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( report, "\"failureKind\": \"UndeclaredLog\"" ), report );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( report, "\"UndeclaredLog\": 1" ), report );
+    // 끝 줄 — 실행기가 마지막으로 찍는 줄이다.
+    const size_t resultAt = child._output.rfind( "TEST_RESULT=" );
+    SW_REQUIRE_TRUE_MSG( resultAt != string::npos, child.getOutputTail() );
+    SW_EXPECT_TRUE_MSG( StringUtil::startsWith( string_view( child._output ).substr( resultAt ), "TEST_RESULT=FAILED run=1 failed=1 skipped=0" ), child.getOutputTail() );
+}

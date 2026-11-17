@@ -50,15 +50,24 @@ namespace sw::test
     public:
         /**
          * @brief JSON 보고 형식의 판입니다. 칸을 바꾸면 올린다(읽는 도구가 판으로 가른다).
+         *        4: 실패 종류 — 케이스의 `failureKind`(Assertion · NoAssertion · UndeclaredLog · ExpectedLogMissing · SnapshotMissing · SnapshotDiffers · Timeout · Crash, 통과 · 건너뜀이면 빈 글),
+         *           위 `failureKinds`(종류별 진 케이스 수) · `unmatchedPatterns`(등록된 케이스에 맞지 않은 더하기 패턴).
          *        3: 건너뜀(`SW_TEST_SKIP`) — 위 `skippedCount`, 케이스의 `skipped` · `skipReason`. 건너뛴 케이스는 `passed` 가 거짓이다(통과로 세지 않는다).
          *        2: 판 번호 · 케이스의 파일 · 줄 · 격리 칸을 더했다.
          */
-        static constexpr uint32 kReportSchemaVersion = 3;
+        static constexpr uint32 kReportSchemaVersion = 4;
 
         /** @brief @p name(`스위트.케이스`)이 거르개에 맞는지입니다. */
         [[nodiscard]] static bool matchesFilter( string_view filter, string_view name );
         /** @brief 태그까지 봅니다 — 패턴 `[태그]` 는 @p tags(공백으로 가른 낱말) 가운데 하나와 같으면 맞는다(`-[태그]` 는 빼기). */
         [[nodiscard]] static bool matchesFilter( string_view filter, string_view name, string_view tags );
+        /**
+         * @brief 거르개의 문법 오류입니다(맞으면 빈 글). 패턴은 이름 글자 · `.` · `*` · `?` · `/` 이거나 `[태그]` 이고 앞의 `-` 는 빼기다 — 그 밖의 글자(`:` · `;` · 공백)는 인자 오류다.
+         * @details GoogleTest 의 `:` 문법을 쓴 거르개가 아무 케이스에도 맞지 않아 "맞는 케이스 없음" 과 같은 길로 빠졌다(`NO TESTS`). 문법이 틀린 것과 맞는 것이 없는 것을 가른다.
+         */
+        [[nodiscard]] static string findFilterError( string_view filter );
+        /** @brief 등록된 케이스(자식 역할 빼고) 어느 것에도 맞지 않는 더하기 패턴입니다(빼기 패턴은 보지 않는다). 하나라도 있으면 실행은 실패다. */
+        [[nodiscard]] static vector<string> findUnmatchedPatterns( string_view filter );
         /** @brief `i/n`(0 ≤ i < n)을 읽습니다. 틀리면 false 입니다. */
         [[nodiscard]] static bool parseShard( string_view text, uint32& outIndex, uint32& outCount );
         /** @brief @p name 이 @p shardCount 몫 가운데 몇 번째인지입니다(이름의 FNV-1a — 실행 · 빌드마다 같다). */
@@ -72,7 +81,9 @@ namespace sw::test
         static vector<string> collectCaseNamesOutside( std::initializer_list<string_view> listFolder );
         /**
          * @brief 거른 케이스를 섞어 돌립니다. 모두 통과하면 true 입니다.
-         * @details 거르개에 맞는 케이스가 없으면 실패다(빈 실행을 통과로 보지 않는다). 케이스 하나는 실패 단언 · 단언 0 개 · 적지 않은 Warning · Error 로그 ·
+         * @details 시작 때 겹친 정적 등록이 있으면 돌지 않는다(`LOAD_ERROR`). 거르개 문법이 틀리면 인자 오류(`ARGUMENT_ERROR`), 등록된 케이스에 맞지 않는 더하기 패턴이 있으면 실패다.
+         *          표준 출력의 마지막 줄은 늘 `TEST_RESULT=<PASSED|FAILED|NO_TESTS|TIMEOUT|ARGUMENT_ERROR|LOAD_ERROR> run=… failed=… skipped=…` 다(목록만 찍는 실행은 빼고).
+         *          거르개에 맞는 케이스가 없으면 실패다(빈 실행을 통과로 보지 않는다). 케이스 하나는 실패 단언 · 단언 0 개 · 적지 않은 Warning · Error 로그 ·
          *          적었는데 나오지 않은 로그 가운데 하나라도 있으면 실패다. 비활성 케이스는 돌지 않고 까닭과 함께 센다. 시한을 넘긴 케이스는 실행을 끝낸다(`kTestTimeoutExitCode`).
          * @param pOutListFailure 비지 않으면 실패 줄(`<케이스>: <파일>(<줄>): error: …`)을 받는다 — 표준 출력을 남기지 않는 실행(에디터 자체 테스트)이 로그에 사유를 적는다.
          */

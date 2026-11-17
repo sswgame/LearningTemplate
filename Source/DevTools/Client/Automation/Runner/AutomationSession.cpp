@@ -8,6 +8,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -64,6 +65,7 @@ namespace sw
                 AutomationHangPayload::assign( payload._scenario, AutomationHangPayload::kScenarioBytes, lastStage );
                 AutomationHangPayload::assign( payload._lastStep, AutomationHangPayload::kLastStepBytes, "process shutdown after the scenario run (engine / module teardown)" );
                 AutomationHangPayload::assign( payload._result, AutomationHangPayload::kResultBytes, getEnumName( AutomationResult::TimedOut ) );
+                AutomationHangPayload::assign( payload._failureKind, AutomationHangPayload::kResultBytes, getEnumName( AutomationFailureKind::Hang ) );
                 const float64 limitSeconds     = AutomationRunner::scaleWallSeconds( AutomationTimeLimits::kShutdownWallSeconds );
                 payload._wallLimitMilliseconds = static_cast<uint32>( limitSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
                 _watchdog.publish( payload );
@@ -303,6 +305,13 @@ namespace sw
         _pRunner->setReproduceInput( _reproduceInput );
         _pRunner->armHangWatchdog(); // 실제 프로세스를 구동하는 세션만 행 감시를 켠다(상한 + 유예 뒤 보고를 쓰고 종료 코드 12 로 끝낸다)
         _pRunner->startFromPath( AssetID{ _pChain->getCurrentPath() }, AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
+        // 겹친 정적 등록(감시 값 · 단계 · 차단 조건 …)이 있으면 단계를 돌리지 않는다 — 뒤의 등록이 조용히 빠진 채 도는 단계는 그 등록을 본 적이 없다. 단계마다 본다(뒤에 오른 모듈의 등록도).
+        if ( const vector<string> listRejected = collectRejectedStaticRegistrations(); listRejected.empty() == false && _pRunner->isActive() )
+        {
+            for ( const string& rejectedLine : listRejected )
+                SW_LOG_ERROR_ID( "AutomationSession.RejectedRegistration", "[Scenario] %#", rejectedLine.c_str() );
+            _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "a static registration was rejected at startup: " + listRejected.front(), {} ) );
+        }
         _screenshotBaseline = completedScreenshotCount;
         applyPresentPolicy();
         if ( _pRunner->isActive() )
@@ -338,8 +347,8 @@ namespace sw
                 IGameRestarter* const pRestarter = engine::findSubsystem<IGameRestarter>();
                 if ( pRestarter == nullptr || pRestarter->restartGame() == false )
                 {
-                    _pRunner->finish( AutomationResult::Failed,
-                                      pRestarter == nullptr ? "this host cannot restart the game for a later chain stage" : "the game could not be restarted for this stage" );
+                    _pRunner->finish( AutomationRunResult::failed( AutomationFailureKind::Assertion,
+                                                                   pRestarter == nullptr ? "this host cannot restart the game for a later chain stage" : "the game could not be restarted for this stage", {} ) );
                     return;
                 }
             }
@@ -430,7 +439,7 @@ namespace sw
         const AutomationResult result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationResult::Running )
             return kEngineFrameRunning;
-        const EngineFrameExit exitCode = onStageEnded( result, completedScreenshotCount );
+        const EngineFrameExit exitCode = onStageEnded( completedScreenshotCount );
         if ( exitCode.has_value() == false )
             return kEngineFrameRunning;
         finishRecording();
@@ -475,6 +484,7 @@ namespace sw
         _runStatus._stepNumber         = runner.getCurrentStepNumber();
         _runStatus._frame              = runner.getFrameIndex();
         _runStatus._result             = runner.getResult();
+        _runStatus._resultLine         = runner.getRunResult().has_value() ? runner.getRunResult()->describe() : string{};
         _runStatus._stageIndex         = _pChain != nullptr ? static_cast<uint32>( _pChain->getStageIndex() ) : 0u;
         _runStatus._stageCount         = _pChain != nullptr ? static_cast<uint32>( _pChain->getStageCount() ) : 1u;
         const vector<string>& listFail = runner.getFailures();
@@ -487,14 +497,17 @@ namespace sw
         _runStatus._warningErrorCount = runner.hasEnded() ? static_cast<uint32>( runner.getUnhandledLogs().size() ) : runner.getCapturedWarningErrorCount();
     }
 
-    EngineFrameExit AutomationSession::onStageEnded( AutomationResult result, uint32 completedScreenshotCount )
+    EngineFrameExit AutomationSession::onStageEnded( uint32 completedScreenshotCount )
     {
-        const size_t stageIndex = _pChain->getStageIndex();
-        const string stageName  = _pRunner->getScenario().getName().empty() ? _pChain->getCurrentPath() : _pRunner->getScenario().getName();
-        const bool   bNextStage = _pChain->onStageEnded( result );
+        SW_ASSERT( _pRunner->getRunResult().has_value() ); // 끝난 단계만 온다(`onFrameEnd` 가 결과를 본 뒤)
+        const AutomationRunResult runResult  = *_pRunner->getRunResult();
+        const AutomationResult    result     = runResult.getResult();
+        const size_t              stageIndex = _pChain->getStageIndex();
+        const string              stageName  = _pRunner->getScenario().getName().empty() ? _pChain->getCurrentPath() : _pRunner->getScenario().getName();
+        const bool                bNextStage = _pChain->onStageEnded( runResult, stageName );
         if ( _pChain->isChain() )
         {
-            const string line = _pChain->describeStageEnd( stageIndex, result, stageName );
+            const string line = _pChain->describeStageEnd( stageIndex, runResult, stageName );
             // 건너뜀은 실패가 아니다 - 까닭과 등급(빌드 구성이면 Info, 환경 탓이면 Warning)은 실행기의 SKIP 줄이 이미 남겼다.
             if ( result == AutomationResult::Passed || result == AutomationResult::Skipped )
                 SW_LOG_INFO_ID( "AutomationSession.ChainStageEnded", "[Scenario] %#", line.c_str() );
@@ -503,15 +516,21 @@ namespace sw
         }
         if ( bNextStage )
         {
-            _runStatus._previousStageName   = stageName; // 다음 단계가 곧 서므로 끝난 단계의 결과는 "앞 단계" 줄로 남긴다
-            _runStatus._previousStageResult = result;
+            _runStatus._previousStageName       = stageName; // 다음 단계가 곧 서므로 끝난 단계의 결과는 "앞 단계" 줄로 남긴다
+            _runStatus._previousStageResult     = result;
+            _runStatus._previousStageResultLine = runResult.describe();
             startStage( completedScreenshotCount );
             return kEngineFrameRunning;
         }
         if ( _pChain->isChain() )
+        {
             SW_LOG_INFO_ID( "AutomationSession.ChainStageFailedSkipped", "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", getEnumName( _pChain->getFinalResult() ),
                             static_cast<uint32>( _pChain->getStageCount() ), static_cast<uint32>( _pChain->getFailedStageCount() ),
                             static_cast<uint32>( _pChain->getSkippedResultCount() ), static_cast<uint32>( _pChain->getSkippedStageCount() ) );
+            // 체인 끝 표 — 진 단계마다 판정 값 한 줄(실행기의 끝 줄 · 보고와 같은 값이다).
+            for ( const string& failedLine : _pChain->describeFailedStages() )
+                SW_LOG_INFO_ID( "AutomationSession.ChainFailedStage", "[Scenario] chain failed stage %#", failedLine.c_str() );
+        }
         return getAutomationExitCode( _pChain->getFinalResult() );
     }
 
@@ -527,7 +546,7 @@ namespace sw
             return kEngineFrameRunning;
         AutomationResult result = _pRunner->onWindowClosed( context._pInput );
         // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).
-        if ( _pChain != nullptr && _pChain->onStageEnded( result ) )
+        if ( _pChain != nullptr && _pRunner->getRunResult().has_value() && _pChain->onStageEnded( *_pRunner->getRunResult(), _pRunner->getScenario().getName() ) )
         {
             SW_LOG_ERROR_ID( "AutomationSession.WindowClosedStageStill", "[Scenario] the window closed with %# stage(s) still to run (put <CloseWindow> in the last scenario of a chain)",
                              static_cast<uint32>( _pChain->getStageCount() - _pChain->getStageIndex() ) );

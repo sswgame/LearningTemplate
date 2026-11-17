@@ -171,6 +171,13 @@ namespace sw
         Internal::writeNumberField( writer, "exitCode", static_cast<uint64>( getAutomationExitStatus( AutomationResult::TimedOut ) ) );
         Internal::writeNumberField( writer, "frames", payload._frame );
         Internal::writeStringField( writer, "reason", reason.view() );
+        // 실행기 보고와 같은 판정 칸(`AutomationReportWriter`) — 행은 실패 종류 `Hang` 이다. 읽는 쪽이 `<종류> - <까닭>` 을 짓는다.
+        writer.key( "failure" );
+        writer.beginObject();
+        Internal::writeStringField( writer, "kind", Internal::toView( payload._failureKind ) );
+        Internal::writeStringField( writer, "reason", reason.view() );
+        Internal::writeStringField( writer, "step", lastStep );
+        writer.endObject();
         Internal::writeStringField( writer, "backend", Internal::toView( payload._backend ) );
         Internal::writeStringField( writer, "game", Internal::toView( payload._game ) );
         Internal::writeStringField( writer, "startedAt", Internal::toView( payload._startedAt ) );
