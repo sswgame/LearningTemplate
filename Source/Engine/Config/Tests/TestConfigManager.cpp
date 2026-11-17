@@ -301,7 +301,7 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
     const string qualityPath  = test::makeScratchPath( "QualityRenderQuality.json" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( overridePath, R"({ "_window": { "_width": 1280 }, "_render": { "_shadowLocalCullSlotLimit": 10, "_maxExtraViewCount": 5 } })" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "Low": { "_shadowLocalCullSlotLimit": 4, "_textureStreaming": { "_poolMegabytes": 256 } }, "High": {} })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 4, "_textureStreaming": { "_poolMegabytes": 256 } }, "high": {} })" ) );
 
     ConfigManager baseOnly;
     SW_REQUIRE_TRUE( baseOnly.loadConfigFile<EngineConfig>( basePath ) == ConfigReadResult::Loaded );
@@ -310,7 +310,7 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
     // 1) 단계가 플랫폼 위에 선다 — 같은 키는 단계가, 단계가 적지 않은 키는 플랫폼이, 둘 다 적지 않은 키는 바탕이 남는다.
     {
         ConfigManager       manager;
-        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ).withRenderQuality( qualityPath, "Low" ) );
+        const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ).withRenderQuality( qualityPath, "low" ) );
         SW_REQUIRE_NOT_NULL( pConfig );
         SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
         SW_EXPECT_EQUAL( 5u, pConfig->_render._maxExtraViewCount );
@@ -328,14 +328,14 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
         SW_EXPECT_EQUAL( 1u, sourceCount );
 
         // 2) 단계 표가 바뀌면 제자리에서 다시 읽는다.
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "Low": { "_shadowLocalCullSlotLimit": 2 }, "High": {} })" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 2 }, "high": {} })" ) );
         SW_EXPECT_TRUE( manager.reloadConfigFile( qualityPath ) == ReloadResult::Reloaded );
         SW_EXPECT_TRUE( manager.getConfig<EngineConfig>() == pConfig );
         SW_EXPECT_EQUAL( 2u, pConfig->_render._shadowLocalCullSlotLimit );
     }
 
-    // 3) 단계 없음(빈 이름)과 빈 단계는 아래 층 그대로다.
-    for ( const utf8* pTier : { "", "High" } )
+    // 3) 단계 없음(빈 이름)과 빈 단계(high)는 아래 층 그대로다.
+    for ( const utf8* pTier : { "", "high" } )
     {
         ConfigManager       manager;
         const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath, overridePath ).withRenderQuality( qualityPath, pTier ) );
@@ -356,7 +356,7 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityTierLayersAfterPlatform )
         const string        baked   = makeEngineConfigJSON( 640, 480 );
         const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>(
             ConfigSource::baked( baked.c_str(), R"({ "_render": { "_shadowLocalCullSlotLimit": 10, "_maxExtraViewCount": 5 } })" )
-                .withRenderQuality( R"({ "Low": { "_shadowLocalCullSlotLimit": 4 } })", "Low" ) );
+                .withRenderQuality( R"({ "low": { "_shadowLocalCullSlotLimit": 4 } })", "low" ) );
         SW_REQUIRE_NOT_NULL( pConfig );
         SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
         SW_EXPECT_EQUAL( 5u, pConfig->_render._maxExtraViewCount );
@@ -376,38 +376,38 @@ SW_TEST_CASE( ConfigManagerTest, RenderQualityRejectsUnknownTierAndKey )
     SW_EXPECT_LOG( "Config.RenderQualityMissing" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "Low" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "low" ) ) );
     }
 
     // 2) 없는 단계 이름.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "Low": {}, "High": {} })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": {}, "high": {} })" ) );
     SW_EXPECT_LOG( "Config.RenderQualityUnknownTier" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "Ultra" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "nope" ) ) );
     }
 
     // 3) 단계의 모르는 키, 그리고 `_render` 밖 칸(단계는 `_render` 안쪽이라 `_window` 는 RenderConfig 의 모르는 키다).
     SW_EXPECT_LOG( "Config.KeyUnknown" );
-    for ( const utf8* pTiers : { R"({ "Low": { "_shadowCullSlots": 4 } })", R"({ "Low": { "_window": { "_width": 1 } } })" } )
+    for ( const utf8* pTiers : { R"({ "low": { "_shadowCullSlots": 4 } })", R"({ "low": { "_window": { "_width": 1 } } })" } )
     {
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, pTiers ) );
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "Low" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "low" ) ) );
     }
 
     // 4) 단계가 객체가 아니다.
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "Low": 1 })" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": 1 })" ) );
     SW_EXPECT_LOG( "Config.RenderQualityTierNotObject" );
     {
         ConfigManager manager;
-        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "Low" ) ) );
+        SW_EXPECT_NULL( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "low" ) ) );
     }
 }
 
 /**
- * @brief [ConfigManagerTest] 커밋된 단계 표(구성 때 구운 사본)의 단계마다 커밋된 엔진 설정 위에 읽히고, 기본 단계 High(`gv_renderQuality`)는 바탕 값 그대로다
- * @details High 가 바탕을 바꾸면 기본 실행의 렌더 값이 바뀌어 골든이 흔들린다 — 바탕이 곧 High 다.
+ * @brief [ConfigManagerTest] 커밋된 단계 표(구성 때 구운 사본)의 단계마다 커밋된 엔진 설정 위에 읽히고, 기본 단계 high(`gv_renderQuality`)는 바탕 값 그대로다
+ * @details high 가 바탕을 바꾸면 기본 실행의 렌더 값이 바뀌어 골든이 흔들린다 — 바탕이 곧 high 다.
  */
 SW_TEST_CASE( ConfigManagerTest, CommittedRenderQualityTiersLoad )
 {
@@ -427,7 +427,7 @@ SW_TEST_CASE( ConfigManagerTest, CommittedRenderQualityTiersLoad )
         ConfigManager       manager;
         const EngineConfig* pConfig = manager.loadHostConfig<EngineConfig>( ConfigSource::baked( shipping_host::kEngineConfigJSON ).withRenderQuality( shipping_host::kRenderQualityJSON, tier ) );
         SW_REQUIRE_TRUE_MSG( pConfig != nullptr, tier.c_str() );
-        if ( tier != "High" )
+        if ( tier != "high" )
             continue;
         bHasHigh                        = true;
         const expected<string> highText = JSONSerializer::serialize( pConfig, *EngineConfig::StaticType() );
@@ -435,4 +435,52 @@ SW_TEST_CASE( ConfigManagerTest, CommittedRenderQualityTiersLoad )
         SW_EXPECT_TRUE( *highText == *baseText );
     }
     SW_EXPECT_TRUE( bHasHigh );
+}
+
+/**
+ * @brief [ConfigManagerTest] 단계를 바꾸면 엔진 설정을 제자리에서 다시 읽고 알린다 — 없는 단계는 이전 값 · 이전 단계를 두고, 파일 다시 읽기는 새 단계로 합친다
+ * @details 사용자 옵션 `graphics.renderQuality` → `gv_renderQuality` → `applyRenderQuality` 의 끝(언리얼 ScalabilityQuality 즉시 적용).
+ */
+SW_TEST_CASE( ConfigManagerTest, RenderQualityAppliesInPlace )
+{
+    const string basePath    = test::makeScratchPath( "QualityApplyEngineConfig.json" );
+    const string qualityPath = test::makeScratchPath( "QualityApplyRenderQuality.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 800, 600 ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( qualityPath, R"({ "low": { "_shadowLocalCullSlotLimit": 4 }, "high": {} })" ) );
+
+    ConfigManager manager;
+    SW_EXPECT_LOG( "ConfigManager.RenderQualityBeforeLoad" );
+    SW_EXPECT_FALSE( manager.applyRenderQuality( "low" ) ); // 읽은 출처가 없으면 다시 읽을 수 없다
+
+    const EngineConfig* pConfig = manager.loadEngineConfig( ConfigSource::disk( basePath ).withRenderQuality( qualityPath, "high" ) );
+    SW_REQUIRE_NOT_NULL( pConfig );
+    const uint32       baseLimit          = pConfig->_render._shadowLocalCullSlotLimit;
+    uint32             notifyCount        = 0;
+    const Subscription reloadSubscription = manager.onConfigReloaded().add( SW_DELEGATE_LAMBDA( Delegate<void( const hashed_string& )>, [&notifyCount]( const hashed_string& )
+    {
+        ++notifyCount;
+    } ) );
+
+    // 1) 단계를 바꾸면 같은 객체에 새 값이 들고 한 번 알린다. 같은 단계는 다시 읽지 않는다.
+    SW_EXPECT_TRUE( manager.applyRenderQuality( "low" ) );
+    SW_EXPECT_TRUE( manager.getConfig<EngineConfig>() == pConfig );
+    SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
+    SW_EXPECT_TRUE( manager.applyRenderQuality( "low" ) );
+    SW_EXPECT_EQUAL( 1u, notifyCount );
+
+    // 2) 없는 단계는 오류이고 값과 단계는 그대로다.
+    SW_EXPECT_LOG( "Config.RenderQualityUnknownTier" );
+    SW_EXPECT_FALSE( manager.applyRenderQuality( "nope" ) );
+    SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
+    SW_EXPECT_EQUAL( 1u, notifyCount );
+
+    // 3) 바탕 파일을 다시 읽어도 고른 단계(low)가 위에 선다.
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( basePath, makeEngineConfigJSON( 1024, 600 ) ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( basePath ) == ReloadResult::Reloaded );
+    SW_EXPECT_EQUAL( 1024u, pConfig->_window._width );
+    SW_EXPECT_EQUAL( 4u, pConfig->_render._shadowLocalCullSlotLimit );
+
+    // 4) 기본 단계로 돌아가면 바탕 값이다.
+    SW_EXPECT_TRUE( manager.applyRenderQuality( "high" ) );
+    SW_EXPECT_EQUAL( baseLimit, pConfig->_render._shadowLocalCullSlotLimit );
 }

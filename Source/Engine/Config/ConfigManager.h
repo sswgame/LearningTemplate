@@ -29,6 +29,8 @@ namespace sw
 {
     class XMLNode;
 
+    struct GlobalVariableInfo;
+
     struct ResourceContext;
 } // namespace sw
 
@@ -139,8 +141,9 @@ namespace sw
          *          파일만 읽는다. 배포 구성은 생성된 JSON 을 읽으며, 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 실패로 드러낸다.
          */
         SubsystemInitResult initializeSubsystem() override;
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 품질 단계 변수(`gv_renderQuality`)에 건 훅을 뗍니다. */
+        void        shutdownSubsystem() override;
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 설정 하나를 파일에서 읽어 등록합니다. 테이블에 이미 같은 타입이 있으면 덮어씁니다.
@@ -172,6 +175,18 @@ namespace sw
                                                           SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
             return ConfigReadResult::Loaded;
         }
+
+        /**
+         * @brief 호스트 엔진 설정을 @p source 에서 읽고 그 출처를 기억합니다(`applyRenderQuality` 가 같은 출처에 단계만 바꿔 다시 읽는다). 결과는 `loadHostConfig` 와 같습니다.
+         */
+        EngineConfig* loadEngineConfig( const ConfigSource& source );
+        /**
+         * @brief 품질 단계를 @p tierName 으로 바꿔 엔진 설정을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다(언리얼 `ScalabilityQuality` 즉시 적용 자리).
+         * @details 사용자 옵션 `graphics.renderQuality` 가 `gv_renderQuality` 를 바꾸면 이것이 불린다(기동 때 저장값 적용 포함). 같은 단계면 아무것도 하지 않는다.
+         *          읽지 못하면(없는 단계 · 모르는 키 — 오류를 남겼다) 이전 값과 이전 단계를 그대로 둔다. 디스크 출처면 파일 다시 읽기도 새 단계로 합친다.
+         * @return 반영했거나 이미 그 단계면 true, `loadEngineConfig` 전이거나 읽지 못했으면 false 입니다.
+         */
+        [[nodiscard]] bool applyRenderQuality( const string& tierName );
 
         /** @brief `loadConfigFile` 이 `Loaded` 이면 true 입니다. */
         template <typename T>
@@ -461,14 +476,18 @@ namespace sw
          * @details 첫 읽기가 끝나면 자리의 객체가 표(`_mapConfig`)로 옮겨가 자리는 비지만, 객체의 주소는 그대로다.
          */
         unique_ptr<IConfig>* findHostSlot( const TypeInfo& type );
+        /** @brief `gv_renderQuality` 의 변경 훅 — `applyRenderQuality` 를 부릅니다. */
+        void onRenderQualityChanged( GlobalVariableInfo* pInfo );
 
     private:
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
-        unique_ptr<IConfig>                        _pEngineSlot;       ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
-        unique_ptr<IConfig>                        _pGameSlot;         ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
-        EngineConfig*                              _pHostEngineConfig; ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
-        GameConfig*                                _pHostGameConfig;   ///< `_pGameSlot` 의 객체 주소
-        unordered_map<uint32, ReloadSource>        _mapSource;         ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unique_ptr<IConfig>                        _pEngineSlot;                       ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
+        unique_ptr<IConfig>                        _pGameSlot;                         ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
+        EngineConfig*                              _pHostEngineConfig;                 ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
+        GameConfig*                                _pHostGameConfig;                   ///< `_pGameSlot` 의 객체 주소
+        unordered_map<uint32, ReloadSource>        _mapSource;                         ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unique_ptr<ConfigSource>                   _pEngineSource;                     ///< 엔진 설정을 읽은 출처(`loadEngineConfig`) — 품질 단계만 바꿔 다시 읽는다
+        GlobalVariableInfo*                        _pRenderQualityVariable{ nullptr }; ///< 훅을 건 `gv_renderQuality`(기동 범위에서만 건다)
         ConfigReloadedDelegate                     _onConfigReloaded;
     };
 

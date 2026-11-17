@@ -1,5 +1,5 @@
 {
-    "Low": {
+    "low": {
         "_shadowLocalMinTileResolution": 64,
         "_shadowLocalCullSlotLimit": 4,
         "_maxExtraViewCount": 4,
@@ -8,15 +8,15 @@
             "_maxMegabytesInFlight": 32
         }
     },
-    "Medium": {
+    "medium": {
         "_shadowLocalCullSlotLimit": 8,
         "_maxExtraViewCount": 6,
         "_textureStreaming": {
             "_poolMegabytes": 512
         }
     },
-    "High": {},
-    "Epic": {
+    "high": {},
+    "ultra": {
         "_shadowLocalMinTileResolution": 256,
         "_shadowLocalCullSlotLimit": 32,
         "_maxExtraViewCount": 16,

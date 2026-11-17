@@ -4,7 +4,8 @@
  * @details 언리얼 스케일러빌리티 그룹(`sg.*` 단계마다 `r.*` 묶음) · 유니티 SRP 품질 에셋(품질 단계마다 렌더 파이프라인 에셋) 자리다.
  *          표는 단계 이름 → `RenderConfig` 덮어쓰기 객체이고, 단계는 `_render` 안쪽만 적는다 — 층이 `{ "_render": <단계> }` 로 감싸므로 다른 칸은 형식상 건드릴 수 없다.
  *          합치기는 플랫폼 층과 같은 `PlatformConfigOverride::apply` 하나이고, 합친 글은 엄격 읽기를 지나 단계의 모르는 키 · 범위 밖 값도 로드 오류다.
- *          단계는 `gv_renderQuality`(명령줄 `-gv_renderQuality=Low`)가 기동 때 고른다. 빈 이름이면 층이 없다(바탕 그대로).
+ *          단계 이름(low · medium · high · ultra)은 사용자 옵션 `graphics.renderQuality` · 품질 프리셋 이름과 같다 — 옵션이 `gv_renderQuality` 를 넣고
+ *          (명령줄 `-gv_renderQuality=low` 가 이긴다) 바뀌면 `ConfigManager::applyRenderQuality` 가 제자리에서 다시 읽는다. 빈 이름이면 층이 없다(바탕 그대로).
  */
 #pragma once
 #include "Core/Container/string.h"

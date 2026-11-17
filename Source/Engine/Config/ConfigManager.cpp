@@ -61,8 +61,10 @@ namespace sw
     } // namespace
 } // namespace sw
 
-// 언리얼 스케일러빌리티 그룹(`sg.*`) · 유니티 품질 단계 자리. 기본 단계 High 는 바탕 값 그대로다. 엔진 설정은 기동 때 한 번 읽으므로 기동 인자로 고른다.
-SW_GLOBAL_VARIABLE( sw::GlobalString, gv_renderQuality, "High", "렌더 품질 단계 — Config/Engine/RenderQuality.json 의 단계 이름(기동 때 엔진 설정 _render 위에 합친다, 빈 글이면 단계 없음)" );
+// 언리얼 스케일러빌리티 그룹(`sg.*`) · 유니티 품질 단계 자리. 기본 단계 high 는 바탕 값 그대로다. 사용자 옵션 `graphics.renderQuality` 가 값을 넣고(명령줄이 이긴다),
+// 바뀌면 엔진 설정을 제자리에서 다시 읽는다(`ConfigManager::applyRenderQuality`).
+SW_GLOBAL_VARIABLE( sw::GlobalString, gv_renderQuality, "high",
+                    "렌더 품질 단계 — Config/Engine/RenderQuality.json 의 단계 이름 low · medium · high · ultra (사용자 설정 graphics.renderQuality, 엔진 설정 _render 위에 합친다, 빈 글이면 단계 없음)" );
 
 namespace sw
 {
@@ -88,12 +90,58 @@ namespace sw
                                                   .withRenderQuality( shipping_host::kRenderQualityJSON, qualityTier )
                                             : ConfigSource::disk( config::kFileRuntimeEngineConfig, PlatformConfigOverride::makeEngineConfigPath() )
                                                   .withRenderQuality( config::kFileRuntimeRenderQuality, qualityTier );
-        if ( loadHostConfig<EngineConfig>( engineSource ) == nullptr )
+        if ( loadEngineConfig( engineSource ) == nullptr )
             return SubsystemInitResult::Failed;
-        const ConfigSource gameSource = build::kStaticModules ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
+        // 사용자 설정이 기동 때 저장값을 넣거나 메뉴 · 콘솔이 바꾸면 그 자리에서 다시 읽는다.
+        _pRenderQualityVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_renderQuality" );
+        if ( _pRenderQualityVariable == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ConfigManager.RenderQualityVariableMissing", "gv_renderQuality is not registered - the render quality option cannot reach the engine config" );
+            return SubsystemInitResult::Failed;
+        }
+        _pRenderQualityVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &ConfigManager::onRenderQualityChanged, this );
+        const ConfigSource gameSource            = build::kStaticModules ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
         if ( loadHostConfig<GameConfig>( gameSource ) == nullptr )
             return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
+    }
+
+    void ConfigManager::shutdownSubsystem()
+    {
+        if ( _pRenderQualityVariable != nullptr )
+            _pRenderQualityVariable->_onValueChanged = {};
+        _pRenderQualityVariable = nullptr;
+    }
+
+    EngineConfig* ConfigManager::loadEngineConfig( const ConfigSource& source )
+    {
+        EngineConfig* const pConfig = loadHostConfig<EngineConfig>( source );
+        if ( pConfig != nullptr )
+            _pEngineSource = make_unique<ConfigSource>( source );
+        return pConfig;
+    }
+
+    bool ConfigManager::applyRenderQuality( const string& tierName )
+    {
+        if ( _pEngineSource == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ConfigManager.RenderQualityBeforeLoad", "Render quality '%#' was chosen before the engine config was loaded", tierName.c_str() );
+            return false;
+        }
+        if ( _pEngineSource->getQualityTier() == tierName )
+            return true;
+        const ConfigSource source = _pEngineSource->withRenderQuality( _pEngineSource->getQualityTiers(), tierName );
+        if ( loadHostConfig<EngineConfig>( source ) == nullptr )
+            return false; // 까닭은 읽기가 남겼다 — 표는 이전 값 그대로다
+        *_pEngineSource = source;
+        _onConfigReloaded.broadcast( EngineConfig::StaticType()->_fullyQualifiedName );
+        return true;
+    }
+
+    void ConfigManager::onRenderQualityChanged( GlobalVariableInfo* pInfo )
+    {
+        (void)pInfo;
+        (void)applyRenderQuality( gv_renderQuality.get() );
     }
 
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )

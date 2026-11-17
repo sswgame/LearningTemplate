@@ -45,13 +45,21 @@
 	</Setting>
 	<Setting id="display.vsync" category="display" type="Bool" default="false" target="handler:display.vsync" text="settings.display.vsync"/>
 
-	<!-- 그래픽 — graphics.quality 가 아래 일곱을 프리셋으로 묶는다(아래 <Scalability>). -->
+	<!-- 그래픽 — graphics.quality 가 아래 여덟을 프리셋으로 묶는다(아래 <Scalability>). -->
 	<Setting id="graphics.quality" category="graphics" type="Enum" default="high" target="handler:resource.tag" param="quality" text="settings.graphics.quality">
 		<Option value="low" text="settings.graphics.quality.low"/>
 		<Option value="medium" text="settings.graphics.quality.medium"/>
 		<Option value="high" text="settings.graphics.quality.high"/>
 		<Option value="ultra" text="settings.graphics.quality.ultra"/>
 		<Option value="custom" text="settings.graphics.quality.custom"/>
+	</Setting>
+	<!-- 렌더 품질 단계 — 선택지 이름이 곧 Config/Engine/RenderQuality.json 의 단계 이름이다(gv_renderQuality, 품질 프리셋 이름과도 같다).
+	     바꾸면 엔진 설정을 제자리에서 다시 읽어 바로 반영한다(언리얼 GameUserSettings 의 ScalabilityQuality 즉시 적용과 같다). 명령줄 -gv_renderQuality 가 저장값을 이긴다. -->
+	<Setting id="graphics.renderQuality" category="graphics" type="Enum" default="high" target="gv:gv_renderQuality" text="settings.graphics.renderQuality">
+		<Option value="low" text="settings.graphics.quality.low"/>
+		<Option value="medium" text="settings.graphics.quality.medium"/>
+		<Option value="high" text="settings.graphics.quality.high"/>
+		<Option value="ultra" text="settings.graphics.quality.ultra"/>
 	</Setting>
 	<!-- 업스케일러는 렌더 배율(graphics.renderScale)로 작게 그린 화면을 키우는 필터다 — off 선형, spatial FSR 1(EASU + RCAS). 배율 1 이면 키울 것이 없다. -->
 	<Setting id="graphics.upscaler" category="graphics" type="Enum" default="off" target="gv:gv_upscaler" text="settings.graphics.upscaler">
@@ -95,6 +103,7 @@
 
 	<Scalability setting="graphics.quality" custom="custom" autoDetectFallback="medium">
 		<Preset name="low">
+			<Value setting="graphics.renderQuality" value="low"/>
 			<Value setting="graphics.renderScale" value="0.75"/>
 			<Value setting="graphics.shadowQuality" value="low"/>
 			<Value setting="graphics.viewDistance" value="0.5"/>
@@ -103,6 +112,7 @@
 			<Value setting="graphics.effectsQuality" value="low"/>
 		</Preset>
 		<Preset name="medium">
+			<Value setting="graphics.renderQuality" value="medium"/>
 			<Value setting="graphics.renderScale" value="0.85"/>
 			<Value setting="graphics.shadowQuality" value="medium"/>
 			<Value setting="graphics.viewDistance" value="0.75"/>
@@ -111,6 +121,7 @@
 			<Value setting="graphics.effectsQuality" value="medium"/>
 		</Preset>
 		<Preset name="high">
+			<Value setting="graphics.renderQuality" value="high"/>
 			<Value setting="graphics.renderScale" value="1"/>
 			<Value setting="graphics.shadowQuality" value="high"/>
 			<Value setting="graphics.viewDistance" value="1"/>
@@ -119,6 +130,7 @@
 			<Value setting="graphics.effectsQuality" value="high"/>
 		</Preset>
 		<Preset name="ultra">
+			<Value setting="graphics.renderQuality" value="ultra"/>
 			<Value setting="graphics.renderScale" value="1"/>
 			<Value setting="graphics.shadowQuality" value="ultra"/>
 			<Value setting="graphics.viewDistance" value="1.5"/>
