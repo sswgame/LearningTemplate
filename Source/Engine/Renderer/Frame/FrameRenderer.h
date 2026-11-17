@@ -473,6 +473,7 @@ namespace sw
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameRendererStatus _status;
+        RHIFormat           _passResourcesBackBufferFormat{ RHIFormat::Unknown }; ///< 출력 패스 PSO 를 만든 백버퍼 형식 — 바뀌면 `ensurePassResources` 가 빠진 변형을 더한다
         uint8               _bCallbacksBound            : 1;
         uint8               _bPassResourcesReady        : 1;
         uint8               _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
