@@ -99,6 +99,7 @@ namespace sw
         , _processID{ 0 }
         , _releaseMode{ ProcessReleaseMode::WaitForExit }
         , _bNewProcessGroup{ false }
+        , _bEndWithParent{ false }
     {
     }
 
@@ -117,6 +118,7 @@ namespace sw
         , _processID{ other._processID.load() }
         , _releaseMode{ other._releaseMode }
         , _bNewProcessGroup{ other._bNewProcessGroup }
+        , _bEndWithParent{ other._bEndWithParent }
     {
         other._pNativeHandle = nullptr;
         other._pStdOutRead   = nullptr;
@@ -140,6 +142,7 @@ namespace sw
             _bufferedOutput   = std::move( other._bufferedOutput );
             _bNewProcessGroup = other._bNewProcessGroup;
             _releaseMode      = other._releaseMode;
+            _bEndWithParent   = other._bEndWithParent;
             _processID.store( other._processID.load() );
 
             other._pNativeHandle = nullptr;

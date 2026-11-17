@@ -273,7 +273,7 @@ namespace sw
         // POSIX 와 같은 계약 — 도는 자식은 `_releaseMode` 대로 죽이거나 끝날 때까지 기다린 뒤 놓는다(Windows 는 좀비가 없지만 두 플랫폼이 같은 일을 한다).
         if ( _pNativeHandle != nullptr && WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT )
         {
-            if ( _releaseMode == ProcessReleaseMode::Terminate )
+            if ( _releaseMode == ProcessReleaseMode::Terminate || _bEndWithParent ) // 부모와 함께 끝낼 자식은 기다리지 않고 트리째 끝낸다 — POSIX 와 같은 순서
                 (void)terminate();
             else
                 SW_LOG_WARNING_ID( "Process.WaitingOnRelease", "Releasing a running child (pid %#) - waiting for it to exit; call terminate() first or launch with ProcessReleaseMode::Terminate",
@@ -293,7 +293,7 @@ namespace sw
             _pNativeHandle = nullptr;
         }
 
-        // 자식은 위에서 끝났다. Job 은 핸들만 닫는다(KILL_ON_JOB_CLOSE 를 걸지 않았다) — 자식이 떼어 띄운 손자는 죽이지 않는다.
+        // 자식은 위에서 끝났다. Job 핸들을 닫으면 부모와 함께 끝낼 자식(`_bEndWithParent`, KILL_ON_JOB_CLOSE)은 트리째 끝나고, 그 밖의 Job 은 핸들만 닫는다(떼어 띄운 손자는 살린다).
         if ( _pNativeJob != nullptr )
         {
             CloseHandle( static_cast<HANDLE>( _pNativeJob ) );
@@ -302,6 +302,7 @@ namespace sw
 
         _bufferedOutput.clear();
         _processID.store( 0 );
+        _bEndWithParent = false;
     }
 
     bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
@@ -373,7 +374,11 @@ namespace sw
 
         // 자식 트리를 Job 하나로 묶는다(`terminate` — POSIX 의 프로세스 그룹과 같은 뜻). 묶지 못하면 손자를 멈출 수 없으니 띄우지 않은 것으로 돌린다.
         HANDLE hJob = CreateJobObjectW( nullptr, nullptr );
-        if ( hJob == nullptr || AssignProcessToJobObject( hJob, pi.hProcess ) == FALSE )
+        // 부모와 함께 끝낼 자식은 Job 의 마지막 핸들이 닫힐 때 트리째 끝낸다 — 이 프로세스가 죽으면 OS 가 핸들을 닫는다(감사 E-15). 걸지 못하면 띄우지 않는다(고아를 남기지 않는다).
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limit{};
+        limit.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        const bool bLimitSet                   = options._bEndWithParent == false || ( hJob != nullptr && SetInformationJobObject( hJob, JobObjectExtendedLimitInformation, &limit, sizeof( limit ) ) != FALSE );
+        if ( hJob == nullptr || bLimitSet == false || AssignProcessToJobObject( hJob, pi.hProcess ) == FALSE )
         {
             const DWORD error = GetLastError();
             TerminateProcess( pi.hProcess, 1 );
@@ -394,6 +399,7 @@ namespace sw
         _pStdInWrite      = pipes._hInWrite;
         _bNewProcessGroup = options._bNewProcessGroup;
         _releaseMode      = options._releaseMode;
+        _bEndWithParent   = options._bEndWithParent;
         _processID.store( static_cast<int32>( pi.dwProcessId ) );
 
         return true;
@@ -401,6 +407,11 @@ namespace sw
 
     bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
+        if ( options._bEndWithParent )
+        {
+            SW_LOG_ERROR_ID( "Process.DetachedEndWithParent", "A detached process cannot end with its parent - launch it attached" );
+            return false;
+        }
         if ( command._executable.empty() )
         {
             SW_LOG_ERROR_ID( "Process.NoExecutable", "Detached process launch needs an executable" );

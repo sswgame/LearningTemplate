@@ -3,6 +3,7 @@
  * @brief 에디터가 외부 도구(파이썬 검증 스크립트 · git LFS)를 띄우고 출력 줄을 모으는 잡입니다.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -38,6 +39,16 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @struct EditorExternalToolLiveOutput
+     * @brief 도는 도구가 지금까지 낸 줄입니다 — 도구 스레드가 줄마다 더하고 게임 스레드가 `EditorExternalToolJob::takeLines` 로 가져간다(감사 E-15: 패키징 출력이 끝나야 보였다).
+     */
+    struct EditorExternalToolLiveOutput
+    {
+        mutable mutex            _mutex{};
+        vector<string> _listLine SW_GUARDED_BY( _mutex ){};
+    };
+
+    /**
      * @class EditorExternalToolJob
      * @brief 외부 도구를 **전용 스레드**에서 띄워 끝날 때까지 기다리고, 게임 스레드가 `take()` 로 결과를 가져갑니다.
      * @details 작업 관리자의 워커를 쓰지 않는다 — 네트워크를 타는 git 명령은 몇 초를 기다릴 수 있고, 그동안 워커 하나가 프레임 잡을 못 받는다.
@@ -61,6 +72,11 @@ namespace sw::editor
 
         /** @brief 도는 자식이 있으면 끝내고 스레드를 기다립니다. */
         void cancelAndWait();
+        /**
+         * @brief 도는 도구가 지난 호출 뒤에 낸 줄을 @p inoutListLine 뒤에 붙입니다(언리얼 `FMonitoredProcess::OnOutput` 처럼 도는 동안 보인다). 끝난 결과(`take`)는 모든 줄을 다시 싣는다.
+         * @details 도구가 줄을 내는 스레드와 이 프레임 사이의 짧은 잠금만 쓴다 — 도구를 기다리지 않는다.
+         */
+        void takeLines( vector<string>& inoutListLine );
 
         /**
          * @brief 저장소 파이썬 스크립트 @p scriptPath 를 띄우는 명령입니다. 스크립트 인자는 돌려받은 `_listArgument` 뒤에 덧붙인다(예전 EditorUtil).
@@ -76,9 +92,10 @@ namespace sw::editor
         }
 
     private:
-        static void runJob( shared_ptr<State> pState, shared_ptr<Process> pProcess, uint32 generation );
+        static void runJob( shared_ptr<State> pState, shared_ptr<Process> pProcess, shared_ptr<EditorExternalToolLiveOutput> pLiveOutput, uint32 generation );
 
-        sw::thread          _thread;
-        shared_ptr<Process> _pProcess;
+        sw::thread                               _thread;
+        shared_ptr<Process>                      _pProcess;
+        shared_ptr<EditorExternalToolLiveOutput> _pLiveOutput; ///< 지금 도는 도구의 줄(요청마다 새로 — 앞 도구의 줄이 섞이지 않는다)
     };
 } // namespace sw::editor

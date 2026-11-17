@@ -529,3 +529,33 @@ SW_TEST_CASE( ProcessTest, ReleasingWithTerminateKillsAndReapsTheChild )
     SW_EXPECT_TRUE( sw::MonotonicClock::nowNanoseconds() - startNano < 10 * sw::constant::time::kNanosecondsPerSecond ); // 30 초를 기다리지 않았다
 }
 #endif
+
+/**
+ * @brief 부모와 함께 끝낼 자식(`ProcessOptions::_bEndWithParent`)은 `Process` 를 놓으면 트리째 끝난다 — 부모가 죽을 때도 같은 장치(Windows Job · Linux 부모 사망 신호)가 끝낸다(감사 E-15)
+ * @details 예전에는 Job 에 KILL_ON_JOB_CLOSE 가 없어 에디터가 죽으면 넷 플레이 서버 · 클라이언트가 고아로 남았다. 분리 실행은 이 옵션을 거절한다.
+ */
+SW_TEST_CASE( ProcessTest, EndWithParentChildEndsWhenReleased )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "ping.exe", { "127.0.0.1", "-n", "30" } );
+#elif defined( SW_PLATFORM_POSIX )
+    const sw::ProcessCommand cmd = sw::ProcessCommand::fromSearchPath( "sleep", { "30" } );
+#else
+    #error "Unsupported platform"
+#endif
+    sw::ProcessOptions options;
+    options._bEndWithParent = true;
+    sw::int32 childID{ 0 };
+    {
+        sw::Process proc;
+        SW_REQUIRE_TRUE( proc.launch( cmd, options ) );
+        childID = proc.getProcessID();
+        SW_REQUIRE_TRUE( childID > 0 );
+    } // 놓는다 — 부모가 죽은 것과 같은 길(마지막 Job 핸들이 닫힌다 · 그룹에 SIGKILL)
+    const bool bEnded = sw::test::waitUntil( [childID]()
+    { return sw::Process::isProcessAlive( childID ) == false; } );
+    SW_EXPECT_TRUE( bEnded );
+
+    SW_EXPECT_LOG( "Process.DetachedEndWithParent" );
+    SW_EXPECT_FALSE( sw::Process::launchDetached( cmd, options ) ); // 분리한 자식은 부모와 묶지 않는다
+}

@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
@@ -40,7 +41,9 @@ namespace sw::editor
             /** @brief 모델이 확장 이미지 안에서 트리를 읽고 같은 글로 되쓰는지 확인합니다(노드 이름표 표가 확장에서도 보여야 한다). */
             static EditorSelfTestStep runModelRoundTrips( EditorSelfTestContext& context )
             {
-                BehaviorTreeEditModel model;
+                const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+                BehaviorTreeEditModel      model;
+                model.bindDocumentEditRecorder( recorder );
                 const expected<int32> root = model.addNode( -1, BehaviorNodeKind::Selector );
                 const expected<int32> wait = root.has_value() ? model.addNode( *root, BehaviorNodeKind::Wait ) : root;
                 context.expect( wait.has_value(), "the model rejected a Selector with a Wait child" );

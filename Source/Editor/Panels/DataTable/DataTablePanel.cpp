@@ -84,7 +84,7 @@ namespace sw::editor
 
     DataTablePanel::DataTablePanel()
         : EditorDocumentPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
-        , _model{}
+        , _model{ getDocumentEditRecorder() }
         , _localizationFilter{}
         , _newKeyBuffer{}
         , _listVisibleLocalizationIndex{}
@@ -145,6 +145,16 @@ namespace sw::editor
             return false;
         outRowCount = _model.getGameDataDocument().countRows();
         return true;
+    }
+
+    string DataTablePanel::captureDocumentText() const
+    {
+        return _model.captureGameDataText();
+    }
+
+    void DataTablePanel::applyDocumentText( string_view text )
+    {
+        _model.applyGameDataText( text );
     }
 
     void DataTablePanel::syncDocumentDirty()

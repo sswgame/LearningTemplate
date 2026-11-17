@@ -57,6 +57,17 @@ namespace sw
         return bValid;
     }
 
+    bool InputMap::loadFromXMLText( string_view xmlText, string_view sourceAssetPath )
+    {
+        XMLDocument doc;
+        if ( doc.parse( xmlText, sourceAssetPath ) == false )
+        {
+            SW_LOG_WARNING_ID( "InputMap.FailedLoadInputMap", "Failed to load InputMap %#", sourceAssetPath );
+            return false;
+        }
+        return loadDefinitionDocument( doc, sourceAssetPath, sourceAssetPath, false, true );
+    }
+
     bool InputMap::loadDefinition( const AssetID& assetID, bool bAppend, bool bCheckConflicts )
     {
         const string_view relativePath = assetID.view();
@@ -67,7 +78,11 @@ namespace sw
             SW_LOG_WARNING_ID( "InputMap.FailedLoadInputMap", "Failed to load InputMap %#", relativePath );
             return false;
         }
+        return loadDefinitionDocument( doc, relativePath, absPath, bAppend, bCheckConflicts );
+    }
 
+    bool InputMap::loadDefinitionDocument( const XMLDocument& doc, string_view relativePath, string_view absPath, bool bAppend, bool bCheckConflicts )
+    {
         XMLNode root = doc.getRoot( "InputMap" );
         if ( root.isValid() == false )
         {
@@ -417,8 +432,29 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
+        XMLDocument doc;
+        if ( fillMapDocument( doc ) == false )
+            return false;
+        if ( doc.saveToFile( absPath.str() ) == false )
+        {
+            SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
+            return false;
+        }
+        return true;
+    }
 
-        XMLDocument        doc;
+    bool InputMap::saveToXMLText( string& outText ) const
+    {
+        XMLDocument doc;
+        if ( fillMapDocument( doc ) == false )
+            return false;
+        outText = doc.saveToString();
+        return true;
+    }
+
+    bool InputMap::fillMapDocument( XMLDocument& outDoc ) const
+    {
+        XMLDocument&       doc  = outDoc;
         const XMLNode      root = doc.appendRoot( "InputMap" );
         InputMapRootParams rootParams;
         rootParams._defaultLayer           = _defaultLayerName;
@@ -441,14 +477,7 @@ namespace sw
         {
             bAllWritten = InputMapXML::writeAction( root, *this, actionName ) && bAllWritten;
         }
-        if ( bAllWritten == false )
-            return false;
-        if ( doc.saveToFile( absPath.str() ) == false )
-        {
-            SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
-            return false;
-        }
-        return true;
+        return bAllWritten;
     }
 
     void InputMap::writeLayerDef( const XMLNode& layersNode, const hashed_string& layerName ) const

@@ -68,8 +68,10 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
 
     private:
-        /** @brief 사본의 미저장(`AudioEventEditModel::isDirty`)을 패널 dirty 로 옮깁니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). */
-        void syncDocumentDirty() override;
+        /** @brief 사본 라이브러리의 저장 글입니다(문서 되돌리기 — 감사 E-13). */
+        string captureDocumentText() const override;
+        /** @brief 되돌리기가 준 글로 사본을 다시 읽습니다. */
+        void applyDocumentText( string_view text ) override;
         void drawEventList();
         void drawEventDetail( IAudioService& audio );
         /**

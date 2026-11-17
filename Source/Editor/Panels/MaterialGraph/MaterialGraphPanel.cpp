@@ -68,6 +68,7 @@ namespace sw::editor
         , _listMenu{}
         , _removal{}
     {
+        _model.bindDocumentEditRecorder( getDocumentEditRecorder() ); // 문서 편집 알림은 모델이 낸다(감사 E-16)
         _nodeGraph.setCommentsEnabled( true );
         // 색은 데이터(값의 형식)에만 쓴다 — float · float2 · float3 · float4 순서다.
         _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Graph", "FlowPin" ), SW_THEME_COLOR( "Graph", "Sensor" ), SW_THEME_COLOR( "Graph", "Operator" ), SW_THEME_COLOR( "Graph", "Actuator" ) } );
@@ -180,7 +181,7 @@ namespace sw::editor
     {
         _nodeGraph.collectRemovals( _removal );
         if ( EditorNodeGraph::removeComments( _model.editGraph()._listComment, _removal._listCommentID ) )
-            _model.markCommentsEdited( "Delete Material Graph Comment" );
+            _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Delete );
         for ( const int32 linkID : _removal._listLinkID )
         {
             (void)_model.disconnectInputPin( linkID ); // 같은 프레임에 지운 노드의 링크면 이미 없다
@@ -203,9 +204,9 @@ namespace sw::editor
 
         vector<GraphCommentBox>& listComment = _model.editGraph()._listComment;
         if ( _nodeGraph.drawComments( listComment, _nodeGraph.needsContentFit() ) )
-            _model.markCommentsEdited( "Rename Material Graph Comment" );
+            _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Rename );
         if ( _nodeGraph.addRequestedComment( listComment ) )
-            _model.markCommentsEdited( "Add Material Graph Comment" );
+            _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Add );
 
         const MaterialGraphDef& graph     = _model.getGraph();
         const uint32            nodeCount = static_cast<uint32>( graph._listNode.size() );
@@ -267,7 +268,7 @@ namespace sw::editor
                 _model.recordNodePosition( nodeIndex, float2{ position.x, position.y } );
             }
             if ( _nodeGraph.syncCommentLayout( _model.editGraph()._listComment ) )
-                _model.markCommentsEdited( "Move Material Graph Comment" );
+                _model.markCommentsEdited( MaterialGraphModel::CommentEdit::Move );
         }
 
         int32 selectedNodeID{ 0 };
@@ -468,9 +469,7 @@ namespace sw::editor
         drawSidePanel();
         _model.refreshCompile( getLoadedAssetPath() ); // 이번 그리기의 편집을 미리보기가 바로 본다
         _model.refreshPreview( getPreviewScene(), getLoadedAssetPath() );
-        MaterialGraphEdit edit;
-        if ( _model.takeEdit( edit ) )
-            notifyDocumentEdited( edit._pLabel );
+        _model.publishEdit(); // 이번 그리기의 편집을 모델이 정한 이름으로 알린다
     }
 
     SW_EDITOR_PANEL( MaterialGraphPanel, MaterialGraphPanel::kPanelID, EditorPanelCategory::Tool, 1301 );

@@ -12,6 +12,7 @@ namespace sw::editor
         : EditorBackgroundTask{}
         , _thread{}
         , _pProcess{}
+        , _pLiveOutput{ sw::make_shared<EditorExternalToolLiveOutput>() }
     {
     }
 
@@ -32,7 +33,8 @@ namespace sw::editor
         input._workingDirectory = string{ workingDirectory };
         const uint32 generation = beginRequest( std::move( input ) );
         _pProcess               = sw::make_shared<Process>();
-        _thread                 = sw::thread( ThreadCreationKey{}, &EditorExternalToolJob::runJob, _pState, _pProcess, generation );
+        _pLiveOutput            = sw::make_shared<EditorExternalToolLiveOutput>();
+        _thread                 = sw::thread( ThreadCreationKey{}, &EditorExternalToolJob::runJob, _pState, _pProcess, _pLiveOutput, generation );
         return true;
     }
 
@@ -45,7 +47,15 @@ namespace sw::editor
         _pProcess.reset();
     }
 
-    void EditorExternalToolJob::runJob( shared_ptr<State> pState, shared_ptr<Process> pProcess, uint32 generation )
+    void EditorExternalToolJob::takeLines( vector<string>& inoutListLine )
+    {
+        ScopedLock<mutex> lock{ _pLiveOutput->_mutex };
+        for ( string& line : _pLiveOutput->_listLine )
+            inoutListLine.push_back( std::move( line ) );
+        _pLiveOutput->_listLine.clear();
+    }
+
+    void EditorExternalToolJob::runJob( shared_ptr<State> pState, shared_ptr<Process> pProcess, shared_ptr<EditorExternalToolLiveOutput> pLiveOutput, uint32 generation )
     {
         EditorExternalToolInput input;
         if ( readInput( pState, generation, input ) == false )
@@ -74,6 +84,8 @@ namespace sw::editor
                     line.pop_back();
                 }
                 result._listLine.push_back( line );
+                ScopedLock<mutex> lock{ pLiveOutput->_mutex };
+                pLiveOutput->_listLine.push_back( line ); // 도는 동안 게임 스레드가 가져간다(`takeLines`)
             }
             const expected<int32> waited = pProcess->waitForExit();
             if ( waited.has_value() )

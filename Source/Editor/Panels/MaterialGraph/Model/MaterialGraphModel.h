@@ -23,7 +23,8 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 모델이 사본을 고친 일 하나입니다. 패널이 문서 기반(`notifyDocumentEdited`)에 넘긴다. */
+    class DocumentEditRecorder;
+    /** @brief 모델이 사본을 고친 일 하나입니다. 그리기 끝에 모델이 그 이름으로 알린다(`publishEdit`). */
     struct MaterialGraphEdit
     {
         const utf8* _pLabel{ nullptr }; ///< 되돌리기 이름. nullptr 이면 고친 것이 없다(끌기 한 번은 문서 패널의 상호작용 구간이 한 단계로 묶는다)
@@ -36,6 +37,8 @@ namespace sw::editor
     class MaterialGraphModel
     {
     public:
+        /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
+        void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
         /** @brief 노드 하나가 쓰는 핀 id 칸의 수입니다. 핀 번호의 위쪽 절반이 출력 핀이다. */
         static constexpr int32 kPinScale = 256;
         /** @brief 핀 번호에서 출력 핀을 가르는 값입니다. */
@@ -60,10 +63,18 @@ namespace sw::editor
 
         [[nodiscard]] const MaterialGraphDef& getGraph() const { return _graph; }
         MaterialGraphDef&                     editGraph() { return _graph; }
-        /** @brief 캔버스가 주석 상자를 고쳤습니다. */
-        void markCommentsEdited( const utf8* pLabel ) { recordEdit( pLabel, false ); }
-        /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. */
-        [[nodiscard]] bool takeEdit( MaterialGraphEdit& outEdit );
+        /** @brief 캔버스가 주석 상자에 한 일의 종류입니다 — 되돌리기 이름은 모델이 고른다(감사 E-16). */
+        enum class CommentEdit : uint8
+        {
+            Add,
+            Rename,
+            Move,
+            Delete
+        };
+        /** @brief 캔버스가 주석 상자를 고쳤습니다 — 종류에 맞는 되돌리기 이름으로 쌓는다. */
+        void markCommentsEdited( CommentEdit edit );
+        /** @brief 이번 그리기에서 고친 일이 있으면 그 이름(모델이 정한다)으로 문서 편집을 알리고 비웁니다(감사 E-16 — View 는 알림 · 이름을 모른다). */
+        void publishEdit();
 
         // ------------------------------------------------------------------------------
         // 2) 캔버스 편집
@@ -115,6 +126,11 @@ namespace sw::editor
         void refreshPreview( Scene* pScene, string_view documentPath );
 
     private:
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 이 모델의 편집 연산만 부른다(감사 E-16) — 무엇을 고쳤는지와 되돌리기 이름은 모델이 정하고, View 는 연산만 부른다.
+         */
+        void recordDocumentEdit( string_view label ) const;
         struct NodePins
         {
             vector<MaterialGraphPinInfo> _listInput;
@@ -127,19 +143,20 @@ namespace sw::editor
         [[nodiscard]] bool usesNode( uint32 fromIndex, uint32 targetIndex, vector<uint8>& inoutListSeen ) const;
 
     private:
-        MaterialGraphDef           _graph;
-        MaterialGraphCompileResult _result;
-        MaterialModel              _preview;     ///< 미리보기 구(머티리얼 창과 같은 일) — 사본 칸은 쓰지 않는다
-        vector<NodePins>           _listNodePin; ///< 노드 번호와 같은 순서의 핀 표
-        string                     _basePath;    ///< 파일의 `_base`(저장이 부모와 다른 칸만 적는다)
-        string                     _previewPath; ///< 구에 건 미리보기 머티리얼
-        MaterialGraphEdit          _pendingEdit;
-        uint32                     _previewFramesLeft;
-        int32                      _selectedNode;
-        int32                      _pendingPlacedNode;
-        int32                      _placingNode;
-        uint8                      _bCompileDirty : 1;
-        uint8                      _bPreviewDirty : 1;
-        uint8                      _bSubgraph     : 1;
+        MaterialGraphDef            _graph;
+        MaterialGraphCompileResult  _result;
+        MaterialModel               _preview;     ///< 미리보기 구(머티리얼 창과 같은 일) — 사본 칸은 쓰지 않는다
+        vector<NodePins>            _listNodePin; ///< 노드 번호와 같은 순서의 핀 표
+        string                      _basePath;    ///< 파일의 `_base`(저장이 부모와 다른 칸만 적는다)
+        string                      _previewPath; ///< 구에 건 미리보기 머티리얼
+        MaterialGraphEdit           _pendingEdit;
+        uint32                      _previewFramesLeft;
+        int32                       _selectedNode;
+        int32                       _pendingPlacedNode;
+        int32                       _placingNode;
+        uint8                       _bCompileDirty : 1;
+        uint8                       _bPreviewDirty : 1;
+        uint8                       _bSubgraph     : 1;
+        const DocumentEditRecorder* _pEditRecorder{ nullptr }; ///< 편집 알림 창구(`bindDocumentEditRecorder` — 문서 패널이 쥔다)
     };
 } // namespace sw::editor

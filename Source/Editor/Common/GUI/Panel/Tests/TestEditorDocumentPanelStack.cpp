@@ -7,6 +7,7 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -19,6 +20,7 @@ namespace
     public:
         StackProbePanel()
             : EditorDocumentPanel{ EditorAssetType{}, false }
+            , _bLossyApply{ SW_FALSE }
         {
         }
 
@@ -29,7 +31,7 @@ namespace
         void edit( string_view text )
         {
             _text = string{ text };
-            notifyDocumentEdited( "Probe Edit" );
+            getDocumentEditRecorder().notifyEdited( "Probe Edit" ); // 패널의 Model 이 하는 일 — 창구로 알린다
         }
         /** @brief 디스크에서 다시 읽은 것처럼 @p text 로 문서를 읽습니다(`reloadDocument`). */
         void reloadFrom( string_view text )
@@ -38,6 +40,8 @@ namespace
             EditorDocumentPanel::reloadDocument();
         }
         const string& getText() const { return _text; }
+        /** @brief 글을 적용할 때 끝 글자를 잃게 합니다 — 적용 → 직렬화가 같은 글이 아닌 패널(되돌리기가 문서를 다른 상태로 돌린다)을 흉내 낸다. */
+        void makeApplyLossy() { _bLossyApply = SW_TRUE; }
 
     protected:
         void                drawDocumentContent() override {}
@@ -48,11 +52,12 @@ namespace
         }
         [[nodiscard]] bool saveDocument() override { return true; }
         string             captureDocumentText() const override { return _text; }
-        void               applyDocumentText( string_view text ) override { _text = string{ text }; }
+        void               applyDocumentText( string_view text ) override { _text = string{ _bLossyApply == SW_TRUE && text.empty() == false ? text.substr( 0, text.size() - 1 ) : text }; }
 
     private:
         string _text{ "a" };
         string _diskText{ "a" };
+        uint8  _bLossyApply : 1;
     };
 } // namespace
 
@@ -93,4 +98,16 @@ SW_TEST_CASE( EditorDocumentPanelStackTest, ReloadClearsTheDocumentStack )
     SW_EXPECT_EQUAL( 0u, panel.getDocumentCommandStack().getCommandCount() );
     SW_EXPECT_TRUE( panel.getText() == "rewritten on disk" );
     SW_EXPECT_FALSE( panel.isDocumentDirty() );
+}
+
+/** @brief [EditorDocumentPanelStackTest] 되돌리기 왕복(감사 E-16): 적용 → 직렬화가 같은 글이면 통과, 글을 잃는 적용이면 실패다 — 전수 시나리오(`panel.expectUndoRoundTrip`)가 이 답을 본다 */
+SW_TEST_CASE( EditorDocumentPanelStackTest, UndoRoundTripCatchesLossyApply )
+{
+    StackProbePanel panel;
+    panel.syncDocumentUndoBaseline();
+    panel.edit( "abc" );
+    SW_EXPECT_TRUE( panel.checkUndoRoundTrip().has_value() );
+
+    panel.makeApplyLossy();
+    SW_EXPECT_FALSE( panel.checkUndoRoundTrip().has_value() );
 }

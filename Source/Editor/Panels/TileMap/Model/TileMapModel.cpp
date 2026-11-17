@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "Engine/Localization/LocText.h"
@@ -131,12 +132,12 @@ namespace sw::editor
         applyMapData( restored );
     }
 
-    bool TileMapModel::applyInputSize()
+    bool TileMapModel::tryApplyInputSize()
     {
         return resize( MathUtil::max( 1, _inputWidth ), MathUtil::max( 1, _inputHeight ) );
     }
 
-    bool TileMapModel::applyInputSpawn()
+    bool TileMapModel::tryApplyInputSpawn()
     {
         if ( isInBounds( _inputSpawnX, _inputSpawnY ) == false )
         {
@@ -151,7 +152,7 @@ namespace sw::editor
         return bEdited;
     }
 
-    bool TileMapModel::applyToolInput( const TileMapToolInput& input )
+    bool TileMapModel::tryApplyToolInput( const TileMapToolInput& input )
     {
         if ( input._bClicked )
             ++_strokeSerial;
@@ -347,7 +348,7 @@ namespace sw::editor
         }
     }
 
-    bool TileMapModel::addDataLayer( string_view name, int32 defaultValue )
+    bool TileMapModel::tryAddDataLayer( string_view name, int32 defaultValue )
     {
         // 빈 이름 · 겹치는 이름은 맵이 거절한다 — 읽기도 같은 규칙으로 거절하므로 저장할 수 없는 맵을 만들지 않는다.
         if ( _map.addDataLayer( name, defaultValue ) == false )
@@ -360,7 +361,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileMapModel::removeSelectedDataLayer()
+    bool TileMapModel::tryRemoveSelectedDataLayer()
     {
         if ( _layer != PaintLayer::Data || _dataLayerIndex < 0 || static_cast<size_t>( _dataLayerIndex ) >= _map._listDataLayer.size() )
             return false;
@@ -374,7 +375,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileMapModel::useTileSetInput()
+    bool TileMapModel::tryUseTileSetInput()
     {
         const string path = _tileSetBuffer.c_str();
         if ( path == _map._tileSetPath )
@@ -594,7 +595,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileMapModel::paintEdgeWarp( int32 edge )
+    bool TileMapModel::tryPaintEdgeWarp( int32 edge )
     {
         const bool bInvalidEdgeTarget = edge < 0 || edge >= kEdgeCount || _arrEdgePreset[edge]._target.empty();
         if ( bInvalidEdgeTarget )
@@ -782,5 +783,73 @@ namespace sw::editor
     bool TileMapModel::hasDocumentFile( string_view path )
     {
         return EditorToolAssetCommands::hasToolDocument( path );
+    }
+
+    void TileMapModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
+    }
+
+    // 편집 연산 — 본문이 바꿨으면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16). View 는 연산만 부른다.
+    bool TileMapModel::applyInputSize()
+    {
+        if ( tryApplyInputSize() == false )
+            return false;
+        recordDocumentEdit( "Resize Tile Map" );
+        return true;
+    }
+
+    bool TileMapModel::applyInputSpawn()
+    {
+        if ( tryApplyInputSpawn() == false )
+            return false;
+        recordDocumentEdit( "Set Tile Map Spawn" );
+        return true;
+    }
+
+    bool TileMapModel::applyToolInput( const TileMapToolInput& input )
+    {
+        if ( tryApplyToolInput( input ) == false )
+            return false;
+        recordDocumentEdit( "Paint Tile Map" );
+        return true;
+    }
+
+    bool TileMapModel::paintEdgeWarp( int32 edge )
+    {
+        if ( tryPaintEdgeWarp( edge ) == false )
+            return false;
+        recordDocumentEdit( "Paint Tile Map Edge" );
+        return true;
+    }
+
+    bool TileMapModel::addDataLayer( string_view name, int32 defaultValue )
+    {
+        if ( tryAddDataLayer( name, defaultValue ) == false )
+            return false;
+        recordDocumentEdit( "Add Tile Map Data Layer" );
+        return true;
+    }
+
+    bool TileMapModel::removeSelectedDataLayer()
+    {
+        if ( tryRemoveSelectedDataLayer() == false )
+            return false;
+        recordDocumentEdit( "Remove Tile Map Data Layer" );
+        return true;
+    }
+
+    bool TileMapModel::useTileSetInput()
+    {
+        if ( tryUseTileSetInput() == false )
+            return false;
+        recordDocumentEdit( "Set Tile Set" );
+        return true;
+    }
+
+    void TileMapModel::commitName()
+    {
+        recordDocumentEdit( "Edit Tile Map Name" );
     }
 } // namespace sw::editor

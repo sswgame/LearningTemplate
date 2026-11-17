@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/GUI/Panel/Model/EditorGraphEditSession.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
 
@@ -126,5 +127,96 @@ namespace sw::editor
             }
         }
         inoutNode._listChoice.erase( inoutNode._listChoice.begin() + static_cast<std::ptrdiff_t>( choiceIndex ) );
+    }
+
+    void DialogueGraphEdit::commitNodeAdded( const EditorGraphEditSession& session )
+    {
+        session.recordDocumentEdit( "Add Dialogue Node" );
+    }
+
+    void DialogueGraphEdit::commitGraphReset( const EditorGraphEditSession& session )
+    {
+        session.recordDocumentEdit( "Reset Dialogue Graph" );
+    }
+
+    void DialogueGraphEdit::linkPins( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, int32 linkID, int32 fromPin, int32 toPin )
+    {
+        DialogueLink newLink{};
+        newLink._id      = linkID;
+        newLink._fromPin = fromPin;
+        newLink._toPin   = toPin;
+        inoutGraph._listLink.push_back( newLink );
+        session.recordDocumentEdit( "Link Dialogue Nodes" );
+    }
+
+    bool DialogueGraphEdit::renameSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, uint32 speakerID, string_view name )
+    {
+        for ( DialogueSpeaker& speaker : inoutGraph._listSpeaker )
+        {
+            if ( speaker._id != speakerID )
+                continue;
+            speaker._name = string{ name };
+            session.recordDocumentEdit( "Rename Dialogue Speaker" );
+            return true;
+        }
+        return false;
+    }
+
+    uint32 DialogueGraphEdit::addSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, string_view name )
+    {
+        const uint32 speakerID = addSpeaker( inoutGraph, name );
+        session.recordDocumentEdit( "Add Dialogue Speaker" );
+        return speakerID;
+    }
+
+    void DialogueGraphEdit::removeSpeaker( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, uint32 speakerID )
+    {
+        removeSpeaker( inoutGraph, speakerID );
+        session.recordDocumentEdit( "Remove Dialogue Speaker" );
+    }
+
+    void DialogueGraphEdit::setNodeText( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view text )
+    {
+        inoutNode._text = string{ text };
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+    }
+
+    void DialogueGraphEdit::setNodeCondition( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view condition )
+    {
+        inoutNode._condition = string{ condition };
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+    }
+
+    bool DialogueGraphEdit::setChoiceText( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, size_t choiceIndex, string_view text )
+    {
+        if ( choiceIndex >= inoutNode._listChoice.size() )
+            return false;
+        inoutNode._listChoice[choiceIndex] = string{ text };
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+        return true;
+    }
+
+    void DialogueGraphEdit::setNodeSpeaker( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, uint32 speakerID )
+    {
+        inoutNode._speaker = speakerID;
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+    }
+
+    void DialogueGraphEdit::setNodeActionCommand( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view command )
+    {
+        inoutNode._actionCommand = string{ command };
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+    }
+
+    void DialogueGraphEdit::removeChoice( DialogueGraphAsset& inoutGraph, const EditorGraphEditSession& session, DialogueAssetNode& inoutNode, size_t choiceIndex )
+    {
+        removeChoice( inoutGraph, inoutNode, choiceIndex );
+        session.recordDocumentEdit( "Edit Dialogue Node" );
+    }
+
+    void DialogueGraphEdit::addChoice( DialogueAssetNode& inoutNode, const EditorGraphEditSession& session, string_view text )
+    {
+        inoutNode._listChoice.push_back( string{ text } );
+        session.recordDocumentEdit( "Edit Dialogue Node" );
     }
 } // namespace sw::editor

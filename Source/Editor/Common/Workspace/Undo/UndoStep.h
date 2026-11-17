@@ -187,18 +187,26 @@ namespace sw::editor
         Delegate<void()>     _transient{};       ///< 주인에 묶인 코드 단계(맡기지 않는다)
         uint64               _ownerID{ 0 };      ///< 코드 단계의 주인(`UndoStepOwner::getID`)
         const UndoStepOwner* _pOwner{ nullptr }; ///< 코드 단계의 주인 — 스택이 단계를 받을 때 사라짐 알림을 구독한다(그 뒤로는 쓰지 않는다)
+        uint64               _heldBytes{ 0 };    ///< 코드 단계가 쥔 자료의 바이트(`makeTransient` 가 받는다 — 되돌리기 바이트 한도가 센다)
 
         /** @brief 실행할 것이 있으면 true 입니다. */
         bool isBound() const { return _functionHash != 0 || _transient.isBound(); }
         /** @brief 데이터 단계면 true 입니다(리로드 · 파일로 넘길 수 있다). */
         bool isPersistable() const { return _functionHash != 0; }
-        /** @brief 코드 단계로 만듭니다. 대상이 패널 인스턴스와 함께 사라질 때만 쓴다(파일 머리말). @p owner 가 사라지면 이 단계를 가진 명령이 빠진다. */
-        static UndoStep makeTransient( Delegate<void()> step, const UndoStepOwner& owner )
+        /** @brief 단계가 쥔 바이트입니다 — 데이터 단계는 인자 바이트, 코드 단계는 만들 때 적은 쥔 자료(`CommandStack` 의 바이트 한도가 센다). */
+        uint64 getHeldBytes() const { return static_cast<uint64>( _arguments.size() ) + _heldBytes; }
+        /**
+         * @brief 코드 단계로 만듭니다. 대상이 패널 인스턴스와 함께 사라질 때만 쓴다(파일 머리말). @p owner 가 사라지면 이 단계를 가진 명령이 빠진다.
+         * @param heldBytes 람다가 값으로 쥔 자료(글 · 스냅샷)의 바이트입니다. 필수다 — 쥔 것을 적지 않으면 되돌리기 바이트 한도(감사 E-13)가 그 단계를 0 으로 세어,
+         *        문서 글을 쥔 단계가 쌓여도 한도에 닿지 않는다. 다른 곳의 기록을 가리키기만 하면 0 이다.
+         */
+        static UndoStep makeTransient( Delegate<void()> step, const UndoStepOwner& owner, uint64 heldBytes )
         {
             UndoStep result;
             result._transient = std::move( step );
             result._ownerID   = owner.getID();
             result._pOwner    = &owner;
+            result._heldBytes = heldBytes;
             return result;
         }
         /** @brief @p context 의 스택에서 실행합니다. 데이터 단계의 처리기가 없거나 인자를 읽지 못하면 경고하고 아무것도 하지 않습니다. */

@@ -25,9 +25,15 @@ namespace
 SW_TEST_CASE( EditorFocusedCommandStackTest, FocusedPanelWinsOverTheRegisteredStack )
 {
     using Internal = EditorFocusedCommandStackTestInternal;
-    CommandStack mainStack;
-    CommandStack documentStack;
-    CommandStack staleStack; // 앞 프레임에 포커스였던 다른 문서가 걸어 둔 것
+    CommandStack mainStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
+    CommandStack documentStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
+    CommandStack staleStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    }; // 앞 프레임에 포커스였던 다른 문서가 걸어 둔 것
 
     const vector<EditorPanelCommandStack> listPanel{
         EditorPanelCommandStack{Internal::kDocumentWindow, &documentStack, false},
@@ -42,8 +48,12 @@ SW_TEST_CASE( EditorFocusedCommandStackTest, FocusedPanelWinsOverTheRegisteredSt
 SW_TEST_CASE( EditorFocusedCommandStackTest, NonPanelFocusKeepsTheRegisteredStack )
 {
     using Internal = EditorFocusedCommandStackTestInternal;
-    CommandStack mainStack;
-    CommandStack documentStack;
+    CommandStack mainStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
+    CommandStack documentStack{
+        sw::UndoBufferLimit{ 128u, 1ull << 20 }
+    };
 
     const vector<EditorPanelCommandStack> listPanel{
         EditorPanelCommandStack{Internal::kDocumentWindow, &documentStack, false},

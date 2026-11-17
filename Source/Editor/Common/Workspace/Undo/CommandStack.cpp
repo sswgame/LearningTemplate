@@ -112,8 +112,9 @@ namespace sw
         };
     } // namespace
 
-    CommandStack::CommandStack()
-        : _listCommand{}
+    CommandStack::CommandStack( const UndoBufferLimit& limit )
+        : _limit{ limit }
+        , _listCommand{}
         , _listPendingTransactionCommand{}
         , _listSuspendedCommand{}
         , _objectEditListener{}
@@ -122,13 +123,34 @@ namespace sw
         , _index{ 0 }
         , _suspendedIndex{ 0 }
         , _transactionDepth{ 0 }
+        , _interactionDepth{ 0 }
         , _bIsExecuting{ SW_FALSE }
         , _bHistorySuspended{ SW_FALSE }
+        , _pAlive{ sw::make_shared<CommandStack*>( this ) }
         , _listOwnerWatch{}
     {
+        SW_ASSERT( limit._maxCommandCount > 0 && limit._maxBytes > 0 ); // 0 이면 기록이 남지 않는다 — 설정 값이 틀렸다
     }
 
-    CommandStack::~CommandStack() = default;
+    CommandStack::~CommandStack()
+    {
+        *_pAlive = nullptr; // 남은 상호작용 핸들은 이제 아무것도 하지 않는다
+    }
+
+    void CommandStackInteractionScope::reset()
+    {
+        if ( _pStack == nullptr )
+            return;
+        if ( *_pStack != nullptr )
+            ( *_pStack )->closeInteraction();
+        _pStack.reset();
+    }
+
+    CommandStackInteractionScope CommandStack::openInteraction()
+    {
+        ++_interactionDepth;
+        return CommandStackInteractionScope{ _pAlive };
+    }
 
     void CommandStack::watchOwners( const Command& cmd )
     {
@@ -175,14 +197,38 @@ namespace sw
 
         _listCommand.push_back( std::move( cmd ) );
         ++_index;
+        evictOverLimit();
+    }
 
-        constexpr size_t kMax = 128;
-        if ( _listCommand.size() > kMax )
+    uint64 CommandStack::measureHeldBytes( const Command& cmd )
+    {
+        uint64 bytes = static_cast<uint64>( cmd._label.size() ) + cmd._undo.getHeldBytes() + cmd._redo.getHeldBytes();
+        if ( cmd._listChild != nullptr )
         {
-            const size_t drop = _listCommand.size() - kMax;
-            _listCommand.erase( _listCommand.begin(), _listCommand.begin() + static_cast<std::ptrdiff_t>( drop ) );
-            _index -= drop;
+            for ( const Command& child : *cmd._listChild )
+                bytes += measureHeldBytes( child );
         }
+        return bytes;
+    }
+
+    void CommandStack::evictOverLimit()
+    {
+        // 기록 전체를 센다 — 명령 수가 한도(수백) 안이라 push 마다 세도 싸고, 따로 든 합계가 빼기 · 비우기 · 맡김 길과 어긋날 일이 없다.
+        uint64 totalBytes{ 0 };
+        for ( const Command& cmd : _listCommand )
+            totalBytes += measureHeldBytes( cmd );
+        size_t dropCount{ 0 };
+        // 가장 새 명령 하나는 남긴다 — 그 하나가 바이트 한도보다 커도 방금 한 편집은 되돌릴 수 있어야 한다.
+        while ( _listCommand.size() - dropCount > 1 &&
+                ( _listCommand.size() - dropCount > _limit._maxCommandCount || totalBytes > _limit._maxBytes ) )
+        {
+            totalBytes -= measureHeldBytes( _listCommand[dropCount] );
+            ++dropCount;
+        }
+        if ( dropCount == 0 )
+            return;
+        _listCommand.erase( _listCommand.begin(), _listCommand.begin() + static_cast<std::ptrdiff_t>( dropCount ) );
+        _index = _index > dropCount ? _index - dropCount : 0;
     }
 
     void CommandStack::beginTransaction( string_view label )
@@ -239,35 +285,45 @@ namespace sw
         _listPendingTransactionCommand.clear();
     }
 
+    void CommandStack::closeInteraction()
+    {
+        SW_ASSERT( _interactionDepth != 0 ); // 핸들 하나가 한 번 닫는다
+        if ( _interactionDepth != 0 )
+            --_interactionDepth;
+    }
+
     bool CommandStack::canUndo() const
     {
-        return _index > 0;
+        return _index > 0 && isEditOpen() == false;
     }
 
     bool CommandStack::canRedo() const
     {
-        return _index < _listCommand.size();
+        return _index < _listCommand.size() && isEditOpen() == false;
     }
 
-    void CommandStack::undo()
+    bool CommandStack::undo()
     {
+        // 열린 편집(거래 · 상호작용)이 있으면 거절한다 — 입구(Ctrl+Z · History · 시나리오)가 몇이든 스택 하나가 막는다(감사 E-2).
         if ( canUndo() == false || _bIsExecuting )
-            return;
+            return false;
         --_index;
         _bIsExecuting = SW_TRUE;
         execute( _listCommand[_index], true );
         _bIsExecuting = SW_FALSE;
+        return true;
     }
 
-    void CommandStack::redo()
+    bool CommandStack::redo()
     {
         if ( canRedo() == false || _bIsExecuting )
-            return;
+            return false;
         const size_t targetIndex = _index;
         ++_index;
         _bIsExecuting = SW_TRUE;
         execute( _listCommand[targetIndex], false );
         _bIsExecuting = SW_FALSE;
+        return true;
     }
 
     void CommandStack::notifyObjectEdit( const ObjectEditEvent& event ) const
@@ -441,14 +497,14 @@ namespace sw
 
     const string& CommandStack::peekUndoLabel() const
     {
-        if ( canUndo() == false )
+        if ( _index == 0 ) // 이름은 열린 편집과 무관하다(메뉴 글이 끌기 동안 깜빡이지 않게)
             return _empty;
         return _listCommand[_index - 1]._label;
     }
 
     const string& CommandStack::peekRedoLabel() const
     {
-        if ( canRedo() == false )
+        if ( _index >= _listCommand.size() )
             return _empty;
         return _listCommand[_index]._label;
     }
@@ -457,19 +513,18 @@ namespace sw
     {
         // 재진입 플래그를 여기서도 본다. undo/redo 콜백 안에서 부르면 아래 `undo()` 가 그 플래그 때문에 아무것도 하지 않아 `_index` 가
         // 줄지 않고 `while` 이 끝나지 않는다.
-        if ( _bIsExecuting )
+        if ( _bIsExecuting || isEditOpen() )
             return;
 
         if ( targetIndex > _listCommand.size() )
             targetIndex = _listCommand.size();
 
-        while ( _index > targetIndex && canUndo() )
+        // 거절되면(단계가 편집을 열었다) 멈춘다 — `_index` 가 줄지 않으면 `while` 이 끝나지 않는다.
+        while ( _index > targetIndex && undo() )
         {
-            undo();
         }
-        while ( _index < targetIndex && canRedo() )
+        while ( _index < targetIndex && redo() )
         {
-            redo();
         }
     }
 } // namespace sw

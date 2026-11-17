@@ -34,6 +34,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/Panel/Model/EditorGraphEditSession.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 
@@ -54,7 +55,7 @@ namespace sw::editor
          * @param kind 이 패널이 다루는 애셋 종류입니다.
          * @param pNodeMoveEditLabel 노드를 옮겼을 때 Undo 에 남길 이름입니다("Move Dialogue Nodes" 등).
          * @param bindModuleCopy 패널 모듈의 사본에 편집기를 거는 함수입니다. nullptr 이면 안 된다.
-         * @details 패널마다 다른 것은 이 이름과 사본뿐이고, 절차는 같다. 끌기 한 번은 상호작용 구간 하나라 되돌리기 한 단계다(`notifyDocumentEdited`).
+         * @details 패널마다 다른 것은 이 이름과 사본뿐이고, 절차는 같다. 끌기 한 번은 상호작용 구간 하나라 되돌리기 한 단계다(`recordGraphEdit`).
          */
         EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, NodeEditorBindFunction bindModuleCopy );
 
@@ -76,6 +77,15 @@ namespace sw::editor
         string getGraphClipboardKind() const { return string{ getDocumentKind().getID() }; }
         /** @brief 캔버스 안에서 노드 @p nodeID 의 캔버스 좌표입니다. */
         float2 getCanvasNodePosition( int32 nodeID ) const;
+        /** @brief 이 그래프 문서의 편집 알림 입구입니다 — 패널은 명령 묶음(`DialogueGraphEdit` · `AnimationGraphEdit`)에 넘기기만 한다(알림 · 이름은 명령이 낸다, 감사 E-16). */
+        const EditorGraphEditSession& getGraphEditSession() const { return _graphEditSession; }
+
+    private:
+        /**
+         * @brief 그래프 틀이 문서를 고쳤음을 알립니다(문서 패널의 편집 알림 창구 — `getDocumentEditRecorder`). 파생 패널(View)은 부를 수 없다 — 패널의 편집은 그 Model 이 알린다(감사 E-16).
+         * @details 이 틀은 공용 GUI 층이라 View 가 아니다. 본문은 .cpp 에 있어 이 헤더가 작업 공간 헤더(창구)를 끌지 않는다 — 이 헤더를 include 하는 View 가 창구에 닿지 않는다.
+         */
+        void recordGraphEdit( string_view label ) const;
 
     protected:
         /** @brief 다음 그리기에서 위치를 정할 노드 하나입니다. */
@@ -85,12 +95,17 @@ namespace sw::editor
             float2 _position{};
         };
 
+        EditorGraphEditSession   _graphEditSession;      /**< 명령 묶음이 고친 뒤 알리는 입구(`getGraphEditSession`). */
         EditorNodeGraph          _nodeGraph;             /**< 캔버스 컨텍스트. 패널마다 하나씩 소유한다. */
         NodeEditorBindFunction   _bindModuleCopy;        /**< 패널 모듈의 imgui-node-editor 사본에 편집기를 거는 함수. */
         const utf8*              _pNodeMoveEditLabel;    /**< 노드 이동 Undo 이름. */
         vector<PendingPlacement> _listPendingPlacement;  /**< 다음 그리기에서 위치를 정할 새 노드들(검색으로 넣은 노드 · 붙여 넣은 노드). */
         uint8                    _bGraphLayoutReady : 1; /**< 캔버스가 위치를 한 번 정한 뒤에 켠다. */
         [[maybe_unused]] uint8   _reservedGraph     : 7;
+
+    private:
+        template <typename>
+        friend class EditorGraphDocumentPanel; // 그래프 틀의 절차(주석 · 노드 옮기기 · 지우기 · 붙여 넣기)만 `recordGraphEdit` 로 알린다
     };
 } // namespace sw::editor
 
@@ -130,9 +145,9 @@ namespace sw::editor
         void drawGraphComments()
         {
             if ( _nodeGraph.drawComments( _graph._listComment, _nodeGraph.needsContentFit() ) )
-                notifyDocumentEdited( "Rename Graph Comment" );
+                recordGraphEdit( "Rename Graph Comment" );
             if ( _nodeGraph.addRequestedComment( _graph._listComment ) )
-                notifyDocumentEdited( "Add Graph Comment" );
+                recordGraphEdit( "Add Graph Comment" );
         }
 
         /** @brief 다음에 쓸 링크 ID 입니다. */
@@ -207,7 +222,7 @@ namespace sw::editor
                 bMoved = true;
 
             if ( bMoved )
-                notifyDocumentEdited( _pNodeMoveEditLabel );
+                recordGraphEdit( _pNodeMoveEditLabel );
             _bGraphLayoutReady = SW_TRUE;
         }
 
@@ -285,10 +300,10 @@ namespace sw::editor
             {
                 VectorUtil::removeIf( _graph._listLink, [id]( const LinkType& link )
                 { return link._id == id; } );
-                notifyDocumentEdited( pDeleteLinkLabel );
+                recordGraphEdit( pDeleteLinkLabel );
             }
             if ( EditorNodeGraph::removeComments( _graph._listComment, removal._listCommentID ) )
-                notifyDocumentEdited( "Delete Graph Comment" );
+                recordGraphEdit( "Delete Graph Comment" );
             for ( const int32 id : removal._listNodeID )
             {
                 VectorUtil::removeIf( _graph._listNode, [id]( const NodeType& node )
@@ -296,7 +311,7 @@ namespace sw::editor
                 VectorUtil::removeIf( _graph._listLink, [id, &linkTouchesNode]( const LinkType& link )
                 { return linkTouchesNode( link, id ); } );
                 onNodeDeleted( id );
-                notifyDocumentEdited( pDeleteNodeLabel );
+                recordGraphEdit( pDeleteNodeLabel );
             }
         }
 
@@ -368,7 +383,7 @@ namespace sw::editor
                 _graph._listLink.push_back( link );
             }
             _nodeGraph.clearSelectionOnNextDraw();
-            notifyDocumentEdited( pLabel );
+            recordGraphEdit( pLabel );
         }
 
     protected:

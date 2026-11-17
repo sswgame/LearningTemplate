@@ -93,6 +93,14 @@ namespace sw
          */
         bool _bNewProcessGroup{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
+         * @brief 자식 트리가 이 프로세스(부모)와 함께 끝나게 합니다 — 부모가 비정상 종료해도 자식이 고아로 남지 않는다(감사 E-15: 에디터가 죽으면 넷 플레이 서버 · 클라이언트가 남았다).
+         * @details Windows 는 자식을 묶는 Job 에 `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` 를 걸어 마지막 핸들이 닫힐 때(이 `Process` 를 놓거나 부모가 죽을 때) 트리째 끝낸다.
+         *          Linux · Android 는 자식이 `PR_SET_PDEATHSIG`(SIGKILL)을 걸고, 이 `Process` 를 놓을 때도 그룹에 SIGKILL 을 보낸다 — 두 구현이 같은 뜻이다
+         *          (그 밖의 POSIX 는 놓을 때만 끝낸다 — 부모 사망 신호가 없다). `launch` 만 받는다 — `launchDetached` 는 켜면 거절한다(분리한 자식은 부모와 묶지 않는다).
+         *          언리얼 `FPlatformProcess::CreateProc` 의 `bLaunchDetached=false` 자식이 에디터 Job 에 묶이는 것과 같은 자리다.
+         */
+        bool _bEndWithParent{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        /**
          * @brief 이 프로세스의 환경에 덮어써서 자식에게 줄 환경 변수들입니다. 비면 환경을 그대로 물려줍니다.
          * @details `launch` 만 받는다 — `launchDetached` 는 비어 있지 않으면 거절한다(조용히 무시하지 않는다). 이름이 비었거나 `=` 를 품으면 launch 가 실패합니다.
          *          부모 프로세스의 환경은 바뀌지 않는다(`ProcessEnvironment::trySet` 은 부모 전체에 새고 다른 스레드가 읽는다).
@@ -291,5 +299,6 @@ namespace sw
         atomic<int32>      _processID;
         ProcessReleaseMode _releaseMode;      ///< 아직 도는 자식을 놓을 때 할 일(`launch` 의 옵션)
         bool               _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool               _bEndWithParent;   ///< 놓을 때 자식 트리를 끝낸다(`ProcessOptions::_bEndWithParent` — POSIX 의 shutdown 이 본다) NOLINT(sw-bool-flag): 위 칸과 같은 형식으로 둔다(이동 생성이 칸마다 옮긴다)
     };
 } // namespace sw

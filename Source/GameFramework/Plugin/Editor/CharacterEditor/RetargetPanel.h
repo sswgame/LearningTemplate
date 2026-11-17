@@ -26,6 +26,7 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetPreviewModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileInspection.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileModel.h"
 
 namespace sw::editor
 {
@@ -57,7 +58,7 @@ namespace sw::editor
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 
-        const RetargetProfile&           getProfile() const { return _profile; }
+        const RetargetProfile&           getProfile() const { return _model.getProfile(); }
         const RetargetProfileInspection& getInspection() const { return _inspection; }
         /** @brief 지난 점검이 실패한 까닭입니다. 묶였으면 비어 있습니다. */
         const string&    getInspectionError() const { return _inspectionError; }
@@ -74,7 +75,7 @@ namespace sw::editor
 
         bool                canAcceptDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
-        string              captureDocumentText() const override { return _profile.toXML(); }
+        string              captureDocumentText() const override { return _model.getProfile().toXML(); }
         void                applyDocumentText( string_view text ) override;
         /** @brief 맞춤(F)이 담을 구입니다. 처음 열 때의 카메라와 같은 값입니다. */
         bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override { return _preview.findFrameSphere( outCenter, outRadius ); }
@@ -92,13 +93,13 @@ namespace sw::editor
         void               drawInspection();
         /** @brief 두 스켈레톤을 겹쳐 긋습니다(뷰포트를 그린 직후). */
         void drawSkeletonLines();
-        /** @brief 편집 하나를 되돌리기에 남기고 다시 점검합니다. */
-        void markEdited( const utf8* pLabel );
+        /** @brief 모델 편집 연산 뒤에 상태 줄을 비우고 칸 · 미리보기 · 점검을 다시 맞춥니다(알림은 모델이 이미 냈다). */
+        void refreshAfterEdit();
         /** @brief 프로필에서 편집 글(스켈레톤 경로 · 사슬 본 목록)을 다시 채우고 미리보기와 점검을 맞춥니다. 스켈레톤 경로가 그대로면 디스크를 읽지 않고 카메라도 그대로입니다. */
         void syncFromProfile();
 
     private:
-        RetargetProfile                            _profile;
+        RetargetProfileModel                       _model; ///< 편집 중인 프로필과 편집 연산(연산이 알린다 — 감사 E-16)
         RetargetProfileInspection                  _inspection;
         RetargetPreviewModel                       _preview;
         vector<ChainText>                          _listChainText;

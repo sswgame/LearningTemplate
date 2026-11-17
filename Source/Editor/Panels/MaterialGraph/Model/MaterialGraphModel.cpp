@@ -14,6 +14,7 @@
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
@@ -94,13 +95,13 @@ namespace sw::editor
         return _graph.saveToFile( diskPath, AssetID{ _basePath } );
     }
 
-    bool MaterialGraphModel::takeEdit( MaterialGraphEdit& outEdit )
+    void MaterialGraphModel::publishEdit()
     {
         if ( _pendingEdit._pLabel == nullptr )
-            return false;
-        outEdit      = _pendingEdit;
-        _pendingEdit = MaterialGraphEdit{};
-        return true;
+            return;
+        const utf8* const pLabel = _pendingEdit._pLabel;
+        _pendingEdit             = MaterialGraphEdit{};
+        recordDocumentEdit( pLabel );
     }
 
     void MaterialGraphModel::recordEdit( const utf8* pLabel, bool bChangesShader )
@@ -352,5 +353,17 @@ namespace sw::editor
         }
         _previewPath = previewPaths._materialPath;
         _preview.syncPreviewSubject( pScene, _previewPath );
+    }
+
+    void MaterialGraphModel::recordDocumentEdit( string_view label ) const
+    {
+        SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
+        _pEditRecorder->notifyEdited( label );
+    }
+
+    void MaterialGraphModel::markCommentsEdited( CommentEdit edit )
+    {
+        static constexpr const utf8* kArrLabel[] = { "Add Material Graph Comment", "Rename Material Graph Comment", "Move Material Graph Comment", "Delete Material Graph Comment" };
+        recordEdit( kArrLabel[static_cast<uint32>( edit )], false );
     }
 } // namespace sw::editor

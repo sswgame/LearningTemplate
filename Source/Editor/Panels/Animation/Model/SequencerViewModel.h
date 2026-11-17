@@ -2,7 +2,7 @@
  * @file SequencerViewModel.h
  * @brief 시퀀서 창의 ViewModel — 바인딩 문맥(이 시퀀스를 트는 지금 씬의 `SequencePlayerComponent`), 에디터 선택, 바인딩이 가리키는 오브젝트,
  *        뷰포트 미리보기 적용 · 풀기, 선택 묶기, 문서 읽기 · 쓰기를 맡습니다. ImGui 를 모릅니다(`docs/agents/EditorUI.md` MVVM 계약).
- * @details 시퀀스 문서(`SequenceModel`)는 창 문서라 패널이 들고 문서 되돌리기(`notifyDocumentEdited`)를 남긴다. 이 ViewModel 은 씬 쪽만 본다 —
+ * @details 시퀀스 문서(`SequenceModel`)는 창 문서라 패널이 들고 문서 되돌리기를 남긴다(`SequenceModel::recordDocumentEdit`). 이 ViewModel 은 씬 쪽만 본다 —
  *          묶기는 씬 데이터(플레이어의 바인딩 표)라 그 오브젝트의 수정으로 되돌리기 한 단계를 남기고(`EditorTransaction`), 미리보기는 씬에 프레임을 적용할 뿐 기록하지 않는다
  *          (언리얼 Sequencer 가 레벨의 Level Sequence Actor 로 여는 것과 같다).
  */
