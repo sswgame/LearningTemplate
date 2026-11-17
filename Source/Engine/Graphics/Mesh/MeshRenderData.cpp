@@ -41,8 +41,8 @@ namespace sw
         // 업로드는 CPU 사본을 읽기만 한다 - 원본 메시를 워커(외형 조립)가 함께 읽으므로 const 로 받아 경합 검출기가 쓰기로 보지 않게 한다.
         const vector<uint32>&    listIndex     = _owner.getIndices();
         const vector<uint32>&    listLODIndex  = _owner.getLODIndices();
-        const vector<RHIVertex>& listVertex    = _owner.getVertices();
-        const vector<RHIVertex>& listLODVertex = _owner.getLODVertices();
+        const vector<RHIVertex>& listVertex    = _owner.getCPUView().getVertices();
+        const vector<RHIVertex>& listLODVertex = _owner.getCPUView().getLODVertices();
         vector<uint32>           listDrawIndex;
         if ( listLODIndex.empty() == false )
         {

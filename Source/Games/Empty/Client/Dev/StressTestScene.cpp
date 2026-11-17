@@ -97,7 +97,7 @@ namespace sw
                 reference.setToReference( skeleton );
                 reference.computeModelSpace( skeleton.getParentIndices(), listModel );
                 const uint32             boneCount  = skeleton.getBoneCount();
-                const vector<RHIVertex>& listVertex = source.getVertices();
+                const vector<RHIVertex>& listVertex = source.getCPUView().getVertices();
                 vector<MeshSkinVertex>   listSkin( listVertex.size() );
                 for ( size_t index = 0; index < listVertex.size() && boneCount >= 2; ++index )
                 {

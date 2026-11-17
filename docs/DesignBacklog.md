@@ -454,6 +454,8 @@ virtual AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint6
 - **MR-1 밉 배치와 범위 읽기 입구** — `Asset/Image/TextureMipLayout.{h,cpp}`(새 파일), `DDSLoader.{h,cpp}`(머리 풀이를 공유), `Core/File/ContentFileSource.{h,cpp}` · `BundledContentFileSource.h` · 팩 소스, `PackReader.{h,cpp}`(무압축 구간 · 압축 항목 오류). 테스트: `TextureMipLayoutTest.OffsetsMatchWholeFileDecode`(BC1 · BC7 · RGBA8 · ASTC) · `TruncatedFileIsError`, `ContentFileSourceTest.RangeMatchesWholeRead`(소스마다), `PackReaderTest.RangeReadOnCompressedEntryIsError`. 의존: 없음.
 - **MR-2 올리기 줄을 밉 요청으로** — `TextureCache.cpp`(`StreamingUpgrade` → `TextureMipRequest`, 읽는 중 목록, 바이트 상한), `Texture2D.{h,cpp}`(`beginUploadMips`, `computeMipDrop` 을 배치로). 테스트: `TextureCacheStreamingTest.QueueHoldsNoImageBytes` · `BytesInFlightStaysUnderCap` · `ReleasedWhileReadingIsDropped`. 의존: MR-1(R6-5 와 같은 파일이라 그 뒤에 맡긴다).
 - **MR-3 첫 로드를 머리 + 꼬리로, 쿠킹 규칙** — `TextureLoadOperation`(`TextureCache.cpp`), `PackConfig.h` · 쿠킹 검사. 테스트: `TextureCacheStreamingTest.FirstLoadReadsTailOnly`, 쿠킹 사례 `PackCooker.CompressedTextureEntry`. 의존: MR-2.
+- **R-15 후속 1 CPU 정점의 GPU 원본 이전** — 정점 풀 다시 꾸리기(`GPUMeshVertexPool.cpp` — 렌더 프록시 버퍼에서 GPU 복사) · 모프 휴지 자세(`GPUMeshMorphPool.cpp` · `FrameGraphExecutor.cpp` 모프 진단 — GPU 휴지 자세) · GI 복셀화(`SceneVoxelizer.cpp` — GPU 래스터 복셀화)가 `MeshCPUView` 대신 GPU 원본을 읽는다. 의존: `MeshCPUView` 도입(첫걸음, 들어감).
+- **R-15 후속 2 CPU 정점 놓기 켜기** — `MeshCPUAccess` 를 `Mesh::create` · `MeshCache::request` 에 기본값 없이(절차 메시 Keep, 요청이 갈리면 Keep, 놓인 뒤 Keep 요청이면 `.mesh` 다시 읽기), 업로드가 모두 끝난 뒤 놓고 장치 교체 때 `.mesh` 를 다시 읽는다. 상용 대조: 언리얼 `UStaticMesh::bAllowCPUAccess`(꺼진 메시는 CPU 쓰기 — 물리 쿠킹 · 내비 · 복셀 GI — 를 에셋 설정 단계에서 막는다). 의존: 후속 1.
 
 ### 자동 렌더 배율: GPU 프레임 시간과 뷰 사각형(설계 2026-11-17, 감사 RN-8)
 

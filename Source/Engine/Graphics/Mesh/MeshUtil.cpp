@@ -375,7 +375,7 @@ namespace sw
         if ( pMesh != nullptr && vertexColor == PrimitiveVertexColor::White )
         {
             // 생성기는 검증 색으로 만든다. 게임이 쓰는 도형은 색을 모두 1 로 — 머티리얼 색이 그대로 보이게.
-            vector<RHIVertex> listVertex = pMesh->getVertices();
+            vector<RHIVertex> listVertex = pMesh->getCPUView().getVertices();
             for ( RHIVertex& vertex : listVertex )
             {
                 vertex._arrColor[0] = 1.0f;

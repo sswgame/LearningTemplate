@@ -38,9 +38,9 @@ namespace sw
 
     void GPUMeshVertexPool::writeDrawVertices( const Mesh& mesh, uint32 firstVertex, uint32 vertexCapacity )
     {
-        const uint32 lod0Count = static_cast<uint32>( mesh.getVertices().size() );
-        RHIMeshVertexStreams::write( _format, mesh.getVertices().data(), lod0Count, firstVertex, vertexCapacity, _listScratchByte.data() );
-        RHIMeshVertexStreams::write( _format, mesh.getLODVertices().data(), static_cast<uint32>( mesh.getLODVertices().size() ), firstVertex + lod0Count, vertexCapacity,
+        const uint32 lod0Count = static_cast<uint32>( mesh.getCPUView().getVertices().size() );
+        RHIMeshVertexStreams::write( _format, mesh.getCPUView().getVertices().data(), lod0Count, firstVertex, vertexCapacity, _listScratchByte.data() );
+        RHIMeshVertexStreams::write( _format, mesh.getCPUView().getLODVertices().data(), static_cast<uint32>( mesh.getCPUView().getLODVertices().size() ), firstVertex + lod0Count, vertexCapacity,
                                      _listScratchByte.data() );
     }
 

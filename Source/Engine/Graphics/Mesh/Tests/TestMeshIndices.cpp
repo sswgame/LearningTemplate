@@ -47,8 +47,8 @@ SW_TEST_CASE( MeshIndicesTest, SetGeometryKeepsSharedVerticesAndRejectsBadIndice
     SW_EXPECT_EQUAL( 4u, mesh->getVertexCount() );
     SW_EXPECT_EQUAL( 6u, mesh->getIndexCount() );
     // 두 삼각형이 나눠 쓰는 정점(0 · 2)도 탄젠트가 +X 다(UV u 가 x 를 따른다).
-    SW_EXPECT_NEAR( 1.0f, mesh->getVertices()[0]._arrTangent[0], 1e-5f );
-    SW_EXPECT_NEAR( 1.0f, mesh->getVertices()[2]._arrTangent[0], 1e-5f );
+    SW_EXPECT_NEAR( 1.0f, mesh->getCPUView().getVertices()[0]._arrTangent[0], 1e-5f );
+    SW_EXPECT_NEAR( 1.0f, mesh->getCPUView().getVertices()[2]._arrTangent[0], 1e-5f );
 
     SW_EXPECT_LOG( "Mesh.MeshIndicesOutOfRange" );
     SW_EXPECT_FALSE( mesh->setGeometry( makeQuadVertices(), sw::vector<uint32>{ 0, 1, 4 } ) );
@@ -156,6 +156,24 @@ SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
     SW_REQUIRE_EQUAL( 6u, welded->getIndexCount() );
     for ( uint32 corner = 0; corner < 6; ++corner )
     {
-        SW_EXPECT_TRUE( sw::Memory::compare( &welded->getVertices()[welded->getIndices()[corner]], &listExpected[corner], sizeof( sw::RHIVertex ) ) == 0 );
+        SW_EXPECT_TRUE( sw::Memory::compare( &welded->getCPUView().getVertices()[welded->getIndices()[corner]], &listExpected[corner], sizeof( sw::RHIVertex ) ) == 0 );
     }
+}
+
+/**
+ * @brief [MeshIndicesTest] CPU 정점은 접근 토큰(`MeshCPUView`)으로만 읽고, 지금 모든 메시는 `Keep` 이라 토큰이 정점 · 낮은 단계 정점을 준다(R-15)
+ * @details 변이: `getCPUView` 가 `Keep` 메시에도 빈 토큰을 주면 정점 수 단언이 진다.
+ */
+SW_TEST_CASE( MeshIndicesTest, CPUViewReadsKeptVertices )
+{
+    const sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    sw::vector<sw::RHIVertex>      listVertex( 3 );
+    listVertex[1]._arrPosition[0] = 1.0f;
+    listVertex[2]._arrPosition[1] = 1.0f;
+    SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), sw::vector<sw::uint32>{ 0, 1, 2 } ) );
+    SW_EXPECT_TRUE( mesh->getCPUAccess() == sw::MeshCPUAccess::Keep );
+    const sw::MeshCPUView view = mesh->getCPUView();
+    SW_EXPECT_TRUE( view.isAvailable() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), view.getVertices().size() );
+    SW_EXPECT_TRUE( view.getLODVertices().empty() );
 }

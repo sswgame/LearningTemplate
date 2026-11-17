@@ -119,7 +119,7 @@ namespace sw
                                       const FitPartResult* pFit, vector<RHIVertex>& outListBaked, vector<MeshSkinVertex>& outListBakedSkin, vector<uint32>& outListBakedIndex,
                                       vector<uint32>& outListNewIndex, vector<uint8>& outListTriangleKept )
             {
-                const vector<RHIVertex>& listVertex    = source.getVertices();
+                const vector<RHIVertex>& listVertex    = source.getCPUView().getVertices();
                 const vector<uint32>&    listIndex     = source.getIndices();
                 const uint32             triangleCount = source.getIndexCount() / 3;
                 const bool               bUseFit       = pWelded != nullptr && pFit != nullptr;
@@ -311,7 +311,7 @@ namespace sw
             {
                 outListNewIndex.assign( mesh.getVertexCount(), constant::invalid_index::kUint32 );
                 const vector<uint32>&    listIndex  = mesh.getIndices();
-                const vector<RHIVertex>& listVertex = mesh.getVertices();
+                const vector<RHIVertex>& listVertex = mesh.getCPUView().getVertices();
                 for ( uint32 corner = piece._firstIndex; corner < piece._firstIndex + piece._indexCount; ++corner )
                 {
                     const uint32 index = listIndex[corner];
@@ -368,7 +368,7 @@ namespace sw
     {
         using Internal = CharacterMeshUtilInternal;
         outGeometry.clear();
-        const vector<RHIVertex>&                 listVertex = mesh.getVertices();
+        const vector<RHIVertex>&                 listVertex = mesh.getCPUView().getVertices();
         const vector<MeshSkinVertex>&            listSkin   = mesh.getSkinVertices();
         const bool                               bSkinned   = mesh.hasSkin();
         unordered_map<Internal::WeldKey, uint32> mapVertex;
@@ -481,7 +481,7 @@ namespace sw
         // 장비는 모서리마다 한 점 — 같은 자리의 모서리는 같은 몸 위치에 묶이므로 이음매가 벌어지지 않는다.
         AppearanceGeometry garment;
         garment._listPosition.reserve( garmentVertexCount );
-        for ( const RHIVertex& vertex : inoutGarment.getVertices() )
+        for ( const RHIVertex& vertex : inoutGarment.getCPUView().getVertices() )
         {
             garment._listPosition.push_back( Internal::getPosition( vertex ) );
         }
