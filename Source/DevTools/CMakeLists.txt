@@ -69,3 +69,14 @@ if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
 	)
 	message(STATUS "[DevTools] Tracy profiler client enabled (loaded on demand on Windows)")
 endif()
+
+# ------------------------------------------------------------------------------
+# 리플렉션 — 머티리얼 그래프 에셋 형식(`Material/` — 컴파일러가 Engine `Graphics/Material/Dev` 에서 옮겨 왔다, 설계 2026-11-17 G2)이 DevTools 의 첫 REFLECT 타입이다.
+# 입력은 그 폴더의 헤더뿐이다(빈 HEADERS 는 DevTools 전체를 훑는다). 주인(CONTENT_OWNER)을 비워 호스트 소유로 둔다 — 개발 호스트가 늘 DevTools 를 링크한다.
+# 셰이더 쿠커는 이 컴파일러를 모른다 — `IShaderSourceGenerator` 정적 등록(`MaterialGraphGeneratedPaths.cpp`)으로 붙는다.
+# ------------------------------------------------------------------------------
+sw_add_reflection_step(DevTools
+	MODULE DevTools
+	HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/Material/MaterialGraph.h"
+	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+)

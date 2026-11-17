@@ -11,6 +11,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 namespace sw
 {
     /** @brief 그래프 값의 형식입니다. 벡터 네 칸의 수는 값 그대로입니다(`getComponentCount`). */
@@ -65,7 +67,7 @@ namespace sw
      * @class MaterialGraphNodeKind
      * @brief 노드 종류 하나입니다. 파일 범위 정적 객체로 두면(`SW_MATERIAL_GRAPH_NODE`) 등록표에 오르고, 사라질 때 내려갑니다.
      */
-    class SW_API MaterialGraphNodeKind
+    class SW_DEVTOOLS_API MaterialGraphNodeKind
     {
     public:
         static constexpr uint32 kMaxInput   = 8;
@@ -125,7 +127,7 @@ namespace sw
      * @struct MaterialGraphNodeRegistry
      * @brief 등록된 노드 종류의 표입니다.
      */
-    struct SW_API MaterialGraphNodeRegistry
+    struct SW_DEVTOOLS_API MaterialGraphNodeRegistry
     {
         /** @brief 이름의 종류입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] static const MaterialGraphNodeKind* find( string_view name );

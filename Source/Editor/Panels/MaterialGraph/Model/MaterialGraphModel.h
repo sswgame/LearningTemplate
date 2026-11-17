@@ -10,10 +10,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Panels/Material/Model/MaterialModel.h"
+#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphCompileResult.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCompileResult.h"
+#include "Editor/Panels/Material/Model/MaterialModel.h"
 
 namespace sw
 {

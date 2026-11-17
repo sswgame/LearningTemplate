@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraph.h"
 
 #include "Core/Log/Logger.h"
 

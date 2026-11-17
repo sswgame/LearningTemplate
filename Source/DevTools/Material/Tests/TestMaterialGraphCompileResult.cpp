@@ -4,13 +4,14 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphCompileResult.h"
+#include "DevTools/Material/MaterialGraphGeneratedPaths.h"
+#include "DevTools/Material/MaterialGraphNodeRegistry.h"
+
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCompileResult.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphNodeRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 
 using namespace sw;

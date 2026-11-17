@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
+#include "DevTools/Material/MaterialGraphGeneratedPaths.h"
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -9,11 +9,12 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphCompileResult.h"
+
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCompileResult.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 
 namespace sw
