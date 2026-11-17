@@ -68,16 +68,27 @@ namespace sw::editor
         int32             _curveTrack;      ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
         int32             _curveChannel;    ///< 커브 편집기가 보는 채널
         uint32            _selectedBinding; ///< 고른 바인딩 id(0 이면 없음). 새 항목 · 트랙 · 컷의 대상입니다
+        string            _note;            ///< 시네마틱 메모(문서 칸 — 저장할 때 애셋의 `_note` 로 간다). 칸을 다 고치면 `commitNote` 를 부른다
 
         SequenceModel();
 
         /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
         void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
-        /**
-         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
-         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
-         */
-        void recordDocumentEdit( string_view label ) const;
+        // 위젯이 문서를 바로 고친 자리의 확정 — 고쳤음을 모델이 정한 되돌리기 이름으로 알린다(감사 E-16)
+        /** @brief 타임라인 위젯이 항목 배치(시작 · 끝 · 더하기 · 지우기)를 바꿨습니다 — "Edit Sequence Timeline" 으로 알립니다. */
+        void commitTimelineEdit() const { recordDocumentEdit( "Edit Sequence Timeline" ); }
+        /** @brief 메모 칸(`_note`)을 다 고쳤습니다 — "Edit Sequence Note" 로 알립니다. */
+        void commitNote() const { recordDocumentEdit( "Edit Sequence Note" ); }
+        /** @brief 트랙 글 칸(프로퍼티 경로 · 리그 슬롯)을 다 고쳤습니다 — "Edit Sequence Track" 으로 알립니다. */
+        void commitTrackEdit() const { recordDocumentEdit( "Edit Sequence Track" ); }
+        /** @brief 트랙 @p track 의 @p frame 에 지금 값 @p pArrValue 로 키를 찍고 "Add Sequence Key" 로 알립니다. */
+        void addKey( SequenceKeyTrack& track, float32 frame, const float32* pArrValue, uint32 valueCount );
+        /** @brief 트랙 @p track 의 @p frame 키를 지우고(키 선택도 비운다) "Delete Sequence Key" 로 알립니다. 지운 키가 없으면 false 입니다. */
+        bool removeKeysAt( SequenceKeyTrack& track, float32 frame );
+        /** @brief 채널 값을 표시 단위로 고칩니다(`setChannelDisplayValue`) — 바꿨으면 "Edit Sequence Key" 로 알린다(끄는 동안은 상호작용 구간 하나). */
+        bool setChannelValue( SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 displayValue );
+        /** @brief 커브 편집기가 고친 채널 @p edited 를 채널 @p inoutChannel 에 쓰고 "Edit Sequence Curve" 로 알립니다. */
+        void setCurveChannel( FloatCurve& inoutChannel, const FloatCurve& edited );
 
         // 문서 교체
         /** @brief 되돌리기가 준 애셋으로 바꿉니다. 없어진 항목 · 트랙 · 바인딩을 가리키지 않게 고른 번호를 맞추고 키 선택을 비웁니다. */
@@ -241,6 +252,28 @@ namespace sw::editor
         [[nodiscard]] static bool setChannelDisplayValue( SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 displayValue );
 
     private:
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 이 모델의 편집 연산만 부른다(감사 E-16) — 무엇을 고쳤는지와 되돌리기 이름은 모델이 정하고, View 는 연산만 부른다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+        /** @brief 편집 연산의 본문입니다 — 알리지 않는다(공개 연산이 성공하면 알린다). */
+        [[nodiscard]] uint32          applyAddBinding( string_view name );
+        [[nodiscard]] bool            applyRenameBinding( uint32 bindingID, string_view name );
+        [[nodiscard]] bool            applyRemoveBinding( uint32 bindingID );
+        [[nodiscard]] optional<int32> applyCommitItemDraft();
+        [[nodiscard]] bool            applyCommitItemEdit();
+        [[nodiscard]] expected<int32> applyAddCameraCut( int32 frame );
+        [[nodiscard]] expected<int32> applySplitCameraCut( int32 frame );
+        [[nodiscard]] bool            applyRemoveCameraCut( int32 itemIndex );
+        [[nodiscard]] bool            applySetCutCamera( int32 itemIndex, uint32 bindingID );
+        [[nodiscard]] bool            applyAddTrack( SequenceTrackKind kind );
+        [[nodiscard]] bool            applyRemoveSelectedTrack();
+        [[nodiscard]] bool            applyMoveTrack( int32 fromIndex, int32 toIndex );
+        [[nodiscard]] bool            applyMoveSelectedKeys( int32 frameDelta );
+        [[nodiscard]] uint32          applyRemoveSelectedKeys();
+        [[nodiscard]] uint32          applyPasteKeys( int32 frame );
+        [[nodiscard]] expected<int32> applyPasteItem( int32 frame );
         /** @brief 키의 프레임(가장 가까운 정수)입니다. 타임라인 밖이면 비어 있습니다. */
         [[nodiscard]] optional<int32> findTimelineFrame( float32 keyFrame ) const;
         /** @brief 타임라인 길이(프레임)입니다. 1 이상입니다. */

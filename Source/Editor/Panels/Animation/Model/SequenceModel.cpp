@@ -115,6 +115,7 @@ namespace sw::editor
         , _curveTrack{ -1 }
         , _curveChannel{ 0 }
         , _selectedBinding{ kSequenceNoBinding }
+        , _note{ "Cinematic notes (not a clip track)." }
         , _listSelectedKey{}
         , _listCopiedKey{}
         , _copiedItem{}
@@ -150,7 +151,7 @@ namespace sw::editor
         fitView(); // 새 문서는 전체를 본다
     }
 
-    uint32 SequenceModel::addBinding( string_view name )
+    uint32 SequenceModel::applyAddBinding( string_view name )
     {
         if ( name.empty() )
             return kSequenceNoBinding;
@@ -158,7 +159,7 @@ namespace sw::editor
         return _selectedBinding;
     }
 
-    bool SequenceModel::renameBinding( uint32 bindingID, string_view name )
+    bool SequenceModel::applyRenameBinding( uint32 bindingID, string_view name )
     {
         if ( name.empty() )
             return false;
@@ -172,7 +173,7 @@ namespace sw::editor
         return false;
     }
 
-    bool SequenceModel::removeBinding( uint32 bindingID )
+    bool SequenceModel::applyRemoveBinding( uint32 bindingID )
     {
         if ( _asset.findBinding( bindingID ) == nullptr || _asset.countBindingUses( bindingID ) > 0 )
             return false;
@@ -221,7 +222,7 @@ namespace sw::editor
         return _bItemDraft == SW_TRUE;
     }
 
-    optional<int32> SequenceModel::commitItemDraft()
+    optional<int32> SequenceModel::applyCommitItemDraft()
     {
         if ( isDraftingItem() == false || isItemAcceptable( _itemEdit ) == false )
             return nullopt;
@@ -247,7 +248,7 @@ namespace sw::editor
             _itemEdit = _asset._listItem[static_cast<size_t>( _selectedItem )];
     }
 
-    bool SequenceModel::commitItemEdit()
+    bool SequenceModel::applyCommitItemEdit()
     {
         if ( isDraftingItem() || hasSelectedItem() == false )
             return false;
@@ -316,7 +317,7 @@ namespace sw::editor
         { return _asset._listItem[static_cast<size_t>( left )]._start < _asset._listItem[static_cast<size_t>( right )]._start; } );
     }
 
-    expected<int32> SequenceModel::addCameraCut( int32 frame )
+    expected<int32> SequenceModel::applyAddCameraCut( int32 frame )
     {
         const bool bInvalid = _asset.findBinding( _selectedBinding ) == nullptr || frame < _asset._frameMin || frame > _asset._frameMax;
         if ( bInvalid )
@@ -350,7 +351,7 @@ namespace sw::editor
         return _selectedItem;
     }
 
-    bool SequenceModel::addTrack( SequenceTrackKind kind )
+    bool SequenceModel::applyAddTrack( SequenceTrackKind kind )
     {
         if ( _asset.findBinding( _selectedBinding ) == nullptr || SequenceKeyTrack::getChannelCount( kind ) == 0 )
             return false;
@@ -364,7 +365,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SequenceModel::removeSelectedTrack()
+    bool SequenceModel::applyRemoveSelectedTrack()
     {
         if ( findSelectedTrack() == nullptr )
             return false;
@@ -430,7 +431,7 @@ namespace sw::editor
         return false;
     }
 
-    bool SequenceModel::moveSelectedKeys( int32 frameDelta )
+    bool SequenceModel::applyMoveSelectedKeys( int32 frameDelta )
     {
         if ( frameDelta == 0 || _listSelectedKey.empty() )
             return false;
@@ -456,7 +457,7 @@ namespace sw::editor
         return bMoved;
     }
 
-    uint32 SequenceModel::removeSelectedKeys()
+    uint32 SequenceModel::applyRemoveSelectedKeys()
     {
         uint32 removedCount = 0;
         for ( const SequenceKeyRef& key : _listSelectedKey )
@@ -564,7 +565,7 @@ namespace sw::editor
         _viewFirstFrame = getViewFirstFrame();
     }
 
-    expected<int32> SequenceModel::splitCameraCut( int32 frame )
+    expected<int32> SequenceModel::applySplitCameraCut( int32 frame )
     {
         for ( int32 itemIndex = 0; itemIndex < static_cast<int32>( _asset._listItem.size() ); ++itemIndex )
         {
@@ -584,7 +585,7 @@ namespace sw::editor
         return unexpected( Error{ ErrorKind::InvalidArgument, "no cut covers the frame past its first frame" } );
     }
 
-    bool SequenceModel::removeCameraCut( int32 itemIndex )
+    bool SequenceModel::applyRemoveCameraCut( int32 itemIndex )
     {
         const bool bInRange = 0 <= itemIndex && itemIndex < static_cast<int32>( _asset._listItem.size() );
         if ( bInRange == false )
@@ -605,7 +606,7 @@ namespace sw::editor
         return removeItem( itemIndex );
     }
 
-    bool SequenceModel::setCutCamera( int32 itemIndex, uint32 bindingID )
+    bool SequenceModel::applySetCutCamera( int32 itemIndex, uint32 bindingID )
     {
         const bool bInRange = 0 <= itemIndex && itemIndex < static_cast<int32>( _asset._listItem.size() );
         if ( bInRange == false || _asset.findBinding( bindingID ) == nullptr )
@@ -618,7 +619,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SequenceModel::moveTrack( int32 fromIndex, int32 toIndex )
+    bool SequenceModel::applyMoveTrack( int32 fromIndex, int32 toIndex )
     {
         const int32 count  = static_cast<int32>( _asset._listTrack.size() );
         const bool  bValid = 0 <= fromIndex && fromIndex < count && 0 <= toIndex && toIndex < count && fromIndex != toIndex;
@@ -710,7 +711,7 @@ namespace sw::editor
         return static_cast<uint32>( _listCopiedKey.size() );
     }
 
-    uint32 SequenceModel::pasteKeys( int32 frame )
+    uint32 SequenceModel::applyPasteKeys( int32 frame )
     {
         if ( findSelectedTrack() == nullptr || _listCopiedKey.empty() )
             return 0;
@@ -746,7 +747,7 @@ namespace sw::editor
         return true;
     }
 
-    expected<int32> SequenceModel::pasteItem( int32 frame )
+    expected<int32> SequenceModel::applyPasteItem( int32 frame )
     {
         const bool bOutside = frame < _asset._frameMin || frame > _asset._frameMax;
         if ( hasCopiedItem() == false || bOutside )
@@ -809,5 +810,163 @@ namespace sw::editor
     {
         SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
         _pEditRecorder->notifyEdited( label );
+    }
+
+    // 편집 연산 — 본문이 바꿨으면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16). View 는 연산만 부른다.
+    uint32 SequenceModel::addBinding( string_view name )
+    {
+        const uint32 result = applyAddBinding( name );
+        if ( result > 0 )
+            recordDocumentEdit( "Add Sequence Binding" );
+        return result;
+    }
+
+    bool SequenceModel::renameBinding( uint32 bindingID, string_view name )
+    {
+        if ( applyRenameBinding( bindingID, name ) == false )
+            return false;
+        recordDocumentEdit( "Rename Sequence Binding" );
+        return true;
+    }
+
+    bool SequenceModel::removeBinding( uint32 bindingID )
+    {
+        if ( applyRemoveBinding( bindingID ) == false )
+            return false;
+        recordDocumentEdit( "Delete Sequence Binding" );
+        return true;
+    }
+
+    optional<int32> SequenceModel::commitItemDraft()
+    {
+        auto result = applyCommitItemDraft();
+        if ( result.has_value() )
+            recordDocumentEdit( "Add Sequence Item" );
+        return result;
+    }
+
+    bool SequenceModel::commitItemEdit()
+    {
+        if ( applyCommitItemEdit() == false )
+            return false;
+        recordDocumentEdit( "Edit Sequence Item" );
+        return true;
+    }
+
+    expected<int32> SequenceModel::addCameraCut( int32 frame )
+    {
+        auto result = applyAddCameraCut( frame );
+        if ( result.has_value() )
+            recordDocumentEdit( "Add Camera Cut" );
+        return result;
+    }
+
+    expected<int32> SequenceModel::splitCameraCut( int32 frame )
+    {
+        auto result = applySplitCameraCut( frame );
+        if ( result.has_value() )
+            recordDocumentEdit( "Split Camera Cut" );
+        return result;
+    }
+
+    bool SequenceModel::removeCameraCut( int32 itemIndex )
+    {
+        if ( applyRemoveCameraCut( itemIndex ) == false )
+            return false;
+        recordDocumentEdit( "Delete Camera Cut" );
+        return true;
+    }
+
+    bool SequenceModel::setCutCamera( int32 itemIndex, uint32 bindingID )
+    {
+        if ( applySetCutCamera( itemIndex, bindingID ) == false )
+            return false;
+        recordDocumentEdit( "Set Camera Cut Camera" );
+        return true;
+    }
+
+    bool SequenceModel::addTrack( SequenceTrackKind kind )
+    {
+        if ( applyAddTrack( kind ) == false )
+            return false;
+        recordDocumentEdit( "Add Sequence Track" );
+        return true;
+    }
+
+    bool SequenceModel::removeSelectedTrack()
+    {
+        if ( applyRemoveSelectedTrack() == false )
+            return false;
+        recordDocumentEdit( "Delete Sequence Track" );
+        return true;
+    }
+
+    bool SequenceModel::moveTrack( int32 fromIndex, int32 toIndex )
+    {
+        if ( applyMoveTrack( fromIndex, toIndex ) == false )
+            return false;
+        recordDocumentEdit( "Move Sequence Track" );
+        return true;
+    }
+
+    bool SequenceModel::moveSelectedKeys( int32 frameDelta )
+    {
+        if ( applyMoveSelectedKeys( frameDelta ) == false )
+            return false;
+        recordDocumentEdit( "Move Sequence Keys" );
+        return true;
+    }
+
+    uint32 SequenceModel::removeSelectedKeys()
+    {
+        const uint32 result = applyRemoveSelectedKeys();
+        if ( result > 0 )
+            recordDocumentEdit( "Delete Sequence Keys" );
+        return result;
+    }
+
+    uint32 SequenceModel::pasteKeys( int32 frame )
+    {
+        const uint32 result = applyPasteKeys( frame );
+        if ( result > 0 )
+            recordDocumentEdit( "Paste Sequence Keys" );
+        return result;
+    }
+
+    expected<int32> SequenceModel::pasteItem( int32 frame )
+    {
+        auto result = applyPasteItem( frame );
+        if ( result.has_value() )
+            recordDocumentEdit( "Paste Sequence Item" );
+        return result;
+    }
+
+    void SequenceModel::addKey( SequenceKeyTrack& track, float32 frame, const float32* pArrValue, uint32 valueCount )
+    {
+        track.setKey( frame, pArrValue, valueCount );
+        recordDocumentEdit( "Add Sequence Key" );
+    }
+
+    bool SequenceModel::removeKeysAt( SequenceKeyTrack& track, float32 frame )
+    {
+        if ( track.removeKeysAt( frame ) == false )
+            return false;
+        clearKeySelection(); // 지운 키를 고른 채 두지 않는다
+        recordDocumentEdit( "Delete Sequence Key" );
+        return true;
+    }
+
+    bool SequenceModel::setChannelValue( SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 displayValue )
+    {
+        if ( setChannelDisplayValue( track, channelIndex, frame, displayValue ) == false )
+            return false;
+        recordDocumentEdit( "Edit Sequence Key" );
+        return true;
+    }
+
+    void SequenceModel::setCurveChannel( FloatCurve& inoutChannel, const FloatCurve& edited )
+    {
+        inoutChannel = edited;
+        recordDocumentEdit( "Edit Sequence Curve" );
     }
 } // namespace sw::editor

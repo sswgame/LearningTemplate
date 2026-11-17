@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/Animation/Model/SequenceModel.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
@@ -35,9 +36,17 @@ namespace
         }
 
         /** @brief 바인딩 Hero(1) 를 고른 문서입니다 — 새 항목 · 트랙의 대상이다. */
+        /** @brief 편집 연산의 알림을 받아 버리는 창구입니다(문서 패널 대신 — 상태가 없어 테스트 사이에 새지 않는다). */
+        static const DocumentEditRecorder& getIgnoredRecorder()
+        {
+            static const DocumentEditRecorder s_recorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) };
+            return s_recorder;
+        }
+
         static SequenceModel makeDocument()
         {
             SequenceModel document;
+            document.bindDocumentEditRecorder( getIgnoredRecorder() );
             (void)document.addBinding( "Hero" );
             return document;
         }
@@ -542,6 +551,7 @@ SW_TEST_CASE( SequenceModelTest, BindingsAreRemovedOnlyWhenUnused )
     SW_EXPECT_EQUAL( 3u, document.addBinding( "Again" ) ); // 지운 id 2 는 다시 주지 않는다
 
     SequenceModel empty;
+    empty.bindDocumentEditRecorder( SequenceModelTestUtil::getIgnoredRecorder() );
     SW_EXPECT_FALSE( empty.addTrack( SequenceTrackKind::Transform ) ); // 고른 바인딩이 없으면 트랙을 더할 대상이 없다
     SW_EXPECT_FALSE( empty.addItem( SequenceItemKind::Clip, "Clip" ).has_value() );
     SW_EXPECT_TRUE( empty.isDraftingItem() );
@@ -814,4 +824,23 @@ SW_TEST_CASE( SequenceModelTest, ShotToolsSplitRemoveAndRebindCuts )
     SW_EXPECT_FALSE( document.setCutCamera( 2, secondCamera ) );
     SequenceAsset readBack;
     SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
+}
+
+/** @brief [SequenceModelTest] 편집 연산 한 번은 알림 한 번이고 되돌리기 이름은 모델이 정한다(감사 E-16). 이름이 비면 바인딩을 만들지 않고 알리지 않는다 */
+SW_TEST_CASE( SequenceModelTest, EditOperationNotifiesOnceWithModelName )
+{
+    uint32                     count{ 0 };
+    string                     lastLabel;
+    const DocumentEditRecorder recorder{ DocumentEditRecorder::RecordDelegate::create( [&count, &lastLabel]( string_view label )
+    {
+        ++count;
+        lastLabel = string{ label };
+    } ) };
+    SequenceModel              document;
+    document.bindDocumentEditRecorder( recorder );
+    SW_EXPECT_EQUAL( document.addBinding( "" ), 0u );
+    SW_EXPECT_EQUAL( count, 0u );
+    SW_EXPECT_TRUE( document.addBinding( "Hero" ) != 0u );
+    SW_EXPECT_EQUAL( count, 1u );
+    SW_EXPECT_TRUE( lastLabel == "Add Sequence Binding" );
 }
