@@ -41,8 +41,18 @@ namespace sw
                         return 0;
                     }
 
+                    case WM_CLOSE:
+                    {
+                        DestroyWindow( hWnd ); // 기동 스레드의 `dismiss` 가 보낸다 — 창은 만든 스레드만 부술 수 있다
+                        return 0;
+                    }
+
                     case WM_DESTROY:
                     {
+                        Win32SplashWindow* pSplash = reinterpret_cast<Win32SplashWindow*>( GetWindowLongPtrW( hWnd, GWLP_USERDATA ) );
+                        if ( pSplash != nullptr )
+                            pSplash->releasePaintCache();
+                        PostQuitMessage( 0 ); // 스플래시 스레드의 메시지 루프를 끝낸다
                         return 0;
                     }
 
@@ -95,6 +105,21 @@ namespace sw
         // 채널 뒤집기는 여기 있지 않다. `loadSplashImage()` 가 **모든 플랫폼에** BGRA 를 보장한다.
         (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시이며, 로드가 이유를 알린다
 
+        storePaintState();
+        const wstring wsTitle = StringUtil::isNullOrEmpty( pTitle ) ? L"SW Engine Splash" : StringUtil::utf8ToUTF16( pTitle );
+        _thread               = thread{ ThreadCreationKey{}, &Win32SplashWindow::runMessageLoop, this, wsTitle };
+
+        UniqueLock<mutex> lock{ _paintMutex };
+        _readyCondition.wait( lock, [this]() SW_REQUIRES_LOCK( _paintMutex )
+        { return _bWindowReady || _bWindowFailed; } );
+        if ( _bWindowFailed )
+            return false; // 스레드는 창 없이 이미 끝났다 — `dismiss` 가 합류한다
+        _bOpen = SW_TRUE;
+        return true;
+    }
+
+    void Win32SplashWindow::runMessageLoop( wstring title )
+    {
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
         WNDCLASSEXW wc{};
@@ -117,41 +142,38 @@ namespace sw
         const int32 posX    = ( screenW - static_cast<int32>( _width ) ) / 2;
         const int32 posY    = ( screenH - static_cast<int32>( _height ) ) / 2;
 
-        const wstring wsTitle = StringUtil::isNullOrEmpty( pTitle ) ? L"SW Engine Splash" : StringUtil::utf8ToUTF16( pTitle );
-
-        HWND hWnd = CreateWindowExW(
-            WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
-            Win32SplashWindowInternal::kSplashClassName,
-            wsTitle.c_str(),
-            WS_POPUP,
-            posX,
-            posY,
-            static_cast<int32>( _width ),
-            static_cast<int32>( _height ),
-            nullptr,
-            nullptr,
-            hInstance,
-            nullptr );
-
+        HWND hWnd = CreateWindowExW( WS_EX_TOPMOST | WS_EX_TOOLWINDOW, Win32SplashWindowInternal::kSplashClassName, title.c_str(), WS_POPUP, posX, posY, static_cast<int32>( _width ),
+                                     static_cast<int32>( _height ), nullptr, nullptr, hInstance, nullptr );
+        if ( hWnd != nullptr )
+        {
+            SetWindowLongPtrW( hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>( this ) );
+            ShowWindow( hWnd, SW_SHOWNORMAL );
+            UpdateWindow( hWnd );
+        }
+        {
+            const ScopedLock<mutex> lock{ _paintMutex };
+            _hWnd          = hWnd;
+            _bWindowReady  = hWnd != nullptr;
+            _bWindowFailed = hWnd == nullptr;
+        }
+        _readyCondition.notify_all();
         if ( hWnd == nullptr )
-            return false;
+            return;
 
-        _hWnd  = hWnd;
-        _bOpen = SW_TRUE;
-
-        SetWindowLongPtrW( hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>( this ) );
-
-        ShowWindow( hWnd, SW_SHOWNORMAL );
-        UpdateWindow( hWnd );
-
+        // 기동 스레드가 무엇을 하든 이 루프가 답한다 — 상태 띠는 기동 스레드의 `InvalidateRect` 가 낸 `WM_PAINT` 로 다시 그린다.
         MSG msg;
-        while ( PeekMessageW( &msg, hWnd, 0, 0, PM_REMOVE ) )
+        while ( GetMessageW( &msg, nullptr, 0, 0 ) > 0 )
         {
             TranslateMessage( &msg );
             DispatchMessageW( &msg );
         }
+    }
 
-        return true;
+    void Win32SplashWindow::storePaintState()
+    {
+        const ScopedLock<mutex> lock{ _paintMutex };
+        _paintStatus   = _status;
+        _paintProgress = _progress;
     }
 
     void Win32SplashWindow::updateStatus( const utf8* pStatus, float32 progress )
@@ -164,21 +186,14 @@ namespace sw
         if ( progress >= 0.0f )
             _progress = ( progress > 1.0f ) ? 1.0f : progress;
 
+        storePaintState();
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )
         {
-            // 바뀌는 것은 아래 상태 띠(텍스트와 진행 막대)뿐이다. 그 띠만 무효로 해 배경을 다시 늘리지 않는다.
+            // 바뀌는 것은 아래 상태 띠(텍스트와 진행 막대)뿐이다. 그 띠만 무효로 해 배경을 다시 늘리지 않는다. 그리기는 스플래시 스레드가 한다.
             RECT rcClient{};
             GetClientRect( _hWnd, &rcClient );
             const RECT rcStatusBar = { 0, rcClient.bottom - Win32SplashWindowInternal::kStatusBarHeight, rcClient.right, rcClient.bottom };
             InvalidateRect( _hWnd, &rcStatusBar, FALSE );
-            UpdateWindow( _hWnd );
-
-            MSG msg;
-            while ( PeekMessageW( &msg, _hWnd, 0, 0, PM_REMOVE ) )
-            {
-                TranslateMessage( &msg );
-                DispatchMessageW( &msg );
-            }
         }
     }
 
@@ -243,7 +258,14 @@ namespace sw
         HGDIOBJ hPrevFont = SelectObject( hDC, _hStatusFont );
         SetTextColor( hDC, RGB( 190, 215, 245 ) );
 
-        const wstring wsStatus = StringUtil::utf8ToUTF16( getStatus().c_str() );
+        string  status;
+        float32 progress = 0.0f;
+        {
+            const ScopedLock<mutex> lock{ _paintMutex }; // 기동 스레드가 `updateStatus` 로 바꾸는 값이다
+            status   = _paintStatus;
+            progress = _paintProgress;
+        }
+        const wstring wsStatus = StringUtil::utf8ToUTF16( status.c_str() );
         RECT          rcStatus = { 24, rc.bottom - 36, rc.right - 24, rc.bottom - 16 };
         DrawTextW( hDC, wsStatus.c_str(), -1, &rcStatus, DT_LEFT | DT_SINGLELINE | DT_NOPREFIX );
 
@@ -254,7 +276,6 @@ namespace sw
         DeleteObject( hProgBgBrush );
 
         // 5) 실제 진행률만큼 채우는 진행 선
-        const float32 progress        = getProgress();
         const float32 clampedProgress = ( progress < 0.0f ) ? 0.0f : ( ( progress > 1.0f ) ? 1.0f : progress );
         const int32   fillWidth       = static_cast<int32>( static_cast<float32>( rc.right ) * clampedProgress );
         if ( fillWidth > 0 )
@@ -290,16 +311,16 @@ namespace sw
 
     void Win32SplashWindow::dismiss()
     {
-        releasePaintCache();
-        const bool bAlreadyClosed = _bOpen == SW_FALSE && _hWnd == nullptr && _gdiplusToken == 0;
+        const bool bAlreadyClosed = _bOpen == SW_FALSE && _hWnd == nullptr && _gdiplusToken == 0 && _thread.joinable() == false;
         if ( bAlreadyClosed )
             return;
 
-        if ( _hWnd != nullptr && IsWindow( _hWnd ) )
-        {
-            DestroyWindow( _hWnd );
-            _hWnd = nullptr;
-        }
+        // 창은 만든 스레드만 부술 수 있다 — 닫기를 보내고(WM_CLOSE → DestroyWindow → WM_QUIT) 그 스레드에 합류한다. 그리기 캐시는 WM_DESTROY 가 놓는다.
+        if ( _hWnd != nullptr )
+            (void)PostMessageW( _hWnd, WM_CLOSE, 0, 0 );
+        if ( _thread.joinable() )
+            _thread.join();
+        _hWnd = nullptr;
 
         if ( _gdiplusToken != 0 )
         {
