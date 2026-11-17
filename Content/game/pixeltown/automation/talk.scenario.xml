@@ -60,8 +60,9 @@
 	<Tap slot="Key.Space" hold="1"/>
 	<WaitUntil watch="Town.Talking" equals="0" timeoutFrames="30"/>
 	<Expect watch="Town.FinishedTalks" equals="1"/>
-	<!-- 대화가 끝나면 다시 걷는다. -->
-	<Tap slot="Key.D" hold="2"/>
+	<!-- 대화가 끝나면 다시 걷는다 — 대화를 닫은 직후의 상호작용 동안은 걷기 입력을 받지 않으니, 닿을 때까지 누르고 있다. -->
+	<Press slot="Key.D"/>
 	<WaitUntil watch="Town.HeroTileX" equals="13" timeoutFrames="30"/>
+	<Release slot="Key.D"/>
 	<Pass/>
 </Scenario>
