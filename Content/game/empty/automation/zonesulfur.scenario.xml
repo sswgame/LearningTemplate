@@ -11,7 +11,6 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
 	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 36 0.05 0"/>
 	<Wait frames="30"/>
 	<Expect watch="Ability.HasTag" target="Walker" key="State.Poisoned" equals="1"/>
@@ -19,7 +18,6 @@
 	<Expect watch="Zone.Sources" target="Walker" is="volume:SulfurVent,volume:ZoneGas"/>
 	<Expect watch="Zone.ScreenWeight" target="Walker" atLeast="0.99"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 36 0.05 -6"/>
 	<Wait frames="30"/>
 	<Expect watch="Zone.Sources" target="Walker" is="None"/>

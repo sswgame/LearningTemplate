@@ -16,7 +16,6 @@
 	<WaitUntil watch="Object.X" target="Hero" atLeast="-6.5" timeoutFrames="60"/>
 	<Expect watch="Object.Y" target="Hero" near="0" tolerance="0.1"/>
 	<!-- 뛴다 — 7 m/s 면 2 m 넘게 오른다 -->
-	<Wait frames="1"/>
 	<Intent pawn="Hero" buttons="Jump" frames="2"/>
 	<WaitUntil watch="Object.Y" target="Hero" atLeast="1" timeoutFrames="60"/>
 	<WaitUntil watch="Object.Y" target="Hero" near="0" tolerance="0.1" timeoutFrames="180"/>
@@ -34,7 +33,6 @@
 	<DevCommand line="teleport WindowLight 100 100 0"/>
 	<Wait frames="2"/>
 	<Screenshot file="freeform_off.ppm" waitForStability="false"/>
-	<Wait frames="1"/>
 	<ExpectImagesDiffer first="freeform_on.ppm" second="freeform_off.ppm" region="0.6,0.05,0.95,0.45" minDiffering="0.05"/>
 	<Pass/>
 </Scenario>

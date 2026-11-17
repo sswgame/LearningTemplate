@@ -83,6 +83,7 @@ namespace sw
              */
             [[nodiscard]] static expected<uint32> readWait( const XMLNode& waitNode, float32 fixedDelta )
             {
+                // shortcut: 옮기는 동안만 받는다 — 모든 시나리오가 `<WaitUntil>` · `<AdvanceSimulation>` 으로 옮겨지면 이 요소를 지운다.
                 uint32 timingCount = 0;
                 uint32 frames      = 0;
                 for ( XMLAttribute attribute = waitNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -106,6 +107,25 @@ namespace sw
              * @brief `<Launch variable="gv_…" value="…"/>` 하나를 읽어 @p inoutList 에 더합니다.
              * @details 값은 명령줄 토큰 하나가 되므로 공백 · 따옴표를 받지 않는다. 같은 변수를 두 번 적으면 어느 쪽이 이기는지 모호하므로 오류다.
              */
+            /**
+             * @brief `<AdvanceSimulation frames="N"/>` 의 프레임 수입니다. 시뮬레이션을 고정 프레임 N 개 진행합니다 — 시간 자체가 시험 내용인 구간(누른 채인 구간 · 이동 거리 ·
+             *        "다음 프레임에" 단언 · 프레임 경계 맞추기)에만 쓴다. 무엇이 끝나기를 기다리는 것은 `<WaitUntil>`(시한은 넘으면 실패)이다.
+             * @details 고정 프레임 시간이 있는 시나리오(루트 `fixedDelta`)만 받는다 — 벽시계로 도는 시나리오에서 N 프레임은 몇 초인지 정해지지 않는다.
+             *          언리얼 기능 테스트의 틱 진행 · 유니티 테스트의 `yield return new WaitForFixedUpdate()` 반복 · Godot GUT 의 `simulate( obj, N, delta )` 와 같은 자리다.
+             */
+            [[nodiscard]] static expected<uint32> readAdvanceSimulation( const XMLNode& node, bool bFixedDeltaDeclared )
+            {
+                if ( bFixedDeltaDeclared == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs a fixed frame time - set fixedDelta on <Scenario> (frames on the wall clock have no fixed length)" } );
+                const XMLAttribute first = node.getFirstAttribute();
+                if ( first.isValid() == false || string_view{ first.getName() } != "frames" || first.getNext().isValid() )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs exactly frames=\"N\" (more than zero)" } );
+                const expected<uint32> frames = readUint( first.getValue(), "frames" );
+                if ( frames.has_value() && *frames == 0 )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs more than zero frames" } );
+                return frames;
+            }
+
             [[nodiscard]] static expected<void> readLaunchVariable( const XMLNode& node, vector<AutomationAttribute>& inoutList )
             {
                 AutomationAttribute entry{};
@@ -234,6 +254,7 @@ namespace sw
 
     AutomationScenario::AutomationScenario()
         : _listStep{}
+        , _listAdvanceSpan{}
         , _testOptions{}
         , _name{}
         , _sourcePath{}
@@ -243,7 +264,29 @@ namespace sw
         , _startTimeoutFrames{ AutomationScenarioInternal::kDefaultStartTimeoutFrames }
         , _startCondition{ AutomationStartCondition::ScenePlaying }
         , _inputMode{ VirtualInputMode::Exclusive }
+        , _bFixedDeltaDeclared{ SW_FALSE }
+        , _reservedScenario{ 0 }
     {
+    }
+
+    bool AutomationScenario::isAdvanceSimulationFrame( uint32 frameIndex ) const
+    {
+        for ( const AdvanceSpan& span : _listAdvanceSpan )
+        {
+            if ( frameIndex >= span._firstFrame && frameIndex < span._firstFrame + span._frameCount )
+                return true;
+        }
+        return false;
+    }
+
+    uint32 AutomationScenario::findAdvanceSimulationFramesStartingAt( uint32 frameIndex ) const
+    {
+        for ( const AdvanceSpan& span : _listAdvanceSpan )
+        {
+            if ( span._firstFrame == frameIndex )
+                return span._frameCount;
+        }
+        return 0;
     }
 
     const AutomationStep* AutomationScenario::findOtherStepAtSameFrame( const AutomationStep& step ) const
@@ -309,6 +352,7 @@ namespace sw
             const bool bOk = StringUtil::parseFloat( string_view{ pText }, _fixedDelta ) && _fixedDelta > 0.0f;
             if ( bOk == false )
                 return unexpected( Internal::makeValueError( "must be a positive number", name, pText ) );
+            _bFixedDeltaDeclared = SW_TRUE;
             return {};
         }
         if ( name == "timeoutFrames" || name == "startTimeoutFrames" )
@@ -402,10 +446,11 @@ namespace sw
 
     expected<void> AutomationScenario::parseChildren( const XMLNode& root )
     {
-        using Internal          = AutomationScenarioInternal;
-        uint32 orderInFile      = 0;
-        uint32 frameCursor      = 0;     ///< 지금까지 `<Wait>` 가 흘린 프레임 — 단계는 적은 순서대로 이 프레임에 돈다
-        bool   bCursorFrameUsed = false; ///< 지금 프레임에 이미 단계가 있다
+        using Internal           = AutomationScenarioInternal;
+        uint32 orderInFile       = 0;
+        uint32 frameCursor       = 0;     ///< 지금까지 `<AdvanceSimulation>` 이 흘린 프레임 — 단계는 적은 순서대로 이 프레임에 돈다
+        bool   bCursorFrameUsed  = false; ///< 지금 프레임에 이미 단계가 있다
+        bool   bFrameEndAtCursor = false; ///< 지금 프레임에 틱 뒤 단계(판정 · 사진)가 이미 있다
         for ( XMLNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
         {
             const string_view elementName = atNode.getName();
@@ -452,15 +497,24 @@ namespace sw
             }
             if ( elementName == "At" )
                 return unexpected( Error{ ErrorKind::Unsupported,
-                                          "<At frame> is gone - write the steps in the order they run and put <Wait frames=\"N\"/> where time must pass (<WaitUntil> waits for a condition)",
+                                          "<At frame> is gone - write the steps in the order they run and put <WaitUntil> where something must finish and <AdvanceSimulation frames=\"N\"/> where simulated time itself is the test",
                                           _sourcePath } );
-            if ( elementName == "Wait" )
+            if ( elementName == "Wait" || elementName == "AdvanceSimulation" )
             {
-                const expected<uint32> frames = Internal::readWait( atNode, _fixedDelta );
+                const expected<uint32> frames = elementName == "Wait" ? Internal::readWait( atNode, _fixedDelta ) : Internal::readAdvanceSimulation( atNode, _bFixedDeltaDeclared == SW_TRUE );
                 if ( frames.has_value() == false )
                     return unexpected( frames.error() );
+                // 진행 구간은 앞 단계가 돈 프레임 뒤부터 다음 단계가 도는 프레임 앞까지다 — 단계가 도는 프레임(판정 · 사진)은 늘 보통 프레임이다.
+                if ( elementName == "AdvanceSimulation" )
+                {
+                    const uint32 firstFrame = bCursorFrameUsed ? frameCursor + 1u : frameCursor;
+                    const uint32 endFrame   = frameCursor + *frames; // 다음 단계의 프레임(빼고)
+                    if ( endFrame > firstFrame )
+                        _listAdvanceSpan.push_back( AdvanceSpan{ firstFrame, endFrame - firstFrame } );
+                }
                 frameCursor += *frames;
-                bCursorFrameUsed = false;
+                bCursorFrameUsed  = false;
+                bFrameEndAtCursor = false;
                 continue;
             }
             // 기다리기만 하는 단계(`<WaitUntil>` · `<EditorWaitStable>`)는 조건이 설 때까지 시계를 붙잡는다 — 붙잡힌 프레임의 다른 단계(입력 · 입력 전 단계)가 다시 돌지
@@ -468,15 +522,23 @@ namespace sw
             // 일이 없다). 등록 모양으로 가린다(`isWaitOnly`) — 단계를 등록한 모듈이 없는 프로세스에서는 모르는 단계라 시작 검사가 먼저 막는다.
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( elementName );
             const bool                        bWaitUntil    = pRegistration != nullptr && pRegistration->isWaitOnly();
-            if ( bWaitUntil && bCursorFrameUsed )
+            // 프레임 처음에 도는 단계(입력 · 입력 전 단계)를 그 프레임의 틱 뒤 단계(판정) 아래에 적으면 판정보다 먼저 돈다 — 다음 프레임으로 넘긴다(적은 순서가 곧 도는 순서다).
+            // 예전에는 쓰는 사람이 사이에 `<Wait frames="1"/>` 를 넣어야 했다(`AutomationStepValidation::validateStepPhaseOrder` 가 거절했다).
+            const bool bRunsAtFrameStart = pRegistration != nullptr && bWaitUntil == false && ( pRegistration->_pRun == nullptr || pRegistration->_bBeforeInput );
+            if ( ( bWaitUntil && bCursorFrameUsed ) || ( bRunsAtFrameStart && bFrameEndAtCursor ) )
+            {
                 ++frameCursor;
+                bFrameEndAtCursor = false;
+            }
             if ( expected<void> parsed = parseStepNode( atNode, frameCursor, orderInFile ); parsed.has_value() == false )
                 return parsed;
-            bCursorFrameUsed = true;
+            bCursorFrameUsed  = true;
+            bFrameEndAtCursor = bFrameEndAtCursor || ( pRegistration != nullptr && bWaitUntil == false && bRunsAtFrameStart == false );
             if ( bWaitUntil )
             {
                 ++frameCursor;
-                bCursorFrameUsed = false;
+                bCursorFrameUsed  = false;
+                bFrameEndAtCursor = false;
             }
         }
         return {};

@@ -16,7 +16,6 @@
 	<DevCommand line="teleport PlainLight -4.5 0 0"/>
 	<Wait frames="1"/>
 	<Screenshot file="cookie_right.ppm"/>
-	<Wait frames="1"/>
 	<ExpectImage file="cookie_left.ppm" golden="cookie_left" region="0.05,0.1,0.45,0.9"/>
 	<ExpectImage file="cookie_left.ppm" golden="cookie_left_2" region="0.55,0.1,0.95,0.9"/>
 	<ExpectImage file="cookie_left.ppm" golden="cookie_left_3" region="0.15,0.3,0.34,0.7"/>

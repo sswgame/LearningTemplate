@@ -13,12 +13,10 @@
 	<Wait frames="30"/>
 	<Expect watch="Dismemberment.SeveredCount" target="Skeleton" equals="0"/>
 	<Expect watch="Object.Exists" target="Skeleton_Arm_L" equals="0"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="combat.fatalhit Skeleton hips"/>
 	<Wait frames="2"/>
 	<Expect watch="Dismemberment.SeveredCount" target="Skeleton" equals="0"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="combat.fatalhit Skeleton upperarm.l"/>
 	<WaitUntil watch="Dismemberment.SeveredCount" target="Skeleton" equals="1" timeoutFrames="5"/>
@@ -26,7 +24,6 @@
 	<Expect watch="Dismemberment.RegionBlood" target="Skeleton" key="Arm_L" atLeast="0.99"/>
 	<Expect watch="Dismemberment.RegionBlood" target="Skeleton" key="Arm_R" atMost="0.01"/>
 	<WaitUntil watch="Object.Y" target="Skeleton_Arm_L" atMost="0.5" timeoutSeconds="5"/>
-	<Wait frames="1"/>
 
 	<DevCommand line="combat.fatalhit Skeleton lowerarm.l"/>
 	<Wait frames="2"/>

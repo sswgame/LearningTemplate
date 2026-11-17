@@ -56,13 +56,13 @@ namespace sw
         /** @brief 에이전트 하나가 건너는(또는 곧 건널) 오프 메시 링크입니다. */
         struct LinkTraversal
         {
-            float3 _start{};
-            float3 _end{};
-            float3 _previousPosition{}; ///< 갱신 직전 위치(속도 계산)
-            float3 _velocity{};
-            uint32 _pendingPoly{ 0 }; ///< 갱신 직전 마지막 모퉁이의 링크 폴리곤(없으면 0)
-            uint32 _linkPoly{ 0 };    ///< 건너는 링크 폴리곤(아니면 0)
-            uint32 _linkID{ 0 };
+            float3     _start{};
+            float3     _end{};
+            float3     _previousPosition{}; ///< 갱신 직전 위치(속도 계산)
+            float3     _velocity{};
+            NavPolyRef _pendingPoly{ NavigationConstant::kInvalidPolyRef }; ///< 갱신 직전 마지막 모퉁이의 링크 폴리곤(없으면 `Invalid`)
+            NavPolyRef _linkPoly{ NavigationConstant::kInvalidPolyRef };    ///< 건너는 링크 폴리곤(아니면 `Invalid`, 링크를 모르면 `kUnknownLinkPoly`)
+            uint32     _linkID{ 0 };
         };
 
         bool isActiveAgent( NavCrowdAgentID agentID ) const;

@@ -621,7 +621,7 @@ namespace sw
         return pRuntime->_pNavMesh->findPath( start, end, pRuntime->_searchExtent, filter, outPath );
     }
 
-    PathRequestHandle SceneNavigation::requestPath( const hashed_string& agentType, const float3& start, const float3& end )
+    NavPathTicket SceneNavigation::requestPath( const hashed_string& agentType, const float3& start, const float3& end )
     {
         NavPathJob job;
         job._agentType = agentType;
@@ -630,7 +630,7 @@ namespace sw
         return _pathQueue.request( std::move( job ) );
     }
 
-    PathRequestHandle SceneNavigation::requestPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter )
+    NavPathTicket SceneNavigation::requestPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter )
     {
         NavPathJob job;
         job._agentType     = agentType;
@@ -641,15 +641,10 @@ namespace sw
         return _pathQueue.request( std::move( job ) );
     }
 
-    void SceneNavigation::cancelPathRequest( const PathRequestHandle& handle )
-    {
-        _pathQueue.cancel( handle );
-    }
-
-    PathRequestState SceneNavigation::takePathResult( const PathRequestHandle& handle, NavPath& outPath )
+    PathRequestState SceneNavigation::takePathResult( NavPathTicket& inoutTicket, NavPath& outPath )
     {
         NavPathJob             job;
-        const PathRequestState state = _pathQueue.takeResult( handle, job );
+        const PathRequestState state = _pathQueue.takeResult( inoutTicket, job );
         if ( state == PathRequestState::Ready )
             outPath = std::move( job._path );
         return state;
@@ -692,7 +687,7 @@ namespace sw
         const NavMeshWriteAccess access = completeNavMeshReads();
         if ( bAnything == false || _pManager == nullptr )
         {
-            _pathQueue.launch( "NavPathQuery", engine::areEngineServicesBound() ? &engine::getSubsystem<TaskManager>() : nullptr );
+            launchPathRequests();
             return;
         }
         // 플레이 중이면 표면이 맡은 종류를 마련한다(처음 쓸 때 — 쿠킹본이 맞으면 읽고 아니면 베이크한다).
@@ -723,8 +718,14 @@ namespace sw
         applyLinkStates( access );
         NavTileRebaker::launchTileBakes( _listRuntime, _settings._maxConcurrentTileBakeCount );
         syncAgentsIntoCrowds();
-        _pathQueue.launch( "NavPathQuery", engine::areEngineServicesBound() ? &engine::getSubsystem<TaskManager>() : nullptr );
+        launchPathRequests();
         launchCrowdUpdates( deltaTime );
+    }
+
+    void SceneNavigation::launchPathRequests()
+    {
+        // 한 갱신의 경로 일은 설정의 상한까지다 — 몰린 요청이 한 프레임을 붙들지 않고 다음 갱신으로 넘어간다(요청 순서는 그대로).
+        _pathQueue.launch( "NavPathQuery", engine::areEngineServicesBound() ? &engine::getSubsystem<TaskManager>() : nullptr, getSettings()._maxPathRequestsPerUpdate );
     }
 
     NavMeshWriteAccess SceneNavigation::completeNavMeshReads()

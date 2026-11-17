@@ -13,7 +13,6 @@
 	<Expect watch="Shooter3D.WeaponIndex" equals="0"/>
 	<Wait frames="20"/>
 	<Expect watch="Shooter3D.ShotDamage" equals="14"/>
-	<Wait frames="1"/>
 	<Tap slot="Mouse.Left" hold="1"/>
 	<WaitUntil watch="Shooter3D.ShotCount" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="Shooter3D.TracerWidth" equals="0.025" timeoutFrames="10"/>
@@ -23,7 +22,6 @@
 	<DevCommand line="cheat.shooter.projectile incendiary_round"/>
 	<Wait frames="1"/>
 	<Expect watch="Shooter3D.ShotDamage" equals="11"/>
-	<Wait frames="1"/>
 	<Tap slot="Mouse.Left" hold="1"/>
 	<WaitUntil watch="Shooter3D.ShotCount" equals="2" timeoutFrames="10"/>
 	<WaitUntil watch="Shooter3D.TracerWidth" equals="0.08" timeoutFrames="10"/>
@@ -33,7 +31,6 @@
 	<Wait frames="10"/>
 	<Expect watch="Shooter3D.WeaponIndex" equals="1"/>
 	<Expect watch="Shooter3D.ShotDamage" equals="9"/>
-	<Wait frames="1"/>
 	<Tap slot="Key.Digit1" hold="2"/>
 	<Wait frames="10"/>
 	<Expect watch="Shooter3D.ShotDamage" equals="11"/>

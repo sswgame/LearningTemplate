@@ -57,8 +57,9 @@ namespace sw
         uint32                           _waitFrameCount;                ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                           _screenshotRequestedCount;
         uint32                           _screenshotCompletedCount;
-        uint8                            _bFinishWaiting : 1; ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
-        uint8                            _bClockHeld     : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        uint32                           _advanceSimulationFrameCount; ///< `<AdvanceSimulation>` 으로 맡긴 프레임 수(`AutomationRunner::advanceSimulation`)
+        uint8                            _bFinishWaiting : 1;          ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
+        uint8                            _bClockHeld     : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         [[maybe_unused]] uint8           _reserved       : 7;
         uint32                           _assetStableFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
         unique_ptr<IAutomationStepState> _pHeldStepState;        ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
@@ -283,6 +284,12 @@ namespace sw
          * @details 종류: 시작 전 · 시계 잡기 조건이 붙잡음 · 조건 대기가 붙잡음 · 단계가 돎 · 돌 단계 없이 `<At>` 시점만 기다림(고정 프레임 대기).
          */
         void recordTimelineFrame( size_t stepIndexBefore );
+        /**
+         * @brief `<AdvanceSimulation>` 진행 구간(@p frameCount 프레임)이 시작하는 프레임에 한 번 부릅니다 — 그 단계의 실행부는 여기 한 곳이다.
+         * @details 엔진의 그리지 않는 진행 줄(`SimulationOnlyFrameQueue`)에 그 프레임 수를 고정 프레임 시간으로 맡긴다 — 시뮬레이션 결과는 같고 렌더만 건너뛴다.
+         *          맡기지 못하면(줄이 거절) 시나리오 실패다. 실행기는 그대로 그 프레임 수를 흘린다.
+         */
+        void advanceSimulation( uint32 frameCount );
         /** @brief 단계 · 시계 잡기 조건이 오래 붙잡고 있으면 무엇을 기다리는지 기다리는 동안 찍습니다(`AutomationTimeLimits::kWaitReportFirstSeconds`). */
         void reportOngoingWait();
         /**

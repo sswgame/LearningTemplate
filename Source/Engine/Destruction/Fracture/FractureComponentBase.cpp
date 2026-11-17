@@ -29,7 +29,6 @@
 
 namespace sw
 {
-    SW_GLOBAL_VARIABLE( int32, gv_destructionMaxDebrisBodies, 512, "한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)" );
     /** @brief 성능 예산이라 배포본도 바꾼다 — 언리얼 Chaos 의 파괴 예산(`p.Chaos.*` 콘솔 변수)과 같은 자리다. */
     SW_GLOBAL_VARIABLE( int32, gv_fractureShapeWarmMicroseconds, 500, "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0 이하=처음 깨질 때 모두" );
 } // namespace sw
@@ -616,6 +615,7 @@ namespace sw
         , _lastPoseMicroseconds{ 0.0f }
         , _frameSimulatedTime{ 0.0f }
         , _nextSpawnOrder{ 0 }
+        , _debrisOwner{ DebrisOwnerID::None }
         , _stillFrameCount{ 0 }
         , _profileReload{}
         , _bStateReady{ SW_FALSE }
@@ -849,7 +849,6 @@ namespace sw
             if ( runtime._body.isValid() )
             {
                 listDestroy.push_back( runtime._body );
-                changeDebrisBodyCount( -1 );
                 runtime._body = PhysicsBodyHandle{};
             }
             if ( runtime._shape.isValid() )
@@ -866,6 +865,10 @@ namespace sw
         }
         if ( listDestroy.empty() == false )
             _physics->destroyBodies( listDestroy );
+        // 장부의 이 주인 몫을 한 번에 내린다(씬이 이미 없으면 장부도 없다).
+        if ( ScenePhysics* pScene = getScenePhysics(); pScene != nullptr && _debrisOwner != DebrisOwnerID::None )
+            pScene->getDebrisBudget().removeOwner( _debrisOwner );
+        _debrisOwner = DebrisOwnerID::None;
         _physics->releaseLeafShapes();
         _physics.reset();
         _leafShapeScale = 0.0f;
@@ -1160,7 +1163,7 @@ namespace sw
             if ( pRuntime->_body.isValid() )
             {
                 outListDestroy.push_back( pRuntime->_body );
-                changeDebrisBodyCount( -1 );
+                removeDebrisBody( pRuntime->_groupID );
             }
             if ( pRuntime->_shape.isValid() )
                 _physics->destroyShape( pRuntime->_shape );
@@ -1313,7 +1316,7 @@ namespace sw
         inoutRuntime._body         = _physics->createGroupBody( listLeaf, inoutRuntime._position, inoutRuntime._rotation, inoutRuntime._volume * getProfile()._density, linearVelocity,
                                                                 angularVelocity, layer, selfID, inoutRuntime._shape );
         if ( inoutRuntime._body.isValid() )
-            changeDebrisBodyCount( 1 );
+            addDebrisBody( inoutRuntime._groupID, bChunk );
     }
 
     void FractureComponentBase::syncStaticBodies( vector<PhysicsBodyHandle>& inoutListDestroy )
@@ -1401,7 +1404,7 @@ namespace sw
                 if ( bRemoveOnSleep )
                 {
                     outListDestroy.push_back( runtime._body );
-                    changeDebrisBodyCount( -1 );
+                    removeDebrisBody( runtime._groupID );
                     runtime._body    = PhysicsBodyHandle{};
                     runtime._bFrozen = SW_TRUE;
                 }
@@ -1421,7 +1424,7 @@ namespace sw
                     if ( runtime._body.isValid() )
                     {
                         outListDestroy.push_back( runtime._body );
-                        changeDebrisBodyCount( -1 );
+                        removeDebrisBody( runtime._groupID );
                         runtime._body = PhysicsBodyHandle{};
                     }
                 }
@@ -1435,13 +1438,29 @@ namespace sw
     bool FractureComponentBase::evictOverBudget( vector<PhysicsBodyHandle>& outListDestroy, uint32 liveBodyCount )
     {
         bool bMoved = false;
-        // 예산: 이 오브젝트(프로필의 maxBodies)나 전역(gv_destructionMaxDebrisBodies)을 넘으면 오래된 것부터, 작은 것을 먼저 사라지게 한다.
-        const uint32 globalLimit = static_cast<uint32>( MathUtil::max( 0, static_cast<int32>( gv_destructionMaxDebrisBodies ) ) );
-        uint32       globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
+        // 씬 예산: 장부가 씬 전체에서 고른(프레임 끝 훅 앞 — `ScenePhysics`) 이 오브젝트 몫을 지운다. 먼저 틱한 오브젝트가 남의 몫까지 치르지 않는다(감사 S-11).
+        if ( ScenePhysics* pScene = getScenePhysics(); pScene != nullptr && _debrisOwner != DebrisOwnerID::None )
+        {
+            vector<uint32> listEvictGroup;
+            pScene->getDebrisBudget().takeRemovals( _debrisOwner, listEvictGroup );
+            for ( const uint32 groupID : listEvictGroup )
+            {
+                FractureGroupRuntime* pRuntime = findRuntime( groupID );
+                removeDebrisBody( groupID ); // 런타임이 없어도 장부에서 뺀다 — 남으면 다음 프레임에 또 넘긴다
+                if ( pRuntime == nullptr || pRuntime->_body.isValid() == false )
+                    continue;
+                pRuntime->_bFading = SW_TRUE;
+                outListDestroy.push_back( pRuntime->_body );
+                pRuntime->_body = PhysicsBodyHandle{};
+                --liveBodyCount;
+                bMoved = true;
+            }
+        }
+        // 오브젝트 예산(프로필의 maxBodies): 넘으면 이 오브젝트 안에서 오래된 것부터, 작은 것을 먼저 사라지게 한다.
         // 사라질 순서는 (큰 덩어리 여부, 생성 순서, 목록 위치)의 오름차순이다. 한 번 지울 때 바뀌는 것은 지운 덩어리뿐이라 한 번 정렬해 앞에서부터 꺼내면
         // 매번 전체를 훑는 것과 같은 순서이며(생성 순서가 같으면 앞선 목록 위치가 먼저), 초과분이 커도 O(N log N) 이다.
         vector<uint32> listEvictOrder;
-        if ( liveBodyCount > getProfile()._maxDebrisBody || globalCount > globalLimit )
+        if ( liveBodyCount > getProfile()._maxDebrisBody )
         {
             for ( uint32 index = 0; index < static_cast<uint32>( _listRuntime.size() ); ++index )
             {
@@ -1463,18 +1482,17 @@ namespace sw
             } );
         }
         size_t evictCursor = 0;
-        while ( liveBodyCount > getProfile()._maxDebrisBody || globalCount > globalLimit )
+        while ( liveBodyCount > getProfile()._maxDebrisBody )
         {
             if ( evictCursor >= listEvictOrder.size() )
                 break;
             FractureGroupRuntime* pOldest = &_listRuntime[listEvictOrder[evictCursor++]];
             pOldest->_bFading             = SW_TRUE;
             outListDestroy.push_back( pOldest->_body );
-            changeDebrisBodyCount( -1 );
+            removeDebrisBody( pOldest->_groupID );
             pOldest->_body = PhysicsBodyHandle{};
             --liveBodyCount;
-            globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
-            bMoved      = true;
+            bMoved = true;
         }
         return bMoved;
     }
@@ -1595,11 +1613,21 @@ namespace sw
 {
     // --- 네트워크 ---------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::changeDebrisBodyCount( int32 delta )
+    void FractureComponentBase::addDebrisBody( uint32 groupID, bool bLarge )
     {
         ScenePhysics* pScene = getScenePhysics();
-        if ( pScene != nullptr )
-            pScene->changeDebrisBodyCount( delta );
+        if ( pScene == nullptr )
+            return;
+        if ( _debrisOwner == DebrisOwnerID::None )
+            _debrisOwner = pScene->getDebrisBudget().addOwner();
+        pScene->getDebrisBudget().addBody( _debrisOwner, groupID, bLarge );
+    }
+
+    void FractureComponentBase::removeDebrisBody( uint32 groupID )
+    {
+        ScenePhysics* pScene = getScenePhysics();
+        if ( pScene != nullptr && _debrisOwner != DebrisOwnerID::None )
+            pScene->getDebrisBudget().removeBody( _debrisOwner, groupID );
     }
 
     void FractureComponentBase::recordRecentStateHash()
@@ -1756,7 +1784,7 @@ namespace sw
             if ( runtime._body.isValid() )
             {
                 listDestroy.push_back( runtime._body );
-                changeDebrisBodyCount( -1 );
+                removeDebrisBody( runtime._groupID );
             }
             if ( runtime._shape.isValid() )
                 _physics->destroyShape( runtime._shape );

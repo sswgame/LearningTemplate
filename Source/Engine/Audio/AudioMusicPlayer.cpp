@@ -144,11 +144,9 @@ namespace sw
             request._gain          = computeLayerGain( voices, segmentIndex, static_cast<int32>( layerIndex ) );
             request._fadeInSeconds = fadeInSeconds;
             request._bLoop         = segment._bLoop;
+            // 풀이 차 자리를 얻지 못하면 레이어를 빼고 간다 — 오디오 스레드는 로그를 남기지 않고, 버린 수는 게시 상태(`AudioEngineStats::_droppedVoiceCount`)로 나간다.
             if ( voices.startMusicVoice( request ) == false )
-            {
-                SW_LOG_WARNING_ID( "AudioMusicPlayer.VoicePoolExhaustedDropped", "Voice pool exhausted - dropped a music layer" );
                 return;
-            }
         }
     }
 

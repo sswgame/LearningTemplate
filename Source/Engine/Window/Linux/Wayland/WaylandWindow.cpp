@@ -1275,12 +1275,7 @@ namespace sw
         const bool bResized = state._configuredWidth > 0 && state._configuredHeight > 0 &&
                               ( static_cast<uint32>( state._configuredWidth ) != _width || static_cast<uint32>( state._configuredHeight ) != _height );
         if ( bResized )
-        {
-            _width  = static_cast<uint32>( state._configuredWidth );
-            _height = static_cast<uint32>( state._configuredHeight );
-            if ( _onResize.isBound() )
-                _onResize.get()( _width, _height );
-        }
+            notifyResized( static_cast<uint32>( state._configuredWidth ), static_cast<uint32>( state._configuredHeight ) );
         if ( state._bCloseRequested && _bRecreating == SW_FALSE )
         {
             state._bCloseRequested = false;
@@ -1349,10 +1344,7 @@ namespace sw
         wl_surface_commit( state._pSurface );
         // 창 모드의 크기는 클라이언트가 정한다 — 그 크기로 그린다고 알린다.
         clampToMinimumClientSize( width, height );
-        _width  = width;
-        _height = height;
-        if ( _onResize.isBound() )
-            _onResize.get()( _width, _height );
+        notifyResized( width, height );
         return true;
     }
 

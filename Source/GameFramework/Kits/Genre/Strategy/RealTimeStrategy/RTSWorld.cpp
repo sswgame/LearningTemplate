@@ -1540,16 +1540,16 @@ namespace sw
         unit._moveGoal = target;
         unit._repathTimer.start( _settings._repathInterval );
         // 걸음 끝에 모아 푼다(`applyPathResults`) — 유닛 수만큼의 A* 가 워커로 나뉜다. 같은 걸음에 다시 다가가면 앞 요청은 버린다(마지막 목표가 이긴다).
-        _pathQueue.cancel( unit._pathRequest );
         GridPathJob job;
         job._from         = unit._position;
         job._target       = target;
-        unit._pathRequest = _pathQueue.request( std::move( job ) );
+        unit._pathRequest = _pathQueue.request( std::move( job ) ); // 앞 표를 덮으면 그 요청이 버려진다
     }
 
     void RTSWorld::applyPathResults()
     {
-        _pathQueue.launch( "RTSPath", game::findSubsystem<TaskManager>() );
+        // 걸음의 요청을 모두 이 걸음에 푼다 — 상한으로 미루면 같은 입력의 걸음이 다른 결과를 낸다(락스텝 결정성).
+        _pathQueue.launch( "RTSPath", game::findSubsystem<TaskManager>(), PathRequestQueue<GridPathSolver>::kNoLaunchLimit );
         (void)_pathQueue.complete(); // 격자는 걸음 안에서만 바뀌고 그 뒤에 풀므로 격자 쪽에 증표를 넘길 데가 없다
         // 유닛 순서(슬롯 순서)로 적용한다 — 결과는 요청 순서 · 레인과 상관없이 같고, 적용 순서도 늘 같다(결정적).
         for ( RTSUnit& unit : _listUnit )
@@ -1558,7 +1558,7 @@ namespace sw
                 continue;
             GridPathJob            job;
             const PathRequestState state = _pathQueue.takeResult( unit._pathRequest, job );
-            unit._pathRequest            = PathRequestHandle{};
+            unit._pathRequest.cancel(); // 걸음을 넘겨 남지 않는다(받았으면 이미 비었다)
             if ( state != PathRequestState::Ready || unit._bAlive == SW_FALSE )
                 continue;
             if ( job._result == GridPathResult::Found || job._result == GridPathResult::Partial )

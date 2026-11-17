@@ -59,12 +59,8 @@ namespace sw
 
     void CallbackInputWindow::applyPlatformResize( uint32 width, uint32 height, float32 contentScale, const float4& safeInsets )
     {
-        _contentScale           = contentScale > 0.0f ? contentScale : 1.0f;
-        _safeInsets             = safeInsets;
-        const bool bSizeChanged = width != _width || height != _height;
-        _width                  = width;
-        _height                 = height;
-        if ( bSizeChanged && _bRecreating == SW_FALSE && _onResize.isBound() )
-            _onResize.get()( _width, _height );
+        _contentScale = contentScale > 0.0f ? contentScale : 1.0f;
+        _safeInsets   = safeInsets;
+        notifyResized( width, height );
     }
 } // namespace sw

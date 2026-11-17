@@ -10,7 +10,6 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/zoneshowcase.scene.xml"/>
 	<Wait frames="20"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 28 -0.5 0"/>
 	<Wait frames="60"/>
 	<Expect watch="Zone.Sources" target="Walker" is="surface:Sea"/>
@@ -20,7 +19,6 @@
 	<Expect watch="Zone.Value" target="Walker" key="immersion" atLeast="0.5"/>
 	<WaitUntil watch="Object.X" target="Walker" atLeast="28.4" timeoutSeconds="4"/>
 
-	<Wait frames="1"/>
 	<DevCommand line="object.place FloatCrate 29 0.5 -1.5"/>
 	<DevCommand line="object.place StoneBlock 29 0.5 1.5"/>
 	<DevCommand line="object.place Raft 30 0.5 0"/>

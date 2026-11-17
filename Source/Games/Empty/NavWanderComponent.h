@@ -10,7 +10,7 @@
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Navigation/PathRequestQueue.h"
+#include "Engine/Navigation/Scene/NavPathSolver.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -65,9 +65,8 @@ namespace sw
 
         DeterministicRandom32 _random;
         SceneNavigation*      _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
-        PathRequestHandle     _probe;            ///< 결과를 기다리는 질의
-        PathRequestHandle     _cancelPending;    ///< 다음 프레임에 버릴 질의(그 사이 워커에 넘어간다)
-        PathRequestHandle     _cancelled;        ///< 버린 질의 — 수확 뒤에도 결과가 없어야 한다
+        NavPathTicket         _probe;            ///< 결과를 기다리는 질의
+        NavPathTicket         _cancelPending;    ///< 다음 프레임에 버릴 질의(그 사이 워커에 넘어간다)
         uint32                _retargetCount;
         uint32                _arrivalCount;
         uint32                _probeResultCount;

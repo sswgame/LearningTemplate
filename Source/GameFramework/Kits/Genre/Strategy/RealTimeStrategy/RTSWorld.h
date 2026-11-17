@@ -137,37 +137,37 @@ namespace sw
     /** @brief 유닛, 건물, 자원 하나입니다. */
     struct RTSUnit
     {
-        NavAgent             _agent{};
-        deque<RTSOrder>      _listOrder{};      ///< 맨 앞이 현재 명령이다(쉬프트 입력은 뒤에 붙인다)
-        deque<hashed_string> _listProduction{}; ///< 생산 대기열이다(비용은 넣을 때 낸다)
-        const RTSUnitDef*    _pDef{ nullptr };
-        float3               _position{};
-        float3               _rallyPoint{};
-        float3               _moveGoal{};                                                               ///< 지금 다가가는 위치(경로를 다시 구할지 판단하는 기준)
-        int2                 _cell{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 건물과 자원이 쓴다. 왼쪽 아래 셀이다
-        RTSUnitID            _id{};
-        RTSUnitID            _attackTarget{};   ///< 지금 공격하는 유닛(명령이나 자동 선택)
-        RTSUnitID            _gatherTarget{};   ///< 채취하는 자원 또는 정제소
-        RTSUnitID            _harvester{};      ///< 자원과 정제소가 쓴다. 지금 캐고 있는 일꾼
-        RTSUnitID            _builder{};        ///< 건설 중인 건물이 쓴다. 짓고 있는 일꾼
-        RTSUnitID            _linkedResource{}; ///< 정제소가 쓴다. 아래에 있는 간헐천
-        PathRequestHandle    _pathRequest{};    ///< 이번 걸음에 세운 땅 경로 요청(걸음 끝 `applyPathResults` 가 받는다 — 걸음을 넘겨 남지 않아 저장하지 않는다)
-        float32              _hp{ 0.0f };
-        Countdown            _cooldown{};            ///< 다음 공격까지 남은 시간
-        float32              _buildProgress{ 1.0f }; ///< 0..1 범위이고 1이면 건설이 끝난 것이다
-        float32              _productionTimer{ 0.0f };
-        float32              _gatherTimer{ 0.0f };
-        Countdown            _repathTimer{};
-        int32                _owner{ constant::invalid_index::kInt32 }; ///< -1 이면 주인이 없다(자원)
-        int32                _resourceLeft{ 0 };
-        int32                _cargoAmount{ 0 };
-        int32                _supplyReserved{ 0 }; ///< 건물이 쓴다. 생산 중인 유닛이 쓸 보급
-        RTSResourceType      _cargoType{ RTSResourceType::None };
-        RTSGatherPhase       _gatherPhase{ RTSGatherPhase::ToResource };
-        uint8                _bAlive{ SW_TRUE };
-        uint8                _bHasRally{ SW_FALSE };
-        uint8                _bOrderStarted{ SW_FALSE }; ///< 맨 앞 명령의 경로를 이미 구했다
-        uint8                _bSupplyBlocked{ SW_FALSE };
+        NavAgent                                 _agent{};
+        deque<RTSOrder>                          _listOrder{};      ///< 맨 앞이 현재 명령이다(쉬프트 입력은 뒤에 붙인다)
+        deque<hashed_string>                     _listProduction{}; ///< 생산 대기열이다(비용은 넣을 때 낸다)
+        const RTSUnitDef*                        _pDef{ nullptr };
+        float3                                   _position{};
+        float3                                   _rallyPoint{};
+        float3                                   _moveGoal{};                                                               ///< 지금 다가가는 위치(경로를 다시 구할지 판단하는 기준)
+        int2                                     _cell{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 건물과 자원이 쓴다. 왼쪽 아래 셀이다
+        RTSUnitID                                _id{};
+        RTSUnitID                                _attackTarget{};   ///< 지금 공격하는 유닛(명령이나 자동 선택)
+        RTSUnitID                                _gatherTarget{};   ///< 채취하는 자원 또는 정제소
+        RTSUnitID                                _harvester{};      ///< 자원과 정제소가 쓴다. 지금 캐고 있는 일꾼
+        RTSUnitID                                _builder{};        ///< 건설 중인 건물이 쓴다. 짓고 있는 일꾼
+        RTSUnitID                                _linkedResource{}; ///< 정제소가 쓴다. 아래에 있는 간헐천
+        PathRequestQueue<GridPathSolver>::Ticket _pathRequest{};    ///< 이번 걸음에 세운 땅 경로 요청(걸음 끝 `applyPathResults` 가 받는다 — 걸음을 넘겨 남지 않아 저장하지 않는다)
+        float32                                  _hp{ 0.0f };
+        Countdown                                _cooldown{};            ///< 다음 공격까지 남은 시간
+        float32                                  _buildProgress{ 1.0f }; ///< 0..1 범위이고 1이면 건설이 끝난 것이다
+        float32                                  _productionTimer{ 0.0f };
+        float32                                  _gatherTimer{ 0.0f };
+        Countdown                                _repathTimer{};
+        int32                                    _owner{ constant::invalid_index::kInt32 }; ///< -1 이면 주인이 없다(자원)
+        int32                                    _resourceLeft{ 0 };
+        int32                                    _cargoAmount{ 0 };
+        int32                                    _supplyReserved{ 0 }; ///< 건물이 쓴다. 생산 중인 유닛이 쓸 보급
+        RTSResourceType                          _cargoType{ RTSResourceType::None };
+        RTSGatherPhase                           _gatherPhase{ RTSGatherPhase::ToResource };
+        uint8                                    _bAlive{ SW_TRUE };
+        uint8                                    _bHasRally{ SW_FALSE };
+        uint8                                    _bOrderStarted{ SW_FALSE }; ///< 맨 앞 명령의 경로를 이미 구했다
+        uint8                                    _bSupplyBlocked{ SW_FALSE };
 
         bool            isConstructed() const { return _buildProgress >= 1.0f; }
         bool            isBuilding() const { return _pDef != nullptr && _pDef->_kind == RTSUnitKind::Building; }
