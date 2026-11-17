@@ -196,3 +196,38 @@ SW_TEST_CASE( PackManagerTest, DLCPackNeedsAnEntitlementValidator )
     SW_EXPECT_TRUE( packs.mountPack( dlc, 1 ) );
     SW_EXPECT_EQUAL( string( "gold" ), TestPackManagerInternal::read( packs, "dlc/paid/maps/gold.txt" ) );
 }
+
+/**
+ * @brief [PackManagerTest] 같은 도메인의 형제 팩(나눈 팩 · 청크)은 항목이 겹치면 붙지 않는다 — 어느 쪽이 이길지 조용히 정하지 않는다(뒤가 이기는 것은 패치뿐)
+ * @details 겹치지 않는 형제는 함께 붙어 한 도메인으로 읽히고, 같은 파일을 다시 붙이는 것은 형제가 아니다.
+ */
+SW_TEST_CASE( PackManagerTest, SiblingPacksOverlapIsAnError )
+{
+    using Internal      = TestPackManagerInternal;
+    const string root   = test::makeScratchPath( "SplitPacks" );
+    const string first  = FileUtil::joinPath( root, "game_split.pack" );
+    const string second = FileUtil::joinPath( root, "game_split.1.pack" );
+    const string clash  = FileUtil::joinPath( root, "game_split.2.pack" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( Internal::writePack( first, "game/split", {
+                                                                   { "maps/a.txt", "a" }
+    } ) );
+    SW_REQUIRE_TRUE( Internal::writePack( second, "game/split", {
+                                                                    { "maps/b.txt", "b" }
+    } ) );
+    SW_REQUIRE_TRUE( Internal::writePack( clash, "game/split", {
+                                                                   { "maps/a.txt", "again" }
+    } ) );
+
+    PackManager packs;
+    SW_REQUIRE_TRUE( packs.mountPack( first, 1 ) );
+    SW_REQUIRE_TRUE( packs.mountPack( second, 1 ) );
+    SW_EXPECT_EQUAL( string( "a" ), Internal::read( packs, "game/split/maps/a.txt" ) );
+    SW_EXPECT_EQUAL( string( "b" ), Internal::read( packs, "game/split/maps/b.txt" ) );
+    {
+        SW_EXPECT_LOG( "PackManager.SiblingPacksOverlap" );
+        SW_EXPECT_FALSE( packs.mountPack( clash, 1 ) );
+    }
+    SW_EXPECT_TRUE( packs.mountPack( first, 1 ) ); // 같은 파일을 다시 붙인다 — 앞 마운트를 바꿔 끼운다
+    SW_EXPECT_EQUAL( size_t{ 2 }, packs.getMountedPackCount() );
+}

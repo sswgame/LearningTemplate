@@ -7,6 +7,7 @@
 
 #include "Engine/Asset/Cook/PackCooker.h"
 #include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Content/Pack/PackWriter.h"
 
 using namespace sw;
 
@@ -141,4 +142,73 @@ SW_TEST_CASE( PackCookerTest, StagedFilesOnlyDropOtherBackendShaders )
     SW_EXPECT_TRUE( PackCooker::shouldIncludeStagedFile( "editor/temp/x.txt", kShaderFolder, "" ) );
     SW_EXPECT_TRUE( PackCooker::shouldIncludeStagedFile( "shaders/bin/dx12/lit.cso", kShaderFolder, "" ) );
     SW_EXPECT_FALSE( PackCooker::shouldIncludeStagedFile( "shaders/bin/opengl/lit.spv", kShaderFolder, "" ) );
+}
+
+/**
+ * @brief [PackCookerTest] 도메인 팩 나누기는 결정적이고 한도 안이다 — 청크 규칙이 항목을 이름 붙은 팩으로 보내고, 청크마다 경로 해시 순으로 한도를 넘기 전에 다음 번호로 넘긴다
+ * @details 입력 순서가 달라도 같은 몫이고, 모든 항목이 정확히 한 몫에 든다. 한도보다 큰 항목 하나는 그 항목만 든 몫이 된다. 기본 청크 0 번은 빈 도메인에도 있다.
+ */
+SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
+{
+    PackSplitConfig split;
+    split._maxPackBytes = 1000;
+    PackChunkRule& rule = split._listChunkRule.emplace_back();
+    rule._name          = "music";
+    rule._listPattern.push_back( "audio/music/**" );
+
+    vector<PackSplitEntry> listEntry;
+    for ( uint32 index = 0; index < 40; ++index )
+    {
+        string path = "data/item";
+        path.push_back( static_cast<utf8>( '0' + index / 10 ) );
+        path.push_back( static_cast<utf8>( '0' + index % 10 ) );
+        path += ".xml";
+        listEntry.push_back( PackSplitEntry{ path, 90 + uint64{ index } * 3 } );
+    }
+    listEntry.push_back( PackSplitEntry{ "audio/music/a.ogg", 700 } );
+    listEntry.push_back( PackSplitEntry{ "audio/music/b.ogg", 700 } );
+    listEntry.push_back( PackSplitEntry{ "textures/huge.dds", 5000 } );
+
+    const expected<vector<PackPart>> parts = PackCooker::splitIntoParts( listEntry, split );
+    SW_REQUIRE_TRUE( parts.has_value() );
+    vector<PackSplitEntry>           listReversed( listEntry.rbegin(), listEntry.rend() );
+    const expected<vector<PackPart>> reversedParts = PackCooker::splitIntoParts( listReversed, split );
+    SW_REQUIRE_TRUE( reversedParts.has_value() );
+    SW_REQUIRE_EQUAL( parts->size(), reversedParts->size() );
+    for ( size_t index = 0; index < parts->size(); ++index )
+    {
+        SW_EXPECT_TRUE( ( *parts )[index]._chunk == ( *reversedParts )[index]._chunk );
+        SW_EXPECT_EQUAL( ( *parts )[index]._number, ( *reversedParts )[index]._number );
+        SW_EXPECT_TRUE( ( *parts )[index]._listPathHash == ( *reversedParts )[index]._listPathHash );
+    }
+
+    SW_REQUIRE_TRUE( parts->empty() == false );
+    SW_EXPECT_TRUE( parts->front().isFirstPack() );
+    unordered_map<uint64, string> mapHashToChunk;
+    uint32                        musicPartCount = 0;
+    for ( const PackPart& part : *parts )
+    {
+        SW_EXPECT_TRUE( part._inputBytes <= split._maxPackBytes || part._listPathHash.size() == 1 ); // 한도 안이거나 큰 항목 하나
+        musicPartCount += part._chunk == "music" ? 1u : 0u;
+        for ( const uint64 pathHash : part._listPathHash )
+        {
+            SW_EXPECT_TRUE( mapHashToChunk.emplace( pathHash, part._chunk ).second ); // 한 몫에만
+        }
+    }
+    SW_EXPECT_EQUAL( listEntry.size(), mapHashToChunk.size() );
+    SW_EXPECT_EQUAL( 2u, musicPartCount ); // 700 + 700 은 한도를 넘는다
+    SW_EXPECT_TRUE( mapHashToChunk[PackStreamWriter::makePathHash( "audio/music/a.ogg" )] == "music" );
+    SW_EXPECT_TRUE( mapHashToChunk[PackStreamWriter::makePathHash( "data/item07.xml" )].empty() );
+
+    // 빈 도메인도 첫 팩이 있고, 파일 이름에 쓸 수 없는 청크 이름은 오류다.
+    const expected<vector<PackPart>> emptyParts = PackCooker::splitIntoParts( {}, split );
+    SW_REQUIRE_TRUE( emptyParts.has_value() && emptyParts->size() == 1 );
+    SW_EXPECT_TRUE( emptyParts->front().isFirstPack() );
+    PackSplitConfig badName              = split;
+    badName._listChunkRule.front()._name = "music.hd";
+    SW_EXPECT_FALSE( PackCooker::splitIntoParts( listEntry, badName ).has_value() );
+
+    SW_EXPECT_EQUAL( string( "game_empty.pack" ), PackCooker::makePackFileName( "game/empty" ) );
+    SW_EXPECT_EQUAL( string( "game_empty.2.pack" ), PackCooker::makePackFileName( "game/empty", "", 2 ) );
+    SW_EXPECT_EQUAL( string( "game_empty.music.0.pack" ), PackCooker::makePackFileName( "game/empty", "music", 0 ) );
 }

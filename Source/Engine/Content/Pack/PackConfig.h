@@ -81,6 +81,41 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct PackChunkRule
+     * @brief 이름 붙은 청크 하나입니다 — 패턴에 맞는 항목은 도메인의 기본 팩이 아니라 이 청크의 팩(`<도메인>.<청크>.<번호>.pack`)에 담는다(언리얼 IoStore 의 청크 · 컨테이너 자리).
+     * @details 패턴은 도메인 기준 경로에 `StringUtil::matchesPathPattern` 으로 맞추고 규칙 순서대로 처음 맞는 것이 이긴다. 이름은 파일 이름에 들어가 글자 · 숫자 · `_` · `-` 만 쓴다.
+     */
+    REFLECT()
+    struct SW_API PackChunkRule
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name; ///< 청크 이름(`streaming_audio`) — 파일 이름의 한 마디
+
+        PROPERTY( Required )
+        vector<string> _listPattern; ///< 도메인 기준 경로 패턴(`audio/music/**`)
+    };
+
+    /**
+     * @struct PackSplitConfig
+     * @brief 도메인 팩을 여러 파일로 나누는 규칙입니다(`PackCooker::splitIntoParts`).
+     * @details 청크마다 항목을 경로 해시 순으로 놓고 원본 바이트 합이 `_maxPackBytes` 를 넘기 전에 다음 번호의 팩으로 넘긴다 — 같은 입력이면 같은 나눔이다.
+     *          항목 하나가 한도보다 크면 그 항목만 든 팩이 된다. 같은 도메인의 형제 팩은 항목이 겹치지 않는다(겹치면 마운트가 거절한다 — `PackManager`).
+     */
+    REFLECT()
+    struct SW_API PackSplitConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 1 )
+        uint64 _maxPackBytes{ 0 }; ///< 팩 하나에 담는 원본 바이트 한도(파일 크기가 아니라 담는 항목의 크기 합 — 쿠킹 전에 정해 결정적이다)
+
+        PROPERTY( Required )
+        vector<PackChunkRule> _listChunkRule; ///< 이름 붙은 청크(빈 목록이면 모두 기본 청크)
+    };
+
+    /**
      * @struct PackExcludeRule
      * @brief 이름 붙은 제외 규칙 하나입니다(폴더 · 패턴).
      */
@@ -211,6 +246,9 @@ namespace sw
 
         PROPERTY( Required )
         PackLayoutConfig _layout; ///< 페이로드 배치(항목 추가 · 삭제에 뒤 항목이 밀리지 않게 하는 슬롯 배치)
+
+        PROPERTY( Required )
+        PackSplitConfig _split; ///< 도메인 팩 나누기(청크 · 크기 한도)
 
         PROPERTY( Required )
         bool _bExcludeRawShaderSource{ false }; ///< 셰이더 원본(`.hlsl` · `.hlsli`)을 팩에서 뺀다 — 배포물은 쿠킹한 바이너리만 읽는다

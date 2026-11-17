@@ -19,6 +19,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -27,6 +28,7 @@
 namespace sw
 {
     struct PackConfig;
+    struct PackSplitConfig;
 
     class CookStore;
 } // namespace sw
@@ -62,14 +64,49 @@ namespace sw
 
 namespace sw
 {
+    /** @struct PackSplitEntry @brief 나누기(`PackCooker::splitIntoParts`)의 입력 한 줄 — 도메인 기준 경로와 디스크의 원본 크기입니다. */
+    struct PackSplitEntry
+    {
+        string _relativePath;
+        uint64 _sizeBytes{ 0 };
+    };
+
+    /** @struct PackPart @brief 도메인 팩 하나의 몫입니다 — 청크(빈 글이면 기본) · 번호와 담을 항목의 경로 해시(오름차순). */
+    struct SW_API PackPart
+    {
+        string         _chunk;
+        uint32         _number{ 0 };
+        uint64         _inputBytes{ 0 };
+        vector<uint64> _listPathHash;
+
+        /** @brief 이 몫이 도메인의 첫 팩(기본 청크 0 번 — 정체성 색인을 담는다)인지입니다. */
+        bool isFirstPack() const { return _chunk.empty() && _number == 0; }
+        /** @brief @p pathHash 항목이 이 몫인지입니다(이진 탐색). */
+        bool contains( uint64 pathHash ) const;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct PackCooker
      * @brief 팩 쿠킹입니다. 파일 머리말 참고.
      */
     struct SW_API PackCooker
     {
-        /** @brief 도메인(`engine` · `common` · `game/empty`)의 팩 파일 이름(`engine.pack` · `game_empty.pack`)입니다. 도메인은 이름이 아니라 팩 안(마운트 도메인)에 적는다. */
-        static string makePackFileName( string_view domain );
+        /**
+         * @brief 도메인(`engine` · `common` · `game/empty`)의 팩 파일 이름입니다. 도메인은 이름이 아니라 팩 안(마운트 도메인)에 적는다.
+         * @details 기본 청크의 0 번은 `<도메인>.pack`(`engine.pack` · `game_empty.pack` — 배포 스크립트 · 도구가 아는 이름 그대로), 그 뒤 번호는 `<도메인>.<번호>.pack`,
+         *          이름 붙은 청크는 `<도메인>.<청크>.<번호>.pack` 이다(언리얼 IoStore 의 청크 컨테이너 이름 자리).
+         */
+        static string makePackFileName( string_view domain, string_view chunk = {}, uint32 number = 0 );
+        /**
+         * @brief 도메인 팩의 항목 @p listEntry 를 청크 규칙과 크기 한도(@p split)로 팩 몫들로 나눕니다. 결과는 기본 청크가 먼저이고 기본 청크 0 번은 늘 있다(빈 도메인도 첫 팩이 있다).
+         * @details 청크는 규칙 순서대로 처음 맞는 패턴의 것, 아무것도 맞지 않으면 기본이다. 청크 안에서 경로 해시 순으로 놓고 합이 한도를 넘기 전에 다음 번호로 넘긴다 —
+         *          같은 입력이면 순서와 상관없이 같은 몫이고, 항목 하나가 한도보다 크면 그 항목만 든 몫이 된다.
+         * @return 청크 이름이 비었거나 파일 이름에 쓸 수 없는 글자(글자 · 숫자 · `_` · `-` 밖)이거나 겹치면 오류입니다.
+         */
+        [[nodiscard]] static expected<vector<PackPart>> splitIntoParts( const vector<PackSplitEntry>& listEntry, const PackSplitConfig& split );
         /**
          * @brief 팩 하나의 쿠킹 기록 id(`packs/<타깃>/<스테이징 해시>/<팩 이름>`)입니다.
          * @details 기록 자리(`<프로젝트>/Saved/CookRecord`)는 프리셋이 함께 쓰는데 팩의 입력인 스테이징(`--cooked-dir`)은 프리셋마다 다르다 — 스테이징마다 기록을 따로 둔다.

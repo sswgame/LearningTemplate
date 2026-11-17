@@ -182,6 +182,11 @@ namespace sw
          * @param listMountedPath 마운트한 패치 팩 경로를 뒤에 덧붙입니다(실패했을 때 호출자가 내린다).
          */
         [[nodiscard]] bool mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath );
+        /**
+         * @brief 이미 마운트된 같은 도메인의 형제 팩(나눈 팩 · 청크 — 패치가 아니다) 가운데 @p reader 와 항목이 겹치는 것이 있으면 오류를 남기고 true 입니다.
+         * @details 같은 파일을 다시 붙이는 것(@p packPath 와 같은 경로)은 형제가 아니다. 겹침은 경로 해시로 본다(리더가 열 때 해시와 경로가 맞는 것을 확인했다).
+         */
+        [[nodiscard]] bool findSiblingOverlap( const string& packPath, const string& mountDomain, const PackReader& reader ) const;
         /** @brief 팩을 열어 지움 목록 해시(@p listRemovedPathHash, 정렬됨)와 함께 마운트합니다. `mountPack` 과 `mountPatchPack` 의 본문입니다. */
         [[nodiscard]] bool mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, bool bPatch, const PackIndexTrust* pTrust );
         /**

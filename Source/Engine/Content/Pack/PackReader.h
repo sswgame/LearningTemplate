@@ -83,6 +83,9 @@ namespace sw
         /** @brief 팩에 든 모든 항목의 팩 안 경로(하위 폴더 포함)를 @p outListPath 뒤에 덧붙입니다. 순서는 정하지 않습니다(패치 목록 셈이 정렬한다). */
         void collectAllEntryPaths( vector<string>& outListPath ) const;
 
+        /** @brief 팩에 든 모든 항목의 경로 해시를 오름차순으로 @p outListPathHash 뒤에 덧붙입니다(FAT 순서 그대로 — 경로를 짓지 않는다). */
+        void collectPathHashes( vector<uint64>& outListPathHash ) const;
+
         /**
          * @brief 팩 안의 파일 데이터를 읽어 블록마다 압축을 풀고 CRC32 를 검증해 반환합니다.
          * @param pathHash 64비트 경로 해시

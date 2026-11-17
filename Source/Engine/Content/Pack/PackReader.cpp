@@ -293,6 +293,16 @@ namespace sw
         }
     }
 
+    void PackReader::collectPathHashes( vector<uint64>& outListPathHash ) const
+    {
+        ScopedLock<mutex> lock{ _fileMutex };
+        outListPathHash.reserve( outListPathHash.size() + _listEntry.size() );
+        for ( const PackFileEntryOnDisk& entry : _listEntry )
+        {
+            outListPathHash.push_back( entry._pathHash );
+        }
+    }
+
     void PackReader::collectFolderEntries( string_view folder, vector<string>& outListPath ) const
     {
         // 폴더 색인(`populateFolderIndex`)에서 그 폴더의 항목만 읽는다 — 팩 전체를 잠금 안에서 훑지 않는다. 경로 해시는 대소문자를 무시하므로 폴더 비교도 그렇다.

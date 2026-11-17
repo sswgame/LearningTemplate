@@ -338,6 +338,39 @@ namespace sw
         return *this;
     }
 
+    bool PackManager::findSiblingOverlap( const string& packPath, const string& mountDomain, const PackReader& reader ) const
+    {
+        vector<shared_ptr<PackReader>> listSibling;
+        {
+            ScopedLock<mutex> lock{ _vfsMutex };
+            for ( const MountedPack& mounted : _listMountedPack )
+            {
+                // 같은 파일을 다시 붙이는 것은 형제가 아니다(앞 마운트를 바꿔 끼운다).
+                const bool bSibling = mounted._pReader != nullptr && mounted._domainName == mountDomain && FileUtil::isSameDiskPath( mounted._pReader->getPackPath(), packPath ) == false;
+                if ( bSibling )
+                    listSibling.push_back( mounted._pReader );
+            }
+        }
+        if ( listSibling.empty() )
+            return false;
+        vector<uint64> listPathHash;
+        reader.collectPathHashes( listPathHash );
+        for ( const shared_ptr<PackReader>& pSibling : listSibling ) // 읽기는 잠금 밖에서(`findReaderWithFile` 과 같은 규칙)
+        {
+            for ( const uint64 pathHash : listPathHash )
+            {
+                if ( pSibling->hasFile( pathHash ) == false )
+                    continue;
+                PackFileEntry entry;
+                (void)reader.getFileEntry( pathHash, entry );
+                SW_LOG_ERROR_ID( "PackManager.SiblingPacksOverlap", "Pack %# and %# both hold '%#' in domain '%#' - sibling packs of a domain must not overlap (cook the packs again)", packPath,
+                                 pSibling->getPackPath(), entry._relativePath, mountDomain );
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool PackManager::mountPack( string_view packFilePath, int32 priority )
     {
         return mountReader( packFilePath, priority, vector<uint64>{}, false, nullptr );
@@ -402,6 +435,10 @@ namespace sw
                 return false;
             }
         }
+
+        // 같은 도메인의 형제 팩(나눈 팩 · 청크)은 항목이 겹치지 않는다 — 겹치면 어느 쪽이 이길지 조용히 정하지 않고 거절한다(뒤가 이기는 것은 패치뿐이다).
+        if ( mountDomain.empty() == false && findSiblingOverlap( normalizedPath, mountDomain, *pReader ) )
+            return false;
 
         {
             ScopedLock<mutex> lock{ _vfsMutex };

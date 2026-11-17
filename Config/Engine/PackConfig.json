@@ -10,6 +10,10 @@
     "_mode": "Sorted",
     "_maxHolePercent": 25
   },
+  "_split": {
+    "_maxPackBytes": 4294967296,
+    "_listChunkRule": []
+  },
   "_bExcludeRawShaderSource": true,
   "_listGlobalExcludeDirectory": [
     "textures_raw",
