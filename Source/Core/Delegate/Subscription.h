@@ -158,6 +158,9 @@ namespace sw
             }
         }
 
+        /** @brief 출처를 닫습니다(파생 소멸자 첫 줄). 지금은 무효화만 한다 — 진행 중인 해제 대기는 제어 블록(감사 C-20)이 더한다. */
+        void closeSubscriptions() noexcept { detachAllSubscriptions(); }
+
         /** @brief 살아 있는 구독을 모두 무효화합니다. 등록은 파생 클래스가 따로 지웁니다(전체 비우기 · 출처 소멸). */
         void detachAllSubscriptions() noexcept
         {
