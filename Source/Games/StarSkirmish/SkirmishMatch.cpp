@@ -232,13 +232,14 @@ namespace sw
         }
     }
 
-    void SkirmishMatch::update( float32 deltaTime )
+    void SkirmishMatch::update( float32 deltaTime, float32 timeScale )
     {
-        _world.update( deltaTime );
+        // AI 는 월드가 실제로 진행한 시간으로 돈다 — 자르지 않은 델타를 받으면 배속 · 히치에서 AI 시계가 월드보다 앞선다(감사 K-6).
+        const float32 worldDelta = _world.update( deltaTime, timeScale );
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             if ( _arrAIActive[player] != SW_FALSE )
-                _arrAI[player].update( deltaTime );
+                _arrAI[player].update( worldDelta );
         }
         // `RTSWorld::pollEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
         _listFrameEvent.clear();

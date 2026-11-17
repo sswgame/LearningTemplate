@@ -148,8 +148,8 @@ namespace sw
             issueOpeningOrders();
         else if ( _tickCount > 2 )
             continuePatrol();
-        _world.update( deltaTime );
-        _bViewsDirty = SW_TRUE; // 유닛이 움직였을 수 있다 — 틱 뒤 플러시가 모습을 옮긴다
+        (void)_world.update( deltaTime, 1.0f ); // 배속 없는 시연 — 진행한 시간은 쓰지 않는다
+        _bViewsDirty = SW_TRUE;                 // 유닛이 움직였을 수 있다 — 틱 뒤 플러시가 모습을 옮긴다
     }
 
     void FrontierSkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )

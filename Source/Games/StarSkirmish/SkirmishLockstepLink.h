@@ -52,7 +52,7 @@ namespace sw
         bool queueCommand( RTSCommand&& command );
         /**
          * @brief 실제 시간 @p deltaTime 만큼 걸음을 내고, 모인 틱을 @p match 에 적용합니다. 진행한 틱 수입니다.
-         * @details 틱마다 두 플레이어의 명령을 플레이어 순서로 적용한 뒤 `match.update( @p step )` 이다. 상대가 아직 붙지 않았으면 입력을 내지 않는다.
+         * @details 틱마다 두 플레이어의 명령을 플레이어 순서로 적용한 뒤 `match.update( @p step, 1 )` 이다. 상대가 아직 붙지 않았으면 입력을 내지 않는다.
          */
         int32 advance( float32 deltaTime, float32 step, SkirmishMatch& match );
 

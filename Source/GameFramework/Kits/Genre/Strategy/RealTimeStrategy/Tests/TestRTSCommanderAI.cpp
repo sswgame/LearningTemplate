@@ -322,7 +322,7 @@ SW_TEST_CASE( RTSCommanderAITest, BuildSupplyWaitsForMarginAndDoesNotRepeat )
     SW_REQUIRE_TRUE( rig.spawnMinerals().isValid() );
     const RTSUnitID workerID = rig.spawnWorker();
     const RTSUnitID spareID  = rig.spawnWorker( 14.5f );
-    rig._world.update( 0.1f ); // 보급을 센다: 상한 10, 쓴 2
+    (void)rig._world.update( 0.1f, 1.0f ); // 보급을 센다: 상한 10, 쓴 2
 
     rig._settings._supplyMargin = 3;
     rig.start( "rts.buildSupply" );

@@ -494,13 +494,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 시간
     // ------------------------------------------------------------------------------
-    void CitySimulation::update( float32 deltaTime )
+    float32 CitySimulation::update( float32 deltaTime, float32 timeScale )
     {
-        const int32 stepCount = _stepTimer.consume( deltaTime );
+        const int32 stepCount = _stepTimer.consumeScaled( deltaTime, timeScale );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepFixed( _stepTimer.getStep() );
         }
+        return static_cast<float32>( stepCount ) * _stepTimer.getStep();
     }
 
     void CitySimulation::pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent )

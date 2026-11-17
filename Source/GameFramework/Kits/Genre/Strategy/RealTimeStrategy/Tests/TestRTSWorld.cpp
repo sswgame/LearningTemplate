@@ -90,7 +90,7 @@ namespace
                         (void)_world.issueGroupMove( _arrArmy[player], _world.findUnit( _arrDepot[1 - player] )->_position, true, true );
                 }
                 for ( int32 tick = 0; tick < 30; ++tick )
-                    _world.update( 1.0f / 30.0f );
+                    (void)_world.update( 1.0f / 30.0f, 1.0f );
             }
         }
     };
@@ -560,4 +560,22 @@ SW_TEST_CASE( RTSWorldTest, SelectionStateRefusesRepeatedAndOverLimit )
 
     SW_REQUIRE_EQUAL( size_t( 2 ), selection.getSelected().size() );
     SW_EXPECT_EQUAL( first, selection.getSelected()[0].packed() );
+}
+
+/** @brief [RTSWorldTest] 8 배속은 30 fps 에서도 8 배다 — 배속을 곱한 델타가 프레임 상한(0.25 초)에 잘리면 7.5 배가 된다. 돌려준 진행 시간은 월드 시각과 같다(감사 K-6) */
+SW_TEST_CASE( RTSWorldTest, SpeedScaleKeepsStepRatio )
+{
+    sw::RTSCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
+    sw::RTSWorld world;
+    SW_REQUIRE_TRUE( world.initialize( &catalog, kMapSize, kMapSize, sw::RTSSettings{} ) );
+
+    float32 advanced = 0.0f;
+    for ( int32 frame = 0; frame < 30; ++frame )
+    {
+        advanced += world.update( 1.0f / 30.0f, 8.0f );
+    }
+    const float32 step = world.getSettings()._fixedStep;
+    SW_EXPECT_NEAR( 8.0f, world.getTime(), step + 1.0e-3f );
+    SW_EXPECT_NEAR( world.getTime(), advanced, 1.0e-3f );
 }

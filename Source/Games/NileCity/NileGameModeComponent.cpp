@@ -179,8 +179,8 @@ namespace sw
             (void)_planner.advance( _city, _wallet, _pCatalog->getRoadCost() );
         if ( _bPaused == SW_FALSE )
         {
-            _city.update( deltaTime * _timeScale );
-            _clock.update( deltaTime * _timeScale ); // 배속은 디렉터가 곱한다(시계 배율은 1)
+            // 시계는 도시가 진행한 시간으로 민다 — 따로 곱하면 프레임 상한에 잘린 도시와 어긋난다(감사 K-6). 배속은 디렉터가 쥔다(시계 배율은 1).
+            _clock.update( _city.update( deltaTime, _timeScale ) );
             settleMonths();
         }
         pollEvents();
