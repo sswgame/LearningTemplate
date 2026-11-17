@@ -76,7 +76,6 @@ namespace sw
         , _origin{}
         , _probe{}
         , _cancelPending{}
-        , _cancelled{}
         , _lastPathLength{ -1.0f }
         , _requestCount{ 0 }
         , _resultCount{ 0 }
@@ -108,15 +107,9 @@ namespace sw
 
     void NavPathProbeComponent::onEndPlay()
     {
-        // 요청자가 사라진다 — 줄에 남은 질의를 버린다.
-        if ( _pSceneNavigation != nullptr )
-        {
-            _pSceneNavigation->cancelPathRequest( _probe );
-            _pSceneNavigation->cancelPathRequest( _cancelPending );
-        }
-        _probe         = PathRequestHandle{};
-        _cancelPending = PathRequestHandle{};
-        _cancelled     = PathRequestHandle{};
+        // 요청자가 사라진다 — 줄에 남은 질의를 버린다. 씬의 내비게이션보다 먼저 놓는다.
+        _probe.cancel();
+        _cancelPending.cancel();
         Component::onEndPlay();
     }
 
@@ -132,24 +125,18 @@ namespace sw
         NavMeshAgentComponent* pAgent    = getOwner()->getComponent<NavMeshAgentComponent>();
         const hashed_string    agentType = pAgent != nullptr ? pAgent->getAgentType() : hashed_string{};
         NavPath                path;
-        if ( _cancelled.isValid() )
-        {
-            if ( _pSceneNavigation->takePathResult( _cancelled, path ) != PathRequestState::Unknown )
-                ++_cancelLeakCount;
-            _cancelled = PathRequestHandle{};
-        }
+        // 지난 프레임에 낸 질의는 워커에 넘어갔다 — 구하는 중에 버린다. 버린 표로는 결과를 받을 수 없어야 한다(받으면 샌 것이다).
         if ( _cancelPending.isValid() )
         {
-            _pSceneNavigation->cancelPathRequest( _cancelPending );
-            _cancelled     = _cancelPending;
-            _cancelPending = PathRequestHandle{};
+            _cancelPending.cancel();
+            if ( _pSceneNavigation->takePathResult( _cancelPending, path ) != PathRequestState::Unknown )
+                ++_cancelLeakCount;
         }
         if ( _probe.isValid() )
         {
             const PathRequestState state = _pSceneNavigation->takePathResult( _probe, path );
             if ( state == PathRequestState::Pending )
                 return;
-            _probe = PathRequestHandle{};
             if ( state == PathRequestState::Ready )
             {
                 ++_resultCount;
@@ -172,7 +159,7 @@ namespace sw
         _probe           = _pSceneNavigation->requestPath( agentType, _origin, end );
         ++_requestCount;
         // 버리기 시험은 하나 걸러 — 확인이 끝나야(셋째 프레임) 다음을 낸다.
-        const bool bCancelDue = ( _requestCount % 2u ) == 0 && _cancelPending.isValid() == false && _cancelled.isValid() == false;
+        const bool bCancelDue = ( _requestCount % 2u ) == 0 && _cancelPending.isValid() == false;
         if ( bCancelDue )
             _cancelPending = _pSceneNavigation->requestPath( agentType, _origin, end );
     }

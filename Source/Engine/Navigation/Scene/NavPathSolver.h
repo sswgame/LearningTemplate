@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Navigation/NavigationTypes.h"
+#include "Engine/Navigation/PathRequestQueue.h"
 
 namespace sw
 {
@@ -49,4 +50,7 @@ namespace sw
     private:
         const SceneNavigation* _pNavigation;
     };
+
+    /** @brief 비동기 내비메시 경로 요청 하나를 쥔 이동 전용 표입니다(`SceneNavigation::requestPath`). 놓으면 요청이 버려진다. */
+    using NavPathTicket = PathRequestQueue<NavPathSolver>::Ticket;
 } // namespace sw
