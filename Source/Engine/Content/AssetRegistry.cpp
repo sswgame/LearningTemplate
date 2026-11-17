@@ -53,13 +53,14 @@ namespace sw
         }
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override { replace( AssetRegistry{} ); }
+        void                shutdownSubsystem() override { (void)replace( AssetRegistry{} ); }
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        void replace( AssetRegistry registry )
+        AssetRegistry replace( AssetRegistry registry )
         {
             ScopedLock<shared_mutex> lock{ _mutex };
-            _registry = std::move( registry );
+            std::swap( _registry, registry );
+            return registry;
         }
         optional<string> findPath( const AssetGUID& guid ) const
         {
@@ -122,14 +123,9 @@ namespace sw
         return found->second;
     }
 
-    void AssetRegistry::install( AssetRegistry registry )
+    AssetRegistry AssetRegistry::install( AssetRegistry registry )
     {
-        engine::getSubsystem<AssetRegistryTable>().replace( std::move( registry ) );
-    }
-
-    void AssetRegistry::clear()
-    {
-        engine::getSubsystem<AssetRegistryTable>().replace( AssetRegistry{} );
+        return engine::getSubsystem<AssetRegistryTable>().replace( std::move( registry ) );
     }
 
     optional<string> AssetRegistry::resolve( const AssetGUID& guid )

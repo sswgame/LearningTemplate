@@ -420,7 +420,7 @@ namespace sw
             return false;
         }
         SW_LOG_INFO_ID( "AssetManager.AssetIndexInstalled", "Asset index: %# assets from %# layers", registry->getCount(), listLayer.size() );
-        AssetRegistry::install( std::move( *registry ) );
+        (void)AssetRegistry::install( std::move( *registry ) );
         return true;
     }
 

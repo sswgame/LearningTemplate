@@ -60,10 +60,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 프로세스 표 — 에셋 매니저가 콘텐츠를 마운트할 때 건다(엔진 서비스 서브시스템이 든다). 엔진이 서기 전에는 비었다.
         // ------------------------------------------------------------------------------
-        /** @brief @p registry 를 프로세스 표로 겁니다(있던 표를 바꾼다). */
-        static void install( AssetRegistry registry );
-        /** @brief 프로세스 표를 비웁니다(엔진 종료 · 테스트). */
-        static void clear();
+        /** @brief @p registry 를 프로세스 표로 걸고 있던 표를 돌려줍니다 — 테스트가 잠시 바꾼 표를 되돌린다. 비우려면 빈 색인(`AssetRegistry{}`)을 건다. */
+        static AssetRegistry install( AssetRegistry registry );
         /** @brief 프로세스 표에서 @p guid 의 리소스 id 입니다. 표가 없거나 줄이 없으면 없음입니다. */
         [[nodiscard]] static optional<string> resolve( const AssetGUID& guid );
         /** @brief 프로세스 표에서 리소스 id @p assetID 의 GUID 입니다. 표가 없거나 줄이 없으면 없음입니다. */

@@ -583,9 +583,11 @@ namespace sw
                 const bool bPathField = prop._bAssetPath == SW_TRUE || prop._typeName == "DataPath" || prop._elementTypeName == "DataPath";
                 if ( bPathField == false )
                     continue;
-                const string                             target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
+                const string target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
+                // 저장 꼴 — `AssetRef<T>` 는 GUID 참조로 쓴다(`AssetRefBase`), 나머지 경로 칸은 경로 글이다.
+                const utf8* const                        pKind = prop._typeName == "AssetRef" || prop._elementTypeName == "AssetRef" ? "ref" : "path";
                 StringBuilder<constant::buffer::kMax256> textBuilder3;
-                textBuilder3.appendFormat( "%#\t%#", prop._name, target );
+                textBuilder3.appendFormat( "%#\t%#\t%#", prop._name, target, pKind );
                 stamp._listAssetField.push_back( string( textBuilder3.view() ) );
                 // 속성으로 읽는 문서(`XMLFields::readProperties`)는 C++ 이름이 아니라 속성 이름(`_shaderPath` → `shaderPath`)으로 적는다 — 그 이름도 낸다.
                 // 예전에는 그 이름을 손 표(`AssetReferenceFields.json`)가 따로 적었다.
@@ -593,13 +595,13 @@ namespace sw
                 if ( attribute != prop._name )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder2;
-                    textBuilder2.appendFormat( "%#\t%#", attribute, target );
+                    textBuilder2.appendFormat( "%#\t%#\t%#", attribute, target, pKind );
                     stamp._listAssetField.push_back( string( textBuilder2.view() ) );
                 }
                 for ( const string& alias : prop._listAlias )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "%#\t%#", alias, target );
+                    textBuilder.appendFormat( "%#\t%#\t%#", alias, target, pKind );
                     stamp._listAssetField.push_back( string( textBuilder.view() ) );
                 }
             }

@@ -89,7 +89,7 @@ SW_TEST_CASE( AssetRegistryTest, ReferenceTextHasOneSpelling )
 }
 
 /**
- * @brief [AssetRegistryTest] 프로세스 표에 건 색인으로 GUID ↔ 경로를 풀고, 비우면 풀리지 않는다
+ * @brief [AssetRegistryTest] 프로세스 표에 건 색인으로 GUID ↔ 경로를 풀고, 빈 색인을 걸면 풀리지 않는다
  */
 SW_TEST_CASE( AssetRegistryTest, InstalledTableResolvesBothWays )
 {
@@ -100,9 +100,10 @@ SW_TEST_CASE( AssetRegistryTest, InstalledTableResolvesBothWays )
     } ) );
     expected<AssetRegistry> registry = AssetRegistry::merge( listLayer );
     SW_REQUIRE_TRUE( registry.has_value() );
-    AssetRegistry::install( std::move( *registry ) );
+    AssetRegistry previous = AssetRegistry::install( std::move( *registry ) ); // 기동이 건 표 — 끝에 되돌린다
     SW_EXPECT_EQUAL( string( "common/data/x.xml" ), AssetRegistry::resolve( guid ).value_or( string{} ) );
     SW_EXPECT_TRUE( AssetRegistry::resolveGUID( "common/data/x.xml" ) == guid );
-    AssetRegistry::clear();
+    (void)AssetRegistry::install( AssetRegistry{} );
     SW_EXPECT_FALSE( AssetRegistry::resolve( guid ).has_value() );
+    (void)AssetRegistry::install( std::move( previous ) );
 }

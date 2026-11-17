@@ -1,11 +1,11 @@
 // EXPECT-TYPE: sw::fixture::FixtureAssetUser
 // EXPECT-GEN: "_single"
 // EXPECT-GEN: hashed_string( "AssetRef" )
-// EXPECT-ASSET-FIELD: _single FixtureAsset
-// EXPECT-ASSET-FIELD: _listMany FixtureAsset
-// EXPECT-ASSET-FIELD: _annotated -
-// EXPECT-ASSET-FIELD: single FixtureAsset
-// EXPECT-ASSET-FIELD: annotated -
+// EXPECT-ASSET-FIELD: _single FixtureAsset ref
+// EXPECT-ASSET-FIELD: _listMany FixtureAsset ref
+// EXPECT-ASSET-FIELD: _annotated - path
+// EXPECT-ASSET-FIELD: single FixtureAsset ref
+// EXPECT-ASSET-FIELD: annotated - path
 // EXPECT-NOT-GEN: AssetRef<FixtureAsset>"
 #pragma once
 #include "Core/Container/string.h"

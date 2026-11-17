@@ -27,8 +27,11 @@ namespace sw
             static constexpr const utf8* kStampTypeKey = "type";
             /** @brief 스탬프의 고정 배치형 판정 줄 머리입니다 — `schema <FQN> | <정규 문자열 또는 이유>`. */
             static constexpr const utf8* kStampFixedSchemaKey = "schema";
-            /** @brief 스탬프의 경로 칸 줄 머리입니다 — `assetfield <이름>\t<대상>`. */
-            static constexpr const utf8* kStampAssetFieldKey = "assetfield";
+            /**
+             * @brief 스탬프의 경로 칸 줄 머리입니다 — `assetfieldkind <이름>\t<대상>\t<ref|path>`.
+             * @details 칸 종류 열을 더할 때 머리를 바꿨다 — 옛 머리(`assetfield`)의 스탬프는 모르는 줄이라 다시 파싱한다(두 열 줄과 세 열 줄이 섞이지 않는다).
+             */
+            static constexpr const utf8* kStampAssetFieldKey = "assetfieldkind";
             /** @brief ENUM(Flags) 가 있는 입력의 스탬프에만 있는 줄입니다. */
             static constexpr const utf8* kStampBitFlagLine = "flags";
             /** @brief 이번 실행의 시작을 적는 표식 파일 이름입니다(`markRunStart`). */

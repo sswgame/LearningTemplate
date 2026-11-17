@@ -155,8 +155,11 @@ namespace sw::editor
             }
 
             /** @brief 맵 키 · 시퀀스 원소의 값 글입니다(값 주소 쪽 변환). */
+            /** @brief 칸 값의 표시 글입니다. 에셋 참조는 경로를 보인다 — 저장 꼴(`guid:<32자>`)은 사람이 읽지 못하고, 고친 글은 경로로 다시 넣는다(`AssetRefBase::assign`). */
             static string formatValueText( const void* pValue, const hashed_string& typeName )
             {
+                if ( typeName == hashed_string( AssetRefBase::kTypeName ) )
+                    return static_cast<const AssetRefBase*>( pValue )->path();
                 return SerializerUtil::formatValueText( ValueAddress{ pValue }, typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
             }
         };
@@ -437,9 +440,10 @@ namespace sw::editor
         if ( getPropertyManager().find( prop._typeName.c_str() ) != nullptr )
         {
             // 확장(`IInspectorProperty`)이 맡는 타입 — 값은 글로 넘긴다(확장이 자기 형식으로 읽는다).
-            row._kind       = PropertyRowKind::Text;
-            row._valueText  = SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
-            row._bAssetPath = ( prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false ) ? SW_TRUE : SW_FALSE;
+            row._kind                = PropertyRowKind::Text;
+            const AssetRefBase* pRef = prop._typeName == hashed_string( AssetRefBase::kTypeName ) ? prop.getValuePtr<AssetRefBase>( instance.get() ) : nullptr;
+            row._valueText           = pRef != nullptr ? pRef->path() : SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            row._bAssetPath          = ( prop._metadata->_bAssetPath != SW_FALSE || prop._metadata->_assetType.empty() == false ) ? SW_TRUE : SW_FALSE;
             return;
         }
 
