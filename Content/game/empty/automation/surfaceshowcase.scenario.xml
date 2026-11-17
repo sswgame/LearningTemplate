@@ -12,7 +12,6 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/surfaceshowcase.scene.xml"/>
 	<Wait frames="30"/>
 	<Screenshot file="surface_showcase.ppm"/>
-	<Wait frames="1"/>
 	<ExpectImage file="surface_showcase.ppm" golden="surface_showcase" region="0.119,0.46,0.169,0.54"/>
 	<ExpectImage file="surface_showcase.ppm" golden="surface_showcase_2" region="0.475,0.46,0.525,0.54"/>
 	<ExpectImage file="surface_showcase.ppm" golden="surface_showcase_3" region="0.653,0.46,0.703,0.54"/>

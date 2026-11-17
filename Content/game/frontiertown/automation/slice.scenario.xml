@@ -7,20 +7,16 @@
 <Scenario name="game.frontiertown.slice" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" input="exclusive">
 	<Variable name="gv_frontierAutoPlay" value="0"/>
 	<!-- 시계는 6 시에 시작하고 하루가 실제 24 초다(FrontierTownData) — 시작 전 프레임까지 합쳐 한 시간이 지나기 전이다. -->
-	<Wait frames="1"/>
+	<WaitUntil watch="Clock.Hour" atLeast="6" timeoutFrames="10"/> <!-- 시계가 첫 틱을 돌았다 -->
 	<Expect watch="Clock.Day" equals="0"/>
 	<Expect watch="Clock.Hour" atLeast="6"/>
 	<Expect watch="Clock.Hour" atMost="7"/>
-	<Wait frames="1"/>
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
-	<Expect watch="Clock.Day" equals="1"/>
-	<Wait frames="1"/>
+	<WaitUntil watch="Clock.Day" equals="1" timeoutFrames="10"/>
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Clock.Day" equals="2" timeoutFrames="10"/>
 	<AdvanceGameTime hours="24"/>
-	<Wait frames="2"/>
-	<Expect watch="Clock.Day" equals="3"/>
+	<WaitUntil watch="Clock.Day" equals="3" timeoutFrames="10"/>
 	<ExpectLog id="Frontier.LandmarkRefused" count="0"/>
 	<Record watch="Clock.Day"/>
 	<!-- 저장 → 세계를 더 돌림 → 두 번 복원: 같은 슬롯을 두 번 불러온 직후의 씬 상태 해시가 같아야 한다(복원이 세계를 다 되살린다 — 저장 순간의 해시와 견주면 명령이 도는 프레임만큼 흔들린다) -->

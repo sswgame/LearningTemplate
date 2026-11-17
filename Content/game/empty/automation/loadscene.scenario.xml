@@ -14,7 +14,6 @@
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<Screenshot file="loaded.ppm"/>
-	<Wait frames="1"/>
 	<ExpectImage file="loaded.ppm" golden="loaded" region="0,0,1,1"/>
 	<Pass/>
 </Scenario>
