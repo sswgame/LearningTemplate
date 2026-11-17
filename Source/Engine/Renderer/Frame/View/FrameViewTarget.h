@@ -215,6 +215,18 @@ namespace sw
          * @brief 첨부 한 축(@p attachmentExtent)에서 사각형이 덮는 픽셀 수입니다. 풀 크기를 따르지 않는 첨부(그림자 맵)나 사각형이 풀 전체면 그대로입니다.
          * @details 나눗수 첨부(반해상도)는 비율로 올림한다 — 사각형 가장자리 픽셀이 빠지지 않게.
          */
+        /**
+         * @brief 지난 프레임 첨부 한 축(@p attachmentExtent — 깊이 히스토리)에서 지난 사각형이 덮은 픽셀 수입니다. 지난 배율이 1 이면 그대로입니다.
+         * @details 깊이 히스토리를 읽는 쪽(가림 타일 · 컬링의 가림 판정 · GPU 입자 깊이 충돌)은 화면 UV 에 이 크기를 곱해 텍셀을 고른다 — 사각형 밖 옛 깊이를 읽지 않는다.
+         */
+        uint32 scaleToPreviousRect( uint32 attachmentExtent, bool bHorizontal ) const
+        {
+            const float32 scale = bHorizontal ? _previousRectScale._x : _previousRectScale._y;
+            if ( scale >= 1.0f )
+                return attachmentExtent;
+            const uint32 scaled = static_cast<uint32>( static_cast<float32>( attachmentExtent ) * scale + 0.5f );
+            return scaled < 1u ? 1u : ( scaled > attachmentExtent ? attachmentExtent : scaled );
+        }
         uint32 scaleToRect( uint32 attachmentExtent, bool bViewSized, bool bHorizontal ) const
         {
             const uint32 pool = bHorizontal ? _transientPool.getWidth() : _transientPool.getHeight();

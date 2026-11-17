@@ -63,3 +63,18 @@ SW_TEST_CASE( FrameViewResourcesTest, HistorySurvivesAutoScaleStep )
     view.updateViewRect( 0.8f ); // 다음 프레임 — 지난 배율도 0.8
     SW_EXPECT_TRUE( isNear( view._previousRectScale._x, 0.8f ) );
 }
+
+/** @brief [FrameViewResourcesTest] 깊이 히스토리를 읽는 쪽(가림 타일 · 컬링 가림 판정 · GPU 입자 깊이 충돌)이 받는 크기는 지난 프레임 사각형이다 — 단계 프레임에도 가림 · 충돌을 끄지 않는다. */
+SW_TEST_CASE( FrameViewResourcesTest, DepthHistoryReadsPreviousRect )
+{
+    FrameViewTarget view;
+    view._transientPool.setSize( 1280, 720 );
+    view.updateViewRect( 1.0f );
+    view.updateViewRect( 0.5f ); // 단계 프레임 — 히스토리는 배율 1 로 그린 지난 프레임이다
+    SW_EXPECT_EQUAL( view.scaleToPreviousRect( 1280, true ), 1280u );
+    SW_EXPECT_EQUAL( view.scaleToPreviousRect( 720, false ), 720u );
+    view.updateViewRect( 0.5f ); // 다음 프레임 — 히스토리는 반 크기 사각형에 그렸다
+    SW_EXPECT_EQUAL( view.scaleToPreviousRect( 1280, true ), 640u );
+    SW_EXPECT_EQUAL( view.scaleToPreviousRect( 720, false ), 360u );
+    SW_EXPECT_EQUAL( view.scaleToPreviousRect( 1, true ), 1u ); // 0 이 되지 않는다
+}
