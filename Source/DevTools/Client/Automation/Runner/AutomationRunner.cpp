@@ -298,8 +298,7 @@ namespace sw
 
     bool AutomationRunner::prepareScratchFolders()
     {
-        // 사본 이름에 이 프로세스의 꼬리를 붙인다 — 저장소의 `Content/scratch/` 는 동시에 도는 App 이 나눠 쓴다.
-        _scenario.bindScratchInstances();
+        // 사본 id 는 시나리오가 적은 그대로다 — 작업 도메인이 이 프로세스의 실행 뿌리 아래라(`AssetPaths::getScratchFolderPath`) 나란히 도는 App 과 겹치지 않는다.
         _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
         for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {

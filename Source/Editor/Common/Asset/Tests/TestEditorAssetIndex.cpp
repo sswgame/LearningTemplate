@@ -30,7 +30,7 @@ namespace
         static EditorAssetIndex scan( const string& root )
         {
             EditorAssetIndexData data{};
-            EditorAssetIndex::scan( root, data, nullptr );
+            EditorAssetIndex::scan( root, {}, data, nullptr );
             EditorAssetIndex index;
             index.assign( std::move( data ) );
             return index;

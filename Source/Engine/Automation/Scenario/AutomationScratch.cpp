@@ -2,9 +2,6 @@
 
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 
-#include "Core/Algorithm/VectorUtil.h"
-#include "Core/File/FileUtil.h"
-#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -21,31 +18,21 @@ namespace sw
                 const bool bLetterOrDigit = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' );
                 return bLetterOrDigit || character == '_' || character == '.' || character == '/' || character == '-';
             }
-
-            /** @brief @p text 가 비지 않은 10 진 숫자만이면 그 값을 @p outValue 에 넣고 true 입니다. */
-            [[nodiscard]] static bool parseProcessID( string_view text, int32& outValue )
-            {
-                const bool bDigits = text.empty() == false && VectorUtil::allOf( text, []( utf8 character )
-                {
-                    return '0' <= character && character <= '9';
-                } );
-                return bDigits && StringUtil::parseInt( text, outValue );
-            }
         };
     } // namespace
 
-    expected<void> AutomationScratch::isValidFolder( const AutomationScratchFolder& folder )
+    expected<void> AutomationScratchFolder::validate() const
     {
-        const string scratchPrefix = string( kScratchDomain ) + "/";
-        if ( folder._sourceID.empty() || folder._scratchID.empty() )
+        const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
+        if ( _sourceID.empty() || _scratchID.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> needs from=\"<resource id>\" and as=\"scratch/<name>\"" } );
-        const bool bLeavesTree = AssetPaths::hasParentDirectoryComponent( folder._sourceID ) || AssetPaths::hasParentDirectoryComponent( folder._scratchID );
+        const bool bLeavesTree = AssetPaths::hasParentDirectoryComponent( _sourceID ) || AssetPaths::hasParentDirectoryComponent( _scratchID );
         if ( bLeavesTree )
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> ids may not use '..'" } );
-        if ( StringUtil::startsWith( folder._scratchID, scratchPrefix ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> must sit under scratch/", folder._scratchID } );
-        if ( StringUtil::startsWith( folder._sourceID, scratchPrefix ) )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch from> must be a tracked folder, not another scratch copy", folder._sourceID } );
+        if ( StringUtil::startsWith( _scratchID, scratchPrefix ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> must sit under scratch/", _scratchID } );
+        if ( StringUtil::startsWith( _sourceID, scratchPrefix ) )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch from> must be a tracked folder, not another scratch copy", _sourceID } );
         return {};
     }
 
@@ -69,61 +56,5 @@ namespace sw
         }
         result.append( text.substr( cursor ) ); // 찾은 끝(`hit + fromID.size()`)은 글 길이를 넘지 않는다
         return result;
-    }
-
-    string AutomationScratch::makeInstanceID( string_view name )
-    {
-        // 꼬리는 그릇 아래 첫 폴더 토막에 단다 — 마지막 토막에 달면 의미 있는 폴더 이름(`textures_raw` · `models_raw`)이 바뀌어
-        // 폴더 이름으로 원본 종류 · 임포트 규칙을 고르는 코드가 사본을 못 알아본다(editor.importsettings).
-        // 그릇 폴더(`scratch/import` · `scratch`)는 뜻이 있는 자리라 꼬리를 달지 않는다 — 그 바로 아래의 시나리오 소유 토막에 단다.
-        size_t segmentAt = 0;
-        for ( const string_view container : { string_view{ kImportDomain }, string_view{ kScratchDomain } } )
-        {
-            if ( StringUtil::startsWith( name, container ) && name.size() > container.size() && name[container.size()] == '/' )
-            {
-                segmentAt = container.size() + 1;
-                break;
-            }
-        }
-        const size_t slash  = name.find( '/', segmentAt );
-        const size_t markAt = slash == string_view::npos ? name.size() : slash;
-        return string( name.substr( 0, markAt ) ) + string( kInstanceMark ) + to_string( Process::getCurrentProcessID() ) + string( name.substr( markAt ) );
-    }
-
-    bool AutomationScratch::isOtherProcessInstance( string_view assetID )
-    {
-        const string_view domain = kScratchDomain;
-        if ( StringUtil::startsWith( assetID, domain ) == false || assetID.size() <= domain.size() || assetID[domain.size()] != '/' )
-            return false;
-        // 사본은 scratch/ 바로 아래만이 아니다 — 가져오기 사본은 scratch/import/<이름>_p<pid> 이다. 폴더 토막마다 본다(마지막 토막은 파일 이름이라 뺀다).
-        string_view rest = assetID.substr( domain.size() + 1 );
-        for ( size_t slash = rest.find( '/' ); slash != string_view::npos; slash = rest.find( '/' ) )
-        {
-            const optional<int32> ownerID = findInstanceProcessID( rest.substr( 0, slash ) );
-            if ( ownerID.has_value() )
-                return *ownerID != static_cast<int32>( Process::getCurrentProcessID() );
-            rest = rest.substr( slash + 1 );
-        }
-        // 폴더 하나뿐인 id(`scratch/<이름>_p<pid>` — 폴더 자체)도 같은 규칙이다
-        const optional<int32> ownerID = findInstanceProcessID( rest );
-        return ownerID.has_value() && *ownerID != static_cast<int32>( Process::getCurrentProcessID() );
-    }
-
-    void AutomationScratch::removeOtherProcessInstances( string_view contentRoot, vector<string>& inoutListPath )
-    {
-        (void)VectorUtil::removeIf( inoutListPath, [contentRoot]( const string& path )
-        {
-            string relativePath;
-            return FileUtil::makeRelativePath( contentRoot, path, relativePath ) && isOtherProcessInstance( FileUtil::normalizeSeparators( relativePath ) );
-        } );
-    }
-
-    optional<int32> AutomationScratch::findInstanceProcessID( string_view folderName )
-    {
-        const size_t markAt = folderName.rfind( kInstanceMark );
-        int32        processID{ 0 };
-        if ( markAt == string_view::npos || AutomationScratchInternal::parseProcessID( folderName.substr( markAt + kInstanceMark.size() ), processID ) == false )
-            return nullopt;
-        return processID;
     }
 } // namespace sw

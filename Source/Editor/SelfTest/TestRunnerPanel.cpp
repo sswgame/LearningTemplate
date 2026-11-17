@@ -189,8 +189,8 @@ namespace sw::editor
             _bScenarioListDirty = SW_FALSE;
             const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
             vector<string> listFilePath;
-            // 남의 시나리오 사본은 고를 시나리오가 아니다(EditorContentScan 이 뺀다)
-            if ( EditorContentScan::collectFiles( root, root, ".xml", listFilePath, true ) == false )
+            // 옛 작업 도메인 자리의 찌꺼기는 고를 시나리오가 아니다(EditorContentScan 이 뺀다)
+            if ( EditorContentScan::collectFiles( root, ".xml", listFilePath, true ) == false )
                 listFilePath.clear(); // 도중에 멈춘 목록을 전부로 보이지 않는다
             _scenarios.setFromFiles( listFilePath, root );
         }

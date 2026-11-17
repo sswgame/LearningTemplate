@@ -123,7 +123,7 @@ namespace sw::editor
         [[nodiscard]] uint64 getCascadeReloadCount() const { return _cascadeReloadCount; }
 
         /**
-         * @brief 감시 울타리를 돌립니다 — 자동화 시나리오의 사본 폴더(`AutomationScratchWorkspace::prepare`)를 새로 만들었으면, 감시 트리에 표지 파일을 쓰고 감시가 그 사건을 알릴 때까지 참을 돌려줍니다.
+         * @brief 감시 울타리를 돌립니다 — 자동화 시나리오의 사본 폴더(`AutomationScratchWorkspace::prepare`)를 새로 만들었으면, 작업 도메인 폴더에 표지 파일을 쓰고 감시가 그 사건을 알릴 때까지 참을 돌려줍니다.
          * @details 에디터 밖의 쓰기는 OS 파일 감시가 알려야 변경 번호가 오른다. 알림 전에는 낡은 색인이 "맞다" 고 보인다(`AssetReferenceTracker::isCurrent`). 표지 사건이 왔으면 그 앞의 사본 쓰기도
          *          알려졌다(같은 감시 흐름의 순서). 시나리오 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)이 매 프레임 부른다. 5 초 안에 안 오면 오류를 남기고 풀어 시나리오가 멈추지 않게 한다.
          *          표지 사건이 온 뒤에도 사본이 일으킨 원본 임포트(`isImportBusy`)가 끝날 때까지 기다린다(시한 120 초, 넘으면 오류를 남기고 푼다) — 임포트가 워커에서 돌아 사건이 와도 결과가 아직 없을 수 있다.
@@ -234,9 +234,10 @@ namespace sw::editor
 
     private:
         unique_ptr<FileWatchDispatcher>   _pFileWatchDispatcher;
-        unique_ptr<AssetReferenceTracker> _pReferenceTracker;     ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
-        unordered_map<string, uint64>     _mapAppliedContentHash; ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 내용 해시
-        uint64                            _cascadeReloadCount;    ///< 연쇄로 다시 읽은 에셋의 누적 수
+        unique_ptr<FileWatchDispatcher>   _pScratchWatchDispatcher; ///< 작업 도메인 폴더(실행 뿌리 아래 — `AssetPaths::getScratchFolderPath`)의 감시. 리소스 루트 밖이라 따로 건다
+        unique_ptr<AssetReferenceTracker> _pReferenceTracker;       ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
+        unordered_map<string, uint64>     _mapAppliedContentHash;   ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 내용 해시
+        uint64                            _cascadeReloadCount;      ///< 연쇄로 다시 읽은 에셋의 누적 수
         unique_ptr<EditorAssetImportJob>  _pImportJob;
         vector<ImportRequest>             _listQueuedImport;               ///< 아직 잡에 싣지 않은 원본(중복 없음)
         vector<ImportRequest>             _listRunningImport;              ///< 지금 도는 잡의 원본
@@ -252,6 +253,8 @@ namespace sw::editor
         int64                             _fenceImportDeadlineNanoseconds; ///< 울타리가 임포트를 기다리다 포기하는 단조 시계 시각(기다리지 않으면 0)
         Subscription                      _resourceWatch;                  ///< 리소스 종류 감시 구독
         Subscription                      _contentWatch;                   ///< 확장자와 무관한 감시 구독이다. 변경 번호와 바뀐 파일을 모은다
+        Subscription                      _scratchResourceWatch;           ///< 작업 도메인의 리소스 종류 감시 구독(`_resourceWatch` 와 같은 처리)
+        Subscription                      _scratchContentWatch;            ///< 작업 도메인의 확장자와 무관한 감시 구독(`_contentWatch` 와 같은 처리)
         uint64                            _contentChangeSerial;
         vector<string>                    _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
         unique_ptr<AssetIdentityRules>    _pIdentityRules;           ///< 정체성 규칙(`Config/Dev/AssetIdentity.json`) — 파일 사건마다 런타임 GUID 색인의 줄을 고친다(`recordIdentity`). 못 읽으면 비었다

@@ -146,8 +146,8 @@ namespace sw::editor
     {
         const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         vector<string> listFolder;
-        // 남의 시나리오 사본의 공유 결과는 지우지 않는다(그 프로세스가 쓰는 중일 수 있다 — EditorContentScan 이 뺀다)
-        if ( root.empty() || EditorContentScan::collectFolders( root, root, listFolder, true ) == false )
+        // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 보지 않는다(EditorContentScan 이 뺀다)
+        if ( root.empty() || EditorContentScan::collectFolders( root, listFolder, true ) == false )
             return 0;
         uint32 removedCount = 0;
         for ( const string& folder : listFolder )
@@ -157,7 +157,7 @@ namespace sw::editor
                 continue;
             // 같은 도메인의 임포트 결과(`<x>/models/**`)가 가리키는 파일만 남긴다. 손 데이터는 저장소를 직접 가리키지 않는다(키가 내용과 함께 바뀐다) — 셋의 이름으로 찾는다.
             vector<string> listResult;
-            (void)EditorContentScan::collectFiles( root, FileUtil::getDirectoryPart( store ), "", listResult, true );
+            (void)EditorContentScan::collectFiles( FileUtil::getDirectoryPart( store ), "", listResult, true );
             unordered_set<string> setReferenced;
             for ( const string& result : listResult )
             {
@@ -177,7 +177,7 @@ namespace sw::editor
                 }
             }
             vector<string> listStored;
-            (void)EditorContentScan::collectFiles( root, store, "", listStored, true );
+            (void)EditorContentScan::collectFiles( store, "", listStored, true );
             for ( const string& stored : listStored )
             {
                 const string fileName = FileUtil::getFileNamePart( FileUtil::normalizeSeparators( stored ) );

@@ -36,10 +36,17 @@ namespace sw
     {
     public:
         /**
-         * @brief 실행이 쓰고 버리는 로컬 작업 도메인(`Content/scratch/`, .gitignore)입니다 — 시나리오 사본 · 편집기 테스트가 쓴다. 콘텐츠가 아니다.
-         * @details 쿠킹 · 팩은 이 도메인을 훑지 않는다 — 남은 찌꺼기 하나가 배포 빌드의 쿠킹을 멈췄다. 이름은 여기 하나다(`AutomationScratch` 가 이것을 가리킨다).
+         * @brief 실행이 쓰고 버리는 로컬 작업 도메인입니다 — 시나리오 사본 · 편집기 테스트 · 머티리얼 미리보기가 쓴다. 콘텐츠가 아니다.
+         * @details 디스크 자리는 리소스 트리 밖, 이 프로세스의 실행 뿌리 아래다(`getScratchFolderPath`) — 같은 체크아웃에서 나란히 도는 실행의 사본이 이 프로세스의 리소스 트리에
+         *          없어 이름에 pid 꼬리를 달거나 남의 사본을 거를 일이 없다. 언리얼 자동화의 임시 마운트 지점(`FPackageName::RegisterMountPoint`)과 같은 자리다.
+         *          예전 자리(`Content/scratch/`, .gitignore)에 남은 것은 찌꺼기다 — 쿠킹 · 기동 색인 · 에디터 훑기가 그 폴더를 뺀다. 이름은 여기 하나다(`AutomationScratch` 가 이것을 가리킨다).
          */
         static constexpr const utf8* kScratchDomain = "scratch";
+        /**
+         * @brief 작업 도메인(`kScratchDomain`)의 디스크 폴더(`<실행 뿌리>/scratch` — `ProcessRoots::_run`)입니다. 프로세스 동안 바뀌지 않는다.
+         * @details 폴더는 처음 쓸 때 생긴다(없어도 도메인이다 — 배포 실행이 기동마다 폴더를 만들지 않게).
+         */
+        [[nodiscard]] static const string& getScratchFolderPath();
 
         /**
          * @brief 콘텐츠 뿌리 @p contentRoot 아래 확장자 @p extension(비면 모두)의 파일을 하위까지 모읍니다 — 작업 도메인(`kScratchDomain`)은 뺀다.
@@ -173,6 +180,12 @@ namespace sw
 
         /** @brief `Content/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. 참조는 이 객체가 사는 동안 유효합니다. */
         const string& getRootFolderPath() const;
+        /**
+         * @brief 리소스 id @p resourceID 가 상대 경로로 놓이는 뿌리입니다 — 작업 도메인(`scratch/…`)은 실행 뿌리(`getScratchFolderPath` 의 부모), 나머지는 `getRootFolderPath`.
+         * @details `<뿌리>/<id>` 로 디스크 자리를 잇고 `원본 경로 - 뿌리` 로 id 를 되돌리는 코드(임포트 스탬프 · 임포터)가 작업 도메인 id 도 같은 규칙으로 다루게 한다.
+         *          붙인 디스크 도메인(`mountDiskDomain`)은 이 모양이 아니다(그 폴더 이름이 도메인 이름과 다르다) — 그 id 는 `toDiskPath` 로 푼다.
+         */
+        [[nodiscard]] const string& getRootFolderPathFor( string_view resourceID ) const;
 
         /**
          * @brief 리소스 검색 루트 우선순위를 설정합니다(예: EngineConfig._listResourcePriority).

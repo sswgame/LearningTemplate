@@ -314,23 +314,6 @@ namespace sw
         return nullptr;
     }
 
-    void AutomationScenario::bindScratchInstances()
-    {
-        for ( AutomationScratchFolder& folder : _testOptions._listScratchFolder )
-        {
-            const string instanceID = AutomationScratch::makeInstanceID( folder._scratchID );
-            for ( AutomationStep& step : _listStep )
-            {
-                for ( AutomationAttribute& attribute : step._listAttribute )
-                {
-                    attribute._value = AutomationScratch::rebaseText( attribute._value, folder._scratchID, instanceID );
-                }
-            }
-            folder._declaredID = folder._scratchID;
-            folder._scratchID  = instanceID;
-        }
-    }
-
     void AutomationScenario::bindOutputDirectory( string_view outputDirectory )
     {
         for ( AutomationStep& step : _listStep )
@@ -486,7 +469,7 @@ namespace sw
                 AutomationScratchFolder folder;
                 folder._sourceID  = std::move( params._from );
                 folder._scratchID = std::move( params._as );
-                if ( expected<void> valid = AutomationScratch::isValidFolder( folder ); valid.has_value() == false )
+                if ( expected<void> valid = folder.validate(); valid.has_value() == false )
                     return valid;
                 _testOptions._listScratchFolder.push_back( std::move( folder ) );
                 continue;

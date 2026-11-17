@@ -1,10 +1,10 @@
 /**
  * @file EditorContentScan.h
- * @brief 에디터가 리소스 루트(`Content/`) 아래를 디스크에서 훑는 한 입구입니다 — 다른 프로세스의 시나리오 사본을 뺀 목록을 돌려줍니다.
- * @details 같은 체크아웃의 다른 App · 끝난 실행이 남긴 사본(`scratch/<이름>_p<pid>/…`)이 원본과 같은 파일 이름으로 보이면 Quick Open 이 사본을 집고,
- *          임포터가 남의 사본에 임포트하며, 공유 결과 정리가 남의 사본 파일을 지웠다. 에디터 코드는 리소스 트리를 `FileUtil::collectFiles` · `collectFolders` 로
- *          직접 훑지 않고 이것을 부른다(린트 common-shapes 의 editorContentScan). 자기 사본은 보인다 — 시나리오가 자기 사본을 연다.
- *          쿠킹 · 팩은 scratch 전체를 빼는 `AssetPaths::collectContentFiles` 를 쓴다(규칙이 다르다).
+ * @brief 에디터가 리소스 트리를 디스크에서 훑는 한 입구입니다 — 원본 곁 서술(`.meta`)과 작업 도메인의 옛 자리(`Content/scratch/`)에 남은 찌꺼기를 뺀 목록을 돌려줍니다.
+ * @details 작업 도메인(`scratch/` — 시나리오 사본)은 이 프로세스의 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`) — 리소스 루트를 훑어도 남의 실행 사본은 나오지 않고,
+ *          이 실행의 사본은 그 폴더를 따로 훑는다(`collectTreeFiles`). 예전 자리(`Content/scratch/`)에 남은 폴더가 원본과 같은 파일 이름으로 보이면 Quick Open 이 그것을 집으므로 뺀다.
+ *          에디터 코드는 리소스 트리를 `FileUtil::collectFiles` · `collectFolders` 로 직접 훑지 않고 이것을 부른다(린트 common-shapes 의 editorContentScan).
+ *          쿠킹 · 팩은 작업 도메인을 빼는 `AssetPaths::collectContentFiles` 를 쓴다(규칙이 다르다).
  */
 #pragma once
 #include "Core/Concurrency/StopToken.h"
@@ -16,19 +16,24 @@ namespace sw::editor
 {
     /**
      * @struct EditorContentScan
-     * @brief 리소스 루트 @p contentRoot 아래 폴더를 훑습니다. 반환과 경로 규칙은 `FileUtil::collectFiles` · `collectFolders` 와 같고, 다른 프로세스의 사본만 빠집니다.
+     * @brief 리소스 트리의 폴더를 훑습니다. 반환과 경로 규칙은 `FileUtil::collectFiles` · `collectFolders` 와 같고, 곁 서술과 옛 작업 도메인 자리(`ProcessRoots::_content` 아래 `scratch/`)만 빠집니다.
      */
     struct EditorContentScan
     {
         /**
-         * @brief 리소스 id @p assetID(디스크 표기)가 에디터 목록에 보이는 파일이면 true 입니다 — 다른 프로세스의 시나리오 사본과 원본 곁 서술(`.meta`)은 아니다.
+         * @brief 리소스 id @p assetID(디스크 표기)가 에디터 목록에 보이는 파일이면 true 입니다 — 원본 곁 서술(`.meta`)은 아니다.
          * @details 트리 훑기(`collectFiles`)와 에셋 색인의 한 파일 갱신(`EditorAssetIndex::applyChanges`)이 같은 규칙을 이것 하나로 쓴다.
          */
         [[nodiscard]] static bool isListedFile( string_view assetID );
-        /** @brief @p folder(리소스 루트 아래 디스크 경로) 아래 파일입니다. 확장자 @p extension 이 비면 모두입니다. */
-        [[nodiscard]] static bool collectFiles( string_view contentRoot, string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive,
-                                                const StopToken& stopToken = {} );
-        /** @brief @p folder(리소스 루트 아래 디스크 경로) 아래 폴더입니다. */
-        [[nodiscard]] static bool collectFolders( string_view contentRoot, string_view folder, vector<string>& outListFolder, bool bRecursive );
+        /** @brief @p folder(디스크 경로) 아래 파일입니다. 확장자 @p extension 이 비면 모두입니다. */
+        [[nodiscard]] static bool collectFiles( string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
+        /** @brief @p folder(디스크 경로) 아래 폴더입니다. */
+        [[nodiscard]] static bool collectFolders( string_view folder, vector<string>& outListFolder, bool bRecursive );
+        /**
+         * @brief 에디터의 리소스 트리 전체 — 리소스 루트 @p contentRoot 와 작업 도메인 폴더(@p scratchFolder, 아직 없으면 뺀다) — 아래 파일입니다.
+         * @details 트리 전체를 보는 쪽(에셋 색인 · 카탈로그 · 참조 검사)이 부른다. 작업 도메인 파일의 id 는 `AssetPaths::toAssetID` 로 푼다(루트 기준 상대 경로가 아니다).
+         */
+        [[nodiscard]] static bool collectTreeFiles( string_view contentRoot, string_view scratchFolder, string_view extension, vector<string>& outListFilePath,
+                                                    const StopToken& stopToken = {} );
     };
 } // namespace sw::editor

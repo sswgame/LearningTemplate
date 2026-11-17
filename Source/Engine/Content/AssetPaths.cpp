@@ -372,6 +372,13 @@ namespace sw
                 const bool bAssetID = lowerRel.empty() == false && FileUtil::isAbsolutePath( lowerRel ) == false;
                 if ( bAssetID && findMountedDiskDomain( state, lowerRel, outRoot, outKeyUnderRoot ) )
                     return true;
+                // 작업 도메인은 실행 뿌리 아래다(`getScratchFolderPath`) — 처음 쓸 때 생기는 폴더라 아직 없어도 도메인이다(빈 트리의 첫 쓰기가 상대 키로 거절되지 않게).
+                if ( bAssetID && FileUtil::startsWithPathComponent( lowerRel, AssetPaths::kScratchDomain ) )
+                {
+                    outRoot         = AssetPaths::getScratchFolderPath();
+                    outKeyUnderRoot = FileUtil::suffixAfterPathComponent( lowerRel, AssetPaths::kScratchDomain );
+                    return true;
+                }
 
                 const string& resourceRoot      = getTable( state )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
                 const bool    bUnresolvablePath = resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel );
@@ -410,8 +417,7 @@ namespace sw
                     if ( domain.find( ':' ) == string_view::npos )
                     {
                         const string candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
-                        // 작업 도메인(`scratch`)은 실행이 처음 쓸 때 생기는 폴더라 아직 없어도 도메인이다 — 폴더가 있을 때만 도메인으로 보면 빈 트리(새 작업 트리 · CI)의 첫 쓰기가 상대 키로 거절됐다.
-                        if ( domain == AssetPaths::kScratchDomain || FileUtil::isDirectory( candidateDomainDir ) )
+                        if ( FileUtil::isDirectory( candidateDomainDir ) )
                         {
                             outRoot         = candidateDomainDir;
                             outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
@@ -684,6 +690,10 @@ namespace sw
         if ( diskPath.empty() || FileUtil::makeAbsolutePath( diskPath, absolutePath ) == false )
             return {};
         absolutePath = FileUtil::normalizeSeparators( absolutePath );
+        // 작업 도메인이 먼저다 — 그 폴더는 실행 산출물 폴더 아래라 시나리오가 붙인 `saved` 도메인(`Saved/`)도 품는다.
+        string underScratch;
+        if ( FileUtil::tryMakePathUnderRoot( getScratchFolderPath(), absolutePath, underScratch ) )
+            return normalizeAssetID( string( kScratchDomain ) + "/" + underScratch );
         string domainID;
         // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
         if ( AssetPathsInternal::findDiskDomainID( *_pState, absolutePath, domainID ) )
@@ -691,6 +701,9 @@ namespace sw
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( getRootFolderPath() ) );
         string       underRoot;
         if ( root.empty() || FileUtil::makeRelativePath( root, absolutePath, underRoot ) == false )
+            return {};
+        // 리소스 트리 안의 `scratch/` 는 작업 도메인의 옛 자리에 남은 찌꺼기다 — 그 id 는 실행 뿌리의 사본을 가리키므로 돌려주지 않는다(디스크 경로라 OS 규칙으로 견준다).
+        if ( FileUtil::isPathAtOrUnderRoot( FileUtil::joinPath( root, kScratchDomain ), absolutePath ) )
             return {};
         return normalizeAssetID( underRoot );
     }
@@ -839,9 +852,22 @@ namespace sw
         }
     }
 
+    const string& AssetPaths::getScratchFolderPath()
+    {
+        // 실행 뿌리는 프로세스 동안 바뀌지 않는다(`ProcessRoots`) — 한 번 잇는다.
+        static const string s_scratchFolderPath = FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._run.str(), kScratchDomain ) );
+        return s_scratchFolderPath;
+    }
+
     const string& AssetPaths::getRootFolderPath() const
     {
         return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
+    }
+
+    const string& AssetPaths::getRootFolderPathFor( string_view resourceID ) const
+    {
+        static const string s_runRootPath = FileUtil::normalizeSeparators( ProcessRoots::get()._run.str() ); // 작업 도메인 폴더의 부모 — 프로세스 동안 바뀌지 않는다
+        return FileUtil::startsWithPathComponent( FileUtil::normalizeSeparators( resourceID ), kScratchDomain ) ? s_runRootPath : getRootFolderPath();
     }
 
     bool AssetPaths::setSearchPriority( const vector<string>& listPriority )

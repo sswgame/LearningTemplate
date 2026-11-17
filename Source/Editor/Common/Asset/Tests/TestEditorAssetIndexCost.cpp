@@ -80,7 +80,7 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCostBySize, ._tags = "bench", ._disabled
 
         EditorAssetIndexData data{};
         const int64          scanStart = MonotonicClock::nowNanoseconds();
-        EditorAssetIndex::scan( root, data, nullptr );
+        EditorAssetIndex::scan( root, {}, data, nullptr );
         const int64 scanNanoseconds = MonotonicClock::nowNanoseconds() - scanStart;
         SW_EXPECT_EQUAL( fileCount, data._scannedFileCount );
         SW_EXPECT_EQUAL( static_cast<size_t>( fileCount ), data._mapReferrer.size() ); // 파일마다 넷이 가리킨다

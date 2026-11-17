@@ -110,14 +110,28 @@ namespace sw::editor
                 return valueEnd == string_view::npos ? nullopt : AssetGUID::tryParse( text.substr( valueAt, valueEnd - valueAt ) );
             }
 
-            /** @brief 디스크 경로 @p filePath 의 리소스 id 를 디스크 표기(대소문자 그대로, `/` 구분)로 돌려줍니다. 루트 밖이면 빈 글입니다. */
+            /**
+             * @brief 디스크 경로 @p filePath 의 리소스 id 를 디스크 표기(대소문자 그대로, `/` 구분)로 돌려줍니다. 루트 밖이면 빈 글입니다.
+             * @details 작업 도메인(`scratch/`)은 리소스 루트 밖, 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath` — 프로세스 상수라 워커에서도 읽는다).
+             */
             static string makeDisplayPath( string_view resourceRoot, string_view filePath )
             {
+                string underScratch;
+                if ( FileUtil::tryMakePathUnderRoot( AssetPaths::getScratchFolderPath(), filePath, underScratch ) )
+                    return string( AssetPaths::kScratchDomain ) + "/" + underScratch;
                 string       relativePath;
                 const string rootPath = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
                 if ( FileUtil::makeRelativePath( rootPath, FileUtil::normalizeSeparators( filePath ), relativePath ) == false )
                     return {};
                 return FileUtil::normalizeSeparators( relativePath );
+            }
+
+            /** @brief 표시 경로 @p displayPath 의 디스크 자리입니다(`makeDisplayPath` 의 짝 — 작업 도메인은 실행 뿌리 아래, 나머지는 @p resourceRoot 아래). */
+            static string makeDiskPath( string_view resourceRoot, string_view displayPath )
+            {
+                if ( FileUtil::startsWithPathComponent( displayPath, AssetPaths::kScratchDomain ) )
+                    return FileUtil::joinPath( AssetPaths::getScratchFolderPath(), FileUtil::suffixAfterPathComponent( displayPath, AssetPaths::kScratchDomain ) );
+                return FileUtil::joinPath( resourceRoot, displayPath );
             }
 
             /** @brief 색인의 열쇠(소문자 리소스 id)입니다. */
@@ -166,7 +180,7 @@ namespace sw::editor
                         if ( _stopToken.isStopRequested() )
                             return; // 결과는 불완전하니 부른 쪽이 신호를 다시 읽고 버린다
                         const string& displayPath = *_ppDisplayPath[index];
-                        const string  absPath     = FileUtil::joinPath( _resourceRoot, displayPath );
+                        const string  absPath     = makeDiskPath( _resourceRoot, displayPath );
                         FileRead&     read        = _pArrRead[index];
                         (void)FileUtil::getFileStamp( absPath, read._fileStamp ); // 목록 뒤에 사라진 파일은 시각이 비어 다음 바뀜에서 다시 읽는다
                         // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
@@ -308,7 +322,7 @@ namespace sw::editor
     void EditorAssetIndex::refreshFromDisk( EditorAssetIndexData& inoutData, string_view resourceRoot, string_view displayPath, bool bForce )
     {
         const string assetID = EditorAssetIndexInternal::makeKey( displayPath );
-        const string absPath = FileUtil::joinPath( resourceRoot, displayPath );
+        const string absPath = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
         FileStamp    stamp{};
         if ( FileUtil::getFileStamp( absPath, stamp ) == false )
         {
@@ -329,13 +343,13 @@ namespace sw::editor
         insertEntry( inoutData, displayPath, stamp, nullptr, bMeta ? &text : nullptr );
     }
 
-    void EditorAssetIndex::scan( string_view resourceRoot, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken )
+    void EditorAssetIndex::scan( string_view resourceRoot, string_view scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken )
     {
         const Stopwatch stopwatch;
         outData = EditorAssetIndexData{};
         vector<string> listFile;
-        // 남의 시나리오 사본과 `.meta` 는 목록의 파일이 아니다(EditorContentScan::isListedFile — 한 파일 갱신과 같은 규칙)
-        if ( resourceRoot.empty() || EditorContentScan::collectFiles( resourceRoot, resourceRoot, "", listFile, true, stopToken ) == false )
+        // `.meta` 는 목록의 파일이 아니다(EditorContentScan::isListedFile — 한 파일 갱신과 같은 규칙). 작업 도메인(시나리오 사본)은 실행 뿌리 아래라 따로 훑는다.
+        if ( resourceRoot.empty() || EditorContentScan::collectTreeFiles( resourceRoot, scratchFolder, "", listFile, stopToken ) == false )
             return;
 
         vector<string> listDisplayPath;
@@ -395,12 +409,12 @@ namespace sw::editor
         {
             const string displayPath = FileUtil::normalizeSeparators( changed );
             const string assetID     = EditorAssetIndexInternal::makeKey( displayPath );
-            const string absPath     = FileUtil::joinPath( resourceRoot, displayPath );
+            const string absPath     = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
             if ( FileUtil::isDirectory( absPath ) )
             {
-                // 폴더가 생겼다(옮겨 왔다) — 그 아래 파일을 하나씩 넣는다. 남의 사본 · `.meta` 는 전체 훑기와 같은 규칙으로 빠진다(EditorContentScan).
+                // 폴더가 생겼다(옮겨 왔다) — 그 아래 파일을 하나씩 넣는다. `.meta` 는 전체 훑기와 같은 규칙으로 빠진다(EditorContentScan).
                 vector<string> listFile;
-                (void)EditorContentScan::collectFiles( resourceRoot, absPath, "", listFile, true );
+                (void)EditorContentScan::collectFiles( absPath, "", listFile, true );
                 for ( const string& filePath : listFile )
                 {
                     const string fileDisplayPath = EditorAssetIndexInternal::makeDisplayPath( resourceRoot, filePath );
@@ -411,7 +425,7 @@ namespace sw::editor
             }
             if ( EditorContentScan::isListedFile( displayPath ) == false )
             {
-                // `.meta` 가 바뀌었으면 그 원본의 정체성만 다시 읽는다(원본의 크기 · 시각은 그대로라 억지로). 남의 사본은 이 색인의 파일이 아니다.
+                // `.meta` 가 바뀌었으면 그 원본의 정체성만 다시 읽는다(원본의 크기 · 시각은 그대로라 억지로).
                 const bool   bMeta             = StringUtil::endsWith( assetID, AssetMeta::kExtension, true );
                 const string sourceDisplayPath = bMeta ? displayPath.substr( 0, displayPath.size() - AssetMeta::kExtension.size() ) : string{};
                 if ( bMeta && EditorContentScan::isListedFile( sourceDisplayPath ) && _data._mapEntry.contains( EditorAssetIndexInternal::makeKey( sourceDisplayPath ) ) )
@@ -571,7 +585,7 @@ namespace sw::editor
 
         EditorAssetIndexData data{};
         const StopToken      stopToken = readStopSignal( pState );
-        EditorAssetIndex::scan( resourceRoot, data, pTasks, stopToken );
+        EditorAssetIndex::scan( resourceRoot, AssetPaths::getScratchFolderPath(), data, pTasks, stopToken );
         if ( stopToken.isStopRequested() )
             return; // 종료가 시작돼 스캔이 중간에 멈췄다 — 불완전한 색인을 싣지 않는다
 
