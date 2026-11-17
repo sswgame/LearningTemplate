@@ -572,12 +572,9 @@ namespace sw
             }
             if ( pErased != nullptr )
                 pErased->releaseRHI( pDevice );
+            // 밉을 올려도 SRV 번호는 그대로다(`rebindBindlessTexture` — R-6) — 머티리얼을 다시 묶지 않으므로 세대를 올리지 않는다.
             if ( bUpgraded )
-            {
                 ++upgradedCount;
-                // 새 SRV 번호가 생겼다 — 빌려 간 머티리얼이 다시 받게 한다(표시를 내린 뒤에 올린다: `reload` 와 같은 순서).
-                _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
-            }
             _impl->_cvLoaded.notify_all();
         };
 
@@ -820,7 +817,7 @@ namespace sw
         // 게임 스레드가 `releaseRetiredTextures` 로 `releaseHandle` 하면 이미 만든 패킷이 끝난 뒤에 핸들 · 인덱스가 돌아가고(스트리밍 교체와 같은 길), 새 텍스처는 새 핸들 · 인덱스를 받는다.
         // 그래서 옛 인덱스를 새 텍스처가 곧바로 물려받아 이전 프레임을 오염시키는 일이 없다. 세대를 올려 빌려 간 머티리얼이 새 인덱스를 다시 받게 한다(아래).
         Texture2DRetiredResource retired{};
-        pTexture->detachRHI( retired );
+        pTexture->detachRHIKeepingSRV( pDevice, retired ); // 새 렌더 타깃이 같은 SRV 번호를 받는다(R-6)
         const bool bReady = pTexture->createRenderTarget( pDevice, key, width, height, constant::render::kOffscreenColorFormat );
         if ( bReady == false )
             SW_LOG_ERROR_ID( "TextureCache.FailedResizeRenderTexture", "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
@@ -839,8 +836,9 @@ namespace sw
         lock.unlock();
         if ( pErased != nullptr )
             pErased->releaseRHI( pDevice ); // 장치 호출은 잠금 밖에서(잠금은 잎 잠금, 결정 5-3)
-        // 새 SRV 인덱스를 받았다 — 빌려 간 머티리얼이 다시 받게 한다(reload 와 같은 순서: 진행 중 표시를 내린 뒤에 올린다).
-        _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+        // SRV 번호는 그대로다(R-6) — 만들지 못했을 때만 번호가 사라지므로 빌려 간 머티리얼이 다시 받게 한다(진행 중 표시를 내린 뒤에 올린다).
+        if ( bReady == false )
+            _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
         _impl->_cvLoaded.notify_all();
         return bReady;
     }
@@ -1301,8 +1299,12 @@ namespace sw
         // 이전 프레임이 아직 이 텍스처와 그 bindless SRV 인덱스를 읽고 있을 수 있어도 GPU 를 기다리지 않는다. `releaseRHI` 의 `releaseHandle` 이 이미 만든 패킷 뒤로 반환을 미루므로
         // 새 텍스처는 새 인덱스를 받고, DX12 · Vulkan 은 그 뒤 펜스까지, DX11 · GL 은 기록 때 슬롯으로 풀었으니 그 패킷이 끝난 것으로 충분하다. 렌더 스레드만 비운다 — 등록은 병렬 기록 중에 할 수 없다.
         pDevice->flushRenderThread();
-        pTexture->releaseRHI( pDevice );
-        if ( pTexture->loadFromAsset( pDevice, AssetID{ key } ) == false )
+        // 옛 텍스처만 해제 줄로 보내고 SRV 번호는 지킨다 — 다시 읽은 텍스처가 같은 번호를 받아 머티리얼을 다시 묶지 않는다(R-6).
+        Texture2DRetiredResource retired{};
+        pTexture->detachRHIKeepingSRV( pDevice, retired );
+        _impl->_retired.add( pDevice, retired );
+        const bool bReloaded = pTexture->loadFromAsset( pDevice, AssetID{ key } );
+        if ( bReloaded == false )
             SW_LOG_ERROR_ID( "TextureCache.HotReloadFailedTexture", "Hot-Reload failed for Texture %#", key.c_str() );
 
         lock.lock();
@@ -1319,9 +1321,10 @@ namespace sw
         lock.unlock();
         if ( pErased != nullptr )
             pErased->releaseRHI( pDevice );
-        // 다시 올린 텍스처는 새 SRV 인덱스를 받았다(실패했으면 인덱스가 없다). 옛 인덱스는 이미 돌려줬으므로 빌려 간 머티리얼이 다시 받게 한다.
+        // 다시 올린 텍스처는 같은 SRV 번호를 받았다(R-6). 실패했을 때만 번호가 사라지므로 빌려 간 머티리얼이 다시 받게 한다.
         // 세대는 진행 중 표시를 내린 **뒤에** 올린다 — 먼저 올리면 새 세대를 본 쪽의 find 가 아직 nullptr 를 받고 그 세대를 소비해 버린다.
-        _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+        if ( bReloaded == false )
+            _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
         _impl->_cvLoaded.notify_all();
     }
 } // namespace sw

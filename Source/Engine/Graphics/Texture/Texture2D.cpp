@@ -315,7 +315,19 @@ namespace sw
             releaseRHI( pDevice );
             return Texture2DUploadStatus::Failed;
         }
-        const RHIDescriptorIndex srv = pResource->registerBindlessTexture( getHandle() );
+        // 지키던 번호가 있으면(크기 변경 · 핫 리로드) 새 텍스처로 다시 묶는다 — 번호가 그대로라 머티리얼을 다시 묶지 않는다(R-6). 없으면 새로 등록한다.
+        const RHIDescriptorIndex keptSRV = _keptSRV;
+        _keptSRV                         = kInvalidDescriptorIndex;
+        RHIDescriptorIndex srv{ kInvalidDescriptorIndex };
+        if ( keptSRV != kInvalidDescriptorIndex )
+        {
+            if ( pResource->rebindBindlessTexture( keptSRV, getHandle() ) )
+                srv = keptSRV;
+            else
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, keptSRV ); // 옛 텍스처는 해제 줄로 갔다 — 그 번호를 남기지 않는다
+        }
+        else
+            srv = pResource->registerBindlessTexture( getHandle() );
         if ( srv == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
@@ -379,15 +391,15 @@ namespace sw
             pResource->destroyTexture( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
-        const RHIDescriptorIndex srv = pResource->registerBindlessTexture( upgrade._handle );
-        if ( srv == kInvalidDescriptorIndex )
+        // 같은 번호가 새 텍스처를 가리키게 한다 — 그 번호를 쥔 머티리얼은 다시 묶지 않는다(R-6, 언리얼 `RHIUpdateTextureReference`). 못 하면 아래쪽 밉 그대로 둔다.
+        if ( pResource->rebindBindlessTexture( getSRV(), upgrade._handle ) == false )
         {
-            SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
+            SW_LOG_ERROR_ID( "Texture.BindlessRebindFailed", "Texture2D: rebindBindlessTexture failed for '%#' - it keeps its lower mips", _path.c_str() );
             pResource->destroyTexture( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
         outRetired._handle = _handle.exchange( upgrade._handle, std::memory_order_acq_rel );
-        outRetired._srv    = _srv.exchange( srv, std::memory_order_acq_rel );
+        outRetired._srv    = kInvalidDescriptorIndex; // 번호는 그대로 산다 — 옛 텍스처만 해제 줄로 간다
         _width             = upgrade._width;
         _height            = upgrade._height;
         _mipCount          = upgrade._mipCount;
@@ -615,6 +627,20 @@ namespace sw
         _streamedMipCount  = 0;
     }
 
+    void Texture2D::detachRHIKeepingSRV( IRHIDevice* pDevice, Texture2DRetiredResource& outRetired )
+    {
+        // 위쪽 밉을 올리는 중이던 새 텍스처는 버린다(핫 리로드가 밉 전부를 다시 읽는다) — `releaseRHI` 와 같다.
+        if ( _upgrade._handle != 0 && pDevice != nullptr )
+            pDevice->releaseHandle( RHIHandleKind::Texture, _upgrade._handle );
+        _upgrade           = PendingUpgrade{};
+        outRetired._handle = _handle.exchange( 0, std::memory_order_acq_rel );
+        outRetired._srv    = kInvalidDescriptorIndex;
+        _keptSRV           = _srv.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel );
+        _uploadTicket      = RHITransferTicket{};
+        _pDevice           = nullptr;
+        _streamedMipCount  = 0;
+    }
+
     void Texture2D::clearRHI( IRHIDevice* pDevice )
     {
         if ( _pDevice != pDevice )
@@ -622,6 +648,7 @@ namespace sw
         // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다. 새 디바이스에 다시 업로드할 때는 밉 전부가 올라간다(`initRHI`).
         _handle           = 0;
         _srv              = kInvalidDescriptorIndex;
+        _keptSRV          = kInvalidDescriptorIndex;
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;
@@ -640,6 +667,8 @@ namespace sw
             // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( getSRV() != kInvalidDescriptorIndex )
                 pDevice->releaseHandle( RHIHandleKind::BindlessTexture, getSRV() );
+            if ( _keptSRV != kInvalidDescriptorIndex )
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, _keptSRV ); // 다시 만들다 실패한 텍스처가 지키던 번호
             if ( getHandle() != 0 )
                 pDevice->releaseHandle( RHIHandleKind::Texture, getHandle() );
             // 위쪽 밉을 올리는 중이던 새 텍스처도 내린다(등록 전이라 SRV 는 없다).
@@ -648,6 +677,7 @@ namespace sw
         }
         _handle           = 0;
         _srv              = kInvalidDescriptorIndex;
+        _keptSRV          = kInvalidDescriptorIndex;
         _uploadTicket     = RHITransferTicket{};
         _upgrade          = PendingUpgrade{};
         _pDevice          = nullptr;

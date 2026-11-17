@@ -85,7 +85,6 @@ namespace sw
         vector<CellDraw>      _listPendingDraw;
         unique_ptr<Texture2D> _atlas;
         RHITextureHandle      _drawnAtlasHandle{ 0 }; ///< 칸을 그린 때의 아틀라스 핸들 — 디바이스 교체로 바뀌면(내용이 비었다) 모든 칸을 다시 그린다
-        uint32                _reloadGeneration{ 0 }; ///< 텍스처 캐시의 다시 읽기 횟수 — 바뀌면 모든 칸을 다시 그린다
         uint8                 _bHasCookies{ SW_FALSE };
         uint8                 _bOverflowReported{ SW_FALSE };
     };

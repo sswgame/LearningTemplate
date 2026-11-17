@@ -141,6 +141,11 @@ namespace sw
          *          크기 · 포맷 · 렌더 타깃 표시는 남겨 다시 만들 때 쓴다(`releaseRHI` 와 같다). 렌더 타깃 전용이다 — 위쪽 밉을 올리는 중인 텍스처에는 부르지 않는다(assert).
          */
         void detachRHI( Texture2DRetiredResource& outRetired );
+        /**
+         * @brief 옛 텍스처만 @p outRetired 로 떼고 SRV 번호는 지킵니다. 다음 업로드의 `finishUpload` 가 그 번호를 새 텍스처로 다시 묶는다(`rebindBindlessTexture`).
+         * @details 렌더 타깃 크기 변경 · 핫 리로드가 쓴다 — 번호가 그대로라 그 번호를 쥔 머티리얼을 다시 묶지 않는다(감사 R-6). 번호는 그동안 옛 텍스처를 가리키고, 옛 텍스처는 해제 줄이 펜스 뒤에 지운다.
+         */
+        void detachRHIKeepingSRV( IRHIDevice* pDevice, Texture2DRetiredResource& outRetired );
         /** @brief 품질 설정이 남긴 밉 사슬이 모두 GPU 에 있으면 true 입니다(스트리밍이 아직 위쪽 밉을 올리지 않았으면 false). */
         bool isFullyResident() const { return _streamedMipCount == 0; }
         /** @brief 아직 GPU 에 없는 위쪽 밉 수입니다(품질 설정이 버린 밉은 세지 않는다). */
@@ -251,16 +256,18 @@ namespace sw
         string                     _path;
         atomic<RHITextureHandle>   _handle;
         atomic<RHIDescriptorIndex> _srv;
-        RHITransferTicket          _uploadTicket{}; ///< 제출했고 `finishUpload` 가 끝내지 않은 업로드의 티켓(무효면 없음). 디바이스를 쓰는 스레드만 만지는 값이다
-        PendingUpgrade             _upgrade{};      ///< 제출했고 `finishUpgradeResidency` 가 끝내지 않은 위쪽 밉 업로드(티켓이 무효면 없음). 디바이스를 쓰는 스레드만 만진다
-        uint32                     _width;
-        uint32                     _height;
-        uint32                     _mipCount;
-        uint32                     _streamedMipCount; ///< 아직 GPU 에 없는 위쪽 밉 수(`TextureResidency::StreamingBase` 로 올렸을 때). 0 이면 다 올라와 있다
-        RHIFormat                  _format;
-        uint8                      _bRenderTarget;              ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
-        vector<uint8>              _cpuBytes;                   ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
-        unique_ptr<DDSImageData>   _pPreparedImage;             ///< `prepareRHI` 가 워커에서 읽어 둔 DDS(다음 `initRHI` 가 올리고 놓는다)
-        uint8                      _bPrepareFailed{ SW_FALSE }; ///< `prepareRHI` 가 읽지 못했다(까닭은 그때 로그로 남겼다) - `initRHI` 가 다시 읽지 않는다
+        /// @brief 다시 만드는 동안 지키는 SRV 번호입니다(`detachRHIKeepingSRV` — 렌더 타깃 크기 변경 · 핫 리로드). 다음 `finishUpload` 가 새 텍스처로 다시 묶는다(R-6).
+        RHIDescriptorIndex       _keptSRV{ kInvalidDescriptorIndex };
+        RHITransferTicket        _uploadTicket{}; ///< 제출했고 `finishUpload` 가 끝내지 않은 업로드의 티켓(무효면 없음). 디바이스를 쓰는 스레드만 만지는 값이다
+        PendingUpgrade           _upgrade{};      ///< 제출했고 `finishUpgradeResidency` 가 끝내지 않은 위쪽 밉 업로드(티켓이 무효면 없음). 디바이스를 쓰는 스레드만 만진다
+        uint32                   _width;
+        uint32                   _height;
+        uint32                   _mipCount;
+        uint32                   _streamedMipCount; ///< 아직 GPU 에 없는 위쪽 밉 수(`TextureResidency::StreamingBase` 로 올렸을 때). 0 이면 다 올라와 있다
+        RHIFormat                _format;
+        uint8                    _bRenderTarget;              ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
+        vector<uint8>            _cpuBytes;                   ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
+        unique_ptr<DDSImageData> _pPreparedImage;             ///< `prepareRHI` 가 워커에서 읽어 둔 DDS(다음 `initRHI` 가 올리고 놓는다)
+        uint8                    _bPrepareFailed{ SW_FALSE }; ///< `prepareRHI` 가 읽지 못했다(까닭은 그때 로그로 남겼다) - `initRHI` 가 다시 읽지 않는다
     };
 } // namespace sw
