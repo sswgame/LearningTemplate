@@ -468,9 +468,7 @@ namespace sw::editor
         drawSidePanel();
         _model.refreshCompile( getLoadedAssetPath() ); // 이번 그리기의 편집을 미리보기가 바로 본다
         _model.refreshPreview( getPreviewScene(), getLoadedAssetPath() );
-        MaterialGraphEdit edit;
-        if ( _model.takeEdit( edit ) )
-            _model.recordDocumentEdit( edit._pLabel );
+        _model.publishEdit(); // 이번 그리기의 편집을 모델이 정한 이름으로 알린다
     }
 
     SW_EDITOR_PANEL( MaterialGraphPanel, MaterialGraphPanel::kPanelID, EditorPanelCategory::Tool, 1301 );

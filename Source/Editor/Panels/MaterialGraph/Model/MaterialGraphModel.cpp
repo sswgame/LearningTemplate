@@ -94,13 +94,13 @@ namespace sw::editor
         return _graph.saveToFile( diskPath, AssetID{ _basePath } );
     }
 
-    bool MaterialGraphModel::takeEdit( MaterialGraphEdit& outEdit )
+    void MaterialGraphModel::publishEdit()
     {
         if ( _pendingEdit._pLabel == nullptr )
-            return false;
-        outEdit      = _pendingEdit;
-        _pendingEdit = MaterialGraphEdit{};
-        return true;
+            return;
+        const utf8* const pLabel = _pendingEdit._pLabel;
+        _pendingEdit             = MaterialGraphEdit{};
+        recordDocumentEdit( pLabel );
     }
 
     void MaterialGraphModel::recordEdit( const utf8* pLabel, bool bChangesShader )
