@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -59,6 +60,12 @@ namespace sw
                     const string& text = *static_cast<const string*>( pValue );
                     inoutBuilder.addUint32( static_cast<uint32>( text.size() ) ); // 길이를 앞에 둬 이웃 칸과 경계가 섞이지 않는다
                     inoutBuilder.addString( text );
+                    return true;
+                }
+                if ( name == "GameObjectHandle" )
+                {
+                    // shortcut: 핸들 번호는 프로세스마다 달라 가리키는지만 접는다 — 대상이 갈리는 것까지 잡으려면 대상 오브젝트 이름을 매니저에서 찾아 접는다.
+                    inoutBuilder.addUint8( static_cast<const GameObjectHandle*>( pValue )->isValid() ? 1 : 0 );
                     return true;
                 }
                 for ( const utf8* pIntegerName : kArrIntegerTypeName )

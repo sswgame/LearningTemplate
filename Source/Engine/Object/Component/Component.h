@@ -460,7 +460,7 @@ namespace sw
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
          *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 칸을 손으로 나열하지 않으므로 새 상태 칸이 빠질 수 없다
          *          (`StateHashTest.EveryStateFieldChangesTheHash`). 재정의는 리플렉션 밖 상태(물리 바디의 속도처럼 칸이 아닌 값)를 **더할** 때만 두고, 부모 것을 먼저 부른다.
-         *          접을 수 없는 형식의 상태 칸(맵 · 핸들)은 선언 결함이라 이유와 함께 멈춘다 — 빼고 접으면 그 칸이 어긋나도 해시가 같다.
+         *          접을 수 없는 형식의 상태 칸(맵 · 컴포넌트 핸들)은 선언 결함이라 이유와 함께 멈춘다 — 빼고 접으면 그 칸이 어긋나도 해시가 같다.
          */
         virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const;
         /**
