@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/StringUtil.h"
@@ -19,8 +20,6 @@ namespace sw
     {
         struct ModuleCatalogLoaderInternal
         {
-            static constexpr size_t kNotFound = constant::invalid_index::kUint64;
-
             /** @brief 매니페스트 파일 하나를 읽습니다. 못 읽거나 틀리면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool readManifest( const string& manifestPath, ModuleManifest& outManifest )
             {
@@ -62,15 +61,15 @@ namespace sw
                 return true;
             }
 
-            /** @brief @p listManifest 에서 이름으로 찾은 칸 번호입니다. 없으면 `kNotFound` 입니다. */
-            static size_t findIndex( const vector<ModuleManifest>& listManifest, string_view name )
+            /** @brief @p listManifest 에서 이름으로 찾은 칸 번호입니다. */
+            [[nodiscard]] static optional<size_t> findIndex( const vector<ModuleManifest>& listManifest, string_view name )
             {
                 for ( size_t index = 0; index < listManifest.size(); ++index )
                 {
                     if ( listManifest[index]._name == name )
                         return index;
                 }
-                return kNotFound;
+                return nullopt;
             }
 
             /** @brief @p listSeed 에서 `_listDependency` 를 따라 닿는 모듈을 @p inoutListReached(@p listManifest 칸 순서)에 표시합니다. */
@@ -78,12 +77,12 @@ namespace sw
             {
                 while ( listSeed.empty() == false )
                 {
-                    const size_t index = findIndex( listManifest, listSeed.back() );
+                    const optional<size_t> index = findIndex( listManifest, listSeed.back() );
                     listSeed.pop_back();
-                    if ( index == kNotFound || inoutListReached[index] == SW_TRUE )
+                    if ( index.has_value() == false || inoutListReached[*index] == SW_TRUE )
                         continue; // 없는 의존은 resolve 가 오류로 알린다
-                    inoutListReached[index] = SW_TRUE;
-                    for ( const ModuleDependency& dependency : listManifest[index]._listDependency )
+                    inoutListReached[*index] = SW_TRUE;
+                    for ( const ModuleDependency& dependency : listManifest[*index]._listDependency )
                     {
                         listSeed.push_back( dependency._name );
                     }
@@ -148,8 +147,8 @@ namespace sw
                     continue;
                 for ( const ModuleDependency& dependency : inoutListManifest[index]._listDependency )
                 {
-                    const size_t dependencyIndex = ModuleCatalogLoaderInternal::findIndex( inoutListManifest, dependency._name );
-                    if ( dependencyIndex != ModuleCatalogLoaderInternal::kNotFound && listRemoved[dependencyIndex] == SW_TRUE )
+                    const optional<size_t> dependencyIndex = ModuleCatalogLoaderInternal::findIndex( inoutListManifest, dependency._name );
+                    if ( dependencyIndex.has_value() && listRemoved[*dependencyIndex] == SW_TRUE )
                     {
                         listRemoved[index] = SW_TRUE;
                         bChanged           = true;
@@ -187,10 +186,10 @@ namespace sw
         vector<ModuleManifest> listGamePackProject;
         if ( ModuleCatalogLoaderInternal::readManifestFolder( FileUtil::joinPath( ProcessRoots::get()._binary.str(), config::kDirBinGames ), true, listGamePackProject ) == false )
             return false;
-        const size_t projectIndex = ModuleCatalogLoaderInternal::findIndex( listManifest, config::kTargetGameModule );
-        string       movedModule;
-        string       movedDirectory;
-        if ( ModuleLibraryUtil::getModuleSubdirectory( movedModule, movedDirectory ) && projectIndex != ModuleCatalogLoaderInternal::kNotFound )
+        const optional<size_t> projectIndex = ModuleCatalogLoaderInternal::findIndex( listManifest, config::kTargetGameModule );
+        string                 movedModule;
+        string                 movedDirectory;
+        if ( ModuleLibraryUtil::getModuleSubdirectory( movedModule, movedDirectory ) && projectIndex.has_value() )
         {
             const string selectedPath = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), movedModule + ModuleCatalog::kManifestExtension );
             bool         bFound       = false;
@@ -198,7 +197,7 @@ namespace sw
             {
                 if ( FileUtil::isSameDiskPath( project._sourcePath, selectedPath ) == false ) // 디스크 경로다(OS 규칙 — 접은 키는 리눅스에서 대소문자를 잃는다)
                     continue;
-                std::swap( project, listManifest[projectIndex] );
+                std::swap( project, listManifest[*projectIndex] );
                 bFound = true;
                 break;
             }
