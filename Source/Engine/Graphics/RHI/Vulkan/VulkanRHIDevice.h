@@ -372,7 +372,7 @@ namespace sw
         {
             VkBuffer       _buffer{ nullptr };
             VkDeviceMemory _memory{ nullptr };
-            uint32         _sizeBytes{ 0 };
+            uint64         _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
             uint32         _usage{ 0 };      ///< VkBufferUsageFlags
             uint32         _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
             RHIBufferState _state = RHIBufferState::Common;
@@ -829,7 +829,7 @@ namespace sw
          * @param memory 메모리 자리 — CPU 가 매핑해 쓰는 버퍼(상수 링 · 읽기 · 스테이징)만 `HostVisible`, GPU 가 그리며 읽는 정적 자원은 `DeviceLocal` 이다(호스트 메모리에서 그리면
          *        디스크리트 GPU 가 PCIe 로 읽는다). `DeviceLocal` 은 초기 데이터를 받지 않는다 — 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
          */
-        RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory );
+        RHIBufferHandle createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory );
         /// @brief 업로드 스테이징 블록입니다 — 호스트 보임 버퍼 하나를 매핑해 두고 앞에서부터 나눠 쓴다(전용이면 그 업로드 하나 몫).
         struct UploadStagingBlock
         {
@@ -837,6 +837,7 @@ namespace sw
             uint8*          _pMapped{ nullptr };
             uint64          _capacity{ 0 };
             uint64          _offset{ 0 };
+            uint64          _retiredSerial{ 0 }; ///< 자유 목록에 돌아온 때의 프레임 기록 시리얼(놓을 때를 잰다)
             uint8           _bDedicated{ SW_FALSE };
         };
         /// @brief 닫은 업로드 커맨드버퍼 하나와 그 복사가 읽는 블록들입니다 — 제출한 뒤 GPU 가 끝나면 함께 돌려받는다.
@@ -864,6 +865,12 @@ namespace sw
         void retireUploadBatch( const UploadBatch& batch );
         /** @brief 스테이징 블록 하나를 만들어 매핑합니다(@p bDedicated 면 그 크기 그대로). 실패하면 빈 블록입니다. */
         UploadStagingBlock createStagingBlock( uint64 capacity, bool bDedicated );
+        /** @brief GPU 가 다 쓴 스테이징 블록을 지금 놓습니다(버퍼 표에서 빼고 버퍼 · 메모리를 바로 지운다 — 해제 큐를 다시 거치지 않는다). */
+        void destroyStagingBlock( const UploadStagingBlock& block );
+        /** @brief `_uploadStagingIdleFrames` 프레임 넘게 쓰지 않은 자유 블록을 놓습니다(하나는 남긴다). 렌더 스레드의 프레임 시작이 부른다. */
+        void trimIdleStagingBlocks();
+        /** @brief 업로드 커맨드버퍼 · 풀 · 모든 스테이징 블록을 놓습니다 — 종료가 해제 큐를 비운 뒤, 버퍼 표를 비우기 전에 부른다. */
+        void shutdownUploads();
         /** @brief 렌더 스레드가 있고 이 스레드가 그것이 아니면 true 입니다 — 그 업로드는 프레임 세그먼트가 아니라 업로드 커맨드버퍼로 간다. */
         bool isOtherThanRenderThread() const;
         /** @brief 이 스레드가 지금 프레임 스트림을 기록하는 렌더 스레드면 true 입니다(렌더 스레드가 없으면 부르는 스레드가 그 자리) — 그때만 구조 버퍼 갱신을 프레임 스트림에 바로 기록한다(앞뒤 그리기와 기록 순서 그대로). */
@@ -954,9 +961,10 @@ namespace sw
         VkCommandPool              _uploadCommandPool{ VK_NULL_HANDLE };
         VkCommandBuffer            _openUploadBuffer{ VK_NULL_HANDLE };
         UploadStagingBlock         _openStagingBlock;
-        vector<UploadStagingBlock> _listUsedStagingBlock;    ///< 열린 업로드 버퍼가 다 쓴 블록 · 전용 블록(제출과 함께 펜스 뒤 해제에 건다)
-        vector<UploadStagingBlock> _listFreeStagingBlock;    ///< 펜스가 지나 돌려받은 블록
-        uint64                     _uploadStagingBytes{ 0 }; ///< 블록 크기(`RHISwapChainDesc::_uploadStagingBytes`)
+        vector<UploadStagingBlock> _listUsedStagingBlock;         ///< 열린 업로드 버퍼가 다 쓴 블록 · 전용 블록(제출과 함께 펜스 뒤 해제에 건다)
+        vector<UploadStagingBlock> _listFreeStagingBlock;         ///< 펜스가 지나 돌려받은 블록
+        uint64                     _uploadStagingBytes{ 0 };      ///< 블록 크기(`RHISwapChainDesc::_uploadStagingBytes`)
+        uint32                     _uploadStagingIdleFrames{ 0 }; ///< 자유 블록을 놓기까지의 프레임 수(`RHISwapChainDesc::_uploadStagingIdleFrames`)
         /**
          * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit`, `vkQueueWaitIdle`, `vkQueuePresentKHR`, `vkDeviceWaitIdle`)을 보호합니다.
          * @details VkQueue 는 외부 동기화 대상이다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있다.

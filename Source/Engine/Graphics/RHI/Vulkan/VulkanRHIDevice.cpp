@@ -231,6 +231,12 @@ namespace sw
             return false;
         }
         _uploadStagingBytes = desc._uploadStagingBytes;
+        if ( desc._uploadStagingIdleFrames == 0 )
+        {
+            SW_LOG_ERROR_ID( "Vulkan.UploadStagingIdleFramesMissing", "EngineConfig _rhi._uploadStagingIdleFrames must be > 0 - the Vulkan backend does not start" );
+            return false;
+        }
+        _uploadStagingIdleFrames = desc._uploadStagingIdleFrames;
         if ( desc._pipelineCacheSaveIntervalSeconds <= 0.0 )
         {
             SW_LOG_ERROR_ID( "Vulkan.PipelineCacheSaveIntervalMissing", "EngineConfig _rhi._pipelineCacheSaveIntervalSeconds must be > 0 - the Vulkan backend does not start" );
@@ -431,17 +437,10 @@ namespace sw
                 vkDestroyCommandPool( _device, _oneShotCommandPool, nullptr );
                 _oneShotCommandPool = VK_NULL_HANDLE;
             }
-            {
-                // 풀을 놓으면 그 버퍼도 놓인다. 스테이징 블록 버퍼 · 메모리는 아래 버퍼 표 정리가 놓는다.
-                ScopedLock<mutex> lock{ _uploadMutex };
-                if ( _uploadCommandPool != VK_NULL_HANDLE )
-                    vkDestroyCommandPool( _device, _uploadCommandPool, nullptr );
-                _uploadCommandPool = VK_NULL_HANDLE;
-                _openUploadBuffer  = VK_NULL_HANDLE;
-                _openStagingBlock  = UploadStagingBlock{};
-                _listUsedStagingBlock.clear();
-                _listFreeStagingBlock.clear();
-            }
+            // 해제 큐를 버퍼 표를 비우기 전에 한 번 비운다 — 업로드 배치 · 버퍼 해제 대리자가 표를 해석하므로, 표가 빈 뒤에 돌면 해석 실패 길이 생긴다.
+            // GPU 는 종료 2 단계(waitIdle)에서 쉬었다. 아래 텍스처 정리가 새로 거는 프레임버퍼 해제는 뒤의 flushAll 이 놓는다.
+            _releaseQueue.flushAll();
+            shutdownUploads();
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
             {
@@ -749,7 +748,7 @@ namespace sw
         return true;
     }
 
-    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory )
+    RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory memory )
     {
         if ( _device == nullptr || sizeBytes == 0 )
             return 0;
@@ -759,7 +758,7 @@ namespace sw
             return 0;
         }
 
-        const uint32 alignedSize = MathUtil::align( sizeBytes, constant::render::kConstantBufferAlignment );
+        const uint64 alignedSize = MathUtil::align( sizeBytes, static_cast<uint64>( constant::render::kConstantBufferAlignment ) );
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -808,7 +807,7 @@ namespace sw
             bReady = isVkSuccess( vkMapMemory( _device, memory, 0, sizeBytes, 0, &pMapped ), "vkMapMemory (initial data)" ) && pMapped != nullptr;
             if ( bReady )
             {
-                Memory::copy( pMapped, pInitialData, sizeBytes );
+                Memory::copy( pMapped, pInitialData, static_cast<size_t>( sizeBytes ) );
                 vkUnmapMemory( _device, memory );
             }
         }
@@ -2414,6 +2413,7 @@ namespace sw
         _timestampRing.beginFrame( getFrameSlot() );
         // 이 칸의 앞 프레임까지 GPU 가 끝냈다. 그 시리얼 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _frameFenceRing.getCompletedSerial() );
+        trimIdleStagingBlocks(); // 돌려받은 업로드 블록 가운데 오래 쉰 것을 놓는다
         // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
         retireFinishedTransfers();
         // 이 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다.
@@ -2895,7 +2895,7 @@ namespace sw
     VulkanRHIDevice::UploadStagingBlock VulkanRHIDevice::createStagingBlock( uint64 capacity, bool bDedicated )
     {
         UploadStagingBlock        block{};
-        const RHIBufferHandle     handle  = createVulkanBuffer( static_cast<uint32>( capacity ), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, nullptr, 0, VulkanBufferMemory::HostVisible );
+        const RHIBufferHandle     handle  = createVulkanBuffer( capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, nullptr, 0, VulkanBufferMemory::HostVisible );
         VulkanBufferRecord* const pRecord = resolveAllocatedBuffer( handle );
         void*                     pMapped{ nullptr };
         const bool                bMapped = pRecord != nullptr && isVkSuccess( vkMapMemory( _device, pRecord->_memory, 0, VK_WHOLE_SIZE, 0, &pMapped ), "vkMapMemory (upload staging)" ) && pMapped != nullptr;
@@ -3027,13 +3027,62 @@ namespace sw
                 continue;
             if ( block._bDedicated != SW_FALSE )
             {
-                if ( getResourceFactory() != nullptr )
-                    getResourceFactory()->destroyBuffer( block._buffer ); // 매핑은 메모리 해제가 풀어 준다
+                destroyStagingBlock( block ); // GPU 가 끝났다 — 해제 큐를 다시 거치지 않고 바로 놓는다
                 continue;
             }
-            block._offset = 0;
+            block._offset        = 0;
+            block._retiredSerial = _frameFenceRing.getRecordingSerial();
             _listFreeStagingBlock.push_back( block );
         }
+    }
+
+    void VulkanRHIDevice::destroyStagingBlock( const UploadStagingBlock& block )
+    {
+        VulkanBufferRecord owned;
+        if ( block._buffer == 0 || _gpuBuffers.take( block._buffer, owned ) == false )
+            return;
+        if ( owned._buffer != VK_NULL_HANDLE )
+            vkDestroyBuffer( _device, owned._buffer, nullptr );
+        if ( owned._memory != VK_NULL_HANDLE )
+            freeDeviceMemory( owned._memory ); // 매핑은 메모리 해제가 풀어 준다
+        getMemoryTracker().recordFree( RHIMemoryKey::makeBuffer( block._buffer ) );
+    }
+
+    void VulkanRHIDevice::trimIdleStagingBlocks()
+    {
+        const uint64      recordingSerial = _frameFenceRing.getRecordingSerial();
+        ScopedLock<mutex> lock{ _uploadMutex };
+        // 재사용은 뒤에서 꺼내므로 앞쪽이 가장 오래 쉰 블록이다. 하나는 남겨 다음 업로드가 새로 만들지 않게 한다.
+        size_t trimCount = 0;
+        while ( _listFreeStagingBlock.size() - trimCount > 1 && recordingSerial - _listFreeStagingBlock[trimCount]._retiredSerial > _uploadStagingIdleFrames )
+        {
+            destroyStagingBlock( _listFreeStagingBlock[trimCount] );
+            ++trimCount;
+        }
+        if ( trimCount > 0 )
+            _listFreeStagingBlock.erase( _listFreeStagingBlock.begin(), _listFreeStagingBlock.begin() + static_cast<std::ptrdiff_t>( trimCount ) );
+    }
+
+    void VulkanRHIDevice::shutdownUploads()
+    {
+        ScopedLock<mutex> lock{ _uploadMutex };
+        // 풀을 놓으면 그 커맨드버퍼도 놓인다. GPU 는 쉬고 있으므로 열린 · 쓴 · 자유 블록 모두 지금 놓는다.
+        if ( _uploadCommandPool != VK_NULL_HANDLE )
+            vkDestroyCommandPool( _device, _uploadCommandPool, nullptr );
+        _uploadCommandPool = VK_NULL_HANDLE;
+        _openUploadBuffer  = VK_NULL_HANDLE;
+        destroyStagingBlock( _openStagingBlock );
+        _openStagingBlock = UploadStagingBlock{};
+        for ( const UploadStagingBlock& block : _listUsedStagingBlock )
+        {
+            destroyStagingBlock( block );
+        }
+        for ( const UploadStagingBlock& block : _listFreeStagingBlock )
+        {
+            destroyStagingBlock( block );
+        }
+        _listUsedStagingBlock.clear();
+        _listFreeStagingBlock.clear();
     }
 
     void VulkanRHIDevice::submitFrameJobNow( VkSemaphore signal )
@@ -3384,6 +3433,8 @@ namespace sw
             submitInfo.pCommandBuffers    = &job._commandBuffer;
             ScopedLock<mutex> queueLock{ _queueMutex };
             // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
+            // 업로드 커맨드버퍼(`takeUploadBatch`)를 거치지 않아도 순서가 맞다 — 기록 즉시 큐에 내므로 이 텍스처를 읽는 어느 프레임 제출보다 앞이고,
+            // 세그먼트 끝에 붙는 일이 없다. 텍스처 전송은 티켓마다 펜스로 끝을 알려야 해서(스트리밍 워터마크) 배치에 섞지 않는다.
             result = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, job._fence );
             // 시리얼은 큐에 낸 직후 같은 락 안에서 매긴다 — 락 밖에서 매기면 시리얼 순서가 큐 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮는다(계약 5).
             if ( result == VK_SUCCESS )

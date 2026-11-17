@@ -238,6 +238,10 @@ namespace sw
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _uploadStagingMegabytes{};
 
+        /** @brief 업로드 스테이징 블록이 이만큼 프레임 동안 쓰이지 않으면 놓습니다(블록 하나는 늘 남긴다). 업로드가 몰린 뒤의 상주 메모리를 돌려준다. */
+        PROPERTY( Min = 1 )
+        uint32 _uploadStagingIdleFrames{};
+
         /** @brief 파이프라인 캐시(Vulkan `VkPipelineCache`)를 디스크에 저장하는 주기(초)입니다. 종료 전에 죽어도 그 주기 앞까지의 컴파일이 남는다(R-13). */
         PROPERTY( Min = 1, Units = s )
         float64 _pipelineCacheSaveIntervalSeconds{};

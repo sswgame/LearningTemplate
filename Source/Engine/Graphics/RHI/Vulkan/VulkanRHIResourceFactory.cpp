@@ -140,7 +140,7 @@ namespace sw
         constexpr uint32 usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         // 구조 버퍼는 GPU 가 읽고 쓴다(인스턴스 · 컬링 · 라이트 그리드) — 기기 로컬이다. 갱신은 늘 스테이징 복사다(`updateStructuredBufferRegions`).
-        return _pDevice->createVulkanBuffer( static_cast<uint32>( totalBytes ), usage, nullptr, 0, VulkanBufferMemory::DeviceLocal );
+        return _pDevice->createVulkanBuffer( totalBytes, usage, nullptr, 0, VulkanBufferMemory::DeviceLocal );
     }
 
     bool VulkanRHIResourceFactory::acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer )

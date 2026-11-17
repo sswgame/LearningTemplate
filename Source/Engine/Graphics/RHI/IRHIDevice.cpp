@@ -557,6 +557,7 @@ namespace sw
         const RHIConfig& rhiConfig                      = engine::getSubsystem<EngineConfig>()._rhi;
         swapChainDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
         swapChainDesc._uploadStagingBytes               = static_cast<uint64>( rhiConfig._uploadStagingMegabytes ) * constant::memory::kBytesPerMegabyte;
+        swapChainDesc._uploadStagingIdleFrames          = rhiConfig._uploadStagingIdleFrames;
         swapChainDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;
         swapChainDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
         swapChainDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
