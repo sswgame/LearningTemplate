@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 
 namespace sw
 {
@@ -47,8 +48,8 @@ namespace sw
                 return true;
             }
 
-            /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 다른 철자도 같은 칸에 닿습니다. */
-            static string makeKey( string_view path ) { return FileUtil::normalizePath( path ).str(); }
+            /** @brief 표의 키입니다 — 소문자로 접은 지금 id 라 다른 철자 · 옮긴 메시의 옛 id 도 같은 칸에 닿습니다(`AssetRedirect::toCacheKey`). */
+            static string makeKey( string_view path ) { return AssetRedirect::toCacheKey( path ); }
         };
     } // namespace
 } // namespace sw

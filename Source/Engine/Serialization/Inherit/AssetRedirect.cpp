@@ -277,6 +277,11 @@ namespace sw
             return current;
         return string{ assetID };
     }
+
+    string AssetRedirect::toCacheKey( string_view path )
+    {
+        return toCurrentID( FileUtil::normalizePath( path ).str() );
+    }
 } // namespace sw
 
 namespace sw
