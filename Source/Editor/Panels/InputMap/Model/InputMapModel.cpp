@@ -9,6 +9,7 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -22,8 +23,9 @@
 
 namespace sw::editor
 {
-    InputMapModel::InputMapModel()
-        : _inputMap{}
+    InputMapModel::InputMapModel( const DocumentEditRecorder& recorder )
+        : _pRecorder{ &recorder }
+        , _inputMap{}
         , _replay{}
         , _listConflict{}
         , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._debugKeyInputMap } // 처음 여는 맵은 디버그 키 맵이다 — 경로의 원본은 enginedefaultassets.xml
@@ -36,7 +38,6 @@ namespace sw::editor
         , _bCapturingKey{ SW_FALSE }
         , _bCaptureNewBinding{ SW_FALSE }
         , _bPlotPaused{ SW_FALSE }
-        , _bDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -106,7 +107,7 @@ namespace sw::editor
 
     bool InputMapModel::reload()
     {
-        // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
+        // 읽지 못하면 편집 중인 바인딩을 그대로 둔다("다시 읽었다" 고 표시하지 않는다 — 미저장은 문서 패널이 든다).
         // 묶음은 읽기 실패가 맵을 비우므로(`InputMap::loadBundle`) 맵에 넣기 전에 묶음만 먼저 검사한다.
         const AssetID assetID{ _inputMapPath.c_str() };
         const bool    bBundle = isBundlePath();
@@ -126,7 +127,6 @@ namespace sw::editor
         // 새 맵에 없는 액션을 든 채면 오른쪽 칸이 없는 액션의 "바인딩 없음" 을 보여 준다.
         if ( _inputMap.hasAction( hashed_string( _selectedAction.c_str() ) ) == false )
             _selectedAction.clear();
-        _bDirty = SW_FALSE;
         return true;
     }
 
@@ -141,7 +141,6 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "InputMapModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
                 return false;
             }
-            _bDirty = SW_FALSE;
             return true;
         }
         const optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.get() );
@@ -151,7 +150,6 @@ namespace sw::editor
             return false;
         }
         SW_LOG_INFO_ID( "InputMapModel.SavedInputMap", "Saved InputMap to %#", _inputMapPath.c_str() );
-        _bDirty = SW_FALSE;
         return true;
     }
 
@@ -192,14 +190,40 @@ namespace sw::editor
 
     bool InputMapModel::recordEdit( bool bChanged )
     {
-        _bDirty = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        if ( bChanged == false )
+            return false;
+        _pRecorder->notifyEdited( "Edit Input Map" );
+        return true;
     }
 
     void InputMapModel::resetAllBindingsToDefault()
     {
         _inputMap.resetAllBindingsToDefault();
-        _bDirty = SW_TRUE;
+        (void)recordEdit( true );
+    }
+
+    string InputMapModel::captureText() const
+    {
+        string text;
+        if ( isBundlePath() || _inputMap.saveToXMLText( text ) == false )
+            return {};
+        return text;
+    }
+
+    bool InputMapModel::applyText( string_view text )
+    {
+        if ( isBundlePath() )
+            return false;
+        if ( _inputMap.loadFromXMLText( text, _inputMapPath.c_str() ) == false )
+        {
+            // 스스로 만든 글이라 드물다 — 일부만 읽힌 맵을 두지 않고 파일에서 다시 읽는다(편집은 잃는다, 이유는 읽기가 남겼다).
+            (void)reload();
+            return false;
+        }
+        cancelKeyCapture();
+        if ( _inputMap.hasAction( hashed_string( _selectedAction.c_str() ) ) == false )
+            _selectedAction.clear();
+        return true;
     }
 
     bool InputMapModel::resetActionToDefault( const hashed_string& action )
