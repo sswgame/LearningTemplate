@@ -27,6 +27,7 @@ namespace sw
     class Texture2D;
     struct HeightfieldAsset;
     class GameObjectManager;
+    class Mesh;
     class MeshInstanceBatch;
     class PrimitiveRegistry;
     class ValidationContext;
@@ -115,8 +116,10 @@ namespace sw
          */
         [[nodiscard]] bool reloadTerrain();
         /**
-         * @brief 카메라 위치 @p viewPosition 으로 청크 LOD 를 고르고, 바뀐 청크의 메시를 다시 만듭니다. 틱이 부르고 테스트가 직접 부릅니다.
-         * @return 메시를 다시 만든 청크 수입니다.
+         * @brief 카메라 위치 @p viewPosition 으로 청크 LOD 를 고르고, 바뀐 청크의 메시를 바꿉니다. 틱이 부르고 테스트가 직접 부릅니다.
+         * @details 청크마다 최근 메시 몇 벌(`kChunkMeshCacheCount`)을 (LOD, 유효 이웃 LOD) 열쇠로 들고 있어, 돌아온 LOD 는 CPU 로 다시 만들지 않고 꺼내 쓴다(감사 RN-7 —
+         *          고리 근처 왕복 · 카메라 컷 되돌림이 공짜다). 높이 · 구멍을 쓴 청크는 들고 있던 메시를 버린다.
+         * @return 메시를 바꾼 청크 수입니다(들고 있던 메시를 꺼낸 것 포함). 새로 만든 수는 `getChunkMeshBuildCount` 가 센다.
          */
         uint32 updateLODs( const float3& viewPosition );
         /**
@@ -217,6 +220,8 @@ namespace sw
         uint32 getChunkLOD( uint32 chunkX, uint32 chunkZ ) const;
         /** @brief 청크 (x, z) 의 지금 메시 정점 수입니다(테스트). */
         uint32 getChunkVertexCount( uint32 chunkX, uint32 chunkZ ) const;
+        /** @brief 지금까지 CPU 로 새로 만든 청크 메시 수입니다(들고 있던 메시를 꺼낸 것은 세지 않는다 — 테스트 · 측정). */
+        uint64 getChunkMeshBuildCount() const { return _chunkMeshBuildCount; }
 
         /**
          * @brief @p manager 의 지형 가운데 월드 (x, z) 를 덮는 첫 지형입니다. 없으면 nullptr 입니다.
@@ -242,6 +247,21 @@ namespace sw
         const vector<TerrainLayer>& getLayers() const { return _listLayer; }
 
     private:
+        /**
+         * @brief 청크 하나가 들고 있는 최근 메시 수입니다. 고리 하나를 사이에 둔 왕복(LOD l ↔ l+1)과 이웃 이음매 한 번 바뀜을 덮는다.
+         * @details 상용 엔진(언리얼 랜드스케이프)은 청크 정점 한 벌에 (LOD, 이웃) 공유 인덱스를 쓴다 — 여기서는 메시 구간이 인덱스 버퍼를 나누지 못하고 구멍 · 지오모프 값이
+         *          청크 · LOD 마다 달라 만든 메시를 들고 있는 쪽을 골랐다. 메모리는 청크마다 이 수만큼(대개 거친 LOD 라 작다).
+         */
+        static constexpr uint32 kChunkMeshCacheCount = 4;
+
+        /** @brief 청크가 들고 있는 메시 한 벌입니다. 열쇠는 LOD 와 유효 이웃 LOD(`max( 이웃, 자기 )`)를 묶은 값입니다. */
+        struct ChunkMeshCacheEntry
+        {
+            shared_ptr<Mesh> _mesh;
+            uint32           _key{ 0 };
+            uint32           _vertexCount{ 0 };
+        };
+
         /** @brief 청크 하나입니다. 배치 하나와 현재 메시의 LOD, 이웃 LOD 를 담습니다. */
         struct Chunk
         {
@@ -249,7 +269,8 @@ namespace sw
             uint32                        _lod{ 0 };
             uint32                        _arrNeighborLOD[static_cast<uint32>( TerrainChunkSide::Count )]{};
             uint32                        _vertexCount{ 0 };
-            bool                          _bMeshStale{ false }; ///< 높이를 썼고 메시는 아직이다(`_listStaleChunk` 에 있다)
+            bool                          _bMeshStale{ false };                   ///< 높이를 썼고 메시는 아직이다(`_listStaleChunk` 에 있다)
+            ChunkMeshCacheEntry           _arrCachedMesh[kChunkMeshCacheCount]{}; ///< 최근에 쓴 것이 앞이다. 높이 · 구멍을 쓰면 비운다
         };
 
         /**
@@ -342,10 +363,11 @@ namespace sw
         TerrainHeightfield  _heightfield;
         TerrainChunkLayout  _layout;
         vector<Chunk>       _listChunk;
-        vector<uint32>      _listWantedLOD;          ///< updateLODs 의 스크래치(청크마다 고른 LOD)
-        vector<uint32>      _listChunkGeneration;    ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
-        vector<uint32>      _listChunkSplatRevision; ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
-        vector<uint32>      _listStaleChunk;         ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
+        vector<uint32>      _listWantedLOD;            ///< updateLODs 의 스크래치(청크마다 고른 LOD)
+        vector<uint32>      _listChunkGeneration;      ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
+        vector<uint32>      _listChunkSplatRevision;   ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
+        vector<uint32>      _listStaleChunk;           ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
+        uint64              _chunkMeshBuildCount{ 0 }; ///< CPU 로 새로 만든 청크 메시 수(`getChunkMeshBuildCount`)
         EnvironmentMaterial _material;
         string              _arrCPUSplatPath[SurfaceLayerWeights::kPlaneCount]; ///< 가중치로 만든 자기 스플랫 텍스처 둘(`getCPUSplatPath` - 평면 0 은 레이어 0..3, 1 은 4..7)
         PrimitiveRegistry*  _pPrimitiveRegistry;                                ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)

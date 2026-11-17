@@ -98,6 +98,15 @@ namespace sw
                 return MathUtil::sqrt( deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ );
             }
 
+            /** @brief 청크 메시 열쇠입니다 — LOD 와 변마다의 유효 이웃 LOD(`max( 이웃, 자기 )` — 고운 이웃 쪽 변은 이웃이 접는다)를 4 비트씩 묶는다(`_maxLOD` 는 log2( 청크 칸 ) 이라 15 이하). */
+            static uint32 makeChunkMeshKey( uint32 lod, const uint32 ( &arrNeighborLOD )[4] )
+            {
+                uint32 key = lod;
+                for ( uint32 side = 0; side < 4; ++side )
+                    key |= MathUtil::max( arrNeighborLOD[side], lod ) << ( 4u * ( side + 1u ) );
+                return key;
+            }
+
             /** @brief 다시 만들 청크 하나의 LOD 와 이웃 LOD 입니다(워커에 넘기는 값). */
             struct ChunkMeshRequest
             {
@@ -404,6 +413,8 @@ namespace sw
                 if ( chunk._bMeshStale == false )
                     _listStaleChunk.push_back( chunkIndex );
                 chunk._bMeshStale = true;
+                for ( ChunkMeshCacheEntry& cached : chunk._arrCachedMesh )
+                    cached = ChunkMeshCacheEntry{}; // 옛 높이로 만든 메시다
             }
         }
         // 큰 사각형은 청크 메시를 프레임마다 나눠 다시 만든다(남은 것은 틱이 이어서). 브러시 한 번(청크 넷 이하)은 바로 끝난다.
@@ -863,18 +874,45 @@ namespace sw
 
     void TerrainComponent::rebuildChunkMeshes( const vector<uint32>& listChunkIndex )
     {
-        using Internal            = TerrainComponentInternal;
-        const uint32 rebuildCount = static_cast<uint32>( listChunkIndex.size() );
+        using Internal = TerrainComponentInternal;
+        // 들고 있던 메시가 맞으면 그것을 앞으로 옮겨 쓰고, 나머지만 만든다. 낡은(높이를 쓴) 청크는 캐시를 이미 비웠다.
+        vector<uint32> listBuildChunk;
+        listBuildChunk.reserve( listChunkIndex.size() );
+        for ( const uint32 chunkIndex : listChunkIndex )
+        {
+            Chunk&       chunk = _listChunk[chunkIndex];
+            const uint32 key   = Internal::makeChunkMeshKey( chunk._lod, chunk._arrNeighborLOD );
+            uint32       found = kChunkMeshCacheCount;
+            for ( uint32 slot = 0; slot < kChunkMeshCacheCount && chunk._bMeshStale == false; ++slot )
+            {
+                if ( chunk._arrCachedMesh[slot]._mesh != nullptr && chunk._arrCachedMesh[slot]._key == key )
+                {
+                    found = slot;
+                    break;
+                }
+            }
+            if ( found == kChunkMeshCacheCount )
+            {
+                listBuildChunk.push_back( chunkIndex );
+                continue;
+            }
+            std::rotate( chunk._arrCachedMesh, chunk._arrCachedMesh + found, chunk._arrCachedMesh + found + 1 );
+            chunk._vertexCount = chunk._arrCachedMesh[0]._vertexCount;
+            chunk._batch->setMesh( chunk._arrCachedMesh[0]._mesh );
+        }
+
+        const uint32 rebuildCount = static_cast<uint32>( listBuildChunk.size() );
         if ( rebuildCount == 0 )
             return;
+        _chunkMeshBuildCount += rebuildCount;
         vector<Internal::ChunkMeshRequest> listRequest( rebuildCount );
         vector<vector<RHIVertex>>          listChunkVertex( rebuildCount );
         vector<vector<uint32>>             listChunkTriangleIndex( rebuildCount );
         for ( uint32 index = 0; index < rebuildCount; ++index )
         {
-            const Chunk&                chunk   = _listChunk[listChunkIndex[index]];
+            const Chunk&                chunk   = _listChunk[listBuildChunk[index]];
             Internal::ChunkMeshRequest& request = listRequest[index];
-            request._chunkIndex                 = listChunkIndex[index];
+            request._chunkIndex                 = listBuildChunk[index];
             request._lod                        = chunk._lod;
             for ( uint32 side = 0; side < static_cast<uint32>( TerrainChunkSide::Count ); ++side )
             {
@@ -893,7 +931,7 @@ namespace sw
         // 메시 생성과 배치 교체는 레지스트리 더티 표시를 건드리므로 이 스레드에서 한다.
         for ( uint32 index = 0; index < rebuildCount; ++index )
         {
-            Chunk& chunk          = _listChunk[listChunkIndex[index]];
+            Chunk& chunk          = _listChunk[listBuildChunk[index]];
             chunk._vertexCount    = static_cast<uint32>( listChunkVertex[index].size() );
             chunk._bMeshStale     = false;
             shared_ptr<Mesh> mesh = Mesh::create();
@@ -901,6 +939,9 @@ namespace sw
             mesh->setVertexFormat( RHIMeshVertexFormat::HighPrecision );
             // 탄젠트(또는 지오모프 값)와 인덱스는 워커가 채웠다 — 번호는 합친 정점 안이다.
             (void)mesh->setGeometryWithTangents( std::move( listChunkVertex[index] ), std::move( listChunkTriangleIndex[index] ) );
+            // 가장 오래 쓰지 않은 칸을 버리고 앞에 넣는다.
+            std::rotate( chunk._arrCachedMesh, chunk._arrCachedMesh + kChunkMeshCacheCount - 1, chunk._arrCachedMesh + kChunkMeshCacheCount );
+            chunk._arrCachedMesh[0] = ChunkMeshCacheEntry{ mesh, Internal::makeChunkMeshKey( chunk._lod, chunk._arrNeighborLOD ), chunk._vertexCount };
             chunk._batch->setMesh( std::move( mesh ) );
         }
     }
