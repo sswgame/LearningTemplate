@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Renderer/Frame/PostProcess/PostProcessChainTexture.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/TemporalJitterSequence.h"
@@ -34,12 +35,13 @@ namespace sw
         /** @brief 이번 프레임 이 뷰가 그릴 후처리 머티리얼 하나(PSO · 원소 버퍼 · 텍스처 번호 · 무게 · 자리)입니다. 셋업(`FramePostProcessMaterials::prepareView`)이 정한다. */
         struct PostProcessMaterialPass
         {
-            RHIPipelineStateHandle       _pso{ 0 }; ///< 0 이면 PSO 를 만들지 못했다(그 그리기만 빠진다)
-            RHIBufferHandle              _buffer{ 0 };
-            RHIDescriptorIndex           _srv{ kInvalidDescriptorIndex };
-            const RHIDescriptorIndex*    _pTextureSRV{ nullptr }; ///< 에뮬 백엔드의 머티리얼 텍스처 칸(t16..t31) — 뷰 설정의 사본이 프레임 동안 쥔다
-            float32                      _weight{ 0.0f };
-            PostProcessBlendableLocation _location{ PostProcessBlendableLocation::None };
+            RHIPipelineStateHandle         _pso{ 0 }; ///< 0 이면 PSO 를 만들지 못했다(그 그리기만 빠진다)
+            RHIBufferHandle                _buffer{ 0 };
+            RHIDescriptorIndex             _srv{ kInvalidDescriptorIndex };
+            const RHIDescriptorIndex*      _pTextureSRV{ nullptr }; ///< 에뮬 백엔드의 머티리얼 텍스처 칸(t16..t31) — 뷰 설정의 사본이 프레임 동안 쥔다
+            float32                        _weight{ 0.0f };
+            PostProcessBlendableLocation   _location{ PostProcessBlendableLocation::None };
+            const PostProcessChainTexture* _pChainSource{ nullptr }; ///< 같은 자리의 앞 머티리얼 결과 사본 — 있으면 원본 대신 읽는다(둘째부터). 뷰가 가진다
         };
 
         TransientAttachmentPool     _transientPool;
@@ -112,6 +114,9 @@ namespace sw
         const Texture2D* _pBloomDirtMask{ nullptr };
         /// @brief 이번 프레임 이 뷰가 그릴 후처리 머티리얼입니다(설정 `_listPostProcessMaterial` 차례 — 그 자리의 패스가 없는 것은 빠진다). PostProcessMaterial 패스가 자기 자리의 것을 그린다.
         vector<PostProcessMaterialPass> _listPostProcessMaterialPass;
+        /// @brief 톤맵 앞 · 뒤 자리의 이어 읽기 사본입니다(그 자리에 머티리얼이 둘 이상일 때만 있다 — `FramePostProcessMaterials::prepareView`). 풀과 수명이 같다.
+        PostProcessChainTexture _postProcessChainBeforeTonemap;
+        PostProcessChainTexture _postProcessChainAfterTonemap;
         /// @brief 파이프라인 패스(`RenderPipelineAsset::getGraphPass` 순서)마다 이번 프레임 이 뷰에서 비활성이면 1(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 실행 입구(`FramePassExecutor::executePass`)가 그대로 따른다.
         vector<uint8> _listPassDisabled;
         /**
