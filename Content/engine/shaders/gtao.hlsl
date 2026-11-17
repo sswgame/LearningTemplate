@@ -1,6 +1,6 @@
 /**
  * gtao.hlsl — 지평선 기반 앰비언트 오클루전(GTAO, Jimenez 2016)과 굽은 노멀. SSAO 패스(`_type="SSAO"`)가 `_shaderPath` 로 고른다 — 같은 출력(AOColor)을 쓰므로
- *             읽는 쪽(블룸 패스의 AO 적용, PassTexture::sampleAmbientOcclusion 의 r)은 그대로다. 예: engine/pipeline/deferredpipeline_gi.xml.
+ *             읽는 쪽(조명 패스가 앰비언트 · 프로브 빛에 곱한다 — deferred_lighting.hlsl, PassTexture::sampleAmbientOcclusion 의 r)은 그대로다. 예: engine/pipeline/deferredpipeline_gi.xml.
  *
  * 화면 방향 조각(slice)마다 양쪽으로 깊이를 걸어 가장 높은 지평선 각을 찾고, 노멀을 그 조각 평면에 투영한 각으로 보이는 몫을 적분한다(코사인 가중 — 4 절 식).
  * 굽은 노멀(가리지 않은 방향의 평균)은 조각마다 두 지평선의 가운데 방향을 투영 노멀 길이로 가중해 더한다 — gba 에 0.5 + 0.5 × n 으로 싣는다(읽는 쪽이 아직 없다).
