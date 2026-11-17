@@ -288,11 +288,12 @@ namespace sw
 
     void VFXGPUSimulation::releaseStaleEmitters( IRHIDevice& device )
     {
-        // 이번 프레임에 없는 재생은 놓는다(멈춤 · 다시 재생 · 컴포넌트 제거).
+        // 재생 토큰을 이 상태만 들고 있으면(다시 재생 · 컴포넌트 제거) 놓는다. 한 프레임 숨은 재생(비활성 컴포넌트)은 토큰이 살아 있어 상태를 이어 쓴다.
         _listScratchStaleRunID.clear();
         for ( auto& [runID, pState] : _mapState )
         {
-            if ( pState->_bSeen == false )
+            const bool bRunEnded = pState->_pRunToken.use_count() <= 1;
+            if ( pState->_bSeen == false && bRunEnded )
                 _listScratchStaleRunID.push_back( runID );
         }
         for ( const uint64 runID : _listScratchStaleRunID )
@@ -426,18 +427,20 @@ namespace sw
 
     uint32 VFXGPUSimulation::appendParams( EmitterState& state, const VFXGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange )
     {
-        using Internal                             = VFXGPUSimulationInternal;
-        const VFXEmitterDef&        def            = state._clock.getDef();
-        const VFXDepthHistoryInput& depth          = _frameInput._depth;
-        const size_t                first          = _listParamWord.size();
-        const uint64                behind         = request._stepCount > state._doneStepCount ? request._stepCount - state._doneStepCount : 0u;
-        const uint32                steps          = behind < SW_VFX_MAX_STEPS_PER_DISPATCH ? static_cast<uint32>( behind ) : SW_VFX_MAX_STEPS_PER_DISPATCH;
-        const uint64                baseSeed       = HashUtil::mix64( request._seed );
-        const uint32                collisionFlags = Internal::computeCollisionFlags( def._collision );
-        const bool                  bDepthReady    = collisionFlags != 0u && depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
-        const uint32                flags          = ( state._bNeedsReset ? SW_VFX_FLAG_RESET : 0u ) | ( bRibbon ? SW_VFX_FLAG_RIBBON : 0u ) | collisionFlags |
+        using Internal                       = VFXGPUSimulationInternal;
+        const VFXEmitterDef&        def      = state._clock.getDef();
+        const VFXDepthHistoryInput& depth    = _frameInput._depth;
+        const size_t                first    = _listParamWord.size();
+        const float32               stepTime = constant::time::kDefaultFixedStepSeconds;
+        // 수명 창보다 오래 밀린 단계(오래 숨었다 다시 실린 재생)는 일정만 옮긴다 — 그 입자는 이미 죽었다. 처음부터 디스패치당 상한씩 빨리감지 않는다.
+        state._doneStepCount += state._clock.skipExpiredSteps( state._doneStepCount, request._stepCount, stepTime );
+        const uint64 behind         = request._stepCount > state._doneStepCount ? request._stepCount - state._doneStepCount : 0u;
+        const uint32 steps          = behind < SW_VFX_MAX_STEPS_PER_DISPATCH ? static_cast<uint32>( behind ) : SW_VFX_MAX_STEPS_PER_DISPATCH;
+        const uint64 baseSeed       = HashUtil::mix64( request._seed );
+        const uint32 collisionFlags = Internal::computeCollisionFlags( def._collision );
+        const bool   bDepthReady    = collisionFlags != 0u && depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
+        const uint32 flags          = ( state._bNeedsReset ? SW_VFX_FLAG_RESET : 0u ) | ( bRibbon ? SW_VFX_FLAG_RIBBON : 0u ) | collisionFlags |
                              ( bDepthReady ? SW_VFX_FLAG_DEPTH_READY : 0u );
-        const float32 stepTime = constant::time::kDefaultFixedStepSeconds;
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D).
         const uint32 historyIndex = _frameInput._bNativeBindless ? static_cast<uint32>( depth._uav ) : 0u;
 
