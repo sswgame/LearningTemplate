@@ -35,6 +35,7 @@ namespace sw
         string _keyID{};                     ///< `apns`: 인증 키 id
         string _teamID{};                    ///< `apns`: 팀 id
         string _topic{};                     ///< `apns`: 번들 id(`apns-topic`)
+        int64  _tokenRefreshMinSeconds{ 0 }; ///< `apns`: 필수 — 403 뒤 제공자 토큰을 다시 서명하기까지 지켜야 할 최소 간격(초, 키 `tokenRefreshMinSeconds`)
     };
 } // namespace sw
 

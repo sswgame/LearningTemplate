@@ -25,6 +25,7 @@ namespace sw
             static constexpr const utf8* kPushTypeBackground = "background";
             static constexpr const utf8* kBackgroundPriority = "5"; ///< 조용한 알림은 우선순위 5 여야 한다(APNs 규칙)
             static constexpr int64       kServerErrorRetryMs = 15 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+            static constexpr int64       kTokenSignFailed    = -1; ///< `ensureProviderToken` 이 서명하지 못했다(키가 틀림)
         };
     } // namespace
 } // namespace sw
@@ -41,6 +42,7 @@ namespace sw
         , _pHTTPClient{ pHTTPClient }
         , _tokenIssuedMs{ 0 }
     {
+        SW_ASSERT( _settings._tokenRefreshMinMs > 0 ); // 제공자 파일의 필수 키다 — 0 이면 403 마다 곧바로 다시 서명한다
         _deviceURLPrefix = _settings._baseURL + "/3/device/";
     }
 
@@ -133,10 +135,14 @@ namespace sw
         return statusCode >= HTTPConstant::kStatusServerError ? APNSPushProviderInternal::kServerErrorRetryMs : 0;
     }
 
-    bool APNSPushProvider::ensureProviderToken( UnixMilliseconds nowMs )
+    int64 APNSPushProvider::ensureProviderToken( UnixMilliseconds nowMs )
     {
-        if ( _providerToken.empty() == false && nowMs.count() - _tokenIssuedMs < kTokenRefreshMs )
-            return true;
+        using Internal            = APNSPushProviderInternal;
+        const int64 sinceIssuedMs = nowMs.count() - _tokenIssuedMs;
+        if ( _providerToken.empty() == false && sinceIssuedMs < kTokenRefreshMs )
+            return 0;
+        if ( _tokenIssuedMs != 0 && sinceIssuedMs < _settings._tokenRefreshMinMs ) // 403 으로 버린 직후다 — 잦은 갱신은 429 로 막힌다
+            return _settings._tokenRefreshMinMs - sinceIssuedMs;
         JSONWriter writer;
         writer.beginObject();
         writer.key( "iss" );
@@ -151,11 +157,11 @@ namespace sw
         if ( bSigned == false )
         {
             SW_LOG_ERROR_ID( "ApnsPushProvider.CouldNotSignAPNs", "Could not sign the APNs provider token with the key '%#' - check the authentication key", _settings._keyID.c_str() );
-            return false;
+            return Internal::kTokenSignFailed;
         }
         _providerToken = std::move( token );
         _tokenIssuedMs = nowMs.count();
-        return true;
+        return 0;
     }
 
     void APNSPushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs )
@@ -167,9 +173,13 @@ namespace sw
             complete( deliveryID, PushDeliveryStatus::InvalidToken ); // 경로에 넣을 수 없는 토큰이다 — 보내지 않는다
             return;
         }
-        if ( ensureProviderToken( nowMs ) == false )
+        const int64 refreshWaitMs = ensureProviderToken( nowMs );
+        if ( refreshWaitMs != 0 )
         {
-            complete( deliveryID, PushDeliveryStatus::Rejected );
+            if ( refreshWaitMs > 0 )
+                complete( deliveryID, PushDeliveryStatus::RateLimited, refreshWaitMs ); // 다시 서명할 수 있을 때 발송기가 다시 보낸다
+            else
+                complete( deliveryID, PushDeliveryStatus::Rejected );
             return;
         }
         const bool        bAlert = hasAlert( message );
@@ -195,7 +205,7 @@ namespace sw
         {
             // 제공자 토큰이 거절됐다(만료 · 서명 불일치) — 버려서 다음 배달이 새로 서명하게 한다.
             _providerToken.clear();
-            SW_LOG_WARNING_ID( "ApnsPushProvider.APNsRejectedProviderToken", "APNs rejected the provider token (status %#) - it will be signed again", response._statusCode );
+            SW_LOG_WARNING_ID( "ApnsPushProvider.APNsRejectedProviderToken", "APNs rejected the provider token (status %#) - it will be signed again after the minimum interval", response._statusCode );
         }
         complete( deliveryID, status, retryAfterMs );
     }

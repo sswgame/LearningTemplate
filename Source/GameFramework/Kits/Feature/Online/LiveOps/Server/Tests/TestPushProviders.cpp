@@ -300,10 +300,11 @@ SW_TEST_CASE( APNSPushProviderTest, LocalFailuresNeverReachTheNetwork )
     test::FakeNetSecurityProvider security;
     security._bSignOk = SW_FALSE;
     APNSPushSettings settings;
-    settings._privateKeyPem = "pem";
-    settings._keyID         = "key";
-    settings._teamID        = "team";
-    settings._topic         = "com.x.game";
+    settings._privateKeyPem     = "pem";
+    settings._keyID             = "key";
+    settings._teamID            = "team";
+    settings._topic             = "com.x.game";
+    settings._tokenRefreshMinMs = 1200000;
     APNSPushProvider provider( std::move( settings ), &security, nullptr ); // 닿으면 null 역참조로 드러난다
     SW_EXPECT_FALSE( provider.supportsTopics() );
 
@@ -333,18 +334,22 @@ SW_TEST_CASE( PushProviderSetTest, ReadEntry )
     }
     {
         PushProviderConfig config;
-        SW_EXPECT_TRUE( read( R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b"})", config ) );
+        SW_EXPECT_TRUE( read( R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":1200})", config ) );
         SW_EXPECT_EQUAL( string( "b" ), config._topic );
+        SW_EXPECT_EQUAL( int64( 1200 ), config._tokenRefreshMinSeconds );
     }
     for ( const utf8* pText : {
               R"({"kind":"fcm"})",
-              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t"})",
-              R"({"kind":"apns","keyId":"i","teamId":"t","topic":"b"})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","tokenRefreshMinSeconds":1200})",
+              R"({"kind":"apns","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":1200})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b"})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":60})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":"1200"})",
               R"({"kind":"other"})",
               R"({"serviceAccountEnvironment":"K"})",
               R"({"kind":"fcm","serviceAccountEnvironment":"K","typo":"x"})",
               R"({"kind":"fcm","serviceAccountEnvironment":"K","topic":"b"})",
-              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenUrl":"x"})",
+              R"({"kind":"apns","keyEnvironment":"K","keyId":"i","teamId":"t","topic":"b","tokenRefreshMinSeconds":1200,"tokenUrl":"x"})",
           } )
     {
         PushProviderConfig config;
