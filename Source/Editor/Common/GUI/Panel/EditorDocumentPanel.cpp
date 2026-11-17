@@ -352,6 +352,19 @@ namespace sw::editor
             markDocumentDirty();
     }
 
+    expected<void> EditorDocumentPanel::checkUndoRoundTrip()
+    {
+        if ( isDocumentLoaded() == false || isDocumentLoadFailed() )
+            return unexpected( Error{ ErrorKind::NotFound, "no document is loaded in the panel", getPanelTitle() } );
+        const string before = captureDocumentText();
+        if ( before.empty() )
+            return unexpected( Error{ ErrorKind::Unsupported, "the panel has no document text undo (captureDocumentText is empty)", getPanelTitle() } );
+        restoreDocumentFromUndo( before ); // 되돌리기 단계가 부르는 그 길이다
+        if ( captureDocumentText() != before )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "applying the document text and capturing it again gives other text - undo would not restore the document", _loadedAssetPath } );
+        return {};
+    }
+
     void EditorDocumentPanel::notifyDocumentEdited( string_view label )
     {
         // 상호작용 구간(감사 P0-1): 위젯이 활성인 동안의 편집(슬라이더 · 노드 끌기 · 칠하기 · 글 칸)은 쥐고, 풀린 프레임에 (구간 전 글, 끝 글)을 한 번 기록한다

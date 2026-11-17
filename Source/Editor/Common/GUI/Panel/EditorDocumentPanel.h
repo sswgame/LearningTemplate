@@ -45,6 +45,8 @@ namespace sw::editor
         EditorAssetType getDocumentKind() const override { return _kind; }
         /** @brief 이 문서의 되돌리기 스택이다 — 창에 포커스가 오면 Ctrl+Z 가 이리 간다(`EditorPanelManager::updateFocusedCommandStack`). */
         CommandStack* findPanelCommandStack() override { return _pDocumentStack.get(); }
+        /** @brief 지금 문서 글을 되돌리기와 같은 길(`restoreDocumentFromUndo`)로 적용하고 다시 직렬화한 글이 같은지 봅니다. 읽은 문서가 없거나 문서 글이 비면(글 되돌리기가 없다) 실패입니다. */
+        [[nodiscard]] expected<void> checkUndoRoundTrip() final;
 
     private:
         static constexpr uint32 kMaxRecentDocumentCount = 8;

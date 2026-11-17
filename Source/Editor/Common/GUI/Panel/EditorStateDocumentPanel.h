@@ -22,6 +22,11 @@ namespace sw::editor
     public:
         /** @brief 연 문서 경로가 없다 — 옮기기 · 삭제 계획이 볼 에셋 파일이 아니다. */
         [[nodiscard]] string_view getDocumentAssetPath() const final { return {}; }
+        /** @brief 상태 문서는 되돌리기 기록을 자기 모델(`EditSnapshotHistory` · 세션)에 두어 문서 글 왕복이 없다 — 전수 시나리오가 이 패널을 고르면 실패로 알린다. */
+        [[nodiscard]] expected<void> checkUndoRoundTrip() final
+        {
+            return unexpected( Error{ ErrorKind::Unsupported, "a state document keeps its undo in its own model - it has no document text round trip", getPanelTitle() } );
+        }
 
     protected:
         EditorStateDocumentPanel()

@@ -9,9 +9,17 @@
   play.keepChanges(재생 중에만 켜진다 — 재생 되돌리기는 playedit 시나리오가 본다). 그 밖에 켜지는 대상이 없는 명령은 실패다(Editor.UndoCoverageNoTarget) —
   명령마다 선택 전체 · 하나씩 · 컴포넌트마다를 대상으로 시도하고, 붙여넣기는 먼저 복사해 둔다. 부모 풀기 대상이 되게 메시 오브젝트에 자식 하나를 만들고, 컴포넌트 위아래 옮기기가 켜지게 그 자식에 컴포넌트 둘을 단다.
   실패 줄의 명령 id 로 그 명령을 고친다. 어느 오브젝트가 달라졌는지는 -gv_automationHashDump=1 로 오브젝트별 해시 로그를 본다.
+  둘째 단계는 문서 패널 전수(감사 E-16)다: 글 되돌리기를 가진 문서 패널마다 사본 문서를 열고 panel.expectUndoRoundTrip 이 문서 글을 되돌리기와 같은 길로
+  다시 적용 → 다시 직렬화해 같은 글인지 본다(다르면 Ctrl+Z 가 문서를 다른 상태로 돌린다). 문서는 저장 왕복 시나리오(saveroundtrip*)와 같은 원본의 실행마다 새 사본이다.
+  글 되돌리기가 아직 없는 문서 패널(audioevents · input_map · data_table — 감사 E-13, 카탈로그 · 어빌리티 카탈로그 — 창 안 기록, UI 미리보기 — 모델 명령)은 이 단계가 아니다.
   실행: App -EnableEditor -scenario=engine/automation/editor/undocoverage.scenario.xml -unattended
 -->
 <Scenario name="editor.undocoverage" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/materialpreview" as="scratch/undocoveragematerial"/>
+	<Scratch from="engine/automation/editor/sequencerkeys" as="scratch/undocoveragesequencer"/>
+	<Scratch from="engine/automation/editor/spriteclipregion" as="scratch/undocoveragespriteclip"/>
+	<Scratch from="engine/automation/editor/audiograph" as="scratch/undocoverageaudiograph"/>
+	<Scratch from="game/empty/data/vocabulary" as="scratch/undocoveragebehaviortree"/>
 	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
@@ -43,5 +51,37 @@
 	<ExpectLog id="Editor.UndoCoverageNoTarget" count="0"/>
 	<ExpectLog id="Editor.UndoCoverageSkipped" count="2"/>
 	<Expect watch="Editor.SceneHash" sameAs="start"/>
+	<!-- 문서 패널 전수 — 패널마다 사본을 열고 되돌리기 왕복을 본다 -->
+	<DevCommand line="panel.focus material"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragematerial/previewblue.material"/>
+	<EditorWaitStable/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.expectUndoRoundTrip material"/>
+	<DevCommand line="panel.focus sequencer"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragesequencer/sequencerkeys.seq.xml"/>
+	<WaitUntil watch="Editor.SequencerBindingCount" equals="1" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip sequencer"/>
+	<DevCommand line="panel.focus sprite_clip"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragespriteclip/hero.sprite.xml"/>
+	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="2" timeoutFrames="120"/>
+	<EditorWaitStable/>
+	<DevCommand line="panel.expectUndoRoundTrip sprite_clip"/>
+	<DevCommand line="panel.focus audiograph"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoverageaudiograph/tone.audiograph.xml"/>
+	<EditorWaitStable/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.expectUndoRoundTrip audiograph"/>
+	<DevCommand line="panel.focus behavior_tree"/>
+	<EditorWaitStable/>
+	<DevCommand line="asset.openScratch scratch/undocoveragebehaviortree/guard.bt.xml"/>
+	<EditorWaitStable/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.expectUndoRoundTrip behavior_tree"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Pass/>
 </Scenario>
