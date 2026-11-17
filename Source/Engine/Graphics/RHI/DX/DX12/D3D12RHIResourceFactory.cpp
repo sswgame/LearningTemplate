@@ -90,11 +90,6 @@ namespace sw
         _pDevice->_constantBufferMirror.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
-
-        // 힙의 CBV 는 여기서 갱신하지 않는다. 주의: 드로우마다 **레지스트리 전체를 훑어** CreateConstantBufferView 를
-        // 다시 부르면 등록 수 N(수백) · 드로우 D 에 O(N·D) 라 드로우 경로의 지배적 비용이 된다.
-        // CBV 주소는 **프레임 링 슬롯**에만 의존하므로 프레임당 한 번이면 충분하다.
-        // D3D12RHIDevice::refreshConstantBufferViews 가 beginFrame 에서 한 번에 한다.
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
@@ -1276,35 +1271,19 @@ namespace sw
             return index;
         }
 
-        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
-        cbvDesc.BufferLocation = pResource->GetGPUVirtualAddress();
-
+        // 상수 버퍼는 루트 CBV 로만 건다(resolveBufferAddress 가 이번 링 슬롯 주소를 낸다). 힙에는 뷰를 만들지 않는다 — 셰이더는 힙에서 CBV 를 읽지 않고
+        // (b# 는 루트 서술자, 힙 테이블은 t# · u# 범위다), 예전엔 등록 때 두 개를 만들고 프레임마다 링 슬롯으로 다시 썼다(R-7). 번호는 바인딩 열쇠로만 쓴다.
         // 상수버퍼 맵 조회는 위에서 쥔 배타 락(`lock`) 안이다. 그 맵은 같은 `_bindlessMutex` 가 지킨다.
-        const auto sizeIt = _pDevice->_mapCbAlignedSize.find( buffer );
-        if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
+        if ( _pDevice->_mapCbAlignedSize.contains( buffer ) == false )
         {
-            cbvDesc.BufferLocation += static_cast<UINT64>( _pDevice->_frameRing.currentIndex() ) * sizeIt->second;
-            cbvDesc.SizeInBytes = sizeIt->second;
-        }
-        else
-        {
-            // 링이 아닌 버퍼: CBV 크기는 256 바이트로 정렬돼야 하고 리소스 폭을 넘으면 안 된다.
-            const UINT width = static_cast<UINT>( pResource->GetDesc().Width );
-            // 256 은 CBV 크기 정렬(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)이다. 텍스처 행 정렬
-            // (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)도 256 이지만 이름만 같은 별개 값이라 그 상수를 쓰지 않는다.
-            const UINT aligned  = MathUtil::align( width, 256u );
-            cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
-            if ( cbvDesc.SizeInBytes == 0 )
+            // 링이 아닌 버퍼: 루트 CBV 가 읽는 256 바이트보다 좁으면 상수 버퍼가 될 수 없다.
+            // 집은 인덱스를 돌려준다. 그냥 반환하면 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다(잠금은 쥐고 있다).
+            if ( pResource->GetDesc().Width < D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT )
             {
-                // 집은 인덱스를 돌려준다. 그냥 반환하면 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다.
-                // 아직 뷰를 만들지 않았으므로 펜스를 기다릴 것 없이 바로 프리리스트로 간다(잠금은 쥐고 있다).
                 _pDevice->_bindlessIndexAllocator.free( index );
                 return kInvalidDescriptorIndex;
             }
         }
-
-        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._cpu );
-        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._offline );
 
         writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
         return index;

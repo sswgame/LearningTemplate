@@ -670,12 +670,6 @@ namespace sw
         /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameJobNow` 가 함께 쓴다). */
         void openNextFrameSegment();
         /**
-         * @brief 링 상수 버퍼들의 힙 CBV 를 이번 프레임 슬롯으로 맞춥니다. 프레임당 한 번, 기록 시작 전에 부릅니다.
-         * @details 주소는 프레임 링 슬롯에만 의존하므로 프레임당 한 번이면 충분하다. 주의: updateConstantBuffer 에서
-         *          드로우마다 레지스트리를 훑으면 O(등록 수 × 드로우 수)가 되어 드로우 경로를 지배한다.
-         */
-        void refreshConstantBufferViews();
-        /**
          * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. `_bindlessMutex` 를 (읽기로라도) 잡고 부릅니다.
          * @details 만들 때 크기를 넘는 쓰기는 자른다. 그대로 복사하면 다음 슬롯(다음 프레임의 값)까지 덮어쓴다.
          */

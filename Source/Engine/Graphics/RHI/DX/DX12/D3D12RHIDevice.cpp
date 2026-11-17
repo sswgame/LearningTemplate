@@ -1677,8 +1677,6 @@ namespace sw
             ensureTimestampResources();
             collectTimestampsForSlot();
             _timestampRing.beginFrame( _frameRing.currentIndex() );
-            // 링 슬롯이 정해졌다. 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
-            refreshConstantBufferViews();
             // 프레임 스트림은 세그먼트로 나뉜다. 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
             // 커맨드 리스트가 제출될 때마다 executeCommandList 가 잘라 새 세그먼트를 연다.
             _listPendingSubmit.clear();
@@ -1885,32 +1883,6 @@ namespace sw
             return;
         pList->SetComputeRootSignature( _rootSignature.Get() );
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, _cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-    }
-
-    void D3D12RHIDevice::refreshConstantBufferViews()
-    {
-        if ( _device == nullptr || _cbvHeap == nullptr )
-            return;
-
-        // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
-        // 렌더 스레드의 기록 시작 전이지만 게임 스레드는 그와 겹쳐 버퍼를 만들고 부수므로(레지스트리 · 상수버퍼 맵에 쓴다)
-        // 읽기 락을 잡는다. 주의: "단일 스레드 구간" 이 아니다.
-        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
-        const uint32                   slot = _frameRing.currentIndex();
-        _srvRegistry.forEachLive( [this, slot]( RHIDescriptorIndex index, const BindlessResourceRecord& record )
-        {
-            (void)index;
-            if ( record._resource == nullptr || record._buffer == 0 )
-                return;
-            const auto sizeIt = _mapCbAlignedSize.find( record._buffer );
-            if ( sizeIt == _mapCbAlignedSize.end() )
-                return; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
-
-            D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
-            cbvDesc.BufferLocation = record._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
-            cbvDesc.SizeInBytes    = sizeIt->second;
-            _device->CreateConstantBufferView( &cbvDesc, record._cpuHandle );
-        } );
     }
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
