@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -343,7 +344,7 @@ namespace sw
                 ServiceStoreRead<vector<SocialLink>> read;
                 vector<ServiceRecord>                listRecord;
                 const string                         prefix = ServiceKeyUtil::makeHex64( accountID ) + "/";
-                read._result                                = connection.listRecords( SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord );
+                read._result                                = ServiceRecordReader::readPage( connection, SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord )._result;
                 if ( read._result != ServiceStoreResult::Ok )
                     return read;
                 for ( const ServiceRecord& record : listRecord )
@@ -420,7 +421,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listLink;
-            const ServiceStoreResult listed = connection.listRecords( Internal::getLinkTable(), prefix, "", kPage, false, listLink );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getLinkTable(), prefix, "", kPage, false, listLink )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listLink.empty() )
@@ -444,7 +445,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listBlocker;
-            const ServiceStoreResult listed = connection.listRecords( Internal::getBlockedByTable(), prefix, "", kPage, false, listBlocker );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getBlockedByTable(), prefix, "", kPage, false, listBlocker )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listBlocker.empty() )

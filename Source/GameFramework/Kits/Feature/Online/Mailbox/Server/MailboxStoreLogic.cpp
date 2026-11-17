@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -288,8 +289,9 @@ namespace sw
             }
         }
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountID ), request._cursor,
-                                                                  request._maxCount, true, listRecord );
+        const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountID ), request._cursor,
+                                                                         request._maxCount, true, listRecord )
+                                              ._result;
         if ( listed != ServiceStoreResult::Ok )
             return MailboxServiceResult::fail( OnlineError::kUnavailable );
         for ( const ServiceRecord& record : listRecord )
@@ -431,8 +433,8 @@ namespace sw
         for ( ;; )
         {
             listRecord.clear();
-            const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), prefix, cursorKey, MailboxProtocol::kMaxListCount, true, listRecord );
-            if ( listed != ServiceStoreResult::Ok )
+            const ServiceRecordPage page = ServiceRecordReader::readPage( connection, ServiceMail::getMailTable(), prefix, cursorKey, MailboxProtocol::kMaxListCount, true, listRecord );
+            if ( page.isOk() == false )
                 return outReply._claimedCount > 0 ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable ); // 이미 받은 것은 커밋됐다
             for ( const ServiceRecord& record : listRecord )
             {
@@ -444,10 +446,9 @@ namespace sw
                 ++scannedCount;
                 claimOne( connection, record, accountID, nowMs, claimedRetentionMs, pPolicy, outReply, firstFailure );
             }
-            const bool bLastPage = static_cast<int32>( listRecord.size() ) < MailboxProtocol::kMaxListCount;
-            if ( outReply._bMoreRemaining == SW_TRUE || bLastPage )
+            if ( outReply._bMoreRemaining == SW_TRUE || page.hasMore() == false )
                 break;
-            cursorKey = listRecord.back()._key; // 이 키 다음(더 오래된 것)부터
+            cursorKey = page._nextCursor; // 이 키 다음(더 오래된 것)부터
         }
         const MailboxServiceResult serviceResult = outReply._claimedCount > 0 ? MailboxServiceResult{ MailboxResult::Ok } : firstFailure;
         outReply._result                         = serviceResult._result;
@@ -499,7 +500,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord>    listMail;
-            const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), prefix, "", Internal::kErasePageSize, false, listMail );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, ServiceMail::getMailTable(), prefix, "", Internal::kErasePageSize, false, listMail )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listMail.empty() )
@@ -536,7 +537,7 @@ namespace sw
     {
         outStats = MailboxSweepStats{};
         vector<ServiceRecord> listIndex;
-        if ( connection.listRecords( ServiceMail::getExpiryTable(), "", "", maxCount, false, listIndex ) != ServiceStoreResult::Ok )
+        if ( ServiceRecordReader::readPage( connection, ServiceMail::getExpiryTable(), "", "", maxCount, false, listIndex )._result != ServiceStoreResult::Ok )
         {
             ++outStats._failedCount;
             return;

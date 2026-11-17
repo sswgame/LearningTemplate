@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -147,7 +148,7 @@ namespace sw
             {
                 ChatHistoryReadResult read;
                 vector<ServiceRecord> listRecord;
-                if ( connection.listRecords( ChatServiceInternal::getHistoryTable(), channelID + "/", cursor, maxCount, true, listRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, ChatServiceInternal::getHistoryTable(), channelID + "/", cursor, maxCount, true, listRecord )._result != ServiceStoreResult::Ok )
                     return read;
                 for ( const ServiceRecord& record : listRecord )
                 {
@@ -176,7 +177,7 @@ namespace sw
                 const string          messageKey = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, request._sequence );
                 const string          cursorKey  = Internal::makeHistoryKey( request._channelID, request._sentMs, request._serverID, static_cast<uint64>( request._sequence ) + 1 );
                 vector<ServiceRecord> listRecord;
-                if ( connection.listRecords( Internal::getHistoryTable(), request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, Internal::getHistoryTable(), request._channelID + "/", cursorKey, ChatLimit::kReportContextCount, true, listRecord )._result != ServiceStoreResult::Ok )
                     return ChatServiceResult::fail( OnlineError::kUnavailable );
                 if ( listRecord.empty() || listRecord.front()._key != messageKey )
                     return ChatResult::NotFound;

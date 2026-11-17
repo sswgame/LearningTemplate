@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -462,7 +463,7 @@ namespace sw
             {
                 string prefix = ServiceKeyUtil::makeHex64( accountID );
                 prefix.push_back( '/' );
-                return connection.listRecords( getAccountExternalTable(), prefix, "", kMaxLinkCount, false, outListLink );
+                return ServiceRecordReader::readPage( connection, getAccountExternalTable(), prefix, "", kMaxLinkCount, false, outListLink )._result;
             }
 
             static AccountIdentity makeIdentity( uint64 accountID, const ProfileRecord& profile )
@@ -1203,7 +1204,7 @@ namespace sw
         if ( maxCount <= 0 )
             return 0;
         vector<ServiceRecord> listDue;
-        if ( _connection.listRecords( Internal::getDeletionTable(), "", "", maxCount, false, listDue ) != ServiceStoreResult::Ok )
+        if ( ServiceRecordReader::readPage( _connection, Internal::getDeletionTable(), "", "", maxCount, false, listDue )._result != ServiceStoreResult::Ok )
             return 0;
         int32 purgedCount = 0;
         for ( const ServiceRecord& due : listDue )
@@ -1236,7 +1237,7 @@ namespace sw
     {
         using Internal = LoginStoreLogicInternal;
         vector<ServiceRecord> listQueued;
-        if ( _connection.listRecords( Internal::getAfterDeleteTable(), "", "", maxCount, false, listQueued ) != ServiceStoreResult::Ok )
+        if ( ServiceRecordReader::readPage( _connection, Internal::getAfterDeleteTable(), "", "", maxCount, false, listQueued )._result != ServiceStoreResult::Ok )
             return;
         for ( const ServiceRecord& queued : listQueued )
         {
@@ -1342,7 +1343,7 @@ namespace sw
     {
         using Internal = LoginStoreLogicInternal;
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listResult = connection.listRecords( Internal::getRevokeTable(), "", "", maxCount, false, listRecord );
+        const ServiceStoreResult listResult = ServiceRecordReader::readPage( connection, Internal::getRevokeTable(), "", "", maxCount, false, listRecord )._result;
         if ( listResult != ServiceStoreResult::Ok )
             return listResult;
         for ( ServiceRecord& record : listRecord )

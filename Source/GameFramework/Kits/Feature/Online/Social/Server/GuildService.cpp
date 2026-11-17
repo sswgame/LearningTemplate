@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -471,7 +472,7 @@ namespace sw
                     return fail( SocialResult::GuildFull );
                 vector<ServiceRecord> listRecord;
                 const string          prefix = guildKey + "/";
-                if ( connection.listRecords( Internal::getApplicationTable(), prefix, "", GuildLimit::kMaxApplication, false, listRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, Internal::getApplicationTable(), prefix, "", GuildLimit::kMaxApplication, false, listRecord )._result != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
                 // 한 번에 지우는 죽은 신청 수 — 역색인까지 두 쓰기라 트랜잭션 상한에 맞춘다. 남은 것은 TTL 쓸기와 다음 신청이 지운다
                 constexpr int32    kMaxDeadErase = ( ServiceTransaction::kMaxWriteCount - 4 ) / 2;
@@ -723,10 +724,13 @@ namespace sw
                     return ServiceStoreResult::Unavailable;
                 if ( listBalance.empty() == false )
                     return fail( SocialResult::StorageNotEmpty );
-                vector<ServiceRecord> listDepositorRecord;
-                const string          prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
-                if ( connection.listRecords( Internal::getDepositorTable(), prefix, "", GuildLimit::kMaxMember, false, listDepositorRecord ) != ServiceStoreResult::Ok )
+                vector<ServiceRecord>   listDepositorRecord;
+                const string            prefix    = ServiceKeyUtil::makeHex64( guildID ) + "/";
+                const ServiceRecordRead depositor = ServiceRecordReader::readAll( connection, Internal::getDepositorTable(), prefix, GuildLimit::kMaxMember, GuildLimit::kMaxMember, false, listDepositorRecord );
+                if ( depositor.isOk() == false )
                     return ServiceStoreResult::Unavailable;
+                if ( depositor._bTruncated == SW_TRUE )
+                    _serviceResult._bStorageTruncated = SW_TRUE; // 맡긴 사람은 멤버 수를 넘지 않는다 — 넘으면 뒤의 몫이 빠졌다고 알린다
                 for ( const ServiceRecord& record : listDepositorRecord )
                 {
                     AccountID depositorID = kInvalidAccountID;
@@ -739,7 +743,7 @@ namespace sw
                     inoutTransaction.erase( Internal::getDepositorTable(), record._key, record._version );
                 }
                 vector<ServiceRecord> listGrantRecord;
-                if ( connection.listRecords( Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord )._result != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
                 for ( const ServiceRecord& record : listGrantRecord ) // 떠난 맡긴 사람의 허용은 떠날 때 지웠으니 길드장의 허용(상한 안)만 남는다
                 {
@@ -771,7 +775,7 @@ namespace sw
                 while ( true )
                 {
                     vector<ServiceRecord> listGrantRecord;
-                    if ( connection.listRecords( Internal::getGrantTable(), prefix, cursor, Internal::kGrantPageSize, false, listGrantRecord ) != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, cursor, Internal::kGrantPageSize, false, listGrantRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     for ( const ServiceRecord& record : listGrantRecord )
                     {
@@ -828,7 +832,7 @@ namespace sw
                 }
                 inoutTransaction.erase( Internal::getDepositorTable(), depositorKey, depositorRecord._version );
                 vector<ServiceRecord> listGrantRecord;
-                if ( connection.listRecords( Internal::getGrantTable(), depositorKey + "/", "", GuildLimit::kMaxStorageGrant, false, listGrantRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), depositorKey + "/", "", GuildLimit::kMaxStorageGrant, false, listGrantRecord )._result != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
                 for ( const ServiceRecord& record : listGrantRecord )
                 {
@@ -847,7 +851,7 @@ namespace sw
                 appendStorageItems( listBalance, kInvalidAccountID );
                 vector<ServiceRecord> listDepositorRecord;
                 const string          prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
-                if ( connection.listRecords( Internal::getDepositorTable(), prefix, "", GuildLimit::kMaxMember, false, listDepositorRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, Internal::getDepositorTable(), prefix, "", GuildLimit::kMaxMember, false, listDepositorRecord )._result != ServiceStoreResult::Ok )
                     return ServiceStoreResult::Unavailable;
                 for ( const ServiceRecord& record : listDepositorRecord )
                 {
@@ -865,11 +869,14 @@ namespace sw
             /** @brief 잔액들을 창고 품목으로 결과에 붙입니다. 상한(`kMaxStorageItem`)을 넘는 것은 버립니다. */
             void appendStorageItems( const vector<LedgerBalance>& listBalance, AccountID depositorID )
             {
-                // shortcut: 상한을 넘는 품목은 응답에서 빠진다, 창고 품목이 상한보다 많아지는 게임이면 쪽 읽기(커서)로 바꾼다
+                // shortcut: 상한을 넘는 품목은 응답에서 빠지고 `_bTruncated` 로 알린다, 창고 품목이 상한보다 많아지는 게임이면 쪽 읽기(커서)로 바꾼다
                 for ( const LedgerBalance& balance : listBalance )
                 {
                     if ( _serviceResult._listStorage.size() >= static_cast<size_t>( GuildLimit::kMaxStorageItem ) )
+                    {
+                        _serviceResult._bStorageTruncated = SW_TRUE;
                         return;
+                    }
                     _serviceResult._listStorage.push_back( GuildStorageItem{ balance._assetID, balance._amount, depositorID } );
                 }
             }
@@ -882,7 +889,7 @@ namespace sw
                 {
                     vector<ServiceRecord> listRecord;
                     const string          prefix = ServiceKeyUtil::makeHex64( guildID ) + "/";
-                    if ( connection.listRecords( Internal::getApplicationTable(), prefix, "", GuildLimit::kMaxApplication, false, listRecord ) != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, Internal::getApplicationTable(), prefix, "", GuildLimit::kMaxApplication, false, listRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     for ( const ServiceRecord& record : listRecord )
                     {
@@ -1163,7 +1170,7 @@ namespace sw
                 {
                     vector<ServiceRecord> listGrantRecord;
                     const string          prefix = Internal::makePairKey( guildID, _request._accountID ) + "/";
-                    if ( connection.listRecords( Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord ) != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     if ( listGrantRecord.size() >= static_cast<size_t>( GuildLimit::kMaxStorageGrant ) )
                         return fail( SocialResult::StorageLimit ); // 쓰지 않는 허용을 거둔 뒤에 준다
@@ -1198,7 +1205,7 @@ namespace sw
                     return;
                 vector<ServiceRecord> listRecord;
                 const string          prefix = ServiceKeyUtil::makeHex64( _serviceResult._guildID ) + "/";
-                if ( connection.listRecords( GuildServiceInternal::getMemberTable(), prefix, "", GuildLimit::kMaxMember, false, listRecord ) != ServiceStoreResult::Ok )
+                if ( ServiceRecordReader::readPage( connection, GuildServiceInternal::getMemberTable(), prefix, "", GuildLimit::kMaxMember, false, listRecord )._result != ServiceStoreResult::Ok )
                     return; // 알림만 빠지며 클라이언트가 다시 조회한다
                 for ( const ServiceRecord& record : listRecord )
                 {
@@ -1292,7 +1299,7 @@ namespace sw
                 while ( true )
                 {
                     vector<ServiceRecord> listGrant;
-                    if ( connection.listRecords( Internal::getGrantTable(), prefix, cursor, Internal::kGrantPageSize, false, listGrant ) != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, cursor, Internal::kGrantPageSize, false, listGrant )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     ServiceTransaction transaction;
                     for ( const ServiceRecord& record : listGrant )
@@ -1398,7 +1405,7 @@ namespace sw
                     if ( const ServiceStoreResult storage = burnEscrow( connection, Internal::makeStorageHolder( guildID ), storagePrefix, nowMs ); storage != ServiceStoreResult::Ok )
                         return storage;
                     vector<ServiceRecord> listDepositor;
-                    if ( connection.listRecords( Internal::getDepositorTable(), guildKey + "/", "", GuildLimit::kMaxMember, false, listDepositor ) != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, Internal::getDepositorTable(), guildKey + "/", "", GuildLimit::kMaxMember, false, listDepositor )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     for ( const ServiceRecord& record : listDepositor )
                     {
@@ -1417,7 +1424,7 @@ namespace sw
                 if ( bMaster )
                 {
                     vector<ServiceRecord> listMemberRecord;
-                    if ( connection.listRecords( Internal::getMemberTable(), guildKey + "/", "", GuildLimit::kMaxMember, false, listMemberRecord ) != ServiceStoreResult::Ok )
+                    if ( ServiceRecordReader::readPage( connection, Internal::getMemberTable(), guildKey + "/", "", GuildLimit::kMaxMember, false, listMemberRecord )._result != ServiceStoreResult::Ok )
                         return ServiceStoreResult::Unavailable;
                     AccountID   successorID = kInvalidAccountID;
                     GuildMember successor;
@@ -1445,7 +1452,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord> listInvite;
-            if ( const ServiceStoreResult listed = connection.listRecords( Internal::getInviteTable(), prefix, "", kPage, false, listInvite ); listed != ServiceStoreResult::Ok )
+            if ( const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getInviteTable(), prefix, "", kPage, false, listInvite )._result; listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listInvite.empty() )
                 break;
@@ -1464,7 +1471,7 @@ namespace sw
         while ( true )
         {
             vector<ServiceRecord> listReverse;
-            if ( const ServiceStoreResult listed = connection.listRecords( Internal::getAccountApplicationTable(), prefix, "", kPage, false, listReverse );
+            if ( const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getAccountApplicationTable(), prefix, "", kPage, false, listReverse )._result;
                  listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listReverse.empty() )
@@ -1607,12 +1614,13 @@ namespace sw
         if ( bServerOperation == false )
         {
             GuildCompletion completion;
-            completion._requestTag      = requestTag;
-            completion._result          = serviceResult._result;
-            completion._info            = serviceResult._info;
-            completion._info._level     = computeLevel( serviceResult._info._experience );
-            completion._listStorage     = std::move( serviceResult._listStorage );
-            completion._listApplication = std::move( serviceResult._listApplication );
+            completion._requestTag        = requestTag;
+            completion._result            = serviceResult._result;
+            completion._info              = serviceResult._info;
+            completion._info._level       = computeLevel( serviceResult._info._experience );
+            completion._listStorage       = std::move( serviceResult._listStorage );
+            completion._bStorageTruncated = serviceResult._bStorageTruncated;
+            completion._listApplication   = std::move( serviceResult._listApplication );
             _completionBuffer.push( std::move( completion ) );
         }
         if ( serviceResult._result != SocialResult::Ok )

@@ -11,6 +11,7 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -112,23 +113,16 @@ namespace sw
             ServiceStoreRead<ServerDirectoryTables> read;
             vector<ServiceRecord>                   listRecord;
             // 점검은 막는 규칙이라 다 읽는다 — 첫 쪽만 읽으면 그 뒤 범위의 점검이 조용히 빠져 열렸다(감사 O-18 의 fail-open)
-            string cursorKey;
-            for ( ;; )
+            const ServiceRecordRead maintenance =
+                ServiceRecordReader::readAll( connection, Internal::getMaintenanceTable(), "", Internal::kMaxMaintenanceRow, Internal::kMaxMaintenanceRowRead, false, listRecord );
+            read._result = maintenance._result;
+            if ( read._result != ServiceStoreResult::Ok )
+                return read;
+            if ( maintenance._bTruncated == SW_TRUE )
             {
-                vector<ServiceRecord> listPage;
-                read._result = connection.listRecords( Internal::getMaintenanceTable(), "", cursorKey, Internal::kMaxMaintenanceRow, false, listPage );
-                if ( read._result != ServiceStoreResult::Ok )
-                    return read;
-                listRecord.insert( listRecord.end(), listPage.begin(), listPage.end() );
-                if ( static_cast<int32>( listRecord.size() ) > Internal::kMaxMaintenanceRowRead )
-                {
-                    SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryMaintenanceTooMany", "Server directory has more than %# maintenance records - kept the previous state", Internal::kMaxMaintenanceRowRead );
-                    read._result = ServiceStoreResult::Invalid;
-                    return read;
-                }
-                if ( static_cast<int32>( listPage.size() ) < Internal::kMaxMaintenanceRow )
-                    break;
-                cursorKey = listPage.back()._key;
+                SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryMaintenanceTooMany", "Server directory has more than %# maintenance records - kept the previous state", Internal::kMaxMaintenanceRowRead );
+                read._result = ServiceStoreResult::Invalid;
+                return read;
             }
             for ( const ServiceRecord& record : listRecord )
             {
@@ -144,9 +138,19 @@ namespace sw
                 read._value._listMaintenance.push_back( std::move( window ) );
             }
             listRecord.clear();
-            read._result = connection.listRecords( Internal::getAnnouncementTable(), "", "", ServerDirectoryLimit::kMaxAnnouncementCount * 4, false, listRecord );
+            const ServiceRecordRead announcementRead = ServiceRecordReader::readAll( connection, Internal::getAnnouncementTable(), "", ServerDirectoryLimit::kMaxAnnouncementCount,
+                                                                                     ServerDirectoryLimit::kMaxAnnouncementCount * 4, false, listRecord );
+            read._result                             = announcementRead._result;
             if ( read._result != ServiceStoreResult::Ok )
                 return read;
+            if ( announcementRead._bTruncated == SW_TRUE )
+            {
+                // 지난 공지가 쌓여 상한에 닿으면 새 공지가 조용히 빠졌다 — 이전 값을 두고 알린다(만료 정리가 지난 것을 지운다)
+                SW_LOG_ERROR_ID( "ServerDirectoryService.ServerDirectoryAnnouncementTooMany", "Server directory has more than %# notice records - kept the previous state",
+                                 ServerDirectoryLimit::kMaxAnnouncementCount * 4 );
+                read._result = ServiceStoreResult::Invalid;
+                return read;
+            }
             for ( const ServiceRecord& record : listRecord )
             {
                 ServiceAnnouncement announcement;

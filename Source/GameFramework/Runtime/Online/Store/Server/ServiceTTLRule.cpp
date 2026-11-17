@@ -6,6 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -76,7 +77,7 @@ namespace sw
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( inoutRule._table, inoutRule._keyPrefix, inoutRule._cursor, pageSize, false, listRecord );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, inoutRule._table, inoutRule._keyPrefix, inoutRule._cursor, pageSize, false, listRecord )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listRecord.empty() )
@@ -181,7 +182,7 @@ namespace sw
             // 한 트랜잭션에 진행 줄 하나가 함께 들어가므로 쓰기 상한보다 하나 적게 읽는다
             const int32              pageSize = MathUtil::min( ServiceTransaction::kMaxWriteCount - 1, maxScanCount - scannedCount );
             vector<ServiceRecord>    listRecord;
-            const ServiceStoreResult listed = connection.listRecords( rule._table, rule._keyPrefix, progress._cursor, pageSize, false, listRecord );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, rule._table, rule._keyPrefix, progress._cursor, pageSize, false, listRecord )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             ServiceTransaction transaction;
@@ -252,7 +253,7 @@ namespace sw
         {
             const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
             vector<ServiceRecord>    listEntry;
-            const ServiceStoreResult listed = connection.listRecords( rule._ttlIndexTable, "", cursor, pageSize, false, listEntry );
+            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, rule._ttlIndexTable, "", cursor, pageSize, false, listEntry )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             if ( listEntry.empty() )
@@ -305,7 +306,7 @@ namespace sw
         {
             // 접두어 묶음: 한 트랜잭션에 색인 줄 하나가 함께 들어가므로 쓰기 상한보다 하나 적게 읽는다
             constexpr int32          kGroupPageSize = ServiceTransaction::kMaxWriteCount - 1;
-            const ServiceStoreResult listed         = connection.listRecords( rule._table, target, "", kGroupPageSize, false, listTarget );
+            const ServiceStoreResult listed         = ServiceRecordReader::readPage( connection, rule._table, target, "", kGroupPageSize, false, listTarget )._result;
             if ( listed != ServiceStoreResult::Ok )
                 return listed;
             const bool bFullPage    = static_cast<int32>( listTarget.size() ) == kGroupPageSize;
