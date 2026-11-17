@@ -98,7 +98,7 @@ namespace sw::editor
          * @brief 이 원본의 임포트가 다른 원본의 임포트 결과를 읽으면 true 입니다(기본은 false). 클래스 설명의 임포터 규칙을 보십시오.
          * @details 읽는 대상이 같은 실행에서 임포트될 수 있으면 그 결과가 먼저 나와야 하므로 데이터로 드러낸다. 조용히 두면 병렬 구간에서 읽는 쪽이 옛 결과를 본다.
          */
-        virtual bool hasOrderDependency( [[maybe_unused]] string_view assetPath ) const { return false; }
+        virtual bool hasOrderDependency( [[maybe_unused]] string_view sourcePath, [[maybe_unused]] string_view assetPath ) const { return false; }
         /**
          * @brief 원본 하나를 결과 경로로 임포트합니다.
          * @details 스레드 계약: 워커에서 서로 다른 원본에 대해 동시에 불린다(같은 결과 경로를 쓰는 원본은 한 스레드가 순서대로). 이 임포터의 공유 상태, `AssetPaths` 의 전역 쓰기,
