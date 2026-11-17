@@ -14,7 +14,9 @@
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
 
@@ -771,4 +773,45 @@ SW_TEST_CASE( ChatServiceTest, GroupRemovalReachesTheMembersServer )
     rigA.poll();
     rigB.poll();
     SW_EXPECT_TRUE( rigB.history( kBob, guildChannel )._result == ChatResult::NotMember );
+}
+
+/**
+ * @brief [ChatServiceTest] 계정 삭제 → 채팅 키트에 그 계정의 기록 0: 보낸 기록과 보낸 사람 색인 · 그 TTL 색인 줄이 지워지고, 그 계정이 낀 귓속말 채널은 상대 기록까지 지워지며
+ *        다른 계정의 월드 기록은 남는다. 보낸 사람 색인도 기록과 같은 기간에 TTL 규칙이 지운다(감사 P0-7)
+ * @details 변이: 보낸 사람 색인 쓰기를 빼면 지운 계정의 월드 기록이 남고, 귓속말 채널 지우기를 빼면 상대가 보낸 귓속말이 남고,
+ *          같은 날짜의 TTL 색인 줄을 쪽 안에서 한 번만 지우지 않으면 트랜잭션이 거절되어 진다(Alice 의 기록 둘이 같은 날짜다).
+ */
+SW_TEST_CASE( ChatServiceTest, AccountDeletionErasesSentHistory )
+{
+    MemoryServiceDatabase database;
+    ChatFixture           rig( database, nullptr, kServerA, ChatTestUtil::makeOpenSettings() );
+    SW_REQUIRE_TRUE( rig.join( kAlice ) == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.join( kBob ) == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.send( kAlice, "from alice" )._result == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.send( kBob, "from bob" )._result == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.whisper( kAlice, kBob, "psst" )._result == ChatResult::Ok );
+    SW_REQUIRE_TRUE( rig.whisper( kBob, kAlice, "reply" )._result == ChatResult::Ok );
+    rig.flush();
+    const hashed_string historyTable{ "chat_history" };
+    const hashed_string senderTable{ "chat_history_sender" };
+    const hashed_string senderExpiryTable{ "chat_history_sender_expiry" };
+    SW_REQUIRE_EQUAL( 4, database.countRecords( historyTable ) );
+    SW_REQUIRE_EQUAL( 4, database.countRecords( senderTable ) );
+
+    SW_REQUIRE_TRUE( ChatService::eraseAccount( database, kAlice, kNowMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 1, database.countRecords( historyTable ) ); // Bob 의 월드 글만 남는다
+    const ChatCompletion left = rig.history( kBob );
+    SW_REQUIRE_EQUAL( size_t( 1 ), left._listHistory.size() );
+    SW_EXPECT_EQUAL( kBob, left._listHistory[0]._senderID );
+    vector<ServiceRecord> listSender;
+    SW_REQUIRE_TRUE( ServiceRecordReader::readPage( database, senderTable, ServiceKeyUtil::makeHex64( kAlice ) + "/", "", 100, false, listSender ).isOk() );
+    SW_EXPECT_TRUE( listSender.empty() );
+    SW_EXPECT_EQUAL( 1, database.countRecords( senderExpiryTable ) );                                  // Bob 의 줄만 남는다
+    SW_EXPECT_TRUE( ChatService::eraseAccount( database, kAlice, kNowMs ) == ServiceStoreResult::Ok ); // 멱등
+
+    ServiceTTLRule        senderRule = ChatService::makeSenderTTLRule( 30 * kChatDayMs );
+    ServiceTTLSweepReport report;
+    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, senderRule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( 0, database.countRecords( senderTable ) );
+    SW_EXPECT_EQUAL( 0, database.countRecords( senderExpiryTable ) );
 }
