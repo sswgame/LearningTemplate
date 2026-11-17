@@ -52,10 +52,17 @@ namespace sw
             static bool decode( string_view text, const utf8* pAlphabet, vector<uint8>& outBytes )
             {
                 outBytes.clear();
+                // 채움은 두 글자까지이고, 있으면 채운 길이가 4 의 배수다(RFC 4648 3.3). 개수를 묻지 않으면 `QQ==` 와 `QQ=====` 가 같은 바이트로 풀려
+                // 한 바이트 열에 글이 여럿이 된다(서명 · 캐시 키의 변조 틈).
+                const size_t paddedSize   = text.size();
+                size_t       paddingCount = 0;
                 while ( text.empty() == false && text.back() == '=' )
                 {
                     text.remove_suffix( 1 );
+                    ++paddingCount;
                 }
+                if ( paddingCount > 2 || ( paddingCount > 0 && paddedSize % 4 != 0 ) )
+                    return false;
                 if ( text.size() % 4 == 1 )
                     return false; // 6 비트 하나로는 바이트가 되지 않는다
                 outBytes.reserve( text.size() * 3 / 4 );
