@@ -872,6 +872,7 @@
         "_documentPath",
         "_graphPath",
         "_materialPath",
+        "_mesh",
         "_meshID",
         "_regionTablePath",
         "_sound",
@@ -886,6 +887,7 @@
         "documentPath",
         "graphPath",
         "materialPath",
+        "mesh",
         "meshID",
         "regionTablePath",
         "sound",
@@ -979,6 +981,7 @@
     {
       "owner": "game:Empty",
       "listField": [
+        "_catalog",
         "_catalogPath",
         "_combatEnemyClips",
         "_combatEnemyMaterial",
@@ -1010,6 +1013,7 @@
         "_rigWeaponMesh",
         "_rigWeaponRig",
         "_rigWeaponSockets",
+        "catalog",
         "catalogPath",
         "combatEnemyClips",
         "combatEnemyMaterial",
@@ -1043,6 +1047,7 @@
         "rigWeaponSockets"
       ],
       "listAssetRefField": [
+        "_catalog",
         "_catalogPath",
         "_combatEnemyClips",
         "_combatEnemyMaterial",
@@ -1074,6 +1079,7 @@
         "_rigWeaponMesh",
         "_rigWeaponRig",
         "_rigWeaponSockets",
+        "catalog",
         "catalogPath",
         "combatEnemyClips",
         "combatEnemyMaterial",
