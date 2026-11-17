@@ -2,8 +2,10 @@
 
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/Frustum.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -37,6 +39,9 @@ namespace sw
 
         struct GPULightBufferInternal
         {
+            /// @brief 빛 고르기(`cullLightsToLimit`)의 카메라 깊이 하한 — 반경의 이 비율이다. 카메라가 빛 구 안이면 값이 끝없이 커지지 않는다(그림자 칸 우선순위와 같은 식).
+            static constexpr float32 kCullMinDepthFraction = 0.1f;
+
             /** @brief 그림자를 켠 점광과 스폿이면 true 입니다(방향광은 씬이 하나 고릅니다). */
             static bool castsLocalShadow( const LightComponent& light )
             {
@@ -316,6 +321,7 @@ namespace sw
         _bProbeWritable = bProbeWritable ? SW_TRUE : SW_FALSE;
         // 상한(GPU 구간을 뺀 몫)은 GPU 구간 수를 아는 update 가 맞춘다.
         _listLightScratch.assign( listLight.begin(), listLight.end() );
+        _listSourceToUploaded.clear();
         _listTileScratch.assign( listShadowTileElement.begin(), listShadowTileElement.end() );
         _pProbeElements = pProbeElements;
     }
@@ -327,11 +333,11 @@ namespace sw
         _gridProducer      = LightGridProducer::None;
         _probeElementCount = 0;
 
-        // CPU 라이트와 GPU 구간이 프레임 상한을 나눠 쓴다. 넘치면 CPU 라이트를 뒤에서부터 자른다(GPU 구간은 방출기가 이미 상한 안에서 요청했다).
+        // CPU 라이트와 GPU 구간이 프레임 상한을 나눠 쓴다. 넘치면 CPU 라이트를 뷰 컬링 · 중요도로 골라 줄인다(GPU 구간은 방출기가 이미 상한 안에서 요청했다).
         _gpuLightCount = selectGPULightSlotCount( producer, requestedGPULightSlotCount );
         if ( requestedGPULightSlotCount > 0 && _gpuLightCount == 0 )
             reportGPULightRefused( requestedGPULightSlotCount );
-        const uint32 cpuCount = limitCPULightCount();
+        const uint32 cpuCount = limitCPULightCount( listGridViewProj );
         _cpuCount             = cpuCount;
         _count                = cpuCount + _gpuLightCount;
         if ( pDevice == nullptr || _count == 0 )
@@ -367,20 +373,125 @@ namespace sw
         }
     }
 
-    uint32 GPULightBuffer::limitCPULightCount()
+    uint32 GPULightBuffer::limitCPULightCount( const vector<float4x4>& listViewProj )
     {
         const uint32 cpuLimit = shaderslot::kMaxFrameLight - _gpuLightCount;
-        uint32       cpuCount = static_cast<uint32>( _listLightScratch.size() );
-        if ( cpuCount > cpuLimit )
+        // 이미 줄인 목록(같은 프레임에 update 를 다시 불렀다)은 넘지 않으므로 번호 표를 그대로 둔다 — 표는 populate 가 비운다.
+        if ( _listLightScratch.size() <= cpuLimit )
+            return static_cast<uint32>( _listLightScratch.size() );
+        if ( _bWarnedOverflow == SW_FALSE )
         {
-            if ( _bWarnedOverflow == SW_FALSE )
-            {
-                _bWarnedOverflow = SW_TRUE;
-                SW_LOG_WARNING_ID( "GPULightBuffer.LightCountExceedsLimit", "The light count exceeds the limit (%#, excluding %# GPU slots) - truncating from the front.", shaderslot::kMaxFrameLight, _gpuLightCount );
-            }
-            cpuCount = cpuLimit;
+            _bWarnedOverflow = SW_TRUE;
+            SW_LOG_WARNING_ID( "GPULightBuffer.LightCountExceedsLimit", "The light count %# exceeds the limit (%#, excluding %# GPU slots) - lights outside the views and the least important are dropped.",
+                               static_cast<uint64>( _listLightScratch.size() ), shaderslot::kMaxFrameLight, _gpuLightCount );
         }
-        return cpuCount;
+        return cullLightsToLimit( _listLightScratch, cpuLimit, listViewProj, _listSourceToUploaded );
+    }
+
+    uint32 GPULightBuffer::cullLightsToLimit( vector<GPULight>& inoutListLight, uint32 limit, const vector<float4x4>& listViewProj, vector<uint32>& outListSourceToKept )
+    {
+        outListSourceToKept.clear();
+        const uint32 sourceCount = static_cast<uint32>( inoutListLight.size() );
+        if ( sourceCount <= limit )
+            return sourceCount;
+
+        // 단위 하나 — 머리 원소와 뒤에 붙은 꼬리(자유 모양 2D 빛의 변)의 구간과 중요도. 중요도가 음수면 어느 뷰에도 닿지 않아 뺀다.
+        struct LightUnit
+        {
+            float32 _importance{ 0.0f };
+            uint32  _first{ 0 };
+            uint32  _count{ 0 };
+        };
+        // 늘 남는 원소(방향광 · 전역 2D 빛)와 빛 다음 차례(2D 가림막)의 값. 빛의 중요도는 0 보다 크다.
+        constexpr float32 kAlwaysKept   = 3.0e38f;
+        constexpr float32 kAfterLights  = 0.0f;
+        constexpr float32 kOutsideViews = -1.0f;
+        vector<Frustum>   listFrustum;
+        listFrustum.reserve( listViewProj.size() );
+        for ( const float4x4& viewProj : listViewProj )
+        {
+            listFrustum.push_back( Frustum::fromViewProjection( viewProj ) );
+        }
+
+        vector<LightUnit> listUnit;
+        for ( uint32 first = 0; first < sourceCount; )
+        {
+            uint32 end = first + 1u;
+            while ( end < sourceCount && static_cast<uint32>( inoutListLight[end]._directionType._w + 0.5f ) == shaderslot::kLightTypeFreeform2DEdge )
+                ++end;
+            const GPULight& head      = inoutListLight[first];
+            const uint32    lightType = static_cast<uint32>( head._directionType._w + 0.5f );
+            float32         importance{ kAfterLights };
+            if ( lightType == shaderslot::kLightTypeDirectional || lightType == shaderslot::kLightTypeGlobal2D )
+            {
+                importance = kAlwaysKept;
+            }
+            else if ( lightType != shaderslot::kLightTypeShadow2D && lightType != shaderslot::kLightTypeFreeform2DEdge )
+            {
+                const float3  center{ head._positionRadius._x, head._positionRadius._y, head._positionRadius._z };
+                const float32 radius  = MathUtil::max( head._positionRadius._w, 0.0f );
+                const bool    bProbe  = lightType == shaderslot::kLightTypeProbeVolume || lightType == shaderslot::kLightTypeReflectionProbe;
+                const float32 power   = bProbe ? 1.0f : MathUtil::max( head._colorIntensity._w, 0.0f ) * MathUtil::max( head._colorIntensity._x, MathUtil::max( head._colorIntensity._y, head._colorIntensity._z ) );
+                const float32 minimum = MathUtil::max( radius * GPULightBufferInternal::kCullMinDepthFraction, MathUtil::kEpsilon );
+                // 뷰가 없으면 깊이 1 — 세기 × 반경이다. 있으면 닿는 뷰 가운데 가장 가까운 깊이(클립 w — 원근에서 뷰 깊이, 직교에서 1)로 화면 크기를 어림한다.
+                float32 depth = listFrustum.empty() ? 1.0f : -1.0f;
+                for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listFrustum.size() ); ++viewIndex )
+                {
+                    if ( listFrustum[viewIndex].overlapsSphere( center, radius ) == false )
+                        continue;
+                    const float32 viewDepth = MathUtil::max( float4::transform( float4{ center._x, center._y, center._z, 1.0f }, listViewProj[viewIndex] )._w, minimum );
+                    depth                   = depth < 0.0f ? viewDepth : MathUtil::min( depth, viewDepth );
+                }
+                // 세기가 0 인 빛도 가림막(0)보다 앞이 되도록 아주 작은 값을 더한다.
+                importance = depth < 0.0f ? kOutsideViews : MathUtil::kEpsilon + power * radius / depth;
+            }
+            listUnit.push_back( LightUnit{ importance, first, end - first } );
+            first = end;
+        }
+
+        // 중요도 순서로 자리가 남는 단위만 고른다(크기가 커서 안 들어가는 단위 뒤의 작은 단위는 아직 들어간다). 같은 값은 목록 순서다.
+        vector<uint32> listOrder( listUnit.size() );
+        for ( uint32 unitIndex = 0; unitIndex < static_cast<uint32>( listUnit.size() ); ++unitIndex )
+        {
+            listOrder[unitIndex] = unitIndex;
+        }
+        VectorUtil::stableSort( listOrder, [&listUnit]( uint32 first, uint32 second )
+        { return listUnit[first]._importance > listUnit[second]._importance; } );
+        vector<uint8> listKept( listUnit.size(), SW_FALSE );
+        uint32        keptCount = 0;
+        for ( const uint32 unitIndex : listOrder )
+        {
+            const LightUnit& unit = listUnit[unitIndex];
+            if ( unit._importance < 0.0f || keptCount + unit._count > limit )
+                continue;
+            listKept[unitIndex] = SW_TRUE;
+            keptCount += unit._count;
+        }
+
+        // 남은 단위를 원래 순서로 앞으로 당긴다(종류별 순서 — 빛 · 프로브 · 가림막 — 를 셰이더가 그대로 본다).
+        outListSourceToKept.assign( sourceCount, constant::invalid_index::kUint32 );
+        uint32 writeIndex = 0;
+        for ( uint32 unitIndex = 0; unitIndex < static_cast<uint32>( listUnit.size() ); ++unitIndex )
+        {
+            if ( listKept[unitIndex] == SW_FALSE )
+                continue;
+            const LightUnit& unit = listUnit[unitIndex];
+            for ( uint32 offset = 0; offset < unit._count; ++offset )
+            {
+                outListSourceToKept[unit._first + offset] = writeIndex;
+                inoutListLight[writeIndex++]              = inoutListLight[unit._first + offset];
+            }
+        }
+        inoutListLight.resize( writeIndex );
+        return writeIndex;
+    }
+
+    uint32 GPULightBuffer::findUploadedLightIndex( uint32 sourceIndex ) const
+    {
+        // 표가 비었으면 이번 목록은 상한 안이다(또는 아직 update 전이다) — 번호가 그대로다.
+        if ( _listSourceToUploaded.empty() )
+            return sourceIndex;
+        return sourceIndex < _listSourceToUploaded.size() ? _listSourceToUploaded[sourceIndex] : constant::invalid_index::kUint32;
     }
 
     bool GPULightBuffer::uploadLightList( IRHIDevice* pDevice, uint32 cpuCount )

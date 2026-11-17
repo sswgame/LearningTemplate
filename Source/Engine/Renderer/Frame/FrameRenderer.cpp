@@ -535,6 +535,8 @@ namespace sw
         // 범위 나누기는 시뮬레이션(prepareFrame)이 같은 함수로 다시 한다.
         const VFXGPULightAssignment lightAssignment = VFXGPUSimulation::assignLightRanges( _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _listScratchGPULightRange );
         _state._lightBuffer.update( pDevice, _listScratchGridViewProj, producer, lightAssignment._slotCount );
+        // 상한을 넘은 프레임은 빛을 골라 줄여 번호가 당겨진다 — 목록 번호를 싣는 주 시점 그림자 상수(접촉 그림자 채널)를 올라간 번호로 다시 싣는다(updatePassConstants 가 먼저 돌았다).
+        _passExecutor.applyViewShadowConstants( _state._frameContext, _state._mainView._shadow );
     }
 
     LightGridProducer FrameRenderer::selectLightGridProducer()

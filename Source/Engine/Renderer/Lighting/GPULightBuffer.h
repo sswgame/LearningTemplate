@@ -169,6 +169,17 @@ namespace sw
         [[nodiscard]] static uint32 selectGPULightSlotCount( LightGridProducer producer, uint32 requestedSlotCount );
 
         /**
+         * @brief 원소가 @p limit 를 넘으면 뷰 절두체 밖의 빛을 빼고 중요도 순서로 골라 @p inoutListLight 를 그 자리에서 줄입니다(감사 RN-3). 넘지 않으면 그대로입니다.
+         * @details 자르는 단위는 "원소 + 뒤에 붙은 꼬리 원소"(자유 모양 2D 빛의 변)라 꼬리가 중간에서 잘리지 않는다. 남은 원소는 원래 순서를 지킨다.
+         *          방향광 · 전역 2D 빛은 늘 남는다. 경계 구를 가진 원소(점광 · 스폿 · 2D 빛 · 프로브)는 어느 뷰(@p listViewProj)의 절두체에도 닿지 않으면 빠지고,
+         *          남은 것은 세기(색의 최댓값 × 세기, 프로브는 1) × 반경 / 카메라 깊이가 큰 쪽이 먼저다. 2D 가림막은 화면 밖에서도 화면 안으로 그림자를 드리우므로
+         *          빼지 않고 빛 다음 차례다. 뷰가 없으면 절두체 판정 없이 세기 × 반경이다. 언리얼 · 유니티 HDRP 의 광원 컬링(가시성 → 중요도 예산) 자리다.
+         * @param outListSourceToKept 원래 번호마다 남은 번호(빠졌으면 `constant::invalid_index::kUint32`). 넘지 않았으면 비운다.
+         * @return 남은 원소 수
+         */
+        static uint32 cullLightsToLimit( vector<GPULight>& inoutListLight, uint32 limit, const vector<float4x4>& listViewProj, vector<uint32>& outListSourceToKept );
+
+        /**
          * @brief 이번 프레임의 라이트와 그림자 타일 원소를 업로드 목록에 담습니다. 업로드는 뷰가 정해진 뒤 `update` 가 합니다.
          * @details 상한 처리(`shaderslot::kMaxFrameLight` 에서 GPU 구간을 뺀 몫)는 GPU 구간 수를 아는 `update` 가 합니다.
          *          @p listShadowTileElement(점광과 스폿 그림자 타일)는 라이트 뒤에 붙고 `getCount` 에 들지 않습니다.
@@ -195,6 +206,12 @@ namespace sw
         const RHIStructuredBuffer& getBuffer() const { return _buffer; }
         /** @brief GPU 에 올라간 라이트 수(CPU 라이트 + GPU 구간)입니다. 셰이더 루프가 이 수만큼 돕니다. */
         uint32 getCount() const { return _count; }
+        /**
+         * @brief `populate` 에 준 라이트 목록의 번호 @p sourceIndex 가 올라간 버퍼에서 몇 번인지 돌려줍니다. 상한을 넘어 빠진 원소면 `constant::invalid_index::kUint32` 입니다.
+         * @details 상한을 넘은 프레임은 원소를 골라 줄이므로(`cullLightsToLimit`) 번호가 당겨진다. 목록 번호를 셰이더에 넘기는 값(접촉 그림자 채널)은 이 번호로 옮긴다.
+         *          `update` 전에는 번호를 그대로 돌려준다(줄이기는 `update` 가 한다).
+         */
+        [[nodiscard]] uint32 findUploadedLightIndex( uint32 sourceIndex ) const;
         /** @brief GPU 구간의 첫 라이트 번호입니다(= 올라간 CPU 라이트 수). 방출기의 슬롯 구간은 여기서부터 이어집니다. */
         uint32 getGPULightBase() const { return _cpuCount; }
         /** @brief 이번 프레임에 받은 GPU 구간의 슬롯 수입니다. 0 이면 GPU 라이트를 쓰지 않는 프레임(또는 생산자가 GPU 가 아니라 거절한 프레임)입니다. */
@@ -223,8 +240,8 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
     private:
-        /** @brief CPU 라이트 수를 프레임 상한(GPU 구간을 뺀 몫)에 맞춰 돌려줍니다. 넘치면 한 번 경고합니다. */
-        uint32 limitCPULightCount();
+        /** @brief CPU 라이트를 프레임 상한(GPU 구간을 뺀 몫)에 맞춥니다 — 넘치면 @p listViewProj 로 골라 줄이고(`cullLightsToLimit`) 한 번 경고합니다. 남은 수를 돌려줍니다. */
+        uint32 limitCPULightCount( const vector<float4x4>& listViewProj );
         /** @brief 업로드 목록([CPU 라이트][GPU 구간][그림자 타일])을 만들고 라이트 버퍼를 갖춰 올립니다. 버퍼를 잡지 못하면 개수를 0 으로 돌리고 false 입니다. */
         bool uploadLightList( IRHIDevice* pDevice, uint32 cpuCount );
         /**
@@ -254,6 +271,7 @@ namespace sw
         uint32                           _probeElementCount{ 0 };                  ///< 이번 프레임에 올린 프로브 원소 수(0 이면 프로브 버퍼를 걸지 않는다)
         uint8                            _bProbeWritable{ SW_FALSE };              ///< 이번 프레임에 컴퓨트가 프로브 버퍼를 쓴다(`populate`)
         vector<GPULight>                 _listLightScratch;                        ///< 이번 프레임의 CPU 라이트(`populate` 가 담고 `update` 가 상한을 맞춰 올린다)
+        vector<uint32>                   _listSourceToUploaded;                    ///< 상한을 넘은 프레임의 목록 번호 → 올라간 번호(넘지 않았으면 비었다 — 번호가 그대로다)
         vector<GPULight>                 _listTileScratch;                         ///< 이번 프레임의 그림자 타일 원소(`populate` 가 담는다)
         vector<GPULight>                 _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
         vector<GPULight>                 _listUploadedLight;                       ///< 라이트 버퍼에 지난번에 올린 내용(바뀐 구간만 올리려고 견준다 — `_listUploadScratch` 와 바꿔 쓴다)

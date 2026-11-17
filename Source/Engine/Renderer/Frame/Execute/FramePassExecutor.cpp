@@ -427,8 +427,18 @@ namespace sw
             context._passValues.setFloat4( names._arrShadowCascade[cascadeIndex], shadow._arrCascade[cascadeIndex] );
         }
         context._passValues.setFloat4( names._shadowFilter, ShadowFilter::makeShaderParams( ShadowFilter::getActiveMode(), shadow._directionalPenumbraScale ) );
-        // 접촉 그림자 채널은 프레임 공통이다(빛 목록이 프레임 공통이다) — 추가 뷰도 같은 값이다.
-        context._passValues.setFloat4( names._contactShadowLights, _state._frameShadow._contactShadowLights );
+        // 접촉 그림자 채널은 프레임 공통이다(빛 목록이 프레임 공통이다) — 추가 뷰도 같은 값이다. 채널의 값은 목록 번호라 올라간 버퍼의 번호로 옮긴다
+        // (상한을 넘은 프레임은 빛을 골라 줄여 번호가 당겨진다 — 빠진 빛의 채널은 빈 채널 -1).
+        const float4& sourceLights                                            = _state._frameShadow._contactShadowLights;
+        float32       arrChannel[FrameShadowData::kContactShadowChannelCount] = { sourceLights._x, sourceLights._y, sourceLights._z, sourceLights._w };
+        for ( float32& channel : arrChannel )
+        {
+            if ( channel < 0.0f )
+                continue;
+            const uint32 uploaded = _state._lightBuffer.findUploadedLightIndex( static_cast<uint32>( channel + 0.5f ) );
+            channel               = uploaded == constant::invalid_index::kUint32 ? -1.0f : static_cast<float32>( uploaded );
+        }
+        context._passValues.setFloat4( names._contactShadowLights, float4{ arrChannel[0], arrChannel[1], arrChannel[2], arrChannel[3] } );
     }
 
     void FramePassExecutor::applyViewPassConstants( FramePassContext& context, FrameViewTarget& view )
