@@ -172,6 +172,29 @@ namespace sw
             outMessage = subject + " opposite of " + *pOppositeOf + " ('" + pStored->_text + "'), got " + valueText;
             return true;
         }
+        if ( const string* pIncreaseFrom = step.findAttribute( "increaseFrom" ); pIncreaseFrom != nullptr )
+        {
+            // 기억한 수에서 increaseBy 이상 늘었다(그린 프레임 수 같은 누적 값 — "앞으로 N 장 더" 를 고정 대기 대신 센다).
+            const StoredValue* pStored = nullptr;
+            for ( const StoredValue& entry : _listStored )
+            {
+                if ( entry._name == *pIncreaseFrom )
+                    pStored = &entry;
+            }
+            float64 remembered = 0.0;
+            if ( pStored == nullptr || StringUtil::parseDouble( string_view{ pStored->_text }, remembered ) == false )
+            {
+                outMessage = subject + ": no number was stored as '" + *pIncreaseFrom + "' (add <Store as=\"" + *pIncreaseFrom + "\"> on a number watch before this step)";
+                return false;
+            }
+            float32 increase = 0.0f;
+            if ( Internal::readFloat( step, "increaseBy", increase ).has_value() == false )
+                return false; // 검사가 본다 — 단계가 바뀌었다(핫 리로드)
+            bOk        = value._number - remembered >= static_cast<float64>( increase );
+            outMatched = bOk;
+            outMessage = subject + " increase by " + *step.findAttribute( "increaseBy" ) + " from " + *pIncreaseFrom + " ('" + pStored->_text + "'), got " + valueText;
+            return true;
+        }
         if ( step.findAttribute( "is" ) != nullptr )
         {
             bOk  = valueText == *step.findAttribute( "is" );

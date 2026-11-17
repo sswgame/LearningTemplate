@@ -140,6 +140,8 @@ namespace sw
         string _differsFrom{};
         PROPERTY( Tooltip = "Remembered number this value must be the negation of (within tolerance) - a mirrored bone's X against the other side's" )
         string _oppositeOf{};
+        PROPERTY( Tooltip = "Remembered number (Store as) that increaseBy counts from - the value must be at least that number plus increaseBy" )
+        string _increaseFrom{};
     };
 
     /** @brief `WaitUntil` 의 시한 칸(`Expect` 칸에 더해진다)입니다. 셋 중 하나만 적습니다. */

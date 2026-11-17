@@ -173,11 +173,19 @@ namespace sw
                 const expected<void> reference = validateWatchReference( step );
                 if ( reference.has_value() == false )
                     return reference;
-                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom", "oppositeOf" } ) == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom · oppositeOf" } );
+                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom", "oppositeOf", "increaseBy" } ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom · oppositeOf · increaseBy" } );
+                // `increaseFrom` 은 `increaseBy` 의 짝이다 — 한쪽만 있으면 무엇에서 늘었는지 모른다.
+                if ( ( step.findAttribute( "increaseBy" ) != nullptr ) != ( step.findAttribute( "increaseFrom" ) != nullptr ) )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "increaseBy=\"N\" and increaseFrom=\"<stored name>\" go together" } );
                 const bool bTextRule = step.findAttribute( "is" ) != nullptr || step.findAttribute( "sameAs" ) != nullptr || step.findAttribute( "differsFrom" ) != nullptr;
                 if ( bTextRule )
                     return {};
+                if ( step.findAttribute( "increaseBy" ) != nullptr )
+                {
+                    float32 increase = 0.0f;
+                    return AutomationStepArgsUtil::readFloat( step, "increaseBy", increase ); // 기억한 수는 실행 때 본다
+                }
                 if ( step.findAttribute( "oppositeOf" ) != nullptr )
                 {
                     float32 tolerance = AutomationStepArgsUtil::kWatchNearTolerance;
@@ -192,7 +200,7 @@ namespace sw
             static expected<void> validateExpect( const AutomationStep& step )
             {
                 AutomationExpectParams params;
-                return step.readProperties( params, { "equals", "near", "atLeast", "atMost" } ).and_then( [&]()
+                return step.readProperties( params, { "equals", "near", "atLeast", "atMost", "increaseBy" } ).and_then( [&]()
                 { return validateWatchComparison( step ); } );
             }
 
@@ -200,7 +208,7 @@ namespace sw
             static expected<void> validateWaitUntil( const AutomationStep& step )
             {
                 AutomationWaitUntilParams params;
-                const expected<void>      read = step.readProperties( params, { "equals", "near", "atLeast", "atMost" } );
+                const expected<void>      read = step.readProperties( params, { "equals", "near", "atLeast", "atMost", "increaseBy" } );
                 if ( read.has_value() == false )
                     return read;
                 const uint32 timeoutCount = ( step.findAttribute( "timeoutFrames" ) != nullptr ? 1u : 0u ) + ( step.findAttribute( "timeoutSeconds" ) != nullptr ? 1u : 0u ) +

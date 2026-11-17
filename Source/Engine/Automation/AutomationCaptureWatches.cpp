@@ -1,6 +1,6 @@
 /**
  * @file AutomationCaptureWatches.cpp
- * @brief 캡처 준비 판정(`CaptureReadiness`)의 자동화 감시 값 `Assets.Pending` 과 사진 앞 정착 감시 값 `Render.StillFrames` · `Render.ExposureErrorEv` · `Render.Stable` 입니다.
+ * @brief 캡처 준비 판정(`CaptureReadiness`)의 자동화 감시 값 `Assets.Pending` 과 사진 앞 정착 감시 값 `Render.StillFrames` · `Render.ExposureErrorEv` · `Render.Stable` · `Render.PresentedFrames` 입니다.
  * @details 정착은 주 렌더러가 올린 값(`RenderStabilitySample::publish`)과 에셋 일(`Assets.Pending` 과 같은 수)을 엔진 설정의 문턱(`EngineConfig::_renderStability`)으로 본다 — 스크린샷 앞
  *          고정 프레임 대기를 대신한다. 에셋 일은 바깥 일(워커 로드 · GPU)이라 `Render.Stable` 도 벽시계 감시 값이다.
  */
@@ -39,6 +39,14 @@ namespace sw
             return true;
         }
 
+        /** @brief 감시 값 `Render.PresentedFrames` 입니다. 렌더 스레드가 장치의 프레임 끝(Present 길)에 넘긴 프레임 수입니다(`RenderPresentCounter`). */
+        [[nodiscard]] bool readPresentedFrames( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            outValue = static_cast<float64>( RenderPresentCounter::read() );
+            return true;
+        }
+
         /** @brief 감시 값 `Render.Stable` 입니다. 정지 프레임 · 노출 오차 · 에셋 일이 모두 문턱 안이면 1 입니다(문턱은 `EngineConfig::_renderStability`). */
         [[nodiscard]] bool readRenderStable( const GameObjectManager* pManager, float64& outValue )
         {
@@ -56,6 +64,9 @@ namespace sw
                          &readStillFrames );
     SW_AUTOMATION_WATCH( renderExposureErrorEv, "Render.ExposureErrorEv", "Upper bound (EV) of how far auto exposure may still be from its target on the main view (0 = fixed exposure)",
                          &readExposureErrorEv );
+    SW_AUTOMATION_WALL_WATCH( renderPresentedFrames, "Render.PresentedFrames",
+                              "Frames the render thread recorded and handed to the device's end of frame (the Present path; frames advanced without drawing do not count)",
+                              &readPresentedFrames );
     SW_AUTOMATION_WALL_WATCH( renderStable, "Render.Stable",
                               "1 once the main view is stable for a photo: enough still TAA frames, auto exposure converged and no asset job pending (thresholds: EngineConfig _renderStability)",
                               &readRenderStable );
