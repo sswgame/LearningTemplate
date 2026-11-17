@@ -86,7 +86,7 @@ namespace sw::editor
         _content.collectIssues( outListIssue );
     }
 
-    bool TileSetEditModel::setAtlasPath( string_view path )
+    bool TileSetEditModel::applySetAtlasPath( string_view path )
     {
         if ( string_view( _content._atlasPath ) == path )
             return false;
@@ -94,7 +94,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::setAtlasGrid( int32 columnCount, int32 rowCount )
+    bool TileSetEditModel::applySetAtlasGrid( int32 columnCount, int32 rowCount )
     {
         const int32 columns = MathUtil::max( columnCount, 1 );
         const int32 rows    = MathUtil::max( rowCount, 1 );
@@ -105,7 +105,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::setTileSize( float32 tileSize )
+    bool TileSetEditModel::applySetTileSize( float32 tileSize )
     {
         if ( tileSize <= 0.0f || tileSize == _content._tileSize )
             return false;
@@ -154,9 +154,10 @@ namespace sw::editor
         _content._listBrush.push_back( brush );
         _selectedBrush = static_cast<int32>( _content._listBrush.size() ) - 1;
         _selectedRule  = nullopt;
+        recordDocumentEdit( bRuleTile ? "Add Rule Tile Brush" : "Add Tile Brush" );
     }
 
-    bool TileSetEditModel::removeSelectedBrush()
+    bool TileSetEditModel::applyRemoveSelectedBrush()
     {
         if ( findSelectedBrush() == nullptr )
             return false;
@@ -165,7 +166,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::renameSelectedBrush( string_view name )
+    bool TileSetEditModel::applyRenameSelectedBrush( string_view name )
     {
         TileBrush* pBrush = editSelectedBrush();
         if ( pBrush == nullptr )
@@ -184,7 +185,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::setSelectedSolid( bool bSolid )
+    bool TileSetEditModel::applySetSelectedSolid( bool bSolid )
     {
         TileBrush*  pBrush = editSelectedBrush();
         const uint8 value  = bSolid ? SW_TRUE : SW_FALSE;
@@ -194,7 +195,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::setSelectedNavCost( int32 navCost )
+    bool TileSetEditModel::applySetSelectedNavCost( int32 navCost )
     {
         using Internal     = TileSetEditModelInternal;
         TileBrush*  pBrush = editSelectedBrush();
@@ -205,7 +206,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::setSelectedOutsideSame( bool bOutsideIsSame )
+    bool TileSetEditModel::applySetSelectedOutsideSame( bool bOutsideIsSame )
     {
         TileBrush*  pBrush = editSelectedBrush();
         const uint8 value  = bOutsideIsSame ? SW_TRUE : SW_FALSE;
@@ -221,7 +222,7 @@ namespace sw::editor
         clampSelection();
     }
 
-    bool TileSetEditModel::addRule()
+    bool TileSetEditModel::applyAddRule()
     {
         TileBrush* pBrush = editSelectedBrush();
         if ( pBrush == nullptr )
@@ -233,7 +234,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::removeSelectedRule()
+    bool TileSetEditModel::applyRemoveSelectedRule()
     {
         TileBrush* pBrush = editSelectedBrush();
         if ( pBrush == nullptr || _selectedRule.has_value() == false || *_selectedRule < 0 || *_selectedRule >= static_cast<int32>( pBrush->_listRule.size() ) )
@@ -248,7 +249,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::moveSelectedRule( int32 delta )
+    bool TileSetEditModel::applyMoveSelectedRule( int32 delta )
     {
         TileBrush* pBrush = editSelectedBrush();
         if ( pBrush == nullptr || _selectedRule.has_value() == false || *_selectedRule < 0 )
@@ -261,7 +262,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::cycleNeighbor( int32 neighbor )
+    bool TileSetEditModel::applyCycleNeighbor( int32 neighbor )
     {
         TileBrush* pBrush       = editSelectedBrush();
         const bool bRuleInRange = _selectedRule.has_value() && *_selectedRule >= 0 && *_selectedRule < static_cast<int32>( pBrush != nullptr ? pBrush->_listRule.size() : 0 );
@@ -304,7 +305,7 @@ namespace sw::editor
         return const_cast<TileVisual*>( findSelectedVisual() );
     }
 
-    bool TileSetEditModel::pickCell( int32 cell, bool bAppendFrame )
+    bool TileSetEditModel::applyPickCell( int32 cell, bool bAppendFrame )
     {
         TileVisual* pVisual = editSelectedVisual();
         if ( pVisual == nullptr || cell < 0 || cell >= _content.getCellCount() )
@@ -324,7 +325,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::removeLastFrame()
+    bool TileSetEditModel::applyRemoveLastFrame()
     {
         TileVisual* pVisual = editSelectedVisual();
         if ( pVisual == nullptr || pVisual->_listFrameCell.size() <= 1 )
@@ -333,7 +334,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TileSetEditModel::setFramesPerSecond( float32 framesPerSecond )
+    bool TileSetEditModel::applySetFramesPerSecond( float32 framesPerSecond )
     {
         TileVisual*   pVisual = editSelectedVisual();
         const float32 value   = MathUtil::max( framesPerSecond, 0.0f );
@@ -362,5 +363,126 @@ namespace sw::editor
     {
         SW_ASSERT( _pEditRecorder != nullptr ); // 문서 패널이 만들 때 건다(`bindDocumentEditRecorder`)
         _pEditRecorder->notifyEdited( label );
+    }
+
+    // 편집 연산 — 본문이 바꿨으면 모델이 정한 되돌리기 이름으로 알린다(감사 E-16). View 는 연산만 부른다.
+    bool TileSetEditModel::setAtlasPath( string_view path )
+    {
+        if ( applySetAtlasPath( path ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Set Atlas" );
+        return true;
+    }
+
+    bool TileSetEditModel::setAtlasGrid( int32 columnCount, int32 rowCount )
+    {
+        if ( applySetAtlasGrid( columnCount, rowCount ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Set Grid" );
+        return true;
+    }
+
+    bool TileSetEditModel::setTileSize( float32 tileSize )
+    {
+        if ( applySetTileSize( tileSize ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Set Tile Size" );
+        return true;
+    }
+
+    bool TileSetEditModel::removeSelectedBrush()
+    {
+        if ( applyRemoveSelectedBrush() == false )
+            return false;
+        recordDocumentEdit( "Remove Tile Brush" );
+        return true;
+    }
+
+    bool TileSetEditModel::renameSelectedBrush( string_view name )
+    {
+        if ( applyRenameSelectedBrush( name ) == false )
+            return false;
+        recordDocumentEdit( "Rename Tile Brush" );
+        return true;
+    }
+
+    bool TileSetEditModel::setSelectedSolid( bool bSolid )
+    {
+        if ( applySetSelectedSolid( bSolid ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Brush" );
+        return true;
+    }
+
+    bool TileSetEditModel::setSelectedNavCost( int32 navCost )
+    {
+        if ( applySetSelectedNavCost( navCost ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Brush" );
+        return true;
+    }
+
+    bool TileSetEditModel::setSelectedOutsideSame( bool bOutsideIsSame )
+    {
+        if ( applySetSelectedOutsideSame( bOutsideIsSame ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Brush" );
+        return true;
+    }
+
+    bool TileSetEditModel::addRule()
+    {
+        if ( applyAddRule() == false )
+            return false;
+        recordDocumentEdit( "Add Tile Rule" );
+        return true;
+    }
+
+    bool TileSetEditModel::removeSelectedRule()
+    {
+        if ( applyRemoveSelectedRule() == false )
+            return false;
+        recordDocumentEdit( "Remove Tile Rule" );
+        return true;
+    }
+
+    bool TileSetEditModel::moveSelectedRule( int32 delta )
+    {
+        if ( applyMoveSelectedRule( delta ) == false )
+            return false;
+        recordDocumentEdit( "Reorder Tile Rules" );
+        return true;
+    }
+
+    bool TileSetEditModel::cycleNeighbor( int32 neighbor )
+    {
+        if ( applyCycleNeighbor( neighbor ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Rule Pattern" );
+        return true;
+    }
+
+    bool TileSetEditModel::removeLastFrame()
+    {
+        if ( applyRemoveLastFrame() == false )
+            return false;
+        recordDocumentEdit( "Remove Tile Frame" );
+        return true;
+    }
+
+    bool TileSetEditModel::setFramesPerSecond( float32 framesPerSecond )
+    {
+        if ( applySetFramesPerSecond( framesPerSecond ) == false )
+            return false;
+        recordDocumentEdit( "Edit Tile Frames" );
+        return true;
+    }
+
+    bool TileSetEditModel::pickCell( int32 cell, bool bAppendFrame )
+    {
+        if ( applyPickCell( cell, bAppendFrame ) == false )
+            return false;
+        recordDocumentEdit( bAppendFrame ? "Add Tile Frame" : "Pick Tile Cell" );
+        return true;
     }
 } // namespace sw::editor

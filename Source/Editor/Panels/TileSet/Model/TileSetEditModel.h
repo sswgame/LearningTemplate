@@ -28,12 +28,6 @@ namespace sw::editor
     public:
         /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다(`EditorDocumentPanel::getDocumentEditRecorder`). 창구는 패널이 쥐어 이 모델보다 먼저 사라지지 않는다. */
         void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
-        /**
-         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
-         * @details 문서 편집 알림은 Model 만 낸다(감사 E-16) — View 는 창구 형식을 앞 선언만 보아 직접 알릴 수 없다.
-         */
-        void recordDocumentEdit( string_view label ) const;
-
         TileSetEditModel();
 
         // ------------------------------------------------------------------------------
@@ -106,8 +100,29 @@ namespace sw::editor
         [[nodiscard]] bool setFramesPerSecond( float32 framesPerSecond );
 
     private:
-        TileBrush*  editSelectedBrush();
-        TileVisual* editSelectedVisual();
+        /**
+         * @brief 문서를 고쳤음을 알립니다 — 되돌리기 한 단계와 미저장이 된다(위젯이 활성인 동안은 상호작용 구간 하나). 창구를 걸지 않았으면 멈춘다.
+         * @details 이 모델의 편집 연산만 부른다(감사 E-16) — 무엇을 고쳤는지와 되돌리기 이름은 모델이 정하고, View 는 연산만 부른다.
+         */
+        void recordDocumentEdit( string_view label ) const;
+        /** @brief 편집 연산의 본문입니다 — 알리지 않는다(공개 연산이 성공하면 알린다). */
+        [[nodiscard]] bool applySetAtlasPath( string_view path );
+        [[nodiscard]] bool applySetAtlasGrid( int32 columnCount, int32 rowCount );
+        [[nodiscard]] bool applySetTileSize( float32 tileSize );
+        [[nodiscard]] bool applyRemoveSelectedBrush();
+        [[nodiscard]] bool applyRenameSelectedBrush( string_view name );
+        [[nodiscard]] bool applySetSelectedSolid( bool bSolid );
+        [[nodiscard]] bool applySetSelectedNavCost( int32 navCost );
+        [[nodiscard]] bool applySetSelectedOutsideSame( bool bOutsideIsSame );
+        [[nodiscard]] bool applyAddRule();
+        [[nodiscard]] bool applyRemoveSelectedRule();
+        [[nodiscard]] bool applyMoveSelectedRule( int32 delta );
+        [[nodiscard]] bool applyCycleNeighbor( int32 neighbor );
+        [[nodiscard]] bool applyRemoveLastFrame();
+        [[nodiscard]] bool applySetFramesPerSecond( float32 framesPerSecond );
+        [[nodiscard]] bool applyPickCell( int32 cell, bool bAppendFrame );
+        TileBrush*         editSelectedBrush();
+        TileVisual*        editSelectedVisual();
         /** @brief 고른 번호를 지금 목록 안으로 묶습니다. */
         void clampSelection();
 

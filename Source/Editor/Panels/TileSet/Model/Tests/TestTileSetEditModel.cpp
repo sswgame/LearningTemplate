@@ -39,7 +39,9 @@ namespace
 // 이웃 단추는 상관없음 → 같음 → 다름 → 상관없음으로 돌고, 런타임이 그 패턴대로 셀을 고른다.
 SW_TEST_CASE( TileSetEditModelTest, NeighborCyclesAndTheRuntimeFollows )
 {
-    TileSetEditModel model;
+    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    TileSetEditModel           model;
+    model.bindDocumentEditRecorder( modelRecorder );
     Util::load( model );
     SW_REQUIRE_TRUE( model.addRule() );
     SW_EXPECT_TRUE( model.getSelectedRule() == 1 );
@@ -62,7 +64,9 @@ SW_TEST_CASE( TileSetEditModelTest, NeighborCyclesAndTheRuntimeFollows )
 // 프레임을 덧붙이면 애니메이션이 되고 fps 가 없으면 기본값을 둔다(읽기는 fps 없는 애니메이션을 거절한다). 마지막 프레임은 빼지 않는다.
 SW_TEST_CASE( TileSetEditModelTest, AppendedFramesStayLoadable )
 {
-    TileSetEditModel model;
+    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    TileSetEditModel           model;
+    model.bindDocumentEditRecorder( modelRecorder );
     Util::load( model );
     SW_REQUIRE_TRUE( model.pickCell( 2, true ) );
     SW_REQUIRE_TRUE( model.pickCell( 3, true ) );
@@ -82,7 +86,9 @@ SW_TEST_CASE( TileSetEditModelTest, AppendedFramesStayLoadable )
 // 이름은 비거나 겹칠 수 없다(맵은 브러시를 이름으로 칠한다). 새 브러시는 겹치지 않는 이름이다.
 SW_TEST_CASE( TileSetEditModelTest, BrushNamesStayUnique )
 {
-    TileSetEditModel model;
+    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    TileSetEditModel           model;
+    model.bindDocumentEditRecorder( modelRecorder );
     Util::load( model );
     model.addBrush( false );
     model.addBrush( false );
@@ -99,7 +105,9 @@ SW_TEST_CASE( TileSetEditModelTest, BrushNamesStayUnique )
 // 규칙 타일의 마지막 규칙은 지우지 않는다(규칙 없는 규칙 타일은 로드 오류). 격자를 줄여 셀이 밖으로 나가면 위반으로 보이고 저장하지 않는다.
 SW_TEST_CASE( TileSetEditModelTest, ViolationsAreShownNotSaved )
 {
-    TileSetEditModel model;
+    const DocumentEditRecorder modelRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    TileSetEditModel           model;
+    model.bindDocumentEditRecorder( modelRecorder );
     Util::load( model );
     model.selectRule( 0 );
     SW_EXPECT_FALSE( model.removeSelectedRule() );
@@ -110,15 +118,17 @@ SW_TEST_CASE( TileSetEditModelTest, ViolationsAreShownNotSaved )
     SW_EXPECT_TRUE( listIssue[0]._brushIndex == 0 );
     SW_EXPECT_FALSE( listIssue[0]._ruleIndex.has_value() );
     // 되돌리기 글은 위반이 든 채로 돌아온다(편집 중의 상태).
-    TileSetEditModel restored;
+    const DocumentEditRecorder restoredRecorder{ DocumentEditRecorder::RecordDelegate::create( []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
+    TileSetEditModel           restored;
+    restored.bindDocumentEditRecorder( restoredRecorder );
     restored.applyText( model.captureText() );
     SW_EXPECT_EQUAL( 2, restored.getContent()._columnCount );
     SW_EXPECT_FALSE( model.saveDocument( "never/written.tileset.xml" ) );
     SW_EXPECT_FALSE( model.getStatus().empty() );
 }
 
-/** @brief [TileSetEditModelTest] 문서 편집 알림은 Model 이 문서 패널의 창구로 낸다(감사 E-16 — View 는 `notifyDocumentEdited` 를 부를 수 없다) */
-SW_TEST_CASE( TileSetEditModelTest, RecordDocumentEditGoesToTheBoundRecorder )
+/** @brief [TileSetEditModelTest] 편집 연산 한 번은 알림 한 번이고 되돌리기 이름은 모델이 정한다(감사 E-16) */
+SW_TEST_CASE( TileSetEditModelTest, EditOperationNotifiesOnceWithModelName )
 {
     uint32                     count{ 0 };
     string                     lastLabel;
@@ -127,9 +137,9 @@ SW_TEST_CASE( TileSetEditModelTest, RecordDocumentEditGoesToTheBoundRecorder )
         ++count;
         lastLabel = string{ label };
     } ) };
-    TileSetEditModel           model;
-    model.bindDocumentEditRecorder( recorder );
-    model.recordDocumentEdit( "Edit Tile Set" );
+    TileSetEditModel           editModel;
+    editModel.bindDocumentEditRecorder( recorder );
+    editModel.addBrush( true );
     SW_EXPECT_EQUAL( count, 1u );
-    SW_EXPECT_TRUE( lastLabel == "Edit Tile Set" );
+    SW_EXPECT_TRUE( lastLabel == "Add Rule Tile Brush" );
 }
