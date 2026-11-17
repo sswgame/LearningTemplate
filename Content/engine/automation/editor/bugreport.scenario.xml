@@ -15,7 +15,7 @@
 	<!-- 에디터 카메라를 오른쪽으로 3 m 남짓(오른쪽 단추 + D) -->
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
 	<EditorKey key="D" state="Down"/>
-	<Wait frames="42"/>
+	<AdvanceSimulation frames="42"/> <!-- 누른 채 둔 시간(비행 거리)이 테스트 내용이다 -->
 	<EditorKey key="D" state="Up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
 	<EditorWaitStable/>
@@ -30,7 +30,7 @@
 	<EditorWaitStable/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
 	<EditorKey key="A" state="Down"/>
-	<Wait frames="70"/>
+	<AdvanceSimulation frames="70"/> <!-- 누른 채 둔 시간(비행 거리)이 테스트 내용이다 -->
 	<EditorKey key="A" state="Up"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
 	<EditorWaitStable/>

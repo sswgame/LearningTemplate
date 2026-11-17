@@ -69,7 +69,6 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/undocoveragematerial/previewblue.material"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<DevCommand line="panel.expectUndoRoundTrip material"/>
 	<DevCommand line="panel.focus sequencer"/>
 	<EditorWaitStable/>
@@ -87,13 +86,11 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/undocoverageaudiograph/tone.audiograph.xml"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<DevCommand line="panel.expectUndoRoundTrip audiograph"/>
 	<DevCommand line="panel.focus behavior_tree"/>
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/undocoveragebehaviortree/guard.bt.xml"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<DevCommand line="panel.expectUndoRoundTrip behavior_tree"/>
 	<DevCommand line="panel.focus audioevents"/>
 	<EditorWaitStable/>
@@ -105,7 +102,6 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/undocoverageinputmap/default.input.xml"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<DevCommand line="panel.expectUndoRoundTrip input_map"/>
 	<DevCommand line="panel.focus data_table"/>
 	<EditorWaitStable/>

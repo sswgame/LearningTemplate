@@ -32,7 +32,7 @@
 	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/sockets.png"/>
 	<EditorClick mark="charactereditor.tab.skeleton" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.skeleton" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadSkeleton"/>
@@ -42,7 +42,7 @@
 	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/skeleton.png"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadData"/>
@@ -58,7 +58,7 @@
 	<EditorWaitStable/>
 	<CaptureEditorUI file="charactereditor/appearance.png"/>
 	<EditorClick mark="charactereditor.tab.preview" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.preview" state="Up"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1" timeoutFrames="177"/>
 	<!-- 스켈레톤 탭에서 고른 본(root)에 기즈모 표식이 놓인다 — 뷰포트에서 끌면 포즈 편집이 된다(눈으로 본다). 관통 점은 피팅 데이터가 겹치는 차림에서만 찍힌다(감시 값 Editor.CharacterEditorPenetrationMarks) -->
@@ -106,7 +106,7 @@
 	     썸네일은 위에서 그린 미리보기 렌더 타깃을 캡처한다. 프리셋 줄은 외형 탭 맨 아래라 휠로 내린다 -->
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
 	<EditorWaitStable/>
 	<EditorHover mark="charactereditor.loadData" anchor="0.5,0.5"/>

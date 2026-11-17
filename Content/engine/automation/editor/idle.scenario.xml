@@ -24,7 +24,7 @@
 	<!-- ① 키 입력: Quick Open 으로 머티리얼을 연다 — 유휴 중에 친 키가 그대로 문서를 연다. 다음 프레임에 깨어 있어야 한다(Wait 1 이 시험 내용이다) -->
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 프레임에 깨어 있어야 한다 — 한 프레임이 테스트 내용이다 -->
 	<Expect watch="Engine.FramePacingState" atMost="1"/>
 	<EditorWaitStable/>
 	<EditorText value="previewred.material"/>
@@ -37,19 +37,19 @@
 	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
 	<!-- ② 마우스 이동: 유휴 중의 이동이 바로 깨운다 -->
 	<EditorHover mark="sceneView.canvas" anchor="0.30,0.50"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 다음 프레임에 깨어 있어야 한다 — 한 프레임이 테스트 내용이다 -->
 	<Expect watch="Engine.FramePacingState" atMost="1"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.60,0.50"/>
 	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
 	<!-- ③ 알림: 떠 있는 동안은 깨어 있고, 시간이 지나 사라진 뒤 다시 잔다 -->
 	<DevCommand line="notify.push 1 idle scenario toast"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Editor.NotificationCount" equals="1" timeoutFrames="10"/>
 	<Expect watch="Editor.NotificationCount" equals="1"/>
 	<Expect watch="Engine.FramePacingState" atMost="1"/>
 	<WaitUntil watch="Editor.NotificationCount" equals="0" timeoutFrames="20000"/>
 	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
 	<Variable name="gv_framePacing" value="Auto"/>
-	<Wait frames="2"/>
+	<WaitUntil watch="Engine.FramePacingState" equals="3" timeoutFrames="10"/>
 	<Expect watch="Engine.FramePacingState" equals="3"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

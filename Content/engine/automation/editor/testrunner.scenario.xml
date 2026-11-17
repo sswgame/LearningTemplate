@@ -19,11 +19,11 @@
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitStable/>
 	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="testRunner.runSelected" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="testRunner.runSelected" state="Up"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.TestRunnerPassCount" equals="1"/>

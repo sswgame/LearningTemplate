@@ -25,6 +25,7 @@ namespace sw
         RenderStabilityStatusHolder()
             : _stillFrameCount{ 0 }
             , _exposureErrorBits{ 0 }
+            , _presentedFrameCount{ 0 }
             , _exposureAdaptationBits{ 0 }
             , _giAccumulatedFrames{ 0 }
         {
@@ -58,9 +59,13 @@ namespace sw
             return sample;
         }
 
+        void   addPresentedFrame() { _presentedFrameCount.fetch_add( 1, std::memory_order_relaxed ); }
+        uint64 loadPresentedFrames() const { return _presentedFrameCount.load( std::memory_order_relaxed ); }
+
     private:
         atomic<uint32> _stillFrameCount;
         atomic<uint32> _exposureErrorBits;      ///< `float32` 의 비트(원자 실수 대신)
+        atomic<uint64> _presentedFrameCount;    ///< 장치의 프레임 끝에 넘긴 프레임 수(`RenderPresentCounter`)
         atomic<uint32> _exposureAdaptationBits; ///< `float32` 의 비트
         atomic<uint32> _giAccumulatedFrames;
 
@@ -95,6 +100,16 @@ namespace sw
     RenderStabilitySample RenderStabilitySample::readPublished()
     {
         return engine::getSubsystem<RenderStabilityStatusHolder>().load();
+    }
+
+    void RenderPresentCounter::addOne()
+    {
+        engine::getSubsystem<RenderStabilityStatusHolder>().addPresentedFrame();
+    }
+
+    uint64 RenderPresentCounter::read()
+    {
+        return engine::getSubsystem<RenderStabilityStatusHolder>().loadPresentedFrames();
     }
 
     SW_ENGINE_SERVICE_SUBSYSTEM( RenderStabilityStatusHolder, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderStabilityStatusHolder ) );

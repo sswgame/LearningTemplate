@@ -9,22 +9,19 @@
 <Scenario name="engine.screenadapt" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_uiSafeZone" value="0.05"/>
 	<ResizeWindow width="540" height="1170"/>
-	<Wait frames="5"/>
-	<Expect watch="UI.ViewportWidth" near="1080" tolerance="1"/>
+	<WaitUntil watch="UI.ViewportWidth" near="1080" tolerance="1" timeoutFrames="30"/> <!-- 창 크기가 UI 뷰포트에 반영됐다 -->
 	<Expect watch="UI.ViewportHeight" near="2340" tolerance="1"/>
 	<Expect watch="UI.SafeInsetTop" near="117" tolerance="1"/>
 	<Expect watch="UI.SafeInsetBottom" near="117" tolerance="1"/>
 	<Expect watch="UI.TouchTargetSize" equals="48"/>
 	<Touch x="0.5" y="0.5" frames="3"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="5"/> <!-- 탭(3 프레임)이 다 지난 뒤에 돌린다(프레임 경계) -->
 	<!-- 돌리기 — 가로 1170x540 은 UI 2340x1080 이다 -->
 	<ResizeWindow width="1170" height="540"/>
-	<Wait frames="5"/>
-	<Expect watch="UI.ViewportWidth" near="2340" tolerance="1"/>
+	<WaitUntil watch="UI.ViewportWidth" near="2340" tolerance="1" timeoutFrames="30"/> <!-- 돌린 크기가 UI 뷰포트에 반영됐다 -->
 	<Expect watch="UI.ViewportHeight" near="1080" tolerance="1"/>
 	<Variable name="gv_uiSafeZone" value="0"/>
-	<Wait frames="2"/>
-	<Expect watch="UI.SafeInsetTop" equals="0"/>
+	<WaitUntil watch="UI.SafeInsetTop" equals="0" timeoutFrames="10"/>
 	<ExpectLog id="App.QuitRequested" count="0"/>
 	<Pass/>
 </Scenario>

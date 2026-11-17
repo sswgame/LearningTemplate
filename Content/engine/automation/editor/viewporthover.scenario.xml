@@ -27,9 +27,8 @@
 	<EditorHover release="true"/>
 	<EditorWaitStable/>
 	<EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.68" state="Down"/>
-	<Wait frames="15"/>
+	<EditorWaitStable/> <!-- 누른 채(비행) 멈춘 상태에서 호버가 없다 — 정지 상태의 값이 답이다 -->
 	<Expect watch="Editor.HoveredObject" equals="0"/>
-	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.68" state="Up"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>

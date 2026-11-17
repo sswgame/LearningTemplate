@@ -16,14 +16,14 @@
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="charactereditor.loadData"/>
 	<EditorWaitStable/>
 
 	<EditorClick mark="charactereditor.tab.body" state="Down"/>
-	<Wait frames="1"/>
+	<AdvanceSimulation frames="1"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="charactereditor.tab.body" state="Up"/>
 	<EditorWaitStable/>
 	<Expect watch="Editor.CharacterEditorBodyLayerCount" equals="0"/>

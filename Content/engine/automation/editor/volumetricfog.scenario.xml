@@ -20,17 +20,14 @@
 	<CaptureEditorUI file="volumetricfog/state.png" maxMagentaFraction="0"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.Compare"/>
-	<Wait frames="5"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="volumetricfog/compare.png" maxMagentaFraction="0"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.Scattering"/>
-	<Wait frames="5"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="volumetricfog/scattering.png" maxMagentaFraction="0"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.Transmittance"/>
-	<Wait frames="5"/>
 	<EditorWaitStable/>
 	<CaptureEditorUI file="volumetricfog/transmittance.png" maxMagentaFraction="0"/>
 	<EditorWaitStable/>

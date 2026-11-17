@@ -715,6 +715,7 @@ namespace sw
             const uint32 presentInterval = _presentInterval.load( std::memory_order_acquire );
             _presentFrameCounter         = presentInterval == 0 ? 0 : ( _presentFrameCounter + 1 ) % presentInterval;
             _pDevice->endFrame( _pDevice->isVSyncEnabled(), presentInterval != 0 && _presentFrameCounter == 0 );
+            RenderPresentCounter::addOne(); // 감시 값 `Render.PresentedFrames` — 시나리오가 그린 프레임 수로 기다린다
         }
         // 외부 프로파일러(Tracy)의 렌더 스레드 프레임 경계다. 주 프레임(게임 스레드)과 주기가 달라 이름을 따로 둔다.
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();

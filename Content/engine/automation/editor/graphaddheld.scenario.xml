@@ -11,6 +11,6 @@
 	<EditorWaitStable/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
 	<EditorKey key="D" state="Down"/>
-	<Wait frames="5"/>
+	<AdvanceSimulation frames="5"/> <!-- 누른 입력이 몇 프레임 들어간 채로 끝난다 — 눌린 시간이 테스트 내용이다 -->
 	<Pass/>
 </Scenario>

@@ -30,12 +30,12 @@
 	<DevCommand line="debug.target clear"/>
 	<ExpectLog id="DevCommand.Reply" contains="debug.target: none" atLeast="1"/>
 	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="0" timeoutFrames="10"/>
-	<Wait frames="40"/>
+	<EditorWaitStable/> <!-- 멈춘 뒤에도 다시 덮이지 않았다 — 정지 상태의 값이 답이다 -->
 	<Expect watch="Editor.DebugTargetFollowsSelection" equals="0"/>
 	<!-- ④ 비웠다 다시 고르면 다시 따른다 -->
 	<DevCommand line="select.tag Automation.NoSuchTag"/>
 	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="-1" timeoutFrames="30"/>
-	<Wait frames="20"/>
+	<EditorWaitStable/>
 	<DevCommand line="select.type MeshComponent"/>
 	<WaitUntil watch="Editor.DebugTargetFollowsSelection" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>

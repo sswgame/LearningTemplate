@@ -24,7 +24,6 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saverefusedmaterial/previewblue.material"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<DevCommand line="panel.lockSaveFiles material"/>
 	<DevCommand line="panel.expectSaveRefused material"/>
 	<Expect watch="Editor.NotificationCount" atLeast="1"/>

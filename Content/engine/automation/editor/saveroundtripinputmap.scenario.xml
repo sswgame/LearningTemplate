@@ -18,7 +18,6 @@
 	<EditorWaitStable/>
 	<DevCommand line="asset.openScratch scratch/saveroundtripinputmap/default.input.xml"/>
 	<EditorWaitStable/>
-	<Wait frames="5"/>
 	<EditorClick mark="inputMap.action.Confirm"/>
 	<WaitUntil watch="Editor.InputMapBindingCount" equals="2" timeoutFrames="60"/>
 	<EditorWaitStable/>

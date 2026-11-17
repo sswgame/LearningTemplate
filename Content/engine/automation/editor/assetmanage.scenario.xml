@@ -25,17 +25,17 @@
 	<!-- 1) 새 머티리얼 -->
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.add" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.add" state="Up"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.add.material" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.add.material" state="Up"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Asset.Created" contains="scratch/assetmanage/new_material.material" count="1"/>
 	<!-- 2) 이름 바꾸기 — 타일을 고르고 F2, 입력 칸은 확장자를 뺀 이름이다 -->
 	<EditorClick mark="contentBrowser.asset.probe.material" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.asset.probe.material" state="Up"/>
 	<EditorWaitStable/>
 	<EditorKey key="F2"/>
@@ -58,7 +58,7 @@
 	<CaptureEditorUI file="renamed.png"/>
 	<!-- 3) 되돌리기 -->
 	<EditorClick mark="contentBrowser.asset.probe_renamed.material" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.asset.probe_renamed.material" state="Up"/>
 	<EditorWaitStable/>
 	<EditorKey key="F2"/>
@@ -75,13 +75,13 @@
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
 	<EditorClick mark="contentBrowser.asset.new_material.material" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.asset.new_material.material" state="Up"/>
 	<EditorWaitStable/>
 	<EditorKey key="Delete"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.delete.confirm" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.delete.confirm" state="Up"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Asset.Recycled" contains="scratch/assetmanage/new_material.material" count="1"/>

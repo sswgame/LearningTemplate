@@ -32,9 +32,9 @@
 	<EditorWaitStable/>
 	<!-- ① 누른 채 옮겨 고스트를 본 뒤 뗀다 -->
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PlacementSurface" atLeast="1"/>
@@ -66,9 +66,9 @@
 	<DevCommand line="camera.set 0 5 -10 -60 0"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PlacementSurface" equals="0"/>
@@ -88,9 +88,9 @@
 	<EditorText value="layered_stone_clean"/>
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.asset.layered_stone_clean.material" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 끌어 놓기는 누름 · 옮김을 다른 프레임에 나눠야 시작된다(프레임 경계) -->
 	<EditorHover mark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="placement/opens.png" maxMagentaFraction="0"/>

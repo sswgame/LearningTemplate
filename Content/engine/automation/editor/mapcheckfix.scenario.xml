@@ -26,7 +26,7 @@
 	<CaptureEditorUI file="mapcheckfix/before.png" maxMagentaFraction="0"/>
 	<!-- ① 줄 고침 -->
 	<EditorClick mark="mapCheck.fix.0" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="mapCheck.fix.0" state="Up"/>
 	<WaitUntil watch="Editor.MapCheckIssueCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
@@ -38,14 +38,14 @@
 	<DevCommand line="editor edit.undo"/>
 	<EditorWaitStable/>
 	<EditorClick mark="mapCheck.checkMap" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="mapCheck.checkMap" state="Up"/>
 	<WaitUntil watch="Editor.MapCheckIssueCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
 	<DevCommand line="editor edit.redo"/>
 	<EditorWaitStable/>
 	<EditorClick mark="mapCheck.checkMap" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="mapCheck.checkMap" state="Up"/>
 	<WaitUntil watch="Editor.MapCheckIssueCount" equals="0" timeoutFrames="60"/>
 	<!-- 오류를 심은 씬을 열어 둔 채 끝내지 않는다 -->

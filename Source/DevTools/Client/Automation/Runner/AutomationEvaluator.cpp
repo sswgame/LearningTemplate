@@ -172,6 +172,26 @@ namespace sw
             outMessage = subject + " opposite of " + *pOppositeOf + " ('" + pStored->_text + "'), got " + valueText;
             return true;
         }
+        if ( const string* pIncreaseFrom = step.findAttribute( "increaseFrom" ); pIncreaseFrom != nullptr )
+        {
+            // 기억한 수에서 increaseBy 이상 늘었다(그린 프레임 수 같은 누적 값 — "앞으로 N 장 더" 를 고정 대기 대신 센다).
+            const StoredValue* pStored = nullptr;
+            for ( const StoredValue& entry : _listStored )
+            {
+                if ( entry._name == *pIncreaseFrom )
+                    pStored = &entry;
+            }
+            const expected<bool> increaseMatch = Internal::matchesIncrease( step, value._number, pStored != nullptr ? &pStored->_text : nullptr );
+            if ( increaseMatch.has_value() == false )
+            {
+                outMessage = subject + " (increaseFrom '" + *pIncreaseFrom + "'): " + AutomationStep::describeReason( increaseMatch.error() );
+                return false;
+            }
+            bOk        = *increaseMatch;
+            outMatched = bOk;
+            outMessage = subject + " increase by " + *step.findAttribute( "increaseBy" ) + " from " + *pIncreaseFrom + " ('" + pStored->_text + "'), got " + valueText;
+            return true;
+        }
         if ( step.findAttribute( "is" ) != nullptr )
         {
             bOk  = valueText == *step.findAttribute( "is" );

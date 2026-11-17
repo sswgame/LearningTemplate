@@ -15,7 +15,7 @@
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitStable/>
 	<EditorClick mark="notification.showInExplorer" state="Down"/>
-	<Wait frames="3"/>
+	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="notification.showInExplorer" state="Up"/>
 	<WaitUntil watch="Editor.ExplorerLaunchCount" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.ExplorerCommandWellFormed" equals="1"/>
