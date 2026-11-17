@@ -103,12 +103,16 @@ namespace sw
         vector<SystemFontFamilyDef> _listSystemFamily;
         PROPERTY( Tooltip = "Distance field the glyph atlas holds: Sdf (single channel, cheap) or MSDF (multi channel RGBA, sharp corners on large text; costs more per new glyph and 4x atlas memory)" )
         GlyphFieldKind _glyphField{ GlyphFieldKind::Sdf };
+        PROPERTY( Required, Min = 64, Max = 8192, Tooltip = "Glyph atlas page side in texels (GlyphAtlasLayout). Larger pages hold more glyphs before eviction; memory is side squared per page (x4 for MSDF)" )
+        uint32 _glyphAtlasPageSize{ 0 };
+        PROPERTY( Required, Min = 1, Max = 256, Tooltip = "Glyph atlas page count before the least recently used page is evicted (CJK text needs more)" )
+        uint32 _glyphAtlasMaxPageCount{ 0 };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 검사 실패) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );
-        /** @brief 패밀리 이름이 비지 않고 겹치지 않는지(저장소와 시스템 합쳐), 저장소 패밀리마다 면이 있고 경로가 비지 않는지, 기본 패밀리가 저장소 패밀리인지 검사합니다. */
+        /** @brief 패밀리 이름이 비지 않고 겹치지 않는지(저장소와 시스템 합쳐), 저장소 패밀리마다 면이 있고 경로가 비지 않는지, 기본 패밀리가 저장소 패밀리인지, 아틀라스 페이지 모양이 범위 안인지 검사합니다. */
         [[nodiscard]] bool validate() const;
 
         /** @brief 이름의 저장소 가족입니다(대소문자 무시). 없으면 nullptr. */

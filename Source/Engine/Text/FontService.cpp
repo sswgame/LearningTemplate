@@ -151,7 +151,7 @@ namespace sw
         if ( _rasterizer == nullptr )
             return false;
         _catalog                     = std::move( catalog );
-        _glyphCache                  = make_unique<GlyphCache>( *_rasterizer, _catalog._glyphField );
+        _glyphCache                  = make_unique<GlyphCache>( *_rasterizer, _catalog._glyphField, GlyphAtlasLayout{ _catalog._glyphAtlasPageSize, _catalog._glyphAtlasMaxPageCount } );
         uint8            bFauxBold   = SW_FALSE;
         uint8            bFauxItalic = SW_FALSE;
         const FontFaceID defaultFace = openFamilyFace( _catalog._defaultFamily, FontWeight::Regular, FontSlant::Upright, bFauxBold, bFauxItalic );

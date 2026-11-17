@@ -24,6 +24,9 @@ namespace sw
 
 namespace sw::test
 {
+    /** @brief 테스트 아틀라스 모양입니다(엔진 카탈로그 `fontcatalog.xml` 과 같은 1024² × 8 — 테스트의 채우기 크기가 이 한 변에 맞춰져 있다). */
+    inline constexpr GlyphAtlasLayout kTestGlyphAtlasLayout{ 1024, 8 };
+
     /** @brief 가짜 면 하나의 설정입니다. */
     struct FakeFontFaceConfig
     {
@@ -236,6 +239,16 @@ namespace sw::test
          *          되살아나지 않아 첫 예산 뒤의 글리프가 빠집니다.
          */
         void beginFrame() { _fontService->getGlyphCache().beginFrame(); }
+
+        /** @brief 기본 가족 @p defaultFamily 와 테스트 아틀라스 모양(`kTestGlyphAtlasLayout`)을 둔 빈 카탈로그입니다(가족은 `addFamily` 로 더한다). */
+        static FontCatalogDef makeCatalog( const string& defaultFamily )
+        {
+            FontCatalogDef catalog{};
+            catalog._defaultFamily          = defaultFamily;
+            catalog._glyphAtlasPageSize     = kTestGlyphAtlasLayout._pageSize;
+            catalog._glyphAtlasMaxPageCount = kTestGlyphAtlasLayout._maxPageCount;
+            return catalog;
+        }
 
         /** @brief 저장소 가족 하나(면 하나)를 카탈로그에 더합니다. */
         static void addFamily( FontCatalogDef& inoutCatalog, const string& name, const string& path, FontWeight weight = FontWeight::Regular )

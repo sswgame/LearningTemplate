@@ -16,6 +16,23 @@
 
 namespace sw
 {
+    /**
+     * @brief 아틀라스 페이지의 모양입니다 — 한 변(텍셀)과 페이지 수 상한. 값은 폰트 카탈로그(`FontCatalogDef::_glyphAtlasPageSize` · `_glyphAtlasMaxPageCount`)가 정본이다.
+     * @details 예전에는 1024² × 8 상수였다. CJK 처럼 글리프가 많으면 페이지 비우기가 잦아 흔들린다 — 언리얼 Slate 는 아틀라스 크기 · 수를 설정으로 둔다(감사 RN-14).
+     */
+    struct GlyphAtlasLayout
+    {
+        uint32 _pageSize{ 0 };     ///< 페이지 한 변(텍셀, `kMinPageSize` ~ `kMaxPageSize`). SDF(R8)면 페이지 한 변² 바이트, MSDF(RGBA8)면 4 배
+        uint32 _maxPageCount{ 0 }; ///< 이 수를 넘으면 오래된 페이지를 비운다(1 ~ `kMaxPageCount`)
+
+        static constexpr uint32 kMinPageSize  = 64;
+        static constexpr uint32 kMaxPageSize  = 8192; ///< 스카이라인 마디 · 업로드 구간이 uint16 이고 GPU 텍스처 한 변 상한 안이다
+        static constexpr uint32 kMaxPageCount = 256;  ///< 페이지 번호가 uint16 이고 bindless 칸을 아틀라스가 다 먹지 않게
+
+        /** @brief 범위 안인지 봅니다. */
+        bool isValid() const { return _pageSize >= kMinPageSize && _pageSize <= kMaxPageSize && _maxPageCount >= 1 && _maxPageCount <= kMaxPageCount; }
+    };
+
     /** @brief 아틀라스 안의 사각형 하나입니다(페이지와 텍셀 좌표). */
     struct GlyphAtlasRect
     {
@@ -39,6 +56,7 @@ namespace sw
         uint16        _y{ 0 };                  ///< 구간 위(텍셀)
         uint16        _width{ 0 };              ///< 구간 너비입니다.
         uint16        _height{ 0 };             ///< 구간 높이입니다.
+        uint16        _pageSize{ 0 };           ///< 페이지 한 변(텍셀)입니다. 렌더러 거울이 페이지 텍스처 크기와 행 폭을 이것으로 정한다.
         uint8         _bWholePage{ SW_FALSE };  ///< 페이지를 새로 만들었거나 비웠는지 나타냅니다. 그러면 렌더러는 페이지 텍스처를 (다시) 만들고 전체를 올립니다.
         uint8         _bFullUpload{ SW_FALSE }; ///< 모든 페이지를 통째로 담은 묶음(`requestFullUpload` 의 답)입니다. 렌더러 거울은 앞 묶음을 놓쳤어도 이 묶음부터 다시 맞는다.
         uint64        _sequence{ 0 };           ///< 이 업로드가 속한 묶음 번호(`takeUploads` 한 번 = 한 묶음, 1 부터)입니다. 렌더러 거울은 번호가 건너뛰면 묶음을 놓친 것으로 안다.
@@ -55,11 +73,10 @@ namespace sw
     class SW_API GlyphAtlas
     {
     public:
-        static constexpr uint32 kPageSize     = 1024; ///< 페이지 한 변(텍셀). SDF(R8)면 페이지 1 MiB, MSDF(RGBA8)면 4 MiB
-        static constexpr uint32 kMaxPageCount = 8;    ///< 이 수를 넘으면 오래된 페이지를 비웁니다.
-        static constexpr uint32 kPadding      = 1;    ///< 글리프 사이 빈 텍셀(쌍선형 표본이 이웃을 읽지 않게)
+        static constexpr uint32 kPadding = 1; ///< 글리프 사이 빈 텍셀(쌍선형 표본이 이웃을 읽지 않게)
 
-        explicit GlyphAtlas( GlyphFieldKind kind );
+        /** @brief @p kind 의 거리장을 @p layout 모양의 페이지에 담습니다. 모양이 범위 밖이면 멈춘다(카탈로그 검사가 먼저 막는다). */
+        GlyphAtlas( GlyphFieldKind kind, const GlyphAtlasLayout& layout );
 
         /**
          * @brief @p width × @p height 영역을 잡습니다(여백은 이쪽이 더합니다). 지금 페이지들에 자리가 없으면 페이지를 늘립니다.
@@ -89,9 +106,11 @@ namespace sw
         GlyphFieldKind getFieldKind() const { return _kind; }
         /** @brief 텍셀당 바이트입니다(SDF 1, MSDF 4). */
         uint32 getBytesPerTexel() const { return getFieldBytesPerTexel( _kind ); }
+        /** @brief 페이지 한 변(텍셀)입니다. 글리프 UV 는 이 값으로 나눈다. */
+        uint32 getPageSize() const { return _layout._pageSize; }
         /** @brief 지금 페이지 수입니다. */
         uint32 getPageCount() const { return static_cast<uint32>( _listPage.size() ); }
-        /** @brief 페이지 바이트입니다(`kPageSize` × `kPageSize` × 텍셀당 바이트, 행 우선). */
+        /** @brief 페이지 바이트입니다(`getPageSize`² × 텍셀당 바이트, 행 우선). */
         const uint8* getPageBytes( uint32 page ) const { return _listPage[page]._bytes.data(); }
         /** @brief 페이지를 비울 때마다 오릅니다. 칠해 둔 글자 사각형이 이 값과 다르면 다시 칠합니다. */
         uint32 getGeneration() const { return _generation; }
@@ -116,15 +135,16 @@ namespace sw
         /** @brief 빈 페이지를 하나 더합니다(스카이라인 = 바닥 한 마디). */
         void addPage();
         /** @brief 페이지 하나에서 영역을 찾고 스카이라인을 고칩니다. */
-        [[nodiscard]] static bool allocateInPage( Page& page, uint32 width, uint32 height, uint16& outX, uint16& outY );
+        [[nodiscard]] static bool allocateInPage( Page& page, uint32 pageSize, uint32 width, uint32 height, uint16& outX, uint16& outY );
         /** @brief 마디 @p nodeIndex 에서 시작해 너비 @p width 가 들어가면 그 위치의 바닥 높이를 반환합니다. */
-        [[nodiscard]] static bool findFitHeight( const Page& page, size_t nodeIndex, uint32 width, uint32 height, uint32& outY );
+        [[nodiscard]] static bool findFitHeight( const Page& page, uint32 pageSize, size_t nodeIndex, uint32 width, uint32 height, uint32& outY );
 
     private:
-        vector<Page>   _listPage;
-        GlyphFieldKind _kind;
-        uint32         _generation;
-        uint64         _uploadSequence;       ///< 마지막으로 낸 묶음 번호입니다(0 = 아직 없음).
-        atomic<bool>   _bFullUploadRequested; ///< 렌더러 거울이 묶음을 놓쳤다(`requestFullUpload`)
+        vector<Page>     _listPage;
+        GlyphAtlasLayout _layout;
+        GlyphFieldKind   _kind;
+        uint32           _generation;
+        uint64           _uploadSequence;       ///< 마지막으로 낸 묶음 번호입니다(0 = 아직 없음).
+        atomic<bool>     _bFullUploadRequested; ///< 렌더러 거울이 묶음을 놓쳤다(`requestFullUpload`)
     };
 } // namespace sw

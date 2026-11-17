@@ -15,9 +15,9 @@ namespace sw
 
 namespace sw
 {
-    GlyphCache::GlyphCache( IFontRasterizer& rasterizer, GlyphFieldKind kind )
+    GlyphCache::GlyphCache( IFontRasterizer& rasterizer, GlyphFieldKind kind, const GlyphAtlasLayout& atlasLayout )
         : _rasterizer{ rasterizer }
-        , _atlas{ kind }
+        , _atlas{ kind, atlasLayout }
         , _mapGlyph{}
         , _rasterParams{}
         , _scratchBitmap{}

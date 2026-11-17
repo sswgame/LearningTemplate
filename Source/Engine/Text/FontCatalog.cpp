@@ -8,6 +8,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Text/GlyphAtlas.h"
 
 namespace sw
 {
@@ -86,6 +87,13 @@ namespace sw
         if ( findFamily( _defaultFamily ) == nullptr )
         {
             SW_LOG_ERROR_ID( "FontCatalog.FontCatalogDefaultFamily", "[Text] Font catalog default family '%#' is not a shipped family", _defaultFamily.c_str() );
+            bValid = false;
+        }
+        // 폴백 없음 — 빠진 값은 0 이라 여기서 걸린다(1024² × 8 상수였던 자리, 감사 RN-14).
+        if ( GlyphAtlasLayout{ _glyphAtlasPageSize, _glyphAtlasMaxPageCount }.isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "FontCatalog.GlyphAtlasLayoutOutOfRange", "[Text] Font catalog glyph atlas page size %# (%#..%#) or max page count %# (1..%#) is missing or out of range", _glyphAtlasPageSize,
+                             GlyphAtlasLayout::kMinPageSize, GlyphAtlasLayout::kMaxPageSize, _glyphAtlasMaxPageCount, GlyphAtlasLayout::kMaxPageCount );
             bValid = false;
         }
         return bValid;

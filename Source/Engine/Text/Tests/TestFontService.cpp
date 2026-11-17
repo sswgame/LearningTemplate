@@ -22,8 +22,7 @@ namespace
         /** @brief 라틴 가족(기본) · 한글 가족 둘의 카탈로그입니다. 한글 가족은 공백도 가진다. */
         static sw::FontCatalogDef makeLatinHangulCatalog()
         {
-            sw::FontCatalogDef catalog{};
-            catalog._defaultFamily = "Latin";
+            sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
             sw::test::FakeFontServiceFixture::addFamily( catalog, "Hangul", kHangulPath );
             return catalog;
