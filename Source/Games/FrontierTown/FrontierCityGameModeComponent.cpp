@@ -34,7 +34,8 @@ namespace sw
         , _roadColor{ 0.45f, 0.42f, 0.38f, 1.0f }
         , _city{}
         , _tintCache{}
-        , _listTileView{}
+        , _buildingViews{}
+        , _roadViews{}
         , _speed{}
         , _bLaidOut{ SW_FALSE }
         , _bViewsDirty{ SW_FALSE }
@@ -157,48 +158,71 @@ namespace sw
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
-        destroySpawned( manager, _listTileView );
-        spawnTiles( manager );
+        // 바뀐 건물 · 도로만 지우고 다시 스폰한다(예전에는 하나만 바뀌어도 모두 지우고 다시 만들었다, 감사 K-10). 처음이거나 정리한 뒤면 슬롯이 비어 모두 쌓인다.
+        if ( bRespawnViews )
+        {
+            _buildingViews.clear();
+            _roadViews.clear();
+        }
+        collectTileViews();
+        const auto destroy = [&manager]( GameObjectHandle& inoutHandle )
+        { destroySpawned( manager, inoutHandle ); };
+        _buildingViews.flush( destroy, [this, &manager]( size_t buildingIndex, const CityBuildingDef* pDef )
+        { return spawnBuildingView( manager, buildingIndex, *pDef ); } );
+        _roadViews.flush( destroy, [this, &manager]( size_t tileIndex, uint8 )
+        { return spawnRoadView( manager, tileIndex ); } );
         _bViewsDirty = SW_FALSE;
     }
 
     void FrontierCityGameModeComponent::onViewsDespawned()
     {
-        _listTileView.clear();
+        _buildingViews.clear();
+        _roadViews.clear();
     }
 
-    void FrontierCityGameModeComponent::spawnTiles( GameObjectManager& manager )
+    void FrontierCityGameModeComponent::collectTileViews()
     {
-        // 건물은 크기만큼 늘린 판 하나, 도로는 칸마다 판 하나 — 위에서 보는 직교 카메라라 높이는 얕다.
-        for ( const CityBuilding& building : _city.getBuildings() )
+        const vector<CityBuilding>& listBuilding = _city.getBuildings();
+        for ( size_t buildingIndex = 0; buildingIndex < listBuilding.size(); ++buildingIndex )
         {
-            if ( building._bAlive == SW_FALSE || building._pDef == nullptr )
-                continue;
-            GameObject*    pView = spawnPrefab( manager, _tilePrefab, "FrontierBuilding" );
-            MeshComponent* pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
-            if ( pMesh == nullptr )
-                continue;
-            const float32 size = static_cast<float32>( building._pDef->_size );
-            pMesh->setLocalPosition( float3{ static_cast<float32>( building._origin._x ) + size * 0.5f, 0.5f, static_cast<float32>( building._origin._y ) + size * 0.5f } );
-            pMesh->setLocalScale( float3{ size * 0.96f, 1.0f, size * 0.96f } );
-            _tintCache.apply( *pMesh, _buildingColor );
-            _listTileView.push_back( pView->getHandle() );
+            const CityBuilding& building = listBuilding[buildingIndex];
+            _buildingViews.show( buildingIndex, building._bAlive != SW_FALSE ? building._pDef : nullptr );
         }
         for ( int32 y = 0; y < _city.getHeight(); ++y )
         {
             for ( int32 x = 0; x < _city.getWidth(); ++x )
             {
                 const CityTile* pTile = _city.findTile( x, y );
-                if ( pTile == nullptr || pTile->_bRoad == SW_FALSE )
-                    continue;
-                GameObject*    pView = spawnPrefab( manager, _tilePrefab, "FrontierRoad" );
-                MeshComponent* pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
-                if ( pMesh == nullptr )
-                    continue;
-                pMesh->setLocalPosition( float3{ static_cast<float32>( x ) + 0.5f, 0.05f, static_cast<float32>( y ) + 0.5f } );
-                _tintCache.apply( *pMesh, _roadColor );
-                _listTileView.push_back( pView->getHandle() );
+                _roadViews.show( static_cast<size_t>( y * _city.getWidth() + x ), pTile != nullptr && pTile->_bRoad != SW_FALSE ? SW_TRUE : SW_FALSE );
             }
         }
+    }
+
+    GameObjectHandle FrontierCityGameModeComponent::spawnBuildingView( GameObjectManager& manager, size_t buildingIndex, const CityBuildingDef& def )
+    {
+        // 건물은 크기만큼 늘린 판 하나, 도로는 칸마다 판 하나 — 위에서 보는 직교 카메라라 높이는 얕다.
+        const CityBuilding& building = _city.getBuildings()[buildingIndex];
+        GameObject*         pView    = spawnPrefab( manager, _tilePrefab, "FrontierBuilding" );
+        MeshComponent*      pMesh    = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
+            return pView != nullptr ? pView->getHandle() : GameObjectHandle{};
+        const float32 size = static_cast<float32>( def._size );
+        pMesh->setLocalPosition( float3{ static_cast<float32>( building._origin._x ) + size * 0.5f, 0.5f, static_cast<float32>( building._origin._y ) + size * 0.5f } );
+        pMesh->setLocalScale( float3{ size * 0.96f, 1.0f, size * 0.96f } );
+        _tintCache.apply( *pMesh, _buildingColor );
+        return pView->getHandle();
+    }
+
+    GameObjectHandle FrontierCityGameModeComponent::spawnRoadView( GameObjectManager& manager, size_t tileIndex )
+    {
+        const int32    x     = static_cast<int32>( tileIndex ) % _city.getWidth();
+        const int32    y     = static_cast<int32>( tileIndex ) / _city.getWidth();
+        GameObject*    pView = spawnPrefab( manager, _tilePrefab, "FrontierRoad" );
+        MeshComponent* pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
+            return pView != nullptr ? pView->getHandle() : GameObjectHandle{};
+        pMesh->setLocalPosition( float3{ static_cast<float32>( x ) + 0.5f, 0.05f, static_cast<float32>( y ) + 0.5f } );
+        _tintCache.apply( *pMesh, _roadColor );
+        return pView->getHandle();
     }
 } // namespace sw

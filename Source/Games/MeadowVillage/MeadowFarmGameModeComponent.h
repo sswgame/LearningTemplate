@@ -17,6 +17,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/SimulationViewSync.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw
@@ -59,7 +60,9 @@ namespace sw
         /** @brief 하루 넘김 — 밭이 자라고, 다 자란 칸을 거둬 팔고 다시 심고, 나머지는 물 준다. */
         void startNextDay( SessionStateComponent& state );
         void replant( int32 x, int32 y, const hashed_string& season );
-        void spawnField( GameObjectManager& manager );
+        /** @brief 밭 칸마다 지금 모습(풀 · 갈림 · 물 줌 · 다 익음)을 동기화에 쌓습니다 — 바뀐 칸만 맞출 목록에 들어간다. */
+        void             collectFieldViews();
+        GameObjectHandle spawnTileView( GameObjectManager& manager, size_t tileIndex, uint8 look );
 
     private:
         PROPERTY( Category = "Prefabs", Tooltip = "One tile view (a cube)" )
@@ -79,11 +82,11 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Tile Spacing", Tooltip = "Distance between field tiles", Min = 0.01, Units = m )
         float32 _tileSpacing;
 
-        FarmField                _field;
-        MaterialTintCache        _tintCache;
-        vector<GameObjectHandle> _listTileView;
-        GameSpeedControl         _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
-        uint8                    _bViewsDirty : 1;
-        uint8                    _reserved    : 7;
+        FarmField                 _field;
+        MaterialTintCache         _tintCache;
+        SimulationViewSync<uint8> _tileViews; ///< 칸 번호(y × 너비 + x) → 모습 번호(.cpp 의 TileLook — 풀 · 갈림 · 물 줌 · 다 익음, 0 은 칸 없음)
+        GameSpeedControl          _speed;     ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
+        uint8                     _bViewsDirty : 1;
+        uint8                     _reserved    : 7;
     };
 } // namespace sw
