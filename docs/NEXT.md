@@ -8,12 +8,13 @@
 
 ## 0. 다음 순서
 
-1. **아직 합치지 않은 갈래**(합치기 전에 `git cherry main <갈래>` 로 이미 들어간 커밋을 거른다): 남은 것 — `integ2`(에셋 GUID 1단계 · 5-3 틱 const · W-R3 (a) 코덱 키 검사 · A1 포즈 노드 · R1 리다이렉트 표 팩 담기 · `setTransient`, 빌드 한 번도 안 함).
-   - integ2: main 을 다시 합친다(새 `extern template class … SharedAssetCache<…>;` 줄은 공유 캐시 선언 매크로로) → Debug 전체 프리셋 빌드(App 만 지으면 게임 모듈 헤더 불일치로 기동 실패) → 컴파일 오류는 `.inl` include · `extern template` 로(`-Werror=undefined-func-template` 를 끄지 않는다) → 단위 · 영향 시나리오 → preflight. 남은 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-2 · "다음 할 일" 16).
-2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 14 번부터. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합이 지운다.
+1. **아직 합치지 않은 갈래**(합치기 전에 `git cherry <통합 갈래> <갈래>` 로 이미 들어간 커밋을 거른다): 통합 묶음 5(`integ5`, f3ee225c00)에 w-webiso · w-alloc · w-anim · w-core · w-svcop · w-inspector(w-undo · w-tools3 포함) · w-pk34 · w-rf24 · w-rhi · w-rs · w-kits · w-kitdemo · w-waitempty · w-waitpacks · w-ed · w-core2 · w-onl2 · w-net 을 합쳤다(integ2 는 그 전에 main 에 들어갔다). 남은 병합: `w-tools2` · `w-waiteditor`. 진행 중인 작업자: `w-gl` · `w-scale` · `w-asset2` · `w-kit3`.
+   - integ2 가 남긴 작업자 몫: GameObjectManager.inl 머리말, `EditorTransaction` 을 연 채 CommandStack 을 읽는 자리. 그 뒤 에셋 GUID 2 · 3 단계(GUID 로 참조 해석 · 경로 참조 이전 — 감사 A-20 · "다음 할 일" 16).
+2. **감사 다음 할 일:** [CommercialGapAudit](CommercialGapAudit.md) `## 다음 할 일` 의 남은 줄(5 · 14 · 16 · 20 · 30 · 31 · 34 ~ 37 · 43 · 45 ~ 47 · 50). 2026-11-17 판정으로 열린 항목은 P1 12 · P2 12 건이다. 묶음마다 "확인" 의 테스트를 먼저 써서 지는 것을 본 뒤 고치고, 끝난 항목은 감사 문서에서 지운다. 작업자에게는 감사 문서 · NEXT 를 고치지 말게 하고 통합 커밋이 지운다 — 커밋 메시지는 `감사 <ID>` 꼴(옛 백로그 번호와 겹친다).
 
 ## 1. 통합 빌드에서 함께 볼 것 (빌드 없이 넘어온 묶음)
 
+- **통합 묶음 5(integ5):** 병합이 겹친 자리 — O-3 해시 줄(w-net `LoginHashNeverRunsOnAStoreWorker`)과 main 의 `PasswordHashBudget`, A-12 · R-6 의 팩 · 텍스처 스트리밍(w-pk34 · w-rhi 대 92caa26b99). 단위: `DeactivateWithoutEditDropsPending`(E-7), `OverrideFollowsComponentWhenAnEarlierSiblingIsRemoved` · `SavedHandleSurvivesSiblingInsertion`(A-2), `MoveCharactersMatchesMoveCharacter`(S-8), `CancelLeavesOtherRequesters`(A-19), `TimeTest.SimulationTimeRebaseKeepsQuarterSecondSteps` · `RTSWorldTest.SpeedScaleKeepsStepRatio`(K-5 · K-6), `PrefabOverridesTest.OmitDefaultValuesKeepsComponentLocalID`. 형식 판이 오른 것: `.mesh` 판 7(R-15 — 다시 쿠킹), 팩 형식 3(A-10), 서브리소스 전이의 Vulkan · DX11 · GL · WebGPU(R-10, lightculling · shadow_* · postprocess_* dx12 · vk). 렌더 배율 GPU 프레임 시계(RN-8, w-rs). 키트 시연 씬 · 시나리오 17 개(K-14, w-kitdemo)와 키트 규칙 자산(K-4 · K-7 · K-9 · K-10, w-kits), 에디터 형제 순서 · 에셋 색인(E-6 · E-8). `MemoryBenchTest` · `ContainerBenchTest` 는 꺼 둔 벤치라 숫자만(C-6 · C-9).
 - **5-4 리플렉션:** 묶음 TU(`ReflectionBundle.N.cpp` — 헤더 충돌 · Windows 매크로 오염), `build_time_report.py` 생성 비중(전 30.7 %, 목표 8 % 미만), `kMethods` · `kEvents` 상수 초기화, `.gen.cpp` 합계(전 7.86 MB), `_bDerivedFlagsBuilt` 단언, 단위 `PhysicsHookRegistryTest.*` · `ReflectionTypeRegistryTest.PropertyHandleGoesStaleWhenItsDeclaringTypeChanges` · `ReflectionTypeInfoTest.MethodTableBuildsMethodList` · `ReflectionPropertyRoleTest.DerivedFlagsAreBuiltByRegistrationNotByFirstQuery` · `ReflectionTypeInfoTest.PropertyDescTableSharesDefaultMetadata`, `ReflectionPipeline.LeafNameCollision`.
 - **RHI 5-2**(Vulkan 기록 경로 락 제거 · 텍스처 전이 묶음 ABI v54 · 컴퓨트 큐 타임스탬프 ABI v55): RHI 단위(`RHITrackedStateTest`), lightculling · shadow_* · postprocess_* 시나리오 dx12 · vk, `D3D12.ComputeTimestampClock` 어긋남, Vulkan 비동기 컴퓨트 `GPU.<패스>` · Tracy 겹침.
 - **실장치 · 백엔드 동작:** Vulkan AMD 브레드크럼 · 128 타임스탬프 슬롯, DX12 placed 텍스처(`D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` 가 RT+SRV 를 받는지), Vulkan placed 텍스처(`RT.Frame.transientPlacements`, 검증 레이어 경고 없이 — lavapipe · Android 포함).
@@ -73,7 +74,7 @@
 ## 6. 리소스 · 그 뒤
 
 - **Sprite Fusion 타일셋**(상세 페이지마다 CC0): Castle · Tiny Swords(Pixel Frog), Dungeon(0x72), Four Seasons Platformer(Analog Studios), Retro Gameboy(Ben Leggett) — `https://www.spritefusion.com/downloads/tilesets/<이름>.zip`. 1Bit Platformer 는 Kenney 원본에서. **VFX 25 종**(MIT, credits 에 고지): 캔버스 TypeScript 를 브라우저 MCP 로 재생해 시트로 굽는다. **PixelFX Piper**: 이용 조건 확인 뒤 시트로 내보낸다.
-- Empty 게임을 TestBed 로 전수 개명(옛 이름 린트로 막기). `new-online-kit` 로 키트 하나 지어 보기. `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋(감사 K-7)이 빠지지 않는지. 단위 테스트 빈 곳(`Scripts/dev/test_coverage.py` "없음"), `AccountTicketConnect` 만료 · 재시도.
+- Empty 게임을 TestBed 로 전수 개명(옛 이름 린트로 막기). `new-online-kit` 로 키트 하나 지어 보기. `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지(키트 뷰 표는 감사 K-7 로 됐다). 단위 테스트 빈 곳(`Scripts/dev/test_coverage.py` "없음"), `AccountTicketConnect` 만료 · 재시도.
 
 ## 사용자에게 받을 것
 
@@ -82,7 +83,7 @@
 ## 꼭 알아야 할 결정
 
 - **리소스:** 무료 · 공개 라이선스만(CC0 우선, MIT 등은 고지와 함께) — 묶음 페이지 라이선스를 확인해 credits 에 URL · 날짜. 에이전트가 직접 그리지 않는다. 유료 생성 API(Agent Sprite Forge)는 들이지 않는다. Quaternius 는 2026-08 QAL(원본 재배포 금지)로 바뀌어 새 묶음은 그 페이지가 CC0 일 때만. 원본은 Git LFS, 받은 팩은 `/AssetLibrary/`(무시), 쓰는 것만 `common/models_raw · textures_raw/<출처>/<묶음>/`.
-- 범용 스크립팅 언어는 들이지 않는다([판단](DesignBacklog.md#핫-리로드와-스크립팅-언어-판단)). 런타임 아틀라스는 하지 않는다. 메모리 풀은 측정 뒤(감사 C-6), GC 는 권하지 않는다.
+- 범용 스크립팅 언어는 들이지 않는다([판단](DesignBacklog.md#핫-리로드와-스크립팅-언어-판단)). 런타임 아틀라스는 하지 않는다. 메모리 풀은 측정 뒤(출하 할당기 선택은 감사 C-6 의 `SW_MEMORY_BACKEND`), GC 는 권하지 않는다.
 - 웹은 wasm32(memory64 는 Safari 미지원). 교차 빌드는 호스트 빌드(`SW_HOST_BUILD_DIR`, 기본 `build/Ninja-Release`)의 ReflectionParser · App 을 쓴다. 교차 프리셋은 vcpkg 설치 폴더를 따로 쓴다.
 - 최상위 `Mods/` 는 `Test/Mods/`. App 의 `Dev/` 는 남긴다.
 - 줄끝: `.gitattributes` 가 `* text=auto eol=lf`.
