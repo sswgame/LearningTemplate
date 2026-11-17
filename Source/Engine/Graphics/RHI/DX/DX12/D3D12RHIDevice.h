@@ -341,8 +341,9 @@ namespace sw
         };
         struct OffscreenTargetView;
 
-        static constexpr uint32 kMaxOffscreenRTVs = 128; ///< 면마다 하나씩 쓴다. 큐브 하나가 여섯을 쓴다.
-        static constexpr uint32 kMaxOffscreenDSVs = 64;
+        /// @brief 오프스크린 RTV · DSV 힙 한 쪽의 칸 수입니다. 칸이 모자라면 쪽을 하나 더 만든다 — 상한이 없다(R-11, 언리얼 `FD3D12OfflineDescriptorManager` 의 힙 목록과 같다).
+        ///        면마다 칸 하나를 쓴다(큐브 하나가 여섯). 크기는 비용이 아니라 힙 생성 횟수만 정한다.
+        static constexpr uint32 kOffscreenViewPageSize = 64;
         // 루트 시그니처. 언리얼 FD3D12RootSignature 와 같은 배치다. b# 는 루트 CBV(GPU 주소)이고, t#/u# 슬롯은 **디스크립터 테이블**이다
         // (오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사해 바인딩한다. FD3D12DescriptorCache). 텍스처 배열(t0 space1)은 힙 시작을
         // 가리키는 테이블이다. 예산은 shaderslot::dx12 (25/64 dword)이고, 슬롯을 늘려도 테이블 안이라 예산이 늘지 않는다.
@@ -368,14 +369,18 @@ namespace sw
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
             uint32                      _width{ 0 };
             uint32                      _height{ 0 };
-            /// @brief 면 1부터의 RTV, DSV 힙 인덱스입니다(면 0 은 `_rtvIndex`, `_dsvIndex`). 면이 하나면 비어 있습니다.
-            vector<uint32>      _listExtraRTVIndex;
-            vector<uint32>      _listExtraDSVIndex;
-            uint32              _arraySize{ 1 };
-            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
-            uint8               _bHasRTV  : 1;
-            uint8               _bHasDSV  : 1;
-            uint8               _reserved : 6;
+            uint32                      _mipLevels{ 1 }; ///< 밉마다 RTV · DSV 를 만든다(다운샘플 체인이 밉 하나에 그린다 — R-10)
+            /// @brief (밉, 면) 의 RTV, DSV 칸 번호와 그 디스크립터입니다. 칸 `mip * _arraySize + slice - 1` 이 그 자리다((0, 0) 은 `_rtvIndex`, `_dsvIndex`). 하나뿐이면 비어 있습니다.
+            /// @details 핸들을 함께 든다 — 기록 경로는 쪽 목록(`_listOffscreenRTVPage`)을 잠그지 않고 읽어야 하므로 번호로 다시 찾지 않는다.
+            vector<uint32>                      _listExtraRTVIndex;
+            vector<uint32>                      _listExtraDSVIndex;
+            vector<D3D12_CPU_DESCRIPTOR_HANDLE> _listExtraRTVHandle;
+            vector<D3D12_CPU_DESCRIPTOR_HANDLE> _listExtraDSVHandle;
+            uint32                              _arraySize{ 1 };
+            RHITextureDimension                 _dimension{ RHITextureDimension::Texture2D };
+            uint8                               _bHasRTV  : 1;
+            uint8                               _bHasDSV  : 1;
+            uint8                               _reserved : 6;
         };
 
         /// @brief 텍스처 · 버퍼 레코드의 추적 상태입니다(`RHITrackedState` — Vulkan 이미지 레이아웃과 같은 형식).
@@ -384,10 +389,10 @@ namespace sw
         /// @brief 텍스처 핸들 테이블의 칸입니다. 오프스크린(RTV · DSV 를 가진) 텍스처만 상태를 추적한다 — 나머지는 COMMON 에서 암묵 승격된다.
         struct TextureRecord
         {
-            Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
-            OffscreenTextureRecord                 _offscreen{}; ///< `_bOffscreen` 일 때만 뜻이 있다
-            TrackedState                           _state;
-            uint8                                  _bOffscreen{ SW_FALSE };
+            Microsoft::WRL::ComPtr<ID3D12Resource>            _resource;
+            OffscreenTextureRecord                            _offscreen{}; ///< `_bOffscreen` 일 때만 뜻이 있다
+            RHITrackedSubresourceState<D3D12_RESOURCE_STATES> _state;       ///< 서브리소스(밉 × 면) 단위 상태(R-10) — 오프스크린만 추적한다
+            uint8                                             _bOffscreen{ SW_FALSE };
         };
 
         /// @brief 버퍼 핸들 테이블의 칸입니다. 구조 버퍼(`createStructuredBuffer`)만 상태를 추적한다.
@@ -401,13 +406,12 @@ namespace sw
         /// @brief 기록 경로가 오프스크린 레코드에서 읽는 항목입니다. `findOffscreenTargetView` 가 복사해 줍니다.
         struct OffscreenTargetView
         {
-            D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{};                          ///< 고른 면의 RTV(없으면 0)
-            D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{};                          ///< 고른 면의 DSV(없으면 0)
-            D3D12_RESOURCE_STATES       _state  = D3D12_RESOURCE_STATE_COMMON; ///< 복사한 순간의 상태(전이는 `transitionTexture` 가 비교 교환으로 다시 한다)
+            D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{}; ///< 고른 면의 RTV(없으면 0)
+            D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{}; ///< 고른 면의 DSV(없으면 0)
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
             uint8                       _bHasRTV{ SW_FALSE };
             uint8                       _bHasDSV{ SW_FALSE };
-            uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 면이 면 수 안에 있고 그 면의 뷰가 있다.
+            uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 (밉, 면) 이 범위 안에 있고 그 뷰가 있다.
         };
 
         /// @brief 네이티브 PSO 와 루트 시그니처입니다.
@@ -611,22 +615,26 @@ namespace sw
         /** @brief 텍스처 레코드입니다. 핸들이 무효면 nullptr 입니다(락 없음). */
         TextureRecord* findTextureRecord( RHITextureHandle handle ) { return _gpuTextures.get( handle ); }
         /**
-         * @brief 텍스처의 추적 상태입니다. 상태를 추적하는 것은 오프스크린 렌더 타깃뿐이라 그 밖의 텍스처는 COMMON 입니다.
-         * @details 복사 전이는 이 상태에서 출발해 같은 상태로 돌아와야 SRV 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다.
+         * @brief 전송 리스트 @p pList 에 텍스처를 추적 상태에서 @p detourState 로(@p bLeave) 또는 그 반대로 옮기는 배리어를 기록합니다. 추적 값은 바꾸지 않는다.
+         * @details 복사 전이는 추적 상태에서 출발해 같은 상태로 돌아와야 SRV 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다. 상태가 서브리소스마다 갈라졌으면 서브리소스마다 낸다(R-10).
+         *          추적하지 않는 텍스처(오프스크린이 아닌 것)는 COMMON 이다.
          */
-        D3D12_RESOURCE_STATES getTrackedTextureState( RHITextureHandle texture );
+        void recordTextureStateDetour( ID3D12GraphicsCommandList* pList, RHITextureHandle texture, ID3D12Resource* pResource, D3D12_RESOURCE_STATES detourState, bool bLeave );
         /** @brief 오프스크린 레코드를 찾아 @p slice 면의 뷰와 함께 복사합니다. 오프스크린 레코드가 없으면 false 입니다(락 없음 — 레코드는 만든 뒤 바뀌지 않는다). */
-        [[nodiscard]] bool findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView );
+        [[nodiscard]] bool findOffscreenTargetView( RHITextureHandle texture, uint32 slice, uint32 mip, OffscreenTargetView& outView );
         /** @brief bindless 번호 @p index 의 기록 경로 값을 쓰고 마지막에 등록표를 공개합니다. `_bindlessMutex` 배타 락 아래에서 부릅니다. */
         void publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record );
         /** @brief 번호 @p index 가 고른 등록표(@p bUAV)에 살아 있으면 그 읽기 칸을, 아니면 nullptr 를 줍니다(락 없음 — 기록 경로의 바인딩이 부른다). */
         const BindlessReadSlot* findBindlessReadSlot( RHIDescriptorIndex index, bool bUAV ) const;
         /** @brief bindless 번호 @p index 를 기록 경로에서 비웁니다(값은 번호가 다시 나갈 때까지 남긴다). `_bindlessMutex` 배타 락 아래에서 부릅니다. */
         void retireBindlessReadSlot( RHIDescriptorIndex index );
-        /** @brief RTV 힙의 `rtvIndex` 번 디스크립터입니다(스왑체인 버퍼 수를 포함한 절대 번호). */
-        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRTVHandle( uint32 rtvIndex ) const;
-        /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
-        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenDSVHandle( uint32 dsvIndex ) const;
+        /**
+         * @brief 오프스크린 RTV(@p bDepth 면 DSV) 칸 하나를 받고 그 디스크립터를 줍니다. 쪽이 모자라면 하나 더 만들고, 만들지 못하면 false 입니다.
+         * @details `_offscreenViewMutex` 아래에서 부릅니다. 칸 번호는 `releaseOffscreenView` 로 돌려준다.
+         */
+        [[nodiscard]] bool acquireOffscreenView( bool bDepth, uint32& outSlot, D3D12_CPU_DESCRIPTOR_HANDLE& outHandle ) SW_REQUIRES_LOCK( _offscreenViewMutex );
+        /** @brief 오프스크린 텍스처 레코드가 받은 RTV · DSV 칸을 모두 돌려줍니다. `_offscreenViewMutex` 아래에서 부릅니다. */
+        void releaseOffscreenViews( const OffscreenTextureRecord& offscreen ) SW_REQUIRES_LOCK( _offscreenViewMutex );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
         /**
@@ -669,12 +677,6 @@ namespace sw
         void submitFrameJobNow();
         /** @brief 프레임 스트림의 새 조각을 열고 바인딩 캐시 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameJobNow` 가 함께 쓴다). */
         void openNextFrameSegment();
-        /**
-         * @brief 링 상수 버퍼들의 힙 CBV 를 이번 프레임 슬롯으로 맞춥니다. 프레임당 한 번, 기록 시작 전에 부릅니다.
-         * @details 주소는 프레임 링 슬롯에만 의존하므로 프레임당 한 번이면 충분하다. 주의: updateConstantBuffer 에서
-         *          드로우마다 레지스트리를 훑으면 O(등록 수 × 드로우 수)가 되어 드로우 경로를 지배한다.
-         */
-        void refreshConstantBufferViews();
         /**
          * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. `_bindlessMutex` 를 (읽기로라도) 잡고 부릅니다.
          * @details 만들 때 크기를 넘는 쓰기는 자른다. 그대로 복사하면 다음 슬롯(다음 프레임의 값)까지 덮어쓴다.
@@ -808,8 +810,7 @@ namespace sw
         uint64                                            _queueSyncValue;     ///< 마지막으로 신호한 포크 값(렌더 스레드만 올린다)
         uint64                                            _computeFenceValue;  ///< 마지막으로 신호한 컴퓨트 값
         uint64                                            _computeWaitedValue; ///< 그래픽스 큐가 이미 기다린 컴퓨트 값 — 프레임 끝이 그 위를 모두 기다린다
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _dsvHeap;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;            ///< 메인 스왑체인 백버퍼의 RTV 만 든다(오프스크린은 쪽 목록)
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _cbvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _offlineViewHeap; ///< CPU 전용 뷰 힙. 슬롯 테이블 CopyDescriptors 의 원본과 null 뷰를 담는다.
         Microsoft::WRL::ComPtr<ID3D12RootSignature>       _rootSignature;   ///< 그래픽스와 컴퓨트가 같이 쓴다(같은 블롭).
@@ -864,14 +865,17 @@ namespace sw
         unordered_map<RHIBufferHandle, uint32> _mapStructuredStride;
 
         /// @brief 오프스크린 RTV · DSV 힙 칸의 발급기를 지킵니다(텍스처 생성 · 파괴만 잡는다 — 기록 경로는 잡지 않는다).
-        mutex                                         _offscreenViewMutex;
-        uint32 _nextOffscreenRTVIndex                 SW_GUARDED_BY( _offscreenViewMutex );
-        uint32 _nextOffscreenDSVIndex                 SW_GUARDED_BY( _offscreenViewMutex );
-        IndexFreeList _freeOffscreenRTV               SW_GUARDED_BY( _offscreenViewMutex );
-        IndexFreeList _freeOffscreenDSV               SW_GUARDED_BY( _offscreenViewMutex );
-        unordered_map<RHIBufferHandle, uint32>        _mapCbAlignedSize;
-        unordered_map<RHIBufferHandle, void*>         _mapCbMapped;
-        RHIConstantBufferMirror _constantBufferMirror SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
+        mutex                           _offscreenViewMutex;
+        uint32 _nextOffscreenRTVIndex   SW_GUARDED_BY( _offscreenViewMutex );
+        uint32 _nextOffscreenDSVIndex   SW_GUARDED_BY( _offscreenViewMutex );
+        IndexFreeList _freeOffscreenRTV SW_GUARDED_BY( _offscreenViewMutex );
+        IndexFreeList _freeOffscreenDSV SW_GUARDED_BY( _offscreenViewMutex );
+        /// @brief 오프스크린 RTV · DSV 힙 쪽입니다(쪽마다 `kOffscreenViewPageSize` 칸). 늘기만 하고 장치 종료가 비운다. 기록 경로는 레코드의 핸들만 읽는다.
+        vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _listOffscreenRTVPage SW_GUARDED_BY( _offscreenViewMutex );
+        vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> _listOffscreenDSVPage SW_GUARDED_BY( _offscreenViewMutex );
+        unordered_map<RHIBufferHandle, uint32>                                     _mapCbAlignedSize;
+        unordered_map<RHIBufferHandle, void*>                                      _mapCbMapped;
+        RHIConstantBufferMirror _constantBufferMirror                              SW_GUARDED_BY( _bindlessMutex ); ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         RHIRenderPassRegistry                    _renderPassRegistry; ///< 렌더 패스 핸들 등록부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.

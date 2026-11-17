@@ -42,7 +42,6 @@ namespace sw
         , _computeFenceValue{ 0 }
         , _computeWaitedValue{ 0 }
         , _rtvHeap{ nullptr }
-        , _dsvHeap{ nullptr }
         , _cbvHeap{ nullptr }
         , _offlineViewHeap{ nullptr }
         , _rootSignature{ nullptr }
@@ -141,15 +140,35 @@ namespace sw
         return pRecord != nullptr ? pRecord->_resource.Get() : nullptr;
     }
 
-    D3D12_RESOURCE_STATES D3D12RHIDevice::getTrackedTextureState( RHITextureHandle texture )
+    static_assert( RHITrackedSubresourceState<D3D12_RESOURCE_STATES>::kWholeResource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, "the whole-resource index must be the D3D12 all-subresources value" );
+
+    void D3D12RHIDevice::recordTextureStateDetour( ID3D12GraphicsCommandList* pList, RHITextureHandle texture, ID3D12Resource* pResource, D3D12_RESOURCE_STATES detourState,
+                                                   bool bLeave )
     {
+        // 전송 리스트의 복사는 추적 상태에서 잠시 @p detourState 로 갔다가 같은 상태로 돌아온다 — 추적 값은 바꾸지 않는다. 서브리소스마다 상태가 갈라졌으면
+        // 서브리소스마다 배리어를 낸다(R-10). 추적하지 않는 텍스처는 COMMON 에서 출발한다.
+        const auto emit = [pList, pResource, detourState, bLeave]( uint32 subresource, D3D12_RESOURCE_STATES tracked )
+        {
+            if ( tracked == detourState )
+                return;
+            D3D12_RESOURCE_BARRIER barrier{};
+            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Transition.pResource   = pResource;
+            barrier.Transition.Subresource = subresource; // kWholeResource 는 D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES 와 같은 값이다
+            barrier.Transition.StateBefore = bLeave ? tracked : detourState;
+            barrier.Transition.StateAfter  = bLeave ? detourState : tracked;
+            pList->ResourceBarrier( 1, &barrier );
+        };
         const TextureRecord* const pRecord = _gpuTextures.get( texture );
         if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
-            return D3D12_RESOURCE_STATE_COMMON;
-        return pRecord->_state.load();
+        {
+            emit( D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_COMMON );
+            return;
+        }
+        pRecord->_state.forEachState( emit );
     }
 
-    bool D3D12RHIDevice::findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView )
+    bool D3D12RHIDevice::findOffscreenTargetView( RHITextureHandle texture, uint32 slice, uint32 mip, OffscreenTargetView& outView )
     {
         const TextureRecord* const pTextureRecord = _gpuTextures.get( texture );
         if ( pTextureRecord == nullptr || pTextureRecord->_bOffscreen == SW_FALSE )
@@ -157,45 +176,78 @@ namespace sw
 
         const OffscreenTextureRecord& record = pTextureRecord->_offscreen;
         outView                              = OffscreenTargetView{};
-        outView._state                       = pTextureRecord->_state.load();
         outView._format                      = record._format;
         outView._bHasRTV                     = record._bHasRTV;
         outView._bHasDSV                     = record._bHasDSV;
-        if ( slice >= record._arraySize )
+        if ( slice >= record._arraySize || mip >= record._mipLevels )
             return true;
 
-        // 면 0 은 레코드의 첫 뷰, 면 1.. 은 추가 인덱스다. 디스크립터가 바닥나 만들다 멈춘 면은 목록에 없다.
-        const size_t extraIndex = static_cast<size_t>( slice ) - 1u;
+        // (밉 0, 면 0) 은 레코드의 첫 뷰, 나머지는 추가 칸 `mip * 면 수 + slice - 1` 이다.
+        const uint32 viewIndex  = mip * record._arraySize + slice;
+        const size_t extraIndex = static_cast<size_t>( viewIndex ) - 1u;
         if ( record._bHasRTV != SW_FALSE )
         {
-            if ( slice == 0 )
+            if ( viewIndex == 0 )
                 outView._rtvHandle = record._rtvHandle;
-            else if ( extraIndex < record._listExtraRTVIndex.size() )
-                outView._rtvHandle = getOffscreenRTVHandle( record._listExtraRTVIndex[extraIndex] );
+            else if ( extraIndex < record._listExtraRTVHandle.size() )
+                outView._rtvHandle = record._listExtraRTVHandle[extraIndex];
         }
         if ( record._bHasDSV != SW_FALSE )
         {
-            if ( slice == 0 )
+            if ( viewIndex == 0 )
                 outView._dsvHandle = record._dsvHandle;
-            else if ( extraIndex < record._listExtraDSVIndex.size() )
-                outView._dsvHandle = getOffscreenDSVHandle( record._listExtraDSVIndex[extraIndex] );
+            else if ( extraIndex < record._listExtraDSVHandle.size() )
+                outView._dsvHandle = record._listExtraDSVHandle[extraIndex];
         }
         outView._bSliceInRange = ( outView._rtvHandle.ptr != 0 || outView._dsvHandle.ptr != 0 ) ? SW_TRUE : SW_FALSE;
         return true;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenRTVHandle( uint32 rtvIndex ) const
+    bool D3D12RHIDevice::acquireOffscreenView( bool bDepth, uint32& outSlot, D3D12_CPU_DESCRIPTOR_HANDLE& outHandle )
     {
-        D3D12_CPU_DESCRIPTOR_HANDLE handle = _rtvHeap->GetCPUDescriptorHandleForHeapStart();
-        handle.ptr += static_cast<SIZE_T>( rtvIndex ) * _rtvDescriptorSize;
-        return handle;
+        IndexFreeList&                                        freeList = bDepth ? _freeOffscreenDSV : _freeOffscreenRTV;
+        uint32&                                               nextSlot = bDepth ? _nextOffscreenDSVIndex : _nextOffscreenRTVIndex;
+        vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>>& listPage = bDepth ? _listOffscreenDSVPage : _listOffscreenRTVPage;
+        const D3D12_DESCRIPTOR_HEAP_TYPE                      heapType = bDepth ? D3D12_DESCRIPTOR_HEAP_TYPE_DSV : D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        if ( _device == nullptr )
+            return false;
+        uint32 slot{ 0 };
+        if ( freeList.tryPop( slot ) == false )
+        {
+            slot = nextSlot;
+            if ( slot / kOffscreenViewPageSize >= listPage.size() )
+            {
+                D3D12_DESCRIPTOR_HEAP_DESC pageDesc{};
+                pageDesc.NumDescriptors = kOffscreenViewPageSize;
+                pageDesc.Type           = heapType;
+                pageDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+                Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> page;
+                if ( isHrSuccess( _device->CreateDescriptorHeap( &pageDesc, IID_PPV_ARGS( page.GetAddressOf() ) ), "CreateDescriptorHeap (offscreen view page)" ) == false )
+                    return false;
+                listPage.push_back( std::move( page ) );
+            }
+            ++nextSlot;
+        }
+        outSlot   = slot;
+        outHandle = listPage[slot / kOffscreenViewPageSize]->GetCPUDescriptorHandleForHeapStart();
+        outHandle.ptr += static_cast<SIZE_T>( slot % kOffscreenViewPageSize ) * _device->GetDescriptorHandleIncrementSize( heapType );
+        return true;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenDSVHandle( uint32 dsvIndex ) const
+    void D3D12RHIDevice::releaseOffscreenViews( const OffscreenTextureRecord& offscreen )
     {
-        D3D12_CPU_DESCRIPTOR_HANDLE handle = _dsvHeap->GetCPUDescriptorHandleForHeapStart();
-        handle.ptr += static_cast<SIZE_T>( dsvIndex ) * _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
-        return handle;
+        if ( offscreen._bHasRTV != SW_FALSE )
+            _freeOffscreenRTV.push( offscreen._rtvIndex );
+        if ( offscreen._bHasDSV != SW_FALSE )
+            _freeOffscreenDSV.push( offscreen._dsvIndex );
+        for ( const uint32 rtvSlot : offscreen._listExtraRTVIndex )
+        {
+            _freeOffscreenRTV.push( rtvSlot );
+        }
+        for ( const uint32 dsvSlot : offscreen._listExtraDSVIndex )
+        {
+            _freeOffscreenDSV.push( dsvSlot );
+        }
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::offlineDescriptorAt( uint32 index ) const
@@ -556,8 +608,28 @@ namespace sw
             {
                 debugController->EnableDebugLayer();
                 SW_LOG_INFO_ID( "D3D12.DebugLayerEnabled", "Debug layer enabled." );
+                // GPU 기반 검증(GBV)은 장치를 만들기 **전에만** 켤 수 있다(ID3D12Debug1::SetEnableGPUBasedValidation 문서). 켜 달라고 했는데 인터페이스가 없으면 멈춘다(R-9).
+                if ( desc._bGPUBasedValidation )
+                {
+                    Microsoft::WRL::ComPtr<ID3D12Debug1> debugController1;
+                    if ( FAILED( debugController.As( &debugController1 ) ) )
+                    {
+                        SW_LOG_ERROR_ID( "D3D12.GPUBasedValidationUnavailable", "EngineConfig _rhi._bGPUBasedValidation is on, but ID3D12Debug1 is not available" );
+                        return false;
+                    }
+                    debugController1->SetEnableGPUBasedValidation( TRUE );
+                    SW_LOG_INFO_ID( "D3D12.GPUBasedValidationEnabled", "GPU-based validation enabled." );
+                }
+            }
+            else if ( desc._bGPUBasedValidation )
+            {
+                SW_LOG_ERROR_ID( "D3D12.GPUBasedValidationNoDebugLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but the D3D12 debug layer is not installed" );
+                return false;
             }
         }
+    #else
+        if ( desc._bGPUBasedValidation )
+            SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
     #endif
         // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 디버그 레이어가 없는 개발 빌드(Release)에서도 켠다
         // (`-gv_gpuBreadcrumbs` 가 기본 켬). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`)가 싣고, DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
@@ -688,23 +760,15 @@ namespace sw
         _bBindlessRootSignature = SW_FALSE;
         _frameStreamState       = D3D12RecordingState{};
 
-        // 백버퍼와 오프스크린 렌더 타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
-        // 그 뒤가 오프스크린이다. 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
+        // 메인 스왑체인 백버퍼의 RTV 힙이다(디바이스가 소유한다 — resize 가 같은 힙에 다시 만든다). 오프스크린 RTV · DSV 는 쪽 목록(`acquireOffscreenView`)이다.
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRTVs;
+        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount();
         rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         if ( isHrSuccess( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
             return false;
 
         _rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
-
-        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc{};
-        dsvHeapDesc.NumDescriptors = kMaxOffscreenDSVs;
-        dsvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-        dsvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        if ( isHrSuccess( _device->CreateDescriptorHeap( &dsvHeapDesc, IID_PPV_ARGS( _dsvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
-            return false;
 
         D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc{};
         cbvHeapDesc.NumDescriptors = kMaxShaderVisibleDescriptors;
@@ -893,6 +957,8 @@ namespace sw
             _nextOffscreenDSVIndex = 0;
             _freeOffscreenRTV.clear();
             _freeOffscreenDSV.clear();
+            _listOffscreenRTVPage.clear();
+            _listOffscreenDSVPage.clear();
         }
 
         _windowSwapChains.clearFrame();
@@ -914,7 +980,6 @@ namespace sw
             ScopedLock<mutex> lock{ _onlineBlockMutex };
             _freeOnlineBlock.clear();
         }
-        _dsvHeap.Reset();
         _rtvHeap.Reset();
         _commandList.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrCommandAllocator )
@@ -1677,8 +1742,6 @@ namespace sw
             ensureTimestampResources();
             collectTimestampsForSlot();
             _timestampRing.beginFrame( _frameRing.currentIndex() );
-            // 링 슬롯이 정해졌다. 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
-            refreshConstantBufferViews();
             // 프레임 스트림은 세그먼트로 나뉜다. 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
             // 커맨드 리스트가 제출될 때마다 executeCommandList 가 잘라 새 세그먼트를 연다.
             _listPendingSubmit.clear();
@@ -1885,32 +1948,6 @@ namespace sw
             return;
         pList->SetComputeRootSignature( _rootSignature.Get() );
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, _cbvHeap->GetGPUDescriptorHandleForHeapStart() );
-    }
-
-    void D3D12RHIDevice::refreshConstantBufferViews()
-    {
-        if ( _device == nullptr || _cbvHeap == nullptr )
-            return;
-
-        // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
-        // 렌더 스레드의 기록 시작 전이지만 게임 스레드는 그와 겹쳐 버퍼를 만들고 부수므로(레지스트리 · 상수버퍼 맵에 쓴다)
-        // 읽기 락을 잡는다. 주의: "단일 스레드 구간" 이 아니다.
-        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
-        const uint32                   slot = _frameRing.currentIndex();
-        _srvRegistry.forEachLive( [this, slot]( RHIDescriptorIndex index, const BindlessResourceRecord& record )
-        {
-            (void)index;
-            if ( record._resource == nullptr || record._buffer == 0 )
-                return;
-            const auto sizeIt = _mapCbAlignedSize.find( record._buffer );
-            if ( sizeIt == _mapCbAlignedSize.end() )
-                return; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
-
-            D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
-            cbvDesc.BufferLocation = record._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
-            cbvDesc.SizeInBytes    = sizeIt->second;
-            _device->CreateConstantBufferView( &cbvDesc, record._cpuHandle );
-        } );
     }
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )

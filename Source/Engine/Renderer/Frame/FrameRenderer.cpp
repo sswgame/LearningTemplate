@@ -740,8 +740,19 @@ namespace sw
 
     void FrameRenderer::ensurePassResources()
     {
-        if ( _pDevice == nullptr || _bPassResourcesReady != SW_FALSE )
+        if ( _pDevice == nullptr )
             return;
+        if ( _bPassResourcesReady != SW_FALSE )
+        {
+            // 스왑체인을 다시 만들며 백버퍼 형식이 바뀔 수 있다(Vulkan 표면이 다른 형식만 줄 때). 출력 패스 PSO 는 셋업에서만 만드므로 여기서 빠진 형식 변형을 더한다 —
+            // 없으면 `findOutputPSO` 가 멈춘다. `createPassPSOs` 는 이미 있는 PSO 를 다시 만들지 않는다(빠진 것만).
+            if ( _pDevice->getBackBufferFormat() != _passResourcesBackBufferFormat )
+            {
+                _psoManager.createPassPSOs();
+                _passResourcesBackBufferFormat = _pDevice->getBackBufferFormat();
+            }
+            return;
+        }
 
         // 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
         if ( _state._passCbRing.initialize( _pDevice ) == false )
@@ -768,7 +779,8 @@ namespace sw
         // 엔진 패스 PSO · 출력 포맷 변형 · 머티리얼 폴백 버퍼(셋업에서만 만든다 — 패스는 병렬로 기록된다).
         _psoManager.createPassPSOs();
 
-        _bPassResourcesReady = SW_TRUE;
+        _passResourcesBackBufferFormat = _pDevice->getBackBufferFormat();
+        _bPassResourcesReady           = SW_TRUE;
         SW_LOG_INFO_ID( "FrameRenderer.PassPSOsCBReady", "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%#)",
                         _psoManager.getEnginePSO( RenderPassType::Shadow ), _psoManager.getEnginePSO( RenderPassType::ForwardOpaque ),
                         _psoManager.getEnginePSO( RenderPassType::Transparent ), _psoManager.getEnginePSO( RenderPassType::Lighting ),
