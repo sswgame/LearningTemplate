@@ -103,6 +103,11 @@ namespace sw
         , _bLightGridPSOMissingLogged{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
+        , _publishedViewRectWidth{ 0 }
+        , _publishedViewRectHeight{ 0 }
+        , _publishedViewPoolWidth{ 0 }
+        , _publishedViewTransientRebuildCount{ 0 }
+        , _publishedOcclusionTilesBuilt{ 0 }
     {
     }
 
@@ -618,7 +623,8 @@ namespace sw
 
         const bool bOk             = _passExecutor.submitGraph( pDevice );
         _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
-        _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
+        _publishedOcclusionTilesBuilt.store( _state._mainView._bOcclusionTilesThisFrame == SW_TRUE ? 1u : 0u );
+        _lastPendingPSOBatchCount = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         // 시계가 스위치를 맞추고 끝난 프레임을 읽는다(자동 렌더 배율 표본). 읽은 프레임 한 벌을 프로파일러도 받는다.
         if ( _host._pProfiler != nullptr )
@@ -960,9 +966,13 @@ namespace sw
         {
             publishRenderTargets();
             reportRenderTargetMemory();
+            _publishedViewTransientRebuildCount.store( _publishedViewTransientRebuildCount.load() + 1u );
         }
         // 자동 렌더 배율은 풀이 아니라 사각형만 줄인다(정수 업스케일은 풀 전체가 화면 픽셀과 짝이라 늘 1).
         _state._mainView.updateViewRect( settings._upscaleZoom > 0 ? 1.0f : settings._rectScale );
+        _publishedViewRectWidth.store( _state._mainView._rect._width );
+        _publishedViewRectHeight.store( _state._mainView._rect._height );
+        _publishedViewPoolWidth.store( _state._mainView._transientPool.getWidth() );
         // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );

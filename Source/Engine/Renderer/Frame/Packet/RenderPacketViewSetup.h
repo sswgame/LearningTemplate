@@ -71,6 +71,8 @@ namespace sw
         void resolvePostProcessMaterials( RenderFramePacket& packet );
         /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` — 게임 스레드). */
         uint32 getLastHiddenViewCount() const { return _lastHiddenViewCount; }
+        /** @brief 마지막 프레임 주 시점에 곱한 자동 렌더 배율입니다(감시 값 `Render.AutoRenderScale` — 게임 스레드). */
+        float32 getLastAutoRenderScale() const { return _lastAutoRenderScale; }
         /** @brief 마지막 `collectExtraViews` 에서 자리(`kMaxExtraRenderView`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
         uint32 getLastOverflowViewCount() const { return _lastOverflowViewCount; }
 
@@ -80,6 +82,8 @@ namespace sw
          * @details 장치에 타임스탬프가 없으면 오류를 한 번 남기고 끕니다(벽시계로 대신하지 않는다).
          */
         float32 updateAutoRenderScale( const FrameRenderer* pFrameRenderer );
+        /** @brief 조정기 경로(`gv_autoRenderScale`)의 배율입니다. 고정 값(`gv_autoRenderScaleForce`)이 없을 때 `updateAutoRenderScale` 이 부른다. */
+        float32 computeAutoRenderScale( const FrameRenderer* pFrameRenderer );
 
     private:
         /** @brief 추가 뷰(CCTV, 백미러, PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기, 예산)입니다. */
@@ -93,7 +97,9 @@ namespace sw
         PostProcessMaterialSet _postProcessMaterials;
         /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */
         unique_ptr<RenderScaleAdjuster> _renderScaleAdjuster;
-        uint8                           _bAutoRenderScaleActive : 1;
+        /** @brief 마지막 프레임의 자동 렌더 배율입니다(`getLastAutoRenderScale`). */
+        float32 _lastAutoRenderScale;
+        uint8   _bAutoRenderScaleActive : 1;
         /** @brief 활성 씬에 쓸 카메라가 없다는 오류를 이미 알렸는지입니다. 카메라가 생기면 다시 알릴 수 있게 내립니다. */
         uint8 _bMissingCameraReported : 1;
     };

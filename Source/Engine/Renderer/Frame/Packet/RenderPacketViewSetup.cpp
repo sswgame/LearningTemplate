@@ -20,6 +20,8 @@ namespace sw
 {
     SW_GLOBAL_VARIABLE( bool, gv_autoRenderScale, false,
                         "자동 렌더 배율 — GPU 프레임 시간이 예산을 깨면 주 시점 렌더 배율을 한 단계씩 내리고 여유가 오래 가면 올린다 (gv_renderScale 에 곱해진다, 값은 Config/Engine/RenderScale.json)" );
+    SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleForce, 0.0f,
+                        "자동 렌더 배율을 이 값(0 초과 1 이하)으로 고정한다 — 조정기와 GPU 시계를 거치지 않는다. 단계 전환을 결정적으로 보는 시나리오 · 측정용, 0 이면 끔" );
 } // namespace sw
 
 namespace sw
@@ -31,6 +33,7 @@ namespace sw
         , _lastOverflowViewCount{ 0 }
         , _postProcessMaterials{}
         , _renderScaleAdjuster{ nullptr }
+        , _lastAutoRenderScale{ 1.0f }
         , _bAutoRenderScaleActive{ SW_FALSE }
         , _bMissingCameraReported{ SW_FALSE }
     {
@@ -61,6 +64,19 @@ namespace sw
     }
 
     float32 RenderPacketViewSetup::updateAutoRenderScale( const FrameRenderer* pFrameRenderer )
+    {
+        // 고정 값은 GPU 시간과 무관하게 단계를 만든다(언리얼 r.DynamicRes.TestScreenPercentage 자리). 조정기는 건드리지 않는다.
+        const float32 forcedScale = static_cast<float32>( gv_autoRenderScaleForce );
+        if ( forcedScale > 0.0f )
+        {
+            _lastAutoRenderScale = MathUtil::min( 1.0f, forcedScale );
+            return _lastAutoRenderScale;
+        }
+        _lastAutoRenderScale = computeAutoRenderScale( pFrameRenderer );
+        return _lastAutoRenderScale;
+    }
+
+    float32 RenderPacketViewSetup::computeAutoRenderScale( const FrameRenderer* pFrameRenderer )
     {
         if ( gv_autoRenderScale == false )
         {
