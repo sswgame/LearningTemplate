@@ -735,6 +735,24 @@ namespace sw
         }
     }
 
+    void WebGPURHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        endComputePass();
+        const WGPUCommandEncoder  encoder = getEncoder();
+        const WebGPUBufferRecord* pSource = _pDevice->findBuffer( source );
+        const WebGPUBufferRecord* pTarget = _pDevice->findBuffer( destination );
+        if ( encoder == nullptr || pSource == nullptr || pTarget == nullptr )
+            return;
+        // 명세: 오프셋 · 크기는 4 의 배수다. 정점 흐름(12 B 위치 · 4 의 배수 속성)은 늘 맞는다 — 어긋나면 기록하지 않고 알린다(검증 오류로 장치를 잃지 않게).
+        constexpr uint64 kCopyAlignment = 4;
+        if ( sourceOffset % kCopyAlignment != 0 || destinationOffset % kCopyAlignment != 0 || sizeBytes % kCopyAlignment != 0 )
+        {
+            SW_LOG_ERROR_ONCE_ID( "WebGPURHICommandContext.CopyBufferRegionUnaligned", "copyBufferRegion: offsets and size must be multiples of 4 (src %#, dst %#, size %#)", sourceOffset, destinationOffset, sizeBytes );
+            return;
+        }
+        wgpuCommandEncoderCopyBufferToBuffer( encoder, pSource->_buffer, sourceOffset, pTarget->_buffer, destinationOffset, sizeBytes );
+    }
+
     void WebGPURHICommandContext::beginEventMarker( const utf8* pName )
     {
         const WGPUCommandEncoder encoder = getEncoder();

@@ -549,6 +549,22 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
+    void OpenGLRHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return;
+        const GLuint sourceName = _pDevice->resolveGlBuffer( source );
+        const GLuint targetName = _pDevice->resolveGlBuffer( destination );
+        if ( sourceName == 0 || targetName == 0 )
+            return;
+        // 복사용 바인딩 지점 — 정점 · SSBO 바인딩을 건드리지 않는다. GL 은 명령 순서를 지키므로 상태 전이가 없다(GL 4.3 · GLES 3.0 코어).
+        glBindBuffer( GL_COPY_READ_BUFFER, sourceName );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, targetName );
+        glCopyBufferSubData( GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, static_cast<GLintptr>( sourceOffset ), static_cast<GLintptr>( destinationOffset ), static_cast<GLsizeiptr>( sizeBytes ) );
+        glBindBuffer( GL_COPY_READ_BUFFER, 0 );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+    }
+
     void OpenGLRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
         // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는

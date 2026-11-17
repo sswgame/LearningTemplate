@@ -292,6 +292,17 @@ namespace sw
         _pContext->CopySubresourceRegion( pTarget, 0, 0, 0, 0, pSource, 0, &region );
     }
 
+    void D3D11RHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        ID3D11Buffer* pSource = _pDevice->resolveBuffer( source );
+        ID3D11Buffer* pTarget = _pDevice->resolveBuffer( destination );
+        if ( _pContext == nullptr || pSource == nullptr || pTarget == nullptr )
+            return;
+        // DX11 은 상태가 없다 — 즉시 컨텍스트가 순서를 지킨다. 박스는 원본 바이트 구간이다(버퍼는 1 차원).
+        const D3D11_BOX region{ static_cast<UINT>( sourceOffset ), 0, 0, static_cast<UINT>( sourceOffset + sizeBytes ), 1, 1 };
+        _pContext->CopySubresourceRegion( pTarget, 0, static_cast<UINT>( destinationOffset ), 0, 0, pSource, 0, &region );
+    }
+
     void D3D11RHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
     {
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUAVAt( index );

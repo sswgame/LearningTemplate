@@ -294,6 +294,13 @@ namespace sw
          */
         virtual void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) = 0;
         /**
+         * @brief GPU 버퍼 @p source 의 [@p sourceOffset, +@p sizeBytes) 를 @p destination 의 @p destinationOffset 에 복사합니다(감사 R-15 — 정점 풀이 CPU 정점 대신 GPU 원본에서 채운다).
+         * @details 부르기 전에 원본은 `RHIBufferState::CopySource`, 도착은 `RHIBufferState::CopyDest` 로 옮겨 둔다(DX12 · Vulkan 은 상태가 맞아야 한다 — `transitionBuffers`).
+         *          두 버퍼는 달라야 하고 범위는 각 버퍼 안이어야 한다. 렌더 패스 밖에서 불러야 한다(열린 패스는 닫는다). 백엔드: DX12 `CopyBufferRegion` · Vulkan `vkCmdCopyBuffer` ·
+         *          GL `glCopyBufferSubData` · WebGPU `copyBufferToBuffer`(오프셋 · 크기가 4 의 배수여야 한다) · DX11 `CopySubresourceRegion`.
+         */
+        virtual void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) = 0;
+        /**
          * @brief 앞선 디스패치의 UAV 쓰기가 끝난 뒤에 다음 디스패치가 읽도록 막습니다.
          * @details 상태가 바뀌지 않는 전이(UAV → UAV)는 `transitionBuffer` 가 아무것도 하지 않는다.
          *          그런데 컴퓨트 두 개가 **같은 버퍼를 이어서** 쓰고 읽으면 그 사이에 장벽이 필요하다.

@@ -659,6 +659,26 @@ namespace sw
         vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
     }
 
+    void VulkanRHICommandContext::copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes )
+    {
+        VkCommandBuffer                      cmd     = commandBuffer();
+        VulkanRHIDevice::VulkanBufferRecord* pSource = _pDevice->resolveAllocatedBuffer( source );
+        VulkanRHIDevice::VulkanBufferRecord* pTarget = _pDevice->resolveAllocatedBuffer( destination );
+        if ( cmd == VK_NULL_HANDLE || pSource == nullptr || pTarget == nullptr || pSource->_buffer == VK_NULL_HANDLE || pTarget->_buffer == VK_NULL_HANDLE )
+            return;
+        if ( _pState->_bRenderPassActive == SW_TRUE ) // 복사는 렌더 패스 밖에서만 기록한다
+        {
+            vkCmdEndRenderPass( cmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+        // 원본 TRANSFER_READ · 도착 TRANSFER_WRITE 배리어는 부르는 쪽의 전이(CopySource · CopyDest)가 걸었다.
+        VkBufferCopy region{};
+        region.srcOffset = sourceOffset;
+        region.dstOffset = destinationOffset;
+        region.size      = sizeBytes;
+        vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
+    }
+
     void VulkanRHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )
     {
         // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 레지스트리(registerBindlessBufferUAV)의 것이다.

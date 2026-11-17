@@ -33,6 +33,16 @@ namespace sw::test
         hashed_string _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
         uint32        _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
         uint32        _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
+        /** @brief `copyBufferRegion` 한 번입니다. */
+        struct BufferCopy
+        {
+            RHIBufferHandle _destination{ 0 };
+            uint64          _destinationOffset{ 0 };
+            RHIBufferHandle _source{ 0 };
+            uint64          _sourceOffset{ 0 };
+            uint64          _sizeBytes{ 0 };
+        };
+        vector<BufferCopy> _listBufferCopy; /**< 기록한 버퍼 구간 복사(받은 순서) */
         /** @brief 디바이스가 몇 번째로 만든 리스트인지와 함께 만듭니다. */
         explicit FakeRHICommandList( uint32 creationIndex )
             : _creationIndex{ creationIndex }
@@ -85,6 +95,7 @@ namespace sw::test
             _transitionCount += count;
         }
         void copyBufferToReadback( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
+        void copyBufferRegion( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override { _listBufferCopy.push_back( BufferCopy{ destination, destinationOffset, source, sourceOffset, sizeBytes } ); }
         void uavBarrier( RHIBufferHandle ) override {}
         void drawIndexedIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void beginEventMarker( const utf8* ) override {}
