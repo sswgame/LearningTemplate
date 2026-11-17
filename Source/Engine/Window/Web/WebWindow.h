@@ -32,6 +32,12 @@ namespace sw
          * @details 브라우저는 Esc 로 언제든 잠금을 푼다 — 풀리면 `pointerlockchange` 가 알리고, 입력 관리자는 다음 클릭에서 다시 청한다(데스크톱 창과 같은 규칙).
          */
         [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override;
+        /**
+         * @brief 메인 스레드를 재우지 않고 다음 프레임 콜백을 마감 간격 뒤로 미룹니다(`emscripten_set_main_loop_timing` — 간격이 있으면 setTimeout, 없으면 requestAnimationFrame).
+         * @details Emscripten 의 메인 스레드 잠은 바쁜 대기라 배경 상한이 브라우저 메인 스레드를 막았다(감사 P-5). setTimeout 간격은 프레임 시작부터 잰다(Emscripten 이 지난 시간을 뺀다).
+         *          https://emscripten.org/docs/api_reference/emscripten.h.html#c.emscripten_set_main_loop_timing
+         */
+        void waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds ) override;
 
     protected:
         void* getNativeHandle() const override { return const_cast<utf8*>( kCanvasSelector ); }
@@ -63,6 +69,7 @@ namespace sw
 
     private:
         float32                _devicePixelRatio;
+        int32                  _mainLoopIntervalMilliseconds; ///< 지금 건 프레임 콜백 간격(0 이면 requestAnimationFrame — `emscripten_set_main_loop_arg` 의 fps 0 과 같다)
         uint8                  _bCallbacksBound : 1;
         uint8                  _bPointerLocked  : 1; ///< 브라우저가 캔버스에 포인터를 잠갔다(`pointerlockchange` 가 정한다 — 요청이 아니라 결과)
         [[maybe_unused]] uint8 _reserved        : 6;

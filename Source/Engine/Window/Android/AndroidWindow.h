@@ -49,7 +49,12 @@ namespace sw
         [[nodiscard]] bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         void               destroy() override;
         bool               processMessages() override;
-        NativeSurfaceKind  getSurfaceKind() const override { return NativeSurfaceKind::AndroidWindow; }
+        /**
+         * @brief 앱 명령 · 입력이 오거나 @p timeoutMilliseconds 가 지날 때까지 ALooper 에서 기다립니다(`ALooper_pollOnce`). 받은 입력은 모아 두고 다음 `processMessages` 가 넘긴다.
+         * @details 콜백 창의 기본(바로 돌아옴)이면 멈춘 앱(표면 없음 · onPause)이 잠과 깨기를 되풀이하며 명령을 늦게 받았다(감사 P-5) — 이제 명령이 오면 곧 깬다.
+         */
+        void              waitForMessages( uint32 timeoutMilliseconds ) override;
+        NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::AndroidWindow; }
 
     protected:
         void* getNativeHandle() const override;

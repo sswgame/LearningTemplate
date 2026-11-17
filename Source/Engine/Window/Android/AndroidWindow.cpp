@@ -258,6 +258,12 @@ namespace sw
         return CallbackInputWindow::processMessages();
     }
 
+    void AndroidWindow::waitForMessages( uint32 timeoutMilliseconds )
+    {
+        if ( AndroidWindowInternal::pollLooper( static_cast<int32>( timeoutMilliseconds ) ) == false )
+            requestClose();
+    }
+
     optional<uint32> AndroidWindow::findOrAssignGamepadSlot( int32 deviceId )
     {
         optional<uint32> emptySlot;

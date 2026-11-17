@@ -151,6 +151,13 @@ namespace sw
         virtual void waitForMessages( uint32 timeoutMilliseconds ) = 0;
 
         /**
+         * @brief 다음 프레임을 @p deadlineNanoseconds(`MonotonicClock` 시각)까지 미룹니다. `FramePacer::endFrame` 이 전속 · 배경 프레임마다 부른다 — 기다릴 것이 없으면 마감이 @p frameStartNanoseconds 와 같다.
+         * @details 기본은 이 스레드를 마감까지 재운다. 메인 스레드를 막으면 안 되는 창(브라우저 — Emscripten 의 메인 스레드 잠은 바쁜 대기다)은 재정의해
+         *          다음 프레임 콜백을 그 간격 뒤로 미룬다(감사 P-5, 유니티 WebGL `emscripten_set_main_loop_timing` 자리). 창 메시지에는 깨지 않는다 — 배경 상한이 마우스 이동에 풀리지 않는다.
+         */
+        virtual void waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds );
+
+        /**
          * @brief 창이 최소화되어 있는지입니다. `processMessages` 가 창 이벤트(Win32 `WM_SIZE`, X11 `UnmapNotify` · `MapNotify`)로 갱신합니다.
          * @details Wayland 는 클라이언트에 최소화를 알리지 않는다(xdg-shell 판 1) — 그 창에서는 늘 false 다.
          */

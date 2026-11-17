@@ -79,8 +79,8 @@ namespace sw
                 return true;
             }
 
-            /** @brief 표면이 없거나 앱이 멈춘 동안 메시지를 보는 주기입니다(잠들어도 수명 이벤트를 곧 받는다). */
-            static constexpr int64 kPausedTickNanoseconds = 10 * 1000 * 1000;
+            /** @brief 표면이 없거나 앱이 멈춘 동안 창 메시지를 기다리는 최대 시간입니다. 메시지(수명 이벤트)가 오면 곧 깬다(`IWindow::waitForMessages`). */
+            static constexpr uint32 kPausedWaitMilliseconds = 10;
 
             /** @brief 감시 값 `Window.RenderPausedTicks` — 표면을 잃거나 앱이 멈춰 프레임을 돌지 않은 메인 루프 틱의 누적입니다. 주 창이 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readWindowRenderPausedTicks( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -665,7 +665,8 @@ namespace sw
         if ( _pWindow->isRenderPaused() )
         {
             _bRenderPaused = SW_TRUE;
-            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + AppInternal::kPausedTickNanoseconds );
+            // 잠들지 않고 창 메시지를 기다린다 — 웹은 메인 스레드를 재우면 바쁜 대기이고(브라우저가 숨은 탭의 프레임 콜백을 이미 멈춘다), Android 는 ALooper 에서 명령을 기다린다(감사 P-5).
+            _pWindow->waitForMessages( AppInternal::kPausedWaitMilliseconds );
             return true;
         }
         // 멈춘 동안 흐른 실제 시간을 한 프레임의 델타로 받지 않는다.

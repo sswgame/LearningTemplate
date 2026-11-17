@@ -61,11 +61,11 @@ namespace sw
 
     void FramePacer::endFrame( IWindow& window ) const
     {
-        if ( _state == FramePacingState::Background )
-            MonotonicClock::sleepUntilNanoseconds( computeBackgroundDeadlineNanoseconds( _frameStartNanoseconds, gv_backgroundFrameRate ) );
-        else if ( _state == FramePacingState::Minimized )
+        if ( _state == FramePacingState::Minimized )
             window.waitForMessages( kMinimizedWakeMilliseconds );
         else if ( _state == FramePacingState::EditorIdle )
             window.waitForMessages( kEditorIdleWakeMilliseconds );
+        else // 기다리는 방법은 창이 정한다 — 전속 상태도 마감(= 시작)을 알려 웹이 미뤄 둔 프레임 콜백을 되돌린다
+            window.waitForNextFrame( _frameStartNanoseconds, _state == FramePacingState::Background ? computeBackgroundDeadlineNanoseconds( _frameStartNanoseconds, gv_backgroundFrameRate ) : _frameStartNanoseconds );
     }
 } // namespace sw

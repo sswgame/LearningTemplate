@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"
@@ -98,6 +99,12 @@ namespace sw
     {
         outListMonitor.clear();
         return false;
+    }
+
+    void IWindow::waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds )
+    {
+        (void)frameStartNanoseconds;
+        MonotonicClock::sleepUntilNanoseconds( deadlineNanoseconds ); // 지난 마감이면 바로 돌아온다
     }
 
     void IWindow::requestTextInput( WindowTextInputClient client, bool bWanted )

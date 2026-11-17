@@ -2,6 +2,7 @@
 
 #include "Engine/Window/Web/WebWindow.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -50,6 +51,7 @@ namespace sw
     WebWindow::WebWindow()
         : CallbackInputWindow{}
         , _devicePixelRatio{ 1.0f }
+        , _mainLoopIntervalMilliseconds{ 0 }
         , _bCallbacksBound{ SW_FALSE }
         , _bPointerLocked{ SW_FALSE }
         , _reserved{ 0 }
@@ -108,6 +110,17 @@ namespace sw
     {
         const double ratio = _devicePixelRatio > 0.0f ? static_cast<double>( _devicePixelRatio ) : 1.0;
         swWebTextInputSetArea( kCanvasSelector, area._position._x / ratio, area._position._y / ratio, area._lineHeight / ratio );
+    }
+
+    void WebWindow::waitForNextFrame( int64 frameStartNanoseconds, int64 deadlineNanoseconds )
+    {
+        const int64 intervalNanoseconds = deadlineNanoseconds - frameStartNanoseconds;
+        const int32 intervalMilliseconds =
+            intervalNanoseconds > 0 ? static_cast<int32>( ( intervalNanoseconds + constant::time::kNanosecondsPerMillisecond - 1 ) / constant::time::kNanosecondsPerMillisecond ) : 0;
+        if ( intervalMilliseconds == _mainLoopIntervalMilliseconds )
+            return;
+        _mainLoopIntervalMilliseconds = intervalMilliseconds;
+        (void)emscripten_set_main_loop_timing( intervalMilliseconds > 0 ? EM_TIMING_SETTIMEOUT : EM_TIMING_RAF, intervalMilliseconds > 0 ? intervalMilliseconds : 1 );
     }
 
     void WebWindow::onTextInput( void* pUserData, int kind, const char* pText )
